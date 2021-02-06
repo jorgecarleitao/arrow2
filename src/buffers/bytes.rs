@@ -125,3 +125,7 @@ impl<T: NativeType> Debug for Bytes<T> {
         write!(f, " }}")
     }
 }
+
+// This is sound because `Bytes` is an imutable container
+unsafe impl<T: NativeType> Send for Bytes<T> {}
+unsafe impl<T: NativeType> Sync for Bytes<T> {}

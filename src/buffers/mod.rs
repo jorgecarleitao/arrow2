@@ -1,6 +1,8 @@
 mod alignment;
 mod alloc;
-pub mod buffer;
+mod buffer;
 pub(crate) mod bytes;
 pub(crate) mod types;
 pub(crate) mod util;
+
+pub use buffer::{Buffer, MutableBuffer};

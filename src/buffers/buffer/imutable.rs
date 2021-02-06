@@ -45,6 +45,10 @@ pub struct Buffer<T: NativeType> {
 }
 
 impl<T: NativeType> Buffer<T> {
+    pub fn new() -> Self {
+        MutableBuffer::new().into()
+    }
+
     /// Auxiliary method to create a new Buffer
     pub(super) unsafe fn build_with_arguments(
         ptr: NonNull<T>,

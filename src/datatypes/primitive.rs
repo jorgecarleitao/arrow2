@@ -3,8 +3,8 @@ use crate::buffers::types::NativeType;
 use super::{DataType, IntervalUnit, TimeUnit};
 
 /// Trait bridging the dynamic-typed nature of Arrow (via [`DataType`]) with the
-/// static-typed nature of rust types ([`ArrowNativeType`]) for all types that implement [`ArrowNativeType`].
-pub trait ArrowPrimitiveType: 'static {
+/// static-typed nature of rust types ([`NativeType`]) for all types that implement [`NativeType`].
+pub trait PrimitiveType: std::fmt::Debug + 'static {
     /// Corresponding Rust native type for the primitive type.
     type Native: NativeType;
 
@@ -26,7 +26,7 @@ macro_rules! make_type {
         #[derive(Debug)]
         pub struct $name {}
 
-        impl ArrowPrimitiveType for $name {
+        impl PrimitiveType for $name {
             type Native = $native_ty;
             const DATA_TYPE: DataType = $data_ty;
         }

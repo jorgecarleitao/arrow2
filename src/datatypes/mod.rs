@@ -134,3 +134,5 @@ pub enum IntervalUnit {
     /// stored as 2 contiguous 32-bit integers (8-bytes in total).
     DayTime,
 }
+
+pub use primitive::PrimitiveType;
