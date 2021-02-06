@@ -38,8 +38,7 @@ pub fn bytes_for(bits: usize) -> usize {
 
 #[inline]
 pub(crate) fn null_count(slice: &[u8], offset: usize, len: usize) -> usize {
-    assert!(len >= slice.len() * 8);
-    let chunks = chunk_iterator::BitChunks::new(slice, offset, slice.len() * 8);
+    let chunks = chunk_iterator::BitChunks::new(slice, offset, len);
 
     let mut count: usize = chunks.iter().map(|c| c.count_ones() as usize).sum();
     count += chunks.remainder_bits().count_ones() as usize;
@@ -56,4 +55,15 @@ pub(crate) fn null_count(slice: &[u8], offset: usize, len: usize) -> usize {
 #[inline]
 pub unsafe fn set_bit_raw(data: *mut u8, i: usize) {
     *data.add(i >> 3) |= BIT_MASK[i & 7];
+}
+
+/// Sets bit at position `i` for `data` to 0
+///
+/// # Safety
+///
+/// Note this doesn't do any bound checking, for performance reason. The caller is
+/// responsible to guarantee that `i` is within bounds.
+#[inline]
+pub unsafe fn unset_bit_raw(data: *mut u8, i: usize) {
+    *data.add(i >> 3) &= UNSET_BIT_MASK[i & 7];
 }

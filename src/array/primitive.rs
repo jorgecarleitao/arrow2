@@ -57,9 +57,9 @@ impl<T: NativeType> Array for PrimitiveArray<T> {
     }
 }
 
-impl<T: NativeType> From<(DataType, &[Option<T>])> for PrimitiveArray<T> {
-    fn from((datatype, slice): (DataType, &[Option<T>])) -> Self {
-        unsafe { Self::from_trusted_len_iter(datatype, slice.iter()) }
+impl<T: NativeType, P: AsRef<[Option<T>]>> From<(DataType, P)> for PrimitiveArray<T> {
+    fn from((datatype, slice): (DataType, P)) -> Self {
+        unsafe { Self::from_trusted_len_iter(datatype, slice.as_ref().iter()) }
     }
 }
 

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    bits::{get_bit, null_count, set_bit_raw},
+    bits::{get_bit, null_count, set_bit_raw, unset_bit_raw},
     buffer::bytes::Bytes,
 };
 
@@ -53,7 +53,7 @@ impl Bitmap {
 
     #[inline]
     pub fn get_bit(&self, i: usize) -> bool {
-        get_bit(&self.bytes[self.offset..self.offset + self.length], i)
+        get_bit(&self.bytes, self.offset + i)
     }
 }
 
@@ -75,6 +75,8 @@ impl MutableBitmap {
     pub unsafe fn push_unchecked(&mut self, value: bool) {
         if value {
             set_bit_raw(self.bytes.as_mut_ptr(), self.length);
+        } else {
+            unset_bit_raw(self.bytes.as_mut_ptr(), self.length);
         }
         self.length += 1;
     }

@@ -25,3 +25,5 @@ mod primitive;
 mod specification;
 
 mod equal;
+
+pub use primitive::PrimitiveArray;
