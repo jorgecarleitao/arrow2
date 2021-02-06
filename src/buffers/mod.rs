@@ -5,4 +5,4 @@ pub(crate) mod bytes;
 pub(crate) mod types;
 pub(crate) mod util;
 
-pub use buffer::{Buffer, MutableBuffer};
+pub use buffer::{Bitmap, Buffer, MutableBuffer};

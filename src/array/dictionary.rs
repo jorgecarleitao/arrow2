@@ -1,6 +1,5 @@
 use crate::{
-    bits::null_count,
-    buffers::{types::NativeType, Buffer},
+    buffers::{types::NativeType, Bitmap},
     datatypes::DataType,
 };
 
@@ -21,17 +20,15 @@ pub struct DictionaryArray<K: DicionaryKey> {
     data_type: DataType,
     keys: PrimitiveArray<K>,
     values: Box<dyn Array>,
-    validity: Option<Buffer<u8>>,
-    null_count: usize,
+    validity: Option<Bitmap>,
 }
 
 impl<K: DicionaryKey> DictionaryArray<K> {
     pub fn from_data(
         keys: PrimitiveArray<K>,
         values: Box<dyn Array>,
-        validity: Option<Buffer<u8>>,
+        validity: Option<Bitmap>,
     ) -> Self {
-        let null_count = null_count(validity.as_ref().map(|x| x.as_slice()), 0, keys.len());
 
         let data_type = DataType::Dictionary(
             Box::new(keys.data_type().clone()),
@@ -43,7 +40,6 @@ impl<K: DicionaryKey> DictionaryArray<K> {
             keys,
             values,
             validity,
-            null_count,
         }
     }
 }

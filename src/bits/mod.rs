@@ -24,6 +24,12 @@ pub fn unset_bit(data: &mut [u8], i: usize) {
     data[i >> 3] &= UNSET_BIT_MASK[i & 7];
 }
 
+/// Returns whether bit at position `i` in `data` is set or not
+#[inline]
+pub fn get_bit(data: &[u8], i: usize) -> bool {
+    (data[i >> 3] & BIT_MASK[i & 7]) != 0
+}
+
 /// Returns the number of bytes required to hold `bits` bits.
 #[inline]
 pub fn bytes_for(bits: usize) -> usize {
@@ -31,16 +37,12 @@ pub fn bytes_for(bits: usize) -> usize {
 }
 
 #[inline]
-pub(crate) fn null_count(null_bit_buffer: Option<&[u8]>, offset: usize, len: usize) -> usize {
-    if let Some(slice) = null_bit_buffer {
-        assert!(len >= slice.len() * 8);
-        let chunks = chunk_iterator::BitChunks::new(slice, offset, slice.len() * 8);
+pub(crate) fn null_count(slice: &[u8], offset: usize, len: usize) -> usize {
+    assert!(len >= slice.len() * 8);
+    let chunks = chunk_iterator::BitChunks::new(slice, offset, slice.len() * 8);
 
-        let mut count: usize = chunks.iter().map(|c| c.count_ones() as usize).sum();
-        count += chunks.remainder_bits().count_ones() as usize;
+    let mut count: usize = chunks.iter().map(|c| c.count_ones() as usize).sum();
+    count += chunks.remainder_bits().count_ones() as usize;
 
-        len - count
-    } else {
-        0
-    }
+    len - count
 }

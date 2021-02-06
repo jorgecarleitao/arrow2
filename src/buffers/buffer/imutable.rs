@@ -18,9 +18,6 @@
 //! This module contains two main structs: [Buffer] and [MutableBuffer]. A buffer represents
 //! a contiguous memory region that can be shared via `offsets`.
 
-#[cfg(feature = "simd")]
-use packed_simd::u8x64;
-
 use super::super::{
     bytes::{Bytes, Deallocation},
     types::NativeType,
@@ -42,6 +39,10 @@ pub struct Buffer<T: NativeType> {
 
     /// The offset into the buffer.
     offset: usize,
+
+    // the length of the buffer. Given a region `data` of N bytes, [offset..offset+length] is visible
+    // to this buffer.
+    length: usize,
 }
 
 impl<T: NativeType> Buffer<T> {
@@ -59,36 +60,38 @@ impl<T: NativeType> Buffer<T> {
         Buffer {
             data: Arc::new(bytes),
             offset: 0,
+            length: len,
         }
     }
 
     /// Returns the number of bytes in the buffer
     pub fn len(&self) -> usize {
-        self.data.len() - self.offset
+        self.length
     }
 
     /// Returns whether the buffer is empty.
     pub fn is_empty(&self) -> bool {
-        self.data.len() - self.offset == 0
+        self.len() == 0
     }
 
     /// Returns the byte slice stored in this buffer
     pub fn as_slice(&self) -> &[T] {
-        &self.data[self.offset..]
+        &self.data[self.offset..self.offset + self.length]
     }
 
     /// Returns a new [Buffer] that is a slice of this buffer starting at `offset`.
     /// Doing so allows the same memory region to be shared between buffers.
     /// # Panics
     /// Panics iff `offset` is larger than `len`.
-    pub fn slice(&self, offset: usize) -> Self {
+    pub fn slice(&self, offset: usize, length: usize) -> Self {
         assert!(
-            offset <= self.len(),
+            offset + length <= self.len(),
             "the offset of the new Buffer cannot exceed the existing length"
         );
         Self {
             data: self.data.clone(),
             offset: self.offset + offset,
+            length,
         }
     }
 

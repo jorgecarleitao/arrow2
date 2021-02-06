@@ -1,6 +1,7 @@
-use bits::null_count;
-
-use crate::{bits, buffers::Buffer, datatypes::DataType};
+use crate::{
+    buffers::{Bitmap, Buffer},
+    datatypes::DataType,
+};
 
 use super::{list::Offset, specification::check_offsets, Array};
 
@@ -9,15 +10,12 @@ pub struct BinaryArray<O: Offset> {
     data_type: DataType,
     offsets: Buffer<O>,
     values: Buffer<u8>,
-    validity: Option<Buffer<u8>>,
-    null_count: usize,
+    validity: Option<Bitmap>,
 }
 
 impl<O: Offset> BinaryArray<O> {
-    pub fn from_data(offsets: Buffer<O>, values: Buffer<u8>, validity: Option<Buffer<u8>>) -> Self {
+    pub fn from_data(offsets: Buffer<O>, values: Buffer<u8>, validity: Option<Bitmap>) -> Self {
         check_offsets(&offsets, values.len());
-
-        let null_count = null_count(validity.as_ref().map(|x| x.as_slice()), 0, values.len());
 
         Self {
             data_type: if O::is_large() {
@@ -28,7 +26,6 @@ impl<O: Offset> BinaryArray<O> {
             offsets,
             values,
             validity,
-            null_count,
         }
     }
 }
@@ -49,8 +46,7 @@ impl<O: Offset> Array for BinaryArray<O> {
         &self.data_type
     }
 
-    #[inline]
-    fn is_null(&self, _: usize) -> bool {
-        todo!()
+    fn nulls(&self) -> &Option<Bitmap> {
+        &self.validity
     }
 }

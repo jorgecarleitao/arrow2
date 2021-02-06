@@ -1,8 +1,5 @@
-use bits::null_count;
-
 use crate::{
-    bits,
-    buffers::{types::NativeType, Buffer},
+    buffers::{types::NativeType, Bitmap, Buffer},
     datatypes::DataType,
 };
 
@@ -12,19 +9,30 @@ use super::Array;
 pub struct PrimitiveArray<T: NativeType> {
     data_type: DataType,
     values: Buffer<T>,
-    validity: Option<Buffer<u8>>,
-    null_count: usize,
+    validity: Option<Bitmap>,
 }
 
 impl<T: NativeType> PrimitiveArray<T> {
-    pub fn from_data(data_type: DataType, values: Buffer<T>, validity: Option<Buffer<u8>>) -> Self {
-        let null_count = null_count(validity.as_ref().map(|x| x.as_slice()), 0, values.len());
+    pub fn from_data(data_type: DataType, values: Buffer<T>, validity: Option<Bitmap>) -> Self {
         Self {
             data_type,
             values,
             validity,
-            null_count,
         }
+    }
+
+    pub fn slice(&self, offset: usize, length: usize) -> Self {
+        let validity = self.validity.as_ref().map(|x| x.slice(offset, length));
+        Self {
+            data_type: self.data_type.clone(),
+            values: self.values.slice(offset, length),
+            validity,
+        }
+    }
+
+    #[inline]
+    pub fn values(&self) -> &[T] {
+        self.values.as_slice()
     }
 }
 
@@ -44,8 +52,7 @@ impl<T: NativeType> Array for PrimitiveArray<T> {
         &self.data_type
     }
 
-    #[inline]
-    fn is_null(&self, _: usize) -> bool {
-        todo!()
+    fn nulls(&self) -> &Option<Bitmap> {
+        &self.validity
     }
 }

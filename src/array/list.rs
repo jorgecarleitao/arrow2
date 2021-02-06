@@ -1,10 +1,7 @@
 use std::convert::TryFrom;
 
-use bits::null_count;
-
 use crate::{
-    bits,
-    buffers::{types::NativeType, Buffer},
+    buffers::{types::NativeType, Bitmap, Buffer},
     datatypes::{DataType, Field},
 };
 
@@ -43,21 +40,19 @@ pub struct ListArray<O: Offset> {
     data_type: DataType,
     offsets: Buffer<O>,
     values: Box<dyn Array>,
-    validity: Option<Buffer<u8>>,
-    null_count: usize,
+    validity: Option<Bitmap>,
 }
 
 impl<O: Offset> ListArray<O> {
     pub fn from_data(
         offsets: Buffer<O>,
         values: Box<dyn Array>,
-        validity: Option<Buffer<u8>>,
+        validity: Option<Bitmap>,
         field_options: Option<(&str, bool)>,
     ) -> Self {
         check_offsets(&offsets, values.len());
 
         let (field_name, field_nullable) = field_options.unwrap_or(("item", true));
-        let null_count = null_count(validity.as_ref().map(|x| x.as_slice()), 0, values.len());
 
         let field = Box::new(Field::new(
             field_name,
@@ -76,7 +71,6 @@ impl<O: Offset> ListArray<O> {
             offsets,
             values,
             validity,
-            null_count,
         }
     }
 }
@@ -98,8 +92,8 @@ impl<O: Offset> Array for ListArray<O> {
     }
 
     #[inline]
-    fn is_null(&self, _: usize) -> bool {
-        todo!()
+    fn nulls(&self) -> &Option<Bitmap> {
+        &self.validity
     }
 }
 

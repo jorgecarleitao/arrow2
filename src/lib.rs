@@ -1,5 +1,5 @@
 pub mod buffers;
 
 mod array;
-mod bits;
+pub(crate) mod bits;
 mod datatypes;
