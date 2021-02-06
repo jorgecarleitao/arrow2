@@ -1,7 +1,7 @@
 use std::unimplemented;
 
 use crate::{
-    buffers::Bitmap,
+    buffer::Bitmap,
     datatypes::{DataType, IntervalUnit},
 };
 

@@ -3,7 +3,12 @@ use std::ptr::NonNull;
 use std::usize;
 use std::{fmt::Debug, mem::size_of};
 
-use super::super::{alloc, bytes::Deallocation, types::NativeType, util};
+use super::{
+    alloc,
+    bytes::{Bytes, Deallocation},
+    types::NativeType,
+    util,
+};
 
 use super::imutable::Buffer;
 
@@ -232,6 +237,14 @@ impl<T: NativeType> MutableBuffer<T> {
         std::ptr::write(dst, item);
         self.len += 1;
     }
+
+    /// # Safety
+    /// The caller must ensure that the buffer was properly initialized up to `len`.
+    #[inline]
+    pub(crate) unsafe fn set_len(&mut self, len: usize) {
+        assert!(len <= self.capacity());
+        self.len = len;
+    }
 }
 
 /// # Safety
@@ -422,8 +435,15 @@ impl Drop for SetLenOnDrop<'_> {
 impl<T: NativeType> From<MutableBuffer<T>> for Buffer<T> {
     #[inline]
     fn from(buffer: MutableBuffer<T>) -> Self {
+        Buffer::from_bytes(buffer.into())
+    }
+}
+
+impl<T: NativeType> From<MutableBuffer<T>> for Bytes<T> {
+    #[inline]
+    fn from(buffer: MutableBuffer<T>) -> Self {
         let result = unsafe {
-            Buffer::build_with_arguments(
+            Bytes::new(
                 buffer.ptr,
                 buffer.len,
                 Deallocation::Native(buffer.capacity),

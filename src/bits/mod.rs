@@ -46,3 +46,14 @@ pub(crate) fn null_count(slice: &[u8], offset: usize, len: usize) -> usize {
 
     len - count
 }
+
+/// Sets bit at position `i` for `data`
+///
+/// # Safety
+///
+/// Note this doesn't do any bound checking, for performance reason. The caller is
+/// responsible to guarantee that `i` is within bounds.
+#[inline]
+pub unsafe fn set_bit_raw(data: *mut u8, i: usize) {
+    *data.add(i >> 3) |= BIT_MASK[i & 7];
+}

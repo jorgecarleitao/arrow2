@@ -18,13 +18,9 @@
 //! This module contains two main structs: [Buffer] and [MutableBuffer]. A buffer represents
 //! a contiguous memory region that can be shared via `offsets`.
 
-use super::super::{
-    bytes::{Bytes, Deallocation},
-    types::NativeType,
-};
+use super::{bytes::Bytes, types::NativeType};
 
 use std::fmt::Debug;
-use std::ptr::NonNull;
 use std::sync::Arc;
 use std::{convert::AsRef, usize};
 
@@ -51,16 +47,12 @@ impl<T: NativeType> Buffer<T> {
     }
 
     /// Auxiliary method to create a new Buffer
-    pub(super) unsafe fn build_with_arguments(
-        ptr: NonNull<T>,
-        len: usize,
-        deallocation: Deallocation,
-    ) -> Self {
-        let bytes = Bytes::new(ptr, len, deallocation);
+    pub fn from_bytes(bytes: Bytes<T>) -> Self {
+        let length = bytes.len();
         Buffer {
             data: Arc::new(bytes),
             offset: 0,
-            length: len,
+            length,
         }
     }
 
@@ -114,15 +106,5 @@ impl<T: NativeType, U: AsRef<[T]>> From<U> for Buffer<T> {
         let mut buffer = MutableBuffer::with_capacity(len);
         buffer.extend_from_slice(slice);
         buffer.into()
-    }
-}
-
-/// Creating a `Buffer` instance by storing the boolean values into the buffer
-impl std::iter::FromIterator<bool> for Buffer<u8> {
-    fn from_iter<I>(iter: I) -> Self
-    where
-        I: IntoIterator<Item = bool>,
-    {
-        MutableBuffer::from_iter(iter).into()
     }
 }

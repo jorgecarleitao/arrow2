@@ -1,4 +1,4 @@
-use crate::buffers::Buffer;
+use crate::buffer::Buffer;
 
 use super::list::Offset;
 

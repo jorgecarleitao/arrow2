@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::{array::Array, buffers::Bitmap};
+use crate::{array::Array, buffer::Bitmap};
 
 // whether bits along the positions are equal
 // `lhs_start`, `rhs_start` and `len` are _measured in bits_.

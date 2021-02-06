@@ -1,6 +1,6 @@
 use std::any::Any;
 
-use crate::{buffers::Bitmap, datatypes::DataType};
+use crate::{buffer::Bitmap, datatypes::DataType};
 
 pub trait Array: std::fmt::Debug + Send + Sync {
     fn as_any(&self) -> &dyn Any;

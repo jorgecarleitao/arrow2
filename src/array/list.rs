@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use crate::{
-    buffers::{types::NativeType, Bitmap, Buffer},
+    buffer::{types::NativeType, Bitmap, Buffer},
     datatypes::{DataType, Field},
 };
 

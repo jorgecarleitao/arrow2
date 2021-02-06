@@ -1,4 +1,4 @@
-pub mod buffers;
+pub mod buffer;
 
 mod array;
 pub(crate) mod bits;

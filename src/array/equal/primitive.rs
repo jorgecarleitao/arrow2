@@ -1,6 +1,6 @@
 use crate::{
     array::primitive::PrimitiveArray,
-    buffers::{types::NativeType, Bitmap},
+    buffer::{types::NativeType, Bitmap},
 };
 
 use super::utils::equal_len;

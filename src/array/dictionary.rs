@@ -1,5 +1,5 @@
 use crate::{
-    buffers::{types::NativeType, Bitmap},
+    buffer::{types::NativeType, Bitmap},
     datatypes::DataType,
 };
 
