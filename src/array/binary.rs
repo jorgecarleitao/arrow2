@@ -1,12 +1,8 @@
 use bits::null_count;
 
-use crate::{
-    bits,
-    buffers::Buffer,
-    datatypes::DataType,
-};
+use crate::{bits, buffers::Buffer, datatypes::DataType};
 
-use super::{Array, list::Offset, specification::check_offsets};
+use super::{list::Offset, specification::check_offsets, Array};
 
 #[derive(Debug)]
 pub struct BinaryArray<O: Offset> {
@@ -18,17 +14,17 @@ pub struct BinaryArray<O: Offset> {
 }
 
 impl<O: Offset> BinaryArray<O> {
-    pub fn from_data(
-        offsets: Buffer<O>,
-        values: Buffer<u8>,
-        validity: Option<Buffer<u8>>,
-    ) -> Self {
+    pub fn from_data(offsets: Buffer<O>, values: Buffer<u8>, validity: Option<Buffer<u8>>) -> Self {
         check_offsets(&offsets, values.len());
 
         let null_count = null_count(validity.as_ref().map(|x| x.as_slice()), 0, values.len());
 
         Self {
-            data_type: if O::is_large() {DataType::LargeBinary} else {DataType::Binary},
+            data_type: if O::is_large() {
+                DataType::LargeBinary
+            } else {
+                DataType::Binary
+            },
             offsets,
             values,
             validity,
