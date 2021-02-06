@@ -18,7 +18,7 @@
 //! Defines memory-related functions, such as allocate/deallocate/reallocate memory
 //! regions, cache and allocation alignments.
 
-use crate::{alignment::ALIGNMENT, types::NativeType};
+use super::{alignment::ALIGNMENT, types::NativeType};
 
 use std::mem::size_of;
 use std::ptr::NonNull;
@@ -129,25 +129,6 @@ pub unsafe fn reallocate<T: NativeType>(
     NonNull::new(raw_ptr).unwrap_or_else(|| {
         handle_alloc_error(Layout::from_size_align_unchecked(new_size, ALIGNMENT))
     })
-}
-
-/// # Safety
-///
-/// Behavior is undefined if any of the following conditions are violated:
-///
-/// * `src` must be valid for reads of `len * size_of::<u8>()` bytes.
-///
-/// * `dst` must be valid for writes of `len * size_of::<u8>()` bytes.
-///
-/// * Both `src` and `dst` must be properly aligned.
-///
-/// `memcpy` creates a bitwise copy of `T`, regardless of whether `T` is [`Copy`]. If `T` is not
-/// [`Copy`], using both the values in the region beginning at `*src` and the region beginning at
-/// `*dst` can [violate memory safety][read-ownership].
-pub unsafe fn memcpy<T: NativeType>(dst: NonNull<T>, src: NonNull<T>, count: usize) {
-    if src != null_pointer() {
-        std::ptr::copy_nonoverlapping(src.as_ptr(), dst.as_ptr(), count)
-    }
 }
 
 #[cfg(test)]

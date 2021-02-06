@@ -1,4 +1,7 @@
-pub unsafe trait NativeType: Sized + 'static {}
+pub unsafe trait NativeType:
+    Sized + Copy + std::fmt::Debug + std::fmt::Display + PartialEq + Default + Sized + 'static
+{
+}
 
 unsafe impl NativeType for u8 {}
 unsafe impl NativeType for u16 {}
