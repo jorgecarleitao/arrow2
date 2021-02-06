@@ -29,7 +29,6 @@ impl<K: DicionaryKey> DictionaryArray<K> {
         values: Box<dyn Array>,
         validity: Option<Bitmap>,
     ) -> Self {
-
         let data_type = DataType::Dictionary(
             Box::new(keys.data_type().clone()),
             Box::new(values.data_type().clone()),

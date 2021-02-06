@@ -1,0 +1,48 @@
+use crate::{
+    array::primitive::PrimitiveArray,
+    buffers::{types::NativeType, Bitmap},
+};
+
+use super::utils::equal_len;
+
+pub(super) fn equal<T: NativeType>(
+    lhs: &PrimitiveArray<T>,
+    rhs: &PrimitiveArray<T>,
+    lhs_nulls: &Option<Bitmap>,
+    rhs_nulls: &Option<Bitmap>,
+    lhs_start: usize,
+    rhs_start: usize,
+    len: usize,
+) -> bool {
+    let lhs_values = &lhs.values();
+    let rhs_values = &rhs.values();
+
+    let lhs_null_count = lhs_nulls
+        .as_ref()
+        .map(|x| x.null_count_range(lhs_start, len))
+        .unwrap_or(0);
+    let rhs_null_count = rhs_nulls
+        .as_ref()
+        .map(|x| x.null_count_range(rhs_start, len))
+        .unwrap_or(0);
+
+    if lhs_null_count == 0 && rhs_null_count == 0 {
+        // without nulls, we just need to compare slices
+        equal_len(lhs_values, rhs_values, lhs_start, rhs_start, len)
+    } else {
+        // get a ref of the null buffer bytes, to use in testing for nullness
+        let lhs_bitmap = lhs_nulls.as_ref().unwrap();
+        let rhs_bitmap = rhs_nulls.as_ref().unwrap();
+        // with nulls, we need to compare item by item whenever it is not null
+        (0..len).all(|i| {
+            let lhs_pos = lhs_start + i;
+            let rhs_pos = rhs_start + i;
+            let lhs_is_null = !lhs_bitmap.get_bit(lhs_pos);
+            let rhs_is_null = !rhs_bitmap.get_bit(rhs_pos);
+
+            lhs_is_null
+                || (lhs_is_null == rhs_is_null)
+                    && equal_len(lhs_values, rhs_values, lhs_pos, rhs_pos, 1)
+        })
+    }
+}
