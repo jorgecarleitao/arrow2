@@ -12,4 +12,6 @@ pub trait Array: std::fmt::Debug + Send + Sync {
     fn is_null(&self, index: usize) -> bool;
 }
 
+mod list;
 mod primitive;
+mod specification;

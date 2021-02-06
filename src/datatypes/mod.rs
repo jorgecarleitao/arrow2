@@ -3,7 +3,7 @@ mod primitive;
 
 use serde_derive::{Deserialize, Serialize};
 
-use field::Field;
+pub use field::Field;
 
 /// The set of datatypes that are supported by this implementation of Apache Arrow.
 ///
