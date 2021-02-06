@@ -1,5 +1,4 @@
 mod field;
-mod primitive;
 
 use serde_derive::{Deserialize, Serialize};
 
@@ -134,5 +133,3 @@ pub enum IntervalUnit {
     /// stored as 2 contiguous 32-bit integers (8-bytes in total).
     DayTime,
 }
-
-pub use primitive::PrimitiveType;

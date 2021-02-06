@@ -14,5 +14,6 @@ pub trait Array: std::fmt::Debug + Send + Sync {
 
 mod list;
 mod binary;
+mod fixed_binary;
 mod primitive;
 mod specification;
