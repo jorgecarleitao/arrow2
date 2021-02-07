@@ -19,6 +19,10 @@ pub struct Bitmap {
 }
 
 impl Bitmap {
+    pub fn new() -> Self {
+        MutableBitmap::new().into()
+    }
+
     #[inline]
     pub fn len(&self) -> usize {
         self.length
@@ -78,6 +82,14 @@ pub struct MutableBitmap {
 }
 
 impl MutableBitmap {
+    #[inline]
+    pub fn new() -> Self {
+        Self {
+            buffer: MutableBuffer::new(),
+            length: 0,
+        }
+    }
+
     #[inline]
     pub fn with_capacity(capacity: usize) -> Self {
         Self {

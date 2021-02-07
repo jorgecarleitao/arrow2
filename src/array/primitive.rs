@@ -20,6 +20,10 @@ pub struct PrimitiveArray<T: NativeType> {
 }
 
 impl<T: NativeType> PrimitiveArray<T> {
+    pub fn new_empty(data_type: DataType) -> Self {
+        Self::from_data(data_type, Buffer::new(), None)
+    }
+
     pub fn from_data(data_type: DataType, values: Buffer<T>, validity: Option<Bitmap>) -> Self {
         Self {
             data_type,

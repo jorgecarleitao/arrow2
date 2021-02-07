@@ -143,3 +143,29 @@ pub enum IntervalUnit {
     /// stored as 2 contiguous 32-bit integers (8-bytes in total).
     DayTime,
 }
+
+impl DataType {
+    /// Compares the datatype with another, ignoring nested field names
+    /// and metadata.
+    pub(crate) fn equals_datatype(&self, other: &DataType) -> bool {
+        match (&self, other) {
+            (DataType::List(a), DataType::List(b))
+            | (DataType::LargeList(a), DataType::LargeList(b)) => {
+                a.is_nullable() == b.is_nullable() && a.data_type().equals_datatype(b.data_type())
+            }
+            (DataType::FixedSizeList(a, a_size), DataType::FixedSizeList(b, b_size)) => {
+                a_size == b_size
+                    && a.is_nullable() == b.is_nullable()
+                    && a.data_type().equals_datatype(b.data_type())
+            }
+            (DataType::Struct(a), DataType::Struct(b)) => {
+                a.len() == b.len()
+                    && a.iter().zip(b).all(|(a, b)| {
+                        a.is_nullable() == b.is_nullable()
+                            && a.data_type().equals_datatype(b.data_type())
+                    })
+            }
+            _ => self == other,
+        }
+    }
+}

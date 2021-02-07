@@ -17,6 +17,10 @@ pub struct BooleanArray {
 }
 
 impl BooleanArray {
+    pub fn new_empty() -> Self {
+        Self::from_data(Bitmap::new(), None)
+    }
+
     pub fn from_data(values: Bitmap, validity: Option<Bitmap>) -> Self {
         Self {
             data_type: DataType::Boolean,

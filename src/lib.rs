@@ -9,3 +9,5 @@ pub mod compute;
 mod error;
 
 mod ffi;
+
+pub mod record_batch;

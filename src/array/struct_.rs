@@ -39,6 +39,11 @@ impl StructArray {
             validity,
         }
     }
+
+    #[inline]
+    pub fn values(&self) -> &[Arc<dyn Array>] {
+        &self.values
+    }
 }
 
 impl Array for StructArray {
