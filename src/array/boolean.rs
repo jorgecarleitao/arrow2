@@ -57,6 +57,10 @@ impl Array for BooleanArray {
     fn nulls(&self) -> &Option<Bitmap> {
         &self.validity
     }
+
+    fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
+        Box::new(self.slice(offset, length))
+    }
 }
 
 impl<P: AsRef<[Option<bool>]>> From<P> for BooleanArray {

@@ -23,6 +23,8 @@ pub trait Array: std::fmt::Debug + Send + Sync {
             .map(|x| !x.get_bit(i))
             .unwrap_or(false)
     }
+
+    fn slice(&self, offset: usize, length: usize) -> Box<dyn Array>;
 }
 
 mod binary;

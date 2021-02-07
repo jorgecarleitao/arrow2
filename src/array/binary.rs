@@ -28,6 +28,16 @@ impl<O: Offset> BinaryArray<O> {
             validity,
         }
     }
+
+    pub fn slice(&self, offset: usize, length: usize) -> Self {
+        let validity = self.validity.as_ref().map(|x| x.slice(offset, length));
+        Self {
+            data_type: self.data_type.clone(),
+            offsets: self.offsets.slice(offset, length),
+            values: self.values.clone(),
+            validity,
+        }
+    }
 }
 
 impl<O: Offset> Array for BinaryArray<O> {
@@ -48,5 +58,9 @@ impl<O: Offset> Array for BinaryArray<O> {
 
     fn nulls(&self) -> &Option<Bitmap> {
         &self.validity
+    }
+
+    fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
+        Box::new(self.slice(offset, length))
     }
 }

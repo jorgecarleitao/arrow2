@@ -24,6 +24,18 @@ impl FixedSizedBinaryArray {
             validity,
         }
     }
+
+    pub fn slice(&self, offset: usize, length: usize) -> Self {
+        let validity = self.validity.as_ref().map(|x| x.slice(offset, length));
+        let offset = offset * self.size as usize;
+        let length = offset * self.size as usize;
+        Self {
+            data_type: self.data_type.clone(),
+            size: self.size,
+            values: self.values.slice(offset, length),
+            validity,
+        }
+    }
 }
 
 impl Array for FixedSizedBinaryArray {
@@ -44,5 +56,9 @@ impl Array for FixedSizedBinaryArray {
 
     fn nulls(&self) -> &Option<Bitmap> {
         &self.validity
+    }
+
+    fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
+        Box::new(self.slice(offset, length))
     }
 }

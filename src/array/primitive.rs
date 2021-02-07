@@ -55,6 +55,10 @@ impl<T: NativeType> Array for PrimitiveArray<T> {
     fn nulls(&self) -> &Option<Bitmap> {
         &self.validity
     }
+
+    fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
+        Box::new(self.slice(offset, length))
+    }
 }
 
 impl<T: NativeType, P: AsRef<[Option<T>]>> From<(DataType, P)> for PrimitiveArray<T> {

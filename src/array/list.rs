@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{
     buffer::{Bitmap, Buffer},
     datatypes::{DataType, Field},
@@ -12,14 +14,14 @@ use super::{
 pub struct ListArray<O: Offset> {
     data_type: DataType,
     offsets: Buffer<O>,
-    values: Box<dyn Array>,
+    values: Arc<dyn Array>,
     validity: Option<Bitmap>,
 }
 
 impl<O: Offset> ListArray<O> {
     pub fn from_data(
         offsets: Buffer<O>,
-        values: Box<dyn Array>,
+        values: Arc<dyn Array>,
         validity: Option<Bitmap>,
         field_options: Option<(&str, bool)>,
     ) -> Self {
@@ -46,6 +48,37 @@ impl<O: Offset> ListArray<O> {
             validity,
         }
     }
+
+    /// Returns the element at index `i` as &str
+    pub fn value(&self, i: usize) -> Box<dyn Array> {
+        let offsets = self.offsets.as_slice();
+        let offset = offsets[i];
+        let offset_1 = offsets[i + 1];
+        let length = (offset_1 - offset).to_usize().unwrap();
+
+        self.values.slice(offset.to_usize().unwrap(), length)
+    }
+
+    /// Returns the element at index `i` as &str
+    /// # Safety
+    /// Assumes that the `i < self.len`.
+    pub unsafe fn value_unchecked(&self, i: usize) -> Box<dyn Array> {
+        let offset = *self.offsets.as_ptr().add(i);
+        let offset_1 = *self.offsets.as_ptr().add(i + 1);
+        let length = (offset_1 - offset).to_usize().unwrap();
+
+        self.values.slice(offset.to_usize().unwrap(), length)
+    }
+
+    pub fn slice(&self, offset: usize, length: usize) -> Self {
+        let validity = self.validity.as_ref().map(|x| x.slice(offset, length));
+        Self {
+            data_type: self.data_type.clone(),
+            offsets: self.offsets.slice(offset, length),
+            values: self.values.clone(),
+            validity,
+        }
+    }
 }
 
 impl<O: Offset> Array for ListArray<O> {
@@ -68,6 +101,10 @@ impl<O: Offset> Array for ListArray<O> {
     fn nulls(&self) -> &Option<Bitmap> {
         &self.validity
     }
+
+    fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
+        Box::new(self.slice(offset, length))
+    }
 }
 
 #[cfg(test)]
@@ -81,6 +118,6 @@ mod tests {
         let values = Buffer::from([1, 2, 3, 4, 5]);
         let values = PrimitiveArray::<i32>::from_data(DataType::Int32, values, None);
 
-        ListArray::<i32>::from_data(Buffer::from([0, 2, 2, 3, 5]), Box::new(values), None, None);
+        ListArray::<i32>::from_data(Buffer::from([0, 2, 2, 3, 5]), Arc::new(values), None, None);
     }
 }
