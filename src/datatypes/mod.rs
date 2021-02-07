@@ -1,11 +1,12 @@
 mod field;
+mod schema;
 mod primitive;
+mod json;
 
 pub use primitive::*;
 
-use serde_derive::{Deserialize, Serialize};
-
 pub use field::Field;
+pub use schema::Schema;
 
 /// The set of datatypes that are supported by this implementation of Apache Arrow.
 ///
@@ -22,7 +23,7 @@ pub use field::Field;
 /// Nested types can themselves be nested within other arrays.
 /// For more information on these types please see
 /// [the physical memory layout of Apache Arrow](https://arrow.apache.org/docs/format/Columnar.html#physical-memory-layout).
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum DataType {
     /// Null type
     Null,
@@ -114,8 +115,14 @@ pub enum DataType {
     Decimal(usize, usize),
 }
 
+impl std::fmt::Display for DataType {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
 /// An absolute length of time in seconds, milliseconds, microseconds or nanoseconds.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum TimeUnit {
     /// Time in seconds.
     Second,
@@ -128,7 +135,7 @@ pub enum TimeUnit {
 }
 
 /// YEAR_MONTH or DAY_TIME interval in SQL style.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum IntervalUnit {
     /// Indicates the number of elapsed whole months, stored as 4-byte integers.
     YearMonth,
