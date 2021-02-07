@@ -6,6 +6,7 @@ use crate::{
 };
 
 use super::{
+    ffi::ToFFI,
     specification::{check_offsets, Offset},
     Array,
 };
@@ -16,6 +17,7 @@ pub struct ListArray<O: Offset> {
     offsets: Buffer<O>,
     values: Arc<dyn Array>,
     validity: Option<Bitmap>,
+    offset: usize,
 }
 
 impl<O: Offset> ListArray<O> {
@@ -46,6 +48,7 @@ impl<O: Offset> ListArray<O> {
             offsets,
             values,
             validity,
+            offset: 0,
         }
     }
 
@@ -71,12 +74,13 @@ impl<O: Offset> ListArray<O> {
     }
 
     pub fn slice(&self, offset: usize, length: usize) -> Self {
-        let validity = self.validity.as_ref().map(|x| x.slice(offset, length));
+        let validity = self.validity.clone().map(|x| x.slice(offset, length));
         Self {
             data_type: self.data_type.clone(),
-            offsets: self.offsets.slice(offset, length),
+            offsets: self.offsets.clone().slice(offset, length),
             values: self.values.clone(),
             validity,
+            offset: self.offset + offset,
         }
     }
 }
@@ -104,6 +108,24 @@ impl<O: Offset> Array for ListArray<O> {
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+}
+
+unsafe impl<O: Offset> ToFFI for ListArray<O> {
+    fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
+        unsafe {
+            [
+                self.validity.as_ref().map(|x| x.as_ptr()),
+                Some(std::ptr::NonNull::new_unchecked(
+                    self.offsets.as_ptr() as *mut u8
+                )),
+                None,
+            ]
+        }
+    }
+
+    fn offset(&self) -> usize {
+        self.offset
     }
 }
 

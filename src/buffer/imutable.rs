@@ -18,7 +18,12 @@
 //! This module contains two main structs: [Buffer] and [MutableBuffer]. A buffer represents
 //! a contiguous memory region that can be shared via `offsets`.
 
-use super::{bytes::Bytes, types::NativeType};
+use crate::ffi;
+
+use super::{
+    bytes::{Bytes, Deallocation},
+    types::NativeType,
+};
 
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -75,22 +80,17 @@ impl<T: NativeType> Buffer<T> {
     /// Doing so allows the same memory region to be shared between buffers.
     /// # Panics
     /// Panics iff `offset` is larger than `len`.
-    pub fn slice(&self, offset: usize, length: usize) -> Self {
+    pub fn slice(mut self, offset: usize, length: usize) -> Self {
         assert!(
             offset + length <= self.len(),
             "the offset of the new Buffer cannot exceed the existing length"
         );
-        Self {
-            data: self.data.clone(),
-            offset: self.offset + offset,
-            length,
-        }
+        self.offset += offset;
+        self.length = length;
+        self
     }
 
     /// Returns a pointer to the start of this buffer.
-    ///
-    /// Note that this should be used cautiously, and the returned pointer should not be
-    /// stored anywhere, to avoid dangling pointers.
     pub fn as_ptr(&self) -> *const T {
         unsafe { self.data.ptr().as_ptr().add(self.offset) }
     }
@@ -106,5 +106,37 @@ impl<T: NativeType, U: AsRef<[T]>> From<U> for Buffer<T> {
         let mut buffer = MutableBuffer::with_capacity(len);
         buffer.extend_from_slice(slice);
         buffer.into()
+    }
+}
+
+impl<T: NativeType> Buffer<T> {
+    /// Creates a buffer from an existing memory region (must already be byte-aligned), this
+    /// `Buffer` **does not** free this piece of memory when dropped.
+    ///
+    /// # Arguments
+    ///
+    /// * `ptr` - Pointer to raw parts
+    /// * `len` - Length of raw parts in **bytes**
+    /// * `data` - An [ffi::FFI_ArrowArray] with the data
+    ///
+    /// # Safety
+    ///
+    /// This function is unsafe as there is no guarantee that the given pointer is valid for `len`
+    /// bytes and that the foreign deallocator frees the region.
+    pub unsafe fn from_unowned(
+        ptr: std::ptr::NonNull<u8>,
+        length: usize,
+        data: Arc<ffi::FFI_ArrowArray>,
+    ) -> Self {
+        // todo: make all kinds of assertions here wrt to alignment, len, etc.
+        let ptr = ptr.as_ptr() as *mut T;
+        let ptr =
+            std::ptr::NonNull::<T>::new(ptr).expect("Can't cast pointer from FFI: it is null");
+        let bytes = Bytes::new(ptr, length, Deallocation::Foreign(data));
+        Self {
+            data: Arc::new(bytes),
+            offset: 0,
+            length,
+        }
     }
 }

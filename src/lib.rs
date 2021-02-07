@@ -7,3 +7,5 @@ pub mod array;
 
 pub mod compute;
 mod error;
+
+mod ffi;

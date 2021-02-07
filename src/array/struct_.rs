@@ -5,7 +5,7 @@ use crate::{
     datatypes::{DataType, Field},
 };
 
-use super::Array;
+use super::{ffi::ToFFI, Array};
 
 #[derive(Debug)]
 pub struct StructArray {
@@ -28,7 +28,7 @@ impl StructArray {
     }
 
     pub fn slice(&self, offset: usize, length: usize) -> Self {
-        let validity = self.validity.as_ref().map(|x| x.slice(offset, length));
+        let validity = self.validity.clone().map(|x| x.slice(offset, length));
         Self {
             data_type: self.data_type.clone(),
             values: self
@@ -64,5 +64,16 @@ impl Array for StructArray {
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+}
+
+unsafe impl ToFFI for StructArray {
+    fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
+        [self.validity.as_ref().map(|x| x.as_ptr()), None, None]
+    }
+
+    fn offset(&self) -> usize {
+        // we do not support offsets in structs. Instead, if an FFI we slice the incoming arrays
+        0
     }
 }

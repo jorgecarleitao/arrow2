@@ -3,7 +3,7 @@ use crate::{
     datatypes::DataType,
 };
 
-use super::Array;
+use super::{ffi::ToFFI, Array};
 
 #[derive(Debug)]
 pub struct FixedSizedBinaryArray {
@@ -11,6 +11,7 @@ pub struct FixedSizedBinaryArray {
     data_type: DataType,
     values: Buffer<u8>,
     validity: Option<Bitmap>,
+    offset: usize,
 }
 
 impl FixedSizedBinaryArray {
@@ -22,18 +23,20 @@ impl FixedSizedBinaryArray {
             data_type: DataType::FixedSizeBinary(size),
             values,
             validity,
+            offset: 0,
         }
     }
 
     pub fn slice(&self, offset: usize, length: usize) -> Self {
-        let validity = self.validity.as_ref().map(|x| x.slice(offset, length));
+        let validity = self.validity.clone().map(|x| x.slice(offset, length));
         let offset = offset * self.size as usize;
         let length = offset * self.size as usize;
         Self {
             data_type: self.data_type.clone(),
             size: self.size,
-            values: self.values.slice(offset, length),
+            values: self.values.clone().slice(offset, length),
             validity,
+            offset: 0,
         }
     }
 }
@@ -60,5 +63,23 @@ impl Array for FixedSizedBinaryArray {
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+}
+
+unsafe impl ToFFI for FixedSizedBinaryArray {
+    fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
+        unsafe {
+            [
+                self.validity.as_ref().map(|x| x.as_ptr()),
+                Some(std::ptr::NonNull::new_unchecked(
+                    self.values.as_ptr() as *mut u8
+                )),
+                None,
+            ]
+        }
+    }
+
+    fn offset(&self) -> usize {
+        self.offset
     }
 }

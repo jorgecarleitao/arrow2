@@ -3,9 +3,10 @@ use std::sync::Arc;
 use crate::{
     bits::{get_bit, null_count, set_bit_raw, unset_bit_raw},
     buffer::bytes::Bytes,
+    ffi,
 };
 
-use super::MutableBuffer;
+use super::{bytes::Deallocation, MutableBuffer};
 
 #[derive(Debug, Clone)]
 pub struct Bitmap {
@@ -51,19 +52,22 @@ impl Bitmap {
     }
 
     #[inline]
-    pub fn slice(&self, offset: usize, length: usize) -> Self {
+    pub fn slice(mut self, offset: usize, length: usize) -> Self {
         let offset = self.offset + offset;
-        Self {
-            bytes: self.bytes.clone(),
-            offset: self.offset + offset,
-            length,
-            null_count: null_count(&self.bytes, offset, length),
-        }
+        self.offset += offset;
+        self.length = length;
+        self.null_count = null_count(&self.bytes, self.offset, self.length);
+        self
     }
 
     #[inline]
     pub fn get_bit(&self, i: usize) -> bool {
         get_bit(&self.bytes, self.offset + i)
+    }
+
+    /// Returns a pointer to the start of this bitmap.
+    pub fn as_ptr(&self) -> std::ptr::NonNull<u8> {
+        self.bytes.ptr()
     }
 }
 
@@ -133,5 +137,36 @@ impl From<MutableBitmap> for Bitmap {
     #[inline]
     fn from(buffer: MutableBitmap) -> Self {
         Bitmap::from_bytes(buffer.buffer.into(), buffer.length)
+    }
+}
+
+impl Bitmap {
+    /// Creates a bitmap from an existing memory region (must already be byte-aligned), this
+    /// `Bitmap` **does not** free this piece of memory when dropped.
+    ///
+    /// # Arguments
+    ///
+    /// * `ptr` - Pointer to raw parts
+    /// * `len` - Length of raw parts in **bytes**
+    /// * `data` - An [ffi::FFI_ArrowArray] with the data
+    ///
+    /// # Safety
+    ///
+    /// This function is unsafe as there is no guarantee that the given pointer is valid for `len`
+    /// bytes and that the foreign deallocator frees the region.
+    pub unsafe fn from_unowned(
+        ptr: std::ptr::NonNull<u8>,
+        length: usize,
+        data: Arc<ffi::FFI_ArrowArray>,
+    ) -> Self {
+        // todo: make all kinds of assertions
+        let bytes = Bytes::new(ptr, length, Deallocation::Foreign(data));
+        let null_count = null_count(&bytes, 0, length);
+        Self {
+            bytes: Arc::new(bytes),
+            offset: 0,
+            length,
+            null_count,
+        }
     }
 }

@@ -2,8 +2,10 @@
 //! how to de-allocate itself, [`Bytes`].
 
 use core::slice;
-use std::ptr::NonNull;
 use std::{fmt::Debug, fmt::Formatter};
+use std::{ptr::NonNull, sync::Arc};
+
+use crate::ffi;
 
 use super::{alloc, types::NativeType};
 
@@ -12,7 +14,7 @@ pub enum Deallocation {
     /// Native deallocation, using Rust deallocator with Arrow-specific memory aligment
     Native(usize),
     // Foreign interface, via a callback
-    //Foreign(Arc<ffi::FFI_ArrowArray>),
+    Foreign(Arc<ffi::FFI_ArrowArray>),
 }
 
 impl Debug for Deallocation {
@@ -20,9 +22,10 @@ impl Debug for Deallocation {
         match self {
             Deallocation::Native(capacity) => {
                 write!(f, "Deallocation::Native {{ capacity: {} }}", capacity)
-            } /*Deallocation::Foreign(_) => {
-                  write!(f, "Deallocation::Foreign {{ capacity: unknown }}")
-              }*/
+            }
+            Deallocation::Foreign(_) => {
+                write!(f, "Deallocation::Foreign {{ capacity: unknown }}")
+            }
         }
     }
 }
@@ -97,7 +100,7 @@ impl<T: NativeType> Drop for Bytes<T> {
                 unsafe { alloc::free_aligned(self.ptr, *capacity) };
             }
             // foreign interface knows how to deallocate itself.
-            //Deallocation::Foreign(_) => (),
+            Deallocation::Foreign(_) => (),
         }
     }
 }

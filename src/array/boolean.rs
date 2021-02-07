@@ -1,15 +1,19 @@
 use crate::{
     buffer::{Bitmap, MutableBitmap},
     datatypes::DataType,
+    ffi::ArrowArray,
 };
 
-use super::Array;
+use super::{ffi::ToFFI, Array, FromFFI};
+
+use crate::error::Result;
 
 #[derive(Debug)]
 pub struct BooleanArray {
     data_type: DataType,
     values: Bitmap,
     validity: Option<Bitmap>,
+    offset: usize,
 }
 
 impl BooleanArray {
@@ -18,15 +22,17 @@ impl BooleanArray {
             data_type: DataType::Boolean,
             values,
             validity,
+            offset: 0,
         }
     }
 
     pub fn slice(&self, offset: usize, length: usize) -> Self {
-        let validity = self.validity.as_ref().map(|x| x.slice(offset, length));
+        let validity = self.validity.clone().map(|x| x.slice(offset, length));
         Self {
             data_type: self.data_type.clone(),
-            values: self.values.slice(offset, length),
+            values: self.values.clone().slice(offset, length),
             validity,
+            offset: self.offset + offset,
         }
     }
 
@@ -60,6 +66,40 @@ impl Array for BooleanArray {
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+}
+
+unsafe impl ToFFI for BooleanArray {
+    fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
+        [
+            self.validity.as_ref().map(|x| x.as_ptr()),
+            Some(self.values.as_ptr()),
+            None,
+        ]
+    }
+
+    fn offset(&self) -> usize {
+        self.offset
+    }
+}
+
+unsafe impl FromFFI for BooleanArray {
+    fn try_from_ffi(data_type: DataType, array: ArrowArray) -> Result<Self> {
+        let length = array.len();
+        let offset = array.offset();
+        let mut validity = array.null_bit_buffer();
+        let mut values = unsafe { array.bitmap(0)? };
+
+        if offset > 0 {
+            values = values.slice(offset, length);
+            validity = validity.map(|x| x.slice(offset, length))
+        }
+        Ok(Self {
+            data_type,
+            values,
+            validity,
+            offset: 0,
+        })
     }
 }
 
