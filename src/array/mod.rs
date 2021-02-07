@@ -35,9 +35,14 @@ mod list;
 mod primitive;
 mod specification;
 mod string;
+mod struct_;
 
 mod equal;
 
+pub use binary::BinaryArray;
+pub use fixed_binary::FixedSizedBinaryArray;
+pub use list::ListArray;
 pub use primitive::PrimitiveArray;
 pub use specification::Offset;
 pub use string::Utf8Array;
+pub use struct_::StructArray;

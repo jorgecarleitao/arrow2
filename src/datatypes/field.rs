@@ -146,8 +146,7 @@ impl Field {
         }
         if from.dict_is_ordered != self.dict_is_ordered {
             return Err(ArrowError::SchemaError(
-                "Fail to merge schema Field due to conflicting dict_is_ordered"
-                    .to_string(),
+                "Fail to merge schema Field due to conflicting dict_is_ordered".to_string(),
             ));
         }
         match &mut self.data_type {
@@ -169,8 +168,7 @@ impl Field {
                 }
                 _ => {
                     return Err(ArrowError::SchemaError(
-                        "Fail to merge schema Field due to conflicting datatype"
-                            .to_string(),
+                        "Fail to merge schema Field due to conflicting datatype".to_string(),
                     ));
                 }
             },
@@ -191,8 +189,7 @@ impl Field {
                 }
                 _ => {
                     return Err(ArrowError::SchemaError(
-                        "Fail to merge schema Field due to conflicting datatype"
-                            .to_string(),
+                        "Fail to merge schema Field due to conflicting datatype".to_string(),
                     ));
                 }
             },
@@ -228,8 +225,7 @@ impl Field {
             | DataType::Decimal(_, _) => {
                 if self.data_type != from.data_type {
                     return Err(ArrowError::SchemaError(
-                        "Fail to merge schema Field due to conflicting datatype"
-                            .to_string(),
+                        "Fail to merge schema Field due to conflicting datatype".to_string(),
                     ));
                 }
             }

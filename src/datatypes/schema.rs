@@ -59,10 +59,7 @@ impl Schema {
     /// let schema = Schema::new_with_metadata(vec![field_a, field_b], metadata);
     /// ```
     #[inline]
-    pub const fn new_with_metadata(
-        fields: Vec<Field>,
-        metadata: HashMap<String, String>,
-    ) -> Self {
+    pub const fn new_with_metadata(fields: Vec<Field>, metadata: HashMap<String, String>) -> Self {
         Self { fields, metadata }
     }
 
@@ -104,8 +101,7 @@ impl Schema {
                     if let Some(old_val) = merged.metadata.get(&key) {
                         if old_val != &value {
                             return Err(ArrowError::SchemaError(
-                                "Fail to merge schema due to conflicting metadata."
-                                    .to_string(),
+                                "Fail to merge schema due to conflicting metadata.".to_string(),
                             ));
                         }
                     }
@@ -163,8 +159,7 @@ impl Schema {
                 return Ok(i);
             }
         }
-        let valid_fields: Vec<String> =
-            self.fields.iter().map(|f| f.name().clone()).collect();
+        let valid_fields: Vec<String> = self.fields.iter().map(|f| f.name().clone()).collect();
         Err(ArrowError::InvalidArgumentError(format!(
             "Unable to get field named \"{}\". Valid fields: {:?}",
             name, valid_fields

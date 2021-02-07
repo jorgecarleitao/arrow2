@@ -1,7 +1,7 @@
 mod field;
-mod schema;
-mod primitive;
 mod json;
+mod primitive;
+mod schema;
 
 pub use primitive::*;
 

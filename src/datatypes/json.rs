@@ -1,7 +1,10 @@
-use std::{collections::{BTreeMap, HashMap}, convert::TryFrom};
+use std::{
+    collections::{BTreeMap, HashMap},
+    convert::TryFrom,
+};
 
 use serde_derive::Deserialize;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
 use crate::error::ArrowError;
 
@@ -223,26 +226,16 @@ impl TryFrom<&Value> for DataType {
                 }
                 Some(s) if s == "duration" => match map.get("unit") {
                     Some(p) if p == "SECOND" => Ok(DataType::Duration(TimeUnit::Second)),
-                    Some(p) if p == "MILLISECOND" => {
-                        Ok(DataType::Duration(TimeUnit::Millisecond))
-                    }
-                    Some(p) if p == "MICROSECOND" => {
-                        Ok(DataType::Duration(TimeUnit::Microsecond))
-                    }
-                    Some(p) if p == "NANOSECOND" => {
-                        Ok(DataType::Duration(TimeUnit::Nanosecond))
-                    }
+                    Some(p) if p == "MILLISECOND" => Ok(DataType::Duration(TimeUnit::Millisecond)),
+                    Some(p) if p == "MICROSECOND" => Ok(DataType::Duration(TimeUnit::Microsecond)),
+                    Some(p) if p == "NANOSECOND" => Ok(DataType::Duration(TimeUnit::Nanosecond)),
                     _ => Err(ArrowError::ParseError(
                         "time unit missing or invalid".to_string(),
                     )),
                 },
                 Some(s) if s == "interval" => match map.get("unit") {
-                    Some(p) if p == "DAY_TIME" => {
-                        Ok(DataType::Interval(IntervalUnit::DayTime))
-                    }
-                    Some(p) if p == "YEAR_MONTH" => {
-                        Ok(DataType::Interval(IntervalUnit::YearMonth))
-                    }
+                    Some(p) if p == "DAY_TIME" => Ok(DataType::Interval(IntervalUnit::DayTime)),
+                    Some(p) if p == "YEAR_MONTH" => Ok(DataType::Interval(IntervalUnit::YearMonth)),
                     _ => Err(ArrowError::ParseError(
                         "interval unit missing or invalid".to_string(),
                     )),
@@ -361,11 +354,8 @@ impl TryFrom<&Value> for Field {
                                             "Field 'metadata' must have exact two entries for each key-value map".to_string(),
                                         ));
                                     }
-                                    if let (Some(k), Some(v)) =
-                                        (map.get("key"), map.get("value"))
-                                    {
-                                        if let (Some(k_str), Some(v_str)) =
-                                            (k.as_str(), v.as_str())
+                                    if let (Some(k), Some(v)) = (map.get("key"), map.get("value")) {
+                                        if let (Some(k_str), Some(v_str)) = (k.as_str(), v.as_str())
                                         {
                                             res.insert(
                                                 k_str.to_string().clone(),
@@ -380,7 +370,8 @@ impl TryFrom<&Value> for Field {
                                 }
                                 _ => {
                                     return Err(ArrowError::ParseError(
-                                        "Field 'metadata' contains non-object key-value pair".to_string(),
+                                        "Field 'metadata' contains non-object key-value pair"
+                                            .to_string(),
                                     ));
                                 }
                             }
@@ -395,9 +386,10 @@ impl TryFrom<&Value> for Field {
                             if let Some(str_value) = v.as_str() {
                                 res.insert(k.clone(), str_value.to_string().clone());
                             } else {
-                                return Err(ArrowError::ParseError(
-                                    format!("Field 'metadata' contains non-string value for key {}", k),
-                                ));
+                                return Err(ArrowError::ParseError(format!(
+                                    "Field 'metadata' contains non-string value for key {}",
+                                    k
+                                )));
                             }
                         }
                         Some(res)
@@ -412,16 +404,15 @@ impl TryFrom<&Value> for Field {
 
                 // if data_type is a struct or list, get its children
                 let data_type = match data_type {
-                    DataType::List(_)
-                    | DataType::LargeList(_)
-                    | DataType::FixedSizeList(_, _) => match map.get("children") {
-                        Some(Value::Array(values)) => {
-                            if values.len() != 1 {
-                                return Err(ArrowError::ParseError(
+                    DataType::List(_) | DataType::LargeList(_) | DataType::FixedSizeList(_, _) => {
+                        match map.get("children") {
+                            Some(Value::Array(values)) => {
+                                if values.len() != 1 {
+                                    return Err(ArrowError::ParseError(
                                     "Field 'children' must have one element for a list data type".to_string(),
                                 ));
-                            }
-                            match data_type {
+                                }
+                                match data_type {
                                     DataType::List(_) => {
                                         DataType::List(Box::new(Self::try_from(&values[0])?))
                                     }
@@ -436,18 +427,19 @@ impl TryFrom<&Value> for Field {
                                         "Data type should be a list, largelist or fixedsizelist"
                                     ),
                                 }
+                            }
+                            Some(_) => {
+                                return Err(ArrowError::ParseError(
+                                    "Field 'children' must be an array".to_string(),
+                                ))
+                            }
+                            None => {
+                                return Err(ArrowError::ParseError(
+                                    "Field missing 'children' attribute".to_string(),
+                                ));
+                            }
                         }
-                        Some(_) => {
-                            return Err(ArrowError::ParseError(
-                                "Field 'children' must be an array".to_string(),
-                            ))
-                        }
-                        None => {
-                            return Err(ArrowError::ParseError(
-                                "Field missing 'children' attribute".to_string(),
-                            ));
-                        }
-                    },
+                    }
                     DataType::Struct(mut fields) => match map.get("children") {
                         Some(Value::Array(values)) => {
                             let struct_fields: Result<Vec<Field>, _> =
@@ -539,11 +531,9 @@ fn from_metadata(json: &Value) -> Result<HashMap<String, String>, ArrowError> {
     match json {
         Value::Array(_) => {
             let mut hashmap = HashMap::new();
-            let values: Vec<MetadataKeyValue> = serde_json::from_value(json.clone())
-                .map_err(|_| {
-                    ArrowError::JsonError(
-                        "Unable to parse object into key-value pair".to_string(),
-                    )
+            let values: Vec<MetadataKeyValue> =
+                serde_json::from_value(json.clone()).map_err(|_| {
+                    ArrowError::JsonError("Unable to parse object into key-value pair".to_string())
                 })?;
             for meta in values {
                 hashmap.insert(meta.key.clone(), meta.value);
