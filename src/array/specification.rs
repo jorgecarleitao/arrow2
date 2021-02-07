@@ -1,6 +1,38 @@
-use crate::buffer::Buffer;
+use std::convert::TryFrom;
 
-use super::list::Offset;
+use num::Num;
+
+use crate::buffer::{Buffer, NativeType};
+
+pub unsafe trait Offset: NativeType + Num + Ord + std::ops::AddAssign {
+    fn is_large() -> bool;
+
+    fn to_usize(&self) -> Option<usize>;
+}
+
+unsafe impl Offset for i32 {
+    #[inline]
+    fn is_large() -> bool {
+        false
+    }
+
+    #[inline]
+    fn to_usize(&self) -> Option<usize> {
+        Some(*self as usize)
+    }
+}
+
+unsafe impl Offset for i64 {
+    #[inline]
+    fn is_large() -> bool {
+        true
+    }
+
+    #[inline]
+    fn to_usize(&self) -> Option<usize> {
+        usize::try_from(*self).ok()
+    }
+}
 
 #[inline]
 pub fn check_offsets<T: Offset>(offsets: &Buffer<T>, values_len: usize) -> usize {

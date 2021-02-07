@@ -19,6 +19,16 @@ pub struct Bitmap {
 
 impl Bitmap {
     #[inline]
+    pub fn len(&self) -> usize {
+        self.length
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    #[inline]
     pub fn from_bytes(bytes: Bytes<u8>, length: usize) -> Self {
         assert!(length <= bytes.len() * 8);
         let null_count = null_count(&bytes, 0, length);
@@ -74,7 +84,8 @@ impl MutableBitmap {
 
     #[inline]
     pub fn push(&mut self, value: bool) {
-        self.buffer.resize((self.length + 1).saturating_add(7) / 8, 0);
+        self.buffer
+            .resize((self.length + 1).saturating_add(7) / 8, 0);
         if value {
             unsafe { set_bit_raw(self.buffer.as_mut_ptr(), self.length) };
         } else {
@@ -97,6 +108,16 @@ impl MutableBitmap {
     #[inline]
     pub fn null_count(&self) -> usize {
         null_count(&self.buffer, 0, self.length)
+    }
+
+    /// Returns the number of bytes in the buffer
+    pub fn len(&self) -> usize {
+        self.length
+    }
+
+    /// Returns whether the buffer is empty.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     /// # Safety

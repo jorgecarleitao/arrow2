@@ -3,7 +3,7 @@ use crate::{
     datatypes::DataType,
 };
 
-use super::{list::Offset, specification::check_offsets, Array};
+use super::{specification::check_offsets, specification::Offset, Array};
 
 #[derive(Debug)]
 pub struct BinaryArray<O: Offset> {

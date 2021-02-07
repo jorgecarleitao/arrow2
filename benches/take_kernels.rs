@@ -22,8 +22,8 @@ use criterion::Criterion;
 use rand::distributions::{Distribution, Standard};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
-use arrow2::{compute::take, datatypes::Int32Type};
 use arrow2::{array::*, datatypes::DataType, datatypes::PrimitiveType};
+use arrow2::{compute::take, datatypes::Int32Type};
 
 /// Returns fixed seedable RNG
 pub fn seedable_rng() -> StdRng {

@@ -246,10 +246,9 @@ fn take_primitive<T: NativeType, I: Offset>(
     ))
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::datatypes::{PrimitiveType, Int8Type};
+    use crate::datatypes::{Int8Type, PrimitiveType};
 
     use super::*;
 
@@ -260,7 +259,8 @@ mod tests {
         expected_data: &[Option<T::Native>],
     ) -> Result<()>
     where
-        T: PrimitiveType {
+        T: PrimitiveType,
+    {
         let output = PrimitiveArray::<T::Native>::from((T::DATA_TYPE, data));
         let expected = PrimitiveArray::<T::Native>::from((T::DATA_TYPE, expected_data));
         let output = take(&output, index, options)?;
@@ -282,7 +282,10 @@ mod tests {
 
     #[test]
     fn test_take_primitive_non_null_values() {
-        let index = PrimitiveArray::<i32>::from((DataType::Int32, &[Some(3), None, Some(1), Some(3), Some(2)]));
+        let index = PrimitiveArray::<i32>::from((
+            DataType::Int32,
+            &[Some(3), None, Some(1), Some(3), Some(2)],
+        ));
         test_take_primitive_arrays::<Int8Type>(
             &[Some(0), Some(1), Some(2), Some(3), Some(4)],
             &index,

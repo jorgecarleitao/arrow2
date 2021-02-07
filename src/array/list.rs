@@ -1,41 +1,12 @@
-use std::convert::TryFrom;
-
 use crate::{
-    buffer::{types::NativeType, Bitmap, Buffer},
+    buffer::{Bitmap, Buffer},
     datatypes::{DataType, Field},
 };
 
-use super::{specification::check_offsets, Array};
-
-pub unsafe trait Offset: NativeType {
-    fn is_large() -> bool;
-
-    fn to_usize(&self) -> Option<usize>;
-}
-
-unsafe impl Offset for i32 {
-    #[inline]
-    fn is_large() -> bool {
-        false
-    }
-
-    #[inline]
-    fn to_usize(&self) -> Option<usize> {
-        Some(*self as usize)
-    }
-}
-
-unsafe impl Offset for i64 {
-    #[inline]
-    fn is_large() -> bool {
-        true
-    }
-
-    #[inline]
-    fn to_usize(&self) -> Option<usize> {
-        usize::try_from(*self).ok()
-    }
-}
+use super::{
+    specification::{check_offsets, Offset},
+    Array,
+};
 
 #[derive(Debug)]
 pub struct ListArray<O: Offset> {

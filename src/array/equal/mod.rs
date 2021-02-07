@@ -1,6 +1,9 @@
 use std::unimplemented;
 
-use crate::{buffer::{Bitmap, NativeType}, datatypes::{DataType, IntervalUnit}};
+use crate::{
+    buffer::{Bitmap, NativeType},
+    datatypes::{DataType, IntervalUnit},
+};
 
 use super::{primitive::PrimitiveArray, Array};
 

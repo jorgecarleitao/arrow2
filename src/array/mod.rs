@@ -15,16 +15,27 @@ pub trait Array: std::fmt::Debug + Send + Sync {
     fn null_count(&self) -> usize {
         self.nulls().as_ref().map(|x| x.null_count()).unwrap_or(0)
     }
+
+    #[inline]
+    fn is_null(&self, i: usize) -> bool {
+        self.nulls()
+            .as_ref()
+            .map(|x| !x.get_bit(i))
+            .unwrap_or(false)
+    }
 }
 
 mod binary;
+mod boolean;
 mod dictionary;
 mod fixed_binary;
 mod list;
 mod primitive;
 mod specification;
+mod string;
 
 mod equal;
 
-pub use list::Offset;
 pub use primitive::PrimitiveArray;
+pub use specification::Offset;
+pub use string::Utf8Array;
