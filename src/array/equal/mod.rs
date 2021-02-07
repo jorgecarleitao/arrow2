@@ -10,12 +10,6 @@ use super::{primitive::PrimitiveArray, Array};
 mod primitive;
 mod utils;
 
-/*impl<T: Array> PartialEq<T> for dyn Array {
-    fn eq(&self, other: &T) -> bool {
-        equal(self, other)
-    }
-}*/
-
 impl PartialEq for &dyn Array {
     fn eq(&self, other: &Self) -> bool {
         equal(*self, *other)
