@@ -54,7 +54,7 @@ impl<T: NativeType> MutableBuffer<T> {
     /// Allocate a new [MutableBuffer] with initial capacity to be at least `capacity`.
     #[inline]
     pub fn with_capacity(capacity: usize) -> Self {
-        let capacity = util::round_upto_multiple_of_64(capacity / size_of::<T>());
+        let capacity = capacity_multiple_of_64::<T>(capacity);
         let ptr = alloc::allocate_aligned(capacity);
         Self {
             ptr,
