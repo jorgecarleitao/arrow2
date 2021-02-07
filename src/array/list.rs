@@ -19,6 +19,7 @@ unsafe impl Offset for i32 {
         false
     }
 
+    #[inline]
     fn to_usize(&self) -> Option<usize> {
         Some(*self as usize)
     }
@@ -30,6 +31,7 @@ unsafe impl Offset for i64 {
         true
     }
 
+    #[inline]
     fn to_usize(&self) -> Option<usize> {
         usize::try_from(*self).ok()
     }

@@ -26,4 +26,5 @@ mod specification;
 
 mod equal;
 
+pub use list::Offset;
 pub use primitive::PrimitiveArray;

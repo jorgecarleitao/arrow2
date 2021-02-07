@@ -1,14 +1,29 @@
 use std::unimplemented;
 
-use crate::{
-    buffer::Bitmap,
-    datatypes::{DataType, IntervalUnit},
-};
+use crate::{buffer::{Bitmap, NativeType}, datatypes::{DataType, IntervalUnit}};
 
 use super::{primitive::PrimitiveArray, Array};
 
 mod primitive;
 mod utils;
+
+/*impl<T: Array> PartialEq<T> for dyn Array {
+    fn eq(&self, other: &T) -> bool {
+        equal(self, other)
+    }
+}*/
+
+impl PartialEq for &dyn Array {
+    fn eq(&self, other: &Self) -> bool {
+        equal(*self, *other)
+    }
+}
+
+impl<T: NativeType> PartialEq<&dyn Array> for PrimitiveArray<T> {
+    fn eq(&self, other: &&dyn Array) -> bool {
+        equal(self, *other)
+    }
+}
 
 /// Compares the values of two [ArrayData] starting at `lhs_start` and `rhs_start` respectively
 /// for `len` slots. The null buffers `lhs_nulls` and `rhs_nulls` inherit parent nullability.

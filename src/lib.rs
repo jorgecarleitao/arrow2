@@ -1,6 +1,9 @@
 pub mod buffer;
 
 pub(crate) mod bits;
-mod datatypes;
+pub mod datatypes;
 
 pub mod array;
+
+pub mod compute;
+mod error;

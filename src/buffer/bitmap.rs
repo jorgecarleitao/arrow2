@@ -67,15 +67,13 @@ impl MutableBitmap {
     #[inline]
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
-            buffer: MutableBuffer::with_capacity(capacity.saturating_add(7) / 8),
+            buffer: MutableBuffer::from_len_zeroed(capacity.saturating_add(7) / 8),
             length: 0,
         }
     }
 
     #[inline]
     pub fn push(&mut self, value: bool) {
-        //let additional =
-        //    ((self.length + 1).saturating_add(7) / 8) - (self.length.saturating_add(7) / 8);
         self.buffer.resize((self.length + 1).saturating_add(7) / 8, 0);
         if value {
             unsafe { set_bit_raw(self.buffer.as_mut_ptr(), self.length) };

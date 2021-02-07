@@ -353,7 +353,6 @@ impl<T: NativeType> MutableBuffer<T> {
 
         let mut dst = buffer.ptr.as_ptr();
         for item in iterator {
-            // note how there is no reserve here (compared with `extend_from_iter`)
             std::ptr::write(dst, item?);
             dst = dst.add(1);
         }
@@ -393,12 +392,14 @@ impl<T: NativeType> FromIterator<T> for MutableBuffer<T> {
 impl<T: NativeType> std::ops::Deref for MutableBuffer<T> {
     type Target = [T];
 
+    #[inline]
     fn deref(&self) -> &[T] {
         unsafe { std::slice::from_raw_parts(self.as_ptr(), self.len) }
     }
 }
 
 impl<T: NativeType> std::ops::DerefMut for MutableBuffer<T> {
+    #[inline]
     fn deref_mut(&mut self) -> &mut [T] {
         unsafe { std::slice::from_raw_parts_mut(self.as_mut_ptr(), self.len) }
     }

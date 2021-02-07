@@ -13,7 +13,7 @@ pub struct BitChunks<'a> {
 
 impl<'a> BitChunks<'a> {
     pub fn new(buffer: &'a [u8], offset: usize, len: usize) -> Self {
-        assert!(bytes_for(offset + len) <= buffer.len() * 8);
+        assert!(offset + len <= buffer.len() * 8);
 
         let byte_offset = offset / 8;
         let bit_offset = offset % 8;
