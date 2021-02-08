@@ -8,6 +8,8 @@ pub unsafe trait Offset: NativeType + Num + Ord + std::ops::AddAssign {
     fn is_large() -> bool;
 
     fn to_usize(&self) -> Option<usize>;
+
+    fn from_usize(value: usize) -> Option<Self>;
 }
 
 unsafe impl Offset for i32 {
@@ -20,6 +22,11 @@ unsafe impl Offset for i32 {
     fn to_usize(&self) -> Option<usize> {
         Some(*self as usize)
     }
+
+    #[inline]
+    fn from_usize(value: usize) -> Option<Self> {
+        Self::try_from(value).ok()
+    }
 }
 
 unsafe impl Offset for i64 {
@@ -31,6 +38,11 @@ unsafe impl Offset for i64 {
     #[inline]
     fn to_usize(&self) -> Option<usize> {
         usize::try_from(*self).ok()
+    }
+
+    #[inline]
+    fn from_usize(value: usize) -> Option<Self> {
+        Some(value as i64)
     }
 }
 
