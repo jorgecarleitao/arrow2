@@ -232,8 +232,8 @@ impl<T: NativeType> MutableBuffer<T> {
     /// Safety
     /// Caller must ensure that the capacity()-len()>=size_of<T>()
     #[inline]
-    unsafe fn push_unchecked(&mut self, item: T) {
-        let dst = self.ptr.as_ptr().add(self.len) as *mut T;
+    pub(crate) unsafe fn push_unchecked(&mut self, item: T) {
+        let dst = self.ptr.as_ptr().add(self.len);
         std::ptr::write(dst, item);
         self.len += 1;
     }
@@ -451,61 +451,6 @@ impl<T: NativeType> From<MutableBuffer<T>> for Bytes<T> {
             )
         };
         std::mem::forget(buffer);
-        result
-    }
-}
-
-/// Creating a `MutableBuffer` instance by setting bits according to the boolean values
-impl std::iter::FromIterator<bool> for MutableBuffer<u8> {
-    fn from_iter<I>(iter: I) -> Self
-    where
-        I: IntoIterator<Item = bool>,
-    {
-        let mut iterator = iter.into_iter();
-        let mut result = {
-            let byte_capacity: usize = iterator.size_hint().0.saturating_add(7) / 8;
-            MutableBuffer::with_capacity(byte_capacity)
-        };
-
-        loop {
-            let mut exhausted = false;
-            let mut byte_accum: u8 = 0;
-            let mut mask: u8 = 1;
-
-            //collect (up to) 8 bits into a byte
-            while mask != 0 {
-                if let Some(value) = iterator.next() {
-                    byte_accum |= match value {
-                        true => mask,
-                        false => 0,
-                    };
-                    mask <<= 1;
-                } else {
-                    exhausted = true;
-                    break;
-                }
-            }
-
-            // break if the iterator was exhausted before it provided a bool for this byte
-            if exhausted && mask == 1 {
-                break;
-            }
-
-            //ensure we have capacity to write the byte
-            if result.len() == result.capacity() {
-                //no capacity for new byte, allocate 1 byte more (plus however many more the iterator advertises)
-                let additional_byte_capacity = 1usize.saturating_add(
-                    iterator.size_hint().0.saturating_add(7) / 8, //convert bit count to byte count, rounding up
-                );
-                result.reserve(additional_byte_capacity)
-            }
-
-            // Soundness: capacity was allocated above
-            unsafe { result.push_unchecked(byte_accum) };
-            if exhausted {
-                break;
-            }
-        }
         result
     }
 }

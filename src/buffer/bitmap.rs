@@ -152,6 +152,63 @@ impl From<MutableBitmap> for Bitmap {
     }
 }
 
+impl std::iter::FromIterator<bool> for MutableBitmap {
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = bool>,
+    {
+        let mut iterator = iter.into_iter();
+        let mut buffer = {
+            let byte_capacity: usize = iterator.size_hint().0.saturating_add(7) / 8;
+            MutableBuffer::with_capacity(byte_capacity)
+        };
+
+        let mut length = 0;
+
+        loop {
+            let mut exhausted = false;
+            let mut byte_accum: u8 = 0;
+            let mut mask: u8 = 1;
+
+            //collect (up to) 8 bits into a byte
+            while mask != 0 {
+                if let Some(value) = iterator.next() {
+                    length += 1;
+                    byte_accum |= match value {
+                        true => mask,
+                        false => 0,
+                    };
+                    mask <<= 1;
+                } else {
+                    exhausted = true;
+                    break;
+                }
+            }
+
+            // break if the iterator was exhausted before it provided a bool for this byte
+            if exhausted && mask == 1 {
+                break;
+            }
+
+            //ensure we have capacity to write the byte
+            if buffer.len() == buffer.capacity() {
+                //no capacity for new byte, allocate 1 byte more (plus however many more the iterator advertises)
+                let additional_byte_capacity = 1usize.saturating_add(
+                    iterator.size_hint().0.saturating_add(7) / 8, //convert bit count to byte count, rounding up
+                );
+                buffer.reserve(additional_byte_capacity)
+            }
+
+            // Soundness: capacity was allocated above
+            unsafe { buffer.push_unchecked(byte_accum) };
+            if exhausted {
+                break;
+            }
+        }
+        Self { buffer, length }
+    }
+}
+
 impl Bitmap {
     /// Creates a bitmap from an existing memory region (must already be byte-aligned), this
     /// `Bitmap` **does not** free this piece of memory when dropped.
