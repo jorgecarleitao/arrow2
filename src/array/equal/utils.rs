@@ -73,3 +73,11 @@ pub(super) fn equal_len<T: PartialEq>(
 ) -> bool {
     lhs_values[lhs_start..(lhs_start + len)] == rhs_values[rhs_start..(rhs_start + len)]
 }
+
+#[inline]
+pub(super) fn count_nulls(nulls: &Option<Bitmap>, offset: usize, length: usize) -> usize {
+    nulls
+        .as_ref()
+        .map(|x| x.null_count_range(offset, length))
+        .unwrap_or(0)
+}

@@ -3,7 +3,7 @@ use crate::{
     buffer::{types::NativeType, Bitmap},
 };
 
-use super::utils::equal_len;
+use super::utils::{count_nulls, equal_len};
 
 pub(super) fn equal<T: NativeType>(
     lhs: &PrimitiveArray<T>,
@@ -17,14 +17,8 @@ pub(super) fn equal<T: NativeType>(
     let lhs_values = &lhs.values();
     let rhs_values = &rhs.values();
 
-    let lhs_null_count = lhs_nulls
-        .as_ref()
-        .map(|x| x.null_count_range(lhs_start, len))
-        .unwrap_or(0);
-    let rhs_null_count = rhs_nulls
-        .as_ref()
-        .map(|x| x.null_count_range(rhs_start, len))
-        .unwrap_or(0);
+    let lhs_null_count = count_nulls(lhs_nulls, lhs_start, len);
+    let rhs_null_count = count_nulls(rhs_nulls, rhs_start, len);
 
     if lhs_null_count == 0 && rhs_null_count == 0 {
         // without nulls, we just need to compare slices

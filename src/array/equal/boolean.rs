@@ -17,7 +17,7 @@
 
 use crate::{array::BooleanArray, buffer::Bitmap};
 
-use super::utils::equal_bits;
+use super::utils::{count_nulls, equal_bits};
 
 pub(super) fn equal(
     lhs: &BooleanArray,
@@ -31,14 +31,8 @@ pub(super) fn equal(
     let lhs_values = lhs.values();
     let rhs_values = rhs.values();
 
-    let lhs_null_count = lhs_nulls
-        .as_ref()
-        .map(|x| x.null_count_range(lhs_start, len))
-        .unwrap_or(0);
-    let rhs_null_count = rhs_nulls
-        .as_ref()
-        .map(|x| x.null_count_range(rhs_start, len))
-        .unwrap_or(0);
+    let lhs_null_count = count_nulls(lhs_nulls, lhs_start, len);
+    let rhs_null_count = count_nulls(rhs_nulls, rhs_start, len);
 
     if lhs_null_count == 0 && rhs_null_count == 0 {
         equal_bits(lhs_values, rhs_values, lhs_start, rhs_start, len)
