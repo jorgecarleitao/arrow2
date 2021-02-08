@@ -30,7 +30,7 @@ pub trait Array: std::fmt::Debug + Send + Sync + ToFFI {
 /// Creates a new empty dynamic array
 pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
     match data_type {
-        DataType::Null => unimplemented!(),
+        DataType::Null => Box::new(NullArray::new_empty()),
         DataType::Boolean => Box::new(BooleanArray::new_empty()),
         DataType::Int8 => Box::new(PrimitiveArray::<i8>::new_empty(data_type)),
         DataType::Int16 => Box::new(PrimitiveArray::<i16>::new_empty(data_type)),
@@ -80,6 +80,7 @@ mod boolean;
 mod dictionary;
 mod fixed_binary;
 mod list;
+mod null;
 mod primitive;
 mod specification;
 mod string;
@@ -93,6 +94,7 @@ pub use boolean::BooleanArray;
 pub use dictionary::{DictionaryArray, DictionaryKey};
 pub use fixed_binary::FixedSizedBinaryArray;
 pub use list::ListArray;
+pub use null::NullArray;
 pub use primitive::PrimitiveArray;
 pub use specification::Offset;
 pub use string::Utf8Array;
