@@ -1,6 +1,4 @@
-use crate::{
-    array::Array,
-};
+use crate::array::Array;
 
 use super::BooleanArray;
 
