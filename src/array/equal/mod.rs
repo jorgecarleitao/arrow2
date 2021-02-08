@@ -5,8 +5,9 @@ use crate::{
     datatypes::{DataType, IntervalUnit},
 };
 
-use super::{primitive::PrimitiveArray, Array};
+use super::{primitive::PrimitiveArray, Array, BooleanArray};
 
+mod boolean;
 mod primitive;
 mod utils;
 
@@ -46,6 +47,11 @@ fn equal_values(
     len: usize,
 ) -> bool {
     match lhs.data_type() {
+        DataType::Boolean => {
+            let lhs = lhs.as_any().downcast_ref::<BooleanArray>().unwrap();
+            let rhs = rhs.as_any().downcast_ref::<BooleanArray>().unwrap();
+            boolean::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+        }
         DataType::UInt8 => {
             let lhs = lhs.as_any().downcast_ref::<PrimitiveArray<u8>>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<PrimitiveArray<u8>>().unwrap();
@@ -132,6 +138,8 @@ pub fn equal(lhs: &dyn Array, rhs: &dyn Array) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use crate::array::BooleanArray;
+
     use super::*;
 
     #[test]
@@ -228,5 +236,55 @@ mod tests {
 
         assert_eq!(equal(lhs, rhs), expected, "\n{:?}\n{:?}", lhs, rhs);
         assert_eq!(equal(rhs, lhs), expected, "\n{:?}\n{:?}", rhs, lhs);
+    }
+
+    #[test]
+    fn test_boolean_equal() {
+        let a = BooleanArray::from_slice([false, false, true]);
+        let b = BooleanArray::from_slice([false, false, true]);
+        test_equal(&a, &b, true);
+
+        let b = BooleanArray::from_slice([false, false, false]);
+        test_equal(&a, &b, false);
+    }
+
+    #[test]
+    fn test_boolean_equal_null() {
+        let a = BooleanArray::from(vec![Some(false), None, None, Some(true)]);
+        let b = BooleanArray::from(vec![Some(false), None, None, Some(true)]);
+        test_equal(&a, &b, true);
+
+        let b = BooleanArray::from(vec![None, None, None, Some(true)]);
+        test_equal(&a, &b, false);
+
+        let b = BooleanArray::from(vec![Some(true), None, None, Some(true)]);
+        test_equal(&a, &b, false);
+    }
+
+    #[test]
+    fn test_boolean_equal_offset() {
+        let a = BooleanArray::from_slice(vec![false, true, false, true, false, false, true]);
+        let b = BooleanArray::from_slice(vec![true, false, false, false, true, false, true, true]);
+        test_equal(&a, &b, false);
+
+        let a_slice = a.slice(2, 3);
+        let b_slice = b.slice(3, 3);
+        test_equal(&a_slice, &b_slice, true);
+
+        let a_slice = a.slice(3, 4);
+        let b_slice = b.slice(4, 4);
+        test_equal(&a_slice, &b_slice, false);
+
+        // Elements fill in `u8`'s exactly.
+        let mut vector = vec![false, false, true, true, true, true, true, true];
+        let a = BooleanArray::from_slice(vector.clone());
+        let b = BooleanArray::from_slice(vector.clone());
+        test_equal(&a, &b, true);
+
+        // Elements fill in `u8`s + suffix bits.
+        vector.push(true);
+        let a = BooleanArray::from_slice(vector.clone());
+        let b = BooleanArray::from_slice(vector);
+        test_equal(&a, &b, true);
     }
 }

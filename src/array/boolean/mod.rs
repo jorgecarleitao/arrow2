@@ -37,10 +37,12 @@ impl BooleanArray {
     }
 
     /// Returns the element at index `i` as &str
-    /// # Safety
-    /// Assumes that the `i < self.len`.
     pub fn value(&self, i: usize) -> bool {
         self.values.get_bit(i)
+    }
+
+    pub fn values(&self) -> &Bitmap {
+        &self.values
     }
 }
 
