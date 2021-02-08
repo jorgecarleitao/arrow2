@@ -106,3 +106,8 @@ pub use struct_::StructArray;
 
 pub use self::ffi::FromFFI;
 use self::ffi::ToFFI;
+
+pub type Float32Array = PrimitiveArray<f32>;
+pub type Float64Array = PrimitiveArray<f64>;
+pub type StringArray = Utf8Array<i32>;
+pub type UInt32Array = PrimitiveArray<u32>;

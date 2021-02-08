@@ -47,11 +47,12 @@ impl<O: Offset> Utf8Array<O> {
     pub unsafe fn value_unchecked(&self, i: usize) -> &str {
         let offset = *self.offsets.as_ptr().add(i);
         let offset_1 = *self.offsets.as_ptr().add(i + 1);
-        let len = (offset_1 - offset).to_usize().unwrap();
-        // sound:
-        let slice =
-            std::slice::from_raw_parts(self.values.as_ptr().add(offset.to_usize().unwrap()), len);
-        std::str::from_utf8_unchecked(slice)
+        let length = (offset_1 - offset).to_usize().unwrap();
+        let offset = offset.to_usize().unwrap();
+
+        let slice = std::slice::from_raw_parts(self.values.as_ptr().add(offset), length);
+        // todo: validate utf8 so that we can use the unsafe version
+        std::str::from_utf8(slice).unwrap()
     }
 
     pub fn slice(&self, offset: usize, length: usize) -> Self {
@@ -63,6 +64,19 @@ impl<O: Offset> Utf8Array<O> {
             validity,
             offset: self.offset + offset,
         }
+    }
+
+    /// Returns the element at index `i` as &str
+    pub fn value(&self, i: usize) -> &str {
+        let offsets = self.offsets.as_slice();
+        let offset = offsets[i];
+        let offset_1 = offsets[i + 1];
+        let length = (offset_1 - offset).to_usize().unwrap();
+        let offset = offset.to_usize().unwrap();
+
+        let slice = &self.values.as_slice()[offset..offset + length];
+        // todo: validate utf8 so that we can use the unsafe version
+        std::str::from_utf8(slice).unwrap()
     }
 }
 
