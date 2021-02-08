@@ -11,6 +11,12 @@ impl<O: Offset> Utf8Array<O> {
     }
 }
 
+impl<O: Offset, T: AsRef<str>> From<&Vec<Option<T>>> for Utf8Array<O> {
+    fn from(slice: &Vec<Option<T>>) -> Self {
+        unsafe { Self::from_trusted_len_iter(slice.iter().map(|x| x.as_ref())) }
+    }
+}
+
 impl<O: Offset> Utf8Array<O> {
     /// Creates a [`PrimitiveArray`] from an iterator of trusted length.
     /// # Safety

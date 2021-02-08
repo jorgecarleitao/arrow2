@@ -56,7 +56,6 @@ pub fn check_offsets<T: Offset>(offsets: &Buffer<T>, values_len: usize) -> usize
     let len = offsets.len() - 1;
 
     let offsets = offsets.as_slice();
-    assert_eq!(offsets[0], T::default());
 
     let last_offset = offsets[len];
     let last_offset = last_offset

@@ -5,11 +5,12 @@ use crate::{
     datatypes::{DataType, IntervalUnit},
 };
 
-use super::{primitive::PrimitiveArray, Array, BooleanArray};
+use super::{primitive::PrimitiveArray, Array, BooleanArray, Utf8Array};
 
 mod boolean;
 mod primitive;
 mod utils;
+mod variable_size;
 
 impl PartialEq for &dyn Array {
     fn eq(&self, other: &Self) -> bool {
@@ -100,6 +101,7 @@ fn equal_values(
             let rhs = rhs.as_any().downcast_ref::<PrimitiveArray<i64>>().unwrap();
             primitive::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
         }
+        DataType::Float16 => unreachable!(),
         DataType::Float32 => {
             let lhs = lhs.as_any().downcast_ref::<PrimitiveArray<f32>>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<PrimitiveArray<f32>>().unwrap();
@@ -110,7 +112,36 @@ fn equal_values(
             let rhs = rhs.as_any().downcast_ref::<PrimitiveArray<f64>>().unwrap();
             primitive::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
         }
-        DataType::Float16 => unreachable!(),
+        DataType::Utf8 => {
+            let lhs = lhs.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
+            let rhs = rhs.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
+            variable_size::equal(
+                lhs.offsets(),
+                rhs.offsets(),
+                lhs.values(),
+                rhs.values(),
+                lhs_nulls,
+                rhs_nulls,
+                lhs_start,
+                rhs_start,
+                len,
+            )
+        }
+        DataType::LargeUtf8 => {
+            let lhs = lhs.as_any().downcast_ref::<Utf8Array<i64>>().unwrap();
+            let rhs = rhs.as_any().downcast_ref::<Utf8Array<i64>>().unwrap();
+            variable_size::equal(
+                lhs.offsets(),
+                rhs.offsets(),
+                lhs.values(),
+                rhs.values(),
+                lhs_nulls,
+                rhs_nulls,
+                lhs_start,
+                rhs_start,
+                len,
+            )
+        }
         _ => unimplemented!(),
     }
 }
@@ -138,7 +169,7 @@ pub fn equal(lhs: &dyn Array, rhs: &dyn Array) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use crate::array::BooleanArray;
+    use crate::array::{BooleanArray, Offset};
 
     use super::*;
 
@@ -286,5 +317,60 @@ mod tests {
         let a = BooleanArray::from_slice(vector.clone());
         let b = BooleanArray::from_slice(vector);
         test_equal(&a, &b, true);
+    }
+
+    fn binary_cases() -> Vec<(Vec<Option<String>>, Vec<Option<String>>, bool)> {
+        let base = vec![
+            Some("hello".to_owned()),
+            None,
+            None,
+            Some("world".to_owned()),
+            None,
+            None,
+        ];
+        let not_base = vec![
+            Some("hello".to_owned()),
+            Some("foo".to_owned()),
+            None,
+            Some("world".to_owned()),
+            None,
+            None,
+        ];
+        vec![
+            (
+                vec![Some("hello".to_owned()), Some("world".to_owned())],
+                vec![Some("hello".to_owned()), Some("world".to_owned())],
+                true,
+            ),
+            (
+                vec![Some("hello".to_owned()), Some("world".to_owned())],
+                vec![Some("hello".to_owned()), Some("arrow".to_owned())],
+                false,
+            ),
+            (base.clone(), base.clone(), true),
+            (base, not_base, false),
+        ]
+    }
+
+    fn test_generic_string_equal<O: Offset>() {
+        let cases = binary_cases();
+
+        for (lhs, rhs, expected) in cases {
+            let lhs = lhs.iter().map(|x| x.as_deref()).collect::<Vec<_>>();
+            let rhs = rhs.iter().map(|x| x.as_deref()).collect::<Vec<_>>();
+            let lhs = Utf8Array::<O>::from(&lhs);
+            let rhs = Utf8Array::<O>::from(&rhs);
+            test_equal(&lhs, &rhs, expected);
+        }
+    }
+
+    #[test]
+    fn test_string_equal() {
+        test_generic_string_equal::<i32>()
+    }
+
+    #[test]
+    fn test_large_string_equal() {
+        test_generic_string_equal::<i64>()
     }
 }
