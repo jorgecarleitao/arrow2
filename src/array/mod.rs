@@ -52,12 +52,14 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
         DataType::Float64 => Box::new(PrimitiveArray::<f64>::new_empty(data_type)),
         DataType::Binary => Box::new(BinaryArray::<i32>::new_empty()),
         DataType::LargeBinary => Box::new(BinaryArray::<i64>::new_empty()),
-        DataType::FixedSizeBinary(size) => Box::new(FixedSizedBinaryArray::new_empty(size)),
+        DataType::FixedSizeBinary(size) => Box::new(FixedSizeBinaryArray::new_empty(size)),
         DataType::Utf8 => Box::new(Utf8Array::<i32>::new_empty()),
         DataType::LargeUtf8 => Box::new(Utf8Array::<i64>::new_empty()),
         DataType::List(field) => Box::new(ListArray::<i32>::new_empty(&field)),
         DataType::LargeList(field) => Box::new(ListArray::<i64>::new_empty(&field)),
-        DataType::FixedSizeList(_, _) => unimplemented!(),
+        DataType::FixedSizeList(field, size) => {
+            Box::new(FixedSizeListArray::new_empty(size, *field))
+        }
         DataType::Struct(fields) => Box::new(StructArray::new_empty(&fields)),
         DataType::Union(_) => unimplemented!(),
         DataType::Dictionary(key_type, value_type) => match key_type.as_ref() {
@@ -79,6 +81,7 @@ mod binary;
 mod boolean;
 mod dictionary;
 mod fixed_binary;
+mod fixed_list;
 mod list;
 mod null;
 mod primitive;
@@ -92,7 +95,8 @@ mod ffi;
 pub use binary::BinaryArray;
 pub use boolean::BooleanArray;
 pub use dictionary::{DictionaryArray, DictionaryKey};
-pub use fixed_binary::FixedSizedBinaryArray;
+pub use fixed_binary::FixedSizeBinaryArray;
+pub use fixed_list::FixedSizeListArray;
 pub use list::ListArray;
 pub use null::NullArray;
 pub use primitive::PrimitiveArray;
