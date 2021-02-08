@@ -25,6 +25,7 @@ impl<T: NativeType> PrimitiveArray<T> {
     }
 
     pub fn from_data(data_type: DataType, values: Buffer<T>, validity: Option<Bitmap>) -> Self {
+        assert!(T::is_valid(&data_type));
         Self {
             data_type,
             values,

@@ -73,7 +73,7 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
             DataType::UInt64 => Box::new(DictionaryArray::<u64>::new_empty(*value_type)),
             _ => unreachable!(),
         },
-        DataType::Decimal(_, _) => unimplemented!(),
+        DataType::Decimal(_, _) => Box::new(PrimitiveArray::<i128>::new_empty(data_type)),
     }
 }
 
