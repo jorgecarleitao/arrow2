@@ -5,7 +5,7 @@ use crate::{
 
 use super::{ffi::ToFFI, specification::check_offsets, Array, Offset};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Utf8Array<O: Offset> {
     data_type: DataType,
     offsets: Buffer<O>,
@@ -77,6 +77,16 @@ impl<O: Offset> Utf8Array<O> {
         let slice = &self.values.as_slice()[offset..offset + length];
         // todo: validate utf8 so that we can use the unsafe version
         std::str::from_utf8(slice).unwrap()
+    }
+
+    #[inline]
+    pub fn offsets(&self) -> &[O] {
+        self.offsets.as_slice()
+    }
+
+    #[inline]
+    pub fn values(&self) -> &[u8] {
+        self.values.as_slice()
     }
 }
 
