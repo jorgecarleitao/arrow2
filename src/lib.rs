@@ -6,8 +6,10 @@ pub mod datatypes;
 pub mod array;
 
 pub mod compute;
-mod error;
+pub mod error;
 
 mod ffi;
 
+pub mod io;
 pub mod record_batch;
+pub mod temporal;
