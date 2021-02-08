@@ -15,6 +15,10 @@ pub struct FixedSizedBinaryArray {
 }
 
 impl FixedSizedBinaryArray {
+    pub fn new_empty(size: i32) -> Self {
+        Self::from_data(size, Buffer::new(), None)
+    }
+
     pub fn from_data(size: i32, values: Buffer<u8>, validity: Option<Bitmap>) -> Self {
         assert_eq!(values.len() % (size as usize), 0);
 

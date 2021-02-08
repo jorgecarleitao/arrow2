@@ -18,6 +18,10 @@ pub struct BinaryArray<O: Offset> {
 }
 
 impl<O: Offset> BinaryArray<O> {
+    pub fn new_empty() -> Self {
+        Self::from_data(Buffer::from(&[O::zero()]), Buffer::new(), None)
+    }
+
     pub fn from_data(offsets: Buffer<O>, values: Buffer<u8>, validity: Option<Bitmap>) -> Self {
         check_offsets(&offsets, values.len());
 

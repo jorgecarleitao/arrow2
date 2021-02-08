@@ -15,6 +15,10 @@ pub struct Utf8Array<O: Offset> {
 }
 
 impl<O: Offset> Utf8Array<O> {
+    pub fn new_empty() -> Self {
+        unsafe { Self::from_data_unchecked(Buffer::from(&[O::zero()]), Buffer::new(), None) }
+    }
+
     /// # Safety
     /// `values` buffer must contain valid utf8 between every `offset`
     pub unsafe fn from_data_unchecked(

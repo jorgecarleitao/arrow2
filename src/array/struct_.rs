@@ -5,7 +5,7 @@ use crate::{
     datatypes::{DataType, Field},
 };
 
-use super::{ffi::ToFFI, Array};
+use super::{ffi::ToFFI, new_empty_array, Array};
 
 #[derive(Debug)]
 pub struct StructArray {
@@ -15,6 +15,14 @@ pub struct StructArray {
 }
 
 impl StructArray {
+    pub fn new_empty(fields: &[Field]) -> Self {
+        let values = fields
+            .iter()
+            .map(|field| new_empty_array(field.data_type().clone()).into())
+            .collect();
+        Self::from_data(fields.to_vec(), values, None)
+    }
+
     pub fn from_data(
         fields: Vec<Field>,
         values: Vec<Arc<dyn Array>>,

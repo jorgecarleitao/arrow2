@@ -7,6 +7,7 @@ use crate::{
 
 use super::{
     ffi::ToFFI,
+    new_empty_array,
     specification::{check_offsets, Offset},
     Array,
 };
@@ -21,6 +22,16 @@ pub struct ListArray<O: Offset> {
 }
 
 impl<O: Offset> ListArray<O> {
+    pub fn new_empty(field: &Field) -> Self {
+        let values = new_empty_array(field.data_type().clone()).into();
+        Self::from_data(
+            Buffer::from(&[O::zero()]),
+            values,
+            None,
+            Some((field.name(), field.is_nullable())),
+        )
+    }
+
     pub fn from_data(
         offsets: Buffer<O>,
         values: Arc<dyn Array>,
