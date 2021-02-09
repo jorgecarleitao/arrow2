@@ -96,6 +96,13 @@ impl<T: NativeType> Buffer<T> {
     }
 }
 
+impl<T: NativeType> Buffer<T> {
+    #[inline]
+    pub unsafe fn from_trusted_len_iter<I: Iterator<Item = T>>(iterator: I) -> Self {
+        MutableBuffer::from_trusted_len_iter(iterator).into()
+    }
+}
+
 /// Creating a `Buffer` instance by copying the memory from a `AsRef<[u8]>` into a newly
 /// allocated memory region.
 impl<T: NativeType, U: AsRef<[T]>> From<U> for Buffer<T> {
