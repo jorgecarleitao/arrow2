@@ -10,7 +10,7 @@ use super::{
     util,
 };
 
-use super::imutable::Buffer;
+use super::immutable::Buffer;
 
 #[inline]
 fn capacity_multiple_of_64<T: NativeType>(capacity: usize) -> usize {
