@@ -94,6 +94,16 @@ impl<O: Offset> ListArray<O> {
             offset: self.offset + offset,
         }
     }
+
+    #[inline]
+    pub fn offsets(&self) -> &[O] {
+        self.offsets.as_slice()
+    }
+
+    #[inline]
+    pub fn values(&self) -> &Arc<dyn Array> {
+        &self.values
+    }
 }
 
 impl<O: Offset> Array for ListArray<O> {
