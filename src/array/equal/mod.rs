@@ -5,7 +5,7 @@ use crate::{
     datatypes::{DataType, IntervalUnit},
 };
 
-use super::{primitive::PrimitiveArray, Array, BooleanArray, Utf8Array};
+use super::{primitive::PrimitiveArray, Array, BinaryArray, BooleanArray, Utf8Array};
 
 mod boolean;
 mod primitive;
@@ -112,6 +112,11 @@ fn equal_values(
             let rhs = rhs.as_any().downcast_ref::<PrimitiveArray<f64>>().unwrap();
             primitive::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
         }
+        DataType::Decimal(_, _) => {
+            let lhs = lhs.as_any().downcast_ref::<PrimitiveArray<i128>>().unwrap();
+            let rhs = rhs.as_any().downcast_ref::<PrimitiveArray<i128>>().unwrap();
+            primitive::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+        }
         DataType::Utf8 => {
             let lhs = lhs.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
@@ -142,7 +147,47 @@ fn equal_values(
                 len,
             )
         }
+        DataType::Binary => {
+            let lhs = lhs.as_any().downcast_ref::<BinaryArray<i32>>().unwrap();
+            let rhs = rhs.as_any().downcast_ref::<BinaryArray<i32>>().unwrap();
+            variable_size::equal(
+                lhs.offsets(),
+                rhs.offsets(),
+                lhs.values(),
+                rhs.values(),
+                lhs_nulls,
+                rhs_nulls,
+                lhs_start,
+                rhs_start,
+                len,
+            )
+        }
+        DataType::LargeBinary => {
+            let lhs = lhs.as_any().downcast_ref::<BinaryArray<i64>>().unwrap();
+            let rhs = rhs.as_any().downcast_ref::<BinaryArray<i64>>().unwrap();
+            variable_size::equal(
+                lhs.offsets(),
+                rhs.offsets(),
+                lhs.values(),
+                rhs.values(),
+                lhs_nulls,
+                rhs_nulls,
+                lhs_start,
+                rhs_start,
+                len,
+            )
+        }
         _ => unimplemented!(),
+        /*
+        DataType::Null => {}
+        DataType::FixedSizeBinary(_) => {}
+        DataType::List(_) => {}
+        DataType::FixedSizeList(_, _) => {}
+        DataType::LargeList(_) => {}
+        DataType::Struct(_) => {}
+        DataType::Union(_) => {}
+        DataType::Dictionary(_, _) => {}
+        */
     }
 }
 

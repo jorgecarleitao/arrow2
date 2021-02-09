@@ -48,6 +48,16 @@ impl<O: Offset> BinaryArray<O> {
             offset: self.offset + offset,
         }
     }
+
+    #[inline]
+    pub fn offsets(&self) -> &[O] {
+        self.offsets.as_slice()
+    }
+
+    #[inline]
+    pub fn values(&self) -> &[u8] {
+        self.values.as_slice()
+    }
 }
 
 impl<O: Offset> Array for BinaryArray<O> {
