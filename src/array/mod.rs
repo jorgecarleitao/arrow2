@@ -55,8 +55,8 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
         DataType::FixedSizeBinary(size) => Box::new(FixedSizeBinaryArray::new_empty(size)),
         DataType::Utf8 => Box::new(Utf8Array::<i32>::new_empty()),
         DataType::LargeUtf8 => Box::new(Utf8Array::<i64>::new_empty()),
-        DataType::List(field) => Box::new(ListArray::<i32>::new_empty(&field)),
-        DataType::LargeList(field) => Box::new(ListArray::<i64>::new_empty(&field)),
+        DataType::List(_) => Box::new(ListArray::<i32>::new_empty(data_type)),
+        DataType::LargeList(_) => Box::new(ListArray::<i64>::new_empty(data_type)),
         DataType::FixedSizeList(field, size) => {
             Box::new(FixedSizeListArray::new_empty(size, *field))
         }
@@ -97,7 +97,7 @@ pub use boolean::BooleanArray;
 pub use dictionary::{DictionaryArray, DictionaryKey};
 pub use fixed_binary::FixedSizeBinaryArray;
 pub use fixed_list::FixedSizeListArray;
-pub use list::ListArray;
+pub use list::{ListArray, ListPrimitive};
 pub use null::NullArray;
 pub use primitive::{Primitive, PrimitiveArray};
 pub use specification::Offset;

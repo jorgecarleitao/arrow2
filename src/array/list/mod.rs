@@ -22,36 +22,29 @@ pub struct ListArray<O: Offset> {
 }
 
 impl<O: Offset> ListArray<O> {
-    pub fn new_empty(field: &Field) -> Self {
-        let values = new_empty_array(field.data_type().clone()).into();
-        Self::from_data(
-            Buffer::from(&[O::zero()]),
-            values,
-            None,
-            Some((field.name(), field.is_nullable())),
-        )
+    pub fn new_empty(data_type: DataType) -> Self {
+        let values = new_empty_array(Self::get_child(&data_type).clone()).into();
+        Self::from_data(data_type, Buffer::from(&[O::zero()]), values, None)
     }
 
     pub fn from_data(
+        data_type: DataType,
         offsets: Buffer<O>,
         values: Arc<dyn Array>,
         validity: Option<Bitmap>,
-        field_options: Option<(&str, bool)>,
     ) -> Self {
         check_offsets(&offsets, values.len());
 
-        let (field_name, field_nullable) = field_options.unwrap_or(("item", true));
-
-        let field = Box::new(Field::new(
-            field_name,
-            values.data_type().clone(),
-            field_nullable,
-        ));
-
-        let data_type = if O::is_large() {
-            DataType::LargeList(field)
+        if O::is_large() {
+            if let DataType::LargeList(_) = data_type {
+            } else {
+                panic!("Wrong DataType")
+            }
         } else {
-            DataType::List(field)
+            if let DataType::List(_) = data_type {
+            } else {
+                panic!("Wrong DataType")
+            }
         };
 
         Self {
@@ -106,6 +99,33 @@ impl<O: Offset> ListArray<O> {
     }
 }
 
+impl<O: Offset> ListArray<O> {
+    pub fn default_datatype(data_type: DataType) -> DataType {
+        let field = Box::new(Field::new("item", data_type, true));
+        if O::is_large() {
+            DataType::LargeList(field)
+        } else {
+            DataType::List(field)
+        }
+    }
+
+    fn get_child(data_type: &DataType) -> &DataType {
+        if O::is_large() {
+            if let DataType::LargeList(child) = data_type {
+                child.data_type()
+            } else {
+                panic!("Wrong DataType")
+            }
+        } else {
+            if let DataType::List(child) = data_type {
+                child.data_type()
+            } else {
+                panic!("Wrong DataType")
+            }
+        }
+    }
+}
+
 impl<O: Offset> Array for ListArray<O> {
     #[inline]
     fn as_any(&self) -> &dyn std::any::Any {
@@ -150,6 +170,10 @@ unsafe impl<O: Offset> ToFFI for ListArray<O> {
     }
 }
 
+mod from;
+
+pub use from::ListPrimitive;
+
 #[cfg(test)]
 mod tests {
     use crate::array::primitive::PrimitiveArray;
@@ -161,6 +185,12 @@ mod tests {
         let values = Buffer::from([1, 2, 3, 4, 5]);
         let values = PrimitiveArray::<i32>::from_data(DataType::Int32, values, None);
 
-        ListArray::<i32>::from_data(Buffer::from([0, 2, 2, 3, 5]), Arc::new(values), None, None);
+        let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
+        ListArray::<i32>::from_data(
+            data_type,
+            Buffer::from([0, 2, 2, 3, 5]),
+            Arc::new(values),
+            None,
+        );
     }
 }

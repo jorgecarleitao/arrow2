@@ -1,11 +1,12 @@
-use std::iter::FromIterator;
+use std::{iter::FromIterator, sync::Arc};
 
 use crate::{
+    array::Array,
     buffer::{types::NativeType, Bitmap, Buffer, MutableBitmap, MutableBuffer},
     datatypes::DataType,
 };
 
-use super::PrimitiveArray;
+use super::{PrimitiveArray, ToArray};
 
 impl<T: NativeType> Primitive<T> {
     pub fn from_slice<P: AsRef<[T]>>(slice: P) -> Self {
@@ -147,6 +148,7 @@ where
 }
 
 /// auxiliary struct used to create a [`PrimitiveArray`] out of an iterator
+#[derive(Debug)]
 pub struct Primitive<T: NativeType> {
     values: Buffer<T>,
     validity: Option<Bitmap>,
@@ -187,5 +189,11 @@ impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> FromIterator<Ptr> for P
             values: values.into(),
             validity: bitmap.into(),
         }
+    }
+}
+
+impl<T: NativeType> ToArray for Primitive<T> {
+    fn to_arc(self, data_type: &DataType) -> Arc<dyn Array> {
+        Arc::new(self.to(data_type.clone()))
     }
 }
