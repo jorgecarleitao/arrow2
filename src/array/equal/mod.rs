@@ -205,18 +205,15 @@ fn equal_values(
             let rhs = rhs.as_any().downcast_ref::<ListArray<i32>>().unwrap();
             list::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
         }
-        DataType::FixedSizeList(_, _) => {
+        DataType::LargeList(_) => {
             let lhs = lhs.as_any().downcast_ref::<ListArray<i64>>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<ListArray<i64>>().unwrap();
             list::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
         }
         _ => unimplemented!(),
         /*
-        DataType::Null => {}
         DataType::FixedSizeBinary(_) => {}
-        DataType::List(_) => {}
         DataType::FixedSizeList(_, _) => {}
-        DataType::LargeList(_) => {}
         DataType::Struct(_) => {}
         DataType::Union(_) => {}
         DataType::Dictionary(_, _) => {}
@@ -338,7 +335,7 @@ mod tests {
         }
     }
 
-    fn test_equal(lhs: &dyn Array, rhs: &dyn Array, expected: bool) {
+    pub(super) fn test_equal(lhs: &dyn Array, rhs: &dyn Array, expected: bool) {
         // equality is symmetric
         assert_eq!(equal(lhs, lhs), true, "\n{:?}\n{:?}", lhs, lhs);
         assert_eq!(equal(rhs, rhs), true, "\n{:?}\n{:?}", rhs, rhs);

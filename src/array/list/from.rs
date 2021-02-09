@@ -16,7 +16,7 @@ pub struct ListPrimitive<O: Offset, A: ToArray> {
 }
 
 impl<T: NativeType, O: Offset> ListPrimitive<O, Primitive<T>> {
-    fn to(self, data_type: DataType) -> ListArray<O> {
+    pub fn to(self, data_type: DataType) -> ListArray<O> {
         let values = self.values.to_arc(ListArray::<O>::get_child(&data_type));
         ListArray::from_data(data_type, self.offsets, values, self.validity)
     }

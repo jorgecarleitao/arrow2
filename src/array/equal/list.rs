@@ -155,11 +155,8 @@ pub(super) fn equal<O: Offset>(
 
 #[cfg(test)]
 mod tests {
-    use crate::datatypes::{DataType, Field};
-    use crate::{
-        array::{primitive::ToArray, ListPrimitive, Primitive},
-        buffer::Buffer,
-    };
+    use crate::array::{ListPrimitive, Primitive};
+    use crate::{array::equal::tests::test_equal, datatypes::DataType};
 
     use super::*;
 
@@ -167,19 +164,23 @@ mod tests {
         let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
         let list = data
             .as_ref()
-            .iter()
+            .into_iter()
+            .map(|x| {
+                x.as_ref()
+                    .map(|x| x.as_ref().iter().map(|x| Some(*x)).collect::<Vec<_>>())
+            })
             .collect::<ListPrimitive<i32, Primitive<i32>>>();
-        list.to_arc(data_type)
+        list.to(data_type)
     }
 
     #[test]
     fn test_list_equal() {
         let a = create_list_array(&[Some(&[1, 2, 3]), Some(&[4, 5, 6])]);
         let b = create_list_array(&[Some(&[1, 2, 3]), Some(&[4, 5, 6])]);
-        test_equal(a.as_ref(), b.as_ref(), true);
+        test_equal(&a, &b, true);
 
         let b = create_list_array(&[Some(&[1, 2, 3]), Some(&[4, 5, 7])]);
-        test_equal(a.as_ref(), b.as_ref(), false);
+        test_equal(&a, &b, false);
     }
 
     // Test the case where null_count > 0
@@ -187,7 +188,7 @@ mod tests {
     fn test_list_null() {
         let a = create_list_array(&[Some(&[1, 2]), None, None, Some(&[3, 4]), None, None]);
         let b = create_list_array(&[Some(&[1, 2]), None, None, Some(&[3, 4]), None, None]);
-        test_equal(a.as_ref(), b.as_ref(), true);
+        test_equal(&a, &b, true);
 
         let b = create_list_array(&[
             Some(&[1, 2]),
@@ -197,45 +198,10 @@ mod tests {
             None,
             None,
         ]);
-        test_equal(a.as_ref(), b.as_ref(), false);
+        test_equal(&a, &b, false);
 
         let b = create_list_array(&[Some(&[1, 2]), None, None, Some(&[3, 5]), None, None]);
-        test_equal(a.as_ref(), b.as_ref(), false);
-
-        // a list where the nullness of values is determined by the list's bitmap
-        let c_values = Int32Array::from(vec![1, 2, -1, -2, 3, 4, -3, -4]);
-        let c = ArrayDataBuilder::new(DataType::List(Box::new(Field::new(
-            "item",
-            DataType::Int32,
-            true,
-        ))))
-        .len(6)
-        .add_buffer(Buffer::from(vec![0i32, 2, 3, 4, 6, 7, 8].to_byte_slice()))
-        .add_child_data(c_values.data())
-        .null_bit_buffer(Buffer::from(vec![0b00001001]))
-        .build();
-
-        let d_values = Int32Array::from(vec![
-            Some(1),
-            Some(2),
-            None,
-            None,
-            Some(3),
-            Some(4),
-            None,
-            None,
-        ]);
-        let d = ArrayDataBuilder::new(DataType::List(Box::new(Field::new(
-            "item",
-            DataType::Int32,
-            true,
-        ))))
-        .len(6)
-        .add_buffer(Buffer::from(vec![0i32, 2, 3, 4, 6, 7, 8].to_byte_slice()))
-        .add_child_data(d_values.data())
-        .null_bit_buffer(Buffer::from(vec![0b00001001]))
-        .build();
-        test_equal(c.as_ref(), d.as_ref(), true);
+        test_equal(&a, &b, false);
     }
 
     // Test the case where offset != 0
@@ -255,20 +221,5 @@ mod tests {
         let a_slice = a.slice(4, 1);
         let b_slice = b.slice(4, 1);
         test_equal(&a_slice, &b_slice, true);
-    }
-
-    fn create_fixed_size_binary_array<U: AsRef<[u8]>, T: AsRef<[Option<U>]>>(
-        data: T,
-    ) -> ArrayDataRef {
-        let mut builder = FixedSizeBinaryBuilder::new(15, 5);
-
-        for d in data.as_ref() {
-            if let Some(v) = d {
-                builder.append_value(v.as_ref()).unwrap();
-            } else {
-                builder.append_null().unwrap();
-            }
-        }
-        builder.finish().data()
     }
 }
