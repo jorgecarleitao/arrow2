@@ -104,7 +104,7 @@ Create a generic `Buffer<T: NativeType>`, `Bytes<T: NativeType>`, `MutableBuffer
 This allow us to only have to deal with `transmute` at ffi boundaries. Effectively, it allow us to not
 have to rely on the highly `unsafe` `RawPointer` on array implementations, as well as `as_typed` function that transmutes buffers.
 
-[Here](src/buffer/imutable.rs) you can find the concrete implementation proposed in this repo.
+[Here](src/buffer/immutable.rs) you can find the concrete implementation proposed in this repo.
 
 ### 5. Remove `ArrayData` and place its contents directly on the corresponding arrays.
 
