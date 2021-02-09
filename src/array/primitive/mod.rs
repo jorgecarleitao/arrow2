@@ -47,13 +47,13 @@ impl<T: NativeType> PrimitiveArray<T> {
     }
 
     #[inline]
-    pub fn values(&self) -> &[T] {
-        self.values.as_slice()
+    pub fn values(&self) -> &Buffer<T> {
+        &self.values
     }
 
     #[inline]
     pub fn value(&self, i: usize) -> T {
-        self.values()[i]
+        self.values().as_slice()[i]
     }
 }
 
