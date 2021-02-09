@@ -5,9 +5,12 @@ use crate::{
     datatypes::{DataType, IntervalUnit},
 };
 
-use super::{primitive::PrimitiveArray, Array, BinaryArray, BooleanArray, NullArray, Utf8Array};
+use super::{
+    primitive::PrimitiveArray, Array, BinaryArray, BooleanArray, ListArray, NullArray, Utf8Array,
+};
 
 mod boolean;
+mod list;
 mod null;
 mod primitive;
 mod utils;
@@ -31,8 +34,22 @@ impl<T: NativeType> PartialEq<PrimitiveArray<T>> for PrimitiveArray<T> {
     }
 }
 
-/// Compares the values of two [ArrayData] starting at `lhs_start` and `rhs_start` respectively
-/// for `len` slots. The null buffers `lhs_nulls` and `rhs_nulls` inherit parent nullability.
+fn equal_range(
+    lhs: &dyn Array,
+    rhs: &dyn Array,
+    lhs_nulls: &Option<Bitmap>,
+    rhs_nulls: &Option<Bitmap>,
+    lhs_start: usize,
+    rhs_start: usize,
+    len: usize,
+) -> bool {
+    utils::base_equal(lhs, rhs)
+        && utils::equal_nulls(lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+        && equal_values(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+}
+
+/// Compares the values of two [`Array`] starting at `lhs_start` and `rhs_start` respectively
+/// for `len` slots. The null buffers `lhs_nulls` and `rhs_nulls` are inherit parent nullability.
 ///
 /// If an array is a child of a struct or list, the array's nulls have to be merged with the parent.
 /// This then affects the null count of the array, thus the merged nulls are passed separately
@@ -182,6 +199,16 @@ fn equal_values(
                 rhs_start,
                 len,
             )
+        }
+        DataType::List(_) => {
+            let lhs = lhs.as_any().downcast_ref::<ListArray<i32>>().unwrap();
+            let rhs = rhs.as_any().downcast_ref::<ListArray<i32>>().unwrap();
+            list::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+        }
+        DataType::FixedSizeList(_, _) => {
+            let lhs = lhs.as_any().downcast_ref::<ListArray<i64>>().unwrap();
+            let rhs = rhs.as_any().downcast_ref::<ListArray<i64>>().unwrap();
+            list::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
         }
         _ => unimplemented!(),
         /*

@@ -1,6 +1,12 @@
-use crate::{array::{Array, ListArray, Offset}, buffer::Bitmap};
+use crate::{
+    array::{Array, ListArray, Offset},
+    buffer::Bitmap,
+};
 
-use super::{equal_range, utils::{child_logical_null_buffer, count_nulls}};
+use super::{
+    equal_range,
+    utils::{child_logical_null_buffer, count_nulls},
+};
 
 fn lengths_equal<O: Offset>(lhs: &[O], rhs: &[O]) -> bool {
     // invariant from `base_equal`
@@ -100,10 +106,8 @@ pub(super) fn equal<O: Offset>(
     let rhs_null_count = count_nulls(rhs_nulls, rhs_start, len);
 
     // compute the child logical bitmap
-    let child_lhs_nulls =
-        child_logical_null_buffer(lhs, lhs_nulls, lhs_values);
-    let child_rhs_nulls =
-        child_logical_null_buffer(rhs, rhs_nulls, rhs_values);
+    let child_lhs_nulls = child_logical_null_buffer(lhs, lhs_nulls, lhs_values);
+    let child_rhs_nulls = child_logical_null_buffer(rhs, rhs_nulls, rhs_values);
 
     if lhs_null_count == 0 && rhs_null_count == 0 {
         lengths_equal(
@@ -151,24 +155,21 @@ pub(super) fn equal<O: Offset>(
 
 #[cfg(test)]
 mod tests {
-    use crate::buffer::Buffer;
-    use crate::datatypes::{Field, Int16Type};
+    use crate::datatypes::{DataType, Field};
+    use crate::{
+        array::{primitive::ToArray, ListPrimitive, Primitive},
+        buffer::Buffer,
+    };
 
     use super::*;
 
-    fn create_list_array<U: AsRef<[i32]>, T: AsRef<[Option<U>]>>(
-        data: T,
-    ) -> ArrayDataRef {
-        let mut builder = ListBuilder::new(Int32Builder::new(10));
-        for d in data.as_ref() {
-            if let Some(v) = d {
-                builder.values().append_slice(v.as_ref()).unwrap();
-                builder.append(true).unwrap()
-            } else {
-                builder.append(false).unwrap()
-            }
-        }
-        builder.finish().data()
+    fn create_list_array<U: AsRef<[i32]>, T: AsRef<[Option<U>]>>(data: T) -> ListArray<i32> {
+        let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
+        let list = data
+            .as_ref()
+            .iter()
+            .collect::<ListPrimitive<i32, Primitive<i32>>>();
+        list.to_arc(data_type)
     }
 
     #[test]
@@ -184,10 +185,8 @@ mod tests {
     // Test the case where null_count > 0
     #[test]
     fn test_list_null() {
-        let a =
-            create_list_array(&[Some(&[1, 2]), None, None, Some(&[3, 4]), None, None]);
-        let b =
-            create_list_array(&[Some(&[1, 2]), None, None, Some(&[3, 4]), None, None]);
+        let a = create_list_array(&[Some(&[1, 2]), None, None, Some(&[3, 4]), None, None]);
+        let b = create_list_array(&[Some(&[1, 2]), None, None, Some(&[3, 4]), None, None]);
         test_equal(a.as_ref(), b.as_ref(), true);
 
         let b = create_list_array(&[
@@ -200,8 +199,7 @@ mod tests {
         ]);
         test_equal(a.as_ref(), b.as_ref(), false);
 
-        let b =
-            create_list_array(&[Some(&[1, 2]), None, None, Some(&[3, 5]), None, None]);
+        let b = create_list_array(&[Some(&[1, 2]), None, None, Some(&[3, 5]), None, None]);
         test_equal(a.as_ref(), b.as_ref(), false);
 
         // a list where the nullness of values is determined by the list's bitmap
@@ -243,10 +241,8 @@ mod tests {
     // Test the case where offset != 0
     #[test]
     fn test_list_offsets() {
-        let a =
-            create_list_array(&[Some(&[1, 2]), None, None, Some(&[3, 4]), None, None]);
-        let b =
-            create_list_array(&[Some(&[1, 2]), None, None, Some(&[3, 5]), None, None]);
+        let a = create_list_array(&[Some(&[1, 2]), None, None, Some(&[3, 4]), None, None]);
+        let b = create_list_array(&[Some(&[1, 2]), None, None, Some(&[3, 5]), None, None]);
 
         let a_slice = a.slice(0, 3);
         let b_slice = b.slice(0, 3);
