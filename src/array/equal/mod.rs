@@ -5,9 +5,10 @@ use crate::{
     datatypes::{DataType, IntervalUnit},
 };
 
-use super::{primitive::PrimitiveArray, Array, BinaryArray, BooleanArray, Utf8Array};
+use super::{primitive::PrimitiveArray, Array, BinaryArray, BooleanArray, NullArray, Utf8Array};
 
 mod boolean;
+mod null;
 mod primitive;
 mod utils;
 mod variable_size;
@@ -48,6 +49,11 @@ fn equal_values(
     len: usize,
 ) -> bool {
     match lhs.data_type() {
+        DataType::Null => {
+            let lhs = lhs.as_any().downcast_ref::<NullArray>().unwrap();
+            let rhs = rhs.as_any().downcast_ref::<NullArray>().unwrap();
+            null::equal(lhs, rhs)
+        }
         DataType::Boolean => {
             let lhs = lhs.as_any().downcast_ref::<BooleanArray>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<BooleanArray>().unwrap();
