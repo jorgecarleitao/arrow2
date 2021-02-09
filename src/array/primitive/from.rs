@@ -1,3 +1,5 @@
+use std::iter::FromIterator;
+
 use crate::{
     buffer::{types::NativeType, Bitmap, Buffer, MutableBitmap, MutableBuffer},
     datatypes::DataType,
@@ -5,19 +7,25 @@ use crate::{
 
 use super::PrimitiveArray;
 
-impl<T: NativeType> PrimitiveArray<T> {
-    pub fn from_slice<P: AsRef<[T]>>((datatype, slice): (DataType, P)) -> Self {
-        unsafe { Self::from_trusted_len_iter(datatype, slice.as_ref().iter().map(Some)) }
+impl<T: NativeType> Primitive<T> {
+    pub fn from_slice<P: AsRef<[T]>>(slice: P) -> Self {
+        unsafe { Self::from_trusted_len_iter(slice.as_ref().iter().map(Some)) }
     }
 }
 
-impl<T: NativeType> PrimitiveArray<T> {
+impl<T: NativeType, P: AsRef<[Option<T>]>> From<P> for Primitive<T> {
+    fn from(slice: P) -> Self {
+        unsafe { Self::from_trusted_len_iter(slice.as_ref().iter().map(|x| x.as_ref())) }
+    }
+}
+
+impl<T: NativeType> Primitive<T> {
     /// Creates a [`PrimitiveArray`] from an iterator of trusted length.
     /// # Safety
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
     /// I.e. that `size_hint().1` correctly reports its length.
     #[inline]
-    pub unsafe fn from_trusted_len_iter<I, P>(data_type: DataType, iter: I) -> Self
+    pub unsafe fn from_trusted_len_iter<I, P>(iter: I) -> Self
     where
         P: std::borrow::Borrow<T>,
         I: IntoIterator<Item = Option<P>>,
@@ -26,7 +34,7 @@ impl<T: NativeType> PrimitiveArray<T> {
 
         let (validity, values) = trusted_len_unzip(iterator);
 
-        Self::from_data(data_type, values, validity)
+        Self { values, validity }
     }
 
     /// Creates a [`PrimitiveArray`] from an falible iterator of trusted length.
@@ -34,10 +42,7 @@ impl<T: NativeType> PrimitiveArray<T> {
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
     /// I.e. that `size_hint().1` correctly reports its length.
     #[inline]
-    pub unsafe fn try_from_trusted_len_iter<E, I, P>(
-        data_type: DataType,
-        iter: I,
-    ) -> Result<Self, E>
+    pub unsafe fn try_from_trusted_len_iter<E, I, P>(iter: I) -> Result<Self, E>
     where
         P: std::borrow::Borrow<T>,
         I: IntoIterator<Item = Result<Option<P>, E>>,
@@ -46,7 +51,7 @@ impl<T: NativeType> PrimitiveArray<T> {
 
         let (validity, values) = try_trusted_len_unzip(iterator)?;
 
-        Ok(Self::from_data(data_type, values, validity))
+        Ok(Self { values, validity })
     }
 }
 
@@ -139,4 +144,48 @@ where
         None
     };
     Ok((bitmap, buffer.into()))
+}
+
+/// auxiliary struct used to create a [`PrimitiveArray`] out of an iterator
+pub struct Primitive<T: NativeType> {
+    values: Buffer<T>,
+    validity: Option<Bitmap>,
+}
+
+impl<T: NativeType> Primitive<T> {
+    pub fn to(self, data_type: DataType) -> PrimitiveArray<T> {
+        PrimitiveArray::<T>::from_data(data_type, self.values, self.validity)
+    }
+}
+
+impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> FromIterator<Ptr> for Primitive<T> {
+    fn from_iter<I: IntoIterator<Item = Ptr>>(iter: I) -> Self {
+        let iter = iter.into_iter();
+        let (lower, _) = iter.size_hint();
+
+        let mut nulls = MutableBitmap::with_capacity(lower);
+
+        let values: MutableBuffer<T> = iter
+            .map(|item| {
+                if let Some(a) = item.borrow() {
+                    nulls.push(true);
+                    *a
+                } else {
+                    nulls.push(false);
+                    T::default()
+                }
+            })
+            .collect();
+
+        let bitmap = if nulls.null_count() > 0 {
+            Some(nulls.into())
+        } else {
+            None
+        };
+
+        Self {
+            values: values.into(),
+            validity: bitmap.into(),
+        }
+    }
 }

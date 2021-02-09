@@ -60,8 +60,8 @@ impl TryFrom<Box<dyn Array>> for ArrowArray {
 
 #[cfg(test)]
 mod tests {
-    use crate::array::Array;
-    use crate::{array::PrimitiveArray, datatypes::DataType, error::Result, ffi::ArrowArray};
+    use crate::array::{Array, Primitive};
+    use crate::{datatypes::DataType, error::Result, ffi::ArrowArray};
     use std::convert::TryFrom;
 
     fn test_round_trip(expected: impl Array + Clone + 'static) -> Result<()> {
@@ -84,22 +84,19 @@ mod tests {
 
     #[test]
     fn test_u32() -> Result<()> {
-        let data =
-            PrimitiveArray::<i32>::from((DataType::Int32, vec![Some(2), None, Some(1), None]));
+        let data = Primitive::<i32>::from(vec![Some(2), None, Some(1), None]).to(DataType::Int32);
         test_round_trip(data)
     }
 
     #[test]
     fn test_u64() -> Result<()> {
-        let data =
-            PrimitiveArray::<u64>::from((DataType::UInt64, vec![Some(2), None, Some(1), None]));
+        let data = Primitive::<u64>::from(vec![Some(2), None, Some(1), None]).to(DataType::UInt64);
         test_round_trip(data)
     }
 
     #[test]
     fn test_i64() -> Result<()> {
-        let data =
-            PrimitiveArray::<i64>::from((DataType::Int64, vec![Some(2), None, Some(1), None]));
+        let data = Primitive::<i64>::from(vec![Some(2), None, Some(1), None]).to(DataType::Int64);
         test_round_trip(data)
     }
 }

@@ -248,7 +248,10 @@ fn take_primitive<T: NativeType, I: Offset>(
 
 #[cfg(test)]
 mod tests {
-    use crate::datatypes::{Int8Type, PrimitiveType};
+    use crate::{
+        array::Primitive,
+        datatypes::{Int8Type, PrimitiveType},
+    };
 
     use super::*;
 
@@ -261,8 +264,8 @@ mod tests {
     where
         T: PrimitiveType,
     {
-        let output = PrimitiveArray::<T::Native>::from((T::DATA_TYPE, data));
-        let expected = PrimitiveArray::<T::Native>::from((T::DATA_TYPE, expected_data));
+        let output = Primitive::<T::Native>::from(data).to(T::DATA_TYPE);
+        let expected = Primitive::<T::Native>::from(expected_data).to(T::DATA_TYPE);
         let output = take(&output, index, options)?;
         assert_eq!(output.as_ref(), &expected);
         Ok(())
@@ -270,7 +273,7 @@ mod tests {
 
     #[test]
     fn test_take_primitive_non_null_indices() {
-        let index = PrimitiveArray::<i32>::from_slice((DataType::Int32, &[0, 5, 3, 1, 4, 2]));
+        let index = Primitive::<i32>::from_slice(&[0, 5, 3, 1, 4, 2]).to(DataType::Int32);
         test_take_primitive_arrays::<Int8Type>(
             &[None, Some(3), Some(5), Some(2), Some(3), None],
             &index,
@@ -282,10 +285,8 @@ mod tests {
 
     #[test]
     fn test_take_primitive_non_null_values() {
-        let index = PrimitiveArray::<i32>::from((
-            DataType::Int32,
-            &[Some(3), None, Some(1), Some(3), Some(2)],
-        ));
+        let index =
+            Primitive::<i32>::from(&[Some(3), None, Some(1), Some(3), Some(2)]).to(DataType::Int32);
         test_take_primitive_arrays::<Int8Type>(
             &[Some(0), Some(1), Some(2), Some(3), Some(4)],
             &index,

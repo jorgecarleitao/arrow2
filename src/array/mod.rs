@@ -99,7 +99,7 @@ pub use fixed_binary::FixedSizeBinaryArray;
 pub use fixed_list::FixedSizeListArray;
 pub use list::ListArray;
 pub use null::NullArray;
-pub use primitive::PrimitiveArray;
+pub use primitive::{Primitive, PrimitiveArray};
 pub use specification::Offset;
 pub use string::Utf8Array;
 pub use struct_::StructArray;

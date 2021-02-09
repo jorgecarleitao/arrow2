@@ -1,7 +1,7 @@
 use csv::StringRecord;
 use lexical_core;
 
-use crate::datatypes::*;
+use crate::{array::Primitive, datatypes::*};
 use crate::{array::PrimitiveArray, buffer::NativeType};
 
 pub trait PrimitiveParser<T: NativeType + lexical_core::FromLexical, E> {
@@ -35,5 +35,5 @@ pub fn new_primitive_array<
             None => Ok(None),
         });
     // Soundness: slice is trusted len.
-    unsafe { PrimitiveArray::<T>::try_from_trusted_len_iter(data_type.clone(), iter) }
+    Ok(unsafe { Primitive::<T>::try_from_trusted_len_iter(iter) }?.to(data_type.clone()))
 }

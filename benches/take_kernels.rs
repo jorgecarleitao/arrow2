@@ -36,17 +36,17 @@ where
     T: PrimitiveType,
     Standard: Distribution<T::Native>,
 {
-    let a = seedable_rng()
+    seedable_rng()
         .sample_iter(&Standard)
         .take(size)
         .map(Some)
-        .collect::<Vec<_>>();
-    (T::DATA_TYPE, a).into()
+        .collect::<Primitive<T::Native>>()
+        .to(T::DATA_TYPE)
 }
 
 fn create_random_index(size: usize, null_density: f32) -> PrimitiveArray<i32> {
     let mut rng = seedable_rng();
-    let a = (0..size)
+    (0..size)
         .map(|_| {
             if rng.gen::<f32>() > null_density {
                 let value = rng.gen_range::<i32, _, _>(0i32, size as i32);
@@ -55,8 +55,8 @@ fn create_random_index(size: usize, null_density: f32) -> PrimitiveArray<i32> {
                 None
             }
         })
-        .collect::<Vec<_>>();
-    (DataType::Int32, &a).into()
+        .collect::<Primitive<i32>>()
+        .to(DataType::Int32)
 }
 
 fn bench_take(values: &dyn Array, indices: &PrimitiveArray<i32>) {

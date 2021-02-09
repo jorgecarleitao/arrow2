@@ -220,7 +220,7 @@ pub fn equal(lhs: &dyn Array, rhs: &dyn Array) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use crate::array::{BooleanArray, Offset};
+    use crate::array::{BooleanArray, Offset, Primitive};
 
     use super::*;
 
@@ -255,8 +255,8 @@ mod tests {
         ];
 
         for (lhs, rhs, expected) in cases {
-            let lhs = PrimitiveArray::<i32>::from((DataType::Int32, &lhs));
-            let rhs = PrimitiveArray::<i32>::from((DataType::Int32, &rhs));
+            let lhs = Primitive::<i32>::from(&lhs).to(DataType::Int32);
+            let rhs = Primitive::<i32>::from(&rhs).to(DataType::Int32);
             test_equal(&lhs, &rhs, expected);
         }
     }
@@ -302,9 +302,9 @@ mod tests {
         ];
 
         for (lhs, slice_lhs, rhs, slice_rhs, expected) in cases {
-            let lhs = PrimitiveArray::<i32>::from((DataType::Int32, &lhs));
+            let lhs = Primitive::<i32>::from(&lhs).to(DataType::Int32);
             let lhs = lhs.slice(slice_lhs.0, slice_lhs.1);
-            let rhs = PrimitiveArray::<i32>::from((DataType::Int32, &rhs));
+            let rhs = Primitive::<i32>::from(&rhs).to(DataType::Int32);
             let rhs = rhs.slice(slice_rhs.0, slice_rhs.1);
 
             test_equal(&lhs, &rhs, expected);
