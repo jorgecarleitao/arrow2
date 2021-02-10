@@ -15,7 +15,7 @@ pub struct ListPrimitive<O: Offset, A: ToArray> {
     validity: Option<Bitmap>,
 }
 
-impl<T: NativeType, O: Offset> ListPrimitive<O, Primitive<T>> {
+impl<O: Offset, A: ToArray> ListPrimitive<O, A> {
     pub fn to(self, data_type: DataType) -> ListArray<O> {
         let values = self.values.to_arc(ListArray::<O>::get_child(&data_type));
         ListArray::from_data(data_type, self.offsets, values, self.validity)
