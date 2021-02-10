@@ -77,11 +77,12 @@ where
 
     let mut null = MutableBitmap::with_capacity(len);
     let mut offsets = MutableBuffer::<O>::with_capacity(len + 1);
-    offsets.push(O::default());
     let mut values = MutableBuffer::<u8>::new();
 
     let mut length = O::default();
     let mut dst = offsets.as_mut_ptr();
+    std::ptr::write(dst, length);
+    dst = dst.add(1);
     for item in iterator {
         if let Some(item) = item {
             null.push_unchecked(true);
@@ -97,10 +98,10 @@ where
     }
     assert_eq!(
         dst.offset_from(offsets.as_ptr()) as usize,
-        len,
+        len + 1,
         "Trusted iterator length was not accurately reported"
     );
-    offsets.set_len(len);
+    offsets.set_len(len + 1);
     null.set_len(len);
 
     let bitmap = if null.null_count() > 0 {
