@@ -17,8 +17,6 @@
 
 //! Defines take kernel for [Array]
 
-use std::sync::Arc;
-
 use crate::{
     buffer::MutableBitmap,
     error::{ArrowError, Result},
@@ -36,7 +34,7 @@ macro_rules! downcast_take {
             .as_any()
             .downcast_ref::<PrimitiveArray<$type>>()
             .expect("Unable to downcast to a primitive array");
-        Ok(Arc::new(take_primitive::<$type, _>(&values, $indices)?))
+        Ok(Box::new(take_primitive::<$type, _>(&values, $indices)?))
     }};
 }
 
@@ -44,7 +42,7 @@ pub fn take<O: Offset>(
     values: &dyn Array,
     indices: &PrimitiveArray<O>,
     options: Option<TakeOptions>,
-) -> Result<Arc<dyn Array>> {
+) -> Result<Box<dyn Array>> {
     take_impl(values, indices, options)
 }
 
@@ -52,7 +50,7 @@ fn take_impl<O: Offset>(
     values: &dyn Array,
     indices: &PrimitiveArray<O>,
     options: Option<TakeOptions>,
-) -> Result<Arc<dyn Array>> {
+) -> Result<Box<dyn Array>> {
     match values.data_type() {
         DataType::Int8 => downcast_take!(i8, values, indices),
         DataType::Int16 => downcast_take!(i16, values, indices),
