@@ -1,3 +1,4 @@
+use std::iter::FromIterator;
 use std::sync::Arc;
 
 use crate::{
@@ -152,7 +153,7 @@ impl From<MutableBitmap> for Bitmap {
     }
 }
 
-impl std::iter::FromIterator<bool> for MutableBitmap {
+impl FromIterator<bool> for MutableBitmap {
     fn from_iter<I>(iter: I) -> Self
     where
         I: IntoIterator<Item = bool>,
@@ -206,6 +207,14 @@ impl std::iter::FromIterator<bool> for MutableBitmap {
             }
         }
         Self { buffer, length }
+    }
+}
+
+impl Bitmap {
+    #[inline]
+    pub unsafe fn from_trusted_len_iter<I: Iterator<Item = bool>>(iterator: I) -> Self {
+        // todo implement `from_trusted_len_iter` for MutableBitmap
+        MutableBitmap::from_iter(iterator).into()
     }
 }
 
