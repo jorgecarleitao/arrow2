@@ -21,6 +21,12 @@ impl<T: NativeType, P: AsRef<[Option<T>]>> From<P> for Primitive<T> {
 }
 
 impl<T: NativeType> Primitive<T> {
+    pub fn from_values<P: AsRef<[T]>>(slice: P) -> Self {
+        Self::from_iter(slice.as_ref().iter().map(|x| Some(*x)))
+    }
+}
+
+impl<T: NativeType> Primitive<T> {
     /// Creates a [`PrimitiveArray`] from an iterator of trusted length.
     /// # Safety
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).

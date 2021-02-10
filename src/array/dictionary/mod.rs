@@ -7,7 +7,7 @@ use crate::{
 
 use super::{ffi::ToFFI, new_empty_array, primitive::PrimitiveArray, Array};
 
-pub unsafe trait DictionaryKey: NativeType + num::FromPrimitive {
+pub unsafe trait DictionaryKey: NativeType + num::NumCast + num::FromPrimitive {
     const DATA_TYPE: DataType;
 }
 
@@ -37,6 +37,7 @@ unsafe impl DictionaryKey for u64 {
 }
 
 mod from;
+pub use from::*;
 
 #[derive(Debug, Clone)]
 pub struct DictionaryArray<K: DictionaryKey> {
@@ -73,6 +74,16 @@ impl<K: DictionaryKey> DictionaryArray<K> {
             values: self.values.clone(),
             offset: self.offset + offset,
         }
+    }
+
+    #[inline]
+    pub fn keys(&self) -> &PrimitiveArray<K> {
+        &self.keys
+    }
+
+    #[inline]
+    pub fn values(&self) -> &Arc<dyn Array> {
+        &self.values
     }
 }
 

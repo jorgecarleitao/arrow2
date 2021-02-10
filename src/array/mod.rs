@@ -149,14 +149,14 @@ mod ffi;
 
 pub use binary::BinaryArray;
 pub use boolean::BooleanArray;
-pub use dictionary::{DictionaryArray, DictionaryKey};
+pub use dictionary::{dict_from_iter, DictionaryArray, DictionaryKey, DictionaryPrimitive};
 pub use fixed_binary::FixedSizeBinaryArray;
 pub use fixed_list::FixedSizeListArray;
 pub use list::{ListArray, ListPrimitive};
 pub use null::NullArray;
 pub use primitive::{Primitive, PrimitiveArray};
 pub use specification::Offset;
-pub use string::Utf8Array;
+pub use string::{Utf8Array, Utf8Primitive};
 pub use struct_::StructArray;
 
 pub use self::ffi::FromFFI;

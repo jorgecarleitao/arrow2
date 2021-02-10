@@ -136,5 +136,6 @@ unsafe impl<O: Offset> ToFFI for Utf8Array<O> {
 }
 
 mod from;
+pub use from::*;
 mod iterator;
 pub use iterator::*;

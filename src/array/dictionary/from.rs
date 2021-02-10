@@ -3,7 +3,6 @@ use std::hash::Hash;
 
 use crate::{
     array::{Builder, Primitive, ToArray},
-    buffer::NativeType,
     datatypes::DataType,
     error::{ArrowError, Result},
 };
@@ -22,16 +21,6 @@ impl<K: DictionaryKey, A: ToArray> DictionaryPrimitive<K, A> {
         let values = self.values.to_arc(values);
         DictionaryArray::from_data(self.keys.to(keys.clone()), values)
     }
-}
-
-pub fn dict_from_iter_primitive<K, T, P, I>(iter: I) -> Result<DictionaryPrimitive<K, Primitive<T>>>
-where
-    K: DictionaryKey,
-    T: NativeType + Eq + Hash,
-    P: std::borrow::Borrow<Option<T>>,
-    I: IntoIterator<Item = P>,
-{
-    dict_from_iter(iter)
 }
 
 pub fn dict_from_iter<K, B, T, P, I>(iter: I) -> Result<DictionaryPrimitive<K, B>>
