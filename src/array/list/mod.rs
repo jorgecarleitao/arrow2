@@ -89,8 +89,8 @@ impl<O: Offset> ListArray<O> {
     }
 
     #[inline]
-    pub fn offsets(&self) -> &[O] {
-        self.offsets.as_slice()
+    pub fn offsets(&self) -> &Buffer<O> {
+        &self.offsets
     }
 
     #[inline]

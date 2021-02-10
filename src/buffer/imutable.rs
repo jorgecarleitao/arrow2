@@ -47,11 +47,13 @@ pub struct Buffer<T: NativeType> {
 }
 
 impl<T: NativeType> Buffer<T> {
+    #[inline]
     pub fn new() -> Self {
         MutableBuffer::new().into()
     }
 
     /// Auxiliary method to create a new Buffer
+    #[inline]
     pub fn from_bytes(bytes: Bytes<T>) -> Self {
         let length = bytes.len();
         Buffer {
@@ -62,16 +64,19 @@ impl<T: NativeType> Buffer<T> {
     }
 
     /// Returns the number of bytes in the buffer
+    #[inline]
     pub fn len(&self) -> usize {
         self.length
     }
 
     /// Returns whether the buffer is empty.
+    #[inline]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
     /// Returns the byte slice stored in this buffer
+    #[inline]
     pub fn as_slice(&self) -> &[T] {
         &self.data[self.offset..self.offset + self.length]
     }
@@ -80,6 +85,7 @@ impl<T: NativeType> Buffer<T> {
     /// Doing so allows the same memory region to be shared between buffers.
     /// # Panics
     /// Panics iff `offset` is larger than `len`.
+    #[inline]
     pub fn slice(mut self, offset: usize, length: usize) -> Self {
         assert!(
             offset + length <= self.len(),
@@ -91,6 +97,7 @@ impl<T: NativeType> Buffer<T> {
     }
 
     /// Returns a pointer to the start of this buffer.
+    #[inline]
     pub fn as_ptr(&self) -> *const T {
         unsafe { self.data.ptr().as_ptr().add(self.offset) }
     }
@@ -106,6 +113,7 @@ impl<T: NativeType> Buffer<T> {
 /// Creating a `Buffer` instance by copying the memory from a `AsRef<[u8]>` into a newly
 /// allocated memory region.
 impl<T: NativeType, U: AsRef<[T]>> From<U> for Buffer<T> {
+    #[inline]
     fn from(p: U) -> Self {
         // allocate aligned memory buffer
         let slice = p.as_ref();
@@ -130,6 +138,7 @@ impl<T: NativeType> Buffer<T> {
     ///
     /// This function is unsafe as there is no guarantee that the given pointer is valid for `len`
     /// bytes and that the foreign deallocator frees the region.
+    #[inline]
     pub unsafe fn from_unowned(
         ptr: std::ptr::NonNull<u8>,
         length: usize,

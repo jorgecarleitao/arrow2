@@ -69,8 +69,8 @@ pub(super) fn equal<O: Offset>(
     rhs_start: usize,
     len: usize,
 ) -> bool {
-    let lhs_offsets = lhs.offsets();
-    let rhs_offsets = rhs.offsets();
+    let lhs_offsets = lhs.offsets().as_slice();
+    let rhs_offsets = rhs.offsets().as_slice();
 
     // There is an edge-case where a n-length list that has 0 children, results in panics.
     // For example; an array with offsets [0, 0, 0, 0, 0] has 4 slots, but will have
