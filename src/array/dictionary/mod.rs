@@ -41,21 +41,16 @@ pub struct DictionaryArray<K: DictionaryKey> {
     data_type: DataType,
     keys: PrimitiveArray<K>,
     values: Arc<dyn Array>,
-    validity: Option<Bitmap>,
     offset: usize,
 }
 
 impl<K: DictionaryKey> DictionaryArray<K> {
     pub fn new_empty(datatype: DataType) -> Self {
         let values = new_empty_array(datatype).into();
-        Self::from_data(PrimitiveArray::<K>::new_empty(K::DATA_TYPE), values, None)
+        Self::from_data(PrimitiveArray::<K>::new_empty(K::DATA_TYPE), values)
     }
 
-    pub fn from_data(
-        keys: PrimitiveArray<K>,
-        values: Arc<dyn Array>,
-        validity: Option<Bitmap>,
-    ) -> Self {
+    pub fn from_data(keys: PrimitiveArray<K>, values: Arc<dyn Array>) -> Self {
         let data_type = DataType::Dictionary(
             Box::new(keys.data_type().clone()),
             Box::new(values.data_type().clone()),
@@ -65,18 +60,15 @@ impl<K: DictionaryKey> DictionaryArray<K> {
             data_type,
             keys,
             values,
-            validity,
             offset: 0,
         }
     }
 
     pub fn slice(&self, offset: usize, length: usize) -> Self {
-        let validity = self.validity.clone().map(|x| x.slice(offset, length));
         Self {
             data_type: self.data_type.clone(),
             keys: self.keys.clone().slice(offset, length),
             values: self.values.clone(),
-            validity,
             offset: self.offset + offset,
         }
     }
@@ -99,7 +91,7 @@ impl<K: DictionaryKey> Array for DictionaryArray<K> {
     }
 
     fn nulls(&self) -> &Option<Bitmap> {
-        &self.validity
+        self.keys.nulls()
     }
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
@@ -109,7 +101,7 @@ impl<K: DictionaryKey> Array for DictionaryArray<K> {
 
 unsafe impl<K: DictionaryKey> ToFFI for DictionaryArray<K> {
     fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
-        [self.validity.as_ref().map(|x| x.as_ptr()), None, None]
+        [self.keys.nulls().as_ref().map(|x| x.as_ptr()), None, None]
     }
 
     #[inline]
