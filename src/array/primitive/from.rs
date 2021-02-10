@@ -2,7 +2,7 @@ use std::{iter::FromIterator, sync::Arc};
 
 use crate::{
     array::Array,
-    buffer::{types::NativeType, Bitmap, Buffer, MutableBitmap, MutableBuffer},
+    buffer::{types::NativeType, MutableBitmap, MutableBuffer},
     datatypes::DataType,
 };
 
@@ -62,7 +62,7 @@ impl<T: NativeType> Primitive<T> {
 /// # Safety
 /// The caller must ensure that `iterator` is `TrustedLen`.
 #[inline]
-pub(crate) unsafe fn trusted_len_unzip<I, P, T>(iterator: I) -> (Option<Bitmap>, Buffer<T>)
+pub(crate) unsafe fn trusted_len_unzip<I, P, T>(iterator: I) -> (MutableBitmap, MutableBuffer<T>)
 where
     T: NativeType,
     P: std::borrow::Borrow<T>,
@@ -94,12 +94,7 @@ where
     buffer.set_len(len);
     null.set_len(len);
 
-    let bitmap = if null.null_count() > 0 {
-        Some(null.into())
-    } else {
-        None
-    };
-    (bitmap, buffer.into())
+    (null, buffer)
 }
 
 /// # Safety
@@ -107,7 +102,7 @@ where
 #[inline]
 pub(crate) unsafe fn try_trusted_len_unzip<E, I, P, T>(
     iterator: I,
-) -> Result<(Option<Bitmap>, Buffer<T>), E>
+) -> Result<(MutableBitmap, MutableBuffer<T>), E>
 where
     T: NativeType,
     P: std::borrow::Borrow<T>,
@@ -139,24 +134,25 @@ where
     buffer.set_len(len);
     null.set_len(len);
 
-    let bitmap = if null.null_count() > 0 {
-        Some(null.into())
-    } else {
-        None
-    };
-    Ok((bitmap, buffer.into()))
+    Ok((null, buffer))
 }
 
 /// auxiliary struct used to create a [`PrimitiveArray`] out of an iterator
 #[derive(Debug)]
 pub struct Primitive<T: NativeType> {
-    values: Buffer<T>,
-    validity: Option<Bitmap>,
+    values: MutableBuffer<T>,
+    validity: MutableBitmap,
 }
 
 impl<T: NativeType> Primitive<T> {
     pub fn to(self, data_type: DataType) -> PrimitiveArray<T> {
-        PrimitiveArray::<T>::from_data(data_type, self.values, self.validity)
+        let validity = if self.validity.null_count() > 0 {
+            Some(self.validity.into())
+        } else {
+            None
+        };
+
+        PrimitiveArray::<T>::from_data(data_type, self.values.into(), validity)
     }
 }
 
@@ -165,29 +161,23 @@ impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> FromIterator<Ptr> for P
         let iter = iter.into_iter();
         let (lower, _) = iter.size_hint();
 
-        let mut nulls = MutableBitmap::with_capacity(lower);
+        let mut validity = MutableBitmap::with_capacity(lower);
 
         let values: MutableBuffer<T> = iter
             .map(|item| {
                 if let Some(a) = item.borrow() {
-                    nulls.push(true);
+                    validity.push(true);
                     *a
                 } else {
-                    nulls.push(false);
+                    validity.push(false);
                     T::default()
                 }
             })
             .collect();
 
-        let bitmap = if nulls.null_count() > 0 {
-            Some(nulls.into())
-        } else {
-            None
-        };
-
         Self {
-            values: values.into(),
-            validity: bitmap.into(),
+            values: values,
+            validity,
         }
     }
 }
