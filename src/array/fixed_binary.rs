@@ -5,7 +5,7 @@ use crate::{
 
 use super::{ffi::ToFFI, Array};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FixedSizeBinaryArray {
     size: i32, // this is redundant with `data_type`, but useful to not have to deconstruct the data_type.
     data_type: DataType,

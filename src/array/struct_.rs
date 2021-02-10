@@ -7,7 +7,7 @@ use crate::{
 
 use super::{ffi::ToFFI, new_empty_array, Array};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct StructArray {
     data_type: DataType,
     values: Vec<Arc<dyn Array>>,

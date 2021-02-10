@@ -4,7 +4,7 @@ use super::{ffi::ToFFI, Array, FromFFI};
 
 use crate::error::Result;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BooleanArray {
     data_type: DataType,
     values: Bitmap,

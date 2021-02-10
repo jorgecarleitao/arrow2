@@ -77,6 +77,61 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
     }
 }
 
+macro_rules! clone_dyn {
+    ($array:expr, $ty:ty) => {{
+        let array = $array.as_any().downcast_ref::<$ty>().unwrap();
+        Box::new(array.clone())
+    }};
+}
+
+/// Clones `array`.
+pub fn clone(array: &dyn Array) -> Box<dyn Array> {
+    match array.data_type() {
+        DataType::Null => clone_dyn!(array, NullArray),
+        DataType::Boolean => clone_dyn!(array, BooleanArray),
+        DataType::Int8 => clone_dyn!(array, PrimitiveArray<i8>),
+        DataType::Int16 => clone_dyn!(array, PrimitiveArray<i16>),
+        DataType::Int32 | DataType::Date32 | DataType::Time32(_) => {
+            clone_dyn!(array, PrimitiveArray<i32>)
+        }
+        DataType::Int64
+        | DataType::Date64
+        | DataType::Time64(_)
+        | DataType::Timestamp(_, _)
+        | DataType::Duration(_)
+        | DataType::Interval(_) => clone_dyn!(array, PrimitiveArray<i64>),
+        DataType::UInt8 => clone_dyn!(array, PrimitiveArray<u8>),
+        DataType::UInt16 => clone_dyn!(array, PrimitiveArray<u16>),
+        DataType::UInt32 => clone_dyn!(array, PrimitiveArray<u32>),
+        DataType::UInt64 => clone_dyn!(array, PrimitiveArray<u64>),
+        DataType::Float16 => unreachable!(),
+        DataType::Float32 => clone_dyn!(array, PrimitiveArray<f32>),
+        DataType::Float64 => clone_dyn!(array, PrimitiveArray<f64>),
+        DataType::Binary => clone_dyn!(array, BinaryArray<i32>),
+        DataType::LargeBinary => clone_dyn!(array, BinaryArray<i64>),
+        DataType::FixedSizeBinary(_) => clone_dyn!(array, FixedSizeBinaryArray),
+        DataType::Utf8 => clone_dyn!(array, Utf8Array::<i32>),
+        DataType::LargeUtf8 => clone_dyn!(array, Utf8Array::<i64>),
+        DataType::List(_) => clone_dyn!(array, ListArray::<i32>),
+        DataType::LargeList(_) => clone_dyn!(array, ListArray::<i64>),
+        DataType::FixedSizeList(_, _) => clone_dyn!(array, FixedSizeListArray),
+        DataType::Struct(_) => clone_dyn!(array, StructArray),
+        DataType::Union(_) => unimplemented!(),
+        DataType::Dictionary(key_type, _) => match key_type.as_ref() {
+            DataType::Int8 => clone_dyn!(array, DictionaryArray::<i8>),
+            DataType::Int16 => clone_dyn!(array, DictionaryArray::<i16>),
+            DataType::Int32 => clone_dyn!(array, DictionaryArray::<i32>),
+            DataType::Int64 => clone_dyn!(array, DictionaryArray::<i64>),
+            DataType::UInt8 => clone_dyn!(array, DictionaryArray::<u8>),
+            DataType::UInt16 => clone_dyn!(array, DictionaryArray::<u16>),
+            DataType::UInt32 => clone_dyn!(array, DictionaryArray::<u32>),
+            DataType::UInt64 => clone_dyn!(array, DictionaryArray::<u64>),
+            _ => unreachable!(),
+        },
+        DataType::Decimal(_, _) => clone_dyn!(array, PrimitiveArray::<i128>),
+    }
+}
+
 mod binary;
 mod boolean;
 mod dictionary;

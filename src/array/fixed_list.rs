@@ -7,7 +7,7 @@ use crate::{
 
 use super::{ffi::ToFFI, new_empty_array, Array};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FixedSizeListArray {
     size: i32, // this is redundant with `data_type`, but useful to not have to deconstruct the data_type.
     data_type: DataType,

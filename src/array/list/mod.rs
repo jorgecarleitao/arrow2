@@ -12,7 +12,7 @@ use super::{
     Array,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ListArray<O: Offset> {
     data_type: DataType,
     offsets: Buffer<O>,

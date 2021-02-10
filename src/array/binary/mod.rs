@@ -8,7 +8,7 @@ use super::{ffi::ToFFI, specification::check_offsets, specification::Offset, Arr
 
 use crate::error::Result;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BinaryArray<O: Offset> {
     data_type: DataType,
     offsets: Buffer<O>,
