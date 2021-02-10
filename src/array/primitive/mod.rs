@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::{
     buffer::{types::NativeType, Bitmap, Buffer},
     datatypes::DataType,
@@ -119,10 +117,6 @@ unsafe impl<T: NativeType> FromFFI for PrimitiveArray<T> {
             offset: 0,
         })
     }
-}
-
-pub trait ToArray: std::fmt::Debug {
-    fn to_arc(self, data_type: &DataType) -> Arc<dyn Array>;
 }
 
 mod from;

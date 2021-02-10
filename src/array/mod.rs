@@ -166,3 +166,13 @@ pub type Float32Array = PrimitiveArray<f32>;
 pub type Float64Array = PrimitiveArray<f64>;
 pub type StringArray = Utf8Array<i32>;
 pub type UInt32Array = PrimitiveArray<u32>;
+
+pub trait ToArray: std::fmt::Debug {
+    fn to_arc(self, data_type: &DataType) -> std::sync::Arc<dyn Array>;
+}
+
+pub trait Builder<T>: ToArray {
+    fn with_capacity(capacity: usize) -> Self;
+
+    fn push(&mut self, item: Option<&T>);
+}

@@ -1,12 +1,12 @@
 use std::{iter::FromIterator, sync::Arc};
 
 use crate::{
-    array::Array,
+    array::{Array, Builder, ToArray},
     buffer::{types::NativeType, MutableBitmap, MutableBuffer},
     datatypes::DataType,
 };
 
-use super::{PrimitiveArray, ToArray};
+use super::PrimitiveArray;
 
 impl<T: NativeType> Primitive<T> {
     pub fn from_slice<P: AsRef<[T]>>(slice: P) -> Self {
@@ -142,6 +142,30 @@ where
 pub struct Primitive<T: NativeType> {
     values: MutableBuffer<T>,
     validity: MutableBitmap,
+}
+
+impl<T: NativeType> Builder<T> for Primitive<T> {
+    #[inline]
+    fn with_capacity(capacity: usize) -> Self {
+        Self {
+            values: MutableBuffer::<T>::with_capacity(capacity),
+            validity: MutableBitmap::with_capacity(capacity),
+        }
+    }
+
+    #[inline]
+    fn push(&mut self, value: Option<&T>) {
+        match value {
+            Some(v) => {
+                self.values.push(*v);
+                self.validity.push(true);
+            }
+            None => {
+                self.values.push(T::default());
+                self.validity.push(false);
+            }
+        }
+    }
 }
 
 impl<T: NativeType> Primitive<T> {

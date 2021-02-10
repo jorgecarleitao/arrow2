@@ -1,7 +1,7 @@
 use std::{iter::FromIterator, sync::Arc};
 
 use crate::{
-    array::{primitive::ToArray, Array, Offset, Primitive},
+    array::{Array, Offset, Primitive, ToArray},
     buffer::{Bitmap, Buffer, MutableBitmap, MutableBuffer, NativeType},
     datatypes::DataType,
 };

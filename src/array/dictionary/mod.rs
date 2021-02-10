@@ -7,7 +7,7 @@ use crate::{
 
 use super::{ffi::ToFFI, new_empty_array, primitive::PrimitiveArray, Array};
 
-pub unsafe trait DictionaryKey: NativeType {
+pub unsafe trait DictionaryKey: NativeType + num::FromPrimitive {
     const DATA_TYPE: DataType;
 }
 
@@ -35,6 +35,8 @@ unsafe impl DictionaryKey for u32 {
 unsafe impl DictionaryKey for u64 {
     const DATA_TYPE: DataType = DataType::UInt64;
 }
+
+mod from;
 
 #[derive(Debug, Clone)]
 pub struct DictionaryArray<K: DictionaryKey> {
@@ -70,6 +72,16 @@ impl<K: DictionaryKey> DictionaryArray<K> {
             keys: self.keys.clone().slice(offset, length),
             values: self.values.clone(),
             offset: self.offset + offset,
+        }
+    }
+}
+
+impl<K: DictionaryKey> DictionaryArray<K> {
+    fn get_child(data_type: &DataType) -> (&DataType, &DataType) {
+        if let DataType::Dictionary(keys, values) = data_type {
+            (keys.as_ref(), values.as_ref())
+        } else {
+            panic!("Wrong DataType")
         }
     }
 }
