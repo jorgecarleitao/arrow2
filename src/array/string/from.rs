@@ -1,6 +1,9 @@
+use std::sync::Arc;
+
 use crate::{
-    array::Offset,
+    array::{Array, Builder, Offset, ToArray},
     buffer::{Bitmap, Buffer, MutableBitmap, MutableBuffer},
+    datatypes::DataType,
 };
 
 use super::Utf8Array;
@@ -155,4 +158,65 @@ where
         None
     };
     Ok((bitmap, offsets.into(), values.into()))
+}
+
+/// auxiliary struct used to create a [`PrimitiveArray`] out of an iterator
+#[derive(Debug)]
+pub struct Utf8Primitive<O: Offset> {
+    offsets: MutableBuffer<O>,
+    values: MutableBuffer<u8>,
+    validity: MutableBitmap,
+    // invariant: always equal to the last offset
+    length: O,
+}
+
+impl<O: Offset> Builder<&str> for Utf8Primitive<O> {
+    #[inline]
+    fn with_capacity(capacity: usize) -> Self {
+        let mut offsets = MutableBuffer::<O>::with_capacity(capacity + 1);
+        offsets.push(O::default());
+
+        Self {
+            offsets,
+            values: MutableBuffer::<u8>::new(),
+            validity: MutableBitmap::with_capacity(capacity),
+            length: O::default(),
+        }
+    }
+
+    #[inline]
+    fn push(&mut self, value: Option<&&str>) {
+        match value {
+            Some(v) => {
+                self.offsets.push(O::from_usize(v.len()).unwrap());
+                self.values.extend_from_slice(&v.as_bytes());
+                self.validity.push(true);
+            }
+            None => {
+                self.offsets.push(self.length);
+                self.validity.push(false);
+            }
+        }
+    }
+}
+
+impl<O: Offset> Utf8Primitive<O> {
+    pub fn to(self) -> Utf8Array<O> {
+        let validity = if self.validity.null_count() > 0 {
+            Some(self.validity.into())
+        } else {
+            None
+        };
+
+        // Soundness: all methods from `Utf8Primitive` receive &str
+        unsafe {
+            Utf8Array::<O>::from_data_unchecked(self.offsets.into(), self.values.into(), validity)
+        }
+    }
+}
+
+impl<O: Offset> ToArray for Utf8Primitive<O> {
+    fn to_arc(self, _: &DataType) -> Arc<dyn Array> {
+        Arc::new(self.to())
+    }
 }
