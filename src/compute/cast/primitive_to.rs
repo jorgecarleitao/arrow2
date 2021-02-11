@@ -8,7 +8,7 @@ use crate::{
     buffer::{Bitmap, NativeType},
     datatypes::DataType,
 };
-use crate::{compute::utils::lexical_to_string, error::Result};
+use crate::{error::Result, util::lexical_to_string};
 
 use super::cast;
 

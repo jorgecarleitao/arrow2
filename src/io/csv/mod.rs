@@ -18,7 +18,7 @@ impl From<chrono::ParseError> for ArrowError {
 
 mod parser;
 pub mod reader;
-//pub mod writer;
+pub mod writer;
 
 mod infer_schema;
 mod read_boolean;

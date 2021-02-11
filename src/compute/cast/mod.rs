@@ -1,15 +1,15 @@
 use crate::{
     array::*,
     buffer::Buffer,
-    temporal::{MILLISECONDS, MILLISECONDS_IN_DAY},
+    temporal_conversions::{MILLISECONDS, MILLISECONDS_IN_DAY},
 };
 use crate::{
     datatypes::*,
-    temporal::{MICROSECONDS, NANOSECONDS},
+    temporal_conversions::{MICROSECONDS, NANOSECONDS},
 };
 use crate::{
     error::{ArrowError, Result},
-    temporal::SECONDS_IN_DAY,
+    temporal_conversions::SECONDS_IN_DAY,
 };
 
 use self::{

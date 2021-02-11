@@ -1,6 +1,6 @@
 use chrono::Datelike;
 
-use crate::temporal::EPOCH_DAYS_FROM_CE;
+use crate::temporal_conversions::EPOCH_DAYS_FROM_CE;
 use crate::{datatypes::*, error::ArrowError};
 
 use super::{BooleanParser, PrimitiveParser};
