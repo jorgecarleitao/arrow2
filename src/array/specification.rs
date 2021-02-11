@@ -47,8 +47,7 @@ unsafe impl Offset for i64 {
 }
 
 #[inline]
-pub fn check_offsets<T: Offset>(offsets: &Buffer<T>, values_len: usize) -> usize {
-    // Check that we can transmute the offset buffer
+pub fn check_offsets<O: Offset>(offsets: &Buffer<O>, values_len: usize) -> usize {
     assert!(
         offsets.len() >= 1,
         "The length of the offset buffer must be larger than 1"
@@ -66,5 +65,22 @@ pub fn check_offsets<T: Offset>(offsets: &Buffer<T>, values_len: usize) -> usize
         values_len, last_offset,
         "The length of the values must be equal to the last offset value"
     );
+    len
+}
+
+#[inline]
+pub fn check_offsets_and_utf8<O: Offset>(offsets: &Buffer<O>, values: &Buffer<u8>) -> usize {
+    let len = check_offsets(offsets, values.len());
+    offsets.as_slice().windows(2).for_each(|window| {
+        let start = window[0]
+            .to_usize()
+            .expect("The last offset of the array is larger than usize::MAX");
+        let end = window[1]
+            .to_usize()
+            .expect("The last offset of the array is larger than usize::MAX");
+        assert!(end < values.len());
+        let slice = unsafe { std::slice::from_raw_parts(values.as_ptr().add(start), end - start) };
+        std::str::from_utf8(slice).expect("A non-utf8 string was passed.");
+    });
     len
 }

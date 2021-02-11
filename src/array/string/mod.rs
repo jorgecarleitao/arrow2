@@ -3,7 +3,11 @@ use crate::{
     datatypes::DataType,
 };
 
-use super::{ffi::ToFFI, specification::check_offsets, Array, Offset};
+use super::{
+    ffi::ToFFI,
+    specification::{check_offsets, check_offsets_and_utf8},
+    Array, Offset,
+};
 
 #[derive(Debug, Clone)]
 pub struct Utf8Array<O: Offset> {
@@ -17,6 +21,22 @@ pub struct Utf8Array<O: Offset> {
 impl<O: Offset> Utf8Array<O> {
     pub fn new_empty() -> Self {
         unsafe { Self::from_data_unchecked(Buffer::from(&[O::zero()]), Buffer::new(), None) }
+    }
+
+    pub fn from_data(offsets: Buffer<O>, values: Buffer<u8>, validity: Option<Bitmap>) -> Self {
+        check_offsets_and_utf8(&offsets, &values);
+
+        Self {
+            data_type: if O::is_large() {
+                DataType::LargeUtf8
+            } else {
+                DataType::Utf8
+            },
+            offsets,
+            values,
+            validity,
+            offset: 0,
+        }
     }
 
     /// # Safety

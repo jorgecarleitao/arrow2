@@ -35,17 +35,8 @@ impl<O: Offset> ListArray<O> {
     ) -> Self {
         check_offsets(&offsets, values.len());
 
-        if O::is_large() {
-            if let DataType::LargeList(_) = data_type {
-            } else {
-                panic!("Wrong DataType")
-            }
-        } else {
-            if let DataType::List(_) = data_type {
-            } else {
-                panic!("Wrong DataType")
-            }
-        };
+        // validate data_type
+        let _ = Self::get_child(&data_type);
 
         Self {
             data_type,
@@ -109,7 +100,7 @@ impl<O: Offset> ListArray<O> {
         }
     }
 
-    fn get_child(data_type: &DataType) -> &DataType {
+    pub(crate) fn get_child(data_type: &DataType) -> &DataType {
         if O::is_large() {
             if let DataType::LargeList(child) = data_type {
                 child.data_type()

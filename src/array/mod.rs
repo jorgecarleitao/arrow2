@@ -57,9 +57,7 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
         DataType::LargeUtf8 => Box::new(Utf8Array::<i64>::new_empty()),
         DataType::List(_) => Box::new(ListArray::<i32>::new_empty(data_type)),
         DataType::LargeList(_) => Box::new(ListArray::<i64>::new_empty(data_type)),
-        DataType::FixedSizeList(field, size) => {
-            Box::new(FixedSizeListArray::new_empty(size, *field))
-        }
+        DataType::FixedSizeList(_, _) => Box::new(FixedSizeListArray::new_empty(data_type)),
         DataType::Struct(fields) => Box::new(StructArray::new_empty(&fields)),
         DataType::Union(_) => unimplemented!(),
         DataType::Dictionary(key_type, value_type) => match key_type.as_ref() {

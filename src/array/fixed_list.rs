@@ -1,9 +1,6 @@
 use std::sync::Arc;
 
-use crate::{
-    buffer::Bitmap,
-    datatypes::{DataType, Field},
-};
+use crate::{buffer::Bitmap, datatypes::DataType};
 
 use super::{ffi::ToFFI, new_empty_array, Array};
 
@@ -17,34 +14,23 @@ pub struct FixedSizeListArray {
 }
 
 impl FixedSizeListArray {
-    pub fn new_empty(size: i32, field: Field) -> Self {
-        Self::from_data(
-            size,
-            new_empty_array(field.data_type().clone()).into(),
-            None,
-            Some((field.name(), field.is_nullable())),
-        )
+    pub fn new_empty(data_type: DataType) -> Self {
+        let values = new_empty_array(Self::get_child_and_size(&data_type).0.clone()).into();
+        Self::from_data(data_type, values, None)
     }
 
     pub fn from_data(
-        size: i32,
+        data_type: DataType,
         values: Arc<dyn Array>,
         validity: Option<Bitmap>,
-        field_options: Option<(&str, bool)>,
     ) -> Self {
-        assert_eq!(values.len() % (size as usize), 0);
+        let (_, size) = Self::get_child_and_size(&data_type);
 
-        let (field_name, field_nullable) = field_options.unwrap_or(("item", true));
-
-        let field = Box::new(Field::new(
-            field_name,
-            values.data_type().clone(),
-            field_nullable,
-        ));
+        assert_eq!(values.len() % (*size as usize), 0);
 
         Self {
-            size,
-            data_type: DataType::FixedSizeList(field, size),
+            size: *size,
+            data_type,
             values,
             validity,
             offset: 0,
@@ -61,6 +47,16 @@ impl FixedSizeListArray {
             values: self.values.clone().slice(offset, length).into(),
             validity,
             offset: 0,
+        }
+    }
+}
+
+impl FixedSizeListArray {
+    pub(crate) fn get_child_and_size(data_type: &DataType) -> (&DataType, &i32) {
+        if let DataType::FixedSizeList(field, size) = data_type {
+            (field.data_type(), size)
+        } else {
+            panic!("Wrong DataType")
         }
     }
 }
