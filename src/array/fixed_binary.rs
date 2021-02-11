@@ -15,11 +15,13 @@ pub struct FixedSizeBinaryArray {
 }
 
 impl FixedSizeBinaryArray {
-    pub fn new_empty(size: i32) -> Self {
-        Self::from_data(size, Buffer::new(), None)
+    pub fn new_empty(data_type: DataType) -> Self {
+        Self::from_data(data_type, Buffer::new(), None)
     }
 
-    pub fn from_data(size: i32, values: Buffer<u8>, validity: Option<Bitmap>) -> Self {
+    pub fn from_data(data_type: DataType, values: Buffer<u8>, validity: Option<Bitmap>) -> Self {
+        let size = *Self::get_size(&data_type);
+
         assert_eq!(values.len() % (size as usize), 0);
 
         Self {
@@ -41,6 +43,16 @@ impl FixedSizeBinaryArray {
             values: self.values.clone().slice(offset, length),
             validity,
             offset: 0,
+        }
+    }
+}
+
+impl FixedSizeBinaryArray {
+    pub(crate) fn get_size(data_type: &DataType) -> &i32 {
+        if let DataType::FixedSizeBinary(size) = data_type {
+            size
+        } else {
+            panic!("Wrong DataType")
         }
     }
 }

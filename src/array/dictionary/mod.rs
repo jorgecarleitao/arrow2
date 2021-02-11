@@ -88,7 +88,7 @@ impl<K: DictionaryKey> DictionaryArray<K> {
 }
 
 impl<K: DictionaryKey> DictionaryArray<K> {
-    fn get_child(data_type: &DataType) -> (&DataType, &DataType) {
+    pub(crate) fn get_child(data_type: &DataType) -> (&DataType, &DataType) {
         if let DataType::Dictionary(keys, values) = data_type {
             (keys.as_ref(), values.as_ref())
         } else {

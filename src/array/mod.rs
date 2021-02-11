@@ -52,7 +52,7 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
         DataType::Float64 => Box::new(PrimitiveArray::<f64>::new_empty(data_type)),
         DataType::Binary => Box::new(BinaryArray::<i32>::new_empty()),
         DataType::LargeBinary => Box::new(BinaryArray::<i64>::new_empty()),
-        DataType::FixedSizeBinary(size) => Box::new(FixedSizeBinaryArray::new_empty(size)),
+        DataType::FixedSizeBinary(_) => Box::new(FixedSizeBinaryArray::new_empty(data_type)),
         DataType::Utf8 => Box::new(Utf8Array::<i32>::new_empty()),
         DataType::LargeUtf8 => Box::new(Utf8Array::<i64>::new_empty()),
         DataType::List(_) => Box::new(ListArray::<i32>::new_empty(data_type)),
