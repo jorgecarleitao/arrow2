@@ -253,6 +253,7 @@ fn to_le_bytes<T: NativeType>(values: &[T]) -> Vec<u8> {
     values
         .iter()
         .map(T::to_le_bytes)
+        .map(|x| x.as_ref().to_vec())
         .flatten()
         .collect::<Vec<_>>()
 }

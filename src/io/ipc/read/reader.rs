@@ -538,6 +538,8 @@ impl<R: Read> RecordBatchReader for StreamReader<R> {
 
 #[cfg(test)]
 mod tests {
+    use crate::io::json_integration::ArrowJson;
+
     use super::*;
 
     use std::fs::File;
@@ -581,10 +583,10 @@ mod tests {
     fn read_decimal_be_file_should_panic() {
         let testdata = crate::util::test_util::arrow_test_data();
         let file = File::open(format!(
-                "{}/arrow-ipc-stream/integration/1.0.0-bigendian/generated_decimal.arrow_file",
-                testdata
-            ))
-            .unwrap();
+            "{}/arrow-ipc-stream/integration/1.0.0-bigendian/generated_decimal.arrow_file",
+            testdata
+        ))
+        .unwrap();
         FileReader::try_new(file).unwrap();
     }
 

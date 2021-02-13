@@ -17,7 +17,6 @@
 
 // TODO: (vcq): Protobuf codegen is not generating Debug impls.
 #![allow(missing_debug_implementations)]
-
 #[allow(clippy::redundant_closure)]
 #[allow(clippy::needless_lifetimes)]
 #[allow(clippy::extra_unused_lifetimes)]

@@ -207,11 +207,7 @@ pub fn read_dictionary<T: DictionaryKey, R: Read + Seek>(
 ) -> Result<Arc<dyn Array>> {
     let values = field_nodes.pop().unwrap().1.as_ref().unwrap();
 
-    let (child, values_data_type) = DictionaryArray::<T>::get_child(&data_type);
-
-    assert_eq!(values_data_type, values.data_type());
-
-    let keys = read_primitive(field_nodes, child.clone(), buffers, reader)?;
+    let keys = read_primitive(field_nodes, T::DATA_TYPE, buffers, reader)?;
 
     Ok(Arc::new(DictionaryArray::<T>::from_data(
         keys,
