@@ -8,7 +8,7 @@ use serde_json::{json, Value};
 
 use crate::error::ArrowError;
 
-use super::{DataType, Field, IntervalUnit, Schema, TimeUnit};
+use crate::datatypes::{DataType, Field, IntervalUnit, Schema, TimeUnit};
 
 pub trait ToJson {
     /// Generate a JSON representation
@@ -494,14 +494,9 @@ impl TryFrom<&Value> for Field {
                     }
                     _ => data_type,
                 };
-                Ok(Field {
-                    name,
-                    nullable,
-                    data_type,
-                    dict_id,
-                    dict_is_ordered,
-                    metadata,
-                })
+                let mut f = Field::new_dict(&name, data_type, nullable, dict_id, dict_is_ordered);
+                f.set_metadata(metadata);
+                Ok(f)
             }
             _ => Err(ArrowError::ParseError(
                 "Invalid json value type for field".to_string(),

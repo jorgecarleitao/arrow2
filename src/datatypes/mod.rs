@@ -1,5 +1,4 @@
 mod field;
-mod json;
 mod primitive;
 mod schema;
 
