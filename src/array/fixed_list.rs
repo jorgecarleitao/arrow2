@@ -49,6 +49,11 @@ impl FixedSizeListArray {
             offset: 0,
         }
     }
+
+    #[inline]
+    pub fn values(&self) -> &Arc<dyn Array> {
+        &self.values
+    }
 }
 
 impl FixedSizeListArray {

@@ -19,7 +19,7 @@ impl<'a, T: NativeType> PrimitiveIter<'a, T> {
     /// create a new iterator
     pub fn new(array: &'a PrimitiveArray<T>) -> Self {
         PrimitiveIter::<T> {
-            values: array.values().as_slice(),
+            values: array.values(),
             validity: &array.validity,
             current: 0,
             current_end: array.len(),

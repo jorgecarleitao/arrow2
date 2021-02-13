@@ -2,7 +2,7 @@ use std::iter::FromIterator;
 use std::sync::Arc;
 
 use crate::{
-    bits::{get_bit, null_count, set_bit_raw, unset_bit_raw},
+    bits::{get_bit, get_bit_unchecked, null_count, set_bit_raw, unset_bit_raw},
     buffer::bytes::Bytes,
     ffi,
 };
@@ -20,6 +20,7 @@ pub struct Bitmap {
 }
 
 impl Bitmap {
+    #[inline]
     pub fn new() -> Self {
         MutableBitmap::new().into()
     }
@@ -58,6 +59,7 @@ impl Bitmap {
 
     #[inline]
     pub fn slice(mut self, offset: usize, length: usize) -> Self {
+        assert!(offset + length <= self.bytes.len() * 8);
         let offset = self.offset + offset;
         self.offset += offset;
         self.length = length;
@@ -68,6 +70,11 @@ impl Bitmap {
     #[inline]
     pub fn get_bit(&self, i: usize) -> bool {
         get_bit(&self.bytes, self.offset + i)
+    }
+
+    #[inline]
+    pub unsafe fn get_bit_unchecked(&self, i: usize) -> bool {
+        get_bit_unchecked(&self.bytes, self.offset + i)
     }
 
     /// Returns a pointer to the start of this bitmap.
@@ -239,12 +246,76 @@ impl Bitmap {
     ) -> Self {
         // todo: make all kinds of assertions
         let bytes = Bytes::new(ptr, length, Deallocation::Foreign(data));
-        let null_count = null_count(&bytes, 0, length);
-        Self {
-            bytes: Arc::new(bytes),
-            offset: 0,
-            length,
-            null_count,
+        Self::from_bytes(bytes, length)
+    }
+}
+
+// Methods used for IPC
+impl Bitmap {
+    #[inline]
+    pub(crate) fn offset(&self) -> usize {
+        self.offset
+    }
+
+    #[inline]
+    pub(crate) fn as_slice(&self) -> &[u8] {
+        assert_eq!(self.offset % 8, 0); // slices only make sense when there is no offset
+        let start = self.offset % 8;
+        let len = self.length.saturating_add(7) / 8;
+        &self.bytes[start..len]
+    }
+}
+
+impl<'a> IntoIterator for &'a Bitmap {
+    type Item = bool;
+    type IntoIter = BitmapIter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        BitmapIter::<'a>::new(self)
+    }
+}
+
+impl<'a> Bitmap {
+    /// constructs a new iterator
+    pub fn iter(&'a self) -> BitmapIter<'a> {
+        BitmapIter::<'a>::new(&self)
+    }
+}
+
+/// an iterator that returns Some(bool) or None.
+// Note: This implementation is based on std's [Vec]s' [IntoIter].
+#[derive(Debug)]
+pub struct BitmapIter<'a> {
+    bitmap: &'a Bitmap,
+    current: usize,
+}
+
+impl<'a> BitmapIter<'a> {
+    /// create a new iterator
+    #[inline]
+    pub fn new(bitmap: &'a Bitmap) -> Self {
+        BitmapIter { bitmap, current: 0 }
+    }
+}
+
+impl<'a> std::iter::Iterator for BitmapIter<'a> {
+    type Item = bool;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current == self.bitmap.len() {
+            None
+        } else {
+            let old = self.current;
+            self.current += 1;
+            Some(unsafe { self.bitmap.get_bit_unchecked(old) })
         }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (
+            self.bitmap.len() - self.current,
+            Some(self.bitmap.len() - self.current),
+        )
     }
 }

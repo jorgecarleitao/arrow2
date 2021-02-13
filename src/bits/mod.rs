@@ -30,6 +30,15 @@ pub fn get_bit(data: &[u8], i: usize) -> bool {
     (data[i >> 3] & BIT_MASK[i & 7]) != 0
 }
 
+/// Returns whether bit at position `i` in `data` is set or not.
+///
+/// # Safety
+/// `i >= data.len() * 8` results in undefined behavior
+#[inline]
+pub unsafe fn get_bit_unchecked(data: &[u8], i: usize) -> bool {
+    (*data.as_ptr().add(i >> 3) & BIT_MASK[i & 7]) != 0
+}
+
 /// Returns the number of bytes required to hold `bits` bits.
 #[inline]
 pub fn bytes_for(bits: usize) -> usize {

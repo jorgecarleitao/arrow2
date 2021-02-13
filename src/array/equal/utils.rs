@@ -162,11 +162,11 @@ pub(super) fn child_logical_null_buffer(
     match parent.data_type() {
         DataType::List(_) => {
             let parent = parent.as_any().downcast_ref::<ListArray<i32>>().unwrap();
-            logical_list_bitmap(parent.offsets().as_slice(), parent_bitmap, self_null_bitmap)
+            logical_list_bitmap(parent.offsets(), parent_bitmap, self_null_bitmap)
         }
         DataType::LargeList(_) => {
             let parent = parent.as_any().downcast_ref::<ListArray<i64>>().unwrap();
-            logical_list_bitmap(parent.offsets().as_slice(), parent_bitmap, self_null_bitmap)
+            logical_list_bitmap(parent.offsets(), parent_bitmap, self_null_bitmap)
         }
         data_type => panic!("Data type {:?} is not a supported nested type", data_type),
     }

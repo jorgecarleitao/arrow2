@@ -45,6 +45,11 @@ impl FixedSizeBinaryArray {
             offset: 0,
         }
     }
+
+    #[inline]
+    pub fn values(&self) -> &[u8] {
+        self.values.as_slice()
+    }
 }
 
 impl FixedSizeBinaryArray {

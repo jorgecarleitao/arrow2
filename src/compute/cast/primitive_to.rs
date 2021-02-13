@@ -60,7 +60,7 @@ where
 
     Ok(Box::new(PrimitiveArray::<T>::from_data(
         to_type.clone(),
-        from.values().clone(),
+        from.values_buffer().clone(),
         from.nulls().clone(),
     )))
 }
@@ -74,7 +74,7 @@ where
 {
     let array = array.as_any().downcast_ref::<PrimitiveArray<T>>().unwrap();
 
-    let iter = array.values().as_slice().iter().map(|v| *v != T::default());
+    let iter = array.values().iter().map(|v| *v != T::default());
     let values = unsafe { Bitmap::from_trusted_len_iter(iter) };
 
     let array = BooleanArray::from_data(values, array.nulls().clone());

@@ -113,7 +113,7 @@ fn take_values_nulls<T: NativeType, I: Offset>(
 
     let null_values = values.nulls().as_ref().unwrap();
 
-    let values_values = values.values().as_slice();
+    let values_values = values.values();
 
     let values = indices.iter().map(|index| {
         let index = maybe_usize::<I>(*index)?;
@@ -143,7 +143,7 @@ fn take_indices_nulls<T: NativeType, I: Offset>(
 ) -> Result<(Buffer<T>, Option<Bitmap>)> {
     let null_indices = indices.nulls().as_ref().unwrap();
 
-    let values = indices.values().as_slice().iter().map(|index| {
+    let values = indices.values().iter().map(|index| {
         let index = maybe_usize::<I>(*index)?;
         Result::Ok(match values.get(index) {
             Some(value) => *value,
@@ -172,7 +172,7 @@ fn take_values_indices_nulls<T: NativeType, I: Offset>(
 
     let null_values = values.nulls().as_ref().unwrap();
 
-    let values_values = values.values().as_slice();
+    let values_values = values.values();
     let values = indices.iter().map(|index| match index {
         Some(index) => {
             let index = maybe_usize::<I>(index)?;
@@ -218,17 +218,17 @@ fn take_primitive<T: NativeType, I: Offset>(
         (false, false) => {
             // * no nulls
             // * all `indices.values()` are valid
-            take_no_nulls::<T, I>(values.values().as_slice(), indices.values().as_slice())?
+            take_no_nulls::<T, I>(values.values(), indices.values())?
         }
         (true, false) => {
             // * nulls come from `values` alone
             // * all `indices.values()` are valid
-            take_values_nulls::<T, I>(values, indices.values().as_slice())?
+            take_values_nulls::<T, I>(values, indices.values())?
         }
         (false, true) => {
             // in this branch it is unsound to read and use `index.values()`,
             // as doing so is UB when they come from a null slot.
-            take_indices_nulls::<T, I>(values.values().as_slice(), indices)?
+            take_indices_nulls::<T, I>(values.values(), indices)?
         }
         (true, true) => {
             // in this branch it is unsound to read and use `index.values()`,

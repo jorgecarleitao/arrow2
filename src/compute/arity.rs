@@ -20,7 +20,7 @@ where
     O: NativeType,
     F: Fn(I) -> O,
 {
-    let values = array.values().as_slice().iter().map(|v| op(*v));
+    let values = array.values().iter().map(|v| op(*v));
     // JUSTIFICATION
     //  Benefit
     //      ~60% speedup
