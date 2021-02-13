@@ -29,9 +29,5 @@ mod convert;
 pub mod read;
 pub mod write;
 
-pub(self) use self::gen::File::*;
-pub(self) use self::gen::Message::*;
-pub(self) use self::gen::Schema::*;
-
 const ARROW_MAGIC: [u8; 6] = [b'A', b'R', b'R', b'O', b'W', b'1'];
 const CONTINUATION_MARKER: [u8; 4] = [0xff; 4];

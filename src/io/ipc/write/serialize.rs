@@ -7,13 +7,13 @@ use crate::{
     datatypes::DataType,
 };
 
-use crate::io::ipc;
+use crate::io::ipc::gen::Schema;
 
 use super::pad_to_8;
 
 fn _write_primitive<T: NativeType>(
     array: &PrimitiveArray<T>,
-    buffers: &mut Vec<ipc::Buffer>,
+    buffers: &mut Vec<Schema::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
 ) {
@@ -28,7 +28,7 @@ fn _write_primitive<T: NativeType>(
 
 fn write_primitive<T: NativeType>(
     array: &dyn Array,
-    buffers: &mut Vec<ipc::Buffer>,
+    buffers: &mut Vec<Schema::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
 ) {
@@ -38,7 +38,7 @@ fn write_primitive<T: NativeType>(
 
 fn write_boolean(
     array: &dyn Array,
-    buffers: &mut Vec<ipc::Buffer>,
+    buffers: &mut Vec<Schema::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
 ) {
@@ -54,7 +54,7 @@ fn write_boolean(
 
 fn write_binary<O: Offset>(
     array: &dyn Array,
-    buffers: &mut Vec<ipc::Buffer>,
+    buffers: &mut Vec<Schema::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
 ) {
@@ -71,7 +71,7 @@ fn write_binary<O: Offset>(
 
 fn write_utf8<O: Offset>(
     array: &dyn Array,
-    buffers: &mut Vec<ipc::Buffer>,
+    buffers: &mut Vec<Schema::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
 ) {
@@ -88,7 +88,7 @@ fn write_utf8<O: Offset>(
 
 fn write_fixed_size_binary(
     array: &dyn Array,
-    buffers: &mut Vec<ipc::Buffer>,
+    buffers: &mut Vec<Schema::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
 ) {
@@ -107,7 +107,7 @@ fn write_fixed_size_binary(
 
 fn write_list<O: Offset>(
     array: &dyn Array,
-    buffers: &mut Vec<ipc::Buffer>,
+    buffers: &mut Vec<Schema::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
 ) {
@@ -124,7 +124,7 @@ fn write_list<O: Offset>(
 
 fn write_fixed_size_list(
     array: &dyn Array,
-    buffers: &mut Vec<ipc::Buffer>,
+    buffers: &mut Vec<Schema::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
 ) {
@@ -135,7 +135,7 @@ fn write_fixed_size_list(
 // use `write_keys` to either write keys or values
 pub fn _write_dictionary<K: DictionaryKey>(
     array: &dyn Array,
-    buffers: &mut Vec<ipc::Buffer>,
+    buffers: &mut Vec<Schema::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
     write_keys: bool,
@@ -150,7 +150,7 @@ pub fn _write_dictionary<K: DictionaryKey>(
 
 pub fn write_dictionary(
     array: &dyn Array,
-    buffers: &mut Vec<ipc::Buffer>,
+    buffers: &mut Vec<Schema::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
     write_keys: bool,
@@ -189,7 +189,7 @@ pub fn write_dictionary(
 
 pub fn write(
     array: &dyn Array,
-    buffers: &mut Vec<ipc::Buffer>,
+    buffers: &mut Vec<Schema::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
 ) {
@@ -233,7 +233,7 @@ pub fn write(
 #[inline]
 fn write_bytes(
     bytes: &[u8],
-    buffers: &mut Vec<ipc::Buffer>,
+    buffers: &mut Vec<Schema::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
 ) {
@@ -241,7 +241,7 @@ fn write_bytes(
     let pad_len = pad_to_8(len as u32);
     let total_len: i64 = (len + pad_len) as i64;
     // assert_eq!(len % 8, 0, "Buffer width not a multiple of 8 bytes");
-    buffers.push(ipc::Buffer::new(*offset, total_len));
+    buffers.push(Schema::Buffer::new(*offset, total_len));
     arrow_data.extend_from_slice(bytes);
     arrow_data.extend_from_slice(&vec![0u8; pad_len][..]);
     *offset += total_len;

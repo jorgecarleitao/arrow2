@@ -19,7 +19,12 @@
 
 use crate::datatypes::{DataType, Field, IntervalUnit, Schema, TimeUnit};
 use crate::error::{ArrowError, Result};
-use crate::io::ipc;
+
+mod ipc {
+    pub use super::super::gen::File::*;
+    pub use super::super::gen::Message::*;
+    pub use super::super::gen::Schema::*;
+}
 
 use flatbuffers::{FlatBufferBuilder, ForwardsUOffset, UnionWIPOffset, Vector, WIPOffset};
 use std::collections::{BTreeMap, HashMap};
