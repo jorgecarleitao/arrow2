@@ -104,12 +104,7 @@ where
     offsets.set_len(len + 1);
     null.set_len(len);
 
-    let bitmap = if null.null_count() > 0 {
-        Some(null.into())
-    } else {
-        None
-    };
-    (bitmap, offsets.into(), values.into())
+    (null.into(), offsets.into(), values.into())
 }
 
 /// # Safety
@@ -153,12 +148,7 @@ where
     offsets.set_len(len);
     null.set_len(len);
 
-    let bitmap = if null.null_count() > 0 {
-        Some(null.into())
-    } else {
-        None
-    };
-    Ok((bitmap, offsets.into(), values.into()))
+    Ok((null.into(), offsets.into(), values.into()))
 }
 
 /// auxiliary struct used to create a [`PrimitiveArray`] out of an iterator
@@ -203,15 +193,13 @@ impl<O: Offset> Builder<&str> for Utf8Primitive<O> {
 
 impl<O: Offset> Utf8Primitive<O> {
     pub fn to(self) -> Utf8Array<O> {
-        let validity = if self.validity.null_count() > 0 {
-            Some(self.validity.into())
-        } else {
-            None
-        };
-
         // Soundness: all methods from `Utf8Primitive` receive &str
         unsafe {
-            Utf8Array::<O>::from_data_unchecked(self.offsets.into(), self.values.into(), validity)
+            Utf8Array::<O>::from_data_unchecked(
+                self.offsets.into(),
+                self.values.into(),
+                self.validity.into(),
+            )
         }
     }
 }

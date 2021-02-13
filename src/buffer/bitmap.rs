@@ -160,6 +160,17 @@ impl From<MutableBitmap> for Bitmap {
     }
 }
 
+impl From<MutableBitmap> for Option<Bitmap> {
+    #[inline]
+    fn from(buffer: MutableBitmap) -> Self {
+        if buffer.null_count() > 0 {
+            Some(Bitmap::from_bytes(buffer.buffer.into(), buffer.length))
+        } else {
+            None
+        }
+    }
+}
+
 impl FromIterator<bool> for MutableBitmap {
     fn from_iter<I>(iter: I) -> Self
     where

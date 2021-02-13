@@ -54,13 +54,7 @@ where
         .flatten()
         .collect();
 
-    let bitmap = if nulls.null_count() > 0 {
-        Some(nulls.into())
-    } else {
-        None
-    };
-
-    (offsets.into(), values, bitmap)
+    (offsets.into(), values, nulls.into())
 }
 
 impl<O, T, P> FromIterator<Option<P>> for ListPrimitive<O, Primitive<T>>

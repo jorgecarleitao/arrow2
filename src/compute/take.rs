@@ -127,13 +127,7 @@ fn take_values_nulls<T: NativeType, I: Offset>(
     // Soundness: `slice.map` is `TrustedLen`.
     let buffer = unsafe { MutableBuffer::try_from_trusted_len_iter(values)? };
 
-    let bitmap = if null.null_count() > 0 {
-        Some(null.into())
-    } else {
-        None
-    };
-
-    Ok((buffer.into(), bitmap))
+    Ok((buffer.into(), null.into()))
 }
 
 // take implementation when only indices contain nulls
@@ -186,14 +180,7 @@ fn take_values_indices_nulls<T: NativeType, I: Offset>(
     });
     // Soundness: `slice.map` is `TrustedLen`.
     let buffer = unsafe { MutableBuffer::try_from_trusted_len_iter(values)? };
-
-    let bitmap = if bitmap.null_count() > 0 {
-        Some(bitmap.into())
-    } else {
-        None
-    };
-
-    Ok((buffer.into(), bitmap))
+    Ok((buffer.into(), bitmap.into()))
 }
 
 /// `take` implementation for all primitive arrays

@@ -79,12 +79,7 @@ where
     values.set_len(len);
     null.set_len(len);
 
-    let bitmap = if null.null_count() > 0 {
-        Some(null.into())
-    } else {
-        None
-    };
-    (bitmap, values.into())
+    (null.into(), values.into())
 }
 
 /// # Safety
@@ -121,10 +116,5 @@ where
     values.set_len(len);
     null.set_len(len);
 
-    let bitmap = if null.null_count() > 0 {
-        Some(null.into())
-    } else {
-        None
-    };
-    Ok((bitmap, values.into()))
+    Ok((null.into(), values.into()))
 }

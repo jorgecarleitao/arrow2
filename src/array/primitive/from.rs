@@ -176,13 +176,7 @@ impl<T: NativeType> Builder<T> for Primitive<T> {
 
 impl<T: NativeType> Primitive<T> {
     pub fn to(self, data_type: DataType) -> PrimitiveArray<T> {
-        let validity = if self.validity.null_count() > 0 {
-            Some(self.validity.into())
-        } else {
-            None
-        };
-
-        PrimitiveArray::<T>::from_data(data_type, self.values.into(), validity)
+        PrimitiveArray::<T>::from_data(data_type, self.values.into(), self.validity.into())
     }
 }
 
