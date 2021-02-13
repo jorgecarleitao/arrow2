@@ -54,6 +54,16 @@ impl StructArray {
     }
 }
 
+impl StructArray {
+    pub fn get_fields(datatype: &DataType) -> &[Field] {
+        if let DataType::Struct(fields) = datatype {
+            fields
+        } else {
+            panic!("Wrong datatype passed to Struct.")
+        }
+    }
+}
+
 impl Array for StructArray {
     #[inline]
     fn as_any(&self) -> &dyn std::any::Any {
