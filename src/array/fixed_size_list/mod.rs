@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::{buffer::Bitmap, datatypes::DataType};
 
-use super::{ffi::ToFFI, new_empty_array, Array};
+use super::{display_fmt, ffi::ToFFI, new_empty_array, Array};
 
 #[derive(Debug, Clone)]
 pub struct FixedSizeListArray {
@@ -54,6 +54,11 @@ impl FixedSizeListArray {
     pub fn values(&self) -> &Arc<dyn Array> {
         &self.values
     }
+
+    #[inline]
+    pub fn value(&self, i: usize) -> Box<dyn Array> {
+        self.values.slice(i * self.size as usize, 1)
+    }
 }
 
 impl FixedSizeListArray {
@@ -91,6 +96,12 @@ impl Array for FixedSizeListArray {
     }
 }
 
+impl std::fmt::Display for FixedSizeListArray {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        display_fmt(self.iter(), "FixedSizeListArray", f, true)
+    }
+}
+
 unsafe impl ToFFI for FixedSizeListArray {
     fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
         [self.validity.as_ref().map(|x| x.as_ptr()), None, None]
@@ -100,3 +111,5 @@ unsafe impl ToFFI for FixedSizeListArray {
         self.offset
     }
 }
+
+pub(crate) mod iterator;

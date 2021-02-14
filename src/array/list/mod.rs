@@ -6,6 +6,7 @@ use crate::{
 };
 
 use super::{
+    display_fmt,
     ffi::ToFFI,
     new_empty_array,
     specification::{check_offsets, Offset},
@@ -148,6 +149,17 @@ impl<O: Offset> Array for ListArray<O> {
     }
 }
 
+impl<O: Offset> std::fmt::Display for ListArray<O> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let head = if O::is_large() {
+            "LargeListArray"
+        } else {
+            "ListArray"
+        };
+        display_fmt(self.iter(), head, f, true)
+    }
+}
+
 unsafe impl<O: Offset> ToFFI for ListArray<O> {
     fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
         unsafe {
@@ -167,6 +179,7 @@ unsafe impl<O: Offset> ToFFI for ListArray<O> {
 }
 
 mod from;
+pub(crate) mod iterator;
 
 pub use from::ListPrimitive;
 
@@ -177,16 +190,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_create() {
+    fn display() {
         let values = Buffer::from([1, 2, 3, 4, 5]);
         let values = PrimitiveArray::<i32>::from_data(DataType::Int32, values, None);
 
         let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
-        ListArray::<i32>::from_data(
+        let array = ListArray::<i32>::from_data(
             data_type,
             Buffer::from([0, 2, 2, 3, 5]),
             Arc::new(values),
             None,
+        );
+
+        assert_eq!(
+            format!("{}", array),
+            "ListArray[\nInt32[1, 2],\nInt32[],\nInt32[3],\nInt32[4, 5]\n]"
         );
     }
 }

@@ -1,6 +1,6 @@
 use crate::{buffer::Bitmap, datatypes::DataType, ffi::ArrowArray};
 
-use super::{ffi::ToFFI, Array, FromFFI};
+use super::{display_fmt, ffi::ToFFI, Array, FromFFI};
 
 use crate::error::Result;
 
@@ -73,6 +73,12 @@ impl Array for BooleanArray {
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+}
+
+impl std::fmt::Display for BooleanArray {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        display_fmt(self.iter(), "BooleanArray", f, false)
     }
 }
 

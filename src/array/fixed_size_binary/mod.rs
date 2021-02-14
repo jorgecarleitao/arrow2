@@ -3,7 +3,9 @@ use crate::{
     datatypes::DataType,
 };
 
-use super::{ffi::ToFFI, Array};
+use super::{display_fmt, display_helper, ffi::ToFFI, Array};
+
+mod iterator;
 
 #[derive(Debug, Clone)]
 pub struct FixedSizeBinaryArray {
@@ -50,6 +52,16 @@ impl FixedSizeBinaryArray {
     pub fn values(&self) -> &[u8] {
         self.values.as_slice()
     }
+
+    /// Returns the element at index `i` as &str
+    /// # Safety
+    /// Assumes that the `i < self.len`.
+    pub unsafe fn value_unchecked(&self, i: usize) -> &[u8] {
+        std::slice::from_raw_parts(
+            self.values.as_ptr().add(i * self.size as usize),
+            self.size as usize,
+        )
+    }
 }
 
 impl FixedSizeBinaryArray {
@@ -84,6 +96,14 @@ impl Array for FixedSizeBinaryArray {
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+}
+
+impl std::fmt::Display for FixedSizeBinaryArray {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let a = |x: &[u8]| display_helper(x.iter().map(|x| Some(format!("{:b}", x)))).join(" ");
+        let iter = self.iter().map(|x| x.map(a));
+        display_fmt(iter, "FixedSizeBinaryArray", f, false)
     }
 }
 

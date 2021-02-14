@@ -122,6 +122,15 @@ impl<K: DictionaryKey> Array for DictionaryArray<K> {
     }
 }
 
+impl<K: DictionaryKey> std::fmt::Display for DictionaryArray<K> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "{:?}{{", self.data_type())?;
+        writeln!(f, "keys: {},", self.keys())?;
+        writeln!(f, "values: {},", self.values())?;
+        write!(f, "}}")
+    }
+}
+
 unsafe impl<K: DictionaryKey> ToFFI for DictionaryArray<K> {
     fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
         [self.keys.nulls().as_ref().map(|x| x.as_ptr()), None, None]

@@ -56,6 +56,12 @@ impl Array for NullArray {
     }
 }
 
+impl std::fmt::Display for NullArray {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "NullArray({})", self.len())
+    }
+}
+
 unsafe impl ToFFI for NullArray {
     fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
         [None, None, None]

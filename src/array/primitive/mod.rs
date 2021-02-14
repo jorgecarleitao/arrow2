@@ -7,6 +7,7 @@ use crate::{
 use crate::error::Result;
 
 use super::{
+    display_fmt,
     ffi::{FromFFI, ToFFI},
     Array,
 };
@@ -90,6 +91,13 @@ impl<T: NativeType> Array for PrimitiveArray<T> {
     }
 }
 
+impl<T: NativeType> std::fmt::Display for PrimitiveArray<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // todo: match data_type and format dates
+        display_fmt(self.iter(), &format!("{}", self.data_type()), f, false)
+    }
+}
+
 unsafe impl<T: NativeType> ToFFI for PrimitiveArray<T> {
     fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
         unsafe {
@@ -133,3 +141,14 @@ mod from;
 pub use from::Primitive;
 mod iterator;
 pub use iterator::*;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn display() {
+        let array = Primitive::<i32>::from(&[Some(1), None, Some(2)]).to(DataType::Int32);
+        assert_eq!(format!("{}", array), "Int32[1, , 2]");
+    }
+}

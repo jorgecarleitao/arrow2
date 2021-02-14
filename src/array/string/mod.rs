@@ -4,6 +4,7 @@ use crate::{
 };
 
 use super::{
+    display_fmt,
     ffi::ToFFI,
     specification::{check_offsets, check_offsets_and_utf8},
     Array, Offset,
@@ -137,6 +138,12 @@ impl<O: Offset> Array for Utf8Array<O> {
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+}
+
+impl<O: Offset> std::fmt::Display for Utf8Array<O> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        display_fmt(self.iter(), &format!("{}", self.data_type()), f, false)
     }
 }
 

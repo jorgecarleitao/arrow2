@@ -2,7 +2,7 @@ use std::any::Any;
 
 use crate::{buffer::Bitmap, datatypes::DataType};
 
-pub trait Array: std::fmt::Debug + Send + Sync + ToFFI {
+pub trait Array: std::fmt::Debug + std::fmt::Display + Send + Sync + ToFFI {
     fn as_any(&self) -> &dyn Any;
 
     fn len(&self) -> usize;
@@ -133,8 +133,8 @@ pub fn clone(array: &dyn Array) -> Box<dyn Array> {
 mod binary;
 mod boolean;
 mod dictionary;
-mod fixed_binary;
-mod fixed_list;
+mod fixed_size_binary;
+mod fixed_size_list;
 mod list;
 mod null;
 mod primitive;
@@ -148,8 +148,8 @@ mod ffi;
 pub use binary::BinaryArray;
 pub use boolean::BooleanArray;
 pub use dictionary::{dict_from_iter, DictionaryArray, DictionaryKey, DictionaryPrimitive};
-pub use fixed_binary::FixedSizeBinaryArray;
-pub use fixed_list::FixedSizeListArray;
+pub use fixed_size_binary::FixedSizeBinaryArray;
+pub use fixed_size_list::FixedSizeListArray;
 pub use list::{ListArray, ListPrimitive};
 pub use null::NullArray;
 pub use primitive::{Primitive, PrimitiveArray};
@@ -175,4 +175,55 @@ pub trait Builder<T>: ToArray {
     fn with_capacity(capacity: usize) -> Self;
 
     fn push(&mut self, item: Option<&T>);
+}
+
+fn display_helper<T: std::fmt::Display, I: IntoIterator<Item = Option<T>>>(iter: I) -> Vec<String> {
+    let iterator = iter.into_iter();
+    let len = iterator.size_hint().0;
+    if len <= 10 {
+        iterator
+            .map(|x| match x {
+                Some(x) => x.to_string(),
+                None => "".to_string(),
+            })
+            .collect::<Vec<_>>()
+    } else {
+        iterator
+            .enumerate()
+            .filter_map(|(i, x)| {
+                if i == 5 {
+                    Some(format!("...({})...", len - 10))
+                } else if i < 5 || i > (len - 5) {
+                    Some(match x {
+                        Some(x) => x.to_string(),
+                        None => "".to_string(),
+                    })
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>()
+    }
+}
+
+fn display_fmt<T: std::fmt::Display, I: IntoIterator<Item = Option<T>>>(
+    iter: I,
+    head: &str,
+    f: &mut std::fmt::Formatter<'_>,
+    new_lines: bool,
+) -> std::fmt::Result {
+    let result = display_helper(iter);
+    if new_lines {
+        write!(f, "{}[\n{}\n]", head, result.join(",\n"))
+    } else {
+        write!(f, "{}[{}]", head, result.join(", "))
+    }
+}
+
+pub trait IterableBinaryArray: Array {
+    unsafe fn value_unchecked(&self, i: usize) -> &[u8];
+}
+
+pub trait IterableListArray: Array {
+    fn value(&self, i: usize) -> Box<dyn Array>;
 }

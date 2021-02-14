@@ -52,6 +52,11 @@ impl StructArray {
     pub fn values(&self) -> &[Arc<dyn Array>] {
         &self.values
     }
+
+    #[inline]
+    pub fn fields(&self) -> &[Field] {
+        Self::get_fields(&self.data_type)
+    }
 }
 
 impl StructArray {
@@ -87,6 +92,16 @@ impl Array for StructArray {
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+}
+
+impl std::fmt::Display for StructArray {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "{:?}{{", self.data_type())?;
+        for (field, column) in self.fields().iter().zip(self.values()) {
+            writeln!(f, "{}: {},", field.name(), column)?;
+        }
+        write!(f, "}}")
     }
 }
 
