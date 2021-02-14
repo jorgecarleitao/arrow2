@@ -58,6 +58,11 @@ impl<T: NativeType> PrimitiveArray<T> {
     pub fn value(&self, i: usize) -> T {
         self.values()[i]
     }
+
+    #[inline]
+    pub fn is_valid(&self, i: usize) -> bool {
+        self.validity.as_ref().map(|x| x.get_bit(i)).unwrap_or(true)
+    }
 }
 
 impl<T: NativeType> Array for PrimitiveArray<T> {

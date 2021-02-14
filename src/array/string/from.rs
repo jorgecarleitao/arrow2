@@ -91,6 +91,7 @@ where
             values.extend_from_slice(s.as_bytes());
         } else {
             null.push_unchecked(false);
+            values.extend_from_slice(b"");
         };
 
         std::ptr::write(dst, length);

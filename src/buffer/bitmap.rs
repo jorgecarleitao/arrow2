@@ -228,6 +228,15 @@ impl FromIterator<bool> for MutableBitmap {
     }
 }
 
+impl FromIterator<bool> for Bitmap {
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = bool>,
+    {
+        MutableBitmap::from_iter(iter).into()
+    }
+}
+
 impl Bitmap {
     #[inline]
     pub unsafe fn from_trusted_len_iter<I: Iterator<Item = bool>>(iterator: I) -> Self {

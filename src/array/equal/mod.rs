@@ -6,7 +6,8 @@ use crate::{
 };
 
 use super::{
-    primitive::PrimitiveArray, Array, BinaryArray, BooleanArray, ListArray, NullArray, Utf8Array,
+    primitive::PrimitiveArray, Array, BinaryArray, BooleanArray, ListArray, NullArray, Offset,
+    StructArray, Utf8Array,
 };
 
 mod boolean;
@@ -31,6 +32,42 @@ impl<T: NativeType> PartialEq<&dyn Array> for PrimitiveArray<T> {
 impl<T: NativeType> PartialEq<PrimitiveArray<T>> for PrimitiveArray<T> {
     fn eq(&self, other: &Self) -> bool {
         equal(self, other)
+    }
+}
+
+impl PartialEq<BooleanArray> for BooleanArray {
+    fn eq(&self, other: &Self) -> bool {
+        equal(self, other)
+    }
+}
+
+impl PartialEq<&dyn Array> for BooleanArray {
+    fn eq(&self, other: &&dyn Array) -> bool {
+        equal(self, *other)
+    }
+}
+
+impl<O: Offset> PartialEq<Utf8Array<O>> for Utf8Array<O> {
+    fn eq(&self, other: &Self) -> bool {
+        equal(self, other)
+    }
+}
+
+impl<O: Offset> PartialEq<&dyn Array> for Utf8Array<O> {
+    fn eq(&self, other: &&dyn Array) -> bool {
+        equal(self, *other)
+    }
+}
+
+impl PartialEq<StructArray> for StructArray {
+    fn eq(&self, other: &Self) -> bool {
+        equal(self, other)
+    }
+}
+
+impl PartialEq<&dyn Array> for StructArray {
+    fn eq(&self, other: &&dyn Array) -> bool {
+        equal(self, *other)
     }
 }
 

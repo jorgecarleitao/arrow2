@@ -44,6 +44,11 @@ impl BooleanArray {
     pub fn values(&self) -> &Bitmap {
         &self.values
     }
+
+    #[inline]
+    pub fn is_valid(&self, i: usize) -> bool {
+        self.validity.as_ref().map(|x| x.get_bit(i)).unwrap_or(true)
+    }
 }
 
 impl Array for BooleanArray {

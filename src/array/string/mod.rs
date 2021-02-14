@@ -108,6 +108,11 @@ impl<O: Offset> Utf8Array<O> {
     pub fn values(&self) -> &[u8] {
         self.values.as_slice()
     }
+
+    #[inline]
+    pub fn is_valid(&self, i: usize) -> bool {
+        self.validity.as_ref().map(|x| x.get_bit(i)).unwrap_or(true)
+    }
 }
 
 impl<O: Offset> Array for Utf8Array<O> {
