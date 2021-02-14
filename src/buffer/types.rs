@@ -7,15 +7,14 @@ pub unsafe trait NativeType:
 
     fn is_valid(data_type: &DataType) -> bool;
 
-    // Vec is not ideal, but well...
-    fn to_le_bytes(&self) -> Vec<u8>;
+    fn to_le_bytes(&self) -> Self::Bytes;
 }
 
 unsafe impl NativeType for u8 {
     type Bytes = [u8; std::mem::size_of::<Self>()];
     #[inline]
-    fn to_le_bytes(&self) -> Vec<u8> {
-        Self::to_le_bytes(*self).to_vec()
+    fn to_le_bytes(&self) -> Self::Bytes {
+        Self::to_le_bytes(*self)
     }
 
     fn is_valid(data_type: &DataType) -> bool {
@@ -26,8 +25,8 @@ unsafe impl NativeType for u8 {
 unsafe impl NativeType for u16 {
     type Bytes = [u8; std::mem::size_of::<Self>()];
     #[inline]
-    fn to_le_bytes(&self) -> Vec<u8> {
-        Self::to_le_bytes(*self).to_vec()
+    fn to_le_bytes(&self) -> Self::Bytes {
+        Self::to_le_bytes(*self)
     }
 
     fn is_valid(data_type: &DataType) -> bool {
@@ -38,8 +37,8 @@ unsafe impl NativeType for u16 {
 unsafe impl NativeType for u32 {
     type Bytes = [u8; std::mem::size_of::<Self>()];
     #[inline]
-    fn to_le_bytes(&self) -> Vec<u8> {
-        Self::to_le_bytes(*self).to_vec()
+    fn to_le_bytes(&self) -> Self::Bytes {
+        Self::to_le_bytes(*self)
     }
 
     fn is_valid(data_type: &DataType) -> bool {
@@ -50,8 +49,8 @@ unsafe impl NativeType for u32 {
 unsafe impl NativeType for u64 {
     type Bytes = [u8; std::mem::size_of::<Self>()];
     #[inline]
-    fn to_le_bytes(&self) -> Vec<u8> {
-        Self::to_le_bytes(*self).to_vec()
+    fn to_le_bytes(&self) -> Self::Bytes {
+        Self::to_le_bytes(*self)
     }
 
     fn is_valid(data_type: &DataType) -> bool {
@@ -62,8 +61,8 @@ unsafe impl NativeType for u64 {
 unsafe impl NativeType for i8 {
     type Bytes = [u8; std::mem::size_of::<Self>()];
     #[inline]
-    fn to_le_bytes(&self) -> Vec<u8> {
-        Self::to_le_bytes(*self).to_vec()
+    fn to_le_bytes(&self) -> Self::Bytes {
+        Self::to_le_bytes(*self)
     }
 
     fn is_valid(data_type: &DataType) -> bool {
@@ -74,8 +73,8 @@ unsafe impl NativeType for i8 {
 unsafe impl NativeType for i16 {
     type Bytes = [u8; std::mem::size_of::<Self>()];
     #[inline]
-    fn to_le_bytes(&self) -> Vec<u8> {
-        Self::to_le_bytes(*self).to_vec()
+    fn to_le_bytes(&self) -> Self::Bytes {
+        Self::to_le_bytes(*self)
     }
 
     fn is_valid(data_type: &DataType) -> bool {
@@ -86,8 +85,8 @@ unsafe impl NativeType for i16 {
 unsafe impl NativeType for i32 {
     type Bytes = [u8; std::mem::size_of::<Self>()];
     #[inline]
-    fn to_le_bytes(&self) -> Vec<u8> {
-        Self::to_le_bytes(*self).to_vec()
+    fn to_le_bytes(&self) -> Self::Bytes {
+        Self::to_le_bytes(*self)
     }
 
     fn is_valid(data_type: &DataType) -> bool {
@@ -101,8 +100,8 @@ unsafe impl NativeType for i32 {
 unsafe impl NativeType for i64 {
     type Bytes = [u8; std::mem::size_of::<Self>()];
     #[inline]
-    fn to_le_bytes(&self) -> Vec<u8> {
-        Self::to_le_bytes(*self).to_vec()
+    fn to_le_bytes(&self) -> Self::Bytes {
+        Self::to_le_bytes(*self)
     }
 
     fn is_valid(data_type: &DataType) -> bool {
@@ -119,8 +118,8 @@ unsafe impl NativeType for i64 {
 unsafe impl NativeType for f32 {
     type Bytes = [u8; std::mem::size_of::<Self>()];
     #[inline]
-    fn to_le_bytes(&self) -> Vec<u8> {
-        Self::to_le_bytes(*self).to_vec()
+    fn to_le_bytes(&self) -> Self::Bytes {
+        Self::to_le_bytes(*self)
     }
 
     fn is_valid(data_type: &DataType) -> bool {
@@ -131,8 +130,8 @@ unsafe impl NativeType for f32 {
 unsafe impl NativeType for f64 {
     type Bytes = [u8; std::mem::size_of::<Self>()];
     #[inline]
-    fn to_le_bytes(&self) -> Vec<u8> {
-        Self::to_le_bytes(*self).to_vec()
+    fn to_le_bytes(&self) -> Self::Bytes {
+        Self::to_le_bytes(*self)
     }
 
     fn is_valid(data_type: &DataType) -> bool {
@@ -143,8 +142,8 @@ unsafe impl NativeType for f64 {
 unsafe impl NativeType for i128 {
     type Bytes = [u8; std::mem::size_of::<Self>()];
     #[inline]
-    fn to_le_bytes(&self) -> Vec<u8> {
-        Self::to_le_bytes(*self).to_vec()
+    fn to_le_bytes(&self) -> Self::Bytes {
+        Self::to_le_bytes(*self)
     }
 
     fn is_valid(data_type: &DataType) -> bool {
