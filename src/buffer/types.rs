@@ -138,19 +138,3 @@ unsafe impl NativeType for f64 {
         data_type == &DataType::Float64
     }
 }
-
-unsafe impl NativeType for i128 {
-    type Bytes = [u8; std::mem::size_of::<Self>()];
-    #[inline]
-    fn to_le_bytes(&self) -> Self::Bytes {
-        Self::to_le_bytes(*self)
-    }
-
-    fn is_valid(data_type: &DataType) -> bool {
-        if let DataType::Decimal(_, _) = data_type {
-            true
-        } else {
-            false
-        }
-    }
-}

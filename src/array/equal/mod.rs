@@ -172,11 +172,7 @@ fn equal_values(
             let rhs = rhs.as_any().downcast_ref::<PrimitiveArray<f64>>().unwrap();
             primitive::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
         }
-        DataType::Decimal(_, _) => {
-            let lhs = lhs.as_any().downcast_ref::<PrimitiveArray<i128>>().unwrap();
-            let rhs = rhs.as_any().downcast_ref::<PrimitiveArray<i128>>().unwrap();
-            primitive::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
-        }
+        DataType::Decimal(_, _) => todo!(),
         DataType::Utf8 => {
             let lhs = lhs.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
