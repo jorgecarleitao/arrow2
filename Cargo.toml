@@ -24,6 +24,7 @@ indexmap = { version = "1.6", optional = true }
 rand = "0.7"
 criterion = "0.3"
 tempfile = "3"
+flate2 = "1"
 
 [features]
 default = ["io_csv", "io_json"]
