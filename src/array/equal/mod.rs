@@ -6,14 +6,16 @@ use crate::{
 };
 
 use super::{
-    primitive::PrimitiveArray, Array, BinaryArray, BooleanArray, ListArray, NullArray, Offset,
-    StructArray, Utf8Array,
+    primitive::PrimitiveArray, Array, BinaryArray, BooleanArray, DictionaryArray, DictionaryKey,
+    ListArray, NullArray, Offset, StructArray, Utf8Array,
 };
 
 mod boolean;
+mod dictionary;
 mod list;
 mod null;
 mod primitive;
+mod struct_;
 mod utils;
 mod variable_size;
 
@@ -59,6 +61,18 @@ impl<O: Offset> PartialEq<&dyn Array> for Utf8Array<O> {
     }
 }
 
+impl<O: Offset> PartialEq<ListArray<O>> for ListArray<O> {
+    fn eq(&self, other: &Self) -> bool {
+        equal(self, other)
+    }
+}
+
+impl<O: Offset> PartialEq<&dyn Array> for ListArray<O> {
+    fn eq(&self, other: &&dyn Array) -> bool {
+        equal(self, *other)
+    }
+}
+
 impl PartialEq<StructArray> for StructArray {
     fn eq(&self, other: &Self) -> bool {
         equal(self, other)
@@ -66,6 +80,18 @@ impl PartialEq<StructArray> for StructArray {
 }
 
 impl PartialEq<&dyn Array> for StructArray {
+    fn eq(&self, other: &&dyn Array) -> bool {
+        equal(self, *other)
+    }
+}
+
+impl<K: DictionaryKey> PartialEq<DictionaryArray<K>> for DictionaryArray<K> {
+    fn eq(&self, other: &Self) -> bool {
+        equal(self, other)
+    }
+}
+
+impl<K: DictionaryKey> PartialEq<&dyn Array> for DictionaryArray<K> {
     fn eq(&self, other: &&dyn Array) -> bool {
         equal(self, *other)
     }
@@ -243,13 +269,59 @@ fn equal_values(
             let rhs = rhs.as_any().downcast_ref::<ListArray<i64>>().unwrap();
             list::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
         }
+        DataType::Struct(_) => {
+            let lhs = lhs.as_any().downcast_ref::<StructArray>().unwrap();
+            let rhs = rhs.as_any().downcast_ref::<StructArray>().unwrap();
+            struct_::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+        }
+        DataType::Dictionary(key_type, _) => match key_type.as_ref() {
+            DataType::Int8 => {
+                let lhs = lhs.as_any().downcast_ref::<DictionaryArray<i8>>().unwrap();
+                let rhs = rhs.as_any().downcast_ref::<DictionaryArray<i8>>().unwrap();
+                dictionary::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+            }
+            DataType::Int16 => {
+                let lhs = lhs.as_any().downcast_ref::<DictionaryArray<i16>>().unwrap();
+                let rhs = rhs.as_any().downcast_ref::<DictionaryArray<i16>>().unwrap();
+                dictionary::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+            }
+            DataType::Int32 => {
+                let lhs = lhs.as_any().downcast_ref::<DictionaryArray<i32>>().unwrap();
+                let rhs = rhs.as_any().downcast_ref::<DictionaryArray<i32>>().unwrap();
+                dictionary::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+            }
+            DataType::Int64 => {
+                let lhs = lhs.as_any().downcast_ref::<DictionaryArray<i64>>().unwrap();
+                let rhs = rhs.as_any().downcast_ref::<DictionaryArray<i64>>().unwrap();
+                dictionary::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+            }
+            DataType::UInt8 => {
+                let lhs = lhs.as_any().downcast_ref::<DictionaryArray<u8>>().unwrap();
+                let rhs = rhs.as_any().downcast_ref::<DictionaryArray<u8>>().unwrap();
+                dictionary::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+            }
+            DataType::UInt16 => {
+                let lhs = lhs.as_any().downcast_ref::<DictionaryArray<u16>>().unwrap();
+                let rhs = rhs.as_any().downcast_ref::<DictionaryArray<u16>>().unwrap();
+                dictionary::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+            }
+            DataType::UInt32 => {
+                let lhs = lhs.as_any().downcast_ref::<DictionaryArray<u32>>().unwrap();
+                let rhs = rhs.as_any().downcast_ref::<DictionaryArray<u32>>().unwrap();
+                dictionary::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+            }
+            DataType::UInt64 => {
+                let lhs = lhs.as_any().downcast_ref::<DictionaryArray<u64>>().unwrap();
+                let rhs = rhs.as_any().downcast_ref::<DictionaryArray<u64>>().unwrap();
+                dictionary::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+            }
+            _ => unreachable!(),
+        },
         _ => unimplemented!(),
         /*
         DataType::FixedSizeBinary(_) => {}
         DataType::FixedSizeList(_, _) => {}
-        DataType::Struct(_) => {}
         DataType::Union(_) => {}
-        DataType::Dictionary(_, _) => {}
         */
     }
 }

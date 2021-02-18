@@ -199,8 +199,7 @@ impl<T: NativeType> MutableBuffer<T> {
     /// assert_eq!(buffer.len(), 8) // u32 has 4 bytes
     /// ```
     pub fn extend_from_slice(&mut self, items: &[T]) {
-        let len = items.len();
-        let additional = len;
+        let additional = items.len();
         self.reserve(additional);
         unsafe {
             let dst = self.ptr.as_ptr().add(self.len);

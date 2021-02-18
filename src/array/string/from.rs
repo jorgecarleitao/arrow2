@@ -180,8 +180,11 @@ impl<O: Offset> Builder<&str> for Utf8Primitive<O> {
     fn push(&mut self, value: Option<&&str>) {
         match value {
             Some(v) => {
-                self.offsets.push(O::from_usize(v.len()).unwrap());
-                self.values.extend_from_slice(&v.as_bytes());
+                let bytes = v.as_bytes();
+                let length = O::from_usize(bytes.len()).unwrap();
+                self.length += length;
+                self.offsets.push(self.length);
+                self.values.extend_from_slice(bytes);
                 self.validity.push(true);
             }
             None => {

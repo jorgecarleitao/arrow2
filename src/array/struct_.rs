@@ -28,6 +28,9 @@ impl StructArray {
         values: Vec<Arc<dyn Array>>,
         validity: Option<Bitmap>,
     ) -> Self {
+        assert!(fields.len() > 0);
+        assert_eq!(fields.len(), values.len());
+        assert!(values.iter().all(|x| x.len() == values[0].len()));
         Self {
             data_type: DataType::Struct(fields),
             values,
@@ -97,7 +100,7 @@ impl Array for StructArray {
 
 impl std::fmt::Display for StructArray {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "{:?}{{", self.data_type())?;
+        writeln!(f, "StructArray{{")?;
         for (field, column) in self.fields().iter().zip(self.values()) {
             writeln!(f, "{}: {},", field.name(), column)?;
         }

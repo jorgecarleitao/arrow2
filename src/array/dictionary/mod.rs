@@ -88,9 +88,9 @@ impl<K: DictionaryKey> DictionaryArray<K> {
 }
 
 impl<K: DictionaryKey> DictionaryArray<K> {
-    pub(crate) fn get_child(data_type: &DataType) -> (&DataType, &DataType) {
-        if let DataType::Dictionary(keys, values) = data_type {
-            (keys.as_ref(), values.as_ref())
+    pub(crate) fn get_child(data_type: &DataType) -> &DataType {
+        if let DataType::Dictionary(_, values) = data_type {
+            values.as_ref()
         } else {
             panic!("Wrong DataType")
         }
@@ -105,7 +105,7 @@ impl<K: DictionaryKey> Array for DictionaryArray<K> {
 
     #[inline]
     fn len(&self) -> usize {
-        self.values.len()
+        self.keys.len()
     }
 
     #[inline]

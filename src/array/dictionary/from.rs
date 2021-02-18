@@ -17,9 +17,9 @@ pub struct DictionaryPrimitive<K: DictionaryKey, A: ToArray> {
 
 impl<K: DictionaryKey, A: ToArray> DictionaryPrimitive<K, A> {
     pub fn to(self, data_type: DataType) -> DictionaryArray<K> {
-        let (keys, values) = DictionaryArray::<K>::get_child(&data_type);
-        let values = self.values.to_arc(values);
-        DictionaryArray::from_data(self.keys.to(keys.clone()), values)
+        let data_type = DictionaryArray::<K>::get_child(&data_type);
+        let values = self.values.to_arc(data_type);
+        DictionaryArray::from_data(self.keys.to(K::DATA_TYPE), values)
     }
 }
 

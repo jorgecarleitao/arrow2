@@ -179,6 +179,13 @@ impl From<MutableBitmap> for Option<Bitmap> {
     }
 }
 
+impl<P: AsRef<[u8]>> From<(P, usize)> for Bitmap {
+    fn from((bytes, length): (P, usize)) -> Self {
+        let buffer = MutableBuffer::<u8>::from(bytes.as_ref());
+        (buffer, length).into()
+    }
+}
+
 impl FromIterator<bool> for MutableBitmap {
     fn from_iter<I>(iter: I) -> Self
     where

@@ -86,10 +86,10 @@ pub(super) fn count_nulls(nulls: &Option<Bitmap>, offset: usize, length: usize) 
         .unwrap_or(0)
 }
 
-// Calculate a list child's logical bitmap/buffer
+// Calculate a list child's logical bitmap
 // `[[1, None, 3], None, [None]]`
 // offsets = [0, 3, 3, 4]
-// parent validity = [1, 0]
+// parent validity = [1, 0, 1]
 // child validity = [1, 0, 1, 0]
 // logical_list_bitmap = [1, 0, 1, 0]
 #[inline]
@@ -146,12 +146,6 @@ fn logical_list_bitmap<O: Offset>(
     }
 }
 
-/// Computes the logical validity bitmap of the array data using the
-/// parent's array data. The parent should be a list or struct, else
-/// the logical bitmap of the array is returned unaltered.
-///
-/// Parent data is passed along with the parent's logical bitmap, as
-/// nested arrays could have a logical bitmap different to the physical one.
 pub(super) fn child_logical_null_buffer(
     parent: &dyn Array,
     logical_null_buffer: &Option<Bitmap>,
@@ -168,6 +162,12 @@ pub(super) fn child_logical_null_buffer(
             let parent = parent.as_any().downcast_ref::<ListArray<i64>>().unwrap();
             logical_list_bitmap(parent.offsets(), parent_bitmap, self_null_bitmap)
         }
+        DataType::Struct(_) => match (parent_bitmap, self_null_bitmap) {
+            (None, None) => None,
+            (Some(p), None) => Some(p.clone()),
+            (None, Some(c)) => Some(c.clone()),
+            (Some(p), Some(c)) => Some(p & c),
+        },
         data_type => panic!("Data type {:?} is not a supported nested type", data_type),
     }
 }
