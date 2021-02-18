@@ -2,7 +2,7 @@ use std::iter::FromIterator;
 use std::sync::Arc;
 
 use crate::{
-    bits::{get_bit, get_bit_unchecked, null_count, set_bit_raw, unset_bit_raw},
+    bits::{get_bit, get_bit_unchecked, null_count, set_bit_raw, unset_bit_raw, BitChunks},
     buffer::bytes::Bytes,
     ffi,
 };
@@ -26,6 +26,7 @@ impl Bitmap {
     }
 
     #[inline]
+    /// The length of the `Bitmap` in bits.
     pub fn len(&self) -> usize {
         self.length
     }
@@ -153,6 +154,13 @@ impl MutableBitmap {
     }
 }
 
+impl From<(MutableBuffer<u8>, usize)> for Bitmap {
+    #[inline]
+    fn from((buffer, length): (MutableBuffer<u8>, usize)) -> Self {
+        Bitmap::from_bytes(buffer.into(), length)
+    }
+}
+
 impl From<MutableBitmap> for Bitmap {
     #[inline]
     fn from(buffer: MutableBitmap) -> Self {
@@ -234,6 +242,12 @@ impl FromIterator<bool> for Bitmap {
         I: IntoIterator<Item = bool>,
     {
         MutableBitmap::from_iter(iter).into()
+    }
+}
+
+impl Bitmap {
+    pub fn chunks(&self) -> BitChunks {
+        BitChunks::new(&self.bytes, self.offset, self.length)
     }
 }
 

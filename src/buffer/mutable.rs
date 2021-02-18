@@ -433,6 +433,13 @@ impl Drop for SetLenOnDrop<'_> {
     }
 }
 
+impl<T: NativeType, P: AsRef<[T]>> From<P> for MutableBuffer<T> {
+    #[inline]
+    fn from(slice: P) -> Self {
+        unsafe { MutableBuffer::from_trusted_len_iter(slice.as_ref().iter().map(|x| *x)) }
+    }
+}
+
 impl<T: NativeType> From<MutableBuffer<T>> for Buffer<T> {
     #[inline]
     fn from(buffer: MutableBuffer<T>) -> Self {
@@ -450,7 +457,32 @@ impl<T: NativeType> From<MutableBuffer<T>> for Bytes<T> {
                 Deallocation::Native(buffer.capacity),
             )
         };
+        // so that the memory region is not deallocated.
         std::mem::forget(buffer);
         result
+    }
+}
+
+impl From<MutableBuffer<u64>> for MutableBuffer<u8> {
+    #[inline]
+    fn from(buffer: MutableBuffer<u64>) -> Self {
+        let ratio = std::mem::size_of::<u64>() / std::mem::size_of::<u8>();
+
+        let capacity = buffer.capacity;
+        let len = buffer.len * ratio;
+        let ptr = unsafe { NonNull::new_unchecked(buffer.ptr.as_ptr() as *mut u8) };
+        // so that the memory region is not deallocated; ownership was transfered
+        std::mem::forget(buffer);
+        Self { ptr, len, capacity }
+    }
+}
+
+impl MutableBuffer<u8> {
+    #[inline]
+    pub fn from_chunk_iter<I: Iterator<Item = u64>>(iter: I) -> Self {
+        let iterator = iter.into_iter();
+
+        let buffer = unsafe { MutableBuffer::from_trusted_len_iter(iterator) };
+        buffer.into()
     }
 }
