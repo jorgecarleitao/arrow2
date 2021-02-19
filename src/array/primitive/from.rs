@@ -1,7 +1,8 @@
 use std::{iter::FromIterator, sync::Arc};
 
+use crate::error::Result as ArrowResult;
 use crate::{
-    array::{Array, Builder, ToArray},
+    array::{Array, Builder, ToArray, TryFromIterator},
     buffer::{types::NativeType, MutableBitmap, MutableBuffer},
     datatypes::DataType,
 };
@@ -203,6 +204,32 @@ impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> FromIterator<Ptr> for P
             values: values,
             validity,
         }
+    }
+}
+
+impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> TryFromIterator<Ptr> for Primitive<T> {
+    fn try_from_iter<I: IntoIterator<Item = ArrowResult<Ptr>>>(iter: I) -> ArrowResult<Self> {
+        let iter = iter.into_iter();
+        let (lower, _) = iter.size_hint();
+
+        let mut validity = MutableBitmap::with_capacity(lower);
+
+        let values: MutableBuffer<T> = iter
+            .map(|item| {
+                Ok(if let Some(a) = item?.borrow() {
+                    validity.push(true);
+                    *a
+                } else {
+                    validity.push(false);
+                    T::default()
+                })
+            })
+            .collect::<ArrowResult<_>>()?;
+
+        Ok(Self {
+            values: values,
+            validity,
+        })
     }
 }
 

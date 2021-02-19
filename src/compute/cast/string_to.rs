@@ -2,8 +2,8 @@ use chrono::Datelike;
 
 use crate::{
     array::{
-        dict_from_iter, Array, DictionaryKey, DictionaryPrimitive, Offset, Primitive,
-        PrimitiveArray, Utf8Array, Utf8Primitive,
+        Array, DictionaryKey, DictionaryPrimitive, Offset, Primitive, PrimitiveArray,
+        TryFromIterator, Utf8Array, Utf8Primitive,
     },
     buffer::NativeType,
     datatypes::DataType,
@@ -79,7 +79,8 @@ pub fn string_to_dictionary<O: Offset, K: DictionaryKey>(
     let values = cast(array, &to)?;
     let values = values.as_any().downcast_ref::<Utf8Array<O>>().unwrap();
 
-    let primitive: DictionaryPrimitive<K, Utf8Primitive<i32>> = dict_from_iter(values.iter())?;
+    let iter = values.iter().map(|x| Result::Ok(x));
+    let primitive = DictionaryPrimitive::<K, Utf8Primitive<i32>, _>::try_from_iter(iter)?;
 
     let array = primitive.to(DataType::Dictionary(Box::new(K::DATA_TYPE), Box::new(to)));
 

@@ -2,8 +2,8 @@ use std::hash::Hash;
 
 use crate::{
     array::{
-        dict_from_iter, Array, BooleanArray, DictionaryKey, DictionaryPrimitive, Offset, Primitive,
-        PrimitiveArray, Utf8Array,
+        Array, BooleanArray, DictionaryKey, DictionaryPrimitive, Offset, Primitive, PrimitiveArray,
+        TryFromIterator, Utf8Array,
     },
     buffer::{Bitmap, NativeType},
     datatypes::DataType,
@@ -89,11 +89,12 @@ pub fn primitive_to_dictionary<T: NativeType + Eq + Hash, K: DictionaryKey>(
     let values = cast(array, to)?;
     let values = values.as_any().downcast_ref::<PrimitiveArray<T>>().unwrap();
 
-    let primitive: DictionaryPrimitive<K, Primitive<T>> = dict_from_iter(values.iter())?;
+    let iter = values.iter().map(|x| Result::Ok(x));
+    let primitive = DictionaryPrimitive::<K, Primitive<T>, _>::try_from_iter(iter)?;
 
     let array = primitive.to(DataType::Dictionary(
-        Box::new(DataType::Utf8),
-        Box::new(DataType::Utf8),
+        Box::new(K::DATA_TYPE),
+        Box::new(values.data_type().clone()),
     ));
 
     Ok(Box::new(array))

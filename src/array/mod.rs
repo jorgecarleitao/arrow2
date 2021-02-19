@@ -1,5 +1,6 @@
 use std::any::Any;
 
+use crate::error::Result;
 use crate::{buffer::Bitmap, datatypes::DataType};
 
 pub trait Array: std::fmt::Debug + std::fmt::Display + Send + Sync + ToFFI {
@@ -147,7 +148,7 @@ mod ffi;
 
 pub use binary::BinaryArray;
 pub use boolean::BooleanArray;
-pub use dictionary::{dict_from_iter, DictionaryArray, DictionaryKey, DictionaryPrimitive};
+pub use dictionary::{DictionaryArray, DictionaryKey, DictionaryPrimitive};
 pub use fixed_size_binary::FixedSizeBinaryArray;
 pub use fixed_size_list::FixedSizeListArray;
 pub use list::{ListArray, ListPrimitive};
@@ -171,10 +172,19 @@ pub trait ToArray {
     fn to_arc(self, data_type: &DataType) -> std::sync::Arc<dyn Array>;
 }
 
-pub trait Builder<T>: ToArray {
+pub trait TryFromIterator<A>: Sized {
+    fn try_from_iter<T: IntoIterator<Item = Result<A>>>(iter: T) -> Result<Self>;
+}
+
+pub trait Builder<T>: TryFromIterator<Option<T>> + ToArray {
     fn with_capacity(capacity: usize) -> Self;
 
     fn push(&mut self, item: Option<&T>);
+
+    #[inline]
+    fn try_push(&mut self, item: Option<&T>) -> Result<()> {
+        Ok(self.push(item))
+    }
 }
 
 fn display_helper<T: std::fmt::Display, I: IntoIterator<Item = Option<T>>>(iter: I) -> Vec<String> {

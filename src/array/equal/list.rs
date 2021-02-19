@@ -169,7 +169,7 @@ mod tests {
                 x.as_ref()
                     .map(|x| x.as_ref().iter().map(|x| Some(*x)).collect::<Vec<_>>())
             })
-            .collect::<ListPrimitive<i32, Primitive<i32>>>();
+            .collect::<ListPrimitive<i32, Primitive<i32>, i32>>();
         list.to(data_type)
     }
 

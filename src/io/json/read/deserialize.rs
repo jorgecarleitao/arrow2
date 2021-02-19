@@ -1,17 +1,62 @@
-use std::sync::Arc;
+use std::hash::Hasher;
+use std::{collections::hash_map::DefaultHasher, sync::Arc};
 
+use hash_hasher::HashedMap;
 use indexmap::map::IndexMap as HashMap;
 use num::NumCast;
 use serde_json::Value;
 
 use crate::{
     array::{
-        Array, BooleanArray, ListArray, NullArray, Offset, Primitive, PrimitiveArray, StructArray,
-        Utf8Array,
+        Array, BooleanArray, DictionaryArray, DictionaryKey, ListArray, NullArray, Offset,
+        Primitive, PrimitiveArray, StructArray, Utf8Array,
     },
     buffer::{MutableBitmap, MutableBuffer, NativeType},
     datatypes::DataType,
 };
+
+/// A function that converts a &Value into an optional tuple of a byte slice and a Value.
+/// This is used to create a dictionary, where the hashing depends on the DataType of the child object.
+type Extract = Box<dyn Fn(&Value) -> Option<(u64, &Value)>>;
+
+fn build_extract(data_type: &DataType) -> Extract {
+    match data_type {
+        DataType::Utf8 | DataType::LargeUtf8 => Box::new(|value| match &value {
+            Value::String(v) => {
+                let mut hasher = DefaultHasher::new();
+                hasher.write(v.as_bytes());
+                Some((hasher.finish(), value))
+            }
+            Value::Number(v) => v.as_f64().map(|x| {
+                let mut hasher = DefaultHasher::new();
+                hasher.write(&x.to_le_bytes());
+                (hasher.finish(), value)
+            }),
+            Value::Bool(v) => {
+                let mut hasher = DefaultHasher::new();
+                hasher.write(&[*v as u8]);
+                Some((hasher.finish(), value))
+            }
+            _ => None,
+        }),
+        DataType::Int32 | DataType::Int64 | DataType::Int16 | DataType::Int8 => {
+            Box::new(move |value| match &value {
+                Value::Number(v) => v.as_f64().map(|x| {
+                    let mut hasher = DefaultHasher::new();
+                    hasher.write(&x.to_le_bytes());
+                    (hasher.finish(), value)
+                }),
+                Value::Bool(v) => {
+                    let mut hasher = DefaultHasher::new();
+                    hasher.write(&[*v as u8]);
+                    Some((hasher.finish(), value))
+                }
+                _ => None,
+            })
+        }
+        _ => Box::new(|_| None),
+    }
+}
 
 fn read_primitive<T: NativeType + NumCast>(
     rows: &[&Value],
@@ -19,6 +64,7 @@ fn read_primitive<T: NativeType + NumCast>(
 ) -> PrimitiveArray<T> {
     let iter = rows.iter().map(|row| match row {
         Value::Number(number) => number.as_f64().and_then(num::cast::cast::<f64, T>),
+        Value::Bool(number) => num::cast::cast::<i32, T>(*number as i32),
         _ => None,
     });
     unsafe { Primitive::from_trusted_len_iter(iter) }.to(data_type)
@@ -34,7 +80,9 @@ fn read_boolean(rows: &[&Value]) -> BooleanArray {
 
 fn read_utf8<O: Offset>(rows: &[&Value]) -> Utf8Array<O> {
     let iter = rows.iter().map(|row| match row {
-        Value::String(v) => Some(v),
+        Value::String(v) => Some(v.clone()),
+        Value::Number(v) => Some(v.to_string()),
+        Value::Bool(v) => Some(v.to_string()),
         _ => None,
     });
     unsafe { Utf8Array::<O>::from_trusted_len_iter(iter) }
@@ -106,6 +154,37 @@ fn read_struct(rows: &[&Value], data_type: DataType) -> StructArray {
     StructArray::from_data(fields.to_vec(), values, None)
 }
 
+fn read_dictionary<K: DictionaryKey>(rows: &[&Value], data_type: DataType) -> DictionaryArray<K> {
+    let child = DictionaryArray::<K>::get_child(&data_type);
+
+    let mut map = HashedMap::<u64, K>::default();
+
+    let extractor = build_extract(child);
+
+    let mut inner = Vec::<&Value>::with_capacity(rows.len());
+    let keys = rows
+        .iter()
+        .map(|x| extractor(x))
+        .map(|item| match item {
+            Some((hash, v)) => match map.get(&hash) {
+                Some(key) => Some(*key),
+                None => {
+                    // todo: convert this to an error.
+                    let key = K::from_usize(map.len()).unwrap();
+                    inner.push(v);
+                    map.insert(hash, key);
+                    Some(key)
+                }
+            },
+            None => None,
+        })
+        .collect::<Primitive<K>>()
+        .to(K::DATA_TYPE);
+
+    let values = read(&inner, child.clone());
+    DictionaryArray::<K>::from_data(keys, values)
+}
+
 pub fn read(rows: &[&Value], data_type: DataType) -> Arc<dyn Array> {
     match &data_type {
         DataType::Null => Arc::new(NullArray::from_data(rows.len())),
@@ -136,22 +215,22 @@ pub fn read(rows: &[&Value], data_type: DataType) -> Arc<dyn Array> {
         //DataType::Binary => Box::new(BinaryArray::<i32>::new_empty()),
         //DataType::LargeBinary => Box::new(BinaryArray::<i64>::new_empty()),
         DataType::Struct(_) => Arc::new(read_struct(rows, data_type)),
+        DataType::Dictionary(key_type, _) => match key_type.as_ref() {
+            DataType::Int8 => Arc::new(read_dictionary::<i8>(rows, data_type)),
+            DataType::Int16 => Arc::new(read_dictionary::<i16>(rows, data_type)),
+            DataType::Int32 => Arc::new(read_dictionary::<i32>(rows, data_type)),
+            DataType::Int64 => Arc::new(read_dictionary::<i64>(rows, data_type)),
+            DataType::UInt8 => Arc::new(read_dictionary::<u8>(rows, data_type)),
+            DataType::UInt16 => Arc::new(read_dictionary::<u16>(rows, data_type)),
+            DataType::UInt32 => Arc::new(read_dictionary::<u32>(rows, data_type)),
+            DataType::UInt64 => Arc::new(read_dictionary::<u64>(rows, data_type)),
+            _ => unreachable!(),
+        },
         _ => todo!(),
         /*
         DataType::FixedSizeBinary(_) => Box::new(FixedSizeBinaryArray::new_empty(data_type)),
         DataType::FixedSizeList(_, _) => Box::new(FixedSizeListArray::new_empty(data_type)),
         DataType::Union(_) => unimplemented!(),
-        DataType::Dictionary(key_type, value_type) => match key_type.as_ref() {
-            DataType::Int8 => Box::new(DictionaryArray::<i8>::new_empty(*value_type)),
-            DataType::Int16 => Box::new(DictionaryArray::<i16>::new_empty(*value_type)),
-            DataType::Int32 => Box::new(DictionaryArray::<i32>::new_empty(*value_type)),
-            DataType::Int64 => Box::new(DictionaryArray::<i64>::new_empty(*value_type)),
-            DataType::UInt8 => Box::new(DictionaryArray::<u8>::new_empty(*value_type)),
-            DataType::UInt16 => Box::new(DictionaryArray::<u16>::new_empty(*value_type)),
-            DataType::UInt32 => Box::new(DictionaryArray::<u32>::new_empty(*value_type)),
-            DataType::UInt64 => Box::new(DictionaryArray::<u64>::new_empty(*value_type)),
-            _ => unreachable!(),
-        },
         DataType::Decimal(_, _) => Box::new(PrimitiveArray::<i128>::new_empty(data_type)),
         */
     }

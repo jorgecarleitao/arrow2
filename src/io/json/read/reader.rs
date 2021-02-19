@@ -336,11 +336,11 @@ impl ReaderBuilder {
 #[cfg(test)]
 mod tests {
     use flate2::read::GzDecoder;
-    use std::iter::FromIterator;
+    use std::io::Cursor;
 
     use crate::{
-        buffer::Bitmap,
-        datatypes::DataType::{Dictionary, List},
+        buffer::{Bitmap, Buffer},
+        error::Result,
         io::json::read::infer_json_schema,
     };
 
@@ -721,11 +721,8 @@ mod tests {
 
     #[test]
     fn test_nested_struct_json_arrays() {
-        let c_field = Field::new(
-            "c",
-            DataType::Struct(vec![Field::new("d", DataType::Utf8, true)]),
-            true,
-        );
+        let d_field = Field::new("d", DataType::Utf8, true);
+        let c_field = Field::new("c", DataType::Struct(vec![d_field.clone()]), true);
         let a_field = Field::new(
             "a",
             DataType::Struct(vec![
@@ -742,17 +739,13 @@ mod tests {
 
         // build expected output
         let d = StringArray::from(&vec![Some("text"), None, Some("text"), None]);
-        let c = StructArray::from_data(
-            vec![c_field.clone()],
-            vec![Arc::new(d)],
-            Some(Bitmap::from_iter(vec![true, true, true, false])),
-        );
+        let c = StructArray::from_data(vec![d_field.clone()], vec![Arc::new(d)], None);
 
         let b = BooleanArray::from(vec![Some(true), Some(false), Some(true), None]);
         let expected = StructArray::from_data(
             vec![Field::new("b", DataType::Boolean, true), c_field],
             vec![Arc::new(b), Arc::new(c)],
-            Some(Bitmap::from_iter(vec![true, true, true, false])),
+            None,
         );
 
         // compare `a` with result from json reader
@@ -761,23 +754,18 @@ mod tests {
         assert_eq!(expected, read.as_ref());
     }
 
-    /*
     #[test]
     fn test_nested_list_json_arrays() {
-        let c_field = Field::new(
-            "c",
-            DataType::Struct(vec![Field::new("d", DataType::Utf8, true)]),
-            true,
-        );
+        let d_field = Field::new("d", DataType::Utf8, true);
+        let c_field = Field::new("c", DataType::Struct(vec![d_field.clone()]), true);
+        let b_field = Field::new("b", DataType::Boolean, true);
         let a_struct_field = Field::new(
             "a",
-            DataType::Struct(vec![
-                Field::new("b", DataType::Boolean, true),
-                c_field.clone(),
-            ]),
+            DataType::Struct(vec![b_field.clone(), c_field.clone()]),
             true,
         );
-        let a_field = Field::new("a", DataType::List(Box::new(a_struct_field.clone())), true);
+        let a_list_data_type = DataType::List(Box::new(a_struct_field));
+        let a_field = Field::new("a", a_list_data_type.clone(), true);
         let schema = Arc::new(Schema::new(vec![a_field.clone()]));
         let builder = ReaderBuilder::new().with_schema(schema).with_batch_size(64);
         let json_content = r#"
@@ -790,20 +778,17 @@ mod tests {
         let mut reader = builder.build(Cursor::new(json_content)).unwrap();
 
         // build expected output
-        let d = StringArray::from(vec![
+        let d = StringArray::from(&vec![
             Some("a_text"),
             Some("b_text"),
             None,
             Some("c_text"),
             Some("d_text"),
             None,
-            None,
         ]);
-        let c = ArrayDataBuilder::new(c_field.data_type().clone())
-            .len(7)
-            .add_child_data(d.data())
-            .null_bit_buffer(Buffer::from(vec![0b00111011]))
-            .build();
+
+        let c = StructArray::from_data(vec![d_field], vec![Arc::new(d)], None);
+
         let b = BooleanArray::from(vec![
             Some(true),
             Some(false),
@@ -811,73 +796,30 @@ mod tests {
             Some(true),
             None,
             Some(true),
-            None,
         ]);
-        let a = ArrayDataBuilder::new(a_struct_field.data_type().clone())
-            .len(7)
-            .add_child_data(b.data())
-            .add_child_data(c.clone())
-            .null_bit_buffer(Buffer::from(vec![0b00111111]))
-            .build();
-        let a_list = ArrayDataBuilder::new(a_field.data_type().clone())
-            .len(5)
-            .add_buffer(Buffer::from_slice_ref(&[0i32, 2, 3, 6, 6, 6]))
-            .add_child_data(a)
-            .null_bit_buffer(Buffer::from(vec![0b00010111]))
-            .build();
-        let expected = make_array(a_list);
+        let a_struct = StructArray::from_data(
+            vec![b_field, c_field],
+            vec![Arc::new(b) as Arc<dyn Array>, Arc::new(c) as Arc<dyn Array>],
+            None,
+        );
+        let expected = ListArray::from_data(
+            a_list_data_type,
+            Buffer::from([0i32, 2, 3, 6, 6, 6]),
+            Arc::new(a_struct) as Arc<dyn Array>,
+            Some(Bitmap::from(([0b00010111], 5))),
+        );
 
         // compare `a` with result from json reader
         let batch = reader.next().unwrap().unwrap();
         let read = batch.column(0);
-        assert_eq!(read.len(), 5);
-        // compare the arrays the long way around, to better detect differences
-        let read: &ListArray = read.as_any().downcast_ref::<ListArray>().unwrap();
-        let expected = expected.as_any().downcast_ref::<ListArray>().unwrap();
-        assert_eq!(
-            read.data().buffers()[0],
-            Buffer::from_slice_ref(&[0i32, 2, 3, 6, 6, 6])
-        );
-        // compare list null buffers
-        assert_eq!(read.data().null_buffer(), expected.data().null_buffer());
-        // build struct from list
-        let struct_values = read.values();
-        let struct_array: &StructArray = struct_values
-            .as_any()
-            .downcast_ref::<StructArray>()
-            .unwrap();
-        let expected_struct_values = expected.values();
-        let expected_struct_array = expected_struct_values
-            .as_any()
-            .downcast_ref::<StructArray>()
-            .unwrap();
-
-        assert_eq!(7, struct_array.len());
-        assert_eq!(1, struct_array.null_count());
-        assert_eq!(7, expected_struct_array.len());
-        assert_eq!(1, expected_struct_array.null_count());
-        // test struct's nulls
-        assert_eq!(
-            struct_array.data().null_buffer(),
-            expected_struct_array.data().null_buffer()
-        );
-        // test struct's fields
-        let read_b = struct_array.column(0);
-        assert_eq!(b.data_ref(), read_b.data_ref());
-        let read_c = struct_array.column(1);
-        assert_eq!(&c, read_c.data_ref());
-        let read_c: &StructArray = read_c.as_any().downcast_ref::<StructArray>().unwrap();
-        let read_d = read_c.column(0);
-        assert_eq!(d.data_ref(), read_d.data_ref());
-
-        assert_eq!(read.data_ref(), expected.data_ref());
+        assert_eq!(expected, read.as_ref());
     }
 
     #[test]
-    fn test_dictionary_from_json_basic_with_nulls() {
+    fn test_dictionary_from_json_basic_with_nulls() -> Result<()> {
         let schema = Schema::new(vec![Field::new(
             "d",
-            Dictionary(Box::new(DataType::Int16), Box::new(DataType::Utf8)),
+            DataType::Dictionary(Box::new(DataType::Int16), Box::new(DataType::Utf8)),
             true,
         )]);
         let builder = ReaderBuilder::new()
@@ -889,6 +831,7 @@ mod tests {
         let batch = reader.next().unwrap().unwrap();
 
         assert_eq!(1, batch.num_columns());
+        println!("{}", batch.column(0));
         assert_eq!(12, batch.num_rows());
 
         let schema = reader.schema();
@@ -896,125 +839,32 @@ mod tests {
         assert_eq!(schema, batch_schema);
 
         let d = schema.column_with_name("d").unwrap();
-        assert_eq!(
-            &Dictionary(Box::new(DataType::Int16), Box::new(DataType::Utf8)),
-            d.1.data_type()
-        );
+        let data_type = DataType::Dictionary(Box::new(DataType::Int16), Box::new(DataType::Utf8));
+        assert_eq!(&data_type, d.1.data_type());
 
-        let dd = batch
-            .column(d.0)
-            .as_any()
-            .downcast_ref::<DictionaryArray<Int16Type>>()
-            .unwrap();
-        assert_eq!(false, dd.is_valid(0));
-        assert_eq!(true, dd.is_valid(1));
-        assert_eq!(true, dd.is_valid(2));
-        assert_eq!(false, dd.is_valid(11));
+        let result = batch.column(d.0);
 
-        assert_eq!(
-            dd.keys(),
-            &Int16Array::from(vec![
-                None,
-                Some(0),
-                Some(1),
-                Some(0),
-                None,
-                None,
-                Some(0),
-                None,
-                Some(1),
-                Some(0),
-                Some(0),
-                None
-            ])
-        );
-    }
+        let values = vec![
+            None,
+            Some("4"),
+            Some("text"),
+            Some("4"),
+            None,
+            None,
+            Some("4"),
+            None,
+            Some("text"),
+            Some("4"),
+            Some("4"),
+            None,
+        ];
 
-    #[test]
-    fn test_dictionary_from_json_int8() {
-        let schema = Schema::new(vec![Field::new(
-            "d",
-            Dictionary(Box::new(DataType::Int8), Box::new(DataType::Utf8)),
-            true,
-        )]);
-        let builder = ReaderBuilder::new()
-            .with_schema(Arc::new(schema))
-            .with_batch_size(64);
-        let mut reader: Reader<File> = builder
-            .build::<File>(File::open("test/data/basic_nulls.json").unwrap())
-            .unwrap();
-        let batch = reader.next().unwrap().unwrap();
+        let iter = values.into_iter().map(|x| Result::Ok(x));
+        let expected = DictionaryPrimitive::<i16, Utf8Primitive<i32>, _>::try_from_iter(iter)?;
+        let expected = expected.to(data_type);
 
-        assert_eq!(1, batch.num_columns());
-        assert_eq!(12, batch.num_rows());
-
-        let schema = reader.schema();
-        let batch_schema = batch.schema();
-        assert_eq!(schema, batch_schema);
-
-        let d = schema.column_with_name("d").unwrap();
-        assert_eq!(
-            &Dictionary(Box::new(DataType::Int8), Box::new(DataType::Utf8)),
-            d.1.data_type()
-        );
-    }
-
-    #[test]
-    fn test_dictionary_from_json_int32() {
-        let schema = Schema::new(vec![Field::new(
-            "d",
-            Dictionary(Box::new(DataType::Int32), Box::new(DataType::Utf8)),
-            true,
-        )]);
-        let builder = ReaderBuilder::new()
-            .with_schema(Arc::new(schema))
-            .with_batch_size(64);
-        let mut reader: Reader<File> = builder
-            .build::<File>(File::open("test/data/basic_nulls.json").unwrap())
-            .unwrap();
-        let batch = reader.next().unwrap().unwrap();
-
-        assert_eq!(1, batch.num_columns());
-        assert_eq!(12, batch.num_rows());
-
-        let schema = reader.schema();
-        let batch_schema = batch.schema();
-        assert_eq!(schema, batch_schema);
-
-        let d = schema.column_with_name("d").unwrap();
-        assert_eq!(
-            &Dictionary(Box::new(DataType::Int32), Box::new(DataType::Utf8)),
-            d.1.data_type()
-        );
-    }
-
-    #[test]
-    fn test_dictionary_from_json_int64() {
-        let schema = Schema::new(vec![Field::new(
-            "d",
-            Dictionary(Box::new(DataType::Int64), Box::new(DataType::Utf8)),
-            true,
-        )]);
-        let builder = ReaderBuilder::new()
-            .with_schema(Arc::new(schema))
-            .with_batch_size(64);
-        let mut reader: Reader<File> = builder
-            .build::<File>(File::open("test/data/basic_nulls.json").unwrap())
-            .unwrap();
-        let batch = reader.next().unwrap().unwrap();
-
-        assert_eq!(1, batch.num_columns());
-        assert_eq!(12, batch.num_rows());
-
-        let schema = reader.schema();
-        let batch_schema = batch.schema();
-        assert_eq!(schema, batch_schema);
-
-        let d = schema.column_with_name("d").unwrap();
-        assert_eq!(
-            &Dictionary(Box::new(DataType::Int64), Box::new(DataType::Utf8)),
-            d.1.data_type()
-        );
+        assert_eq!(expected, result.as_ref());
+        Ok(())
     }
 
     #[test]
@@ -1051,75 +901,14 @@ mod tests {
     }
 
     #[test]
-    fn test_list_of_string_dictionary_from_json() {
-        let schema = Schema::new(vec![Field::new(
-            "events",
-            List(Box::new(Field::new(
-                "item",
-                Dictionary(Box::new(DataType::UInt64), Box::new(DataType::Utf8)),
-                true,
-            ))),
+    fn test_list_of_string_dictionary_from_json_with_nulls() -> Result<()> {
+        let data_type = DataType::List(Box::new(Field::new(
+            "item",
+            DataType::Dictionary(Box::new(DataType::UInt64), Box::new(DataType::Utf8)),
             true,
-        )]);
-        let builder = ReaderBuilder::new()
-            .with_schema(Arc::new(schema))
-            .with_batch_size(64);
-        let mut reader: Reader<File> = builder
-            .build::<File>(File::open("test/data/list_string_dict_nested.json").unwrap())
-            .unwrap();
-        let batch = reader.next().unwrap().unwrap();
+        )));
 
-        assert_eq!(1, batch.num_columns());
-        assert_eq!(3, batch.num_rows());
-
-        let schema = reader.schema();
-        let batch_schema = batch.schema();
-        assert_eq!(schema, batch_schema);
-
-        let events = schema.column_with_name("events").unwrap();
-        assert_eq!(
-            &List(Box::new(Field::new(
-                "item",
-                Dictionary(Box::new(DataType::UInt64), Box::new(DataType::Utf8)),
-                true
-            ))),
-            events.1.data_type()
-        );
-
-        let evs_list = batch
-            .column(events.0)
-            .as_any()
-            .downcast_ref::<ListArray>()
-            .unwrap();
-        let evs_list = evs_list.values();
-        let evs_list = evs_list
-            .as_any()
-            .downcast_ref::<DictionaryArray<UInt64Type>>()
-            .unwrap();
-        assert_eq!(6, evs_list.len());
-        assert_eq!(true, evs_list.is_valid(1));
-        assert_eq!(DataType::Utf8, evs_list.value_type());
-
-        // dict from the events list
-        let dict_el = evs_list.values();
-        let dict_el = dict_el.as_any().downcast_ref::<StringArray>().unwrap();
-        assert_eq!(3, dict_el.len());
-        assert_eq!("Elect Leader", dict_el.value(0));
-        assert_eq!("Do Ballot", dict_el.value(1));
-        assert_eq!("Send Data", dict_el.value(2));
-    }
-
-    #[test]
-    fn test_list_of_string_dictionary_from_json_with_nulls() {
-        let schema = Schema::new(vec![Field::new(
-            "events",
-            List(Box::new(Field::new(
-                "item",
-                Dictionary(Box::new(DataType::UInt64), Box::new(DataType::Utf8)),
-                true,
-            ))),
-            true,
-        )]);
+        let schema = Schema::new(vec![Field::new("events", data_type.clone(), true)]);
         let builder = ReaderBuilder::new()
             .with_schema(Arc::new(schema))
             .with_batch_size(64);
@@ -1136,124 +925,25 @@ mod tests {
         assert_eq!(schema, batch_schema);
 
         let events = schema.column_with_name("events").unwrap();
-        assert_eq!(
-            &List(Box::new(Field::new(
-                "item",
-                Dictionary(Box::new(DataType::UInt64), Box::new(DataType::Utf8)),
-                true
-            ))),
-            events.1.data_type()
-        );
+        assert_eq!(&data_type, events.1.data_type());
 
-        let evs_list = batch
-            .column(events.0)
-            .as_any()
-            .downcast_ref::<ListArray>()
-            .unwrap();
-        let evs_list = evs_list.values();
-        let evs_list = evs_list
-            .as_any()
-            .downcast_ref::<DictionaryArray<UInt64Type>>()
-            .unwrap();
-        assert_eq!(8, evs_list.len());
-        assert_eq!(true, evs_list.is_valid(1));
-        assert_eq!(DataType::Utf8, evs_list.value_type());
+        let expected = vec![
+            Some(vec![None, Some("Elect Leader"), Some("Do Ballot")]),
+            Some(vec![
+                Some("Do Ballot"),
+                None,
+                Some("Send Data"),
+                Some("Elect Leader"),
+            ]),
+            Some(vec![Some("Send Data")]),
+        ];
 
-        // dict from the events list
-        let dict_el = evs_list.values();
-        let dict_el = dict_el.as_any().downcast_ref::<StringArray>().unwrap();
-        assert_eq!(2, evs_list.null_count());
-        assert_eq!(3, dict_el.len());
-        assert_eq!("Elect Leader", dict_el.value(0));
-        assert_eq!("Do Ballot", dict_el.value(1));
-        assert_eq!("Send Data", dict_el.value(2));
-    }
+        let iter = expected.into_iter().map(Result::Ok);
+        let expected = ListPrimitive::<i32, DictionaryPrimitive<u64, Utf8Primitive<i32>, _>, _>::try_from_iter(iter)?;
+        let expected = expected.to(data_type);
 
-    #[test]
-    fn test_dictionary_from_json_uint8() {
-        let schema = Schema::new(vec![Field::new(
-            "d",
-            Dictionary(Box::new(DataType::UInt8), Box::new(DataType::Utf8)),
-            true,
-        )]);
-        let builder = ReaderBuilder::new()
-            .with_schema(Arc::new(schema))
-            .with_batch_size(64);
-        let mut reader: Reader<File> = builder
-            .build::<File>(File::open("test/data/basic_nulls.json").unwrap())
-            .unwrap();
-        let batch = reader.next().unwrap().unwrap();
-
-        assert_eq!(1, batch.num_columns());
-        assert_eq!(12, batch.num_rows());
-
-        let schema = reader.schema();
-        let batch_schema = batch.schema();
-        assert_eq!(schema, batch_schema);
-
-        let d = schema.column_with_name("d").unwrap();
-        assert_eq!(
-            &Dictionary(Box::new(DataType::UInt8), Box::new(DataType::Utf8)),
-            d.1.data_type()
-        );
-    }
-
-    #[test]
-    fn test_dictionary_from_json_uint32() {
-        let schema = Schema::new(vec![Field::new(
-            "d",
-            Dictionary(Box::new(DataType::UInt32), Box::new(DataType::Utf8)),
-            true,
-        )]);
-        let builder = ReaderBuilder::new()
-            .with_schema(Arc::new(schema))
-            .with_batch_size(64);
-        let mut reader: Reader<File> = builder
-            .build::<File>(File::open("test/data/basic_nulls.json").unwrap())
-            .unwrap();
-        let batch = reader.next().unwrap().unwrap();
-
-        assert_eq!(1, batch.num_columns());
-        assert_eq!(12, batch.num_rows());
-
-        let schema = reader.schema();
-        let batch_schema = batch.schema();
-        assert_eq!(schema, batch_schema);
-
-        let d = schema.column_with_name("d").unwrap();
-        assert_eq!(
-            &Dictionary(Box::new(DataType::UInt32), Box::new(DataType::Utf8)),
-            d.1.data_type()
-        );
-    }
-
-    #[test]
-    fn test_dictionary_from_json_uint64() {
-        let schema = Schema::new(vec![Field::new(
-            "d",
-            Dictionary(Box::new(DataType::UInt64), Box::new(DataType::Utf8)),
-            true,
-        )]);
-        let builder = ReaderBuilder::new()
-            .with_schema(Arc::new(schema))
-            .with_batch_size(64);
-        let mut reader: Reader<File> = builder
-            .build::<File>(File::open("test/data/basic_nulls.json").unwrap())
-            .unwrap();
-        let batch = reader.next().unwrap().unwrap();
-
-        assert_eq!(1, batch.num_columns());
-        assert_eq!(12, batch.num_rows());
-
-        let schema = reader.schema();
-        let batch_schema = batch.schema();
-        assert_eq!(schema, batch_schema);
-
-        let d = schema.column_with_name("d").unwrap();
-        assert_eq!(
-            &Dictionary(Box::new(DataType::UInt64), Box::new(DataType::Utf8)),
-            d.1.data_type()
-        );
+        assert_eq!(expected, batch.column(0).as_ref());
+        Ok(())
     }
 
     #[test]
@@ -1297,171 +987,12 @@ mod tests {
         let mut reader = BufReader::new(File::open("test/data/mixed_arrays.json").unwrap());
         let inferred_schema = infer_json_schema_from_seekable(&mut reader, None).unwrap();
 
-        assert_eq!(inferred_schema, Arc::new(schema.clone()));
+        assert_eq!(inferred_schema, schema.clone());
 
         let file = File::open("test/data/mixed_arrays.json.gz").unwrap();
         let mut reader = BufReader::new(GzDecoder::new(&file));
         let inferred_schema = infer_json_schema(&mut reader, None).unwrap();
 
-        assert_eq!(inferred_schema, Arc::new(schema));
+        assert_eq!(inferred_schema, schema);
     }
-
-    #[test]
-    fn test_timestamp_from_json_seconds() {
-        let schema = Schema::new(vec![Field::new(
-            "a",
-            DataType::Timestamp(TimeUnit::Second, None),
-            true,
-        )]);
-
-        let builder = ReaderBuilder::new()
-            .with_schema(Arc::new(schema))
-            .with_batch_size(64);
-        let mut reader: Reader<File> = builder
-            .build::<File>(File::open("test/data/basic_nulls.json").unwrap())
-            .unwrap();
-        let batch = reader.next().unwrap().unwrap();
-
-        assert_eq!(1, batch.num_columns());
-        assert_eq!(12, batch.num_rows());
-
-        let schema = reader.schema();
-        let batch_schema = batch.schema();
-        assert_eq!(schema, batch_schema);
-
-        let a = schema.column_with_name("a").unwrap();
-        assert_eq!(
-            &DataType::Timestamp(TimeUnit::Second, None),
-            a.1.data_type()
-        );
-
-        let aa = batch
-            .column(a.0)
-            .as_any()
-            .downcast_ref::<TimestampSecondArray>()
-            .unwrap();
-        assert_eq!(true, aa.is_valid(0));
-        assert_eq!(false, aa.is_valid(1));
-        assert_eq!(false, aa.is_valid(2));
-        assert_eq!(1, aa.value(0));
-        assert_eq!(1, aa.value(3));
-        assert_eq!(5, aa.value(7));
-    }
-
-    #[test]
-    fn test_timestamp_from_json_milliseconds() {
-        let schema = Schema::new(vec![Field::new(
-            "a",
-            DataType::Timestamp(TimeUnit::Millisecond, None),
-            true,
-        )]);
-
-        let builder = ReaderBuilder::new()
-            .with_schema(Arc::new(schema))
-            .with_batch_size(64);
-        let mut reader: Reader<File> = builder
-            .build::<File>(File::open("test/data/basic_nulls.json").unwrap())
-            .unwrap();
-        let batch = reader.next().unwrap().unwrap();
-
-        assert_eq!(1, batch.num_columns());
-        assert_eq!(12, batch.num_rows());
-
-        let schema = reader.schema();
-        let batch_schema = batch.schema();
-        assert_eq!(schema, batch_schema);
-
-        let a = schema.column_with_name("a").unwrap();
-        assert_eq!(
-            &DataType::Timestamp(TimeUnit::Millisecond, None),
-            a.1.data_type()
-        );
-
-        let aa = batch
-            .column(a.0)
-            .as_any()
-            .downcast_ref::<TimestampMillisecondArray>()
-            .unwrap();
-        assert_eq!(true, aa.is_valid(0));
-        assert_eq!(false, aa.is_valid(1));
-        assert_eq!(false, aa.is_valid(2));
-        assert_eq!(1, aa.value(0));
-        assert_eq!(1, aa.value(3));
-        assert_eq!(5, aa.value(7));
-    }
-
-    #[test]
-    fn test_date_from_json_milliseconds() {
-        let schema = Schema::new(vec![Field::new("a", DataType::Date64, true)]);
-
-        let builder = ReaderBuilder::new()
-            .with_schema(Arc::new(schema))
-            .with_batch_size(64);
-        let mut reader: Reader<File> = builder
-            .build::<File>(File::open("test/data/basic_nulls.json").unwrap())
-            .unwrap();
-        let batch = reader.next().unwrap().unwrap();
-
-        assert_eq!(1, batch.num_columns());
-        assert_eq!(12, batch.num_rows());
-
-        let schema = reader.schema();
-        let batch_schema = batch.schema();
-        assert_eq!(schema, batch_schema);
-
-        let a = schema.column_with_name("a").unwrap();
-        assert_eq!(&DataType::Date64, a.1.data_type());
-
-        let aa = batch
-            .column(a.0)
-            .as_any()
-            .downcast_ref::<Date64Array>()
-            .unwrap();
-        assert_eq!(true, aa.is_valid(0));
-        assert_eq!(false, aa.is_valid(1));
-        assert_eq!(false, aa.is_valid(2));
-        assert_eq!(1, aa.value(0));
-        assert_eq!(1, aa.value(3));
-        assert_eq!(5, aa.value(7));
-    }
-
-    #[test]
-    fn test_time_from_json_nanoseconds() {
-        let schema = Schema::new(vec![Field::new(
-            "a",
-            DataType::Time64(TimeUnit::Nanosecond),
-            true,
-        )]);
-
-        let builder = ReaderBuilder::new()
-            .with_schema(Arc::new(schema))
-            .with_batch_size(64);
-        let mut reader: Reader<File> = builder
-            .build::<File>(File::open("test/data/basic_nulls.json").unwrap())
-            .unwrap();
-        let batch = reader.next().unwrap().unwrap();
-
-        assert_eq!(1, batch.num_columns());
-        assert_eq!(12, batch.num_rows());
-
-        let schema = reader.schema();
-        let batch_schema = batch.schema();
-        assert_eq!(schema, batch_schema);
-
-        let a = schema.column_with_name("a").unwrap();
-        assert_eq!(&DataType::Time64(TimeUnit::Nanosecond), a.1.data_type());
-
-        let aa = batch
-            .column(a.0)
-            .as_any()
-            .downcast_ref::<Time64NanosecondArray>()
-            .unwrap();
-        assert_eq!(true, aa.is_valid(0));
-        assert_eq!(false, aa.is_valid(1));
-        assert_eq!(false, aa.is_valid(2));
-        assert_eq!(1, aa.value(0));
-        assert_eq!(1, aa.value(3));
-        assert_eq!(5, aa.value(7));
-    }
-    */
 }
