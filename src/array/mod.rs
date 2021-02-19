@@ -167,7 +167,7 @@ pub type Float64Array = PrimitiveArray<f64>;
 pub type StringArray = Utf8Array<i32>;
 pub type UInt32Array = PrimitiveArray<u32>;
 
-pub trait ToArray: std::fmt::Debug {
+pub trait ToArray {
     fn to_arc(self, data_type: &DataType) -> std::sync::Arc<dyn Array>;
 }
 

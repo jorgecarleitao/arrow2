@@ -1,8 +1,8 @@
 use std::{iter::FromIterator, sync::Arc};
 
 use crate::{
-    array::{Array, Offset, Primitive, ToArray},
-    buffer::{Bitmap, Buffer, MutableBitmap, MutableBuffer, NativeType},
+    array::{Array, Builder, Offset, ToArray},
+    buffer::{Bitmap, Buffer, MutableBitmap, MutableBuffer},
     datatypes::DataType,
 };
 
@@ -22,10 +22,10 @@ impl<O: Offset, A: ToArray> ListPrimitive<O, A> {
     }
 }
 
-pub fn list_from_iter_primitive<O, T, P, I>(iter: I) -> (Buffer<O>, Primitive<T>, Option<Bitmap>)
+pub fn list_from_iter<O, B, T, P, I>(iter: I) -> (Buffer<O>, B, Option<Bitmap>)
 where
     O: Offset,
-    T: NativeType,
+    B: Builder<T>,
     P: AsRef<[Option<T>]> + IntoIterator<Item = Option<T>>,
     I: IntoIterator<Item = Option<P>>,
 {
@@ -38,7 +38,8 @@ where
 
     let mut nulls = MutableBitmap::with_capacity(lower);
 
-    let values: Primitive<T> = iterator
+    let mut values = B::with_capacity(0);
+    iterator
         .filter_map(|maybe_slice| {
             // regardless of whether the item is Some, the offsets and null buffers must be updated.
             match &maybe_slice {
@@ -52,19 +53,19 @@ where
             maybe_slice
         })
         .flatten()
-        .collect();
+        .for_each(|x| values.push(x.as_ref()));
 
     (offsets.into(), values, nulls.into())
 }
 
-impl<O, T, P> FromIterator<Option<P>> for ListPrimitive<O, Primitive<T>>
+impl<O, B, T, P> FromIterator<Option<P>> for ListPrimitive<O, B>
 where
     O: Offset,
-    T: NativeType,
+    B: Builder<T>,
     P: AsRef<[Option<T>]> + IntoIterator<Item = Option<T>>,
 {
     fn from_iter<I: IntoIterator<Item = Option<P>>>(iter: I) -> Self {
-        let (offsets, values, validity) = list_from_iter_primitive(iter);
+        let (offsets, values, validity) = list_from_iter(iter);
         Self {
             offsets,
             values,
@@ -73,10 +74,9 @@ where
     }
 }
 
-impl<T: NativeType, O: Offset> ToArray for ListPrimitive<O, Primitive<T>> {
+impl<O: Offset, B: ToArray> ToArray for ListPrimitive<O, B> {
     fn to_arc(self, data_type: &DataType) -> Arc<dyn Array> {
-        let list = self.to(data_type.clone());
-        Arc::new(list)
+        Arc::new(self.to(data_type.clone()))
     }
 }
 
