@@ -161,12 +161,17 @@ pub use struct_::StructArray;
 pub use self::ffi::FromFFI;
 use self::ffi::ToFFI;
 
+pub type Int8Array = PrimitiveArray<i8>;
+pub type Int16Array = PrimitiveArray<i16>;
 pub type Int32Array = PrimitiveArray<i32>;
 pub type Int64Array = PrimitiveArray<i64>;
 pub type Float32Array = PrimitiveArray<f32>;
 pub type Float64Array = PrimitiveArray<f64>;
 pub type StringArray = Utf8Array<i32>;
+pub type UInt8Array = PrimitiveArray<u8>;
+pub type UInt16Array = PrimitiveArray<u16>;
 pub type UInt32Array = PrimitiveArray<u32>;
+pub type UInt64Array = PrimitiveArray<u64>;
 
 pub trait ToArray {
     fn to_arc(self, data_type: &DataType) -> std::sync::Arc<dyn Array>;
