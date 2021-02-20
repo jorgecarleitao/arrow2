@@ -25,9 +25,9 @@ use super::{
     types::NativeType,
 };
 
-use std::fmt::Debug;
 use std::sync::Arc;
 use std::{convert::AsRef, usize};
+use std::{fmt::Debug, iter::FromIterator};
 
 use super::mutable::MutableBuffer;
 
@@ -121,6 +121,12 @@ impl<T: NativeType, U: AsRef<[T]>> From<U> for Buffer<T> {
         let mut buffer = MutableBuffer::with_capacity(len);
         buffer.extend_from_slice(slice);
         buffer.into()
+    }
+}
+
+impl<T: NativeType> FromIterator<T> for Buffer<T> {
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+        MutableBuffer::from_iter(iter).into()
     }
 }
 

@@ -5,7 +5,9 @@ use crate::{
 
 use super::{display_fmt, display_helper, ffi::ToFFI, Array};
 
+mod from;
 mod iterator;
+pub use from::*;
 
 #[derive(Debug, Clone)]
 pub struct FixedSizeBinaryArray {
@@ -44,7 +46,7 @@ impl FixedSizeBinaryArray {
             size: self.size,
             values: self.values.clone().slice(offset, length),
             validity,
-            offset: 0,
+            offset: self.offset + offset,
         }
     }
 

@@ -4,6 +4,11 @@ use num::Num;
 
 use crate::buffer::{Buffer, NativeType};
 
+/// Trait uses to distinguish types whose offset sizes support multiple sizes.
+/// This trait is only implemented for i32 and i64, which are the two sizes currently
+/// declared in arrow specification.
+/// # Safety
+/// Do not implement.
 pub unsafe trait Offset: NativeType + Num + Ord + std::ops::AddAssign {
     fn is_large() -> bool;
 

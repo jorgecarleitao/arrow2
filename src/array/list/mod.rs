@@ -49,6 +49,7 @@ impl<O: Offset> ListArray<O> {
     }
 
     /// Returns the element at index `i` as &str
+    #[inline]
     pub fn value(&self, i: usize) -> Box<dyn Array> {
         let offsets = self.offsets.as_slice();
         let offset = offsets[i];
@@ -61,6 +62,7 @@ impl<O: Offset> ListArray<O> {
     /// Returns the element at index `i` as &str
     /// # Safety
     /// Assumes that the `i < self.len`.
+    #[inline]
     pub unsafe fn value_unchecked(&self, i: usize) -> Box<dyn Array> {
         let offset = *self.offsets.as_ptr().add(i);
         let offset_1 = *self.offsets.as_ptr().add(i + 1);
@@ -98,6 +100,7 @@ impl<O: Offset> ListArray<O> {
 }
 
 impl<O: Offset> ListArray<O> {
+    #[inline]
     pub fn default_datatype(data_type: DataType) -> DataType {
         let field = Box::new(Field::new("item", data_type, true));
         if O::is_large() {
@@ -107,20 +110,26 @@ impl<O: Offset> ListArray<O> {
         }
     }
 
-    pub(crate) fn get_child(data_type: &DataType) -> &DataType {
+    #[inline]
+    pub(crate) fn get_child_field(data_type: &DataType) -> &Field {
         if O::is_large() {
             if let DataType::LargeList(child) = data_type {
-                child.data_type()
+                child.as_ref()
             } else {
                 panic!("Wrong DataType")
             }
         } else {
             if let DataType::List(child) = data_type {
-                child.data_type()
+                child.as_ref()
             } else {
                 panic!("Wrong DataType")
             }
         }
+    }
+
+    #[inline]
+    pub(crate) fn get_child(data_type: &DataType) -> &DataType {
+        Self::get_child_field(data_type).data_type()
     }
 }
 

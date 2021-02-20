@@ -1,3 +1,5 @@
+use std::iter::FromIterator;
+
 use crate::buffer::{Bitmap, MutableBitmap};
 
 use super::BooleanArray;
@@ -117,4 +119,27 @@ where
     null.set_len(len);
 
     Ok((null.into(), values.into()))
+}
+
+impl<Ptr: std::borrow::Borrow<Option<bool>>> FromIterator<Ptr> for BooleanArray {
+    fn from_iter<I: IntoIterator<Item = Ptr>>(iter: I) -> Self {
+        let iter = iter.into_iter();
+        let (lower, _) = iter.size_hint();
+
+        let mut validity = MutableBitmap::with_capacity(lower);
+
+        let values: MutableBitmap = iter
+            .map(|item| {
+                if let Some(a) = item.borrow() {
+                    validity.push(true);
+                    *a
+                } else {
+                    validity.push(false);
+                    false
+                }
+            })
+            .collect();
+
+        BooleanArray::from_data(values.into(), validity.into())
+    }
 }

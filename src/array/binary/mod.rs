@@ -167,3 +167,5 @@ unsafe impl<O: Offset> FromFFI for BinaryArray<O> {
 
 mod iterator;
 pub use iterator::*;
+mod from;
+pub use from::*;

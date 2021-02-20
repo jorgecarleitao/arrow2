@@ -146,10 +146,10 @@ mod struct_;
 mod equal;
 mod ffi;
 
-pub use binary::BinaryArray;
+pub use binary::{BinaryArray, BinaryPrimitive};
 pub use boolean::BooleanArray;
 pub use dictionary::{DictionaryArray, DictionaryKey, DictionaryPrimitive};
-pub use fixed_size_binary::FixedSizeBinaryArray;
+pub use fixed_size_binary::{FixedSizeBinaryArray, FixedSizeBinaryPrimitive};
 pub use fixed_size_list::FixedSizeListArray;
 pub use list::{ListArray, ListPrimitive};
 pub use null::NullArray;

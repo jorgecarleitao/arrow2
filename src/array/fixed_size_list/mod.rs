@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use crate::{buffer::Bitmap, datatypes::DataType};
+use crate::{
+    buffer::Bitmap,
+    datatypes::{DataType, Field},
+};
 
 use super::{display_fmt, ffi::ToFFI, new_empty_array, Array};
 
@@ -46,7 +49,7 @@ impl FixedSizeListArray {
             size: self.size,
             values: self.values.clone().slice(offset, length).into(),
             validity,
-            offset: 0,
+            offset: self.offset + offset,
         }
     }
 
@@ -62,6 +65,15 @@ impl FixedSizeListArray {
 }
 
 impl FixedSizeListArray {
+    #[inline]
+    pub(crate) fn get_child_field(data_type: &DataType) -> (&Field, &i32) {
+        if let DataType::FixedSizeList(field, size) = data_type {
+            (field.as_ref(), size)
+        } else {
+            panic!("Wrong DataType")
+        }
+    }
+
     pub(crate) fn get_child_and_size(data_type: &DataType) -> (&DataType, &i32) {
         if let DataType::FixedSizeList(field, size) = data_type {
             (field.data_type(), size)
