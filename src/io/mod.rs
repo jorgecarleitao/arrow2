@@ -6,3 +6,6 @@ pub mod json;
 
 #[cfg(feature = "io_ipc")]
 pub mod ipc;
+
+#[cfg(feature = "io_json_integration")]
+pub mod json_integration;

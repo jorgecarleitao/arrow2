@@ -1,0 +1,256 @@
+use std::{collections::HashMap, sync::Arc};
+
+use hex;
+use num::NumCast;
+use serde_json::Value;
+
+use crate::error::{ArrowError, Result};
+use crate::{array::*, buffer::NativeType};
+use crate::{
+    buffer::{Bitmap, Buffer},
+    datatypes::{DataType, Field, IntervalUnit},
+};
+
+use super::{ArrowJsonColumn, ArrowJsonDictionaryBatch};
+
+fn to_validity(validity: &Option<Vec<u8>>) -> Option<Bitmap> {
+    validity
+        .as_ref()
+        .map(|x| x.iter().map(|is_valid| *is_valid == 1).collect::<Bitmap>())
+}
+
+fn to_offsets<O: Offset>(offsets: Option<&Vec<Value>>) -> Buffer<O> {
+    offsets
+        .as_ref()
+        .unwrap()
+        .iter()
+        .map(|v| {
+            v.as_i64()
+                .map(|x| x as usize)
+                .and_then(O::from_usize)
+                .unwrap()
+        })
+        .collect()
+}
+
+fn to_primitive<T: NativeType + NumCast>(
+    json_col: &ArrowJsonColumn,
+    data_type: DataType,
+) -> PrimitiveArray<T> {
+    let validity = to_validity(&json_col.validity);
+    let values = json_col
+        .data
+        .as_ref()
+        .unwrap()
+        .iter()
+        .map(|value| value.as_f64().and_then(num::cast::cast::<f64, T>).unwrap())
+        .collect();
+
+    PrimitiveArray::<T>::from_data(data_type, values, validity)
+}
+
+fn to_binary<O: Offset>(json_col: &ArrowJsonColumn) -> Arc<dyn Array> {
+    let validity = to_validity(&json_col.validity);
+    let offsets = to_offsets::<O>(json_col.offset.as_ref());
+    let values = json_col
+        .data
+        .as_ref()
+        .unwrap()
+        .iter()
+        .map(|value| value.as_str().map(|x| hex::decode(x).unwrap()).unwrap())
+        .flatten()
+        .collect();
+    Arc::new(BinaryArray::from_data(offsets, values, validity))
+}
+
+fn to_utf8<O: Offset>(json_col: &ArrowJsonColumn) -> Arc<dyn Array> {
+    let validity = to_validity(&json_col.validity);
+    let offsets = to_offsets::<O>(json_col.offset.as_ref());
+    let values = json_col
+        .data
+        .as_ref()
+        .unwrap()
+        .iter()
+        .map(|value| value.as_str().unwrap().as_bytes().to_vec())
+        .flatten()
+        .collect();
+    Arc::new(Utf8Array::from_data(offsets, values, validity))
+}
+
+fn to_list<O: Offset>(
+    json_col: &ArrowJsonColumn,
+    data_type: DataType,
+    dictionaries: Option<&HashMap<i64, ArrowJsonDictionaryBatch>>,
+) -> Result<Arc<dyn Array>> {
+    let validity = json_col
+        .validity
+        .as_ref()
+        .map(|x| x.iter().map(|is_valid| *is_valid == 1).collect::<Bitmap>());
+
+    let child_field = ListArray::<O>::get_child_field(&data_type);
+    let children = &json_col.children.as_ref().unwrap()[0];
+    let values = to_array(&child_field, children, dictionaries)?;
+    let offsets: Buffer<O> = json_col
+        .offset
+        .as_ref()
+        .unwrap()
+        .iter()
+        .map(|v| {
+            v.as_i64()
+                .map(|x| x as usize)
+                .and_then(O::from_usize)
+                .unwrap()
+        })
+        .collect();
+    Ok(Arc::new(ListArray::<O>::from_data(
+        data_type, offsets, values, validity,
+    )))
+}
+
+fn to_dictionary<K: DictionaryKey>(
+    field: &Field,
+    json_col: &ArrowJsonColumn,
+    dictionaries: Option<&HashMap<i64, ArrowJsonDictionaryBatch>>,
+) -> Result<Arc<dyn Array>> {
+    let dict_id = field.dict_id().ok_or_else(|| {
+        ArrowError::JsonError(format!("Unable to find dict_id for field {:?}", field))
+    })?;
+    // find dictionary
+    let dictionary = dictionaries
+        .ok_or_else(|| {
+            ArrowError::JsonError(format!(
+                "Unable to find any dictionaries for field {:?}",
+                field
+            ))
+        })?
+        .get(&dict_id)
+        .ok_or_else(|| {
+            ArrowError::JsonError(format!("Unable to find any dictionary id {}", dict_id))
+        })?;
+
+    let keys = to_primitive(json_col, K::DATA_TYPE);
+
+    // todo: make DataType::Dictionary hold a Field so that it can hold dictionary_id
+    let data_type = DictionaryArray::<K>::get_child(field.data_type());
+    // note: not enough info on nullability of dictionary
+    let value_field = Field::new("value", data_type.clone(), true);
+    let values = to_array(&value_field, &dictionary.data.columns[0], None)?;
+
+    Ok(Arc::new(DictionaryArray::<K>::from_data(keys, values)))
+}
+
+/// Construct an [`Array`] from the JSON integration format
+pub fn to_array(
+    field: &Field,
+    json_col: &ArrowJsonColumn,
+    dictionaries: Option<&HashMap<i64, ArrowJsonDictionaryBatch>>,
+) -> Result<Arc<dyn Array>> {
+    let data_type = field.data_type();
+    match data_type {
+        DataType::Null => Ok(Arc::new(NullArray::from_data(json_col.count))),
+        DataType::Boolean => {
+            let array = json_col
+                .validity
+                .as_ref()
+                .unwrap()
+                .iter()
+                .zip(json_col.data.as_ref().unwrap())
+                .map(|(is_valid, value)| {
+                    if *is_valid == 1 {
+                        Some(value.as_bool().unwrap())
+                    } else {
+                        None
+                    }
+                })
+                .collect::<BooleanArray>();
+            Ok(Arc::new(array))
+        }
+        DataType::Int8 => Ok(Arc::new(to_primitive::<i8>(json_col, data_type.clone()))),
+        DataType::Int16 => Ok(Arc::new(to_primitive::<i16>(json_col, data_type.clone()))),
+        DataType::Int32
+        | DataType::Date32
+        | DataType::Time32(_)
+        | DataType::Interval(IntervalUnit::YearMonth) => {
+            Ok(Arc::new(to_primitive::<i32>(json_col, data_type.clone())))
+        }
+        DataType::Int64
+        | DataType::Date64
+        | DataType::Time64(_)
+        | DataType::Timestamp(_, _)
+        | DataType::Duration(_)
+        | DataType::Interval(IntervalUnit::DayTime) => {
+            Ok(Arc::new(to_primitive::<i64>(json_col, data_type.clone())))
+        }
+        DataType::UInt8 => Ok(Arc::new(to_primitive::<u8>(json_col, data_type.clone()))),
+        DataType::UInt16 => Ok(Arc::new(to_primitive::<u16>(json_col, data_type.clone()))),
+        DataType::UInt32 => Ok(Arc::new(to_primitive::<u32>(json_col, data_type.clone()))),
+        DataType::UInt64 => Ok(Arc::new(to_primitive::<u64>(json_col, data_type.clone()))),
+        DataType::Float32 => Ok(Arc::new(to_primitive::<f32>(json_col, data_type.clone()))),
+        DataType::Float64 => Ok(Arc::new(to_primitive::<f64>(json_col, data_type.clone()))),
+        DataType::Binary => Ok(to_binary::<i32>(json_col)),
+        DataType::LargeBinary => Ok(to_binary::<i64>(json_col)),
+        DataType::Utf8 => Ok(to_utf8::<i32>(json_col)),
+        DataType::LargeUtf8 => Ok(to_utf8::<i64>(json_col)),
+        DataType::FixedSizeBinary(_) => {
+            let array = json_col
+                .validity
+                .as_ref()
+                .unwrap()
+                .iter()
+                .zip(json_col.data.as_ref().unwrap())
+                .map(|(is_valid, value)| {
+                    if *is_valid == 1 {
+                        value.as_str().and_then(|x| hex::decode(x).ok())
+                    } else {
+                        None
+                    }
+                })
+                .collect::<FixedSizeBinaryPrimitive>()
+                .to(data_type.clone());
+            Ok(Arc::new(array))
+        }
+
+        DataType::List(_) => to_list::<i32>(json_col, data_type.clone(), dictionaries),
+        DataType::LargeList(_) => to_list::<i64>(json_col, data_type.clone(), dictionaries),
+
+        DataType::FixedSizeList(child_field, _) => {
+            let validity = to_validity(&json_col.validity);
+
+            let children = &json_col.children.as_ref().unwrap()[0];
+            let values = to_array(&child_field, children, dictionaries)?;
+
+            Ok(Arc::new(FixedSizeListArray::from_data(
+                data_type.clone(),
+                values,
+                validity,
+            )))
+        }
+        DataType::Struct(fields) => {
+            let validity = to_validity(&json_col.validity);
+
+            let values = fields
+                .iter()
+                .zip(json_col.children.as_ref().unwrap())
+                .map(|(field, col)| to_array(field, col, dictionaries))
+                .collect::<Result<Vec<_>>>()?;
+
+            let array = StructArray::from_data(fields.clone(), values, validity);
+            Ok(Arc::new(array))
+        }
+        DataType::Dictionary(key_type, _) => match key_type.as_ref() {
+            DataType::Int8 => to_dictionary::<i8>(field, json_col, dictionaries),
+            DataType::Int16 => to_dictionary::<i16>(field, json_col, dictionaries),
+            DataType::Int32 => to_dictionary::<i32>(field, json_col, dictionaries),
+            DataType::Int64 => to_dictionary::<i64>(field, json_col, dictionaries),
+            DataType::UInt8 => to_dictionary::<u8>(field, json_col, dictionaries),
+            DataType::UInt16 => to_dictionary::<u16>(field, json_col, dictionaries),
+            DataType::UInt32 => to_dictionary::<u32>(field, json_col, dictionaries),
+            DataType::UInt64 => to_dictionary::<u64>(field, json_col, dictionaries),
+            _ => unreachable!(),
+        },
+        t => Err(ArrowError::JsonError(format!(
+            "data type {:?} not supported",
+            t
+        ))),
+    }
+}

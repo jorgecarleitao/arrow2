@@ -24,6 +24,7 @@ serde_json = { version = "1.0", features = ["preserve_order"], optional = true }
 indexmap = { version = "1.6", optional = true }
 
 flatbuffers = { version = "^0.8", optional = true }
+hex = { version = "0.4", optional = true }
 
 [dev-dependencies]
 rand = "0.7"
@@ -32,10 +33,11 @@ tempfile = "3"
 flate2 = "1"
 
 [features]
-default = ["io_csv", "io_json", "io_ipc"]
+default = ["io_csv", "io_json", "io_ipc", "io_json_integration"]
 io_csv = ["csv", "lazy_static", "lexical-core", "regex"]
 io_json = ["serde", "serde_derive", "serde_json", "indexmap"]
 io_ipc = ["flatbuffers"]
+io_json_integration = ["io_json", "hex"]
 
 [[bench]]
 name = "take_kernels"
