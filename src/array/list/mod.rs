@@ -71,9 +71,10 @@ impl<O: Offset> ListArray<O> {
 
     pub fn slice(&self, offset: usize, length: usize) -> Self {
         let validity = self.validity.clone().map(|x| x.slice(offset, length));
+        let offsets = self.offsets.clone().slice(offset, length + 1);
         Self {
             data_type: self.data_type.clone(),
-            offsets: self.offsets.clone().slice(offset, length),
+            offsets,
             values: self.values.clone(),
             validity,
             offset: self.offset + offset,
