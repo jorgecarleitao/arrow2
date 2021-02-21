@@ -145,7 +145,7 @@ unsafe impl NativeType for f64 {
 
 #[derive(Debug, Copy, Clone, Default, PartialEq)]
 #[allow(non_camel_case_types)]
-pub struct days_ms([i32; 2]);
+pub struct days_ms(pub [i32; 2]);
 
 impl std::fmt::Display for days_ms {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
