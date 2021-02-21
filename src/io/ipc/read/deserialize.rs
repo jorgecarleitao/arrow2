@@ -13,7 +13,7 @@ use crate::buffer::Buffer;
 use crate::datatypes::{DataType, IntervalUnit};
 use crate::{
     array::*,
-    buffer::{Bitmap, MutableBuffer, NativeType},
+    buffer::{Bitmap, MutableBuffer, NativeType, days_ms},
 };
 
 use super::super::gen;
@@ -327,9 +327,12 @@ pub fn read<R: Read + Seek>(
         | DataType::Date64
         | DataType::Time64(_)
         | DataType::Timestamp(_, _)
-        | DataType::Duration(_)
-        | DataType::Interval(IntervalUnit::DayTime) => {
+        | DataType::Duration(_) => {
             read_primitive::<i64, _>(field_nodes, data_type, buffers, reader, block_offset)
+                .map(|x| Arc::new(x) as Arc<dyn Array>)
+        }
+        DataType::Interval(IntervalUnit::DayTime) => {
+            read_primitive::<days_ms, _>(field_nodes, data_type, buffers, reader, block_offset)
                 .map(|x| Arc::new(x) as Arc<dyn Array>)
         }
         DataType::UInt8 => {

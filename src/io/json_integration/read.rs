@@ -4,7 +4,10 @@ use hex;
 use num::NumCast;
 use serde_json::Value;
 
-use crate::{array::*, buffer::NativeType};
+use crate::{
+    array::*,
+    buffer::{days_ms, NativeType},
+};
 use crate::{
     buffer::{Bitmap, Buffer},
     datatypes::{DataType, Field, IntervalUnit},
@@ -35,6 +38,39 @@ fn to_offsets<O: Offset>(offsets: Option<&Vec<Value>>) -> Buffer<O> {
                 .unwrap()
         })
         .collect()
+}
+
+fn to_interval(value: &Value) -> days_ms {
+    if let Value::Object(v) = value {
+        let days = v.get("days").unwrap();
+        let milliseconds = v.get("milliseconds").unwrap();
+        match (days, milliseconds) {
+            (Value::Number(days), Value::Number(milliseconds)) => {
+                let days = days.as_i64().unwrap() as i32;
+                let milliseconds = milliseconds.as_i64().unwrap() as i32;
+                days_ms([days, milliseconds])
+            }
+            (_, _) => panic!(),
+        }
+    } else {
+        println!("{:#?}", value);
+        panic!()
+    }
+}
+
+fn to_primitive_interval(
+    json_col: &ArrowJsonColumn,
+    data_type: DataType,
+) -> PrimitiveArray<days_ms> {
+    let validity = to_validity(&json_col.validity);
+    let values = json_col
+        .data
+        .as_ref()
+        .unwrap()
+        .iter()
+        .map(to_interval)
+        .collect();
+    PrimitiveArray::<days_ms>::from_data(data_type, values, validity)
 }
 
 fn to_primitive<T: NativeType + NumCast>(
@@ -194,9 +230,9 @@ pub fn to_array(
         | DataType::Date64
         | DataType::Time64(_)
         | DataType::Timestamp(_, _)
-        | DataType::Duration(_)
-        | DataType::Interval(IntervalUnit::DayTime) => {
-            Ok(Arc::new(to_primitive::<i64>(json_col, data_type.clone())))
+        | DataType::Duration(_) => Ok(Arc::new(to_primitive::<i64>(json_col, data_type.clone()))),
+        DataType::Interval(IntervalUnit::DayTime) => {
+            Ok(Arc::new(to_primitive_interval(json_col, data_type.clone())))
         }
         DataType::UInt8 => Ok(Arc::new(to_primitive::<u8>(json_col, data_type.clone()))),
         DataType::UInt16 => Ok(Arc::new(to_primitive::<u16>(json_col, data_type.clone()))),
