@@ -1,7 +1,7 @@
 use std::unimplemented;
 
 use crate::{
-    buffer::{Bitmap, NativeType},
+    buffer::{days_ms, Bitmap, NativeType},
     datatypes::{DataType, IntervalUnit},
 };
 
@@ -181,12 +181,22 @@ fn equal_values(
         }
         DataType::Int64
         | DataType::Date64
-        | DataType::Interval(IntervalUnit::DayTime)
         | DataType::Time64(_)
         | DataType::Timestamp(_, _)
         | DataType::Duration(_) => {
             let lhs = lhs.as_any().downcast_ref::<PrimitiveArray<i64>>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<PrimitiveArray<i64>>().unwrap();
+            primitive::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+        }
+        DataType::Interval(IntervalUnit::DayTime) => {
+            let lhs = lhs
+                .as_any()
+                .downcast_ref::<PrimitiveArray<days_ms>>()
+                .unwrap();
+            let rhs = rhs
+                .as_any()
+                .downcast_ref::<PrimitiveArray<days_ms>>()
+                .unwrap();
             primitive::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
         }
         DataType::Float16 => unreachable!(),

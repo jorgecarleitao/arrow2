@@ -1,8 +1,5 @@
 mod field;
-mod primitive;
 mod schema;
-
-pub use primitive::*;
 
 pub use field::Field;
 pub use schema::Schema;

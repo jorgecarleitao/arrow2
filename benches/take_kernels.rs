@@ -22,8 +22,8 @@ use criterion::Criterion;
 use rand::distributions::{Distribution, Standard};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
-use arrow2::{array::*, datatypes::DataType, datatypes::PrimitiveType};
-use arrow2::{compute::take, datatypes::Int32Type};
+use arrow2::compute::take;
+use arrow2::{array::*, buffer::NativeType, datatypes::DataType};
 
 /// Returns fixed seedable RNG
 pub fn seedable_rng() -> StdRng {
@@ -31,17 +31,17 @@ pub fn seedable_rng() -> StdRng {
 }
 
 // cast array from specified primitive array type to desired data type
-fn create_primitive<T>(size: usize) -> PrimitiveArray<T::Native>
+fn create_primitive<T>(size: usize, data_type: DataType) -> PrimitiveArray<T>
 where
-    T: PrimitiveType,
-    Standard: Distribution<T::Native>,
+    T: NativeType,
+    Standard: Distribution<T>,
 {
     seedable_rng()
         .sample_iter(&Standard)
         .take(size)
         .map(Some)
-        .collect::<Primitive<T::Native>>()
-        .to(T::DATA_TYPE)
+        .collect::<Primitive<T>>()
+        .to(data_type)
 }
 
 fn create_random_index(size: usize, null_density: f32) -> PrimitiveArray<i32> {
@@ -64,10 +64,10 @@ fn bench_take(values: &dyn Array, indices: &PrimitiveArray<i32>) {
 }
 
 fn add_benchmark(c: &mut Criterion) {
-    let values = create_primitive::<Int32Type>(512);
+    let values = create_primitive::<i32>(512, DataType::Int32);
     let indices = create_random_index(512, 0.0);
     c.bench_function("take i32 512", |b| b.iter(|| bench_take(&values, &indices)));
-    let values = create_primitive::<Int32Type>(1024);
+    let values = create_primitive::<i32>(1024, DataType::Int32);
     let indices = create_random_index(1024, 0.0);
     c.bench_function("take i32 1024", |b| {
         b.iter(|| bench_take(&values, &indices))
@@ -77,7 +77,7 @@ fn add_benchmark(c: &mut Criterion) {
     c.bench_function("take i32 nulls 512", |b| {
         b.iter(|| bench_take(&values, &indices))
     });
-    let values = create_primitive::<Int32Type>(1024);
+    let values = create_primitive::<i32>(1024, DataType::Int32);
     let indices = create_random_index(1024, 0.5);
     c.bench_function("take i32 nulls 1024", |b| {
         b.iter(|| bench_take(&values, &indices))

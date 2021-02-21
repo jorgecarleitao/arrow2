@@ -233,24 +233,22 @@ fn take_primitive<T: NativeType, I: Offset>(
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        array::Primitive,
-        datatypes::{Int8Type, PrimitiveType},
-    };
+    use crate::array::Primitive;
 
     use super::*;
 
     fn test_take_primitive_arrays<T>(
-        data: &[Option<T::Native>],
+        data: &[Option<T>],
         index: &PrimitiveArray<i32>,
         options: Option<TakeOptions>,
-        expected_data: &[Option<T::Native>],
+        expected_data: &[Option<T>],
+        data_type: DataType,
     ) -> Result<()>
     where
-        T: PrimitiveType,
+        T: NativeType,
     {
-        let output = Primitive::<T::Native>::from(data).to(T::DATA_TYPE);
-        let expected = Primitive::<T::Native>::from(expected_data).to(T::DATA_TYPE);
+        let output = Primitive::<T>::from(data).to(data_type.clone());
+        let expected = Primitive::<T>::from(expected_data).to(data_type);
         let output = take(&output, index, options)?;
         assert_eq!(expected, *output);
         Ok(())
@@ -259,11 +257,12 @@ mod tests {
     #[test]
     fn test_take_primitive_non_null_indices() {
         let index = Primitive::<i32>::from_slice(&[0, 5, 3, 1, 4, 2]).to(DataType::Int32);
-        test_take_primitive_arrays::<Int8Type>(
+        test_take_primitive_arrays::<i8>(
             &[None, Some(3), Some(5), Some(2), Some(3), None],
             &index,
             None,
             &[None, None, Some(2), Some(3), Some(3), Some(5)],
+            DataType::Int8,
         )
         .unwrap();
     }
@@ -272,11 +271,12 @@ mod tests {
     fn test_take_primitive_non_null_values() {
         let index =
             Primitive::<i32>::from(&[Some(3), None, Some(1), Some(3), Some(2)]).to(DataType::Int32);
-        test_take_primitive_arrays::<Int8Type>(
+        test_take_primitive_arrays::<i8>(
             &[Some(0), Some(1), Some(2), Some(3), Some(4)],
             &index,
             None,
             &[Some(3), None, Some(1), Some(3), Some(2)],
+            DataType::Int8,
         )
         .unwrap();
     }

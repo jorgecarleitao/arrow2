@@ -14,4 +14,4 @@ pub use bitmap::MutableBitmap;
 pub use bitmap_ops::*;
 pub use immutable::Buffer;
 pub use mutable::MutableBuffer;
-pub use types::NativeType;
+pub use types::{days_ms, NativeType};

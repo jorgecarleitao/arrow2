@@ -113,8 +113,7 @@ unsafe impl NativeType for i64 {
             | DataType::Date64
             | DataType::Time64(_)
             | DataType::Timestamp(_, _)
-            | DataType::Duration(_)
-            | DataType::Interval(IntervalUnit::DayTime) => true,
+            | DataType::Duration(_) => true,
             _ => false,
         }
     }
@@ -141,5 +140,28 @@ unsafe impl NativeType for f64 {
 
     fn is_valid(data_type: &DataType) -> bool {
         data_type == &DataType::Float64
+    }
+}
+
+#[derive(Debug, Copy, Clone, Default, PartialEq)]
+#[allow(non_camel_case_types)]
+pub struct days_ms([i32; 2]);
+
+impl std::fmt::Display for days_ms {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}d {}ms", self.0[0], self.0[1])
+    }
+}
+
+unsafe impl NativeType for days_ms {
+    type Bytes = Vec<u8>;
+    #[inline]
+    fn to_le_bytes(&self) -> Self::Bytes {
+        // todo: find a way of avoiding this allocation
+        [self.0[0].to_le_bytes(), self.0[1].to_le_bytes()].concat()
+    }
+
+    fn is_valid(data_type: &DataType) -> bool {
+        data_type == &DataType::Interval(IntervalUnit::DayTime)
     }
 }
