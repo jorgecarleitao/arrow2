@@ -9,7 +9,7 @@ use crate::{
 
 use crate::io::ipc::gen::Schema;
 
-use super::pad_to_8;
+use super::common::pad_to_8;
 
 fn _write_primitive<T: NativeType>(
     array: &PrimitiveArray<T>,
