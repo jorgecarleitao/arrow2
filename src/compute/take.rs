@@ -38,19 +38,11 @@ macro_rules! downcast_take {
     }};
 }
 
-pub fn take<O: Offset>(
-    values: &dyn Array,
-    indices: &PrimitiveArray<O>,
-    options: Option<TakeOptions>,
-) -> Result<Box<dyn Array>> {
-    take_impl(values, indices, options)
+pub fn take<O: Offset>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result<Box<dyn Array>> {
+    take_impl(values, indices)
 }
 
-fn take_impl<O: Offset>(
-    values: &dyn Array,
-    indices: &PrimitiveArray<O>,
-    options: Option<TakeOptions>,
-) -> Result<Box<dyn Array>> {
+fn take_impl<O: Offset>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result<Box<dyn Array>> {
     match values.data_type() {
         DataType::Int8 => downcast_take!(i8, values, indices),
         DataType::Int16 => downcast_take!(i16, values, indices),
@@ -63,23 +55,6 @@ fn take_impl<O: Offset>(
         DataType::Float32 => downcast_take!(f32, values, indices),
         DataType::Float64 => downcast_take!(f64, values, indices),
         t => unimplemented!("Take not supported for data type {:?}", t),
-    }
-}
-
-/// Options that define how `take` should behave
-#[derive(Clone, Debug)]
-pub struct TakeOptions {
-    /// Perform bounds check before taking indices from values.
-    /// If enabled, an `ArrowError` is returned if the indices are out of bounds.
-    /// If not enabled, and indices exceed bounds, the kernel will panic.
-    pub check_bounds: bool,
-}
-
-impl Default for TakeOptions {
-    fn default() -> Self {
-        Self {
-            check_bounds: false,
-        }
     }
 }
 
@@ -240,7 +215,6 @@ mod tests {
     fn test_take_primitive_arrays<T>(
         data: &[Option<T>],
         index: &PrimitiveArray<i32>,
-        options: Option<TakeOptions>,
         expected_data: &[Option<T>],
         data_type: DataType,
     ) -> Result<()>
@@ -249,7 +223,7 @@ mod tests {
     {
         let output = Primitive::<T>::from(data).to(data_type.clone());
         let expected = Primitive::<T>::from(expected_data).to(data_type);
-        let output = take(&output, index, options)?;
+        let output = take(&output, index)?;
         assert_eq!(expected, *output);
         Ok(())
     }
@@ -260,7 +234,6 @@ mod tests {
         test_take_primitive_arrays::<i8>(
             &[None, Some(3), Some(5), Some(2), Some(3), None],
             &index,
-            None,
             &[None, None, Some(2), Some(3), Some(3), Some(5)],
             DataType::Int8,
         )
@@ -274,7 +247,6 @@ mod tests {
         test_take_primitive_arrays::<i8>(
             &[Some(0), Some(1), Some(2), Some(3), Some(4)],
             &index,
-            None,
             &[Some(3), None, Some(1), Some(3), Some(2)],
             DataType::Int8,
         )

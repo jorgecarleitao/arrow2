@@ -1,20 +1,3 @@
-// Licensed to the Apache Software Foundation (ASF) under one
-// or more contributor license agreements.  See the NOTICE file
-// distributed with this work for additional information
-// regarding copyright ownership.  The ASF licenses this file
-// to you under the Apache License, Version 2.0 (the
-// "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
-
 //! Defines memory-related functions, such as allocate/deallocate/reallocate memory
 //! regions, cache and allocation alignments.
 
@@ -71,14 +54,12 @@ pub fn allocate_aligned_zeroed<T: NativeType>(size: usize) -> NonNull<T> {
     }
 }
 
+/// Frees memory previously allocated by [`allocate_aligned_zeroed`] or [`allocate_aligned`].
 /// # Safety
+/// This function is sound iff:
 ///
-/// This function is unsafe because undefined behavior can result if the caller does not ensure all
-/// of the following:
-///
-/// * ptr must denote a block of memory currently allocated via this allocator,
-///
-/// * size must be the same size that was used to allocate that block of memory,
+/// * `ptr` was allocated by [`allocate_aligned_zeroed`] or [`allocate_aligned`]
+/// * `size` must be the same size that was used to allocate that block of memory.
 pub unsafe fn free_aligned<T: NativeType>(ptr: NonNull<T>, size: usize) {
     if ptr != null_pointer() {
         let size = size * size_of::<T>();

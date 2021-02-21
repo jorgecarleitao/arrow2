@@ -54,6 +54,17 @@ impl<O: Offset> BinaryArray<O> {
     }
 
     /// Returns the element at index `i` as &str
+    pub fn value(&self, i: usize) -> &[u8] {
+        let offsets = self.offsets.as_slice();
+        let offset = offsets[i];
+        let offset_1 = offsets[i + 1];
+        let length = (offset_1 - offset).to_usize().unwrap();
+        let offset = offset.to_usize().unwrap();
+
+        &self.values.as_slice()[offset..offset + length]
+    }
+
+    /// Returns the element at index `i` as &str
     /// # Safety
     /// Assumes that the `i < self.len`.
     pub unsafe fn value_unchecked(&self, i: usize) -> &[u8] {
@@ -71,8 +82,18 @@ impl<O: Offset> BinaryArray<O> {
     }
 
     #[inline]
+    pub fn offsets_buffer(&self) -> &Buffer<O> {
+        &self.offsets
+    }
+
+    #[inline]
     pub fn values(&self) -> &[u8] {
         self.values.as_slice()
+    }
+
+    #[inline]
+    pub fn values_buffer(&self) -> &Buffer<u8> {
+        &self.values
     }
 }
 
@@ -169,3 +190,49 @@ mod iterator;
 pub use iterator::*;
 mod from;
 pub use from::*;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::iter::FromIterator;
+
+    #[test]
+    fn basics() {
+        let data = vec![Some(b"hello".to_vec()), None, Some(b"hello2".to_vec())];
+
+        let array = BinaryArray::<i32>::from_iter(data);
+
+        assert_eq!(array.value(0), b"hello");
+        assert_eq!(array.value(1), b"");
+        assert_eq!(array.value(2), b"hello2");
+        assert_eq!(unsafe { array.value_unchecked(2) }, b"hello2");
+        assert_eq!(array.values(), b"hellohello2");
+        assert_eq!(array.offsets(), &[0, 5, 5, 11]);
+        assert_eq!(array.nulls(), &Some(Bitmap::from((&[0b00000101], 3))));
+        assert_eq!(array.is_valid(0), true);
+        assert_eq!(array.is_valid(1), false);
+        assert_eq!(array.is_valid(2), true);
+
+        let array2 = BinaryArray::<i32>::from_data(
+            array.offsets_buffer().clone(),
+            array.values_buffer().clone(),
+            array.nulls().clone(),
+        );
+        assert_eq!(array, array2);
+
+        let array = array.slice(1, 2);
+        assert_eq!(array.value(0), b"");
+        assert_eq!(array.value(1), b"hello2");
+        // note how this keeps everything: the offsets were sliced
+        assert_eq!(array.values(), b"hellohello2");
+        assert_eq!(array.offsets(), &[5, 5, 11]);
+    }
+
+    #[test]
+    fn empty() {
+        let array = BinaryArray::<i32>::new_empty();
+        assert_eq!(array.values(), b"");
+        assert_eq!(array.offsets(), &[0]);
+        assert_eq!(array.nulls(), &None);
+    }
+}

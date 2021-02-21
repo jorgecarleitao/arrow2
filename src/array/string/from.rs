@@ -169,6 +169,13 @@ impl<O: Offset, P: AsRef<str>> FromIterator<Option<P>> for Utf8Primitive<O> {
     }
 }
 
+impl<O: Offset, P: AsRef<str>> FromIterator<Option<P>> for Utf8Array<O> {
+    #[inline]
+    fn from_iter<I: IntoIterator<Item = Option<P>>>(iter: I) -> Self {
+        Utf8Primitive::from_iter(iter).to()
+    }
+}
+
 impl<O: Offset, P> TryFromIterator<Option<P>> for Utf8Primitive<O>
 where
     P: AsRef<str>,

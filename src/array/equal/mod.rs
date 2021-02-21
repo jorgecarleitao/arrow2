@@ -63,6 +63,18 @@ impl<O: Offset> PartialEq<&dyn Array> for Utf8Array<O> {
     }
 }
 
+impl<O: Offset> PartialEq<BinaryArray<O>> for BinaryArray<O> {
+    fn eq(&self, other: &Self) -> bool {
+        equal(self, other)
+    }
+}
+
+impl<O: Offset> PartialEq<&dyn Array> for BinaryArray<O> {
+    fn eq(&self, other: &&dyn Array) -> bool {
+        equal(self, *other)
+    }
+}
+
 impl<O: Offset> PartialEq<ListArray<O>> for ListArray<O> {
     fn eq(&self, other: &Self) -> bool {
         equal(self, other)

@@ -12,18 +12,6 @@ const UNSET_BIT_MASK: [u8; 8] = [
     255 - 128,
 ];
 
-/// Sets bit at position `i` for `data`
-#[inline]
-pub fn set_bit(data: &mut [u8], i: usize) {
-    data[i >> 3] |= BIT_MASK[i & 7];
-}
-
-/// Sets bit at position `i` for `data` to 0
-#[inline]
-pub fn unset_bit(data: &mut [u8], i: usize) {
-    data[i >> 3] &= UNSET_BIT_MASK[i & 7];
-}
-
 /// Returns whether bit at position `i` in `data` is set or not
 #[inline]
 pub fn get_bit(data: &[u8], i: usize) -> bool {

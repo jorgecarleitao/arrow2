@@ -101,3 +101,10 @@ impl<O: Offset> ToArray for BinaryPrimitive<O> {
         Arc::new(self.to())
     }
 }
+
+impl<O: Offset, P: AsRef<[u8]>> FromIterator<Option<P>> for BinaryArray<O> {
+    #[inline]
+    fn from_iter<I: IntoIterator<Item = Option<P>>>(iter: I) -> Self {
+        BinaryPrimitive::from_iter(iter).to()
+    }
+}

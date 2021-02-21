@@ -1,16 +1,14 @@
+pub mod array;
 pub mod buffer;
+pub mod error;
+
+pub mod compute;
+pub mod io;
+pub mod record_batch;
+pub mod temporal_conversions;
 
 pub(crate) mod bits;
 pub mod datatypes;
 
-pub mod array;
-
-pub mod compute;
-pub mod error;
-
 mod ffi;
-
-pub mod io;
-pub mod record_batch;
-pub mod temporal_conversions;
-pub mod util;
+mod util;

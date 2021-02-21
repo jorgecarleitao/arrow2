@@ -17,19 +17,19 @@ fn capacity_multiple_of_64<T: NativeType>(capacity: usize) -> usize {
     util::round_upto_multiple_of_64(capacity * size_of::<T>()) / size_of::<T>()
 }
 
-/// A [`MutableBuffer`] is Arrow's interface to build a [`Buffer`] out of items or slices of items.
+/// A [`MutableBuffer`] is Arrow's interface to build a [`Buffer`] out of items, slices and iterators.
 /// [`Buffer`]s created from [`MutableBuffer`] (via `into`) are guaranteed to have its pointer aligned
 /// along cache lines and in multiple of 64 bytes.
 /// Use [MutableBuffer::push] to insert an item, [MutableBuffer::extend_from_slice]
 /// to insert many items, and `into` to convert it to [`Buffer`].
 /// # Example
 /// ```
-/// # use arrow::buffer::{Buffer, MutableBuffer};
-/// let mut buffer = MutableBuffer::new(0);
-/// buffer.push(256u32);
-/// buffer.extend_from_slice(&[1u32]);
-/// let buffer: Buffer = buffer.into();
-/// assert_eq!(buffer.as_slice(), &[0u8, 1, 0, 0, 1, 0, 0, 0])
+/// # use arrow2::buffer::{Buffer, MutableBuffer};
+/// let mut buffer = MutableBuffer::<u32>::new();
+/// buffer.push(256);
+/// buffer.extend_from_slice(&[1]);
+/// let buffer: Buffer<u32> = buffer.into();
+/// assert_eq!(buffer.as_slice(), &[256, 1])
 /// ```
 #[derive(Debug)]
 pub struct MutableBuffer<T: NativeType> {
@@ -41,6 +41,7 @@ pub struct MutableBuffer<T: NativeType> {
 }
 
 impl<T: NativeType> MutableBuffer<T> {
+    /// Creates an empty [`MutableBuffer`]. This does not allocate in the heap.
     #[inline]
     pub fn new() -> Self {
         let ptr = alloc::allocate_aligned(0);
@@ -51,7 +52,7 @@ impl<T: NativeType> MutableBuffer<T> {
         }
     }
 
-    /// Allocate a new [MutableBuffer] with initial capacity to be at least `capacity`.
+    /// Allocate a new [`MutableBuffer`] with initial capacity to be at least `capacity`.
     #[inline]
     pub fn with_capacity(capacity: usize) -> Self {
         let capacity = capacity_multiple_of_64::<T>(capacity);
@@ -67,8 +68,8 @@ impl<T: NativeType> MutableBuffer<T> {
     /// all bytes are guaranteed to be `0u8`.
     /// # Example
     /// ```
-    /// # use arrow::buffer::{Buffer, MutableBuffer};
-    /// let mut buffer = MutableBuffer::from_len_zeroed(127);
+    /// # use arrow2::buffer::{Buffer, MutableBuffer};
+    /// let mut buffer = MutableBuffer::<u8>::from_len_zeroed(127);
     /// assert_eq!(buffer.len(), 127);
     /// assert!(buffer.capacity() >= 127);
     /// let data = buffer.as_slice_mut();
@@ -88,11 +89,11 @@ impl<T: NativeType> MutableBuffer<T> {
     /// `self.len + additional > capacity`.
     /// # Example
     /// ```
-    /// # use arrow::buffer::{Buffer, MutableBuffer};
-    /// let mut buffer = MutableBuffer::new(0);
+    /// # use arrow2::buffer::{Buffer, MutableBuffer};
+    /// let mut buffer = MutableBuffer::<u8>::new();
     /// buffer.reserve(253); // allocates for the first time
     /// (0..253u8).for_each(|i| buffer.push(i)); // no reallocation
-    /// let buffer: Buffer = buffer.into();
+    /// let buffer: Buffer<u8> = buffer.into();
     /// assert_eq!(buffer.len(), 253);
     /// ```
     // For performance reasons, this must be inlined so that the `if` is executed inside the caller, and not as an extra call that just
@@ -116,8 +117,8 @@ impl<T: NativeType> MutableBuffer<T> {
     /// growing it (potentially reallocating it) and writing `value` in the newly available bytes.
     /// # Example
     /// ```
-    /// # use arrow::buffer::{Buffer, MutableBuffer};
-    /// let mut buffer = MutableBuffer::new(0);
+    /// # use arrow2::buffer::{Buffer, MutableBuffer};
+    /// let mut buffer = MutableBuffer::<u8>::new();
     /// buffer.resize(253, 2); // allocates for the first time
     /// assert_eq!(buffer.as_slice()[252], 2u8);
     /// ```
@@ -193,10 +194,10 @@ impl<T: NativeType> MutableBuffer<T> {
     /// Extends this buffer from a slice of items that can be represented in bytes, increasing its capacity if needed.
     /// # Example
     /// ```
-    /// # use arrow::buffer::MutableBuffer;
-    /// let mut buffer = MutableBuffer::new(0);
+    /// # use arrow2::buffer::MutableBuffer;
+    /// let mut buffer = MutableBuffer::new();
     /// buffer.extend_from_slice(&[2u32, 0]);
-    /// assert_eq!(buffer.len(), 8) // u32 has 4 bytes
+    /// assert_eq!(buffer.len(), 2)
     /// ```
     pub fn extend_from_slice(&mut self, items: &[T]) {
         let additional = items.len();
@@ -212,10 +213,10 @@ impl<T: NativeType> MutableBuffer<T> {
     /// Extends the buffer with a new item, increasing its capacity if needed.
     /// # Example
     /// ```
-    /// # use arrow::buffer::MutableBuffer;
-    /// let mut buffer = MutableBuffer::new(0);
+    /// # use arrow2::buffer::MutableBuffer;
+    /// let mut buffer = MutableBuffer::new();
     /// buffer.push(256u32);
-    /// assert_eq!(buffer.len(), 4) // u32 has 4 bytes
+    /// assert_eq!(buffer.len(), 1)
     /// ```
     #[inline]
     pub fn push(&mut self, item: T) {
@@ -300,11 +301,11 @@ impl<T: NativeType> MutableBuffer<T> {
     /// Prefer this to `collect` whenever possible, as it is faster ~60% faster.
     /// # Example
     /// ```
-    /// # use arrow::buffer::MutableBuffer;
+    /// # use arrow2::buffer::MutableBuffer;
     /// let v = vec![1u32];
     /// let iter = v.iter().map(|x| x * 2);
     /// let buffer = unsafe { MutableBuffer::from_trusted_len_iter(iter) };
-    /// assert_eq!(buffer.len(), 4) // u32 has 4 bytes
+    /// assert_eq!(buffer.len(), 1)
     /// ```
     /// # Safety
     /// This method assumes that the iterator's size is correct and is undefined behavior

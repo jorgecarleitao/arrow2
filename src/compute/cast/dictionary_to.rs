@@ -71,5 +71,5 @@ where
     // take requires first casting i32
     let indices = cast_typed_primitive::<_, i32>(keys, &DataType::UInt32);
 
-    take(values.as_ref(), &indices, None)
+    take(values.as_ref(), &indices)
 }

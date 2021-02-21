@@ -15,6 +15,5 @@ pub fn lexical_to_string<N: lexical_core::ToLexical>(n: N) -> String {
     }
 }
 
-pub mod string_writer;
 #[cfg(test)]
 pub mod test_util;

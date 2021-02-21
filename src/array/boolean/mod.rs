@@ -13,10 +13,12 @@ pub struct BooleanArray {
 }
 
 impl BooleanArray {
+    #[inline]
     pub fn new_empty() -> Self {
         Self::from_data(Bitmap::new(), None)
     }
 
+    #[inline]
     pub fn from_data(values: Bitmap, validity: Option<Bitmap>) -> Self {
         Self {
             data_type: DataType::Boolean,
@@ -26,6 +28,7 @@ impl BooleanArray {
         }
     }
 
+    #[inline]
     pub fn slice(&self, offset: usize, length: usize) -> Self {
         let validity = self.validity.clone().map(|x| x.slice(offset, length));
         Self {
@@ -37,17 +40,20 @@ impl BooleanArray {
     }
 
     /// Returns the element at index `i` as &str
+    #[inline]
+    pub fn values_bitmap(&self) -> &Bitmap {
+        &self.values
+    }
+
+    /// Returns the element at index `i` as &str
+    #[inline]
     pub fn value(&self, i: usize) -> bool {
         self.values.get_bit(i)
     }
 
+    #[inline]
     pub fn values(&self) -> &Bitmap {
         &self.values
-    }
-
-    #[inline]
-    pub fn is_valid(&self, i: usize) -> bool {
-        self.validity.as_ref().map(|x| x.get_bit(i)).unwrap_or(true)
     }
 }
 
@@ -126,3 +132,39 @@ mod iterator;
 pub use iterator::*;
 
 mod from;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::iter::FromIterator;
+
+    #[test]
+    fn basics() {
+        let data = vec![Some(true), None, Some(false)];
+
+        let array = BooleanArray::from_iter(data);
+
+        assert_eq!(array.value(0), true);
+        assert_eq!(array.value(1), false);
+        assert_eq!(array.value(2), false);
+        assert_eq!(array.values(), &Bitmap::from((&[0b00000001], 3)));
+        assert_eq!(array.nulls(), &Some(Bitmap::from((&[0b00000101], 3))));
+        assert_eq!(array.is_valid(0), true);
+        assert_eq!(array.is_valid(1), false);
+        assert_eq!(array.is_valid(2), true);
+
+        let array2 = BooleanArray::from_data(array.values_bitmap().clone(), array.nulls().clone());
+        assert_eq!(array, array2);
+
+        let array = array.slice(1, 2);
+        assert_eq!(array.value(0), false);
+        assert_eq!(array.value(1), false);
+    }
+
+    #[test]
+    fn empty() {
+        let array = BooleanArray::new_empty();
+        assert_eq!(array.values().len(), 0);
+        assert_eq!(array.nulls(), &None);
+    }
+}

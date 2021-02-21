@@ -86,7 +86,10 @@ use std::{
 use crate::error::{ArrowError, Result};
 use crate::{
     array::Array,
-    buffer::{Bitmap, Buffer, NativeType},
+    buffer::{
+        bytes::{Bytes, Deallocation},
+        Bitmap, Buffer, NativeType,
+    },
 };
 use crate::{
     bits::bytes_for,
@@ -275,6 +278,7 @@ unsafe extern "C" fn release_array(array: *mut FFI_ArrowArray) {
     array.release = None;
 }
 
+#[allow(dead_code)]
 struct PrivateData {
     array: Box<dyn Array>,
     buffers_ptr: Box<[*const std::os::raw::c_void]>,
@@ -348,7 +352,10 @@ unsafe fn create_buffer<T: NativeType>(
     assert!(index < array.n_buffers as usize);
     let ptr = *buffers.add(index);
 
-    NonNull::new(ptr as *mut u8).map(|ptr| Buffer::from_unowned(ptr, len, array))
+    let ptr = NonNull::new(ptr as *mut T);
+    let bytes = ptr.map(|ptr| Bytes::new(ptr, len, Deallocation::Foreign(array)));
+
+    bytes.map(|bytes| Buffer::from_bytes(bytes))
 }
 
 /// returns a new buffer corresponding to the index `i` of the FFI array. It may not exist (null pointer).
@@ -367,7 +374,11 @@ unsafe fn create_bitmap(array: Arc<FFI_ArrowArray>, index: usize, len: usize) ->
     assert!(index < array.n_buffers as usize);
     let ptr = *buffers.add(index);
 
-    NonNull::new(ptr as *mut u8).map(|ptr| Bitmap::from_unowned(ptr, len, array))
+    let bytes_len = len.saturating_add(7) / 8;
+    let ptr = NonNull::new(ptr as *mut u8);
+    let bytes = ptr.map(|ptr| Bytes::new(ptr, bytes_len, Deallocation::Foreign(array)));
+
+    bytes.map(|bytes| Bitmap::from_bytes(bytes, len))
 }
 
 impl Drop for FFI_ArrowArray {

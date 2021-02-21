@@ -33,7 +33,7 @@ where
 }
 
 /// Apply a bitwise operation `op` to one input and return the result as a [`Bitmap`].
-pub fn unary<F>(lhs: &Bitmap, op: F) -> Bitmap
+fn unary<F>(lhs: &Bitmap, op: F) -> Bitmap
 where
     F: Fn(u64) -> u64,
 {
@@ -54,11 +54,11 @@ where
     (buffer, length).into()
 }
 
-pub fn and(lhs: &Bitmap, rhs: &Bitmap) -> Bitmap {
+fn and(lhs: &Bitmap, rhs: &Bitmap) -> Bitmap {
     binary(lhs, rhs, |x, y| x & y)
 }
 
-pub fn or(lhs: &Bitmap, rhs: &Bitmap) -> Bitmap {
+fn or(lhs: &Bitmap, rhs: &Bitmap) -> Bitmap {
     binary(lhs, rhs, |x, y| x | y)
 }
 

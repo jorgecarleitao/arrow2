@@ -362,11 +362,10 @@ mod tests {
     use super::*;
 
     use crate::datatypes::{Field, Schema};
-    use crate::util::string_writer::StringWriter;
     use crate::util::test_util::get_temp_file;
-    use std::fs::File;
     use std::io::Read;
     use std::sync::Arc;
+    use std::{fs::File, io::Cursor};
 
     #[test]
     fn test_write_csv() {
@@ -528,8 +527,7 @@ sed do eiusmod tempor,-556132.25,1,,2019-04-18T02:45:55.555000000,23:46:03
         )
         .unwrap();
 
-        let sw = StringWriter::new();
-        let mut writer = Writer::new(sw);
+        let mut writer = Writer::new(Cursor::new(vec![]));
         let batches = vec![&batch, &batch];
         for batch in batches {
             writer.write(batch).unwrap();
@@ -542,7 +540,10 @@ sed do eiusmod tempor,-556132.25,1,,2019-04-18T02:45:55.555000000,23:46:03
 Lorem ipsum dolor sit amet,123.564532,3,true,,00:20:34
 consectetur adipiscing elit,,2,false,2019-04-18T10:54:47.378000000,06:51:20
 sed do eiusmod tempor,-556132.25,1,,2019-04-18T02:45:55.555000000,23:46:03\n";
-        let right = writer.writer.into_inner().map(|s| s.to_string());
+        let right = writer
+            .writer
+            .into_inner()
+            .map(|s| String::from_utf8(s.into_inner()).unwrap());
         assert_eq!(Some(left.to_string()), right.ok());
     }
 }

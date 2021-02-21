@@ -4,11 +4,16 @@ use std::sync::Arc;
 use crate::{
     bits::{get_bit, get_bit_unchecked, null_count, set_bit_raw, unset_bit_raw, BitChunks},
     buffer::bytes::Bytes,
-    ffi,
 };
 
-use super::{bytes::Deallocation, MutableBuffer};
+use super::MutableBuffer;
 
+/// An immutable container whose API is optimized to handle bitmaps. All quantities on this
+/// container's API are measured in bits.
+/// # Implementation
+/// * This container shares memory regions across thread boundaries through an `Arc`
+/// * Cloning [`Bitmap`] is `O(1)`
+/// * Slicing [`Bitmap`] is `O(1)`
 #[derive(Debug, Clone)]
 pub struct Bitmap {
     bytes: Arc<Bytes<u8>>,
@@ -20,24 +25,29 @@ pub struct Bitmap {
 }
 
 impl Bitmap {
+    /// Initializes an empty [`Bitmap`].
     #[inline]
     pub fn new() -> Self {
         MutableBitmap::new().into()
     }
 
+    /// Returns the length of the [`Bitmap`] in bits.
     #[inline]
-    /// The length of the `Bitmap` in bits.
     pub fn len(&self) -> usize {
         self.length
     }
 
+    /// Returns whether [`Bitmap`] is empty
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
+    /// Creates a new `Bitmap` from [`Bytes`] and a length.
+    /// # Panic
+    /// Panics iff `length <= bytes.len() * 8`
     #[inline]
-    pub fn from_bytes(bytes: Bytes<u8>, length: usize) -> Self {
+    pub(crate) fn from_bytes(bytes: Bytes<u8>, length: usize) -> Self {
         assert!(length <= bytes.len() * 8);
         let null_count = null_count(&bytes, 0, length);
         Self {
@@ -48,42 +58,55 @@ impl Bitmap {
         }
     }
 
+    /// Counts the nulls (unset bits) starting from `offset` bits and for `length` bits.
     #[inline]
     pub fn null_count_range(&self, offset: usize, length: usize) -> usize {
         null_count(&self.bytes, self.offset + offset, length)
     }
 
+    /// Returns the number of unset bits on this `Bitmap`
     #[inline]
     pub fn null_count(&self) -> usize {
         self.null_count
     }
 
+    /// Slices `self`, offseting by `offset` and truncating up to `length` bits.
+    /// # Panic
+    /// Panics iff `self.offset + offset + length <= self.bytes.len() * 8`, i.e. if the offset and `length`
+    /// exceeds the allocated capacity of `self`.
     #[inline]
     pub fn slice(mut self, offset: usize, length: usize) -> Self {
-        assert!(offset + length <= self.bytes.len() * 8);
-        let offset = self.offset + offset;
         self.offset += offset;
+        assert!(self.offset + length <= self.bytes.len() * 8);
         self.length = length;
         self.null_count = null_count(&self.bytes, self.offset, self.length);
         self
     }
 
+    /// Returns whether the bit at position `i` is set.
+    /// # Panics
+    /// Panics iff `i >= self.len()`.
     #[inline]
     pub fn get_bit(&self, i: usize) -> bool {
         get_bit(&self.bytes, self.offset + i)
     }
 
+    /// Unsafely returns whether the bit at position `i` is set.
+    /// # Safety
+    /// Unsound iff `i >= self.len()`.
     #[inline]
     pub unsafe fn get_bit_unchecked(&self, i: usize) -> bool {
         get_bit_unchecked(&self.bytes, self.offset + i)
     }
 
-    /// Returns a pointer to the start of this bitmap.
-    pub fn as_ptr(&self) -> std::ptr::NonNull<u8> {
+    /// Returns a pointer to the start of this `Bitmap` (ignores `offsets`)
+    /// This pointer is allocated iff `self.len() > 0`.
+    pub(crate) fn as_ptr(&self) -> std::ptr::NonNull<u8> {
         self.bytes.ptr()
     }
 }
 
+/// The mutable counterpart of [`Bitmap`].
 #[derive(Debug)]
 pub struct MutableBitmap {
     buffer: MutableBuffer<u8>,
@@ -91,6 +114,7 @@ pub struct MutableBitmap {
 }
 
 impl MutableBitmap {
+    /// Initializes an empty [`MutableBitmap`].
     #[inline]
     pub fn new() -> Self {
         Self {
@@ -99,6 +123,7 @@ impl MutableBitmap {
         }
     }
 
+    /// Initializes an a pre-allocated [`MutableBitmap`] with capacity for `capacity` bits.
     #[inline]
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
@@ -107,6 +132,7 @@ impl MutableBitmap {
         }
     }
 
+    /// Pushes a new bit to the container, re-sizing it if necessary.
     #[inline]
     pub fn push(&mut self, value: bool) {
         self.buffer
@@ -119,6 +145,9 @@ impl MutableBitmap {
         self.length += 1;
     }
 
+    /// Pushes a new bit to the container.
+    /// # Safety
+    /// The caller must ensure that this container has the necessary capacity.
     #[inline]
     pub unsafe fn push_unchecked(&mut self, value: bool) {
         if value {
@@ -130,23 +159,26 @@ impl MutableBitmap {
         self.buffer.set_len(self.length.saturating_add(7) / 8);
     }
 
+    /// Returns the number of unset bits on this `Bitmap`
     #[inline]
     pub fn null_count(&self) -> usize {
         null_count(&self.buffer, 0, self.length)
     }
 
-    /// Returns the number of bytes in the buffer
+    /// Returns the length of the [`MutableBitmap`] in bits.
+    #[inline]
     pub fn len(&self) -> usize {
         self.length
     }
 
-    /// Returns whether the buffer is empty.
+    /// Returns whether [`MutableBitmap`] is empty
+    #[inline]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
     /// # Safety
-    /// The caller must ensure that the buffer was properly initialized up to `len`.
+    /// The caller must ensure that the [`MutableBitmap`] was properly initialized up to `len`.
     #[inline]
     pub(crate) unsafe fn set_len(&mut self, len: usize) {
         self.buffer.set_len(len.saturating_add(7) / 8);
@@ -253,41 +285,21 @@ impl FromIterator<bool> for Bitmap {
 }
 
 impl Bitmap {
+    /// Returns an iterator over bits in chunks of `u64`, which is useful for
+    /// bit operations.
     pub fn chunks(&self) -> BitChunks {
         BitChunks::new(&self.bytes, self.offset, self.length)
     }
 }
 
 impl Bitmap {
+    /// Creates a new [`Bitmap`] from an iterator of booleans.
+    /// # Safety
+    /// The caller must guarantee that the iterator is `TrustedLen`.
     #[inline]
     pub unsafe fn from_trusted_len_iter<I: Iterator<Item = bool>>(iterator: I) -> Self {
         // todo implement `from_trusted_len_iter` for MutableBitmap
         MutableBitmap::from_iter(iterator).into()
-    }
-}
-
-impl Bitmap {
-    /// Creates a bitmap from an existing memory region (must already be byte-aligned), this
-    /// `Bitmap` **does not** free this piece of memory when dropped.
-    ///
-    /// # Arguments
-    ///
-    /// * `ptr` - Pointer to raw parts
-    /// * `len` - Length of raw parts in **bytes**
-    /// * `data` - An [ffi::FFI_ArrowArray] with the data
-    ///
-    /// # Safety
-    ///
-    /// This function is unsafe as there is no guarantee that the given pointer is valid for `len`
-    /// bytes and that the foreign deallocator frees the region.
-    pub unsafe fn from_unowned(
-        ptr: std::ptr::NonNull<u8>,
-        length: usize,
-        data: Arc<ffi::FFI_ArrowArray>,
-    ) -> Self {
-        // todo: make all kinds of assertions
-        let bytes = Bytes::new(ptr, length, Deallocation::Foreign(data));
-        Self::from_bytes(bytes, length)
     }
 }
 

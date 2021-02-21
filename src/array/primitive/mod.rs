@@ -59,11 +59,6 @@ impl<T: NativeType> PrimitiveArray<T> {
     pub fn value(&self, i: usize) -> T {
         self.values()[i]
     }
-
-    #[inline]
-    pub fn is_valid(&self, i: usize) -> bool {
-        self.validity.as_ref().map(|x| x.get_bit(i)).unwrap_or(true)
-    }
 }
 
 impl<T: NativeType> Array for PrimitiveArray<T> {
@@ -145,10 +140,46 @@ pub use iterator::*;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::iter::FromIterator;
 
     #[test]
     fn display() {
         let array = Primitive::<i32>::from(&[Some(1), None, Some(2)]).to(DataType::Int32);
         assert_eq!(format!("{}", array), "Int32[1, , 2]");
+    }
+
+    #[test]
+    fn basics() {
+        let data = vec![Some(1), None, Some(10)];
+
+        let array = Primitive::<i32>::from_iter(data).to(DataType::Int32);
+
+        assert_eq!(array.value(0), 1);
+        assert_eq!(array.value(1), 0);
+        assert_eq!(array.value(2), 10);
+        assert_eq!(array.values(), &[1, 0, 10]);
+        assert_eq!(array.nulls(), &Some(Bitmap::from((&[0b00000101], 3))));
+        assert_eq!(array.is_valid(0), true);
+        assert_eq!(array.is_valid(1), false);
+        assert_eq!(array.is_valid(2), true);
+
+        let array2 = PrimitiveArray::<i32>::from_data(
+            DataType::Int32,
+            array.values_buffer().clone(),
+            array.nulls().clone(),
+        );
+        assert_eq!(array, array2);
+
+        let array = array.slice(1, 2);
+        assert_eq!(array.value(0), 0);
+        assert_eq!(array.value(1), 10);
+        assert_eq!(array.values(), &[0, 10]);
+    }
+
+    #[test]
+    fn empty() {
+        let array = PrimitiveArray::<i32>::new_empty(DataType::Int32);
+        assert_eq!(array.values().len(), 0);
+        assert_eq!(array.nulls(), &None);
     }
 }

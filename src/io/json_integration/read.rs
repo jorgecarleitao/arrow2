@@ -51,7 +51,7 @@ fn to_interval(value: &Value) -> days_ms {
             (Value::Number(days), Value::Number(milliseconds)) => {
                 let days = days.as_i64().unwrap() as i32;
                 let milliseconds = milliseconds.as_i64().unwrap() as i32;
-                days_ms([days, milliseconds])
+                days_ms::new(days, milliseconds)
             }
             (_, _) => panic!(),
         }

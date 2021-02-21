@@ -10,6 +10,9 @@ use super::{
     Array, Offset,
 };
 
+/// An arrow array with UTF8s.
+/// # Example
+///
 #[derive(Debug, Clone)]
 pub struct Utf8Array<O: Offset> {
     data_type: DataType,
@@ -108,13 +111,18 @@ impl<O: Offset> Utf8Array<O> {
     }
 
     #[inline]
+    pub fn offsets_buffer(&self) -> &Buffer<O> {
+        &self.offsets
+    }
+
+    #[inline]
     pub fn values(&self) -> &[u8] {
         self.values.as_slice()
     }
 
     #[inline]
-    pub fn is_valid(&self, i: usize) -> bool {
-        self.validity.as_ref().map(|x| x.get_bit(i)).unwrap_or(true)
+    pub fn values_buffer(&self) -> &Buffer<u8> {
+        &self.values
     }
 }
 
@@ -173,3 +181,49 @@ mod from;
 pub use from::*;
 mod iterator;
 pub use iterator::*;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::iter::FromIterator;
+
+    #[test]
+    fn basics() {
+        let data = vec![Some("hello"), None, Some("hello2")];
+
+        let array = Utf8Array::<i32>::from_iter(data);
+
+        assert_eq!(array.value(0), "hello");
+        assert_eq!(array.value(1), "");
+        assert_eq!(array.value(2), "hello2");
+        assert_eq!(unsafe { array.value_unchecked(2) }, "hello2");
+        assert_eq!(array.values(), b"hellohello2");
+        assert_eq!(array.offsets(), &[0, 5, 5, 11]);
+        assert_eq!(array.nulls(), &Some(Bitmap::from((&[0b00000101], 3))));
+        assert_eq!(array.is_valid(0), true);
+        assert_eq!(array.is_valid(1), false);
+        assert_eq!(array.is_valid(2), true);
+
+        let array2 = Utf8Array::<i32>::from_data(
+            array.offsets_buffer().clone(),
+            array.values_buffer().clone(),
+            array.nulls().clone(),
+        );
+        assert_eq!(array, array2);
+
+        let array = array.slice(1, 2);
+        assert_eq!(array.value(0), "");
+        assert_eq!(array.value(1), "hello2");
+        // note how this keeps everything: the offsets were sliced
+        assert_eq!(array.values(), b"hellohello2");
+        assert_eq!(array.offsets(), &[5, 5, 11]);
+    }
+
+    #[test]
+    fn empty() {
+        let array = Utf8Array::<i32>::new_empty();
+        assert_eq!(array.values(), b"");
+        assert_eq!(array.offsets(), &[0]);
+        assert_eq!(array.nulls(), &None);
+    }
+}

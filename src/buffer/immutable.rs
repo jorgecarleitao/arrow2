@@ -1,29 +1,4 @@
-// Licensed to the Apache Software Foundation (ASF) under one
-// or more contributor license agreements.  See the NOTICE file
-// distributed with this work for additional information
-// regarding copyright ownership.  The ASF licenses this file
-// to you under the Apache License, Version 2.0 (the
-// "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
-
-//! This module contains two main structs: [Buffer] and [MutableBuffer]. A buffer represents
-//! a contiguous memory region that can be shared via `offsets`.
-
-use crate::ffi;
-
-use super::{
-    bytes::{Bytes, Deallocation},
-    types::NativeType,
-};
+use super::{bytes::Bytes, types::NativeType};
 
 use std::sync::Arc;
 use std::{convert::AsRef, usize};
@@ -104,14 +79,25 @@ impl<T: NativeType> Buffer<T> {
 }
 
 impl<T: NativeType> Buffer<T> {
+    /// Creates a [`Buffer`] from an [`Iterator`] with a trusted (upper) length.
+    /// Prefer this to `collect` whenever possible, as it often enables auto-vectorization.
+    /// # Example
+    /// ```
+    /// # use arrow2::buffer::Buffer;
+    /// let v = vec![1u32];
+    /// let iter = v.iter().map(|x| x * 2);
+    /// let buffer = unsafe { Buffer::from_trusted_len_iter(iter) };
+    /// assert_eq!(buffer.len(), 1)
+    /// ```
+    /// # Safety
+    /// This method assumes that the iterator's size is correct and is undefined behavior
+    /// to use it on an iterator that reports an incorrect length.
     #[inline]
     pub unsafe fn from_trusted_len_iter<I: Iterator<Item = T>>(iterator: I) -> Self {
         MutableBuffer::from_trusted_len_iter(iterator).into()
     }
 }
 
-/// Creating a `Buffer` instance by copying the memory from a `AsRef<[u8]>` into a newly
-/// allocated memory region.
 impl<T: NativeType, U: AsRef<[T]>> From<U> for Buffer<T> {
     #[inline]
     fn from(p: U) -> Self {
@@ -127,38 +113,5 @@ impl<T: NativeType, U: AsRef<[T]>> From<U> for Buffer<T> {
 impl<T: NativeType> FromIterator<T> for Buffer<T> {
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
         MutableBuffer::from_iter(iter).into()
-    }
-}
-
-impl<T: NativeType> Buffer<T> {
-    /// Creates a buffer from an existing memory region (must already be byte-aligned), this
-    /// `Buffer` **does not** free this piece of memory when dropped.
-    ///
-    /// # Arguments
-    ///
-    /// * `ptr` - Pointer to raw parts
-    /// * `len` - Length of raw parts in **bytes**
-    /// * `data` - An [ffi::FFI_ArrowArray] with the data
-    ///
-    /// # Safety
-    ///
-    /// This function is unsafe as there is no guarantee that the given pointer is valid for `len`
-    /// bytes and that the foreign deallocator frees the region.
-    #[inline]
-    pub unsafe fn from_unowned(
-        ptr: std::ptr::NonNull<u8>,
-        length: usize,
-        data: Arc<ffi::FFI_ArrowArray>,
-    ) -> Self {
-        // todo: make all kinds of assertions here wrt to alignment, len, etc.
-        let ptr = ptr.as_ptr() as *mut T;
-        let ptr =
-            std::ptr::NonNull::<T>::new(ptr).expect("Can't cast pointer from FFI: it is null");
-        let bytes = Bytes::new(ptr, length, Deallocation::Foreign(data));
-        Self {
-            data: Arc::new(bytes),
-            offset: 0,
-            length,
-        }
     }
 }

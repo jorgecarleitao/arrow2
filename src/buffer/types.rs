@@ -1,5 +1,9 @@
 use crate::datatypes::{DataType, IntervalUnit};
 
+/// Trait declaring any type that can be allocated, serialized and deserialized by this crate.
+/// All data-heavy memory operations are implemented for this trait alone.
+/// # Safety
+/// Do not implement.
 pub unsafe trait NativeType:
     Sized + Copy + std::fmt::Debug + std::fmt::Display + PartialEq + Default + Sized + 'static
 {
@@ -143,13 +147,14 @@ unsafe impl NativeType for f64 {
     }
 }
 
+/// The in-memory representation of the DayMillisecond variant of arrow's "Interval" logical type.
 #[derive(Debug, Copy, Clone, Default, PartialEq)]
 #[allow(non_camel_case_types)]
-pub struct days_ms(pub [i32; 2]);
+pub struct days_ms([i32; 2]);
 
 impl std::fmt::Display for days_ms {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}d {}ms", self.0[0], self.0[1])
+        write!(f, "{}d {}ms", self.days(), self.milliseconds())
     }
 }
 
@@ -163,5 +168,22 @@ unsafe impl NativeType for days_ms {
 
     fn is_valid(data_type: &DataType) -> bool {
         data_type == &DataType::Interval(IntervalUnit::DayTime)
+    }
+}
+
+impl days_ms {
+    #[inline]
+    pub fn new(days: i32, milliseconds: i32) -> Self {
+        Self([days, milliseconds])
+    }
+
+    #[inline]
+    pub fn days(&self) -> i32 {
+        self.0[0]
+    }
+
+    #[inline]
+    pub fn milliseconds(&self) -> i32 {
+        self.0[1]
     }
 }

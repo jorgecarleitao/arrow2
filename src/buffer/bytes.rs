@@ -31,12 +31,10 @@ impl Debug for Deallocation {
 }
 
 /// A continuous, fixed-size, immutable memory region that knows how to de-allocate itself.
-/// This structs' API is inspired by the `bytes::Bytes`, but it is not limited to using rust's
-/// global allocator nor u8 aligmnent.
 ///
-/// In the most common case, this buffer is allocated using [`allocate_aligned`](memory::allocate_aligned)
-/// and deallocated accordingly [`free_aligned`](memory::free_aligned).
-/// When the region is allocated by an foreign allocator, [Deallocation::Foreign], this calls the
+/// In the most common case, this buffer is allocated using [`allocate_aligned`](alloc::allocate_aligned)
+/// and deallocated accordingly [`free_aligned`](alloc::free_aligned).
+/// When the region is allocated by a foreign allocator, [Deallocation::Foreign], this calls the
 /// foreign deallocator to deallocate the region when it is no longer needed.
 pub struct Bytes<T: NativeType> {
     /// The raw pointer to be begining of the region

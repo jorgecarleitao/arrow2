@@ -25,6 +25,11 @@ pub trait Array: std::fmt::Debug + std::fmt::Display + Send + Sync + ToFFI {
             .unwrap_or(false)
     }
 
+    #[inline]
+    fn is_valid(&self, i: usize) -> bool {
+        !self.is_null(i)
+    }
+
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array>;
 }
 
