@@ -174,12 +174,18 @@ impl IpcDataGenerator {
     ) -> EncodedData {
         let mut fbb = FlatBufferBuilder::new();
 
-        let nodes: Vec<gen::Message::FieldNode> = vec![];
+        let mut nodes: Vec<gen::Message::FieldNode> = vec![];
         let mut buffers: Vec<gen::Schema::Buffer> = vec![];
         let mut arrow_data: Vec<u8> = vec![];
         let mut offset = 0;
         for array in batch.columns() {
-            write(array.as_ref(), &mut buffers, &mut arrow_data, &mut offset)
+            write(
+                array.as_ref(),
+                &mut buffers,
+                &mut arrow_data,
+                &mut nodes,
+                &mut offset,
+            )
         }
 
         // write data
@@ -220,11 +226,18 @@ impl IpcDataGenerator {
     ) -> EncodedData {
         let mut fbb = FlatBufferBuilder::new();
 
-        let nodes: Vec<gen::Message::FieldNode> = vec![];
+        let mut nodes: Vec<gen::Message::FieldNode> = vec![];
         let mut buffers: Vec<gen::Schema::Buffer> = vec![];
         let mut arrow_data: Vec<u8> = vec![];
 
-        write_dictionary(array, &mut buffers, &mut arrow_data, &mut 0, false);
+        write_dictionary(
+            array,
+            &mut buffers,
+            &mut arrow_data,
+            &mut nodes,
+            &mut 0,
+            false,
+        );
 
         // write data
         let buffers = fbb.create_vector(&buffers);
@@ -381,8 +394,8 @@ pub struct EncodedData {
     pub arrow_data: Vec<u8>,
 }
 /// Write a message's IPC data and buffers, returning metadata and buffer data lengths written
-pub fn write_message<W: Write>(
-    mut writer: W,
+pub fn write_message<'a, W: Write>(
+    writer: &'a mut W,
     encoded: EncodedData,
     write_options: &IpcWriteOptions,
 ) -> Result<(usize, usize)> {
@@ -402,11 +415,7 @@ pub fn write_message<W: Write>(
     let aligned_size = (flatbuf_size + prefix_size + a) & !a;
     let padding_bytes = aligned_size - flatbuf_size - prefix_size;
 
-    write_continuation(
-        &mut writer,
-        &write_options,
-        (aligned_size - prefix_size) as i32,
-    )?;
+    write_continuation(writer, &write_options, (aligned_size - prefix_size) as i32)?;
 
     // write the flatbuf
     if flatbuf_size > 0 {
@@ -417,7 +426,7 @@ pub fn write_message<W: Write>(
 
     // write arrow data
     let body_len = if arrow_data_len > 0 {
-        write_body_buffers(&mut writer, &encoded.arrow_data)?
+        write_body_buffers(writer, &encoded.arrow_data)?
     } else {
         0
     };
@@ -442,8 +451,8 @@ fn write_body_buffers<W: Write>(mut writer: W, data: &[u8]) -> Result<usize> {
 
 /// Write a record batch to the writer, writing the message size before the message
 /// if the record batch is being written to a stream
-pub fn write_continuation<W: Write>(
-    mut writer: W,
+pub fn write_continuation<'a, W: Write>(
+    writer: &'a mut W,
     write_options: &IpcWriteOptions,
     total_len: i32,
 ) -> Result<usize> {

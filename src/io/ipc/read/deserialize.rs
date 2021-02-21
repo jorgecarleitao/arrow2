@@ -223,7 +223,6 @@ fn read_fixed_size_list<R: Read + Seek>(
     reader: &mut R,
     block_offset: u64,
 ) -> Result<Arc<dyn Array>> {
-    println!("{:?}", field_nodes);
     let field_node = field_nodes.pop_front().unwrap().0;
 
     let validity = read_validity(buffers, &field_node, reader, block_offset)?;
@@ -301,7 +300,6 @@ pub fn read<R: Read + Seek>(
     reader: &mut R,
     block_offset: u64,
 ) -> Result<Arc<dyn Array>> {
-    println!("{:?}: {:?}, {:?}", data_type, field_nodes, buffers);
     match data_type {
         DataType::Null => {
             let array = read_null(field_nodes);

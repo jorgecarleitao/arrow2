@@ -32,10 +32,13 @@ fn to_offsets<O: Offset>(offsets: Option<&Vec<Value>>) -> Buffer<O> {
         .unwrap()
         .iter()
         .map(|v| {
-            v.as_i64()
-                .map(|x| x as usize)
-                .and_then(O::from_usize)
-                .unwrap()
+            match v {
+                Value::String(s) => s.parse::<i64>().ok(),
+                _ => v.as_i64(),
+            }
+            .map(|x| x as usize)
+            .and_then(O::from_usize)
+            .unwrap()
         })
         .collect()
 }
@@ -53,7 +56,6 @@ fn to_interval(value: &Value) -> days_ms {
             (_, _) => panic!(),
         }
     } else {
-        println!("{:#?}", value);
         panic!()
     }
 }
@@ -100,7 +102,6 @@ fn to_primitive<T: NativeType + NumCast>(
                     .and_then(num::cast::cast::<i64, T>)
                     .unwrap(),
                 _ => {
-                    println!("{:#?}", value);
                     panic!()
                 }
             })
@@ -151,18 +152,7 @@ fn to_list<O: Offset>(
     let child_field = ListArray::<O>::get_child_field(&data_type);
     let children = &json_col.children.as_ref().unwrap()[0];
     let values = to_array(&child_field, children, dictionaries)?;
-    let offsets: Buffer<O> = json_col
-        .offset
-        .as_ref()
-        .unwrap()
-        .iter()
-        .map(|v| {
-            v.as_i64()
-                .map(|x| x as usize)
-                .and_then(O::from_usize)
-                .unwrap()
-        })
-        .collect();
+    let offsets = to_offsets::<O>(json_col.offset.as_ref());
     Ok(Arc::new(ListArray::<O>::from_data(
         data_type, offsets, values, validity,
     )))

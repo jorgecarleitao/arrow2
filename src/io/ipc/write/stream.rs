@@ -111,3 +111,121 @@ impl<W: Write> Drop for StreamWriter<W> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::io::Cursor;
+
+    use super::super::super::gen;
+    use super::*;
+
+    use crate::io::ipc::common::tests::{read_arrow_stream, read_gzip_json};
+    use crate::io::ipc::read::StreamReader;
+
+    fn test_file(version: &str, file_name: &str) {
+        let (schema, batches) = read_arrow_stream(version, file_name);
+
+        let mut result = Vec::<u8>::new();
+
+        // write IPC version 5
+        {
+            let options =
+                IpcWriteOptions::try_new(8, false, gen::Schema::MetadataVersion::V5).unwrap();
+            let mut writer =
+                StreamWriter::try_new_with_options(&mut result, &schema, options).unwrap();
+            for batch in batches {
+                writer.write(&batch).unwrap();
+            }
+            writer.finish().unwrap();
+        }
+
+        let reader = StreamReader::try_new(Cursor::new(result)).unwrap();
+
+        let schema = reader.schema().clone();
+
+        // read expected JSON output
+        let (expected_schema, expected_batches) = read_gzip_json(version, file_name);
+
+        assert_eq!(schema, expected_schema);
+
+        let batches = reader.collect::<Result<Vec<_>>>().unwrap();
+
+        assert_eq!(batches, expected_batches);
+    }
+
+    #[test]
+    fn write_100_primitive() {
+        test_file("1.0.0-littleendian", "generated_primitive");
+    }
+
+    #[test]
+    fn write_100_datetime() {
+        test_file("1.0.0-littleendian", "generated_datetime");
+    }
+
+    #[test]
+    fn write_100_dictionary_unsigned() {
+        test_file("1.0.0-littleendian", "generated_dictionary_unsigned");
+    }
+
+    #[test]
+    fn write_100_dictionary() {
+        test_file("1.0.0-littleendian", "generated_dictionary");
+    }
+
+    #[test]
+    fn write_100_interval() {
+        test_file("1.0.0-littleendian", "generated_interval");
+    }
+
+    #[test]
+    fn write_100_large_batch() {
+        // this takes too long for unit-tests. It has been passing...
+        //test_file("1.0.0-littleendian", "generated_large_batch");
+    }
+
+    #[test]
+    fn write_100_nested() {
+        test_file("1.0.0-littleendian", "generated_nested");
+    }
+
+    #[test]
+    fn write_100_nested_large_offsets() {
+        test_file("1.0.0-littleendian", "generated_nested_large_offsets");
+    }
+
+    #[test]
+    fn write_100_null_trivial() {
+        test_file("1.0.0-littleendian", "generated_null_trivial");
+    }
+
+    #[test]
+    fn write_100_null() {
+        test_file("1.0.0-littleendian", "generated_null");
+    }
+
+    #[test]
+    fn write_100_primitive_large_offsets() {
+        test_file("1.0.0-littleendian", "generated_primitive_large_offsets");
+    }
+
+    //#[test]
+    //fn write_100_recursive_nested() {
+    //test_file("1.0.0-littleendian", "generated_recursive_nested");
+    //}
+
+    #[test]
+    fn write_100_primitive_no_batches() {
+        test_file("1.0.0-littleendian", "generated_primitive_no_batches");
+    }
+
+    #[test]
+    fn write_100_primitive_zerolength() {
+        test_file("1.0.0-littleendian", "generated_primitive_zerolength");
+    }
+
+    #[test]
+    fn write_100_custom_metadata() {
+        test_file("1.0.0-littleendian", "generated_custom_metadata");
+    }
+}

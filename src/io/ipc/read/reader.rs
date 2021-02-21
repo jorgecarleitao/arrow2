@@ -312,6 +312,11 @@ mod tests {
     }
 
     #[test]
+    fn read_100_custom_metadata() {
+        test_file("1.0.0-littleendian", "generated_custom_metadata");
+    }
+
+    #[test]
     fn read_generated_100_nested() {
         test_file("1.0.0-littleendian", "generated_nested");
     }

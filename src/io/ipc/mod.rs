@@ -17,6 +17,7 @@
 
 // TODO: (vcq): Protobuf codegen is not generating Debug impls.
 #![allow(missing_debug_implementations)]
+#![allow(non_camel_case_types)]
 #[allow(clippy::redundant_closure)]
 #[allow(clippy::needless_lifetimes)]
 #[allow(clippy::extra_unused_lifetimes)]
@@ -24,6 +25,7 @@
 #[allow(clippy::redundant_field_names)]
 pub mod gen;
 
+mod common;
 mod convert;
 pub mod read;
 pub mod write;

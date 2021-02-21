@@ -826,7 +826,6 @@ mod tests {
     #[test]
     fn test_cast_utf8_to_i32() {
         let array = Utf8Array::<i32>::from_slice(&["5", "6", "seven", "8", "9.1"]);
-        println!("{:#?}", array);
         let b = cast(&array, &DataType::Int32).unwrap();
         let c = b.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
 

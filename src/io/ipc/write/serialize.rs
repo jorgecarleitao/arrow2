@@ -1,10 +1,11 @@
 use crate::{
     array::{
         Array, BinaryArray, BooleanArray, DictionaryArray, DictionaryKey, FixedSizeBinaryArray,
-        FixedSizeListArray, ListArray, Offset, PrimitiveArray, Utf8Array,
+        FixedSizeListArray, ListArray, Offset, PrimitiveArray, StructArray, Utf8Array,
     },
-    buffer::{Bitmap, NativeType},
-    datatypes::DataType,
+    buffer::{days_ms, Bitmap, NativeType},
+    datatypes::{DataType, IntervalUnit},
+    io::ipc::gen::Message,
 };
 
 use crate::io::ipc::gen::Schema;
@@ -109,6 +110,7 @@ fn write_list<O: Offset>(
     array: &dyn Array,
     buffers: &mut Vec<Schema::Buffer>,
     arrow_data: &mut Vec<u8>,
+    nodes: &mut Vec<Message::FieldNode>,
     offset: &mut i64,
 ) {
     let array = array.as_any().downcast_ref::<ListArray<O>>().unwrap();
@@ -119,17 +121,43 @@ fn write_list<O: Offset>(
         offset,
     );
     write_bytes(&to_le_bytes(array.offsets()), buffers, arrow_data, offset);
-    write(array.values().as_ref(), buffers, arrow_data, offset);
+    write(array.values().as_ref(), buffers, arrow_data, nodes, offset);
+}
+
+pub fn write_struct(
+    array: &dyn Array,
+    buffers: &mut Vec<Schema::Buffer>,
+    arrow_data: &mut Vec<u8>,
+    nodes: &mut Vec<Message::FieldNode>,
+    offset: &mut i64,
+) {
+    let array = array.as_any().downcast_ref::<StructArray>().unwrap();
+    write_bytes(
+        &to_le_bytes_bitmap(array.nulls(), array.len()),
+        buffers,
+        arrow_data,
+        offset,
+    );
+    array.values().iter().for_each(|array| {
+        write(array.as_ref(), buffers, arrow_data, nodes, offset);
+    });
 }
 
 fn write_fixed_size_list(
     array: &dyn Array,
     buffers: &mut Vec<Schema::Buffer>,
     arrow_data: &mut Vec<u8>,
+    nodes: &mut Vec<Message::FieldNode>,
     offset: &mut i64,
 ) {
     let array = array.as_any().downcast_ref::<FixedSizeListArray>().unwrap();
-    write(array.values().as_ref(), buffers, arrow_data, offset);
+    write_bytes(
+        &to_le_bytes_bitmap(array.nulls(), array.len()),
+        buffers,
+        arrow_data,
+        offset,
+    );
+    write(array.values().as_ref(), buffers, arrow_data, nodes, offset);
 }
 
 // use `write_keys` to either write keys or values
@@ -137,6 +165,7 @@ pub fn _write_dictionary<K: DictionaryKey>(
     array: &dyn Array,
     buffers: &mut Vec<Schema::Buffer>,
     arrow_data: &mut Vec<u8>,
+    nodes: &mut Vec<Message::FieldNode>,
     offset: &mut i64,
     write_keys: bool,
 ) {
@@ -144,7 +173,7 @@ pub fn _write_dictionary<K: DictionaryKey>(
     if write_keys {
         _write_primitive(array.keys(), buffers, arrow_data, offset);
     } else {
-        write(array.values().as_ref(), buffers, arrow_data, offset);
+        write(array.values().as_ref(), buffers, arrow_data, nodes, offset);
     }
 }
 
@@ -152,34 +181,35 @@ pub fn write_dictionary(
     array: &dyn Array,
     buffers: &mut Vec<Schema::Buffer>,
     arrow_data: &mut Vec<u8>,
+    nodes: &mut Vec<Message::FieldNode>,
     offset: &mut i64,
     write_keys: bool,
 ) {
     match array.data_type() {
         DataType::Dictionary(key_type, _) => match key_type.as_ref() {
             DataType::Int8 => {
-                _write_dictionary::<i8>(array, buffers, arrow_data, offset, write_keys)
+                _write_dictionary::<i8>(array, buffers, arrow_data, nodes, offset, write_keys)
             }
             DataType::Int16 => {
-                _write_dictionary::<i16>(array, buffers, arrow_data, offset, write_keys)
+                _write_dictionary::<i16>(array, buffers, arrow_data, nodes, offset, write_keys)
             }
             DataType::Int32 => {
-                _write_dictionary::<i32>(array, buffers, arrow_data, offset, write_keys)
+                _write_dictionary::<i32>(array, buffers, arrow_data, nodes, offset, write_keys)
             }
             DataType::Int64 => {
-                _write_dictionary::<i64>(array, buffers, arrow_data, offset, write_keys)
+                _write_dictionary::<i64>(array, buffers, arrow_data, nodes, offset, write_keys)
             }
             DataType::UInt8 => {
-                _write_dictionary::<u8>(array, buffers, arrow_data, offset, write_keys)
+                _write_dictionary::<u8>(array, buffers, arrow_data, nodes, offset, write_keys)
             }
             DataType::UInt16 => {
-                _write_dictionary::<u16>(array, buffers, arrow_data, offset, write_keys)
+                _write_dictionary::<u16>(array, buffers, arrow_data, nodes, offset, write_keys)
             }
             DataType::UInt32 => {
-                _write_dictionary::<u32>(array, buffers, arrow_data, offset, write_keys)
+                _write_dictionary::<u32>(array, buffers, arrow_data, nodes, offset, write_keys)
             }
             DataType::UInt64 => {
-                _write_dictionary::<u64>(array, buffers, arrow_data, offset, write_keys)
+                _write_dictionary::<u64>(array, buffers, arrow_data, nodes, offset, write_keys)
             }
             _ => unreachable!(),
         },
@@ -191,22 +221,32 @@ pub fn write(
     array: &dyn Array,
     buffers: &mut Vec<Schema::Buffer>,
     arrow_data: &mut Vec<u8>,
+    nodes: &mut Vec<Message::FieldNode>,
     offset: &mut i64,
 ) {
+    nodes.push(Message::FieldNode::new(
+        array.len() as i64,
+        array.null_count() as i64,
+    ));
     match array.data_type() {
         DataType::Null => (),
         DataType::Boolean => write_boolean(array, buffers, arrow_data, offset),
         DataType::Int8 => write_primitive::<i8>(array, buffers, arrow_data, offset),
         DataType::Int16 => write_primitive::<i16>(array, buffers, arrow_data, offset),
-        DataType::Int32 | DataType::Date32 | DataType::Time32(_) => {
+        DataType::Int32
+        | DataType::Date32
+        | DataType::Time32(_)
+        | DataType::Interval(IntervalUnit::YearMonth) => {
             write_primitive::<i32>(array, buffers, arrow_data, offset)
         }
         DataType::Int64
         | DataType::Date64
         | DataType::Time64(_)
         | DataType::Timestamp(_, _)
-        | DataType::Duration(_)
-        | DataType::Interval(_) => write_primitive::<i64>(array, buffers, arrow_data, offset),
+        | DataType::Duration(_) => write_primitive::<i64>(array, buffers, arrow_data, offset),
+        DataType::Interval(IntervalUnit::DayTime) => {
+            write_primitive::<days_ms>(array, buffers, arrow_data, offset)
+        }
         DataType::UInt8 => write_primitive::<u8>(array, buffers, arrow_data, offset),
         DataType::UInt16 => write_primitive::<u16>(array, buffers, arrow_data, offset),
         DataType::UInt32 => write_primitive::<u32>(array, buffers, arrow_data, offset),
@@ -219,12 +259,16 @@ pub fn write(
         DataType::FixedSizeBinary(_) => write_fixed_size_binary(array, buffers, arrow_data, offset),
         DataType::Utf8 => write_utf8::<i32>(array, buffers, arrow_data, offset),
         DataType::LargeUtf8 => write_utf8::<i64>(array, buffers, arrow_data, offset),
-        DataType::List(_) => write_list::<i32>(array, buffers, arrow_data, offset),
-        DataType::LargeList(_) => write_list::<i64>(array, buffers, arrow_data, offset),
-        DataType::FixedSizeList(_, _) => write_fixed_size_list(array, buffers, arrow_data, offset),
-        DataType::Struct(_) => unimplemented!(),
+        DataType::List(_) => write_list::<i32>(array, buffers, arrow_data, nodes, offset),
+        DataType::LargeList(_) => write_list::<i64>(array, buffers, arrow_data, nodes, offset),
+        DataType::FixedSizeList(_, _) => {
+            write_fixed_size_list(array, buffers, arrow_data, nodes, offset)
+        }
+        DataType::Struct(_) => write_struct(array, buffers, arrow_data, nodes, offset),
+        DataType::Dictionary(_, _) => {
+            write_dictionary(array, buffers, arrow_data, nodes, offset, true)
+        }
         DataType::Union(_) => unimplemented!(),
-        DataType::Dictionary(_, _) => write_dictionary(array, buffers, arrow_data, offset, true),
         DataType::Decimal(_, _) => unimplemented!(),
     }
 }

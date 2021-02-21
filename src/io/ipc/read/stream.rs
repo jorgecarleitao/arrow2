@@ -199,7 +199,7 @@ impl<R: Read> RecordBatchReader for StreamReader<R> {
 mod tests {
     use super::*;
 
-    use super::super::tests::read_gzip_json;
+    use crate::io::ipc::common::tests::read_gzip_json;
 
     use std::fs::File;
 
