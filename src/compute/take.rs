@@ -87,7 +87,7 @@ impl Default for TakeOptions {
 fn maybe_usize<I: Offset>(index: I) -> Result<usize> {
     index
         .to_usize()
-        .ok_or_else(|| ArrowError::ComputeError("Cast to usize failed".to_string()))
+        .ok_or_else(|| ArrowError::DictionaryKeyOverflowError)
 }
 
 // take implementation when neither values nor indices contain nulls

@@ -58,10 +58,7 @@ impl<'a, R: Read> Iterator for ValueIter<'a, R> {
                     return None;
                 }
                 Err(e) => {
-                    return Some(Err(ArrowError::JsonError(format!(
-                        "Failed to read JSON record: {}",
-                        e
-                    ))));
+                    return Some(Err(ArrowError::from(e)));
                 }
                 _ => {
                     let trimmed_s = self.line_buf.trim();
@@ -71,10 +68,7 @@ impl<'a, R: Read> Iterator for ValueIter<'a, R> {
                     }
 
                     self.record_count += 1;
-                    return Some(
-                        serde_json::from_str(trimmed_s)
-                            .map_err(|e| ArrowError::JsonError(format!("Not valid JSON: {}", e))),
-                    );
+                    return Some(serde_json::from_str(trimmed_s).map_err(|e| ArrowError::from(e)));
                 }
             }
         }

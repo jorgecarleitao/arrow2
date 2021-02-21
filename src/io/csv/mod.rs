@@ -6,13 +6,13 @@ use csv;
 
 impl From<csv::Error> for ArrowError {
     fn from(error: csv::Error) -> Self {
-        ArrowError::ExternalError(Box::new(error))
+        ArrowError::External("".to_string(), Box::new(error))
     }
 }
 
 impl From<chrono::ParseError> for ArrowError {
     fn from(error: chrono::ParseError) -> Self {
-        ArrowError::ExternalError(Box::new(error))
+        ArrowError::External("".to_string(), Box::new(error))
     }
 }
 

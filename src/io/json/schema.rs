@@ -150,7 +150,7 @@ impl TryFrom<&Value> for DataType {
                     if let Some(Value::Number(size)) = map.get("byteWidth") {
                         Ok(DataType::FixedSizeBinary(size.as_i64().unwrap() as i32))
                     } else {
-                        Err(ArrowError::ParseError(
+                        Err(ArrowError::Schema(
                             "Expecting a byteWidth for fixedsizebinary".to_string(),
                         ))
                     }
@@ -159,13 +159,13 @@ impl TryFrom<&Value> for DataType {
                     // return a list with any type as its child isn't defined in the map
                     let precision = match map.get("precision") {
                         Some(p) => Ok(p.as_u64().unwrap() as usize),
-                        None => Err(ArrowError::ParseError(
+                        None => Err(ArrowError::Schema(
                             "Expecting a precision for decimal".to_string(),
                         )),
                     };
                     let scale = match map.get("scale") {
                         Some(s) => Ok(s.as_u64().unwrap() as usize),
-                        _ => Err(ArrowError::ParseError(
+                        _ => Err(ArrowError::Schema(
                             "Expecting a scale for decimal".to_string(),
                         )),
                     };
@@ -176,7 +176,7 @@ impl TryFrom<&Value> for DataType {
                     Some(p) if p == "HALF" => Ok(DataType::Float16),
                     Some(p) if p == "SINGLE" => Ok(DataType::Float32),
                     Some(p) if p == "DOUBLE" => Ok(DataType::Float64),
-                    _ => Err(ArrowError::ParseError(
+                    _ => Err(ArrowError::Schema(
                         "floatingpoint precision missing or invalid".to_string(),
                     )),
                 },
@@ -186,23 +186,21 @@ impl TryFrom<&Value> for DataType {
                         Some(p) if p == "MILLISECOND" => Ok(TimeUnit::Millisecond),
                         Some(p) if p == "MICROSECOND" => Ok(TimeUnit::Microsecond),
                         Some(p) if p == "NANOSECOND" => Ok(TimeUnit::Nanosecond),
-                        _ => Err(ArrowError::ParseError(
+                        _ => Err(ArrowError::Schema(
                             "timestamp unit missing or invalid".to_string(),
                         )),
                     };
                     let tz = match map.get("timezone") {
                         None => Ok(None),
                         Some(Value::String(tz)) => Ok(Some(tz.clone())),
-                        _ => Err(ArrowError::ParseError(
-                            "timezone must be a string".to_string(),
-                        )),
+                        _ => Err(ArrowError::Schema("timezone must be a string".to_string())),
                     };
                     Ok(DataType::Timestamp(unit?, tz?))
                 }
                 Some(s) if s == "date" => match map.get("unit") {
                     Some(p) if p == "DAY" => Ok(DataType::Date32),
                     Some(p) if p == "MILLISECOND" => Ok(DataType::Date64),
-                    _ => Err(ArrowError::ParseError(
+                    _ => Err(ArrowError::Schema(
                         "date unit missing or invalid".to_string(),
                     )),
                 },
@@ -212,14 +210,14 @@ impl TryFrom<&Value> for DataType {
                         Some(p) if p == "MILLISECOND" => Ok(TimeUnit::Millisecond),
                         Some(p) if p == "MICROSECOND" => Ok(TimeUnit::Microsecond),
                         Some(p) if p == "NANOSECOND" => Ok(TimeUnit::Nanosecond),
-                        _ => Err(ArrowError::ParseError(
+                        _ => Err(ArrowError::Schema(
                             "time unit missing or invalid".to_string(),
                         )),
                     };
                     match map.get("bitWidth") {
                         Some(p) if p == 32 => Ok(DataType::Time32(unit?)),
                         Some(p) if p == 64 => Ok(DataType::Time64(unit?)),
-                        _ => Err(ArrowError::ParseError(
+                        _ => Err(ArrowError::Schema(
                             "time bitWidth missing or invalid".to_string(),
                         )),
                     }
@@ -229,14 +227,14 @@ impl TryFrom<&Value> for DataType {
                     Some(p) if p == "MILLISECOND" => Ok(DataType::Duration(TimeUnit::Millisecond)),
                     Some(p) if p == "MICROSECOND" => Ok(DataType::Duration(TimeUnit::Microsecond)),
                     Some(p) if p == "NANOSECOND" => Ok(DataType::Duration(TimeUnit::Nanosecond)),
-                    _ => Err(ArrowError::ParseError(
+                    _ => Err(ArrowError::Schema(
                         "time unit missing or invalid".to_string(),
                     )),
                 },
                 Some(s) if s == "interval" => match map.get("unit") {
                     Some(p) if p == "DAY_TIME" => Ok(DataType::Interval(IntervalUnit::DayTime)),
                     Some(p) if p == "YEAR_MONTH" => Ok(DataType::Interval(IntervalUnit::YearMonth)),
-                    _ => Err(ArrowError::ParseError(
+                    _ => Err(ArrowError::Schema(
                         "interval unit missing or invalid".to_string(),
                     )),
                 },
@@ -247,11 +245,11 @@ impl TryFrom<&Value> for DataType {
                             Some(16) => Ok(DataType::Int16),
                             Some(32) => Ok(DataType::Int32),
                             Some(64) => Ok(DataType::Int64),
-                            _ => Err(ArrowError::ParseError(
+                            _ => Err(ArrowError::Schema(
                                 "int bitWidth missing or invalid".to_string(),
                             )),
                         },
-                        _ => Err(ArrowError::ParseError(
+                        _ => Err(ArrowError::Schema(
                             "int bitWidth missing or invalid".to_string(),
                         )),
                     },
@@ -261,15 +259,15 @@ impl TryFrom<&Value> for DataType {
                             Some(16) => Ok(DataType::UInt16),
                             Some(32) => Ok(DataType::UInt32),
                             Some(64) => Ok(DataType::UInt64),
-                            _ => Err(ArrowError::ParseError(
+                            _ => Err(ArrowError::Schema(
                                 "int bitWidth missing or invalid".to_string(),
                             )),
                         },
-                        _ => Err(ArrowError::ParseError(
+                        _ => Err(ArrowError::Schema(
                             "int bitWidth missing or invalid".to_string(),
                         )),
                     },
-                    _ => Err(ArrowError::ParseError(
+                    _ => Err(ArrowError::Schema(
                         "int signed missing or invalid".to_string(),
                     )),
                 },
@@ -289,7 +287,7 @@ impl TryFrom<&Value> for DataType {
                             size.as_i64().unwrap() as i32,
                         ))
                     } else {
-                        Err(ArrowError::ParseError(
+                        Err(ArrowError::Schema(
                             "Expecting a listSize for fixedsizelist".to_string(),
                         ))
                     }
@@ -298,15 +296,13 @@ impl TryFrom<&Value> for DataType {
                     // return an empty `struct` type as its children aren't defined in the map
                     Ok(DataType::Struct(vec![]))
                 }
-                Some(other) => Err(ArrowError::ParseError(format!(
+                Some(other) => Err(ArrowError::Schema(format!(
                     "invalid or unsupported type name: {} in {:?}",
                     other, value
                 ))),
-                None => Err(ArrowError::ParseError("type name missing".to_string())),
+                None => Err(ArrowError::Schema("type name missing".to_string())),
             },
-            _ => Err(ArrowError::ParseError(
-                "invalid json value type".to_string(),
-            )),
+            _ => Err(ArrowError::Schema("invalid json value type".to_string())),
         }
     }
 }
@@ -320,7 +316,7 @@ impl TryFrom<&Value> for Field {
                 let name = match map.get("name") {
                     Some(&Value::String(ref name)) => name.to_string(),
                     _ => {
-                        return Err(ArrowError::ParseError(
+                        return Err(ArrowError::Schema(
                             "Field missing 'name' attribute".to_string(),
                         ));
                     }
@@ -328,7 +324,7 @@ impl TryFrom<&Value> for Field {
                 let nullable = match map.get("nullable") {
                     Some(&Value::Bool(b)) => b,
                     _ => {
-                        return Err(ArrowError::ParseError(
+                        return Err(ArrowError::Schema(
                             "Field missing 'nullable' attribute".to_string(),
                         ));
                     }
@@ -336,7 +332,7 @@ impl TryFrom<&Value> for Field {
                 let data_type = match map.get("type") {
                     Some(t) => DataType::try_from(t)?,
                     _ => {
-                        return Err(ArrowError::ParseError(
+                        return Err(ArrowError::Schema(
                             "Field missing 'type' attribute".to_string(),
                         ));
                     }
@@ -350,7 +346,7 @@ impl TryFrom<&Value> for Field {
                             match value.as_object() {
                                 Some(map) => {
                                     if map.len() != 2 {
-                                        return Err(ArrowError::ParseError(
+                                        return Err(ArrowError::Schema(
                                             "Field 'metadata' must have exact two entries for each key-value map".to_string(),
                                         ));
                                     }
@@ -362,14 +358,14 @@ impl TryFrom<&Value> for Field {
                                                 v_str.to_string().clone(),
                                             );
                                         } else {
-                                            return Err(ArrowError::ParseError("Field 'metadata' must have map value of string type".to_string()));
+                                            return Err(ArrowError::Schema("Field 'metadata' must have map value of string type".to_string()));
                                         }
                                     } else {
-                                        return Err(ArrowError::ParseError("Field 'metadata' lacks map keys named \"key\" or \"value\"".to_string()));
+                                        return Err(ArrowError::Schema("Field 'metadata' lacks map keys named \"key\" or \"value\"".to_string()));
                                     }
                                 }
                                 _ => {
-                                    return Err(ArrowError::ParseError(
+                                    return Err(ArrowError::Schema(
                                         "Field 'metadata' contains non-object key-value pair"
                                             .to_string(),
                                     ));
@@ -386,7 +382,7 @@ impl TryFrom<&Value> for Field {
                             if let Some(str_value) = v.as_str() {
                                 res.insert(k.clone(), str_value.to_string().clone());
                             } else {
-                                return Err(ArrowError::ParseError(format!(
+                                return Err(ArrowError::Schema(format!(
                                     "Field 'metadata' contains non-string value for key {}",
                                     k
                                 )));
@@ -395,7 +391,7 @@ impl TryFrom<&Value> for Field {
                         Some(res)
                     }
                     Some(_) => {
-                        return Err(ArrowError::ParseError(
+                        return Err(ArrowError::Schema(
                             "Field `metadata` is not json array".to_string(),
                         ));
                     }
@@ -408,7 +404,7 @@ impl TryFrom<&Value> for Field {
                         match map.get("children") {
                             Some(Value::Array(values)) => {
                                 if values.len() != 1 {
-                                    return Err(ArrowError::ParseError(
+                                    return Err(ArrowError::Schema(
                                     "Field 'children' must have one element for a list data type".to_string(),
                                 ));
                                 }
@@ -429,12 +425,12 @@ impl TryFrom<&Value> for Field {
                                 }
                             }
                             Some(_) => {
-                                return Err(ArrowError::ParseError(
+                                return Err(ArrowError::Schema(
                                     "Field 'children' must be an array".to_string(),
                                 ))
                             }
                             None => {
-                                return Err(ArrowError::ParseError(
+                                return Err(ArrowError::Schema(
                                     "Field missing 'children' attribute".to_string(),
                                 ));
                             }
@@ -448,12 +444,12 @@ impl TryFrom<&Value> for Field {
                             DataType::Struct(fields)
                         }
                         Some(_) => {
-                            return Err(ArrowError::ParseError(
+                            return Err(ArrowError::Schema(
                                 "Field 'children' must be an array".to_string(),
                             ))
                         }
                         None => {
-                            return Err(ArrowError::ParseError(
+                            return Err(ArrowError::Schema(
                                 "Field missing 'children' attribute".to_string(),
                             ));
                         }
@@ -469,7 +465,7 @@ impl TryFrom<&Value> for Field {
                         let index_type = match dictionary.get("indexType") {
                             Some(t) => DataType::try_from(t)?,
                             _ => {
-                                return Err(ArrowError::ParseError(
+                                return Err(ArrowError::Schema(
                                     "Field missing 'indexType' attribute".to_string(),
                                 ));
                             }
@@ -477,7 +473,7 @@ impl TryFrom<&Value> for Field {
                         dict_id = match dictionary.get("id") {
                             Some(Value::Number(n)) => n.as_i64().unwrap(),
                             _ => {
-                                return Err(ArrowError::ParseError(
+                                return Err(ArrowError::Schema(
                                     "Field missing 'id' attribute".to_string(),
                                 ));
                             }
@@ -485,7 +481,7 @@ impl TryFrom<&Value> for Field {
                         dict_is_ordered = match dictionary.get("isOrdered") {
                             Some(&Value::Bool(n)) => n,
                             _ => {
-                                return Err(ArrowError::ParseError(
+                                return Err(ArrowError::Schema(
                                     "Field missing 'isOrdered' attribute".to_string(),
                                 ));
                             }
@@ -498,7 +494,7 @@ impl TryFrom<&Value> for Field {
                 f.set_metadata(metadata);
                 Ok(f)
             }
-            _ => Err(ArrowError::ParseError(
+            _ => Err(ArrowError::Schema(
                 "Invalid json value type for field".to_string(),
             )),
         }
@@ -526,10 +522,7 @@ fn from_metadata(json: &Value) -> Result<HashMap<String, String>, ArrowError> {
     match json {
         Value::Array(_) => {
             let mut hashmap = HashMap::new();
-            let values: Vec<MetadataKeyValue> =
-                serde_json::from_value(json.clone()).map_err(|_| {
-                    ArrowError::JsonError("Unable to parse object into key-value pair".to_string())
-                })?;
+            let values: Vec<MetadataKeyValue> = serde_json::from_value(json.clone())?;
             for meta in values {
                 hashmap.insert(meta.key.clone(), meta.value);
             }
@@ -541,13 +534,13 @@ fn from_metadata(json: &Value) -> Result<HashMap<String, String>, ArrowError> {
                 if let Value::String(v) = v {
                     Ok((k.to_string(), v.to_string()))
                 } else {
-                    Err(ArrowError::ParseError(
+                    Err(ArrowError::Schema(
                         "metadata `value` field must be a string".to_string(),
                     ))
                 }
             })
             .collect::<Result<_, _>>(),
-        _ => Err(ArrowError::ParseError(
+        _ => Err(ArrowError::Schema(
             "`metadata` field must be an object".to_string(),
         )),
     }
@@ -565,7 +558,7 @@ impl TryFrom<&Value> for Schema {
                         .map(|f| Field::try_from(f))
                         .collect::<Result<_, _>>()?
                 } else {
-                    return Err(ArrowError::ParseError(
+                    return Err(ArrowError::Schema(
                         "Schema fields should be an array".to_string(),
                     ));
                 };
@@ -578,7 +571,7 @@ impl TryFrom<&Value> for Schema {
 
                 Ok(Self { fields, metadata })
             }
-            _ => Err(ArrowError::ParseError(
+            _ => Err(ArrowError::Schema(
                 "Invalid json value type for schema".to_string(),
             )),
         }

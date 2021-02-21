@@ -212,7 +212,7 @@ impl<W: Write> Writer<W> {
                 t => {
                     // List and Struct arrays not supported by the writer, any
                     // other type needs to be implemented
-                    return Err(ArrowError::CsvError(format!(
+                    return Err(ArrowError::NotYetImplemented(format!(
                         "CSV Writer does not support {:?} data type",
                         t
                     )));

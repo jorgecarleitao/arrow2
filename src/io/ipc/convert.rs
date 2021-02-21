@@ -146,14 +146,10 @@ pub fn schema_from_bytes(bytes: &[u8]) -> Result<Schema> {
         if let Some(schema) = ipc.header_as_schema().map(fb_to_schema) {
             Ok(schema)
         } else {
-            Err(ArrowError::IoError(
-                "Unable to get head as schema".to_string(),
-            ))
+            Err(ArrowError::IPC("Unable to get head as schema".to_string()))
         }
     } else {
-        Err(ArrowError::IoError(
-            "Unable to get root as message".to_string(),
-        ))
+        Err(ArrowError::IPC("Unable to get root as message".to_string()))
     }
 }
 

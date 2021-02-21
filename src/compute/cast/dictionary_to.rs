@@ -16,12 +16,7 @@ macro_rules! key_cast {
         // Failure to cast keys (because they don't fit in the
         // target type) results in NULL values;
         if cast_keys.null_count() > $keys.null_count() {
-            return Err(ArrowError::ComputeError(format!(
-                "Could not convert {} dictionary indexes from {:?} to {:?}",
-                cast_keys.null_count() - $keys.null_count(),
-                $keys.data_type(),
-                $to_keys_type
-            )));
+            return Err(ArrowError::DictionaryKeyOverflowError);
         }
         Ok(Box::new(DictionaryArray::<$to_type>::from_data(
             cast_keys, $values,
@@ -53,12 +48,7 @@ pub fn dictionary_cast<K: DictionaryKey>(
                 DataType::UInt16 => key_cast!(keys, values, array, to_keys_type, u16),
                 DataType::UInt32 => key_cast!(keys, values, array, to_keys_type, u32),
                 DataType::UInt64 => key_cast!(keys, values, array, to_keys_type, u64),
-                _ => {
-                    return Err(ArrowError::ComputeError(format!(
-                        "Unsupported type {:?} for dictionary index",
-                        to_keys_type
-                    )))
-                }
+                _ => unreachable!(),
             }
         }
         _ => unpack_dictionary::<K>(keys, values.as_ref(), to_type),

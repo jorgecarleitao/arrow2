@@ -13,7 +13,7 @@ use crate::buffer::Buffer;
 use crate::datatypes::{DataType, IntervalUnit};
 use crate::{
     array::*,
-    buffer::{Bitmap, MutableBuffer, NativeType, days_ms},
+    buffer::{days_ms, Bitmap, MutableBuffer, NativeType},
 };
 
 use super::super::gen;

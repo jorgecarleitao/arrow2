@@ -134,7 +134,7 @@ impl Decoder {
                 match v {
                     Value::Object(_) => Ok(v),
                     _ => {
-                        return Err(ArrowError::JsonError(format!(
+                        return Err(ArrowError::Other(format!(
                             "Row needs to be of type object, got: {:?}",
                             v
                         )));
@@ -623,7 +623,7 @@ mod tests {
         );
         assert_eq!(
             re.err().unwrap().to_string(),
-            "Json error: Not valid JSON: expected value at line 1 column 1",
+            "External error: expected value at line 1 column 1",
         );
     }
 
@@ -640,7 +640,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             reader.next().err().unwrap().to_string(),
-            "Json error: Not valid JSON: expected value at line 1 column 1",
+            "External error: expected value at line 1 column 1",
         );
     }
 
@@ -831,7 +831,6 @@ mod tests {
         let batch = reader.next().unwrap().unwrap();
 
         assert_eq!(1, batch.num_columns());
-        println!("{}", batch.column(0));
         assert_eq!(12, batch.num_rows());
 
         let schema = reader.schema();
@@ -896,7 +895,7 @@ mod tests {
         let re = builder.build(Cursor::new(json_content));
         assert_eq!(
             re.err().unwrap().to_string(),
-            r#"Json error: Expected JSON record to be an object, found Array([Number(1), String("hello")])"#,
+            r#"Expected JSON record to be an object, found Array([Number(1), String("hello")])"#,
         );
     }
 

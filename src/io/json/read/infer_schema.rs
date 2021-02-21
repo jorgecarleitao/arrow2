@@ -118,7 +118,7 @@ fn coerce_data_type(dt: Vec<&DataType>) -> Result<DataType> {
                             ))))
                         }
                     }
-                    (t1, t2) => Err(ArrowError::JsonError(format!(
+                    (t1, t2) => Err(ArrowError::Schema(format!(
                         "Cannot coerce data types for {:?} and {:?}",
                         t1, t2
                     ))),
@@ -220,7 +220,7 @@ where
                                     Value::Bool(_) => Ok(Some(&DataType::Boolean)),
                                     Value::String(_) => Ok(Some(&DataType::Utf8)),
                                     Value::Array(_) | Value::Object(_) => {
-                                        Err(ArrowError::JsonError(
+                                        Err(ArrowError::NotYetImplemented(
                                             "Nested lists and structs not supported".to_string(),
                                         ))
                                     }
@@ -311,7 +311,7 @@ where
                             }
                             Ok(())
                         }
-                        Value::Object(_) => Err(ArrowError::JsonError(
+                        Value::Object(_) => Err(ArrowError::NotYetImplemented(
                             "Inferring schema from nested JSON structs currently not supported"
                                 .to_string(),
                         )),
@@ -323,7 +323,7 @@ where
                 }
             }
             value => {
-                return Err(ArrowError::JsonError(format!(
+                return Err(ArrowError::Other(format!(
                     "Expected JSON record to be an object, found {:?}",
                     value
                 )));

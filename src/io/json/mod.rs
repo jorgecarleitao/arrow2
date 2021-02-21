@@ -8,6 +8,14 @@ pub use read::*;
 pub use schema::*;
 pub use write::*;
 
+use crate::error::ArrowError;
+
+impl From<serde_json::error::Error> for ArrowError {
+    fn from(error: serde_json::error::Error) -> Self {
+        ArrowError::External("".to_string(), Box::new(error))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

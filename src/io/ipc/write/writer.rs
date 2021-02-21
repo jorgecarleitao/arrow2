@@ -434,7 +434,7 @@ impl<W: Write> FileWriter<W> {
     /// Write a record batch to the file
     pub fn write(&mut self, batch: &RecordBatch) -> Result<()> {
         if self.finished {
-            return Err(ArrowError::IoError(
+            return Err(ArrowError::IPC(
                 "Cannot write record batch to file writer as it is closed".to_string(),
             ));
         }
@@ -551,7 +551,7 @@ impl<W: Write> StreamWriter<W> {
     /// Write a record batch to the stream
     pub fn write(&mut self, batch: &RecordBatch) -> Result<()> {
         if self.finished {
-            return Err(ArrowError::IoError(
+            return Err(ArrowError::IPC(
                 "Cannot write record batch to stream writer as it is closed".to_string(),
             ));
         }
@@ -603,9 +603,7 @@ pub fn write_message<W: Write>(
 ) -> Result<(usize, usize)> {
     let arrow_data_len = encoded.arrow_data.len();
     if arrow_data_len % 8 != 0 {
-        return Err(ArrowError::MemoryError(
-            "Arrow data not aligned".to_string(),
-        ));
+        return Err(ArrowError::IPC("Arrow data not aligned".to_string()));
     }
 
     let a = write_options.alignment - 1;

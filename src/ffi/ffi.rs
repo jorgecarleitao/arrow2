@@ -197,7 +197,7 @@ fn to_datatype(format: &str) -> Result<DataType> {
         "ttu" => DataType::Time64(TimeUnit::Microsecond),
         "ttn" => DataType::Time64(TimeUnit::Nanosecond),
         _ => {
-            return Err(ArrowError::CDataInterface(
+            return Err(ArrowError::FFI(
                 "The datatype \"{}\" is still not supported in Rust implementation".to_string(),
             ))
         }
@@ -231,7 +231,7 @@ fn from_datatype(datatype: &DataType) -> Result<String> {
         DataType::Time64(TimeUnit::Microsecond) => "ttu",
         DataType::Time64(TimeUnit::Nanosecond) => "ttn",
         z => {
-            return Err(ArrowError::CDataInterface(format!(
+            return Err(ArrowError::FFI(format!(
                 "The datatype \"{:?}\" is still not supported in Rust implementation",
                 z
             )))
@@ -428,7 +428,7 @@ impl ArrowArray {
         schema: *const FFI_ArrowSchema,
     ) -> Result<Self> {
         if array.is_null() || schema.is_null() {
-            return Err(ArrowError::MemoryError(
+            return Err(ArrowError::FFI(
                 "At least one of the pointers passed to `try_from_raw` is null".to_string(),
             ));
         };
@@ -508,7 +508,7 @@ impl ArrowArray {
         let len = self.buffer_len(index)?;
 
         create_buffer(self.array.clone(), index, len).ok_or_else(|| {
-            ArrowError::CDataInterface(format!(
+            ArrowError::FFI(format!(
                 "The external buffer at position {} is null.",
                 index - 1
             ))
@@ -523,7 +523,7 @@ impl ArrowArray {
         let len = bytes_for(self.array.length as usize);
 
         create_bitmap(self.array.clone(), index, len).ok_or_else(|| {
-            ArrowError::CDataInterface(format!(
+            ArrowError::FFI(format!(
                 "The external buffer at position {} is null.",
                 index - 1
             ))

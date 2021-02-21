@@ -173,13 +173,13 @@ fn to_dictionary<K: DictionaryKey>(
     json_col: &ArrowJsonColumn,
     dictionaries: &HashMap<i64, &ArrowJsonDictionaryBatch>,
 ) -> Result<Arc<dyn Array>> {
-    let dict_id = field.dict_id().ok_or_else(|| {
-        ArrowError::JsonError(format!("Unable to find dict_id for field {:?}", field))
-    })?;
+    let dict_id = field
+        .dict_id()
+        .ok_or_else(|| ArrowError::IPC(format!("Unable to find dict_id for field {:?}", field)))?;
     // find dictionary
-    let dictionary = dictionaries.get(&dict_id).ok_or_else(|| {
-        ArrowError::JsonError(format!("Unable to find any dictionary id {}", dict_id))
-    })?;
+    let dictionary = dictionaries
+        .get(&dict_id)
+        .ok_or_else(|| ArrowError::IPC(format!("Unable to find any dictionary id {}", dict_id)))?;
 
     let keys = to_primitive(json_col, K::DATA_TYPE);
 
@@ -300,7 +300,7 @@ pub fn to_array(
             DataType::UInt64 => to_dictionary::<u64>(field, json_col, dictionaries),
             _ => unreachable!(),
         },
-        t => Err(ArrowError::JsonError(format!(
+        t => Err(ArrowError::NotYetImplemented(format!(
             "data type {:?} not supported",
             t
         ))),

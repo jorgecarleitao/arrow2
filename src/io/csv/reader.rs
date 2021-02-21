@@ -169,11 +169,10 @@ impl<R: Read, P: GenericParser<ArrowError>> Iterator for Reader<R, P> {
                 }
                 Ok(false) => break,
                 Err(e) => {
-                    return Some(Err(ArrowError::ParseError(format!(
-                        "Error parsing line {}: {:?}",
-                        self.line_number + i,
-                        e
-                    ))))
+                    return Some(Err(ArrowError::External(
+                        format!(" at line {}", self.line_number + i,),
+                        Box::new(e),
+                    )))
                 }
             }
         }
@@ -246,7 +245,7 @@ fn parse<P: GenericParser<ArrowError>>(
                 DataType::UInt64 => primitive!(u64, line_number, rows, i, data_type, parser),
                 DataType::Float32 => primitive!(f32, line_number, rows, i, data_type, parser),
                 DataType::Float64 => primitive!(f64, line_number, rows, i, data_type, parser),
-                other => Err(ArrowError::ParseError(format!(
+                other => Err(ArrowError::NotYetImplemented(format!(
                     "Unsupported data type {:?}",
                     other
                 ))),
