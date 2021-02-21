@@ -15,7 +15,7 @@ type ArrayRef = Arc<dyn Array>;
 /// Creates a record batch from binary data using the `ipc::RecordBatch` indexes and the `Schema`
 pub fn read_record_batch<R: Read + Seek>(
     batch: gen::Message::RecordBatch,
-    schema: Arc<Schema>,
+    schema: Schema,
     dictionaries: &[Option<ArrayRef>],
     reader: &mut R,
     block_offset: u64,
@@ -50,7 +50,7 @@ pub fn read_record_batch<R: Read + Seek>(
         })
         .collect::<std::io::Result<Vec<_>>>()?;
 
-    RecordBatch::try_new(schema, arrays)
+    RecordBatch::try_new(schema.clone(), arrays)
 }
 
 /// Read the dictionary from the buffer and provided metadata,
@@ -87,7 +87,7 @@ pub fn read_dictionary<R: Read + Seek>(
             // Read a single column
             let record_batch = read_record_batch(
                 batch.data().unwrap(),
-                Arc::new(schema),
+                schema,
                 dictionaries_by_field,
                 reader,
                 block_offset,

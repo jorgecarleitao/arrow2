@@ -43,7 +43,6 @@
 //! ```
 
 use std::io::{BufReader, Read, Seek};
-use std::sync::Arc;
 
 use serde_json::Value;
 
@@ -53,8 +52,6 @@ use crate::error::{ArrowError, Result};
 use crate::record_batch::RecordBatch;
 
 use super::{deserialize::read, infer_json_schema_from_seekable, util::ValueIter};
-
-type SchemaRef = Arc<Schema>;
 
 /// JSON values to Arrow record batch decoder. Decoder's next_batch method takes a JSON Value
 /// iterator as input and outputs Arrow record batch.
@@ -81,7 +78,7 @@ type SchemaRef = Arc<Schema>;
 #[derive(Debug)]
 struct Decoder {
     /// Explicit schema for the JSON file
-    schema: SchemaRef,
+    schema: Schema,
     /// Optional projection for which columns to load (case-sensitive names)
     projection: Option<Vec<String>>,
     /// Batch size (number of records to load each time)
@@ -91,20 +88,10 @@ struct Decoder {
 impl Decoder {
     /// Create a new JSON decoder from any value that implements the `Iterator<Item=Result<Value>>`
     /// trait.
-    pub fn new(schema: SchemaRef, batch_size: usize, projection: Option<Vec<String>>) -> Self {
-        Self {
-            schema,
-            projection,
-            batch_size,
-        }
-    }
-
-    /// Returns the schema of the reader, useful for getting the schema without reading
-    /// record batches
-    pub fn schema(&self) -> SchemaRef {
-        match &self.projection {
+    pub fn new(schema: Schema, batch_size: usize, projection: Option<Vec<String>>) -> Self {
+        let schema = match &projection {
             Some(projection) => {
-                let fields = self.schema.fields();
+                let fields = schema.fields();
                 let projected_fields: Vec<Field> = fields
                     .iter()
                     .filter_map(|field| {
@@ -116,10 +103,22 @@ impl Decoder {
                     })
                     .collect();
 
-                Arc::new(Schema::new(projected_fields))
+                Schema::new(projected_fields)
             }
-            None => self.schema.clone(),
+            None => schema,
+        };
+
+        Self {
+            schema,
+            projection,
+            batch_size,
         }
+    }
+
+    /// Returns the schema of the reader, useful for getting the schema without reading
+    /// record batches
+    pub fn schema(&self) -> &Schema {
+        &self.schema
     }
 
     /// Read the next batch of records
@@ -166,7 +165,7 @@ impl Decoder {
         let array = array.as_any().downcast_ref::<StructArray>().unwrap();
         let arrays = array.values().to_vec();
 
-        let projected_schema = Arc::new(Schema::new(projected_fields));
+        let projected_schema = Schema::new(projected_fields);
 
         RecordBatch::try_new(projected_schema, arrays).map(Some)
     }
@@ -187,7 +186,7 @@ impl<R: Read> Reader<R> {
     /// inference, use `ReaderBuilder`.
     pub fn new(
         reader: R,
-        schema: SchemaRef,
+        schema: Schema,
         batch_size: usize,
         projection: Option<Vec<String>>,
     ) -> Self {
@@ -199,7 +198,7 @@ impl<R: Read> Reader<R> {
     /// To customize the schema, such as to enable schema inference, use `ReaderBuilder`
     pub fn from_buf_reader(
         reader: BufReader<R>,
-        schema: SchemaRef,
+        schema: Schema,
         batch_size: usize,
         projection: Option<Vec<String>>,
     ) -> Self {
@@ -211,7 +210,7 @@ impl<R: Read> Reader<R> {
 
     /// Returns the schema of the reader, useful for getting the schema without reading
     /// record batches
-    pub fn schema(&self) -> SchemaRef {
+    pub fn schema(&self) -> &Schema {
         self.decoder.schema()
     }
 
@@ -230,7 +229,7 @@ pub struct ReaderBuilder {
     ///
     /// If the schema is not supplied, the reader will try to infer the schema
     /// based on the JSON structure.
-    schema: Option<SchemaRef>,
+    schema: Option<Schema>,
     /// Optional maximum number of records to read during schema inference
     ///
     /// If a number is not provided, all the records are read.
@@ -283,7 +282,7 @@ impl ReaderBuilder {
     }
 
     /// Set the JSON file's schema
-    pub fn with_schema(mut self, schema: SchemaRef) -> Self {
+    pub fn with_schema(mut self, schema: Schema) -> Self {
         self.schema = Some(schema);
         self
     }
@@ -318,10 +317,7 @@ impl ReaderBuilder {
         // check if schema should be inferred
         let schema = match self.schema {
             Some(schema) => schema,
-            None => Arc::new(infer_json_schema_from_seekable(
-                &mut buf_reader,
-                self.max_records,
-            )?),
+            None => infer_json_schema_from_seekable(&mut buf_reader, self.max_records)?,
         };
 
         Ok(Reader::from_buf_reader(
@@ -336,7 +332,7 @@ impl ReaderBuilder {
 #[cfg(test)]
 mod tests {
     use flate2::read::GzDecoder;
-    use std::io::Cursor;
+    use std::{io::Cursor, sync::Arc};
 
     use crate::{
         buffer::{Bitmap, Buffer},
@@ -475,12 +471,12 @@ mod tests {
 
         let mut reader: Reader<File> = Reader::new(
             File::open("test/data/basic.json").unwrap(),
-            Arc::new(schema.clone()),
+            schema.clone(),
             1024,
             None,
         );
         let reader_schema = reader.schema();
-        assert_eq!(reader_schema, Arc::new(schema));
+        assert_eq!(reader_schema, &schema);
         let batch = reader.next().unwrap().unwrap();
 
         assert_eq!(4, batch.num_columns());
@@ -527,25 +523,24 @@ mod tests {
 
         let mut reader: Reader<File> = Reader::new(
             File::open("test/data/basic.json").unwrap(),
-            Arc::new(schema),
+            schema,
             1024,
             Some(vec!["a".to_string(), "c".to_string()]),
         );
-        let reader_schema = reader.schema();
-        let expected_schema = Arc::new(Schema::new(vec![
+        let reader_schema = reader.schema().clone();
+        let expected_schema = Schema::new(vec![
             Field::new("a", DataType::Int32, false),
             Field::new("c", DataType::Boolean, false),
-        ]));
+        ]);
         assert_eq!(reader_schema, expected_schema);
 
         let batch = reader.next().unwrap().unwrap();
 
         assert_eq!(2, batch.num_columns());
-        assert_eq!(2, batch.schema().fields().len());
         assert_eq!(12, batch.num_rows());
 
         let schema = batch.schema();
-        assert_eq!(reader_schema, schema);
+        assert_eq!(&reader_schema, schema);
 
         let a = schema.column_with_name("a").unwrap();
         assert_eq!(0, a.0);
@@ -629,11 +624,11 @@ mod tests {
 
     #[test]
     fn test_invalid_json_read_record() {
-        let schema = Arc::new(Schema::new(vec![Field::new(
+        let schema = Schema::new(vec![Field::new(
             "a",
             DataType::Struct(vec![Field::new("a", DataType::Utf8, true)]),
             true,
-        )]));
+        )]);
         let builder = ReaderBuilder::new().with_schema(schema).with_batch_size(64);
         let mut reader: Reader<File> = builder
             .build::<File>(File::open("test/data/uk_cities_with_headers.csv").unwrap())
@@ -654,7 +649,7 @@ mod tests {
 
         let mut file = File::open("test/data/mixed_arrays.json.gz").unwrap();
         let mut reader = BufReader::new(GzDecoder::new(&file));
-        let schema = Arc::new(infer_json_schema(&mut reader, None).unwrap());
+        let schema = infer_json_schema(&mut reader, None).unwrap();
         file.seek(SeekFrom::Start(0)).unwrap();
 
         let reader = BufReader::new(GzDecoder::new(&file));
@@ -731,7 +726,7 @@ mod tests {
             ]),
             true,
         );
-        let schema = Arc::new(Schema::new(vec![a_field.clone()]));
+        let schema = Schema::new(vec![a_field.clone()]);
         let builder = ReaderBuilder::new().with_schema(schema).with_batch_size(64);
         let mut reader: Reader<File> = builder
             .build::<File>(File::open("test/data/nested_structs.json").unwrap())
@@ -766,7 +761,7 @@ mod tests {
         );
         let a_list_data_type = DataType::List(Box::new(a_struct_field));
         let a_field = Field::new("a", a_list_data_type.clone(), true);
-        let schema = Arc::new(Schema::new(vec![a_field.clone()]));
+        let schema = Schema::new(vec![a_field.clone()]);
         let builder = ReaderBuilder::new().with_schema(schema).with_batch_size(64);
         let json_content = r#"
         {"a": [{"b": true, "c": {"d": "a_text"}}, {"b": false, "c": {"d": "b_text"}}]}
@@ -822,9 +817,7 @@ mod tests {
             DataType::Dictionary(Box::new(DataType::Int16), Box::new(DataType::Utf8)),
             true,
         )]);
-        let builder = ReaderBuilder::new()
-            .with_schema(Arc::new(schema))
-            .with_batch_size(64);
+        let builder = ReaderBuilder::new().with_schema(schema).with_batch_size(64);
         let mut reader: Reader<File> = builder
             .build::<File>(File::open("test/data/basic_nulls.json").unwrap())
             .unwrap();
@@ -908,9 +901,7 @@ mod tests {
         )));
 
         let schema = Schema::new(vec![Field::new("events", data_type.clone(), true)]);
-        let builder = ReaderBuilder::new()
-            .with_schema(Arc::new(schema))
-            .with_batch_size(64);
+        let builder = ReaderBuilder::new().with_schema(schema).with_batch_size(64);
         let mut reader: Reader<File> = builder
             .build::<File>(File::open("test/data/list_string_dict_nested_nulls.json").unwrap())
             .unwrap();

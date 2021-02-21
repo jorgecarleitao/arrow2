@@ -10,7 +10,6 @@ use super::super::CONTINUATION_MARKER;
 use super::super::{convert, gen};
 use super::common::*;
 
-type SchemaRef = Arc<Schema>;
 type ArrayRef = Arc<dyn Array>;
 
 /// Arrow Stream reader
@@ -19,7 +18,7 @@ pub struct StreamReader<R: Read> {
     reader: BufReader<R>,
 
     /// The schema that is read from the stream's first message
-    schema: SchemaRef,
+    schema: Schema,
 
     /// Optional dictionaries for each schema field.
     ///
@@ -69,15 +68,15 @@ impl<R: Read> StreamReader<R> {
 
         Ok(Self {
             reader,
-            schema: Arc::new(schema),
+            schema,
             finished: false,
             dictionaries_by_field,
         })
     }
 
     /// Return the schema of the stream
-    pub fn schema(&self) -> SchemaRef {
-        self.schema.clone()
+    pub fn schema(&self) -> &Schema {
+        &self.schema
     }
 
     /// Check if the stream is finished
@@ -145,7 +144,7 @@ impl<R: Read> StreamReader<R> {
 
                 read_record_batch(
                     batch,
-                    self.schema(),
+                    self.schema().clone(),
                     &self.dictionaries_by_field,
                     &mut reader,
                     0,
@@ -191,8 +190,8 @@ impl<R: Read> Iterator for StreamReader<R> {
 }
 
 impl<R: Read> RecordBatchReader for StreamReader<R> {
-    fn schema(&self) -> Arc<Schema> {
-        self.schema.clone()
+    fn schema(&self) -> &Schema {
+        &self.schema
     }
 }
 
@@ -217,7 +216,7 @@ mod tests {
         // read expected JSON output
         let (schema, batches) = read_gzip_json(version, file_name);
 
-        assert_eq!(&schema, reader.schema().as_ref());
+        assert_eq!(&schema, reader.schema());
 
         batches
             .iter()

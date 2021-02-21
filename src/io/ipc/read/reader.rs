@@ -15,7 +15,6 @@ use super::super::{convert, gen};
 use super::super::{ARROW_MAGIC, CONTINUATION_MARKER};
 use super::common::*;
 
-type SchemaRef = Arc<Schema>;
 type ArrayRef = Arc<dyn Array>;
 
 /// Arrow File reader
@@ -24,7 +23,7 @@ pub struct FileReader<R: Read + Seek> {
     reader: BufReader<R>,
 
     /// The schema that is read from the file header
-    schema: SchemaRef,
+    schema: Schema,
 
     /// The blocks in the file
     ///
@@ -136,7 +135,7 @@ impl<R: Read + Seek> FileReader<R> {
 
         Ok(Self {
             reader,
-            schema: Arc::new(schema),
+            schema,
             blocks: blocks.to_vec(),
             current_block: 0,
             total_blocks,
@@ -151,8 +150,8 @@ impl<R: Read + Seek> FileReader<R> {
     }
 
     /// Return the schema of the file
-    pub fn schema(&self) -> SchemaRef {
-        self.schema.clone()
+    pub fn schema(&self) -> &Schema {
+        &self.schema
     }
 
     /// Read a specific record batch
@@ -209,7 +208,7 @@ impl<R: Read + Seek> FileReader<R> {
                 })?;
                 read_record_batch(
                     batch,
-                    self.schema(),
+                    self.schema().clone(),
                     &self.dictionaries_by_field,
                     &mut self.reader,
                     block.offset() as u64 + block.metaDataLength() as u64,
@@ -239,8 +238,8 @@ impl<R: Read + Seek> Iterator for FileReader<R> {
 }
 
 impl<R: Read + Seek> RecordBatchReader for FileReader<R> {
-    fn schema(&self) -> SchemaRef {
-        self.schema.clone()
+    fn schema(&self) -> &Schema {
+        &self.schema
     }
 }
 
@@ -267,7 +266,7 @@ mod tests {
         // read expected JSON output
         let (schema, batches) = read_gzip_json(version, file_name);
 
-        assert_eq!(&schema, reader.schema().as_ref());
+        assert_eq!(&schema, reader.schema());
 
         batches
             .iter()

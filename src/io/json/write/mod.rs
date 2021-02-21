@@ -7,7 +7,6 @@
 //! Serialize record batches into array of JSON objects:
 //!
 //! ```
-//! use std::sync::Arc;
 //!
 //! use arrow::array::Int32Array;
 //! use arrow::datatypes::{DataType, Field, Schema};
@@ -16,7 +15,7 @@
 //!
 //! let schema = Schema::new(vec![Field::new("a", DataType::Int32, false)]);
 //! let a = Int32Array::from(vec![1, 2, 3]);
-//! let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(a)]).unwrap();
+//! let batch = RecordBatch::try_new(schema, vec![Arc::new(a)]).unwrap();
 //!
 //! let json_rows = json::writer::record_batches_to_json_rows(&[batch]);
 //! assert_eq!(
@@ -28,7 +27,6 @@
 //! Serialize record batches into line-delimited JSON bytes:
 //!
 //! ```
-//! use std::sync::Arc;
 //!
 //! use arrow::array::Int32Array;
 //! use arrow::datatypes::{DataType, Field, Schema};
@@ -37,7 +35,7 @@
 //!
 //! let schema = Schema::new(vec![Field::new("a", DataType::Int32, false)]);
 //! let a = Int32Array::from(vec![1, 2, 3]);
-//! let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(a)]).unwrap();
+//! let batch = RecordBatch::try_new(schema, vec![Arc::new(a)]).unwrap();
 //!
 //! let buf = Vec::new();
 //! let mut writer = json::Writer::new(buf);
@@ -71,7 +69,7 @@ mod tests {
             Primitive::<i32>::from([Some(1), Some(2), Some(3), None, Some(5)]).to(DataType::Int32);
         let b = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c"), Some("d"), None]);
 
-        let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(a), Arc::new(b)]).unwrap();
+        let batch = RecordBatch::try_new(schema, vec![Arc::new(a), Arc::new(b)]).unwrap();
 
         let mut buf = Vec::new();
         {
@@ -121,8 +119,7 @@ mod tests {
 
         let c2 = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c")]);
 
-        let batch =
-            RecordBatch::try_new(Arc::new(schema), vec![Arc::new(c1), Arc::new(c2)]).unwrap();
+        let batch = RecordBatch::try_new(schema, vec![Arc::new(c1), Arc::new(c2)]).unwrap();
 
         let mut buf = Vec::new();
         {
@@ -159,7 +156,7 @@ mod tests {
 
         let b = Primitive::from_slice(&vec![1, 2, 3, 4, 5]).to(DataType::Int32);
 
-        let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(a), Arc::new(b)]).unwrap();
+        let batch = RecordBatch::try_new(schema, vec![Arc::new(a), Arc::new(b)]).unwrap();
 
         let mut buf = Vec::new();
         {
@@ -199,8 +196,7 @@ mod tests {
 
         let c2 = Utf8Array::<i32>::from(&vec![Some("foo"), Some("bar"), None]);
 
-        let batch =
-            RecordBatch::try_new(Arc::new(schema), vec![Arc::new(c1), Arc::new(c2)]).unwrap();
+        let batch = RecordBatch::try_new(schema, vec![Arc::new(c1), Arc::new(c2)]).unwrap();
 
         let mut buf = Vec::new();
         {
@@ -263,8 +259,7 @@ mod tests {
 
         let c2 = Primitive::<i32>::from_slice(&[1, 2, 3]).to(DataType::Int32);
 
-        let batch =
-            RecordBatch::try_new(Arc::new(schema), vec![Arc::new(c1), Arc::new(c2)]).unwrap();
+        let batch = RecordBatch::try_new(schema, vec![Arc::new(c1), Arc::new(c2)]).unwrap();
 
         let mut buf = Vec::new();
         {

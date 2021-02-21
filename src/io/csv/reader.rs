@@ -19,15 +19,13 @@ use super::{
     parser::{DefaultParser, GenericParser},
 };
 
-type SchemaRef = Arc<Schema>;
-
 // optional bounds of the reader, of the form (min line, max line).
 type Bounds = Option<(usize, usize)>;
 
 /// CSV file reader
 pub struct Reader<R: Read, P: GenericParser<ArrowError>> {
     /// Explicit schema for the CSV file
-    schema: SchemaRef,
+    schema: Schema,
     /// Optional projection for which columns to load (zero-based column indices)
     projection: Option<Vec<usize>>,
     /// File reader
@@ -67,7 +65,7 @@ impl<R: Read, P: GenericParser<ArrowError>> Reader<R, P> {
     /// `ReaderBuilder`.
     pub fn new(
         reader: R,
-        schema: SchemaRef,
+        schema: Schema,
         has_header: bool,
         delimiter: Option<u8>,
         batch_size: usize,
@@ -75,6 +73,17 @@ impl<R: Read, P: GenericParser<ArrowError>> Reader<R, P> {
         projection: Option<Vec<usize>>,
         parser: P,
     ) -> Self {
+        let schema = match &projection {
+            Some(projection) => {
+                let fields = schema.fields();
+                let projected_fields: Vec<Field> =
+                    projection.iter().map(|i| fields[*i].clone()).collect();
+
+                Schema::new(projected_fields)
+            }
+            None => schema,
+        };
+
         Self::from_reader(
             reader, schema, has_header, delimiter, batch_size, bounds, projection, parser,
         )
@@ -82,17 +91,8 @@ impl<R: Read, P: GenericParser<ArrowError>> Reader<R, P> {
 
     /// Returns the schema of the reader, useful for getting the schema without reading
     /// record batches
-    pub fn schema(&self) -> SchemaRef {
-        match &self.projection {
-            Some(projection) => {
-                let fields = self.schema.fields();
-                let projected_fields: Vec<Field> =
-                    projection.iter().map(|i| fields[*i].clone()).collect();
-
-                Arc::new(Schema::new(projected_fields))
-            }
-            None => self.schema.clone(),
-        }
+    pub fn schema(&self) -> &Schema {
+        &self.schema
     }
 
     /// Create a new CsvReader from a Reader
@@ -101,7 +101,7 @@ impl<R: Read, P: GenericParser<ArrowError>> Reader<R, P> {
     /// csv reader.
     pub fn from_reader(
         reader: R,
-        schema: SchemaRef,
+        schema: Schema,
         has_header: bool,
         delimiter: Option<u8>,
         batch_size: usize,
@@ -255,7 +255,7 @@ fn parse<P: GenericParser<ArrowError>>(
 
     let projected_fields: Vec<Field> = projection.iter().map(|i| fields[*i].clone()).collect();
 
-    let projected_schema = Arc::new(Schema::new(projected_fields));
+    let projected_schema = Schema::new(projected_fields);
 
     arrays.and_then(|arr| RecordBatch::try_new(projected_schema, arr))
 }
@@ -301,7 +301,7 @@ pub struct ReaderBuilder {
     ///
     /// If the schema is not supplied, the reader will try to infer the schema
     /// based on the CSV structure.
-    schema: Option<SchemaRef>,
+    schema: Option<Schema>,
     /// Whether the file has headers or not
     ///
     /// If schema inference is run on a file with no headers, default column names
@@ -366,7 +366,7 @@ impl ReaderBuilder {
     }
 
     /// Set the CSV file's schema
-    pub fn with_schema(mut self, schema: SchemaRef) -> Self {
+    pub fn with_schema(mut self, schema: Schema) -> Self {
         self.schema = Some(schema);
         self
     }
@@ -418,7 +418,7 @@ impl ReaderBuilder {
                     &infer,
                 )?;
 
-                Arc::new(inferred_schema)
+                inferred_schema
             }
         };
         Ok(Reader::from_reader(

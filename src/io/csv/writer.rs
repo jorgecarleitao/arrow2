@@ -394,7 +394,7 @@ mod tests {
             .to(DataType::Time32(TimeUnit::Second));
 
         let batch = RecordBatch::try_new(
-            Arc::new(schema),
+            schema,
             vec![
                 Arc::new(c1),
                 Arc::new(c2),
@@ -455,7 +455,7 @@ sed do eiusmod tempor,-556132.25,1,,2019-04-18T02:45:55.555000000,23:46:03
             .to(DataType::Time32(TimeUnit::Second));
 
         let batch = RecordBatch::try_new(
-            Arc::new(schema),
+            schema,
             vec![
                 Arc::new(c1),
                 Arc::new(c2),
@@ -516,7 +516,7 @@ sed do eiusmod tempor,-556132.25,1,,2019-04-18T02:45:55.555000000,23:46:03
             .to(DataType::Time32(TimeUnit::Second));
 
         let batch = RecordBatch::try_new(
-            Arc::new(schema),
+            schema,
             vec![
                 Arc::new(c1),
                 Arc::new(c2),

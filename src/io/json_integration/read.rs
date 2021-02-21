@@ -319,5 +319,5 @@ pub fn to_record_batch(
         .map(|(field, json_col)| to_array(field, &json_col, json_dictionaries))
         .collect::<Result<Vec<_>>>()?;
 
-    RecordBatch::try_new(Arc::new(schema.clone()), columns)
+    RecordBatch::try_new(schema.clone(), columns)
 }

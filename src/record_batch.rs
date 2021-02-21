@@ -24,7 +24,6 @@ use crate::array::*;
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 
-type SchemaRef = Arc<Schema>;
 type ArrayRef = Arc<dyn Array>;
 
 /// A two-dimensional batch of column-oriented data with a defined
@@ -41,7 +40,7 @@ type ArrayRef = Arc<dyn Array>;
 /// [JSON reader](crate::json::Reader).
 #[derive(Clone, Debug, PartialEq)]
 pub struct RecordBatch {
-    schema: SchemaRef,
+    schema: Schema,
     columns: Vec<ArrayRef>,
 }
 
@@ -77,7 +76,7 @@ impl RecordBatch {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn try_new(schema: SchemaRef, columns: Vec<ArrayRef>) -> Result<Self> {
+    pub fn try_new(schema: Schema, columns: Vec<ArrayRef>) -> Result<Self> {
         let options = RecordBatchOptions::default();
         Self::validate_new_batch(&schema, columns.as_slice(), &options)?;
         Ok(RecordBatch { schema, columns })
@@ -88,7 +87,7 @@ impl RecordBatch {
     ///
     /// See [`RecordBatch::try_new`] for the expected conditions.
     pub fn try_new_with_options(
-        schema: SchemaRef,
+        schema: Schema,
         columns: Vec<ArrayRef>,
         options: &RecordBatchOptions,
     ) -> Result<Self> {
@@ -97,7 +96,7 @@ impl RecordBatch {
     }
 
     /// Creates a new empty [`RecordBatch`].
-    pub fn new_empty(schema: SchemaRef) -> Self {
+    pub fn new_empty(schema: Schema) -> Self {
         let columns = schema
             .fields()
             .iter()
@@ -109,7 +108,7 @@ impl RecordBatch {
     /// Validate the schema and columns using [`RecordBatchOptions`]. Returns an error
     /// if any validation check fails.
     fn validate_new_batch(
-        schema: &SchemaRef,
+        schema: &Schema,
         columns: &[ArrayRef],
         options: &RecordBatchOptions,
     ) -> Result<()> {
@@ -170,8 +169,8 @@ impl RecordBatch {
     }
 
     /// Returns the [`Schema`](crate::datatypes::Schema) of the record batch.
-    pub fn schema(&self) -> SchemaRef {
-        self.schema.clone()
+    pub fn schema(&self) -> &Schema {
+        &self.schema
     }
 
     /// Returns the number of columns in the record batch.
@@ -268,10 +267,7 @@ impl From<&StructArray> for RecordBatch {
         if let DataType::Struct(fields) = struct_array.data_type() {
             let schema = Schema::new(fields.clone());
             let columns = struct_array.values().to_vec();
-            RecordBatch {
-                schema: Arc::new(schema),
-                columns,
-            }
+            RecordBatch { schema, columns }
         } else {
             unreachable!("unable to get datatype as struct")
         }
@@ -298,7 +294,7 @@ pub trait RecordBatchReader: Iterator<Item = Result<RecordBatch>> {
     ///
     /// Implementation of this trait should guarantee that all `RecordBatch`'s returned by this
     /// reader should have the same schema as returned from this method.
-    fn schema(&self) -> SchemaRef;
+    fn schema(&self) -> &Schema;
 
     /// Reads the next `RecordBatch`.
     #[deprecated(
