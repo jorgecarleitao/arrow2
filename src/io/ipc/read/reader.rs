@@ -20,7 +20,7 @@
 //! The `FileReader` and `StreamReader` have similar interfaces,
 //! however the `FileReader` expects a reader that supports `Seek`ing
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::io::{BufReader, Read, Seek, SeekFrom};
 use std::sync::Arc;
 
@@ -42,21 +42,24 @@ pub fn read_record_batch<R: Read + Seek>(
     schema: Arc<Schema>,
     dictionaries: &[Option<ArrayRef>],
     reader: &mut R,
+    block_offset: u64,
 ) -> Result<RecordBatch> {
     let buffers = batch.buffers().ok_or_else(|| {
         ArrowError::IoError("Unable to get buffers from IPC RecordBatch".to_string())
     })?;
-    let mut buffers = buffers.to_vec();
+    let mut buffers: VecDeque<&gen::Schema::Buffer> = buffers.into_iter().collect();
     let field_nodes = batch.nodes().ok_or_else(|| {
         ArrowError::IoError("Unable to get field nodes from IPC RecordBatch".to_string())
     })?;
 
+    // This is a bug fix: we should have one dictionary per node, not schema field
+    let dictionaries = dictionaries.into_iter().chain(std::iter::repeat(&None));
+
     let mut field_nodes = field_nodes
         .into_iter()
-        .zip(dictionaries.into_iter())
-        .collect::<Vec<_>>();
+        .zip(dictionaries)
+        .collect::<VecDeque<_>>();
 
-    // keep track of index as lists require more than one node
     let arrays = schema
         .fields()
         .iter()
@@ -66,6 +69,7 @@ pub fn read_record_batch<R: Read + Seek>(
                 field.data_type().clone(),
                 &mut buffers,
                 reader,
+                block_offset,
             )
         })
         .collect::<std::io::Result<Vec<_>>>()?;
@@ -80,6 +84,7 @@ fn read_dictionary<R: Read + Seek>(
     schema: &Schema,
     dictionaries_by_field: &mut [Option<ArrayRef>],
     reader: &mut R,
+    block_offset: u64,
 ) -> Result<()> {
     if batch.isDelta() {
         return Err(ArrowError::IoError(
@@ -109,6 +114,7 @@ fn read_dictionary<R: Read + Seek>(
                 Arc::new(schema),
                 dictionaries_by_field,
                 reader,
+                block_offset,
             )?;
             Some(record_batch.column(0).clone())
         }
@@ -230,8 +236,15 @@ impl<R: Read + Seek> FileReader<R> {
 
             match message.header_type() {
                 gen::Message::MessageHeader::DictionaryBatch => {
+                    let block_offset = block.offset() as u64 + block.metaDataLength() as u64;
                     let batch = message.header_as_dictionary_batch().unwrap();
-                    read_dictionary(batch, &schema, &mut dictionaries_by_field, &mut reader)?;
+                    read_dictionary(
+                        batch,
+                        &schema,
+                        &mut dictionaries_by_field,
+                        &mut reader,
+                        block_offset,
+                    )?;
                 }
                 t => {
                     return Err(ArrowError::IoError(format!(
@@ -321,6 +334,7 @@ impl<R: Read + Seek> FileReader<R> {
                     self.schema(),
                     &self.dictionaries_by_field,
                     &mut self.reader,
+                    block.offset() as u64 + block.metaDataLength() as u64,
                 )
                 .map(Some)
             }
@@ -404,6 +418,7 @@ impl<R: Read> StreamReader<R> {
         let schema = convert::fb_to_schema(ipc_schema);
 
         // Create an array of optional dictionary value arrays, one per field.
+        // todo: this is wrong for nested types, as there must be one dictionary per node, not per field
         let dictionaries_by_field = vec![None; schema.fields().len()];
 
         Ok(Self {
@@ -488,6 +503,7 @@ impl<R: Read> StreamReader<R> {
                     self.schema(),
                     &self.dictionaries_by_field,
                     &mut reader,
+                    0,
                 )
                 .map(Some)
             }
@@ -508,6 +524,7 @@ impl<R: Read> StreamReader<R> {
                     &self.schema,
                     &mut self.dictionaries_by_field,
                     &mut reader,
+                    0,
                 )?;
 
                 // read the next message until we encounter a RecordBatch
@@ -538,149 +555,83 @@ impl<R: Read> RecordBatchReader for StreamReader<R> {
 
 #[cfg(test)]
 mod tests {
-    use crate::io::json_integration::ArrowJson;
+    use crate::io::json_integration::{to_record_batch, ArrowJson};
 
     use super::*;
 
-    use std::fs::File;
+    use std::{convert::TryFrom, fs::File};
 
     use flate2::read::GzDecoder;
 
-    //use crate::util::integration_util::*;
-
-    #[test]
-    fn read_generated_files_014() {
-        let testdata = crate::util::test_util::arrow_test_data();
-        let version = "0.14.1";
-        // the test is repetitive, thus we can read all supported files at once
-        let paths = vec![
-            "generated_interval",
-            "generated_datetime",
-            "generated_dictionary",
-            "generated_nested",
-            "generated_primitive_no_batches",
-            "generated_primitive_zerolength",
-            "generated_primitive",
-            "generated_decimal",
-        ];
-        paths.iter().for_each(|path| {
-            let file = File::open(format!(
-                "{}/arrow-ipc-stream/integration/{}/{}.arrow_file",
-                testdata, version, path
-            ))
-            .unwrap();
-
-            let mut reader = FileReader::try_new(file).unwrap();
-
-            // read expected JSON output
-            let arrow_json = read_gzip_json(version, path);
-            assert!(arrow_json.equals_reader(&mut reader));
-        });
-    }
-
-    #[test]
-    #[should_panic(expected = "Big Endian is not supported for Decimal!")]
-    fn read_decimal_be_file_should_panic() {
+    fn test_file(version: &str, file_name: &str) {
         let testdata = crate::util::test_util::arrow_test_data();
         let file = File::open(format!(
-            "{}/arrow-ipc-stream/integration/1.0.0-bigendian/generated_decimal.arrow_file",
-            testdata
+            "{}/arrow-ipc-stream/integration/{}/{}.arrow_file",
+            testdata, version, file_name
         ))
         .unwrap();
-        FileReader::try_new(file).unwrap();
+
+        let reader = FileReader::try_new(file).unwrap();
+
+        // read expected JSON output
+        let (schema, batches) = read_gzip_json(version, file_name);
+
+        assert_eq!(&schema, reader.schema().as_ref());
+
+        batches
+            .iter()
+            .zip(reader.map(|x| x.unwrap()))
+            .for_each(|(lhs, rhs)| {
+                assert_eq!(lhs, &rhs);
+            });
     }
 
     #[test]
-    fn read_generated_be_files_should_work() {
-        // complementary to the previous test
-        let testdata = crate::util::test_util::arrow_test_data();
-        let paths = vec![
-            "generated_interval",
-            "generated_datetime",
-            "generated_dictionary",
-            "generated_nested",
-            "generated_null_trivial",
-            "generated_null",
-            "generated_primitive_no_batches",
-            "generated_primitive_zerolength",
-            "generated_primitive",
-        ];
-        paths.iter().for_each(|path| {
-            let file = File::open(format!(
-                "{}/arrow-ipc-stream/integration/1.0.0-bigendian/{}.arrow_file",
-                testdata, path
-            ))
-            .unwrap();
-
-            FileReader::try_new(file).unwrap();
-        });
+    fn read_generated_100_primitive() {
+        test_file("1.0.0-littleendian", "generated_primitive");
     }
 
     #[test]
-    fn read_generated_streams_014() {
-        let testdata = crate::util::test_util::arrow_test_data();
-        let version = "0.14.1";
-        // the test is repetitive, thus we can read all supported files at once
-        let paths = vec![
-            "generated_interval",
-            "generated_datetime",
-            "generated_dictionary",
-            "generated_nested",
-            "generated_primitive_no_batches",
-            "generated_primitive_zerolength",
-            "generated_primitive",
-            "generated_decimal",
-        ];
-        paths.iter().for_each(|path| {
-            let file = File::open(format!(
-                "{}/arrow-ipc-stream/integration/{}/{}.stream",
-                testdata, version, path
-            ))
-            .unwrap();
-
-            let mut reader = StreamReader::try_new(file).unwrap();
-
-            // read expected JSON output
-            let arrow_json = read_gzip_json(version, path);
-            assert!(arrow_json.equals_reader(&mut reader));
-            // the next batch must be empty
-            assert!(reader.next().is_none());
-            // the stream must indicate that it's finished
-            assert!(reader.is_finished());
-        });
+    fn read_generated_100_datetime() {
+        test_file("1.0.0-littleendian", "generated_datetime");
     }
 
     #[test]
-    fn read_generated_files_100() {
-        let testdata = crate::util::test_util::arrow_test_data();
-        let version = "1.0.0-littleendian";
-        // the test is repetitive, thus we can read all supported files at once
-        let paths = vec![
-            "generated_interval",
-            "generated_datetime",
-            "generated_dictionary",
-            "generated_nested",
-            "generated_null_trivial",
-            "generated_null",
-            "generated_primitive_no_batches",
-            "generated_primitive_zerolength",
-            "generated_primitive",
-        ];
-        paths.iter().for_each(|path| {
-            let file = File::open(format!(
-                "{}/arrow-ipc-stream/integration/{}/{}.arrow_file",
-                testdata, version, path
-            ))
-            .unwrap();
-
-            let mut reader = FileReader::try_new(file).unwrap();
-
-            // read expected JSON output
-            let arrow_json = read_gzip_json(version, path);
-            assert!(arrow_json.equals_reader(&mut reader));
-        });
+    fn read_generated_100_null_trivial() {
+        test_file("1.0.0-littleendian", "generated_null_trivial");
     }
 
+    #[test]
+    fn read_generated_100_null() {
+        test_file("1.0.0-littleendian", "generated_null");
+    }
+
+    #[test]
+    fn read_generated_100_primitive_zerolength() {
+        test_file("1.0.0-littleendian", "generated_primitive_zerolength");
+    }
+
+    #[test]
+    fn read_generated_100_primitive_primitive_no_batches() {
+        test_file("1.0.0-littleendian", "generated_primitive_no_batches");
+    }
+
+    #[test]
+    fn read_generated_100_dictionary() {
+        test_file("1.0.0-littleendian", "generated_dictionary");
+    }
+
+    #[test]
+    fn read_generated_100_nested() {
+        test_file("1.0.0-littleendian", "generated_nested");
+    }
+
+    #[test]
+    fn read_generated_100_interval() {
+        test_file("1.0.0-littleendian", "generated_interval");
+    }
+
+    /*
     #[test]
     fn read_generated_streams_100() {
         let testdata = crate::util::test_util::arrow_test_data();
@@ -766,13 +717,14 @@ mod tests {
         })
     }
     */
+    */
 
     /// Read gzipped JSON file
-    fn read_gzip_json(version: &str, path: &str) -> ArrowJson {
+    fn read_gzip_json(version: &str, file_name: &str) -> (Schema, Vec<RecordBatch>) {
         let testdata = crate::util::test_util::arrow_test_data();
         let file = File::open(format!(
             "{}/arrow-ipc-stream/integration/{}/{}.json.gz",
-            testdata, version, path
+            testdata, version, file_name
         ))
         .unwrap();
         let mut gz = GzDecoder::new(&file);
@@ -780,6 +732,26 @@ mod tests {
         gz.read_to_string(&mut s).unwrap();
         // convert to Arrow JSON
         let arrow_json: ArrowJson = serde_json::from_str(&s).unwrap();
-        arrow_json
+
+        let schema = serde_json::to_value(arrow_json.schema).unwrap();
+        let schema = Schema::try_from(&schema).unwrap();
+
+        // read dictionaries
+        let mut dictionaries = HashMap::new();
+        if let Some(dicts) = &arrow_json.dictionaries {
+            for json_dict in dicts {
+                // TODO: convert to a concrete Arrow type
+                dictionaries.insert(json_dict.id, json_dict);
+            }
+        }
+
+        let batches = arrow_json
+            .batches
+            .iter()
+            .map(|batch| to_record_batch(&schema, batch, &dictionaries))
+            .collect::<Result<Vec<_>>>()
+            .unwrap();
+
+        (schema, batches)
     }
 }

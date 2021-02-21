@@ -4,14 +4,18 @@ use hex;
 use num::NumCast;
 use serde_json::Value;
 
-use crate::error::{ArrowError, Result};
 use crate::{array::*, buffer::NativeType};
 use crate::{
     buffer::{Bitmap, Buffer},
     datatypes::{DataType, Field, IntervalUnit},
 };
+use crate::{
+    datatypes::Schema,
+    error::{ArrowError, Result},
+    record_batch::RecordBatch,
+};
 
-use super::{ArrowJsonColumn, ArrowJsonDictionaryBatch};
+use super::{ArrowJsonBatch, ArrowJsonColumn, ArrowJsonDictionaryBatch};
 
 fn to_validity(validity: &Option<Vec<u8>>) -> Option<Bitmap> {
     validity
@@ -38,13 +42,34 @@ fn to_primitive<T: NativeType + NumCast>(
     data_type: DataType,
 ) -> PrimitiveArray<T> {
     let validity = to_validity(&json_col.validity);
-    let values = json_col
-        .data
-        .as_ref()
-        .unwrap()
-        .iter()
-        .map(|value| value.as_f64().and_then(num::cast::cast::<f64, T>).unwrap())
-        .collect();
+    let values = if data_type == DataType::Float64 || data_type == DataType::Float32 {
+        json_col
+            .data
+            .as_ref()
+            .unwrap()
+            .iter()
+            .map(|value| value.as_f64().and_then(num::cast::cast::<f64, T>).unwrap())
+            .collect()
+    } else {
+        json_col
+            .data
+            .as_ref()
+            .unwrap()
+            .iter()
+            .map(|value| match value {
+                Value::Number(x) => x.as_i64().and_then(num::cast::cast::<i64, T>).unwrap(),
+                Value::String(x) => x
+                    .parse::<i64>()
+                    .ok()
+                    .and_then(num::cast::cast::<i64, T>)
+                    .unwrap(),
+                _ => {
+                    println!("{:#?}", value);
+                    panic!()
+                }
+            })
+            .collect()
+    };
 
     PrimitiveArray::<T>::from_data(data_type, values, validity)
 }
@@ -80,7 +105,7 @@ fn to_utf8<O: Offset>(json_col: &ArrowJsonColumn) -> Arc<dyn Array> {
 fn to_list<O: Offset>(
     json_col: &ArrowJsonColumn,
     data_type: DataType,
-    dictionaries: Option<&HashMap<i64, ArrowJsonDictionaryBatch>>,
+    dictionaries: &HashMap<i64, &ArrowJsonDictionaryBatch>,
 ) -> Result<Arc<dyn Array>> {
     let validity = json_col
         .validity
@@ -110,23 +135,15 @@ fn to_list<O: Offset>(
 fn to_dictionary<K: DictionaryKey>(
     field: &Field,
     json_col: &ArrowJsonColumn,
-    dictionaries: Option<&HashMap<i64, ArrowJsonDictionaryBatch>>,
+    dictionaries: &HashMap<i64, &ArrowJsonDictionaryBatch>,
 ) -> Result<Arc<dyn Array>> {
     let dict_id = field.dict_id().ok_or_else(|| {
         ArrowError::JsonError(format!("Unable to find dict_id for field {:?}", field))
     })?;
     // find dictionary
-    let dictionary = dictionaries
-        .ok_or_else(|| {
-            ArrowError::JsonError(format!(
-                "Unable to find any dictionaries for field {:?}",
-                field
-            ))
-        })?
-        .get(&dict_id)
-        .ok_or_else(|| {
-            ArrowError::JsonError(format!("Unable to find any dictionary id {}", dict_id))
-        })?;
+    let dictionary = dictionaries.get(&dict_id).ok_or_else(|| {
+        ArrowError::JsonError(format!("Unable to find any dictionary id {}", dict_id))
+    })?;
 
     let keys = to_primitive(json_col, K::DATA_TYPE);
 
@@ -134,7 +151,7 @@ fn to_dictionary<K: DictionaryKey>(
     let data_type = DictionaryArray::<K>::get_child(field.data_type());
     // note: not enough info on nullability of dictionary
     let value_field = Field::new("value", data_type.clone(), true);
-    let values = to_array(&value_field, &dictionary.data.columns[0], None)?;
+    let values = to_array(&value_field, &dictionary.data.columns[0], &HashMap::new())?;
 
     Ok(Arc::new(DictionaryArray::<K>::from_data(keys, values)))
 }
@@ -143,7 +160,7 @@ fn to_dictionary<K: DictionaryKey>(
 pub fn to_array(
     field: &Field,
     json_col: &ArrowJsonColumn,
-    dictionaries: Option<&HashMap<i64, ArrowJsonDictionaryBatch>>,
+    dictionaries: &HashMap<i64, &ArrowJsonDictionaryBatch>,
 ) -> Result<Arc<dyn Array>> {
     let data_type = field.data_type();
     match data_type {
@@ -192,22 +209,21 @@ pub fn to_array(
         DataType::Utf8 => Ok(to_utf8::<i32>(json_col)),
         DataType::LargeUtf8 => Ok(to_utf8::<i64>(json_col)),
         DataType::FixedSizeBinary(_) => {
-            let array = json_col
-                .validity
+            let validity = to_validity(&json_col.validity);
+
+            let values = json_col
+                .data
                 .as_ref()
                 .unwrap()
                 .iter()
-                .zip(json_col.data.as_ref().unwrap())
-                .map(|(is_valid, value)| {
-                    if *is_valid == 1 {
-                        value.as_str().and_then(|x| hex::decode(x).ok())
-                    } else {
-                        None
-                    }
-                })
-                .collect::<FixedSizeBinaryPrimitive>()
-                .to(data_type.clone());
-            Ok(Arc::new(array))
+                .map(|value| value.as_str().map(|x| hex::decode(x).unwrap()).unwrap())
+                .flatten()
+                .collect();
+            Ok(Arc::new(FixedSizeBinaryArray::from_data(
+                data_type.clone(),
+                values,
+                validity,
+            )))
         }
 
         DataType::List(_) => to_list::<i32>(json_col, data_type.clone(), dictionaries),
@@ -253,4 +269,19 @@ pub fn to_array(
             t
         ))),
     }
+}
+
+pub fn to_record_batch(
+    schema: &Schema,
+    json_batch: &ArrowJsonBatch,
+    json_dictionaries: &HashMap<i64, &ArrowJsonDictionaryBatch>,
+) -> Result<RecordBatch> {
+    let columns = schema
+        .fields()
+        .iter()
+        .zip(&json_batch.columns)
+        .map(|(field, json_col)| to_array(field, &json_col, json_dictionaries))
+        .collect::<Result<Vec<_>>>()?;
+
+    RecordBatch::try_new(Arc::new(schema.clone()), columns)
 }

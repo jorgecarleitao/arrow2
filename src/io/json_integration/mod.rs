@@ -22,14 +22,11 @@
 use serde_derive::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
-use crate::array::*;
 use crate::datatypes::*;
-use crate::error::Result;
 use crate::io::json::ToJson;
-use crate::record_batch::{RecordBatch, RecordBatchReader};
 
 mod read;
-pub use read::to_array;
+pub use read::to_record_batch;
 
 /// A struct that represents an Arrow file with a schema and record batches
 #[derive(Deserialize, Serialize, Debug)]
