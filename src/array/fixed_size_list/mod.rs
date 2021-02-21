@@ -42,12 +42,15 @@ impl FixedSizeListArray {
 
     pub fn slice(&self, offset: usize, length: usize) -> Self {
         let validity = self.validity.clone().map(|x| x.slice(offset, length));
-        let offset = offset * self.size as usize;
-        let length = offset * self.size as usize;
+        let values = self
+            .values
+            .clone()
+            .slice(offset * self.size as usize, length * self.size as usize)
+            .into();
         Self {
             data_type: self.data_type.clone(),
             size: self.size,
-            values: self.values.clone().slice(offset, length).into(),
+            values,
             validity,
             offset: self.offset + offset,
         }
@@ -60,26 +63,24 @@ impl FixedSizeListArray {
 
     #[inline]
     pub fn value(&self, i: usize) -> Box<dyn Array> {
-        self.values.slice(i * self.size as usize, 1)
+        self.values
+            .slice(i * self.size as usize, self.size as usize)
     }
 }
 
 impl FixedSizeListArray {
-    #[inline]
-    pub(crate) fn get_child_field(data_type: &DataType) -> (&Field, &i32) {
-        if let DataType::FixedSizeList(field, size) = data_type {
-            (field.as_ref(), size)
-        } else {
-            panic!("Wrong DataType")
-        }
-    }
-
     pub(crate) fn get_child_and_size(data_type: &DataType) -> (&DataType, &i32) {
         if let DataType::FixedSizeList(field, size) = data_type {
             (field.data_type(), size)
         } else {
             panic!("Wrong DataType")
         }
+    }
+
+    #[inline]
+    pub fn default_datatype(data_type: DataType, size: usize) -> DataType {
+        let field = Box::new(Field::new("item", data_type, true));
+        DataType::FixedSizeList(field, size as i32)
     }
 }
 
@@ -124,4 +125,6 @@ unsafe impl ToFFI for FixedSizeListArray {
     }
 }
 
+mod from;
 pub(crate) mod iterator;
+pub use from::*;

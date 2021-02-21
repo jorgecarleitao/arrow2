@@ -48,15 +48,19 @@ impl<O: Offset> ListArray<O> {
         }
     }
 
-    /// Returns the element at index `i` as &str
+    /// Returns the element at index `i`
     #[inline]
     pub fn value(&self, i: usize) -> Box<dyn Array> {
-        let offsets = self.offsets.as_slice();
-        let offset = offsets[i];
-        let offset_1 = offsets[i + 1];
-        let length = (offset_1 - offset).to_usize().unwrap();
+        if self.is_null(i) {
+            new_empty_array(self.values.data_type().clone())
+        } else {
+            let offsets = self.offsets.as_slice();
+            let offset = offsets[i];
+            let offset_1 = offsets[i + 1];
+            let length = (offset_1 - offset).to_usize().unwrap();
 
-        self.values.slice(offset.to_usize().unwrap(), length)
+            self.values.slice(offset.to_usize().unwrap(), length)
+        }
     }
 
     /// Returns the element at index `i` as &str

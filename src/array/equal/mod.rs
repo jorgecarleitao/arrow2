@@ -7,11 +7,13 @@ use crate::{
 
 use super::{
     primitive::PrimitiveArray, Array, BinaryArray, BooleanArray, DictionaryArray, DictionaryKey,
-    ListArray, NullArray, Offset, StructArray, Utf8Array,
+    FixedSizeBinaryArray, FixedSizeListArray, ListArray, NullArray, Offset, StructArray, Utf8Array,
 };
 
 mod boolean;
 mod dictionary;
+mod fixed_size_binary;
+mod fixed_size_list;
 mod list;
 mod null;
 mod primitive;
@@ -19,15 +21,15 @@ mod struct_;
 mod utils;
 mod variable_size;
 
-impl PartialEq for &dyn Array {
+impl PartialEq for dyn Array {
     fn eq(&self, other: &Self) -> bool {
-        equal(*self, *other)
+        equal(self, other)
     }
 }
 
-impl<T: NativeType> PartialEq<&dyn Array> for PrimitiveArray<T> {
-    fn eq(&self, other: &&dyn Array) -> bool {
-        equal(self, *other)
+impl<T: NativeType> PartialEq<dyn Array> for PrimitiveArray<T> {
+    fn eq(&self, other: &dyn Array) -> bool {
+        equal(self, other)
     }
 }
 
@@ -317,10 +319,18 @@ fn equal_values(
             }
             _ => unreachable!(),
         },
+        DataType::FixedSizeBinary(_) => {
+            let lhs = lhs.as_any().downcast_ref::<FixedSizeBinaryArray>().unwrap();
+            let rhs = rhs.as_any().downcast_ref::<FixedSizeBinaryArray>().unwrap();
+            fixed_size_binary::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+        }
+        DataType::FixedSizeList(_, _) => {
+            let lhs = lhs.as_any().downcast_ref::<FixedSizeListArray>().unwrap();
+            let rhs = rhs.as_any().downcast_ref::<FixedSizeListArray>().unwrap();
+            fixed_size_list::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+        }
         _ => unimplemented!(),
         /*
-        DataType::FixedSizeBinary(_) => {}
-        DataType::FixedSizeList(_, _) => {}
         DataType::Union(_) => {}
         */
     }

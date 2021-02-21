@@ -105,24 +105,20 @@ fn logical_list_bitmap<O: Offset>(
     match (parent_bitmap, child_bitmap) {
         (Some(parent_bitmap), Some(child_bitmap)) => {
             let mut buffer = MutableBitmap::with_capacity(length);
-            offsets
-                .windows(2)
-                .enumerate()
-                .take(length)
-                .for_each(|(index, window)| {
-                    let start = window[0].to_usize().unwrap();
-                    let end = window[1].to_usize().unwrap();
-                    let mask = parent_bitmap.get_bit(index);
-                    (start..end).for_each(|child_index| {
-                        let is_set = mask && child_bitmap.get_bit(child_index);
-                        buffer.push(is_set);
-                    });
+            offsets.windows(2).enumerate().for_each(|(index, window)| {
+                let start = window[0].to_usize().unwrap();
+                let end = window[1].to_usize().unwrap();
+                let mask = parent_bitmap.get_bit(index);
+                (start..end).for_each(|child_index| {
+                    let is_set = mask && child_bitmap.get_bit(child_index);
+                    buffer.push(is_set);
                 });
+            });
             Some(buffer.into())
         }
         (None, Some(child_bitmap)) => {
             let mut buffer = MutableBitmap::with_capacity(length);
-            offsets.windows(2).take(length).for_each(|window| {
+            offsets.windows(2).for_each(|window| {
                 let start = window[0].to_usize().unwrap();
                 let end = window[1].to_usize().unwrap();
                 (start..end).for_each(|child_index| {
@@ -133,11 +129,12 @@ fn logical_list_bitmap<O: Offset>(
         }
         (Some(parent_bitmap), None) => {
             let mut buffer = MutableBitmap::with_capacity(length);
-            offsets.windows(2).take(length).for_each(|window| {
+            offsets.windows(2).enumerate().for_each(|(index, window)| {
                 let start = window[0].to_usize().unwrap();
                 let end = window[1].to_usize().unwrap();
-                (start..end).for_each(|child_index| {
-                    buffer.push(parent_bitmap.get_bit(child_index));
+                let mask = parent_bitmap.get_bit(index);
+                (start..end).for_each(|_| {
+                    buffer.push(mask);
                 });
             });
             Some(buffer.into())
@@ -161,6 +158,12 @@ pub(super) fn child_logical_null_buffer(
         DataType::LargeList(_) => {
             let parent = parent.as_any().downcast_ref::<ListArray<i64>>().unwrap();
             logical_list_bitmap(parent.offsets(), parent_bitmap, self_null_bitmap)
+        }
+        DataType::FixedSizeList(_, len) => {
+            let offsets = (0..=parent.len())
+                .map(|x| (x as i32) * *len)
+                .collect::<Vec<i32>>();
+            logical_list_bitmap(&offsets, parent_bitmap, self_null_bitmap)
         }
         DataType::Struct(_) => match (parent_bitmap, self_null_bitmap) {
             (None, None) => None,

@@ -39,7 +39,7 @@ type ArrayRef = Arc<dyn Array>;
 /// serialization and computation functions, possibly incremental.
 /// See also [CSV reader](crate::csv::Reader) and
 /// [JSON reader](crate::json::Reader).
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct RecordBatch {
     schema: SchemaRef,
     columns: Vec<ArrayRef>,

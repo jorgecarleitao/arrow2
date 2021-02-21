@@ -58,11 +58,17 @@ impl FixedSizeBinaryArray {
     /// Returns the element at index `i` as &str
     /// # Safety
     /// Assumes that the `i < self.len`.
+    #[inline]
     pub unsafe fn value_unchecked(&self, i: usize) -> &[u8] {
         std::slice::from_raw_parts(
             self.values.as_ptr().add(i * self.size as usize),
             self.size as usize,
         )
+    }
+
+    #[inline]
+    pub fn size(&self) -> usize {
+        self.size as usize
     }
 }
 

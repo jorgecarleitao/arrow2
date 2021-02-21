@@ -78,7 +78,8 @@ mod tests {
 
         let result = Box::<dyn Array>::try_from(d1)?;
 
-        assert_eq!(result.as_ref(), &expected);
+        let expected = Box::new(expected) as Box<dyn Array>;
+        assert_eq!(&result, &expected);
         Ok(())
     }
 

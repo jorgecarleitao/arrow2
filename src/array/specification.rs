@@ -83,7 +83,7 @@ pub fn check_offsets_and_utf8<O: Offset>(offsets: &Buffer<O>, values: &Buffer<u8
         let end = window[1]
             .to_usize()
             .expect("The last offset of the array is larger than usize::MAX");
-        assert!(end < values.len());
+        assert!(end <= values.len());
         let slice = unsafe { std::slice::from_raw_parts(values.as_ptr().add(start), end - start) };
         std::str::from_utf8(slice).expect("A non-utf8 string was passed.");
     });

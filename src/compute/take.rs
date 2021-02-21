@@ -252,7 +252,7 @@ mod tests {
         let output = Primitive::<T::Native>::from(data).to(T::DATA_TYPE);
         let expected = Primitive::<T::Native>::from(expected_data).to(T::DATA_TYPE);
         let output = take(&output, index, options)?;
-        assert_eq!(output.as_ref(), &expected);
+        assert_eq!(expected, *output);
         Ok(())
     }
 

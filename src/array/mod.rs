@@ -150,7 +150,7 @@ pub use binary::{BinaryArray, BinaryPrimitive};
 pub use boolean::BooleanArray;
 pub use dictionary::{DictionaryArray, DictionaryKey, DictionaryPrimitive};
 pub use fixed_size_binary::{FixedSizeBinaryArray, FixedSizeBinaryPrimitive};
-pub use fixed_size_list::FixedSizeListArray;
+pub use fixed_size_list::{FixedSizeListArray, FixedSizeListPrimitive};
 pub use list::{ListArray, ListPrimitive};
 pub use null::NullArray;
 pub use primitive::{Primitive, PrimitiveArray};
@@ -195,7 +195,7 @@ pub trait Builder<T>: TryFromIterator<Option<T>> + ToArray {
 fn display_helper<T: std::fmt::Display, I: IntoIterator<Item = Option<T>>>(iter: I) -> Vec<String> {
     let iterator = iter.into_iter();
     let len = iterator.size_hint().0;
-    if len <= 10 {
+    if len <= 100 {
         iterator
             .map(|x| match x {
                 Some(x) => x.to_string(),

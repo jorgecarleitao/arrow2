@@ -42,11 +42,7 @@ pub(super) fn equal<O: Offset>(
     let lhs_null_count = count_nulls(lhs_nulls, lhs_start, len);
     let rhs_null_count = count_nulls(rhs_nulls, rhs_start, len);
 
-    if lhs_null_count == 0
-        && rhs_null_count == 0
-        && !lhs_values.is_empty()
-        && !rhs_values.is_empty()
-    {
+    if lhs_null_count == 0 && rhs_null_count == 0 {
         offset_value_equal(
             lhs_values,
             rhs_values,
