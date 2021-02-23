@@ -343,6 +343,11 @@ mod tests {
         test_file("1.0.0-littleendian", "generated_interval");
     }
 
+    #[test]
+    fn read_generated_100_decimal() {
+        test_file("1.0.0-littleendian", "generated_decimal");
+    }
+
     /// Read gzipped JSON file
     fn read_gzip_json(version: &str, file_name: &str) -> (Schema, Vec<RecordBatch>) {
         let testdata = crate::util::test_util::arrow_test_data();

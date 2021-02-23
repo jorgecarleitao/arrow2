@@ -66,6 +66,7 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
         | DataType::Timestamp(_, _)
         | DataType::Duration(_)
         | DataType::Interval(_) => Box::new(PrimitiveArray::<i64>::new_empty(data_type)),
+        DataType::Decimal(_, _) => Box::new(PrimitiveArray::<i128>::new_empty(data_type)),
         DataType::UInt8 => Box::new(PrimitiveArray::<u8>::new_empty(data_type)),
         DataType::UInt16 => Box::new(PrimitiveArray::<u16>::new_empty(data_type)),
         DataType::UInt32 => Box::new(PrimitiveArray::<u32>::new_empty(data_type)),
@@ -94,7 +95,6 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
             DataType::UInt64 => Box::new(DictionaryArray::<u64>::new_empty(*value_type)),
             _ => unreachable!(),
         },
-        DataType::Decimal(_, _) => todo!(),
     }
 }
 
@@ -121,6 +121,7 @@ pub fn clone(array: &dyn Array) -> Box<dyn Array> {
         | DataType::Timestamp(_, _)
         | DataType::Duration(_)
         | DataType::Interval(_) => clone_dyn!(array, PrimitiveArray<i64>),
+        DataType::Decimal(_, _) => clone_dyn!(array, PrimitiveArray<i128>),
         DataType::UInt8 => clone_dyn!(array, PrimitiveArray<u8>),
         DataType::UInt16 => clone_dyn!(array, PrimitiveArray<u16>),
         DataType::UInt32 => clone_dyn!(array, PrimitiveArray<u32>),
@@ -148,8 +149,7 @@ pub fn clone(array: &dyn Array) -> Box<dyn Array> {
             DataType::UInt32 => clone_dyn!(array, DictionaryArray::<u32>),
             DataType::UInt64 => clone_dyn!(array, DictionaryArray::<u64>),
             _ => unreachable!(),
-        },
-        DataType::Decimal(_, _) => todo!(),
+        }
     }
 }
 

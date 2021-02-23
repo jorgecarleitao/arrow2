@@ -280,4 +280,9 @@ mod tests {
     fn write_100_custom_metadata() {
         test_file("1.0.0-littleendian", "generated_custom_metadata");
     }
+
+    #[test]
+    fn write_100_decimal() {
+        test_file("1.0.0-littleendian", "generated_decimal");
+    }
 }

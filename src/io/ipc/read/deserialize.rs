@@ -346,6 +346,10 @@ pub fn read<R: Read + Seek>(
             read_primitive::<i64, _>(field_nodes, data_type, buffers, reader, block_offset)
                 .map(|x| Arc::new(x) as Arc<dyn Array>)
         }
+        DataType::Decimal(_, _) => {
+            read_primitive::<i128, _>(field_nodes, data_type, buffers, reader, block_offset)
+                .map(|x| Arc::new(x) as Arc<dyn Array>)
+        }
         DataType::Interval(IntervalUnit::DayTime) => {
             read_primitive::<days_ms, _>(field_nodes, data_type, buffers, reader, block_offset)
                 .map(|x| Arc::new(x) as Arc<dyn Array>)
@@ -430,6 +434,5 @@ pub fn read<R: Read + Seek>(
             _ => unreachable!(),
         },
         DataType::Union(_) => unimplemented!(),
-        DataType::Decimal(_, _) => unimplemented!(),
     }
 }

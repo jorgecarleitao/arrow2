@@ -92,6 +92,24 @@ fn to_primitive_interval(
     PrimitiveArray::<days_ms>::from_data(data_type, values, validity)
 }
 
+fn to_decimal(json_col: &ArrowJsonColumn, data_type: DataType) -> PrimitiveArray<i128> {
+    let validity = to_validity(&json_col.validity);
+    let values = json_col
+        .data
+        .as_ref()
+        .unwrap()
+        .iter()
+        .map(|value| match value {
+            Value::String(x) => x.parse::<i128>().unwrap(),
+            _ => {
+                panic!()
+            }
+        })
+        .collect();
+
+    PrimitiveArray::<i128>::from_data(data_type, values, validity)
+}
+
 fn to_primitive<T: NativeType + NumCast>(
     json_col: &ArrowJsonColumn,
     data_type: DataType,
@@ -113,11 +131,13 @@ fn to_primitive<T: NativeType + NumCast>(
             .iter()
             .map(|value| match value {
                 Value::Number(x) => x.as_i64().and_then(num::cast::cast::<i64, T>).unwrap(),
-                Value::String(x) => x
-                    .parse::<i64>()
-                    .ok()
-                    .and_then(num::cast::cast::<i64, T>)
-                    .unwrap(),
+                Value::String(x) => {
+                    println!("{:?}", x);
+                    x.parse::<i64>()
+                        .ok()
+                        .and_then(num::cast::cast::<i64, T>)
+                        .unwrap()
+                }
                 _ => {
                     panic!()
                 }
@@ -241,6 +261,7 @@ pub fn to_array(
         DataType::Interval(IntervalUnit::DayTime) => {
             Ok(Arc::new(to_primitive_interval(json_col, data_type.clone())))
         }
+        DataType::Decimal(_, _) => Ok(Arc::new(to_decimal(json_col, data_type.clone()))),
         DataType::UInt8 => Ok(Arc::new(to_primitive::<u8>(json_col, data_type.clone()))),
         DataType::UInt16 => Ok(Arc::new(to_primitive::<u16>(json_col, data_type.clone()))),
         DataType::UInt32 => Ok(Arc::new(to_primitive::<u32>(json_col, data_type.clone()))),
@@ -307,10 +328,10 @@ pub fn to_array(
             DataType::UInt64 => to_dictionary::<u64>(field, json_col, dictionaries),
             _ => unreachable!(),
         },
-        t => Err(ArrowError::NotYetImplemented(format!(
-            "data type {:?} not supported",
-            t
-        ))),
+        DataType::Float16 => unreachable!(),
+        DataType::Union(_) => Err(ArrowError::NotYetImplemented(
+            "Union not supported".to_string(),
+        )),
     }
 }
 

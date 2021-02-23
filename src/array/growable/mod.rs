@@ -64,10 +64,9 @@ pub fn make_growable<'a>(
     capacity: usize,
 ) -> Box<dyn Growable<'a> + 'a> {
     assert!(!arrays.is_empty());
-    let first = arrays[0].data_type();
-    assert!(arrays.iter().all(|&item| item.data_type() == first));
-
     let data_type = arrays[0].data_type();
+    assert!(arrays.iter().all(|&item| item.data_type() == data_type));
+
     match data_type {
         DataType::Null => Box::new(null::GrowableNull::new()),
         DataType::Boolean => Box::new(boolean::GrowableBoolean::new(arrays, use_nulls, capacity)),
@@ -93,6 +92,9 @@ pub fn make_growable<'a>(
         | DataType::Interval(IntervalUnit::DayTime) => Box::new(
             primitive::GrowablePrimitive::<i64>::new(arrays, use_nulls, capacity),
         ),
+        DataType::Decimal(_, _) => Box::new(primitive::GrowablePrimitive::<i128>::new(
+            arrays, use_nulls, capacity,
+        )),
         DataType::UInt8 => Box::new(primitive::GrowablePrimitive::<u8>::new(
             arrays, use_nulls, capacity,
         )),
@@ -136,7 +138,6 @@ pub fn make_growable<'a>(
         DataType::FixedSizeList(_, _) => todo!(),
         DataType::Union(_) => todo!(),
         DataType::Dictionary(_, _) => todo!(),
-        DataType::Decimal(_, _) => todo!(),
     }
 }
 

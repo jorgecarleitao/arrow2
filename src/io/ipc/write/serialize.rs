@@ -261,6 +261,7 @@ pub fn write(
         | DataType::Time64(_)
         | DataType::Timestamp(_, _)
         | DataType::Duration(_) => write_primitive::<i64>(array, buffers, arrow_data, offset),
+        DataType::Decimal(_, _) => write_primitive::<i128>(array, buffers, arrow_data, offset),
         DataType::Interval(IntervalUnit::DayTime) => {
             write_primitive::<days_ms>(array, buffers, arrow_data, offset)
         }
@@ -286,7 +287,6 @@ pub fn write(
             write_dictionary(array, buffers, arrow_data, nodes, offset, true)
         }
         DataType::Union(_) => unimplemented!(),
-        DataType::Decimal(_, _) => unimplemented!(),
     }
 }
 

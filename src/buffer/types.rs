@@ -140,6 +140,21 @@ unsafe impl NativeType for i64 {
     }
 }
 
+unsafe impl NativeType for i128 {
+    type Bytes = [u8; std::mem::size_of::<Self>()];
+    #[inline]
+    fn to_le_bytes(&self) -> Self::Bytes {
+        Self::to_le_bytes(*self)
+    }
+
+    fn is_valid(data_type: &DataType) -> bool {
+        match data_type {
+            DataType::Decimal(_, _) => true,
+            _ => false,
+        }
+    }
+}
+
 unsafe impl NativeType for f32 {
     type Bytes = [u8; std::mem::size_of::<Self>()];
     #[inline]

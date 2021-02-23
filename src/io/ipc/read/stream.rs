@@ -287,4 +287,9 @@ mod tests {
     fn read_generated_100_interval() {
         test_file("1.0.0-littleendian", "generated_interval");
     }
+
+    #[test]
+    fn read_generated_100_decimal() {
+        test_file("1.0.0-littleendian", "generated_decimal");
+    }
 }
