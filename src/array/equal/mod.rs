@@ -44,6 +44,18 @@ impl PartialEq for dyn Array {
     }
 }
 
+impl PartialEq<NullArray> for NullArray {
+    fn eq(&self, other: &Self) -> bool {
+        equal(self, other)
+    }
+}
+
+impl PartialEq<&dyn Array> for NullArray {
+    fn eq(&self, other: &&dyn Array) -> bool {
+        equal(self, *other)
+    }
+}
+
 impl<T: NativeType> PartialEq<dyn Array> for PrimitiveArray<T> {
     fn eq(&self, other: &dyn Array) -> bool {
         equal(self, other)
@@ -87,6 +99,18 @@ impl<O: Offset> PartialEq<BinaryArray<O>> for BinaryArray<O> {
 }
 
 impl<O: Offset> PartialEq<&dyn Array> for BinaryArray<O> {
+    fn eq(&self, other: &&dyn Array) -> bool {
+        equal(self, *other)
+    }
+}
+
+impl PartialEq<FixedSizeBinaryArray> for FixedSizeBinaryArray {
+    fn eq(&self, other: &Self) -> bool {
+        equal(self, other)
+    }
+}
+
+impl PartialEq<&dyn Array> for FixedSizeBinaryArray {
     fn eq(&self, other: &&dyn Array) -> bool {
         equal(self, *other)
     }

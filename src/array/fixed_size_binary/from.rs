@@ -20,13 +20,18 @@ use std::{iter::FromIterator, sync::Arc};
 use super::FixedSizeBinaryArray;
 use crate::array::{Array, Builder, ToArray, TryFromIterator};
 use crate::buffer::{MutableBitmap, MutableBuffer};
-use crate::{datatypes::DataType, error::Result as ArrowResult};
+use crate::{
+    datatypes::DataType,
+    error::{ArrowError, Result as ArrowResult},
+};
 
 /// auxiliary struct used to create a [`BinaryArray`] out of an iterator
 #[derive(Debug)]
 pub struct FixedSizeBinaryPrimitive {
     values: MutableBuffer<u8>,
     validity: MutableBitmap,
+    size: Option<usize>,
+    current_nulls: usize,
 }
 
 impl<P: AsRef<[u8]>> FromIterator<Option<P>> for FixedSizeBinaryPrimitive {
@@ -59,6 +64,8 @@ impl Builder<&[u8]> for FixedSizeBinaryPrimitive {
         Self {
             values: MutableBuffer::<u8>::new(),
             validity: MutableBitmap::with_capacity(capacity),
+            size: None,
+            current_nulls: 0,
         }
     }
 
@@ -67,10 +74,24 @@ impl Builder<&[u8]> for FixedSizeBinaryPrimitive {
         match value {
             Some(v) => {
                 let bytes = *v;
+                if let Some(size) = self.size {
+                    if size != bytes.len() {
+                        return Err(ArrowError::DictionaryKeyOverflowError);
+                    }
+                } else {
+                    self.size = Some(bytes.len());
+                    self.values
+                        .extend_from_slice(&vec![0; bytes.len() * self.current_nulls]);
+                };
                 self.values.extend_from_slice(bytes);
                 self.validity.push(true);
             }
             None => {
+                if let Some(size) = self.size {
+                    self.values.extend_from_slice(&vec![0; size]);
+                } else {
+                    self.current_nulls += 1;
+                }
                 self.validity.push(false);
             }
         }
@@ -84,7 +105,15 @@ impl Builder<&[u8]> for FixedSizeBinaryPrimitive {
 }
 
 impl FixedSizeBinaryPrimitive {
-    pub fn to(self, data_type: DataType) -> FixedSizeBinaryArray {
+    pub fn to(mut self, data_type: DataType) -> FixedSizeBinaryArray {
+        let size = *FixedSizeBinaryArray::get_size(&data_type) as usize;
+        if let Some(self_size) = self.size {
+            assert_eq!(size, self_size);
+        } else {
+            self.values
+                .extend_from_slice(&vec![0; size * self.current_nulls])
+        };
+
         FixedSizeBinaryArray::from_data(data_type, self.values.into(), self.validity.into())
     }
 }
@@ -92,5 +121,20 @@ impl FixedSizeBinaryPrimitive {
 impl ToArray for FixedSizeBinaryPrimitive {
     fn to_arc(self, data_type: &DataType) -> Arc<dyn Array> {
         Arc::new(self.to(data_type.clone()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::iter::FromIterator;
+
+    use super::*;
+
+    #[test]
+    fn basic() {
+        let array =
+            FixedSizeBinaryPrimitive::from_iter(vec![Some(b"ab"), Some(b"bc"), None, Some(b"fh")])
+                .to(DataType::FixedSizeBinary(2));
+        assert_eq!(array.len(), 4);
     }
 }

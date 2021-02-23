@@ -201,6 +201,23 @@ impl MutableBitmap {
         self.buffer.set_len(len.saturating_add(7) / 8);
         self.length = len;
     }
+
+    /// Extends the [`MutableBitmap`] by a constant bit for `additional` bits.
+    #[inline(always)]
+    pub fn extend_constant(&mut self, additional: usize, value: bool) {
+        self.buffer
+            .resize((self.length + additional).saturating_add(7) / 8, 0);
+        if value {
+            // Soundness: we just resized the buffer to hold bits up to `len`
+            let ptr = self.buffer.as_mut_ptr();
+            unsafe {
+                (self.length..self.length + additional).for_each(|i| {
+                    set_bit_raw(ptr, i);
+                })
+            }
+        };
+        self.length += additional;
+    }
 }
 
 impl From<(MutableBuffer<u8>, usize)> for Bitmap {
@@ -298,6 +315,12 @@ impl FromIterator<bool> for Bitmap {
         I: IntoIterator<Item = bool>,
     {
         MutableBitmap::from_iter(iter).into()
+    }
+}
+
+impl Default for MutableBitmap {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

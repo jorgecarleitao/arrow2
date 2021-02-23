@@ -48,6 +48,9 @@ impl StructArray {
         assert!(fields.len() > 0);
         assert_eq!(fields.len(), values.len());
         assert!(values.iter().all(|x| x.len() == values[0].len()));
+        if let Some(ref validity) = validity {
+            assert_eq!(values[0].len(), validity.len());
+        }
         Self {
             data_type: DataType::Struct(fields),
             values,

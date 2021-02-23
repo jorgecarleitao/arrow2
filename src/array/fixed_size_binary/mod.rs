@@ -36,10 +36,12 @@ pub struct FixedSizeBinaryArray {
 }
 
 impl FixedSizeBinaryArray {
+    #[inline]
     pub fn new_empty(data_type: DataType) -> Self {
         Self::from_data(data_type, Buffer::new(), None)
     }
 
+    #[inline]
     pub fn from_data(data_type: DataType, values: Buffer<u8>, validity: Option<Bitmap>) -> Self {
         let size = *Self::get_size(&data_type);
 
@@ -54,14 +56,17 @@ impl FixedSizeBinaryArray {
         }
     }
 
+    #[inline]
     pub fn slice(&self, offset: usize, length: usize) -> Self {
         let validity = self.validity.clone().map(|x| x.slice(offset, length));
-        let offset = offset * self.size as usize;
-        let length = offset * self.size as usize;
+        let values = self
+            .values
+            .clone()
+            .slice(offset * self.size as usize, length * self.size as usize);
         Self {
             data_type: self.data_type.clone(),
             size: self.size,
-            values: self.values.clone().slice(offset, length),
+            values,
             validity,
             offset: self.offset + offset,
         }

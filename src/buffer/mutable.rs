@@ -406,6 +406,12 @@ impl<T: NativeType> FromIterator<T> for MutableBuffer<T> {
     }
 }
 
+impl<T: NativeType> Default for MutableBuffer<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T: NativeType> std::ops::Deref for MutableBuffer<T> {
     type Target = [T];
 

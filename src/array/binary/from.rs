@@ -28,6 +28,12 @@ use crate::{
     error::{ArrowError, Result as ArrowResult},
 };
 
+impl<O: Offset> BinaryArray<O> {
+    pub fn from_slice<T: AsRef<[u8]>, P: AsRef<[T]>>(slice: P) -> Self {
+        Self::from_iter(slice.as_ref().iter().map(Some))
+    }
+}
+
 /// auxiliary struct used to create a [`BinaryArray`] out of an iterator
 #[derive(Debug)]
 pub struct BinaryPrimitive<O: Offset> {
