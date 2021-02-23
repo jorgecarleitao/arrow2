@@ -18,7 +18,6 @@
 //! Utilities for converting between IPC types and native Arrow types
 
 use crate::datatypes::{DataType, Field, IntervalUnit, Schema, TimeUnit};
-use crate::error::{ArrowError, Result};
 
 mod ipc {
     pub use super::super::gen::File::*;
@@ -30,17 +29,6 @@ use flatbuffers::{FlatBufferBuilder, ForwardsUOffset, UnionWIPOffset, Vector, WI
 use std::collections::{BTreeMap, HashMap};
 
 use DataType::*;
-
-/// Serialize a schema in IPC format
-pub fn schema_to_fb(schema: &Schema) -> FlatBufferBuilder {
-    let mut fbb = FlatBufferBuilder::new();
-
-    let root = schema_to_fb_offset(&mut fbb, schema);
-
-    fbb.finish(root, None);
-
-    fbb
-}
 
 pub fn schema_to_fb_offset<'a>(
     fbb: &mut FlatBufferBuilder<'a>,
@@ -138,19 +126,6 @@ pub fn fb_to_schema(fb: ipc::Schema) -> Schema {
         }
     }
     Schema::new_with_metadata(fields, metadata)
-}
-
-/// Deserialize an IPC message into a schema
-pub fn schema_from_bytes(bytes: &[u8]) -> Result<Schema> {
-    if let Ok(ipc) = ipc::root_as_message(bytes) {
-        if let Some(schema) = ipc.header_as_schema().map(fb_to_schema) {
-            Ok(schema)
-        } else {
-            Err(ArrowError::IPC("Unable to get head as schema".to_string()))
-        }
-    } else {
-        Err(ArrowError::IPC("Unable to get root as message".to_string()))
-    }
 }
 
 /// Get the Arrow data type from the flatbuffer Field table
@@ -671,6 +646,17 @@ mod tests {
     use super::*;
     use crate::datatypes::{DataType, Field, Schema};
 
+    /// Serialize a schema in IPC format
+    fn schema_to_fb(schema: &Schema) -> FlatBufferBuilder {
+        let mut fbb = FlatBufferBuilder::new();
+
+        let root = schema_to_fb_offset(&mut fbb, schema);
+
+        fbb.finish(root, None);
+
+        fbb
+    }
+
     #[test]
     fn convert_schema_round_trip() {
         let md: HashMap<String, String> = [("Key".to_string(), "value".to_string())]
@@ -812,38 +798,5 @@ mod tests {
         let ipc = ipc::root_as_schema(fb.finished_data()).unwrap();
         let schema2 = fb_to_schema(ipc);
         assert_eq!(schema, schema2);
-    }
-
-    #[test]
-    fn schema_from_bytes() {
-        // bytes of a schema generated from python (0.14.0), saved as an `ipc::Message`.
-        // the schema is: Field("field1", DataType::UInt32, false)
-        let bytes: Vec<u8> = vec![
-            16, 0, 0, 0, 0, 0, 10, 0, 12, 0, 6, 0, 5, 0, 8, 0, 10, 0, 0, 0, 0, 1, 3, 0, 12, 0, 0,
-            0, 8, 0, 8, 0, 0, 0, 4, 0, 8, 0, 0, 0, 4, 0, 0, 0, 1, 0, 0, 0, 20, 0, 0, 0, 16, 0, 20,
-            0, 8, 0, 0, 0, 7, 0, 12, 0, 0, 0, 16, 0, 16, 0, 0, 0, 0, 0, 0, 2, 32, 0, 0, 0, 20, 0,
-            0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 8, 0, 4, 0, 6, 0, 0, 0, 32, 0, 0, 0, 6, 0, 0,
-            0, 102, 105, 101, 108, 100, 49, 0, 0, 0, 0, 0, 0,
-        ];
-        let ipc = ipc::root_as_message(&bytes[..]).unwrap();
-        let schema = ipc.header_as_schema().unwrap();
-
-        // a message generated from Rust, same as the Python one
-        let bytes: Vec<u8> = vec![
-            16, 0, 0, 0, 0, 0, 10, 0, 14, 0, 12, 0, 11, 0, 4, 0, 10, 0, 0, 0, 20, 0, 0, 0, 0, 0, 0,
-            1, 3, 0, 10, 0, 12, 0, 0, 0, 8, 0, 4, 0, 10, 0, 0, 0, 8, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0,
-            0, 1, 0, 0, 0, 16, 0, 0, 0, 12, 0, 18, 0, 12, 0, 0, 0, 11, 0, 4, 0, 12, 0, 0, 0, 20, 0,
-            0, 0, 0, 0, 0, 2, 20, 0, 0, 0, 0, 0, 6, 0, 8, 0, 4, 0, 6, 0, 0, 0, 32, 0, 0, 0, 6, 0,
-            0, 0, 102, 105, 101, 108, 100, 49, 0, 0,
-        ];
-        let ipc2 = ipc::root_as_message(&bytes[..]).unwrap();
-        let schema2 = ipc.header_as_schema().unwrap();
-
-        assert_eq!(schema, schema2);
-        assert_eq!(ipc.version(), ipc2.version());
-        assert_eq!(ipc.header_type(), ipc2.header_type());
-        assert_eq!(ipc.bodyLength(), ipc2.bodyLength());
-        assert!(ipc.custom_metadata().is_none());
-        assert!(ipc2.custom_metadata().is_none());
     }
 }

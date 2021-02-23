@@ -149,7 +149,7 @@ pub fn clone(array: &dyn Array) -> Box<dyn Array> {
             DataType::UInt32 => clone_dyn!(array, DictionaryArray::<u32>),
             DataType::UInt64 => clone_dyn!(array, DictionaryArray::<u64>),
             _ => unreachable!(),
-        }
+        },
     }
 }
 
