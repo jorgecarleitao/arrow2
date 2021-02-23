@@ -31,6 +31,7 @@ pub struct Schema {
     /// A map of key-value pairs containing additional meta data.
     //#[serde(skip_serializing_if = "HashMap::is_empty")]
     pub(crate) metadata: HashMap<String, String>,
+    pub(crate) is_little_endian: bool,
 }
 
 impl Schema {
@@ -39,6 +40,7 @@ impl Schema {
         Self {
             fields: vec![],
             metadata: HashMap::new(),
+            is_little_endian: true,
         }
     }
 
@@ -55,7 +57,7 @@ impl Schema {
     /// let schema = Schema::new(vec![field_a, field_b]);
     /// ```
     pub fn new(fields: Vec<Field>) -> Self {
-        Self::new_with_metadata(fields, HashMap::new())
+        Self::new_from(fields, HashMap::new(), true)
     }
 
     /// Creates a new `Schema` from a sequence of `Field` values
@@ -73,11 +75,19 @@ impl Schema {
     /// let mut metadata: HashMap<String, String> = HashMap::new();
     /// metadata.insert("row_count".to_string(), "100".to_string());
     ///
-    /// let schema = Schema::new_with_metadata(vec![field_a, field_b], metadata);
+    /// let schema = Schema::new_from(vec![field_a, field_b], metadata, true);
     /// ```
     #[inline]
-    pub const fn new_with_metadata(fields: Vec<Field>, metadata: HashMap<String, String>) -> Self {
-        Self { fields, metadata }
+    pub const fn new_from(
+        fields: Vec<Field>,
+        metadata: HashMap<String, String>,
+        is_little_endian: bool,
+    ) -> Self {
+        Self {
+            fields,
+            metadata,
+            is_little_endian,
+        }
     }
 
     /// Merge schema into self if it is compatible. Struct fields will be merged recursively.
@@ -112,7 +122,11 @@ impl Schema {
         schemas
             .into_iter()
             .try_fold(Self::empty(), |mut merged, schema| {
-                let Schema { metadata, fields } = schema;
+                let Schema {
+                    metadata,
+                    fields,
+                    is_little_endian,
+                } = schema;
                 for (key, value) in metadata.into_iter() {
                     // merge metadata
                     if let Some(old_val) = merged.metadata.get(&key) {

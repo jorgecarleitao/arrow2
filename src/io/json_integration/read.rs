@@ -131,13 +131,11 @@ fn to_primitive<T: NativeType + NumCast>(
             .iter()
             .map(|value| match value {
                 Value::Number(x) => x.as_i64().and_then(num::cast::cast::<i64, T>).unwrap(),
-                Value::String(x) => {
-                    println!("{:?}", x);
-                    x.parse::<i64>()
-                        .ok()
-                        .and_then(num::cast::cast::<i64, T>)
-                        .unwrap()
-                }
+                Value::String(x) => x
+                    .parse::<i64>()
+                    .ok()
+                    .and_then(num::cast::cast::<i64, T>)
+                    .unwrap(),
                 _ => {
                     panic!()
                 }

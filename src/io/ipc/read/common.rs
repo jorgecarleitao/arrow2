@@ -63,6 +63,7 @@ pub fn read_record_batch<R: Read + Seek>(
                 &mut buffers,
                 reader,
                 block_offset,
+                schema.is_little_endian,
             )
         })
         .collect::<std::io::Result<Vec<_>>>()?;
@@ -100,6 +101,7 @@ pub fn read_dictionary<R: Read + Seek>(
             let schema = Schema {
                 fields: vec![Field::new("", value_type.as_ref().clone(), false)],
                 metadata: HashMap::new(),
+                is_little_endian: schema.is_little_endian,
             };
             // Read a single column
             let record_batch = read_record_batch(

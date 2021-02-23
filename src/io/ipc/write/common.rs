@@ -155,6 +155,7 @@ impl IpcDataGenerator {
                         dict_id,
                         column.as_ref(),
                         write_options,
+                        batch.schema().is_little_endian,
                     ));
                 }
             }
@@ -185,6 +186,7 @@ impl IpcDataGenerator {
                 &mut arrow_data,
                 &mut nodes,
                 &mut offset,
+                batch.schema().is_little_endian,
             )
         }
 
@@ -223,6 +225,7 @@ impl IpcDataGenerator {
         dict_id: i64,
         array: &dyn Array,
         write_options: &IpcWriteOptions,
+        is_little_endian: bool,
     ) -> EncodedData {
         let mut fbb = FlatBufferBuilder::new();
 
@@ -236,6 +239,7 @@ impl IpcDataGenerator {
             &mut arrow_data,
             &mut nodes,
             &mut 0,
+            is_little_endian,
             false,
         );
 

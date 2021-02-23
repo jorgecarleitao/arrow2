@@ -57,6 +57,11 @@ pub fn schema_to_fb_offset<'a>(
     let mut builder = ipc::SchemaBuilder::new(fbb);
     builder.add_fields(fb_field_list);
     builder.add_custom_metadata(fb_metadata_list);
+    builder.add_endianness(if schema.is_little_endian {
+        ipc::Endianness::Little
+    } else {
+        ipc::Endianness::Big
+    });
     builder.finish()
 }
 
@@ -102,14 +107,10 @@ pub fn fb_to_schema(fb: ipc::Schema) -> Schema {
     let len = c_fields.len();
     for i in 0..len {
         let c_field: ipc::Field = c_fields.get(i);
-        match c_field.type_type() {
-            ipc::Type::Decimal if fb.endianness() == ipc::Endianness::Big => {
-                unimplemented!("Big Endian is not supported for Decimal!")
-            }
-            _ => (),
-        };
         fields.push(c_field.into());
     }
+
+    let is_little_endian = fb.endianness().variant_name().unwrap_or("Little") == "Little";
 
     let mut metadata: HashMap<String, String> = HashMap::default();
     if let Some(md_fields) = fb.custom_metadata() {
@@ -125,7 +126,7 @@ pub fn fb_to_schema(fb: ipc::Schema) -> Schema {
             }
         }
     }
-    Schema::new_with_metadata(fields, metadata)
+    Schema::new_from(fields, metadata, is_little_endian)
 }
 
 /// Get the Arrow data type from the flatbuffer Field table
@@ -667,7 +668,7 @@ mod tests {
             .iter()
             .cloned()
             .collect();
-        let schema = Schema::new_with_metadata(
+        let schema = Schema::new_from(
             vec![
                 {
                     let mut f = Field::new("uint8", DataType::UInt8, false);
@@ -790,6 +791,7 @@ mod tests {
                 Field::new("decimal<usize, usize>", DataType::Decimal(10, 6), false),
             ],
             md,
+            true,
         );
 
         let fb = schema_to_fb(&schema);

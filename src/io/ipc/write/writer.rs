@@ -208,26 +208,31 @@ mod tests {
     #[test]
     fn write_100_primitive() {
         test_file("1.0.0-littleendian", "generated_primitive");
+        test_file("1.0.0-bigendian", "generated_primitive");
     }
 
     #[test]
     fn write_100_datetime() {
         test_file("1.0.0-littleendian", "generated_datetime");
+        test_file("1.0.0-bigendian", "generated_datetime");
     }
 
     #[test]
     fn write_100_dictionary_unsigned() {
         test_file("1.0.0-littleendian", "generated_dictionary_unsigned");
+        test_file("1.0.0-bigendian", "generated_dictionary_unsigned");
     }
 
     #[test]
     fn write_100_dictionary() {
         test_file("1.0.0-littleendian", "generated_dictionary");
+        test_file("1.0.0-bigendian", "generated_dictionary");
     }
 
     #[test]
     fn write_100_interval() {
         test_file("1.0.0-littleendian", "generated_interval");
+        test_file("1.0.0-bigendian", "generated_interval");
     }
 
     #[test]
@@ -239,26 +244,31 @@ mod tests {
     #[test]
     fn write_100_nested() {
         test_file("1.0.0-littleendian", "generated_nested");
+        test_file("1.0.0-bigendian", "generated_nested");
     }
 
     #[test]
     fn write_100_nested_large_offsets() {
         test_file("1.0.0-littleendian", "generated_nested_large_offsets");
+        test_file("1.0.0-bigendian", "generated_nested_large_offsets");
     }
 
     #[test]
     fn write_100_null_trivial() {
         test_file("1.0.0-littleendian", "generated_null_trivial");
+        test_file("1.0.0-bigendian", "generated_null_trivial");
     }
 
     #[test]
     fn write_100_null() {
         test_file("1.0.0-littleendian", "generated_null");
+        test_file("1.0.0-bigendian", "generated_null");
     }
 
     #[test]
     fn write_100_primitive_large_offsets() {
         test_file("1.0.0-littleendian", "generated_primitive_large_offsets");
+        test_file("1.0.0-bigendian", "generated_primitive_large_offsets");
     }
 
     //#[test]
@@ -269,20 +279,24 @@ mod tests {
     #[test]
     fn write_100_primitive_no_batches() {
         test_file("1.0.0-littleendian", "generated_primitive_no_batches");
+        test_file("1.0.0-bigendian", "generated_primitive_no_batches");
     }
 
     #[test]
     fn write_100_primitive_zerolength() {
         test_file("1.0.0-littleendian", "generated_primitive_zerolength");
+        test_file("1.0.0-bigendian", "generated_primitive_zerolength");
     }
 
     #[test]
     fn write_100_custom_metadata() {
         test_file("1.0.0-littleendian", "generated_custom_metadata");
+        test_file("1.0.0-bigendian", "generated_custom_metadata");
     }
 
     #[test]
     fn write_100_decimal() {
         test_file("1.0.0-littleendian", "generated_decimal");
+        test_file("1.0.0-bigendian", "generated_decimal");
     }
 }

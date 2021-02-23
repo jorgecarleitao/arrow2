@@ -34,6 +34,7 @@ fn _write_primitive<T: NativeType>(
     buffers: &mut Vec<Schema::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
+    is_little_endian: bool,
 ) {
     write_bytes(
         &to_le_bytes_bitmap(array.nulls(), array.len()),
@@ -41,7 +42,12 @@ fn _write_primitive<T: NativeType>(
         arrow_data,
         offset,
     );
-    write_bytes(&to_le_bytes(array.values()), buffers, arrow_data, offset);
+    write_bytes(
+        &to_bytes(array.values(), is_little_endian),
+        buffers,
+        arrow_data,
+        offset,
+    );
 }
 
 fn write_primitive<T: NativeType>(
@@ -49,9 +55,10 @@ fn write_primitive<T: NativeType>(
     buffers: &mut Vec<Schema::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
+    is_little_endian: bool,
 ) {
     let array = array.as_any().downcast_ref::<PrimitiveArray<T>>().unwrap();
-    _write_primitive(array, buffers, arrow_data, offset);
+    _write_primitive(array, buffers, arrow_data, offset, is_little_endian);
 }
 
 fn write_boolean(
@@ -59,6 +66,7 @@ fn write_boolean(
     buffers: &mut Vec<Schema::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
+    _: bool,
 ) {
     let array = array.as_any().downcast_ref::<BooleanArray>().unwrap();
     write_bytes(
@@ -75,6 +83,7 @@ fn write_binary<O: Offset>(
     buffers: &mut Vec<Schema::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
+    is_little_endian: bool,
 ) {
     let array = array.as_any().downcast_ref::<BinaryArray<O>>().unwrap();
     write_bytes(
@@ -83,8 +92,18 @@ fn write_binary<O: Offset>(
         arrow_data,
         offset,
     );
-    write_bytes(&to_le_bytes(array.offsets()), buffers, arrow_data, offset);
-    write_bytes(&to_le_bytes(array.values()), buffers, arrow_data, offset);
+    write_bytes(
+        &to_bytes(array.offsets(), is_little_endian),
+        buffers,
+        arrow_data,
+        offset,
+    );
+    write_bytes(
+        &to_bytes(array.values(), is_little_endian),
+        buffers,
+        arrow_data,
+        offset,
+    );
 }
 
 fn write_utf8<O: Offset>(
@@ -92,6 +111,7 @@ fn write_utf8<O: Offset>(
     buffers: &mut Vec<Schema::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
+    is_little_endian: bool,
 ) {
     let array = array.as_any().downcast_ref::<Utf8Array<O>>().unwrap();
     write_bytes(
@@ -100,8 +120,18 @@ fn write_utf8<O: Offset>(
         arrow_data,
         offset,
     );
-    write_bytes(&to_le_bytes(array.offsets()), buffers, arrow_data, offset);
-    write_bytes(&to_le_bytes(array.values()), buffers, arrow_data, offset);
+    write_bytes(
+        &to_bytes(array.offsets(), is_little_endian),
+        buffers,
+        arrow_data,
+        offset,
+    );
+    write_bytes(
+        &to_bytes(array.values(), is_little_endian),
+        buffers,
+        arrow_data,
+        offset,
+    );
 }
 
 fn write_fixed_size_binary(
@@ -109,6 +139,7 @@ fn write_fixed_size_binary(
     buffers: &mut Vec<Schema::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
+    is_little_endian: bool,
 ) {
     let array = array
         .as_any()
@@ -120,7 +151,12 @@ fn write_fixed_size_binary(
         arrow_data,
         offset,
     );
-    write_bytes(&to_le_bytes(array.values()), buffers, arrow_data, offset);
+    write_bytes(
+        &to_bytes(array.values(), is_little_endian),
+        buffers,
+        arrow_data,
+        offset,
+    );
 }
 
 fn write_list<O: Offset>(
@@ -129,6 +165,7 @@ fn write_list<O: Offset>(
     arrow_data: &mut Vec<u8>,
     nodes: &mut Vec<Message::FieldNode>,
     offset: &mut i64,
+    is_little_endian: bool,
 ) {
     let array = array.as_any().downcast_ref::<ListArray<O>>().unwrap();
     write_bytes(
@@ -137,8 +174,20 @@ fn write_list<O: Offset>(
         arrow_data,
         offset,
     );
-    write_bytes(&to_le_bytes(array.offsets()), buffers, arrow_data, offset);
-    write(array.values().as_ref(), buffers, arrow_data, nodes, offset);
+    write_bytes(
+        &to_bytes(array.offsets(), is_little_endian),
+        buffers,
+        arrow_data,
+        offset,
+    );
+    write(
+        array.values().as_ref(),
+        buffers,
+        arrow_data,
+        nodes,
+        offset,
+        is_little_endian,
+    );
 }
 
 pub fn write_struct(
@@ -147,6 +196,7 @@ pub fn write_struct(
     arrow_data: &mut Vec<u8>,
     nodes: &mut Vec<Message::FieldNode>,
     offset: &mut i64,
+    is_little_endian: bool,
 ) {
     let array = array.as_any().downcast_ref::<StructArray>().unwrap();
     write_bytes(
@@ -156,7 +206,14 @@ pub fn write_struct(
         offset,
     );
     array.values().iter().for_each(|array| {
-        write(array.as_ref(), buffers, arrow_data, nodes, offset);
+        write(
+            array.as_ref(),
+            buffers,
+            arrow_data,
+            nodes,
+            offset,
+            is_little_endian,
+        );
     });
 }
 
@@ -166,6 +223,7 @@ fn write_fixed_size_list(
     arrow_data: &mut Vec<u8>,
     nodes: &mut Vec<Message::FieldNode>,
     offset: &mut i64,
+    is_little_endian: bool,
 ) {
     let array = array.as_any().downcast_ref::<FixedSizeListArray>().unwrap();
     write_bytes(
@@ -174,7 +232,14 @@ fn write_fixed_size_list(
         arrow_data,
         offset,
     );
-    write(array.values().as_ref(), buffers, arrow_data, nodes, offset);
+    write(
+        array.values().as_ref(),
+        buffers,
+        arrow_data,
+        nodes,
+        offset,
+        is_little_endian,
+    );
 }
 
 // use `write_keys` to either write keys or values
@@ -184,13 +249,21 @@ pub fn _write_dictionary<K: DictionaryKey>(
     arrow_data: &mut Vec<u8>,
     nodes: &mut Vec<Message::FieldNode>,
     offset: &mut i64,
+    is_little_endian: bool,
     write_keys: bool,
 ) {
     let array = array.as_any().downcast_ref::<DictionaryArray<K>>().unwrap();
     if write_keys {
-        _write_primitive(array.keys(), buffers, arrow_data, offset);
+        _write_primitive(array.keys(), buffers, arrow_data, offset, is_little_endian);
     } else {
-        write(array.values().as_ref(), buffers, arrow_data, nodes, offset);
+        write(
+            array.values().as_ref(),
+            buffers,
+            arrow_data,
+            nodes,
+            offset,
+            is_little_endian,
+        );
     }
 }
 
@@ -200,34 +273,83 @@ pub fn write_dictionary(
     arrow_data: &mut Vec<u8>,
     nodes: &mut Vec<Message::FieldNode>,
     offset: &mut i64,
+    is_little_endian: bool,
     write_keys: bool,
 ) {
     match array.data_type() {
         DataType::Dictionary(key_type, _) => match key_type.as_ref() {
-            DataType::Int8 => {
-                _write_dictionary::<i8>(array, buffers, arrow_data, nodes, offset, write_keys)
-            }
-            DataType::Int16 => {
-                _write_dictionary::<i16>(array, buffers, arrow_data, nodes, offset, write_keys)
-            }
-            DataType::Int32 => {
-                _write_dictionary::<i32>(array, buffers, arrow_data, nodes, offset, write_keys)
-            }
-            DataType::Int64 => {
-                _write_dictionary::<i64>(array, buffers, arrow_data, nodes, offset, write_keys)
-            }
-            DataType::UInt8 => {
-                _write_dictionary::<u8>(array, buffers, arrow_data, nodes, offset, write_keys)
-            }
-            DataType::UInt16 => {
-                _write_dictionary::<u16>(array, buffers, arrow_data, nodes, offset, write_keys)
-            }
-            DataType::UInt32 => {
-                _write_dictionary::<u32>(array, buffers, arrow_data, nodes, offset, write_keys)
-            }
-            DataType::UInt64 => {
-                _write_dictionary::<u64>(array, buffers, arrow_data, nodes, offset, write_keys)
-            }
+            DataType::Int8 => _write_dictionary::<i8>(
+                array,
+                buffers,
+                arrow_data,
+                nodes,
+                offset,
+                is_little_endian,
+                write_keys,
+            ),
+            DataType::Int16 => _write_dictionary::<i16>(
+                array,
+                buffers,
+                arrow_data,
+                nodes,
+                offset,
+                is_little_endian,
+                write_keys,
+            ),
+            DataType::Int32 => _write_dictionary::<i32>(
+                array,
+                buffers,
+                arrow_data,
+                nodes,
+                offset,
+                is_little_endian,
+                write_keys,
+            ),
+            DataType::Int64 => _write_dictionary::<i64>(
+                array,
+                buffers,
+                arrow_data,
+                nodes,
+                offset,
+                is_little_endian,
+                write_keys,
+            ),
+            DataType::UInt8 => _write_dictionary::<u8>(
+                array,
+                buffers,
+                arrow_data,
+                nodes,
+                offset,
+                is_little_endian,
+                write_keys,
+            ),
+            DataType::UInt16 => _write_dictionary::<u16>(
+                array,
+                buffers,
+                arrow_data,
+                nodes,
+                offset,
+                is_little_endian,
+                write_keys,
+            ),
+            DataType::UInt32 => _write_dictionary::<u32>(
+                array,
+                buffers,
+                arrow_data,
+                nodes,
+                offset,
+                is_little_endian,
+                write_keys,
+            ),
+            DataType::UInt64 => _write_dictionary::<u64>(
+                array,
+                buffers,
+                arrow_data,
+                nodes,
+                offset,
+                is_little_endian,
+                write_keys,
+            ),
             _ => unreachable!(),
         },
         _ => unreachable!(),
@@ -240,6 +362,7 @@ pub fn write(
     arrow_data: &mut Vec<u8>,
     nodes: &mut Vec<Message::FieldNode>,
     offset: &mut i64,
+    is_little_endian: bool,
 ) {
     nodes.push(Message::FieldNode::new(
         array.len() as i64,
@@ -247,45 +370,85 @@ pub fn write(
     ));
     match array.data_type() {
         DataType::Null => (),
-        DataType::Boolean => write_boolean(array, buffers, arrow_data, offset),
-        DataType::Int8 => write_primitive::<i8>(array, buffers, arrow_data, offset),
-        DataType::Int16 => write_primitive::<i16>(array, buffers, arrow_data, offset),
+        DataType::Boolean => write_boolean(array, buffers, arrow_data, offset, is_little_endian),
+        DataType::Int8 => {
+            write_primitive::<i8>(array, buffers, arrow_data, offset, is_little_endian)
+        }
+        DataType::Int16 => {
+            write_primitive::<i16>(array, buffers, arrow_data, offset, is_little_endian)
+        }
         DataType::Int32
         | DataType::Date32
         | DataType::Time32(_)
         | DataType::Interval(IntervalUnit::YearMonth) => {
-            write_primitive::<i32>(array, buffers, arrow_data, offset)
+            write_primitive::<i32>(array, buffers, arrow_data, offset, is_little_endian)
         }
         DataType::Int64
         | DataType::Date64
         | DataType::Time64(_)
         | DataType::Timestamp(_, _)
-        | DataType::Duration(_) => write_primitive::<i64>(array, buffers, arrow_data, offset),
-        DataType::Decimal(_, _) => write_primitive::<i128>(array, buffers, arrow_data, offset),
+        | DataType::Duration(_) => {
+            write_primitive::<i64>(array, buffers, arrow_data, offset, is_little_endian)
+        }
+        DataType::Decimal(_, _) => {
+            write_primitive::<i128>(array, buffers, arrow_data, offset, is_little_endian)
+        }
         DataType::Interval(IntervalUnit::DayTime) => {
-            write_primitive::<days_ms>(array, buffers, arrow_data, offset)
+            write_primitive::<days_ms>(array, buffers, arrow_data, offset, is_little_endian)
         }
-        DataType::UInt8 => write_primitive::<u8>(array, buffers, arrow_data, offset),
-        DataType::UInt16 => write_primitive::<u16>(array, buffers, arrow_data, offset),
-        DataType::UInt32 => write_primitive::<u32>(array, buffers, arrow_data, offset),
-        DataType::UInt64 => write_primitive::<u64>(array, buffers, arrow_data, offset),
+        DataType::UInt8 => {
+            write_primitive::<u8>(array, buffers, arrow_data, offset, is_little_endian)
+        }
+        DataType::UInt16 => {
+            write_primitive::<u16>(array, buffers, arrow_data, offset, is_little_endian)
+        }
+        DataType::UInt32 => {
+            write_primitive::<u32>(array, buffers, arrow_data, offset, is_little_endian)
+        }
+        DataType::UInt64 => {
+            write_primitive::<u64>(array, buffers, arrow_data, offset, is_little_endian)
+        }
         DataType::Float16 => unreachable!(),
-        DataType::Float32 => write_primitive::<f32>(array, buffers, arrow_data, offset),
-        DataType::Float64 => write_primitive::<f64>(array, buffers, arrow_data, offset),
-        DataType::Binary => write_binary::<i32>(array, buffers, arrow_data, offset),
-        DataType::LargeBinary => write_binary::<i64>(array, buffers, arrow_data, offset),
-        DataType::FixedSizeBinary(_) => write_fixed_size_binary(array, buffers, arrow_data, offset),
-        DataType::Utf8 => write_utf8::<i32>(array, buffers, arrow_data, offset),
-        DataType::LargeUtf8 => write_utf8::<i64>(array, buffers, arrow_data, offset),
-        DataType::List(_) => write_list::<i32>(array, buffers, arrow_data, nodes, offset),
-        DataType::LargeList(_) => write_list::<i64>(array, buffers, arrow_data, nodes, offset),
+        DataType::Float32 => {
+            write_primitive::<f32>(array, buffers, arrow_data, offset, is_little_endian)
+        }
+        DataType::Float64 => {
+            write_primitive::<f64>(array, buffers, arrow_data, offset, is_little_endian)
+        }
+        DataType::Binary => {
+            write_binary::<i32>(array, buffers, arrow_data, offset, is_little_endian)
+        }
+        DataType::LargeBinary => {
+            write_binary::<i64>(array, buffers, arrow_data, offset, is_little_endian)
+        }
+        DataType::FixedSizeBinary(_) => {
+            write_fixed_size_binary(array, buffers, arrow_data, offset, is_little_endian)
+        }
+        DataType::Utf8 => write_utf8::<i32>(array, buffers, arrow_data, offset, is_little_endian),
+        DataType::LargeUtf8 => {
+            write_utf8::<i64>(array, buffers, arrow_data, offset, is_little_endian)
+        }
+        DataType::List(_) => {
+            write_list::<i32>(array, buffers, arrow_data, nodes, offset, is_little_endian)
+        }
+        DataType::LargeList(_) => {
+            write_list::<i64>(array, buffers, arrow_data, nodes, offset, is_little_endian)
+        }
         DataType::FixedSizeList(_, _) => {
-            write_fixed_size_list(array, buffers, arrow_data, nodes, offset)
+            write_fixed_size_list(array, buffers, arrow_data, nodes, offset, is_little_endian)
         }
-        DataType::Struct(_) => write_struct(array, buffers, arrow_data, nodes, offset),
-        DataType::Dictionary(_, _) => {
-            write_dictionary(array, buffers, arrow_data, nodes, offset, true)
+        DataType::Struct(_) => {
+            write_struct(array, buffers, arrow_data, nodes, offset, is_little_endian)
         }
+        DataType::Dictionary(_, _) => write_dictionary(
+            array,
+            buffers,
+            arrow_data,
+            nodes,
+            offset,
+            is_little_endian,
+            true,
+        ),
         DataType::Union(_) => unimplemented!(),
     }
 }
@@ -310,13 +473,22 @@ fn write_bytes(
 
 /// converts the buffer to a bytes in little endian
 #[inline]
-fn to_le_bytes<T: NativeType>(values: &[T]) -> Vec<u8> {
-    values
-        .iter()
-        .map(T::to_le_bytes)
-        .map(|x| x.as_ref().to_vec())
-        .flatten()
-        .collect::<Vec<_>>()
+fn to_bytes<T: NativeType>(values: &[T], is_little_endian: bool) -> Vec<u8> {
+    if is_little_endian {
+        values
+            .iter()
+            .map(T::to_le_bytes)
+            .map(|x| x.as_ref().to_vec())
+            .flatten()
+            .collect::<Vec<_>>()
+    } else {
+        values
+            .iter()
+            .map(T::to_be_bytes)
+            .map(|x| x.as_ref().to_vec())
+            .flatten()
+            .collect::<Vec<_>>()
+    }
 }
 
 #[inline]

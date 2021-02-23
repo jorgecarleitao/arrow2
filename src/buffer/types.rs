@@ -17,99 +17,105 @@
 
 use crate::datatypes::{DataType, IntervalUnit};
 
+pub unsafe trait Relation {
+    fn is_valid(data_type: &DataType) -> bool;
+}
+
 /// Trait declaring any type that can be allocated, serialized and deserialized by this crate.
 /// All data-heavy memory operations are implemented for this trait alone.
 /// # Safety
 /// Do not implement.
 pub unsafe trait NativeType:
-    Sized + Copy + std::fmt::Debug + std::fmt::Display + PartialEq + Default + Sized + 'static
+    Relation
+    + Sized
+    + Copy
+    + std::fmt::Debug
+    + std::fmt::Display
+    + PartialEq
+    + Default
+    + Sized
+    + 'static
 {
     type Bytes: AsRef<[u8]>;
 
-    fn is_valid(data_type: &DataType) -> bool;
-
     fn to_le_bytes(&self) -> Self::Bytes;
+
+    fn to_be_bytes(&self) -> Self::Bytes;
+
+    fn from_be_bytes(bytes: Self::Bytes) -> Self;
 }
 
-unsafe impl NativeType for u8 {
-    type Bytes = [u8; std::mem::size_of::<Self>()];
-    #[inline]
-    fn to_le_bytes(&self) -> Self::Bytes {
-        Self::to_le_bytes(*self)
-    }
+macro_rules! native {
+    ($type:ty) => {
+        unsafe impl NativeType for $type {
+            type Bytes = [u8; std::mem::size_of::<Self>()];
+            #[inline]
+            fn to_le_bytes(&self) -> Self::Bytes {
+                Self::to_le_bytes(*self)
+            }
 
+            #[inline]
+            fn to_be_bytes(&self) -> Self::Bytes {
+                Self::to_be_bytes(*self)
+            }
+
+            #[inline]
+            fn from_be_bytes(bytes: Self::Bytes) -> Self {
+                Self::from_be_bytes(bytes)
+            }
+        }
+    };
+}
+
+native!(u8);
+native!(u16);
+native!(u32);
+native!(u64);
+native!(i8);
+native!(i16);
+native!(i32);
+native!(i64);
+native!(i128);
+native!(f32);
+native!(f64);
+
+unsafe impl Relation for u8 {
     fn is_valid(data_type: &DataType) -> bool {
         data_type == &DataType::UInt8
     }
 }
 
-unsafe impl NativeType for u16 {
-    type Bytes = [u8; std::mem::size_of::<Self>()];
-    #[inline]
-    fn to_le_bytes(&self) -> Self::Bytes {
-        Self::to_le_bytes(*self)
-    }
-
+unsafe impl Relation for u16 {
     fn is_valid(data_type: &DataType) -> bool {
         data_type == &DataType::UInt16
     }
 }
 
-unsafe impl NativeType for u32 {
-    type Bytes = [u8; std::mem::size_of::<Self>()];
-    #[inline]
-    fn to_le_bytes(&self) -> Self::Bytes {
-        Self::to_le_bytes(*self)
-    }
-
+unsafe impl Relation for u32 {
     fn is_valid(data_type: &DataType) -> bool {
         data_type == &DataType::UInt32
     }
 }
 
-unsafe impl NativeType for u64 {
-    type Bytes = [u8; std::mem::size_of::<Self>()];
-    #[inline]
-    fn to_le_bytes(&self) -> Self::Bytes {
-        Self::to_le_bytes(*self)
-    }
-
+unsafe impl Relation for u64 {
     fn is_valid(data_type: &DataType) -> bool {
         data_type == &DataType::UInt64
     }
 }
 
-unsafe impl NativeType for i8 {
-    type Bytes = [u8; std::mem::size_of::<Self>()];
-    #[inline]
-    fn to_le_bytes(&self) -> Self::Bytes {
-        Self::to_le_bytes(*self)
-    }
-
+unsafe impl Relation for i8 {
     fn is_valid(data_type: &DataType) -> bool {
         data_type == &DataType::Int8
     }
 }
 
-unsafe impl NativeType for i16 {
-    type Bytes = [u8; std::mem::size_of::<Self>()];
-    #[inline]
-    fn to_le_bytes(&self) -> Self::Bytes {
-        Self::to_le_bytes(*self)
-    }
-
+unsafe impl Relation for i16 {
     fn is_valid(data_type: &DataType) -> bool {
         data_type == &DataType::Int16
     }
 }
 
-unsafe impl NativeType for i32 {
-    type Bytes = [u8; std::mem::size_of::<Self>()];
-    #[inline]
-    fn to_le_bytes(&self) -> Self::Bytes {
-        Self::to_le_bytes(*self)
-    }
-
+unsafe impl Relation for i32 {
     fn is_valid(data_type: &DataType) -> bool {
         match data_type {
             DataType::Int32
@@ -121,13 +127,7 @@ unsafe impl NativeType for i32 {
     }
 }
 
-unsafe impl NativeType for i64 {
-    type Bytes = [u8; std::mem::size_of::<Self>()];
-    #[inline]
-    fn to_le_bytes(&self) -> Self::Bytes {
-        Self::to_le_bytes(*self)
-    }
-
+unsafe impl Relation for i64 {
     fn is_valid(data_type: &DataType) -> bool {
         match data_type {
             DataType::Int64
@@ -140,13 +140,7 @@ unsafe impl NativeType for i64 {
     }
 }
 
-unsafe impl NativeType for i128 {
-    type Bytes = [u8; std::mem::size_of::<Self>()];
-    #[inline]
-    fn to_le_bytes(&self) -> Self::Bytes {
-        Self::to_le_bytes(*self)
-    }
-
+unsafe impl Relation for i128 {
     fn is_valid(data_type: &DataType) -> bool {
         match data_type {
             DataType::Decimal(_, _) => true,
@@ -155,25 +149,13 @@ unsafe impl NativeType for i128 {
     }
 }
 
-unsafe impl NativeType for f32 {
-    type Bytes = [u8; std::mem::size_of::<Self>()];
-    #[inline]
-    fn to_le_bytes(&self) -> Self::Bytes {
-        Self::to_le_bytes(*self)
-    }
-
+unsafe impl Relation for f32 {
     fn is_valid(data_type: &DataType) -> bool {
         data_type == &DataType::Float32
     }
 }
 
-unsafe impl NativeType for f64 {
-    type Bytes = [u8; std::mem::size_of::<Self>()];
-    #[inline]
-    fn to_le_bytes(&self) -> Self::Bytes {
-        Self::to_le_bytes(*self)
-    }
-
+unsafe impl Relation for f64 {
     fn is_valid(data_type: &DataType) -> bool {
         data_type == &DataType::Float64
     }
@@ -191,13 +173,56 @@ impl std::fmt::Display for days_ms {
 }
 
 unsafe impl NativeType for days_ms {
-    type Bytes = Vec<u8>;
+    type Bytes = [u8; 8];
     #[inline]
     fn to_le_bytes(&self) -> Self::Bytes {
-        // todo: find a way of avoiding this allocation
-        [self.0[0].to_le_bytes(), self.0[1].to_le_bytes()].concat()
+        let days = self.0[0].to_le_bytes();
+        let ms = self.0[1].to_le_bytes();
+        let mut result = [0; 8];
+        result[0] = days[0];
+        result[1] = days[1];
+        result[2] = days[2];
+        result[3] = days[3];
+        result[4] = ms[0];
+        result[5] = ms[1];
+        result[6] = ms[2];
+        result[7] = ms[3];
+        result
     }
 
+    #[inline]
+    fn to_be_bytes(&self) -> Self::Bytes {
+        let days = self.0[0].to_be_bytes();
+        let ms = self.0[1].to_be_bytes();
+        let mut result = [0; 8];
+        result[0] = days[0];
+        result[1] = days[1];
+        result[2] = days[2];
+        result[3] = days[3];
+        result[4] = ms[0];
+        result[5] = ms[1];
+        result[6] = ms[2];
+        result[7] = ms[3];
+        result
+    }
+
+    #[inline]
+    fn from_be_bytes(bytes: Self::Bytes) -> Self {
+        let mut days = [0; 4];
+        days[0] = bytes[0];
+        days[1] = bytes[1];
+        days[2] = bytes[2];
+        days[3] = bytes[3];
+        let mut ms = [0; 4];
+        ms[0] = bytes[4];
+        ms[1] = bytes[5];
+        ms[2] = bytes[6];
+        ms[3] = bytes[7];
+        Self([i32::from_be_bytes(days), i32::from_be_bytes(ms)])
+    }
+}
+
+unsafe impl Relation for days_ms {
     fn is_valid(data_type: &DataType) -> bool {
         data_type == &DataType::Interval(IntervalUnit::DayTime)
     }

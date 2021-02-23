@@ -262,13 +262,11 @@ impl<R: Read + Seek> RecordBatchReader for FileReader<R> {
 
 #[cfg(test)]
 mod tests {
-    use crate::io::json_integration::{to_record_batch, ArrowJson};
+    use std::fs::File;
+
+    use crate::io::ipc::common::tests::read_gzip_json;
 
     use super::*;
-
-    use std::{collections::HashMap, convert::TryFrom, fs::File};
-
-    use flate2::read::GzDecoder;
 
     fn test_file(version: &str, file_name: &str) {
         let testdata = crate::util::test_util::arrow_test_data();
@@ -296,91 +294,66 @@ mod tests {
     #[test]
     fn read_generated_100_primitive() {
         test_file("1.0.0-littleendian", "generated_primitive");
+        test_file("1.0.0-bigendian", "generated_primitive");
     }
 
     #[test]
     fn read_generated_100_datetime() {
         test_file("1.0.0-littleendian", "generated_datetime");
+        test_file("1.0.0-bigendian", "generated_datetime");
     }
 
     #[test]
     fn read_generated_100_null_trivial() {
         test_file("1.0.0-littleendian", "generated_null_trivial");
+        test_file("1.0.0-bigendian", "generated_null_trivial");
     }
 
     #[test]
     fn read_generated_100_null() {
         test_file("1.0.0-littleendian", "generated_null");
+        test_file("1.0.0-bigendian", "generated_null");
     }
 
     #[test]
     fn read_generated_100_primitive_zerolength() {
         test_file("1.0.0-littleendian", "generated_primitive_zerolength");
+        test_file("1.0.0-bigendian", "generated_primitive_zerolength");
     }
 
     #[test]
     fn read_generated_100_primitive_primitive_no_batches() {
         test_file("1.0.0-littleendian", "generated_primitive_no_batches");
+        test_file("1.0.0-bigendian", "generated_primitive_no_batches");
     }
 
     #[test]
     fn read_generated_100_dictionary() {
         test_file("1.0.0-littleendian", "generated_dictionary");
+        test_file("1.0.0-bigendian", "generated_dictionary");
     }
 
     #[test]
     fn read_100_custom_metadata() {
         test_file("1.0.0-littleendian", "generated_custom_metadata");
+        test_file("1.0.0-bigendian", "generated_custom_metadata");
     }
 
     #[test]
     fn read_generated_100_nested() {
         test_file("1.0.0-littleendian", "generated_nested");
+        test_file("1.0.0-bigendian", "generated_nested");
     }
 
     #[test]
     fn read_generated_100_interval() {
         test_file("1.0.0-littleendian", "generated_interval");
+        test_file("1.0.0-bigendian", "generated_interval");
     }
 
     #[test]
     fn read_generated_100_decimal() {
         test_file("1.0.0-littleendian", "generated_decimal");
-    }
-
-    /// Read gzipped JSON file
-    fn read_gzip_json(version: &str, file_name: &str) -> (Schema, Vec<RecordBatch>) {
-        let testdata = crate::util::test_util::arrow_test_data();
-        let file = File::open(format!(
-            "{}/arrow-ipc-stream/integration/{}/{}.json.gz",
-            testdata, version, file_name
-        ))
-        .unwrap();
-        let mut gz = GzDecoder::new(&file);
-        let mut s = String::new();
-        gz.read_to_string(&mut s).unwrap();
-        // convert to Arrow JSON
-        let arrow_json: ArrowJson = serde_json::from_str(&s).unwrap();
-
-        let schema = serde_json::to_value(arrow_json.schema).unwrap();
-        let schema = Schema::try_from(&schema).unwrap();
-
-        // read dictionaries
-        let mut dictionaries = HashMap::new();
-        if let Some(dicts) = &arrow_json.dictionaries {
-            for json_dict in dicts {
-                // TODO: convert to a concrete Arrow type
-                dictionaries.insert(json_dict.id, json_dict);
-            }
-        }
-
-        let batches = arrow_json
-            .batches
-            .iter()
-            .map(|batch| to_record_batch(&schema, batch, &dictionaries))
-            .collect::<Result<Vec<_>>>()
-            .unwrap();
-
-        (schema, batches)
+        test_file("1.0.0-bigendian", "generated_decimal");
     }
 }

@@ -522,7 +522,7 @@ impl ToJson for Schema {
     fn to_json(&self) -> Value {
         json!({
             "fields": self.fields.iter().map(|field| field.to_json()).collect::<Vec<Value>>(),
-            "metadata": serde_json::to_value(&self.metadata).unwrap()
+            "metadata": serde_json::to_value(&self.metadata).unwrap(),
         })
     }
 }
@@ -586,7 +586,11 @@ impl TryFrom<&Value> for Schema {
                     HashMap::default()
                 };
 
-                Ok(Self { fields, metadata })
+                Ok(Self {
+                    fields,
+                    metadata,
+                    is_little_endian: true,
+                })
             }
             _ => Err(ArrowError::Schema(
                 "Invalid json value type for schema".to_string(),
