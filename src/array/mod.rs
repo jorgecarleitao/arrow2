@@ -167,6 +167,7 @@ mod struct_;
 
 mod equal;
 mod ffi;
+pub mod growable;
 
 pub use binary::{BinaryArray, BinaryPrimitive};
 pub use boolean::BooleanArray;
