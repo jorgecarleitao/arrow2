@@ -27,5 +27,9 @@ pub mod temporal_conversions;
 pub(crate) mod bits;
 pub mod datatypes;
 
-mod ffi;
+pub mod ffi;
 mod util;
+
+// so that documentation gets test
+#[cfg(any(test, doctest))]
+mod docs;

@@ -15,33 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-//! JSON Reader
-//!
-//! This JSON reader allows JSON line-delimited files to be read into the Arrow memory
-//! model. Records are loaded in batches and are then converted from row-based data to
-//! columnar data.
-//!
-//! Example:
-//!
-//! ```
-//! use arrow::datatypes::{DataType, Field, Schema};
-//! use arrow::json;
-//! use std::fs::File;
-//! use std::io::BufReader;
-//! use std::sync::Arc;
-//!
-//! let schema = Schema::new(vec![
-//!     Field::new("a", DataType::Float64, false),
-//!     Field::new("b", DataType::Float64, false),
-//!     Field::new("c", DataType::Float64, false),
-//! ]);
-//!
-//! let file = File::open("test/data/basic.json").unwrap();
-//!
-//! let mut json = json::Reader::new(BufReader::new(file), Arc::new(schema), 1024, None);
-//! let batch = json.next().unwrap().unwrap();
-//! ```
-
 use std::io::{BufReader, Read, Seek};
 
 use serde_json::Value;
@@ -53,28 +26,6 @@ use crate::record_batch::RecordBatch;
 
 use super::{deserialize::read, infer_json_schema_from_seekable, util::ValueIter};
 
-/// JSON values to Arrow record batch decoder. Decoder's next_batch method takes a JSON Value
-/// iterator as input and outputs Arrow record batch.
-///
-/// # Examples
-/// ```
-/// use arrow::json::reader::{Decoder, ValueIter, infer_json_schema};
-/// use std::fs::File;
-/// use std::io::{BufReader, Seek, SeekFrom};
-///
-/// let mut reader =
-///     BufReader::new(File::open("test/data/mixed_arrays.json").unwrap());
-/// let inferred_schema = infer_json_schema(&mut reader, None).unwrap();
-/// let batch_size = 1024;
-/// let decoder = Decoder::new(inferred_schema, batch_size, None);
-///
-/// // seek back to start so that the original file is usable again
-/// reader.seek(SeekFrom::Start(0)).unwrap();
-/// let mut value_reader = ValueIter::new(&mut reader, None);
-/// let batch = decoder.next_batch(&mut value_reader).unwrap().unwrap();
-/// assert_eq!(4, batch.num_rows());
-/// assert_eq!(4, batch.num_columns());
-/// ```
 #[derive(Debug)]
 struct Decoder {
     /// Explicit schema for the JSON file
@@ -171,7 +122,31 @@ impl Decoder {
     }
 }
 
-/// JSON file reader
+/// JSON Reader
+///
+/// This JSON reader allows JSON line-delimited files to be read into the Arrow memory
+/// model. Records are loaded in batches and are then converted from row-based data to
+/// columnar data.
+///
+/// Example:
+///
+/// ```
+/// use arrow2::datatypes::{DataType, Field, Schema};
+/// use arrow2::io::json;
+/// use std::fs::File;
+/// use std::io::BufReader;
+///
+/// let schema = Schema::new(vec![
+///     Field::new("a", DataType::Float64, false),
+///     Field::new("b", DataType::Float64, false),
+///     Field::new("c", DataType::Float64, false),
+/// ]);
+///
+/// let file = File::open("test/data/basic.json").unwrap();
+///
+/// let mut json = json::Reader::new(BufReader::new(file), schema, 1024, None);
+/// let batch = json.next().unwrap().unwrap();
+/// ```
 #[derive(Debug)]
 pub struct Reader<R: Read> {
     reader: BufReader<R>,
@@ -254,29 +229,6 @@ impl Default for ReaderBuilder {
 }
 
 impl ReaderBuilder {
-    /// Create a new builder for configuring JSON parsing options.
-    ///
-    /// To convert a builder into a reader, call `Reader::from_builder`
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// extern crate arrow;
-    ///
-    /// use arrow::json;
-    /// use std::fs::File;
-    ///
-    /// fn example() -> json::Reader<File> {
-    ///     let file = File::open("test/data/basic.json").unwrap();
-    ///
-    ///     // create a builder, inferring the schema with the first 100 records
-    ///     let builder = json::ReaderBuilder::new().infer_schema(Some(100));
-    ///
-    ///     let reader = builder.build::<File>(file).unwrap();
-    ///
-    ///     reader
-    /// }
-    /// ```
     pub fn new() -> Self {
         Self::default()
     }

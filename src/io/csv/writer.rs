@@ -23,13 +23,13 @@
 //! Example:
 //!
 //! ```
-//! use arrow::array::*;
-//! use arrow::csv;
-//! use arrow::datatypes::*;
-//! use arrow::record_batch::RecordBatch;
-//! use arrow::util::test_util::get_temp_file;
 //! use std::fs::File;
 //! use std::sync::Arc;
+//!
+//! use arrow2::array::*;
+//! use arrow2::io::csv;
+//! use arrow2::datatypes::*;
+//! use arrow2::record_batch::RecordBatch;
 //!
 //! let schema = Schema::new(vec![
 //!     Field::new("c1", DataType::Utf8, false),
@@ -37,28 +37,29 @@
 //!     Field::new("c3", DataType::UInt32, false),
 //!     Field::new("c3", DataType::Boolean, true),
 //! ]);
-//! let c1 = StringArray::from(vec![
+//! let c1 = StringArray::from_slice(&[
 //!     "Lorem ipsum dolor sit amet",
 //!     "consectetur adipiscing elit",
 //!     "sed do eiusmod tempor",
 //! ]);
-//! let c2 = PrimitiveArray::<Float64Type>::from(vec![
-//!     Some(123.564532),
+//! let c2 = Primitive::from(&[
+//!     Some(123.564532f64),
 //!     None,
 //!     Some(-556132.25),
-//! ]);
-//! let c3 = PrimitiveArray::<UInt32Type>::from(vec![3, 2, 1]);
-//! let c4 = BooleanArray::from(vec![Some(true), Some(false), None]);
+//! ]).to(DataType::Float64);
+//! let c3 = Primitive::from_slice(&[3u32, 2, 1]).to(DataType::UInt32);
+//! let c4 = BooleanArray::from(&[Some(true), Some(false), None]);
 //!
 //! let batch = RecordBatch::try_new(
-//!     Arc::new(schema),
+//!     schema,
 //!     vec![Arc::new(c1), Arc::new(c2), Arc::new(c3), Arc::new(c4)],
 //! )
 //! .unwrap();
 //!
-//! let file = get_temp_file("out.csv", &[]);
+//! use std::io::Cursor;
+//! let mut buffer = Cursor::new(Vec::new());
 //!
-//! let mut writer = csv::Writer::new(file);
+//! let mut writer = csv::Writer::new(buffer);
 //! let batches = vec![&batch, &batch];
 //! for batch in batches {
 //!     writer.write(batch).unwrap();
@@ -285,20 +286,12 @@ impl WriterBuilder {
     /// # Example
     ///
     /// ```
-    /// extern crate arrow;
-    ///
-    /// use arrow::csv;
+    /// use arrow2::io::csv;
     /// use std::fs::File;
     ///
-    /// fn example() -> csv::Writer<File> {
-    ///     let file = File::create("target/out.csv").unwrap();
-    ///
-    ///     // create a builder that doesn't write headers
-    ///     let builder = csv::WriterBuilder::new().has_headers(false);
-    ///     let writer = builder.build(file);
-    ///
-    ///     writer
-    /// }
+    /// let file = File::create("target/out.csv").unwrap();
+    /// let builder = csv::WriterBuilder::new().has_headers(false);    
+    /// let writer = builder.build(file);
     /// ```
     pub fn new() -> Self {
         Self::default()

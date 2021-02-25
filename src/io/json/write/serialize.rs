@@ -335,6 +335,25 @@ fn set_column_for_json_rows(
     }
 }
 
+/// Serializes a [`RecordBatch`] into Json
+/// # Example
+/// ```
+/// use std::sync::Arc;
+/// use arrow2::array::Primitive;
+/// use arrow2::datatypes::{DataType, Field, Schema};
+/// use arrow2::io::json;
+/// use arrow2::record_batch::RecordBatch;
+///
+/// let schema = Schema::new(vec![Field::new("a", DataType::Int32, false)]);
+/// let a = Primitive::from_slice(&[1i32, 2, 3]).to(DataType::Int32);
+/// let batch = RecordBatch::try_new(schema, vec![Arc::new(a)]).unwrap();
+///
+/// let json_rows = json::write_record_batches(&[batch]);
+/// assert_eq!(
+///     serde_json::Value::Object(json_rows[1].clone()),
+///     serde_json::json!({"a": 2}),
+/// );
+/// ```
 pub fn write_record_batches(batches: &[RecordBatch]) -> Vec<Map<String, Value>> {
     let mut rows: Vec<Map<String, Value>> = std::iter::repeat(Map::new())
         .take(batches.iter().map(|b| b.num_rows()).sum())

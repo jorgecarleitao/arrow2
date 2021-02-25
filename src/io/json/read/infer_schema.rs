@@ -173,7 +173,7 @@ fn generate_schema(spec: HashMap<String, HashSet<DataType>>) -> Result<Schema> {
 /// use std::fs::File;
 /// use std::io::{BufReader, SeekFrom, Seek};
 /// use flate2::read::GzDecoder;
-/// use arrow::json::reader::infer_json_schema;
+/// use arrow2::io::json::infer_json_schema;
 ///
 /// let mut file = File::open("test/data/mixed_arrays.json.gz").unwrap();
 ///
@@ -346,7 +346,7 @@ where
 /// ```
 /// use std::fs::File;
 /// use std::io::BufReader;
-/// use arrow::json::reader::infer_json_schema_from_seekable;
+/// use arrow2::io::json::infer_json_schema_from_seekable;
 ///
 /// let file = File::open("test/data/mixed_arrays.json").unwrap();
 /// // file's cursor's offset at 0

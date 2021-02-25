@@ -127,7 +127,7 @@ impl Field {
     /// Example:
     ///
     /// ```
-    /// use arrow::datatypes::*;
+    /// use arrow2::datatypes::*;
     ///
     /// let mut field = Field::new("c1", DataType::Int64, false);
     /// assert!(field.try_merge(&Field::new("c1", DataType::Int64, true)).is_ok());

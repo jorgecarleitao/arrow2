@@ -15,52 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-//! JSON Writer
-//!
-//! This JSON writer allows converting Arrow record batches into array of JSON objects. It also
-//! provides a Writer struct to help serialize record batches directly into line-delimited JSON
-//! objects as bytes.
-//!
-//! Serialize record batches into array of JSON objects:
-//!
-//! ```
-//!
-//! use arrow::array::Int32Array;
-//! use arrow::datatypes::{DataType, Field, Schema};
-//! use arrow::json;
-//! use arrow::record_batch::RecordBatch;
-//!
-//! let schema = Schema::new(vec![Field::new("a", DataType::Int32, false)]);
-//! let a = Int32Array::from(vec![1, 2, 3]);
-//! let batch = RecordBatch::try_new(schema, vec![Arc::new(a)]).unwrap();
-//!
-//! let json_rows = json::writer::record_batches_to_json_rows(&[batch]);
-//! assert_eq!(
-//!     serde_json::Value::Object(json_rows[1].clone()),
-//!     serde_json::json!({"a": 2}),
-//! );
-//! ```
-//!
-//! Serialize record batches into line-delimited JSON bytes:
-//!
-//! ```
-//!
-//! use arrow::array::Int32Array;
-//! use arrow::datatypes::{DataType, Field, Schema};
-//! use arrow::json;
-//! use arrow::record_batch::RecordBatch;
-//!
-//! let schema = Schema::new(vec![Field::new("a", DataType::Int32, false)]);
-//! let a = Int32Array::from(vec![1, 2, 3]);
-//! let batch = RecordBatch::try_new(schema, vec![Arc::new(a)]).unwrap();
-//!
-//! let buf = Vec::new();
-//! let mut writer = json::Writer::new(buf);
-//! writer.write_batches(&vec![batch]).unwrap();
-//! ```
-
 mod serialize;
 mod writer;
+pub use serialize::write_record_batches;
 pub use writer::Writer;
 
 #[cfg(test)]

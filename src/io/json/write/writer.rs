@@ -24,7 +24,29 @@ use crate::record_batch::RecordBatch;
 
 use super::serialize::write_record_batches;
 
-/// A JSON writer
+/// JSON Writer
+///
+/// This JSON writer allows converting Arrow record batches into array of JSON objects. It also
+/// provides a Writer struct to help serialize record batches directly into line-delimited JSON
+/// objects as bytes.
+///
+/// Serialize record batches into line-delimited JSON bytes:
+///
+/// ```
+/// use std::sync::Arc;
+/// use arrow2::array::Primitive;
+/// use arrow2::datatypes::{DataType, Field, Schema};
+/// use arrow2::io::json;
+/// use arrow2::record_batch::RecordBatch;
+///
+/// let schema = Schema::new(vec![Field::new("a", DataType::Int32, false)]);
+/// let a = Primitive::from_slice(&[1i32, 2, 3]).to(DataType::Int32);
+/// let batch = RecordBatch::try_new(schema, vec![Arc::new(a)]).unwrap();
+///
+/// let buf = Vec::new();
+/// let mut writer = json::Writer::new(buf);
+/// writer.write_batches(&vec![batch]).unwrap();
+/// ```
 #[derive(Debug)]
 pub struct Writer<W: Write> {
     writer: BufWriter<W>,

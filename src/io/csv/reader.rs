@@ -362,21 +362,13 @@ impl ReaderBuilder {
     /// # Example
     ///
     /// ```
-    /// extern crate arrow;
     ///
-    /// use arrow::csv;
+    /// use arrow2::io::csv;
     /// use std::fs::File;
     ///
-    /// fn example() -> csv::Reader<File> {
-    ///     let file = File::open("test/data/uk_cities_with_headers.csv").unwrap();
-    ///
-    ///     // create a builder, inferring the schema with the first 100 records
-    ///     let builder = csv::ReaderBuilder::new().infer_schema(Some(100));
-    ///
-    ///     let reader = builder.build(file).unwrap();
-    ///
-    ///     reader
-    /// }
+    /// let file = File::open("test/data/uk_cities_with_headers.csv").unwrap();
+    /// let builder = csv::ReaderBuilder::new().infer_schema(Some(100));
+    /// let reader = builder.build(file).unwrap();
     /// ```
     pub fn new() -> ReaderBuilder {
         ReaderBuilder::default()

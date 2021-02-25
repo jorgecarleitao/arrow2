@@ -34,8 +34,8 @@ impl From<chrono::ParseError> for ArrowError {
 }
 
 mod parser;
-pub mod reader;
-pub mod writer;
+mod reader;
+mod writer;
 
 mod infer_schema;
 mod read_boolean;
@@ -43,3 +43,6 @@ mod read_primitive;
 pub use infer_schema::{infer_file_schema, infer_schema_from_files};
 pub use read_boolean::{new_boolean_array, BooleanParser};
 pub use read_primitive::{new_primitive_array, PrimitiveParser};
+
+pub use reader::*;
+pub use writer::{Writer, WriterBuilder};

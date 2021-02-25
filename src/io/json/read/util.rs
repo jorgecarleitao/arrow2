@@ -21,22 +21,6 @@ use serde_json::Value;
 
 use crate::error::{ArrowError, Result};
 
-/// JSON file reader that produces a serde_json::Value iterator from a Read trait
-///
-/// # Example
-///
-/// ```
-/// use std::fs::File;
-/// use std::io::BufReader;
-/// use arrow::json::reader::ValueIter;
-///
-/// let mut reader =
-///     BufReader::new(File::open("test/data/mixed_arrays.json").unwrap());
-/// let mut value_reader = ValueIter::new(&mut reader, None);
-/// for value in value_reader {
-///     println!("JSON value: {}", value.unwrap());
-/// }
-/// ```
 #[derive(Debug)]
 pub(super) struct ValueIter<'a, R: Read> {
     reader: &'a mut BufReader<R>,

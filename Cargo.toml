@@ -31,6 +31,7 @@ rand = "0.7"
 criterion = "0.3"
 tempfile = "3"
 flate2 = "1"
+doc-comment = "0.3"
 
 [features]
 default = ["io_csv", "io_json", "io_ipc", "io_json_integration"]

@@ -49,8 +49,7 @@ impl Schema {
     /// # Example
     ///
     /// ```
-    /// # extern crate arrow;
-    /// # use arrow::datatypes::{Field, DataType, Schema};
+    /// # use arrow2::datatypes::{Field, DataType, Schema};
     /// let field_a = Field::new("a", DataType::Int64, false);
     /// let field_b = Field::new("b", DataType::Boolean, false);
     ///
@@ -66,8 +65,7 @@ impl Schema {
     /// # Example
     ///
     /// ```
-    /// # extern crate arrow;
-    /// # use arrow::datatypes::{Field, DataType, Schema};
+    /// # use arrow2::datatypes::{Field, DataType, Schema};
     /// # use std::collections::HashMap;
     /// let field_a = Field::new("a", DataType::Int64, false);
     /// let field_b = Field::new("b", DataType::Boolean, false);
@@ -95,7 +93,7 @@ impl Schema {
     /// Example:
     ///
     /// ```
-    /// use arrow::datatypes::*;
+    /// use arrow2::datatypes::*;
     ///
     /// let merged = Schema::try_merge(vec![
     ///     Schema::new(vec![
@@ -125,7 +123,7 @@ impl Schema {
                 let Schema {
                     metadata,
                     fields,
-                    is_little_endian,
+                    is_little_endian: _,
                 } = schema;
                 for (key, value) in metadata.into_iter() {
                     // merge metadata

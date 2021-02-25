@@ -26,30 +26,31 @@
 //!
 //! ```rust
 //! # use std::sync::Arc;
-//! # use arrow::array::{Int32Array, Array, ArrayData, make_array_from_raw};
-//! # use arrow::error::{Result, ArrowError};
-//! # use arrow::compute::kernels::arithmetic;
+//! # use arrow2::array::{Array, Primitive, Int32Array};
+//! # use arrow2::error::{Result, ArrowError};
+//! # use arrow2::ffi::ArrowArray;
+//! # use arrow2::datatypes::DataType;
 //! # use std::convert::TryFrom;
 //! # fn main() -> Result<()> {
 //! // create an array natively
-//! let array = Int32Array::from(vec![Some(1), None, Some(3)]);
+//! let array = Box::new(Primitive::from(&[Some(1i32), None, Some(3)]).to(DataType::Int32)) as Box<dyn Array>;
 //!
 //! // export it
-//! let (array_ptr, schema_ptr) = array.to_raw()?;
+//! let array = ArrowArray::try_from(array)?;
+//! let (array, schema) = ArrowArray::into_raw(array);
 //!
 //! // consumed and used by something else...
 //!
 //! // import it
-//! let array = unsafe { make_array_from_raw(array_ptr, schema_ptr)? };
+//! let array = unsafe { ArrowArray::try_from_raw(array, schema) }?;
+//! let array = Box::<dyn Array>::try_from(array)?;
 //!
 //! // perform some operation
-//! let array = array.as_any().downcast_ref::<Int32Array>().ok_or(
-//!     ArrowError::ParseError("Expects an int32".to_string()),
-//! )?;
-//! let array = arithmetic::add(&array, &array)?;
+//! let array = array.as_any().downcast_ref::<Int32Array>().unwrap();
 //!
 //! // verify
-//! assert_eq!(array, Int32Array::from(vec![Some(2), None, Some(6)]));
+//! let expected = Primitive::from(&[Some(1i32), None, Some(3)]).to(DataType::Int32);
+//! assert_eq!(array, &expected);
 //!
 //! // (drop/release)
 //! Ok(())
@@ -66,4 +67,5 @@ trait ToFFI {
     fn offset(&self) -> usize;
 }
 
-pub(crate) use ffi::{ArrowArray, FFI_ArrowArray};
+pub use ffi::ArrowArray;
+pub(crate) use ffi::FFI_ArrowArray;
