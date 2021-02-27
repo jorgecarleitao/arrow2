@@ -65,9 +65,17 @@ pub struct DictionaryArray<K: DictionaryKey> {
 }
 
 impl<K: DictionaryKey> DictionaryArray<K> {
-    pub fn new_empty(datatype: DataType) -> Self {
-        let values = new_empty_array(datatype).into();
+    pub fn new_empty(data_type: DataType) -> Self {
+        let values = new_empty_array(data_type).into();
         Self::from_data(PrimitiveArray::<K>::new_empty(K::DATA_TYPE), values)
+    }
+
+    #[inline]
+    pub fn new_null(data_type: DataType, length: usize) -> Self {
+        Self::from_data(
+            PrimitiveArray::<K>::new_null(K::DATA_TYPE, length),
+            new_empty_array(data_type).into(),
+        )
     }
 
     pub fn from_data(keys: PrimitiveArray<K>, values: Arc<dyn Array>) -> Self {

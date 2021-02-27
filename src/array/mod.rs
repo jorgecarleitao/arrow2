@@ -98,6 +98,54 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
     }
 }
 
+/// Creates a new empty dynamic array
+pub fn new_null_array(data_type: DataType, length: usize) -> Box<dyn Array> {
+    match data_type {
+        DataType::Null => Box::new(NullArray::new_null(length)),
+        DataType::Boolean => Box::new(BooleanArray::new_null(length)),
+        DataType::Int8 => Box::new(PrimitiveArray::<i8>::new_null(data_type, length)),
+        DataType::Int16 => Box::new(PrimitiveArray::<i16>::new_null(data_type, length)),
+        DataType::Int32 | DataType::Date32 | DataType::Time32(_) => {
+            Box::new(PrimitiveArray::<i32>::new_null(data_type, length))
+        }
+        DataType::Int64
+        | DataType::Date64
+        | DataType::Time64(_)
+        | DataType::Timestamp(_, _)
+        | DataType::Duration(_)
+        | DataType::Interval(_) => Box::new(PrimitiveArray::<i64>::new_null(data_type, length)),
+        DataType::Decimal(_, _) => Box::new(PrimitiveArray::<i128>::new_null(data_type, length)),
+        DataType::UInt8 => Box::new(PrimitiveArray::<u8>::new_null(data_type, length)),
+        DataType::UInt16 => Box::new(PrimitiveArray::<u16>::new_null(data_type, length)),
+        DataType::UInt32 => Box::new(PrimitiveArray::<u32>::new_null(data_type, length)),
+        DataType::UInt64 => Box::new(PrimitiveArray::<u64>::new_null(data_type, length)),
+        DataType::Float16 => unreachable!(),
+        DataType::Float32 => Box::new(PrimitiveArray::<f32>::new_null(data_type, length)),
+        DataType::Float64 => Box::new(PrimitiveArray::<f64>::new_null(data_type, length)),
+        DataType::Binary => Box::new(BinaryArray::<i32>::new_null(length)),
+        DataType::LargeBinary => Box::new(BinaryArray::<i64>::new_null(length)),
+        DataType::FixedSizeBinary(_) => Box::new(FixedSizeBinaryArray::new_null(data_type, length)),
+        DataType::Utf8 => Box::new(Utf8Array::<i32>::new_null(length)),
+        DataType::LargeUtf8 => Box::new(Utf8Array::<i64>::new_null(length)),
+        DataType::List(_) => Box::new(ListArray::<i32>::new_null(data_type, length)),
+        DataType::LargeList(_) => Box::new(ListArray::<i64>::new_null(data_type, length)),
+        DataType::FixedSizeList(_, _) => Box::new(FixedSizeListArray::new_null(data_type, length)),
+        DataType::Struct(fields) => Box::new(StructArray::new_null(&fields, length)),
+        DataType::Union(_) => unimplemented!(),
+        DataType::Dictionary(key_type, value_type) => match key_type.as_ref() {
+            DataType::Int8 => Box::new(DictionaryArray::<i8>::new_null(*value_type, length)),
+            DataType::Int16 => Box::new(DictionaryArray::<i16>::new_null(*value_type, length)),
+            DataType::Int32 => Box::new(DictionaryArray::<i32>::new_null(*value_type, length)),
+            DataType::Int64 => Box::new(DictionaryArray::<i64>::new_null(*value_type, length)),
+            DataType::UInt8 => Box::new(DictionaryArray::<u8>::new_null(*value_type, length)),
+            DataType::UInt16 => Box::new(DictionaryArray::<u16>::new_null(*value_type, length)),
+            DataType::UInt32 => Box::new(DictionaryArray::<u32>::new_null(*value_type, length)),
+            DataType::UInt64 => Box::new(DictionaryArray::<u64>::new_null(*value_type, length)),
+            _ => unreachable!(),
+        },
+    }
+}
+
 macro_rules! clone_dyn {
     ($array:expr, $ty:ty) => {{
         let array = $array.as_any().downcast_ref::<$ty>().unwrap();

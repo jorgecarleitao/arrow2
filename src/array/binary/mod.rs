@@ -42,6 +42,15 @@ impl<O: Offset> BinaryArray<O> {
         Self::from_data(Buffer::from(&[O::zero()]), Buffer::new(), None)
     }
 
+    #[inline]
+    pub fn new_null(length: usize) -> Self {
+        Self::from_data(
+            Buffer::new_zeroed(length + 1),
+            Buffer::new(),
+            Some(Bitmap::new_zeroed(length)),
+        )
+    }
+
     pub fn from_data(offsets: Buffer<O>, values: Buffer<u8>, validity: Option<Bitmap>) -> Self {
         check_offsets(&offsets, values.len());
 

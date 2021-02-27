@@ -29,6 +29,8 @@ This document describes the overall design of this module.
 
 * An array MUST implement either `new_empty()` or `new_empty(DataType)` that returns a zero-len of `Self`.
 
+* An array MUST implement either `new_null(length: usize)` or `new_null(DataType, length: usize)` that returns a valid array of length `length`.
+
 * An array MAY implement `value(i: usize)` that returns the value at slot `i` ignoring the validity bitmap.
 
 * An array SHOULD have a `offset: usize` measuring the number of slots that the array is currently offsetted by.

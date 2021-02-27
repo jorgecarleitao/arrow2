@@ -22,7 +22,7 @@ use crate::{
     datatypes::{DataType, Field},
 };
 
-use super::{display_fmt, ffi::ToFFI, new_empty_array, Array};
+use super::{Array, display_fmt, ffi::ToFFI, new_empty_array, new_null_array};
 
 #[derive(Debug, Clone)]
 pub struct FixedSizeListArray {
@@ -37,6 +37,11 @@ impl FixedSizeListArray {
     pub fn new_empty(data_type: DataType) -> Self {
         let values = new_empty_array(Self::get_child_and_size(&data_type).0.clone()).into();
         Self::from_data(data_type, values, None)
+    }
+
+    pub fn new_null(data_type: DataType, length: usize) -> Self {
+        let values = new_null_array(Self::get_child_and_size(&data_type).0.clone(), length).into();
+        Self::from_data(data_type, values, Some(Bitmap::new_zeroed(length)))
     }
 
     pub fn from_data(

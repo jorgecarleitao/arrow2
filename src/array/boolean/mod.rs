@@ -36,6 +36,12 @@ impl BooleanArray {
     }
 
     #[inline]
+    pub fn new_null(length: usize) -> Self {
+        let bitmap = Bitmap::new_zeroed(length);
+        Self::from_data(bitmap.clone(), Some(bitmap))
+    }
+
+    #[inline]
     pub fn from_data(values: Bitmap, validity: Option<Bitmap>) -> Self {
         Self {
             data_type: DataType::Boolean,

@@ -31,6 +31,11 @@ impl NullArray {
         Self::from_data(0)
     }
 
+    /// Returns a new null array
+    pub fn new_null(length: usize) -> Self {
+        Self::from_data(length)
+    }
+
     pub fn from_data(length: usize) -> Self {
         Self {
             data_type: DataType::Null,

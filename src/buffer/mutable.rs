@@ -92,6 +92,7 @@ impl<T: NativeType> MutableBuffer<T> {
     /// let data = buffer.as_slice_mut();
     /// assert_eq!(data[126], 0u8);
     /// ```
+    #[inline]
     pub fn from_len_zeroed(len: usize) -> Self {
         let new_capacity = capacity_multiple_of_64::<T>(len);
         let ptr = alloc::allocate_aligned_zeroed(new_capacity);

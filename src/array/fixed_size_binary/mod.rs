@@ -42,6 +42,15 @@ impl FixedSizeBinaryArray {
     }
 
     #[inline]
+    pub fn new_null(data_type: DataType, length: usize) -> Self {
+        Self::from_data(
+            data_type,
+            Buffer::new_zeroed(length),
+            Some(Bitmap::new_zeroed(length)),
+        )
+    }
+
+    #[inline]
     pub fn from_data(data_type: DataType, values: Buffer<u8>, validity: Option<Bitmap>) -> Self {
         let size = *Self::get_size(&data_type);
 

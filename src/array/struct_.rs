@@ -22,7 +22,7 @@ use crate::{
     datatypes::{DataType, Field},
 };
 
-use super::{ffi::ToFFI, new_empty_array, Array};
+use super::{ffi::ToFFI, new_empty_array, new_null_array, Array};
 
 #[derive(Debug, Clone)]
 pub struct StructArray {
@@ -38,6 +38,15 @@ impl StructArray {
             .map(|field| new_empty_array(field.data_type().clone()).into())
             .collect();
         Self::from_data(fields.to_vec(), values, None)
+    }
+
+    #[inline]
+    pub fn new_null(fields: &[Field], length: usize) -> Self {
+        let values = fields
+            .iter()
+            .map(|field| new_null_array(field.data_type().clone(), length).into())
+            .collect();
+        Self::from_data(fields.to_vec(), values, Some(Bitmap::new_zeroed(length)))
     }
 
     pub fn from_data(

@@ -18,6 +18,7 @@
 use crate::{
     buffer::{types::NativeType, Bitmap, Buffer},
     datatypes::DataType,
+    error::ArrowError,
     ffi::ArrowArray,
 };
 
@@ -42,8 +43,25 @@ impl<T: NativeType> PrimitiveArray<T> {
         Self::from_data(data_type, Buffer::new(), None)
     }
 
+    // Returns a new [`PrimitiveArray`] whose validity is all null
+    #[inline]
+    pub fn new_null(data_type: DataType, length: usize) -> Self {
+        Self::from_data(
+            data_type,
+            Buffer::new_zeroed(length),
+            Some(Bitmap::new_zeroed(length)),
+        )
+    }
+
     pub fn from_data(data_type: DataType, values: Buffer<T>, validity: Option<Bitmap>) -> Self {
-        assert!(T::is_valid(&data_type));
+        if !T::is_valid(&data_type) {
+            Err(ArrowError::InvalidArgumentError(format!(
+                "Type {} does not support logical type {}",
+                std::any::type_name::<T>(),
+                data_type
+            )))
+            .unwrap()
+        }
         Self {
             data_type,
             values,

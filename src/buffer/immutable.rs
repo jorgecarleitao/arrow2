@@ -44,6 +44,11 @@ impl<T: NativeType> Buffer<T> {
         MutableBuffer::new().into()
     }
 
+    #[inline]
+    pub fn new_zeroed(length: usize) -> Self {
+        MutableBuffer::from_len_zeroed(length).into()
+    }
+
     /// Auxiliary method to create a new Buffer
     #[inline]
     pub fn from_bytes(bytes: Bytes<T>) -> Self {

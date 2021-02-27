@@ -45,6 +45,17 @@ impl<O: Offset> ListArray<O> {
         Self::from_data(data_type, Buffer::from(&[O::zero()]), values, None)
     }
 
+    #[inline]
+    pub fn new_null(data_type: DataType, length: usize) -> Self {
+        let child = Self::get_child(&data_type).clone();
+        Self::from_data(
+            data_type,
+            Buffer::new_zeroed(length + 1),
+            new_empty_array(child).into(),
+            Some(Bitmap::new_zeroed(length)),
+        )
+    }
+
     pub fn from_data(
         data_type: DataType,
         offsets: Buffer<O>,

@@ -60,6 +60,15 @@ impl<O: Offset> Utf8Array<O> {
         }
     }
 
+    #[inline]
+    pub fn new_null(length: usize) -> Self {
+        Self::from_data(
+            Buffer::new_zeroed(length + 1),
+            Buffer::new(),
+            Some(Bitmap::new_zeroed(length)),
+        )
+    }
+
     /// # Safety
     /// `values` buffer must contain valid utf8 between every `offset`
     pub unsafe fn from_data_unchecked(

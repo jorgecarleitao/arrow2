@@ -48,6 +48,11 @@ impl Bitmap {
         MutableBitmap::new().into()
     }
 
+    #[inline]
+    pub fn new_zeroed(length: usize) -> Self {
+        MutableBitmap::from_len_zeroed(length).into()
+    }
+
     /// Returns the length of the [`Bitmap`] in bits.
     #[inline]
     pub fn len(&self) -> usize {
@@ -137,6 +142,15 @@ impl MutableBitmap {
         Self {
             buffer: MutableBuffer::new(),
             length: 0,
+        }
+    }
+
+    /// Initializes a zeroed [`MutableBitmap`].
+    #[inline]
+    pub fn from_len_zeroed(length: usize) -> Self {
+        Self {
+            buffer: MutableBuffer::from_len_zeroed(length.saturating_add(7) / 8),
+            length,
         }
     }
 
@@ -309,6 +323,17 @@ impl FromIterator<bool> for MutableBitmap {
     }
 }
 
+impl MutableBitmap {
+    /// Creates a new [`Bitmap`] from an iterator of booleans.
+    /// # Safety
+    /// The caller must guarantee that the iterator is `TrustedLen`.
+    #[inline]
+    pub unsafe fn from_trusted_len_iter<I: Iterator<Item = bool>>(iterator: I) -> Self {
+        // todo implement `from_trusted_len_iter` for MutableBitmap
+        Self::from_iter(iterator)
+    }
+}
+
 impl FromIterator<bool> for Bitmap {
     fn from_iter<I>(iter: I) -> Self
     where
@@ -338,8 +363,7 @@ impl Bitmap {
     /// The caller must guarantee that the iterator is `TrustedLen`.
     #[inline]
     pub unsafe fn from_trusted_len_iter<I: Iterator<Item = bool>>(iterator: I) -> Self {
-        // todo implement `from_trusted_len_iter` for MutableBitmap
-        MutableBitmap::from_iter(iterator).into()
+        MutableBitmap::from_trusted_len_iter(iterator).into()
     }
 }
 
