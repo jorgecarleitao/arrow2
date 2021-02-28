@@ -1,4 +1,4 @@
-# Arrow2: safe arrow
+# Arrow2: Safe Arrow
 
 This repository contains a Rust Library to work with the Arrow format within Rust.
 
@@ -8,7 +8,7 @@ It is a re-write of the original Arrow crate using `safe` Rust. See #FAQ for det
 
 See details in the book.
 
-## Run Unit tests
+## Run unit tests
 
 ```bash
 git clone git@github.com:jorgecarleitao/arrow2.git
@@ -40,7 +40,7 @@ against other implementations in arrow's master; it assumes that arrow's golden 
 1. CI/CD
 2. parquet IO
 3. bring documentation up to speed
-4. compute kernels; probably a different repo
+4. compute kernels; probably a different crate
 5. auto-vectorization of bitmap operations
 
 ## How to develop
@@ -121,23 +121,23 @@ Consequently, this crate is easier to use, develop, maintain, and debug.
 
 #### Why is this not in the arrow repository?
 
-The arrow repository and project uses a release methodology that is IMO detrimental to software development. Specifically:
+The arrow repository and project uses a methodology that is IMO detrimental to software development. Specifically:
 
 * The Apache Arrow project has a single git repository with all 10+ implementations, ranging from C++, Python, C#, Julia, Rust, and execution engines such as Grandiva and DataFusion. A git ref corresponds to a specific implementation of any of them, and a commit is about any/all of them.
 
-The implication is that the repository has an unecessarily complex CI setup and a git history that is very difficult to follow. It also implies that tags of software releases are difficult to manage, as they correspond to all implementations at once (see also next point).
+The implication is that the repository has an unecessarily complex CI setup and git history that is difficult to follow. It needs rigorous discipline to understand which commit belongs to which implementation. It also implies that tags of software releases are difficult to manage, as they correspond to all implementations at once (see also next point).
 
 * A release of the Apache consists of a release of all implementations of the arrow format at once, with the same version. It is currently at `3.0.0`.
 
 Firstly, this implies that the crate version is _independent_ of the changelog or its API stability, which violates SemVer _by design_. This procedure makes the crate incompatible with Rusts' (and many others') ecosystem that heavily relies on SemVer to constraint software versions.
 
-Secondly, this implies the arrow crate is versioned as `>0.x`. This is inconsistent with the state of the crate: the arrow crate is neither stable nor mature. This also places expectations about API stability that are un-reasonble for the current maturity of the crate.
+Secondly, this implies the arrow crate is versioned as `>0.x`. This places expectations about API stability that are unreasonble for the current maturity of the crate.
 
-This crate in this repo will not be `1.x` until the crate's API is sufficiently stable, and uses the traditional `0.x` for releases of an unstable API.
+The crate in this repo will not be `1.x` until the crate's API is sufficiently stable, and uses the traditional `0.x` for releases of an unstable API.
 
 * Apache Arrow releases a major version every X months
 
-This implies that, irrespectively of how stable or not the API is, or at which pace it was developed during X months, the crate will get a major version bump.
+This implies that, irrespectively of how stable or not the API is, or at which pace it was developed during X months, the crate will get a major version bump. This again makes it difficult to depend on the crate and creates a large incentive to break backward compatibility on every release.
 
-This repo will release code according to the relevance and stability of new features and/or bug fixes.
-It is expected to be released at a higher cadence than 3 months.
+This repo releases according to the relevance and stability of new features and/or bug fixes.
+Its release follows semver with `0.Y.Z` until sufficiently stable.

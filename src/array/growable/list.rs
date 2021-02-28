@@ -124,6 +124,19 @@ impl<'a, O: Offset> GrowableList<'a, O> {
             extend_null_bits,
         }
     }
+
+    fn to(&mut self) -> ListArray<O> {
+        let validity = std::mem::take(&mut self.validity);
+        let offsets = std::mem::take(&mut self.offsets);
+        let values = self.values.to_arc();
+
+        ListArray::<O>::from_data(
+            self.arrays[0].data_type().clone(),
+            offsets.into(),
+            values,
+            validity.into(),
+        )
+    }
 }
 
 impl<'a, O: Offset> Growable<'a> for GrowableList<'a, O> {
@@ -138,16 +151,11 @@ impl<'a, O: Offset> Growable<'a> for GrowableList<'a, O> {
     }
 
     fn to_arc(&mut self) -> Arc<dyn Array> {
-        let validity = std::mem::take(&mut self.validity);
-        let offsets = std::mem::take(&mut self.offsets);
-        let values = self.values.to_arc();
+        Arc::new(self.to())
+    }
 
-        Arc::new(ListArray::<O>::from_data(
-            self.arrays[0].data_type().clone(),
-            offsets.into(),
-            values,
-            validity.into(),
-        ))
+    fn to_box(&mut self) -> Box<dyn Array> {
+        Box::new(self.to())
     }
 }
 

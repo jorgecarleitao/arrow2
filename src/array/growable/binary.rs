@@ -71,6 +71,14 @@ impl<'a, O: Offset> GrowableBinary<'a, O> {
             extend_null_bits,
         }
     }
+
+    fn to(&mut self) -> BinaryArray<O> {
+        let validity = std::mem::take(&mut self.validity);
+        let offsets = std::mem::take(&mut self.offsets);
+        let values = std::mem::take(&mut self.values);
+
+        BinaryArray::<O>::from_data(offsets.into(), values.into(), validity.into())
+    }
 }
 
 impl<'a, O: Offset> Growable<'a> for GrowableBinary<'a, O> {
@@ -96,15 +104,11 @@ impl<'a, O: Offset> Growable<'a> for GrowableBinary<'a, O> {
     }
 
     fn to_arc(&mut self) -> Arc<dyn Array> {
-        let validity = std::mem::take(&mut self.validity);
-        let offsets = std::mem::take(&mut self.offsets);
-        let values = std::mem::take(&mut self.values);
+        Arc::new(self.to())
+    }
 
-        Arc::new(BinaryArray::<O>::from_data(
-            offsets.into(),
-            values.into(),
-            validity.into(),
-        ))
+    fn to_box(&mut self) -> Box<dyn Array> {
+        Box::new(self.to())
     }
 }
 

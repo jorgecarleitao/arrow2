@@ -64,6 +64,17 @@ impl<'a, T: NativeType> GrowablePrimitive<'a, T> {
             extend_null_bits,
         }
     }
+
+    fn to(&mut self) -> PrimitiveArray<T> {
+        let validity = std::mem::take(&mut self.validity);
+        let values = std::mem::take(&mut self.values);
+
+        PrimitiveArray::<T>::from_data(
+            self.arrays[0].data_type().clone(),
+            values.into(),
+            validity.into(),
+        )
+    }
 }
 
 impl<'a, T: NativeType> Growable<'a> for GrowablePrimitive<'a, T> {
@@ -83,14 +94,11 @@ impl<'a, T: NativeType> Growable<'a> for GrowablePrimitive<'a, T> {
     }
 
     fn to_arc(&mut self) -> Arc<dyn Array> {
-        let validity = std::mem::take(&mut self.validity);
-        let values = std::mem::take(&mut self.values);
+        Arc::new(self.to())
+    }
 
-        Arc::new(PrimitiveArray::<T>::from_data(
-            self.arrays[0].data_type().clone(),
-            values.into(),
-            validity.into(),
-        ))
+    fn to_box(&mut self) -> Box<dyn Array> {
+        Box::new(self.to())
     }
 }
 

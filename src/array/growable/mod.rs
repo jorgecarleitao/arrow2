@@ -53,7 +53,13 @@ pub trait Growable<'a> {
 
     /// Converts itself to an `Arc<dyn Array>`, thereby finishing the mutation.
     /// Self will be empty after such operation
-    fn to_arc(&mut self) -> std::sync::Arc<dyn Array>;
+    fn to_arc(&mut self) -> std::sync::Arc<dyn Array> {
+        self.to_box().into()
+    }
+
+    /// Converts itself to an `Box<dyn Array>`, thereby finishing the mutation.
+    /// Self will be empty after such operation
+    fn to_box(&mut self) -> Box<dyn Array>;
 }
 
 /// # Panics

@@ -79,6 +79,14 @@ impl<'a> GrowableStruct<'a> {
             extend_null_bits,
         }
     }
+
+    fn to(&mut self) -> StructArray {
+        let validity = std::mem::take(&mut self.validity);
+        let values = std::mem::take(&mut self.values);
+        let values = values.into_iter().map(|mut x| x.to_arc()).collect();
+
+        StructArray::from_data(self.arrays[0].fields().to_vec(), values, validity.into())
+    }
 }
 
 impl<'a> Growable<'a> for GrowableStruct<'a> {
@@ -113,15 +121,11 @@ impl<'a> Growable<'a> for GrowableStruct<'a> {
     }
 
     fn to_arc(&mut self) -> Arc<dyn Array> {
-        let validity = std::mem::take(&mut self.validity);
-        let values = std::mem::take(&mut self.values);
-        let values = values.into_iter().map(|mut x| x.to_arc()).collect();
+        Arc::new(self.to())
+    }
 
-        Arc::new(StructArray::from_data(
-            self.arrays[0].fields().to_vec(),
-            values,
-            validity.into(),
-        ))
+    fn to_box(&mut self) -> Box<dyn Array> {
+        Box::new(self.to())
     }
 }
 

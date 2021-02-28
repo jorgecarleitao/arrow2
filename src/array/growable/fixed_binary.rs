@@ -71,6 +71,17 @@ impl<'a> GrowableFixedSizeBinary<'a> {
             size,
         }
     }
+
+    fn to(&mut self) -> FixedSizeBinaryArray {
+        let validity = std::mem::take(&mut self.validity);
+        let values = std::mem::take(&mut self.values);
+
+        FixedSizeBinaryArray::from_data(
+            self.arrays[0].data_type().clone(),
+            values.into(),
+            validity.into(),
+        )
+    }
 }
 
 impl<'a> Growable<'a> for GrowableFixedSizeBinary<'a> {
@@ -91,14 +102,11 @@ impl<'a> Growable<'a> for GrowableFixedSizeBinary<'a> {
     }
 
     fn to_arc(&mut self) -> Arc<dyn Array> {
-        let validity = std::mem::take(&mut self.validity);
-        let values = std::mem::take(&mut self.values);
+        Arc::new(self.to())
+    }
 
-        Arc::new(FixedSizeBinaryArray::from_data(
-            self.arrays[0].data_type().clone(),
-            values.into(),
-            validity.into(),
-        ))
+    fn to_box(&mut self) -> Box<dyn Array> {
+        Box::new(self.to())
     }
 }
 

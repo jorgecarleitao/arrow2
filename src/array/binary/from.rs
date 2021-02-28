@@ -34,6 +34,12 @@ impl<O: Offset> BinaryArray<O> {
     }
 }
 
+impl<O: Offset, T: AsRef<[u8]>> From<&Vec<Option<T>>> for BinaryArray<O> {
+    fn from(slice: &Vec<Option<T>>) -> Self {
+        Self::from_iter(slice.iter().map(|x| x.as_ref()))
+    }
+}
+
 /// auxiliary struct used to create a [`BinaryArray`] out of an iterator
 #[derive(Debug)]
 pub struct BinaryPrimitive<O: Offset> {

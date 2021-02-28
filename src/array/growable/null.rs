@@ -44,6 +44,10 @@ impl<'a> Growable<'a> for GrowableNull {
     fn to_arc(&mut self) -> Arc<dyn Array> {
         Arc::new(NullArray::from_data(self.length))
     }
+
+    fn to_box(&mut self) -> Box<dyn Array> {
+        Box::new(NullArray::from_data(self.length))
+    }
 }
 
 impl Into<NullArray> for GrowableNull {

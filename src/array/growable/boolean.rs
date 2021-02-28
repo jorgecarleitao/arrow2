@@ -64,6 +64,13 @@ impl<'a> GrowableBoolean<'a> {
             extend_null_bits,
         }
     }
+
+    fn to(&mut self) -> BooleanArray {
+        let validity = std::mem::take(&mut self.validity);
+        let values = std::mem::take(&mut self.values);
+
+        BooleanArray::from_data(values.into(), validity.into())
+    }
 }
 
 impl<'a> Growable<'a> for GrowableBoolean<'a> {
@@ -81,10 +88,11 @@ impl<'a> Growable<'a> for GrowableBoolean<'a> {
     }
 
     fn to_arc(&mut self) -> Arc<dyn Array> {
-        let validity = std::mem::take(&mut self.validity);
-        let values = std::mem::take(&mut self.values);
+        Arc::new(self.to())
+    }
 
-        Arc::new(BooleanArray::from_data(values.into(), validity.into()))
+    fn to_box(&mut self) -> Box<dyn Array> {
+        Box::new(self.to())
     }
 }
 

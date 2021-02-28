@@ -149,4 +149,4 @@ Two notes:
 1. We have used `from_trusted_len_iter`. This is because [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html) and trait specialization are still unstable.
 
 2. Note how we use `op` on the array's values irrespectively of their validity
-and cloned the validity `Bitmap`. This approach is suitable for operations whose branching off is more expensive than operating over all values. If the operation is expensive, then using a normal iterator may be justified.
+and cloned the validity `Bitmap`. This approach is suitable for operations whose branching off is more expensive than operating over all values. If the operation is expensive, then using `Primitive::<O>::from_trusted_len_iter` is likely faster.
