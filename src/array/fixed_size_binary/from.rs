@@ -31,7 +31,7 @@ pub struct FixedSizeBinaryPrimitive {
     values: MutableBuffer<u8>,
     validity: MutableBitmap,
     size: Option<usize>,
-    current_nulls: usize,
+    current_validity: usize,
 }
 
 impl<P: AsRef<[u8]>> FromIterator<Option<P>> for FixedSizeBinaryPrimitive {
@@ -65,7 +65,7 @@ impl Builder<&[u8]> for FixedSizeBinaryPrimitive {
             values: MutableBuffer::<u8>::new(),
             validity: MutableBitmap::with_capacity(capacity),
             size: None,
-            current_nulls: 0,
+            current_validity: 0,
         }
     }
 
@@ -81,7 +81,7 @@ impl Builder<&[u8]> for FixedSizeBinaryPrimitive {
                 } else {
                     self.size = Some(bytes.len());
                     self.values
-                        .extend_from_slice(&vec![0; bytes.len() * self.current_nulls]);
+                        .extend_from_slice(&vec![0; bytes.len() * self.current_validity]);
                 };
                 self.values.extend_from_slice(bytes);
                 self.validity.push(true);
@@ -90,7 +90,7 @@ impl Builder<&[u8]> for FixedSizeBinaryPrimitive {
                 if let Some(size) = self.size {
                     self.values.extend_from_slice(&vec![0; size]);
                 } else {
-                    self.current_nulls += 1;
+                    self.current_validity += 1;
                 }
                 self.validity.push(false);
             }
@@ -111,7 +111,7 @@ impl FixedSizeBinaryPrimitive {
             assert_eq!(size, self_size);
         } else {
             self.values
-                .extend_from_slice(&vec![0; size * self.current_nulls])
+                .extend_from_slice(&vec![0; size * self.current_validity])
         };
 
         FixedSizeBinaryArray::from_data(data_type, self.values.into(), self.validity.into())

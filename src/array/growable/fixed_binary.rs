@@ -40,16 +40,16 @@ pub struct GrowableFixedSizeBinary<'a> {
 impl<'a> GrowableFixedSizeBinary<'a> {
     /// # Panics
     /// This function panics if any of the `arrays` is not downcastable to `FixedSizeBinaryArray`.
-    pub fn new(arrays: &[&'a dyn Array], mut use_nulls: bool, capacity: usize) -> Self {
+    pub fn new(arrays: &[&'a dyn Array], mut use_validity: bool, capacity: usize) -> Self {
         // if any of the arrays has nulls, insertions from any array requires setting bits
         // as there is at least one array with nulls.
         if arrays.iter().any(|array| array.null_count() > 0) {
-            use_nulls = true;
+            use_validity = true;
         };
 
         let extend_null_bits = arrays
             .iter()
-            .map(|array| build_extend_null_bits(*array, use_nulls))
+            .map(|array| build_extend_null_bits(*array, use_validity))
             .collect();
 
         let arrays = arrays
@@ -95,7 +95,7 @@ impl<'a> Growable<'a> for GrowableFixedSizeBinary<'a> {
             .extend_from_slice(&values[start * self.size..start * self.size + len * self.size]);
     }
 
-    fn extend_nulls(&mut self, additional: usize) {
+    fn extend_validity(&mut self, additional: usize) {
         self.values
             .extend_from_slice(&vec![0; self.size * additional]);
         self.validity.extend_constant(additional, false);
@@ -167,7 +167,7 @@ mod tests {
     }
 
     #[test]
-    fn multiple_with_nulls() {
+    fn multiple_with_validity() {
         let array1 = FixedSizeBinaryPrimitive::from_iter(vec![Some("hello"), Some("world")])
             .to(DataType::FixedSizeBinary(5));
         let array2 = FixedSizeBinaryPrimitive::from_iter(vec![Some("12345"), None])
@@ -191,7 +191,7 @@ mod tests {
     }
 
     #[test]
-    fn null_offset_nulls() {
+    fn null_offset_validity() {
         let array =
             FixedSizeBinaryPrimitive::from_iter(vec![Some("aa"), Some("bc"), None, Some("fh")])
                 .to(DataType::FixedSizeBinary(2));
@@ -200,7 +200,7 @@ mod tests {
         let mut a = GrowableFixedSizeBinary::new(&[&array], true, 0);
 
         a.extend(0, 1, 2);
-        a.extend_nulls(1);
+        a.extend_validity(1);
 
         let result: FixedSizeBinaryArray = a.into();
 

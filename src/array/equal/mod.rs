@@ -155,30 +155,38 @@ impl<K: DictionaryKey> PartialEq<&dyn Array> for DictionaryArray<K> {
 fn equal_range(
     lhs: &dyn Array,
     rhs: &dyn Array,
-    lhs_nulls: &Option<Bitmap>,
-    rhs_nulls: &Option<Bitmap>,
+    lhs_validity: &Option<Bitmap>,
+    rhs_validity: &Option<Bitmap>,
     lhs_start: usize,
     rhs_start: usize,
     len: usize,
 ) -> bool {
     utils::base_equal(lhs, rhs)
-        && utils::equal_nulls(lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
-        && equal_values(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+        && utils::equal_validity(lhs_validity, rhs_validity, lhs_start, rhs_start, len)
+        && equal_values(
+            lhs,
+            rhs,
+            lhs_validity,
+            rhs_validity,
+            lhs_start,
+            rhs_start,
+            len,
+        )
 }
 
 /// Compares the values of two [`Array`] starting at `lhs_start` and `rhs_start` respectively
-/// for `len` slots. The null buffers `lhs_nulls` and `rhs_nulls` are inherit parent nullability.
+/// for `len` slots. The null buffers `lhs_validity` and `rhs_validity` are inherit parent nullability.
 ///
 /// If an array is a child of a struct or list, the array's nulls have to be merged with the parent.
 /// This then affects the null count of the array, thus the merged nulls are passed separately
-/// as `lhs_nulls` and `rhs_nulls` variables to functions.
+/// as `lhs_validity` and `rhs_validity` variables to functions.
 /// The nulls are merged with a bitwise AND, and null counts are recomputed where necessary.
 #[inline]
 fn equal_values(
     lhs: &dyn Array,
     rhs: &dyn Array,
-    lhs_nulls: &Option<Bitmap>,
-    rhs_nulls: &Option<Bitmap>,
+    lhs_validity: &Option<Bitmap>,
+    rhs_validity: &Option<Bitmap>,
     lhs_start: usize,
     rhs_start: usize,
     len: usize,
@@ -192,37 +200,93 @@ fn equal_values(
         DataType::Boolean => {
             let lhs = lhs.as_any().downcast_ref::<BooleanArray>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<BooleanArray>().unwrap();
-            boolean::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+            boolean::equal(
+                lhs,
+                rhs,
+                lhs_validity,
+                rhs_validity,
+                lhs_start,
+                rhs_start,
+                len,
+            )
         }
         DataType::UInt8 => {
             let lhs = lhs.as_any().downcast_ref::<PrimitiveArray<u8>>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<PrimitiveArray<u8>>().unwrap();
-            primitive::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+            primitive::equal(
+                lhs,
+                rhs,
+                lhs_validity,
+                rhs_validity,
+                lhs_start,
+                rhs_start,
+                len,
+            )
         }
         DataType::UInt16 => {
             let lhs = lhs.as_any().downcast_ref::<PrimitiveArray<u16>>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<PrimitiveArray<u16>>().unwrap();
-            primitive::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+            primitive::equal(
+                lhs,
+                rhs,
+                lhs_validity,
+                rhs_validity,
+                lhs_start,
+                rhs_start,
+                len,
+            )
         }
         DataType::UInt32 => {
             let lhs = lhs.as_any().downcast_ref::<PrimitiveArray<u32>>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<PrimitiveArray<u32>>().unwrap();
-            primitive::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+            primitive::equal(
+                lhs,
+                rhs,
+                lhs_validity,
+                rhs_validity,
+                lhs_start,
+                rhs_start,
+                len,
+            )
         }
         DataType::UInt64 => {
             let lhs = lhs.as_any().downcast_ref::<PrimitiveArray<u64>>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<PrimitiveArray<u64>>().unwrap();
-            primitive::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+            primitive::equal(
+                lhs,
+                rhs,
+                lhs_validity,
+                rhs_validity,
+                lhs_start,
+                rhs_start,
+                len,
+            )
         }
         DataType::Int8 => {
             let lhs = lhs.as_any().downcast_ref::<PrimitiveArray<i8>>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<PrimitiveArray<i8>>().unwrap();
-            primitive::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+            primitive::equal(
+                lhs,
+                rhs,
+                lhs_validity,
+                rhs_validity,
+                lhs_start,
+                rhs_start,
+                len,
+            )
         }
         DataType::Int16 => {
             let lhs = lhs.as_any().downcast_ref::<PrimitiveArray<i16>>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<PrimitiveArray<i16>>().unwrap();
-            primitive::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+            primitive::equal(
+                lhs,
+                rhs,
+                lhs_validity,
+                rhs_validity,
+                lhs_start,
+                rhs_start,
+                len,
+            )
         }
         DataType::Int32
         | DataType::Date32
@@ -230,7 +294,15 @@ fn equal_values(
         | DataType::Interval(IntervalUnit::YearMonth) => {
             let lhs = lhs.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
-            primitive::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+            primitive::equal(
+                lhs,
+                rhs,
+                lhs_validity,
+                rhs_validity,
+                lhs_start,
+                rhs_start,
+                len,
+            )
         }
         DataType::Int64
         | DataType::Date64
@@ -239,12 +311,28 @@ fn equal_values(
         | DataType::Duration(_) => {
             let lhs = lhs.as_any().downcast_ref::<PrimitiveArray<i64>>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<PrimitiveArray<i64>>().unwrap();
-            primitive::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+            primitive::equal(
+                lhs,
+                rhs,
+                lhs_validity,
+                rhs_validity,
+                lhs_start,
+                rhs_start,
+                len,
+            )
         }
         DataType::Decimal(_, _) => {
             let lhs = lhs.as_any().downcast_ref::<PrimitiveArray<i128>>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<PrimitiveArray<i128>>().unwrap();
-            primitive::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+            primitive::equal(
+                lhs,
+                rhs,
+                lhs_validity,
+                rhs_validity,
+                lhs_start,
+                rhs_start,
+                len,
+            )
         }
         DataType::Interval(IntervalUnit::DayTime) => {
             let lhs = lhs
@@ -255,18 +343,42 @@ fn equal_values(
                 .as_any()
                 .downcast_ref::<PrimitiveArray<days_ms>>()
                 .unwrap();
-            primitive::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+            primitive::equal(
+                lhs,
+                rhs,
+                lhs_validity,
+                rhs_validity,
+                lhs_start,
+                rhs_start,
+                len,
+            )
         }
         DataType::Float16 => unreachable!(),
         DataType::Float32 => {
             let lhs = lhs.as_any().downcast_ref::<PrimitiveArray<f32>>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<PrimitiveArray<f32>>().unwrap();
-            primitive::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+            primitive::equal(
+                lhs,
+                rhs,
+                lhs_validity,
+                rhs_validity,
+                lhs_start,
+                rhs_start,
+                len,
+            )
         }
         DataType::Float64 => {
             let lhs = lhs.as_any().downcast_ref::<PrimitiveArray<f64>>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<PrimitiveArray<f64>>().unwrap();
-            primitive::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+            primitive::equal(
+                lhs,
+                rhs,
+                lhs_validity,
+                rhs_validity,
+                lhs_start,
+                rhs_start,
+                len,
+            )
         }
         DataType::Utf8 => {
             let lhs = lhs.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
@@ -276,8 +388,8 @@ fn equal_values(
                 rhs.offsets(),
                 lhs.values(),
                 rhs.values(),
-                lhs_nulls,
-                rhs_nulls,
+                lhs_validity,
+                rhs_validity,
                 lhs_start,
                 rhs_start,
                 len,
@@ -291,8 +403,8 @@ fn equal_values(
                 rhs.offsets(),
                 lhs.values(),
                 rhs.values(),
-                lhs_nulls,
-                rhs_nulls,
+                lhs_validity,
+                rhs_validity,
                 lhs_start,
                 rhs_start,
                 len,
@@ -306,8 +418,8 @@ fn equal_values(
                 rhs.offsets(),
                 lhs.values(),
                 rhs.values(),
-                lhs_nulls,
-                rhs_nulls,
+                lhs_validity,
+                rhs_validity,
                 lhs_start,
                 rhs_start,
                 len,
@@ -321,8 +433,8 @@ fn equal_values(
                 rhs.offsets(),
                 lhs.values(),
                 rhs.values(),
-                lhs_nulls,
-                rhs_nulls,
+                lhs_validity,
+                rhs_validity,
                 lhs_start,
                 rhs_start,
                 len,
@@ -331,70 +443,174 @@ fn equal_values(
         DataType::List(_) => {
             let lhs = lhs.as_any().downcast_ref::<ListArray<i32>>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<ListArray<i32>>().unwrap();
-            list::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+            list::equal(
+                lhs,
+                rhs,
+                lhs_validity,
+                rhs_validity,
+                lhs_start,
+                rhs_start,
+                len,
+            )
         }
         DataType::LargeList(_) => {
             let lhs = lhs.as_any().downcast_ref::<ListArray<i64>>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<ListArray<i64>>().unwrap();
-            list::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+            list::equal(
+                lhs,
+                rhs,
+                lhs_validity,
+                rhs_validity,
+                lhs_start,
+                rhs_start,
+                len,
+            )
         }
         DataType::Struct(_) => {
             let lhs = lhs.as_any().downcast_ref::<StructArray>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<StructArray>().unwrap();
-            struct_::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+            struct_::equal(
+                lhs,
+                rhs,
+                lhs_validity,
+                rhs_validity,
+                lhs_start,
+                rhs_start,
+                len,
+            )
         }
         DataType::Dictionary(key_type, _) => match key_type.as_ref() {
             DataType::Int8 => {
                 let lhs = lhs.as_any().downcast_ref::<DictionaryArray<i8>>().unwrap();
                 let rhs = rhs.as_any().downcast_ref::<DictionaryArray<i8>>().unwrap();
-                dictionary::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+                dictionary::equal(
+                    lhs,
+                    rhs,
+                    lhs_validity,
+                    rhs_validity,
+                    lhs_start,
+                    rhs_start,
+                    len,
+                )
             }
             DataType::Int16 => {
                 let lhs = lhs.as_any().downcast_ref::<DictionaryArray<i16>>().unwrap();
                 let rhs = rhs.as_any().downcast_ref::<DictionaryArray<i16>>().unwrap();
-                dictionary::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+                dictionary::equal(
+                    lhs,
+                    rhs,
+                    lhs_validity,
+                    rhs_validity,
+                    lhs_start,
+                    rhs_start,
+                    len,
+                )
             }
             DataType::Int32 => {
                 let lhs = lhs.as_any().downcast_ref::<DictionaryArray<i32>>().unwrap();
                 let rhs = rhs.as_any().downcast_ref::<DictionaryArray<i32>>().unwrap();
-                dictionary::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+                dictionary::equal(
+                    lhs,
+                    rhs,
+                    lhs_validity,
+                    rhs_validity,
+                    lhs_start,
+                    rhs_start,
+                    len,
+                )
             }
             DataType::Int64 => {
                 let lhs = lhs.as_any().downcast_ref::<DictionaryArray<i64>>().unwrap();
                 let rhs = rhs.as_any().downcast_ref::<DictionaryArray<i64>>().unwrap();
-                dictionary::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+                dictionary::equal(
+                    lhs,
+                    rhs,
+                    lhs_validity,
+                    rhs_validity,
+                    lhs_start,
+                    rhs_start,
+                    len,
+                )
             }
             DataType::UInt8 => {
                 let lhs = lhs.as_any().downcast_ref::<DictionaryArray<u8>>().unwrap();
                 let rhs = rhs.as_any().downcast_ref::<DictionaryArray<u8>>().unwrap();
-                dictionary::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+                dictionary::equal(
+                    lhs,
+                    rhs,
+                    lhs_validity,
+                    rhs_validity,
+                    lhs_start,
+                    rhs_start,
+                    len,
+                )
             }
             DataType::UInt16 => {
                 let lhs = lhs.as_any().downcast_ref::<DictionaryArray<u16>>().unwrap();
                 let rhs = rhs.as_any().downcast_ref::<DictionaryArray<u16>>().unwrap();
-                dictionary::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+                dictionary::equal(
+                    lhs,
+                    rhs,
+                    lhs_validity,
+                    rhs_validity,
+                    lhs_start,
+                    rhs_start,
+                    len,
+                )
             }
             DataType::UInt32 => {
                 let lhs = lhs.as_any().downcast_ref::<DictionaryArray<u32>>().unwrap();
                 let rhs = rhs.as_any().downcast_ref::<DictionaryArray<u32>>().unwrap();
-                dictionary::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+                dictionary::equal(
+                    lhs,
+                    rhs,
+                    lhs_validity,
+                    rhs_validity,
+                    lhs_start,
+                    rhs_start,
+                    len,
+                )
             }
             DataType::UInt64 => {
                 let lhs = lhs.as_any().downcast_ref::<DictionaryArray<u64>>().unwrap();
                 let rhs = rhs.as_any().downcast_ref::<DictionaryArray<u64>>().unwrap();
-                dictionary::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+                dictionary::equal(
+                    lhs,
+                    rhs,
+                    lhs_validity,
+                    rhs_validity,
+                    lhs_start,
+                    rhs_start,
+                    len,
+                )
             }
             _ => unreachable!(),
         },
         DataType::FixedSizeBinary(_) => {
             let lhs = lhs.as_any().downcast_ref::<FixedSizeBinaryArray>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<FixedSizeBinaryArray>().unwrap();
-            fixed_size_binary::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+            fixed_size_binary::equal(
+                lhs,
+                rhs,
+                lhs_validity,
+                rhs_validity,
+                lhs_start,
+                rhs_start,
+                len,
+            )
         }
         DataType::FixedSizeList(_, _) => {
             let lhs = lhs.as_any().downcast_ref::<FixedSizeListArray>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<FixedSizeListArray>().unwrap();
-            fixed_size_list::equal(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+            fixed_size_list::equal(
+                lhs,
+                rhs,
+                lhs_validity,
+                rhs_validity,
+                lhs_start,
+                rhs_start,
+                len,
+            )
         }
         DataType::Union(_) => unimplemented!(),
     }
@@ -413,12 +629,12 @@ fn equal_values(
 /// This function may panic whenever any of the [ArrayData] does not follow the Arrow specification.
 /// (e.g. wrong number of buffers, buffer `len` does not correspond to the declared `len`)
 pub fn equal(lhs: &dyn Array, rhs: &dyn Array) -> bool {
-    let lhs_nulls = lhs.nulls();
-    let rhs_nulls = rhs.nulls();
+    let lhs_validity = lhs.validity();
+    let rhs_validity = rhs.validity();
     utils::base_equal(lhs, rhs)
         && lhs.null_count() == rhs.null_count()
-        && utils::equal_nulls(lhs_nulls, rhs_nulls, 0, 0, lhs.len())
-        && equal_values(lhs, rhs, lhs_nulls, rhs_nulls, 0, 0, lhs.len())
+        && utils::equal_validity(lhs_validity, rhs_validity, 0, 0, lhs.len())
+        && equal_values(lhs, rhs, lhs_validity, rhs_validity, 0, 0, lhs.len())
 }
 
 #[cfg(test)]

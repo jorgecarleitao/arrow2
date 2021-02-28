@@ -266,7 +266,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
                 to_type.clone(),
                 array.offsets_buffer().clone(),
                 new_values,
-                array.nulls().clone(),
+                array.validity().clone(),
             );
             Ok(Box::new(list))
         }

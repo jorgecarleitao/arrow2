@@ -41,16 +41,16 @@ pub struct GrowableUtf8<'a, O: Offset> {
 impl<'a, O: Offset> GrowableUtf8<'a, O> {
     /// # Panics
     /// This function panics if any of the `arrays` is not downcastable to `PrimitiveArray<T>`.
-    pub fn new(arrays: &[&'a dyn Array], mut use_nulls: bool, capacity: usize) -> Self {
+    pub fn new(arrays: &[&'a dyn Array], mut use_validity: bool, capacity: usize) -> Self {
         // if any of the arrays has nulls, insertions from any array requires setting bits
         // as there is at least one array with nulls.
         if arrays.iter().any(|array| array.null_count() > 0) {
-            use_nulls = true;
+            use_validity = true;
         };
 
         let extend_null_bits = arrays
             .iter()
-            .map(|array| build_extend_null_bits(*array, use_nulls))
+            .map(|array| build_extend_null_bits(*array, use_validity))
             .collect();
 
         let arrays = arrays
@@ -98,7 +98,7 @@ impl<'a, O: Offset> Growable<'a> for GrowableUtf8<'a, O> {
         extend_offset_values::<O>(&mut self.values, offsets, values, start, len);
     }
 
-    fn extend_nulls(&mut self, additional: usize) {
+    fn extend_validity(&mut self, additional: usize) {
         (0..additional).for_each(|_| self.offsets.push(self.length));
         self.validity.extend_constant(additional, false);
     }
@@ -132,7 +132,7 @@ mod tests {
 
     /// tests extending from a variable-sized (strings and binary) array w/ offset with nulls
     #[test]
-    fn test_variable_sized_nulls() {
+    fn test_variable_sized_validity() {
         let array = Utf8Array::<i32>::from_iter(vec![Some("a"), Some("bc"), None, Some("defh")]);
 
         let mut a = GrowableUtf8::new(&[&array], false, 0);
@@ -178,7 +178,7 @@ mod tests {
     }
 
     #[test]
-    fn test_multiple_with_nulls() {
+    fn test_multiple_with_validity() {
         let array1 = Utf8Array::<i32>::from_slice(vec!["hello", "world"]);
         let array2 = Utf8Array::<i32>::from_iter(vec![Some("1"), None]);
 
@@ -195,14 +195,14 @@ mod tests {
     }
 
     #[test]
-    fn test_string_null_offset_nulls() {
+    fn test_string_null_offset_validity() {
         let array = Utf8Array::<i32>::from_iter(vec![Some("a"), Some("bc"), None, Some("defh")]);
         let array = array.slice(1, 3);
 
         let mut a = GrowableUtf8::new(&[&array], true, 0);
 
         a.extend(0, 1, 2);
-        a.extend_nulls(1);
+        a.extend_validity(1);
 
         let result: Utf8Array<i32> = a.into();
 

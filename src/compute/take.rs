@@ -66,7 +66,7 @@ fn maybe_usize<I: Offset>(index: I) -> Result<usize> {
 }
 
 // take implementation when neither values nor indices contain nulls
-fn take_no_nulls<T: NativeType, I: Offset>(
+fn take_no_validity<T: NativeType, I: Offset>(
     values: &[T],
     indices: &[I],
 ) -> Result<(Buffer<T>, Option<Bitmap>)> {
@@ -80,13 +80,13 @@ fn take_no_nulls<T: NativeType, I: Offset>(
 }
 
 // take implementation when only values contain nulls
-fn take_values_nulls<T: NativeType, I: Offset>(
+fn take_values_validity<T: NativeType, I: Offset>(
     values: &PrimitiveArray<T>,
     indices: &[I],
 ) -> Result<(Buffer<T>, Option<Bitmap>)> {
     let mut null = MutableBitmap::with_capacity(indices.len());
 
-    let null_values = values.nulls().as_ref().unwrap();
+    let null_values = values.validity().as_ref().unwrap();
 
     let values_values = values.values();
 
@@ -106,11 +106,11 @@ fn take_values_nulls<T: NativeType, I: Offset>(
 }
 
 // take implementation when only indices contain nulls
-fn take_indices_nulls<T: NativeType, I: Offset>(
+fn take_indices_validity<T: NativeType, I: Offset>(
     values: &[T],
     indices: &PrimitiveArray<I>,
 ) -> Result<(Buffer<T>, Option<Bitmap>)> {
-    let null_indices = indices.nulls().as_ref().unwrap();
+    let null_indices = indices.validity().as_ref().unwrap();
 
     let values = indices.values().iter().map(|index| {
         let index = maybe_usize::<I>(*index)?;
@@ -129,17 +129,17 @@ fn take_indices_nulls<T: NativeType, I: Offset>(
     // Soundness: `slice.map` is `TrustedLen`.
     let buffer = unsafe { MutableBuffer::try_from_trusted_len_iter(values)? };
 
-    Ok((buffer.into(), indices.nulls().clone()))
+    Ok((buffer.into(), indices.validity().clone()))
 }
 
 // take implementation when both values and indices contain nulls
-fn take_values_indices_nulls<T: NativeType, I: Offset>(
+fn take_values_indices_validity<T: NativeType, I: Offset>(
     values: &PrimitiveArray<T>,
     indices: &PrimitiveArray<I>,
 ) -> Result<(Buffer<T>, Option<Bitmap>)> {
     let mut bitmap = MutableBitmap::with_capacity(indices.len());
 
-    let null_values = values.nulls().as_ref().unwrap();
+    let null_values = values.validity().as_ref().unwrap();
 
     let values_values = values.values();
     let values = indices.iter().map(|index| match index {
@@ -171,31 +171,31 @@ fn take_primitive<T: NativeType, I: Offset>(
     values: &PrimitiveArray<T>,
     indices: &PrimitiveArray<I>,
 ) -> Result<PrimitiveArray<T>> {
-    let indices_has_nulls = indices.null_count() > 0;
-    let values_has_nulls = values.null_count() > 0;
+    let indices_has_validity = indices.null_count() > 0;
+    let values_has_validity = values.null_count() > 0;
     // note: this function should only panic when "an index is not null and out of bounds".
     // if the index is null, its value is undefined and therefore we should not read from it.
 
-    let (buffer, nulls) = match (values_has_nulls, indices_has_nulls) {
+    let (buffer, nulls) = match (values_has_validity, indices_has_validity) {
         (false, false) => {
             // * no nulls
             // * all `indices.values()` are valid
-            take_no_nulls::<T, I>(values.values(), indices.values())?
+            take_no_validity::<T, I>(values.values(), indices.values())?
         }
         (true, false) => {
             // * nulls come from `values` alone
             // * all `indices.values()` are valid
-            take_values_nulls::<T, I>(values, indices.values())?
+            take_values_validity::<T, I>(values, indices.values())?
         }
         (false, true) => {
             // in this branch it is unsound to read and use `index.values()`,
             // as doing so is UB when they come from a null slot.
-            take_indices_nulls::<T, I>(values.values(), indices)?
+            take_indices_validity::<T, I>(values.values(), indices)?
         }
         (true, true) => {
             // in this branch it is unsound to read and use `index.values()`,
             // as doing so is UB when they come from a null slot.
-            take_values_indices_nulls::<T, I>(values, indices)?
+            take_values_indices_validity::<T, I>(values, indices)?
         }
     };
 

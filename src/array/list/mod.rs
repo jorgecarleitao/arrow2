@@ -182,7 +182,7 @@ impl<O: Offset> Array for ListArray<O> {
     }
 
     #[inline]
-    fn nulls(&self) -> &Option<Bitmap> {
+    fn validity(&self) -> &Option<Bitmap> {
         &self.validity
     }
 

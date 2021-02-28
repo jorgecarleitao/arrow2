@@ -122,7 +122,7 @@ impl Array for FixedSizeListArray {
         &self.data_type
     }
 
-    fn nulls(&self) -> &Option<Bitmap> {
+    fn validity(&self) -> &Option<Bitmap> {
         &self.validity
     }
 

@@ -17,13 +17,13 @@
 
 use crate::{array::BooleanArray, buffer::Bitmap};
 
-use super::utils::{count_nulls, equal_bits};
+use super::utils::{count_validity, equal_bits};
 
 pub(super) fn equal(
     lhs: &BooleanArray,
     rhs: &BooleanArray,
-    lhs_nulls: &Option<Bitmap>,
-    rhs_nulls: &Option<Bitmap>,
+    lhs_validity: &Option<Bitmap>,
+    rhs_validity: &Option<Bitmap>,
     lhs_start: usize,
     rhs_start: usize,
     len: usize,
@@ -31,15 +31,15 @@ pub(super) fn equal(
     let lhs_values = lhs.values();
     let rhs_values = rhs.values();
 
-    let lhs_null_count = count_nulls(lhs_nulls, lhs_start, len);
-    let rhs_null_count = count_nulls(rhs_nulls, rhs_start, len);
+    let lhs_null_count = count_validity(lhs_validity, lhs_start, len);
+    let rhs_null_count = count_validity(rhs_validity, rhs_start, len);
 
     if lhs_null_count == 0 && rhs_null_count == 0 {
         equal_bits(lhs_values, rhs_values, lhs_start, rhs_start, len)
     } else {
         // get a ref of the null buffer bytes, to use in testing for nullness
-        let lhs_null_bytes = lhs_nulls.as_ref().unwrap();
-        let rhs_null_bytes = rhs_nulls.as_ref().unwrap();
+        let lhs_null_bytes = lhs_validity.as_ref().unwrap();
+        let rhs_null_bytes = rhs_validity.as_ref().unwrap();
 
         (0..len).all(|i| {
             let lhs_pos = lhs_start + i;

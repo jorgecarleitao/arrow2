@@ -21,13 +21,13 @@ use crate::{
 };
 
 use super::equal as _equal;
-use super::utils::count_nulls;
+use super::utils::count_validity;
 
 pub(super) fn equal<K: DictionaryKey>(
     lhs: &DictionaryArray<K>,
     rhs: &DictionaryArray<K>,
-    lhs_nulls: &Option<Bitmap>,
-    rhs_nulls: &Option<Bitmap>,
+    lhs_validity: &Option<Bitmap>,
+    rhs_validity: &Option<Bitmap>,
     lhs_start: usize,
     rhs_start: usize,
     len: usize,
@@ -37,8 +37,8 @@ pub(super) fn equal<K: DictionaryKey>(
     let lhs_values = lhs.values();
     let rhs_values = rhs.values();
 
-    let lhs_null_count = count_nulls(lhs_nulls, lhs_start, len);
-    let rhs_null_count = count_nulls(rhs_nulls, rhs_start, len);
+    let lhs_null_count = count_validity(lhs_validity, lhs_start, len);
+    let rhs_null_count = count_validity(rhs_validity, rhs_start, len);
 
     if lhs_null_count == 0 && rhs_null_count == 0 {
         lhs_keys
@@ -55,8 +55,8 @@ pub(super) fn equal<K: DictionaryKey>(
                 }
             })
     } else {
-        let lhs_bitmap = lhs_nulls.as_ref().unwrap();
-        let rhs_bitmap = rhs_nulls.as_ref().unwrap();
+        let lhs_bitmap = lhs_validity.as_ref().unwrap();
+        let rhs_bitmap = rhs_validity.as_ref().unwrap();
         let lhs_bitmap_iter = lhs_bitmap.iter();
         let rhs_bitmap_iter = rhs_bitmap.iter();
         let keys_iter = lhs_keys.iter().zip(rhs_keys.iter());

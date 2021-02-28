@@ -22,7 +22,7 @@ use crate::{
 
 use super::{
     equal_range,
-    utils::{child_logical_null_buffer, count_nulls},
+    utils::{child_logical_null_buffer, count_validity},
 };
 
 fn lengths_equal<O: Offset>(lhs: &[O], rhs: &[O]) -> bool {
@@ -52,8 +52,8 @@ fn lengths_equal<O: Offset>(lhs: &[O], rhs: &[O]) -> bool {
 fn offset_value_equal<O: Offset>(
     lhs_values: &dyn Array,
     rhs_values: &dyn Array,
-    lhs_nulls: &Option<Bitmap>,
-    rhs_nulls: &Option<Bitmap>,
+    lhs_validity: &Option<Bitmap>,
+    rhs_validity: &Option<Bitmap>,
     lhs_offsets: &[O],
     rhs_offsets: &[O],
     lhs_pos: usize,
@@ -69,8 +69,8 @@ fn offset_value_equal<O: Offset>(
         && equal_range(
             lhs_values,
             rhs_values,
-            lhs_nulls,
-            rhs_nulls,
+            lhs_validity,
+            rhs_validity,
             lhs_start,
             rhs_start,
             lhs_len.to_usize().unwrap(),
@@ -80,8 +80,8 @@ fn offset_value_equal<O: Offset>(
 pub(super) fn equal<O: Offset>(
     lhs: &ListArray<O>,
     rhs: &ListArray<O>,
-    lhs_nulls: &Option<Bitmap>,
-    rhs_nulls: &Option<Bitmap>,
+    lhs_validity: &Option<Bitmap>,
+    rhs_validity: &Option<Bitmap>,
     lhs_start: usize,
     rhs_start: usize,
     len: usize,
@@ -119,12 +119,12 @@ pub(super) fn equal<O: Offset>(
     let lhs_values = lhs.values().as_ref();
     let rhs_values = rhs.values().as_ref();
 
-    let lhs_null_count = count_nulls(lhs_nulls, lhs_start, len);
-    let rhs_null_count = count_nulls(rhs_nulls, rhs_start, len);
+    let lhs_null_count = count_validity(lhs_validity, lhs_start, len);
+    let rhs_null_count = count_validity(rhs_validity, rhs_start, len);
 
     // compute the child logical bitmap
-    let child_lhs_nulls = child_logical_null_buffer(lhs, lhs_nulls, lhs_values);
-    let child_rhs_nulls = child_logical_null_buffer(rhs, rhs_nulls, rhs_values);
+    let child_lhs_validity = child_logical_null_buffer(lhs, lhs_validity, lhs_values);
+    let child_rhs_validity = child_logical_null_buffer(rhs, rhs_validity, rhs_values);
 
     if lhs_null_count == 0 && rhs_null_count == 0 {
         lengths_equal(
@@ -133,8 +133,8 @@ pub(super) fn equal<O: Offset>(
         ) && equal_range(
             lhs_values,
             rhs_values,
-            &child_lhs_nulls,
-            &child_rhs_nulls,
+            &child_lhs_validity,
+            &child_rhs_validity,
             lhs_offsets[lhs_start].to_usize().unwrap(),
             rhs_offsets[rhs_start].to_usize().unwrap(),
             (lhs_offsets[len] - lhs_offsets[lhs_start])
@@ -143,8 +143,8 @@ pub(super) fn equal<O: Offset>(
         )
     } else {
         // get a ref of the parent null buffer bytes, to use in testing for nullness
-        let lhs_null_bytes = lhs_nulls.as_ref().unwrap();
-        let rhs_null_bytes = rhs_nulls.as_ref().unwrap();
+        let lhs_null_bytes = lhs_validity.as_ref().unwrap();
+        let rhs_null_bytes = rhs_validity.as_ref().unwrap();
         // with nulls, we need to compare item by item whenever it is not null
         (0..len).all(|i| {
             let lhs_pos = lhs_start + i;
@@ -158,8 +158,8 @@ pub(super) fn equal<O: Offset>(
                     && offset_value_equal::<O>(
                         lhs_values,
                         rhs_values,
-                        &child_lhs_nulls,
-                        &child_rhs_nulls,
+                        &child_lhs_validity,
+                        &child_rhs_validity,
                         lhs_offsets,
                         rhs_offsets,
                         lhs_pos,

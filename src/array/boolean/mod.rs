@@ -96,7 +96,7 @@ impl Array for BooleanArray {
         &self.data_type
     }
 
-    fn nulls(&self) -> &Option<Bitmap> {
+    fn validity(&self) -> &Option<Bitmap> {
         &self.validity
     }
 
@@ -171,12 +171,13 @@ mod tests {
         assert_eq!(array.value(1), false);
         assert_eq!(array.value(2), false);
         assert_eq!(array.values(), &Bitmap::from((&[0b00000001], 3)));
-        assert_eq!(array.nulls(), &Some(Bitmap::from((&[0b00000101], 3))));
+        assert_eq!(array.validity(), &Some(Bitmap::from((&[0b00000101], 3))));
         assert_eq!(array.is_valid(0), true);
         assert_eq!(array.is_valid(1), false);
         assert_eq!(array.is_valid(2), true);
 
-        let array2 = BooleanArray::from_data(array.values_bitmap().clone(), array.nulls().clone());
+        let array2 =
+            BooleanArray::from_data(array.values_bitmap().clone(), array.validity().clone());
         assert_eq!(array, array2);
 
         let array = array.slice(1, 2);
@@ -188,6 +189,6 @@ mod tests {
     fn empty() {
         let array = BooleanArray::new_empty();
         assert_eq!(array.values().len(), 0);
-        assert_eq!(array.nulls(), &None);
+        assert_eq!(array.validity(), &None);
     }
 }

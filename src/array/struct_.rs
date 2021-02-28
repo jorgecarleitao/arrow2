@@ -118,7 +118,7 @@ impl Array for StructArray {
     }
 
     #[inline]
-    fn nulls(&self) -> &Option<Bitmap> {
+    fn validity(&self) -> &Option<Bitmap> {
         &self.validity
     }
 

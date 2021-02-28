@@ -40,16 +40,16 @@ pub struct GrowableBoolean<'a> {
 impl<'a> GrowableBoolean<'a> {
     /// # Panics
     /// This function panics if any of the `arrays` is not downcastable to `PrimitiveArray<T>`.
-    pub fn new(arrays: &[&'a dyn Array], mut use_nulls: bool, capacity: usize) -> Self {
+    pub fn new(arrays: &[&'a dyn Array], mut use_validity: bool, capacity: usize) -> Self {
         // if any of the arrays has nulls, insertions from any array requires setting bits
         // as there is at least one array with nulls.
         if arrays.iter().any(|array| array.null_count() > 0) {
-            use_nulls = true;
+            use_validity = true;
         };
 
         let extend_null_bits = arrays
             .iter()
-            .map(|array| build_extend_null_bits(*array, use_nulls))
+            .map(|array| build_extend_null_bits(*array, use_validity))
             .collect();
 
         let arrays = arrays
@@ -82,7 +82,7 @@ impl<'a> Growable<'a> for GrowableBoolean<'a> {
         (start..start + len).for_each(|i| self.values.push(values.get_bit(i)));
     }
 
-    fn extend_nulls(&mut self, additional: usize) {
+    fn extend_validity(&mut self, additional: usize) {
         self.values.extend_constant(additional, false);
         self.validity.extend_constant(additional, false);
     }

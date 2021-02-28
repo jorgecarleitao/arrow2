@@ -88,16 +88,16 @@ pub struct GrowableList<'a, O: Offset> {
 impl<'a, O: Offset> GrowableList<'a, O> {
     /// # Panics
     /// This function panics if any of the `arrays` is not downcastable to `PrimitiveArray<T>`.
-    pub fn new(arrays: &[&'a dyn Array], mut use_nulls: bool, capacity: usize) -> Self {
+    pub fn new(arrays: &[&'a dyn Array], mut use_validity: bool, capacity: usize) -> Self {
         // if any of the arrays has nulls, insertions from any array requires setting bits
         // as there is at least one array with nulls.
         if arrays.iter().any(|array| array.null_count() > 0) {
-            use_nulls = true;
+            use_validity = true;
         };
 
         let extend_null_bits = arrays
             .iter()
-            .map(|array| build_extend_null_bits(*array, use_nulls))
+            .map(|array| build_extend_null_bits(*array, use_validity))
             .collect();
 
         let arrays = arrays
@@ -109,7 +109,7 @@ impl<'a, O: Offset> GrowableList<'a, O> {
             .iter()
             .map(|array| array.values().as_ref())
             .collect::<Vec<_>>();
-        let values = make_growable(&inner, use_nulls, 0);
+        let values = make_growable(&inner, use_validity, 0);
 
         let mut offsets = MutableBuffer::with_capacity(capacity + 1);
         let length = O::default();
@@ -145,7 +145,7 @@ impl<'a, O: Offset> Growable<'a> for GrowableList<'a, O> {
         extend_offset_values::<O>(self, index, start, len);
     }
 
-    fn extend_nulls(&mut self, additional: usize) {
+    fn extend_validity(&mut self, additional: usize) {
         (0..additional).for_each(|_| self.offsets.push(self.last_offset));
         self.validity.extend_constant(additional, false);
     }

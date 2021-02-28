@@ -41,16 +41,16 @@ pub struct GrowableStruct<'a> {
 impl<'a> GrowableStruct<'a> {
     /// # Panics
     /// This function panics if any of the `arrays` is not downcastable to `PrimitiveArray<T>`.
-    pub fn new(arrays: &[&'a dyn Array], mut use_nulls: bool, capacity: usize) -> Self {
+    pub fn new(arrays: &[&'a dyn Array], mut use_validity: bool, capacity: usize) -> Self {
         // if any of the arrays has nulls, insertions from any array requires setting bits
         // as there is at least one array with nulls.
         if arrays.iter().any(|array| array.null_count() > 0) {
-            use_nulls = true;
+            use_validity = true;
         };
 
         let extend_null_bits = arrays
             .iter()
-            .map(|array| build_extend_null_bits(*array, use_nulls))
+            .map(|array| build_extend_null_bits(*array, use_validity))
             .collect();
 
         let arrays = arrays
@@ -66,7 +66,7 @@ impl<'a> GrowableStruct<'a> {
                         .iter()
                         .map(|x| x.values()[i].as_ref())
                         .collect::<Vec<_>>(),
-                    use_nulls,
+                    use_validity,
                     capacity,
                 )
             })
@@ -107,16 +107,16 @@ impl<'a> Growable<'a> for GrowableStruct<'a> {
                 } else {
                     self.values
                         .iter_mut()
-                        .for_each(|child| child.extend_nulls(1))
+                        .for_each(|child| child.extend_validity(1))
                 }
             })
         }
     }
 
-    fn extend_nulls(&mut self, additional: usize) {
+    fn extend_validity(&mut self, additional: usize) {
         self.values
             .iter_mut()
-            .for_each(|child| child.extend_nulls(additional));
+            .for_each(|child| child.extend_validity(additional));
         self.validity.extend_constant(additional, false);
     }
 

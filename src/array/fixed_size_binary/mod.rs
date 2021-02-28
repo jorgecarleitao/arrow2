@@ -129,7 +129,7 @@ impl Array for FixedSizeBinaryArray {
         &self.data_type
     }
 
-    fn nulls(&self) -> &Option<Bitmap> {
+    fn validity(&self) -> &Option<Bitmap> {
         &self.validity
     }
 

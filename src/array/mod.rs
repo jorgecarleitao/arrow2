@@ -27,16 +27,19 @@ pub trait Array: std::fmt::Debug + std::fmt::Display + Send + Sync + ToFFI {
 
     fn data_type(&self) -> &DataType;
 
-    fn nulls(&self) -> &Option<Bitmap>;
+    fn validity(&self) -> &Option<Bitmap>;
 
     #[inline]
     fn null_count(&self) -> usize {
-        self.nulls().as_ref().map(|x| x.null_count()).unwrap_or(0)
+        self.validity()
+            .as_ref()
+            .map(|x| x.null_count())
+            .unwrap_or(0)
     }
 
     #[inline]
     fn is_null(&self, i: usize) -> bool {
-        self.nulls()
+        self.validity()
             .as_ref()
             .map(|x| !x.get_bit(i))
             .unwrap_or(false)

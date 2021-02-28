@@ -93,7 +93,7 @@ pub fn infer_file_schema<R: Read + Seek, F: Fn(&str) -> DataType>(
     // build schema from inference results
     for i in 0..header_length {
         let possibilities = &column_types[i];
-        let has_nulls = nulls[i];
+        let has_validity = nulls[i];
         let field_name = &headers[i];
 
         // determine data type based on possible types
@@ -101,7 +101,7 @@ pub fn infer_file_schema<R: Read + Seek, F: Fn(&str) -> DataType>(
         match possibilities.len() {
             1 => {
                 for dtype in possibilities.iter() {
-                    fields.push(Field::new(&field_name, dtype.clone(), has_nulls));
+                    fields.push(Field::new(&field_name, dtype.clone(), has_validity));
                 }
             }
             2 => {
@@ -109,13 +109,13 @@ pub fn infer_file_schema<R: Read + Seek, F: Fn(&str) -> DataType>(
                     && possibilities.contains(&DataType::Float64)
                 {
                     // we have an integer and double, fall down to double
-                    fields.push(Field::new(&field_name, DataType::Float64, has_nulls));
+                    fields.push(Field::new(&field_name, DataType::Float64, has_validity));
                 } else {
                     // default to Utf8 for conflicting datatypes (e.g bool and int)
-                    fields.push(Field::new(&field_name, DataType::Utf8, has_nulls));
+                    fields.push(Field::new(&field_name, DataType::Utf8, has_validity));
                 }
             }
-            _ => fields.push(Field::new(&field_name, DataType::Utf8, has_nulls)),
+            _ => fields.push(Field::new(&field_name, DataType::Utf8, has_validity)),
         }
     }
 

@@ -37,7 +37,7 @@ fn _write_primitive<T: NativeType>(
     is_little_endian: bool,
 ) {
     write_bytes(
-        &to_le_bytes_bitmap(array.nulls(), array.len()),
+        &to_le_bytes_bitmap(array.validity(), array.len()),
         buffers,
         arrow_data,
         offset,
@@ -70,7 +70,7 @@ fn write_boolean(
 ) {
     let array = array.as_any().downcast_ref::<BooleanArray>().unwrap();
     write_bytes(
-        &to_le_bytes_bitmap(array.nulls(), array.len()),
+        &to_le_bytes_bitmap(array.validity(), array.len()),
         buffers,
         arrow_data,
         offset,
@@ -87,7 +87,7 @@ fn write_binary<O: Offset>(
 ) {
     let array = array.as_any().downcast_ref::<BinaryArray<O>>().unwrap();
     write_bytes(
-        &to_le_bytes_bitmap(array.nulls(), array.len()),
+        &to_le_bytes_bitmap(array.validity(), array.len()),
         buffers,
         arrow_data,
         offset,
@@ -115,7 +115,7 @@ fn write_utf8<O: Offset>(
 ) {
     let array = array.as_any().downcast_ref::<Utf8Array<O>>().unwrap();
     write_bytes(
-        &to_le_bytes_bitmap(array.nulls(), array.len()),
+        &to_le_bytes_bitmap(array.validity(), array.len()),
         buffers,
         arrow_data,
         offset,
@@ -146,7 +146,7 @@ fn write_fixed_size_binary(
         .downcast_ref::<FixedSizeBinaryArray>()
         .unwrap();
     write_bytes(
-        &to_le_bytes_bitmap(array.nulls(), array.len()),
+        &to_le_bytes_bitmap(array.validity(), array.len()),
         buffers,
         arrow_data,
         offset,
@@ -169,7 +169,7 @@ fn write_list<O: Offset>(
 ) {
     let array = array.as_any().downcast_ref::<ListArray<O>>().unwrap();
     write_bytes(
-        &to_le_bytes_bitmap(array.nulls(), array.len()),
+        &to_le_bytes_bitmap(array.validity(), array.len()),
         buffers,
         arrow_data,
         offset,
@@ -200,7 +200,7 @@ pub fn write_struct(
 ) {
     let array = array.as_any().downcast_ref::<StructArray>().unwrap();
     write_bytes(
-        &to_le_bytes_bitmap(array.nulls(), array.len()),
+        &to_le_bytes_bitmap(array.validity(), array.len()),
         buffers,
         arrow_data,
         offset,
@@ -227,7 +227,7 @@ fn write_fixed_size_list(
 ) {
     let array = array.as_any().downcast_ref::<FixedSizeListArray>().unwrap();
     write_bytes(
-        &to_le_bytes_bitmap(array.nulls(), array.len()),
+        &to_le_bytes_bitmap(array.validity(), array.len()),
         buffers,
         arrow_data,
         offset,

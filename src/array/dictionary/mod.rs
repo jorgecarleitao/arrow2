@@ -138,8 +138,8 @@ impl<K: DictionaryKey> Array for DictionaryArray<K> {
         &self.data_type
     }
 
-    fn nulls(&self) -> &Option<Bitmap> {
-        self.keys.nulls()
+    fn validity(&self) -> &Option<Bitmap> {
+        self.keys.validity()
     }
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
@@ -158,7 +158,11 @@ impl<K: DictionaryKey> std::fmt::Display for DictionaryArray<K> {
 
 unsafe impl<K: DictionaryKey> ToFFI for DictionaryArray<K> {
     fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
-        [self.keys.nulls().as_ref().map(|x| x.as_ptr()), None, None]
+        [
+            self.keys.validity().as_ref().map(|x| x.as_ptr()),
+            None,
+            None,
+        ]
     }
 
     #[inline]

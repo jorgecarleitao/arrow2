@@ -19,21 +19,21 @@ use crate::{array::StructArray, buffer::Bitmap};
 
 use super::{
     equal_range,
-    utils::{child_logical_null_buffer, count_nulls},
+    utils::{child_logical_null_buffer, count_validity},
 };
 
 /// Compares the values of two [ArrayData] starting at `lhs_start` and `rhs_start` respectively
-/// for `len` slots. The null buffers `lhs_nulls` and `rhs_nulls` inherit parent nullability.
+/// for `len` slots. The null buffers `lhs_validity` and `rhs_validity` inherit parent nullability.
 ///
 /// If an array is a child of a struct or list, the array's nulls have to be merged with the parent.
 /// This then affects the null count of the array, thus the merged nulls are passed separately
-/// as `lhs_nulls` and `rhs_nulls` variables to functions.
+/// as `lhs_validity` and `rhs_validity` variables to functions.
 /// The nulls are merged with a bitwise AND, and null counts are recomputed where necessary.
 fn equal_values(
     lhs: &StructArray,
     rhs: &StructArray,
-    lhs_nulls: &Option<Bitmap>,
-    rhs_nulls: &Option<Bitmap>,
+    lhs_validity: &Option<Bitmap>,
+    rhs_validity: &Option<Bitmap>,
     lhs_start: usize,
     rhs_start: usize,
     len: usize,
@@ -43,13 +43,15 @@ fn equal_values(
         .zip(rhs.values())
         .all(|(lhs_values, rhs_values)| {
             // merge the null data
-            let lhs_merged_nulls = child_logical_null_buffer(lhs, lhs_nulls, lhs_values.as_ref());
-            let rhs_merged_nulls = child_logical_null_buffer(rhs, rhs_nulls, rhs_values.as_ref());
+            let lhs_merged_validity =
+                child_logical_null_buffer(lhs, lhs_validity, lhs_values.as_ref());
+            let rhs_merged_validity =
+                child_logical_null_buffer(rhs, rhs_validity, rhs_values.as_ref());
             equal_range(
                 lhs_values.as_ref(),
                 rhs_values.as_ref(),
-                &lhs_merged_nulls,
-                &rhs_merged_nulls,
+                &lhs_merged_validity,
+                &rhs_merged_validity,
                 lhs_start,
                 rhs_start,
                 len,
@@ -60,21 +62,29 @@ fn equal_values(
 pub(super) fn equal(
     lhs: &StructArray,
     rhs: &StructArray,
-    lhs_nulls: &Option<Bitmap>,
-    rhs_nulls: &Option<Bitmap>,
+    lhs_validity: &Option<Bitmap>,
+    rhs_validity: &Option<Bitmap>,
     lhs_start: usize,
     rhs_start: usize,
     len: usize,
 ) -> bool {
-    let lhs_null_count = count_nulls(lhs_nulls, lhs_start, len);
-    let rhs_null_count = count_nulls(rhs_nulls, rhs_start, len);
+    let lhs_null_count = count_validity(lhs_validity, lhs_start, len);
+    let rhs_null_count = count_validity(rhs_validity, rhs_start, len);
 
     if lhs_null_count == 0 && rhs_null_count == 0 {
-        equal_values(lhs, rhs, lhs_nulls, rhs_nulls, lhs_start, rhs_start, len)
+        equal_values(
+            lhs,
+            rhs,
+            lhs_validity,
+            rhs_validity,
+            lhs_start,
+            rhs_start,
+            len,
+        )
     } else {
         // get a ref of the null buffer bytes, to use in testing for nullness
-        let lhs_bitmap = lhs_nulls.as_ref().unwrap();
-        let rhs_bitmap = rhs_nulls.as_ref().unwrap();
+        let lhs_bitmap = lhs_validity.as_ref().unwrap();
+        let rhs_bitmap = rhs_validity.as_ref().unwrap();
         // with nulls, we need to compare item by item whenever it is not null
         (0..len).all(|i| {
             let lhs_pos = lhs_start + i;
@@ -85,7 +95,7 @@ pub(super) fn equal(
 
             lhs_is_null
                 || (lhs_is_null == rhs_is_null)
-                    && equal_values(lhs, rhs, lhs_nulls, rhs_nulls, lhs_pos, rhs_pos, 1)
+                    && equal_values(lhs, rhs, lhs_validity, rhs_validity, lhs_pos, rhs_pos, 1)
         })
     }
 }

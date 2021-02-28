@@ -69,7 +69,7 @@ impl Array for NullArray {
         &DataType::Null
     }
 
-    fn nulls(&self) -> &Option<Bitmap> {
+    fn validity(&self) -> &Option<Bitmap> {
         &None
     }
 

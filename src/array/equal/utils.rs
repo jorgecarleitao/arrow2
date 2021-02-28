@@ -36,25 +36,25 @@ pub(super) fn equal_bits(
 }
 
 #[inline]
-pub(super) fn equal_nulls(
-    lhs_nulls: &Option<Bitmap>,
-    rhs_nulls: &Option<Bitmap>,
+pub(super) fn equal_validity(
+    lhs_validity: &Option<Bitmap>,
+    rhs_validity: &Option<Bitmap>,
     lhs_start: usize,
     rhs_start: usize,
     len: usize,
 ) -> bool {
-    let lhs_null_count = lhs_nulls
+    let lhs_null_count = lhs_validity
         .as_ref()
         .map(|x| x.null_count_range(lhs_start, len))
         .unwrap_or(0);
-    let rhs_null_count = rhs_nulls
+    let rhs_null_count = rhs_validity
         .as_ref()
         .map(|x| x.null_count_range(rhs_start, len))
         .unwrap_or(0);
 
     if lhs_null_count > 0 || rhs_null_count > 0 {
-        let lhs_values = lhs_nulls.as_ref().unwrap();
-        let rhs_values = rhs_nulls.as_ref().unwrap();
+        let lhs_values = lhs_validity.as_ref().unwrap();
+        let rhs_values = rhs_validity.as_ref().unwrap();
         equal_bits(lhs_values, rhs_values, lhs_start, rhs_start, len)
     } else {
         true
@@ -79,8 +79,8 @@ pub(super) fn equal_len<T: PartialEq>(
 }
 
 #[inline]
-pub(super) fn count_nulls(nulls: &Option<Bitmap>, offset: usize, length: usize) -> usize {
-    nulls
+pub(super) fn count_validity(validity: &Option<Bitmap>, offset: usize, length: usize) -> usize {
+    validity
         .as_ref()
         .map(|x| x.null_count_range(offset, length))
         .unwrap_or(0)
@@ -149,7 +149,7 @@ pub(super) fn child_logical_null_buffer(
     child: &dyn Array,
 ) -> Option<Bitmap> {
     let parent_bitmap = logical_null_buffer;
-    let self_null_bitmap = child.nulls();
+    let self_null_bitmap = child.validity();
     match parent.data_type() {
         DataType::List(_) => {
             let parent = parent.as_any().downcast_ref::<ListArray<i32>>().unwrap();

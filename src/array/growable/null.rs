@@ -37,7 +37,7 @@ impl<'a> Growable<'a> for GrowableNull {
         self.length += len;
     }
 
-    fn extend_nulls(&mut self, additional: usize) {
+    fn extend_validity(&mut self, additional: usize) {
         self.length += additional;
     }
 

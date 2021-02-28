@@ -139,7 +139,7 @@ impl<O: Offset> Array for BinaryArray<O> {
         &self.data_type
     }
 
-    fn nulls(&self) -> &Option<Bitmap> {
+    fn validity(&self) -> &Option<Bitmap> {
         &self.validity
     }
 
@@ -234,7 +234,7 @@ mod tests {
         assert_eq!(unsafe { array.value_unchecked(2) }, b"hello2");
         assert_eq!(array.values(), b"hellohello2");
         assert_eq!(array.offsets(), &[0, 5, 5, 11]);
-        assert_eq!(array.nulls(), &Some(Bitmap::from((&[0b00000101], 3))));
+        assert_eq!(array.validity(), &Some(Bitmap::from((&[0b00000101], 3))));
         assert_eq!(array.is_valid(0), true);
         assert_eq!(array.is_valid(1), false);
         assert_eq!(array.is_valid(2), true);
@@ -242,7 +242,7 @@ mod tests {
         let array2 = BinaryArray::<i32>::from_data(
             array.offsets_buffer().clone(),
             array.values_buffer().clone(),
-            array.nulls().clone(),
+            array.validity().clone(),
         );
         assert_eq!(array, array2);
 
@@ -259,6 +259,6 @@ mod tests {
         let array = BinaryArray::<i32>::new_empty();
         assert_eq!(array.values(), b"");
         assert_eq!(array.offsets(), &[0]);
-        assert_eq!(array.nulls(), &None);
+        assert_eq!(array.validity(), &None);
     }
 }

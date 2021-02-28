@@ -36,12 +36,12 @@ pub(super) fn extend_offsets<T: Offset>(
 
 pub(super) type ExtendNullBits<'a> = Box<dyn Fn(&mut MutableBitmap, usize, usize) + 'a>;
 
-pub(super) fn build_extend_null_bits(array: &dyn Array, use_nulls: bool) -> ExtendNullBits {
-    if let Some(bitmap) = array.nulls() {
+pub(super) fn build_extend_null_bits(array: &dyn Array, use_validity: bool) -> ExtendNullBits {
+    if let Some(bitmap) = array.validity() {
         Box::new(move |validity, start, len| {
             (start..start + len).for_each(|i| validity.push(bitmap.get_bit(i)));
         })
-    } else if use_nulls {
+    } else if use_validity {
         Box::new(|validity, _, len| {
             (0..len).for_each(|_| validity.push(true));
         })

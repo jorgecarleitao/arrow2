@@ -40,16 +40,16 @@ pub struct GrowablePrimitive<'a, T: NativeType> {
 impl<'a, T: NativeType> GrowablePrimitive<'a, T> {
     /// # Panics
     /// This function panics if any of the `arrays` is not downcastable to `PrimitiveArray<T>`.
-    pub fn new(arrays: &[&'a dyn Array], mut use_nulls: bool, capacity: usize) -> Self {
+    pub fn new(arrays: &[&'a dyn Array], mut use_validity: bool, capacity: usize) -> Self {
         // if any of the arrays has nulls, insertions from any array requires setting bits
         // as there is at least one array with nulls.
         if arrays.iter().any(|array| array.null_count() > 0) {
-            use_nulls = true;
+            use_validity = true;
         };
 
         let extend_null_bits = arrays
             .iter()
-            .map(|array| build_extend_null_bits(*array, use_nulls))
+            .map(|array| build_extend_null_bits(*array, use_validity))
             .collect();
 
         let arrays = arrays
@@ -87,7 +87,7 @@ impl<'a, T: NativeType> Growable<'a> for GrowablePrimitive<'a, T> {
     }
 
     #[inline]
-    fn extend_nulls(&mut self, additional: usize) {
+    fn extend_validity(&mut self, additional: usize) {
         self.values
             .resize(self.values.len() + additional, T::default());
         self.validity.extend_constant(additional, false);
@@ -155,12 +155,12 @@ mod tests {
     }
 
     #[test]
-    fn test_primitive_null_offset_nulls() {
+    fn test_primitive_null_offset_validity() {
         let b = Primitive::<u8>::from(vec![Some(1), Some(2), Some(3)]).to(DataType::UInt8);
         let b = b.slice(1, 2);
         let mut a = GrowablePrimitive::new(&[&b], true, 2);
         a.extend(0, 0, 2);
-        a.extend_nulls(3);
+        a.extend_validity(3);
         a.extend(0, 1, 1);
         let result: PrimitiveArray<u8> = a.into();
         let expected = Primitive::<u8>::from(vec![Some(2), Some(3), None, None, None, Some(3)])

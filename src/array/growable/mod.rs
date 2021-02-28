@@ -49,7 +49,7 @@ pub trait Growable<'a> {
     fn extend(&mut self, index: usize, start: usize, len: usize);
 
     /// Extends this [`GrowableArray`] with null elements, disregarding the bound arrays
-    fn extend_nulls(&mut self, additional: usize);
+    fn extend_validity(&mut self, additional: usize);
 
     /// Converts itself to an `Arc<dyn Array>`, thereby finishing the mutation.
     /// Self will be empty after such operation
@@ -66,7 +66,7 @@ pub trait Growable<'a> {
 /// This function panics iff the arrays do not have the same data_type.
 pub fn make_growable<'a>(
     arrays: &[&'a dyn Array],
-    use_nulls: bool,
+    use_validity: bool,
     capacity: usize,
 ) -> Box<dyn Growable<'a> + 'a> {
     assert!(!arrays.is_empty());
@@ -75,72 +75,114 @@ pub fn make_growable<'a>(
 
     match data_type {
         DataType::Null => Box::new(null::GrowableNull::new()),
-        DataType::Boolean => Box::new(boolean::GrowableBoolean::new(arrays, use_nulls, capacity)),
+        DataType::Boolean => Box::new(boolean::GrowableBoolean::new(
+            arrays,
+            use_validity,
+            capacity,
+        )),
         DataType::Int8 => Box::new(primitive::GrowablePrimitive::<i8>::new(
-            arrays, use_nulls, capacity,
+            arrays,
+            use_validity,
+            capacity,
         )),
         DataType::Int16 => Box::new(primitive::GrowablePrimitive::<i16>::new(
-            arrays, use_nulls, capacity,
+            arrays,
+            use_validity,
+            capacity,
         )),
         DataType::Int32
         | DataType::Date32
         | DataType::Time32(_)
-        | DataType::Interval(IntervalUnit::YearMonth) => {
-            Box::new(primitive::GrowablePrimitive::<i32>::new(
-                arrays, use_nulls, capacity,
-            ))
-        }
+        | DataType::Interval(IntervalUnit::YearMonth) => Box::new(primitive::GrowablePrimitive::<
+            i32,
+        >::new(
+            arrays, use_validity, capacity
+        )),
         DataType::Int64
         | DataType::Date64
         | DataType::Time64(_)
         | DataType::Timestamp(_, _)
         | DataType::Duration(_)
         | DataType::Interval(IntervalUnit::DayTime) => Box::new(
-            primitive::GrowablePrimitive::<i64>::new(arrays, use_nulls, capacity),
+            primitive::GrowablePrimitive::<i64>::new(arrays, use_validity, capacity),
         ),
         DataType::Decimal(_, _) => Box::new(primitive::GrowablePrimitive::<i128>::new(
-            arrays, use_nulls, capacity,
+            arrays,
+            use_validity,
+            capacity,
         )),
         DataType::UInt8 => Box::new(primitive::GrowablePrimitive::<u8>::new(
-            arrays, use_nulls, capacity,
+            arrays,
+            use_validity,
+            capacity,
         )),
         DataType::UInt16 => Box::new(primitive::GrowablePrimitive::<u16>::new(
-            arrays, use_nulls, capacity,
+            arrays,
+            use_validity,
+            capacity,
         )),
         DataType::UInt32 => Box::new(primitive::GrowablePrimitive::<u32>::new(
-            arrays, use_nulls, capacity,
+            arrays,
+            use_validity,
+            capacity,
         )),
         DataType::UInt64 => Box::new(primitive::GrowablePrimitive::<u64>::new(
-            arrays, use_nulls, capacity,
+            arrays,
+            use_validity,
+            capacity,
         )),
         DataType::Float16 => unreachable!(),
         DataType::Float32 => Box::new(primitive::GrowablePrimitive::<f32>::new(
-            arrays, use_nulls, capacity,
+            arrays,
+            use_validity,
+            capacity,
         )),
         DataType::Float64 => Box::new(primitive::GrowablePrimitive::<f64>::new(
-            arrays, use_nulls, capacity,
+            arrays,
+            use_validity,
+            capacity,
         )),
-        DataType::Utf8 => Box::new(utf8::GrowableUtf8::<i32>::new(arrays, use_nulls, capacity)),
-        DataType::LargeUtf8 => {
-            Box::new(utf8::GrowableUtf8::<i64>::new(arrays, use_nulls, capacity))
-        }
+        DataType::Utf8 => Box::new(utf8::GrowableUtf8::<i32>::new(
+            arrays,
+            use_validity,
+            capacity,
+        )),
+        DataType::LargeUtf8 => Box::new(utf8::GrowableUtf8::<i64>::new(
+            arrays,
+            use_validity,
+            capacity,
+        )),
         DataType::Binary => Box::new(binary::GrowableBinary::<i32>::new(
-            arrays, use_nulls, capacity,
+            arrays,
+            use_validity,
+            capacity,
         )),
         DataType::LargeBinary => Box::new(binary::GrowableBinary::<i64>::new(
-            arrays, use_nulls, capacity,
+            arrays,
+            use_validity,
+            capacity,
         )),
         DataType::FixedSizeBinary(_) => Box::new(fixed_binary::GrowableFixedSizeBinary::new(
-            arrays, use_nulls, capacity,
+            arrays,
+            use_validity,
+            capacity,
         )),
 
-        DataType::List(_) => Box::new(list::GrowableList::<i32>::new(arrays, use_nulls, capacity)),
-        DataType::LargeList(_) => {
-            Box::new(list::GrowableList::<i64>::new(arrays, use_nulls, capacity))
-        }
-        DataType::Struct(_) => {
-            Box::new(structure::GrowableStruct::new(arrays, use_nulls, capacity))
-        }
+        DataType::List(_) => Box::new(list::GrowableList::<i32>::new(
+            arrays,
+            use_validity,
+            capacity,
+        )),
+        DataType::LargeList(_) => Box::new(list::GrowableList::<i64>::new(
+            arrays,
+            use_validity,
+            capacity,
+        )),
+        DataType::Struct(_) => Box::new(structure::GrowableStruct::new(
+            arrays,
+            use_validity,
+            capacity,
+        )),
         DataType::FixedSizeList(_, _) => todo!(),
         DataType::Union(_) => todo!(),
         DataType::Dictionary(_, _) => todo!(),

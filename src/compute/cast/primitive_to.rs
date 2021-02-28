@@ -78,7 +78,7 @@ where
     Ok(Box::new(PrimitiveArray::<T>::from_data(
         to_type.clone(),
         from.values_buffer().clone(),
-        from.nulls().clone(),
+        from.validity().clone(),
     )))
 }
 
@@ -94,7 +94,7 @@ where
     let iter = array.values().iter().map(|v| *v != T::default());
     let values = unsafe { Bitmap::from_trusted_len_iter(iter) };
 
-    let array = BooleanArray::from_data(values, array.nulls().clone());
+    let array = BooleanArray::from_data(values, array.validity().clone());
 
     Ok(Box::new(array))
 }

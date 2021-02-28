@@ -17,7 +17,7 @@
 
 use crate::{array::Offset, buffer::Bitmap};
 
-use super::utils::{count_nulls, equal_len};
+use super::utils::{count_validity, equal_len};
 
 fn offset_value_equal<O: Offset>(
     lhs_values: &[u8],
@@ -48,16 +48,16 @@ pub(super) fn equal<O: Offset>(
     rhs_offsets: &[O],
     lhs_values: &[u8],
     rhs_values: &[u8],
-    lhs_nulls: &Option<Bitmap>,
-    rhs_nulls: &Option<Bitmap>,
+    lhs_validity: &Option<Bitmap>,
+    rhs_validity: &Option<Bitmap>,
     lhs_start: usize,
     rhs_start: usize,
     len: usize,
 ) -> bool {
     // the offsets of the `ArrayData` are ignored as they are only applied to the offset buffer.
 
-    let lhs_null_count = count_nulls(lhs_nulls, lhs_start, len);
-    let rhs_null_count = count_nulls(rhs_nulls, rhs_start, len);
+    let lhs_null_count = count_validity(lhs_validity, lhs_start, len);
+    let rhs_null_count = count_validity(rhs_validity, rhs_start, len);
 
     if lhs_null_count == 0 && rhs_null_count == 0 {
         offset_value_equal(
@@ -70,8 +70,8 @@ pub(super) fn equal<O: Offset>(
             len,
         )
     } else {
-        let lhs_bitmap = lhs_nulls.as_ref().unwrap();
-        let rhs_bitmap = rhs_nulls.as_ref().unwrap();
+        let lhs_bitmap = lhs_validity.as_ref().unwrap();
+        let rhs_bitmap = rhs_validity.as_ref().unwrap();
 
         (0..len).all(|i| {
             let lhs_pos = lhs_start + i;
