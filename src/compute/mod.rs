@@ -21,4 +21,5 @@ pub mod cast;
 pub mod concat;
 pub mod filter;
 pub mod limit;
+pub mod substring;
 pub mod take;
