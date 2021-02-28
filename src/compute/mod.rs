@@ -20,3 +20,4 @@ pub mod cast;
 pub mod concat;
 pub mod filter;
 pub mod take;
+pub mod limit;
