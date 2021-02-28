@@ -86,7 +86,6 @@ where
 
         if !is_little_endian {
             let chunks = slice.chunks_exact(std::mem::size_of::<T>());
-            println!("Reading big endian");
             buffer
                 .as_slice_mut()
                 .iter_mut()

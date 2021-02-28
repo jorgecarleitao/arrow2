@@ -34,6 +34,8 @@ pub enum ArrowError {
     FFI(String),
     /// Error during import or export to/from IPC
     IPC(String),
+    /// Error during import or export to/from a format
+    ExternalFormat(String),
     DictionaryKeyOverflowError,
     Other(String),
 }
@@ -70,6 +72,9 @@ impl Display for ArrowError {
             }
             ArrowError::IPC(desc) => {
                 write!(f, "IPC error: {}", desc)
+            }
+            ArrowError::ExternalFormat(desc) => {
+                write!(f, "External format error: {}", desc)
             }
             ArrowError::DictionaryKeyOverflowError => {
                 write!(f, "Dictionary key bigger than the key type")

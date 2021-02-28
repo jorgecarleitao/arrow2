@@ -31,7 +31,7 @@ type ArrayRef = Arc<dyn Array>;
 ///
 /// A `RecordBatch` is a two-dimensional dataset of a number of
 /// contiguous arrays, each the same length.
-/// A record batch has a schema which must match its arrays’
+/// A record batch has a schema which must match its arrays'
 /// datatypes.
 ///
 /// Record batches are a convenient unit of work for various

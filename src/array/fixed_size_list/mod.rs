@@ -22,7 +22,7 @@ use crate::{
     datatypes::{DataType, Field},
 };
 
-use super::{Array, display_fmt, ffi::ToFFI, new_empty_array, new_null_array};
+use super::{display_fmt, ffi::ToFFI, new_empty_array, new_null_array, Array};
 
 #[derive(Debug, Clone)]
 pub struct FixedSizeListArray {
