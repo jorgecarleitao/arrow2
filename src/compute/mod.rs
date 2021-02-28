@@ -16,6 +16,7 @@
 // under the License.
 
 pub mod arity;
+pub mod boolean;
 pub mod cast;
 pub mod concat;
 pub mod filter;
