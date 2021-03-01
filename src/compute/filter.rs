@@ -299,10 +299,14 @@ mod tests {
 
     #[test]
     fn test_filter_string_array_simple() {
-        let a = StringArray::from_slice(vec!["hello", " ", "world", "!"]);
+        let a = Utf8Array::<i32>::from_slice(vec!["hello", " ", "world", "!"]);
         let b = BooleanArray::from_slice(vec![true, false, true, false]);
         let c = filter(&a, &b).unwrap();
-        let d = c.as_ref().as_any().downcast_ref::<StringArray>().unwrap();
+        let d = c
+            .as_ref()
+            .as_any()
+            .downcast_ref::<Utf8Array<i32>>()
+            .unwrap();
         assert_eq!(2, d.len());
         assert_eq!("hello", d.value(0));
         assert_eq!("world", d.value(1));
@@ -320,10 +324,14 @@ mod tests {
 
     #[test]
     fn test_filter_string_array_with_null() {
-        let a = StringArray::from(&vec![Some("hello"), None, Some("world"), None]);
+        let a = Utf8Array::<i32>::from(&vec![Some("hello"), None, Some("world"), None]);
         let b = BooleanArray::from_slice(vec![true, false, false, true]);
         let c = filter(&a, &b).unwrap();
-        let d = c.as_ref().as_any().downcast_ref::<StringArray>().unwrap();
+        let d = c
+            .as_ref()
+            .as_any()
+            .downcast_ref::<Utf8Array<i32>>()
+            .unwrap();
         assert_eq!(2, d.len());
         assert_eq!("hello", d.value(0));
         assert_eq!(false, d.is_null(0));

@@ -347,7 +347,7 @@ mod tests {
         let dd = batch
             .column(d.0)
             .as_any()
-            .downcast_ref::<StringArray>()
+            .downcast_ref::<Utf8Array<i32>>()
             .unwrap();
         assert_eq!("4", dd.value(0));
         assert_eq!("text", dd.value(8));
@@ -404,7 +404,7 @@ mod tests {
         let dd = batch
             .column(d.0)
             .as_any()
-            .downcast_ref::<StringArray>()
+            .downcast_ref::<Utf8Array<i32>>()
             .unwrap();
         assert_eq!(false, dd.is_valid(0));
         assert_eq!(true, dd.is_valid(1));
@@ -658,10 +658,10 @@ mod tests {
                 .downcast_ref::<ListArray<i32>>()
                 .unwrap();
             let dd = dd.values();
-            let dd = dd.as_any().downcast_ref::<StringArray>().unwrap();
+            let dd = dd.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
             assert_eq!(
                 dd,
-                &StringArray::from_slice(&["1", "false", "array", "2.4"])
+                &Utf8Array::<i32>::from_slice(&["1", "false", "array", "2.4"])
             );
         }
     }
@@ -685,7 +685,7 @@ mod tests {
             .unwrap();
 
         // build expected output
-        let d = StringArray::from(&vec![Some("text"), None, Some("text"), None]);
+        let d = Utf8Array::<i32>::from(&vec![Some("text"), None, Some("text"), None]);
         let c = StructArray::from_data(vec![d_field.clone()], vec![Arc::new(d)], None);
 
         let b = BooleanArray::from(vec![Some(true), Some(false), Some(true), None]);
@@ -725,7 +725,7 @@ mod tests {
         let mut reader = builder.build(Cursor::new(json_content)).unwrap();
 
         // build expected output
-        let d = StringArray::from(&vec![
+        let d = Utf8Array::<i32>::from(&vec![
             Some("a_text"),
             Some("b_text"),
             None,

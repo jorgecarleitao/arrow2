@@ -30,6 +30,10 @@ impl<T: NativeType> Primitive<T> {
     pub fn from_slice<P: AsRef<[T]>>(slice: P) -> Self {
         unsafe { Self::from_trusted_len_iter(slice.as_ref().iter().map(Some)) }
     }
+
+    pub fn from_vec(slice: Vec<T>) -> Self {
+        unsafe { Self::from_trusted_len_iter(slice.iter().map(|x| Some(*x))) }
+    }
 }
 
 impl<T: NativeType, P: AsRef<[Option<T>]>> From<P> for Primitive<T> {

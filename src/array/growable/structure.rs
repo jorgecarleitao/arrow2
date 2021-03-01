@@ -145,14 +145,14 @@ impl<'a> Into<StructArray> for GrowableStruct<'a> {
 mod tests {
     use std::iter::FromIterator;
 
-    use crate::array::{Primitive, StringArray};
+    use crate::array::{Primitive, Utf8Array};
     use crate::buffer::Bitmap;
     use crate::datatypes::{DataType, Field};
 
     use super::*;
 
     fn some_values() -> (Vec<Field>, Vec<Arc<dyn Array>>) {
-        let strings: Arc<dyn Array> = Arc::new(StringArray::from_iter(vec![
+        let strings: Arc<dyn Array> = Arc::new(Utf8Array::<i32>::from_iter(vec![
             Some("a"),
             Some("aa"),
             None,
@@ -245,7 +245,7 @@ mod tests {
         mutable.extend(1, 0, 2);
         let result: StructArray = mutable.into();
 
-        let expected_string: Arc<dyn Array> = Arc::new(StringArray::from_iter(vec![
+        let expected_string: Arc<dyn Array> = Arc::new(Utf8Array::<i32>::from_iter(vec![
             Some("aa"),
             None,
             Some("a"),

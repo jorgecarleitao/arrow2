@@ -15,13 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-pub mod arity;
-pub mod boolean;
-pub mod cast;
-pub mod comparison;
-pub mod concat;
-pub mod filter;
-pub mod limit;
-pub mod substring;
-pub mod take;
-mod utils;
+use crate::buffer::Bitmap;
+
+pub fn combine_validities(lhs: &Option<Bitmap>, rhs: &Option<Bitmap>) -> Option<Bitmap> {
+    match (lhs, rhs) {
+        (Some(lhs), None) => Some(lhs.clone()),
+        (None, Some(rhs)) => Some(rhs.clone()),
+        (None, None) => None,
+        (Some(lhs), Some(rhs)) => Some(lhs & rhs),
+    }
+}

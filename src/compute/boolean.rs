@@ -19,6 +19,8 @@ use crate::array::{Array, BooleanArray};
 use crate::buffer::{Bitmap, MutableBitmap};
 use crate::error::{ArrowError, Result};
 
+use super::utils::combine_validities;
+
 /// Helper function to implement binary kernels
 fn binary_boolean_kernel<F>(lhs: &BooleanArray, rhs: &BooleanArray, op: F) -> Result<BooleanArray>
 where
@@ -30,12 +32,7 @@ where
         ));
     }
 
-    let validity = match (lhs.validity(), rhs.validity()) {
-        (Some(lhs), None) => Some(lhs.clone()),
-        (None, Some(rhs)) => Some(rhs.clone()),
-        (None, None) => None,
-        (Some(lhs), Some(rhs)) => Some(lhs & rhs),
-    };
+    let validity = combine_validities(lhs.validity(), rhs.validity());
 
     let left_buffer = lhs.values();
     let right_buffer = rhs.values();

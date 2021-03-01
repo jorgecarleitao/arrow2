@@ -128,7 +128,7 @@ mod tests {
 
     use super::*;
 
-    use crate::array::StringArray;
+    use crate::array::Utf8Array;
 
     /// tests extending from a variable-sized (strings and binary) array w/ offset with nulls
     #[test]
@@ -171,7 +171,7 @@ mod tests {
 
         a.extend(0, 0, 3);
 
-        let result: StringArray = a.into();
+        let result: Utf8Array<i32> = a.into();
 
         let expected = Utf8Array::<i32>::from_iter(vec![Some("bc"), None, Some("defh")]);
         assert_eq!(result, expected);

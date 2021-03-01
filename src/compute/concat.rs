@@ -79,7 +79,7 @@ mod tests {
     fn test_concat_incompatible_datatypes() {
         let re = concatenate(&[
             &Primitive::<i64>::from(vec![Some(-1), Some(2), None]).to(DataType::Int64),
-            &StringArray::from(&vec![Some("hello"), Some("bar"), Some("world")]),
+            &Utf8Array::<i32>::from(&vec![Some("hello"), Some("bar"), Some("world")]),
         ]);
         assert!(re.is_err());
     }
@@ -87,12 +87,12 @@ mod tests {
     #[test]
     fn test_concat_string_arrays() -> Result<()> {
         let arr = concatenate(&[
-            &StringArray::from_slice(&vec!["hello", "world"]),
-            &StringArray::from_slice(&vec!["2", "3", "4"]),
-            &StringArray::from(&vec![Some("foo"), Some("bar"), None, Some("baz")]),
+            &Utf8Array::<i32>::from_slice(&vec!["hello", "world"]),
+            &Utf8Array::<i32>::from_slice(&vec!["2", "3", "4"]),
+            &Utf8Array::<i32>::from(&vec![Some("foo"), Some("bar"), None, Some("baz")]),
         ])?;
 
-        let expected_output = StringArray::from(&vec![
+        let expected_output = Utf8Array::<i32>::from(&vec![
             Some("hello"),
             Some("world"),
             Some("2"),
