@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+pub mod arithmetics;
 pub mod arity;
 pub mod boolean;
 pub mod cast;

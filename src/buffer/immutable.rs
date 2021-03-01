@@ -118,6 +118,13 @@ impl<T: NativeType> Buffer<T> {
     pub unsafe fn from_trusted_len_iter<I: Iterator<Item = T>>(iterator: I) -> Self {
         MutableBuffer::from_trusted_len_iter(iterator).into()
     }
+
+    #[inline]
+    pub unsafe fn try_from_trusted_len_iter<E, I: Iterator<Item = std::result::Result<T, E>>>(
+        iterator: I,
+    ) -> std::result::Result<Self, E> {
+        Ok(MutableBuffer::try_from_trusted_len_iter(iterator)?.into())
+    }
 }
 
 impl<T: NativeType, U: AsRef<[T]>> From<U> for Buffer<T> {
