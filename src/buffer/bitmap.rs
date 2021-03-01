@@ -328,9 +328,43 @@ impl MutableBitmap {
     /// # Safety
     /// The caller must guarantee that the iterator is `TrustedLen`.
     #[inline]
-    pub unsafe fn from_trusted_len_iter<I: Iterator<Item = bool>>(iterator: I) -> Self {
-        // todo implement `from_trusted_len_iter` for MutableBitmap
-        Self::from_iter(iterator)
+    pub unsafe fn from_trusted_len_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = bool>,
+    {
+        let mut iterator = iter.into_iter();
+        let length = iterator.size_hint().1.unwrap();
+
+        let chunks = length / 64;
+
+        let iter = (0..chunks).map(|_| {
+            let mut byte_accum: u64 = 0;
+            let mut mask: u64 = 1;
+            (0..64).for_each(|_| {
+                let value = iterator.next().unwrap();
+                byte_accum |= match value {
+                    true => mask,
+                    false => 0,
+                };
+                mask <<= 1;
+            });
+            byte_accum
+        });
+
+        let mut buffer = MutableBuffer::from_trusted_len_iter(iter);
+
+        let mut byte_accum: u64 = 0;
+        let mut mask: u64 = 1;
+        while let Some(value) = iterator.next() {
+            byte_accum |= match value {
+                true => mask,
+                false => 0,
+            };
+            mask <<= 1;
+        };
+        buffer.push(byte_accum);
+
+        Self { buffer: buffer.into(), length }
     }
 }
 
@@ -429,10 +463,26 @@ impl<'a> std::iter::Iterator for BitmapIter<'a> {
         }
     }
 
+    #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         (
             self.bitmap.len() - self.current,
             Some(self.bitmap.len() - self.current),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_trusted_len() {
+        let data = vec![true; 65];
+        let bitmap = unsafe { MutableBitmap::from_trusted_len_iter(data) };
+        let bitmap: Bitmap = bitmap.into();
+        assert_eq!(bitmap.len(), 65);
+
+        assert_eq!(bitmap.as_slice()[8], 0b00000001);
     }
 }
