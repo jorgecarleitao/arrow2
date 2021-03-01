@@ -140,7 +140,7 @@ where
     //      `values` is an iterator with a known size because arrays are sized.
     let values = unsafe { Buffer::from_trusted_len_iter(values) };
 
-    PrimitiveArray::<O>::from_data(data_type.clone(), values, array.nulls().clone())
+    PrimitiveArray::<O>::from_data(data_type.clone(), values, array.validity().clone())
 }
 ```
 

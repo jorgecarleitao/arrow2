@@ -37,7 +37,7 @@
 //!     Field::new("c3", DataType::UInt32, false),
 //!     Field::new("c3", DataType::Boolean, true),
 //! ]);
-//! let c1 = StringArray::from_slice(&[
+//! let c1 = Utf8Array::<i32>::from_slice(&[
 //!     "Lorem ipsum dolor sit amet",
 //!     "consectetur adipiscing elit",
 //!     "sed do eiusmod tempor",

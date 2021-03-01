@@ -24,24 +24,6 @@ use crate::array::{BooleanArray, Offset, Utf8Array};
 use crate::error::{ArrowError, Result};
 use crate::{array::*, buffer::Bitmap};
 
-/// Perform SQL `left LIKE right` operation on [`StringArray`] / [`LargeStringArray`].
-///
-/// There are two wildcards supported with the LIKE operator:
-///
-/// 1. `%` - The percent sign represents zero, one, or multiple characters
-/// 2. `_` - The underscore represents a single character
-///
-/// For example:
-/// ```
-/// use arrow::array::{StringArray, BooleanArray};
-/// use arrow::compute::regex_match::regex_match;
-///
-/// let strings = StringArray::from(&vec!["Arrow", "Arrow", "Arrow", "Ar"]);
-/// let patterns = StringArray::from(&vec!["A%", "B%", "A.", "A."]);
-///
-/// let result = regex_match(&strings, &patterns).unwrap();
-/// assert_eq!(result, BooleanArray::from(vec![true, false, false, true]));
-/// ```
 pub fn regex_match<O: Offset>(values: &Utf8Array<O>, regex: &Utf8Array<O>) -> Result<BooleanArray> {
     if values.len() != regex.len() {
         return Err(ArrowError::InvalidArgumentError(
@@ -80,6 +62,17 @@ pub fn regex_match<O: Offset>(values: &Utf8Array<O>, regex: &Utf8Array<O>) -> Re
     Ok(BooleanArray::from_data(new_values, validity))
 }
 
+/// Regex matches
+/// # Example
+/// ```
+/// use arrow2::array::{Utf8Array, BooleanArray};
+/// use arrow2::compute::regex_match::regex_match_scalar;
+///
+/// let strings = Utf8Array::<i32>::from_slice(&vec!["ArAow", "A_B", "AAA"]);
+///
+/// let result = regex_match_scalar(&strings, "^A.A").unwrap();
+/// assert_eq!(result, BooleanArray::from_slice(&vec![true, false, true]));
+/// ```
 pub fn regex_match_scalar<O: Offset>(values: &Utf8Array<O>, regex: &str) -> Result<BooleanArray> {
     let regex = Regex::new(regex)
         .map_err(|e| ArrowError::InvalidArgumentError(format!("Unable to compile regex: {}", e)))?;

@@ -20,12 +20,12 @@
 //! Example:
 //!
 //! ```
-//! use arrow::array::{ArrayRef, StringArray};
-//! use arrow::compute::concat;
+//! use arrow2::array::Utf8Array;
+//! use arrow2::compute::concat::concatenate;
 //!
 //! let arr = concatenate(&[
-//!     &StringArray::from(vec!["hello", "world"]),
-//!     &StringArray::from(vec!["!"]),
+//!     &Utf8Array::<i32>::from_slice(vec!["hello", "world"]),
+//!     &Utf8Array::<i32>::from_slice(vec!["!"]),
 //! ]).unwrap();
 //! assert_eq!(arr.len(), 3);
 //! ```

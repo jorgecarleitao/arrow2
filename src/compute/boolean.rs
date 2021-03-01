@@ -48,9 +48,9 @@ where
 /// This function errors when the arrays have different lengths.
 /// # Example
 /// ```rust
-/// use arrow::array::BooleanArray;
-/// use arrow::error::Result;
-/// use arrow::compute::kernels::boolean::and;
+/// use arrow2::array::BooleanArray;
+/// use arrow2::error::Result;
+/// use arrow2::compute::boolean::and;
 /// # fn main() -> Result<()> {
 /// let a = BooleanArray::from(&[Some(false), Some(true), None]);
 /// let b = BooleanArray::from(&[Some(true), Some(true), Some(false)]);
@@ -69,9 +69,9 @@ pub fn and(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
 /// This function errors when the arrays have different lengths.
 /// # Example
 /// ```rust
-/// use arrow::array::BooleanArray;
-/// use arrow::error::Result;
-/// use arrow::compute::kernels::boolean::or;
+/// use arrow2::array::BooleanArray;
+/// use arrow2::error::Result;
+/// use arrow2::compute::boolean::or;
 /// # fn main() -> Result<()> {
 /// let a = BooleanArray::from(vec![Some(false), Some(true), None]);
 /// let b = BooleanArray::from(vec![Some(true), Some(true), Some(false)]);
@@ -88,8 +88,8 @@ pub fn or(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
 /// null.
 /// # Example
 /// ```rust
-/// use arrow::array::BooleanArray;
-/// use arrow::compute::kernels::boolean::not;
+/// use arrow2::array::BooleanArray;
+/// use arrow2::compute::boolean::not;
 /// # fn main() {
 /// let a = BooleanArray::from(vec![Some(false), Some(true), None]);
 /// let not_a = not(&a);
@@ -107,12 +107,12 @@ pub fn not(array: &BooleanArray) -> BooleanArray {
 /// This function never errors.
 /// # Example
 /// ```rust
-/// use arrow::array::BooleanArray;
-/// use arrow::compute::kernels::boolean::is_null;
+/// use arrow2::array::BooleanArray;
+/// use arrow2::compute::boolean::is_null;
 /// # fn main() {
 /// let a = BooleanArray::from(vec![Some(false), Some(true), None]);
 /// let a_is_null = is_null(&a);
-/// assert_eq!(a_is_null, BooleanArray::from(vec![false, false, true]));
+/// assert_eq!(a_is_null, BooleanArray::from_slice(vec![false, false, true]));
 /// # }
 /// ```
 pub fn is_null(input: &dyn Array) -> BooleanArray {
@@ -129,12 +129,12 @@ pub fn is_null(input: &dyn Array) -> BooleanArray {
 /// Returns a non-null [BooleanArray] with whether each value of the array is not null.
 /// # Example
 /// ```rust
-/// use arrow::array::BooleanArray;
-/// use arrow::compute::kernels::boolean::is_not_null;
+/// use arrow2::array::BooleanArray;
+/// use arrow2::compute::boolean::is_not_null;
 /// # fn main() {
-/// let a = BooleanArray::from(vec![Some(false), Some(true), None]);
+/// let a = BooleanArray::from(&vec![Some(false), Some(true), None]);
 /// let a_is_not_null = is_not_null(&a);
-/// assert_eq!(a_is_not_null, BooleanArray::from(vec![true, true, false]));
+/// assert_eq!(a_is_not_null, BooleanArray::from_slice(&vec![true, true, false]));
 /// # }
 /// ```
 pub fn is_not_null(input: &dyn Array) -> BooleanArray {
