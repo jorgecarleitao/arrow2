@@ -20,6 +20,7 @@ pub mod boolean;
 pub mod cast;
 pub mod comparison;
 pub mod concat;
+pub mod contains;
 pub mod filter;
 pub mod limit;
 pub mod substring;
