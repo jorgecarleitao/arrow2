@@ -15,7 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::buffer::Bitmap;
+use crate::{
+    array::{Array, BooleanArray, Offset, Utf8Array},
+    buffer::Bitmap,
+};
 
 pub fn combine_validities(lhs: &Option<Bitmap>, rhs: &Option<Bitmap>) -> Option<Bitmap> {
     match (lhs, rhs) {
@@ -24,4 +27,20 @@ pub fn combine_validities(lhs: &Option<Bitmap>, rhs: &Option<Bitmap>) -> Option<
         (None, None) => None,
         (Some(lhs), Some(rhs)) => Some(lhs & rhs),
     }
+}
+
+pub fn unary_utf8_boolean<O: Offset, F: Fn(&str) -> bool>(
+    values: &Utf8Array<O>,
+    op: F,
+) -> BooleanArray {
+    let validity = values.validity().clone();
+
+    let iterator = values.iter().map(|value| {
+        if value.is_none() {
+            return false;
+        };
+        op(value.unwrap())
+    });
+    let values = unsafe { Bitmap::from_trusted_len_iter(iterator) };
+    BooleanArray::from_data(values, validity)
 }

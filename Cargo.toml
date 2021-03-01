@@ -34,7 +34,7 @@ flate2 = "1"
 doc-comment = "0.3"
 
 [features]
-default = ["io_csv", "io_json", "io_ipc", "io_json_integration"]
+default = ["io_csv", "io_json", "io_ipc", "io_json_integration", "regex"]
 io_csv = ["csv", "lazy_static", "lexical-core", "regex"]
 io_json = ["serde", "serde_derive", "serde_json", "indexmap"]
 io_ipc = ["flatbuffers"]

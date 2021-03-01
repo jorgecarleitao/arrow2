@@ -26,3 +26,6 @@ pub mod limit;
 pub mod substring;
 pub mod take;
 mod utils;
+
+#[cfg(feature = "regex")]
+pub mod regex_match;
