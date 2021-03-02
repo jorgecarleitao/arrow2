@@ -23,15 +23,23 @@ use crate::{
 
 use super::maybe_usize;
 
-fn take_values<O: Offset>(length: O, starts: &[O], offsets: &[O], values: &[u8]) -> Result<Buffer<u8>> {
+fn take_values<O: Offset>(
+    length: O,
+    starts: &[O],
+    offsets: &[O],
+    values: &[u8],
+) -> Result<Buffer<u8>> {
     let new_len = maybe_usize::<O>(length)?;
     let mut buffer = MutableBuffer::with_capacity(new_len);
-    starts.iter().zip(offsets.windows(2)).try_for_each(|(start_, window)| {
-        let start = maybe_usize::<O>(*start_)?;
-        let end = maybe_usize::<O>(*start_ + (window[1] - window[0]))?;
-        buffer.extend_from_slice(&values[start..end]);
-        Result::Ok(())
-    })?;
+    starts
+        .iter()
+        .zip(offsets.windows(2))
+        .try_for_each(|(start_, window)| {
+            let start = maybe_usize::<O>(*start_)?;
+            let end = maybe_usize::<O>(*start_ + (window[1] - window[0]))?;
+            buffer.extend_from_slice(&values[start..end]);
+            Result::Ok(())
+        })?;
     Ok(buffer.into())
 }
 
