@@ -24,6 +24,7 @@ pub mod concat;
 pub mod contains;
 pub mod filter;
 pub mod limit;
+pub mod sort;
 pub mod substring;
 pub mod take;
 mod utils;
