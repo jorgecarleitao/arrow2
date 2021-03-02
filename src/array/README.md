@@ -19,7 +19,7 @@ This document describes the overall design of this module.
 
 * The trait `Array` MUST only be implemented by structs in this module.
 
-* Every child array on the struct MUST be `Arc<dyn Array>`
+* Every child array on the struct MUST be `Arc<dyn Array>`. This enables the struct to be clonable.
 
 * An array MUST implement `from_data` that:
     * panics if the specification is incorrect
