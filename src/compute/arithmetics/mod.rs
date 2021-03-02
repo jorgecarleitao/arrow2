@@ -22,8 +22,8 @@ use std::ops::{Add, Div, Mul, Neg, Sub};
 use num::{traits::Pow, Zero};
 
 use crate::array::*;
-use crate::datatypes::DataType;
 use crate::buffer::{Buffer, NativeType};
+use crate::datatypes::DataType;
 use crate::error::{ArrowError, Result};
 
 use super::arity::{binary, unary};
@@ -33,66 +33,88 @@ pub fn arithmetic(lhs: &dyn Array, op: Operator, rhs: &dyn Array) -> Result<Box<
     let data_type = lhs.data_type();
     if data_type != rhs.data_type() {
         return Err(ArrowError::NotYetImplemented(
-            "Arithmetic is currently only supported for arrays of the same logical type".to_string(),
+            "Arithmetic is currently only supported for arrays of the same logical type"
+                .to_string(),
         ));
     }
     match data_type {
         DataType::Int8 => {
             let lhs = lhs.as_any().downcast_ref::<Int8Array>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<Int8Array>().unwrap();
-            arithmetic_primitive(lhs, op, rhs).map(Box::new).map(|x| x as Box<dyn Array>)
+            arithmetic_primitive(lhs, op, rhs)
+                .map(Box::new)
+                .map(|x| x as Box<dyn Array>)
         }
         DataType::Int16 => {
             let lhs = lhs.as_any().downcast_ref::<Int16Array>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<Int16Array>().unwrap();
-            arithmetic_primitive(lhs, op, rhs).map(Box::new).map(|x| x as Box<dyn Array>)
+            arithmetic_primitive(lhs, op, rhs)
+                .map(Box::new)
+                .map(|x| x as Box<dyn Array>)
         }
         DataType::Int32 => {
             let lhs = lhs.as_any().downcast_ref::<Int32Array>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<Int32Array>().unwrap();
-            arithmetic_primitive(lhs, op, rhs).map(Box::new).map(|x| x as Box<dyn Array>)
+            arithmetic_primitive(lhs, op, rhs)
+                .map(Box::new)
+                .map(|x| x as Box<dyn Array>)
         }
-        DataType::Int64
-        | DataType::Duration(_) => {
+        DataType::Int64 | DataType::Duration(_) => {
             let lhs = lhs.as_any().downcast_ref::<Int64Array>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<Int64Array>().unwrap();
-            arithmetic_primitive(lhs, op, rhs).map(Box::new).map(|x| x as Box<dyn Array>)
+            arithmetic_primitive(lhs, op, rhs)
+                .map(Box::new)
+                .map(|x| x as Box<dyn Array>)
         }
         DataType::UInt8 => {
             let lhs = lhs.as_any().downcast_ref::<UInt8Array>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<UInt8Array>().unwrap();
-            arithmetic_primitive(lhs, op, rhs).map(Box::new).map(|x| x as Box<dyn Array>)
+            arithmetic_primitive(lhs, op, rhs)
+                .map(Box::new)
+                .map(|x| x as Box<dyn Array>)
         }
         DataType::UInt16 => {
             let lhs = lhs.as_any().downcast_ref::<UInt16Array>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<UInt16Array>().unwrap();
-            arithmetic_primitive(lhs, op, rhs).map(Box::new).map(|x| x as Box<dyn Array>)
+            arithmetic_primitive(lhs, op, rhs)
+                .map(Box::new)
+                .map(|x| x as Box<dyn Array>)
         }
         DataType::UInt32 => {
             let lhs = lhs.as_any().downcast_ref::<UInt32Array>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<UInt32Array>().unwrap();
-            arithmetic_primitive(lhs, op, rhs).map(Box::new).map(|x| x as Box<dyn Array>)
+            arithmetic_primitive(lhs, op, rhs)
+                .map(Box::new)
+                .map(|x| x as Box<dyn Array>)
         }
         DataType::UInt64 => {
             let lhs = lhs.as_any().downcast_ref::<UInt64Array>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<UInt64Array>().unwrap();
-            arithmetic_primitive(lhs, op, rhs).map(Box::new).map(|x| x as Box<dyn Array>)
+            arithmetic_primitive(lhs, op, rhs)
+                .map(Box::new)
+                .map(|x| x as Box<dyn Array>)
         }
         DataType::Float16 => unreachable!(),
         DataType::Float32 => {
             let lhs = lhs.as_any().downcast_ref::<Float32Array>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<Float32Array>().unwrap();
-            arithmetic_primitive(lhs, op, rhs).map(Box::new).map(|x| x as Box<dyn Array>)
+            arithmetic_primitive(lhs, op, rhs)
+                .map(Box::new)
+                .map(|x| x as Box<dyn Array>)
         }
         DataType::Float64 => {
             let lhs = lhs.as_any().downcast_ref::<Float64Array>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<Float64Array>().unwrap();
-            arithmetic_primitive(lhs, op, rhs).map(Box::new).map(|x| x as Box<dyn Array>)
+            arithmetic_primitive(lhs, op, rhs)
+                .map(Box::new)
+                .map(|x| x as Box<dyn Array>)
         }
         DataType::Decimal(_, _) => {
             let lhs = lhs.as_any().downcast_ref::<Int128Array>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<Int128Array>().unwrap();
-            arithmetic_primitive(lhs, op, rhs).map(Box::new).map(|x| x as Box<dyn Array>)
+            arithmetic_primitive(lhs, op, rhs)
+                .map(Box::new)
+                .map(|x| x as Box<dyn Array>)
         }
         _ => Err(ArrowError::NotYetImplemented(format!(
             "Arithmetics between {:?} is not supported",
