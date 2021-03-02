@@ -93,7 +93,7 @@ mod tests {
         let output = Primitive::<T>::from(data).to(data_type.clone());
         let expected = Primitive::<T>::from(expected_data).to(data_type);
         let output = take(&output, index)?;
-        assert_eq!(expected, *output);
+        assert_eq!(expected, output.as_ref());
         Ok(())
     }
 

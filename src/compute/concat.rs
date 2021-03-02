@@ -135,7 +135,7 @@ mod tests {
         ])
         .to(DataType::Int64);
 
-        assert_eq!(&expected_output, arr.as_ref());
+        assert_eq!(expected_output, arr.as_ref());
 
         Ok(())
     }
@@ -155,7 +155,7 @@ mod tests {
             Primitive::<i64>::from(vec![Some(-1), Some(2), None, Some(102), Some(103), None])
                 .to(DataType::Int64);
 
-        assert_eq!(&expected_output, arr.as_ref());
+        assert_eq!(expected_output, arr.as_ref());
 
         Ok(())
     }
