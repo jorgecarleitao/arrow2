@@ -22,7 +22,7 @@ use crate::bits::get_bit_unchecked;
 use super::{Bitmap, MutableBuffer};
 
 /// Apply a bitwise operation `op` to two inputs and return the result as a [`Bitmap`].
-fn binary<F>(lhs: &Bitmap, rhs: &Bitmap, op: F) -> Bitmap
+pub fn binary<F>(lhs: &Bitmap, rhs: &Bitmap, op: F) -> Bitmap
 where
     F: Fn(u64, u64) -> u64,
 {
@@ -50,7 +50,7 @@ where
 }
 
 /// Apply a bitwise operation `op` to one input and return the result as a [`Bitmap`].
-fn unary<F>(lhs: &Bitmap, op: F) -> Bitmap
+pub fn unary<F>(lhs: &Bitmap, op: F) -> Bitmap
 where
     F: Fn(u64) -> u64,
 {
