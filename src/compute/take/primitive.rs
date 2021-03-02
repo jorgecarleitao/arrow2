@@ -15,55 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-//! Defines take kernel for [Array]
-
-use crate::{
-    buffer::MutableBitmap,
-    error::{ArrowError, Result},
-};
-
 use crate::{
     array::{Array, Offset, PrimitiveArray},
-    buffer::{types::NativeType, Bitmap, Buffer, MutableBuffer},
-    datatypes::DataType,
+    buffer::{Bitmap, Buffer, MutableBitmap, MutableBuffer, NativeType},
+    error::Result,
 };
 
-macro_rules! downcast_take {
-    ($type: ty, $values: expr, $indices: expr) => {{
-        let values = $values
-            .as_any()
-            .downcast_ref::<PrimitiveArray<$type>>()
-            .expect("Unable to downcast to a primitive array");
-        Ok(Box::new(take_primitive::<$type, _>(&values, $indices)?))
-    }};
-}
-
-pub fn take<O: Offset>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result<Box<dyn Array>> {
-    take_impl(values, indices)
-}
-
-fn take_impl<O: Offset>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result<Box<dyn Array>> {
-    match values.data_type() {
-        DataType::Int8 => downcast_take!(i8, values, indices),
-        DataType::Int16 => downcast_take!(i16, values, indices),
-        DataType::Int32 => downcast_take!(i32, values, indices),
-        DataType::Int64 => downcast_take!(i64, values, indices),
-        DataType::UInt8 => downcast_take!(u8, values, indices),
-        DataType::UInt16 => downcast_take!(u16, values, indices),
-        DataType::UInt32 => downcast_take!(u32, values, indices),
-        DataType::UInt64 => downcast_take!(u64, values, indices),
-        DataType::Float32 => downcast_take!(f32, values, indices),
-        DataType::Float64 => downcast_take!(f64, values, indices),
-        t => unimplemented!("Take not supported for data type {:?}", t),
-    }
-}
-
-#[inline(always)]
-fn maybe_usize<I: Offset>(index: I) -> Result<usize> {
-    index
-        .to_usize()
-        .ok_or_else(|| ArrowError::DictionaryKeyOverflowError)
-}
+use super::maybe_usize;
 
 // take implementation when neither values nor indices contain nulls
 fn take_no_validity<T: NativeType, I: Offset>(
@@ -139,13 +97,13 @@ fn take_values_indices_validity<T: NativeType, I: Offset>(
 ) -> Result<(Buffer<T>, Option<Bitmap>)> {
     let mut bitmap = MutableBitmap::with_capacity(indices.len());
 
-    let null_values = values.validity().as_ref().unwrap();
+    let values_validity = values.validity().as_ref().unwrap();
 
     let values_values = values.values();
     let values = indices.iter().map(|index| match index {
         Some(index) => {
             let index = maybe_usize::<I>(index)?;
-            bitmap.push(null_values.get_bit(index));
+            bitmap.push(values_validity.get_bit(index));
             Result::Ok(values_values[index])
         }
         None => {
@@ -158,16 +116,8 @@ fn take_values_indices_validity<T: NativeType, I: Offset>(
     Ok((buffer.into(), bitmap.into()))
 }
 
-/// `take` implementation for all primitive arrays
-///
-/// This checks if an `indices` slot is populated, and gets the value from `values`
-///  as the populated index.
-/// If the `indices` slot is null, a null value is returned.
-/// For example, given:
-///     values:  [1, 2, 3, null, 5]
-///     indices: [0, null, 4, 3]
-/// The result is: [1 (slot 0), null (null slot), 5 (slot 4), null (slot 3)]
-fn take_primitive<T: NativeType, I: Offset>(
+/// `take` implementation for primitive arrays
+pub fn take<T: NativeType, I: Offset>(
     values: &PrimitiveArray<T>,
     indices: &PrimitiveArray<I>,
 ) -> Result<PrimitiveArray<T>> {
@@ -204,52 +154,4 @@ fn take_primitive<T: NativeType, I: Offset>(
         buffer,
         nulls,
     ))
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::array::Primitive;
-
-    use super::*;
-
-    fn test_take_primitive_arrays<T>(
-        data: &[Option<T>],
-        index: &PrimitiveArray<i32>,
-        expected_data: &[Option<T>],
-        data_type: DataType,
-    ) -> Result<()>
-    where
-        T: NativeType,
-    {
-        let output = Primitive::<T>::from(data).to(data_type.clone());
-        let expected = Primitive::<T>::from(expected_data).to(data_type);
-        let output = take(&output, index)?;
-        assert_eq!(expected, *output);
-        Ok(())
-    }
-
-    #[test]
-    fn test_take_primitive_non_null_indices() {
-        let index = Primitive::<i32>::from_slice(&[0, 5, 3, 1, 4, 2]).to(DataType::Int32);
-        test_take_primitive_arrays::<i8>(
-            &[None, Some(3), Some(5), Some(2), Some(3), None],
-            &index,
-            &[None, None, Some(2), Some(3), Some(3), Some(5)],
-            DataType::Int8,
-        )
-        .unwrap();
-    }
-
-    #[test]
-    fn test_take_primitive_non_null_values() {
-        let index =
-            Primitive::<i32>::from(&[Some(3), None, Some(1), Some(3), Some(2)]).to(DataType::Int32);
-        test_take_primitive_arrays::<i8>(
-            &[Some(0), Some(1), Some(2), Some(3), Some(4)],
-            &index,
-            &[Some(3), None, Some(1), Some(3), Some(2)],
-            DataType::Int8,
-        )
-        .unwrap();
-    }
 }
