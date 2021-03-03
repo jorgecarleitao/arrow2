@@ -623,51 +623,32 @@ mod tests {
         assert_eq!(expected, output.as_ref())
     }
 
-    /*
-    fn test_sort_string_dict_arrays<T: ArrowDictionaryKeyType>(
-        data: Vec<Option<&str>>,
+    fn test_sort_string_dict_arrays<K: DictionaryKey>(
+        data: &[Option<&str>],
         options: Option<SortOptions>,
-        expected_data: Vec<Option<&str>>,
+        expected_data: &[Option<&str>],
     ) {
-        let array = DictionaryArray::<T>::from_iter(data.into_iter());
-        let array_values = array.values();
-        let dict = array_values
-            .as_any()
-            .downcast_ref::<StringArray>()
-            .expect("Unable to get dictionary values");
+        let input = data.into_iter().map(|x| Result::Ok(x.clone()));
+        let input =
+            DictionaryPrimitive::<i32, Utf8Primitive<i32>, &str>::try_from_iter(input).unwrap();
+        let input = input.to(DataType::Dictionary(
+            Box::new(DataType::Int32),
+            Box::new(DataType::Utf8),
+        ));
 
-        let sorted = sort(&(Arc::new(array) as ArrayRef), options).unwrap();
-        let sorted = sorted
-            .as_any()
-            .downcast_ref::<DictionaryArray<T>>()
-            .unwrap();
-        let sorted_values = sorted.values();
-        let sorted_dict = sorted_values
-            .as_any()
-            .downcast_ref::<StringArray>()
-            .expect("Unable to get dictionary values");
-        let sorted_keys = sorted.keys_array();
-
-        assert_eq!(sorted_dict, dict);
-
-        let sorted_strings = StringArray::try_from(
-            (0..sorted.len())
-                .map(|i| {
-                    if sorted.is_valid(i) {
-                        Some(sorted_dict.value(sorted_keys.value(i).to_usize().unwrap()))
-                    } else {
-                        None
-                    }
-                })
-                .collect::<Vec<Option<&str>>>(),
-        )
-        .expect("Unable to create string array from dictionary");
+        let expected = expected_data.into_iter().map(|x| Result::Ok(x.clone()));
         let expected =
-            StringArray::try_from(expected_data).expect("Unable to create string array");
+            DictionaryPrimitive::<i32, Utf8Primitive<i32>, &str>::try_from_iter(expected).unwrap();
+        let expected = expected.to(DataType::Dictionary(
+            Box::new(DataType::Int32),
+            Box::new(DataType::Utf8),
+        ));
 
-        assert_eq!(sorted_strings, expected)
+        let output = sort(&input, options).unwrap();
+        assert_eq!(expected, output.as_ref())
     }
 
+    /*
     fn test_sort_list_arrays<T>(
         data: Vec<Option<Vec<Option<T::Native>>>>,
         options: Option<SortOptions>,
@@ -1112,11 +1093,10 @@ mod tests {
         );
     }
 
-    /*
     #[test]
     fn test_sort_string_dicts() {
-        test_sort_string_dict_arrays::<Int8Type>(
-            vec![
+        test_sort_string_dict_arrays::<i8>(
+            &[
                 None,
                 Some("bad"),
                 Some("sad"),
@@ -1125,7 +1105,7 @@ mod tests {
                 Some("-ad"),
             ],
             None,
-            vec![
+            &[
                 None,
                 None,
                 Some("-ad"),
@@ -1135,8 +1115,8 @@ mod tests {
             ],
         );
 
-        test_sort_string_dict_arrays::<Int16Type>(
-            vec![
+        test_sort_string_dict_arrays::<i16>(
+            &[
                 None,
                 Some("bad"),
                 Some("sad"),
@@ -1148,7 +1128,7 @@ mod tests {
                 descending: true,
                 nulls_first: false,
             }),
-            vec![
+            &[
                 Some("sad"),
                 Some("glad"),
                 Some("bad"),
@@ -1158,8 +1138,8 @@ mod tests {
             ],
         );
 
-        test_sort_string_dict_arrays::<Int32Type>(
-            vec![
+        test_sort_string_dict_arrays::<i32>(
+            &[
                 None,
                 Some("bad"),
                 Some("sad"),
@@ -1171,7 +1151,7 @@ mod tests {
                 descending: false,
                 nulls_first: true,
             }),
-            vec![
+            &[
                 None,
                 None,
                 Some("-ad"),
@@ -1181,8 +1161,8 @@ mod tests {
             ],
         );
 
-        test_sort_string_dict_arrays::<Int16Type>(
-            vec![
+        test_sort_string_dict_arrays::<i16>(
+            &[
                 None,
                 Some("bad"),
                 Some("sad"),
@@ -1194,7 +1174,7 @@ mod tests {
                 descending: true,
                 nulls_first: true,
             }),
-            vec![
+            &[
                 None,
                 None,
                 Some("sad"),
@@ -1205,9 +1185,10 @@ mod tests {
         );
     }
 
+    /*
     #[test]
     fn test_sort_list() {
-        test_sort_list_arrays::<Int8Type>(
+        test_sort_list_arrays::<i8>(
             vec![
                 Some(vec![Some(1)]),
                 Some(vec![Some(4)]),
@@ -1227,7 +1208,7 @@ mod tests {
             Some(1),
         );
 
-        test_sort_list_arrays::<Int32Type>(
+        test_sort_list_arrays::<i32>(
             vec![
                 Some(vec![Some(1), Some(0)]),
                 Some(vec![Some(4), Some(3), Some(2), Some(1)]),
@@ -1249,7 +1230,7 @@ mod tests {
             None,
         );
 
-        test_sort_list_arrays::<Int32Type>(
+        test_sort_list_arrays::<i32>(
             vec![
                 None,
                 Some(vec![Some(4), None, Some(2)]),

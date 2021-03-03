@@ -23,10 +23,11 @@ use crate::{
 };
 
 use crate::{
-    array::{Array, Offset, PrimitiveArray},
+    array::{Array, DictionaryArray, Offset, PrimitiveArray},
     datatypes::DataType,
 };
 
+mod dict;
 mod primitive;
 mod utf8;
 
@@ -37,6 +38,16 @@ macro_rules! downcast_take {
             .downcast_ref::<PrimitiveArray<$type>>()
             .expect("Unable to downcast to a primitive array");
         Ok(Box::new(primitive::take::<$type, _>(&values, $indices)?))
+    }};
+}
+
+macro_rules! downcast_dict_take {
+    ($type: ty, $values: expr, $indices: expr) => {{
+        let values = $values
+            .as_any()
+            .downcast_ref::<DictionaryArray<$type>>()
+            .expect("Unable to downcast to a primitive array");
+        Ok(Box::new(dict::take::<$type, _>(&values, $indices)?))
     }};
 }
 
@@ -64,6 +75,17 @@ fn take_impl<O: Offset>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Resu
             let values = values.as_any().downcast_ref::<Utf8Array<i64>>().unwrap();
             Ok(Box::new(utf8::take::<i64, _>(values, indices)?))
         }
+        DataType::Dictionary(key_type, _) => match key_type.as_ref() {
+            DataType::Int8 => downcast_dict_take!(i8, values, indices),
+            DataType::Int16 => downcast_dict_take!(i16, values, indices),
+            DataType::Int32 => downcast_dict_take!(i32, values, indices),
+            DataType::Int64 => downcast_dict_take!(i64, values, indices),
+            DataType::UInt8 => downcast_dict_take!(u8, values, indices),
+            DataType::UInt16 => downcast_dict_take!(u16, values, indices),
+            DataType::UInt32 => downcast_dict_take!(u32, values, indices),
+            DataType::UInt64 => downcast_dict_take!(u64, values, indices),
+            _ => unreachable!(),
+        },
         t => unimplemented!("Take not supported for data type {:?}", t),
     }
 }
