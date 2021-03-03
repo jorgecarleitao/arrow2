@@ -4,6 +4,8 @@ is idenpotent and errors if any file has more than one license.
 """
 import os
 
+# Because the code was copied to a large extent from the arrow project,
+# it makes sense to add the original lincense.
 license = """// Licensed to the Apache Software Foundation (ASF) under one
 // or more contributor license agreements.  See the NOTICE file
 // distributed with this work for additional information

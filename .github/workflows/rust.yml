@@ -1,3 +1,5 @@
+on: [push, pull_request]
+
 jobs:
   # build the library, a compilation step used by multiple steps below
   linux-build-lib:
