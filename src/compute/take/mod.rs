@@ -18,13 +18,12 @@
 //! Defines take kernel for [Array]
 
 use crate::{
-    array::Utf8Array,
-    error::{ArrowError, Result},
-};
-
-use crate::{
-    array::{Array, BinaryArray, DictionaryArray, Offset, BooleanArray, PrimitiveArray},
+    array::{
+        Array, BinaryArray, BooleanArray, DictionaryArray, Offset, PrimitiveArray, StructArray,
+        Utf8Array,
+    },
     datatypes::{DataType, IntervalUnit},
+    error::{ArrowError, Result},
 };
 
 mod binary;
@@ -32,6 +31,7 @@ mod boolean;
 mod dict;
 mod generic_binary;
 mod primitive;
+mod structure;
 mod utf8;
 
 macro_rules! downcast_take {
@@ -106,6 +106,10 @@ pub fn take<O: Offset>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Resul
             DataType::UInt64 => downcast_dict_take!(u64, values, indices),
             _ => unreachable!(),
         },
+        DataType::Struct(_) => {
+            let array = values.as_any().downcast_ref::<StructArray>().unwrap();
+            Ok(Box::new(structure::take::<_>(array, indices)?))
+        }
         t => unimplemented!("Take not supported for data type {:?}", t),
     }
 }
@@ -119,7 +123,13 @@ fn maybe_usize<I: Offset>(index: I) -> Result<usize> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{array::Primitive, buffer::NativeType};
+    use std::sync::Arc;
+
+    use crate::datatypes::Field;
+    use crate::{
+        array::Primitive,
+        buffer::{MutableBitmap, NativeType},
+    };
 
     use super::*;
 
@@ -143,22 +153,38 @@ mod tests {
     fn test_take_primitive_non_null_indices() {
         let indices = Primitive::<i32>::from_slice(&[0, 5, 3, 1, 4, 2]).to(DataType::Int32);
         test_take_primitive::<i8>(
-            &[None, Some(3), Some(5), Some(2), Some(3), None],
+            &[None, Some(2), Some(4), Some(6), Some(8), None],
             &indices,
-            &[None, None, Some(2), Some(3), Some(3), Some(5)],
+            &[None, None, Some(6), Some(2), Some(8), Some(4)],
+            DataType::Int8,
+        )
+        .unwrap();
+
+        test_take_primitive::<i8>(
+            &[Some(0), Some(2), Some(4), Some(6), Some(8), Some(10)],
+            &indices,
+            &[Some(0), Some(10), Some(6), Some(2), Some(8), Some(4)],
             DataType::Int8,
         )
         .unwrap();
     }
 
     #[test]
-    fn test_take_primitive_non_null_values() {
-        let indices =
-            Primitive::<i32>::from(&[Some(3), None, Some(1), Some(3), Some(2)]).to(DataType::Int32);
+    fn test_take_primitive_null_values() {
+        let indices = Primitive::<i32>::from(&[Some(0), None, Some(3), Some(1), Some(4), Some(2)])
+            .to(DataType::Int32);
         test_take_primitive::<i8>(
-            &[Some(0), Some(1), Some(2), Some(3), Some(4)],
+            &[Some(0), Some(2), Some(4), Some(6), Some(8), Some(10)],
             &indices,
-            &[Some(3), None, Some(1), Some(3), Some(2)],
+            &[Some(0), None, Some(6), Some(2), Some(8), Some(4)],
+            DataType::Int8,
+        )
+        .unwrap();
+
+        test_take_primitive::<i8>(
+            &[None, Some(2), Some(4), Some(6), Some(8), Some(10)],
+            &indices,
+            &[None, None, Some(6), Some(2), Some(8), Some(4)],
             DataType::Int8,
         )
         .unwrap();
@@ -203,7 +229,7 @@ mod tests {
     }
 
     #[test]
-    fn test_take_primitive_bool() {
+    fn test_boolean() {
         let index =
             Primitive::<i32>::from(&[Some(3), None, Some(1), Some(3), Some(2)]).to(DataType::Int32);
 
@@ -212,10 +238,79 @@ mod tests {
             &index,
             &[Some(false), None, None, Some(false), Some(true)],
         );
-        // todo: test branches to cover 100%
-        // * (no validity on indexes, no validity on values)
-        // * (no validity on indexes, validity on values)
-        // * (validity on indexes, validity on values)
-        // * (validity on indexes, no validity on values)
+
+        test_take_boolean_arrays(
+            &[Some(false), Some(true), Some(true), Some(false), Some(true)],
+            &index,
+            &[Some(false), None, Some(true), Some(false), Some(true)],
+        );
+
+        let index = Primitive::<i32>::from(&[Some(3), Some(0), Some(1), Some(3), Some(2)])
+            .to(DataType::Int32);
+
+        test_take_boolean_arrays(
+            &[Some(false), Some(true), Some(true), Some(false), Some(true)],
+            &index,
+            &[
+                Some(false),
+                Some(false),
+                Some(true),
+                Some(false),
+                Some(true),
+            ],
+        );
+
+        test_take_boolean_arrays(
+            &[Some(false), None, Some(true), Some(false), Some(true)],
+            &index,
+            &[Some(false), Some(false), None, Some(false), Some(true)],
+        );
+    }
+
+    fn create_test_struct() -> StructArray {
+        let boolean = BooleanArray::from_slice(&[true, false, false, true]);
+        let int = Primitive::from_slice(&[42, 28, 19, 31]).to(DataType::Int32);
+        let validity = vec![true, true, false, true]
+            .into_iter()
+            .collect::<MutableBitmap>()
+            .into();
+        let fields = vec![
+            Field::new("a", DataType::Boolean, true),
+            Field::new("b", DataType::Int32, true),
+        ];
+        StructArray::from_data(
+            fields,
+            vec![
+                Arc::new(boolean) as Arc<dyn Array>,
+                Arc::new(int) as Arc<dyn Array>,
+            ],
+            validity,
+        )
+    }
+
+    #[test]
+    fn test_struct_with_nulls() {
+        let array = create_test_struct();
+
+        let indices =
+            Primitive::<i32>::from(&[None, Some(3), Some(1), None, Some(0)]).to(DataType::Int32);
+
+        let output = take(&array, &indices).unwrap();
+
+        let boolean = BooleanArray::from(&[None, Some(true), Some(false), None, Some(true)]);
+        let int = Primitive::from(&[None, Some(31), Some(28), None, Some(42)]).to(DataType::Int32);
+        let validity = vec![false, true, true, false, true]
+            .into_iter()
+            .collect::<MutableBitmap>()
+            .into();
+        let expected = StructArray::from_data(
+            array.fields().to_vec(),
+            vec![
+                Arc::new(boolean) as Arc<dyn Array>,
+                Arc::new(int) as Arc<dyn Array>,
+            ],
+            validity,
+        );
+        assert_eq!(expected, output.as_ref());
     }
 }

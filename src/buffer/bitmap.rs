@@ -117,7 +117,7 @@ impl Bitmap {
     #[inline]
     pub fn get(&self, i: usize) -> Option<bool> {
         if i < self.len() {
-            Some(unsafe {self.get_bit_unchecked(i)})
+            Some(unsafe { self.get_bit_unchecked(i) })
         } else {
             None
         }

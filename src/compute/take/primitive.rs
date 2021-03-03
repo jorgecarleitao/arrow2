@@ -68,20 +68,12 @@ fn take_indices_validity<T: NativeType, I: Offset>(
     values: &[T],
     indices: &PrimitiveArray<I>,
 ) -> Result<(Buffer<T>, Option<Bitmap>)> {
-    let null_indices = indices.validity().as_ref().unwrap();
-
-    let values = indices.values().iter().map(|index| {
-        let index = maybe_usize::<I>(*index)?;
-        Result::Ok(match values.get(index) {
-            Some(value) => *value,
-            None => {
-                if null_indices.get_bit(index) {
-                    panic!("Out-of-bounds index {}", index)
-                } else {
-                    T::default()
-                }
-            }
-        })
+    let values = indices.iter().map(|index| match index {
+        Some(index) => {
+            let index = maybe_usize::<I>(index)?;
+            Result::Ok(values[index])
+        }
+        None => Result::Ok(T::default()),
     });
 
     // Soundness: `slice.map` is `TrustedLen`.
@@ -123,35 +115,16 @@ pub fn take<T: NativeType, I: Offset>(
 ) -> Result<PrimitiveArray<T>> {
     let indices_has_validity = indices.null_count() > 0;
     let values_has_validity = values.null_count() > 0;
-    // note: this function should only panic when "an index is not null and out of bounds".
-    // if the index is null, its value is undefined and therefore we should not read from it.
-
-    let (buffer, nulls) = match (values_has_validity, indices_has_validity) {
-        (false, false) => {
-            // * no nulls
-            // * all `indices.values()` are valid
-            take_no_validity::<T, I>(values.values(), indices.values())?
-        }
-        (true, false) => {
-            // * nulls come from `values` alone
-            // * all `indices.values()` are valid
-            take_values_validity::<T, I>(values, indices.values())?
-        }
-        (false, true) => {
-            // in this branch it is unsound to read and use `index.values()`,
-            // as doing so is UB when they come from a null slot.
-            take_indices_validity::<T, I>(values.values(), indices)?
-        }
-        (true, true) => {
-            // in this branch it is unsound to read and use `index.values()`,
-            // as doing so is UB when they come from a null slot.
-            take_values_indices_validity::<T, I>(values, indices)?
-        }
+    let (buffer, validity) = match (values_has_validity, indices_has_validity) {
+        (false, false) => take_no_validity::<T, I>(values.values(), indices.values())?,
+        (true, false) => take_values_validity::<T, I>(values, indices.values())?,
+        (false, true) => take_indices_validity::<T, I>(values.values(), indices)?,
+        (true, true) => take_values_indices_validity::<T, I>(values, indices)?,
     };
 
     Ok(PrimitiveArray::<T>::from_data(
         values.data_type().clone(),
         buffer,
-        nulls,
+        validity,
     ))
 }

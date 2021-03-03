@@ -53,7 +53,7 @@ impl<'a, T: NativeType> std::iter::Iterator for PrimitiveIter<'a, T> {
         } else if !self
             .validity
             .as_ref()
-            .map(|x| unsafe {x.get_bit_unchecked(self.current)})
+            .map(|x| unsafe { x.get_bit_unchecked(self.current) })
             .unwrap_or(true)
         {
             self.current += 1;

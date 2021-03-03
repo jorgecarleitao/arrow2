@@ -15,15 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::{array::{Array, BooleanArray, Offset, PrimitiveArray}, buffer::{Bitmap, MutableBitmap}, error::Result};
+use crate::{
+    array::{Array, BooleanArray, Offset, PrimitiveArray},
+    buffer::{Bitmap, MutableBitmap},
+    error::Result,
+};
 
 use super::maybe_usize;
 
 // take implementation when neither values nor indices contain nulls
-fn take_no_validity<I: Offset>(
-    values: &Bitmap,
-    indices: &[I],
-) -> Result<(Bitmap, Option<Bitmap>)> {
+fn take_no_validity<I: Offset>(values: &Bitmap, indices: &[I]) -> Result<(Bitmap, Option<Bitmap>)> {
     let values = indices
         .iter()
         .map(|index| Result::Ok(values.get_bit(maybe_usize::<I>(*index)?)));
@@ -113,30 +114,16 @@ fn take_values_indices_validity<I: Offset>(
 }
 
 /// `take` implementation for boolean arrays
-pub fn take<I: Offset>(
-    values: &BooleanArray,
-    indices: &PrimitiveArray<I>,
-) -> Result<BooleanArray> {
+pub fn take<I: Offset>(values: &BooleanArray, indices: &PrimitiveArray<I>) -> Result<BooleanArray> {
     let indices_has_validity = indices.null_count() > 0;
     let values_has_validity = values.null_count() > 0;
 
     let (values, validity) = match (values_has_validity, indices_has_validity) {
-        (false, false) => {
-            take_no_validity(values.values(), indices.values())?
-        }
-        (true, false) => {
-            take_values_validity(values, indices.values())?
-        }
-        (false, true) => {
-            take_indices_validity(values.values(), indices)?
-        }
-        (true, true) => {
-            take_values_indices_validity(values, indices)?
-        }
+        (false, false) => take_no_validity(values.values(), indices.values())?,
+        (true, false) => take_values_validity(values, indices.values())?,
+        (false, true) => take_indices_validity(values.values(), indices)?,
+        (true, true) => take_values_indices_validity(values, indices)?,
     };
 
-    Ok(BooleanArray::from_data(
-        values,
-        validity,
-    ))
+    Ok(BooleanArray::from_data(values, validity))
 }
