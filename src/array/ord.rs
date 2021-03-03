@@ -146,11 +146,12 @@ where
 /// The arrays' types must be equal.
 /// # Example
 /// ```
-/// use arrow::array::{build_compare, Int32Array};
+/// use arrow2::array::{ord::build_compare, Primitive};
+/// use arrow2::datatypes::DataType;
 ///
-/// # fn main() -> arrow::error::Result<()> {
-/// let array1 = Int32Array::from(vec![1, 2]);
-/// let array2 = Int32Array::from(vec![3, 4]);
+/// # fn main() -> arrow2::error::Result<()> {
+/// let array1 = Primitive::from_slice(&[1, 2]).to(DataType::Int32);
+/// let array2 = Primitive::from_slice(&[3, 4]).to(DataType::Int32);
 ///
 /// let cmp = build_compare(&array1, &array2)?;
 ///

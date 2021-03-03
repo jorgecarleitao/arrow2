@@ -17,10 +17,7 @@
 
 //! Defines sort kernel for `ArrayRef`
 
-use std::{
-    cmp::{Ordering, Reverse},
-    sync::Arc,
-};
+use std::cmp::{Ordering, Reverse};
 
 use crate::array::ord;
 use crate::compute::take;
@@ -414,8 +411,8 @@ fn cmp_array(a: &dyn Array, b: &dyn Array) -> Ordering {
 
 /// One column to be used in lexicographical sort
 #[derive(Clone, Debug)]
-pub struct SortColumn {
-    pub values: Arc<dyn Array>,
+pub struct SortColumn<'a> {
+    pub values: &'a dyn Array,
     pub options: Option<SortOptions>,
 }
 
@@ -430,30 +427,20 @@ pub struct SortColumn {
 ///
 /// ```
 /// use std::convert::From;
-/// use std::sync::Arc;
-/// use arrow::array::{ArrayRef, StringArray, PrimitiveArray, as_primitive_array};
-/// use arrow::compute::kernels::sort::{SortColumn, SortOptions, lexsort};
-/// use arrow::datatypes::Int64Type;
+/// use arrow2::array::{Utf8Array, PrimitiveArray, Array, Primitive};
+/// use arrow2::compute::sort::{SortColumn, SortOptions, lexsort};
+/// use arrow2::datatypes::DataType;
+///
+/// let int64 = Primitive::<i64>::from(&[None, Some(-2), Some(89), Some(-64), Some(101)]).to(DataType::Int64);
+/// let utf8 = Utf8Array::<i32>::from(&vec![Some("hello"), Some("world"), Some(","), Some("foobar"), Some("!")]);
 ///
 /// let sorted_columns = lexsort(&vec![
 ///     SortColumn {
-///         values: Arc::new(PrimitiveArray::<Int64Type>::from(vec![
-///             None,
-///             Some(-2),
-///             Some(89),
-///             Some(-64),
-///             Some(101),
-///         ])) as ArrayRef,
+///         values: &int64,
 ///         options: None,
 ///     },
 ///     SortColumn {
-///         values: Arc::new(StringArray::from(vec![
-///             Some("hello"),
-///             Some("world"),
-///             Some(","),
-///             Some("foobar"),
-///             Some("!"),
-///         ])) as ArrayRef,
+///         values: &utf8,
 ///         options: Some(SortOptions {
 ///             descending: true,
 ///             nulls_first: false,
@@ -461,14 +448,15 @@ pub struct SortColumn {
 ///     },
 /// ]).unwrap();
 ///
-/// assert_eq!(as_primitive_array::<Int64Type>(&sorted_columns[0]).value(1), -64);
-/// assert!(sorted_columns[0].is_null(0));
+/// let sorted = sorted_columns[0].as_any().downcast_ref::<PrimitiveArray<i64>>().unwrap();
+/// assert_eq!(sorted.value(1), -64);
+/// assert!(sorted.is_null(0));
 /// ```
 pub fn lexsort(columns: &[SortColumn]) -> Result<Vec<Box<dyn Array>>> {
     let indices = lexsort_to_indices(columns)?;
     columns
         .iter()
-        .map(|c| take::take(c.values.as_ref(), &indices))
+        .map(|c| take::take(c.values, &indices))
         .collect()
 }
 
@@ -483,7 +471,7 @@ pub fn lexsort_to_indices(columns: &[SortColumn]) -> Result<Int32Array> {
     if columns.len() == 1 {
         // fallback to non-lexical sort
         let column = &columns[0];
-        return sort_to_indices(column.values.as_ref(), column.options);
+        return sort_to_indices(column.values, column.options);
     }
 
     let row_count = columns[0].values.len();
@@ -499,7 +487,7 @@ pub fn lexsort_to_indices(columns: &[SortColumn]) -> Result<Int32Array> {
         .map(
             |column| -> Result<(&dyn Array, ord::DynComparator, SortOptions)> {
                 // flatten and convert build comparators
-                let array = column.values.as_ref();
+                let array = column.values;
                 Ok((
                     array,
                     ord::build_compare(array, array)?,

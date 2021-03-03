@@ -1,9 +1,9 @@
 # High end API
 
-The simplest way to think about an arrow `Array` is that it is a `Vec<Option<T>>`
-with a logical type associated with it.
+The simplest way to think about an arrow `Array` is that it represents 
+`Vec<Option<T>>` and has a logical type associated with it.
 
-Probably the simplest array is `PrimitiveArray<T>`. It can be constructed
+Probably the simplest array in this crate is `PrimitiveArray<T>`. It can be constructed
 from an iterator as follows:
 
 ```rust
@@ -29,8 +29,7 @@ Its main difference vs a `Vec<Option<T>>` are:
 * Its data is layed out in memory as a `Buffer<T>` and a `Option<Bitmap>`.
 * `PrimitivArray<T>` has an associated datatype.
 
-The first difference allows interoperability with Arrow's ecosystem and efficient operations (we will re-visit this in a second);
-the second difference allows semantic meaning to the array: in the example
+The first difference allows interoperability with Arrow's ecosystem and efficient SIMD operations (we will re-visit this below); the second difference is that it allows semantic meaning to the array: in the example
 
 ```rust
 # use arrow2::array::Primitive;
