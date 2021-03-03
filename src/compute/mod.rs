@@ -23,6 +23,7 @@ pub mod comparison;
 pub mod concat;
 pub mod contains;
 pub mod filter;
+pub mod length;
 pub mod limit;
 pub mod sort;
 pub mod substring;
