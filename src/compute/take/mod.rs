@@ -23,11 +23,12 @@ use crate::{
 };
 
 use crate::{
-    array::{Array, BinaryArray, DictionaryArray, Offset, PrimitiveArray},
+    array::{Array, BinaryArray, DictionaryArray, Offset, BooleanArray, PrimitiveArray},
     datatypes::{DataType, IntervalUnit},
 };
 
 mod binary;
+mod boolean;
 mod dict;
 mod generic_binary;
 mod primitive;
@@ -55,6 +56,10 @@ macro_rules! downcast_dict_take {
 
 pub fn take<O: Offset>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result<Box<dyn Array>> {
     match values.data_type() {
+        DataType::Boolean => {
+            let values = values.as_any().downcast_ref::<BooleanArray>().unwrap();
+            Ok(Box::new(boolean::take::<O>(values, indices)?))
+        }
         DataType::Int8 => downcast_take!(i8, values, indices),
         DataType::Int16 => downcast_take!(i16, values, indices),
         DataType::Int32
@@ -120,7 +125,7 @@ mod tests {
 
     fn test_take_primitive<T>(
         data: &[Option<T>],
-        index: &PrimitiveArray<i32>,
+        indices: &PrimitiveArray<i32>,
         expected_data: &[Option<T>],
         data_type: DataType,
     ) -> Result<()>
@@ -129,17 +134,17 @@ mod tests {
     {
         let output = Primitive::<T>::from(data).to(data_type.clone());
         let expected = Primitive::<T>::from(expected_data).to(data_type);
-        let output = take(&output, index)?;
+        let output = take(&output, indices)?;
         assert_eq!(expected, output.as_ref());
         Ok(())
     }
 
     #[test]
     fn test_take_primitive_non_null_indices() {
-        let index = Primitive::<i32>::from_slice(&[0, 5, 3, 1, 4, 2]).to(DataType::Int32);
+        let indices = Primitive::<i32>::from_slice(&[0, 5, 3, 1, 4, 2]).to(DataType::Int32);
         test_take_primitive::<i8>(
             &[None, Some(3), Some(5), Some(2), Some(3), None],
-            &index,
+            &indices,
             &[None, None, Some(2), Some(3), Some(3), Some(5)],
             DataType::Int8,
         )
@@ -148,11 +153,11 @@ mod tests {
 
     #[test]
     fn test_take_primitive_non_null_values() {
-        let index =
+        let indices =
             Primitive::<i32>::from(&[Some(3), None, Some(1), Some(3), Some(2)]).to(DataType::Int32);
         test_take_primitive::<i8>(
             &[Some(0), Some(1), Some(2), Some(3), Some(4)],
-            &index,
+            &indices,
             &[Some(3), None, Some(1), Some(3), Some(2)],
             DataType::Int8,
         )
@@ -161,7 +166,7 @@ mod tests {
 
     fn test_take_utf8<O>(
         data: &[Option<&str>],
-        index: &PrimitiveArray<i32>,
+        indices: &PrimitiveArray<i32>,
         expected_data: &[Option<&str>],
     ) -> Result<()>
     where
@@ -169,7 +174,7 @@ mod tests {
     {
         let output = Utf8Array::<O>::from(&data.to_vec());
         let expected = Utf8Array::<O>::from(&expected_data.to_vec());
-        let output = take(&output, index)?;
+        let output = take(&output, indices)?;
         assert_eq!(expected, output.as_ref());
         Ok(())
     }
@@ -184,5 +189,33 @@ mod tests {
             &[Some("four"), None, None, Some("four"), Some("five")],
         )
         .unwrap();
+    }
+
+    fn test_take_boolean_arrays(
+        data: &[Option<bool>],
+        indices: &PrimitiveArray<i32>,
+        expected_data: &[Option<bool>],
+    ) {
+        let input = BooleanArray::from(data);
+        let expected = BooleanArray::from(expected_data);
+        let output = take(&input, indices).unwrap();
+        assert_eq!(expected, output.as_ref());
+    }
+
+    #[test]
+    fn test_take_primitive_bool() {
+        let index =
+            Primitive::<i32>::from(&[Some(3), None, Some(1), Some(3), Some(2)]).to(DataType::Int32);
+
+        test_take_boolean_arrays(
+            &[Some(false), None, Some(true), Some(false), None],
+            &index,
+            &[Some(false), None, None, Some(false), Some(true)],
+        );
+        // todo: test branches to cover 100%
+        // * (no validity on indexes, no validity on values)
+        // * (no validity on indexes, validity on values)
+        // * (validity on indexes, validity on values)
+        // * (validity on indexes, no validity on values)
     }
 }

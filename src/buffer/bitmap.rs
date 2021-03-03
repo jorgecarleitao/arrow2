@@ -113,6 +113,16 @@ impl Bitmap {
         get_bit(&self.bytes, self.offset + i)
     }
 
+    /// Returns whether the bit at position `i` is set.
+    #[inline]
+    pub fn get(&self, i: usize) -> Option<bool> {
+        if i < self.len() {
+            Some(unsafe {self.get_bit_unchecked(i)})
+        } else {
+            None
+        }
+    }
+
     /// Unsafely returns whether the bit at position `i` is set.
     /// # Safety
     /// Unsound iff `i >= self.len()`.
