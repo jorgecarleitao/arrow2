@@ -75,7 +75,7 @@ pub(super) fn equal<K: DictionaryKey>(
                 (None, Some(_)) => false,
                 (Some(l), Some(r)) => {
                     let lhs = lhs_values.slice(l.to_usize().unwrap(), 1);
-                    let rhs = lhs_values.slice(r.to_usize().unwrap(), 1);
+                    let rhs = rhs_values.slice(r.to_usize().unwrap(), 1);
                     _equal(lhs.as_ref(), rhs.as_ref())
                 }
             }
