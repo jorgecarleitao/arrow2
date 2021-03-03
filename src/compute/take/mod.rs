@@ -19,8 +19,8 @@
 
 use crate::{
     array::{
-        Array, BinaryArray, BooleanArray, DictionaryArray, Offset, PrimitiveArray, StructArray,
-        Utf8Array,
+        Array, BinaryArray, BooleanArray, DictionaryArray, NullArray, Offset, PrimitiveArray,
+        StructArray, Utf8Array,
     },
     datatypes::{DataType, IntervalUnit},
     error::{ArrowError, Result},
@@ -56,6 +56,7 @@ macro_rules! downcast_dict_take {
 
 pub fn take<O: Offset>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result<Box<dyn Array>> {
     match values.data_type() {
+        DataType::Null => Ok(Box::new(NullArray::from_data(indices.len()))),
         DataType::Boolean => {
             let values = values.as_any().downcast_ref::<BooleanArray>().unwrap();
             Ok(Box::new(boolean::take::<O>(values, indices)?))
