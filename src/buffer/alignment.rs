@@ -93,7 +93,7 @@ pub const ALIGNMENT: usize = 1 << 5;
 // Currently no way to determine this without runtime inference.
 /// Cache and allocation multiple alignment size
 #[cfg(target_arch = "wasm32")]
-pub const ALIGNMENT: usize = FALLBACK_ALIGNMENT;
+pub const ALIGNMENT: usize = 1 << 6;
 
 // Same as v6 and v7.
 // List goes like that:
