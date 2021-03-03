@@ -317,3 +317,8 @@ pub trait IterableBinaryArray: Array {
 pub trait IterableListArray: Array {
     fn value(&self, i: usize) -> Box<dyn Array>;
 }
+
+pub trait GenericBinaryArray<O: Offset>: Array {
+    fn values(&self) -> &[u8];
+    fn offsets(&self) -> &[O];
+}

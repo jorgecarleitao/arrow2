@@ -23,11 +23,13 @@ use crate::{
 };
 
 use crate::{
-    array::{Array, DictionaryArray, Offset, PrimitiveArray},
-    datatypes::DataType,
+    array::{Array, BinaryArray, DictionaryArray, Offset, PrimitiveArray},
+    datatypes::{DataType, IntervalUnit},
 };
 
+mod binary;
 mod dict;
+mod generic_binary;
 mod primitive;
 mod utf8;
 
@@ -52,21 +54,26 @@ macro_rules! downcast_dict_take {
 }
 
 pub fn take<O: Offset>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result<Box<dyn Array>> {
-    take_impl(values, indices)
-}
-
-fn take_impl<O: Offset>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result<Box<dyn Array>> {
     match values.data_type() {
         DataType::Int8 => downcast_take!(i8, values, indices),
         DataType::Int16 => downcast_take!(i16, values, indices),
-        DataType::Int32 => downcast_take!(i32, values, indices),
-        DataType::Int64 => downcast_take!(i64, values, indices),
+        DataType::Int32
+        | DataType::Date32
+        | DataType::Time32(_)
+        | DataType::Interval(IntervalUnit::YearMonth) => downcast_take!(i32, values, indices),
+        DataType::Int64
+        | DataType::Date64
+        | DataType::Time64(_)
+        | DataType::Duration(_)
+        | DataType::Timestamp(_, _) => downcast_take!(i64, values, indices),
         DataType::UInt8 => downcast_take!(u8, values, indices),
         DataType::UInt16 => downcast_take!(u16, values, indices),
         DataType::UInt32 => downcast_take!(u32, values, indices),
         DataType::UInt64 => downcast_take!(u64, values, indices),
+        DataType::Float16 => unreachable!(),
         DataType::Float32 => downcast_take!(f32, values, indices),
         DataType::Float64 => downcast_take!(f64, values, indices),
+        DataType::Decimal(_, _) => downcast_take!(i128, values, indices),
         DataType::Utf8 => {
             let values = values.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
             Ok(Box::new(utf8::take::<i32, _>(values, indices)?))
@@ -74,6 +81,14 @@ fn take_impl<O: Offset>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Resu
         DataType::LargeUtf8 => {
             let values = values.as_any().downcast_ref::<Utf8Array<i64>>().unwrap();
             Ok(Box::new(utf8::take::<i64, _>(values, indices)?))
+        }
+        DataType::Binary => {
+            let values = values.as_any().downcast_ref::<BinaryArray<i32>>().unwrap();
+            Ok(Box::new(binary::take::<i32, _>(values, indices)?))
+        }
+        DataType::LargeBinary => {
+            let values = values.as_any().downcast_ref::<BinaryArray<i64>>().unwrap();
+            Ok(Box::new(binary::take::<i64, _>(values, indices)?))
         }
         DataType::Dictionary(key_type, _) => match key_type.as_ref() {
             DataType::Int8 => downcast_dict_take!(i8, values, indices),

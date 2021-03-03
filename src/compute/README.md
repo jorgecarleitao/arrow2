@@ -24,4 +24,6 @@ can be applied on an array. For example, `Date32 + Date32` is meaningless and SH
 
 * Implementations MUST feature-gate any implementation that requires external dependencies
 
+* When a kernel accepts dynamically-typed arrays, it MUST expect them as `&dyn Array`.
+
 * When an API returns `&dyn Array`, it MUST return `Box<dyn Array>`. The rational is that a `Box` is mutable, while an `Arc` is not. As such, `Box` offers the most flexible API to consumers and the compiler. Users can cast a `Box` into `Arc` via `.into()`.

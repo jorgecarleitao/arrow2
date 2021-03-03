@@ -16,7 +16,7 @@
 // under the License.
 
 use crate::{
-    array::{Array, Offset, PrimitiveArray, Utf8Array},
+    array::{Array, BinaryArray, Offset, PrimitiveArray},
     error::Result,
 };
 
@@ -24,9 +24,9 @@ use super::generic_binary::*;
 
 /// `take` implementation for utf8 arrays
 pub fn take<O: Offset, I: Offset>(
-    values: &Utf8Array<O>,
+    values: &BinaryArray<O>,
     indices: &PrimitiveArray<I>,
-) -> Result<Utf8Array<O>> {
+) -> Result<BinaryArray<O>> {
     let indices_has_validity = indices.null_count() > 0;
     let values_has_validity = values.null_count() > 0;
 
@@ -38,5 +38,5 @@ pub fn take<O: Offset, I: Offset>(
         (false, true) => take_indices_validity(values.offsets(), values.values(), indices)?,
         (true, true) => take_values_indices_validity(values, indices)?,
     };
-    Ok(unsafe { Utf8Array::<O>::from_data_unchecked(offsets, values, validity) })
+    Ok(BinaryArray::<O>::from_data(offsets, values, validity))
 }

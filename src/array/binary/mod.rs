@@ -23,7 +23,7 @@ use crate::{
 
 use super::{
     display_fmt, display_helper, ffi::ToFFI, specification::check_offsets, specification::Offset,
-    Array, FromFFI,
+    Array, FromFFI, GenericBinaryArray,
 };
 
 use crate::error::Result;
@@ -158,6 +158,18 @@ impl<O: Offset> std::fmt::Display for BinaryArray<O> {
             "BinaryArray"
         };
         display_fmt(iter, head, f, false)
+    }
+}
+
+impl<O: Offset> GenericBinaryArray<O> for BinaryArray<O> {
+    #[inline]
+    fn values(&self) -> &[u8] {
+        self.values()
+    }
+
+    #[inline]
+    fn offsets(&self) -> &[O] {
+        self.offsets()
     }
 }
 

@@ -24,7 +24,7 @@ use super::{
     display_fmt,
     ffi::ToFFI,
     specification::{check_offsets, check_offsets_and_utf8},
-    Array, Offset,
+    Array, GenericBinaryArray, Offset,
 };
 
 /// An arrow array with UTF8s.
@@ -180,6 +180,18 @@ impl<O: Offset> Array for Utf8Array<O> {
 impl<O: Offset> std::fmt::Display for Utf8Array<O> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         display_fmt(self.iter(), &format!("{}", self.data_type()), f, false)
+    }
+}
+
+impl<O: Offset> GenericBinaryArray<O> for Utf8Array<O> {
+    #[inline]
+    fn values(&self) -> &[u8] {
+        self.values()
+    }
+
+    #[inline]
+    fn offsets(&self) -> &[O] {
+        self.offsets()
     }
 }
 
