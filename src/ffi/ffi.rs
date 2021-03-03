@@ -42,17 +42,16 @@ use std::{
     sync::Arc,
 };
 
-use crate::error::{ArrowError, Result};
 use crate::{
     array::Array,
+    bits::bytes_for,
     buffer::{
         bytes::{Bytes, Deallocation},
-        Bitmap, Buffer, NativeType,
+        Bitmap, Buffer,
     },
-};
-use crate::{
-    bits::bytes_for,
     datatypes::{DataType, TimeUnit},
+    error::{ArrowError, Result},
+    types::NativeType,
 };
 
 /// ABI-compatible struct for `ArrowSchema` from C Data Interface

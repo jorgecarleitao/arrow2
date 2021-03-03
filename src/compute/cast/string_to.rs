@@ -22,8 +22,8 @@ use crate::{
         Array, DictionaryKey, DictionaryPrimitive, Offset, Primitive, PrimitiveArray,
         TryFromIterator, Utf8Array, Utf8Primitive,
     },
-    buffer::NativeType,
     datatypes::DataType,
+    types::NativeType,
 };
 use crate::{error::Result, temporal_conversions::EPOCH_DAYS_FROM_CE};
 

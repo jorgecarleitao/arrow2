@@ -19,7 +19,8 @@ use std::convert::TryFrom;
 
 use num::Num;
 
-use crate::buffer::{Buffer, NativeType};
+use crate::buffer::Buffer;
+use crate::types::NativeType;
 
 /// Trait uses to distinguish types whose offset sizes support multiple sizes.
 /// This trait is only implemented for i32 and i64, which are the two sizes currently

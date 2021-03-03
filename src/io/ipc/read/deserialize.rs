@@ -31,7 +31,8 @@ use crate::datatypes::{DataType, IntervalUnit};
 use crate::error::{ArrowError, Result as ArrowResult};
 use crate::{
     array::*,
-    buffer::{days_ms, Bitmap, MutableBuffer, NativeType},
+    buffer::{Bitmap, MutableBuffer},
+    types::{days_ms, NativeType},
 };
 
 use super::super::gen;

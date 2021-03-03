@@ -21,9 +21,9 @@ use super::utils::combine_validities;
 use crate::error::{ArrowError, Result};
 
 use crate::buffer::Buffer;
+use crate::types::NativeType;
 use crate::{
     array::{Array, PrimitiveArray},
-    buffer::NativeType,
     datatypes::DataType,
 };
 

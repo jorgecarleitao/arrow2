@@ -19,7 +19,8 @@ use std::sync::Arc;
 
 use crate::{
     array::{Array, PrimitiveArray},
-    buffer::{MutableBitmap, MutableBuffer, NativeType},
+    buffer::{MutableBitmap, MutableBuffer},
+    types::NativeType,
 };
 
 use super::{

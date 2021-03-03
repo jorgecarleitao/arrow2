@@ -15,12 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use super::{bytes::Bytes, types::NativeType};
-
 use std::sync::Arc;
 use std::{convert::AsRef, usize};
 use std::{fmt::Debug, iter::FromIterator};
 
+use crate::types::NativeType;
+
+use super::bytes::Bytes;
 use super::mutable::MutableBuffer;
 
 /// Buffer represents a contiguous memory region that can be shared with other buffers and across

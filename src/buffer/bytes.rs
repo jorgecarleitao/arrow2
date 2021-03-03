@@ -23,8 +23,9 @@ use std::{fmt::Debug, fmt::Formatter};
 use std::{ptr::NonNull, sync::Arc};
 
 use crate::ffi;
+use crate::types::NativeType;
 
-use super::{alloc, types::NativeType};
+use super::alloc;
 
 /// Mode of deallocating memory regions
 pub enum Deallocation {

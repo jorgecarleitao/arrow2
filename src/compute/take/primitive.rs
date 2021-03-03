@@ -17,8 +17,9 @@
 
 use crate::{
     array::{Array, Offset, PrimitiveArray},
-    buffer::{Bitmap, Buffer, MutableBitmap, MutableBuffer, NativeType},
+    buffer::{Bitmap, Buffer, MutableBitmap, MutableBuffer},
     error::Result,
+    types::NativeType,
 };
 
 use super::maybe_usize;

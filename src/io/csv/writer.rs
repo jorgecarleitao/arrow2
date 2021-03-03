@@ -73,7 +73,7 @@ use std::io::Write;
 use crate::array::*;
 use crate::error::{ArrowError, Result};
 use crate::record_batch::RecordBatch;
-use crate::{buffer::NativeType, datatypes::*, temporal_conversions, util::lexical_to_string};
+use crate::{datatypes::*, temporal_conversions, types::NativeType, util::lexical_to_string};
 const DEFAULT_DATE_FORMAT: &str = "%F";
 const DEFAULT_TIME_FORMAT: &str = "%T";
 const DEFAULT_TIMESTAMP_FORMAT: &str = "%FT%H:%M:%S.%9f";

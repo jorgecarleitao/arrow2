@@ -2,7 +2,7 @@
 
 This repository contains a Rust Library to work with the Arrow format within Rust.
 
-It is a re-write of the original Arrow crate using `safe` Rust. See #FAQ for details.
+It is a re-write of the original Arrow crate using `safe` Rust. See FAQ for details.
 
 ## How to use
 
@@ -32,7 +32,7 @@ against other implementations in arrow's master; it assumes that arrow's golden 
 ## Features in the original not availabe in this crate
 
 * Parquet IO
-* compute kernels
+* some compute kernels
 * SIMD (no plans to support: favor auto-vectorization instead)
 
 ## Roadmap

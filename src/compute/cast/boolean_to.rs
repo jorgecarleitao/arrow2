@@ -17,8 +17,8 @@
 
 use crate::{
     array::{Array, BooleanArray, Primitive},
-    buffer::NativeType,
     datatypes::DataType,
+    types::NativeType,
 };
 use crate::{
     array::{Offset, Utf8Array},

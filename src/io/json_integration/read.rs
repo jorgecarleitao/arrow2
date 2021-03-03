@@ -23,16 +23,11 @@ use serde_json::Value;
 
 use crate::{
     array::*,
-    buffer::{days_ms, NativeType},
-};
-use crate::{
     buffer::{Bitmap, Buffer},
-    datatypes::{DataType, Field, IntervalUnit},
-};
-use crate::{
-    datatypes::Schema,
+    datatypes::{DataType, Field, IntervalUnit, Schema},
     error::{ArrowError, Result},
     record_batch::RecordBatch,
+    types::{days_ms, NativeType},
 };
 
 use super::{ArrowJsonBatch, ArrowJsonColumn, ArrowJsonDictionaryBatch};

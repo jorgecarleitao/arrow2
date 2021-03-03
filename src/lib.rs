@@ -18,6 +18,7 @@
 pub mod array;
 pub mod buffer;
 pub mod error;
+pub mod types;
 
 pub mod compute;
 pub mod io;

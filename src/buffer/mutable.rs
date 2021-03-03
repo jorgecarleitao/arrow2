@@ -20,10 +20,11 @@ use std::ptr::NonNull;
 use std::usize;
 use std::{fmt::Debug, mem::size_of};
 
+use crate::types::NativeType;
+
 use super::{
     alloc,
     bytes::{Bytes, Deallocation},
-    types::NativeType,
     util,
 };
 

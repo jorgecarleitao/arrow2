@@ -18,7 +18,9 @@
 //! Defines memory-related functions, such as allocate/deallocate/reallocate memory
 //! regions, cache and allocation alignments.
 
-use super::{alignment::ALIGNMENT, types::NativeType};
+use crate::types::NativeType;
+
+use super::alignment::ALIGNMENT;
 
 use std::mem::size_of;
 use std::ptr::NonNull;

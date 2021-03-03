@@ -15,10 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::{
-    array::primitive::PrimitiveArray,
-    buffer::{types::NativeType, Bitmap},
-};
+use crate::{array::primitive::PrimitiveArray, buffer::Bitmap, types::NativeType};
 
 use super::utils::{count_validity, equal_len};
 

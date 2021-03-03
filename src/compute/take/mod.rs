@@ -127,10 +127,7 @@ mod tests {
     use std::sync::Arc;
 
     use crate::datatypes::Field;
-    use crate::{
-        array::Primitive,
-        buffer::{MutableBitmap, NativeType},
-    };
+    use crate::{array::Primitive, buffer::MutableBitmap, types::NativeType};
 
     use super::*;
 

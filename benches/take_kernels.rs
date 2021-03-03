@@ -23,7 +23,8 @@ use rand::distributions::{Distribution, Standard};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use arrow2::compute::take;
-use arrow2::{array::*, buffer::NativeType, datatypes::DataType};
+use arrow2::types::NativeType;
+use arrow2::{array::*, datatypes::DataType};
 
 /// Returns fixed seedable RNG
 pub fn seedable_rng() -> StdRng {

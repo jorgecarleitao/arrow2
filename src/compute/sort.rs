@@ -28,7 +28,8 @@ use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 use crate::{
     array::*,
-    buffer::{days_ms, Buffer, NativeType},
+    buffer::Buffer,
+    types::{days_ms, NativeType},
 };
 
 use crate::buffer::MutableBuffer;

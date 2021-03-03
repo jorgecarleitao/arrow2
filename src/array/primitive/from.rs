@@ -20,8 +20,9 @@ use std::{iter::FromIterator, sync::Arc};
 use crate::error::Result as ArrowResult;
 use crate::{
     array::{Array, Builder, ToArray, TryFromIterator},
-    buffer::{types::NativeType, MutableBitmap, MutableBuffer},
+    buffer::{MutableBitmap, MutableBuffer},
     datatypes::DataType,
+    types::NativeType,
 };
 
 use super::PrimitiveArray;

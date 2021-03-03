@@ -18,8 +18,11 @@
 use csv::StringRecord;
 use lexical_core;
 
-use crate::{array::Primitive, datatypes::*};
-use crate::{array::PrimitiveArray, buffer::NativeType};
+use crate::{
+    array::{Primitive, PrimitiveArray},
+    datatypes::*,
+    types::NativeType,
+};
 
 pub trait PrimitiveParser<T: NativeType + lexical_core::FromLexical, E> {
     fn parse(&self, string: &str, _: &DataType, _: usize) -> Result<Option<T>, E> {

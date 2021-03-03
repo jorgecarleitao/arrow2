@@ -15,9 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
+use crate::types::NativeType;
 use crate::{
     array::{Array, BooleanArray, ListArray, Offset, PrimitiveArray, Utf8Array},
-    buffer::{Bitmap, NativeType},
+    buffer::Bitmap,
 };
 use crate::{
     datatypes::DataType,

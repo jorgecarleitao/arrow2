@@ -16,10 +16,11 @@
 // under the License.
 
 use crate::{
-    buffer::{types::NativeType, Bitmap, Buffer},
+    buffer::{Bitmap, Buffer},
     datatypes::DataType,
     error::ArrowError,
     ffi::ArrowArray,
+    types::NativeType,
 };
 
 use crate::error::Result;

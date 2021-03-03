@@ -22,8 +22,9 @@ use crate::{
         Array, BooleanArray, DictionaryKey, DictionaryPrimitive, Offset, Primitive, PrimitiveArray,
         TryFromIterator, Utf8Array,
     },
-    buffer::{Bitmap, NativeType},
+    buffer::Bitmap,
     datatypes::DataType,
+    types::NativeType,
 };
 use crate::{error::Result, util::lexical_to_string};
 

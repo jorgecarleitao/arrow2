@@ -20,9 +20,10 @@ use crate::{
         Array, BinaryArray, BooleanArray, DictionaryArray, DictionaryKey, FixedSizeBinaryArray,
         FixedSizeListArray, ListArray, Offset, PrimitiveArray, StructArray, Utf8Array,
     },
-    buffer::{days_ms, Bitmap, NativeType},
+    buffer::Bitmap,
     datatypes::{DataType, IntervalUnit},
     io::ipc::gen::Message,
+    types::{days_ms, NativeType},
 };
 
 use crate::io::ipc::gen::Schema;

@@ -18,8 +18,7 @@
 use serde_json::map::Map;
 use serde_json::{Number, Value};
 
-use crate::{array::*, buffer::NativeType};
-use crate::{datatypes::*, record_batch::RecordBatch};
+use crate::{array::*, datatypes::*, record_batch::RecordBatch, types::NativeType};
 
 trait JsonSerializable {
     fn into_json_value(self) -> Option<Value>;

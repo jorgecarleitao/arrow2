@@ -171,7 +171,7 @@ it often enables SIMD. For example, an unary operation `op` on a `PrimitiveArray
 # use arrow2::buffer::Buffer;
 # use arrow2::{
 #     array::{Array, PrimitiveArray},
-#     buffer::NativeType,
+#     types::NativeType,
 #     datatypes::DataType,
 # };
 

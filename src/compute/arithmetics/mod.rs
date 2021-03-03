@@ -22,9 +22,10 @@ use std::ops::{Add, Div, Mul, Neg, Sub};
 use num::{traits::Pow, Zero};
 
 use crate::array::*;
-use crate::buffer::{Buffer, NativeType};
+use crate::buffer::Buffer;
 use crate::datatypes::DataType;
 use crate::error::{ArrowError, Result};
+use crate::types::NativeType;
 
 use super::arity::{binary, unary};
 use super::utils::combine_validities;

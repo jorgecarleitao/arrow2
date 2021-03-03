@@ -23,7 +23,7 @@ use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 use crate::{
     array::*,
-    buffer::{days_ms, NativeType},
+    types::{days_ms, NativeType},
 };
 
 /// Compare the values at two arbitrary indices in two arrays.

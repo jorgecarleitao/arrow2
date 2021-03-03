@@ -28,8 +28,9 @@ use crate::{
         Array, BooleanArray, DictionaryArray, DictionaryKey, ListArray, NullArray, Offset,
         Primitive, PrimitiveArray, StructArray, Utf8Array,
     },
-    buffer::{MutableBitmap, MutableBuffer, NativeType},
+    buffer::{MutableBitmap, MutableBuffer},
     datatypes::DataType,
+    types::NativeType,
 };
 
 /// A function that converts a &Value into an optional tuple of a byte slice and a Value.

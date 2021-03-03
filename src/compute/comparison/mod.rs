@@ -23,9 +23,9 @@
 //! [here](https://doc.rust-lang.org/stable/core/arch/) for more information.
 
 use crate::array::*;
-use crate::buffer::days_ms;
 use crate::datatypes::{DataType, IntervalUnit};
 use crate::error::{ArrowError, Result};
+use crate::types::days_ms;
 
 mod primitive;
 mod utf8;
