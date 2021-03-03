@@ -16,8 +16,7 @@ cd arrow2
 cargo test
 ```
 
-The test suite is a _superset_ of all integration tests that the original implementation has against golden files from the arrow project. It currently makes no attempt to test the implementation
-against other implementations in arrow's master; it assumes that arrow's golden files are sufficient to cover the specification. This crate uses both little and big endian golden files, as it supports both endianesses at IPC boundaries.
+The test suite is a _superset_ of all integration tests that the original implementation has against golden files from the arrow project. It currently makes no attempt to test the implementation against other implementations in arrow's master; it assumes that arrow's golden files are sufficient to cover the specification. This crate uses both little and big endian golden files, as it supports both endianesses at IPC boundaries.
 
 ## Features in this crate and not in the original
 
@@ -40,7 +39,7 @@ against other implementations in arrow's master; it assumes that arrow's golden 
 1. CI/CD
 2. parquet IO
 3. bring documentation up to speed
-4. compute kernels; probably a different crate
+4. compute kernels
 5. auto-vectorization of bitmap operations
 
 ## How to develop
