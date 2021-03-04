@@ -15,5 +15,5 @@
 // specific language governing permissions and limitations
 // under the License.
 
-doc_comment::doctest!("../guide/src/low_end.md");
-doc_comment::doctest!("../guide/src/high_end.md");
+doc_comment::doctest!("../guide/src/low_level.md");
+doc_comment::doctest!("../guide/src/high_level.md");
