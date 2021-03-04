@@ -1,14 +1,11 @@
-# Arrow2: Safe Arrow
+# Arrow2: Transmute-free Arrow
 
 ![test](https://github.com/jorgecarleitao/arrow2/actions/workflows/test.yml/badge.svg)
 
 This repository contains a Rust library to work with the [Arrow format](https://arrow.apache.org/).
+It is a re-write of the [official Arrow crate](https://github.com/apache/arrow) using transmute-free operations. See FAQ for details.
 
-It is a re-write of the original Arrow crate using `safe` Rust. See FAQ for details.
-
-## How to use
-
-See details in the book.
+See [the guide](https://jorgecarleitao.github.io/arrow2/).
 
 ## Run unit tests
 
@@ -38,11 +35,10 @@ The test suite is a _superset_ of all integration tests that the original implem
 
 ## Roadmap
 
-1. CI/CD
-2. parquet IO
-3. bring documentation up to speed
-4. compute kernels
-5. auto-vectorization of bitmap operations
+1. parquet IO
+2. bring documentation up to speed
+3. compute kernels
+4. auto-vectorization of bitmap operations
 
 ## How to develop
 
@@ -119,7 +115,7 @@ This crate's design of primitive types is also more explicit about its logical a
 
 Consequently, this crate is easier to use, develop, maintain, and debug.
 
-#### Any plans to merge with the Apache Arrow project?
+### Any plans to merge with the Apache Arrow project?
 
 Yes. The primary reason to have this repo and crate is to be able to propotype and mature using a fundamentally different design based on a transmute-free implementation. This requires breaking backward compatibility and loss of features that is impossible to achieve on the Arrow repo.
 
