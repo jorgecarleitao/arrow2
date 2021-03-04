@@ -33,7 +33,7 @@ use std::{
 pub static mut ALLOCATIONS: AtomicIsize = AtomicIsize::new(0);
 
 #[inline]
-unsafe fn null_pointer<T: NativeType>() -> NonNull<T> {
+unsafe fn dangling<T: NativeType>() -> NonNull<T> {
     NonNull::new_unchecked(ALIGNMENT as *mut T)
 }
 
@@ -43,7 +43,7 @@ unsafe fn null_pointer<T: NativeType>() -> NonNull<T> {
 pub fn allocate_aligned<T: NativeType>(size: usize) -> NonNull<T> {
     unsafe {
         if size == 0 {
-            null_pointer()
+            dangling()
         } else {
             let size = size * size_of::<T>();
             ALLOCATIONS.fetch_add(size as isize, std::sync::atomic::Ordering::SeqCst);
@@ -61,7 +61,7 @@ pub fn allocate_aligned<T: NativeType>(size: usize) -> NonNull<T> {
 pub fn allocate_aligned_zeroed<T: NativeType>(size: usize) -> NonNull<T> {
     unsafe {
         if size == 0 {
-            null_pointer()
+            dangling()
         } else {
             let size = size * size_of::<T>();
             ALLOCATIONS.fetch_add(size as isize, std::sync::atomic::Ordering::SeqCst);
@@ -80,7 +80,7 @@ pub fn allocate_aligned_zeroed<T: NativeType>(size: usize) -> NonNull<T> {
 /// * `ptr` was allocated by [`allocate_aligned_zeroed`] or [`allocate_aligned`]
 /// * `size` must be the same size that was used to allocate that block of memory.
 pub unsafe fn free_aligned<T: NativeType>(ptr: NonNull<T>, size: usize) {
-    if ptr != null_pointer() {
+    if size != 0 {
         let size = size * size_of::<T>();
         ALLOCATIONS.fetch_sub(size as isize, std::sync::atomic::Ordering::SeqCst);
         std::alloc::dealloc(
@@ -106,16 +106,16 @@ pub unsafe fn reallocate<T: NativeType>(
     old_size: usize,
     new_size: usize,
 ) -> NonNull<T> {
-    let old_size = old_size * size_of::<T>();
-    let new_size = new_size * size_of::<T>();
-    if ptr == null_pointer() {
+    if old_size == 0 {
         return allocate_aligned(new_size);
     }
 
     if new_size == 0 {
         free_aligned(ptr, old_size);
-        return null_pointer();
+        return dangling();
     }
+    let old_size = old_size * size_of::<T>();
+    let new_size = new_size * size_of::<T>();
 
     ALLOCATIONS.fetch_add(
         new_size as isize - old_size as isize,
@@ -143,5 +143,18 @@ mod tests {
             assert_eq!(0, (p.as_ptr() as usize) % 64);
             unsafe { free_aligned(p, 1024) };
         }
+    }
+
+    #[test]
+    fn test_reallocate() {
+        let size = 16;
+        let ptr = allocate_aligned::<i32>(size);
+        let new_size = 32;
+        let ptr = unsafe { reallocate(ptr, size, 32) };
+        unsafe { free_aligned(ptr, new_size) };
+        assert_eq!(
+            unsafe { ALLOCATIONS.load(std::sync::atomic::Ordering::SeqCst) },
+            0
+        );
     }
 }
