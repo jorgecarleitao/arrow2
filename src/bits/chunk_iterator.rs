@@ -39,6 +39,8 @@ impl<'a> BitChunks<'a> {
 
         let chunk_len = len / chunk_bits;
         let remainder_len = len & (chunk_bits - 1);
+        debug_assert!(remainder_len < 64);
+        debug_assert!(bit_offset < 8);
 
         BitChunks::<'a> {
             buffer: &buffer[byte_offset..],
@@ -47,14 +49,6 @@ impl<'a> BitChunks<'a> {
             remainder_len,
         }
     }
-}
-
-#[derive(Debug)]
-pub struct BitChunkIterator<'a> {
-    buffer: &'a [u8],
-    bit_offset: usize,
-    chunk_len: usize,
-    index: usize,
 }
 
 impl<'a> BitChunks<'a> {
@@ -72,7 +66,7 @@ impl<'a> BitChunks<'a> {
 
     /// Returns the bitmask of remaining bits
     #[inline]
-    pub fn remainder_bits(&self) -> u64 {
+    pub fn remainder(&self) -> u64 {
         let bit_len = self.remainder_len;
         if bit_len == 0 {
             0
@@ -117,6 +111,14 @@ impl<'a> IntoIterator for BitChunks<'a> {
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
+}
+
+#[derive(Debug)]
+pub struct BitChunkIterator<'a> {
+    buffer: &'a [u8],
+    bit_offset: usize,
+    chunk_len: usize,
+    index: usize,
 }
 
 impl Iterator for BitChunkIterator<'_> {
@@ -190,7 +192,7 @@ mod tests {
         let bitchunks = BitChunks::new(&input, 4, 64);
 
         assert_eq!(0, bitchunks.remainder_len());
-        assert_eq!(0, bitchunks.remainder_bits());
+        assert_eq!(0, bitchunks.remainder());
 
         let result = bitchunks.into_iter().collect::<Vec<_>>();
 
@@ -209,7 +211,7 @@ mod tests {
         let bitchunks = BitChunks::new(&input, 4, 66);
 
         assert_eq!(2, bitchunks.remainder_len());
-        assert_eq!(0b00000011, bitchunks.remainder_bits());
+        assert_eq!(0b00000011, bitchunks.remainder());
 
         let result = bitchunks.into_iter().collect::<Vec<_>>();
 
@@ -228,7 +230,7 @@ mod tests {
         let bitchunks = BitChunks::new(&input, 6, 7);
 
         assert_eq!(7, bitchunks.remainder_len());
-        assert_eq!(0b1110000, bitchunks.remainder_bits());
+        assert_eq!(0b1110000, bitchunks.remainder());
     }
 
     #[test]
@@ -242,7 +244,51 @@ mod tests {
         assert_eq!(63, bitchunks.remainder_len());
         assert_eq!(
             0b100_0000_0011_1111_1100_0000_0011_1111_1100_0000_0011_1111_1100_0000_0011_1111,
-            bitchunks.remainder_bits()
+            bitchunks.remainder()
         );
+    }
+
+    fn remainder_chunk(buffer: &[u8], offset: usize, len: usize) -> u64 {
+        BitChunks::new(buffer, offset, len).remainder()
+    }
+
+    #[test]
+    fn remainder() {
+        let input: &[u8] = &[
+            0b00000000, 0b00000001, 0b00000010, 0b00000100, 0b00001000, 0b00010000, 0b00100000,
+            0b01000010, 0b11111111,
+        ];
+        let remainder = remainder_chunk(input, 0, 64 + 8);
+        assert_eq!(remainder, 0b11111111);
+
+        let remainder = remainder_chunk(input, 0, 64 + 7);
+        assert_eq!(remainder, 0b01111111);
+
+        let remainder = remainder_chunk(input, 0, 64 + 3);
+        assert_eq!(remainder, 0b00000111);
+
+        let remainder = remainder_chunk(input, 0, 64);
+        assert_eq!(remainder, 0b00000000);
+
+        let remainder = remainder_chunk(input, 1, 64 + 7);
+        assert_eq!(remainder, 0b01111111);
+
+        let remainder = remainder_chunk(input, 1, 64 + 6);
+        assert_eq!(remainder, 0b00111111);
+
+        let remainder = remainder_chunk(input, 2, 64 + 6);
+        assert_eq!(remainder, 0b00111111);
+
+        let remainder = remainder_chunk(input, 3, 64 + 5);
+        assert_eq!(remainder, 0b00011111);
+
+        let input: &[u8] = &[
+            0b00000000, 0b00000001, 0b00000010, 0b00000100, 0b00001000, 0b00010000, 0b00100000,
+            0b01000010, 0b11111111,
+        ];
+        let remainder = remainder_chunk(input, 0, 63);
+        let expected: u64 =
+            0b01000010_00100000_00010000_00001000_00000100_00000010_00000001_00000000;
+        assert_eq!(remainder, expected);
     }
 }

@@ -35,10 +35,10 @@ where
         .zip(rhs_chunks.iter())
         .map(|(left, right)| op(left, right));
     // Soundness: `BitChunks` is a trusted len iterator
-    let mut buffer = MutableBuffer::from_chunk_iter(chunks);
+    let mut buffer = unsafe { MutableBuffer::from_chunk_iter(chunks) };
 
     let remainder_bytes = lhs_chunks.remainder_len().saturating_add(7) / 8;
-    let rem = op(lhs_chunks.remainder_bits(), rhs_chunks.remainder_bits());
+    let rem = op(lhs_chunks.remainder(), rhs_chunks.remainder());
     // See https://arrow.apache.org/docs/format/Columnar.html#validity-bitmaps
     // least-significant bit (LSB) numbering (also known as bit-endianness)
     let rem = &rem.to_le_bytes()[0..remainder_bytes];
@@ -57,10 +57,10 @@ where
     let lhs_chunks = lhs.chunks();
 
     let chunks = lhs_chunks.iter().map(|left| op(left));
-    let mut buffer = MutableBuffer::from_chunk_iter(chunks);
+    let mut buffer = unsafe { MutableBuffer::from_chunk_iter(chunks) };
 
     let remainder_bytes = lhs_chunks.remainder_len().saturating_add(7) / 8;
-    let rem = op(lhs_chunks.remainder_bits());
+    let rem = op(lhs_chunks.remainder());
     // See https://arrow.apache.org/docs/format/Columnar.html#validity-bitmaps
     // least-significant bit (LSB) numbering (also known as bit-endianness)
     let rem = &rem.to_le_bytes()[0..remainder_bytes];
@@ -99,8 +99,8 @@ fn eq(lhs: &Bitmap, rhs: &Bitmap) -> bool {
 
     // See https://arrow.apache.org/docs/format/Columnar.html#validity-bitmaps
     // least-significant bit (LSB) numbering (also known as bit-endianness)
-    let lhs_remainder = &lhs_chunks.remainder_bits().to_le_bytes()[0..remainder_bytes];
-    let rhs_remainder = &rhs_chunks.remainder_bits().to_le_bytes()[0..remainder_bytes];
+    let lhs_remainder = &lhs_chunks.remainder().to_le_bytes()[0..remainder_bytes];
+    let rhs_remainder = &rhs_chunks.remainder().to_le_bytes()[0..remainder_bytes];
     let remainder_equal = unsafe {
         debug_assert!(lhs_remainder.len() * 8 >= lhs_chunks.remainder_len());
         (0..lhs_chunks.remainder_len())
@@ -184,6 +184,27 @@ mod test {
         let rhs = create_bitmap([0b01001110], 8);
         let expected = create_bitmap([0b01001010], 8);
         assert_eq!(&lhs & &rhs, expected);
+    }
+
+    #[test]
+    fn test_or_large() {
+        let input: &[u8] = &[
+            0b00000000, 0b00000001, 0b00000010, 0b00000100, 0b00001000, 0b00010000, 0b00100000,
+            0b01000010, 0b11111111,
+        ];
+        let input1: &[u8] = &[
+            0b00000000, 0b00000001, 0b10000000, 0b10000000, 0b10000000, 0b10000000, 0b10000000,
+            0b10000000, 0b11111111,
+        ];
+        let expected: &[u8] = &[
+            0b00000000, 0b00000001, 0b10000010, 0b10000100, 0b10001000, 0b10010000, 0b10100000,
+            0b11000010, 0b11111111,
+        ];
+
+        let lhs = create_bitmap(input, 62);
+        let rhs = create_bitmap(input1, 62);
+        let expected = create_bitmap(expected, 62);
+        assert_eq!(&lhs | &rhs, expected);
     }
 
     #[test]

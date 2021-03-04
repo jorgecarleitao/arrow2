@@ -67,7 +67,7 @@ impl<'a> SlicesIterator<'a> {
             filter_count: values.len() - values.null_count(),
             remainder_len: chunks.remainder_len(),
             chunk_len: chunks.chunk_len(),
-            remainder_mask: chunks.remainder_bits(),
+            remainder_mask: chunks.remainder(),
             len: 0,
             start: 0,
             on_region: false,

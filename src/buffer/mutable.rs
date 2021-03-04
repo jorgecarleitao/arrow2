@@ -503,11 +503,13 @@ impl From<MutableBuffer<u64>> for MutableBuffer<u8> {
 }
 
 impl MutableBuffer<u8> {
+    /// # Safety
+    /// * The iterator must be TrustedLen
     #[inline]
-    pub fn from_chunk_iter<I: Iterator<Item = u64>>(iter: I) -> Self {
+    pub unsafe fn from_chunk_iter<I: Iterator<Item = u64>>(iter: I) -> Self {
         let iterator = iter.into_iter();
 
-        let buffer = unsafe { MutableBuffer::from_trusted_len_iter(iterator) };
+        let buffer = MutableBuffer::from_trusted_len_iter(iterator);
         buffer.into()
     }
 }

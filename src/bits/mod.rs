@@ -55,7 +55,7 @@ pub(crate) fn null_count(slice: &[u8], offset: usize, len: usize) -> usize {
     let chunks = chunk_iterator::BitChunks::new(slice, offset, len);
 
     let mut count: usize = chunks.iter().map(|c| c.count_ones() as usize).sum();
-    count += chunks.remainder_bits().count_ones() as usize;
+    count += chunks.remainder().count_ones() as usize;
 
     len - count
 }
@@ -83,3 +83,32 @@ pub unsafe fn unset_bit_raw(data: *mut u8, i: usize) {
 }
 
 pub use chunk_iterator::{BitChunkIterator, BitChunks};
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_bit() {
+        let input: &[u8] = &[
+            0b00000000, 0b00000001, 0b00000010, 0b00000100, 0b00001000, 0b00010000, 0b00100000,
+            0b01000000, 0b11111111,
+        ];
+        for i in 0..8 {
+            assert_eq!(get_bit(input, i), false);
+        }
+        assert_eq!(get_bit(input, 8), true);
+        for i in 8 + 1..2 * 8 {
+            assert_eq!(get_bit(input, i), false);
+        }
+        assert_eq!(get_bit(input, 2 * 8 + 1), true);
+        for i in 2 * 8 + 2..3 * 8 {
+            assert_eq!(get_bit(input, i), false);
+        }
+        assert_eq!(get_bit(input, 3 * 8 + 2), true);
+        for i in 3 * 8 + 3..4 * 8 {
+            assert_eq!(get_bit(input, i), false);
+        }
+        assert_eq!(get_bit(input, 4 * 8 + 3), true);
+    }
+}
