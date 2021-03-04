@@ -213,7 +213,7 @@ mod list;
 mod null;
 mod primitive;
 mod specification;
-mod string;
+mod utf8;
 mod struct_;
 
 mod equal;
@@ -230,7 +230,7 @@ pub use list::{ListArray, ListPrimitive};
 pub use null::NullArray;
 pub use primitive::{Primitive, PrimitiveArray};
 pub use specification::Offset;
-pub use string::{Utf8Array, Utf8Primitive};
+pub use utf8::{Utf8Array, Utf8Primitive};
 pub use struct_::StructArray;
 
 pub use self::ffi::FromFFI;
