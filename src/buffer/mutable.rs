@@ -511,3 +511,17 @@ impl MutableBuffer<u8> {
         buffer.into()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_push() {
+        let mut b = MutableBuffer::<i32>::new();
+        for _ in 0..17 {
+            b.push(1);
+        }
+        assert_eq!(b.len(), 17);
+    }
+}

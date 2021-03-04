@@ -144,17 +144,4 @@ mod tests {
             unsafe { free_aligned(p, 1024) };
         }
     }
-
-    #[test]
-    fn test_reallocate() {
-        let size = 16;
-        let ptr = allocate_aligned::<i32>(size);
-        let new_size = 32;
-        let ptr = unsafe { reallocate(ptr, size, 32) };
-        unsafe { free_aligned(ptr, new_size) };
-        assert_eq!(
-            unsafe { ALLOCATIONS.load(std::sync::atomic::Ordering::SeqCst) },
-            0
-        );
-    }
 }
