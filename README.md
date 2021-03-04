@@ -1,6 +1,8 @@
 # Arrow2: Safe Arrow
 
-This repository contains a Rust Library to work with the Arrow format within Rust.
+![test](https://github.com/jorgecarleitao/arrow2/actions/workflows/test.yml/badge.svg)
+
+This repository contains a Rust library to work with the [Arrow format](https://arrow.apache.org/).
 
 It is a re-write of the original Arrow crate using `safe` Rust. See FAQ for details.
 
@@ -52,7 +54,7 @@ This is a normal Rust project. Clone and run tests with `cargo test`.
 
 The arrow crate uses `Buffer`, a generic struct to store contiguous memory regions (of bytes). This construct is used to store data from all arrays in the rust implementation. The simplest example is a buffer containing `1i32`, that is represented as `&[0u8, 0u8, 0u8, 1u8]` or `&[1u8, 0u8, 0u8, 0u8]` depending on endianness.
 
-When a user wishes to read from a buffer, e.g. to perform a mathematical operation with its values, it needs to interpret the buffer in the target type. Because `Buffer` is a contiguous regions of bytes with no information about its underlying type, users must transmute its data into the respective type.
+When a user wishes to read from a buffer, e.g. to perform a mathematical operation with its values, it needs to interpret the buffer in the target type. Because `Buffer` is a contiguous region of bytes with no type information, users must transmute its data into the respective type.
 
 Arrow currently transmutes buffers on almost all operations, and very often does not verify that there is type alignment nor correct length when we transmute it to a slice of type `&[T]`.
 
@@ -66,8 +68,7 @@ let array = Float64Array::from(Arc::new(data));
 println!("{:?}", array.value(1));
 ```
 
-Note how this initializes a buffer with bytes from `i32`, initializes an `ArrayData` with dynamic type
-`Int64`, and then an array `Float64Array` from `Arc<ArrayData>`. `Float64Array`'s internals will essentially consume the pointer from the buffer, re-interpret it as `f64`, and offset it by `1`.
+Note how this initializes a buffer with bytes from `i32`, initializes an `ArrayData` with dynamic type `Int64`, and then an array `Float64Array` from `Arc<ArrayData>`. `Float64Array`'s internals will essentially consume the pointer from the buffer, re-interpret it as `f64`, and offset it by `1`.
 
 Still within this example, if we were to use `ArrayData`'s datatype, `Int64`, to transmute the buffer, we would be creating `&[i64]` out of a buffer created out of `i32`.
 
