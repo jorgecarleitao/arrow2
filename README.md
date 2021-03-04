@@ -121,26 +121,18 @@ Consequently, this crate is easier to use, develop, maintain, and debug.
 
 #### Any plans to merge with the Apache Arrow project?
 
-Yes. The primary reason to have this repo and crate is to be able to propotype and mature using a fundamentally different design based on a transmute-free implementation. This requires breaking backward compatibility and loss of features that is impossible to achieve on the Arrow project.
+Yes. The primary reason to have this repo and crate is to be able to propotype and mature using a fundamentally different design based on a transmute-free implementation. This requires breaking backward compatibility and loss of features that is impossible to achieve on the Arrow repo.
 
 Furthermore, the arrow project currently has a release mechanism that is unsuitable for this type of work:
 
 * The Apache Arrow project has a single git repository with all 10+ implementations, ranging from C++, Python, C#, Julia, Rust, and execution engines such as Grandiva and DataFusion. A git ref corresponds to all of them, and a commit is about any/all of them.
 
-The implication is that the repository has a CI/CD setup and git history that is difficult to follow. It needs rigorous discipline to understand which commit belongs to which implementation. It also implies that tags of software releases are difficult to manage, as they correspond to all implementations at once (see also next point).
+The implication is this work would require a proibitive number of Jira issues for each PR to the crate, as well as an inhumane number of PRs, reviews, etc.
 
-For example, this work would require a proibitive number of Jira issues for each PR to the crate, as well as an inhumane number of PRs, reviews, etc.
-
-Another example is that it is impossible to release a different design of the arrow crate without breaking every dependency within the project which makes it difficult to iterate.
+Another consequence is that it is impossible to release a different design of the arrow crate without breaking every dependency within the project which makes it difficult to iterate.
 
 * A release of the Apache consists of a release of all implementations of the arrow format at once, with the same version. It is currently at `3.0.0`.
 
 This implies that the crate version is independent of the changelog or its API stability, which violates SemVer. This procedure makes the crate incompatible with Rusts' (and many others') ecosystem that heavily relies on SemVer to constraint software versions.
 
 Secondly, this implies the arrow crate is versioned as `>0.x`. This places expectations about API stability that are incompatible with this effort.
-
-* Apache Arrow releases a major version every X months
-
-This implies that, irrespectively of how stable or not the API is, or at which pace it was developed during X months, the crate will get a major version bump. This again makes it difficult to depend on the crate.
-
-This also creates a large incentive to break backward compatibility on every release.
