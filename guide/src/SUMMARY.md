@@ -2,5 +2,5 @@
 
 - [Arrow2](./README.md)
 - [The arrow format](./arrow.md)
-- [Low end API](./low_end.md)
-- [High end API](./high_end.md)
+- [Low level API](./low_level.md)
+- [High level API](./high_level.md)

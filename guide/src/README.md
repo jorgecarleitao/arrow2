@@ -1,6 +1,6 @@
 # Arrow2
 
-Arrow2 is a `safe` Rust library that implements data structures and functionality enabling
+Arrow2 is a Rust library that implements data structures and functionality enabling
 interoperability with the arrow format.
 
 The typical use-case for this library is to perform CPU and memory-intensive analytics in a format that supports heterogeneous data strutures, null values, and IPC and FFI interfaces across languages.
@@ -9,4 +9,5 @@ Arrow2 is divided in two main parts: a [low-end API](./low_end.md) to efficientl
 operate with contiguous memory regions, and a [high-end API](./high_end.md) to operate with
 arrow arrays, logical types, schemas, etc.
 
-Finally, this crate has an anxiliary section devoted to IO (CSV, JSON, parquet).
+This repo started as an experiment forked from the Apache arrow project to offer a transmute-free
+Rust implementation of that crate. It currently offers most functionality with the notable exception of reading and writing to and from parquet.

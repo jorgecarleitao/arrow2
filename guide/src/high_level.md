@@ -27,9 +27,9 @@ A `PrimitiveArray` has 3 components:
 Its main difference vs a `Vec<Option<T>>` are:
 
 * Its data is layed out in memory as a `Buffer<T>` and a `Option<Bitmap>`.
-* `PrimitivArray<T>` has an associated datatype.
+* `PrimitivArray<T>` has an associated logical datatype.
 
-The first difference allows interoperability with Arrow's ecosystem and efficient SIMD operations (we will re-visit this below); the second difference is that it allows semantic meaning to the array: in the example
+The first difference allows interoperability with Arrow's ecosystem and efficient SIMD operations (we will re-visit this below); the second difference is that it allows semantic meaning to the array. In the example
 
 ```rust
 # use arrow2::array::Primitive;
@@ -42,7 +42,7 @@ let dates = Primitive::<i32>::from(&[Some(1), None]).to(DataType::Date32);
 
 `ints` and `dates` have the same in-memory representation but different logic representations (e.g. dates are usually represented as a string).
 
-The following arrays exist:
+The following arrays are supported:
 
 * `NullArray` (just holds nulls)
 * `BooleanArray` (booleans)
