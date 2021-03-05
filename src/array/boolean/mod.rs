@@ -15,11 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::{buffer::Bitmap, datatypes::DataType, ffi::ArrowArray};
+use crate::{buffer::Bitmap, datatypes::DataType};
 
-use super::{display_fmt, ffi::ToFFI, Array, FromFFI};
-
-use crate::error::Result;
+use super::{display_fmt, Array};
 
 /// A [`BooleanArray`] is arrow's equivalent to `Vec<Option<bool>>`, i.e.
 /// an array designed for highly performant operations on optionally nullable booleans,
@@ -125,40 +123,6 @@ impl std::fmt::Display for BooleanArray {
     }
 }
 
-unsafe impl ToFFI for BooleanArray {
-    fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
-        [
-            self.validity.as_ref().map(|x| x.as_ptr()),
-            Some(self.values.as_ptr()),
-            None,
-        ]
-    }
-
-    fn offset(&self) -> usize {
-        self.offset
-    }
-}
-
-unsafe impl FromFFI for BooleanArray {
-    fn try_from_ffi(data_type: DataType, array: ArrowArray) -> Result<Self> {
-        let length = array.len();
-        let offset = array.offset();
-        let mut validity = array.null_bit_buffer();
-        let mut values = unsafe { array.bitmap(0)? };
-
-        if offset > 0 {
-            values = values.slice(offset, length);
-            validity = validity.map(|x| x.slice(offset, length))
-        }
-        Ok(Self {
-            data_type,
-            values,
-            validity,
-            offset: 0,
-        })
-    }
-}
-
 impl<P: AsRef<[Option<bool>]>> From<P> for BooleanArray {
     /// Creates a new [`BooleanArray`] out of a slice of Optional `bool`.
     #[inline]
@@ -167,6 +131,7 @@ impl<P: AsRef<[Option<bool>]>> From<P> for BooleanArray {
     }
 }
 
+mod ffi;
 mod iterator;
 pub use iterator::*;
 

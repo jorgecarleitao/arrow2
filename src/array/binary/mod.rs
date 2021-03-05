@@ -18,15 +18,12 @@
 use crate::{
     buffer::{Bitmap, Buffer},
     datatypes::DataType,
-    ffi::ArrowArray,
 };
 
 use super::{
-    display_fmt, display_helper, ffi::ToFFI, specification::check_offsets, specification::Offset,
-    Array, FromFFI, GenericBinaryArray,
+    display_fmt, display_helper, specification::check_offsets, specification::Offset, Array,
+    GenericBinaryArray,
 };
-
-use crate::error::Result;
 
 #[derive(Debug, Clone)]
 pub struct BinaryArray<O: Offset> {
@@ -173,57 +170,7 @@ impl<O: Offset> GenericBinaryArray<O> for BinaryArray<O> {
     }
 }
 
-unsafe impl<O: Offset> ToFFI for BinaryArray<O> {
-    fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
-        unsafe {
-            [
-                self.validity.as_ref().map(|x| x.as_ptr()),
-                Some(std::ptr::NonNull::new_unchecked(
-                    self.offsets.as_ptr() as *mut u8
-                )),
-                Some(std::ptr::NonNull::new_unchecked(
-                    self.values.as_ptr() as *mut u8
-                )),
-            ]
-        }
-    }
-
-    #[inline]
-    fn offset(&self) -> usize {
-        self.offset
-    }
-}
-
-unsafe impl<O: Offset> FromFFI for BinaryArray<O> {
-    fn try_from_ffi(data_type: DataType, array: ArrowArray) -> Result<Self> {
-        let expected = if O::is_large() {
-            DataType::LargeBinary
-        } else {
-            DataType::Binary
-        };
-        assert_eq!(data_type, expected);
-
-        let length = array.len();
-        let offset = array.offset();
-        let mut validity = array.null_bit_buffer();
-        let mut offsets = unsafe { array.buffer::<O>(0)? };
-        let values = unsafe { array.buffer::<u8>(1)? };
-
-        if offset > 0 {
-            offsets = offsets.slice(offset, length);
-            validity = validity.map(|x| x.slice(offset, length))
-        }
-
-        Ok(Self {
-            data_type,
-            offsets,
-            values,
-            validity,
-            offset: 0,
-        })
-    }
-}
-
+mod ffi;
 mod iterator;
 pub use iterator::*;
 mod from;

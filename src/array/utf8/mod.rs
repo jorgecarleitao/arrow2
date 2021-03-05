@@ -22,7 +22,6 @@ use crate::{
 
 use super::{
     display_fmt,
-    ffi::ToFFI,
     specification::{check_offsets, check_offsets_and_utf8},
     Array, GenericBinaryArray, Offset,
 };
@@ -227,26 +226,7 @@ impl<O: Offset> GenericBinaryArray<O> for Utf8Array<O> {
     }
 }
 
-unsafe impl<O: Offset> ToFFI for Utf8Array<O> {
-    fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
-        unsafe {
-            [
-                self.validity.as_ref().map(|x| x.as_ptr()),
-                Some(std::ptr::NonNull::new_unchecked(
-                    self.offsets.as_ptr() as *mut u8
-                )),
-                Some(std::ptr::NonNull::new_unchecked(
-                    self.values.as_ptr() as *mut u8
-                )),
-            ]
-        }
-    }
-
-    fn offset(&self) -> usize {
-        self.offset
-    }
-}
-
+mod ffi;
 mod from;
 pub use from::*;
 mod iterator;

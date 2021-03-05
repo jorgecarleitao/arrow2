@@ -424,7 +424,7 @@ impl ArrowArray {
     /// returns the null bit buffer.
     /// Rust implementation uses a buffer that is not part of the array of buffers.
     /// The C Data interface's null buffer is part of the array of buffers.
-    pub fn null_bit_buffer(&self) -> Option<Bitmap> {
+    pub fn validity(&self) -> Option<Bitmap> {
         let len = self.array.length;
         unsafe { create_bitmap(self.array.clone(), 0, len as usize) }
     }
