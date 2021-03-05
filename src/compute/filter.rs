@@ -250,10 +250,10 @@ mod tests {
             .slice(1, 4);
         let b = BooleanArray::from_slice(vec![true, true, false, false, true]).slice(1, 4);
         let c = filter(&a, &b).unwrap();
-        let d = c.as_ref().as_any().downcast_ref::<Int32Array>().unwrap();
-        assert_eq!(2, d.len());
-        assert_eq!(6, d.value(0));
-        assert_eq!(9, d.value(1));
+
+        let expected = Primitive::<i32>::from_slice(&[6, 9]).to(DataType::Int32);
+
+        assert_eq!(expected, c.as_ref());
     }
 
     #[test]
@@ -268,9 +268,10 @@ mod tests {
         let b = BooleanArray::from_slice(filter_values);
         let c = filter(&a, &b).unwrap();
         let d = c.as_ref().as_any().downcast_ref::<Int32Array>().unwrap();
-        assert_eq!(2, d.len());
-        assert_eq!(65, d.value(0));
-        assert_eq!(67, d.value(1));
+
+        let expected = Primitive::<i32>::from_slice(&[65, 67]).to(DataType::Int32);
+
+        assert_eq!(expected, c.as_ref());
     }
 
     #[test]

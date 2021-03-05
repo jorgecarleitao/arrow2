@@ -23,12 +23,19 @@ use crate::{buffer::Bitmap, datatypes::DataType};
 pub trait Array: std::fmt::Debug + std::fmt::Display + Send + Sync + ToFFI {
     fn as_any(&self) -> &dyn Any;
 
+    /// The length of the array
     fn len(&self) -> usize;
 
+    /// The [`DataType`] of the array
     fn data_type(&self) -> &DataType;
 
+    /// The validity of the Array
     fn validity(&self) -> &Option<Bitmap>;
 
+    /// The number of nulls on this Array. This is useful to branch implementations
+    /// to cases where the null count is zero.
+    /// # Implementation
+    /// This is `O(1)`.
     #[inline]
     fn null_count(&self) -> usize {
         self.validity()
@@ -37,6 +44,9 @@ pub trait Array: std::fmt::Debug + std::fmt::Display + Send + Sync + ToFFI {
             .unwrap_or(0)
     }
 
+    /// Returns whether slot `i` is null.
+    /// # Panic
+    /// Panics iff `i >= self.len()`.
     #[inline]
     fn is_null(&self, i: usize) -> bool {
         self.validity()
@@ -45,11 +55,20 @@ pub trait Array: std::fmt::Debug + std::fmt::Display + Send + Sync + ToFFI {
             .unwrap_or(false)
     }
 
+    /// Returns whether slot `i` is valid.
+    /// # Panic
+    /// Panics iff `i >= self.len()`.
     #[inline]
     fn is_valid(&self, i: usize) -> bool {
         !self.is_null(i)
     }
 
+    /// Slices the `Array`, returning a new `Array`.
+    /// # Implementation
+    /// This operation is `O(1)` over `len`, as it amounts to increase two ref counts
+    /// and moving the struct under a `Box`.
+    /// # Panic
+    /// This function panics iff `offset + length >= self.len()`.
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array>;
 }
 
@@ -101,7 +120,7 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
     }
 }
 
-/// Creates a new empty dynamic array
+/// Creates a new null dynamic array of `length`.
 pub fn new_null_array(data_type: DataType, length: usize) -> Box<dyn Array> {
     match data_type {
         DataType::Null => Box::new(NullArray::new_null(length)),
@@ -156,7 +175,10 @@ macro_rules! clone_dyn {
     }};
 }
 
-/// Clones `array`.
+/// Clones a dynamic `Array`.
+/// # Implementation
+/// This operation is `O(1)` over `len`, as it amounts to increase two ref counts
+/// and moving the concrete struct under a `Box`.
 pub fn clone(array: &dyn Array) -> Box<dyn Array> {
     match array.data_type() {
         DataType::Null => clone_dyn!(array, NullArray),
@@ -248,19 +270,28 @@ pub type UInt16Array = PrimitiveArray<u16>;
 pub type UInt32Array = PrimitiveArray<u32>;
 pub type UInt64Array = PrimitiveArray<u64>;
 
+/// A trait describing the ability of a struct to convert itself to a Boxed [`Array`].
 pub trait ToArray {
     fn to_arc(self, data_type: &DataType) -> std::sync::Arc<dyn Array>;
 }
 
+/// A trait describing the ability of a struct to create itself from a falible iterator
+/// This is used in the context of creating arrays from non-sized iterators
 pub trait TryFromIterator<A>: Sized {
     fn try_from_iter<T: IntoIterator<Item = Result<A>>>(iter: T) -> Result<Self>;
 }
 
+/// A trait describing the ability of a struct to
 pub trait Builder<T>: TryFromIterator<Option<T>> + ToArray {
+    /// Create the builder
     fn with_capacity(capacity: usize) -> Self;
 
+    /// Push a new item to the builder.
+    /// This operation may panic if the container cannot hold more items.
+    /// For example, if all possible keys are exausted when building a dictionary.
     fn push(&mut self, item: Option<&T>);
 
+    /// Falible version of `push`, on which the operation errors instead of panicking.
     #[inline]
     fn try_push(&mut self, item: Option<&T>) -> Result<()> {
         Ok(self.push(item))
@@ -310,14 +341,17 @@ fn display_fmt<T: std::fmt::Display, I: IntoIterator<Item = Option<T>>>(
     }
 }
 
+/// Trait that Binary arrays implement for the purposes of DRY.
 pub trait IterableBinaryArray: Array {
     unsafe fn value_unchecked(&self, i: usize) -> &[u8];
 }
 
+/// Trait that list arrays implement for the purposes of DRY.
 pub trait IterableListArray: Array {
     fn value(&self, i: usize) -> Box<dyn Array>;
 }
 
+/// Trait that list arrays implement for the purposes of DRY.
 pub trait GenericBinaryArray<O: Offset>: Array {
     fn values(&self) -> &[u8];
     fn offsets(&self) -> &[O];

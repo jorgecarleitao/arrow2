@@ -166,7 +166,9 @@ where
     Ok((null, buffer))
 }
 
-/// auxiliary struct used to create a [`PrimitiveArray`] out of an iterator
+/// Auxiliary struct used to create a [`PrimitiveArray`] out of iterators.
+/// Primitive arrays are often built from this struct, that knows how to cheaply convert itself
+/// into a primitive array.
 #[derive(Debug)]
 pub struct Primitive<T: NativeType> {
     values: MutableBuffer<T>,
@@ -174,6 +176,7 @@ pub struct Primitive<T: NativeType> {
 }
 
 impl<T: NativeType> Builder<T> for Primitive<T> {
+    /// Initializes itself with a capacity.
     #[inline]
     fn with_capacity(capacity: usize) -> Self {
         Self {
@@ -182,6 +185,7 @@ impl<T: NativeType> Builder<T> for Primitive<T> {
         }
     }
 
+    /// Pushes a new item to this struct
     #[inline]
     fn push(&mut self, value: Option<&T>) {
         match value {
@@ -198,6 +202,9 @@ impl<T: NativeType> Builder<T> for Primitive<T> {
 }
 
 impl<T: NativeType> Primitive<T> {
+    /// Converts itself to a [`PrimitiveArray`].
+    /// # Panic
+    /// This panics if the `DataType` is not valid for this physical type.
     pub fn to(self, data_type: DataType) -> PrimitiveArray<T> {
         PrimitiveArray::<T>::from_data(data_type, self.values.into(), self.validity.into())
     }
