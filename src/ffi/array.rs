@@ -24,7 +24,7 @@ use crate::array::{BooleanArray, FromFFI};
 use crate::error::{ArrowError, Result};
 use crate::types::days_ms;
 use crate::{
-    array::{Array, PrimitiveArray},
+    array::{Array, BinaryArray, PrimitiveArray, Utf8Array},
     datatypes::{DataType, IntervalUnit},
 };
 
@@ -64,6 +64,10 @@ impl TryFrom<ArrowArray> for Box<dyn Array> {
             DataType::Float16 => unreachable!(),
             DataType::Float32 => Box::new(PrimitiveArray::<f32>::try_from_ffi(data_type, array)?),
             DataType::Float64 => Box::new(PrimitiveArray::<f64>::try_from_ffi(data_type, array)?),
+            DataType::Utf8 => Box::new(Utf8Array::<i32>::try_from_ffi(data_type, array)?),
+            DataType::LargeUtf8 => Box::new(Utf8Array::<i64>::try_from_ffi(data_type, array)?),
+            DataType::Binary => Box::new(BinaryArray::<i32>::try_from_ffi(data_type, array)?),
+            DataType::LargeBinary => Box::new(BinaryArray::<i64>::try_from_ffi(data_type, array)?),
             _ => unimplemented!(),
         };
 
@@ -81,7 +85,7 @@ impl TryFrom<Box<dyn Array>> for ArrowArray {
 
 #[cfg(test)]
 mod tests {
-    use crate::array::{Array, Primitive};
+    use crate::array::{Array, BinaryArray, Primitive, Utf8Array};
     use crate::{datatypes::DataType, error::Result, ffi::ArrowArray};
     use std::convert::TryFrom;
 
@@ -119,6 +123,32 @@ mod tests {
     #[test]
     fn test_i64() -> Result<()> {
         let data = Primitive::<i64>::from(vec![Some(2), None, Some(1), None]).to(DataType::Int64);
+        test_round_trip(data)
+    }
+
+    #[test]
+    fn test_utf8() -> Result<()> {
+        let data = Utf8Array::<i32>::from(&vec![Some("a"), None, Some("bb"), None]);
+        test_round_trip(data)
+    }
+
+    #[test]
+    fn test_large_utf8() -> Result<()> {
+        let data = Utf8Array::<i64>::from(&vec![Some("a"), None, Some("bb"), None]);
+        test_round_trip(data)
+    }
+
+    #[test]
+    fn test_binary() -> Result<()> {
+        let data =
+            BinaryArray::<i32>::from(&vec![Some(b"a".as_ref()), None, Some(b"bb".as_ref()), None]);
+        test_round_trip(data)
+    }
+
+    #[test]
+    fn test_large_binary() -> Result<()> {
+        let data =
+            BinaryArray::<i64>::from(&vec![Some(b"a".as_ref()), None, Some(b"bb".as_ref()), None]);
         test_round_trip(data)
     }
 }
