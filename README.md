@@ -1,5 +1,7 @@
 # Arrow2: Transmute-free Arrow
 
+[![Join the chat at https://gitter.im/apache-arrow-rust/arrow2](https://badges.gitter.im/apache-arrow-rust/arrow2.svg)](https://gitter.im/apache-arrow-rust/arrow2?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 ![test](https://github.com/jorgecarleitao/arrow2/actions/workflows/test.yml/badge.svg)
 
 This repository contains a Rust library to work with the [Arrow format](https://arrow.apache.org/).
