@@ -22,9 +22,10 @@ use std::convert::TryFrom;
 use super::ffi::ArrowArray;
 use crate::array::{BooleanArray, FromFFI};
 use crate::error::{ArrowError, Result};
+use crate::types::days_ms;
 use crate::{
     array::{Array, PrimitiveArray},
-    datatypes::DataType,
+    datatypes::{DataType, IntervalUnit},
 };
 
 impl TryFrom<ArrowArray> for Box<dyn Array> {
@@ -35,14 +36,34 @@ impl TryFrom<ArrowArray> for Box<dyn Array> {
 
         let array: Box<dyn Array> = match data_type {
             DataType::Boolean => Box::new(BooleanArray::try_from_ffi(data_type, array)?),
-            DataType::UInt32 => Box::new(PrimitiveArray::<u32>::try_from_ffi(data_type, array)?),
-            DataType::Date32 | DataType::Int32 => {
+            DataType::Int8 => Box::new(PrimitiveArray::<i8>::try_from_ffi(data_type, array)?),
+            DataType::Int16 => Box::new(PrimitiveArray::<i16>::try_from_ffi(data_type, array)?),
+            DataType::Int32
+            | DataType::Date32
+            | DataType::Time32(_)
+            | DataType::Interval(IntervalUnit::YearMonth) => {
                 Box::new(PrimitiveArray::<i32>::try_from_ffi(data_type, array)?)
             }
-            DataType::Date64 | DataType::Int64 => {
+            DataType::Interval(IntervalUnit::DayTime) => {
+                Box::new(PrimitiveArray::<days_ms>::try_from_ffi(data_type, array)?)
+            }
+            DataType::Int64
+            | DataType::Date64
+            | DataType::Time64(_)
+            | DataType::Timestamp(_, _)
+            | DataType::Duration(_) => {
                 Box::new(PrimitiveArray::<i64>::try_from_ffi(data_type, array)?)
             }
+            DataType::Decimal(_, _) => {
+                Box::new(PrimitiveArray::<i128>::try_from_ffi(data_type, array)?)
+            }
+            DataType::UInt8 => Box::new(PrimitiveArray::<u8>::try_from_ffi(data_type, array)?),
+            DataType::UInt16 => Box::new(PrimitiveArray::<u16>::try_from_ffi(data_type, array)?),
+            DataType::UInt32 => Box::new(PrimitiveArray::<u32>::try_from_ffi(data_type, array)?),
             DataType::UInt64 => Box::new(PrimitiveArray::<u64>::try_from_ffi(data_type, array)?),
+            DataType::Float16 => unreachable!(),
+            DataType::Float32 => Box::new(PrimitiveArray::<f32>::try_from_ffi(data_type, array)?),
+            DataType::Float64 => Box::new(PrimitiveArray::<f64>::try_from_ffi(data_type, array)?),
             _ => unimplemented!(),
         };
 
