@@ -2,8 +2,7 @@
 
 This document outlines the design guide lines of this module.
 
-This module is composed by independent "kernels", or logical operations common
-in analytics. Below are some design principles:
+This module is composed by independent operations common in analytics. Below are some design of its principles:
 
 * APIs MUST return an error when either:
     * The arguments are incorrect
