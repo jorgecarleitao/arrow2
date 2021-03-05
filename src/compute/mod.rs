@@ -30,6 +30,7 @@ pub mod substring;
 pub mod take;
 pub mod temporal;
 mod utils;
+pub mod window;
 
 #[cfg(feature = "regex")]
 pub mod regex_match;
