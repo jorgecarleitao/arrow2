@@ -29,7 +29,7 @@ use crate::{
         Primitive, PrimitiveArray, StructArray, Utf8Array,
     },
     buffer::{MutableBitmap, MutableBuffer},
-    datatypes::DataType,
+    datatypes::{DataType, IntervalUnit},
     types::NativeType,
 };
 
@@ -209,15 +209,20 @@ pub fn read(rows: &[&Value], data_type: DataType) -> Arc<dyn Array> {
         DataType::Boolean => Arc::new(read_boolean(rows)),
         DataType::Int8 => Arc::new(read_primitive::<i8>(rows, data_type)),
         DataType::Int16 => Arc::new(read_primitive::<i16>(rows, data_type)),
-        DataType::Int32 | DataType::Date32 | DataType::Time32(_) => {
+        DataType::Int32
+        | DataType::Date32
+        | DataType::Time32(_)
+        | DataType::Interval(IntervalUnit::YearMonth) => {
             Arc::new(read_primitive::<i32>(rows, data_type))
+        }
+        DataType::Interval(IntervalUnit::DayTime) => {
+            unimplemented!("There is no natural representation of DayTime in JSON.")
         }
         DataType::Int64
         | DataType::Date64
         | DataType::Time64(_)
         | DataType::Timestamp(_, _)
-        | DataType::Duration(_)
-        | DataType::Interval(_) => Arc::new(read_primitive::<i64>(rows, data_type)),
+        | DataType::Duration(_) => Arc::new(read_primitive::<i64>(rows, data_type)),
         DataType::UInt8 => Arc::new(read_primitive::<u8>(rows, data_type)),
         DataType::UInt16 => Arc::new(read_primitive::<u16>(rows, data_type)),
         DataType::UInt32 => Arc::new(read_primitive::<u32>(rows, data_type)),

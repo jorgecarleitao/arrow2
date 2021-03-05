@@ -18,7 +18,11 @@
 use std::any::Any;
 
 use crate::error::Result;
-use crate::{buffer::Bitmap, datatypes::DataType};
+use crate::types::days_ms;
+use crate::{
+    buffer::Bitmap,
+    datatypes::{DataType, IntervalUnit},
+};
 
 pub trait Array: std::fmt::Debug + std::fmt::Display + Send + Sync + ToFFI {
     fn as_any(&self) -> &dyn Any;
@@ -79,15 +83,20 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
         DataType::Boolean => Box::new(BooleanArray::new_empty()),
         DataType::Int8 => Box::new(PrimitiveArray::<i8>::new_empty(data_type)),
         DataType::Int16 => Box::new(PrimitiveArray::<i16>::new_empty(data_type)),
-        DataType::Int32 | DataType::Date32 | DataType::Time32(_) => {
+        DataType::Int32
+        | DataType::Date32
+        | DataType::Time32(_)
+        | DataType::Interval(IntervalUnit::YearMonth) => {
             Box::new(PrimitiveArray::<i32>::new_empty(data_type))
+        }
+        DataType::Interval(IntervalUnit::DayTime) => {
+            Box::new(PrimitiveArray::<days_ms>::new_empty(data_type))
         }
         DataType::Int64
         | DataType::Date64
         | DataType::Time64(_)
         | DataType::Timestamp(_, _)
-        | DataType::Duration(_)
-        | DataType::Interval(_) => Box::new(PrimitiveArray::<i64>::new_empty(data_type)),
+        | DataType::Duration(_) => Box::new(PrimitiveArray::<i64>::new_empty(data_type)),
         DataType::Decimal(_, _) => Box::new(PrimitiveArray::<i128>::new_empty(data_type)),
         DataType::UInt8 => Box::new(PrimitiveArray::<u8>::new_empty(data_type)),
         DataType::UInt16 => Box::new(PrimitiveArray::<u16>::new_empty(data_type)),
@@ -127,15 +136,20 @@ pub fn new_null_array(data_type: DataType, length: usize) -> Box<dyn Array> {
         DataType::Boolean => Box::new(BooleanArray::new_null(length)),
         DataType::Int8 => Box::new(PrimitiveArray::<i8>::new_null(data_type, length)),
         DataType::Int16 => Box::new(PrimitiveArray::<i16>::new_null(data_type, length)),
-        DataType::Int32 | DataType::Date32 | DataType::Time32(_) => {
+        DataType::Int32
+        | DataType::Date32
+        | DataType::Time32(_)
+        | DataType::Interval(IntervalUnit::YearMonth) => {
             Box::new(PrimitiveArray::<i32>::new_null(data_type, length))
+        }
+        DataType::Interval(IntervalUnit::DayTime) => {
+            Box::new(PrimitiveArray::<days_ms>::new_null(data_type, length))
         }
         DataType::Int64
         | DataType::Date64
         | DataType::Time64(_)
         | DataType::Timestamp(_, _)
-        | DataType::Duration(_)
-        | DataType::Interval(_) => Box::new(PrimitiveArray::<i64>::new_null(data_type, length)),
+        | DataType::Duration(_) => Box::new(PrimitiveArray::<i64>::new_null(data_type, length)),
         DataType::Decimal(_, _) => Box::new(PrimitiveArray::<i128>::new_null(data_type, length)),
         DataType::UInt8 => Box::new(PrimitiveArray::<u8>::new_null(data_type, length)),
         DataType::UInt16 => Box::new(PrimitiveArray::<u16>::new_null(data_type, length)),
@@ -185,15 +199,18 @@ pub fn clone(array: &dyn Array) -> Box<dyn Array> {
         DataType::Boolean => clone_dyn!(array, BooleanArray),
         DataType::Int8 => clone_dyn!(array, PrimitiveArray<i8>),
         DataType::Int16 => clone_dyn!(array, PrimitiveArray<i16>),
-        DataType::Int32 | DataType::Date32 | DataType::Time32(_) => {
+        DataType::Int32
+        | DataType::Date32
+        | DataType::Time32(_)
+        | DataType::Interval(IntervalUnit::YearMonth) => {
             clone_dyn!(array, PrimitiveArray<i32>)
         }
+        DataType::Interval(IntervalUnit::DayTime) => clone_dyn!(array, PrimitiveArray<days_ms>),
         DataType::Int64
         | DataType::Date64
         | DataType::Time64(_)
         | DataType::Timestamp(_, _)
-        | DataType::Duration(_)
-        | DataType::Interval(_) => clone_dyn!(array, PrimitiveArray<i64>),
+        | DataType::Duration(_) => clone_dyn!(array, PrimitiveArray<i64>),
         DataType::Decimal(_, _) => clone_dyn!(array, PrimitiveArray<i128>),
         DataType::UInt8 => clone_dyn!(array, PrimitiveArray<u8>),
         DataType::UInt16 => clone_dyn!(array, PrimitiveArray<u16>),
