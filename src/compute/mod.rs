@@ -28,6 +28,7 @@ pub mod limit;
 pub mod sort;
 pub mod substring;
 pub mod take;
+pub mod temporal;
 mod utils;
 
 #[cfg(feature = "regex")]
