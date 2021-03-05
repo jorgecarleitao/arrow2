@@ -21,6 +21,9 @@ use super::{display_fmt, ffi::ToFFI, Array, FromFFI};
 
 use crate::error::Result;
 
+/// A [`BooleanArray`] is arrow's equivalent to `Vec<Option<bool>>`, i.e.
+/// an array designed for highly performant operations on optionally nullable booleans,
+/// The size of this struct is `O(1)` as all data is stored behind an `Arc`.
 #[derive(Debug, Clone)]
 pub struct BooleanArray {
     data_type: DataType,
@@ -30,19 +33,28 @@ pub struct BooleanArray {
 }
 
 impl BooleanArray {
+    /// Returns a new empty [`BooleanArray`].
     #[inline]
     pub fn new_empty() -> Self {
         Self::from_data(Bitmap::new(), None)
     }
 
+    /// Returns a new [`BooleanArray`] whose all slots are null / `None`.
     #[inline]
     pub fn new_null(length: usize) -> Self {
         let bitmap = Bitmap::new_zeroed(length);
         Self::from_data(bitmap.clone(), Some(bitmap))
     }
 
+    /// The canonical method to create a [`BooleanArray`] out of low-end APIs.
+    /// # Panics
+    /// This function panics iff:
+    /// * The validity is not `None` and its length is different from `values`'s length
     #[inline]
     pub fn from_data(values: Bitmap, validity: Option<Bitmap>) -> Self {
+        if let Some(ref validity) = validity {
+            assert_eq!(values.len(), validity.len());
+        }
         Self {
             data_type: DataType::Boolean,
             values,
@@ -51,6 +63,11 @@ impl BooleanArray {
         }
     }
 
+    /// Returns a slice of this [`BooleanArray`].
+    /// # Implementation
+    /// This operation is `O(1)` as it amounts to essentially increase two ref counts.
+    /// # Panic
+    /// This function panics iff `offset + length >= self.len()`.
     #[inline]
     pub fn slice(&self, offset: usize, length: usize) -> Self {
         let validity = self.validity.clone().map(|x| x.slice(offset, length));
@@ -64,16 +81,11 @@ impl BooleanArray {
 
     /// Returns the element at index `i` as &str
     #[inline]
-    pub fn values_bitmap(&self) -> &Bitmap {
-        &self.values
-    }
-
-    /// Returns the element at index `i` as &str
-    #[inline]
     pub fn value(&self, i: usize) -> bool {
         self.values.get_bit(i)
     }
 
+    /// Returns the values bitmap of this [`BooleanArray`].
     #[inline]
     pub fn values(&self) -> &Bitmap {
         &self.values
@@ -96,10 +108,12 @@ impl Array for BooleanArray {
         &self.data_type
     }
 
+    #[inline]
     fn validity(&self) -> &Option<Bitmap> {
         &self.validity
     }
 
+    #[inline]
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
     }
@@ -146,6 +160,8 @@ unsafe impl FromFFI for BooleanArray {
 }
 
 impl<P: AsRef<[Option<bool>]>> From<P> for BooleanArray {
+    /// Creates a new [`BooleanArray`] out of a slice of Optional `bool`.
+    #[inline]
     fn from(slice: P) -> Self {
         unsafe { Self::from_trusted_len_iter(slice.as_ref().iter().map(|x| x.as_ref())) }
     }
@@ -176,8 +192,7 @@ mod tests {
         assert_eq!(array.is_valid(1), false);
         assert_eq!(array.is_valid(2), true);
 
-        let array2 =
-            BooleanArray::from_data(array.values_bitmap().clone(), array.validity().clone());
+        let array2 = BooleanArray::from_data(array.values().clone(), array.validity().clone());
         assert_eq!(array, array2);
 
         let array = array.slice(1, 2);

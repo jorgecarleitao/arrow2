@@ -267,7 +267,6 @@ mod tests {
         let a = Primitive::<i32>::from_slice(data_values).to(DataType::Int32);
         let b = BooleanArray::from_slice(filter_values);
         let c = filter(&a, &b).unwrap();
-        let d = c.as_ref().as_any().downcast_ref::<Int32Array>().unwrap();
 
         let expected = Primitive::<i32>::from_slice(&[65, 67]).to(DataType::Int32);
 

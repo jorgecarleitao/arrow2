@@ -27,9 +27,18 @@ use super::{
     Array, GenericBinaryArray, Offset,
 };
 
-/// An arrow array with UTF8s.
+/// A [`Utf8Array`] is arrow's equivalent of `Vec<Option<String>>`, i.e.
+/// an array designed for highly performant operations on optionally nullable strings.
+/// The size of this struct is `O(1)` as all data is stored behind an `Arc`.
 /// # Example
-///
+/// ```
+/// # use arrow2::array::Utf8Array;
+/// # fn main() {
+/// let data = vec![Some("hello"), None, Some("hello2")];
+/// let array = Utf8Array::<i32>::from_iter(data);
+/// assert_eq!(array.value(0), "hello");
+/// }
+/// ```
 #[derive(Debug, Clone)]
 pub struct Utf8Array<O: Offset> {
     data_type: DataType,
@@ -40,12 +49,33 @@ pub struct Utf8Array<O: Offset> {
 }
 
 impl<O: Offset> Utf8Array<O> {
+    /// Returns a new empty [`Utf8Array`].
+    #[inline]
     pub fn new_empty() -> Self {
         unsafe { Self::from_data_unchecked(Buffer::from(&[O::zero()]), Buffer::new(), None) }
     }
 
+    /// Returns a new [`Utf8Array`] whose all slots are null / `None`.
+    #[inline]
+    pub fn new_null(length: usize) -> Self {
+        Self::from_data(
+            Buffer::new_zeroed(length + 1),
+            Buffer::new(),
+            Some(Bitmap::new_zeroed(length)),
+        )
+    }
+
+    /// The canonical method to create a [`Utf8Array`] out of low-end APIs.
+    /// # Panics
+    /// This function panics iff:
+    /// * The `offsets` and `values` are consistent
+    /// * The `values` between `offsets` are utf8 encoded
+    /// * The validity is not `None` and its length is different from `values`'s length
     pub fn from_data(offsets: Buffer<O>, values: Buffer<u8>, validity: Option<Bitmap>) -> Self {
         check_offsets_and_utf8(&offsets, &values);
+        if let Some(ref validity) = validity {
+            assert_eq!(offsets.len(), validity.len() + 1);
+        }
 
         Self {
             data_type: if O::is_large() {
@@ -60,15 +90,7 @@ impl<O: Offset> Utf8Array<O> {
         }
     }
 
-    #[inline]
-    pub fn new_null(length: usize) -> Self {
-        Self::from_data(
-            Buffer::new_zeroed(length + 1),
-            Buffer::new(),
-            Some(Bitmap::new_zeroed(length)),
-        )
-    }
-
+    /// The same as [`Utf8Array::from_data`] but does not check for utf8.
     /// # Safety
     /// `values` buffer must contain valid utf8 between every `offset`
     pub unsafe fn from_data_unchecked(
@@ -105,6 +127,11 @@ impl<O: Offset> Utf8Array<O> {
         std::str::from_utf8(slice).unwrap()
     }
 
+    /// Returns a slice of this [`Utf8Array`].
+    /// # Implementation
+    /// This operation is `O(1)` as it amounts to essentially increase two ref counts.
+    /// # Panic
+    /// This function panics iff `offset + length >= self.len()`.
     pub fn slice(&self, offset: usize, length: usize) -> Self {
         let validity = self.validity.clone().map(|x| x.slice(offset, length));
         // + 1: `length == 0` implies that we take the first offset.
@@ -131,21 +158,25 @@ impl<O: Offset> Utf8Array<O> {
         std::str::from_utf8(slice).unwrap()
     }
 
+    /// Returns the offsets of this [`Utf8Array`].
     #[inline]
     pub fn offsets(&self) -> &[O] {
         self.offsets.as_slice()
     }
 
+    /// Returns the offset [`Buffer`] of this [`Utf8Array`].
     #[inline]
     pub fn offsets_buffer(&self) -> &Buffer<O> {
         &self.offsets
     }
 
+    /// Returns the values of this [`Utf8Array`] as a slice of `u8`
     #[inline]
     pub fn values(&self) -> &[u8] {
         self.values.as_slice()
     }
 
+    /// Returns the values [`Buffer`] of this [`Utf8Array`]
     #[inline]
     pub fn values_buffer(&self) -> &Buffer<u8> {
         &self.values
