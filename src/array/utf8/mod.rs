@@ -32,11 +32,12 @@ use super::{
 /// The size of this struct is `O(1)` as all data is stored behind an `Arc`.
 /// # Example
 /// ```
-/// # use arrow2::array::Utf8Array;
-/// # fn main() {
-/// let data = vec![Some("hello"), None, Some("hello2")];
-/// let array = Utf8Array::<i32>::from_iter(data);
-/// assert_eq!(array.value(0), "hello");
+/// use std::iter::FromIterator;
+/// use arrow2::array::Utf8Array;
+/// fn main() {
+///     let data = vec![Some("hello"), None, Some("hello2")];
+///     let array = Utf8Array::<i32>::from_iter(data);
+///     assert_eq!(array.value(0), "hello");
 /// }
 /// ```
 #[derive(Debug, Clone)]
