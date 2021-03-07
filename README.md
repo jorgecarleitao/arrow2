@@ -20,6 +20,7 @@ The test suite is a _superset_ of all integration tests that the original implem
 ## Features in this crate and not in the original
 
 * Uses Rust's compiler whenever possible to prove that memory reads are sound
+* MIRI checks on non-IO components (MIRI and file systems are a bit funny atm)
 * IPC supports big endian
 * More predictable JSON reader
 * Generalized parsing of CSV based on logical data types
