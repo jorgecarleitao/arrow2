@@ -493,7 +493,7 @@ impl From<MutableBuffer<u64>> for MutableBuffer<u8> {
     fn from(buffer: MutableBuffer<u64>) -> Self {
         let ratio = std::mem::size_of::<u64>() / std::mem::size_of::<u8>();
 
-        let capacity = buffer.capacity;
+        let capacity = buffer.capacity * ratio;
         let len = buffer.len * ratio;
         let ptr = unsafe { NonNull::new_unchecked(buffer.ptr.as_ptr() as *mut u8) };
         // so that the memory region is not deallocated; ownership was transfered
