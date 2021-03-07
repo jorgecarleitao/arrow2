@@ -42,7 +42,7 @@ enum State {
 /// "taken" from an array to be filtered.
 #[derive(Debug)]
 pub(crate) struct SlicesIterator<'a> {
-    iter: Enumerate<BitChunkIterator<'a>>,
+    iter: Enumerate<BitChunkIterator<'a, u64>>,
     state: State,
     filter_count: usize,
     remainder_mask: u64,

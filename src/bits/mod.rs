@@ -52,10 +52,17 @@ pub fn bytes_for(bits: usize) -> usize {
 
 #[inline]
 pub(crate) fn null_count(slice: &[u8], offset: usize, len: usize) -> usize {
-    let chunks = chunk_iterator::BitChunks::new(slice, offset, len);
+    let chunks = chunk_iterator::BitChunks::<u64>::new(slice, offset, len);
 
     let mut count: usize = chunks.iter().map(|c| c.count_ones() as usize).sum();
-    count += chunks.remainder().count_ones() as usize;
+
+    if chunks.remainder_len() > 0 {
+        // mask least significant bits up to len, as they are otherwise not required
+        // let remainder = chunks.remainder() & !0u64 >> (64 - chunks.remainder_len());
+        // here we shift instead because it is a bit faster
+        let remainder = chunks.remainder() & !0u64 >> (64 - chunks.remainder_len());
+        count += remainder.count_ones() as usize;
+    }
 
     len - count
 }

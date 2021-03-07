@@ -44,7 +44,7 @@ where
     let rem = &rem.to_le_bytes()[0..remainder_bytes];
     buffer.extend_from_slice(rem);
 
-    let length = lhs_chunks.remainder_len() + lhs_chunks.chunk_len() * 64;
+    let length = lhs.len();
 
     (buffer, length).into()
 }
@@ -66,9 +66,7 @@ where
     let rem = &rem.to_le_bytes()[0..remainder_bytes];
     buffer.extend_from_slice(rem);
 
-    let length = lhs_chunks.remainder_len() + lhs_chunks.chunk_len() * 64;
-
-    (buffer, length).into()
+    (buffer, lhs.len()).into()
 }
 
 fn and(lhs: &Bitmap, rhs: &Bitmap) -> Bitmap {

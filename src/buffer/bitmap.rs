@@ -446,7 +446,7 @@ impl Default for MutableBitmap {
 impl Bitmap {
     /// Returns an iterator over bits in chunks of `u64`, which is useful for
     /// bit operations.
-    pub fn chunks(&self) -> BitChunks {
+    pub fn chunks(&self) -> BitChunks<u64> {
         BitChunks::new(&self.bytes, self.offset, self.length)
     }
 }
