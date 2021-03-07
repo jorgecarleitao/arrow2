@@ -34,3 +34,6 @@ pub fn lexical_to_string<N: lexical_core::ToLexical>(n: N) -> String {
 
 #[cfg(test)]
 pub mod test_util;
+
+#[cfg(feature = "benchmarks")]
+pub mod bench_util;

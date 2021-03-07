@@ -146,6 +146,8 @@ impl<'a, O: Offset> Growable<'a> for GrowableList<'a, O> {
     }
 
     fn extend_validity(&mut self, additional: usize) {
+        self.offsets.reserve(additional);
+        self.validity.reserve(additional);
         (0..additional).for_each(|_| {
             self.offsets.push(self.last_offset);
             self.validity.push(false)

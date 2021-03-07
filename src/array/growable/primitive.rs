@@ -20,6 +20,7 @@ use std::sync::Arc;
 use crate::{
     array::{Array, PrimitiveArray},
     buffer::{MutableBitmap, MutableBuffer},
+    datatypes::DataType,
     types::NativeType,
 };
 
@@ -30,7 +31,8 @@ use super::{
 
 /// A growable PrimitiveArray
 pub struct GrowablePrimitive<'a, T: NativeType> {
-    arrays: Vec<&'a PrimitiveArray<T>>,
+    data_type: DataType,
+    arrays: Vec<&'a [T]>,
     validity: MutableBitmap,
     values: MutableBuffer<T>,
     // function used to extend nulls from arrays. This function's lifetime is bound to the array
@@ -53,12 +55,20 @@ impl<'a, T: NativeType> GrowablePrimitive<'a, T> {
             .map(|array| build_extend_null_bits(*array, use_validity))
             .collect();
 
+        let data_type = arrays[0].data_type().clone();
         let arrays = arrays
             .iter()
-            .map(|array| array.as_any().downcast_ref::<PrimitiveArray<T>>().unwrap())
+            .map(|array| {
+                array
+                    .as_any()
+                    .downcast_ref::<PrimitiveArray<T>>()
+                    .unwrap()
+                    .values()
+            })
             .collect::<Vec<_>>();
 
         Self {
+            data_type,
             arrays,
             values: MutableBuffer::with_capacity(capacity),
             validity: MutableBitmap::with_capacity(capacity),
@@ -66,15 +76,12 @@ impl<'a, T: NativeType> GrowablePrimitive<'a, T> {
         }
     }
 
+    #[inline]
     fn to(&mut self) -> PrimitiveArray<T> {
         let validity = std::mem::take(&mut self.validity);
         let values = std::mem::take(&mut self.values);
 
-        PrimitiveArray::<T>::from_data(
-            self.arrays[0].data_type().clone(),
-            values.into(),
-            validity.into(),
-        )
+        PrimitiveArray::<T>::from_data(self.data_type.clone(), values.into(), validity.into())
     }
 }
 
@@ -83,7 +90,7 @@ impl<'a, T: NativeType> Growable<'a> for GrowablePrimitive<'a, T> {
     fn extend(&mut self, index: usize, start: usize, len: usize) {
         (self.extend_null_bits[index])(&mut self.validity, start, len);
 
-        let values = self.arrays[index].values();
+        let values = self.arrays[index];
         self.values.extend_from_slice(&values[start..start + len]);
     }
 
@@ -91,27 +98,27 @@ impl<'a, T: NativeType> Growable<'a> for GrowablePrimitive<'a, T> {
     fn extend_validity(&mut self, additional: usize) {
         self.values
             .resize(self.values.len() + additional, T::default());
+        self.validity.reserve(additional);
         (0..additional).for_each(|_| {
-            self.validity.push(false);
+            unsafe { self.validity.push_unchecked(false) };
         });
     }
 
+    #[inline]
     fn to_arc(&mut self) -> Arc<dyn Array> {
         Arc::new(self.to())
     }
 
+    #[inline]
     fn to_box(&mut self) -> Box<dyn Array> {
         Box::new(self.to())
     }
 }
 
 impl<'a, T: NativeType> Into<PrimitiveArray<T>> for GrowablePrimitive<'a, T> {
+    #[inline]
     fn into(self) -> PrimitiveArray<T> {
-        PrimitiveArray::<T>::from_data(
-            self.arrays[0].data_type().clone(),
-            self.values.into(),
-            self.validity.into(),
-        )
+        PrimitiveArray::<T>::from_data(self.data_type, self.values.into(), self.validity.into())
     }
 }
 

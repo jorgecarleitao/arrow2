@@ -218,6 +218,7 @@ impl<T: NativeType> MutableBuffer<T> {
     /// buffer.extend_from_slice(&[2u32, 0]);
     /// assert_eq!(buffer.len(), 2)
     /// ```
+    #[inline]
     pub fn extend_from_slice(&mut self, items: &[T]) {
         let additional = items.len();
         self.reserve(additional);

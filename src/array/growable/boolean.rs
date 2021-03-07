@@ -83,6 +83,8 @@ impl<'a> Growable<'a> for GrowableBoolean<'a> {
     }
 
     fn extend_validity(&mut self, additional: usize) {
+        self.values.reserve(additional);
+        self.validity.reserve(additional);
         (0..additional).for_each(|_| {
             self.values.push(false);
             self.validity.push(false);

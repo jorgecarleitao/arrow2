@@ -181,6 +181,13 @@ impl MutableBitmap {
         }
     }
 
+    /// Initializes an a pre-allocated [`MutableBitmap`] with capacity for `capacity` bits.
+    #[inline(always)]
+    pub fn reserve(&mut self, additional: usize) {
+        self.buffer
+            .reserve((self.length + additional).saturating_add(7) / 8 - self.buffer.len())
+    }
+
     /// Pushes a new bit to the container, re-sizing it if necessary.
     #[inline]
     pub fn push(&mut self, value: bool) {
@@ -190,6 +197,20 @@ impl MutableBitmap {
         self.mask = self.mask.rotate_left(1);
         if self.mask == 1 {
             self.buffer.push(self.byte);
+            self.byte = 0;
+        }
+        self.length += 1;
+    }
+
+    /// Pushes a new bit to the container, re-sizing it if necessary.
+    #[inline]
+    pub unsafe fn push_unchecked(&mut self, value: bool) {
+        if value {
+            self.byte |= self.mask
+        };
+        self.mask = self.mask.rotate_left(1);
+        if self.mask == 1 {
+            self.buffer.push_unchecked(self.byte);
             self.byte = 0;
         }
         self.length += 1;

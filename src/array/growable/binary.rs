@@ -99,6 +99,8 @@ impl<'a, O: Offset> Growable<'a> for GrowableBinary<'a, O> {
     }
 
     fn extend_validity(&mut self, additional: usize) {
+        self.offsets.reserve(additional);
+        self.validity.reserve(additional);
         (0..additional).for_each(|_| {
             self.offsets.push(self.length);
             self.validity.push(false)

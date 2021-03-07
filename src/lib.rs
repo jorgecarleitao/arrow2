@@ -29,7 +29,7 @@ pub(crate) mod bits;
 pub mod datatypes;
 
 pub mod ffi;
-mod util;
+pub mod util;
 
 // so that documentation gets test
 #[cfg(any(test, doctest))]
