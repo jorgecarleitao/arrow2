@@ -89,7 +89,7 @@ pub unsafe fn unset_bit_raw(data: *mut u8, i: usize) {
     *data.add(i >> 3) &= UNSET_BIT_MASK[i & 7];
 }
 
-pub use chunk_iterator::{BitChunkIterator, BitChunks};
+pub use chunk_iterator::{BitChunk, BitChunkIterator, BitChunks};
 
 #[cfg(test)]
 mod tests {

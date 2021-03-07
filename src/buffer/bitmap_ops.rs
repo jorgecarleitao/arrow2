@@ -82,8 +82,8 @@ fn eq(lhs: &Bitmap, rhs: &Bitmap) -> bool {
         return false;
     }
 
-    let lhs_chunks = lhs.chunks();
-    let rhs_chunks = rhs.chunks();
+    let lhs_chunks = lhs.chunks::<u64>();
+    let rhs_chunks = rhs.chunks::<u64>();
 
     let equal_chunks = lhs_chunks
         .iter()

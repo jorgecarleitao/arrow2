@@ -19,7 +19,9 @@ use std::iter::FromIterator;
 use std::sync::Arc;
 
 use crate::{
-    bits::{get_bit, get_bit_unchecked, null_count, set_bit_raw, unset_bit_raw, BitChunks},
+    bits::{
+        get_bit, get_bit_unchecked, null_count, set_bit_raw, unset_bit_raw, BitChunk, BitChunks,
+    },
     buffer::bytes::Bytes,
 };
 
@@ -444,9 +446,9 @@ impl Default for MutableBitmap {
 }
 
 impl Bitmap {
-    /// Returns an iterator over bits in chunks of `u64`, which is useful for
+    /// Returns an iterator over bits in chunks of `T`, which is useful for
     /// bit operations.
-    pub fn chunks(&self) -> BitChunks<u64> {
+    pub fn chunks<T: BitChunk>(&self) -> BitChunks<T> {
         BitChunks::new(&self.bytes, self.offset, self.length)
     }
 }
