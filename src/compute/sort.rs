@@ -416,11 +416,11 @@ pub struct SortColumn<'a> {
     pub options: Option<SortOptions>,
 }
 
-/// Sort a list of `ArrayRef` using `SortOptions` provided for each array.
+/// Sort a list of [`Array`] using [`SortOptions`] provided for each array.
+/// # Implementaqtion
+/// The sort is stable and lexicographical on values.
 ///
-/// Performs a stable lexicographical sort on values and indices.
-///
-/// Returns an `ArrowError::ComputeError(String)` if any of the array type is either unsupported by
+/// Returns an [`ArrowError`] if any of the array type is either unsupported by
 /// `lexsort_to_indices` or `take`.
 ///
 /// Example:
@@ -461,7 +461,7 @@ pub fn lexsort(columns: &[SortColumn]) -> Result<Vec<Box<dyn Array>>> {
 }
 
 /// Sort elements lexicographically from a list of `ArrayRef` into an unsigned integer
-/// (`UInt32Array`) of indices.
+/// [`Int32Array`] of indices.
 pub fn lexsort_to_indices(columns: &[SortColumn]) -> Result<Int32Array> {
     if columns.is_empty() {
         return Err(ArrowError::InvalidArgumentError(

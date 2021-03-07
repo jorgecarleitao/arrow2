@@ -243,7 +243,7 @@ where
 }
 
 #[inline]
-fn add<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<PrimitiveArray<T>>
+pub fn add<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<PrimitiveArray<T>>
 where
     T: NativeType + Add<Output = T>,
 {

@@ -9,7 +9,9 @@ authors = ["Jorge C. Leitao <jorgecarleitao@gmail.com>", "Apache Arrow <dev@arro
 keywords = [ "arrow", "analytics" ]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "arrow2"
+bench = false
 
 [dependencies]
 num = "^0.3"

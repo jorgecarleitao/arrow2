@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-//! Defines take kernel for [Array]
+//! Defines take kernel for [`Array`]
 
 use crate::{
     array::{
