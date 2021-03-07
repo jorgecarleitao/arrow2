@@ -77,28 +77,25 @@ where
     let (_, upper) = iterator.size_hint();
     let len = upper.expect("trusted_len_unzip requires an upper limit");
 
-    let mut null = MutableBitmap::with_capacity(len);
+    let mut validity = MutableBitmap::with_capacity(len);
     let mut values = MutableBitmap::with_capacity(len);
 
     for item in iterator {
         let item = if let Some(item) = item {
-            null.push_unchecked(true);
+            validity.push(true);
             *item.borrow()
         } else {
-            null.push_unchecked(false);
+            validity.push(false);
             false
         };
-        values.push_unchecked(item);
+        values.push(item);
     }
     assert_eq!(
         values.len(),
         len,
         "Trusted iterator length was not accurately reported"
     );
-    values.set_len(len);
-    null.set_len(len);
-
-    (null.into(), values.into())
+    (validity.into(), values.into())
 }
 
 /// # Safety
@@ -119,13 +116,13 @@ where
 
     for item in iterator {
         let item = if let Some(item) = item? {
-            null.push_unchecked(true);
+            null.push(true);
             *item.borrow()
         } else {
-            null.push_unchecked(false);
+            null.push(false);
             false
         };
-        values.push_unchecked(item);
+        values.push(item);
     }
     assert_eq!(
         values.len(),

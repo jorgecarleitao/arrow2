@@ -99,8 +99,10 @@ impl<'a, O: Offset> Growable<'a> for GrowableBinary<'a, O> {
     }
 
     fn extend_validity(&mut self, additional: usize) {
-        (0..additional).for_each(|_| self.offsets.push(self.length));
-        self.validity.extend_constant(additional, false);
+        (0..additional).for_each(|_| {
+            self.offsets.push(self.length);
+            self.validity.push(false)
+        });
     }
 
     fn to_arc(&mut self) -> Arc<dyn Array> {

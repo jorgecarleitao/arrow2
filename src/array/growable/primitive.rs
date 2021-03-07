@@ -91,7 +91,9 @@ impl<'a, T: NativeType> Growable<'a> for GrowablePrimitive<'a, T> {
     fn extend_validity(&mut self, additional: usize) {
         self.values
             .resize(self.values.len() + additional, T::default());
-        self.validity.extend_constant(additional, false);
+        (0..additional).for_each(|_| {
+            self.validity.push(false);
+        });
     }
 
     fn to_arc(&mut self) -> Arc<dyn Array> {

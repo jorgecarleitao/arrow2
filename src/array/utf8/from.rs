@@ -103,12 +103,12 @@ where
     dst = dst.add(1);
     for item in iterator {
         if let Some(item) = item {
-            null.push_unchecked(true);
+            null.push(true);
             let s = item.as_ref();
             length += O::from_usize(s.len()).unwrap();
             values.extend_from_slice(s.as_bytes());
         } else {
-            null.push_unchecked(false);
+            null.push(false);
             values.extend_from_slice(b"");
         };
 
@@ -121,7 +121,6 @@ where
         "Trusted iterator length was not accurately reported"
     );
     offsets.set_len(len + 1);
-    null.set_len(len);
 
     (null.into(), offsets.into(), values.into())
 }
@@ -149,12 +148,12 @@ where
     let mut dst = offsets.as_mut_ptr();
     for item in iterator {
         if let Some(item) = item? {
-            null.push_unchecked(true);
+            null.push(true);
             let s = item.as_ref();
             length += O::from_usize(s.len()).unwrap();
             values.extend_from_slice(s.as_bytes());
         } else {
-            null.push_unchecked(false);
+            null.push(false);
         };
         std::ptr::write(dst, length);
         dst = dst.add(1);
@@ -165,7 +164,6 @@ where
         "Trusted iterator length was not accurately reported"
     );
     offsets.set_len(len);
-    null.set_len(len);
 
     Ok((null.into(), offsets.into(), values.into()))
 }
@@ -268,5 +266,19 @@ impl<O: Offset> Utf8Primitive<O> {
 impl<O: Offset> ToArray for Utf8Primitive<O> {
     fn to_arc(self, _: &DataType) -> Arc<dyn Array> {
         Arc::new(self.to())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_from() {
+        let array = Utf8Array::<i32>::from(&vec![Some("hello"), Some(" "), None]);
+
+        let a = array.validity().as_ref().unwrap();
+        assert_eq!(a.len(), 3);
+        assert_eq!(a.as_slice()[0], 0b00000011);
     }
 }

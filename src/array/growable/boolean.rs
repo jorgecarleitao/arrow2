@@ -83,8 +83,10 @@ impl<'a> Growable<'a> for GrowableBoolean<'a> {
     }
 
     fn extend_validity(&mut self, additional: usize) {
-        self.values.extend_constant(additional, false);
-        self.validity.extend_constant(additional, false);
+        (0..additional).for_each(|_| {
+            self.values.push(false);
+            self.validity.push(false);
+        });
     }
 
     fn to_arc(&mut self) -> Arc<dyn Array> {

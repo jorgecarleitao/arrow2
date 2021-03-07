@@ -18,16 +18,6 @@
 mod chunk_iterator;
 
 const BIT_MASK: [u8; 8] = [1, 2, 4, 8, 16, 32, 64, 128];
-const UNSET_BIT_MASK: [u8; 8] = [
-    255 - 1,
-    255 - 2,
-    255 - 4,
-    255 - 8,
-    255 - 16,
-    255 - 32,
-    255 - 64,
-    255 - 128,
-];
 
 /// Returns whether bit at position `i` in `data` is set or not
 #[inline]
@@ -65,28 +55,6 @@ pub(crate) fn null_count(slice: &[u8], offset: usize, len: usize) -> usize {
     }
 
     len - count
-}
-
-/// Sets bit at position `i` for `data`
-///
-/// # Safety
-///
-/// Note this doesn't do any bound checking, for performance reason. The caller is
-/// responsible to guarantee that `i` is within bounds.
-#[inline]
-pub unsafe fn set_bit_raw(data: *mut u8, i: usize) {
-    *data.add(i >> 3) |= BIT_MASK[i & 7];
-}
-
-/// Sets bit at position `i` for `data` to 0
-///
-/// # Safety
-///
-/// Note this doesn't do any bound checking, for performance reason. The caller is
-/// responsible to guarantee that `i` is within bounds.
-#[inline]
-pub unsafe fn unset_bit_raw(data: *mut u8, i: usize) {
-    *data.add(i >> 3) &= UNSET_BIT_MASK[i & 7];
 }
 
 pub use chunk_iterator::{BitChunk, BitChunkIterator, BitChunks};

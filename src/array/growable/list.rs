@@ -146,8 +146,10 @@ impl<'a, O: Offset> Growable<'a> for GrowableList<'a, O> {
     }
 
     fn extend_validity(&mut self, additional: usize) {
-        (0..additional).for_each(|_| self.offsets.push(self.last_offset));
-        self.validity.extend_constant(additional, false);
+        (0..additional).for_each(|_| {
+            self.offsets.push(self.last_offset);
+            self.validity.push(false)
+        });
     }
 
     fn to_arc(&mut self) -> Arc<dyn Array> {

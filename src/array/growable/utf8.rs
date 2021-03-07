@@ -77,7 +77,9 @@ impl<'a, O: Offset> GrowableUtf8<'a, O> {
         let offsets = std::mem::take(&mut self.offsets);
         let values = std::mem::take(&mut self.values);
 
-        Utf8Array::<O>::from_data(offsets.into(), values.into(), validity.into())
+        unsafe {
+            Utf8Array::<O>::from_data_unchecked(offsets.into(), values.into(), validity.into())
+        }
     }
 }
 
@@ -99,8 +101,10 @@ impl<'a, O: Offset> Growable<'a> for GrowableUtf8<'a, O> {
     }
 
     fn extend_validity(&mut self, additional: usize) {
-        (0..additional).for_each(|_| self.offsets.push(self.length));
-        self.validity.extend_constant(additional, false);
+        (0..additional).for_each(|_| {
+            self.offsets.push(self.length);
+            self.validity.push(false);
+        });
     }
 
     fn to_arc(&mut self) -> Arc<dyn Array> {
@@ -114,11 +118,13 @@ impl<'a, O: Offset> Growable<'a> for GrowableUtf8<'a, O> {
 
 impl<'a, O: Offset> Into<Utf8Array<O>> for GrowableUtf8<'a, O> {
     fn into(self) -> Utf8Array<O> {
-        Utf8Array::<O>::from_data(
-            self.offsets.into(),
-            self.values.into(),
-            self.validity.into(),
-        )
+        unsafe {
+            Utf8Array::<O>::from_data_unchecked(
+                self.offsets.into(),
+                self.values.into(),
+                self.validity.into(),
+            )
+        }
     }
 }
 

@@ -140,8 +140,10 @@ pub fn is_null(input: &dyn Array) -> BooleanArray {
 pub fn is_not_null(input: &dyn Array) -> BooleanArray {
     let values = match input.validity() {
         None => {
-            let mut buffer = MutableBitmap::new();
-            buffer.extend_constant(input.len(), true);
+            let mut buffer = MutableBitmap::with_capacity(input.len().saturating_add(7) / 8);
+            (0..input.len()).for_each(|_| {
+                buffer.push(true);
+            });
             buffer.into()
         }
         Some(buffer) => buffer.clone(),

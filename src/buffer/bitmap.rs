@@ -19,9 +19,7 @@ use std::iter::FromIterator;
 use std::sync::Arc;
 
 use crate::{
-    bits::{
-        get_bit, get_bit_unchecked, null_count, set_bit_raw, unset_bit_raw, BitChunk, BitChunks,
-    },
+    bits::{get_bit, get_bit_unchecked, null_count, BitChunk, BitChunks},
     buffer::bytes::Bytes,
 };
 
@@ -144,6 +142,8 @@ impl Bitmap {
 #[derive(Debug)]
 pub struct MutableBitmap {
     buffer: MutableBuffer<u8>,
+    mask: u8,
+    byte: u8,
     length: usize,
 }
 
@@ -153,6 +153,8 @@ impl MutableBitmap {
     pub fn new() -> Self {
         Self {
             buffer: MutableBuffer::new(),
+            mask: 1,
+            byte: 0,
             length: 0,
         }
     }
@@ -162,6 +164,8 @@ impl MutableBitmap {
     pub fn from_len_zeroed(length: usize) -> Self {
         Self {
             buffer: MutableBuffer::from_len_zeroed(length.saturating_add(7) / 8),
+            mask: 1,
+            byte: 0,
             length,
         }
     }
@@ -170,7 +174,9 @@ impl MutableBitmap {
     #[inline]
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
-            buffer: MutableBuffer::from_len_zeroed(capacity.saturating_add(7) / 8),
+            buffer: MutableBuffer::with_capacity(capacity.saturating_add(7) / 8),
+            mask: 1,
+            byte: 0,
             length: 0,
         }
     }
@@ -178,28 +184,15 @@ impl MutableBitmap {
     /// Pushes a new bit to the container, re-sizing it if necessary.
     #[inline]
     pub fn push(&mut self, value: bool) {
-        self.buffer
-            .resize((self.length + 1).saturating_add(7) / 8, 0);
         if value {
-            unsafe { set_bit_raw(self.buffer.as_mut_ptr(), self.length) };
-        } else {
-            unsafe { unset_bit_raw(self.buffer.as_mut_ptr(), self.length) };
+            self.byte |= self.mask
+        };
+        self.mask = self.mask.rotate_left(1);
+        if self.mask == 1 {
+            self.buffer.push(self.byte);
+            self.byte = 0;
         }
         self.length += 1;
-    }
-
-    /// Pushes a new bit to the container.
-    /// # Safety
-    /// The caller must ensure that this container has the necessary capacity.
-    #[inline]
-    pub unsafe fn push_unchecked(&mut self, value: bool) {
-        if value {
-            set_bit_raw(self.buffer.as_mut_ptr(), self.length);
-        } else {
-            unset_bit_raw(self.buffer.as_mut_ptr(), self.length);
-        }
-        self.length += 1;
-        self.buffer.set_len(self.length.saturating_add(7) / 8);
     }
 
     /// Returns the number of unset bits on this `Bitmap`
@@ -227,23 +220,6 @@ impl MutableBitmap {
         self.buffer.set_len(len.saturating_add(7) / 8);
         self.length = len;
     }
-
-    /// Extends the [`MutableBitmap`] by a constant bit for `additional` bits.
-    #[inline(always)]
-    pub fn extend_constant(&mut self, additional: usize, value: bool) {
-        self.buffer
-            .resize((self.length + additional).saturating_add(7) / 8, 0);
-        if value {
-            // Soundness: we just resized the buffer to hold bits up to `len`
-            let ptr = self.buffer.as_mut_ptr();
-            unsafe {
-                (self.length..self.length + additional).for_each(|i| {
-                    set_bit_raw(ptr, i);
-                })
-            }
-        };
-        self.length += additional;
-    }
 }
 
 impl From<(MutableBuffer<u8>, usize)> for Bitmap {
@@ -255,14 +231,20 @@ impl From<(MutableBuffer<u8>, usize)> for Bitmap {
 
 impl From<MutableBitmap> for Bitmap {
     #[inline]
-    fn from(buffer: MutableBitmap) -> Self {
+    fn from(mut buffer: MutableBitmap) -> Self {
+        if buffer.mask != 1 {
+            buffer.buffer.push(buffer.byte)
+        };
         Bitmap::from_bytes(buffer.buffer.into(), buffer.length)
     }
 }
 
 impl From<MutableBitmap> for Option<Bitmap> {
     #[inline]
-    fn from(buffer: MutableBitmap) -> Self {
+    fn from(mut buffer: MutableBitmap) -> Self {
+        if buffer.mask != 1 {
+            buffer.buffer.push(buffer.byte)
+        };
         if buffer.null_count() > 0 {
             Some(Bitmap::from_bytes(buffer.buffer.into(), buffer.length))
         } else {
@@ -331,7 +313,12 @@ impl FromIterator<bool> for MutableBitmap {
                 break;
             }
         }
-        Self { buffer, length }
+        Self {
+            buffer,
+            byte: 0,
+            length,
+            mask: 1u8.rotate_left(length as u32),
+        }
     }
 }
 
@@ -378,6 +365,8 @@ impl MutableBitmap {
 
         Self {
             buffer: buffer.into(),
+            byte: 0,
+            mask: 1u8.rotate_left(length as u32),
             length,
         }
     }
@@ -425,6 +414,8 @@ impl MutableBitmap {
 
         Ok(Self {
             buffer: buffer.into(),
+            byte: 0,
+            mask: 1u8.rotate_left(length as u32),
             length,
         })
     }
@@ -566,5 +557,55 @@ mod tests {
         assert_eq!(bitmap.len(), 7);
 
         assert_eq!(bitmap.as_slice()[0], 0b01111111);
+    }
+
+    #[test]
+    fn test_push() {
+        let mut bitmap = MutableBitmap::new();
+        bitmap.push(true);
+        bitmap.push(false);
+        bitmap.push(false);
+        for _ in 0..7 {
+            bitmap.push(true)
+        }
+        let bitmap: Bitmap = bitmap.into();
+        assert_eq!(bitmap.len(), 10);
+
+        assert_eq!(bitmap.as_slice()[0], 0b11111001);
+        assert_eq!(bitmap.as_slice()[1], 0b00000011);
+    }
+
+    #[test]
+    fn test_push_small() {
+        let mut bitmap = MutableBitmap::new();
+        bitmap.push(true);
+        bitmap.push(true);
+        bitmap.push(false);
+        let bitmap: Option<Bitmap> = bitmap.into();
+        let bitmap = bitmap.unwrap();
+        assert_eq!(bitmap.len(), 3);
+        assert_eq!(bitmap.as_slice()[0], 0b00000011);
+    }
+
+    #[test]
+    fn test_push_exact_zeros() {
+        let mut bitmap = MutableBitmap::new();
+        for _ in 0..8 {
+            bitmap.push(false)
+        }
+        let bitmap: Option<Bitmap> = bitmap.into();
+        let bitmap = bitmap.unwrap();
+        assert_eq!(bitmap.len(), 8);
+        assert_eq!(bitmap.as_slice().len(), 1);
+    }
+
+    #[test]
+    fn test_push_exact_ones() {
+        let mut bitmap = MutableBitmap::new();
+        for _ in 0..8 {
+            bitmap.push(true)
+        }
+        let bitmap: Option<Bitmap> = bitmap.into();
+        assert!(bitmap.is_none());
     }
 }

@@ -100,16 +100,16 @@ where
     let (_, upper) = iterator.size_hint();
     let len = upper.expect("trusted_len_unzip requires an upper limit");
 
-    let mut null = MutableBitmap::with_capacity(len);
+    let mut validity = MutableBitmap::with_capacity(len);
     let mut buffer = MutableBuffer::<T>::with_capacity(len);
 
     let mut dst = buffer.as_mut_ptr();
     for item in iterator {
         let item = if let Some(item) = item {
-            null.push_unchecked(true);
+            validity.push(true);
             *item.borrow()
         } else {
-            null.push_unchecked(false);
+            validity.push(false);
             T::default()
         };
         std::ptr::write(dst, item);
@@ -121,9 +121,8 @@ where
         "Trusted iterator length was not accurately reported"
     );
     buffer.set_len(len);
-    null.set_len(len);
 
-    (null, buffer)
+    (validity, buffer)
 }
 
 /// # Safety
@@ -146,10 +145,10 @@ where
     let mut dst = buffer.as_mut_ptr();
     for item in iterator {
         let item = if let Some(item) = item? {
-            null.push_unchecked(true);
+            null.push(true);
             *item.borrow()
         } else {
-            null.push_unchecked(false);
+            null.push(false);
             T::default()
         };
         std::ptr::write(dst, item);
