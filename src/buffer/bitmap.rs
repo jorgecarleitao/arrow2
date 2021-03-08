@@ -463,6 +463,11 @@ impl Bitmap {
     pub fn chunks<T: BitChunk>(&self) -> BitChunks<T> {
         BitChunks::new(&self.bytes, self.offset, self.length)
     }
+
+    #[inline]
+    pub fn bytes(&self) -> &[u8] {
+        &self.bytes
+    }
 }
 
 impl Bitmap {

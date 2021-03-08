@@ -17,9 +17,8 @@
 
 use crate::array::growable::make_growable;
 use crate::array::*;
+use crate::error::Result;
 use crate::record_batch::RecordBatch;
-use crate::{bits::BitChunkIterator, error::Result};
-use std::iter::Enumerate;
 
 /// Function that can filter arbitrary arrays
 pub type Filter<'a> = Box<dyn Fn(&dyn Array) -> Box<dyn Array> + 'a>;
@@ -27,152 +26,125 @@ pub type Filter<'a> = Box<dyn Fn(&dyn Array) -> Box<dyn Array> + 'a>;
 /// Internal state of [SlicesIterator]
 #[derive(Debug, PartialEq)]
 enum State {
-    // it is iterating over bits of a mask (`u64`, steps of size of 1 slot)
-    Bits(u64),
-    // it is iterating over chunks (steps of size of 64 slots)
-    Chunks,
-    // it is iterating over the remainding bits (steps of size of 1 slot)
-    Remainder,
+    // normal iteration
+    Nominal,
     // nothing more to iterate.
-    Finish,
+    Finished,
 }
 
-/// An iterator of `(usize, usize)` each representing an interval `[start,start+len[` whose
-/// slots of a [BooleanArray] are true. Each interval corresponds to a contiguous region of memory to be
-/// "taken" from an array to be filtered.
 #[derive(Debug)]
-pub(crate) struct SlicesIterator<'a> {
-    iter: Enumerate<BitChunkIterator<'a, u64>>,
-    state: State,
+struct SlicesIterator2<'a> {
+    values: std::slice::Iter<'a, u8>,
     filter_count: usize,
-    remainder_mask: u64,
-    remainder_len: usize,
-    chunk_len: usize,
+    mask: u8,
+    max_len: usize,
+    current_byte: &'a u8,
+    state: State,
     len: usize,
     start: usize,
     on_region: bool,
-    current_chunk: usize,
-    current_bit: usize,
 }
 
-impl<'a> SlicesIterator<'a> {
+impl<'a> SlicesIterator2<'a> {
     pub(crate) fn new(filter: &'a BooleanArray) -> Self {
         let values = filter.values();
+        let offset = values.offset();
+        let buffer = &values.bytes()[offset / 8..];
+        let mut iter = buffer.iter();
 
-        let chunks = values.chunks();
+        let (current_byte, state) = match iter.next() {
+            Some(b) => (b, State::Nominal),
+            None => (&0, State::Finished),
+        };
 
         Self {
-            iter: chunks.iter().enumerate(),
-            state: State::Chunks,
+            state,
             filter_count: values.len() - values.null_count(),
-            remainder_len: chunks.remainder_len(),
-            chunk_len: chunks.chunk_len(),
-            remainder_mask: chunks.remainder(),
+            max_len: values.len(),
+            values: iter,
+            mask: 1u8.rotate_left(offset as u32),
+            current_byte,
             len: 0,
             start: 0,
             on_region: false,
-            current_chunk: 0,
-            current_bit: 0,
+        }
+    }
+
+    fn finish(&mut self) -> Option<(usize, usize)> {
+        self.state = State::Finished;
+        if self.on_region {
+            Some((self.start, self.len))
+        } else {
+            None
         }
     }
 
     #[inline]
-    fn current_start(&self) -> usize {
-        self.current_chunk * 64 + self.current_bit
-    }
-
-    #[inline]
-    fn iterate_bits(&mut self, mask: u64, max: usize) -> Option<(usize, usize)> {
-        while self.current_bit < max {
-            if (mask & (1 << self.current_bit)) != 0 {
-                if !self.on_region {
-                    self.start = self.current_start();
-                    self.on_region = true;
-                }
-                self.len += 1;
-            } else if self.on_region {
-                let result = (self.start, self.len);
-                self.len = 0;
-                self.on_region = false;
-                self.current_bit += 1;
-                return Some(result);
-            }
-            self.current_bit += 1;
-        }
-        self.current_bit = 0;
-        None
-    }
-
-    /// iterates over chunks.
-    #[inline]
-    fn iterate_chunks(&mut self) -> Option<(usize, usize)> {
-        while let Some((i, mask)) = self.iter.next() {
-            self.current_chunk = i;
-            if mask == 0 {
-                if self.on_region {
-                    let result = (self.start, self.len);
-                    self.len = 0;
-                    self.on_region = false;
-                    return Some(result);
-                }
-            } else if mask == 18446744073709551615u64 {
-                // = !0u64
-                if !self.on_region {
-                    self.start = self.current_start();
-                    self.on_region = true;
-                }
-                self.len += 64;
-            } else {
-                // there is a chunk that has a non-trivial mask => iterate over bits.
-                self.state = State::Bits(mask);
-                return None;
-            }
-        }
-        // no more chunks => start iterating over the remainder
-        self.current_chunk = self.chunk_len;
-        self.state = State::Remainder;
-        None
+    fn current_len(&self) -> usize {
+        self.start + self.len
     }
 }
 
-impl<'a> Iterator for SlicesIterator<'a> {
+impl<'a> Iterator for SlicesIterator2<'a> {
     type Item = (usize, usize);
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.state {
-            State::Chunks => {
-                match self.iterate_chunks() {
-                    None => {
-                        // iterating over chunks does not yield any new slice => continue to the next
-                        self.current_bit = 0;
-                        self.next()
+        loop {
+            if self.state == State::Finished {
+                return None;
+            }
+            if self.mask == 1 {
+                // at the beginning of a byte => try to skip it all together
+                match (self.on_region, self.current_byte) {
+                    (true, &255u8) => {
+                        self.len += 8;
+                        match self.values.next() {
+                            Some(v) => self.current_byte = v,
+                            None => return self.finish(),
+                        };
+                        continue;
                     }
-                    other => other,
+                    (false, &0) => {
+                        self.len += 8;
+                        match self.values.next() {
+                            Some(v) => self.current_byte = v,
+                            None => return self.finish(),
+                        };
+                        continue;
+                    }
+                    _ => (), // we need to run over all bits of this byte
+                }
+            };
+
+            let value = (self.current_byte & self.mask) != 0;
+            self.mask = self.mask.rotate_left(1);
+            if self.mask == 1 {
+                // reached a new byte => try to fetch it from the iterator
+                match self.values.next() {
+                    Some(v) => self.current_byte = v,
+                    None => return self.finish(),
+                };
+            }
+
+            match (self.on_region, value) {
+                (true, true) => self.len += 1,
+                (false, false) => self.len += 1,
+                (true, _) => {
+                    let result = (self.start, self.len);
+                    self.start += self.len;
+                    self.len = 1;
+                    self.on_region = false;
+                    return Some(result);
+                }
+                (false, _) => {
+                    self.start += self.len;
+                    self.len = 1;
+                    self.on_region = true;
                 }
             }
-            State::Bits(mask) => {
-                match self.iterate_bits(mask, 64) {
-                    None => {
-                        // iterating over bits does not yield any new slice => change back
-                        // to chunks and continue to the next
-                        self.state = State::Chunks;
-                        self.next()
-                    }
-                    other => other,
-                }
+            if self.current_len() == self.max_len {
+                return self.finish();
             }
-            State::Remainder => match self.iterate_bits(self.remainder_mask, self.remainder_len) {
-                None => {
-                    self.state = State::Finish;
-                    if self.on_region {
-                        Some((self.start, self.len))
-                    } else {
-                        None
-                    }
-                }
-                other => other,
-            },
-            State::Finish => None,
         }
     }
 }
@@ -183,7 +155,7 @@ impl<'a> Iterator for SlicesIterator<'a> {
 /// WARNING: the nulls of `filter` are ignored and the value on its slot is considered.
 /// Therefore, it is considered undefined behavior to pass `filter` with null values.
 pub fn build_filter(filter: &BooleanArray) -> Result<Filter> {
-    let iter = SlicesIterator::new(filter);
+    let iter = SlicesIterator2::new(filter);
     let filter_count = iter.filter_count;
     let chunks = iter.collect::<Vec<_>>();
 
@@ -215,7 +187,7 @@ pub fn build_filter(filter: &BooleanArray) -> Result<Filter> {
 /// # }
 /// ```
 pub fn filter(array: &dyn Array, filter: &BooleanArray) -> Result<Box<dyn Array>> {
-    let iter = SlicesIterator::new(filter);
+    let iter = SlicesIterator2::new(filter);
 
     let mut mutable = make_growable(&[array], false, iter.filter_count);
     iter.for_each(|(start, len)| mutable.extend(0, start, len));
@@ -424,10 +396,10 @@ mod tests {
 
     #[test]
     fn test_slice_iterator_bits() {
-        let filter_values = (0..64).map(|i| i == 1).collect::<Vec<bool>>();
+        let filter_values = (0..16).map(|i| i == 1).collect::<Vec<bool>>();
         let filter = BooleanArray::from_slice(filter_values);
 
-        let iter = SlicesIterator::new(&filter);
+        let iter = SlicesIterator2::new(&filter);
         let filter_count = iter.filter_count;
         let chunks = iter.collect::<Vec<_>>();
 
@@ -440,7 +412,7 @@ mod tests {
         let filter_values = (0..64).map(|i| i != 1).collect::<Vec<bool>>();
         let filter = BooleanArray::from_slice(filter_values);
 
-        let iter = SlicesIterator::new(&filter);
+        let iter = SlicesIterator2::new(&filter);
         let filter_count = iter.filter_count;
         let chunks = iter.collect::<Vec<_>>();
 
@@ -453,11 +425,37 @@ mod tests {
         let filter_values = (0..130).map(|i| i % 62 != 0).collect::<Vec<bool>>();
         let filter = BooleanArray::from_slice(filter_values);
 
-        let iter = SlicesIterator::new(&filter);
+        let iter = SlicesIterator2::new(&filter);
         let filter_count = iter.filter_count;
         let chunks = iter.collect::<Vec<_>>();
 
         assert_eq!(chunks, vec![(1, 61), (63, 61), (125, 5)]);
         assert_eq!(filter_count, 61 + 61 + 5);
+    }
+
+    #[test]
+    fn test_slice_iterator_incomplete_byte() {
+        let filter_values = (0..6).map(|i| i == 1).collect::<Vec<bool>>();
+        let filter = BooleanArray::from_slice(filter_values);
+
+        let iter = SlicesIterator2::new(&filter);
+        let filter_count = iter.filter_count;
+        let chunks = iter.collect::<Vec<_>>();
+
+        assert_eq!(chunks, vec![(1, 1)]);
+        assert_eq!(filter_count, 1);
+    }
+
+    #[test]
+    fn test_slice_iterator_incomplete_byte1() {
+        let filter_values = (0..12).map(|i| i == 9).collect::<Vec<bool>>();
+        let filter = BooleanArray::from_slice(filter_values);
+
+        let iter = SlicesIterator2::new(&filter);
+        let filter_count = iter.filter_count;
+        let chunks = iter.collect::<Vec<_>>();
+
+        assert_eq!(chunks, vec![(9, 1)]);
+        assert_eq!(filter_count, 1);
     }
 }

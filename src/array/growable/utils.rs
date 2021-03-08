@@ -25,7 +25,7 @@ pub(super) fn extend_offsets<T: Offset>(
     last_offset: &mut T,
     offsets: &[T],
 ) {
-    buffer.reserve(offsets.len());
+    buffer.reserve(offsets.len() - 1);
     offsets.windows(2).for_each(|offsets| {
         // compute the new offset
         let length = offsets[1] - offsets[0];
