@@ -61,3 +61,15 @@ harness = false
 [[bench]]
 name = "filter_kernels"
 harness = false
+
+[[bench]]
+name = "cast_kernels"
+harness = false
+
+[[bench]]
+name = "sort_kernel"
+harness = false
+
+[[bench]]
+name = "length_kernel"
+harness = false
