@@ -575,7 +575,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
         (Time32(from_unit), Time64(to_unit)) => {
             let array = array
                 .as_any()
-                .downcast_ref::<PrimitiveArray<i64>>()
+                .downcast_ref::<PrimitiveArray<i32>>()
                 .unwrap();
 
             let from_size = time_unit_multiple(&from_unit);
