@@ -39,9 +39,7 @@ pub struct GrowableUtf8<'a, O: Offset> {
 }
 
 impl<'a, O: Offset> GrowableUtf8<'a, O> {
-    /// # Panics
-    /// This function panics if any of the `arrays` is not downcastable to `PrimitiveArray<T>`.
-    pub fn new(arrays: &[&'a dyn Array], mut use_validity: bool, capacity: usize) -> Self {
+    pub fn new(arrays: &[&'a Utf8Array<O>], mut use_validity: bool, capacity: usize) -> Self {
         // if any of the arrays has nulls, insertions from any array requires setting bits
         // as there is at least one array with nulls.
         if arrays.iter().any(|array| array.null_count() > 0) {
@@ -53,17 +51,12 @@ impl<'a, O: Offset> GrowableUtf8<'a, O> {
             .map(|array| build_extend_null_bits(*array, use_validity))
             .collect();
 
-        let arrays = arrays
-            .iter()
-            .map(|array| array.as_any().downcast_ref::<Utf8Array<O>>().unwrap())
-            .collect::<Vec<_>>();
-
         let mut offsets = MutableBuffer::with_capacity(capacity + 1);
         let length = O::default();
         unsafe { offsets.push_unchecked(length) };
 
         Self {
-            arrays,
+            arrays: arrays.to_vec(),
             values: MutableBuffer::with_capacity(0),
             offsets,
             length,

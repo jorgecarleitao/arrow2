@@ -41,9 +41,7 @@ pub struct GrowablePrimitive<'a, T: NativeType> {
 }
 
 impl<'a, T: NativeType> GrowablePrimitive<'a, T> {
-    /// # Panics
-    /// This function panics if any of the `arrays` is not downcastable to `PrimitiveArray<T>`.
-    pub fn new(arrays: &[&'a dyn Array], mut use_validity: bool, capacity: usize) -> Self {
+    pub fn new(arrays: &[&'a PrimitiveArray<T>], mut use_validity: bool, capacity: usize) -> Self {
         // if any of the arrays has nulls, insertions from any array requires setting bits
         // as there is at least one array with nulls.
         if arrays.iter().any(|array| array.null_count() > 0) {
@@ -58,13 +56,7 @@ impl<'a, T: NativeType> GrowablePrimitive<'a, T> {
         let data_type = arrays[0].data_type().clone();
         let arrays = arrays
             .iter()
-            .map(|array| {
-                array
-                    .as_any()
-                    .downcast_ref::<PrimitiveArray<T>>()
-                    .unwrap()
-                    .values()
-            })
+            .map(|array| array.values())
             .collect::<Vec<_>>();
 
         Self {

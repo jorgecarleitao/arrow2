@@ -531,7 +531,6 @@ mod tests {
     #[test]
     fn test_capacity() {
         let b = MutableBuffer::<f32>::with_capacity(10);
-        assert!(b.capacity() >= 10);
         assert_eq!(b.capacity(), 64 / std::mem::size_of::<f32>());
         let b = MutableBuffer::<f32>::with_capacity(16);
         assert_eq!(b.capacity(), 16);

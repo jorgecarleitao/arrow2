@@ -78,6 +78,9 @@ fn add_benchmark(c: &mut Criterion) {
     c.bench_function("filter f32", |b| {
         b.iter(|| bench_filter(&data_array, &filter_array))
     });
+    c.bench_function("filter f32 high selectivity", |b| {
+        b.iter(|| bench_filter(&data_array, &dense_filter_array))
+    });
     c.bench_function("filter context f32", |b| {
         b.iter(|| bench_built_filter(&filter, &data_array))
     });

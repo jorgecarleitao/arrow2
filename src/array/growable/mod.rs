@@ -18,9 +18,8 @@
 //! Contains components suitable to create an array out of N other arrays, by slicing
 //! from each in a random-access fashion.
 
+use crate::array::*;
 use crate::datatypes::*;
-
-use super::Array;
 
 mod binary;
 pub use binary::GrowableBinary;
@@ -62,6 +61,25 @@ pub trait Growable<'a> {
     fn to_box(&mut self) -> Box<dyn Array>;
 }
 
+macro_rules! dyn_growable {
+    ($ty:ty, $arrays:expr, $use_validity:expr, $capacity:expr) => {{
+        let arrays = $arrays
+            .iter()
+            .map(|array| {
+                array
+                    .as_any()
+                    .downcast_ref::<PrimitiveArray<$ty>>()
+                    .unwrap()
+            })
+            .collect::<Vec<_>>();
+        Box::new(primitive::GrowablePrimitive::<$ty>::new(
+            &arrays,
+            $use_validity,
+            $capacity,
+        ))
+    }};
+}
+
 /// # Panics
 /// This function panics iff the arrays do not have the same data_type.
 pub fn make_growable<'a>(
@@ -80,78 +98,54 @@ pub fn make_growable<'a>(
             use_validity,
             capacity,
         )),
-        DataType::Int8 => Box::new(primitive::GrowablePrimitive::<i8>::new(
-            arrays,
-            use_validity,
-            capacity,
-        )),
-        DataType::Int16 => Box::new(primitive::GrowablePrimitive::<i16>::new(
-            arrays,
-            use_validity,
-            capacity,
-        )),
+        DataType::Int8 => dyn_growable!(i8, arrays, use_validity, capacity),
+        DataType::Int16 => dyn_growable!(i16, arrays, use_validity, capacity),
         DataType::Int32
         | DataType::Date32
         | DataType::Time32(_)
-        | DataType::Interval(IntervalUnit::YearMonth) => Box::new(primitive::GrowablePrimitive::<
-            i32,
-        >::new(
-            arrays, use_validity, capacity
-        )),
+        | DataType::Interval(IntervalUnit::YearMonth) => {
+            dyn_growable!(i32, arrays, use_validity, capacity)
+        }
         DataType::Int64
         | DataType::Date64
         | DataType::Time64(_)
         | DataType::Timestamp(_, _)
-        | DataType::Duration(_)
-        | DataType::Interval(IntervalUnit::DayTime) => Box::new(
-            primitive::GrowablePrimitive::<i64>::new(arrays, use_validity, capacity),
-        ),
-        DataType::Decimal(_, _) => Box::new(primitive::GrowablePrimitive::<i128>::new(
-            arrays,
-            use_validity,
-            capacity,
-        )),
-        DataType::UInt8 => Box::new(primitive::GrowablePrimitive::<u8>::new(
-            arrays,
-            use_validity,
-            capacity,
-        )),
-        DataType::UInt16 => Box::new(primitive::GrowablePrimitive::<u16>::new(
-            arrays,
-            use_validity,
-            capacity,
-        )),
-        DataType::UInt32 => Box::new(primitive::GrowablePrimitive::<u32>::new(
-            arrays,
-            use_validity,
-            capacity,
-        )),
-        DataType::UInt64 => Box::new(primitive::GrowablePrimitive::<u64>::new(
-            arrays,
-            use_validity,
-            capacity,
-        )),
+        | DataType::Duration(_) => {
+            dyn_growable!(i64, arrays, use_validity, capacity)
+        }
+        DataType::Interval(IntervalUnit::DayTime) => {
+            dyn_growable!(days_ms, arrays, use_validity, capacity)
+        }
+        DataType::Decimal(_, _) => dyn_growable!(i128, arrays, use_validity, capacity),
+        DataType::UInt8 => dyn_growable!(u8, arrays, use_validity, capacity),
+        DataType::UInt16 => dyn_growable!(u16, arrays, use_validity, capacity),
+        DataType::UInt32 => dyn_growable!(u32, arrays, use_validity, capacity),
+        DataType::UInt64 => dyn_growable!(u64, arrays, use_validity, capacity),
         DataType::Float16 => unreachable!(),
-        DataType::Float32 => Box::new(primitive::GrowablePrimitive::<f32>::new(
-            arrays,
-            use_validity,
-            capacity,
-        )),
-        DataType::Float64 => Box::new(primitive::GrowablePrimitive::<f64>::new(
-            arrays,
-            use_validity,
-            capacity,
-        )),
-        DataType::Utf8 => Box::new(utf8::GrowableUtf8::<i32>::new(
-            arrays,
-            use_validity,
-            capacity,
-        )),
-        DataType::LargeUtf8 => Box::new(utf8::GrowableUtf8::<i64>::new(
-            arrays,
-            use_validity,
-            capacity,
-        )),
+        DataType::Float32 => dyn_growable!(f32, arrays, use_validity, capacity),
+        DataType::Float64 => dyn_growable!(f64, arrays, use_validity, capacity),
+        DataType::Utf8 => {
+            let arrays = arrays
+                .iter()
+                .map(|array| array.as_any().downcast_ref::<Utf8Array<i32>>().unwrap())
+                .collect::<Vec<_>>();
+            Box::new(utf8::GrowableUtf8::<i32>::new(
+                &arrays,
+                use_validity,
+                capacity,
+            ))
+        }
+        DataType::LargeUtf8 => {
+            let arrays = arrays
+                .iter()
+                .map(|array| array.as_any().downcast_ref::<Utf8Array<i64>>().unwrap())
+                .collect::<Vec<_>>();
+            Box::new(utf8::GrowableUtf8::<i64>::new(
+                &arrays,
+                use_validity,
+                capacity,
+            ))
+        }
         DataType::Binary => Box::new(binary::GrowableBinary::<i32>::new(
             arrays,
             use_validity,

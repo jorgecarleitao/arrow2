@@ -15,10 +15,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::array::growable::make_growable;
+use crate::array::growable::Growable;
 use crate::array::*;
 use crate::error::Result;
 use crate::record_batch::RecordBatch;
+use crate::types::days_ms;
+use crate::{
+    array::growable::make_growable,
+    datatypes::{DataType, IntervalUnit},
+};
 
 /// Function that can filter arbitrary arrays
 pub type Filter<'a> = Box<dyn Fn(&dyn Array) -> Box<dyn Array> + 'a>;
@@ -149,6 +154,25 @@ impl<'a> Iterator for SlicesIterator2<'a> {
     }
 }
 
+fn filter_growable<'a>(growable: &mut impl Growable<'a>, chunks: &[(usize, usize)]) {
+    chunks
+        .iter()
+        .for_each(|(start, len)| growable.extend(0, *start, *len));
+}
+
+macro_rules! dyn_build_filter {
+    ($ty:ty, $array:expr, $filter_count:expr, $chunks:expr) => {{
+        let array = $array
+            .as_any()
+            .downcast_ref::<PrimitiveArray<$ty>>()
+            .unwrap();
+        let mut growable = growable::GrowablePrimitive::<$ty>::new(&[array], false, $filter_count);
+        filter_growable(&mut growable, &$chunks);
+        let array: PrimitiveArray<$ty> = growable.into();
+        Box::new(array)
+    }};
+}
+
 /// Returns a prepared function optimized to filter multiple arrays.
 /// Creating this function requires time, but using it is faster than [filter] when the
 /// same filter needs to be applied to multiple arrays (e.g. a multi-column `RecordBatch`).
@@ -159,13 +183,76 @@ pub fn build_filter(filter: &BooleanArray) -> Result<Filter> {
     let filter_count = iter.filter_count;
     let chunks = iter.collect::<Vec<_>>();
 
-    Ok(Box::new(move |array: &dyn Array| {
-        let mut mutable = make_growable(&[array], false, filter_count);
-        chunks
-            .iter()
-            .for_each(|(start, len)| mutable.extend(0, *start, *len));
-        mutable.to_box()
+    Ok(Box::new(move |array: &dyn Array| match array.data_type() {
+        DataType::UInt8 => {
+            dyn_build_filter!(u8, array, filter_count, chunks)
+        }
+        DataType::UInt16 => {
+            dyn_build_filter!(u16, array, filter_count, chunks)
+        }
+        DataType::UInt32 => {
+            dyn_build_filter!(u32, array, filter_count, chunks)
+        }
+        DataType::UInt64 => {
+            dyn_build_filter!(u64, array, filter_count, chunks)
+        }
+        DataType::Int8 => {
+            dyn_build_filter!(i8, array, filter_count, chunks)
+        }
+        DataType::Int16 => {
+            dyn_build_filter!(i16, array, filter_count, chunks)
+        }
+        DataType::Int32
+        | DataType::Date32
+        | DataType::Time32(_)
+        | DataType::Interval(IntervalUnit::YearMonth) => {
+            dyn_build_filter!(i32, array, filter_count, chunks)
+        }
+        DataType::Int64
+        | DataType::Date64
+        | DataType::Time64(_)
+        | DataType::Timestamp(_, _)
+        | DataType::Duration(_) => {
+            dyn_build_filter!(i64, array, filter_count, chunks)
+        }
+        DataType::Interval(IntervalUnit::DayTime) => {
+            dyn_build_filter!(days_ms, array, filter_count, chunks)
+        }
+        DataType::Float32 => {
+            dyn_build_filter!(f32, array, filter_count, chunks)
+        }
+        DataType::Float64 => {
+            dyn_build_filter!(f64, array, filter_count, chunks)
+        }
+        DataType::Utf8 => {
+            let array = array.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
+            let mut growable = growable::GrowableUtf8::<i32>::new(&[array], false, filter_count);
+            filter_growable(&mut growable, &chunks);
+            let array: Utf8Array<i32> = growable.into();
+            Box::new(array)
+        }
+        _ => {
+            let mut mutable = make_growable(&[array], false, filter_count);
+            chunks
+                .iter()
+                .for_each(|(start, len)| mutable.extend(0, *start, *len));
+            mutable.to_box()
+        }
     }))
+}
+
+macro_rules! dyn_filter {
+    ($ty:ty, $array:expr, $iter:expr) => {{
+        let array = $array
+            .as_any()
+            .downcast_ref::<PrimitiveArray<$ty>>()
+            .unwrap();
+        let mut growable =
+            growable::GrowablePrimitive::<$ty>::new(&[array], false, $iter.filter_count);
+        $iter.for_each(|(start, len)| growable.extend(0, start, len));
+        let array: PrimitiveArray<$ty> = growable.into();
+        Ok(Box::new(array))
+    }};
 }
 
 /// Filters an [Array], returning elements matching the filter (i.e. where the values are true).
@@ -189,9 +276,53 @@ pub fn build_filter(filter: &BooleanArray) -> Result<Filter> {
 pub fn filter(array: &dyn Array, filter: &BooleanArray) -> Result<Box<dyn Array>> {
     let iter = SlicesIterator2::new(filter);
 
-    let mut mutable = make_growable(&[array], false, iter.filter_count);
-    iter.for_each(|(start, len)| mutable.extend(0, start, len));
-    Ok(mutable.to_box())
+    match array.data_type() {
+        DataType::UInt8 => {
+            dyn_filter!(u8, array, iter)
+        }
+        DataType::UInt16 => {
+            dyn_filter!(u16, array, iter)
+        }
+        DataType::UInt32 => {
+            dyn_filter!(u32, array, iter)
+        }
+        DataType::UInt64 => {
+            dyn_filter!(u64, array, iter)
+        }
+        DataType::Int8 => {
+            dyn_filter!(i8, array, iter)
+        }
+        DataType::Int16 => {
+            dyn_filter!(i16, array, iter)
+        }
+        DataType::Int32
+        | DataType::Date32
+        | DataType::Time32(_)
+        | DataType::Interval(IntervalUnit::YearMonth) => {
+            dyn_filter!(i32, array, iter)
+        }
+        DataType::Int64
+        | DataType::Date64
+        | DataType::Time64(_)
+        | DataType::Timestamp(_, _)
+        | DataType::Duration(_) => {
+            dyn_filter!(i64, array, iter)
+        }
+        DataType::Interval(IntervalUnit::DayTime) => {
+            dyn_filter!(days_ms, array, iter)
+        }
+        DataType::Float32 => {
+            dyn_filter!(f32, array, iter)
+        }
+        DataType::Float64 => {
+            dyn_filter!(f64, array, iter)
+        }
+        _ => {
+            let mut mutable = make_growable(&[array], false, iter.filter_count);
+            iter.for_each(|(start, len)| mutable.extend(0, start, len));
+            Ok(mutable.to_box())
+        }
+    }
 }
 
 /// Returns a new [RecordBatch] with arrays containing only values matching the filter.
