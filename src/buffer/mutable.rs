@@ -527,4 +527,23 @@ mod tests {
         }
         assert_eq!(b.len(), 17);
     }
+
+    #[test]
+    fn test_capacity() {
+        let b = MutableBuffer::<f32>::with_capacity(10);
+        assert!(b.capacity() >= 10);
+        assert_eq!(b.capacity(), 64 / std::mem::size_of::<f32>());
+        let b = MutableBuffer::<f32>::with_capacity(16);
+        assert_eq!(b.capacity(), 16);
+
+        let b = MutableBuffer::<f32>::with_capacity(64);
+        assert!(b.capacity() >= 64);
+
+        let mut b = MutableBuffer::<f32>::with_capacity(16);
+        b.reserve(4);
+        assert_eq!(b.capacity(), 16);
+        b.extend_from_slice(&vec![0.1; 16]);
+        b.reserve(4);
+        assert_eq!(b.capacity(), 32);
+    }
 }

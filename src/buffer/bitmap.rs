@@ -202,7 +202,14 @@ impl MutableBitmap {
         self.length += 1;
     }
 
-    /// Pushes a new bit to the container, re-sizing it if necessary.
+    #[inline]
+    pub fn capacity(&self) -> usize {
+        self.buffer.capacity() * 8
+    }
+
+    /// Pushes a new bit to the container
+    /// # Safety
+    /// The caller must ensure that the container has sufficient space.
     #[inline]
     pub unsafe fn push_unchecked(&mut self, value: bool) {
         if value {
@@ -633,5 +640,27 @@ mod tests {
         }
         let bitmap: Option<Bitmap> = bitmap.into();
         assert!(bitmap.is_none());
+    }
+
+    #[test]
+    fn test_capacity() {
+        let b = MutableBitmap::with_capacity(10);
+        assert_eq!(b.capacity(), 512);
+
+        let b = MutableBitmap::with_capacity(512);
+        assert_eq!(b.capacity(), 512);
+
+        let mut b = MutableBitmap::with_capacity(512);
+        b.reserve(8);
+        assert_eq!(b.capacity(), 512);
+    }
+
+    #[test]
+    fn test_capacity_push() {
+        let mut b = MutableBitmap::with_capacity(512);
+        (0..512).for_each(|_| b.push(true));
+        assert_eq!(b.capacity(), 512);
+        b.reserve(8);
+        assert_eq!(b.capacity(), 1024);
     }
 }
