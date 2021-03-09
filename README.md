@@ -7,6 +7,17 @@ It is a re-write of the [official Arrow crate](https://github.com/apache/arrow) 
 
 See [the guide](https://jorgecarleitao.github.io/arrow2/).
 
+## Design
+
+This repo and crate's primary goal is to offer a safe Rust implementation to interoperate with the Arrow. As such, it
+
+* MUST NOT implement any logical type other than the ones defined on the arrow specification, [schema.fbs](https://github.com/apache/arrow/blob/master/format/Schema.fbs).
+* MUST lay out memory according to the [arrow specification](https://arrow.apache.org/docs/format/Columnar.html)
+* MUST support reading from and writing to the [C data interface](https://arrow.apache.org/docs/format/CDataInterface.html) at zero-copy.
+* MUST support reading from, and writing to, the [IPC specification](https://arrow.apache.org/docs/python/ipc.html), which it MUST verify against golden files available [here](https://github.com/apache/arrow-testing).
+
+Design documents about each of the parts of this repo are available on their respective READMEs.
+
 ## Run unit tests
 
 ```bash
