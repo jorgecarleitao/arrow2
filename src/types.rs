@@ -22,6 +22,17 @@ pub unsafe trait Relation {
     fn is_valid(data_type: &DataType) -> bool;
 }
 
+macro_rules! create_relation {
+    ($native_ty:ty, $($impl_pattern:pat)|+) => {
+        unsafe impl Relation for $native_ty {
+            #[inline]
+            fn is_valid(data_type: &DataType) -> bool {
+                matches!(data_type, $($impl_pattern)|+)
+            }
+        }
+    };
+}
+
 /// Trait declaring any type that can be allocated, serialized and deserialized by this crate.
 /// All data-heavy memory operations are implemented for this trait alone.
 /// # Safety
@@ -80,87 +91,32 @@ native!(i128);
 native!(f32);
 native!(f64);
 
-unsafe impl Relation for u8 {
-    fn is_valid(data_type: &DataType) -> bool {
-        data_type == &DataType::UInt8
-    }
-}
+create_relation!(u8, &DataType::UInt8);
+create_relation!(u16, &DataType::UInt16);
+create_relation!(u32, &DataType::UInt32);
+create_relation!(u64, &DataType::UInt64);
+create_relation!(i8, &DataType::Int8);
+create_relation!(i16, &DataType::Int16);
+create_relation!(
+    i32,
+    &DataType::Int32
+        | &DataType::Date32
+        | &DataType::Time32(_)
+        | &DataType::Interval(IntervalUnit::YearMonth)
+);
 
-unsafe impl Relation for u16 {
-    fn is_valid(data_type: &DataType) -> bool {
-        data_type == &DataType::UInt16
-    }
-}
+create_relation!(
+    i64,
+    &DataType::Int64
+        | &DataType::Date64
+        | &DataType::Time64(_)
+        | &DataType::Timestamp(_, _)
+        | &DataType::Duration(_)
+);
 
-unsafe impl Relation for u32 {
-    fn is_valid(data_type: &DataType) -> bool {
-        data_type == &DataType::UInt32
-    }
-}
-
-unsafe impl Relation for u64 {
-    fn is_valid(data_type: &DataType) -> bool {
-        data_type == &DataType::UInt64
-    }
-}
-
-unsafe impl Relation for i8 {
-    fn is_valid(data_type: &DataType) -> bool {
-        data_type == &DataType::Int8
-    }
-}
-
-unsafe impl Relation for i16 {
-    fn is_valid(data_type: &DataType) -> bool {
-        data_type == &DataType::Int16
-    }
-}
-
-unsafe impl Relation for i32 {
-    fn is_valid(data_type: &DataType) -> bool {
-        match data_type {
-            DataType::Int32
-            | DataType::Date32
-            | DataType::Time32(_)
-            | DataType::Interval(IntervalUnit::YearMonth) => true,
-            _ => false,
-        }
-    }
-}
-
-unsafe impl Relation for i64 {
-    fn is_valid(data_type: &DataType) -> bool {
-        match data_type {
-            DataType::Int64
-            | DataType::Date64
-            | DataType::Time64(_)
-            | DataType::Timestamp(_, _)
-            | DataType::Duration(_) => true,
-            _ => false,
-        }
-    }
-}
-
-unsafe impl Relation for i128 {
-    fn is_valid(data_type: &DataType) -> bool {
-        match data_type {
-            DataType::Decimal(_, _) => true,
-            _ => false,
-        }
-    }
-}
-
-unsafe impl Relation for f32 {
-    fn is_valid(data_type: &DataType) -> bool {
-        data_type == &DataType::Float32
-    }
-}
-
-unsafe impl Relation for f64 {
-    fn is_valid(data_type: &DataType) -> bool {
-        data_type == &DataType::Float64
-    }
-}
+create_relation!(i128, &DataType::Decimal(_, _));
+create_relation!(f32, &DataType::Float32);
+create_relation!(f64, &DataType::Float64);
 
 /// The in-memory representation of the DayMillisecond variant of arrow's "Interval" logical type.
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
@@ -223,11 +179,7 @@ unsafe impl NativeType for days_ms {
     }
 }
 
-unsafe impl Relation for days_ms {
-    fn is_valid(data_type: &DataType) -> bool {
-        data_type == &DataType::Interval(IntervalUnit::DayTime)
-    }
-}
+create_relation!(days_ms, &DataType::Interval(IntervalUnit::DayTime));
 
 impl days_ms {
     #[inline]
