@@ -16,7 +16,6 @@
 // under the License.
 
 use csv::StringRecord;
-use lexical_core;
 
 use crate::{
     array::{Primitive, PrimitiveArray},

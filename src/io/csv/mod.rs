@@ -18,8 +18,6 @@
 //! Transfer data between the Arrow memory format and CSV (comma-separated values).
 
 use crate::error::ArrowError;
-use chrono;
-use csv;
 
 impl From<csv::Error> for ArrowError {
     fn from(error: csv::Error) -> Self {

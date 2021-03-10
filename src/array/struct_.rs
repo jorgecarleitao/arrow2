@@ -54,7 +54,7 @@ impl StructArray {
         values: Vec<Arc<dyn Array>>,
         validity: Option<Bitmap>,
     ) -> Self {
-        assert!(fields.len() > 0);
+        assert!(!fields.is_empty());
         assert_eq!(fields.len(), values.len());
         assert!(values.iter().all(|x| x.len() == values[0].len()));
         if let Some(ref validity) = validity {

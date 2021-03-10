@@ -19,7 +19,6 @@ use std::io::Read;
 use std::sync::Arc;
 use std::{fmt, io::Seek};
 
-use csv;
 use csv::{ByteRecord, StringRecord};
 use lazy_static::lazy_static;
 use regex::{Regex, RegexBuilder};

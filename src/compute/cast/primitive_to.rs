@@ -107,7 +107,7 @@ pub fn primitive_to_dictionary<T: NativeType + Eq + Hash, K: DictionaryKey>(
     let values = cast(array, to)?;
     let values = values.as_any().downcast_ref::<PrimitiveArray<T>>().unwrap();
 
-    let iter = values.iter().map(|x| Result::Ok(x));
+    let iter = values.iter().map(Result::Ok);
     let primitive = DictionaryPrimitive::<K, Primitive<T>, _>::try_from_iter(iter)?;
 
     let array = primitive.to(DataType::Dictionary(

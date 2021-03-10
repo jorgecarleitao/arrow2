@@ -313,7 +313,7 @@ unsafe fn create_buffer<T: NativeType>(
     let ptr = NonNull::new(ptr as *mut T);
     let bytes = ptr.map(|ptr| Bytes::new(ptr, len, Deallocation::Foreign(array)));
 
-    bytes.map(|bytes| Buffer::from_bytes(bytes))
+    bytes.map(Buffer::from_bytes)
 }
 
 /// returns a new buffer corresponding to the index `i` of the FFI array. It may not exist (null pointer).

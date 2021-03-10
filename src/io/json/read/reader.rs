@@ -335,8 +335,8 @@ mod tests {
             .as_any()
             .downcast_ref::<PrimitiveArray<f64>>()
             .unwrap();
-        assert!(2.0 - bb.value(0) < f64::EPSILON);
-        assert!(-3.5 - bb.value(1) < f64::EPSILON);
+        assert!((2.0 - bb.value(0)).abs() < f64::EPSILON);
+        assert!((-3.5 - bb.value(1)).abs() < f64::EPSILON);
         let cc = batch
             .column(c.0)
             .as_any()
@@ -458,8 +458,8 @@ mod tests {
             .as_any()
             .downcast_ref::<Float32Array>()
             .unwrap();
-        assert!(2.0 - bb.value(0) < f32::EPSILON);
-        assert!(-3.5 - bb.value(1) < f32::EPSILON);
+        assert!((2.0 - bb.value(0)).abs() < f32::EPSILON);
+        assert!((-3.5 - bb.value(1)).abs() < f32::EPSILON);
     }
 
     #[test]
@@ -545,8 +545,8 @@ mod tests {
         let bb = bb.values();
         let bb = bb.as_any().downcast_ref::<Float64Array>().unwrap();
         assert_eq!(9, bb.len());
-        assert!(2.0 - bb.value(0) < f64::EPSILON);
-        assert!(-6.1 - bb.value(5) < f64::EPSILON);
+        assert!((2.0 - bb.value(0)).abs() < f64::EPSILON);
+        assert!((-6.1 - bb.value(5)).abs() < f64::EPSILON);
         assert_eq!(false, bb.is_valid(7));
 
         let cc = batch
@@ -640,7 +640,7 @@ mod tests {
             let bb = bb.values();
             let bb = bb.as_any().downcast_ref::<Float64Array>().unwrap();
             assert_eq!(9, bb.len());
-            assert!(-6.1 - bb.value(8) < f64::EPSILON);
+            assert!((-6.1 - bb.value(8)).abs() < f64::EPSILON);
 
             let cc = batch
                 .column(c.0)
@@ -678,7 +678,7 @@ mod tests {
             ]),
             true,
         );
-        let schema = Schema::new(vec![a_field.clone()]);
+        let schema = Schema::new(vec![a_field]);
         let builder = ReaderBuilder::new().with_schema(schema).with_batch_size(64);
         let mut reader: Reader<File> = builder
             .build::<File>(File::open("test/data/nested_structs.json").unwrap())
@@ -686,7 +686,7 @@ mod tests {
 
         // build expected output
         let d = Utf8Array::<i32>::from(&vec![Some("text"), None, Some("text"), None]);
-        let c = StructArray::from_data(vec![d_field.clone()], vec![Arc::new(d)], None);
+        let c = StructArray::from_data(vec![d_field], vec![Arc::new(d)], None);
 
         let b = BooleanArray::from(vec![Some(true), Some(false), Some(true), None]);
         let expected = StructArray::from_data(
@@ -713,7 +713,7 @@ mod tests {
         );
         let a_list_data_type = DataType::List(Box::new(a_struct_field));
         let a_field = Field::new("a", a_list_data_type.clone(), true);
-        let schema = Schema::new(vec![a_field.clone()]);
+        let schema = Schema::new(vec![a_field]);
         let builder = ReaderBuilder::new().with_schema(schema).with_batch_size(64);
         let json_content = r#"
         {"a": [{"b": true, "c": {"d": "a_text"}}, {"b": false, "c": {"d": "b_text"}}]}
@@ -803,7 +803,7 @@ mod tests {
             None,
         ];
 
-        let iter = values.into_iter().map(|x| Result::Ok(x));
+        let iter = values.into_iter().map(Result::Ok);
         let expected = DictionaryPrimitive::<i16, Utf8Primitive<i32>, _>::try_from_iter(iter)?;
         let expected = expected.to(data_type);
 
@@ -929,7 +929,7 @@ mod tests {
         let mut reader = BufReader::new(File::open("test/data/mixed_arrays.json").unwrap());
         let inferred_schema = infer_json_schema_from_seekable(&mut reader, None).unwrap();
 
-        assert_eq!(inferred_schema, schema.clone());
+        assert_eq!(inferred_schema, schema);
 
         let file = File::open("test/data/mixed_arrays.json.gz").unwrap();
         let mut reader = BufReader::new(GzDecoder::new(&file));

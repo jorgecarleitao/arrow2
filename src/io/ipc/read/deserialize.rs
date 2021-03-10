@@ -51,7 +51,7 @@ fn is_native_little_endian() {
     false
 }
 
-fn read_buffer<'a, T: NativeType, R: Read + Seek>(
+fn read_buffer<T: NativeType, R: Read + Seek>(
     buf: &mut VecDeque<&gen::Schema::Buffer>,
     length: usize, // in slots
     reader: &mut R,
@@ -150,7 +150,7 @@ fn read_validity<R: Read + Seek>(
     })
 }
 
-fn read_primitive<'a, T: NativeType, R: Read + Seek>(
+fn read_primitive<T: NativeType, R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
     data_type: DataType,
     buffers: &mut VecDeque<&gen::Schema::Buffer>,
@@ -196,7 +196,7 @@ fn read_boolean<R: Read + Seek>(
     Ok(Arc::new(array))
 }
 
-fn read_utf8<'a, O: Offset, R: Read + Seek>(
+fn read_utf8<O: Offset, R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
     buffers: &mut VecDeque<&gen::Schema::Buffer>,
     reader: &mut R,
@@ -224,7 +224,7 @@ where
     Ok(Utf8Array::<O>::from_data(offsets, values, validity))
 }
 
-fn read_binary<'a, O: Offset, R: Read + Seek>(
+fn read_binary<O: Offset, R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
     buffers: &mut VecDeque<&gen::Schema::Buffer>,
     reader: &mut R,
@@ -275,7 +275,7 @@ fn read_null(field_nodes: &mut VecDeque<Node>) -> NullArray {
     NullArray::from_data(field_nodes.pop_front().unwrap().0.length() as usize)
 }
 
-fn read_list<'a, O: Offset, R: Read + Seek>(
+fn read_list<O: Offset, R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
     data_type: DataType,
     buffers: &mut VecDeque<&gen::Schema::Buffer>,
@@ -307,8 +307,7 @@ where
         reader,
         block_offset,
         is_little_endian,
-    )?
-    .into();
+    )?;
     Ok(Arc::new(ListArray::from_data(
         data_type, offsets, values, validity,
     )))
@@ -335,8 +334,7 @@ fn read_fixed_size_list<R: Read + Seek>(
         reader,
         block_offset,
         is_little_endian,
-    )?
-    .into();
+    )?;
     Ok(Arc::new(FixedSizeListArray::from_data(
         data_type, values, validity,
     )))
@@ -379,7 +377,7 @@ fn read_struct<R: Read + Seek>(
 
 /// Reads the correct number of buffers based on list type and null_count, and creates a
 /// list array ref
-pub fn read_dictionary<'a, T: DictionaryKey, R: Read + Seek>(
+pub fn read_dictionary<T: DictionaryKey, R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
     buffers: &mut VecDeque<&gen::Schema::Buffer>,
     reader: &mut R,

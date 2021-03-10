@@ -180,7 +180,7 @@ pub struct Utf8Primitive<O: Offset> {
 
 impl<O: Offset, P: AsRef<str>> FromIterator<Option<P>> for Utf8Primitive<O> {
     fn from_iter<I: IntoIterator<Item = Option<P>>>(iter: I) -> Self {
-        Self::try_from_iter(iter.into_iter().map(|x| Ok(x))).unwrap()
+        Self::try_from_iter(iter.into_iter().map(Ok)).unwrap()
     }
 }
 

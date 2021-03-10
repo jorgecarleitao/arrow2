@@ -41,11 +41,17 @@ pub struct Bitmap {
     null_count: usize,
 }
 
+impl Default for Bitmap {
+    fn default() -> Self {
+        MutableBitmap::new().into()
+    }
+}
+
 impl Bitmap {
     /// Initializes an empty [`Bitmap`].
     #[inline]
     pub fn new() -> Self {
-        MutableBitmap::new().into()
+        Self::default()
     }
 
     #[inline]

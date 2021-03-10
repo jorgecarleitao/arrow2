@@ -149,7 +149,7 @@ fn read_struct(rows: &[&Value], data_type: DataType) -> StructArray {
         })
         .collect::<HashMap<_, _>>();
 
-    rows.into_iter().for_each(|row| {
+    rows.iter().for_each(|row| {
         match row {
             Value::Object(value) => {
                 values

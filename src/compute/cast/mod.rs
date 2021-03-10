@@ -728,11 +728,11 @@ mod tests {
         let array = Primitive::<i32>::from_values(&[5, 6, 7, 8, 9]).to(DataType::Int32);
         let b = cast(&array, &DataType::Float64).unwrap();
         let c = b.as_any().downcast_ref::<Float64Array>().unwrap();
-        assert!(5.0 - c.value(0) < f64::EPSILON);
-        assert!(6.0 - c.value(1) < f64::EPSILON);
-        assert!(7.0 - c.value(2) < f64::EPSILON);
-        assert!(8.0 - c.value(3) < f64::EPSILON);
-        assert!(9.0 - c.value(4) < f64::EPSILON);
+        assert!((5.0 - c.value(0)).abs() < f64::EPSILON);
+        assert!((6.0 - c.value(1)).abs() < f64::EPSILON);
+        assert!((7.0 - c.value(2)).abs() < f64::EPSILON);
+        assert!((8.0 - c.value(3)).abs() < f64::EPSILON);
+        assert!((9.0 - c.value(4)).abs() < f64::EPSILON);
     }
 
     #[test]

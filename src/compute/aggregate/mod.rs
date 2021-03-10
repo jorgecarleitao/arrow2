@@ -191,7 +191,7 @@ where
     }
 
     match array.validity() {
-        None => Some(array.values().iter().map(|&x| x).sum()),
+        None => Some(array.values().iter().copied().sum()),
         Some(buffer) => {
             let values = array.values();
             let validity_chunks = buffer.chunks::<u64>();
@@ -242,7 +242,7 @@ mod tests {
     #[test]
     fn test_primitive_array_float_sum() {
         let a = Primitive::from_slice(&[1.1f64, 2.2, 3.3, 4.4, 5.5]).to(DataType::Float64);
-        assert!(16.5 - sum(&a).unwrap() < f64::EPSILON);
+        assert!((16.5 - sum(&a).unwrap()).abs() < f64::EPSILON);
     }
 
     #[test]

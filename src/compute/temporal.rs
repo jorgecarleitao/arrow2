@@ -109,14 +109,10 @@ pub fn hour(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
             };
             Ok(unary(array, op, &final_data_type))
         }
-        dt => {
-            return {
-                Err(ArrowError::NotYetImplemented(format!(
-                    "\"hour\" does not support type {:?}",
-                    dt
-                )))
-            }
-        }
+        dt => Err(ArrowError::NotYetImplemented(format!(
+            "\"hour\" does not support type {:?}",
+            dt
+        ))),
     }
 }
 
@@ -159,14 +155,10 @@ pub fn year(array: &dyn Array) -> Result<PrimitiveArray<i32>> {
             };
             Ok(unary(array, op, &final_data_type))
         }
-        dt => {
-            return {
-                Err(ArrowError::NotYetImplemented(format!(
-                    "\"year\" does not support type {:?}",
-                    dt
-                )))
-            }
-        }
+        dt => Err(ArrowError::NotYetImplemented(format!(
+            "\"year\" does not support type {:?}",
+            dt
+        ))),
     }
 }
 

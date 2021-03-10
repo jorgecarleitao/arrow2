@@ -132,7 +132,7 @@ mod tests {
     fn primitive() -> Result<()> {
         let data = vec![Some("a"), Some("b"), Some("a")];
 
-        let data = data.into_iter().map(|x| Result::Ok(x));
+        let data = data.into_iter().map(Result::Ok);
         let a = DictionaryPrimitive::<i32, Utf8Primitive<i32>, &str>::try_from_iter(data)?;
         a.to(DataType::Dictionary(
             Box::new(DataType::Int32),

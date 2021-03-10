@@ -181,7 +181,7 @@ mod tests {
         let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
         let list = data
             .as_ref()
-            .into_iter()
+            .iter()
             .map(|x| {
                 x.as_ref()
                     .map(|x| x.as_ref().iter().map(|x| Some(*x)).collect::<Vec<_>>())

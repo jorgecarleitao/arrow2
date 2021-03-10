@@ -26,9 +26,15 @@ pub struct GrowableNull {
     length: usize,
 }
 
+impl Default for GrowableNull {
+    fn default() -> Self {
+        Self { length: 0 }
+    }
+}
+
 impl GrowableNull {
     pub fn new() -> Self {
-        Self { length: 0 }
+        Self::default()
     }
 }
 

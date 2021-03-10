@@ -28,8 +28,8 @@ use super::{
     Growable,
 };
 
-fn extend_offset_values<'a, O: Offset>(
-    growable: &mut GrowableList<'a, O>,
+fn extend_offset_values<O: Offset>(
+    growable: &mut GrowableList<'_, O>,
     index: usize,
     start: usize,
     len: usize,

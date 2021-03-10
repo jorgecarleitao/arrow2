@@ -96,7 +96,7 @@ pub fn string_to_dictionary<O: Offset, K: DictionaryKey>(
     let values = cast(array, &to)?;
     let values = values.as_any().downcast_ref::<Utf8Array<O>>().unwrap();
 
-    let iter = values.iter().map(|x| Result::Ok(x));
+    let iter = values.iter().map(Result::Ok);
     let primitive = DictionaryPrimitive::<K, Utf8Primitive<i32>, _>::try_from_iter(iter)?;
 
     let array = primitive.to(DataType::Dictionary(Box::new(K::DATA_TYPE), Box::new(to)));

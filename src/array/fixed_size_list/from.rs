@@ -48,7 +48,7 @@ where
     P: AsRef<[Option<T>]> + IntoIterator<Item = Option<T>>,
 {
     fn from_iter<I: IntoIterator<Item = Option<P>>>(iter: I) -> Self {
-        Self::try_from_iter(iter.into_iter().map(|x| Ok(x))).unwrap()
+        Self::try_from_iter(iter.into_iter().map(Ok)).unwrap()
     }
 }
 

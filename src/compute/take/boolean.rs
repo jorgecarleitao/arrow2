@@ -31,7 +31,7 @@ fn take_no_validity<I: Offset>(values: &Bitmap, indices: &[I]) -> Result<(Bitmap
     // Soundness: `slice.map` is `TrustedLen`.
     let buffer = unsafe { Bitmap::try_from_trusted_len_iter(values)? };
 
-    Ok((buffer.into(), None))
+    Ok((buffer, None))
 }
 
 // take implementation when only values contain nulls

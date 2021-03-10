@@ -176,28 +176,25 @@ impl<T: BitChunk> Iterator for BitChunkIterator<'_, T> {
         // so when reading as u64 on a big-endian machine, the bytes need to be swapped
         let combined = if self.offset == 0 {
             unsafe { std::ptr::read_unaligned(chunk_data.add(self.chunk_index)) }
+        } else if self.chunk_index + 1 < self.chunk_len {
+            // on the middle we can use the whole next chunk
+            let current =
+                unsafe { std::ptr::read_unaligned(chunk_data.add(self.chunk_index)) }.to_le();
+            let chunk_data = self.buffer.as_ptr() as *const T;
+            let next = unsafe { std::ptr::read_unaligned(chunk_data.add(self.chunk_index + 1)) };
+
+            merge_reversed(current, next, self.offset)
         } else {
-            if self.chunk_index + 1 < self.chunk_len {
-                // on the middle we can use the whole next chunk
-                let current =
-                    unsafe { std::ptr::read_unaligned(chunk_data.add(self.chunk_index)) }.to_le();
-                let chunk_data = self.buffer.as_ptr() as *const T;
-                let next =
-                    unsafe { std::ptr::read_unaligned(chunk_data.add(self.chunk_index + 1)) };
+            // on the last chunk the "next" chunk may not be complete and thus we must create it from existing bytes.
+            let mut remainder = T::zero();
+            let dst = &mut remainder as *mut T as *mut u8;
 
-                merge_reversed(current, next, self.offset)
-            } else {
-                // on the last chunk the "next" chunk may not be complete and thus we must create it from existing bytes.
-                let mut remainder = T::zero();
-                let dst = &mut remainder as *mut T as *mut u8;
+            let size_of = std::mem::size_of::<T>();
+            let remainder_bytes =
+                &self.buffer[self.chunk_index * size_of..(self.chunk_index + 1) * size_of];
 
-                let size_of = std::mem::size_of::<T>();
-                let remainder_bytes =
-                    &self.buffer[self.chunk_index * size_of..(self.chunk_index + 1) * size_of];
-
-                unsafe { copy_with_merge(dst, remainder_bytes, self.offset) };
-                remainder
-            }
+            unsafe { copy_with_merge(dst, remainder_bytes, self.offset) };
+            remainder
         };
 
         self.chunk_index += 1;
