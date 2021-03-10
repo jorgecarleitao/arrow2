@@ -1,6 +1,6 @@
 """
 Adds licenses haders to all Rust source files (.rs). This script
-is idenpotent and errors if any file has more than one license.
+is idempotent and errors if any file has more than one license.
 """
 import os
 
