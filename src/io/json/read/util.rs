@@ -69,7 +69,7 @@ impl<'a, R: Read> Iterator for ValueIter<'a, R> {
                     }
 
                     self.record_count += 1;
-                    return Some(serde_json::from_str(trimmed_s).map_err(|e| ArrowError::from(e)));
+                    return Some(serde_json::from_str(trimmed_s).map_err(ArrowError::from));
                 }
             }
         }

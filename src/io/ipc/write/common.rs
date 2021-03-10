@@ -398,8 +398,8 @@ pub struct EncodedData {
     pub arrow_data: Vec<u8>,
 }
 /// Write a message's IPC data and buffers, returning metadata and buffer data lengths written
-pub fn write_message<'a, W: Write>(
-    writer: &'a mut W,
+pub fn write_message<W: Write>(
+    writer: &mut W,
     encoded: EncodedData,
     write_options: &IpcWriteOptions,
 ) -> Result<(usize, usize)> {
@@ -455,8 +455,8 @@ fn write_body_buffers<W: Write>(mut writer: W, data: &[u8]) -> Result<usize> {
 
 /// Write a record batch to the writer, writing the message size before the message
 /// if the record batch is being written to a stream
-pub fn write_continuation<'a, W: Write>(
-    writer: &'a mut W,
+pub fn write_continuation<W: Write>(
+    writer: &mut W,
     write_options: &IpcWriteOptions,
     total_len: i32,
 ) -> Result<usize> {

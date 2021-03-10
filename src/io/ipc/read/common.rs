@@ -40,16 +40,16 @@ pub fn read_record_batch<R: Read + Seek>(
     let buffers = batch
         .buffers()
         .ok_or_else(|| ArrowError::IPC("Unable to get buffers from IPC RecordBatch".to_string()))?;
-    let mut buffers: VecDeque<&gen::Schema::Buffer> = buffers.into_iter().collect();
+    let mut buffers: VecDeque<&gen::Schema::Buffer> = buffers.iter().collect();
     let field_nodes = batch.nodes().ok_or_else(|| {
         ArrowError::IPC("Unable to get field nodes from IPC RecordBatch".to_string())
     })?;
 
     // This is a bug fix: we should have one dictionary per node, not schema field
-    let dictionaries = dictionaries.into_iter().chain(std::iter::repeat(&None));
+    let dictionaries = dictionaries.iter().chain(std::iter::repeat(&None));
 
     let mut field_nodes = field_nodes
-        .into_iter()
+        .iter()
         .zip(dictionaries)
         .collect::<VecDeque<_>>();
 

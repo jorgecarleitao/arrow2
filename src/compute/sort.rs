@@ -617,7 +617,7 @@ mod tests {
         options: Option<SortOptions>,
         expected_data: &[Option<&str>],
     ) {
-        let input = data.into_iter().map(|x| Result::Ok(x.clone()));
+        let input = data.iter().map(|x| Result::Ok(x.clone()));
         let input =
             DictionaryPrimitive::<i32, Utf8Primitive<i32>, &str>::try_from_iter(input).unwrap();
         let input = input.to(DataType::Dictionary(
@@ -625,7 +625,7 @@ mod tests {
             Box::new(DataType::Utf8),
         ));
 
-        let expected = expected_data.into_iter().map(|x| Result::Ok(x.clone()));
+        let expected = expected_data.iter().map(|x| Result::Ok(x.clone()));
         let expected =
             DictionaryPrimitive::<i32, Utf8Primitive<i32>, &str>::try_from_iter(expected).unwrap();
         let expected = expected.to(DataType::Dictionary(

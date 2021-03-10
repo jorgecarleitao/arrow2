@@ -30,6 +30,10 @@ pub trait Array: std::fmt::Debug + std::fmt::Display + Send + Sync + ToFFI {
     /// The length of the array
     fn len(&self) -> usize;
 
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /// The [`DataType`] of the array
     fn data_type(&self) -> &DataType;
 

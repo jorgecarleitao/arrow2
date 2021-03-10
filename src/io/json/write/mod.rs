@@ -115,7 +115,7 @@ mod tests {
         let list_datatype = DataType::List(Box::new(Field::new("c_list", DataType::Utf8, false)));
         let field_c1 = Field::new("c1", list_datatype.clone(), false);
         let field_c2 = Field::new("c2", DataType::Int32, false);
-        let schema = Schema::new(vec![field_c1.clone(), field_c2]);
+        let schema = Schema::new(vec![field_c1, field_c2]);
 
         let iter = vec![vec!["a", "a1"], vec!["b"], vec!["c"], vec!["d"], vec!["e"]];
 
@@ -152,11 +152,11 @@ mod tests {
     #[test]
     fn write_nested_list() {
         let list_inner = DataType::List(Box::new(Field::new("b", DataType::Int32, false)));
-        let list_inner_type = Field::new("a", list_inner.clone(), false);
-        let list_datatype = DataType::List(Box::new(list_inner_type.clone()));
+        let list_inner_type = Field::new("a", list_inner, false);
+        let list_datatype = DataType::List(Box::new(list_inner_type));
         let field_c1 = Field::new("c1", list_datatype.clone(), false);
         let field_c2 = Field::new("c2", DataType::Utf8, false);
-        let schema = Schema::new(vec![field_c1.clone(), field_c2]);
+        let schema = Schema::new(vec![field_c1, field_c2]);
 
         let iter = vec![
             vec![Some(vec![Some(1), Some(2)]), Some(vec![Some(3)])],
@@ -201,7 +201,7 @@ mod tests {
         )));
         let field_c1 = Field::new("c1", c1_datatype.clone(), true);
         let field_c2 = Field::new("c2", DataType::Int32, false);
-        let schema = Schema::new(vec![field_c1.clone(), field_c2]);
+        let schema = Schema::new(vec![field_c1, field_c2]);
 
         let s = StructArray::from_data(
             fields,

@@ -279,8 +279,7 @@ impl Into<StructArray> for RecordBatch {
             .iter()
             .zip(self.columns.iter())
             .map(|t| (t.0.clone(), t.1.clone()))
-            .unzip()
-            .into();
+            .unzip();
         StructArray::from_data(fields, values, None)
     }
 }

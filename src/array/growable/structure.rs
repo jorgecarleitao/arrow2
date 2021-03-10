@@ -54,7 +54,7 @@ impl<'a> GrowableStruct<'a> {
             .collect();
 
         let arrays = arrays
-            .into_iter()
+            .iter()
             .map(|array| array.as_any().downcast_ref::<StructArray>().unwrap())
             .collect::<Vec<_>>();
 
@@ -203,7 +203,7 @@ mod tests {
         let result: StructArray = a.into();
 
         let expected = StructArray::from_data(
-            fields.clone(),
+            fields,
             vec![values[0].slice(2, 2).into(), values[1].slice(2, 2).into()],
             None,
         );
@@ -227,7 +227,7 @@ mod tests {
         let result: StructArray = a.into();
 
         let expected = StructArray::from_data(
-            fields.clone(),
+            fields,
             vec![values[0].slice(1, 2).into(), values[1].slice(1, 2).into()],
             Some(Bitmap::from((&[0b00000010], 5)).slice(1, 2)),
         );
@@ -257,8 +257,7 @@ mod tests {
             Primitive::<i32>::from(vec![Some(2), Some(3), Some(1), Some(2)]).to(DataType::Int32),
         );
 
-        let expected =
-            StructArray::from_data(fields.clone(), vec![expected_string, expected_int], None);
+        let expected = StructArray::from_data(fields, vec![expected_string, expected_int], None);
         assert_eq!(result, expected)
     }
 }

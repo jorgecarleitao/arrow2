@@ -119,7 +119,7 @@ pub fn take<O: Offset>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Resul
 fn maybe_usize<I: Offset>(index: I) -> Result<usize> {
     index
         .to_usize()
-        .ok_or_else(|| ArrowError::DictionaryKeyOverflowError)
+        .ok_or(ArrowError::DictionaryKeyOverflowError)
 }
 
 #[cfg(test)]

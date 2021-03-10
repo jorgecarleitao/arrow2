@@ -17,7 +17,6 @@
 
 use std::{collections::HashMap, sync::Arc};
 
-use hex;
 use num::NumCast;
 use serde_json::Value;
 

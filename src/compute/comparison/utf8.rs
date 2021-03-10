@@ -35,13 +35,13 @@ where
 
     let validity = combine_validities(lhs.validity(), rhs.validity());
 
-    let values = lhs.iter().zip(rhs.iter()).map(|(lhs, rhs)| {
-        if lhs.is_none() | rhs.is_none() {
-            return false;
-        } else {
-            op(lhs.unwrap(), rhs.unwrap())
-        }
-    });
+    let values = lhs
+        .iter()
+        .zip(rhs.iter())
+        .map(|(lhs, rhs)| match (lhs, rhs) {
+            (Some(lhs), Some(rhs)) => op(lhs, rhs),
+            _ => false,
+        });
     let values = unsafe { Bitmap::from_trusted_len_iter(values) };
 
     Ok(BooleanArray::from_data(values, validity))
@@ -56,12 +56,9 @@ where
 {
     let validity = lhs.validity().clone();
 
-    let values = lhs.iter().map(|lhs| {
-        if lhs.is_none() {
-            return false;
-        } else {
-            op(lhs.unwrap(), rhs)
-        }
+    let values = lhs.iter().map(|lhs| match lhs {
+        None => false,
+        Some(lhs) => op(lhs, rhs),
     });
     let values = unsafe { Bitmap::from_trusted_len_iter(values) };
 

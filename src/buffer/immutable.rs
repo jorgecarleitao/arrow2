@@ -39,10 +39,16 @@ pub struct Buffer<T: NativeType> {
     length: usize,
 }
 
+impl<T: NativeType> Default for Buffer<T> {
+    fn default() -> Self {
+        MutableBuffer::new().into()
+    }
+}
+
 impl<T: NativeType> Buffer<T> {
     #[inline]
     pub fn new() -> Self {
-        MutableBuffer::new().into()
+        Self::default()
     }
 
     #[inline]

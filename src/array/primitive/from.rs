@@ -228,10 +228,7 @@ impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> FromIterator<Ptr> for P
             })
             .collect();
 
-        Self {
-            values: values,
-            validity,
-        }
+        Self { values, validity }
     }
 }
 
@@ -254,10 +251,7 @@ impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> TryFromIterator<Ptr> fo
             })
             .collect::<ArrowResult<_>>()?;
 
-        Ok(Self {
-            values: values,
-            validity,
-        })
+        Ok(Self { values, validity })
     }
 }
 

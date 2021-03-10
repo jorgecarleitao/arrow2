@@ -99,7 +99,7 @@ where
     T: NativeType + JsonSerializable,
 {
     let array = array.as_any().downcast_ref::<PrimitiveArray<T>>().unwrap();
-    array.iter().map(|x| to_json(x)).collect()
+    array.iter().map(to_json).collect()
 }
 
 fn struct_array_to_jsonmap_array(array: &StructArray, row_count: usize) -> Vec<Map<String, Value>> {
@@ -248,7 +248,7 @@ fn set_column_for_json_rows(
                 .for_each(|(row, value)| {
                     row.insert(
                         col_name.to_string(),
-                        value.map(|x| Value::Bool(x)).unwrap_or(Value::Null),
+                        value.map(Value::Bool).unwrap_or(Value::Null),
                     );
                 });
         }

@@ -301,7 +301,7 @@ impl<T: NativeType> MutableBuffer<T> {
         let mut dst = unsafe { self.ptr.as_ptr().add(len.local_len) as *mut T };
         let capacity = self.capacity;
 
-        while len.local_len + 1 <= capacity {
+        while len.local_len < capacity {
             if let Some(item) = iterator.next() {
                 unsafe {
                     std::ptr::write(dst, item);
@@ -405,7 +405,7 @@ impl<T: NativeType> FromIterator<T> for MutableBuffer<T> {
         };
 
         buffer.extend_from_iter(iterator);
-        buffer.into()
+        buffer
     }
 }
 
@@ -462,7 +462,7 @@ impl Drop for SetLenOnDrop<'_> {
 impl<T: NativeType, P: AsRef<[T]>> From<P> for MutableBuffer<T> {
     #[inline]
     fn from(slice: P) -> Self {
-        unsafe { MutableBuffer::from_trusted_len_iter(slice.as_ref().iter().map(|x| *x)) }
+        unsafe { MutableBuffer::from_trusted_len_iter(slice.as_ref().iter().copied()) }
     }
 }
 
@@ -508,9 +508,7 @@ impl MutableBuffer<u8> {
     /// * The iterator must be TrustedLen
     #[inline]
     pub unsafe fn from_chunk_iter<I: Iterator<Item = u64>>(iter: I) -> Self {
-        let iterator = iter.into_iter();
-
-        let buffer = MutableBuffer::from_trusted_len_iter(iterator);
+        let buffer = MutableBuffer::from_trusted_len_iter(iter);
         buffer.into()
     }
 }
@@ -541,7 +539,7 @@ mod tests {
         let mut b = MutableBuffer::<f32>::with_capacity(16);
         b.reserve(4);
         assert_eq!(b.capacity(), 16);
-        b.extend_from_slice(&vec![0.1; 16]);
+        b.extend_from_slice(&[0.1; 16]);
         b.reserve(4);
         assert_eq!(b.capacity(), 32);
     }

@@ -99,12 +99,11 @@ fn eq(lhs: &Bitmap, rhs: &Bitmap) -> bool {
     // least-significant bit (LSB) numbering (also known as bit-endianness)
     let lhs_remainder = &lhs_chunks.remainder().to_le_bytes()[0..remainder_bytes];
     let rhs_remainder = &rhs_chunks.remainder().to_le_bytes()[0..remainder_bytes];
-    let remainder_equal = unsafe {
+    unsafe {
         debug_assert!(lhs_remainder.len() * 8 >= lhs_chunks.remainder_len());
         (0..lhs_chunks.remainder_len())
             .all(|i| get_bit_unchecked(lhs_remainder, i) == get_bit_unchecked(rhs_remainder, i))
-    };
-    remainder_equal
+    }
 }
 
 impl PartialEq for Bitmap {
