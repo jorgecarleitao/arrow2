@@ -220,7 +220,7 @@ fn sort_primitive<T, F>(
 ) -> Result<Int32Array>
 where
     T: NativeType,
-    F: Fn(T, &T) -> std::cmp::Ordering,
+    F: Fn(&T, &T) -> std::cmp::Ordering,
 {
     let values = values
         .as_any()
@@ -238,9 +238,9 @@ where
     let mut nulls = null_indices;
 
     if !descending {
-        valids.sort_by(|a, b| cmp(a.1, &b.1));
+        valids.sort_by(|a, b| cmp(&a.1, &b.1));
     } else {
-        valids.sort_by(|a, b| cmp(a.1, &b.1).reverse());
+        valids.sort_by(|a, b| cmp(&a.1, &b.1).reverse());
         // reverse to keep a stable ordering
         nulls.reverse();
     }

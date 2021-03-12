@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::array::growable::Growable;
 use crate::array::*;
 use crate::error::Result;
 use crate::record_batch::RecordBatch;
@@ -24,135 +23,10 @@ use crate::{
     array::growable::make_growable,
     datatypes::{DataType, IntervalUnit},
 };
+use crate::{array::growable::Growable, bits::SlicesIterator};
 
 /// Function that can filter arbitrary arrays
 pub type Filter<'a> = Box<dyn Fn(&dyn Array) -> Box<dyn Array> + 'a>;
-
-/// Internal state of [SlicesIterator]
-#[derive(Debug, PartialEq)]
-enum State {
-    // normal iteration
-    Nominal,
-    // nothing more to iterate.
-    Finished,
-}
-
-#[derive(Debug)]
-struct SlicesIterator2<'a> {
-    values: std::slice::Iter<'a, u8>,
-    filter_count: usize,
-    mask: u8,
-    max_len: usize,
-    current_byte: &'a u8,
-    state: State,
-    len: usize,
-    start: usize,
-    on_region: bool,
-}
-
-impl<'a> SlicesIterator2<'a> {
-    pub(crate) fn new(filter: &'a BooleanArray) -> Self {
-        let values = filter.values();
-        let offset = values.offset();
-        let buffer = &values.bytes()[offset / 8..];
-        let mut iter = buffer.iter();
-
-        let (current_byte, state) = match iter.next() {
-            Some(b) => (b, State::Nominal),
-            None => (&0, State::Finished),
-        };
-
-        Self {
-            state,
-            filter_count: values.len() - values.null_count(),
-            max_len: values.len(),
-            values: iter,
-            mask: 1u8.rotate_left(offset as u32),
-            current_byte,
-            len: 0,
-            start: 0,
-            on_region: false,
-        }
-    }
-
-    fn finish(&mut self) -> Option<(usize, usize)> {
-        self.state = State::Finished;
-        if self.on_region {
-            Some((self.start, self.len))
-        } else {
-            None
-        }
-    }
-
-    #[inline]
-    fn current_len(&self) -> usize {
-        self.start + self.len
-    }
-}
-
-impl<'a> Iterator for SlicesIterator2<'a> {
-    type Item = (usize, usize);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            if self.state == State::Finished {
-                return None;
-            }
-            if self.mask == 1 {
-                // at the beginning of a byte => try to skip it all together
-                match (self.on_region, self.current_byte) {
-                    (true, &255u8) => {
-                        self.len += 8;
-                        match self.values.next() {
-                            Some(v) => self.current_byte = v,
-                            None => return self.finish(),
-                        };
-                        continue;
-                    }
-                    (false, &0) => {
-                        self.len += 8;
-                        match self.values.next() {
-                            Some(v) => self.current_byte = v,
-                            None => return self.finish(),
-                        };
-                        continue;
-                    }
-                    _ => (), // we need to run over all bits of this byte
-                }
-            };
-
-            let value = (self.current_byte & self.mask) != 0;
-            self.mask = self.mask.rotate_left(1);
-            if self.mask == 1 {
-                // reached a new byte => try to fetch it from the iterator
-                match self.values.next() {
-                    Some(v) => self.current_byte = v,
-                    None => return self.finish(),
-                };
-            }
-
-            match (self.on_region, value) {
-                (true, true) => self.len += 1,
-                (false, false) => self.len += 1,
-                (true, _) => {
-                    let result = (self.start, self.len);
-                    self.start += self.len;
-                    self.len = 1;
-                    self.on_region = false;
-                    return Some(result);
-                }
-                (false, _) => {
-                    self.start += self.len;
-                    self.len = 1;
-                    self.on_region = true;
-                }
-            }
-            if self.current_len() == self.max_len {
-                return self.finish();
-            }
-        }
-    }
-}
 
 fn filter_growable<'a>(growable: &mut impl Growable<'a>, chunks: &[(usize, usize)]) {
     chunks
@@ -179,8 +53,8 @@ macro_rules! dyn_build_filter {
 /// WARNING: the nulls of `filter` are ignored and the value on its slot is considered.
 /// Therefore, it is considered undefined behavior to pass `filter` with null values.
 pub fn build_filter(filter: &BooleanArray) -> Result<Filter> {
-    let iter = SlicesIterator2::new(filter);
-    let filter_count = iter.filter_count;
+    let iter = SlicesIterator::new(filter.values());
+    let filter_count = iter.slots();
     let chunks = iter.collect::<Vec<_>>();
 
     Ok(Box::new(move |array: &dyn Array| match array.data_type() {
@@ -247,8 +121,7 @@ macro_rules! dyn_filter {
             .as_any()
             .downcast_ref::<PrimitiveArray<$ty>>()
             .unwrap();
-        let mut growable =
-            growable::GrowablePrimitive::<$ty>::new(&[array], false, $iter.filter_count);
+        let mut growable = growable::GrowablePrimitive::<$ty>::new(&[array], false, $iter.slots());
         $iter.for_each(|(start, len)| growable.extend(0, start, len));
         let array: PrimitiveArray<$ty> = growable.into();
         Ok(Box::new(array))
@@ -274,7 +147,7 @@ macro_rules! dyn_filter {
 /// # }
 /// ```
 pub fn filter(array: &dyn Array, filter: &BooleanArray) -> Result<Box<dyn Array>> {
-    let iter = SlicesIterator2::new(filter);
+    let iter = SlicesIterator::new(filter.values());
 
     match array.data_type() {
         DataType::UInt8 => {
@@ -318,7 +191,7 @@ pub fn filter(array: &dyn Array, filter: &BooleanArray) -> Result<Box<dyn Array>
             dyn_filter!(f64, array, iter)
         }
         _ => {
-            let mut mutable = make_growable(&[array], false, iter.filter_count);
+            let mut mutable = make_growable(&[array], false, iter.slots());
             iter.for_each(|(start, len)| mutable.extend(0, start, len));
             Ok(mutable.to_box())
         }
@@ -524,69 +397,4 @@ mod tests {
         assert_eq!(&make_array(expected), &result);
     }
     */
-
-    #[test]
-    fn test_slice_iterator_bits() {
-        let filter_values = (0..16).map(|i| i == 1).collect::<Vec<bool>>();
-        let filter = BooleanArray::from_slice(filter_values);
-
-        let iter = SlicesIterator2::new(&filter);
-        let filter_count = iter.filter_count;
-        let chunks = iter.collect::<Vec<_>>();
-
-        assert_eq!(chunks, vec![(1, 1)]);
-        assert_eq!(filter_count, 1);
-    }
-
-    #[test]
-    fn test_slice_iterator_bits1() {
-        let filter_values = (0..64).map(|i| i != 1).collect::<Vec<bool>>();
-        let filter = BooleanArray::from_slice(filter_values);
-
-        let iter = SlicesIterator2::new(&filter);
-        let filter_count = iter.filter_count;
-        let chunks = iter.collect::<Vec<_>>();
-
-        assert_eq!(chunks, vec![(0, 1), (2, 62)]);
-        assert_eq!(filter_count, 64 - 1);
-    }
-
-    #[test]
-    fn test_slice_iterator_chunk_and_bits() {
-        let filter_values = (0..130).map(|i| i % 62 != 0).collect::<Vec<bool>>();
-        let filter = BooleanArray::from_slice(filter_values);
-
-        let iter = SlicesIterator2::new(&filter);
-        let filter_count = iter.filter_count;
-        let chunks = iter.collect::<Vec<_>>();
-
-        assert_eq!(chunks, vec![(1, 61), (63, 61), (125, 5)]);
-        assert_eq!(filter_count, 61 + 61 + 5);
-    }
-
-    #[test]
-    fn test_slice_iterator_incomplete_byte() {
-        let filter_values = (0..6).map(|i| i == 1).collect::<Vec<bool>>();
-        let filter = BooleanArray::from_slice(filter_values);
-
-        let iter = SlicesIterator2::new(&filter);
-        let filter_count = iter.filter_count;
-        let chunks = iter.collect::<Vec<_>>();
-
-        assert_eq!(chunks, vec![(1, 1)]);
-        assert_eq!(filter_count, 1);
-    }
-
-    #[test]
-    fn test_slice_iterator_incomplete_byte1() {
-        let filter_values = (0..12).map(|i| i == 9).collect::<Vec<bool>>();
-        let filter = BooleanArray::from_slice(filter_values);
-
-        let iter = SlicesIterator2::new(&filter);
-        let filter_count = iter.filter_count;
-        let chunks = iter.collect::<Vec<_>>();
-
-        assert_eq!(chunks, vec![(9, 1)]);
-        assert_eq!(filter_count, 1);
-    }
 }

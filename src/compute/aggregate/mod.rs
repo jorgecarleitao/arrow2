@@ -92,7 +92,7 @@ pub fn min_string<O: Offset>(array: &Utf8Array<O>) -> Option<&str> {
 fn min_max_helper<T, F>(array: &PrimitiveArray<T>, cmp: F) -> Option<T>
 where
     T: NativeType,
-    F: Fn(T, &T) -> std::cmp::Ordering,
+    F: Fn(&T, &T) -> std::cmp::Ordering,
 {
     let null_count = array.null_count();
 
@@ -109,7 +109,7 @@ where
         let mut has_value = false;
         for (i, item) in m.iter().enumerate() {
             let is_valid = unsafe { validity.get_bit_unchecked(i) };
-            if is_valid && (!has_value || cmp(n, item) == std::cmp::Ordering::Greater) {
+            if is_valid && (!has_value || cmp(&n, item) == std::cmp::Ordering::Greater) {
                 has_value = true;
                 n = *item
             }
@@ -117,7 +117,7 @@ where
     } else {
         // optimized path for arrays without null values
         n = m[1..].iter().fold(m[0], |max, item| {
-            if cmp(max, item) == std::cmp::Ordering::Greater {
+            if cmp(&max, item) == std::cmp::Ordering::Greater {
                 *item
             } else {
                 max

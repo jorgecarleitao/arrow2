@@ -33,7 +33,7 @@ pub type DynComparator<'a> = Box<dyn Fn(usize, usize) -> Ordering + 'a>;
 // Original implementation from https://doc.rust-lang.org/std/primitive.f32.html#method.total_cmp
 // TODO to change to use std when it becomes stable
 #[inline]
-pub fn total_cmp_f32(l: f32, r: &f32) -> std::cmp::Ordering {
+pub fn total_cmp_f32(l: &f32, r: &f32) -> std::cmp::Ordering {
     let mut left = l.to_bits() as i32;
     let mut right = r.to_bits() as i32;
 
@@ -47,7 +47,7 @@ pub fn total_cmp_f32(l: f32, r: &f32) -> std::cmp::Ordering {
 // Original implementation from https://doc.rust-lang.org/std/primitive.f64.html#method.total_cmp
 // TODO to change to use std when it becomes stable
 #[inline]
-pub fn total_cmp_f64(l: f64, r: &f64) -> std::cmp::Ordering {
+pub fn total_cmp_f64(l: &f64, r: &f64) -> std::cmp::Ordering {
     let mut left = l.to_bits() as i64;
     let mut right = r.to_bits() as i64;
 
@@ -60,7 +60,7 @@ pub fn total_cmp_f64(l: f64, r: &f64) -> std::cmp::Ordering {
 /// Total order of all native types whose Rust implementation
 /// supports total order.
 #[inline]
-pub fn total_cmp<T>(l: T, r: &T) -> std::cmp::Ordering
+pub fn total_cmp<T>(l: &T, r: &T) -> std::cmp::Ordering
 where
     T: NativeType + Ord,
 {
@@ -75,7 +75,7 @@ fn compare_primitives<'a, T: NativeType + Ord>(
     let right = right.as_any().downcast_ref::<PrimitiveArray<T>>().unwrap();
     let left = left.values();
     let right = right.values();
-    Box::new(move |i, j| total_cmp(left[i], &right[j]))
+    Box::new(move |i, j| total_cmp(&left[i], &right[j]))
 }
 
 fn compare_boolean<'a>(left: &'a dyn Array, right: &'a dyn Array) -> DynComparator<'a> {
@@ -92,7 +92,7 @@ fn compare_f32<'a>(left: &'a dyn Array, right: &'a dyn Array) -> DynComparator<'
         .unwrap();
     let left = left.values();
     let right = right.values();
-    Box::new(move |i, j| total_cmp_f32(left[i], &right[j]))
+    Box::new(move |i, j| total_cmp_f32(&left[i], &right[j]))
 }
 
 fn compare_f64<'a>(left: &'a dyn Array, right: &'a dyn Array) -> DynComparator<'a> {
@@ -103,7 +103,7 @@ fn compare_f64<'a>(left: &'a dyn Array, right: &'a dyn Array) -> DynComparator<'
         .unwrap();
     let left = left.values();
     let right = right.values();
-    Box::new(move |i, j| total_cmp_f64(left[i], &right[j]))
+    Box::new(move |i, j| total_cmp_f64(&left[i], &right[j]))
 }
 
 fn compare_string<'a, O: Offset>(left: &'a dyn Array, right: &'a dyn Array) -> DynComparator<'a> {
