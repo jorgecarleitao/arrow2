@@ -99,7 +99,7 @@ fn take_values_indices_validity<I: Offset>(
     let values_values = values.values();
     let values = indices.iter().map(|index| match index {
         Some(index) => {
-            let index = maybe_usize::<I>(index)?;
+            let index = maybe_usize::<I>(*index)?;
             validity.push(values_validity.get_bit(index));
             Result::Ok(values_values.get_bit(index))
         }

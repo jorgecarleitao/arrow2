@@ -150,7 +150,7 @@ pub fn take_values_indices_validity<O: Offset, I: Offset, A: GenericBinaryArray<
     let offsets = indices.iter().map(|index| {
         match index {
             Some(index) => {
-                let index = maybe_usize::<I>(index)?;
+                let index = maybe_usize::<I>(*index)?;
                 if values_validity.get_bit(index) {
                     validity.push(true);
                     length += offsets[index + 1] - offsets[index];

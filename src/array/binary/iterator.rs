@@ -15,75 +15,65 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::array::IterableBinaryArray;
-use crate::array::Offset;
+use crate::{
+    array::{Array, Offset},
+    bits::{zip_validity, ZipValidity},
+};
 
 use super::BinaryArray;
 
-impl<O: Offset> IterableBinaryArray for BinaryArray<O> {
-    unsafe fn value_unchecked(&self, i: usize) -> &[u8] {
-        BinaryArray::<O>::value_unchecked(self, i)
+/// # Safety
+/// This iterator is `TrustedLen`
+pub struct BinaryValueIter<'a, O: Offset> {
+    array: &'a BinaryArray<O>,
+    index: usize,
+}
+
+impl<'a, O: Offset> BinaryValueIter<'a, O> {
+    #[inline]
+    pub fn new(array: &'a BinaryArray<O>) -> Self {
+        Self { array, index: 0 }
+    }
+}
+
+impl<'a, O: Offset> Iterator for BinaryValueIter<'a, O> {
+    type Item = &'a [u8];
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index >= self.array.len() {
+            return None;
+        } else {
+            self.index += 1;
+        }
+        Some(unsafe { self.array.value_unchecked(self.index - 1) })
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (
+            self.array.len() - self.index,
+            Some(self.array.len() - self.index),
+        )
     }
 }
 
 impl<'a, O: Offset> IntoIterator for &'a BinaryArray<O> {
     type Item = Option<&'a [u8]>;
-    type IntoIter = BinaryIter<'a, BinaryArray<O>>;
+    type IntoIter = ZipValidity<'a, &'a [u8], BinaryValueIter<'a, O>>;
 
     fn into_iter(self) -> Self::IntoIter {
-        BinaryIter::new(self)
+        self.iter()
     }
 }
 
 impl<'a, O: Offset> BinaryArray<O> {
-    /// constructs a new iterator
-    pub fn iter(&'a self) -> BinaryIter<'a, Self> {
-        BinaryIter::new(&self)
-    }
-}
-
-/// an iterator that returns `Some(&[u8])` or `None`, for binary arrays
-#[derive(Debug)]
-pub struct BinaryIter<'a, A>
-where
-    A: IterableBinaryArray,
-{
-    array: &'a A,
-    i: usize,
-    len: usize,
-}
-
-impl<'a, A: IterableBinaryArray> BinaryIter<'a, A> {
-    /// create a new iterator
-    pub fn new(array: &'a A) -> Self {
-        Self {
-            array,
-            i: 0,
-            len: array.len(),
-        }
-    }
-}
-
-impl<'a, A: IterableBinaryArray> std::iter::Iterator for BinaryIter<'a, A> {
-    type Item = Option<&'a [u8]>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let i = self.i;
-        if i >= self.len {
-            None
-        } else if self.array.is_null(i) {
-            self.i += 1;
-            Some(None)
-        } else {
-            self.i += 1;
-            Some(Some(unsafe { self.array.value_unchecked(i) }))
-        }
+    /// Returns an iterator of `Option<&[u8]>`
+    pub fn iter(&'a self) -> ZipValidity<'a, &'a [u8], BinaryValueIter<'a, O>> {
+        zip_validity(BinaryValueIter::new(self), &self.validity)
     }
 
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.len - self.i, Some(self.len - self.i))
+    /// Returns an iterator of `&[u8]`
+    pub fn values_iter(&'a self) -> BinaryValueIter<'a, O> {
+        BinaryValueIter::new(self)
     }
 }
-
-/// all arrays have known size.
-impl<'a, A: IterableBinaryArray> std::iter::ExactSizeIterator for BinaryIter<'a, A> {}

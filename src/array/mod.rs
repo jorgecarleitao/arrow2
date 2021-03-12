@@ -362,18 +362,18 @@ fn display_fmt<T: std::fmt::Display, I: IntoIterator<Item = Option<T>>>(
     }
 }
 
-/// Trait that Binary arrays implement for the purposes of DRY.
-pub trait IterableBinaryArray: Array {
-    unsafe fn value_unchecked(&self, i: usize) -> &[u8];
-}
-
 /// Trait that list arrays implement for the purposes of DRY.
 pub trait IterableListArray: Array {
     fn value(&self, i: usize) -> Box<dyn Array>;
 }
 
-/// Trait that list arrays implement for the purposes of DRY.
-pub trait GenericBinaryArray<O: Offset>: Array {
+/// Trait that binary and string arrays implement for the purposes of DRY.
+/// # Safety
+/// The implementer must ensure that
+/// 1. `offsets.len() > 0`
+/// 2. `offsets[i] >= offsets[i-1] for all i`
+/// 3. `offsets[i] < values.len() for all i`
+pub unsafe trait GenericBinaryArray<O: Offset>: Array {
     fn values(&self) -> &[u8];
     fn offsets(&self) -> &[O];
 }

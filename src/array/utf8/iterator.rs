@@ -16,67 +16,63 @@
 // under the License.
 
 use crate::array::{Array, Offset};
+use crate::bits::{zip_validity, ZipValidity};
 
 use super::Utf8Array;
 
+/// Iterator of values of an `Utf8Array`.
+/// # Safety
+/// This iterator is `TrustedLen`
+pub struct Utf8ValuesIter<'a, O: Offset> {
+    array: &'a Utf8Array<O>,
+    index: usize,
+}
+
+impl<'a, O: Offset> Utf8ValuesIter<'a, O> {
+    #[inline]
+    pub fn new(array: &'a Utf8Array<O>) -> Self {
+        Self { array, index: 0 }
+    }
+}
+
+impl<'a, O: Offset> Iterator for Utf8ValuesIter<'a, O> {
+    type Item = &'a str;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index >= self.array.len() {
+            return None;
+        } else {
+            self.index += 1;
+        }
+        Some(unsafe { self.array.value_unchecked(self.index - 1) })
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (
+            self.array.len() - self.index,
+            Some(self.array.len() - self.index),
+        )
+    }
+}
+
 impl<'a, O: Offset> IntoIterator for &'a Utf8Array<O> {
     type Item = Option<&'a str>;
-    type IntoIter = Utf8Iter<'a, O>;
+    type IntoIter = ZipValidity<'a, &'a str, Utf8ValuesIter<'a, O>>;
 
     fn into_iter(self) -> Self::IntoIter {
-        Utf8Iter::new(self)
+        self.iter()
     }
 }
 
 impl<'a, O: Offset> Utf8Array<O> {
-    /// constructs a new iterator
-    pub fn iter(&'a self) -> Utf8Iter<'a, O> {
-        Utf8Iter::new(&self)
-    }
-}
-
-/// an iterator that returns `Some(&str)` or `None`, for string arrays
-#[derive(Debug)]
-pub struct Utf8Iter<'a, T>
-where
-    T: Offset,
-{
-    array: &'a Utf8Array<T>,
-    i: usize,
-    len: usize,
-}
-
-impl<'a, T: Offset> Utf8Iter<'a, T> {
-    /// create a new iterator
-    pub fn new(array: &'a Utf8Array<T>) -> Self {
-        Utf8Iter::<T> {
-            array,
-            i: 0,
-            len: array.len(),
-        }
-    }
-}
-
-impl<'a, T: Offset> std::iter::Iterator for Utf8Iter<'a, T> {
-    type Item = Option<&'a str>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let i = self.i;
-        if i >= self.len {
-            None
-        } else if self.array.is_null(i) {
-            self.i += 1;
-            Some(None)
-        } else {
-            self.i += 1;
-            Some(Some(unsafe { self.array.value_unchecked(i) }))
-        }
+    /// Returns an iterator of `Option<&str>`
+    pub fn iter(&'a self) -> ZipValidity<'a, &'a str, Utf8ValuesIter<'a, O>> {
+        zip_validity(Utf8ValuesIter::new(self), &self.validity)
     }
 
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.len - self.i, Some(self.len - self.i))
+    /// Returns an iterator of `&str`
+    pub fn values_iter(&'a self) -> Utf8ValuesIter<'a, O> {
+        Utf8ValuesIter::new(self)
     }
 }
-
-/// all arrays have known size.
-impl<'a, T: Offset> std::iter::ExactSizeIterator for Utf8Iter<'a, T> {}

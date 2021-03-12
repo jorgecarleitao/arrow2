@@ -158,7 +158,7 @@ impl<O: Offset> std::fmt::Display for BinaryArray<O> {
     }
 }
 
-impl<O: Offset> GenericBinaryArray<O> for BinaryArray<O> {
+unsafe impl<O: Offset> GenericBinaryArray<O> for BinaryArray<O> {
     #[inline]
     fn values(&self) -> &[u8] {
         self.values()

@@ -44,7 +44,7 @@ fn take_validity<I: Offset>(
             let iter = indices.iter().map(|x| {
                 Result::Ok(match x {
                     Some(x) => {
-                        let index = maybe_usize(x)?;
+                        let index = maybe_usize(*x)?;
                         validity.get_bit(index)
                     }
                     None => false,

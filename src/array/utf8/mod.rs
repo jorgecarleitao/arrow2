@@ -122,9 +122,9 @@ impl<O: Offset> Utf8Array<O> {
         let length = (offset_1 - offset).to_usize().unwrap();
         let offset = offset.to_usize().unwrap();
 
+        // Soundness: `from_data` verifies that each slot is utf8 and offsets are built correctly.
         let slice = std::slice::from_raw_parts(self.values.as_ptr().add(offset), length);
-        // todo: validate utf8 so that we can use the unsafe version
-        std::str::from_utf8(slice).unwrap()
+        std::str::from_utf8_unchecked(slice)
     }
 
     /// Returns a slice of this [`Utf8Array`].
@@ -214,7 +214,7 @@ impl<O: Offset> std::fmt::Display for Utf8Array<O> {
     }
 }
 
-impl<O: Offset> GenericBinaryArray<O> for Utf8Array<O> {
+unsafe impl<O: Offset> GenericBinaryArray<O> for Utf8Array<O> {
     #[inline]
     fn values(&self) -> &[u8] {
         self.values()

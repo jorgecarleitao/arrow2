@@ -16,6 +16,9 @@
 // under the License.
 
 mod chunk_iterator;
+mod zip_validity;
+
+pub use zip_validity::{zip_validity, ZipValidity};
 
 const BIT_MASK: [u8; 8] = [1, 2, 4, 8, 16, 32, 64, 128];
 

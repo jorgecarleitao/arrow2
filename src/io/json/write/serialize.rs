@@ -85,7 +85,7 @@ impl JsonSerializable for f64 {
 }
 
 #[inline]
-fn to_json<T: NativeType>(value: Option<T>) -> Value
+fn to_json<T: NativeType>(value: Option<&T>) -> Value
 where
     T: NativeType + JsonSerializable,
 {
