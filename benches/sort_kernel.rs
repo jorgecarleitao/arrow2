@@ -19,7 +19,7 @@
 extern crate criterion;
 use criterion::Criterion;
 
-use arrow2::compute::sort::{lexsort, sort, SortColumn};
+use arrow2::compute::sort::{lexsort, sort, SortColumn, SortOptions};
 use arrow2::util::bench_util::*;
 use arrow2::{array::*, datatypes::*};
 
@@ -44,7 +44,7 @@ fn bench_lexsort(arr_a: &dyn Array, array_b: &dyn Array) {
 }
 
 fn bench_sort(arr_a: &dyn Array) {
-    sort(criterion::black_box(arr_a), None).unwrap();
+    sort(criterion::black_box(arr_a), &SortOptions::default()).unwrap();
 }
 
 fn add_benchmark(c: &mut Criterion) {
