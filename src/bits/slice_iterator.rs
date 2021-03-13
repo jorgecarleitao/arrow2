@@ -122,13 +122,6 @@ impl<'a> Iterator for SlicesIterator<'a> {
 
             let value = (self.current_byte & self.mask) != 0;
             self.mask = self.mask.rotate_left(1);
-            if self.mask == 1 {
-                // reached a new byte => try to fetch it from the iterator
-                match self.values.next() {
-                    Some(v) => self.current_byte = v,
-                    None => return self.finish(),
-                };
-            }
 
             match (self.on_region, value) {
                 (true, true) => self.len += 1,
@@ -146,6 +139,15 @@ impl<'a> Iterator for SlicesIterator<'a> {
                     self.on_region = true;
                 }
             }
+
+            if self.mask == 1 {
+                // reached a new byte => try to fetch it from the iterator
+                match self.values.next() {
+                    Some(v) => self.current_byte = v,
+                    None => return self.finish(),
+                };
+            }
+
             if self.current_len() == self.max_len {
                 return self.finish();
             }
@@ -156,6 +158,24 @@ impl<'a> Iterator for SlicesIterator<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn check_invariant() {
+        let values = (0..8).map(|i| i % 2 != 0).collect::<Bitmap>();
+        let iter = SlicesIterator::new(&values);
+
+        let slots = iter.slots();
+
+        let slices = iter.collect::<Vec<_>>();
+
+        assert_eq!(slices, vec![(1, 1), (3, 1), (5, 1), (7, 1)]);
+
+        let mut sum = 0;
+        for (_, len) in slices {
+            sum += len;
+        };
+        assert_eq!(sum, slots);
+    }
 
     #[test]
     fn test_slice_iterator_bits() {
