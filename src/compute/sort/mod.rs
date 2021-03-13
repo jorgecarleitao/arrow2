@@ -34,7 +34,7 @@ use num::ToPrimitive;
 
 mod lex_sort;
 
-pub use lex_sort::{lexsort, lexsort_to_indices};
+pub use lex_sort::{lexsort, lexsort_to_indices, SortColumn};
 
 /// Sort the `ArrayRef` using `SortOptions`.
 ///
