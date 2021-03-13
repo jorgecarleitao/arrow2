@@ -173,7 +173,7 @@ mod tests {
         let mut sum = 0;
         for (_, len) in slices {
             sum += len;
-        };
+        }
         assert_eq!(sum, slots);
     }
 

@@ -73,3 +73,7 @@ harness = false
 [[bench]]
 name = "length_kernel"
 harness = false
+
+[[bench]]
+name = "null_count"
+harness = false

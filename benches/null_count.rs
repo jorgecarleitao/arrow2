@@ -14,26 +14,29 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+extern crate arrow2;
 
-pub mod array;
-pub mod buffer;
-pub mod error;
-pub mod types;
+use arrow2::bits::null_count;
 
-pub mod compute;
-pub mod io;
-pub mod record_batch;
-pub mod temporal_conversions;
+use criterion::{criterion_group, criterion_main, Criterion};
 
-#[cfg(feature = "benchmarks")]
-pub mod bits;
-#[cfg(not(feature = "benchmarks"))]
-pub(crate) mod bits;
-pub mod datatypes;
+fn add_benchmark(c: &mut Criterion) {
+    let bytes = (0..1026)
+        .map(|x| 0b01011011u8.rotate_left(x))
+        .collect::<Vec<_>>();
 
-pub mod ffi;
-pub mod util;
+    c.bench_function("null_count", |b| {
+        b.iter(|| null_count(&bytes, 0, bytes.len() * 8))
+    });
 
-// so that documentation gets test
-#[cfg(any(test, doctest))]
-mod docs;
+    c.bench_function("null_count_offset", |b| {
+        b.iter(|| null_count(&bytes, 10, bytes.len() * 8 - 10))
+    });
+
+    c.bench_function("null_count_sliced", |b| {
+        b.iter(|| null_count(&bytes, 10, bytes.len() * 8 - 20))
+    });
+}
+
+criterion_group!(benches, add_benchmark);
+criterion_main!(benches);

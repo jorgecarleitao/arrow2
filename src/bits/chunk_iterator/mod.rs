@@ -31,6 +31,11 @@ pub struct BitChunks<'a, T> {
     phantom: std::marker::PhantomData<T>,
 }
 
+#[inline]
+fn remainder_bytes(offset: usize, len: usize, bits_in_chunk: usize) -> usize {
+    (((offset + len) % bits_in_chunk) + 7) / 8
+}
+
 /// writes `bytes` into `dst` assuming that they correspond to an arrow bitmap
 /// # Safety
 /// `dst` must be writable for `bytes.len()` bytes.
@@ -58,7 +63,7 @@ impl<'a, T: BitChunk> BitChunks<'a, T> {
         let bits_in_chunk = Self::bits_in_chunk();
         let skip_offset = offset / 8;
         let bit_offset = offset % 8;
-        let remainder_bytes_len = (len % bits_in_chunk).saturating_add(7) / 8;
+        let remainder_bytes_len = remainder_bytes(bit_offset, len, bits_in_chunk);
         debug_assert!(bit_offset < 8);
 
         Self {
@@ -72,16 +77,15 @@ impl<'a, T: BitChunk> BitChunks<'a, T> {
 
     #[inline]
     pub fn remainder(&self) -> T {
-        // remaining bytes may not fit in `size_of::<T>()`. Thus, we must complement
-        // them to fit: allocate T and write to it
+        // remaining bytes may not fit in `size_of::<T>()`. We complement
+        // them to fit by allocating T and writing to it byte by byte
         let mut remainder = T::zero();
 
         match (self.remainder_bytes_len == 0, self.bit_offset == 0) {
             (true, _) => remainder,
             (false, true) => {
-                // build T by combining the remaining bytes at the end.
-                // when: len == 514 and T = u64 (=512 bits)
-                // chunked_bytes_len = 8 * (514/8) / 8 = 64;
+                // remaining bytes but not bit offset: bytes bit-aligned
+                // and thus we only need to write them to `remainder`.
                 let chunked_bytes_len = std::mem::size_of::<T>() * self.chunk_len();
 
                 // all remaining bytes
@@ -97,6 +101,8 @@ impl<'a, T: BitChunk> BitChunks<'a, T> {
                 remainder
             }
             (false, false) => {
+                // there is a min-alignment; we need to write to `remainder`
+                // with valid bit-alignment, via `copy_with_merge`
                 let dst = &mut remainder as *mut T as *mut u8;
 
                 // build T by combining the remaining bytes at the end.
@@ -185,7 +191,7 @@ impl<T: BitChunk> Iterator for BitChunkIterator<'_, T> {
 
             merge_reversed(current, next, self.offset)
         } else {
-            // on the last chunk the "next" chunk may not be complete and thus we must create it from existing bytes.
+            // on the last chunk the "next" chunk may not be complete and thus we must create it from remaining bytes.
             let mut remainder = T::zero();
             let dst = &mut remainder as *mut T as *mut u8;
 
@@ -215,5 +221,18 @@ impl<T: BitChunk> ExactSizeIterator for BitChunkIterator<'_, T> {
     #[inline]
     fn len(&self) -> usize {
         self.chunk_len - self.chunk_index
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_bla() {
+        assert_eq!(remainder_bytes(2, 2, 64), 1);
+        assert_eq!(remainder_bytes(2, 3, 64), 1);
+        assert_eq!(remainder_bytes(2, 6, 64), 1);
+        assert_eq!(remainder_bytes(2, 8, 64), 2);
     }
 }

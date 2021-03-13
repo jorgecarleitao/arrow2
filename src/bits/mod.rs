@@ -46,14 +46,14 @@ pub fn bytes_for(bits: usize) -> usize {
 }
 
 #[inline]
-pub(crate) fn null_count(slice: &[u8], offset: usize, len: usize) -> usize {
+pub fn null_count(slice: &[u8], offset: usize, len: usize) -> usize {
+    // u64 results in optimal performance (verified via benches)
     let chunks = chunk_iterator::BitChunks::<u64>::new(slice, offset, len);
 
     let mut count: usize = chunks.iter().map(|c| c.count_ones() as usize).sum();
 
     if chunks.remainder_len() > 0 {
         // mask least significant bits up to len, as they are otherwise not required
-        // let remainder = chunks.remainder() & !0u64 >> (64 - chunks.remainder_len());
         // here we shift instead because it is a bit faster
         let remainder = chunks.remainder() & !0u64 >> (64 - chunks.remainder_len());
         count += remainder.count_ones() as usize;
@@ -90,5 +90,36 @@ mod tests {
             assert_eq!(get_bit(input, i), false);
         }
         assert_eq!(get_bit(input, 4 * 8 + 3), true);
+    }
+
+    #[test]
+    fn test_null_count() {
+        let input: &[u8] = &[
+            0b01001001, 0b00000001, 0b00000010, 0b00000100, 0b00001000, 0b00010000, 0b00100000,
+            0b01000000, 0b11111111,
+        ];
+        assert_eq!(null_count(input, 0, 8), 8 - 3);
+        assert_eq!(null_count(input, 1, 7), 7 - 2);
+        assert_eq!(null_count(input, 1, 8), 8 - 3);
+        assert_eq!(null_count(input, 2, 7), 7 - 3);
+        assert_eq!(null_count(input, 0, 32), 32 - 6);
+        assert_eq!(null_count(input, 9, 2), 2);
+
+        let input: &[u8] = &[0b01000000, 0b01000001];
+        assert_eq!(null_count(input, 8, 2), 1);
+        assert_eq!(null_count(input, 8, 3), 2);
+        assert_eq!(null_count(input, 8, 4), 3);
+        assert_eq!(null_count(input, 8, 5), 4);
+        assert_eq!(null_count(input, 8, 6), 5);
+        assert_eq!(null_count(input, 8, 7), 5);
+        assert_eq!(null_count(input, 8, 8), 6);
+
+        let input: &[u8] = &[0b01000000, 0b01010101];
+        assert_eq!(null_count(input, 9, 2), 1);
+        assert_eq!(null_count(input, 10, 2), 1);
+        assert_eq!(null_count(input, 11, 2), 1);
+        assert_eq!(null_count(input, 12, 2), 1);
+        assert_eq!(null_count(input, 13, 2), 1);
+        assert_eq!(null_count(input, 14, 2), 1);
     }
 }

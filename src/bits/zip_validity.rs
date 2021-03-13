@@ -71,7 +71,14 @@ impl<'a, T, I: Iterator<Item = T>> Iterator for ZipValidity<'a, T, I> {
                 // reached a new byte => try to fetch it from the iterator
                 match self.validity_iter.next() {
                     Some(v) => self.current_byte = v,
-                    None => return None,
+                    None => {
+                        return if is_valid {
+                            self.values.next().map(Some)
+                        } else {
+                            self.values.next();
+                            Some(None)
+                        }
+                    }
                 }
             }
             if is_valid {
@@ -119,6 +126,21 @@ mod tests {
 
         let a = zip.collect::<Vec<_>>();
         assert_eq!(a, vec![Some(0), None]);
+    }
+
+    #[test]
+    fn complete() {
+        let a: Option<Bitmap> =
+            MutableBitmap::from_iter(vec![true, false, true, false, true, false, true, false])
+                .into();
+        let values = vec![0, 1, 2, 3, 4, 5, 6, 7];
+        let zip = zip_validity(values.into_iter(), &a);
+
+        let a = zip.collect::<Vec<_>>();
+        assert_eq!(
+            a,
+            vec![Some(0), None, Some(2), None, Some(4), None, Some(6), None]
+        );
     }
 
     #[test]
