@@ -210,14 +210,8 @@ mod tests {
     #[test]
     fn test_lex_sort_mixed_types2() {
         // test mix of string and in64 with option
-        let c1 = Primitive::<i64>::from(&[Some(0), Some(2), Some(-1), Some(0)])
-        .to(DataType::Int64);
-        let c2 = Utf8Array::<i32>::from(&vec![
-            Some("foo"),
-            Some("9"),
-            Some("7"),
-            Some("bar"),
-        ]);
+        let c1 = Primitive::<i64>::from(&[Some(0), Some(2), Some(-1), Some(0)]).to(DataType::Int64);
+        let c2 = Utf8Array::<i32>::from(&vec![Some("foo"), Some("9"), Some("7"), Some("bar")]);
         let input = vec![
             SortColumn {
                 values: &c1,
@@ -235,8 +229,15 @@ mod tests {
             },
         ];
         let expected = vec![
-            Box::new(Primitive::<i64>::from(&[Some(2), Some(0), Some(0), Some(-1)]).to(DataType::Int64)) as Box<dyn Array>,
-            Box::new(Utf8Array::<i32>::from(&vec![Some("9"), Some("foo"), Some("bar"), Some("7")])) as Box<dyn Array>,
+            Box::new(
+                Primitive::<i64>::from(&[Some(2), Some(0), Some(0), Some(-1)]).to(DataType::Int64),
+            ) as Box<dyn Array>,
+            Box::new(Utf8Array::<i32>::from(&vec![
+                Some("9"),
+                Some("foo"),
+                Some("bar"),
+                Some("7"),
+            ])) as Box<dyn Array>,
         ];
         test_lex_sort_arrays(input, expected);
     }
