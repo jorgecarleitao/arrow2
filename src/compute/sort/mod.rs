@@ -33,8 +33,21 @@ use crate::buffer::MutableBuffer;
 use num::ToPrimitive;
 
 mod lex_sort;
+mod primitive;
 
 pub use lex_sort::{lexsort, lexsort_to_indices, SortColumn};
+
+macro_rules! dyn_sort {
+    ($ty:ty, $array:expr, $cmp:expr, $options:expr) => {{
+        let array = $array
+            .as_any()
+            .downcast_ref::<PrimitiveArray<$ty>>()
+            .unwrap();
+        Ok(Box::new(primitive::sort_by::<$ty, _>(
+            &array, $cmp, $options,
+        )))
+    }};
+}
 
 /// Sort the `ArrayRef` using `SortOptions`.
 ///
@@ -43,9 +56,35 @@ pub use lex_sort::{lexsort, lexsort_to_indices, SortColumn};
 ///
 /// Returns an `ArrowError::ComputeError(String)` if the array type is either unsupported by `sort_to_indices` or `take`.
 ///
-pub fn sort(values: &dyn Array, options: Option<SortOptions>) -> Result<Box<dyn Array>> {
-    let indices = sort_to_indices(values, options)?;
-    take::take(values, &indices)
+pub fn sort(values: &dyn Array, options: &SortOptions) -> Result<Box<dyn Array>> {
+    match values.data_type() {
+        DataType::Int8 => dyn_sort!(i8, values, ord::total_cmp, options),
+        DataType::Int16 => dyn_sort!(i16, values, ord::total_cmp, options),
+        DataType::Int32
+        | DataType::Date32
+        | DataType::Time32(_)
+        | DataType::Interval(IntervalUnit::YearMonth) => {
+            dyn_sort!(i32, values, ord::total_cmp, options)
+        }
+        DataType::Int64
+        | DataType::Date64
+        | DataType::Time64(_)
+        | DataType::Timestamp(_, None)
+        | DataType::Duration(_) => dyn_sort!(i64, values, ord::total_cmp, options),
+        DataType::UInt8 => dyn_sort!(u8, values, ord::total_cmp, options),
+        DataType::UInt16 => dyn_sort!(u16, values, ord::total_cmp, options),
+        DataType::UInt32 => dyn_sort!(u32, values, ord::total_cmp, options),
+        DataType::UInt64 => dyn_sort!(u64, values, ord::total_cmp, options),
+        DataType::Float32 => dyn_sort!(f32, values, ord::total_cmp_f32, options),
+        DataType::Float64 => dyn_sort!(f64, values, ord::total_cmp_f64, options),
+        DataType::Interval(IntervalUnit::DayTime) => {
+            dyn_sort!(days_ms, values, ord::total_cmp, options)
+        }
+        _ => {
+            let indices = sort_to_indices(values, options)?;
+            take::take(values, &indices)
+        }
+    }
 }
 
 // partition indices into valid and null indices
@@ -54,82 +93,109 @@ fn partition_validity(array: &dyn Array) -> (Vec<i32>, Vec<i32>) {
     indices.partition(|index| array.is_valid(*index as usize))
 }
 
+macro_rules! dyn_sort_indices {
+    ($ty:ty, $array:expr, $cmp:expr, $options:expr) => {{
+        let array = $array
+            .as_any()
+            .downcast_ref::<PrimitiveArray<$ty>>()
+            .unwrap();
+        Ok(primitive::indices_sorted_by::<$ty, _>(
+            &array, $cmp, $options,
+        ))
+    }};
+}
+
 /// Sort elements from `ArrayRef` into an unsigned integer (`UInt32Array`) of indices.
 /// For floating point arrays any NaN values are considered to be greater than any other non-null value
-pub fn sort_to_indices(values: &dyn Array, options: Option<SortOptions>) -> Result<Int32Array> {
-    let options = options.unwrap_or_default();
-
-    let (v, n) = partition_validity(values);
-
+pub fn sort_to_indices(values: &dyn Array, options: &SortOptions) -> Result<Int32Array> {
     match values.data_type() {
-        DataType::Boolean => sort_boolean(values, v, n, &options),
-        DataType::Int8 => sort_primitive::<i8, _>(values, v, n, ord::total_cmp, &options),
-        DataType::Int16 => sort_primitive::<i16, _>(values, v, n, ord::total_cmp, &options),
+        DataType::Boolean => {
+            let (v, n) = partition_validity(values);
+            sort_boolean(values, v, n, &options)
+        }
+        DataType::Int8 => dyn_sort_indices!(i8, values, ord::total_cmp, options),
+        DataType::Int16 => dyn_sort_indices!(i16, values, ord::total_cmp, options),
         DataType::Int32
         | DataType::Date32
         | DataType::Time32(_)
         | DataType::Interval(IntervalUnit::YearMonth) => {
-            sort_primitive::<i32, _>(values, v, n, ord::total_cmp, &options)
+            dyn_sort_indices!(i32, values, ord::total_cmp, options)
         }
         DataType::Int64
         | DataType::Date64
         | DataType::Time64(_)
         | DataType::Timestamp(_, None)
-        | DataType::Duration(_) => sort_primitive::<i64, _>(values, v, n, ord::total_cmp, &options),
-        DataType::UInt8 => sort_primitive::<u8, _>(values, v, n, ord::total_cmp, &options),
-        DataType::UInt16 => sort_primitive::<u16, _>(values, v, n, ord::total_cmp, &options),
-        DataType::UInt32 => sort_primitive::<u32, _>(values, v, n, ord::total_cmp, &options),
-        DataType::UInt64 => sort_primitive::<u64, _>(values, v, n, ord::total_cmp, &options),
-        DataType::Float32 => sort_primitive::<f32, _>(values, v, n, ord::total_cmp_f32, &options),
-        DataType::Float64 => sort_primitive::<f64, _>(values, v, n, ord::total_cmp_f64, &options),
+        | DataType::Duration(_) => dyn_sort_indices!(i64, values, ord::total_cmp, options),
+        DataType::UInt8 => dyn_sort_indices!(u8, values, ord::total_cmp, options),
+        DataType::UInt16 => dyn_sort_indices!(u16, values, ord::total_cmp, options),
+        DataType::UInt32 => dyn_sort_indices!(u32, values, ord::total_cmp, options),
+        DataType::UInt64 => dyn_sort_indices!(u64, values, ord::total_cmp, options),
+        DataType::Float32 => dyn_sort_indices!(f32, values, ord::total_cmp_f32, options),
+        DataType::Float64 => dyn_sort_indices!(f64, values, ord::total_cmp_f64, options),
         DataType::Interval(IntervalUnit::DayTime) => {
-            sort_primitive::<days_ms, _>(values, v, n, ord::total_cmp, &options)
+            dyn_sort_indices!(days_ms, values, ord::total_cmp, options)
         }
-        DataType::Utf8 => Ok(sort_utf8::<i32>(values, v, n, &options)),
-        DataType::LargeUtf8 => Ok(sort_utf8::<i64>(values, v, n, &options)),
-        DataType::List(field) => match field.data_type() {
-            DataType::Int8 => Ok(sort_list::<i32, i8>(values, v, n, &options)),
-            DataType::Int16 => Ok(sort_list::<i32, i16>(values, v, n, &options)),
-            DataType::Int32 => Ok(sort_list::<i32, i32>(values, v, n, &options)),
-            DataType::Int64 => Ok(sort_list::<i32, i64>(values, v, n, &options)),
-            DataType::UInt8 => Ok(sort_list::<i32, u8>(values, v, n, &options)),
-            DataType::UInt16 => Ok(sort_list::<i32, u16>(values, v, n, &options)),
-            DataType::UInt32 => Ok(sort_list::<i32, u32>(values, v, n, &options)),
-            DataType::UInt64 => Ok(sort_list::<i32, u64>(values, v, n, &options)),
-            t => Err(ArrowError::NotYetImplemented(format!(
-                "Sort not supported for list type {:?}",
-                t
-            ))),
-        },
-        DataType::LargeList(field) => match field.data_type() {
-            DataType::Int8 => Ok(sort_list::<i64, i8>(values, v, n, &options)),
-            DataType::Int16 => Ok(sort_list::<i64, i16>(values, v, n, &options)),
-            DataType::Int32 => Ok(sort_list::<i64, i32>(values, v, n, &options)),
-            DataType::Int64 => Ok(sort_list::<i64, i64>(values, v, n, &options)),
-            DataType::UInt8 => Ok(sort_list::<i64, u8>(values, v, n, &options)),
-            DataType::UInt16 => Ok(sort_list::<i64, u16>(values, v, n, &options)),
-            DataType::UInt32 => Ok(sort_list::<i64, u32>(values, v, n, &options)),
-            DataType::UInt64 => Ok(sort_list::<i64, u64>(values, v, n, &options)),
-            t => Err(ArrowError::NotYetImplemented(format!(
-                "Sort not supported for list type {:?}",
-                t
-            ))),
-        },
-        DataType::FixedSizeList(field, _) => match field.data_type() {
-            DataType::Int8 => Ok(sort_list::<i32, i8>(values, v, n, &options)),
-            DataType::Int16 => Ok(sort_list::<i32, i16>(values, v, n, &options)),
-            DataType::Int32 => Ok(sort_list::<i32, i32>(values, v, n, &options)),
-            DataType::Int64 => Ok(sort_list::<i32, i64>(values, v, n, &options)),
-            DataType::UInt8 => Ok(sort_list::<i32, u8>(values, v, n, &options)),
-            DataType::UInt16 => Ok(sort_list::<i32, u16>(values, v, n, &options)),
-            DataType::UInt32 => Ok(sort_list::<i32, u32>(values, v, n, &options)),
-            DataType::UInt64 => Ok(sort_list::<i32, u64>(values, v, n, &options)),
-            t => Err(ArrowError::NotYetImplemented(format!(
-                "Sort not supported for list type {:?}",
-                t
-            ))),
-        },
+        DataType::Utf8 => {
+            let (v, n) = partition_validity(values);
+            Ok(sort_utf8::<i32>(values, v, n, &options))
+        }
+        DataType::LargeUtf8 => {
+            let (v, n) = partition_validity(values);
+            Ok(sort_utf8::<i64>(values, v, n, &options))
+        }
+        DataType::List(field) => {
+            let (v, n) = partition_validity(values);
+            match field.data_type() {
+                DataType::Int8 => Ok(sort_list::<i32, i8>(values, v, n, &options)),
+                DataType::Int16 => Ok(sort_list::<i32, i16>(values, v, n, &options)),
+                DataType::Int32 => Ok(sort_list::<i32, i32>(values, v, n, &options)),
+                DataType::Int64 => Ok(sort_list::<i32, i64>(values, v, n, &options)),
+                DataType::UInt8 => Ok(sort_list::<i32, u8>(values, v, n, &options)),
+                DataType::UInt16 => Ok(sort_list::<i32, u16>(values, v, n, &options)),
+                DataType::UInt32 => Ok(sort_list::<i32, u32>(values, v, n, &options)),
+                DataType::UInt64 => Ok(sort_list::<i32, u64>(values, v, n, &options)),
+                t => Err(ArrowError::NotYetImplemented(format!(
+                    "Sort not supported for list type {:?}",
+                    t
+                ))),
+            }
+        }
+        DataType::LargeList(field) => {
+            let (v, n) = partition_validity(values);
+            match field.data_type() {
+                DataType::Int8 => Ok(sort_list::<i64, i8>(values, v, n, &options)),
+                DataType::Int16 => Ok(sort_list::<i64, i16>(values, v, n, &options)),
+                DataType::Int32 => Ok(sort_list::<i64, i32>(values, v, n, &options)),
+                DataType::Int64 => Ok(sort_list::<i64, i64>(values, v, n, &options)),
+                DataType::UInt8 => Ok(sort_list::<i64, u8>(values, v, n, &options)),
+                DataType::UInt16 => Ok(sort_list::<i64, u16>(values, v, n, &options)),
+                DataType::UInt32 => Ok(sort_list::<i64, u32>(values, v, n, &options)),
+                DataType::UInt64 => Ok(sort_list::<i64, u64>(values, v, n, &options)),
+                t => Err(ArrowError::NotYetImplemented(format!(
+                    "Sort not supported for list type {:?}",
+                    t
+                ))),
+            }
+        }
+        DataType::FixedSizeList(field, _) => {
+            let (v, n) = partition_validity(values);
+            match field.data_type() {
+                DataType::Int8 => Ok(sort_list::<i32, i8>(values, v, n, &options)),
+                DataType::Int16 => Ok(sort_list::<i32, i16>(values, v, n, &options)),
+                DataType::Int32 => Ok(sort_list::<i32, i32>(values, v, n, &options)),
+                DataType::Int64 => Ok(sort_list::<i32, i64>(values, v, n, &options)),
+                DataType::UInt8 => Ok(sort_list::<i32, u8>(values, v, n, &options)),
+                DataType::UInt16 => Ok(sort_list::<i32, u16>(values, v, n, &options)),
+                DataType::UInt32 => Ok(sort_list::<i32, u32>(values, v, n, &options)),
+                DataType::UInt64 => Ok(sort_list::<i32, u64>(values, v, n, &options)),
+                t => Err(ArrowError::NotYetImplemented(format!(
+                    "Sort not supported for list type {:?}",
+                    t
+                ))),
+            }
+        }
         DataType::Dictionary(key_type, value_type) if *value_type.as_ref() == DataType::Utf8 => {
+            let (v, n) = partition_validity(values);
             match key_type.as_ref() {
                 DataType::Int8 => Ok(sort_string_dictionary::<i8>(values, v, n, &options)),
                 DataType::Int16 => Ok(sort_string_dictionary::<i16>(values, v, n, &options)),
@@ -212,54 +278,6 @@ fn sort_boolean(
     }
 
     Ok(Int32Array::from_data(DataType::Int32, values.into(), None))
-}
-
-/// Sort primitive values
-fn sort_primitive<T, F>(
-    values: &dyn Array,
-    value_indices: Vec<i32>,
-    null_indices: Vec<i32>,
-    cmp: F,
-    options: &SortOptions,
-) -> Result<Int32Array>
-where
-    T: NativeType,
-    F: Fn(&T, &T) -> std::cmp::Ordering,
-{
-    let values = values
-        .as_any()
-        .downcast_ref::<PrimitiveArray<T>>()
-        .unwrap()
-        .values();
-    let descending = options.descending;
-
-    // create tuples that are used for sorting
-    let mut valids = value_indices
-        .into_iter()
-        .map(|index| (index, values[index as usize]))
-        .collect::<Vec<(i32, T)>>();
-
-    let mut nulls = null_indices;
-
-    if !descending {
-        valids.sort_by(|a, b| cmp(&a.1, &b.1));
-    } else {
-        valids.sort_by(|a, b| cmp(&a.1, &b.1).reverse());
-        // reverse to keep a stable ordering
-        nulls.reverse();
-    }
-
-    let valids = valids.iter().map(|tuple| tuple.0);
-
-    let values = if options.nulls_first {
-        let values = nulls.into_iter().chain(valids);
-        unsafe { Buffer::<i32>::from_trusted_len_iter(values) }
-    } else {
-        let values = valids.chain(nulls.into_iter());
-        unsafe { Buffer::<i32>::from_trusted_len_iter(values) }
-    };
-
-    Ok(Int32Array::from_data(DataType::Int32, values, None))
 }
 
 /// Sort strings
@@ -419,71 +437,57 @@ mod tests {
 
     fn test_sort_to_indices_boolean_arrays(
         data: &[Option<bool>],
-        options: Option<SortOptions>,
+        options: SortOptions,
         expected_data: &[i32],
     ) {
         let output = BooleanArray::from(data);
         let expected = Primitive::<i32>::from_slice(&expected_data).to(DataType::Int32);
-        let output = sort_to_indices(&output, options).unwrap();
-        assert_eq!(output, expected)
-    }
-
-    fn test_sort_to_indices_primitive_arrays<T>(
-        data: &[Option<T>],
-        data_type: DataType,
-        options: Option<SortOptions>,
-        expected_data: &[i32],
-    ) where
-        T: NativeType,
-    {
-        let input = Primitive::<T>::from(data).to(data_type);
-        let expected = Primitive::<i32>::from_slice(&expected_data).to(DataType::Int32);
-        let output = sort_to_indices(&input, options).unwrap();
+        let output = sort_to_indices(&output, &options).unwrap();
         assert_eq!(output, expected)
     }
 
     fn test_sort_primitive_arrays<T>(
         data: &[Option<T>],
         data_type: DataType,
-        options: Option<SortOptions>,
+        options: SortOptions,
         expected_data: &[Option<T>],
     ) where
         T: NativeType,
     {
         let input = Primitive::<T>::from(data).to(data_type.clone());
         let expected = Primitive::<T>::from(expected_data).to(data_type);
-        let output = sort(&input, options).unwrap();
+        let output = sort(&input, &options).unwrap();
         assert_eq!(expected, output.as_ref())
     }
 
     fn test_sort_to_indices_string_arrays(
         data: &[Option<&str>],
-        options: Option<SortOptions>,
+        options: SortOptions,
         expected_data: &[i32],
     ) {
         let input = Utf8Array::<i32>::from(&data.to_vec());
         let expected = Primitive::<i32>::from_slice(&expected_data).to(DataType::Int32);
-        let output = sort_to_indices(&input, options).unwrap();
+        let output = sort_to_indices(&input, &options).unwrap();
         assert_eq!(output, expected)
     }
 
     fn test_sort_string_arrays(
         data: &[Option<&str>],
-        options: Option<SortOptions>,
+        options: SortOptions,
         expected_data: &[Option<&str>],
     ) {
         let input = Utf8Array::<i32>::from(&data.to_vec());
         let expected = Utf8Array::<i32>::from(&expected_data.to_vec());
-        let output = sort(&input, options).unwrap();
+        let output = sort(&input, &options).unwrap();
         assert_eq!(expected, output.as_ref())
     }
 
     fn test_sort_string_dict_arrays<K: DictionaryKey>(
         data: &[Option<&str>],
-        options: Option<SortOptions>,
+        options: SortOptions,
         expected_data: &[Option<&str>],
     ) {
-        let input = data.iter().map(|x| Result::Ok(x.clone()));
+        let input = data.iter().map(|x| Result::Ok(*x));
         let input =
             DictionaryPrimitive::<i32, Utf8Primitive<i32>, &str>::try_from_iter(input).unwrap();
         let input = input.to(DataType::Dictionary(
@@ -491,7 +495,7 @@ mod tests {
             Box::new(DataType::Utf8),
         ));
 
-        let expected = expected_data.iter().map(|x| Result::Ok(x.clone()));
+        let expected = expected_data.iter().map(|x| Result::Ok(*x));
         let expected =
             DictionaryPrimitive::<i32, Utf8Primitive<i32>, &str>::try_from_iter(expected).unwrap();
         let expected = expected.to(DataType::Dictionary(
@@ -499,7 +503,7 @@ mod tests {
             Box::new(DataType::Utf8),
         ));
 
-        let output = sort(&input, options).unwrap();
+        let output = sort(&input, &options).unwrap();
         assert_eq!(expected, output.as_ref())
     }
 
@@ -553,199 +557,35 @@ mod tests {
     */
 
     #[test]
-    fn test_sort_to_indices_primitives() {
-        test_sort_to_indices_primitive_arrays::<i16>(
-            &[None, Some(0), Some(2), Some(-1), Some(0), None],
-            DataType::Int16,
-            None,
-            &[0, 5, 3, 1, 4, 2],
-        );
-        test_sort_to_indices_primitive_arrays::<f32>(
-            &[
-                None,
-                Some(-0.05),
-                Some(2.225),
-                Some(-1.01),
-                Some(-0.05),
-                None,
-            ],
-            DataType::Float32,
-            None,
-            &[0, 5, 3, 1, 4, 2],
-        );
-        test_sort_to_indices_primitive_arrays::<f64>(
-            &[
-                None,
-                Some(-0.05),
-                Some(2.225),
-                Some(-1.01),
-                Some(-0.05),
-                None,
-            ],
-            DataType::Float64,
-            None,
-            &[0, 5, 3, 1, 4, 2],
-        );
-
-        // descending
-        test_sort_to_indices_primitive_arrays::<i8>(
-            &[None, Some(0), Some(2), Some(-1), Some(0), None],
-            DataType::Int8,
-            Some(SortOptions {
-                descending: true,
-                nulls_first: false,
-            }),
-            &[2, 1, 4, 3, 5, 0], // [2, 4, 1, 3, 5, 0]
-        );
-
-        test_sort_to_indices_primitive_arrays::<f32>(
-            &[
-                None,
-                Some(0.005),
-                Some(20.22),
-                Some(-10.3),
-                Some(0.005),
-                None,
-            ],
-            DataType::Float32,
-            Some(SortOptions {
-                descending: true,
-                nulls_first: false,
-            }),
-            &[2, 1, 4, 3, 5, 0],
-        );
-
-        test_sort_to_indices_primitive_arrays::<f64>(
-            &[None, Some(0.0), Some(2.0), Some(-1.0), Some(0.0), None],
-            DataType::Float64,
-            Some(SortOptions {
-                descending: true,
-                nulls_first: false,
-            }),
-            &[2, 1, 4, 3, 5, 0],
-        );
-
-        // descending, nulls first
-        test_sort_to_indices_primitive_arrays::<i8>(
-            &[None, Some(0), Some(2), Some(-1), Some(0), None],
-            DataType::Int8,
-            Some(SortOptions {
-                descending: true,
-                nulls_first: true,
-            }),
-            &[5, 0, 2, 1, 4, 3], // [5, 0, 2, 4, 1, 3]
-        );
-
-        test_sort_to_indices_primitive_arrays::<f32>(
-            &[None, Some(0.1), Some(0.2), Some(-1.3), Some(0.01), None],
-            DataType::Float32,
-            Some(SortOptions {
-                descending: true,
-                nulls_first: true,
-            }),
-            &[5, 0, 2, 1, 4, 3],
-        );
-
-        test_sort_to_indices_primitive_arrays::<f64>(
-            &[None, Some(10.1), Some(100.2), Some(-1.3), Some(10.01), None],
-            DataType::Float64,
-            Some(SortOptions {
-                descending: true,
-                nulls_first: true,
-            }),
-            &[5, 0, 2, 1, 4, 3],
-        );
-    }
-
-    #[test]
     fn test_sort_boolean() {
         // boolean
         test_sort_to_indices_boolean_arrays(
             &[None, Some(false), Some(true), Some(true), Some(false), None],
-            None,
+            SortOptions {
+                descending: false,
+                nulls_first: true,
+            },
             &[0, 5, 1, 4, 2, 3],
         );
 
         // boolean, descending
         test_sort_to_indices_boolean_arrays(
             &[None, Some(false), Some(true), Some(true), Some(false), None],
-            Some(SortOptions {
+            SortOptions {
                 descending: true,
                 nulls_first: false,
-            }),
+            },
             &[2, 3, 1, 4, 5, 0],
         );
 
         // boolean, descending, nulls first
         test_sort_to_indices_boolean_arrays(
             &[None, Some(false), Some(true), Some(true), Some(false), None],
-            Some(SortOptions {
+            SortOptions {
                 descending: true,
                 nulls_first: true,
-            }),
+            },
             &[5, 0, 2, 3, 1, 4],
-        );
-    }
-
-    #[test]
-    fn test_sort_primitives() {
-        // default case
-        test_sort_primitive_arrays::<i8>(
-            &[None, Some(3), Some(5), Some(2), Some(3), None],
-            DataType::Int8,
-            None,
-            &[None, None, Some(2), Some(3), Some(3), Some(5)],
-        );
-        // descending
-        test_sort_primitive_arrays::<i8>(
-            &[None, Some(0), Some(2), Some(-1), Some(0), None],
-            DataType::Int8,
-            Some(SortOptions {
-                descending: true,
-                nulls_first: false,
-            }),
-            &[Some(2), Some(0), Some(0), Some(-1), None, None],
-        );
-
-        // descending, nulls first
-        test_sort_primitive_arrays::<i8>(
-            &[None, Some(0), Some(2), Some(-1), Some(0), None],
-            DataType::Int8,
-            Some(SortOptions {
-                descending: true,
-                nulls_first: true,
-            }),
-            &[None, None, Some(2), Some(0), Some(0), Some(-1)],
-        );
-
-        test_sort_primitive_arrays::<f32>(
-            &[None, Some(0.0), Some(2.0), Some(-1.0), Some(0.0), None],
-            DataType::Float32,
-            Some(SortOptions {
-                descending: true,
-                nulls_first: true,
-            }),
-            &[None, None, Some(2.0), Some(0.0), Some(0.0), Some(-1.0)],
-        );
-
-        // ascending, nulls first
-        test_sort_primitive_arrays::<i8>(
-            &[None, Some(0), Some(2), Some(-1), Some(0), None],
-            DataType::Int8,
-            Some(SortOptions {
-                descending: false,
-                nulls_first: true,
-            }),
-            &[None, None, Some(-1), Some(0), Some(0), Some(2)],
-        );
-        test_sort_primitive_arrays::<f32>(
-            &[None, Some(0.0), Some(2.0), Some(-1.0), Some(0.0), None],
-            DataType::Float32,
-            Some(SortOptions {
-                descending: false,
-                nulls_first: true,
-            }),
-            &[None, None, Some(-1.0), Some(0.0), Some(0.0), Some(2.0)],
         );
     }
 
@@ -755,39 +595,39 @@ mod tests {
         test_sort_primitive_arrays::<f64>(
             &[None, Some(0.0), Some(2.0), Some(-1.0), Some(f64::NAN), None],
             DataType::Float64,
-            Some(SortOptions {
+            SortOptions {
                 descending: true,
                 nulls_first: true,
-            }),
+            },
             &[None, None, Some(f64::NAN), Some(2.0), Some(0.0), Some(-1.0)],
         );
         test_sort_primitive_arrays::<f64>(
             &[Some(f64::NAN), Some(f64::NAN), Some(f64::NAN), Some(1.0)],
             DataType::Float64,
-            Some(SortOptions {
+            SortOptions {
                 descending: true,
                 nulls_first: true,
-            }),
+            },
             &[Some(f64::NAN), Some(f64::NAN), Some(f64::NAN), Some(1.0)],
         );
 
         test_sort_primitive_arrays::<f64>(
             &[None, Some(0.0), Some(2.0), Some(-1.0), Some(f64::NAN), None],
             DataType::Float64,
-            Some(SortOptions {
+            SortOptions {
                 descending: false,
                 nulls_first: true,
-            }),
+            },
             &[None, None, Some(-1.0), Some(0.0), Some(2.0), Some(f64::NAN)],
         );
         // nans
         test_sort_primitive_arrays::<f64>(
             &[Some(f64::NAN), Some(f64::NAN), Some(f64::NAN), Some(1.0)],
             DataType::Float64,
-            Some(SortOptions {
+            SortOptions {
                 descending: false,
                 nulls_first: true,
-            }),
+            },
             &[Some(1.0), Some(f64::NAN), Some(f64::NAN), Some(f64::NAN)],
         );
     }
@@ -803,7 +643,10 @@ mod tests {
                 Some("glad"),
                 Some("-ad"),
             ],
-            None,
+            SortOptions {
+                descending: false,
+                nulls_first: true,
+            },
             &[0, 3, 5, 1, 4, 2],
         );
 
@@ -816,10 +659,10 @@ mod tests {
                 Some("glad"),
                 Some("-ad"),
             ],
-            Some(SortOptions {
+            SortOptions {
                 descending: true,
                 nulls_first: false,
-            }),
+            },
             &[2, 4, 1, 5, 3, 0],
         );
 
@@ -832,10 +675,10 @@ mod tests {
                 Some("glad"),
                 Some("-ad"),
             ],
-            Some(SortOptions {
+            SortOptions {
                 descending: false,
                 nulls_first: true,
-            }),
+            },
             &[0, 3, 5, 1, 4, 2],
         );
 
@@ -848,10 +691,10 @@ mod tests {
                 Some("glad"),
                 Some("-ad"),
             ],
-            Some(SortOptions {
+            SortOptions {
                 descending: true,
                 nulls_first: true,
-            }),
+            },
             &[3, 0, 2, 4, 1, 5],
         );
     }
@@ -867,53 +710,10 @@ mod tests {
                 Some("glad"),
                 Some("-ad"),
             ],
-            None,
-            &[
-                None,
-                None,
-                Some("-ad"),
-                Some("bad"),
-                Some("glad"),
-                Some("sad"),
-            ],
-        );
-
-        test_sort_string_arrays(
-            &[
-                None,
-                Some("bad"),
-                Some("sad"),
-                None,
-                Some("glad"),
-                Some("-ad"),
-            ],
-            Some(SortOptions {
-                descending: true,
-                nulls_first: false,
-            }),
-            &[
-                Some("sad"),
-                Some("glad"),
-                Some("bad"),
-                Some("-ad"),
-                None,
-                None,
-            ],
-        );
-
-        test_sort_string_arrays(
-            &[
-                None,
-                Some("bad"),
-                Some("sad"),
-                None,
-                Some("glad"),
-                Some("-ad"),
-            ],
-            Some(SortOptions {
+            SortOptions {
                 descending: false,
                 nulls_first: true,
-            }),
+            },
             &[
                 None,
                 None,
@@ -933,10 +733,56 @@ mod tests {
                 Some("glad"),
                 Some("-ad"),
             ],
-            Some(SortOptions {
+            SortOptions {
+                descending: true,
+                nulls_first: false,
+            },
+            &[
+                Some("sad"),
+                Some("glad"),
+                Some("bad"),
+                Some("-ad"),
+                None,
+                None,
+            ],
+        );
+
+        test_sort_string_arrays(
+            &[
+                None,
+                Some("bad"),
+                Some("sad"),
+                None,
+                Some("glad"),
+                Some("-ad"),
+            ],
+            SortOptions {
+                descending: false,
+                nulls_first: true,
+            },
+            &[
+                None,
+                None,
+                Some("-ad"),
+                Some("bad"),
+                Some("glad"),
+                Some("sad"),
+            ],
+        );
+
+        test_sort_string_arrays(
+            &[
+                None,
+                Some("bad"),
+                Some("sad"),
+                None,
+                Some("glad"),
+                Some("-ad"),
+            ],
+            SortOptions {
                 descending: true,
                 nulls_first: true,
-            }),
+            },
             &[
                 None,
                 None,
@@ -959,7 +805,10 @@ mod tests {
                 Some("glad"),
                 Some("-ad"),
             ],
-            None,
+            SortOptions {
+                descending: false,
+                nulls_first: true,
+            },
             &[
                 None,
                 None,
@@ -979,10 +828,10 @@ mod tests {
                 Some("glad"),
                 Some("-ad"),
             ],
-            Some(SortOptions {
+            SortOptions {
                 descending: true,
                 nulls_first: false,
-            }),
+            },
             &[
                 Some("sad"),
                 Some("glad"),
@@ -1002,10 +851,10 @@ mod tests {
                 Some("glad"),
                 Some("-ad"),
             ],
-            Some(SortOptions {
+            SortOptions {
                 descending: false,
                 nulls_first: true,
-            }),
+            },
             &[
                 None,
                 None,
@@ -1025,10 +874,10 @@ mod tests {
                 Some("glad"),
                 Some("-ad"),
             ],
-            Some(SortOptions {
+            SortOptions {
                 descending: true,
                 nulls_first: true,
-            }),
+            },
             &[
                 None,
                 None,

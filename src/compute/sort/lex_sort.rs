@@ -89,7 +89,7 @@ pub fn lexsort_to_indices(columns: &[SortColumn]) -> Result<PrimitiveArray<i32>>
     if columns.len() == 1 {
         // fallback to non-lexical sort
         let column = &columns[0];
-        return sort_to_indices(column.values, column.options);
+        return sort_to_indices(column.values, &column.options.unwrap_or_default());
     }
 
     let row_count = columns[0].values.len();
