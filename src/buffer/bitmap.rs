@@ -253,6 +253,7 @@ impl MutableBitmap {
     pub(crate) unsafe fn set_len(&mut self, len: usize) {
         self.buffer.set_len(len.saturating_add(7) / 8);
         self.length = len;
+        self.mask = 1u8.rotate_left(len as u32);
     }
 }
 

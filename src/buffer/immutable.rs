@@ -126,6 +126,9 @@ impl<T: NativeType> Buffer<T> {
         MutableBuffer::from_trusted_len_iter(iterator).into()
     }
 
+    /// # Safety
+    /// This method assumes that the iterator's size is correct and is undefined behavior
+    /// to use it on an iterator that reports an incorrect length.
     #[inline]
     pub unsafe fn try_from_trusted_len_iter<E, I: Iterator<Item = std::result::Result<T, E>>>(
         iterator: I,
