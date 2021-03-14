@@ -368,39 +368,39 @@ impl MutableBitmap {
         let mut iterator = iter.into_iter();
         let length = iterator.size_hint().1.unwrap();
 
-        let chunks = length / 64;
+        let chunks = length / 8;
 
+        let mut mask: u8 = 1;
         let iter = (0..chunks).map(|_| {
-            let mut byte_accum: u64 = 0;
-            let mut mask: u64 = 1;
-            (0..64).for_each(|_| {
+            let mut byte_accum: u8 = 0;
+            (0..8).for_each(|_| {
                 let value = iterator.next().unwrap();
                 byte_accum |= match value {
                     true => mask,
                     false => 0,
                 };
-                mask <<= 1;
+                mask = mask.rotate_left(1);
             });
             byte_accum
         });
 
         let mut buffer = MutableBuffer::from_trusted_len_iter(iter);
 
-        let mut byte_accum: u64 = 0;
-        let mut mask: u64 = 1;
-        while let Some(value) = iterator.next() {
+        let mut byte_accum: u8 = 0;
+        let mut mask: u8 = 1;
+        for value in iterator {
             byte_accum |= match value {
                 true => mask,
                 false => 0,
             };
-            mask <<= 1;
+            mask = mask.rotate_left(1);
         }
         buffer.push(byte_accum);
 
         Self {
-            buffer: buffer.into(),
+            buffer,
             byte: 0,
-            mask: 1u8.rotate_left(length as u32),
+            mask,
             length,
         }
     }
@@ -416,18 +416,18 @@ impl MutableBitmap {
         let mut iterator = iter.into_iter();
         let length = iterator.size_hint().1.unwrap();
 
-        let chunks = length / 64;
+        let chunks = length / 8;
 
+        let mut mask: u8 = 1;
         let iter = (0..chunks).map(|_| {
-            let mut byte_accum: u64 = 0;
-            let mut mask: u64 = 1;
-            (0..64).try_for_each(|_| {
+            let mut byte_accum: u8 = 0;
+            (0..8).try_for_each(|_| {
                 let value = iterator.next().unwrap()?;
                 byte_accum |= match value {
                     true => mask,
                     false => 0,
                 };
-                mask <<= 1;
+                mask = mask.rotate_left(1);
                 Ok(())
             })?;
             Ok(byte_accum)
@@ -435,21 +435,21 @@ impl MutableBitmap {
 
         let mut buffer = MutableBuffer::try_from_trusted_len_iter(iter)?;
 
-        let mut byte_accum: u64 = 0;
-        let mut mask: u64 = 1;
-        while let Some(value) = iterator.next() {
+        let mut byte_accum: u8 = 0;
+        let mut mask: u8 = 1;
+        for value in iterator {
             byte_accum |= match value? {
                 true => mask,
                 false => 0,
             };
-            mask <<= 1;
+            mask = mask.rotate_left(1);
         }
         buffer.push(byte_accum);
 
         Ok(Self {
-            buffer: buffer.into(),
+            buffer,
             byte: 0,
-            mask: 1u8.rotate_left(length as u32),
+            mask,
             length,
         })
     }
