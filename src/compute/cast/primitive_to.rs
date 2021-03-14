@@ -22,7 +22,7 @@ use crate::{
         Array, BooleanArray, DictionaryKey, DictionaryPrimitive, Offset, Primitive, PrimitiveArray,
         TryFromIterator, Utf8Array,
     },
-    buffer::Bitmap,
+    bitmap::Bitmap,
     datatypes::DataType,
     types::NativeType,
 };

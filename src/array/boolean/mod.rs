@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::{buffer::Bitmap, datatypes::DataType};
+use crate::{bitmap::Bitmap, datatypes::DataType};
 
 use super::{display_fmt, Array};
 

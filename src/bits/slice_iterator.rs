@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::buffer::Bitmap;
+use crate::bitmap::Bitmap;
 
 /// Internal state of [SlicesIterator]
 #[derive(Debug, PartialEq)]

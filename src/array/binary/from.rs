@@ -19,10 +19,7 @@ use std::{iter::FromIterator, sync::Arc};
 
 use super::BinaryArray;
 use crate::array::{Array, Builder, ToArray, TryFromIterator};
-use crate::{
-    array::Offset,
-    buffer::{MutableBitmap, MutableBuffer},
-};
+use crate::{array::Offset, bitmap::MutableBitmap, buffer::MutableBuffer};
 use crate::{
     datatypes::DataType,
     error::{ArrowError, Result as ArrowResult},

@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::{array::BooleanArray, buffer::Bitmap};
+use crate::{array::BooleanArray, bitmap::Bitmap};
 
 use super::utils::{count_validity, equal_bits};
 

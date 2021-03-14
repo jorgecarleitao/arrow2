@@ -286,11 +286,7 @@ mod tests {
     use flate2::read::GzDecoder;
     use std::{io::Cursor, sync::Arc};
 
-    use crate::{
-        buffer::{Bitmap, Buffer},
-        error::Result,
-        io::json::read::infer_json_schema,
-    };
+    use crate::{bitmap::Bitmap, buffer::Buffer, error::Result, io::json::read::infer_json_schema};
 
     use super::*;
     use std::{fs::File, io::SeekFrom};

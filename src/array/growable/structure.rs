@@ -19,7 +19,7 @@ use std::sync::Arc;
 
 use crate::{
     array::{Array, StructArray},
-    buffer::MutableBitmap,
+    bitmap::MutableBitmap,
 };
 
 use super::{
@@ -148,7 +148,7 @@ mod tests {
     use std::iter::FromIterator;
 
     use crate::array::{Primitive, Utf8Array};
-    use crate::buffer::Bitmap;
+    use crate::bitmap::Bitmap;
     use crate::datatypes::{DataType, Field};
 
     use super::*;

@@ -20,8 +20,8 @@ use std::ptr::NonNull;
 use std::usize;
 use std::{fmt::Debug, mem::size_of};
 
-use crate::types::NativeType;
 use crate::alloc;
+use crate::types::NativeType;
 
 use super::{
     bytes::{Bytes, Deallocation},

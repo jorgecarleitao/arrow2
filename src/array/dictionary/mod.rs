@@ -17,7 +17,7 @@
 
 use std::sync::Arc;
 
-use crate::{buffer::Bitmap, datatypes::DataType, types::NativeType};
+use crate::{bitmap::Bitmap, datatypes::DataType, types::NativeType};
 
 use super::{ffi::ToFFI, new_empty_array, primitive::PrimitiveArray, Array};
 

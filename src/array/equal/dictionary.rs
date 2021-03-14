@@ -17,7 +17,7 @@
 
 use crate::{
     array::{DictionaryArray, DictionaryKey},
-    buffer::Bitmap,
+    bitmap::Bitmap,
 };
 
 use super::equal as _equal;

@@ -17,7 +17,8 @@
 
 use crate::{
     array::{Array, Offset},
-    buffer::{MutableBitmap, MutableBuffer},
+    bitmap::MutableBitmap,
+    buffer::MutableBuffer,
 };
 
 pub(super) fn extend_offsets<T: Offset>(

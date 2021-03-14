@@ -22,7 +22,7 @@ use regex::Regex;
 use super::utils::{combine_validities, unary_utf8_boolean};
 use crate::array::{BooleanArray, Offset, Utf8Array};
 use crate::error::{ArrowError, Result};
-use crate::{array::*, buffer::Bitmap};
+use crate::{array::*, bitmap::Bitmap};
 
 pub fn regex_match<O: Offset>(values: &Utf8Array<O>, regex: &Utf8Array<O>) -> Result<BooleanArray> {
     if values.len() != regex.len() {

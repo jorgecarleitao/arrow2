@@ -16,7 +16,7 @@
 // under the License.
 
 use crate::array::{Array, BooleanArray};
-use crate::buffer::{Bitmap, MutableBitmap};
+use crate::bitmap::{Bitmap, MutableBitmap};
 use crate::error::{ArrowError, Result};
 
 use super::utils::combine_validities;

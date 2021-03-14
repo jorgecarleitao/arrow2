@@ -44,10 +44,11 @@ use std::{
 
 use crate::{
     array::Array,
+    bitmap::Bitmap,
     bits::bytes_for,
     buffer::{
         bytes::{Bytes, Deallocation},
-        Bitmap, Buffer,
+        Buffer,
     },
     datatypes::{DataType, TimeUnit},
     error::{ArrowError, Result},

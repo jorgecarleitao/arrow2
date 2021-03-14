@@ -18,8 +18,8 @@
 use crate::buffer::MutableBuffer;
 use crate::{
     array::{Array, PrimitiveArray},
+    bitmap::MutableBitmap,
     bits::SlicesIterator,
-    buffer::MutableBitmap,
     types::NativeType,
 };
 

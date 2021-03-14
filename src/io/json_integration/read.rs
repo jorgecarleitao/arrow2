@@ -22,7 +22,8 @@ use serde_json::Value;
 
 use crate::{
     array::*,
-    buffer::{Bitmap, Buffer},
+    bitmap::Bitmap,
+    buffer::Buffer,
     datatypes::{DataType, Field, IntervalUnit, Schema},
     error::{ArrowError, Result},
     record_batch::RecordBatch,

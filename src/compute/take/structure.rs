@@ -19,7 +19,7 @@ use std::sync::Arc;
 
 use crate::{
     array::{Array, Offset, PrimitiveArray, StructArray},
-    buffer::{Bitmap, MutableBitmap},
+    bitmap::{Bitmap, MutableBitmap},
     error::Result,
 };
 

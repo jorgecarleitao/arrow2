@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::buffer::Bitmap;
+use crate::bitmap::Bitmap;
 
 /// Iterator of Option<T> from an iterator and validity.
 pub struct ZipValidity<'a, T, I: Iterator<Item = T>> {
@@ -114,7 +114,7 @@ pub fn zip_validity<T, I: Iterator<Item = T>>(
 mod tests {
     use std::iter::FromIterator;
 
-    use crate::buffer::MutableBitmap;
+    use crate::bitmap::MutableBitmap;
 
     use super::*;
 

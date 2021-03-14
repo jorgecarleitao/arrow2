@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::{array::StructArray, buffer::Bitmap};
+use crate::{array::StructArray, bitmap::Bitmap};
 
 use super::{
     equal_range,

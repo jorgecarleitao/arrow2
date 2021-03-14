@@ -15,10 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::{
-    buffer::{Bitmap, Buffer},
-    datatypes::DataType,
-};
+use crate::{bitmap::Bitmap, buffer::Buffer, datatypes::DataType};
 
 use super::{display_fmt, display_helper, ffi::ToFFI, Array};
 

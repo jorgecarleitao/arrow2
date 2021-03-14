@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::{array::Offset, buffer::Bitmap};
+use crate::{array::Offset, bitmap::Bitmap};
 
 use super::utils::{count_validity, equal_len};
 

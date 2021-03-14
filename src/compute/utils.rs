@@ -17,7 +17,7 @@
 
 use crate::{
     array::{Array, BooleanArray, Offset, Utf8Array},
-    buffer::Bitmap,
+    bitmap::Bitmap,
 };
 
 pub fn combine_validities(lhs: &Option<Bitmap>, rhs: &Option<Bitmap>) -> Option<Bitmap> {

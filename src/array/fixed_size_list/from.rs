@@ -19,7 +19,7 @@ use std::{iter::FromIterator, sync::Arc};
 
 use crate::{
     array::{Array, Builder, ToArray, TryFromIterator},
-    buffer::MutableBitmap,
+    bitmap::MutableBitmap,
     datatypes::DataType,
     error::Result,
 };

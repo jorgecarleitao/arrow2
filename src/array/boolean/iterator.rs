@@ -15,8 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+use crate::bitmap::BitmapIter;
 use crate::bits::{zip_validity, ZipValidity};
-use crate::buffer::BitmapIter;
 
 use super::BooleanArray;
 

@@ -17,7 +17,7 @@
 
 use crate::{
     array::{Array, ListArray, Offset},
-    buffer::Bitmap,
+    bitmap::Bitmap,
 };
 
 use super::{

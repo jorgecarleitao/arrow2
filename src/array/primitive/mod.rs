@@ -16,10 +16,7 @@
 // under the License.
 
 use crate::{
-    buffer::{Bitmap, Buffer},
-    datatypes::DataType,
-    error::ArrowError,
-    types::NativeType,
+    bitmap::Bitmap, buffer::Buffer, datatypes::DataType, error::ArrowError, types::NativeType,
 };
 
 use super::{display_fmt, Array};

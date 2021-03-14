@@ -28,7 +28,8 @@ use crate::{
         Array, BooleanArray, DictionaryArray, DictionaryKey, ListArray, NullArray, Offset,
         Primitive, PrimitiveArray, StructArray, Utf8Array,
     },
-    buffer::{MutableBitmap, MutableBuffer},
+    bitmap::MutableBitmap,
+    buffer::MutableBuffer,
     datatypes::{DataType, IntervalUnit},
     types::NativeType,
 };

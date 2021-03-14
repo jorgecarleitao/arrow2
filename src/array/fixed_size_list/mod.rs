@@ -18,7 +18,7 @@
 use std::sync::Arc;
 
 use crate::{
-    buffer::Bitmap,
+    bitmap::Bitmap,
     datatypes::{DataType, Field},
 };
 

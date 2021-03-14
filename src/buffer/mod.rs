@@ -30,16 +30,11 @@
 //!
 //! Together, these declare all data (not metadata) that is stored in memory by this crate.
 
-mod bitmap;
-mod bitmap_ops;
 mod immutable;
 mod mutable;
 
 pub(crate) mod bytes;
 pub(crate) mod util;
 
-pub use bitmap::MutableBitmap;
-pub use bitmap::{Bitmap, BitmapIter};
-pub use bitmap_ops::*;
 pub use immutable::Buffer;
 pub use mutable::MutableBuffer;

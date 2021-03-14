@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::{array::FixedSizeBinaryArray, buffer::Bitmap};
+use crate::{array::FixedSizeBinaryArray, bitmap::Bitmap};
 
 use super::utils::{count_validity, equal_len};
 

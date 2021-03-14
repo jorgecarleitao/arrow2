@@ -20,7 +20,7 @@ use crate::{
         Array, BinaryArray, BooleanArray, DictionaryArray, DictionaryKey, FixedSizeBinaryArray,
         FixedSizeListArray, ListArray, Offset, PrimitiveArray, StructArray, Utf8Array,
     },
-    buffer::Bitmap,
+    bitmap::Bitmap,
     datatypes::{DataType, IntervalUnit},
     io::ipc::gen::Message,
     types::{days_ms, NativeType},

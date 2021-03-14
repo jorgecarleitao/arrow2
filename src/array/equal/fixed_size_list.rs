@@ -18,7 +18,7 @@
 use crate::datatypes::DataType;
 use crate::{
     array::{Array, FixedSizeListArray},
-    buffer::Bitmap,
+    bitmap::Bitmap,
 };
 
 use super::{

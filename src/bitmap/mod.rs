@@ -21,9 +21,11 @@ use std::sync::Arc;
 use crate::{
     bits::{get_bit, get_bit_unchecked, null_count, BitChunk, BitChunks},
     buffer::bytes::Bytes,
+    buffer::MutableBuffer,
 };
 
-use super::MutableBuffer;
+mod bitmap_ops;
+pub use bitmap_ops::*;
 
 /// An immutable container whose API is optimized to handle bitmaps. All quantities on this
 /// container's API are measured in bits.

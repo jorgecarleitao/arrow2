@@ -140,7 +140,8 @@ impl Not for &Bitmap {
 mod test {
     use super::*;
 
-    use crate::buffer::{Bitmap, MutableBuffer};
+    use crate::bitmap::Bitmap;
+    use crate::buffer::MutableBuffer;
 
     fn create_bitmap<P: AsRef<[u8]>>(bytes: P, len: usize) -> Bitmap {
         let buffer = MutableBuffer::<u8>::from(bytes.as_ref());

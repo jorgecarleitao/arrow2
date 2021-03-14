@@ -22,8 +22,8 @@ use std::slice;
 use std::{fmt::Debug, fmt::Formatter};
 use std::{ptr::NonNull, sync::Arc};
 
-use crate::ffi;
 use crate::alloc;
+use crate::ffi;
 use crate::types::NativeType;
 
 /// Mode of deallocating memory regions

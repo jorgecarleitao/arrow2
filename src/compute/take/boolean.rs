@@ -17,7 +17,7 @@
 
 use crate::{
     array::{Array, BooleanArray, Offset, PrimitiveArray},
-    buffer::{Bitmap, MutableBitmap},
+    bitmap::{Bitmap, MutableBitmap},
     error::Result,
 };
 

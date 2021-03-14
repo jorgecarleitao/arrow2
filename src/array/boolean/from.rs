@@ -17,7 +17,7 @@
 
 use std::iter::FromIterator;
 
-use crate::buffer::{Bitmap, MutableBitmap};
+use crate::bitmap::{Bitmap, MutableBitmap};
 
 use super::BooleanArray;
 

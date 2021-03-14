@@ -18,7 +18,7 @@
 use crate::types::NativeType;
 use crate::{
     array::{Array, BooleanArray, ListArray, Offset, PrimitiveArray, Utf8Array},
-    buffer::Bitmap,
+    bitmap::Bitmap,
 };
 use crate::{
     datatypes::DataType,

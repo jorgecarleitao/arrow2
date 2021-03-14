@@ -20,7 +20,7 @@ use std::any::Any;
 use crate::error::Result;
 use crate::types::days_ms;
 use crate::{
-    buffer::Bitmap,
+    bitmap::Bitmap,
     datatypes::{DataType, IntervalUnit},
 };
 

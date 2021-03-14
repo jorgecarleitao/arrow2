@@ -17,6 +17,7 @@
 
 mod alloc;
 pub mod array;
+pub mod bitmap;
 pub mod buffer;
 pub mod error;
 pub mod types;

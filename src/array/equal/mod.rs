@@ -18,7 +18,7 @@
 use std::unimplemented;
 
 use crate::{
-    buffer::Bitmap,
+    bitmap::Bitmap,
     datatypes::{DataType, IntervalUnit},
     types::{days_ms, NativeType},
 };

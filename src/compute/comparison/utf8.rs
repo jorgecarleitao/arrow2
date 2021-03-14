@@ -16,7 +16,7 @@
 // under the License.
 
 use crate::error::{ArrowError, Result};
-use crate::{array::*, buffer::Bitmap};
+use crate::{array::*, bitmap::Bitmap};
 
 use super::{super::utils::combine_validities, Operator};
 
