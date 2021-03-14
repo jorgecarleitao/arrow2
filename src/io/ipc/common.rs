@@ -46,11 +46,7 @@ pub(crate) mod tests {
 
         let schema = serde_json::to_value(arrow_json.schema).unwrap();
         let mut schema = Schema::try_from(&schema).unwrap();
-        schema.is_little_endian = if version.contains("littleendian") {
-            true
-        } else {
-            false
-        };
+        schema.is_little_endian = version.contains("littleendian");
 
         // read dictionaries
         let mut dictionaries = HashMap::new();

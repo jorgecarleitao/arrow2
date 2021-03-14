@@ -30,11 +30,11 @@ use super::{
 /// ```
 /// use std::iter::FromIterator;
 /// use arrow2::array::Utf8Array;
-/// fn main() {
-///     let data = vec![Some("hello"), None, Some("hello2")];
-///     let array = Utf8Array::<i32>::from_iter(data);
-///     assert_eq!(array.value(0), "hello");
-/// }
+/// # fn main() {
+/// let data = vec![Some("hello"), None, Some("hello2")];
+/// let array = Utf8Array::<i32>::from_iter(data);
+/// assert_eq!(array.value(0), "hello");
+/// # }
 /// ```
 #[derive(Debug, Clone)]
 pub struct Utf8Array<O: Offset> {

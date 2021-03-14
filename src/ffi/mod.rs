@@ -58,6 +58,7 @@
 //! ```
 
 mod array;
+#[allow(clippy::module_inception)]
 mod ffi;
 
 trait ToFFI {

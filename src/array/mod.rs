@@ -315,7 +315,8 @@ pub trait Builder<T>: TryFromIterator<Option<T>> + ToArray {
     /// Falible version of `push`, on which the operation errors instead of panicking.
     #[inline]
     fn try_push(&mut self, item: Option<&T>) -> Result<()> {
-        Ok(self.push(item))
+        self.push(item);
+        Ok(())
     }
 }
 

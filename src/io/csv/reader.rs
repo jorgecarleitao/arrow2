@@ -79,6 +79,7 @@ impl<R: Read, P: GenericParser<ArrowError>> Reader<R, P> {
     /// If reading a `File` or an input that supports `std::io::Read` and `std::io::Seek`;
     /// you can customise the Reader, such as to enable schema inference, use
     /// `ReaderBuilder`.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         reader: R,
         schema: Schema,
@@ -115,6 +116,7 @@ impl<R: Read, P: GenericParser<ArrowError>> Reader<R, P> {
     ///
     /// This constructor allows you more flexibility in what records are processed by the
     /// csv reader.
+    #[allow(clippy::too_many_arguments)]
     pub fn from_reader(
         reader: R,
         schema: Schema,

@@ -83,12 +83,10 @@ impl Decoder {
                 let v = value?;
                 match v {
                     Value::Object(_) => Ok(v),
-                    _ => {
-                        return Err(ArrowError::Other(format!(
-                            "Row needs to be of type object, got: {:?}",
-                            v
-                        )));
-                    }
+                    _ => Err(ArrowError::Other(format!(
+                        "Row needs to be of type object, got: {:?}",
+                        v
+                    ))),
                 }
             })
             .collect::<Result<Vec<_>>>()?;

@@ -471,6 +471,9 @@ impl ArrowArray {
     }
 
     /// returns all buffers, as organized by Rust (i.e. null buffer is skipped)
+    /// # Safety
+    /// The caller must guarantee that the buffer `index` corresponds to a buffer of type `T`.
+    /// This function assumes that the buffer created from FFI is valid; this is impossible to prove.
     pub unsafe fn buffer<T: NativeType>(&self, index: usize) -> Result<Buffer<T>> {
         // + 1: skip null buffer
         let index = (index + 1) as usize;
@@ -486,6 +489,9 @@ impl ArrowArray {
     }
 
     /// returns all buffers, as organized by Rust (i.e. null buffer is skipped)
+    /// # Safety
+    /// The caller must guarantee that the buffer `index` corresponds to a bitmap.
+    /// This function assumes that the buffer created from FFI is valid; this is impossible to prove.
     pub unsafe fn bitmap(&self, index: usize) -> Result<Bitmap> {
         // + 1: skip null buffer
         let index = (index + 1) as usize;

@@ -792,6 +792,7 @@ mod tests {
         test_equal(&a, &b, true);
     }
 
+    #[allow(clippy::type_complexity)]
     fn binary_cases() -> Vec<(Vec<Option<String>>, Vec<Option<String>>, bool)> {
         let base = vec![
             Some("hello".to_owned()),

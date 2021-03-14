@@ -72,7 +72,7 @@ unsafe impl Offset for i64 {
 #[inline]
 pub fn check_offsets<O: Offset>(offsets: &Buffer<O>, values_len: usize) -> usize {
     assert!(
-        offsets.len() >= 1,
+        !offsets.is_empty(),
         "The length of the offset buffer must be larger than 1"
     );
     let len = offsets.len() - 1;

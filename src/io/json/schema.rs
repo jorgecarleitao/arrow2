@@ -456,7 +456,7 @@ impl TryFrom<&Value> for Field {
                     DataType::Struct(mut fields) => match map.get("children") {
                         Some(Value::Array(values)) => {
                             let struct_fields: Result<Vec<Field>, _> =
-                                values.iter().map(|v| Field::try_from(v)).collect();
+                                values.iter().map(Field::try_from).collect();
                             fields.append(&mut struct_fields?);
                             DataType::Struct(fields)
                         }
@@ -572,7 +572,7 @@ impl TryFrom<&Value> for Schema {
                 let fields = if let Some(Value::Array(fields)) = schema.get("fields") {
                     fields
                         .iter()
-                        .map(|f| Field::try_from(f))
+                        .map(Field::try_from)
                         .collect::<Result<_, _>>()?
                 } else {
                     return Err(ArrowError::Schema(

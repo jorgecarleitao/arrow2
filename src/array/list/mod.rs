@@ -151,12 +151,10 @@ impl<O: Offset> ListArray<O> {
             } else {
                 panic!("Wrong DataType")
             }
+        } else if let DataType::List(child) = data_type {
+            child.as_ref()
         } else {
-            if let DataType::List(child) = data_type {
-                child.as_ref()
-            } else {
-                panic!("Wrong DataType")
-            }
+            panic!("Wrong DataType")
         }
     }
 

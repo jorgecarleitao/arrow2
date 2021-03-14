@@ -43,6 +43,7 @@ fn offset_value_equal<O: Offset>(
         )
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn equal<O: Offset>(
     lhs_offsets: &[O],
     rhs_offsets: &[O],

@@ -129,6 +129,7 @@ where
 /// # Safety
 /// The caller must ensure that `iterator` is `TrustedLen`.
 #[inline]
+#[allow(clippy::type_complexity)]
 pub(crate) unsafe fn try_trusted_len_unzip<E, I, P, O>(
     iterator: I,
 ) -> Result<(Option<Bitmap>, Buffer<O>, Buffer<u8>), E>
