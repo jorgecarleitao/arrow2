@@ -21,9 +21,9 @@ use std::usize;
 use std::{fmt::Debug, mem::size_of};
 
 use crate::types::NativeType;
+use crate::alloc;
 
 use super::{
-    alloc,
     bytes::{Bytes, Deallocation},
     util,
 };

@@ -18,14 +18,13 @@
 //! This module contains an implementation of a contiguous immutable memory region that knows
 //! how to de-allocate itself, [`Bytes`].
 
-use core::slice;
+use std::slice;
 use std::{fmt::Debug, fmt::Formatter};
 use std::{ptr::NonNull, sync::Arc};
 
 use crate::ffi;
+use crate::alloc;
 use crate::types::NativeType;
-
-use super::alloc;
 
 /// Mode of deallocating memory regions
 pub enum Deallocation {

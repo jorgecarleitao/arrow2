@@ -18,16 +18,18 @@
 //! Defines memory-related functions, such as allocate/deallocate/reallocate memory
 //! regions, cache and allocation alignments.
 
-use crate::types::NativeType;
-
-use super::alignment::ALIGNMENT;
-
 use std::mem::size_of;
 use std::ptr::NonNull;
 use std::{
     alloc::{handle_alloc_error, Layout},
     sync::atomic::AtomicIsize,
 };
+
+use crate::types::NativeType;
+
+mod alignment;
+
+use alignment::ALIGNMENT;
 
 // If this number is not zero after all objects have been `drop`, there is a memory leak
 pub static mut ALLOCATIONS: AtomicIsize = AtomicIsize::new(0);

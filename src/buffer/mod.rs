@@ -30,8 +30,6 @@
 //!
 //! Together, these declare all data (not metadata) that is stored in memory by this crate.
 
-mod alignment;
-mod alloc;
 mod bitmap;
 mod bitmap_ops;
 mod immutable;

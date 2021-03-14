@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+mod alloc;
 pub mod array;
 pub mod buffer;
 pub mod error;
