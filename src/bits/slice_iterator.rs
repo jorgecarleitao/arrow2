@@ -126,14 +126,25 @@ impl<'a> Iterator for SlicesIterator<'a> {
             match (self.on_region, value) {
                 (true, true) => self.len += 1,
                 (false, false) => self.len += 1,
-                (true, _) => {
+                (true, false) => {
                     let result = (self.start, self.len);
                     self.start += self.len;
                     self.len = 1;
                     self.on_region = false;
-                    return Some(result);
+                    if self.mask == 1 {
+                        // reached a new byte => try to fetch it from the iterator
+                        match self.values.next() {
+                            Some(v) => {
+                                self.current_byte = v;
+                                return Some(result);
+                            }
+                            None => return self.finish(),
+                        };
+                    } else {
+                        return Some(result);
+                    }
                 }
-                (false, _) => {
+                (false, true) => {
                     self.start += self.len;
                     self.len = 1;
                     self.on_region = true;
@@ -178,7 +189,7 @@ mod tests {
     }
 
     #[test]
-    fn test_slice_iterator_bits() {
+    fn single_set() {
         let values = (0..16).map(|i| i == 1).collect::<Bitmap>();
 
         let iter = SlicesIterator::new(&values);
@@ -190,7 +201,7 @@ mod tests {
     }
 
     #[test]
-    fn test_slice_iterator_bits1() {
+    fn single_unset() {
         let values = (0..64).map(|i| i != 1).collect::<Bitmap>();
 
         let iter = SlicesIterator::new(&values);
@@ -202,7 +213,7 @@ mod tests {
     }
 
     #[test]
-    fn test_slice_iterator_chunk_and_bits() {
+    fn generic() {
         let values = (0..130).map(|i| i % 62 != 0).collect::<Bitmap>();
 
         let iter = SlicesIterator::new(&values);
@@ -214,7 +225,7 @@ mod tests {
     }
 
     #[test]
-    fn test_slice_iterator_incomplete_byte() {
+    fn incomplete_byte() {
         let values = (0..6).map(|i| i == 1).collect::<Bitmap>();
 
         let iter = SlicesIterator::new(&values);
@@ -226,7 +237,7 @@ mod tests {
     }
 
     #[test]
-    fn test_slice_iterator_incomplete_byte1() {
+    fn incomplete_byte1() {
         let values = (0..12).map(|i| i == 9).collect::<Bitmap>();
 
         let iter = SlicesIterator::new(&values);
@@ -235,5 +246,17 @@ mod tests {
 
         assert_eq!(chunks, vec![(9, 1)]);
         assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn end_of_byte() {
+        let values = (0..16).map(|i| i != 7).collect::<Bitmap>();
+
+        let iter = SlicesIterator::new(&values);
+        let count = iter.slots();
+        let chunks = iter.collect::<Vec<_>>();
+
+        assert_eq!(chunks, vec![(0, 7), (8, 8)]);
+        assert_eq!(count, 15);
     }
 }
