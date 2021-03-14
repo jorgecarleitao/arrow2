@@ -15,23 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-pub mod array;
-pub mod buffer;
-pub mod error;
-pub mod tensor;
-pub mod types;
+//! Arrow Tensor representation. There are two types of tensor
+//! in the module; a dense and sparse tensor.
 
-pub mod compute;
-pub mod io;
-pub mod record_batch;
-pub mod temporal_conversions;
-
-pub(crate) mod bits;
-pub mod datatypes;
-
-pub mod ffi;
-pub mod util;
-
-// so that documentation gets test
-#[cfg(any(test, doctest))]
-mod docs;
+pub mod dense;
