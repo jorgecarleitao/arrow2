@@ -40,8 +40,8 @@ mod mutable;
 pub(crate) mod bytes;
 pub(crate) mod util;
 
-pub use bitmap::Bitmap;
 pub use bitmap::MutableBitmap;
+pub use bitmap::{Bitmap, BitmapIter};
 pub use bitmap_ops::*;
 pub use immutable::Buffer;
 pub use mutable::MutableBuffer;
