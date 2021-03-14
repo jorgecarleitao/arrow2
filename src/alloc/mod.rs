@@ -92,17 +92,9 @@ pub unsafe fn free_aligned<T: NativeType>(ptr: NonNull<T>, size: usize) {
     }
 }
 
+/// Reallocates memory previously allocated by [`allocate_aligned_zeroed`] or [`allocate_aligned`].
 /// # Safety
-///
-/// This function is unsafe because undefined behavior can result if the caller does not ensure all
-/// of the following:
-///
-/// * ptr must be currently allocated via this allocator,
-///
-/// * new_size must be greater than zero.
-///
-/// * new_size, when rounded up to the nearest multiple of [ALIGNMENT], must not overflow (i.e.,
-/// the rounded value must be less than usize::MAX).
+/// This function is sound iff `ptr` was previously allocated by `allocate_aligned` or `allocate_aligned_zeroed` for `old_size` items.
 pub unsafe fn reallocate<T: NativeType>(
     ptr: NonNull<T>,
     old_size: usize,
@@ -141,8 +133,7 @@ mod tests {
     fn test_allocate() {
         for _ in 0..10 {
             let p = allocate_aligned::<u32>(1024);
-            // make sure this is 64-byte aligned
-            assert_eq!(0, (p.as_ptr() as usize) % 64);
+            assert_eq!(0, (p.as_ptr() as usize) % ALIGNMENT);
             unsafe { free_aligned(p, 1024) };
         }
     }

@@ -24,10 +24,10 @@ A `PrimitiveArray` has 3 components:
 2. A logical type (`DataType::Int32`)
 3. Data
 
-Its main difference vs a `Vec<Option<T>>` are:
+The main differences from a `Vec<Option<T>>` are:
 
 * Its data is layed out in memory as a `Buffer<T>` and a `Option<Bitmap>`.
-* `PrimitivArray<T>` has an associated logical datatype.
+* It has an associated logical datatype.
 
 The first difference allows interoperability with Arrow's ecosystem and efficient SIMD operations (we will re-visit this below); the second difference is that it allows semantic meaning to the array. In the example
 
@@ -103,7 +103,45 @@ let array = array.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
 # }
 ```
 
-There is a many to one relationship between `DataType` and a physical type (like `i32`). These are typically encapsulated on `match` patterns.
+There is a many to one relationship between `DataType` and an Array (i.e. a physical representation). These are typically encapsulated on `match` patterns. The relationship is the following:
+
+| DataType             | PhysicalType            |
+|----------------------|-------------------------|
+| UInt8                | PrimitiveArray<u8>      |
+| UInt16               | PrimitiveArray<u16>     |
+| UInt32               | PrimitiveArray<u32>     |
+| UInt64               | PrimitiveArray<u64>     |
+| Int8                 | PrimitiveArray<i8>      |
+| Int16                | PrimitiveArray<i16>     |
+| Int32                | PrimitiveArray<i32>     |
+| Int64                | PrimitiveArray<i64>     |
+| Float32              | PrimitiveArray<f32>     |
+| Float64              | PrimitiveArray<f64>     |
+| Date32               | PrimitiveArray<i32>     |
+| Date64               | PrimitiveArray<i64>     |
+| Time32(_)            | PrimitiveArray<i32>     |
+| Time64(_)            | PrimitiveArray<i64>     |
+| Timestamp(_,_)       | PrimitiveArray<i64>     |
+| Interval(YearMonth)  | PrimitiveArray<i32>     |
+| Interval(DayTime)    | PrimitiveArray<days_ms> |
+| Duration(_)          | PrimitiveArray<i64>     |
+| Binary               | BinaryArray<i32>        |
+| LargeBinary          | BinaryArray<i64>        |
+| Utf8                 | Utf8Array<i32>          |
+| LargeUtf8            | Utf8Array<i64>          |
+| List                 | ListArray<i32>          |
+| LargeList            | ListArray<i64>          |
+| FixedSizeBinary(_)   | FixedSizeBinaryArray    |
+| FixedSizeList(_,_)   | FixedSizeListArray      |
+| Struct(_)            | StructArray             |
+| Dictionary(UInt8,_)  | DictionaryArray<u8>     |
+| Dictionary(UInt16,_) | DictionaryArray<u16>    |
+| Dictionary(UInt32,_) | DictionaryArray<u32>    |
+| Dictionary(UInt64,_) | DictionaryArray<u64>    |
+| Dictionary(Int8,_)   | DictionaryArray<i8>     |
+| Dictionary(Int16,_)  | DictionaryArray<i16>    |
+| Dictionary(Int32,_)  | DictionaryArray<i32>    |
+| Dictionary(Int64,_)  | DictionaryArray<i64>    |
 
 ## From Iterator
 

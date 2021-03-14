@@ -15,11 +15,9 @@ These hold _all_ data-related memory in this crate.
 Due to their intrinsic imutability, each container has a corresponding mutable (and non-sharable) variant:
 
 * `MutableBuffer<T>`
-* `Buffer<T>`
 * `MutableBitmap`
-* `Bitmap`
 
-Some examples:
+Let's see how these structures are used.
 
 Create a new `Buffer<u32>`:
 
