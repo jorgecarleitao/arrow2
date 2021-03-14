@@ -50,22 +50,23 @@ pub fn take_no_validity<O: Offset, I: Offset>(
     indices: &[I],
 ) -> Result<(Buffer<O>, Buffer<u8>, Option<Bitmap>)> {
     let mut length = O::default();
-    let mut starts = MutableBuffer::<O>::with_capacity(indices.len());
+    let mut buffer = MutableBuffer::<u8>::new();
     let offsets = indices.iter().map(|index| {
         let index = maybe_usize::<I>(*index)?;
         let start = offsets[index];
-        length += offsets[index + 1] - start;
-        starts.push(start);
+        let length_h = offsets[index + 1] - start;
+        length += length_h;
+
+        let _start = maybe_usize::<O>(start)?;
+        let end = maybe_usize::<O>(start + length_h)?;
+        buffer.extend_from_slice(&values[_start..end]);
         Result::Ok(length)
     });
     let offsets = std::iter::once(Ok(O::default())).chain(offsets);
     // Soundness: `TrustedLen`.
     let offsets = unsafe { Buffer::try_from_trusted_len_iter(offsets)? };
-    let starts: Buffer<O> = starts.into();
 
-    let buffer = take_values(length, starts.as_slice(), offsets.as_slice(), values)?;
-
-    Ok((offsets, buffer, None))
+    Ok((offsets, buffer.into(), None))
 }
 
 // take implementation when only values contain nulls

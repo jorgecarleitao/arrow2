@@ -69,12 +69,19 @@ fn take_indices_validity<T: NativeType, I: Offset>(
     values: &[T],
     indices: &PrimitiveArray<I>,
 ) -> Result<(Buffer<T>, Option<Bitmap>)> {
-    let values = indices.iter().map(|index| match index {
-        Some(index) => {
-            let index = maybe_usize::<I>(*index)?;
-            Result::Ok(values[index])
-        }
-        None => Result::Ok(T::default()),
+    let validity = indices.validity().as_ref().unwrap();
+    let values = indices.values().iter().map(|index| {
+        let index = maybe_usize::<I>(*index)?;
+        Result::Ok(match values.get(index) {
+            Some(value) => *value,
+            None => {
+                if !validity.get_bit(index) {
+                    T::default()
+                } else {
+                    panic!("Out-of-bounds index {}", index)
+                }
+            }
+        })
     });
 
     // Soundness: `slice.map` is `TrustedLen`.
