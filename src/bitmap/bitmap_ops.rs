@@ -18,8 +18,9 @@
 use std::ops::{BitAnd, BitOr, Not};
 
 use crate::bits::get_bit_unchecked;
+use crate::buffer::MutableBuffer;
 
-use super::{Bitmap, MutableBuffer};
+use super::Bitmap;
 
 /// Apply a bitwise operation `op` to two inputs and return the result as a [`Bitmap`].
 pub fn binary<F>(lhs: &Bitmap, rhs: &Bitmap, op: F) -> Bitmap
