@@ -219,11 +219,11 @@ jobs:
           rustup default stable
           rustup component add rustfmt clippy
           cargo install cargo-all-features
-      - name: Run clippy
+      - name: Run
         run: |
           export CARGO_HOME="/github/home/.cargo"
           export CARGO_TARGET_DIR="/github/home/target"
-          cargo clippy
+          cargo check-all-features
 
   # test the arrow crate builds against wasm32 in stable rust
   wasm32-build:
