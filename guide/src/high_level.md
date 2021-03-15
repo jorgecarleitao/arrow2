@@ -154,14 +154,16 @@ fn float_operator(array: &dyn Array) -> Result<Box<dyn Array>, String> {
         DataType::Float32 => {
             let array = array.as_any().downcast_ref::<PrimitiveArray<f32>>().unwrap();
             // let array = f32-specific operator
+            let array = array.clone();
             Ok(Box::new(array))
         }
         DataType::Float64 => {
             let array = array.as_any().downcast_ref::<PrimitiveArray<f64>>().unwrap();
             // let array = f64-specific operator
+            let array = array.clone();
             Ok(Box::new(array))
         }
-        _ => Err("This operator is only valid for float point."),
+        _ => Err("This operator is only valid for float point.".to_string()),
     }
 }
 ```
