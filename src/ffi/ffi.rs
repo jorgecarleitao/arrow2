@@ -239,7 +239,7 @@ unsafe extern "C" fn release_array(array: *mut FFI_ArrowArray) {
 
 #[allow(dead_code)]
 struct PrivateData {
-    array: Box<dyn Array>,
+    array: Arc<dyn Array>,
     buffers_ptr: Box<[*const std::os::raw::c_void]>,
 }
 
@@ -248,7 +248,7 @@ impl FFI_ArrowArray {
     /// # Safety
     /// This method releases `buffers`. Consumers of this struct *must* call `release` before
     /// releasing this struct, or contents in `buffers` leak.
-    fn new(array: Box<dyn Array>) -> Self {
+    fn new(array: Arc<dyn Array>) -> Self {
         let buffers_ptr = array
             .buffers()
             .iter()
@@ -379,7 +379,7 @@ impl ArrowArray {
     /// creates a new `ArrowArray`. This is used to export to the C Data Interface.
     /// # Safety
     /// See safety of [ArrowArray]
-    pub fn try_new(array: Box<dyn Array>) -> Result<Self> {
+    pub fn try_new(array: Arc<dyn Array>) -> Result<Self> {
         let format = from_datatype(array.data_type())?;
 
         let schema = Arc::new(FFI_ArrowSchema::new(&format));

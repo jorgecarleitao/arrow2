@@ -17,7 +17,7 @@
 
 //! Contains functionality to load an ArrayData from the C Data Interface
 
-use std::convert::TryFrom;
+use std::{convert::TryFrom, sync::Arc};
 
 use super::ffi::ArrowArray;
 use crate::array::{BooleanArray, FromFFI};
@@ -75,10 +75,10 @@ impl TryFrom<ArrowArray> for Box<dyn Array> {
     }
 }
 
-impl TryFrom<Box<dyn Array>> for ArrowArray {
+impl TryFrom<Arc<dyn Array>> for ArrowArray {
     type Error = ArrowError;
 
-    fn try_from(array: Box<dyn Array>) -> Result<Self> {
+    fn try_from(array: Arc<dyn Array>) -> Result<Self> {
         ArrowArray::try_new(array)
     }
 }
@@ -87,11 +87,11 @@ impl TryFrom<Box<dyn Array>> for ArrowArray {
 mod tests {
     use crate::array::{Array, BinaryArray, Primitive, Utf8Array};
     use crate::{datatypes::DataType, error::Result, ffi::ArrowArray};
-    use std::convert::TryFrom;
+    use std::{convert::TryFrom, sync::Arc};
 
     fn test_round_trip(expected: impl Array + Clone + 'static) -> Result<()> {
         // create a `ArrowArray` from the data.
-        let b: Box<dyn Array> = Box::new(expected.clone());
+        let b: Arc<dyn Array> = Arc::new(expected.clone());
         let d1 = ArrowArray::try_from(b)?;
 
         // here we export the array as 2 pointers. We would have no control over ownership if it was not for

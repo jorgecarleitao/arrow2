@@ -103,7 +103,7 @@ let array = array.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
 # }
 ```
 
-There is a many to one relationship between `DataType` and an Array (i.e. a physical representation). These are typically encapsulated on `match` patterns. The relationship is the following:
+There is a many to one relationship between `DataType` and an Array (i.e. a physical representation). The relationship is the following:
 
 | DataType             | PhysicalType            |
 |----------------------|-------------------------|
@@ -143,9 +143,32 @@ There is a many to one relationship between `DataType` and an Array (i.e. a phys
 | Dictionary(Int32,_)  | DictionaryArray<i32>    |
 | Dictionary(Int64,_)  | DictionaryArray<i64>    |
 
+In this context, a common pattern to write operators that receive `&dyn Array` is:
+
+```rust
+use arrow2::datatypes::DataType;
+use arrow2::array::{Array, PrimitiveArray};
+
+fn float_operator(array: &dyn Array) -> Result<Box<dyn Array>, String> {
+    match array.data_type() {
+        DataType::Float32 => {
+            let array = array.as_any().downcast_ref::<PrimitiveArray<f32>>().unwrap();
+            // let array = f32-specific operator
+            Ok(Box::new(array))
+        }
+        DataType::Float64 => {
+            let array = array.as_any().downcast_ref::<PrimitiveArray<f64>>().unwrap();
+            // let array = f64-specific operator
+            Ok(Box::new(array))
+        }
+        _ => Err("This operator is only valid for float point."),
+    }
+}
+```
+
 ## From Iterator
 
-In the code above, we've introduced how to create an array from an iterator.
+In the examples above, we've introduced how to create an array from an iterator.
 These APIs are avaiable for all Arrays, and they are highly suitable to efficiently
 create them. In this section we will go a bit more in detail about these operations,
 and how to make them even more efficient.
@@ -186,8 +209,8 @@ for item in array.iter() {
 # }
 ```
 
-Like `FromIterator`, this crate contains two sets of APIs to iterate over data. Let's say
-that you have an array `array: &PrimitiveArray<T>`. The following applies:
+Like `FromIterator`, this crate contains two sets of APIs to iterate over data. Given
+an array `array: &PrimitiveArray<T>`, the following applies:
 
 1. If you need to iterate over `Option<T>`, use `array.iter()`
 2. If you can operate over the values and validity independently, use `array.values() -> &[T]` and `array.validity() -> &Option<Bitmap>`

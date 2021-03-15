@@ -1,7 +1,6 @@
 # Low end API
 
-The starting point of this crate is the idea that data must be stored in memory in a specific arrangement to be interoperable with Arrow's ecosystem. With this in mind, this crate
-does not use `Vec`, and instead has its own containers to store data, including to share and consume it via FFI.
+The starting point of this crate is the idea that data must be stored in memory in a specific arrangement to be interoperable with Arrow's ecosystem. With this in mind, this crate does not use `Vec`, and instead has its own containers to store data, including to share and consume it via FFI.
 
 The most important design decision of this crate is that contiguous regions are shared via an `Arc`. In this context, the operation of slicing a memory region is `O(1)` because it corresponds to changing an offset and length. The tradeoff is that once under and `Arc`, memory regions are imutable.
 
