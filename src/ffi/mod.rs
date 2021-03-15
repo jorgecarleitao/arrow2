@@ -33,7 +33,7 @@
 //! # use std::convert::TryFrom;
 //! # fn main() -> Result<()> {
 //! // create an array natively
-//! let array = Box::new(Primitive::from(&[Some(1i32), None, Some(3)]).to(DataType::Int32)) as Box<dyn Array>;
+//! let array = Arc::new(Primitive::from(&[Some(1i32), None, Some(3)]).to(DataType::Int32)) as Arc<dyn Array>;
 //!
 //! // export it
 //! let array = ArrowArray::try_from(array)?;
