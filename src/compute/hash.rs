@@ -22,7 +22,7 @@ pub fn hash_primitive<T: NativeType + Hash>(array: &PrimitiveArray<T>) -> Primit
             x.hash(&mut hasher);
             hasher.finish()
         },
-        &DataType::Int64,
+        &DataType::UInt64,
     )
 }
 
@@ -34,7 +34,7 @@ pub fn hash_boolean(array: &BooleanArray) -> PrimitiveArray<u64> {
         hasher.finish()
     });
     let values = unsafe { Buffer::from_trusted_len_iter(iter) };
-    PrimitiveArray::<u64>::from_data(DataType::Int64, values, array.validity().clone())
+    PrimitiveArray::<u64>::from_data(DataType::UInt64, values, array.validity().clone())
 }
 
 /// Element-wise hash of a [`Utf8Array`]. Validity is preserved.
@@ -45,7 +45,7 @@ pub fn hash_utf8<O: Offset>(array: &Utf8Array<O>) -> PrimitiveArray<u64> {
         hasher.finish()
     });
     let values = unsafe { Buffer::from_trusted_len_iter(iter) };
-    PrimitiveArray::<u64>::from_data(DataType::Int64, values, array.validity().clone())
+    PrimitiveArray::<u64>::from_data(DataType::UInt64, values, array.validity().clone())
 }
 
 /// Element-wise hash of a [`BinaryArray`]. Validity is preserved.
@@ -56,7 +56,7 @@ pub fn hash_binary<O: Offset>(array: &BinaryArray<O>) -> PrimitiveArray<u64> {
         hasher.finish()
     });
     let values = unsafe { Buffer::from_trusted_len_iter(iter) };
-    PrimitiveArray::<u64>::from_data(DataType::Int64, values, array.validity().clone())
+    PrimitiveArray::<u64>::from_data(DataType::UInt64, values, array.validity().clone())
 }
 
 macro_rules! hash_dyn {
