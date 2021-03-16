@@ -36,6 +36,8 @@ hex = { version = "^0.4", optional = true }
 
 rand = { version = "0.7", optional = true }
 
+itertools = { version = "^0.10", optional = true }
+
 [dev-dependencies]
 rand = "0.7"
 criterion = "0.3"
@@ -44,7 +46,8 @@ flate2 = "1"
 doc-comment = "0.3"
 
 [features]
-default = ["io_csv", "io_json", "io_ipc", "io_json_integration", "regex", "benchmarks"]
+default = ["io_csv", "io_json", "io_ipc", "io_json_integration", "regex", "merge_sort", "benchmarks"]
+merge_sort = ["itertools"]
 io_csv = ["csv", "lazy_static", "regex"]
 io_json = ["serde", "serde_derive", "serde_json", "indexmap"]
 io_ipc = ["flatbuffers"]
