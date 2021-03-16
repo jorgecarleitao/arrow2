@@ -129,7 +129,7 @@ Consequently, this crate is easier to use, develop, maintain, and debug.
 
 ### Any plans to merge with the Apache Arrow project?
 
-Yes. The primary reason to have this repo and crate is to be able to propotype and mature using a fundamentally different design based on a transmute-free implementation. This requires breaking backward compatibility and loss of features that is impossible to achieve on the Arrow repo.
+Maybe. The primary reason to have this repo and crate is to be able to propotype and mature using a fundamentally different design based on a transmute-free implementation. This requires breaking backward compatibility and loss of features that is impossible to achieve on the Arrow repo.
 
 Furthermore, the arrow project currently has a release mechanism that is unsuitable for this type of work:
 
