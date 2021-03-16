@@ -103,7 +103,7 @@ create_relation!(f32, &DataType::Float32);
 create_relation!(f64, &DataType::Float64);
 
 /// The in-memory representation of the DayMillisecond variant of arrow's "Interval" logical type.
-#[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash)]
 #[allow(non_camel_case_types)]
 pub struct days_ms([i32; 2]);
 

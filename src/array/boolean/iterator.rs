@@ -19,4 +19,10 @@ impl<'a> BooleanArray {
     pub fn iter(&'a self) -> ZipValidity<'a, bool, BitmapIter<'a>> {
         zip_validity(self.values().iter(), &self.validity)
     }
+
+    /// Returns an iterator of `bool`
+    #[inline]
+    pub fn values_iter(&'a self) -> BitmapIter<'a> {
+        BitmapIter::new(self.values())
+    }
 }
