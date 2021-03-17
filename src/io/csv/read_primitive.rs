@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use csv::StringRecord;
+use csv::ByteRecord;
 
 use crate::{
     array::{Primitive, PrimitiveArray},
@@ -24,9 +24,9 @@ use crate::{
 };
 
 pub trait PrimitiveParser<T: NativeType + lexical_core::FromLexical, E> {
-    fn parse(&self, string: &str, _: &DataType, _: usize) -> Result<Option<T>, E> {
+    fn parse(&self, bytes: &[u8], _: &DataType, _: usize) -> Result<Option<T>, E> {
         // default behavior is infalible: `None` if unable to parse
-        Ok(lexical_core::parse(string.as_bytes()).ok())
+        Ok(lexical_core::parse(bytes).ok())
     }
 }
 
@@ -36,7 +36,7 @@ pub fn new_primitive_array<
     P: PrimitiveParser<T, E>,
 >(
     line_number: usize,
-    rows: &[StringRecord],
+    rows: &[ByteRecord],
     col_idx: usize,
     data_type: &DataType,
     parser: &P,

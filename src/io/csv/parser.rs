@@ -20,7 +20,7 @@ use chrono::Datelike;
 use crate::temporal_conversions::EPOCH_DAYS_FROM_CE;
 use crate::{datatypes::*, error::ArrowError};
 
-use super::{BooleanParser, PrimitiveParser};
+use super::{BooleanParser, PrimitiveParser, Utf8Parser};
 
 pub trait GenericParser<E>:
     PrimitiveParser<u8, E>
@@ -34,6 +34,7 @@ pub trait GenericParser<E>:
     + PrimitiveParser<f32, E>
     + PrimitiveParser<f64, E>
     + BooleanParser<E>
+    + Utf8Parser<E>
 {
 }
 
@@ -58,21 +59,22 @@ impl<E: From<ArrowError> + From<chrono::ParseError>> PrimitiveParser<i8, E> for 
 
 impl<E: From<ArrowError> + From<chrono::ParseError>> PrimitiveParser<i16, E> for DefaultParser {}
 
-impl<E: From<ArrowError> + From<chrono::ParseError>> PrimitiveParser<i32, E> for DefaultParser {
+impl<E: From<ArrowError> + From<chrono::ParseError> + From<std::str::Utf8Error>>
+    PrimitiveParser<i32, E> for DefaultParser
+{
     #[inline]
     fn parse(
         &self,
-        string: &str,
+        entry: &[u8],
         data_type: &DataType,
         row_number: usize,
     ) -> Result<Option<i32>, E> {
         // default behavior: error if not able to parse, else `None`
         match data_type {
-            DataType::Int32 => {
-                PrimitiveParser::<i32, E>::parse(self, string, data_type, row_number)
-            }
+            DataType::Int32 => PrimitiveParser::<i32, E>::parse(self, entry, data_type, row_number),
             DataType::Date32 => {
-                let date = string.parse::<chrono::NaiveDate>()?;
+                let date = std::str::from_utf8(entry)?;
+                let date = date.parse::<chrono::NaiveDate>()?;
                 Ok(Some(date.num_days_from_ce() - EPOCH_DAYS_FROM_CE))
             }
             DataType::Time32(_) => Err(ArrowError::NotYetImplemented(
@@ -84,20 +86,21 @@ impl<E: From<ArrowError> + From<chrono::ParseError>> PrimitiveParser<i32, E> for
     }
 }
 
-impl<E: From<ArrowError> + From<chrono::ParseError>> PrimitiveParser<i64, E> for DefaultParser {
+impl<E: From<ArrowError> + From<chrono::ParseError> + From<std::str::Utf8Error>>
+    PrimitiveParser<i64, E> for DefaultParser
+{
     #[inline]
     fn parse(
         &self,
-        string: &str,
+        entry: &[u8],
         data_type: &DataType,
         row_number: usize,
     ) -> Result<Option<i64>, E> {
         match data_type {
-            DataType::Int64 => {
-                PrimitiveParser::<i64, E>::parse(self, string, data_type, row_number)
-            }
+            DataType::Int64 => PrimitiveParser::<i64, E>::parse(self, entry, data_type, row_number),
             DataType::Date64 => {
-                let date_time = string.parse::<chrono::NaiveDateTime>()?;
+                let date_time = std::str::from_utf8(entry)?;
+                let date_time = date_time.parse::<chrono::NaiveDateTime>()?;
                 Ok(Some(date_time.timestamp_millis()))
             }
             DataType::Time64(_) => Err(ArrowError::NotYetImplemented(
@@ -105,19 +108,23 @@ impl<E: From<ArrowError> + From<chrono::ParseError>> PrimitiveParser<i64, E> for
             )
             .into()),
             DataType::Timestamp(TimeUnit::Nanosecond, None) => {
-                let date_time = string.parse::<chrono::NaiveDateTime>()?;
+                let date_time = std::str::from_utf8(entry)?;
+                let date_time = date_time.parse::<chrono::NaiveDateTime>()?;
                 Ok(Some(date_time.timestamp_nanos()))
             }
             DataType::Timestamp(TimeUnit::Microsecond, None) => {
-                let date_time = string.parse::<chrono::NaiveDateTime>()?;
+                let date_time = std::str::from_utf8(entry)?;
+                let date_time = date_time.parse::<chrono::NaiveDateTime>()?;
                 Ok(Some(date_time.timestamp_nanos() / 1000))
             }
             DataType::Timestamp(TimeUnit::Millisecond, None) => {
-                let date_time = string.parse::<chrono::NaiveDateTime>()?;
+                let date_time = std::str::from_utf8(entry)?;
+                let date_time = date_time.parse::<chrono::NaiveDateTime>()?;
                 Ok(Some(date_time.timestamp_nanos() / 1_000_000))
             }
             DataType::Timestamp(TimeUnit::Second, None) => {
-                let date_time = string.parse::<chrono::NaiveDateTime>()?;
+                let date_time = std::str::from_utf8(entry)?;
+                let date_time = date_time.parse::<chrono::NaiveDateTime>()?;
                 Ok(Some(date_time.timestamp_nanos() / 1_000_000_000))
             }
             DataType::Timestamp(_, _) => Err(ArrowError::NotYetImplemented(
@@ -135,7 +142,12 @@ impl<E: From<ArrowError> + From<chrono::ParseError>> PrimitiveParser<f64, E> for
 
 impl<E> BooleanParser<E> for DefaultParser {}
 
-impl<E: From<ArrowError> + From<chrono::ParseError>> GenericParser<E> for DefaultParser {}
+impl<E> Utf8Parser<E> for DefaultParser {}
+
+impl<E: From<ArrowError> + From<chrono::ParseError> + From<std::str::Utf8Error>> GenericParser<E>
+    for DefaultParser
+{
+}
 
 #[cfg(test)]
 mod tests {
@@ -146,9 +158,9 @@ mod tests {
         let parser = DefaultParser::default();
 
         let cases = vec![
-            ("1970-01-01", Some(0)),
-            ("2020-03-15", Some(18336)),
-            ("1945-05-08", Some(-9004)),
+            (b"1970-01-01", Some(0)),
+            (b"2020-03-15", Some(18336)),
+            (b"1945-05-08", Some(-9004)),
         ];
 
         for (input, output) in cases {
@@ -163,10 +175,10 @@ mod tests {
         let parser = DefaultParser::default();
 
         let cases = vec![
-            ("1970-01-01T00:00:00", Some(0i64)),
-            ("2018-11-13T17:11:10", Some(1542129070000)),
-            ("2018-11-13T17:11:10.011", Some(1542129070011)),
-            ("1900-02-28T12:34:56", Some(-2203932304000)),
+            (b"1970-01-01T00:00:00".as_ref(), Some(0i64)),
+            (b"2018-11-13T17:11:10", Some(1542129070000)),
+            (b"2018-11-13T17:11:10.011", Some(1542129070011)),
+            (b"1900-02-28T12:34:56", Some(-2203932304000)),
         ];
 
         for (input, output) in cases {
@@ -181,20 +193,20 @@ mod tests {
         let parser = DefaultParser::default();
 
         let cases = vec![
-            ("true", Some(true)),
-            ("tRUe", Some(true)),
-            ("True", Some(true)),
-            ("TRUE", Some(true)),
-            ("t", None),
-            ("T", None),
-            ("", None),
-            ("false", Some(false)),
-            ("fALse", Some(false)),
-            ("False", Some(false)),
-            ("FALSE", Some(false)),
-            ("f", None),
-            ("F", None),
-            ("", None),
+            (b"true".as_ref(), Some(true)),
+            (b"tRUe", Some(true)),
+            (b"True", Some(true)),
+            (b"TRUE", Some(true)),
+            (b"t", None),
+            (b"T", None),
+            (b"", None),
+            (b"false", Some(false)),
+            (b"fALse", Some(false)),
+            (b"False", Some(false)),
+            (b"FALSE", Some(false)),
+            (b"f", None),
+            (b"F", None),
+            (b"", None),
         ];
 
         for (input, output) in cases {
@@ -208,13 +220,13 @@ mod tests {
         let parser = DefaultParser::default();
 
         let cases = vec![
-            ("12.34", Some(12.34f64)),
-            ("12.0", Some(12.0)),
-            ("0.0", Some(0.0)),
-            ("inf", Some(f64::INFINITY)),
-            ("-inf", Some(f64::NEG_INFINITY)),
-            ("dd", None),
-            ("", None),
+            (b"12.34".as_ref(), Some(12.34f64)),
+            (b"12.0", Some(12.0)),
+            (b"0.0", Some(0.0)),
+            (b"inf", Some(f64::INFINITY)),
+            (b"-inf", Some(f64::NEG_INFINITY)),
+            (b"dd", None),
+            (b"", None),
         ];
 
         for (input, output) in cases {
@@ -224,10 +236,10 @@ mod tests {
         }
 
         let r: Result<Option<f64>, ArrowError> =
-            PrimitiveParser::parse(&parser, "nan", &DataType::Float64, 0);
+            PrimitiveParser::parse(&parser, b"nan", &DataType::Float64, 0);
         assert!(r.unwrap().unwrap().is_nan());
         let r: Result<Option<f64>, ArrowError> =
-            PrimitiveParser::parse(&parser, "NaN", &DataType::Float64, 0);
+            PrimitiveParser::parse(&parser, b"NaN", &DataType::Float64, 0);
         assert!(r.unwrap().unwrap().is_nan());
     }
 }

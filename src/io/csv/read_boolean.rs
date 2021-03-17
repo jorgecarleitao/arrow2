@@ -15,16 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use csv::StringRecord;
+use csv::ByteRecord;
 
 use crate::array::BooleanArray;
 
 /// default behavior is infalible: `None` if unable to parse
 pub trait BooleanParser<E> {
-    fn parse(&self, string: &str, _: usize) -> Result<Option<bool>, E> {
-        Ok(if string.eq_ignore_ascii_case("false") {
+    fn parse(&self, string: &[u8], _: usize) -> Result<Option<bool>, E> {
+        Ok(if string.eq_ignore_ascii_case(b"false") {
             Some(false)
-        } else if string.eq_ignore_ascii_case("true") {
+        } else if string.eq_ignore_ascii_case(b"true") {
             Some(true)
         } else {
             None
@@ -35,7 +35,7 @@ pub trait BooleanParser<E> {
 // parses a specific column (col_idx) into an Arrow Array.
 pub fn new_boolean_array<E, P: BooleanParser<E>>(
     line_number: usize,
-    rows: &[StringRecord],
+    rows: &[ByteRecord],
     col_idx: usize,
     parser: &P,
 ) -> Result<BooleanArray, E> {
