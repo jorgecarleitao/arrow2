@@ -1,5 +1,3 @@
-
-
 use csv::ByteRecord;
 
 use crate::array::BooleanArray;

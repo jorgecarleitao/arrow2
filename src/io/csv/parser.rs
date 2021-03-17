@@ -1,5 +1,3 @@
-
-
 use chrono::Datelike;
 
 use crate::temporal_conversions::EPOCH_DAYS_FROM_CE;
