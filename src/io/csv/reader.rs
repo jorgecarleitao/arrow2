@@ -1,25 +1,7 @@
-// Licensed to the Apache Software Foundation (ASF) under one
-// or more contributor license agreements.  See the NOTICE file
-// distributed with this work for additional information
-// regarding copyright ownership.  The ASF licenses this file
-// to you under the Apache License, Version 2.0 (the
-// "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
-
-use std::io::Read;
+use std::io::{Read, Seek};
 use std::sync::Arc;
-use std::{fmt, io::Seek};
 
-use csv::{ByteRecord, StringRecord};
+use csv::ByteRecord;
 use lazy_static::lazy_static;
 use regex::{Regex, RegexBuilder};
 
@@ -30,189 +12,58 @@ use crate::{
     error::{ArrowError, Result},
 };
 
-use super::{
-    infer_file_schema, new_boolean_array, new_primitive_array,
-    parser::{DefaultParser, GenericParser},
-};
+use super::{new_boolean_array, new_primitive_array, new_utf8_array, parser::GenericParser};
 
-// optional bounds of the reader, of the form (min line, max line).
-type Bounds = Option<(usize, usize)>;
+pub fn projected_schema(schema: &Schema, projection: Option<&[usize]>) -> Schema {
+    match &projection {
+        Some(projection) => {
+            let fields = schema.fields();
+            let projected_fields: Vec<Field> =
+                projection.iter().map(|i| fields[*i].clone()).collect();
+            Schema::new_from(
+                projected_fields,
+                schema.metadata().clone(),
+                schema.is_little_endian(),
+            )
+        }
+        None => schema.clone(),
+    }
+}
 
-/// CSV file reader
-pub struct Reader<R: Read, P: GenericParser<ArrowError>> {
-    /// Explicit schema for the CSV file
+pub fn read_batch<R: Read + Seek, P: GenericParser<ArrowError>>(
+    reader: &mut csv::Reader<R>,
+    parser: &P,
+    skip: usize,
+    len: usize,
     schema: Schema,
-    /// Optional projection for which columns to load (zero-based column indices)
-    projection: Option<Vec<usize>>,
-    /// File reader
-    reader: csv::Reader<R>,
-    /// Current line number
-    line_number: usize,
-    /// Maximum number of rows to read
-    end: usize,
-    /// Number of records per batch
-    batch_size: usize,
-    /// Vector that can hold the `StringRecord`s of the batches
-    batch_records: Vec<StringRecord>,
-
-    /// the parser to use
-    parser: P,
-}
-
-impl<R, P> fmt::Debug for Reader<R, P>
-where
-    R: Read,
-    P: GenericParser<ArrowError>,
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Reader")
-            .field("schema", &self.schema)
-            .field("projection", &self.projection)
-            .field("line_number", &self.line_number)
-            .finish()
-    }
-}
-
-impl<R: Read, P: GenericParser<ArrowError>> Reader<R, P> {
-    /// Create a new CsvReader from any value that implements the `Read` trait.
-    ///
-    /// If reading a `File` or an input that supports `std::io::Read` and `std::io::Seek`;
-    /// you can customise the Reader, such as to enable schema inference, use
-    /// `ReaderBuilder`.
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        reader: R,
-        schema: Schema,
-        has_header: bool,
-        delimiter: Option<u8>,
-        batch_size: usize,
-        bounds: Bounds,
-        projection: Option<Vec<usize>>,
-        parser: P,
-    ) -> Self {
-        let schema = match &projection {
-            Some(projection) => {
-                let fields = schema.fields();
-                let projected_fields: Vec<Field> =
-                    projection.iter().map(|i| fields[*i].clone()).collect();
-
-                Schema::new(projected_fields)
-            }
-            None => schema,
-        };
-
-        Self::from_reader(
-            reader, schema, has_header, delimiter, batch_size, bounds, projection, parser,
-        )
-    }
-
-    /// Returns the schema of the reader, useful for getting the schema without reading
-    /// record batches
-    pub fn schema(&self) -> &Schema {
-        &self.schema
-    }
-
-    /// Create a new CsvReader from a Reader
-    ///
-    /// This constructor allows you more flexibility in what records are processed by the
-    /// csv reader.
-    #[allow(clippy::too_many_arguments)]
-    pub fn from_reader(
-        reader: R,
-        schema: Schema,
-        has_header: bool,
-        delimiter: Option<u8>,
-        batch_size: usize,
-        bounds: Bounds,
-        projection: Option<Vec<usize>>,
-        parser: P,
-    ) -> Self {
-        let mut reader_builder = csv::ReaderBuilder::new();
-        reader_builder.has_headers(has_header);
-
-        if let Some(c) = delimiter {
-            reader_builder.delimiter(c);
-        }
-
-        let mut csv_reader = reader_builder.from_reader(reader);
-
-        let (start, end) = match bounds {
-            None => (0, usize::MAX),
-            Some((start, end)) => (start, end),
-        };
-
-        // First we will skip `start` rows
-        // note that this skips by iteration. This is because in general it is not possible
-        // to seek in CSV. However, skiping still saves the burden of creating arrow arrays,
-        // which is a slow operation that scales with the number of columns
-
-        let mut record = ByteRecord::new();
-        // Skip first start items
-        for _ in 0..start {
-            let res = csv_reader.read_byte_record(&mut record);
-            if !res.unwrap_or(false) {
-                break;
-            }
-        }
-
-        // Initialize batch_records with StringRecords so they
-        // can be reused accross batches
-        let mut batch_records = Vec::with_capacity(batch_size);
-        batch_records.resize_with(batch_size, Default::default);
-
-        Self {
-            schema,
-            projection,
-            reader: csv_reader,
-            line_number: if has_header { start + 1 } else { start },
-            batch_size,
-            end,
-            batch_records,
-            parser,
+    projection: Option<&[usize]>,
+) -> Result<RecordBatch> {
+    // skip first `start` rows.
+    let mut row = ByteRecord::new();
+    for _ in 0..skip {
+        let res = reader.read_byte_record(&mut row);
+        if !res.unwrap_or(false) {
+            break;
         }
     }
-}
 
-impl<R: Read, P: GenericParser<ArrowError>> Iterator for Reader<R, P> {
-    type Item = Result<RecordBatch>;
+    let rows = reader
+        .byte_records()
+        .enumerate()
+        .take(len)
+        .map(|(row_number, row)| {
+            row.map_err(|e| {
+                ArrowError::External(format!(" at line {}", skip + row_number), Box::new(e))
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        let remaining = self.end - self.line_number;
-
-        let mut read_records = 0;
-        for i in 0..std::cmp::min(self.batch_size, remaining) {
-            match self.reader.read_record(&mut self.batch_records[i]) {
-                Ok(true) => {
-                    read_records += 1;
-                }
-                Ok(false) => break,
-                Err(e) => {
-                    return Some(Err(ArrowError::External(
-                        format!(" at line {}", self.line_number + i,),
-                        Box::new(e),
-                    )))
-                }
-            }
-        }
-
-        // return early if no data was loaded
-        if read_records == 0 {
-            return None;
-        }
-
-        // parse the batches into a RecordBatch
-        let result = parse(
-            &self.batch_records[..read_records],
-            &self.schema.fields(),
-            &self.projection,
-            self.line_number,
-            &self.parser,
-        );
-
-        self.line_number += read_records;
-
-        Some(result)
+    if rows.is_empty() {
+        return Ok(RecordBatch::new_empty(schema));
     }
+
+    // parse the batches into a RecordBatch
+    parse(&rows, schema.fields(), projection, skip, parser)
 }
 
 macro_rules! primitive {
@@ -224,18 +75,18 @@ macro_rules! primitive {
 
 /// parses a slice of [csv_crate::StringRecord] into a [array::record_batch::RecordBatch].
 fn parse<P: GenericParser<ArrowError>>(
-    rows: &[StringRecord],
+    rows: &[ByteRecord],
     fields: &[Field],
-    projection: &Option<Vec<usize>>,
+    projection: Option<&[usize]>,
     line_number: usize,
     parser: &P,
 ) -> Result<RecordBatch> {
     let projection: Vec<usize> = match projection {
-        Some(ref v) => v.clone(),
+        Some(ref v) => v.to_vec(),
         None => fields.iter().enumerate().map(|(i, _)| i).collect(),
     };
 
-    let arrays: Result<Vec<Arc<dyn Array>>> = projection
+    let columns = projection
         .iter()
         .map(|i| {
             let i = *i;
@@ -263,19 +114,27 @@ fn parse<P: GenericParser<ArrowError>>(
                 DataType::UInt64 => primitive!(u64, line_number, rows, i, data_type, parser),
                 DataType::Float32 => primitive!(f32, line_number, rows, i, data_type, parser),
                 DataType::Float64 => primitive!(f64, line_number, rows, i, data_type, parser),
+                DataType::Utf8 => {
+                    new_utf8_array::<i32, ArrowError, _>(line_number, rows, i, parser)
+                        .map(|x| Arc::new(x) as Arc<dyn Array>)
+                }
+                DataType::LargeUtf8 => {
+                    new_utf8_array::<i64, ArrowError, _>(line_number, rows, i, parser)
+                        .map(|x| Arc::new(x) as Arc<dyn Array>)
+                }
                 other => Err(ArrowError::NotYetImplemented(format!(
                     "Unsupported data type {:?}",
                     other
                 ))),
             }
         })
-        .collect();
+        .collect::<Result<Vec<_>>>()?;
 
     let projected_fields: Vec<Field> = projection.iter().map(|i| fields[*i].clone()).collect();
 
     let projected_schema = Schema::new(projected_fields);
 
-    arrays.and_then(|arr| RecordBatch::try_new(projected_schema, arr))
+    RecordBatch::try_new(projected_schema, columns)
 }
 
 lazy_static! {
@@ -312,134 +171,47 @@ pub fn infer(string: &str) -> DataType {
     }
 }
 
-/// CSV file reader builder
-#[derive(Debug)]
-pub struct ReaderBuilder {
-    /// Optional schema for the CSV file
-    ///
-    /// If the schema is not supplied, the reader will try to infer the schema
-    /// based on the CSV structure.
-    schema: Option<Schema>,
-    /// Whether the file has headers or not
-    ///
-    /// If schema inference is run on a file with no headers, default column names
-    /// are created.
-    has_header: bool,
-    /// An optional column delimiter. Defaults to `b','`
-    delimiter: Option<u8>,
-    /// Optional maximum number of records to read during schema inference
-    ///
-    /// If a number is not provided, all the records are read.
-    max_records: Option<usize>,
-    /// Batch size (number of records to load each time)
-    ///
-    /// The default batch size when using the `ReaderBuilder` is 1024 records
-    batch_size: usize,
-    /// The bounds over which to scan the reader. `None` starts from 0 and runs until EOF.
-    bounds: Bounds,
-    /// Optional projection for which columns to load (zero-based column indices)
-    projection: Option<Vec<usize>>,
-}
+#[cfg(test)]
+mod tests {
+    use csv::ReaderBuilder;
 
-impl Default for ReaderBuilder {
-    fn default() -> Self {
-        Self {
-            schema: None,
-            has_header: false,
-            delimiter: None,
-            max_records: None,
-            batch_size: 1024,
-            bounds: None,
-            projection: None,
-        }
-    }
-}
+    use crate::array::{Float64Array, Utf8Array};
 
-impl ReaderBuilder {
-    /// Create a new builder for configuring CSV parsing options.
-    ///
-    /// To convert a builder into a reader, call `ReaderBuilder::build`
-    ///
-    /// # Example
-    ///
-    /// ```
-    ///
-    /// use arrow2::io::csv;
-    /// use std::fs::File;
-    ///
-    /// let file = File::open("test/data/uk_cities_with_headers.csv").unwrap();
-    /// let builder = csv::ReaderBuilder::new().infer_schema(Some(100));
-    /// let reader = builder.build(file).unwrap();
-    /// ```
-    pub fn new() -> ReaderBuilder {
-        ReaderBuilder::default()
-    }
+    use super::super::infer_schema;
+    use super::super::DefaultParser;
+    use super::*;
 
-    /// Set the CSV file's schema
-    pub fn with_schema(mut self, schema: Schema) -> Self {
-        self.schema = Some(schema);
-        self
-    }
+    #[test]
+    fn test_read() -> Result<()> {
+        let builder = ReaderBuilder::new();
+        let mut reader = builder.from_path("test/data/uk_cities_with_headers.csv")?;
+        let parser = DefaultParser::default();
 
-    /// Set whether the CSV file has headers
-    pub fn has_header(mut self, has_header: bool) -> Self {
-        self.has_header = has_header;
-        self
-    }
+        let schema = infer_schema(&mut reader, None, true, &infer)?;
 
-    /// Set the CSV file's column delimiter as a byte character
-    pub fn with_delimiter(mut self, delimiter: u8) -> Self {
-        self.delimiter = Some(delimiter);
-        self
-    }
+        let batch = read_batch(&mut reader, &parser, 0, 100, schema.clone(), None)?;
 
-    /// Set the CSV reader to infer the schema of the file
-    pub fn infer_schema(mut self, max_records: Option<usize>) -> Self {
-        // remove any schema that is set
-        self.schema = None;
-        self.max_records = max_records;
-        self
-    }
+        let batch_schema = batch.schema();
 
-    /// Set the batch size (number of records to load at one time)
-    pub fn with_batch_size(mut self, batch_size: usize) -> Self {
-        self.batch_size = batch_size;
-        self
-    }
+        assert_eq!(&schema, batch_schema);
+        assert_eq!(37, batch.num_rows());
+        assert_eq!(3, batch.num_columns());
 
-    /// Set the reader's column projection
-    pub fn with_projection(mut self, projection: Vec<usize>) -> Self {
-        self.projection = Some(projection);
-        self
-    }
+        let lat = batch
+            .column(1)
+            .as_any()
+            .downcast_ref::<Float64Array>()
+            .unwrap();
+        assert!((57.653484 - lat.value(0)).abs() < f64::EPSILON);
 
-    /// Create a new `Reader` from the `ReaderBuilder`
-    pub fn build<R: Read + Seek>(self, mut reader: R) -> Result<Reader<R, DefaultParser>> {
-        // check if schema should be inferred
-        let delimiter = self.delimiter.unwrap_or(b',');
-        let schema = match self.schema {
-            Some(schema) => schema,
-            None => {
-                let (inferred_schema, _) = infer_file_schema(
-                    &mut reader,
-                    delimiter,
-                    self.max_records,
-                    self.has_header,
-                    &infer,
-                )?;
+        let city = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Utf8Array<i32>>()
+            .unwrap();
 
-                inferred_schema
-            }
-        };
-        Ok(Reader::from_reader(
-            reader,
-            schema,
-            self.has_header,
-            self.delimiter,
-            self.batch_size,
-            None,
-            self.projection.clone(),
-            DefaultParser::default(),
-        ))
+        assert_eq!("Elgin, Scotland, the UK", city.value(0));
+        assert_eq!("Aberdeen, Aberdeen City, UK", city.value(13));
+        Ok(())
     }
 }
