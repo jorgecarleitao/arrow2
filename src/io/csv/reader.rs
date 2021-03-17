@@ -183,8 +183,7 @@ mod tests {
 
     #[test]
     fn test_read() -> Result<()> {
-        let builder = ReaderBuilder::new();
-        let mut reader = builder.from_path("test/data/uk_cities_with_headers.csv")?;
+        let mut reader = ReaderBuilder::new().from_path("test/data/uk_cities_with_headers.csv")?;
         let parser = DefaultParser::default();
 
         let schema = infer_schema(&mut reader, None, true, &infer)?;

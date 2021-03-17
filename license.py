@@ -30,6 +30,7 @@ own_license = '// ' + own_license.replace('\n', '\n// ')[:-3]
 
 own_compute = [
     "src/compute/arity.rs",
+    "src/compute/hash.rs",
     "src/compute/merge_sort",
 ]
 
@@ -43,14 +44,15 @@ def should_be_own_license(path: str) -> bool:
         path.startswith("src/docs") or \
         path.startswith("src/bits") or \
         path == "src/temporal_conversions.rs" or \
-        path.startswith("src/compute/merge_sort") or \
+        path.startswith("src/io/csv") or \
         any(path.startswith(x) for x in own_compute)
 
 
 def should_be_asf_license(path: str) -> bool:
     return path.startswith("src/alloc") or \
         (path.startswith("src/compute") and not any(path.startswith(x) for x in own_compute)) or \
-        path.startswith("src/io") or path == "src/record_batch.rs" or \
+        path.startswith("src/io") and not path.startswith("src/io/csv") or \
+        path == "src/record_batch.rs" or \
         path.startswith("src/datatypes/") or path.startswith("src/ffi/") or \
         path.startswith("src/util/")
 
