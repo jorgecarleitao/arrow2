@@ -1,5 +1,3 @@
-
-
 //! CSV Writer
 //!
 //! This CSV writer allows Arrow data (in record batches) to be written as CSV files.
