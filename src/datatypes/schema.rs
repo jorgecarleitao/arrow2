@@ -88,6 +88,10 @@ impl Schema {
         }
     }
 
+    pub const fn is_little_endian(&self) -> bool {
+        self.is_little_endian
+    }
+
     /// Merge schema into self if it is compatible. Struct fields will be merged recursively.
     ///
     /// Example:
