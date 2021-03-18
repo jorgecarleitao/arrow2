@@ -90,10 +90,10 @@ where
     let mut dst = buffer.as_mut_ptr();
     for item in iterator {
         let item = if let Some(item) = item {
-            validity.push(true);
+            validity.push_unchecked(true);
             *item.borrow()
         } else {
-            validity.push(false);
+            validity.push_unchecked(false);
             T::default()
         };
         std::ptr::write(dst, item);

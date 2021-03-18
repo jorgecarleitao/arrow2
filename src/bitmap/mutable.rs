@@ -1,6 +1,9 @@
 use std::iter::FromIterator;
 
-use crate::{bits::null_count, buffer::MutableBuffer};
+use crate::{
+    bits::{null_count, set},
+    buffer::MutableBuffer,
+};
 
 use super::Bitmap;
 
@@ -8,8 +11,6 @@ use super::Bitmap;
 #[derive(Debug)]
 pub struct MutableBitmap {
     buffer: MutableBuffer<u8>,
-    mask: u8,
-    byte: u8,
     length: usize,
 }
 
@@ -19,8 +20,6 @@ impl MutableBitmap {
     pub fn new() -> Self {
         Self {
             buffer: MutableBuffer::new(),
-            mask: 1,
-            byte: 0,
             length: 0,
         }
     }
@@ -30,8 +29,6 @@ impl MutableBitmap {
     pub fn from_len_zeroed(length: usize) -> Self {
         Self {
             buffer: MutableBuffer::from_len_zeroed(length.saturating_add(7) / 8),
-            mask: 1,
-            byte: 0,
             length,
         }
     }
@@ -41,8 +38,6 @@ impl MutableBitmap {
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             buffer: MutableBuffer::with_capacity(capacity.saturating_add(7) / 8),
-            mask: 1,
-            byte: 0,
             length: 0,
         }
     }
@@ -57,14 +52,13 @@ impl MutableBitmap {
     /// Pushes a new bit to the container, re-sizing it if necessary.
     #[inline]
     pub fn push(&mut self, value: bool) {
-        if value {
-            self.byte |= self.mask
-        };
-        self.mask = self.mask.rotate_left(1);
-        if self.mask == 1 {
-            self.buffer.push(self.byte);
-            self.byte = 0;
+        if self.length % 8 == 0 {
+            self.buffer.push(0);
         }
+        if value {
+            let byte = self.buffer.as_slice_mut().last_mut().unwrap();
+            *byte = set(*byte, self.length % 8);
+        };
         self.length += 1;
     }
 
@@ -78,14 +72,13 @@ impl MutableBitmap {
     /// The caller must ensure that the container has sufficient space.
     #[inline]
     pub unsafe fn push_unchecked(&mut self, value: bool) {
-        if value {
-            self.byte |= self.mask
-        };
-        self.mask = self.mask.rotate_left(1);
-        if self.mask == 1 {
-            self.buffer.push_unchecked(self.byte);
-            self.byte = 0;
+        if self.length % 8 == 0 {
+            self.buffer.push_unchecked(0);
         }
+        if value {
+            let byte = self.buffer.as_slice_mut().last_mut().unwrap();
+            *byte = set(*byte, self.length % 8);
+        };
         self.length += 1;
     }
 
@@ -113,7 +106,6 @@ impl MutableBitmap {
     pub(crate) unsafe fn set_len(&mut self, len: usize) {
         self.buffer.set_len(len.saturating_add(7) / 8);
         self.length = len;
-        self.mask = 1u8.rotate_left(len as u32);
     }
 }
 
@@ -126,20 +118,14 @@ impl From<(MutableBuffer<u8>, usize)> for Bitmap {
 
 impl From<MutableBitmap> for Bitmap {
     #[inline]
-    fn from(mut buffer: MutableBitmap) -> Self {
-        if buffer.mask != 1 {
-            buffer.buffer.push(buffer.byte)
-        };
+    fn from(buffer: MutableBitmap) -> Self {
         Bitmap::from_bytes(buffer.buffer.into(), buffer.length)
     }
 }
 
 impl From<MutableBitmap> for Option<Bitmap> {
     #[inline]
-    fn from(mut buffer: MutableBitmap) -> Self {
-        if buffer.mask != 1 {
-            buffer.buffer.push(buffer.byte)
-        };
+    fn from(buffer: MutableBitmap) -> Self {
         if buffer.null_count() > 0 {
             Some(Bitmap::from_bytes(buffer.buffer.into(), buffer.length))
         } else {
@@ -203,9 +189,7 @@ impl FromIterator<bool> for MutableBitmap {
         }
         Self {
             buffer,
-            byte: 0,
             length,
-            mask: 1u8.rotate_left(length as u32),
         }
     }
 }
@@ -222,39 +206,31 @@ impl MutableBitmap {
         let mut iterator = iter.into_iter();
         let length = iterator.size_hint().1.unwrap();
 
-        let chunks = length / 8;
+        let mut buffer = MutableBuffer::<u8>::from_len_zeroed((length + 7) / 8);
 
-        let mut mask: u8 = 1;
-        let iter = (0..chunks).map(|_| {
-            let mut byte_accum: u8 = 0;
-            (0..8).for_each(|_| {
-                let value = iterator.next().unwrap();
-                byte_accum |= match value {
-                    true => mask,
-                    false => 0,
-                };
-                mask = mask.rotate_left(1);
-            });
-            byte_accum
+        let chunks = length / 8;
+        let reminder = length % 8;
+
+        let data = buffer.as_slice_mut();
+        data[..chunks].iter_mut().for_each(|byte| {
+            (0..8).for_each(|i| {
+                if iterator.next().unwrap() {
+                    *byte = set(*byte, i)
+                }
+            })
         });
 
-        let mut buffer = MutableBuffer::from_trusted_len_iter(iter);
-
-        let mut byte_accum: u8 = 0;
-        let mut mask: u8 = 1;
-        for value in iterator {
-            byte_accum |= match value {
-                true => mask,
-                false => 0,
-            };
-            mask = mask.rotate_left(1);
+        if reminder != 0 {
+            let last = &mut data[chunks];
+            iterator.enumerate().for_each(|(i, value)| {
+                if value {
+                    *last = set(*last, i)
+                }
+            });
         }
-        buffer.push(byte_accum);
 
         Self {
             buffer,
-            byte: 0,
-            mask,
             length,
         }
     }
@@ -270,40 +246,33 @@ impl MutableBitmap {
         let mut iterator = iter.into_iter();
         let length = iterator.size_hint().1.unwrap();
 
-        let chunks = length / 8;
+        let mut buffer = MutableBuffer::<u8>::from_len_zeroed((length + 7) / 8);
 
-        let mut mask: u8 = 1;
-        let iter = (0..chunks).map(|_| {
-            let mut byte_accum: u8 = 0;
-            (0..8).try_for_each(|_| {
-                let value = iterator.next().unwrap()?;
-                byte_accum |= match value {
-                    true => mask,
-                    false => 0,
+        let chunks = length / 8;
+        let reminder = length % 8;
+
+        let data = buffer.as_slice_mut();
+        data[..chunks].iter_mut().try_for_each(|byte| {
+            (0..8).try_for_each(|i| {
+                if iterator.next().unwrap()? {
+                    *byte = set(*byte, i)
                 };
-                mask = mask.rotate_left(1);
+                Ok(())
+            })
+        })?;
+
+        if reminder != 0 {
+            let last = &mut data[chunks];
+            iterator.enumerate().try_for_each(|(i, value)| {
+                if value? {
+                    *last = set(*last, i)
+                }
                 Ok(())
             })?;
-            Ok(byte_accum)
-        });
-
-        let mut buffer = MutableBuffer::try_from_trusted_len_iter(iter)?;
-
-        let mut byte_accum: u8 = 0;
-        let mut mask: u8 = 1;
-        for value in iterator {
-            byte_accum |= match value? {
-                true => mask,
-                false => 0,
-            };
-            mask = mask.rotate_left(1);
         }
-        buffer.push(byte_accum);
 
         Ok(Self {
             buffer,
-            byte: 0,
-            mask,
             length,
         })
     }

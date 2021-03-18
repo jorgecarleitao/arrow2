@@ -7,10 +7,22 @@ pub use zip_validity::{zip_validity, ZipValidity};
 
 const BIT_MASK: [u8; 8] = [1, 2, 4, 8, 16, 32, 64, 128];
 
+/// Returns whether bit at position `i` in `byte` is set or not
+#[inline]
+pub fn is_set(byte: u8, i: usize) -> bool {
+    (byte & BIT_MASK[i]) != 0
+}
+
+/// Sets bit at position `i` in `byte`
+#[inline]
+pub fn set(byte: u8, i: usize) -> u8 {
+    byte | BIT_MASK[i]
+}
+
 /// Returns whether bit at position `i` in `data` is set or not
 #[inline]
 pub fn get_bit(data: &[u8], i: usize) -> bool {
-    (data[i >> 3] & BIT_MASK[i & 7]) != 0
+    is_set(data[i / 8], i % 8)
 }
 
 /// Returns whether bit at position `i` in `data` is set or not.
