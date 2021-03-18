@@ -2,26 +2,22 @@ use std::sync::Arc;
 
 use crate::{
     array::{Array, PrimitiveArray},
-    bitmap::MutableBitmap,
+    bitmap::{Bitmap, MutableBitmap},
     buffer::MutableBuffer,
     datatypes::DataType,
     types::NativeType,
 };
 
-use super::{
-    utils::{build_extend_null_bits, ExtendNullBits},
-    Growable,
-};
+use super::Growable;
 
 /// A growable PrimitiveArray
 pub struct GrowablePrimitive<'a, T: NativeType> {
     data_type: DataType,
     arrays: Vec<&'a [T]>,
+    validities: Vec<&'a Option<Bitmap>>,
+    use_validity: bool,
     validity: MutableBitmap,
     values: MutableBuffer<T>,
-    // function used to extend nulls from arrays. This function's lifetime is bound to the array
-    // because it reads nulls from it.
-    extend_null_bits: Vec<ExtendNullBits<'a>>,
 }
 
 impl<'a, T: NativeType> GrowablePrimitive<'a, T> {
@@ -32,12 +28,11 @@ impl<'a, T: NativeType> GrowablePrimitive<'a, T> {
             use_validity = true;
         };
 
-        let extend_null_bits = arrays
-            .iter()
-            .map(|array| build_extend_null_bits(*array, use_validity))
-            .collect();
-
         let data_type = arrays[0].data_type().clone();
+        let validities = arrays
+            .iter()
+            .map(|array| array.validity())
+            .collect::<Vec<_>>();
         let arrays = arrays
             .iter()
             .map(|array| array.values())
@@ -46,9 +41,10 @@ impl<'a, T: NativeType> GrowablePrimitive<'a, T> {
         Self {
             data_type,
             arrays,
+            validities,
+            use_validity,
             values: MutableBuffer::with_capacity(capacity),
             validity: MutableBitmap::with_capacity(capacity),
-            extend_null_bits,
         }
     }
 
@@ -64,7 +60,19 @@ impl<'a, T: NativeType> GrowablePrimitive<'a, T> {
 impl<'a, T: NativeType> Growable<'a> for GrowablePrimitive<'a, T> {
     #[inline]
     fn extend(&mut self, index: usize, start: usize, len: usize) {
-        (self.extend_null_bits[index])(&mut self.validity, start, len);
+        let validity = self.validities[index];
+        if let Some(bitmap) = validity {
+            assert!(start + len <= bitmap.len());
+            unsafe {
+                let iter = (start..start + len).map(|i| bitmap.get_bit_unchecked(i));
+                self.validity.extend_from_trusted_len_iter(iter);
+            };
+        } else if self.use_validity {
+            let iter = (0..len).map(|_| true);
+            unsafe {
+                self.validity.extend_from_trusted_len_iter(iter);
+            };
+        };
 
         let values = self.arrays[index];
         self.values.extend_from_slice(&values[start..start + len]);
@@ -74,10 +82,11 @@ impl<'a, T: NativeType> Growable<'a> for GrowablePrimitive<'a, T> {
     fn extend_validity(&mut self, additional: usize) {
         self.values
             .resize(self.values.len() + additional, T::default());
-        self.validity.reserve(additional);
-        (0..additional).for_each(|_| {
-            unsafe { self.validity.push_unchecked(false) };
-        });
+
+        let iter = (0..additional).map(|_| false);
+        unsafe {
+            self.validity.extend_from_trusted_len_iter(iter);
+        };
     }
 
     #[inline]
