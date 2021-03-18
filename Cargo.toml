@@ -84,3 +84,7 @@ harness = false
 [[bench]]
 name = "from_trusted_len_iter"
 harness = false
+
+[[bench]]
+name = "growable"
+harness = false
