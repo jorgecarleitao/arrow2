@@ -23,17 +23,18 @@ pub(super) type ExtendNullBits<'a> = Box<dyn Fn(&mut MutableBitmap, usize, usize
 pub(super) fn build_extend_null_bits(array: &dyn Array, use_validity: bool) -> ExtendNullBits {
     if let Some(bitmap) = array.validity() {
         Box::new(move |validity, start, len| {
-            validity.reserve(len);
+            assert!(start + len <= bitmap.len());
             unsafe {
-                (start..start + len).for_each(|i| validity.push_unchecked(bitmap.get_bit(i)))
+                let iter = (start..start + len).map(|i| bitmap.get_bit_unchecked(i));
+                validity.extend_from_trusted_len_iter(iter);
             };
         })
     } else if use_validity {
         Box::new(|validity, _, len| {
-            validity.reserve(len);
-            (0..len).for_each(|_| {
-                unsafe { validity.push_unchecked(true) };
-            });
+            let iter = (0..len).map(|_| true);
+            unsafe {
+                validity.extend_from_trusted_len_iter(iter);
+            };
         })
     } else {
         Box::new(|_, _, _| {})

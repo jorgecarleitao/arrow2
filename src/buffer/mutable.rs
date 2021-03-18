@@ -129,6 +129,16 @@ impl<T: NativeType> MutableBuffer<T> {
     #[inline(always)]
     pub fn resize(&mut self, new_len: usize, value: T) {
         if new_len > self.len {
+            if self.capacity == 0 && value == T::default() {
+                // edge case where the allocate
+                let required_cap = capacity_multiple_of_64::<T>(new_len);
+                let ptr = alloc::allocate_aligned_zeroed(required_cap);
+                self.ptr = ptr;
+                self.capacity = required_cap;
+                self.len = new_len;
+                return;
+            }
+
             let diff = new_len - self.len;
             self.reserve(diff);
             unsafe {
@@ -248,6 +258,11 @@ impl<T: NativeType> MutableBuffer<T> {
         assert!(len <= self.capacity());
         self.len = len;
     }
+
+    #[inline]
+    pub fn extend_constant(&mut self, additional: usize, value: T) {
+        self.resize(self.len() + additional, value)
+    }
 }
 
 /// # Safety
@@ -300,6 +315,31 @@ impl<T: NativeType> MutableBuffer<T> {
         iterator.for_each(|item| self.push(item));
     }
 
+    /// Extends `self` from a `TrustedLen` iterator.
+    /// # Safety
+    /// This method assumes that the iterator's size is correct and is undefined behavior
+    /// to use it on an iterator that reports an incorrect length.
+    #[inline]
+    pub unsafe fn extend_from_trusted_len_iter<I: Iterator<Item = T>>(&mut self, iterator: I) {
+        let (_, upper) = iterator.size_hint();
+        let upper = upper.expect("trusted_len_iter requires an upper limit");
+        let len = upper;
+
+        self.reserve(len);
+        let mut dst = self.ptr.as_ptr().add(self.len);
+        for item in iterator {
+            // note how there is no reserve here (compared with `extend_from_iter`)
+            std::ptr::write(dst, item);
+            dst = dst.add(1);
+        }
+        assert_eq!(
+            dst.offset_from(self.ptr.as_ptr().add(self.len)) as usize,
+            upper,
+            "Trusted iterator length was not accurately reported"
+        );
+        self.len += len;
+    }
+
     /// Creates a [`MutableBuffer`] from an [`Iterator`] with a trusted (upper) length.
     /// Prefer this to `collect` whenever possible, as it is faster ~60% faster.
     /// # Example
@@ -319,24 +359,8 @@ impl<T: NativeType> MutableBuffer<T> {
     // 2. `from_trusted_len_iter` is faster.
     #[inline]
     pub unsafe fn from_trusted_len_iter<I: Iterator<Item = T>>(iterator: I) -> Self {
-        let (_, upper) = iterator.size_hint();
-        let upper = upper.expect("from_trusted_len_iter requires an upper limit");
-        let len = upper;
-
-        let mut buffer = MutableBuffer::with_capacity(len);
-
-        let mut dst = buffer.ptr.as_ptr();
-        for item in iterator {
-            // note how there is no reserve here (compared with `extend_from_iter`)
-            std::ptr::write(dst, item);
-            dst = dst.add(1);
-        }
-        assert_eq!(
-            dst.offset_from(buffer.ptr.as_ptr()) as usize,
-            upper,
-            "Trusted iterator length was not accurately reported"
-        );
-        buffer.len = len;
+        let mut buffer = MutableBuffer::new();
+        buffer.extend_from_trusted_len_iter(iterator);
         buffer
     }
 

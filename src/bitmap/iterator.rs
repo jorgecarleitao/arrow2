@@ -57,4 +57,25 @@ impl<'a> Iterator for BitmapIter<'a> {
     fn size_hint(&self) -> (usize, Option<usize>) {
         (self.len - self.index, Some(self.len - self.index))
     }
+
+    #[inline]
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        let (end, overflow) = self.index.overflowing_add(n);
+        if end > self.len || overflow {
+            self.index = self.len;
+            None
+        } else {
+            self.mask = self.mask.rotate_left((n % 8) as u32);
+
+            if (self.index % 8 + n) >= 8 {
+                // need to fetch the new byte.
+                // infalible because self.index + n < self.len;
+                self.current_byte = self.iter.nth((n / 8).saturating_sub(1)).unwrap();
+            };
+            let value = self.current_byte & self.mask != 0;
+            self.mask = self.mask.rotate_left(1);
+            self.index += n;
+            Some(value)
+        }
+    }
 }
