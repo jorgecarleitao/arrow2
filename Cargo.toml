@@ -80,3 +80,7 @@ harness = false
 [[bench]]
 name = "null_count"
 harness = false
+
+[[bench]]
+name = "from_trusted_len_iter"
+harness = false
