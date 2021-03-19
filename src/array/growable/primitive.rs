@@ -8,7 +8,7 @@ use crate::{
     types::NativeType,
 };
 
-use super::Growable;
+use super::{utils::extend_validity, Growable};
 
 /// A growable PrimitiveArray
 pub struct GrowablePrimitive<'a, T: NativeType> {
@@ -61,18 +61,7 @@ impl<'a, T: NativeType> Growable<'a> for GrowablePrimitive<'a, T> {
     #[inline]
     fn extend(&mut self, index: usize, start: usize, len: usize) {
         let validity = self.validities[index];
-        if let Some(bitmap) = validity {
-            assert!(start + len <= bitmap.len());
-            unsafe {
-                let iter = (start..start + len).map(|i| bitmap.get_bit_unchecked(i));
-                self.validity.extend_from_trusted_len_iter(iter);
-            };
-        } else if self.use_validity {
-            let iter = (0..len).map(|_| true);
-            unsafe {
-                self.validity.extend_from_trusted_len_iter(iter);
-            };
-        };
+        extend_validity(&mut self.validity, validity, start, len, self.use_validity);
 
         let values = self.arrays[index];
         self.values.extend_from_slice(&values[start..start + len]);
@@ -82,11 +71,7 @@ impl<'a, T: NativeType> Growable<'a> for GrowablePrimitive<'a, T> {
     fn extend_validity(&mut self, additional: usize) {
         self.values
             .resize(self.values.len() + additional, T::default());
-
-        let iter = (0..additional).map(|_| false);
-        unsafe {
-            self.validity.extend_from_trusted_len_iter(iter);
-        };
+        self.validity.extend_constant(additional, false);
     }
 
     #[inline]

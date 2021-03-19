@@ -1,6 +1,6 @@
 use crate::{
     array::{Array, Offset},
-    bitmap::MutableBitmap,
+    bitmap::{Bitmap, MutableBitmap},
     buffer::MutableBuffer,
 };
 
@@ -39,6 +39,25 @@ pub(super) fn build_extend_null_bits(array: &dyn Array, use_validity: bool) -> E
     } else {
         Box::new(|_, _, _| {})
     }
+}
+
+#[inline]
+pub(super) fn extend_validity(
+    mutable_validity: &mut MutableBitmap,
+    validity: &Option<Bitmap>,
+    start: usize,
+    len: usize,
+    use_validity: bool,
+) {
+    if let Some(bitmap) = validity {
+        assert!(start + len <= bitmap.len());
+        unsafe {
+            let iter = (start..start + len).map(|i| bitmap.get_bit_unchecked(i));
+            mutable_validity.extend_from_trusted_len_iter(iter);
+        };
+    } else if use_validity {
+        mutable_validity.extend_constant(len, true);
+    };
 }
 
 #[inline]

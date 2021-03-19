@@ -62,16 +62,13 @@ impl<'a> Growable<'a> for GrowableBoolean<'a> {
 
         let array = self.arrays[index];
         let values = array.values();
-        (start..start + len).for_each(|i| self.values.push(values.get_bit(i)));
+        let iter = (start..start + len).map(|i| values.get_bit(i));
+        unsafe { self.values.extend_from_trusted_len_iter(iter) };
     }
 
     fn extend_validity(&mut self, additional: usize) {
-        self.values.reserve(additional);
-        self.validity.reserve(additional);
-        (0..additional).for_each(|_| {
-            self.values.push(false);
-            self.validity.push(false);
-        });
+        self.values.extend_constant(additional, false);
+        self.validity.extend_constant(additional, false);
     }
 
     fn to_arc(&mut self) -> Arc<dyn Array> {

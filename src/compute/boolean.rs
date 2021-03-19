@@ -139,13 +139,7 @@ pub fn is_null(input: &dyn Array) -> BooleanArray {
 /// ```
 pub fn is_not_null(input: &dyn Array) -> BooleanArray {
     let values = match input.validity() {
-        None => {
-            let mut buffer = MutableBitmap::with_capacity(input.len().saturating_add(7) / 8);
-            (0..input.len()).for_each(|_| {
-                buffer.push(true);
-            });
-            buffer.into()
-        }
+        None => unsafe { Bitmap::from_trusted_len_iter((0..input.len()).map(|_| true)) },
         Some(buffer) => buffer.clone(),
     };
     BooleanArray::from_data(values, None)
