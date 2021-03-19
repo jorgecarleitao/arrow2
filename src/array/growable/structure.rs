@@ -100,9 +100,7 @@ impl<'a> Growable<'a> for GrowableStruct<'a> {
         self.values
             .iter_mut()
             .for_each(|child| child.extend_validity(additional));
-        (0..additional).for_each(|_| {
-            self.validity.push(false);
-        });
+        self.validity.extend_constant(additional, false);
     }
 
     fn to_arc(&mut self) -> Arc<dyn Array> {

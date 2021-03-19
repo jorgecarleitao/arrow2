@@ -107,6 +107,20 @@ impl MutableBitmap {
         self.buffer.set_len(len.saturating_add(7) / 8);
         self.length = len;
     }
+
+    #[inline]
+    pub fn extend_constant(&mut self, additional: usize, value: bool) {
+        if value {
+            let iter = (0..additional).map(|_| true);
+            unsafe {
+                self.extend_from_trusted_len_iter(iter);
+            };
+        } else {
+            self.buffer
+                .resize((self.length + additional).saturating_add(7) / 8, 0);
+            self.length += additional;
+        }
+    }
 }
 
 impl From<(MutableBuffer<u8>, usize)> for Bitmap {

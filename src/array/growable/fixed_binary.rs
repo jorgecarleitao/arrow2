@@ -82,10 +82,7 @@ impl<'a> Growable<'a> for GrowableFixedSizeBinary<'a> {
     fn extend_validity(&mut self, additional: usize) {
         self.values
             .extend_from_slice(&vec![0; self.size * additional]);
-        self.validity.reserve(additional);
-        (0..additional).for_each(|_| {
-            self.validity.push(false);
-        });
+        self.validity.extend_constant(additional, false);
     }
 
     fn to_arc(&mut self) -> Arc<dyn Array> {
