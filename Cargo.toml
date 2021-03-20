@@ -88,3 +88,7 @@ harness = false
 [[bench]]
 name = "growable"
 harness = false
+
+[[bench]]
+name = "comparison_kernels"
+harness = false
