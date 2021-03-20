@@ -41,7 +41,6 @@ itertools = { version = "^0.10", optional = true }
 [dev-dependencies]
 rand = "0.7"
 criterion = "0.3"
-tempfile = "3"
 flate2 = "1"
 doc-comment = "0.3"
 
