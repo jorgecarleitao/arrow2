@@ -7,3 +7,4 @@
 - [Foreign interfaces](./ffi.md)
 - [IO](./io/csv_reader.md)
     - [Read CSV](./io/csv_reader.md)
+    - [Write CSV](./io/csv_write.md)
