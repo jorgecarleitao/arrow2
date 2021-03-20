@@ -16,7 +16,8 @@
 // under the License.
 
 /// Converts numeric type to a `String`
-pub fn lexical_to_string<N: lexical_core::ToLexical>(n: N) -> String {
+#[inline]
+pub fn lexical_to_bytes<N: lexical_core::ToLexical>(n: N) -> Vec<u8> {
     let mut buf = Vec::<u8>::with_capacity(N::FORMATTED_SIZE_DECIMAL);
     unsafe {
         // JUSTIFICATION
@@ -28,8 +29,14 @@ pub fn lexical_to_string<N: lexical_core::ToLexical>(n: N) -> String {
         let slice = std::slice::from_raw_parts_mut(buf.as_mut_ptr(), buf.capacity());
         let len = lexical_core::write(n, slice).len();
         buf.set_len(len);
-        String::from_utf8_unchecked(buf)
     }
+    buf
+}
+
+/// Converts numeric type to a `String`
+#[inline]
+pub fn lexical_to_string<N: lexical_core::ToLexical>(n: N) -> String {
+    unsafe { String::from_utf8_unchecked(lexical_to_bytes(n)) }
 }
 
 #[cfg(test)]

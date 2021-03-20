@@ -22,7 +22,7 @@ impl From<std::str::Utf8Error> for ArrowError {
 
 mod parser;
 mod reader;
-mod writer;
+pub mod write;
 
 mod infer_schema;
 mod read_boolean;
@@ -35,4 +35,3 @@ pub use read_primitive::{new_primitive_array, PrimitiveParser};
 pub use read_utf8::{new_utf8_array, Utf8Parser};
 
 pub use reader::*;
-pub use writer::{Writer, WriterBuilder};

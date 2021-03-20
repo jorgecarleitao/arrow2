@@ -1,4 +1,4 @@
-use std::io::{Read, Seek};
+use std::io::Read;
 use std::sync::Arc;
 
 use csv::ByteRecord;
@@ -30,7 +30,7 @@ pub fn projected_schema(schema: &Schema, projection: Option<&[usize]>) -> Schema
     }
 }
 
-pub fn read_batch<R: Read + Seek, P: GenericParser<ArrowError>>(
+pub fn read_batch<R: Read, P: GenericParser<ArrowError>>(
     reader: &mut csv::Reader<R>,
     parser: &P,
     skip: usize,
