@@ -17,7 +17,6 @@
 
 use crate::{array::*, types::NativeType};
 use crate::{
-    bits,
     buffer::MutableBuffer,
     error::{ArrowError, Result},
 };
@@ -53,11 +52,12 @@ where
         .zip(lhs_chunks_iter)
         .zip(rhs_chunks_iter)
         .for_each(|((byte, lhs), rhs)| {
-            (0..8).for_each(|i| {
-                if op(lhs[i], rhs[i]) {
-                    *byte = bits::set(*byte, i)
-                }
-            });
+            lhs.iter()
+                .zip(rhs.iter())
+                .enumerate()
+                .for_each(|(i, (&lhs, &rhs))| {
+                    *byte |= if op(lhs, rhs) { 1 << i } else { 0 };
+                });
         });
 
     if !lhs_remainder.is_empty() {
@@ -66,10 +66,8 @@ where
             .iter()
             .zip(rhs_remainder.iter())
             .enumerate()
-            .for_each(|(i, (lhs, rhs))| {
-                if op(*lhs, *rhs) {
-                    *last = bits::set(*last, i)
-                }
+            .for_each(|(i, (&lhs, &rhs))| {
+                *last |= if op(lhs, rhs) { 1 << i } else { 0 };
             });
     };
 
@@ -97,20 +95,16 @@ where
     values[..chunks]
         .iter_mut()
         .zip(lhs_chunks_iter)
-        .for_each(|(byte, lhs)| {
-            (0..8).for_each(|i| {
-                if op(lhs[i], rhs) {
-                    *byte = bits::set(*byte, i)
-                }
+        .for_each(|(byte, chunk)| {
+            chunk.iter().enumerate().for_each(|(i, &c_i)| {
+                *byte |= if op(c_i, rhs) { 1 << i } else { 0 };
             });
         });
 
     if !lhs_remainder.is_empty() {
         let last = &mut values[chunks];
-        lhs_remainder.iter().enumerate().for_each(|(i, lhs)| {
-            if op(*lhs, rhs) {
-                *last = bits::set(*last, i)
-            }
+        lhs_remainder.iter().enumerate().for_each(|(i, &lhs)| {
+            *last |= if op(lhs, rhs) { 1 << i } else { 0 };
         });
     };
 
