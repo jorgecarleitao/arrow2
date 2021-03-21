@@ -23,26 +23,21 @@ use arrow2::array::*;
 use arrow2::util::bench_util::*;
 use arrow2::{compute::comparison::*, datatypes::DataType, types::NativeType};
 
-fn bench_eq<T>(arr_a: &PrimitiveArray<T>, arr_b: &PrimitiveArray<T>)
+fn bench_op<T>(arr_a: &PrimitiveArray<T>, arr_b: &PrimitiveArray<T>, op: Operator)
 where
     T: NativeType,
 {
-    compare(
-        criterion::black_box(arr_a),
-        criterion::black_box(arr_b),
-        Operator::Eq,
-    )
-    .unwrap();
+    compare(criterion::black_box(arr_a), criterion::black_box(arr_b), op).unwrap();
 }
 
-fn bench_eq_scalar<T>(arr_a: &PrimitiveArray<T>, value_b: T)
+fn bench_op_scalar<T>(arr_a: &PrimitiveArray<T>, value_b: T, op: Operator)
 where
     T: NativeType + std::cmp::PartialOrd,
 {
     primtive_compare_scalar(
         criterion::black_box(arr_a),
         criterion::black_box(value_b),
-        Operator::Eq,
+        op,
     )
     .unwrap();
 }
@@ -52,9 +47,18 @@ fn add_benchmark(c: &mut Criterion) {
     let arr_a = create_primitive_array::<f32>(size, DataType::Float32, 0.0);
     let arr_b = create_primitive_array::<f32>(size, DataType::Float32, 0.0);
 
-    c.bench_function("eq Float32", |b| b.iter(|| bench_eq(&arr_a, &arr_b)));
+    c.bench_function("eq Float32", |b| {
+        b.iter(|| bench_op(&arr_a, &arr_b, Operator::Eq))
+    });
     c.bench_function("eq scalar Float32", |b| {
-        b.iter(|| bench_eq_scalar(&arr_a, 1.0))
+        b.iter(|| bench_op_scalar(&arr_a, 1.0, Operator::Eq))
+    });
+
+    c.bench_function("lt Float32", |b| {
+        b.iter(|| bench_op(&arr_a, &arr_b, Operator::Lt))
+    });
+    c.bench_function("lt scalar Float32", |b| {
+        b.iter(|| bench_op_scalar(&arr_a, 1.0, Operator::Lt))
     });
 }
 
