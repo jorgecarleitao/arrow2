@@ -19,28 +19,38 @@
 extern crate criterion;
 use criterion::Criterion;
 
-use arrow2::{compute::comparison::*, datatypes::DataType, types::NativeType};
+use arrow2::array::*;
 use arrow2::util::bench_util::*;
-use arrow2::{array::*};
+use arrow2::{compute::comparison::*, datatypes::DataType, types::NativeType};
 
 fn bench_eq<T>(arr_a: &PrimitiveArray<T>, arr_b: &PrimitiveArray<T>)
 where
     T: NativeType,
 {
-    compare(criterion::black_box(arr_a), criterion::black_box(arr_b), Operator::Eq).unwrap();
+    compare(
+        criterion::black_box(arr_a),
+        criterion::black_box(arr_b),
+        Operator::Eq,
+    )
+    .unwrap();
 }
 
 fn bench_eq_scalar<T>(arr_a: &PrimitiveArray<T>, value_b: T)
 where
     T: NativeType + std::cmp::PartialOrd,
 {
-    primtive_compare_scalar(criterion::black_box(arr_a), criterion::black_box(value_b), Operator::Eq).unwrap();
+    primtive_compare_scalar(
+        criterion::black_box(arr_a),
+        criterion::black_box(value_b),
+        Operator::Eq,
+    )
+    .unwrap();
 }
 
 fn add_benchmark(c: &mut Criterion) {
     let size = 65536;
     let arr_a = create_primitive_array::<f32>(size, DataType::Float32, 0.0);
-    let arr_b = create_primitive_array::<f32>(size, DataType::Float32,0.0);
+    let arr_b = create_primitive_array::<f32>(size, DataType::Float32, 0.0);
 
     c.bench_function("eq Float32", |b| b.iter(|| bench_eq(&arr_a, &arr_b)));
     c.bench_function("eq scalar Float32", |b| {

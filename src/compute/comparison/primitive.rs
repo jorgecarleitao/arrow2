@@ -15,8 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::error::{ArrowError, Result};
-use crate::{array::*, bitmap::Bitmap, types::NativeType};
+use crate::{array::*, types::NativeType};
+use crate::{
+    bits,
+    buffer::MutableBuffer,
+    error::{ArrowError, Result},
+};
 
 use super::{super::utils::combine_validities, Operator};
 
@@ -35,14 +39,44 @@ where
 
     let validity = combine_validities(lhs.validity(), rhs.validity());
 
-    let values = lhs
-        .values()
-        .iter()
-        .zip(rhs.values())
-        .map(|(lhs, rhs)| op(*lhs, *rhs));
-    let values = unsafe { Bitmap::from_trusted_len_iter(values) };
+    let mut values = MutableBuffer::from_len_zeroed((lhs.len() + 7) / 8);
 
-    Ok(BooleanArray::from_data(values, validity))
+    let lhs_chunks_iter = lhs.values().chunks_exact(8);
+    let lhs_remainder = lhs_chunks_iter.remainder();
+    let rhs_chunks_iter = rhs.values().chunks_exact(8);
+    let rhs_remainder = rhs_chunks_iter.remainder();
+
+    let chunks = lhs.len() / 8;
+
+    values[..chunks]
+        .iter_mut()
+        .zip(lhs_chunks_iter)
+        .zip(rhs_chunks_iter)
+        .for_each(|((byte, lhs), rhs)| {
+            (0..8).for_each(|i| {
+                if op(lhs[i], rhs[i]) {
+                    *byte = bits::set(*byte, i)
+                }
+            });
+        });
+
+    if !lhs_remainder.is_empty() {
+        let last = &mut values[chunks];
+        lhs_remainder
+            .iter()
+            .zip(rhs_remainder.iter())
+            .enumerate()
+            .for_each(|(i, (lhs, rhs))| {
+                if op(*lhs, *rhs) {
+                    *last = bits::set(*last, i)
+                }
+            });
+    };
+
+    Ok(BooleanArray::from_data(
+        (values, lhs.len()).into(),
+        validity,
+    ))
 }
 
 /// Evaluate `op(left, right)` for [`PrimitiveArray`] and scalar using
@@ -54,10 +88,36 @@ where
 {
     let validity = lhs.validity().clone();
 
-    let values = lhs.values().iter().map(|lhs| op(*lhs, rhs));
-    let values = unsafe { Bitmap::from_trusted_len_iter(values) };
+    let mut values = MutableBuffer::from_len_zeroed((lhs.len() + 7) / 8);
 
-    Ok(BooleanArray::from_data(values, validity))
+    let lhs_chunks_iter = lhs.values().chunks_exact(8);
+    let lhs_remainder = lhs_chunks_iter.remainder();
+    let chunks = lhs.len() / 8;
+
+    values[..chunks]
+        .iter_mut()
+        .zip(lhs_chunks_iter)
+        .for_each(|(byte, lhs)| {
+            (0..8).for_each(|i| {
+                if op(lhs[i], rhs) {
+                    *byte = bits::set(*byte, i)
+                }
+            });
+        });
+
+    if !lhs_remainder.is_empty() {
+        let last = &mut values[chunks];
+        lhs_remainder.iter().enumerate().for_each(|(i, lhs)| {
+            if op(*lhs, rhs) {
+                *last = bits::set(*last, i)
+            }
+        });
+    };
+
+    Ok(BooleanArray::from_data(
+        (values, lhs.len()).into(),
+        validity,
+    ))
 }
 
 /// Perform `lhs == rhs` operation on two arrays.
