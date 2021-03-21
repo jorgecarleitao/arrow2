@@ -51,6 +51,30 @@ where
         .to(data_type)
 }
 
+pub fn create_primitive_array_with_seed<T>(
+    size: usize,
+    data_type: DataType,
+    null_density: f32,
+    seed: u64,
+) -> PrimitiveArray<T>
+where
+    T: NativeType,
+    Standard: Distribution<T>,
+{
+    let mut rng = StdRng::seed_from_u64(seed);
+
+    (0..size)
+        .map(|_| {
+            if rng.gen::<f32>() < null_density {
+                None
+            } else {
+                Some(rng.gen())
+            }
+        })
+        .collect::<Primitive<T>>()
+        .to(data_type)
+}
+
 /// Creates an random (but fixed-seeded) array of a given size and null density
 pub fn create_boolean_array(size: usize, null_density: f32, true_density: f32) -> BooleanArray
 where
