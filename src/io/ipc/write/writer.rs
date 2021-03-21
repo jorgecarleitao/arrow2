@@ -271,11 +271,6 @@ mod tests {
         test_file("1.0.0-bigendian", "generated_primitive_large_offsets");
     }
 
-    //#[test]
-    //fn write_100_recursive_nested() {
-    //test_file("1.0.0-littleendian", "generated_recursive_nested");
-    //}
-
     #[test]
     fn write_100_primitive_no_batches() {
         test_file("1.0.0-littleendian", "generated_primitive_no_batches");

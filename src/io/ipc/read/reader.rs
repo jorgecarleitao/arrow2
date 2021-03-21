@@ -298,6 +298,12 @@ mod tests {
     }
 
     #[test]
+    fn read_generated_100_primitive_large_offsets() {
+        test_file("1.0.0-littleendian", "generated_primitive_large_offsets");
+        test_file("1.0.0-bigendian", "generated_primitive_large_offsets");
+    }
+
+    #[test]
     fn read_generated_100_datetime() {
         test_file("1.0.0-littleendian", "generated_datetime");
         test_file("1.0.0-bigendian", "generated_datetime");
@@ -340,20 +346,32 @@ mod tests {
     }
 
     #[test]
+    fn read_generated_100_nested_large_offsets() {
+        test_file("1.0.0-littleendian", "generated_nested_large_offsets");
+        test_file("1.0.0-bigendian", "generated_nested_large_offsets");
+    }
+
+    #[test]
     fn read_generated_100_nested() {
         test_file("1.0.0-littleendian", "generated_nested");
         test_file("1.0.0-bigendian", "generated_nested");
     }
 
     #[test]
-    fn read_generated_100_interval() {
-        test_file("1.0.0-littleendian", "generated_interval");
-        test_file("1.0.0-bigendian", "generated_interval");
+    fn read_generated_100_dictionary_unsigned() {
+        test_file("1.0.0-littleendian", "generated_dictionary_unsigned");
+        test_file("1.0.0-bigendian", "generated_dictionary_unsigned");
     }
 
     #[test]
     fn read_generated_100_decimal() {
         test_file("1.0.0-littleendian", "generated_decimal");
         test_file("1.0.0-bigendian", "generated_decimal");
+    }
+
+    #[test]
+    fn read_generated_100_interval() {
+        test_file("1.0.0-littleendian", "generated_interval");
+        test_file("1.0.0-bigendian", "generated_interval");
     }
 }
