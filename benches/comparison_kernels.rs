@@ -51,14 +51,14 @@ fn add_benchmark(c: &mut Criterion) {
         b.iter(|| bench_op(&arr_a, &arr_b, Operator::Eq))
     });
     c.bench_function("eq scalar Float32", |b| {
-        b.iter(|| bench_op_scalar(&arr_a, 1.0, Operator::Eq))
+        b.iter(|| bench_op_scalar(&arr_a, 0.5, Operator::Eq))
     });
 
     c.bench_function("lt Float32", |b| {
         b.iter(|| bench_op(&arr_a, &arr_b, Operator::Lt))
     });
     c.bench_function("lt scalar Float32", |b| {
-        b.iter(|| bench_op_scalar(&arr_a, 1.0, Operator::Lt))
+        b.iter(|| bench_op_scalar(&arr_a, 0.5, Operator::Lt))
     });
 }
 
