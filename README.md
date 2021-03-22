@@ -56,6 +56,32 @@ The test suite is a _superset_ of all integration tests that the original implem
 
 This is a normal Rust project. Clone and run tests with `cargo test`.
 
+### Tips for coverage reporting
+
+On a Linux machine, with VS-code:
+
+* install the extension `coverage gutters`
+* install `tarpaulin`
+* run the command `Coverage Gutters: Watch` and run
+
+```bash
+cargo tarpaulin --target-dir target-tarpaulin --lib --out Lcov
+```
+
+This will cause tarpaulin to run all tests under coverage and show the coverage on VS-code.
+`--target-dir target-tarpaulin` is used to avoid collisions with rust-analyzer / Cargo, as `tarpaulin`
+uses different compilation flags.
+
+### How to improve coverage
+
+An overall goal of this repo is to have high coverage over all its code base. To achieve this, we recommend to run coverage against a single module of this project; e.g.
+
+```bash
+cargo tarpaulin --target-dir target-tarpaulin --lib --out Lcov -- buffer::immutable
+```
+
+and evaluate coverage of that module alone.
+
 ## FAQ
 
 ### Why?
