@@ -137,3 +137,68 @@ impl<T: NativeType> FromIterator<T> for Buffer<T> {
         MutableBuffer::from_iter(iter).into()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new() {
+        let buffer = Buffer::<i32>::new();
+        assert_eq!(buffer.len(), 0);
+        assert_eq!(buffer.is_empty(), true);
+    }
+
+    #[test]
+    fn test_new_zeroed() {
+        let buffer = Buffer::<i32>::new_zeroed(2);
+        assert_eq!(buffer.len(), 2);
+        assert_eq!(buffer.is_empty(), false);
+        assert_eq!(buffer.as_slice(), &[0, 0]);
+    }
+
+    #[test]
+    fn test_from_slice() {
+        let buffer = Buffer::<i32>::from(&[0, 1, 2]);
+        assert_eq!(buffer.len(), 3);
+        assert_eq!(buffer.as_slice(), &[0, 1, 2]);
+    }
+
+    #[test]
+    fn test_slice() {
+        let buffer = Buffer::<i32>::from(&[0, 1, 2, 3]);
+        let buffer = buffer.slice(1, 2);
+        assert_eq!(buffer.len(), 2);
+        assert_eq!(buffer.as_slice(), &[1, 2]);
+    }
+
+    #[test]
+    fn test_from_iter() {
+        let buffer = (0..3).collect::<Buffer<i32>>();
+        assert_eq!(buffer.len(), 3);
+        assert_eq!(buffer.as_slice(), &[0, 1, 2]);
+    }
+
+    #[test]
+    fn test_from_trusted_len_iter() {
+        let buffer = unsafe { Buffer::<i32>::from_trusted_len_iter(0..3) };
+        assert_eq!(buffer.len(), 3);
+        assert_eq!(buffer.as_slice(), &[0, 1, 2]);
+    }
+
+    #[test]
+    fn test_try_from_trusted_len_iter() {
+        let iter = (0..3).map(Result::<_, String>::Ok);
+        let buffer = unsafe { Buffer::<i32>::try_from_trusted_len_iter(iter) }.unwrap();
+        assert_eq!(buffer.len(), 3);
+        assert_eq!(buffer.as_slice(), &[0, 1, 2]);
+    }
+
+    #[test]
+    fn test_as_ptr() {
+        let buffer = Buffer::<i32>::from(&[0, 1, 2, 3]);
+        let buffer = buffer.slice(1, 2);
+        let ptr = buffer.as_ptr();
+        assert_eq!(unsafe { *ptr }, 1);
+    }
+}
