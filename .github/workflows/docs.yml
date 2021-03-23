@@ -1,11 +1,15 @@
 name: GitHub pages
+
 on:
   push:
-    branches:
-      - main
+    paths:
+      - 'guide/**'
+  pull_request:
+    paths:
+      - 'guide/**'
 
 jobs:
-  deploy:
+  guide:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
@@ -18,7 +22,9 @@ jobs:
       - run: mdbook build guide
 
       - name: Deploy
+        if: github.ref == 'refs/heads/main'
         uses: peaceiris/actions-gh-pages@v3
         with:
           personal_token: ${{ secrets.PERSONAL_TOKEN }}
           publish_dir: ./guide/book
+
