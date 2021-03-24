@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+use bitvec;
 use crate::{array::*, types::NativeType};
 use crate::{
     buffer::MutableBuffer,
@@ -88,25 +89,11 @@ where
 
     let mut values = MutableBuffer::from_len_zeroed((lhs.len() + 7) / 8);
 
-    let lhs_chunks_iter = lhs.values().chunks_exact(8);
-    let lhs_remainder = lhs_chunks_iter.remainder();
-    let chunks = lhs.len() / 8;
+    let slice = bitvec::slice::BitSlice::<bitvec::order::Lsb0, u8>::from_slice_mut(values.as_slice_mut()).unwrap();
 
-    values[..chunks]
-        .iter_mut()
-        .zip(lhs_chunks_iter)
-        .for_each(|(byte, chunk)| {
-            chunk.iter().enumerate().for_each(|(i, &c_i)| {
-                *byte |= if op(c_i, rhs) { 1 << i } else { 0 };
-            });
-        });
-
-    if !lhs_remainder.is_empty() {
-        let last = &mut values[chunks];
-        lhs_remainder.iter().enumerate().for_each(|(i, &lhs)| {
-            *last |= if op(lhs, rhs) { 1 << i } else { 0 };
-        });
-    };
+    for (mut bit, &lhs) in slice.iter_mut().zip(lhs.values()) {
+        *bit = op(lhs, rhs);
+    }
 
     Ok(BooleanArray::from_data(
         (values, lhs.len()).into(),

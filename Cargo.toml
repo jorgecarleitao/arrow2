@@ -18,6 +18,8 @@ num = "^0.3"
 chrono = "^0.4"
 # To efficiently cast numbers to strings
 lexical-core = "^0.7"
+# To efficiently work with bitmap
+bitvec = "0.21.1"
 # We need to Hash values before sending them to an hasher. This
 # crate provides HashMap that assumes pre-hashed values.
 hash_hasher = "^2.0.3"
