@@ -3,7 +3,7 @@
 The simplest way to think about an arrow `Array` is that it represents 
 `Vec<Option<T>>` and has a logical type associated with it.
 
-Probably the simplest array in this crate is `PrimitiveArray<T>`. It can be constructed
+Probably the most simple array in this crate is `PrimitiveArray<T>`. It can be constructed
 from an iterator as follows:
 
 ```rust
@@ -26,10 +26,10 @@ A `PrimitiveArray` has 3 components:
 
 The main differences from a `Vec<Option<T>>` are:
 
-* Its data is layed out in memory as a `Buffer<T>` and a `Option<Bitmap>`.
+* Its data is layed out in memory as a `Buffer<T>` and an `Option<Bitmap>`.
 * It has an associated logical datatype.
 
-The first difference allows interoperability with Arrow's ecosystem and efficient SIMD operations (we will re-visit this below); the second difference is that it allows semantic meaning to the array. In the example
+The first difference allows interoperability with Arrow's ecosystem and efficient SIMD operations (we will re-visit this below); the second difference is that it gives semantic meaning to the array. In the example
 
 ```rust
 # use arrow2::array::Primitive;
@@ -82,7 +82,7 @@ let inner: &Arc<dyn Array> = a.values();
 # }
 ```
 
-Note how we have not specified the the inner type explicitely in the signature `ListArray<i32>`.
+Note how we have not specified the inner type explicitly in the signature `ListArray<i32>`.
 Instead, `ListArray` has an inner `Array` representing all its values (available via `.values()`).
 
 ### Downcast and `as_any`
@@ -103,7 +103,7 @@ let array = array.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
 # }
 ```
 
-There is a many to one relationship between `DataType` and an Array (i.e. a physical representation). The relationship is the following:
+There is a many-to-one relationship between `DataType` and an Array (i.e. a physical representation). The relationship is the following:
 
 | `DataType`            | `PhysicalType`            |
 |-----------------------|---------------------------|
@@ -171,11 +171,11 @@ fn float_operator(array: &dyn Array) -> Result<Box<dyn Array>, String> {
 ## From Iterator
 
 In the examples above, we've introduced how to create an array from an iterator.
-These APIs are avaiable for all Arrays, and they are highly suitable to efficiently
+These APIs are available for all Arrays, and they are highly suitable to efficiently
 create them. In this section we will go a bit more in detail about these operations,
 and how to make them even more efficient.
 
-This crate's APIs are generally split in two parts: whether an operation leverages contiguous memory regions or whether it does not.
+This crate's APIs are generally split into two parts: whether an operation leverages contiguous memory regions or whether it does not.
 
 If yes, then use:
 

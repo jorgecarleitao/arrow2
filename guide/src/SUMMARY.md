@@ -5,6 +5,6 @@
 - [Low level API](./low_level.md)
 - [High level API](./high_level.md)
 - [Foreign interfaces](./ffi.md)
-- [IO](./io/csv_reader.md)
+- [IO](./io/README.md)
     - [Read CSV](./io/csv_reader.md)
     - [Write CSV](./io/csv_write.md)
