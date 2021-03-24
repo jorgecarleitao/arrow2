@@ -24,7 +24,7 @@ let array = [Some(1), None, Some(123)]
 // create a struct from it with the API to export it.
 let array = ArrowArray::try_from(Arc::new(array))?;
 
-// export; these are `ArrowArray` and `ArrowSchema` of the C data interface
+// export: these are `ArrowArray` and `ArrowSchema` of the C data interface
 let (array, schema) = ArrowArray::into_raw(array);
 # }
 ```

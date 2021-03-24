@@ -1,17 +1,17 @@
 # Low end API
 
-The starting point of this crate is the idea that data must be stored in memory in a specific arrangement to be interoperable with Arrow's ecosystem. With this in mind, this crate does not use `Vec`, and instead has its own containers to store data, including to share and consume it via FFI.
+The starting point of this crate is the idea that data must be stored in memory in a specific arrangement to be interoperable with Arrow's ecosystem. With this in mind, this crate does not use `Vec` but instead has its own containers to store data, including sharing and consuming it via FFI.
 
-The most important design decision of this crate is that contiguous regions are shared via an `Arc`. In this context, the operation of slicing a memory region is `O(1)` because it corresponds to changing an offset and length. The tradeoff is that once under and `Arc`, memory regions are imutable.
+The most important design decision of this crate is that contiguous regions are shared via an `Arc`. In this context, the operation of slicing a memory region is `O(1)` because it corresponds to changing an offset and length. The tradeoff is that once under an `Arc`, memory regions are immutable.
 
 The second important aspect is that Arrow has two main types of data buffers: bitmaps, whose offsets are measured in bits, and byte types (such as `i23`), whose offsets are measured in bytes. With this in mind, this crate has 2 main types of containers of contiguous memory regions:
 
-* `Buffer<T>`: handle contigous memory regions of type T whose offsets are measured in items
-* `Bitmap`: handle contigous memory regions of bits whose offsets are measured in bits
+* `Buffer<T>`: handle contiguous memory regions of type T whose offsets are measured in items
+* `Bitmap`: handle contiguous memory regions of bits whose offsets are measured in bits
 
 These hold _all_ data-related memory in this crate.
 
-Due to their intrinsic imutability, each container has a corresponding mutable (and non-sharable) variant:
+Due to their intrinsic immutability, each container has a corresponding mutable (and non-sharable) variant:
 
 * `MutableBuffer<T>`
 * `MutableBitmap`
