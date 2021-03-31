@@ -5,6 +5,80 @@ use crate::buffer::MutableBuffer;
 
 use super::Bitmap;
 
+/// Apply a bitwise operation `op` to four inputs and return the result as a [`Bitmap`].
+pub fn quaternary<F>(a1: &Bitmap, a2: &Bitmap, a3: &Bitmap, a4: &Bitmap, op: F) -> Bitmap
+where
+    F: Fn(u64, u64, u64, u64) -> u64,
+{
+    assert_eq!(a1.len(), a2.len());
+    assert_eq!(a1.len(), a3.len());
+    assert_eq!(a1.len(), a4.len());
+    let a1_chunks = a1.chunks();
+    let a2_chunks = a2.chunks();
+    let a3_chunks = a3.chunks();
+    let a4_chunks = a4.chunks();
+
+    let chunks = a1_chunks
+        .iter()
+        .zip(a2_chunks.iter())
+        .zip(a3_chunks.iter())
+        .zip(a4_chunks.iter())
+        .map(|(((a1, a2), a3), a4)| op(a1, a2, a3, a4));
+    // Soundness: `BitChunks` is a trusted len iterator
+    let mut buffer = unsafe { MutableBuffer::from_chunk_iter(chunks) };
+
+    let remainder_bytes = a1_chunks.remainder_len().saturating_add(7) / 8;
+    let rem = op(
+        a1_chunks.remainder(),
+        a2_chunks.remainder(),
+        a3_chunks.remainder(),
+        a4_chunks.remainder(),
+    );
+    // See https://arrow.apache.org/docs/format/Columnar.html#validity-bitmaps
+    // least-significant bit (LSB) numbering (also known as bit-endianness)
+    let rem = &rem.to_le_bytes()[0..remainder_bytes];
+    buffer.extend_from_slice(rem);
+
+    let length = a1.len();
+
+    (buffer, length).into()
+}
+
+/// Apply a bitwise operation `op` to three inputs and return the result as a [`Bitmap`].
+pub fn ternary<F>(a1: &Bitmap, a2: &Bitmap, a3: &Bitmap, op: F) -> Bitmap
+where
+    F: Fn(u64, u64, u64) -> u64,
+{
+    assert_eq!(a1.len(), a2.len());
+    assert_eq!(a1.len(), a3.len());
+    let a1_chunks = a1.chunks();
+    let a2_chunks = a2.chunks();
+    let a3_chunks = a3.chunks();
+
+    let chunks = a1_chunks
+        .iter()
+        .zip(a2_chunks.iter())
+        .zip(a3_chunks.iter())
+        .map(|((a1, a2), a3)| op(a1, a2, a3));
+    // Soundness: `BitChunks` is a trusted len iterator
+    let mut buffer = unsafe { MutableBuffer::from_chunk_iter(chunks) };
+
+    let remainder_bytes = a1_chunks.remainder_len().saturating_add(7) / 8;
+    let rem = op(
+        a1_chunks.remainder(),
+        a2_chunks.remainder(),
+        a3_chunks.remainder(),
+    );
+    // See https://arrow.apache.org/docs/format/Columnar.html#validity-bitmaps
+    // least-significant bit (LSB) numbering (also known as bit-endianness)
+    let rem = &rem.to_le_bytes()[0..remainder_bytes];
+    buffer.extend_from_slice(rem);
+
+    let length = a1.len();
+
+    (buffer, length).into()
+}
+
 /// Apply a bitwise operation `op` to two inputs and return the result as a [`Bitmap`].
 pub fn binary<F>(lhs: &Bitmap, rhs: &Bitmap, op: F) -> Bitmap
 where

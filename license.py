@@ -31,6 +31,7 @@ own_license = '// ' + own_license.replace('\n', '\n// ')[:-3]
 own_compute = [
     "src/compute/arity.rs",
     "src/compute/hash.rs",
+    "src/compute/boolean_kleene.rs",
     "src/compute/merge_sort",
 ]
 
