@@ -144,8 +144,8 @@ jobs:
           key: ${{ runner.os }}-cargo-miri-${{ hashFiles('**/Cargo.lock') }}
       - name: Setup toolchain
         run: |
-          rustup toolchain install nightly-2021-01-19
-          rustup default nightly-2021-01-19
+          rustup toolchain install nightly-2021-03-25
+          rustup default nightly-2021-03-25
           rustup component add rustfmt miri
       - name: Run
         env:
@@ -246,11 +246,11 @@ jobs:
         uses: actions/cache@v2
         with:
           path: /github/home/target
-          key: ${{ runner.os }}-amd64-target-wasm32-cache-nightly-2020-11-24
+          key: ${{ runner.os }}-amd64-target-wasm32-cache-nightly-2021-03-25
       - name: Setup toolchain
         run: |
-          rustup toolchain install nightly-2020-11-24
-          rustup override set nightly-2020-11-24
+          rustup toolchain install nightly-2021-03-25
+          rustup override set nightly-2021-03-25
           rustup component add rustfmt
           rustup target add wasm32-unknown-unknown
       - name: Build arrow crate
