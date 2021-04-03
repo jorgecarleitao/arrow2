@@ -1,6 +1,6 @@
 use super::Bitmap;
 
-/// Iterator of Option<T> from an iterator and validity.
+/// An iterator of bits according to the LSB format
 pub struct BitmapIter<'a> {
     iter: std::slice::Iter<'a, u8>,
     current_byte: &'a u8,
@@ -11,10 +11,8 @@ pub struct BitmapIter<'a> {
 
 impl<'a> BitmapIter<'a> {
     #[inline]
-    pub fn new(bitmap: &'a Bitmap) -> Self {
-        let offset = bitmap.offset();
-        let len = bitmap.len();
-        let bytes = &bitmap.bytes()[offset / 8..];
+    pub fn new(slice: &'a [u8], offset: usize, len: usize) -> Self {
+        let bytes = &slice[offset / 8..];
 
         let mut iter = bytes.iter();
 
@@ -27,6 +25,11 @@ impl<'a> BitmapIter<'a> {
             index: 0,
             current_byte,
         }
+    }
+
+    #[inline]
+    pub fn from_bitmap(bitmap: &'a Bitmap) -> Self {
+        Self::new(bitmap.bytes(), bitmap.offset(), bitmap.len())
     }
 }
 

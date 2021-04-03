@@ -198,13 +198,13 @@ impl<'a> IntoIterator for &'a Bitmap {
     type IntoIter = BitmapIter<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
-        BitmapIter::<'a>::new(self)
+        BitmapIter::<'a>::from_bitmap(self)
     }
 }
 
 impl<'a> Bitmap {
     /// constructs a new iterator
     pub fn iter(&'a self) -> BitmapIter<'a> {
-        BitmapIter::<'a>::new(&self)
+        BitmapIter::<'a>::from_bitmap(&self)
     }
 }

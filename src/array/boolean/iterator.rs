@@ -23,6 +23,6 @@ impl<'a> BooleanArray {
     /// Returns an iterator of `bool`
     #[inline]
     pub fn values_iter(&'a self) -> BitmapIter<'a> {
-        BitmapIter::new(self.values())
+        BitmapIter::from_bitmap(self.values())
     }
 }
