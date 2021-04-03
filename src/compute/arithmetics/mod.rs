@@ -16,6 +16,7 @@
 // under the License.
 
 //! Defines basic arithmetic kernels for `PrimitiveArrays`.
+pub mod decimals;
 
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
@@ -354,33 +355,5 @@ mod tests {
         let actual = powf_scalar(&a, 2.0);
         let expected = Primitive::from(&vec![Some(4f32), None]).to(DataType::Float32);
         assert_eq!(expected, actual);
-    }
-
-    #[test]
-    fn test_add_decimal() {
-        let a = Primitive::from(&vec![
-            Some(11111i128),
-            Some(11100i128),
-            None,
-            Some(22200i128),
-        ])
-        .to(DataType::Decimal(5, 2));
-        let b = Primitive::from(&vec![
-            Some(22222i128),
-            Some(22200i128),
-            None,
-            Some(11100i128),
-        ])
-        .to(DataType::Decimal(5, 2));
-        let result = add(&a, &b).unwrap();
-        let expected = Primitive::from(&vec![
-            Some(33333i128),
-            Some(33300i128),
-            None,
-            Some(33300i128),
-        ])
-        .to(DataType::Decimal(5, 2));
-
-        assert_eq!(result, expected);
     }
 }

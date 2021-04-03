@@ -47,7 +47,7 @@ where
 {
     if lhs.data_type() != rhs.data_type() {
         return Err(ArrowError::InvalidArgumentError(
-            "Arays must have the same logical type".to_string(),
+            "Arrays must have the same logical type".to_string(),
         ));
     }
     if lhs.len() != rhs.len() {
