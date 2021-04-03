@@ -36,7 +36,7 @@ use std::{env, error::Error, path::PathBuf};
 pub fn arrow_test_data() -> String {
     match get_data_dir("ARROW_TEST_DATA", "testing/arrow-testing/data") {
         Ok(pb) => pb.display().to_string(),
-        Err(err) => panic!(format!("failed to get arrow data dir: {}", err)),
+        Err(err) => panic!("failed to get arrow data dir: {}", err),
     }
 }
 

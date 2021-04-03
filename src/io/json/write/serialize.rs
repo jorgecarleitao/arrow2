@@ -205,10 +205,10 @@ fn write_array(array: &dyn Array) -> Value {
             jsonmaps.into_iter().map(Value::Object).collect()
         }
         _ => {
-            panic!(format!(
+            panic!(
                 "Unsupported datatype for array conversion: {:#?}",
                 array.data_type()
-            ));
+            );
         }
     })
 }
@@ -329,7 +329,7 @@ fn set_column_for_json_rows(
                 });
         }
         _ => {
-            panic!(format!("Unsupported datatype: {:#?}", array.data_type()));
+            panic!("Unsupported datatype: {:#?}", array.data_type());
         }
     }
 }
