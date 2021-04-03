@@ -125,6 +125,9 @@ pub enum DataType {
     /// arrays or a limited set of primitive types as integers.
     Dictionary(Box<DataType>, Box<DataType>),
     /// Decimal value with precision and scale
+    /// precision is the number of digits in the number and
+    /// scale is the number of decimal places.
+    /// The number 999.99 has a precision of 5 and scale of 2.
     Decimal(usize, usize),
 }
 

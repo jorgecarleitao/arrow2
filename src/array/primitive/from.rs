@@ -51,7 +51,7 @@ impl<T: NativeType> Primitive<T> {
         Self { values, validity }
     }
 
-    /// Creates a [`PrimitiveArray`] from an falible iterator of trusted length.
+    /// Creates a [`PrimitiveArray`] from an fallible iterator of trusted length.
     /// # Safety
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
     /// I.e. that `size_hint().1` correctly reports its length.

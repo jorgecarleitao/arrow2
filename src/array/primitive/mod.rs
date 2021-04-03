@@ -176,4 +176,12 @@ mod tests {
         assert_eq!(array.values().len(), 0);
         assert_eq!(array.validity(), &None);
     }
+    #[test]
+    fn decimal() {
+        // Creates a decimal list with precision 5 and scale 2
+        // 55566 should be 555.66. The max number with these parameters is 999.99
+        let data = vec![Some(55566i128), None, Some(55500i128), Some(11100i128)];
+        let array = Primitive::<i128>::from(&data).to(DataType::Decimal(5, 2));
+        assert_eq!(format!("{}", array), "Decimal(5, 2)[55566, , 55500, 11100]");
+    }
 }
