@@ -40,18 +40,12 @@ macro_rules! primitive_arithmetic_match {
         let res_lhs = $lhs
             .as_any()
             .downcast_ref::<$primitive_array_type>()
-            .ok_or(ArrowError::DowncastError(format!(
-                "data type: {}",
-                $data_type
-            )))?;
+            .unwrap();
 
         let res_rhs = $rhs
             .as_any()
             .downcast_ref::<$primitive_array_type>()
-            .ok_or(ArrowError::DowncastError(format!(
-                "data type: {}",
-                $data_type
-            )))?;
+            .unwrap();
 
         arithmetic_primitive(res_lhs, $op, res_rhs)
             .map(Box::new)

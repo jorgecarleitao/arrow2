@@ -20,8 +20,6 @@ pub enum ArrowError {
     /// Error during import or export to/from a format
     ExternalFormat(String),
     DictionaryKeyOverflowError,
-    /// Error produced when unable to downcast an array
-    DowncastError(String),
     Other(String),
 }
 
@@ -63,9 +61,6 @@ impl Display for ArrowError {
             }
             ArrowError::DictionaryKeyOverflowError => {
                 write!(f, "Dictionary key bigger than the key type")
-            }
-            ArrowError::DowncastError(desc) => {
-                write!(f, "Error while downcasting array: {}", desc)
             }
             ArrowError::Other(message) => {
                 write!(f, "{}", message)
