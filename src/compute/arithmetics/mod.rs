@@ -30,6 +30,38 @@ use crate::types::NativeType;
 use super::arity::{binary, unary};
 use super::utils::combine_validities;
 
+// Macro to evaluate match branch in arithmetic function.
+// The macro is used to downcast both arrays to a primitive_array_type. If there
+// is an error then an ArrowError is return with the data_type that cause it.
+// It returns the result from the arithmetic_primitive function evaluated with
+// the Operator selected
+macro_rules! arithmetic_match {
+    ($lhs: expr, $rhs: expr, $op: expr, $primitive_array_type: ty, $data_type: expr) => {{
+        let res_lhs = $lhs
+            .as_any()
+            .downcast_ref::<$primitive_array_type>()
+            .ok_or(ArrowError::DowncastError(format!(
+                "data type: {}",
+                $data_type
+            )))?;
+
+        let res_rhs = $rhs
+            .as_any()
+            .downcast_ref::<$primitive_array_type>()
+            .ok_or(ArrowError::DowncastError(format!(
+                "data type: {}",
+                $data_type
+            )))?;
+
+        arithmetic_primitive(res_lhs, $op, res_rhs)
+            .map(Box::new)
+            .map(|x| x as Box<dyn Array>)
+    }};
+}
+
+/// Function to execute an arithmetic operation with two arrays
+/// It uses the enum Operator to select the type of operation that is going to
+/// be performed with the two arrays
 pub fn arithmetic(lhs: &dyn Array, op: Operator, rhs: &dyn Array) -> Result<Box<dyn Array>> {
     let data_type = lhs.data_type();
     if data_type != rhs.data_type() {
@@ -39,84 +71,20 @@ pub fn arithmetic(lhs: &dyn Array, op: Operator, rhs: &dyn Array) -> Result<Box<
         ));
     }
     match data_type {
-        DataType::Int8 => {
-            let lhs = lhs.as_any().downcast_ref::<Int8Array>().unwrap();
-            let rhs = rhs.as_any().downcast_ref::<Int8Array>().unwrap();
-            arithmetic_primitive(lhs, op, rhs)
-                .map(Box::new)
-                .map(|x| x as Box<dyn Array>)
-        }
-        DataType::Int16 => {
-            let lhs = lhs.as_any().downcast_ref::<Int16Array>().unwrap();
-            let rhs = rhs.as_any().downcast_ref::<Int16Array>().unwrap();
-            arithmetic_primitive(lhs, op, rhs)
-                .map(Box::new)
-                .map(|x| x as Box<dyn Array>)
-        }
-        DataType::Int32 => {
-            let lhs = lhs.as_any().downcast_ref::<Int32Array>().unwrap();
-            let rhs = rhs.as_any().downcast_ref::<Int32Array>().unwrap();
-            arithmetic_primitive(lhs, op, rhs)
-                .map(Box::new)
-                .map(|x| x as Box<dyn Array>)
-        }
+        DataType::Int8 => arithmetic_match!(lhs, rhs, op, Int8Array, data_type),
+        DataType::Int16 => arithmetic_match!(lhs, rhs, op, Int16Array, data_type),
+        DataType::Int32 => arithmetic_match!(lhs, rhs, op, Int32Array, data_type),
         DataType::Int64 | DataType::Duration(_) => {
-            let lhs = lhs.as_any().downcast_ref::<Int64Array>().unwrap();
-            let rhs = rhs.as_any().downcast_ref::<Int64Array>().unwrap();
-            arithmetic_primitive(lhs, op, rhs)
-                .map(Box::new)
-                .map(|x| x as Box<dyn Array>)
+            arithmetic_match!(lhs, rhs, op, Int64Array, data_type)
         }
-        DataType::UInt8 => {
-            let lhs = lhs.as_any().downcast_ref::<UInt8Array>().unwrap();
-            let rhs = rhs.as_any().downcast_ref::<UInt8Array>().unwrap();
-            arithmetic_primitive(lhs, op, rhs)
-                .map(Box::new)
-                .map(|x| x as Box<dyn Array>)
-        }
-        DataType::UInt16 => {
-            let lhs = lhs.as_any().downcast_ref::<UInt16Array>().unwrap();
-            let rhs = rhs.as_any().downcast_ref::<UInt16Array>().unwrap();
-            arithmetic_primitive(lhs, op, rhs)
-                .map(Box::new)
-                .map(|x| x as Box<dyn Array>)
-        }
-        DataType::UInt32 => {
-            let lhs = lhs.as_any().downcast_ref::<UInt32Array>().unwrap();
-            let rhs = rhs.as_any().downcast_ref::<UInt32Array>().unwrap();
-            arithmetic_primitive(lhs, op, rhs)
-                .map(Box::new)
-                .map(|x| x as Box<dyn Array>)
-        }
-        DataType::UInt64 => {
-            let lhs = lhs.as_any().downcast_ref::<UInt64Array>().unwrap();
-            let rhs = rhs.as_any().downcast_ref::<UInt64Array>().unwrap();
-            arithmetic_primitive(lhs, op, rhs)
-                .map(Box::new)
-                .map(|x| x as Box<dyn Array>)
-        }
+        DataType::UInt8 => arithmetic_match!(lhs, rhs, op, UInt8Array, data_type),
+        DataType::UInt16 => arithmetic_match!(lhs, rhs, op, UInt16Array, data_type),
+        DataType::UInt32 => arithmetic_match!(lhs, rhs, op, UInt32Array, data_type),
+        DataType::UInt64 => arithmetic_match!(lhs, rhs, op, UInt64Array, data_type),
         DataType::Float16 => unreachable!(),
-        DataType::Float32 => {
-            let lhs = lhs.as_any().downcast_ref::<Float32Array>().unwrap();
-            let rhs = rhs.as_any().downcast_ref::<Float32Array>().unwrap();
-            arithmetic_primitive(lhs, op, rhs)
-                .map(Box::new)
-                .map(|x| x as Box<dyn Array>)
-        }
-        DataType::Float64 => {
-            let lhs = lhs.as_any().downcast_ref::<Float64Array>().unwrap();
-            let rhs = rhs.as_any().downcast_ref::<Float64Array>().unwrap();
-            arithmetic_primitive(lhs, op, rhs)
-                .map(Box::new)
-                .map(|x| x as Box<dyn Array>)
-        }
-        DataType::Decimal(_, _) => {
-            let lhs = lhs.as_any().downcast_ref::<Int128Array>().unwrap();
-            let rhs = rhs.as_any().downcast_ref::<Int128Array>().unwrap();
-            arithmetic_primitive(lhs, op, rhs)
-                .map(Box::new)
-                .map(|x| x as Box<dyn Array>)
-        }
+        DataType::Float32 => arithmetic_match!(lhs, rhs, op, Float32Array, data_type),
+        DataType::Float64 => arithmetic_match!(lhs, rhs, op, Float64Array, data_type),
+        DataType::Decimal(_, _) => arithmetic_match!(lhs, rhs, op, Int128Array, data_type),
         _ => Err(ArrowError::NotYetImplemented(format!(
             "Arithmetics between {:?} is not supported",
             data_type
@@ -132,6 +100,7 @@ pub enum Operator {
     Divide,
 }
 
+/// Perform arithmetic operations on two primitive arrays based on the Operator enum
 #[inline]
 fn arithmetic_primitive<T>(
     lhs: &PrimitiveArray<T>,
@@ -149,6 +118,7 @@ where
     }
 }
 
+/// Performs primitive operation on an array and and scalar
 #[inline]
 pub fn arithmetic_primitive_scalar<T>(
     lhs: &PrimitiveArray<T>,
@@ -388,5 +358,33 @@ mod tests {
         let actual = powf_scalar(&a, 2.0);
         let expected = Primitive::from(&vec![Some(4f32), None]).to(DataType::Float32);
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_add_decimal() {
+        let a = Primitive::from(&vec![
+            Some(11111i128),
+            Some(11100i128),
+            None,
+            Some(22200i128),
+        ])
+        .to(DataType::Decimal(5, 2));
+        let b = Primitive::from(&vec![
+            Some(22222i128),
+            Some(22200i128),
+            None,
+            Some(11100i128),
+        ])
+        .to(DataType::Decimal(5, 2));
+        let result = add(&a, &b).unwrap();
+        let expected = Primitive::from(&vec![
+            Some(33333i128),
+            Some(33300i128),
+            None,
+            Some(33300i128),
+        ])
+        .to(DataType::Decimal(5, 2));
+
+        assert_eq!(result, expected);
     }
 }
