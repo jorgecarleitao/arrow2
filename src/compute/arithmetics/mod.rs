@@ -35,7 +35,7 @@ use super::utils::combine_validities;
 // is an error then an ArrowError is return with the data_type that cause it.
 // It returns the result from the arithmetic_primitive function evaluated with
 // the Operator selected
-macro_rules! arithmetic_match {
+macro_rules! primitive_arithmetic_match {
     ($lhs: expr, $rhs: expr, $op: expr, $primitive_array_type: ty, $data_type: expr) => {{
         let res_lhs = $lhs
             .as_any()
@@ -71,20 +71,22 @@ pub fn arithmetic(lhs: &dyn Array, op: Operator, rhs: &dyn Array) -> Result<Box<
         ));
     }
     match data_type {
-        DataType::Int8 => arithmetic_match!(lhs, rhs, op, Int8Array, data_type),
-        DataType::Int16 => arithmetic_match!(lhs, rhs, op, Int16Array, data_type),
-        DataType::Int32 => arithmetic_match!(lhs, rhs, op, Int32Array, data_type),
+        DataType::Int8 => primitive_arithmetic_match!(lhs, rhs, op, Int8Array, data_type),
+        DataType::Int16 => primitive_arithmetic_match!(lhs, rhs, op, Int16Array, data_type),
+        DataType::Int32 => primitive_arithmetic_match!(lhs, rhs, op, Int32Array, data_type),
         DataType::Int64 | DataType::Duration(_) => {
-            arithmetic_match!(lhs, rhs, op, Int64Array, data_type)
+            primitive_arithmetic_match!(lhs, rhs, op, Int64Array, data_type)
         }
-        DataType::UInt8 => arithmetic_match!(lhs, rhs, op, UInt8Array, data_type),
-        DataType::UInt16 => arithmetic_match!(lhs, rhs, op, UInt16Array, data_type),
-        DataType::UInt32 => arithmetic_match!(lhs, rhs, op, UInt32Array, data_type),
-        DataType::UInt64 => arithmetic_match!(lhs, rhs, op, UInt64Array, data_type),
+        DataType::UInt8 => primitive_arithmetic_match!(lhs, rhs, op, UInt8Array, data_type),
+        DataType::UInt16 => primitive_arithmetic_match!(lhs, rhs, op, UInt16Array, data_type),
+        DataType::UInt32 => primitive_arithmetic_match!(lhs, rhs, op, UInt32Array, data_type),
+        DataType::UInt64 => primitive_arithmetic_match!(lhs, rhs, op, UInt64Array, data_type),
         DataType::Float16 => unreachable!(),
-        DataType::Float32 => arithmetic_match!(lhs, rhs, op, Float32Array, data_type),
-        DataType::Float64 => arithmetic_match!(lhs, rhs, op, Float64Array, data_type),
-        DataType::Decimal(_, _) => arithmetic_match!(lhs, rhs, op, Int128Array, data_type),
+        DataType::Float32 => primitive_arithmetic_match!(lhs, rhs, op, Float32Array, data_type),
+        DataType::Float64 => primitive_arithmetic_match!(lhs, rhs, op, Float64Array, data_type),
+        DataType::Decimal(_, _) => {
+            primitive_arithmetic_match!(lhs, rhs, op, Int128Array, data_type)
+        }
         _ => Err(ArrowError::NotYetImplemented(format!(
             "Arithmetics between {:?} is not supported",
             data_type
