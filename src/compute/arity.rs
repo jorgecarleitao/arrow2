@@ -99,10 +99,11 @@ where
 
     let validity = combine_validities(lhs.validity(), rhs.validity());
 
-    let values =
-        lhs.values().iter().zip(rhs.values().iter()).map(|(l, r)| {
-            op(*l, *r).map_err(|error| ArrowError::from_external_error(Box::new(error)))
-        });
+    let values = lhs
+        .values()
+        .iter()
+        .zip(rhs.values().iter())
+        .map(|(l, r)| op(*l, *r).map_err(ArrowError::from_external_error));
     // JUSTIFICATION
     //  Benefit
     //      ~60% speedup

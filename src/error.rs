@@ -25,8 +25,8 @@ pub enum ArrowError {
 
 impl ArrowError {
     /// Wraps an external error in an `ArrowError`.
-    pub fn from_external_error(error: Box<dyn ::std::error::Error + Send + Sync>) -> Self {
-        Self::External("".to_string(), error)
+    pub fn from_external_error(error: impl std::error::Error + Send + Sync + 'static) -> Self {
+        Self::External("".to_string(), Box::new(error))
     }
 }
 
