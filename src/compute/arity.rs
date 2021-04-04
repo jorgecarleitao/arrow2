@@ -10,12 +10,12 @@ use crate::{
     datatypes::DataType,
 };
 
-/// Applies an unary and infalible function to a primitive array.
+/// Applies an unary and infallible function to a primitive array.
 /// This is the fastest way to perform an operation on a primitive array when
-/// the benefits of a vectorized operation outweights the cost of branching nulls and non-nulls.
+/// the benefits of a vectorized operation outweighs the cost of branching nulls and non-nulls.
 /// # Implementation
 /// This will apply the function for all values, including those on null slots.
-/// This implies that the operation must be infalible for any value of the corresponding type
+/// This implies that the operation must be infallible for any value of the corresponding type
 /// or this function may panic.
 #[inline]
 pub fn unary<I, F, O>(array: &PrimitiveArray<I>, op: F, data_type: &DataType) -> PrimitiveArray<O>
@@ -35,6 +35,12 @@ where
     PrimitiveArray::<O>::from_data(data_type.clone(), values, array.validity().clone())
 }
 
+/// Applies a binary operations to two primitive arrays
+/// This is the fastest way to perform an operation on two primitive array when
+/// the benefits of a vectorized operation outweighs the cost of branching nulls and non-nulls.
+/// # Implementation
+/// This will apply the function for all values, including those on null slots.
+/// This implies that the operation must be infallible for any value of the corresponding type
 #[inline]
 pub fn binary<T, F>(
     lhs: &PrimitiveArray<T>,
@@ -77,7 +83,10 @@ where
     ))
 }
 
-pub fn try_binary<E, T, F>(
+/// Applies a checked binary function to a pair of primitive arrays. The op function
+/// has to return an Arrow Result to be used with this function. The result from this
+/// function can be used to check if there was an ArrowError::ArithmeticError.
+pub fn try_binary<T, F>(
     lhs: &PrimitiveArray<T>,
     rhs: &PrimitiveArray<T>,
     op: F,
@@ -88,7 +97,7 @@ where
 {
     if lhs.data_type() != rhs.data_type() {
         return Err(ArrowError::InvalidArgumentError(
-            "Arays must have the same logical type".to_string(),
+            "Arrays must have the same logical type".to_string(),
         ));
     }
     if lhs.len() != rhs.len() {
@@ -103,7 +112,8 @@ where
         .values()
         .iter()
         .zip(rhs.values().iter())
-        .map(|(l, r)| op(*l, *r).map_err(ArrowError::from_external_error));
+        .map(|(l, r)| op(*l, *r));
+
     // JUSTIFICATION
     //  Benefit
     //      ~60% speedup
@@ -116,4 +126,42 @@ where
         values,
         validity,
     ))
+}
+
+/// Applies a binary operations to two primitive arrays
+/// This is the fastest way to perform an operation on two primitive array when
+/// the benefits of a vectorized operation outweighs the cost of branching nulls and non-nulls.
+/// This function accepts a DataType argument in order to switch the resulting
+/// array to another DataType
+pub fn binary_with_change<T, F>(
+    lhs: &PrimitiveArray<T>,
+    rhs: &PrimitiveArray<T>,
+    data_type: DataType,
+    op: F,
+) -> Result<PrimitiveArray<T>>
+where
+    T: NativeType,
+    F: Fn(T, T) -> T,
+{
+    if lhs.len() != rhs.len() {
+        return Err(ArrowError::InvalidArgumentError(
+            "Arrays must have the same length".to_string(),
+        ));
+    }
+
+    let validity = combine_validities(lhs.validity(), rhs.validity());
+
+    let values = lhs
+        .values()
+        .iter()
+        .zip(rhs.values().iter())
+        .map(|(l, r)| op(*l, *r));
+    // JUSTIFICATION
+    //  Benefit
+    //      ~60% speedup
+    //  Soundness
+    //      `values` is an iterator with a known size.
+    let values = unsafe { Buffer::from_trusted_len_iter(values) };
+
+    Ok(PrimitiveArray::<T>::from_data(data_type, values, validity))
 }

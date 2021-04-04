@@ -20,6 +20,9 @@ pub enum ArrowError {
     /// Error during import or export to/from a format
     ExternalFormat(String),
     DictionaryKeyOverflowError,
+    /// Error during arithmetic operation. Normally returned
+    /// during checked operations
+    ArithmeticError(String),
     Other(String),
 }
 
@@ -61,6 +64,9 @@ impl Display for ArrowError {
             }
             ArrowError::DictionaryKeyOverflowError => {
                 write!(f, "Dictionary key bigger than the key type")
+            }
+            ArrowError::ArithmeticError(desc) => {
+                write!(f, "Arithmetic error: {}", desc)
             }
             ArrowError::Other(message) => {
                 write!(f, "{}", message)
