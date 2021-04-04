@@ -170,3 +170,16 @@ Another consequence is that it is impossible to release a different design of th
 This implies that the crate version is independent of the changelog or its API stability, which violates SemVer. This procedure makes the crate incompatible with Rusts' (and many others') ecosystem that heavily relies on SemVer to constraint software versions.
 
 Secondly, this implies the arrow crate is versioned as `>0.x`. This places expectations about API stability that are incompatible with this effort.
+
+## License
+
+Licensed under either of
+
+ * Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+ * MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+
+at your option.
+
+### Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
