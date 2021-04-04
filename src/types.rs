@@ -1,4 +1,7 @@
-use std::cmp::{Ord, Ordering};
+use std::{
+    cmp::{Ord, Ordering},
+    convert::TryFrom,
+};
 
 use crate::datatypes::{DataType, IntervalUnit};
 
@@ -32,7 +35,7 @@ pub unsafe trait NativeType:
     + Sized
     + 'static
 {
-    type Bytes: AsRef<[u8]>;
+    type Bytes: AsRef<[u8]> + for<'a> TryFrom<&'a [u8]>;
 
     fn to_le_bytes(&self) -> Self::Bytes;
 

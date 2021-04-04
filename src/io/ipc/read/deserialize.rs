@@ -28,7 +28,7 @@ use std::{
 
 use crate::buffer::Buffer;
 use crate::datatypes::{DataType, IntervalUnit};
-use crate::error::{ArrowError, Result as ArrowResult};
+use crate::error::Result as ArrowResult;
 use crate::{
     array::*,
     bitmap::Bitmap,
@@ -58,10 +58,7 @@ fn read_buffer<T: NativeType, R: Read + Seek>(
     reader: &mut R,
     block_offset: u64,
     is_little_endian: bool,
-) -> Result<Buffer<T>>
-where
-    Vec<u8>: TryInto<T::Bytes>,
-{
+) -> Result<Buffer<T>> {
     let buf = buf.pop_front().unwrap();
 
     reader.seek(SeekFrom::Start(block_offset + buf.offset() as u64))?;
@@ -92,11 +89,11 @@ where
                 .as_slice_mut()
                 .iter_mut()
                 .zip(chunks)
-                .try_for_each(|(slot, bytes)| {
-                    let a = bytes
-                        .to_vec()
-                        .try_into()
-                        .map_err(|_| ArrowError::IPC("some".to_string()))?;
+                .try_for_each(|(slot, chunk)| {
+                    let a: T::Bytes = match chunk.try_into() {
+                        Ok(a) => a,
+                        Err(_) => unreachable!(),
+                    };
                     *slot = T::from_be_bytes(a);
                     ArrowResult::Ok(())
                 })
