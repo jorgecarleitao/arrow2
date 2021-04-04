@@ -38,6 +38,13 @@ rand = { version = "0.7", optional = true }
 
 itertools = { version = "^0.10", optional = true }
 
+[dependencies.parquet2]
+git = "https://github.com/jorgecarleitao/parquet2"
+rev = "a131dea41c5eefe8fab7c9effa4316063aaec1ab"
+default-features = false
+features = ["snappy", "gzip", "lz4", "zstd", "brotli"]
+optional = true
+
 [dev-dependencies]
 rand = "0.7"
 criterion = "0.3"
@@ -45,15 +52,22 @@ flate2 = "1"
 doc-comment = "0.3"
 
 [features]
-default = ["io_csv", "io_json", "io_ipc", "io_json_integration", "regex", "merge_sort", "benchmarks"]
+default = ["io_csv", "io_json", "io_ipc", "io_json_integration", "io_parquet", "regex", "merge_sort", "benchmarks"]
 merge_sort = ["itertools"]
 io_csv = ["csv", "lazy_static", "regex"]
 io_json = ["serde", "serde_derive", "serde_json", "indexmap"]
 io_ipc = ["flatbuffers"]
 io_json_integration = ["io_json", "hex"]
+io_parquet = ["parquet2"]
 benchmarks = ["rand"]
 
 [package.metadata.cargo-all-features]
+skip_feature_sets = [
+    ["benchmarks"],
+    ["merge_sort"],
+    ["io_json_integration"],
+]
+
 skip_optional_dependencies = true
 
 [[bench]]
@@ -90,4 +104,8 @@ harness = false
 
 [[bench]]
 name = "comparison_kernels"
+harness = false
+
+[[bench]]
+name = "read_parquet"
 harness = false

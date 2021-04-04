@@ -26,3 +26,6 @@ pub mod ipc;
 
 #[cfg(feature = "io_json_integration")]
 pub mod json_integration;
+
+#[cfg(feature = "io_parquet")]
+pub mod parquet;
