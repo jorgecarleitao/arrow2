@@ -66,6 +66,13 @@ jobs:
           rustup toolchain install stable
           rustup default stable
           rustup component add rustfmt
+      - name: Setup parquet files
+        run: | 
+          apt update && apt install python3-pip python3-venv -y -q
+          python3 -m venv venv
+          venv/bin/pip install pip --upgrade
+          venv/bin/pip install pyarrow==3
+          venv/bin/python parquet_integration/write_parquet.py
       - name: Run
         run: |
           export CARGO_HOME="/github/home/.cargo"
@@ -91,7 +98,8 @@ jobs:
           rustup component add rustfmt
       - name: Run
         shell: bash
-        run: cargo test
+        # no need to run the whole thing. Rust guarantees interoperability
+        run: ARROW2_IGNORE_PARQUET= cargo test --lib
 
   clippy:
     name: Clippy
@@ -178,6 +186,13 @@ jobs:
           path: /home/runner/target
           # this key is not equal because coverage uses different compilation flags.
           key: ${{ runner.os }}-amd64-target-coverage-cache-stable-
+      - name: Setup parquet files
+        run: | 
+          apt update && apt install python3-pip python3-venv -y -q
+          python3 -m venv venv
+          venv/bin/pip install pip --upgrade
+          venv/bin/pip install pyarrow==3
+          venv/bin/python parquet_integration/write_parquet.py
       - name: Run coverage
         run: |
           export CARGO_HOME="/home/runner/.cargo"
@@ -257,4 +272,5 @@ jobs:
         run: |
           export CARGO_HOME="/github/home/.cargo"
           export CARGO_TARGET_DIR="/github/home/target"
-          cargo build --target wasm32-unknown-unknown
+          # no need 
+          cargo build --no-default-features --features=merge_sort,io_ipc,io_csv,io_json --target wasm32-unknown-unknown

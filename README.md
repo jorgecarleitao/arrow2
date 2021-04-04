@@ -20,13 +20,24 @@ Design documents about each of the parts of this repo are available on their res
 
 ## Run unit tests
 
+Some unit-tests depend on generating parquet files from pyarrow. These tests run by default.
+To not run them, pass `ARROW2_IGNORE_PARQUET` to the tests (the tests will be marked as OK/PASS).
+
 ```bash
 git clone git@github.com:jorgecarleitao/arrow2.git
 cd arrow2
-cargo test
+ARROW2_IGNORE_PARQUET= cargo test
 ```
 
 The test suite is a _superset_ of all integration tests that the original implementation has against golden files from the arrow project. It currently makes no attempt to test the implementation against other implementations in arrow's master; it assumes that arrow's golden files are sufficient to cover the specification. This crate uses both little and big endian golden files, as it supports both endianesses at IPC boundaries.
+
+To run the tests including integration with pyarrow's parquet writer, run
+
+```bash
+python3 -m venv venv
+venv/bin/pip install pyarrow==3
+venv/bin/python -m parquet_integration/write_parquet.py
+```
 
 ## Features in this crate and not in the original
 
@@ -41,7 +52,7 @@ The test suite is a _superset_ of all integration tests that the original implem
 
 ## Features in the original not availabe in this crate
 
-* Parquet IO
+* Parquet write
 * some compute kernels
 * SIMD (no plans to support: favor auto-vectorization instead)
 

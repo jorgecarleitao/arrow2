@@ -46,6 +46,7 @@ def should_be_own_license(path: str) -> bool:
         path.startswith("src/bits") or \
         path == "src/temporal_conversions.rs" or \
         path.startswith("src/io/csv") or \
+        path.startswith("src/io/parquet") or \
         any(path.startswith(x) for x in own_compute)
 
 
