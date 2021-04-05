@@ -219,12 +219,12 @@ mod tests {
     }
 
     #[test]
-    fn pyarrow_integration_int64() -> Result<()> {
+    fn pyarrow_integration_v1_int64() -> Result<()> {
         if std::env::var("ARROW2_IGNORE_PARQUET").is_ok() {
             return Ok(());
         }
         let column = 0;
-        let path = "fixtures/pyarrow3/basic_nulls_10.parquet";
+        let path = "fixtures/pyarrow3/v1/basic_nulls_10.parquet";
         let array = get_column(path, 0, column)?;
 
         let expected = pyarrow_integration(column);
@@ -235,12 +235,12 @@ mod tests {
     }
 
     #[test]
-    fn pyarrow_integration_float64() -> Result<()> {
+    fn pyarrow_integration_v1_float64() -> Result<()> {
         if std::env::var("ARROW2_IGNORE_PARQUET").is_ok() {
             return Ok(());
         }
         let column = 1;
-        let path = "fixtures/pyarrow3/basic_nulls_10.parquet";
+        let path = "fixtures/pyarrow3/v1/basic_nulls_10.parquet";
         let array = get_column(path, 0, column)?;
 
         let expected = pyarrow_integration(column);
@@ -251,12 +251,12 @@ mod tests {
     }
 
     #[test]
-    fn pyarrow_integration_string() -> Result<()> {
+    fn pyarrow_integration_v1_string() -> Result<()> {
         if std::env::var("ARROW2_IGNORE_PARQUET").is_ok() {
             return Ok(());
         }
         let column = 2;
-        let path = "fixtures/pyarrow3/basic_nulls_10.parquet";
+        let path = "fixtures/pyarrow3/v1/basic_nulls_10.parquet";
         let array = get_column(path, 0, column)?;
 
         let expected = pyarrow_integration(column);
@@ -267,12 +267,12 @@ mod tests {
     }
 
     #[test]
-    fn pyarrow_integration_boolean() -> Result<()> {
+    fn pyarrow_integration_v1_boolean() -> Result<()> {
         if std::env::var("ARROW2_IGNORE_PARQUET").is_ok() {
             return Ok(());
         }
         let column = 3;
-        let path = "fixtures/pyarrow3/basic_nulls_10.parquet";
+        let path = "fixtures/pyarrow3/v1/basic_nulls_10.parquet";
         let array = get_column(path, 0, column)?;
 
         let expected = pyarrow_integration(column);
@@ -283,12 +283,12 @@ mod tests {
     }
 
     #[test]
-    fn pyarrow_integration_timestamp() -> Result<()> {
+    fn pyarrow_integration_v1_timestamp() -> Result<()> {
         if std::env::var("ARROW2_IGNORE_PARQUET").is_ok() {
             return Ok(());
         }
         let column = 4;
-        let path = "fixtures/pyarrow3/basic_nulls_10.parquet";
+        let path = "fixtures/pyarrow3/v1/basic_nulls_10.parquet";
         let array = get_column(path, 0, column)?;
 
         let expected = pyarrow_integration(column);
@@ -300,12 +300,12 @@ mod tests {
 
     #[test]
     #[ignore] // pyarrow issue; see https://issues.apache.org/jira/browse/ARROW-12201
-    fn pyarrow_integration_u32() -> Result<()> {
+    fn pyarrow_integration_v1_u32() -> Result<()> {
         if std::env::var("ARROW2_IGNORE_PARQUET").is_ok() {
             return Ok(());
         }
         let column = 5;
-        let path = "fixtures/pyarrow3/basic_nulls_10.parquet";
+        let path = "fixtures/pyarrow3/v1/basic_nulls_10.parquet";
         let array = get_column(path, 0, column)?;
 
         let expected = pyarrow_integration(column);

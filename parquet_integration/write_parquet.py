@@ -21,7 +21,7 @@ def case1(size = 1):
         "uint32": int64 * size,
     }, f"basic_nulls_{size*10}.parquet"
 
-def write_case1_pyarrow(size = 1):
+def write_case1_pyarrow(size = 1, page_version = 1):
     data, path = case1(size)
 
     fields = [
@@ -34,15 +34,18 @@ def write_case1_pyarrow(size = 1):
     ]
     schema = pa.schema(fields)
 
+    base_path = f"{PYARROW_PATH}/v{page_version}"
+
     t = pa.table(data, schema=schema)
-    os.makedirs(PYARROW_PATH, exist_ok=True)
-    pa.parquet.write_table(t, f"{PYARROW_PATH}/{path}")
+    os.makedirs(base_path, exist_ok=True)
+    pa.parquet.write_table(t, f"{base_path}/{path}", data_page_version=f"{page_version}.0")
 
 write_case1_pyarrow(1)
 write_case1_pyarrow(10)
 write_case1_pyarrow(100)
 write_case1_pyarrow(1000)
 write_case1_pyarrow(10000)
+write_case1_pyarrow(1, 2)
 exit(0) # we are only testing against pyarrow in the code.
 
 def write_case1_pyspark():
