@@ -178,22 +178,29 @@ pub fn adaptive_add(
     if let (DataType::Decimal(lhs_p, lhs_s), DataType::Decimal(rhs_p, rhs_s)) =
         (lhs.data_type(), rhs.data_type())
     {
-        //    11.1111 -> 5, 4
-        // 11111.01   -> 7, 2
-        // -----------------
-        // 11122.1211 -> 9, 4
+        // The initial new precision and scale is based on the number of digits
+        // that lhs and rhs number has before and after the point. The max
+        // number of digits before and after the point will make the last
+        // precision and scale of the result
 
-        // The scale for the resulting vector will be the largest one from both
-        // arrays The diff variable is the difference between the scales and it
-        // is used to calculate the final precision
+        //                        Digits before/after point
+        //                        before    after
+        //    11.1111 -> 5, 4  ->   2        4
+        // 11111.01   -> 7, 2  ->   5        2
+        // -----------------
+        // 11122.1211 -> 9, 4  ->   5        4
+        let lhs_digits_before = lhs_p - lhs_s;
+        let rhs_digits_before = rhs_p - rhs_s;
+
+        let res_digits_before = std::cmp::max(lhs_digits_before, rhs_digits_before);
+
         let (res_s, diff) = if lhs_s > rhs_s {
             (*lhs_s, lhs_s - rhs_s)
         } else {
             (*rhs_s, rhs_s - lhs_s)
         };
 
-        // The final precision is the largest precision plus the difference between the scales
-        let mut res_p = (if lhs_p > rhs_p { lhs_p } else { rhs_p }) + diff;
+        let mut res_p = res_digits_before + res_s;
 
         let mut result = Vec::new();
         for (l, r) in lhs.values().iter().zip(rhs.values().iter()) {
@@ -402,24 +409,50 @@ mod tests {
         // 11111.11   -> 7, 2
         // -----------------
         // 11122.2211 -> 9, 4
-        let a = Primitive::from(&vec![Some(111111i128)]).to(DataType::Decimal(6, 4));
-        let b = Primitive::from(&vec![Some(1111111i128)]).to(DataType::Decimal(7, 2));
+        let a = Primitive::from(&vec![Some(11_1111i128)]).to(DataType::Decimal(6, 4));
+        let b = Primitive::from(&vec![Some(11111_11i128)]).to(DataType::Decimal(7, 2));
         let result = adaptive_add(&a, &b).unwrap();
 
-        let expected = Primitive::from(&vec![Some(111222211i128)]).to(DataType::Decimal(9, 4));
+        let expected = Primitive::from(&vec![Some(11122_2211i128)]).to(DataType::Decimal(9, 4));
 
         assert_eq!(result, expected);
         assert_eq!(result.data_type(), &DataType::Decimal(9, 4));
+
+        //     0.1111 -> 5, 4
+        // 11111.0    -> 6, 1
+        // -----------------
+        // 11111.1111 -> 9, 4
+        let a = Primitive::from(&vec![Some(1111i128)]).to(DataType::Decimal(5, 4));
+        let b = Primitive::from(&vec![Some(11111_0i128)]).to(DataType::Decimal(6, 1));
+        let result = adaptive_add(&a, &b).unwrap();
+
+        let expected = Primitive::from(&vec![Some(11111_1111i128)]).to(DataType::Decimal(9, 4));
+
+        assert_eq!(result, expected);
+        assert_eq!(result.data_type(), &DataType::Decimal(9, 4));
+
+        // 11111.11   -> 7, 2
+        // 11111.111  -> 8, 3
+        // -----------------
+        // 22222.221  -> 8, 3
+        let a = Primitive::from(&vec![Some(11111_11i128)]).to(DataType::Decimal(7, 2));
+        let b = Primitive::from(&vec![Some(11111_111i128)]).to(DataType::Decimal(8, 3));
+        let result = adaptive_add(&a, &b).unwrap();
+
+        let expected = Primitive::from(&vec![Some(22222_221i128)]).to(DataType::Decimal(8, 3));
+
+        assert_eq!(result, expected);
+        assert_eq!(result.data_type(), &DataType::Decimal(8, 3));
 
         //  99.9999 -> 6, 4
         //  00.0001 -> 6, 4
         // -----------------
         // 100.0000 -> 7, 4
-        let a = Primitive::from(&vec![Some(999999i128)]).to(DataType::Decimal(6, 4));
-        let b = Primitive::from(&vec![Some(000001i128)]).to(DataType::Decimal(6, 4));
+        let a = Primitive::from(&vec![Some(99_9999i128)]).to(DataType::Decimal(6, 4));
+        let b = Primitive::from(&vec![Some(00_0001i128)]).to(DataType::Decimal(6, 4));
         let result = adaptive_add(&a, &b).unwrap();
 
-        let expected = Primitive::from(&vec![Some(1000000i128)]).to(DataType::Decimal(7, 4));
+        let expected = Primitive::from(&vec![Some(100_0000i128)]).to(DataType::Decimal(7, 4));
 
         assert_eq!(result, expected);
         assert_eq!(result.data_type(), &DataType::Decimal(7, 4));
