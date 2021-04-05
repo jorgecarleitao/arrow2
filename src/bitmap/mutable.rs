@@ -235,7 +235,6 @@ impl MutableBitmap {
     /// # Implementation
     /// This function splits the the iterator in 3 iterations:
     /// * a prefix, that is used finish a
-    #[inline]
     pub unsafe fn extend_from_trusted_len_iter<I: IntoIterator<Item = bool>>(
         &mut self,
         iterator: I,
@@ -292,7 +291,6 @@ impl MutableBitmap {
     /// Creates a new [`Bitmap`] from an iterator of booleans.
     /// # Safety
     /// The caller must guarantee that the iterator is `TrustedLen`.
-    #[inline]
     pub unsafe fn from_trusted_len_iter<I>(iter: I) -> Self
     where
         I: IntoIterator<Item = bool>,
@@ -310,7 +308,6 @@ impl MutableBitmap {
     /// Creates a new [`Bitmap`] from an falible iterator of booleans.
     /// # Safety
     /// The caller must guarantee that the iterator is `TrustedLen`.
-    #[inline]
     pub unsafe fn try_from_trusted_len_iter<E, I>(iter: I) -> std::result::Result<Self, E>
     where
         I: IntoIterator<Item = std::result::Result<bool, E>>,

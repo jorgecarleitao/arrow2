@@ -280,7 +280,6 @@ unsafe fn reallocate<T: NativeType>(
 }
 
 impl<A: NativeType> Extend<A> for MutableBuffer<A> {
-    #[inline]
     fn extend<T: IntoIterator<Item = A>>(&mut self, iter: T) {
         let iterator = iter.into_iter();
         self.extend_from_iter(iterator)
@@ -319,7 +318,6 @@ impl<T: NativeType> MutableBuffer<T> {
     /// # Safety
     /// This method assumes that the iterator's size is correct and is undefined behavior
     /// to use it on an iterator that reports an incorrect length.
-    #[inline]
     pub unsafe fn extend_from_trusted_len_iter<I: Iterator<Item = T>>(&mut self, iterator: I) {
         let (_, upper) = iterator.size_hint();
         let upper = upper.expect("trusted_len_iter requires an upper limit");
@@ -357,7 +355,6 @@ impl<T: NativeType> MutableBuffer<T> {
     // 1. there is no trait `TrustedLen` in stable rust and therefore
     //    we can't specialize `extend` for `TrustedLen` like `Vec` does.
     // 2. `from_trusted_len_iter` is faster.
-    #[inline]
     pub unsafe fn from_trusted_len_iter<I: Iterator<Item = T>>(iterator: I) -> Self {
         let mut buffer = MutableBuffer::new();
         buffer.extend_from_trusted_len_iter(iterator);
@@ -370,7 +367,6 @@ impl<T: NativeType> MutableBuffer<T> {
     /// # Safety
     /// This method assumes that the iterator's size is correct and is undefined behavior
     /// to use it on an iterator that reports an incorrect length.
-    #[inline]
     pub unsafe fn try_from_trusted_len_iter<E, I: Iterator<Item = std::result::Result<T, E>>>(
         iterator: I,
     ) -> std::result::Result<Self, E> {
