@@ -21,6 +21,7 @@
 //! doing operations with Decimal numbers.
 
 pub mod add;
+pub mod subtract;
 
 /// Maximum value that can exist with a selected precision
 #[inline]
