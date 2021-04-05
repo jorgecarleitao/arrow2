@@ -40,12 +40,9 @@ def write_case1_pyarrow(size = 1, page_version = 1):
     os.makedirs(base_path, exist_ok=True)
     pa.parquet.write_table(t, f"{base_path}/{path}", data_page_version=f"{page_version}.0")
 
-write_case1_pyarrow(1)
-write_case1_pyarrow(10)
-write_case1_pyarrow(100)
-write_case1_pyarrow(1000)
-write_case1_pyarrow(10000)
-write_case1_pyarrow(1, 2)
+for i in [1, 10, 100, 1000, 10000]:
+    write_case1_pyarrow(i)  # V1
+write_case1_pyarrow(1, 2)  # V2
 exit(0) # we are only testing against pyarrow in the code.
 
 def write_case1_pyspark():

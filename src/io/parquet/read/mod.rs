@@ -196,11 +196,11 @@ mod tests {
                     .to(DataType::Timestamp(TimeUnit::Millisecond, None)),
             ),
             5 => {
-                let values = i64_values.iter().map(|x| x.map(|x| x as u32)).collect::<Vec<_>>();
-                Box::new(
-                    Primitive::<u32>::from(values)
-                        .to(DataType::UInt32),
-                )
+                let values = i64_values
+                    .iter()
+                    .map(|x| x.map(|x| x as u32))
+                    .collect::<Vec<_>>();
+                Box::new(Primitive::<u32>::from(values).to(DataType::UInt32))
             }
             _ => unreachable!(),
         }
@@ -209,9 +209,8 @@ mod tests {
     fn get_column(path: &str, row_group: usize, column: usize) -> Result<Box<dyn Array>> {
         let mut file = File::open(path).unwrap();
 
-        let metadata = read_metadata(&mut file).map_err(ArrowError::from_external_error)?;
-        let iter = get_page_iterator(&metadata, row_group, column, &mut file)
-            .map_err(ArrowError::from_external_error)?;
+        let metadata = read_metadata(&mut file)?;
+        let iter = get_page_iterator(&metadata, row_group, column, &mut file)?;
 
         let descriptor = &iter.descriptor().clone();
 
@@ -251,7 +250,7 @@ mod tests {
     }
 
     #[test]
-    fn pyarrow_integration_v1_string() -> Result<()> {
+    fn pyarrow_integration_v1_utf8() -> Result<()> {
         if std::env::var("ARROW2_IGNORE_PARQUET").is_ok() {
             return Ok(());
         }
@@ -306,6 +305,54 @@ mod tests {
         }
         let column = 5;
         let path = "fixtures/pyarrow3/v1/basic_nulls_10.parquet";
+        let array = get_column(path, 0, column)?;
+
+        let expected = pyarrow_integration(column);
+
+        assert_eq!(expected.as_ref(), array.as_ref());
+
+        Ok(())
+    }
+
+    #[test]
+    fn pyarrow_integration_v2_int64() -> Result<()> {
+        if std::env::var("ARROW2_IGNORE_PARQUET").is_ok() {
+            return Ok(());
+        }
+        let column = 0;
+        let path = "fixtures/pyarrow3/v2/basic_nulls_10.parquet";
+        let array = get_column(path, 0, column)?;
+
+        let expected = pyarrow_integration(column);
+
+        assert_eq!(expected.as_ref(), array.as_ref());
+
+        Ok(())
+    }
+
+    #[test]
+    fn pyarrow_integration_v2_utf8() -> Result<()> {
+        if std::env::var("ARROW2_IGNORE_PARQUET").is_ok() {
+            return Ok(());
+        }
+        let column = 2;
+        let path = "fixtures/pyarrow3/v2/basic_nulls_10.parquet";
+        let array = get_column(path, 0, column)?;
+
+        let expected = pyarrow_integration(column);
+
+        assert_eq!(expected.as_ref(), array.as_ref());
+
+        Ok(())
+    }
+
+    #[test]
+    fn pyarrow_integration_v2_boolean() -> Result<()> {
+        if std::env::var("ARROW2_IGNORE_PARQUET").is_ok() {
+            return Ok(());
+        }
+        let column = 3;
+        let path = "fixtures/pyarrow3/v2/basic_nulls_10.parquet";
         let array = get_column(path, 0, column)?;
 
         let expected = pyarrow_integration(column);

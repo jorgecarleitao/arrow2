@@ -4,25 +4,22 @@ use crate::{
     error::{ArrowError, Result},
 };
 
+use super::utils;
 use parquet2::{
-    encoding::{get_length, hybrid_rle, Encoding},
+    encoding::{hybrid_rle, Encoding},
     metadata::ColumnDescriptor,
     read::{decompress_page, Page},
 };
 
 fn read_bitmap(
-    buffer: &[u8],
+    validity_buffer: &[u8],
+    values_buffer: &[u8],
     length: u32,
     _has_validity: bool,
     values: &mut MutableBitmap,
     validity: &mut MutableBitmap,
 ) {
     let length = length as usize;
-
-    // split in two buffers: def_levels and data
-    let def_level_buffer_length = get_length(buffer) as usize;
-    let validity_buffer = &buffer[4..4 + def_level_buffer_length];
-    let values_buffer = &buffer[4 + def_level_buffer_length..];
 
     let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
 
@@ -87,17 +84,23 @@ fn extend_from_page(
     values: &mut MutableBitmap,
     validity: &mut MutableBitmap,
 ) -> Result<()> {
-    let page = decompress_page(page).map_err(ArrowError::from_external_error)?;
+    let page = decompress_page(page)?;
     assert_eq!(descriptor.max_rep_level(), 0);
     assert_eq!(descriptor.max_def_level(), 1);
     let has_validity = descriptor.max_def_level() == 1;
     match page {
         Page::V1(page) => {
             assert_eq!(page.def_level_encoding, Encoding::Rle);
+            let (validity_buffer, values_buffer) = utils::split_buffer_v1(&page.buf);
             match (&page.encoding, &page.dictionary_page) {
-                (Encoding::Plain, None) => {
-                    read_bitmap(&page.buf, page.num_values, has_validity, values, validity)
-                }
+                (Encoding::Plain, None) => read_bitmap(
+                    validity_buffer,
+                    values_buffer,
+                    page.num_values,
+                    has_validity,
+                    values,
+                    validity,
+                ),
                 (encoding, None) => {
                     return Err(ArrowError::NotYetImplemented(format!(
                         "Encoding {:?} not yet implemented for Binary",
@@ -107,10 +110,27 @@ fn extend_from_page(
                 _ => todo!(),
             }
         }
-        Page::V2(_) => {
-            return Err(ArrowError::NotYetImplemented(
-                "Reading booleans from V2 pages is not yet implemented".to_string(),
-            ))
+        Page::V2(page) => {
+            let def_level_buffer_length = page.header.definition_levels_byte_length as usize;
+            let (validity_buffer, values_buffer) =
+                utils::split_buffer_v2(&page.buf, def_level_buffer_length);
+            match (&page.header.encoding, &page.dictionary_page) {
+                (Encoding::Plain, None) => read_bitmap(
+                    validity_buffer,
+                    values_buffer,
+                    page.header.num_values as u32,
+                    has_validity,
+                    values,
+                    validity,
+                ),
+                (encoding, None) => {
+                    return Err(ArrowError::NotYetImplemented(format!(
+                        "Encoding {:?} not yet implemented for boolean values",
+                        encoding
+                    )))
+                }
+                _ => todo!(),
+            }
         }
     };
     Ok(())
