@@ -195,6 +195,13 @@ mod tests {
                 Primitive::<i64>::from(i64_values)
                     .to(DataType::Timestamp(TimeUnit::Millisecond, None)),
             ),
+            5 => {
+                let values = i64_values.iter().map(|x| x.map(|x| x as u32)).collect::<Vec<_>>();
+                Box::new(
+                    Primitive::<u32>::from(values)
+                        .to(DataType::UInt32),
+                )
+            }
             _ => unreachable!(),
         }
     }
@@ -281,6 +288,23 @@ mod tests {
             return Ok(());
         }
         let column = 4;
+        let path = "fixtures/pyarrow3/basic_nulls_10.parquet";
+        let array = get_column(path, 0, column)?;
+
+        let expected = pyarrow_integration(column);
+
+        assert_eq!(expected.as_ref(), array.as_ref());
+
+        Ok(())
+    }
+
+    #[test]
+    #[ignore] // pyarrow issue; see https://issues.apache.org/jira/browse/ARROW-12201
+    fn pyarrow_integration_u32() -> Result<()> {
+        if std::env::var("ARROW2_IGNORE_PARQUET").is_ok() {
+            return Ok(());
+        }
+        let column = 5;
         let path = "fixtures/pyarrow3/basic_nulls_10.parquet";
         let array = get_column(path, 0, column)?;
 

@@ -18,6 +18,7 @@ def case1(size = 1):
         "string": string * size,
         "bool": boolean * size,
         "date": int64 * size,
+        "uint32": int64 * size,
     }, f"basic_nulls_{size*10}.parquet"
 
 def write_case1_pyarrow(size = 1):
@@ -29,6 +30,7 @@ def write_case1_pyarrow(size = 1):
         pa.field('string', pa.utf8()),
         pa.field('bool', pa.bool_()),
         pa.field('date', pa.timestamp('ms')),
+        pa.field('uint32', pa.uint32()),
     ]
     schema = pa.schema(fields)
 
