@@ -26,11 +26,11 @@ use crate::{
     error::{ArrowError, Result},
 };
 
-use super::{max_value, number_digits};
+use super::{adjusted_precision_scale, max_value, number_digits};
 use crate::compute::arity::{binary, try_binary};
 use crate::compute::utils::combine_validities;
 
-/// Subtract two decimal primitive arrays with the same precision and scale If
+/// Subtract two decimal primitive arrays with the same precision and scale. If
 /// the precision and scale is different, then an InvalidArgumentError is
 /// returned. This function panics if the subtracted numbers result in a number
 /// smaller than the possible number for the selected precision.
@@ -87,9 +87,7 @@ pub fn saturating_subtract(
     match (lhs.data_type(), rhs.data_type()) {
         (DataType::Decimal(lhs_p, lhs_s), DataType::Decimal(rhs_p, rhs_s)) => {
             if lhs_p == rhs_p && lhs_s == rhs_s {
-                // Closure for the binary operation. This closure will panic if
-                // the sum of the values is larger than the max value possible
-                // for the decimal precision
+                // Closure for the binary operation.
                 let op = move |a, b| {
                     let res: i128 = a - b;
                     let max: i128 = max_value(*lhs_p);
@@ -136,9 +134,7 @@ pub fn checked_subtract(
     match (lhs.data_type(), rhs.data_type()) {
         (DataType::Decimal(lhs_p, lhs_s), DataType::Decimal(rhs_p, rhs_s)) => {
             if lhs_p == rhs_p && lhs_s == rhs_s {
-                // Closure for the binary operation. This closure will panic if
-                // the sum of the values is larger than the max value possible
-                // for the decimal precision
+                // Closure for the binary operation.
                 let op = move |a, b| {
                     let res: i128 = a - b;
 
@@ -186,31 +182,9 @@ pub fn adaptive_subtract(
     if let (DataType::Decimal(lhs_p, lhs_s), DataType::Decimal(rhs_p, rhs_s)) =
         (lhs.data_type(), rhs.data_type())
     {
-        // The initial new precision and scale is based on the number of digits
-        // that lhs and rhs number has before and after the point. The max
-        // number of digits before and after the point will make the last
-        // precision and scale of the result
-
-        //                        Digits before/after point
-        //                        before    after
-        // 11111.01   -> 7, 2  ->   5        2
-        //    11.1111 -> 5, 4  ->   2        4
-        // -----------------
-        // 11099.8989 -> 9, 4  ->   5        4
-        let lhs_digits_before = lhs_p - lhs_s;
-        let rhs_digits_before = rhs_p - rhs_s;
-
-        let res_digits_before = std::cmp::max(lhs_digits_before, rhs_digits_before);
-
-        let (res_s, diff) = if lhs_s > rhs_s {
-            (*lhs_s, lhs_s - rhs_s)
-        } else {
-            (*rhs_s, rhs_s - lhs_s)
-        };
-
         // The resulting precision is mutable because it could change while
         // looping through the iterator
-        let mut res_p = res_digits_before + res_s;
+        let (mut res_p, res_s, diff) = adjusted_precision_scale(*lhs_p, *lhs_s, *rhs_p, *rhs_s);
 
         let mut result = Vec::new();
         for (l, r) in lhs.values().iter().zip(rhs.values().iter()) {
