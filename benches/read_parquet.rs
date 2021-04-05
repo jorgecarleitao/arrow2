@@ -3,8 +3,8 @@ use std::{fs::File, path::PathBuf};
 use criterion::{criterion_group, criterion_main, Criterion};
 
 use arrow2::error::Result;
-use parquet2::read::{get_page_iterator, read_metadata};
 use arrow2::io::parquet::read::page_iter_to_array;
+use parquet2::read::{get_page_iterator, read_metadata};
 
 fn read_decompressed_pages(size: usize, column: usize) -> Result<()> {
     // reads decompressed pages (i.e. CPU)

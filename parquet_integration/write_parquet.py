@@ -1,4 +1,4 @@
-import pyarrow
+import pyarrow as pa
 import pyarrow.parquet
 import os
 import shutil
@@ -17,13 +17,24 @@ def case1(size = 1):
         "float64": float64 * size,
         "string": string * size,
         "bool": boolean * size,
+        "date": int64 * size,
     }, f"basic_nulls_{size*10}.parquet"
 
 def write_case1_pyarrow(size = 1):
     data, path = case1(size)
-    t = pyarrow.table(data)
+
+    fields = [
+        pa.field('int64', pa.int64()),
+        pa.field('float64', pa.float64()),
+        pa.field('string', pa.utf8()),
+        pa.field('bool', pa.bool_()),
+        pa.field('date', pa.timestamp('ms')),
+    ]
+    schema = pa.schema(fields)
+
+    t = pa.table(data, schema=schema)
     os.makedirs(PYARROW_PATH, exist_ok=True)
-    pyarrow.parquet.write_table(t, f"{PYARROW_PATH}/{path}")
+    pa.parquet.write_table(t, f"{PYARROW_PATH}/{path}")
 
 write_case1_pyarrow(1)
 write_case1_pyarrow(10)
