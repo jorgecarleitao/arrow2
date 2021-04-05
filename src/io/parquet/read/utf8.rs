@@ -1,5 +1,5 @@
 use parquet2::{
-    encoding::{get_length, hybrid_rle, Encoding},
+    encoding::{hybrid_rle, Encoding},
     metadata::ColumnDescriptor,
     read::{decompress_page, BinaryPageDict, Page},
     serialization::levels,
@@ -15,8 +15,10 @@ use crate::{
 use super::utils;
 
 /// Assumptions: No rep levels
+#[allow(clippy::too_many_arguments)]
 fn read_dict_buffer<O: Offset>(
-    buffer: &[u8],
+    validity_buffer: &[u8],
+    indices_buffer: &[u8],
     length: u32,
     dict: &BinaryPageDict,
     _has_validity: bool,
@@ -29,17 +31,12 @@ fn read_dict_buffer<O: Offset>(
     let dict_offsets = dict.offsets();
     let mut last_offset = *offsets.as_slice_mut().last().unwrap();
 
-    // split in two buffers: def_levels and data
-    let def_level_buffer_length = get_length(buffer) as usize;
-    let validity_buffer = &buffer[4..4 + def_level_buffer_length];
-    let indices_buffer = &buffer[4 + def_level_buffer_length..];
-
     // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
     // SPEC: followed by the values encoded using RLE/Bit packed described above (with the given bit width).
     let bit_width = indices_buffer[0];
     let indices_buffer = &indices_buffer[1..];
 
-    let non_null_indices_len = (buffer.len() * 8 / bit_width as usize) as u32;
+    let non_null_indices_len = (indices_buffer.len() * 8 / bit_width as usize) as u32;
     let mut indices =
         levels::rle_decode(&indices_buffer, bit_width as u32, non_null_indices_len).into_iter();
 
@@ -86,7 +83,8 @@ fn read_dict_buffer<O: Offset>(
 }
 
 fn read_buffer<O: Offset>(
-    buffer: &[u8],
+    validity_buffer: &[u8],
+    values_buffer: &[u8],
     length: u32,
     _has_validity: bool,
     offsets: &mut MutableBuffer<O>,
@@ -95,11 +93,6 @@ fn read_buffer<O: Offset>(
 ) {
     let length = length as usize;
     let mut last_offset = *offsets.as_slice_mut().last().unwrap();
-
-    // split in two buffers: def_levels and data
-    let def_level_buffer_length = get_length(buffer) as usize;
-    let validity_buffer = &buffer[4..4 + def_level_buffer_length];
-    let values_buffer = &buffer[4 + def_level_buffer_length..];
 
     // values_buffer: first 4 bytes are len, remaining is values
     let mut values_iterator = utils::BinaryIter::new(values_buffer);
@@ -170,16 +163,20 @@ fn extend_from_page<O: Offset>(
     values: &mut MutableBuffer<u8>,
     validity: &mut MutableBitmap,
 ) -> Result<()> {
-    let page = decompress_page(page).map_err(ArrowError::from_external_error)?;
+    let page = decompress_page(page)?;
     assert_eq!(descriptor.max_rep_level(), 0);
     assert_eq!(descriptor.max_def_level(), 1);
     let has_validity = descriptor.max_def_level() == 1;
     match page {
         Page::V1(page) => {
             assert_eq!(page.def_level_encoding, Encoding::Rle);
+            // split in two buffers: def_levels and data
+            let (validity_buffer, values_buffer) = utils::split_buffer_v1(&page.buf);
+
             match (&page.encoding, &page.dictionary_page) {
                 (Encoding::PlainDictionary, Some(dict)) => read_dict_buffer::<O>(
-                    &page.buf,
+                    validity_buffer,
+                    values_buffer,
                     page.num_values,
                     dict.as_any().downcast_ref().unwrap(),
                     has_validity,
@@ -188,7 +185,8 @@ fn extend_from_page<O: Offset>(
                     validity,
                 ),
                 (Encoding::Plain, None) => read_buffer::<O>(
-                    &page.buf,
+                    validity_buffer,
+                    values_buffer,
                     page.num_values,
                     has_validity,
                     offsets,
@@ -204,7 +202,39 @@ fn extend_from_page<O: Offset>(
                 _ => todo!(),
             }
         }
-        Page::V2(_) => todo!(),
+        Page::V2(page) => {
+            let def_level_buffer_length = page.header.definition_levels_byte_length as usize;
+            let (validity_buffer, values_buffer) =
+                utils::split_buffer_v2(&page.buf, def_level_buffer_length);
+            match (&page.header.encoding, &page.dictionary_page) {
+                (Encoding::PlainDictionary, Some(dict)) => read_dict_buffer::<O>(
+                    validity_buffer,
+                    values_buffer,
+                    page.header.num_values as u32,
+                    dict.as_any().downcast_ref().unwrap(),
+                    has_validity,
+                    offsets,
+                    values,
+                    validity,
+                ),
+                (Encoding::Plain, None) => read_buffer::<O>(
+                    validity_buffer,
+                    values_buffer,
+                    page.header.num_values as u32,
+                    has_validity,
+                    offsets,
+                    values,
+                    validity,
+                ),
+                (encoding, None) => {
+                    return Err(ArrowError::NotYetImplemented(format!(
+                        "Encoding {:?} not yet implemented",
+                        encoding
+                    )))
+                }
+                _ => todo!(),
+            }
+        }
     };
     Ok(())
 }
