@@ -15,7 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-//! Defines the addition arithmetic kernels for Decimal `PrimitiveArrays`.
+//! Defines the multiplication arithmetic kernels for Decimal
+//! `PrimitiveArrays`.
 
 use crate::{
     array::{Array, PrimitiveArray},
@@ -30,11 +31,14 @@ use super::{adjusted_precision_scale, max_value, number_digits};
 use crate::compute::arity::{binary, try_binary};
 use crate::compute::utils::combine_validities;
 
-/// Adds two decimal primitive arrays with the same precision and scale. If the
-/// precision and scale is different, then an InvalidArgumentError is returned.
-/// This function panics if the added numbers result in a number larger than
-/// the possible number for the selected precision.
-pub fn add(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<PrimitiveArray<i128>> {
+/// Multiply two decimal primitive arrays with the same precision and scale. If
+/// the precision and scale is different, then an InvalidArgumentError is
+/// returned. This function panics if the multiplied numbers result in a number
+/// larger than the possible number for the selected precision.
+pub fn multiply(
+    lhs: &PrimitiveArray<i128>,
+    rhs: &PrimitiveArray<i128>,
+) -> Result<PrimitiveArray<i128>> {
     // Matching on both data types from both arrays
     // This match will be true only when precision and scale from both
     // arrays are the same, otherwise it will return and ArrowError
@@ -44,11 +48,27 @@ pub fn add(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<Pri
                 // Closure for the binary operation. This closure will panic if
                 // the sum of the values is larger than the max value possible
                 // for the decimal precision
-                let op = move |a, b| {
-                    let res: i128 = a + b;
+                let op = move |a: i128, b: i128| {
+                    // The multiplication between i128 can overflow if they are
+                    // very large numbers. For that reason a checked
+                    // multiplication is used.
+                    let res: i128 = a.checked_mul(b).expect("Mayor overflow for multiplication");
+
+                    // The multiplication is done using the numbers without scale.
+                    // The resulting scale of the value has to be corrected by
+                    // dividing by (10^scale)
+
+                    //   111.111 -->      111111
+                    //   222.222 -->      222222
+                    // --------          -------
+                    // 24691.308 <-- 24691308642
+                    let res = res / 10i128.pow(*lhs_s as u32);
 
                     if res.abs() > max_value(*lhs_p) {
-                        panic!("Overflow in addition presented for precision {}", lhs_p);
+                        panic!(
+                            "Overflow in multiplication presented for precision {}",
+                            lhs_p
+                        );
                     }
 
                     res
@@ -69,12 +89,13 @@ pub fn add(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<Pri
     }
 }
 
-/// Saturated addition of two decimal primitive arrays with the same precision
-/// and scale. If the precision and scale is different, then an
-/// InvalidArgumentError is returned. If the result from the sum is larger than
-/// the possible number with the selected precision then the resulted number in
-/// the arrow array is the maximum number for the selected precision.
-pub fn saturating_add(
+/// Saturated multiplication of two decimal primitive arrays with the same
+/// precision and scale. If the precision and scale is different, then an
+/// InvalidArgumentError is returned. If the result from the multiplication is
+/// larger than the possible number with the selected precision then the
+/// resulted number in the arrow array is the maximum number for the selected
+/// precision.
+pub fn saturating_multiply(
     lhs: &PrimitiveArray<i128>,
     rhs: &PrimitiveArray<i128>,
 ) -> Result<PrimitiveArray<i128>> {
@@ -85,20 +106,23 @@ pub fn saturating_add(
         (DataType::Decimal(lhs_p, lhs_s), DataType::Decimal(rhs_p, rhs_s)) => {
             if lhs_p == rhs_p && lhs_s == rhs_s {
                 // Closure for the binary operation.
-                let op = move |a, b| {
-                    let res: i128 = a + b;
-                    let max = max_value(*lhs_p);
+                let op = move |a: i128, b: i128| match a.checked_mul(b) {
+                    Some(res) => {
+                        let res = res / 10i128.pow(*lhs_s as u32);
+                        let max = max_value(*lhs_p);
 
-                    match res {
-                        res if res.abs() > max => {
-                            if res > 0 {
-                                max
-                            } else {
-                                -1 * max
+                        match res {
+                            res if res.abs() > max => {
+                                if res > 0 {
+                                    max
+                                } else {
+                                    -1 * max
+                                }
                             }
+                            _ => res,
                         }
-                        _ => res,
                     }
+                    None => max_value(*lhs_p),
                 };
 
                 binary(lhs, rhs, op)
@@ -116,12 +140,12 @@ pub fn saturating_add(
     }
 }
 
-/// Checked addition of two decimal primitive arrays with the same precision
-/// and scale. If the precision and scale is different, then an
+/// Checked multiplication of two decimal primitive arrays with the same
+/// precision and scale. If the precision and scale is different, then an
 /// InvalidArgumentError is returned. If the result from the sum is larger than
 /// the possible number with the selected precision then the function returns
 /// an ArrowError::ArithmeticError.
-pub fn checked_add(
+pub fn checked_multiply(
     lhs: &PrimitiveArray<i128>,
     rhs: &PrimitiveArray<i128>,
 ) -> Result<PrimitiveArray<i128>> {
@@ -132,16 +156,23 @@ pub fn checked_add(
         (DataType::Decimal(lhs_p, lhs_s), DataType::Decimal(rhs_p, rhs_s)) => {
             if lhs_p == rhs_p && lhs_s == rhs_s {
                 // Closure for the binary operation.
-                let op = move |a, b| {
-                    let res: i128 = a + b;
+                let op = move |a: i128, b: i128| match a.checked_mul(b) {
+                    Some(res) => {
+                        let res = res / 10i128.pow(*lhs_s as u32);
 
-                    match res {
-                        res if res.abs() > max_value(*lhs_p) => {
-                            return Err(ArrowError::ArithmeticError(
-                                "Saturated result in addition".to_string(),
-                            ));
+                        match res {
+                            res if res.abs() > max_value(*lhs_p) => {
+                                return Err(ArrowError::ArithmeticError(
+                                    "Saturated result in multiplication".to_string(),
+                                ));
+                            }
+                            _ => Ok(res),
                         }
-                        _ => Ok(res),
+                    }
+                    None => {
+                        return Err(ArrowError::ArithmeticError(
+                            "Saturated result in multiplication".to_string(),
+                        ));
                     }
                 };
 
@@ -160,12 +191,13 @@ pub fn checked_add(
     }
 }
 
-/// Adaptive addition of two decimal primitive arrays with different precision
-/// and scale. If the precision and scale is different, then the smallest scale
-/// and precision is adjusted to the largest precision and scale. If during the
-/// addition one of the results is larger than the max possible value, the
-/// result precision is changed to the precision of the max value
-pub fn adaptive_add(
+/// Adaptive multiplication of two decimal primitive arrays with different
+/// precision and scale. If the precision and scale is different, then the
+/// smallest scale and precision is adjusted to the largest precision and
+/// scale. If during the multiplication one of the results is larger than the
+/// max possible value, the result precision is changed to the precision of the
+/// max value
+pub fn adaptive_multiply(
     lhs: &PrimitiveArray<i128>,
     rhs: &PrimitiveArray<i128>,
 ) -> Result<PrimitiveArray<i128>> {
@@ -188,17 +220,22 @@ pub fn adaptive_add(
             // Based on the array's scales one of the arguments in the sum has to be shifted
             // to the left to match the final scale
             let res = if lhs_s > rhs_s {
-                l + r * 10i128.pow(diff as u32)
+                l.checked_mul(r * 10i128.pow(diff as u32))
+                    .expect("Mayor overflow for multiplication")
             } else {
-                l * 10i128.pow(diff as u32) + r
+                (l * 10i128.pow(diff as u32))
+                    .checked_mul(*r)
+                    .expect("Mayor overflow for multiplication")
             };
 
-            // The precision of the resulting array will change if one of the
-            // sums during the iteration produces a value bigger than the
-            // possible value for the initial precision
+            let res = res / 10i128.pow(res_s as u32);
 
-            //  99.9999 -> 6, 4
-            //  00.0001 -> 6, 4
+            // The precision of the resulting array will change if one of the
+            // multiplications during the iteration produces a value bigger
+            // than the possible value for the initial precision
+
+            //  10.0000 -> 6, 4
+            //  10.0000 -> 6, 4
             // -----------------
             // 100.0000 -> 7, 4
             if res.abs() > max_value(res_p) {
@@ -230,40 +267,50 @@ mod tests {
     use crate::datatypes::DataType;
 
     #[test]
-    fn test_add_normal() {
+    fn test_multiply_normal() {
+        //   111.11 -->     11111
+        //   222.22 -->     22222
+        // --------       -------
+        // 24690.86 <-- 246908642
         let a = Primitive::from(&vec![
-            Some(11111i128),
-            Some(11100i128),
+            Some(111_11i128),
+            Some(10_00i128),
+            Some(20_00i128),
             None,
-            Some(22200i128),
+            Some(30_00i128),
+            Some(123_45i128),
         ])
-        .to(DataType::Decimal(5, 2));
+        .to(DataType::Decimal(7, 2));
 
         let b = Primitive::from(&vec![
-            Some(22222i128),
-            Some(22200i128),
+            Some(222_22i128),
+            Some(2_00i128),
+            Some(3_00i128),
             None,
-            Some(11100i128),
+            Some(4_00i128),
+            Some(543_21i128),
         ])
-        .to(DataType::Decimal(5, 2));
+        .to(DataType::Decimal(7, 2));
 
-        let result = add(&a, &b).unwrap();
+        let result = multiply(&a, &b).unwrap();
         let expected = Primitive::from(&vec![
-            Some(33333i128),
-            Some(33300i128),
+            Some(24690_86i128),
+            Some(20_00i128),
+            Some(60_00i128),
             None,
-            Some(33300i128),
+            Some(120_00i128),
+            Some(67059_27i128),
         ])
-        .to(DataType::Decimal(5, 2));
+        .to(DataType::Decimal(7, 2));
 
         assert_eq!(result, expected);
     }
 
     #[test]
-    fn test_add_decimal_wrong_precision() {
+    fn test_multiply_decimal_wrong_precision() {
         let a = Primitive::from(&vec![None]).to(DataType::Decimal(5, 2));
         let b = Primitive::from(&vec![None]).to(DataType::Decimal(6, 2));
-        let result = add(&a, &b);
+        let result = multiply(&a, &b);
 
         if result.is_ok() {
             panic!("Should panic for different precision");
@@ -271,64 +318,70 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Overflow in addition presented for precision 5")]
-    fn test_add_panic() {
+    #[should_panic(expected = "Overflow in multiplication presented for precision 5")]
+    fn test_multiply_panic() {
         let a = Primitive::from(&vec![Some(99999i128)]).to(DataType::Decimal(5, 2));
-        let b = Primitive::from(&vec![Some(1i128)]).to(DataType::Decimal(5, 2));
-        let _ = add(&a, &b);
+        let b = Primitive::from(&vec![Some(100_00i128)]).to(DataType::Decimal(5, 2));
+        let _ = multiply(&a, &b);
     }
 
     #[test]
-    fn test_add_saturating() {
+    fn test_multiply_saturating() {
         let a = Primitive::from(&vec![
-            Some(11111i128),
-            Some(11100i128),
+            Some(111_11i128),
+            Some(10_00i128),
+            Some(20_00i128),
             None,
-            Some(22200i128),
+            Some(30_00i128),
+            Some(123_45i128),
         ])
-        .to(DataType::Decimal(5, 2));
+        .to(DataType::Decimal(7, 2));
 
         let b = Primitive::from(&vec![
-            Some(22222i128),
-            Some(22200i128),
+            Some(222_22i128),
+            Some(2_00i128),
+            Some(3_00i128),
             None,
-            Some(11100i128),
+            Some(4_00i128),
+            Some(543_21i128),
         ])
-        .to(DataType::Decimal(5, 2));
+        .to(DataType::Decimal(7, 2));
 
-        let result = saturating_add(&a, &b).unwrap();
+        let result = saturating_multiply(&a, &b).unwrap();
         let expected = Primitive::from(&vec![
-            Some(33333i128),
-            Some(33300i128),
+            Some(24690_86i128),
+            Some(20_00i128),
+            Some(60_00i128),
             None,
-            Some(33300i128),
+            Some(120_00i128),
+            Some(67059_27i128),
         ])
-        .to(DataType::Decimal(5, 2));
+        .to(DataType::Decimal(7, 2));
 
         assert_eq!(result, expected);
     }
 
     #[test]
-    fn test_add_saturating_overflow() {
+    fn test_multiply_saturating_overflow() {
         let a = Primitive::from(&vec![
             Some(99999i128),
             Some(99999i128),
             Some(99999i128),
-            Some(-99999i128),
+            Some(99999i128),
         ])
         .to(DataType::Decimal(5, 2));
         let b = Primitive::from(&vec![
-            Some(00001i128),
-            Some(00100i128),
+            Some(-00100i128),
+            Some(01000i128),
             Some(10000i128),
             Some(-99999i128),
         ])
         .to(DataType::Decimal(5, 2));
 
-        let result = saturating_add(&a, &b).unwrap();
+        let result = saturating_multiply(&a, &b).unwrap();
 
         let expected = Primitive::from(&vec![
-            Some(99999i128),
+            Some(-99999i128),
             Some(99999i128),
             Some(99999i128),
             Some(-99999i128),
@@ -339,40 +392,46 @@ mod tests {
     }
 
     #[test]
-    fn test_add_checked() {
+    fn test_multiply_checked() {
         let a = Primitive::from(&vec![
-            Some(11111i128),
-            Some(11100i128),
+            Some(111_11i128),
+            Some(10_00i128),
+            Some(20_00i128),
             None,
-            Some(22200i128),
+            Some(30_00i128),
+            Some(123_45i128),
         ])
-        .to(DataType::Decimal(5, 2));
+        .to(DataType::Decimal(7, 2));
 
         let b = Primitive::from(&vec![
-            Some(22222i128),
-            Some(22200i128),
+            Some(222_22i128),
+            Some(2_00i128),
+            Some(3_00i128),
             None,
-            Some(11100i128),
+            Some(4_00i128),
+            Some(543_21i128),
         ])
-        .to(DataType::Decimal(5, 2));
+        .to(DataType::Decimal(7, 2));
 
-        let result = checked_add(&a, &b).unwrap();
+        let result = checked_multiply(&a, &b).unwrap();
         let expected = Primitive::from(&vec![
-            Some(33333i128),
-            Some(33300i128),
+            Some(24690_86i128),
+            Some(20_00i128),
+            Some(60_00i128),
             None,
-            Some(33300i128),
+            Some(120_00i128),
+            Some(67059_27i128),
         ])
-        .to(DataType::Decimal(5, 2));
+        .to(DataType::Decimal(7, 2));
 
         assert_eq!(result, expected);
     }
 
     #[test]
-    fn test_add_checked_overflow() {
+    fn test_multiply_checked_overflow() {
         let a = Primitive::from(&vec![Some(99999i128)]).to(DataType::Decimal(5, 2));
-        let b = Primitive::from(&vec![Some(1i128)]).to(DataType::Decimal(5, 2));
-        let result = checked_add(&a, &b);
+        let b = Primitive::from(&vec![Some(10000i128)]).to(DataType::Decimal(5, 2));
+        let result = checked_multiply(&a, &b);
 
         match result {
             Err(err) => match err {
@@ -384,57 +443,44 @@ mod tests {
     }
 
     #[test]
-    fn test_add_adaptive() {
-        //    11.1111 -> 6, 4
-        // 11111.11   -> 7, 2
+    fn test_multiply_adaptive() {
+        //  1000.00   -> 7, 2
+        //    10.0000 -> 6, 4
         // -----------------
-        // 11122.2211 -> 9, 4
-        let a = Primitive::from(&vec![Some(11_1111i128)]).to(DataType::Decimal(6, 4));
-        let b = Primitive::from(&vec![Some(11111_11i128)]).to(DataType::Decimal(7, 2));
-        let result = adaptive_add(&a, &b).unwrap();
+        // 10000.0000 -> 9, 4
+        let a = Primitive::from(&vec![Some(1000_00i128)]).to(DataType::Decimal(7, 2));
+        let b = Primitive::from(&vec![Some(10_0000i128)]).to(DataType::Decimal(6, 4));
+        let result = adaptive_multiply(&a, &b).unwrap();
 
-        let expected = Primitive::from(&vec![Some(11122_2211i128)]).to(DataType::Decimal(9, 4));
+        let expected = Primitive::from(&vec![Some(10000_0000i128)]).to(DataType::Decimal(9, 4));
 
         assert_eq!(result, expected);
         assert_eq!(result.data_type(), &DataType::Decimal(9, 4));
 
-        //     0.1111 -> 5, 4
-        // 11111.0    -> 6, 1
+        //   11111.0    -> 6, 1
+        //      10.002  -> 5, 3
         // -----------------
-        // 11111.1111 -> 9, 4
-        let a = Primitive::from(&vec![Some(1111i128)]).to(DataType::Decimal(5, 4));
-        let b = Primitive::from(&vec![Some(11111_0i128)]).to(DataType::Decimal(6, 1));
-        let result = adaptive_add(&a, &b).unwrap();
+        //  111132.222  -> 9, 3
+        let a = Primitive::from(&vec![Some(11111_0i128)]).to(DataType::Decimal(6, 1));
+        let b = Primitive::from(&vec![Some(10_002i128)]).to(DataType::Decimal(5, 3));
+        let result = adaptive_multiply(&a, &b).unwrap();
 
-        let expected = Primitive::from(&vec![Some(11111_1111i128)]).to(DataType::Decimal(9, 4));
+        let expected = Primitive::from(&vec![Some(111132_222i128)]).to(DataType::Decimal(9, 3));
 
         assert_eq!(result, expected);
-        assert_eq!(result.data_type(), &DataType::Decimal(9, 4));
+        assert_eq!(result.data_type(), &DataType::Decimal(9, 3));
 
-        // 11111.11   -> 7, 2
-        // 11111.111  -> 8, 3
+        //     12345.67   ->  7, 2
+        //     12345.678  ->  8, 3
         // -----------------
-        // 22222.221  -> 8, 3
-        let a = Primitive::from(&vec![Some(11111_11i128)]).to(DataType::Decimal(7, 2));
-        let b = Primitive::from(&vec![Some(11111_111i128)]).to(DataType::Decimal(8, 3));
-        let result = adaptive_add(&a, &b).unwrap();
+        // 152415666.514  -> 11, 3
+        let a = Primitive::from(&vec![Some(12345_67i128)]).to(DataType::Decimal(7, 2));
+        let b = Primitive::from(&vec![Some(12345_678i128)]).to(DataType::Decimal(8, 3));
+        let result = adaptive_multiply(&a, &b).unwrap();
 
-        let expected = Primitive::from(&vec![Some(22222_221i128)]).to(DataType::Decimal(8, 3));
+        let expected = Primitive::from(&vec![Some(152415666_514i128)]).to(DataType::Decimal(12, 3));
 
         assert_eq!(result, expected);
-        assert_eq!(result.data_type(), &DataType::Decimal(8, 3));
-
-        //  99.9999 -> 6, 4
-        //  00.0001 -> 6, 4
-        // -----------------
-        // 100.0000 -> 7, 4
-        let a = Primitive::from(&vec![Some(99_9999i128)]).to(DataType::Decimal(6, 4));
-        let b = Primitive::from(&vec![Some(00_0001i128)]).to(DataType::Decimal(6, 4));
-        let result = adaptive_add(&a, &b).unwrap();
-
-        let expected = Primitive::from(&vec![Some(100_0000i128)]).to(DataType::Decimal(7, 4));
-
-        assert_eq!(result, expected);
-        assert_eq!(result.data_type(), &DataType::Decimal(7, 4));
+        assert_eq!(result.data_type(), &DataType::Decimal(12, 3));
     }
 }
