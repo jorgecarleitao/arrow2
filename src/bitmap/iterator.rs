@@ -38,7 +38,6 @@ impl<'a> Iterator for BitmapIter<'a> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        // easily predictable in branching
         if self.index == self.len {
             return None;
         } else {
@@ -47,11 +46,11 @@ impl<'a> Iterator for BitmapIter<'a> {
         let value = self.current_byte & self.mask != 0;
         self.mask = self.mask.rotate_left(1);
         if self.mask == 1 {
-            // reached a new byte => try to fetch it from the iterator
-            match self.iter.next() {
-                Some(v) => self.current_byte = v,
-                None => return None,
+            // reached a new byte => try to fetch it from the byte iterator
+            if let Some(next_byte) = self.iter.next() {
+                self.current_byte = next_byte
             }
+            // no byte: we reached the end.
         }
         Some(value)
     }
@@ -80,5 +79,39 @@ impl<'a> Iterator for BitmapIter<'a> {
             self.index += n;
             Some(value)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn basic() {
+        let values = &[0b01011011u8];
+        let iter = BitmapIter::new(values, 0, 6);
+        let result = iter.collect::<Vec<_>>();
+        assert_eq!(result, vec![true, true, false, true, true, false])
+    }
+
+    #[test]
+    fn large() {
+        let values = &[0b01011011u8];
+        let values = std::iter::repeat(values)
+            .take(63)
+            .flatten()
+            .copied()
+            .collect::<Vec<_>>();
+        let len = 63 * 8;
+        let iter = BitmapIter::new(&values, 0, len);
+        assert_eq!(iter.count(), len);
+    }
+
+    #[test]
+    fn offset() {
+        let values = &[0b01011011u8];
+        let iter = BitmapIter::new(values, 2, 4);
+        let result = iter.collect::<Vec<_>>();
+        assert_eq!(result, vec![false, true, true, false])
     }
 }
