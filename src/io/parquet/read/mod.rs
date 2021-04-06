@@ -12,14 +12,14 @@ use crate::{
 use parquet2::{
     error::ParquetError,
     metadata::ColumnDescriptor,
-    read::Page,
+    read::CompressedPage,
     schema::{
         types::{LogicalType, ParquetType, PhysicalType, PrimitiveConvertedType},
         TimeUnit as ParquetTimeUnit, TimestampType,
     },
 };
 
-fn page_iter_to_array_i64<I: Iterator<Item = std::result::Result<Page, ParquetError>>>(
+fn page_iter_to_array_i64<I: Iterator<Item = std::result::Result<CompressedPage, ParquetError>>>(
     iter: I,
     descriptor: &ColumnDescriptor,
     converted_type: &Option<PrimitiveConvertedType>,
@@ -79,7 +79,7 @@ fn page_iter_to_array_i64<I: Iterator<Item = std::result::Result<Page, ParquetEr
         .map(|x| Box::new(x) as Box<dyn Array>)
 }
 
-pub fn page_iter_to_array<I: Iterator<Item = std::result::Result<Page, ParquetError>>>(
+pub fn page_iter_to_array<I: Iterator<Item = std::result::Result<CompressedPage, ParquetError>>>(
     iter: I,
     descriptor: &ColumnDescriptor,
 ) -> Result<Box<dyn Array>> {
@@ -212,9 +212,9 @@ mod tests {
         let metadata = read_metadata(&mut file)?;
         let iter = get_page_iterator(&metadata, row_group, column, &mut file)?;
 
-        let descriptor = &iter.descriptor().clone();
+        let descriptor = iter.descriptor().clone();
 
-        page_iter_to_array(iter, descriptor)
+        page_iter_to_array(iter, &descriptor)
     }
 
     #[test]

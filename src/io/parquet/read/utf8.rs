@@ -1,7 +1,7 @@
 use parquet2::{
     encoding::{hybrid_rle, Encoding},
     metadata::ColumnDescriptor,
-    read::{decompress_page, BinaryPageDict, Page},
+    read::{decompress_page, BinaryPageDict, CompressedPage, Page},
     serialization::levels,
 };
 
@@ -137,7 +137,7 @@ pub fn iter_to_array<O, I, E>(mut iter: I, descriptor: &ColumnDescriptor) -> Res
 where
     ArrowError: From<E>,
     O: Offset,
-    I: Iterator<Item = std::result::Result<Page, E>>,
+    I: Iterator<Item = std::result::Result<CompressedPage, E>>,
 {
     // todo: push metadata from the file to get this capacity
     let capacity = 0;
@@ -157,7 +157,7 @@ where
 }
 
 fn extend_from_page<O: Offset>(
-    page: Page,
+    page: CompressedPage,
     descriptor: &ColumnDescriptor,
     offsets: &mut MutableBuffer<O>,
     values: &mut MutableBuffer<u8>,
@@ -169,15 +169,15 @@ fn extend_from_page<O: Offset>(
     let has_validity = descriptor.max_def_level() == 1;
     match page {
         Page::V1(page) => {
-            assert_eq!(page.def_level_encoding, Encoding::Rle);
+            assert_eq!(page.header.definition_level_encoding, Encoding::Rle);
             // split in two buffers: def_levels and data
-            let (validity_buffer, values_buffer) = utils::split_buffer_v1(&page.buf);
+            let (validity_buffer, values_buffer) = utils::split_buffer_v1(&page.buffer);
 
-            match (&page.encoding, &page.dictionary_page) {
+            match (&page.header.encoding, &page.dictionary_page) {
                 (Encoding::PlainDictionary, Some(dict)) => read_dict_buffer::<O>(
                     validity_buffer,
                     values_buffer,
-                    page.num_values,
+                    page.header.num_values as u32,
                     dict.as_any().downcast_ref().unwrap(),
                     has_validity,
                     offsets,
@@ -187,7 +187,7 @@ fn extend_from_page<O: Offset>(
                 (Encoding::Plain, None) => read_buffer::<O>(
                     validity_buffer,
                     values_buffer,
-                    page.num_values,
+                    page.header.num_values as u32,
                     has_validity,
                     offsets,
                     values,
@@ -205,7 +205,7 @@ fn extend_from_page<O: Offset>(
         Page::V2(page) => {
             let def_level_buffer_length = page.header.definition_levels_byte_length as usize;
             let (validity_buffer, values_buffer) =
-                utils::split_buffer_v2(&page.buf, def_level_buffer_length);
+                utils::split_buffer_v2(&page.buffer, def_level_buffer_length);
             match (&page.header.encoding, &page.dictionary_page) {
                 (Encoding::PlainDictionary, Some(dict)) => read_dict_buffer::<O>(
                     validity_buffer,

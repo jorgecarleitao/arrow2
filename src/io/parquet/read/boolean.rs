@@ -8,7 +8,7 @@ use super::utils;
 use parquet2::{
     encoding::{hybrid_rle, Encoding},
     metadata::ColumnDescriptor,
-    read::{decompress_page, Page},
+    read::{decompress_page, CompressedPage, Page},
 };
 
 fn read_bitmap(
@@ -67,7 +67,7 @@ fn read_bitmap(
 pub fn iter_to_array<I, E>(mut iter: I, descriptor: &ColumnDescriptor) -> Result<BooleanArray>
 where
     ArrowError: From<E>,
-    I: Iterator<Item = std::result::Result<Page, E>>,
+    I: Iterator<Item = std::result::Result<CompressedPage, E>>,
 {
     // todo: push metadata from the file to get this capacity
     let capacity = 0;
@@ -79,7 +79,7 @@ where
 }
 
 fn extend_from_page(
-    page: Page,
+    page: CompressedPage,
     descriptor: &ColumnDescriptor,
     values: &mut MutableBitmap,
     validity: &mut MutableBitmap,
@@ -90,13 +90,13 @@ fn extend_from_page(
     let has_validity = descriptor.max_def_level() == 1;
     match page {
         Page::V1(page) => {
-            assert_eq!(page.def_level_encoding, Encoding::Rle);
-            let (validity_buffer, values_buffer) = utils::split_buffer_v1(&page.buf);
-            match (&page.encoding, &page.dictionary_page) {
+            assert_eq!(page.header.definition_level_encoding, Encoding::Rle);
+            let (validity_buffer, values_buffer) = utils::split_buffer_v1(&page.buffer);
+            match (&page.header.encoding, &page.dictionary_page) {
                 (Encoding::Plain, None) => read_bitmap(
                     validity_buffer,
                     values_buffer,
-                    page.num_values,
+                    page.header.num_values as u32,
                     has_validity,
                     values,
                     validity,
@@ -113,7 +113,7 @@ fn extend_from_page(
         Page::V2(page) => {
             let def_level_buffer_length = page.header.definition_levels_byte_length as usize;
             let (validity_buffer, values_buffer) =
-                utils::split_buffer_v2(&page.buf, def_level_buffer_length);
+                utils::split_buffer_v2(&page.buffer, def_level_buffer_length);
             match (&page.header.encoding, &page.dictionary_page) {
                 (Encoding::Plain, None) => read_bitmap(
                     validity_buffer,
