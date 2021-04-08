@@ -2,7 +2,7 @@ use parquet2::{
     encoding::{hybrid_rle, Encoding},
     metadata::ColumnDescriptor,
     read::{decompress_page, BinaryPageDict, CompressedPage, Page},
-    serialization::levels,
+    serialization::read::levels,
 };
 
 use crate::{
