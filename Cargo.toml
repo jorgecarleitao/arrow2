@@ -109,3 +109,7 @@ harness = false
 [[bench]]
 name = "read_parquet"
 harness = false
+
+[[bench]]
+name = "write_parquet"
+harness = false
