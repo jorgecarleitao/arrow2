@@ -85,8 +85,7 @@ fn read_buffer<T: NativeType + ArrowNativeType>(
 ) {
     let length = length as usize;
 
-    let mut chunks = values_buffer[..length as usize * std::mem::size_of::<T>()]
-        .chunks_exact(std::mem::size_of::<T>());
+    let mut chunks = values_buffer.chunks_exact(std::mem::size_of::<T>());
 
     let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
 
