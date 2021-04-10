@@ -117,3 +117,41 @@ where
         validity,
     ))
 }
+
+// The types of the arrays are not checked with this operation. The closure
+// "op" needs to handle the different types in the arrays. The datatype for the
+// resulting array has to be selected by the implementer of the function as
+// an argument for the function.
+#[inline]
+pub fn unchecked_binary<T, F>(
+    lhs: &PrimitiveArray<T>,
+    rhs: &PrimitiveArray<T>,
+    data_type: DataType,
+    op: F,
+) -> Result<PrimitiveArray<T>>
+where
+    T: NativeType,
+    F: Fn(T, T) -> T,
+{
+    if lhs.len() != rhs.len() {
+        return Err(ArrowError::InvalidArgumentError(
+            "Arrays must have the same length".to_string(),
+        ));
+    }
+
+    let validity = combine_validities(lhs.validity(), rhs.validity());
+
+    let values = lhs
+        .values()
+        .iter()
+        .zip(rhs.values().iter())
+        .map(|(l, r)| op(*l, *r));
+    // JUSTIFICATION
+    //  Benefit
+    //      ~60% speedup
+    //  Soundness
+    //      `values` is an iterator with a known size.
+    let values = unsafe { Buffer::from_trusted_len_iter(values) };
+
+    Ok(PrimitiveArray::<T>::from_data(data_type, values, validity))
+}
