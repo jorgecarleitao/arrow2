@@ -1,5 +1,6 @@
 mod boolean;
 mod primitive;
+mod utf8;
 
 use parquet2::{compression::CompressionCodec, read::CompressedPage};
 
@@ -25,6 +26,12 @@ pub fn array_to_page(array: &dyn Array) -> Result<CompressedPage> {
         }
         DataType::Float64 => {
             primitive::array_to_page_v1::<f64>(array.as_any().downcast_ref().unwrap(), compression)
+        }
+        DataType::Utf8 => {
+            utf8::array_to_page_v1::<i32>(array.as_any().downcast_ref().unwrap(), compression)
+        }
+        DataType::LargeUtf8 => {
+            utf8::array_to_page_v1::<i64>(array.as_any().downcast_ref().unwrap(), compression)
         }
         _ => todo!(),
     }
@@ -69,17 +76,18 @@ mod tests {
         )))));
 
         // prepare schema
-        let a = match array.data_type() {
-            DataType::Int32 => "INT32",
-            DataType::Int64 => "INT64",
-            DataType::Float32 => "FLOAT",
-            DataType::Float64 => "DOUBLE",
-            DataType::Boolean => "BOOLEAN",
+        let (physical, converted) = match array.data_type() {
+            DataType::Int32 => ("INT32", ""),
+            DataType::Int64 => ("INT64", ""),
+            DataType::Float32 => ("FLOAT", ""),
+            DataType::Float64 => ("DOUBLE", ""),
+            DataType::Boolean => ("BOOLEAN", ""),
+            DataType::Utf8 => ("BYTE_ARRAY", "(UTF8)"),
             _ => todo!(),
         };
         let schema = SchemaDescriptor::new(from_message(&format!(
-            "message schema {{ OPTIONAL {} col; }}",
-            a
+            "message schema {{ OPTIONAL {} col {}; }}",
+            physical, converted
         ))?);
 
         let mut writer = Cursor::new(vec![]);
@@ -100,6 +108,11 @@ mod tests {
     #[test]
     fn test_int32() -> Result<()> {
         round_trip(0)
+    }
+
+    #[test]
+    fn test_utf8() -> Result<()> {
+        round_trip(2)
     }
 
     #[test]

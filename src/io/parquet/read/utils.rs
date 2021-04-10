@@ -20,8 +20,8 @@ impl<'a> Iterator for BinaryIter<'a> {
         }
         let length = get_length(self.values) as usize;
         self.values = &self.values[4..];
-        let result = &self.values[4..length as usize];
-        self.values = &self.values[4 + length..];
+        let result = &self.values[..length];
+        self.values = &self.values[length..];
         Some(result)
     }
 }

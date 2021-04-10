@@ -110,13 +110,9 @@ pub fn page_iter_to_array<I: Iterator<Item = std::result::Result<CompressedPage,
             (PhysicalType::Boolean, None, None) => {
                 Ok(Box::new(boolean::iter_to_array(iter, descriptor)?))
             }
-            (
-                PhysicalType::ByteArray,
-                Some(PrimitiveConvertedType::Utf8),
-                Some(LogicalType::STRING(_)),
-            ) => Ok(Box::new(utf8::iter_to_array::<i32, _, _>(
-                iter, descriptor,
-            )?)),
+            (PhysicalType::ByteArray, Some(PrimitiveConvertedType::Utf8), _) => Ok(Box::new(
+                utf8::iter_to_array::<i32, _, _>(iter, descriptor)?,
+            )),
             (p, c, l) => Err(ArrowError::NotYetImplemented(format!(
                 "The conversion of ({:?}, {:?}, {:?}) to arrow still not implemented",
                 p, c, l
