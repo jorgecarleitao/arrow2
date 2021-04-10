@@ -6,7 +6,7 @@ use arrow2::array::*;
 use arrow2::datatypes::DataType;
 use arrow2::error::Result;
 use arrow2::io::parquet::write::array_to_page;
-use arrow2::util::bench_util::create_primitive_array;
+use arrow2::util::bench_util::{create_boolean_array, create_primitive_array};
 
 use parquet2::{
     compression::CompressionCodec, metadata::SchemaDescriptor, schema::io_message::from_message,
@@ -24,6 +24,7 @@ fn write(array: &dyn Array) -> Result<()> {
         DataType::Int64 => "INT64",
         DataType::Float32 => "FLOAT",
         DataType::Float64 => "DOUBLE",
+        DataType::Boolean => "BOOLEAN",
         _ => todo!(),
     };
     let schema = SchemaDescriptor::new(from_message(&format!(
@@ -43,14 +44,17 @@ fn write(array: &dyn Array) -> Result<()> {
 }
 
 fn add_benchmark(c: &mut Criterion) {
-    // parity with `parquet` crates' bench
-    let array = &create_primitive_array::<i64>(1024, DataType::Int64, 0.1);
-    c.bench_function("write i64 2^10", |b| b.iter(|| write(array).unwrap()));
+    (0..=10).step_by(2).for_each(|i| {
+        let array = &create_primitive_array::<i64>(1024 * 2usize.pow(i), DataType::Int64, 0.1);
+        let a = format!("write i64 2^{}", 10 + i);
+        c.bench_function(&a, |b| b.iter(|| write(array).unwrap()));
+    });
 
-    let array = &create_primitive_array::<i64>(1024 * 4, DataType::Int64, 0.1);
-    c.bench_function("write i64 2^12", |b| b.iter(|| write(array).unwrap()));
-    let array = &create_primitive_array::<i64>(1024 * 4 * 4, DataType::Int64, 0.1);
-    c.bench_function("write i64 2^14", |b| b.iter(|| write(array).unwrap()));
+    (0..=10).step_by(2).for_each(|i| {
+        let array = &create_boolean_array(1024 * 2usize.pow(i), 0.1, 0.5);
+        let a = format!("write bool 2^{}", 10 + i);
+        c.bench_function(&a, |b| b.iter(|| write(array).unwrap()));
+    });
 }
 
 criterion_group!(benches, add_benchmark);
