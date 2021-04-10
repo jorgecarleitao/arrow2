@@ -1,3 +1,4 @@
+mod boolean;
 mod primitive;
 
 use parquet2::{compression::CompressionCodec, read::CompressedPage};
@@ -10,6 +11,9 @@ pub fn array_to_page(array: &dyn Array) -> Result<CompressedPage> {
     // using plain encoding format
     let compression = CompressionCodec::Uncompressed;
     match array.data_type() {
+        DataType::Boolean => {
+            boolean::array_to_page_v1(array.as_any().downcast_ref().unwrap(), compression)
+        }
         DataType::Int32 => {
             primitive::array_to_page_v1::<i32>(array.as_any().downcast_ref().unwrap(), compression)
         }
@@ -70,6 +74,7 @@ mod tests {
             DataType::Int64 => "INT64",
             DataType::Float32 => "FLOAT",
             DataType::Float64 => "DOUBLE",
+            DataType::Boolean => "BOOLEAN",
             _ => todo!(),
         };
         let schema = SchemaDescriptor::new(from_message(&format!(
@@ -95,5 +100,10 @@ mod tests {
     #[test]
     fn test_int32() -> Result<()> {
         round_trip(0)
+    }
+
+    #[test]
+    fn test_bool() -> Result<()> {
+        round_trip(3)
     }
 }

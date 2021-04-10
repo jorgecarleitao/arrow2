@@ -40,7 +40,7 @@ itertools = { version = "^0.10", optional = true }
 
 [dependencies.parquet2]
 git = "https://github.com/jorgecarleitao/parquet2"
-rev = "e6b81efb228ac1137e290c58e2ca531b4d13ff46"
+rev = "1ec0838e5dae7e5fe1ae70bd479179446a8e3270"
 default-features = false
 features = ["snappy", "gzip", "lz4", "zstd", "brotli"]
 optional = true
