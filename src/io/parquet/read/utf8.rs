@@ -95,7 +95,6 @@ fn read_buffer<O: Offset>(
     let mut last_offset = *offsets.as_slice_mut().last().unwrap();
 
     // values_buffer: first 4 bytes are len, remaining is values
-    println!("{:?}", values_buffer);
     let mut values_iterator = utils::BinaryIter::new(values_buffer);
 
     let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
@@ -172,7 +171,6 @@ fn extend_from_page<O: Offset>(
     let has_validity = descriptor.max_def_level() == 1;
     match page {
         Page::V1(page) => {
-            println!("{:?}", page);
             assert_eq!(page.header.definition_level_encoding, Encoding::Rle);
             // split in two buffers: def_levels and data
             let (validity_buffer, values_buffer) = utils::split_buffer_v1(&page.buffer);

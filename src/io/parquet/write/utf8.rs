@@ -43,7 +43,6 @@ pub fn array_to_page_v1<O: Offset>(
         }
     });
     let uncompressed_page_size = buffer.len();
-    println!("{:?}", buffer);
 
     let codec = create_codec(&compression)?;
     let buffer = if let Some(mut codec) = codec {
