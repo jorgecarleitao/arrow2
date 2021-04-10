@@ -32,7 +32,7 @@ use crate::{
 };
 
 /// Calculates the scale factor between two TimeUnits. The function returns the
-/// number that should multiply the TimeUnit "b" to have at the same scale as
+/// scale that should multiply the TimeUnit "b" to have the same time scale as
 /// the TimeUnit "a".
 fn timeunit_scale(a: &TimeUnit, b: &TimeUnit) -> f64 {
     match (a, b) {
