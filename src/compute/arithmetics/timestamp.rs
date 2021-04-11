@@ -76,7 +76,9 @@ pub fn timestamp_diff(
     // Both timestamps have a Timeunit enum in its data type.
     // This enum is used to adjust the scale between the timestamps.
     match (lhs.data_type(), rhs.data_type()) {
-        (DataType::Timestamp(timeunit_a, _), DataType::Timestamp(timeunit_b, _)) => {
+        // Naive timestamp comparison. It doesn't take into account timezones
+        // from the Timestamp timeunit.
+        (DataType::Timestamp(timeunit_a, None), DataType::Timestamp(timeunit_b, None)) => {
             // Closure for the binary operation. The closure contains the scale
             // required to calculate the difference between the timestamps.
             let scale = timeunit_scale(timeunit_a, timeunit_b);
@@ -342,10 +344,7 @@ mod tests {
             None,
             Some(300_030i64),
         ])
-        .to(DataType::Timestamp(
-            TimeUnit::Second,
-            Some("America/New_York".to_string()),
-        ));
+        .to(DataType::Timestamp(TimeUnit::Second, None));
 
         let timestamp_b = Primitive::from(&vec![
             Some(100_000i64),
@@ -353,10 +352,7 @@ mod tests {
             None,
             Some(300_000i64),
         ])
-        .to(DataType::Timestamp(
-            TimeUnit::Second,
-            Some("America/New_York".to_string()),
-        ));
+        .to(DataType::Timestamp(TimeUnit::Second, None));
 
         let expected = Primitive::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)])
             .to(DataType::Duration(TimeUnit::Second));
@@ -373,10 +369,7 @@ mod tests {
             None,
             Some(300_000_000i64),
         ])
-        .to(DataType::Timestamp(
-            TimeUnit::Millisecond,
-            Some("America/New_York".to_string()),
-        ));
+        .to(DataType::Timestamp(TimeUnit::Millisecond, None));
 
         let timestamp_b = Primitive::from(&vec![
             Some(100_010i64),
@@ -384,10 +377,7 @@ mod tests {
             None,
             Some(300_030i64),
         ])
-        .to(DataType::Timestamp(
-            TimeUnit::Second,
-            Some("America/New_York".to_string()),
-        ));
+        .to(DataType::Timestamp(TimeUnit::Second, None));
 
         let expected = Primitive::from(&vec![
             Some(-10_000i64),
