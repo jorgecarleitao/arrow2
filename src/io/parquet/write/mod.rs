@@ -53,7 +53,7 @@ mod tests {
     use crate::error::Result;
     use crate::io::parquet::read::page_iter_to_array;
 
-    use super::super::tests::pyarrow_integration;
+    use super::super::tests::*;
 
     fn read_column<R: Read + Seek>(
         reader: &mut R,
@@ -68,8 +68,8 @@ mod tests {
         page_iter_to_array(iter, &descriptor)
     }
 
-    fn round_trip(column: usize) -> Result<()> {
-        let array = pyarrow_integration(column);
+    fn round_trip_optional(column: usize) -> Result<()> {
+        let array = pyarrow_nullable(column);
 
         let row_groups = std::iter::once(Result::Ok(std::iter::once(Ok(std::iter::once(
             array_to_page(array.as_ref()),
@@ -106,17 +106,17 @@ mod tests {
     }
 
     #[test]
-    fn test_int32() -> Result<()> {
-        round_trip(0)
+    fn test_int32_optional() -> Result<()> {
+        round_trip_optional(0)
     }
 
     #[test]
-    fn test_utf8() -> Result<()> {
-        round_trip(2)
+    fn test_utf8_optional() -> Result<()> {
+        round_trip_optional(2)
     }
 
     #[test]
-    fn test_bool() -> Result<()> {
-        round_trip(3)
+    fn test_bool_optional() -> Result<()> {
+        round_trip_optional(3)
     }
 }

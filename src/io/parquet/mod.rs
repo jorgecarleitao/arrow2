@@ -14,7 +14,7 @@ mod tests {
     use crate::array::*;
     use crate::datatypes::*;
 
-    pub fn pyarrow_integration(column: usize) -> Box<dyn Array> {
+    pub fn pyarrow_nullable(column: usize) -> Box<dyn Array> {
         let i64_values = &[
             Some(0),
             Some(1),
@@ -80,6 +80,27 @@ mod tests {
                     .collect::<Vec<_>>();
                 Box::new(Primitive::<u32>::from(values).to(DataType::UInt32))
             }
+            _ => unreachable!(),
+        }
+    }
+
+    // these values match the values in `integration`
+    pub fn pyarrow_required(column: usize) -> Box<dyn Array> {
+        let i64_values = &[
+            Some(0),
+            Some(1),
+            Some(2),
+            Some(3),
+            Some(4),
+            Some(5),
+            Some(6),
+            Some(7),
+            Some(8),
+            Some(9),
+        ];
+
+        match column {
+            0 => Box::new(Primitive::<i64>::from(i64_values).to(DataType::Int64)),
             _ => unreachable!(),
         }
     }
