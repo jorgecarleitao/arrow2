@@ -65,6 +65,31 @@ pub fn subtract_duration(
     }
 }
 
+/// Calculates the difference between two timestamps returning an array of type
+/// Duration. The timeunit enum is used to scale correctly both arrays;
+/// subtracting seconds with seconds, or milliseconds with milliseconds.
+pub fn timestamp_diff(
+    lhs: &PrimitiveArray<i64>,
+    rhs: &PrimitiveArray<i64>,
+) -> Result<PrimitiveArray<i64>> {
+    // Matching on both data types from both arrays.
+    // Both timestamps have a Timeunit enum in its data type.
+    // This enum is used to adjust the scale between the timestamps.
+    match (lhs.data_type(), rhs.data_type()) {
+        (DataType::Timestamp(timeunit_a, _), DataType::Timestamp(timeunit_b, _)) => {
+            // Closure for the binary operation. The closure contains the scale
+            // required to calculate the difference between the timestamps.
+            let scale = timeunit_scale(timeunit_a, timeunit_b);
+            let op = move |a, b| a - (b as f64 * scale) as i64;
+
+            binary(lhs, rhs, DataType::Duration(timeunit_a.clone()), op)
+        }
+        _ => Err(ArrowError::InvalidArgumentError(
+            "Incorrect data type for the arguments".to_string(),
+        )),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -306,6 +331,73 @@ mod tests {
         ));
 
         let result = subtract_duration(&timestamp, &duration).unwrap();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_timestamp_diff() {
+        let timestamp_a = Primitive::from(&vec![
+            Some(100_010i64),
+            Some(200_020i64),
+            None,
+            Some(300_030i64),
+        ])
+        .to(DataType::Timestamp(
+            TimeUnit::Second,
+            Some("America/New_York".to_string()),
+        ));
+
+        let timestamp_b = Primitive::from(&vec![
+            Some(100_000i64),
+            Some(200_000i64),
+            None,
+            Some(300_000i64),
+        ])
+        .to(DataType::Timestamp(
+            TimeUnit::Second,
+            Some("America/New_York".to_string()),
+        ));
+
+        let expected = Primitive::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)])
+            .to(DataType::Duration(TimeUnit::Second));
+
+        let result = timestamp_diff(&timestamp_a, &&timestamp_b).unwrap();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_timestamp_diff_scale() {
+        let timestamp_a = Primitive::from(&vec![
+            Some(100_000_000i64),
+            Some(200_000_000i64),
+            None,
+            Some(300_000_000i64),
+        ])
+        .to(DataType::Timestamp(
+            TimeUnit::Millisecond,
+            Some("America/New_York".to_string()),
+        ));
+
+        let timestamp_b = Primitive::from(&vec![
+            Some(100_010i64),
+            Some(200_020i64),
+            None,
+            Some(300_030i64),
+        ])
+        .to(DataType::Timestamp(
+            TimeUnit::Second,
+            Some("America/New_York".to_string()),
+        ));
+
+        let expected = Primitive::from(&vec![
+            Some(-10_000i64),
+            Some(-20_000i64),
+            None,
+            Some(-30_000i64),
+        ])
+        .to(DataType::Duration(TimeUnit::Millisecond));
+
+        let result = timestamp_diff(&timestamp_a, &&timestamp_b).unwrap();
         assert_eq!(result, expected);
     }
 }
