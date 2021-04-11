@@ -10,13 +10,15 @@ use crate::{
     datatypes::DataType,
 };
 
-/// Applies an unary and infallible function to a primitive array.
-/// This is the fastest way to perform an operation on a primitive array when
-/// the benefits of a vectorized operation outweights the cost of branching nulls and non-nulls.
+/// Applies an unary and infallible function to a primitive array. This is the
+/// fastest way to perform an operation on a primitive array when the benefits
+/// of a vectorized operation outweights the cost of branching nulls and
+/// non-nulls.
+///
 /// # Implementation
 /// This will apply the function for all values, including those on null slots.
-/// This implies that the operation must be infalible for any value of the corresponding type
-/// or this function may panic.
+/// This implies that the operation must be infalible for any value of the
+/// corresponding type or this function may panic.
 #[inline]
 pub fn unary<I, F, O>(array: &PrimitiveArray<I>, op: F, data_type: &DataType) -> PrimitiveArray<O>
 where
@@ -84,17 +86,13 @@ where
 pub fn try_binary<E, T, F>(
     lhs: &PrimitiveArray<T>,
     rhs: &PrimitiveArray<T>,
+    data_type: DataType,
     op: F,
 ) -> Result<PrimitiveArray<T>>
 where
     T: NativeType,
     F: Fn(T, T) -> Result<T>,
 {
-    if lhs.data_type() != rhs.data_type() {
-        return Err(ArrowError::InvalidArgumentError(
-            "Arrays must have the same logical type".to_string(),
-        ));
-    }
     if lhs.len() != rhs.len() {
         return Err(ArrowError::InvalidArgumentError(
             "Arrays must have the same length".to_string(),
@@ -115,9 +113,5 @@ where
     //      `values` is an iterator with a known size.
     let values = unsafe { Buffer::try_from_trusted_len_iter(values) }?;
 
-    Ok(PrimitiveArray::<T>::from_data(
-        lhs.data_type().clone(),
-        values,
-        validity,
-    ))
+    Ok(PrimitiveArray::<T>::from_data(data_type, values, validity))
 }
