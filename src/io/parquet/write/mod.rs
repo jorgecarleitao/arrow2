@@ -1,12 +1,15 @@
 mod boolean;
 mod primitive;
+mod schema;
 mod utf8;
 
 use parquet2::{compression::CompressionCodec, read::CompressedPage};
 
 use crate::array::*;
-use crate::datatypes::DataType;
+use crate::datatypes::*;
 use crate::error::Result;
+
+pub use schema::to_parquet_type;
 
 pub fn array_to_page(array: &dyn Array) -> Result<CompressedPage> {
     // using plain encoding format
@@ -46,7 +49,7 @@ mod tests {
     use parquet2::{
         metadata::SchemaDescriptor,
         read::{get_page_iterator, read_metadata},
-        schema::io_message::from_message,
+        schema::types::ParquetType,
         write::write_file,
     };
 
@@ -75,20 +78,12 @@ mod tests {
             array_to_page(array.as_ref()),
         )))));
 
-        // prepare schema
-        let (physical, converted) = match array.data_type() {
-            DataType::Int32 => ("INT32", ""),
-            DataType::Int64 => ("INT64", ""),
-            DataType::Float32 => ("FLOAT", ""),
-            DataType::Float64 => ("DOUBLE", ""),
-            DataType::Boolean => ("BOOLEAN", ""),
-            DataType::Utf8 => ("BYTE_ARRAY", "(UTF8)"),
-            _ => todo!(),
-        };
-        let schema = SchemaDescriptor::new(from_message(&format!(
-            "message schema {{ OPTIONAL {} col {}; }}",
-            physical, converted
-        ))?);
+        let field = Field::new("a1", array.data_type().clone(), true);
+        let parquet_type = to_parquet_type(&field)?;
+        let schema = SchemaDescriptor::new(ParquetType::new_root(
+            "root".to_string(),
+            vec![parquet_type],
+        ));
 
         let mut writer = Cursor::new(vec![]);
         write_file(
