@@ -4,25 +4,12 @@ import os
 import shutil
 
 PYARROW_PATH = "fixtures/pyarrow3"
-PYSPARK_PATH = "fixtures/pyspark3"
 
-def case1(size = 1):
+def case_basic_nullable(size = 1):
     int64 = [0, 1, None, 3, None, 5, 6, 7, None, 9]
     float64 = [0.0, 1.0, None, 3.0, None, 5.0, 6.0, 7.0, None, 9.0]
     string = ["Hello", None, "aa", "", None, "abc", None, None, "def", "aaa"]
     boolean = [True, None, False, False, None, True, None, None, True, True]
-
-    return {
-        "int64": int64 * size,
-        "float64": float64 * size,
-        "string": string * size,
-        "bool": boolean * size,
-        "date": int64 * size,
-        "uint32": int64 * size,
-    }, f"basic_nulls_{size*10}.parquet"
-
-def write_case1_pyarrow(size = 1, page_version = 1):
-    data, path = case1(size)
 
     fields = [
         pa.field('int64', pa.int64()),
@@ -34,46 +21,58 @@ def write_case1_pyarrow(size = 1, page_version = 1):
     ]
     schema = pa.schema(fields)
 
+    return {
+        "int64": int64 * size,
+        "float64": float64 * size,
+        "string": string * size,
+        "bool": boolean * size,
+        "date": int64 * size,
+        "uint32": int64 * size,
+    }, schema, f"basic_nullable_{size*10}.parquet"
+
+
+def case_basic_required(size = 1):
+    int64 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    float64 = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
+    string = ["Hello", "bbb", "aa", "", "bbb", "abc", "bbb", "bbb", "def", "aaa"]
+    boolean = [True, True, False, False, False, True, True, True, True, True]
+
+    fields = [
+        pa.field('int64', pa.int64(), nullable=False),
+        pa.field('float64', pa.float64(), nullable=False),
+        pa.field('string', pa.utf8(), nullable=False),
+        pa.field('bool', pa.bool_(), nullable=False),
+        pa.field('date', pa.timestamp('ms', ), nullable=False),
+        pa.field('uint32', pa.uint32(), nullable=False),
+    ]
+    schema = pa.schema(fields)
+
+    return {
+        "int64": int64 * size,
+        "float64": float64 * size,
+        "string": string * size,
+        "bool": boolean * size,
+        "date": int64 * size,
+        "uint32": int64 * size,
+    }, schema, f"basic_required_{size*10}.parquet"
+
+
+def write_pyarrow(case, size = 1, page_version = 1):
+    data, schema, path = case(size)
+
     base_path = f"{PYARROW_PATH}/v{page_version}"
 
     t = pa.table(data, schema=schema)
     os.makedirs(base_path, exist_ok=True)
     pa.parquet.write_table(t, f"{base_path}/{path}", data_page_version=f"{page_version}.0")
 
-for i in [1, 10, 100, 1000, 10000]:
-    write_case1_pyarrow(i)  # V1
-write_case1_pyarrow(1, 2)  # V2
-exit(0) # we are only testing against pyarrow in the code.
 
-def write_case1_pyspark():
-    data, path = case1()
-    from pyspark.sql import SparkSession
+write_pyarrow(case_basic_nullable, 1, 1)  # V1
+write_pyarrow(case_basic_nullable, 1, 2)  # V2
 
-    spark = SparkSession \
-        .builder \
-        .getOrCreate()
+write_pyarrow(case_basic_required, 1, 1)  # V1
+write_pyarrow(case_basic_required, 1, 2)  # V2
 
-    columns = list(data.keys())
-    length = len(data[columns[0]])
-    # transpose
-    df = spark.createDataFrame([
-        [int64[i], float64[i]] for i in range(length)
-    ], schema=columns)
-
-    os.makedirs(PYSPARK_PATH, exist_ok=True)
-    # 1 is required here so that we convert it to a single parquet file
-    df.coalesce(1).write.parquet(f"{PYSPARK_PATH}/{FILE_NAME}")
-
-    def _single_file_spark(file_name: str):
-        """
-        converts a directiory with a single parquet "part" into a single parquet file.
-        """
-        files = os.listdir(f"{PYSPARK_PATH}/{file_name}")
-        part = [a for a in files if a.endswith(".parquet")]
-        assert len(path) == 1
-
-        os.rename(f"{PYSPARK_PATH}/{file_name}/{part[0]}", f"{PYSPARK_PATH}/tmp.parquet")
-        shutil.rmtree(f"{PYSPARK_PATH}/{file_name}")
-        os.rename(f"{PYSPARK_PATH}/tmp.parquet", f"{PYSPARK_PATH}/{file_name}")
-
-    _single_file_spark(FILE_NAME)
+# for read benchmarks
+for i in [10, 100, 1000, 10000]:
+    write_pyarrow(case_basic_nullable, i, 1)  # V1

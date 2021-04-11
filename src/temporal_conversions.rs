@@ -1,5 +1,6 @@
 //! Conversion methods for dates and times.
 
+use crate::datatypes::TimeUnit;
 use chrono::{NaiveDateTime, NaiveTime};
 
 /// Number of seconds in a day
@@ -111,4 +112,28 @@ pub fn timestamp_ns_to_datetime(v: i64) -> NaiveDateTime {
         // discard extracted seconds
         (v % NANOSECONDS) as u32,
     )
+}
+
+/// Calculates the scale factor between two TimeUnits. The function returns the
+/// scale that should multiply the TimeUnit "b" to have the same time scale as
+/// the TimeUnit "a".
+pub fn timeunit_scale(a: &TimeUnit, b: &TimeUnit) -> f64 {
+    match (a, b) {
+        (TimeUnit::Second, TimeUnit::Second) => 1.0,
+        (TimeUnit::Second, TimeUnit::Millisecond) => 0.001,
+        (TimeUnit::Second, TimeUnit::Microsecond) => 0.000_001,
+        (TimeUnit::Second, TimeUnit::Nanosecond) => 0.000_000_001,
+        (TimeUnit::Millisecond, TimeUnit::Second) => 1_000.0,
+        (TimeUnit::Millisecond, TimeUnit::Millisecond) => 1.0,
+        (TimeUnit::Millisecond, TimeUnit::Microsecond) => 0.001,
+        (TimeUnit::Millisecond, TimeUnit::Nanosecond) => 0.000_001,
+        (TimeUnit::Microsecond, TimeUnit::Second) => 1_000_000.0,
+        (TimeUnit::Microsecond, TimeUnit::Millisecond) => 1_000.0,
+        (TimeUnit::Microsecond, TimeUnit::Microsecond) => 1.0,
+        (TimeUnit::Microsecond, TimeUnit::Nanosecond) => 0.001,
+        (TimeUnit::Nanosecond, TimeUnit::Second) => 1_000_000_000.0,
+        (TimeUnit::Nanosecond, TimeUnit::Millisecond) => 1_000_000.0,
+        (TimeUnit::Nanosecond, TimeUnit::Microsecond) => 1_000.0,
+        (TimeUnit::Nanosecond, TimeUnit::Nanosecond) => 1.0,
+    }
 }

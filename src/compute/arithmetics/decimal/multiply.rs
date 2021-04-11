@@ -74,7 +74,7 @@ pub fn multiply(
                     res
                 };
 
-                binary(lhs, rhs, op)
+                binary(lhs, rhs, lhs.data_type().clone(), op)
             } else {
                 return Err(ArrowError::InvalidArgumentError(
                     "Arrays must have the same precision and scale".to_string(),
@@ -125,7 +125,7 @@ pub fn saturating_multiply(
                     None => max_value(*lhs_p),
                 };
 
-                binary(lhs, rhs, op)
+                binary(lhs, rhs, lhs.data_type().clone(), op)
             } else {
                 return Err(ArrowError::InvalidArgumentError(
                     "Arrays must have the same precision and scale".to_string(),
@@ -176,7 +176,7 @@ pub fn checked_multiply(
                     }
                 };
 
-                try_binary(lhs, rhs, op)
+                try_binary(lhs, rhs, lhs.data_type().clone(), op)
             } else {
                 return Err(ArrowError::InvalidArgumentError(
                     "Arrays must have the same precision and scale".to_string(),

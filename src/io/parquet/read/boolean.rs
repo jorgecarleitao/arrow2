@@ -34,11 +34,11 @@ fn read_bitmap(
     values.reserve(length);
     for run in validity_iterator {
         match run {
-            hybrid_rle::HybridEncoded::Bitpacked(packed) => {
+            hybrid_rle::HybridEncoded::Bitpacked(packed_validity) => {
                 // the pack may contain more items than needed.
                 let remaining = length - values.len();
-                let len = std::cmp::min(packed.len() * 8, remaining);
-                for is_valid in BitmapIter::new(packed, 0, len) {
+                let len = std::cmp::min(packed_validity.len() * 8, remaining);
+                for is_valid in BitmapIter::new(packed_validity, 0, len) {
                     validity.push(is_valid);
                     let value = if is_valid {
                         values_iterator.next().unwrap()

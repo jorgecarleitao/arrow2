@@ -57,7 +57,7 @@ pub fn subtract(
                     res
                 };
 
-                binary(lhs, rhs, op)
+                binary(lhs, rhs, lhs.data_type().clone(), op)
             } else {
                 return Err(ArrowError::InvalidArgumentError(
                     "Arrays must have the same precision and scale".to_string(),
@@ -104,7 +104,7 @@ pub fn saturating_subtract(
                     }
                 };
 
-                binary(lhs, rhs, op)
+                binary(lhs, rhs, lhs.data_type().clone(), op)
             } else {
                 return Err(ArrowError::InvalidArgumentError(
                     "Arrays must have the same precision and scale".to_string(),
@@ -148,7 +148,7 @@ pub fn checked_subtract(
                     }
                 };
 
-                try_binary(lhs, rhs, op)
+                try_binary(lhs, rhs, lhs.data_type().clone(), op)
             } else {
                 return Err(ArrowError::InvalidArgumentError(
                     "Arrays must have the same precision and scale".to_string(),

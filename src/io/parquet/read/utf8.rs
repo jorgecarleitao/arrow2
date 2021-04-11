@@ -2,7 +2,7 @@ use parquet2::{
     encoding::{hybrid_rle, Encoding},
     metadata::ColumnDescriptor,
     read::{decompress_page, BinaryPageDict, CompressedPage, Page},
-    serialization::levels,
+    serialization::read::levels,
 };
 
 use crate::{
@@ -109,10 +109,12 @@ fn read_buffer<O: Offset>(
                 let len = std::cmp::min(packed.len() * 8, remaining);
                 for is_valid in BitmapIter::new(packed, 0, len) {
                     validity.push(is_valid);
-                    let value = values_iterator.next().unwrap();
-                    last_offset += O::from_usize(value.len()).unwrap();
+                    if is_valid {
+                        let value = values_iterator.next().unwrap();
+                        last_offset += O::from_usize(value.len()).unwrap();
+                        values.extend_from_slice(value);
+                    }
                     offsets.push(last_offset);
-                    values.extend_from_slice(value);
                 }
             }
             hybrid_rle::HybridEncoded::Rle(value, additional) => {
