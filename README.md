@@ -42,7 +42,10 @@ venv/bin/python -m parquet_integration/write_parquet.py
 ## Features in this crate and not in the original
 
 * Uses Rust's compiler whenever possible to prove that memory reads are sound
+* Reading parquet is 10-20x faster (single core) and deserialization is parallelizable
+* Writing parquet is 3-10x faster (single core) and serialization is parallelizable
 * MIRI checks on non-IO components (MIRI and file systems are a bit funny atm)
+* parquet IO has no `unsafe`
 * IPC supports big endian
 * More predictable JSON reader
 * Generalized parsing of CSV based on logical data types
@@ -52,16 +55,14 @@ venv/bin/python -m parquet_integration/write_parquet.py
 
 ## Features in the original not availabe in this crate
 
-* Parquet write
-* some compute kernels
-* SIMD (no plans to support: favor auto-vectorization instead)
+* Parquet read of nested types, arrow schema from the metadata, etc.
+* Parquet write V2, nested types, arrow schema to the metadata, etc.
 
 ## Roadmap
 
-1. parquet IO
-2. bring documentation up to speed
-3. compute kernels
-4. auto-vectorization of bitmap operations
+1. parquet read of nested types, arrow schema from the metadata, etc.
+2. parquet nested types, arrow schema to the metadata, etc.
+3. bring documentation up to speed
 
 ## How to develop
 

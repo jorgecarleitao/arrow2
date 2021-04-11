@@ -2,7 +2,7 @@ use parquet2::{
     encoding::{hybrid_rle, Encoding},
     metadata::ColumnDescriptor,
     read::{decompress_page, CompressedPage, Page, PrimitivePageDict},
-    serialization::levels,
+    serialization::read::levels,
     types,
     types::NativeType,
 };
@@ -23,7 +23,6 @@ fn read_dict_buffer<T: NativeType + ArrowNativeType>(
     indices_buffer: &[u8],
     length: u32,
     dict: &PrimitivePageDict<T>,
-    _has_validity: bool,
     values: &mut MutableBuffer<T>,
     validity: &mut MutableBitmap,
 ) {
@@ -75,18 +74,16 @@ fn read_dict_buffer<T: NativeType + ArrowNativeType>(
     }
 }
 
-fn read_buffer<T: NativeType + ArrowNativeType>(
+fn read_nullable<T: NativeType + ArrowNativeType>(
     validity_buffer: &[u8],
     values_buffer: &[u8],
     length: u32,
-    _has_validity: bool,
     values: &mut MutableBuffer<T>,
     validity: &mut MutableBitmap,
 ) {
     let length = length as usize;
 
-    let mut chunks = values_buffer[..length as usize * std::mem::size_of::<T>()]
-        .chunks_exact(std::mem::size_of::<T>());
+    let mut chunks = values_buffer.chunks_exact(std::mem::size_of::<T>());
 
     let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
 
@@ -124,6 +121,23 @@ fn read_buffer<T: NativeType + ArrowNativeType>(
     }
 }
 
+fn read_required<T: NativeType + ArrowNativeType>(
+    values_buffer: &[u8],
+    length: u32,
+    values: &mut MutableBuffer<T>,
+) {
+    // todo: for little endian machines this can be replaced by `extend_from_slice`
+    // via transmute.
+    let length = length as usize;
+    let size = std::mem::size_of::<T>();
+
+    let chunks = values_buffer[..length * size].chunks_exact(size);
+
+    let iter = chunks.map(|chunk| types::decode::<T>(chunk));
+
+    values.extend(iter);
+}
+
 pub fn iter_to_array<T, I, E>(
     mut iter: I,
     descriptor: &ColumnDescriptor,
@@ -155,32 +169,32 @@ fn extend_from_page<T: NativeType + ArrowNativeType>(
 ) -> Result<()> {
     let page = decompress_page(page)?;
     assert_eq!(descriptor.max_rep_level(), 0);
-    assert_eq!(descriptor.max_def_level(), 1);
     let has_validity = descriptor.max_def_level() == 1;
     match page {
         Page::V1(page) => {
             assert_eq!(page.header.definition_level_encoding, Encoding::Rle);
             let (validity_buffer, values_buffer) = utils::split_buffer_v1(&page.buffer);
 
-            match (&page.header.encoding, &page.dictionary_page) {
-                (Encoding::PlainDictionary, Some(dict)) => read_dict_buffer::<T>(
+            match (&page.header.encoding, &page.dictionary_page, has_validity) {
+                (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer::<T>(
                     validity_buffer,
                     values_buffer,
                     page.header.num_values as u32,
                     dict.as_any().downcast_ref().unwrap(),
-                    has_validity,
                     values,
                     validity,
                 ),
-                (Encoding::Plain, None) => read_buffer::<T>(
+                (Encoding::Plain, None, true) => read_nullable::<T>(
                     validity_buffer,
                     values_buffer,
                     page.header.num_values as u32,
-                    has_validity,
                     values,
                     validity,
                 ),
-                (encoding, None) => {
+                (Encoding::Plain, None, false) => {
+                    read_required::<T>(values_buffer, page.header.num_values as u32, values)
+                }
+                (encoding, None, _) => {
                     return Err(ArrowError::NotYetImplemented(format!(
                         "Encoding {:?} not yet implemented",
                         encoding
@@ -193,25 +207,26 @@ fn extend_from_page<T: NativeType + ArrowNativeType>(
             let def_level_buffer_length = page.header.definition_levels_byte_length as usize;
             let (validity_buffer, values_buffer) =
                 utils::split_buffer_v2(&page.buffer, def_level_buffer_length);
-            match (&page.header.encoding, &page.dictionary_page) {
-                (Encoding::PlainDictionary, Some(dict)) => read_dict_buffer::<T>(
+            match (&page.header.encoding, &page.dictionary_page, has_validity) {
+                (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer::<T>(
                     validity_buffer,
                     values_buffer,
                     page.header.num_values as u32,
                     dict.as_any().downcast_ref().unwrap(),
-                    has_validity,
                     values,
                     validity,
                 ),
-                (Encoding::Plain, None) => read_buffer::<T>(
+                (Encoding::Plain, None, true) => read_nullable::<T>(
                     validity_buffer,
                     values_buffer,
                     page.header.num_values as u32,
-                    has_validity,
                     values,
                     validity,
                 ),
-                (encoding, None) => {
+                (Encoding::Plain, None, false) => {
+                    read_required::<T>(values_buffer, page.header.num_values as u32, values)
+                }
+                (encoding, None, _) => {
                     return Err(ArrowError::NotYetImplemented(format!(
                         "Encoding {:?} not yet implemented",
                         encoding

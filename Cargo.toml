@@ -40,7 +40,7 @@ itertools = { version = "^0.10", optional = true }
 
 [dependencies.parquet2]
 git = "https://github.com/jorgecarleitao/parquet2"
-rev = "58975badad09819dd5bdb09c7441ab3239bb14c1"
+rev = "1ec0838e5dae7e5fe1ae70bd479179446a8e3270"
 default-features = false
 features = ["snappy", "gzip", "lz4", "zstd", "brotli"]
 optional = true
@@ -108,4 +108,8 @@ harness = false
 
 [[bench]]
 name = "read_parquet"
+harness = false
+
+[[bench]]
+name = "write_parquet"
 harness = false
