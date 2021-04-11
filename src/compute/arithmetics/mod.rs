@@ -214,7 +214,13 @@ pub fn add<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<Primit
 where
     T: NativeType + Add<Output = T>,
 {
-    binary(lhs, rhs, |a, b| a + b)
+    if lhs.data_type() != rhs.data_type() {
+        return Err(ArrowError::InvalidArgumentError(
+            "Arrays must have the same logical type".to_string(),
+        ));
+    }
+
+    binary(lhs, rhs, lhs.data_type().clone(), |a, b| a + b)
 }
 
 #[inline]
@@ -231,7 +237,13 @@ fn subtract<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<Primi
 where
     T: NativeType + Sub<Output = T>,
 {
-    binary(lhs, rhs, |a, b| a - b)
+    if lhs.data_type() != rhs.data_type() {
+        return Err(ArrowError::InvalidArgumentError(
+            "Arrays must have the same logical type".to_string(),
+        ));
+    }
+
+    binary(lhs, rhs, lhs.data_type().clone(), |a, b| a - b)
 }
 
 #[inline]
@@ -264,7 +276,13 @@ fn multiply<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<Primi
 where
     T: NativeType + Mul<Output = T>,
 {
-    binary(lhs, rhs, |lhs, rhs| lhs * rhs)
+    if lhs.data_type() != rhs.data_type() {
+        return Err(ArrowError::InvalidArgumentError(
+            "Arrays must have the same logical type".to_string(),
+        ));
+    }
+
+    binary(lhs, rhs, lhs.data_type().clone(), |lhs, rhs| lhs * rhs)
 }
 
 #[inline]

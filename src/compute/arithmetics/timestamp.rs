@@ -1,20 +1,3 @@
-// Licensed to the Apache Software Foundation (ASF) under one
-// or more contributor license agreements.  See the NOTICE file
-// distributed with this work for additional information
-// regarding copyright ownership.  The ASF licenses this file
-// to you under the Apache License, Version 2.0 (the
-// "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
-
 //! Defines the arithmetic kernels for Timestamp and Duration.
 //! For the purposes of Arrow Implementations, adding this value to a Timestamp
 //! ("t1") naively (i.e. simply summing the two number) is acceptable even
@@ -26,34 +9,11 @@
 
 use crate::{
     array::{Array, PrimitiveArray},
-    compute::arity::unchecked_binary,
-    datatypes::{DataType, TimeUnit},
+    compute::arity::binary,
+    datatypes::DataType,
     error::{ArrowError, Result},
+    temporal_conversions::timeunit_scale,
 };
-
-/// Calculates the scale factor between two TimeUnits. The function returns the
-/// scale that should multiply the TimeUnit "b" to have the same time scale as
-/// the TimeUnit "a".
-fn timeunit_scale(a: &TimeUnit, b: &TimeUnit) -> f64 {
-    match (a, b) {
-        (TimeUnit::Second, TimeUnit::Second) => 1.0,
-        (TimeUnit::Second, TimeUnit::Millisecond) => 0.001,
-        (TimeUnit::Second, TimeUnit::Microsecond) => 0.000_001,
-        (TimeUnit::Second, TimeUnit::Nanosecond) => 0.000_000_001,
-        (TimeUnit::Millisecond, TimeUnit::Second) => 1_000.0,
-        (TimeUnit::Millisecond, TimeUnit::Millisecond) => 1.0,
-        (TimeUnit::Millisecond, TimeUnit::Microsecond) => 0.001,
-        (TimeUnit::Millisecond, TimeUnit::Nanosecond) => 0.000_001,
-        (TimeUnit::Microsecond, TimeUnit::Second) => 1_000_000.0,
-        (TimeUnit::Microsecond, TimeUnit::Millisecond) => 1_000.0,
-        (TimeUnit::Microsecond, TimeUnit::Microsecond) => 1.0,
-        (TimeUnit::Microsecond, TimeUnit::Nanosecond) => 0.001,
-        (TimeUnit::Nanosecond, TimeUnit::Second) => 1_000_000_000.0,
-        (TimeUnit::Nanosecond, TimeUnit::Millisecond) => 1_000_000.0,
-        (TimeUnit::Nanosecond, TimeUnit::Microsecond) => 1_000.0,
-        (TimeUnit::Nanosecond, TimeUnit::Nanosecond) => 1.0,
-    }
-}
 
 /// Adds a duration to a timestamp array. The timeunit enum is used to scale
 /// correctly both arrays; adding seconds with seconds, or milliseconds with
@@ -72,7 +32,7 @@ pub fn add_duration(
             let scale = timeunit_scale(timeunit_a, timeunit_b);
             let op = move |a, b| a + (b as f64 * scale) as i64;
 
-            unchecked_binary(timestamp, duration, timestamp.data_type().clone(), op)
+            binary(timestamp, duration, timestamp.data_type().clone(), op)
         }
         _ => Err(ArrowError::InvalidArgumentError(
             "Incorrect data type for the arguments".to_string(),
@@ -97,7 +57,7 @@ pub fn subtract_duration(
             let scale = timeunit_scale(timeunit_a, timeunit_b);
             let op = move |a, b| a - (b as f64 * scale) as i64;
 
-            unchecked_binary(timestamp, duration, timestamp.data_type().clone(), op)
+            binary(timestamp, duration, timestamp.data_type().clone(), op)
         }
         _ => Err(ArrowError::InvalidArgumentError(
             "Incorrect data type for the arguments".to_string(),
