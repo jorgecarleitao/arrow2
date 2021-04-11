@@ -12,12 +12,12 @@ use crate::{
 
 /// Applies an unary and infallible function to a primitive array. This is the
 /// fastest way to perform an operation on a primitive array when the benefits
-/// of a vectorized operation outweights the cost of branching nulls and
+/// of a vectorized operation outweighs the cost of branching nulls and
 /// non-nulls.
 ///
 /// # Implementation
 /// This will apply the function for all values, including those on null slots.
-/// This implies that the operation must be infalible for any value of the
+/// This implies that the operation must be infallible for any value of the
 /// corresponding type or this function may panic.
 #[inline]
 pub fn unary<I, F, O>(array: &PrimitiveArray<I>, op: F, data_type: &DataType) -> PrimitiveArray<O>
@@ -50,15 +50,16 @@ where
 /// resulting array has to be selected by the implementer of the function as
 /// an argument for the function.
 #[inline]
-pub fn binary<T, F>(
+pub fn binary<T, D, F>(
     lhs: &PrimitiveArray<T>,
-    rhs: &PrimitiveArray<T>,
+    rhs: &PrimitiveArray<D>,
     data_type: DataType,
     op: F,
 ) -> Result<PrimitiveArray<T>>
 where
     T: NativeType,
-    F: Fn(T, T) -> T,
+    D: NativeType,
+    F: Fn(T, D) -> T,
 {
     if lhs.len() != rhs.len() {
         return Err(ArrowError::InvalidArgumentError(
@@ -83,15 +84,16 @@ where
     Ok(PrimitiveArray::<T>::from_data(data_type, values, validity))
 }
 
-pub fn try_binary<E, T, F>(
+pub fn try_binary<E, T, D, F>(
     lhs: &PrimitiveArray<T>,
-    rhs: &PrimitiveArray<T>,
+    rhs: &PrimitiveArray<D>,
     data_type: DataType,
     op: F,
 ) -> Result<PrimitiveArray<T>>
 where
     T: NativeType,
-    F: Fn(T, T) -> Result<T>,
+    D: NativeType,
+    F: Fn(T, D) -> Result<T>,
 {
     if lhs.len() != rhs.len() {
         return Err(ArrowError::InvalidArgumentError(

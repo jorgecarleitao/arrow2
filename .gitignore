@@ -4,3 +4,4 @@ venv
 lcov.info
 Cargo.lock
 fixtures
+settings.json
