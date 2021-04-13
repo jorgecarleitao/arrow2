@@ -9,6 +9,8 @@
 //! would yield a value that is possibly a few seconds off from the true
 //! elapsed time.
 
+use std::ops::{Add, Sub};
+
 use num::cast::AsPrimitive;
 
 use crate::{
@@ -19,59 +21,6 @@ use crate::{
     temporal_conversions::{timeunit_scale, SECONDS_IN_DAY},
     types::NativeType,
 };
-
-/// Scaling trait used to define scaled operations for certain numbers. The
-/// Scaled trait is sealed using the Sealed Trait Pattern. This pattern
-/// guarantees that the Sealed trait is not implement outside this crate.
-pub trait Scaled<D>: private::Sealed {
-    fn scaled_add(&self, duration: D, scale: f64) -> Self;
-    fn scaled_subtract(&self, duration: D, scale: f64) -> Self;
-}
-
-impl<D> Scaled<D> for i32
-where
-    D: AsPrimitive<f64>,
-{
-    fn scaled_add(&self, duration: D, scale: f64) -> Self {
-        let d: f64 = duration.as_();
-        let scaled: i32 = (d * scale).as_();
-
-        self + scaled
-    }
-
-    fn scaled_subtract(&self, duration: D, scale: f64) -> Self {
-        let d: f64 = duration.as_();
-        let scaled: i32 = (d * scale).as_();
-
-        self - scaled
-    }
-}
-
-impl<D> Scaled<D> for i64
-where
-    D: AsPrimitive<f64>,
-{
-    fn scaled_add(&self, duration: D, scale: f64) -> Self {
-        let d: f64 = duration.as_();
-        let scaled: i64 = (d * scale).as_();
-
-        self + scaled
-    }
-
-    fn scaled_subtract(&self, duration: D, scale: f64) -> Self {
-        let d: f64 = duration.as_();
-        let scaled: i64 = (d * scale).as_();
-
-        self - scaled
-    }
-}
-
-mod private {
-    pub trait Sealed {}
-
-    impl Sealed for i32 {}
-    impl Sealed for i64 {}
-}
 
 /// Creates the scale required to add or subtract a Duration to a time array
 /// (Timestamp, Time, or Date). The resulting scale always multiplies the rhs
@@ -120,14 +69,15 @@ pub fn add_duration<T, D>(
     duration: &PrimitiveArray<D>,
 ) -> Result<PrimitiveArray<T>>
 where
-    T: NativeType + Scaled<D>,
+    f64: AsPrimitive<T>,
+    T: NativeType + Add<T, Output = T>,
     D: NativeType + AsPrimitive<f64>,
 {
     let scale = create_scale(time.data_type(), duration.data_type())?;
 
     // Closure for the binary operation. The closure contains the scale
     // required to add a duration to the timestamp array.
-    let op = move |a: T, b: D| a.scaled_add(b, scale);
+    let op = move |a: T, b: D| a + (b.as_() * scale).as_();
 
     binary(time, duration, time.data_type().clone(), op)
 }
@@ -140,14 +90,15 @@ pub fn subtract_duration<T, D>(
     duration: &PrimitiveArray<D>,
 ) -> Result<PrimitiveArray<T>>
 where
-    T: NativeType + Scaled<D>,
+    f64: AsPrimitive<T>,
+    T: NativeType + Sub<T, Output = T>,
     D: NativeType + AsPrimitive<f64>,
 {
     let scale = create_scale(time.data_type(), duration.data_type())?;
 
     // Closure for the binary operation. The closure contains the scale
     // required to add a duration to the timestamp array.
-    let op = move |a: T, b: D| a.scaled_subtract(b, scale);
+    let op = move |a: T, b: D| a - (b.as_() * scale).as_();
 
     binary(time, duration, time.data_type().clone(), op)
 }
