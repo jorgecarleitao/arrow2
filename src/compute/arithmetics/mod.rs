@@ -17,7 +17,7 @@
 
 //! Defines basic arithmetic kernels for `PrimitiveArrays`.
 pub mod decimal;
-pub mod timestamp;
+pub mod time;
 
 use std::ops::{Add, Div, Mul, Neg, Sub};
 

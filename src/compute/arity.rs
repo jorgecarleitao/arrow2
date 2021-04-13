@@ -50,15 +50,16 @@ where
 /// resulting array has to be selected by the implementer of the function as
 /// an argument for the function.
 #[inline]
-pub fn binary<T, F>(
+pub fn binary<T, D, F>(
     lhs: &PrimitiveArray<T>,
-    rhs: &PrimitiveArray<T>,
+    rhs: &PrimitiveArray<D>,
     data_type: DataType,
     op: F,
 ) -> Result<PrimitiveArray<T>>
 where
     T: NativeType,
-    F: Fn(T, T) -> T,
+    D: NativeType,
+    F: Fn(T, D) -> T,
 {
     if lhs.len() != rhs.len() {
         return Err(ArrowError::InvalidArgumentError(
@@ -83,19 +84,16 @@ where
     Ok(PrimitiveArray::<T>::from_data(data_type, values, validity))
 }
 
-/// Applies a checked binary function to a pair of primitive arrays. The op
-/// function has to return an Arrow Result to be used with this function. The
-/// result from this function can be used to check if there was an
-/// ArrowError::ArithmeticError.
-pub fn try_binary<T, F>(
+pub fn try_binary<T, D, F>(
     lhs: &PrimitiveArray<T>,
-    rhs: &PrimitiveArray<T>,
+    rhs: &PrimitiveArray<D>,
     data_type: DataType,
     op: F,
 ) -> Result<PrimitiveArray<T>>
 where
     T: NativeType,
-    F: Fn(T, T) -> Result<T>,
+    D: NativeType,
+    F: Fn(T, D) -> Result<T>,
 {
     if lhs.len() != rhs.len() {
         return Err(ArrowError::InvalidArgumentError(
