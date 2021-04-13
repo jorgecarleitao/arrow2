@@ -16,7 +16,7 @@
 // under the License.
 
 //! Defines basic arithmetic kernels for `PrimitiveArrays`.
-pub mod timestamp;
+pub mod time;
 
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
