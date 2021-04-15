@@ -52,7 +52,6 @@ def bench(log2_size: int, datatype: str):
     t = pyarrow.table([data], schema=pyarrow.schema([field]))
 
     def f():
-        page_version = 1
         pyarrow.parquet.write_table(t,
             io.BytesIO(),
             use_dictionary=False,

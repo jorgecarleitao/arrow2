@@ -64,7 +64,13 @@ def write_pyarrow(case, size = 1, page_version = 1):
 
     t = pa.table(data, schema=schema)
     os.makedirs(base_path, exist_ok=True)
-    pa.parquet.write_table(t, f"{base_path}/{path}", data_page_version=f"{page_version}.0")
+    pa.parquet.write_table(t, f"{base_path}/{path}",
+        use_dictionary=False,
+        compression=None,
+        write_statistics=False,
+        data_page_size=2**40,  # i.e. a large number to ensure a single page
+        data_page_version="1.0",
+    )
 
 
 write_pyarrow(case_basic_nullable, 1, 1)  # V1
@@ -73,6 +79,16 @@ write_pyarrow(case_basic_nullable, 1, 2)  # V2
 write_pyarrow(case_basic_required, 1, 1)  # V1
 write_pyarrow(case_basic_required, 1, 2)  # V2
 
+
+def case_benches(size):
+    assert size % 8 == 0
+    size //= 8
+    data, schema, path = case_basic_nullable(1)
+    for k in data:
+        data[k] = data[k][:8] * size
+    return data, schema, f"benches_{size}.parquet"
+
+
 # for read benchmarks
-for i in [10, 100, 1000, 10000]:
-    write_pyarrow(case_basic_nullable, i, 1)  # V1
+for i in range(3 + 10, 3 + 22, 2):
+    write_pyarrow(case_benches, 2**i, 1)  # V1

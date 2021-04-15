@@ -1,4 +1,5 @@
-use std::{fs::File, path::PathBuf};
+use std::io::Read;
+use std::{fs, io::Cursor, path::PathBuf};
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
@@ -6,14 +7,18 @@ use arrow2::error::Result;
 use arrow2::io::parquet::read::page_iter_to_array;
 use parquet2::read::{get_page_iterator, read_metadata};
 
-fn read_decompressed_pages(size: usize, column: usize) -> Result<()> {
-    // reads decompressed pages (i.e. CPU)
+fn to_buffer(size: usize) -> Vec<u8> {
     let dir = env!("CARGO_MANIFEST_DIR");
-    let path = PathBuf::from(dir).join(format!(
-        "fixtures/pyarrow3/v1/basic_nullable_{}.parquet",
-        size
-    ));
-    let mut file = File::open(path).unwrap();
+    let path = PathBuf::from(dir).join(format!("fixtures/pyarrow3/v1/benches_{}.parquet", size));
+    let metadata = fs::metadata(&path).expect("unable to read metadata");
+    let mut file = fs::File::open(path).unwrap();
+    let mut buffer = vec![0; metadata.len() as usize];
+    file.read(&mut buffer).expect("buffer overflow");
+    buffer
+}
+
+fn read_decompressed_pages(buffer: &[u8], column: usize) -> Result<()> {
+    let mut file = Cursor::new(buffer);
 
     let metadata = read_metadata(&mut file)?;
 
@@ -26,17 +31,28 @@ fn read_decompressed_pages(size: usize, column: usize) -> Result<()> {
 }
 
 fn add_benchmark(c: &mut Criterion) {
-    c.bench_function("read u64 10000", |b| {
-        b.iter(|| read_decompressed_pages(1000, 0))
+    (10..=20).step_by(2).for_each(|i| {
+        let buffer = to_buffer(2usize.pow(i));
+        let a = format!("read i64 2^{}", i);
+        c.bench_function(&a, |b| {
+            b.iter(|| read_decompressed_pages(&buffer, 0).unwrap())
+        });
     });
-    c.bench_function("read u64 100000", |b| {
-        b.iter(|| read_decompressed_pages(10000, 0))
+
+    (10..=20).step_by(2).for_each(|i| {
+        let buffer = to_buffer(2usize.pow(i));
+        let a = format!("read utf8 2^{}", i);
+        c.bench_function(&a, |b| {
+            b.iter(|| read_decompressed_pages(&buffer, 2).unwrap())
+        });
     });
-    c.bench_function("read utf8 10000", |b| {
-        b.iter(|| read_decompressed_pages(1000, 2))
-    });
-    c.bench_function("read utf8 100000", |b| {
-        b.iter(|| read_decompressed_pages(10000, 2))
+
+    (10..=20).step_by(2).for_each(|i| {
+        let buffer = to_buffer(2usize.pow(i));
+        let a = format!("read bool 2^{}", i);
+        c.bench_function(&a, |b| {
+            b.iter(|| read_decompressed_pages(&buffer, 3).unwrap())
+        });
     });
 }
 
