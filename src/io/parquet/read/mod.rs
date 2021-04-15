@@ -1,5 +1,6 @@
 mod boolean;
 mod primitive;
+pub mod schema;
 mod utf8;
 mod utils;
 

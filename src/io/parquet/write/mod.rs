@@ -49,7 +49,6 @@ mod tests {
     use parquet2::{
         metadata::SchemaDescriptor,
         read::{get_page_iterator, read_metadata},
-        schema::types::ParquetType,
         write::write_file,
     };
 
@@ -80,15 +79,12 @@ mod tests {
 
         let field = Field::new("a1", array.data_type().clone(), true);
         let parquet_type = to_parquet_type(&field)?;
-        let schema = SchemaDescriptor::new(ParquetType::new_root(
-            "root".to_string(),
-            vec![parquet_type],
-        ));
+        let schema = SchemaDescriptor::new("root".to_string(), vec![parquet_type]);
 
         let mut writer = Cursor::new(vec![]);
         write_file(
             &mut writer,
-            &schema,
+            schema,
             CompressionCodec::Uncompressed,
             row_groups,
         )?;

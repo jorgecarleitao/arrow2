@@ -38,9 +38,11 @@ rand = { version = "0.7", optional = true }
 
 itertools = { version = "^0.10", optional = true }
 
+base64 = { version = "0.13.0", optional = true }
+
 [dependencies.parquet2]
 git = "https://github.com/jorgecarleitao/parquet2"
-rev = "92156b7e7d675f6359cfb4716177aa4d25bb8aaa"
+rev = "fb65dcaf7d02c7e0bcf8ec0aa85d3fe0cb0630c6"
 default-features = false
 features = ["snappy", "gzip", "lz4", "zstd", "brotli"]
 optional = true
@@ -58,7 +60,8 @@ io_csv = ["csv", "lazy_static", "regex"]
 io_json = ["serde", "serde_derive", "serde_json", "indexmap"]
 io_ipc = ["flatbuffers"]
 io_json_integration = ["io_json", "hex"]
-io_parquet = ["parquet2"]
+# base64 + io_ipc because arrow schemas are stored as base64-encoded ipc format.
+io_parquet = ["parquet2", "io_ipc", "base64"]
 benchmarks = ["rand"]
 
 [package.metadata.cargo-all-features]
