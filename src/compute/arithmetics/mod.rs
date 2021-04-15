@@ -16,6 +16,7 @@
 // under the License.
 
 //! Defines basic arithmetic kernels for `PrimitiveArrays`.
+pub mod decimal;
 pub mod time;
 
 use std::ops::{Add, Div, Mul, Neg, Sub};
@@ -37,7 +38,7 @@ use super::utils::combine_validities;
 // It returns the result from the arithmetic_primitive function evaluated with
 // the Operator selected
 macro_rules! primitive_arithmetic_match {
-    ($lhs: expr, $rhs: expr, $op: expr, $primitive_array_type: ty, $data_type: expr) => {{
+    ($lhs: expr, $rhs: expr, $op: expr, $primitive_array_type: ty) => {{
         let res_lhs = $lhs
             .as_any()
             .downcast_ref::<$primitive_array_type>()
@@ -66,21 +67,31 @@ pub fn arithmetic(lhs: &dyn Array, op: Operator, rhs: &dyn Array) -> Result<Box<
         ));
     }
     match data_type {
-        DataType::Int8 => primitive_arithmetic_match!(lhs, rhs, op, Int8Array, data_type),
-        DataType::Int16 => primitive_arithmetic_match!(lhs, rhs, op, Int16Array, data_type),
-        DataType::Int32 => primitive_arithmetic_match!(lhs, rhs, op, Int32Array, data_type),
+        DataType::Int8 => primitive_arithmetic_match!(lhs, rhs, op, Int8Array),
+        DataType::Int16 => primitive_arithmetic_match!(lhs, rhs, op, Int16Array),
+        DataType::Int32 => primitive_arithmetic_match!(lhs, rhs, op, Int32Array),
         DataType::Int64 | DataType::Duration(_) => {
-            primitive_arithmetic_match!(lhs, rhs, op, Int64Array, data_type)
+            primitive_arithmetic_match!(lhs, rhs, op, Int64Array)
         }
-        DataType::UInt8 => primitive_arithmetic_match!(lhs, rhs, op, UInt8Array, data_type),
-        DataType::UInt16 => primitive_arithmetic_match!(lhs, rhs, op, UInt16Array, data_type),
-        DataType::UInt32 => primitive_arithmetic_match!(lhs, rhs, op, UInt32Array, data_type),
-        DataType::UInt64 => primitive_arithmetic_match!(lhs, rhs, op, UInt64Array, data_type),
+        DataType::UInt8 => primitive_arithmetic_match!(lhs, rhs, op, UInt8Array),
+        DataType::UInt16 => primitive_arithmetic_match!(lhs, rhs, op, UInt16Array),
+        DataType::UInt32 => primitive_arithmetic_match!(lhs, rhs, op, UInt32Array),
+        DataType::UInt64 => primitive_arithmetic_match!(lhs, rhs, op, UInt64Array),
         DataType::Float16 => unreachable!(),
-        DataType::Float32 => primitive_arithmetic_match!(lhs, rhs, op, Float32Array, data_type),
-        DataType::Float64 => primitive_arithmetic_match!(lhs, rhs, op, Float64Array, data_type),
+        DataType::Float32 => primitive_arithmetic_match!(lhs, rhs, op, Float32Array),
+        DataType::Float64 => primitive_arithmetic_match!(lhs, rhs, op, Float64Array),
         DataType::Decimal(_, _) => {
-            primitive_arithmetic_match!(lhs, rhs, op, Int128Array, data_type)
+            let lhs = lhs.as_any().downcast_ref::<Int128Array>().unwrap();
+            let rhs = rhs.as_any().downcast_ref::<Int128Array>().unwrap();
+
+            let res = match op {
+                Operator::Add => decimal::add::add(lhs, rhs),
+                Operator::Subtract => decimal::subtract::subtract(lhs, rhs),
+                Operator::Multiply => decimal::multiply::multiply(lhs, rhs),
+                Operator::Divide => decimal::divide::divide(lhs, rhs),
+            };
+
+            res.map(Box::new).map(|x| x as Box<dyn Array>)
         }
         _ => Err(ArrowError::NotYetImplemented(format!(
             "Arithmetics between {:?} is not supported",
@@ -373,33 +384,5 @@ mod tests {
         let actual = powf_scalar(&a, 2.0);
         let expected = Primitive::from(&vec![Some(4f32), None]).to(DataType::Float32);
         assert_eq!(expected, actual);
-    }
-
-    #[test]
-    fn test_add_decimal() {
-        let a = Primitive::from(&vec![
-            Some(11111i128),
-            Some(11100i128),
-            None,
-            Some(22200i128),
-        ])
-        .to(DataType::Decimal(5, 2));
-        let b = Primitive::from(&vec![
-            Some(22222i128),
-            Some(22200i128),
-            None,
-            Some(11100i128),
-        ])
-        .to(DataType::Decimal(5, 2));
-        let result = add(&a, &b).unwrap();
-        let expected = Primitive::from(&vec![
-            Some(33333i128),
-            Some(33300i128),
-            None,
-            Some(33300i128),
-        ])
-        .to(DataType::Decimal(5, 2));
-
-        assert_eq!(result, expected);
     }
 }

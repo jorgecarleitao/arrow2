@@ -84,7 +84,7 @@ where
     Ok(PrimitiveArray::<T>::from_data(data_type, values, validity))
 }
 
-pub fn try_binary<E, T, D, F>(
+pub fn try_binary<T, D, F>(
     lhs: &PrimitiveArray<T>,
     rhs: &PrimitiveArray<D>,
     data_type: DataType,
@@ -107,7 +107,8 @@ where
         .values()
         .iter()
         .zip(rhs.values().iter())
-        .map(|(l, r)| op(*l, *r).map_err(ArrowError::from_external_error));
+        .map(|(l, r)| op(*l, *r));
+
     // JUSTIFICATION
     //  Benefit
     //      ~60% speedup
