@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-//! Defines the division arithmetic kernels for Decimal
+//! Defines the multiplication arithmetic kernels for Decimal
 //! `PrimitiveArrays`.
 
 use crate::{
@@ -31,15 +31,11 @@ use super::{adjusted_precision_scale, max_value, number_digits};
 use crate::compute::arity::{binary, try_binary};
 use crate::compute::utils::combine_validities;
 
-/// Divide two decimal primitive arrays with the same precision and scale. If
+/// Multiply two decimal primitive arrays with the same precision and scale. If
 /// the precision and scale is different, then an InvalidArgumentError is
-/// returned. This function panics if the dividend is divided by 0 or None.
-/// This function also panics if the division produces a number larger
-/// than the possible number for the array precision.
-pub fn divide(
-    lhs: &PrimitiveArray<i128>,
-    rhs: &PrimitiveArray<i128>,
-) -> Result<PrimitiveArray<i128>> {
+/// returned. This function panics if the multiplied numbers result in a number
+/// larger than the possible number for the selected precision.
+pub fn mul(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<PrimitiveArray<i128>> {
     // Matching on both data types from both arrays
     // This match will be true only when precision and scale from both
     // arrays are the same, otherwise it will return and ArrowError
@@ -50,19 +46,20 @@ pub fn divide(
                 // the sum of the values is larger than the max value possible
                 // for the decimal precision
                 let op = move |a: i128, b: i128| {
-                    // The division is done using the numbers without scale.
-                    // The dividend is scaled up to maintain precision after the
-                    // division
+                    // The multiplication between i128 can overflow if they are
+                    // very large numbers. For that reason a checked
+                    // multiplication is used.
+                    let res: i128 = a.checked_mul(b).expect("Mayor overflow for multiplication");
 
-                    //   222.222 -->  222222000
-                    //   123.456 -->     123456
-                    // --------       ---------
-                    //     1.800 <--       1800
-                    let numeral: i128 = a * 10i128.pow(*lhs_s as u32);
+                    // The multiplication is done using the numbers without scale.
+                    // The resulting scale of the value has to be corrected by
+                    // dividing by (10^scale)
 
-                    // The division can overflow if the dividend is divided
-                    // by zero.
-                    let res: i128 = numeral.checked_div(b).expect("Found division by zero");
+                    //   111.111 -->      111111
+                    //   222.222 -->      222222
+                    // --------          -------
+                    // 24691.308 <-- 24691308642
+                    let res = res / 10i128.pow(*lhs_s as u32);
 
                     if res.abs() > max_value(*lhs_p) {
                         panic!(
@@ -89,13 +86,13 @@ pub fn divide(
     }
 }
 
-/// Saturated division of two decimal primitive arrays with the same
+/// Saturated multiplication of two decimal primitive arrays with the same
 /// precision and scale. If the precision and scale is different, then an
-/// InvalidArgumentError is returned. If the result from the division is
+/// InvalidArgumentError is returned. If the result from the multiplication is
 /// larger than the possible number with the selected precision then the
 /// resulted number in the arrow array is the maximum number for the selected
 /// precision.
-pub fn saturating_divide(
+pub fn saturating_mul(
     lhs: &PrimitiveArray<i128>,
     rhs: &PrimitiveArray<i128>,
 ) -> Result<PrimitiveArray<i128>> {
@@ -106,26 +103,23 @@ pub fn saturating_divide(
         (DataType::Decimal(lhs_p, lhs_s), DataType::Decimal(rhs_p, rhs_s)) => {
             if lhs_p == rhs_p && lhs_s == rhs_s {
                 // Closure for the binary operation.
-                let op = move |a: i128, b: i128| {
-                    let numeral: i128 = a * 10i128.pow(*lhs_s as u32);
+                let op = move |a: i128, b: i128| match a.checked_mul(b) {
+                    Some(res) => {
+                        let res = res / 10i128.pow(*lhs_s as u32);
+                        let max = max_value(*lhs_p);
 
-                    match numeral.checked_div(b) {
-                        Some(res) => {
-                            let max = max_value(*lhs_p);
-
-                            match res {
-                                res if res.abs() > max => {
-                                    if res > 0 {
-                                        max
-                                    } else {
-                                        -1 * max
-                                    }
+                        match res {
+                            res if res.abs() > max => {
+                                if res > 0 {
+                                    max
+                                } else {
+                                    -1 * max
                                 }
-                                _ => res,
                             }
+                            _ => res,
                         }
-                        None => 0,
                     }
+                    None => max_value(*lhs_p),
                 };
 
                 binary(lhs, rhs, lhs.data_type().clone(), op)
@@ -143,12 +137,12 @@ pub fn saturating_divide(
     }
 }
 
-/// Checked division of two decimal primitive arrays with the same precision
-/// and scale. If the precision and scale is different, then an
-/// InvalidArgumentError is returned. If the result from the division is larger
-/// than the possible number with the selected precision then the function
-/// returns an ArrowError::ArithmeticError.
-pub fn checked_divide(
+/// Checked multiplication of two decimal primitive arrays with the same
+/// precision and scale. If the precision and scale is different, then an
+/// InvalidArgumentError is returned. If the result from the multiplication is
+/// larger than the possible number with the selected precision then the
+/// function returns an ArrowError::ArithmeticError.
+pub fn checked_mul(
     lhs: &PrimitiveArray<i128>,
     rhs: &PrimitiveArray<i128>,
 ) -> Result<PrimitiveArray<i128>> {
@@ -159,23 +153,23 @@ pub fn checked_divide(
         (DataType::Decimal(lhs_p, lhs_s), DataType::Decimal(rhs_p, rhs_s)) => {
             if lhs_p == rhs_p && lhs_s == rhs_s {
                 // Closure for the binary operation.
-                let op = move |a: i128, b: i128| {
-                    let numeral: i128 = a * 10i128.pow(*lhs_s as u32);
+                let op = move |a: i128, b: i128| match a.checked_mul(b) {
+                    Some(res) => {
+                        let res = res / 10i128.pow(*lhs_s as u32);
 
-                    match numeral.checked_mul(b) {
-                        Some(res) => match res {
+                        match res {
                             res if res.abs() > max_value(*lhs_p) => {
                                 return Err(ArrowError::ArithmeticError(
                                     "Saturated result in multiplication".to_string(),
                                 ));
                             }
                             _ => Ok(res),
-                        },
-                        None => {
-                            return Err(ArrowError::ArithmeticError(
-                                "Found division by zero".to_string(),
-                            ));
                         }
+                    }
+                    None => {
+                        return Err(ArrowError::ArithmeticError(
+                            "Saturated result in multiplication".to_string(),
+                        ));
                     }
                 };
 
@@ -194,12 +188,13 @@ pub fn checked_divide(
     }
 }
 
-/// Adaptive division of two decimal primitive arrays with different precision
-/// and scale. If the precision and scale is different, then the smallest scale
-/// and precision is adjusted to the largest precision and scale. If during the
-/// division one of the results is larger than the max possible value, the
-/// result precision is changed to the precision of the max value
-pub fn adaptive_divide(
+/// Adaptive multiplication of two decimal primitive arrays with different
+/// precision and scale. If the precision and scale is different, then the
+/// smallest scale and precision is adjusted to the largest precision and
+/// scale. If during the multiplication one of the results is larger than the
+/// max possible value, the result precision is changed to the precision of the
+/// max value
+pub fn adaptive_mul(
     lhs: &PrimitiveArray<i128>,
     rhs: &PrimitiveArray<i128>,
 ) -> Result<PrimitiveArray<i128>> {
@@ -219,26 +214,25 @@ pub fn adaptive_divide(
 
         let mut result = Vec::new();
         for (l, r) in lhs.values().iter().zip(rhs.values().iter()) {
-            let numeral: i128 = l * 10i128.pow(res_s as u32);
-
             // Based on the array's scales one of the arguments in the sum has to be shifted
             // to the left to match the final scale
             let res = if lhs_s > rhs_s {
-                numeral
-                    .checked_div(r * 10i128.pow(diff as u32))
-                    .expect("Found division by zero")
+                l.checked_mul(r * 10i128.pow(diff as u32))
+                    .expect("Mayor overflow for multiplication")
             } else {
-                (numeral * 10i128.pow(diff as u32))
-                    .checked_div(*r)
-                    .expect("Found division by zero")
+                (l * 10i128.pow(diff as u32))
+                    .checked_mul(*r)
+                    .expect("Mayor overflow for multiplication")
             };
+
+            let res = res / 10i128.pow(res_s as u32);
 
             // The precision of the resulting array will change if one of the
             // multiplications during the iteration produces a value bigger
             // than the possible value for the initial precision
 
             //  10.0000 -> 6, 4
-            //  00.1000 -> 6, 4
+            //  10.0000 -> 6, 4
             // -----------------
             // 100.0000 -> 7, 4
             if res.abs() > max_value(res_p) {
@@ -270,50 +264,50 @@ mod tests {
     use crate::datatypes::DataType;
 
     #[test]
-    fn test_divide_normal() {
-        //   222.222 -->  222222000
-        //   123.456 -->     123456
-        // --------       ---------
-        //     1.800 <--       1800
+    fn test_multiply_normal() {
+        //   111.11 -->     11111
+        //   222.22 -->     22222
+        // --------       -------
+        // 24690.86 <-- 246908642
         let a = Primitive::from(&vec![
-            Some(222_222i128),
-            Some(10_000i128),
-            Some(20_000i128),
+            Some(111_11i128),
+            Some(10_00i128),
+            Some(20_00i128),
             None,
-            Some(30_000i128),
-            Some(123_456i128),
+            Some(30_00i128),
+            Some(123_45i128),
         ])
-        .to(DataType::Decimal(7, 3));
+        .to(DataType::Decimal(7, 2));
 
         let b = Primitive::from(&vec![
-            Some(123_456i128),
-            Some(2_000i128),
-            Some(3_000i128),
-            Some(4_000i128),
-            Some(4_000i128),
-            Some(654_321i128),
-        ])
-        .to(DataType::Decimal(7, 3));
-
-        let result = divide(&a, &b).unwrap();
-        let expected = Primitive::from(&vec![
-            Some(1_800i128),
-            Some(5_000i128),
-            Some(6_666i128),
+            Some(222_22i128),
+            Some(2_00i128),
+            Some(3_00i128),
             None,
-            Some(7_500i128),
-            Some(0_188i128),
+            Some(4_00i128),
+            Some(543_21i128),
         ])
-        .to(DataType::Decimal(7, 3));
+        .to(DataType::Decimal(7, 2));
+
+        let result = mul(&a, &b).unwrap();
+        let expected = Primitive::from(&vec![
+            Some(24690_86i128),
+            Some(20_00i128),
+            Some(60_00i128),
+            None,
+            Some(120_00i128),
+            Some(67059_27i128),
+        ])
+        .to(DataType::Decimal(7, 2));
 
         assert_eq!(result, expected);
     }
 
     #[test]
-    fn test_divide_decimal_wrong_precision() {
+    fn test_multiply_decimal_wrong_precision() {
         let a = Primitive::from(&vec![None]).to(DataType::Decimal(5, 2));
         let b = Primitive::from(&vec![None]).to(DataType::Decimal(6, 2));
-        let result = divide(&a, &b);
+        let result = mul(&a, &b);
 
         if result.is_ok() {
             panic!("Should panic for different precision");
@@ -322,52 +316,51 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "Overflow in multiplication presented for precision 5")]
-    fn test_divide_panic() {
+    fn test_multiply_panic() {
         let a = Primitive::from(&vec![Some(99999i128)]).to(DataType::Decimal(5, 2));
-        let b = Primitive::from(&vec![Some(000_01i128)]).to(DataType::Decimal(5, 2));
-        let _ = divide(&a, &b);
+        let b = Primitive::from(&vec![Some(100_00i128)]).to(DataType::Decimal(5, 2));
+        let _ = mul(&a, &b);
     }
 
     #[test]
-    fn test_divide_saturating() {
+    fn test_multiply_saturating() {
         let a = Primitive::from(&vec![
-            Some(222_222i128),
-            Some(10_000i128),
-            Some(20_000i128),
+            Some(111_11i128),
+            Some(10_00i128),
+            Some(20_00i128),
             None,
-            Some(30_000i128),
-            Some(123_456i128),
+            Some(30_00i128),
+            Some(123_45i128),
         ])
-        .to(DataType::Decimal(7, 3));
+        .to(DataType::Decimal(7, 2));
 
         let b = Primitive::from(&vec![
-            Some(123_456i128),
-            Some(2_000i128),
-            Some(3_000i128),
-            Some(4_000i128),
-            Some(4_000i128),
-            Some(654_321i128),
-        ])
-        .to(DataType::Decimal(7, 3));
-
-        let result = saturating_divide(&a, &b).unwrap();
-        let expected = Primitive::from(&vec![
-            Some(1_800i128),
-            Some(5_000i128),
-            Some(6_666i128),
+            Some(222_22i128),
+            Some(2_00i128),
+            Some(3_00i128),
             None,
-            Some(7_500i128),
-            Some(0_188i128),
+            Some(4_00i128),
+            Some(543_21i128),
         ])
-        .to(DataType::Decimal(7, 3));
+        .to(DataType::Decimal(7, 2));
+
+        let result = saturating_mul(&a, &b).unwrap();
+        let expected = Primitive::from(&vec![
+            Some(24690_86i128),
+            Some(20_00i128),
+            Some(60_00i128),
+            None,
+            Some(120_00i128),
+            Some(67059_27i128),
+        ])
+        .to(DataType::Decimal(7, 2));
 
         assert_eq!(result, expected);
     }
 
     #[test]
-    fn test_divide_saturating_overflow() {
+    fn test_multiply_saturating_overflow() {
         let a = Primitive::from(&vec![
-            Some(99999i128),
             Some(99999i128),
             Some(99999i128),
             Some(99999i128),
@@ -375,22 +368,20 @@ mod tests {
         ])
         .to(DataType::Decimal(5, 2));
         let b = Primitive::from(&vec![
-            Some(-00001i128),
-            Some(00001i128),
-            Some(00010i128),
-            Some(-00020i128),
-            Some(00000i128),
+            Some(-00100i128),
+            Some(01000i128),
+            Some(10000i128),
+            Some(-99999i128),
         ])
         .to(DataType::Decimal(5, 2));
 
-        let result = saturating_divide(&a, &b).unwrap();
+        let result = saturating_mul(&a, &b).unwrap();
 
         let expected = Primitive::from(&vec![
             Some(-99999i128),
             Some(99999i128),
             Some(99999i128),
             Some(-99999i128),
-            Some(00000i128),
         ])
         .to(DataType::Decimal(5, 2));
 
@@ -398,46 +389,46 @@ mod tests {
     }
 
     #[test]
-    fn test_divide_checked() {
+    fn test_multiply_checked() {
         let a = Primitive::from(&vec![
-            Some(222_222i128),
-            Some(10_000i128),
-            Some(20_000i128),
+            Some(111_11i128),
+            Some(10_00i128),
+            Some(20_00i128),
             None,
-            Some(30_000i128),
-            Some(123_456i128),
+            Some(30_00i128),
+            Some(123_45i128),
         ])
-        .to(DataType::Decimal(7, 3));
+        .to(DataType::Decimal(7, 2));
 
         let b = Primitive::from(&vec![
-            Some(123_456i128),
-            Some(2_000i128),
-            Some(3_000i128),
-            Some(4_000i128),
-            Some(4_000i128),
-            Some(654_321i128),
-        ])
-        .to(DataType::Decimal(7, 3));
-
-        let result = divide(&a, &b).unwrap();
-        let expected = Primitive::from(&vec![
-            Some(1_800i128),
-            Some(5_000i128),
-            Some(6_666i128),
+            Some(222_22i128),
+            Some(2_00i128),
+            Some(3_00i128),
             None,
-            Some(7_500i128),
-            Some(0_188i128),
+            Some(4_00i128),
+            Some(543_21i128),
         ])
-        .to(DataType::Decimal(7, 3));
+        .to(DataType::Decimal(7, 2));
+
+        let result = checked_mul(&a, &b).unwrap();
+        let expected = Primitive::from(&vec![
+            Some(24690_86i128),
+            Some(20_00i128),
+            Some(60_00i128),
+            None,
+            Some(120_00i128),
+            Some(67059_27i128),
+        ])
+        .to(DataType::Decimal(7, 2));
 
         assert_eq!(result, expected);
     }
 
     #[test]
-    fn test_divide_checked_overflow() {
+    fn test_multiply_checked_overflow() {
         let a = Primitive::from(&vec![Some(99999i128)]).to(DataType::Decimal(5, 2));
-        let b = Primitive::from(&vec![Some(00001i128)]).to(DataType::Decimal(5, 2));
-        let result = checked_divide(&a, &b);
+        let b = Primitive::from(&vec![Some(10000i128)]).to(DataType::Decimal(5, 2));
+        let result = checked_mul(&a, &b);
 
         match result {
             Err(err) => match err {
@@ -449,16 +440,16 @@ mod tests {
     }
 
     #[test]
-    fn test_divide_adaptive() {
+    fn test_multiply_adaptive() {
         //  1000.00   -> 7, 2
         //    10.0000 -> 6, 4
         // -----------------
-        //   100.0000 -> 9, 4
+        // 10000.0000 -> 9, 4
         let a = Primitive::from(&vec![Some(1000_00i128)]).to(DataType::Decimal(7, 2));
         let b = Primitive::from(&vec![Some(10_0000i128)]).to(DataType::Decimal(6, 4));
-        let result = adaptive_divide(&a, &b).unwrap();
+        let result = adaptive_mul(&a, &b).unwrap();
 
-        let expected = Primitive::from(&vec![Some(100_0000i128)]).to(DataType::Decimal(9, 4));
+        let expected = Primitive::from(&vec![Some(10000_0000i128)]).to(DataType::Decimal(9, 4));
 
         assert_eq!(result, expected);
         assert_eq!(result.data_type(), &DataType::Decimal(9, 4));
@@ -466,27 +457,27 @@ mod tests {
         //   11111.0    -> 6, 1
         //      10.002  -> 5, 3
         // -----------------
-        //    1110.877  -> 8, 3
+        //  111132.222  -> 9, 3
         let a = Primitive::from(&vec![Some(11111_0i128)]).to(DataType::Decimal(6, 1));
         let b = Primitive::from(&vec![Some(10_002i128)]).to(DataType::Decimal(5, 3));
-        let result = adaptive_divide(&a, &b).unwrap();
+        let result = adaptive_mul(&a, &b).unwrap();
 
-        let expected = Primitive::from(&vec![Some(1110_877i128)]).to(DataType::Decimal(8, 3));
+        let expected = Primitive::from(&vec![Some(111132_222i128)]).to(DataType::Decimal(9, 3));
 
         assert_eq!(result, expected);
-        assert_eq!(result.data_type(), &DataType::Decimal(8, 3));
+        assert_eq!(result.data_type(), &DataType::Decimal(9, 3));
 
         //     12345.67   ->  7, 2
         //     12345.678  ->  8, 3
         // -----------------
-        //         0.999  ->  8, 3
+        // 152415666.514  -> 11, 3
         let a = Primitive::from(&vec![Some(12345_67i128)]).to(DataType::Decimal(7, 2));
         let b = Primitive::from(&vec![Some(12345_678i128)]).to(DataType::Decimal(8, 3));
-        let result = adaptive_divide(&a, &b).unwrap();
+        let result = adaptive_mul(&a, &b).unwrap();
 
-        let expected = Primitive::from(&vec![Some(0_999i128)]).to(DataType::Decimal(8, 3));
+        let expected = Primitive::from(&vec![Some(152415666_514i128)]).to(DataType::Decimal(12, 3));
 
         assert_eq!(result, expected);
-        assert_eq!(result.data_type(), &DataType::Decimal(8, 3));
+        assert_eq!(result.data_type(), &DataType::Decimal(12, 3));
     }
 }
