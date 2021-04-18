@@ -51,11 +51,6 @@ where
     F: Fn(I) -> Result<O>,
 {
     let values = array.values().iter().map(|v| op(*v));
-    // JUSTIFICATION
-    //  Benefit
-    //      ~60% speedup
-    //  Soundness
-    //      `values` is an iterator with a known size because arrays are sized.
     let values = unsafe { Buffer::try_from_trusted_len_iter(values) }?;
 
     Ok(PrimitiveArray::<O>::from_data(
@@ -163,11 +158,6 @@ where
         .zip(rhs.values().iter())
         .map(|(l, r)| op(*l, *r));
 
-    // JUSTIFICATION
-    //  Benefit
-    //      ~60% speedup
-    //  Soundness
-    //      `values` is an iterator with a known size.
     let values = unsafe { Buffer::try_from_trusted_len_iter(values) }?;
 
     Ok(PrimitiveArray::<T>::from_data(data_type, values, validity))
