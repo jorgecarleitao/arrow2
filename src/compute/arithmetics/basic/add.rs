@@ -2,13 +2,15 @@ use std::ops::Add;
 
 use num::{
     traits::{ops::overflowing::OverflowingAdd, SaturatingAdd},
-    CheckedAdd,
+    CheckedAdd, Zero,
 };
 
 use crate::{
     array::{Array, PrimitiveArray},
     bitmap::Bitmap,
-    compute::arity::{binary, binary_with_bitmap, try_binary, try_unary, unary, unary_with_bitmap},
+    compute::arity::{
+        binary, binary_checked, binary_with_bitmap, unary, unary_checked, unary_with_bitmap,
+    },
     error::{ArrowError, Result},
     types::NativeType,
 };
@@ -42,9 +44,8 @@ where
     binary(lhs, rhs, lhs.data_type().clone(), |a, b| a + b)
 }
 
-/// Checked addition of two primitive arrays. If the result from the sum is
-/// larger than the possible number for this type an
-/// ArrowError::ArithmeticError is returned.
+/// Checked addition of two primitive arrays. If the result from the sum
+/// overflows, the validity for that index is changed to None
 ///
 /// # Examples
 /// ```
@@ -52,15 +53,15 @@ where
 /// use arrow2::array::Primitive;
 /// use arrow2::datatypes::DataType;
 ///
-/// let a = Primitive::from(&vec![Some(100i8)]).to(DataType::Int8);
-/// let b = Primitive::from(&vec![Some(100i8)]).to(DataType::Int8);
-/// checked_add(&a, &b)
-///     .err()
-///     .expect("should have failed due to overflow");
+/// let a = Primitive::from(&vec![Some(100i8), Some(100i8), Some(100i8)]).to(DataType::Int8);
+/// let b = Primitive::from(&vec![Some(0i8), Some(100i8), Some(0i8)]).to(DataType::Int8);
+/// let result = checked_add(&a, &b).unwrap();
+/// let expected = Primitive::from(&vec![Some(100i8), None, Some(100i8)]).to(DataType::Int8);
+/// assert_eq!(result, expected);
 /// ```
 pub fn checked_add<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<PrimitiveArray<T>>
 where
-    T: NativeType + CheckedAdd<Output = T>,
+    T: NativeType + CheckedAdd<Output = T> + Zero,
 {
     if lhs.data_type() != rhs.data_type() {
         return Err(ArrowError::InvalidArgumentError(
@@ -68,20 +69,9 @@ where
         ));
     }
 
-    let op = move |a: T, b: T| {
-        let res = a.checked_add(&b);
+    let op = move |a: T, b: T| a.checked_add(&b);
 
-        match res {
-            Some(val) => Ok(val),
-            None => {
-                return Err(ArrowError::ArithmeticError(
-                    "Saturated result in addition".to_string(),
-                ));
-            }
-        }
-    };
-
-    try_binary(lhs, rhs, lhs.data_type().clone(), op)
+    binary_checked(lhs, rhs, lhs.data_type().clone(), op)
 }
 
 /// Saturating addition of two primitive arrays. If the result from the sum is
@@ -177,8 +167,8 @@ where
 }
 
 /// Checked addition of a scalar T to a primitive array of type T. If the
-/// result from the sum is larger than the possible number for this type an
-/// ArrowError::ArithmeticError is returned.
+/// result from the sum overflows then the validity index for that value is
+/// changed to None
 ///
 /// # Examples
 /// ```
@@ -186,31 +176,20 @@ where
 /// use arrow2::array::Primitive;
 /// use arrow2::datatypes::DataType;
 ///
-/// let a = Primitive::from(&vec![Some(100i8)]).to(DataType::Int8);
-/// checked_add_scalar(&a, &100i8)
-///     .err()
-///     .expect("should have failed due to overflow");
+/// let a = Primitive::from(&vec![None, Some(100), None, Some(100)]).to(DataType::Int8);
+/// let result = checked_add_scalar(&a, &100i8);
+/// let expected = Primitive::<i8>::from(&vec![None, None, None, None]).to(DataType::Int8);
+/// assert_eq!(result, expected);
 /// ```
 #[inline]
-pub fn checked_add_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> Result<PrimitiveArray<T>>
+pub fn checked_add_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
 where
-    T: NativeType + CheckedAdd<Output = T>,
+    T: NativeType + CheckedAdd<Output = T> + Zero,
 {
     let rhs = *rhs;
-    let op = move |a: T| {
-        let res = a.checked_add(&rhs);
+    let op = move |a: T| a.checked_add(&rhs);
 
-        match res {
-            Some(val) => Ok(val),
-            None => {
-                return Err(ArrowError::ArithmeticError(
-                    "Saturated result in addition".to_string(),
-                ));
-            }
-        }
-    };
-
-    try_unary(lhs, op, lhs.data_type())
+    unary_checked(lhs, op, lhs.data_type())
 }
 
 /// Saturated addition of a scalar T to a primitive array of type T. If the
@@ -306,11 +285,11 @@ mod tests {
         let expected = Primitive::from(&vec![None, None, None, Some(12)]).to(DataType::Int32);
         assert_eq!(result, expected);
 
-        let a = Primitive::from(&vec![Some(100i8)]).to(DataType::Int8);
-        let b = Primitive::from(&vec![Some(100i8)]).to(DataType::Int8);
-        checked_add(&a, &b)
-            .err()
-            .expect("should have failed due to overflow");
+        let a = Primitive::from(&vec![Some(100i8), Some(100i8), Some(100i8)]).to(DataType::Int8);
+        let b = Primitive::from(&vec![Some(0i8), Some(100i8), Some(0i8)]).to(DataType::Int8);
+        let result = checked_add(&a, &b).unwrap();
+        let expected = Primitive::from(&vec![Some(100i8), None, Some(100i8)]).to(DataType::Int8);
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -356,14 +335,14 @@ mod tests {
     #[test]
     fn test_add_scalar_checked() {
         let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
-        let result = checked_add_scalar(&a, &1i32).unwrap();
+        let result = checked_add_scalar(&a, &1i32);
         let expected = Primitive::from(&vec![None, Some(7), None, Some(7)]).to(DataType::Int32);
         assert_eq!(result, expected);
 
-        let a = Primitive::from(&vec![Some(100i8)]).to(DataType::Int8);
-        checked_add_scalar(&a, &100i8)
-            .err()
-            .expect("should have failed due to overflow");
+        let a = Primitive::from(&vec![None, Some(100), None, Some(100)]).to(DataType::Int8);
+        let result = checked_add_scalar(&a, &100i8);
+        let expected = Primitive::<i8>::from(&vec![None, None, None, None]).to(DataType::Int8);
+        assert_eq!(result, expected);
     }
 
     #[test]

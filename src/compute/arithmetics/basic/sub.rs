@@ -2,13 +2,15 @@ use std::ops::{Neg, Sub};
 
 use num::{
     traits::{ops::overflowing::OverflowingSub, SaturatingSub},
-    CheckedSub,
+    CheckedSub, Zero,
 };
 
 use crate::{
     array::{Array, PrimitiveArray},
     bitmap::Bitmap,
-    compute::arity::{binary, binary_with_bitmap, try_binary, try_unary, unary, unary_with_bitmap},
+    compute::arity::{
+        binary, binary_checked, binary_with_bitmap, unary, unary_checked, unary_with_bitmap,
+    },
     error::{ArrowError, Result},
     types::NativeType,
 };
@@ -64,8 +66,7 @@ where
 }
 
 /// Checked subtraction of two primitive arrays. If the result from the
-/// subtraction is smaller than the possible number for this type an
-/// ArrowError::ArithmeticError is returned.
+/// subtraction overflow, the validity for that index is changed
 ///
 /// # Examples
 /// ```
@@ -73,15 +74,15 @@ where
 /// use arrow2::array::Primitive;
 /// use arrow2::datatypes::DataType;
 ///
-/// let a = Primitive::from(&vec![Some(-100i8)]).to(DataType::Int8);
-/// let b = Primitive::from(&vec![Some(100i8)]).to(DataType::Int8);
-/// checked_sub(&a, &b)
-///     .err()
-///     .expect("should have failed due to overflow");
+/// let a = Primitive::from(&vec![Some(100i8), Some(-100i8), Some(100i8)]).to(DataType::Int8);
+/// let b = Primitive::from(&vec![Some(1i8), Some(100i8), Some(0i8)]).to(DataType::Int8);
+/// let result = checked_sub(&a, &b).unwrap();
+/// let expected = Primitive::from(&vec![Some(99i8), None, Some(100i8)]).to(DataType::Int8);
+/// assert_eq!(result, expected);
 /// ```
 pub fn checked_sub<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<PrimitiveArray<T>>
 where
-    T: NativeType + CheckedSub<Output = T>,
+    T: NativeType + CheckedSub<Output = T> + Zero,
 {
     if lhs.data_type() != rhs.data_type() {
         return Err(ArrowError::InvalidArgumentError(
@@ -89,20 +90,9 @@ where
         ));
     }
 
-    let op = move |a: T, b: T| {
-        let res = a.checked_sub(&b);
+    let op = move |a: T, b: T| a.checked_sub(&b);
 
-        match res {
-            Some(val) => Ok(val),
-            None => {
-                return Err(ArrowError::ArithmeticError(
-                    "Saturated result in subtraction".to_string(),
-                ));
-            }
-        }
-    };
-
-    try_binary(lhs, rhs, lhs.data_type().clone(), op)
+    binary_checked(lhs, rhs, lhs.data_type().clone(), op)
 }
 
 /// Saturating subtraction of two primitive arrays. If the result from the sub
@@ -198,8 +188,8 @@ where
 }
 
 /// Checked subtraction of a scalar T to a primitive array of type T. If the
-/// result from the subtraction is smaller than the possible number for this
-/// type an ArrowError::ArithmeticError is returned.
+/// result from the subtraction overflows, then the validity for that index
+/// is changed to None
 ///
 /// # Examples
 /// ```
@@ -207,31 +197,20 @@ where
 /// use arrow2::array::Primitive;
 /// use arrow2::datatypes::DataType;
 ///
-/// let a = Primitive::from(&vec![Some(-100i8)]).to(DataType::Int8);
-/// checked_sub_scalar(&a, &100i8)
-///     .err()
-///     .expect("should have failed due to overflow");
+/// let a = Primitive::from(&vec![None, Some(-100), None, Some(-100)]).to(DataType::Int8);
+/// let result = checked_sub_scalar(&a, &100i8);
+/// let expected = Primitive::<i8>::from(&vec![None, None, None, None]).to(DataType::Int8);
+/// assert_eq!(result, expected);
 /// ```
 #[inline]
-pub fn checked_sub_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> Result<PrimitiveArray<T>>
+pub fn checked_sub_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
 where
-    T: NativeType + CheckedSub<Output = T>,
+    T: NativeType + CheckedSub<Output = T> + Zero,
 {
     let rhs = *rhs;
-    let op = move |a: T| {
-        let res = a.checked_sub(&rhs);
+    let op = move |a: T| a.checked_sub(&rhs);
 
-        match res {
-            Some(val) => Ok(val),
-            None => {
-                return Err(ArrowError::ArithmeticError(
-                    "Saturated result in subtraction".to_string(),
-                ));
-            }
-        }
-    };
-
-    try_unary(lhs, op, lhs.data_type())
+    unary_checked(lhs, op, lhs.data_type())
 }
 
 /// Saturated subtraction of a scalar T to a primitive array of type T. If the
@@ -327,11 +306,11 @@ mod tests {
         let expected = Primitive::from(&vec![None, None, None, Some(0)]).to(DataType::Int32);
         assert_eq!(result, expected);
 
-        let a = Primitive::from(&vec![Some(-100i8)]).to(DataType::Int8);
-        let b = Primitive::from(&vec![Some(100i8)]).to(DataType::Int8);
-        checked_sub(&a, &b)
-            .err()
-            .expect("should have failed due to overflow");
+        let a = Primitive::from(&vec![Some(100i8), Some(-100i8), Some(100i8)]).to(DataType::Int8);
+        let b = Primitive::from(&vec![Some(1i8), Some(100i8), Some(0i8)]).to(DataType::Int8);
+        let result = checked_sub(&a, &b).unwrap();
+        let expected = Primitive::from(&vec![Some(99i8), None, Some(100i8)]).to(DataType::Int8);
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -377,14 +356,14 @@ mod tests {
     #[test]
     fn test_sub_scalar_checked() {
         let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
-        let result = checked_sub_scalar(&a, &1i32).unwrap();
+        let result = checked_sub_scalar(&a, &1i32);
         let expected = Primitive::from(&vec![None, Some(5), None, Some(5)]).to(DataType::Int32);
         assert_eq!(result, expected);
 
-        let a = Primitive::from(&vec![Some(-100i8)]).to(DataType::Int8);
-        checked_sub_scalar(&a, &100i8)
-            .err()
-            .expect("should have failed due to overflow");
+        let a = Primitive::from(&vec![None, Some(-100), None, Some(-100)]).to(DataType::Int8);
+        let result = checked_sub_scalar(&a, &100i8);
+        let expected = Primitive::<i8>::from(&vec![None, None, None, None]).to(DataType::Int8);
+        assert_eq!(result, expected);
     }
 
     #[test]
