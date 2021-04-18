@@ -1,91 +1,120 @@
 use std::ops::Div;
 
+use num::{CheckedDiv, Zero};
+
 use crate::{
     array::{Array, PrimitiveArray},
-    buffer::Buffer,
-    compute::arity::unary,
+    compute::arity::{binary, binary_checked, unary, unary_checked},
     error::{ArrowError, Result},
     types::NativeType,
 };
 
-use num::Zero;
-
-use crate::compute::utils::combine_validities;
-
-/// Divide two arrays.
+/// Divides two primitive arrays with the same type.
+/// Panics if the divisor is zero of one pair of values overflows.
 ///
-/// # Errors
+/// # Examples
+/// ```
+/// use arrow2::compute::arithmetics::basic::div::div;
+/// use arrow2::array::Primitive;
+/// use arrow2::datatypes::DataType;
 ///
-/// This function errors iff:
-/// * the arrays have different lengths
-/// * a division by zero is found
+/// let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
+/// let b = Primitive::from(&vec![Some(5), None, None, Some(6)]).to(DataType::Int32);
+/// let result = div(&a, &b).unwrap();
+/// let expected = Primitive::from(&vec![None, None, None, Some(36)]).to(DataType::Int32);
+/// assert_eq!(result, expected)
+/// ```
+#[inline]
 pub fn div<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<PrimitiveArray<T>>
 where
-    T: NativeType,
-    T: Div<Output = T> + Zero,
+    T: NativeType + Div<Output = T>,
 {
-    if lhs.len() != rhs.len() {
+    if lhs.data_type() != rhs.data_type() {
         return Err(ArrowError::InvalidArgumentError(
-            "Cannot perform math operation on arrays of different length".to_string(),
+            "Arrays must have the same logical type".to_string(),
         ));
     }
 
-    let validity = combine_validities(lhs.validity(), rhs.validity());
-
-    let values = if let Some(b) = &validity {
-        // there are nulls. Division by zero on them should be ignored
-        let values =
-            b.iter()
-                .zip(lhs.values().iter().zip(rhs.values()))
-                .map(|(is_valid, (lhs, rhs))| {
-                    if is_valid {
-                        if rhs.is_zero() {
-                            Err(ArrowError::InvalidArgumentError(
-                                "There is a zero in the division, causing a division by zero"
-                                    .to_string(),
-                            ))
-                        } else {
-                            Ok(*lhs / *rhs)
-                        }
-                    } else {
-                        Ok(T::default())
-                    }
-                });
-        unsafe { Buffer::try_from_trusted_len_iter(values) }
-    } else {
-        // no value is null
-        let values = lhs.values().iter().zip(rhs.values()).map(|(lhs, rhs)| {
-            if rhs.is_zero() {
-                Err(ArrowError::InvalidArgumentError(
-                    "There is a zero in the division, causing a division by zero".to_string(),
-                ))
-            } else {
-                Ok(*lhs / *rhs)
-            }
-        });
-        unsafe { Buffer::try_from_trusted_len_iter(values) }
-    }?;
-
-    Ok(PrimitiveArray::<T>::from_data(
-        lhs.data_type().clone(),
-        values,
-        validity,
-    ))
+    binary(lhs, rhs, lhs.data_type().clone(), |a, b| a / b)
 }
 
-/// Divide an array by a constant
-pub fn div_scalar<T>(array: &PrimitiveArray<T>, divisor: &T) -> Result<PrimitiveArray<T>>
+/// Checked division of two primitive arrays. If the result from the division
+/// overflows, the result for the operation will change the validity array
+/// making this operation None
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::arithmetics::basic::div::checked_div;
+/// use arrow2::array::Primitive;
+/// use arrow2::datatypes::DataType;
+///
+/// let a = Primitive::from(&vec![Some(-100i8)]).to(DataType::Int8);
+/// let b = Primitive::from(&vec![Some(100i8)]).to(DataType::Int8);
+/// let result = checked_div(&a, &b).unwrap();
+/// let expected = Primitive::from(&vec![Some(-128)]).to(DataType::Int8);
+/// assert_eq!(result, expected);
+/// ```
+pub fn checked_div<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<PrimitiveArray<T>>
 where
-    T: NativeType,
-    T: Div<Output = T> + Zero,
+    T: NativeType + CheckedDiv<Output = T> + Zero,
 {
-    if divisor.is_zero() {
+    if lhs.data_type() != rhs.data_type() {
         return Err(ArrowError::InvalidArgumentError(
-            "The divisor cannot be zero".to_string(),
+            "Arrays must have the same logical type".to_string(),
         ));
     }
-    let divisor = *divisor;
-    Ok(unary(array, |x| x / divisor, array.data_type()))
+
+    let op = move |a: T, b: T| a.checked_div(&b);
+
+    binary_checked(lhs, rhs, lhs.data_type().clone(), op)
+}
+
+/// Divide a primitive array of type T by a scalar T.
+/// Panics if the divisor is zero.
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::arithmetics::basic::div::div_scalar;
+/// use arrow2::array::Primitive;
+/// use arrow2::datatypes::DataType;
+///
+/// let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
+/// let result = div_scalar(&a, &2i32);
+/// let expected = Primitive::from(&vec![None, Some(12), None, Some(12)]).to(DataType::Int32);
+/// assert_eq!(result, expected)
+/// ```
+#[inline]
+pub fn div_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
+where
+    T: NativeType + Div<Output = T>,
+{
+    let rhs = *rhs;
+    unary(lhs, |a| a / rhs, lhs.data_type())
+}
+
+/// Checked division of a primitive array of type T by a scalar T. If the
+/// divisor is zero then the validity array is changed to None.
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::arithmetics::basic::div::saturating_div_scalar;
+/// use arrow2::array::Primitive;
+/// use arrow2::datatypes::DataType;
+///
+/// let a = Primitive::from(&vec![Some(-100i8)]).to(DataType::Int8);
+/// let result = saturating_div_scalar(&a, &100i8);
+/// let expected = Primitive::from(&vec![Some(-128i8)]).to(DataType::Int8);
+/// assert_eq!(result, expected);
+/// ```
+#[inline]
+pub fn checked_div_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
+where
+    T: NativeType + CheckedDiv<Output = T> + Zero,
+{
+    let rhs = *rhs;
+    let op = move |a: T| a.checked_div(&rhs);
+
+    unary_checked(lhs, op, lhs.data_type())
 }
 
 #[cfg(test)]
@@ -95,34 +124,64 @@ mod tests {
     use crate::datatypes::DataType;
 
     #[test]
-    fn test_divide() {
-        let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
-        let b = Primitive::from(&vec![Some(5), None, None, Some(6)]).to(DataType::Int32);
+    fn test_div_mismatched_length() {
+        let a = Primitive::from_slice(vec![5, 6]).to(DataType::Int32);
+        let b = Primitive::from_slice(vec![5]).to(DataType::Int32);
+        div(&a, &b)
+            .err()
+            .expect("should have failed due to different lengths");
+    }
+
+    #[test]
+    fn test_div() {
+        let a = Primitive::from(&vec![Some(5), Some(6)]).to(DataType::Int32);
+        let b = Primitive::from(&vec![Some(5), Some(6)]).to(DataType::Int32);
         let result = div(&a, &b).unwrap();
-        let expected = Primitive::from(&vec![None, None, None, Some(1)]).to(DataType::Int32);
+        let expected = Primitive::from(&vec![Some(1), Some(1)]).to(DataType::Int32);
         assert_eq!(result, expected)
     }
 
     #[test]
-    fn test_divide_scalar() {
-        let a = Primitive::from(&vec![None, Some(6)]).to(DataType::Int32);
-        let b = 3i32;
-        let result = div_scalar(&a, &b).unwrap();
-        let expected = Primitive::from(&vec![None, Some(2)]).to(DataType::Int32);
+    #[should_panic]
+    fn test_div_panic() {
+        let a = Primitive::from(&vec![Some(10i8)]).to(DataType::Int8);
+        let b = Primitive::from(&vec![Some(0i8)]).to(DataType::Int8);
+        let _ = div(&a, &b);
+    }
+
+    #[test]
+    fn test_div_checked() {
+        let a = Primitive::from(&vec![Some(5), None, Some(3), Some(6)]).to(DataType::Int32);
+        let b = Primitive::from(&vec![Some(5), Some(3), None, Some(6)]).to(DataType::Int32);
+        let result = checked_div(&a, &b).unwrap();
+        let expected = Primitive::from(&vec![Some(1), None, None, Some(1)]).to(DataType::Int32);
+        assert_eq!(result, expected);
+
+        let a = Primitive::from(&vec![Some(5), None, Some(3), Some(6)]).to(DataType::Int32);
+        let b = Primitive::from(&vec![Some(5), Some(0), Some(0), Some(6)]).to(DataType::Int32);
+        let result = checked_div(&a, &b).unwrap();
+        let expected = Primitive::from(&vec![Some(1), None, None, Some(1)]).to(DataType::Int32);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_div_scalar() {
+        let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
+        let result = div_scalar(&a, &1i32);
+        let expected = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
         assert_eq!(result, expected)
     }
 
     #[test]
-    fn test_divide_by_zero() {
-        let a = Primitive::from(&vec![Some(6)]).to(DataType::Int32);
-        let b = Primitive::from(&vec![Some(0)]).to(DataType::Int32);
-        assert_eq!(div(&a, &b).is_err(), true);
-    }
+    fn test_div_scalar_checked() {
+        let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
+        let result = checked_div_scalar(&a, &1i32);
+        let expected = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
+        assert_eq!(result, expected);
 
-    #[test]
-    fn test_divide_by_zero_on_null() {
-        let a = Primitive::from(&vec![None]).to(DataType::Int32);
-        let b = Primitive::from(&vec![Some(0)]).to(DataType::Int32);
-        assert_eq!(div(&a, &b).is_err(), false);
+        let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
+        let result = checked_div_scalar(&a, &0);
+        let expected = Primitive::from(&vec![None, None, None, None]).to(DataType::Int32);
+        assert_eq!(result, expected);
     }
 }

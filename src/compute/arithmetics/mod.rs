@@ -137,6 +137,6 @@ where
         Operator::Add => Ok(basic::add::add_scalar(lhs, rhs)),
         Operator::Subtract => Ok(basic::sub::sub_scalar(lhs, rhs)),
         Operator::Multiply => Ok(basic::mul::mul_scalar(lhs, rhs)),
-        Operator::Divide => basic::div::div_scalar(lhs, rhs),
+        Operator::Divide => Ok(basic::div::div_scalar(lhs, rhs)),
     }
 }
