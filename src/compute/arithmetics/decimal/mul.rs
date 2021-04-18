@@ -21,20 +21,35 @@
 use crate::{
     array::{Array, PrimitiveArray},
     buffer::Buffer,
-};
-use crate::{
+    compute::{
+        arity::{binary, binary_checked},
+        utils::combine_validities,
+    },
     datatypes::DataType,
     error::{ArrowError, Result},
 };
 
 use super::{adjusted_precision_scale, max_value, number_digits};
-use crate::compute::arity::{binary, try_binary};
-use crate::compute::utils::combine_validities;
 
 /// Multiply two decimal primitive arrays with the same precision and scale. If
 /// the precision and scale is different, then an InvalidArgumentError is
 /// returned. This function panics if the multiplied numbers result in a number
 /// larger than the possible number for the selected precision.
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::arithmetics::decimal::mul::mul;
+/// use arrow2::array::Primitive;
+/// use arrow2::datatypes::DataType;
+///
+/// let a = Primitive::from(&vec![Some(1_00i128), Some(1_00i128), None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
+/// let b = Primitive::from(&vec![Some(1_00i128), Some(2_00i128), None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
+///
+/// let result = mul(&a, &b).unwrap();
+/// let expected = Primitive::from(&vec![Some(1_00i128), Some(2_00i128), None, Some(4_00i128)]).to(DataType::Decimal(5, 2));
+///
+/// assert_eq!(result, expected);
+/// ```
 pub fn mul(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<PrimitiveArray<i128>> {
     // Matching on both data types from both arrays
     // This match will be true only when precision and scale from both
@@ -92,6 +107,21 @@ pub fn mul(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<Pri
 /// larger than the possible number with the selected precision then the
 /// resulted number in the arrow array is the maximum number for the selected
 /// precision.
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::arithmetics::decimal::mul::saturating_mul;
+/// use arrow2::array::Primitive;
+/// use arrow2::datatypes::DataType;
+///
+/// let a = Primitive::from(&vec![Some(999_99i128), Some(1_00i128), None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
+/// let b = Primitive::from(&vec![Some(10_00i128), Some(2_00i128), None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
+///
+/// let result = saturating_mul(&a, &b).unwrap();
+/// let expected = Primitive::from(&vec![Some(999_99i128), Some(2_00i128), None, Some(4_00i128)]).to(DataType::Decimal(5, 2));
+///
+/// assert_eq!(result, expected);
+/// ```
 pub fn saturating_mul(
     lhs: &PrimitiveArray<i128>,
     rhs: &PrimitiveArray<i128>,
@@ -139,9 +169,24 @@ pub fn saturating_mul(
 
 /// Checked multiplication of two decimal primitive arrays with the same
 /// precision and scale. If the precision and scale is different, then an
-/// InvalidArgumentError is returned. If the result from the multiplication is
-/// larger than the possible number with the selected precision then the
-/// function returns an ArrowError::ArithmeticError.
+/// InvalidArgumentError is returned. If the result from the mul is larger than
+/// the possible number with the selected precision (overflowing), then the
+/// validity for that index is changed to None
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::arithmetics::decimal::mul::checked_mul;
+/// use arrow2::array::Primitive;
+/// use arrow2::datatypes::DataType;
+///
+/// let a = Primitive::from(&vec![Some(999_99i128), Some(1_00i128), None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
+/// let b = Primitive::from(&vec![Some(10_00i128), Some(2_00i128), None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
+///
+/// let result = checked_mul(&a, &b).unwrap();
+/// let expected = Primitive::from(&vec![None, Some(2_00i128), None, Some(4_00i128)]).to(DataType::Decimal(5, 2));
+///
+/// assert_eq!(result, expected);
+/// ```
 pub fn checked_mul(
     lhs: &PrimitiveArray<i128>,
     rhs: &PrimitiveArray<i128>,
@@ -158,22 +203,14 @@ pub fn checked_mul(
                         let res = res / 10i128.pow(*lhs_s as u32);
 
                         match res {
-                            res if res.abs() > max_value(*lhs_p) => {
-                                return Err(ArrowError::ArithmeticError(
-                                    "Saturated result in multiplication".to_string(),
-                                ));
-                            }
-                            _ => Ok(res),
+                            res if res.abs() > max_value(*lhs_p) => None,
+                            _ => Some(res),
                         }
                     }
-                    None => {
-                        return Err(ArrowError::ArithmeticError(
-                            "Saturated result in multiplication".to_string(),
-                        ));
-                    }
+                    None => None,
                 };
 
-                try_binary(lhs, rhs, lhs.data_type().clone(), op)
+                binary_checked(lhs, rhs, lhs.data_type().clone(), op)
             } else {
                 return Err(ArrowError::InvalidArgumentError(
                     "Arrays must have the same precision and scale".to_string(),
@@ -194,6 +231,26 @@ pub fn checked_mul(
 /// scale. If during the multiplication one of the results is larger than the
 /// max possible value, the result precision is changed to the precision of the
 /// max value
+///
+/// ```nocode
+///   11111.0    -> 6, 1
+///      10.002  -> 5, 3
+/// -----------------
+///  111132.222  -> 9, 3
+/// ```
+/// # Examples
+/// ```
+/// use arrow2::compute::arithmetics::decimal::mul::adaptive_mul;
+/// use arrow2::array::Primitive;
+/// use arrow2::datatypes::DataType;
+///
+/// let a = Primitive::from(&vec![Some(11111_0i128), Some(1_0i128)]).to(DataType::Decimal(6, 1));
+/// let b = Primitive::from(&vec![Some(10_002i128), Some(2_000i128)]).to(DataType::Decimal(5, 3));
+/// let result = adaptive_mul(&a, &b).unwrap();
+/// let expected = Primitive::from(&vec![Some(111132_222i128), Some(2_000i128)]).to(DataType::Decimal(9, 3));
+///
+/// assert_eq!(result, expected);
+/// ```
 pub fn adaptive_mul(
     lhs: &PrimitiveArray<i128>,
     rhs: &PrimitiveArray<i128>,
@@ -426,17 +483,12 @@ mod tests {
 
     #[test]
     fn test_multiply_checked_overflow() {
-        let a = Primitive::from(&vec![Some(99999i128)]).to(DataType::Decimal(5, 2));
-        let b = Primitive::from(&vec![Some(10000i128)]).to(DataType::Decimal(5, 2));
-        let result = checked_mul(&a, &b);
+        let a = Primitive::from(&vec![Some(99999i128), Some(1_00i128)]).to(DataType::Decimal(5, 2));
+        let b = Primitive::from(&vec![Some(10000i128), Some(2_00i128)]).to(DataType::Decimal(5, 2));
+        let result = checked_mul(&a, &b).unwrap();
+        let expected = Primitive::from(&vec![None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
 
-        match result {
-            Err(err) => match err {
-                ArrowError::ArithmeticError(_) => assert!(true),
-                _ => panic!("Should return ArrowError::ArithmeticError should be detected"),
-            },
-            _ => panic!("Should return ArrowError::ArithmeticError should be detected"),
-        }
+        assert_eq!(result, expected);
     }
 
     #[test]

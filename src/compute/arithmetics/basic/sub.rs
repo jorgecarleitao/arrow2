@@ -1,3 +1,4 @@
+//! Definition of basic sub operations with primitive arrays
 use std::ops::{Neg, Sub};
 
 use num::{

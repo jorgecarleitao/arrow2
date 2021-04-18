@@ -1,3 +1,4 @@
+//! Definition of basic add operations with primitive arrays
 use std::ops::Add;
 
 use num::{

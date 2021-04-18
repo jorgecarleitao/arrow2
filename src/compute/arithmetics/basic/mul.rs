@@ -1,3 +1,4 @@
+//! Definition of basic mul operations with primitive arrays
 use std::ops::Mul;
 
 use num::{
