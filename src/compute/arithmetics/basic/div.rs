@@ -19,10 +19,10 @@ use crate::{
 /// use arrow2::array::Primitive;
 /// use arrow2::datatypes::DataType;
 ///
-/// let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
-/// let b = Primitive::from(&vec![Some(5), None, None, Some(6)]).to(DataType::Int32);
+/// let a = Primitive::from(&vec![Some(10), Some(6)]).to(DataType::Int32);
+/// let b = Primitive::from(&vec![Some(5), Some(6)]).to(DataType::Int32);
 /// let result = div(&a, &b).unwrap();
-/// let expected = Primitive::from(&vec![None, None, None, Some(36)]).to(DataType::Int32);
+/// let expected = Primitive::from(&vec![Some(2), Some(1)]).to(DataType::Int32);
 /// assert_eq!(result, expected)
 /// ```
 #[inline]
@@ -49,10 +49,10 @@ where
 /// use arrow2::array::Primitive;
 /// use arrow2::datatypes::DataType;
 ///
-/// let a = Primitive::from(&vec![Some(-100i8)]).to(DataType::Int8);
-/// let b = Primitive::from(&vec![Some(100i8)]).to(DataType::Int8);
+/// let a = Primitive::from(&vec![Some(-100i8), Some(10i8)]).to(DataType::Int8);
+/// let b = Primitive::from(&vec![Some(100i8), Some(0i8)]).to(DataType::Int8);
 /// let result = checked_div(&a, &b).unwrap();
-/// let expected = Primitive::from(&vec![Some(-128)]).to(DataType::Int8);
+/// let expected = Primitive::from(&vec![Some(-1i8), None]).to(DataType::Int8);
 /// assert_eq!(result, expected);
 /// ```
 pub fn checked_div<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<PrimitiveArray<T>>
@@ -81,7 +81,7 @@ where
 ///
 /// let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
 /// let result = div_scalar(&a, &2i32);
-/// let expected = Primitive::from(&vec![None, Some(12), None, Some(12)]).to(DataType::Int32);
+/// let expected = Primitive::from(&vec![None, Some(3), None, Some(3)]).to(DataType::Int32);
 /// assert_eq!(result, expected)
 /// ```
 #[inline]
@@ -98,13 +98,13 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::div::saturating_div_scalar;
+/// use arrow2::compute::arithmetics::basic::div::checked_div_scalar;
 /// use arrow2::array::Primitive;
 /// use arrow2::datatypes::DataType;
 ///
 /// let a = Primitive::from(&vec![Some(-100i8)]).to(DataType::Int8);
-/// let result = saturating_div_scalar(&a, &100i8);
-/// let expected = Primitive::from(&vec![Some(-128i8)]).to(DataType::Int8);
+/// let result = checked_div_scalar(&a, &100i8);
+/// let expected = Primitive::from(&vec![Some(-1i8)]).to(DataType::Int8);
 /// assert_eq!(result, expected);
 /// ```
 #[inline]
