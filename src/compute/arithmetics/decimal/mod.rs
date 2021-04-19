@@ -1,7 +1,7 @@
-//! Defines the arithmetic kernels for Decimal `PrimitiveArrays`.
-//! The Decimal type specifies the precision and scale parameters. These
-//! affect the arithmetic operations and need to be considered while
-//! doing operations with Decimal numbers.
+//! Defines the arithmetic kernels for Decimal `PrimitiveArrays`. The
+//! [`Decimal`](crate::datatypes::DataType::Decimal) type specifies the
+//! precision and scale parameters. These affect the arithmetic operations and
+//! need to be considered while doing operations with Decimal numbers.
 
 pub mod add;
 pub mod div;
