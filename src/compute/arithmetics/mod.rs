@@ -15,7 +15,45 @@
 // specific language governing permissions and limitations
 // under the License.
 
-//! Defines basic arithmetic kernels for `PrimitiveArrays`.
+//! Defines basic arithmetic kernels for [`PrimitiveArray`]s.
+//!
+//! # Description
+//!
+//! The Arithmetics module is composed by basic arithmetics operations that can
+//! be performed on Primitive Arrays. These operations can be the building for
+//! any implementation using Arrow.
+//!
+//! Whenever possible, each of the operations in these modules has variations
+//! of the basic operation that offers different guarantees. These options are:
+//!
+//! * plain: The plain type (add, sub, mul, and div) don't offer any protection
+//!   when performing the operations. This means that if overflow is found,
+//!   then the operations will panic.
+//!
+//! * checked: A checked operation will change the validity Bitmap for the
+//!   offending operation. For example, if one of the operations overflows, the
+//!   validity will be changed to None, indicating a Null value.
+//!
+//! * saturating: If overflowing is presented in one operation, the resulting
+//!   value for that index will be saturated to the MAX or MIN value possible
+//!   for that type. For [`Decimal`](crate::datatypes::DataType::Decimal)
+//!   arrays, the saturated value is calculated considering the precision and
+//!   scale of the array.
+//!
+//! * overflowing: When an operation overflows, the resulting will be the
+//!   overflowed value for the operation. The result from the array operation
+//!   includes a Binary bitmap indicating which values overflowed.
+//!
+//! * adaptive: For [`Decimal`](crate::datatypes::DataType::Decimal) arrays,
+//!   the adaptive variation adjusts the precision and scale to avoid
+//!   saturation or overflowing.
+//!
+//! # New kernels
+//!
+//! When adding a new operation to this module, it is strongly suggested to
+//! follow the design description presented in the [`compute`](crate::compute)
+//! module and the function descriptions presented in this document.
+
 pub mod basic;
 pub mod decimal;
 pub mod time;
