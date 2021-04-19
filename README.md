@@ -36,7 +36,7 @@ To run the tests including integration with pyarrow's parquet writer, run
 ```bash
 python3 -m venv venv
 venv/bin/pip install pyarrow==3
-venv/bin/python -m parquet_integration/write_parquet.py
+venv/bin/python parquet_integration/write_parquet.py
 ```
 
 ## Features in this crate and not in the original
