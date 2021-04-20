@@ -40,7 +40,7 @@ type ArrayRef = Arc<dyn Array>;
 /// [JSON reader](crate::json::Reader).
 #[derive(Clone, Debug, PartialEq)]
 pub struct RecordBatch {
-    schema: Schema,
+    schema: Arc<Schema>,
     columns: Vec<ArrayRef>,
 }
 
@@ -75,7 +75,7 @@ impl RecordBatch {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn try_new(schema: Schema, columns: Vec<ArrayRef>) -> Result<Self> {
+    pub fn try_new(schema: Arc<Schema>, columns: Vec<ArrayRef>) -> Result<Self> {
         let options = RecordBatchOptions::default();
         Self::validate_new_batch(&schema, columns.as_slice(), &options)?;
         Ok(RecordBatch { schema, columns })
@@ -86,7 +86,7 @@ impl RecordBatch {
     ///
     /// See [`RecordBatch::try_new`] for the expected conditions.
     pub fn try_new_with_options(
-        schema: Schema,
+        schema: Arc<Schema>,
         columns: Vec<ArrayRef>,
         options: &RecordBatchOptions,
     ) -> Result<Self> {
@@ -95,7 +95,7 @@ impl RecordBatch {
     }
 
     /// Creates a new empty [`RecordBatch`].
-    pub fn new_empty(schema: Schema) -> Self {
+    pub fn new_empty(schema: Arc<Schema>) -> Self {
         let columns = schema
             .fields()
             .iter()
@@ -168,7 +168,7 @@ impl RecordBatch {
     }
 
     /// Returns the [`Schema`](crate::datatypes::Schema) of the record batch.
-    pub fn schema(&self) -> &Schema {
+    pub fn schema(&self) -> &Arc<Schema> {
         &self.schema
     }
 
@@ -262,7 +262,7 @@ impl From<&StructArray> for RecordBatch {
     /// This currently does not flatten and nested struct types
     fn from(struct_array: &StructArray) -> Self {
         if let DataType::Struct(fields) = struct_array.data_type() {
-            let schema = Schema::new(fields.clone());
+            let schema = Arc::new(Schema::new(fields.clone()));
             let columns = struct_array.values().to_vec();
             RecordBatch { schema, columns }
         } else {

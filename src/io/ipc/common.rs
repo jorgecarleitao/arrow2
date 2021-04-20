@@ -79,7 +79,10 @@ pub(crate) mod tests {
 
         let schema = reader.schema();
 
-        (schema.clone(), reader.collect::<Result<_>>().unwrap())
+        (
+            schema.as_ref().clone(),
+            reader.collect::<Result<_>>().unwrap(),
+        )
     }
 
     pub fn read_arrow_stream(version: &str, file_name: &str) -> (Schema, Vec<RecordBatch>) {
@@ -94,6 +97,9 @@ pub(crate) mod tests {
 
         let schema = reader.schema();
 
-        (schema.clone(), reader.collect::<Result<_>>().unwrap())
+        (
+            schema.as_ref().clone(),
+            reader.collect::<Result<_>>().unwrap(),
+        )
     }
 }

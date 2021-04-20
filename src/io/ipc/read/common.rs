@@ -32,7 +32,7 @@ type ArrayRef = Arc<dyn Array>;
 /// Creates a record batch from binary data using the `ipc::RecordBatch` indexes and the `Schema`
 pub fn read_record_batch<R: Read + Seek>(
     batch: gen::Message::RecordBatch,
-    schema: Schema,
+    schema: Arc<Schema>,
     dictionaries: &[Option<ArrayRef>],
     reader: &mut R,
     block_offset: u64,
@@ -98,11 +98,11 @@ pub fn read_dictionary<R: Read + Seek>(
     let dictionary_values: ArrayRef = match first_field.data_type() {
         DataType::Dictionary(_, ref value_type) => {
             // Make a fake schema for the dictionary batch.
-            let schema = Schema {
+            let schema = Arc::new(Schema {
                 fields: vec![Field::new("", value_type.as_ref().clone(), false)],
                 metadata: HashMap::new(),
                 is_little_endian: schema.is_little_endian,
-            };
+            });
             // Read a single column
             let record_batch = read_record_batch(
                 batch.data().unwrap(),

@@ -108,7 +108,7 @@ mod tests {
             .to(DataType::Time32(TimeUnit::Second));
 
         RecordBatch::try_new(
-            schema,
+            Arc::new(schema),
             vec![
                 Arc::new(c1),
                 Arc::new(c2),

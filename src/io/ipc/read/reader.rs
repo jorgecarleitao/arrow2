@@ -40,7 +40,7 @@ pub struct FileReader<R: Read + Seek> {
     reader: BufReader<R>,
 
     /// The schema that is read from the file header
-    schema: Schema,
+    schema: Arc<Schema>,
 
     /// The blocks in the file
     ///
@@ -105,7 +105,7 @@ impl<R: Read + Seek> FileReader<R> {
         let total_blocks = blocks.len();
 
         let ipc_schema = footer.schema().unwrap();
-        let schema = convert::fb_to_schema(ipc_schema);
+        let schema = Arc::new(convert::fb_to_schema(ipc_schema));
 
         // Create an array of optional dictionary value arrays, one per field.
         let mut dictionaries_by_field = vec![None; schema.fields().len()];
@@ -167,7 +167,7 @@ impl<R: Read + Seek> FileReader<R> {
     }
 
     /// Return the schema of the file
-    pub fn schema(&self) -> &Schema {
+    pub fn schema(&self) -> &Arc<Schema> {
         &self.schema
     }
 
@@ -281,7 +281,7 @@ mod tests {
         // read expected JSON output
         let (schema, batches) = read_gzip_json(version, file_name);
 
-        assert_eq!(&schema, reader.schema());
+        assert_eq!(&schema, reader.schema().as_ref());
 
         batches
             .iter()
