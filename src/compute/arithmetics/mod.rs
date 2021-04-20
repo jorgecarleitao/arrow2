@@ -51,8 +51,9 @@
 //! # New kernels
 //!
 //! When adding a new operation to this module, it is strongly suggested to
-//! follow the design description presented in the [`compute`](crate::compute)
-//! module and the function descriptions presented in this document.
+//! follow the design description presented in the README.md file located in
+//! the [`compute`](crate::compute) module and the function descriptions
+//! presented in this document.
 
 pub mod basic;
 pub mod decimal;
