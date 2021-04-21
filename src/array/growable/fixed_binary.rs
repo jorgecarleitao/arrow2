@@ -94,12 +94,12 @@ impl<'a> Growable<'a> for GrowableFixedSizeBinary<'a> {
     }
 }
 
-impl<'a> Into<FixedSizeBinaryArray> for GrowableFixedSizeBinary<'a> {
-    fn into(self) -> FixedSizeBinaryArray {
+impl<'a> From<GrowableFixedSizeBinary<'a>> for FixedSizeBinaryArray {
+    fn from(val: GrowableFixedSizeBinary<'a>) -> Self {
         FixedSizeBinaryArray::from_data(
-            self.arrays[0].data_type().clone(),
-            self.values.into(),
-            self.validity.into(),
+            val.arrays[0].data_type().clone(),
+            val.values.into(),
+            val.validity.into(),
         )
     }
 }

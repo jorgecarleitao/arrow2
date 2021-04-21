@@ -143,16 +143,16 @@ impl<'a, O: Offset> Growable<'a> for GrowableList<'a, O> {
     }
 }
 
-impl<'a, O: Offset> Into<ListArray<O>> for GrowableList<'a, O> {
-    fn into(self) -> ListArray<O> {
-        let mut values = self.values;
+impl<'a, O: Offset> From<GrowableList<'a, O>> for ListArray<O> {
+    fn from(val: GrowableList<'a, O>) -> Self {
+        let mut values = val.values;
         let values = values.to_arc();
 
         ListArray::<O>::from_data(
-            self.arrays[0].data_type().clone(),
-            self.offsets.into(),
+            val.arrays[0].data_type().clone(),
+            val.offsets.into(),
             values,
-            self.validity.into(),
+            val.validity.into(),
         )
     }
 }

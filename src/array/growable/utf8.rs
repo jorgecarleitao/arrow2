@@ -91,13 +91,13 @@ impl<'a, O: Offset> Growable<'a> for GrowableUtf8<'a, O> {
     }
 }
 
-impl<'a, O: Offset> Into<Utf8Array<O>> for GrowableUtf8<'a, O> {
-    fn into(self) -> Utf8Array<O> {
+impl<'a, O: Offset> From<GrowableUtf8<'a, O>> for Utf8Array<O> {
+    fn from(val: GrowableUtf8<'a, O>) -> Self {
         unsafe {
             Utf8Array::<O>::from_data_unchecked(
-                self.offsets.into(),
-                self.values.into(),
-                self.validity.into(),
+                val.offsets.into(),
+                val.values.into(),
+                val.validity.into(),
             )
         }
     }
