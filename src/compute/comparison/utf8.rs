@@ -49,7 +49,7 @@ where
 
 /// Evaluate `op(lhs, rhs)` for [`PrimitiveArray`] and scalar using
 /// a specified comparison function.
-fn compare_op_scalar<O, F>(lhs: &Utf8Array<O>, rhs: &str, op: F) -> Result<BooleanArray>
+fn compare_op_scalar<O, F>(lhs: &Utf8Array<O>, rhs: &str, op: F) -> BooleanArray
 where
     O: Offset,
     F: Fn(&str, &str) -> bool,
@@ -62,7 +62,7 @@ where
     });
     let values = unsafe { Bitmap::from_trusted_len_iter(values) };
 
-    Ok(BooleanArray::from_data(values, validity))
+    BooleanArray::from_data(values, validity)
 }
 
 /// Perform `lhs == rhs` operation on [`StringArray`] / [`LargeStringArray`].
@@ -71,7 +71,7 @@ fn eq<O: Offset>(lhs: &Utf8Array<O>, rhs: &Utf8Array<O>) -> Result<BooleanArray>
 }
 
 /// Perform `lhs == rhs` operation on [`StringArray`] / [`LargeStringArray`] and a scalar.
-fn eq_scalar<O: Offset>(lhs: &Utf8Array<O>, rhs: &str) -> Result<BooleanArray> {
+fn eq_scalar<O: Offset>(lhs: &Utf8Array<O>, rhs: &str) -> BooleanArray {
     compare_op_scalar(lhs, rhs, |a, b| a == b)
 }
 
@@ -81,7 +81,7 @@ fn neq<O: Offset>(lhs: &Utf8Array<O>, rhs: &Utf8Array<O>) -> Result<BooleanArray
 }
 
 /// Perform `lhs != rhs` operation on [`StringArray`] / [`LargeStringArray`] and a scalar.
-fn neq_scalar<O: Offset>(lhs: &Utf8Array<O>, rhs: &str) -> Result<BooleanArray> {
+fn neq_scalar<O: Offset>(lhs: &Utf8Array<O>, rhs: &str) -> BooleanArray {
     compare_op_scalar(lhs, rhs, |a, b| a != b)
 }
 
@@ -91,7 +91,7 @@ fn lt<O: Offset>(lhs: &Utf8Array<O>, rhs: &Utf8Array<O>) -> Result<BooleanArray>
 }
 
 /// Perform `lhs < rhs` operation on [`StringArray`] / [`LargeStringArray`] and a scalar.
-fn lt_scalar<O: Offset>(lhs: &Utf8Array<O>, rhs: &str) -> Result<BooleanArray> {
+fn lt_scalar<O: Offset>(lhs: &Utf8Array<O>, rhs: &str) -> BooleanArray {
     compare_op_scalar(lhs, rhs, |a, b| a < b)
 }
 
@@ -101,7 +101,7 @@ fn lt_eq<O: Offset>(lhs: &Utf8Array<O>, rhs: &Utf8Array<O>) -> Result<BooleanArr
 }
 
 /// Perform `lhs <= rhs` operation on [`StringArray`] / [`LargeStringArray`] and a scalar.
-fn lt_eq_scalar<O: Offset>(lhs: &Utf8Array<O>, rhs: &str) -> Result<BooleanArray> {
+fn lt_eq_scalar<O: Offset>(lhs: &Utf8Array<O>, rhs: &str) -> BooleanArray {
     compare_op_scalar(lhs, rhs, |a, b| a <= b)
 }
 
@@ -111,7 +111,7 @@ fn gt<O: Offset>(lhs: &Utf8Array<O>, rhs: &Utf8Array<O>) -> Result<BooleanArray>
 }
 
 /// Perform `lhs > rhs` operation on [`StringArray`] / [`LargeStringArray`] and a scalar.
-fn gt_scalar<O: Offset>(lhs: &Utf8Array<O>, rhs: &str) -> Result<BooleanArray> {
+fn gt_scalar<O: Offset>(lhs: &Utf8Array<O>, rhs: &str) -> BooleanArray {
     compare_op_scalar(lhs, rhs, |a, b| a > b)
 }
 
@@ -121,7 +121,7 @@ fn gt_eq<O: Offset>(lhs: &Utf8Array<O>, rhs: &Utf8Array<O>) -> Result<BooleanArr
 }
 
 /// Perform `lhs >= rhs` operation on [`StringArray`] / [`LargeStringArray`] and a scalar.
-fn gt_eq_scalar<O: Offset>(lhs: &Utf8Array<O>, rhs: &str) -> Result<BooleanArray> {
+fn gt_eq_scalar<O: Offset>(lhs: &Utf8Array<O>, rhs: &str) -> BooleanArray {
     compare_op_scalar(lhs, rhs, |a, b| a >= b)
 }
 
@@ -140,11 +140,7 @@ pub fn compare<O: Offset>(
     }
 }
 
-pub fn compare_scalar<O: Offset>(
-    lhs: &Utf8Array<O>,
-    rhs: &str,
-    op: Operator,
-) -> Result<BooleanArray> {
+pub fn compare_scalar<O: Offset>(lhs: &Utf8Array<O>, rhs: &str, op: Operator) -> BooleanArray {
     match op {
         Operator::Eq => eq_scalar(lhs, rhs),
         Operator::Neq => neq_scalar(lhs, rhs),
@@ -171,7 +167,7 @@ mod tests {
         assert_eq!(op(&lhs, &rhs).unwrap(), expected);
     }
 
-    fn test_generic_scalar<O: Offset, F: Fn(&Utf8Array<O>, &str) -> Result<BooleanArray>>(
+    fn test_generic_scalar<O: Offset, F: Fn(&Utf8Array<O>, &str) -> BooleanArray>(
         lhs: Vec<&str>,
         rhs: &str,
         op: F,
@@ -179,7 +175,7 @@ mod tests {
     ) {
         let lhs = Utf8Array::<O>::from_slice(lhs);
         let expected = BooleanArray::from_slice(expected);
-        assert_eq!(op(&lhs, rhs).unwrap(), expected);
+        assert_eq!(op(&lhs, rhs), expected);
     }
 
     #[test]

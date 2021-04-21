@@ -111,7 +111,7 @@ pub fn sort_to_indices(values: &dyn Array, options: &SortOptions) -> Result<Int3
     match values.data_type() {
         DataType::Boolean => {
             let (v, n) = partition_validity(values);
-            sort_boolean(values, v, n, &options)
+            Ok(sort_boolean(values, v, n, &options))
         }
         DataType::Int8 => dyn_sort_indices!(i8, values, ord::total_cmp, options),
         DataType::Int16 => dyn_sort_indices!(i16, values, ord::total_cmp, options),
@@ -243,7 +243,7 @@ fn sort_boolean(
     value_indices: Vec<i32>,
     null_indices: Vec<i32>,
     options: &SortOptions,
-) -> Result<Int32Array> {
+) -> Int32Array {
     let values = values
         .as_any()
         .downcast_ref::<BooleanArray>()
@@ -277,7 +277,7 @@ fn sort_boolean(
         values.extend_from_slice(nulls.as_slice());
     }
 
-    Ok(Int32Array::from_data(DataType::Int32, values.into(), None))
+    Int32Array::from_data(DataType::Int32, values.into(), None)
 }
 
 /// Sort strings
