@@ -116,3 +116,7 @@ harness = false
 [[bench]]
 name = "write_parquet"
 harness = false
+
+[[bench]]
+name = "aggregate"
+harness = false
