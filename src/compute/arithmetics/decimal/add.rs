@@ -20,6 +20,10 @@
 use crate::{
     array::{Array, PrimitiveArray},
     buffer::Buffer,
+    compute::{
+        arity::{binary, binary_checked},
+        utils::combine_validities,
+    },
 };
 use crate::{
     datatypes::DataType,
@@ -27,13 +31,26 @@ use crate::{
 };
 
 use super::{adjusted_precision_scale, max_value, number_digits};
-use crate::compute::arity::{binary, try_binary};
-use crate::compute::utils::combine_validities;
 
 /// Adds two decimal primitive arrays with the same precision and scale. If the
 /// precision and scale is different, then an InvalidArgumentError is returned.
 /// This function panics if the added numbers result in a number larger than
 /// the possible number for the selected precision.
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::arithmetics::decimal::add::add;
+/// use arrow2::array::Primitive;
+/// use arrow2::datatypes::DataType;
+///
+/// let a = Primitive::from(&vec![Some(1i128), Some(1i128), None, Some(2i128)]).to(DataType::Decimal(5, 2));
+/// let b = Primitive::from(&vec![Some(1i128), Some(2i128), None, Some(2i128)]).to(DataType::Decimal(5, 2));
+///
+/// let result = add(&a, &b).unwrap();
+/// let expected = Primitive::from(&vec![Some(2i128), Some(3i128), None, Some(4i128)]).to(DataType::Decimal(5, 2));
+///
+/// assert_eq!(result, expected);
+/// ```
 pub fn add(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<PrimitiveArray<i128>> {
     // Matching on both data types from both arrays
     // This match will be true only when precision and scale from both
@@ -74,6 +91,21 @@ pub fn add(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<Pri
 /// InvalidArgumentError is returned. If the result from the sum is larger than
 /// the possible number with the selected precision then the resulted number in
 /// the arrow array is the maximum number for the selected precision.
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::arithmetics::decimal::add::saturating_add;
+/// use arrow2::array::Primitive;
+/// use arrow2::datatypes::DataType;
+///
+/// let a = Primitive::from(&vec![Some(99000i128), Some(11100i128), None, Some(22200i128)]).to(DataType::Decimal(5, 2));
+/// let b = Primitive::from(&vec![Some(01000i128), Some(22200i128), None, Some(11100i128)]).to(DataType::Decimal(5, 2));
+///
+/// let result = saturating_add(&a, &b).unwrap();
+/// let expected = Primitive::from(&vec![Some(99999i128), Some(33300i128), None, Some(33300i128)]).to(DataType::Decimal(5, 2));
+///
+/// assert_eq!(result, expected);
+/// ```
 pub fn saturating_add(
     lhs: &PrimitiveArray<i128>,
     rhs: &PrimitiveArray<i128>,
@@ -119,8 +151,23 @@ pub fn saturating_add(
 /// Checked addition of two decimal primitive arrays with the same precision
 /// and scale. If the precision and scale is different, then an
 /// InvalidArgumentError is returned. If the result from the sum is larger than
-/// the possible number with the selected precision then the function returns
-/// an ArrowError::ArithmeticError.
+/// the possible number with the selected precision (overflowing), then the
+/// validity for that index is changed to None
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::arithmetics::decimal::add::checked_add;
+/// use arrow2::array::Primitive;
+/// use arrow2::datatypes::DataType;
+///
+/// let a = Primitive::from(&vec![Some(99000i128), Some(11100i128), None, Some(22200i128)]).to(DataType::Decimal(5, 2));
+/// let b = Primitive::from(&vec![Some(01000i128), Some(22200i128), None, Some(11100i128)]).to(DataType::Decimal(5, 2));
+///
+/// let result = checked_add(&a, &b).unwrap();
+/// let expected = Primitive::from(&vec![None, Some(33300i128), None, Some(33300i128)]).to(DataType::Decimal(5, 2));
+///
+/// assert_eq!(result, expected);
+/// ```
 pub fn checked_add(
     lhs: &PrimitiveArray<i128>,
     rhs: &PrimitiveArray<i128>,
@@ -136,16 +183,12 @@ pub fn checked_add(
                     let res: i128 = a + b;
 
                     match res {
-                        res if res.abs() > max_value(*lhs_p) => {
-                            return Err(ArrowError::ArithmeticError(
-                                "Saturated result in addition".to_string(),
-                            ));
-                        }
-                        _ => Ok(res),
+                        res if res.abs() > max_value(*lhs_p) => None,
+                        _ => Some(res),
                     }
                 };
 
-                try_binary(lhs, rhs, lhs.data_type().clone(), op)
+                binary_checked(lhs, rhs, lhs.data_type().clone(), op)
             } else {
                 return Err(ArrowError::InvalidArgumentError(
                     "Arrays must have the same precision and scale".to_string(),
@@ -165,6 +208,26 @@ pub fn checked_add(
 /// and precision is adjusted to the largest precision and scale. If during the
 /// addition one of the results is larger than the max possible value, the
 /// result precision is changed to the precision of the max value
+///
+/// ```nocode
+/// 11111.11   -> 7, 2
+/// 11111.111  -> 8, 3
+/// ------------------
+/// 22222.221  -> 8, 3
+/// ```
+/// # Examples
+/// ```
+/// use arrow2::compute::arithmetics::decimal::add::adaptive_add;
+/// use arrow2::array::Primitive;
+/// use arrow2::datatypes::DataType;
+///
+/// let a = Primitive::from(&vec![Some(11111_11i128)]).to(DataType::Decimal(7, 2));
+/// let b = Primitive::from(&vec![Some(11111_111i128)]).to(DataType::Decimal(8, 3));
+/// let result = adaptive_add(&a, &b).unwrap();
+/// let expected = Primitive::from(&vec![Some(22222_221i128)]).to(DataType::Decimal(8, 3));
+///
+/// assert_eq!(result, expected);
+/// ```
 pub fn adaptive_add(
     lhs: &PrimitiveArray<i128>,
     rhs: &PrimitiveArray<i128>,
@@ -370,17 +433,11 @@ mod tests {
 
     #[test]
     fn test_add_checked_overflow() {
-        let a = Primitive::from(&vec![Some(99999i128)]).to(DataType::Decimal(5, 2));
-        let b = Primitive::from(&vec![Some(1i128)]).to(DataType::Decimal(5, 2));
-        let result = checked_add(&a, &b);
-
-        match result {
-            Err(err) => match err {
-                ArrowError::ArithmeticError(_) => assert!(true),
-                _ => panic!("Should return ArrowError::ArithmeticError should be detected"),
-            },
-            _ => panic!("Should return ArrowError::ArithmeticError should be detected"),
-        }
+        let a = Primitive::from(&vec![Some(1i128), Some(99999i128)]).to(DataType::Decimal(5, 2));
+        let b = Primitive::from(&vec![Some(1i128), Some(1i128)]).to(DataType::Decimal(5, 2));
+        let result = checked_add(&a, &b).unwrap();
+        let expected = Primitive::from(&vec![Some(2i128), None]).to(DataType::Decimal(5, 2));
+        assert_eq!(result, expected);
     }
 
     #[test]

@@ -64,6 +64,41 @@ fn create_scale(lhs: &DataType, rhs: &DataType) -> Result<f64> {
 /// Adds a duration to a time array (Timestamp, Time and Date). The timeunit
 /// enum is used to scale correctly both arrays; adding seconds with seconds,
 /// or milliseconds with milliseconds.
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::arithmetics::time::add_duration;
+/// use arrow2::array::Primitive;
+/// use arrow2::datatypes::{DataType, TimeUnit};
+///
+/// let timestamp = Primitive::from(&vec![
+///     Some(100000i64),
+///     Some(200000i64),
+///     None,
+///     Some(300000i64),
+/// ])
+/// .to(DataType::Timestamp(
+///     TimeUnit::Second,
+///     Some("America/New_York".to_string()),
+/// ));
+///
+/// let duration = Primitive::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)])
+///     .to(DataType::Duration(TimeUnit::Second));
+///
+/// let result = add_duration(&timestamp, &duration).unwrap();
+/// let expected = Primitive::from(&vec![
+///     Some(100010i64),
+///     Some(200020i64),
+///     None,
+///     Some(300030i64),
+/// ])
+/// .to(DataType::Timestamp(
+///     TimeUnit::Second,
+///     Some("America/New_York".to_string()),
+/// ));
+///
+/// assert_eq!(result, expected);
+/// ```
 pub fn add_duration<T, D>(
     time: &PrimitiveArray<T>,
     duration: &PrimitiveArray<D>,
@@ -85,6 +120,42 @@ where
 /// Subtract a duration to a time array (Timestamp, Time and Date). The timeunit
 /// enum is used to scale correctly both arrays; adding seconds with seconds,
 /// or milliseconds with milliseconds.
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::arithmetics::time::subtract_duration;
+/// use arrow2::array::Primitive;
+/// use arrow2::datatypes::{DataType, TimeUnit};
+///
+/// let timestamp = Primitive::from(&vec![
+///     Some(100000i64),
+///     Some(200000i64),
+///     None,
+///     Some(300000i64),
+/// ])
+/// .to(DataType::Timestamp(
+///     TimeUnit::Second,
+///     Some("America/New_York".to_string()),
+/// ));
+///
+/// let duration = Primitive::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)])
+///     .to(DataType::Duration(TimeUnit::Second));
+///
+/// let result = subtract_duration(&timestamp, &duration).unwrap();
+/// let expected = Primitive::from(&vec![
+///     Some(99990i64),
+///     Some(199980i64),
+///     None,
+///     Some(299970i64),
+/// ])
+/// .to(DataType::Timestamp(
+///     TimeUnit::Second,
+///     Some("America/New_York".to_string()),
+/// ));
+///
+/// assert_eq!(result, expected);
+///
+/// ```
 pub fn subtract_duration<T, D>(
     time: &PrimitiveArray<T>,
     duration: &PrimitiveArray<D>,
@@ -106,6 +177,34 @@ where
 /// Calculates the difference between two timestamps returning an array of type
 /// Duration. The timeunit enum is used to scale correctly both arrays;
 /// subtracting seconds with seconds, or milliseconds with milliseconds.
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::arithmetics::time::timestamp_diff;
+/// use arrow2::array::Primitive;
+/// use arrow2::datatypes::{DataType, TimeUnit};
+/// let timestamp_a = Primitive::from(&vec![
+///     Some(100_010i64),
+///     Some(200_020i64),
+///     None,
+///     Some(300_030i64),
+/// ])
+/// .to(DataType::Timestamp(TimeUnit::Second, None));
+///
+/// let timestamp_b = Primitive::from(&vec![
+///     Some(100_000i64),
+///     Some(200_000i64),
+///     None,
+///     Some(300_000i64),
+/// ])
+/// .to(DataType::Timestamp(TimeUnit::Second, None));
+///
+/// let expected = Primitive::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)])
+///     .to(DataType::Duration(TimeUnit::Second));
+///
+/// let result = timestamp_diff(&timestamp_a, &&timestamp_b).unwrap();
+/// assert_eq!(result, expected);
+/// ```
 pub fn timestamp_diff(
     lhs: &PrimitiveArray<i64>,
     rhs: &PrimitiveArray<i64>,
