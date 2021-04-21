@@ -1,5 +1,5 @@
 use crate::{
-    array::{FromFFI, Offset, ToFFI},
+    array::{FromFfi, Offset, ToFfi},
     datatypes::DataType,
     ffi::ArrowArray,
 };
@@ -8,7 +8,7 @@ use crate::error::Result;
 
 use super::BinaryArray;
 
-unsafe impl<O: Offset> ToFFI for BinaryArray<O> {
+unsafe impl<O: Offset> ToFfi for BinaryArray<O> {
     fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
         unsafe {
             [
@@ -29,7 +29,7 @@ unsafe impl<O: Offset> ToFFI for BinaryArray<O> {
     }
 }
 
-unsafe impl<O: Offset> FromFFI for BinaryArray<O> {
+unsafe impl<O: Offset> FromFfi for BinaryArray<O> {
     fn try_from_ffi(data_type: DataType, array: ArrowArray) -> Result<Self> {
         let expected = if O::is_large() {
             DataType::LargeBinary

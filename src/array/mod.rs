@@ -7,7 +7,7 @@ use crate::{
     datatypes::{DataType, IntervalUnit},
 };
 
-pub trait Array: std::fmt::Debug + std::fmt::Display + Send + Sync + ToFFI {
+pub trait Array: std::fmt::Debug + std::fmt::Display + Send + Sync + ToFfi {
     fn as_any(&self) -> &dyn Any;
 
     /// The length of the array
@@ -259,8 +259,8 @@ pub use specification::Offset;
 pub use struct_::StructArray;
 pub use utf8::{Utf8Array, Utf8Primitive};
 
-pub use self::ffi::FromFFI;
-use self::ffi::ToFFI;
+pub use self::ffi::FromFfi;
+use self::ffi::ToFfi;
 
 pub type Int8Array = PrimitiveArray<i8>;
 pub type Int16Array = PrimitiveArray<i16>;

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::{bitmap::Bitmap, datatypes::DataType, types::NativeType};
 
-use super::{ffi::ToFFI, new_empty_array, primitive::PrimitiveArray, Array};
+use super::{ffi::ToFfi, new_empty_array, primitive::PrimitiveArray, Array};
 
 pub unsafe trait DictionaryKey: NativeType + num::NumCast + num::FromPrimitive {
     const DATA_TYPE: DataType;
@@ -136,7 +136,7 @@ impl<K: DictionaryKey> std::fmt::Display for DictionaryArray<K> {
     }
 }
 
-unsafe impl<K: DictionaryKey> ToFFI for DictionaryArray<K> {
+unsafe impl<K: DictionaryKey> ToFfi for DictionaryArray<K> {
     fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
         [
             self.keys.validity().as_ref().map(|x| x.as_ptr()),

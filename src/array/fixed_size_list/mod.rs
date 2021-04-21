@@ -5,7 +5,7 @@ use crate::{
     datatypes::{DataType, Field},
 };
 
-use super::{display_fmt, ffi::ToFFI, new_empty_array, new_null_array, Array};
+use super::{display_fmt, ffi::ToFfi, new_empty_array, new_null_array, Array};
 
 #[derive(Debug, Clone)]
 pub struct FixedSizeListArray {
@@ -120,7 +120,7 @@ impl std::fmt::Display for FixedSizeListArray {
     }
 }
 
-unsafe impl ToFFI for FixedSizeListArray {
+unsafe impl ToFfi for FixedSizeListArray {
     fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
         [self.validity.as_ref().map(|x| x.as_ptr()), None, None]
     }

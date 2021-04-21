@@ -61,7 +61,7 @@ mod array;
 #[allow(clippy::module_inception)]
 mod ffi;
 
-trait ToFFI {
+trait ToFfi {
     // necessary for ffi. first must be the bitmap
     fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3];
 

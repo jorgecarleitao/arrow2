@@ -5,7 +5,7 @@ use crate::{
     datatypes::{DataType, Field},
 };
 
-use super::{ffi::ToFFI, new_empty_array, new_null_array, Array};
+use super::{ffi::ToFfi, new_empty_array, new_null_array, Array};
 
 #[derive(Debug, Clone)]
 pub struct StructArray {
@@ -120,7 +120,7 @@ impl std::fmt::Display for StructArray {
     }
 }
 
-unsafe impl ToFFI for StructArray {
+unsafe impl ToFfi for StructArray {
     fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
         [self.validity.as_ref().map(|x| x.as_ptr()), None, None]
     }

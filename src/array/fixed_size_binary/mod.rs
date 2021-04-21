@@ -1,6 +1,6 @@
 use crate::{bitmap::Bitmap, buffer::Buffer, datatypes::DataType};
 
-use super::{display_fmt, display_helper, ffi::ToFFI, Array};
+use super::{display_fmt, display_helper, ffi::ToFfi, Array};
 
 mod from;
 mod iterator;
@@ -126,7 +126,7 @@ impl std::fmt::Display for FixedSizeBinaryArray {
     }
 }
 
-unsafe impl ToFFI for FixedSizeBinaryArray {
+unsafe impl ToFfi for FixedSizeBinaryArray {
     fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
         unsafe {
             [

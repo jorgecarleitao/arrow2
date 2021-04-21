@@ -1,13 +1,13 @@
 use crate::error::Result;
 use crate::{
-    array::{FromFFI, Offset, ToFFI},
+    array::{FromFfi, Offset, ToFfi},
     datatypes::DataType,
     ffi::ArrowArray,
 };
 
 use super::Utf8Array;
 
-unsafe impl<O: Offset> ToFFI for Utf8Array<O> {
+unsafe impl<O: Offset> ToFfi for Utf8Array<O> {
     fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
         unsafe {
             [
@@ -27,7 +27,7 @@ unsafe impl<O: Offset> ToFFI for Utf8Array<O> {
     }
 }
 
-unsafe impl<O: Offset> FromFFI for Utf8Array<O> {
+unsafe impl<O: Offset> FromFfi for Utf8Array<O> {
     fn try_from_ffi(_: DataType, array: ArrowArray) -> Result<Self> {
         let length = array.len();
         let offset = array.offset();

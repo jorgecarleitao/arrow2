@@ -20,7 +20,7 @@
 use std::{convert::TryFrom, sync::Arc};
 
 use super::ffi::ArrowArray;
-use crate::array::{BooleanArray, FromFFI};
+use crate::array::{BooleanArray, FromFfi};
 use crate::error::{ArrowError, Result};
 use crate::types::days_ms;
 use crate::{

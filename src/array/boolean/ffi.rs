@@ -1,5 +1,5 @@
 use crate::{
-    array::{FromFFI, ToFFI},
+    array::{FromFfi, ToFfi},
     datatypes::DataType,
     ffi::ArrowArray,
 };
@@ -8,7 +8,7 @@ use crate::error::Result;
 
 use super::BooleanArray;
 
-unsafe impl ToFFI for BooleanArray {
+unsafe impl ToFfi for BooleanArray {
     fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
         [
             self.validity.as_ref().map(|x| x.as_ptr()),
@@ -22,7 +22,7 @@ unsafe impl ToFFI for BooleanArray {
     }
 }
 
-unsafe impl FromFFI for BooleanArray {
+unsafe impl FromFfi for BooleanArray {
     fn try_from_ffi(_: DataType, array: ArrowArray) -> Result<Self> {
         let length = array.len();
         let offset = array.offset();

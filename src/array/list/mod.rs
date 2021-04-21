@@ -8,7 +8,7 @@ use crate::{
 
 use super::{
     display_fmt,
-    ffi::ToFFI,
+    ffi::ToFfi,
     new_empty_array,
     specification::{check_offsets, Offset},
     Array,
@@ -184,7 +184,7 @@ impl<O: Offset> std::fmt::Display for ListArray<O> {
     }
 }
 
-unsafe impl<O: Offset> ToFFI for ListArray<O> {
+unsafe impl<O: Offset> ToFfi for ListArray<O> {
     fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
         unsafe {
             [
