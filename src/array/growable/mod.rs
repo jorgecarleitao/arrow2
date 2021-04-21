@@ -20,6 +20,8 @@ mod structure;
 pub use structure::GrowableStruct;
 mod utf8;
 pub use utf8::GrowableUtf8;
+mod dictionary;
+pub use dictionary::GrowableDictionary;
 
 mod utils;
 
@@ -56,6 +58,25 @@ macro_rules! dyn_growable {
             })
             .collect::<Vec<_>>();
         Box::new(primitive::GrowablePrimitive::<$ty>::new(
+            &arrays,
+            $use_validity,
+            $capacity,
+        ))
+    }};
+}
+
+macro_rules! dyn_dict_growable {
+    ($ty:ty, $arrays:expr, $use_validity:expr, $capacity:expr) => {{
+        let arrays = $arrays
+            .iter()
+            .map(|array| {
+                array
+                    .as_any()
+                    .downcast_ref::<DictionaryArray<$ty>>()
+                    .unwrap()
+            })
+            .collect::<Vec<_>>();
+        Box::new(dictionary::GrowableDictionary::<$ty>::new(
             &arrays,
             $use_validity,
             $capacity,
@@ -162,7 +183,17 @@ pub fn make_growable<'a>(
         )),
         DataType::FixedSizeList(_, _) => todo!(),
         DataType::Union(_) => todo!(),
-        DataType::Dictionary(_, _) => todo!(),
+        DataType::Dictionary(key, _) => match key.as_ref() {
+            DataType::UInt8 => dyn_dict_growable!(u8, arrays, use_validity, capacity),
+            DataType::UInt16 => dyn_dict_growable!(u16, arrays, use_validity, capacity),
+            DataType::UInt32 => dyn_dict_growable!(u32, arrays, use_validity, capacity),
+            DataType::UInt64 => dyn_dict_growable!(u64, arrays, use_validity, capacity),
+            DataType::Int8 => dyn_dict_growable!(i8, arrays, use_validity, capacity),
+            DataType::Int16 => dyn_dict_growable!(i16, arrays, use_validity, capacity),
+            DataType::Int32 => dyn_dict_growable!(i32, arrays, use_validity, capacity),
+            DataType::Int64 => dyn_dict_growable!(i64, arrays, use_validity, capacity),
+            _ => unreachable!(),
+        },
     }
 }
 
@@ -203,26 +234,6 @@ mod tests {
             }
         }
         builder.finish().data()
-    }
-
-    #[test]
-    fn test_dictionary() {
-        // (a, b, c), (0, 1, 0, 2) => (a, b, a, c)
-        let array = create_dictionary_array(
-            &["a", "b", "c"],
-            &[Some("a"), Some("b"), None, Some("c")],
-        );
-        let arrays = vec![array.as_ref()];
-
-        let mut mutable = MutableArrayData::new(arrays, false, 0);
-
-        mutable.extend(0, 1, 3);
-
-        let result = mutable.freeze();
-        let result = DictionaryArray::from(Arc::new(result));
-
-        let expected = Int16Array::from(vec![Some(1), None]);
-        assert_eq!(result.keys(), &expected);
     }
 
     /*
