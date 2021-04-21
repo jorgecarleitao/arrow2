@@ -177,6 +177,26 @@ pub fn max_boolean(array: &BooleanArray) -> Option<bool> {
         .or(Some(false))
 }
 
+fn nonnull_sum<T: NativeType + AddAssign + Sum>(values: &[T]) -> T {
+    let chunks = values.chunks_exact(T::LANES);
+    let remainder = chunks.remainder();
+
+    let sum = chunks.fold(T::new_simd(), |mut acc, chunk| {
+        let chunk = T::from_slice(chunk);
+        for i in 0..T::LANES {
+            acc[i] += chunk[i];
+        }
+        acc
+    });
+
+    let mut reduced: T = remainder.iter().copied().sum();
+
+    for i in 0..T::LANES {
+        reduced += sum[i];
+    }
+    reduced
+}
+
 /// Returns the sum of values in the array.
 ///
 /// Returns `None` if the array is empty or only contains null values.
@@ -191,7 +211,7 @@ where
     }
 
     match array.validity() {
-        None => Some(array.values().iter().copied().sum()),
+        None => Some(nonnull_sum(array.values())),
         Some(buffer) => {
             let values = array.values();
             let validity_chunks = buffer.chunks::<u64>();
