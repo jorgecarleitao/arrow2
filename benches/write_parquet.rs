@@ -27,15 +27,18 @@ fn write(array: &dyn Array) -> Result<()> {
         DataType::Utf8 => ("BYTE_ARRAY", "(UTF8)"),
         _ => todo!(),
     };
-    let schema = SchemaDescriptor::new(from_message(&format!(
-        "message schema {{ OPTIONAL {} col {}; }}",
-        physical, converted
-    ))?);
+    let schema = SchemaDescriptor::new(
+        "test".to_string(),
+        vec![from_message(&format!(
+            "message schema {{ OPTIONAL {} col {}; }}",
+            physical, converted
+        ))?],
+    );
 
     let mut writer = Cursor::new(vec![]);
     write_file(
         &mut writer,
-        &schema,
+        schema,
         CompressionCodec::Uncompressed,
         row_groups,
     )
