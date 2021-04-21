@@ -3,6 +3,9 @@ use std::{
     convert::TryFrom,
 };
 
+mod simd;
+pub use simd::Simd;
+
 use crate::datatypes::{DataType, IntervalUnit};
 
 pub unsafe trait Relation {
@@ -33,6 +36,7 @@ pub unsafe trait NativeType:
     + PartialEq
     + Default
     + Sized
+    + Simd
     + 'static
 {
     type Bytes: AsRef<[u8]> + for<'a> TryFrom<&'a [u8]>;
