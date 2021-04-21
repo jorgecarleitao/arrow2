@@ -80,9 +80,9 @@ impl<'a> Growable<'a> for GrowableBoolean<'a> {
     }
 }
 
-impl<'a> Into<BooleanArray> for GrowableBoolean<'a> {
-    fn into(self) -> BooleanArray {
-        BooleanArray::from_data(self.values.into(), self.validity.into())
+impl<'a> From<GrowableBoolean<'a>> for BooleanArray {
+    fn from(val: GrowableBoolean<'a>) -> Self {
+        BooleanArray::from_data(val.values.into(), val.validity.into())
     }
 }
 

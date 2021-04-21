@@ -90,16 +90,14 @@ pub fn div(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<Pri
 
                 binary(lhs, rhs, lhs.data_type().clone(), op)
             } else {
-                return Err(ArrowError::InvalidArgumentError(
+                Err(ArrowError::InvalidArgumentError(
                     "Arrays must have the same precision and scale".to_string(),
-                ));
+                ))
             }
         }
-        _ => {
-            return Err(ArrowError::InvalidArgumentError(
-                "Incorrect data type for the array".to_string(),
-            ));
-        }
+        _ => Err(ArrowError::InvalidArgumentError(
+            "Incorrect data type for the array".to_string(),
+        )),
     }
 }
 
@@ -147,7 +145,7 @@ pub fn saturating_div(
                                     if res > 0 {
                                         max
                                     } else {
-                                        -1 * max
+                                        -max
                                     }
                                 }
                                 _ => res,
@@ -159,16 +157,14 @@ pub fn saturating_div(
 
                 binary(lhs, rhs, lhs.data_type().clone(), op)
             } else {
-                return Err(ArrowError::InvalidArgumentError(
+                Err(ArrowError::InvalidArgumentError(
                     "Arrays must have the same precision and scale".to_string(),
-                ));
+                ))
             }
         }
-        _ => {
-            return Err(ArrowError::InvalidArgumentError(
-                "Incorrect data type for the array".to_string(),
-            ));
-        }
+        _ => Err(ArrowError::InvalidArgumentError(
+            "Incorrect data type for the array".to_string(),
+        )),
     }
 }
 
@@ -216,16 +212,14 @@ pub fn checked_div(
 
                 binary_checked(lhs, rhs, lhs.data_type().clone(), op)
             } else {
-                return Err(ArrowError::InvalidArgumentError(
+                Err(ArrowError::InvalidArgumentError(
                     "Arrays must have the same precision and scale".to_string(),
-                ));
+                ))
             }
         }
-        _ => {
-            return Err(ArrowError::InvalidArgumentError(
-                "Incorrect data type for the array".to_string(),
-            ));
-        }
+        _ => Err(ArrowError::InvalidArgumentError(
+            "Incorrect data type for the array".to_string(),
+        )),
     }
 }
 
@@ -313,9 +307,9 @@ pub fn adaptive_div(
             validity,
         ))
     } else {
-        return Err(ArrowError::InvalidArgumentError(
+        Err(ArrowError::InvalidArgumentError(
             "Incorrect data type for the array".to_string(),
-        ));
+        ))
     }
 }
 

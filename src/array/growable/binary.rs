@@ -96,13 +96,9 @@ impl<'a, O: Offset> Growable<'a> for GrowableBinary<'a, O> {
     }
 }
 
-impl<'a, O: Offset> Into<BinaryArray<O>> for GrowableBinary<'a, O> {
-    fn into(self) -> BinaryArray<O> {
-        BinaryArray::<O>::from_data(
-            self.offsets.into(),
-            self.values.into(),
-            self.validity.into(),
-        )
+impl<'a, O: Offset> From<GrowableBinary<'a, O>> for BinaryArray<O> {
+    fn from(val: GrowableBinary<'a, O>) -> Self {
+        BinaryArray::<O>::from_data(val.offsets.into(), val.values.into(), val.validity.into())
     }
 }
 

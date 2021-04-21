@@ -1,5 +1,5 @@
 use crate::{
-    array::{FromFFI, ToFFI},
+    array::{FromFfi, ToFfi},
     datatypes::DataType,
     ffi::ArrowArray,
     types::NativeType,
@@ -9,7 +9,7 @@ use crate::error::Result;
 
 use super::PrimitiveArray;
 
-unsafe impl<T: NativeType> ToFFI for PrimitiveArray<T> {
+unsafe impl<T: NativeType> ToFfi for PrimitiveArray<T> {
     fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
         unsafe {
             [
@@ -28,7 +28,7 @@ unsafe impl<T: NativeType> ToFFI for PrimitiveArray<T> {
     }
 }
 
-unsafe impl<T: NativeType> FromFFI for PrimitiveArray<T> {
+unsafe impl<T: NativeType> FromFfi for PrimitiveArray<T> {
     fn try_from_ffi(data_type: DataType, array: ArrowArray) -> Result<Self> {
         let length = array.len();
         let offset = array.offset();

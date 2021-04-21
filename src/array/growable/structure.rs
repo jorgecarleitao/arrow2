@@ -112,15 +112,11 @@ impl<'a> Growable<'a> for GrowableStruct<'a> {
     }
 }
 
-impl<'a> Into<StructArray> for GrowableStruct<'a> {
-    fn into(self) -> StructArray {
-        let values = self.values.into_iter().map(|mut x| x.to_arc()).collect();
+impl<'a> From<GrowableStruct<'a>> for StructArray {
+    fn from(val: GrowableStruct<'a>) -> Self {
+        let values = val.values.into_iter().map(|mut x| x.to_arc()).collect();
 
-        StructArray::from_data(
-            self.arrays[0].fields().to_vec(),
-            values,
-            self.validity.into(),
-        )
+        StructArray::from_data(val.arrays[0].fields().to_vec(), values, val.validity.into())
     }
 }
 

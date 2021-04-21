@@ -39,9 +39,9 @@ impl<'a> Growable<'a> for GrowableNull {
     }
 }
 
-impl Into<NullArray> for GrowableNull {
-    fn into(self) -> NullArray {
-        NullArray::from_data(self.length)
+impl From<GrowableNull> for NullArray {
+    fn from(val: GrowableNull) -> Self {
+        NullArray::from_data(val.length)
     }
 }
 

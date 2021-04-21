@@ -1,6 +1,6 @@
 use crate::{bitmap::Bitmap, datatypes::DataType};
 
-use super::{ffi::ToFFI, Array};
+use super::{ffi::ToFfi, Array};
 
 #[derive(Debug, Clone)]
 pub struct NullArray {
@@ -67,7 +67,7 @@ impl std::fmt::Display for NullArray {
     }
 }
 
-unsafe impl ToFFI for NullArray {
+unsafe impl ToFfi for NullArray {
     fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
         [None, None, None]
     }

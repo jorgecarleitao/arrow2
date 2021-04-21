@@ -120,16 +120,16 @@ impl<'a, T: DictionaryKey> Growable<'a> for GrowableDictionary<'a, T> {
     }
 }
 
-impl<'a, T: DictionaryKey> Into<DictionaryArray<T>> for GrowableDictionary<'a, T> {
+impl<'a, T: DictionaryKey> From<GrowableDictionary<'a, T>> for DictionaryArray<T> {
     #[inline]
-    fn into(self) -> DictionaryArray<T> {
+    fn from(val: GrowableDictionary<'a, T>) -> Self {
         let keys = PrimitiveArray::<T>::from_data(
             T::DATA_TYPE,
-            self.key_values.into(),
-            self.key_validity.into(),
+            val.key_values.into(),
+            val.key_validity.into(),
         );
 
-        DictionaryArray::<T>::from_data(keys, self.values)
+        DictionaryArray::<T>::from_data(keys, val.values)
     }
 }
 

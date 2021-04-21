@@ -85,10 +85,10 @@ impl<'a, T: NativeType> Growable<'a> for GrowablePrimitive<'a, T> {
     }
 }
 
-impl<'a, T: NativeType> Into<PrimitiveArray<T>> for GrowablePrimitive<'a, T> {
+impl<'a, T: NativeType> From<GrowablePrimitive<'a, T>> for PrimitiveArray<T> {
     #[inline]
-    fn into(self) -> PrimitiveArray<T> {
-        PrimitiveArray::<T>::from_data(self.data_type, self.values.into(), self.validity.into())
+    fn from(val: GrowablePrimitive<'a, T>) -> Self {
+        PrimitiveArray::<T>::from_data(val.data_type, val.values.into(), val.validity.into())
     }
 }
 
