@@ -19,8 +19,11 @@
 
 use std::{iter::Sum, ops::AddAssign};
 
-use crate::array::{ord::total_cmp, Array, BooleanArray, Offset, PrimitiveArray, Utf8Array};
-use crate::types::NativeType;
+use crate::types::{BitChunkIter, NativeType};
+use crate::{
+    array::{ord::total_cmp, Array, BooleanArray, Offset, PrimitiveArray, Utf8Array},
+    bitmap::Bitmap,
+};
 
 /// Helper macro to perform min/max of strings
 fn min_max_string<O: Offset, F: Fn(&str, &str) -> bool>(
@@ -197,6 +200,43 @@ fn nonnull_sum<T: NativeType + AddAssign + Sum>(values: &[T]) -> T {
     reduced
 }
 
+/// # Panics
+/// iff `values.len() != bitmap.len()` or the operation overflows.
+fn null_sum<T: NativeType + AddAssign + Sum>(values: &[T], bitmap: &Bitmap) -> T {
+    let chunks = values.chunks_exact(T::LANES);
+    let remainder = chunks.remainder();
+
+    let validity_chunks = bitmap.chunks::<T::SimdMask>();
+
+    let validity_remainder = validity_chunks.remainder();
+
+    let iter = validity_chunks.iter();
+
+    let sum = chunks
+        .zip(iter)
+        .fold(T::new_simd(), |mut acc, (chunk, validity_chunk)| {
+            let chunk = T::from_slice(chunk);
+            let mut iter = BitChunkIter::new(validity_chunk);
+            for i in 0..T::LANES {
+                if iter.next().unwrap() {
+                    acc[i] += chunk[i];
+                }
+            }
+            acc
+        });
+
+    let mut reduced: T = remainder
+        .iter()
+        .zip(BitChunkIter::new(validity_remainder))
+        .map(|(x, is_valid)| if is_valid { *x } else { T::default() })
+        .sum();
+
+    for i in 0..T::LANES {
+        reduced += sum[i];
+    }
+    reduced
+}
+
 /// Returns the sum of values in the array.
 ///
 /// Returns `None` if the array is empty or only contains null values.
@@ -212,37 +252,7 @@ where
 
     match array.validity() {
         None => Some(nonnull_sum(array.values())),
-        Some(buffer) => {
-            let values = array.values();
-            let validity_chunks = buffer.chunks::<u64>();
-            let iter = validity_chunks.iter();
-            let values_chunks = values.chunks_exact(64);
-            let values_remainder = values_chunks.remainder();
-
-            let mut result =
-                values_chunks
-                    .zip(iter)
-                    .fold(T::default(), |mut acc, (chunk, mask)| {
-                        let mut index_mask = 1u64;
-                        chunk.iter().for_each(|value| {
-                            if (mask & index_mask) != 0u64 {
-                                acc += *value;
-                            }
-                            index_mask <<= 1u64;
-                        });
-                        acc
-                    });
-
-            let mask = validity_chunks.remainder();
-            let mut index_mask = 1;
-            values_remainder.iter().for_each(|value| {
-                if (mask & index_mask) != 0 {
-                    result += *value;
-                }
-                index_mask <<= 1;
-            });
-            Some(result)
-        }
+        Some(bitmap) => Some(null_sum(array.values(), bitmap)),
     }
 }
 

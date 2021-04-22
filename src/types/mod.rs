@@ -3,6 +3,8 @@ use std::{
     convert::TryFrom,
 };
 
+mod bit_chunk;
+pub use bit_chunk::{BitChunk, BitChunkIter};
 mod simd;
 pub use simd::Simd;
 
