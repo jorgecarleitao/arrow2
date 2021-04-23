@@ -40,6 +40,8 @@ itertools = { version = "^0.10", optional = true }
 
 base64 = { version = "0.13.0", optional = true }
 
+multiversion = "0.6.1"
+
 [dependencies.parquet2]
 git = "https://github.com/jorgecarleitao/parquet2"
 rev = "fb65dcaf7d02c7e0bcf8ec0aa85d3fe0cb0630c6"
