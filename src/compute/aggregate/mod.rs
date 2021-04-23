@@ -21,7 +21,7 @@ use std::{iter::Sum, ops::AddAssign};
 
 use crate::types::{BitChunkIter, NativeType};
 use crate::{
-    array::{ord::total_cmp, Array, BooleanArray, Offset, PrimitiveArray, Utf8Array},
+    array::{ord::*, Array, BooleanArray, Offset, PrimitiveArray, Utf8Array},
     bitmap::Bitmap,
 };
 
@@ -63,7 +63,6 @@ fn min_max_string<O: Offset, F: Fn(&str, &str) -> bool>(
 
 /// Returns the minimum value in the array, according to the natural order.
 /// For floating point arrays any NaN values are considered to be greater than any other non-null value
-#[inline]
 pub fn min<T>(array: &PrimitiveArray<T>) -> Option<T>
 where
     T: NativeType + Ord,
@@ -71,9 +70,24 @@ where
     min_max_helper(array, total_cmp)
 }
 
+pub fn max_f32(array: &PrimitiveArray<f32>) -> Option<f32> {
+    min_max_helper(array, |x, y| total_cmp_f32(x, y).reverse())
+}
+
+pub fn max_f64(array: &PrimitiveArray<f64>) -> Option<f64> {
+    min_max_helper(array, |x, y| total_cmp_f64(x, y).reverse())
+}
+
+pub fn min_f32(array: &PrimitiveArray<f32>) -> Option<f32> {
+    min_max_helper(array, |x, y| total_cmp_f32(x, y))
+}
+
+pub fn min_f64(array: &PrimitiveArray<f64>) -> Option<f64> {
+    min_max_helper(array, |x, y| total_cmp_f64(x, y))
+}
+
 /// Returns the maximum value in the array, according to the natural order.
 /// For floating point arrays any NaN values are considered to be greater than any other non-null value
-#[inline]
 pub fn max<T>(array: &PrimitiveArray<T>) -> Option<T>
 where
     T: NativeType + Ord,
