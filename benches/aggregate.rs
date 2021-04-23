@@ -18,6 +18,10 @@ fn add_benchmark(c: &mut Criterion) {
     let arr_a = create_primitive_array::<f32>(size, DataType::Float32, 0.0);
 
     c.bench_function("add f32", |b| b.iter(|| bench_op(&arr_a)));
+
+    let arr_a = create_primitive_array::<f32>(size, DataType::Float32, 0.5);
+
+    c.bench_function("add nulls f32", |b| b.iter(|| bench_op(&arr_a)));
 }
 
 criterion_group!(benches, add_benchmark);

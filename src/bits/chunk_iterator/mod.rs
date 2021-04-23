@@ -1,7 +1,6 @@
-mod chunk;
 mod merge;
 
-pub use chunk::BitChunk;
+pub use crate::types::BitChunk;
 use merge::merge_reversed;
 
 #[derive(Debug)]

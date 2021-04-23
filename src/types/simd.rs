@@ -1,4 +1,5 @@
 use super::days_ms;
+use super::BitChunk;
 use std::convert::TryInto;
 
 /// A trait describing types that can be represented by SIMD instructions.
@@ -10,6 +11,7 @@ pub unsafe trait Simd: Sized {
     type Simd: std::ops::Index<usize, Output = Self>
         + std::ops::IndexMut<usize, Output = Self>
         + for<'a> std::convert::TryFrom<&'a [Self]>;
+    type SimdMask: BitChunk;
 
     #[inline]
     fn from_slice(v: &[Self]) -> Self::Simd {
@@ -22,122 +24,33 @@ pub unsafe trait Simd: Sized {
     fn new_simd() -> Self::Simd;
 }
 
-unsafe impl Simd for u8 {
-    const LANES: usize = 64;
-    type Simd = [u8; 64];
+macro_rules! native {
+    ($type:ty, $lanes:tt, $mask:ty, $zero:tt) => {
+        unsafe impl Simd for $type {
+            const LANES: usize = $lanes;
+            type Simd = [$type; $lanes];
+            type SimdMask = $mask;
 
-    #[inline]
-    fn new_simd() -> Self::Simd {
-        [0; 64]
-    }
+            #[inline]
+            fn new_simd() -> Self::Simd {
+                [$zero; $lanes]
+            }
+        }
+    };
 }
 
-unsafe impl Simd for u16 {
-    const LANES: usize = 32;
-    type Simd = [u16; 32];
+native!(u8, 64, u64, 0);
+native!(u16, 32, u32, 0);
+native!(u32, 16, u16, 0);
+native!(u64, 8, u8, 0);
+native!(i8, 64, u64, 0);
+native!(i16, 32, u32, 0);
+native!(i32, 16, u16, 0);
+native!(i64, 8, u8, 0);
+native!(f32, 16, u16, 0.0);
+native!(f64, 8, u8, 0.0);
+// this is not 512 as it needs to be at least 8bits to align well with masks.
+native!(i128, 8, u8, 0);
 
-    #[inline]
-    fn new_simd() -> Self::Simd {
-        [0; 32]
-    }
-}
-
-unsafe impl Simd for u32 {
-    const LANES: usize = 16;
-    type Simd = [u32; 16];
-
-    #[inline]
-    fn new_simd() -> Self::Simd {
-        [0; 16]
-    }
-}
-
-unsafe impl Simd for u64 {
-    const LANES: usize = 8;
-    type Simd = [u64; 8];
-
-    #[inline]
-    fn new_simd() -> Self::Simd {
-        [0; 8]
-    }
-}
-
-unsafe impl Simd for i8 {
-    const LANES: usize = 64;
-    type Simd = [i8; 64];
-
-    #[inline]
-    fn new_simd() -> Self::Simd {
-        [0; 64]
-    }
-}
-
-unsafe impl Simd for i16 {
-    const LANES: usize = 32;
-    type Simd = [i16; 32];
-
-    #[inline]
-    fn new_simd() -> Self::Simd {
-        [0; 32]
-    }
-}
-
-unsafe impl Simd for i32 {
-    const LANES: usize = 16;
-    type Simd = [i32; 16];
-
-    #[inline]
-    fn new_simd() -> Self::Simd {
-        [0; 16]
-    }
-}
-
-unsafe impl Simd for i64 {
-    const LANES: usize = 8;
-    type Simd = [i64; 8];
-
-    #[inline]
-    fn new_simd() -> Self::Simd {
-        [0; 8]
-    }
-}
-
-unsafe impl Simd for f32 {
-    const LANES: usize = 16;
-    type Simd = [f32; 16];
-
-    #[inline]
-    fn new_simd() -> Self::Simd {
-        [0.0; 16]
-    }
-}
-
-unsafe impl Simd for f64 {
-    const LANES: usize = 8;
-    type Simd = [f64; 8];
-
-    #[inline]
-    fn new_simd() -> Self::Simd {
-        [0.0; 8]
-    }
-}
-
-unsafe impl Simd for i128 {
-    const LANES: usize = 4;
-    type Simd = [i128; 4];
-
-    #[inline]
-    fn new_simd() -> Self::Simd {
-        [0; 4]
-    }
-}
-
-unsafe impl Simd for days_ms {
-    const LANES: usize = 8;
-    type Simd = [days_ms; 8];
-
-    #[inline]
-    fn new_simd() -> Self::Simd {
-        [days_ms([0i32; 2]); 8]
-    }
-}
+static A: days_ms = days_ms([0i32; 2]);
+native!(days_ms, 8, u8, A);
