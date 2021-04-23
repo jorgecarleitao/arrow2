@@ -24,6 +24,7 @@ use crate::{
     array::{ord::total_cmp, Array, BooleanArray, Offset, PrimitiveArray, Utf8Array},
     bitmap::Bitmap,
 };
+use multiversion::multiversion;
 
 /// Helper macro to perform min/max of strings
 fn min_max_string<O: Offset, F: Fn(&str, &str) -> bool>(
@@ -180,6 +181,8 @@ pub fn max_boolean(array: &BooleanArray) -> Option<bool> {
         .or(Some(false))
 }
 
+#[multiversion]
+#[clone(target = "x86_64+avx")]
 fn nonnull_sum<T: NativeType + AddAssign + Sum>(values: &[T]) -> T {
     let chunks = values.chunks_exact(T::LANES);
     let remainder = chunks.remainder();
@@ -202,6 +205,8 @@ fn nonnull_sum<T: NativeType + AddAssign + Sum>(values: &[T]) -> T {
 
 /// # Panics
 /// iff `values.len() != bitmap.len()` or the operation overflows.
+#[multiversion]
+#[clone(target = "x86_64+avx")]
 fn null_sum<T: NativeType + AddAssign + Sum>(values: &[T], bitmap: &Bitmap) -> T {
     let chunks = values.chunks_exact(T::LANES);
     let remainder = chunks.remainder();
@@ -216,11 +221,9 @@ fn null_sum<T: NativeType + AddAssign + Sum>(values: &[T], bitmap: &Bitmap) -> T
         .zip(iter)
         .fold(T::new_simd(), |mut acc, (chunk, validity_chunk)| {
             let chunk = T::from_slice(chunk);
-            let mut iter = BitChunkIter::new(validity_chunk);
-            for i in 0..T::LANES {
-                if iter.next().unwrap() {
-                    acc[i] += chunk[i];
-                }
+            let iter = BitChunkIter::new(validity_chunk);
+            for (i, b) in (0..T::LANES).zip(iter) {
+                acc[i] += if b { chunk[i] } else { T::default() };
             }
             acc
         });
