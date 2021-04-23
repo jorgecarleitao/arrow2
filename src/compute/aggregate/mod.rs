@@ -105,7 +105,56 @@ pub fn min_string<O: Offset>(array: &Utf8Array<O>) -> Option<&str> {
     min_max_string(array, |a, b| a > b)
 }
 
+#[inline]
+fn reduce_slice<T, F>(initial: T, values: &[T], cmp: F) -> T
+where
+    T: NativeType,
+    F: Fn(&T, &T) -> std::cmp::Ordering,
+{
+    values.iter().fold(initial, |max, item| {
+        if cmp(&max, item) == std::cmp::Ordering::Greater {
+            *item
+        } else {
+            max
+        }
+    })
+}
+
+fn nonnull_min_max_primitive<T, F>(values: &[T], cmp: F) -> T
+where
+    T: NativeType,
+    F: Fn(&T, &T) -> std::cmp::Ordering,
+{
+    if values.len() < T::LANES {
+        return reduce_slice(values[0], &values[1..], cmp);
+    };
+    let mut chunks = values.chunks_exact(T::LANES);
+    let remainder = chunks.remainder();
+
+    let initial = T::from_slice(chunks.next().unwrap());
+
+    let chunk_reduced = chunks.fold(initial, |mut acc, chunk| {
+        let chunk = T::from_slice(chunk);
+        for i in 0..T::LANES {
+            if cmp(&acc[i], &chunk[i]) == std::cmp::Ordering::Greater {
+                acc[i] = chunk[i];
+            }
+        }
+        acc
+    });
+
+    let mut reduced = chunk_reduced[0];
+    for i in 1..T::LANES {
+        if cmp(&reduced, &chunk_reduced[i]) == std::cmp::Ordering::Greater {
+            reduced = chunk_reduced[i];
+        }
+    }
+
+    reduce_slice(reduced, remainder, cmp)
+}
+
 /// Helper function to perform min/max lambda function on values from a numeric array.
+#[inline]
 fn min_max_helper<T, F>(array: &PrimitiveArray<T>, cmp: F) -> Option<T>
 where
     T: NativeType,
@@ -117,31 +166,22 @@ where
     if null_count == array.len() {
         return None;
     }
-
-    let m = array.values();
-    let mut n;
+    let values = array.values();
 
     if let Some(validity) = array.validity() {
-        n = T::default();
+        let mut n = T::default();
         let mut has_value = false;
-        for (i, item) in m.iter().enumerate() {
+        for (i, item) in values.iter().enumerate() {
             let is_valid = unsafe { validity.get_bit_unchecked(i) };
             if is_valid && (!has_value || cmp(&n, item) == std::cmp::Ordering::Greater) {
                 has_value = true;
                 n = *item
             }
         }
+        Some(n)
     } else {
-        // optimized path for arrays without null values
-        n = m[1..].iter().fold(m[0], |max, item| {
-            if cmp(&max, item) == std::cmp::Ordering::Greater {
-                *item
-            } else {
-                max
-            }
-        });
+        Some(nonnull_min_max_primitive(values, cmp))
     }
-    Some(n)
 }
 
 /// Returns the minimum value in the boolean array.
