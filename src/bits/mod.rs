@@ -43,9 +43,9 @@ pub fn bytes_for(bits: usize) -> usize {
 #[inline]
 pub fn null_count(slice: &[u8], offset: usize, len: usize) -> usize {
     // u64 results in optimal performance (verified via benches)
-    let chunks = chunk_iterator::BitChunks::<u64>::new(slice, offset, len);
+    let mut chunks = chunk_iterator::BitChunks::<u64>::new(slice, offset, len);
 
-    let mut count: usize = chunks.iter().map(|c| c.count_ones() as usize).sum();
+    let mut count: usize = chunks.by_ref().map(|c| c.count_ones() as usize).sum();
 
     if chunks.remainder_len() > 0 {
         // mask least significant bits up to len, as they are otherwise not required
@@ -57,7 +57,7 @@ pub fn null_count(slice: &[u8], offset: usize, len: usize) -> usize {
     len - count
 }
 
-pub use chunk_iterator::{BitChunk, BitChunkIterator, BitChunks};
+pub use chunk_iterator::{BitChunk, BitChunks};
 
 #[cfg(test)]
 mod tests {

@@ -262,29 +262,28 @@ fn nonnull_sum<T: NativeType + AddAssign + Sum>(values: &[T]) -> T {
 #[multiversion]
 #[clone(target = "x86_64+avx")]
 fn null_sum<T: NativeType + AddAssign + Sum>(values: &[T], bitmap: &Bitmap) -> T {
-    let chunks = values.chunks_exact(T::LANES);
-    let remainder = chunks.remainder();
+    let mut chunks = values.chunks_exact(T::LANES);
 
-    let validity_chunks = bitmap.chunks::<T::SimdMask>();
+    let mut validity_masks = bitmap.chunks::<T::SimdMask>();
 
-    let validity_remainder = validity_chunks.remainder();
-
-    let iter = validity_chunks.iter();
-
-    let sum = chunks
-        .zip(iter)
-        .fold(T::new_simd(), |mut acc, (chunk, validity_chunk)| {
+    let sum = chunks.by_ref().zip(validity_masks.by_ref()).fold(
+        T::new_simd(),
+        |mut acc, (chunk, validity_chunk)| {
             let chunk = T::from_slice(chunk);
             let iter = BitChunkIter::new(validity_chunk);
             for (i, b) in (0..T::LANES).zip(iter) {
                 acc[i] += if b { chunk[i] } else { T::default() };
             }
             acc
-        });
+        },
+    );
 
-    let mut reduced: T = remainder
+    let a = validity_masks.remainder();
+
+    let mut reduced: T = chunks
+        .remainder()
         .iter()
-        .zip(BitChunkIter::new(validity_remainder))
+        .zip(BitChunkIter::new(validity_masks.remainder()))
         .map(|(x, is_valid)| if is_valid { *x } else { T::default() })
         .sum();
 
@@ -351,7 +350,7 @@ mod tests {
             .collect::<Primitive<i64>>()
             .to(DataType::Int64);
         let b: Int64Array = (1..=100)
-            .map(|i| if i % 3 == 0 { Some(0) } else { Some(i) })
+            .map(|i| if i % 3 == 0 { Some(0) } else { Some(0) })
             .collect::<Primitive<i64>>()
             .to(DataType::Int64);
         // create an array that actually has non-zero values at the invalid indices

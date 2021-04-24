@@ -22,20 +22,33 @@ pub unsafe trait BitChunk:
     + BitAndAssign
     + BitOr<Output = Self>
 {
+    type Bytes: std::ops::Index<usize, Output = u8>
+        + std::ops::IndexMut<usize, Output = u8>
+        + for<'a> std::convert::TryFrom<&'a [u8]>
+        + std::fmt::Debug;
+
     fn one() -> Self;
     fn zero() -> Self;
-    fn to_le(self) -> Self;
+    fn to_ne_bytes(self) -> Self::Bytes;
+    fn from_ne_bytes(v: Self::Bytes) -> Self;
 }
 
 unsafe impl BitChunk for u8 {
+    type Bytes = [u8; 1];
+
     #[inline(always)]
     fn zero() -> Self {
         0
     }
 
     #[inline(always)]
-    fn to_le(self) -> Self {
-        self.to_le()
+    fn to_ne_bytes(self) -> Self::Bytes {
+        self.to_ne_bytes()
+    }
+
+    #[inline(always)]
+    fn from_ne_bytes(v: Self::Bytes) -> Self {
+        Self::from_ne_bytes(v)
     }
 
     #[inline(always)]
@@ -45,14 +58,21 @@ unsafe impl BitChunk for u8 {
 }
 
 unsafe impl BitChunk for u16 {
+    type Bytes = [u8; 2];
+
     #[inline(always)]
     fn zero() -> Self {
         0
     }
 
     #[inline(always)]
-    fn to_le(self) -> Self {
-        self.to_le()
+    fn to_ne_bytes(self) -> Self::Bytes {
+        self.to_ne_bytes()
+    }
+
+    #[inline(always)]
+    fn from_ne_bytes(v: Self::Bytes) -> Self {
+        Self::from_ne_bytes(v)
     }
 
     #[inline(always)]
@@ -62,14 +82,21 @@ unsafe impl BitChunk for u16 {
 }
 
 unsafe impl BitChunk for u32 {
+    type Bytes = [u8; 4];
+
     #[inline(always)]
     fn zero() -> Self {
         0
     }
 
     #[inline(always)]
-    fn to_le(self) -> Self {
-        self.to_le()
+    fn from_ne_bytes(v: Self::Bytes) -> Self {
+        Self::from_ne_bytes(v)
+    }
+
+    #[inline(always)]
+    fn to_ne_bytes(self) -> Self::Bytes {
+        self.to_ne_bytes()
     }
 
     #[inline(always)]
@@ -79,14 +106,21 @@ unsafe impl BitChunk for u32 {
 }
 
 unsafe impl BitChunk for u64 {
+    type Bytes = [u8; 8];
+
     #[inline(always)]
     fn zero() -> Self {
         0
     }
 
     #[inline(always)]
-    fn to_le(self) -> Self {
-        self.to_le()
+    fn to_ne_bytes(self) -> Self::Bytes {
+        self.to_ne_bytes()
+    }
+
+    #[inline(always)]
+    fn from_ne_bytes(v: Self::Bytes) -> Self {
+        Self::from_ne_bytes(v)
     }
 
     #[inline(always)]
