@@ -46,6 +46,9 @@ pub struct StreamReader<R: Read> {
     ///
     /// This value is set to `true` the first time the reader's `next()` returns `None`.
     finished: bool,
+
+    /// Whether the incoming stream is little-endian
+    is_little_endian: bool,
 }
 
 impl<R: Read> StreamReader<R> {
@@ -77,7 +80,8 @@ impl<R: Read> StreamReader<R> {
         let ipc_schema: gen::Schema::Schema = message
             .header_as_schema()
             .ok_or_else(|| ArrowError::Ipc("Unable to read IPC message as schema".to_string()))?;
-        let schema = Arc::new(convert::fb_to_schema(ipc_schema));
+        let (schema, is_little_endian) = convert::fb_to_schema(ipc_schema);
+        let schema = Arc::new(schema);
 
         // Create an array of optional dictionary value arrays, one per field.
         // todo: this is wrong for nested types, as there must be one dictionary per node, not per field
@@ -86,6 +90,7 @@ impl<R: Read> StreamReader<R> {
         Ok(Self {
             reader,
             schema,
+            is_little_endian,
             finished: false,
             dictionaries_by_field,
         })
@@ -162,6 +167,7 @@ impl<R: Read> StreamReader<R> {
                 read_record_batch(
                     batch,
                     self.schema().clone(),
+                    self.is_little_endian,
                     &self.dictionaries_by_field,
                     &mut reader,
                     0,
@@ -181,6 +187,7 @@ impl<R: Read> StreamReader<R> {
                 read_dictionary(
                     batch,
                     &self.schema,
+                    self.is_little_endian,
                     &mut self.dictionaries_by_field,
                     &mut reader,
                     0,

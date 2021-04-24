@@ -586,11 +586,7 @@ impl TryFrom<&Value> for Schema {
                     HashMap::default()
                 };
 
-                Ok(Self {
-                    fields,
-                    metadata,
-                    is_little_endian: true,
-                })
+                Ok(Self { fields, metadata })
             }
             _ => Err(ArrowError::Schema(
                 "Invalid json value type for schema".to_string(),

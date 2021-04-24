@@ -28,6 +28,7 @@ use std::{
 
 use crate::buffer::Buffer;
 use crate::datatypes::{DataType, IntervalUnit};
+use crate::endianess::is_native_little_endian;
 use crate::error::Result as ArrowResult;
 use crate::{
     array::*,
@@ -39,18 +40,6 @@ use crate::{
 use super::super::gen;
 
 type Node<'a> = (&'a gen::Message::FieldNode, &'a Option<Arc<dyn Array>>);
-
-#[cfg(target_endian = "little")]
-#[inline]
-fn is_native_little_endian() -> bool {
-    true
-}
-
-#[cfg(target_endian = "big")]
-#[inline]
-fn is_native_little_endian() {
-    false
-}
 
 fn read_buffer<T: NativeType, R: Read + Seek>(
     buf: &mut VecDeque<&gen::Schema::Buffer>,

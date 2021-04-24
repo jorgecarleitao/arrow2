@@ -33,6 +33,7 @@ type ArrayRef = Arc<dyn Array>;
 pub fn read_record_batch<R: Read + Seek>(
     batch: gen::Message::RecordBatch,
     schema: Arc<Schema>,
+    is_little_endian: bool,
     dictionaries: &[Option<ArrayRef>],
     reader: &mut R,
     block_offset: u64,
@@ -63,7 +64,7 @@ pub fn read_record_batch<R: Read + Seek>(
                 &mut buffers,
                 reader,
                 block_offset,
-                schema.is_little_endian,
+                is_little_endian,
             )
         })
         .collect::<std::io::Result<Vec<_>>>()?;
@@ -76,6 +77,7 @@ pub fn read_record_batch<R: Read + Seek>(
 pub fn read_dictionary<R: Read + Seek>(
     batch: gen::Message::DictionaryBatch,
     schema: &Schema,
+    is_little_endian: bool,
     dictionaries_by_field: &mut [Option<ArrayRef>],
     reader: &mut R,
     block_offset: u64,
@@ -101,12 +103,12 @@ pub fn read_dictionary<R: Read + Seek>(
             let schema = Arc::new(Schema {
                 fields: vec![Field::new("", value_type.as_ref().clone(), false)],
                 metadata: HashMap::new(),
-                is_little_endian: schema.is_little_endian,
             });
             // Read a single column
             let record_batch = read_record_batch(
                 batch.data().unwrap(),
                 schema,
+                is_little_endian,
                 dictionaries_by_field,
                 reader,
                 block_offset,

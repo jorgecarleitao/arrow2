@@ -20,11 +20,7 @@ pub fn projected_schema(schema: &Schema, projection: Option<&[usize]>) -> Schema
             let fields = schema.fields();
             let projected_fields: Vec<Field> =
                 projection.iter().map(|i| fields[*i].clone()).collect();
-            Schema::new_from(
-                projected_fields,
-                schema.metadata().clone(),
-                schema.is_little_endian(),
-            )
+            Schema::new_from(projected_fields, schema.metadata().clone())
         }
         None => schema.clone(),
     }

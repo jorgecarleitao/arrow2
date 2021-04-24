@@ -18,6 +18,7 @@
 //! Utilities for converting between IPC types and native Arrow types
 
 use crate::datatypes::{DataType, Field, IntervalUnit, Schema, TimeUnit};
+use crate::endianess::is_native_little_endian;
 
 mod ipc {
     pub use super::super::gen::File::*;
@@ -57,7 +58,7 @@ pub fn schema_to_fb_offset<'a>(
     let mut builder = ipc::SchemaBuilder::new(fbb);
     builder.add_fields(fb_field_list);
     builder.add_custom_metadata(fb_metadata_list);
-    builder.add_endianness(if schema.is_little_endian {
+    builder.add_endianness(if is_native_little_endian() {
         ipc::Endianness::Little
     } else {
         ipc::Endianness::Big
@@ -101,7 +102,7 @@ impl<'a> From<ipc::Field<'a>> for Field {
 }
 
 /// Deserialize a Schema table from IPC format to Schema data type
-pub fn fb_to_schema(fb: ipc::Schema) -> Schema {
+pub fn fb_to_schema(fb: ipc::Schema) -> (Schema, bool) {
     let mut fields: Vec<Field> = vec![];
     let c_fields = fb.fields().unwrap();
     let len = c_fields.len();
@@ -126,7 +127,7 @@ pub fn fb_to_schema(fb: ipc::Schema) -> Schema {
             }
         }
     }
-    Schema::new_from(fields, metadata, is_little_endian)
+    (Schema::new_from(fields, metadata), is_little_endian)
 }
 
 /// Get the Arrow data type from the flatbuffer Field table
@@ -791,14 +792,13 @@ mod tests {
                 Field::new("decimal<usize, usize>", DataType::Decimal(10, 6), false),
             ],
             md,
-            true,
         );
 
         let fb = schema_to_fb(&schema);
 
         // read back fields
         let ipc = ipc::root_as_schema(fb.finished_data()).unwrap();
-        let schema2 = fb_to_schema(ipc);
+        let (schema2, _) = fb_to_schema(ipc);
         assert_eq!(schema, schema2);
     }
 }
