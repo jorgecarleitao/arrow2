@@ -1,0 +1,37 @@
+use std::slice::Iter;
+
+/// A trait denoting Rusts' unstable [TrustedLen](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
+/// This is re-defined here and implemented for some iterators until `std::iter::TrustedLen`
+/// is stabilized.
+pub unsafe trait TrustedLen: Iterator {}
+
+unsafe impl<T> TrustedLen for Iter<'_, T> {}
+
+unsafe impl<B, I: TrustedLen, T: FnMut(I::Item) -> B> TrustedLen for std::iter::Map<I, T> {}
+
+unsafe impl<'a, I, T: 'a> TrustedLen for std::iter::Copied<I>
+where
+    I: TrustedLen<Item = &'a T>,
+    T: Copy,
+{
+}
+
+unsafe impl<A, B> TrustedLen for std::iter::Zip<A, B>
+where
+    A: TrustedLen,
+    B: TrustedLen,
+{
+}
+
+unsafe impl<T> TrustedLen for std::slice::Windows<'_, T> {}
+
+unsafe impl<A, B> TrustedLen for std::iter::Chain<A, B>
+where
+    A: TrustedLen,
+    B: TrustedLen<Item = A::Item>,
+{
+}
+
+unsafe impl<T> TrustedLen for std::iter::Once<T> {}
+
+unsafe impl<T> TrustedLen for std::vec::IntoIter<T> {}

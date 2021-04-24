@@ -119,7 +119,8 @@ where
 
         PrimitiveArray::<i32>::from_data(DataType::Int32, indices.into(), None)
     } else {
-        let mut indices = unsafe { MutableBuffer::from_trusted_len_iter(0..values.len() as i32) };
+        let mut indices =
+            unsafe { MutableBuffer::from_trusted_len_iter_unchecked(0..values.len() as i32) };
 
         // Soundness:
         // indices are by construction `< values.len()`

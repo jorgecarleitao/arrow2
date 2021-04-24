@@ -1,3 +1,5 @@
+use crate::trusted_len::TrustedLen;
+
 use super::Bitmap;
 
 /// An iterator of bits according to the LSB format
@@ -81,6 +83,8 @@ impl<'a> Iterator for BitmapIter<'a> {
         }
     }
 }
+
+unsafe impl TrustedLen for BitmapIter<'_> {}
 
 #[cfg(test)]
 mod tests {

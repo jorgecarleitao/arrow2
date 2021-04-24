@@ -33,8 +33,7 @@ fn take_no_validity<T: NativeType, I: Offset>(
     let values = indices
         .iter()
         .map(|index| Result::Ok(values[maybe_usize::<I>(*index)?]));
-    // Soundness: `slice.map` is `TrustedLen`.
-    let buffer = unsafe { MutableBuffer::try_from_trusted_len_iter(values)? };
+    let buffer = MutableBuffer::try_from_trusted_len_iter(values)?;
 
     Ok((buffer.into(), None))
 }
@@ -59,8 +58,7 @@ fn take_values_validity<T: NativeType, I: Offset>(
         }
         Result::Ok(values_values[index])
     });
-    // Soundness: `slice.map` is `TrustedLen`.
-    let buffer = unsafe { MutableBuffer::try_from_trusted_len_iter(values)? };
+    let buffer = MutableBuffer::try_from_trusted_len_iter(values)?;
 
     Ok((buffer.into(), null.into()))
 }
@@ -85,8 +83,7 @@ fn take_indices_validity<T: NativeType, I: Offset>(
         })
     });
 
-    // Soundness: `slice.map` is `TrustedLen`.
-    let buffer = unsafe { MutableBuffer::try_from_trusted_len_iter(values)? };
+    let buffer = MutableBuffer::try_from_trusted_len_iter(values)?;
 
     Ok((buffer.into(), indices.validity().clone()))
 }
@@ -112,8 +109,7 @@ fn take_values_indices_validity<T: NativeType, I: Offset>(
             Ok(T::default())
         }
     });
-    // Soundness: `slice.map` is `TrustedLen`.
-    let buffer = unsafe { MutableBuffer::try_from_trusted_len_iter(values)? };
+    let buffer = MutableBuffer::try_from_trusted_len_iter(values)?;
     Ok((buffer.into(), bitmap.into()))
 }
 

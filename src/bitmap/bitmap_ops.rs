@@ -24,7 +24,7 @@ where
         .zip(a4_chunks.by_ref())
         .map(|(((a1, a2), a3), a4)| op(a1, a2, a3, a4));
     // Soundness: `BitChunks` is a trusted len iterator
-    let mut buffer = unsafe { MutableBuffer::from_chunk_iter(chunks) };
+    let mut buffer = unsafe { MutableBuffer::from_chunk_iter_unchecked(chunks) };
 
     let remainder_bytes = a1_chunks.remainder_len().saturating_add(7) / 8;
     let rem = op(
@@ -58,7 +58,7 @@ where
         .zip(a3_chunks.by_ref())
         .map(|((a1, a2), a3)| op(a1, a2, a3));
     // Soundness: `BitChunks` is a trusted len iterator
-    let mut buffer = unsafe { MutableBuffer::from_chunk_iter(chunks) };
+    let mut buffer = unsafe { MutableBuffer::from_chunk_iter_unchecked(chunks) };
 
     let remainder_bytes = a1_chunks.remainder_len().saturating_add(7) / 8;
     let rem = op(
@@ -88,7 +88,7 @@ where
         .zip(rhs_chunks.by_ref())
         .map(|(left, right)| op(left, right));
     // Soundness: `BitChunks` is a trusted len iterator
-    let mut buffer = unsafe { MutableBuffer::from_chunk_iter(chunks) };
+    let mut buffer = unsafe { MutableBuffer::from_chunk_iter_unchecked(chunks) };
 
     let remainder_bytes = lhs_chunks.remainder_len().saturating_add(7) / 8;
     let rem = op(lhs_chunks.remainder(), rhs_chunks.remainder());
@@ -108,7 +108,7 @@ where
     let mut lhs_chunks = lhs.chunks();
 
     let chunks = lhs_chunks.by_ref().map(|left| op(left));
-    let mut buffer = unsafe { MutableBuffer::from_chunk_iter(chunks) };
+    let mut buffer = unsafe { MutableBuffer::from_chunk_iter_unchecked(chunks) };
 
     let remainder_bytes = lhs_chunks.remainder_len().saturating_add(7) / 8;
     let rem = op(lhs_chunks.remainder());

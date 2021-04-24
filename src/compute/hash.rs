@@ -33,7 +33,7 @@ pub fn hash_boolean(array: &BooleanArray) -> PrimitiveArray<u64> {
         x.hash(&mut hasher);
         hasher.finish()
     });
-    let values = unsafe { Buffer::from_trusted_len_iter(iter) };
+    let values = Buffer::from_trusted_len_iter(iter);
     PrimitiveArray::<u64>::from_data(DataType::UInt64, values, array.validity().clone())
 }
 
@@ -44,7 +44,7 @@ pub fn hash_utf8<O: Offset>(array: &Utf8Array<O>) -> PrimitiveArray<u64> {
         x.hash(&mut hasher);
         hasher.finish()
     });
-    let values = unsafe { Buffer::from_trusted_len_iter(iter) };
+    let values = Buffer::from_trusted_len_iter(iter);
     PrimitiveArray::<u64>::from_data(DataType::UInt64, values, array.validity().clone())
 }
 
@@ -55,7 +55,7 @@ pub fn hash_binary<O: Offset>(array: &BinaryArray<O>) -> PrimitiveArray<u64> {
         x.hash(&mut hasher);
         hasher.finish()
     });
-    let values = unsafe { Buffer::from_trusted_len_iter(iter) };
+    let values = Buffer::from_trusted_len_iter(iter);
     PrimitiveArray::<u64>::from_data(DataType::UInt64, values, array.validity().clone())
 }
 

@@ -1,12 +1,11 @@
 use crate::{
     array::{Array, Offset},
     bits::{zip_validity, ZipValidity},
+    trusted_len::TrustedLen,
 };
 
 use super::BinaryArray;
 
-/// # Safety
-/// This iterator is `TrustedLen`
 pub struct BinaryValueIter<'a, O: Offset> {
     array: &'a BinaryArray<O>,
     index: usize,
@@ -60,3 +59,5 @@ impl<'a, O: Offset> BinaryArray<O> {
         BinaryValueIter::new(self)
     }
 }
+
+unsafe impl<O: Offset> TrustedLen for BinaryValueIter<'_, O> {}
