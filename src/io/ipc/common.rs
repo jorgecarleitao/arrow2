@@ -45,8 +45,7 @@ pub(crate) mod tests {
         let arrow_json: ArrowJson = serde_json::from_str(&s).unwrap();
 
         let schema = serde_json::to_value(arrow_json.schema).unwrap();
-        let mut schema = Schema::try_from(&schema).unwrap();
-        schema.is_little_endian = version.contains("littleendian");
+        let schema = Schema::try_from(&schema).unwrap();
 
         // read dictionaries
         let mut dictionaries = HashMap::new();
@@ -79,7 +78,10 @@ pub(crate) mod tests {
 
         let schema = reader.schema();
 
-        (schema.clone(), reader.collect::<Result<_>>().unwrap())
+        (
+            schema.as_ref().clone(),
+            reader.collect::<Result<_>>().unwrap(),
+        )
     }
 
     pub fn read_arrow_stream(version: &str, file_name: &str) -> (Schema, Vec<RecordBatch>) {
@@ -94,6 +96,9 @@ pub(crate) mod tests {
 
         let schema = reader.schema();
 
-        (schema.clone(), reader.collect::<Result<_>>().unwrap())
+        (
+            schema.as_ref().clone(),
+            reader.collect::<Result<_>>().unwrap(),
+        )
     }
 }

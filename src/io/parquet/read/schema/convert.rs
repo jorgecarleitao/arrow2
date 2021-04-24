@@ -52,7 +52,7 @@ pub fn parquet_to_arrow_schema(
         .map(|t| to_field(t))
         .filter_map(|x| x.transpose())
         .collect::<Result<Vec<_>>>()
-        .map(|fields| Schema::new_from(fields, metadata, true))
+        .map(|fields| Schema::new_from(fields, metadata))
 }
 
 fn from_int32(

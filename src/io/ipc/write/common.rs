@@ -29,6 +29,7 @@ use super::{write, write_dictionary};
 use flatbuffers::FlatBufferBuilder;
 
 use crate::array::Array;
+use crate::endianess::is_native_little_endian;
 use crate::error::{ArrowError, Result};
 use crate::record_batch::RecordBatch;
 use crate::{array::DictionaryArray, datatypes::*};
@@ -155,7 +156,7 @@ impl IpcDataGenerator {
                         dict_id,
                         column.as_ref(),
                         write_options,
-                        batch.schema().is_little_endian,
+                        is_native_little_endian(),
                     ));
                 }
             }
@@ -186,7 +187,7 @@ impl IpcDataGenerator {
                 &mut arrow_data,
                 &mut nodes,
                 &mut offset,
-                batch.schema().is_little_endian,
+                is_native_little_endian(),
             )
         }
 

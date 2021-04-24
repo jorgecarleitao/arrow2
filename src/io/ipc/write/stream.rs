@@ -143,7 +143,7 @@ mod tests {
         // read expected JSON output
         let (expected_schema, expected_batches) = read_gzip_json(version, file_name);
 
-        assert_eq!(schema, expected_schema);
+        assert_eq!(schema.as_ref(), &expected_schema);
 
         let batches = reader.collect::<Result<Vec<_>>>().unwrap();
 

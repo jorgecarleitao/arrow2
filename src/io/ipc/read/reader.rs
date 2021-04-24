@@ -40,7 +40,7 @@ pub struct FileReader<R: Read + Seek> {
     reader: BufReader<R>,
 
     /// The schema that is read from the file header
-    schema: Schema,
+    schema: Arc<Schema>,
 
     /// The blocks in the file
     ///
@@ -60,6 +60,8 @@ pub struct FileReader<R: Read + Seek> {
 
     /// Metadata version
     metadata_version: gen::Schema::MetadataVersion,
+
+    is_little_endian: bool,
 }
 
 impl<R: Read + Seek> FileReader<R> {
@@ -105,7 +107,8 @@ impl<R: Read + Seek> FileReader<R> {
         let total_blocks = blocks.len();
 
         let ipc_schema = footer.schema().unwrap();
-        let schema = convert::fb_to_schema(ipc_schema);
+        let (schema, is_little_endian) = convert::fb_to_schema(ipc_schema);
+        let schema = Arc::new(schema);
 
         // Create an array of optional dictionary value arrays, one per field.
         let mut dictionaries_by_field = vec![None; schema.fields().len()];
@@ -136,6 +139,7 @@ impl<R: Read + Seek> FileReader<R> {
                     read_dictionary(
                         batch,
                         &schema,
+                        is_little_endian,
                         &mut dictionaries_by_field,
                         &mut reader,
                         block_offset,
@@ -153,6 +157,7 @@ impl<R: Read + Seek> FileReader<R> {
         Ok(Self {
             reader,
             schema,
+            is_little_endian,
             blocks: blocks.to_vec(),
             current_block: 0,
             total_blocks,
@@ -167,7 +172,7 @@ impl<R: Read + Seek> FileReader<R> {
     }
 
     /// Return the schema of the file
-    pub fn schema(&self) -> &Schema {
+    pub fn schema(&self) -> &Arc<Schema> {
         &self.schema
     }
 
@@ -226,6 +231,7 @@ impl<R: Read + Seek> FileReader<R> {
                 read_record_batch(
                     batch,
                     self.schema().clone(),
+                    self.is_little_endian,
                     &self.dictionaries_by_field,
                     &mut self.reader,
                     block.offset() as u64 + block.metaDataLength() as u64,
@@ -281,7 +287,7 @@ mod tests {
         // read expected JSON output
         let (schema, batches) = read_gzip_json(version, file_name);
 
-        assert_eq!(&schema, reader.schema());
+        assert_eq!(&schema, reader.schema().as_ref());
 
         batches
             .iter()

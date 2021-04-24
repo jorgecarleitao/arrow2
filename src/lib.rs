@@ -2,6 +2,7 @@ mod alloc;
 pub mod array;
 pub mod bitmap;
 pub mod buffer;
+mod endianess;
 pub mod error;
 pub mod trusted_len;
 pub mod types;

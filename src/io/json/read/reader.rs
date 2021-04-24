@@ -16,6 +16,7 @@
 // under the License.
 
 use std::io::{BufReader, Read, Seek};
+use std::sync::Arc;
 
 use serde_json::Value;
 
@@ -114,7 +115,7 @@ impl Decoder {
         let array = array.as_any().downcast_ref::<StructArray>().unwrap();
         let arrays = array.values().to_vec();
 
-        let projected_schema = Schema::new(projected_fields);
+        let projected_schema = Arc::new(Schema::new(projected_fields));
 
         RecordBatch::try_new(projected_schema, arrays).map(Some)
     }
@@ -302,7 +303,7 @@ mod tests {
 
         let schema = reader.schema();
         let batch_schema = batch.schema();
-        assert_eq!(schema, batch_schema);
+        assert_eq!(schema, batch_schema.as_ref());
 
         let a = schema.column_with_name("a").unwrap();
         assert_eq!(0, a.0);
@@ -360,7 +361,7 @@ mod tests {
 
         let schema = reader.schema();
         let batch_schema = batch.schema();
-        assert_eq!(schema, batch_schema);
+        assert_eq!(schema, batch_schema.as_ref());
 
         let a = schema.column_with_name("a").unwrap();
         assert_eq!(&DataType::Int64, a.1.data_type());
@@ -485,13 +486,13 @@ mod tests {
         assert_eq!(2, batch.num_columns());
         assert_eq!(12, batch.num_rows());
 
-        let schema = batch.schema();
-        assert_eq!(&reader_schema, schema);
+        let batch_schema = batch.schema();
+        assert_eq!(&reader_schema, batch_schema.as_ref());
 
-        let a = schema.column_with_name("a").unwrap();
+        let a = batch_schema.column_with_name("a").unwrap();
         assert_eq!(0, a.0);
         assert_eq!(&DataType::Int32, a.1.data_type());
-        let c = schema.column_with_name("c").unwrap();
+        let c = batch_schema.column_with_name("c").unwrap();
         assert_eq!(1, c.0);
         assert_eq!(&DataType::Boolean, c.1.data_type());
     }
@@ -774,7 +775,7 @@ mod tests {
 
         let schema = reader.schema();
         let batch_schema = batch.schema();
-        assert_eq!(schema, batch_schema);
+        assert_eq!(schema, batch_schema.as_ref());
 
         let d = schema.column_with_name("d").unwrap();
         let data_type = DataType::Dictionary(Box::new(DataType::Int16), Box::new(DataType::Utf8));
@@ -858,7 +859,7 @@ mod tests {
 
         let schema = reader.schema();
         let batch_schema = batch.schema();
-        assert_eq!(schema, batch_schema);
+        assert_eq!(schema, batch_schema.as_ref());
 
         let events = schema.column_with_name("events").unwrap();
         assert_eq!(&data_type, events.1.data_type());

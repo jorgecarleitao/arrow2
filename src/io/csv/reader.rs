@@ -20,11 +20,7 @@ pub fn projected_schema(schema: &Schema, projection: Option<&[usize]>) -> Schema
             let fields = schema.fields();
             let projected_fields: Vec<Field> =
                 projection.iter().map(|i| fields[*i].clone()).collect();
-            Schema::new_from(
-                projected_fields,
-                schema.metadata().clone(),
-                schema.is_little_endian(),
-            )
+            Schema::new_from(projected_fields, schema.metadata().clone())
         }
         None => schema.clone(),
     }
@@ -35,7 +31,7 @@ pub fn read_batch<R: Read, P: GenericParser<ArrowError>>(
     parser: &P,
     skip: usize,
     len: usize,
-    schema: Schema,
+    schema: Arc<Schema>,
     projection: Option<&[usize]>,
 ) -> Result<RecordBatch> {
     // skip first `start` rows.
@@ -132,7 +128,7 @@ fn parse<P: GenericParser<ArrowError>>(
 
     let projected_fields: Vec<Field> = projection.iter().map(|i| fields[*i].clone()).collect();
 
-    let projected_schema = Schema::new(projected_fields);
+    let projected_schema = Arc::new(Schema::new(projected_fields));
 
     RecordBatch::try_new(projected_schema, columns)
 }
@@ -186,7 +182,7 @@ mod tests {
         let mut reader = ReaderBuilder::new().from_path("test/data/uk_cities_with_headers.csv")?;
         let parser = DefaultParser::default();
 
-        let schema = infer_schema(&mut reader, None, true, &infer)?;
+        let schema = Arc::new(infer_schema(&mut reader, None, true, &infer)?);
 
         let batch = read_batch(&mut reader, &parser, 0, 100, schema.clone(), None)?;
 

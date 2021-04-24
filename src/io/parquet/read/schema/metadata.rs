@@ -35,6 +35,7 @@ fn get_arrow_schema_from_metadata(encoded_meta: &str) -> Result<Schema> {
                 Ok(message) => message
                     .header_as_schema()
                     .map(ipc::fb_to_schema)
+                    .map(|x| x.0)
                     .ok_or_else(|| ArrowError::Ipc("the message is not Arrow Schema".to_string())),
                 Err(err) => {
                     // The flatbuffers implementation returns an error on verification error.

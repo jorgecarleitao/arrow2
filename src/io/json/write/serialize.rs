@@ -343,7 +343,7 @@ fn set_column_for_json_rows(
 /// use arrow2::io::json;
 /// use arrow2::record_batch::RecordBatch;
 ///
-/// let schema = Schema::new(vec![Field::new("a", DataType::Int32, false)]);
+/// let schema = Arc::new(Schema::new(vec![Field::new("a", DataType::Int32, false)]));
 /// let a = Primitive::from_slice(&[1i32, 2, 3]).to(DataType::Int32);
 /// let batch = RecordBatch::try_new(schema, vec![Arc::new(a)]).unwrap();
 ///
