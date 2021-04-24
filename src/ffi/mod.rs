@@ -19,7 +19,7 @@
 //!
 //! Generally, this module is divided in two main interfaces:
 //! One interface maps C ABI to native Rust types, i.e. convert c-pointers, c_char, to native rust.
-//! This is handled by [FFI_ArrowSchema] and [FFI_ArrowArray].
+//! This is handled by [Ffi_ArrowSchema] and [Ffi_ArrowArray].
 //!
 //! The second interface maps native Rust types to the Rust-specific implementation of Arrow such as `format` to `Datatype`,
 //! `Buffer`, etc. This is handled by `ArrowArray`.
@@ -69,4 +69,4 @@ trait ToFfi {
 }
 
 pub use ffi::ArrowArray;
-pub(crate) use ffi::FFI_ArrowArray;
+pub(crate) use ffi::Ffi_ArrowArray;
