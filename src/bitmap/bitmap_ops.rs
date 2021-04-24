@@ -1,6 +1,5 @@
 use std::ops::{BitAnd, BitOr, Not};
 
-use crate::bits::get_bit_unchecked;
 use crate::buffer::MutableBuffer;
 
 use super::Bitmap;
@@ -13,16 +12,16 @@ where
     assert_eq!(a1.len(), a2.len());
     assert_eq!(a1.len(), a3.len());
     assert_eq!(a1.len(), a4.len());
-    let a1_chunks = a1.chunks();
-    let a2_chunks = a2.chunks();
-    let a3_chunks = a3.chunks();
-    let a4_chunks = a4.chunks();
+    let mut a1_chunks = a1.chunks();
+    let mut a2_chunks = a2.chunks();
+    let mut a3_chunks = a3.chunks();
+    let mut a4_chunks = a4.chunks();
 
     let chunks = a1_chunks
-        .iter()
-        .zip(a2_chunks.iter())
-        .zip(a3_chunks.iter())
-        .zip(a4_chunks.iter())
+        .by_ref()
+        .zip(a2_chunks.by_ref())
+        .zip(a3_chunks.by_ref())
+        .zip(a4_chunks.by_ref())
         .map(|(((a1, a2), a3), a4)| op(a1, a2, a3, a4));
     // Soundness: `BitChunks` is a trusted len iterator
     let mut buffer = unsafe { MutableBuffer::from_chunk_iter(chunks) };
@@ -34,9 +33,7 @@ where
         a3_chunks.remainder(),
         a4_chunks.remainder(),
     );
-    // See https://arrow.apache.org/docs/format/Columnar.html#validity-bitmaps
-    // least-significant bit (LSB) numbering (also known as bit-endianness)
-    let rem = &rem.to_le_bytes()[0..remainder_bytes];
+    let rem = &rem.to_ne_bytes()[..remainder_bytes];
     buffer.extend_from_slice(rem);
 
     let length = a1.len();
@@ -51,14 +48,14 @@ where
 {
     assert_eq!(a1.len(), a2.len());
     assert_eq!(a1.len(), a3.len());
-    let a1_chunks = a1.chunks();
-    let a2_chunks = a2.chunks();
-    let a3_chunks = a3.chunks();
+    let mut a1_chunks = a1.chunks();
+    let mut a2_chunks = a2.chunks();
+    let mut a3_chunks = a3.chunks();
 
     let chunks = a1_chunks
-        .iter()
-        .zip(a2_chunks.iter())
-        .zip(a3_chunks.iter())
+        .by_ref()
+        .zip(a2_chunks.by_ref())
+        .zip(a3_chunks.by_ref())
         .map(|((a1, a2), a3)| op(a1, a2, a3));
     // Soundness: `BitChunks` is a trusted len iterator
     let mut buffer = unsafe { MutableBuffer::from_chunk_iter(chunks) };
@@ -69,9 +66,7 @@ where
         a2_chunks.remainder(),
         a3_chunks.remainder(),
     );
-    // See https://arrow.apache.org/docs/format/Columnar.html#validity-bitmaps
-    // least-significant bit (LSB) numbering (also known as bit-endianness)
-    let rem = &rem.to_le_bytes()[0..remainder_bytes];
+    let rem = &rem.to_ne_bytes()[..remainder_bytes];
     buffer.extend_from_slice(rem);
 
     let length = a1.len();
@@ -85,21 +80,19 @@ where
     F: Fn(u64, u64) -> u64,
 {
     assert_eq!(lhs.len(), rhs.len());
-    let lhs_chunks = lhs.chunks();
-    let rhs_chunks = rhs.chunks();
+    let mut lhs_chunks = lhs.chunks();
+    let mut rhs_chunks = rhs.chunks();
 
     let chunks = lhs_chunks
-        .iter()
-        .zip(rhs_chunks.iter())
+        .by_ref()
+        .zip(rhs_chunks.by_ref())
         .map(|(left, right)| op(left, right));
     // Soundness: `BitChunks` is a trusted len iterator
     let mut buffer = unsafe { MutableBuffer::from_chunk_iter(chunks) };
 
     let remainder_bytes = lhs_chunks.remainder_len().saturating_add(7) / 8;
     let rem = op(lhs_chunks.remainder(), rhs_chunks.remainder());
-    // See https://arrow.apache.org/docs/format/Columnar.html#validity-bitmaps
-    // least-significant bit (LSB) numbering (also known as bit-endianness)
-    let rem = &rem.to_le_bytes()[0..remainder_bytes];
+    let rem = &rem.to_ne_bytes()[..remainder_bytes];
     buffer.extend_from_slice(rem);
 
     let length = lhs.len();
@@ -112,16 +105,15 @@ pub fn unary<F>(lhs: &Bitmap, op: F) -> Bitmap
 where
     F: Fn(u64) -> u64,
 {
-    let lhs_chunks = lhs.chunks();
+    let mut lhs_chunks = lhs.chunks();
 
-    let chunks = lhs_chunks.iter().map(|left| op(left));
+    let chunks = lhs_chunks.by_ref().map(|left| op(left));
     let mut buffer = unsafe { MutableBuffer::from_chunk_iter(chunks) };
 
     let remainder_bytes = lhs_chunks.remainder_len().saturating_add(7) / 8;
     let rem = op(lhs_chunks.remainder());
-    // See https://arrow.apache.org/docs/format/Columnar.html#validity-bitmaps
-    // least-significant bit (LSB) numbering (also known as bit-endianness)
-    let rem = &rem.to_le_bytes()[0..remainder_bytes];
+
+    let rem = &rem.to_ne_bytes()[..remainder_bytes];
     buffer.extend_from_slice(rem);
 
     (buffer, lhs.len()).into()
@@ -140,28 +132,20 @@ fn eq(lhs: &Bitmap, rhs: &Bitmap) -> bool {
         return false;
     }
 
-    let lhs_chunks = lhs.chunks::<u64>();
-    let rhs_chunks = rhs.chunks::<u64>();
+    let mut lhs_chunks = lhs.chunks::<u64>();
+    let mut rhs_chunks = rhs.chunks::<u64>();
 
     let equal_chunks = lhs_chunks
-        .iter()
-        .zip(rhs_chunks.iter())
+        .by_ref()
+        .zip(rhs_chunks.by_ref())
         .all(|(left, right)| left == right);
 
     if !equal_chunks {
         return false;
     }
-    let remainder_bytes = lhs_chunks.remainder_len().saturating_add(7) / 8;
-
-    // See https://arrow.apache.org/docs/format/Columnar.html#validity-bitmaps
-    // least-significant bit (LSB) numbering (also known as bit-endianness)
-    let lhs_remainder = &lhs_chunks.remainder().to_le_bytes()[0..remainder_bytes];
-    let rhs_remainder = &rhs_chunks.remainder().to_le_bytes()[0..remainder_bytes];
-    unsafe {
-        debug_assert!(lhs_remainder.len() * 8 >= lhs_chunks.remainder_len());
-        (0..lhs_chunks.remainder_len())
-            .all(|i| get_bit_unchecked(lhs_remainder, i) == get_bit_unchecked(rhs_remainder, i))
-    }
+    let lhs_remainder = lhs_chunks.remainder_iter();
+    let rhs_remainder = rhs_chunks.remainder_iter();
+    lhs_remainder.zip(rhs_remainder).all(|(x, y)| x == y)
 }
 
 impl PartialEq for Bitmap {

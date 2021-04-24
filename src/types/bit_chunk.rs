@@ -3,8 +3,8 @@ use std::{
     ops::{BitAnd, BitAndAssign, BitOr, Not, Shl, ShlAssign, ShrAssign},
 };
 
-/// Something that can be use as a chunk of bits.
-/// Currently implemented for `u8` and `u64`
+/// Something that can be use as a chunk of bits. This is used to create masks of a given number
+/// of lengths, whose width is `1`. In `simd_packed` notation, this corresponds to `m1xY`.
 /// # Safety
 /// Do not implement.
 pub unsafe trait BitChunk:
@@ -22,20 +22,33 @@ pub unsafe trait BitChunk:
     + BitAndAssign
     + BitOr<Output = Self>
 {
+    type Bytes: std::ops::Index<usize, Output = u8>
+        + std::ops::IndexMut<usize, Output = u8>
+        + for<'a> std::convert::TryFrom<&'a [u8]>
+        + std::fmt::Debug;
+
     fn one() -> Self;
     fn zero() -> Self;
-    fn to_le(self) -> Self;
+    fn to_ne_bytes(self) -> Self::Bytes;
+    fn from_ne_bytes(v: Self::Bytes) -> Self;
 }
 
 unsafe impl BitChunk for u8 {
+    type Bytes = [u8; 1];
+
     #[inline(always)]
     fn zero() -> Self {
         0
     }
 
     #[inline(always)]
-    fn to_le(self) -> Self {
-        self.to_le()
+    fn to_ne_bytes(self) -> Self::Bytes {
+        self.to_ne_bytes()
+    }
+
+    #[inline(always)]
+    fn from_ne_bytes(v: Self::Bytes) -> Self {
+        Self::from_ne_bytes(v)
     }
 
     #[inline(always)]
@@ -45,14 +58,21 @@ unsafe impl BitChunk for u8 {
 }
 
 unsafe impl BitChunk for u16 {
+    type Bytes = [u8; 2];
+
     #[inline(always)]
     fn zero() -> Self {
         0
     }
 
     #[inline(always)]
-    fn to_le(self) -> Self {
-        self.to_le()
+    fn to_ne_bytes(self) -> Self::Bytes {
+        self.to_ne_bytes()
+    }
+
+    #[inline(always)]
+    fn from_ne_bytes(v: Self::Bytes) -> Self {
+        Self::from_ne_bytes(v)
     }
 
     #[inline(always)]
@@ -62,14 +82,21 @@ unsafe impl BitChunk for u16 {
 }
 
 unsafe impl BitChunk for u32 {
+    type Bytes = [u8; 4];
+
     #[inline(always)]
     fn zero() -> Self {
         0
     }
 
     #[inline(always)]
-    fn to_le(self) -> Self {
-        self.to_le()
+    fn from_ne_bytes(v: Self::Bytes) -> Self {
+        Self::from_ne_bytes(v)
+    }
+
+    #[inline(always)]
+    fn to_ne_bytes(self) -> Self::Bytes {
+        self.to_ne_bytes()
     }
 
     #[inline(always)]
@@ -79,14 +106,21 @@ unsafe impl BitChunk for u32 {
 }
 
 unsafe impl BitChunk for u64 {
+    type Bytes = [u8; 8];
+
     #[inline(always)]
     fn zero() -> Self {
         0
     }
 
     #[inline(always)]
-    fn to_le(self) -> Self {
-        self.to_le()
+    fn to_ne_bytes(self) -> Self::Bytes {
+        self.to_ne_bytes()
+    }
+
+    #[inline(always)]
+    fn from_ne_bytes(v: Self::Bytes) -> Self {
+        Self::from_ne_bytes(v)
     }
 
     #[inline(always)]
@@ -95,6 +129,18 @@ unsafe impl BitChunk for u64 {
     }
 }
 
+/// An iterator of `bool` over a [`BitChunk`]. This iterator is often
+/// compiled to SIMD instructions.
+/// The [LSB](https://en.wikipedia.org/wiki/Bit_numbering#Least_significant_bit) corresponds
+/// to the first slot, as defined by the arrow specification.
+/// # Example
+/// ```
+/// # use arrow2::types::BitChunkIter;
+/// let a = 0b00010000u8;
+/// let iter = BitChunkIter::new(a, 7);
+/// let r = iter.collect::<Vec<_>>();
+/// assert_eq!(r, vec![false, false, false, false, true, false, false]);
+/// ```
 pub struct BitChunkIter<T: BitChunk> {
     value: T,
     mask: T,
@@ -103,10 +149,11 @@ pub struct BitChunkIter<T: BitChunk> {
 
 impl<T: BitChunk> BitChunkIter<T> {
     #[inline]
-    pub fn new(value: T) -> Self {
+    pub fn new(value: T, len: usize) -> Self {
+        assert!(len <= std::mem::size_of::<T>() * 8);
         Self {
             value,
-            remaining: std::mem::size_of::<T>() * 8,
+            remaining: len,
             mask: T::one(),
         }
     }
@@ -118,7 +165,6 @@ impl<T: BitChunk> Iterator for BitChunkIter<T> {
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         if self.remaining == 0 {
-            debug_assert_eq!(self.mask, T::zero());
             return None;
         };
         let result = Some(self.value & self.mask != T::zero());
@@ -138,21 +184,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_basic() {
-        let a = 0b00010000u8;
-        let iter = BitChunkIter::new(a);
-        let r = iter.collect::<Vec<_>>();
-        assert_eq!(
-            r,
-            vec![false, false, false, false, true, false, false, false]
-        );
-    }
-
-    #[test]
     fn test_basic1() {
         let a = [0b00000001, 0b00010000]; // 0th and 13th entry
         let a = u16::from_ne_bytes(a);
-        let iter = BitChunkIter::new(a);
+        let iter = BitChunkIter::new(a, 16);
         let r = iter.collect::<Vec<_>>();
         assert_eq!(r, (0..16).map(|x| x == 0 || x == 12).collect::<Vec<_>>(),);
     }
