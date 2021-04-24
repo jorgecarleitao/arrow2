@@ -3,8 +3,8 @@ use std::{
     ops::{BitAnd, BitAndAssign, BitOr, Not, Shl, ShlAssign, ShrAssign},
 };
 
-/// Something that can be use as a chunk of bits.
-/// Currently implemented for `u8` and `u64`
+/// Something that can be use as a chunk of bits. This is used to create masks of a given number
+/// of lengths, whose width is `1`. In `simd_packed` notation, this corresponds to `m1xY`.
 /// # Safety
 /// Do not implement.
 pub unsafe trait BitChunk:
@@ -129,6 +129,18 @@ unsafe impl BitChunk for u64 {
     }
 }
 
+/// An iterator of `bool` over a [`BitChunk`]. This iterator is often
+/// compiled to SIMD instructions.
+/// The [LSB](https://en.wikipedia.org/wiki/Bit_numbering#Least_significant_bit) corresponds
+/// to the first slot, as defined by the arrow specification.
+/// # Example
+/// ```
+/// # use arrow2::types::BitChunkIter;
+/// let a = 0b00010000u8;
+/// let iter = BitChunkIter::new(a, 7);
+/// let r = iter.collect::<Vec<_>>();
+/// assert_eq!(r, vec![false, false, false, false, true, false, false]);
+/// ```
 pub struct BitChunkIter<T: BitChunk> {
     value: T,
     mask: T,
@@ -170,17 +182,6 @@ impl<T: BitChunk> Iterator for BitChunkIter<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_basic() {
-        let a = 0b00010000u8;
-        let iter = BitChunkIter::new(a, 8);
-        let r = iter.collect::<Vec<_>>();
-        assert_eq!(
-            r,
-            vec![false, false, false, false, true, false, false, false]
-        );
-    }
 
     #[test]
     fn test_basic1() {
