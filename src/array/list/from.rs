@@ -1,7 +1,7 @@
 use std::{iter::FromIterator, sync::Arc};
 
 use crate::{
-    array::{Array, Builder, Offset, ToArray, TryFromIterator},
+    array::{Array, Builder, IntoArray, Offset, TryFromIterator},
     bitmap::MutableBitmap,
     buffer::MutableBuffer,
     datatypes::DataType,
@@ -21,7 +21,7 @@ pub struct ListPrimitive<O: Offset, B: Builder<T>, T> {
 
 impl<O: Offset, A: Builder<T>, T> ListPrimitive<O, A, T> {
     pub fn to(self, data_type: DataType) -> ListArray<O> {
-        let values = self.values.to_arc(ListArray::<O>::get_child(&data_type));
+        let values = self.values.into_arc(ListArray::<O>::get_child(&data_type));
         ListArray::from_data(data_type, self.offsets.into(), values, self.validity.into())
     }
 }
@@ -103,8 +103,8 @@ where
     }
 }
 
-impl<O: Offset, B: Builder<T>, T> ToArray for ListPrimitive<O, B, T> {
-    fn to_arc(self, data_type: &DataType) -> Arc<dyn Array> {
+impl<O: Offset, B: Builder<T>, T> IntoArray for ListPrimitive<O, B, T> {
+    fn into_arc(self, data_type: &DataType) -> Arc<dyn Array> {
         Arc::new(self.to(data_type.clone()))
     }
 }

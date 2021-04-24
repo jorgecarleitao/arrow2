@@ -110,7 +110,7 @@ pub fn build_filter(filter: &BooleanArray) -> Result<Filter> {
             chunks
                 .iter()
                 .for_each(|(start, len)| mutable.extend(0, *start, *len));
-            mutable.to_box()
+            mutable.as_box()
         }
     }))
 }
@@ -193,7 +193,7 @@ pub fn filter(array: &dyn Array, filter: &BooleanArray) -> Result<Box<dyn Array>
         _ => {
             let mut mutable = make_growable(&[array], false, iter.slots());
             iter.for_each(|(start, len)| mutable.extend(0, start, len));
-            Ok(mutable.to_box())
+            Ok(mutable.as_box())
         }
     }
 }

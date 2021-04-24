@@ -66,7 +66,7 @@ impl<'a> GrowableStruct<'a> {
     fn to(&mut self) -> StructArray {
         let validity = std::mem::take(&mut self.validity);
         let values = std::mem::take(&mut self.values);
-        let values = values.into_iter().map(|mut x| x.to_arc()).collect();
+        let values = values.into_iter().map(|mut x| x.as_arc()).collect();
 
         StructArray::from_data(self.arrays[0].fields().to_vec(), values, validity.into())
     }
@@ -103,18 +103,18 @@ impl<'a> Growable<'a> for GrowableStruct<'a> {
         self.validity.extend_constant(additional, false);
     }
 
-    fn to_arc(&mut self) -> Arc<dyn Array> {
+    fn as_arc(&mut self) -> Arc<dyn Array> {
         Arc::new(self.to())
     }
 
-    fn to_box(&mut self) -> Box<dyn Array> {
+    fn as_box(&mut self) -> Box<dyn Array> {
         Box::new(self.to())
     }
 }
 
 impl<'a> From<GrowableStruct<'a>> for StructArray {
     fn from(val: GrowableStruct<'a>) -> Self {
-        let values = val.values.into_iter().map(|mut x| x.to_arc()).collect();
+        let values = val.values.into_iter().map(|mut x| x.as_arc()).collect();
 
         StructArray::from_data(val.arrays[0].fields().to_vec(), values, val.validity.into())
     }

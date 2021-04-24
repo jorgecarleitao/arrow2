@@ -2,7 +2,7 @@ use std::{iter::FromIterator, sync::Arc};
 
 use crate::error::Result as ArrowResult;
 use crate::{
-    array::{Array, Builder, ToArray, TryFromIterator},
+    array::{Array, Builder, IntoArray, TryFromIterator},
     bitmap::MutableBitmap,
     buffer::MutableBuffer,
     datatypes::DataType,
@@ -239,8 +239,8 @@ impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> TryFromIterator<Ptr> fo
     }
 }
 
-impl<T: NativeType> ToArray for Primitive<T> {
-    fn to_arc(self, data_type: &DataType) -> Arc<dyn Array> {
+impl<T: NativeType> IntoArray for Primitive<T> {
+    fn into_arc(self, data_type: &DataType) -> Arc<dyn Array> {
         Arc::new(self.to(data_type.clone()))
     }
 }

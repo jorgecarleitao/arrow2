@@ -30,11 +30,11 @@ impl<'a> Growable<'a> for GrowableNull {
         self.length += additional;
     }
 
-    fn to_arc(&mut self) -> Arc<dyn Array> {
+    fn as_arc(&mut self) -> Arc<dyn Array> {
         Arc::new(NullArray::from_data(self.length))
     }
 
-    fn to_box(&mut self) -> Box<dyn Array> {
+    fn as_box(&mut self) -> Box<dyn Array> {
         Box::new(NullArray::from_data(self.length))
     }
 }

@@ -271,13 +271,13 @@ impl From<&StructArray> for RecordBatch {
     }
 }
 
-impl Into<StructArray> for RecordBatch {
-    fn into(self) -> StructArray {
-        let (fields, values) = self
+impl From<RecordBatch> for StructArray {
+    fn from(batch: RecordBatch) -> Self {
+        let (fields, values) = batch
             .schema
             .fields
             .iter()
-            .zip(self.columns.iter())
+            .zip(batch.columns.iter())
             .map(|t| (t.0.clone(), t.1.clone()))
             .unzip();
         StructArray::from_data(fields, values, None)

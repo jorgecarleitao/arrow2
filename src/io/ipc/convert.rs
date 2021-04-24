@@ -279,7 +279,7 @@ pub(crate) fn get_data_type(field: ipc::Field, may_be_dictionary: bool) -> DataT
     }
 }
 
-pub(crate) struct FBFieldType<'b> {
+pub(crate) struct FbFieldType<'b> {
     pub(crate) type_type: ipc::Type,
     pub(crate) type_: WIPOffset<UnionWIPOffset>,
     pub(crate) children: Option<WIPOffset<Vector<'b, ForwardsUOffset<ipc::Field<'b>>>>>,
@@ -350,17 +350,17 @@ pub(crate) fn get_fb_field_type<'a>(
     data_type: &DataType,
     is_nullable: bool,
     fbb: &mut FlatBufferBuilder<'a>,
-) -> FBFieldType<'a> {
+) -> FbFieldType<'a> {
     // some IPC implementations expect an empty list for child data, instead of a null value.
     // An empty field list is thus returned for primitive types
     let empty_fields: Vec<WIPOffset<ipc::Field>> = vec![];
     match data_type {
-        Null => FBFieldType {
+        Null => FbFieldType {
             type_type: ipc::Type::Null,
             type_: ipc::NullBuilder::new(fbb).finish().as_union_value(),
             children: Some(fbb.create_vector(&empty_fields[..])),
         },
-        Boolean => FBFieldType {
+        Boolean => FbFieldType {
             type_type: ipc::Type::Bool,
             type_: ipc::BoolBuilder::new(fbb).finish().as_union_value(),
             children: Some(fbb.create_vector(&empty_fields[..])),
@@ -376,7 +376,7 @@ pub(crate) fn get_fb_field_type<'a>(
                 UInt64 => builder.add_bitWidth(64),
                 _ => {}
             };
-            FBFieldType {
+            FbFieldType {
                 type_type: ipc::Type::Int,
                 type_: builder.finish().as_union_value(),
                 children: Some(children),
@@ -393,7 +393,7 @@ pub(crate) fn get_fb_field_type<'a>(
                 Int64 => builder.add_bitWidth(64),
                 _ => {}
             };
-            FBFieldType {
+            FbFieldType {
                 type_type: ipc::Type::Int,
                 type_: builder.finish().as_union_value(),
                 children: Some(children),
@@ -408,28 +408,28 @@ pub(crate) fn get_fb_field_type<'a>(
                 Float64 => builder.add_precision(ipc::Precision::DOUBLE),
                 _ => {}
             };
-            FBFieldType {
+            FbFieldType {
                 type_type: ipc::Type::FloatingPoint,
                 type_: builder.finish().as_union_value(),
                 children: Some(children),
             }
         }
-        Binary => FBFieldType {
+        Binary => FbFieldType {
             type_type: ipc::Type::Binary,
             type_: ipc::BinaryBuilder::new(fbb).finish().as_union_value(),
             children: Some(fbb.create_vector(&empty_fields[..])),
         },
-        LargeBinary => FBFieldType {
+        LargeBinary => FbFieldType {
             type_type: ipc::Type::LargeBinary,
             type_: ipc::LargeBinaryBuilder::new(fbb).finish().as_union_value(),
             children: Some(fbb.create_vector(&empty_fields[..])),
         },
-        Utf8 => FBFieldType {
+        Utf8 => FbFieldType {
             type_type: ipc::Type::Utf8,
             type_: ipc::Utf8Builder::new(fbb).finish().as_union_value(),
             children: Some(fbb.create_vector(&empty_fields[..])),
         },
-        LargeUtf8 => FBFieldType {
+        LargeUtf8 => FbFieldType {
             type_type: ipc::Type::LargeUtf8,
             type_: ipc::LargeUtf8Builder::new(fbb).finish().as_union_value(),
             children: Some(fbb.create_vector(&empty_fields[..])),
@@ -437,7 +437,7 @@ pub(crate) fn get_fb_field_type<'a>(
         FixedSizeBinary(len) => {
             let mut builder = ipc::FixedSizeBinaryBuilder::new(fbb);
             builder.add_byteWidth(*len as i32);
-            FBFieldType {
+            FbFieldType {
                 type_type: ipc::Type::FixedSizeBinary,
                 type_: builder.finish().as_union_value(),
                 children: Some(fbb.create_vector(&empty_fields[..])),
@@ -446,7 +446,7 @@ pub(crate) fn get_fb_field_type<'a>(
         Date32 => {
             let mut builder = ipc::DateBuilder::new(fbb);
             builder.add_unit(ipc::DateUnit::DAY);
-            FBFieldType {
+            FbFieldType {
                 type_type: ipc::Type::Date,
                 type_: builder.finish().as_union_value(),
                 children: Some(fbb.create_vector(&empty_fields[..])),
@@ -455,7 +455,7 @@ pub(crate) fn get_fb_field_type<'a>(
         Date64 => {
             let mut builder = ipc::DateBuilder::new(fbb);
             builder.add_unit(ipc::DateUnit::MILLISECOND);
-            FBFieldType {
+            FbFieldType {
                 type_type: ipc::Type::Date,
                 type_: builder.finish().as_union_value(),
                 children: Some(fbb.create_vector(&empty_fields[..])),
@@ -481,7 +481,7 @@ pub(crate) fn get_fb_field_type<'a>(
                     builder.add_unit(ipc::TimeUnit::NANOSECOND);
                 }
             }
-            FBFieldType {
+            FbFieldType {
                 type_type: ipc::Type::Time,
                 type_: builder.finish().as_union_value(),
                 children: Some(fbb.create_vector(&empty_fields[..])),
@@ -501,7 +501,7 @@ pub(crate) fn get_fb_field_type<'a>(
             if !tz.is_empty() {
                 builder.add_timezone(tz_str);
             }
-            FBFieldType {
+            FbFieldType {
                 type_type: ipc::Type::Timestamp,
                 type_: builder.finish().as_union_value(),
                 children: Some(fbb.create_vector(&empty_fields[..])),
@@ -514,7 +514,7 @@ pub(crate) fn get_fb_field_type<'a>(
                 IntervalUnit::DayTime => ipc::IntervalUnit::DAY_TIME,
             };
             builder.add_unit(interval_unit);
-            FBFieldType {
+            FbFieldType {
                 type_type: ipc::Type::Interval,
                 type_: builder.finish().as_union_value(),
                 children: Some(fbb.create_vector(&empty_fields[..])),
@@ -529,7 +529,7 @@ pub(crate) fn get_fb_field_type<'a>(
                 TimeUnit::Nanosecond => ipc::TimeUnit::NANOSECOND,
             };
             builder.add_unit(time_unit);
-            FBFieldType {
+            FbFieldType {
                 type_type: ipc::Type::Duration,
                 type_: builder.finish().as_union_value(),
                 children: Some(fbb.create_vector(&empty_fields[..])),
@@ -537,7 +537,7 @@ pub(crate) fn get_fb_field_type<'a>(
         }
         List(ref list_type) => {
             let child = build_field(fbb, list_type);
-            FBFieldType {
+            FbFieldType {
                 type_type: ipc::Type::List,
                 type_: ipc::ListBuilder::new(fbb).finish().as_union_value(),
                 children: Some(fbb.create_vector(&[child])),
@@ -545,7 +545,7 @@ pub(crate) fn get_fb_field_type<'a>(
         }
         LargeList(ref list_type) => {
             let child = build_field(fbb, list_type);
-            FBFieldType {
+            FbFieldType {
                 type_type: ipc::Type::LargeList,
                 type_: ipc::LargeListBuilder::new(fbb).finish().as_union_value(),
                 children: Some(fbb.create_vector(&[child])),
@@ -555,7 +555,7 @@ pub(crate) fn get_fb_field_type<'a>(
             let child = build_field(fbb, list_type);
             let mut builder = ipc::FixedSizeListBuilder::new(fbb);
             builder.add_listSize(*len as i32);
-            FBFieldType {
+            FbFieldType {
                 type_type: ipc::Type::FixedSizeList,
                 type_: builder.finish().as_union_value(),
                 children: Some(fbb.create_vector(&[child])),
@@ -580,7 +580,7 @@ pub(crate) fn get_fb_field_type<'a>(
                     },
                 ));
             }
-            FBFieldType {
+            FbFieldType {
                 type_type: ipc::Type::Struct_,
                 type_: ipc::Struct_Builder::new(fbb).finish().as_union_value(),
                 children: Some(fbb.create_vector(&children[..])),
@@ -597,7 +597,7 @@ pub(crate) fn get_fb_field_type<'a>(
             builder.add_precision(*precision as i32);
             builder.add_scale(*scale as i32);
             builder.add_bitWidth(128);
-            FBFieldType {
+            FbFieldType {
                 type_type: ipc::Type::Decimal,
                 type_: builder.finish().as_union_value(),
                 children: Some(fbb.create_vector(&empty_fields[..])),

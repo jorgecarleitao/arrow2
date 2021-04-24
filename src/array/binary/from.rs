@@ -1,7 +1,7 @@
 use std::{iter::FromIterator, sync::Arc};
 
 use super::BinaryArray;
-use crate::array::{Array, Builder, ToArray, TryFromIterator};
+use crate::array::{Array, Builder, IntoArray, TryFromIterator};
 use crate::{array::Offset, bitmap::MutableBitmap, buffer::MutableBuffer};
 use crate::{
     datatypes::DataType,
@@ -105,8 +105,8 @@ impl<O: Offset> BinaryPrimitive<O> {
     }
 }
 
-impl<O: Offset> ToArray for BinaryPrimitive<O> {
-    fn to_arc(self, _: &DataType) -> Arc<dyn Array> {
+impl<O: Offset> IntoArray for BinaryPrimitive<O> {
+    fn into_arc(self, _: &DataType) -> Arc<dyn Array> {
         Arc::new(self.to())
     }
 }

@@ -32,7 +32,7 @@ fn concatenate_values<K: DictionaryKey>(
         mutable.extend(i, 0, values.len());
         offsets.push(offsets[i] + values.len());
     }
-    (mutable.to_arc(), offsets)
+    (mutable.as_arc(), offsets)
 }
 
 impl<'a, T: DictionaryKey> GrowableDictionary<'a, T> {
@@ -110,12 +110,12 @@ impl<'a, T: DictionaryKey> Growable<'a> for GrowableDictionary<'a, T> {
     }
 
     #[inline]
-    fn to_arc(&mut self) -> Arc<dyn Array> {
+    fn as_arc(&mut self) -> Arc<dyn Array> {
         Arc::new(self.to())
     }
 
     #[inline]
-    fn to_box(&mut self) -> Box<dyn Array> {
+    fn as_box(&mut self) -> Box<dyn Array> {
         Box::new(self.to())
     }
 }

@@ -7,7 +7,7 @@ use std::{
 use hash_hasher::HashedMap;
 
 use crate::{
-    array::{Array, Builder, Primitive, ToArray, TryFromIterator},
+    array::{Array, Builder, IntoArray, Primitive, TryFromIterator},
     datatypes::DataType,
     error::{ArrowError, Result},
 };
@@ -25,18 +25,18 @@ pub struct DictionaryPrimitive<K: DictionaryKey, B: Builder<T>, T: Hash> {
 impl<K: DictionaryKey, B: Builder<T>, T: Hash> DictionaryPrimitive<K, B, T> {
     pub fn to(self, data_type: DataType) -> DictionaryArray<K> {
         let data_type = DictionaryArray::<K>::get_child(&data_type);
-        let values = self.values.to_arc(data_type);
+        let values = self.values.into_arc(data_type);
         DictionaryArray::from_data(self.keys.to(K::DATA_TYPE), values)
     }
 }
 
-impl<K, B, T> ToArray for DictionaryPrimitive<K, B, T>
+impl<K, B, T> IntoArray for DictionaryPrimitive<K, B, T>
 where
     K: DictionaryKey,
     B: Builder<T>,
     T: Hash,
 {
-    fn to_arc(self, data_type: &DataType) -> Arc<dyn Array> {
+    fn into_arc(self, data_type: &DataType) -> Arc<dyn Array> {
         Arc::new(self.to(data_type.clone()))
     }
 }

@@ -1,7 +1,7 @@
 use std::{iter::FromIterator, sync::Arc};
 
 use crate::{
-    array::{Array, Builder, ToArray, TryFromIterator},
+    array::{Array, Builder, IntoArray, TryFromIterator},
     bitmap::MutableBitmap,
     datatypes::DataType,
     error::Result,
@@ -20,7 +20,7 @@ impl<A: Builder<T>, T> FixedSizeListPrimitive<A, T> {
     pub fn to(self, data_type: DataType) -> FixedSizeListArray {
         let values = self
             .values
-            .to_arc(FixedSizeListArray::get_child_and_size(&data_type).0);
+            .into_arc(FixedSizeListArray::get_child_and_size(&data_type).0);
         FixedSizeListArray::from_data(data_type, values, self.validity.into())
     }
 }
@@ -88,8 +88,8 @@ where
     }
 }
 
-impl<B: Builder<T>, T> ToArray for FixedSizeListPrimitive<B, T> {
-    fn to_arc(self, data_type: &DataType) -> Arc<dyn Array> {
+impl<B: Builder<T>, T> IntoArray for FixedSizeListPrimitive<B, T> {
+    fn into_arc(self, data_type: &DataType) -> Arc<dyn Array> {
         Arc::new(self.to(data_type.clone()))
     }
 }
