@@ -21,13 +21,13 @@ fn add_benchmark(c: &mut Criterion) {
     let size = 65536;
     let arr_a = create_primitive_array::<f32>(size, DataType::Float32, 0.0);
 
-    c.bench_function("add f32", |b| b.iter(|| bench_op(&arr_a)));
+    c.bench_function("sum f32", |b| b.iter(|| bench_sum(&arr_a)));
 
     c.bench_function("min f32", |b| b.iter(|| bench_min(&arr_a)));
 
     let arr_a = create_primitive_array::<f32>(size, DataType::Float32, 0.5);
 
-    c.bench_function("add nulls f32", |b| b.iter(|| bench_op(&arr_a)));
+    c.bench_function("sum nulls f32", |b| b.iter(|| bench_sum(&arr_a)));
 }
 
 criterion_group!(benches, add_benchmark);
