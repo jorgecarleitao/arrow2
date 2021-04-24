@@ -73,14 +73,14 @@ impl<R: Read + Seek> FileReader<R> {
         let mut magic_buffer: [u8; 6] = [0; 6];
         reader.read_exact(&mut magic_buffer)?;
         if magic_buffer != ARROW_MAGIC {
-            return Err(ArrowError::IPC(
+            return Err(ArrowError::Ipc(
                 "Arrow file does not contain correct header".to_string(),
             ));
         }
         reader.seek(SeekFrom::End(-6))?;
         reader.read_exact(&mut magic_buffer)?;
         if magic_buffer != ARROW_MAGIC {
-            return Err(ArrowError::IPC(
+            return Err(ArrowError::Ipc(
                 "Arrow file does not contain correct footer".to_string(),
             ));
         }
@@ -96,10 +96,10 @@ impl<R: Read + Seek> FileReader<R> {
         reader.read_exact(&mut footer_data)?;
 
         let footer = gen::File::root_as_footer(&footer_data[..])
-            .map_err(|err| ArrowError::IPC(format!("Unable to get root as footer: {:?}", err)))?;
+            .map_err(|err| ArrowError::Ipc(format!("Unable to get root as footer: {:?}", err)))?;
 
         let blocks = footer.recordBatches().ok_or_else(|| {
-            ArrowError::IPC("Unable to get record batches from IPC Footer".to_string())
+            ArrowError::Ipc("Unable to get record batches from IPC Footer".to_string())
         })?;
 
         let total_blocks = blocks.len();
@@ -126,7 +126,7 @@ impl<R: Read + Seek> FileReader<R> {
             reader.read_exact(&mut block_data)?;
 
             let message = gen::Message::root_as_message(&block_data[..]).map_err(|err| {
-                ArrowError::IPC(format!("Unable to get root as message: {:?}", err))
+                ArrowError::Ipc(format!("Unable to get root as message: {:?}", err))
             })?;
 
             match message.header_type() {
@@ -142,7 +142,7 @@ impl<R: Read + Seek> FileReader<R> {
                     )?;
                 }
                 t => {
-                    return Err(ArrowError::IPC(format!(
+                    return Err(ArrowError::Ipc(format!(
                         "Expecting DictionaryBatch in dictionary blocks, found {:?}.",
                         t
                     )));
@@ -176,7 +176,7 @@ impl<R: Read + Seek> FileReader<R> {
     /// Sets the current block to the index, allowing random reads
     pub fn set_index(&mut self, index: usize) -> Result<()> {
         if index >= self.total_blocks {
-            Err(ArrowError::IPC(format!(
+            Err(ArrowError::Ipc(format!(
                 "Cannot set batch to index {} from {} total batches",
                 index, self.total_blocks
             )))
@@ -204,24 +204,24 @@ impl<R: Read + Seek> FileReader<R> {
         self.reader.read_exact(&mut block_data)?;
 
         let message = gen::Message::root_as_message(&block_data[..])
-            .map_err(|err| ArrowError::IPC(format!("Unable to get root as footer: {:?}", err)))?;
+            .map_err(|err| ArrowError::Ipc(format!("Unable to get root as footer: {:?}", err)))?;
 
         // some old test data's footer metadata is not set, so we account for that
         if self.metadata_version != gen::Schema::MetadataVersion::V1
             && message.version() != self.metadata_version
         {
-            return Err(ArrowError::IPC(
+            return Err(ArrowError::Ipc(
                 "Could not read IPC message as metadata versions mismatch".to_string(),
             ));
         }
 
         match message.header_type() {
-            gen::Message::MessageHeader::Schema => Err(ArrowError::IPC(
+            gen::Message::MessageHeader::Schema => Err(ArrowError::Ipc(
                 "Not expecting a schema when messages are read".to_string(),
             )),
             gen::Message::MessageHeader::RecordBatch => {
                 let batch = message.header_as_record_batch().ok_or_else(|| {
-                    ArrowError::IPC("Unable to read IPC message as record batch".to_string())
+                    ArrowError::Ipc("Unable to read IPC message as record batch".to_string())
                 })?;
                 read_record_batch(
                     batch,
@@ -233,7 +233,7 @@ impl<R: Read + Seek> FileReader<R> {
                 .map(Some)
             }
             gen::Message::MessageHeader::NONE => Ok(None),
-            t => Err(ArrowError::IPC(format!(
+            t => Err(ArrowError::Ipc(format!(
                 "Reading types other than record batches not yet supported, unable to read {:?}",
                 t
             ))),

@@ -72,11 +72,11 @@ impl<R: Read> StreamReader<R> {
         reader.read_exact(&mut meta_buffer)?;
 
         let message = gen::Message::root_as_message(meta_buffer.as_slice())
-            .map_err(|err| ArrowError::IPC(format!("Unable to get root as message: {:?}", err)))?;
+            .map_err(|err| ArrowError::Ipc(format!("Unable to get root as message: {:?}", err)))?;
         // message header is a Schema, so read it
         let ipc_schema: gen::Schema::Schema = message
             .header_as_schema()
-            .ok_or_else(|| ArrowError::IPC("Unable to read IPC message as schema".to_string()))?;
+            .ok_or_else(|| ArrowError::Ipc("Unable to read IPC message as schema".to_string()))?;
         let schema = convert::fb_to_schema(ipc_schema);
 
         // Create an array of optional dictionary value arrays, one per field.
@@ -143,15 +143,15 @@ impl<R: Read> StreamReader<R> {
 
         let vecs = &meta_buffer.to_vec();
         let message = gen::Message::root_as_message(vecs)
-            .map_err(|err| ArrowError::IPC(format!("Unable to get root as message: {:?}", err)))?;
+            .map_err(|err| ArrowError::Ipc(format!("Unable to get root as message: {:?}", err)))?;
 
         match message.header_type() {
-            gen::Message::MessageHeader::Schema => Err(ArrowError::IPC(
+            gen::Message::MessageHeader::Schema => Err(ArrowError::Ipc(
                 "Not expecting a schema when messages are read".to_string(),
             )),
             gen::Message::MessageHeader::RecordBatch => {
                 let batch = message.header_as_record_batch().ok_or_else(|| {
-                    ArrowError::IPC("Unable to read IPC message as record batch".to_string())
+                    ArrowError::Ipc("Unable to read IPC message as record batch".to_string())
                 })?;
                 // read the block that makes up the record batch into a buffer
                 let mut buf = vec![0; message.bodyLength() as usize];
@@ -170,7 +170,7 @@ impl<R: Read> StreamReader<R> {
             }
             gen::Message::MessageHeader::DictionaryBatch => {
                 let batch = message.header_as_dictionary_batch().ok_or_else(|| {
-                    ArrowError::IPC("Unable to read IPC message as dictionary batch".to_string())
+                    ArrowError::Ipc("Unable to read IPC message as dictionary batch".to_string())
                 })?;
                 // read the block that makes up the dictionary batch into a buffer
                 let mut buf = vec![0; message.bodyLength() as usize];
@@ -190,7 +190,7 @@ impl<R: Read> StreamReader<R> {
                 self.maybe_next()
             }
             gen::Message::MessageHeader::NONE => Ok(None),
-            t => Err(ArrowError::IPC(format!(
+            t => Err(ArrowError::Ipc(format!(
                 "Reading types other than record batches not yet supported, unable to read {:?} ",
                 t
             ))),

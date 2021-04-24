@@ -14,9 +14,9 @@ pub enum ArrowError {
     Io(std::io::Error),
     InvalidArgumentError(String),
     /// Error during import or export to/from C Data Interface
-    FFI(String),
+    Ffi(String),
     /// Error during import or export to/from IPC
-    IPC(String),
+    Ipc(String),
     /// Error during import or export to/from a format
     ExternalFormat(String),
     DictionaryKeyOverflowError,
@@ -53,10 +53,10 @@ impl Display for ArrowError {
             ArrowError::InvalidArgumentError(desc) => {
                 write!(f, "Invalid argument error: {}", desc)
             }
-            ArrowError::FFI(desc) => {
+            ArrowError::Ffi(desc) => {
                 write!(f, "FFI error: {}", desc)
             }
-            ArrowError::IPC(desc) => {
+            ArrowError::Ipc(desc) => {
                 write!(f, "IPC error: {}", desc)
             }
             ArrowError::ExternalFormat(desc) => {

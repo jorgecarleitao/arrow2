@@ -72,7 +72,7 @@ impl<W: Write> StreamWriter<W> {
     /// Write a record batch to the stream
     pub fn write(&mut self, batch: &RecordBatch) -> Result<()> {
         if self.finished {
-            return Err(ArrowError::IPC(
+            return Err(ArrowError::Ipc(
                 "Cannot write record batch to stream writer as it is closed".to_string(),
             ));
         }
