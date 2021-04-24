@@ -137,10 +137,11 @@ pub struct BitChunkIter<T: BitChunk> {
 
 impl<T: BitChunk> BitChunkIter<T> {
     #[inline]
-    pub fn new(value: T) -> Self {
+    pub fn new(value: T, len: usize) -> Self {
+        assert!(len <= std::mem::size_of::<T>() * 8);
         Self {
             value,
-            remaining: std::mem::size_of::<T>() * 8,
+            remaining: len,
             mask: T::one(),
         }
     }
@@ -152,7 +153,6 @@ impl<T: BitChunk> Iterator for BitChunkIter<T> {
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         if self.remaining == 0 {
-            debug_assert_eq!(self.mask, T::zero());
             return None;
         };
         let result = Some(self.value & self.mask != T::zero());
@@ -174,7 +174,7 @@ mod tests {
     #[test]
     fn test_basic() {
         let a = 0b00010000u8;
-        let iter = BitChunkIter::new(a);
+        let iter = BitChunkIter::new(a, 8);
         let r = iter.collect::<Vec<_>>();
         assert_eq!(
             r,
@@ -186,7 +186,7 @@ mod tests {
     fn test_basic1() {
         let a = [0b00000001, 0b00010000]; // 0th and 13th entry
         let a = u16::from_ne_bytes(a);
-        let iter = BitChunkIter::new(a);
+        let iter = BitChunkIter::new(a, 16);
         let r = iter.collect::<Vec<_>>();
         assert_eq!(r, (0..16).map(|x| x == 0 || x == 12).collect::<Vec<_>>(),);
     }

@@ -3,6 +3,7 @@ use std::convert::TryInto;
 mod merge;
 
 pub use crate::types::BitChunk;
+use crate::types::BitChunkIter;
 use merge::merge_reversed;
 
 /// This struct is used to efficiently iterate over bit masks by loading bytes on
@@ -112,6 +113,11 @@ impl<'a, T: BitChunk> BitChunks<'a, T> {
     #[inline]
     pub fn remainder_len(&self) -> usize {
         self.len - (std::mem::size_of::<T>() * ((self.len / 8) / std::mem::size_of::<T>()) * 8)
+    }
+
+    #[inline]
+    pub fn remainder_iter(&self) -> BitChunkIter<T> {
+        BitChunkIter::new(self.remainder(), self.remainder_len())
     }
 }
 
@@ -264,7 +270,7 @@ mod tests {
         assert_eq!(iter.remainder_len(), 100 - 96);
 
         for j in 0..12 {
-            let mut a = BitChunkIter::new(iter.next().unwrap());
+            let mut a = BitChunkIter::new(iter.next().unwrap(), 8);
             for i in 0..8 {
                 assert_eq!(a.next().unwrap(), (j * 8 + i + 1) % 3 == 0);
             }
@@ -275,7 +281,7 @@ mod tests {
         let expected_remainder = 0b00000100u8;
         assert_eq!(iter.remainder(), expected_remainder);
 
-        let mut a = BitChunkIter::new(expected_remainder);
+        let mut a = BitChunkIter::new(expected_remainder, 8);
         for i in 0..4 {
             assert_eq!(a.next().unwrap(), (i + 1) % 3 == 0);
         }

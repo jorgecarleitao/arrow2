@@ -1,6 +1,5 @@
 use std::ops::{BitAnd, BitOr, Not};
 
-use crate::bits::get_bit_unchecked;
 use crate::buffer::MutableBuffer;
 
 use super::Bitmap;
@@ -34,9 +33,7 @@ where
         a3_chunks.remainder(),
         a4_chunks.remainder(),
     );
-    // See https://arrow.apache.org/docs/format/Columnar.html#validity-bitmaps
-    // least-significant bit (LSB) numbering (also known as bit-endianness)
-    let rem = &rem.to_le_bytes()[0..remainder_bytes];
+    let rem = &rem.to_ne_bytes()[..remainder_bytes];
     buffer.extend_from_slice(rem);
 
     let length = a1.len();
@@ -69,9 +66,7 @@ where
         a2_chunks.remainder(),
         a3_chunks.remainder(),
     );
-    // See https://arrow.apache.org/docs/format/Columnar.html#validity-bitmaps
-    // least-significant bit (LSB) numbering (also known as bit-endianness)
-    let rem = &rem.to_le_bytes()[0..remainder_bytes];
+    let rem = &rem.to_ne_bytes()[..remainder_bytes];
     buffer.extend_from_slice(rem);
 
     let length = a1.len();
@@ -97,9 +92,7 @@ where
 
     let remainder_bytes = lhs_chunks.remainder_len().saturating_add(7) / 8;
     let rem = op(lhs_chunks.remainder(), rhs_chunks.remainder());
-    // See https://arrow.apache.org/docs/format/Columnar.html#validity-bitmaps
-    // least-significant bit (LSB) numbering (also known as bit-endianness)
-    let rem = &rem.to_le_bytes()[0..remainder_bytes];
+    let rem = &rem.to_ne_bytes()[..remainder_bytes];
     buffer.extend_from_slice(rem);
 
     let length = lhs.len();
@@ -119,9 +112,8 @@ where
 
     let remainder_bytes = lhs_chunks.remainder_len().saturating_add(7) / 8;
     let rem = op(lhs_chunks.remainder());
-    // See https://arrow.apache.org/docs/format/Columnar.html#validity-bitmaps
-    // least-significant bit (LSB) numbering (also known as bit-endianness)
-    let rem = &rem.to_le_bytes()[0..remainder_bytes];
+
+    let rem = &rem.to_ne_bytes()[..remainder_bytes];
     buffer.extend_from_slice(rem);
 
     (buffer, lhs.len()).into()
@@ -151,17 +143,9 @@ fn eq(lhs: &Bitmap, rhs: &Bitmap) -> bool {
     if !equal_chunks {
         return false;
     }
-    let remainder_bytes = lhs_chunks.remainder_len().saturating_add(7) / 8;
-
-    // See https://arrow.apache.org/docs/format/Columnar.html#validity-bitmaps
-    // least-significant bit (LSB) numbering (also known as bit-endianness)
-    let lhs_remainder = &lhs_chunks.remainder().to_le_bytes()[0..remainder_bytes];
-    let rhs_remainder = &rhs_chunks.remainder().to_le_bytes()[0..remainder_bytes];
-    unsafe {
-        debug_assert!(lhs_remainder.len() * 8 >= lhs_chunks.remainder_len());
-        (0..lhs_chunks.remainder_len())
-            .all(|i| get_bit_unchecked(lhs_remainder, i) == get_bit_unchecked(rhs_remainder, i))
-    }
+    let lhs_remainder = lhs_chunks.remainder_iter();
+    let rhs_remainder = rhs_chunks.remainder_iter();
+    lhs_remainder.zip(rhs_remainder).all(|(x, y)| x == y)
 }
 
 impl PartialEq for Bitmap {

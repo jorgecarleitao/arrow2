@@ -270,7 +270,7 @@ fn null_sum<T: NativeType + AddAssign + Sum>(values: &[T], bitmap: &Bitmap) -> T
         T::new_simd(),
         |mut acc, (chunk, validity_chunk)| {
             let chunk = T::from_slice(chunk);
-            let iter = BitChunkIter::new(validity_chunk);
+            let iter = BitChunkIter::new(validity_chunk, T::LANES);
             for (i, b) in (0..T::LANES).zip(iter) {
                 acc[i] += if b { chunk[i] } else { T::default() };
             }
@@ -278,12 +278,10 @@ fn null_sum<T: NativeType + AddAssign + Sum>(values: &[T], bitmap: &Bitmap) -> T
         },
     );
 
-    let a = validity_masks.remainder();
-
     let mut reduced: T = chunks
         .remainder()
         .iter()
-        .zip(BitChunkIter::new(validity_masks.remainder()))
+        .zip(BitChunkIter::new(validity_masks.remainder(), T::LANES))
         .map(|(x, is_valid)| if is_valid { *x } else { T::default() })
         .sum();
 
@@ -350,7 +348,7 @@ mod tests {
             .collect::<Primitive<i64>>()
             .to(DataType::Int64);
         let b: Int64Array = (1..=100)
-            .map(|i| if i % 3 == 0 { Some(0) } else { Some(0) })
+            .map(|i| if i % 3 == 0 { Some(0) } else { Some(i) })
             .collect::<Primitive<i64>>()
             .to(DataType::Int64);
         // create an array that actually has non-zero values at the invalid indices
