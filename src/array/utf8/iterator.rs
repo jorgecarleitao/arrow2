@@ -1,11 +1,12 @@
-use crate::array::{Array, Offset};
 use crate::bits::{zip_validity, ZipValidity};
+use crate::{
+    array::{Array, Offset},
+    trusted_len::TrustedLen,
+};
 
 use super::Utf8Array;
 
 /// Iterator of values of an `Utf8Array`.
-/// # Safety
-/// This iterator is `TrustedLen`
 pub struct Utf8ValuesIter<'a, O: Offset> {
     array: &'a Utf8Array<O>,
     index: usize,
@@ -59,3 +60,5 @@ impl<'a, O: Offset> Utf8Array<O> {
         Utf8ValuesIter::new(self)
     }
 }
+
+unsafe impl<O: Offset> TrustedLen for Utf8ValuesIter<'_, O> {}

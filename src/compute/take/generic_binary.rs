@@ -64,8 +64,7 @@ pub fn take_no_validity<O: Offset, I: Offset>(
         Result::Ok(length)
     });
     let offsets = std::iter::once(Ok(O::default())).chain(offsets);
-    // Soundness: `TrustedLen`.
-    let offsets = unsafe { Buffer::try_from_trusted_len_iter(offsets)? };
+    let offsets = Buffer::try_from_trusted_len_iter(offsets)?;
 
     Ok((offsets, buffer.into(), None))
 }
@@ -97,8 +96,7 @@ pub fn take_values_validity<O: Offset, I: Offset, A: GenericBinaryArray<O>>(
         Result::Ok(length)
     });
     let offsets = std::iter::once(Ok(O::default())).chain(offsets);
-    // Soundness: `TrustedLen`.
-    let offsets = unsafe { Buffer::try_from_trusted_len_iter(offsets) }?;
+    let offsets = Buffer::try_from_trusted_len_iter(offsets)?;
     let starts: Buffer<O> = starts.into();
 
     let buffer = take_values(length, starts.as_slice(), offsets.as_slice(), values_values)?;
@@ -128,7 +126,7 @@ pub fn take_indices_validity<O: Offset, I: Offset>(
         Result::Ok(length)
     });
     let offsets = std::iter::once(Ok(O::default())).chain(offsets);
-    let offsets = unsafe { Buffer::try_from_trusted_len_iter(offsets) }?;
+    let offsets = Buffer::try_from_trusted_len_iter(offsets)?;
     let starts: Buffer<O> = starts.into();
 
     let buffer = take_values(length, starts.as_slice(), offsets.as_slice(), values)?;
@@ -170,7 +168,7 @@ pub fn take_values_indices_validity<O: Offset, I: Offset, A: GenericBinaryArray<
         Result::Ok(length)
     });
     let offsets = std::iter::once(Ok(O::default())).chain(offsets);
-    let offsets = unsafe { Buffer::try_from_trusted_len_iter(offsets) }?;
+    let offsets = Buffer::try_from_trusted_len_iter(offsets)?;
     let starts: Buffer<O> = starts.into();
 
     let buffer = take_values(length, starts.as_slice(), offsets.as_slice(), values_values)?;

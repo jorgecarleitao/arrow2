@@ -157,7 +157,7 @@ pub fn lexsort_to_indices(columns: &[SortColumn]) -> Result<PrimitiveArray<i32>>
     value_indices.sort_by(lex_comparator);
 
     let values = value_indices.into_iter().map(|i| i as i32);
-    let values = unsafe { Buffer::<i32>::from_trusted_len_iter(values) };
+    let values = Buffer::<i32>::from_trusted_len_iter(values);
     Ok(PrimitiveArray::<i32>::from_data(
         DataType::Int32,
         values,

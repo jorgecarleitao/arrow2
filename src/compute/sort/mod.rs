@@ -355,10 +355,10 @@ where
 
     let values = if options.nulls_first {
         let values = nulls.into_iter().chain(valids);
-        unsafe { Buffer::<i32>::from_trusted_len_iter(values) }
+        Buffer::<i32>::from_trusted_len_iter(values)
     } else {
         let values = valids.chain(nulls.into_iter());
-        unsafe { Buffer::<i32>::from_trusted_len_iter(values) }
+        Buffer::<i32>::from_trusted_len_iter(values)
     };
 
     PrimitiveArray::<i32>::from_data(DataType::Int32, values, None)
@@ -404,12 +404,11 @@ where
     let values = valids.iter().map(|tuple| tuple.0);
 
     let values = if options.nulls_first {
-        let mut buffer =
-            unsafe { MutableBuffer::<i32>::from_trusted_len_iter(null_indices.into_iter()) };
+        let mut buffer = MutableBuffer::<i32>::from_trusted_len_iter(null_indices.into_iter());
         values.for_each(|x| buffer.push(x));
         buffer.into()
     } else {
-        let mut buffer = unsafe { MutableBuffer::<i32>::from_trusted_len_iter(values) };
+        let mut buffer = MutableBuffer::<i32>::from_trusted_len_iter(values);
         null_indices.iter().for_each(|x| buffer.push(*x));
         buffer.into()
     };

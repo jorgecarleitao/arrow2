@@ -3,7 +3,7 @@ use std::convert::TryInto;
 mod merge;
 
 pub use crate::types::BitChunk;
-use crate::types::BitChunkIter;
+use crate::{trusted_len::TrustedLen, types::BitChunkIter};
 use merge::merge_reversed;
 
 /// This struct is used to efficiently iterate over bit masks by loading bytes on
@@ -173,6 +173,8 @@ impl<T: BitChunk> ExactSizeIterator for BitChunks<'_, T> {
         self.chunk_iterator.len()
     }
 }
+
+unsafe impl<T: BitChunk> TrustedLen for BitChunks<'_, T> {}
 
 #[cfg(test)]
 mod tests {

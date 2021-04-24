@@ -278,8 +278,8 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
             // cast primitive to list's primitive
             let values = cast(array, to.data_type())?.into();
             // create offsets, where if array.len() = 2, we have [0,1,2]
-            let offsets: Buffer<i32> =
-                unsafe { Buffer::from_trusted_len_iter(0..=array.len() as i32) };
+            let offsets =
+                unsafe { Buffer::from_trusted_len_iter_unchecked(0..=array.len() as i32) };
 
             let data_type = ListArray::<i32>::default_datatype(to.data_type().clone());
             let list_array = ListArray::<i32>::from_data(data_type, offsets, values, None);

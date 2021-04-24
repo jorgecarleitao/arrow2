@@ -3,6 +3,7 @@ pub mod array;
 pub mod bitmap;
 pub mod buffer;
 pub mod error;
+pub mod trusted_len;
 pub mod types;
 
 pub mod compute;

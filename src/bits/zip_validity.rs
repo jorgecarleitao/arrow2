@@ -1,4 +1,4 @@
-use crate::bitmap::Bitmap;
+use crate::{bitmap::Bitmap, trusted_len::TrustedLen};
 
 /// Iterator of Option<T> from an iterator and validity.
 pub struct ZipValidity<'a, T, I: Iterator<Item = T>> {
@@ -83,6 +83,8 @@ impl<'a, T, I: Iterator<Item = T>> Iterator for ZipValidity<'a, T, I> {
 
 /// all arrays have known size.
 impl<'a, T, I: Iterator<Item = T>> std::iter::ExactSizeIterator for ZipValidity<'a, T, I> {}
+
+unsafe impl<T, I: TrustedLen<Item = T>> TrustedLen for ZipValidity<'_, T, I> {}
 
 /// Returns an iterator adapter that returns Option<T> according to an optional validity.
 #[inline]

@@ -34,10 +34,7 @@ where
         .windows(2)
         .map(|offset| op(offset[1] - offset[0]));
 
-    // JUSTIFICATION
-    //  Soundness
-    //      `values` is an iterator with a known size.
-    let values = unsafe { Buffer::from_trusted_len_iter(values) };
+    let values = Buffer::from_trusted_len_iter(values);
 
     let data_type = if O::is_large() {
         DataType::Int64

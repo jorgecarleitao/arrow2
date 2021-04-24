@@ -3,8 +3,8 @@ use std::ptr::NonNull;
 use std::usize;
 use std::{fmt::Debug, mem::size_of};
 
-use crate::alloc;
 use crate::types::NativeType;
+use crate::{alloc, trusted_len::TrustedLen};
 
 use super::{
     bytes::{Bytes, Deallocation},
@@ -314,11 +314,20 @@ impl<T: NativeType> MutableBuffer<T> {
         iterator.for_each(|item| self.push(item));
     }
 
-    /// Extends `self` from a `TrustedLen` iterator.
+    /// Extends `self` from a [`TrustedLen`] iterator.
+    #[inline]
+    pub fn extend_from_trusted_len_iter<I: TrustedLen<Item = T>>(&mut self, iterator: I) {
+        unsafe { self.extend_from_trusted_len_iter_unchecked(iterator) }
+    }
+
+    /// Extends `self` from an iterator.
     /// # Safety
     /// This method assumes that the iterator's size is correct and is undefined behavior
     /// to use it on an iterator that reports an incorrect length.
-    pub unsafe fn extend_from_trusted_len_iter<I: Iterator<Item = T>>(&mut self, iterator: I) {
+    pub unsafe fn extend_from_trusted_len_iter_unchecked<I: Iterator<Item = T>>(
+        &mut self,
+        iterator: I,
+    ) {
         let (_, upper) = iterator.size_hint();
         let upper = upper.expect("trusted_len_iter requires an upper limit");
         let len = upper;
@@ -355,19 +364,59 @@ impl<T: NativeType> MutableBuffer<T> {
     // 1. there is no trait `TrustedLen` in stable rust and therefore
     //    we can't specialize `extend` for `TrustedLen` like `Vec` does.
     // 2. `from_trusted_len_iter` is faster.
-    pub unsafe fn from_trusted_len_iter<I: Iterator<Item = T>>(iterator: I) -> Self {
+    #[inline]
+    pub fn from_trusted_len_iter<I: Iterator<Item = T> + TrustedLen>(iterator: I) -> Self {
         let mut buffer = MutableBuffer::new();
         buffer.extend_from_trusted_len_iter(iterator);
         buffer
     }
 
-    /// Creates a [`MutableBuffer`] from an [`Iterator`] with a trusted (upper) length or errors
-    /// if any of the items of the iterator is an error.
+    /// Creates a [`MutableBuffer`] from an [`Iterator`] with a trusted (upper) length.
     /// Prefer this to `collect` whenever possible, as it is faster ~60% faster.
+    /// # Example
+    /// ```
+    /// # use arrow2::buffer::MutableBuffer;
+    /// let v = vec![1u32];
+    /// let iter = v.iter().map(|x| x * 2);
+    /// let buffer = unsafe { MutableBuffer::from_trusted_len_iter(iter) };
+    /// assert_eq!(buffer.len(), 1)
+    /// ```
     /// # Safety
     /// This method assumes that the iterator's size is correct and is undefined behavior
     /// to use it on an iterator that reports an incorrect length.
-    pub unsafe fn try_from_trusted_len_iter<E, I: Iterator<Item = std::result::Result<T, E>>>(
+    // This implementation is required for two reasons:
+    // 1. there is no trait `TrustedLen` in stable rust and therefore
+    //    we can't specialize `extend` for `TrustedLen` like `Vec` does.
+    // 2. `from_trusted_len_iter` is faster.
+    #[inline]
+    pub unsafe fn from_trusted_len_iter_unchecked<I: Iterator<Item = T>>(iterator: I) -> Self {
+        let mut buffer = MutableBuffer::new();
+        buffer.extend_from_trusted_len_iter_unchecked(iterator);
+        buffer
+    }
+
+    /// Creates a [`MutableBuffer`] from an [`Iterator`] with a [`TrustedLen`] iterator, or errors
+    /// if any of the items of the iterator is an error.
+    #[inline]
+    pub fn try_from_trusted_len_iter<E, I: TrustedLen<Item = std::result::Result<T, E>>>(
+        iterator: I,
+    ) -> std::result::Result<Self, E> {
+        unsafe { Self::try_from_trusted_len_iter_unchecked(iterator) }
+    }
+
+    /// Creates a [`MutableBuffer`] from an [`Iterator`] with a trusted (upper) length or errors
+    /// if any of the items of the iterator is an error.
+    /// Prefer this to `collect` whenever possible, as it is faster ~60% faster.
+    /// The only difference between this and [`try_from_trusted_len_iter`] is that this works
+    /// on any iterator, while `try_from_trusted_len_iter` requires the iterator to implement the trait
+    /// [`TrustedLen`], which not every iterator currently implements due to limitations of the Rust compiler.
+    /// # Safety
+    /// This method assumes that the iterator's size is correct and is undefined behavior
+    /// to use it on an iterator that reports an incorrect length.
+    pub unsafe fn try_from_trusted_len_iter_unchecked<
+        E,
+        I: Iterator<Item = std::result::Result<T, E>>,
+    >(
         iterator: I,
     ) -> std::result::Result<Self, E> {
         let (_, upper) = iterator.size_hint();
@@ -467,7 +516,7 @@ impl Drop for SetLenOnDrop<'_> {
 impl<T: NativeType, P: AsRef<[T]>> From<P> for MutableBuffer<T> {
     #[inline]
     fn from(slice: P) -> Self {
-        unsafe { MutableBuffer::from_trusted_len_iter(slice.as_ref().iter().copied()) }
+        MutableBuffer::from_trusted_len_iter(slice.as_ref().iter().copied())
     }
 }
 
@@ -509,12 +558,17 @@ impl From<MutableBuffer<u64>> for MutableBuffer<u8> {
 }
 
 impl MutableBuffer<u8> {
-    /// # Safety
-    /// * The iterator must be TrustedLen
     #[inline]
-    pub unsafe fn from_chunk_iter<I: Iterator<Item = u64>>(iter: I) -> Self {
-        let buffer = MutableBuffer::from_trusted_len_iter(iter);
-        buffer.into()
+    pub fn from_chunk_iter<I: TrustedLen<Item = u64>>(iter: I) -> Self {
+        MutableBuffer::from_trusted_len_iter(iter).into()
+    }
+
+    /// # Safety
+    /// This method assumes that the iterator's size is correct and is undefined behavior
+    /// to use it on an iterator that reports an incorrect length.
+    #[inline]
+    pub unsafe fn from_chunk_iter_unchecked<I: Iterator<Item = u64>>(iter: I) -> Self {
+        MutableBuffer::from_trusted_len_iter_unchecked(iter).into()
     }
 }
 
@@ -636,14 +690,15 @@ mod tests {
 
     #[test]
     fn from_trusted_len_iter() {
-        let b = unsafe { MutableBuffer::<i32>::from_trusted_len_iter(0..3) };
+        let b = unsafe { MutableBuffer::<i32>::from_trusted_len_iter_unchecked(0..3) };
         assert_eq!(b.as_slice(), &[0, 1, 2]);
     }
 
     #[test]
     fn try_from_trusted_len_iter() {
         let iter = (0..3).map(Result::<_, String>::Ok);
-        let buffer = unsafe { MutableBuffer::<i32>::try_from_trusted_len_iter(iter) }.unwrap();
+        let buffer =
+            unsafe { MutableBuffer::<i32>::try_from_trusted_len_iter_unchecked(iter) }.unwrap();
         assert_eq!(buffer.len(), 3);
         assert_eq!(buffer.as_slice(), &[0, 1, 2]);
     }

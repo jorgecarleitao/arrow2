@@ -32,12 +32,7 @@ where
     F: Fn(I) -> O,
 {
     let values = array.values().iter().map(|v| op(*v));
-    // JUSTIFICATION
-    //  Benefit
-    //      ~60% speedup
-    //  Soundness
-    //      `values` is an iterator with a known size because arrays are sized.
-    let values = unsafe { Buffer::from_trusted_len_iter(values) };
+    let values = Buffer::from_trusted_len_iter(values);
 
     PrimitiveArray::<O>::from_data(data_type.clone(), values, array.validity().clone())
 }
@@ -55,7 +50,7 @@ where
     F: Fn(I) -> Result<O>,
 {
     let values = array.values().iter().map(|v| op(*v));
-    let values = unsafe { Buffer::try_from_trusted_len_iter(values) }?;
+    let values = Buffer::try_from_trusted_len_iter(values)?;
 
     Ok(PrimitiveArray::<O>::from_data(
         data_type.clone(),
@@ -84,7 +79,7 @@ where
         res
     });
 
-    let values = unsafe { Buffer::from_trusted_len_iter(values) };
+    let values = Buffer::from_trusted_len_iter(values);
 
     (
         PrimitiveArray::<O>::from_data(data_type.clone(), values, array.validity().clone()),
@@ -118,7 +113,7 @@ where
         }
     });
 
-    let values = unsafe { Buffer::from_trusted_len_iter(values) };
+    let values = Buffer::from_trusted_len_iter(values);
 
     // The validity has to be checked against the bitmap created during the
     // creation of the values with the iterator. If an error was found during
@@ -167,12 +162,7 @@ where
         .iter()
         .zip(rhs.values().iter())
         .map(|(l, r)| op(*l, *r));
-    // JUSTIFICATION
-    //  Benefit
-    //      ~60% speedup
-    //  Soundness
-    //      `values` is an iterator with a known size.
-    let values = unsafe { Buffer::from_trusted_len_iter(values) };
+    let values = Buffer::from_trusted_len_iter(values);
 
     Ok(PrimitiveArray::<T>::from_data(data_type, values, validity))
 }
@@ -204,7 +194,7 @@ where
         .zip(rhs.values().iter())
         .map(|(l, r)| op(*l, *r));
 
-    let values = unsafe { Buffer::try_from_trusted_len_iter(values) }?;
+    let values = Buffer::try_from_trusted_len_iter(values)?;
 
     Ok(PrimitiveArray::<T>::from_data(data_type, values, validity))
 }
@@ -238,7 +228,7 @@ where
         res
     });
 
-    let values = unsafe { Buffer::from_trusted_len_iter(values) };
+    let values = Buffer::from_trusted_len_iter(values);
 
     Ok((
         PrimitiveArray::<T>::from_data(data_type, values, validity),
@@ -283,7 +273,7 @@ where
             }
         });
 
-    let values = unsafe { Buffer::from_trusted_len_iter(values) };
+    let values = Buffer::from_trusted_len_iter(values);
 
     let bitmap: Bitmap = mut_bitmap.into();
     let validity = combine_validities(lhs.validity(), rhs.validity());

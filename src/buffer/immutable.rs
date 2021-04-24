@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::{convert::AsRef, usize};
 use std::{fmt::Debug, iter::FromIterator};
 
-use crate::types::NativeType;
+use crate::{trusted_len::TrustedLen, types::NativeType};
 
 use super::bytes::Bytes;
 use super::mutable::MutableBuffer;
@@ -91,7 +91,7 @@ impl<T: NativeType> Buffer<T> {
 }
 
 impl<T: NativeType> Buffer<T> {
-    /// Creates a [`Buffer`] from an [`Iterator`] with a trusted (upper) length.
+    /// Creates a [`Buffer`] from an [`Iterator`] with a trusted length.
     /// Prefer this to `collect` whenever possible, as it often enables auto-vectorization.
     /// # Example
     /// ```
@@ -101,11 +101,8 @@ impl<T: NativeType> Buffer<T> {
     /// let buffer = unsafe { Buffer::from_trusted_len_iter(iter) };
     /// assert_eq!(buffer.len(), 1)
     /// ```
-    /// # Safety
-    /// This method assumes that the iterator's size is correct and is undefined behavior
-    /// to use it on an iterator that reports an incorrect length.
     #[inline]
-    pub unsafe fn from_trusted_len_iter<I: Iterator<Item = T>>(iterator: I) -> Self {
+    pub fn from_trusted_len_iter<I: TrustedLen<Item = T>>(iterator: I) -> Self {
         MutableBuffer::from_trusted_len_iter(iterator).into()
     }
 
@@ -113,10 +110,32 @@ impl<T: NativeType> Buffer<T> {
     /// This method assumes that the iterator's size is correct and is undefined behavior
     /// to use it on an iterator that reports an incorrect length.
     #[inline]
-    pub unsafe fn try_from_trusted_len_iter<E, I: Iterator<Item = std::result::Result<T, E>>>(
+    pub fn try_from_trusted_len_iter<E, I: TrustedLen<Item = std::result::Result<T, E>>>(
         iterator: I,
     ) -> std::result::Result<Self, E> {
         Ok(MutableBuffer::try_from_trusted_len_iter(iterator)?.into())
+    }
+
+    /// Creates a [`Buffer`] from an [`Iterator`] with a trusted (upper) length.
+    /// # Safety
+    /// This method assumes that the iterator's size is correct and is undefined behavior
+    /// to use it on an iterator that reports an incorrect length.
+    #[inline]
+    pub unsafe fn from_trusted_len_iter_unchecked<I: Iterator<Item = T>>(iterator: I) -> Self {
+        MutableBuffer::from_trusted_len_iter_unchecked(iterator).into()
+    }
+
+    /// # Safety
+    /// This method assumes that the iterator's size is correct and is undefined behavior
+    /// to use it on an iterator that reports an incorrect length.
+    #[inline]
+    pub unsafe fn try_from_trusted_len_iter_unchecked<
+        E,
+        I: Iterator<Item = std::result::Result<T, E>>,
+    >(
+        iterator: I,
+    ) -> std::result::Result<Self, E> {
+        Ok(MutableBuffer::try_from_trusted_len_iter_unchecked(iterator)?.into())
     }
 }
 
@@ -181,7 +200,7 @@ mod tests {
 
     #[test]
     fn test_from_trusted_len_iter() {
-        let buffer = unsafe { Buffer::<i32>::from_trusted_len_iter(0..3) };
+        let buffer = unsafe { Buffer::<i32>::from_trusted_len_iter_unchecked(0..3) };
         assert_eq!(buffer.len(), 3);
         assert_eq!(buffer.as_slice(), &[0, 1, 2]);
     }
@@ -189,7 +208,7 @@ mod tests {
     #[test]
     fn test_try_from_trusted_len_iter() {
         let iter = (0..3).map(Result::<_, String>::Ok);
-        let buffer = unsafe { Buffer::<i32>::try_from_trusted_len_iter(iter) }.unwrap();
+        let buffer = unsafe { Buffer::<i32>::try_from_trusted_len_iter_unchecked(iter) }.unwrap();
         assert_eq!(buffer.len(), 3);
         assert_eq!(buffer.as_slice(), &[0, 1, 2]);
     }
