@@ -2,7 +2,7 @@ use std::{iter::FromIterator, sync::Arc};
 
 use crate::error::{ArrowError, Result as ArrowResult};
 use crate::{
-    array::{Array, Builder, Offset, ToArray, TryFromIterator},
+    array::{Array, Builder, IntoArray, Offset, TryFromIterator},
     bitmap::{Bitmap, MutableBitmap},
     buffer::{Buffer, MutableBuffer},
     datatypes::DataType,
@@ -249,8 +249,8 @@ impl<O: Offset> Utf8Primitive<O> {
     }
 }
 
-impl<O: Offset> ToArray for Utf8Primitive<O> {
-    fn to_arc(self, _: &DataType) -> Arc<dyn Array> {
+impl<O: Offset> IntoArray for Utf8Primitive<O> {
+    fn into_arc(self, _: &DataType) -> Arc<dyn Array> {
         Arc::new(self.to())
     }
 }

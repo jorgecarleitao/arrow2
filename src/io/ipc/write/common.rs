@@ -405,7 +405,7 @@ pub fn write_message<W: Write>(
 ) -> Result<(usize, usize)> {
     let arrow_data_len = encoded.arrow_data.len();
     if arrow_data_len % 8 != 0 {
-        return Err(ArrowError::IPC("Arrow data not aligned".to_string()));
+        return Err(ArrowError::Ipc("Arrow data not aligned".to_string()));
     }
 
     let a = write_options.alignment - 1;

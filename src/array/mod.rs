@@ -275,8 +275,8 @@ pub type UInt32Array = PrimitiveArray<u32>;
 pub type UInt64Array = PrimitiveArray<u64>;
 
 /// A trait describing the ability of a struct to convert itself to a Boxed [`Array`].
-pub trait ToArray {
-    fn to_arc(self, data_type: &DataType) -> std::sync::Arc<dyn Array>;
+pub trait IntoArray {
+    fn into_arc(self, data_type: &DataType) -> std::sync::Arc<dyn Array>;
 }
 
 /// A trait describing the ability of a struct to create itself from a falible iterator
@@ -286,7 +286,7 @@ pub trait TryFromIterator<A>: Sized {
 }
 
 /// A trait describing the ability of a struct to
-pub trait Builder<T>: TryFromIterator<Option<T>> + ToArray {
+pub trait Builder<T>: TryFromIterator<Option<T>> + IntoArray {
     /// Create the builder
     fn with_capacity(capacity: usize) -> Self;
 

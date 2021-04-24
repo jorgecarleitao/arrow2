@@ -195,11 +195,11 @@ fn to_dictionary<K: DictionaryKey>(
 ) -> Result<Arc<dyn Array>> {
     let dict_id = field
         .dict_id()
-        .ok_or_else(|| ArrowError::IPC(format!("Unable to find dict_id for field {:?}", field)))?;
+        .ok_or_else(|| ArrowError::Ipc(format!("Unable to find dict_id for field {:?}", field)))?;
     // find dictionary
     let dictionary = dictionaries
         .get(&dict_id)
-        .ok_or_else(|| ArrowError::IPC(format!("Unable to find any dictionary id {}", dict_id)))?;
+        .ok_or_else(|| ArrowError::Ipc(format!("Unable to find any dictionary id {}", dict_id)))?;
 
     let keys = to_primitive(json_col, K::DATA_TYPE);
 

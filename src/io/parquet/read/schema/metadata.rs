@@ -35,10 +35,10 @@ fn get_arrow_schema_from_metadata(encoded_meta: &str) -> Result<Schema> {
                 Ok(message) => message
                     .header_as_schema()
                     .map(ipc::fb_to_schema)
-                    .ok_or_else(|| ArrowError::IPC("the message is not Arrow Schema".to_string())),
+                    .ok_or_else(|| ArrowError::Ipc("the message is not Arrow Schema".to_string())),
                 Err(err) => {
                     // The flatbuffers implementation returns an error on verification error.
-                    Err(ArrowError::IPC(format!(
+                    Err(ArrowError::Ipc(format!(
                         "Unable to get root as message stored in {}: {:?}",
                         ARROW_SCHEMA_META_KEY, err
                     )))

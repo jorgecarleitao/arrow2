@@ -1,7 +1,7 @@
 use std::{iter::FromIterator, sync::Arc};
 
 use super::FixedSizeBinaryArray;
-use crate::array::{Array, Builder, ToArray, TryFromIterator};
+use crate::array::{Array, Builder, IntoArray, TryFromIterator};
 use crate::bitmap::MutableBitmap;
 use crate::buffer::MutableBuffer;
 use crate::{
@@ -102,8 +102,8 @@ impl FixedSizeBinaryPrimitive {
     }
 }
 
-impl ToArray for FixedSizeBinaryPrimitive {
-    fn to_arc(self, data_type: &DataType) -> Arc<dyn Array> {
+impl IntoArray for FixedSizeBinaryPrimitive {
+    fn into_arc(self, data_type: &DataType) -> Arc<dyn Array> {
         Arc::new(self.to(data_type.clone()))
     }
 }

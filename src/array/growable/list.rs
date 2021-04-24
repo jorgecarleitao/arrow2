@@ -112,7 +112,7 @@ impl<'a, O: Offset> GrowableList<'a, O> {
     fn to(&mut self) -> ListArray<O> {
         let validity = std::mem::take(&mut self.validity);
         let offsets = std::mem::take(&mut self.offsets);
-        let values = self.values.to_arc();
+        let values = self.values.as_arc();
 
         ListArray::<O>::from_data(
             self.arrays[0].data_type().clone(),
@@ -134,11 +134,11 @@ impl<'a, O: Offset> Growable<'a> for GrowableList<'a, O> {
         self.validity.extend_constant(additional, false);
     }
 
-    fn to_arc(&mut self) -> Arc<dyn Array> {
+    fn as_arc(&mut self) -> Arc<dyn Array> {
         Arc::new(self.to())
     }
 
-    fn to_box(&mut self) -> Box<dyn Array> {
+    fn as_box(&mut self) -> Box<dyn Array> {
         Box::new(self.to())
     }
 }
@@ -146,7 +146,7 @@ impl<'a, O: Offset> Growable<'a> for GrowableList<'a, O> {
 impl<'a, O: Offset> From<GrowableList<'a, O>> for ListArray<O> {
     fn from(val: GrowableList<'a, O>) -> Self {
         let mut values = val.values;
-        let values = values.to_arc();
+        let values = values.as_arc();
 
         ListArray::<O>::from_data(
             val.arrays[0].data_type().clone(),

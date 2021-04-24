@@ -59,7 +59,7 @@ pub fn concatenate(arrays: &[&dyn Array]) -> Result<Box<dyn Array>> {
         mutable.extend(i, 0, *len)
     }
 
-    Ok(mutable.to_box())
+    Ok(mutable.as_box())
 }
 
 #[cfg(test)]

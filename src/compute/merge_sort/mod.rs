@@ -97,7 +97,7 @@ pub fn take_arrays<I: IntoIterator<Item = MergeSlice>>(
     for (index, start, len) in slices {
         growable.extend(index, start, len)
     }
-    growable.to_box()
+    growable.as_box()
 }
 
 /// Combines two sorted [Array]s of the same [DataType] into a single sorted array.

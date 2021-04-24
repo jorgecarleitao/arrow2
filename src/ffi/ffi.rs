@@ -60,20 +60,20 @@ use crate::{
 /// This was created by bindgen
 #[repr(C)]
 #[derive(Debug)]
-pub struct FFI_ArrowSchema {
+pub struct Ffi_ArrowSchema {
     format: *const ::std::os::raw::c_char,
     name: *const ::std::os::raw::c_char,
     metadata: *const ::std::os::raw::c_char,
     flags: i64,
     n_children: i64,
-    children: *mut *mut FFI_ArrowSchema,
-    dictionary: *mut FFI_ArrowSchema,
-    release: ::std::option::Option<unsafe extern "C" fn(arg1: *mut FFI_ArrowSchema)>,
+    children: *mut *mut Ffi_ArrowSchema,
+    dictionary: *mut Ffi_ArrowSchema,
+    release: ::std::option::Option<unsafe extern "C" fn(arg1: *mut Ffi_ArrowSchema)>,
     private_data: *mut ::std::os::raw::c_void,
 }
 
-// callback used to drop [FFI_ArrowSchema] when it is exported.
-unsafe extern "C" fn release_schema(schema: *mut FFI_ArrowSchema) {
+// callback used to drop [Ffi_ArrowSchema] when it is exported.
+unsafe extern "C" fn release_schema(schema: *mut Ffi_ArrowSchema) {
     let schema = &mut *schema;
 
     // take ownership back to release it.
@@ -82,11 +82,11 @@ unsafe extern "C" fn release_schema(schema: *mut FFI_ArrowSchema) {
     schema.release = None;
 }
 
-impl FFI_ArrowSchema {
-    /// create a new [FFI_ArrowSchema] from a format.
-    fn new(format: &str) -> FFI_ArrowSchema {
+impl Ffi_ArrowSchema {
+    /// create a new [Ffi_ArrowSchema] from a format.
+    fn new(format: &str) -> Ffi_ArrowSchema {
         // <https://arrow.apache.org/docs/format/CDataInterface.html#c.ArrowSchema>
-        FFI_ArrowSchema {
+        Ffi_ArrowSchema {
             format: CString::new(format).unwrap().into_raw(),
             name: std::ptr::null_mut(),
             metadata: std::ptr::null_mut(),
@@ -99,7 +99,7 @@ impl FFI_ArrowSchema {
         }
     }
 
-    /// create an empty [FFI_ArrowSchema]
+    /// create an empty [Ffi_ArrowSchema]
     fn empty() -> Self {
         Self {
             format: std::ptr::null_mut(),
@@ -122,7 +122,7 @@ impl FFI_ArrowSchema {
     }
 }
 
-impl Drop for FFI_ArrowSchema {
+impl Drop for Ffi_ArrowSchema {
     fn drop(&mut self) {
         match self.release {
             None => (),
@@ -159,7 +159,7 @@ fn to_datatype(format: &str) -> Result<DataType> {
         "ttu" => DataType::Time64(TimeUnit::Microsecond),
         "ttn" => DataType::Time64(TimeUnit::Nanosecond),
         _ => {
-            return Err(ArrowError::FFI(
+            return Err(ArrowError::Ffi(
                 "The datatype \"{}\" is still not supported in Rust implementation".to_string(),
             ))
         }
@@ -193,7 +193,7 @@ fn from_datatype(datatype: &DataType) -> Result<String> {
         DataType::Time64(TimeUnit::Microsecond) => "ttu",
         DataType::Time64(TimeUnit::Nanosecond) => "ttn",
         z => {
-            return Err(ArrowError::FFI(format!(
+            return Err(ArrowError::Ffi(format!(
                 "The datatype \"{:?}\" is still not supported in Rust implementation",
                 z
             )))
@@ -207,26 +207,26 @@ fn from_datatype(datatype: &DataType) -> Result<String> {
 /// This was created by bindgen
 #[repr(C)]
 #[derive(Debug)]
-pub struct FFI_ArrowArray {
+pub struct Ffi_ArrowArray {
     pub(crate) length: i64,
     pub(crate) null_count: i64,
     pub(crate) offset: i64,
     pub(crate) n_buffers: i64,
     pub(crate) n_children: i64,
     pub(crate) buffers: *mut *const ::std::os::raw::c_void,
-    children: *mut *mut FFI_ArrowArray,
-    dictionary: *mut FFI_ArrowArray,
-    release: ::std::option::Option<unsafe extern "C" fn(arg1: *mut FFI_ArrowArray)>,
+    children: *mut *mut Ffi_ArrowArray,
+    dictionary: *mut Ffi_ArrowArray,
+    release: ::std::option::Option<unsafe extern "C" fn(arg1: *mut Ffi_ArrowArray)>,
     // When exported, this MUST contain everything that is owned by this array.
     // for example, any buffer pointed to in `buffers` must be here, as well as the `buffers` pointer
     // itself.
-    // In other words, everything in [FFI_ArrowArray] must be owned by `private_data` and can assume
+    // In other words, everything in [Ffi_ArrowArray] must be owned by `private_data` and can assume
     // that they do not outlive `private_data`.
     private_data: *mut ::std::os::raw::c_void,
 }
 
-// callback used to drop [FFI_ArrowArray] when it is exported
-unsafe extern "C" fn release_array(array: *mut FFI_ArrowArray) {
+// callback used to drop [Ffi_ArrowArray] when it is exported
+unsafe extern "C" fn release_array(array: *mut Ffi_ArrowArray) {
     if array.is_null() {
         return;
     }
@@ -243,8 +243,8 @@ struct PrivateData {
     buffers_ptr: Box<[*const std::os::raw::c_void]>,
 }
 
-impl FFI_ArrowArray {
-    /// creates a new `FFI_ArrowArray` from existing data.
+impl Ffi_ArrowArray {
+    /// creates a new `Ffi_ArrowArray` from existing data.
     /// # Safety
     /// This method releases `buffers`. Consumers of this struct *must* call `release` before
     /// releasing this struct, or contents in `buffers` leak.
@@ -275,7 +275,7 @@ impl FFI_ArrowArray {
         }
     }
 
-    // create an empty `FFI_ArrowArray`, which can be used to import data into
+    // create an empty `Ffi_ArrowArray`, which can be used to import data into
     fn empty() -> Self {
         Self {
             length: 0,
@@ -299,7 +299,7 @@ impl FFI_ArrowArray {
 /// # Safety
 /// This function assumes that `ceil(self.length * bits, 8)` is the size of the buffer
 unsafe fn create_buffer<T: NativeType>(
-    array: Arc<FFI_ArrowArray>,
+    array: Arc<Ffi_ArrowArray>,
     index: usize,
     len: usize,
 ) -> Option<Buffer<T>> {
@@ -324,7 +324,7 @@ unsafe fn create_buffer<T: NativeType>(
 /// This function panics if `i` is larger or equal to `n_buffers`.
 /// # Safety
 /// This function assumes that `ceil(self.length * bits, 8)` is the size of the buffer
-unsafe fn create_bitmap(array: Arc<FFI_ArrowArray>, index: usize, len: usize) -> Option<Bitmap> {
+unsafe fn create_bitmap(array: Arc<Ffi_ArrowArray>, index: usize, len: usize) -> Option<Bitmap> {
     if array.buffers.is_null() {
         return None;
     }
@@ -340,7 +340,7 @@ unsafe fn create_bitmap(array: Arc<FFI_ArrowArray>, index: usize, len: usize) ->
     bytes.map(|bytes| Bitmap::from_bytes(bytes, len))
 }
 
-impl Drop for FFI_ArrowArray {
+impl Drop for Ffi_ArrowArray {
     fn drop(&mut self) {
         match self.release {
             None => (),
@@ -351,7 +351,7 @@ impl Drop for FFI_ArrowArray {
 
 /// Struct used to move an Array from and to the C Data Interface.
 /// Its main responsibility is to expose functionality that requires
-/// both [FFI_ArrowArray] and [FFI_ArrowSchema].
+/// both [Ffi_ArrowArray] and [Ffi_ArrowSchema].
 ///
 /// This struct has two main paths:
 ///
@@ -360,19 +360,19 @@ impl Drop for FFI_ArrowArray {
 /// * [ArrowArray::try_from_raw] to consume two non-null allocated pointers
 /// ## Export to the C Data Interface
 /// * [ArrowArray::try_new] to create a new [ArrowArray] from Rust-specific information
-/// * [ArrowArray::into_raw] to expose two pointers for [FFI_ArrowArray] and [FFI_ArrowSchema].
+/// * [ArrowArray::into_raw] to expose two pointers for [Ffi_ArrowArray] and [Ffi_ArrowSchema].
 ///
 /// # Safety
 /// Whoever creates this struct is responsible for releasing their resources. Specifically,
 /// consumers *must* call [ArrowArray::into_raw] and take ownership of the individual pointers,
-/// calling [FFI_ArrowArray::release] and [FFI_ArrowSchema::release] accordingly.
+/// calling [Ffi_ArrowArray::release] and [Ffi_ArrowSchema::release] accordingly.
 ///
 /// Furthermore, this struct assumes that the incoming data agrees with the C data interface.
 #[derive(Debug)]
 pub struct ArrowArray {
     // these are ref-counted because they can be shared by multiple buffers.
-    array: Arc<FFI_ArrowArray>,
-    schema: Arc<FFI_ArrowSchema>,
+    array: Arc<Ffi_ArrowArray>,
+    schema: Arc<Ffi_ArrowSchema>,
 }
 
 impl ArrowArray {
@@ -382,8 +382,8 @@ impl ArrowArray {
     pub fn try_new(array: Arc<dyn Array>) -> Result<Self> {
         let format = from_datatype(array.data_type())?;
 
-        let schema = Arc::new(FFI_ArrowSchema::new(&format));
-        let array = Arc::new(FFI_ArrowArray::new(array));
+        let schema = Arc::new(Ffi_ArrowSchema::new(&format));
+        let array = Arc::new(Ffi_ArrowArray::new(array));
 
         Ok(ArrowArray { schema, array })
     }
@@ -394,17 +394,17 @@ impl ArrowArray {
     /// # Error
     /// Errors if any of the pointers is null
     pub unsafe fn try_from_raw(
-        array: *const FFI_ArrowArray,
-        schema: *const FFI_ArrowSchema,
+        array: *const Ffi_ArrowArray,
+        schema: *const Ffi_ArrowSchema,
     ) -> Result<Self> {
         if array.is_null() || schema.is_null() {
-            return Err(ArrowError::FFI(
+            return Err(ArrowError::Ffi(
                 "At least one of the pointers passed to `try_from_raw` is null".to_string(),
             ));
         };
         Ok(Self {
-            array: Arc::from_raw(array as *mut FFI_ArrowArray),
-            schema: Arc::from_raw(schema as *mut FFI_ArrowSchema),
+            array: Arc::from_raw(array as *mut Ffi_ArrowArray),
+            schema: Arc::from_raw(schema as *mut Ffi_ArrowSchema),
         })
     }
 
@@ -412,13 +412,13 @@ impl ArrowArray {
     /// # Safety
     /// See safety of [ArrowArray]
     pub unsafe fn empty() -> Self {
-        let schema = Arc::new(FFI_ArrowSchema::empty());
-        let array = Arc::new(FFI_ArrowArray::empty());
+        let schema = Arc::new(Ffi_ArrowSchema::empty());
+        let array = Arc::new(Ffi_ArrowArray::empty());
         ArrowArray { schema, array }
     }
 
     /// exports [ArrowArray] to the C Data Interface
-    pub fn into_raw(this: ArrowArray) -> (*const FFI_ArrowArray, *const FFI_ArrowSchema) {
+    pub fn into_raw(this: ArrowArray) -> (*const Ffi_ArrowArray, *const Ffi_ArrowSchema) {
         (Arc::into_raw(this.array), Arc::into_raw(this.schema))
     }
 
@@ -481,7 +481,7 @@ impl ArrowArray {
         let len = self.buffer_len(index)?;
 
         create_buffer(self.array.clone(), index, len).ok_or_else(|| {
-            ArrowError::FFI(format!(
+            ArrowError::Ffi(format!(
                 "The external buffer at position {} is null.",
                 index - 1
             ))
@@ -499,7 +499,7 @@ impl ArrowArray {
         let len = bytes_for(self.array.length as usize);
 
         create_bitmap(self.array.clone(), index, len).ok_or_else(|| {
-            ArrowError::FFI(format!(
+            ArrowError::Ffi(format!(
                 "The external buffer at position {} is null.",
                 index - 1
             ))

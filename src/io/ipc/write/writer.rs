@@ -93,7 +93,7 @@ impl<'a, W: Write> FileWriter<'a, W> {
     /// Write a record batch to the file
     pub fn write(&mut self, batch: &RecordBatch) -> Result<()> {
         if self.finished {
-            return Err(ArrowError::IPC(
+            return Err(ArrowError::Ipc(
                 "Cannot write record batch to file writer as it is closed".to_string(),
             ));
         }

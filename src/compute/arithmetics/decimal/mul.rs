@@ -302,9 +302,9 @@ pub fn adaptive_mul(
             validity,
         ))
     } else {
-        return Err(ArrowError::InvalidArgumentError(
+        Err(ArrowError::InvalidArgumentError(
             "Incorrect data type for the array".to_string(),
-        ));
+        ))
     }
 }
 
