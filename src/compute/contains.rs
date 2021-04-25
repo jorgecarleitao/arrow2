@@ -57,7 +57,7 @@ where
         let values = values.unwrap();
         list.iter().any(|x| x.map(|x| x == values).unwrap_or(false))
     });
-    let values = unsafe { Bitmap::from_trusted_len_iter(values) };
+    let values = Bitmap::from_trusted_len_iter(values);
 
     Ok(BooleanArray::from_data(values, validity))
 }
@@ -91,7 +91,7 @@ where
         let values = values.unwrap();
         list.iter().any(|x| x.map(|x| x == values).unwrap_or(false))
     });
-    let values = unsafe { Bitmap::from_trusted_len_iter(values) };
+    let values = Bitmap::from_trusted_len_iter(values);
 
     Ok(BooleanArray::from_data(values, validity))
 }

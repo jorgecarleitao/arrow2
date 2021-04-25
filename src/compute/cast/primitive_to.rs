@@ -40,7 +40,7 @@ where
 
     let iter = array.iter().map(|x| x.map(|x| lexical_to_string(*x)));
 
-    let array = unsafe { Utf8Array::<O>::from_trusted_len_iter(iter) };
+    let array = Utf8Array::<O>::from_trusted_len_iter(iter);
 
     Ok(Box::new(array))
 }
@@ -66,9 +66,7 @@ where
     let iter = from
         .iter()
         .map(|v| v.and_then(|x| num::cast::cast::<I, O>(*x)));
-    // Soundness:
-    //  The iterator is trustedLen because it comes from an `PrimitiveArray`.
-    unsafe { Primitive::<O>::from_trusted_len_iter(iter) }.to(to_type.clone())
+    Primitive::<O>::from_trusted_len_iter(iter).to(to_type.clone())
 }
 
 /// Cast an array by changing its data type to the desired type
@@ -95,7 +93,7 @@ where
     let array = array.as_any().downcast_ref::<PrimitiveArray<T>>().unwrap();
 
     let iter = array.values().iter().map(|v| *v != T::default());
-    let values = unsafe { Bitmap::from_trusted_len_iter(iter) };
+    let values = Bitmap::from_trusted_len_iter(iter);
 
     let array = BooleanArray::from_data(values, array.validity().clone());
 

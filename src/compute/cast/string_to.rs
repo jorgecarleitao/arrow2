@@ -43,11 +43,7 @@ where
         .iter()
         .map(|x| x.and_then::<T, _>(|x| lexical_core::parse(x.as_bytes()).ok()));
 
-    // Benefit:
-    //     20% performance improvement
-    // Soundness:
-    //     The iterator is trustedLen because it comes from an `StringArray`.
-    let array = unsafe { Primitive::<T>::from_trusted_len_iter(iter) }.to(to.clone());
+    let array = Primitive::<T>::from_trusted_len_iter(iter).to(to.clone());
 
     Ok(Box::new(array))
 }
@@ -62,9 +58,7 @@ pub fn to_date32<O: Offset>(array: &dyn Array, to_type: &DataType) -> PrimitiveA
                 .map(|x| x.num_days_from_ce() - EPOCH_DAYS_FROM_CE)
         })
     });
-    // Soundness:
-    //     The iterator is trustedLen because it comes from a `Utf8Array`.
-    unsafe { Primitive::<i32>::from_trusted_len_iter(iter) }.to(to_type.clone())
+    Primitive::<i32>::from_trusted_len_iter(iter).to(to_type.clone())
 }
 
 pub fn to_date64<O: Offset>(array: &dyn Array, to_type: &DataType) -> PrimitiveArray<i64> {
@@ -77,9 +71,7 @@ pub fn to_date64<O: Offset>(array: &dyn Array, to_type: &DataType) -> PrimitiveA
                 .map(|x| x.timestamp_millis())
         })
     });
-    // Soundness:
-    //     The iterator is trustedLen because it comes from a `Utf8Array`.
-    unsafe { Primitive::<i64>::from_trusted_len_iter(iter) }.to(to_type.clone())
+    Primitive::<i64>::from_trusted_len_iter(iter).to(to_type.clone())
 }
 
 // Packs the data as a StringDictionaryArray, if possible, with the

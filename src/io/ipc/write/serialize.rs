@@ -496,7 +496,7 @@ fn to_bytes<T: NativeType>(values: &[T], is_little_endian: bool) -> Vec<u8> {
 fn to_le_bitmap(bitmap: &Bitmap) -> Vec<u8> {
     if bitmap.offset() % 8 != 0 {
         // case where we can't slice the bitmap as the offsets are not multiple of 8
-        unsafe { Bitmap::from_trusted_len_iter(bitmap.iter()) }
+        Bitmap::from_trusted_len_iter(bitmap.iter())
             .as_slice()
             .to_vec()
     } else {
@@ -513,8 +513,7 @@ fn to_le_bytes_bitmap(bitmap: &Option<Bitmap>, length: usize) -> Vec<u8> {
         }
         None => {
             // in IPC, the null bitmap is always be present
-            let bitmap =
-                unsafe { Bitmap::from_trusted_len_iter(std::iter::repeat(true).take(length)) };
+            let bitmap = Bitmap::from_trusted_len_iter(std::iter::repeat(true).take(length));
             bitmap.as_slice().to_vec()
         }
     }

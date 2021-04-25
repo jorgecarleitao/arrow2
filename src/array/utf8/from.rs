@@ -1,44 +1,58 @@
 use std::{iter::FromIterator, sync::Arc};
 
-use crate::error::{ArrowError, Result as ArrowResult};
 use crate::{
     array::{Array, Builder, IntoArray, Offset, TryFromIterator},
     bitmap::{Bitmap, MutableBitmap},
     buffer::{Buffer, MutableBuffer},
     datatypes::DataType,
 };
+use crate::{
+    error::{ArrowError, Result as ArrowResult},
+    trusted_len::TrustedLen,
+};
 
 use super::Utf8Array;
 
 impl<O: Offset> Utf8Array<O> {
     pub fn from_slice<T: AsRef<str>, P: AsRef<[T]>>(slice: P) -> Self {
-        unsafe { Self::from_trusted_len_iter(slice.as_ref().iter().map(Some)) }
+        Self::from_trusted_len_iter(slice.as_ref().iter().map(Some))
     }
 }
 
 impl<O: Offset, T: AsRef<str>> From<&Vec<Option<T>>> for Utf8Array<O> {
     fn from(slice: &Vec<Option<T>>) -> Self {
-        unsafe { Self::from_trusted_len_iter(slice.iter().map(|x| x.as_ref())) }
+        Self::from_trusted_len_iter(slice.iter().map(|x| x.as_ref()))
     }
 }
 
 impl<O: Offset> Utf8Array<O> {
-    /// Creates a [`PrimitiveArray`] from an iterator of trusted length.
+    /// Creates a [`Utf8Array`] from an iterator of trusted length.
     /// # Safety
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
     /// I.e. that `size_hint().1` correctly reports its length.
     #[inline]
-    pub unsafe fn from_trusted_len_iter<I, P>(iter: I) -> Self
+    pub unsafe fn from_trusted_len_iter_unchecked<I, P>(iterator: I) -> Self
     where
         P: AsRef<str>,
-        I: IntoIterator<Item = Option<P>>,
+        I: Iterator<Item = Option<P>>,
     {
-        let iterator = iter.into_iter();
-
         let (validity, offsets, values) = trusted_len_unzip(iterator);
 
         // soundness: P is `str`
         Self::from_data_unchecked(offsets, values, validity)
+    }
+
+    /// Creates a [`Utf8Array`] from an iterator of trusted length.
+    #[inline]
+    pub fn from_trusted_len_iter<I, P>(iterator: I) -> Self
+    where
+        P: AsRef<str>,
+        I: TrustedLen<Item = Option<P>>,
+    {
+        let (validity, offsets, values) = unsafe { trusted_len_unzip(iterator) };
+
+        // soundness: P is `str`
+        unsafe { Self::from_data_unchecked(offsets, values, validity) }
     }
 
     /// Creates a [`PrimitiveArray`] from an falible iterator of trusted length.

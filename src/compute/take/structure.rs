@@ -38,7 +38,7 @@ fn take_validity<I: Offset>(
                 let index = maybe_usize(*x)?;
                 Result::Ok(validity.get_bit(index))
             });
-            Ok(unsafe { MutableBitmap::try_from_trusted_len_iter(iter) }?.into())
+            Ok(MutableBitmap::try_from_trusted_len_iter(iter)?.into())
         }
         (Some(validity), _) => {
             let iter = indices.iter().map(|x| {
@@ -50,7 +50,7 @@ fn take_validity<I: Offset>(
                     None => false,
                 })
             });
-            Ok(unsafe { MutableBitmap::try_from_trusted_len_iter(iter) }?.into())
+            Ok(MutableBitmap::try_from_trusted_len_iter(iter)?.into())
         }
     }
 }
