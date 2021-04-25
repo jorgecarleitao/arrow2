@@ -41,6 +41,6 @@ pub fn unary_utf8_boolean<O: Offset, F: Fn(&str) -> bool>(
         };
         op(value.unwrap())
     });
-    let values = unsafe { Bitmap::from_trusted_len_iter(iterator) };
+    let values = Bitmap::from_trusted_len_iter(iterator);
     BooleanArray::from_data(values, validity)
 }

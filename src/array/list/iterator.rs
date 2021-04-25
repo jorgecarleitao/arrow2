@@ -1,5 +1,5 @@
-use crate::array::Offset;
 use crate::array::{Array, IterableListArray};
+use crate::{array::Offset, trusted_len::TrustedLen};
 
 use super::ListArray;
 
@@ -70,3 +70,5 @@ impl<'a, A: IterableListArray> std::iter::Iterator for ListIter<'a, A> {
 
 /// all arrays have known size.
 impl<'a, A: IterableListArray> std::iter::ExactSizeIterator for ListIter<'a, A> {}
+
+unsafe impl<A: IterableListArray> TrustedLen for ListIter<'_, A> {}

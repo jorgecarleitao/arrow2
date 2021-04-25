@@ -3,6 +3,7 @@ use std::iter::FromIterator;
 use crate::{
     bits::{null_count, set},
     buffer::MutableBuffer,
+    trusted_len::TrustedLen,
 };
 
 use super::Bitmap;
@@ -290,12 +291,11 @@ impl MutableBitmap {
 
     /// Creates a new [`Bitmap`] from an iterator of booleans.
     /// # Safety
-    /// The caller must guarantee that the iterator is `TrustedLen`.
-    pub unsafe fn from_trusted_len_iter<I>(iter: I) -> Self
+    /// The iterator must report an accurate length.
+    pub unsafe fn from_trusted_len_iter_unchecked<I>(iterator: I) -> Self
     where
-        I: IntoIterator<Item = bool>,
+        I: Iterator<Item = bool>,
     {
-        let iterator = iter.into_iter();
         let length = iterator.size_hint().1.unwrap();
 
         let mut buffer = MutableBuffer::<u8>::from_len_zeroed((length + 7) / 8);
@@ -305,14 +305,37 @@ impl MutableBitmap {
         Self { buffer, length }
     }
 
+    /// Creates a new [`Bitmap`] from an iterator of booleans.
+    pub fn from_trusted_len_iter<I>(iterator: I) -> Self
+    where
+        I: TrustedLen<Item = bool>,
+    {
+        let length = iterator.size_hint().1.unwrap();
+
+        let mut buffer = MutableBuffer::<u8>::from_len_zeroed((length + 7) / 8);
+
+        extend(&mut buffer, length, iterator);
+
+        Self { buffer, length }
+    }
+
+    /// Creates a new [`Bitmap`] from an iterator of booleans.
+    pub fn try_from_trusted_len_iter<E, I>(iterator: I) -> std::result::Result<Self, E>
+    where
+        I: TrustedLen<Item = std::result::Result<bool, E>>,
+    {
+        unsafe { Self::try_from_trusted_len_iter_unchecked(iterator) }
+    }
+
     /// Creates a new [`Bitmap`] from an falible iterator of booleans.
     /// # Safety
     /// The caller must guarantee that the iterator is `TrustedLen`.
-    pub unsafe fn try_from_trusted_len_iter<E, I>(iter: I) -> std::result::Result<Self, E>
+    pub unsafe fn try_from_trusted_len_iter_unchecked<E, I>(
+        mut iterator: I,
+    ) -> std::result::Result<Self, E>
     where
-        I: IntoIterator<Item = std::result::Result<bool, E>>,
+        I: Iterator<Item = std::result::Result<bool, E>>,
     {
-        let mut iterator = iter.into_iter();
         let length = iterator.size_hint().1.unwrap();
 
         let mut buffer = MutableBuffer::<u8>::from_len_zeroed((length + 7) / 8);
@@ -357,7 +380,7 @@ mod tests {
     #[test]
     fn test_trusted_len() {
         let data = vec![true; 65];
-        let bitmap = unsafe { MutableBitmap::from_trusted_len_iter(data) };
+        let bitmap = MutableBitmap::from_trusted_len_iter(data.into_iter());
         let bitmap: Bitmap = bitmap.into();
         assert_eq!(bitmap.len(), 65);
 
@@ -367,7 +390,7 @@ mod tests {
     #[test]
     fn test_trusted_len_small() {
         let data = vec![true; 7];
-        let bitmap = unsafe { MutableBitmap::from_trusted_len_iter(data) };
+        let bitmap = MutableBitmap::from_trusted_len_iter(data.into_iter());
         let bitmap: Bitmap = bitmap.into();
         assert_eq!(bitmap.len(), 7);
 

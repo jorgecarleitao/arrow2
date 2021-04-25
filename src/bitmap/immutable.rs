@@ -5,6 +5,7 @@ use crate::{
     bits::{get_bit, get_bit_unchecked, null_count, BitChunk, BitChunks},
     buffer::bytes::Bytes,
     buffer::MutableBuffer,
+    trusted_len::TrustedLen,
 };
 
 use super::{BitmapIter, MutableBitmap};
@@ -160,20 +161,37 @@ impl Bitmap {
 impl Bitmap {
     /// Creates a new [`Bitmap`] from an iterator of booleans.
     /// # Safety
-    /// The caller must guarantee that the iterator is `TrustedLen`.
+    /// The iterator must report an accurate length.
     #[inline]
-    pub unsafe fn from_trusted_len_iter<I: Iterator<Item = bool>>(iterator: I) -> Self {
+    pub unsafe fn from_trusted_len_iter_unchecked<I: Iterator<Item = bool>>(iterator: I) -> Self {
+        MutableBitmap::from_trusted_len_iter_unchecked(iterator).into()
+    }
+
+    /// Creates a new [`Bitmap`] from an iterator of booleans.
+    #[inline]
+    pub fn from_trusted_len_iter<I: TrustedLen<Item = bool>>(iterator: I) -> Self {
         MutableBitmap::from_trusted_len_iter(iterator).into()
     }
 
     /// Creates a new [`Bitmap`] from a fallible iterator of booleans.
-    /// # Safety
-    /// The caller must guarantee that the iterator is `TrustedLen`.
     #[inline]
-    pub unsafe fn try_from_trusted_len_iter<E, I: Iterator<Item = std::result::Result<bool, E>>>(
+    pub fn try_from_trusted_len_iter<E, I: TrustedLen<Item = std::result::Result<bool, E>>>(
         iterator: I,
     ) -> std::result::Result<Self, E> {
         Ok(MutableBitmap::try_from_trusted_len_iter(iterator)?.into())
+    }
+
+    /// Creates a new [`Bitmap`] from a fallible iterator of booleans.
+    /// # Safety
+    /// The iterator must report an accurate length.
+    #[inline]
+    pub unsafe fn try_from_trusted_len_iter_unchecked<
+        E,
+        I: Iterator<Item = std::result::Result<bool, E>>,
+    >(
+        iterator: I,
+    ) -> std::result::Result<Self, E> {
+        Ok(MutableBitmap::try_from_trusted_len_iter_unchecked(iterator)?.into())
     }
 }
 

@@ -57,7 +57,7 @@ pub fn regex_match<O: Offset>(values: &Utf8Array<O>, regex: &Utf8Array<O>) -> Re
 
         Ok(regex.is_match(haystack))
     });
-    let new_values = unsafe { Bitmap::try_from_trusted_len_iter(iterator) }?;
+    let new_values = Bitmap::try_from_trusted_len_iter(iterator)?;
 
     Ok(BooleanArray::from_data(new_values, validity))
 }

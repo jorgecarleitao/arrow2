@@ -28,8 +28,7 @@ fn take_no_validity<I: Offset>(values: &Bitmap, indices: &[I]) -> Result<(Bitmap
     let values = indices
         .iter()
         .map(|index| Result::Ok(values.get_bit(maybe_usize::<I>(*index)?)));
-    // Soundness: `slice.map` is `TrustedLen`.
-    let buffer = unsafe { Bitmap::try_from_trusted_len_iter(values)? };
+    let buffer = Bitmap::try_from_trusted_len_iter(values)?;
 
     Ok((buffer, None))
 }
@@ -54,8 +53,7 @@ fn take_values_validity<I: Offset>(
         }
         Result::Ok(values_values.get_bit(index))
     });
-    // Soundness: `slice.map` is `TrustedLen`.
-    let buffer = unsafe { Bitmap::try_from_trusted_len_iter(values)? };
+    let buffer = Bitmap::try_from_trusted_len_iter(values)?;
 
     Ok((buffer, validity.into()))
 }
@@ -81,8 +79,7 @@ fn take_indices_validity<I: Offset>(
         })
     });
 
-    // Soundness: `slice.map` is `TrustedLen`.
-    let buffer = unsafe { Bitmap::try_from_trusted_len_iter(values)? };
+    let buffer = Bitmap::try_from_trusted_len_iter(values)?;
 
     Ok((buffer, indices.validity().clone()))
 }
@@ -108,8 +105,7 @@ fn take_values_indices_validity<I: Offset>(
             Ok(false)
         }
     });
-    // Soundness: `slice.map` is `TrustedLen`.
-    let values = unsafe { Bitmap::try_from_trusted_len_iter(values)? };
+    let values = Bitmap::try_from_trusted_len_iter(values)?;
     Ok((values, validity.into()))
 }
 

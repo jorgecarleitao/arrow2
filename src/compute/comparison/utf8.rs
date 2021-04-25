@@ -42,7 +42,7 @@ where
             (Some(lhs), Some(rhs)) => op(lhs, rhs),
             _ => false,
         });
-    let values = unsafe { Bitmap::from_trusted_len_iter(values) };
+    let values = Bitmap::from_trusted_len_iter(values);
 
     Ok(BooleanArray::from_data(values, validity))
 }
@@ -60,7 +60,7 @@ where
         None => false,
         Some(lhs) => op(lhs, rhs),
     });
-    let values = unsafe { Bitmap::from_trusted_len_iter(values) };
+    let values = Bitmap::from_trusted_len_iter(values);
 
     BooleanArray::from_data(values, validity)
 }

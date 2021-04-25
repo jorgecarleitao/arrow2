@@ -95,7 +95,7 @@ where
     let array = array.as_any().downcast_ref::<PrimitiveArray<T>>().unwrap();
 
     let iter = array.values().iter().map(|v| *v != T::default());
-    let values = unsafe { Bitmap::from_trusted_len_iter(iter) };
+    let values = Bitmap::from_trusted_len_iter(iter);
 
     let array = BooleanArray::from_data(values, array.validity().clone());
 
