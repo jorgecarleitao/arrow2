@@ -35,11 +35,7 @@ pub fn hour(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
                 .as_any()
                 .downcast_ref::<PrimitiveArray<i32>>()
                 .unwrap();
-            Ok(unary(
-                array,
-                |x| time32s_to_time(x).hour(),
-                &final_data_type,
-            ))
+            Ok(unary(array, |x| time32s_to_time(x).hour(), final_data_type))
         }
         DataType::Time32(TimeUnit::Microsecond) => {
             let array = array
@@ -49,7 +45,7 @@ pub fn hour(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
             Ok(unary(
                 array,
                 |x| time32ms_to_time(x).hour(),
-                &final_data_type,
+                final_data_type,
             ))
         }
         DataType::Time64(TimeUnit::Microsecond) => {
@@ -60,7 +56,7 @@ pub fn hour(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
             Ok(unary(
                 array,
                 |x| time64us_to_time(x).hour(),
-                &final_data_type,
+                final_data_type,
             ))
         }
         DataType::Time64(TimeUnit::Nanosecond) => {
@@ -71,7 +67,7 @@ pub fn hour(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
             Ok(unary(
                 array,
                 |x| time64ns_to_time(x).hour(),
-                &final_data_type,
+                final_data_type,
             ))
         }
         DataType::Date32 => {
@@ -82,7 +78,7 @@ pub fn hour(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
             Ok(unary(
                 array,
                 |x| date32_to_datetime(x).hour(),
-                &final_data_type,
+                final_data_type,
             ))
         }
         DataType::Date64 => {
@@ -93,7 +89,7 @@ pub fn hour(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
             Ok(unary(
                 array,
                 |x| date64_to_datetime(x).hour(),
-                &final_data_type,
+                final_data_type,
             ))
         }
         DataType::Timestamp(time_unit, None) => {
@@ -107,7 +103,7 @@ pub fn hour(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
                 TimeUnit::Microsecond => |x| timestamp_us_to_datetime(x).hour(),
                 TimeUnit::Nanosecond => |x| timestamp_ns_to_datetime(x).hour(),
             };
-            Ok(unary(array, op, &final_data_type))
+            Ok(unary(array, op, final_data_type))
         }
         dt => Err(ArrowError::NotYetImplemented(format!(
             "\"hour\" does not support type {:?}",
@@ -128,7 +124,7 @@ pub fn year(array: &dyn Array) -> Result<PrimitiveArray<i32>> {
             Ok(unary(
                 array,
                 |x| date32_to_datetime(x).year(),
-                &final_data_type,
+                final_data_type,
             ))
         }
         DataType::Date64 => {
@@ -139,7 +135,7 @@ pub fn year(array: &dyn Array) -> Result<PrimitiveArray<i32>> {
             Ok(unary(
                 array,
                 |x| date64_to_datetime(x).year(),
-                &final_data_type,
+                final_data_type,
             ))
         }
         DataType::Timestamp(time_unit, None) => {
@@ -153,7 +149,7 @@ pub fn year(array: &dyn Array) -> Result<PrimitiveArray<i32>> {
                 TimeUnit::Microsecond => |x| timestamp_us_to_datetime(x).year(),
                 TimeUnit::Nanosecond => |x| timestamp_ns_to_datetime(x).year(),
             };
-            Ok(unary(array, op, &final_data_type))
+            Ok(unary(array, op, final_data_type))
         }
         dt => Err(ArrowError::NotYetImplemented(format!(
             "\"year\" does not support type {:?}",

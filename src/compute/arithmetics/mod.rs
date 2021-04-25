@@ -200,5 +200,5 @@ pub fn negate<T>(array: &PrimitiveArray<T>) -> PrimitiveArray<T>
 where
     T: NativeType + Neg<Output = T>,
 {
-    unary(array, |a| -a, array.data_type())
+    unary(array, |a| -a, array.data_type().clone())
 }

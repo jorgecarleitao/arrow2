@@ -26,7 +26,7 @@ pub fn powf_scalar<T>(array: &PrimitiveArray<T>, exponent: T) -> PrimitiveArray<
 where
     T: NativeType + Pow<T, Output = T>,
 {
-    unary(array, |x| x.pow(exponent), array.data_type())
+    unary(array, |x| x.pow(exponent), array.data_type().clone())
 }
 
 /// Checked operation of raising an array of primitives to the power of
@@ -51,7 +51,7 @@ where
 {
     let op = move |a: T| checked_pow(a, exponent);
 
-    unary_checked(array, op, array.data_type())
+    unary_checked(array, op, array.data_type().clone())
 }
 
 #[cfg(test)]
