@@ -38,9 +38,7 @@ where
         .iter()
         .map(|x| x.map(|x| if x { T::one() } else { T::default() }));
 
-    // Soundness:
-    //     The iterator is trustedLen
-    let array = unsafe { Primitive::<T>::from_trusted_len_iter(iter) }.to(to.clone());
+    let array = Primitive::<T>::from_trusted_len_iter(iter).to(to.clone());
 
     Ok(Box::new(array))
 }
@@ -53,9 +51,7 @@ pub fn cast_bool_to_utf8<O: Offset>(array: &dyn Array) -> Result<Box<dyn Array>>
 
     let iter = array.iter().map(|x| x.map(|x| if x { "1" } else { "0" }));
 
-    // Soundness:
-    //     The iterator is trustedLen
-    let array = unsafe { Utf8Array::<O>::from_trusted_len_iter(iter) };
+    let array = Utf8Array::<O>::from_trusted_len_iter(iter);
 
     Ok(Box::new(array))
 }

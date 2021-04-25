@@ -407,7 +407,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
                     .iter()
                     .map(|x| x.and_then(|x| std::str::from_utf8(x).ok()));
 
-                let array = unsafe { Utf8Array::<i32>::from_trusted_len_iter(iter) };
+                let array = Utf8Array::<i32>::from_trusted_len_iter(iter);
                 Ok(Box::new(array))
             }
             _ => Err(ArrowError::NotYetImplemented(format!(

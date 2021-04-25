@@ -1,6 +1,5 @@
 use std::{iter::FromIterator, sync::Arc};
 
-use crate::error::Result as ArrowResult;
 use crate::{
     array::{Array, Builder, IntoArray, TryFromIterator},
     bitmap::MutableBitmap,
@@ -8,22 +7,23 @@ use crate::{
     datatypes::DataType,
     types::NativeType,
 };
+use crate::{error::Result as ArrowResult, trusted_len::TrustedLen};
 
 use super::PrimitiveArray;
 
 impl<T: NativeType> Primitive<T> {
     pub fn from_slice<P: AsRef<[T]>>(slice: P) -> Self {
-        unsafe { Self::from_trusted_len_iter(slice.as_ref().iter().map(Some)) }
+        Self::from_trusted_len_iter(slice.as_ref().iter().map(Some))
     }
 
     pub fn from_vec(slice: Vec<T>) -> Self {
-        unsafe { Self::from_trusted_len_iter(slice.iter().map(|x| Some(*x))) }
+        Self::from_trusted_len_iter(slice.iter().map(|x| Some(*x)))
     }
 }
 
 impl<T: NativeType, P: AsRef<[Option<T>]>> From<P> for Primitive<T> {
     fn from(slice: P) -> Self {
-        unsafe { Self::from_trusted_len_iter(slice.as_ref().iter().map(|x| x.as_ref())) }
+        Self::from_trusted_len_iter(slice.as_ref().iter().map(|x| x.as_ref()))
     }
 }
 
@@ -34,19 +34,29 @@ impl<T: NativeType> Primitive<T> {
 }
 
 impl<T: NativeType> Primitive<T> {
-    /// Creates a [`PrimitiveArray`] from an iterator of trusted length.
+    /// Creates a [`Primitive`] from an iterator of trusted length.
     /// # Safety
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
-    /// I.e. that `size_hint().1` correctly reports its length.
+    /// I.e. `size_hint().1` correctly reports its length.
     #[inline]
-    pub unsafe fn from_trusted_len_iter<I, P>(iter: I) -> Self
+    pub unsafe fn from_trusted_len_iter_unchecked<I, P>(iterator: I) -> Self
     where
         P: std::borrow::Borrow<T>,
-        I: IntoIterator<Item = Option<P>>,
+        I: Iterator<Item = Option<P>>,
     {
-        let iterator = iter.into_iter();
-
         let (validity, values) = trusted_len_unzip(iterator);
+
+        Self { values, validity }
+    }
+
+    /// Creates a [`Primitive`] from a [`TrustedLen`].
+    #[inline]
+    pub fn from_trusted_len_iter<I, P>(iterator: I) -> Self
+    where
+        P: std::borrow::Borrow<T>,
+        I: TrustedLen<Item = Option<P>>,
+    {
+        let (validity, values) = unsafe { trusted_len_unzip(iterator) };
 
         Self { values, validity }
     }

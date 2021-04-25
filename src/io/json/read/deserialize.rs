@@ -86,7 +86,7 @@ fn read_primitive<T: NativeType + NumCast>(
         Value::Bool(number) => num::cast::cast::<i32, T>(*number as i32),
         _ => None,
     });
-    unsafe { Primitive::from_trusted_len_iter(iter) }.to(data_type)
+    Primitive::from_trusted_len_iter(iter).to(data_type)
 }
 
 fn read_boolean(rows: &[&Value]) -> BooleanArray {
@@ -94,7 +94,7 @@ fn read_boolean(rows: &[&Value]) -> BooleanArray {
         Value::Bool(v) => Some(v),
         _ => None,
     });
-    unsafe { BooleanArray::from_trusted_len_iter(iter) }
+    BooleanArray::from_trusted_len_iter(iter)
 }
 
 fn read_utf8<O: Offset>(rows: &[&Value]) -> Utf8Array<O> {
@@ -104,7 +104,7 @@ fn read_utf8<O: Offset>(rows: &[&Value]) -> Utf8Array<O> {
         Value::Bool(v) => Some(v.to_string()),
         _ => None,
     });
-    unsafe { Utf8Array::<O>::from_trusted_len_iter(iter) }
+    Utf8Array::<O>::from_trusted_len_iter(iter)
 }
 
 fn read_list<O: Offset>(rows: &[&Value], data_type: DataType) -> ListArray<O> {

@@ -1,12 +1,15 @@
 use std::iter::FromIterator;
 
-use crate::bitmap::{Bitmap, MutableBitmap};
+use crate::{
+    bitmap::{Bitmap, MutableBitmap},
+    trusted_len::TrustedLen,
+};
 
 use super::BooleanArray;
 
 impl BooleanArray {
     pub fn from_slice<P: AsRef<[bool]>>(slice: P) -> Self {
-        unsafe { Self::from_trusted_len_iter(slice.as_ref().iter().map(Some)) }
+        Self::from_trusted_len_iter(slice.as_ref().iter().map(Some))
     }
 }
 
@@ -16,14 +19,24 @@ impl BooleanArray {
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
     /// I.e. that `size_hint().1` correctly reports its length.
     #[inline]
-    pub unsafe fn from_trusted_len_iter<I, P>(iter: I) -> Self
+    pub unsafe fn from_trusted_len_iter_unchecked<I, P>(iterator: I) -> Self
     where
         P: std::borrow::Borrow<bool>,
-        I: IntoIterator<Item = Option<P>>,
+        I: Iterator<Item = Option<P>>,
     {
-        let iterator = iter.into_iter();
-
         let (validity, values) = trusted_len_unzip(iterator);
+
+        Self::from_data(values, validity)
+    }
+
+    /// Creates a [`BooleanArray`] from a [`TrustedLen`].
+    #[inline]
+    pub fn from_trusted_len_iter<I, P>(iterator: I) -> Self
+    where
+        P: std::borrow::Borrow<bool>,
+        I: TrustedLen<Item = Option<P>>,
+    {
+        let (validity, values) = unsafe { trusted_len_unzip(iterator) };
 
         Self::from_data(values, validity)
     }
