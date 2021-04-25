@@ -195,6 +195,15 @@ impl<T: NativeType> Builder<T> for Primitive<T> {
 }
 
 impl<T: NativeType> Primitive<T> {
+    /// Initializes itself with a capacity.
+    #[inline]
+    pub fn new() -> Self {
+        Self {
+            values: MutableBuffer::<T>::new(),
+            validity: MutableBitmap::new(),
+        }
+    }
+
     /// Converts itself to a [`PrimitiveArray`].
     /// # Panic
     /// This panics if the `DataType` is not valid for this physical type.
@@ -223,6 +232,13 @@ impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> FromIterator<Ptr> for P
             .collect();
 
         Self { values, validity }
+    }
+}
+
+impl<T: NativeType> Default for Primitive<T> {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
     }
 }
 

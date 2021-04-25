@@ -1,5 +1,5 @@
 //! Definition of basic sub operations with primitive arrays
-use std::ops::{Neg, Sub};
+use std::ops::Sub;
 
 use num::{
     traits::{ops::overflowing::OverflowingSub, SaturatingSub},
@@ -15,27 +15,6 @@ use crate::{
     error::{ArrowError, Result},
     types::NativeType,
 };
-
-/// Negates values from array.
-///
-/// # Examples
-/// ```
-/// use arrow2::compute::arithmetics::basic::sub::negate;
-/// use arrow2::array::Primitive;
-/// use arrow2::datatypes::DataType;
-///
-/// let a = Primitive::from(&vec![None, Some(6), None, Some(7)]).to(DataType::Int32);
-/// let result = negate(&a);
-/// let expected = Primitive::from(&vec![None, Some(-6), None, Some(-7)]).to(DataType::Int32);
-/// assert_eq!(result, expected)
-/// ```
-#[inline]
-pub fn negate<T>(array: &PrimitiveArray<T>) -> PrimitiveArray<T>
-where
-    T: NativeType + Neg<Output = T>,
-{
-    unary(array, |a| -a, array.data_type())
-}
 
 /// Subtracts two primitive arrays with the same type.
 /// Panics if the subtraction of one pair of values overflows.

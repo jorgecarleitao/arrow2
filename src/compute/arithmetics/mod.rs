@@ -59,7 +59,7 @@ pub mod basic;
 pub mod decimal;
 pub mod time;
 
-use std::ops::{Add, Div, Mul, Sub};
+use std::ops::{Add, Div, Mul, Neg, Sub};
 
 use num::Zero;
 
@@ -67,6 +67,8 @@ use crate::array::*;
 use crate::datatypes::DataType;
 use crate::error::{ArrowError, Result};
 use crate::types::NativeType;
+
+use super::arity::unary;
 
 // Macro to evaluate match branch in arithmetic function.
 // The macro is used to downcast both arrays to a primitive_array_type. If there
@@ -178,4 +180,25 @@ where
         Operator::Multiply => Ok(basic::mul::mul_scalar(lhs, rhs)),
         Operator::Divide => Ok(basic::div::div_scalar(lhs, rhs)),
     }
+}
+
+/// Negates values from array.
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::arithmetics::negate;
+/// use arrow2::array::Primitive;
+/// use arrow2::datatypes::DataType;
+///
+/// let a = Primitive::from(&vec![None, Some(6), None, Some(7)]).to(DataType::Int32);
+/// let result = negate(&a);
+/// let expected = Primitive::from(&vec![None, Some(-6), None, Some(-7)]).to(DataType::Int32);
+/// assert_eq!(result, expected)
+/// ```
+#[inline]
+pub fn negate<T>(array: &PrimitiveArray<T>) -> PrimitiveArray<T>
+where
+    T: NativeType + Neg<Output = T>,
+{
+    unary(array, |a| -a, array.data_type())
 }
