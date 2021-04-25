@@ -90,7 +90,7 @@ where
     T: NativeType + Div<Output = T>,
 {
     let rhs = *rhs;
-    unary(lhs, |a| a / rhs, lhs.data_type())
+    unary(lhs, |a| a / rhs, lhs.data_type().clone())
 }
 
 /// Checked division of a primitive array of type T by a scalar T. If the
@@ -115,7 +115,7 @@ where
     let rhs = *rhs;
     let op = move |a: T| a.checked_div(&rhs);
 
-    unary_checked(lhs, op, lhs.data_type())
+    unary_checked(lhs, op, lhs.data_type().clone())
 }
 
 #[cfg(test)]

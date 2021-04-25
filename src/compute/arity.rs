@@ -25,7 +25,7 @@ use crate::{
 /// This implies that the operation must be infallible for any value of the
 /// corresponding type or this function may panic.
 #[inline]
-pub fn unary<I, F, O>(array: &PrimitiveArray<I>, op: F, data_type: &DataType) -> PrimitiveArray<O>
+pub fn unary<I, F, O>(array: &PrimitiveArray<I>, op: F, data_type: DataType) -> PrimitiveArray<O>
 where
     I: NativeType,
     O: NativeType,
@@ -34,7 +34,7 @@ where
     let values = array.values().iter().map(|v| op(*v));
     let values = Buffer::from_trusted_len_iter(values);
 
-    PrimitiveArray::<O>::from_data(data_type.clone(), values, array.validity().clone())
+    PrimitiveArray::<O>::from_data(data_type, values, array.validity().clone())
 }
 
 /// Version of unary that checks for errors in the closure used to create the
@@ -42,7 +42,7 @@ where
 pub fn try_unary<I, F, O>(
     array: &PrimitiveArray<I>,
     op: F,
-    data_type: &DataType,
+    data_type: DataType,
 ) -> Result<PrimitiveArray<O>>
 where
     I: NativeType,
@@ -53,7 +53,7 @@ where
     let values = Buffer::try_from_trusted_len_iter(values)?;
 
     Ok(PrimitiveArray::<O>::from_data(
-        data_type.clone(),
+        data_type,
         values,
         array.validity().clone(),
     ))
@@ -64,7 +64,7 @@ where
 pub fn unary_with_bitmap<I, F, O>(
     array: &PrimitiveArray<I>,
     op: F,
-    data_type: &DataType,
+    data_type: DataType,
 ) -> (PrimitiveArray<O>, Bitmap)
 where
     I: NativeType,
@@ -82,7 +82,7 @@ where
     let values = Buffer::from_trusted_len_iter(values);
 
     (
-        PrimitiveArray::<O>::from_data(data_type.clone(), values, array.validity().clone()),
+        PrimitiveArray::<O>::from_data(data_type, values, array.validity().clone()),
         mut_bitmap.into(),
     )
 }
@@ -93,7 +93,7 @@ where
 pub fn unary_checked<I, F, O>(
     array: &PrimitiveArray<I>,
     op: F,
-    data_type: &DataType,
+    data_type: DataType,
 ) -> PrimitiveArray<O>
 where
     I: NativeType,
@@ -122,7 +122,7 @@ where
     let bitmap: Bitmap = mut_bitmap.into();
     let validity = combine_validities(&array.validity(), &Some(bitmap));
 
-    PrimitiveArray::<O>::from_data(data_type.clone(), values, validity)
+    PrimitiveArray::<O>::from_data(data_type, values, validity)
 }
 
 /// Applies a binary operations to two primitive arrays. This is the fastest

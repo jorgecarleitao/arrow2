@@ -22,7 +22,7 @@ pub fn hash_primitive<T: NativeType + Hash>(array: &PrimitiveArray<T>) -> Primit
             x.hash(&mut hasher);
             hasher.finish()
         },
-        &DataType::UInt64,
+        DataType::UInt64,
     )
 }
 

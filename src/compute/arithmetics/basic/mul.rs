@@ -165,7 +165,7 @@ where
     T: NativeType + Mul<Output = T>,
 {
     let rhs = *rhs;
-    unary(lhs, |a| a * rhs, lhs.data_type())
+    unary(lhs, |a| a * rhs, lhs.data_type().clone())
 }
 
 /// Checked multiplication of a scalar T to a primitive array of type T. If the
@@ -191,7 +191,7 @@ where
     let rhs = *rhs;
     let op = move |a: T| a.checked_mul(&rhs);
 
-    unary_checked(lhs, op, lhs.data_type())
+    unary_checked(lhs, op, lhs.data_type().clone())
 }
 
 /// Saturated multiplication of a scalar T to a primitive array of type T. If the
@@ -217,7 +217,7 @@ where
     let rhs = *rhs;
     let op = move |a: T| a.saturating_mul(&rhs);
 
-    unary(lhs, op, lhs.data_type())
+    unary(lhs, op, lhs.data_type().clone())
 }
 
 /// Overflowing multiplication of a scalar T to a primitive array of type T. If
@@ -244,7 +244,7 @@ where
     let rhs = *rhs;
     let op = move |a: T| a.overflowing_mul(&rhs);
 
-    unary_with_bitmap(lhs, op, lhs.data_type())
+    unary_with_bitmap(lhs, op, lhs.data_type().clone())
 }
 
 #[cfg(test)]

@@ -538,7 +538,8 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
                 .downcast_ref::<PrimitiveArray<i32>>()
                 .unwrap();
 
-            let values = unary::<_, _, i64>(array, |x| x as i64 * MILLISECONDS_IN_DAY, to_type);
+            let values =
+                unary::<_, _, i64>(array, |x| x as i64 * MILLISECONDS_IN_DAY, to_type.clone());
 
             Ok(Box::new(values))
         }
@@ -548,7 +549,8 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
                 .downcast_ref::<PrimitiveArray<i64>>()
                 .unwrap();
 
-            let values = unary::<_, _, i32>(array, |x| (x / MILLISECONDS_IN_DAY) as i32, to_type);
+            let values =
+                unary::<_, _, i32>(array, |x| (x / MILLISECONDS_IN_DAY) as i32, to_type.clone());
 
             Ok(Box::new(values))
         }
@@ -558,7 +560,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
                 .downcast_ref::<PrimitiveArray<i32>>()
                 .unwrap();
 
-            let values = unary::<_, _, i32>(array, |x| x * MILLISECONDS as i32, to_type);
+            let values = unary::<_, _, i32>(array, |x| x * MILLISECONDS as i32, to_type.clone());
 
             Ok(Box::new(values))
         }
@@ -568,7 +570,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
                 .downcast_ref::<PrimitiveArray<i32>>()
                 .unwrap();
 
-            let values = unary::<_, _, i32>(array, |x| x / (MILLISECONDS as i32), to_type);
+            let values = unary::<_, _, i32>(array, |x| x / (MILLISECONDS as i32), to_type.clone());
 
             Ok(Box::new(values))
         }
@@ -581,7 +583,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
             let from_size = time_unit_multiple(&from_unit);
             let to_size = time_unit_multiple(&to_unit);
             let divisor = to_size / from_size;
-            let values = unary::<_, _, i64>(&array, |x| (x as i64 * divisor), to_type);
+            let values = unary::<_, _, i64>(&array, |x| (x as i64 * divisor), to_type.clone());
             Ok(Box::new(values))
         }
         (Time64(TimeUnit::Microsecond), Time64(TimeUnit::Nanosecond)) => {
@@ -590,7 +592,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
                 .downcast_ref::<PrimitiveArray<i64>>()
                 .unwrap();
 
-            let values = unary::<_, _, i64>(array, |x| x * MILLISECONDS, to_type);
+            let values = unary::<_, _, i64>(array, |x| x * MILLISECONDS, to_type.clone());
             Ok(Box::new(values))
         }
         (Time64(TimeUnit::Nanosecond), Time64(TimeUnit::Microsecond)) => {
@@ -599,7 +601,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
                 .downcast_ref::<PrimitiveArray<i64>>()
                 .unwrap();
 
-            let values = unary::<_, _, i64>(array, |x| x / MILLISECONDS, to_type);
+            let values = unary::<_, _, i64>(array, |x| x / MILLISECONDS, to_type.clone());
             Ok(Box::new(values))
         }
         (Time64(from_unit), Time32(to_unit)) => {
@@ -611,7 +613,8 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
             let from_size = time_unit_multiple(&from_unit);
             let to_size = time_unit_multiple(&to_unit);
             let divisor = from_size / to_size;
-            let values = unary::<_, _, i32>(&array, |x| (x as i64 / divisor) as i32, to_type);
+            let values =
+                unary::<_, _, i32>(&array, |x| (x as i64 / divisor) as i32, to_type.clone());
             Ok(Box::new(values))
         }
         (Timestamp(_, _), Int64) => cast_array_data::<i64>(array, &to_type),
@@ -626,9 +629,9 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
             let to_size = time_unit_multiple(&to_unit);
             // we either divide or multiply, depending on size of each unit
             let array = if from_size >= to_size {
-                unary::<_, _, i64>(&array, |x| (x / (from_size / to_size)), to_type)
+                unary::<_, _, i64>(&array, |x| (x / (from_size / to_size)), to_type.clone())
             } else {
-                unary::<_, _, i64>(&array, |x| (x * (to_size / from_size)), to_type)
+                unary::<_, _, i64>(&array, |x| (x * (to_size / from_size)), to_type.clone())
             };
             Ok(Box::new(array))
         }
@@ -639,7 +642,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
                 .unwrap();
 
             let from_size = time_unit_multiple(&from_unit) * SECONDS_IN_DAY;
-            let array = unary::<_, _, i32>(&array, |x| (x / from_size) as i32, to_type);
+            let array = unary::<_, _, i32>(&array, |x| (x / from_size) as i32, to_type.clone());
 
             Ok(Box::new(array))
         }
@@ -658,14 +661,20 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
 
             match to_size.cmp(&from_size) {
                 std::cmp::Ordering::Less => {
-                    let array =
-                        unary::<_, _, i64>(&array, |x| (x / (from_size / to_size)), to_type);
+                    let array = unary::<_, _, i64>(
+                        &array,
+                        |x| (x / (from_size / to_size)),
+                        to_type.clone(),
+                    );
                     Ok(Box::new(array))
                 }
                 std::cmp::Ordering::Equal => cast_array_data::<i64>(array, &to_type),
                 std::cmp::Ordering::Greater => {
-                    let array =
-                        unary::<_, _, i64>(&array, |x| (x * (to_size / from_size)), to_type);
+                    let array = unary::<_, _, i64>(
+                        &array,
+                        |x| (x * (to_size / from_size)),
+                        to_type.clone(),
+                    );
                     Ok(Box::new(array))
                 }
             }
