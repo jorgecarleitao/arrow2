@@ -1,4 +1,4 @@
-# Low end API
+# Low-level API
 
 The starting point of this crate is the idea that data must be stored in memory in a specific arrangement to be interoperable with Arrow's ecosystem. With this in mind, this crate does not use `Vec` but instead has its own containers to store data, including sharing and consuming it via FFI.
 
@@ -47,7 +47,7 @@ assert_eq!(x.as_slice(), &[0.0, 1.0, 2.0]);
 
 In this context, `MutableBuffer` is the closest API to rust's `Vec`.
 
-The following demonstrates how to efficiently 
+The following demonstrates how to efficiently
 perform an operation from an iterator of [TrustedLen](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html):
 
 ```rust

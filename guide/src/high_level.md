@@ -1,6 +1,6 @@
-# High end API
+# High-level API
 
-The simplest way to think about an arrow `Array` is that it represents 
+The simplest way to think about an arrow `Array` is that it represents
 `Vec<Option<T>>` and has a logical type associated with it.
 
 Probably the most simple array in this crate is `PrimitiveArray<T>`. It can be constructed
@@ -226,7 +226,7 @@ bitwise operations, it is often more performant to operate on chunks of bits ins
 
 ## Vectorized operations
 
-One of the main advantages of the arrow format and its memory layout is that 
+One of the main advantages of the arrow format and its memory layout is that
 it often enables SIMD. For example, an unary operation `op` on a `PrimitiveArray` is likely auto-vectorized on the following code:
 
 ```rust
