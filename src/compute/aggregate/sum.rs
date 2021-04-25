@@ -3,6 +3,9 @@ use std::ops::Add;
 use multiversion::multiversion;
 
 use crate::bitmap::utils::{BitChunkIterExact, BitChunksExact};
+use crate::datatypes::{DataType, IntervalUnit};
+use crate::error::{ArrowError, Result};
+use crate::scalar::*;
 use crate::types::simd::*;
 use crate::types::NativeType;
 use crate::{
@@ -85,7 +88,7 @@ where
 /// Returns the sum of values in the array.
 ///
 /// Returns `None` if the array is empty or only contains null values.
-pub fn sum<T>(array: &PrimitiveArray<T>) -> Option<T>
+pub fn sum_primitive<T>(array: &PrimitiveArray<T>) -> Option<T>
 where
     T: NativeType + Simd,
     T::Simd: Add<Output = T::Simd> + Sum<T>,
@@ -100,6 +103,50 @@ where
         None => Some(nonnull_sum(array.values())),
         Some(bitmap) => Some(null_sum(array.values(), bitmap)),
     }
+}
+
+macro_rules! dyn_sum {
+    ($ty:ty, $array:expr) => {{
+        let array = $array
+            .as_any()
+            .downcast_ref::<PrimitiveArray<$ty>>()
+            .unwrap();
+        Box::new(PrimitiveScalar::<$ty>::new(
+            $array.data_type().clone(),
+            sum_primitive::<$ty>(array),
+        ))
+    }};
+}
+
+pub fn sum(array: &dyn Array) -> Result<Box<dyn Scalar>> {
+    Ok(match array.data_type() {
+        DataType::Int8 => dyn_sum!(i8, array),
+        DataType::Int16 => dyn_sum!(i16, array),
+        DataType::Int32
+        | DataType::Date32
+        | DataType::Time32(_)
+        | DataType::Interval(IntervalUnit::YearMonth) => {
+            dyn_sum!(i32, array)
+        }
+        DataType::Int64
+        | DataType::Date64
+        | DataType::Time64(_)
+        | DataType::Timestamp(_, _)
+        | DataType::Duration(_) => dyn_sum!(i64, array),
+        DataType::UInt8 => dyn_sum!(u8, array),
+        DataType::UInt16 => dyn_sum!(u16, array),
+        DataType::UInt32 => dyn_sum!(u32, array),
+        DataType::UInt64 => dyn_sum!(u64, array),
+        DataType::Float16 => unreachable!(),
+        DataType::Float32 => dyn_sum!(f32, array),
+        DataType::Float64 => dyn_sum!(f64, array),
+        _ => {
+            return Err(ArrowError::InvalidArgumentError(format!(
+                "The `sum` operator does not support type `{}`",
+                array.data_type(),
+            )))
+        }
+    })
 }
 
 #[cfg(test)]
@@ -123,13 +170,13 @@ mod tests {
     #[test]
     fn test_primitive_array_sum_with_nulls() {
         let a = Int32Array::from(&[None, Some(2), Some(3), None, Some(5)]);
-        assert_eq!(10, sum(&a).unwrap());
+        assert_eq!(10, sum_primitive(&a).unwrap());
     }
 
     #[test]
     fn test_primitive_array_sum_all_nulls() {
         let a = Int32Array::from(&[None, None, None]);
-        assert_eq!(None, sum(&a));
+        assert_eq!(None, sum_primitive(&a));
     }
 
     #[test]
@@ -142,6 +189,9 @@ mod tests {
             .collect();
         // create an array that actually has non-zero values at the invalid indices
         let c = arithmetics::basic::add::add(&a, &b).unwrap();
-        assert_eq!(Some((1..=100).filter(|i| i % 3 == 0).sum()), sum(&c));
+        assert_eq!(
+            Some((1..=100).filter(|i| i % 3 == 0).sum()),
+            sum_primitive(&c)
+        );
     }
 }
