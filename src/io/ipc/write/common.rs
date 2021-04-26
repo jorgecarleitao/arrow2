@@ -15,11 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-//! Arrow IPC File and Stream Writers
-//!
-//! The `FileWriter` and `StreamWriter` have similar interfaces,
-//! however the `FileWriter` expects a reader that supports `Seek`ing
-
 use std::io::Write;
 use std::{collections::HashMap, sync::Arc};
 

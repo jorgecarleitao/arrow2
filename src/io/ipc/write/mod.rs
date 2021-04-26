@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-mod common;
+pub mod common;
 mod serialize;
 mod stream;
 mod writer;

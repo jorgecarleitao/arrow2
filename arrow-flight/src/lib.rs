@@ -15,11 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-mod common;
-mod deserialize;
-mod reader;
-mod stream;
+include!("arrow.flight.protocol.rs");
 
-pub use common::read_record_batch;
-pub use reader::FileReader;
-pub use stream::StreamReader;
+pub mod utils;
