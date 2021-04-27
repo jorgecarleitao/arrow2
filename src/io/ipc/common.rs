@@ -49,7 +49,7 @@ pub(crate) mod tests {
 
         // read dictionaries
         let mut dictionaries = HashMap::new();
-        if let Some(dicts) = &arrow_json.dictionaries {
+        if let Some(dicts) = arrow_json.dictionaries {
             for json_dict in dicts {
                 // TODO: convert to a concrete Arrow type
                 dictionaries.insert(json_dict.id, json_dict);

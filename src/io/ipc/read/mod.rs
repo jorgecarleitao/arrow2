@@ -20,6 +20,6 @@ mod deserialize;
 mod reader;
 mod stream;
 
-pub use common::read_record_batch;
+pub use common::{read_dictionary, read_record_batch};
 pub use reader::FileReader;
 pub use stream::StreamReader;
