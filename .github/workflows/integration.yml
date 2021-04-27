@@ -1,0 +1,35 @@
+name: Integration
+
+on: [push, pull_request]
+
+jobs:
+  docker:
+    name: Integration Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Arrow
+        uses: actions/checkout@v2
+        with:
+          repository: apache/arrow
+          submodules: true
+          fetch-depth: 0
+      # this is temporary: once rust is removed from `apache/arrow`, we are good to go.
+      - name: Remove Rust from arrow
+        run: rm -rf rust/
+      - name: Checkout Arrow Rust
+        uses: actions/checkout@v2
+        with:
+          path: rust
+          fetch-depth: 0
+      # Arrow uses cargo build -p arrow-integration-testing
+      # which is incompatible with this. Let's monkey patch it
+      - name: Fix compilation
+        run: cp rust/integration-testing/rust_build.sh ci/scripts/rust_build.sh
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+      - name: Setup Archery
+        run: pip install -e dev/archery[docker]
+      - name: Execute Docker Build
+        run: archery docker run conda-integration
