@@ -1,4 +1,4 @@
-# Arrow
+# The arrow format
 
 [Arrow](https://arrow.apache.org/) is an in-memory columnar format for modern analytics that natively supports the concept of a null value, nested structs, and many others.
 

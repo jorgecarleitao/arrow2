@@ -26,7 +26,7 @@ A `PrimitiveArray` has 3 components:
 
 The main differences from a `Vec<Option<T>>` are:
 
-* Its data is layed out in memory as a `Buffer<T>` and an `Option<Bitmap>`.
+* Its data is laid out in memory as a `Buffer<T>` and an `Option<Bitmap>`.
 * It has an associated logical datatype.
 
 The first difference allows interoperability with Arrow's ecosystem and efficient SIMD operations (we will re-visit this below); the second difference is that it gives semantic meaning to the array. In the example
@@ -58,7 +58,7 @@ The following arrays are supported:
 ## Dynamic Array
 
 There is a more powerful aspect of arrow arrays, and that is that they all
-implement the trait `Array` and can be casted to `&dyn Array`, i.e. they can be turned into
+implement the trait `Array` and can be cast to `&dyn Array`, i.e. they can be turned into
 a trait object. This enables arrays to have types that are dynamic in nature.
 `ListArray<i32>` is an example of a nested (dynamic) array:
 
@@ -117,16 +117,17 @@ There is a many-to-one relationship between `DataType` and an Array (i.e. a phys
 | `Int64`               | `PrimitiveArray<i64>`     |
 | `Float32`             | `PrimitiveArray<f32>`     |
 | `Float64`             | `PrimitiveArray<f64>`     |
+| `Decimal(_,_)`        | `PrimitiveArray<i128>`    |
 | `Date32`              | `PrimitiveArray<i32>`     |
 | `Date64`              | `PrimitiveArray<i64>`     |
 | `Time32(_)`           | `PrimitiveArray<i32>`     |
 | `Time64(_)`           | `PrimitiveArray<i64>`     |
 | `Timestamp(_,_)`      | `PrimitiveArray<i64>`     |
 | `Interval(YearMonth)` | `PrimitiveArray<i32>`     |
-| `Interval(DayTime) `  | `PrimitiveArray<days_ms>` |
+| `Interval(DayTime)`   | `PrimitiveArray<days_ms>` |
 | `Duration(_)`         | `PrimitiveArray<i64>`     |
-| `Binary`              | `BinaryArray<i32> `       |
-| `LargeBinary`         | `BinaryArray<i64> `       |
+| `Binary`              | `BinaryArray<i32>`        |
+| `LargeBinary`         | `BinaryArray<i64>`        |
 | `Utf8`                | `Utf8Array<i32>`          |
 | `LargeUtf8`           | `Utf8Array<i64>`          |
 | `List`                | `ListArray<i32>`          |
@@ -139,9 +140,9 @@ There is a many-to-one relationship between `DataType` and an Array (i.e. a phys
 | `Dictionary(UInt32,_)`| `DictionaryArray<u32>`    |
 | `Dictionary(UInt64,_)`| `DictionaryArray<u64>`    |
 | `Dictionary(Int8,_)`  | `DictionaryArray<i8>`     |
-| `Dictionary(Int16,_) `| `DictionaryArray<i16>`    |
-| `Dictionary(Int32,_) `| `DictionaryArray<i32>`    |
-| `Dictionary(Int64,_) `| `DictionaryArray<i64>`    |
+| `Dictionary(Int16,_)` | `DictionaryArray<i16>`    |
+| `Dictionary(Int32,_)` | `DictionaryArray<i32>`    |
+| `Dictionary(Int64,_)` | `DictionaryArray<i64>`    |
 
 In this context, a common pattern to write operators that receive `&dyn Array` is:
 
