@@ -117,6 +117,7 @@ There is a many-to-one relationship between `DataType` and an Array (i.e. a phys
 | `Int64`               | `PrimitiveArray<i64>`     |
 | `Float32`             | `PrimitiveArray<f32>`     |
 | `Float64`             | `PrimitiveArray<f64>`     |
+| `Decimal(_,_)`        | `PrimitiveArray<i128>`    |
 | `Date32`              | `PrimitiveArray<i32>`     |
 | `Date64`              | `PrimitiveArray<i64>`     |
 | `Time32(_)`           | `PrimitiveArray<i32>`     |
