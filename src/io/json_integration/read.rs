@@ -172,7 +172,7 @@ fn to_utf8<O: Offset>(json_col: &ArrowJsonColumn) -> Arc<dyn Array> {
 fn to_list<O: Offset>(
     json_col: &ArrowJsonColumn,
     data_type: DataType,
-    dictionaries: &HashMap<i64, &ArrowJsonDictionaryBatch>,
+    dictionaries: &HashMap<i64, ArrowJsonDictionaryBatch>,
 ) -> Result<Arc<dyn Array>> {
     let validity = json_col
         .validity
@@ -191,7 +191,7 @@ fn to_list<O: Offset>(
 fn to_dictionary<K: DictionaryKey>(
     field: &Field,
     json_col: &ArrowJsonColumn,
-    dictionaries: &HashMap<i64, &ArrowJsonDictionaryBatch>,
+    dictionaries: &HashMap<i64, ArrowJsonDictionaryBatch>,
 ) -> Result<Arc<dyn Array>> {
     let dict_id = field
         .dict_id()
@@ -216,7 +216,7 @@ fn to_dictionary<K: DictionaryKey>(
 pub fn to_array(
     field: &Field,
     json_col: &ArrowJsonColumn,
-    dictionaries: &HashMap<i64, &ArrowJsonDictionaryBatch>,
+    dictionaries: &HashMap<i64, ArrowJsonDictionaryBatch>,
 ) -> Result<Arc<dyn Array>> {
     let data_type = field.data_type();
     match data_type {
@@ -331,7 +331,7 @@ pub fn to_array(
 pub fn to_record_batch(
     schema: &Schema,
     json_batch: &ArrowJsonBatch,
-    json_dictionaries: &HashMap<i64, &ArrowJsonDictionaryBatch>,
+    json_dictionaries: &HashMap<i64, ArrowJsonDictionaryBatch>,
 ) -> Result<RecordBatch> {
     let columns = schema
         .fields()

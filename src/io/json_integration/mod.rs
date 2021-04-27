@@ -26,7 +26,9 @@ use crate::datatypes::*;
 use crate::io::json::ToJson;
 
 mod read;
+mod write;
 pub use read::to_record_batch;
+pub use write::from_record_batch;
 
 /// A struct that represents an Arrow file with a schema and record batches
 #[derive(Deserialize, Serialize, Debug)]
