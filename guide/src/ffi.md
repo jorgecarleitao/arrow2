@@ -47,7 +47,7 @@ let array = Box::<dyn Array>::try_from(array)?;
 ```
 
 Note that this assumes that `array` and `schema` are valid pointers and
-that the data on it is also layed out according to the c data interface.
+that the data on it is also laid out according to the c data interface.
 This is impossible to prove at neither compile nor run-time and is thus
 intrinsically `unsafe`.
 
