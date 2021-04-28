@@ -229,7 +229,7 @@ impl IpcDataGenerator {
         let mut buffers: Vec<gen::Schema::Buffer> = vec![];
         let mut arrow_data: Vec<u8> = vec![];
 
-        write_dictionary(
+        let length = write_dictionary(
             array,
             &mut buffers,
             &mut arrow_data,
@@ -245,7 +245,7 @@ impl IpcDataGenerator {
 
         let root = {
             let mut batch_builder = gen::Message::RecordBatchBuilder::new(&mut fbb);
-            batch_builder.add_length(array.len() as i64);
+            batch_builder.add_length(length as i64);
             batch_builder.add_nodes(nodes);
             batch_builder.add_buffers(buffers);
             batch_builder.finish()

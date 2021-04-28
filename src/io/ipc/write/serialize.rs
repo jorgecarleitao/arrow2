@@ -252,10 +252,11 @@ pub fn _write_dictionary<K: DictionaryKey>(
     offset: &mut i64,
     is_little_endian: bool,
     write_keys: bool,
-) {
+) -> usize {
     let array = array.as_any().downcast_ref::<DictionaryArray<K>>().unwrap();
     if write_keys {
         _write_primitive(array.keys(), buffers, arrow_data, offset, is_little_endian);
+        array.keys().len()
     } else {
         write(
             array.values().as_ref(),
@@ -265,6 +266,7 @@ pub fn _write_dictionary<K: DictionaryKey>(
             offset,
             is_little_endian,
         );
+        array.values().len()
     }
 }
 
@@ -276,7 +278,7 @@ pub fn write_dictionary(
     offset: &mut i64,
     is_little_endian: bool,
     write_keys: bool,
-) {
+) -> usize {
     match array.data_type() {
         DataType::Dictionary(key_type, _) => match key_type.as_ref() {
             DataType::Int8 => _write_dictionary::<i8>(
@@ -441,15 +443,17 @@ pub fn write(
         DataType::Struct(_) => {
             write_struct(array, buffers, arrow_data, nodes, offset, is_little_endian)
         }
-        DataType::Dictionary(_, _) => write_dictionary(
-            array,
-            buffers,
-            arrow_data,
-            nodes,
-            offset,
-            is_little_endian,
-            true,
-        ),
+        DataType::Dictionary(_, _) => {
+            write_dictionary(
+                array,
+                buffers,
+                arrow_data,
+                nodes,
+                offset,
+                is_little_endian,
+                true,
+            );
+        }
         DataType::Union(_) => unimplemented!(),
     }
 }
