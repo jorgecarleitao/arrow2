@@ -66,24 +66,6 @@ pub(crate) mod tests {
         (schema, batches)
     }
 
-    pub fn read_arrow_file(version: &str, file_name: &str) -> (Schema, Vec<RecordBatch>) {
-        let testdata = crate::util::test_util::arrow_test_data();
-        let file = File::open(format!(
-            "{}/arrow-ipc-stream/integration/{}/{}.arrow_file",
-            testdata, version, file_name
-        ))
-        .unwrap();
-
-        let reader = FileReader::try_new(file).unwrap();
-
-        let schema = reader.schema();
-
-        (
-            schema.as_ref().clone(),
-            reader.collect::<Result<_>>().unwrap(),
-        )
-    }
-
     pub fn read_arrow_stream(version: &str, file_name: &str) -> (Schema, Vec<RecordBatch>) {
         let testdata = crate::util::test_util::arrow_test_data();
         let file = File::open(format!(
