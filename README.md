@@ -18,9 +18,13 @@ This repo and crate's primary goal is to offer a safe Rust implementation to int
 
 Design documents about each of the parts of this repo are available on their respective READMEs.
 
-## Run unit tests
+## Tests
 
-Some unit-tests depend on generating parquet files from pyarrow. These tests run by default.
+The test suite is a _superset_ of all tests that the original implementation has against golden files from the arrow project. It includes both little and big endian files.
+
+Furthermore, the CI runs all integration tests against [apache/arrow@master](https://github.com/apache/arrow), demonstrating full interoperability with other implementations.
+
+Integration tests against parquet files created by pyarrow require generating parquet files. These tests run by default.
 To not run them, pass `ARROW2_IGNORE_PARQUET` to the tests (the tests will be marked as OK/PASS).
 
 ```bash
@@ -29,9 +33,7 @@ cd arrow2
 ARROW2_IGNORE_PARQUET= cargo test
 ```
 
-The test suite is a _superset_ of all integration tests that the original implementation has against golden files from the arrow project. It currently makes no attempt to test the implementation against other implementations in arrow's master; it assumes that arrow's golden files are sufficient to cover the specification. This crate uses both little and big endian golden files, as it supports both endianesses at IPC boundaries.
-
-To run the tests including integration with pyarrow's parquet writer, run
+To generate the necessary parquet files, run
 
 ```bash
 python3 -m venv venv
@@ -50,7 +52,6 @@ venv/bin/python parquet_integration/write_parquet.py
 * More predictable JSON reader
 * Generalized parsing of CSV based on logical data types
 * conditional compilation based on cargo `features` to reduce dependencies and size
-* single repository dedicated to Rust
 * faster IPC reader (different design that avoids an extra copy of all data)
 
 ## Features in the original not availabe in this crate
