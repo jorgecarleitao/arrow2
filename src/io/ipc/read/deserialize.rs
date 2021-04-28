@@ -215,7 +215,9 @@ where
         reader,
         block_offset,
         is_little_endian,
-    )?;
+    )
+    // Older versions of the IPC format sometimes do not report an offset
+    .or_else(|_| Result::Ok(MutableBuffer::<O>::from(&[O::default()]).into()))?;
 
     let last_offset = offsets.as_slice()[offsets.len() - 1].to_usize().unwrap();
     let values = read_buffer(buffers, last_offset, reader, block_offset, is_little_endian)?;
@@ -243,7 +245,9 @@ where
         reader,
         block_offset,
         is_little_endian,
-    )?;
+    )
+    // Older versions of the IPC format sometimes do not report an offset
+    .or_else(|_| Result::Ok(MutableBuffer::<O>::from(&[O::default()]).into()))?;
 
     let last_offset = offsets.as_slice()[offsets.len() - 1].to_usize().unwrap();
     let values = read_buffer(buffers, last_offset, reader, block_offset, is_little_endian)?;
@@ -295,7 +299,9 @@ where
         reader,
         block_offset,
         is_little_endian,
-    )?;
+    )
+    // Older versions of the IPC format sometimes do not report an offset
+    .or_else(|_| Result::Ok(MutableBuffer::<O>::from(&[O::default()]).into()))?;
 
     let value_data_type = ListArray::<O>::get_child(&data_type).clone();
 
