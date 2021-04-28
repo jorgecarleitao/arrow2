@@ -52,9 +52,21 @@ fn read_buffer<T: NativeType, R: Read + Seek>(
 
     reader.seek(SeekFrom::Start(block_offset + buf.offset() as u64))?;
 
-    // something is wrong if the length is not a multiple
     let bytes = length * std::mem::size_of::<T>();
-    assert!(bytes <= buf.length() as usize);
+    if bytes > buf.length() as usize {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!("The slots of the array times the physical size must \
+            be smaller or equal to the length of the IPC buffer. \
+            However, this array reports {} slots, which, for physical type \"{}\", corresponds to {} bytes, \
+            which is larger than the buffer length {}",
+                length,
+                std::any::type_name::<T>(),
+                bytes,
+                buf.length(),
+            ),
+        ));
+    }
 
     // it is undefined behavior to call read_exact on un-initialized, https://doc.rust-lang.org/std/io/trait.Read.html#tymethod.read
     // see also https://github.com/MaikKlein/ash/issues/354#issue-781730580
