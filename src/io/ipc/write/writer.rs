@@ -171,11 +171,11 @@ mod tests {
 
     use super::*;
 
-    use crate::io::ipc::common::tests::{read_arrow_file, read_gzip_json};
+    use crate::io::ipc::common::tests::read_gzip_json;
     use crate::io::ipc::read::FileReader;
 
     fn test_file(version: &str, file_name: &str) {
-        let (schema, batches) = read_arrow_file(version, file_name);
+        let (schema, batches) = read_gzip_json(version, file_name);
 
         let mut result = Vec::<u8>::new();
 
