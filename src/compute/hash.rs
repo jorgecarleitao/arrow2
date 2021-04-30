@@ -61,16 +61,13 @@ pub fn hash_binary<O: Offset>(array: &BinaryArray<O>) -> PrimitiveArray<u64> {
 
 macro_rules! hash_dyn {
     ($ty:ty, $array:expr) => {{
-        let array = $array
-            .as_any()
-            .downcast_ref::<PrimitiveArray<$ty>>()
-            .unwrap();
-        hash_primitive(array)
+        hash_primitive::<$ty>($array.as_any().downcast_ref().unwrap())
     }};
 }
 
 /// Returns the element-wise hash of an [`Array`]. Validity is preserved.
 /// Supported DataTypes:
+/// * Boolean types
 /// * All primitive types except `Float32` and `Float64`
 /// * `[Large]Utf8`;
 /// * `[Large]Binary`.
@@ -78,6 +75,7 @@ macro_rules! hash_dyn {
 /// This function errors whenever it does not support the specific `DataType`.
 pub fn hash(array: &dyn Array) -> Result<PrimitiveArray<u64>> {
     Ok(match array.data_type() {
+        DataType::Boolean => hash_boolean(array.as_any().downcast_ref().unwrap()),
         DataType::Int8 => hash_dyn!(i8, array),
         DataType::Int16 => hash_dyn!(i16, array),
         DataType::Int32
@@ -96,22 +94,10 @@ pub fn hash(array: &dyn Array) -> Result<PrimitiveArray<u64>> {
         DataType::UInt32 => hash_dyn!(u32, array),
         DataType::UInt64 => hash_dyn!(u64, array),
         DataType::Float16 => unreachable!(),
-        DataType::Binary => {
-            let array = array.as_any().downcast_ref::<BinaryArray<i32>>().unwrap();
-            hash_binary(array)
-        }
-        DataType::LargeBinary => {
-            let array = array.as_any().downcast_ref::<BinaryArray<i64>>().unwrap();
-            hash_binary(array)
-        }
-        DataType::Utf8 => {
-            let array = array.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
-            hash_utf8(array)
-        }
-        DataType::LargeUtf8 => {
-            let array = array.as_any().downcast_ref::<Utf8Array<i64>>().unwrap();
-            hash_utf8(array)
-        }
+        DataType::Binary => hash_binary::<i32>(array.as_any().downcast_ref().unwrap()),
+        DataType::LargeBinary => hash_binary::<i64>(array.as_any().downcast_ref().unwrap()),
+        DataType::Utf8 => hash_utf8::<i32>(array.as_any().downcast_ref().unwrap()),
+        DataType::LargeUtf8 => hash_utf8::<i64>(array.as_any().downcast_ref().unwrap()),
         t => {
             return Err(ArrowError::NotYetImplemented(format!(
                 "Hash not implemented for type {:?}",
