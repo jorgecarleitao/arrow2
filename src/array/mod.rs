@@ -1,4 +1,5 @@
 use std::any::Any;
+use std::fmt::Display;
 
 use crate::error::Result;
 use crate::types::days_ms;
@@ -7,7 +8,7 @@ use crate::{
     datatypes::{DataType, IntervalUnit},
 };
 
-pub trait Array: std::fmt::Debug + std::fmt::Display + Send + Sync + ToFfi {
+pub trait Array: std::fmt::Debug + Send + Sync + ToFfi {
     fn as_any(&self) -> &dyn Any;
 
     /// The length of the array
@@ -61,6 +62,74 @@ pub trait Array: std::fmt::Debug + std::fmt::Display + Send + Sync + ToFfi {
     /// # Panic
     /// This function panics iff `offset + length >= self.len()`.
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array>;
+}
+
+macro_rules! general_dyn {
+    ($array:expr, $ty:ty, $f:expr) => {{
+        let array = $array.as_any().downcast_ref::<$ty>().unwrap();
+        ($f)(array)
+    }};
+}
+
+macro_rules! fmt_dyn {
+    ($array:expr, $ty:ty, $f:expr) => {{
+        let mut f = |x: &$ty| x.fmt($f);
+        general_dyn!($array, $ty, f)
+    }};
+}
+
+impl Display for dyn Array {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.data_type() {
+            DataType::Null => fmt_dyn!(self, NullArray, f),
+            DataType::Boolean => fmt_dyn!(self, BooleanArray, f),
+            DataType::Int8 => fmt_dyn!(self, PrimitiveArray<i8>, f),
+            DataType::Int16 => fmt_dyn!(self, PrimitiveArray<i16>, f),
+            DataType::Int32
+            | DataType::Date32
+            | DataType::Time32(_)
+            | DataType::Interval(IntervalUnit::YearMonth) => {
+                fmt_dyn!(self, PrimitiveArray<i32>, f)
+            }
+            DataType::Interval(IntervalUnit::DayTime) => {
+                fmt_dyn!(self, PrimitiveArray<days_ms>, f)
+            }
+            DataType::Int64
+            | DataType::Date64
+            | DataType::Time64(_)
+            | DataType::Timestamp(_, _)
+            | DataType::Duration(_) => fmt_dyn!(self, PrimitiveArray<i64>, f),
+            DataType::Decimal(_, _) => fmt_dyn!(self, PrimitiveArray<i128>, f),
+            DataType::UInt8 => fmt_dyn!(self, PrimitiveArray<u8>, f),
+            DataType::UInt16 => fmt_dyn!(self, PrimitiveArray<u16>, f),
+            DataType::UInt32 => fmt_dyn!(self, PrimitiveArray<u32>, f),
+            DataType::UInt64 => fmt_dyn!(self, PrimitiveArray<u64>, f),
+            DataType::Float16 => unreachable!(),
+            DataType::Float32 => fmt_dyn!(self, PrimitiveArray<f32>, f),
+            DataType::Float64 => fmt_dyn!(self, PrimitiveArray<f64>, f),
+            DataType::Binary => fmt_dyn!(self, BinaryArray<i32>, f),
+            DataType::LargeBinary => fmt_dyn!(self, BinaryArray<i64>, f),
+            DataType::FixedSizeBinary(_) => fmt_dyn!(self, FixedSizeBinaryArray, f),
+            DataType::Utf8 => fmt_dyn!(self, Utf8Array::<i32>, f),
+            DataType::LargeUtf8 => fmt_dyn!(self, Utf8Array::<i64>, f),
+            DataType::List(_) => fmt_dyn!(self, ListArray::<i32>, f),
+            DataType::LargeList(_) => fmt_dyn!(self, ListArray::<i64>, f),
+            DataType::FixedSizeList(_, _) => fmt_dyn!(self, FixedSizeListArray, f),
+            DataType::Struct(_) => fmt_dyn!(self, StructArray, f),
+            DataType::Union(_) => unimplemented!(),
+            DataType::Dictionary(key_type, _) => match key_type.as_ref() {
+                DataType::Int8 => fmt_dyn!(self, DictionaryArray::<i8>, f),
+                DataType::Int16 => fmt_dyn!(self, DictionaryArray::<i16>, f),
+                DataType::Int32 => fmt_dyn!(self, DictionaryArray::<i32>, f),
+                DataType::Int64 => fmt_dyn!(self, DictionaryArray::<i64>, f),
+                DataType::UInt8 => fmt_dyn!(self, DictionaryArray::<u8>, f),
+                DataType::UInt16 => fmt_dyn!(self, DictionaryArray::<u16>, f),
+                DataType::UInt32 => fmt_dyn!(self, DictionaryArray::<u32>, f),
+                DataType::UInt64 => fmt_dyn!(self, DictionaryArray::<u64>, f),
+                _ => unreachable!(),
+            },
+        }
+    }
 }
 
 /// Creates a new empty dynamic array
@@ -171,8 +240,8 @@ pub fn new_null_array(data_type: DataType, length: usize) -> Box<dyn Array> {
 
 macro_rules! clone_dyn {
     ($array:expr, $ty:ty) => {{
-        let array = $array.as_any().downcast_ref::<$ty>().unwrap();
-        Box::new(array.clone())
+        let f = |x: &$ty| Box::new(x.clone());
+        general_dyn!($array, $ty, f)
     }};
 }
 
