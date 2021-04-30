@@ -17,32 +17,24 @@
 
 use crate::{array::*, types::NativeType};
 use crate::{
+    bitmap::MutableBitmap,
     buffer::MutableBuffer,
     error::{ArrowError, Result},
 };
 
 use super::{super::utils::combine_validities, Operator};
 
-/// Evaluate `op(lhs, rhs)` for [`PrimitiveArray`]s using a specified
-/// comparison function.
-fn compare_op<T, F>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>, op: F) -> Result<BooleanArray>
+pub(crate) fn compare_values_op<T, F>(lhs: &[T], rhs: &[T], op: F) -> MutableBitmap
 where
     T: NativeType,
     F: Fn(T, T) -> bool,
 {
-    if lhs.len() != rhs.len() {
-        return Err(ArrowError::InvalidArgumentError(
-            "Cannot perform comparison operation on arrays of different length".to_string(),
-        ));
-    }
-
-    let validity = combine_validities(lhs.validity(), rhs.validity());
-
+    assert_eq!(lhs.len(), rhs.len());
     let mut values = MutableBuffer::from_len_zeroed((lhs.len() + 7) / 8);
 
-    let lhs_chunks_iter = lhs.values().chunks_exact(8);
+    let lhs_chunks_iter = lhs.chunks_exact(8);
     let lhs_remainder = lhs_chunks_iter.remainder();
-    let rhs_chunks_iter = rhs.values().chunks_exact(8);
+    let rhs_chunks_iter = rhs.chunks_exact(8);
     let rhs_remainder = rhs_chunks_iter.remainder();
 
     let chunks = lhs.len() / 8;
@@ -70,11 +62,27 @@ where
                 *last |= if op(lhs, rhs) { 1 << i } else { 0 };
             });
     };
+    (values, lhs.len()).into()
+}
 
-    Ok(BooleanArray::from_data(
-        (values, lhs.len()).into(),
-        validity,
-    ))
+/// Evaluate `op(lhs, rhs)` for [`PrimitiveArray`]s using a specified
+/// comparison function.
+fn compare_op<T, F>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>, op: F) -> Result<BooleanArray>
+where
+    T: NativeType,
+    F: Fn(T, T) -> bool,
+{
+    if lhs.len() != rhs.len() {
+        return Err(ArrowError::InvalidArgumentError(
+            "Cannot perform comparison operation on arrays of different length".to_string(),
+        ));
+    }
+
+    let validity = combine_validities(lhs.validity(), rhs.validity());
+
+    let values = compare_values_op(lhs.values(), rhs.values(), op);
+
+    Ok(BooleanArray::from_data(values.into(), validity))
 }
 
 /// Evaluate `op(left, right)` for [`PrimitiveArray`] and scalar using

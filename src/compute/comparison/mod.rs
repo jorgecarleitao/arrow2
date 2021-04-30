@@ -139,5 +139,6 @@ pub fn compare(lhs: &dyn Array, rhs: &dyn Array, operator: Operator) -> Result<B
     }
 }
 
-pub use primitive::compare_scalar as primtive_compare_scalar;
+pub use primitive::compare_scalar as primitive_compare_scalar;
+pub(crate) use primitive::compare_values_op as primitive_compare_values_op;
 pub use utf8::compare_scalar as utf8_compare_scalar;

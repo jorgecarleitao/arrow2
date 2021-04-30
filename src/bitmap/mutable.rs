@@ -124,6 +124,16 @@ impl MutableBitmap {
     }
 }
 
+impl From<(MutableBuffer<u8>, usize)> for MutableBitmap {
+    #[inline]
+    fn from((buffer, length): (MutableBuffer<u8>, usize)) -> Self {
+        Self {
+            buffer,
+            length,
+        }
+    }
+}
+
 impl From<(MutableBuffer<u8>, usize)> for Bitmap {
     #[inline]
     fn from((buffer, length): (MutableBuffer<u8>, usize)) -> Self {
