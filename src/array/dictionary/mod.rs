@@ -127,7 +127,10 @@ impl<K: DictionaryKey> Array for DictionaryArray<K> {
     }
 }
 
-impl<K: DictionaryKey> std::fmt::Display for DictionaryArray<K> {
+impl<K: DictionaryKey> std::fmt::Display for DictionaryArray<K>
+where
+    PrimitiveArray<K>: std::fmt::Display,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{:?}{{", self.data_type())?;
         writeln!(f, "keys: {},", self.keys())?;

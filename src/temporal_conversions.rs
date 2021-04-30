@@ -1,7 +1,7 @@
 //! Conversion methods for dates and times.
 
 use crate::datatypes::TimeUnit;
-use chrono::{NaiveDateTime, NaiveTime};
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 
 /// Number of seconds in a day
 pub const SECONDS_IN_DAY: i64 = 86_400;
@@ -22,6 +22,12 @@ pub fn date32_to_datetime(v: i32) -> NaiveDateTime {
     NaiveDateTime::from_timestamp(v as i64 * SECONDS_IN_DAY, 0)
 }
 
+/// converts a `i32` representing a `date32` to [`NaiveDate`]
+#[inline]
+pub fn date32_to_date(days: i32) -> NaiveDate {
+    NaiveDate::from_num_days_from_ce(days)
+}
+
 /// converts a `i64` representing a `date64` to [`NaiveDateTime`]
 #[inline]
 pub fn date64_to_datetime(v: i64) -> NaiveDateTime {
@@ -31,6 +37,12 @@ pub fn date64_to_datetime(v: i64) -> NaiveDateTime {
         // discard extracted seconds and convert milliseconds to nanoseconds
         (v % MILLISECONDS * MICROSECONDS) as u32,
     )
+}
+
+/// converts a `i64` representing a `date64` to [`NaiveDate`]
+#[inline]
+pub fn date64_to_date(milliseconds: i64) -> NaiveDate {
+    date64_to_datetime(milliseconds).date()
 }
 
 /// converts a `i32` representing a `time32(s)` to [`NaiveDateTime`]

@@ -1,8 +1,6 @@
-use crate::{
-    bitmap::Bitmap, buffer::Buffer, datatypes::DataType, error::ArrowError, types::NativeType,
-};
+use crate::{bitmap::Bitmap, buffer::Buffer, datatypes::*, error::ArrowError, types::NativeType};
 
-use super::{display_fmt, Array};
+use super::Array;
 
 /// A [`PrimitiveArray`] is arrow's equivalent to `Vec<Option<T: NativeType>>`, i.e.
 /// an array designed for highly performant operations on optionally nullable slots,
@@ -118,13 +116,7 @@ impl<T: NativeType> Array for PrimitiveArray<T> {
     }
 }
 
-impl<T: NativeType> std::fmt::Display for PrimitiveArray<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // todo: match data_type and format dates
-        display_fmt(self.iter(), &format!("{}", self.data_type()), f, false)
-    }
-}
-
+mod display;
 mod ffi;
 mod from;
 pub use from::Primitive;
@@ -135,12 +127,6 @@ pub use iterator::*;
 mod tests {
     use super::*;
     use std::iter::FromIterator;
-
-    #[test]
-    fn display() {
-        let array = Primitive::<i32>::from(&[Some(1), None, Some(2)]).to(DataType::Int32);
-        assert_eq!(format!("{}", array), "Int32[1, , 2]");
-    }
 
     #[test]
     fn basics() {
