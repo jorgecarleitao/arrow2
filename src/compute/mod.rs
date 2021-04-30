@@ -31,6 +31,7 @@ pub mod filter;
 pub mod hash;
 pub mod length;
 pub mod limit;
+pub mod nullif;
 pub mod sort;
 pub mod substring;
 pub mod take;
