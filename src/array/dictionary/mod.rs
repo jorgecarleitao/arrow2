@@ -140,12 +140,8 @@ where
 }
 
 unsafe impl<K: DictionaryKey> ToFfi for DictionaryArray<K> {
-    fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
-        [
-            self.keys.validity().as_ref().map(|x| x.as_ptr()),
-            None,
-            None,
-        ]
+    fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>> {
+        vec![self.keys.validity().as_ref().map(|x| x.as_ptr())]
     }
 
     #[inline]

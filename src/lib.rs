@@ -11,6 +11,7 @@ pub mod compute;
 pub mod io;
 pub mod record_batch;
 pub mod temporal_conversions;
+pub use alloc::total_allocated_bytes;
 
 #[cfg(feature = "benchmarks")]
 pub mod bits;

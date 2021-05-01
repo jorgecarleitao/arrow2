@@ -68,5 +68,7 @@ trait ToFfi {
     fn offset(&self) -> usize;
 }
 
+pub use array::try_from;
 pub use ffi::ArrowArray;
-pub(crate) use ffi::Ffi_ArrowArray;
+pub use ffi::ArrowArrayRef;
+pub use ffi::{child, Ffi_ArrowArray, Ffi_ArrowSchema};

@@ -68,8 +68,8 @@ impl std::fmt::Display for NullArray {
 }
 
 unsafe impl ToFfi for NullArray {
-    fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
-        [None, None, None]
+    fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>> {
+        vec![]
     }
 
     #[inline]
