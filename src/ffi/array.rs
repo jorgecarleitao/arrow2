@@ -26,6 +26,11 @@ use crate::{
     datatypes::{DataType, IntervalUnit},
 };
 
+/// Reads a valid `ffi` interface into a `Box<dyn Array>`
+/// # Errors
+/// If and only if:
+/// * the data type is not supported
+/// * the interface is not valid (e.g. a null pointer)
 pub fn try_from<A: ArrowArrayRef>(array: A) -> Result<Box<dyn Array>> {
     let data_type = array.data_type()?;
     let array: Box<dyn Array> = match data_type {
@@ -76,7 +81,7 @@ pub fn try_from<A: ArrowArrayRef>(array: A) -> Result<Box<dyn Array>> {
 mod tests {
     use super::*;
     use crate::array::*;
-    use crate::{datatypes::DataType, error::Result, ffi::ArrowArray};
+    use crate::{datatypes::DataType, error::Result, ffi};
     use std::sync::Arc;
 
     fn test_release(expected: impl Array + 'static) -> Result<()> {
@@ -84,7 +89,7 @@ mod tests {
         let b: Arc<dyn Array> = Arc::new(expected);
 
         // export the array as 2 pointers.
-        let _ = ArrowArray::export_to_c(b)?;
+        let _ = ffi::export_to_c(b)?;
 
         Ok(())
     }
@@ -94,7 +99,7 @@ mod tests {
         let expected = Box::new(expected) as Box<dyn Array>;
 
         // create a `ArrowArray` from the data.
-        let array = Arc::new(ArrowArray::export_to_c(b)?);
+        let array = Arc::new(ffi::export_to_c(b)?);
 
         let (_, _) = array.references();
 

@@ -31,9 +31,9 @@ unsafe impl<O: Offset, A: ffi::ArrowArrayRef> FromFfi<A> for ListArray<O> {
         let data_type = array.data_type()?;
         let length = array.array().len();
         let offset = array.array().offset();
-        let mut validity = unsafe { array.validity() };
-        let mut offsets = unsafe { array.buffer::<O>(0)? };
-        let child = ffi::child(array, 0)?;
+        let mut validity = unsafe { array.validity() }?;
+        let mut offsets = unsafe { array.buffer::<O>(0) }?;
+        let child = array.child(0)?;
         let values = ffi::try_from(child)?.into();
 
         if offset > 0 {

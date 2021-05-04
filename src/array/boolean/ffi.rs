@@ -24,8 +24,8 @@ unsafe impl<A: ffi::ArrowArrayRef> FromFfi<A> for BooleanArray {
     fn try_from_ffi(array: A) -> Result<Self> {
         let length = array.array().len();
         let offset = array.array().offset();
-        let mut validity = unsafe { array.validity() };
-        let mut values = unsafe { array.bitmap(0)? };
+        let mut validity = unsafe { array.validity() }?;
+        let mut values = unsafe { array.bitmap(0) }?;
 
         if offset > 0 {
             values = values.slice(offset, length);

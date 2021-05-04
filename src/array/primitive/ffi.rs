@@ -31,7 +31,7 @@ unsafe impl<T: NativeType, A: ffi::ArrowArrayRef> FromFfi<A> for PrimitiveArray<
         let data_type = array.data_type()?;
         let length = array.array().len();
         let offset = array.array().offset();
-        let mut validity = unsafe { array.validity() };
+        let mut validity = unsafe { array.validity() }?;
         let mut values = unsafe { array.buffer::<T>(0) }?;
 
         if offset > 0 {

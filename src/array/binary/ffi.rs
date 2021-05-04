@@ -41,7 +41,7 @@ unsafe impl<O: Offset, A: ffi::ArrowArrayRef> FromFfi<A> for BinaryArray<O> {
 
         let length = array.array().len();
         let offset = array.array().offset();
-        let mut validity = unsafe { array.validity() };
+        let mut validity = unsafe { array.validity() }?;
         let mut offsets = unsafe { array.buffer::<O>(0) }?;
         let values = unsafe { array.buffer::<u8>(1) }?;
 

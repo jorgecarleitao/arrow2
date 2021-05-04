@@ -72,7 +72,7 @@ impl From<PyO3ArrowError> for PyErr {
 
 fn to_rust(ob: PyObject, py: Python) -> PyResult<ArrayRef> {
     // prepare a pointer to receive the Array struct
-    let array = Arc::new(ffi::ArrowArray::create_empty());
+    let array = Arc::new(ffi::create_empty());
     let (array_ptr, schema_ptr) = array.references();
 
     // make the conversion through PyArrow's private API
@@ -87,7 +87,7 @@ fn to_rust(ob: PyObject, py: Python) -> PyResult<ArrayRef> {
 }
 
 fn to_py(array: ArrayRef, py: Python) -> PyResult<PyObject> {
-    let array_ptr = ffi::ArrowArray::export_to_c(array).map_err(PyO3ArrowError::from)?;
+    let array_ptr = ffi::export_to_c(array).map_err(PyO3ArrowError::from)?;
 
     let (array_ptr, schema_ptr) = array_ptr.references();
 

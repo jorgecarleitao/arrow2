@@ -144,7 +144,7 @@ unsafe impl<A: ffi::ArrowArrayRef> FromFfi<A> for StructArray {
 
         let length = array.array().len();
         let offset = array.array().offset();
-        let mut validity = unsafe { array.validity() };
+        let mut validity = unsafe { array.validity() }?;
         let values = (0..fields.len())
             .map(|index| {
                 let child = array.child(index)?;

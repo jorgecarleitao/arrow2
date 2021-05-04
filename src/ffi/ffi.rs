@@ -15,26 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-/*
-# Design:
-
-Main assumptions:
-* A memory region is deallocated according it its own release mechanism.
-* Rust shares memory regions between arrays.
-* A memory region should be deallocated when no-one is using it.
-
-The design of this module is as follows:
-
-`ArrowArray` contains two `Arc`s, one per ABI-compatible `struct`, each containing data
-according to the C Data Interface. These Arcs are used for ref counting of the structs
-within Rust and lifetime management.
-
-Each ABI-compatible `struct` knowns how to `drop` itself, calling `release`.
-
-To import an array, unsafely create an `ArrowArray` from two pointers using [ArrowArray::try_from_raw].
-To export an array, create an `ArrowArray` using [ArrowArray::try_new].
-*/
-
 use std::{
     ffi::CStr,
     ffi::CString,
@@ -410,6 +390,11 @@ impl Ffi_ArrowArray {
     pub fn offset(&self) -> usize {
         self.offset as usize
     }
+
+    /// the null count of the array
+    pub fn null_count(&self) -> usize {
+        self.null_count as usize
+    }
 }
 
 /// interprets the buffer `index` as a [`Buffer`].
@@ -451,9 +436,9 @@ unsafe fn create_bitmap(
     array: &Ffi_ArrowArray,
     deallocation: Deallocation,
     index: usize,
-) -> Option<Bitmap> {
+) -> Result<Bitmap> {
     if array.buffers.is_null() {
-        return None;
+        return Err(ArrowError::Ffi("The array buffers are null".to_string()));
     }
     let len = array.length as usize;
     let buffers = array.buffers as *mut *const u8;
@@ -463,9 +448,16 @@ unsafe fn create_bitmap(
 
     let bytes_len = bytes_for(len);
     let ptr = NonNull::new(ptr as *mut u8);
-    let bytes = ptr.map(|ptr| Bytes::new(ptr, bytes_len, deallocation));
+    let bytes = ptr
+        .map(|ptr| Bytes::new(ptr, bytes_len, deallocation))
+        .ok_or_else(|| {
+            ArrowError::Ffi(format!(
+                "The buffer {} is a null pointer and cannot be interpreted as a bitmap",
+                index
+            ))
+        })?;
 
-    bytes.map(|bytes| Bitmap::from_bytes(bytes, len))
+    Ok(Bitmap::from_bytes(bytes, len))
 }
 
 /// Returns the length, in slots, of the buffer `i` (indexed according to the C data interface)
@@ -508,21 +500,23 @@ fn buffer_len(array: &Ffi_ArrowArray, data_type: &DataType, i: usize) -> Result<
     })
 }
 
-pub fn child<A: ArrowArrayRef>(array: A, index: usize) -> Result<ArrowArrayChild<'static>> {
-    assert!(index < array.array().n_children as usize);
-    assert!(!array.array().children.is_null());
-    assert!(!array.schema().children.is_null());
+fn create_child(
+    array: &Ffi_ArrowArray,
+    schema: &Ffi_ArrowSchema,
+    parent: Arc<ArrowArray>,
+    index: usize,
+) -> Result<ArrowArrayChild<'static>> {
+    assert!(index < array.n_children as usize);
+    assert!(!array.children.is_null());
+    assert!(!array.children.is_null());
     unsafe {
-        let arr_ptr = *array.array().children.add(index);
-        let schema_ptr = *array.schema().children.add(index);
-        // todo: assert non-null
+        let arr_ptr = *array.children.add(index);
+        let schema_ptr = *schema.children.add(index);
+        assert!(!arr_ptr.is_null());
+        assert!(!schema_ptr.is_null());
         let arr_ptr = &*arr_ptr;
         let schema_ptr = &*schema_ptr;
-        Ok(ArrowArrayChild::from_raw(
-            arr_ptr,
-            schema_ptr,
-            array.parent().clone(),
-        ))
+        Ok(ArrowArrayChild::from_raw(arr_ptr, schema_ptr, parent))
     }
 }
 
@@ -537,8 +531,12 @@ pub trait ArrowArrayRef {
     /// # Safety
     /// The caller must guarantee that the buffer `index` corresponds to a bitmap.
     /// This function assumes that the bitmap created from FFI is valid; this is impossible to prove.
-    unsafe fn validity(&self) -> Option<Bitmap> {
-        create_bitmap(self.array(), self.deallocation(), 0)
+    unsafe fn validity(&self) -> Result<Option<Bitmap>> {
+        if self.array().null_count() == 0 {
+            Ok(None)
+        } else {
+            create_bitmap(self.array(), self.deallocation(), 0).map(Some)
+        }
     }
 
     /// # Safety
@@ -546,8 +544,12 @@ pub trait ArrowArrayRef {
     /// This function assumes that the bitmap created from FFI is valid; this is impossible to prove.
     unsafe fn buffer<T: NativeType>(&self, index: usize) -> Result<Buffer<T>> {
         // +1 to ignore null bitmap
-        let index = index + 1;
-        create_buffer::<T>(self.array(), &self.data_type()?, self.deallocation(), index)
+        create_buffer::<T>(
+            self.array(),
+            &self.data_type()?,
+            self.deallocation(),
+            index + 1,
+        )
     }
 
     /// # Safety
@@ -555,19 +557,17 @@ pub trait ArrowArrayRef {
     /// This function assumes that the bitmap created from FFI is valid; this is impossible to prove.
     unsafe fn bitmap(&self, index: usize) -> Result<Bitmap> {
         // +1 to ignore null bitmap
-        create_bitmap(self.array(), self.deallocation(), index + 1).ok_or_else(|| {
-            ArrowError::Ffi(format!(
-                "The external buffer at position {} is null.",
-                index - 1
-            ))
-        })
+        create_bitmap(self.array(), self.deallocation(), index + 1)
+    }
+
+    fn child(&self, index: usize) -> Result<ArrowArrayChild> {
+        create_child(self.array(), self.schema(), self.parent().clone(), index)
     }
 
     fn parent(&self) -> &Arc<ArrowArray>;
     fn array(&self) -> &Ffi_ArrowArray;
     fn schema(&self) -> &Ffi_ArrowSchema;
     fn data_type(&self) -> Result<DataType>;
-    fn child(&self, index: usize) -> Result<ArrowArrayChild>;
 }
 
 /// Struct used to move an Array from and to the C Data Interface.
@@ -611,10 +611,6 @@ impl ArrowArrayRef for Arc<ArrowArray> {
 
     fn schema(&self) -> &Ffi_ArrowSchema {
         self.schema.as_ref()
-    }
-
-    fn child(&self, index: usize) -> Result<ArrowArrayChild> {
-        child(self.clone(), index)
     }
 }
 
@@ -662,32 +658,28 @@ impl<'a> ArrowArrayChild<'a> {
     }
 }
 
+/// Exports an `Array` to the C data interface.
+pub fn export_to_c(array: Arc<dyn Array>) -> Result<ArrowArray> {
+    let field = Field::new("", array.data_type().clone(), array.null_count() != 0);
+
+    Ok(ArrowArray {
+        array: Arc::new(Ffi_ArrowArray::new(array)),
+        schema: Arc::new(Ffi_ArrowSchema::try_new(field)?),
+    })
+}
+
+pub fn create_empty() -> ArrowArray {
+    ArrowArray {
+        array: Arc::new(Ffi_ArrowArray::empty()),
+        schema: Arc::new(Ffi_ArrowSchema::empty()),
+    }
+}
+
 impl ArrowArray {
-    pub fn create_empty() -> Self {
-        Self {
-            array: Arc::new(Ffi_ArrowArray::empty()),
-            schema: Arc::new(Ffi_ArrowSchema::empty()),
-        }
-    }
-
-    pub fn export_to_c(array: Arc<dyn Array>) -> Result<Self> {
-        let field = Field::new("", array.data_type().clone(), array.null_count() != 0);
-
-        Ok(Self {
-            array: Arc::new(Ffi_ArrowArray::new(array)),
-            schema: Arc::new(Ffi_ArrowSchema::try_new(field)?),
-        })
-    }
-
     pub fn references(&self) -> (*mut Ffi_ArrowArray, *mut Ffi_ArrowSchema) {
         (
             self.array.as_ref() as *const Ffi_ArrowArray as *mut Ffi_ArrowArray,
             self.schema.as_ref() as *const Ffi_ArrowSchema as *mut Ffi_ArrowSchema,
         )
-    }
-
-    /// the null count of the array
-    pub fn null_count(&self) -> usize {
-        self.array.null_count as usize
     }
 }
