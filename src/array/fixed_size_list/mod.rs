@@ -121,8 +121,8 @@ impl std::fmt::Display for FixedSizeListArray {
 }
 
 unsafe impl ToFfi for FixedSizeListArray {
-    fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
-        [self.validity.as_ref().map(|x| x.as_ptr()), None, None]
+    fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>> {
+        vec![self.validity.as_ref().map(|x| x.as_ptr())]
     }
 
     fn offset(&self) -> usize {

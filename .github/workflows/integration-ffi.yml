@@ -1,0 +1,45 @@
+name: FFI integration
+
+on: [push, pull_request]
+
+jobs:
+  # test FFI against the C-Data interface exposed by pyarrow
+  pyarrow-integration-test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Rust toolchain
+        run: |
+          rustup toolchain install stable
+          rustup default stable
+          rustup component add rustfmt clippy
+      - name: Cache Cargo
+        uses: actions/cache@v2
+        with:
+          path: /home/runner/.cargo
+          key: cargo-maturin-cache-
+      - name: Cache Rust dependencies
+        uses: actions/cache@v2
+        with:
+          path: /home/runner/target
+          # this key is not equal because maturin uses different compilation flags.
+          key: ${{ runner.os }}-amd64-target-maturin-cache
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.7'
+      - name: Install Python dependencies
+        run: python -m pip install --upgrade pip setuptools wheel
+      - name: Run tests
+        run: |
+          export CARGO_HOME="/home/runner/.cargo"
+          export CARGO_TARGET_DIR="/home/runner/target"
+
+          cd arrow-pyarrow-integration-testing
+
+          python -m venv venv
+          source venv/bin/activate
+
+          pip install maturin==0.10.2 toml==0.10.1 pyarrow==4.0.0
+          maturin develop
+          python -m unittest discover tests

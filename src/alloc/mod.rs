@@ -34,6 +34,11 @@ use alignment::ALIGNMENT;
 // If this number is not zero after all objects have been `drop`, there is a memory leak
 pub static mut ALLOCATIONS: AtomicIsize = AtomicIsize::new(0);
 
+/// Returns the total number of bytes allocated to buffers by the allocator.
+pub fn total_allocated_bytes() -> isize {
+    unsafe { ALLOCATIONS.load(std::sync::atomic::Ordering::SeqCst) }
+}
+
 #[inline]
 unsafe fn dangling<T: NativeType>() -> NonNull<T> {
     NonNull::new_unchecked(ALIGNMENT as *mut T)

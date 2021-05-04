@@ -1,7 +1,6 @@
 use crate::{
     array::{FromFfi, ToFfi},
-    datatypes::DataType,
-    ffi::ArrowArray,
+    ffi,
     types::NativeType,
 };
 
@@ -10,14 +9,13 @@ use crate::error::Result;
 use super::PrimitiveArray;
 
 unsafe impl<T: NativeType> ToFfi for PrimitiveArray<T> {
-    fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
+    fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>> {
         unsafe {
-            [
+            vec![
                 self.validity.as_ref().map(|x| x.as_ptr()),
                 Some(std::ptr::NonNull::new_unchecked(
                     self.values.as_ptr() as *mut u8
                 )),
-                None,
             ]
         }
     }
@@ -28,12 +26,13 @@ unsafe impl<T: NativeType> ToFfi for PrimitiveArray<T> {
     }
 }
 
-unsafe impl<T: NativeType> FromFfi for PrimitiveArray<T> {
-    fn try_from_ffi(data_type: DataType, array: ArrowArray) -> Result<Self> {
-        let length = array.len();
-        let offset = array.offset();
-        let mut validity = array.validity();
-        let mut values = unsafe { array.buffer::<T>(0)? };
+unsafe impl<T: NativeType, A: ffi::ArrowArrayRef> FromFfi<A> for PrimitiveArray<T> {
+    fn try_from_ffi(array: A) -> Result<Self> {
+        let data_type = array.data_type()?;
+        let length = array.array().len();
+        let offset = array.array().offset();
+        let mut validity = unsafe { array.validity() }?;
+        let mut values = unsafe { array.buffer::<T>(0) }?;
 
         if offset > 0 {
             values = values.slice(offset, length);

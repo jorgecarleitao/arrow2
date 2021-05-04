@@ -3,9 +3,11 @@ use std::sync::Arc;
 use crate::{
     bitmap::Bitmap,
     datatypes::{DataType, Field},
+    error::Result,
+    ffi,
 };
 
-use super::{ffi::ToFfi, new_empty_array, new_null_array, Array};
+use super::{ffi::ToFfi, new_empty_array, new_null_array, Array, FromFfi};
 
 #[derive(Debug, Clone)]
 pub struct StructArray {
@@ -121,12 +123,38 @@ impl std::fmt::Display for StructArray {
 }
 
 unsafe impl ToFfi for StructArray {
-    fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
-        [self.validity.as_ref().map(|x| x.as_ptr()), None, None]
+    fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>> {
+        vec![self.validity.as_ref().map(|x| x.as_ptr())]
     }
 
     fn offset(&self) -> usize {
         // we do not support offsets in structs. Instead, if an FFI we slice the incoming arrays
         0
+    }
+
+    fn children(&self) -> Vec<Arc<dyn Array>> {
+        self.values.clone()
+    }
+}
+
+unsafe impl<A: ffi::ArrowArrayRef> FromFfi<A> for StructArray {
+    fn try_from_ffi(array: A) -> Result<Self> {
+        let data_type = array.data_type()?;
+        let fields = Self::get_fields(&data_type).to_vec();
+
+        let length = array.array().len();
+        let offset = array.array().offset();
+        let mut validity = unsafe { array.validity() }?;
+        let values = (0..fields.len())
+            .map(|index| {
+                let child = array.child(index)?;
+                Ok(ffi::try_from(child)?.into())
+            })
+            .collect::<Result<Vec<Arc<dyn Array>>>>()?;
+
+        if offset > 0 {
+            validity = validity.map(|x| x.slice(offset, length))
+        }
+        Ok(Self::from_data(fields, values, validity))
     }
 }

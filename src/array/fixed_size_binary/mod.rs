@@ -127,14 +127,13 @@ impl std::fmt::Display for FixedSizeBinaryArray {
 }
 
 unsafe impl ToFfi for FixedSizeBinaryArray {
-    fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
+    fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>> {
         unsafe {
-            [
+            vec![
                 self.validity.as_ref().map(|x| x.as_ptr()),
                 Some(std::ptr::NonNull::new_unchecked(
                     self.values.as_ptr() as *mut u8
                 )),
-                None,
             ]
         }
     }

@@ -1,7 +1,7 @@
 use crate::{
     array::{FromFfi, Offset, ToFfi},
     datatypes::DataType,
-    ffi::ArrowArray,
+    ffi,
 };
 
 use crate::error::Result;
@@ -9,9 +9,9 @@ use crate::error::Result;
 use super::BinaryArray;
 
 unsafe impl<O: Offset> ToFfi for BinaryArray<O> {
-    fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
+    fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>> {
         unsafe {
-            [
+            vec![
                 self.validity.as_ref().map(|x| x.as_ptr()),
                 Some(std::ptr::NonNull::new_unchecked(
                     self.offsets.as_ptr() as *mut u8
@@ -29,8 +29,9 @@ unsafe impl<O: Offset> ToFfi for BinaryArray<O> {
     }
 }
 
-unsafe impl<O: Offset> FromFfi for BinaryArray<O> {
-    fn try_from_ffi(data_type: DataType, array: ArrowArray) -> Result<Self> {
+unsafe impl<O: Offset, A: ffi::ArrowArrayRef> FromFfi<A> for BinaryArray<O> {
+    fn try_from_ffi(array: A) -> Result<Self> {
+        let data_type = array.data_type()?;
         let expected = if O::is_large() {
             DataType::LargeBinary
         } else {
@@ -38,11 +39,11 @@ unsafe impl<O: Offset> FromFfi for BinaryArray<O> {
         };
         assert_eq!(data_type, expected);
 
-        let length = array.len();
-        let offset = array.offset();
-        let mut validity = array.validity();
-        let mut offsets = unsafe { array.buffer::<O>(0)? };
-        let values = unsafe { array.buffer::<u8>(1)? };
+        let length = array.array().len();
+        let offset = array.array().offset();
+        let mut validity = unsafe { array.validity() }?;
+        let mut offsets = unsafe { array.buffer::<O>(0) }?;
+        let values = unsafe { array.buffer::<u8>(1) }?;
 
         if offset > 0 {
             offsets = offsets.slice(offset, length);

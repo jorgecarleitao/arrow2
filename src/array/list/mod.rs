@@ -7,9 +7,7 @@ use crate::{
 };
 
 use super::{
-    display_fmt,
-    ffi::ToFfi,
-    new_empty_array,
+    display_fmt, new_empty_array,
     specification::{check_offsets, Offset},
     Array,
 };
@@ -184,24 +182,7 @@ impl<O: Offset> std::fmt::Display for ListArray<O> {
     }
 }
 
-unsafe impl<O: Offset> ToFfi for ListArray<O> {
-    fn buffers(&self) -> [Option<std::ptr::NonNull<u8>>; 3] {
-        unsafe {
-            [
-                self.validity.as_ref().map(|x| x.as_ptr()),
-                Some(std::ptr::NonNull::new_unchecked(
-                    self.offsets.as_ptr() as *mut u8
-                )),
-                None,
-            ]
-        }
-    }
-
-    fn offset(&self) -> usize {
-        self.offset
-    }
-}
-
+mod ffi;
 mod from;
 pub(crate) mod iterator;
 

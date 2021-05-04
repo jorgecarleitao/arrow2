@@ -1,9 +1,18 @@
 # Foreign Interfaces
 
-One of the hallmarks of the Arrow format is that its in-memory representation has a specification, which allows languages to share data structures via foreign interfaces
-at zero cost (i.e. via pointers). This is known as the [C Data interface](https://arrow.apache.org/docs/format/CDataInterface.html).
+One of the hallmarks of the Arrow format is that its in-memory representation
+has a specification, which allows languages to share data
+structures via foreign interfaces at zero cost (i.e. via pointers).
+This is known as the [C Data interface](https://arrow.apache.org/docs/format/CDataInterface.html).
 
-Currently, this crate supports importing from and exporting to all non-nested DataTypes.
+This crate supports importing from and exporting to most of `DataType`s.
+Types currently not supported:
+
+* `FixedSizeBinary`
+* `Union`
+* `Dictionary`
+* `FixedSizeList`
+* `Null`
 
 ## Export
 
@@ -21,37 +30,34 @@ let array = [Some(1), None, Some(123)]
     .iter()
     .collect::<Primitive<i32>>()
     .to(DataType::Int32);
-// create a struct from it with the API to export it.
-let array = ArrowArray::try_from(Arc::new(array))?;
 
-// export: these are `ArrowArray` and `ArrowSchema` of the C data interface
-let (array, schema) = ArrowArray::into_raw(array);
+// export the array.
+let ffi_array = ffi::export_to_c(Arc::new(array))?;
+
+// these are mutable pointers to `ArrowArray` and `ArrowSchema` of the C data interface
+let (array_ptr, schema_ptr) = ffi_array.references();
 # }
 ```
-
-Note that this leaks memory iff the consumers of these
-pointers do not `release` them according to the [member allocation](https://arrow.apache.org/docs/format/CDataInterface.html#release-callback-semantics-for-consumers).
 
 ## Import
 
 The API to import works similarly:
 
-```rust,ignore
+```rust
 use arrow2::array::Array;
-use arrow2::ffi::ArrowArray;
+use arrow2::ffi;
 
-// these are `ArrowArray` and `ArrowSchema` of the C data interface
-let array = unsafe { ArrowArray::try_from_raw(array, schema) }?;
+let array = Arc::new(ffi::create_empty());
 
-let array = Box::<dyn Array>::try_from(array)?;
+// non-owned mutable pointers.
+let (array_ptr, schema_ptr) = array.references();
+
+// write to the pointers using any C data interface exporter
+
+// consume it to a `Box<dyn Array>`
+let array = ffi::try_from(array)?;
 ```
 
-Note that this assumes that `array` and `schema` are valid pointers and
-that the data on it is also laid out according to the c data interface.
-This is impossible to prove at neither compile nor run-time and is thus
-intrinsically `unsafe`.
-
-Soundness here relies on the producer creating `array` and `schema` that
-follow the c data interface specification.
-In particular, if the producer reports an array length larger than what its buffer
-was allocated for, it will cause this crate to read out of bounds.
+This assumes that the exporter writes to `array_ptr` and `schema_ptr` 
+according to the c data interface. This is an intrinsically `unsafe` operation.
+Failing to do so results in UB.
