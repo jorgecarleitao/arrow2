@@ -15,18 +15,69 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::array::*;
-use crate::error::Result;
 use crate::record_batch::RecordBatch;
-use crate::types::days_ms;
 use crate::{
     array::growable::make_growable,
     datatypes::{DataType, IntervalUnit},
 };
 use crate::{array::growable::Growable, bits::SlicesIterator};
+use crate::{array::*, bitmap::Bitmap, types::NativeType};
+use crate::{bitmap::MutableBitmap, types::days_ms};
+use crate::{buffer::MutableBuffer, error::Result};
 
 /// Function that can filter arbitrary arrays
 pub type Filter<'a> = Box<dyn Fn(&dyn Array) -> Box<dyn Array> + 'a>;
+
+fn filter_nonnull_primitive<T: NativeType>(
+    array: &PrimitiveArray<T>,
+    mask: &Bitmap,
+) -> PrimitiveArray<T> {
+    assert_eq!(array.len(), mask.len());
+    let filter_count = mask.len() - mask.null_count();
+
+    if let Some(validity) = array.validity() {
+        let mut buffer = MutableBuffer::<T>::with_capacity(filter_count);
+        let mut new_validity = MutableBitmap::with_capacity(filter_count);
+
+        array
+            .values()
+            .iter()
+            .zip(validity.iter())
+            .zip(mask.iter())
+            .filter(|x| x.1)
+            .map(|x| x.0)
+            .for_each(|(item, is_valid)| unsafe {
+                buffer.push_unchecked(*item);
+                new_validity.push_unchecked(is_valid);
+            });
+
+        PrimitiveArray::<T>::from_data(
+            array.data_type().clone(),
+            buffer.into(),
+            new_validity.into(),
+        )
+    } else {
+        let mut buffer = MutableBuffer::<T>::with_capacity(filter_count);
+
+        array
+            .values()
+            .iter()
+            .zip(mask.iter())
+            .filter(|x| x.1)
+            .map(|x| x.0)
+            .for_each(|item| unsafe { buffer.push_unchecked(*item) });
+
+        PrimitiveArray::<T>::from_data(array.data_type().clone(), buffer.into(), None)
+    }
+}
+
+fn filter_primitive<T: NativeType>(
+    array: &PrimitiveArray<T>,
+    mask: &BooleanArray,
+) -> PrimitiveArray<T> {
+    // todo: branch on mask.validity()
+    filter_nonnull_primitive(array, mask.values())
+}
 
 fn filter_growable<'a>(growable: &mut impl Growable<'a>, chunks: &[(usize, usize)]) {
     chunks
@@ -115,19 +166,6 @@ pub fn build_filter(filter: &BooleanArray) -> Result<Filter> {
     }))
 }
 
-macro_rules! dyn_filter {
-    ($ty:ty, $array:expr, $iter:expr) => {{
-        let array = $array
-            .as_any()
-            .downcast_ref::<PrimitiveArray<$ty>>()
-            .unwrap();
-        let mut growable = growable::GrowablePrimitive::<$ty>::new(&[array], false, $iter.slots());
-        $iter.for_each(|(start, len)| growable.extend(0, start, len));
-        let array: PrimitiveArray<$ty> = growable.into();
-        Ok(Box::new(array))
-    }};
-}
-
 /// Filters an [Array], returning elements matching the filter (i.e. where the values are true).
 /// WARNING: the nulls of `filter` are ignored and the value on its slot is considered.
 /// Therefore, it is considered undefined behavior to pass `filter` with null values.
@@ -147,50 +185,60 @@ macro_rules! dyn_filter {
 /// # }
 /// ```
 pub fn filter(array: &dyn Array, filter: &BooleanArray) -> Result<Box<dyn Array>> {
-    let iter = SlicesIterator::new(filter.values());
-
     match array.data_type() {
         DataType::UInt8 => {
-            dyn_filter!(u8, array, iter)
+            let array = array.as_any().downcast_ref().unwrap();
+            Ok(Box::new(filter_primitive::<u8>(array, filter)))
         }
         DataType::UInt16 => {
-            dyn_filter!(u16, array, iter)
+            let array = array.as_any().downcast_ref().unwrap();
+            Ok(Box::new(filter_primitive::<u16>(array, filter)))
         }
         DataType::UInt32 => {
-            dyn_filter!(u32, array, iter)
+            let array = array.as_any().downcast_ref().unwrap();
+            Ok(Box::new(filter_primitive::<u32>(array, filter)))
         }
         DataType::UInt64 => {
-            dyn_filter!(u64, array, iter)
+            let array = array.as_any().downcast_ref().unwrap();
+            Ok(Box::new(filter_primitive::<u64>(array, filter)))
         }
         DataType::Int8 => {
-            dyn_filter!(i8, array, iter)
+            let array = array.as_any().downcast_ref().unwrap();
+            Ok(Box::new(filter_primitive::<i8>(array, filter)))
         }
         DataType::Int16 => {
-            dyn_filter!(i16, array, iter)
+            let array = array.as_any().downcast_ref().unwrap();
+            Ok(Box::new(filter_primitive::<i16>(array, filter)))
         }
         DataType::Int32
         | DataType::Date32
         | DataType::Time32(_)
         | DataType::Interval(IntervalUnit::YearMonth) => {
-            dyn_filter!(i32, array, iter)
+            let array = array.as_any().downcast_ref().unwrap();
+            Ok(Box::new(filter_primitive::<i32>(array, filter)))
         }
         DataType::Int64
         | DataType::Date64
         | DataType::Time64(_)
         | DataType::Timestamp(_, _)
         | DataType::Duration(_) => {
-            dyn_filter!(i64, array, iter)
+            let array = array.as_any().downcast_ref().unwrap();
+            Ok(Box::new(filter_primitive::<i64>(array, filter)))
         }
         DataType::Interval(IntervalUnit::DayTime) => {
-            dyn_filter!(days_ms, array, iter)
+            let array = array.as_any().downcast_ref().unwrap();
+            Ok(Box::new(filter_primitive::<days_ms>(array, filter)))
         }
         DataType::Float32 => {
-            dyn_filter!(f32, array, iter)
+            let array = array.as_any().downcast_ref().unwrap();
+            Ok(Box::new(filter_primitive::<f32>(array, filter)))
         }
         DataType::Float64 => {
-            dyn_filter!(f64, array, iter)
+            let array = array.as_any().downcast_ref().unwrap();
+            Ok(Box::new(filter_primitive::<f64>(array, filter)))
         }
         _ => {
+            let iter = SlicesIterator::new(filter.values());
             let mut mutable = make_growable(&[array], false, iter.slots());
             iter.for_each(|(start, len)| mutable.extend(0, start, len));
             Ok(mutable.as_box())
