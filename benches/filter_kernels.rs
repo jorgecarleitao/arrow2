@@ -32,6 +32,25 @@ fn bench_built_filter<'a>(filter: &Filter<'a>, array: &impl Array) {
 }
 
 fn add_benchmark(c: &mut Criterion) {
+    // scaling benchmarks
+    (10..=20).step_by(2).for_each(|log2_size| {
+        let size = 2usize.pow(log2_size);
+
+        let filter_array = create_boolean_array(size, 0.0, 0.9);
+        let filter_array = BooleanArray::from_data(filter_array.values().clone(), None);
+
+        let arr_a = create_primitive_array::<f32>(size, DataType::Float32, 0.0);
+        c.bench_function(&format!("filter 2^{} f32", log2_size), |b| {
+            b.iter(|| bench_filter(&arr_a, &filter_array))
+        });
+
+        let arr_a = create_primitive_array::<f32>(size, DataType::Float32, 0.1);
+
+        c.bench_function(&format!("filter null 2^{} f32", log2_size), |b| {
+            b.iter(|| bench_filter(&arr_a, &filter_array))
+        });
+    });
+
     let size = 65536;
     let filter_array = create_boolean_array(size, 0.0, 0.5);
     let dense_filter_array = create_boolean_array(size, 0.0, 1.0 - 1.0 / 1024.0);

@@ -48,16 +48,20 @@ fn bench_sort(arr_a: &dyn Array) {
 }
 
 fn add_benchmark(c: &mut Criterion) {
-    let arr_a = create_array(2usize.pow(10), false);
-    c.bench_function("sort 2^10", |b| b.iter(|| bench_sort(&arr_a)));
-    let arr_a = create_array(2usize.pow(12) as usize, false);
-    c.bench_function("sort 2^12", |b| b.iter(|| bench_sort(&arr_a)));
+    (10..=20).step_by(2).for_each(|log2_size| {
+        let size = 2usize.pow(log2_size);
+        let arr_a = create_primitive_array_with_seed::<f32>(size, DataType::Float32, 0.0, 42);
 
-    // with nulls
-    let arr_a = create_array(2usize.pow(10), true);
-    c.bench_function("sort nulls 2^10", |b| b.iter(|| bench_sort(&arr_a)));
-    let arr_a = create_array(2usize.pow(12) as usize, true);
-    c.bench_function("sort nulls 2^12", |b| b.iter(|| bench_sort(&arr_a)));
+        c.bench_function(&format!("sort 2^{} f32", log2_size), |b| {
+            b.iter(|| bench_sort(&arr_a))
+        });
+
+        let arr_a = create_primitive_array_with_seed::<f32>(size, DataType::Float32, 0.1, 42);
+
+        c.bench_function(&format!("sort null 2^{} f32", log2_size), |b| {
+            b.iter(|| bench_sort(&arr_a))
+        });
+    });
 
     let arr_a = create_array(2u64.pow(10) as usize, false);
     let arr_b = create_array(2u64.pow(10) as usize, false);
