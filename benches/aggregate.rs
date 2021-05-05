@@ -18,16 +18,32 @@ fn bench_min(arr_a: &PrimitiveArray<f32>) {
 }
 
 fn add_benchmark(c: &mut Criterion) {
-    let size = 65536;
+    (10..=20).step_by(2).for_each(|log2_size| {
+        let size = 2usize.pow(log2_size);
+        let arr_a = create_primitive_array::<f32>(size, DataType::Float32, 0.0);
+
+        c.bench_function(&format!("sum 2^{} f32", log2_size), |b| {
+            b.iter(|| bench_sum(&arr_a))
+        });
+
+        let arr_a = create_primitive_array::<f32>(size, DataType::Float32, 0.1);
+
+        c.bench_function(&format!("sum null 2^{} f32", log2_size), |b| {
+            b.iter(|| bench_sum(&arr_a))
+        });
+    });
+
+    let log2_size = 16;
+    let size = 2usize.pow(log2_size);
     let arr_a = create_primitive_array::<f32>(size, DataType::Float32, 0.0);
+    c.bench_function(&format!("min 2^{} f32", log2_size), |b| {
+        b.iter(|| bench_min(&arr_a))
+    });
 
-    c.bench_function("sum f32", |b| b.iter(|| bench_sum(&arr_a)));
-
-    c.bench_function("min f32", |b| b.iter(|| bench_min(&arr_a)));
-
-    let arr_a = create_primitive_array::<f32>(size, DataType::Float32, 0.5);
-
-    c.bench_function("sum nulls f32", |b| b.iter(|| bench_sum(&arr_a)));
+    let arr_a = create_primitive_array::<f32>(size, DataType::Float32, 0.1);
+    c.bench_function(&format!("min mun 2^{} f32", log2_size), |b| {
+        b.iter(|| bench_min(&arr_a))
+    });
 }
 
 criterion_group!(benches, add_benchmark);
