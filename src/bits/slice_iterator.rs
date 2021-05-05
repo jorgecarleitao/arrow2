@@ -1,7 +1,7 @@
 use crate::bitmap::Bitmap;
 
 /// Internal state of [SlicesIterator]
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 enum State {
     // normal iteration
     Nominal,
@@ -13,7 +13,7 @@ enum State {
 /// This is the most efficient method to extract slices of values from arrays
 /// with a validity bitmap.
 /// For example, the bitmap `00101111` returns `[(0,4), (6,1)]`
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SlicesIterator<'a> {
     values: std::slice::Iter<'a, u8>,
     count: usize,
@@ -110,20 +110,24 @@ impl<'a> Iterator for SlicesIterator<'a> {
                 (true, true) => self.len += 1,
                 (false, false) => self.len += 1,
                 (true, false) => {
-                    let result = (self.start, self.len);
-                    self.start += self.len;
-                    self.len = 1;
-                    self.on_region = false;
                     if self.mask == 1 {
                         // reached a new byte => try to fetch it from the iterator
                         match self.values.next() {
                             Some(v) => {
+                                self.on_region = false;
+                                let result = (self.start, self.len);
+                                self.start += self.len;
+                                self.len = 1;
                                 self.current_byte = v;
                                 return Some(result);
                             }
                             None => return self.finish(),
                         };
                     } else {
+                        self.on_region = false;
+                        let result = (self.start, self.len);
+                        self.start += self.len;
+                        self.len = 1;
                         return Some(result);
                     }
                 }
@@ -241,5 +245,19 @@ mod tests {
 
         assert_eq!(chunks, vec![(0, 7), (8, 8)]);
         assert_eq!(count, 15);
+    }
+
+    #[test]
+    fn bla() {
+        let values = vec![true, true, true, true, true, true, true, false]
+            .into_iter()
+            .collect::<Bitmap>();
+        let iter = SlicesIterator::new(&values);
+        let count = iter.slots();
+        assert_eq!(values.null_count() + iter.slots(), values.len());
+
+        let total = iter.into_iter().fold(0, |acc, x| acc + x.1);
+
+        assert_eq!(count, total);
     }
 }
