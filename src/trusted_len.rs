@@ -16,6 +16,8 @@ where
 {
 }
 
+unsafe impl<I> TrustedLen for std::iter::Enumerate<I> where I: TrustedLen {}
+
 unsafe impl<A, B> TrustedLen for std::iter::Zip<A, B>
 where
     A: TrustedLen,

@@ -37,5 +37,5 @@ pub fn new_primitive_array<
             None => Ok(None),
         });
     // Soundness: slice is trusted len.
-    Ok(unsafe { Primitive::<T>::try_from_trusted_len_iter(iter) }?.to(data_type.clone()))
+    Ok(Primitive::<T>::try_from_trusted_len_iter(iter)?.to(data_type.clone()))
 }
