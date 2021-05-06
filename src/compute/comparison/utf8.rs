@@ -163,7 +163,7 @@ mod tests {
     ) {
         let lhs = Utf8Array::<O>::from_slice(lhs);
         let rhs = Utf8Array::<O>::from_slice(rhs);
-        let expected = BooleanArray::from_slice(expected);
+        let expected = BooleanArray::from_values(expected);
         assert_eq!(op(&lhs, &rhs).unwrap(), expected);
     }
 
@@ -174,7 +174,7 @@ mod tests {
         expected: Vec<bool>,
     ) {
         let lhs = Utf8Array::<O>::from_slice(lhs);
-        let expected = BooleanArray::from_slice(expected);
+        let expected = BooleanArray::from_values(expected);
         assert_eq!(op(&lhs, rhs), expected);
     }
 

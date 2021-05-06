@@ -269,7 +269,7 @@ mod tests {
             let a = Primitive::<i64>::from_vec($A_VEC).to(DataType::Int64);
             let b = Primitive::<i64>::from_vec($B_VEC).to(DataType::Int64);
             let c = $KERNEL(&a, &b).unwrap();
-            assert_eq!(BooleanArray::from_slice($EXPECTED), c);
+            assert_eq!(BooleanArray::from_values($EXPECTED), c);
         };
     }
 
@@ -298,7 +298,7 @@ mod tests {
         ($KERNEL:ident, $A_VEC:expr, $B:literal, $EXPECTED:expr) => {
             let a = Primitive::<i64>::from_vec($A_VEC).to(DataType::Int64);
             let c = $KERNEL(&a, $B).unwrap();
-            assert_eq!(BooleanArray::from_slice($EXPECTED), c);
+            assert_eq!(BooleanArray::from_values($EXPECTED), c);
         };
     }
 
@@ -330,7 +330,7 @@ mod tests {
         let d = eq(&c, &a).unwrap();
         assert_eq!(
             d,
-            BooleanArray::from_slice(&vec![true, true, true, false, true])
+            BooleanArray::from_values(&vec![true, true, true, false, true])
         );
     }
 
@@ -550,7 +550,7 @@ mod tests {
 
         let array_a = Primitive::<i8>::from_slice(&vec![1; item_count]).to(DataType::Int8);
         let array_b = Primitive::<i8>::from_slice(&vec![2; item_count]).to(DataType::Int8);
-        let expected = BooleanArray::from_slice(&vec![false; item_count]);
+        let expected = BooleanArray::from_values(&vec![false; item_count]);
         let result = gt_eq(&array_a, &array_b).unwrap();
 
         assert_eq!(result, expected)

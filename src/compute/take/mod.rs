@@ -266,7 +266,7 @@ mod tests {
     }
 
     fn create_test_struct() -> StructArray {
-        let boolean = BooleanArray::from_slice(&[true, false, false, true]);
+        let boolean = BooleanArray::from_values(&[true, false, false, true]);
         let int = Primitive::from_slice(&[42, 28, 19, 31]).to(DataType::Int32);
         let validity = vec![true, true, false, true]
             .into_iter()

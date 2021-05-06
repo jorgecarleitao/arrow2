@@ -727,11 +727,11 @@ mod tests {
 
     #[test]
     fn test_boolean_equal() {
-        let a = BooleanArray::from_slice([false, false, true]);
-        let b = BooleanArray::from_slice([false, false, true]);
+        let a = BooleanArray::from_values([false, false, true]);
+        let b = BooleanArray::from_values([false, false, true]);
         test_equal(&a, &b, true);
 
-        let b = BooleanArray::from_slice([false, false, false]);
+        let b = BooleanArray::from_values([false, false, false]);
         test_equal(&a, &b, false);
     }
 
@@ -750,8 +750,8 @@ mod tests {
 
     #[test]
     fn test_boolean_equal_offset() {
-        let a = BooleanArray::from_slice(vec![false, true, false, true, false, false, true]);
-        let b = BooleanArray::from_slice(vec![true, false, false, false, true, false, true, true]);
+        let a = BooleanArray::from_values(vec![false, true, false, true, false, false, true]);
+        let b = BooleanArray::from_values(vec![true, false, false, false, true, false, true, true]);
         test_equal(&a, &b, false);
 
         let a_slice = a.slice(2, 3);
@@ -764,14 +764,14 @@ mod tests {
 
         // Elements fill in `u8`'s exactly.
         let mut vector = vec![false, false, true, true, true, true, true, true];
-        let a = BooleanArray::from_slice(vector.clone());
-        let b = BooleanArray::from_slice(vector.clone());
+        let a = BooleanArray::from_values(vector.clone());
+        let b = BooleanArray::from_values(vector.clone());
         test_equal(&a, &b, true);
 
         // Elements fill in `u8`s + suffix bits.
         vector.push(true);
-        let a = BooleanArray::from_slice(vector.clone());
-        let b = BooleanArray::from_slice(vector);
+        let a = BooleanArray::from_values(vector.clone());
+        let b = BooleanArray::from_values(vector);
         test_equal(&a, &b, true);
     }
 

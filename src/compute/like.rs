@@ -75,7 +75,7 @@ fn a_like_utf8<O: Offset, F: Fn(bool) -> bool>(
 /// let patterns = Utf8Array::<i32>::from_slice(&["A%", "B%", "%r_ow", "A_", "A_"]);
 ///
 /// let result = like_utf8(&strings, &patterns).unwrap();
-/// assert_eq!(result, BooleanArray::from_slice(&[true, false, true, false, true]));
+/// assert_eq!(result, BooleanArray::from_values(&[true, false, true, false, true]));
 /// ```
 pub fn like_utf8<O: Offset>(lhs: &Utf8Array<O>, rhs: &Utf8Array<O>) -> Result<BooleanArray> {
     a_like_utf8(lhs, rhs, |x| x)
@@ -134,7 +134,7 @@ fn a_like_utf8_scalar<O: Offset, F: Fn(bool) -> bool>(
 /// let array = Utf8Array::<i32>::from_slice(&["Arrow", "Arrow", "Arrow", "BA"]);
 ///
 /// let result = like_utf8_scalar(&array, &"A%").unwrap();
-/// assert_eq!(result, BooleanArray::from_slice(&[true, true, true, false]));
+/// assert_eq!(result, BooleanArray::from_values(&[true, true, true, false]));
 /// ```
 pub fn like_utf8_scalar<O: Offset>(lhs: &Utf8Array<O>, rhs: &str) -> Result<BooleanArray> {
     a_like_utf8_scalar(lhs, rhs, |x| x)

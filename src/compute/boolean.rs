@@ -112,7 +112,7 @@ pub fn not(array: &BooleanArray) -> BooleanArray {
 /// # fn main() {
 /// let a = BooleanArray::from(vec![Some(false), Some(true), None]);
 /// let a_is_null = is_null(&a);
-/// assert_eq!(a_is_null, BooleanArray::from_slice(vec![false, false, true]));
+/// assert_eq!(a_is_null, BooleanArray::from_values(vec![false, false, true]));
 /// # }
 /// ```
 pub fn is_null(input: &dyn Array) -> BooleanArray {
@@ -134,7 +134,7 @@ pub fn is_null(input: &dyn Array) -> BooleanArray {
 /// # fn main() {
 /// let a = BooleanArray::from(&vec![Some(false), Some(true), None]);
 /// let a_is_not_null = is_not_null(&a);
-/// assert_eq!(a_is_not_null, BooleanArray::from_slice(&vec![true, true, false]));
+/// assert_eq!(a_is_not_null, BooleanArray::from_values(&vec![true, true, false]));
 /// # }
 /// ```
 pub fn is_not_null(input: &dyn Array) -> BooleanArray {
@@ -154,22 +154,22 @@ mod tests {
 
     #[test]
     fn test_bool_array_and() {
-        let a = BooleanArray::from_slice(vec![false, false, true, true]);
-        let b = BooleanArray::from_slice(vec![false, true, false, true]);
+        let a = BooleanArray::from_values(vec![false, false, true, true]);
+        let b = BooleanArray::from_values(vec![false, true, false, true]);
         let c = and(&a, &b).unwrap();
 
-        let expected = BooleanArray::from_slice(vec![false, false, false, true]);
+        let expected = BooleanArray::from_values(vec![false, false, false, true]);
 
         assert_eq!(c, expected);
     }
 
     #[test]
     fn test_bool_array_or() {
-        let a = BooleanArray::from_slice(vec![false, false, true, true]);
-        let b = BooleanArray::from_slice(vec![false, true, false, true]);
+        let a = BooleanArray::from_values(vec![false, false, true, true]);
+        let b = BooleanArray::from_values(vec![false, true, false, true]);
         let c = or(&a, &b).unwrap();
 
-        let expected = BooleanArray::from_slice(vec![false, true, true, true]);
+        let expected = BooleanArray::from_values(vec![false, true, true, true]);
 
         assert_eq!(c, expected);
     }
@@ -217,10 +217,10 @@ mod tests {
 
     #[test]
     fn test_bool_array_not() {
-        let a = BooleanArray::from_slice(vec![false, true]);
+        let a = BooleanArray::from_values(vec![false, true]);
         let c = not(&a);
 
-        let expected = BooleanArray::from_slice(vec![true, false]);
+        let expected = BooleanArray::from_values(vec![true, false]);
 
         assert_eq!(c, expected);
     }
@@ -268,10 +268,10 @@ mod tests {
 
     #[test]
     fn test_bool_array_and_sliced_same_offset() {
-        let a = BooleanArray::from_slice(vec![
+        let a = BooleanArray::from_values(vec![
             false, false, false, false, false, false, false, false, false, false, true, true,
         ]);
-        let b = BooleanArray::from_slice(vec![
+        let b = BooleanArray::from_values(vec![
             false, false, false, false, false, false, false, false, false, true, false, true,
         ]);
 
@@ -279,17 +279,17 @@ mod tests {
         let b = b.slice(8, 4);
         let c = and(&a, &b).unwrap();
 
-        let expected = BooleanArray::from_slice(vec![false, false, false, true]);
+        let expected = BooleanArray::from_values(vec![false, false, false, true]);
 
         assert_eq!(expected, c);
     }
 
     #[test]
     fn test_bool_array_and_sliced_same_offset_mod8() {
-        let a = BooleanArray::from_slice(vec![
+        let a = BooleanArray::from_values(vec![
             false, false, true, true, false, false, false, false, false, false, false, false,
         ]);
-        let b = BooleanArray::from_slice(vec![
+        let b = BooleanArray::from_values(vec![
             false, false, false, false, false, false, false, false, false, true, false, true,
         ]);
 
@@ -298,31 +298,31 @@ mod tests {
 
         let c = and(&a, &b).unwrap();
 
-        let expected = BooleanArray::from_slice(vec![false, false, false, true]);
+        let expected = BooleanArray::from_values(vec![false, false, false, true]);
 
         assert_eq!(expected, c);
     }
 
     #[test]
     fn test_bool_array_and_sliced_offset1() {
-        let a = BooleanArray::from_slice(vec![
+        let a = BooleanArray::from_values(vec![
             false, false, false, false, false, false, false, false, false, false, true, true,
         ]);
-        let b = BooleanArray::from_slice(vec![false, true, false, true]);
+        let b = BooleanArray::from_values(vec![false, true, false, true]);
 
         let a = a.slice(8, 4);
 
         let c = and(&a, &b).unwrap();
 
-        let expected = BooleanArray::from_slice(vec![false, false, false, true]);
+        let expected = BooleanArray::from_values(vec![false, false, false, true]);
 
         assert_eq!(expected, c);
     }
 
     #[test]
     fn test_bool_array_and_sliced_offset2() {
-        let a = BooleanArray::from_slice(vec![false, false, true, true]);
-        let b = BooleanArray::from_slice(vec![
+        let a = BooleanArray::from_values(vec![false, false, true, true]);
+        let b = BooleanArray::from_values(vec![
             false, false, false, false, false, false, false, false, false, true, false, true,
         ]);
 
@@ -330,7 +330,7 @@ mod tests {
 
         let c = and(&a, &b).unwrap();
 
-        let expected = BooleanArray::from_slice(vec![false, false, false, true]);
+        let expected = BooleanArray::from_values(vec![false, false, false, true]);
 
         assert_eq!(expected, c);
     }
@@ -366,7 +366,7 @@ mod tests {
 
         let res = is_null(&a);
 
-        let expected = BooleanArray::from_slice(vec![false, false, false, false]);
+        let expected = BooleanArray::from_values(vec![false, false, false, false]);
 
         assert_eq!(expected, res);
     }
@@ -379,7 +379,7 @@ mod tests {
 
         let res = is_null(&a);
 
-        let expected = BooleanArray::from_slice(vec![false, false, false, false]);
+        let expected = BooleanArray::from_values(vec![false, false, false, false]);
 
         assert_eq!(expected, res);
     }
@@ -390,7 +390,7 @@ mod tests {
 
         let res = is_not_null(&a);
 
-        let expected = BooleanArray::from_slice(vec![true, true, true, true]);
+        let expected = BooleanArray::from_values(vec![true, true, true, true]);
 
         assert_eq!(expected, res);
     }
@@ -403,7 +403,7 @@ mod tests {
 
         let res = is_not_null(&a);
 
-        let expected = BooleanArray::from_slice(vec![true, true, true, true]);
+        let expected = BooleanArray::from_values(vec![true, true, true, true]);
 
         assert_eq!(expected, res);
     }
@@ -414,7 +414,7 @@ mod tests {
 
         let res = is_null(&a);
 
-        let expected = BooleanArray::from_slice(vec![false, true, false, true]);
+        let expected = BooleanArray::from_values(vec![false, true, false, true]);
 
         assert_eq!(expected, res);
     }
@@ -445,7 +445,7 @@ mod tests {
 
         let res = is_null(&a);
 
-        let expected = BooleanArray::from_slice(vec![false, true, false, true]);
+        let expected = BooleanArray::from_values(vec![false, true, false, true]);
 
         assert_eq!(expected, res);
     }
@@ -456,7 +456,7 @@ mod tests {
 
         let res = is_not_null(&a);
 
-        let expected = BooleanArray::from_slice(vec![true, false, true, false]);
+        let expected = BooleanArray::from_values(vec![true, false, true, false]);
 
         assert_eq!(expected, res);
     }
@@ -487,7 +487,7 @@ mod tests {
 
         let res = is_not_null(&a);
 
-        let expected = BooleanArray::from_slice(vec![true, false, true, false]);
+        let expected = BooleanArray::from_values(vec![true, false, true, false]);
 
         assert_eq!(expected, res);
     }

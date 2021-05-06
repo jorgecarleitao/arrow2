@@ -3,7 +3,7 @@ use crate::{bitmap::Bitmap, datatypes::DataType};
 use super::{display_fmt, Array};
 
 /// A [`BooleanArray`] is arrow's equivalent to `Vec<Option<bool>>`, i.e.
-/// an array designed for highly performant operations on optionally nullable booleans,
+/// an array designed for highly performant operations on optionally nullable booleans.
 /// The size of this struct is `O(1)` as all data is stored behind an `Arc`.
 #[derive(Debug, Clone)]
 pub struct BooleanArray {

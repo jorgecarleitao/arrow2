@@ -71,7 +71,7 @@ pub fn regex_match<O: Offset>(values: &Utf8Array<O>, regex: &Utf8Array<O>) -> Re
 /// let strings = Utf8Array::<i32>::from_slice(&vec!["ArAow", "A_B", "AAA"]);
 ///
 /// let result = regex_match_scalar(&strings, "^A.A").unwrap();
-/// assert_eq!(result, BooleanArray::from_slice(&vec![true, false, true]));
+/// assert_eq!(result, BooleanArray::from_values(&vec![true, false, true]));
 /// ```
 pub fn regex_match_scalar<O: Offset>(values: &Utf8Array<O>, regex: &str) -> Result<BooleanArray> {
     let regex = Regex::new(regex)
@@ -91,7 +91,7 @@ mod tests {
     ) {
         let lhs = Utf8Array::<O>::from_slice(lhs);
         let pattern = Utf8Array::<O>::from_slice(pattern);
-        let expected = BooleanArray::from_slice(expected);
+        let expected = BooleanArray::from_values(expected);
         let result = op(&lhs, &pattern).unwrap();
         assert_eq!(result, expected);
     }
@@ -103,7 +103,7 @@ mod tests {
         expected: Vec<bool>,
     ) {
         let lhs = Utf8Array::<O>::from_slice(lhs);
-        let expected = BooleanArray::from_slice(expected);
+        let expected = BooleanArray::from_values(expected);
         let result = op(&lhs, &pattern).unwrap();
         assert_eq!(result, expected);
     }
