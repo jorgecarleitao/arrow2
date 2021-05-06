@@ -66,7 +66,7 @@ impl<T: NativeType> Primitive<T> {
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
     /// I.e. that `size_hint().1` correctly reports its length.
     #[inline]
-    pub unsafe fn try_from_trusted_len_iter<E, I, P>(iter: I) -> Result<Self, E>
+    pub unsafe fn try_from_trusted_len_iter_unchecked<E, I, P>(iter: I) -> Result<Self, E>
     where
         P: std::borrow::Borrow<T>,
         I: IntoIterator<Item = Result<Option<P>, E>>,
@@ -74,6 +74,18 @@ impl<T: NativeType> Primitive<T> {
         let iterator = iter.into_iter();
 
         let (validity, values) = try_trusted_len_unzip(iterator)?;
+
+        Ok(Self { values, validity })
+    }
+
+    /// Creates a [`PrimitiveArray`] from an fallible iterator of trusted length.
+    #[inline]
+    pub fn try_from_trusted_len_iter<E, I, P>(iterator: I) -> Result<Self, E>
+    where
+        P: std::borrow::Borrow<T>,
+        I: TrustedLen<Item = Result<Option<P>, E>>,
+    {
+        let (validity, values) = unsafe { try_trusted_len_unzip(iterator) }?;
 
         Ok(Self { values, validity })
     }
