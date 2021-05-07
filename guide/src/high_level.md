@@ -21,7 +21,7 @@ assert_eq!(array.len(), 3)
 A `PrimitiveArray` has 3 components:
 
 1. A physical type (`i32`)
-2. A logical type (`DataType::Int32`)
+2. A logical type (e.g. `DataType::Int32`)
 3. Data
 
 The main differences from a `Vec<Option<T>>` are:
@@ -41,6 +41,18 @@ let dates = Primitive::<i32>::from(&[Some(1), None]).to(DataType::Date32);
 ```
 
 `ints` and `dates` have the same in-memory representation but different logic representations (e.g. dates are usually represented as a string).
+
+Some physical types (e.g. `i32`) have a "natural" logical `DataType` (e.g. `DataType::Int32`).
+These types support a more compact notation:
+
+```rust
+# use arrow2::array::{Array, PrimitiveArray, Primitive};
+# use arrow2::datatypes::DataType;
+# fn main() {
+let array: PrimitiveArray<i32> = [Some(1), None, Some(123)].iter().collect();
+assert_eq!(array.len(), 3)
+# }
+```
 
 The following arrays are supported:
 

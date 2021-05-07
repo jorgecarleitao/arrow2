@@ -119,6 +119,7 @@ impl<T: NativeType> Array for PrimitiveArray<T> {
 mod display;
 mod ffi;
 mod from;
+mod from_natural;
 pub use from::Primitive;
 mod iterator;
 pub use iterator::*;

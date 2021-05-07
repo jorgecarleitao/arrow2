@@ -10,6 +10,12 @@ pub use simd::Simd;
 
 use crate::datatypes::{DataType, IntervalUnit};
 
+/// Trait denoting anything that has a natural, constant type.
+/// For example, `i32` has a natural datatype, [`DataType::Int32`].
+pub trait NaturalDataType {
+    const DATA_TYPE: DataType;
+}
+
 pub unsafe trait Relation {
     fn is_valid(data_type: &DataType) -> bool;
 }
@@ -21,6 +27,14 @@ macro_rules! create_relation {
             fn is_valid(data_type: &DataType) -> bool {
                 matches!(data_type, $($impl_pattern)|+)
             }
+        }
+    };
+}
+
+macro_rules! natural_type {
+    ($type:ty, $data_type:expr) => {
+        impl NaturalDataType for $type {
+            const DATA_TYPE: DataType = $data_type;
         }
     };
 }
@@ -83,6 +97,17 @@ native!(i64);
 native!(i128);
 native!(f32);
 native!(f64);
+
+natural_type!(u8, DataType::UInt8);
+natural_type!(u16, DataType::UInt16);
+natural_type!(u32, DataType::UInt32);
+natural_type!(u64, DataType::UInt64);
+natural_type!(i8, DataType::Int8);
+natural_type!(i16, DataType::Int16);
+natural_type!(i32, DataType::Int32);
+natural_type!(i64, DataType::Int64);
+natural_type!(f32, DataType::Float32);
+natural_type!(f64, DataType::Float64);
 
 create_relation!(u8, &DataType::UInt8);
 create_relation!(u16, &DataType::UInt16);
