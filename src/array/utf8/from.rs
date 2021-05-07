@@ -14,14 +14,26 @@ use crate::{
 use super::Utf8Array;
 
 impl<O: Offset> Utf8Array<O> {
+    /// Creates a new [`Utf8Array`] from a slice of `&str`.
+    /// This is a convenience method that just calls [`Self::from_trusted_len_values_iter`].
+    #[inline]
     pub fn from_slice<T: AsRef<str>, P: AsRef<[T]>>(slice: P) -> Self {
-        Self::from_trusted_len_iter(slice.as_ref().iter().map(Some))
+        Self::from_trusted_len_values_iter(slice.as_ref().iter())
     }
-}
 
-impl<O: Offset, T: AsRef<str>> From<&Vec<Option<T>>> for Utf8Array<O> {
-    fn from(slice: &Vec<Option<T>>) -> Self {
-        Self::from_trusted_len_iter(slice.iter().map(|x| x.as_ref()))
+    /// Creates a new [`Utf8Array`] from a slice of `&str`.
+    // Note: this can't be `impl From` because Rust does not allow double `AsRef` on it.
+    pub fn from<T: AsRef<str>, P: AsRef<[Option<T>]>>(slice: P) -> Self {
+        Self::from_trusted_len_iter(slice.as_ref().iter().map(|x| x.as_ref()))
+    }
+
+    /// Creates a new [`Utf8Array`] from a [`TrustedLen`] of `&str`.
+    #[inline]
+    pub fn from_trusted_len_values_iter<T: AsRef<str>, I: TrustedLen<Item = T>>(
+        iterator: I,
+    ) -> Self {
+        let (offsets, values) = unsafe { trusted_len_values_iter(iterator) };
+        Self::from_data(offsets, values, None)
     }
 }
 
@@ -49,6 +61,7 @@ impl<O: Offset> Utf8Array<O> {
         P: AsRef<str>,
         I: TrustedLen<Item = Option<P>>,
     {
+        // soundness: I is `TrustedLen`
         let (validity, offsets, values) = unsafe { trusted_len_unzip(iterator) };
 
         // soundness: P is `str`
@@ -74,8 +87,8 @@ impl<O: Offset> Utf8Array<O> {
     }
 }
 
-/// Creates a Bitmap and a [`Buffer`] from an iterator of `Option`.
-/// The first buffer corresponds to a bitmap buffer, the second one
+/// Creates [`Bitmap`] and two [`Buffer`]s from an iterator of `Option`.
+/// The first buffer corresponds to a offset buffer, the second one
 /// corresponds to a values buffer.
 /// # Safety
 /// The caller must ensure that `iterator` is `TrustedLen`.
@@ -121,6 +134,45 @@ where
     offsets.set_len(len + 1);
 
     (null.into(), offsets.into(), values.into())
+}
+
+/// Creates two [`Buffer`]s from an iterator of `&str`.
+/// The first buffer corresponds to a offset buffer, the second to a values buffer.
+/// # Safety
+/// The caller must ensure that `iterator` is [`TrustedLen`].
+#[inline]
+pub(crate) unsafe fn trusted_len_values_iter<O, I, P>(iterator: I) -> (Buffer<O>, Buffer<u8>)
+where
+    O: Offset,
+    P: AsRef<str>,
+    I: Iterator<Item = P>,
+{
+    let (_, upper) = iterator.size_hint();
+    let len = upper.expect("trusted_len_unzip requires an upper limit");
+
+    let mut offsets = MutableBuffer::<O>::with_capacity(len + 1);
+    let mut values = MutableBuffer::<u8>::new();
+
+    let mut length = O::default();
+    let mut dst = offsets.as_mut_ptr();
+    std::ptr::write(dst, length);
+    dst = dst.add(1);
+    for item in iterator {
+        let s = item.as_ref();
+        length += O::from_usize(s.len()).unwrap();
+        values.extend_from_slice(s.as_bytes());
+
+        std::ptr::write(dst, length);
+        dst = dst.add(1);
+    }
+    assert_eq!(
+        dst.offset_from(offsets.as_ptr()) as usize,
+        len + 1,
+        "Trusted iterator length was not accurately reported"
+    );
+    offsets.set_len(len + 1);
+
+    (offsets.into(), values.into())
 }
 
 /// # Safety
@@ -275,7 +327,7 @@ mod tests {
 
     #[test]
     fn test_from() {
-        let array = Utf8Array::<i32>::from(&vec![Some("hello"), Some(" "), None]);
+        let array = Utf8Array::<i32>::from(&[Some("hello"), Some(" "), None]);
 
         let a = array.validity().as_ref().unwrap();
         assert_eq!(a.len(), 3);

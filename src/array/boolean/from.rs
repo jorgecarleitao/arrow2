@@ -8,13 +8,23 @@ use crate::{
 use super::BooleanArray;
 
 impl BooleanArray {
+    /// Creates a new [`BooleanArray`] from an [`TrustedLen`] of `bool`.
+    #[inline]
+    pub fn from_trusted_len_values_iter<I: TrustedLen<Item = bool>>(iterator: I) -> Self {
+        Self::from_data(Bitmap::from_trusted_len_iter(iterator), None)
+    }
+
+    /// Creates a new [`BooleanArray`] from a slice of `bool`.
+    #[inline]
     pub fn from_slice<P: AsRef<[bool]>>(slice: P) -> Self {
-        Self::from_trusted_len_iter(slice.as_ref().iter().map(Some))
+        Self::from_trusted_len_values_iter(slice.as_ref().iter().copied())
     }
 }
 
 impl BooleanArray {
     /// Creates a [`BooleanArray`] from an iterator of trusted length.
+    /// Use this over [`BooleanArray::from_trusted_len_iter`] when the iterator is trusted len
+    /// but this crate does not mark it as such.
     /// # Safety
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
     /// I.e. that `size_hint().1` correctly reports its length.
@@ -41,19 +51,28 @@ impl BooleanArray {
         Self::from_data(values, validity)
     }
 
-    /// Creates a [`PrimitiveArray`] from an falible iterator of trusted length.
+    /// Creates a [`BooleanArray`] from an falible iterator of trusted length.
     /// # Safety
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
     /// I.e. that `size_hint().1` correctly reports its length.
     #[inline]
-    pub unsafe fn try_from_trusted_len_iter<E, I, P>(iter: I) -> Result<Self, E>
+    pub unsafe fn try_from_trusted_len_iter_unchecked<E, I, P>(iterator: I) -> Result<Self, E>
     where
         P: std::borrow::Borrow<bool>,
-        I: IntoIterator<Item = Result<Option<P>, E>>,
+        I: Iterator<Item = Result<Option<P>, E>>,
     {
-        let iterator = iter.into_iter();
-
         let (validity, values) = try_trusted_len_unzip(iterator)?;
+        Ok(Self::from_data(values, validity))
+    }
+
+    /// Creates a [`BooleanArray`] from a [`TrustedLen`].
+    #[inline]
+    pub fn try_from_trusted_len_iter<E, I, P>(iterator: I) -> Result<Self, E>
+    where
+        P: std::borrow::Borrow<bool>,
+        I: TrustedLen<Item = Result<Option<P>, E>>,
+    {
+        let (validity, values) = unsafe { try_trusted_len_unzip(iterator)? };
 
         Ok(Self::from_data(values, validity))
     }

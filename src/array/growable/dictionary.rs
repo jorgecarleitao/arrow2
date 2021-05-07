@@ -186,7 +186,7 @@ mod tests {
         original_data1.extend(original_data2.iter().cloned());
         let expected = DictionaryArray::<i32>::from_data(
             Primitive::from(vec![Some(1), None, Some(3), None]).to(DataType::Int32),
-            Arc::new(Utf8Array::<i32>::from_slice(&vec!["a", "b", "c", "b", "a"])),
+            Arc::new(Utf8Array::<i32>::from_slice(&["a", "b", "c", "b", "a"])),
         );
 
         let mut growable = GrowableDictionary::new(&[&array1, &array2], false, 0);

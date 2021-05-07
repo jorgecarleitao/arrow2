@@ -324,8 +324,8 @@ mod tests {
 
     #[test]
     fn test_filter_string_array_simple() {
-        let a = Utf8Array::<i32>::from_slice(vec!["hello", " ", "world", "!"]);
-        let b = BooleanArray::from_slice(vec![true, false, true, false]);
+        let a = Utf8Array::<i32>::from_slice(&["hello", " ", "world", "!"]);
+        let b = BooleanArray::from_slice(&[true, false, true, false]);
         let c = filter(&a, &b).unwrap();
         let d = c
             .as_ref()

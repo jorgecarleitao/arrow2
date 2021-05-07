@@ -8,12 +8,15 @@ use crate::{
     datatypes::{DataType, IntervalUnit},
 };
 
+/// A trait representing an Arrow array. Arrow arrays are trait objects
+/// that are infalibly downcasted to concrete types according to the `Array::data_type`.
 pub trait Array: std::fmt::Debug + Send + Sync + ToFfi {
     fn as_any(&self) -> &dyn Any;
 
     /// The length of the array
     fn len(&self) -> usize;
 
+    /// whether the array is empty
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -132,7 +135,7 @@ impl Display for dyn Array {
     }
 }
 
-/// Creates a new empty dynamic array
+/// Creates a new empty [`Array`]. An empty array has a length of 0.
 pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
     match data_type {
         DataType::Null => Box::new(NullArray::new_empty()),
@@ -185,7 +188,8 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
     }
 }
 
-/// Creates a new null dynamic array of `length`.
+/// Creates a new null [`Array`] of [`DataType`] `data_type` and `length`.
+/// A null array has all its elements nulls.
 pub fn new_null_array(data_type: DataType, length: usize) -> Box<dyn Array> {
     match data_type {
         DataType::Null => Box::new(NullArray::new_null(length)),
@@ -245,7 +249,7 @@ macro_rules! clone_dyn {
     }};
 }
 
-/// Clones a dynamic `Array`.
+/// Clones a dynamic [`Array`].
 /// # Implementation
 /// This operation is `O(1)` over `len`, as it amounts to increase two ref counts
 /// and moving the concrete struct under a `Box`.
@@ -343,13 +347,13 @@ pub type UInt16Array = PrimitiveArray<u16>;
 pub type UInt32Array = PrimitiveArray<u32>;
 pub type UInt64Array = PrimitiveArray<u64>;
 
-/// A trait describing the ability of a struct to convert itself to a Boxed [`Array`].
+/// A trait describing the ability of a struct to convert itself to a Arc'ed [`Array`].
 pub trait IntoArray {
     fn into_arc(self, data_type: &DataType) -> std::sync::Arc<dyn Array>;
 }
 
 /// A trait describing the ability of a struct to create itself from a falible iterator
-/// This is used in the context of creating arrays from non-sized iterators
+/// Used in the context of creating arrays from non-sized iterators.
 pub trait TryFromIterator<A>: Sized {
     fn try_from_iter<T: IntoIterator<Item = Result<A>>>(iter: T) -> Result<Self>;
 }

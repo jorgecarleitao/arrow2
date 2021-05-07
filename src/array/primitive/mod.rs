@@ -4,7 +4,7 @@ use super::Array;
 
 /// A [`PrimitiveArray`] is arrow's equivalent to `Vec<Option<T: NativeType>>`, i.e.
 /// an array designed for highly performant operations on optionally nullable slots,
-/// with uniform types such as `i32` or `f64`.
+/// backed by a physical type of a physical byte-width, such as `i32` or `f64`.
 /// The size of this struct is `O(1)` as all data is stored behind an `Arc`.
 #[derive(Debug, Clone)]
 pub struct PrimitiveArray<T: NativeType> {
@@ -33,8 +33,8 @@ impl<T: NativeType> PrimitiveArray<T> {
     /// The canonical method to create a [`PrimitiveArray`] out of low-end APIs.
     /// # Panics
     /// This function panics iff:
-    /// * `data_type` does not supported by this physical type
-    /// * The validity is not `None` and its length is different from `values`'s length
+    /// * `data_type` is not supported by the physical type
+    /// * The validity is not `None` and its length is different from the `values`'s length
     pub fn from_data(data_type: DataType, values: Buffer<T>, validity: Option<Bitmap>) -> Self {
         if !T::is_valid(&data_type) {
             Err(ArrowError::InvalidArgumentError(format!(
@@ -57,7 +57,7 @@ impl<T: NativeType> PrimitiveArray<T> {
 
     /// Returns a slice of this [`PrimitiveArray`].
     /// # Implementation
-    /// This operation is `O(1)` as it amounts to essentially increase two ref counts.
+    /// This operation is `O(1)` as it amounts to increase two ref counts.
     /// # Panic
     /// This function panics iff `offset + length >= self.len()`.
     #[inline]
@@ -71,13 +71,13 @@ impl<T: NativeType> PrimitiveArray<T> {
         }
     }
 
-    /// The values [`Buffer`].
+    /// The values [`Buffer`]. Often used to clone the buffer.
     #[inline]
     pub fn values_buffer(&self) -> &Buffer<T> {
         &self.values
     }
 
-    /// The values as a slice
+    /// The values as a slice.
     #[inline]
     pub fn values(&self) -> &[T] {
         self.values.as_slice()

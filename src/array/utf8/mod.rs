@@ -50,11 +50,11 @@ impl<O: Offset> Utf8Array<O> {
     /// This function panics iff:
     /// * The `offsets` and `values` are consistent
     /// * The `values` between `offsets` are utf8 encoded
-    /// * The validity is not `None` and its length is different from `values`'s length
+    /// * The validity is not `None` and its length is different from `offsets`'s length minus one.
     pub fn from_data(offsets: Buffer<O>, values: Buffer<u8>, validity: Option<Bitmap>) -> Self {
         check_offsets_and_utf8(&offsets, &values);
         if let Some(ref validity) = validity {
-            assert_eq!(offsets.len(), validity.len() + 1);
+            assert_eq!(offsets.len() - 1, validity.len());
         }
 
         Self {
@@ -95,7 +95,7 @@ impl<O: Offset> Utf8Array<O> {
 
     /// Returns the element at index `i` as &str
     /// # Safety
-    /// Assumes that the `i < self.len`.
+    /// This function is safe `iff` `i < self.len`.
     pub unsafe fn value_unchecked(&self, i: usize) -> &str {
         let offset = *self.offsets.as_ptr().add(i);
         let offset_1 = *self.offsets.as_ptr().add(i + 1);

@@ -33,6 +33,13 @@ This document describes the overall design of this module.
 
 * An array MAY implement `value(i: usize)` that returns the value at slot `i` ignoring the validity bitmap.
 
+* functions to create new arrays from native Rust SHOULD be named as follows:
+    * `from`: from a slice of optional values (e.g. `AsRef<[Option<bool>]` for `BooleanArray`)
+    * `from_slice`: from a slice of values (e.g. `AsRef<[bool]` for `BooleanArray`)
+    * `from_trusted_len_iter` from an iterator of trusted len of optional values
+    * `from_trusted_len_values_iter` from an iterator of trusted len of values
+    * `try_from_trusted_len_iter` from an fallible iterator of trusted len of optional values
+
 ### Slot offsets
 
 * An array MUST have a `offset: usize` measuring the number of slots that the array is currently offsetted by if the specification requires.
