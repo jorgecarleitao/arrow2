@@ -14,6 +14,7 @@ use crate::{
 use super::Utf8Array;
 
 impl<O: Offset> Utf8Array<O> {
+    /// Creates a new [`Utf8Array`] from a slice of `&str`.
     pub fn from_slice<T: AsRef<str>, P: AsRef<[T]>>(slice: P) -> Self {
         Self::from_trusted_len_iter(slice.as_ref().iter().map(Some))
     }
@@ -74,8 +75,8 @@ impl<O: Offset> Utf8Array<O> {
     }
 }
 
-/// Creates a Bitmap and a [`Buffer`] from an iterator of `Option`.
-/// The first buffer corresponds to a bitmap buffer, the second one
+/// Creates [`Bitmap`] and two [`Buffer`]s from an iterator of `Option`.
+/// The first buffer corresponds to a offset buffer, the second one
 /// corresponds to a values buffer.
 /// # Safety
 /// The caller must ensure that `iterator` is `TrustedLen`.
