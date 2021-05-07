@@ -560,8 +560,8 @@ mod tests {
 
     #[test]
     fn test_merge_string() -> Result<()> {
-        let a0: &dyn Array = &Utf8Array::<i32>::from_slice(vec!["a", "c", "d", "e"]);
-        let a1: &dyn Array = &Utf8Array::<i32>::from_slice(vec!["b", "y", "z", "z"]);
+        let a0: &dyn Array = &Utf8Array::<i32>::from_slice(&["a", "c", "d", "e"]);
+        let a1: &dyn Array = &Utf8Array::<i32>::from_slice(&["b", "y", "z", "z"]);
 
         let options = SortOptions::default();
         let arrays = vec![a0, a1];
@@ -595,8 +595,8 @@ mod tests {
         let a00: &dyn Array = &Primitive::<i32>::from_slice(&[0, 1, 2, 3]).to(DataType::Int32);
         let a01: &dyn Array = &Primitive::<i32>::from_slice(&[2, 3, 4]).to(DataType::Int32);
         // column 2
-        let a10: &dyn Array = &Utf8Array::<i32>::from_slice(vec!["a", "c", "d", "e"]);
-        let a11: &dyn Array = &Utf8Array::<i32>::from_slice(vec!["b", "y", "z"]);
+        let a10: &dyn Array = &Utf8Array::<i32>::from_slice(&["a", "c", "d", "e"]);
+        let a11: &dyn Array = &Utf8Array::<i32>::from_slice(&["b", "y", "z"]);
         // column 3
         // arrays to be sorted via the columns above
         let array0: &dyn Array = &Primitive::<i32>::from_slice(&[0, 1, 2, 3]).to(DataType::Int32);

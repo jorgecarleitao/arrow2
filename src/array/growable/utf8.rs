@@ -160,8 +160,8 @@ mod tests {
 
     #[test]
     fn test_multiple_with_validity() {
-        let array1 = Utf8Array::<i32>::from_slice(vec!["hello", "world"]);
-        let array2 = Utf8Array::<i32>::from_iter(vec![Some("1"), None]);
+        let array1 = Utf8Array::<i32>::from_slice(&["hello", "world"]);
+        let array2 = Utf8Array::<i32>::from(&[Some("1"), None]);
 
         let mut a = GrowableUtf8::new(&[&array1, &array2], false, 5);
 

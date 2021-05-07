@@ -139,7 +139,7 @@ macro_rules! dyn_filter {
 /// # use arrow2::compute::filter::filter;
 /// # fn main() -> Result<()> {
 /// let array = Primitive::from_slice(&vec![5, 6, 7, 8, 9]).to(DataType::Int32);
-/// let filter_array = BooleanArray::from_values(&vec![true, false, false, true, false]);
+/// let filter_array = BooleanArray::from_slice(&vec![true, false, false, true, false]);
 /// let c = filter(&array, &filter_array)?;
 /// let c = c.as_any().downcast_ref::<Int32Array>().unwrap();
 /// assert_eq!(c, &Primitive::from_slice(vec![5, 8]).to(DataType::Int32));
@@ -224,7 +224,7 @@ mod tests {
         let a = Primitive::<i32>::from_slice(&[5, 6, 7, 8, 9])
             .to(DataType::Int32)
             .slice(1, 4);
-        let b = BooleanArray::from_values(vec![true, true, false, false, true]).slice(1, 4);
+        let b = BooleanArray::from_slice(vec![true, true, false, false, true]).slice(1, 4);
         let c = filter(&a, &b).unwrap();
 
         let expected = Primitive::<i32>::from_slice(&[6, 9]).to(DataType::Int32);
@@ -241,7 +241,7 @@ mod tests {
         data_values.extend_from_slice(&[66, 67]);
         filter_values.extend_from_slice(&[false, true]);
         let a = Primitive::<i32>::from_slice(data_values).to(DataType::Int32);
-        let b = BooleanArray::from_values(filter_values);
+        let b = BooleanArray::from_slice(filter_values);
         let c = filter(&a, &b).unwrap();
 
         let expected = Primitive::<i32>::from_slice(&[65, 67]).to(DataType::Int32);
@@ -262,7 +262,7 @@ mod tests {
         data_values.extend_from_slice(&[Some(66), None, Some(67), None]);
         filter_values.extend_from_slice(&[false, true, true, true]);
         let a = Primitive::<i32>::from(data_values).to(DataType::Int32);
-        let b = BooleanArray::from_values(filter_values);
+        let b = BooleanArray::from_slice(filter_values);
         let c = filter(&a, &b).unwrap();
         let d = c.as_ref().as_any().downcast_ref::<Int32Array>().unwrap();
         assert_eq!(67, d.len());
@@ -276,8 +276,8 @@ mod tests {
 
     #[test]
     fn test_filter_string_array_simple() {
-        let a = Utf8Array::<i32>::from_slice(vec!["hello", " ", "world", "!"]);
-        let b = BooleanArray::from_values(vec![true, false, true, false]);
+        let a = Utf8Array::<i32>::from_slice(&["hello", " ", "world", "!"]);
+        let b = BooleanArray::from_slice(&[true, false, true, false]);
         let c = filter(&a, &b).unwrap();
         let d = c
             .as_ref()
@@ -292,7 +292,7 @@ mod tests {
     #[test]
     fn test_filter_primative_array_with_null() {
         let a = Primitive::<i32>::from(vec![Some(5), None]).to(DataType::Int32);
-        let b = BooleanArray::from_values(vec![false, true]);
+        let b = BooleanArray::from_slice(vec![false, true]);
         let c = filter(&a, &b).unwrap();
         let d = c.as_ref().as_any().downcast_ref::<Int32Array>().unwrap();
         assert_eq!(1, d.len());
@@ -302,7 +302,7 @@ mod tests {
     #[test]
     fn test_filter_string_array_with_null() {
         let a = Utf8Array::<i32>::from(&vec![Some("hello"), None, Some("world"), None]);
-        let b = BooleanArray::from_values(vec![true, false, false, true]);
+        let b = BooleanArray::from_slice(vec![true, false, false, true]);
         let c = filter(&a, &b).unwrap();
         let d = c
             .as_ref()
@@ -319,7 +319,7 @@ mod tests {
     fn test_filter_binary_array_with_null() {
         let data: Vec<Option<&[u8]>> = vec![Some(b"hello"), None, Some(b"world"), None];
         let a = BinaryArray::<i32>::from(&data);
-        let b = BooleanArray::from_values(vec![true, false, false, true]);
+        let b = BooleanArray::from_slice(vec![true, false, false, true]);
         let c = filter(&a, &b).unwrap();
         let d = c
             .as_ref()

@@ -734,7 +734,7 @@ mod tests {
 
     #[test]
     fn test_cast_i32_to_f64() {
-        let array = Primitive::<i32>::from_values(&[5, 6, 7, 8, 9]).to(DataType::Int32);
+        let array = Primitive::<i32>::from_slice(&[5, 6, 7, 8, 9]).to(DataType::Int32);
         let b = cast(&array, &DataType::Float64).unwrap();
         let c = b.as_any().downcast_ref::<Float64Array>().unwrap();
         assert!((5.0 - c.value(0)).abs() < f64::EPSILON);
@@ -746,7 +746,7 @@ mod tests {
 
     #[test]
     fn test_cast_i32_to_u8() {
-        let array = Primitive::<i32>::from_values(&[-5, 6, -7, 8, 100000000]).to(DataType::Int32);
+        let array = Primitive::<i32>::from_slice(&[-5, 6, -7, 8, 100000000]).to(DataType::Int32);
         let b = cast(&array, &DataType::UInt8).unwrap();
         let expected =
             Primitive::<u8>::from(&[None, Some(6), None, Some(8), None]).to(DataType::UInt8);
@@ -756,7 +756,7 @@ mod tests {
 
     #[test]
     fn test_cast_i32_to_u8_sliced() {
-        let array = Primitive::<i32>::from_values(&[-5, 6, -7, 8, 100000000]).to(DataType::Int32);
+        let array = Primitive::<i32>::from_slice(&[-5, 6, -7, 8, 100000000]).to(DataType::Int32);
         let array = array.slice(2, 3);
         let b = cast(&array, &DataType::UInt8).unwrap();
         let expected = Primitive::<u8>::from(&[None, Some(8), None]).to(DataType::UInt8);
@@ -767,19 +767,19 @@ mod tests {
     #[test]
     fn test_cast_i32_to_i32() {
         let input = &[5, 6, 7, 8, 9];
-        let array = Primitive::<i32>::from_values(input).to(DataType::Int32);
+        let array = Primitive::<i32>::from_slice(input).to(DataType::Int32);
         let b = cast(&array, &DataType::Int32).unwrap();
         let c = b.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
 
         let expected = &[5, 6, 7, 8, 9];
-        let expected = Primitive::<i32>::from_values(expected).to(DataType::Int32);
+        let expected = Primitive::<i32>::from_slice(expected).to(DataType::Int32);
         assert_eq!(c, &expected);
     }
 
     #[test]
     fn test_cast_i32_to_list_i32() {
         let input = &[5, 6, 7, 8, 9];
-        let array = Primitive::<i32>::from_values(input).to(DataType::Int32);
+        let array = Primitive::<i32>::from_slice(input).to(DataType::Int32);
         let b = cast(
             &array,
             &DataType::List(Box::new(Field::new("item", DataType::Int32, true))),
@@ -795,7 +795,7 @@ mod tests {
             .unwrap();
 
         let expected = &[5, 6, 7, 8, 9];
-        let expected = Primitive::<i32>::from_values(expected).to(DataType::Int32);
+        let expected = Primitive::<i32>::from_slice(expected).to(DataType::Int32);
         assert_eq!(c, &expected);
     }
 

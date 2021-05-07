@@ -263,7 +263,7 @@ mod tests {
 
     #[test]
     fn or_right_nulls() {
-        let a = BooleanArray::from_values(&[false, false, false, true, true, true]);
+        let a = BooleanArray::from_slice(&[false, false, false, true, true, true]);
 
         let b = BooleanArray::from(&[Some(true), Some(false), None, Some(true), Some(false), None]);
 
@@ -292,7 +292,7 @@ mod tests {
             None,
         ]);
 
-        let b = BooleanArray::from_values(&[false, false, false, true, true, true]);
+        let b = BooleanArray::from_slice(&[false, false, false, true, true, true]);
 
         let c = or(&a, &b).unwrap();
 

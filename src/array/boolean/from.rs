@@ -16,7 +16,7 @@ impl BooleanArray {
 
     /// Creates a new [`BooleanArray`] from a slice of `bool`.
     #[inline]
-    pub fn from_values<P: AsRef<[bool]>>(slice: P) -> Self {
+    pub fn from_slice<P: AsRef<[bool]>>(slice: P) -> Self {
         Self::from_trusted_len_values_iter(slice.as_ref().iter().copied())
     }
 }
