@@ -36,8 +36,6 @@ type ArrayRef = Arc<dyn Array>;
 ///
 /// Record batches are a convenient unit of work for various
 /// serialization and computation functions, possibly incremental.
-/// See also [CSV reader](crate::csv::Reader) and
-/// [JSON reader](crate::json::Reader).
 #[derive(Clone, Debug, PartialEq)]
 pub struct RecordBatch {
     schema: Arc<Schema>,

@@ -1,9 +1,10 @@
 use std::io::Read;
 use std::sync::Arc;
 
-use csv::ByteRecord;
 use lazy_static::lazy_static;
 use regex::{Regex, RegexBuilder};
+
+use super::{ByteRecord, Reader};
 
 use crate::record_batch::RecordBatch;
 use crate::{
@@ -27,7 +28,7 @@ pub fn projected_schema(schema: &Schema, projection: Option<&[usize]>) -> Schema
 }
 
 pub fn read_batch<R: Read, P: GenericParser<ArrowError>>(
-    reader: &mut csv::Reader<R>,
+    reader: &mut Reader<R>,
     parser: &P,
     skip: usize,
     len: usize,
@@ -169,7 +170,7 @@ pub fn infer(string: &str) -> DataType {
 
 #[cfg(test)]
 mod tests {
-    use csv::ReaderBuilder;
+    use super::super::ReaderBuilder;
 
     use crate::array::{Float64Array, Utf8Array};
 

@@ -16,19 +16,18 @@ This crate relies on [the crate `csv`](https://crates.io/crates/csv) to scan and
 As an example, the following infers the schema and reads a CSV by re-using the same reader:
 
 ```rust
-use csv::ReaderBuilder;
-use arrow2::io::csv::{infer_schema, read_batch, infer, DefaultParser};
+use arrow2::io::csv::read;
 use arrow2::error::Result;
 
 fn read_path(path: &str) -> Result<()> {
-    let mut reader = ReaderBuilder::new().from_path(path)?;
-    let parser = DefaultParser::default();
+    let mut reader = read::ReaderBuilder::new().from_path(path)?;
+    let parser = read::DefaultParser::default();
 
-    let schema = infer_schema(&mut reader, None, true, &infer)?;
+    let schema = read::infer_schema(&mut reader, None, true, &infer)?;
 
     // 0: start from
     // 100: up to (max batch size)
-    let batch = read_batch(&mut reader, &parser, 0, 100, schema, None)?;
+    let batch = read::read_batch(&mut reader, &parser, 0, 100, schema, None)?;
 }
 ```
 

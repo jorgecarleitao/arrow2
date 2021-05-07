@@ -3,6 +3,7 @@ use std::{
     io::{Read, Seek},
 };
 
+use super::Reader;
 use csv::StringRecord;
 
 use crate::datatypes::DataType;
@@ -16,7 +17,7 @@ use crate::error::Result;
 ///
 /// Return infered schema and number of records used for inference.
 pub fn infer_schema<R: Read + Seek, F: Fn(&str) -> DataType>(
-    reader: &mut csv::Reader<R>,
+    reader: &mut Reader<R>,
     max_read_records: Option<usize>,
     has_header: bool,
     infer: &F,

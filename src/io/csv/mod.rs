@@ -2,8 +2,10 @@
 
 use crate::error::ArrowError;
 
-impl From<csv::Error> for ArrowError {
-    fn from(error: csv::Error) -> Self {
+pub use csv::Error as CSVError;
+
+impl From<CSVError> for ArrowError {
+    fn from(error: CSVError) -> Self {
         ArrowError::External("".to_string(), Box::new(error))
     }
 }
@@ -20,18 +22,5 @@ impl From<std::str::Utf8Error> for ArrowError {
     }
 }
 
-mod parser;
-mod reader;
+pub mod read;
 pub mod write;
-
-mod infer_schema;
-mod read_boolean;
-mod read_primitive;
-mod read_utf8;
-pub use infer_schema::infer_schema;
-pub use parser::DefaultParser;
-pub use read_boolean::{new_boolean_array, BooleanParser};
-pub use read_primitive::{new_primitive_array, PrimitiveParser};
-pub use read_utf8::{new_utf8_array, Utf8Parser};
-
-pub use reader::*;
