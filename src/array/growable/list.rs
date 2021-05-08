@@ -232,4 +232,41 @@ mod tests {
 
         assert_eq!(result, expected)
     }
+
+    #[test]
+    fn test_from_two_lists() {
+        let data_1 = vec![
+            Some(vec![Some(1i32), Some(2), Some(3)]),
+            None,
+            Some(vec![Some(6i32), None, Some(8)]),
+        ];
+        let array_1: ListPrimitive<i32, Primitive<i32>, i32> = data_1.into_iter().collect();
+        let array_1 = array_1.to(ListArray::<i32>::default_datatype(DataType::Int32));
+
+        let data_2 = vec![
+            Some(vec![Some(8i32), Some(7), Some(6)]),
+            Some(vec![Some(5i32), None, Some(4)]),
+            Some(vec![Some(2i32), Some(1), Some(0)]),
+        ];
+        let array_2: ListPrimitive<i32, Primitive<i32>, i32> = data_2.into_iter().collect();
+        let array_2 = array_2.to(ListArray::<i32>::default_datatype(DataType::Int32));
+
+        let arrays: Vec<&dyn Array> = vec![&array_1, &array_2];
+
+        let mut a = GrowableList::new(&arrays, false, 6);
+        a.extend(0, 0, 2);
+        a.extend(1, 1, 1);
+
+        let result: ListArray<i32> = a.into();
+
+        let expected_data = vec![
+            Some(vec![Some(1i32), Some(2), Some(3)]),
+            None,
+            Some(vec![Some(5i32), None, Some(4)]),
+        ];
+        let expected: ListPrimitive<i32, Primitive<i32>, i32> = expected_data.into_iter().collect();
+        let expected = expected.to(ListArray::<i32>::default_datatype(DataType::Int32));
+
+        assert_eq!(result, expected);
+    }
 }

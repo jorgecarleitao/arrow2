@@ -147,4 +147,18 @@ mod tests {
             .to(DataType::UInt8);
         assert_eq!(result, expected);
     }
+
+    #[test]
+    fn test_primitive_joining_arrays() {
+        let b = Primitive::<u8>::from(vec![Some(1), Some(2), Some(3)]).to(DataType::UInt8);
+        let c = Primitive::<u8>::from(vec![Some(4), Some(5), Some(6)]).to(DataType::UInt8);
+        let mut a = GrowablePrimitive::new(&[&b, &c], false, 4);
+        a.extend(0, 0, 2);
+        a.extend(1, 1, 2);
+        let result: PrimitiveArray<u8> = a.into();
+
+        let expected =
+            Primitive::<u8>::from(vec![Some(1), Some(2), Some(5), Some(6)]).to(DataType::UInt8);
+        assert_eq!(result, expected);
+    }
 }
