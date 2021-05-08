@@ -7,13 +7,12 @@ This crate relies on [the crate csv](https://crates.io/crates/csv) to write well
 The following example writes a batch as a CSV file with the default configuration:
 
 ```rust
-use csv::WriterBuilder;
 use arrow2::io::csv::write;
 use arrow2::record_batch::RecordBatch;
 use arrow2::error::Result;
 
-fn write(path: &str, batches: &[RecordBatch]) -> Result<()> {
-    let writer = &mut WriterBuilder::new().from_path(path)?;
+fn write_batch(path: &str, batches: &[RecordBatch]) -> Result<()> {
+    let writer = &mut write::WriterBuilder::new().from_path(path)?;
 
     write::write_header(writer, batches[0].schema())?;
 
@@ -38,7 +37,6 @@ use std::sync::mpsc::{Sender, Receiver};
 use std::sync::mpsc;
 use std::thread;
 
-use csv::{WriterBuilder, ByteRecord};
 use arrow2::io::csv::write;
 use arrow2::record_batch::RecordBatch;
 use arrow2::error::Result;
@@ -47,7 +45,7 @@ fn parallel_write(path: &str, batches: [RecordBatch; 2]) -> Result<()> {
     let options = write::SerializeOptions::default();
 
     // write a header
-    let writer = &mut WriterBuilder::new().from_path(path)?;
+    let writer = &mut write::WriterBuilder::new().from_path(path)?;
     write::write_header(writer, batches[0].schema())?;
 
     // prepare a channel to send serialized records from threads

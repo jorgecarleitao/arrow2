@@ -1,4 +1,4 @@
-use csv::ByteRecord;
+use super::ByteRecord;
 
 use crate::array::BooleanArray;
 
@@ -34,5 +34,5 @@ pub fn new_boolean_array<E, P: BooleanParser<E>>(
             }
             None => Ok(None),
         });
-    unsafe { BooleanArray::try_from_trusted_len_iter(iter) }
+    BooleanArray::try_from_trusted_len_iter(iter)
 }

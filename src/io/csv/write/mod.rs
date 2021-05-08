@@ -2,7 +2,9 @@ mod serialize;
 
 use std::io::Write;
 
-use csv::ByteRecord;
+// re-export necessary public APIs from csv
+pub use csv::{ByteRecord, Writer, WriterBuilder};
+
 pub use serialize::*;
 
 use crate::record_batch::RecordBatch;
@@ -39,7 +41,7 @@ pub fn serialize(batch: &RecordBatch, options: &SerializeOptions) -> Result<Vec<
 
 /// Writes the data in a `RecordBatch` to `writer` according to the serialization options `options`.
 pub fn write_batch<W: Write>(
-    writer: &mut csv::Writer<W>,
+    writer: &mut Writer<W>,
     batch: &RecordBatch,
     options: &SerializeOptions,
 ) -> Result<()> {
@@ -61,7 +63,7 @@ pub fn write_batch<W: Write>(
 }
 
 /// Writes a header to `writer` according to `schema`
-pub fn write_header<W: Write>(writer: &mut csv::Writer<W>, schema: &Schema) -> Result<()> {
+pub fn write_header<W: Write>(writer: &mut Writer<W>, schema: &Schema) -> Result<()> {
     let fields = schema
         .fields()
         .iter()
@@ -73,7 +75,7 @@ pub fn write_header<W: Write>(writer: &mut csv::Writer<W>, schema: &Schema) -> R
 
 #[cfg(test)]
 mod tests {
-    use csv::WriterBuilder;
+    use super::WriterBuilder;
 
     use super::*;
 

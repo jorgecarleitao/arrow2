@@ -1,4 +1,4 @@
-use csv::ByteRecord;
+use super::ByteRecord;
 
 use crate::array::{Offset, Utf8Array};
 

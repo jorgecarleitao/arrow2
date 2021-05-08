@@ -1,4 +1,4 @@
-use csv::ByteRecord;
+use super::ByteRecord;
 
 use crate::{
     array::{Primitive, PrimitiveArray},
@@ -13,6 +13,7 @@ pub trait PrimitiveParser<T: NativeType + lexical_core::FromLexical, E> {
     }
 }
 
+/// creates a new [`PrimitiveArray`] from a slice of [`ByteRecord`].
 pub fn new_primitive_array<
     T: NativeType + lexical_core::FromLexical,
     E,
@@ -36,6 +37,5 @@ pub fn new_primitive_array<
             }
             None => Ok(None),
         });
-    // Soundness: slice is trusted len.
     Ok(Primitive::<T>::try_from_trusted_len_iter(iter)?.to(data_type.clone()))
 }
