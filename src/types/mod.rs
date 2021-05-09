@@ -5,8 +5,7 @@ use std::{
 
 mod bit_chunk;
 pub use bit_chunk::{BitChunk, BitChunkIter};
-mod simd;
-pub use simd::Simd;
+pub mod simd;
 
 use crate::datatypes::{DataType, IntervalUnit};
 
@@ -52,7 +51,6 @@ pub unsafe trait NativeType:
     + PartialEq
     + Default
     + Sized
-    + Simd
     + 'static
 {
     type Bytes: AsRef<[u8]> + for<'a> TryFrom<&'a [u8]>;

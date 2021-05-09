@@ -42,6 +42,8 @@ itertools = { version = "^0.10", optional = true }
 
 base64 = { version = "0.13.0", optional = true }
 
+packed_simd = { version = "0.3.4", optional = true, package = "packed_simd_2" }
+
 multiversion = "0.6.1"
 
 [dependencies.parquet2]
@@ -67,12 +69,14 @@ io_json_integration = ["io_json", "hex"]
 # base64 + io_ipc because arrow schemas are stored as base64-encoded ipc format.
 io_parquet = ["parquet2", "io_ipc", "base64"]
 benchmarks = ["rand"]
+simd = ["packed_simd"]
 
 [package.metadata.cargo-all-features]
 skip_feature_sets = [
     ["benchmarks"],
     ["merge_sort"],
     ["io_json_integration"],
+    ["simd"],
 ]
 
 skip_optional_dependencies = true

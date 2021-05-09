@@ -70,19 +70,19 @@ def bench_add_f32_numpy(log2_size):
     }
 
 
-def bench_sum_f32_pyarrow(log2_size, null_density):
+def _bench_unary_f32_pyarrow(log2_size, null_density, name, op):
     size = 2 ** log2_size
 
     values, validity = get_f32(size, null_density)
     array = pa.array(values, pa.float32(), mask=validity)
 
     def f():
-        pa.compute.sum(array)
+        op(array)
 
     microseconds = measured_us(f)
-    print(f"sum f32 2^{log2_size}     time: {microseconds:.2f} us")
+    print(f"{name} f32 2^{log2_size}     time: {microseconds:.2f} us")
     return {
-        "operation": "sum",
+        "operation": name,
         "log2_size": log2_size,
         "type": "float32",
         "time (us)": microseconds,
@@ -91,24 +91,40 @@ def bench_sum_f32_pyarrow(log2_size, null_density):
     }
 
 
-def bench_sum_f32_numpy(log2_size):
+def bench_sum_f32_pyarrow(log2_size, null_density):
+    return _bench_unary_f32_pyarrow(log2_size, null_density, "sum", pa.compute.sum)
+
+
+def bench_min_f32_pyarrow(log2_size, null_density):
+    return _bench_unary_f32_pyarrow(log2_size, null_density, "min", pa.compute.min_max)
+
+
+def _bench_unary_f32_numpy(log2_size, name, op):
     size = 2 ** log2_size
 
     values, _ = get_f32(size, 0)
 
     def f():
-        np.sum(values)
+        op(values)
 
     microseconds = measured_us(f)
-    print(f"sum f32 2^{log2_size}     time: {microseconds:.2f} us")
+    print(f"{name} f32 2^{log2_size}     time: {microseconds:.2f} us")
     return {
-        "operation": "sum",
+        "operation": name,
         "log2_size": log2_size,
         "type": "float32",
         "time (us)": microseconds,
         "null_density": 0,
         "backend": "numpy",
     }
+
+
+def bench_sum_f32_numpy(log2_size):
+    return _bench_unary_f32_numpy(log2_size, "sum", np.sum)
+
+
+def bench_min_f32_numpy(log2_size):
+    return _bench_unary_f32_numpy(log2_size, "min", np.min)
 
 
 def bench_sort_f32_pyarrow(log2_size, null_density):
@@ -211,6 +227,9 @@ def measure():
         results.append(bench_sum_f32_numpy(size))
         results.append(bench_sum_f32_pyarrow(size, 0))
         results.append(bench_sum_f32_pyarrow(size, 0.1))
+        results.append(bench_min_f32_numpy(size))
+        results.append(bench_min_f32_pyarrow(size, 0))
+        results.append(bench_min_f32_pyarrow(size, 0.1))
         results.append(bench_sort_f32_numpy(size))
         results.append(bench_sort_f32_pyarrow(size, 0))
         results.append(bench_sort_f32_pyarrow(size, 0.1))
@@ -236,8 +255,8 @@ def report(operation, backend, null_density):
             print(result["time (us)"])
 
 
-# measure()
-op = "filter"
+measure()
+op = "min"
 report(op, "numpy", 0)
 report(op, "pyarrow", 0.1)
 report(op, "pyarrow", 0)
