@@ -54,7 +54,7 @@ venv/bin/python parquet_integration/write_parquet.py
 * conditional compilation based on cargo `features` to reduce dependencies and size
 * faster IPC reader (different design that avoids an extra copy of all data)
 
-## Features in the original not availabe in this crate
+## Features in the original not available in this crate
 
 * Parquet read of nested types, arrow schema from the metadata, etc.
 * Parquet write V2, nested types, arrow schema to the metadata, etc.

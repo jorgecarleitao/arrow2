@@ -1,66 +1,68 @@
-use std::{iter::Sum, ops::AddAssign};
+use std::ops::Add;
 
-use crate::types::{BitChunkIter, NativeType};
+use multiversion::multiversion;
+
+use crate::types::simd::*;
+use crate::types::NativeType;
 use crate::{
     array::{Array, PrimitiveArray},
     bitmap::Bitmap,
 };
-use multiversion::multiversion;
+
+/// Object that can reduce itself to a number. This is used in the context of SIMD to reduce
+/// a MD (e.g. `[f32; 16]`) into a single number (`f32`).
+pub trait Sum<T> {
+    fn simd_sum(self) -> T;
+}
 
 #[multiversion]
 #[clone(target = "x86_64+avx")]
-fn nonnull_sum<T: NativeType + AddAssign + Sum>(values: &[T]) -> T {
-    let chunks = values.chunks_exact(T::LANES);
-    let remainder = chunks.remainder();
+fn nonnull_sum<T>(values: &[T]) -> T
+where
+    T: NativeType + Simd,
+    T::Simd: Add<Output = T::Simd> + Sum<T>,
+{
+    let mut chunks = values.chunks_exact(T::Simd::LANES);
 
-    let sum = chunks.fold(T::new_simd(), |mut acc, chunk| {
-        let chunk = T::from_slice(chunk);
-        for i in 0..T::LANES {
-            acc[i] += chunk[i];
-        }
-        acc
+    let sum = chunks.by_ref().fold(T::Simd::default(), |acc, chunk| {
+        acc + T::Simd::from_chunk(chunk)
     });
 
-    let mut reduced: T = remainder.iter().copied().sum();
+    let remainder = T::Simd::from_incomplete_chunk(chunks.remainder(), T::default());
+    let reduced = sum + remainder;
 
-    for i in 0..T::LANES {
-        reduced += sum[i];
-    }
-    reduced
+    reduced.simd_sum()
 }
 
 /// # Panics
 /// iff `values.len() != bitmap.len()` or the operation overflows.
 #[multiversion]
 #[clone(target = "x86_64+avx")]
-fn null_sum<T: NativeType + AddAssign + Sum>(values: &[T], bitmap: &Bitmap) -> T {
-    let mut chunks = values.chunks_exact(T::LANES);
+fn null_sum<T>(values: &[T], bitmap: &Bitmap) -> T
+where
+    T: NativeType + Simd,
+    T::Simd: Add<Output = T::Simd> + Sum<T>,
+{
+    let mut chunks = values.chunks_exact(T::Simd::LANES);
 
-    let mut validity_masks = bitmap.chunks::<T::SimdMask>();
+    let mut validity_masks = bitmap.chunks::<<T::Simd as NativeSimd>::Chunk>();
 
     let sum = chunks.by_ref().zip(validity_masks.by_ref()).fold(
-        T::new_simd(),
-        |mut acc, (chunk, validity_chunk)| {
-            let chunk = T::from_slice(chunk);
-            let iter = BitChunkIter::new(validity_chunk, T::LANES);
-            for (i, b) in (0..T::LANES).zip(iter) {
-                acc[i] += if b { chunk[i] } else { T::default() };
-            }
-            acc
+        T::Simd::default(),
+        |acc, (chunk, validity_chunk)| {
+            let chunk = T::Simd::from_chunk(chunk);
+            let mask = <T::Simd as NativeSimd>::Mask::from_chunk(validity_chunk);
+            let selected = chunk.select(mask, T::Simd::default());
+            acc + selected
         },
     );
 
-    let mut reduced: T = chunks
-        .remainder()
-        .iter()
-        .zip(BitChunkIter::new(validity_masks.remainder(), T::LANES))
-        .map(|(x, is_valid)| if is_valid { *x } else { T::default() })
-        .sum();
+    let remainder = T::Simd::from_incomplete_chunk(chunks.remainder(), T::default());
+    let mask = <T::Simd as NativeSimd>::Mask::from_chunk(validity_masks.remainder());
+    let remainder = remainder.select(mask, T::Simd::default());
+    let reduced = sum + remainder;
 
-    for i in 0..T::LANES {
-        reduced += sum[i];
-    }
-    reduced
+    reduced.simd_sum()
 }
 
 /// Returns the sum of values in the array.
@@ -68,7 +70,8 @@ fn null_sum<T: NativeType + AddAssign + Sum>(values: &[T], bitmap: &Bitmap) -> T
 /// Returns `None` if the array is empty or only contains null values.
 pub fn sum<T>(array: &PrimitiveArray<T>) -> Option<T>
 where
-    T: NativeType + Sum + AddAssign,
+    T: NativeType + Simd,
+    T::Simd: Add<Output = T::Simd> + Sum<T>,
 {
     let null_count = array.null_count();
 

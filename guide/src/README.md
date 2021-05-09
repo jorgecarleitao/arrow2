@@ -10,4 +10,9 @@ operate with contiguous memory regions, and a [high-level API](./high_level.md) 
 arrow arrays, logical types, schemas, etc.
 
 This repo started as an experiment forked from the Apache arrow project to offer a transmute-free
-Rust implementation of that crate. It currently offers most functionality with the notable exception of reading and writing to and from parquet.
+Rust implementation of that crate.
+
+## Cargo features
+
+This crate has a significant number of cargo features to reduce compilation times and dependencies blowup.
+There is also a feature `simd`, that requires the nightly channel, that produces more explicit SIMD instructions via [`packed_simd`](https://github.com/rust-lang/packed_simd).

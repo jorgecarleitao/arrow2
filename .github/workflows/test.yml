@@ -274,3 +274,38 @@ jobs:
           export CARGO_TARGET_DIR="/github/home/target"
           # no need 
           cargo build --no-default-features --features=merge_sort,io_ipc,io_csv,io_json --target wasm32-unknown-unknown
+
+  linux-simd-test:
+    name: SIMD
+    needs: [linux-build-lib]
+    runs-on: ubuntu-latest
+    container:
+      image: amd64/rust
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - name: Cache Cargo
+        uses: actions/cache@v2
+        with:
+          path: /github/home/.cargo
+          # these represent dependencies downloaded by cargo
+          # and thus do not depend on the OS, arch nor rust version.
+          key: cargo-simd-cache-
+      - name: Cache dependencies
+        uses: actions/cache@v2
+        with:
+          path: /github/home/target
+          # these represent compiled steps of both dependencies and arrow
+          # and thus are specific for a particular OS, arch and rust version.
+          key: ${{ runner.os }}-amd64-target-simd-cache-
+      - name: Setup toolchain
+        run: |
+          rustup toolchain install nightly
+          rustup default nightly
+      - name: Run
+        run: |
+          export CARGO_HOME="/github/home/.cargo"
+          export CARGO_TARGET_DIR="/github/home/target"
+          # no need to run over all features: simd only affects the core
+          cargo test --no-default-features --features simd --lib
