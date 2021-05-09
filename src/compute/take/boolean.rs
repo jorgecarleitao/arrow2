@@ -123,3 +123,45 @@ pub fn take<I: Offset>(values: &BooleanArray, indices: &PrimitiveArray<I>) -> Re
 
     Ok(BooleanArray::from_data(values, validity))
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::array::Int32Array;
+
+    use super::*;
+
+    fn _all_cases() -> Vec<(Int32Array, BooleanArray, BooleanArray)> {
+        vec![
+            (
+                Int32Array::from(&[Some(1), Some(0)]),
+                BooleanArray::from(vec![Some(true), Some(false)]),
+                BooleanArray::from(vec![Some(false), Some(true)]),
+            ),
+            (
+                Int32Array::from(&[Some(1), None]),
+                BooleanArray::from(vec![Some(true), Some(false)]),
+                BooleanArray::from(vec![Some(false), None]),
+            ),
+            (
+                Int32Array::from(&[Some(1), Some(0)]),
+                BooleanArray::from(vec![None, Some(false)]),
+                BooleanArray::from(vec![Some(false), None]),
+            ),
+            (
+                Int32Array::from(&[Some(1), None, Some(0)]),
+                BooleanArray::from(vec![None, Some(false)]),
+                BooleanArray::from(vec![Some(false), None, None]),
+            ),
+        ]
+    }
+
+    #[test]
+    fn all_cases() -> Result<()> {
+        let cases = _all_cases();
+        for (indices, input, expected) in cases {
+            let output = take(&input, &indices)?;
+            assert_eq!(expected, output);
+        }
+        Ok(())
+    }
+}
