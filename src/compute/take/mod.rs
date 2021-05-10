@@ -19,8 +19,8 @@
 
 use crate::{
     array::{
-        Array, BinaryArray, BooleanArray, DictionaryArray, NullArray, Offset, PrimitiveArray,
-        StructArray, Utf8Array,
+        Array, BinaryArray, BooleanArray, DictionaryArray, ListArray, NullArray, Offset,
+        PrimitiveArray, StructArray, Utf8Array,
     },
     datatypes::{DataType, IntervalUnit},
     error::{ArrowError, Result},
@@ -30,6 +30,7 @@ mod binary;
 mod boolean;
 mod dict;
 mod generic_binary;
+mod list;
 mod primitive;
 mod structure;
 mod utf8;
@@ -110,6 +111,14 @@ pub fn take<O: Offset>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Resul
         DataType::Struct(_) => {
             let array = values.as_any().downcast_ref::<StructArray>().unwrap();
             Ok(Box::new(structure::take::<_>(array, indices)?))
+        }
+        DataType::List(_) => {
+            let array = values.as_any().downcast_ref::<ListArray<i32>>().unwrap();
+            Ok(Box::new(list::take::<i32, O>(array, indices)?))
+        }
+        DataType::LargeList(_) => {
+            let array = values.as_any().downcast_ref::<ListArray<i64>>().unwrap();
+            Ok(Box::new(list::take::<i64, O>(array, indices)?))
         }
         t => unimplemented!("Take not supported for data type {:?}", t),
     }

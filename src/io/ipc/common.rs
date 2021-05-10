@@ -24,7 +24,7 @@ pub(crate) mod tests {
         record_batch::RecordBatch,
     };
 
-    use crate::io::ipc::read::{FileReader, StreamReader};
+    use crate::io::ipc::read::StreamReader;
 
     use std::{collections::HashMap, convert::TryFrom, fs::File, io::Read};
 
