@@ -95,33 +95,31 @@ fn compare_string<'a, O: Offset>(left: &'a dyn Array, right: &'a dyn Array) -> D
     Box::new(move |i, j| left.value(i).cmp(&right.value(j)))
 }
 
-fn compare_dict_string<'a, T>(left: &'a dyn Array, right: &'a dyn Array) -> DynComparator<'a>
+fn compare_dict<'a, K>(
+    left: &'a DictionaryArray<K>,
+    right: &'a DictionaryArray<K>,
+) -> Result<DynComparator<'a>>
 where
-    T: DictionaryKey,
+    K: DictionaryKey,
 {
-    let left = left.as_any().downcast_ref::<DictionaryArray<T>>().unwrap();
-    let right = right.as_any().downcast_ref::<DictionaryArray<T>>().unwrap();
     let left_keys = left.keys().values();
     let right_keys = right.keys().values();
 
-    let left_values = left
-        .values()
-        .as_any()
-        .downcast_ref::<Utf8Array<i32>>()
-        .unwrap();
-    let right_values = right
-        .values()
-        .as_any()
-        .downcast_ref::<Utf8Array<i32>>()
-        .unwrap();
+    let comparator = build_compare(left.values().as_ref(), right.values().as_ref())?;
 
-    Box::new(move |i: usize, j: usize| {
+    Ok(Box::new(move |i: usize, j: usize| {
         let key_left = left_keys[i].to_usize().unwrap();
         let key_right = right_keys[j].to_usize().unwrap();
-        let left = left_values.value(key_left);
-        let right = right_values.value(key_right);
-        left.cmp(&right)
-    })
+        (comparator)(key_left, key_right)
+    }))
+}
+
+macro_rules! dyn_dict {
+    ($key:ty, $lhs:expr, $rhs:expr) => {{
+        let lhs = $lhs.as_any().downcast_ref().unwrap();
+        let rhs = $rhs.as_any().downcast_ref().unwrap();
+        compare_dict::<$key>(lhs, rhs)?
+    }};
 }
 
 /// returns a comparison function that compares two values at two different positions
@@ -184,29 +182,16 @@ pub fn build_compare<'a>(left: &'a dyn Array, right: &'a dyn Array) -> Result<Dy
         (Interval(DayTime), Interval(DayTime)) => compare_primitives::<days_ms>(left, right),
         (Utf8, Utf8) => compare_string::<i32>(left, right),
         (LargeUtf8, LargeUtf8) => compare_string::<i64>(left, right),
-        (Dictionary(key_type_lhs, value_type_lhs), Dictionary(key_type_rhs, value_type_rhs)) => {
-            if value_type_lhs.as_ref() != &DataType::Utf8
-                || value_type_rhs.as_ref() != &DataType::Utf8
-            {
-                return Err(ArrowError::InvalidArgumentError(
-                    "Arrow still does not support comparisons of non-string dictionary arrays"
-                        .to_string(),
-                ));
-            }
+        (Dictionary(key_type_lhs, _), Dictionary(key_type_rhs, _)) => {
             match (key_type_lhs.as_ref(), key_type_rhs.as_ref()) {
-                (a, b) if a != b => {
-                    return Err(ArrowError::InvalidArgumentError(
-                        "Can't compare arrays of different types".to_string(),
-                    ));
-                }
-                (UInt8, UInt8) => compare_dict_string::<u8>(left, right),
-                (UInt16, UInt16) => compare_dict_string::<u16>(left, right),
-                (UInt32, UInt32) => compare_dict_string::<u32>(left, right),
-                (UInt64, UInt64) => compare_dict_string::<u64>(left, right),
-                (Int8, Int8) => compare_dict_string::<i8>(left, right),
-                (Int16, Int16) => compare_dict_string::<i16>(left, right),
-                (Int32, Int32) => compare_dict_string::<i32>(left, right),
-                (Int64, Int64) => compare_dict_string::<i64>(left, right),
+                (UInt8, UInt8) => dyn_dict!(u8, left, right),
+                (UInt16, UInt16) => dyn_dict!(u16, left, right),
+                (UInt32, UInt32) => dyn_dict!(u32, left, right),
+                (UInt64, UInt64) => dyn_dict!(u64, left, right),
+                (Int8, Int8) => dyn_dict!(i8, left, right),
+                (Int16, Int16) => dyn_dict!(i16, left, right),
+                (Int32, Int32) => dyn_dict!(i32, left, right),
+                (Int64, Int64) => dyn_dict!(i64, left, right),
                 (lhs, _) => {
                     return Err(ArrowError::InvalidArgumentError(format!(
                         "Dictionaries do not support keys of type {:?}",
@@ -292,6 +277,25 @@ pub mod tests {
         let array = array.to(DataType::Dictionary(
             Box::new(DataType::Int32),
             Box::new(DataType::Utf8),
+        ));
+
+        let cmp = build_compare(&array, &array)?;
+
+        assert_eq!(Ordering::Less, (cmp)(0, 1));
+        assert_eq!(Ordering::Equal, (cmp)(3, 4));
+        assert_eq!(Ordering::Greater, (cmp)(2, 3));
+        Ok(())
+    }
+
+    #[test]
+    fn test_dict_1() -> Result<()> {
+        let data = vec![1, 2, 3, 1, 1, 3, 3];
+
+        let data = data.into_iter().map(|x| Result::Ok(Some(x)));
+        let array = DictionaryPrimitive::<i32, Primitive<i32>, i32>::try_from_iter(data)?;
+        let array = array.to(DataType::Dictionary(
+            Box::new(DataType::Int32),
+            Box::new(DataType::Int32),
         ));
 
         let cmp = build_compare(&array, &array)?;
