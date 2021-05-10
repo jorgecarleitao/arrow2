@@ -69,5 +69,6 @@ pub fn array_to_page_v1<T: NativeType + ArrowNativeType>(
         compression,
         uncompressed_page_size,
         dictionary_page: None,
+        statistics: None,
     }))
 }

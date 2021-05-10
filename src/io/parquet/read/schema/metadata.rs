@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use parquet2::metadata::KeyValue;
+pub use parquet2::metadata::KeyValue;
 
 use crate::datatypes::Schema;
 use crate::error::{ArrowError, Result};

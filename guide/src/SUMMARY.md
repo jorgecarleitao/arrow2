@@ -8,3 +8,4 @@
 - [IO](./io/README.md)
     - [Read CSV](./io/csv_reader.md)
     - [Write CSV](./io/csv_write.md)
+    - [Read Parquet](./io/parquet_read.md)
