@@ -111,18 +111,18 @@ pub fn take_indices_validity<O: Offset, I: Offset>(
     indices: &PrimitiveArray<I>,
 ) -> Result<(Buffer<O>, Buffer<u8>, Option<Bitmap>)> {
     let mut length = O::default();
-    let null_indices = indices.validity().as_ref().unwrap();
 
     let mut starts = MutableBuffer::<O>::with_capacity(indices.len());
     let offsets = indices.values().iter().map(|index| {
         let index = maybe_usize::<I>(*index)?;
-        if null_indices.get_bit(index) {
-            let start = offsets[index];
-            length += offsets[index + 1] - start;
-            starts.push(start);
-        } else {
-            starts.push(O::default());
-        }
+        match offsets.get(index + 1) {
+            Some(&next) => {
+                let start = offsets[index];
+                length += next - start;
+                starts.push(start);
+            }
+            None => starts.push(O::default()),
+        };
         Result::Ok(length)
     });
     let offsets = std::iter::once(Ok(O::default())).chain(offsets);

@@ -40,3 +40,50 @@ pub fn take<O: Offset, I: Offset>(
     };
     Ok(unsafe { Utf8Array::<O>::from_data_unchecked(offsets, values, validity) })
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::array::Int32Array;
+
+    use super::*;
+
+    fn _all_cases<O: Offset>() -> Vec<(Int32Array, Utf8Array<O>, Utf8Array<O>)> {
+        vec![
+            (
+                Int32Array::from(&[Some(1), Some(0)]),
+                Utf8Array::<O>::from(vec![Some("one"), Some("two")]),
+                Utf8Array::<O>::from(vec![Some("two"), Some("one")]),
+            ),
+            (
+                Int32Array::from(&[Some(1), None]),
+                Utf8Array::<O>::from(vec![Some("one"), Some("two")]),
+                Utf8Array::<O>::from(vec![Some("two"), None]),
+            ),
+            (
+                Int32Array::from(&[Some(1), Some(0)]),
+                Utf8Array::<O>::from(vec![None, Some("two")]),
+                Utf8Array::<O>::from(vec![Some("two"), None]),
+            ),
+            (
+                Int32Array::from(&[Some(1), None, Some(0)]),
+                Utf8Array::<O>::from(vec![None, Some("two")]),
+                Utf8Array::<O>::from(vec![Some("two"), None, None]),
+            ),
+        ]
+    }
+
+    #[test]
+    fn all_cases() -> Result<()> {
+        let cases = _all_cases::<i32>();
+        for (indices, input, expected) in cases {
+            let output = take(&input, &indices)?;
+            assert_eq!(expected, output);
+        }
+        let cases = _all_cases::<i64>();
+        for (indices, input, expected) in cases {
+            let output = take(&input, &indices)?;
+            assert_eq!(expected, output);
+        }
+        Ok(())
+    }
+}
