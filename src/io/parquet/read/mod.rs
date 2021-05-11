@@ -10,7 +10,10 @@ use crate::{
     error::{ArrowError, Result},
 };
 
-use parquet2::{
+pub use schema::get_schema;
+
+pub use parquet2::read::{get_page_iterator, read_metadata};
+pub use parquet2::{
     error::ParquetError,
     metadata::ColumnDescriptor,
     read::CompressedPage,
@@ -126,8 +129,6 @@ pub fn page_iter_to_array<I: Iterator<Item = std::result::Result<CompressedPage,
 #[cfg(test)]
 mod tests {
     use std::fs::File;
-
-    use parquet2::read::{get_page_iterator, read_metadata};
 
     use crate::array::*;
 

@@ -48,7 +48,7 @@ multiversion = "0.6.1"
 
 [dependencies.parquet2]
 git = "https://github.com/jorgecarleitao/parquet2"
-rev = "fb65dcaf7d02c7e0bcf8ec0aa85d3fe0cb0630c6"
+rev = "ae99e476bd575c5b3d058ece22d1a666778181c7"
 default-features = false
 features = ["snappy", "gzip", "lz4", "zstd", "brotli"]
 optional = true
@@ -58,6 +58,7 @@ rand = "0.7"
 criterion = "0.3"
 flate2 = "1"
 doc-comment = "0.3"
+crossbeam-channel = "0.5.1"
 
 [features]
 default = ["io_csv", "io_json", "io_ipc", "io_json_integration", "io_parquet", "regex", "merge_sort", "benchmarks"]

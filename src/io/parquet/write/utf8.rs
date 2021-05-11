@@ -69,5 +69,6 @@ pub fn array_to_page_v1<O: Offset>(
         compression,
         uncompressed_page_size,
         dictionary_page: None,
+        statistics: None,
     }))
 }
