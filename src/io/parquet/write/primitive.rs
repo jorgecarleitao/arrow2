@@ -3,7 +3,6 @@ use parquet2::{
     encoding::{hybrid_rle::encode, Encoding},
     read::{CompressedPage, PageV1},
     schema::{CompressionCodec, DataPageHeader},
-    types,
     types::NativeType,
 };
 
@@ -13,10 +12,15 @@ use crate::{
     types::NativeType as ArrowNativeType,
 };
 
-pub fn array_to_page_v1<T: NativeType + ArrowNativeType>(
+pub fn array_to_page_v1<T, R>(
     array: &PrimitiveArray<T>,
     compression: CompressionCodec,
-) -> Result<CompressedPage> {
+) -> Result<CompressedPage>
+where
+    T: ArrowNativeType,
+    R: NativeType,
+    T: num::cast::AsPrimitive<R>,
+{
     let validity = array.validity();
 
     // parquet: first 4 bytes represent the length in bytes
@@ -39,7 +43,8 @@ pub fn array_to_page_v1<T: NativeType + ArrowNativeType>(
     // append the non-null values
     array.iter().for_each(|x| {
         if let Some(x) = x {
-            buffer.extend_from_slice(types::NativeType::to_le_bytes(x).as_ref())
+            let parquet_native: R = x.as_();
+            buffer.extend_from_slice(parquet_native.to_le_bytes().as_ref())
         }
     });
     let uncompressed_page_size = buffer.len();
