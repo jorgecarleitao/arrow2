@@ -301,8 +301,8 @@ jobs:
           key: ${{ runner.os }}-amd64-target-simd-cache-
       - name: Setup toolchain
         run: |
-          rustup toolchain install nightly
-          rustup default nightly
+          rustup toolchain install nightly-2021-03-24
+          rustup default nightly-2021-03-24
       - name: Run
         run: |
           export CARGO_HOME="/github/home/.cargo"
