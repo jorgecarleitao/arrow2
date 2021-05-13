@@ -1,4 +1,6 @@
-use parquet2::encoding::get_length;
+use parquet2::{encoding::get_length, schema::Encoding};
+
+use crate::error::ArrowError;
 
 pub struct BinaryIter<'a> {
     values: &'a [u8],
@@ -40,4 +42,19 @@ pub fn split_buffer_v2(buffer: &[u8], def_level_buffer_length: usize) -> (&[u8],
         &buffer[..def_level_buffer_length],
         &buffer[def_level_buffer_length..],
     )
+}
+
+pub fn not_implemented(
+    encoding: &Encoding,
+    is_optional: bool,
+    has_dict: bool,
+    version: &str,
+    physical_type: &str,
+) -> ArrowError {
+    let required = if is_optional { "optional" } else { "required" };
+    let dict = if has_dict { ", dictionary-encoded" } else { "" };
+    ArrowError::NotYetImplemented(format!(
+        "Decoding \"{:?}\"-encoded{} {} {} pages is not yet implemented for {}",
+        encoding, dict, required, version, physical_type
+    ))
 }

@@ -17,15 +17,15 @@ use crate::{
     types::NativeType as ArrowNativeType,
 };
 
-/// Assumptions: No rep levels
-fn read_dict_buffer<T: NativeType + ArrowNativeType>(
-    validity_buffer: &[u8],
-    indices_buffer: &[u8],
+fn read_dict_buffer_optional<T: NativeType + ArrowNativeType>(
+    buffer: &[u8],
     length: u32,
     dict: &PrimitivePageDict<T>,
     values: &mut MutableBuffer<T>,
     validity: &mut MutableBitmap,
 ) {
+    let (validity_buffer, indices_buffer) = utils::split_buffer_v1(buffer);
+
     let length = length as usize;
     let dict_values = dict.values();
 
@@ -169,72 +169,76 @@ fn extend_from_page<T: NativeType + ArrowNativeType>(
 ) -> Result<()> {
     let page = decompress_page(page)?;
     assert_eq!(descriptor.max_rep_level(), 0);
-    let has_validity = descriptor.max_def_level() == 1;
+    let is_optional = descriptor.max_def_level() == 1;
     match page {
         Page::V1(page) => {
             assert_eq!(page.header.definition_level_encoding, Encoding::Rle);
-            let (validity_buffer, values_buffer) = utils::split_buffer_v1(&page.buffer);
 
-            match (&page.header.encoding, &page.dictionary_page, has_validity) {
-                (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer::<T>(
-                    validity_buffer,
-                    values_buffer,
+            match (&page.header.encoding, &page.dictionary_page, is_optional) {
+                (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer_optional::<T>(
+                    &page.buffer,
                     page.header.num_values as u32,
                     dict.as_any().downcast_ref().unwrap(),
                     values,
                     validity,
                 ),
-                (Encoding::Plain, None, true) => read_nullable::<T>(
-                    validity_buffer,
-                    values_buffer,
-                    page.header.num_values as u32,
-                    values,
-                    validity,
-                ),
+                (Encoding::Plain, None, true) => {
+                    let (validity_buffer, values_buffer) = utils::split_buffer_v1(&page.buffer);
+                    read_nullable::<T>(
+                        validity_buffer,
+                        values_buffer,
+                        page.header.num_values as u32,
+                        values,
+                        validity,
+                    )
+                }
                 (Encoding::Plain, None, false) => {
-                    read_required::<T>(values_buffer, page.header.num_values as u32, values)
+                    read_required::<T>(&page.buffer, page.header.num_values as u32, values)
                 }
-                (encoding, None, _) => {
-                    return Err(ArrowError::NotYetImplemented(format!(
-                        "Encoding {:?} not yet implemented",
-                        encoding
-                    )))
+                _ => {
+                    return Err(utils::not_implemented(
+                        &page.header.encoding,
+                        is_optional,
+                        page.dictionary_page.is_some(),
+                        "V1",
+                        "primitive",
+                    ))
                 }
-                _ => todo!(),
             }
         }
-        Page::V2(page) => {
-            let def_level_buffer_length = page.header.definition_levels_byte_length as usize;
-            let (validity_buffer, values_buffer) =
-                utils::split_buffer_v2(&page.buffer, def_level_buffer_length);
-            match (&page.header.encoding, &page.dictionary_page, has_validity) {
-                (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer::<T>(
+        Page::V2(page) => match (&page.header.encoding, &page.dictionary_page, is_optional) {
+            (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer_optional::<T>(
+                &page.buffer,
+                page.header.num_values as u32,
+                dict.as_any().downcast_ref().unwrap(),
+                values,
+                validity,
+            ),
+            (Encoding::Plain, None, true) => {
+                let def_level_buffer_length = page.header.definition_levels_byte_length as usize;
+                let (validity_buffer, values_buffer) =
+                    utils::split_buffer_v2(&page.buffer, def_level_buffer_length);
+                read_nullable::<T>(
                     validity_buffer,
                     values_buffer,
                     page.header.num_values as u32,
-                    dict.as_any().downcast_ref().unwrap(),
                     values,
                     validity,
-                ),
-                (Encoding::Plain, None, true) => read_nullable::<T>(
-                    validity_buffer,
-                    values_buffer,
-                    page.header.num_values as u32,
-                    values,
-                    validity,
-                ),
-                (Encoding::Plain, None, false) => {
-                    read_required::<T>(values_buffer, page.header.num_values as u32, values)
-                }
-                (encoding, None, _) => {
-                    return Err(ArrowError::NotYetImplemented(format!(
-                        "Encoding {:?} not yet implemented",
-                        encoding
-                    )))
-                }
-                _ => todo!(),
+                )
             }
-        }
+            (Encoding::Plain, None, false) => {
+                read_required::<T>(&page.buffer, page.header.num_values as u32, values)
+            }
+            _ => {
+                return Err(utils::not_implemented(
+                    &page.header.encoding,
+                    is_optional,
+                    page.dictionary_page.is_some(),
+                    "V2",
+                    "primitive",
+                ))
+            }
+        },
     };
     Ok(())
 }

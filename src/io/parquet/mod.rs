@@ -101,6 +101,12 @@ mod tests {
 
         match column {
             0 => Box::new(Primitive::<i64>::from(i64_values).to(DataType::Int64)),
+            3 => Box::new(BooleanArray::from_slice(&[
+                true, true, false, false, false, true, true, true, true, true,
+            ])),
+            2 => Box::new(Utf8Array::<i32>::from_slice(&[
+                "Hello", "bbb", "aa", "", "bbb", "abc", "bbb", "bbb", "def", "aaa",
+            ])),
             _ => unreachable!(),
         }
     }
