@@ -27,13 +27,21 @@ where
 
     let mut buffer = utils::write_def_levels(is_optional, validity, array.len())?;
 
-    // append the non-null values
-    array.iter().for_each(|x| {
-        if let Some(x) = x {
+    if is_optional {
+        // append the non-null values
+        array.iter().for_each(|x| {
+            if let Some(x) = x {
+                let parquet_native: R = x.as_();
+                buffer.extend_from_slice(parquet_native.to_le_bytes().as_ref())
+            }
+        });
+    } else {
+        // append all values
+        array.values().iter().for_each(|x| {
             let parquet_native: R = x.as_();
             buffer.extend_from_slice(parquet_native.to_le_bytes().as_ref())
-        }
-    });
+        });
+    }
     let uncompressed_page_size = buffer.len();
 
     let codec = create_codec(&compression)?;
