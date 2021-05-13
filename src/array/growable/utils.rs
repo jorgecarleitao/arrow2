@@ -26,14 +26,14 @@ pub(super) fn build_extend_null_bits(array: &dyn Array, use_validity: bool) -> E
             assert!(start + len <= bitmap.len());
             unsafe {
                 let iter = (start..start + len).map(|i| bitmap.get_bit_unchecked(i));
-                validity.extend_from_trusted_len_iter(iter);
+                validity.extend_from_trusted_len_iter_unchecked(iter);
             };
         })
     } else if use_validity {
         Box::new(|validity, _, len| {
             let iter = (0..len).map(|_| true);
             unsafe {
-                validity.extend_from_trusted_len_iter(iter);
+                validity.extend_from_trusted_len_iter_unchecked(iter);
             };
         })
     } else {
@@ -53,7 +53,7 @@ pub(super) fn extend_validity(
         assert!(start + len <= bitmap.len());
         unsafe {
             let iter = (start..start + len).map(|i| bitmap.get_bit_unchecked(i));
-            mutable_validity.extend_from_trusted_len_iter(iter);
+            mutable_validity.extend_from_trusted_len_iter_unchecked(iter);
         };
     } else if use_validity {
         mutable_validity.extend_constant(len, true);

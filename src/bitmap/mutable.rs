@@ -112,10 +112,8 @@ impl MutableBitmap {
     #[inline]
     pub fn extend_constant(&mut self, additional: usize, value: bool) {
         if value {
-            let iter = (0..additional).map(|_| true);
-            unsafe {
-                self.extend_from_trusted_len_iter(iter);
-            };
+            let iter = std::iter::repeat(true).take(additional);
+            self.extend_from_trusted_len_iter(iter);
         } else {
             self.buffer
                 .resize((self.length + additional).saturating_add(7) / 8, 0);
@@ -127,10 +125,7 @@ impl MutableBitmap {
 impl From<(MutableBuffer<u8>, usize)> for MutableBitmap {
     #[inline]
     fn from((buffer, length): (MutableBuffer<u8>, usize)) -> Self {
-        Self {
-            buffer,
-            length,
-        }
+        Self { buffer, length }
     }
 }
 
@@ -240,18 +235,20 @@ fn extend<I: Iterator<Item = bool>>(buffer: &mut [u8], length: usize, mut iterat
 }
 
 impl MutableBitmap {
-    /// Extends `self` from a `TrustedLen` iterator.
-    /// # Safety
-    /// The caller must guarantee that the iterator is `TrustedLen`.
-    /// # Implementation
-    /// This function splits the the iterator in 3 iterations:
-    /// * a prefix, that is used finish a
-    pub unsafe fn extend_from_trusted_len_iter<I: IntoIterator<Item = bool>>(
-        &mut self,
-        iterator: I,
-    ) {
-        let mut iterator = iterator.into_iter();
+    /// Extends `self` from a [`TrustedLen`] iterator.
+    #[inline]
+    pub fn extend_from_trusted_len_iter<I: TrustedLen<Item = bool>>(&mut self, iterator: I) {
+        // safety: I: TrustedLen
+        unsafe { self.extend_from_trusted_len_iter_unchecked(iterator) }
+    }
 
+    /// Extends `self` from an iterator of trusted len.
+    /// # Safety
+    /// The caller must guarantee that the iterator has a trusted len.
+    pub unsafe fn extend_from_trusted_len_iter_unchecked<I: Iterator<Item = bool>>(
+        &mut self,
+        mut iterator: I,
+    ) {
         // the length of the iterator throughout this function.
         let mut length = iterator.size_hint().1.unwrap();
 
@@ -484,7 +481,7 @@ mod tests {
         let mut b = MutableBitmap::new();
 
         let iter = (0..512).map(|i| i % 6 == 0);
-        unsafe { b.extend_from_trusted_len_iter(iter) };
+        unsafe { b.extend_from_trusted_len_iter_unchecked(iter) };
         let b: Bitmap = b.into();
         for (i, v) in b.iter().enumerate() {
             assert_eq!(i % 6 == 0, v);
@@ -497,7 +494,7 @@ mod tests {
         b.push(true);
 
         let iter = (0..512).map(|i| i % 6 == 0);
-        unsafe { b.extend_from_trusted_len_iter(iter) };
+        unsafe { b.extend_from_trusted_len_iter_unchecked(iter) };
         let b: Bitmap = b.into();
         let mut iter = b.iter().enumerate();
         assert_eq!(iter.next().unwrap().1, true);
