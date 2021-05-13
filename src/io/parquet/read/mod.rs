@@ -180,6 +180,11 @@ mod tests {
     }
 
     #[test]
+    fn v1_int64_required() -> Result<()> {
+        test_pyarrow_integration(0, 1, true)
+    }
+
+    #[test]
     fn v1_float64_nullable() -> Result<()> {
         test_pyarrow_integration(1, 1, false)
     }
@@ -190,8 +195,18 @@ mod tests {
     }
 
     #[test]
+    fn v1_utf8_required() -> Result<()> {
+        test_pyarrow_integration(2, 1, true)
+    }
+
+    #[test]
     fn v1_boolean_nullable() -> Result<()> {
         test_pyarrow_integration(3, 1, false)
+    }
+
+    #[test]
+    fn v1_boolean_required() -> Result<()> {
+        test_pyarrow_integration(3, 1, true)
     }
 
     #[test]
@@ -216,7 +231,17 @@ mod tests {
     }
 
     #[test]
+    fn v2_utf8_required() -> Result<()> {
+        test_pyarrow_integration(2, 2, true)
+    }
+
+    #[test]
     fn v2_boolean_nullable() -> Result<()> {
         test_pyarrow_integration(3, 2, false)
+    }
+
+    #[test]
+    fn v2_boolean_required() -> Result<()> {
+        test_pyarrow_integration(3, 2, true)
     }
 }
