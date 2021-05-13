@@ -1,41 +1,24 @@
 use parquet2::{
     compression::create_codec,
-    encoding::{
-        hybrid_rle::{bitpacked_encode, encode},
-        Encoding,
-    },
+    encoding::{hybrid_rle::bitpacked_encode, Encoding},
     read::{CompressedPage, PageV1},
     schema::{CompressionCodec, DataPageHeader},
 };
 
+use super::utils;
 use crate::array::*;
 use crate::error::Result;
 
 pub fn array_to_page_v1(
     array: &BooleanArray,
     compression: CompressionCodec,
+    is_optional: bool,
 ) -> Result<CompressedPage> {
     let validity = array.validity();
 
-    // parquet: first 4 bytes represent the length in bytes
-    let mut buffer = std::io::Cursor::new(vec![0; 4]);
-    buffer.set_position(4);
+    let buffer = utils::write_def_levels(is_optional, validity, array.len())?;
 
-    // encode def levels
-    if let Some(validity) = validity {
-        encode(&mut buffer, validity.iter())?;
-    }
-
-    let mut buffer = buffer.into_inner();
-    let length = buffer.len() - 4;
-    // todo: pay this small debt (loop?)
-    let length = length.to_le_bytes();
-    buffer[0] = length[0];
-    buffer[1] = length[1];
-    buffer[2] = length[2];
-    buffer[3] = length[3];
-
-    let iterator = array.iter().filter_map(|x| x).take(
+    let iterator = array.iter().flatten().take(
         validity
             .as_ref()
             .map(|x| x.len() - x.null_count())

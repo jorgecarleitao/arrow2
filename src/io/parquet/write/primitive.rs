@@ -1,11 +1,12 @@
 use parquet2::{
     compression::create_codec,
-    encoding::{hybrid_rle::encode, Encoding},
+    encoding::Encoding,
     read::{CompressedPage, PageV1},
     schema::{CompressionCodec, DataPageHeader},
     types::NativeType,
 };
 
+use super::utils;
 use crate::{
     array::{Array, PrimitiveArray},
     error::Result,
@@ -15,6 +16,7 @@ use crate::{
 pub fn array_to_page_v1<T, R>(
     array: &PrimitiveArray<T>,
     compression: CompressionCodec,
+    is_optional: bool,
 ) -> Result<CompressedPage>
 where
     T: ArrowNativeType,
@@ -23,22 +25,7 @@ where
 {
     let validity = array.validity();
 
-    // parquet: first 4 bytes represent the length in bytes
-    let mut buffer = std::io::Cursor::new(vec![0; 4]);
-    buffer.set_position(4);
-
-    // encode def levels
-    if let Some(validity) = validity {
-        encode(&mut buffer, validity.iter())?;
-    }
-    let mut buffer = buffer.into_inner();
-    let length = buffer.len() - 4;
-    // todo: pay this small debt (loop?)
-    let length = length.to_le_bytes();
-    buffer[0] = length[0];
-    buffer[1] = length[1];
-    buffer[2] = length[2];
-    buffer[3] = length[3];
+    let mut buffer = utils::write_def_levels(is_optional, validity, array.len())?;
 
     // append the non-null values
     array.iter().for_each(|x| {
