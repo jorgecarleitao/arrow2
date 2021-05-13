@@ -40,9 +40,9 @@ fn main() -> Result<()> {
     use std::env;
     let args: Vec<String> = env::args().collect();
 
-    let file_path = &args[0];
-    let column = args[1].parse::<usize>().unwrap();
-    let row_group = args[2].parse::<usize>().unwrap();
+    let file_path = &args[1];
+    let column = args[2].parse::<usize>().unwrap();
+    let row_group = args[3].parse::<usize>().unwrap();
 
     let array = read_column_chunk(&file_path, row_group, column)?;
     println!("{}", array);

@@ -82,7 +82,7 @@ fn parallel_read(path: &str) -> Result<Vec<Box<dyn Array>>> {
 fn main() -> Result<()> {
     use std::env;
     let args: Vec<String> = env::args().collect();
-    let file_path = &args[0];
+    let file_path = &args[1];
 
     let arrays = parallel_read(file_path)?;
     for array in arrays {
