@@ -21,6 +21,7 @@ use crate::{
     array::{Array, PrimitiveArray},
     buffer::Buffer,
     compute::{
+        arithmetics::{ArrayCheckedSub, ArraySaturatingSub, ArraySub},
         arity::{binary, binary_checked},
         utils::combine_validities,
     },
@@ -142,6 +143,32 @@ pub fn saturating_sub(
     }
 }
 
+// Implementation of ArraySub trait for PrimitiveArrays
+impl ArraySub<PrimitiveArray<i128>> for PrimitiveArray<i128> {
+    type Output = Self;
+
+    fn sub(&self, rhs: &PrimitiveArray<i128>) -> Result<Self::Output> {
+        sub(self, rhs)
+    }
+}
+
+// Implementation of ArrayCheckedSub trait for PrimitiveArrays
+impl ArrayCheckedSub<PrimitiveArray<i128>> for PrimitiveArray<i128> {
+    type Output = Self;
+
+    fn checked_sub(&self, rhs: &PrimitiveArray<i128>) -> Result<Self::Output> {
+        checked_sub(self, rhs)
+    }
+}
+
+// Implementation of ArraySaturatingSub trait for PrimitiveArrays
+impl ArraySaturatingSub<PrimitiveArray<i128>> for PrimitiveArray<i128> {
+    type Output = Self;
+
+    fn saturating_sub(&self, rhs: &PrimitiveArray<i128>) -> Result<Self::Output> {
+        saturating_sub(self, rhs)
+    }
+}
 /// Checked subtract of two decimal primitive arrays with the same precision
 /// and scale. If the precision and scale is different, then an
 /// InvalidArgumentError is returned. If the result from the sub is larger than
@@ -312,6 +339,10 @@ mod tests {
         .to(DataType::Decimal(5, 2));
 
         assert_eq!(result, expected);
+
+        // Testing trait
+        let result = a.sub(&b).unwrap();
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -361,6 +392,10 @@ mod tests {
         .to(DataType::Decimal(5, 2));
 
         assert_eq!(result, expected);
+
+        // Testing trait
+        let result = a.saturating_sub(&b).unwrap();
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -391,6 +426,10 @@ mod tests {
         .to(DataType::Decimal(5, 2));
 
         assert_eq!(result, expected);
+
+        // Testing trait
+        let result = a.saturating_sub(&b).unwrap();
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -420,6 +459,10 @@ mod tests {
         ])
         .to(DataType::Decimal(5, 2));
 
+        assert_eq!(result, expected);
+
+        // Testing trait
+        let result = a.checked_sub(&b).unwrap();
         assert_eq!(result, expected);
     }
 

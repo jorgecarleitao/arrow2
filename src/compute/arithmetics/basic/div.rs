@@ -5,7 +5,10 @@ use num::{CheckedDiv, Zero};
 
 use crate::{
     array::{Array, PrimitiveArray},
-    compute::arity::{binary, binary_checked, unary, unary_checked},
+    compute::{
+        arithmetics::{ArrayCheckedDiv, ArrayDiv, NotI128},
+        arity::{binary, binary_checked, unary, unary_checked},
+    },
     error::{ArrowError, Result},
     types::NativeType,
 };
@@ -70,6 +73,30 @@ where
     binary_checked(lhs, rhs, lhs.data_type().clone(), op)
 }
 
+// Implementation of ArrayDiv trait for PrimitiveArrays
+impl<T> ArrayDiv<PrimitiveArray<T>> for PrimitiveArray<T>
+where
+    T: NativeType + Div<Output = T> + NotI128,
+{
+    type Output = Self;
+
+    fn div(&self, rhs: &PrimitiveArray<T>) -> Result<Self::Output> {
+        div(self, rhs)
+    }
+}
+
+// Implementation of ArrayCheckedDiv trait for PrimitiveArrays
+impl<T> ArrayCheckedDiv<PrimitiveArray<T>> for PrimitiveArray<T>
+where
+    T: NativeType + CheckedDiv<Output = T> + Zero + NotI128,
+{
+    type Output = Self;
+
+    fn checked_div(&self, rhs: &PrimitiveArray<T>) -> Result<Self::Output> {
+        checked_div(self, rhs)
+    }
+}
+
 /// Divide a primitive array of type T by a scalar T.
 /// Panics if the divisor is zero.
 ///
@@ -118,6 +145,30 @@ where
     unary_checked(lhs, op, lhs.data_type().clone())
 }
 
+// Implementation of ArrayDiv trait for PrimitiveArrays with a scalar
+impl<T> ArrayDiv<T> for PrimitiveArray<T>
+where
+    T: NativeType + Div<Output = T> + NotI128,
+{
+    type Output = Self;
+
+    fn div(&self, rhs: &T) -> Result<Self::Output> {
+        Ok(div_scalar(self, rhs))
+    }
+}
+
+// Implementation of ArrayCheckedDiv trait for PrimitiveArrays with a scalar
+impl<T> ArrayCheckedDiv<T> for PrimitiveArray<T>
+where
+    T: NativeType + CheckedDiv<Output = T> + Zero + NotI128,
+{
+    type Output = Self;
+
+    fn checked_div(&self, rhs: &T) -> Result<Self::Output> {
+        Ok(checked_div_scalar(self, rhs))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -139,7 +190,11 @@ mod tests {
         let b = Primitive::from(&vec![Some(5), Some(6)]).to(DataType::Int32);
         let result = div(&a, &b).unwrap();
         let expected = Primitive::from(&vec![Some(1), Some(1)]).to(DataType::Int32);
-        assert_eq!(result, expected)
+        assert_eq!(result, expected);
+
+        // Trait testing
+        let result = a.div(&b).unwrap();
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -163,6 +218,10 @@ mod tests {
         let result = checked_div(&a, &b).unwrap();
         let expected = Primitive::from(&vec![Some(1), None, None, Some(1)]).to(DataType::Int32);
         assert_eq!(result, expected);
+
+        // Trait testing
+        let result = a.checked_div(&b).unwrap();
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -170,7 +229,11 @@ mod tests {
         let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
         let result = div_scalar(&a, &1i32);
         let expected = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
-        assert_eq!(result, expected)
+        assert_eq!(result, expected);
+
+        // Trait testing
+        let result = a.div(&1i32).unwrap();
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -183,6 +246,10 @@ mod tests {
         let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
         let result = checked_div_scalar(&a, &0);
         let expected = Primitive::from(&vec![None, None, None, None]).to(DataType::Int32);
+        assert_eq!(result, expected);
+
+        // Trait testing
+        let result = a.checked_div(&0).unwrap();
         assert_eq!(result, expected);
     }
 }

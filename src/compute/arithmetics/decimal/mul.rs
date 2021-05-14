@@ -22,6 +22,7 @@ use crate::{
     array::{Array, PrimitiveArray},
     buffer::Buffer,
     compute::{
+        arithmetics::{ArrayCheckedMul, ArrayMul, ArraySaturatingMul},
         arity::{binary, binary_checked},
         utils::combine_validities,
     },
@@ -219,6 +220,33 @@ pub fn checked_mul(
     }
 }
 
+// Implementation of ArrayMul trait for PrimitiveArrays
+impl ArrayMul<PrimitiveArray<i128>> for PrimitiveArray<i128> {
+    type Output = Self;
+
+    fn mul(&self, rhs: &PrimitiveArray<i128>) -> Result<Self::Output> {
+        mul(self, rhs)
+    }
+}
+
+// Implementation of ArrayCheckedMul trait for PrimitiveArrays
+impl ArrayCheckedMul<PrimitiveArray<i128>> for PrimitiveArray<i128> {
+    type Output = Self;
+
+    fn checked_mul(&self, rhs: &PrimitiveArray<i128>) -> Result<Self::Output> {
+        checked_mul(self, rhs)
+    }
+}
+
+// Implementation of ArraySaturatingMul trait for PrimitiveArrays
+impl ArraySaturatingMul<PrimitiveArray<i128>> for PrimitiveArray<i128> {
+    type Output = Self;
+
+    fn saturating_mul(&self, rhs: &PrimitiveArray<i128>) -> Result<Self::Output> {
+        saturating_mul(self, rhs)
+    }
+}
+
 /// Adaptive multiplication of two decimal primitive arrays with different
 /// precision and scale. If the precision and scale is different, then the
 /// smallest scale and precision is adjusted to the largest precision and
@@ -352,6 +380,10 @@ mod tests {
         .to(DataType::Decimal(7, 2));
 
         assert_eq!(result, expected);
+
+        // Testing trait
+        let result = a.mul(&b).unwrap();
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -407,6 +439,10 @@ mod tests {
         .to(DataType::Decimal(7, 2));
 
         assert_eq!(result, expected);
+
+        // Testing trait
+        let result = a.saturating_mul(&b).unwrap();
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -436,6 +472,10 @@ mod tests {
         ])
         .to(DataType::Decimal(5, 2));
 
+        assert_eq!(result, expected);
+
+        // Testing trait
+        let result = a.saturating_mul(&b).unwrap();
         assert_eq!(result, expected);
     }
 
@@ -472,6 +512,10 @@ mod tests {
         ])
         .to(DataType::Decimal(7, 2));
 
+        assert_eq!(result, expected);
+
+        // Testing trait
+        let result = a.checked_mul(&b).unwrap();
         assert_eq!(result, expected);
     }
 

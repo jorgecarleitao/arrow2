@@ -9,8 +9,13 @@ use num::{
 use crate::{
     array::{Array, PrimitiveArray},
     bitmap::Bitmap,
-    compute::arity::{
-        binary, binary_checked, binary_with_bitmap, unary, unary_checked, unary_with_bitmap,
+    compute::{
+        arithmetics::{
+            ArrayAdd, ArrayCheckedAdd, ArrayOverflowingAdd, ArraySaturatingAdd, NotI128,
+        },
+        arity::{
+            binary, binary_checked, binary_with_bitmap, unary, unary_checked, unary_with_bitmap,
+        },
     },
     error::{ArrowError, Result},
     types::NativeType,
@@ -144,6 +149,54 @@ where
     binary_with_bitmap(lhs, rhs, lhs.data_type().clone(), op)
 }
 
+// Implementation of ArrayAdd trait for PrimitiveArrays
+impl<T> ArrayAdd<PrimitiveArray<T>> for PrimitiveArray<T>
+where
+    T: NativeType + Add<Output = T> + NotI128,
+{
+    type Output = Self;
+
+    fn add(&self, rhs: &PrimitiveArray<T>) -> Result<Self::Output> {
+        add(self, rhs)
+    }
+}
+
+// Implementation of ArrayCheckedAdd trait for PrimitiveArrays
+impl<T> ArrayCheckedAdd<PrimitiveArray<T>> for PrimitiveArray<T>
+where
+    T: NativeType + CheckedAdd<Output = T> + Zero + NotI128,
+{
+    type Output = Self;
+
+    fn checked_add(&self, rhs: &PrimitiveArray<T>) -> Result<Self::Output> {
+        checked_add(self, rhs)
+    }
+}
+
+// Implementation of ArraySaturatingAdd trait for PrimitiveArrays
+impl<T> ArraySaturatingAdd<PrimitiveArray<T>> for PrimitiveArray<T>
+where
+    T: NativeType + SaturatingAdd<Output = T> + NotI128,
+{
+    type Output = Self;
+
+    fn saturating_add(&self, rhs: &PrimitiveArray<T>) -> Result<Self::Output> {
+        saturating_add(self, rhs)
+    }
+}
+
+// Implementation of ArraySaturatingAdd trait for PrimitiveArrays
+impl<T> ArrayOverflowingAdd<PrimitiveArray<T>> for PrimitiveArray<T>
+where
+    T: NativeType + OverflowingAdd<Output = T> + NotI128,
+{
+    type Output = Self;
+
+    fn overflowing_add(&self, rhs: &PrimitiveArray<T>) -> Result<(Self::Output, Bitmap)> {
+        overflowing_add(self, rhs)
+    }
+}
+
 /// Adds a scalar T to a primitive array of type T.
 /// Panics if the sum of the values overflows.
 ///
@@ -246,6 +299,54 @@ where
     unary_with_bitmap(lhs, op, lhs.data_type().clone())
 }
 
+// Implementation of ArrayAdd trait for PrimitiveArrays with a scalar
+impl<T> ArrayAdd<T> for PrimitiveArray<T>
+where
+    T: NativeType + Add<Output = T> + NotI128,
+{
+    type Output = Self;
+
+    fn add(&self, rhs: &T) -> Result<Self::Output> {
+        Ok(add_scalar(self, rhs))
+    }
+}
+
+// Implementation of ArrayCheckedAdd trait for PrimitiveArrays with a scalar
+impl<T> ArrayCheckedAdd<T> for PrimitiveArray<T>
+where
+    T: NativeType + CheckedAdd<Output = T> + Zero + NotI128,
+{
+    type Output = Self;
+
+    fn checked_add(&self, rhs: &T) -> Result<Self::Output> {
+        Ok(checked_add_scalar(self, rhs))
+    }
+}
+
+// Implementation of ArraySaturatingAdd trait for PrimitiveArrays with a scalar
+impl<T> ArraySaturatingAdd<T> for PrimitiveArray<T>
+where
+    T: NativeType + SaturatingAdd<Output = T> + NotI128,
+{
+    type Output = Self;
+
+    fn saturating_add(&self, rhs: &T) -> Result<Self::Output> {
+        Ok(saturating_add_scalar(self, rhs))
+    }
+}
+
+// Implementation of ArraySaturatingAdd trait for PrimitiveArrays with a scalar
+impl<T> ArrayOverflowingAdd<T> for PrimitiveArray<T>
+where
+    T: NativeType + OverflowingAdd<Output = T> + NotI128,
+{
+    type Output = Self;
+
+    fn overflowing_add(&self, rhs: &T) -> Result<(Self::Output, Bitmap)> {
+        Ok(overflowing_add_scalar(self, rhs))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -267,7 +368,11 @@ mod tests {
         let b = Primitive::from(&vec![Some(5), None, None, Some(6)]).to(DataType::Int32);
         let result = add(&a, &b).unwrap();
         let expected = Primitive::from(&vec![None, None, None, Some(12)]).to(DataType::Int32);
-        assert_eq!(result, expected)
+        assert_eq!(result, expected);
+
+        // Trait testing
+        let result = a.add(&b).unwrap();
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -291,6 +396,10 @@ mod tests {
         let result = checked_add(&a, &b).unwrap();
         let expected = Primitive::from(&vec![Some(100i8), None, Some(100i8)]).to(DataType::Int8);
         assert_eq!(result, expected);
+
+        // Trait testing
+        let result = a.checked_add(&b).unwrap();
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -305,6 +414,10 @@ mod tests {
         let b = Primitive::from(&vec![Some(100i8)]).to(DataType::Int8);
         let result = saturating_add(&a, &b).unwrap();
         let expected = Primitive::from(&vec![Some(127)]).to(DataType::Int8);
+        assert_eq!(result, expected);
+
+        // Trait testing
+        let result = a.saturating_add(&b).unwrap();
         assert_eq!(result, expected);
     }
 
@@ -323,6 +436,11 @@ mod tests {
         let expected = Primitive::from(&vec![Some(2i8), Some(-56i8)]).to(DataType::Int8);
         assert_eq!(result, expected);
         assert_eq!(overflow.as_slice()[0], 0b10);
+
+        // Trait testing
+        let (result, overflow) = a.overflowing_add(&b).unwrap();
+        assert_eq!(result, expected);
+        assert_eq!(overflow.as_slice()[0], 0b10);
     }
 
     #[test]
@@ -330,7 +448,11 @@ mod tests {
         let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
         let result = add_scalar(&a, &1i32);
         let expected = Primitive::from(&vec![None, Some(7), None, Some(7)]).to(DataType::Int32);
-        assert_eq!(result, expected)
+        assert_eq!(result, expected);
+
+        // Trait testing
+        let result = a.add(&1i32).unwrap();
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -343,6 +465,10 @@ mod tests {
         let a = Primitive::from(&vec![None, Some(100), None, Some(100)]).to(DataType::Int8);
         let result = checked_add_scalar(&a, &100i8);
         let expected = Primitive::<i8>::from(&vec![None, None, None, None]).to(DataType::Int8);
+        assert_eq!(result, expected);
+
+        // Trait testing
+        let result = a.checked_add(&100i8).unwrap();
         assert_eq!(result, expected);
     }
 
@@ -357,6 +483,10 @@ mod tests {
         let result = saturating_add_scalar(&a, &100i8);
         let expected = Primitive::from(&vec![Some(127)]).to(DataType::Int8);
         assert_eq!(result, expected);
+
+        // Trait testing
+        let result = a.saturating_add(&100i8).unwrap();
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -370,6 +500,11 @@ mod tests {
         let a = Primitive::from(&vec![Some(1i8), Some(100i8)]).to(DataType::Int8);
         let (result, overflow) = overflowing_add_scalar(&a, &100i8);
         let expected = Primitive::from(&vec![Some(101i8), Some(-56i8)]).to(DataType::Int8);
+        assert_eq!(result, expected);
+        assert_eq!(overflow.as_slice()[0], 0b10);
+
+        // Trait testing
+        let (result, overflow) = a.overflowing_add(&100i8).unwrap();
         assert_eq!(result, expected);
         assert_eq!(overflow.as_slice()[0], 0b10);
     }

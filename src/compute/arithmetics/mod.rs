@@ -63,10 +63,10 @@ use std::ops::{Add, Div, Mul, Neg, Sub};
 
 use num::Zero;
 
-use crate::array::*;
 use crate::datatypes::DataType;
 use crate::error::{ArrowError, Result};
 use crate::types::NativeType;
+use crate::{array::*, bitmap::Bitmap};
 
 use super::arity::unary;
 
@@ -202,3 +202,115 @@ where
 {
     unary(array, |a| -a, array.data_type().clone())
 }
+
+/// Defines basic addition operation for primitive arrays
+pub trait ArrayAdd<Rhs> {
+    type Output;
+
+    fn add(&self, rhs: &Rhs) -> Result<Self::Output>;
+}
+
+/// Defines checked addition operation for primitive arrays
+pub trait ArrayCheckedAdd<Rhs> {
+    type Output;
+
+    fn checked_add(&self, rhs: &Rhs) -> Result<Self::Output>;
+}
+
+/// Defines saturating addition operation for primitive arrays
+pub trait ArraySaturatingAdd<Rhs> {
+    type Output;
+
+    fn saturating_add(&self, rhs: &Rhs) -> Result<Self::Output>;
+}
+
+/// Defines Overflowing addition operation for primitive arrays
+pub trait ArrayOverflowingAdd<Rhs> {
+    type Output;
+
+    fn overflowing_add(&self, rhs: &Rhs) -> Result<(Self::Output, Bitmap)>;
+}
+
+/// Defines basic subtraction operation for primitive arrays
+pub trait ArraySub<Rhs> {
+    type Output;
+
+    fn sub(&self, rhs: &Rhs) -> Result<Self::Output>;
+}
+
+/// Defines checked subtraction operation for primitive arrays
+pub trait ArrayCheckedSub<Rhs> {
+    type Output;
+
+    fn checked_sub(&self, rhs: &Rhs) -> Result<Self::Output>;
+}
+
+/// Defines saturating subtraction operation for primitive arrays
+pub trait ArraySaturatingSub<Rhs> {
+    type Output;
+
+    fn saturating_sub(&self, rhs: &Rhs) -> Result<Self::Output>;
+}
+
+/// Defines Overflowing subtraction operation for primitive arrays
+pub trait ArrayOverflowingSub<Rhs> {
+    type Output;
+
+    fn overflowing_sub(&self, rhs: &Rhs) -> Result<(Self::Output, Bitmap)>;
+}
+
+/// Defines basic multiplication operation for primitive arrays
+pub trait ArrayMul<Rhs> {
+    type Output;
+
+    fn mul(&self, rhs: &Rhs) -> Result<Self::Output>;
+}
+
+/// Defines checked multiplication operation for primitive arrays
+pub trait ArrayCheckedMul<Rhs> {
+    type Output;
+
+    fn checked_mul(&self, rhs: &Rhs) -> Result<Self::Output>;
+}
+
+/// Defines saturating multiplication operation for primitive arrays
+pub trait ArraySaturatingMul<Rhs> {
+    type Output;
+
+    fn saturating_mul(&self, rhs: &Rhs) -> Result<Self::Output>;
+}
+
+/// Defines Overflowing multiplication operation for primitive arrays
+pub trait ArrayOverflowingMul<Rhs> {
+    type Output;
+
+    fn overflowing_mul(&self, rhs: &Rhs) -> Result<(Self::Output, Bitmap)>;
+}
+
+/// Defines basic division operation for primitive arrays
+pub trait ArrayDiv<Rhs> {
+    type Output;
+
+    fn div(&self, rhs: &Rhs) -> Result<Self::Output>;
+}
+
+/// Defines checked division operation for primitive arrays
+pub trait ArrayCheckedDiv<Rhs> {
+    type Output;
+
+    fn checked_div(&self, rhs: &Rhs) -> Result<Self::Output>;
+}
+
+// The decimal primitive array defines different arithmetic functions and
+// it requires specialization
+pub unsafe trait NotI128 {}
+unsafe impl NotI128 for u8 {}
+unsafe impl NotI128 for u16 {}
+unsafe impl NotI128 for u32 {}
+unsafe impl NotI128 for u64 {}
+unsafe impl NotI128 for i8 {}
+unsafe impl NotI128 for i16 {}
+unsafe impl NotI128 for i32 {}
+unsafe impl NotI128 for i64 {}
+unsafe impl NotI128 for f32 {}
+unsafe impl NotI128 for f64 {}
