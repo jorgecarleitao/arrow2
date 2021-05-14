@@ -9,3 +9,4 @@
     - [Read CSV](./io/csv_reader.md)
     - [Write CSV](./io/csv_write.md)
     - [Read Parquet](./io/parquet_read.md)
+    - [Write Parquet](./io/parquet_write.md)

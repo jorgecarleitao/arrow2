@@ -18,9 +18,12 @@ pub use parquet2::{
 };
 pub use schema::to_parquet_type;
 
-pub fn array_to_page(array: &dyn Array, type_: &ParquetType) -> Result<CompressedPage> {
+pub fn array_to_page(
+    array: &dyn Array,
+    type_: &ParquetType,
+    compression: CompressionCodec,
+) -> Result<CompressedPage> {
     // using plain encoding format
-    let compression = CompressionCodec::Uncompressed;
     let is_optional = is_type_nullable(type_);
     match array.data_type() {
         DataType::Boolean => boolean::array_to_page_v1(
@@ -132,7 +135,11 @@ mod tests {
         let schema = SchemaDescriptor::new("root".to_string(), vec![parquet_type.clone()]);
 
         let row_groups = std::iter::once(Result::Ok(std::iter::once(Ok(std::iter::once(
-            array_to_page(array.as_ref(), &parquet_type),
+            array_to_page(
+                array.as_ref(),
+                &parquet_type,
+                CompressionCodec::Uncompressed,
+            ),
         )))));
 
         let mut writer = Cursor::new(vec![]);

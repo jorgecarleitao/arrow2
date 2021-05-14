@@ -14,10 +14,6 @@ use parquet2::{
 };
 
 fn write(array: &dyn Array) -> Result<()> {
-    let row_groups = std::iter::once(Result::Ok(std::iter::once(Ok(std::iter::once(
-        array_to_page(array),
-    )))));
-
     let (physical, converted) = match array.data_type() {
         DataType::Int32 => ("INT32", ""),
         DataType::Int64 => ("INT64", ""),
@@ -34,6 +30,11 @@ fn write(array: &dyn Array) -> Result<()> {
             physical, converted
         ))?],
     );
+    let parquet_type = &schema.fields()[0];
+
+    let row_groups = std::iter::once(Result::Ok(std::iter::once(Ok(std::iter::once(
+        array_to_page(array, parquet_type, CompressionCodec::Uncompressed),
+    )))));
 
     let mut writer = Cursor::new(vec![]);
     write_file(
