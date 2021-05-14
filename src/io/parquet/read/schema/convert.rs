@@ -8,7 +8,7 @@ use parquet2::{
             BasicTypeInfo, GroupConvertedType, LogicalType, ParquetType, PhysicalType,
             PrimitiveConvertedType, TimeUnit as ParquetTimeUnit,
         },
-        Repetition,
+        Repetition, TimestampType,
     },
 };
 
@@ -55,7 +55,7 @@ pub fn parquet_to_arrow_schema(
         .map(|fields| Schema::new_from(fields, metadata))
 }
 
-fn from_int32(
+pub fn from_int32(
     logical_type: &Option<LogicalType>,
     converted_type: &Option<PrimitiveConvertedType>,
 ) -> Result<DataType> {
@@ -104,60 +104,79 @@ fn from_int32(
     }
 }
 
-fn from_int64(
+pub fn from_int64(
     logical_type: &Option<LogicalType>,
     converted_type: &Option<PrimitiveConvertedType>,
 ) -> Result<DataType> {
-    match (logical_type, converted_type) {
-        (None, None) => Ok(DataType::Int64),
-        (Some(LogicalType::INTEGER(t)), _) if t.bit_width == 64 => match t.is_signed {
-            true => Ok(DataType::Int64),
-            false => Ok(DataType::UInt64),
+    Ok(match (converted_type, logical_type) {
+        (None, None) => DataType::Int64,
+        (_, Some(LogicalType::INTEGER(t))) if t.bit_width == 64 => match t.is_signed {
+            true => DataType::Int64,
+            false => DataType::UInt64,
         },
-        (Some(LogicalType::TIME(t)), _) => match t.unit {
-            ParquetTimeUnit::MILLIS(_) => Err(ArrowError::ExternalFormat(
-                "Cannot create INT64 from MILLIS time unit".to_string(),
-            )),
-            ParquetTimeUnit::MICROS(_) => Ok(DataType::Time64(TimeUnit::Microsecond)),
-            ParquetTimeUnit::NANOS(_) => Ok(DataType::Time64(TimeUnit::Nanosecond)),
-        },
-        (Some(LogicalType::TIMESTAMP(t)), _) => Ok(DataType::Timestamp(
-            match t.unit {
-                ParquetTimeUnit::MILLIS(_) => TimeUnit::Millisecond,
-                ParquetTimeUnit::MICROS(_) => TimeUnit::Microsecond,
-                ParquetTimeUnit::NANOS(_) => TimeUnit::Nanosecond,
-            },
-            if t.is_adjusted_to_u_t_c {
-                Some("UTC".to_string())
+        (Some(PrimitiveConvertedType::Int64), None) => DataType::Int64,
+        (Some(PrimitiveConvertedType::Uint64), None) => DataType::UInt64,
+        (
+            _,
+            Some(LogicalType::TIMESTAMP(TimestampType {
+                is_adjusted_to_u_t_c,
+                unit,
+            })),
+        ) => {
+            let timezone = if *is_adjusted_to_u_t_c {
+                // https://github.com/apache/parquet-format/blob/master/LogicalTypes.md
+                // A TIMESTAMP with isAdjustedToUTC=true is defined as [...] elapsed since the Unix epoch
+                Some("+00:00".to_string())
             } else {
+                // PARQUET:
+                // https://github.com/apache/parquet-format/blob/master/LogicalTypes.md
+                // A TIMESTAMP with isAdjustedToUTC=false represents [...] such
+                // timestamps should always be displayed the same way, regardless of the local time zone in effect
+                // ARROW:
+                // https://github.com/apache/parquet-format/blob/master/LogicalTypes.md
+                // If the time zone is null or equal to an empty string, the data is "time
+                // zone naive" and shall be displayed *as is* to the user, not localized
+                // to the locale of the user.
                 None
-            },
-        )),
-        (None, Some(PrimitiveConvertedType::Int64)) => Ok(DataType::Int64),
-        (None, Some(PrimitiveConvertedType::Uint64)) => Ok(DataType::UInt64),
-        (None, Some(PrimitiveConvertedType::TimeMicros)) => {
-            Ok(DataType::Time64(TimeUnit::Microsecond))
+            };
+
+            match unit {
+                ParquetTimeUnit::MILLIS(_) => DataType::Timestamp(TimeUnit::Millisecond, timezone),
+                ParquetTimeUnit::MICROS(_) => DataType::Timestamp(TimeUnit::Microsecond, timezone),
+                ParquetTimeUnit::NANOS(_) => DataType::Timestamp(TimeUnit::Nanosecond, timezone),
+            }
         }
-        (None, Some(PrimitiveConvertedType::TimestampMillis)) => {
-            Ok(DataType::Timestamp(TimeUnit::Millisecond, None))
+        // https://github.com/apache/parquet-format/blob/master/LogicalTypes.md
+        // *Backward compatibility:*
+        // TIME_MILLIS | TimeType (isAdjustedToUTC = true, unit = MILLIS)
+        // TIME_MICROS | TimeType (isAdjustedToUTC = true, unit = MICROS)
+        (Some(PrimitiveConvertedType::TimeMillis), None) => DataType::Time32(TimeUnit::Millisecond),
+        (Some(PrimitiveConvertedType::TimeMicros), None) => DataType::Time64(TimeUnit::Microsecond),
+        (Some(PrimitiveConvertedType::TimestampMillis), None) => {
+            DataType::Timestamp(TimeUnit::Millisecond, None)
         }
-        (None, Some(PrimitiveConvertedType::TimestampMicros)) => {
-            Ok(DataType::Timestamp(TimeUnit::Microsecond, None))
+        (Some(PrimitiveConvertedType::TimestampMicros), None) => {
+            DataType::Timestamp(TimeUnit::Microsecond, None)
         }
-        (Some(LogicalType::DECIMAL(t)), _) => {
-            Ok(DataType::Decimal(t.precision as usize, t.scale as usize))
+        (_, Some(LogicalType::TIME(t))) => match t.unit {
+            ParquetTimeUnit::MILLIS(_) => {
+                return Err(ArrowError::ExternalFormat(
+                    "Cannot create INT64 from MILLIS time unit".to_string(),
+                ))
+            }
+            ParquetTimeUnit::MICROS(_) => DataType::Time64(TimeUnit::Microsecond),
+            ParquetTimeUnit::NANOS(_) => DataType::Time64(TimeUnit::Nanosecond),
+        },
+        (c, l) => {
+            return Err(ArrowError::NotYetImplemented(format!(
+                "The conversion of (Int64, {:?}, {:?}) to arrow still not implemented",
+                c, l
+            )))
         }
-        (None, Some(PrimitiveConvertedType::Decimal(precision, scale))) => {
-            Ok(DataType::Decimal(*precision as usize, *scale as usize))
-        }
-        (logical, converted) => Err(ArrowError::ExternalFormat(format!(
-            "Unable to convert parquet INT64 logical type {:?} or converted type {:?}",
-            logical, converted
-        ))),
-    }
+    })
 }
 
-fn from_byte_array(
+pub fn from_byte_array(
     logical_type: &Option<LogicalType>,
     converted_type: &Option<PrimitiveConvertedType>,
 ) -> Result<DataType> {
@@ -178,7 +197,7 @@ fn from_byte_array(
     }
 }
 
-fn from_fixed_len_byte_array(
+pub fn from_fixed_len_byte_array(
     length: &i32,
     logical_type: &Option<LogicalType>,
     converted_type: &Option<PrimitiveConvertedType>,
@@ -929,7 +948,7 @@ mod tests {
             ),
             Field::new(
                 "ts_nano",
-                DataType::Timestamp(TimeUnit::Nanosecond, Some("UTC".to_string())),
+                DataType::Timestamp(TimeUnit::Nanosecond, Some("+00:00".to_string())),
                 false,
             ),
         ];

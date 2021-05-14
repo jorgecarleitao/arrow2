@@ -10,6 +10,8 @@ pub use metadata::read_schema_from_metadata;
 pub use parquet2::metadata::{FileMetaData, KeyValue, SchemaDescriptor};
 pub use parquet2::schema::types::ParquetType;
 
+pub(crate) use convert::{from_byte_array, from_fixed_len_byte_array, from_int32, from_int64};
+
 pub fn get_schema(metadata: &FileMetaData) -> Result<Schema> {
     let schema = read_schema_from_metadata(metadata.key_value_metadata())?;
     Ok(schema).transpose().unwrap_or_else(|| {
