@@ -23,8 +23,10 @@
 use std::io::{BufWriter, Write};
 
 use super::common::{
-    write_continuation, write_message, DictionaryTracker, IpcDataGenerator, IpcWriteOptions,
+    encoded_batch, write_continuation, write_message, DictionaryTracker, EncodedData,
+    IpcWriteOptions,
 };
+use super::schema_to_bytes;
 
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
@@ -39,8 +41,6 @@ pub struct StreamWriter<W: Write> {
     finished: bool,
     /// Keeps track of dictionaries that have been written
     dictionary_tracker: DictionaryTracker,
-
-    data_gen: IpcDataGenerator,
 }
 
 impl<W: Write> StreamWriter<W> {
@@ -55,17 +55,18 @@ impl<W: Write> StreamWriter<W> {
         schema: &Schema,
         write_options: IpcWriteOptions,
     ) -> Result<Self> {
-        let data_gen = IpcDataGenerator::default();
         let mut writer = BufWriter::new(writer);
         // write the schema, set the written bytes to the schema
-        let encoded_message = data_gen.schema_to_bytes(schema, &write_options);
+        let encoded_message = EncodedData {
+            ipc_message: schema_to_bytes(schema, *write_options.metadata_version()),
+            arrow_data: vec![],
+        };
         write_message(&mut writer, encoded_message, &write_options)?;
         Ok(Self {
             writer,
             write_options,
             finished: false,
             dictionary_tracker: DictionaryTracker::new(false),
-            data_gen,
         })
     }
 
@@ -77,10 +78,9 @@ impl<W: Write> StreamWriter<W> {
             ));
         }
 
-        let (encoded_dictionaries, encoded_message) = self
-            .data_gen
-            .encoded_batch(batch, &mut self.dictionary_tracker, &self.write_options)
-            .expect("StreamWriter is configured to not error on dictionary replacement");
+        let (encoded_dictionaries, encoded_message) =
+            encoded_batch(batch, &mut self.dictionary_tracker, &self.write_options)
+                .expect("StreamWriter is configured to not error on dictionary replacement");
 
         for encoded_dictionary in encoded_dictionaries {
             write_message(&mut self.writer, encoded_dictionary, &self.write_options)?;

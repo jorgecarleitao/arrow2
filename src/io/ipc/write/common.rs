@@ -18,8 +18,8 @@
 use std::io::Write;
 use std::{collections::HashMap, sync::Arc};
 
+use super::super::gen;
 use super::super::CONTINUATION_MARKER;
-use super::super::{convert, gen};
 use super::{write, write_dictionary};
 use flatbuffers::FlatBufferBuilder;
 
@@ -45,7 +45,7 @@ pub struct IpcWriteOptions {
     ///
     /// version 2.0.0: V4, with legacy format enabled
     /// version 4.0.0: V5
-    pub(super) metadata_version: gen::Schema::MetadataVersion,
+    metadata_version: gen::Schema::MetadataVersion,
 }
 
 impl IpcWriteOptions {
@@ -87,6 +87,10 @@ impl IpcWriteOptions {
             z => panic!("Unsupported gen::Schema::MetadataVersion {:?}", z),
         }
     }
+
+    pub fn metadata_version(&self) -> &gen::Schema::MetadataVersion {
+        &self.metadata_version
+    }
 }
 
 impl Default for IpcWriteOptions {
@@ -99,181 +103,147 @@ impl Default for IpcWriteOptions {
     }
 }
 
-#[derive(Debug, Default)]
-pub struct IpcDataGenerator {}
+pub fn encoded_batch(
+    batch: &RecordBatch,
+    dictionary_tracker: &mut DictionaryTracker,
+    write_options: &IpcWriteOptions,
+) -> Result<(Vec<EncodedData>, EncodedData)> {
+    // TODO: handle nested dictionaries
+    let schema = batch.schema();
+    let mut encoded_dictionaries = Vec::with_capacity(schema.fields().len());
 
-impl IpcDataGenerator {
-    pub fn schema_to_bytes(&self, schema: &Schema, write_options: &IpcWriteOptions) -> EncodedData {
-        let mut fbb = FlatBufferBuilder::new();
-        let schema = {
-            let fb = convert::schema_to_fb_offset(&mut fbb, schema);
-            fb.as_union_value()
-        };
+    for (i, field) in schema.fields().iter().enumerate() {
+        let column = batch.column(i);
 
-        let mut message = gen::Message::MessageBuilder::new(&mut fbb);
-        message.add_version(write_options.metadata_version);
-        message.add_header_type(gen::Message::MessageHeader::Schema);
-        message.add_bodyLength(0);
-        message.add_header(schema);
-        // TODO: custom metadata
-        let data = message.finish();
-        fbb.finish(data, None);
+        if let DataType::Dictionary(_key_type, _value_type) = column.data_type() {
+            let dict_id = field
+                .dict_id()
+                .expect("All Dictionary types have `dict_id`");
 
-        let data = fbb.finished_data();
-        EncodedData {
-            ipc_message: data.to_vec(),
-            arrow_data: vec![],
-        }
-    }
+            let emit = dictionary_tracker.insert(dict_id, column)?;
 
-    pub fn encoded_batch(
-        &self,
-        batch: &RecordBatch,
-        dictionary_tracker: &mut DictionaryTracker,
-        write_options: &IpcWriteOptions,
-    ) -> Result<(Vec<EncodedData>, EncodedData)> {
-        // TODO: handle nested dictionaries
-        let schema = batch.schema();
-        let mut encoded_dictionaries = Vec::with_capacity(schema.fields().len());
-
-        for (i, field) in schema.fields().iter().enumerate() {
-            let column = batch.column(i);
-
-            if let DataType::Dictionary(_key_type, _value_type) = column.data_type() {
-                let dict_id = field
-                    .dict_id()
-                    .expect("All Dictionary types have `dict_id`");
-
-                let emit = dictionary_tracker.insert(dict_id, column)?;
-
-                if emit {
-                    encoded_dictionaries.push(self.dictionary_batch_to_bytes(
-                        dict_id,
-                        column.as_ref(),
-                        write_options,
-                        is_native_little_endian(),
-                    ));
-                }
+            if emit {
+                encoded_dictionaries.push(dictionary_batch_to_bytes(
+                    dict_id,
+                    column.as_ref(),
+                    write_options,
+                    is_native_little_endian(),
+                ));
             }
         }
-
-        let encoded_message = self.record_batch_to_bytes(batch, write_options);
-
-        Ok((encoded_dictionaries, encoded_message))
     }
 
-    /// Write a `RecordBatch` into two sets of bytes, one for the header (gen::Schema::Message) and the
-    /// other for the batch's data
-    fn record_batch_to_bytes(
-        &self,
-        batch: &RecordBatch,
-        write_options: &IpcWriteOptions,
-    ) -> EncodedData {
-        let mut fbb = FlatBufferBuilder::new();
+    let encoded_message = record_batch_to_bytes(batch, write_options);
 
-        let mut nodes: Vec<gen::Message::FieldNode> = vec![];
-        let mut buffers: Vec<gen::Schema::Buffer> = vec![];
-        let mut arrow_data: Vec<u8> = vec![];
-        let mut offset = 0;
-        for array in batch.columns() {
-            write(
-                array.as_ref(),
-                &mut buffers,
-                &mut arrow_data,
-                &mut nodes,
-                &mut offset,
-                is_native_little_endian(),
-            )
-        }
+    Ok((encoded_dictionaries, encoded_message))
+}
 
-        // write data
-        let buffers = fbb.create_vector(&buffers);
-        let nodes = fbb.create_vector(&nodes);
+/// Write a `RecordBatch` into two sets of bytes, one for the header (gen::Schema::Message) and the
+/// other for the batch's data
+fn record_batch_to_bytes(batch: &RecordBatch, write_options: &IpcWriteOptions) -> EncodedData {
+    let mut fbb = FlatBufferBuilder::new();
 
-        let root = {
-            let mut batch_builder = gen::Message::RecordBatchBuilder::new(&mut fbb);
-            batch_builder.add_length(batch.num_rows() as i64);
-            batch_builder.add_nodes(nodes);
-            batch_builder.add_buffers(buffers);
-            let b = batch_builder.finish();
-            b.as_union_value()
-        };
-        // create an gen::Schema::Message
-        let mut message = gen::Message::MessageBuilder::new(&mut fbb);
-        message.add_version(write_options.metadata_version);
-        message.add_header_type(gen::Message::MessageHeader::RecordBatch);
-        message.add_bodyLength(arrow_data.len() as i64);
-        message.add_header(root);
-        let root = message.finish();
-        fbb.finish(root, None);
-        let finished_data = fbb.finished_data();
-
-        EncodedData {
-            ipc_message: finished_data.to_vec(),
-            arrow_data,
-        }
-    }
-
-    /// Write dictionary values into two sets of bytes, one for the header (gen::Schema::Message) and the
-    /// other for the data
-    fn dictionary_batch_to_bytes(
-        &self,
-        dict_id: i64,
-        array: &dyn Array,
-        write_options: &IpcWriteOptions,
-        is_little_endian: bool,
-    ) -> EncodedData {
-        let mut fbb = FlatBufferBuilder::new();
-
-        let mut nodes: Vec<gen::Message::FieldNode> = vec![];
-        let mut buffers: Vec<gen::Schema::Buffer> = vec![];
-        let mut arrow_data: Vec<u8> = vec![];
-
-        let length = write_dictionary(
-            array,
+    let mut nodes: Vec<gen::Message::FieldNode> = vec![];
+    let mut buffers: Vec<gen::Schema::Buffer> = vec![];
+    let mut arrow_data: Vec<u8> = vec![];
+    let mut offset = 0;
+    for array in batch.columns() {
+        write(
+            array.as_ref(),
             &mut buffers,
             &mut arrow_data,
             &mut nodes,
-            &mut 0,
-            is_little_endian,
-            false,
-        );
+            &mut offset,
+            is_native_little_endian(),
+        )
+    }
 
-        // write data
-        let buffers = fbb.create_vector(&buffers);
-        let nodes = fbb.create_vector(&nodes);
+    // write data
+    let buffers = fbb.create_vector(&buffers);
+    let nodes = fbb.create_vector(&nodes);
 
-        let root = {
-            let mut batch_builder = gen::Message::RecordBatchBuilder::new(&mut fbb);
-            batch_builder.add_length(length as i64);
-            batch_builder.add_nodes(nodes);
-            batch_builder.add_buffers(buffers);
-            batch_builder.finish()
-        };
+    let root = {
+        let mut batch_builder = gen::Message::RecordBatchBuilder::new(&mut fbb);
+        batch_builder.add_length(batch.num_rows() as i64);
+        batch_builder.add_nodes(nodes);
+        batch_builder.add_buffers(buffers);
+        let b = batch_builder.finish();
+        b.as_union_value()
+    };
+    // create an gen::Schema::Message
+    let mut message = gen::Message::MessageBuilder::new(&mut fbb);
+    message.add_version(write_options.metadata_version);
+    message.add_header_type(gen::Message::MessageHeader::RecordBatch);
+    message.add_bodyLength(arrow_data.len() as i64);
+    message.add_header(root);
+    let root = message.finish();
+    fbb.finish(root, None);
+    let finished_data = fbb.finished_data();
 
-        let root = {
-            let mut batch_builder = gen::Message::DictionaryBatchBuilder::new(&mut fbb);
-            batch_builder.add_id(dict_id);
-            batch_builder.add_data(root);
-            batch_builder.finish().as_union_value()
-        };
+    EncodedData {
+        ipc_message: finished_data.to_vec(),
+        arrow_data,
+    }
+}
 
-        let root = {
-            let mut message_builder = gen::Message::MessageBuilder::new(&mut fbb);
-            message_builder.add_version(write_options.metadata_version);
-            message_builder.add_header_type(gen::Message::MessageHeader::DictionaryBatch);
-            message_builder.add_bodyLength(arrow_data.len() as i64);
-            message_builder.add_header(root);
-            message_builder.finish()
-        };
+/// Write dictionary values into two sets of bytes, one for the header (gen::Schema::Message) and the
+/// other for the data
+fn dictionary_batch_to_bytes(
+    dict_id: i64,
+    array: &dyn Array,
+    write_options: &IpcWriteOptions,
+    is_little_endian: bool,
+) -> EncodedData {
+    let mut fbb = FlatBufferBuilder::new();
 
-        fbb.finish(root, None);
-        let finished_data = fbb.finished_data();
+    let mut nodes: Vec<gen::Message::FieldNode> = vec![];
+    let mut buffers: Vec<gen::Schema::Buffer> = vec![];
+    let mut arrow_data: Vec<u8> = vec![];
 
-        EncodedData {
-            ipc_message: finished_data.to_vec(),
-            arrow_data,
-        }
+    let length = write_dictionary(
+        array,
+        &mut buffers,
+        &mut arrow_data,
+        &mut nodes,
+        &mut 0,
+        is_little_endian,
+        false,
+    );
+
+    // write data
+    let buffers = fbb.create_vector(&buffers);
+    let nodes = fbb.create_vector(&nodes);
+
+    let root = {
+        let mut batch_builder = gen::Message::RecordBatchBuilder::new(&mut fbb);
+        batch_builder.add_length(length as i64);
+        batch_builder.add_nodes(nodes);
+        batch_builder.add_buffers(buffers);
+        batch_builder.finish()
+    };
+
+    let root = {
+        let mut batch_builder = gen::Message::DictionaryBatchBuilder::new(&mut fbb);
+        batch_builder.add_id(dict_id);
+        batch_builder.add_data(root);
+        batch_builder.finish().as_union_value()
+    };
+
+    let root = {
+        let mut message_builder = gen::Message::MessageBuilder::new(&mut fbb);
+        message_builder.add_version(write_options.metadata_version);
+        message_builder.add_header_type(gen::Message::MessageHeader::DictionaryBatch);
+        message_builder.add_bodyLength(arrow_data.len() as i64);
+        message_builder.add_header(root);
+        message_builder.finish()
+    };
+
+    fbb.finish(root, None);
+    let finished_data = fbb.finished_data();
+
+    EncodedData {
+        ipc_message: finished_data.to_vec(),
+        arrow_data,
     }
 }
 
@@ -393,6 +363,7 @@ pub struct EncodedData {
     /// Arrow buffers to be written, should be an empty vec for schema messages
     pub arrow_data: Vec<u8>,
 }
+
 /// Write a message's IPC data and buffers, returning metadata and buffer data lengths written
 pub fn write_message<W: Write>(
     writer: &mut W,
