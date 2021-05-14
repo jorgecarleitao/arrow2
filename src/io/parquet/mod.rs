@@ -111,3 +111,100 @@ mod tests {
         }
     }
 }
+
+/// Round-trip with parquet using the same integration files used for IPC integration tests.
+#[cfg(test)]
+mod tests_integration {
+    use std::sync::Arc;
+
+    use super::write::CompressionCodec;
+    use crate::array::Array;
+    use crate::datatypes::*;
+    use crate::record_batch::*;
+
+    use crate::error::Result;
+    use crate::io::ipc::common::tests::read_gzip_json;
+    use crate::io::parquet::read;
+    use crate::io::parquet::write::*;
+    use std::io::Cursor;
+
+    fn integration_write(schema: &Schema, batches: &[RecordBatch]) -> Result<Vec<u8>> {
+        let codec = CompressionCodec::Uncompressed;
+
+        let parquet_types = schema
+            .fields()
+            .iter()
+            .map(to_parquet_type)
+            .collect::<Result<Vec<_>>>()?;
+        let parquet_schema = SchemaDescriptor::new("root".to_string(), parquet_types.clone());
+
+        let row_groups = batches.iter().map(|batch| {
+            let iterator = batch
+                .columns()
+                .iter()
+                .zip(parquet_types.iter())
+                .map(|(array, type_)| Ok(std::iter::once(array_to_page(array.as_ref(), type_))));
+            Ok(iterator)
+        });
+
+        let mut writer = Cursor::new(vec![]);
+
+        write_file(&mut writer, parquet_schema, codec, row_groups)?;
+
+        Ok(writer.into_inner())
+    }
+
+    fn integration_read(data: &[u8]) -> Result<(Schema, Vec<RecordBatch>)> {
+        let mut reader = Cursor::new(data);
+
+        let file_metadata = read::read_metadata(&mut reader)?;
+
+        let schema = read::get_schema(&file_metadata)?;
+        let schema1 = Arc::new(schema.clone());
+
+        let batches = file_metadata
+            .row_groups
+            .iter()
+            .enumerate()
+            .map(|(row_group, group)| {
+                let columns = group
+                    .columns()
+                    .iter()
+                    .enumerate()
+                    .map(|(column, column_meta)| {
+                        let pages = read::get_page_iterator(
+                            &file_metadata,
+                            row_group,
+                            column,
+                            &mut reader,
+                        )?;
+                        read::page_iter_to_array(pages, column_meta.column_descriptor())
+                            .map(|x| x.into())
+                    })
+                    .collect::<Result<Vec<Arc<dyn Array>>>>()?;
+                RecordBatch::try_new(schema1.clone(), columns)
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok((schema, batches))
+    }
+
+    fn test_file(version: &str, file_name: &str) -> Result<()> {
+        let (schema, batches) = read_gzip_json(version, file_name);
+
+        let data = integration_write(&schema, &batches)?;
+
+        let (read_schema, read_batches) = integration_read(&data)?;
+
+        assert_eq!(schema, read_schema);
+        assert_eq!(batches, read_batches);
+
+        Ok(())
+    }
+
+    #[test]
+    fn roundtrip_100_primitive() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_primitive")?;
+        test_file("1.0.0-bigendian", "generated_primitive")
+    }
+}

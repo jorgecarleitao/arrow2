@@ -217,13 +217,18 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
                 name, repetition, None, None, fields, None,
             )?)
         }
-        DataType::Union(_) => Err(ArrowError::NotYetImplemented(
-            "Union still in progress".to_string(),
-        )),
         DataType::Dictionary(_, value) => {
             let dict_field = Field::new(name.as_str(), value.as_ref().clone(), field.is_nullable());
             to_parquet_type(&dict_field)
         }
+        DataType::FixedSizeBinary(size) => Ok(ParquetType::try_from_primitive(
+            name,
+            PhysicalType::FixedLenByteArray(*size),
+            repetition,
+            None,
+            None,
+            None,
+        )?),
         /*
         DataType::Interval(_) => {
             Type::primitive_type_builder(name, PhysicalType::FIXED_LEN_BYTE_ARRAY)
@@ -276,6 +281,9 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
                 .build()
         }
         */
-        _ => todo!(),
+        other => Err(ArrowError::NotYetImplemented(format!(
+            "Writing the data type {:?} is not yet implemented",
+            other
+        ))),
     }
 }

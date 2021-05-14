@@ -3,26 +3,19 @@ use parquet2::{
     encoding::Encoding,
     read::{CompressedPage, PageV1},
     schema::{CompressionCodec, DataPageHeader},
-    types::NativeType,
 };
 
 use super::utils;
 use crate::{
-    array::{Array, PrimitiveArray},
+    array::{Array, FixedSizeBinaryArray},
     error::Result,
-    types::NativeType as ArrowNativeType,
 };
 
-pub fn array_to_page_v1<T, R>(
-    array: &PrimitiveArray<T>,
+pub fn array_to_page_v1(
+    array: &FixedSizeBinaryArray,
     compression: CompressionCodec,
     is_optional: bool,
-) -> Result<CompressedPage>
-where
-    T: ArrowNativeType,
-    R: NativeType,
-    T: num::cast::AsPrimitive<R>,
-{
+) -> Result<CompressedPage> {
     let validity = array.validity();
 
     let mut buffer = utils::write_def_levels(is_optional, validity, array.len())?;
@@ -31,17 +24,14 @@ where
         // append the non-null values
         array.iter().for_each(|x| {
             if let Some(x) = x {
-                let parquet_native: R = x.as_();
-                buffer.extend_from_slice(parquet_native.to_le_bytes().as_ref())
+                buffer.extend_from_slice(x);
             }
         });
     } else {
         // append all values
-        array.values().iter().for_each(|x| {
-            let parquet_native: R = x.as_();
-            buffer.extend_from_slice(parquet_native.to_le_bytes().as_ref())
-        });
+        buffer.extend_from_slice(array.values());
     }
+
     let uncompressed_page_size = buffer.len();
 
     let codec = create_codec(&compression)?;

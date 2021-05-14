@@ -1,11 +1,13 @@
+mod binary;
 mod boolean;
+mod fixed_len_bytes;
 mod primitive;
 mod schema;
 mod utf8;
 mod utils;
 
 use crate::datatypes::*;
-use crate::error::Result;
+use crate::error::{ArrowError, Result};
 use crate::{array::*, io::parquet::read::is_type_nullable};
 
 pub use parquet2::{
@@ -96,7 +98,29 @@ pub fn array_to_page(
             compression,
             is_optional,
         ),
-        _ => todo!(),
+        DataType::Binary => binary::array_to_page_v1::<i32>(
+            array.as_any().downcast_ref().unwrap(),
+            compression,
+            is_optional,
+        ),
+        DataType::LargeBinary => binary::array_to_page_v1::<i64>(
+            array.as_any().downcast_ref().unwrap(),
+            compression,
+            is_optional,
+        ),
+        DataType::Null => {
+            let array = Int32Array::new_null(DataType::Int32, array.len());
+            primitive::array_to_page_v1::<i32, i32>(&array, compression, is_optional)
+        }
+        DataType::FixedSizeBinary(_) => fixed_len_bytes::array_to_page_v1(
+            array.as_any().downcast_ref().unwrap(),
+            compression,
+            is_optional,
+        ),
+        other => Err(ArrowError::NotYetImplemented(format!(
+            "Writing the data type {:?} is not yet implemented",
+            other
+        ))),
     }
 }
 

@@ -25,7 +25,7 @@
 #[allow(clippy::redundant_field_names)]
 pub mod gen;
 
-mod common;
+pub(crate) mod common;
 mod convert;
 
 pub use convert::fb_to_schema;

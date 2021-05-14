@@ -3,44 +3,40 @@ use parquet2::{
     encoding::Encoding,
     read::{CompressedPage, PageV1},
     schema::{CompressionCodec, DataPageHeader},
-    types::NativeType,
 };
 
 use super::utils;
 use crate::{
-    array::{Array, PrimitiveArray},
+    array::{Array, BinaryArray, Offset},
     error::Result,
-    types::NativeType as ArrowNativeType,
 };
 
-pub fn array_to_page_v1<T, R>(
-    array: &PrimitiveArray<T>,
+pub fn array_to_page_v1<O: Offset>(
+    array: &BinaryArray<O>,
     compression: CompressionCodec,
     is_optional: bool,
-) -> Result<CompressedPage>
-where
-    T: ArrowNativeType,
-    R: NativeType,
-    T: num::cast::AsPrimitive<R>,
-{
+) -> Result<CompressedPage> {
     let validity = array.validity();
 
     let mut buffer = utils::write_def_levels(is_optional, validity, array.len())?;
 
+    // append the non-null values
     if is_optional {
-        // append the non-null values
         array.iter().for_each(|x| {
             if let Some(x) = x {
-                let parquet_native: R = x.as_();
-                buffer.extend_from_slice(parquet_native.to_le_bytes().as_ref())
+                // BYTE_ARRAY: first 4 bytes denote length in littleendian.
+                let len = (x.len() as u32).to_le_bytes();
+                buffer.extend_from_slice(&len);
+                buffer.extend_from_slice(x);
             }
-        });
+        })
     } else {
-        // append all values
-        array.values().iter().for_each(|x| {
-            let parquet_native: R = x.as_();
-            buffer.extend_from_slice(parquet_native.to_le_bytes().as_ref())
-        });
+        array.values_iter().for_each(|x| {
+            // BYTE_ARRAY: first 4 bytes denote length in littleendian.
+            let len = (x.len() as u32).to_le_bytes();
+            buffer.extend_from_slice(&len);
+            buffer.extend_from_slice(x);
+        })
     }
     let uncompressed_page_size = buffer.len();
 

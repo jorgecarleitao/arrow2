@@ -9,6 +9,16 @@ use super::utils;
 use crate::array::*;
 use crate::error::Result;
 
+#[inline]
+fn encode(iterator: impl Iterator<Item = bool>, buffer: Vec<u8>) -> Result<Vec<u8>> {
+    // encode values using bitpacking
+    let len = buffer.len();
+    let mut buffer = std::io::Cursor::new(buffer);
+    buffer.set_position(len as u64);
+    bitpacked_encode(&mut buffer, iterator)?;
+    Ok(buffer.into_inner())
+}
+
 pub fn array_to_page_v1(
     array: &BooleanArray,
     compression: CompressionCodec,
@@ -18,19 +28,18 @@ pub fn array_to_page_v1(
 
     let buffer = utils::write_def_levels(is_optional, validity, array.len())?;
 
-    let iterator = array.iter().flatten().take(
-        validity
-            .as_ref()
-            .map(|x| x.len() - x.null_count())
-            .unwrap_or_else(|| array.len()),
-    );
-
-    // encode values using bitpacking
-    let len = buffer.len();
-    let mut buffer = std::io::Cursor::new(buffer);
-    buffer.set_position(len as u64);
-    bitpacked_encode(&mut buffer, iterator)?;
-    let buffer = buffer.into_inner();
+    let buffer = if is_optional {
+        let iter = array.iter().flatten().take(
+            validity
+                .as_ref()
+                .map(|x| x.len() - x.null_count())
+                .unwrap_or_else(|| array.len()),
+        );
+        encode(iter, buffer)
+    } else {
+        let iter = array.values().iter();
+        encode(iter, buffer)
+    }?;
 
     let uncompressed_page_size = buffer.len();
 

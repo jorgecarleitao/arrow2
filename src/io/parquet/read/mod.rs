@@ -1,4 +1,6 @@
+mod binary;
 mod boolean;
+mod fixed_size_binary;
 mod primitive;
 pub mod schema;
 mod utf8;
@@ -6,7 +8,7 @@ mod utils;
 
 use crate::{
     array::Array,
-    datatypes::{DataType, TimeUnit},
+    datatypes::DataType,
     error::{ArrowError, Result},
 };
 
@@ -23,64 +25,93 @@ pub use parquet2::{
     },
 };
 
-fn page_iter_to_array_i64<I: Iterator<Item = std::result::Result<CompressedPage, ParquetError>>>(
+fn page_iter_i64<I: Iterator<Item = std::result::Result<CompressedPage, ParquetError>>>(
     iter: I,
     descriptor: &ColumnDescriptor,
     converted_type: &Option<PrimitiveConvertedType>,
     logical_type: &Option<LogicalType>,
 ) -> Result<Box<dyn Array>> {
-    let data_type = match (converted_type, logical_type) {
-        (None, None) => DataType::Int64,
-        (
-            _,
-            Some(LogicalType::TIMESTAMP(TimestampType {
-                is_adjusted_to_u_t_c,
-                unit,
-            })),
-        ) => {
-            let timezone = if *is_adjusted_to_u_t_c {
-                // https://github.com/apache/parquet-format/blob/master/LogicalTypes.md
-                // A TIMESTAMP with isAdjustedToUTC=true is defined as [...] elapsed since the Unix epoch
-                Some("+00:00".to_string())
-            } else {
-                // PARQUET:
-                // https://github.com/apache/parquet-format/blob/master/LogicalTypes.md
-                // A TIMESTAMP with isAdjustedToUTC=false represents [...] such
-                // timestamps should always be displayed the same way, regardless of the local time zone in effect
-                // ARROW:
-                // https://github.com/apache/parquet-format/blob/master/LogicalTypes.md
-                // If the time zone is null or equal to an empty string, the data is "time
-                // zone naive" and shall be displayed *as is* to the user, not localized
-                // to the locale of the user.
-                None
-            };
+    let data_type = schema::from_int64(logical_type, converted_type)?;
 
-            match unit {
-                ParquetTimeUnit::MILLIS(_) => DataType::Timestamp(TimeUnit::Millisecond, timezone),
-                ParquetTimeUnit::MICROS(_) => DataType::Timestamp(TimeUnit::Microsecond, timezone),
-                ParquetTimeUnit::NANOS(_) => DataType::Timestamp(TimeUnit::Nanosecond, timezone),
-            }
-        }
-        // https://github.com/apache/parquet-format/blob/master/LogicalTypes.md
-        // *Backward compatibility:*
-        // TIME_MILLIS | TimeType (isAdjustedToUTC = true, unit = MILLIS)
-        // TIME_MICROS | TimeType (isAdjustedToUTC = true, unit = MICROS)
-        (Some(PrimitiveConvertedType::TimeMillis), None) => {
-            DataType::Timestamp(TimeUnit::Millisecond, Some("+00:00".to_string()))
-        }
-        (Some(PrimitiveConvertedType::TimeMicros), None) => {
-            DataType::Timestamp(TimeUnit::Microsecond, Some("+00:00".to_string()))
-        }
-        (c, l) => {
+    match data_type {
+        DataType::UInt64 => primitive::iter_to_array::<i64, u64, _, _>(iter, descriptor, data_type)
+            .map(|x| Box::new(x) as Box<dyn Array>),
+        _ => primitive::iter_to_array::<i64, i64, _, _>(iter, descriptor, data_type)
+            .map(|x| Box::new(x) as Box<dyn Array>),
+    }
+}
+
+fn page_iter_i32<I: Iterator<Item = std::result::Result<CompressedPage, ParquetError>>>(
+    iter: I,
+    descriptor: &ColumnDescriptor,
+    converted_type: &Option<PrimitiveConvertedType>,
+    logical_type: &Option<LogicalType>,
+) -> Result<Box<dyn Array>> {
+    let data_type = schema::from_int32(logical_type, converted_type)?;
+
+    use DataType::*;
+    match data_type {
+        UInt8 => primitive::iter_to_array::<i32, u8, _, _>(iter, descriptor, data_type)
+            .map(|x| Box::new(x) as Box<dyn Array>),
+        UInt16 => primitive::iter_to_array::<i32, u16, _, _>(iter, descriptor, data_type)
+            .map(|x| Box::new(x) as Box<dyn Array>),
+        UInt32 => primitive::iter_to_array::<i32, u32, _, _>(iter, descriptor, data_type)
+            .map(|x| Box::new(x) as Box<dyn Array>),
+        Int8 => primitive::iter_to_array::<i32, i8, _, _>(iter, descriptor, data_type)
+            .map(|x| Box::new(x) as Box<dyn Array>),
+        Int16 => primitive::iter_to_array::<i32, i16, _, _>(iter, descriptor, data_type)
+            .map(|x| Box::new(x) as Box<dyn Array>),
+        _ => primitive::iter_to_array::<i32, i32, _, _>(iter, descriptor, data_type)
+            .map(|x| Box::new(x) as Box<dyn Array>),
+    }
+}
+
+fn page_iter_byte_array<I: Iterator<Item = std::result::Result<CompressedPage, ParquetError>>>(
+    iter: I,
+    descriptor: &ColumnDescriptor,
+    converted_type: &Option<PrimitiveConvertedType>,
+    logical_type: &Option<LogicalType>,
+) -> Result<Box<dyn Array>> {
+    let data_type = schema::from_byte_array(logical_type, converted_type)?;
+
+    use DataType::*;
+    Ok(match data_type {
+        Utf8 => Box::new(utf8::iter_to_array::<i32, _, _>(iter, descriptor)?),
+        LargeUtf8 => Box::new(utf8::iter_to_array::<i64, _, _>(iter, descriptor)?),
+        Binary => Box::new(binary::iter_to_array::<i32, _, _>(iter, descriptor)?),
+        LargeBinary => Box::new(binary::iter_to_array::<i64, _, _>(iter, descriptor)?),
+        other => {
             return Err(ArrowError::NotYetImplemented(format!(
-                "The conversion of (Int64, {:?}, {:?}) to arrow still not implemented",
-                c, l
+                "Can't read {:?} from parquet",
+                other
             )))
         }
-    };
+    })
+}
 
-    primitive::iter_to_array::<i64, _, _>(iter, descriptor, data_type)
-        .map(|x| Box::new(x) as Box<dyn Array>)
+fn page_iter_fixed_len_byte_array<
+    I: Iterator<Item = std::result::Result<CompressedPage, ParquetError>>,
+>(
+    iter: I,
+    length: &i32,
+    descriptor: &ColumnDescriptor,
+    converted_type: &Option<PrimitiveConvertedType>,
+    logical_type: &Option<LogicalType>,
+) -> Result<Box<dyn Array>> {
+    let data_type = schema::from_fixed_len_byte_array(length, logical_type, converted_type);
+
+    use DataType::*;
+    Ok(match data_type {
+        FixedSizeBinary(size) => {
+            Box::new(fixed_size_binary::iter_to_array(iter, size, descriptor)?)
+        }
+        other => {
+            return Err(ArrowError::NotYetImplemented(format!(
+                "Can't read {:?} from parquet",
+                other
+            )))
+        }
+    })
 }
 
 pub fn page_iter_to_array<I: Iterator<Item = std::result::Result<CompressedPage, ParquetError>>>(
@@ -95,17 +126,21 @@ pub fn page_iter_to_array<I: Iterator<Item = std::result::Result<CompressedPage,
             ..
         } => match (physical_type, converted_type, logical_type) {
             // todo: apply conversion rules and the like
-            (PhysicalType::Int32, None, None) => Ok(Box::new(
-                primitive::iter_to_array::<i32, _, _>(iter, descriptor, DataType::Int32)?,
-            )),
-            (PhysicalType::Int64, _, _) => {
-                page_iter_to_array_i64(iter, descriptor, converted_type, logical_type)
+            (PhysicalType::Int32, _, _) => {
+                page_iter_i32(iter, descriptor, converted_type, logical_type)
             }
-            (PhysicalType::Float, None, None) => Ok(Box::new(
-                primitive::iter_to_array::<f32, _, _>(iter, descriptor, DataType::Float32)?,
-            )),
+            (PhysicalType::Int64, _, _) => {
+                page_iter_i64(iter, descriptor, converted_type, logical_type)
+            }
+            (PhysicalType::Float, None, None) => {
+                Ok(Box::new(primitive::iter_to_array::<f32, f32, _, _>(
+                    iter,
+                    descriptor,
+                    DataType::Float32,
+                )?))
+            }
             (PhysicalType::Double, None, None) => {
-                Ok(Box::new(primitive::iter_to_array::<f64, _, _>(
+                Ok(Box::new(primitive::iter_to_array::<f64, f64, _, _>(
                     iter,
                     descriptor,
                     DataType::Float64,
@@ -114,9 +149,16 @@ pub fn page_iter_to_array<I: Iterator<Item = std::result::Result<CompressedPage,
             (PhysicalType::Boolean, None, None) => {
                 Ok(Box::new(boolean::iter_to_array(iter, descriptor)?))
             }
-            (PhysicalType::ByteArray, Some(PrimitiveConvertedType::Utf8), _) => Ok(Box::new(
-                utf8::iter_to_array::<i32, _, _>(iter, descriptor)?,
-            )),
+            (PhysicalType::ByteArray, _, _) => {
+                page_iter_byte_array(iter, descriptor, converted_type, logical_type)
+            }
+            (PhysicalType::FixedLenByteArray(length), _, _) => page_iter_fixed_len_byte_array(
+                iter,
+                length,
+                descriptor,
+                converted_type,
+                logical_type,
+            ),
             (p, c, l) => Err(ArrowError::NotYetImplemented(format!(
                 "The conversion of ({:?}, {:?}, {:?}) to arrow still not implemented",
                 p, c, l

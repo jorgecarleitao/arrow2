@@ -21,14 +21,23 @@ pub fn array_to_page_v1<O: Offset>(
     let mut buffer = utils::write_def_levels(is_optional, validity, array.len())?;
 
     // append the non-null values
-    array.iter().for_each(|x| {
-        if let Some(x) = x {
+    if is_optional {
+        array.iter().for_each(|x| {
+            if let Some(x) = x {
+                // BYTE_ARRAY: first 4 bytes denote length in littleendian.
+                let len = (x.len() as u32).to_le_bytes();
+                buffer.extend_from_slice(&len);
+                buffer.extend_from_slice(x.as_bytes());
+            }
+        })
+    } else {
+        array.values_iter().for_each(|x| {
             // BYTE_ARRAY: first 4 bytes denote length in littleendian.
             let len = (x.len() as u32).to_le_bytes();
             buffer.extend_from_slice(&len);
             buffer.extend_from_slice(x.as_bytes());
-        }
-    });
+        })
+    }
     let uncompressed_page_size = buffer.len();
 
     let codec = create_codec(&compression)?;
