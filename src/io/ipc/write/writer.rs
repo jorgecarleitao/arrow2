@@ -26,8 +26,10 @@ use super::super::ARROW_MAGIC;
 use super::{
     super::{convert, gen},
     common::{
-        write_continuation, write_message, DictionaryTracker, IpcDataGenerator, IpcWriteOptions,
+        encoded_batch, write_continuation, write_message, DictionaryTracker, EncodedData,
+        IpcWriteOptions,
     },
+    schema_to_bytes,
 };
 use flatbuffers::FlatBufferBuilder;
 
@@ -52,8 +54,6 @@ pub struct FileWriter<'a, W: Write> {
     finished: bool,
     /// Keeps track of dictionaries that have been written
     dictionary_tracker: DictionaryTracker,
-
-    data_gen: IpcDataGenerator,
 }
 
 impl<'a, W: Write> FileWriter<'a, W> {
@@ -69,13 +69,15 @@ impl<'a, W: Write> FileWriter<'a, W> {
         schema: &Schema,
         write_options: IpcWriteOptions,
     ) -> Result<Self> {
-        let data_gen = IpcDataGenerator::default();
         // write magic to header
         writer.write_all(&ARROW_MAGIC[..])?;
         // create an 8-byte boundary after the header
         writer.write_all(&[0, 0])?;
-        // write the schema, set the written bytes to the schema + header
-        let encoded_message = data_gen.schema_to_bytes(schema, &write_options);
+        // write the schema, set the written bytes to the schema
+        let encoded_message = EncodedData {
+            ipc_message: schema_to_bytes(schema, *write_options.metadata_version()),
+            arrow_data: vec![],
+        };
         let (meta, data) = write_message(writer, encoded_message, &write_options)?;
         Ok(Self {
             writer,
@@ -86,7 +88,6 @@ impl<'a, W: Write> FileWriter<'a, W> {
             record_blocks: vec![],
             finished: false,
             dictionary_tracker: DictionaryTracker::new(true),
-            data_gen,
         })
     }
 
@@ -98,11 +99,8 @@ impl<'a, W: Write> FileWriter<'a, W> {
             ));
         }
 
-        let (encoded_dictionaries, encoded_message) = self.data_gen.encoded_batch(
-            batch,
-            &mut self.dictionary_tracker,
-            &self.write_options,
-        )?;
+        let (encoded_dictionaries, encoded_message) =
+            encoded_batch(batch, &mut self.dictionary_tracker, &self.write_options)?;
 
         for encoded_dictionary in encoded_dictionaries {
             let (meta, data) =
@@ -137,7 +135,7 @@ impl<'a, W: Write> FileWriter<'a, W> {
 
         let root = {
             let mut footer_builder = gen::File::FooterBuilder::new(&mut fbb);
-            footer_builder.add_version(self.write_options.metadata_version);
+            footer_builder.add_version(*self.write_options.metadata_version());
             footer_builder.add_schema(schema);
             footer_builder.add_dictionaries(dictionaries);
             footer_builder.add_recordBatches(record_batches);

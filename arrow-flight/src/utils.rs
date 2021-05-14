@@ -28,7 +28,7 @@ use arrow2::{
     io::ipc,
     io::ipc::read::read_record_batch,
     io::ipc::write,
-    io::ipc::write::common::{DictionaryTracker, EncodedData, IpcDataGenerator, IpcWriteOptions},
+    io::ipc::write::common::{encoded_batch, DictionaryTracker, EncodedData, IpcWriteOptions},
     record_batch::RecordBatch,
 };
 
@@ -38,12 +38,11 @@ pub fn flight_data_from_arrow_batch(
     batch: &RecordBatch,
     options: &IpcWriteOptions,
 ) -> (Vec<FlightData>, FlightData) {
-    let data_gen = IpcDataGenerator::default();
     let mut dictionary_tracker = DictionaryTracker::new(false);
 
-    let (encoded_dictionaries, encoded_batch) = data_gen
-        .encoded_batch(batch, &mut dictionary_tracker, &options)
-        .expect("DictionaryTracker configured above to not error on replacement");
+    let (encoded_dictionaries, encoded_batch) =
+        encoded_batch(batch, &mut dictionary_tracker, &options)
+            .expect("DictionaryTracker configured above to not error on replacement");
 
     let flight_dictionaries = encoded_dictionaries.into_iter().map(Into::into).collect();
     let flight_batch = encoded_batch.into();
@@ -95,8 +94,10 @@ fn flight_schema_as_flatbuffer(arrow_schema: &Schema, options: &IpcWriteOptions)
 }
 
 fn flight_schema_as_encoded_data(arrow_schema: &Schema, options: &IpcWriteOptions) -> EncodedData {
-    let data_gen = IpcDataGenerator::default();
-    data_gen.schema_to_bytes(arrow_schema, options)
+    EncodedData {
+        ipc_message: write::schema_to_bytes(arrow_schema, *options.metadata_version()),
+        arrow_data: vec![],
+    }
 }
 
 /// Deserialize an IPC message into a schema
