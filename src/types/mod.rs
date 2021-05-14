@@ -7,7 +7,7 @@ mod bit_chunk;
 pub use bit_chunk::{BitChunk, BitChunkIter};
 pub mod simd;
 
-use crate::datatypes::{DataType, IntervalUnit};
+use crate::datatypes::{DataType, IntervalUnit, TimeUnit};
 
 /// Trait denoting anything that has a natural, constant type.
 /// For example, `i32` has a natural datatype, [`DataType::Int32`].
@@ -117,7 +117,8 @@ create_relation!(
     i32,
     &DataType::Int32
         | &DataType::Date32
-        | &DataType::Time32(_)
+        | &DataType::Time32(TimeUnit::Millisecond)
+        | &DataType::Time32(TimeUnit::Second)
         | &DataType::Interval(IntervalUnit::YearMonth)
 );
 
@@ -125,7 +126,8 @@ create_relation!(
     i64,
     &DataType::Int64
         | &DataType::Date64
-        | &DataType::Time64(_)
+        | &DataType::Time64(TimeUnit::Microsecond)
+        | &DataType::Time64(TimeUnit::Nanosecond)
         | &DataType::Timestamp(_, _)
         | &DataType::Duration(_)
 );
