@@ -9,8 +9,13 @@ use num::{
 use crate::{
     array::{Array, PrimitiveArray},
     bitmap::Bitmap,
-    compute::arity::{
-        binary, binary_checked, binary_with_bitmap, unary, unary_checked, unary_with_bitmap,
+    compute::{
+        arithmetics::{
+            ArrayCheckedMul, ArrayMul, ArrayOverflowingMul, ArraySaturatingMul, NotI128,
+        },
+        arity::{
+            binary, binary_checked, binary_with_bitmap, unary, unary_checked, unary_with_bitmap,
+        },
     },
     error::{ArrowError, Result},
     types::NativeType,
@@ -145,6 +150,53 @@ where
     binary_with_bitmap(lhs, rhs, lhs.data_type().clone(), op)
 }
 
+// Implementation of ArrayMul trait for PrimitiveArrays
+impl<T> ArrayMul<PrimitiveArray<T>> for PrimitiveArray<T>
+where
+    T: NativeType + Mul<Output = T> + NotI128,
+{
+    type Output = Self;
+
+    fn mul(&self, rhs: &PrimitiveArray<T>) -> Result<Self::Output> {
+        mul(self, rhs)
+    }
+}
+
+// Implementation of ArrayCheckedMul trait for PrimitiveArrays
+impl<T> ArrayCheckedMul<PrimitiveArray<T>> for PrimitiveArray<T>
+where
+    T: NativeType + CheckedMul<Output = T> + Zero + NotI128,
+{
+    type Output = Self;
+
+    fn checked_mul(&self, rhs: &PrimitiveArray<T>) -> Result<Self::Output> {
+        checked_mul(self, rhs)
+    }
+}
+
+// Implementation of ArraySaturatingMul trait for PrimitiveArrays
+impl<T> ArraySaturatingMul<PrimitiveArray<T>> for PrimitiveArray<T>
+where
+    T: NativeType + SaturatingMul<Output = T> + NotI128,
+{
+    type Output = Self;
+
+    fn saturating_mul(&self, rhs: &PrimitiveArray<T>) -> Result<Self::Output> {
+        saturating_mul(self, rhs)
+    }
+}
+
+// Implementation of ArraySaturatingMul trait for PrimitiveArrays
+impl<T> ArrayOverflowingMul<PrimitiveArray<T>> for PrimitiveArray<T>
+where
+    T: NativeType + OverflowingMul<Output = T> + NotI128,
+{
+    type Output = Self;
+
+    fn overflowing_mul(&self, rhs: &PrimitiveArray<T>) -> Result<(Self::Output, Bitmap)> {
+        overflowing_mul(self, rhs)
+    }
+}
 /// Multiply a scalar T to a primitive array of type T.
 /// Panics if the multiplication of the values overflows.
 ///
@@ -247,6 +299,53 @@ where
     unary_with_bitmap(lhs, op, lhs.data_type().clone())
 }
 
+// Implementation of ArrayMul trait for PrimitiveArrays with a scalar
+impl<T> ArrayMul<T> for PrimitiveArray<T>
+where
+    T: NativeType + Mul<Output = T> + NotI128,
+{
+    type Output = Self;
+
+    fn mul(&self, rhs: &T) -> Result<Self::Output> {
+        Ok(mul_scalar(self, rhs))
+    }
+}
+
+// Implementation of ArrayCheckedMul trait for PrimitiveArrays with a scalar
+impl<T> ArrayCheckedMul<T> for PrimitiveArray<T>
+where
+    T: NativeType + CheckedMul<Output = T> + Zero + NotI128,
+{
+    type Output = Self;
+
+    fn checked_mul(&self, rhs: &T) -> Result<Self::Output> {
+        Ok(checked_mul_scalar(self, rhs))
+    }
+}
+
+// Implementation of ArraySaturatingMul trait for PrimitiveArrays with a scalar
+impl<T> ArraySaturatingMul<T> for PrimitiveArray<T>
+where
+    T: NativeType + SaturatingMul<Output = T> + NotI128,
+{
+    type Output = Self;
+
+    fn saturating_mul(&self, rhs: &T) -> Result<Self::Output> {
+        Ok(saturating_mul_scalar(self, rhs))
+    }
+}
+
+// Implementation of ArraySaturatingMul trait for PrimitiveArrays with a scalar
+impl<T> ArrayOverflowingMul<T> for PrimitiveArray<T>
+where
+    T: NativeType + OverflowingMul<Output = T> + NotI128,
+{
+    type Output = Self;
+
+    fn overflowing_mul(&self, rhs: &T) -> Result<(Self::Output, Bitmap)> {
+        Ok(overflowing_mul_scalar(self, rhs))
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -268,7 +367,11 @@ mod tests {
         let b = Primitive::from(&vec![Some(5), None, None, Some(6)]).to(DataType::Int32);
         let result = mul(&a, &b).unwrap();
         let expected = Primitive::from(&vec![None, None, None, Some(36)]).to(DataType::Int32);
-        assert_eq!(result, expected)
+        assert_eq!(result, expected);
+
+        // Trait testing
+        let result = a.mul(&b).unwrap();
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -292,6 +395,10 @@ mod tests {
         let result = checked_mul(&a, &b).unwrap();
         let expected = Primitive::from(&vec![Some(100i8), None, Some(100i8)]).to(DataType::Int8);
         assert_eq!(result, expected);
+
+        // Trait testing
+        let result = a.checked_mul(&b).unwrap();
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -306,6 +413,10 @@ mod tests {
         let b = Primitive::from(&vec![Some(100i8)]).to(DataType::Int8);
         let result = saturating_mul(&a, &b).unwrap();
         let expected = Primitive::from(&vec![Some(-128)]).to(DataType::Int8);
+        assert_eq!(result, expected);
+
+        // Trait testing
+        let result = a.saturating_mul(&b).unwrap();
         assert_eq!(result, expected);
     }
 
@@ -324,6 +435,11 @@ mod tests {
         let expected = Primitive::from(&vec![Some(1i8), Some(-16i8)]).to(DataType::Int8);
         assert_eq!(result, expected);
         assert_eq!(overflow.as_slice()[0], 0b10);
+
+        // Trait testing
+        let (result, overflow) = a.overflowing_mul(&b).unwrap();
+        assert_eq!(result, expected);
+        assert_eq!(overflow.as_slice()[0], 0b10);
     }
 
     #[test]
@@ -331,7 +447,11 @@ mod tests {
         let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
         let result = mul_scalar(&a, &1i32);
         let expected = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
-        assert_eq!(result, expected)
+        assert_eq!(result, expected);
+
+        // Trait testing
+        let result = a.mul(&1i32).unwrap();
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -344,6 +464,10 @@ mod tests {
         let a = Primitive::from(&vec![None, Some(100), None, Some(100)]).to(DataType::Int8);
         let result = checked_mul_scalar(&a, &100i8);
         let expected = Primitive::<i8>::from(&vec![None, None, None, None]).to(DataType::Int8);
+        assert_eq!(result, expected);
+
+        // Trait testing
+        let result = a.checked_mul(&100i8).unwrap();
         assert_eq!(result, expected);
     }
 
@@ -358,6 +482,10 @@ mod tests {
         let result = saturating_mul_scalar(&a, &100i8);
         let expected = Primitive::from(&vec![Some(-128)]).to(DataType::Int8);
         assert_eq!(result, expected);
+
+        // Trait testing
+        let result = a.saturating_mul(&100i8).unwrap();
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -371,6 +499,11 @@ mod tests {
         let a = Primitive::from(&vec![Some(1i8), Some(-100i8)]).to(DataType::Int8);
         let (result, overflow) = overflowing_mul_scalar(&a, &100i8);
         let expected = Primitive::from(&vec![Some(100i8), Some(-16i8)]).to(DataType::Int8);
+        assert_eq!(result, expected);
+        assert_eq!(overflow.as_slice()[0], 0b10);
+
+        // Trait testing
+        let (result, overflow) = a.overflowing_mul(&100i8).unwrap();
         assert_eq!(result, expected);
         assert_eq!(overflow.as_slice()[0], 0b10);
     }

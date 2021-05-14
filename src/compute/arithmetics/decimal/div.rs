@@ -22,6 +22,7 @@ use crate::{
     array::{Array, PrimitiveArray},
     buffer::Buffer,
     compute::{
+        arithmetics::{ArrayCheckedDiv, ArrayDiv},
         arity::{binary, binary_checked},
         utils::combine_validities,
     },
@@ -223,6 +224,24 @@ pub fn checked_div(
     }
 }
 
+// Implementation of ArrayDiv trait for PrimitiveArrays
+impl ArrayDiv<PrimitiveArray<i128>> for PrimitiveArray<i128> {
+    type Output = Self;
+
+    fn div(&self, rhs: &PrimitiveArray<i128>) -> Result<Self::Output> {
+        div(self, rhs)
+    }
+}
+
+// Implementation of ArrayCheckedDiv trait for PrimitiveArrays
+impl ArrayCheckedDiv<PrimitiveArray<i128>> for PrimitiveArray<i128> {
+    type Output = Self;
+
+    fn checked_div(&self, rhs: &PrimitiveArray<i128>) -> Result<Self::Output> {
+        checked_div(self, rhs)
+    }
+}
+
 /// Adaptive division of two decimal primitive arrays with different precision
 /// and scale. If the precision and scale is different, then the smallest scale
 /// and precision is adjusted to the largest precision and scale. If during the
@@ -356,6 +375,10 @@ mod tests {
         ])
         .to(DataType::Decimal(7, 3));
 
+        assert_eq!(result, expected);
+
+        // Testing trait
+        let result = a.div(&b).unwrap();
         assert_eq!(result, expected);
     }
 
@@ -494,6 +517,10 @@ mod tests {
         let expected =
             Primitive::from(&vec![None, None, Some(3_00i128)]).to(DataType::Decimal(5, 2));
 
+        assert_eq!(result, expected);
+
+        // Testing trait
+        let result = a.checked_div(&b).unwrap();
         assert_eq!(result, expected);
     }
 

@@ -21,6 +21,7 @@ use crate::{
     array::{Array, PrimitiveArray},
     buffer::Buffer,
     compute::{
+        arithmetics::{ArrayAdd, ArrayCheckedAdd, ArraySaturatingAdd},
         arity::{binary, binary_checked},
         utils::combine_validities,
     },
@@ -197,6 +198,33 @@ pub fn checked_add(
     }
 }
 
+// Implementation of ArrayAdd trait for PrimitiveArrays
+impl ArrayAdd<PrimitiveArray<i128>> for PrimitiveArray<i128> {
+    type Output = Self;
+
+    fn add(&self, rhs: &PrimitiveArray<i128>) -> Result<Self::Output> {
+        add(self, rhs)
+    }
+}
+
+// Implementation of ArrayCheckedAdd trait for PrimitiveArrays
+impl ArrayCheckedAdd<PrimitiveArray<i128>> for PrimitiveArray<i128> {
+    type Output = Self;
+
+    fn checked_add(&self, rhs: &PrimitiveArray<i128>) -> Result<Self::Output> {
+        checked_add(self, rhs)
+    }
+}
+
+// Implementation of ArraySaturatingAdd trait for PrimitiveArrays
+impl ArraySaturatingAdd<PrimitiveArray<i128>> for PrimitiveArray<i128> {
+    type Output = Self;
+
+    fn saturating_add(&self, rhs: &PrimitiveArray<i128>) -> Result<Self::Output> {
+        saturating_add(self, rhs)
+    }
+}
+
 /// Adaptive addition of two decimal primitive arrays with different precision
 /// and scale. If the precision and scale is different, then the smallest scale
 /// and precision is adjusted to the largest precision and scale. If during the
@@ -314,6 +342,10 @@ mod tests {
         .to(DataType::Decimal(5, 2));
 
         assert_eq!(result, expected);
+
+        // Testing trait
+        let result = a.add(&b).unwrap();
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -363,6 +395,10 @@ mod tests {
         .to(DataType::Decimal(5, 2));
 
         assert_eq!(result, expected);
+
+        // Testing trait
+        let result = a.saturating_add(&b).unwrap();
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -392,6 +428,10 @@ mod tests {
         ])
         .to(DataType::Decimal(5, 2));
 
+        assert_eq!(result, expected);
+
+        // Testing trait
+        let result = a.saturating_add(&b).unwrap();
         assert_eq!(result, expected);
     }
 
@@ -423,6 +463,10 @@ mod tests {
         .to(DataType::Decimal(5, 2));
 
         assert_eq!(result, expected);
+
+        // Testing trait
+        let result = a.checked_add(&b).unwrap();
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -431,6 +475,10 @@ mod tests {
         let b = Primitive::from(&vec![Some(1i128), Some(1i128)]).to(DataType::Decimal(5, 2));
         let result = checked_add(&a, &b).unwrap();
         let expected = Primitive::from(&vec![Some(2i128), None]).to(DataType::Decimal(5, 2));
+        assert_eq!(result, expected);
+
+        // Testing trait
+        let result = a.checked_add(&b).unwrap();
         assert_eq!(result, expected);
     }
 
