@@ -21,5 +21,5 @@ mod reader;
 mod stream;
 
 pub use common::{read_dictionary, read_record_batch};
-pub use reader::FileReader;
-pub use stream::StreamReader;
+pub use reader::{read_file_metadata, FileMetadata, FileReader};
+pub use stream::{read_stream_metadata, StreamMetadata, StreamReader};

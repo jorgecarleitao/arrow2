@@ -17,21 +17,20 @@
 
 use std::env;
 use std::fs::File;
-use std::io::{self, BufReader};
 
 use arrow2::error::Result;
-use arrow2::io::ipc::read::FileReader;
+use arrow2::io::ipc::read;
 use arrow2::io::ipc::write::StreamWriter;
 
 fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
     let filename = &args[1];
-    let f = File::open(filename)?;
-    let reader = BufReader::new(f);
-    let mut reader = FileReader::try_new(reader)?;
+    let mut f = File::open(filename)?;
+    let metadata = read::read_file_metadata(&mut f)?;
+    let mut reader = read::FileReader::new(f, metadata);
     let schema = reader.schema();
 
-    let mut writer = StreamWriter::try_new(io::stdout(), &schema)?;
+    let mut writer = StreamWriter::try_new(std::io::stdout(), &schema)?;
 
     reader.try_for_each(|batch| {
         let batch = batch?;

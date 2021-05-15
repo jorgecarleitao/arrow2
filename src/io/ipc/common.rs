@@ -17,12 +17,12 @@
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::error::Result;
     use crate::{
         datatypes::Schema,
         io::json_integration::{to_record_batch, ArrowJson},
         record_batch::RecordBatch,
     };
+    use crate::{error::Result, io::ipc::read::read_stream_metadata};
 
     use crate::io::ipc::read::StreamReader;
 
@@ -68,13 +68,14 @@ pub(crate) mod tests {
 
     pub fn read_arrow_stream(version: &str, file_name: &str) -> (Schema, Vec<RecordBatch>) {
         let testdata = crate::util::test_util::arrow_test_data();
-        let file = File::open(format!(
+        let mut file = File::open(format!(
             "{}/arrow-ipc-stream/integration/{}/{}.stream",
             testdata, version, file_name
         ))
         .unwrap();
 
-        let reader = StreamReader::try_new(file).unwrap();
+        let metadata = read_stream_metadata(&mut file).unwrap();
+        let reader = StreamReader::new(file, metadata);
 
         let schema = reader.schema();
 

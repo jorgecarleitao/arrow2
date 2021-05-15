@@ -116,8 +116,11 @@ mod tests {
     use super::super::super::gen;
     use super::*;
 
-    use crate::io::ipc::common::tests::{read_arrow_stream, read_gzip_json};
     use crate::io::ipc::read::StreamReader;
+    use crate::io::ipc::{
+        common::tests::{read_arrow_stream, read_gzip_json},
+        read::read_stream_metadata,
+    };
 
     fn test_file(version: &str, file_name: &str) {
         let (schema, batches) = read_arrow_stream(version, file_name);
@@ -136,7 +139,9 @@ mod tests {
             writer.finish().unwrap();
         }
 
-        let reader = StreamReader::try_new(Cursor::new(result)).unwrap();
+        let mut reader = Cursor::new(result);
+        let metadata = read_stream_metadata(&mut reader).unwrap();
+        let reader = StreamReader::new(reader, metadata);
 
         let schema = reader.schema().clone();
 
