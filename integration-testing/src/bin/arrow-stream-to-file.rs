@@ -18,11 +18,13 @@
 use std::io;
 
 use arrow2::error::Result;
-use arrow2::io::ipc::read::StreamReader;
+use arrow2::io::ipc::read;
 use arrow2::io::ipc::write::FileWriter;
 
 fn main() -> Result<()> {
-    let mut arrow_stream_reader = StreamReader::try_new(io::stdin())?;
+    let mut reader = io::stdin();
+    let metadata = read::read_stream_metadata(&mut reader)?;
+    let mut arrow_stream_reader = read::StreamReader::new(reader, metadata);
     let schema = arrow_stream_reader.schema();
 
     let mut writer = io::stdout();

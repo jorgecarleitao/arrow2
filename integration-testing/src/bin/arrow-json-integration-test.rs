@@ -19,7 +19,7 @@ use std::fs::File;
 
 use clap::{App, Arg};
 
-use arrow2::io::ipc::read::FileReader;
+use arrow2::io::ipc::read;
 use arrow2::io::ipc::write::FileWriter;
 use arrow2::{
     error::{ArrowError, Result},
@@ -97,8 +97,9 @@ fn arrow_to_json(arrow_name: &str, json_name: &str, verbose: bool) -> Result<()>
         eprintln!("Converting {} to {}", arrow_name, json_name);
     }
 
-    let arrow_file = File::open(arrow_name)?;
-    let reader = FileReader::try_new(arrow_file)?;
+    let mut arrow_file = File::open(arrow_name)?;
+    let metadata = read::read_file_metadata(&mut arrow_file)?;
+    let reader = read::FileReader::new(arrow_file, metadata);
 
     let mut fields: Vec<ArrowJsonField> = vec![];
     for f in reader.schema().fields() {
@@ -134,8 +135,9 @@ fn validate(arrow_name: &str, json_name: &str, verbose: bool) -> Result<()> {
     let json_file = read_json_file(json_name)?;
 
     // open Arrow file
-    let arrow_file = File::open(arrow_name)?;
-    let mut reader = FileReader::try_new(arrow_file)?;
+    let mut arrow_file = File::open(arrow_name)?;
+    let metadata = read::read_file_metadata(&mut arrow_file)?;
+    let reader = read::FileReader::new(arrow_file, metadata);
     let arrow_schema = reader.schema().as_ref().to_owned();
 
     // compare schemas
@@ -147,12 +149,6 @@ fn validate(arrow_name: &str, json_name: &str, verbose: bool) -> Result<()> {
     }
 
     let json_batches = json_file.batches;
-
-    // compare number of batches
-    assert!(
-        json_batches.len() == reader.num_batches(),
-        "JSON batches and Arrow batches are unequal"
-    );
 
     if verbose {
         eprintln!(

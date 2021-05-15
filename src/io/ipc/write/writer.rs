@@ -169,132 +169,136 @@ mod tests {
 
     use super::*;
 
-    use crate::io::ipc::common::tests::read_gzip_json;
-    use crate::io::ipc::read::FileReader;
+    use crate::error::Result;
+    use crate::io::ipc::{
+        common::tests::read_gzip_json,
+        read::{read_file_metadata, FileReader},
+    };
 
-    fn test_file(version: &str, file_name: &str) {
+    fn test_file(version: &str, file_name: &str) -> Result<()> {
         let (schema, batches) = read_gzip_json(version, file_name);
 
         let mut result = Vec::<u8>::new();
 
         // write IPC version 5
         {
-            let options =
-                IpcWriteOptions::try_new(8, false, gen::Schema::MetadataVersion::V5).unwrap();
-            let mut writer =
-                FileWriter::try_new_with_options(&mut result, &schema, options).unwrap();
+            let options = IpcWriteOptions::try_new(8, false, gen::Schema::MetadataVersion::V5)?;
+            let mut writer = FileWriter::try_new_with_options(&mut result, &schema, options)?;
             for batch in batches {
-                writer.write(&batch).unwrap();
+                writer.write(&batch)?;
             }
-            writer.finish().unwrap();
+            writer.finish()?;
         }
+        let mut reader = Cursor::new(result);
+        let metadata = read_file_metadata(&mut reader)?;
+        let schema = metadata.schema().clone();
 
-        let reader = FileReader::try_new(Cursor::new(result)).unwrap();
-
-        let schema = reader.schema().clone();
+        let reader = FileReader::new(reader, metadata);
 
         // read expected JSON output
         let (expected_schema, expected_batches) = read_gzip_json(version, file_name);
 
         assert_eq!(schema.as_ref(), &expected_schema);
 
-        let batches = reader.collect::<Result<Vec<_>>>().unwrap();
+        let batches = reader.collect::<Result<Vec<_>>>()?;
 
         assert_eq!(batches, expected_batches);
+        Ok(())
     }
 
     #[test]
-    fn write_100_primitive() {
-        test_file("1.0.0-littleendian", "generated_primitive");
-        test_file("1.0.0-bigendian", "generated_primitive");
+    fn write_100_primitive() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_primitive")?;
+        test_file("1.0.0-bigendian", "generated_primitive")
     }
 
     #[test]
-    fn write_100_datetime() {
-        test_file("1.0.0-littleendian", "generated_datetime");
-        test_file("1.0.0-bigendian", "generated_datetime");
+    fn write_100_datetime() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_datetime")?;
+        test_file("1.0.0-bigendian", "generated_datetime")
     }
 
     #[test]
-    fn write_100_dictionary_unsigned() {
-        test_file("1.0.0-littleendian", "generated_dictionary_unsigned");
-        test_file("1.0.0-bigendian", "generated_dictionary_unsigned");
+    fn write_100_dictionary_unsigned() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_dictionary_unsigned")?;
+        test_file("1.0.0-bigendian", "generated_dictionary_unsigned")
     }
 
     #[test]
-    fn write_100_dictionary() {
-        test_file("1.0.0-littleendian", "generated_dictionary");
-        test_file("1.0.0-bigendian", "generated_dictionary");
+    fn write_100_dictionary() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_dictionary")?;
+        test_file("1.0.0-bigendian", "generated_dictionary")
     }
 
     #[test]
-    fn write_100_interval() {
-        test_file("1.0.0-littleendian", "generated_interval");
-        test_file("1.0.0-bigendian", "generated_interval");
+    fn write_100_interval() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_interval")?;
+        test_file("1.0.0-bigendian", "generated_interval")
     }
 
     #[test]
-    fn write_100_large_batch() {
+    fn write_100_large_batch() -> Result<()> {
         // this takes too long for unit-tests. It has been passing...
         //test_file("1.0.0-littleendian", "generated_large_batch");
+        Ok(())
     }
 
     #[test]
-    fn write_100_nested() {
-        test_file("1.0.0-littleendian", "generated_nested");
-        test_file("1.0.0-bigendian", "generated_nested");
+    fn write_100_nested() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_nested")?;
+        test_file("1.0.0-bigendian", "generated_nested")
     }
 
     #[test]
-    fn write_100_nested_large_offsets() {
-        test_file("1.0.0-littleendian", "generated_nested_large_offsets");
-        test_file("1.0.0-bigendian", "generated_nested_large_offsets");
+    fn write_100_nested_large_offsets() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_nested_large_offsets")?;
+        test_file("1.0.0-bigendian", "generated_nested_large_offsets")
     }
 
     #[test]
-    fn write_100_null_trivial() {
-        test_file("1.0.0-littleendian", "generated_null_trivial");
-        test_file("1.0.0-bigendian", "generated_null_trivial");
+    fn write_100_null_trivial() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_null_trivial")?;
+        test_file("1.0.0-bigendian", "generated_null_trivial")
     }
 
     #[test]
-    fn write_100_null() {
-        test_file("1.0.0-littleendian", "generated_null");
-        test_file("1.0.0-bigendian", "generated_null");
+    fn write_100_null() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_null")?;
+        test_file("1.0.0-bigendian", "generated_null")
     }
 
     #[test]
-    fn write_100_primitive_large_offsets() {
-        test_file("1.0.0-littleendian", "generated_primitive_large_offsets");
-        test_file("1.0.0-bigendian", "generated_primitive_large_offsets");
+    fn write_100_primitive_large_offsets() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_primitive_large_offsets")?;
+        test_file("1.0.0-bigendian", "generated_primitive_large_offsets")
     }
 
     #[test]
-    fn write_100_primitive_no_batches() {
-        test_file("1.0.0-littleendian", "generated_primitive_no_batches");
-        test_file("1.0.0-bigendian", "generated_primitive_no_batches");
+    fn write_100_primitive_no_batches() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_primitive_no_batches")?;
+        test_file("1.0.0-bigendian", "generated_primitive_no_batches")
     }
 
     #[test]
-    fn write_100_primitive_zerolength() {
-        test_file("1.0.0-littleendian", "generated_primitive_zerolength");
-        test_file("1.0.0-bigendian", "generated_primitive_zerolength");
+    fn write_100_primitive_zerolength() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_primitive_zerolength")?;
+        test_file("1.0.0-bigendian", "generated_primitive_zerolength")
     }
 
     #[test]
-    fn write_0141_primitive_zerolength() {
-        test_file("0.14.1", "generated_primitive_zerolength");
+    fn write_0141_primitive_zerolength() -> Result<()> {
+        test_file("0.14.1", "generated_primitive_zerolength")
     }
 
     #[test]
-    fn write_100_custom_metadata() {
-        test_file("1.0.0-littleendian", "generated_custom_metadata");
-        test_file("1.0.0-bigendian", "generated_custom_metadata");
+    fn write_100_custom_metadata() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_custom_metadata")?;
+        test_file("1.0.0-bigendian", "generated_custom_metadata")
     }
 
     #[test]
-    fn write_100_decimal() {
-        test_file("1.0.0-littleendian", "generated_decimal");
-        test_file("1.0.0-bigendian", "generated_decimal");
+    fn write_100_decimal() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_decimal")?;
+        test_file("1.0.0-bigendian", "generated_decimal")
     }
 }

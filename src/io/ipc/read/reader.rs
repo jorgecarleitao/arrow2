@@ -15,12 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-//! Arrow IPC File and Stream Readers
-//!
-//! The `FileReader` and `StreamReader` have similar interfaces,
-//! however the `FileReader` expects a reader that supports `Seek`ing
-
-use std::io::{BufReader, Read, Seek, SeekFrom};
+use std::io::{Read, Seek, SeekFrom};
 use std::sync::Arc;
 
 use crate::array::*;
@@ -34,11 +29,8 @@ use super::common::*;
 
 type ArrayRef = Arc<dyn Array>;
 
-/// Arrow File reader
-pub struct FileReader<R: Read + Seek> {
-    /// Buffered file reader that supports reading and seeking
-    reader: BufReader<R>,
-
+#[derive(Debug, Clone)]
+pub struct FileMetadata {
     /// The schema that is read from the file header
     schema: Arc<Schema>,
 
@@ -46,9 +38,6 @@ pub struct FileReader<R: Read + Seek> {
     ///
     /// A block indicates the regions in the file to read to get data
     blocks: Vec<gen::File::Block>,
-
-    /// A counter to keep track of the current block that should be read
-    current_block: usize,
 
     /// The total number of blocks, which may contain record batches and other types
     total_blocks: usize,
@@ -58,211 +47,212 @@ pub struct FileReader<R: Read + Seek> {
     /// Dictionaries may be appended to in the streaming format.
     dictionaries_by_field: Vec<Option<ArrayRef>>,
 
-    /// Metadata version
-    metadata_version: gen::Schema::MetadataVersion,
+    /// FileMetadata version
+    version: gen::Schema::MetadataVersion,
 
     is_little_endian: bool,
 }
 
-impl<R: Read + Seek> FileReader<R> {
-    /// Try to create a new file reader
-    ///
-    /// Returns errors if the file does not meet the Arrow Format header and footer
-    /// requirements
-    pub fn try_new(reader: R) -> Result<Self> {
-        let mut reader = BufReader::new(reader);
-        // check if header and footer contain correct magic bytes
-        let mut magic_buffer: [u8; 6] = [0; 6];
-        reader.read_exact(&mut magic_buffer)?;
-        if magic_buffer != ARROW_MAGIC {
-            return Err(ArrowError::Ipc(
-                "Arrow file does not contain correct header".to_string(),
-            ));
-        }
-        reader.seek(SeekFrom::End(-6))?;
-        reader.read_exact(&mut magic_buffer)?;
-        if magic_buffer != ARROW_MAGIC {
-            return Err(ArrowError::Ipc(
-                "Arrow file does not contain correct footer".to_string(),
-            ));
-        }
-        // read footer length
-        let mut footer_size: [u8; 4] = [0; 4];
-        reader.seek(SeekFrom::End(-10))?;
-        reader.read_exact(&mut footer_size)?;
-        let footer_len = i32::from_le_bytes(footer_size);
+impl FileMetadata {
+    /// Returns the schema.
+    pub fn schema(&self) -> &Arc<Schema> {
+        &self.schema
+    }
+}
 
-        // read footer
-        let mut footer_data = vec![0; footer_len as usize];
-        reader.seek(SeekFrom::End(-10 - footer_len as i64))?;
-        reader.read_exact(&mut footer_data)?;
+/// Arrow File reader
+#[derive(Debug)]
+pub struct FileReader<R: Read + Seek + std::fmt::Debug> {
+    reader: R,
+    metadata: FileMetadata,
+    current_block: usize,
+}
 
-        let footer = gen::File::root_as_footer(&footer_data[..])
-            .map_err(|err| ArrowError::Ipc(format!("Unable to get root as footer: {:?}", err)))?;
+/// Read the IPC file's metadata
+pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata> {
+    // check if header and footer contain correct magic bytes
+    let mut magic_buffer: [u8; 6] = [0; 6];
+    reader.read_exact(&mut magic_buffer)?;
+    if magic_buffer != ARROW_MAGIC {
+        return Err(ArrowError::Ipc(
+            "Arrow file does not contain correct header".to_string(),
+        ));
+    }
+    reader.seek(SeekFrom::End(-6))?;
+    reader.read_exact(&mut magic_buffer)?;
+    if magic_buffer != ARROW_MAGIC {
+        return Err(ArrowError::Ipc(
+            "Arrow file does not contain correct footer".to_string(),
+        ));
+    }
+    // read footer length
+    let mut footer_size: [u8; 4] = [0; 4];
+    reader.seek(SeekFrom::End(-10))?;
+    reader.read_exact(&mut footer_size)?;
+    let footer_len = i32::from_le_bytes(footer_size);
 
-        let blocks = footer.recordBatches().ok_or_else(|| {
-            ArrowError::Ipc("Unable to get record batches from IPC Footer".to_string())
-        })?;
+    // read footer
+    let mut footer_data = vec![0; footer_len as usize];
+    reader.seek(SeekFrom::End(-10 - footer_len as i64))?;
+    reader.read_exact(&mut footer_data)?;
 
-        let total_blocks = blocks.len();
+    let footer = gen::File::root_as_footer(&footer_data[..])
+        .map_err(|err| ArrowError::Ipc(format!("Unable to get root as footer: {:?}", err)))?;
 
-        let ipc_schema = footer.schema().unwrap();
-        let (schema, is_little_endian) = convert::fb_to_schema(ipc_schema);
-        let schema = Arc::new(schema);
+    let blocks = footer.recordBatches().ok_or_else(|| {
+        ArrowError::Ipc("Unable to get record batches from IPC Footer".to_string())
+    })?;
 
-        // Create an array of optional dictionary value arrays, one per field.
-        let mut dictionaries_by_field = vec![None; schema.fields().len()];
-        for block in footer.dictionaries().unwrap() {
-            // read length from end of offset
-            let mut message_size: [u8; 4] = [0; 4];
-            reader.seek(SeekFrom::Start(block.offset() as u64))?;
+    let total_blocks = blocks.len();
+
+    let ipc_schema = footer.schema().unwrap();
+    let (schema, is_little_endian) = convert::fb_to_schema(ipc_schema);
+    let schema = Arc::new(schema);
+
+    // Create an array of optional dictionary value arrays, one per field.
+    let mut dictionaries_by_field = vec![None; schema.fields().len()];
+    for block in footer.dictionaries().unwrap() {
+        // read length from end of offset
+        let mut message_size: [u8; 4] = [0; 4];
+        reader.seek(SeekFrom::Start(block.offset() as u64))?;
+        reader.read_exact(&mut message_size)?;
+        let footer_len = if message_size == CONTINUATION_MARKER {
             reader.read_exact(&mut message_size)?;
-            let footer_len = if message_size == CONTINUATION_MARKER {
-                reader.read_exact(&mut message_size)?;
-                i32::from_le_bytes(message_size)
-            } else {
-                i32::from_le_bytes(message_size)
-            };
+            i32::from_le_bytes(message_size)
+        } else {
+            i32::from_le_bytes(message_size)
+        };
 
-            let mut block_data = vec![0; footer_len as usize];
+        let mut block_data = vec![0; footer_len as usize];
 
-            reader.read_exact(&mut block_data)?;
+        reader.read_exact(&mut block_data)?;
 
-            let message = gen::Message::root_as_message(&block_data[..]).map_err(|err| {
-                ArrowError::Ipc(format!("Unable to get root as message: {:?}", err))
-            })?;
+        let message = gen::Message::root_as_message(&block_data[..])
+            .map_err(|err| ArrowError::Ipc(format!("Unable to get root as message: {:?}", err)))?;
 
-            match message.header_type() {
-                gen::Message::MessageHeader::DictionaryBatch => {
-                    let block_offset = block.offset() as u64 + block.metaDataLength() as u64;
-                    let batch = message.header_as_dictionary_batch().unwrap();
-                    read_dictionary(
-                        batch,
-                        &schema,
-                        is_little_endian,
-                        &mut dictionaries_by_field,
-                        &mut reader,
-                        block_offset,
-                    )?;
-                }
-                t => {
-                    return Err(ArrowError::Ipc(format!(
-                        "Expecting DictionaryBatch in dictionary blocks, found {:?}.",
-                        t
-                    )));
-                }
-            };
-        }
+        match message.header_type() {
+            gen::Message::MessageHeader::DictionaryBatch => {
+                let block_offset = block.offset() as u64 + block.metaDataLength() as u64;
+                let batch = message.header_as_dictionary_batch().unwrap();
+                read_dictionary(
+                    batch,
+                    &schema,
+                    is_little_endian,
+                    &mut dictionaries_by_field,
+                    reader,
+                    block_offset,
+                )?;
+            }
+            t => {
+                return Err(ArrowError::Ipc(format!(
+                    "Expecting DictionaryBatch in dictionary blocks, found {:?}.",
+                    t
+                )));
+            }
+        };
+    }
+    Ok(FileMetadata {
+        schema,
+        is_little_endian,
+        blocks: blocks.to_vec(),
+        total_blocks,
+        dictionaries_by_field,
+        version: footer.version(),
+    })
+}
 
-        Ok(Self {
-            reader,
-            schema,
-            is_little_endian,
-            blocks: blocks.to_vec(),
-            current_block: 0,
-            total_blocks,
-            dictionaries_by_field,
-            metadata_version: footer.version(),
-        })
+/// Read the IPC file's metadata
+pub fn read_batch<R: Read + Seek>(
+    reader: &mut R,
+    metadata: &FileMetadata,
+    block: usize,
+) -> Result<Option<RecordBatch>> {
+    let block = metadata.blocks[block];
+
+    // read length
+    reader.seek(SeekFrom::Start(block.offset() as u64))?;
+    let mut meta_buf = [0; 4];
+    reader.read_exact(&mut meta_buf)?;
+    if meta_buf == CONTINUATION_MARKER {
+        // continuation marker encountered, read message next
+        reader.read_exact(&mut meta_buf)?;
+    }
+    let meta_len = i32::from_le_bytes(meta_buf);
+
+    let mut block_data = vec![0; meta_len as usize];
+    reader.read_exact(&mut block_data)?;
+
+    let message = gen::Message::root_as_message(&block_data[..])
+        .map_err(|err| ArrowError::Ipc(format!("Unable to get root as footer: {:?}", err)))?;
+
+    // some old test data's footer metadata is not set, so we account for that
+    if metadata.version != gen::Schema::MetadataVersion::V1 && message.version() != metadata.version
+    {
+        return Err(ArrowError::Ipc(
+            "Could not read IPC message as metadata versions mismatch".to_string(),
+        ));
     }
 
-    /// Return the number of batches in the file
-    pub fn num_batches(&self) -> usize {
-        self.total_blocks
+    match message.header_type() {
+        gen::Message::MessageHeader::Schema => Err(ArrowError::Ipc(
+            "Not expecting a schema when messages are read".to_string(),
+        )),
+        gen::Message::MessageHeader::RecordBatch => {
+            let batch = message.header_as_record_batch().ok_or_else(|| {
+                ArrowError::Ipc("Unable to read IPC message as record batch".to_string())
+            })?;
+            read_record_batch(
+                batch,
+                metadata.schema.clone(),
+                metadata.is_little_endian,
+                &metadata.dictionaries_by_field,
+                reader,
+                block.offset() as u64 + block.metaDataLength() as u64,
+            )
+            .map(Some)
+        }
+        gen::Message::MessageHeader::NONE => Ok(None),
+        t => Err(ArrowError::Ipc(format!(
+            "Reading types other than record batches not yet supported, unable to read {:?}",
+            t
+        ))),
+    }
+}
+
+impl<R: Read + Seek + std::fmt::Debug> FileReader<R> {
+    /// Creates a new reader
+    pub fn new(reader: R, metadata: FileMetadata) -> Self {
+        Self {
+            reader,
+            metadata,
+            current_block: 0,
+        }
     }
 
     /// Return the schema of the file
     pub fn schema(&self) -> &Arc<Schema> {
-        &self.schema
-    }
-
-    /// Read a specific record batch
-    ///
-    /// Sets the current block to the index, allowing random reads
-    pub fn set_index(&mut self, index: usize) -> Result<()> {
-        if index >= self.total_blocks {
-            Err(ArrowError::Ipc(format!(
-                "Cannot set batch to index {} from {} total batches",
-                index, self.total_blocks
-            )))
-        } else {
-            self.current_block = index;
-            Ok(())
-        }
-    }
-
-    fn maybe_next(&mut self) -> Result<Option<RecordBatch>> {
-        let block = self.blocks[self.current_block];
-        self.current_block += 1;
-
-        // read length
-        self.reader.seek(SeekFrom::Start(block.offset() as u64))?;
-        let mut meta_buf = [0; 4];
-        self.reader.read_exact(&mut meta_buf)?;
-        if meta_buf == CONTINUATION_MARKER {
-            // continuation marker encountered, read message next
-            self.reader.read_exact(&mut meta_buf)?;
-        }
-        let meta_len = i32::from_le_bytes(meta_buf);
-
-        let mut block_data = vec![0; meta_len as usize];
-        self.reader.read_exact(&mut block_data)?;
-
-        let message = gen::Message::root_as_message(&block_data[..])
-            .map_err(|err| ArrowError::Ipc(format!("Unable to get root as footer: {:?}", err)))?;
-
-        // some old test data's footer metadata is not set, so we account for that
-        if self.metadata_version != gen::Schema::MetadataVersion::V1
-            && message.version() != self.metadata_version
-        {
-            return Err(ArrowError::Ipc(
-                "Could not read IPC message as metadata versions mismatch".to_string(),
-            ));
-        }
-
-        match message.header_type() {
-            gen::Message::MessageHeader::Schema => Err(ArrowError::Ipc(
-                "Not expecting a schema when messages are read".to_string(),
-            )),
-            gen::Message::MessageHeader::RecordBatch => {
-                let batch = message.header_as_record_batch().ok_or_else(|| {
-                    ArrowError::Ipc("Unable to read IPC message as record batch".to_string())
-                })?;
-                read_record_batch(
-                    batch,
-                    self.schema().clone(),
-                    self.is_little_endian,
-                    &self.dictionaries_by_field,
-                    &mut self.reader,
-                    block.offset() as u64 + block.metaDataLength() as u64,
-                )
-                .map(Some)
-            }
-            gen::Message::MessageHeader::NONE => Ok(None),
-            t => Err(ArrowError::Ipc(format!(
-                "Reading types other than record batches not yet supported, unable to read {:?}",
-                t
-            ))),
-        }
+        &self.metadata.schema
     }
 }
 
-impl<R: Read + Seek> Iterator for FileReader<R> {
+impl<R: Read + Seek + std::fmt::Debug> Iterator for FileReader<R> {
     type Item = Result<RecordBatch>;
 
     fn next(&mut self) -> Option<Self::Item> {
         // get current block
-        if self.current_block < self.total_blocks {
-            self.maybe_next().transpose()
+        if self.current_block < self.metadata.total_blocks {
+            let block = self.current_block;
+            self.current_block += 1;
+            read_batch(&mut self.reader, &self.metadata, block).transpose()
         } else {
             None
         }
     }
 }
 
-impl<R: Read + Seek> RecordBatchReader for FileReader<R> {
+impl<R: Read + Seek + std::fmt::Debug> RecordBatchReader for FileReader<R> {
     fn schema(&self) -> &Schema {
-        &self.schema
+        &self.metadata.schema
     }
 }
 
@@ -270,19 +260,20 @@ impl<R: Read + Seek> RecordBatchReader for FileReader<R> {
 mod tests {
     use std::fs::File;
 
+    use crate::error::Result;
     use crate::io::ipc::common::tests::read_gzip_json;
 
     use super::*;
 
-    fn test_file(version: &str, file_name: &str) {
+    fn test_file(version: &str, file_name: &str) -> Result<()> {
         let testdata = crate::util::test_util::arrow_test_data();
-        let file = File::open(format!(
+        let mut file = File::open(format!(
             "{}/arrow-ipc-stream/integration/{}/{}.arrow_file",
             testdata, version, file_name
-        ))
-        .unwrap();
+        ))?;
 
-        let reader = FileReader::try_new(file).unwrap();
+        let metadata = read_file_metadata(&mut file)?;
+        let reader = FileReader::new(file, metadata);
 
         // read expected JSON output
         let (schema, batches) = read_gzip_json(version, file_name);
@@ -295,89 +286,90 @@ mod tests {
             .for_each(|(lhs, rhs)| {
                 assert_eq!(lhs, &rhs);
             });
+        Ok(())
     }
 
     #[test]
-    fn read_generated_100_primitive() {
-        test_file("1.0.0-littleendian", "generated_primitive");
-        test_file("1.0.0-bigendian", "generated_primitive");
+    fn read_generated_100_primitive() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_primitive")?;
+        test_file("1.0.0-bigendian", "generated_primitive")
     }
 
     #[test]
-    fn read_generated_100_primitive_large_offsets() {
-        test_file("1.0.0-littleendian", "generated_primitive_large_offsets");
-        test_file("1.0.0-bigendian", "generated_primitive_large_offsets");
+    fn read_generated_100_primitive_large_offsets() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_primitive_large_offsets")?;
+        test_file("1.0.0-bigendian", "generated_primitive_large_offsets")
     }
 
     #[test]
-    fn read_generated_100_datetime() {
-        test_file("1.0.0-littleendian", "generated_datetime");
-        test_file("1.0.0-bigendian", "generated_datetime");
+    fn read_generated_100_datetime() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_datetime")?;
+        test_file("1.0.0-bigendian", "generated_datetime")
     }
 
     #[test]
-    fn read_generated_100_null_trivial() {
-        test_file("1.0.0-littleendian", "generated_null_trivial");
-        test_file("1.0.0-bigendian", "generated_null_trivial");
+    fn read_generated_100_null_trivial() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_null_trivial")?;
+        test_file("1.0.0-bigendian", "generated_null_trivial")
     }
 
     #[test]
-    fn read_generated_100_null() {
-        test_file("1.0.0-littleendian", "generated_null");
-        test_file("1.0.0-bigendian", "generated_null");
+    fn read_generated_100_null() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_null")?;
+        test_file("1.0.0-bigendian", "generated_null")
     }
 
     #[test]
-    fn read_generated_100_primitive_zerolength() {
-        test_file("1.0.0-littleendian", "generated_primitive_zerolength");
-        test_file("1.0.0-bigendian", "generated_primitive_zerolength");
+    fn read_generated_100_primitive_zerolength() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_primitive_zerolength")?;
+        test_file("1.0.0-bigendian", "generated_primitive_zerolength")
     }
 
     #[test]
-    fn read_generated_100_primitive_primitive_no_batches() {
-        test_file("1.0.0-littleendian", "generated_primitive_no_batches");
-        test_file("1.0.0-bigendian", "generated_primitive_no_batches");
+    fn read_generated_100_primitive_primitive_no_batches() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_primitive_no_batches")?;
+        test_file("1.0.0-bigendian", "generated_primitive_no_batches")
     }
 
     #[test]
-    fn read_generated_100_dictionary() {
-        test_file("1.0.0-littleendian", "generated_dictionary");
-        test_file("1.0.0-bigendian", "generated_dictionary");
+    fn read_generated_100_dictionary() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_dictionary")?;
+        test_file("1.0.0-bigendian", "generated_dictionary")
     }
 
     #[test]
-    fn read_100_custom_metadata() {
-        test_file("1.0.0-littleendian", "generated_custom_metadata");
-        test_file("1.0.0-bigendian", "generated_custom_metadata");
+    fn read_100_custom_metadata() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_custom_metadata")?;
+        test_file("1.0.0-bigendian", "generated_custom_metadata")
     }
 
     #[test]
-    fn read_generated_100_nested_large_offsets() {
-        test_file("1.0.0-littleendian", "generated_nested_large_offsets");
-        test_file("1.0.0-bigendian", "generated_nested_large_offsets");
+    fn read_generated_100_nested_large_offsets() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_nested_large_offsets")?;
+        test_file("1.0.0-bigendian", "generated_nested_large_offsets")
     }
 
     #[test]
-    fn read_generated_100_nested() {
-        test_file("1.0.0-littleendian", "generated_nested");
-        test_file("1.0.0-bigendian", "generated_nested");
+    fn read_generated_100_nested() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_nested")?;
+        test_file("1.0.0-bigendian", "generated_nested")
     }
 
     #[test]
-    fn read_generated_100_dictionary_unsigned() {
-        test_file("1.0.0-littleendian", "generated_dictionary_unsigned");
-        test_file("1.0.0-bigendian", "generated_dictionary_unsigned");
+    fn read_generated_100_dictionary_unsigned() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_dictionary_unsigned")?;
+        test_file("1.0.0-bigendian", "generated_dictionary_unsigned")
     }
 
     #[test]
-    fn read_generated_100_decimal() {
-        test_file("1.0.0-littleendian", "generated_decimal");
-        test_file("1.0.0-bigendian", "generated_decimal");
+    fn read_generated_100_decimal() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_decimal")?;
+        test_file("1.0.0-bigendian", "generated_decimal")
     }
 
     #[test]
-    fn read_generated_100_interval() {
-        test_file("1.0.0-littleendian", "generated_interval");
-        test_file("1.0.0-bigendian", "generated_interval");
+    fn read_generated_100_interval() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_interval")?;
+        test_file("1.0.0-bigendian", "generated_interval")
     }
 }
