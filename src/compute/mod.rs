@@ -29,6 +29,7 @@ pub mod concat;
 pub mod contains;
 pub mod filter;
 pub mod hash;
+pub mod if_then_else;
 pub mod length;
 pub mod limit;
 pub mod nullif;
