@@ -111,19 +111,19 @@ mod tests {
 
     #[test]
     fn test_u32() -> Result<()> {
-        let data = Primitive::<i32>::from(vec![Some(2), None, Some(1), None]).to(DataType::Int32);
+        let data = Int32Array::from(&[Some(2), None, Some(1), None]);
         test_release(data)
     }
 
     #[test]
     fn test_u64() -> Result<()> {
-        let data = Primitive::<u64>::from(vec![Some(2), None, Some(1), None]).to(DataType::UInt64);
+        let data = UInt64Array::from(&[Some(2), None, Some(1), None]);
         test_round_trip(data)
     }
 
     #[test]
     fn test_i64() -> Result<()> {
-        let data = Primitive::<i64>::from(vec![Some(2), None, Some(1), None]).to(DataType::Int64);
+        let data = Int64Array::from(&[Some(2), None, Some(1), None]);
         test_round_trip(data)
     }
 

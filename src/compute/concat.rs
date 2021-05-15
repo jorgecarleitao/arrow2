@@ -67,7 +67,6 @@ mod tests {
     use super::*;
 
     use crate::array::*;
-    use crate::datatypes::*;
 
     #[test]
     fn test_concat_empty_vec() {
@@ -78,7 +77,7 @@ mod tests {
     #[test]
     fn test_concat_incompatible_datatypes() {
         let re = concatenate(&[
-            &Primitive::<i64>::from(vec![Some(-1), Some(2), None]).to(DataType::Int64),
+            &Int64Array::from(vec![Some(-1), Some(2), None]),
             &Utf8Array::<i32>::from(&vec![Some("hello"), Some("bar"), Some("world")]),
         ]);
         assert!(re.is_err());
@@ -112,14 +111,12 @@ mod tests {
     #[test]
     fn test_concat_primitive_arrays() -> Result<()> {
         let arr = concatenate(&[
-            &Primitive::<i64>::from(vec![Some(-1), Some(-1), Some(2), None, None])
-                .to(DataType::Int64),
-            &Primitive::<i64>::from(vec![Some(101), Some(102), Some(103), None])
-                .to(DataType::Int64),
-            &Primitive::<i64>::from(vec![Some(256), Some(512), Some(1024)]).to(DataType::Int64),
+            &Int64Array::from(&[Some(-1), Some(-1), Some(2), None, None]),
+            &Int64Array::from(&[Some(101), Some(102), Some(103), None]),
+            &Int64Array::from(&[Some(256), Some(512), Some(1024)]),
         ])?;
 
-        let expected_output = Primitive::<i64>::from(vec![
+        let expected_output = Int64Array::from(vec![
             Some(-1),
             Some(-1),
             Some(2),
@@ -132,8 +129,7 @@ mod tests {
             Some(256),
             Some(512),
             Some(1024),
-        ])
-        .to(DataType::Int64);
+        ]);
 
         assert_eq!(expected_output, arr.as_ref());
 
@@ -142,18 +138,13 @@ mod tests {
 
     #[test]
     fn test_concat_primitive_array_slices() -> Result<()> {
-        let input_1 = Primitive::<i64>::from(vec![Some(-1), Some(-1), Some(2), None, None])
-            .to(DataType::Int64)
-            .slice(1, 3);
+        let input_1 = Int64Array::from(&[Some(-1), Some(-1), Some(2), None, None]).slice(1, 3);
 
-        let input_2 = Primitive::<i64>::from(vec![Some(101), Some(102), Some(103), None])
-            .to(DataType::Int64)
-            .slice(1, 3);
+        let input_2 = Int64Array::from(&[Some(101), Some(102), Some(103), None]).slice(1, 3);
         let arr = concatenate(&[&input_1, &input_2])?;
 
         let expected_output =
-            Primitive::<i64>::from(vec![Some(-1), Some(2), None, Some(102), Some(103), None])
-                .to(DataType::Int64);
+            Int64Array::from(&[Some(-1), Some(2), None, Some(102), Some(103), None]);
 
         assert_eq!(expected_output, arr.as_ref());
 

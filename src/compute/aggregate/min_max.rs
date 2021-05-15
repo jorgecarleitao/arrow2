@@ -252,26 +252,24 @@ pub fn max_boolean(array: &BooleanArray) -> Option<bool> {
 mod tests {
     use super::*;
     use crate::array::*;
-    use crate::datatypes::DataType;
 
     #[test]
     fn test_primitive_array_min_max() {
-        let a = Primitive::<i32>::from_slice(&[5, 6, 7, 8, 9]).to(DataType::Int32);
+        let a = Int32Array::from_slice(&[5, 6, 7, 8, 9]);
         assert_eq!(5, min_primitive(&a).unwrap());
         assert_eq!(9, max_primitive(&a).unwrap());
     }
 
     #[test]
     fn test_primitive_array_min_max_with_nulls() {
-        let a =
-            Primitive::<i32>::from(&[Some(5), None, None, Some(8), Some(9)]).to(DataType::Int32);
+        let a = Int32Array::from(&[Some(5), None, None, Some(8), Some(9)]);
         assert_eq!(5, min_primitive(&a).unwrap());
         assert_eq!(9, max_primitive(&a).unwrap());
     }
 
     #[test]
     fn test_primitive_min_max_1() {
-        let a = Primitive::<i32>::from(&[None, None, Some(5), Some(2)]).to(DataType::Int32);
+        let a = Int32Array::from(&[None, None, Some(5), Some(2)]);
         assert_eq!(Some(2), min_primitive(&a));
         assert_eq!(Some(5), max_primitive(&a));
     }

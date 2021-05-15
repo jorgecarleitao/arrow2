@@ -734,7 +734,7 @@ mod tests {
 
     #[test]
     fn test_cast_i32_to_f64() {
-        let array = Primitive::<i32>::from_slice(&[5, 6, 7, 8, 9]).to(DataType::Int32);
+        let array = Int32Array::from_slice(&[5, 6, 7, 8, 9]);
         let b = cast(&array, &DataType::Float64).unwrap();
         let c = b.as_any().downcast_ref::<Float64Array>().unwrap();
         assert!((5.0 - c.value(0)).abs() < f64::EPSILON);
@@ -746,40 +746,37 @@ mod tests {
 
     #[test]
     fn test_cast_i32_to_u8() {
-        let array = Primitive::<i32>::from_slice(&[-5, 6, -7, 8, 100000000]).to(DataType::Int32);
+        let array = Int32Array::from_slice(&[-5, 6, -7, 8, 100000000]);
         let b = cast(&array, &DataType::UInt8).unwrap();
-        let expected =
-            Primitive::<u8>::from(&[None, Some(6), None, Some(8), None]).to(DataType::UInt8);
-        let c = b.as_any().downcast_ref::<PrimitiveArray<u8>>().unwrap();
+        let expected = UInt8Array::from(&[None, Some(6), None, Some(8), None]);
+        let c = b.as_any().downcast_ref::<UInt8Array>().unwrap();
         assert_eq!(c, &expected);
     }
 
     #[test]
     fn test_cast_i32_to_u8_sliced() {
-        let array = Primitive::<i32>::from_slice(&[-5, 6, -7, 8, 100000000]).to(DataType::Int32);
+        let array = Int32Array::from_slice(&[-5, 6, -7, 8, 100000000]);
         let array = array.slice(2, 3);
         let b = cast(&array, &DataType::UInt8).unwrap();
-        let expected = Primitive::<u8>::from(&[None, Some(8), None]).to(DataType::UInt8);
-        let c = b.as_any().downcast_ref::<PrimitiveArray<u8>>().unwrap();
+        let expected = UInt8Array::from(&[None, Some(8), None]);
+        let c = b.as_any().downcast_ref::<UInt8Array>().unwrap();
         assert_eq!(c, &expected);
     }
 
     #[test]
     fn test_cast_i32_to_i32() {
-        let input = &[5, 6, 7, 8, 9];
-        let array = Primitive::<i32>::from_slice(input).to(DataType::Int32);
+        let array = Int32Array::from_slice(&[5, 6, 7, 8, 9]);
         let b = cast(&array, &DataType::Int32).unwrap();
-        let c = b.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
+        let c = b.as_any().downcast_ref::<Int32Array>().unwrap();
 
         let expected = &[5, 6, 7, 8, 9];
-        let expected = Primitive::<i32>::from_slice(expected).to(DataType::Int32);
+        let expected = Int32Array::from_slice(expected);
         assert_eq!(c, &expected);
     }
 
     #[test]
     fn test_cast_i32_to_list_i32() {
-        let input = &[5, 6, 7, 8, 9];
-        let array = Primitive::<i32>::from_slice(input).to(DataType::Int32);
+        let array = Int32Array::from_slice(&[5, 6, 7, 8, 9]);
         let b = cast(
             &array,
             &DataType::List(Box::new(Field::new("item", DataType::Int32, true))),
@@ -794,8 +791,7 @@ mod tests {
             .downcast_ref::<PrimitiveArray<i32>>()
             .unwrap();
 
-        let expected = &[5, 6, 7, 8, 9];
-        let expected = Primitive::<i32>::from_slice(expected).to(DataType::Int32);
+        let expected = Int32Array::from_slice(&[5, 6, 7, 8, 9]);
         assert_eq!(c, &expected);
     }
 
@@ -803,7 +799,7 @@ mod tests {
     fn test_cast_i32_to_list_i32_nullable() {
         let input = [Some(5), None, Some(7), Some(8), Some(9)];
 
-        let array = Primitive::<i32>::from(input).to(DataType::Int32);
+        let array = Int32Array::from(input);
         let b = cast(
             &array,
             &DataType::List(Box::new(Field::new("item", DataType::Int32, true))),
@@ -813,13 +809,10 @@ mod tests {
         let arr = b.as_any().downcast_ref::<ListArray<i32>>().unwrap();
         assert_eq!(&[0, 1, 2, 3, 4, 5], arr.offsets());
         let values = arr.values();
-        let c = values
-            .as_any()
-            .downcast_ref::<PrimitiveArray<i32>>()
-            .unwrap();
+        let c = values.as_any().downcast_ref::<Int32Array>().unwrap();
 
         let expected = &[Some(5), None, Some(7), Some(8), Some(9)];
-        let expected = Primitive::<i32>::from(expected).to(DataType::Int32);
+        let expected = Int32Array::from(expected);
         assert_eq!(c, &expected);
     }
 
@@ -827,7 +820,7 @@ mod tests {
     fn test_cast_i32_to_list_f64_nullable_sliced() {
         let input = [Some(5), None, Some(7), Some(8), None, Some(10)];
 
-        let array = Primitive::<i32>::from(input).to(DataType::Int32);
+        let array = Int32Array::from(input);
 
         let array = array.slice(2, 4);
         let b = cast(
@@ -839,13 +832,10 @@ mod tests {
         let arr = b.as_any().downcast_ref::<ListArray<i32>>().unwrap();
         assert_eq!(&[0, 1, 2, 3, 4], arr.offsets());
         let values = arr.values();
-        let c = values
-            .as_any()
-            .downcast_ref::<PrimitiveArray<f64>>()
-            .unwrap();
+        let c = values.as_any().downcast_ref::<Float64Array>().unwrap();
 
         let expected = &[Some(7.0), Some(8.0), None, Some(10.0)];
-        let expected = Primitive::<f64>::from(expected).to(DataType::Float64);
+        let expected = Float64Array::from(expected);
         assert_eq!(c, &expected);
     }
 
@@ -856,7 +846,7 @@ mod tests {
         let c = b.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
 
         let expected = &[Some(5), Some(6), None, Some(8), None];
-        let expected = Primitive::<i32>::from(expected).to(DataType::Int32);
+        let expected = Int32Array::from(expected);
         assert_eq!(c, &expected);
     }
 
@@ -864,10 +854,10 @@ mod tests {
     fn test_cast_bool_to_i32() {
         let array = BooleanArray::from(vec![Some(true), Some(false), None]);
         let b = cast(&array, &DataType::Int32).unwrap();
-        let c = b.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
+        let c = b.as_any().downcast_ref::<Int32Array>().unwrap();
 
         let expected = &[Some(1), Some(0), None];
-        let expected = Primitive::<i32>::from(expected).to(DataType::Int32);
+        let expected = Int32Array::from(expected);
         assert_eq!(c, &expected);
     }
 
@@ -878,14 +868,14 @@ mod tests {
         let c = b.as_any().downcast_ref::<Float64Array>().unwrap();
 
         let expected = &[Some(1.0), Some(0.0), None];
-        let expected = Primitive::<f64>::from(expected).to(DataType::Float64);
+        let expected = Float64Array::from(expected);
         assert_eq!(c, &expected);
     }
 
     #[test]
     #[should_panic(expected = "Casting from Int32 to Timestamp(Microsecond, None) not supported")]
     fn test_cast_int32_to_timestamp() {
-        let array = Primitive::<i32>::from(&[Some(2), Some(10), None]).to(DataType::Int32);
+        let array = Int32Array::from(&[Some(2), Some(10), None]);
         cast(&array, &DataType::Timestamp(TimeUnit::Microsecond, None)).unwrap();
     }
 

@@ -9,19 +9,16 @@ use super::utils::combine_validities;
 /// This has the same semantics as postgres.
 /// # Example
 /// ```rust
-/// # use arrow2::array::Primitive;
+/// # use arrow2::array::Int32Array;
 /// # use arrow2::datatypes::DataType;
 /// # use arrow2::error::Result;
 /// # use arrow2::compute::nullif::nullif_primitive;
 /// # fn main() -> Result<()> {
-/// let lhs =
-///     Primitive::<i32>::from(&[None, None, Some(1), Some(1), Some(1)]).to(DataType::Int32);
-/// let rhs =
-///     Primitive::<i32>::from(&[None, Some(1), None, Some(1), Some(0)]).to(DataType::Int32);
+/// let lhs = Int32Array::from(&[None, None, Some(1), Some(1), Some(1)]);
+/// let rhs = Int32Array::from(&[None, Some(1), None, Some(1), Some(0)]);
 /// let result = nullif_primitive(&lhs, &rhs)?;
 ///
-/// let expected =
-///     Primitive::<i32>::from(&[None, None, Some(1), None, Some(1)]).to(DataType::Int32);
+/// let expected = Int32Array::from(&[None, None, Some(1), None, Some(1)]);
 ///
 /// assert_eq!(expected, result);
 /// Ok(())

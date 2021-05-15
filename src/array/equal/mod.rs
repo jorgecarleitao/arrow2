@@ -625,7 +625,7 @@ pub fn equal(lhs: &dyn Array, rhs: &dyn Array) -> bool {
 mod tests {
     use std::sync::Arc;
 
-    use crate::array::{BooleanArray, Offset, Primitive};
+    use crate::array::{BooleanArray, Int16Array, Int32Array, Offset};
 
     use super::*;
 
@@ -660,8 +660,8 @@ mod tests {
         ];
 
         for (lhs, rhs, expected) in cases {
-            let lhs = Primitive::<i32>::from(&lhs).to(DataType::Int32);
-            let rhs = Primitive::<i32>::from(&rhs).to(DataType::Int32);
+            let lhs = Int32Array::from(&lhs);
+            let rhs = Int32Array::from(&rhs);
             test_equal(&lhs, &rhs, expected);
         }
     }
@@ -707,9 +707,9 @@ mod tests {
         ];
 
         for (lhs, slice_lhs, rhs, slice_rhs, expected) in cases {
-            let lhs = Primitive::<i32>::from(&lhs).to(DataType::Int32);
+            let lhs = Int32Array::from(&lhs);
             let lhs = lhs.slice(slice_lhs.0, slice_lhs.1);
-            let rhs = Primitive::<i32>::from(&rhs).to(DataType::Int32);
+            let rhs = Int32Array::from(&rhs);
             let rhs = rhs.slice(slice_rhs.0, slice_rhs.1);
 
             test_equal(&lhs, &rhs, expected);
@@ -832,10 +832,10 @@ mod tests {
     }
 
     fn create_dictionary_array(values: &[&str], keys: &[Option<i16>]) -> DictionaryArray<i16> {
-        let keys = Primitive::<i16>::from(keys).to(DataType::Int16);
+        let keys = Int16Array::from(keys);
         let values = Utf8Array::<i32>::from_slice(values);
 
-        DictionaryArray::<i16>::from_data(keys, Arc::new(values))
+        DictionaryArray::from_data(keys, Arc::new(values))
     }
 
     #[test]

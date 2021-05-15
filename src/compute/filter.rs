@@ -265,17 +265,14 @@ pub fn filter_record_batch(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::datatypes::DataType;
 
     #[test]
     fn test_filter_array_slice() {
-        let a = Primitive::<i32>::from_slice(&[5, 6, 7, 8, 9])
-            .to(DataType::Int32)
-            .slice(1, 4);
+        let a = Int32Array::from_slice(&[5, 6, 7, 8, 9]).slice(1, 4);
         let b = BooleanArray::from_slice(vec![true, true, false, false, true]).slice(1, 4);
         let c = filter(&a, &b).unwrap();
 
-        let expected = Primitive::<i32>::from_slice(&[6, 9]).to(DataType::Int32);
+        let expected = Int32Array::from_slice(&[6, 9]);
 
         assert_eq!(expected, c.as_ref());
     }
@@ -288,11 +285,11 @@ mod tests {
         // set up two more values after the batch
         data_values.extend_from_slice(&[66, 67]);
         filter_values.extend_from_slice(&[false, true]);
-        let a = Primitive::<i32>::from_slice(data_values).to(DataType::Int32);
+        let a = Int32Array::from_slice(&data_values);
         let b = BooleanArray::from_slice(filter_values);
         let c = filter(&a, &b).unwrap();
 
-        let expected = Primitive::<i32>::from_slice(&[65, 67]).to(DataType::Int32);
+        let expected = Int32Array::from_slice(&[65, 67]);
 
         assert_eq!(expected, c.as_ref());
     }
@@ -309,7 +306,7 @@ mod tests {
         // set up two more values after the batch
         data_values.extend_from_slice(&[Some(66), None, Some(67), None]);
         filter_values.extend_from_slice(&[false, true, true, true]);
-        let a = Primitive::<i32>::from(data_values).to(DataType::Int32);
+        let a = Int32Array::from(data_values);
         let b = BooleanArray::from_slice(filter_values);
         let c = filter(&a, &b).unwrap();
         let d = c.as_ref().as_any().downcast_ref::<Int32Array>().unwrap();
@@ -339,7 +336,7 @@ mod tests {
 
     #[test]
     fn test_filter_primative_array_with_null() {
-        let a = Primitive::<i32>::from(vec![Some(5), None]).to(DataType::Int32);
+        let a = Int32Array::from(&[Some(5), None]);
         let b = BooleanArray::from_slice(vec![false, true]);
         let c = filter(&a, &b).unwrap();
         let d = c.as_ref().as_any().downcast_ref::<Int32Array>().unwrap();

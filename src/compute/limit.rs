@@ -32,14 +32,13 @@ pub fn limit(array: &dyn Array, num_elements: usize) -> Box<dyn Array> {
 mod tests {
     use super::*;
     use crate::array::*;
-    use crate::datatypes::DataType;
 
     #[test]
     fn test_limit_array() {
-        let a = Primitive::<i32>::from_slice(vec![5, 6, 7, 8, 9]).to(DataType::Int32);
+        let a = Int32Array::from_slice(&[5, 6, 7, 8, 9]);
         let b = limit(&a, 3);
         let c = b.as_ref().as_any().downcast_ref::<Int32Array>().unwrap();
-        let expected = Primitive::<i32>::from_slice(vec![5, 6, 7]).to(DataType::Int32);
+        let expected = Int32Array::from_slice(&[5, 6, 7]);
         assert_eq!(&expected, c);
     }
 }

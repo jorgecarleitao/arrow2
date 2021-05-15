@@ -227,12 +227,11 @@ where
 /// # Examples
 /// ```
 /// use arrow2::compute::arithmetics::basic::add::checked_add_scalar;
-/// use arrow2::array::Primitive;
-/// use arrow2::datatypes::DataType;
+/// use arrow2::array::Int8Array;
 ///
-/// let a = Primitive::from(&vec![None, Some(100), None, Some(100)]).to(DataType::Int8);
+/// let a = Int8Array::from(&[None, Some(100), None, Some(100)]);
 /// let result = checked_add_scalar(&a, &100i8);
-/// let expected = Primitive::<i8>::from(&vec![None, None, None, None]).to(DataType::Int8);
+/// let expected = Int8Array::from(&[None, None, None, None]);
 /// assert_eq!(result, expected);
 /// ```
 #[inline]
@@ -350,13 +349,12 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::array::Primitive;
-    use crate::datatypes::DataType;
+    use crate::array::*;
 
     #[test]
     fn test_add_mismatched_length() {
-        let a = Primitive::from_slice(vec![5, 6]).to(DataType::Int32);
-        let b = Primitive::from_slice(vec![5]).to(DataType::Int32);
+        let a = Int32Array::from_slice(&[5, 6]);
+        let b = Int32Array::from_slice(&[5]);
         add(&a, &b)
             .err()
             .expect("should have failed due to different lengths");
@@ -364,10 +362,10 @@ mod tests {
 
     #[test]
     fn test_add() {
-        let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
-        let b = Primitive::from(&vec![Some(5), None, None, Some(6)]).to(DataType::Int32);
+        let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
+        let b = Int32Array::from(&[Some(5), None, None, Some(6)]);
         let result = add(&a, &b).unwrap();
-        let expected = Primitive::from(&vec![None, None, None, Some(12)]).to(DataType::Int32);
+        let expected = Int32Array::from(&[None, None, None, Some(12)]);
         assert_eq!(result, expected);
 
         // Trait testing
@@ -378,23 +376,23 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_add_panic() {
-        let a = Primitive::from(&vec![Some(100i8)]).to(DataType::Int8);
-        let b = Primitive::from(&vec![Some(100i8)]).to(DataType::Int8);
+        let a = Int8Array::from(&[Some(100i8)]);
+        let b = Int8Array::from(&[Some(100i8)]);
         let _ = add(&a, &b);
     }
 
     #[test]
     fn test_add_checked() {
-        let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
-        let b = Primitive::from(&vec![Some(5), None, None, Some(6)]).to(DataType::Int32);
+        let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
+        let b = Int32Array::from(&[Some(5), None, None, Some(6)]);
         let result = checked_add(&a, &b).unwrap();
-        let expected = Primitive::from(&vec![None, None, None, Some(12)]).to(DataType::Int32);
+        let expected = Int32Array::from(&[None, None, None, Some(12)]);
         assert_eq!(result, expected);
 
-        let a = Primitive::from(&vec![Some(100i8), Some(100i8), Some(100i8)]).to(DataType::Int8);
-        let b = Primitive::from(&vec![Some(0i8), Some(100i8), Some(0i8)]).to(DataType::Int8);
+        let a = Int8Array::from(&[Some(100i8), Some(100i8), Some(100i8)]);
+        let b = Int8Array::from(&[Some(0i8), Some(100i8), Some(0i8)]);
         let result = checked_add(&a, &b).unwrap();
-        let expected = Primitive::from(&vec![Some(100i8), None, Some(100i8)]).to(DataType::Int8);
+        let expected = Int8Array::from(&[Some(100i8), None, Some(100i8)]);
         assert_eq!(result, expected);
 
         // Trait testing
@@ -404,16 +402,16 @@ mod tests {
 
     #[test]
     fn test_add_saturating() {
-        let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
-        let b = Primitive::from(&vec![Some(5), None, None, Some(6)]).to(DataType::Int32);
+        let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
+        let b = Int32Array::from(&[Some(5), None, None, Some(6)]);
         let result = saturating_add(&a, &b).unwrap();
-        let expected = Primitive::from(&vec![None, None, None, Some(12)]).to(DataType::Int32);
+        let expected = Int32Array::from(&[None, None, None, Some(12)]);
         assert_eq!(result, expected);
 
-        let a = Primitive::from(&vec![Some(100i8)]).to(DataType::Int8);
-        let b = Primitive::from(&vec![Some(100i8)]).to(DataType::Int8);
+        let a = Int8Array::from(&[Some(100i8)]);
+        let b = Int8Array::from(&[Some(100i8)]);
         let result = saturating_add(&a, &b).unwrap();
-        let expected = Primitive::from(&vec![Some(127)]).to(DataType::Int8);
+        let expected = Int8Array::from(&[Some(127)]);
         assert_eq!(result, expected);
 
         // Trait testing
@@ -423,17 +421,17 @@ mod tests {
 
     #[test]
     fn test_add_overflowing() {
-        let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
-        let b = Primitive::from(&vec![Some(5), None, None, Some(6)]).to(DataType::Int32);
+        let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
+        let b = Int32Array::from(&[Some(5), None, None, Some(6)]);
         let (result, overflow) = overflowing_add(&a, &b).unwrap();
-        let expected = Primitive::from(&vec![None, None, None, Some(12)]).to(DataType::Int32);
+        let expected = Int32Array::from(&[None, None, None, Some(12)]);
         assert_eq!(result, expected);
         assert_eq!(overflow.as_slice()[0], 0b0000);
 
-        let a = Primitive::from(&vec![Some(1i8), Some(100i8)]).to(DataType::Int8);
-        let b = Primitive::from(&vec![Some(1i8), Some(100i8)]).to(DataType::Int8);
+        let a = Int8Array::from(&[Some(1i8), Some(100i8)]);
+        let b = Int8Array::from(&[Some(1i8), Some(100i8)]);
         let (result, overflow) = overflowing_add(&a, &b).unwrap();
-        let expected = Primitive::from(&vec![Some(2i8), Some(-56i8)]).to(DataType::Int8);
+        let expected = Int8Array::from(&[Some(2i8), Some(-56i8)]);
         assert_eq!(result, expected);
         assert_eq!(overflow.as_slice()[0], 0b10);
 
@@ -445,9 +443,9 @@ mod tests {
 
     #[test]
     fn test_add_scalar() {
-        let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
+        let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
         let result = add_scalar(&a, &1i32);
-        let expected = Primitive::from(&vec![None, Some(7), None, Some(7)]).to(DataType::Int32);
+        let expected = Int32Array::from(&[None, Some(7), None, Some(7)]);
         assert_eq!(result, expected);
 
         // Trait testing
@@ -457,14 +455,14 @@ mod tests {
 
     #[test]
     fn test_add_scalar_checked() {
-        let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
+        let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
         let result = checked_add_scalar(&a, &1i32);
-        let expected = Primitive::from(&vec![None, Some(7), None, Some(7)]).to(DataType::Int32);
+        let expected = Int32Array::from(&[None, Some(7), None, Some(7)]);
         assert_eq!(result, expected);
 
-        let a = Primitive::from(&vec![None, Some(100), None, Some(100)]).to(DataType::Int8);
+        let a = Int8Array::from(&[None, Some(100), None, Some(100)]);
         let result = checked_add_scalar(&a, &100i8);
-        let expected = Primitive::<i8>::from(&vec![None, None, None, None]).to(DataType::Int8);
+        let expected = Int8Array::from(&[None, None, None, None]);
         assert_eq!(result, expected);
 
         // Trait testing
@@ -474,14 +472,14 @@ mod tests {
 
     #[test]
     fn test_add_scalar_saturating() {
-        let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
+        let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
         let result = saturating_add_scalar(&a, &1i32);
-        let expected = Primitive::from(&vec![None, Some(7), None, Some(7)]).to(DataType::Int32);
+        let expected = Int32Array::from(&[None, Some(7), None, Some(7)]);
         assert_eq!(result, expected);
 
-        let a = Primitive::from(&vec![Some(100i8)]).to(DataType::Int8);
+        let a = Int8Array::from(&[Some(100i8)]);
         let result = saturating_add_scalar(&a, &100i8);
-        let expected = Primitive::from(&vec![Some(127)]).to(DataType::Int8);
+        let expected = Int8Array::from(&[Some(127)]);
         assert_eq!(result, expected);
 
         // Trait testing
@@ -491,15 +489,15 @@ mod tests {
 
     #[test]
     fn test_add_scalar_overflowing() {
-        let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
+        let a = Int32Array::from(&vec![None, Some(6), None, Some(6)]);
         let (result, overflow) = overflowing_add_scalar(&a, &1i32);
-        let expected = Primitive::from(&vec![None, Some(7), None, Some(7)]).to(DataType::Int32);
+        let expected = Int32Array::from(&vec![None, Some(7), None, Some(7)]);
         assert_eq!(result, expected);
         assert_eq!(overflow.as_slice()[0], 0b0000);
 
-        let a = Primitive::from(&vec![Some(1i8), Some(100i8)]).to(DataType::Int8);
+        let a = Int8Array::from(&vec![Some(1i8), Some(100i8)]);
         let (result, overflow) = overflowing_add_scalar(&a, &100i8);
-        let expected = Primitive::from(&vec![Some(101i8), Some(-56i8)]).to(DataType::Int8);
+        let expected = Int8Array::from(&vec![Some(101i8), Some(-56i8)]);
         assert_eq!(result, expected);
         assert_eq!(overflow.as_slice()[0], 0b10);
 

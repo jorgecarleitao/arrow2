@@ -180,13 +180,7 @@ mod tests {
             Some(vec![Some(1), Some(2), None]),
             None,
         ];
-        let values = Primitive::<i32>::from(vec![
-            Some(1),
-            Some(3),
-            None,
-            Some(1),
-            ])
-        .to(DataType::Int32);
+        let values = Int32Array::from(&[Some(1), Some(3), None, Some(1)]);
         let expected = BooleanArray::from(vec![
             Some(true),
             Some(false),
