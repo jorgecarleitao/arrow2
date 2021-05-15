@@ -139,11 +139,14 @@ mod tests_integration {
         let parquet_schema = SchemaDescriptor::new("root".to_string(), parquet_types.clone());
 
         let row_groups = batches.iter().map(|batch| {
-            let iterator = batch
-                .columns()
-                .iter()
-                .zip(parquet_types.iter())
-                .map(|(array, type_)| Ok(std::iter::once(array_to_page(array.as_ref(), type_))));
+            let iterator =
+                batch
+                    .columns()
+                    .iter()
+                    .zip(parquet_types.iter())
+                    .map(|(array, type_)| {
+                        Ok(std::iter::once(array_to_page(array.as_ref(), type_, codec)))
+                    });
             Ok(iterator)
         });
 
