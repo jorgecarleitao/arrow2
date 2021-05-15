@@ -99,20 +99,19 @@ fn create_scale(lhs: &DataType, rhs: &DataType) -> Result<f64> {
 ///
 /// assert_eq!(result, expected);
 /// ```
-pub fn add_duration<T, D>(
+pub fn add_duration<T>(
     time: &PrimitiveArray<T>,
-    duration: &PrimitiveArray<D>,
+    duration: &PrimitiveArray<i64>,
 ) -> Result<PrimitiveArray<T>>
 where
     f64: AsPrimitive<T>,
     T: NativeType + Add<T, Output = T>,
-    D: NativeType + AsPrimitive<f64>,
 {
     let scale = create_scale(time.data_type(), duration.data_type())?;
 
     // Closure for the binary operation. The closure contains the scale
     // required to add a duration to the timestamp array.
-    let op = move |a: T, b: D| a + (b.as_() * scale).as_();
+    let op = move |a: T, b: i64| a + (b as f64 * scale).as_();
 
     binary(time, duration, time.data_type().clone(), op)
 }
