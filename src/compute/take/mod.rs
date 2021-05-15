@@ -124,6 +124,61 @@ pub fn take<O: Offset>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Resul
     }
 }
 
+/// Checks if an array of type `datatype` can perform take operation
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::take::can_take;
+/// use arrow2::datatypes::{DataType};
+///
+/// let data_type = DataType::Int8;
+/// assert_eq!(can_take(&data_type), true);
+/// ```
+pub fn can_take(data_type: &DataType) -> bool {
+    match data_type {
+        DataType::Null
+        | DataType::Boolean
+        | DataType::Int8
+        | DataType::Int16
+        | DataType::Int32
+        | DataType::Date32
+        | DataType::Time32(_)
+        | DataType::Interval(IntervalUnit::YearMonth)
+        | DataType::Int64
+        | DataType::Date64
+        | DataType::Time64(_)
+        | DataType::Duration(_)
+        | DataType::Timestamp(_, _)
+        | DataType::UInt8
+        | DataType::UInt16
+        | DataType::UInt32
+        | DataType::UInt64
+        | DataType::Float16
+        | DataType::Float32
+        | DataType::Float64
+        | DataType::Decimal(_, _)
+        | DataType::Utf8
+        | DataType::LargeUtf8
+        | DataType::Binary
+        | DataType::LargeBinary
+        | DataType::Struct(_)
+        | DataType::List(_)
+        | DataType::LargeList(_) => true,
+        DataType::Dictionary(key_type, _) => match key_type.as_ref() {
+            DataType::Int8
+            | DataType::Int16
+            | DataType::Int32
+            | DataType::Int64
+            | DataType::UInt8
+            | DataType::UInt16
+            | DataType::UInt32
+            | DataType::UInt64 => true,
+            _ => false,
+        },
+        _ => false,
+    }
+}
+
 #[inline(always)]
 fn maybe_usize<I: Offset>(index: I) -> Result<usize> {
     index
@@ -242,5 +297,58 @@ mod tests {
             validity,
         );
         assert_eq!(expected, output.as_ref());
+    }
+
+    #[test]
+    fn consistency() {
+        use crate::array::new_null_array;
+        use crate::datatypes::DataType::*;
+        use crate::datatypes::TimeUnit;
+
+        let datatypes = vec![
+            Null,
+            Boolean,
+            UInt8,
+            UInt16,
+            UInt32,
+            UInt64,
+            Int8,
+            Int16,
+            Int32,
+            Int64,
+            Float32,
+            Float64,
+            Timestamp(TimeUnit::Second, None),
+            Timestamp(TimeUnit::Millisecond, None),
+            Timestamp(TimeUnit::Microsecond, None),
+            Timestamp(TimeUnit::Nanosecond, None),
+            Time64(TimeUnit::Microsecond),
+            Time64(TimeUnit::Nanosecond),
+            Date32,
+            Time32(TimeUnit::Second),
+            Time32(TimeUnit::Millisecond),
+            Date64,
+            Utf8,
+            LargeUtf8,
+            Binary,
+            LargeBinary,
+            Duration(TimeUnit::Second),
+            Duration(TimeUnit::Millisecond),
+            Duration(TimeUnit::Microsecond),
+            Duration(TimeUnit::Nanosecond),
+        ];
+
+        datatypes.clone().into_iter().for_each(|d1| {
+            let array = new_null_array(d1.clone(), 10);
+            if can_take(&d1) {
+                let indices =
+                    Primitive::<i32>::from(&[Some(1), Some(2), None, Some(3)]).to(DataType::Int32);
+                assert!(take(array.as_ref(), &indices).is_ok());
+            } else {
+                let indices =
+                    Primitive::<i32>::from(&[Some(1), Some(2), None, Some(3)]).to(DataType::Int32);
+                assert!(take(array.as_ref(), &indices).is_err());
+            }
+        });
     }
 }

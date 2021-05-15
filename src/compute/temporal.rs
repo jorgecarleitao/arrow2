@@ -112,6 +112,32 @@ pub fn hour(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
     }
 }
 
+/// Checks if an array of type `datatype` can perform hour operation
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::temporal::can_hour;
+/// use arrow2::datatypes::{DataType, TimeUnit};
+///
+/// let data_type = DataType::Time32(TimeUnit::Second);
+/// assert_eq!(can_hour(&data_type), true);
+
+/// let data_type = DataType::Int8;
+/// assert_eq!(can_hour(&data_type), false);
+/// ```
+pub fn can_hour(data_type: &DataType) -> bool {
+    match data_type {
+        DataType::Time32(TimeUnit::Second)
+        | DataType::Time32(TimeUnit::Microsecond)
+        | DataType::Time64(TimeUnit::Microsecond)
+        | DataType::Time64(TimeUnit::Nanosecond)
+        | DataType::Date32
+        | DataType::Date64
+        | DataType::Timestamp(_, None) => true,
+        _ => false,
+    }
+}
+
 /// Extracts the hours of a given temporal array as an array of integers
 pub fn year(array: &dyn Array) -> Result<PrimitiveArray<i32>> {
     let final_data_type = DataType::Int32;
@@ -158,6 +184,25 @@ pub fn year(array: &dyn Array) -> Result<PrimitiveArray<i32>> {
     }
 }
 
+/// Checks if an array of type `datatype` can perform year operation
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::temporal::can_year;
+/// use arrow2::datatypes::{DataType};
+///
+/// let data_type = DataType::Date32;
+/// assert_eq!(can_year(&data_type), true);
+
+/// let data_type = DataType::Int8;
+/// assert_eq!(can_year(&data_type), false);
+/// ```
+pub fn can_year(data_type: &DataType) -> bool {
+    match data_type {
+        DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, None) => true,
+        _ => false,
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -237,5 +282,103 @@ mod tests {
         let result = year(&array).unwrap();
         let expected = Primitive::<i32>::from(&[Some(2021), None]).to(DataType::Int32);
         assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn consistency_hour() {
+        use crate::array::new_null_array;
+        use crate::datatypes::DataType::*;
+        use crate::datatypes::TimeUnit;
+
+        let datatypes = vec![
+            Null,
+            Boolean,
+            UInt8,
+            UInt16,
+            UInt32,
+            UInt64,
+            Int8,
+            Int16,
+            Int32,
+            Int64,
+            Float32,
+            Float64,
+            Timestamp(TimeUnit::Second, None),
+            Timestamp(TimeUnit::Millisecond, None),
+            Timestamp(TimeUnit::Microsecond, None),
+            Timestamp(TimeUnit::Nanosecond, None),
+            Time64(TimeUnit::Microsecond),
+            Time64(TimeUnit::Nanosecond),
+            Date32,
+            Time32(TimeUnit::Second),
+            Time32(TimeUnit::Millisecond),
+            Date64,
+            Utf8,
+            LargeUtf8,
+            Binary,
+            LargeBinary,
+            Duration(TimeUnit::Second),
+            Duration(TimeUnit::Millisecond),
+            Duration(TimeUnit::Microsecond),
+            Duration(TimeUnit::Nanosecond),
+        ];
+
+        datatypes.clone().into_iter().for_each(|d1| {
+            let array = new_null_array(d1.clone(), 10);
+            if can_hour(&d1) {
+                assert!(hour(array.as_ref()).is_ok());
+            } else {
+                assert!(hour(array.as_ref()).is_err());
+            }
+        });
+    }
+
+    #[test]
+    fn consistency_year() {
+        use crate::array::new_null_array;
+        use crate::datatypes::DataType::*;
+        use crate::datatypes::TimeUnit;
+
+        let datatypes = vec![
+            Null,
+            Boolean,
+            UInt8,
+            UInt16,
+            UInt32,
+            UInt64,
+            Int8,
+            Int16,
+            Int32,
+            Int64,
+            Float32,
+            Float64,
+            Timestamp(TimeUnit::Second, None),
+            Timestamp(TimeUnit::Millisecond, None),
+            Timestamp(TimeUnit::Microsecond, None),
+            Timestamp(TimeUnit::Nanosecond, None),
+            Time64(TimeUnit::Microsecond),
+            Time64(TimeUnit::Nanosecond),
+            Date32,
+            Time32(TimeUnit::Second),
+            Time32(TimeUnit::Millisecond),
+            Date64,
+            Utf8,
+            LargeUtf8,
+            Binary,
+            LargeBinary,
+            Duration(TimeUnit::Second),
+            Duration(TimeUnit::Millisecond),
+            Duration(TimeUnit::Microsecond),
+            Duration(TimeUnit::Nanosecond),
+        ];
+
+        datatypes.clone().into_iter().for_each(|d1| {
+            let array = new_null_array(d1.clone(), 10);
+            if can_year(&d1) {
+                assert!(year(array.as_ref()).is_ok());
+            } else {
+                assert!(year(array.as_ref()).is_err());
+            }
+        });
     }
 }

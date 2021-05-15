@@ -218,6 +218,71 @@ pub fn sort_to_indices(values: &dyn Array, options: &SortOptions) -> Result<Int3
     }
 }
 
+/// Checks if an array of type `datatype` can be sorted
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::sort::can_sort;
+/// use arrow2::datatypes::{DataType};
+///
+/// let data_type = DataType::Int8;
+/// assert_eq!(can_sort(&data_type), true);
+///
+/// let data_type = DataType::LargeBinary;
+/// assert_eq!(can_sort(&data_type), false)
+/// ```
+pub fn can_sort(data_type: &DataType) -> bool {
+    match data_type {
+        DataType::Boolean
+        | DataType::Int8
+        | DataType::Int16
+        | DataType::Int32
+        | DataType::Date32
+        | DataType::Time32(_)
+        | DataType::Interval(_)
+        | DataType::Int64
+        | DataType::Date64
+        | DataType::Time64(_)
+        | DataType::Timestamp(_, None)
+        | DataType::Duration(_)
+        | DataType::UInt8
+        | DataType::UInt16
+        | DataType::UInt32
+        | DataType::UInt64
+        | DataType::Float32
+        | DataType::Float64
+        | DataType::Utf8
+        | DataType::LargeUtf8 => true,
+        DataType::List(field) | DataType::LargeList(field) | DataType::FixedSizeList(field, _) => {
+            match field.data_type() {
+                DataType::Int8
+                | DataType::Int16
+                | DataType::Int32
+                | DataType::Int64
+                | DataType::UInt8
+                | DataType::UInt16
+                | DataType::UInt32
+                | DataType::UInt64 => true,
+                _ => false,
+            }
+        }
+        DataType::Dictionary(key_type, value_type) if *value_type.as_ref() == DataType::Utf8 => {
+            match key_type.as_ref() {
+                DataType::Int8
+                | DataType::Int16
+                | DataType::Int32
+                | DataType::Int64
+                | DataType::UInt8
+                | DataType::UInt16
+                | DataType::UInt32
+                | DataType::UInt64 => true,
+                _ => false,
+            }
+        }
+        _ => false,
+    }
+}
+
 /// Options that define how sort kernels should behave
 #[derive(Clone, Copy, Debug)]
 pub struct SortOptions {
@@ -995,4 +1060,61 @@ mod tests {
         );
     }
     */
+
+    #[test]
+    fn consistency() {
+        use crate::array::new_null_array;
+        use crate::datatypes::DataType::*;
+        use crate::datatypes::TimeUnit;
+
+        let datatypes = vec![
+            Null,
+            Boolean,
+            UInt8,
+            UInt16,
+            UInt32,
+            UInt64,
+            Int8,
+            Int16,
+            Int32,
+            Int64,
+            Float32,
+            Float64,
+            Timestamp(TimeUnit::Second, None),
+            Timestamp(TimeUnit::Millisecond, None),
+            Timestamp(TimeUnit::Microsecond, None),
+            Timestamp(TimeUnit::Nanosecond, None),
+            Time64(TimeUnit::Microsecond),
+            Time64(TimeUnit::Nanosecond),
+            Date32,
+            Time32(TimeUnit::Second),
+            Time32(TimeUnit::Millisecond),
+            Date64,
+            Utf8,
+            LargeUtf8,
+            Binary,
+            LargeBinary,
+            Duration(TimeUnit::Second),
+            Duration(TimeUnit::Millisecond),
+            Duration(TimeUnit::Microsecond),
+            Duration(TimeUnit::Nanosecond),
+        ];
+
+        datatypes.clone().into_iter().for_each(|d1| {
+            let array = new_null_array(d1.clone(), 10);
+            if can_sort(&d1) {
+                let options = SortOptions {
+                    descending: true,
+                    nulls_first: true,
+                };
+                assert!(sort(array.as_ref(), &options).is_ok());
+            } else {
+                let options = SortOptions {
+                    descending: true,
+                    nulls_first: true,
+                };
+                assert!(sort(array.as_ref(), &options).is_err());
+            }
+        });
+    }
 }

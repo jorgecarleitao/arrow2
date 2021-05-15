@@ -93,9 +93,9 @@ macro_rules! primitive_arithmetic_match {
     }};
 }
 
-/// Function to execute an arithmetic operation with two arrays
-/// It uses the enum Operator to select the type of operation that is going to
-/// be performed with the two arrays
+/// Execute an arithmetic operation with two arrays. It uses the enum Operator
+/// to select the type of operation that is going to be performed with the two
+/// arrays
 pub fn arithmetic(lhs: &dyn Array, op: Operator, rhs: &dyn Array) -> Result<Box<dyn Array>> {
     let data_type = lhs.data_type();
     if data_type != rhs.data_type() {
@@ -135,6 +135,38 @@ pub fn arithmetic(lhs: &dyn Array, op: Operator, rhs: &dyn Array) -> Result<Box<
             "Arithmetics between {:?} is not supported",
             data_type
         ))),
+    }
+}
+
+/// Checks if an array of type `datatype` can perform basic arithmetic
+/// operations. These operations include add, subtract, multiply, divide.
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::arithmetics::can_arithmetic;
+/// use arrow2::datatypes::{DataType};
+///
+/// let data_type = DataType::Int8;
+/// assert_eq!(can_arithmetic(&data_type), true);
+///
+/// let data_type = DataType::LargeBinary;
+/// assert_eq!(can_arithmetic(&data_type), false)
+/// ```
+pub fn can_arithmetic(data_type: &DataType) -> bool {
+    match data_type {
+        DataType::Int8
+        | DataType::Int16
+        | DataType::Int32
+        | DataType::Int64
+        | DataType::Duration(_)
+        | DataType::UInt8
+        | DataType::UInt16
+        | DataType::UInt32
+        | DataType::UInt64
+        | DataType::Float32
+        | DataType::Float64
+        | DataType::Decimal(_, _) => true,
+        _ => false,
     }
 }
 
@@ -314,3 +346,71 @@ unsafe impl NotI128 for i32 {}
 unsafe impl NotI128 for i64 {}
 unsafe impl NotI128 for f32 {}
 unsafe impl NotI128 for f64 {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn consistency() {
+        use crate::array::new_null_array;
+        use crate::datatypes::DataType::*;
+        use crate::datatypes::TimeUnit;
+
+        let datatypes = vec![
+            Null,
+            Boolean,
+            UInt8,
+            UInt16,
+            UInt32,
+            UInt64,
+            Int8,
+            Int16,
+            Int32,
+            Int64,
+            Float32,
+            Float64,
+            Timestamp(TimeUnit::Second, None),
+            Timestamp(TimeUnit::Millisecond, None),
+            Timestamp(TimeUnit::Microsecond, None),
+            Timestamp(TimeUnit::Nanosecond, None),
+            Time64(TimeUnit::Microsecond),
+            Time64(TimeUnit::Nanosecond),
+            Date32,
+            Time32(TimeUnit::Second),
+            Time32(TimeUnit::Millisecond),
+            Date64,
+            Utf8,
+            LargeUtf8,
+            Binary,
+            LargeBinary,
+            Duration(TimeUnit::Second),
+            Duration(TimeUnit::Millisecond),
+            Duration(TimeUnit::Microsecond),
+            Duration(TimeUnit::Nanosecond),
+        ];
+
+        datatypes.clone().into_iter().for_each(|d1| {
+            let array = new_null_array(d1.clone(), 10);
+            if can_arithmetic(&d1) {
+                let op = Operator::Add;
+                assert!(arithmetic(array.as_ref(), op, array.as_ref()).is_ok());
+
+                let op = Operator::Subtract;
+                assert!(arithmetic(array.as_ref(), op, array.as_ref()).is_ok());
+
+                let op = Operator::Multiply;
+                assert!(arithmetic(array.as_ref(), op, array.as_ref()).is_ok());
+            } else {
+                let op = Operator::Add;
+                assert!(arithmetic(array.as_ref(), op, array.as_ref()).is_err());
+
+                let op = Operator::Subtract;
+                assert!(arithmetic(array.as_ref(), op, array.as_ref()).is_err());
+
+                let op = Operator::Multiply;
+                assert!(arithmetic(array.as_ref(), op, array.as_ref()).is_err());
+            }
+        });
+    }
+}
