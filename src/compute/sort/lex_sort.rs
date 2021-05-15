@@ -45,11 +45,11 @@ pub struct SortColumn<'a> {
 ///
 /// ```
 /// use std::convert::From;
-/// use arrow2::array::{Utf8Array, PrimitiveArray, Array, Primitive};
+/// use arrow2::array::{Utf8Array, Int64Array, Array};
 /// use arrow2::compute::sort::{SortColumn, SortOptions, lexsort};
 /// use arrow2::datatypes::DataType;
 ///
-/// let int64 = Primitive::<i64>::from(&[None, Some(-2), Some(89), Some(-64), Some(101)]).to(DataType::Int64);
+/// let int64 = Int64Array::from(&[None, Some(-2), Some(89), Some(-64), Some(101)]);
 /// let utf8 = Utf8Array::<i32>::from(&vec![Some("hello"), Some("world"), Some(","), Some("foobar"), Some("!")]);
 ///
 /// let sorted_columns = lexsort(&vec![
@@ -66,7 +66,7 @@ pub struct SortColumn<'a> {
 ///     },
 /// ]).unwrap();
 ///
-/// let sorted = sorted_columns[0].as_any().downcast_ref::<PrimitiveArray<i64>>().unwrap();
+/// let sorted = sorted_columns[0].as_any().downcast_ref::<Int64Array>().unwrap();
 /// assert_eq!(sorted.value(1), -64);
 /// assert!(sorted.is_null(0));
 /// ```
@@ -167,7 +167,7 @@ pub fn lexsort_to_indices(columns: &[SortColumn]) -> Result<PrimitiveArray<i32>>
 
 #[cfg(test)]
 mod tests {
-    use crate::array::{Primitive, Utf8Array};
+    use crate::array::*;
 
     use super::*;
 
@@ -178,11 +178,9 @@ mod tests {
 
     #[test]
     fn test_lex_sort_mixed_types() {
-        let c1 = Primitive::<i64>::from(&[Some(0), Some(2), Some(-1), Some(0)]).to(DataType::Int64);
-        let c2 =
-            Primitive::<u32>::from(&[Some(101), Some(8), Some(7), Some(102)]).to(DataType::UInt32);
-        let c3 =
-            Primitive::<i64>::from(&[Some(-1), Some(-2), Some(-3), Some(-4)]).to(DataType::Int64);
+        let c1 = Int64Array::from(&[Some(0), Some(2), Some(-1), Some(0)]);
+        let c2 = UInt32Array::from(&[Some(101), Some(8), Some(7), Some(102)]);
+        let c3 = Int64Array::from(&[Some(-1), Some(-2), Some(-3), Some(-4)]);
 
         let input = vec![
             SortColumn {
@@ -198,11 +196,9 @@ mod tests {
                 options: None,
             },
         ];
-        let c1 = Primitive::<i64>::from(&[Some(-1), Some(0), Some(0), Some(2)]).to(DataType::Int64);
-        let c2 =
-            Primitive::<u32>::from(&[Some(7), Some(101), Some(102), Some(8)]).to(DataType::UInt32);
-        let c3 =
-            Primitive::<i64>::from(&[Some(-3), Some(-1), Some(-4), Some(-2)]).to(DataType::Int64);
+        let c1 = Int64Array::from(&[Some(-1), Some(0), Some(0), Some(2)]);
+        let c2 = UInt32Array::from(&[Some(7), Some(101), Some(102), Some(8)]);
+        let c3 = Int64Array::from(&[Some(-3), Some(-1), Some(-4), Some(-2)]);
         let expected = vec![Box::new(c1) as Box<dyn Array>, Box::new(c2), Box::new(c3)];
         test_lex_sort_arrays(input, expected);
     }
@@ -210,7 +206,7 @@ mod tests {
     #[test]
     fn test_lex_sort_mixed_types2() {
         // test mix of string and in64 with option
-        let c1 = Primitive::<i64>::from(&[Some(0), Some(2), Some(-1), Some(0)]).to(DataType::Int64);
+        let c1 = Int64Array::from(&[Some(0), Some(2), Some(-1), Some(0)]);
         let c2 = Utf8Array::<i32>::from(&vec![Some("foo"), Some("9"), Some("7"), Some("bar")]);
         let input = vec![
             SortColumn {
@@ -229,9 +225,7 @@ mod tests {
             },
         ];
         let expected = vec![
-            Box::new(
-                Primitive::<i64>::from(&[Some(2), Some(0), Some(0), Some(-1)]).to(DataType::Int64),
-            ) as Box<dyn Array>,
+            Box::new(Int64Array::from(&[Some(2), Some(0), Some(0), Some(-1)])) as Box<dyn Array>,
             Box::new(Utf8Array::<i32>::from(&vec![
                 Some("9"),
                 Some("foo"),

@@ -134,14 +134,14 @@ where
 mod tests {
     use super::*;
     use crate::array::ord;
-    use crate::array::Primitive;
+    use crate::array::*;
 
     fn test<T>(data: &[Option<T>], data_type: DataType, options: SortOptions, expected_data: &[i32])
     where
         T: NativeType + std::cmp::Ord,
     {
         let input = Primitive::<T>::from(data).to(data_type);
-        let expected = Primitive::<i32>::from_slice(&expected_data).to(DataType::Int32);
+        let expected = Int32Array::from_slice(&expected_data);
         let output = indices_sorted_by(&input, ord::total_cmp, &options);
         assert_eq!(output, expected)
     }

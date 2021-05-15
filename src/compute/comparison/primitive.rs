@@ -266,8 +266,8 @@ mod tests {
     /// The main reason for this macro is that inputs and outputs align nicely after `cargo fmt`.
     macro_rules! cmp_i64 {
         ($KERNEL:ident, $A_VEC:expr, $B_VEC:expr, $EXPECTED:expr) => {
-            let a = Primitive::<i64>::from_vec($A_VEC).to(DataType::Int64);
-            let b = Primitive::<i64>::from_vec($B_VEC).to(DataType::Int64);
+            let a = Int64Array::from_slice($A_VEC);
+            let b = Int64Array::from_slice($B_VEC);
             let c = $KERNEL(&a, &b).unwrap();
             assert_eq!(BooleanArray::from_slice($EXPECTED), c);
         };
@@ -275,8 +275,8 @@ mod tests {
 
     macro_rules! cmp_i64_options {
         ($KERNEL:ident, $A_VEC:expr, $B_VEC:expr, $EXPECTED:expr) => {
-            let a = Primitive::<i64>::from($A_VEC).to(DataType::Int64);
-            let b = Primitive::<i64>::from($B_VEC).to(DataType::Int64);
+            let a = Int64Array::from($A_VEC);
+            let b = Int64Array::from($B_VEC);
             let c = $KERNEL(&a, &b).unwrap();
             assert_eq!(BooleanArray::from($EXPECTED), c);
         };
@@ -288,7 +288,7 @@ mod tests {
     /// The main reason for this macro is that inputs and outputs align nicely after `cargo fmt`.
     macro_rules! cmp_i64_scalar_options {
         ($KERNEL:ident, $A_VEC:expr, $B:literal, $EXPECTED:expr) => {
-            let a = Primitive::<i64>::from($A_VEC).to(DataType::Int64);
+            let a = Int64Array::from($A_VEC);
             let c = $KERNEL(&a, $B).unwrap();
             assert_eq!(BooleanArray::from($EXPECTED), c);
         };
@@ -296,7 +296,7 @@ mod tests {
 
     macro_rules! cmp_i64_scalar {
         ($KERNEL:ident, $A_VEC:expr, $B:literal, $EXPECTED:expr) => {
-            let a = Primitive::<i64>::from_vec($A_VEC).to(DataType::Int64);
+            let a = Int64Array::from_slice($A_VEC);
             let c = $KERNEL(&a, $B).unwrap();
             assert_eq!(BooleanArray::from_slice($EXPECTED), c);
         };
@@ -306,8 +306,8 @@ mod tests {
     fn test_primitive_array_eq() {
         cmp_i64!(
             eq,
-            vec![8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
-            vec![6, 7, 8, 9, 10, 6, 7, 8, 9, 10],
+            &[8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+            &[6, 7, 8, 9, 10, 6, 7, 8, 9, 10],
             vec![false, false, true, false, false, false, false, true, false, false]
         );
     }
@@ -316,7 +316,7 @@ mod tests {
     fn test_primitive_array_eq_scalar() {
         cmp_i64_scalar!(
             eq_scalar,
-            vec![6, 7, 8, 9, 10, 6, 7, 8, 9, 10],
+            &[6, 7, 8, 9, 10, 6, 7, 8, 9, 10],
             8,
             vec![false, false, true, false, false, false, false, true, false, false]
         );
@@ -324,8 +324,8 @@ mod tests {
 
     #[test]
     fn test_primitive_array_eq_with_slice() {
-        let a = Primitive::<i64>::from_vec(vec![6, 7, 8, 8, 10]).to(DataType::Int64);
-        let b = Primitive::<i64>::from_vec(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).to(DataType::Int64);
+        let a = Int64Array::from_slice(&[6, 7, 8, 8, 10]);
+        let b = Int64Array::from_slice(&[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
         let c = b.slice(5, 5);
         let d = eq(&c, &a).unwrap();
         assert_eq!(
@@ -338,8 +338,8 @@ mod tests {
     fn test_primitive_array_neq() {
         cmp_i64!(
             neq,
-            vec![8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
-            vec![6, 7, 8, 9, 10, 6, 7, 8, 9, 10],
+            &[8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+            &[6, 7, 8, 9, 10, 6, 7, 8, 9, 10],
             vec![true, true, false, true, true, true, true, false, true, true]
         );
     }
@@ -348,7 +348,7 @@ mod tests {
     fn test_primitive_array_neq_scalar() {
         cmp_i64_scalar!(
             neq_scalar,
-            vec![6, 7, 8, 9, 10, 6, 7, 8, 9, 10],
+            &[6, 7, 8, 9, 10, 6, 7, 8, 9, 10],
             8,
             vec![true, true, false, true, true, true, true, false, true, true]
         );
@@ -358,8 +358,8 @@ mod tests {
     fn test_primitive_array_lt() {
         cmp_i64!(
             lt,
-            vec![8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
-            vec![6, 7, 8, 9, 10, 6, 7, 8, 9, 10],
+            &[8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+            &[6, 7, 8, 9, 10, 6, 7, 8, 9, 10],
             vec![false, false, false, true, true, false, false, false, true, true]
         );
     }
@@ -368,7 +368,7 @@ mod tests {
     fn test_primitive_array_lt_scalar() {
         cmp_i64_scalar!(
             lt_scalar,
-            vec![6, 7, 8, 9, 10, 6, 7, 8, 9, 10],
+            &[6, 7, 8, 9, 10, 6, 7, 8, 9, 10],
             8,
             vec![true, true, false, false, false, true, true, false, false, false]
         );
@@ -378,8 +378,8 @@ mod tests {
     fn test_primitive_array_lt_nulls() {
         cmp_i64_options!(
             lt,
-            vec![None, None, Some(1), Some(1), None, None, Some(2), Some(2),],
-            vec![None, Some(1), None, Some(1), None, Some(3), None, Some(3),],
+            &[None, None, Some(1), Some(1), None, None, Some(2), Some(2),],
+            &[None, Some(1), None, Some(1), None, Some(3), None, Some(3),],
             vec![None, None, None, Some(false), None, None, None, Some(true)]
         );
     }
@@ -388,7 +388,7 @@ mod tests {
     fn test_primitive_array_lt_scalar_nulls() {
         cmp_i64_scalar_options!(
             lt_scalar,
-            vec![None, Some(1), Some(2), Some(3), None, Some(1), Some(2), Some(3), Some(2), None],
+            &[None, Some(1), Some(2), Some(3), None, Some(1), Some(2), Some(3), Some(2), None],
             2,
             vec![None, Some(true), Some(false), Some(false), None, Some(true), Some(false), Some(false), Some(false), None]
         );
@@ -398,8 +398,8 @@ mod tests {
     fn test_primitive_array_lt_eq() {
         cmp_i64!(
             lt_eq,
-            vec![8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
-            vec![6, 7, 8, 9, 10, 6, 7, 8, 9, 10],
+            &[8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+            &[6, 7, 8, 9, 10, 6, 7, 8, 9, 10],
             vec![false, false, true, true, true, false, false, true, true, true]
         );
     }
@@ -408,7 +408,7 @@ mod tests {
     fn test_primitive_array_lt_eq_scalar() {
         cmp_i64_scalar!(
             lt_eq_scalar,
-            vec![6, 7, 8, 9, 10, 6, 7, 8, 9, 10],
+            &[6, 7, 8, 9, 10, 6, 7, 8, 9, 10],
             8,
             vec![true, true, true, false, false, true, true, true, false, false]
         );
@@ -418,8 +418,28 @@ mod tests {
     fn test_primitive_array_lt_eq_nulls() {
         cmp_i64_options!(
             lt_eq,
-            vec![None, None, Some(1), None, None, Some(1), None, None, Some(1)],
-            vec![None, Some(1), Some(0), None, Some(1), Some(2), None, None, Some(3)],
+            &[
+                None,
+                None,
+                Some(1),
+                None,
+                None,
+                Some(1),
+                None,
+                None,
+                Some(1)
+            ],
+            &[
+                None,
+                Some(1),
+                Some(0),
+                None,
+                Some(1),
+                Some(2),
+                None,
+                None,
+                Some(3)
+            ],
             vec![None, None, Some(false), None, None, Some(true), None, None, Some(true)]
         );
     }
@@ -428,7 +448,7 @@ mod tests {
     fn test_primitive_array_lt_eq_scalar_nulls() {
         cmp_i64_scalar_options!(
             lt_eq_scalar,
-            vec![None, Some(1), Some(2), None, Some(1), Some(2), None, Some(1), Some(2)],
+            &[None, Some(1), Some(2), None, Some(1), Some(2), None, Some(1), Some(2)],
             1,
             vec![None, Some(true), Some(false), None, Some(true), Some(false), None, Some(true), Some(false)]
         );
@@ -438,8 +458,8 @@ mod tests {
     fn test_primitive_array_gt() {
         cmp_i64!(
             gt,
-            vec![8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
-            vec![6, 7, 8, 9, 10, 6, 7, 8, 9, 10],
+            &[8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+            &[6, 7, 8, 9, 10, 6, 7, 8, 9, 10],
             vec![true, true, false, false, false, true, true, false, false, false]
         );
     }
@@ -448,7 +468,7 @@ mod tests {
     fn test_primitive_array_gt_scalar() {
         cmp_i64_scalar!(
             gt_scalar,
-            vec![6, 7, 8, 9, 10, 6, 7, 8, 9, 10],
+            &[6, 7, 8, 9, 10, 6, 7, 8, 9, 10],
             8,
             vec![false, false, false, true, true, false, false, false, true, true]
         );
@@ -458,8 +478,28 @@ mod tests {
     fn test_primitive_array_gt_nulls() {
         cmp_i64_options!(
             gt,
-            vec![None, None, Some(1), None, None, Some(2), None, None, Some(3)],
-            vec![None, Some(1), Some(1), None, Some(1), Some(1), None, Some(1), Some(1)],
+            &[
+                None,
+                None,
+                Some(1),
+                None,
+                None,
+                Some(2),
+                None,
+                None,
+                Some(3)
+            ],
+            &[
+                None,
+                Some(1),
+                Some(1),
+                None,
+                Some(1),
+                Some(1),
+                None,
+                Some(1),
+                Some(1)
+            ],
             vec![None, None, Some(false), None, None, Some(true), None, None, Some(true)]
         );
     }
@@ -468,7 +508,7 @@ mod tests {
     fn test_primitive_array_gt_scalar_nulls() {
         cmp_i64_scalar_options!(
             gt_scalar,
-            vec![None, Some(1), Some(2), None, Some(1), Some(2), None, Some(1), Some(2)],
+            &[None, Some(1), Some(2), None, Some(1), Some(2), None, Some(1), Some(2)],
             1,
             vec![None, Some(false), Some(true), None, Some(false), Some(true), None, Some(false), Some(true)]
         );
@@ -478,8 +518,8 @@ mod tests {
     fn test_primitive_array_gt_eq() {
         cmp_i64!(
             gt_eq,
-            vec![8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
-            vec![6, 7, 8, 9, 10, 6, 7, 8, 9, 10],
+            &[8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+            &[6, 7, 8, 9, 10, 6, 7, 8, 9, 10],
             vec![true, true, true, false, false, true, true, true, false, false]
         );
     }
@@ -488,7 +528,7 @@ mod tests {
     fn test_primitive_array_gt_eq_scalar() {
         cmp_i64_scalar!(
             gt_eq_scalar,
-            vec![6, 7, 8, 9, 10, 6, 7, 8, 9, 10],
+            &[6, 7, 8, 9, 10, 6, 7, 8, 9, 10],
             8,
             vec![false, false, true, true, true, false, false, true, true, true]
         );
@@ -548,8 +588,8 @@ mod tests {
         // `item_count` is chosen to not be a multiple of 64.
         let item_count = 130;
 
-        let array_a = Primitive::<i8>::from_slice(&vec![1; item_count]).to(DataType::Int8);
-        let array_b = Primitive::<i8>::from_slice(&vec![2; item_count]).to(DataType::Int8);
+        let array_a = Int8Array::from_slice(&vec![1; item_count]);
+        let array_b = Int8Array::from_slice(&vec![2; item_count]);
         let expected = BooleanArray::from_slice(&vec![false; item_count]);
         let result = gt_eq(&array_a, &array_b).unwrap();
 

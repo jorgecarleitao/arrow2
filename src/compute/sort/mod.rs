@@ -505,7 +505,7 @@ mod tests {
         expected_data: &[i32],
     ) {
         let output = BooleanArray::from(data);
-        let expected = Primitive::<i32>::from_slice(&expected_data).to(DataType::Int32);
+        let expected = Int32Array::from_slice(expected_data);
         let output = sort_to_indices(&output, &options).unwrap();
         assert_eq!(output, expected)
     }
@@ -530,7 +530,7 @@ mod tests {
         expected_data: &[i32],
     ) {
         let input = Utf8Array::<i32>::from(&data.to_vec());
-        let expected = Primitive::<i32>::from_slice(&expected_data).to(DataType::Int32);
+        let expected = Int32Array::from_slice(expected_data);
         let output = sort_to_indices(&input, &options).unwrap();
         assert_eq!(output, expected)
     }

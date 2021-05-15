@@ -191,13 +191,17 @@ mod tests {
     use std::sync::Arc;
 
     use crate::datatypes::Field;
-    use crate::{array::Primitive, bitmap::MutableBitmap, types::NativeType};
+    use crate::{
+        array::{Int32Array, Primitive},
+        bitmap::MutableBitmap,
+        types::NativeType,
+    };
 
     use super::*;
 
     fn test_take_primitive<T>(
         data: &[Option<T>],
-        indices: &PrimitiveArray<i32>,
+        indices: &Int32Array,
         expected_data: &[Option<T>],
         data_type: DataType,
     ) -> Result<()>
@@ -213,7 +217,7 @@ mod tests {
 
     #[test]
     fn test_take_primitive_non_null_indices() {
-        let indices = Primitive::<i32>::from_slice(&[0, 5, 3, 1, 4, 2]).to(DataType::Int32);
+        let indices = Int32Array::from_slice(&[0, 5, 3, 1, 4, 2]);
         test_take_primitive::<i8>(
             &[None, Some(2), Some(4), Some(6), Some(8), None],
             &indices,
@@ -233,8 +237,7 @@ mod tests {
 
     #[test]
     fn test_take_primitive_null_values() {
-        let indices = Primitive::<i32>::from(&[Some(0), None, Some(3), Some(1), Some(4), Some(2)])
-            .to(DataType::Int32);
+        let indices = Int32Array::from(&[Some(0), None, Some(3), Some(1), Some(4), Some(2)]);
         test_take_primitive::<i8>(
             &[Some(0), Some(2), Some(4), Some(6), Some(8), Some(10)],
             &indices,
@@ -277,13 +280,12 @@ mod tests {
     fn test_struct_with_nulls() {
         let array = create_test_struct();
 
-        let indices =
-            Primitive::<i32>::from(&[None, Some(3), Some(1), None, Some(0)]).to(DataType::Int32);
+        let indices = Int32Array::from(&[None, Some(3), Some(1), None, Some(0)]);
 
         let output = take(&array, &indices).unwrap();
 
         let boolean = BooleanArray::from(&[None, Some(true), Some(false), None, Some(true)]);
-        let int = Primitive::from(&[None, Some(31), Some(28), None, Some(42)]).to(DataType::Int32);
+        let int = Int32Array::from(&[None, Some(31), Some(28), None, Some(42)]);
         let validity = vec![false, true, true, false, true]
             .into_iter()
             .collect::<MutableBitmap>()

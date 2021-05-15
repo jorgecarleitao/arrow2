@@ -106,13 +106,13 @@ mod tests {
 
     #[test]
     fn test_primitive_array_sum_with_nulls() {
-        let a = Primitive::from(vec![None, Some(2), Some(3), None, Some(5)]).to(DataType::Int32);
+        let a = Int32Array::from(&[None, Some(2), Some(3), None, Some(5)]);
         assert_eq!(10, sum(&a).unwrap());
     }
 
     #[test]
     fn test_primitive_array_sum_all_nulls() {
-        let a = Primitive::<i32>::from(vec![None, None, None]).to(DataType::Int32);
+        let a = Int32Array::from(&[None, None, None]);
         assert_eq!(None, sum(&a));
     }
 
@@ -120,12 +120,10 @@ mod tests {
     fn test_primitive_array_sum_large_64() {
         let a: Int64Array = (1..=100)
             .map(|i| if i % 3 == 0 { Some(i) } else { None })
-            .collect::<Primitive<i64>>()
-            .to(DataType::Int64);
+            .collect();
         let b: Int64Array = (1..=100)
             .map(|i| if i % 3 == 0 { Some(0) } else { Some(i) })
-            .collect::<Primitive<i64>>()
-            .to(DataType::Int64);
+            .collect();
         // create an array that actually has non-zero values at the invalid indices
         let c = arithmetics::basic::add::add(&a, &b).unwrap();
         assert_eq!(Some((1..=100).filter(|i| i % 3 == 0).sum()), sum(&c));

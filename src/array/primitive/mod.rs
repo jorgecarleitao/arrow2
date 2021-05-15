@@ -127,13 +127,14 @@ pub use iterator::*;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::array::Int32Array;
     use std::iter::FromIterator;
 
     #[test]
     fn basics() {
         let data = vec![Some(1), None, Some(10)];
 
-        let array = Primitive::<i32>::from_iter(data).to(DataType::Int32);
+        let array = Int32Array::from_iter(data);
 
         assert_eq!(array.value(0), 1);
         assert_eq!(array.value(1), 0);

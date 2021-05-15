@@ -30,13 +30,12 @@ use crate::{
 /// a negative value shifts the array to the left.
 /// # Examples
 /// ```
-/// use arrow2::array::Primitive;
-/// use arrow2::datatypes::DataType;
+/// use arrow2::array::Int32Array;
 /// use arrow2::compute::window::shift;
 ///
-/// let array = Primitive::<i32>::from(&[Some(1), None, Some(3)]).to(DataType::Date32);
+/// let array = Int32Array::from(&[Some(1), None, Some(3)]);
 /// let result = shift(&array, -1).unwrap();
-/// let expected = Primitive::<i32>::from(&[None, Some(3), None]).to(DataType::Date32);
+/// let expected = Int32Array::from(&[None, Some(3), None]);
 /// assert_eq!(expected, result.as_ref());
 /// ```
 pub fn shift(array: &dyn Array, offset: i64) -> Result<Box<dyn Array>> {
@@ -67,17 +66,17 @@ pub fn shift(array: &dyn Array, offset: i64) -> Result<Box<dyn Array>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::array::Primitive;
+    use crate::array::{Int32Array, Primitive};
     use crate::datatypes::DataType;
 
     use super::*;
 
     #[test]
     fn shift_pos() {
-        let array = Primitive::<i32>::from(&[Some(1), None, Some(3)]).to(DataType::Date32);
+        let array = Int32Array::from(&[Some(1), None, Some(3)]);
         let result = shift(&array, 1).unwrap();
 
-        let expected = Primitive::<i32>::from(&[None, Some(1), None]).to(DataType::Date32);
+        let expected = Int32Array::from(&[None, Some(1), None]);
 
         assert_eq!(expected, result.as_ref());
     }

@@ -96,7 +96,7 @@ impl<B: Builder<T>, T> IntoArray for FixedSizeListPrimitive<B, T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::array::{Primitive, PrimitiveArray};
+    use crate::array::*;
 
     use super::*;
 
@@ -112,16 +112,15 @@ mod tests {
         let list = a.to(FixedSizeListArray::default_datatype(DataType::Int32, 3));
 
         let a = list.value(0);
-        let a = a.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
+        let a = a.as_any().downcast_ref::<Int32Array>().unwrap();
 
-        let expected =
-            Primitive::<i32>::from(vec![Some(1i32), Some(2), Some(3)]).to(DataType::Int32);
+        let expected = Int32Array::from(vec![Some(1i32), Some(2), Some(3)]);
         assert_eq!(a, &expected);
 
         let a = list.value(1);
         let a = a.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
 
-        let expected = Primitive::<i32>::from(vec![None, None, None]).to(DataType::Int32);
+        let expected = Int32Array::from(vec![None, None, None]);
         assert_eq!(a, &expected)
     }
 }

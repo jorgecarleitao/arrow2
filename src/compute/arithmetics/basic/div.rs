@@ -19,13 +19,12 @@ use crate::{
 /// # Examples
 /// ```
 /// use arrow2::compute::arithmetics::basic::div::div;
-/// use arrow2::array::Primitive;
-/// use arrow2::datatypes::DataType;
+/// use arrow2::array::Int32Array;
 ///
-/// let a = Primitive::from(&vec![Some(10), Some(6)]).to(DataType::Int32);
-/// let b = Primitive::from(&vec![Some(5), Some(6)]).to(DataType::Int32);
+/// let a = Int32Array::from(&[Some(10), Some(6)]);
+/// let b = Int32Array::from(&[Some(5), Some(6)]);
 /// let result = div(&a, &b).unwrap();
-/// let expected = Primitive::from(&vec![Some(2), Some(1)]).to(DataType::Int32);
+/// let expected = Int32Array::from(&[Some(2), Some(1)]);
 /// assert_eq!(result, expected)
 /// ```
 #[inline]
@@ -49,13 +48,12 @@ where
 /// # Examples
 /// ```
 /// use arrow2::compute::arithmetics::basic::div::checked_div;
-/// use arrow2::array::Primitive;
-/// use arrow2::datatypes::DataType;
+/// use arrow2::array::Int8Array;
 ///
-/// let a = Primitive::from(&vec![Some(-100i8), Some(10i8)]).to(DataType::Int8);
-/// let b = Primitive::from(&vec![Some(100i8), Some(0i8)]).to(DataType::Int8);
+/// let a = Int8Array::from(&[Some(-100i8), Some(10i8)]);
+/// let b = Int8Array::from(&[Some(100i8), Some(0i8)]);
 /// let result = checked_div(&a, &b).unwrap();
-/// let expected = Primitive::from(&vec![Some(-1i8), None]).to(DataType::Int8);
+/// let expected = Int8Array::from(&[Some(-1i8), None]);
 /// assert_eq!(result, expected);
 /// ```
 pub fn checked_div<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<PrimitiveArray<T>>
@@ -103,12 +101,11 @@ where
 /// # Examples
 /// ```
 /// use arrow2::compute::arithmetics::basic::div::div_scalar;
-/// use arrow2::array::Primitive;
-/// use arrow2::datatypes::DataType;
+/// use arrow2::array::Int32Array;
 ///
-/// let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
+/// let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
 /// let result = div_scalar(&a, &2i32);
-/// let expected = Primitive::from(&vec![None, Some(3), None, Some(3)]).to(DataType::Int32);
+/// let expected = Int32Array::from(&[None, Some(3), None, Some(3)]);
 /// assert_eq!(result, expected)
 /// ```
 #[inline]
@@ -126,12 +123,11 @@ where
 /// # Examples
 /// ```
 /// use arrow2::compute::arithmetics::basic::div::checked_div_scalar;
-/// use arrow2::array::Primitive;
-/// use arrow2::datatypes::DataType;
+/// use arrow2::array::Int8Array;
 ///
-/// let a = Primitive::from(&vec![Some(-100i8)]).to(DataType::Int8);
+/// let a = Int8Array::from(&[Some(-100i8)]);
 /// let result = checked_div_scalar(&a, &100i8);
-/// let expected = Primitive::from(&vec![Some(-1i8)]).to(DataType::Int8);
+/// let expected = Int8Array::from(&[Some(-1i8)]);
 /// assert_eq!(result, expected);
 /// ```
 #[inline]
@@ -172,13 +168,12 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::array::Primitive;
-    use crate::datatypes::DataType;
+    use crate::array::*;
 
     #[test]
     fn test_div_mismatched_length() {
-        let a = Primitive::from_slice(vec![5, 6]).to(DataType::Int32);
-        let b = Primitive::from_slice(vec![5]).to(DataType::Int32);
+        let a = Int32Array::from_slice(&[5, 6]);
+        let b = Int32Array::from_slice(&[5]);
         div(&a, &b)
             .err()
             .expect("should have failed due to different lengths");
@@ -186,10 +181,10 @@ mod tests {
 
     #[test]
     fn test_div() {
-        let a = Primitive::from(&vec![Some(5), Some(6)]).to(DataType::Int32);
-        let b = Primitive::from(&vec![Some(5), Some(6)]).to(DataType::Int32);
+        let a = Int32Array::from(&[Some(5), Some(6)]);
+        let b = Int32Array::from(&[Some(5), Some(6)]);
         let result = div(&a, &b).unwrap();
-        let expected = Primitive::from(&vec![Some(1), Some(1)]).to(DataType::Int32);
+        let expected = Int32Array::from(&[Some(1), Some(1)]);
         assert_eq!(result, expected);
 
         // Trait testing
@@ -200,23 +195,23 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_div_panic() {
-        let a = Primitive::from(&vec![Some(10i8)]).to(DataType::Int8);
-        let b = Primitive::from(&vec![Some(0i8)]).to(DataType::Int8);
+        let a = Int8Array::from(&[Some(10i8)]);
+        let b = Int8Array::from(&[Some(0i8)]);
         let _ = div(&a, &b);
     }
 
     #[test]
     fn test_div_checked() {
-        let a = Primitive::from(&vec![Some(5), None, Some(3), Some(6)]).to(DataType::Int32);
-        let b = Primitive::from(&vec![Some(5), Some(3), None, Some(6)]).to(DataType::Int32);
+        let a = Int32Array::from(&[Some(5), None, Some(3), Some(6)]);
+        let b = Int32Array::from(&[Some(5), Some(3), None, Some(6)]);
         let result = checked_div(&a, &b).unwrap();
-        let expected = Primitive::from(&vec![Some(1), None, None, Some(1)]).to(DataType::Int32);
+        let expected = Int32Array::from(&[Some(1), None, None, Some(1)]);
         assert_eq!(result, expected);
 
-        let a = Primitive::from(&vec![Some(5), None, Some(3), Some(6)]).to(DataType::Int32);
-        let b = Primitive::from(&vec![Some(5), Some(0), Some(0), Some(6)]).to(DataType::Int32);
+        let a = Int32Array::from(&[Some(5), None, Some(3), Some(6)]);
+        let b = Int32Array::from(&[Some(5), Some(0), Some(0), Some(6)]);
         let result = checked_div(&a, &b).unwrap();
-        let expected = Primitive::from(&vec![Some(1), None, None, Some(1)]).to(DataType::Int32);
+        let expected = Int32Array::from(&[Some(1), None, None, Some(1)]);
         assert_eq!(result, expected);
 
         // Trait testing
@@ -226,9 +221,9 @@ mod tests {
 
     #[test]
     fn test_div_scalar() {
-        let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
+        let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
         let result = div_scalar(&a, &1i32);
-        let expected = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
+        let expected = Int32Array::from(&[None, Some(6), None, Some(6)]);
         assert_eq!(result, expected);
 
         // Trait testing
@@ -238,14 +233,14 @@ mod tests {
 
     #[test]
     fn test_div_scalar_checked() {
-        let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
+        let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
         let result = checked_div_scalar(&a, &1i32);
-        let expected = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
+        let expected = Int32Array::from(&[None, Some(6), None, Some(6)]);
         assert_eq!(result, expected);
 
-        let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
+        let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
         let result = checked_div_scalar(&a, &0);
-        let expected = Primitive::from(&vec![None, None, None, None]).to(DataType::Int32);
+        let expected = Int32Array::from(&[None, None, None, None]);
         assert_eq!(result, expected);
 
         // Trait testing

@@ -39,8 +39,7 @@ mod tests {
             Field::new("c2", DataType::Utf8, false),
         ]);
 
-        let a =
-            Primitive::<i32>::from([Some(1), Some(2), Some(3), None, Some(5)]).to(DataType::Int32);
+        let a = Int32Array::from([Some(1), Some(2), Some(3), None, Some(5)]);
         let b = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c"), Some("d"), None]);
 
         let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(a), Arc::new(b)]).unwrap();
@@ -77,7 +76,7 @@ mod tests {
         let c1 = StructArray::from_data(
             fields,
             vec![
-                Arc::new(Primitive::<i32>::from(&[Some(1), None, Some(5)]).to(DataType::Int32)),
+                Arc::new(Int32Array::from(&[Some(1), None, Some(5)])),
                 Arc::new(StructArray::from_data(
                     vec![c121],
                     vec![Arc::new(Utf8Array::<i32>::from(&vec![
@@ -208,7 +207,7 @@ mod tests {
         let s = StructArray::from_data(
             fields,
             vec![
-                Arc::new(Primitive::<i32>::from(vec![Some(1), None, Some(5)]).to(DataType::Int32)),
+                Arc::new(Int32Array::from(&[Some(1), None, Some(5)])),
                 Arc::new(StructArray::from_data(
                     inner,
                     vec![Arc::new(Utf8Array::<i32>::from(&vec![
@@ -233,7 +232,7 @@ mod tests {
             Some(([0b00000101], 3).into()),
         );
 
-        let c2 = Primitive::<i32>::from_slice(&[1, 2, 3]).to(DataType::Int32);
+        let c2 = Int32Array::from_slice(&[1, 2, 3]);
 
         let batch =
             RecordBatch::try_new(Arc::new(schema), vec![Arc::new(c1), Arc::new(c2)]).unwrap();

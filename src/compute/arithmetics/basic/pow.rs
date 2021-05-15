@@ -13,12 +13,11 @@ use crate::{
 /// # Examples
 /// ```
 /// use arrow2::compute::arithmetics::basic::pow::powf_scalar;
-/// use arrow2::array::Primitive;
-/// use arrow2::datatypes::DataType;
+/// use arrow2::array::Float32Array;
 ///
-/// let a = Primitive::from(&vec![Some(2f32), None]).to(DataType::Float32);
+/// let a = Float32Array::from(&[Some(2f32), None]);
 /// let actual = powf_scalar(&a, 2.0);
-/// let expected = Primitive::from(&vec![Some(4f32), None]).to(DataType::Float32);
+/// let expected = Float32Array::from(&[Some(4f32), None]);
 /// assert_eq!(expected, actual);
 /// ```
 #[inline]
@@ -36,12 +35,11 @@ where
 /// # Examples
 /// ```
 /// use arrow2::compute::arithmetics::basic::pow::checked_powf_scalar;
-/// use arrow2::array::Primitive;
-/// use arrow2::datatypes::DataType;
+/// use arrow2::array::Int8Array;
 ///
-/// let a = Primitive::from(&vec![Some(1i8), None, Some(7i8)]).to(DataType::Int8);
+/// let a = Int8Array::from(&[Some(1i8), None, Some(7i8)]);
 /// let actual = checked_powf_scalar(&a, 8usize);
-/// let expected = Primitive::from(&vec![Some(1i8), None, None]).to(DataType::Int8);
+/// let expected = Int8Array::from(&[Some(1i8), None, None]);
 /// assert_eq!(expected, actual);
 /// ```
 #[inline]
@@ -57,22 +55,21 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::array::Primitive;
-    use crate::datatypes::DataType;
+    use crate::array::{Float32Array, Int8Array};
 
     #[test]
     fn test_raise_power_scalar() {
-        let a = Primitive::from(&vec![Some(2f32), None]).to(DataType::Float32);
+        let a = Float32Array::from(&[Some(2f32), None]);
         let actual = powf_scalar(&a, 2.0);
-        let expected = Primitive::from(&vec![Some(4f32), None]).to(DataType::Float32);
+        let expected = Float32Array::from(&[Some(4f32), None]);
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn test_raise_power_scalar_checked() {
-        let a = Primitive::from(&vec![Some(1i8), None, Some(7i8)]).to(DataType::Int8);
+        let a = Int8Array::from(&[Some(1i8), None, Some(7i8)]);
         let actual = checked_powf_scalar(&a, 8usize);
-        let expected = Primitive::from(&vec![Some(1i8), None, None]).to(DataType::Int8);
+        let expected = Int8Array::from(&[Some(1i8), None, None]);
         assert_eq!(expected, actual);
     }
 }

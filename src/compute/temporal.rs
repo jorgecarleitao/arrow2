@@ -213,7 +213,7 @@ mod tests {
             .to(DataType::Date64);
 
         let result = hour(&array).unwrap();
-        let expected = Primitive::<u32>::from(&[Some(0), None, Some(4)]).to(DataType::UInt32);
+        let expected = UInt32Array::from(&[Some(0), None, Some(4)]);
         assert_eq!(result, expected);
     }
 
@@ -222,7 +222,7 @@ mod tests {
         let array = Primitive::<i32>::from(&[Some(15147), None, Some(15148)]).to(DataType::Date32);
 
         let result = hour(&array).unwrap();
-        let expected = Primitive::<u32>::from(&[Some(0), None, Some(0)]).to(DataType::UInt32);
+        let expected = UInt32Array::from(&[Some(0), None, Some(0)]);
         assert_eq!(result, expected);
     }
 
@@ -232,7 +232,7 @@ mod tests {
             Primitive::<i32>::from(&[Some(37800), None]).to(DataType::Time32(TimeUnit::Second));
 
         let result = hour(&array).unwrap();
-        let expected = Primitive::<u32>::from(&[Some(10), None]).to(DataType::UInt32);
+        let expected = UInt32Array::from(&[Some(10), None]);
         assert_eq!(result, expected);
     }
 
@@ -242,7 +242,7 @@ mod tests {
             .to(DataType::Time64(TimeUnit::Microsecond));
 
         let result = hour(&array).unwrap();
-        let expected = Primitive::<u32>::from(&[Some(10), None]).to(DataType::UInt32);
+        let expected = UInt32Array::from(&[Some(10), None]);
         assert_eq!(result, expected);
     }
 
@@ -252,7 +252,7 @@ mod tests {
             .to(DataType::Timestamp(TimeUnit::Microsecond, None));
 
         let result = hour(&array).unwrap();
-        let expected = Primitive::<u32>::from(&[Some(10), None]).to(DataType::UInt32);
+        let expected = UInt32Array::from(&[Some(10), None]);
         assert_eq!(result, expected);
     }
 
@@ -261,7 +261,7 @@ mod tests {
         let array = Primitive::<i64>::from(&[Some(1514764800000), None]).to(DataType::Date64);
 
         let result = year(&array).unwrap();
-        let expected = Primitive::<i32>::from(&[Some(2018), None]).to(DataType::Int32);
+        let expected = Int32Array::from(&[Some(2018), None]);
         assert_eq!(result, expected);
     }
 
@@ -270,7 +270,7 @@ mod tests {
         let array = Primitive::<i32>::from(&[Some(15147), None]).to(DataType::Date32);
 
         let result = year(&array).unwrap();
-        let expected = Primitive::<i32>::from(&[Some(2011), None]).to(DataType::Int32);
+        let expected = Int32Array::from(&[Some(2011), None]);
         assert_eq!(result, expected);
     }
 
@@ -280,7 +280,7 @@ mod tests {
             .to(DataType::Timestamp(TimeUnit::Microsecond, None));
 
         let result = year(&array).unwrap();
-        let expected = Primitive::<i32>::from(&[Some(2021), None]).to(DataType::Int32);
+        let expected = Int32Array::from(&[Some(2021), None]);
         assert_eq!(result, expected);
     }
 

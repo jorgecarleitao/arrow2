@@ -27,13 +27,12 @@ use crate::{
 /// # Examples
 /// ```
 /// use arrow2::compute::arithmetics::basic::mul::mul;
-/// use arrow2::array::Primitive;
-/// use arrow2::datatypes::DataType;
+/// use arrow2::array::Int32Array;
 ///
-/// let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
-/// let b = Primitive::from(&vec![Some(5), None, None, Some(6)]).to(DataType::Int32);
+/// let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
+/// let b = Int32Array::from(&[Some(5), None, None, Some(6)]);
 /// let result = mul(&a, &b).unwrap();
-/// let expected = Primitive::from(&vec![None, None, None, Some(36)]).to(DataType::Int32);
+/// let expected = Int32Array::from(&[None, None, None, Some(36)]);
 /// assert_eq!(result, expected)
 /// ```
 #[inline]
@@ -57,13 +56,12 @@ where
 /// # Examples
 /// ```
 /// use arrow2::compute::arithmetics::basic::mul::checked_mul;
-/// use arrow2::array::Primitive;
-/// use arrow2::datatypes::DataType;
+/// use arrow2::array::Int8Array;
 ///
-/// let a = Primitive::from(&vec![Some(100i8), Some(100i8), Some(100i8)]).to(DataType::Int8);
-/// let b = Primitive::from(&vec![Some(1i8), Some(100i8), Some(1i8)]).to(DataType::Int8);
+/// let a = Int8Array::from(&[Some(100i8), Some(100i8), Some(100i8)]);
+/// let b = Int8Array::from(&[Some(1i8), Some(100i8), Some(1i8)]);
 /// let result = checked_mul(&a, &b).unwrap();
-/// let expected = Primitive::from(&vec![Some(100i8), None, Some(100i8)]).to(DataType::Int8);
+/// let expected = Int8Array::from(&[Some(100i8), None, Some(100i8)]);
 /// assert_eq!(result, expected);
 /// ```
 pub fn checked_mul<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<PrimitiveArray<T>>
@@ -88,13 +86,12 @@ where
 /// # Examples
 /// ```
 /// use arrow2::compute::arithmetics::basic::mul::saturating_mul;
-/// use arrow2::array::Primitive;
-/// use arrow2::datatypes::DataType;
+/// use arrow2::array::Int8Array;
 ///
-/// let a = Primitive::from(&vec![Some(-100i8)]).to(DataType::Int8);
-/// let b = Primitive::from(&vec![Some(100i8)]).to(DataType::Int8);
+/// let a = Int8Array::from(&[Some(-100i8)]);
+/// let b = Int8Array::from(&[Some(100i8)]);
 /// let result = saturating_mul(&a, &b).unwrap();
-/// let expected = Primitive::from(&vec![Some(-128)]).to(DataType::Int8);
+/// let expected = Int8Array::from(&[Some(-128)]);
 /// assert_eq!(result, expected);
 /// ```
 pub fn saturating_mul<T>(
@@ -123,13 +120,12 @@ where
 /// # Examples
 /// ```
 /// use arrow2::compute::arithmetics::basic::mul::overflowing_mul;
-/// use arrow2::array::Primitive;
-/// use arrow2::datatypes::DataType;
+/// use arrow2::array::Int8Array;
 ///
-/// let a = Primitive::from(&vec![Some(1i8), Some(-100i8)]).to(DataType::Int8);
-/// let b = Primitive::from(&vec![Some(1i8), Some(100i8)]).to(DataType::Int8);
+/// let a = Int8Array::from(&[Some(1i8), Some(-100i8)]);
+/// let b = Int8Array::from(&[Some(1i8), Some(100i8)]);
 /// let (result, overflow) = overflowing_mul(&a, &b).unwrap();
-/// let expected = Primitive::from(&vec![Some(1i8), Some(-16i8)]).to(DataType::Int8);
+/// let expected = Int8Array::from(&[Some(1i8), Some(-16i8)]);
 /// assert_eq!(result, expected);
 /// ```
 pub fn overflowing_mul<T>(
@@ -203,12 +199,11 @@ where
 /// # Examples
 /// ```
 /// use arrow2::compute::arithmetics::basic::mul::mul_scalar;
-/// use arrow2::array::Primitive;
-/// use arrow2::datatypes::DataType;
+/// use arrow2::array::Int32Array;
 ///
-/// let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
+/// let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
 /// let result = mul_scalar(&a, &2i32);
-/// let expected = Primitive::from(&vec![None, Some(12), None, Some(12)]).to(DataType::Int32);
+/// let expected = Int32Array::from(&[None, Some(12), None, Some(12)]);
 /// assert_eq!(result, expected)
 /// ```
 #[inline]
@@ -227,12 +222,11 @@ where
 /// # Examples
 /// ```
 /// use arrow2::compute::arithmetics::basic::mul::checked_mul_scalar;
-/// use arrow2::array::Primitive;
-/// use arrow2::datatypes::DataType;
+/// use arrow2::array::Int8Array;
 ///
-/// let a = Primitive::from(&vec![None, Some(100), None, Some(100)]).to(DataType::Int8);
+/// let a = Int8Array::from(&[None, Some(100), None, Some(100)]);
 /// let result = checked_mul_scalar(&a, &100i8);
-/// let expected = Primitive::<i8>::from(&vec![None, None, None, None]).to(DataType::Int8);
+/// let expected = Int8Array::from(&[None, None, None, None]);
 /// assert_eq!(result, expected);
 /// ```
 #[inline]
@@ -253,12 +247,11 @@ where
 /// # Examples
 /// ```
 /// use arrow2::compute::arithmetics::basic::mul::saturating_mul_scalar;
-/// use arrow2::array::Primitive;
-/// use arrow2::datatypes::DataType;
+/// use arrow2::array::Int8Array;
 ///
-/// let a = Primitive::from(&vec![Some(-100i8)]).to(DataType::Int8);
+/// let a = Int8Array::from(&[Some(-100i8)]);
 /// let result = saturating_mul_scalar(&a, &100i8);
-/// let expected = Primitive::from(&vec![Some(-128i8)]).to(DataType::Int8);
+/// let expected = Int8Array::from(&[Some(-128i8)]);
 /// assert_eq!(result, expected);
 /// ```
 #[inline]
@@ -280,12 +273,11 @@ where
 /// # Examples
 /// ```
 /// use arrow2::compute::arithmetics::basic::mul::overflowing_mul_scalar;
-/// use arrow2::array::Primitive;
-/// use arrow2::datatypes::DataType;
+/// use arrow2::array::Int8Array;
 ///
-/// let a = Primitive::from(&vec![Some(1i8), Some(100i8)]).to(DataType::Int8);
+/// let a = Int8Array::from(&[Some(1i8), Some(100i8)]);
 /// let (result, overflow) = overflowing_mul_scalar(&a, &100i8);
-/// let expected = Primitive::from(&vec![Some(100i8), Some(16i8)]).to(DataType::Int8);
+/// let expected = Int8Array::from(&[Some(100i8), Some(16i8)]);
 /// assert_eq!(result, expected);
 /// ```
 #[inline]
@@ -349,13 +341,12 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::array::Primitive;
-    use crate::datatypes::DataType;
+    use crate::array::*;
 
     #[test]
     fn test_mul_mismatched_length() {
-        let a = Primitive::from_slice(vec![5, 6]).to(DataType::Int32);
-        let b = Primitive::from_slice(vec![5]).to(DataType::Int32);
+        let a = Int32Array::from_slice(&[5, 6]);
+        let b = Int32Array::from_slice(&[5]);
         mul(&a, &b)
             .err()
             .expect("should have failed due to different lengths");
@@ -363,10 +354,10 @@ mod tests {
 
     #[test]
     fn test_mul() {
-        let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
-        let b = Primitive::from(&vec![Some(5), None, None, Some(6)]).to(DataType::Int32);
+        let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
+        let b = Int32Array::from(&[Some(5), None, None, Some(6)]);
         let result = mul(&a, &b).unwrap();
-        let expected = Primitive::from(&vec![None, None, None, Some(36)]).to(DataType::Int32);
+        let expected = Int32Array::from(&[None, None, None, Some(36)]);
         assert_eq!(result, expected);
 
         // Trait testing
@@ -377,23 +368,23 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_mul_panic() {
-        let a = Primitive::from(&vec![Some(-100i8)]).to(DataType::Int8);
-        let b = Primitive::from(&vec![Some(100i8)]).to(DataType::Int8);
+        let a = Int8Array::from(&[Some(-100i8)]);
+        let b = Int8Array::from(&[Some(100i8)]);
         let _ = mul(&a, &b);
     }
 
     #[test]
     fn test_mul_checked() {
-        let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
-        let b = Primitive::from(&vec![Some(5), None, None, Some(6)]).to(DataType::Int32);
+        let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
+        let b = Int32Array::from(&[Some(5), None, None, Some(6)]);
         let result = checked_mul(&a, &b).unwrap();
-        let expected = Primitive::from(&vec![None, None, None, Some(36)]).to(DataType::Int32);
+        let expected = Int32Array::from(&[None, None, None, Some(36)]);
         assert_eq!(result, expected);
 
-        let a = Primitive::from(&vec![Some(100i8), Some(100i8), Some(100i8)]).to(DataType::Int8);
-        let b = Primitive::from(&vec![Some(1i8), Some(100i8), Some(1i8)]).to(DataType::Int8);
+        let a = Int8Array::from(&[Some(100i8), Some(100i8), Some(100i8)]);
+        let b = Int8Array::from(&[Some(1i8), Some(100i8), Some(1i8)]);
         let result = checked_mul(&a, &b).unwrap();
-        let expected = Primitive::from(&vec![Some(100i8), None, Some(100i8)]).to(DataType::Int8);
+        let expected = Int8Array::from(&[Some(100i8), None, Some(100i8)]);
         assert_eq!(result, expected);
 
         // Trait testing
@@ -403,16 +394,16 @@ mod tests {
 
     #[test]
     fn test_mul_saturating() {
-        let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
-        let b = Primitive::from(&vec![Some(5), None, None, Some(6)]).to(DataType::Int32);
+        let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
+        let b = Int32Array::from(&[Some(5), None, None, Some(6)]);
         let result = saturating_mul(&a, &b).unwrap();
-        let expected = Primitive::from(&vec![None, None, None, Some(36)]).to(DataType::Int32);
+        let expected = Int32Array::from(&[None, None, None, Some(36)]);
         assert_eq!(result, expected);
 
-        let a = Primitive::from(&vec![Some(-100i8)]).to(DataType::Int8);
-        let b = Primitive::from(&vec![Some(100i8)]).to(DataType::Int8);
+        let a = Int8Array::from(&[Some(-100i8)]);
+        let b = Int8Array::from(&[Some(100i8)]);
         let result = saturating_mul(&a, &b).unwrap();
-        let expected = Primitive::from(&vec![Some(-128)]).to(DataType::Int8);
+        let expected = Int8Array::from(&[Some(-128)]);
         assert_eq!(result, expected);
 
         // Trait testing
@@ -422,17 +413,17 @@ mod tests {
 
     #[test]
     fn test_mul_overflowing() {
-        let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
-        let b = Primitive::from(&vec![Some(5), None, None, Some(6)]).to(DataType::Int32);
+        let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
+        let b = Int32Array::from(&[Some(5), None, None, Some(6)]);
         let (result, overflow) = overflowing_mul(&a, &b).unwrap();
-        let expected = Primitive::from(&vec![None, None, None, Some(36)]).to(DataType::Int32);
+        let expected = Int32Array::from(&[None, None, None, Some(36)]);
         assert_eq!(result, expected);
         assert_eq!(overflow.as_slice()[0], 0b0000);
 
-        let a = Primitive::from(&vec![Some(1i8), Some(-100i8)]).to(DataType::Int8);
-        let b = Primitive::from(&vec![Some(1i8), Some(100i8)]).to(DataType::Int8);
+        let a = Int8Array::from(&[Some(1i8), Some(-100i8)]);
+        let b = Int8Array::from(&[Some(1i8), Some(100i8)]);
         let (result, overflow) = overflowing_mul(&a, &b).unwrap();
-        let expected = Primitive::from(&vec![Some(1i8), Some(-16i8)]).to(DataType::Int8);
+        let expected = Int8Array::from(&[Some(1i8), Some(-16i8)]);
         assert_eq!(result, expected);
         assert_eq!(overflow.as_slice()[0], 0b10);
 
@@ -444,9 +435,9 @@ mod tests {
 
     #[test]
     fn test_mul_scalar() {
-        let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
+        let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
         let result = mul_scalar(&a, &1i32);
-        let expected = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
+        let expected = Int32Array::from(&[None, Some(6), None, Some(6)]);
         assert_eq!(result, expected);
 
         // Trait testing
@@ -456,14 +447,14 @@ mod tests {
 
     #[test]
     fn test_mul_scalar_checked() {
-        let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
+        let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
         let result = checked_mul_scalar(&a, &1i32);
-        let expected = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
+        let expected = Int32Array::from(&[None, Some(6), None, Some(6)]);
         assert_eq!(result, expected);
 
-        let a = Primitive::from(&vec![None, Some(100), None, Some(100)]).to(DataType::Int8);
+        let a = Int8Array::from(&[None, Some(100), None, Some(100)]);
         let result = checked_mul_scalar(&a, &100i8);
-        let expected = Primitive::<i8>::from(&vec![None, None, None, None]).to(DataType::Int8);
+        let expected = Int8Array::from(&[None, None, None, None]);
         assert_eq!(result, expected);
 
         // Trait testing
@@ -473,14 +464,14 @@ mod tests {
 
     #[test]
     fn test_mul_scalar_saturating() {
-        let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
+        let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
         let result = saturating_mul_scalar(&a, &1i32);
-        let expected = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
+        let expected = Int32Array::from(&[None, Some(6), None, Some(6)]);
         assert_eq!(result, expected);
 
-        let a = Primitive::from(&vec![Some(-100i8)]).to(DataType::Int8);
+        let a = Int8Array::from(&[Some(-100i8)]);
         let result = saturating_mul_scalar(&a, &100i8);
-        let expected = Primitive::from(&vec![Some(-128)]).to(DataType::Int8);
+        let expected = Int8Array::from(&[Some(-128)]);
         assert_eq!(result, expected);
 
         // Trait testing
@@ -490,15 +481,15 @@ mod tests {
 
     #[test]
     fn test_mul_scalar_overflowing() {
-        let a = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
+        let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
         let (result, overflow) = overflowing_mul_scalar(&a, &1i32);
-        let expected = Primitive::from(&vec![None, Some(6), None, Some(6)]).to(DataType::Int32);
+        let expected = Int32Array::from(&[None, Some(6), None, Some(6)]);
         assert_eq!(result, expected);
         assert_eq!(overflow.as_slice()[0], 0b0000);
 
-        let a = Primitive::from(&vec![Some(1i8), Some(-100i8)]).to(DataType::Int8);
+        let a = Int8Array::from(&[Some(1i8), Some(-100i8)]);
         let (result, overflow) = overflowing_mul_scalar(&a, &100i8);
-        let expected = Primitive::from(&vec![Some(100i8), Some(-16i8)]).to(DataType::Int8);
+        let expected = Int8Array::from(&[Some(100i8), Some(-16i8)]);
         assert_eq!(result, expected);
         assert_eq!(overflow.as_slice()[0], 0b10);
 

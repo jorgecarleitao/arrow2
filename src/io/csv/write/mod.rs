@@ -100,9 +100,8 @@ mod tests {
             "consectetur adipiscing elit",
             "sed do eiusmod tempor",
         ]);
-        let c2 = Primitive::<f64>::from([Some(123.564532), None, Some(-556132.25)])
-            .to(DataType::Float64);
-        let c3 = Primitive::<u32>::from_slice(vec![3, 2, 1]).to(DataType::UInt32);
+        let c2 = Float64Array::from([Some(123.564532), None, Some(-556132.25)]);
+        let c3 = UInt32Array::from_slice(&[3, 2, 1]);
         let c4 = BooleanArray::from(vec![Some(true), Some(false), None]);
         let c5 = Primitive::<i64>::from([None, Some(1555584887378), Some(1555555555555)])
             .to(DataType::Timestamp(TimeUnit::Millisecond, None));
