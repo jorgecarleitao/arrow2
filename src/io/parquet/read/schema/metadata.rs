@@ -6,7 +6,7 @@ use crate::datatypes::Schema;
 use crate::error::{ArrowError, Result};
 use crate::io::ipc;
 
-const ARROW_SCHEMA_META_KEY: &str = "ARROW:schema";
+use super::super::super::ARROW_SCHEMA_META_KEY;
 
 /// Reads an arrow schema from Parquet's file metadata. Returns `None` if no schema was found.
 /// # Errors

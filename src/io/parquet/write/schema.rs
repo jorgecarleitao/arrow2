@@ -1,10 +1,34 @@
 use parquet2::schema::{
     types::{ParquetType, PhysicalType, PrimitiveConvertedType, TimeUnit as ParquetTimeUnit},
-    FieldRepetitionType, IntType, LogicalType, TimeType, TimestampType,
+    FieldRepetitionType, IntType, KeyValue, LogicalType, TimeType, TimestampType,
 };
 
-use crate::datatypes::{DataType, Field, TimeUnit};
+use crate::datatypes::{DataType, Field, Schema, TimeUnit};
 use crate::error::{ArrowError, Result};
+
+use crate::io::ipc::write::schema_to_bytes;
+use crate::io::ipc::write::MetadataVersion;
+
+use super::super::ARROW_SCHEMA_META_KEY;
+
+pub fn schema_to_metadata_key(schema: &Schema) -> KeyValue {
+    let serialized_schema = schema_to_bytes(&schema, MetadataVersion::V5);
+
+    // manually prepending the length to the schema as arrow uses the legacy IPC format
+    // TODO: change after addressing ARROW-9777
+    let schema_len = serialized_schema.len();
+    let mut len_prefix_schema = Vec::with_capacity(schema_len + 8);
+    len_prefix_schema.extend_from_slice(&[255u8, 255, 255, 255]);
+    len_prefix_schema.extend_from_slice(&(schema_len as u32).to_le_bytes());
+    len_prefix_schema.extend_from_slice(&serialized_schema);
+
+    let encoded = base64::encode(&len_prefix_schema);
+
+    KeyValue {
+        key: ARROW_SCHEMA_META_KEY.to_string(),
+        value: Some(encoded),
+    }
+}
 
 pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
     let name = field.name().clone();
