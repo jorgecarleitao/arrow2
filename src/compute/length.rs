@@ -72,7 +72,7 @@ pub fn length(array: &dyn Array) -> Result<Box<dyn Array>> {
 ///
 /// let data_type = DataType::Utf8;
 /// assert_eq!(can_length(&data_type), true);
-
+///
 /// let data_type = DataType::Int8;
 /// assert_eq!(can_length(&data_type), false);
 /// ```
