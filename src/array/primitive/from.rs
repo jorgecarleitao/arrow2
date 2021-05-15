@@ -276,3 +276,20 @@ impl<T: NativeType> IntoArray for Primitive<T> {
         Arc::new(self.to(data_type.clone()))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::super::Primitive;
+    use super::*;
+    use crate::array::Array;
+    use crate::datatypes::DataType;
+    use crate::error::Result;
+
+    #[test]
+    fn try_from_iter() -> Result<()> {
+        let a = Primitive::<i32>::try_from_iter((0..2).map(|x| Result::Ok(Some(x))))?
+            .to(DataType::Int32);
+        assert_eq!(a.len(), 2);
+        Ok(())
+    }
+}

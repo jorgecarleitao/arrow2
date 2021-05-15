@@ -1,7 +1,7 @@
 use std::iter::FromIterator;
 
 use crate::{
-    buffer::MutableBuffer,
+    buffer::{Buffer, MutableBuffer},
     trusted_len::TrustedLen,
     types::{NativeType, NaturalDataType},
 };
@@ -31,6 +31,11 @@ impl<T: NativeType + NaturalDataType> PrimitiveArray<T> {
             MutableBuffer::<T>::from_iter(iter).into(),
             None,
         )
+    }
+
+    /// Creates a new array out an iterator over values
+    pub fn from_slice(slice: &[T]) -> Self {
+        Self::from_data(T::DATA_TYPE, Buffer::<T>::from(slice), None)
     }
 }
 

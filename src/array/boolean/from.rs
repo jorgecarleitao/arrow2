@@ -172,3 +172,18 @@ impl<Ptr: std::borrow::Borrow<Option<bool>>> FromIterator<Ptr> for BooleanArray 
         BooleanArray::from_data(values.into(), validity.into())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::array::Array;
+    use crate::error::Result;
+
+    #[test]
+    fn try_from_iter() -> Result<()> {
+        let iter = std::iter::repeat(true).take(2).map(Some);
+        let a = BooleanArray::from_trusted_len_iter(iter);
+        assert_eq!(a.len(), 2);
+        Ok(())
+    }
+}
