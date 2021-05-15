@@ -105,10 +105,7 @@ pub fn substring(array: &dyn Array, start: i64, length: &Option<u64>) -> Result<
 /// assert_eq!(can_substring(&data_type), false);
 /// ```
 pub fn can_substring(data_type: &DataType) -> bool {
-    match data_type {
-        DataType::LargeUtf8 | DataType::Utf8 => true,
-        _ => false,
-    }
+    matches!(data_type, DataType::LargeUtf8 | DataType::Utf8)
 }
 
 #[cfg(test)]
@@ -298,7 +295,7 @@ mod tests {
             Duration(TimeUnit::Nanosecond),
         ];
 
-        datatypes.clone().into_iter().for_each(|d1| {
+        datatypes.into_iter().for_each(|d1| {
             let array = new_null_array(d1.clone(), 10);
             if can_substring(&d1) {
                 assert!(substring(array.as_ref(), 0, &None).is_ok());

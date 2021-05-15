@@ -121,31 +121,31 @@ pub fn hash(array: &dyn Array) -> Result<PrimitiveArray<u64>> {
 /// assert_eq!(can_hash(&data_type), false);
 /// ```
 pub fn can_hash(data_type: &DataType) -> bool {
-    match data_type {
+    matches!(
+        data_type,
         DataType::Boolean
-        | DataType::Int8
-        | DataType::Int16
-        | DataType::Int32
-        | DataType::Date32
-        | DataType::Time32(_)
-        | DataType::Interval(_)
-        | DataType::Int64
-        | DataType::Date64
-        | DataType::Time64(_)
-        | DataType::Timestamp(_, _)
-        | DataType::Duration(_)
-        | DataType::Decimal(_, _)
-        | DataType::UInt8
-        | DataType::UInt16
-        | DataType::UInt32
-        | DataType::UInt64
-        | DataType::Float16
-        | DataType::Binary
-        | DataType::LargeBinary
-        | DataType::Utf8
-        | DataType::LargeUtf8 => true,
-        _ => false,
-    }
+            | DataType::Int8
+            | DataType::Int16
+            | DataType::Int32
+            | DataType::Date32
+            | DataType::Time32(_)
+            | DataType::Interval(_)
+            | DataType::Int64
+            | DataType::Date64
+            | DataType::Time64(_)
+            | DataType::Timestamp(_, _)
+            | DataType::Duration(_)
+            | DataType::Decimal(_, _)
+            | DataType::UInt8
+            | DataType::UInt16
+            | DataType::UInt32
+            | DataType::UInt64
+            | DataType::Float16
+            | DataType::Binary
+            | DataType::LargeBinary
+            | DataType::Utf8
+            | DataType::LargeUtf8
+    )
 }
 
 #[cfg(test)]
@@ -191,7 +191,7 @@ mod tests {
             Duration(TimeUnit::Nanosecond),
         ];
 
-        datatypes.clone().into_iter().for_each(|d1| {
+        datatypes.into_iter().for_each(|d1| {
             let array = new_null_array(d1.clone(), 10);
             if can_hash(&d1) {
                 assert!(hash(array.as_ref()).is_ok());

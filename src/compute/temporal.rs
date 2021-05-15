@@ -126,16 +126,16 @@ pub fn hour(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
 /// assert_eq!(can_hour(&data_type), false);
 /// ```
 pub fn can_hour(data_type: &DataType) -> bool {
-    match data_type {
+    matches!(
+        data_type,
         DataType::Time32(TimeUnit::Second)
-        | DataType::Time32(TimeUnit::Microsecond)
-        | DataType::Time64(TimeUnit::Microsecond)
-        | DataType::Time64(TimeUnit::Nanosecond)
-        | DataType::Date32
-        | DataType::Date64
-        | DataType::Timestamp(_, None) => true,
-        _ => false,
-    }
+            | DataType::Time32(TimeUnit::Microsecond)
+            | DataType::Time64(TimeUnit::Microsecond)
+            | DataType::Time64(TimeUnit::Nanosecond)
+            | DataType::Date32
+            | DataType::Date64
+            | DataType::Timestamp(_, None)
+    )
 }
 
 /// Extracts the hours of a given temporal array as an array of integers
@@ -198,10 +198,10 @@ pub fn year(array: &dyn Array) -> Result<PrimitiveArray<i32>> {
 /// assert_eq!(can_year(&data_type), false);
 /// ```
 pub fn can_year(data_type: &DataType) -> bool {
-    match data_type {
-        DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, None) => true,
-        _ => false,
-    }
+    matches!(
+        data_type,
+        DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, None)
+    )
 }
 #[cfg(test)]
 mod tests {
@@ -323,7 +323,7 @@ mod tests {
             Duration(TimeUnit::Nanosecond),
         ];
 
-        datatypes.clone().into_iter().for_each(|d1| {
+        datatypes.into_iter().for_each(|d1| {
             let array = new_null_array(d1.clone(), 10);
             if can_hour(&d1) {
                 assert!(hour(array.as_ref()).is_ok());
@@ -372,7 +372,7 @@ mod tests {
             Duration(TimeUnit::Nanosecond),
         ];
 
-        datatypes.clone().into_iter().for_each(|d1| {
+        datatypes.into_iter().for_each(|d1| {
             let array = new_null_array(d1.clone(), 10);
             if can_year(&d1) {
                 assert!(year(array.as_ref()).is_ok());

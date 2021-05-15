@@ -63,7 +63,7 @@ pub fn length(array: &dyn Array) -> Result<Box<dyn Array>> {
     }
 }
 
-/// Checks if an array of type `datatype` can perform lenght operation
+/// Checks if an array of type `datatype` can perform length operation
 ///
 /// # Examples
 /// ```
@@ -77,10 +77,7 @@ pub fn length(array: &dyn Array) -> Result<Box<dyn Array>> {
 /// assert_eq!(can_length(&data_type), false);
 /// ```
 pub fn can_length(data_type: &DataType) -> bool {
-    match data_type {
-        DataType::Utf8 | DataType::LargeUtf8 => true,
-        _ => false,
-    }
+    matches!(data_type, DataType::Utf8 | DataType::LargeUtf8)
 }
 
 #[cfg(test)]
@@ -164,7 +161,7 @@ mod tests {
             Duration(TimeUnit::Nanosecond),
         ];
 
-        datatypes.clone().into_iter().for_each(|d1| {
+        datatypes.into_iter().for_each(|d1| {
             let array = new_null_array(d1.clone(), 10);
             if can_length(&d1) {
                 assert!(length(array.as_ref()).is_ok());

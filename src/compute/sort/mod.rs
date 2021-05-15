@@ -254,30 +254,30 @@ pub fn can_sort(data_type: &DataType) -> bool {
         | DataType::Utf8
         | DataType::LargeUtf8 => true,
         DataType::List(field) | DataType::LargeList(field) | DataType::FixedSizeList(field, _) => {
-            match field.data_type() {
+            matches!(
+                field.data_type(),
                 DataType::Int8
-                | DataType::Int16
-                | DataType::Int32
-                | DataType::Int64
-                | DataType::UInt8
-                | DataType::UInt16
-                | DataType::UInt32
-                | DataType::UInt64 => true,
-                _ => false,
-            }
+                    | DataType::Int16
+                    | DataType::Int32
+                    | DataType::Int64
+                    | DataType::UInt8
+                    | DataType::UInt16
+                    | DataType::UInt32
+                    | DataType::UInt64
+            )
         }
         DataType::Dictionary(key_type, value_type) if *value_type.as_ref() == DataType::Utf8 => {
-            match key_type.as_ref() {
+            matches!(
+                key_type.as_ref(),
                 DataType::Int8
-                | DataType::Int16
-                | DataType::Int32
-                | DataType::Int64
-                | DataType::UInt8
-                | DataType::UInt16
-                | DataType::UInt32
-                | DataType::UInt64 => true,
-                _ => false,
-            }
+                    | DataType::Int16
+                    | DataType::Int32
+                    | DataType::Int64
+                    | DataType::UInt8
+                    | DataType::UInt16
+                    | DataType::UInt32
+                    | DataType::UInt64
+            )
         }
         _ => false,
     }
@@ -1100,7 +1100,7 @@ mod tests {
             Duration(TimeUnit::Nanosecond),
         ];
 
-        datatypes.clone().into_iter().for_each(|d1| {
+        datatypes.into_iter().for_each(|d1| {
             let array = new_null_array(d1.clone(), 10);
             if can_sort(&d1) {
                 let options = SortOptions {
