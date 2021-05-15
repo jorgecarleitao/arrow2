@@ -3,6 +3,8 @@ use crate::error::ArrowError;
 pub mod read;
 pub mod write;
 
+const ARROW_SCHEMA_META_KEY: &str = "ARROW:schema";
+
 impl From<parquet2::error::ParquetError> for ArrowError {
     fn from(error: parquet2::error::ParquetError) -> Self {
         ArrowError::External("".to_string(), Box::new(error))
@@ -136,20 +138,22 @@ mod tests_integration {
             .iter()
             .map(to_parquet_type)
             .collect::<Result<Vec<_>>>()?;
-        let parquet_schema = SchemaDescriptor::new("root".to_string(), parquet_types.clone());
 
         let row_groups = batches.iter().map(|batch| {
-            let iterator = batch
-                .columns()
-                .iter()
-                .zip(parquet_types.iter())
-                .map(|(array, type_)| Ok(std::iter::once(array_to_page(array.as_ref(), type_))));
+            let iterator =
+                batch
+                    .columns()
+                    .iter()
+                    .zip(parquet_types.iter())
+                    .map(|(array, type_)| {
+                        Ok(std::iter::once(array_to_page(array.as_ref(), type_, codec)))
+                    });
             Ok(iterator)
         });
 
         let mut writer = Cursor::new(vec![]);
 
-        write_file(&mut writer, parquet_schema, codec, row_groups)?;
+        write_file(&mut writer, row_groups, schema, codec, None)?;
 
         Ok(writer.into_inner())
     }

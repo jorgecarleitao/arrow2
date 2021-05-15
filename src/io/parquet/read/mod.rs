@@ -14,11 +14,11 @@ use crate::{
 
 pub use schema::{get_schema, is_type_nullable};
 
-pub use parquet2::read::{get_page_iterator, read_metadata};
 pub use parquet2::{
     error::ParquetError,
     metadata::ColumnDescriptor,
     read::CompressedPage,
+    read::{get_page_iterator, read_metadata},
     schema::{
         types::{LogicalType, ParquetType, PhysicalType, PrimitiveConvertedType},
         TimeUnit as ParquetTimeUnit, TimestampType,

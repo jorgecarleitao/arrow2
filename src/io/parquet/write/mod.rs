@@ -11,14 +11,57 @@ use crate::error::{ArrowError, Result};
 use crate::{array::*, io::parquet::read::is_type_nullable};
 
 pub use parquet2::{
-    compression::CompressionCodec,
-    metadata::SchemaDescriptor,
-    read::CompressedPage,
-    read::{get_page_iterator, read_metadata},
-    schema::types::ParquetType,
-    write::write_file,
+    compression::CompressionCodec, read::CompressedPage, schema::types::ParquetType,
 };
+use parquet2::{
+    metadata::SchemaDescriptor, schema::KeyValue, write::write_file as parquet_write_file,
+};
+use schema::schema_to_metadata_key;
 pub use schema::to_parquet_type;
+
+/// Writes
+pub fn write_file<
+    W,
+    I,   // iterator over pages
+    II,  // iterator over columns
+    III, // iterator over row groups
+>(
+    writer: &mut W,
+    row_groups: III,
+    schema: &Schema,
+    codec: CompressionCodec,
+    key_value_metadata: Option<Vec<KeyValue>>,
+) -> Result<()>
+where
+    W: std::io::Write + std::io::Seek,
+    I: Iterator<Item = Result<CompressedPage>>,
+    II: Iterator<Item = Result<I>>,
+    III: Iterator<Item = Result<II>>,
+{
+    let key_value_metadata = key_value_metadata
+        .map(|mut x| {
+            x.push(schema_to_metadata_key(&schema));
+            x
+        })
+        .or_else(|| Some(vec![schema_to_metadata_key(&schema)]));
+
+    let fields = schema
+        .fields()
+        .iter()
+        .map(to_parquet_type)
+        .collect::<Result<Vec<_>>>()?;
+    let schema = SchemaDescriptor::new("root".to_string(), fields);
+
+    let created_by = Some("Arrow2 - Native Rust implementation of Arrow".to_string());
+    Ok(parquet_write_file(
+        writer,
+        row_groups,
+        schema,
+        codec,
+        created_by,
+        key_value_metadata,
+    )?)
+}
 
 pub fn array_to_page(
     array: &dyn Array,
@@ -129,7 +172,7 @@ mod tests {
     use super::*;
 
     use crate::error::Result;
-    use crate::io::parquet::read::page_iter_to_array;
+    use crate::io::parquet::read::{get_page_iterator, page_iter_to_array, read_metadata};
     use std::io::{Cursor, Read, Seek};
 
     use super::super::tests::*;
@@ -154,25 +197,27 @@ mod tests {
             pyarrow_required(column)
         };
         let field = Field::new("a1", array.data_type().clone(), nullable);
+        let schema = Schema::new(vec![field]);
 
-        let parquet_type = to_parquet_type(&field)?;
-        let schema = SchemaDescriptor::new("root".to_string(), vec![parquet_type.clone()]);
+        let compression = CompressionCodec::Uncompressed;
 
+        let parquet_types = schema
+            .fields()
+            .iter()
+            .map(to_parquet_type)
+            .collect::<Result<Vec<_>>>()?;
+
+        // one row group
+        // one column chunk
+        // one page
         let row_groups = std::iter::once(Result::Ok(std::iter::once(Ok(std::iter::once(
-            array_to_page(
-                array.as_ref(),
-                &parquet_type,
-                CompressionCodec::Uncompressed,
-            ),
-        )))));
+            array.as_ref(),
+        )
+        .zip(parquet_types.iter())
+        .map(|(array, type_)| array_to_page(array, type_, compression))))));
 
         let mut writer = Cursor::new(vec![]);
-        write_file(
-            &mut writer,
-            schema,
-            CompressionCodec::Uncompressed,
-            row_groups,
-        )?;
+        write_file(&mut writer, row_groups, &schema, compression, None)?;
 
         let data = writer.into_inner();
 
