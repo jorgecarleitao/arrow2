@@ -15,7 +15,7 @@
 //! 1. compute the array of slices `v` that construct a new sorted array from `a0` and `a1`.
 //! 2. `take_arrays` from `a0` and `a1`, creating the sorted array.
 //!
-//! In the extreme case where the two arrays are already sorted betwen then (e.g. `[0, 2]`, `[3, 4]`),
+//! In the extreme case where the two arrays are already sorted between then (e.g. `[0, 2]`, `[3, 4]`),
 //! we need two slices, `v = vec![(0, 0, a0.len()), (1, 0, a1.len())]`. The higher the
 //! inter-leave between the two arrays, the more slices will be needed, and
 //! generally the more expensive the `take` operation will be.

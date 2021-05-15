@@ -142,3 +142,99 @@ pub fn compare(lhs: &dyn Array, rhs: &dyn Array, operator: Operator) -> Result<B
 pub use primitive::compare_scalar as primitive_compare_scalar;
 pub(crate) use primitive::compare_values_op as primitive_compare_values_op;
 pub use utf8::compare_scalar as utf8_compare_scalar;
+
+/// Checks if an array of type `datatype` can be compared with another array of
+/// the same type.
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::comparison::can_compare;
+/// use arrow2::datatypes::{DataType};
+///
+/// let data_type = DataType::Int8;
+/// assert_eq!(can_compare(&data_type), true);
+///
+/// let data_type = DataType::LargeBinary;
+/// assert_eq!(can_compare(&data_type), false)
+/// ```
+pub fn can_compare(data_type: &DataType) -> bool {
+    match data_type {
+        DataType::Int8
+        | DataType::Int16
+        | DataType::Int32
+        | DataType::Date32
+        | DataType::Time32(_)
+        | DataType::Interval(_)
+        | DataType::Int64
+        | DataType::Timestamp(_, None)
+        | DataType::Date64
+        | DataType::Time64(_)
+        | DataType::Duration(_)
+        | DataType::UInt8
+        | DataType::UInt16
+        | DataType::UInt32
+        | DataType::UInt64
+        | DataType::Float32
+        | DataType::Float64
+        | DataType::Utf8
+        | DataType::LargeUtf8
+        | DataType::Decimal(_, _) => true,
+        _ => false,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn consistency() {
+        use crate::array::new_null_array;
+        use crate::datatypes::DataType::*;
+        use crate::datatypes::TimeUnit;
+
+        let datatypes = vec![
+            Null,
+            Boolean,
+            UInt8,
+            UInt16,
+            UInt32,
+            UInt64,
+            Int8,
+            Int16,
+            Int32,
+            Int64,
+            Float32,
+            Float64,
+            Timestamp(TimeUnit::Second, None),
+            Timestamp(TimeUnit::Millisecond, None),
+            Timestamp(TimeUnit::Microsecond, None),
+            Timestamp(TimeUnit::Nanosecond, None),
+            Time64(TimeUnit::Microsecond),
+            Time64(TimeUnit::Nanosecond),
+            Date32,
+            Time32(TimeUnit::Second),
+            Time32(TimeUnit::Millisecond),
+            Date64,
+            Utf8,
+            LargeUtf8,
+            Binary,
+            LargeBinary,
+            Duration(TimeUnit::Second),
+            Duration(TimeUnit::Millisecond),
+            Duration(TimeUnit::Microsecond),
+            Duration(TimeUnit::Nanosecond),
+        ];
+
+        datatypes.clone().into_iter().for_each(|d1| {
+            let array = new_null_array(d1.clone(), 10);
+            if can_compare(&d1) {
+                let op = Operator::Eq;
+                assert!(compare(array.as_ref(), array.as_ref(), op).is_ok());
+            } else {
+                let op = Operator::Eq;
+                assert!(compare(array.as_ref(), array.as_ref(), op).is_err());
+            }
+        });
+    }
+}
