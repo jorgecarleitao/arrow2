@@ -237,6 +237,16 @@ pub mod tests {
     }
 
     #[test]
+    fn test_f32() -> Result<()> {
+        let array = &Float32Array::from_slice(&[1.0, 2.0]);
+
+        let cmp = build_compare(array, array)?;
+
+        assert_eq!(Ordering::Less, (cmp)(0, 1));
+        Ok(())
+    }
+
+    #[test]
     fn test_f64() -> Result<()> {
         let array = Primitive::from_slice(&vec![1.0, 2.0]).to(DataType::Float64);
 

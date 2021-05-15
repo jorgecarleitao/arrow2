@@ -263,6 +263,16 @@ mod tests {
     }
 
     #[test]
+    fn display_timestamp_ms() {
+        let array = Primitive::<i64>::from(&[Some(1), None, Some(2)])
+            .to(DataType::Timestamp(TimeUnit::Millisecond, None));
+        assert_eq!(
+            format!("{}", array),
+            "Timestamp(Millisecond, None)[1970-01-01 00:00:00.001, , 1970-01-01 00:00:00.002]"
+        );
+    }
+
+    #[test]
     fn display_timestamp_us() {
         let array = Primitive::<i64>::from(&[Some(1), None, Some(2)])
             .to(DataType::Timestamp(TimeUnit::Microsecond, None));
@@ -273,10 +283,41 @@ mod tests {
     }
 
     #[test]
+    fn display_timestamp_ns() {
+        let array = Primitive::<i64>::from(&[Some(1), None, Some(2)])
+            .to(DataType::Timestamp(TimeUnit::Nanosecond, None));
+        assert_eq!(
+            format!("{}", array),
+            "Timestamp(Nanosecond, None)[1970-01-01 00:00:00.000000001, , 1970-01-01 00:00:00.000000002]"
+        );
+    }
+
+    #[test]
     fn display_duration_ms() {
         let array = Primitive::<i64>::from(&[Some(1), None, Some(2)])
             .to(DataType::Duration(TimeUnit::Millisecond));
         assert_eq!(format!("{}", array), "Duration(Millisecond)[1ms, , 2ms]");
+    }
+
+    #[test]
+    fn display_duration_s() {
+        let array = Primitive::<i64>::from(&[Some(1), None, Some(2)])
+            .to(DataType::Duration(TimeUnit::Second));
+        assert_eq!(format!("{}", array), "Duration(Second)[1s, , 2s]");
+    }
+
+    #[test]
+    fn display_duration_us() {
+        let array = Primitive::<i64>::from(&[Some(1), None, Some(2)])
+            .to(DataType::Duration(TimeUnit::Microsecond));
+        assert_eq!(format!("{}", array), "Duration(Microsecond)[1us, , 2us]");
+    }
+
+    #[test]
+    fn display_duration_ns() {
+        let array = Primitive::<i64>::from(&[Some(1), None, Some(2)])
+            .to(DataType::Duration(TimeUnit::Nanosecond));
+        assert_eq!(format!("{}", array), "Duration(Nanosecond)[1ns, , 2ns]");
     }
 
     #[test]
