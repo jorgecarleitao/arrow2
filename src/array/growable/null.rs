@@ -4,7 +4,7 @@ use crate::array::{Array, NullArray};
 
 use super::Growable;
 
-/// A growable PrimitiveArray
+/// Concrete [`Growable`] for the [`NullArray`].
 pub struct GrowableNull {
     length: usize,
 }

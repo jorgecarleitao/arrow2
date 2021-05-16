@@ -1,3 +1,19 @@
+//! This module contains arrays: fixed-length and immutable containers with optional validity
+//! that are layed in memory according to the Arrow specification.
+//! Each type of value has its own `struct`. The main types are:
+//!
+//! * [`PrimitiveArray`], an array of values with a fixed length such as integers, floats, etc.
+//! * [`BooleanArray`], an array of boolean values (stored as a bitmap)
+//! * [`Utf8Array`], an array of utf8 values
+//! * [`BinaryArray`], an array of binary values
+//! * [`ListArray`], an array of arrays (e.g. `[[1, 2], None, [], [None]]`)
+//! * [`StructArray`], an array of arrays identified by a string (e.g. `{"a": [1, 2], "b": [true, false]}`)
+//!
+//! This module contains constructors and accessors to operate on the arrays.
+//! All the arrays implement the trait [`Array`] and are often trait objects via [`Array::as_any`].
+//! Every array has a [`DataType`], which you can access with [`Array::data_type`].
+//! This can be used to `downcast_ref` a `&dyn Array` to concrete structs.
+//! Arrays share memory regions via [`std::sync::Arc`] and can be cloned and sliced at no cost (`O(1)`).
 use std::any::Any;
 use std::fmt::Display;
 
@@ -13,7 +29,8 @@ use crate::{
 pub trait Array: std::fmt::Debug + Send + Sync + ToFfi {
     fn as_any(&self) -> &dyn Any;
 
-    /// The length of the array
+    /// The length of the [`Array`]. Every array has a length corresponding to the number of
+    /// elements (slots).
     fn len(&self) -> usize;
 
     /// whether the array is empty
@@ -21,14 +38,17 @@ pub trait Array: std::fmt::Debug + Send + Sync + ToFfi {
         self.len() == 0
     }
 
-    /// The [`DataType`] of the array
+    /// The [`DataType`] of the [`Array`]. In combination with [`Array::as_any`], this can be
+    /// used to downcast trait objects (`dyn Array`) to concrete arrays.
     fn data_type(&self) -> &DataType;
 
-    /// The validity of the Array
+    /// The validity of the [`Array`]: every array has an optional [`Bitmap`] that, when available
+    /// specifies whether the array slot is valid or not (null).
+    /// When the validity is [`None`], all slots are valid.
     fn validity(&self) -> &Option<Bitmap>;
 
-    /// The number of nulls on this Array. This is useful to branch implementations
-    /// to cases where the null count is zero.
+    /// The number of null slots on this [`Array`]. This is usually used to branch
+    /// implementations to cases where optimizations can be made.
     /// # Implementation
     /// This is `O(1)`.
     #[inline]
@@ -58,10 +78,10 @@ pub trait Array: std::fmt::Debug + Send + Sync + ToFfi {
         !self.is_null(i)
     }
 
-    /// Slices the `Array`, returning a new `Array`.
+    /// Slices the [`Array`], returning a new `Box<dyn Array>`.
     /// # Implementation
     /// This operation is `O(1)` over `len`, as it amounts to increase two ref counts
-    /// and moving the struct under a `Box`.
+    /// and moving the struct to the heap.
     /// # Panic
     /// This function panics iff `offset + length >= self.len()`.
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array>;
@@ -135,7 +155,7 @@ impl Display for dyn Array {
     }
 }
 
-/// Creates a new empty [`Array`]. An empty array has a length of 0.
+/// Creates a new [`Array`] with a [`Array::len`] of 0.
 pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
     match data_type {
         DataType::Null => Box::new(NullArray::new_empty()),
@@ -188,8 +208,8 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
     }
 }
 
-/// Creates a new null [`Array`] of [`DataType`] `data_type` and `length`.
-/// A null array has all its elements nulls.
+/// Creates a new [`Array`] of [`DataType`] `data_type` and `length`.
+/// The array is guaranteed to have [`Array::null_count`] equal to [`Array::len`].
 pub fn new_null_array(data_type: DataType, length: usize) -> Box<dyn Array> {
     match data_type {
         DataType::Null => Box::new(NullArray::new_null(length)),
@@ -335,16 +355,27 @@ pub use utf8::{Utf8Array, Utf8Primitive};
 pub use self::ffi::FromFfi;
 use self::ffi::ToFfi;
 
+/// A type definition [`PrimitiveArray`] for `i8`
 pub type Int8Array = PrimitiveArray<i8>;
+/// A type definition [`PrimitiveArray`] for `i16`
 pub type Int16Array = PrimitiveArray<i16>;
+/// A type definition [`PrimitiveArray`] for `i32`
 pub type Int32Array = PrimitiveArray<i32>;
+/// A type definition [`PrimitiveArray`] for `i64`
 pub type Int64Array = PrimitiveArray<i64>;
+/// A type definition [`PrimitiveArray`] for `i128`
 pub type Int128Array = PrimitiveArray<i128>;
+/// A type definition [`PrimitiveArray`] for `f32`
 pub type Float32Array = PrimitiveArray<f32>;
+/// A type definition [`PrimitiveArray`] for `f64`
 pub type Float64Array = PrimitiveArray<f64>;
+/// A type definition [`PrimitiveArray`] for `u8`
 pub type UInt8Array = PrimitiveArray<u8>;
+/// A type definition [`PrimitiveArray`] for `u16`
 pub type UInt16Array = PrimitiveArray<u16>;
+/// A type definition [`PrimitiveArray`] for `u32`
 pub type UInt32Array = PrimitiveArray<u32>;
+/// A type definition [`PrimitiveArray`] for `u64`
 pub type UInt64Array = PrimitiveArray<u64>;
 
 /// A trait describing the ability of a struct to convert itself to a Arc'ed [`Array`].
@@ -358,9 +389,9 @@ pub trait TryFromIterator<A>: Sized {
     fn try_from_iter<T: IntoIterator<Item = Result<A>>>(iter: T) -> Result<Self>;
 }
 
-/// A trait describing the ability of a struct to
+/// A trait describing the ability of a struct to build itself from an iterator into an [`Array`].
 pub trait Builder<T>: TryFromIterator<Option<T>> + IntoArray {
-    /// Create the builder
+    /// Create the builder with a capacity
     fn with_capacity(capacity: usize) -> Self;
 
     /// Push a new item to the builder.
@@ -368,7 +399,8 @@ pub trait Builder<T>: TryFromIterator<Option<T>> + IntoArray {
     /// For example, if all possible keys are exausted when building a dictionary.
     fn push(&mut self, item: Option<&T>);
 
-    /// Falible version of `push`, on which the operation errors instead of panicking.
+    /// Fallible version of `push`, on which the operation errors instead of panicking.
+    /// prefer this if there is no guarantee that the operation will not fail.
     #[inline]
     fn try_push(&mut self, item: Option<&T>) -> Result<()> {
         self.push(item);
@@ -424,7 +456,7 @@ pub trait IterableListArray: Array {
     fn value(&self, i: usize) -> Box<dyn Array>;
 }
 
-/// Trait that binary and string arrays implement for the purposes of DRY.
+/// Trait that [`BinaryArray`] and [`Utf8Array`] implement for the purposes of DRY.
 /// # Safety
 /// The implementer must ensure that
 /// 1. `offsets.len() > 0`

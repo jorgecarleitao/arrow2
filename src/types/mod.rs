@@ -1,3 +1,12 @@
+//! This module contains traits to handle all _physical_ types used in this crate.
+//! Most physical types used in this crate are native Rust types, like `i32`.
+//! The most important trait is [`NativeType`], implemented for all Arrow types
+//! with a Rust correspondence (such as `i32` or `f64`).
+//!
+//! Another important trait is [`BitChunk`], describing types that can be used to
+//! represent chunks of bits (e.g. `u8`, `u16`), and [`BitChunkIter`], that can be used to
+//! iterate over bitmaps in [`BitChunk`]s.
+//! Finally, this module also contains traits used to compile code optimized for SIMD instructions at [`simd`].
 use std::{
     cmp::{Ord, Ordering},
     convert::TryFrom,

@@ -21,20 +21,16 @@ use crate::error::{ArrowError, Result};
 
 use super::Field;
 
-/// Describes the meta-data of an ordered sequence of relative types.
-///
-/// Note that this information is only part of the meta-data and not part of the physical
-/// memory layout.
+/// An ordered sequence of [`Field`] with optional metadata.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Schema {
     pub(crate) fields: Vec<Field>,
     /// A map of key-value pairs containing additional meta data.
-    //#[serde(skip_serializing_if = "HashMap::is_empty")]
     pub(crate) metadata: HashMap<String, String>,
 }
 
 impl Schema {
-    /// Creates an empty `Schema`
+    /// Creates an empty [`Schema`].
     pub fn empty() -> Self {
         Self {
             fields: vec![],
@@ -42,7 +38,7 @@ impl Schema {
         }
     }
 
-    /// Creates a new `Schema` from a sequence of `Field` values.
+    /// Creates a new [`Schema`] from a sequence of [`Field`] values.
     ///
     /// # Example
     ///
@@ -58,7 +54,7 @@ impl Schema {
     }
 
     /// Creates a new `Schema` from a sequence of `Field` values
-    /// and adds additional metadata in form of key value pairs.
+    /// and additional metadata.
     ///
     /// # Example
     ///
@@ -141,25 +137,25 @@ impl Schema {
             })
     }
 
-    /// Returns an immutable reference of the vector of `Field` instances.
+    /// Returns all [`Field`]s in this schema.
     #[inline]
     pub const fn fields(&self) -> &Vec<Field> {
         &self.fields
     }
 
-    /// Returns an immutable reference of a specific `Field` instance selected using an
-    /// offset within the internal `fields` vector.
+    /// Returns the [`Field`] at position `i`.
+    /// # Panics
+    /// Panics iff `i` is larger than the number of fields in this [`Schema`].
     pub fn field(&self, i: usize) -> &Field {
         &self.fields[i]
     }
 
-    /// Returns an immutable reference of a specific `Field` instance selected by name.
+    /// Returns the first [`Field`] named `name`.
     pub fn field_with_name(&self, name: &str) -> Result<&Field> {
         Ok(&self.fields[self.index_of(name)?])
     }
 
-    /// Returns a vector of immutable references to all `Field` instances selected by
-    /// the dictionary ID they use.
+    /// Returns all [`Field`]s with dictionary id `dict_id`.
     pub fn fields_with_dict_id(&self, dict_id: i64) -> Vec<&Field> {
         self.fields
             .iter()

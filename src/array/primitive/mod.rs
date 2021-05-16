@@ -5,7 +5,7 @@ use super::Array;
 /// A [`PrimitiveArray`] is arrow's equivalent to `Vec<Option<T: NativeType>>`, i.e.
 /// an array designed for highly performant operations on optionally nullable slots,
 /// backed by a physical type of a physical byte-width, such as `i32` or `f64`.
-/// The size of this struct is `O(1)` as all data is stored behind an `Arc`.
+/// The size of this struct is `O(1)` as all data is stored behind an [`std::sync::Arc`].
 #[derive(Debug, Clone)]
 pub struct PrimitiveArray<T: NativeType> {
     data_type: DataType,

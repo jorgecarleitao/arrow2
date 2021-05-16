@@ -11,7 +11,7 @@ use super::{
     Growable,
 };
 
-/// A growable PrimitiveArray
+/// Concrete [`Growable`] for the [`StructArray`].
 pub struct GrowableStruct<'a> {
     arrays: Vec<&'a StructArray>,
     validity: MutableBitmap,

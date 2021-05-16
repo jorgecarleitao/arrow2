@@ -1,5 +1,5 @@
-//! Contains components suitable to create an array out of N other arrays, by slicing
-//! from each in a random-access fashion.
+//! Contains the trait [`Growable`] and corresponding concreate implementations, one per concrete array,
+//! that offer the ability to create a new [`Array`] out of slices of existing [`Array`]s.
 
 use crate::array::*;
 use crate::datatypes::*;
@@ -25,9 +25,12 @@ pub use dictionary::GrowableDictionary;
 
 mod utils;
 
+/// A trait describing a struct that can be extended from slices of pre-existing [`Array`]s.
+/// This is used in operations where a new array is built out of other arrays such,
+/// as filtering and concatenation.
 pub trait Growable<'a> {
-    /// Extends this [`GrowableArray`] with elements from the bounded [`Array`] at `start`
-    /// and for a size of `len`.
+    /// Extends this [`Growable`] with elements from the bounded [`Array`] at index `index` from
+    /// a slice starting at `start` and length `len`.
     /// # Panic
     /// This function panics if the range is out of bounds, i.e. if `start + len >= array.len()`.
     fn extend(&mut self, index: usize, start: usize, len: usize);
@@ -84,8 +87,11 @@ macro_rules! dyn_dict_growable {
     }};
 }
 
+/// Creates a new [`Growable`] from an arbitrary number of dynamic [`Array`]s.
 /// # Panics
-/// This function panics iff the arrays do not have the same data_type.
+/// This function panics iff
+/// * the arrays do not have the same [`DataType`].
+/// * `arrays.is_empty`.
 pub fn make_growable<'a>(
     arrays: &[&'a dyn Array],
     use_validity: bool,

@@ -11,6 +11,7 @@ use super::{
     Growable,
 };
 
+/// Concrete [`Growable`] for the [`Utf8Array`].
 pub struct GrowableUtf8<'a, O: Offset> {
     arrays: Vec<&'a Utf8Array<O>>,
     validity: MutableBitmap,

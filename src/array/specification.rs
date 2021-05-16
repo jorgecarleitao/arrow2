@@ -7,9 +7,8 @@ use crate::{
     types::{NativeType, NaturalDataType},
 };
 
-/// Trait uses to distinguish types whose offset sizes support multiple sizes.
-/// This trait is only implemented for i32 and i64, which are the two sizes currently
-/// declared in arrow specification.
+/// Trait describing types that can be used as offsets as per Arrow specification.
+/// This trait is only implemented for `i32` and `i64`, the two sizes part of the specification.
 /// # Safety
 /// Do not implement.
 pub unsafe trait Offset:

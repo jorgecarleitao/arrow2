@@ -11,6 +11,7 @@ use super::{
     Growable,
 };
 
+/// Concrete [`Growable`] for the [`FixedSizeBinaryArray`].
 pub struct GrowableFixedSizeBinary<'a> {
     arrays: Vec<&'a FixedSizeBinaryArray>,
     validity: MutableBitmap,

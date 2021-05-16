@@ -58,6 +58,7 @@ fn extend_offset_values<O: Offset>(
     }
 }
 
+/// Concrete [`Growable`] for the [`ListArray`].
 pub struct GrowableList<'a, O: Offset> {
     arrays: Vec<&'a ListArray<O>>,
     validity: MutableBitmap,

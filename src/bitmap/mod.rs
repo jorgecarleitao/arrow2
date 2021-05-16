@@ -1,3 +1,6 @@
+//! Contains efficient containers of booleans: [`Bitmap`] and [`MutableBitmap`].
+//! The memory backing these containers is cache-aligned and optimized for both vertical
+//! and horizontal operations over booleans.
 mod immutable;
 pub use immutable::*;
 

@@ -12,7 +12,7 @@ use crate::{
 /// Compare the values at two arbitrary indices in two arrays.
 pub type DynComparator<'a> = Box<dyn Fn(usize, usize) -> Ordering + 'a>;
 
-// implements comparison using IEEE 754 total ordering for f32
+/// implements comparison using IEEE 754 total ordering for f32
 // Original implementation from https://doc.rust-lang.org/std/primitive.f32.html#method.total_cmp
 // TODO to change to use std when it becomes stable
 #[inline]
@@ -26,7 +26,7 @@ pub fn total_cmp_f32(l: &f32, r: &f32) -> std::cmp::Ordering {
     left.cmp(&right)
 }
 
-// implements comparison using IEEE 754 total ordering for f64
+/// implements comparison using IEEE 754 total ordering for f64
 // Original implementation from https://doc.rust-lang.org/std/primitive.f64.html#method.total_cmp
 // TODO to change to use std when it becomes stable
 #[inline]
@@ -41,7 +41,7 @@ pub fn total_cmp_f64(l: &f64, r: &f64) -> std::cmp::Ordering {
 }
 
 /// Total order of all native types whose Rust implementation
-/// supports total order.
+/// that support total order.
 #[inline]
 pub fn total_cmp<T>(l: &T, r: &T) -> std::cmp::Ordering
 where
@@ -122,9 +122,8 @@ macro_rules! dyn_dict {
     }};
 }
 
-/// returns a comparison function that compares two values at two different positions
-/// between the two arrays.
-/// The arrays' types must be equal.
+/// returns a comparison function that compares values at two different slots
+/// between two [`Array`].
 /// # Example
 /// ```
 /// use arrow2::array::{ord::build_compare, Primitive};
@@ -141,6 +140,8 @@ macro_rules! dyn_dict {
 /// # Ok(())
 /// # }
 /// ```
+/// # Error
+/// The arrays' [`DataType`] must be equal and the types must have a natural order.
 // This is a factory of comparisons.
 // The lifetime 'a enforces that we cannot use the closure beyond any of the array's lifetime.
 pub fn build_compare<'a>(left: &'a dyn Array, right: &'a dyn Array) -> Result<DynComparator<'a>> {

@@ -10,7 +10,7 @@ use super::{
     Growable,
 };
 
-/// A growable PrimitiveArray
+/// Concrete [`Growable`] for the [`BooleanArray`].
 pub struct GrowableBoolean<'a> {
     arrays: Vec<&'a BooleanArray>,
     validity: MutableBitmap,

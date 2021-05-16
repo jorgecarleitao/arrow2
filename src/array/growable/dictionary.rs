@@ -8,7 +8,7 @@ use crate::{
 
 use super::{make_growable, utils::extend_validity, Growable};
 
-/// A growable PrimitiveArray
+/// Concrete [`Growable`] for the [`DictionaryArray`].
 #[derive(Debug)]
 pub struct GrowableDictionary<'a, K: DictionaryKey> {
     keys_values: Vec<&'a [K]>,

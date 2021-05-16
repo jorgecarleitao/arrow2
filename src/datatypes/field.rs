@@ -21,9 +21,8 @@ use crate::error::{ArrowError, Result};
 
 use super::DataType;
 
-/// Contains the meta-data for a single relative type.
-///
-/// The `Schema` object is an ordered collection of `Field` objects.
+/// A logical [`DataType`] and its associated metadata per
+/// [Arrow specification](https://arrow.apache.org/docs/cpp/api/datatype.html)
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Field {
     pub(super) name: String,
@@ -66,7 +65,7 @@ impl Field {
         }
     }
 
-    /// Sets the `Field`'s optional custom metadata.
+    /// Sets the [`Field`]'s optional metadata.
     /// The metadata is set as `None` for empty map.
     #[inline]
     pub fn set_metadata(&mut self, metadata: Option<BTreeMap<String, String>>) {
@@ -79,25 +78,25 @@ impl Field {
         }
     }
 
-    /// Returns the immutable reference to the `Field`'s optional custom metadata.
+    /// Returns the [`Field`]'s optional custom metadata.
     #[inline]
     pub const fn metadata(&self) -> &Option<BTreeMap<String, String>> {
         &self.metadata
     }
 
-    /// Returns an immutable reference to the `Field`'s name.
+    /// Returns the [`Field`]'s name.
     #[inline]
     pub const fn name(&self) -> &String {
         &self.name
     }
 
-    /// Returns an immutable reference to the `Field`'s  data-type.
+    /// Returns the [`Field`]'s [`DataType`].
     #[inline]
     pub const fn data_type(&self) -> &DataType {
         &self.data_type
     }
 
-    /// Indicates whether this `Field` supports null values.
+    /// Returns the [`Field`] nullability.
     #[inline]
     pub const fn is_nullable(&self) -> bool {
         self.nullable
@@ -112,7 +111,7 @@ impl Field {
         }
     }
 
-    /// Returns whether this `Field`'s dictionary is ordered, if this is a dictionary type.
+    /// Returns whether this [`Field`]'s dictionary is ordered, if this is a dictionary type.
     #[inline]
     pub const fn dict_is_ordered(&self) -> Option<bool> {
         match self.data_type {

@@ -10,7 +10,7 @@ use crate::{
 
 use super::{utils::extend_validity, Growable};
 
-/// A growable PrimitiveArray
+/// Concrete [`Growable`] for the [`PrimitiveArray`].
 pub struct GrowablePrimitive<'a, T: NativeType> {
     data_type: DataType,
     arrays: Vec<&'a [T]>,

@@ -2,6 +2,7 @@ use crate::{bitmap::Bitmap, datatypes::DataType};
 
 use super::{ffi::ToFfi, Array};
 
+/// The concrete [`Array`] of [`DataType::Null`].
 #[derive(Debug, Clone)]
 pub struct NullArray {
     data_type: DataType,

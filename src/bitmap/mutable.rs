@@ -8,7 +8,10 @@ use crate::{
 
 use super::Bitmap;
 
-/// The mutable counterpart of [`Bitmap`].
+/// A mutable container to store boolean values. This container is equivalent to [`Vec<bool>`], but
+/// each bool is stored as a single bit.
+/// # Implementation
+/// This container is backed by [`MutableBuffer<u8>`] and can be converted to a [`Bitmap`] at `O(1)`.
 #[derive(Debug)]
 pub struct MutableBitmap {
     buffer: MutableBuffer<u8>,
@@ -50,7 +53,7 @@ impl MutableBitmap {
             .reserve((self.length + additional).saturating_add(7) / 8 - self.buffer.len())
     }
 
-    /// Pushes a new bit to the container, re-sizing it if necessary.
+    /// Pushes a new bit to the [`MutableBitmap`], re-sizing it if necessary.
     #[inline]
     pub fn push(&mut self, value: bool) {
         if self.length % 8 == 0 {
@@ -70,7 +73,7 @@ impl MutableBitmap {
 
     /// Pushes a new bit to the container
     /// # Safety
-    /// The caller must ensure that the container has sufficient space.
+    /// The caller must ensure that the container has sufficient capacity.
     #[inline]
     pub unsafe fn push_unchecked(&mut self, value: bool) {
         if self.length % 8 == 0 {
@@ -83,19 +86,19 @@ impl MutableBitmap {
         self.length += 1;
     }
 
-    /// Returns the number of unset bits on this `Bitmap`
+    /// Returns the number of unset bits on this [`MutableBitmap`].
     #[inline]
     pub fn null_count(&self) -> usize {
         null_count(&self.buffer, 0, self.length)
     }
 
-    /// Returns the length of the [`MutableBitmap`] in bits.
+    /// Returns the length of the [`MutableBitmap`].
     #[inline]
     pub fn len(&self) -> usize {
         self.length
     }
 
-    /// Returns whether [`MutableBitmap`] is empty
+    /// Returns whether [`MutableBitmap`] is empty.
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
@@ -109,6 +112,7 @@ impl MutableBitmap {
         self.length = len;
     }
 
+    /// Extends [`MutableBitmap`] by `additional` values of constant `value`.
     #[inline]
     pub fn extend_constant(&mut self, additional: usize, value: bool) {
         if value {

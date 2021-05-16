@@ -1,9 +1,9 @@
-//! Defines `ArrowError` for representing failures in various Arrow operations.
+//! Defines [`ArrowError`], representing all errors returned by this crate.
 use std::fmt::{Debug, Display, Formatter};
 
 use std::error::Error;
 
-/// Many different operations in the `arrow` crate return this error type.
+/// Enum with all errors in this crate.
 #[derive(Debug)]
 pub enum ArrowError {
     /// Returned when functionality is not yet available.

@@ -13,7 +13,7 @@ use super::{BitmapIter, MutableBitmap};
 /// An immutable container whose API is optimized to handle bitmaps. All quantities on this
 /// container's API are measured in bits.
 /// # Implementation
-/// * This container shares memory regions across thread boundaries through an `Arc`
+/// * memory on this container is sharable across thread boundaries
 /// * Cloning [`Bitmap`] is `O(1)`
 /// * Slicing [`Bitmap`] is `O(1)`
 #[derive(Debug, Clone)]
@@ -39,12 +39,13 @@ impl Bitmap {
         Self::default()
     }
 
+    /// Initializes an new [`Bitmap`] filled with unset values.
     #[inline]
     pub fn new_zeroed(length: usize) -> Self {
         MutableBitmap::from_len_zeroed(length).into()
     }
 
-    /// Returns the length of the [`Bitmap`] in bits.
+    /// Returns the length of the [`Bitmap`].
     #[inline]
     pub fn len(&self) -> usize {
         self.length
@@ -56,7 +57,7 @@ impl Bitmap {
         self.len() == 0
     }
 
-    /// Creates a new `Bitmap` from [`Bytes`] and a length.
+    /// Creates a new [`Bitmap`] from [`Bytes`] and a length.
     /// # Panic
     /// Panics iff `length <= bytes.len() * 8`
     #[inline]
@@ -77,7 +78,7 @@ impl Bitmap {
         null_count(&self.bytes, self.offset + offset, length)
     }
 
-    /// Returns the number of unset bits on this `Bitmap`
+    /// Returns the number of unset bits on this [`Bitmap`].
     #[inline]
     pub fn null_count(&self) -> usize {
         self.null_count
@@ -122,7 +123,7 @@ impl Bitmap {
         get_bit_unchecked(&self.bytes, self.offset + i)
     }
 
-    /// Returns a pointer to the start of this `Bitmap` (ignores `offsets`)
+    /// Returns a pointer to the start of this [`Bitmap`] (ignores `offsets`)
     /// This pointer is allocated iff `self.len() > 0`.
     pub(crate) fn as_ptr(&self) -> std::ptr::NonNull<u8> {
         self.bytes.ptr()
@@ -153,7 +154,7 @@ impl Bitmap {
     }
 
     #[inline]
-    pub fn bytes(&self) -> &[u8] {
+    pub(crate) fn bytes(&self) -> &[u8] {
         &self.bytes
     }
 }
@@ -216,13 +217,13 @@ impl<'a> IntoIterator for &'a Bitmap {
     type IntoIter = BitmapIter<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
-        BitmapIter::<'a>::from_bitmap(self)
+        BitmapIter::<'a>::new(&self.bytes, self.offset, self.length)
     }
 }
 
 impl<'a> Bitmap {
     /// constructs a new iterator
     pub fn iter(&'a self) -> BitmapIter<'a> {
-        BitmapIter::<'a>::from_bitmap(&self)
+        BitmapIter::<'a>::new(&self.bytes, self.offset, self.length)
     }
 }
