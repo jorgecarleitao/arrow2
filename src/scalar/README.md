@@ -10,7 +10,7 @@ There are three reasons:
 * forward-compatibility: a new entry on an `enum` is backward-incompatible
 * do not expose implementation details to users (reduce the surface of the public API)
 
-### `Scalar` should contain nullability information
+### `Scalar` MUST contain nullability information
 
 This is to be aligned with the general notion of arrow's `Array`.
 

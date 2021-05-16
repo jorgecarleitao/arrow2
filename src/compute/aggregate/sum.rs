@@ -118,6 +118,32 @@ macro_rules! dyn_sum {
     }};
 }
 
+pub fn can_sum(data_type: &DataType) -> bool {
+    use DataType::*;
+    matches!(
+        data_type,
+        Int8 | Int16
+            | Date32
+            | Time32(_)
+            | Interval(IntervalUnit::YearMonth)
+            | Int64
+            | Date64
+            | Time64(_)
+            | Timestamp(_, _)
+            | Duration(_)
+            | UInt8
+            | UInt16
+            | UInt32
+            | UInt64
+            | Float32
+            | Float64
+    )
+}
+
+/// Returns the sum of all elements in `array` as a [`Scalar`] of the same physical
+/// and logical types as `array`.
+/// # Error
+/// Errors iff the operation is not supported.
 pub fn sum(array: &dyn Array) -> Result<Box<dyn Scalar>> {
     Ok(match array.data_type() {
         DataType::Int8 => dyn_sum!(i8, array),
@@ -158,13 +184,22 @@ mod tests {
     #[test]
     fn test_primitive_array_sum() {
         let a = Int32Array::from_slice(&[1, 2, 3, 4, 5]);
-        assert_eq!(15, sum(&a).unwrap());
+        assert_eq!(
+            &PrimitiveScalar::<i32>::from(Some(15)) as &dyn Scalar,
+            sum(&a).unwrap().as_ref()
+        );
+
+        let a = a.to(DataType::Date32);
+        assert_eq!(
+            &PrimitiveScalar::<i32>::from(Some(15)).to(DataType::Date32) as &dyn Scalar,
+            sum(&a).unwrap().as_ref()
+        );
     }
 
     #[test]
     fn test_primitive_array_float_sum() {
         let a = Float64Array::from_slice(&[1.1f64, 2.2, 3.3, 4.4, 5.5]);
-        assert!((16.5 - sum(&a).unwrap()).abs() < f64::EPSILON);
+        assert!((16.5 - sum_primitive(&a).unwrap()).abs() < f64::EPSILON);
     }
 
     #[test]

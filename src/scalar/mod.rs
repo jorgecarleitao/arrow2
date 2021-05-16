@@ -1,6 +1,22 @@
 use std::any::Any;
 
-use crate::{array::*, bitmap::Bitmap, buffer::Buffer, datatypes::DataType, types::NativeType};
+use crate::{array::*, datatypes::*, types::days_ms};
+
+mod equal;
+mod primitive;
+pub use primitive::*;
+mod utf8;
+pub use utf8::*;
+mod binary;
+pub use binary::*;
+mod boolean;
+pub use boolean::*;
+mod list;
+pub use list::*;
+mod null;
+pub use null::*;
+mod struct_;
+pub use struct_::*;
 
 pub trait Scalar: std::fmt::Debug {
     fn as_any(&self) -> &dyn Any;
@@ -8,238 +24,113 @@ pub trait Scalar: std::fmt::Debug {
     fn is_valid(&self) -> bool;
 
     fn data_type(&self) -> &DataType;
-
-    fn to_boxed_array(&self, length: usize) -> Box<dyn Array>;
 }
 
-#[derive(Debug, Clone)]
-pub struct PrimitiveScalar<T: NativeType> {
-    // Not Option<T> because this offers a stabler pointer offset on the struct
-    value: T,
-    is_valid: bool,
-    data_type: DataType,
-}
-
-impl<T: NativeType> PrimitiveScalar<T> {
-    #[inline]
-    pub fn new(data_type: DataType, v: Option<T>) -> Self {
-        let is_valid = v.is_some();
-        Self {
-            value: v.unwrap_or_default(),
-            is_valid,
-            data_type,
-        }
-    }
-
-    #[inline]
-    pub fn value(&self) -> T {
-        self.value
-    }
-}
-
-impl<T: NativeType> Scalar for PrimitiveScalar<T> {
-    #[inline]
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    #[inline]
-    fn is_valid(&self) -> bool {
-        self.is_valid
-    }
-
-    #[inline]
-    fn data_type(&self) -> &DataType {
-        &self.data_type
-    }
-
-    fn to_boxed_array(&self, length: usize) -> Box<dyn Array> {
-        if self.is_valid {
-            let values = Buffer::from_trusted_len_iter(std::iter::repeat(self.value).take(length));
-            Box::new(PrimitiveArray::from_data(
-                self.data_type.clone(),
-                values,
-                None,
-            ))
+macro_rules! dyn_new {
+    ($array:expr, $index:expr, $type:ty) => {{
+        let array = $array
+            .as_any()
+            .downcast_ref::<PrimitiveArray<$type>>()
+            .unwrap();
+        let value = if array.is_valid($index) {
+            Some(array.value($index))
         } else {
-            Box::new(PrimitiveArray::<T>::new_null(
-                self.data_type.clone(),
-                length,
-            ))
-        }
-    }
+            None
+        };
+        Box::new(PrimitiveScalar::new(array.data_type().clone(), value))
+    }};
 }
 
-#[derive(Debug, Clone)]
-pub struct BooleanScalar {
-    value: bool,
-    is_valid: bool,
-}
-
-impl BooleanScalar {
-    #[inline]
-    pub fn new(v: Option<bool>) -> Self {
-        let is_valid = v.is_some();
-        Self {
-            value: v.unwrap_or_default(),
-            is_valid,
-        }
-    }
-
-    #[inline]
-    pub fn value(&self) -> bool {
-        self.value
-    }
-}
-
-impl Scalar for BooleanScalar {
-    #[inline]
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    #[inline]
-    fn is_valid(&self) -> bool {
-        self.is_valid
-    }
-
-    #[inline]
-    fn data_type(&self) -> &DataType {
-        &DataType::Boolean
-    }
-
-    fn to_boxed_array(&self, length: usize) -> Box<dyn Array> {
-        if self.is_valid {
-            let values = Bitmap::from_trusted_len_iter(std::iter::repeat(self.value).take(length));
-            Box::new(BooleanArray::from_data(values, None))
+macro_rules! dyn_new_utf8 {
+    ($array:expr, $index:expr, $type:ty) => {{
+        let array = $array.as_any().downcast_ref::<Utf8Array<$type>>().unwrap();
+        let value = if array.is_valid($index) {
+            Some(array.value($index))
         } else {
-            Box::new(BooleanArray::new_null(length))
-        }
-    }
+            None
+        };
+        Box::new(Utf8Scalar::<$type>::new(value))
+    }};
 }
 
-#[derive(Debug, Clone)]
-pub struct Utf8Scalar<O: Offset> {
-    value: Buffer<u8>,
-    is_valid: bool,
-    phantom: std::marker::PhantomData<O>,
-}
-
-impl<O: Offset> Utf8Scalar<O> {
-    #[inline]
-    pub fn new(v: Option<&str>) -> Self {
-        let is_valid = v.is_some();
-        O::from_usize(v.map(|x| x.len()).unwrap_or_default()).expect("Too large");
-        let value = Buffer::from(v.map(|x| x.as_bytes()).unwrap_or(&[]));
-        Self {
-            value,
-            is_valid,
-            phantom: std::marker::PhantomData,
-        }
-    }
-
-    #[inline]
-    pub fn value(&self) -> &str {
-        unsafe { std::str::from_utf8_unchecked(self.value.as_slice()) }
-    }
-}
-
-impl<O: Offset> Scalar for Utf8Scalar<O> {
-    #[inline]
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    #[inline]
-    fn is_valid(&self) -> bool {
-        self.is_valid
-    }
-
-    #[inline]
-    fn data_type(&self) -> &DataType {
-        if O::is_large() {
-            &DataType::LargeUtf8
+macro_rules! dyn_new_binary {
+    ($array:expr, $index:expr, $type:ty) => {{
+        let array = $array
+            .as_any()
+            .downcast_ref::<BinaryArray<$type>>()
+            .unwrap();
+        let value = if array.is_valid($index) {
+            Some(array.value($index))
         } else {
-            &DataType::Utf8
-        }
-    }
-
-    fn to_boxed_array(&self, length: usize) -> Box<dyn Array> {
-        if self.is_valid {
-            let item_length = O::from_usize(self.value.len()).unwrap(); // verified at `new`
-            let offsets = (0..=length).map(|i| O::from_usize(i).unwrap() * item_length);
-            let offsets = unsafe { Buffer::from_trusted_len_iter_unchecked(offsets) };
-            let values = std::iter::repeat(self.value.as_slice())
-                .take(length)
-                .flatten()
-                .copied()
-                .collect();
-            Box::new(Utf8Array::<O>::from_data(offsets, values, None))
-        } else {
-            Box::new(Utf8Array::<O>::new_null(length))
-        }
-    }
+            None
+        };
+        Box::new(BinaryScalar::<$type>::new(value))
+    }};
 }
 
-#[derive(Debug, Clone)]
-pub struct BinaryScalar<O: Offset> {
-    value: Buffer<u8>,
-    is_valid: bool,
-    phantom: std::marker::PhantomData<O>,
+macro_rules! dyn_new_list {
+    ($array:expr, $index:expr, $type:ty) => {{
+        let array = $array.as_any().downcast_ref::<ListArray<$type>>().unwrap();
+        let value = if array.is_valid($index) {
+            Some(array.value($index).into())
+        } else {
+            None
+        };
+        Box::new(ListScalar::<$type>::new(array.data_type().clone(), value))
+    }};
 }
 
-impl<O: Offset> BinaryScalar<O> {
-    #[inline]
-    pub fn new(v: Option<&str>) -> Self {
-        let is_valid = v.is_some();
-        O::from_usize(v.map(|x| x.len()).unwrap_or_default()).expect("Too large");
-        let value = Buffer::from(v.map(|x| x.as_bytes()).unwrap_or(&[]));
-        Self {
-            value,
-            is_valid,
-            phantom: std::marker::PhantomData,
+/// creates a new [`Scalar`] from an [`Array`].
+pub fn new_scalar(array: &dyn Array, index: usize) -> Box<dyn Scalar> {
+    use DataType::*;
+    match array.data_type() {
+        Null => Box::new(NullScalar::new()),
+        Boolean => {
+            let array = array.as_any().downcast_ref::<BooleanArray>().unwrap();
+            let value = if array.is_valid(index) {
+                Some(array.value(index))
+            } else {
+                None
+            };
+            Box::new(BooleanScalar::new(value))
         }
-    }
-
-    #[inline]
-    pub fn value(&self) -> &[u8] {
-        self.value.as_slice()
-    }
-}
-
-impl<O: Offset> Scalar for BinaryScalar<O> {
-    #[inline]
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    #[inline]
-    fn is_valid(&self) -> bool {
-        self.is_valid
-    }
-
-    #[inline]
-    fn data_type(&self) -> &DataType {
-        if O::is_large() {
-            &DataType::LargeBinary
-        } else {
-            &DataType::Binary
+        Int8 => dyn_new!(array, index, i8),
+        Int16 => dyn_new!(array, index, i16),
+        Int32 | Date32 | Time32(_) | Interval(IntervalUnit::YearMonth) => {
+            dyn_new!(array, index, i32)
         }
-    }
-
-    fn to_boxed_array(&self, length: usize) -> Box<dyn Array> {
-        if self.is_valid {
-            let item_length = O::from_usize(self.value.len()).unwrap(); // verified at `new`
-            let offsets = (0..=length).map(|i| O::from_usize(i).unwrap() * item_length);
-            let offsets = unsafe { Buffer::from_trusted_len_iter_unchecked(offsets) };
-            let values = std::iter::repeat(self.value.as_slice())
-                .take(length)
-                .flatten()
-                .copied()
-                .collect();
-            Box::new(BinaryArray::<O>::from_data(offsets, values, None))
-        } else {
-            Box::new(BinaryArray::<O>::new_null(length))
+        Int64 | Date64 | Time64(_) | Duration(_) | Timestamp(_, _) => dyn_new!(array, index, i64),
+        Interval(IntervalUnit::DayTime) => dyn_new!(array, index, days_ms),
+        UInt8 => dyn_new!(array, index, u8),
+        UInt16 => dyn_new!(array, index, u16),
+        UInt32 => dyn_new!(array, index, u32),
+        UInt64 => dyn_new!(array, index, u64),
+        Decimal(_, _) => dyn_new!(array, index, i128),
+        Float16 => unreachable!(),
+        Float32 => dyn_new!(array, index, f32),
+        Float64 => dyn_new!(array, index, f64),
+        Utf8 => dyn_new_utf8!(array, index, i32),
+        LargeUtf8 => dyn_new_utf8!(array, index, i64),
+        Binary => dyn_new_binary!(array, index, i32),
+        LargeBinary => dyn_new_binary!(array, index, i64),
+        List(_) => dyn_new_list!(array, index, i32),
+        LargeList(_) => dyn_new_list!(array, index, i64),
+        Struct(_) => {
+            let array = array.as_any().downcast_ref::<StructArray>().unwrap();
+            if array.is_valid(index) {
+                let values = array
+                    .values()
+                    .iter()
+                    .map(|x| new_scalar(x.as_ref(), index).into())
+                    .collect();
+                Box::new(StructScalar::new(array.data_type().clone(), Some(values)))
+            } else {
+                Box::new(StructScalar::new(array.data_type().clone(), None))
+            }
         }
+        FixedSizeBinary(_) => todo!(),
+        FixedSizeList(_, _) => todo!(),
+        Union(_) => todo!(),
+        Dictionary(_, _) => todo!(),
     }
 }
