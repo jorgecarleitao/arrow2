@@ -179,7 +179,6 @@ pub enum Operator {
 }
 
 /// Perform arithmetic operations on two primitive arrays based on the Operator enum
-#[inline]
 fn arithmetic_primitive<T>(
     lhs: &PrimitiveArray<T>,
     op: Operator,
@@ -197,7 +196,6 @@ where
 }
 
 /// Performs primitive operation on an array and and scalar
-#[inline]
 pub fn arithmetic_primitive_scalar<T>(
     lhs: &PrimitiveArray<T>,
     op: Operator,
@@ -227,7 +225,6 @@ where
 /// let expected = Primitive::from(&vec![None, Some(-6), None, Some(-7)]).to(DataType::Int32);
 /// assert_eq!(result, expected)
 /// ```
-#[inline]
 pub fn negate<T>(array: &PrimitiveArray<T>) -> PrimitiveArray<T>
 where
     T: NativeType + Neg<Output = T>,

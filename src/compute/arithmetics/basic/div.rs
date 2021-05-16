@@ -27,7 +27,6 @@ use crate::{
 /// let expected = Int32Array::from(&[Some(2), Some(1)]);
 /// assert_eq!(result, expected)
 /// ```
-#[inline]
 pub fn div<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<PrimitiveArray<T>>
 where
     T: NativeType + Div<Output = T>,
@@ -108,7 +107,6 @@ where
 /// let expected = Int32Array::from(&[None, Some(3), None, Some(3)]);
 /// assert_eq!(result, expected)
 /// ```
-#[inline]
 pub fn div_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
 where
     T: NativeType + Div<Output = T>,
@@ -130,7 +128,6 @@ where
 /// let expected = Int8Array::from(&[Some(-1i8)]);
 /// assert_eq!(result, expected);
 /// ```
-#[inline]
 pub fn checked_div_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
 where
     T: NativeType + CheckedDiv<Output = T> + Zero,

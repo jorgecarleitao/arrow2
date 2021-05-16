@@ -20,7 +20,6 @@ use crate::{
 /// let expected = Float32Array::from(&[Some(4f32), None]);
 /// assert_eq!(expected, actual);
 /// ```
-#[inline]
 pub fn powf_scalar<T>(array: &PrimitiveArray<T>, exponent: T) -> PrimitiveArray<T>
 where
     T: NativeType + Pow<T, Output = T>,
@@ -42,7 +41,6 @@ where
 /// let expected = Int8Array::from(&[Some(1i8), None, None]);
 /// assert_eq!(expected, actual);
 /// ```
-#[inline]
 pub fn checked_powf_scalar<T>(array: &PrimitiveArray<T>, exponent: usize) -> PrimitiveArray<T>
 where
     T: NativeType + Zero + One + CheckedMul,
