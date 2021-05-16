@@ -8,7 +8,7 @@ use crate::{
 
 use super::{ffi::ToFfi, new_empty_array, primitive::PrimitiveArray, Array};
 
-/// Trait denoting all [`NativeType`] that can be used as dictionary keys.
+/// Trait denoting [`NativeType`]s that can be used as keys of a dictionary.
 pub trait DictionaryKey: NativeType + NaturalDataType + num::NumCast + num::FromPrimitive {}
 
 impl DictionaryKey for i8 {}
