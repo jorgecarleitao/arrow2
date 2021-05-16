@@ -1,37 +1,24 @@
 use std::sync::Arc;
 
-use crate::{bitmap::Bitmap, datatypes::DataType, types::NativeType};
+use crate::{
+    bitmap::Bitmap,
+    datatypes::DataType,
+    types::{NativeType, NaturalDataType},
+};
 
 use super::{ffi::ToFfi, new_empty_array, primitive::PrimitiveArray, Array};
 
-pub unsafe trait DictionaryKey: NativeType + num::NumCast + num::FromPrimitive {
-    const DATA_TYPE: DataType;
-}
+/// Trait denoting [`NativeType`]s that can be used as keys of a dictionary.
+pub trait DictionaryKey: NativeType + NaturalDataType + num::NumCast + num::FromPrimitive {}
 
-unsafe impl DictionaryKey for i8 {
-    const DATA_TYPE: DataType = DataType::Int8;
-}
-unsafe impl DictionaryKey for i16 {
-    const DATA_TYPE: DataType = DataType::Int16;
-}
-unsafe impl DictionaryKey for i32 {
-    const DATA_TYPE: DataType = DataType::Int32;
-}
-unsafe impl DictionaryKey for i64 {
-    const DATA_TYPE: DataType = DataType::Int64;
-}
-unsafe impl DictionaryKey for u8 {
-    const DATA_TYPE: DataType = DataType::UInt8;
-}
-unsafe impl DictionaryKey for u16 {
-    const DATA_TYPE: DataType = DataType::UInt16;
-}
-unsafe impl DictionaryKey for u32 {
-    const DATA_TYPE: DataType = DataType::UInt32;
-}
-unsafe impl DictionaryKey for u64 {
-    const DATA_TYPE: DataType = DataType::UInt64;
-}
+impl DictionaryKey for i8 {}
+impl DictionaryKey for i16 {}
+impl DictionaryKey for i32 {}
+impl DictionaryKey for i64 {}
+impl DictionaryKey for u8 {}
+impl DictionaryKey for u16 {}
+impl DictionaryKey for u32 {}
+impl DictionaryKey for u64 {}
 
 mod from;
 pub use from::*;

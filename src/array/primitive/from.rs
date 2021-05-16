@@ -5,11 +5,17 @@ use crate::{
     bitmap::MutableBitmap,
     buffer::MutableBuffer,
     datatypes::DataType,
-    types::NativeType,
+    types::{NativeType, NaturalDataType},
 };
 use crate::{error::Result as ArrowResult, trusted_len::TrustedLen};
 
 use super::PrimitiveArray;
+
+impl<T: NativeType + NaturalDataType> From<Primitive<T>> for PrimitiveArray<T> {
+    fn from(other: Primitive<T>) -> Self {
+        PrimitiveArray::<T>::from_data(T::DATA_TYPE, other.values.into(), other.validity.into())
+    }
+}
 
 impl<T: NativeType> Primitive<T> {
     pub fn from_slice<P: AsRef<[T]>>(slice: P) -> Self {
