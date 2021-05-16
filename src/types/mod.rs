@@ -9,8 +9,8 @@ pub mod simd;
 
 use crate::datatypes::{DataType, IntervalUnit, TimeUnit};
 
-/// Trait denoting anything that has a natural, constant type.
-/// For example, `i32` has a natural datatype, [`DataType::Int32`].
+/// Trait denoting anything that has a natural logical [`DataType`].
+/// For example, [`DataType::Int32`] for `i32`.
 pub trait NaturalDataType {
     const DATA_TYPE: DataType;
 }
