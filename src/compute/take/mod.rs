@@ -164,17 +164,17 @@ pub fn can_take(data_type: &DataType) -> bool {
         | DataType::Struct(_)
         | DataType::List(_)
         | DataType::LargeList(_) => true,
-        DataType::Dictionary(key_type, _) => match key_type.as_ref() {
+        DataType::Dictionary(key_type, _) => matches!(
+            key_type.as_ref(),
             DataType::Int8
-            | DataType::Int16
-            | DataType::Int32
-            | DataType::Int64
-            | DataType::UInt8
-            | DataType::UInt16
-            | DataType::UInt32
-            | DataType::UInt64 => true,
-            _ => false,
-        },
+                | DataType::Int16
+                | DataType::Int32
+                | DataType::Int64
+                | DataType::UInt8
+                | DataType::UInt16
+                | DataType::UInt32
+                | DataType::UInt64
+        ),
         _ => false,
     }
 }
@@ -340,7 +340,7 @@ mod tests {
             Duration(TimeUnit::Nanosecond),
         ];
 
-        datatypes.clone().into_iter().for_each(|d1| {
+        datatypes.into_iter().for_each(|d1| {
             let array = new_null_array(d1.clone(), 10);
             if can_take(&d1) {
                 let indices =

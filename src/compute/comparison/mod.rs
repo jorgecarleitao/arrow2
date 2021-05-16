@@ -158,29 +158,29 @@ pub use utf8::compare_scalar as utf8_compare_scalar;
 /// assert_eq!(can_compare(&data_type), false)
 /// ```
 pub fn can_compare(data_type: &DataType) -> bool {
-    match data_type {
+    matches!(
+        data_type,
         DataType::Int8
-        | DataType::Int16
-        | DataType::Int32
-        | DataType::Date32
-        | DataType::Time32(_)
-        | DataType::Interval(_)
-        | DataType::Int64
-        | DataType::Timestamp(_, None)
-        | DataType::Date64
-        | DataType::Time64(_)
-        | DataType::Duration(_)
-        | DataType::UInt8
-        | DataType::UInt16
-        | DataType::UInt32
-        | DataType::UInt64
-        | DataType::Float32
-        | DataType::Float64
-        | DataType::Utf8
-        | DataType::LargeUtf8
-        | DataType::Decimal(_, _) => true,
-        _ => false,
-    }
+            | DataType::Int16
+            | DataType::Int32
+            | DataType::Date32
+            | DataType::Time32(_)
+            | DataType::Interval(_)
+            | DataType::Int64
+            | DataType::Timestamp(_, None)
+            | DataType::Date64
+            | DataType::Time64(_)
+            | DataType::Duration(_)
+            | DataType::UInt8
+            | DataType::UInt16
+            | DataType::UInt32
+            | DataType::UInt64
+            | DataType::Float32
+            | DataType::Float64
+            | DataType::Utf8
+            | DataType::LargeUtf8
+            | DataType::Decimal(_, _)
+    )
 }
 
 #[cfg(test)]
@@ -226,7 +226,7 @@ mod tests {
             Duration(TimeUnit::Nanosecond),
         ];
 
-        datatypes.clone().into_iter().for_each(|d1| {
+        datatypes.into_iter().for_each(|d1| {
             let array = new_null_array(d1.clone(), 10);
             if can_compare(&d1) {
                 let op = Operator::Eq;
