@@ -1,0 +1,404 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Read Parquet - arrow2 documentation</title>
+        
+        
+
+
+        <!-- Custom HTML head -->
+        
+
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        
+        <link rel="icon" href="../favicon.svg">
+        
+        
+        <link rel="shortcut icon" href="../favicon.png">
+        
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        
+        <link rel="stylesheet" href="../css/print.css" media="print">
+        
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        
+        <link rel="stylesheet" href="../fonts/fonts.css">
+        
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../index.html"><strong aria-hidden="true">1.</strong> Arrow2</a></li><li class="chapter-item expanded "><a href="../arrow.html"><strong aria-hidden="true">2.</strong> The arrow format</a></li><li class="chapter-item expanded "><a href="../low_level.html"><strong aria-hidden="true">3.</strong> Low-level API</a></li><li class="chapter-item expanded "><a href="../high_level.html"><strong aria-hidden="true">4.</strong> High-level API</a></li><li class="chapter-item expanded "><a href="../ffi.html"><strong aria-hidden="true">5.</strong> Foreign interfaces</a></li><li class="chapter-item expanded "><a href="../io/index.html"><strong aria-hidden="true">6.</strong> IO</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../io/csv_reader.html"><strong aria-hidden="true">6.1.</strong> Read CSV</a></li><li class="chapter-item expanded "><a href="../io/csv_write.html"><strong aria-hidden="true">6.2.</strong> Write CSV</a></li><li class="chapter-item expanded "><a href="../io/parquet_read.html" class="active"><strong aria-hidden="true">6.3.</strong> Read Parquet</a></li><li class="chapter-item expanded "><a href="../io/parquet_write.html"><strong aria-hidden="true">6.4.</strong> Write Parquet</a></li><li class="chapter-item expanded "><a href="../io/ipc_file_read.html"><strong aria-hidden="true">6.5.</strong> Read Arrow IPC files</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                        
+                    </div>
+
+                    <h1 class="menu-title">arrow2 documentation</h1>
+
+                    <div class="right-buttons">
+                        
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        
+                        
+                        
+
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="read-parquet"><a class="header" href="#read-parquet">Read parquet</a></h1>
+<p>When compiled with feature <code>io_parquet</code>, this crate can be used to read parquet files
+to arrow.
+It makes minimal assumptions on how you to decompose CPU and IO intensive tasks.</p>
+<p>First, some notation:</p>
+<ul>
+<li><code>page</code>: part of a column (e.g. similar of a slice of an <code>Array</code>)</li>
+<li><code>column chunk</code>: composed of multiple pages (similar of an <code>Array</code>)</li>
+<li><code>row group</code>: a group of columns with the same length (similar of a <code>RecordBatch</code> in Arrow)</li>
+</ul>
+<p>Here is how to read a single column chunk from a single row group:</p>
+<pre><pre class="playground"><code class="language-rust">use std::fs::File;
+
+use arrow2::compute::cast::cast;
+use arrow2::io::parquet::read;
+use arrow2::{array::Array, error::Result};
+
+fn read_column_chunk(path: &amp;str, row_group: usize, column: usize) -&gt; Result&lt;Box&lt;dyn Array&gt;&gt; {
+    // Open a file, a common operation in Rust
+    let mut file = File::open(path)?;
+
+    // Read the files' metadata. This has a small IO cost because it requires seeking to the end
+    // of the file to read its footer.
+    let file_metadata = read::read_metadata(&amp;mut file)?;
+
+    // Convert the files' metadata into an arrow schema. This is CPU-only and amounts to
+    // parse thrift if the arrow format is available on a key, or infering the arrow schema from
+    // the parquet's physical, converted and logical types.
+    let arrow_schema = read::get_schema(&amp;file_metadata)?;
+
+    // Construct an iterator over pages. This binds `file` to this iterator, and each iteration
+    // is IO intensive as it will read a compressed page into memory. There is almost no CPU work
+    // on this operation
+    let iter = read::get_page_iterator(&amp;file_metadata, row_group, column, &amp;mut file)?;
+
+    // This is for now required, but we hope to remove the need for this clone.
+    let descriptor = iter.descriptor().clone();
+
+    // This is the actual work. In this case, pages are read (by calling `iter.next()`) and are
+    // immediately decompressed, decoded, deserialized to arrow and deallocated.
+    // This uses a combination of IO and CPU. At this point, `array` is the arrow-corresponding
+    // array of the parquets' physical type.
+    let array = read::page_iter_to_array(iter, &amp;descriptor)?;
+
+    // Cast the array to the corresponding Arrow's data type. When the physical type
+    // is the same, this operation is `O(1)`. Otherwise, it incurs some CPU cost.
+    cast(array.as_ref(), arrow_schema.field(column).data_type())
+}
+
+fn main() -&gt; Result&lt;()&gt; {
+    use std::env;
+    let args: Vec&lt;String&gt; = env::args().collect();
+
+    let file_path = &amp;args[1];
+    let column = args[2].parse::&lt;usize&gt;().unwrap();
+    let row_group = args[3].parse::&lt;usize&gt;().unwrap();
+
+    let array = read_column_chunk(&amp;file_path, row_group, column)?;
+    println!(&quot;{}&quot;, array);
+    Ok(())
+}
+</code></pre></pre>
+<p>The example above minimizes memory usage at the expense of mixing IO and CPU tasks
+on the same thread, which may hurt performance if one of them is a bottleneck.</p>
+<h3 id="parallelism-decoupling-of-cpu-from-io"><a class="header" href="#parallelism-decoupling-of-cpu-from-io">Parallelism decoupling of CPU from IO</a></h3>
+<p>One important aspect of the pages created by the iterator above is that they can cross
+thread boundaries. Consequently, the thread reading pages from a file (IO-bounded)
+does not have to be the same thread performing CPU-bounded work (decompressing,
+decoding, etc.).</p>
+<p>The example below assumes that CPU starves the consumption of pages,
+and that it is advantageous to have a single thread performing all IO-intensive work,
+by delegating all CPU-intensive tasks to separate threads.</p>
+<pre><pre class="playground"><code class="language-rust">use crossbeam_channel::unbounded;
+
+use std::fs::File;
+use std::sync::Arc;
+use std::thread;
+use std::time::SystemTime;
+
+use arrow2::{array::Array, compute::cast::cast, error::Result, io::parquet::read};
+
+fn parallel_read(path: &amp;str) -&gt; Result&lt;Vec&lt;Box&lt;dyn Array&gt;&gt;&gt; {
+    // prepare a channel to send serialized records from threads
+    let (tx, rx) = unbounded();
+
+    let mut file = File::open(path)?;
+    let file_metadata = read::read_metadata(&amp;mut file)?;
+    let arrow_schema = Arc::new(read::get_schema(&amp;file_metadata)?);
+
+    let file_metadata = Arc::new(file_metadata);
+
+    let start = SystemTime::now();
+    // spawn a thread to produce `Vec&lt;CompressedPage&gt;` (IO bounded)
+    let producer_metadata = file_metadata.clone();
+    let child = thread::spawn(move || {
+        for column in 0..producer_metadata.schema().num_columns() {
+            for row_group in 0..producer_metadata.row_groups.len() {
+                let start = SystemTime::now();
+                println!(&quot;produce start: {} {}&quot;, column, row_group);
+                let pages =
+                    read::get_page_iterator(&amp;producer_metadata, row_group, column, &amp;mut file)
+                        .unwrap()
+                        .collect::&lt;Vec&lt;_&gt;&gt;();
+                println!(
+                    &quot;produce end - {:?}: {} {}&quot;,
+                    start.elapsed().unwrap(),
+                    column,
+                    row_group
+                );
+                tx.send((column, row_group, pages)).unwrap();
+            }
+        }
+    });
+
+    let mut children = Vec::new();
+    // use 3 consumers of to decompress, decode and deserialize.
+    for _ in 0..3 {
+        let rx_consumer = rx.clone();
+        let metadata_consumer = file_metadata.clone();
+        let arrow_schema_consumer = arrow_schema.clone();
+        let child = thread::spawn(move || {
+            let (column, row_group, iter) = rx_consumer.recv().unwrap();
+            let start = SystemTime::now();
+            println!(&quot;consumer start - {} {}&quot;, column, row_group);
+            let descriptor = metadata_consumer.row_groups[row_group]
+                .column(column)
+                .column_descriptor();
+            let array = read::page_iter_to_array(iter.into_iter(), descriptor).unwrap();
+            println!(
+                &quot;consumer end - {:?}: {} {}&quot;,
+                start.elapsed().unwrap(),
+                column,
+                row_group
+            );
+            cast(
+                array.as_ref(),
+                arrow_schema_consumer.field(column).data_type(),
+            )
+        });
+        children.push(child);
+    }
+
+    child.join().expect(&quot;child thread panicked&quot;);
+
+    let arrays = children
+        .into_iter()
+        .map(|x| x.join().unwrap())
+        .collect::&lt;Result&lt;Vec&lt;_&gt;&gt;&gt;()?;
+    println!(&quot;Finished - {:?}&quot;, start.elapsed().unwrap());
+
+    Ok(arrays)
+}
+
+fn main() -&gt; Result&lt;()&gt; {
+    use std::env;
+    let args: Vec&lt;String&gt; = env::args().collect();
+    let file_path = &amp;args[1];
+
+    let arrays = parallel_read(file_path)?;
+    for array in arrays {
+        println!(&quot;{}&quot;, array)
+    }
+    Ok(())
+}
+</code></pre></pre>
+<p>This can of course be reversed; in configurations where IO is bounded (e.g. when a
+network is involved), we can use multiple producers of pages, potentially divided
+in file readers, and a single consumer that performs all CPU-intensive work.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+                            <a rel="prev" href="../io/csv_write.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        
+
+                        
+                            <a rel="next" href="../io/parquet_write.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+                    <a rel="prev" href="../io/csv_write.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+                    <a rel="next" href="../io/parquet_write.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+
+        
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        
+
+        
+
+        
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+
+    </body>
+</html>

@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["create_empty",""],["export_to_c","Exports an `Array` to the C data interface."],["try_from","Reads a valid `ffi` interface into a `Box<dyn Array>`"]],"struct":[["ArrowArray","Struct used to move an `Array` from and to the C Data Interface."]],"trait":[["ArrowArrayRef",""]]});
