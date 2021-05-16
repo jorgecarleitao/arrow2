@@ -5,7 +5,7 @@
 This repository contains a Rust library to work with the [Arrow format](https://arrow.apache.org/).
 It is a re-write of the [official Arrow crate](https://github.com/apache/arrow) using transmute-free operations. See FAQ for details.
 
-See [the guide](https://jorgecarleitao.github.io/arrow2/).
+See [the guide](https://jorgecarleitao.github.io/arrow2/) and [API docs](https://jorgecarleitao.github.io/arrow2/docs/arrow2/index.html)
 
 ## Design
 
