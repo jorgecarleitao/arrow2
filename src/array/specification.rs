@@ -2,15 +2,19 @@ use std::convert::TryFrom;
 
 use num::Num;
 
-use crate::buffer::Buffer;
-use crate::types::NativeType;
+use crate::{
+    buffer::Buffer,
+    types::{NativeType, NaturalDataType},
+};
 
 /// Trait uses to distinguish types whose offset sizes support multiple sizes.
 /// This trait is only implemented for i32 and i64, which are the two sizes currently
 /// declared in arrow specification.
 /// # Safety
 /// Do not implement.
-pub unsafe trait Offset: NativeType + Num + Ord + std::ops::AddAssign {
+pub unsafe trait Offset:
+    NativeType + NaturalDataType + Num + Ord + std::ops::AddAssign
+{
     fn is_large() -> bool;
 
     fn to_usize(&self) -> Option<usize>;
