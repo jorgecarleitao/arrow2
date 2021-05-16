@@ -1,12 +1,6 @@
 name: GitHub pages
 
-on:
-  push:
-    paths:
-      - 'guide/**'
-  pull_request:
-    paths:
-      - 'guide/**'
+on: [push, pull_request]
 
 jobs:
   guide:
@@ -21,10 +15,33 @@ jobs:
 
       - run: mdbook build guide
 
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          components: rustfmt, rust-src
+
+      - name: Build Documentation
+        run: cargo doc --all --no-deps
+
+      - name: Build Documentation
+        run: cargo doc --all --no-deps
+
       - name: Deploy
         if: github.ref == 'refs/heads/main'
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v3.7.0-6
         with:
           personal_token: ${{ secrets.PERSONAL_TOKEN }}
           publish_dir: ./guide/book
+          keep_files: false
 
+      - name: Deploy
+        if: github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3.7.0-6
+        with:
+          personal_token: ${{ secrets.PERSONAL_TOKEN }}
+          publish_dir: ./target/doc
+          destination_dir: ./docs
+          keep_files: true
