@@ -35,7 +35,6 @@ use crate::{
 /// let expected = Int32Array::from(&[None, None, None, Some(36)]);
 /// assert_eq!(result, expected)
 /// ```
-#[inline]
 pub fn mul<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<PrimitiveArray<T>>
 where
     T: NativeType + Mul<Output = T>,
@@ -206,7 +205,6 @@ where
 /// let expected = Int32Array::from(&[None, Some(12), None, Some(12)]);
 /// assert_eq!(result, expected)
 /// ```
-#[inline]
 pub fn mul_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
 where
     T: NativeType + Mul<Output = T>,
@@ -229,7 +227,6 @@ where
 /// let expected = Int8Array::from(&[None, None, None, None]);
 /// assert_eq!(result, expected);
 /// ```
-#[inline]
 pub fn checked_mul_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
 where
     T: NativeType + CheckedMul<Output = T> + Zero,
@@ -254,7 +251,6 @@ where
 /// let expected = Int8Array::from(&[Some(-128i8)]);
 /// assert_eq!(result, expected);
 /// ```
-#[inline]
 pub fn saturating_mul_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
 where
     T: NativeType + SaturatingMul<Output = T>,
@@ -280,7 +276,6 @@ where
 /// let expected = Int8Array::from(&[Some(100i8), Some(16i8)]);
 /// assert_eq!(result, expected);
 /// ```
-#[inline]
 pub fn overflowing_mul_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> (PrimitiveArray<T>, Bitmap)
 where
     T: NativeType + OverflowingMul<Output = T>,

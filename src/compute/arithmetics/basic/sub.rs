@@ -35,7 +35,6 @@ use crate::{
 /// let expected = Int32Array::from(&[None, None, None, Some(0)]);
 /// assert_eq!(result, expected)
 /// ```
-#[inline]
 pub fn sub<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<PrimitiveArray<T>>
 where
     T: NativeType + Sub<Output = T>,
@@ -206,7 +205,6 @@ where
 /// let expected = Int32Array::from(&[None, Some(5), None, Some(5)]);
 /// assert_eq!(result, expected)
 /// ```
-#[inline]
 pub fn sub_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
 where
     T: NativeType + Sub<Output = T>,
@@ -229,7 +227,6 @@ where
 /// let expected = Int8Array::from(&[None, None, None, None]);
 /// assert_eq!(result, expected);
 /// ```
-#[inline]
 pub fn checked_sub_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
 where
     T: NativeType + CheckedSub<Output = T> + Zero,
@@ -254,7 +251,6 @@ where
 /// let expected = Int8Array::from(&[Some(-128i8)]);
 /// assert_eq!(result, expected);
 /// ```
-#[inline]
 pub fn saturating_sub_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
 where
     T: NativeType + SaturatingSub<Output = T>,
@@ -280,7 +276,6 @@ where
 /// let expected = Int8Array::from(&[Some(-99i8), Some(56i8)]);
 /// assert_eq!(result, expected);
 /// ```
-#[inline]
 pub fn overflowing_sub_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> (PrimitiveArray<T>, Bitmap)
 where
     T: NativeType + OverflowingSub<Output = T>,

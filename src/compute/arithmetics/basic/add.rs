@@ -36,7 +36,6 @@ use crate::{
 /// let expected = Primitive::from(&vec![None, None, None, Some(12)]).to(DataType::Int32);
 /// assert_eq!(result, expected)
 /// ```
-#[inline]
 pub fn add<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<PrimitiveArray<T>>
 where
     T: NativeType + Add<Output = T>,
@@ -211,7 +210,6 @@ where
 /// let expected = Primitive::from(&vec![None, Some(7), None, Some(7)]).to(DataType::Int32);
 /// assert_eq!(result, expected)
 /// ```
-#[inline]
 pub fn add_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
 where
     T: NativeType + Add<Output = T>,
@@ -234,7 +232,6 @@ where
 /// let expected = Int8Array::from(&[None, None, None, None]);
 /// assert_eq!(result, expected);
 /// ```
-#[inline]
 pub fn checked_add_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
 where
     T: NativeType + CheckedAdd<Output = T> + Zero,
@@ -260,7 +257,6 @@ where
 /// let expected = Primitive::from(&vec![Some(127)]).to(DataType::Int8);
 /// assert_eq!(result, expected);
 /// ```
-#[inline]
 pub fn saturating_add_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
 where
     T: NativeType + SaturatingAdd<Output = T>,
@@ -287,7 +283,6 @@ where
 /// let expected = Primitive::from(&vec![Some(101i8), Some(-56i8)]).to(DataType::Int8);
 /// assert_eq!(result, expected);
 /// ```
-#[inline]
 pub fn overflowing_add_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> (PrimitiveArray<T>, Bitmap)
 where
     T: NativeType + OverflowingAdd<Output = T>,
