@@ -11,14 +11,14 @@ use crate::datatypes::{Field, Schema};
 use crate::error::Result;
 
 /// Infer the schema of a CSV file by reading through the first n records of the file,
-/// with `max_read_records` controlling the maximum number of records to read.
+/// with `max_rows` controlling the maximum number of records to read.
 ///
-/// If `max_read_records` is not set, the whole file is read to infer its schema.
+/// If `max_rows` is not set, the whole file is read to infer its schema.
 ///
 /// Return infered schema and number of records used for inference.
 pub fn infer_schema<R: Read + Seek, F: Fn(&str) -> DataType>(
     reader: &mut Reader<R>,
-    max_read_records: Option<usize>,
+    max_rows: Option<usize>,
     has_header: bool,
     infer: &F,
 ) -> Result<Schema> {
@@ -45,7 +45,7 @@ pub fn infer_schema<R: Read + Seek, F: Fn(&str) -> DataType>(
     let mut fields = vec![];
 
     let mut record = StringRecord::new();
-    let max_records = max_read_records.unwrap_or(usize::MAX);
+    let max_records = max_rows.unwrap_or(usize::MAX);
     while records_count < max_records {
         if !reader.read_record(&mut record)? {
             break;

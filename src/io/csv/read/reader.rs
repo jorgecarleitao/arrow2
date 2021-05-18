@@ -27,14 +27,14 @@ pub fn projected_schema(schema: &Schema, projection: Option<&[usize]>) -> Schema
     }
 }
 
-pub fn read_batch<R: Read, P: GenericParser<ArrowError>>(
+/// Reads `len` rows from the CSV into Bytes, skiping `skip`
+/// This operation has minimal CPU work and is thus the fastest way to read through a CSV
+/// without deserializing the contents to arrow.
+pub fn read_rows<R: Read>(
     reader: &mut Reader<R>,
-    parser: &P,
     skip: usize,
     len: usize,
-    schema: Arc<Schema>,
-    projection: Option<&[usize]>,
-) -> Result<RecordBatch> {
+) -> Result<Vec<ByteRecord>> {
     // skip first `start` rows.
     let mut row = ByteRecord::new();
     for _ in 0..skip {
@@ -44,7 +44,7 @@ pub fn read_batch<R: Read, P: GenericParser<ArrowError>>(
         }
     }
 
-    let rows = reader
+    reader
         .byte_records()
         .enumerate()
         .take(len)
@@ -53,14 +53,7 @@ pub fn read_batch<R: Read, P: GenericParser<ArrowError>>(
                 ArrowError::External(format!(" at line {}", skip + row_number), Box::new(e))
             })
         })
-        .collect::<Result<Vec<_>>>()?;
-
-    if rows.is_empty() {
-        return Ok(RecordBatch::new_empty(schema));
-    }
-
-    // parse the batches into a RecordBatch
-    parse(&rows, schema.fields(), projection, skip, parser)
+        .collect::<Result<Vec<_>>>()
 }
 
 macro_rules! primitive {
@@ -70,8 +63,8 @@ macro_rules! primitive {
     };
 }
 
-/// parses a slice of [csv_crate::StringRecord] into a [array::record_batch::RecordBatch].
-fn parse<P: GenericParser<ArrowError>>(
+/// Parses a slice of [`ByteRecord`] into a [`RecordBatch`] using the parser `parser`.
+pub fn parse<P: GenericParser<ArrowError>>(
     rows: &[ByteRecord],
     fields: &[Field],
     projection: Option<&[usize]>,
@@ -82,6 +75,13 @@ fn parse<P: GenericParser<ArrowError>>(
         Some(ref v) => v.to_vec(),
         None => fields.iter().enumerate().map(|(i, _)| i).collect(),
     };
+    let projected_fields: Vec<Field> = projection.iter().map(|i| fields[*i].clone()).collect();
+
+    let schema = Arc::new(Schema::new(projected_fields));
+
+    if rows.is_empty() {
+        return Ok(RecordBatch::new_empty(schema));
+    }
 
     let columns = projection
         .iter()
@@ -127,11 +127,7 @@ fn parse<P: GenericParser<ArrowError>>(
         })
         .collect::<Result<Vec<_>>>()?;
 
-    let projected_fields: Vec<Field> = projection.iter().map(|i| fields[*i].clone()).collect();
-
-    let projected_schema = Arc::new(Schema::new(projected_fields));
-
-    RecordBatch::try_new(projected_schema, columns)
+    RecordBatch::try_new(schema, columns)
 }
 
 lazy_static! {
@@ -185,7 +181,8 @@ mod tests {
 
         let schema = Arc::new(infer_schema(&mut reader, None, true, &infer)?);
 
-        let batch = read_batch(&mut reader, &parser, 0, 100, schema.clone(), None)?;
+        let rows = read_rows(&mut reader, 0, 100)?;
+        let batch = parse(&rows, schema.fields(), None, 0, &parser)?;
 
         let batch_schema = batch.schema();
 
