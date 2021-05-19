@@ -51,7 +51,7 @@ multiversion = "0.6.1"
 
 [dependencies.parquet2]
 git = "https://github.com/jorgecarleitao/parquet2"
-rev = "79ea253793eb60a6f9cbdc57af0f2bca9afc2171"
+rev = "942312cf4de2bbb4ae81e9bf75bfd9d8c7666135"
 default-features = false
 features = ["snappy", "gzip", "lz4", "zstd", "brotli"]
 optional = true
