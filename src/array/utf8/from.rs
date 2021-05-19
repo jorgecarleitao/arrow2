@@ -62,10 +62,7 @@ impl<O: Offset> Utf8Array<O> {
         I: TrustedLen<Item = Option<P>>,
     {
         // soundness: I is `TrustedLen`
-        let (validity, offsets, values) = unsafe { trusted_len_unzip(iterator) };
-
-        // soundness: P is `str`
-        unsafe { Self::from_data_unchecked(offsets, values, validity) }
+        unsafe { Self::from_trusted_len_iter_unchecked(iterator) }
     }
 
     /// Creates a [`PrimitiveArray`] from an falible iterator of trusted length.
