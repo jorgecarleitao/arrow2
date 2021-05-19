@@ -213,13 +213,13 @@ fn write_single_array(path: &amp;str, array: &amp;dyn Array, field: Field) -&gt;
     let mut file = File::create(path)?;
 
     // Write the file. Note that, at present, any error results in a corrupted file.
-    Ok(write_file(
+    write_file(
         &amp;mut file,
         row_groups,
         &amp;schema,
         CompressionCodec::Uncompressed,
         None,
-    )?)
+    )
 }
 
 fn main() -&gt; Result&lt;()&gt; {

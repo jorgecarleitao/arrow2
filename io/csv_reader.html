@@ -177,31 +177,140 @@ This crate makes minimal assumptions on how you want to read a CSV, and offers a
 <p>Parsing bytes into values is more expensive than interpreting lines. As such, it is generally advantageous to have multiple readers of a single file that scan different parts of the file (within IO constraints).</p>
 <p>This crate relies on <a href="https://crates.io/crates/csv">the crate <code>csv</code></a> to scan and seek CSV files, and your code also needs such a dependency. With that said, <code>arrow2</code> makes no assumptions as to how to efficiently read the CSV: as a single reader per file or multiple readers.</p>
 <p>As an example, the following infers the schema and reads a CSV by re-using the same reader:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use arrow2::io::csv::read;
-use arrow2::error::Result;
+<pre><pre class="playground"><code class="language-rust">use arrow2::error::Result;
+use arrow2::io::csv::read;
+use arrow2::record_batch::RecordBatch;
 
-fn read_path(path: &amp;str) -&gt; Result&lt;()&gt; {
+fn read_path(path: &amp;str, projection: Option&lt;&amp;[usize]&gt;) -&gt; Result&lt;RecordBatch&gt; {
+    // Create a CSV reader. This is typically created on the thread that reads the file and
+    // thus owns the read head.
     let mut reader = read::ReaderBuilder::new().from_path(path)?;
+
+    // Infers the schema using the default inferer. The inferer is just a function that maps a string
+    // to a `DataType`.
+    let schema = read::infer_schema(&amp;mut reader, None, true, &amp;read::infer)?;
+
+    // skip 0 (excluding the header) and read up to 100 rows.
+    // this is IO-intensive and performs minimal CPU work. In particular,
+    // no deserialization is performed.
+    let rows = read::read_rows(&amp;mut reader, 0, 100)?;
+
+    // initializes a parser. A parser is a stateless trait to parse rows.
+    // Its logic must be consistent with `read::infer` above.
     let parser = read::DefaultParser::default();
 
-    let schema = read::infer_schema(&amp;mut reader, None, true, &amp;infer)?;
-
-    // 0: start from
-    // 100: up to (max batch size)
-    let batch = read::read_batch(&amp;mut reader, &amp;parser, 0, 100, schema, None)?;
+    // parse the batches into a `RecordBatch`. This is CPU-intensive, has no IO,
+    // and can be performed on a different thread by passing `rows` through a channel.
+    read::parse(&amp;rows, schema.fields(), projection, 0, &amp;parser)
 }
-<span class="boring">}
-</span></code></pre></pre>
+
+fn main() -&gt; Result&lt;()&gt; {
+    use std::env;
+    let args: Vec&lt;String&gt; = env::args().collect();
+
+    let file_path = &amp;args[1];
+
+    let batch = read_path(&amp;file_path, None)?;
+    println!(&quot;{:?}&quot;, batch);
+    Ok(())
+}
+</code></pre></pre>
 <h2 id="orchestration-and-parallelization"><a class="header" href="#orchestration-and-parallelization">Orchestration and parallelization</a></h2>
-<p>Because <code>csv</code>'s API is synchronous, the functions above represent the &quot;minimal unit of synchronous work&quot;. It is up to you to decide how you want to read the file efficiently:
-whether to read batches in sequence or in parallel, or whether IO supports multiple readers per file.</p>
+<p>Because <code>csv</code>'s API is synchronous, the functions above represent the &quot;minimal
+unit of synchronous work&quot;, IO and CPU. Note that <code>rows</code> above are <code>Send</code>,
+which implies that it is possible to run <code>parse</code> on a separate thread,
+thereby maximizing IO throughput. The example below shows how to do just that:</p>
+<pre><pre class="playground"><code class="language-rust">use crossbeam_channel::unbounded;
+
+use std::sync::Arc;
+use std::thread;
+use std::time::SystemTime;
+
+use arrow2::{error::Result, io::csv::read, record_batch::RecordBatch};
+
+fn parallel_read(path: &amp;str) -&gt; Result&lt;Vec&lt;RecordBatch&gt;&gt; {
+    let batch_size = 100;
+    let has_header = true;
+    let projection = None;
+
+    // prepare a channel to send serialized records from threads
+    let (tx, rx) = unbounded();
+
+    let mut reader = read::ReaderBuilder::new().from_path(path)?;
+    let schema = read::infer_schema(&amp;mut reader, Some(batch_size * 10), has_header, &amp;read::infer)?;
+    let schema = Arc::new(schema);
+
+    let start = SystemTime::now();
+    // spawn a thread to produce `Vec&lt;ByteRecords&gt;` (IO bounded)
+    let child = thread::spawn(move || {
+        let rows = read::read_rows(&amp;mut reader, 0, batch_size).unwrap();
+        let mut line_number = batch_size;
+        let mut size = rows.len();
+        tx.send((rows, line_number)).unwrap();
+        while size &gt; 0 {
+            let rows = read::read_rows(&amp;mut reader, 0, batch_size).unwrap();
+            line_number += batch_size;
+            size = rows.len();
+            tx.send((rows, line_number)).unwrap();
+        }
+    });
+
+    let mut children = Vec::new();
+    // use 3 consumers of to decompress, decode and deserialize.
+    for _ in 0..3 {
+        let rx_consumer = rx.clone();
+        let consumer_schema = schema.clone();
+        let child = thread::spawn(move || {
+            let (rows, line_number) = rx_consumer.recv().unwrap();
+            let start = SystemTime::now();
+            println!(&quot;consumer start - {}&quot;, line_number);
+            let batch = read::parse(
+                &amp;rows,
+                &amp;consumer_schema.fields(),
+                projection,
+                line_number,
+                &amp;read::DefaultParser::default(),
+            )
+            .unwrap();
+            println!(
+                &quot;consumer end - {:?}: {}&quot;,
+                start.elapsed().unwrap(),
+                line_number,
+            );
+            batch
+        });
+        children.push(child);
+    }
+
+    child.join().expect(&quot;child thread panicked&quot;);
+
+    let batches = children
+        .into_iter()
+        .map(|x| x.join().unwrap())
+        .collect::&lt;Vec&lt;_&gt;&gt;();
+    println!(&quot;Finished - {:?}&quot;, start.elapsed().unwrap());
+
+    Ok(batches)
+}
+
+fn main() -&gt; Result&lt;()&gt; {
+    use std::env;
+    let args: Vec&lt;String&gt; = env::args().collect();
+    let file_path = &amp;args[1];
+
+    let batches = parallel_read(file_path)?;
+    for batch in batches {
+        println!(&quot;{}&quot;, batch.num_rows())
+    }
+    Ok(())
+}
+</code></pre></pre>
 <h2 id="customization"><a class="header" href="#customization">Customization</a></h2>
 <p>In the code above, <code>parser</code> and <code>infer</code> allow for customization: they declare
-how rows of bytes should be inferred (into a logical type), and processed (into a value of said type). They offer good default options, but you can customize the inference and parsing to your own needs. You can also of course decide to parse everything into memory as <code>Utf8Array</code> and delay
-any data transformation.</p>
+how rows of bytes should be inferred (into a logical type), and processed (into a value of said type).
+They offer good default options, but you can customize the inference and parsing to your own needs.
+You can also of course decide to parse everything into memory as <code>Utf8Array</code> and
+delay any data transformation.</p>
 
                     </main>
 
