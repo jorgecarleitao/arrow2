@@ -16,28 +16,24 @@ This crate relies on [the crate `csv`](https://crates.io/crates/csv) to scan and
 As an example, the following infers the schema and reads a CSV by re-using the same reader:
 
 ```rust
-use arrow2::io::csv::read;
-use arrow2::error::Result;
-
-fn read_path(path: &str) -> Result<()> {
-    let mut reader = read::ReaderBuilder::new().from_path(path)?;
-    let parser = read::DefaultParser::default();
-
-    let schema = read::infer_schema(&mut reader, None, true, &infer)?;
-
-    // 0: start from
-    // 100: up to (max batch size)
-    let batch = read::read_batch(&mut reader, &parser, 0, 100, schema, None)?;
-}
+{{#include ../../../examples/csv_read.rs}}
 ```
 
 ## Orchestration and parallelization
 
-Because `csv`'s API is synchronous, the functions above represent the "minimal unit of synchronous work". It is up to you to decide how you want to read the file efficiently:
-whether to read batches in sequence or in parallel, or whether IO supports multiple readers per file.
+Because `csv`'s API is synchronous, the functions above represent the "minimal
+unit of synchronous work", IO and CPU. Note that `rows` above are `Send`,
+which implies that it is possible to run `parse` on a separate thread,
+thereby maximizing IO throughput. The example below shows how to do just that:
+
+```rust
+{{#include ../../../examples/csv_read_parallel.rs}}
+```
 
 ## Customization
 
 In the code above, `parser` and `infer` allow for customization: they declare
-how rows of bytes should be inferred (into a logical type), and processed (into a value of said type). They offer good default options, but you can customize the inference and parsing to your own needs. You can also of course decide to parse everything into memory as `Utf8Array` and delay
-any data transformation.
+how rows of bytes should be inferred (into a logical type), and processed (into a value of said type).
+They offer good default options, but you can customize the inference and parsing to your own needs.
+You can also of course decide to parse everything into memory as `Utf8Array` and
+delay any data transformation.
