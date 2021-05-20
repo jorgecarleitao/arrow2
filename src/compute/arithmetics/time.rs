@@ -178,7 +178,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::time::timestamp_diff;
+/// use arrow2::compute::arithmetics::time::subtract_timestamps;
 /// use arrow2::array::Primitive;
 /// use arrow2::datatypes::{DataType, TimeUnit};
 /// let timestamp_a = Primitive::from(&vec![
@@ -200,10 +200,10 @@ where
 /// let expected = Primitive::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)])
 ///     .to(DataType::Duration(TimeUnit::Second));
 ///
-/// let result = timestamp_diff(&timestamp_a, &&timestamp_b).unwrap();
+/// let result = subtract_timestamps(&timestamp_a, &&timestamp_b).unwrap();
 /// assert_eq!(result, expected);
 /// ```
-pub fn timestamp_diff(
+pub fn subtract_timestamps(
     lhs: &PrimitiveArray<i64>,
     rhs: &PrimitiveArray<i64>,
 ) -> Result<PrimitiveArray<i64>> {
@@ -316,7 +316,7 @@ mod tests {
     }
 
     #[test]
-    fn test_adding_timestamp_different_scale() {
+    fn test_adding_subtract_timestamps_scale() {
         let timestamp = Primitive::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)]).to(
             DataType::Timestamp(TimeUnit::Millisecond, Some("America/New_York".to_string())),
         );
@@ -435,7 +435,7 @@ mod tests {
     }
 
     #[test]
-    fn test_subtracting_timestamp_different_scale() {
+    fn test_subtracting_subtract_timestamps_scale() {
         let timestamp = Primitive::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)]).to(
             DataType::Timestamp(TimeUnit::Millisecond, Some("America/New_York".to_string())),
         );
@@ -472,7 +472,7 @@ mod tests {
     }
 
     #[test]
-    fn test_timestamp_diff() {
+    fn test_subtract_timestamps() {
         let timestamp_a = Primitive::from(&vec![
             Some(100_010i64),
             Some(200_020i64),
@@ -492,12 +492,12 @@ mod tests {
         let expected = Primitive::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)])
             .to(DataType::Duration(TimeUnit::Second));
 
-        let result = timestamp_diff(&timestamp_a, &&timestamp_b).unwrap();
+        let result = subtract_timestamps(&timestamp_a, &&timestamp_b).unwrap();
         assert_eq!(result, expected);
     }
 
     #[test]
-    fn test_timestamp_diff_scale() {
+    fn test_subtract_timestamps_scale() {
         let timestamp_a = Primitive::from(&vec![
             Some(100_000_000i64),
             Some(200_000_000i64),
@@ -522,7 +522,7 @@ mod tests {
         ])
         .to(DataType::Duration(TimeUnit::Millisecond));
 
-        let result = timestamp_diff(&timestamp_a, &&timestamp_b).unwrap();
+        let result = subtract_timestamps(&timestamp_a, &&timestamp_b).unwrap();
         assert_eq!(result, expected);
     }
 

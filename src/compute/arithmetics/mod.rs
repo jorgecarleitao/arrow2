@@ -63,7 +63,7 @@ use std::ops::{Add, Div, Mul, Neg, Sub};
 
 use num::Zero;
 
-use crate::datatypes::DataType;
+use crate::datatypes::{DataType, TimeUnit};
 use crate::error::{ArrowError, Result};
 use crate::types::NativeType;
 use crate::{array::*, bitmap::Bitmap};
@@ -75,19 +75,11 @@ use super::arity::unary;
 // is an error then an ArrowError is return with the data_type that cause it.
 // It returns the result from the arithmetic_primitive function evaluated with
 // the Operator selected
-macro_rules! primitive_arithmetic_match {
-    ($lhs: expr, $rhs: expr, $op: expr, $primitive_array_type: ty) => {{
-        let res_lhs = $lhs
-            .as_any()
-            .downcast_ref::<$primitive_array_type>()
-            .unwrap();
-
-        let res_rhs = $rhs
-            .as_any()
-            .downcast_ref::<$primitive_array_type>()
-            .unwrap();
-
-        arithmetic_primitive(res_lhs, $op, res_rhs)
+macro_rules! primitive {
+    ($lhs: expr, $rhs: expr, $op: expr, $array_type: ty) => {{
+        let res_lhs = $lhs.as_any().downcast_ref().unwrap();
+        let res_rhs = $rhs.as_any().downcast_ref().unwrap();
+        arithmetic_primitive::<$array_type>(res_lhs, $op, res_rhs)
             .map(Box::new)
             .map(|x| x as Box<dyn Array>)
     }};
@@ -97,43 +89,72 @@ macro_rules! primitive_arithmetic_match {
 /// to select the type of operation that is going to be performed with the two
 /// arrays
 pub fn arithmetic(lhs: &dyn Array, op: Operator, rhs: &dyn Array) -> Result<Box<dyn Array>> {
-    let data_type = lhs.data_type();
-    if data_type != rhs.data_type() {
-        return Err(ArrowError::NotYetImplemented(
-            "Arithmetic is currently only supported for arrays of the same logical type"
-                .to_string(),
-        ));
-    }
-    match data_type {
-        DataType::Int8 => primitive_arithmetic_match!(lhs, rhs, op, Int8Array),
-        DataType::Int16 => primitive_arithmetic_match!(lhs, rhs, op, Int16Array),
-        DataType::Int32 => primitive_arithmetic_match!(lhs, rhs, op, Int32Array),
-        DataType::Int64 | DataType::Duration(_) => {
-            primitive_arithmetic_match!(lhs, rhs, op, Int64Array)
+    use DataType::*;
+    use Operator::*;
+    match (lhs.data_type(), op, rhs.data_type()) {
+        (Int8, _, Int8) => primitive!(lhs, rhs, op, i8),
+        (Int16, _, Int16) => primitive!(lhs, rhs, op, i16),
+        (Int32, _, Int32) => primitive!(lhs, rhs, op, i32),
+        (Int64, _, Int64) | (Duration(_), _, Duration(_)) => {
+            primitive!(lhs, rhs, op, i64)
         }
-        DataType::UInt8 => primitive_arithmetic_match!(lhs, rhs, op, UInt8Array),
-        DataType::UInt16 => primitive_arithmetic_match!(lhs, rhs, op, UInt16Array),
-        DataType::UInt32 => primitive_arithmetic_match!(lhs, rhs, op, UInt32Array),
-        DataType::UInt64 => primitive_arithmetic_match!(lhs, rhs, op, UInt64Array),
-        DataType::Float16 => unreachable!(),
-        DataType::Float32 => primitive_arithmetic_match!(lhs, rhs, op, Float32Array),
-        DataType::Float64 => primitive_arithmetic_match!(lhs, rhs, op, Float64Array),
-        DataType::Decimal(_, _) => {
-            let lhs = lhs.as_any().downcast_ref::<Int128Array>().unwrap();
-            let rhs = rhs.as_any().downcast_ref::<Int128Array>().unwrap();
+        (UInt8, _, UInt8) => primitive!(lhs, rhs, op, u8),
+        (UInt16, _, UInt16) => primitive!(lhs, rhs, op, u16),
+        (UInt32, _, UInt32) => primitive!(lhs, rhs, op, u32),
+        (UInt64, _, UInt64) => primitive!(lhs, rhs, op, u64),
+        (Float32, _, Float32) => primitive!(lhs, rhs, op, f32),
+        (Float64, _, Float64) => primitive!(lhs, rhs, op, f64),
+        (Decimal(_, _), _, Decimal(_, _)) => {
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
 
             let res = match op {
-                Operator::Add => decimal::add::add(lhs, rhs),
-                Operator::Subtract => decimal::sub::sub(lhs, rhs),
-                Operator::Multiply => decimal::mul::mul(lhs, rhs),
-                Operator::Divide => decimal::div::div(lhs, rhs),
+                Add => decimal::add::add(lhs, rhs),
+                Subtract => decimal::sub::sub(lhs, rhs),
+                Multiply => decimal::mul::mul(lhs, rhs),
+                Divide => decimal::div::div(lhs, rhs),
             };
 
-            res.map(Box::new).map(|x| x as Box<dyn Array>)
+            res.map(|x| Box::new(x) as Box<dyn Array>)
         }
-        _ => Err(ArrowError::NotYetImplemented(format!(
-            "Arithmetics between {:?} is not supported",
-            data_type
+        (Time32(TimeUnit::Second), Add, Duration(_))
+        | (Time32(TimeUnit::Millisecond), Add, Duration(_))
+        | (Date32, Add, Duration(_)) => {
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            time::add_duration::<i32>(lhs, rhs).map(|x| Box::new(x) as Box<dyn Array>)
+        }
+        (Time32(TimeUnit::Second), Subtract, Duration(_))
+        | (Time32(TimeUnit::Millisecond), Subtract, Duration(_))
+        | (Date32, Subtract, Duration(_)) => {
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            time::subtract_duration::<i32>(lhs, rhs).map(|x| Box::new(x) as Box<dyn Array>)
+        }
+        (Time64(TimeUnit::Microsecond), Add, Duration(_))
+        | (Time64(TimeUnit::Nanosecond), Add, Duration(_))
+        | (Date64, Add, Duration(_))
+        | (Timestamp(_, _), Add, Duration(_)) => {
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            time::add_duration::<i64>(lhs, rhs).map(|x| Box::new(x) as Box<dyn Array>)
+        }
+        (Time64(TimeUnit::Microsecond), Subtract, Duration(_))
+        | (Time64(TimeUnit::Nanosecond), Subtract, Duration(_))
+        | (Date64, Subtract, Duration(_))
+        | (Timestamp(_, _), Subtract, Duration(_)) => {
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            time::subtract_duration::<i64>(lhs, rhs).map(|x| Box::new(x) as Box<dyn Array>)
+        }
+        (Timestamp(_, None), Subtract, Timestamp(_, None)) => {
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            time::subtract_timestamps(lhs, rhs).map(|x| Box::new(x) as Box<dyn Array>)
+        }
+        (lhs, op, rhs) => Err(ArrowError::NotYetImplemented(format!(
+            "Arithmetics of ({:?}, {:?}, {:?}) is not supported",
+            lhs, op, rhs
         ))),
     }
 }
@@ -143,30 +164,47 @@ pub fn arithmetic(lhs: &dyn Array, op: Operator, rhs: &dyn Array) -> Result<Box<
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::can_arithmetic;
-/// use arrow2::datatypes::{DataType};
+/// use arrow2::compute::arithmetics::{can_arithmetic, Operator};
+/// use arrow2::datatypes::DataType;
 ///
 /// let data_type = DataType::Int8;
-/// assert_eq!(can_arithmetic(&data_type), true);
+/// assert_eq!(can_arithmetic(&data_type, Operator::Add, &data_type), true);
 ///
 /// let data_type = DataType::LargeBinary;
-/// assert_eq!(can_arithmetic(&data_type), false)
+/// assert_eq!(can_arithmetic(&data_type, Operator::Add, &data_type), false)
 /// ```
-pub fn can_arithmetic(data_type: &DataType) -> bool {
+pub fn can_arithmetic(lhs: &DataType, op: Operator, rhs: &DataType) -> bool {
+    use DataType::*;
+    use Operator::*;
     matches!(
-        data_type,
-        DataType::Int8
-            | DataType::Int16
-            | DataType::Int32
-            | DataType::Int64
-            | DataType::Duration(_)
-            | DataType::UInt8
-            | DataType::UInt16
-            | DataType::UInt32
-            | DataType::UInt64
-            | DataType::Float32
-            | DataType::Float64
-            | DataType::Decimal(_, _)
+        (lhs, op, rhs),
+        (Int8, _, Int8)
+            | (Int16, _, Int16)
+            | (Int32, _, Int32)
+            | (Int64, _, Int64)
+            | (UInt8, _, UInt8)
+            | (UInt16, _, UInt16)
+            | (UInt32, _, UInt32)
+            | (UInt64, _, UInt64)
+            | (Float64, _, Float64)
+            | (Float32, _, Float32)
+            | (Duration(_), _, Duration(_))
+            | (Decimal(_, _), _, Decimal(_, _))
+            | (Date32, Subtract, Duration(_))
+            | (Date32, Add, Duration(_))
+            | (Date64, Subtract, Duration(_))
+            | (Date64, Add, Duration(_))
+            | (Time32(TimeUnit::Millisecond), Subtract, Duration(_))
+            | (Time32(TimeUnit::Second), Subtract, Duration(_))
+            | (Time32(TimeUnit::Millisecond), Add, Duration(_))
+            | (Time32(TimeUnit::Second), Add, Duration(_))
+            | (Time64(TimeUnit::Microsecond), Subtract, Duration(_))
+            | (Time64(TimeUnit::Nanosecond), Subtract, Duration(_))
+            | (Time64(TimeUnit::Microsecond), Add, Duration(_))
+            | (Time64(TimeUnit::Nanosecond), Add, Duration(_))
+            | (Timestamp(_, _), Subtract, Duration(_))
+            | (Timestamp(_, _), Add, Duration(_))
+            | (Timestamp(_, None), Subtract, Timestamp(_, None))
     )
 }
 
@@ -386,27 +424,26 @@ mod tests {
             Duration(TimeUnit::Microsecond),
             Duration(TimeUnit::Nanosecond),
         ];
+        let operators = vec![
+            Operator::Add,
+            Operator::Divide,
+            Operator::Subtract,
+            Operator::Multiply,
+        ];
 
-        datatypes.into_iter().for_each(|d1| {
-            let array = new_null_array(d1.clone(), 10);
-            if can_arithmetic(&d1) {
-                let op = Operator::Add;
-                assert!(arithmetic(array.as_ref(), op, array.as_ref()).is_ok());
+        let cases = datatypes
+            .clone()
+            .into_iter()
+            .zip(operators.into_iter())
+            .zip(datatypes.into_iter());
 
-                let op = Operator::Subtract;
-                assert!(arithmetic(array.as_ref(), op, array.as_ref()).is_ok());
-
-                let op = Operator::Multiply;
-                assert!(arithmetic(array.as_ref(), op, array.as_ref()).is_ok());
+        cases.for_each(|((lhs, op), rhs)| {
+            let lhs_a = new_null_array(lhs.clone(), 10);
+            let rhs_a = new_null_array(rhs.clone(), 10);
+            if can_arithmetic(&lhs, op, &rhs) {
+                assert!(arithmetic(lhs_a.as_ref(), op, rhs_a.as_ref()).is_ok());
             } else {
-                let op = Operator::Add;
-                assert!(arithmetic(array.as_ref(), op, array.as_ref()).is_err());
-
-                let op = Operator::Subtract;
-                assert!(arithmetic(array.as_ref(), op, array.as_ref()).is_err());
-
-                let op = Operator::Multiply;
-                assert!(arithmetic(array.as_ref(), op, array.as_ref()).is_err());
+                assert!(arithmetic(lhs_a.as_ref(), op, rhs_a.as_ref()).is_err());
             }
         });
     }
