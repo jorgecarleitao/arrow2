@@ -263,6 +263,36 @@ impl<T: NativeType> MutableBuffer<T> {
     pub fn extend_constant(&mut self, additional: usize, value: T) {
         self.resize(self.len() + additional, value)
     }
+
+    /// Shrinks the capacity of the [`MutableBuffer`] to fit its current length.
+    /// The new capacity will be a multiple of 64 bytes.
+    ///
+    /// # Example
+    /// ```
+    /// # use arrow2::buffer::MutableBuffer;
+    ///
+    /// let mut buffer = MutableBuffer::<u64>::with_capacity(16);
+    /// assert_eq!(buffer.capacity(), 16);
+    /// buffer.push(1);
+    /// buffer.push(2);
+    ///
+    /// buffer.shrink_to_fit();
+    /// assert!(buffer.capacity() == 8);
+    /// ```
+    pub fn shrink_to_fit(&mut self) {
+        let new_capacity = capacity_multiple_of_64::<T>(self.len);
+        if new_capacity < self.capacity {
+            // JUSTIFICATION
+            //  Benefit
+            //      necessity
+            //  Soundness
+            //      `self.ptr` is valid for `self.capacity`.
+            let ptr = unsafe { alloc::reallocate(self.ptr, self.capacity, new_capacity) };
+
+            self.ptr = ptr;
+            self.capacity = new_capacity;
+        }
+    }
 }
 
 /// # Safety
