@@ -7,7 +7,7 @@ use std::{
 use hash_hasher::HashedMap;
 
 use crate::{
-    array::{Array, Builder, IntoArray, Primitive, TryFromIterator},
+    array::{Array, Builder, IntoArray, Primitive, ToArray, TryFromIterator},
     datatypes::DataType,
     error::{ArrowError, Result},
 };
@@ -22,22 +22,39 @@ pub struct DictionaryPrimitive<K: DictionaryKey, B: Builder<T>, T: Hash> {
     phantom: std::marker::PhantomData<T>,
 }
 
-impl<K: DictionaryKey, B: Builder<T>, T: Hash> DictionaryPrimitive<K, B, T> {
+impl<K: DictionaryKey, B: Builder<T> + ToArray, T: Hash> DictionaryPrimitive<K, B, T> {
     pub fn to(self, data_type: DataType) -> DictionaryArray<K> {
         let data_type = DictionaryArray::<K>::get_child(&data_type);
-        let values = self.values.into_arc(data_type);
+        let values = self.values.to_arc(data_type);
         DictionaryArray::from_data(self.keys.to(K::DATA_TYPE), values)
+    }
+}
+
+impl<K: DictionaryKey, B: Builder<T> + IntoArray, T: Hash> DictionaryPrimitive<K, B, T> {
+    pub fn into(self) -> DictionaryArray<K> {
+        DictionaryArray::from_data(self.keys.to(K::DATA_TYPE), self.values.into_arc())
+    }
+}
+
+impl<K, B, T> ToArray for DictionaryPrimitive<K, B, T>
+where
+    K: DictionaryKey,
+    B: Builder<T> + ToArray,
+    T: Hash,
+{
+    fn to_arc(self, data_type: &DataType) -> Arc<dyn Array> {
+        Arc::new(self.to(data_type.clone()))
     }
 }
 
 impl<K, B, T> IntoArray for DictionaryPrimitive<K, B, T>
 where
     K: DictionaryKey,
-    B: Builder<T>,
+    B: Builder<T> + IntoArray,
     T: Hash,
 {
-    fn into_arc(self, data_type: &DataType) -> Arc<dyn Array> {
-        Arc::new(self.to(data_type.clone()))
+    fn into_arc(self) -> Arc<dyn Array> {
+        Arc::new(self.into())
     }
 }
 
@@ -107,7 +124,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::array::Utf8Primitive;
+    use crate::array::{Array, BinaryPrimitive, Utf8Primitive};
 
     use super::*;
 
@@ -117,10 +134,38 @@ mod tests {
 
         let data = data.into_iter().map(Result::Ok);
         let a = DictionaryPrimitive::<i32, Utf8Primitive<i32>, &str>::try_from_iter(data)?;
-        a.to(DataType::Dictionary(
+        let a = a.to(DataType::Dictionary(
             Box::new(DataType::Int32),
             Box::new(DataType::Utf8),
         ));
+        assert_eq!(a.len(), 3);
+        assert_eq!(a.values().len(), 2);
+        Ok(())
+    }
+
+    #[test]
+    fn utf8_natural() -> Result<()> {
+        let data = vec![Some("a"), Some("b"), Some("a")];
+
+        let data = data.into_iter().map(Result::Ok);
+        let a = DictionaryPrimitive::<i32, Utf8Primitive<i32>, &str>::try_from_iter(data)?;
+        let a = a.into_arc();
+        assert_eq!(a.len(), 3);
+        let a = a.as_any().downcast_ref::<DictionaryArray<i32>>().unwrap();
+        assert_eq!(a.values().len(), 2);
+        Ok(())
+    }
+
+    #[test]
+    fn binary_natural() -> Result<()> {
+        let data = vec![Some("a".as_ref()), Some("b".as_ref()), Some("a".as_ref())];
+
+        let data = data.into_iter().map(Result::Ok);
+        let a = DictionaryPrimitive::<i32, BinaryPrimitive<i32>, &[u8]>::try_from_iter(data)?;
+        let a = a.into_arc();
+        let a = a.as_any().downcast_ref::<DictionaryArray<i32>>().unwrap();
+        assert_eq!(a.len(), 3);
+        assert_eq!(a.values().len(), 2);
         Ok(())
     }
 }

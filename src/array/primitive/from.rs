@@ -1,7 +1,7 @@
 use std::{iter::FromIterator, sync::Arc};
 
 use crate::{
-    array::{Array, Builder, IntoArray, TryFromIterator},
+    array::{Array, Builder, IntoArray, ToArray, TryFromIterator},
     bitmap::MutableBitmap,
     buffer::MutableBuffer,
     datatypes::DataType,
@@ -277,9 +277,16 @@ impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> TryFromIterator<Ptr> fo
     }
 }
 
-impl<T: NativeType> IntoArray for Primitive<T> {
-    fn into_arc(self, data_type: &DataType) -> Arc<dyn Array> {
+impl<T: NativeType> ToArray for Primitive<T> {
+    fn to_arc(self, data_type: &DataType) -> Arc<dyn Array> {
         Arc::new(self.to(data_type.clone()))
+    }
+}
+
+impl<T: NativeType + NaturalDataType> IntoArray for Primitive<T> {
+    fn into_arc(self) -> Arc<dyn Array> {
+        let a: PrimitiveArray<T> = self.into();
+        Arc::new(a)
     }
 }
 
@@ -295,6 +302,13 @@ mod tests {
     fn try_from_iter() -> Result<()> {
         let a = Primitive::<i32>::try_from_iter((0..2).map(|x| Result::Ok(Some(x))))?
             .to(DataType::Int32);
+        assert_eq!(a.len(), 2);
+        Ok(())
+    }
+
+    #[test]
+    fn natural_arc() -> Result<()> {
+        let a = Primitive::<i32>::from_slice(&[0, 1]).into_arc();
         assert_eq!(a.len(), 2);
         Ok(())
     }

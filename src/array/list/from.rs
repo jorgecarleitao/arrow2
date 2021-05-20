@@ -1,7 +1,7 @@
 use std::{iter::FromIterator, sync::Arc};
 
 use crate::{
-    array::{Array, Builder, IntoArray, Offset, TryFromIterator},
+    array::{Array, Builder, IntoArray, Offset, ToArray, TryFromIterator},
     bitmap::MutableBitmap,
     buffer::MutableBuffer,
     datatypes::DataType,
@@ -19,10 +19,23 @@ pub struct ListPrimitive<O: Offset, B: Builder<T>, T> {
     phantom: std::marker::PhantomData<T>,
 }
 
-impl<O: Offset, A: Builder<T>, T> ListPrimitive<O, A, T> {
+impl<O: Offset, A: Builder<T> + ToArray, T> ListPrimitive<O, A, T> {
     pub fn to(self, data_type: DataType) -> ListArray<O> {
-        let values = self.values.into_arc(ListArray::<O>::get_child(&data_type));
+        let values = self.values.to_arc(ListArray::<O>::get_child(&data_type));
         ListArray::from_data(data_type, self.offsets.into(), values, self.validity.into())
+    }
+}
+
+impl<O: Offset, A: Builder<T> + IntoArray, T> From<ListPrimitive<O, A, T>> for ListArray<O> {
+    fn from(primitive: ListPrimitive<O, A, T>) -> Self {
+        let values = primitive.values.into_arc();
+        let data_type = ListArray::<O>::default_datatype(values.data_type().clone());
+        ListArray::from_data(
+            data_type,
+            primitive.offsets.into(),
+            values,
+            primitive.validity.into(),
+        )
     }
 }
 
@@ -103,8 +116,8 @@ where
     }
 }
 
-impl<O: Offset, B: Builder<T>, T> IntoArray for ListPrimitive<O, B, T> {
-    fn into_arc(self, data_type: &DataType) -> Arc<dyn Array> {
+impl<O: Offset, B: Builder<T> + ToArray, T> ToArray for ListPrimitive<O, B, T> {
+    fn to_arc(self, data_type: &DataType) -> Arc<dyn Array> {
         Arc::new(self.to(data_type.clone()))
     }
 }
@@ -125,6 +138,24 @@ mod tests {
 
         let a: ListPrimitive<i32, Primitive<i32>, i32> = data.into_iter().collect();
         let a = a.to(ListArray::<i32>::default_datatype(DataType::Int32));
+        let a = a.value(0);
+        let a = a.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
+
+        let expected =
+            Primitive::<i32>::from(vec![Some(1i32), Some(2), Some(3)]).to(DataType::Int32);
+        assert_eq!(a, &expected)
+    }
+
+    #[test]
+    fn primitive_natural() {
+        let data = vec![
+            Some(vec![Some(1i32), Some(2), Some(3)]),
+            None,
+            Some(vec![Some(4), None, Some(6)]),
+        ];
+
+        let a: ListPrimitive<i32, Primitive<i32>, i32> = data.into_iter().collect();
+        let a: ListArray<i32> = a.into();
         let a = a.value(0);
         let a = a.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
 

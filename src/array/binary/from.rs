@@ -1,19 +1,15 @@
 use std::{iter::FromIterator, sync::Arc};
 
-use super::BinaryArray;
 use crate::{
-    array::Offset,
+    array::{Array, Builder, IntoArray, Offset, ToArray, TryFromIterator},
     bitmap::{Bitmap, MutableBitmap},
     buffer::{Buffer, MutableBuffer},
-};
-use crate::{
-    array::{Array, Builder, IntoArray, TryFromIterator},
-    trusted_len::TrustedLen,
-};
-use crate::{
     datatypes::DataType,
     error::{ArrowError, Result as ArrowResult},
+    trusted_len::TrustedLen,
 };
+
+use super::BinaryArray;
 
 impl<O: Offset> BinaryArray<O> {
     pub fn from_slice<T: AsRef<[u8]>, P: AsRef<[T]>>(slice: P) -> Self {
@@ -125,8 +121,14 @@ impl<O: Offset> BinaryPrimitive<O> {
     }
 }
 
+impl<O: Offset> ToArray for BinaryPrimitive<O> {
+    fn to_arc(self, _: &DataType) -> Arc<dyn Array> {
+        Arc::new(self.to())
+    }
+}
+
 impl<O: Offset> IntoArray for BinaryPrimitive<O> {
-    fn into_arc(self, _: &DataType) -> Arc<dyn Array> {
+    fn into_arc(self) -> Arc<dyn Array> {
         Arc::new(self.to())
     }
 }
