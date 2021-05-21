@@ -326,6 +326,7 @@ pub fn clone(array: &dyn Array) -> Box<dyn Array> {
 mod binary;
 mod boolean;
 mod dictionary;
+mod display;
 mod fixed_size_binary;
 mod fixed_size_list;
 mod list;
@@ -339,6 +340,8 @@ mod equal;
 mod ffi;
 pub mod growable;
 pub mod ord;
+
+pub use display::get_display;
 
 pub use binary::{BinaryArray, BinaryPrimitive};
 pub use boolean::BooleanArray;
