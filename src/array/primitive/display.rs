@@ -193,7 +193,7 @@ mod tests {
     #[test]
     fn display_date32() {
         let array = Primitive::<i32>::from(&[Some(1), None, Some(2)]).to(DataType::Date32);
-        assert_eq!(format!("{}", array), "Date32[0001-01-01, , 0001-01-02]");
+        assert_eq!(format!("{}", array), "Date32[1970-01-02, , 1970-01-03]");
     }
 
     #[test]
