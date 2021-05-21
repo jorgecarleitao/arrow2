@@ -25,7 +25,7 @@ pub fn date32_to_datetime(v: i32) -> NaiveDateTime {
 /// converts a `i32` representing a `date32` to [`NaiveDate`]
 #[inline]
 pub fn date32_to_date(days: i32) -> NaiveDate {
-    NaiveDate::from_num_days_from_ce(days)
+    NaiveDate::from_num_days_from_ce(EPOCH_DAYS_FROM_CE + days)
 }
 
 /// converts a `i64` representing a `date64` to [`NaiveDateTime`]

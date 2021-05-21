@@ -29,3 +29,6 @@ pub mod json_integration;
 
 #[cfg(feature = "io_parquet")]
 pub mod parquet;
+
+#[cfg(feature = "io_print")]
+pub mod print;

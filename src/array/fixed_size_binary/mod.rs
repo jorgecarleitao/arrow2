@@ -66,6 +66,11 @@ impl FixedSizeBinaryArray {
         self.values.as_slice()
     }
 
+    #[inline]
+    pub fn value(&self, i: usize) -> &[u8] {
+        &self.values()[i * self.size as usize..(i + 1) * self.size as usize]
+    }
+
     /// Returns the element at index `i` as &str
     /// # Safety
     /// Assumes that the `i < self.len`.
