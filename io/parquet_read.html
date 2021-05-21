@@ -291,7 +291,7 @@ fn parallel_read(path: &amp;str) -&gt; Result&lt;Vec&lt;Box&lt;dyn Array&gt;&gt;
             println!(&quot;consumer start - {} {}&quot;, column, row_group);
             let descriptor = metadata_consumer.row_groups[row_group]
                 .column(column)
-                .column_descriptor();
+                .descriptor();
             let array = read::page_iter_to_array(iter.into_iter(), descriptor).unwrap();
             println!(
                 &quot;consumer end - {:?}: {} {}&quot;,
