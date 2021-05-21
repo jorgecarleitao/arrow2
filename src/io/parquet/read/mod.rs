@@ -1,3 +1,5 @@
+use std::io::{Read, Seek};
+
 mod binary;
 mod boolean;
 mod fixed_size_binary;
@@ -12,18 +14,35 @@ use crate::{
     error::{ArrowError, Result},
 };
 
-pub use schema::{get_schema, is_type_nullable};
+pub use schema::{get_schema, is_type_nullable, FileMetaData};
 
+use parquet2::read::{
+    get_page_iterator as _get_page_iterator, read_metadata as _read_metadata, PageIterator,
+};
 pub use parquet2::{
     error::ParquetError,
     metadata::ColumnDescriptor,
     read::CompressedPage,
-    read::{get_page_iterator, read_metadata},
     schema::{
         types::{LogicalType, ParquetType, PhysicalType, PrimitiveConvertedType},
         TimeUnit as ParquetTimeUnit, TimestampType,
     },
 };
+
+/// Creates a new iterator of compressed pages.
+pub fn get_page_iterator<'b, RR: Read + Seek>(
+    metadata: &FileMetaData,
+    row_group: usize,
+    column: usize,
+    reader: &'b mut RR,
+) -> Result<PageIterator<'b, RR>> {
+    Ok(_get_page_iterator(metadata, row_group, column, reader)?)
+}
+
+/// Reads parquets' metadata.
+pub fn read_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetaData> {
+    Ok(_read_metadata(reader)?)
+}
 
 fn page_iter_i64<I: Iterator<Item = std::result::Result<CompressedPage, ParquetError>>>(
     iter: I,

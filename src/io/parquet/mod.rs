@@ -182,8 +182,7 @@ mod tests_integration {
                             column,
                             &mut reader,
                         )?;
-                        read::page_iter_to_array(pages, column_meta.column_descriptor())
-                            .map(|x| x.into())
+                        read::page_iter_to_array(pages, column_meta.descriptor()).map(|x| x.into())
                     })
                     .collect::<Result<Vec<Arc<dyn Array>>>>()?;
                 RecordBatch::try_new(schema1.clone(), columns)
