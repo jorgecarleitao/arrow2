@@ -92,3 +92,51 @@ pub fn infer_schema<R: Read + Seek, F: Fn(&str) -> DataType>(
 
     Ok(Schema::new(fields))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use std::io::Cursor;
+
+    use crate::datatypes::{DataType, Field, Schema};
+    use crate::error::Result;
+
+    use super::super::{infer, ReaderBuilder};
+
+    #[test]
+    fn basics() -> Result<()> {
+        let file = Cursor::new("1,2,3\na,b,c\na,,c");
+        let mut reader = ReaderBuilder::new().from_reader(file);
+
+        let schema = infer_schema(&mut reader, Some(10), false, &infer)?;
+
+        assert_eq!(
+            schema,
+            Schema::new(vec![
+                Field::new("column_1", DataType::Utf8, true),
+                Field::new("column_2", DataType::Utf8, true),
+                Field::new("column_3", DataType::Utf8, true),
+            ])
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn ints() -> Result<()> {
+        let file = Cursor::new("1,2,3\n1,a,5\n2,,4");
+        let mut reader = ReaderBuilder::new().from_reader(file);
+
+        let schema = infer_schema(&mut reader, Some(10), false, &infer)?;
+
+        assert_eq!(
+            schema,
+            Schema::new(vec![
+                Field::new("column_1", DataType::Int64, true),
+                Field::new("column_2", DataType::Utf8, true),
+                Field::new("column_3", DataType::Int64, true),
+            ])
+        );
+        Ok(())
+    }
+}
