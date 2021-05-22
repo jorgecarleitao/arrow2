@@ -17,16 +17,17 @@ use crate::{
     types::NativeType as ArrowNativeType,
 };
 
-fn read_dict_buffer_optional<T, A>(
+fn read_dict_buffer_optional<T, A, F>(
     buffer: &[u8],
     length: u32,
     dict: &PrimitivePageDict<T>,
     values: &mut MutableBuffer<A>,
     validity: &mut MutableBitmap,
+    op: F,
 ) where
     T: NativeType,
     A: ArrowNativeType,
-    T: num::cast::AsPrimitive<A>,
+    F: Fn(T) -> A,
 {
     let (validity_buffer, indices_buffer) = utils::split_buffer_v1(buffer);
 
@@ -54,7 +55,7 @@ fn read_dict_buffer_optional<T, A>(
                 for is_valid in BitmapIter::new(packed, 0, len) {
                     validity.push(is_valid);
                     let value = if is_valid {
-                        dict_values[indices.next().unwrap() as usize].as_()
+                        op(dict_values[indices.next().unwrap() as usize])
                     } else {
                         A::default()
                     };
@@ -67,7 +68,7 @@ fn read_dict_buffer_optional<T, A>(
                 if is_set {
                     (0..additional).for_each(|_| {
                         let index = indices.next().unwrap() as usize;
-                        let value = dict_values[index].as_();
+                        let value = op(dict_values[index]);
                         values.push(value)
                     })
                 } else {
@@ -78,16 +79,17 @@ fn read_dict_buffer_optional<T, A>(
     }
 }
 
-fn read_nullable<T, A>(
+fn read_nullable<T, A, F>(
     validity_buffer: &[u8],
     values_buffer: &[u8],
     length: u32,
     values: &mut MutableBuffer<A>,
     validity: &mut MutableBitmap,
+    op: F,
 ) where
     T: NativeType,
     A: ArrowNativeType,
-    T: num::cast::AsPrimitive<A>,
+    F: Fn(T) -> A,
 {
     let length = length as usize;
 
@@ -106,7 +108,7 @@ fn read_nullable<T, A>(
                 for is_valid in BitmapIter::new(packed, 0, len) {
                     validity.push(is_valid);
                     let value = if is_valid {
-                        types::decode::<T>(chunks.next().unwrap()).as_()
+                        op(types::decode::<T>(chunks.next().unwrap()))
                     } else {
                         A::default()
                     };
@@ -118,7 +120,7 @@ fn read_nullable<T, A>(
                 validity.extend_constant(additional, is_set);
                 if is_set {
                     (0..additional).for_each(|_| {
-                        let value = types::decode::<T>(chunks.next().unwrap()).as_();
+                        let value = op(types::decode::<T>(chunks.next().unwrap()));
                         values.push(value)
                     })
                 } else {
@@ -129,11 +131,11 @@ fn read_nullable<T, A>(
     }
 }
 
-fn read_required<T, A>(values_buffer: &[u8], length: u32, values: &mut MutableBuffer<A>)
+fn read_required<T, A, F>(values_buffer: &[u8], length: u32, values: &mut MutableBuffer<A>, op: F)
 where
     T: NativeType,
     A: ArrowNativeType,
-    T: num::cast::AsPrimitive<A>,
+    F: Fn(T) -> A,
 {
     // todo: for little endian machines this can be replaced by `extend_from_slice`
     // via transmute.
@@ -142,30 +144,29 @@ where
 
     let chunks = values_buffer[..length * size].chunks_exact(size);
 
-    let iter = chunks.map(|chunk| types::decode::<T>(chunk).as_());
+    let iter = chunks.map(|chunk| op(types::decode::<T>(chunk)));
 
     values.extend(iter);
 }
 
-pub fn iter_to_array<T, A, I, E>(
+pub fn iter_to_array<T, A, I, E, F>(
     mut iter: I,
     descriptor: &ColumnDescriptor,
     data_type: DataType,
+    op: F,
 ) -> Result<PrimitiveArray<A>>
 where
     ArrowError: From<E>,
     T: NativeType,
     A: ArrowNativeType,
-    T: num::cast::AsPrimitive<A>,
+    F: Copy + Fn(T) -> A,
     I: Iterator<Item = std::result::Result<CompressedPage, E>>,
 {
     // todo: push metadata from the file to get this capacity
     let capacity = 0;
     let mut values = MutableBuffer::<A>::with_capacity(capacity);
     let mut validity = MutableBitmap::with_capacity(capacity);
-    iter.try_for_each(|page| {
-        extend_from_page::<T, A>(page?, &descriptor, &mut values, &mut validity)
-    })?;
+    iter.try_for_each(|page| extend_from_page(page?, &descriptor, &mut values, &mut validity, op))?;
 
     Ok(PrimitiveArray::from_data(
         data_type,
@@ -174,16 +175,17 @@ where
     ))
 }
 
-fn extend_from_page<T, A>(
+fn extend_from_page<T, A, F>(
     page: CompressedPage,
     descriptor: &ColumnDescriptor,
     values: &mut MutableBuffer<A>,
     validity: &mut MutableBitmap,
+    op: F,
 ) -> Result<()>
 where
     T: NativeType,
     A: ArrowNativeType,
-    T: num::cast::AsPrimitive<A>,
+    F: Fn(T) -> A,
 {
     let page = decompress_page(page)?;
     assert_eq!(descriptor.max_rep_level(), 0);
@@ -193,25 +195,27 @@ where
             assert_eq!(page.header.definition_level_encoding, Encoding::Rle);
 
             match (&page.header.encoding, &page.dictionary_page, is_optional) {
-                (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer_optional::<T, A>(
+                (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer_optional(
                     &page.buffer,
                     page.header.num_values as u32,
                     dict.as_any().downcast_ref().unwrap(),
                     values,
                     validity,
+                    op,
                 ),
                 (Encoding::Plain, None, true) => {
                     let (validity_buffer, values_buffer) = utils::split_buffer_v1(&page.buffer);
-                    read_nullable::<T, A>(
+                    read_nullable(
                         validity_buffer,
                         values_buffer,
                         page.header.num_values as u32,
                         values,
                         validity,
+                        op,
                     )
                 }
                 (Encoding::Plain, None, false) => {
-                    read_required::<T, A>(&page.buffer, page.header.num_values as u32, values)
+                    read_required(&page.buffer, page.header.num_values as u32, values, op)
                 }
                 _ => {
                     return Err(utils::not_implemented(
@@ -225,27 +229,29 @@ where
             }
         }
         Page::V2(page) => match (&page.header.encoding, &page.dictionary_page, is_optional) {
-            (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer_optional::<T, A>(
+            (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer_optional(
                 &page.buffer,
                 page.header.num_values as u32,
                 dict.as_any().downcast_ref().unwrap(),
                 values,
                 validity,
+                op,
             ),
             (Encoding::Plain, None, true) => {
                 let def_level_buffer_length = page.header.definition_levels_byte_length as usize;
                 let (validity_buffer, values_buffer) =
                     utils::split_buffer_v2(&page.buffer, def_level_buffer_length);
-                read_nullable::<T, A>(
+                read_nullable(
                     validity_buffer,
                     values_buffer,
                     page.header.num_values as u32,
                     values,
                     validity,
+                    op,
                 )
             }
             (Encoding::Plain, None, false) => {
-                read_required::<T, A>(&page.buffer, page.header.num_values as u32, values)
+                read_required::<T, A, F>(&page.buffer, page.header.num_values as u32, values, op)
             }
             _ => {
                 return Err(utils::not_implemented(
