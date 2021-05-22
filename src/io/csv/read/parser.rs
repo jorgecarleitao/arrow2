@@ -31,30 +31,21 @@ impl Default for DefaultParser {
 }
 
 impl<E: From<ArrowError> + From<chrono::ParseError>> PrimitiveParser<u8, E> for DefaultParser {}
-
 impl<E: From<ArrowError> + From<chrono::ParseError>> PrimitiveParser<u16, E> for DefaultParser {}
-
 impl<E: From<ArrowError> + From<chrono::ParseError>> PrimitiveParser<u32, E> for DefaultParser {}
-
 impl<E: From<ArrowError> + From<chrono::ParseError>> PrimitiveParser<u64, E> for DefaultParser {}
 
 impl<E: From<ArrowError> + From<chrono::ParseError>> PrimitiveParser<i8, E> for DefaultParser {}
-
 impl<E: From<ArrowError> + From<chrono::ParseError>> PrimitiveParser<i16, E> for DefaultParser {}
 
 impl<E: From<ArrowError> + From<chrono::ParseError> + From<std::str::Utf8Error>>
     PrimitiveParser<i32, E> for DefaultParser
 {
     #[inline]
-    fn parse(
-        &self,
-        entry: &[u8],
-        data_type: &DataType,
-        row_number: usize,
-    ) -> Result<Option<i32>, E> {
+    fn parse(&self, entry: &[u8], data_type: &DataType, _: usize) -> Result<Option<i32>, E> {
         // default behavior: error if not able to parse, else `None`
         match data_type {
-            DataType::Int32 => PrimitiveParser::<i32, E>::parse(self, entry, data_type, row_number),
+            DataType::Int32 => Ok(lexical_core::parse(entry).ok()),
             DataType::Date32 => {
                 let date = std::str::from_utf8(entry)?;
                 let date = date.parse::<chrono::NaiveDate>()?;
@@ -73,14 +64,9 @@ impl<E: From<ArrowError> + From<chrono::ParseError> + From<std::str::Utf8Error>>
     PrimitiveParser<i64, E> for DefaultParser
 {
     #[inline]
-    fn parse(
-        &self,
-        entry: &[u8],
-        data_type: &DataType,
-        row_number: usize,
-    ) -> Result<Option<i64>, E> {
+    fn parse(&self, entry: &[u8], data_type: &DataType, _: usize) -> Result<Option<i64>, E> {
         match data_type {
-            DataType::Int64 => PrimitiveParser::<i64, E>::parse(self, entry, data_type, row_number),
+            DataType::Int64 => Ok(lexical_core::parse(entry).ok()),
             DataType::Date64 => {
                 let date_time = std::str::from_utf8(entry)?;
                 let date_time = date_time.parse::<chrono::NaiveDateTime>()?;
@@ -120,7 +106,6 @@ impl<E: From<ArrowError> + From<chrono::ParseError> + From<std::str::Utf8Error>>
 }
 
 impl<E: From<ArrowError> + From<chrono::ParseError>> PrimitiveParser<f32, E> for DefaultParser {}
-
 impl<E: From<ArrowError> + From<chrono::ParseError>> PrimitiveParser<f64, E> for DefaultParser {}
 
 impl<E> BooleanParser<E> for DefaultParser {}
@@ -135,6 +120,21 @@ impl<E: From<ArrowError> + From<chrono::ParseError> + From<std::str::Utf8Error>>
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parse_int32() {
+        let parser = DefaultParser::default();
+
+        let cases = vec![
+            (b"1", Some(1)),
+        ];
+
+        for (input, output) in cases {
+            let r: Result<_, ArrowError> =
+                PrimitiveParser::parse(&parser, input, &DataType::Int32, 0);
+            assert_eq!(r.unwrap(), output);
+        }
+    }
 
     #[test]
     fn parse_date32() {
