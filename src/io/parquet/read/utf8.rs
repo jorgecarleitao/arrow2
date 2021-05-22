@@ -42,7 +42,7 @@ pub(crate) fn read_dict_buffer<O: Offset>(
     let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
 
     validity.reserve(length);
-    values.reserve(length);
+    offsets.reserve(length);
     for run in validity_iterator {
         match run {
             hybrid_rle::HybridEncoded::Bitpacked(packed) => {
@@ -71,6 +71,7 @@ pub(crate) fn read_dict_buffer<O: Offset>(
                         let dict_offset_ip1 = dict_offsets[index + 1] as usize;
                         let length = dict_offset_ip1 - dict_offset_i;
                         last_offset += O::from_usize(length).unwrap();
+                        offsets.push(last_offset);
                         values.extend_from_slice(&dict_values[dict_offset_i..dict_offset_ip1]);
                     })
                 } else {
@@ -98,7 +99,7 @@ pub(crate) fn read_optional<O: Offset>(
     let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
 
     validity.reserve(length);
-    values.reserve(length);
+    offsets.reserve(length);
     for run in validity_iterator {
         match run {
             hybrid_rle::HybridEncoded::Bitpacked(packed) => {

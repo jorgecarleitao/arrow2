@@ -10,15 +10,12 @@ mod utils;
 
 use crate::{
     array::Array,
-    datatypes::DataType,
+    datatypes::{DataType, TimeUnit},
     error::{ArrowError, Result},
 };
 
 pub use schema::{get_schema, is_type_nullable, FileMetaData};
 
-use parquet2::read::{
-    get_page_iterator as _get_page_iterator, read_metadata as _read_metadata, PageIterator,
-};
 pub use parquet2::{
     error::ParquetError,
     metadata::ColumnDescriptor,
@@ -27,6 +24,12 @@ pub use parquet2::{
         types::{LogicalType, ParquetType, PhysicalType, PrimitiveConvertedType},
         TimeUnit as ParquetTimeUnit, TimestampType,
     },
+};
+use parquet2::{
+    read::{
+        get_page_iterator as _get_page_iterator, read_metadata as _read_metadata, PageIterator,
+    },
+    types::int96_to_i64,
 };
 
 /// Creates a new iterator of compressed pages.
@@ -53,9 +56,11 @@ fn page_iter_i64<I: Iterator<Item = std::result::Result<CompressedPage, ParquetE
     let data_type = schema::from_int64(logical_type, converted_type)?;
 
     match data_type {
-        DataType::UInt64 => primitive::iter_to_array::<i64, u64, _, _>(iter, descriptor, data_type)
-            .map(|x| Box::new(x) as Box<dyn Array>),
-        _ => primitive::iter_to_array::<i64, i64, _, _>(iter, descriptor, data_type)
+        DataType::UInt64 => {
+            primitive::iter_to_array(iter, descriptor, data_type, |x: i64| x as u64)
+                .map(|x| Box::new(x) as Box<dyn Array>)
+        }
+        _ => primitive::iter_to_array(iter, descriptor, data_type, |x: i64| x as i64)
             .map(|x| Box::new(x) as Box<dyn Array>),
     }
 }
@@ -70,17 +75,17 @@ fn page_iter_i32<I: Iterator<Item = std::result::Result<CompressedPage, ParquetE
 
     use DataType::*;
     match data_type {
-        UInt8 => primitive::iter_to_array::<i32, u8, _, _>(iter, descriptor, data_type)
+        UInt8 => primitive::iter_to_array(iter, descriptor, data_type, |x: i32| x as u8)
             .map(|x| Box::new(x) as Box<dyn Array>),
-        UInt16 => primitive::iter_to_array::<i32, u16, _, _>(iter, descriptor, data_type)
+        UInt16 => primitive::iter_to_array(iter, descriptor, data_type, |x: i32| x as u16)
             .map(|x| Box::new(x) as Box<dyn Array>),
-        UInt32 => primitive::iter_to_array::<i32, u32, _, _>(iter, descriptor, data_type)
+        UInt32 => primitive::iter_to_array(iter, descriptor, data_type, |x: i32| x as u32)
             .map(|x| Box::new(x) as Box<dyn Array>),
-        Int8 => primitive::iter_to_array::<i32, i8, _, _>(iter, descriptor, data_type)
+        Int8 => primitive::iter_to_array(iter, descriptor, data_type, |x: i32| x as i8)
             .map(|x| Box::new(x) as Box<dyn Array>),
-        Int16 => primitive::iter_to_array::<i32, i16, _, _>(iter, descriptor, data_type)
+        Int16 => primitive::iter_to_array(iter, descriptor, data_type, |x: i32| x as i16)
             .map(|x| Box::new(x) as Box<dyn Array>),
-        _ => primitive::iter_to_array::<i32, i32, _, _>(iter, descriptor, data_type)
+        _ => primitive::iter_to_array(iter, descriptor, data_type, |x: i32| x)
             .map(|x| Box::new(x) as Box<dyn Array>),
     }
 }
@@ -151,20 +156,18 @@ pub fn page_iter_to_array<I: Iterator<Item = std::result::Result<CompressedPage,
             (PhysicalType::Int64, _, _) => {
                 page_iter_i64(iter, descriptor, converted_type, logical_type)
             }
-            (PhysicalType::Float, None, None) => {
-                Ok(Box::new(primitive::iter_to_array::<f32, f32, _, _>(
-                    iter,
-                    descriptor,
-                    DataType::Float32,
-                )?))
-            }
-            (PhysicalType::Double, None, None) => {
-                Ok(Box::new(primitive::iter_to_array::<f64, f64, _, _>(
-                    iter,
-                    descriptor,
-                    DataType::Float64,
-                )?))
-            }
+            (PhysicalType::Float, None, None) => Ok(Box::new(primitive::iter_to_array(
+                iter,
+                descriptor,
+                DataType::Float32,
+                |x: f32| x,
+            )?)),
+            (PhysicalType::Double, None, None) => Ok(Box::new(primitive::iter_to_array(
+                iter,
+                descriptor,
+                DataType::Float64,
+                |x: f64| x,
+            )?)),
             (PhysicalType::Boolean, None, None) => {
                 Ok(Box::new(boolean::iter_to_array(iter, descriptor)?))
             }
@@ -178,6 +181,12 @@ pub fn page_iter_to_array<I: Iterator<Item = std::result::Result<CompressedPage,
                 converted_type,
                 logical_type,
             ),
+            (PhysicalType::Int96, _, _) => Ok(Box::new(primitive::iter_to_array(
+                iter,
+                descriptor,
+                DataType::Timestamp(TimeUnit::Millisecond, None),
+                int96_to_i64,
+            )?)),
             (p, c, l) => Err(ArrowError::NotYetImplemented(format!(
                 "The conversion of ({:?}, {:?}, {:?}) to arrow still not implemented",
                 p, c, l
@@ -304,5 +313,45 @@ mod tests {
     #[test]
     fn v2_boolean_required() -> Result<()> {
         test_pyarrow_integration(3, 2, true)
+    }
+}
+
+#[cfg(test)]
+mod tests_integration {
+    use super::*;
+    use crate::record_batch::RecordBatch;
+    use std::sync::Arc;
+
+    #[test]
+    fn all_types() -> Result<()> {
+        let path = "testing/parquet-testing/data/alltypes_plain.parquet";
+        let mut reader = std::fs::File::open(path)?;
+
+        let file_metadata = read_metadata(&mut reader)?;
+
+        let schema = get_schema(&file_metadata)?;
+        let schema = Arc::new(schema);
+
+        // checks that record arrays and schema are consistent
+        file_metadata
+            .row_groups
+            .iter()
+            .enumerate()
+            .map(|(row_group, group)| {
+                let columns = group
+                    .columns()
+                    .iter()
+                    .enumerate()
+                    .map(|(column, column_meta)| {
+                        let pages =
+                            get_page_iterator(&file_metadata, row_group, column, &mut reader)?;
+                        page_iter_to_array(pages, column_meta.descriptor()).map(|x| x.into())
+                    })
+                    .collect::<Result<Vec<Arc<dyn Array>>>>()?;
+                RecordBatch::try_new(schema.clone(), columns)
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(())
     }
 }
