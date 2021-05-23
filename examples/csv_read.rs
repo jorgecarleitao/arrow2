@@ -16,13 +16,15 @@ fn read_path(path: &str, projection: Option<&[usize]>) -> Result<RecordBatch> {
     // no deserialization is performed.
     let rows = read::read_rows(&mut reader, 0, 100)?;
 
-    // initializes a parser. A parser is a stateless trait to parse rows.
-    // Its logic must be consistent with `read::infer` above.
-    let parser = read::DefaultParser::default();
-
     // parse the batches into a `RecordBatch`. This is CPU-intensive, has no IO,
     // and can be performed on a different thread by passing `rows` through a channel.
-    read::parse(&rows, schema.fields(), projection, 0, &parser)
+    read::deserialize_batch(
+        &rows,
+        schema.fields(),
+        projection,
+        0,
+        read::deserialize_column,
+    )
 }
 
 fn main() -> Result<()> {
