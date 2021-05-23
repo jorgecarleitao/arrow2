@@ -29,7 +29,7 @@ use parquet2::{
     read::{
         get_page_iterator as _get_page_iterator, read_metadata as _read_metadata, PageIterator,
     },
-    types::int96_to_i64,
+    types::int96_to_i64_ns,
 };
 
 /// Creates a new iterator of compressed pages.
@@ -184,8 +184,8 @@ pub fn page_iter_to_array<I: Iterator<Item = std::result::Result<CompressedPage,
             (PhysicalType::Int96, _, _) => Ok(Box::new(primitive::iter_to_array(
                 iter,
                 descriptor,
-                DataType::Timestamp(TimeUnit::Millisecond, None),
-                int96_to_i64,
+                DataType::Timestamp(TimeUnit::Nanosecond, None),
+                int96_to_i64_ns,
             )?)),
             (p, c, l) => Err(ArrowError::NotYetImplemented(format!(
                 "The conversion of ({:?}, {:?}, {:?}) to arrow still not implemented",
