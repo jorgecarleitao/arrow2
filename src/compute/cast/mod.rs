@@ -364,7 +364,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
             Float32 => utf8_to_primitive_dyn::<i32, f32>(array, to_type),
             Float64 => utf8_to_primitive_dyn::<i32, f64>(array, to_type),
             Date32 => utf8_to_date32_dyn::<i32>(array),
-            Date64 => utf8_to_date64_dyn::<i64>(array),
+            Date64 => utf8_to_date64_dyn::<i32>(array),
             _ => Err(ArrowError::NotYetImplemented(format!(
                 "Casting from {:?} to {:?} not supported",
                 from_type, to_type,
