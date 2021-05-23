@@ -23,11 +23,6 @@ use arrow2::compute::sort::{lexsort, sort, SortColumn, SortOptions};
 use arrow2::util::bench_util::*;
 use arrow2::{array::*, datatypes::*};
 
-fn create_array(size: usize, with_nulls: bool) -> PrimitiveArray<f32> {
-    let null_density = if with_nulls { 0.5 } else { 0.0 };
-    create_primitive_array::<f32>(size, DataType::Float32, null_density)
-}
-
 fn bench_lexsort(arr_a: &dyn Array, array_b: &dyn Array) {
     let columns = vec![
         SortColumn {
@@ -40,7 +35,7 @@ fn bench_lexsort(arr_a: &dyn Array, array_b: &dyn Array) {
         },
     ];
 
-    lexsort(&criterion::black_box(columns)).unwrap();
+    criterion::black_box(lexsort(&columns).unwrap());
 }
 
 fn bench_sort(arr_a: &dyn Array) {
@@ -50,41 +45,27 @@ fn bench_sort(arr_a: &dyn Array) {
 fn add_benchmark(c: &mut Criterion) {
     (10..=20).step_by(2).for_each(|log2_size| {
         let size = 2usize.pow(log2_size);
-        let arr_a = create_primitive_array_with_seed::<f32>(size, DataType::Float32, 0.0, 42);
+        let arr_a = create_primitive_array::<f32>(size, DataType::Float32, 0.0);
 
         c.bench_function(&format!("sort 2^{} f32", log2_size), |b| {
             b.iter(|| bench_sort(&arr_a))
         });
 
-        let arr_a = create_primitive_array_with_seed::<f32>(size, DataType::Float32, 0.1, 42);
+        let arr_b = create_primitive_array_with_seed::<f32>(size, DataType::Float32, 0.0, 43);
+        c.bench_function(&format!("lexsort 2^{} f32", log2_size), |b| {
+            b.iter(|| bench_lexsort(&arr_a, &arr_b))
+        });
+
+        let arr_a = create_primitive_array::<f32>(size, DataType::Float32, 0.5);
 
         c.bench_function(&format!("sort null 2^{} f32", log2_size), |b| {
             b.iter(|| bench_sort(&arr_a))
         });
-    });
 
-    let arr_a = create_array(2u64.pow(10) as usize, false);
-    let arr_b = create_array(2u64.pow(10) as usize, false);
-
-    c.bench_function("lexsort 2^10", |b| b.iter(|| bench_lexsort(&arr_a, &arr_b)));
-
-    let arr_a = create_array(2u64.pow(12) as usize, false);
-    let arr_b = create_array(2u64.pow(12) as usize, false);
-
-    c.bench_function("lexsort 2^12", |b| b.iter(|| bench_lexsort(&arr_a, &arr_b)));
-
-    let arr_a = create_array(2u64.pow(10) as usize, true);
-    let arr_b = create_array(2u64.pow(10) as usize, true);
-
-    c.bench_function("lexsort nulls 2^10", |b| {
-        b.iter(|| bench_lexsort(&arr_a, &arr_b))
-    });
-
-    let arr_a = create_array(2u64.pow(12) as usize, true);
-    let arr_b = create_array(2u64.pow(12) as usize, true);
-
-    c.bench_function("lexsort nulls 2^12", |b| {
-        b.iter(|| bench_lexsort(&arr_a, &arr_b))
+        let arr_b = create_primitive_array_with_seed::<f32>(size, DataType::Float32, 0.5, 43);
+        c.bench_function(&format!("lexsort null 2^{} f32", log2_size), |b| {
+            b.iter(|| bench_lexsort(&arr_a, &arr_b))
+        });
     });
 }
 
