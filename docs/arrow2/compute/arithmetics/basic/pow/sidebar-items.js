@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["checked_powf_scalar","Checked operation of raising an array of primitives to the power of exponent. If the result from the multiplications overflows, the validity for that index is changed returned."],["powf_scalar","Raises an array of primitives to the power of exponent. Panics if one of the values values overflows."]]});
