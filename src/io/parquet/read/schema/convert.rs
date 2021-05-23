@@ -229,7 +229,7 @@ fn to_primitive_type_inner(
         PhysicalType::Boolean => Ok(DataType::Boolean),
         PhysicalType::Int32 => from_int32(logical_type, converted_type),
         PhysicalType::Int64 => from_int64(logical_type, converted_type),
-        PhysicalType::Int96 => Ok(DataType::Timestamp(TimeUnit::Millisecond, None)),
+        PhysicalType::Int96 => Ok(DataType::Timestamp(TimeUnit::Nanosecond, None)),
         PhysicalType::Float => Ok(DataType::Float32),
         PhysicalType::Double => Ok(DataType::Float64),
         PhysicalType::ByteArray => from_byte_array(logical_type, converted_type),
