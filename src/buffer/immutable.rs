@@ -23,6 +23,7 @@ pub struct Buffer<T: NativeType> {
 }
 
 impl<T: NativeType> Default for Buffer<T> {
+    #[inline]
     fn default() -> Self {
         MutableBuffer::new().into()
     }
@@ -152,6 +153,7 @@ impl<T: NativeType, U: AsRef<[T]>> From<U> for Buffer<T> {
 }
 
 impl<T: NativeType> FromIterator<T> for Buffer<T> {
+    #[inline]
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
         MutableBuffer::from_iter(iter).into()
     }

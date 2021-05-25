@@ -1,8 +1,9 @@
+use std::{convert::TryInto, hint::unreachable_unchecked};
+
 use parquet2::{
     encoding::{hybrid_rle, Encoding},
     read::{decompress_page, CompressedPage, Page, PrimitivePageDict},
     serialization::read::levels,
-    types,
     types::NativeType,
 };
 
@@ -14,8 +15,48 @@ use crate::{
     buffer::MutableBuffer,
     datatypes::DataType,
     error::{ArrowError, Result},
+    trusted_len::TrustedLen,
     types::NativeType as ArrowNativeType,
 };
+
+struct ExactChunksIter<'a, T: NativeType> {
+    chunks: std::slice::ChunksExact<'a, u8>,
+    phantom: std::marker::PhantomData<T>,
+}
+
+impl<'a, T: NativeType> ExactChunksIter<'a, T> {
+    #[inline]
+    pub fn new(slice: &'a [u8]) -> Self {
+        assert_eq!(slice.len() % std::mem::size_of::<T>(), 0);
+        let chunks = slice.chunks_exact(std::mem::size_of::<T>());
+        Self {
+            chunks,
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<'a, T: NativeType> Iterator for ExactChunksIter<'a, T> {
+    type Item = T;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.chunks.next().map(|chunk| {
+            let chunk: <T as NativeType>::Bytes = match chunk.try_into() {
+                Ok(v) => v,
+                Err(_) => unsafe { unreachable_unchecked() },
+            };
+            T::from_le_bytes(chunk)
+        })
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.chunks.size_hint()
+    }
+}
+
+unsafe impl<'a, T: NativeType> TrustedLen for ExactChunksIter<'a, T> {}
 
 fn read_dict_buffer_optional<T, A, F>(
     buffer: &[u8],
@@ -91,7 +132,7 @@ fn read_nullable<T, A, F>(
 {
     let length = length as usize;
 
-    let mut chunks = values_buffer.chunks_exact(std::mem::size_of::<T>());
+    let mut chunks = ExactChunksIter::<T>::new(values_buffer);
 
     let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
 
@@ -104,7 +145,7 @@ fn read_nullable<T, A, F>(
                 for is_valid in BitmapIter::new(packed, 0, len) {
                     validity.push(is_valid);
                     let value = if is_valid {
-                        op(types::decode::<T>(chunks.next().unwrap()))
+                        op(chunks.next().unwrap())
                     } else {
                         A::default()
                     };
@@ -116,7 +157,7 @@ fn read_nullable<T, A, F>(
                 validity.extend_constant(additional, is_set);
                 if is_set {
                     (0..additional).for_each(|_| {
-                        let value = op(types::decode::<T>(chunks.next().unwrap()));
+                        let value = op(chunks.next().unwrap());
                         values.push(value)
                     })
                 } else {
@@ -133,16 +174,15 @@ where
     A: ArrowNativeType,
     F: Fn(T) -> A,
 {
-    // todo: for little endian machines this can be replaced by `extend_from_slice`
-    // via transmute.
-    let length = length as usize;
-    let size = std::mem::size_of::<T>();
+    assert_eq!(
+        values_buffer.len(),
+        length as usize * std::mem::size_of::<T>()
+    );
+    let iterator = ExactChunksIter::<T>::new(values_buffer);
 
-    let chunks = values_buffer[..length * size].chunks_exact(size);
+    let iterator = iterator.map(|value| op(value));
 
-    let iter = chunks.map(|chunk| op(types::decode::<T>(chunk)));
-
-    values.extend(iter);
+    values.extend_from_trusted_len_iter(iterator);
 }
 
 pub fn iter_to_array<T, A, I, E, F>(

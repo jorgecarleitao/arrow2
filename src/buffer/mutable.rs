@@ -175,16 +175,19 @@ impl<T: NativeType> MutableBuffer<T> {
     }
 
     /// Clear all existing data from this buffer.
+    #[inline]
     pub fn clear(&mut self) {
         self.len = 0
     }
 
     /// Returns the data stored in this buffer as a slice.
+    #[inline]
     pub fn as_slice(&self) -> &[T] {
         self
     }
 
     /// Returns the data stored in this buffer as a mutable slice.
+    #[inline]
     pub fn as_slice_mut(&mut self) -> &mut [T] {
         self
     }
