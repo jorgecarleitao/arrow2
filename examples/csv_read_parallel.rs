@@ -21,10 +21,8 @@ fn parallel_read(path: &str) -> Result<Vec<RecordBatch>> {
     let start = SystemTime::now();
     // spawn a thread to produce `Vec<ByteRecords>` (IO bounded)
     let child = thread::spawn(move || {
-        let rows = read::read_rows(&mut reader, 0, batch_size).unwrap();
-        let mut line_number = batch_size;
-        let mut size = rows.len();
-        tx.send((rows, line_number)).unwrap();
+        let mut line_number = 0;
+        let mut size = 1;
         while size > 0 {
             let rows = read::read_rows(&mut reader, 0, batch_size).unwrap();
             line_number += batch_size;
@@ -42,12 +40,12 @@ fn parallel_read(path: &str) -> Result<Vec<RecordBatch>> {
             let (rows, line_number) = rx_consumer.recv().unwrap();
             let start = SystemTime::now();
             println!("consumer start - {}", line_number);
-            let batch = read::parse(
+            let batch = read::deserialize_batch(
                 &rows,
-                &consumer_schema.fields(),
+                consumer_schema.fields(),
                 projection,
-                line_number,
-                &read::DefaultParser::default(),
+                0,
+                read::deserialize_column,
             )
             .unwrap();
             println!(
