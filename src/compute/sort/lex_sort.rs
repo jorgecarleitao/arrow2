@@ -21,11 +21,13 @@ use crate::compute::take;
 use crate::error::{ArrowError, Result};
 use crate::{
     array::{ord, Array, PrimitiveArray},
-    buffer::Buffer,
+    buffer::MutableBuffer,
     datatypes::DataType,
 };
 
 use super::{sort_to_indices, SortOptions};
+
+type IsValid<'a> = Box<dyn Fn(usize) -> bool + 'a>;
 
 /// One column to be used in lexicographical sort
 #[derive(Clone, Debug)]
@@ -78,6 +80,61 @@ pub fn lexsort(columns: &[SortColumn]) -> Result<Vec<Box<dyn Array>>> {
         .collect()
 }
 
+#[inline]
+fn build_is_valid(array: &dyn Array) -> IsValid {
+    if let Some(validity) = array.validity() {
+        Box::new(move |x| unsafe { validity.get_bit_unchecked(x) })
+    } else {
+        Box::new(move |_| true)
+    }
+}
+
+type Compare<'a> = Box<dyn Fn(usize, usize) -> Ordering + 'a>;
+
+fn build_compare(array: &dyn Array, sort_option: SortOptions) -> Result<Compare> {
+    let is_valid = build_is_valid(array);
+    let comparator = ord::build_compare(array, array)?;
+
+    Ok(match (sort_option.descending, sort_option.nulls_first) {
+        (true, true) => Box::new(move |i: usize, j: usize| match (is_valid(i), is_valid(j)) {
+            (true, true) => match (comparator)(i, j) {
+                Ordering::Equal => Ordering::Equal,
+                other => other.reverse(),
+            },
+            (false, true) => Ordering::Less,
+            (true, false) => Ordering::Greater,
+            (false, false) => Ordering::Equal,
+        }),
+        (false, true) => Box::new(move |i: usize, j: usize| match (is_valid(i), is_valid(j)) {
+            (true, true) => match (comparator)(i, j) {
+                Ordering::Equal => Ordering::Equal,
+                other => other,
+            },
+            (false, true) => Ordering::Less,
+            (true, false) => Ordering::Greater,
+            (false, false) => Ordering::Equal,
+        }),
+        (false, false) => Box::new(move |i: usize, j: usize| match (is_valid(i), is_valid(j)) {
+            (true, true) => match (comparator)(i, j) {
+                Ordering::Equal => Ordering::Equal,
+                other => other,
+            },
+            (false, true) => Ordering::Greater,
+            (true, false) => Ordering::Less,
+            (false, false) => Ordering::Equal,
+        }),
+        (true, false) => Box::new(move |i: usize, j: usize| match (is_valid(i), is_valid(j)) {
+            (true, true) => match (comparator)(i, j) {
+                Ordering::Equal => Ordering::Equal,
+                other => other.reverse(),
+            },
+            (false, true) => Ordering::Greater,
+            (true, false) => Ordering::Less,
+            (false, false) => Ordering::Equal,
+        }),
+    })
+}
+
 /// Sort elements lexicographically from a list of `ArrayRef` into an unsigned integer
 /// [`Int32Array`] of indices.
 pub fn lexsort_to_indices(columns: &[SortColumn]) -> Result<PrimitiveArray<i32>> {
@@ -99,68 +156,35 @@ pub fn lexsort_to_indices(columns: &[SortColumn]) -> Result<PrimitiveArray<i32>>
         ));
     };
 
-    // map to data and DynComparator
-    let flat_columns = columns
+    // map arrays to comparators
+    let comparators = columns
         .iter()
-        .map(
-            |column| -> Result<(&dyn Array, ord::DynComparator, SortOptions)> {
-                // flatten and convert build comparators
-                let array = column.values;
-                Ok((
-                    array,
-                    ord::build_compare(array, array)?,
-                    column.options.unwrap_or_default(),
-                ))
-            },
-        )
-        .collect::<Result<Vec<(&dyn Array, ord::DynComparator, SortOptions)>>>()?;
+        .map(|column| -> Result<Compare> {
+            build_compare(column.values, column.options.unwrap_or_default())
+        })
+        .collect::<Result<Vec<Compare>>>()?;
 
-    let lex_comparator = |a_idx: &usize, b_idx: &usize| -> Ordering {
-        for (array, comparator, sort_option) in flat_columns.iter() {
-            match (array.is_valid(*a_idx), array.is_valid(*b_idx)) {
-                (true, true) => {
-                    match (comparator)(*a_idx, *b_idx) {
-                        // equal, move on to next column
-                        Ordering::Equal => continue,
-                        order => {
-                            if sort_option.descending {
-                                return order.reverse();
-                            } else {
-                                return order;
-                            }
-                        }
-                    }
-                }
-                (false, true) => {
-                    return if sort_option.nulls_first {
-                        Ordering::Less
-                    } else {
-                        Ordering::Greater
-                    };
-                }
-                (true, false) => {
-                    return if sort_option.nulls_first {
-                        Ordering::Greater
-                    } else {
-                        Ordering::Less
-                    };
-                }
-                // equal, move on to next column
-                (false, false) => continue,
+    let lex_comparator = |a_idx: &i32, b_idx: &i32| -> Ordering {
+        let a_idx = *a_idx as usize;
+        let b_idx = *b_idx as usize;
+        for comparator in comparators.iter() {
+            match comparator(a_idx, b_idx) {
+                Ordering::Equal => continue,
+                other => return other,
             }
         }
 
         Ordering::Equal
     };
 
-    let mut value_indices = (0..row_count).collect::<Vec<usize>>();
-    value_indices.sort_by(lex_comparator);
+    // Safety: `0..row_count` is TrustedLen
+    let mut values =
+        unsafe { MutableBuffer::<i32>::from_trusted_len_iter_unchecked(0..row_count as i32) };
+    values.sort_unstable_by(lex_comparator);
 
-    let values = value_indices.into_iter().map(|i| i as i32);
-    let values = Buffer::<i32>::from_trusted_len_iter(values);
     Ok(PrimitiveArray::<i32>::from_data(
         DataType::Int32,
-        values,
+        values.into(),
         None,
     ))
 }
