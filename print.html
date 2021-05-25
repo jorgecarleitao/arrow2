@@ -573,13 +573,15 @@ fn read_path(path: &amp;str, projection: Option&lt;&amp;[usize]&gt;) -&gt; Resul
     // no deserialization is performed.
     let rows = read::read_rows(&amp;mut reader, 0, 100)?;
 
-    // initializes a parser. A parser is a stateless trait to parse rows.
-    // Its logic must be consistent with `read::infer` above.
-    let parser = read::DefaultParser::default();
-
     // parse the batches into a `RecordBatch`. This is CPU-intensive, has no IO,
     // and can be performed on a different thread by passing `rows` through a channel.
-    read::parse(&amp;rows, schema.fields(), projection, 0, &amp;parser)
+    read::deserialize_batch(
+        &amp;rows,
+        schema.fields(),
+        projection,
+        0,
+        read::deserialize_column,
+    )
 }
 
 fn main() -&gt; Result&lt;()&gt; {
@@ -621,10 +623,8 @@ fn parallel_read(path: &amp;str) -&gt; Result&lt;Vec&lt;RecordBatch&gt;&gt; {
     let start = SystemTime::now();
     // spawn a thread to produce `Vec&lt;ByteRecords&gt;` (IO bounded)
     let child = thread::spawn(move || {
-        let rows = read::read_rows(&amp;mut reader, 0, batch_size).unwrap();
-        let mut line_number = batch_size;
-        let mut size = rows.len();
-        tx.send((rows, line_number)).unwrap();
+        let mut line_number = 0;
+        let mut size = 1;
         while size &gt; 0 {
             let rows = read::read_rows(&amp;mut reader, 0, batch_size).unwrap();
             line_number += batch_size;
@@ -642,12 +642,12 @@ fn parallel_read(path: &amp;str) -&gt; Result&lt;Vec&lt;RecordBatch&gt;&gt; {
             let (rows, line_number) = rx_consumer.recv().unwrap();
             let start = SystemTime::now();
             println!(&quot;consumer start - {}&quot;, line_number);
-            let batch = read::parse(
+            let batch = read::deserialize_batch(
                 &amp;rows,
-                &amp;consumer_schema.fields(),
+                consumer_schema.fields(),
                 projection,
-                line_number,
-                &amp;read::DefaultParser::default(),
+                0,
+                read::deserialize_column,
             )
             .unwrap();
             println!(
