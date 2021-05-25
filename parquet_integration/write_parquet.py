@@ -65,6 +65,7 @@ def write_pyarrow(case, size = 1, page_version = 1):
     t = pa.table(data, schema=schema)
     os.makedirs(base_path, exist_ok=True)
     pa.parquet.write_table(t, f"{base_path}/{path}",
+        row_group_size=2**40,
         use_dictionary=False,
         compression=None,
         write_statistics=False,

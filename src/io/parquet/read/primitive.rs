@@ -1,6 +1,5 @@
 use parquet2::{
     encoding::{hybrid_rle, Encoding},
-    metadata::ColumnDescriptor,
     read::{decompress_page, CompressedPage, Page, PrimitivePageDict},
     serialization::read::levels,
     types,
@@ -8,6 +7,7 @@ use parquet2::{
 };
 
 use super::utils;
+use super::{ColumnChunkMetaData, ColumnDescriptor};
 use crate::{
     array::PrimitiveArray,
     bitmap::{BitmapIter, MutableBitmap},
@@ -45,8 +45,6 @@ fn read_dict_buffer_optional<T, A, F>(
 
     let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
 
-    validity.reserve(length);
-    values.reserve(length);
     for run in validity_iterator {
         match run {
             hybrid_rle::HybridEncoded::Bitpacked(packed) => {
@@ -97,8 +95,6 @@ fn read_nullable<T, A, F>(
 
     let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
 
-    validity.reserve(length);
-    values.reserve(length);
     for run in validity_iterator {
         match run {
             hybrid_rle::HybridEncoded::Bitpacked(packed) => {
@@ -151,7 +147,7 @@ where
 
 pub fn iter_to_array<T, A, I, E, F>(
     mut iter: I,
-    descriptor: &ColumnDescriptor,
+    metadata: &ColumnChunkMetaData,
     data_type: DataType,
     op: F,
 ) -> Result<PrimitiveArray<A>>
@@ -162,11 +158,12 @@ where
     F: Copy + Fn(T) -> A,
     I: Iterator<Item = std::result::Result<CompressedPage, E>>,
 {
-    // todo: push metadata from the file to get this capacity
-    let capacity = 0;
+    let capacity = metadata.num_values() as usize;
     let mut values = MutableBuffer::<A>::with_capacity(capacity);
     let mut validity = MutableBitmap::with_capacity(capacity);
-    iter.try_for_each(|page| extend_from_page(page?, &descriptor, &mut values, &mut validity, op))?;
+    iter.try_for_each(|page| {
+        extend_from_page(page?, metadata.descriptor(), &mut values, &mut validity, op)
+    })?;
 
     Ok(PrimitiveArray::from_data(
         data_type,

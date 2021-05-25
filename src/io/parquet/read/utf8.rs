@@ -1,6 +1,6 @@
 use parquet2::{
     encoding::{hybrid_rle, Encoding},
-    metadata::ColumnDescriptor,
+    metadata::{ColumnChunkMetaData, ColumnDescriptor},
     read::{decompress_page, BinaryPageDict, CompressedPage, Page},
     serialization::read::levels,
 };
@@ -41,8 +41,6 @@ pub(crate) fn read_dict_buffer<O: Offset>(
 
     let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
 
-    validity.reserve(length);
-    offsets.reserve(length);
     for run in validity_iterator {
         match run {
             hybrid_rle::HybridEncoded::Bitpacked(packed) => {
@@ -98,8 +96,6 @@ pub(crate) fn read_optional<O: Offset>(
 
     let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
 
-    validity.reserve(length);
-    offsets.reserve(length);
     for run in validity_iterator {
         match run {
             hybrid_rle::HybridEncoded::Bitpacked(packed) => {
@@ -136,16 +132,14 @@ pub(crate) fn read_optional<O: Offset>(
 
 pub(crate) fn read_required<O: Offset>(
     buffer: &[u8],
-    length: u32,
+    _length: u32,
     offsets: &mut MutableBuffer<O>,
     values: &mut MutableBuffer<u8>,
 ) {
-    let length = length as usize;
     let mut last_offset = *offsets.as_slice_mut().last().unwrap();
 
     let values_iterator = utils::BinaryIter::new(buffer);
 
-    offsets.reserve(length);
     for value in values_iterator {
         last_offset += O::from_usize(value.len()).unwrap();
         values.extend_from_slice(value);
@@ -153,20 +147,25 @@ pub(crate) fn read_required<O: Offset>(
     }
 }
 
-pub fn iter_to_array<O, I, E>(mut iter: I, descriptor: &ColumnDescriptor) -> Result<Utf8Array<O>>
+pub fn iter_to_array<O, I, E>(mut iter: I, metadata: &ColumnChunkMetaData) -> Result<Utf8Array<O>>
 where
     ArrowError: From<E>,
     O: Offset,
     I: Iterator<Item = std::result::Result<CompressedPage, E>>,
 {
-    // todo: push metadata from the file to get this capacity
-    let capacity = 0;
+    let capacity = metadata.num_values() as usize;
     let mut values = MutableBuffer::<u8>::with_capacity(0);
     let mut offsets = MutableBuffer::<O>::with_capacity(1 + capacity);
     offsets.push(O::default());
     let mut validity = MutableBitmap::with_capacity(capacity);
     iter.try_for_each(|page| {
-        extend_from_page(page?, &descriptor, &mut offsets, &mut values, &mut validity)
+        extend_from_page(
+            page?,
+            metadata.descriptor(),
+            &mut offsets,
+            &mut values,
+            &mut validity,
+        )
     })?;
 
     Ok(Utf8Array::from_data(

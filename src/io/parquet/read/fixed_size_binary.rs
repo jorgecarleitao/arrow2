@@ -1,10 +1,10 @@
 use parquet2::{
     encoding::{hybrid_rle, Encoding},
-    metadata::ColumnDescriptor,
     read::{decompress_page, CompressedPage, FixedLenByteArrayPageDict, Page},
     serialization::read::levels,
 };
 
+use super::{ColumnChunkMetaData, ColumnDescriptor};
 use crate::{
     array::FixedSizeBinaryArray,
     bitmap::{BitmapIter, MutableBitmap},
@@ -41,8 +41,6 @@ pub(crate) fn read_dict_buffer(
 
     let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
 
-    validity.reserve(length);
-    values.reserve(length);
     for run in validity_iterator {
         match run {
             hybrid_rle::HybridEncoded::Bitpacked(packed) => {
@@ -90,8 +88,6 @@ pub(crate) fn read_optional(
 
     let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
 
-    validity.reserve(length);
-    values.reserve(length * size);
     for run in validity_iterator {
         match run {
             hybrid_rle::HybridEncoded::Bitpacked(packed) => {
@@ -132,17 +128,23 @@ pub(crate) fn read_required(buffer: &[u8], length: u32, size: i32, values: &mut 
 pub fn iter_to_array<I, E>(
     mut iter: I,
     size: i32,
-    descriptor: &ColumnDescriptor,
+    metadata: &ColumnChunkMetaData,
 ) -> Result<FixedSizeBinaryArray>
 where
     ArrowError: From<E>,
     I: Iterator<Item = std::result::Result<CompressedPage, E>>,
 {
-    let capacity = 0;
-    let mut values = MutableBuffer::<u8>::with_capacity(0);
+    let capacity = metadata.num_values() as usize;
+    let mut values = MutableBuffer::<u8>::with_capacity(capacity * size as usize);
     let mut validity = MutableBitmap::with_capacity(capacity);
     iter.try_for_each(|page| {
-        extend_from_page(page?, size, &descriptor, &mut values, &mut validity)
+        extend_from_page(
+            page?,
+            size,
+            metadata.descriptor(),
+            &mut values,
+            &mut validity,
+        )
     })?;
 
     Ok(FixedSizeBinaryArray::from_data(

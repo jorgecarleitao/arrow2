@@ -185,9 +185,7 @@ mod tests {
         let metadata = read_metadata(reader)?;
         let iter = get_page_iterator(&metadata, row_group, column, reader)?;
 
-        let descriptor = iter.descriptor().clone();
-
-        page_iter_to_array(iter, &descriptor)
+        page_iter_to_array(iter, metadata.row_groups[row_group].column(column))
     }
 
     fn round_trip(column: usize, nullable: bool) -> Result<()> {

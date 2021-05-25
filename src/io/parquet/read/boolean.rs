@@ -7,7 +7,7 @@ use crate::{
 use super::utils;
 use parquet2::{
     encoding::{hybrid_rle, Encoding},
-    metadata::ColumnDescriptor,
+    metadata::{ColumnChunkMetaData, ColumnDescriptor},
     read::{decompress_page, CompressedPage, Page},
 };
 
@@ -39,8 +39,6 @@ fn read_optional(
     let values_len = values_buffer.len() * 8;
     let mut values_iterator = BitmapIter::new(values_buffer, 0, values_len);
 
-    validity.reserve(length);
-    values.reserve(length);
     for run in validity_iterator {
         match run {
             hybrid_rle::HybridEncoded::Bitpacked(packed_validity) => {
@@ -73,16 +71,18 @@ fn read_optional(
     }
 }
 
-pub fn iter_to_array<I, E>(mut iter: I, descriptor: &ColumnDescriptor) -> Result<BooleanArray>
+pub fn iter_to_array<I, E>(mut iter: I, metadata: &ColumnChunkMetaData) -> Result<BooleanArray>
 where
     ArrowError: From<E>,
     I: Iterator<Item = std::result::Result<CompressedPage, E>>,
 {
     // todo: push metadata from the file to get this capacity
-    let capacity = 0;
+    let capacity = metadata.num_values() as usize;
     let mut values = MutableBitmap::with_capacity(capacity);
     let mut validity = MutableBitmap::with_capacity(capacity);
-    iter.try_for_each(|page| extend_from_page(page?, &descriptor, &mut values, &mut validity))?;
+    iter.try_for_each(|page| {
+        extend_from_page(page?, metadata.descriptor(), &mut values, &mut validity)
+    })?;
 
     Ok(BooleanArray::from_data(values.into(), validity.into()))
 }
