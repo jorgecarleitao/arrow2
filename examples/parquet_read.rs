@@ -22,14 +22,14 @@ fn read_column_chunk(path: &str, row_group: usize, column: usize) -> Result<Box<
     // on this operation
     let iter = read::get_page_iterator(&file_metadata, row_group, column, &mut file)?;
 
-    // This is for now required, but we hope to remove the need for this clone.
-    let descriptor = iter.descriptor().clone();
+    // get the columns' metadata
+    let metadata = file_metadata.row_groups[row_group].column(column);
 
     // This is the actual work. In this case, pages are read (by calling `iter.next()`) and are
     // immediately decompressed, decoded, deserialized to arrow and deallocated.
     // This uses a combination of IO and CPU. At this point, `array` is the arrow-corresponding
     // array of the parquets' physical type.
-    let array = read::page_iter_to_array(iter, &descriptor)?;
+    let array = read::page_iter_to_array(iter, metadata)?;
 
     // Cast the array to the corresponding Arrow's data type. When the physical type
     // is the same, this operation is `O(1)`. Otherwise, it incurs some CPU cost.

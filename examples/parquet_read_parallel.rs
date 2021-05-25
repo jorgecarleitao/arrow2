@@ -50,10 +50,8 @@ fn parallel_read(path: &str) -> Result<Vec<Box<dyn Array>>> {
             let (column, row_group, iter) = rx_consumer.recv().unwrap();
             let start = SystemTime::now();
             println!("consumer start - {} {}", column, row_group);
-            let descriptor = metadata_consumer.row_groups[row_group]
-                .column(column)
-                .descriptor();
-            let array = read::page_iter_to_array(iter.into_iter(), descriptor).unwrap();
+            let metadata = metadata_consumer.row_groups[row_group].column(column);
+            let array = read::page_iter_to_array(iter.into_iter(), metadata).unwrap();
             println!(
                 "consumer end - {:?}: {} {}",
                 start.elapsed().unwrap(),
