@@ -25,11 +25,13 @@ use crate::{
 mod boolean_to;
 mod dictionary_to;
 mod primitive_to;
+mod timestamps;
 mod utf8_to;
 
 pub use boolean_to::*;
 pub use dictionary_to::*;
 pub use primitive_to::*;
+pub use timestamps::*;
 pub use utf8_to::*;
 
 /// Returns true if this type is numeric: (UInt*, Unit*, or Float*).
@@ -89,7 +91,9 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
 
         (Utf8, Date32) => true,
         (Utf8, Date64) => true,
+        (Utf8, Timestamp(TimeUnit::Nanosecond, None)) => true,
         (Utf8, _) => is_numeric(to_type),
+        (LargeUtf8, Timestamp(TimeUnit::Nanosecond, None)) => true,
         (LargeUtf8, _) => is_numeric(to_type),
         (_, Utf8) => is_numeric(from_type) || from_type == &Binary,
 
@@ -365,6 +369,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
             Float64 => utf8_to_primitive_dyn::<i32, f64>(array, to_type),
             Date32 => utf8_to_date32_dyn::<i32>(array),
             Date64 => utf8_to_date64_dyn::<i32>(array),
+            Timestamp(TimeUnit::Nanosecond, None) => utf8_to_timestamp_ns_dyn::<i32>(array),
             _ => Err(ArrowError::NotYetImplemented(format!(
                 "Casting from {:?} to {:?} not supported",
                 from_type, to_type,
@@ -383,6 +388,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
             Float64 => utf8_to_primitive_dyn::<i64, f64>(array, to_type),
             Date32 => utf8_to_date32_dyn::<i64>(array),
             Date64 => utf8_to_date64_dyn::<i64>(array),
+            Timestamp(TimeUnit::Nanosecond, None) => utf8_to_timestamp_ns_dyn::<i64>(array),
             _ => Err(ArrowError::NotYetImplemented(format!(
                 "Casting from {:?} to {:?} not supported",
                 from_type, to_type,

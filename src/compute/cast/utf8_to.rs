@@ -1,7 +1,13 @@
 use chrono::Datelike;
 
-use crate::{array::*, datatypes::DataType, types::NativeType};
+use crate::{
+    array::*,
+    datatypes::{DataType, TimeUnit},
+    types::NativeType,
+};
 use crate::{error::Result, temporal_conversions::EPOCH_DAYS_FROM_CE};
+
+use super::utf8_to_timestamp_ns_scalar;
 
 /// Casts a [`Utf8Array`] to a [`PrimitiveArray`], making any uncastable value a Null.
 pub fn utf8_to_primitive<O: Offset, T>(from: &Utf8Array<O>, to: &DataType) -> PrimitiveArray<T>
@@ -81,4 +87,18 @@ pub fn utf8_to_dictionary<O: Offset, K: DictionaryKey>(
         Box::new(K::DATA_TYPE),
         Box::new(from.data_type().clone()),
     )))
+}
+
+pub(super) fn utf8_to_timestamp_ns_dyn<O: Offset>(from: &dyn Array) -> Result<Box<dyn Array>> {
+    let from = from.as_any().downcast_ref().unwrap();
+    Ok(Box::new(utf8_to_timestamp_ns::<O>(from)))
+}
+
+/// The array version of [`utf8_to_timestamp_ns_scalar`].
+pub fn utf8_to_timestamp_ns<O: Offset>(from: &Utf8Array<O>) -> PrimitiveArray<i64> {
+    let iter = from
+        .iter()
+        .map(|x| x.and_then(|x| utf8_to_timestamp_ns_scalar(x).ok()));
+    Primitive::<i64>::from_trusted_len_iter(iter)
+        .to(DataType::Timestamp(TimeUnit::Nanosecond, None))
 }
