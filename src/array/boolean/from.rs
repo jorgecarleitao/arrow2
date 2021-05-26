@@ -1,7 +1,9 @@
 use std::iter::FromIterator;
 
 use crate::{
+    array::TryFromIterator,
     bitmap::{Bitmap, MutableBitmap},
+    error::Result as ArrowResult,
     trusted_len::TrustedLen,
 };
 
@@ -173,6 +175,29 @@ impl<Ptr: std::borrow::Borrow<Option<bool>>> FromIterator<Ptr> for BooleanArray 
     }
 }
 
+impl<Ptr: std::borrow::Borrow<Option<bool>>> TryFromIterator<Ptr> for BooleanArray {
+    fn try_from_iter<I: IntoIterator<Item = ArrowResult<Ptr>>>(iter: I) -> ArrowResult<Self> {
+        let iter = iter.into_iter();
+        let (lower, _) = iter.size_hint();
+
+        let mut validity = MutableBitmap::with_capacity(lower);
+
+        let values: Bitmap = iter
+            .map(|item| {
+                Ok(if let Some(a) = item?.borrow() {
+                    validity.push(true);
+                    *a
+                } else {
+                    validity.push(false);
+                    false
+                })
+            })
+            .collect::<ArrowResult<_>>()?;
+
+        Ok(Self::from_data(values, validity.into()))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -180,9 +205,17 @@ mod tests {
     use crate::error::Result;
 
     #[test]
-    fn try_from_iter() -> Result<()> {
+    fn from_trusted_len_iter() -> Result<()> {
         let iter = std::iter::repeat(true).take(2).map(Some);
         let a = BooleanArray::from_trusted_len_iter(iter);
+        assert_eq!(a.len(), 2);
+        Ok(())
+    }
+
+    #[test]
+    fn try_from_iter() -> Result<()> {
+        let iter = std::iter::repeat(true).take(2).map(Some).map(Ok);
+        let a = BooleanArray::try_from_iter(iter)?;
         assert_eq!(a.len(), 2);
         Ok(())
     }
