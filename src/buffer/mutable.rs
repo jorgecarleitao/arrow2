@@ -249,8 +249,10 @@ impl<T: NativeType> MutableBuffer<T> {
     /// Caller must ensure that the capacity()-len()>=size_of<T>()
     #[inline]
     pub(crate) unsafe fn push_unchecked(&mut self, item: T) {
-        let dst = self.ptr.as_ptr().add(self.len);
-        std::ptr::write(dst, item);
+        unsafe {
+            let dst = self.ptr.as_ptr().add(self.len);
+            std::ptr::write(dst, item);
+        }
         self.len += 1;
     }
 
