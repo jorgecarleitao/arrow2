@@ -23,13 +23,13 @@ pub struct ListArray<O: Offset> {
 
 impl<O: Offset> ListArray<O> {
     pub fn new_empty(data_type: DataType) -> Self {
-        let values = new_empty_array(Self::get_child(&data_type).clone()).into();
+        let values = new_empty_array(Self::get_child_type(&data_type).clone()).into();
         Self::from_data(data_type, Buffer::from(&[O::zero()]), values, None)
     }
 
     #[inline]
     pub fn new_null(data_type: DataType, length: usize) -> Self {
-        let child = Self::get_child(&data_type).clone();
+        let child = Self::get_child_type(&data_type).clone();
         Self::from_data(
             data_type,
             Buffer::new_zeroed(length + 1),
@@ -47,7 +47,7 @@ impl<O: Offset> ListArray<O> {
         check_offsets(&offsets, values.len());
 
         // validate data_type
-        let child_data_type = Self::get_child(&data_type);
+        let child_data_type = Self::get_child_type(&data_type);
         assert_eq!(
             child_data_type,
             values.data_type(),
@@ -130,7 +130,7 @@ impl<O: Offset> ListArray<O> {
     }
 
     #[inline]
-    pub(crate) fn get_child_field(data_type: &DataType) -> &Field {
+    pub fn get_child_field(data_type: &DataType) -> &Field {
         if O::is_large() {
             if let DataType::LargeList(child) = data_type {
                 child.as_ref()
@@ -145,7 +145,7 @@ impl<O: Offset> ListArray<O> {
     }
 
     #[inline]
-    pub(crate) fn get_child(data_type: &DataType) -> &DataType {
+    pub fn get_child_type(data_type: &DataType) -> &DataType {
         Self::get_child_field(data_type).data_type()
     }
 }
