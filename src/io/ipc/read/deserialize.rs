@@ -303,7 +303,7 @@ where
     // Older versions of the IPC format sometimes do not report an offset
     .or_else(|_| Result::Ok(MutableBuffer::<O>::from(&[O::default()]).into()))?;
 
-    let value_data_type = ListArray::<O>::get_child(&data_type).clone();
+    let value_data_type = ListArray::<O>::get_child_type(&data_type).clone();
 
     let values = read(
         field_nodes,
