@@ -19,8 +19,8 @@
 
 use crate::{
     array::{
-        Array, BinaryArray, BooleanArray, DictionaryArray, ListArray, NullArray, Offset,
-        PrimitiveArray, StructArray, Utf8Array,
+        new_empty_array, Array, BinaryArray, BooleanArray, DictionaryArray, ListArray, NullArray,
+        Offset, PrimitiveArray, StructArray, Utf8Array,
     },
     datatypes::{DataType, IntervalUnit},
     error::{ArrowError, Result},
@@ -56,6 +56,10 @@ macro_rules! downcast_dict_take {
 }
 
 pub fn take<O: Offset>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result<Box<dyn Array>> {
+    if indices.len() == 0 {
+        return Ok(new_empty_array(values.data_type().clone()));
+    }
+
     match values.data_type() {
         DataType::Null => Ok(Box::new(NullArray::from_data(indices.len()))),
         DataType::Boolean => {
@@ -352,5 +356,13 @@ mod tests {
                 assert!(take(array.as_ref(), &indices).is_err());
             }
         });
+    }
+
+    #[test]
+    fn empty() {
+        let indices = Int32Array::from_slice(&[]);
+        let values = BooleanArray::from(vec![Some(true), Some(false)]);
+        let a = take(&values, &indices).unwrap();
+        assert_eq!(a.len(), 0)
     }
 }

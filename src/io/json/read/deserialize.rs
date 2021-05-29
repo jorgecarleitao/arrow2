@@ -108,7 +108,7 @@ fn read_utf8<O: Offset>(rows: &[&Value]) -> Utf8Array<O> {
 }
 
 fn read_list<O: Offset>(rows: &[&Value], data_type: DataType) -> ListArray<O> {
-    let child = ListArray::<O>::get_child(&data_type);
+    let child = ListArray::<O>::get_child_type(&data_type);
 
     let mut validity = MutableBitmap::with_capacity(rows.len());
     let mut inner = Vec::<&Value>::with_capacity(rows.len());
