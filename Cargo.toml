@@ -49,6 +49,9 @@ packed_simd = { version = "0.3.4", optional = true, package = "packed_simd_2" }
 
 multiversion = "0.6.1"
 
+# for faster hashing
+ahash = { version = "0.7", optional = true }
+
 [dependencies.parquet2]
 git = "https://github.com/jorgecarleitao/parquet2"
 rev = "bd2b764fe39286e23ef32a6662bc32edd656c840"
@@ -64,7 +67,7 @@ doc-comment = "0.3"
 crossbeam-channel = "0.5.1"
 
 [features]
-default = ["io_csv", "io_json", "io_ipc", "io_json_integration", "io_print", "io_parquet", "regex", "merge_sort", "benchmarks"]
+default = ["io_csv", "io_json", "io_ipc", "io_json_integration", "io_print", "io_parquet", "regex", "merge_sort", "ahash", "benchmarks"]
 merge_sort = ["itertools"]
 io_csv = ["csv", "lazy_static", "regex"]
 io_json = ["serde", "serde_derive", "serde_json", "indexmap"]
