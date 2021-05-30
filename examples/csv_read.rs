@@ -11,15 +11,19 @@ fn read_path(path: &str, projection: Option<&[usize]>) -> Result<RecordBatch> {
     // to a `DataType`.
     let schema = read::infer_schema(&mut reader, None, true, &read::infer)?;
 
+    // allocate space to read from CSV to. The size of this vec denotes how many rows are read.
+    let mut rows = vec![read::ByteRecord::default(); 100];
+
     // skip 0 (excluding the header) and read up to 100 rows.
     // this is IO-intensive and performs minimal CPU work. In particular,
     // no deserialization is performed.
-    let rows = read::read_rows(&mut reader, 0, 100)?;
+    let rows_read = read::read_rows(&mut reader, 0, &mut rows)?;
+    let rows = &rows[..rows_read];
 
     // parse the batches into a `RecordBatch`. This is CPU-intensive, has no IO,
     // and can be performed on a different thread by passing `rows` through a channel.
     read::deserialize_batch(
-        &rows,
+        rows,
         schema.fields(),
         projection,
         0,

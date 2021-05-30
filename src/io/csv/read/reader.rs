@@ -28,8 +28,8 @@ pub fn projected_schema(schema: &Schema, projection: Option<&[usize]>) -> Schema
 pub fn read_rows<R: Read>(
     reader: &mut Reader<R>,
     skip: usize,
-    len: usize,
-) -> Result<Vec<ByteRecord>> {
+    rows: &mut [ByteRecord],
+) -> Result<usize> {
     // skip first `start` rows.
     let mut row = ByteRecord::new();
     for _ in 0..skip {
@@ -39,16 +39,17 @@ pub fn read_rows<R: Read>(
         }
     }
 
-    reader
-        .byte_records()
-        .enumerate()
-        .take(len)
-        .map(|(row_number, row)| {
-            row.map_err(|e| {
-                ArrowError::External(format!(" at line {}", skip + row_number), Box::new(e))
-            })
-        })
-        .collect::<Result<Vec<_>>>()
+    let mut row_number = 0;
+    for row in rows.iter_mut() {
+        let has_more = reader.read_byte_record(row).map_err(|e| {
+            ArrowError::External(format!(" at line {}", skip + row_number), Box::new(e))
+        })?;
+        if !has_more {
+            break;
+        }
+        row_number += 1;
+    }
+    Ok(row_number)
 }
 
 lazy_static! {
@@ -100,9 +101,16 @@ mod tests {
 
         let schema = Arc::new(infer_schema(&mut reader, None, true, &infer)?);
 
-        let rows = read_rows(&mut reader, 0, 100)?;
+        let mut rows = vec![ByteRecord::default(); 100];
+        let rows_read = read_rows(&mut reader, 0, &mut rows)?;
 
-        let batch = deserialize_batch(&rows, schema.fields(), None, 0, deserialize_column)?;
+        let batch = deserialize_batch(
+            &rows[..rows_read],
+            schema.fields(),
+            None,
+            0,
+            deserialize_column,
+        )?;
 
         let batch_schema = batch.schema();
 
