@@ -22,6 +22,17 @@ pub struct DictionaryPrimitive<K: DictionaryKey, B: Builder<T>, T: Hash> {
     phantom: std::marker::PhantomData<T>,
 }
 
+impl<K: DictionaryKey, B: Builder<T>, T: Hash> DictionaryPrimitive<K, B, T> {
+    fn with_capacity(capacity: usize) -> Self {
+        Self {
+            keys: Primitive::<K>::with_capacity(capacity),
+            values: B::with_capacity(0),
+            map: HashedMap::<u64, K>::default(),
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+
 impl<K: DictionaryKey, B: Builder<T> + ToArray, T: Hash> DictionaryPrimitive<K, B, T> {
     pub fn to(self, data_type: DataType) -> DictionaryArray<K> {
         let data_type = DictionaryArray::<K>::get_child(&data_type);
@@ -69,7 +80,7 @@ where
         let (lower, _) = iterator.size_hint();
         let mut primitive: DictionaryPrimitive<K, B, T> = Builder::<T>::with_capacity(lower);
         for item in iterator {
-            primitive.try_push(item?.as_ref())?;
+            primitive.try_push(item?)?;
         }
         Ok(primitive)
     }
@@ -81,31 +92,25 @@ where
     B: Builder<T>,
     T: Hash,
 {
-    #[inline]
     fn with_capacity(capacity: usize) -> Self {
-        Self {
-            keys: Primitive::<K>::with_capacity(capacity),
-            values: B::with_capacity(0),
-            map: HashedMap::<u64, K>::default(),
-            phantom: std::marker::PhantomData,
-        }
+        Self::with_capacity(capacity)
     }
 
     #[inline]
-    fn try_push(&mut self, value: Option<&T>) -> Result<()> {
+    fn try_push(&mut self, value: Option<T>) -> Result<()> {
         match value {
             Some(v) => {
                 let mut hasher = DefaultHasher::new();
                 v.hash(&mut hasher);
                 let hash = hasher.finish();
                 match self.map.get(&hash) {
-                    Some(key) => self.keys.push(Some(key)),
+                    Some(key) => self.keys.push(Some(*key)),
                     None => {
                         let key = K::from_usize(self.map.len())
                             .ok_or(ArrowError::DictionaryKeyOverflowError)?;
-                        self.values.try_push(value)?;
+                        self.values.try_push(Some(v))?;
                         self.map.insert(hash, key);
-                        self.keys.push(Some(&key));
+                        self.keys.push(Some(key));
                     }
                 }
             }
@@ -117,7 +122,7 @@ where
     }
 
     #[inline]
-    fn push(&mut self, value: Option<&T>) {
+    fn push(&mut self, value: Option<T>) {
         self.try_push(value).unwrap()
     }
 }

@@ -227,6 +227,22 @@ pub struct Utf8Primitive<O: Offset> {
     length: O,
 }
 
+impl<O: Offset> Utf8Primitive<O> {
+    /// Initializes a new [`Utf8Primitive`] with a pre-allocated number of slots.
+    fn with_capacity(capacity: usize) -> Self {
+        let mut offsets = MutableBuffer::<O>::with_capacity(capacity + 1);
+        let length = O::default();
+        unsafe { offsets.push_unchecked(length) };
+
+        Self {
+            offsets,
+            values: MutableBuffer::<u8>::new(),
+            validity: MutableBitmap::with_capacity(capacity),
+            length,
+        }
+    }
+}
+
 impl<O: Offset, P: AsRef<str>> FromIterator<Option<P>> for Utf8Primitive<O> {
     fn from_iter<I: IntoIterator<Item = Option<P>>>(iter: I) -> Self {
         Self::try_from_iter(iter.into_iter().map(Ok)).unwrap()
@@ -259,22 +275,12 @@ where
 }
 
 impl<O: Offset> Builder<&str> for Utf8Primitive<O> {
-    #[inline]
     fn with_capacity(capacity: usize) -> Self {
-        let mut offsets = MutableBuffer::<O>::with_capacity(capacity + 1);
-        let length = O::default();
-        unsafe { offsets.push_unchecked(length) };
-
-        Self {
-            offsets,
-            values: MutableBuffer::<u8>::new(),
-            validity: MutableBitmap::with_capacity(capacity),
-            length,
-        }
+        Self::with_capacity(capacity)
     }
 
     #[inline]
-    fn try_push(&mut self, value: Option<&&str>) -> ArrowResult<()> {
+    fn try_push(&mut self, value: Option<&str>) -> ArrowResult<()> {
         match value {
             Some(v) => {
                 let bytes = v.as_bytes();
@@ -294,7 +300,7 @@ impl<O: Offset> Builder<&str> for Utf8Primitive<O> {
     }
 
     #[inline]
-    fn push(&mut self, value: Option<&&str>) {
+    fn push(&mut self, value: Option<&str>) {
         self.try_push(value).unwrap()
     }
 }

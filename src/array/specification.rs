@@ -12,7 +12,7 @@ use crate::{
 /// # Safety
 /// Do not implement.
 pub unsafe trait Offset:
-    NativeType + NaturalDataType + Num + Ord + std::ops::AddAssign
+    NativeType + NaturalDataType + Num + Ord + std::ops::AddAssign + num::CheckedAdd
 {
     fn is_large() -> bool;
 

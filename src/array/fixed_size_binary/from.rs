@@ -18,6 +18,17 @@ pub struct FixedSizeBinaryPrimitive {
     current_validity: usize,
 }
 
+impl FixedSizeBinaryPrimitive {
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            values: MutableBuffer::<u8>::new(),
+            validity: MutableBitmap::with_capacity(capacity),
+            size: None,
+            current_validity: 0,
+        }
+    }
+}
+
 impl<P: AsRef<[u8]>> FromIterator<Option<P>> for FixedSizeBinaryPrimitive {
     fn from_iter<I: IntoIterator<Item = Option<P>>>(iter: I) -> Self {
         Self::try_from_iter(iter.into_iter().map(Ok)).unwrap()
@@ -43,21 +54,14 @@ where
 }
 
 impl Builder<&[u8]> for FixedSizeBinaryPrimitive {
-    #[inline]
     fn with_capacity(capacity: usize) -> Self {
-        Self {
-            values: MutableBuffer::<u8>::new(),
-            validity: MutableBitmap::with_capacity(capacity),
-            size: None,
-            current_validity: 0,
-        }
+        Self::with_capacity(capacity)
     }
 
     #[inline]
-    fn try_push(&mut self, value: Option<&&[u8]>) -> ArrowResult<()> {
+    fn try_push(&mut self, value: Option<&[u8]>) -> ArrowResult<()> {
         match value {
-            Some(v) => {
-                let bytes = *v;
+            Some(bytes) => {
                 if let Some(size) = self.size {
                     if size != bytes.len() {
                         return Err(ArrowError::DictionaryKeyOverflowError);
@@ -83,7 +87,7 @@ impl Builder<&[u8]> for FixedSizeBinaryPrimitive {
     }
 
     #[inline]
-    fn push(&mut self, value: Option<&&[u8]>) {
+    fn push(&mut self, value: Option<&[u8]>) {
         self.try_push(value).unwrap()
     }
 }

@@ -34,6 +34,14 @@ impl<T: NativeType, P: AsRef<[Option<T>]>> From<P> for Primitive<T> {
 }
 
 impl<T: NativeType> Primitive<T> {
+    /// Initializes a new [`Primitive`] with a pre-allocated number of slots.
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            values: MutableBuffer::<T>::with_capacity(capacity),
+            validity: MutableBitmap::with_capacity(capacity),
+        }
+    }
+
     /// Creates a [`Primitive`] from an iterator of trusted length.
     /// # Safety
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
@@ -192,10 +200,10 @@ impl<T: NativeType> Builder<T> for Primitive<T> {
 
     /// Pushes a new item to this struct
     #[inline]
-    fn push(&mut self, value: Option<&T>) {
+    fn push(&mut self, value: Option<T>) {
         match value {
             Some(v) => {
-                self.values.push(*v);
+                self.values.push(v);
                 self.validity.push(true);
             }
             None => {
