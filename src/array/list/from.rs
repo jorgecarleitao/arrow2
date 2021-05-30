@@ -124,6 +124,13 @@ impl<O: Offset, B: Builder<T> + ToArray, T> ToArray for ListPrimitive<O, B, T> {
     }
 }
 
+impl<O: Offset, B: Builder<T> + IntoArray, T> IntoArray for ListPrimitive<O, B, T> {
+    fn into_arc(self) -> Arc<dyn Array> {
+        let a: ListArray<O> = self.into();
+        Arc::new(a)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::array::{Primitive, PrimitiveArray};
