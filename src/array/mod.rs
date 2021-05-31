@@ -392,7 +392,7 @@ pub trait IntoArray {
     fn into_arc(self) -> std::sync::Arc<dyn Array>;
 }
 
-/// A trait describing the ability of a struct to create itself from a falible iterator
+/// A trait describing the ability of a struct to create itself from a falible iterator.
 /// Used in the context of creating arrays from non-sized iterators.
 pub trait TryFromIterator<A>: Sized {
     fn try_from_iter<T: IntoIterator<Item = Result<A>>>(iter: T) -> Result<Self>;
@@ -406,12 +406,12 @@ pub trait Builder<T>: TryFromIterator<Option<T>> {
     /// Push a new item to the builder.
     /// This operation may panic if the container cannot hold more items.
     /// For example, if all possible keys are exausted when building a dictionary.
-    fn push(&mut self, item: Option<&T>);
+    fn push(&mut self, item: Option<T>);
 
     /// Fallible version of `push`, on which the operation errors instead of panicking.
     /// prefer this if there is no guarantee that the operation will not fail.
     #[inline]
-    fn try_push(&mut self, item: Option<&T>) -> Result<()> {
+    fn try_push(&mut self, item: Option<T>) -> Result<()> {
         self.push(item);
         Ok(())
     }

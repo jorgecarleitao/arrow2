@@ -16,6 +16,20 @@ pub struct FixedSizeListPrimitive<B: Builder<T>, T> {
     phantom: std::marker::PhantomData<T>,
 }
 
+impl<B: Builder<T>, T> FixedSizeListPrimitive<B, T> {
+    #[inline]
+    pub fn with_capacity(capacity: usize) -> Self {
+        // stricky not correct: it should be capacity * size but constant generics
+        // in Rust are still wip, so we can't know the size at this point
+        let values_capacity = capacity;
+        Self {
+            values: B::with_capacity(values_capacity),
+            validity: MutableBitmap::with_capacity(capacity),
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+
 impl<A: Builder<T> + ToArray, T> FixedSizeListPrimitive<A, T> {
     pub fn to(self, data_type: DataType) -> FixedSizeListArray {
         let values = self
@@ -28,7 +42,7 @@ impl<A: Builder<T> + ToArray, T> FixedSizeListPrimitive<A, T> {
 impl<B, T, P> FromIterator<Option<P>> for FixedSizeListPrimitive<B, T>
 where
     B: Builder<T>,
-    P: AsRef<[Option<T>]> + IntoIterator<Item = Option<T>>,
+    P: IntoIterator<Item = Option<T>>,
 {
     fn from_iter<I: IntoIterator<Item = Option<P>>>(iter: I) -> Self {
         Self::try_from_iter(iter.into_iter().map(Ok)).unwrap()
@@ -38,14 +52,14 @@ where
 impl<B, T, P> TryFromIterator<Option<P>> for FixedSizeListPrimitive<B, T>
 where
     B: Builder<T>,
-    P: AsRef<[Option<T>]> + IntoIterator<Item = Option<T>>,
+    P: IntoIterator<Item = Option<T>>,
 {
     fn try_from_iter<I: IntoIterator<Item = Result<Option<P>>>>(iter: I) -> Result<Self> {
         let iterator = iter.into_iter();
         let (lower, _) = iterator.size_hint();
         let mut primitive: FixedSizeListPrimitive<B, T> = Builder::<P>::with_capacity(lower);
         for item in iterator {
-            primitive.try_push(item?.as_ref())?;
+            primitive.try_push(item?)?;
         }
         Ok(primitive)
     }
@@ -54,25 +68,18 @@ where
 impl<T, B, P> Builder<P> for FixedSizeListPrimitive<B, T>
 where
     B: Builder<T>,
-    P: AsRef<[Option<T>]> + IntoIterator<Item = Option<T>>,
+    P: IntoIterator<Item = Option<T>>,
 {
-    #[inline]
     fn with_capacity(capacity: usize) -> Self {
-        Self {
-            values: B::with_capacity(0),
-            validity: MutableBitmap::with_capacity(capacity),
-            phantom: std::marker::PhantomData,
-        }
+        Self::with_capacity(capacity)
     }
 
     #[inline]
-    fn try_push(&mut self, value: Option<&P>) -> Result<()> {
+    fn try_push(&mut self, value: Option<P>) -> Result<()> {
         match value {
             Some(v) => {
-                let items = v.as_ref();
-                items
-                    .iter()
-                    .try_for_each(|item| self.values.try_push(item.as_ref()))?;
+                v.into_iter()
+                    .try_for_each(|item| self.values.try_push(item))?;
                 self.validity.push(true);
             }
             None => {
@@ -83,7 +90,7 @@ where
     }
 
     #[inline]
-    fn push(&mut self, value: Option<&P>) {
+    fn push(&mut self, value: Option<P>) {
         self.try_push(value).unwrap()
     }
 }
