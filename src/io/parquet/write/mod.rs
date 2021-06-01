@@ -172,7 +172,9 @@ mod tests {
     use super::*;
 
     use crate::error::Result;
-    use crate::io::parquet::read::{get_page_iterator, page_iter_to_array, read_metadata};
+    use crate::io::parquet::read::{
+        get_page_iterator, page_iter_to_array, read_metadata, Decompressor,
+    };
     use std::io::{Cursor, Read, Seek};
 
     use super::super::tests::*;
@@ -183,9 +185,10 @@ mod tests {
         column: usize,
     ) -> Result<Box<dyn Array>> {
         let metadata = read_metadata(reader)?;
-        let iter = get_page_iterator(&metadata, row_group, column, reader)?;
+        let iter = get_page_iterator(&metadata, row_group, column, reader, vec![])?;
+        let mut iter = Decompressor::new(iter, vec![]);
 
-        page_iter_to_array(iter, metadata.row_groups[row_group].column(column))
+        page_iter_to_array(&mut iter, metadata.row_groups[row_group].column(column))
     }
 
     fn round_trip(column: usize, nullable: bool) -> Result<()> {

@@ -115,7 +115,7 @@ mod tests {
 }
 
 /// Round-trip with parquet using the same integration files used for IPC integration tests.
-#[cfg(test)]
+#[cfg(tests)]
 mod tests_integration {
     use std::sync::Arc;
 

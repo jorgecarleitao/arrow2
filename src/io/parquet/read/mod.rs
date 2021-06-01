@@ -4,6 +4,7 @@ mod binary;
 mod boolean;
 mod fixed_size_binary;
 mod primitive;
+mod record_batch;
 pub mod schema;
 mod utf8;
 mod utils;
@@ -14,12 +15,16 @@ use crate::{
     error::{ArrowError, Result},
 };
 
+pub use record_batch::RecordReader;
 pub use schema::{get_schema, is_type_nullable, FileMetaData};
 
 pub use parquet2::{
     error::ParquetError,
-    metadata::{ColumnChunkMetaData, ColumnDescriptor},
-    read::CompressedPage,
+    metadata::{ColumnChunkMetaData, ColumnDescriptor, RowGroupMetaData},
+    read::{
+        decompress, streaming_iterator, CompressedPage, Decompressor, Page, PageHeader,
+        StreamingIterator,
+    },
     schema::{
         types::{LogicalType, ParquetType, PhysicalType, PrimitiveConvertedType},
         TimeUnit as ParquetTimeUnit, TimestampType,
@@ -38,8 +43,11 @@ pub fn get_page_iterator<'b, RR: Read + Seek>(
     row_group: usize,
     column: usize,
     reader: &'b mut RR,
+    buffer: Vec<u8>,
 ) -> Result<PageIterator<'b, RR>> {
-    Ok(_get_page_iterator(metadata, row_group, column, reader)?)
+    Ok(_get_page_iterator(
+        metadata, row_group, column, reader, buffer,
+    )?)
 }
 
 /// Reads parquets' metadata.
@@ -47,7 +55,7 @@ pub fn read_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetaData> {
     Ok(_read_metadata(reader)?)
 }
 
-fn page_iter_i64<I: Iterator<Item = std::result::Result<CompressedPage, ParquetError>>>(
+fn page_iter_i64<I: StreamingIterator<Item = std::result::Result<Page, ParquetError>>>(
     iter: I,
     metadata: &ColumnChunkMetaData,
     converted_type: &Option<PrimitiveConvertedType>,
@@ -63,7 +71,7 @@ fn page_iter_i64<I: Iterator<Item = std::result::Result<CompressedPage, ParquetE
     }
 }
 
-fn page_iter_i32<I: Iterator<Item = std::result::Result<CompressedPage, ParquetError>>>(
+fn page_iter_i32<I: StreamingIterator<Item = std::result::Result<Page, ParquetError>>>(
     iter: I,
     metadata: &ColumnChunkMetaData,
     converted_type: &Option<PrimitiveConvertedType>,
@@ -88,7 +96,7 @@ fn page_iter_i32<I: Iterator<Item = std::result::Result<CompressedPage, ParquetE
     }
 }
 
-fn page_iter_byte_array<I: Iterator<Item = std::result::Result<CompressedPage, ParquetError>>>(
+fn page_iter_byte_array<I: StreamingIterator<Item = std::result::Result<Page, ParquetError>>>(
     iter: I,
     metadata: &ColumnChunkMetaData,
     converted_type: &Option<PrimitiveConvertedType>,
@@ -112,7 +120,7 @@ fn page_iter_byte_array<I: Iterator<Item = std::result::Result<CompressedPage, P
 }
 
 fn page_iter_fixed_len_byte_array<
-    I: Iterator<Item = std::result::Result<CompressedPage, ParquetError>>,
+    I: StreamingIterator<Item = std::result::Result<Page, ParquetError>>,
 >(
     iter: I,
     length: &i32,
@@ -134,8 +142,8 @@ fn page_iter_fixed_len_byte_array<
     })
 }
 
-pub fn page_iter_to_array<I: Iterator<Item = std::result::Result<CompressedPage, ParquetError>>>(
-    iter: I,
+pub fn page_iter_to_array<I: StreamingIterator<Item = std::result::Result<Page, ParquetError>>>(
+    iter: &mut I,
     metadata: &ColumnChunkMetaData,
 ) -> Result<Box<dyn Array>> {
     match metadata.descriptor().type_() {
@@ -201,9 +209,11 @@ mod tests {
         let mut file = File::open(path).unwrap();
 
         let metadata = read_metadata(&mut file)?;
-        let iter = get_page_iterator(&metadata, row_group, column, &mut file)?;
+        let iter = get_page_iterator(&metadata, row_group, column, &mut file, vec![])?;
 
-        page_iter_to_array(iter, metadata.row_groups[row_group].column(column))
+        let mut iter = Decompressor::new(iter, vec![]);
+
+        page_iter_to_array(&mut iter, metadata.row_groups[row_group].column(column))
     }
 
     fn test_pyarrow_integration(column: usize, version: usize, required: bool) -> Result<()> {
@@ -309,7 +319,6 @@ mod tests {
 #[cfg(test)]
 mod tests_integration {
     use super::*;
-    use crate::record_batch::RecordBatch;
     use std::sync::Arc;
 
     #[test]
@@ -322,25 +331,11 @@ mod tests_integration {
         let schema = get_schema(&file_metadata)?;
         let schema = Arc::new(schema);
 
-        // checks that record arrays and schema are consistent
-        file_metadata
-            .row_groups
-            .iter()
-            .enumerate()
-            .map(|(row_group, group)| {
-                let columns = group
-                    .columns()
-                    .iter()
-                    .enumerate()
-                    .map(|(column, column_meta)| {
-                        let pages =
-                            get_page_iterator(&file_metadata, row_group, column, &mut reader)?;
-                        page_iter_to_array(pages, column_meta).map(|x| x.into())
-                    })
-                    .collect::<Result<Vec<Arc<dyn Array>>>>()?;
-                RecordBatch::try_new(schema.clone(), columns)
-            })
-            .collect::<Result<Vec<_>>>()?;
+        let reader =
+            RecordReader::try_new(reader, Some(schema), None, None, Arc::new(|_, _| true))?;
+
+        let batches = reader.collect::<Result<Vec<_>>>()?;
+        assert_eq!(batches.len(), 1);
 
         Ok(())
     }

@@ -1,7 +1,7 @@
 use parquet2::{
     compression::create_codec,
     encoding::Encoding,
-    read::{CompressedPage, PageV1},
+    read::{CompressedPage, PageHeader},
     schema::{CompressionCodec, DataPageHeader},
 };
 
@@ -51,20 +51,20 @@ pub fn array_to_page_v1<O: Offset>(
         buffer
     };
 
-    let header = DataPageHeader {
+    let header = PageHeader::V1(DataPageHeader {
         num_values: array.len() as i32,
         encoding: Encoding::Plain,
         definition_level_encoding: Encoding::Rle,
         repetition_level_encoding: Encoding::Rle,
         statistics: None,
-    };
+    });
 
-    Ok(CompressedPage::V1(PageV1 {
-        buffer,
+    Ok(CompressedPage::new(
         header,
+        buffer,
         compression,
         uncompressed_page_size,
-        dictionary_page: None,
-        statistics: None,
-    }))
+        None,
+        None,
+    ))
 }
