@@ -206,8 +206,10 @@ mod tests {
     fn test(input: &str, data_type: DataType) -> Result<Arc<dyn Array>> {
         let reader = std::io::Cursor::new(input);
         let mut reader = ReaderBuilder::new().has_headers(false).from_reader(reader);
-        let rows = read_rows(&mut reader, 0, 10)?;
-        deserialize_column(&rows, 0, data_type, 0)
+
+        let mut rows = vec![ByteRecord::default(); 10];
+        let rows_read = read_rows(&mut reader, 0, &mut rows)?;
+        deserialize_column(&rows[..rows_read], 0, data_type, 0)
     }
 
     #[test]
