@@ -231,7 +231,7 @@ where
                                     // unwrap the Option and discard None values (from
                                     // JSON nulls)
                                     let mut types: Vec<&DataType> =
-                                        types.into_iter().filter_map(|t| t).collect();
+                                        types.into_iter().flatten().collect();
                                     types.dedup();
                                     // if a record contains only nulls, it is not
                                     // added to values
