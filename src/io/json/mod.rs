@@ -51,7 +51,7 @@ mod tests {
 
         let mut buf = Vec::new();
         {
-            let mut writer = Writer::new(&mut buf);
+            let mut writer = LineDelimitedWriter::new(&mut buf);
             writer.write_batches(&[batch]).unwrap();
         }
 

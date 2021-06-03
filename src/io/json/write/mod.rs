@@ -18,7 +18,7 @@
 mod serialize;
 mod writer;
 pub use serialize::write_record_batches;
-pub use writer::Writer;
+pub use writer::{ArrayWriter, LineDelimitedWriter, Writer};
 
 #[cfg(test)]
 mod tests {
@@ -46,7 +46,7 @@ mod tests {
 
         let mut buf = Vec::new();
         {
-            let mut writer = Writer::new(&mut buf);
+            let mut writer = LineDelimitedWriter::new(&mut buf);
             writer.write_batches(&[batch]).unwrap();
         }
 
@@ -97,7 +97,7 @@ mod tests {
 
         let mut buf = Vec::new();
         {
-            let mut writer = Writer::new(&mut buf);
+            let mut writer = LineDelimitedWriter::new(&mut buf);
             writer.write_batches(&[batch]).unwrap();
         }
 
@@ -134,7 +134,7 @@ mod tests {
 
         let mut buf = Vec::new();
         {
-            let mut writer = Writer::new(&mut buf);
+            let mut writer = LineDelimitedWriter::new(&mut buf);
             writer.write_batches(&[batch]).unwrap();
         }
 
@@ -175,7 +175,7 @@ mod tests {
 
         let mut buf = Vec::new();
         {
-            let mut writer = Writer::new(&mut buf);
+            let mut writer = LineDelimitedWriter::new(&mut buf);
             writer.write_batches(&[batch]).unwrap();
         }
 
@@ -239,7 +239,7 @@ mod tests {
 
         let mut buf = Vec::new();
         {
-            let mut writer = Writer::new(&mut buf);
+            let mut writer = LineDelimitedWriter::new(&mut buf);
             writer.write_batches(&[batch]).unwrap();
         }
 
