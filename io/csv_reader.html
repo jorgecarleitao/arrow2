@@ -190,15 +190,19 @@ fn read_path(path: &amp;str, projection: Option&lt;&amp;[usize]&gt;) -&gt; Resul
     // to a `DataType`.
     let schema = read::infer_schema(&amp;mut reader, None, true, &amp;read::infer)?;
 
+    // allocate space to read from CSV to. The size of this vec denotes how many rows are read.
+    let mut rows = vec![read::ByteRecord::default(); 100];
+
     // skip 0 (excluding the header) and read up to 100 rows.
     // this is IO-intensive and performs minimal CPU work. In particular,
     // no deserialization is performed.
-    let rows = read::read_rows(&amp;mut reader, 0, 100)?;
+    let rows_read = read::read_rows(&amp;mut reader, 0, &amp;mut rows)?;
+    let rows = &amp;rows[..rows_read];
 
     // parse the batches into a `RecordBatch`. This is CPU-intensive, has no IO,
     // and can be performed on a different thread by passing `rows` through a channel.
     read::deserialize_batch(
-        &amp;rows,
+        rows,
         schema.fields(),
         projection,
         0,
@@ -248,8 +252,10 @@ fn parallel_read(path: &amp;str) -&gt; Result&lt;Vec&lt;RecordBatch&gt;&gt; {
         let mut line_number = 0;
         let mut size = 1;
         while size &gt; 0 {
-            let rows = read::read_rows(&amp;mut reader, 0, batch_size).unwrap();
-            line_number += batch_size;
+            let mut rows = vec![read::ByteRecord::default(); batch_size];
+            let rows_read = read::read_rows(&amp;mut reader, 0, &amp;mut rows).unwrap();
+            rows.truncate(rows_read);
+            line_number += rows.len();
             size = rows.len();
             tx.send((rows, line_number)).unwrap();
         }
