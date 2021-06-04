@@ -808,7 +808,7 @@ fn read_column_chunk(path: &amp;str, row_group: usize, column: usize) -&gt; Resu
     // Construct an iterator over pages. This binds `file` to this iterator, and each iteration
     // is IO intensive as it will read a compressed page into memory. There is almost no CPU work
     // on this operation
-    let iter = read::get_page_iterator(&amp;file_metadata, row_group, column, &amp;mut file)?;
+    let pages = read::get_page_iterator(&amp;file_metadata, row_group, column, &amp;mut file, vec![])?;
 
     // get the columns' metadata
     let metadata = file_metadata.row_groups[row_group].column(column);
@@ -817,7 +817,9 @@ fn read_column_chunk(path: &amp;str, row_group: usize, column: usize) -&gt; Resu
     // immediately decompressed, decoded, deserialized to arrow and deallocated.
     // This uses a combination of IO and CPU. At this point, `array` is the arrow-corresponding
     // array of the parquets' physical type.
-    let array = read::page_iter_to_array(iter, metadata)?;
+    // `Decompressor` re-uses an internal buffer for de-compression, thereby maximizing memory re-use.
+    let mut pages = read::Decompressor::new(pages, vec![]);
+    let array = read::page_iter_to_array(&amp;mut pages, metadata)?;
 
     // Cast the array to the corresponding Arrow's data type. When the physical type
     // is the same, this operation is `O(1)`. Otherwise, it incurs some CPU cost.
@@ -839,6 +841,30 @@ fn main() -&gt; Result&lt;()&gt; {
 </code></pre></pre>
 <p>The example above minimizes memory usage at the expense of mixing IO and CPU tasks
 on the same thread, which may hurt performance if one of them is a bottleneck.</p>
+<p>For single-threaded reading, buffers used to read and decompress pages can be re-used.
+This create offers an API that encapsulates the above logic:</p>
+<pre><pre class="playground"><code class="language-rust">use std::fs::File;
+use std::sync::Arc;
+
+use arrow2::error::Result;
+use arrow2::io::parquet::read;
+
+fn main() -&gt; Result&lt;()&gt; {
+    use std::env;
+    let args: Vec&lt;String&gt; = env::args().collect();
+
+    let file_path = &amp;args[1];
+
+    let reader = File::open(file_path)?;
+    let reader = read::RecordReader::try_new(reader, None, None, None, Arc::new(|_, _| true))?;
+
+    for maybe_batch in reader {
+        let batch = maybe_batch?;
+        println!(&quot;{:?}&quot;, batch);
+    }
+    Ok(())
+}
+</code></pre></pre>
 <h3 id="parallelism-decoupling-of-cpu-from-io"><a class="header" href="#parallelism-decoupling-of-cpu-from-io">Parallelism decoupling of CPU from IO</a></h3>
 <p>One important aspect of the pages created by the iterator above is that they can cross
 thread boundaries. Consequently, the thread reading pages from a file (IO-bounded)
@@ -874,10 +900,15 @@ fn parallel_read(path: &amp;str) -&gt; Result&lt;Vec&lt;Box&lt;dyn Array&gt;&gt;
             for row_group in 0..producer_metadata.row_groups.len() {
                 let start = SystemTime::now();
                 println!(&quot;produce start: {} {}&quot;, column, row_group);
-                let pages =
-                    read::get_page_iterator(&amp;producer_metadata, row_group, column, &amp;mut file)
-                        .unwrap()
-                        .collect::&lt;Vec&lt;_&gt;&gt;();
+                let pages = read::get_page_iterator(
+                    &amp;producer_metadata,
+                    row_group,
+                    column,
+                    &amp;mut file,
+                    vec![],
+                )
+                .unwrap()
+                .collect::&lt;Vec&lt;_&gt;&gt;();
                 println!(
                     &quot;produce end - {:?}: {} {}&quot;,
                     start.elapsed().unwrap(),
@@ -900,7 +931,12 @@ fn parallel_read(path: &amp;str) -&gt; Result&lt;Vec&lt;Box&lt;dyn Array&gt;&gt;
             let start = SystemTime::now();
             println!(&quot;consumer start - {} {}&quot;, column, row_group);
             let metadata = metadata_consumer.row_groups[row_group].column(column);
-            let array = read::page_iter_to_array(iter.into_iter(), metadata).unwrap();
+
+            let pages = iter
+                .into_iter()
+                .map(|x| x.and_then(|x| read::decompress(x, &amp;mut vec![])));
+            let mut pages = read::streaming_iterator::convert(pages);
+            let array = read::page_iter_to_array(&amp;mut pages, metadata).unwrap();
             println!(
                 &quot;consumer end - {:?}: {} {}&quot;,
                 start.elapsed().unwrap(),
