@@ -2,7 +2,7 @@ use std::{convert::TryInto, hint::unreachable_unchecked};
 
 use parquet2::{
     encoding::{hybrid_rle, Encoding},
-    read::{decompress_page, CompressedPage, Page, PrimitivePageDict},
+    read::{Page, PageHeader, PrimitivePageDict, StreamingIterator},
     serialization::read::levels,
     types::NativeType,
 };
@@ -194,16 +194,23 @@ pub fn iter_to_array<T, A, I, E, F>(
 where
     ArrowError: From<E>,
     T: NativeType,
+    E: Clone,
     A: ArrowNativeType,
     F: Copy + Fn(T) -> A,
-    I: Iterator<Item = std::result::Result<CompressedPage, E>>,
+    I: StreamingIterator<Item = std::result::Result<Page, E>>,
 {
     let capacity = metadata.num_values() as usize;
     let mut values = MutableBuffer::<A>::with_capacity(capacity);
     let mut validity = MutableBitmap::with_capacity(capacity);
-    iter.try_for_each(|page| {
-        extend_from_page(page?, metadata.descriptor(), &mut values, &mut validity, op)
-    })?;
+    while let Some(page) = iter.next() {
+        extend_from_page(
+            page.as_ref().map_err(|x| x.clone())?,
+            metadata.descriptor(),
+            &mut values,
+            &mut validity,
+            op,
+        )?
+    }
 
     Ok(PrimitiveArray::from_data(
         data_type,
@@ -213,7 +220,7 @@ where
 }
 
 fn extend_from_page<T, A, F>(
-    page: CompressedPage,
+    page: &Page,
     descriptor: &ColumnDescriptor,
     values: &mut MutableBuffer<A>,
     validity: &mut MutableBitmap,
@@ -224,77 +231,76 @@ where
     A: ArrowNativeType,
     F: Fn(T) -> A,
 {
-    let page = decompress_page(page)?;
     assert_eq!(descriptor.max_rep_level(), 0);
     let is_optional = descriptor.max_def_level() == 1;
-    match page {
-        Page::V1(page) => {
-            assert_eq!(page.header.definition_level_encoding, Encoding::Rle);
+    match page.header() {
+        PageHeader::V1(header) => {
+            assert_eq!(header.definition_level_encoding, Encoding::Rle);
 
-            match (&page.header.encoding, &page.dictionary_page, is_optional) {
+            match (&page.encoding(), page.dictionary_page(), is_optional) {
                 (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer_optional(
-                    &page.buffer,
-                    page.header.num_values as u32,
+                    page.buffer(),
+                    page.num_values() as u32,
                     dict.as_any().downcast_ref().unwrap(),
                     values,
                     validity,
                     op,
                 ),
                 (Encoding::Plain, None, true) => {
-                    let (validity_buffer, values_buffer) = utils::split_buffer_v1(&page.buffer);
+                    let (validity_buffer, values_buffer) = utils::split_buffer_v1(page.buffer());
                     read_nullable(
                         validity_buffer,
                         values_buffer,
-                        page.header.num_values as u32,
+                        page.num_values() as u32,
                         values,
                         validity,
                         op,
                     )
                 }
                 (Encoding::Plain, None, false) => {
-                    read_required(&page.buffer, page.header.num_values as u32, values, op)
+                    read_required(page.buffer(), page.num_values() as u32, values, op)
                 }
                 _ => {
                     return Err(utils::not_implemented(
-                        &page.header.encoding,
+                        &page.encoding(),
                         is_optional,
-                        page.dictionary_page.is_some(),
+                        page.dictionary_page().is_some(),
                         "V1",
                         "primitive",
                     ))
                 }
             }
         }
-        Page::V2(page) => match (&page.header.encoding, &page.dictionary_page, is_optional) {
+        PageHeader::V2(header) => match (&page.encoding(), page.dictionary_page(), is_optional) {
             (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer_optional(
-                &page.buffer,
-                page.header.num_values as u32,
+                page.buffer(),
+                page.num_values() as u32,
                 dict.as_any().downcast_ref().unwrap(),
                 values,
                 validity,
                 op,
             ),
             (Encoding::Plain, None, true) => {
-                let def_level_buffer_length = page.header.definition_levels_byte_length as usize;
+                let def_level_buffer_length = header.definition_levels_byte_length as usize;
                 let (validity_buffer, values_buffer) =
-                    utils::split_buffer_v2(&page.buffer, def_level_buffer_length);
+                    utils::split_buffer_v2(page.buffer(), def_level_buffer_length);
                 read_nullable(
                     validity_buffer,
                     values_buffer,
-                    page.header.num_values as u32,
+                    page.num_values() as u32,
                     values,
                     validity,
                     op,
                 )
             }
             (Encoding::Plain, None, false) => {
-                read_required::<T, A, F>(&page.buffer, page.header.num_values as u32, values, op)
+                read_required::<T, A, F>(page.buffer(), page.num_values() as u32, values, op)
             }
             _ => {
                 return Err(utils::not_implemented(
-                    &page.header.encoding,
+                    &page.encoding(),
                     is_optional,
-                    page.dictionary_page.is_some(),
+                    page.dictionary_page().is_some(),
                     "V2",
                     "primitive",
                 ))
