@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+use crate::bitmap::Bitmap;
 use crate::{array::*, types::NativeType};
 use crate::{
     bitmap::MutableBitmap,
@@ -117,7 +118,7 @@ where
     };
 
     Ok(BooleanArray::from_data(
-        (values, lhs.len()).into(),
+        Bitmap::from_u8_buffer(values, lhs.len()),
         validity,
     ))
 }

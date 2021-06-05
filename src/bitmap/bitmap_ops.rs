@@ -38,7 +38,7 @@ where
 
     let length = a1.len();
 
-    (buffer, length).into()
+    Bitmap::from_u8_buffer(buffer, length)
 }
 
 /// Apply a bitwise operation `op` to three inputs and return the result as a [`Bitmap`].
@@ -71,7 +71,7 @@ where
 
     let length = a1.len();
 
-    (buffer, length).into()
+    Bitmap::from_u8_buffer(buffer, length)
 }
 
 /// Apply a bitwise operation `op` to two inputs and return the result as a [`Bitmap`].
@@ -97,7 +97,7 @@ where
 
     let length = lhs.len();
 
-    (buffer, length).into()
+    Bitmap::from_u8_buffer(buffer, length)
 }
 
 /// Apply a bitwise operation `op` to one input and return the result as a [`Bitmap`].
@@ -116,7 +116,7 @@ where
     let rem = &rem.to_ne_bytes()[..remainder_bytes];
     buffer.extend_from_slice(rem);
 
-    (buffer, lhs.len()).into()
+    Bitmap::from_u8_buffer(buffer, lhs.len())
 }
 
 fn and(lhs: &Bitmap, rhs: &Bitmap) -> Bitmap {
@@ -187,7 +187,7 @@ mod test {
 
     fn create_bitmap<P: AsRef<[u8]>>(bytes: P, len: usize) -> Bitmap {
         let buffer = MutableBuffer::<u8>::from(bytes.as_ref());
-        (buffer, len).into()
+        Bitmap::from_u8_buffer(buffer, len)
     }
 
     #[test]

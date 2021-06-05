@@ -72,6 +72,23 @@ impl Bitmap {
         }
     }
 
+    /// Creates a new [`Bitmap`] from [`MutableBuffer`] and a length.
+    /// # Panic
+    /// Panics iff `length <= buffer.len() * 8`
+    #[inline]
+    pub fn from_u8_buffer(buffer: MutableBuffer<u8>, length: usize) -> Self {
+        Bitmap::from_bytes(buffer.into(), length)
+    }
+
+    /// Creates a new [`Bitmap`] from [`Bytes`] and a length.
+    /// # Panic
+    /// Panics iff `length <= bytes.len() * 8`
+    #[inline]
+    pub fn from_u8_slice<T: AsRef<[u8]>>(buffer: T, length: usize) -> Self {
+        let buffer = MutableBuffer::<u8>::from(buffer.as_ref());
+        Bitmap::from_u8_buffer(buffer, length)
+    }
+
     /// Counts the nulls (unset bits) starting from `offset` bits and for `length` bits.
     #[inline]
     pub fn null_count_range(&self, offset: usize, length: usize) -> usize {
@@ -130,10 +147,9 @@ impl Bitmap {
     }
 }
 
-impl<P: AsRef<[u8]>> From<(P, usize)> for Bitmap {
-    fn from((bytes, length): (P, usize)) -> Self {
-        let buffer = MutableBuffer::<u8>::from(bytes.as_ref());
-        (buffer, length).into()
+impl<P: AsRef<[bool]>> From<P> for Bitmap {
+    fn from(slice: P) -> Self {
+        Self::from_trusted_len_iter(slice.as_ref().iter().copied())
     }
 }
 
