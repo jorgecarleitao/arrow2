@@ -28,7 +28,7 @@ pub(crate) fn read_dict_buffer<O: Offset>(
     let length = length as usize;
     let dict_values = dict.values();
     let dict_offsets = dict.offsets();
-    let mut last_offset = *offsets.as_slice_mut().last().unwrap();
+    let mut last_offset = *offsets.as_mut_slice().last().unwrap();
 
     // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
     // SPEC: followed by the values encoded using RLE/Bit packed described above (with the given bit width).
@@ -89,7 +89,7 @@ pub(crate) fn read_optional<O: Offset>(
     validity: &mut MutableBitmap,
 ) {
     let length = length as usize;
-    let mut last_offset = *offsets.as_slice_mut().last().unwrap();
+    let mut last_offset = *offsets.as_mut_slice().last().unwrap();
 
     // values_buffer: first 4 bytes are len, remaining is values
     let mut values_iterator = utils::BinaryIter::new(values_buffer);
@@ -136,7 +136,7 @@ pub(crate) fn read_required<O: Offset>(
     offsets: &mut MutableBuffer<O>,
     values: &mut MutableBuffer<u8>,
 ) {
-    let mut last_offset = *offsets.as_slice_mut().last().unwrap();
+    let mut last_offset = *offsets.as_mut_slice().last().unwrap();
 
     let values_iterator = utils::BinaryIter::new(buffer);
 

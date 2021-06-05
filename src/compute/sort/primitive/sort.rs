@@ -63,7 +63,7 @@ where
                 buffer.extend_from_slice(&values[start..start + len])
             }
             sort_inner(
-                &mut buffer.as_slice_mut()[validity.null_count()..],
+                &mut buffer.as_mut_slice()[validity.null_count()..],
                 cmp,
                 options.descending,
             )
@@ -74,7 +74,7 @@ where
             for (start, len) in slices {
                 buffer.extend_from_slice(&values[start..start + len])
             }
-            sort_inner(&mut buffer.as_slice_mut(), cmp, options.descending);
+            sort_inner(&mut buffer.as_mut_slice(), cmp, options.descending);
 
             (0..validity.null_count()).for_each(|_| buffer.push(T::default()));
         };
@@ -84,7 +84,7 @@ where
         let mut buffer = MutableBuffer::<T>::new();
         buffer.extend_from_slice(values);
 
-        sort_inner(&mut buffer.as_slice_mut(), cmp, options.descending);
+        sort_inner(&mut buffer.as_mut_slice(), cmp, options.descending);
 
         (buffer, None)
     };

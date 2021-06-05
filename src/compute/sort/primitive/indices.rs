@@ -82,7 +82,7 @@ where
             // all indices in `indices` are by construction `< array.len() == values.len()`
             unsafe {
                 sort_inner(
-                    &mut indices.as_slice_mut()[validity.null_count()..],
+                    &mut indices.as_mut_slice()[validity.null_count()..],
                     values,
                     cmp,
                     options.descending,
@@ -109,7 +109,7 @@ where
             // all indices in `indices` are by construction `< array.len() == values.len()`
             unsafe {
                 sort_inner(
-                    &mut indices.as_slice_mut()[..last_valid_index],
+                    &mut indices.as_mut_slice()[..last_valid_index],
                     values,
                     cmp,
                     options.descending,

@@ -73,7 +73,7 @@ impl<T: NativeType> MutableBuffer<T> {
     /// let mut buffer = MutableBuffer::<u8>::from_len_zeroed(127);
     /// assert_eq!(buffer.len(), 127);
     /// assert!(buffer.capacity() >= 127);
-    /// let data = buffer.as_slice_mut();
+    /// let data = buffer.as_mut_slice();
     /// assert_eq!(data[126], 0u8);
     /// ```
     #[inline]
@@ -188,7 +188,7 @@ impl<T: NativeType> MutableBuffer<T> {
 
     /// Returns the data stored in this buffer as a mutable slice.
     #[inline]
-    pub fn as_slice_mut(&mut self) -> &mut [T] {
+    pub fn as_mut_slice(&mut self) -> &mut [T] {
         self
     }
 
@@ -637,7 +637,7 @@ mod tests {
         b.resize(3, 1);
         assert_eq!(b.len(), 3);
         assert_eq!(b.as_slice(), &[1, 1, 1]);
-        assert_eq!(b.as_slice_mut(), &[1, 1, 1]);
+        assert_eq!(b.as_mut_slice(), &[1, 1, 1]);
     }
 
     // branch that uses alloc_zeroed
