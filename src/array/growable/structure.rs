@@ -195,7 +195,7 @@ mod tests {
         let array = StructArray::from_data(
             fields.clone(),
             values.clone(),
-            Some(Bitmap::from((&[0b00000010], 5))),
+            Some(Bitmap::from_u8_slice(&[0b00000010], 5)),
         );
 
         let mut a = GrowableStruct::new(&[&array], false, 0);
@@ -206,7 +206,7 @@ mod tests {
         let expected = StructArray::from_data(
             fields,
             vec![values[0].slice(1, 2).into(), values[1].slice(1, 2).into()],
-            Some(Bitmap::from((&[0b00000010], 5)).slice(1, 2)),
+            Some(Bitmap::from_u8_slice(&[0b00000010], 5).slice(1, 2)),
         );
 
         assert_eq!(result, expected)

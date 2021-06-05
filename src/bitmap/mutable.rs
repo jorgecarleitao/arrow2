@@ -1,7 +1,7 @@
 use std::iter::FromIterator;
 
 use crate::{
-    bits::{null_count, set},
+    bits::{get_bit, null_count, set, set_bit},
     buffer::MutableBuffer,
     trusted_len::TrustedLen,
 };
@@ -61,7 +61,7 @@ impl MutableBitmap {
         }
         if value {
             let byte = self.buffer.as_mut_slice().last_mut().unwrap();
-            *byte = set(*byte, self.length % 8);
+            *byte = set(*byte, self.length % 8, true);
         };
         self.length += 1;
     }
@@ -71,9 +71,9 @@ impl MutableBitmap {
         self.buffer.capacity() * 8
     }
 
-    /// Pushes a new bit to the container
+    /// Pushes a new bit to the [`MutableBitmap`]
     /// # Safety
-    /// The caller must ensure that the container has sufficient capacity.
+    /// The caller must ensure that the [`MutableBitmap`] has sufficient capacity.
     #[inline]
     pub unsafe fn push_unchecked(&mut self, value: bool) {
         if self.length % 8 == 0 {
@@ -81,7 +81,7 @@ impl MutableBitmap {
         }
         if value {
             let byte = self.buffer.as_mut_slice().last_mut().unwrap();
-            *byte = set(*byte, self.length % 8);
+            *byte = set(*byte, self.length % 8, true);
         };
         self.length += 1;
     }
@@ -124,19 +124,28 @@ impl MutableBitmap {
             self.length += additional;
         }
     }
+
+    /// Returns whether the position `index` is set.
+    /// # Panics
+    /// Panics iff `index >= self.len()`.
+    #[inline]
+    pub fn get(&self, index: usize) -> bool {
+        get_bit(&self.buffer, index)
+    }
+
+    /// Sets the position `index` to `value`
+    /// # Panics
+    /// Panics iff `index >= self.len()`.
+    #[inline]
+    pub fn set(&mut self, index: usize, value: bool) {
+        set_bit(&mut self.buffer.as_mut_slice(), index, value)
+    }
 }
 
 impl From<(MutableBuffer<u8>, usize)> for MutableBitmap {
     #[inline]
     fn from((buffer, length): (MutableBuffer<u8>, usize)) -> Self {
         Self { buffer, length }
-    }
-}
-
-impl From<(MutableBuffer<u8>, usize)> for Bitmap {
-    #[inline]
-    fn from((buffer, length): (MutableBuffer<u8>, usize)) -> Self {
-        Bitmap::from_bytes(buffer.into(), length)
     }
 }
 
@@ -223,7 +232,7 @@ fn extend<I: Iterator<Item = bool>>(buffer: &mut [u8], length: usize, mut iterat
     buffer[..chunks].iter_mut().for_each(|byte| {
         (0..8).for_each(|i| {
             if iterator.next().unwrap() {
-                *byte = set(*byte, i)
+                *byte = set(*byte, i, true)
             }
         })
     });
@@ -232,7 +241,7 @@ fn extend<I: Iterator<Item = bool>>(buffer: &mut [u8], length: usize, mut iterat
         let last = &mut buffer[chunks];
         iterator.enumerate().for_each(|(i, value)| {
             if value {
-                *last = set(*last, i)
+                *last = set(*last, i, true)
             }
         });
     }
@@ -267,7 +276,7 @@ impl MutableBitmap {
             let mut i = bit_offset;
             for value in iterator {
                 if value {
-                    *byte = set(*byte, i);
+                    *byte = set(*byte, i, true);
                 }
                 i += 1;
             }
@@ -284,7 +293,7 @@ impl MutableBitmap {
             (bit_offset..8).for_each(|i| {
                 let value = iterator.next().unwrap();
                 if value {
-                    *byte = set(*byte, i);
+                    *byte = set(*byte, i, true);
                 }
             });
             self.length += 8 - bit_offset;
@@ -358,7 +367,7 @@ impl MutableBitmap {
         data[..chunks].iter_mut().try_for_each(|byte| {
             (0..8).try_for_each(|i| {
                 if iterator.next().unwrap()? {
-                    *byte = set(*byte, i)
+                    *byte = set(*byte, i, true)
                 };
                 Ok(())
             })
@@ -368,7 +377,7 @@ impl MutableBitmap {
             let last = &mut data[chunks];
             iterator.enumerate().try_for_each(|(i, value)| {
                 if value? {
-                    *last = set(*last, i)
+                    *last = set(*last, i, true)
                 }
                 Ok(())
             })?;
@@ -505,5 +514,25 @@ mod tests {
         for (i, v) in iter {
             assert_eq!((i - 1) % 6 == 0, v);
         }
+    }
+
+    #[test]
+    fn test_set() {
+        let mut bitmap = MutableBitmap::from_len_zeroed(12);
+        bitmap.set(0, true);
+        assert_eq!(bitmap.get(0), true);
+        bitmap.set(0, false);
+        assert_eq!(bitmap.get(0), false);
+
+        bitmap.set(11, true);
+        assert_eq!(bitmap.get(11), true);
+        bitmap.set(11, false);
+        assert_eq!(bitmap.get(11), false);
+        bitmap.set(11, true);
+
+        let bitmap: Option<Bitmap> = bitmap.into();
+        let bitmap = bitmap.unwrap();
+        assert_eq!(bitmap.len(), 12);
+        assert_eq!(bitmap.as_slice()[0], 0b00000000);
     }
 }

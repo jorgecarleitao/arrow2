@@ -26,6 +26,7 @@ mod tests {
     use std::sync::Arc;
 
     use crate::array::*;
+    use crate::bitmap::Bitmap;
     use crate::buffer::Buffer;
     use crate::datatypes::{DataType, Field, Schema};
     use crate::record_batch::RecordBatch;
@@ -229,7 +230,7 @@ mod tests {
             c1_datatype,
             Buffer::from(&[0, 2, 2, 3]),
             Arc::new(s),
-            Some(([0b00000101], 3).into()),
+            Some(Bitmap::from_u8_slice([0b00000101], 3)),
         );
 
         let c2 = Int32Array::from_slice(&[1, 2, 3]);

@@ -134,8 +134,11 @@ mod tests {
         assert_eq!(array.value(0), true);
         assert_eq!(array.value(1), false);
         assert_eq!(array.value(2), false);
-        assert_eq!(array.values(), &Bitmap::from((&[0b00000001], 3)));
-        assert_eq!(array.validity(), &Some(Bitmap::from((&[0b00000101], 3))));
+        assert_eq!(array.values(), &Bitmap::from_u8_slice(&[0b00000001], 3));
+        assert_eq!(
+            array.validity(),
+            &Some(Bitmap::from_u8_slice(&[0b00000101], 3))
+        );
         assert_eq!(array.is_valid(0), true);
         assert_eq!(array.is_valid(1), false);
         assert_eq!(array.is_valid(2), true);

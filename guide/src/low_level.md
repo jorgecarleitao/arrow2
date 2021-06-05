@@ -56,7 +56,7 @@ perform an operation from an iterator of [TrustedLen](https://doc.rust-lang.org/
 # fn main() {
 let x = Buffer::from_iter((0..1000));
 let iter = x.as_slice().iter().map(|x| x * 2);
-let y = unsafe { Buffer::from_trusted_len_iter(iter) };
+let y = Buffer::from_trusted_len_iter(iter);
 assert_eq!(y.as_slice()[50], 100);
 # }
 ```
@@ -64,3 +64,32 @@ assert_eq!(y.as_slice()[50], 100);
 Using `from_trusted_len_iter` often causes the compiler to auto-vectorize.
 
 We will now see how these containers are used in higher-level structures: Arrays.
+
+## Bitmaps
+
+Arrow's in-memory arrangement of boolean values is different from `Vec<bool>`. Specifically,
+arrow uses individual bits to represent a boolean, as opposed to the usual byte that `bool` holds.
+In arrow2, these are `Bitmap` (immutable) and `MutableBitmap` (mutable).
+
+```rust
+use arrow2::bitmap::Bitmap;
+# fn main() {
+let x = Bitmap::from(&[true, false]);
+let iter = x.iter().map(|x| !x);
+let y = Bitmap::from_trusted_len_iter(iter);
+assert_eq!(y.get_bit(0), false);
+assert_eq!(y.get_bit(1), true);
+# }
+```
+
+```rust
+use arrow2::bitmap::MutableBitmap;
+# fn main() {
+let mut x = MutableBitmap::new();
+x.push(true);
+x.push(false);
+assert_eq!(x.get(1), false);
+x.set(1, true);
+assert_eq!(x.get(1), true);
+# }
+```

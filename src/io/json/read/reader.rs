@@ -752,7 +752,7 @@ mod tests {
             a_list_data_type,
             Buffer::from([0i32, 2, 3, 6, 6, 6]),
             Arc::new(a_struct) as Arc<dyn Array>,
-            Some(Bitmap::from(([0b00010111], 5))),
+            Some(Bitmap::from_u8_slice([0b00010111], 5)),
         );
 
         // compare `a` with result from json reader
