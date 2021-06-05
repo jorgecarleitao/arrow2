@@ -1,21 +1,25 @@
 use parquet2::{
     compression::create_codec,
     encoding::Encoding,
+    metadata::ColumnDescriptor,
     read::{CompressedPage, PageHeader},
-    schema::{CompressionCodec, DataPageHeader},
+    schema::DataPageHeader,
+    write::WriteOptions,
 };
 
 use super::utils;
 use crate::{
     array::{Array, FixedSizeBinaryArray},
     error::Result,
+    io::parquet::read::is_type_nullable,
 };
 
 pub fn array_to_page_v1(
     array: &FixedSizeBinaryArray,
-    compression: CompressionCodec,
-    is_optional: bool,
+    options: WriteOptions,
+    descriptor: ColumnDescriptor,
 ) -> Result<CompressedPage> {
+    let is_optional = is_type_nullable(descriptor.type_());
     let validity = array.validity();
 
     let mut buffer = utils::write_def_levels(is_optional, validity, array.len())?;
@@ -34,7 +38,7 @@ pub fn array_to_page_v1(
 
     let uncompressed_page_size = buffer.len();
 
-    let codec = create_codec(&compression)?;
+    let codec = create_codec(&options.compression)?;
     let buffer = if let Some(mut codec) = codec {
         // todo: remove this allocation by extending `buffer` directly.
         // needs refactoring `compress`'s API.
@@ -56,9 +60,9 @@ pub fn array_to_page_v1(
     Ok(CompressedPage::new(
         header,
         buffer,
-        compression,
+        options.compression,
         uncompressed_page_size,
         None,
-        None,
+        descriptor,
     ))
 }
