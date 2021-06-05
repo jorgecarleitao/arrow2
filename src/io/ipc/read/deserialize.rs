@@ -87,7 +87,7 @@ fn read_buffer<T: NativeType, R: Read + Seek>(
         if !is_little_endian {
             let chunks = slice.chunks_exact(std::mem::size_of::<T>());
             buffer
-                .as_slice_mut()
+                .as_mut_slice()
                 .iter_mut()
                 .zip(chunks)
                 .try_for_each(|(slot, chunk)| {
@@ -123,7 +123,7 @@ fn read_bitmap<R: Read + Seek>(
     // it is undefined behavior to call read_exact on un-initialized, https://doc.rust-lang.org/std/io/trait.Read.html#tymethod.read
     // see also https://github.com/MaikKlein/ash/issues/354#issue-781730580
     let mut buffer = MutableBuffer::<u8>::from_len_zeroed(bytes);
-    reader.read_exact(buffer.as_slice_mut())?;
+    reader.read_exact(buffer.as_mut_slice())?;
 
     Ok(Bitmap::from_bytes(buffer.into(), length))
 }
