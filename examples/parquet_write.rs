@@ -1,25 +1,24 @@
 use std::fs::File;
 use std::iter::once;
 
+use arrow2::io::parquet::write::to_parquet_schema;
 use arrow2::{
     array::{Array, Int32Array},
     datatypes::{Field, Schema},
     error::Result,
-    io::parquet::write::{array_to_page, to_parquet_type, write_file, CompressionCodec},
+    io::parquet::write::{array_to_page, write_file, CompressionCodec, WriteOptions},
 };
 
 fn write_single_array(path: &str, array: &dyn Array, field: Field) -> Result<()> {
     let schema = Schema::new(vec![field]);
 
-    // declare the compression
-    let compression = CompressionCodec::Uncompressed;
+    let options = WriteOptions {
+        write_statistics: true,
+        compression: CompressionCodec::Uncompressed,
+    };
 
     // map arrow fields to parquet fields
-    let parquet_types = schema
-        .fields()
-        .iter()
-        .map(to_parquet_type)
-        .collect::<Result<Vec<_>>>()?;
+    let parquet_schema = to_parquet_schema(&schema)?;
 
     // Declare the row group iterator. This must be an iterator of iterators of iterators:
     // * first iterator of row groups
@@ -28,8 +27,8 @@ fn write_single_array(path: &str, array: &dyn Array, field: Field) -> Result<()>
     // an array can be divided in multiple pages via `.slice(offset, length)` (`O(1)`).
     // All column chunks within a row group MUST have the same length.
     let row_groups = once(Result::Ok(once(Ok(once(array)
-        .zip(parquet_types.iter())
-        .map(|(array, type_)| array_to_page(array, type_, compression))))));
+        .zip(parquet_schema.columns().to_vec().into_iter())
+        .map(|(array, descriptor)| array_to_page(array, descriptor, options))))));
 
     // Create a new empty file
     let mut file = File::create(path)?;
@@ -39,7 +38,8 @@ fn write_single_array(path: &str, array: &dyn Array, field: Field) -> Result<()>
         &mut file,
         row_groups,
         &schema,
-        CompressionCodec::Uncompressed,
+        parquet_schema,
+        options,
         None,
     )
 }

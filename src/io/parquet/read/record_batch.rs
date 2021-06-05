@@ -53,6 +53,10 @@ impl<R: Read + Seek> RecordReader<R> {
             remaining_rows: limit.unwrap_or(usize::MAX),
         })
     }
+
+    pub fn schema(&self) -> &Arc<Schema> {
+        &self.schema
+    }
 }
 
 impl<R: Read + Seek> Iterator for RecordReader<R> {

@@ -200,21 +200,8 @@ pub fn page_iter_to_array<I: StreamingIterator<Item = std::result::Result<Page, 
 mod tests {
     use std::fs::File;
 
-    use crate::array::*;
-
     use super::super::tests::*;
     use super::*;
-
-    fn get_column(path: &str, row_group: usize, column: usize) -> Result<Box<dyn Array>> {
-        let mut file = File::open(path).unwrap();
-
-        let metadata = read_metadata(&mut file)?;
-        let iter = get_page_iterator(&metadata, row_group, column, &mut file, vec![])?;
-
-        let mut iter = Decompressor::new(iter, vec![]);
-
-        page_iter_to_array(&mut iter, metadata.row_groups[row_group].column(column))
-    }
 
     fn test_pyarrow_integration(column: usize, version: usize, required: bool) -> Result<()> {
         if std::env::var("ARROW2_IGNORE_PARQUET").is_ok() {
@@ -231,7 +218,8 @@ mod tests {
                 version, "nullable"
             )
         };
-        let array = get_column(&path, 0, column)?;
+        let mut file = File::open(path).unwrap();
+        let (array, statistics) = read_column(&mut file, 0, column)?;
 
         let expected = if required {
             pyarrow_required(column)
@@ -239,7 +227,14 @@ mod tests {
             pyarrow_nullable(column)
         };
 
+        let expected_statistics = if required {
+            pyarrow_required_statistics(column)
+        } else {
+            pyarrow_nullable_statistics(column)
+        };
+
         assert_eq!(expected.as_ref(), array.as_ref());
+        assert_eq!(expected_statistics.as_ref(), statistics.unwrap().as_ref());
 
         Ok(())
     }

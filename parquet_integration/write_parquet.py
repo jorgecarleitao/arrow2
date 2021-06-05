@@ -68,7 +68,7 @@ def write_pyarrow(case, size = 1, page_version = 1):
         row_group_size=2**40,
         use_dictionary=False,
         compression=None,
-        write_statistics=False,
+        write_statistics=True,
         data_page_size=2**40,  # i.e. a large number to ensure a single page
         data_page_version="1.0",
     )

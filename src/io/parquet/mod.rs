@@ -13,8 +13,40 @@ impl From<parquet2::error::ParquetError> for ArrowError {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
+    use parquet2::statistics::*;
+
     use crate::array::*;
     use crate::datatypes::*;
+
+    use crate::error::Result;
+    use crate::io::parquet::read::{
+        get_page_iterator, page_iter_to_array, read_metadata, Decompressor,
+    };
+    use std::io::{Read, Seek};
+
+    type ArrayStats = (Box<dyn Array>, Option<Arc<dyn Statistics>>);
+
+    pub fn read_column<R: Read + Seek>(
+        reader: &mut R,
+        row_group: usize,
+        column: usize,
+    ) -> Result<ArrayStats> {
+        let metadata = read_metadata(reader)?;
+        let iter = get_page_iterator(&metadata, row_group, column, reader, vec![])?;
+        let mut iter = Decompressor::new(iter, vec![]);
+
+        let statistics = metadata.row_groups[row_group]
+            .column(column)
+            .statistics()
+            .transpose()?;
+
+        Ok((
+            page_iter_to_array(&mut iter, metadata.row_groups[row_group].column(column))?,
+            statistics,
+        ))
+    }
 
     pub fn pyarrow_nullable(column: usize) -> Box<dyn Array> {
         let i64_values = &[
@@ -86,6 +118,42 @@ mod tests {
         }
     }
 
+    pub fn pyarrow_nullable_statistics(column: usize) -> Arc<dyn Statistics> {
+        match column {
+            0 | 4 => Arc::new(PrimitiveStatistics::<i64> {
+                null_count: Some(3),
+                distinct_count: None,
+                max_value: Some(9),
+                min_value: Some(0),
+            }),
+            1 => Arc::new(PrimitiveStatistics::<f64> {
+                null_count: Some(3),
+                distinct_count: None,
+                max_value: Some(9.0),
+                min_value: Some(0.0),
+            }),
+            2 => Arc::new(BinaryStatistics {
+                null_count: Some(4),
+                distinct_count: None,
+                max_value: Some("def".as_bytes().to_vec()),
+                min_value: Some("".as_bytes().to_vec()),
+            }),
+            3 => Arc::new(BooleanStatistics {
+                null_count: Some(4),
+                distinct_count: None,
+                max_value: Some(true),
+                min_value: Some(false),
+            }),
+            5 => Arc::new(PrimitiveStatistics::<i32> {
+                null_count: Some(3),
+                distinct_count: None,
+                max_value: Some(9),
+                min_value: Some(0),
+            }),
+            _ => unreachable!(),
+        }
+    }
+
     // these values match the values in `integration`
     pub fn pyarrow_required(column: usize) -> Box<dyn Array> {
         let i64_values = &[
@@ -112,15 +180,38 @@ mod tests {
             _ => unreachable!(),
         }
     }
+
+    pub fn pyarrow_required_statistics(column: usize) -> Arc<dyn Statistics> {
+        match column {
+            0 => Arc::new(PrimitiveStatistics::<i64> {
+                null_count: Some(0),
+                distinct_count: None,
+                max_value: Some(9),
+                min_value: Some(0),
+            }),
+            3 => Arc::new(BooleanStatistics {
+                null_count: Some(0),
+                distinct_count: None,
+                max_value: Some(true),
+                min_value: Some(false),
+            }),
+            2 => Arc::new(BinaryStatistics {
+                null_count: Some(0),
+                distinct_count: None,
+                max_value: Some("def".as_bytes().to_vec()),
+                min_value: Some("".as_bytes().to_vec()),
+            }),
+            _ => unreachable!(),
+        }
+    }
 }
 
 /// Round-trip with parquet using the same integration files used for IPC integration tests.
-#[cfg(tests)]
+#[cfg(test)]
 mod tests_integration {
     use std::sync::Arc;
 
     use super::write::CompressionCodec;
-    use crate::array::Array;
     use crate::datatypes::*;
     use crate::record_batch::*;
 
@@ -131,63 +222,48 @@ mod tests_integration {
     use std::io::Cursor;
 
     fn integration_write(schema: &Schema, batches: &[RecordBatch]) -> Result<Vec<u8>> {
-        let codec = CompressionCodec::Uncompressed;
+        let options = WriteOptions {
+            write_statistics: true,
+            compression: CompressionCodec::Uncompressed,
+        };
 
-        let parquet_types = schema
-            .fields()
-            .iter()
-            .map(to_parquet_type)
-            .collect::<Result<Vec<_>>>()?;
+        let parquet_schema = to_parquet_schema(&schema)?;
+        let descritors = parquet_schema.columns().to_vec().into_iter();
 
         let row_groups = batches.iter().map(|batch| {
-            let iterator =
-                batch
-                    .columns()
-                    .iter()
-                    .zip(parquet_types.iter())
-                    .map(|(array, type_)| {
-                        Ok(std::iter::once(array_to_page(array.as_ref(), type_, codec)))
-                    });
+            let iterator = batch
+                .columns()
+                .iter()
+                .zip(descritors.clone())
+                .map(|(array, type_)| {
+                    Ok(std::iter::once(array_to_page(
+                        array.as_ref(),
+                        type_,
+                        options,
+                    )))
+                });
             Ok(iterator)
         });
 
         let mut writer = Cursor::new(vec![]);
 
-        write_file(&mut writer, row_groups, schema, codec, None)?;
+        write_file(
+            &mut writer,
+            row_groups,
+            schema,
+            parquet_schema,
+            options,
+            None,
+        )?;
 
         Ok(writer.into_inner())
     }
 
-    fn integration_read(data: &[u8]) -> Result<(Schema, Vec<RecordBatch>)> {
-        let mut reader = Cursor::new(data);
-
-        let file_metadata = read::read_metadata(&mut reader)?;
-
-        let schema = read::get_schema(&file_metadata)?;
-        let schema1 = Arc::new(schema.clone());
-
-        let batches = file_metadata
-            .row_groups
-            .iter()
-            .enumerate()
-            .map(|(row_group, group)| {
-                let columns = group
-                    .columns()
-                    .iter()
-                    .enumerate()
-                    .map(|(column, column_meta)| {
-                        let pages = read::get_page_iterator(
-                            &file_metadata,
-                            row_group,
-                            column,
-                            &mut reader,
-                        )?;
-                        read::page_iter_to_array(pages, column_meta).map(|x| x.into())
-                    })
-                    .collect::<Result<Vec<Arc<dyn Array>>>>()?;
-                RecordBatch::try_new(schema1.clone(), columns)
-            })
-            .collect::<Result<Vec<_>>>()?;
+    fn integration_read(data: &[u8]) -> Result<(Arc<Schema>, Vec<RecordBatch>)> {
+        let reader = Cursor::new(data);
+        let reader = read::RecordReader::try_new(reader, None, None, None, Arc::new(|_, _| true))?;
+        let schema = reader.schema().clone();
+        let batches = reader.collect::<Result<Vec<_>>>()?;
 
         Ok((schema, batches))
     }
@@ -199,7 +275,7 @@ mod tests_integration {
 
         let (read_schema, read_batches) = integration_read(&data)?;
 
-        assert_eq!(schema, read_schema);
+        assert_eq!(&schema, read_schema.as_ref());
         assert_eq!(batches, read_batches);
 
         Ok(())
