@@ -1,7 +1,9 @@
 mod chunk_iterator;
+mod iterator;
 mod slice_iterator;
 mod zip_validity;
 
+pub use iterator::BitmapIter;
 pub use slice_iterator::SlicesIterator;
 pub use zip_validity::{zip_validity, ZipValidity};
 

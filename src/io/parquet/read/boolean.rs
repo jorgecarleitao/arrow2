@@ -1,6 +1,6 @@
 use crate::{
     array::BooleanArray,
-    bitmap::{BitmapIter, MutableBitmap},
+    bitmap::{utils::BitmapIter, MutableBitmap},
     error::{ArrowError, Result},
 };
 

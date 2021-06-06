@@ -1,5 +1,5 @@
 use crate::array::Array;
-use crate::bits::{zip_validity, ZipValidity};
+use crate::bitmap::utils::{zip_validity, ZipValidity};
 
 use super::FixedSizeBinaryArray;
 

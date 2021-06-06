@@ -131,5 +131,6 @@ unsafe impl ToFfi for FixedSizeListArray {
 }
 
 mod from;
-pub(crate) mod iterator;
 pub use from::*;
+mod iterator;
+pub use iterator::*;

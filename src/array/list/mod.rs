@@ -189,7 +189,8 @@ impl<O: Offset> std::fmt::Display for ListArray<O> {
 
 mod ffi;
 mod from;
-pub(crate) mod iterator;
+mod iterator;
+pub use iterator::*;
 
 pub use from::ListPrimitive;
 

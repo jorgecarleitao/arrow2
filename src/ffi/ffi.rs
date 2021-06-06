@@ -24,8 +24,7 @@ use std::{
 
 use crate::{
     array::Array,
-    bitmap::Bitmap,
-    bits::bytes_for,
+    bitmap::{utils::bytes_for, Bitmap},
     buffer::{
         bytes::{Bytes, Deallocation},
         Buffer,

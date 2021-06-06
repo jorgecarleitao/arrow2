@@ -16,7 +16,7 @@
 // under the License.
 extern crate arrow2;
 
-use arrow2::bits::null_count;
+use arrow2::bitmap::utils::null_count;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 

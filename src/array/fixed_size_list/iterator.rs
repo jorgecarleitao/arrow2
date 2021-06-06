@@ -1,4 +1,4 @@
-use crate::array::{list::iterator::ListIter, Array, IterableListArray};
+use crate::array::{list::ListIter, Array, IterableListArray};
 
 use super::FixedSizeListArray;
 

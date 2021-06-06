@@ -1,5 +1,5 @@
 use crate::{
-    bits::{zip_validity, ZipValidity},
+    bitmap::utils::{zip_validity, ZipValidity},
     types::NativeType,
 };
 

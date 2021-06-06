@@ -13,10 +13,6 @@ pub mod record_batch;
 pub mod temporal_conversions;
 pub use alloc::total_allocated_bytes;
 
-#[cfg(feature = "benchmarks")]
-pub mod bits;
-#[cfg(not(feature = "benchmarks"))]
-pub(crate) mod bits;
 pub mod datatypes;
 
 pub mod ffi;

@@ -7,7 +7,7 @@ use parquet2::{
 use super::{ColumnChunkMetaData, ColumnDescriptor};
 use crate::{
     array::FixedSizeBinaryArray,
-    bitmap::{BitmapIter, MutableBitmap},
+    bitmap::{utils::BitmapIter, MutableBitmap},
     buffer::MutableBuffer,
     datatypes::DataType,
     error::{ArrowError, Result},

@@ -15,14 +15,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
+use crate::array::growable::Growable;
 use crate::record_batch::RecordBatch;
 use crate::{
     array::growable::make_growable,
     datatypes::{DataType, IntervalUnit},
 };
-use crate::{array::growable::Growable, bits::SlicesIterator};
 use crate::{array::*, bitmap::Bitmap, types::NativeType};
-use crate::{bitmap::MutableBitmap, types::days_ms};
+use crate::{
+    bitmap::{utils::SlicesIterator, MutableBitmap},
+    types::days_ms,
+};
 use crate::{buffer::MutableBuffer, error::Result};
 
 /// Function that can filter arbitrary arrays

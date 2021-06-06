@@ -7,7 +7,7 @@ use parquet2::{
 
 use crate::{
     array::{Offset, Utf8Array},
-    bitmap::{BitmapIter, MutableBitmap},
+    bitmap::{utils::BitmapIter, MutableBitmap},
     buffer::MutableBuffer,
     error::{ArrowError, Result},
 };
