@@ -410,7 +410,7 @@ fn to_list(fields: &[ParquetType], parent_name: &str) -> Result<Option<DataType>
 ///
 /// If this schema is a group type and none of its children is reserved in the
 /// conversion, the result is Ok(None).
-fn to_data_type(type_: &ParquetType) -> Result<Option<DataType>> {
+pub(crate) fn to_data_type(type_: &ParquetType) -> Result<Option<DataType>> {
     match type_ {
         ParquetType::PrimitiveType {
             basic_info,

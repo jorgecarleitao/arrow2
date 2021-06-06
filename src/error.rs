@@ -39,6 +39,12 @@ impl From<::std::io::Error> for ArrowError {
     }
 }
 
+impl From<std::str::Utf8Error> for ArrowError {
+    fn from(error: std::str::Utf8Error) -> Self {
+        ArrowError::External("".to_string(), Box::new(error))
+    }
+}
+
 impl Display for ArrowError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
