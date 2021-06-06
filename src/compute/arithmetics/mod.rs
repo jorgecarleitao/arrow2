@@ -113,7 +113,7 @@ pub fn arithmetic(lhs: &dyn Array, op: Operator, rhs: &dyn Array) -> Result<Box<
                 Subtract => decimal::sub::sub(lhs, rhs),
                 Multiply => decimal::mul::mul(lhs, rhs),
                 Divide => decimal::div::div(lhs, rhs),
-                Reminder => {
+                Remainder => {
                     return Err(ArrowError::NotYetImplemented(format!(
                         "Arithmetics of ({:?}, {:?}, {:?}) is not supported",
                         lhs, op, rhs
