@@ -57,10 +57,10 @@ fn create_table(results: &[RecordBatch]) -> Result<Table> {
 
         for row in 0..batch.num_rows() {
             let mut cells = Vec::new();
-            for col in 0..batch.num_columns() {
+            (0..batch.num_columns()).for_each(|col| {
                 let string = displayes[col](row);
                 cells.push(Cell::new(&string));
-            }
+            });
             table.add_row(Row::new(cells));
         }
     }
@@ -160,12 +160,7 @@ mod tests {
         let schema = Arc::new(Schema::new(vec![Field::new("d1", field_type, true)]));
 
         let array = DictionaryPrimitive::<i32, Utf8Primitive<i32>, _>::try_from_iter(
-            vec![
-                Ok(Some("one".as_ref())),
-                Ok(None),
-                Ok(Some("three".as_ref())),
-            ]
-            .into_iter(),
+            vec![Ok(Some("one")), Ok(None), Ok(Some("three"))].into_iter(),
         )
         .unwrap()
         .into_arc();
