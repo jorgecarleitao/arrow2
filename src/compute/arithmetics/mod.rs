@@ -224,7 +224,7 @@ pub enum Operator {
     Subtract,
     Multiply,
     Divide,
-    Reminder,
+    Remainder,
 }
 
 /// Perform arithmetic operations on two primitive arrays based on the Operator enum
