@@ -1,14 +1,12 @@
 use std::iter::FromIterator;
 use std::sync::Arc;
 
-use crate::{
-    bits::{get_bit, get_bit_unchecked, null_count, BitChunk, BitChunks},
-    buffer::bytes::Bytes,
-    buffer::MutableBuffer,
-    trusted_len::TrustedLen,
-};
+use crate::{buffer::bytes::Bytes, buffer::MutableBuffer, trusted_len::TrustedLen};
 
-use super::{BitmapIter, MutableBitmap};
+use super::{
+    utils::{get_bit, get_bit_unchecked, null_count, BitChunk, BitChunks, BitmapIter},
+    MutableBitmap,
+};
 
 /// An immutable container whose API is optimized to handle bitmaps. All quantities on this
 /// container's API are measured in bits.

@@ -11,7 +11,7 @@ use super::utils;
 use super::{ColumnChunkMetaData, ColumnDescriptor};
 use crate::{
     array::PrimitiveArray,
-    bitmap::{BitmapIter, MutableBitmap},
+    bitmap::{utils::BitmapIter, MutableBitmap},
     buffer::MutableBuffer,
     datatypes::DataType,
     error::{ArrowError, Result},

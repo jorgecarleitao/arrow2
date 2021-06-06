@@ -1,11 +1,8 @@
 use std::iter::FromIterator;
 
-use crate::{
-    bits::{get_bit, null_count, set, set_bit},
-    buffer::MutableBuffer,
-    trusted_len::TrustedLen,
-};
+use crate::{buffer::MutableBuffer, trusted_len::TrustedLen};
 
+use super::utils::{get_bit, null_count, set, set_bit};
 use super::Bitmap;
 
 /// A mutable container to store boolean values. This container is equivalent to [`Vec<bool>`], but

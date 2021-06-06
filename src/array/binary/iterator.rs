@@ -1,6 +1,6 @@
 use crate::{
     array::{Array, Offset},
-    bits::{zip_validity, ZipValidity},
+    bitmap::utils::{zip_validity, ZipValidity},
     trusted_len::TrustedLen,
 };
 

@@ -1,5 +1,4 @@
-use crate::bitmap::BitmapIter;
-use crate::bits::{zip_validity, ZipValidity};
+use crate::bitmap::utils::{zip_validity, BitmapIter, ZipValidity};
 
 use super::BooleanArray;
 
