@@ -12,7 +12,7 @@ use crate::{
     types::NativeType,
 };
 
-/// Reminder of two primitive arrays with the same type.
+/// Remainder of two primitive arrays with the same type.
 /// Panics if the divisor is zero of one pair of values overflows.
 ///
 /// # Examples
