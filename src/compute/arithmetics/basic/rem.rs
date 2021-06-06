@@ -112,7 +112,7 @@ where
     unary(lhs, |a| a % rhs, lhs.data_type().clone())
 }
 
-/// Checked reminder of a primitive array of type T by a scalar T. If the
+/// Checked remainder of a primitive array of type T by a scalar T. If the
 /// divisor is zero then the validity array is changed to None.
 ///
 /// # Examples
