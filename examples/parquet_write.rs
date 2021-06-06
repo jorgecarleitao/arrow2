@@ -6,7 +6,7 @@ use arrow2::{
     array::{Array, Int32Array},
     datatypes::{Field, Schema},
     error::Result,
-    io::parquet::write::{array_to_page, write_file, CompressionCodec, WriteOptions},
+    io::parquet::write::{array_to_page, write_file, CompressionCodec, DynIter, WriteOptions},
 };
 
 fn write_single_array(path: &str, array: &dyn Array, field: Field) -> Result<()> {
@@ -26,9 +26,11 @@ fn write_single_array(path: &str, array: &dyn Array, field: Field) -> Result<()>
     // * third iterator of pages
     // an array can be divided in multiple pages via `.slice(offset, length)` (`O(1)`).
     // All column chunks within a row group MUST have the same length.
-    let row_groups = once(Result::Ok(once(Ok(once(array)
-        .zip(parquet_schema.columns().to_vec().into_iter())
-        .map(|(array, descriptor)| array_to_page(array, descriptor, options))))));
+    let row_groups = once(Result::Ok(DynIter::new(once(Ok(DynIter::new(
+        once(array)
+            .zip(parquet_schema.columns().to_vec().into_iter())
+            .map(|(array, descriptor)| array_to_page(array, descriptor, options)),
+    ))))));
 
     // Create a new empty file
     let mut file = File::create(path)?;

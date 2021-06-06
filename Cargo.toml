@@ -49,14 +49,15 @@ packed_simd = { version = "0.3.4", optional = true, package = "packed_simd_2" }
 
 multiversion = "0.6.1"
 
+# to write to parquet as a stream
+futures = { version = "0.3", optional = true }
+
 # for faster hashing
 ahash = { version = "0.7", optional = true }
 
 [dependencies.parquet2]
 git = "https://github.com/jorgecarleitao/parquet2"
-rev = "f86ba6f65fede75dd7b9f7dd6b0fe3e271d2aa58"
-default-features = false
-features = ["snappy", "gzip", "lz4", "zstd", "brotli"]
+rev = "17910746cf39f429bbcd6e2b0e033fbf0759f806"
 optional = true
 
 [dev-dependencies]
@@ -75,7 +76,7 @@ io_ipc = ["flatbuffers"]
 io_json_integration = ["io_json", "hex"]
 io_print = ["prettytable-rs"]
 # base64 + io_ipc because arrow schemas are stored as base64-encoded ipc format.
-io_parquet = ["parquet2", "io_ipc", "base64"]
+io_parquet = ["parquet2", "io_ipc", "base64", "futures"]
 benchmarks = ["rand"]
 simd = ["packed_simd"]
 

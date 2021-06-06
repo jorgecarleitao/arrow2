@@ -241,17 +241,15 @@ mod tests_integration {
         let descritors = parquet_schema.columns().to_vec().into_iter();
 
         let row_groups = batches.iter().map(|batch| {
-            let iterator = batch
-                .columns()
-                .iter()
-                .zip(descritors.clone())
-                .map(|(array, type_)| {
-                    Ok(std::iter::once(array_to_page(
+            let iterator = DynIter::new(batch.columns().iter().zip(descritors.clone()).map(
+                |(array, type_)| {
+                    Ok(DynIter::new(std::iter::once(array_to_page(
                         array.as_ref(),
                         type_,
                         options,
-                    )))
-                });
+                    ))))
+                },
+            ));
             Ok(iterator)
         });
 
