@@ -182,7 +182,7 @@ pub fn arithmetic(lhs: &dyn Array, op: Operator, rhs: &dyn Array) -> Result<Box<
 pub fn can_arithmetic(lhs: &DataType, op: Operator, rhs: &DataType) -> bool {
     use DataType::*;
     use Operator::*;
-    if let (Decimal(_, _), Reminder, Decimal(_, _)) = (lhs, op, rhs) {
+    if let (Decimal(_, _), Remainder, Decimal(_, _)) = (lhs, op, rhs) {
         return false;
     };
 
@@ -247,7 +247,7 @@ where
         Operator::Subtract => basic::sub::sub(lhs, rhs),
         Operator::Multiply => basic::mul::mul(lhs, rhs),
         Operator::Divide => basic::div::div(lhs, rhs),
-        Operator::Reminder => basic::rem::rem(lhs, rhs),
+        Operator::Remainder => basic::rem::rem(lhs, rhs),
     }
 }
 
@@ -271,7 +271,7 @@ where
         Operator::Subtract => Ok(basic::sub::sub_scalar(lhs, rhs)),
         Operator::Multiply => Ok(basic::mul::mul_scalar(lhs, rhs)),
         Operator::Divide => Ok(basic::div::div_scalar(lhs, rhs)),
-        Operator::Reminder => Ok(basic::rem::rem_scalar(lhs, rhs)),
+        Operator::Remainder => Ok(basic::rem::rem_scalar(lhs, rhs)),
     }
 }
 
@@ -467,7 +467,7 @@ mod tests {
             Operator::Divide,
             Operator::Subtract,
             Operator::Multiply,
-            Operator::Reminder,
+            Operator::Remainder,
         ];
 
         let cases = datatypes
