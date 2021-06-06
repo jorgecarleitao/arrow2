@@ -91,7 +91,7 @@ where
     }
 }
 
-/// Reminder a primitive array of type T by a scalar T.
+/// Remainder a primitive array of type T by a scalar T.
 /// Panics if the divisor is zero.
 ///
 /// # Examples
