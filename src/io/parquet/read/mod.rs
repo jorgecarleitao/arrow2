@@ -6,6 +6,7 @@ mod fixed_size_binary;
 mod primitive;
 mod record_batch;
 pub mod schema;
+pub mod statistics;
 mod utf8;
 mod utils;
 
@@ -153,7 +154,6 @@ pub fn page_iter_to_array<I: StreamingIterator<Item = std::result::Result<Page, 
             logical_type,
             ..
         } => match (physical_type, converted_type, logical_type) {
-            // todo: apply conversion rules and the like
             (PhysicalType::Int32, _, _) => {
                 page_iter_i32(iter, metadata, converted_type, logical_type)
             }

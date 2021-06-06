@@ -13,20 +13,16 @@ impl From<parquet2::error::ParquetError> for ArrowError {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
-    use parquet2::statistics::*;
-
     use crate::array::*;
     use crate::datatypes::*;
 
     use crate::error::Result;
     use crate::io::parquet::read::{
-        get_page_iterator, page_iter_to_array, read_metadata, Decompressor,
+        get_page_iterator, page_iter_to_array, read_metadata, statistics::*, Decompressor,
     };
     use std::io::{Read, Seek};
 
-    type ArrayStats = (Box<dyn Array>, Option<Arc<dyn Statistics>>);
+    type ArrayStats = (Box<dyn Array>, Option<Box<dyn Statistics>>);
 
     pub fn read_column<R: Read + Seek>(
         reader: &mut R,
@@ -40,6 +36,7 @@ mod tests {
         let statistics = metadata.row_groups[row_group]
             .column(column)
             .statistics()
+            .map(|x| deserialize_statistics(x?.as_ref()))
             .transpose()?;
 
         Ok((
@@ -118,37 +115,49 @@ mod tests {
         }
     }
 
-    pub fn pyarrow_nullable_statistics(column: usize) -> Arc<dyn Statistics> {
+    pub fn pyarrow_nullable_statistics(column: usize) -> Box<dyn Statistics> {
         match column {
-            0 | 4 => Arc::new(PrimitiveStatistics::<i64> {
-                null_count: Some(3),
+            0 => Box::new(PrimitiveStatistics::<i64> {
+                data_type: DataType::Int64,
                 distinct_count: None,
-                max_value: Some(9),
+                null_count: Some(3),
                 min_value: Some(0),
+                max_value: Some(9),
             }),
-            1 => Arc::new(PrimitiveStatistics::<f64> {
-                null_count: Some(3),
+            1 => Box::new(PrimitiveStatistics::<f64> {
+                data_type: DataType::Float64,
                 distinct_count: None,
-                max_value: Some(9.0),
+                null_count: Some(3),
                 min_value: Some(0.0),
+                max_value: Some(9.0),
             }),
-            2 => Arc::new(BinaryStatistics {
+            2 => Box::new(Utf8Statistics {
                 null_count: Some(4),
                 distinct_count: None,
-                max_value: Some("def".as_bytes().to_vec()),
-                min_value: Some("".as_bytes().to_vec()),
+                min_value: Some("".to_string()),
+                max_value: Some("def".to_string()),
             }),
-            3 => Arc::new(BooleanStatistics {
+            3 => Box::new(BooleanStatistics {
                 null_count: Some(4),
                 distinct_count: None,
-                max_value: Some(true),
+
                 min_value: Some(false),
+                max_value: Some(true),
             }),
-            5 => Arc::new(PrimitiveStatistics::<i32> {
+            4 => Box::new(PrimitiveStatistics::<i64> {
+                data_type: DataType::Timestamp(TimeUnit::Millisecond, None),
+                distinct_count: None,
+                null_count: Some(3),
+                min_value: Some(0),
+                max_value: Some(9),
+            }),
+            5 => Box::new(PrimitiveStatistics::<u32> {
+                data_type: DataType::UInt32,
                 null_count: Some(3),
                 distinct_count: None,
-                max_value: Some(9),
+
                 min_value: Some(0),
+                max_value: Some(9),
             }),
             _ => unreachable!(),
         }
@@ -181,25 +190,26 @@ mod tests {
         }
     }
 
-    pub fn pyarrow_required_statistics(column: usize) -> Arc<dyn Statistics> {
+    pub fn pyarrow_required_statistics(column: usize) -> Box<dyn Statistics> {
         match column {
-            0 => Arc::new(PrimitiveStatistics::<i64> {
+            0 => Box::new(PrimitiveStatistics::<i64> {
+                data_type: DataType::Int64,
                 null_count: Some(0),
                 distinct_count: None,
-                max_value: Some(9),
                 min_value: Some(0),
+                max_value: Some(9),
             }),
-            3 => Arc::new(BooleanStatistics {
+            3 => Box::new(BooleanStatistics {
                 null_count: Some(0),
                 distinct_count: None,
-                max_value: Some(true),
                 min_value: Some(false),
+                max_value: Some(true),
             }),
-            2 => Arc::new(BinaryStatistics {
+            2 => Box::new(Utf8Statistics {
                 null_count: Some(0),
                 distinct_count: None,
-                max_value: Some("def".as_bytes().to_vec()),
-                min_value: Some("".as_bytes().to_vec()),
+                min_value: Some("".to_string()),
+                max_value: Some("def".to_string()),
             }),
             _ => unreachable!(),
         }

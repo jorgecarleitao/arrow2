@@ -62,7 +62,7 @@ where
     };
 
     let statistics = if options.write_statistics {
-        Some(build_statistics(array))
+        Some(build_statistics(array, descriptor.clone()))
     } else {
         None
     };
@@ -85,13 +85,17 @@ where
     ))
 }
 
-fn build_statistics<T, R>(array: &PrimitiveArray<T>) -> ParquetStatistics
+fn build_statistics<T, R>(
+    array: &PrimitiveArray<T>,
+    descriptor: ColumnDescriptor,
+) -> ParquetStatistics
 where
     T: ArrowNativeType,
     R: NativeType,
     T: num::cast::AsPrimitive<R>,
 {
     let statistics = &PrimitiveStatistics::<R> {
+        descriptor,
         null_count: Some(array.null_count() as i64),
         distinct_count: None,
         max_value: array

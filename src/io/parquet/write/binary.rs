@@ -46,7 +46,7 @@ pub fn array_to_page_v1<O: Offset>(
     let uncompressed_page_size = buffer.len();
 
     let statistics = if options.write_statistics {
-        Some(build_statistics(array))
+        Some(build_statistics(array, descriptor.clone()))
     } else {
         None
     };
@@ -80,8 +80,12 @@ pub fn array_to_page_v1<O: Offset>(
     ))
 }
 
-fn build_statistics<O: Offset>(array: &BinaryArray<O>) -> ParquetStatistics {
+fn build_statistics<O: Offset>(
+    array: &BinaryArray<O>,
+    descriptor: ColumnDescriptor,
+) -> ParquetStatistics {
     let statistics = &BinaryStatistics {
+        descriptor,
         null_count: Some(array.null_count() as i64),
         distinct_count: None,
         max_value: array
