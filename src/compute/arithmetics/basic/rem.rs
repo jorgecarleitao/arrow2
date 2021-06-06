@@ -39,7 +39,7 @@ where
     binary(lhs, rhs, lhs.data_type().clone(), |a, b| a % b)
 }
 
-/// Checked reminder of two primitive arrays. If the result from the reminder
+/// Checked remainder of two primitive arrays. If the result from the remainder
 /// overflows, the result for the operation will change the validity array
 /// making this operation None
 ///
