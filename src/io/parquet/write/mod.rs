@@ -6,14 +6,19 @@ mod schema;
 mod utf8;
 mod utils;
 
+pub mod stream;
+
 use crate::array::*;
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 
 use parquet2::metadata::ColumnDescriptor;
 pub use parquet2::{
-    compression::CompressionCodec, read::CompressedPage, schema::types::ParquetType,
+    compression::CompressionCodec,
+    read::CompressedPage,
+    schema::types::ParquetType,
     write::WriteOptions,
+    write::{DynIter, RowGroupIter},
 };
 use parquet2::{
     metadata::SchemaDescriptor, schema::KeyValue, write::write_file as parquet_write_file,
@@ -32,14 +37,9 @@ pub fn to_parquet_schema(schema: &Schema) -> Result<SchemaDescriptor> {
 }
 
 /// Writes
-pub fn write_file<
-    W,
-    I,   // iterator over pages
-    II,  // iterator over columns
-    III, // iterator over row groups
->(
+pub fn write_file<'a, W, I>(
     writer: &mut W,
-    row_groups: III,
+    row_groups: I,
     schema: &Schema,
     parquet_schema: SchemaDescriptor,
     options: WriteOptions,
@@ -47,9 +47,7 @@ pub fn write_file<
 ) -> Result<()>
 where
     W: std::io::Write + std::io::Seek,
-    I: Iterator<Item = Result<CompressedPage>>,
-    II: Iterator<Item = Result<I>>,
-    III: Iterator<Item = Result<II>>,
+    I: Iterator<Item = Result<RowGroupIter<'a, ArrowError>>>,
 {
     let key_value_metadata = key_value_metadata
         .map(|mut x| {
@@ -204,11 +202,12 @@ mod tests {
         // one row group
         // one column chunk
         // one page
-        let row_groups = std::iter::once(Result::Ok(std::iter::once(Ok(std::iter::once(
-            array.as_ref(),
-        )
-        .zip(parquet_schema.columns().to_vec().into_iter())
-        .map(|(array, descriptor)| array_to_page(array, descriptor, options))))));
+        let row_groups =
+            std::iter::once(Result::Ok(DynIter::new(std::iter::once(Ok(DynIter::new(
+                std::iter::once(array.as_ref())
+                    .zip(parquet_schema.columns().to_vec().into_iter())
+                    .map(|(array, descriptor)| array_to_page(array, descriptor, options)),
+            ))))));
 
         let mut writer = Cursor::new(vec![]);
         write_file(
