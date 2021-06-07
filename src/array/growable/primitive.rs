@@ -35,7 +35,7 @@ impl<'a, T: NativeType> GrowablePrimitive<'a, T> {
             .collect::<Vec<_>>();
         let arrays = arrays
             .iter()
-            .map(|array| array.values())
+            .map(|array| array.values().as_slice())
             .collect::<Vec<_>>();
 
         Self {

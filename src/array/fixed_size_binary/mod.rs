@@ -62,8 +62,8 @@ impl FixedSizeBinaryArray {
     }
 
     #[inline]
-    pub fn values(&self) -> &[u8] {
-        self.values.as_slice()
+    pub fn values(&self) -> &Buffer<u8> {
+        &self.values
     }
 
     #[inline]

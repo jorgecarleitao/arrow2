@@ -273,7 +273,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
 
             let list = ListArray::<i32>::from_data(
                 to_type.clone(),
-                array.offsets_buffer().clone(),
+                array.offsets().clone(),
                 new_values,
                 array.validity().clone(),
             );
@@ -669,7 +669,7 @@ mod tests {
         .unwrap();
 
         let arr = b.as_any().downcast_ref::<ListArray<i32>>().unwrap();
-        assert_eq!(&[0, 1, 2, 3, 4, 5], arr.offsets());
+        assert_eq!(&[0, 1, 2, 3, 4, 5], arr.offsets().as_slice());
         let values = arr.values();
         let c = values
             .as_any()
@@ -692,7 +692,7 @@ mod tests {
         .unwrap();
 
         let arr = b.as_any().downcast_ref::<ListArray<i32>>().unwrap();
-        assert_eq!(&[0, 1, 2, 3, 4, 5], arr.offsets());
+        assert_eq!(&[0, 1, 2, 3, 4, 5], arr.offsets().as_slice());
         let values = arr.values();
         let c = values.as_any().downcast_ref::<Int32Array>().unwrap();
 
@@ -715,7 +715,7 @@ mod tests {
         .unwrap();
 
         let arr = b.as_any().downcast_ref::<ListArray<i32>>().unwrap();
-        assert_eq!(&[0, 1, 2, 3, 4], arr.offsets());
+        assert_eq!(&[0, 1, 2, 3, 4], arr.offsets().as_slice());
         let values = arr.values();
         let c = values.as_any().downcast_ref::<Float64Array>().unwrap();
 

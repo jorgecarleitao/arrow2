@@ -71,16 +71,10 @@ impl<T: NativeType> PrimitiveArray<T> {
         }
     }
 
-    /// The values [`Buffer`]. Often used to clone the buffer.
+    /// The values [`Buffer`].
     #[inline]
-    pub fn values_buffer(&self) -> &Buffer<T> {
+    pub fn values(&self) -> &Buffer<T> {
         &self.values
-    }
-
-    /// The values as a slice.
-    #[inline]
-    pub fn values(&self) -> &[T] {
-        self.values.as_slice()
     }
 
     /// Safe method to retrieve the value at slot `i`.
@@ -139,7 +133,7 @@ mod tests {
         assert_eq!(array.value(0), 1);
         assert_eq!(array.value(1), 0);
         assert_eq!(array.value(2), 10);
-        assert_eq!(array.values(), &[1, 0, 10]);
+        assert_eq!(array.values().as_slice(), &[1, 0, 10]);
         assert_eq!(
             array.validity(),
             &Some(Bitmap::from_u8_slice(&[0b00000101], 3))
@@ -150,7 +144,7 @@ mod tests {
 
         let array2 = PrimitiveArray::<i32>::from_data(
             DataType::Int32,
-            array.values_buffer().clone(),
+            array.values().clone(),
             array.validity().clone(),
         );
         assert_eq!(array, array2);
@@ -158,7 +152,7 @@ mod tests {
         let array = array.slice(1, 2);
         assert_eq!(array.value(0), 0);
         assert_eq!(array.value(1), 10);
-        assert_eq!(array.values(), &[0, 10]);
+        assert_eq!(array.values().as_slice(), &[0, 10]);
     }
 
     #[test]
