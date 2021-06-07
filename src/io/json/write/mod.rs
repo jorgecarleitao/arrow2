@@ -18,7 +18,7 @@
 mod serialize;
 mod writer;
 pub use serialize::write_record_batches;
-pub use writer::{ArrayWriter, LineDelimitedWriter, Writer};
+pub use writer::*;
 
 #[cfg(test)]
 mod tests {

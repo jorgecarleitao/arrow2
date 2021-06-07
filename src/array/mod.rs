@@ -524,3 +524,7 @@ mod tests {
         assert!(a);
     }
 }
+
+// backward compatibility
+use std::sync::Arc;
+pub type ArrayRef = Arc<dyn Array>;
