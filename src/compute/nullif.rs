@@ -46,7 +46,7 @@ pub fn nullif_primitive<T: NativeType>(
 
     Ok(PrimitiveArray::<T>::from_data(
         lhs.data_type().clone(),
-        lhs.values_buffer().clone(),
+        lhs.values().clone(),
         validity,
     ))
 }

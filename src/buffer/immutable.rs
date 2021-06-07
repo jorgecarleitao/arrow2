@@ -152,6 +152,15 @@ impl<T: NativeType, U: AsRef<[T]>> From<U> for Buffer<T> {
     }
 }
 
+impl<T: NativeType> std::ops::Deref for Buffer<T> {
+    type Target = [T];
+
+    #[inline]
+    fn deref(&self) -> &[T] {
+        self.as_slice()
+    }
+}
+
 impl<T: NativeType> FromIterator<T> for Buffer<T> {
     #[inline]
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {

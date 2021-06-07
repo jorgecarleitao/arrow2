@@ -140,25 +140,13 @@ impl<O: Offset> Utf8Array<O> {
 
     /// Returns the offsets of this [`Utf8Array`].
     #[inline]
-    pub fn offsets(&self) -> &[O] {
-        self.offsets.as_slice()
-    }
-
-    /// Returns the offset [`Buffer`] of this [`Utf8Array`].
-    #[inline]
-    pub fn offsets_buffer(&self) -> &Buffer<O> {
+    pub fn offsets(&self) -> &Buffer<O> {
         &self.offsets
     }
 
-    /// Returns the values of this [`Utf8Array`] as a slice of `u8`
+    /// Returns the values of this [`Utf8Array`].
     #[inline]
-    pub fn values(&self) -> &[u8] {
-        self.values.as_slice()
-    }
-
-    /// Returns the values [`Buffer`] of this [`Utf8Array`]
-    #[inline]
-    pub fn values_buffer(&self) -> &Buffer<u8> {
+    pub fn values(&self) -> &Buffer<u8> {
         &self.values
     }
 }
@@ -227,8 +215,8 @@ mod tests {
         assert_eq!(array.value(1), "");
         assert_eq!(array.value(2), "hello2");
         assert_eq!(unsafe { array.value_unchecked(2) }, "hello2");
-        assert_eq!(array.values(), b"hellohello2");
-        assert_eq!(array.offsets(), &[0, 5, 5, 11]);
+        assert_eq!(array.values().as_slice(), b"hellohello2");
+        assert_eq!(array.offsets().as_slice(), &[0, 5, 5, 11]);
         assert_eq!(
             array.validity(),
             &Some(Bitmap::from_u8_slice(&[0b00000101], 3))
@@ -238,8 +226,8 @@ mod tests {
         assert_eq!(array.is_valid(2), true);
 
         let array2 = Utf8Array::<i32>::from_data(
-            array.offsets_buffer().clone(),
-            array.values_buffer().clone(),
+            array.offsets().clone(),
+            array.values().clone(),
             array.validity().clone(),
         );
         assert_eq!(array, array2);
@@ -248,15 +236,15 @@ mod tests {
         assert_eq!(array.value(0), "");
         assert_eq!(array.value(1), "hello2");
         // note how this keeps everything: the offsets were sliced
-        assert_eq!(array.values(), b"hellohello2");
-        assert_eq!(array.offsets(), &[5, 5, 11]);
+        assert_eq!(array.values().as_slice(), b"hellohello2");
+        assert_eq!(array.offsets().as_slice(), &[5, 5, 11]);
     }
 
     #[test]
     fn empty() {
         let array = Utf8Array::<i32>::new_empty();
-        assert_eq!(array.values(), b"");
-        assert_eq!(array.offsets(), &[0]);
+        assert_eq!(array.values().as_slice(), b"");
+        assert_eq!(array.offsets().as_slice(), &[0]);
         assert_eq!(array.validity(), &None);
     }
 }

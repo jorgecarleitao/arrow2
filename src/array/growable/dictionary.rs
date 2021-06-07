@@ -46,7 +46,7 @@ impl<'a, T: DictionaryKey> GrowableDictionary<'a, T> {
         let arrays_keys = arrays.iter().map(|array| array.keys()).collect::<Vec<_>>();
         let keys_values = arrays_keys
             .iter()
-            .map(|array| array.values())
+            .map(|array| array.values().as_slice())
             .collect::<Vec<_>>();
         let keys_validities = arrays_keys
             .iter()

@@ -85,7 +85,7 @@ where
 {
     PrimitiveArray::<T>::from_data(
         to_type.clone(),
-        from.values_buffer().clone(),
+        from.values().clone(),
         from.validity().clone(),
     )
 }
