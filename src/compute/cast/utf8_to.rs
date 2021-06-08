@@ -1,11 +1,17 @@
+use std::convert::TryFrom;
+
 use chrono::Datelike;
 
 use crate::{
     array::*,
+    buffer::Buffer,
     datatypes::{DataType, TimeUnit},
     types::NativeType,
 };
-use crate::{error::Result, temporal_conversions::EPOCH_DAYS_FROM_CE};
+use crate::{
+    error::{ArrowError, Result},
+    temporal_conversions::EPOCH_DAYS_FROM_CE,
+};
 
 use super::utf8_to_timestamp_ns_scalar;
 
@@ -101,4 +107,21 @@ pub fn utf8_to_timestamp_ns<O: Offset>(from: &Utf8Array<O>) -> PrimitiveArray<i6
         .map(|x| x.and_then(|x| utf8_to_timestamp_ns_scalar(x).ok()));
     Primitive::<i64>::from_trusted_len_iter(iter)
         .to(DataType::Timestamp(TimeUnit::Nanosecond, None))
+}
+
+pub fn utf8_to_large_utf8(from: &Utf8Array<i32>) -> Utf8Array<i64> {
+    let values = from.values().clone();
+    let offsets = from.offsets().iter().map(|x| *x as i64);
+    let offsets = Buffer::from_trusted_len_iter(offsets);
+    unsafe { Utf8Array::<i64>::from_data_unchecked(offsets, values, from.validity().clone()) }
+}
+
+pub fn utf8_large_to_utf8(from: &Utf8Array<i64>) -> Result<Utf8Array<i32>> {
+    let values = from.values().clone();
+    let _ =
+        i32::try_from(*from.offsets().last().unwrap()).map_err(ArrowError::from_external_error)?;
+
+    let offsets = from.offsets().iter().map(|x| *x as i32);
+    let offsets = Buffer::from_trusted_len_iter(offsets);
+    Ok(unsafe { Utf8Array::<i32>::from_data_unchecked(offsets, values, from.validity().clone()) })
 }
