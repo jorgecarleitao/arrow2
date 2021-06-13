@@ -27,6 +27,7 @@ use crate::datatypes::{DataType, IntervalUnit};
 use crate::error::{ArrowError, Result};
 use crate::types::days_ms;
 
+mod boolean;
 mod primitive;
 mod utf8;
 
@@ -48,6 +49,11 @@ pub fn compare(lhs: &dyn Array, rhs: &dyn Array, operator: Operator) -> Result<B
         ));
     }
     match data_type {
+        DataType::Boolean => {
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            boolean::compare(lhs, rhs, operator)
+        }
         DataType::Int8 => {
             let lhs = lhs.as_any().downcast_ref::<Int8Array>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<Int8Array>().unwrap();
@@ -139,6 +145,7 @@ pub fn compare(lhs: &dyn Array, rhs: &dyn Array, operator: Operator) -> Result<B
     }
 }
 
+pub use boolean::compare_scalar as boolean_compare_scalar;
 pub use primitive::compare_scalar as primitive_compare_scalar;
 pub(crate) use primitive::compare_values_op as primitive_compare_values_op;
 pub use utf8::compare_scalar as utf8_compare_scalar;
@@ -160,7 +167,8 @@ pub use utf8::compare_scalar as utf8_compare_scalar;
 pub fn can_compare(data_type: &DataType) -> bool {
     matches!(
         data_type,
-        DataType::Int8
+        DataType::Boolean
+            | DataType::Int8
             | DataType::Int16
             | DataType::Int32
             | DataType::Date32
