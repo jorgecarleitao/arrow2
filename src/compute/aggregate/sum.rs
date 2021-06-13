@@ -2,6 +2,7 @@ use std::ops::Add;
 
 use multiversion::multiversion;
 
+use crate::bitmap::utils::{BitChunkIterExact, BitChunksExact};
 use crate::types::simd::*;
 use crate::types::NativeType;
 use crate::{
@@ -38,14 +39,13 @@ where
 /// iff `values.len() != bitmap.len()` or the operation overflows.
 #[multiversion]
 #[clone(target = "x86_64+avx")]
-fn null_sum<T>(values: &[T], bitmap: &Bitmap) -> T
+fn null_sum_impl<T, I>(values: &[T], mut validity_masks: I) -> T
 where
     T: NativeType + Simd,
     T::Simd: Add<Output = T::Simd> + Sum<T>,
+    I: BitChunkIterExact<<<T as Simd>::Simd as NativeSimd>::Chunk>,
 {
     let mut chunks = values.chunks_exact(T::Simd::LANES);
-
-    let mut validity_masks = bitmap.chunks::<<T::Simd as NativeSimd>::Chunk>();
 
     let sum = chunks.by_ref().zip(validity_masks.by_ref()).fold(
         T::Simd::default(),
@@ -63,6 +63,23 @@ where
     let reduced = sum + remainder;
 
     reduced.simd_sum()
+}
+
+/// # Panics
+/// iff `values.len() != bitmap.len()` or the operation overflows.
+fn null_sum<T>(values: &[T], bitmap: &Bitmap) -> T
+where
+    T: NativeType + Simd,
+    T::Simd: Add<Output = T::Simd> + Sum<T>,
+{
+    if bitmap.offset() == 0 {
+        let validity_masks =
+            BitChunksExact::<<T::Simd as NativeSimd>::Chunk>::new(bitmap.as_slice(), bitmap.len());
+        null_sum_impl(values, validity_masks)
+    } else {
+        let validity_masks = bitmap.chunks::<<T::Simd as NativeSimd>::Chunk>();
+        null_sum_impl(values, validity_masks)
+    }
 }
 
 /// Returns the sum of values in the array.

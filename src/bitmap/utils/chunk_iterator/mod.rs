@@ -1,10 +1,17 @@
 use std::convert::TryInto;
 
+mod chunks_exact;
 mod merge;
 
 pub use crate::types::BitChunk;
+pub use chunks_exact::BitChunksExact;
+
 use crate::{trusted_len::TrustedLen, types::BitChunkIter};
 use merge::merge_reversed;
+
+pub trait BitChunkIterExact<B: BitChunk>: Iterator<Item = B> {
+    fn remainder(&self) -> B;
+}
 
 /// This struct is used to efficiently iterate over bit masks by loading bytes on
 /// the stack with alignments of `uX`. This allows efficient iteration over bitmaps.
@@ -15,14 +22,14 @@ pub struct BitChunks<'a, T: BitChunk> {
     remainder_bytes: &'a [u8],
     remaining: usize,
     /// offset inside a byte
-    bit_offset: u32,
+    bit_offset: usize,
     len: usize,
     phantom: std::marker::PhantomData<T>,
 }
 
 /// writes `bytes` into `dst`.
 #[inline]
-fn copy_with_merge<T: BitChunk>(dst: &mut T::Bytes, bytes: &[u8], bit_offset: u32) {
+fn copy_with_merge<T: BitChunk>(dst: &mut T::Bytes, bytes: &[u8], bit_offset: usize) {
     let mut last = bytes[bytes.len() - 1];
     last >>= bit_offset;
     dst[0] = last;
@@ -70,7 +77,7 @@ impl<'a, T: BitChunk> BitChunks<'a, T> {
             current,
             remaining,
             remainder_bytes,
-            bit_offset: bit_offset as u32,
+            bit_offset,
             phantom: std::marker::PhantomData,
         }
     }
@@ -146,10 +153,7 @@ impl<T: BitChunk> Iterator for BitChunks<'_, T> {
             } else {
                 // case where the `next` is incomplete and thus we can only take part of it
                 let mut next = T::zero().to_ne_bytes();
-                self.remainder_bytes
-                    .iter()
-                    .enumerate()
-                    .for_each(|(i, byte)| next[i] = *byte);
+                next[0] = self.remainder_bytes[0];
                 T::from_ne_bytes(next)
             };
             merge_reversed(current, next, self.bit_offset)
@@ -164,6 +168,12 @@ impl<T: BitChunk> Iterator for BitChunks<'_, T> {
         // it contains always one more than the chunk_iterator, which is the last
         // one where the remainder is merged into current.
         (self.remaining, Some(self.remaining))
+    }
+}
+
+impl<T: BitChunk> BitChunkIterExact<T> for BitChunks<'_, T> {
+    fn remainder(&self) -> T {
+        self.remainder()
     }
 }
 

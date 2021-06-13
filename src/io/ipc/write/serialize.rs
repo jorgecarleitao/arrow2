@@ -498,7 +498,7 @@ fn to_bytes<T: NativeType>(values: &[T], is_little_endian: bool) -> Vec<u8> {
 
 #[inline]
 fn to_le_bitmap(bitmap: &Bitmap) -> Vec<u8> {
-    if bitmap.offset() % 8 != 0 {
+    if bitmap.offset() != 0 {
         // case where we can't slice the bitmap as the offsets are not multiple of 8
         Bitmap::from_trusted_len_iter(bitmap.iter())
             .as_slice()
