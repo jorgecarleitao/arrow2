@@ -45,7 +45,21 @@ impl<O: Offset> ListArray<O> {
         validity: Option<Bitmap>,
     ) -> Self {
         check_offsets(&offsets, values.len());
+        unsafe { Self::from_data_unchecked(data_type, offsets, values, validity) }
+    }
 
+    /// Create a new ListArray from its data buffers.
+    ///
+    /// # Safety
+    /// `offsets` buffer must be monotonically increasing.
+    ///
+    /// Note that the correctness of the data types are checked.
+    pub unsafe fn from_data_unchecked(
+        data_type: DataType,
+        offsets: Buffer<O>,
+        values: Arc<dyn Array>,
+        validity: Option<Bitmap>,
+    ) -> Self {
         // validate data_type
         let child_data_type = Self::get_child_type(&data_type);
         assert_eq!(

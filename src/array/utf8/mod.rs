@@ -57,29 +57,34 @@ impl<O: Offset> Utf8Array<O> {
             assert_eq!(offsets.len() - 1, validity.len());
         }
 
-        Self {
-            data_type: if O::is_large() {
-                DataType::LargeUtf8
-            } else {
-                DataType::Utf8
-            },
-            offsets,
-            values,
-            validity,
-            offset: 0,
-        }
+        // Safety:
+        // 1: utf8 is just checked
+        // 2: monotonically increasing offsets are just checked
+        unsafe { Self::from_data_unchecked(offsets, values, validity) }
     }
 
     /// The same as [`Utf8Array::from_data`] but does not check for utf8.
     /// # Safety
     /// `values` buffer must contain valid utf8 between every `offset`
-    pub unsafe fn from_data_unchecked(
+    pub unsafe fn from_data_unchecked_utf8(
         offsets: Buffer<O>,
         values: Buffer<u8>,
         validity: Option<Bitmap>,
     ) -> Self {
         check_offsets(&offsets, values.len());
+        // Safety: we just checked offsets. Utf8 checking is done by the caller
+        Self::from_data_unchecked(offsets, values, validity)
+    }
 
+    /// The same as [`Utf8Array::from_data`] but does not check for utf8.
+    /// # Safety
+    /// `values` buffer must contain valid utf8 between every `offset`
+    /// `offsets` buffer must be monotonically increasing.
+    pub unsafe fn from_data_unchecked(
+        offsets: Buffer<O>,
+        values: Buffer<u8>,
+        validity: Option<Bitmap>,
+    ) -> Self {
         Self {
             data_type: if O::is_large() {
                 DataType::LargeUtf8
