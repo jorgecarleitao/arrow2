@@ -47,15 +47,29 @@ pub struct BinaryPrimitive<O: Offset> {
 }
 
 impl<O: Offset> BinaryPrimitive<O> {
-    /// Initializes a new [`BinaryPrimitive`] with a pre-allocated number of slots.
-    fn with_capacity(capacity: usize) -> Self {
+    /// Initializes a new [`BinaryPrimitive`] with a pre-allocated capacity of slots.
+    pub fn with_capacity(capacity: usize) -> Self {
         let mut offsets = MutableBuffer::<O>::with_capacity(capacity + 1);
         let length = O::default();
-        unsafe { offsets.push_unchecked(length) };
+        offsets.push(length);
 
         Self {
             offsets,
             values: MutableBuffer::<u8>::new(),
+            validity: MutableBitmap::with_capacity(capacity),
+            length,
+        }
+    }
+
+    /// Initializes a new [`BinaryPrimitive`] with a pre-allocated capacity of slots and values.
+    pub fn with_capacities(capacity: usize, values: usize) -> Self {
+        let mut offsets = MutableBuffer::<O>::with_capacity(capacity + 1);
+        let length = O::default();
+        offsets.push(length);
+
+        Self {
+            offsets,
+            values: MutableBuffer::<u8>::with_capacity(values),
             validity: MutableBitmap::with_capacity(capacity),
             length,
         }

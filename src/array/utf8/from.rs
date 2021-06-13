@@ -228,15 +228,29 @@ pub struct Utf8Primitive<O: Offset> {
 }
 
 impl<O: Offset> Utf8Primitive<O> {
-    /// Initializes a new [`Utf8Primitive`] with a pre-allocated number of slots.
-    fn with_capacity(capacity: usize) -> Self {
+    /// Initializes a new [`Utf8Primitive`] with a pre-allocated capacity of slots.
+    pub fn with_capacity(capacity: usize) -> Self {
         let mut offsets = MutableBuffer::<O>::with_capacity(capacity + 1);
         let length = O::default();
-        unsafe { offsets.push_unchecked(length) };
+        offsets.push(length);
 
         Self {
             offsets,
             values: MutableBuffer::<u8>::new(),
+            validity: MutableBitmap::with_capacity(capacity),
+            length,
+        }
+    }
+
+    /// Initializes a new [`Utf8Primitive`] with a pre-allocated capacity of slots and values.
+    pub fn with_capacities(capacity: usize, values: usize) -> Self {
+        let mut offsets = MutableBuffer::<O>::with_capacity(capacity + 1);
+        let length = O::default();
+        offsets.push(length);
+
+        Self {
+            offsets,
+            values: MutableBuffer::<u8>::with_capacity(values),
             validity: MutableBitmap::with_capacity(capacity),
             length,
         }
@@ -341,5 +355,13 @@ mod tests {
         let a = array.validity().as_ref().unwrap();
         assert_eq!(a.len(), 3);
         assert_eq!(a.as_slice()[0], 0b00000011);
+    }
+
+    #[test]
+    fn test_capacities() {
+        let b = Utf8Primitive::<i32>::with_capacities(1, 10);
+
+        assert_eq!(b.values.capacity(), 64);
+        assert_eq!(b.offsets.capacity(), 16); // 64 bytes
     }
 }
