@@ -68,15 +68,17 @@ impl Builder<&[u8]> for FixedSizeBinaryPrimitive {
                     }
                 } else {
                     self.size = Some(bytes.len());
-                    self.values
-                        .extend_from_slice(&vec![0; bytes.len() * self.current_validity]);
+                    self.values.extend_from_trusted_len_iter(
+                        std::iter::repeat(0).take(bytes.len() * self.current_validity),
+                    );
                 };
                 self.values.extend_from_slice(bytes);
                 self.validity.push(true);
             }
             None => {
                 if let Some(size) = self.size {
-                    self.values.extend_from_slice(&vec![0; size]);
+                    self.values
+                        .extend_from_trusted_len_iter(std::iter::repeat(0).take(size));
                 } else {
                     self.current_validity += 1;
                 }
@@ -98,8 +100,9 @@ impl FixedSizeBinaryPrimitive {
         if let Some(self_size) = self.size {
             assert_eq!(size, self_size);
         } else {
-            self.values
-                .extend_from_slice(&vec![0; size * self.current_validity])
+            self.values.extend_from_trusted_len_iter(
+                std::iter::repeat(0).take(size * self.current_validity),
+            )
         };
 
         FixedSizeBinaryArray::from_data(data_type, self.values.into(), self.validity.into())
