@@ -426,8 +426,7 @@ mod tests {
         let bitmap: Bitmap = bitmap.into();
         assert_eq!(bitmap.len(), 10);
 
-        assert_eq!(bitmap.as_slice()[0], 0b11111001);
-        assert_eq!(bitmap.as_slice()[1], 0b00000011);
+        assert_eq!(bitmap.as_slice(), &[0b11111001, 0b00000011]);
     }
 
     #[test]
