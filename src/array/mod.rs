@@ -398,7 +398,8 @@ pub trait TryFromIterator<A>: Sized {
     fn try_from_iter<T: IntoIterator<Item = Result<A>>>(iter: T) -> Result<Self>;
 }
 
-/// A trait describing the ability of a struct to build itself from an iterator into an [`Array`].
+/// A trait describing the ability of a struct to build an Array incrementally.
+/// There are builders for almost all array types.
 pub trait Builder<T>: TryFromIterator<Option<T>> {
     /// Create the builder with a capacity
     fn with_capacity(capacity: usize) -> Self;

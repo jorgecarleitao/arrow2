@@ -116,6 +116,7 @@ impl<P: AsRef<[Option<bool>]>> From<P> for BooleanArray {
 
 mod ffi;
 mod iterator;
+mod primitive;
 pub use iterator::*;
 
 mod from;
