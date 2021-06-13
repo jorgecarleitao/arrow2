@@ -180,11 +180,16 @@ let dates = Primitive::&lt;i32&gt;::from(&amp;[Some(1), None]).to(DataType::Date
 <p><code>ints</code> and <code>dates</code> have the same in-memory representation but different logic representations (e.g. dates are usually represented as a string).</p>
 <p>Some physical types (e.g. <code>i32</code>) have a &quot;natural&quot; logical <code>DataType</code> (e.g. <code>DataType::Int32</code>).
 These types support a more compact notation:</p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::array::{Array, PrimitiveArray, Primitive};
+<pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::array::{Array, Int32Array, Primitive};
 </span><span class="boring">use arrow2::datatypes::DataType;
 </span><span class="boring">fn main() {
-</span>let array: PrimitiveArray&lt;i32&gt; = [Some(1), None, Some(123)].iter().collect();
-assert_eq!(array.len(), 3)
+</span>/// Int32Array = PrimitiveArray&lt;i32&gt;
+let array = [Some(1), None, Some(123)].iter().collect::&lt;Int32Array&gt;();
+assert_eq!(array.len(), 3);
+let array = Int32Array::from(&amp;[Some(1), None, Some(123)]);
+assert_eq!(array.len(), 3);
+let array = Int32Array::from_slice(&amp;[1, 123]);
+assert_eq!(array.len(), 2);
 <span class="boring">}
 </span></code></pre></pre>
 <p>The following arrays are supported:</p>
@@ -306,28 +311,26 @@ fn float_operator(array: &amp;dyn Array) -&gt; Result&lt;Box&lt;dyn Array&gt;, S
 </span></code></pre></pre>
 <h2 id="from-iterator"><a class="header" href="#from-iterator">From Iterator</a></h2>
 <p>In the examples above, we've introduced how to create an array from an iterator.
-These APIs are available for all Arrays, and they are highly suitable to efficiently
+These APIs are available for all Arrays, and they are suitable to efficiently
 create them. In this section we will go a bit more in detail about these operations,
 and how to make them even more efficient.</p>
-<p>This crate's APIs are generally split into two parts: whether an operation leverages contiguous memory regions or whether it does not.</p>
+<p>This crate's APIs are generally split into two patterns: whether an operation leverages
+contiguous memory regions or whether it does not.</p>
 <p>If yes, then use:</p>
 <ul>
 <li><code>Buffer::from_iter</code></li>
-<li><code>unsafe Buffer::from_trusted_len_iter</code></li>
-<li><code>unsafe Buffer::try_from_trusted_len_iter</code></li>
+<li><code>Buffer::from_trusted_len_iter</code></li>
+<li><code>Buffer::try_from_trusted_len_iter</code></li>
 </ul>
 <p>If not, then use the builder API, such as <code>Primitive&lt;T&gt;</code>, <code>Utf8Primitive&lt;O&gt;</code>, <code>ListPrimitive</code>, etc.</p>
-<p>We have seen examples where the latter API was used. In the last example of this page you will be introduced to an example of using the former for SIMD.</p>
+<p>We have seen examples where the latter API was used. In the last example of this page
+you will be introduced to an example of using the former for SIMD.</p>
 <h2 id="into-iterator"><a class="header" href="#into-iterator">Into Iterator</a></h2>
 <p>We've already seen how to create an array from an iterator. Most arrays also implement
 <code>IntoIterator</code>:</p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::array::{Array, PrimitiveArray, Primitive};
-</span><span class="boring">use arrow2::datatypes::DataType;
+<pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::array::{Array, Int32Array};
 </span><span class="boring">fn main() {
-</span>let array: PrimitiveArray&lt;i32&gt; = [Some(1), None, Some(123)]
-    .iter()
-    .collect::&lt;Primitive&lt;i32&gt;&gt;()
-    .to(DataType::Int32);
+</span>let array = Int32Array::from(&amp;[Some(1), None, Some(123)]);
 
 for item in array.iter() {
     if let Some(value) = item {
@@ -341,11 +344,11 @@ for item in array.iter() {
 <p>Like <code>FromIterator</code>, this crate contains two sets of APIs to iterate over data. Given
 an array <code>array: &amp;PrimitiveArray&lt;T&gt;</code>, the following applies:</p>
 <ol>
-<li>If you need to iterate over <code>Option&lt;T&gt;</code>, use <code>array.iter()</code></li>
-<li>If you can operate over the values and validity independently, use <code>array.values() -&gt; &amp;[T]</code> and <code>array.validity() -&gt; &amp;Option&lt;Bitmap&gt;</code></li>
+<li>If you need to iterate over <code>Option&lt;&amp;T&gt;</code>, use <code>array.iter()</code></li>
+<li>If you can operate over the values and validity independently, use <code>array.values() -&gt; &amp;Buffer&lt;T&gt;</code> and <code>array.validity() -&gt; &amp;Option&lt;Bitmap&gt;</code></li>
 </ol>
-<p>Note that case 1 is useful when e.g. you want to perform an operation that depends on both validity and values, while the latter is suitable for SIMD and copies, as they return contiguous memory regions (slices and bitmaps). We will see below how to leverage these APIs.</p>
-<p>This idea holds more generally in this crate: <code>values()</code> always returns something that has a contiguous in-memory representation, while <code>iter()</code> returns items taking validity into account. To get an iterator over contiguous values, use <code>array.values().iter()</code>.</p>
+<p>Note that case 1 is useful when e.g. you want to perform an operation that depends on both validity and values, while the latter is suitable for SIMD and copies, as they return contiguous memory regions (buffers and bitmaps). We will see below how to leverage these APIs.</p>
+<p>This idea holds more generally in this crate's arrays: <code>values()</code> returns something that has a contiguous in-memory representation, while <code>iter()</code> returns items taking validity into account. To get an iterator over contiguous values, use <code>array.values().iter()</code>.</p>
 <p>There is one last API that is worth mentioning, and that is <code>Bitmap::chunks</code>. When performing
 bitwise operations, it is often more performant to operate on chunks of bits instead of single bits. <code>chunks</code> offers a <code>TrustedLen</code> of <code>u64</code> with the bits + an extra <code>u64</code> remainder. We expose two functions, <code>unary(Bitmap, Fn) -&gt; Bitmap</code> and <code>binary(Bitmap, Bitmap, Fn) -&gt; Bitmap</code> that use this API to efficiently perform bitmap operations.</p>
 <h2 id="vectorized-operations"><a class="header" href="#vectorized-operations">Vectorized operations</a></h2>
@@ -368,9 +371,7 @@ where
     F: Fn(I) -&gt; O,
 {
     let values = array.values().iter().map(|v| op(*v));
-    //  Soundness
-    //      `values` is an iterator with a known size because arrays are sized.
-    let values = unsafe { Buffer::from_trusted_len_iter(values) };
+    let values = Buffer::from_trusted_len_iter(values);
 
     PrimitiveArray::&lt;O&gt;::from_data(data_type.clone(), values, array.validity().clone())
 }
@@ -383,9 +384,6 @@ where
 </li>
 <li>
 <p>We leveraged normal rust iterators for the operation.</p>
-</li>
-<li>
-<p>We have used <code>from_trusted_len_iter</code>, which assumes that the iterator is <a href="https://doc.rust-lang.org/std/iter/trait.TrustedLen.html"><code>TrustedLen</code></a>. This (instead of <code>.collect</code>) is necessary because trait specialization is currently unstable.</p>
 </li>
 <li>
 <p>We used <code>op</code> on the array's values irrespectively of their validity,

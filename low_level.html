@@ -196,7 +196,11 @@ assert_eq!(y.as_slice()[50], 100);
 <h2 id="bitmaps"><a class="header" href="#bitmaps">Bitmaps</a></h2>
 <p>Arrow's in-memory arrangement of boolean values is different from <code>Vec&lt;bool&gt;</code>. Specifically,
 arrow uses individual bits to represent a boolean, as opposed to the usual byte that <code>bool</code> holds.
-In arrow2, these are <code>Bitmap</code> (immutable) and <code>MutableBitmap</code> (mutable).</p>
+Besides the 8x compression, this makes the validity particularly useful for 
+<a href="https://en.wikipedia.org/wiki/AVX-512">AVX512</a> masks.
+The disadvantage is that an arrows' bitmap is not represented as a Rust slice, as Rust slices use
+pointer arithmetics, whose smallest size is a byte.</p>
+<p>Arrow2 has two containers for bitmaps: <code>Bitmap</code> (immutable and sharable) and <code>MutableBitmap</code> (mutable):</p>
 <pre><pre class="playground"><code class="language-rust">use arrow2::bitmap::Bitmap;
 <span class="boring">fn main() {
 </span>let x = Bitmap::from(&amp;[true, false]);
