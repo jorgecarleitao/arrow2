@@ -80,6 +80,9 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (List(list_from), List(list_to)) => {
             can_cast_types(list_from.data_type(), list_to.data_type())
         }
+        (LargeList(list_from), LargeList(list_to)) => {
+            can_cast_types(list_from.data_type(), list_to.data_type())
+        }
         (List(_), _) => false,
         (_, List(list_to)) => can_cast_types(from_type, list_to.data_type()),
         (Dictionary(_, from_value_type), Dictionary(_, to_value_type)) => {
@@ -227,11 +230,23 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (Timestamp(_, _), Timestamp(_, _)) => true,
         (Timestamp(_, _), Date32) => true,
         (Timestamp(_, _), Date64) => true,
-        // date64 to timestamp might not make sense,
         (Int64, Duration(_)) => true,
+        (Duration(_), Int64) => true,
         (Null, Int32) => true,
         (_, _) => false,
     }
+}
+
+fn cast_list<O: Offset>(array: &ListArray<O>, to_type: &DataType) -> Result<ListArray<O>> {
+    let values = array.values();
+    let new_values = cast(values.as_ref(), ListArray::<O>::get_child_type(to_type))?.into();
+
+    Ok(ListArray::<O>::from_data(
+        to_type.clone(),
+        array.offsets().clone(),
+        new_values,
+        array.validity().clone(),
+    ))
 }
 
 /// Cast `array` to the provided data type and return a new [`Array`] with
@@ -269,19 +284,11 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
         (_, Struct(_)) => Err(ArrowError::NotYetImplemented(
             "Cannot cast to struct from other types".to_string(),
         )),
-        (List(_), List(to)) => {
-            let array = array.as_any().downcast_ref::<ListArray<i32>>().unwrap();
-
-            let values = array.values();
-            let new_values = cast(values.as_ref(), to.data_type())?.into();
-
-            let list = ListArray::<i32>::from_data(
-                to_type.clone(),
-                array.offsets().clone(),
-                new_values,
-                array.validity().clone(),
-            );
-            Ok(Box::new(list))
+        (List(_), List(_)) => cast_list::<i32>(array.as_any().downcast_ref().unwrap(), to_type)
+            .map(|x| Box::new(x) as Box<dyn Array>),
+        (LargeList(_), LargeList(_)) => {
+            cast_list::<i64>(array.as_any().downcast_ref().unwrap(), to_type)
+                .map(|x| Box::new(x) as Box<dyn Array>)
         }
 
         (List(_), _) => Err(ArrowError::NotYetImplemented(
@@ -588,8 +595,8 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
         (Timestamp(from_unit, _), Date32) => primitive_dyn!(array, timestamp_to_date32, from_unit),
         (Timestamp(from_unit, _), Date64) => primitive_dyn!(array, timestamp_to_date64, from_unit),
 
-        // date64 to timestamp might not make sense,
         (Int64, Duration(_)) => primitive_to_same_primitive_dyn::<i64>(array, to_type),
+        (Duration(_), Int64) => primitive_to_same_primitive_dyn::<i64>(array, to_type),
 
         // null to primitive/flat types
         //(Null, Int32) => Ok(Box::new(Int32Array::from(vec![None; array.len()]))),
@@ -813,6 +820,7 @@ mod tests {
             Duration(TimeUnit::Millisecond),
             Duration(TimeUnit::Microsecond),
             Duration(TimeUnit::Nanosecond),
+            List(Box::new(Field::new("a", Utf8, true))),
         ];
         datatypes
             .clone()
