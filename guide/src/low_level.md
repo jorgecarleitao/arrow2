@@ -69,7 +69,12 @@ We will now see how these containers are used in higher-level structures: Arrays
 
 Arrow's in-memory arrangement of boolean values is different from `Vec<bool>`. Specifically,
 arrow uses individual bits to represent a boolean, as opposed to the usual byte that `bool` holds.
-In arrow2, these are `Bitmap` (immutable) and `MutableBitmap` (mutable).
+Besides the 8x compression, this makes the validity particularly useful for 
+[AVX512](https://en.wikipedia.org/wiki/AVX-512) masks.
+The disadvantage is that an arrows' bitmap is not represented as a Rust slice, as Rust slices use
+pointer arithmetics, whose smallest size is a byte.
+
+Arrow2 has two containers for bitmaps: `Bitmap` (immutable and sharable) and `MutableBitmap` (mutable):
 
 ```rust
 use arrow2::bitmap::Bitmap;

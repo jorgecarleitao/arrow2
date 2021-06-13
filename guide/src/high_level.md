@@ -46,11 +46,16 @@ Some physical types (e.g. `i32`) have a "natural" logical `DataType` (e.g. `Data
 These types support a more compact notation:
 
 ```rust
-# use arrow2::array::{Array, PrimitiveArray, Primitive};
+# use arrow2::array::{Array, Int32Array, Primitive};
 # use arrow2::datatypes::DataType;
 # fn main() {
-let array: PrimitiveArray<i32> = [Some(1), None, Some(123)].iter().collect();
-assert_eq!(array.len(), 3)
+/// Int32Array = PrimitiveArray<i32>
+let array = [Some(1), None, Some(123)].iter().collect::<Int32Array>();
+assert_eq!(array.len(), 3);
+let array = Int32Array::from(&[Some(1), None, Some(123)]);
+assert_eq!(array.len(), 3);
+let array = Int32Array::from_slice(&[1, 123]);
+assert_eq!(array.len(), 2);
 # }
 ```
 
@@ -184,21 +189,23 @@ fn float_operator(array: &dyn Array) -> Result<Box<dyn Array>, String> {
 ## From Iterator
 
 In the examples above, we've introduced how to create an array from an iterator.
-These APIs are available for all Arrays, and they are highly suitable to efficiently
+These APIs are available for all Arrays, and they are suitable to efficiently
 create them. In this section we will go a bit more in detail about these operations,
 and how to make them even more efficient.
 
-This crate's APIs are generally split into two parts: whether an operation leverages contiguous memory regions or whether it does not.
+This crate's APIs are generally split into two patterns: whether an operation leverages
+contiguous memory regions or whether it does not.
 
 If yes, then use:
 
 * `Buffer::from_iter`
-* `unsafe Buffer::from_trusted_len_iter`
-* `unsafe Buffer::try_from_trusted_len_iter`
+* `Buffer::from_trusted_len_iter`
+* `Buffer::try_from_trusted_len_iter`
 
 If not, then use the builder API, such as `Primitive<T>`, `Utf8Primitive<O>`, `ListPrimitive`, etc.
 
-We have seen examples where the latter API was used. In the last example of this page you will be introduced to an example of using the former for SIMD.
+We have seen examples where the latter API was used. In the last example of this page
+you will be introduced to an example of using the former for SIMD.
 
 ## Into Iterator
 
@@ -206,13 +213,9 @@ We've already seen how to create an array from an iterator. Most arrays also imp
 `IntoIterator`:
 
 ```rust
-# use arrow2::array::{Array, PrimitiveArray, Primitive};
-# use arrow2::datatypes::DataType;
+# use arrow2::array::{Array, Int32Array};
 # fn main() {
-let array: PrimitiveArray<i32> = [Some(1), None, Some(123)]
-    .iter()
-    .collect::<Primitive<i32>>()
-    .to(DataType::Int32);
+let array = Int32Array::from(&[Some(1), None, Some(123)]);
 
 for item in array.iter() {
     if let Some(value) = item {
@@ -227,12 +230,12 @@ for item in array.iter() {
 Like `FromIterator`, this crate contains two sets of APIs to iterate over data. Given
 an array `array: &PrimitiveArray<T>`, the following applies:
 
-1. If you need to iterate over `Option<T>`, use `array.iter()`
-2. If you can operate over the values and validity independently, use `array.values() -> &[T]` and `array.validity() -> &Option<Bitmap>`
+1. If you need to iterate over `Option<&T>`, use `array.iter()`
+2. If you can operate over the values and validity independently, use `array.values() -> &Buffer<T>` and `array.validity() -> &Option<Bitmap>`
 
-Note that case 1 is useful when e.g. you want to perform an operation that depends on both validity and values, while the latter is suitable for SIMD and copies, as they return contiguous memory regions (slices and bitmaps). We will see below how to leverage these APIs.
+Note that case 1 is useful when e.g. you want to perform an operation that depends on both validity and values, while the latter is suitable for SIMD and copies, as they return contiguous memory regions (buffers and bitmaps). We will see below how to leverage these APIs.
 
-This idea holds more generally in this crate: `values()` always returns something that has a contiguous in-memory representation, while `iter()` returns items taking validity into account. To get an iterator over contiguous values, use `array.values().iter()`.
+This idea holds more generally in this crate's arrays: `values()` returns something that has a contiguous in-memory representation, while `iter()` returns items taking validity into account. To get an iterator over contiguous values, use `array.values().iter()`.
 
 There is one last API that is worth mentioning, and that is `Bitmap::chunks`. When performing
 bitwise operations, it is often more performant to operate on chunks of bits instead of single bits. `chunks` offers a `TrustedLen` of `u64` with the bits + an extra `u64` remainder. We expose two functions, `unary(Bitmap, Fn) -> Bitmap` and `binary(Bitmap, Bitmap, Fn) -> Bitmap` that use this API to efficiently perform bitmap operations.
@@ -257,9 +260,7 @@ where
     F: Fn(I) -> O,
 {
     let values = array.values().iter().map(|v| op(*v));
-    //  Soundness
-    //      `values` is an iterator with a known size because arrays are sized.
-    let values = unsafe { Buffer::from_trusted_len_iter(values) };
+    let values = Buffer::from_trusted_len_iter(values);
 
     PrimitiveArray::<O>::from_data(data_type.clone(), values, array.validity().clone())
 }
@@ -271,7 +272,5 @@ Some notes:
 
 2. We leveraged normal rust iterators for the operation.
 
-1. We have used `from_trusted_len_iter`, which assumes that the iterator is [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html). This (instead of `.collect`) is necessary because trait specialization is currently unstable.
-
-2. We used `op` on the array's values irrespectively of their validity,
+3. We used `op` on the array's values irrespectively of their validity,
 and cloned its validity. This approach is suitable for operations whose branching off is more expensive than operating over all values. If the operation is expensive, then using `Primitive::<O>::from_trusted_len_iter` is likely faster.
