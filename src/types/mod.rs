@@ -53,6 +53,8 @@ macro_rules! natural_type {
 /// Do not implement.
 pub unsafe trait NativeType:
     Relation
+    + Send
+    + Sync
     + Sized
     + Copy
     + std::fmt::Debug
