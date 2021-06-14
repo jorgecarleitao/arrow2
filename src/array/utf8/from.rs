@@ -230,16 +230,7 @@ pub struct Utf8Primitive<O: Offset> {
 impl<O: Offset> Utf8Primitive<O> {
     /// Initializes a new [`Utf8Primitive`] with a pre-allocated capacity of slots.
     pub fn with_capacity(capacity: usize) -> Self {
-        let mut offsets = MutableBuffer::<O>::with_capacity(capacity + 1);
-        let length = O::default();
-        offsets.push(length);
-
-        Self {
-            offsets,
-            values: MutableBuffer::<u8>::new(),
-            validity: MutableBitmap::with_capacity(capacity),
-            length,
-        }
+        Self::with_capacities(capacity, 0)
     }
 
     /// Initializes a new [`Utf8Primitive`] with a pre-allocated capacity of slots and values.

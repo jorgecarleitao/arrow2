@@ -26,13 +26,18 @@ where
 {
     /// Initializes a new [`ListPrimitive`] with a pre-allocated number of slots.
     pub fn with_capacity(capacity: usize) -> Self {
+        Self::with_capacities(capacity, 0)
+    }
+
+    /// Initializes a new [`ListPrimitive`] with a pre-allocated capacity of slots and values.
+    pub fn with_capacities(capacity: usize, values: usize) -> Self {
         let mut offsets = MutableBuffer::<O>::with_capacity(capacity + 1);
         let length = O::default();
-        unsafe { offsets.push_unchecked(length) };
+        offsets.push(length);
 
         Self {
             offsets,
-            values: B::with_capacity(0),
+            values: B::with_capacity(values),
             validity: MutableBitmap::with_capacity(capacity),
             length,
             phantom: std::marker::PhantomData,
