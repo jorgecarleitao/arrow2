@@ -1,3 +1,4 @@
+use crate::bitmap::utils::{BitChunkIterExact, BitChunksExact};
 use crate::types::simd::*;
 use crate::types::NativeType;
 use crate::{
@@ -71,14 +72,13 @@ where
     reduced.min_element()
 }
 
-fn null_min_primitive<T>(values: &[T], validity: &Bitmap) -> T
+fn null_min_primitive_impl<T, I>(values: &[T], mut validity_masks: I) -> T
 where
     T: NativeType + Simd,
     T::Simd: SimdOrd<T>,
+    I: BitChunkIterExact<<<T as Simd>::Simd as NativeSimd>::Chunk>,
 {
     let mut chunks = values.chunks_exact(T::Simd::LANES);
-
-    let mut validity_masks = validity.chunks::<<T::Simd as NativeSimd>::Chunk>();
 
     let chunk_reduced = chunks.by_ref().zip(validity_masks.by_ref()).fold(
         T::Simd::new_min(),
@@ -96,6 +96,40 @@ where
     let reduced = chunk_reduced.min(remainder);
 
     reduced.min_element()
+}
+
+/// # Panics
+/// iff `values.len() != bitmap.len()` or the operation overflows.
+fn null_min_primitive<T>(values: &[T], bitmap: &Bitmap) -> T
+where
+    T: NativeType + Simd,
+    T::Simd: SimdOrd<T>,
+{
+    if bitmap.offset() == 0 {
+        let validity_masks =
+            BitChunksExact::<<T::Simd as NativeSimd>::Chunk>::new(bitmap.as_slice(), bitmap.len());
+        null_min_primitive_impl(values, validity_masks)
+    } else {
+        let validity_masks = bitmap.chunks::<<T::Simd as NativeSimd>::Chunk>();
+        null_min_primitive_impl(values, validity_masks)
+    }
+}
+
+/// # Panics
+/// iff `values.len() != bitmap.len()` or the operation overflows.
+fn null_max_primitive<T>(values: &[T], bitmap: &Bitmap) -> T
+where
+    T: NativeType + Simd,
+    T::Simd: SimdOrd<T>,
+{
+    if bitmap.offset() == 0 {
+        let validity_masks =
+            BitChunksExact::<<T::Simd as NativeSimd>::Chunk>::new(bitmap.as_slice(), bitmap.len());
+        null_max_primitive_impl(values, validity_masks)
+    } else {
+        let validity_masks = bitmap.chunks::<<T::Simd as NativeSimd>::Chunk>();
+        null_max_primitive_impl(values, validity_masks)
+    }
 }
 
 fn nonnull_max_primitive<T>(values: &[T]) -> T
@@ -117,14 +151,13 @@ where
     reduced.max_element()
 }
 
-fn null_max_primitive<T>(values: &[T], validity: &Bitmap) -> T
+fn null_max_primitive_impl<T, I>(values: &[T], mut validity_masks: I) -> T
 where
     T: NativeType + Simd,
     T::Simd: SimdOrd<T>,
+    I: BitChunkIterExact<<<T as Simd>::Simd as NativeSimd>::Chunk>,
 {
     let mut chunks = values.chunks_exact(T::Simd::LANES);
-
-    let mut validity_masks = validity.chunks::<<T::Simd as NativeSimd>::Chunk>();
 
     let chunk_reduced = chunks.by_ref().zip(validity_masks.by_ref()).fold(
         T::Simd::new_max(),

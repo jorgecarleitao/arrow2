@@ -214,7 +214,7 @@ impl Bitmap {
 impl Bitmap {
     #[inline]
     pub(crate) fn offset(&self) -> usize {
-        self.offset
+        self.offset % 8
     }
 
     #[inline]
@@ -222,7 +222,7 @@ impl Bitmap {
         assert_eq!(self.offset % 8, 0); // slices only make sense when there is no offset
         let start = self.offset % 8;
         let len = self.length.saturating_add(7) / 8;
-        &self.bytes[start..len]
+        &self.bytes[start..start + len]
     }
 }
 

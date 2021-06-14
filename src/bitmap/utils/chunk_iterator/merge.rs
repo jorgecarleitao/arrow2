@@ -12,7 +12,7 @@ use super::BitChunk;
 /// assert_eq!(result, 0b10101100);
 /// ```
 #[inline]
-pub fn merge_reversed<T>(mut current: T, mut next: T, offset: u32) -> T
+pub fn merge_reversed<T>(mut current: T, mut next: T, offset: usize) -> T
 where
     T: BitChunk,
 {
@@ -23,7 +23,7 @@ where
     // expected = [n5, n6, n7, c0, c1, c2, c3, c4]
 
     // 1. unset most significants of `next` up to `offset`
-    let inverse_offset = std::mem::size_of::<T>() as u32 * 8 - offset;
+    let inverse_offset = std::mem::size_of::<T>() * 8 - offset;
     next <<= inverse_offset;
     // next    =  [n5, n6, n7, 0 , 0 , 0 , 0 , 0 ]
 

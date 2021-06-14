@@ -3,6 +3,7 @@ mod iterator;
 mod slice_iterator;
 mod zip_validity;
 
+pub use chunk_iterator::{BitChunk, BitChunkIterExact, BitChunks, BitChunksExact};
 pub use iterator::BitmapIter;
 pub use slice_iterator::SlicesIterator;
 pub use zip_validity::{zip_validity, ZipValidity};
@@ -78,8 +79,6 @@ pub fn null_count(slice: &[u8], offset: usize, len: usize) -> usize {
 
     len - count
 }
-
-pub use chunk_iterator::{BitChunk, BitChunks};
 
 #[cfg(test)]
 mod tests {
