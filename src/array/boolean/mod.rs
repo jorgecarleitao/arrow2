@@ -2,6 +2,14 @@ use crate::{bitmap::Bitmap, datatypes::DataType};
 
 use super::{display_fmt, Array};
 
+mod ffi;
+mod from;
+mod iterator;
+mod primitive;
+
+pub use iterator::*;
+pub use primitive::*;
+
 /// A [`BooleanArray`] is arrow's equivalent to `Vec<Option<bool>>`, i.e.
 /// an array designed for highly performant operations on optionally nullable booleans.
 /// The size of this struct is `O(1)` as all data is stored behind an `Arc`.
@@ -113,13 +121,6 @@ impl<P: AsRef<[Option<bool>]>> From<P> for BooleanArray {
         Self::from_trusted_len_iter(slice.as_ref().iter().map(|x| x.as_ref()))
     }
 }
-
-mod ffi;
-mod iterator;
-mod primitive;
-pub use iterator::*;
-
-mod from;
 
 #[cfg(test)]
 mod tests {

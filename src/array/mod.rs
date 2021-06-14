@@ -344,7 +344,7 @@ pub mod ord;
 pub use display::get_display;
 
 pub use binary::{BinaryArray, BinaryPrimitive};
-pub use boolean::BooleanArray;
+pub use boolean::{BooleanArray, BooleanPrimitive};
 pub use dictionary::{DictionaryArray, DictionaryKey, DictionaryPrimitive};
 pub use fixed_size_binary::{FixedSizeBinaryArray, FixedSizeBinaryPrimitive};
 pub use fixed_size_list::{FixedSizeListArray, FixedSizeListPrimitive};
