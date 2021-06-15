@@ -68,10 +68,19 @@ impl BooleanArray {
         }
     }
 
-    /// Returns the element at index `i` as &str
+    /// Returns the element at index `i` as bool
     #[inline]
     pub fn value(&self, i: usize) -> bool {
         self.values.get_bit(i)
+    }
+
+    /// Returns the element at index `i` as bool
+    ///
+    /// # Safety
+    /// Caller must be sure that `i < self.len()`
+    #[inline]
+    pub unsafe fn value_unchecked(&self, i: usize) -> bool {
+        self.values.get_bit_unchecked(i)
     }
 
     /// Returns the values bitmap of this [`BooleanArray`].
