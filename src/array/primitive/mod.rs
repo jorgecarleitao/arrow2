@@ -83,6 +83,15 @@ impl<T: NativeType> PrimitiveArray<T> {
     pub fn value(&self, i: usize) -> T {
         self.values()[i]
     }
+
+    /// Returns the element at index `i` as `T`
+    ///
+    /// # Safety
+    /// Caller must be sure that `i < self.len()`
+    #[inline]
+    pub unsafe fn value_unchecked(&self, i: usize) -> T {
+        *self.values().as_ptr().add(i)
+    }
 }
 
 impl<T: NativeType> Array for PrimitiveArray<T> {
@@ -153,6 +162,11 @@ mod tests {
         assert_eq!(array.value(0), 0);
         assert_eq!(array.value(1), 10);
         assert_eq!(array.values().as_slice(), &[0, 10]);
+
+        unsafe {
+            assert_eq!(array.value_unchecked(0), 0);
+            assert_eq!(array.value_unchecked(1), 10);
+        }
     }
 
     #[test]
