@@ -23,6 +23,7 @@ use crate::{
 };
 
 use super::maybe_usize;
+use super::Index;
 
 pub fn take_values<O: Offset>(
     length: O,
@@ -45,7 +46,7 @@ pub fn take_values<O: Offset>(
 }
 
 // take implementation when neither values nor indices contain nulls
-pub fn take_no_validity<O: Offset, I: Offset>(
+pub fn take_no_validity<O: Offset, I: Index>(
     offsets: &[O],
     values: &[u8],
     indices: &[I],
@@ -70,7 +71,7 @@ pub fn take_no_validity<O: Offset, I: Offset>(
 }
 
 // take implementation when only values contain nulls
-pub fn take_values_validity<O: Offset, I: Offset, A: GenericBinaryArray<O>>(
+pub fn take_values_validity<O: Offset, I: Index, A: GenericBinaryArray<O>>(
     values: &A,
     indices: &[I],
 ) -> Result<(Buffer<O>, Buffer<u8>, Option<Bitmap>)> {
@@ -105,7 +106,7 @@ pub fn take_values_validity<O: Offset, I: Offset, A: GenericBinaryArray<O>>(
 }
 
 // take implementation when only indices contain nulls
-pub fn take_indices_validity<O: Offset, I: Offset>(
+pub fn take_indices_validity<O: Offset, I: Index>(
     offsets: &[O],
     values: &[u8],
     indices: &PrimitiveArray<I>,
@@ -135,7 +136,7 @@ pub fn take_indices_validity<O: Offset, I: Offset>(
 }
 
 // take implementation when both indices and values contain nulls
-pub fn take_values_indices_validity<O: Offset, I: Offset, A: GenericBinaryArray<O>>(
+pub fn take_values_indices_validity<O: Offset, I: Index, A: GenericBinaryArray<O>>(
     values: &A,
     indices: &PrimitiveArray<I>,
 ) -> Result<(Buffer<O>, Buffer<u8>, Option<Bitmap>)> {

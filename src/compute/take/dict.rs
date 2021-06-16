@@ -16,11 +16,12 @@
 // under the License.
 
 use crate::{
-    array::{DictionaryArray, DictionaryKey, Offset, PrimitiveArray},
+    array::{DictionaryArray, DictionaryKey, PrimitiveArray},
     error::Result,
 };
 
 use super::primitive::take as take_primitive;
+use super::Index;
 
 /// `take` implementation for dictionary arrays
 ///
@@ -32,7 +33,7 @@ pub fn take<K, I>(
 ) -> Result<DictionaryArray<K>>
 where
     K: DictionaryKey,
-    I: Offset,
+    I: Index,
 {
     let keys = take_primitive::<K, I>(values.keys(), indices)?;
     Ok(DictionaryArray::<K>::from_data(

@@ -24,9 +24,10 @@ use crate::{
 };
 
 use super::maybe_usize;
+use super::Index;
 
 /// `take` implementation for ListArrays
-pub fn take<I: Offset, O: Offset>(
+pub fn take<I: Offset, O: Index>(
     values: &ListArray<I>,
     indices: &PrimitiveArray<O>,
 ) -> Result<ListArray<I>> {

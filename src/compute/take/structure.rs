@@ -18,15 +18,16 @@
 use std::sync::Arc;
 
 use crate::{
-    array::{Array, Offset, PrimitiveArray, StructArray},
+    array::{Array, PrimitiveArray, StructArray},
     bitmap::{Bitmap, MutableBitmap},
     error::Result,
 };
 
 use super::maybe_usize;
+use super::Index;
 
 #[inline]
-fn take_validity<I: Offset>(
+fn take_validity<I: Index>(
     validity: &Option<Bitmap>,
     indices: &PrimitiveArray<I>,
 ) -> Result<Option<Bitmap>> {
@@ -55,7 +56,7 @@ fn take_validity<I: Offset>(
     }
 }
 
-pub fn take<I: Offset>(array: &StructArray, indices: &PrimitiveArray<I>) -> Result<StructArray> {
+pub fn take<I: Index>(array: &StructArray, indices: &PrimitiveArray<I>) -> Result<StructArray> {
     let values: Vec<Arc<dyn Array>> = array
         .values()
         .iter()
