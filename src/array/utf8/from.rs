@@ -35,6 +35,13 @@ impl<O: Offset> Utf8Array<O> {
         let (offsets, values) = unsafe { trusted_len_values_iter(iterator) };
         Self::from_data(offsets, values, None)
     }
+
+    /// Creates a new [`Utf8Array`] from a [`Iterator`] of `&str`.
+    pub fn from_iter_values<T: AsRef<str>, I: IntoIterator<Item = T>>(iter: I) -> Self {
+        let iterator = iter.into_iter();
+        let (offsets, values) = values_iter(iterator);
+        Self::from_data(offsets, values, None)
+    }
 }
 
 impl<O: Offset> Utf8Array<O> {
@@ -169,6 +176,33 @@ where
     );
     offsets.set_len(len + 1);
 
+    (offsets.into(), values.into())
+}
+
+/// Creates two [`Buffer`]s from an iterator of `&str`.
+/// The first buffer corresponds to a offset buffer, the second to a values buffer.
+#[inline]
+fn values_iter<O, I, P>(iterator: I) -> (Buffer<O>, Buffer<u8>)
+where
+    O: Offset,
+    P: AsRef<str>,
+    I: Iterator<Item = P>,
+{
+    let (lower, _) = iterator.size_hint();
+
+    let mut offsets = MutableBuffer::<O>::with_capacity(lower + 1);
+    let mut values = MutableBuffer::<u8>::new();
+
+    let mut length = O::default();
+    offsets.push(length);
+
+    for item in iterator {
+        let s = item.as_ref();
+        length += O::from_usize(s.len()).unwrap();
+        values.extend_from_slice(s.as_bytes());
+
+        offsets.push(length)
+    }
     (offsets.into(), values.into())
 }
 
@@ -354,5 +388,14 @@ mod tests {
 
         assert_eq!(b.values.capacity(), 64);
         assert_eq!(b.offsets.capacity(), 16); // 64 bytes
+    }
+
+    #[test]
+    fn test_from_iter_values() {
+        let b = Utf8Array::<i32>::from_iter_values(vec!["a", "b", "cc"]);
+
+        let offsets = Buffer::from(&[0, 1, 2, 4]);
+        let values = Buffer::from("abcc".as_bytes());
+        assert_eq!(b, Utf8Array::<i32>::from_data(offsets, values, None));
     }
 }
