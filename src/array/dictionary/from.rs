@@ -6,7 +6,7 @@ use std::{
 
 use hash_hasher::HashedMap;
 
-use crate::array::TryExtend;
+use crate::array::{NullableBuilder, TryExtend};
 use crate::{
     array::{Array, Builder, IntoArray, Primitive, ToArray},
     datatypes::DataType,
@@ -81,10 +81,13 @@ where
     T: Hash,
 {
     fn try_extend<I: IntoIterator<Item = Option<T>>>(&mut self, iter: I) -> Result<()> {
-        for item in iter {
-            self.try_push(item)?
-        }
-        Ok(())
+        iter.into_iter().try_for_each(|item| match item {
+            Some(item) => self.try_push(item),
+            None => {
+                self.push_null();
+                Ok(())
+            }
+        })
     }
 }
 
@@ -99,6 +102,18 @@ where
     }
 }
 
+impl<K, T, B> NullableBuilder for DictionaryPrimitive<K, B, T>
+where
+    K: DictionaryKey,
+    B: Builder<T>,
+    T: Hash,
+{
+    #[inline]
+    fn push_null(&mut self) {
+        self.keys.push_null();
+    }
+}
+
 impl<K, T, B> Builder<T> for DictionaryPrimitive<K, B, T>
 where
     K: DictionaryKey,
@@ -106,32 +121,25 @@ where
     T: Hash,
 {
     #[inline]
-    fn try_push(&mut self, value: Option<T>) -> Result<()> {
-        match value {
-            Some(v) => {
-                let mut hasher = DefaultHasher::new();
-                v.hash(&mut hasher);
-                let hash = hasher.finish();
-                match self.map.get(&hash) {
-                    Some(key) => self.keys.push(Some(*key)),
-                    None => {
-                        let key = K::from_usize(self.map.len())
-                            .ok_or(ArrowError::DictionaryKeyOverflowError)?;
-                        self.values.try_push(Some(v))?;
-                        self.map.insert(hash, key);
-                        self.keys.push(Some(key));
-                    }
-                }
-            }
+    fn try_push(&mut self, value: T) -> Result<()> {
+        let mut hasher = DefaultHasher::new();
+        value.hash(&mut hasher);
+        let hash = hasher.finish();
+        match self.map.get(&hash) {
+            Some(key) => self.keys.push(*key),
             None => {
-                self.keys.push(None);
+                let key =
+                    K::from_usize(self.map.len()).ok_or(ArrowError::DictionaryKeyOverflowError)?;
+                self.values.try_push(value)?;
+                self.map.insert(hash, key);
+                self.keys.push(key);
             }
         }
         Ok(())
     }
 
     #[inline]
-    fn push(&mut self, value: Option<T>) {
+    fn push(&mut self, value: T) {
         self.try_push(value).unwrap()
     }
 }

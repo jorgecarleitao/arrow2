@@ -392,8 +392,8 @@ pub trait IntoArray {
     fn into_arc(self) -> std::sync::Arc<dyn Array>;
 }
 
-/// A trait describing the ability of a struct to create itself from a falible iterator.
-/// Used in the context of creating arrays from non-sized iterators.
+/// A trait describing the ability of a struct to create itself.
+/// Used in the context of creating arrays that hold a finite number of items.
 pub trait TryFromIterator<A>: Sized {
     fn try_from_iter<T: IntoIterator<Item = A>>(iter: T) -> Result<Self>;
 }
@@ -404,18 +404,26 @@ pub trait TryExtend<A>: Sized {
     fn try_extend<T: IntoIterator<Item = A>>(&mut self, iter: T) -> Result<()>;
 }
 
-/// A trait describing the ability of a struct to build an Array incrementally.
-/// There are builders for almost all array types.
-pub trait Builder<T> {
-    /// Push a new item to the builder.
+/// A trait describing the ability of a struct to increment itself with a null.
+pub trait NullableBuilder {
+    /// Push a new null item to the builder.
     /// This operation may panic if the container cannot hold more items.
     /// For example, if all possible keys are exausted when building a dictionary.
-    fn push(&mut self, item: Option<T>);
+    fn push_null(&mut self);
+}
+
+/// A trait describing the ability of a struct to build an Array incrementally.
+/// There are builders for almost all array types.
+pub trait Builder<T>: NullableBuilder {
+    /// Push a new non-null item to the builder.
+    /// This operation may panic if the container cannot hold more items.
+    /// For example, if all possible keys are exausted when building a dictionary.
+    fn push(&mut self, item: T);
 
     /// Fallible version of `push`, on which the operation errors instead of panicking.
     /// prefer this if there is no guarantee that the operation will not fail.
     #[inline]
-    fn try_push(&mut self, item: Option<T>) -> Result<()> {
+    fn try_push(&mut self, item: T) -> Result<()> {
         self.push(item);
         Ok(())
     }

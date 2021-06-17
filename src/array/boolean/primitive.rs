@@ -1,8 +1,8 @@
 use std::iter::FromIterator;
 use std::sync::Arc;
 
-use crate::array::TryFromIterator;
 use crate::array::{IntoArray, TryExtend};
+use crate::array::{NullableBuilder, TryFromIterator};
 use crate::error::Result;
 use crate::{
     array::{Array, BooleanArray, Builder},
@@ -19,20 +19,20 @@ pub struct BooleanPrimitive {
     validity: MutableBitmap,
 }
 
+impl NullableBuilder for BooleanPrimitive {
+    #[inline]
+    fn push_null(&mut self) {
+        self.values.push(false);
+        self.validity.push(false);
+    }
+}
+
 impl Builder<bool> for BooleanPrimitive {
     /// Pushes a new item to this struct
     #[inline]
-    fn push(&mut self, value: Option<bool>) {
-        match value {
-            Some(v) => {
-                self.values.push(v);
-                self.validity.push(true);
-            }
-            None => {
-                self.values.push(false);
-                self.validity.push(false);
-            }
-        }
+    fn push(&mut self, value: bool) {
+        self.values.push(value);
+        self.validity.push(true);
     }
 }
 
@@ -84,7 +84,11 @@ impl<Ptr: std::borrow::Borrow<Option<bool>>> TryExtend<Ptr> for BooleanPrimitive
         self.validity.reserve(lower);
         self.values.reserve(lower);
         for item in iter {
-            self.push(*item.borrow())
+            let item = item.borrow();
+            match item {
+                Some(item) => self.push(*item),
+                None => self.push_null(),
+            }
         }
         Ok(())
     }

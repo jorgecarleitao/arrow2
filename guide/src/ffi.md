@@ -20,16 +20,14 @@ The API to export an `Array` is as follows:
 
 ```rust
 use std::sync::Arc;
-use arrow2::array::{Array, Primitive};
-use arrow2::datatypes::DataType;
+use arrow2::array::{Array, Int32Array};
 use arrow2::ffi::ArrowArray;
 
 # fn main() {
 // Example of an array:
 let array = [Some(1), None, Some(123)]
     .iter()
-    .collect::<Primitive<i32>>()
-    .to(DataType::Int32);
+    .collect::<Int32Array>();
 
 // export the array.
 let ffi_array = ffi::export_to_c(Arc::new(array))?;

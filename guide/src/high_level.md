@@ -90,12 +90,12 @@ let data = vec![
     Some(vec![Some(4), None, Some(6)]),
 ];
 
-let a: ListArray<i32> = data
-    .into_iter()
-    .collect::<ListPrimitive<i32, Primitive<i32>, i32>>()
-    .to(ListArray::<i32>::default_datatype(DataType::Int32));
+let mut builder = ListPrimitive::<i32, _, _>::new(Primitive::<i32>::new());
+builder.extend(data); // if the list can't hold all items
 
-let inner: &Arc<dyn Array> = a.values();
+let dates_array: ListArray<i32> = builder.to(ListArray::<i32>::default_datatype(DataType::Date32));
+
+let dates: &Arc<dyn Array> = dates_array.values();
 # }
 ```
 
@@ -107,13 +107,12 @@ Instead, `ListArray` has an inner `Array` representing all its values (available
 Given a trait object `&dyn Array`, we know its logical type via `Array::data_type()` and can use it to downcast the array to its concrete type:
 
 ```rust
-# use arrow2::array::{Array, PrimitiveArray, Primitive};
+# use arrow2::array::{Array, PrimitiveArray};
 # use arrow2::datatypes::DataType;
 # fn main() {
 let array: PrimitiveArray<i32> = [Some(1), None, Some(123)]
     .iter()
-    .collect::<Primitive<i32>>()
-    .to(DataType::Int32);
+    .collect();
 let array = &array as &dyn Array;
 
 let array = array.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
@@ -217,7 +216,7 @@ We've already seen how to create an array from an iterator. Most arrays also imp
 # fn main() {
 let array = Int32Array::from(&[Some(1), None, Some(123)]);
 
-for item in array.iter() {
+for item in &array {
     if let Some(value) = item {
         println!("{}", value);
     } else {

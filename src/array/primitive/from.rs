@@ -1,7 +1,7 @@
 use std::{iter::FromIterator, sync::Arc};
 
 use crate::{
-    array::{Array, Builder, IntoArray, ToArray, TryExtend, TryFromIterator},
+    array::{Array, Builder, IntoArray, NullableBuilder, ToArray, TryExtend, TryFromIterator},
     bitmap::MutableBitmap,
     buffer::MutableBuffer,
     datatypes::DataType,
@@ -188,20 +188,19 @@ pub struct Primitive<T: NativeType> {
     validity: MutableBitmap,
 }
 
+impl<T: NativeType> NullableBuilder for Primitive<T> {
+    fn push_null(&mut self) {
+        self.values.push(T::default());
+        self.validity.push(false);
+    }
+}
+
 impl<T: NativeType> Builder<T> for Primitive<T> {
     /// Pushes a new item to this struct
     #[inline]
-    fn push(&mut self, value: Option<T>) {
-        match value {
-            Some(v) => {
-                self.values.push(v);
-                self.validity.push(true);
-            }
-            None => {
-                self.values.push(T::default());
-                self.validity.push(false);
-            }
-        }
+    fn push(&mut self, value: T) {
+        self.values.push(value);
+        self.validity.push(true);
     }
 }
 
@@ -230,7 +229,11 @@ impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> Extend<Ptr> for Primiti
         self.validity.reserve(lower);
         self.values.reserve(lower);
         for item in iter {
-            self.push(*item.borrow())
+            let item = item.borrow();
+            match item {
+                Some(item) => self.push(*item),
+                None => self.push_null(),
+            }
         }
     }
 }

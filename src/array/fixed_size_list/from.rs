@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    array::{Array, Builder, ToArray, TryExtend},
+    array::{Array, Builder, NullableBuilder, ToArray, TryExtend},
     bitmap::MutableBitmap,
     datatypes::DataType,
     error::Result,
@@ -47,10 +47,13 @@ where
     P: IntoIterator<Item = Option<T>>,
 {
     fn try_extend<I: IntoIterator<Item = Option<P>>>(&mut self, iter: I) -> Result<()> {
-        for item in iter {
-            self.try_push(item)?;
-        }
-        Ok(())
+        iter.into_iter().try_for_each(|item| match item {
+            Some(item) => self.try_push(item),
+            None => {
+                self.push_null();
+                Ok(())
+            }
+        })
     }
 }
 
@@ -64,28 +67,36 @@ where
     }
 }
 
+impl<T, B> NullableBuilder for FixedSizeListPrimitive<B, T>
+where
+    B: Builder<T>,
+{
+    #[inline]
+    fn push_null(&mut self) {
+        self.validity.push(false);
+    }
+}
+
 impl<T, B, P> Builder<P> for FixedSizeListPrimitive<B, T>
 where
     B: Builder<T>,
     P: IntoIterator<Item = Option<T>>,
 {
     #[inline]
-    fn try_push(&mut self, value: Option<P>) -> Result<()> {
-        match value {
-            Some(v) => {
-                v.into_iter()
-                    .try_for_each(|item| self.values.try_push(item))?;
-                self.validity.push(true);
-            }
+    fn try_push(&mut self, value: P) -> Result<()> {
+        value.into_iter().try_for_each(|item| match item {
+            Some(item) => self.values.try_push(item),
             None => {
-                self.validity.push(false);
+                self.values.push_null();
+                Ok(())
             }
-        }
+        })?;
+        self.validity.push(true);
         Ok(())
     }
 
     #[inline]
-    fn push(&mut self, value: Option<P>) {
+    fn push(&mut self, value: P) {
         self.try_push(value).unwrap()
     }
 }

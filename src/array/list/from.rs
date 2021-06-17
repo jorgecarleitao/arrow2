@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    array::{Array, Builder, IntoArray, Offset, ToArray, TryExtend},
+    array::{Array, Builder, IntoArray, NullableBuilder, Offset, ToArray, TryExtend},
     bitmap::MutableBitmap,
     buffer::MutableBuffer,
     datatypes::DataType,
@@ -74,10 +74,13 @@ where
     P: IntoIterator<Item = Option<T>>,
 {
     fn try_extend<I: IntoIterator<Item = Option<P>>>(&mut self, iter: I) -> Result<()> {
-        for item in iter {
-            self.try_push(item)?;
-        }
-        Ok(())
+        iter.into_iter().try_for_each(|item| match item {
+            Some(item) => self.try_push(item),
+            None => {
+                self.push_null();
+                Ok(())
+            }
+        })
     }
 }
 
@@ -92,6 +95,18 @@ where
     }
 }
 
+impl<O, T, B> NullableBuilder for ListPrimitive<O, B, T>
+where
+    O: Offset,
+    B: Builder<T>,
+{
+    #[inline]
+    fn push_null(&mut self) {
+        self.offsets.push(self.length);
+        self.validity.push(false);
+    }
+}
+
 impl<O, T, B, P> Builder<P> for ListPrimitive<O, B, T>
 where
     O: Offset,
@@ -99,29 +114,27 @@ where
     P: IntoIterator<Item = Option<T>>,
 {
     #[inline]
-    fn try_push(&mut self, value: Option<P>) -> Result<()> {
-        match value {
-            Some(v) => {
-                v.into_iter().try_for_each(|item| {
-                    self.length = self
-                        .length
-                        .checked_add(&O::one())
-                        .ok_or(ArrowError::DictionaryKeyOverflowError)?;
-                    self.values.try_push(item)
-                })?;
-                self.offsets.push(self.length);
-                self.validity.push(true);
+    fn try_push(&mut self, value: P) -> Result<()> {
+        value.into_iter().try_for_each(|item| {
+            self.length = self
+                .length
+                .checked_add(&O::one())
+                .ok_or(ArrowError::DictionaryKeyOverflowError)?;
+            match item {
+                Some(item) => self.values.try_push(item),
+                None => {
+                    self.values.push_null();
+                    Ok(())
+                }
             }
-            None => {
-                self.offsets.push(self.length);
-                self.validity.push(false);
-            }
-        }
+        })?;
+        self.offsets.push(self.length);
+        self.validity.push(true);
         Ok(())
     }
 
     #[inline]
-    fn push(&mut self, value: Option<P>) {
+    fn push(&mut self, value: P) {
         self.try_push(value).unwrap()
     }
 }
@@ -203,7 +216,16 @@ mod tests {
     fn utf8_push() {
         let mut a = ListPrimitive::<i32, _, _>::with_capacity(0, Utf8Primitive::<i32>::new());
 
-        a.try_push(Some(vec![Some("a")].into_iter())).unwrap();
+        a.try_push(vec![Some("a")].into_iter()).unwrap();
+        let a = a.into_arc();
+        assert_eq!(a.len(), 1)
+    }
+
+    #[test]
+    fn utf8_push_none() {
+        let mut a = ListPrimitive::<i32, _, _>::with_capacity(0, Utf8Primitive::<i32>::new());
+
+        a.push_null();
         let a = a.into_arc();
         assert_eq!(a.len(), 1)
     }

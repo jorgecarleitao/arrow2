@@ -1,7 +1,7 @@
 use std::{iter::FromIterator, sync::Arc};
 
 use super::FixedSizeBinaryArray;
-use crate::array::{Array, Builder, ToArray, TryExtend, TryFromIterator};
+use crate::array::{Array, Builder, NullableBuilder, ToArray, TryExtend, TryFromIterator};
 use crate::bitmap::MutableBitmap;
 use crate::buffer::MutableBuffer;
 use crate::{
@@ -64,47 +64,50 @@ where
     fn try_extend<I: IntoIterator<Item = Option<P>>>(&mut self, iter: I) -> ArrowResult<()> {
         for item in iter {
             match item {
-                Some(x) => self.try_push(Some(x.as_ref()))?,
-                None => self.try_push(None)?,
+                Some(x) => self.try_push(x.as_ref())?,
+                None => self.push_null(),
             }
         }
         Ok(())
     }
 }
 
+impl NullableBuilder for FixedSizeBinaryPrimitive {
+    #[inline]
+    fn push_null(&mut self) {
+        if let Some(size) = self.size {
+            self.values
+                .extend_from_trusted_len_iter(std::iter::repeat(0).take(size));
+        } else {
+            self.current_validity += 1;
+        }
+        self.validity.push(false);
+    }
+}
+
 impl Builder<&[u8]> for FixedSizeBinaryPrimitive {
     #[inline]
-    fn try_push(&mut self, value: Option<&[u8]>) -> ArrowResult<()> {
-        match value {
-            Some(bytes) => {
-                if let Some(size) = self.size {
-                    if size != bytes.len() {
-                        return Err(ArrowError::InvalidArgumentError("FixedSizeBinaryPrimitive received an argument with the wrong number of items".to_string()));
-                    }
-                } else {
-                    self.size = Some(bytes.len());
-                    self.values.extend_from_trusted_len_iter(
-                        std::iter::repeat(0).take(bytes.len() * self.current_validity),
-                    );
-                };
-                self.values.extend_from_slice(bytes);
-                self.validity.push(true);
+    fn try_push(&mut self, values: &[u8]) -> ArrowResult<()> {
+        if let Some(size) = self.size {
+            if size != values.len() {
+                return Err(ArrowError::InvalidArgumentError(
+                    "FixedSizeBinaryPrimitive received an argument with the wrong number of items"
+                        .to_string(),
+                ));
             }
-            None => {
-                if let Some(size) = self.size {
-                    self.values
-                        .extend_from_trusted_len_iter(std::iter::repeat(0).take(size));
-                } else {
-                    self.current_validity += 1;
-                }
-                self.validity.push(false);
-            }
-        }
+        } else {
+            self.size = Some(values.len());
+            self.values.extend_from_trusted_len_iter(
+                std::iter::repeat(0).take(values.len() * self.current_validity),
+            );
+        };
+        self.values.extend_from_slice(values);
+        self.validity.push(true);
         Ok(())
     }
 
     #[inline]
-    fn push(&mut self, value: Option<&[u8]>) {
+    fn push(&mut self, value: &[u8]) {
         self.try_push(value).unwrap()
     }
 }

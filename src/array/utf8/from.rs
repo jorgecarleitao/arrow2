@@ -1,7 +1,9 @@
 use std::{iter::FromIterator, sync::Arc};
 
 use crate::{
-    array::{Array, Builder, IntoArray, Offset, ToArray, TryExtend, TryFromIterator},
+    array::{
+        Array, Builder, IntoArray, NullableBuilder, Offset, ToArray, TryExtend, TryFromIterator,
+    },
     bitmap::{Bitmap, MutableBitmap},
     buffer::{Buffer, MutableBuffer},
     datatypes::DataType,
@@ -328,37 +330,36 @@ where
         self.offsets.reserve(lower);
         for item in iter {
             match item {
-                Some(x) => self.try_push(Some(x.as_ref()))?,
-                None => self.try_push(None)?,
+                Some(x) => self.try_push(x.as_ref())?,
+                None => self.push_null(),
             }
         }
         Ok(())
     }
 }
 
+impl<O: Offset> NullableBuilder for Utf8Primitive<O> {
+    #[inline]
+    fn push_null(&mut self) {
+        self.offsets.push(self.length);
+        self.validity.push(false);
+    }
+}
+
 impl<O: Offset> Builder<&str> for Utf8Primitive<O> {
     #[inline]
-    fn try_push(&mut self, value: Option<&str>) -> ArrowResult<()> {
-        match value {
-            Some(v) => {
-                let bytes = v.as_bytes();
-                let length =
-                    O::from_usize(bytes.len()).ok_or(ArrowError::DictionaryKeyOverflowError)?;
-                self.length += length;
-                self.offsets.push(self.length);
-                self.values.extend_from_slice(bytes);
-                self.validity.push(true);
-            }
-            None => {
-                self.offsets.push(self.length);
-                self.validity.push(false);
-            }
-        }
+    fn try_push(&mut self, value: &str) -> ArrowResult<()> {
+        let bytes = value.as_bytes();
+        let length = O::from_usize(bytes.len()).ok_or(ArrowError::DictionaryKeyOverflowError)?;
+        self.length += length;
+        self.offsets.push(self.length);
+        self.values.extend_from_slice(bytes);
+        self.validity.push(true);
         Ok(())
     }
 
     #[inline]
-    fn push(&mut self, value: Option<&str>) {
+    fn push(&mut self, value: &str) {
         self.try_push(value).unwrap()
     }
 }

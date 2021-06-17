@@ -1,7 +1,9 @@
 use std::{iter::FromIterator, sync::Arc};
 
 use crate::{
-    array::{Array, Builder, IntoArray, Offset, ToArray, TryExtend, TryFromIterator},
+    array::{
+        Array, Builder, IntoArray, NullableBuilder, Offset, ToArray, TryExtend, TryFromIterator,
+    },
     bitmap::{Bitmap, MutableBitmap},
     buffer::{Buffer, MutableBuffer},
     datatypes::DataType,
@@ -106,36 +108,35 @@ where
         self.offsets.reserve(lower);
         for item in iter {
             match item {
-                Some(x) => self.try_push(Some(x.as_ref()))?,
-                None => self.try_push(None)?,
+                Some(x) => self.try_push(x.as_ref())?,
+                None => self.push_null(),
             }
         }
         Ok(())
     }
 }
 
+impl<O: Offset> NullableBuilder for BinaryPrimitive<O> {
+    #[inline]
+    fn push_null(&mut self) {
+        self.offsets.push(self.length);
+        self.validity.push(false);
+    }
+}
+
 impl<O: Offset> Builder<&[u8]> for BinaryPrimitive<O> {
     #[inline]
-    fn try_push(&mut self, value: Option<&[u8]>) -> ArrowResult<()> {
-        match value {
-            Some(bytes) => {
-                let length =
-                    O::from_usize(bytes.len()).ok_or(ArrowError::DictionaryKeyOverflowError)?;
-                self.length += length;
-                self.offsets.push(self.length);
-                self.values.extend_from_slice(bytes);
-                self.validity.push(true);
-            }
-            None => {
-                self.offsets.push(self.length);
-                self.validity.push(false);
-            }
-        }
+    fn try_push(&mut self, value: &[u8]) -> ArrowResult<()> {
+        let length = O::from_usize(value.len()).ok_or(ArrowError::DictionaryKeyOverflowError)?;
+        self.length += length;
+        self.offsets.push(self.length);
+        self.values.extend_from_slice(value);
+        self.validity.push(true);
         Ok(())
     }
 
     #[inline]
-    fn push(&mut self, value: Option<&[u8]>) {
+    fn push(&mut self, value: &[u8]) {
         self.try_push(value).unwrap()
     }
 }
