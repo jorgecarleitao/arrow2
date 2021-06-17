@@ -117,8 +117,10 @@ pub(super) fn primitive_to_dictionary_dyn<T: NativeType + Eq + Hash, K: Dictiona
 pub fn primitive_to_dictionary<T: NativeType + Eq + Hash, K: DictionaryKey>(
     from: &PrimitiveArray<T>,
 ) -> Result<DictionaryArray<K>> {
-    let iter = from.iter().map(|x| x.copied()).map(Result::Ok);
-    let primitive = DictionaryPrimitive::<K, Primitive<T>, _>::try_from_iter(iter)?;
+    let iter = from.iter().map(|x| x.copied());
+
+    let mut primitive = DictionaryPrimitive::<K, _, _>::new(Primitive::<T>::new());
+    primitive.try_extend(iter)?;
 
     Ok(primitive.to(DataType::Dictionary(
         Box::new(K::DATA_TYPE),

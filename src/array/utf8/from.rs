@@ -1,7 +1,7 @@
 use std::{iter::FromIterator, sync::Arc};
 
 use crate::{
-    array::{Array, Builder, IntoArray, Offset, ToArray, TryFromIterator},
+    array::{Array, Builder, IntoArray, Offset, ToArray, TryExtend, TryFromIterator},
     bitmap::{Bitmap, MutableBitmap},
     buffer::{Buffer, MutableBuffer},
     datatypes::DataType,
@@ -251,7 +251,7 @@ where
     Ok((null.into(), offsets.into(), values.into()))
 }
 
-/// auxiliary struct used to create a [`PrimitiveArray`] out of an iterator
+/// auxiliary struct used to create a [`Utf8Array`] out of an iterator
 #[derive(Debug)]
 pub struct Utf8Primitive<O: Offset> {
     offsets: MutableBuffer<O>,
@@ -262,6 +262,11 @@ pub struct Utf8Primitive<O: Offset> {
 }
 
 impl<O: Offset> Utf8Primitive<O> {
+    /// Initializes a new empty [`Utf8Primitive`].
+    pub fn new() -> Self {
+        Self::with_capacity(0)
+    }
+
     /// Initializes a new [`Utf8Primitive`] with a pre-allocated capacity of slots.
     pub fn with_capacity(capacity: usize) -> Self {
         Self::with_capacities(capacity, 0)
@@ -282,9 +287,15 @@ impl<O: Offset> Utf8Primitive<O> {
     }
 }
 
+impl<O: Offset> Default for Utf8Primitive<O> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<O: Offset, P: AsRef<str>> FromIterator<Option<P>> for Utf8Primitive<O> {
     fn from_iter<I: IntoIterator<Item = Option<P>>>(iter: I) -> Self {
-        Self::try_from_iter(iter.into_iter().map(Ok)).unwrap()
+        Self::try_from_iter(iter.into_iter()).unwrap()
     }
 }
 
@@ -299,25 +310,33 @@ impl<O: Offset, P> TryFromIterator<Option<P>> for Utf8Primitive<O>
 where
     P: AsRef<str>,
 {
-    fn try_from_iter<I: IntoIterator<Item = ArrowResult<Option<P>>>>(iter: I) -> ArrowResult<Self> {
-        let iterator = iter.into_iter();
-        let (lower, _) = iterator.size_hint();
-        let mut primitive = Self::with_capacity(lower);
-        for item in iterator {
-            match item? {
-                Some(x) => primitive.try_push(Some(&x.as_ref()))?,
-                None => primitive.try_push(None)?,
-            }
-        }
+    fn try_from_iter<I: IntoIterator<Item = Option<P>>>(iter: I) -> ArrowResult<Self> {
+        let mut primitive = Self::new();
+        primitive.try_extend(iter)?;
         Ok(primitive)
     }
 }
 
-impl<O: Offset> Builder<&str> for Utf8Primitive<O> {
-    fn with_capacity(capacity: usize) -> Self {
-        Self::with_capacity(capacity)
+impl<O: Offset, P> TryExtend<Option<P>> for Utf8Primitive<O>
+where
+    P: AsRef<str>,
+{
+    fn try_extend<I: IntoIterator<Item = Option<P>>>(&mut self, iter: I) -> ArrowResult<()> {
+        let iter = iter.into_iter();
+        let (lower, _) = iter.size_hint();
+        self.validity.reserve(lower);
+        self.offsets.reserve(lower);
+        for item in iter {
+            match item {
+                Some(x) => self.try_push(Some(x.as_ref()))?,
+                None => self.try_push(None)?,
+            }
+        }
+        Ok(())
     }
+}
 
+impl<O: Offset> Builder<&str> for Utf8Primitive<O> {
     #[inline]
     fn try_push(&mut self, value: Option<&str>) -> ArrowResult<()> {
         match value {

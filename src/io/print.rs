@@ -159,11 +159,9 @@ mod tests {
         let field_type = DataType::Dictionary(Box::new(DataType::Int32), Box::new(DataType::Utf8));
         let schema = Arc::new(Schema::new(vec![Field::new("d1", field_type, true)]));
 
-        let array = DictionaryPrimitive::<i32, Utf8Primitive<i32>, _>::try_from_iter(
-            vec![Ok(Some("one")), Ok(None), Ok(Some("three"))].into_iter(),
-        )
-        .unwrap()
-        .into_arc();
+        let mut a = DictionaryPrimitive::<i32, _, _>::new(Utf8Primitive::<i32>::new());
+        a.extend(vec![Some("one"), None, Some("three")]);
+        let array = a.into_arc();
 
         let batch = RecordBatch::try_new(schema, vec![array])?;
 

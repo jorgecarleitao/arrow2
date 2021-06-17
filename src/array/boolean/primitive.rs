@@ -1,8 +1,8 @@
 use std::iter::FromIterator;
 use std::sync::Arc;
 
-use crate::array::IntoArray;
 use crate::array::TryFromIterator;
+use crate::array::{IntoArray, TryExtend};
 use crate::error::Result;
 use crate::{
     array::{Array, BooleanArray, Builder},
@@ -20,15 +20,6 @@ pub struct BooleanPrimitive {
 }
 
 impl Builder<bool> for BooleanPrimitive {
-    /// Initializes itself with a capacity.
-    #[inline]
-    fn with_capacity(capacity: usize) -> Self {
-        Self {
-            values: MutableBitmap::with_capacity(capacity),
-            validity: MutableBitmap::with_capacity(capacity),
-        }
-    }
-
     /// Pushes a new item to this struct
     #[inline]
     fn push(&mut self, value: Option<bool>) {
@@ -86,8 +77,21 @@ impl Default for BooleanPrimitive {
     }
 }
 
+impl<Ptr: std::borrow::Borrow<Option<bool>>> TryExtend<Ptr> for BooleanPrimitive {
+    fn try_extend<T: IntoIterator<Item = Ptr>>(&mut self, iter: T) -> Result<()> {
+        let iter = iter.into_iter();
+        let (lower, _) = iter.size_hint();
+        self.validity.reserve(lower);
+        self.values.reserve(lower);
+        for item in iter {
+            self.push(*item.borrow())
+        }
+        Ok(())
+    }
+}
+
 impl<Ptr: std::borrow::Borrow<Option<bool>>> TryFromIterator<Ptr> for BooleanPrimitive {
-    fn try_from_iter<I: IntoIterator<Item = Result<Ptr>>>(iter: I) -> Result<Self> {
+    fn try_from_iter<I: IntoIterator<Item = Ptr>>(iter: I) -> Result<Self> {
         let iter = iter.into_iter();
         let (lower, _) = iter.size_hint();
 
@@ -95,7 +99,7 @@ impl<Ptr: std::borrow::Borrow<Option<bool>>> TryFromIterator<Ptr> for BooleanPri
 
         let values: MutableBitmap = iter
             .map(|item| {
-                Ok(if let Some(a) = item?.borrow() {
+                Ok(if let Some(a) = item.borrow() {
                     validity.push(true);
                     *a
                 } else {
@@ -130,7 +134,7 @@ mod tests {
 
     #[test]
     fn try_from_iter() -> Result<()> {
-        let a = BooleanPrimitive::try_from_iter((0..2).map(|x| Result::Ok(Some(x > 0))))?;
+        let a = BooleanPrimitive::try_from_iter((0..2).map(|x| Some(x > 0)))?;
         let a: BooleanArray = a.into();
         assert_eq!(a.len(), 2);
         Ok(())

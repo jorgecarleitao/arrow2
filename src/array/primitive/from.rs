@@ -1,7 +1,7 @@
 use std::{iter::FromIterator, sync::Arc};
 
 use crate::{
-    array::{Array, Builder, IntoArray, ToArray, TryFromIterator},
+    array::{Array, Builder, IntoArray, ToArray, TryExtend, TryFromIterator},
     bitmap::MutableBitmap,
     buffer::MutableBuffer,
     datatypes::DataType,
@@ -189,15 +189,6 @@ pub struct Primitive<T: NativeType> {
 }
 
 impl<T: NativeType> Builder<T> for Primitive<T> {
-    /// Initializes itself with a capacity.
-    #[inline]
-    fn with_capacity(capacity: usize) -> Self {
-        Self {
-            values: MutableBuffer::<T>::with_capacity(capacity),
-            validity: MutableBitmap::with_capacity(capacity),
-        }
-    }
-
     /// Pushes a new item to this struct
     #[inline]
     fn push(&mut self, value: Option<T>) {
@@ -232,6 +223,25 @@ impl<T: NativeType> Primitive<T> {
     }
 }
 
+impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> Extend<Ptr> for Primitive<T> {
+    fn extend<I: IntoIterator<Item = Ptr>>(&mut self, iter: I) {
+        let iter = iter.into_iter();
+        let (lower, _) = iter.size_hint();
+        self.validity.reserve(lower);
+        self.values.reserve(lower);
+        for item in iter {
+            self.push(*item.borrow())
+        }
+    }
+}
+
+impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> TryExtend<Ptr> for Primitive<T> {
+    fn try_extend<I: IntoIterator<Item = Ptr>>(&mut self, iter: I) -> ArrowResult<()> {
+        self.extend(iter);
+        Ok(())
+    }
+}
+
 impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> FromIterator<Ptr> for Primitive<T> {
     fn from_iter<I: IntoIterator<Item = Ptr>>(iter: I) -> Self {
         let iter = iter.into_iter();
@@ -263,7 +273,7 @@ impl<T: NativeType> Default for Primitive<T> {
 }
 
 impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> TryFromIterator<Ptr> for Primitive<T> {
-    fn try_from_iter<I: IntoIterator<Item = ArrowResult<Ptr>>>(iter: I) -> ArrowResult<Self> {
+    fn try_from_iter<I: IntoIterator<Item = Ptr>>(iter: I) -> ArrowResult<Self> {
         let iter = iter.into_iter();
         let (lower, _) = iter.size_hint();
 
@@ -271,7 +281,7 @@ impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> TryFromIterator<Ptr> fo
 
         let values: MutableBuffer<T> = iter
             .map(|item| {
-                Ok(if let Some(a) = item?.borrow() {
+                Ok(if let Some(a) = item.borrow() {
                     validity.push(true);
                     *a
                 } else {
@@ -308,8 +318,7 @@ mod tests {
 
     #[test]
     fn try_from_iter() -> Result<()> {
-        let a = Primitive::<i32>::try_from_iter((0..2).map(|x| Result::Ok(Some(x))))?
-            .to(DataType::Int32);
+        let a = Primitive::<i32>::try_from_iter((0..2).map(Some))?.to(DataType::Int32);
         assert_eq!(a.len(), 2);
         Ok(())
     }

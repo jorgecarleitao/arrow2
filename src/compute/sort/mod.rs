@@ -551,21 +551,13 @@ mod tests {
         options: SortOptions,
         expected_data: &[Option<&str>],
     ) {
-        let input = data.iter().map(|x| Result::Ok(*x));
-        let input =
-            DictionaryPrimitive::<i32, Utf8Primitive<i32>, &str>::try_from_iter(input).unwrap();
-        let input = input.to(DataType::Dictionary(
-            Box::new(DataType::Int32),
-            Box::new(DataType::Utf8),
-        ));
+        let mut input = DictionaryPrimitive::<K, _, _>::new(Utf8Primitive::<i32>::new());
+        input.extend(data.iter().copied());
+        let input = input.into();
 
-        let expected = expected_data.iter().map(|x| Result::Ok(*x));
-        let expected =
-            DictionaryPrimitive::<i32, Utf8Primitive<i32>, &str>::try_from_iter(expected).unwrap();
-        let expected = expected.to(DataType::Dictionary(
-            Box::new(DataType::Int32),
-            Box::new(DataType::Utf8),
-        ));
+        let mut expected = DictionaryPrimitive::<K, _, _>::new(Utf8Primitive::<i32>::new());
+        expected.extend(expected_data.iter().copied());
+        let expected = expected.into();
 
         let output = sort(&input, &options).unwrap();
         assert_eq!(expected, output.as_ref())

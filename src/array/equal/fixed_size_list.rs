@@ -80,16 +80,14 @@ mod tests {
         data: T,
     ) -> FixedSizeListArray {
         let data_type = FixedSizeListArray::default_datatype(DataType::Int32, 3);
-        let list = data
-            .as_ref()
-            .iter()
-            .map(|x| {
-                Some(match x {
-                    Some(x) => x.as_ref().iter().map(|x| Some(*x)).collect::<Vec<_>>(),
-                    None => std::iter::repeat(None).take(3).collect::<Vec<_>>(),
-                })
+        let data = data.as_ref().iter().map(|x| {
+            Some(match x {
+                Some(x) => x.as_ref().iter().map(|x| Some(*x)).collect::<Vec<_>>(),
+                None => std::iter::repeat(None).take(3).collect::<Vec<_>>(),
             })
-            .collect::<FixedSizeListPrimitive<Primitive<i32>, i32>>();
+        });
+        let mut list = FixedSizeListPrimitive::new(Primitive::<i32>::new());
+        list.extend(data);
         list.to(data_type)
     }
 

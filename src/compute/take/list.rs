@@ -134,8 +134,9 @@ mod tests {
             Some(vec![Some(2i32), Some(3), Some(4), Some(5)]),
             Some(vec![Some(6i32), Some(7), Some(8)]),
         ];
-        let expected: ListPrimitive<i32, Primitive<i32>, i32> = data_expected.into_iter().collect();
-        let expected = expected.to(ListArray::<i32>::default_datatype(DataType::Int32));
+        let mut builder = ListPrimitive::<i32, _, _>::new(Primitive::<i32>::new());
+        builder.extend(data_expected);
+        let expected: ListArray<i32> = builder.into();
 
         assert_eq!(result, expected)
     }
@@ -148,8 +149,9 @@ mod tests {
             Some(vec![Some(9i32)]),
             Some(vec![Some(6i32), Some(7), Some(8)]),
         ];
-        let array: ListPrimitive<i32, Primitive<i32>, i32> = values.into_iter().collect();
-        let array = array.to(ListArray::<i32>::default_datatype(DataType::Int32));
+        let mut builder = ListPrimitive::<i32, _, _>::new(Primitive::<i32>::new());
+        builder.extend(values);
+        let array: ListArray<i32> = builder.into();
 
         let indices =
             Primitive::from(&vec![Some(3i32), None, Some(1), Some(0)]).to(DataType::Int32);
@@ -161,8 +163,9 @@ mod tests {
             None,
             Some(vec![Some(2i32), Some(3), Some(4), Some(5)]),
         ];
-        let expected: ListPrimitive<i32, Primitive<i32>, i32> = data_expected.into_iter().collect();
-        let expected = expected.to(ListArray::<i32>::default_datatype(DataType::Int32));
+        let mut builder = ListPrimitive::<i32, _, _>::new(Primitive::<i32>::new());
+        builder.extend(data_expected);
+        let expected: ListArray<i32> = builder.into();
 
         assert_eq!(result, expected)
     }

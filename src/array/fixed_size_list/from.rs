@@ -1,7 +1,7 @@
-use std::{iter::FromIterator, sync::Arc};
+use std::sync::Arc;
 
 use crate::{
-    array::{Array, Builder, ToArray, TryFromIterator},
+    array::{Array, Builder, ToArray, TryExtend},
     bitmap::MutableBitmap,
     datatypes::DataType,
     error::Result,
@@ -18,12 +18,14 @@ pub struct FixedSizeListPrimitive<B: Builder<T>, T> {
 
 impl<B: Builder<T>, T> FixedSizeListPrimitive<B, T> {
     #[inline]
-    pub fn with_capacity(capacity: usize) -> Self {
-        // stricky not correct: it should be capacity * size but constant generics
-        // in Rust are still wip, so we can't know the size at this point
-        let values_capacity = capacity;
+    pub fn new(values: B) -> Self {
+        Self::with_capacity(0, values)
+    }
+
+    #[inline]
+    pub fn with_capacity(capacity: usize, values: B) -> Self {
         Self {
-            values: B::with_capacity(values_capacity),
+            values,
             validity: MutableBitmap::with_capacity(capacity),
             phantom: std::marker::PhantomData,
         }
@@ -39,29 +41,26 @@ impl<A: Builder<T> + ToArray, T> FixedSizeListPrimitive<A, T> {
     }
 }
 
-impl<B, T, P> FromIterator<Option<P>> for FixedSizeListPrimitive<B, T>
+impl<B, T, P> TryExtend<Option<P>> for FixedSizeListPrimitive<B, T>
 where
     B: Builder<T>,
     P: IntoIterator<Item = Option<T>>,
 {
-    fn from_iter<I: IntoIterator<Item = Option<P>>>(iter: I) -> Self {
-        Self::try_from_iter(iter.into_iter().map(Ok)).unwrap()
+    fn try_extend<I: IntoIterator<Item = Option<P>>>(&mut self, iter: I) -> Result<()> {
+        for item in iter {
+            self.try_push(item)?;
+        }
+        Ok(())
     }
 }
 
-impl<B, T, P> TryFromIterator<Option<P>> for FixedSizeListPrimitive<B, T>
+impl<T, B, P> Extend<Option<P>> for FixedSizeListPrimitive<B, T>
 where
     B: Builder<T>,
     P: IntoIterator<Item = Option<T>>,
 {
-    fn try_from_iter<I: IntoIterator<Item = Result<Option<P>>>>(iter: I) -> Result<Self> {
-        let iterator = iter.into_iter();
-        let (lower, _) = iterator.size_hint();
-        let mut primitive: FixedSizeListPrimitive<B, T> = Builder::<P>::with_capacity(lower);
-        for item in iterator {
-            primitive.try_push(item?)?;
-        }
-        Ok(primitive)
+    fn extend<I: IntoIterator<Item = Option<P>>>(&mut self, iter: I) {
+        self.try_extend(iter).unwrap()
     }
 }
 
@@ -70,10 +69,6 @@ where
     B: Builder<T>,
     P: IntoIterator<Item = Option<T>>,
 {
-    fn with_capacity(capacity: usize) -> Self {
-        Self::with_capacity(capacity)
-    }
-
     #[inline]
     fn try_push(&mut self, value: Option<P>) -> Result<()> {
         match value {
@@ -115,7 +110,9 @@ mod tests {
             Some(vec![Some(4), None, Some(6)]),
         ];
 
-        let a: FixedSizeListPrimitive<Primitive<i32>, i32> = data.into_iter().collect();
+        let mut a = FixedSizeListPrimitive::<_, i32>::new(Primitive::<i32>::new());
+        a.try_extend(data).unwrap();
+
         let list = a.to(FixedSizeListArray::default_datatype(DataType::Int32, 3));
 
         let a = list.value(0);

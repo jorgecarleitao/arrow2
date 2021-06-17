@@ -188,8 +188,10 @@ mod tests {
             None
         ]);
 
-        let a: ListPrimitive<i32, Primitive<i32>, i32> = data.into_iter().collect();
-        let a = a.to(ListArray::<i32>::default_datatype(DataType::Int32));
+        let mut primitive = ListPrimitive::<i32, _, _>::new(Primitive::<i32>::new());
+        primitive.try_extend(data).unwrap();
+
+        let a = primitive.to(ListArray::<i32>::default_datatype(DataType::Int32));
 
         let result = contains(&a, &values).unwrap();
 

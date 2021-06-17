@@ -283,12 +283,11 @@ pub mod tests {
     fn test_dict() -> Result<()> {
         let data = vec!["a", "b", "c", "a", "a", "c", "c"];
 
-        let data = data.into_iter().map(|x| Result::Ok(Some(x)));
-        let array = DictionaryPrimitive::<i32, Utf8Primitive<i32>, &str>::try_from_iter(data)?;
-        let array = array.to(DataType::Dictionary(
-            Box::new(DataType::Int32),
-            Box::new(DataType::Utf8),
-        ));
+        let data = data.into_iter().map(Some);
+
+        let mut a = DictionaryPrimitive::<i32, _, _>::new(Utf8Primitive::<i32>::new());
+        a.try_extend(data)?;
+        let array = a.into();
 
         let cmp = build_compare(&array, &array)?;
 
@@ -302,12 +301,11 @@ pub mod tests {
     fn test_dict_1() -> Result<()> {
         let data = vec![1, 2, 3, 1, 1, 3, 3];
 
-        let data = data.into_iter().map(|x| Result::Ok(Some(x)));
-        let array = DictionaryPrimitive::<i32, Primitive<i32>, i32>::try_from_iter(data)?;
-        let array = array.to(DataType::Dictionary(
-            Box::new(DataType::Int32),
-            Box::new(DataType::Int32),
-        ));
+        let data = data.into_iter().map(Some);
+
+        let mut a = DictionaryPrimitive::<i32, _, _>::new(Primitive::<i32>::new());
+        a.try_extend(data)?;
+        let array = a.into();
 
         let cmp = build_compare(&array, &array)?;
 

@@ -1,7 +1,7 @@
-use std::{iter::FromIterator, sync::Arc};
+use std::sync::Arc;
 
 use crate::{
-    array::{Array, Builder, IntoArray, Offset, ToArray, TryFromIterator},
+    array::{Array, Builder, IntoArray, Offset, ToArray, TryExtend},
     bitmap::MutableBitmap,
     buffer::MutableBuffer,
     datatypes::DataType,
@@ -25,19 +25,19 @@ where
     B: Builder<T>,
 {
     /// Initializes a new [`ListPrimitive`] with a pre-allocated number of slots.
-    pub fn with_capacity(capacity: usize) -> Self {
-        Self::with_capacities(capacity, 0)
+    pub fn new(values: B) -> Self {
+        Self::with_capacity(0, values)
     }
 
-    /// Initializes a new [`ListPrimitive`] with a pre-allocated capacity of slots and values.
-    pub fn with_capacities(capacity: usize, values: usize) -> Self {
+    /// Initializes a new [`ListPrimitive`] with a pre-allocated number of slots.
+    pub fn with_capacity(capacity: usize, values: B) -> Self {
         let mut offsets = MutableBuffer::<O>::with_capacity(capacity + 1);
         let length = O::default();
         offsets.push(length);
 
         Self {
             offsets,
-            values: B::with_capacity(values),
+            values,
             validity: MutableBitmap::with_capacity(capacity),
             length,
             phantom: std::marker::PhantomData,
@@ -67,31 +67,28 @@ impl<O: Offset, A: Builder<T> + IntoArray, T> From<ListPrimitive<O, A, T>> for L
     }
 }
 
-impl<O, B, T, P> FromIterator<Option<P>> for ListPrimitive<O, B, T>
+impl<O, T, B, P> TryExtend<Option<P>> for ListPrimitive<O, B, T>
 where
     O: Offset,
     B: Builder<T>,
     P: IntoIterator<Item = Option<T>>,
 {
-    fn from_iter<I: IntoIterator<Item = Option<P>>>(iter: I) -> Self {
-        Self::try_from_iter(iter.into_iter().map(Ok)).unwrap()
+    fn try_extend<I: IntoIterator<Item = Option<P>>>(&mut self, iter: I) -> Result<()> {
+        for item in iter {
+            self.try_push(item)?;
+        }
+        Ok(())
     }
 }
 
-impl<O, B, T, P> TryFromIterator<Option<P>> for ListPrimitive<O, B, T>
+impl<O, T, B, P> Extend<Option<P>> for ListPrimitive<O, B, T>
 where
     O: Offset,
     B: Builder<T>,
     P: IntoIterator<Item = Option<T>>,
 {
-    fn try_from_iter<I: IntoIterator<Item = Result<Option<P>>>>(iter: I) -> Result<Self> {
-        let iterator = iter.into_iter();
-        let (lower, _) = iterator.size_hint();
-        let mut primitive: ListPrimitive<O, B, T> = Builder::<P>::with_capacity(lower);
-        for item in iterator {
-            primitive.try_push(item?)?;
-        }
-        Ok(primitive)
+    fn extend<I: IntoIterator<Item = Option<P>>>(&mut self, iter: I) {
+        self.try_extend(iter).unwrap()
     }
 }
 
@@ -101,10 +98,6 @@ where
     B: Builder<T>,
     P: IntoIterator<Item = Option<T>>,
 {
-    fn with_capacity(capacity: usize) -> Self {
-        Self::with_capacity(capacity)
-    }
-
     #[inline]
     fn try_push(&mut self, value: Option<P>) -> Result<()> {
         match value {
@@ -160,8 +153,10 @@ mod tests {
             Some(vec![Some(4), None, Some(6)]),
         ];
 
-        let a: ListPrimitive<i32, Primitive<i32>, i32> = data.into_iter().collect();
-        let a = a.to(ListArray::<i32>::default_datatype(DataType::Int32));
+        let mut a = ListPrimitive::<i32, _, _>::with_capacity(0, Primitive::<i32>::new());
+        a.try_extend(data).unwrap();
+
+        let a: ListArray<i32> = a.into();
         let a = a.value(0);
         let a = a.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
 
@@ -178,7 +173,8 @@ mod tests {
             Some(vec![Some(4), None, Some(6)]),
         ];
 
-        let a: ListPrimitive<i32, Primitive<i32>, i32> = data.into_iter().collect();
+        let mut a = ListPrimitive::<i32, _, _>::with_capacity(0, Primitive::<i32>::new());
+        a.try_extend(data).unwrap();
         let a: ListArray<i32> = a.into();
         let a = a.value(0);
         let a = a.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
@@ -192,7 +188,9 @@ mod tests {
     fn primitive_utf8_natural() {
         let data = vec![Some(vec![Some("1"), Some("2"), Some("3")]), None];
 
-        let a: ListPrimitive<i32, Utf8Primitive<i32>, &str> = data.into_iter().collect();
+        let mut a = ListPrimitive::<i32, _, _>::with_capacity(0, Utf8Primitive::<i32>::new());
+        a.try_extend(data).unwrap();
+
         let a: ListArray<i32> = a.into();
         let a = a.value(0);
         let a = a.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
@@ -203,7 +201,7 @@ mod tests {
 
     #[test]
     fn utf8_push() {
-        let mut a = ListPrimitive::<i32, Utf8Primitive<i32>, _>::with_capacity(10);
+        let mut a = ListPrimitive::<i32, _, _>::with_capacity(0, Utf8Primitive::<i32>::new());
 
         a.try_push(Some(vec![Some("a")].into_iter())).unwrap();
         let a = a.into_arc();

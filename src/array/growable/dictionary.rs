@@ -145,10 +145,10 @@ mod tests {
     fn test_single() -> Result<()> {
         let original_data = vec![Some("a"), Some("b"), Some("a")];
 
-        let data = original_data.clone().into_iter().map(Result::Ok);
-        let array = DictionaryPrimitive::<i32, Utf8Primitive<i32>, &str>::try_from_iter(data)?.to(
-            DataType::Dictionary(Box::new(DataType::Int32), Box::new(DataType::Utf8)),
-        );
+        let data = original_data.clone();
+        let mut builder = DictionaryPrimitive::<i32, _, _>::new(Utf8Primitive::<i32>::new());
+        builder.extend(data);
+        let array = builder.into();
 
         // same values, less keys
         let expected = DictionaryArray::<i32>::from_data(
@@ -171,16 +171,16 @@ mod tests {
         let mut original_data1 = vec![Some("a"), Some("b"), None, Some("a")];
         let original_data2 = vec![Some("c"), Some("b"), None, Some("a")];
 
-        let data1 = original_data1.clone().into_iter().map(Result::Ok);
-        let data2 = original_data2.clone().into_iter().map(Result::Ok);
-        let array1 =
-            DictionaryPrimitive::<i32, Utf8Primitive<i32>, &str>::try_from_iter(data1)?.to(
-                DataType::Dictionary(Box::new(DataType::Int32), Box::new(DataType::Utf8)),
-            );
-        let array2 =
-            DictionaryPrimitive::<i32, Utf8Primitive<i32>, &str>::try_from_iter(data2)?.to(
-                DataType::Dictionary(Box::new(DataType::Int32), Box::new(DataType::Utf8)),
-            );
+        let data1 = original_data1.clone();
+        let data2 = original_data2.clone();
+
+        let mut builder = DictionaryPrimitive::<i32, _, _>::new(Utf8Primitive::<i32>::new());
+        builder.extend(data1);
+        let array1 = builder.into();
+
+        let mut builder = DictionaryPrimitive::<i32, _, _>::new(Utf8Primitive::<i32>::new());
+        builder.extend(data2);
+        let array2 = builder.into();
 
         // same values, less keys
         original_data1.extend(original_data2.iter().cloned());

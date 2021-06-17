@@ -86,13 +86,10 @@ pub(super) fn utf8_to_dictionary_dyn<O: Offset, K: DictionaryKey>(
 pub fn utf8_to_dictionary<O: Offset, K: DictionaryKey>(
     from: &Utf8Array<O>,
 ) -> Result<DictionaryArray<K>> {
-    let iter = from.iter().map(Result::Ok);
-    let primitive = DictionaryPrimitive::<K, Utf8Primitive<O>, _>::try_from_iter(iter)?;
+    let mut primitive = DictionaryPrimitive::<K, _, _>::new(Utf8Primitive::<O>::new());
+    primitive.try_extend(from)?;
 
-    Ok(primitive.to(DataType::Dictionary(
-        Box::new(K::DATA_TYPE),
-        Box::new(from.data_type().clone()),
-    )))
+    Ok(primitive.into())
 }
 
 pub(super) fn utf8_to_timestamp_ns_dyn<O: Offset>(from: &dyn Array) -> Result<Box<dyn Array>> {

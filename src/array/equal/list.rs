@@ -155,21 +155,19 @@ pub(super) fn equal<O: Offset>(
 
 #[cfg(test)]
 mod tests {
-    use crate::array::{ListPrimitive, Primitive};
+    use crate::array::{ListPrimitive, Primitive, TryExtend};
     use crate::{array::equal::tests::test_equal, datatypes::DataType};
 
     use super::*;
 
     fn create_list_array<U: AsRef<[i32]>, T: AsRef<[Option<U>]>>(data: T) -> ListArray<i32> {
         let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
-        let list = data
-            .as_ref()
-            .iter()
-            .map(|x| {
-                x.as_ref()
-                    .map(|x| x.as_ref().iter().map(|x| Some(*x)).collect::<Vec<_>>())
-            })
-            .collect::<ListPrimitive<i32, Primitive<i32>, i32>>();
+        let iter = data.as_ref().iter().map(|x| {
+            x.as_ref()
+                .map(|x| x.as_ref().iter().map(|x| Some(*x)).collect::<Vec<_>>())
+        });
+        let mut list = ListPrimitive::<i32, _, i32>::new(Primitive::<i32>::new());
+        list.try_extend(iter).unwrap();
         list.to(data_type)
     }
 

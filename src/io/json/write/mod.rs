@@ -22,7 +22,6 @@ pub use writer::*;
 
 #[cfg(test)]
 mod tests {
-    use std::iter::FromIterator;
     use std::sync::Arc;
 
     use crate::array::*;
@@ -123,11 +122,11 @@ mod tests {
         let iter = iter
             .into_iter()
             .map(|x| x.into_iter().map(Some).collect::<Vec<_>>())
-            .map(Some)
-            .map(Result::Ok);
-        let a = ListPrimitive::<i32, Utf8Primitive<i32>, _>::try_from_iter(iter)
-            .unwrap()
-            .to(list_datatype);
+            .map(Some);
+
+        let mut a = ListPrimitive::<i32, _, _>::new(Utf8Primitive::<i32>::new());
+        a.extend(iter);
+        let a = a.to(list_datatype);
 
         let b = Primitive::from_slice(&vec![1, 2, 3, 4, 5]).to(DataType::Int32);
 
@@ -166,8 +165,13 @@ mod tests {
         ];
 
         let iter = iter.into_iter().map(Some);
-        let c1 = ListPrimitive::<i32, ListPrimitive<i32, Primitive<i32>, _>, _>::from_iter(iter)
-            .to(list_datatype);
+
+        let mut a = ListPrimitive::<i32, _, _>::new(ListPrimitive::<i32, _, _>::new(Primitive::<
+            i32,
+        >::new(
+        )));
+        a.extend(iter);
+        let c1 = a.to(list_datatype);
 
         let c2 = Utf8Array::<i32>::from(&vec![Some("foo"), Some("bar"), None]);
 

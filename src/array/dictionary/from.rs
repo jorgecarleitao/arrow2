@@ -6,8 +6,9 @@ use std::{
 
 use hash_hasher::HashedMap;
 
+use crate::array::TryExtend;
 use crate::{
-    array::{Array, Builder, IntoArray, Primitive, ToArray, TryFromIterator},
+    array::{Array, Builder, IntoArray, Primitive, ToArray},
     datatypes::DataType,
     error::{ArrowError, Result},
 };
@@ -23,10 +24,14 @@ pub struct DictionaryPrimitive<K: DictionaryKey, B: Builder<T>, T: Hash> {
 }
 
 impl<K: DictionaryKey, B: Builder<T>, T: Hash> DictionaryPrimitive<K, B, T> {
-    fn with_capacity(capacity: usize) -> Self {
+    pub fn new(values: B) -> Self {
+        Self::with_capacity(0, values)
+    }
+
+    pub fn with_capacity(capacity: usize, values: B) -> Self {
         Self {
             keys: Primitive::<K>::with_capacity(capacity),
-            values: B::with_capacity(0),
+            values,
             map: HashedMap::<u64, K>::default(),
             phantom: std::marker::PhantomData,
         }
@@ -69,20 +74,28 @@ where
     }
 }
 
-impl<K, B, T> TryFromIterator<Option<T>> for DictionaryPrimitive<K, B, T>
+impl<K, B, T> TryExtend<Option<T>> for DictionaryPrimitive<K, B, T>
 where
     K: DictionaryKey,
     B: Builder<T>,
     T: Hash,
 {
-    fn try_from_iter<I: IntoIterator<Item = Result<Option<T>>>>(iter: I) -> Result<Self> {
-        let iterator = iter.into_iter();
-        let (lower, _) = iterator.size_hint();
-        let mut primitive: DictionaryPrimitive<K, B, T> = Builder::<T>::with_capacity(lower);
-        for item in iterator {
-            primitive.try_push(item?)?;
+    fn try_extend<I: IntoIterator<Item = Option<T>>>(&mut self, iter: I) -> Result<()> {
+        for item in iter {
+            self.try_push(item)?
         }
-        Ok(primitive)
+        Ok(())
+    }
+}
+
+impl<K, B, T> Extend<Option<T>> for DictionaryPrimitive<K, B, T>
+where
+    K: DictionaryKey,
+    B: Builder<T>,
+    T: Hash,
+{
+    fn extend<I: IntoIterator<Item = Option<T>>>(&mut self, iter: I) {
+        self.try_extend(iter).unwrap()
     }
 }
 
@@ -92,10 +105,6 @@ where
     B: Builder<T>,
     T: Hash,
 {
-    fn with_capacity(capacity: usize) -> Self {
-        Self::with_capacity(capacity)
-    }
-
     #[inline]
     fn try_push(&mut self, value: Option<T>) -> Result<()> {
         match value {
@@ -129,7 +138,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::array::{Array, BinaryPrimitive, Utf8Primitive};
+    use crate::array::{BinaryPrimitive, Utf8Primitive};
 
     use super::*;
 
@@ -137,12 +146,10 @@ mod tests {
     fn primitive() -> Result<()> {
         let data = vec![Some("a"), Some("b"), Some("a")];
 
-        let data = data.into_iter().map(Result::Ok);
-        let a = DictionaryPrimitive::<i32, Utf8Primitive<i32>, &str>::try_from_iter(data)?;
-        let a = a.to(DataType::Dictionary(
-            Box::new(DataType::Int32),
-            Box::new(DataType::Utf8),
-        ));
+        let mut a = DictionaryPrimitive::<i32, _, _>::new(Utf8Primitive::<i32>::new());
+
+        a.try_extend(data)?;
+        let a = a.into();
         assert_eq!(a.len(), 3);
         assert_eq!(a.values().len(), 2);
         Ok(())
@@ -152,8 +159,9 @@ mod tests {
     fn utf8_natural() -> Result<()> {
         let data = vec![Some("a"), Some("b"), Some("a")];
 
-        let data = data.into_iter().map(Result::Ok);
-        let a = DictionaryPrimitive::<i32, Utf8Primitive<i32>, &str>::try_from_iter(data)?;
+        let mut a = DictionaryPrimitive::<i32, _, _>::new(Utf8Primitive::<i32>::new());
+        a.try_extend(data)?;
+
         let a = a.into_arc();
         assert_eq!(a.len(), 3);
         let a = a.as_any().downcast_ref::<DictionaryArray<i32>>().unwrap();
@@ -165,8 +173,8 @@ mod tests {
     fn binary_natural() -> Result<()> {
         let data = vec![Some("a".as_ref()), Some("b".as_ref()), Some("a".as_ref())];
 
-        let data = data.into_iter().map(Result::Ok);
-        let a = DictionaryPrimitive::<i32, BinaryPrimitive<i32>, &[u8]>::try_from_iter(data)?;
+        let mut a = DictionaryPrimitive::<i32, _, _>::new(BinaryPrimitive::<i32>::new());
+        a.try_extend(data)?;
         let a = a.into_arc();
         let a = a.as_any().downcast_ref::<DictionaryArray<i32>>().unwrap();
         assert_eq!(a.len(), 3);

@@ -176,7 +176,7 @@ impl<Ptr: std::borrow::Borrow<Option<bool>>> FromIterator<Ptr> for BooleanArray 
 }
 
 impl<Ptr: std::borrow::Borrow<Option<bool>>> TryFromIterator<Ptr> for BooleanArray {
-    fn try_from_iter<I: IntoIterator<Item = ArrowResult<Ptr>>>(iter: I) -> ArrowResult<Self> {
+    fn try_from_iter<I: IntoIterator<Item = Ptr>>(iter: I) -> ArrowResult<Self> {
         let iter = iter.into_iter();
         let (lower, _) = iter.size_hint();
 
@@ -184,7 +184,7 @@ impl<Ptr: std::borrow::Borrow<Option<bool>>> TryFromIterator<Ptr> for BooleanArr
 
         let values: Bitmap = iter
             .map(|item| {
-                Ok(if let Some(a) = item?.borrow() {
+                Ok(if let Some(a) = item.borrow() {
                     validity.push(true);
                     *a
                 } else {
@@ -214,7 +214,7 @@ mod tests {
 
     #[test]
     fn try_from_iter() -> Result<()> {
-        let iter = std::iter::repeat(true).take(2).map(Some).map(Ok);
+        let iter = std::iter::repeat(true).take(2).map(Some);
         let a = BooleanArray::try_from_iter(iter)?;
         assert_eq!(a.len(), 2);
         Ok(())

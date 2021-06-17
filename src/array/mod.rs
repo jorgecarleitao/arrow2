@@ -395,15 +395,18 @@ pub trait IntoArray {
 /// A trait describing the ability of a struct to create itself from a falible iterator.
 /// Used in the context of creating arrays from non-sized iterators.
 pub trait TryFromIterator<A>: Sized {
-    fn try_from_iter<T: IntoIterator<Item = Result<A>>>(iter: T) -> Result<Self>;
+    fn try_from_iter<T: IntoIterator<Item = A>>(iter: T) -> Result<Self>;
+}
+
+/// A trait describing the ability of a struct to extend itself from an iterator.
+/// Used in the context of creating arrays from non-sized iterators.
+pub trait TryExtend<A>: Sized {
+    fn try_extend<T: IntoIterator<Item = A>>(&mut self, iter: T) -> Result<()>;
 }
 
 /// A trait describing the ability of a struct to build an Array incrementally.
 /// There are builders for almost all array types.
-pub trait Builder<T>: TryFromIterator<Option<T>> {
-    /// Create the builder with a capacity
-    fn with_capacity(capacity: usize) -> Self;
-
+pub trait Builder<T> {
     /// Push a new item to the builder.
     /// This operation may panic if the container cannot hold more items.
     /// For example, if all possible keys are exausted when building a dictionary.

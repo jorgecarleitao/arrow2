@@ -1,7 +1,7 @@
 use std::{iter::FromIterator, sync::Arc};
 
 use super::FixedSizeBinaryArray;
-use crate::array::{Array, Builder, ToArray, TryFromIterator};
+use crate::array::{Array, Builder, ToArray, TryExtend, TryFromIterator};
 use crate::bitmap::MutableBitmap;
 use crate::buffer::MutableBuffer;
 use crate::{
@@ -19,6 +19,11 @@ pub struct FixedSizeBinaryPrimitive {
 }
 
 impl FixedSizeBinaryPrimitive {
+    /// Initializes a new empty [`FixedSizeBinaryPrimitive`].
+    pub fn new() -> Self {
+        Self::with_capacity(0)
+    }
+
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             values: MutableBuffer::<u8>::new(),
@@ -29,9 +34,15 @@ impl FixedSizeBinaryPrimitive {
     }
 }
 
+impl Default for FixedSizeBinaryPrimitive {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<P: AsRef<[u8]>> FromIterator<Option<P>> for FixedSizeBinaryPrimitive {
     fn from_iter<I: IntoIterator<Item = Option<P>>>(iter: I) -> Self {
-        Self::try_from_iter(iter.into_iter().map(Ok)).unwrap()
+        Self::try_from_iter(iter.into_iter()).unwrap()
     }
 }
 
@@ -39,32 +50,36 @@ impl<P> TryFromIterator<Option<P>> for FixedSizeBinaryPrimitive
 where
     P: AsRef<[u8]>,
 {
-    fn try_from_iter<I: IntoIterator<Item = ArrowResult<Option<P>>>>(iter: I) -> ArrowResult<Self> {
-        let iterator = iter.into_iter();
-        let (lower, _) = iterator.size_hint();
-        let mut primitive = Self::with_capacity(lower);
-        for item in iterator {
-            match item? {
-                Some(x) => primitive.try_push(Some(&x.as_ref()))?,
-                None => primitive.try_push(None)?,
-            }
-        }
+    fn try_from_iter<I: IntoIterator<Item = Option<P>>>(iter: I) -> ArrowResult<Self> {
+        let mut primitive = Self::new();
+        primitive.try_extend(iter)?;
         Ok(primitive)
     }
 }
 
-impl Builder<&[u8]> for FixedSizeBinaryPrimitive {
-    fn with_capacity(capacity: usize) -> Self {
-        Self::with_capacity(capacity)
+impl<P> TryExtend<Option<P>> for FixedSizeBinaryPrimitive
+where
+    P: AsRef<[u8]>,
+{
+    fn try_extend<I: IntoIterator<Item = Option<P>>>(&mut self, iter: I) -> ArrowResult<()> {
+        for item in iter {
+            match item {
+                Some(x) => self.try_push(Some(x.as_ref()))?,
+                None => self.try_push(None)?,
+            }
+        }
+        Ok(())
     }
+}
 
+impl Builder<&[u8]> for FixedSizeBinaryPrimitive {
     #[inline]
     fn try_push(&mut self, value: Option<&[u8]>) -> ArrowResult<()> {
         match value {
             Some(bytes) => {
                 if let Some(size) = self.size {
                     if size != bytes.len() {
-                        return Err(ArrowError::DictionaryKeyOverflowError);
+                        return Err(ArrowError::InvalidArgumentError("FixedSizeBinaryPrimitive received an argument with the wrong number of items".to_string()));
                     }
                 } else {
                     self.size = Some(bytes.len());
