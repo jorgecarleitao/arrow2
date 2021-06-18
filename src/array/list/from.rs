@@ -11,7 +11,7 @@ use crate::{
 use super::ListArray;
 
 #[derive(Debug)]
-pub struct ListPrimitive<O: Offset, B: Builder<T>, T> {
+pub struct ListBuilder<O: Offset, B: Builder<T>, T> {
     offsets: MutableBuffer<O>,
     values: B,
     validity: MutableBitmap,
@@ -19,17 +19,17 @@ pub struct ListPrimitive<O: Offset, B: Builder<T>, T> {
     phantom: std::marker::PhantomData<T>,
 }
 
-impl<O, T, B> ListPrimitive<O, B, T>
+impl<O, T, B> ListBuilder<O, B, T>
 where
     O: Offset,
     B: Builder<T>,
 {
-    /// Initializes a new [`ListPrimitive`] with a pre-allocated number of slots.
+    /// Initializes a new [`ListBuilder`] with a pre-allocated number of slots.
     pub fn new(values: B) -> Self {
         Self::with_capacity(0, values)
     }
 
-    /// Initializes a new [`ListPrimitive`] with a pre-allocated number of slots.
+    /// Initializes a new [`ListBuilder`] with a pre-allocated number of slots.
     pub fn with_capacity(capacity: usize, values: B) -> Self {
         let mut offsets = MutableBuffer::<O>::with_capacity(capacity + 1);
         let length = O::default();
@@ -45,7 +45,7 @@ where
     }
 }
 
-impl<O: Offset, A: Builder<T> + ToArray, T> ListPrimitive<O, A, T> {
+impl<O: Offset, A: Builder<T> + ToArray, T> ListBuilder<O, A, T> {
     pub fn to(self, data_type: DataType) -> ListArray<O> {
         let values = self
             .values
@@ -54,8 +54,8 @@ impl<O: Offset, A: Builder<T> + ToArray, T> ListPrimitive<O, A, T> {
     }
 }
 
-impl<O: Offset, A: Builder<T> + IntoArray, T> From<ListPrimitive<O, A, T>> for ListArray<O> {
-    fn from(primitive: ListPrimitive<O, A, T>) -> Self {
+impl<O: Offset, A: Builder<T> + IntoArray, T> From<ListBuilder<O, A, T>> for ListArray<O> {
+    fn from(primitive: ListBuilder<O, A, T>) -> Self {
         let values = primitive.values.into_arc();
         let data_type = ListArray::<O>::default_datatype(values.data_type().clone());
         ListArray::from_data(
@@ -67,7 +67,7 @@ impl<O: Offset, A: Builder<T> + IntoArray, T> From<ListPrimitive<O, A, T>> for L
     }
 }
 
-impl<O, T, B, P> TryExtend<Option<P>> for ListPrimitive<O, B, T>
+impl<O, T, B, P> TryExtend<Option<P>> for ListBuilder<O, B, T>
 where
     O: Offset,
     B: Builder<T>,
@@ -84,7 +84,7 @@ where
     }
 }
 
-impl<O, T, B, P> Extend<Option<P>> for ListPrimitive<O, B, T>
+impl<O, T, B, P> Extend<Option<P>> for ListBuilder<O, B, T>
 where
     O: Offset,
     B: Builder<T>,
@@ -95,7 +95,7 @@ where
     }
 }
 
-impl<O, T, B> NullableBuilder for ListPrimitive<O, B, T>
+impl<O, T, B> NullableBuilder for ListBuilder<O, B, T>
 where
     O: Offset,
     B: Builder<T>,
@@ -107,7 +107,7 @@ where
     }
 }
 
-impl<O, T, B, P> Builder<P> for ListPrimitive<O, B, T>
+impl<O, T, B, P> Builder<P> for ListBuilder<O, B, T>
 where
     O: Offset,
     B: Builder<T>,
@@ -139,13 +139,13 @@ where
     }
 }
 
-impl<O: Offset, B: Builder<T> + ToArray, T> ToArray for ListPrimitive<O, B, T> {
+impl<O: Offset, B: Builder<T> + ToArray, T> ToArray for ListBuilder<O, B, T> {
     fn to_arc(self, data_type: &DataType) -> Arc<dyn Array> {
         Arc::new(self.to(data_type.clone()))
     }
 }
 
-impl<O: Offset, B: Builder<T> + IntoArray, T> IntoArray for ListPrimitive<O, B, T> {
+impl<O: Offset, B: Builder<T> + IntoArray, T> IntoArray for ListBuilder<O, B, T> {
     fn into_arc(self) -> Arc<dyn Array> {
         let a: ListArray<O> = self.into();
         Arc::new(a)
@@ -166,7 +166,7 @@ mod tests {
             Some(vec![Some(4), None, Some(6)]),
         ];
 
-        let mut a = ListPrimitive::<i32, _, _>::with_capacity(0, Primitive::<i32>::new());
+        let mut a = ListBuilder::<i32, _, _>::with_capacity(0, PrimitiveBuilder::<i32>::new());
         a.try_extend(data).unwrap();
 
         let a: ListArray<i32> = a.into();
@@ -174,7 +174,7 @@ mod tests {
         let a = a.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
 
         let expected =
-            Primitive::<i32>::from(vec![Some(1i32), Some(2), Some(3)]).to(DataType::Int32);
+            PrimitiveBuilder::<i32>::from(vec![Some(1i32), Some(2), Some(3)]).to(DataType::Int32);
         assert_eq!(a, &expected)
     }
 
@@ -186,14 +186,14 @@ mod tests {
             Some(vec![Some(4), None, Some(6)]),
         ];
 
-        let mut a = ListPrimitive::<i32, _, _>::with_capacity(0, Primitive::<i32>::new());
+        let mut a = ListBuilder::<i32, _, _>::with_capacity(0, PrimitiveBuilder::<i32>::new());
         a.try_extend(data).unwrap();
         let a: ListArray<i32> = a.into();
         let a = a.value(0);
         let a = a.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
 
         let expected =
-            Primitive::<i32>::from(vec![Some(1i32), Some(2), Some(3)]).to(DataType::Int32);
+            PrimitiveBuilder::<i32>::from(vec![Some(1i32), Some(2), Some(3)]).to(DataType::Int32);
         assert_eq!(a, &expected)
     }
 
@@ -201,7 +201,7 @@ mod tests {
     fn primitive_utf8_natural() {
         let data = vec![Some(vec![Some("1"), Some("2"), Some("3")]), None];
 
-        let mut a = ListPrimitive::<i32, _, _>::with_capacity(0, Utf8Primitive::<i32>::new());
+        let mut a = ListBuilder::<i32, _, _>::with_capacity(0, Utf8Builder::<i32>::new());
         a.try_extend(data).unwrap();
 
         let a: ListArray<i32> = a.into();
@@ -214,7 +214,7 @@ mod tests {
 
     #[test]
     fn utf8_push() {
-        let mut a = ListPrimitive::<i32, _, _>::with_capacity(0, Utf8Primitive::<i32>::new());
+        let mut a = ListBuilder::<i32, _, _>::with_capacity(0, Utf8Builder::<i32>::new());
 
         a.try_push(vec![Some("a")].into_iter()).unwrap();
         let a = a.into_arc();
@@ -223,7 +223,7 @@ mod tests {
 
     #[test]
     fn utf8_push_none() {
-        let mut a = ListPrimitive::<i32, _, _>::with_capacity(0, Utf8Primitive::<i32>::new());
+        let mut a = ListBuilder::<i32, _, _>::with_capacity(0, Utf8Builder::<i32>::new());
 
         a.push_null();
         let a = a.into_arc();

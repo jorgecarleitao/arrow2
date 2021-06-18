@@ -71,7 +71,7 @@ where
     let iter = from
         .iter()
         .map(|v| v.and_then(|x| num::cast::cast::<I, O>(*x)));
-    Primitive::<O>::from_trusted_len_iter(iter).to(to_type.clone())
+    PrimitiveBuilder::<O>::from_trusted_len_iter(iter).to(to_type.clone())
 }
 
 /// Cast [`PrimitiveArray`] to a [`PrimitiveArray`] of the same physical type.
@@ -119,7 +119,7 @@ pub fn primitive_to_dictionary<T: NativeType + Eq + Hash, K: DictionaryKey>(
 ) -> Result<DictionaryArray<K>> {
     let iter = from.iter().map(|x| x.copied());
 
-    let mut primitive = DictionaryPrimitive::<K, _, _>::new(Primitive::<T>::new());
+    let mut primitive = DictionaryBuilder::<K, _, _>::new(PrimitiveBuilder::<T>::new());
     primitive.try_extend(iter)?;
 
     Ok(primitive.to(DataType::Dictionary(

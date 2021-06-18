@@ -68,10 +68,10 @@ fn create_scale(lhs: &DataType, rhs: &DataType) -> Result<f64> {
 /// # Examples
 /// ```
 /// use arrow2::compute::arithmetics::time::add_duration;
-/// use arrow2::array::Primitive;
+/// use arrow2::array::PrimitiveBuilder;
 /// use arrow2::datatypes::{DataType, TimeUnit};
 ///
-/// let timestamp = Primitive::from(&vec![
+/// let timestamp = PrimitiveBuilder::from(&vec![
 ///     Some(100000i64),
 ///     Some(200000i64),
 ///     None,
@@ -82,11 +82,11 @@ fn create_scale(lhs: &DataType, rhs: &DataType) -> Result<f64> {
 ///     Some("America/New_York".to_string()),
 /// ));
 ///
-/// let duration = Primitive::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)])
+/// let duration = PrimitiveBuilder::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)])
 ///     .to(DataType::Duration(TimeUnit::Second));
 ///
 /// let result = add_duration(&timestamp, &duration).unwrap();
-/// let expected = Primitive::from(&vec![
+/// let expected = PrimitiveBuilder::from(&vec![
 ///     Some(100010i64),
 ///     Some(200020i64),
 ///     None,
@@ -123,10 +123,10 @@ where
 /// # Examples
 /// ```
 /// use arrow2::compute::arithmetics::time::subtract_duration;
-/// use arrow2::array::Primitive;
+/// use arrow2::array::PrimitiveBuilder;
 /// use arrow2::datatypes::{DataType, TimeUnit};
 ///
-/// let timestamp = Primitive::from(&vec![
+/// let timestamp = PrimitiveBuilder::from(&vec![
 ///     Some(100000i64),
 ///     Some(200000i64),
 ///     None,
@@ -137,11 +137,11 @@ where
 ///     Some("America/New_York".to_string()),
 /// ));
 ///
-/// let duration = Primitive::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)])
+/// let duration = PrimitiveBuilder::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)])
 ///     .to(DataType::Duration(TimeUnit::Second));
 ///
 /// let result = subtract_duration(&timestamp, &duration).unwrap();
-/// let expected = Primitive::from(&vec![
+/// let expected = PrimitiveBuilder::from(&vec![
 ///     Some(99990i64),
 ///     Some(199980i64),
 ///     None,
@@ -179,9 +179,9 @@ where
 /// # Examples
 /// ```
 /// use arrow2::compute::arithmetics::time::subtract_timestamps;
-/// use arrow2::array::Primitive;
+/// use arrow2::array::PrimitiveBuilder;
 /// use arrow2::datatypes::{DataType, TimeUnit};
-/// let timestamp_a = Primitive::from(&vec![
+/// let timestamp_a = PrimitiveBuilder::from(&vec![
 ///     Some(100_010i64),
 ///     Some(200_020i64),
 ///     None,
@@ -189,7 +189,7 @@ where
 /// ])
 /// .to(DataType::Timestamp(TimeUnit::Second, None));
 ///
-/// let timestamp_b = Primitive::from(&vec![
+/// let timestamp_b = PrimitiveBuilder::from(&vec![
 ///     Some(100_000i64),
 ///     Some(200_000i64),
 ///     None,
@@ -197,7 +197,7 @@ where
 /// ])
 /// .to(DataType::Timestamp(TimeUnit::Second, None));
 ///
-/// let expected = Primitive::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)])
+/// let expected = PrimitiveBuilder::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)])
 ///     .to(DataType::Duration(TimeUnit::Second));
 ///
 /// let result = subtract_timestamps(&timestamp_a, &&timestamp_b).unwrap();
@@ -230,12 +230,12 @@ pub fn subtract_timestamps(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::array::Primitive;
+    use crate::array::PrimitiveBuilder;
     use crate::datatypes::{DataType, TimeUnit};
 
     #[test]
     fn test_adding_timestamp() {
-        let timestamp = Primitive::from(&vec![
+        let timestamp = PrimitiveBuilder::from(&vec![
             Some(100000i64),
             Some(200000i64),
             None,
@@ -246,11 +246,11 @@ mod tests {
             Some("America/New_York".to_string()),
         ));
 
-        let duration = Primitive::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)])
+        let duration = PrimitiveBuilder::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)])
             .to(DataType::Duration(TimeUnit::Second));
 
         let result = add_duration(&timestamp, &duration).unwrap();
-        let expected = Primitive::from(&vec![
+        let expected = PrimitiveBuilder::from(&vec![
             Some(100010i64),
             Some(200020i64),
             None,
@@ -266,7 +266,7 @@ mod tests {
 
     #[test]
     fn test_adding_duration_different_scale() {
-        let timestamp = Primitive::from(&vec![
+        let timestamp = PrimitiveBuilder::from(&vec![
             Some(100000i64),
             Some(200000i64),
             None,
@@ -276,7 +276,7 @@ mod tests {
             TimeUnit::Second,
             Some("America/New_York".to_string()),
         ));
-        let expected = Primitive::from(&vec![
+        let expected = PrimitiveBuilder::from(&vec![
             Some(100010i64),
             Some(200020i64),
             None,
@@ -288,7 +288,7 @@ mod tests {
         ));
 
         // Testing duration in milliseconds
-        let duration = Primitive::from(&vec![
+        let duration = PrimitiveBuilder::from(&vec![
             Some(10_000i64),
             Some(20_000i64),
             None,
@@ -303,7 +303,7 @@ mod tests {
         // The last digits in the nanosecond are not significant enough to
         // be added to the timestamp which is in seconds and doesn't have a
         // fractional value
-        let duration = Primitive::from(&vec![
+        let duration = PrimitiveBuilder::from(&vec![
             Some(10_000_000_999i64),
             Some(20_000_000_000i64),
             None,
@@ -317,27 +317,27 @@ mod tests {
 
     #[test]
     fn test_adding_subtract_timestamps_scale() {
-        let timestamp = Primitive::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)]).to(
+        let timestamp = PrimitiveBuilder::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)]).to(
             DataType::Timestamp(TimeUnit::Millisecond, Some("America/New_York".to_string())),
         );
-        let duration = Primitive::from(&vec![Some(1i64), Some(2i64), None, Some(3i64)])
+        let duration = PrimitiveBuilder::from(&vec![Some(1i64), Some(2i64), None, Some(3i64)])
             .to(DataType::Duration(TimeUnit::Second));
 
         let expected =
-            Primitive::from(&vec![Some(1_010i64), Some(2_020i64), None, Some(3_030i64)]).to(
+            PrimitiveBuilder::from(&vec![Some(1_010i64), Some(2_020i64), None, Some(3_030i64)]).to(
                 DataType::Timestamp(TimeUnit::Millisecond, Some("America/New_York".to_string())),
             );
 
         let result = add_duration(&timestamp, &duration).unwrap();
         assert_eq!(result, expected);
 
-        let timestamp = Primitive::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)]).to(
+        let timestamp = PrimitiveBuilder::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)]).to(
             DataType::Timestamp(TimeUnit::Nanosecond, Some("America/New_York".to_string())),
         );
-        let duration = Primitive::from(&vec![Some(1i64), Some(2i64), None, Some(3i64)])
+        let duration = PrimitiveBuilder::from(&vec![Some(1i64), Some(2i64), None, Some(3i64)])
             .to(DataType::Duration(TimeUnit::Second));
 
-        let expected = Primitive::from(&vec![
+        let expected = PrimitiveBuilder::from(&vec![
             Some(1_000_000_010i64),
             Some(2_000_000_020i64),
             None,
@@ -354,7 +354,7 @@ mod tests {
 
     #[test]
     fn test_subtract_timestamp() {
-        let timestamp = Primitive::from(&vec![
+        let timestamp = PrimitiveBuilder::from(&vec![
             Some(100000i64),
             Some(200000i64),
             None,
@@ -365,11 +365,11 @@ mod tests {
             Some("America/New_York".to_string()),
         ));
 
-        let duration = Primitive::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)])
+        let duration = PrimitiveBuilder::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)])
             .to(DataType::Duration(TimeUnit::Second));
 
         let result = subtract_duration(&timestamp, &duration).unwrap();
-        let expected = Primitive::from(&vec![
+        let expected = PrimitiveBuilder::from(&vec![
             Some(99990i64),
             Some(199980i64),
             None,
@@ -385,7 +385,7 @@ mod tests {
 
     #[test]
     fn test_subtracting_duration_different_scale() {
-        let timestamp = Primitive::from(&vec![
+        let timestamp = PrimitiveBuilder::from(&vec![
             Some(100000i64),
             Some(200000i64),
             None,
@@ -395,7 +395,7 @@ mod tests {
             TimeUnit::Second,
             Some("America/New_York".to_string()),
         ));
-        let expected = Primitive::from(&vec![
+        let expected = PrimitiveBuilder::from(&vec![
             Some(99990i64),
             Some(199980i64),
             None,
@@ -407,7 +407,7 @@ mod tests {
         ));
 
         // Testing duration in milliseconds
-        let duration = Primitive::from(&vec![
+        let duration = PrimitiveBuilder::from(&vec![
             Some(10_000i64),
             Some(20_000i64),
             None,
@@ -422,7 +422,7 @@ mod tests {
         // The last digits in the nanosecond are not significant enough to
         // be added to the timestamp which is in seconds and doesn't have a
         // fractional value
-        let duration = Primitive::from(&vec![
+        let duration = PrimitiveBuilder::from(&vec![
             Some(10_000_000_999i64),
             Some(20_000_000_000i64),
             None,
@@ -436,27 +436,27 @@ mod tests {
 
     #[test]
     fn test_subtracting_subtract_timestamps_scale() {
-        let timestamp = Primitive::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)]).to(
+        let timestamp = PrimitiveBuilder::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)]).to(
             DataType::Timestamp(TimeUnit::Millisecond, Some("America/New_York".to_string())),
         );
-        let duration = Primitive::from(&vec![Some(1i64), Some(2i64), None, Some(3i64)])
+        let duration = PrimitiveBuilder::from(&vec![Some(1i64), Some(2i64), None, Some(3i64)])
             .to(DataType::Duration(TimeUnit::Second));
 
         let expected =
-            Primitive::from(&vec![Some(-990i64), Some(-1_980i64), None, Some(-2_970i64)]).to(
+            PrimitiveBuilder::from(&vec![Some(-990i64), Some(-1_980i64), None, Some(-2_970i64)]).to(
                 DataType::Timestamp(TimeUnit::Millisecond, Some("America/New_York".to_string())),
             );
 
         let result = subtract_duration(&timestamp, &duration).unwrap();
         assert_eq!(result, expected);
 
-        let timestamp = Primitive::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)]).to(
+        let timestamp = PrimitiveBuilder::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)]).to(
             DataType::Timestamp(TimeUnit::Nanosecond, Some("America/New_York".to_string())),
         );
-        let duration = Primitive::from(&vec![Some(1i64), Some(2i64), None, Some(3i64)])
+        let duration = PrimitiveBuilder::from(&vec![Some(1i64), Some(2i64), None, Some(3i64)])
             .to(DataType::Duration(TimeUnit::Second));
 
-        let expected = Primitive::from(&vec![
+        let expected = PrimitiveBuilder::from(&vec![
             Some(-999_999_990i64),
             Some(-1_999_999_980i64),
             None,
@@ -473,7 +473,7 @@ mod tests {
 
     #[test]
     fn test_subtract_timestamps() {
-        let timestamp_a = Primitive::from(&vec![
+        let timestamp_a = PrimitiveBuilder::from(&vec![
             Some(100_010i64),
             Some(200_020i64),
             None,
@@ -481,7 +481,7 @@ mod tests {
         ])
         .to(DataType::Timestamp(TimeUnit::Second, None));
 
-        let timestamp_b = Primitive::from(&vec![
+        let timestamp_b = PrimitiveBuilder::from(&vec![
             Some(100_000i64),
             Some(200_000i64),
             None,
@@ -489,7 +489,7 @@ mod tests {
         ])
         .to(DataType::Timestamp(TimeUnit::Second, None));
 
-        let expected = Primitive::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)])
+        let expected = PrimitiveBuilder::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)])
             .to(DataType::Duration(TimeUnit::Second));
 
         let result = subtract_timestamps(&timestamp_a, &&timestamp_b).unwrap();
@@ -498,7 +498,7 @@ mod tests {
 
     #[test]
     fn test_subtract_timestamps_scale() {
-        let timestamp_a = Primitive::from(&vec![
+        let timestamp_a = PrimitiveBuilder::from(&vec![
             Some(100_000_000i64),
             Some(200_000_000i64),
             None,
@@ -506,7 +506,7 @@ mod tests {
         ])
         .to(DataType::Timestamp(TimeUnit::Millisecond, None));
 
-        let timestamp_b = Primitive::from(&vec![
+        let timestamp_b = PrimitiveBuilder::from(&vec![
             Some(100_010i64),
             Some(200_020i64),
             None,
@@ -514,7 +514,7 @@ mod tests {
         ])
         .to(DataType::Timestamp(TimeUnit::Second, None));
 
-        let expected = Primitive::from(&vec![
+        let expected = PrimitiveBuilder::from(&vec![
             Some(-10_000i64),
             Some(-20_000i64),
             None,
@@ -528,11 +528,11 @@ mod tests {
 
     #[test]
     fn test_adding_to_time() {
-        let duration = Primitive::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)])
+        let duration = PrimitiveBuilder::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)])
             .to(DataType::Duration(TimeUnit::Second));
 
         // Testing Time32
-        let time_32 = Primitive::from(&vec![
+        let time_32 = PrimitiveBuilder::from(&vec![
             Some(100000i32),
             Some(200000i32),
             None,
@@ -541,7 +541,7 @@ mod tests {
         .to(DataType::Time32(TimeUnit::Second));
 
         let result = add_duration(&time_32, &duration).unwrap();
-        let expected = Primitive::from(&vec![
+        let expected = PrimitiveBuilder::from(&vec![
             Some(100010i32),
             Some(200020i32),
             None,
@@ -554,11 +554,11 @@ mod tests {
 
     #[test]
     fn test_subtract_to_time() {
-        let duration = Primitive::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)])
+        let duration = PrimitiveBuilder::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)])
             .to(DataType::Duration(TimeUnit::Second));
 
         // Testing Time32
-        let time_32 = Primitive::from(&vec![
+        let time_32 = PrimitiveBuilder::from(&vec![
             Some(100000i32),
             Some(200000i32),
             None,
@@ -567,7 +567,7 @@ mod tests {
         .to(DataType::Time32(TimeUnit::Second));
 
         let result = subtract_duration(&time_32, &duration).unwrap();
-        let expected = Primitive::from(&vec![
+        let expected = PrimitiveBuilder::from(&vec![
             Some(99990i32),
             Some(199980i32),
             None,
@@ -580,7 +580,7 @@ mod tests {
 
     #[test]
     fn test_date32() {
-        let duration = Primitive::from(&vec![
+        let duration = PrimitiveBuilder::from(&vec![
             Some(86_400),     // 1 day
             Some(864_000i64), // 10 days
             None,
@@ -588,7 +588,7 @@ mod tests {
         ])
         .to(DataType::Duration(TimeUnit::Second));
 
-        let date_32 = Primitive::from(&vec![
+        let date_32 = PrimitiveBuilder::from(&vec![
             Some(100_000i32),
             Some(100_000i32),
             None,
@@ -597,7 +597,7 @@ mod tests {
         .to(DataType::Date32);
 
         let result = add_duration(&date_32, &duration).unwrap();
-        let expected = Primitive::from(&vec![
+        let expected = PrimitiveBuilder::from(&vec![
             Some(100_001i32),
             Some(100_010i32),
             None,
@@ -608,7 +608,7 @@ mod tests {
         assert_eq!(result, expected);
 
         let result = subtract_duration(&date_32, &duration).unwrap();
-        let expected = Primitive::from(&vec![
+        let expected = PrimitiveBuilder::from(&vec![
             Some(99_999i32),
             Some(99_990i32),
             None,
@@ -621,7 +621,7 @@ mod tests {
 
     #[test]
     fn test_date64() {
-        let duration = Primitive::from(&vec![
+        let duration = PrimitiveBuilder::from(&vec![
             Some(10i64),  // 10 milliseconds
             Some(100i64), // 100 milliseconds
             None,
@@ -629,7 +629,7 @@ mod tests {
         ])
         .to(DataType::Duration(TimeUnit::Millisecond));
 
-        let date_64 = Primitive::from(&vec![
+        let date_64 = PrimitiveBuilder::from(&vec![
             Some(100_000i64),
             Some(100_000i64),
             None,
@@ -638,7 +638,7 @@ mod tests {
         .to(DataType::Date64);
 
         let result = add_duration(&date_64, &duration).unwrap();
-        let expected = Primitive::from(&vec![
+        let expected = PrimitiveBuilder::from(&vec![
             Some(100_010i64),
             Some(100_100i64),
             None,
@@ -649,7 +649,7 @@ mod tests {
         assert_eq!(result, expected);
 
         let result = subtract_duration(&date_64, &duration).unwrap();
-        let expected = Primitive::from(&vec![
+        let expected = PrimitiveBuilder::from(&vec![
             Some(99_990i64),
             Some(99_900i64),
             None,

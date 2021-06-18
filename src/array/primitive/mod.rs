@@ -123,7 +123,7 @@ mod display;
 mod ffi;
 mod from;
 mod from_natural;
-pub use from::Primitive;
+pub use from::PrimitiveBuilder;
 mod iterator;
 pub use iterator::*;
 

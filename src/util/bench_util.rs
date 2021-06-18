@@ -47,7 +47,7 @@ where
                 Some(rng.gen())
             }
         })
-        .collect::<Primitive<T>>()
+        .collect::<PrimitiveBuilder<T>>()
         .to(data_type)
 }
 
@@ -71,7 +71,7 @@ where
                 Some(rng.gen())
             }
         })
-        .collect::<Primitive<T>>()
+        .collect::<PrimitiveBuilder<T>>()
         .to(data_type)
 }
 

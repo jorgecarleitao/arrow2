@@ -163,7 +163,7 @@ mod tests {
     use super::*;
 
     use crate::array::ListArray;
-    use crate::array::{ListPrimitive, Primitive};
+    use crate::array::{ListBuilder, PrimitiveBuilder};
 
     #[test]
     fn basic() {
@@ -173,7 +173,7 @@ mod tests {
             Some(vec![Some(6i32), Some(7), Some(8)]),
         ];
 
-        let mut builder = ListPrimitive::<i32, _, _>::new(Primitive::<i32>::new());
+        let mut builder = ListBuilder::<i32, _, _>::new(PrimitiveBuilder::<i32>::new());
         builder.extend(data);
         let array: ListArray<i32> = builder.into();
 
@@ -183,7 +183,7 @@ mod tests {
         let result: ListArray<i32> = a.into();
 
         let expected = vec![Some(vec![Some(1i32), Some(2), Some(3)])];
-        let mut builder = ListPrimitive::<i32, _, _>::new(Primitive::<i32>::new());
+        let mut builder = ListBuilder::<i32, _, _>::new(PrimitiveBuilder::<i32>::new());
         builder.extend(expected);
         let expected: ListArray<i32> = builder.into();
 
@@ -197,7 +197,7 @@ mod tests {
             None,
             Some(vec![Some(6i32), Some(7), Some(8)]),
         ];
-        let mut builder = ListPrimitive::<i32, _, _>::new(Primitive::<i32>::new());
+        let mut builder = ListBuilder::<i32, _, _>::new(PrimitiveBuilder::<i32>::new());
         builder.extend(data);
         let array: ListArray<i32> = builder.into();
         let array = array.slice(1, 2);
@@ -208,7 +208,7 @@ mod tests {
         let result: ListArray<i32> = a.into();
 
         let expected = vec![Some(vec![Some(6i32), Some(7), Some(8)])];
-        let mut builder = ListPrimitive::<i32, _, _>::new(Primitive::<i32>::new());
+        let mut builder = ListBuilder::<i32, _, _>::new(PrimitiveBuilder::<i32>::new());
         builder.extend(expected);
         let expected: ListArray<i32> = builder.into();
 
@@ -222,7 +222,7 @@ mod tests {
             None,
             Some(vec![Some(6i32), None, Some(8)]),
         ];
-        let mut builder = ListPrimitive::<i32, _, _>::new(Primitive::<i32>::new());
+        let mut builder = ListBuilder::<i32, _, _>::new(PrimitiveBuilder::<i32>::new());
         builder.extend(data);
         let array: ListArray<i32> = builder.into();
         let array = array.slice(1, 2);
@@ -233,7 +233,7 @@ mod tests {
         let result: ListArray<i32> = a.into();
 
         let expected = vec![Some(vec![Some(6i32), None, Some(8)])];
-        let mut builder = ListPrimitive::<i32, _, _>::new(Primitive::<i32>::new());
+        let mut builder = ListBuilder::<i32, _, _>::new(PrimitiveBuilder::<i32>::new());
         builder.extend(expected);
         let expected: ListArray<i32> = builder.into();
 
@@ -247,7 +247,7 @@ mod tests {
             None,
             Some(vec![Some(6i32), None, Some(8)]),
         ];
-        let mut builder = ListPrimitive::<i32, _, _>::new(Primitive::<i32>::new());
+        let mut builder = ListBuilder::<i32, _, _>::new(PrimitiveBuilder::<i32>::new());
         builder.extend(data_1);
         let array_1: ListArray<i32> = builder.into();
 
@@ -256,7 +256,7 @@ mod tests {
             Some(vec![Some(5i32), None, Some(4)]),
             Some(vec![Some(2i32), Some(1), Some(0)]),
         ];
-        let mut builder = ListPrimitive::<i32, _, _>::new(Primitive::<i32>::new());
+        let mut builder = ListBuilder::<i32, _, _>::new(PrimitiveBuilder::<i32>::new());
         builder.extend(data_2);
         let array_2: ListArray<i32> = builder.into();
 
@@ -273,7 +273,7 @@ mod tests {
             None,
             Some(vec![Some(5i32), None, Some(4)]),
         ];
-        let mut builder = ListPrimitive::<i32, _, _>::new(Primitive::<i32>::new());
+        let mut builder = ListBuilder::<i32, _, _>::new(PrimitiveBuilder::<i32>::new());
         builder.extend(expected_data);
         let expected: ListArray<i32> = builder.into();
 

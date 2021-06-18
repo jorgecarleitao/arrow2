@@ -187,7 +187,7 @@ mod from;
 mod iterator;
 pub use iterator::*;
 
-pub use from::ListPrimitive;
+pub use from::ListBuilder;
 
 #[cfg(test)]
 mod tests {

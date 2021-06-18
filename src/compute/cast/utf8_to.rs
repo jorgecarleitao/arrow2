@@ -24,7 +24,7 @@ where
         .iter()
         .map(|x| x.and_then::<T, _>(|x| lexical_core::parse(x.as_bytes()).ok()));
 
-    Primitive::<T>::from_trusted_len_iter(iter).to(to.clone())
+    PrimitiveBuilder::<T>::from_trusted_len_iter(iter).to(to.clone())
 }
 
 pub(super) fn utf8_to_primitive_dyn<O: Offset, T>(
@@ -47,7 +47,7 @@ pub fn utf8_to_date32<O: Offset>(from: &Utf8Array<O>) -> PrimitiveArray<i32> {
                 .map(|x| x.num_days_from_ce() - EPOCH_DAYS_FROM_CE)
         })
     });
-    Primitive::<i32>::from_trusted_len_iter(iter).to(DataType::Date32)
+    PrimitiveBuilder::<i32>::from_trusted_len_iter(iter).to(DataType::Date32)
 }
 
 pub(super) fn utf8_to_date32_dyn<O: Offset>(from: &dyn Array) -> Result<Box<dyn Array>> {
@@ -64,7 +64,7 @@ pub fn utf8_to_date64<O: Offset>(from: &Utf8Array<O>) -> PrimitiveArray<i64> {
                 .map(|x| x.timestamp_millis())
         })
     });
-    Primitive::<i64>::from_trusted_len_iter(iter).to(DataType::Date64)
+    PrimitiveBuilder::<i64>::from_trusted_len_iter(iter).to(DataType::Date64)
 }
 
 pub(super) fn utf8_to_date64_dyn<O: Offset>(from: &dyn Array) -> Result<Box<dyn Array>> {
@@ -86,7 +86,7 @@ pub(super) fn utf8_to_dictionary_dyn<O: Offset, K: DictionaryKey>(
 pub fn utf8_to_dictionary<O: Offset, K: DictionaryKey>(
     from: &Utf8Array<O>,
 ) -> Result<DictionaryArray<K>> {
-    let mut primitive = DictionaryPrimitive::<K, _, _>::new(Utf8Primitive::<O>::new());
+    let mut primitive = DictionaryBuilder::<K, _, _>::new(Utf8Builder::<O>::new());
     primitive.try_extend(from)?;
 
     Ok(primitive.into())
@@ -102,7 +102,7 @@ pub fn utf8_to_timestamp_ns<O: Offset>(from: &Utf8Array<O>) -> PrimitiveArray<i6
     let iter = from
         .iter()
         .map(|x| x.and_then(|x| utf8_to_timestamp_ns_scalar(x).ok()));
-    Primitive::<i64>::from_trusted_len_iter(iter)
+    PrimitiveBuilder::<i64>::from_trusted_len_iter(iter)
         .to(DataType::Timestamp(TimeUnit::Nanosecond, None))
 }
 

@@ -11,13 +11,13 @@ use crate::{error::Result as ArrowResult, trusted_len::TrustedLen};
 
 use super::PrimitiveArray;
 
-impl<T: NativeType + NaturalDataType> From<Primitive<T>> for PrimitiveArray<T> {
-    fn from(other: Primitive<T>) -> Self {
+impl<T: NativeType + NaturalDataType> From<PrimitiveBuilder<T>> for PrimitiveArray<T> {
+    fn from(other: PrimitiveBuilder<T>) -> Self {
         PrimitiveArray::<T>::from_data(T::DATA_TYPE, other.values.into(), other.validity.into())
     }
 }
 
-impl<T: NativeType> Primitive<T> {
+impl<T: NativeType> PrimitiveBuilder<T> {
     pub fn from_slice<P: AsRef<[T]>>(slice: P) -> Self {
         Self::from_trusted_len_iter(slice.as_ref().iter().map(Some))
     }
@@ -27,14 +27,14 @@ impl<T: NativeType> Primitive<T> {
     }
 }
 
-impl<T: NativeType, P: AsRef<[Option<T>]>> From<P> for Primitive<T> {
+impl<T: NativeType, P: AsRef<[Option<T>]>> From<P> for PrimitiveBuilder<T> {
     fn from(slice: P) -> Self {
         Self::from_trusted_len_iter(slice.as_ref().iter().map(|x| x.as_ref()))
     }
 }
 
-impl<T: NativeType> Primitive<T> {
-    /// Initializes a new [`Primitive`] with a pre-allocated number of slots.
+impl<T: NativeType> PrimitiveBuilder<T> {
+    /// Initializes a new [`PrimitiveBuilder`] with a pre-allocated number of slots.
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             values: MutableBuffer::<T>::with_capacity(capacity),
@@ -42,7 +42,7 @@ impl<T: NativeType> Primitive<T> {
         }
     }
 
-    /// Creates a [`Primitive`] from an iterator of trusted length.
+    /// Creates a [`PrimitiveBuilder`] from an iterator of trusted length.
     /// # Safety
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
     /// I.e. `size_hint().1` correctly reports its length.
@@ -57,7 +57,7 @@ impl<T: NativeType> Primitive<T> {
         Self { values, validity }
     }
 
-    /// Creates a [`Primitive`] from a [`TrustedLen`].
+    /// Creates a [`PrimitiveBuilder`] from a [`TrustedLen`].
     #[inline]
     pub fn from_trusted_len_iter<I, P>(iterator: I) -> Self
     where
@@ -180,22 +180,22 @@ where
 }
 
 /// Auxiliary struct used to create a [`PrimitiveArray`] out of iterators.
-/// Primitive arrays are often built from this struct, that knows how to cheaply convert itself
+/// PrimitiveBuilder arrays are often built from this struct, that knows how to cheaply convert itself
 /// into a primitive array.
 #[derive(Debug)]
-pub struct Primitive<T: NativeType> {
+pub struct PrimitiveBuilder<T: NativeType> {
     values: MutableBuffer<T>,
     validity: MutableBitmap,
 }
 
-impl<T: NativeType> NullableBuilder for Primitive<T> {
+impl<T: NativeType> NullableBuilder for PrimitiveBuilder<T> {
     fn push_null(&mut self) {
         self.values.push(T::default());
         self.validity.push(false);
     }
 }
 
-impl<T: NativeType> Builder<T> for Primitive<T> {
+impl<T: NativeType> Builder<T> for PrimitiveBuilder<T> {
     /// Pushes a new item to this struct
     #[inline]
     fn push(&mut self, value: T) {
@@ -204,7 +204,7 @@ impl<T: NativeType> Builder<T> for Primitive<T> {
     }
 }
 
-impl<T: NativeType> Primitive<T> {
+impl<T: NativeType> PrimitiveBuilder<T> {
     /// Initializes itself with a capacity.
     #[inline]
     pub fn new() -> Self {
@@ -222,7 +222,7 @@ impl<T: NativeType> Primitive<T> {
     }
 }
 
-impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> Extend<Ptr> for Primitive<T> {
+impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> Extend<Ptr> for PrimitiveBuilder<T> {
     fn extend<I: IntoIterator<Item = Ptr>>(&mut self, iter: I) {
         let iter = iter.into_iter();
         let (lower, _) = iter.size_hint();
@@ -238,14 +238,14 @@ impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> Extend<Ptr> for Primiti
     }
 }
 
-impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> TryExtend<Ptr> for Primitive<T> {
+impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> TryExtend<Ptr> for PrimitiveBuilder<T> {
     fn try_extend<I: IntoIterator<Item = Ptr>>(&mut self, iter: I) -> ArrowResult<()> {
         self.extend(iter);
         Ok(())
     }
 }
 
-impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> FromIterator<Ptr> for Primitive<T> {
+impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> FromIterator<Ptr> for PrimitiveBuilder<T> {
     fn from_iter<I: IntoIterator<Item = Ptr>>(iter: I) -> Self {
         let iter = iter.into_iter();
         let (lower, _) = iter.size_hint();
@@ -268,14 +268,16 @@ impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> FromIterator<Ptr> for P
     }
 }
 
-impl<T: NativeType> Default for Primitive<T> {
+impl<T: NativeType> Default for PrimitiveBuilder<T> {
     #[inline]
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> TryFromIterator<Ptr> for Primitive<T> {
+impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> TryFromIterator<Ptr>
+    for PrimitiveBuilder<T>
+{
     fn try_from_iter<I: IntoIterator<Item = Ptr>>(iter: I) -> ArrowResult<Self> {
         let iter = iter.into_iter();
         let (lower, _) = iter.size_hint();
@@ -298,13 +300,13 @@ impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> TryFromIterator<Ptr> fo
     }
 }
 
-impl<T: NativeType> ToArray for Primitive<T> {
+impl<T: NativeType> ToArray for PrimitiveBuilder<T> {
     fn to_arc(self, data_type: &DataType) -> Arc<dyn Array> {
         Arc::new(self.to(data_type.clone()))
     }
 }
 
-impl<T: NativeType + NaturalDataType> IntoArray for Primitive<T> {
+impl<T: NativeType + NaturalDataType> IntoArray for PrimitiveBuilder<T> {
     fn into_arc(self) -> Arc<dyn Array> {
         let a: PrimitiveArray<T> = self.into();
         Arc::new(a)
@@ -313,7 +315,7 @@ impl<T: NativeType + NaturalDataType> IntoArray for Primitive<T> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::Primitive;
+    use super::super::PrimitiveBuilder;
     use super::*;
     use crate::array::Array;
     use crate::datatypes::DataType;
@@ -321,14 +323,14 @@ mod tests {
 
     #[test]
     fn try_from_iter() -> Result<()> {
-        let a = Primitive::<i32>::try_from_iter((0..2).map(Some))?.to(DataType::Int32);
+        let a = PrimitiveBuilder::<i32>::try_from_iter((0..2).map(Some))?.to(DataType::Int32);
         assert_eq!(a.len(), 2);
         Ok(())
     }
 
     #[test]
     fn natural_arc() -> Result<()> {
-        let a = Primitive::<i32>::from_slice(&[0, 1]).into_arc();
+        let a = PrimitiveBuilder::<i32>::from_slice(&[0, 1]).into_arc();
         assert_eq!(a.len(), 2);
         Ok(())
     }

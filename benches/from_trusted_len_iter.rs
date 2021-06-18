@@ -1,6 +1,6 @@
 extern crate arrow2;
 
-use arrow2::{array::Primitive, bitmap::*, buffer::*};
+use arrow2::{array::PrimitiveBuilder, bitmap::*, buffer::*};
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
@@ -21,7 +21,7 @@ fn add_benchmark(c: &mut Criterion) {
         .into_iter()
         .map(|x| if x % 5 == 0 { Some(x) } else { None });
     c.bench_function("primitive", |b| {
-        b.iter(|| Primitive::from_trusted_len_iter(maybe_values.clone()))
+        b.iter(|| PrimitiveBuilder::from_trusted_len_iter(maybe_values.clone()))
     });
 }
 

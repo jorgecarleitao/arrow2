@@ -155,7 +155,7 @@ pub(super) fn equal<O: Offset>(
 
 #[cfg(test)]
 mod tests {
-    use crate::array::{ListPrimitive, Primitive, TryExtend};
+    use crate::array::{ListBuilder, PrimitiveBuilder, TryExtend};
     use crate::{array::equal::tests::test_equal, datatypes::DataType};
 
     use super::*;
@@ -166,7 +166,7 @@ mod tests {
             x.as_ref()
                 .map(|x| x.as_ref().iter().map(|x| Some(*x)).collect::<Vec<_>>())
         });
-        let mut list = ListPrimitive::<i32, _, i32>::new(Primitive::<i32>::new());
+        let mut list = ListBuilder::<i32, _, i32>::new(PrimitiveBuilder::<i32>::new());
         list.try_extend(iter).unwrap();
         list.to(data_type)
     }

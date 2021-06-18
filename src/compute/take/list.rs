@@ -71,7 +71,7 @@ pub fn take<I: Offset, O: Index>(
 mod tests {
     use super::*;
     use crate::{
-        array::{ListPrimitive, Primitive, PrimitiveArray},
+        array::{ListBuilder, PrimitiveArray, PrimitiveBuilder},
         bitmap::Bitmap,
         buffer::Buffer,
         datatypes::DataType,
@@ -91,7 +91,8 @@ mod tests {
             None,
         );
 
-        let indices = Primitive::from(&vec![Some(4i32), Some(1), Some(3)]).to(DataType::Int32);
+        let indices =
+            PrimitiveBuilder::from(&vec![Some(4i32), Some(1), Some(3)]).to(DataType::Int32);
         let result = take(&array, &indices).unwrap();
 
         let expected_values = Buffer::from([9, 6, 7, 8]);
@@ -125,7 +126,7 @@ mod tests {
         );
 
         let indices =
-            Primitive::from(&vec![Some(4i32), None, Some(2), Some(3)]).to(DataType::Int32);
+            PrimitiveBuilder::from(&vec![Some(4i32), None, Some(2), Some(3)]).to(DataType::Int32);
         let result = take(&array, &indices).unwrap();
 
         let data_expected = vec![
@@ -134,7 +135,7 @@ mod tests {
             Some(vec![Some(2i32), Some(3), Some(4), Some(5)]),
             Some(vec![Some(6i32), Some(7), Some(8)]),
         ];
-        let mut builder = ListPrimitive::<i32, _, _>::new(Primitive::<i32>::new());
+        let mut builder = ListBuilder::<i32, _, _>::new(PrimitiveBuilder::<i32>::new());
         builder.extend(data_expected);
         let expected: ListArray<i32> = builder.into();
 
@@ -149,12 +150,12 @@ mod tests {
             Some(vec![Some(9i32)]),
             Some(vec![Some(6i32), Some(7), Some(8)]),
         ];
-        let mut builder = ListPrimitive::<i32, _, _>::new(Primitive::<i32>::new());
+        let mut builder = ListBuilder::<i32, _, _>::new(PrimitiveBuilder::<i32>::new());
         builder.extend(values);
         let array: ListArray<i32> = builder.into();
 
         let indices =
-            Primitive::from(&vec![Some(3i32), None, Some(1), Some(0)]).to(DataType::Int32);
+            PrimitiveBuilder::from(&vec![Some(3i32), None, Some(1), Some(0)]).to(DataType::Int32);
         let result = take(&array, &indices).unwrap();
 
         let data_expected = vec![
@@ -163,7 +164,7 @@ mod tests {
             None,
             Some(vec![Some(2i32), Some(3), Some(4), Some(5)]),
         ];
-        let mut builder = ListPrimitive::<i32, _, _>::new(Primitive::<i32>::new());
+        let mut builder = ListBuilder::<i32, _, _>::new(PrimitiveBuilder::<i32>::new());
         builder.extend(data_expected);
         let expected: ListArray<i32> = builder.into();
 
@@ -191,7 +192,7 @@ mod tests {
             None,
         );
 
-        let indices = Primitive::from(&vec![Some(0i32), Some(1)]).to(DataType::Int32);
+        let indices = PrimitiveBuilder::from(&vec![Some(0i32), Some(1)]).to(DataType::Int32);
         let result = take(&nested, &indices).unwrap();
 
         // expected data

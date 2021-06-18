@@ -11,15 +11,15 @@ use crate::{
 
 /// auxiliary struct used to create a [`BinaryArray`] out of an iterator
 #[derive(Debug)]
-pub struct FixedSizeBinaryPrimitive {
+pub struct FixedSizeBinaryBuilder {
     values: MutableBuffer<u8>,
     validity: MutableBitmap,
     size: Option<usize>,
     current_validity: usize,
 }
 
-impl FixedSizeBinaryPrimitive {
-    /// Initializes a new empty [`FixedSizeBinaryPrimitive`].
+impl FixedSizeBinaryBuilder {
+    /// Initializes a new empty [`FixedSizeBinaryBuilder`].
     pub fn new() -> Self {
         Self::with_capacity(0)
     }
@@ -34,19 +34,19 @@ impl FixedSizeBinaryPrimitive {
     }
 }
 
-impl Default for FixedSizeBinaryPrimitive {
+impl Default for FixedSizeBinaryBuilder {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<P: AsRef<[u8]>> FromIterator<Option<P>> for FixedSizeBinaryPrimitive {
+impl<P: AsRef<[u8]>> FromIterator<Option<P>> for FixedSizeBinaryBuilder {
     fn from_iter<I: IntoIterator<Item = Option<P>>>(iter: I) -> Self {
         Self::try_from_iter(iter.into_iter()).unwrap()
     }
 }
 
-impl<P> TryFromIterator<Option<P>> for FixedSizeBinaryPrimitive
+impl<P> TryFromIterator<Option<P>> for FixedSizeBinaryBuilder
 where
     P: AsRef<[u8]>,
 {
@@ -57,7 +57,7 @@ where
     }
 }
 
-impl<P> TryExtend<Option<P>> for FixedSizeBinaryPrimitive
+impl<P> TryExtend<Option<P>> for FixedSizeBinaryBuilder
 where
     P: AsRef<[u8]>,
 {
@@ -72,7 +72,7 @@ where
     }
 }
 
-impl NullableBuilder for FixedSizeBinaryPrimitive {
+impl NullableBuilder for FixedSizeBinaryBuilder {
     #[inline]
     fn push_null(&mut self) {
         if let Some(size) = self.size {
@@ -85,13 +85,13 @@ impl NullableBuilder for FixedSizeBinaryPrimitive {
     }
 }
 
-impl Builder<&[u8]> for FixedSizeBinaryPrimitive {
+impl Builder<&[u8]> for FixedSizeBinaryBuilder {
     #[inline]
     fn try_push(&mut self, values: &[u8]) -> ArrowResult<()> {
         if let Some(size) = self.size {
             if size != values.len() {
                 return Err(ArrowError::InvalidArgumentError(
-                    "FixedSizeBinaryPrimitive received an argument with the wrong number of items"
+                    "FixedSizeBinaryBuilder received an argument with the wrong number of items"
                         .to_string(),
                 ));
             }
@@ -112,7 +112,7 @@ impl Builder<&[u8]> for FixedSizeBinaryPrimitive {
     }
 }
 
-impl FixedSizeBinaryPrimitive {
+impl FixedSizeBinaryBuilder {
     pub fn to(mut self, data_type: DataType) -> FixedSizeBinaryArray {
         let size = *FixedSizeBinaryArray::get_size(&data_type) as usize;
         if let Some(self_size) = self.size {
@@ -127,7 +127,7 @@ impl FixedSizeBinaryPrimitive {
     }
 }
 
-impl ToArray for FixedSizeBinaryPrimitive {
+impl ToArray for FixedSizeBinaryBuilder {
     fn to_arc(self, data_type: &DataType) -> Arc<dyn Array> {
         Arc::new(self.to(data_type.clone()))
     }
@@ -142,7 +142,7 @@ mod tests {
     #[test]
     fn basic() {
         let array =
-            FixedSizeBinaryPrimitive::from_iter(vec![Some(b"ab"), Some(b"bc"), None, Some(b"fh")])
+            FixedSizeBinaryBuilder::from_iter(vec![Some(b"ab"), Some(b"bc"), None, Some(b"fh")])
                 .to(DataType::FixedSizeBinary(2));
         assert_eq!(array.len(), 4);
     }

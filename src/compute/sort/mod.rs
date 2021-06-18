@@ -518,8 +518,8 @@ mod tests {
     ) where
         T: NativeType,
     {
-        let input = Primitive::<T>::from(data).to(data_type.clone());
-        let expected = Primitive::<T>::from(expected_data).to(data_type);
+        let input = PrimitiveBuilder::<T>::from(data).to(data_type.clone());
+        let expected = PrimitiveBuilder::<T>::from(expected_data).to(data_type);
         let output = sort(&input, &options).unwrap();
         assert_eq!(expected, output.as_ref())
     }
@@ -551,11 +551,11 @@ mod tests {
         options: SortOptions,
         expected_data: &[Option<&str>],
     ) {
-        let mut input = DictionaryPrimitive::<K, _, _>::new(Utf8Primitive::<i32>::new());
+        let mut input = DictionaryBuilder::<K, _, _>::new(Utf8Builder::<i32>::new());
         input.extend(data.iter().copied());
         let input = input.into();
 
-        let mut expected = DictionaryPrimitive::<K, _, _>::new(Utf8Primitive::<i32>::new());
+        let mut expected = DictionaryBuilder::<K, _, _>::new(Utf8Builder::<i32>::new());
         expected.extend(expected_data.iter().copied());
         let expected = expected.into();
 

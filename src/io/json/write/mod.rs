@@ -124,11 +124,11 @@ mod tests {
             .map(|x| x.into_iter().map(Some).collect::<Vec<_>>())
             .map(Some);
 
-        let mut a = ListPrimitive::<i32, _, _>::new(Utf8Primitive::<i32>::new());
+        let mut a = ListBuilder::<i32, _, _>::new(Utf8Builder::<i32>::new());
         a.extend(iter);
         let a = a.to(list_datatype);
 
-        let b = Primitive::from_slice(&vec![1, 2, 3, 4, 5]).to(DataType::Int32);
+        let b = PrimitiveBuilder::from_slice(&vec![1, 2, 3, 4, 5]).to(DataType::Int32);
 
         let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(a), Arc::new(b)]).unwrap();
 
@@ -166,10 +166,9 @@ mod tests {
 
         let iter = iter.into_iter().map(Some);
 
-        let mut a = ListPrimitive::<i32, _, _>::new(ListPrimitive::<i32, _, _>::new(Primitive::<
-            i32,
-        >::new(
-        )));
+        let mut a = ListBuilder::<i32, _, _>::new(ListBuilder::<i32, _, _>::new(
+            PrimitiveBuilder::<i32>::new(),
+        ));
         a.extend(iter);
         let c1 = a.to(list_datatype);
 

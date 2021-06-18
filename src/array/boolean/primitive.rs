@@ -14,12 +14,12 @@ use crate::{
 /// single (optional) elements.
 /// The tradeoff is that this struct is not clonable nor `Send + Sync`.
 #[derive(Debug)]
-pub struct BooleanPrimitive {
+pub struct BooleanBuilder {
     values: MutableBitmap,
     validity: MutableBitmap,
 }
 
-impl NullableBuilder for BooleanPrimitive {
+impl NullableBuilder for BooleanBuilder {
     #[inline]
     fn push_null(&mut self) {
         self.values.push(false);
@@ -27,7 +27,7 @@ impl NullableBuilder for BooleanPrimitive {
     }
 }
 
-impl Builder<bool> for BooleanPrimitive {
+impl Builder<bool> for BooleanBuilder {
     /// Pushes a new item to this struct
     #[inline]
     fn push(&mut self, value: bool) {
@@ -36,7 +36,7 @@ impl Builder<bool> for BooleanPrimitive {
     }
 }
 
-impl BooleanPrimitive {
+impl BooleanBuilder {
     /// Initializes itself with a capacity.
     #[inline]
     pub fn new() -> Self {
@@ -47,7 +47,7 @@ impl BooleanPrimitive {
     }
 }
 
-impl<Ptr: std::borrow::Borrow<Option<bool>>> FromIterator<Ptr> for BooleanPrimitive {
+impl<Ptr: std::borrow::Borrow<Option<bool>>> FromIterator<Ptr> for BooleanBuilder {
     fn from_iter<I: IntoIterator<Item = Ptr>>(iter: I) -> Self {
         let iter = iter.into_iter();
         let (lower, _) = iter.size_hint();
@@ -70,14 +70,14 @@ impl<Ptr: std::borrow::Borrow<Option<bool>>> FromIterator<Ptr> for BooleanPrimit
     }
 }
 
-impl Default for BooleanPrimitive {
+impl Default for BooleanBuilder {
     #[inline]
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<Ptr: std::borrow::Borrow<Option<bool>>> TryExtend<Ptr> for BooleanPrimitive {
+impl<Ptr: std::borrow::Borrow<Option<bool>>> TryExtend<Ptr> for BooleanBuilder {
     fn try_extend<T: IntoIterator<Item = Ptr>>(&mut self, iter: T) -> Result<()> {
         let iter = iter.into_iter();
         let (lower, _) = iter.size_hint();
@@ -94,7 +94,7 @@ impl<Ptr: std::borrow::Borrow<Option<bool>>> TryExtend<Ptr> for BooleanPrimitive
     }
 }
 
-impl<Ptr: std::borrow::Borrow<Option<bool>>> TryFromIterator<Ptr> for BooleanPrimitive {
+impl<Ptr: std::borrow::Borrow<Option<bool>>> TryFromIterator<Ptr> for BooleanBuilder {
     fn try_from_iter<I: IntoIterator<Item = Ptr>>(iter: I) -> Result<Self> {
         let iter = iter.into_iter();
         let (lower, _) = iter.size_hint();
@@ -117,13 +117,13 @@ impl<Ptr: std::borrow::Borrow<Option<bool>>> TryFromIterator<Ptr> for BooleanPri
     }
 }
 
-impl From<BooleanPrimitive> for BooleanArray {
-    fn from(p: BooleanPrimitive) -> Self {
+impl From<BooleanBuilder> for BooleanArray {
+    fn from(p: BooleanBuilder) -> Self {
         Self::from_data(p.values.into(), p.validity.into())
     }
 }
 
-impl IntoArray for BooleanPrimitive {
+impl IntoArray for BooleanBuilder {
     fn into_arc(self) -> Arc<dyn Array> {
         let a: BooleanArray = self.into();
         Arc::new(a)
@@ -138,7 +138,7 @@ mod tests {
 
     #[test]
     fn try_from_iter() -> Result<()> {
-        let a = BooleanPrimitive::try_from_iter((0..2).map(|x| Some(x > 0)))?;
+        let a = BooleanBuilder::try_from_iter((0..2).map(|x| Some(x > 0)))?;
         let a: BooleanArray = a.into();
         assert_eq!(a.len(), 2);
         Ok(())

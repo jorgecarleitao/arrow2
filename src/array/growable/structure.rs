@@ -124,7 +124,7 @@ impl<'a> From<GrowableStruct<'a>> for StructArray {
 mod tests {
     use std::iter::FromIterator;
 
-    use crate::array::{Primitive, Utf8Array};
+    use crate::array::{PrimitiveBuilder, Utf8Array};
     use crate::bitmap::Bitmap;
     use crate::datatypes::{DataType, Field};
 
@@ -139,7 +139,7 @@ mod tests {
             Some("doe"),
         ]));
         let ints: Arc<dyn Array> = Arc::new(
-            Primitive::<i32>::from(vec![Some(1), Some(2), Some(3), Some(4), Some(5)])
+            PrimitiveBuilder::<i32>::from(vec![Some(1), Some(2), Some(3), Some(4), Some(5)])
                 .to(DataType::Int32),
         );
         let fields = vec![
@@ -231,7 +231,7 @@ mod tests {
             Some("aa"),
         ]));
         let expected_int: Arc<dyn Array> = Arc::new(
-            Primitive::<i32>::from(vec![Some(2), Some(3), Some(1), Some(2)]).to(DataType::Int32),
+            PrimitiveBuilder::<i32>::from(vec![Some(2), Some(3), Some(1), Some(2)]).to(DataType::Int32),
         );
 
         let expected = StructArray::from_data(fields, vec![expected_string, expected_int], None);

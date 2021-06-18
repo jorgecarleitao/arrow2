@@ -40,7 +40,7 @@ impl<O: Offset> BinaryArray<O> {
 
 /// auxiliary struct used to create a [`BinaryArray`] out of an iterator
 #[derive(Debug)]
-pub struct BinaryPrimitive<O: Offset> {
+pub struct BinaryBuilder<O: Offset> {
     offsets: MutableBuffer<O>,
     values: MutableBuffer<u8>,
     validity: MutableBitmap,
@@ -48,18 +48,18 @@ pub struct BinaryPrimitive<O: Offset> {
     length: O,
 }
 
-impl<O: Offset> BinaryPrimitive<O> {
-    /// Initializes a new empty [`BinaryPrimitive`].
+impl<O: Offset> BinaryBuilder<O> {
+    /// Initializes a new empty [`BinaryBuilder`].
     pub fn new() -> Self {
         Self::with_capacity(0)
     }
 
-    /// Initializes a new [`BinaryPrimitive`] with a pre-allocated capacity of slots.
+    /// Initializes a new [`BinaryBuilder`] with a pre-allocated capacity of slots.
     pub fn with_capacity(capacity: usize) -> Self {
         Self::with_capacities(capacity, 0)
     }
 
-    /// Initializes a new [`BinaryPrimitive`] with a pre-allocated capacity of slots and values.
+    /// Initializes a new [`BinaryBuilder`] with a pre-allocated capacity of slots and values.
     pub fn with_capacities(capacity: usize, values: usize) -> Self {
         let mut offsets = MutableBuffer::<O>::with_capacity(capacity + 1);
         let length = O::default();
@@ -74,19 +74,19 @@ impl<O: Offset> BinaryPrimitive<O> {
     }
 }
 
-impl<O: Offset> Default for BinaryPrimitive<O> {
+impl<O: Offset> Default for BinaryBuilder<O> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<O: Offset, P: AsRef<[u8]>> FromIterator<Option<P>> for BinaryPrimitive<O> {
+impl<O: Offset, P: AsRef<[u8]>> FromIterator<Option<P>> for BinaryBuilder<O> {
     fn from_iter<I: IntoIterator<Item = Option<P>>>(iter: I) -> Self {
         Self::try_from_iter(iter.into_iter()).unwrap()
     }
 }
 
-impl<O: Offset, P> TryFromIterator<Option<P>> for BinaryPrimitive<O>
+impl<O: Offset, P> TryFromIterator<Option<P>> for BinaryBuilder<O>
 where
     P: AsRef<[u8]>,
 {
@@ -97,7 +97,7 @@ where
     }
 }
 
-impl<O: Offset, P> TryExtend<Option<P>> for BinaryPrimitive<O>
+impl<O: Offset, P> TryExtend<Option<P>> for BinaryBuilder<O>
 where
     P: AsRef<[u8]>,
 {
@@ -116,7 +116,7 @@ where
     }
 }
 
-impl<O: Offset> NullableBuilder for BinaryPrimitive<O> {
+impl<O: Offset> NullableBuilder for BinaryBuilder<O> {
     #[inline]
     fn push_null(&mut self) {
         self.offsets.push(self.length);
@@ -124,7 +124,7 @@ impl<O: Offset> NullableBuilder for BinaryPrimitive<O> {
     }
 }
 
-impl<O: Offset> Builder<&[u8]> for BinaryPrimitive<O> {
+impl<O: Offset> Builder<&[u8]> for BinaryBuilder<O> {
     #[inline]
     fn try_push(&mut self, value: &[u8]) -> ArrowResult<()> {
         let length = O::from_usize(value.len()).ok_or(ArrowError::DictionaryKeyOverflowError)?;
@@ -141,7 +141,7 @@ impl<O: Offset> Builder<&[u8]> for BinaryPrimitive<O> {
     }
 }
 
-impl<O: Offset> BinaryPrimitive<O> {
+impl<O: Offset> BinaryBuilder<O> {
     pub fn to(self) -> BinaryArray<O> {
         BinaryArray::<O>::from_data(
             self.offsets.into(),
@@ -151,13 +151,13 @@ impl<O: Offset> BinaryPrimitive<O> {
     }
 }
 
-impl<O: Offset> ToArray for BinaryPrimitive<O> {
+impl<O: Offset> ToArray for BinaryBuilder<O> {
     fn to_arc(self, _: &DataType) -> Arc<dyn Array> {
         Arc::new(self.to())
     }
 }
 
-impl<O: Offset> IntoArray for BinaryPrimitive<O> {
+impl<O: Offset> IntoArray for BinaryBuilder<O> {
     fn into_arc(self) -> Arc<dyn Array> {
         Arc::new(self.to())
     }
@@ -166,7 +166,7 @@ impl<O: Offset> IntoArray for BinaryPrimitive<O> {
 impl<O: Offset, P: AsRef<[u8]>> FromIterator<Option<P>> for BinaryArray<O> {
     #[inline]
     fn from_iter<I: IntoIterator<Item = Option<P>>>(iter: I) -> Self {
-        BinaryPrimitive::from_iter(iter).to()
+        BinaryBuilder::from_iter(iter).to()
     }
 }
 

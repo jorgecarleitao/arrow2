@@ -6,11 +6,11 @@ use crate::{
     types::{NativeType, NaturalDataType},
 };
 
-use super::{Primitive, PrimitiveArray};
+use super::{PrimitiveBuilder, PrimitiveArray};
 
 impl<T: NativeType + NaturalDataType, P: AsRef<[Option<T>]>> From<P> for PrimitiveArray<T> {
     fn from(slice: P) -> Self {
-        Primitive::<T>::from_trusted_len_iter(slice.as_ref().iter().map(|x| x.as_ref()))
+        PrimitiveBuilder::<T>::from_trusted_len_iter(slice.as_ref().iter().map(|x| x.as_ref()))
             .to(T::DATA_TYPE)
     }
 }
@@ -19,7 +19,7 @@ impl<T: NativeType + NaturalDataType, Ptr: std::borrow::Borrow<Option<T>>> FromI
     for PrimitiveArray<T>
 {
     fn from_iter<I: IntoIterator<Item = Ptr>>(iter: I) -> Self {
-        Primitive::<T>::from_iter(iter).to(T::DATA_TYPE)
+        PrimitiveBuilder::<T>::from_iter(iter).to(T::DATA_TYPE)
     }
 }
 

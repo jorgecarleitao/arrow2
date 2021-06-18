@@ -26,7 +26,7 @@ use serde_json::Value;
 use crate::{
     array::{
         Array, BooleanArray, DictionaryArray, DictionaryKey, ListArray, NullArray, Offset,
-        Primitive, PrimitiveArray, StructArray, Utf8Array,
+        PrimitiveBuilder, PrimitiveArray, StructArray, Utf8Array,
     },
     bitmap::MutableBitmap,
     buffer::MutableBuffer,
@@ -86,7 +86,7 @@ fn read_primitive<T: NativeType + NumCast>(
         Value::Bool(number) => num::cast::cast::<i32, T>(*number as i32),
         _ => None,
     });
-    Primitive::from_trusted_len_iter(iter).to(data_type)
+    PrimitiveBuilder::from_trusted_len_iter(iter).to(data_type)
 }
 
 fn read_boolean(rows: &[&Value]) -> BooleanArray {
@@ -197,7 +197,7 @@ fn read_dictionary<K: DictionaryKey>(rows: &[&Value], data_type: DataType) -> Di
             },
             None => None,
         })
-        .collect::<Primitive<K>>()
+        .collect::<PrimitiveBuilder<K>>()
         .to(K::DATA_TYPE);
 
     let values = read(&inner, child.clone());

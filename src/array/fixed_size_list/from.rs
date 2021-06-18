@@ -10,13 +10,13 @@ use crate::{
 use super::FixedSizeListArray;
 
 #[derive(Debug)]
-pub struct FixedSizeListPrimitive<B: Builder<T>, T> {
+pub struct FixedSizeListBuilder<B: Builder<T>, T> {
     values: B,
     validity: MutableBitmap,
     phantom: std::marker::PhantomData<T>,
 }
 
-impl<B: Builder<T>, T> FixedSizeListPrimitive<B, T> {
+impl<B: Builder<T>, T> FixedSizeListBuilder<B, T> {
     #[inline]
     pub fn new(values: B) -> Self {
         Self::with_capacity(0, values)
@@ -32,7 +32,7 @@ impl<B: Builder<T>, T> FixedSizeListPrimitive<B, T> {
     }
 }
 
-impl<A: Builder<T> + ToArray, T> FixedSizeListPrimitive<A, T> {
+impl<A: Builder<T> + ToArray, T> FixedSizeListBuilder<A, T> {
     pub fn to(self, data_type: DataType) -> FixedSizeListArray {
         let values = self
             .values
@@ -41,7 +41,7 @@ impl<A: Builder<T> + ToArray, T> FixedSizeListPrimitive<A, T> {
     }
 }
 
-impl<B, T, P> TryExtend<Option<P>> for FixedSizeListPrimitive<B, T>
+impl<B, T, P> TryExtend<Option<P>> for FixedSizeListBuilder<B, T>
 where
     B: Builder<T>,
     P: IntoIterator<Item = Option<T>>,
@@ -57,7 +57,7 @@ where
     }
 }
 
-impl<T, B, P> Extend<Option<P>> for FixedSizeListPrimitive<B, T>
+impl<T, B, P> Extend<Option<P>> for FixedSizeListBuilder<B, T>
 where
     B: Builder<T>,
     P: IntoIterator<Item = Option<T>>,
@@ -67,7 +67,7 @@ where
     }
 }
 
-impl<T, B> NullableBuilder for FixedSizeListPrimitive<B, T>
+impl<T, B> NullableBuilder for FixedSizeListBuilder<B, T>
 where
     B: Builder<T>,
 {
@@ -77,7 +77,7 @@ where
     }
 }
 
-impl<T, B, P> Builder<P> for FixedSizeListPrimitive<B, T>
+impl<T, B, P> Builder<P> for FixedSizeListBuilder<B, T>
 where
     B: Builder<T>,
     P: IntoIterator<Item = Option<T>>,
@@ -101,7 +101,7 @@ where
     }
 }
 
-impl<B: Builder<T> + ToArray, T> ToArray for FixedSizeListPrimitive<B, T> {
+impl<B: Builder<T> + ToArray, T> ToArray for FixedSizeListBuilder<B, T> {
     fn to_arc(self, data_type: &DataType) -> Arc<dyn Array> {
         Arc::new(self.to(data_type.clone()))
     }
@@ -121,7 +121,7 @@ mod tests {
             Some(vec![Some(4), None, Some(6)]),
         ];
 
-        let mut a = FixedSizeListPrimitive::<_, i32>::new(Primitive::<i32>::new());
+        let mut a = FixedSizeListBuilder::<_, i32>::new(PrimitiveBuilder::<i32>::new());
         a.try_extend(data).unwrap();
 
         let list = a.to(FixedSizeListArray::default_datatype(DataType::Int32, 3));

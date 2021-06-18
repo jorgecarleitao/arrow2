@@ -20,7 +20,7 @@
 //! # Description
 //!
 //! The Arithmetics module is composed by basic arithmetics operations that can
-//! be performed on Primitive Arrays. These operations can be the building for
+//! be performed on PrimitiveBuilder Arrays. These operations can be the building for
 //! any implementation using Arrow.
 //!
 //! Whenever possible, each of the operations in these modules has variations
@@ -280,12 +280,12 @@ where
 /// # Examples
 /// ```
 /// use arrow2::compute::arithmetics::negate;
-/// use arrow2::array::Primitive;
+/// use arrow2::array::PrimitiveBuilder;
 /// use arrow2::datatypes::DataType;
 ///
-/// let a = Primitive::from(&vec![None, Some(6), None, Some(7)]).to(DataType::Int32);
+/// let a = PrimitiveBuilder::from(&vec![None, Some(6), None, Some(7)]).to(DataType::Int32);
 /// let result = negate(&a);
-/// let expected = Primitive::from(&vec![None, Some(-6), None, Some(-7)]).to(DataType::Int32);
+/// let expected = PrimitiveBuilder::from(&vec![None, Some(-6), None, Some(-7)]).to(DataType::Int32);
 /// assert_eq!(result, expected)
 /// ```
 pub fn negate<T>(array: &PrimitiveArray<T>) -> PrimitiveArray<T>

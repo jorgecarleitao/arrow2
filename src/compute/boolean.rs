@@ -362,7 +362,7 @@ mod tests {
 
     #[test]
     fn test_nonnull_array_is_null() {
-        let a = Primitive::from_slice(vec![1, 2, 3, 4]).to(DataType::Int32);
+        let a = PrimitiveBuilder::from_slice(vec![1, 2, 3, 4]).to(DataType::Int32);
 
         let res = is_null(&a);
 
@@ -373,7 +373,7 @@ mod tests {
 
     #[test]
     fn test_nonnull_array_with_offset_is_null() {
-        let a = Primitive::from_slice(vec![1, 2, 3, 4, 5, 6, 7, 8, 7, 6, 5, 4, 3, 2, 1])
+        let a = PrimitiveBuilder::from_slice(vec![1, 2, 3, 4, 5, 6, 7, 8, 7, 6, 5, 4, 3, 2, 1])
             .to(DataType::Int32);
         let a = a.slice(8, 4);
 
@@ -386,7 +386,7 @@ mod tests {
 
     #[test]
     fn test_nonnull_array_is_not_null() {
-        let a = Primitive::from_slice(vec![1, 2, 3, 4]).to(DataType::Int32);
+        let a = PrimitiveBuilder::from_slice(vec![1, 2, 3, 4]).to(DataType::Int32);
 
         let res = is_not_null(&a);
 
@@ -397,7 +397,7 @@ mod tests {
 
     #[test]
     fn test_nonnull_array_with_offset_is_not_null() {
-        let a = Primitive::from_slice(vec![1, 2, 3, 4, 5, 6, 7, 8, 7, 6, 5, 4, 3, 2, 1])
+        let a = PrimitiveBuilder::from_slice(vec![1, 2, 3, 4, 5, 6, 7, 8, 7, 6, 5, 4, 3, 2, 1])
             .to(DataType::Int32);
         let a = a.slice(8, 4);
 
@@ -410,7 +410,7 @@ mod tests {
 
     #[test]
     fn test_nullable_array_is_null() {
-        let a = Primitive::from(vec![Some(1), None, Some(3), None]).to(DataType::Int32);
+        let a = PrimitiveBuilder::from(vec![Some(1), None, Some(3), None]).to(DataType::Int32);
 
         let res = is_null(&a);
 
@@ -421,7 +421,7 @@ mod tests {
 
     #[test]
     fn test_nullable_array_with_offset_is_null() {
-        let a = Primitive::from(vec![
+        let a = PrimitiveBuilder::from(vec![
             None,
             None,
             None,
@@ -452,7 +452,7 @@ mod tests {
 
     #[test]
     fn test_nullable_array_is_not_null() {
-        let a = Primitive::from(vec![Some(1), None, Some(3), None]).to(DataType::Int32);
+        let a = PrimitiveBuilder::from(vec![Some(1), None, Some(3), None]).to(DataType::Int32);
 
         let res = is_not_null(&a);
 
@@ -463,7 +463,7 @@ mod tests {
 
     #[test]
     fn test_nullable_array_with_offset_is_not_null() {
-        let a = Primitive::from(vec![
+        let a = PrimitiveBuilder::from(vec![
             None,
             None,
             None,

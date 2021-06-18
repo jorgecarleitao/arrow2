@@ -7,12 +7,12 @@ Probably the most simple array in this crate is `PrimitiveArray<T>`. It can be c
 from an iterator as follows:
 
 ```rust
-# use arrow2::array::{Array, PrimitiveArray, Primitive};
+# use arrow2::array::{Array, PrimitiveArray, PrimitiveBuilder};
 # use arrow2::datatypes::DataType;
 # fn main() {
 let array: PrimitiveArray<i32> = [Some(1), None, Some(123)]
     .iter()
-    .collect::<Primitive<i32>>()
+    .collect::<PrimitiveBuilder<i32>>()
     .to(DataType::Int32);
 assert_eq!(array.len(), 3)
 # }
@@ -32,11 +32,11 @@ The main differences from a `Vec<Option<T>>` are:
 The first difference allows interoperability with Arrow's ecosystem and efficient SIMD operations (we will re-visit this below); the second difference is that it gives semantic meaning to the array. In the example
 
 ```rust
-# use arrow2::array::Primitive;
+# use arrow2::array::PrimitiveBuilder;
 # use arrow2::datatypes::DataType;
 # fn main() {
-let ints = Primitive::<i32>::from(&[Some(1), None]).to(DataType::Int32);
-let dates = Primitive::<i32>::from(&[Some(1), None]).to(DataType::Date32);
+let ints = PrimitiveBuilder::<i32>::from(&[Some(1), None]).to(DataType::Int32);
+let dates = PrimitiveBuilder::<i32>::from(&[Some(1), None]).to(DataType::Date32);
 # }
 ```
 
@@ -46,8 +46,7 @@ Some physical types (e.g. `i32`) have a "natural" logical `DataType` (e.g. `Data
 These types support a more compact notation:
 
 ```rust
-# use arrow2::array::{Array, Int32Array, Primitive};
-# use arrow2::datatypes::DataType;
+# use arrow2::array::{Array, Int32Array};
 # fn main() {
 /// Int32Array = PrimitiveArray<i32>
 let array = [Some(1), None, Some(123)].iter().collect::<Int32Array>();
@@ -58,6 +57,11 @@ let array = Int32Array::from_slice(&[1, 123]);
 assert_eq!(array.len(), 2);
 # }
 ```
+
+The API above holds for all array types:
+* `from_iter` for an iterator of optional values
+* `from` for a slice of optional values
+* `from_slice` for a slice of values
 
 The following arrays are supported:
 
@@ -81,7 +85,7 @@ a trait object. This enables arrays to have types that are dynamic in nature.
 
 ```rust
 # use std::sync::Arc;
-# use arrow2::array::{Array, ListPrimitive, ListArray, Primitive};
+# use arrow2::array::{Array, ListBuilder, ListArray, PrimitiveBuilder};
 # use arrow2::datatypes::DataType;
 # fn main() {
 let data = vec![
@@ -90,7 +94,7 @@ let data = vec![
     Some(vec![Some(4), None, Some(6)]),
 ];
 
-let mut builder = ListPrimitive::<i32, _, _>::new(Primitive::<i32>::new());
+let mut builder = ListBuilder::<i32, _, _>::new(PrimitiveBuilder::<i32>::new());
 builder.extend(data); // if the list can't hold all items
 
 let dates_array: ListArray<i32> = builder.to(ListArray::<i32>::default_datatype(DataType::Date32));
@@ -108,7 +112,6 @@ Given a trait object `&dyn Array`, we know its logical type via `Array::data_typ
 
 ```rust
 # use arrow2::array::{Array, PrimitiveArray};
-# use arrow2::datatypes::DataType;
 # fn main() {
 let array: PrimitiveArray<i32> = [Some(1), None, Some(123)]
     .iter()
@@ -201,7 +204,7 @@ If yes, then use:
 * `Buffer::from_trusted_len_iter`
 * `Buffer::try_from_trusted_len_iter`
 
-If not, then use the builder API, such as `Primitive<T>`, `Utf8Primitive<O>`, `ListPrimitive`, etc.
+If not, then use the builder API, such as `PrimitiveBuilder<T>`, `Utf8Builder<O>`, `ListBuilder`, etc.
 
 We have seen examples where the latter API was used. In the last example of this page
 you will be introduced to an example of using the former for SIMD.
@@ -272,4 +275,4 @@ Some notes:
 2. We leveraged normal rust iterators for the operation.
 
 3. We used `op` on the array's values irrespectively of their validity,
-and cloned its validity. This approach is suitable for operations whose branching off is more expensive than operating over all values. If the operation is expensive, then using `Primitive::<O>::from_trusted_len_iter` is likely faster.
+and cloned its validity. This approach is suitable for operations whose branching off is more expensive than operating over all values. If the operation is expensive, then using `PrimitiveBuilder::<O>::from_trusted_len_iter` is likely faster.

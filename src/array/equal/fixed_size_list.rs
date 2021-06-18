@@ -70,7 +70,7 @@ pub(super) fn equal(
 
 #[cfg(test)]
 mod tests {
-    use crate::array::{FixedSizeListPrimitive, Primitive};
+    use crate::array::{FixedSizeListBuilder, PrimitiveBuilder};
     use crate::{array::equal::tests::test_equal, datatypes::DataType};
 
     use super::*;
@@ -86,7 +86,7 @@ mod tests {
                 None => std::iter::repeat(None).take(3).collect::<Vec<_>>(),
             })
         });
-        let mut list = FixedSizeListPrimitive::new(Primitive::<i32>::new());
+        let mut list = FixedSizeListBuilder::new(PrimitiveBuilder::<i32>::new());
         list.extend(data);
         list.to(data_type)
     }

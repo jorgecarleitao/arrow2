@@ -146,13 +146,13 @@ mod tests {
         let original_data = vec![Some("a"), Some("b"), Some("a")];
 
         let data = original_data.clone();
-        let mut builder = DictionaryPrimitive::<i32, _, _>::new(Utf8Primitive::<i32>::new());
+        let mut builder = DictionaryBuilder::<i32, _, _>::new(Utf8Builder::<i32>::new());
         builder.extend(data);
         let array = builder.into();
 
         // same values, less keys
         let expected = DictionaryArray::<i32>::from_data(
-            Primitive::from(vec![Some(1), Some(0)]).to(DataType::Int32),
+            PrimitiveBuilder::from(vec![Some(1), Some(0)]).to(DataType::Int32),
             Arc::new(Utf8Array::<i32>::from(&original_data)),
         );
 
@@ -174,18 +174,18 @@ mod tests {
         let data1 = original_data1.clone();
         let data2 = original_data2.clone();
 
-        let mut builder = DictionaryPrimitive::<i32, _, _>::new(Utf8Primitive::<i32>::new());
+        let mut builder = DictionaryBuilder::<i32, _, _>::new(Utf8Builder::<i32>::new());
         builder.extend(data1);
         let array1 = builder.into();
 
-        let mut builder = DictionaryPrimitive::<i32, _, _>::new(Utf8Primitive::<i32>::new());
+        let mut builder = DictionaryBuilder::<i32, _, _>::new(Utf8Builder::<i32>::new());
         builder.extend(data2);
         let array2 = builder.into();
 
         // same values, less keys
         original_data1.extend(original_data2.iter().cloned());
         let expected = DictionaryArray::<i32>::from_data(
-            Primitive::from(vec![Some(1), None, Some(3), None]).to(DataType::Int32),
+            PrimitiveBuilder::from(vec![Some(1), None, Some(3), None]).to(DataType::Int32),
             Arc::new(Utf8Array::<i32>::from_slice(&["a", "b", "c", "b", "a"])),
         );
 

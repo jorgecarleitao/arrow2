@@ -343,17 +343,17 @@ pub mod ord;
 
 pub use display::get_display;
 
-pub use binary::{BinaryArray, BinaryPrimitive};
-pub use boolean::{BooleanArray, BooleanPrimitive};
-pub use dictionary::{DictionaryArray, DictionaryKey, DictionaryPrimitive};
-pub use fixed_size_binary::{FixedSizeBinaryArray, FixedSizeBinaryPrimitive};
-pub use fixed_size_list::{FixedSizeListArray, FixedSizeListPrimitive};
-pub use list::{ListArray, ListPrimitive};
+pub use binary::{BinaryArray, BinaryBuilder};
+pub use boolean::{BooleanArray, BooleanBuilder};
+pub use dictionary::{DictionaryArray, DictionaryBuilder, DictionaryKey};
+pub use fixed_size_binary::{FixedSizeBinaryArray, FixedSizeBinaryBuilder};
+pub use fixed_size_list::{FixedSizeListArray, FixedSizeListBuilder};
+pub use list::{ListArray, ListBuilder};
 pub use null::NullArray;
-pub use primitive::{Primitive, PrimitiveArray};
+pub use primitive::{PrimitiveArray, PrimitiveBuilder};
 pub use specification::{Index, Offset};
 pub use struct_::StructArray;
-pub use utf8::{Utf8Array, Utf8Primitive};
+pub use utf8::{Utf8Array, Utf8Builder};
 
 pub use self::ffi::FromFfi;
 use self::ffi::ToFfi;
@@ -407,8 +407,6 @@ pub trait TryExtend<A>: Sized {
 /// A trait describing the ability of a struct to increment itself with a null.
 pub trait NullableBuilder {
     /// Push a new null item to the builder.
-    /// This operation may panic if the container cannot hold more items.
-    /// For example, if all possible keys are exausted when building a dictionary.
     fn push_null(&mut self);
 }
 

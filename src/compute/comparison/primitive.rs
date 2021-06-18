@@ -559,12 +559,12 @@ mod tests {
     fn test_primitive_array_compare_slice() {
         let a = (0..100)
             .map(Some)
-            .collect::<Primitive<i32>>()
+            .collect::<PrimitiveBuilder<i32>>()
             .to(DataType::Int32);
         let a = a.slice(50, 50);
         let b = (100..200)
             .map(Some)
-            .collect::<Primitive<i32>>()
+            .collect::<PrimitiveBuilder<i32>>()
             .to(DataType::Int32);
         let b = b.slice(50, 50);
         let actual = lt(&a, &b).unwrap();
@@ -576,7 +576,7 @@ mod tests {
     fn test_primitive_array_compare_scalar_slice() {
         let a = (0..100)
             .map(Some)
-            .collect::<Primitive<i32>>()
+            .collect::<PrimitiveBuilder<i32>>()
             .to(DataType::Int32);
         let a = a.slice(50, 50);
         let actual = lt_scalar(&a, 200).unwrap();

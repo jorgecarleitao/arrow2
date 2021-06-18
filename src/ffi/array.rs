@@ -161,7 +161,7 @@ mod tests {
             Some(vec![Some(4), None, Some(6)]),
         ];
 
-        let mut builder = ListPrimitive::<i32, _, _>::new(Primitive::<i32>::new());
+        let mut builder = ListBuilder::<i32, _, _>::new(PrimitiveBuilder::<i32>::new());
         builder.extend(data);
         let array: ListArray<i32> = builder.into();
 

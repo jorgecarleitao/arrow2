@@ -255,7 +255,7 @@ where
 
 /// auxiliary struct used to create a [`Utf8Array`] out of an iterator
 #[derive(Debug)]
-pub struct Utf8Primitive<O: Offset> {
+pub struct Utf8Builder<O: Offset> {
     offsets: MutableBuffer<O>,
     values: MutableBuffer<u8>,
     validity: MutableBitmap,
@@ -263,18 +263,18 @@ pub struct Utf8Primitive<O: Offset> {
     length: O,
 }
 
-impl<O: Offset> Utf8Primitive<O> {
-    /// Initializes a new empty [`Utf8Primitive`].
+impl<O: Offset> Utf8Builder<O> {
+    /// Initializes a new empty [`Utf8Builder`].
     pub fn new() -> Self {
         Self::with_capacity(0)
     }
 
-    /// Initializes a new [`Utf8Primitive`] with a pre-allocated capacity of slots.
+    /// Initializes a new [`Utf8Builder`] with a pre-allocated capacity of slots.
     pub fn with_capacity(capacity: usize) -> Self {
         Self::with_capacities(capacity, 0)
     }
 
-    /// Initializes a new [`Utf8Primitive`] with a pre-allocated capacity of slots and values.
+    /// Initializes a new [`Utf8Builder`] with a pre-allocated capacity of slots and values.
     pub fn with_capacities(capacity: usize, values: usize) -> Self {
         let mut offsets = MutableBuffer::<O>::with_capacity(capacity + 1);
         let length = O::default();
@@ -289,13 +289,13 @@ impl<O: Offset> Utf8Primitive<O> {
     }
 }
 
-impl<O: Offset> Default for Utf8Primitive<O> {
+impl<O: Offset> Default for Utf8Builder<O> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<O: Offset, P: AsRef<str>> FromIterator<Option<P>> for Utf8Primitive<O> {
+impl<O: Offset, P: AsRef<str>> FromIterator<Option<P>> for Utf8Builder<O> {
     fn from_iter<I: IntoIterator<Item = Option<P>>>(iter: I) -> Self {
         Self::try_from_iter(iter.into_iter()).unwrap()
     }
@@ -304,11 +304,11 @@ impl<O: Offset, P: AsRef<str>> FromIterator<Option<P>> for Utf8Primitive<O> {
 impl<O: Offset, P: AsRef<str>> FromIterator<Option<P>> for Utf8Array<O> {
     #[inline]
     fn from_iter<I: IntoIterator<Item = Option<P>>>(iter: I) -> Self {
-        Utf8Primitive::from_iter(iter).to()
+        Utf8Builder::from_iter(iter).to()
     }
 }
 
-impl<O: Offset, P> TryFromIterator<Option<P>> for Utf8Primitive<O>
+impl<O: Offset, P> TryFromIterator<Option<P>> for Utf8Builder<O>
 where
     P: AsRef<str>,
 {
@@ -319,7 +319,7 @@ where
     }
 }
 
-impl<O: Offset, P> TryExtend<Option<P>> for Utf8Primitive<O>
+impl<O: Offset, P> TryExtend<Option<P>> for Utf8Builder<O>
 where
     P: AsRef<str>,
 {
@@ -338,7 +338,7 @@ where
     }
 }
 
-impl<O: Offset> NullableBuilder for Utf8Primitive<O> {
+impl<O: Offset> NullableBuilder for Utf8Builder<O> {
     #[inline]
     fn push_null(&mut self) {
         self.offsets.push(self.length);
@@ -346,7 +346,7 @@ impl<O: Offset> NullableBuilder for Utf8Primitive<O> {
     }
 }
 
-impl<O: Offset> Builder<&str> for Utf8Primitive<O> {
+impl<O: Offset> Builder<&str> for Utf8Builder<O> {
     #[inline]
     fn try_push(&mut self, value: &str) -> ArrowResult<()> {
         let bytes = value.as_bytes();
@@ -364,9 +364,9 @@ impl<O: Offset> Builder<&str> for Utf8Primitive<O> {
     }
 }
 
-impl<O: Offset> Utf8Primitive<O> {
+impl<O: Offset> Utf8Builder<O> {
     pub fn to(self) -> Utf8Array<O> {
-        // Soundness: all methods from `Utf8Primitive` receive &str
+        // Soundness: all methods from `Utf8Builder` receive &str
         unsafe {
             Utf8Array::<O>::from_data_unchecked(
                 self.offsets.into(),
@@ -377,13 +377,13 @@ impl<O: Offset> Utf8Primitive<O> {
     }
 }
 
-impl<O: Offset> ToArray for Utf8Primitive<O> {
+impl<O: Offset> ToArray for Utf8Builder<O> {
     fn to_arc(self, _: &DataType) -> Arc<dyn Array> {
         Arc::new(self.to())
     }
 }
 
-impl<O: Offset> IntoArray for Utf8Primitive<O> {
+impl<O: Offset> IntoArray for Utf8Builder<O> {
     fn into_arc(self) -> Arc<dyn Array> {
         Arc::new(self.to())
     }
@@ -404,7 +404,7 @@ mod tests {
 
     #[test]
     fn test_capacities() {
-        let b = Utf8Primitive::<i32>::with_capacities(1, 10);
+        let b = Utf8Builder::<i32>::with_capacities(1, 10);
 
         assert_eq!(b.values.capacity(), 64);
         assert_eq!(b.offsets.capacity(), 16); // 64 bytes

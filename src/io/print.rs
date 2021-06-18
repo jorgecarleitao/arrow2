@@ -159,7 +159,7 @@ mod tests {
         let field_type = DataType::Dictionary(Box::new(DataType::Int32), Box::new(DataType::Utf8));
         let schema = Arc::new(Schema::new(vec![Field::new("d1", field_type, true)]));
 
-        let mut a = DictionaryPrimitive::<i32, _, _>::new(Utf8Primitive::<i32>::new());
+        let mut a = DictionaryBuilder::<i32, _, _>::new(Utf8Builder::<i32>::new());
         a.extend(vec![Some("one"), None, Some("three")]);
         let array = a.into_arc();
 
@@ -189,7 +189,7 @@ mod tests {
     /// formatting that array with `write`
     macro_rules! check_datetime {
         ($ty:ty, $datatype:expr, $value:expr, $EXPECTED_RESULT:expr) => {
-            let array = Primitive::<$ty>::from(&[Some($value), None]).to_arc(&$datatype);
+            let array = PrimitiveBuilder::<$ty>::from(&[Some($value), None]).to_arc(&$datatype);
 
             let schema = Arc::new(Schema::new(vec![Field::new(
                 "f",

@@ -111,13 +111,13 @@ mod tests {
 
     #[test]
     fn test_primitive_array_sum() {
-        let a = Primitive::from_slice(&[1, 2, 3, 4, 5]).to(DataType::Int32);
+        let a = PrimitiveBuilder::from_slice(&[1, 2, 3, 4, 5]).to(DataType::Int32);
         assert_eq!(15, sum(&a).unwrap());
     }
 
     #[test]
     fn test_primitive_array_float_sum() {
-        let a = Primitive::from_slice(&[1.1f64, 2.2, 3.3, 4.4, 5.5]).to(DataType::Float64);
+        let a = PrimitiveBuilder::from_slice(&[1.1f64, 2.2, 3.3, 4.4, 5.5]).to(DataType::Float64);
         assert!((16.5 - sum(&a).unwrap()).abs() < f64::EPSILON);
     }
 

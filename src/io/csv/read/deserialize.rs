@@ -31,7 +31,7 @@ where
         }
         None => None,
     });
-    Arc::new(Primitive::<T>::from_trusted_len_iter(iter).to(datatype))
+    Arc::new(PrimitiveBuilder::<T>::from_trusted_len_iter(iter).to(datatype))
 }
 
 fn deserialize_boolean<F>(rows: &[ByteRecord], column: usize, op: F) -> Arc<dyn Array>
@@ -224,7 +224,7 @@ mod tests {
     fn date32() -> Result<()> {
         let result = test("1970-01-01,\n2020-03-15,\n1945-05-08,\n", DataType::Date32)?;
         let expected =
-            Primitive::<i32>::from(&[Some(0), Some(18336), Some(-9004)]).to(DataType::Date32);
+            PrimitiveBuilder::<i32>::from(&[Some(0), Some(18336), Some(-9004)]).to(DataType::Date32);
         assert_eq!(expected, result.as_ref());
         Ok(())
     }
@@ -237,7 +237,7 @@ mod tests {
             1900-02-28T12:34:56,\n";
 
         let result = test(input, DataType::Date64)?;
-        let expected = Primitive::<i64>::from(&[
+        let expected = PrimitiveBuilder::<i64>::from(&[
             Some(0),
             Some(1542129070000),
             Some(1542129070011),

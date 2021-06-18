@@ -802,7 +802,7 @@ mod tests {
             None,
         ];
 
-        let mut builder = DictionaryPrimitive::<i16, _, _>::new(Utf8Primitive::<i32>::new());
+        let mut builder = DictionaryBuilder::<i16, _, _>::new(Utf8Builder::<i32>::new());
         builder.extend(values);
         let expected: DictionaryArray<i16> = builder.into();
 
@@ -883,8 +883,8 @@ mod tests {
             Some(vec![Some("Send Data")]),
         ];
 
-        let mut builder = ListPrimitive::<i32, _, _>::new(DictionaryPrimitive::<u64, _, _>::new(
-            Utf8Primitive::<i32>::new(),
+        let mut builder = ListBuilder::<i32, _, _>::new(DictionaryBuilder::<u64, _, _>::new(
+            Utf8Builder::<i32>::new(),
         ));
         builder.extend(expected);
         let expected: ListArray<i32> = builder.into();
