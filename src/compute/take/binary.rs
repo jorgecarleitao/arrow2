@@ -21,9 +21,10 @@ use crate::{
 };
 
 use super::generic_binary::*;
+use super::Index;
 
 /// `take` implementation for utf8 arrays
-pub fn take<O: Offset, I: Offset>(
+pub fn take<O: Offset, I: Index>(
     values: &BinaryArray<O>,
     indices: &PrimitiveArray<I>,
 ) -> Result<BinaryArray<O>> {

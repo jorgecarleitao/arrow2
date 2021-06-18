@@ -16,15 +16,16 @@
 // under the License.
 
 use crate::{
-    array::{Array, BooleanArray, Offset, PrimitiveArray},
+    array::{Array, BooleanArray, PrimitiveArray},
     bitmap::{Bitmap, MutableBitmap},
     error::Result,
 };
 
 use super::maybe_usize;
+use super::Index;
 
 // take implementation when neither values nor indices contain nulls
-fn take_no_validity<I: Offset>(values: &Bitmap, indices: &[I]) -> Result<(Bitmap, Option<Bitmap>)> {
+fn take_no_validity<I: Index>(values: &Bitmap, indices: &[I]) -> Result<(Bitmap, Option<Bitmap>)> {
     let values = indices
         .iter()
         .map(|index| Result::Ok(values.get_bit(maybe_usize::<I>(*index)?)));
@@ -34,7 +35,7 @@ fn take_no_validity<I: Offset>(values: &Bitmap, indices: &[I]) -> Result<(Bitmap
 }
 
 // take implementation when only values contain nulls
-fn take_values_validity<I: Offset>(
+fn take_values_validity<I: Index>(
     values: &BooleanArray,
     indices: &[I],
 ) -> Result<(Bitmap, Option<Bitmap>)> {
@@ -59,7 +60,7 @@ fn take_values_validity<I: Offset>(
 }
 
 // take implementation when only indices contain nulls
-fn take_indices_validity<I: Offset>(
+fn take_indices_validity<I: Index>(
     values: &Bitmap,
     indices: &PrimitiveArray<I>,
 ) -> Result<(Bitmap, Option<Bitmap>)> {
@@ -85,7 +86,7 @@ fn take_indices_validity<I: Offset>(
 }
 
 // take implementation when both values and indices contain nulls
-fn take_values_indices_validity<I: Offset>(
+fn take_values_indices_validity<I: Index>(
     values: &BooleanArray,
     indices: &PrimitiveArray<I>,
 ) -> Result<(Bitmap, Option<Bitmap>)> {
@@ -110,7 +111,7 @@ fn take_values_indices_validity<I: Offset>(
 }
 
 /// `take` implementation for boolean arrays
-pub fn take<I: Offset>(values: &BooleanArray, indices: &PrimitiveArray<I>) -> Result<BooleanArray> {
+pub fn take<I: Index>(values: &BooleanArray, indices: &PrimitiveArray<I>) -> Result<BooleanArray> {
     let indices_has_validity = indices.null_count() > 0;
     let values_has_validity = values.null_count() > 0;
 

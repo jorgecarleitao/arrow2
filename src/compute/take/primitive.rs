@@ -16,7 +16,7 @@
 // under the License.
 
 use crate::{
-    array::{Array, Offset, PrimitiveArray},
+    array::{Array, PrimitiveArray},
     bitmap::{Bitmap, MutableBitmap},
     buffer::{Buffer, MutableBuffer},
     error::Result,
@@ -24,9 +24,10 @@ use crate::{
 };
 
 use super::maybe_usize;
+use super::Index;
 
 // take implementation when neither values nor indices contain nulls
-fn take_no_validity<T: NativeType, I: Offset>(
+fn take_no_validity<T: NativeType, I: Index>(
     values: &[T],
     indices: &[I],
 ) -> Result<(Buffer<T>, Option<Bitmap>)> {
@@ -39,7 +40,7 @@ fn take_no_validity<T: NativeType, I: Offset>(
 }
 
 // take implementation when only values contain nulls
-fn take_values_validity<T: NativeType, I: Offset>(
+fn take_values_validity<T: NativeType, I: Index>(
     values: &PrimitiveArray<T>,
     indices: &[I],
 ) -> Result<(Buffer<T>, Option<Bitmap>)> {
@@ -64,7 +65,7 @@ fn take_values_validity<T: NativeType, I: Offset>(
 }
 
 // take implementation when only indices contain nulls
-fn take_indices_validity<T: NativeType, I: Offset>(
+fn take_indices_validity<T: NativeType, I: Index>(
     values: &[T],
     indices: &PrimitiveArray<I>,
 ) -> Result<(Buffer<T>, Option<Bitmap>)> {
@@ -89,7 +90,7 @@ fn take_indices_validity<T: NativeType, I: Offset>(
 }
 
 // take implementation when both values and indices contain nulls
-fn take_values_indices_validity<T: NativeType, I: Offset>(
+fn take_values_indices_validity<T: NativeType, I: Index>(
     values: &PrimitiveArray<T>,
     indices: &PrimitiveArray<I>,
 ) -> Result<(Buffer<T>, Option<Bitmap>)> {
@@ -114,7 +115,7 @@ fn take_values_indices_validity<T: NativeType, I: Offset>(
 }
 
 /// `take` implementation for primitive arrays
-pub fn take<T: NativeType, I: Offset>(
+pub fn take<T: NativeType, I: Index>(
     values: &PrimitiveArray<T>,
     indices: &PrimitiveArray<I>,
 ) -> Result<PrimitiveArray<T>> {

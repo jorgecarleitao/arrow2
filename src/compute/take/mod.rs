@@ -20,11 +20,13 @@
 use crate::{
     array::{
         new_empty_array, Array, BinaryArray, BooleanArray, DictionaryArray, ListArray, NullArray,
-        Offset, PrimitiveArray, StructArray, Utf8Array,
+        PrimitiveArray, StructArray, Utf8Array,
     },
     datatypes::{DataType, IntervalUnit},
     error::{ArrowError, Result},
 };
+
+pub use crate::array::Index;
 
 mod binary;
 mod boolean;
@@ -55,7 +57,7 @@ macro_rules! downcast_dict_take {
     }};
 }
 
-pub fn take<O: Offset>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result<Box<dyn Array>> {
+pub fn take<O: Index>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result<Box<dyn Array>> {
     if indices.len() == 0 {
         return Ok(new_empty_array(values.data_type().clone()));
     }
@@ -184,7 +186,7 @@ pub fn can_take(data_type: &DataType) -> bool {
 }
 
 #[inline(always)]
-fn maybe_usize<I: Offset>(index: I) -> Result<usize> {
+fn maybe_usize<I: Index>(index: I) -> Result<usize> {
     index
         .to_usize()
         .ok_or(ArrowError::DictionaryKeyOverflowError)
@@ -196,7 +198,7 @@ mod tests {
 
     use crate::datatypes::Field;
     use crate::{
-        array::{Int32Array, Primitive},
+        array::{Int32Array, Primitive, UInt32Array},
         bitmap::MutableBitmap,
         types::NativeType,
     };
@@ -361,6 +363,14 @@ mod tests {
     #[test]
     fn empty() {
         let indices = Int32Array::from_slice(&[]);
+        let values = BooleanArray::from(vec![Some(true), Some(false)]);
+        let a = take(&values, &indices).unwrap();
+        assert_eq!(a.len(), 0)
+    }
+
+    #[test]
+    fn unsigned_take() {
+        let indices = UInt32Array::from_slice(&[]);
         let values = BooleanArray::from(vec![Some(true), Some(false)]);
         let a = take(&values, &indices).unwrap();
         assert_eq!(a.len(), 0)

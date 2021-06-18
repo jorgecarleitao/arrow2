@@ -351,7 +351,7 @@ pub use fixed_size_list::{FixedSizeListArray, FixedSizeListPrimitive};
 pub use list::{ListArray, ListPrimitive};
 pub use null::NullArray;
 pub use primitive::{Primitive, PrimitiveArray};
-pub use specification::Offset;
+pub use specification::{Index, Offset};
 pub use struct_::StructArray;
 pub use utf8::{Utf8Array, Utf8Primitive};
 
