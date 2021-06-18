@@ -37,12 +37,18 @@ impl Builder<bool> for BooleanBuilder {
 }
 
 impl BooleanBuilder {
-    /// Initializes itself with a capacity.
+    /// Initializes an empty [`BooleanBuilder`].
     #[inline]
     pub fn new() -> Self {
+        Self::with_capacity(0)
+    }
+
+    /// Initializes a [`BooleanBuilder`] with a capacity.
+    #[inline]
+    pub fn with_capacity(capacity: usize) -> Self {
         Self {
-            values: MutableBitmap::new(),
-            validity: MutableBitmap::new(),
+            values: MutableBitmap::with_capacity(capacity),
+            validity: MutableBitmap::with_capacity(capacity),
         }
     }
 }
