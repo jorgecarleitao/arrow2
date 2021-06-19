@@ -187,9 +187,7 @@ pub fn can_take(data_type: &DataType) -> bool {
 
 #[inline(always)]
 fn maybe_usize<I: Index>(index: I) -> Result<usize> {
-    index
-        .to_usize()
-        .ok_or(ArrowError::DictionaryKeyOverflowError)
+    index.to_usize().ok_or(ArrowError::KeyOverflowError)
 }
 
 #[cfg(test)]
@@ -198,7 +196,7 @@ mod tests {
 
     use crate::datatypes::Field;
     use crate::{
-        array::{Int32Array, Primitive, UInt32Array},
+        array::{Int32Array, UInt32Array},
         bitmap::MutableBitmap,
         types::NativeType,
     };
@@ -214,8 +212,8 @@ mod tests {
     where
         T: NativeType,
     {
-        let output = Primitive::<T>::from(data).to(data_type.clone());
-        let expected = Primitive::<T>::from(expected_data).to(data_type);
+        let output = PrimitiveArray::<T>::from(data).to(data_type.clone());
+        let expected = PrimitiveArray::<T>::from(expected_data).to(data_type);
         let output = take(&output, indices)?;
         assert_eq!(expected, output.as_ref());
         Ok(())
@@ -263,7 +261,7 @@ mod tests {
 
     fn create_test_struct() -> StructArray {
         let boolean = BooleanArray::from_slice(&[true, false, false, true]);
-        let int = Primitive::from_slice(&[42, 28, 19, 31]).to(DataType::Int32);
+        let int = Int32Array::from_slice(&[42, 28, 19, 31]);
         let validity = vec![true, true, false, true]
             .into_iter()
             .collect::<MutableBitmap>()
@@ -349,12 +347,10 @@ mod tests {
         datatypes.into_iter().for_each(|d1| {
             let array = new_null_array(d1.clone(), 10);
             if can_take(&d1) {
-                let indices =
-                    Primitive::<i32>::from(&[Some(1), Some(2), None, Some(3)]).to(DataType::Int32);
+                let indices = Int32Array::from(&[Some(1), Some(2), None, Some(3)]);
                 assert!(take(array.as_ref(), &indices).is_ok());
             } else {
-                let indices =
-                    Primitive::<i32>::from(&[Some(1), Some(2), None, Some(3)]).to(DataType::Int32);
+                let indices = Int32Array::from(&[Some(1), Some(2), None, Some(3)]);
                 assert!(take(array.as_ref(), &indices).is_err());
             }
         });

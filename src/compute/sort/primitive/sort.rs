@@ -95,7 +95,7 @@ mod tests {
     use super::*;
 
     use crate::array::ord;
-    use crate::array::Primitive;
+    use crate::array::PrimitiveArray;
     use crate::datatypes::DataType;
 
     fn test_sort_primitive_arrays<T>(
@@ -106,8 +106,8 @@ mod tests {
     ) where
         T: NativeType + std::cmp::Ord,
     {
-        let input = Primitive::<T>::from(data).to(data_type.clone());
-        let expected = Primitive::<T>::from(expected_data).to(data_type);
+        let input = PrimitiveArray::<T>::from(data).to(data_type.clone());
+        let expected = PrimitiveArray::<T>::from(expected_data).to(data_type);
         let output = sort_by(&input, ord::total_cmp, &options);
         assert_eq!(expected, output)
     }

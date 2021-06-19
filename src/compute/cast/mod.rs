@@ -258,7 +258,7 @@ fn cast_list<O: Offset>(array: &ListArray<O>, to_type: &DataType) -> Result<List
 ///   in integer casts return null
 /// * Numeric to boolean: 0 returns `false`, any other value returns `true`
 /// * List to List: the underlying data type is cast
-/// * Primitive to List: a list array with 1 value per slot is created
+/// * PrimitiveArray to List: a list array with 1 value per slot is created
 /// * Date32 and Date64: precision lost when going to higher interval
 /// * Time32 and Time64: precision lost when going to higher interval
 /// * Timestamp and Date{32|64}: precision lost when going to higher interval

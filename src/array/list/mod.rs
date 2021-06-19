@@ -12,6 +12,12 @@ use super::{
     Array,
 };
 
+mod ffi;
+mod iterator;
+pub use iterator::*;
+mod mutable;
+pub use mutable::*;
+
 #[derive(Debug, Clone)]
 pub struct ListArray<O: Offset> {
     data_type: DataType,
@@ -181,13 +187,6 @@ impl<O: Offset> std::fmt::Display for ListArray<O> {
         display_fmt(self.iter(), head, f, true)
     }
 }
-
-mod ffi;
-mod from;
-mod iterator;
-pub use iterator::*;
-
-pub use from::ListPrimitive;
 
 #[cfg(test)]
 mod tests {

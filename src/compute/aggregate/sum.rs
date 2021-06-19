@@ -107,17 +107,16 @@ mod tests {
     use super::super::super::arithmetics;
     use super::*;
     use crate::array::*;
-    use crate::datatypes::DataType;
 
     #[test]
     fn test_primitive_array_sum() {
-        let a = Primitive::from_slice(&[1, 2, 3, 4, 5]).to(DataType::Int32);
+        let a = Int32Array::from_slice(&[1, 2, 3, 4, 5]);
         assert_eq!(15, sum(&a).unwrap());
     }
 
     #[test]
     fn test_primitive_array_float_sum() {
-        let a = Primitive::from_slice(&[1.1f64, 2.2, 3.3, 4.4, 5.5]).to(DataType::Float64);
+        let a = Float64Array::from_slice(&[1.1f64, 2.2, 3.3, 4.4, 5.5]);
         assert!((16.5 - sum(&a).unwrap()).abs() < f64::EPSILON);
     }
 

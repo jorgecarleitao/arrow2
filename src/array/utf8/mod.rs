@@ -6,6 +6,13 @@ use super::{
     Array, GenericBinaryArray, Offset,
 };
 
+mod ffi;
+mod from;
+mod iterator;
+mod mutable;
+pub use iterator::*;
+pub use mutable::*;
+
 /// A [`Utf8Array`] is arrow's equivalent of `Vec<Option<String>>`, i.e.
 /// an array designed for highly performant operations on optionally nullable strings.
 /// The size of this struct is `O(1)` as all data is stored behind an `Arc`.
@@ -193,12 +200,6 @@ unsafe impl<O: Offset> GenericBinaryArray<O> for Utf8Array<O> {
         self.offsets()
     }
 }
-
-mod ffi;
-mod from;
-pub use from::*;
-mod iterator;
-pub use iterator::*;
 
 #[cfg(test)]
 mod tests {

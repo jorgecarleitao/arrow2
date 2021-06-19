@@ -7,6 +7,11 @@ use crate::{
 
 use super::{display_fmt, ffi::ToFfi, new_empty_array, new_null_array, Array};
 
+mod iterator;
+pub use iterator::*;
+mod mutable;
+pub use mutable::*;
+
 #[derive(Debug, Clone)]
 pub struct FixedSizeListArray {
     size: i32, // this is redundant with `data_type`, but useful to not have to deconstruct the data_type.
@@ -129,8 +134,3 @@ unsafe impl ToFfi for FixedSizeListArray {
         self.offset
     }
 }
-
-mod from;
-pub use from::*;
-mod iterator;
-pub use iterator::*;

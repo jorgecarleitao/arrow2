@@ -359,7 +359,7 @@ fn to_list(fields: &[ParquetType], parent_name: &str) -> Result<Option<DataType>
                 to_primitive_type_inner(physical_type, logical_type, converted_type).map(Some)
             } else {
                 Err(ArrowError::ExternalFormat(
-                    "Primitive element type of list must be repeated.".to_string(),
+                    "PrimitiveArray element type of list must be repeated.".to_string(),
                 ))
             }
         }

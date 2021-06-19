@@ -3,17 +3,16 @@
 The simplest way to think about an arrow `Array` is that it represents
 `Vec<Option<T>>` and has a logical type associated with it.
 
-Probably the most simple array in this crate is `PrimitiveArray<T>`. It can be constructed
+Probably the simplest array in this crate is `PrimitiveArray<T>`. It can be constructed
 from an iterator as follows:
 
 ```rust
-# use arrow2::array::{Array, PrimitiveArray, Primitive};
+# use arrow2::array::{Array, PrimitiveArray};
 # use arrow2::datatypes::DataType;
 # fn main() {
-let array: PrimitiveArray<i32> = [Some(1), None, Some(123)]
+let array = [Some(1), None, Some(123)]
     .iter()
-    .collect::<Primitive<i32>>()
-    .to(DataType::Int32);
+    .collect::<PrimitiveArray<i32>>();
 assert_eq!(array.len(), 3)
 # }
 ```
@@ -32,11 +31,11 @@ The main differences from a `Vec<Option<T>>` are:
 The first difference allows interoperability with Arrow's ecosystem and efficient SIMD operations (we will re-visit this below); the second difference is that it gives semantic meaning to the array. In the example
 
 ```rust
-# use arrow2::array::Primitive;
+# use arrow2::array::PrimitiveArray;
 # use arrow2::datatypes::DataType;
 # fn main() {
-let ints = Primitive::<i32>::from(&[Some(1), None]).to(DataType::Int32);
-let dates = Primitive::<i32>::from(&[Some(1), None]).to(DataType::Date32);
+let ints = PrimitiveArray::<i32>::from(&[Some(1), None]).to(DataType::Int32);
+let dates = PrimitiveArray::<i32>::from(&[Some(1), None]).to(DataType::Date32);
 # }
 ```
 
@@ -46,7 +45,7 @@ Some physical types (e.g. `i32`) have a "natural" logical `DataType` (e.g. `Data
 These types support a more compact notation:
 
 ```rust
-# use arrow2::array::{Array, Int32Array, Primitive};
+# use arrow2::array::{Array, Int32Array, PrimitiveArray};
 # use arrow2::datatypes::DataType;
 # fn main() {
 /// Int32Array = PrimitiveArray<i32>
@@ -77,11 +76,10 @@ The following arrays are supported:
 There is a more powerful aspect of arrow arrays, and that is that they all
 implement the trait `Array` and can be cast to `&dyn Array`, i.e. they can be turned into
 a trait object. This enables arrays to have types that are dynamic in nature.
-`ListArray<i32>` is an example of a nested (dynamic) array:
 
 ```rust
 # use std::sync::Arc;
-# use arrow2::array::{Array, ListPrimitive, ListArray, Primitive};
+# use arrow2::array::{Array, PrimitiveArray};
 # use arrow2::datatypes::DataType;
 # fn main() {
 let data = vec![
@@ -90,12 +88,8 @@ let data = vec![
     Some(vec![Some(4), None, Some(6)]),
 ];
 
-let a: ListArray<i32> = data
-    .into_iter()
-    .collect::<ListPrimitive<i32, Primitive<i32>, i32>>()
-    .to(ListArray::<i32>::default_datatype(DataType::Int32));
-
-let inner: &Arc<dyn Array> = a.values();
+let a = PrimitiveArray::<i32>::from(&[Some(1), None]);
+let a: &dyn Array = &a;
 # }
 ```
 
@@ -107,13 +101,12 @@ Instead, `ListArray` has an inner `Array` representing all its values (available
 Given a trait object `&dyn Array`, we know its logical type via `Array::data_type()` and can use it to downcast the array to its concrete type:
 
 ```rust
-# use arrow2::array::{Array, PrimitiveArray, Primitive};
+# use arrow2::array::{Array, PrimitiveArray};
 # use arrow2::datatypes::DataType;
 # fn main() {
-let array: PrimitiveArray<i32> = [Some(1), None, Some(123)]
+let array = [Some(1), None, Some(123)]
     .iter()
-    .collect::<Primitive<i32>>()
-    .to(DataType::Int32);
+    .collect::<PrimitiveArray<i32>>();
 let array = &array as &dyn Array;
 
 let array = array.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
@@ -202,7 +195,7 @@ If yes, then use:
 * `Buffer::from_trusted_len_iter`
 * `Buffer::try_from_trusted_len_iter`
 
-If not, then use the builder API, such as `Primitive<T>`, `Utf8Primitive<O>`, `ListPrimitive`, etc.
+If not, then use the builder API, such as `MutablePrimitiveArray<T>`, `MutableUtf8Array<O>` or `MutableListArray`.
 
 We have seen examples where the latter API was used. In the last example of this page
 you will be introduced to an example of using the former for SIMD.
@@ -273,4 +266,4 @@ Some notes:
 2. We leveraged normal rust iterators for the operation.
 
 3. We used `op` on the array's values irrespectively of their validity,
-and cloned its validity. This approach is suitable for operations whose branching off is more expensive than operating over all values. If the operation is expensive, then using `Primitive::<O>::from_trusted_len_iter` is likely faster.
+and cloned its validity. This approach is suitable for operations whose branching off is more expensive than operating over all values. If the operation is expensive, then using `PrimitiveArray::<O>::from_trusted_len_iter` is likely faster.

@@ -140,7 +140,7 @@ mod tests {
     where
         T: NativeType + std::cmp::Ord,
     {
-        let input = Primitive::<T>::from(data).to(data_type);
+        let input = PrimitiveArray::<T>::from(data).to(data_type);
         let expected = Int32Array::from_slice(&expected_data);
         let output = indices_sorted_by(&input, ord::total_cmp, &options);
         assert_eq!(output, expected)

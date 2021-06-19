@@ -159,11 +159,10 @@ mod tests {
         let field_type = DataType::Dictionary(Box::new(DataType::Int32), Box::new(DataType::Utf8));
         let schema = Arc::new(Schema::new(vec![Field::new("d1", field_type, true)]));
 
-        let array = DictionaryPrimitive::<i32, Utf8Primitive<i32>, _>::try_from_iter(
-            vec![Ok(Some("one")), Ok(None), Ok(Some("three"))].into_iter(),
-        )
-        .unwrap()
-        .into_arc();
+        let mut array = MutableDictionaryArray::<i32, MutableUtf8Array<i32>>::new();
+
+        array.try_extend(vec![Some("one"), None, Some("three")])?;
+        let array = array.into_arc();
 
         let batch = RecordBatch::try_new(schema, vec![array])?;
 
@@ -191,7 +190,7 @@ mod tests {
     /// formatting that array with `write`
     macro_rules! check_datetime {
         ($ty:ty, $datatype:expr, $value:expr, $EXPECTED_RESULT:expr) => {
-            let array = Primitive::<$ty>::from(&[Some($value), None]).to_arc(&$datatype);
+            let array = Arc::new(PrimitiveArray::<$ty>::from(&[Some($value), None]).to($datatype));
 
             let schema = Arc::new(Schema::new(vec![Field::new(
                 "f",

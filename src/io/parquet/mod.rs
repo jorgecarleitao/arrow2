@@ -60,9 +60,9 @@ mod tests {
         ];
 
         match column {
-            0 => Box::new(Primitive::<i64>::from(i64_values).to(DataType::Int64)),
+            0 => Box::new(PrimitiveArray::<i64>::from(i64_values).to(DataType::Int64)),
             1 => Box::new(
-                Primitive::<f64>::from(&[
+                PrimitiveArray::<f64>::from(&[
                     Some(0.0),
                     Some(1.0),
                     None,
@@ -101,7 +101,7 @@ mod tests {
                 Some(true),
             ])),
             4 => Box::new(
-                Primitive::<i64>::from(i64_values)
+                PrimitiveArray::<i64>::from(i64_values)
                     .to(DataType::Timestamp(TimeUnit::Millisecond, None)),
             ),
             5 => {
@@ -109,7 +109,7 @@ mod tests {
                     .iter()
                     .map(|x| x.map(|x| x as u32))
                     .collect::<Vec<_>>();
-                Box::new(Primitive::<u32>::from(values).to(DataType::UInt32))
+                Box::new(PrimitiveArray::<u32>::from(values).to(DataType::UInt32))
             }
             _ => unreachable!(),
         }
@@ -179,7 +179,7 @@ mod tests {
         ];
 
         match column {
-            0 => Box::new(Primitive::<i64>::from(i64_values).to(DataType::Int64)),
+            0 => Box::new(PrimitiveArray::<i64>::from(i64_values).to(DataType::Int64)),
             3 => Box::new(BooleanArray::from_slice(&[
                 true, true, false, false, false, true, true, true, true, true,
             ])),

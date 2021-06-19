@@ -5,10 +5,10 @@ use super::{display_fmt, Array};
 mod ffi;
 mod from;
 mod iterator;
-mod primitive;
+mod mutable;
 
 pub use iterator::*;
-pub use primitive::*;
+pub use mutable::*;
 
 /// A [`BooleanArray`] is arrow's equivalent to `Vec<Option<bool>>`, i.e.
 /// an array designed for highly performant operations on optionally nullable booleans.
@@ -134,13 +134,12 @@ impl<P: AsRef<[Option<bool>]>> From<P> for BooleanArray {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::iter::FromIterator;
 
     #[test]
     fn basics() {
         let data = vec![Some(true), None, Some(false)];
 
-        let array = BooleanArray::from_iter(data);
+        let array: BooleanArray = data.into_iter().collect();
 
         assert_eq!(array.value(0), true);
         assert_eq!(array.value(1), false);

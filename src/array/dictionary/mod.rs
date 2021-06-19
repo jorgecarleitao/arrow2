@@ -6,6 +6,9 @@ use crate::{
     types::{NativeType, NaturalDataType},
 };
 
+mod mutable;
+pub use mutable::*;
+
 use super::{ffi::ToFfi, new_empty_array, primitive::PrimitiveArray, Array};
 
 /// Trait denoting [`NativeType`]s that can be used as keys of a dictionary.
@@ -19,9 +22,6 @@ impl DictionaryKey for u8 {}
 impl DictionaryKey for u16 {}
 impl DictionaryKey for u32 {}
 impl DictionaryKey for u64 {}
-
-mod from;
-pub use from::*;
 
 /// An [`Array`] whose values are encoded by keys. This [`Array`] is useful when the cardinality of
 /// values is low compared to the length of the [`Array`].

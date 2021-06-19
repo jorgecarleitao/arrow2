@@ -20,9 +20,24 @@ use std::fmt::Display;
 use crate::error::Result;
 use crate::types::days_ms;
 use crate::{
-    bitmap::Bitmap,
+    bitmap::{Bitmap, MutableBitmap},
     datatypes::{DataType, IntervalUnit},
 };
+
+/// A trait describing an Array that is mutable; i.e. whose values can change.
+/// These arrays are not Send + Sync and cannot be cloned.
+pub trait MutableArray: std::fmt::Debug {
+    fn len(&self) -> usize;
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+    fn validity(&self) -> &Option<MutableBitmap>;
+    fn as_arc(&mut self) -> Arc<dyn Array>;
+    fn data_type(&self) -> &DataType;
+    fn as_any(&self) -> &dyn Any;
+    fn as_mut_any(&mut self) -> &mut dyn Any;
+    fn push_null(&mut self);
+}
 
 /// A trait representing an Arrow array. Arrow arrays are trait objects
 /// that are infalibly downcasted to concrete types according to the `Array::data_type`.
@@ -343,79 +358,24 @@ pub mod ord;
 
 pub use display::get_display;
 
-pub use binary::{BinaryArray, BinaryPrimitive};
-pub use boolean::{BooleanArray, BooleanPrimitive};
-pub use dictionary::{DictionaryArray, DictionaryKey, DictionaryPrimitive};
-pub use fixed_size_binary::{FixedSizeBinaryArray, FixedSizeBinaryPrimitive};
-pub use fixed_size_list::{FixedSizeListArray, FixedSizeListPrimitive};
-pub use list::{ListArray, ListPrimitive};
+pub use binary::{BinaryArray, MutableBinaryArray};
+pub use boolean::{BooleanArray, MutableBooleanArray};
+pub use dictionary::{DictionaryArray, DictionaryKey, MutableDictionaryArray};
+pub use fixed_size_binary::FixedSizeBinaryArray;
+pub use fixed_size_list::FixedSizeListArray;
+pub use list::{ListArray, MutableListArray};
 pub use null::NullArray;
-pub use primitive::{Primitive, PrimitiveArray};
+pub use primitive::*;
 pub use specification::{Index, Offset};
 pub use struct_::StructArray;
-pub use utf8::{Utf8Array, Utf8Primitive};
+pub use utf8::{MutableUtf8Array, Utf8Array};
 
 pub use self::ffi::FromFfi;
 use self::ffi::ToFfi;
 
-/// A type definition [`PrimitiveArray`] for `i8`
-pub type Int8Array = PrimitiveArray<i8>;
-/// A type definition [`PrimitiveArray`] for `i16`
-pub type Int16Array = PrimitiveArray<i16>;
-/// A type definition [`PrimitiveArray`] for `i32`
-pub type Int32Array = PrimitiveArray<i32>;
-/// A type definition [`PrimitiveArray`] for `i64`
-pub type Int64Array = PrimitiveArray<i64>;
-/// A type definition [`PrimitiveArray`] for `i128`
-pub type Int128Array = PrimitiveArray<i128>;
-/// A type definition [`PrimitiveArray`] for `f32`
-pub type Float32Array = PrimitiveArray<f32>;
-/// A type definition [`PrimitiveArray`] for `f64`
-pub type Float64Array = PrimitiveArray<f64>;
-/// A type definition [`PrimitiveArray`] for `u8`
-pub type UInt8Array = PrimitiveArray<u8>;
-/// A type definition [`PrimitiveArray`] for `u16`
-pub type UInt16Array = PrimitiveArray<u16>;
-/// A type definition [`PrimitiveArray`] for `u32`
-pub type UInt32Array = PrimitiveArray<u32>;
-/// A type definition [`PrimitiveArray`] for `u64`
-pub type UInt64Array = PrimitiveArray<u64>;
-
-/// A trait describing the ability of a struct to convert itself to a Arc'ed [`Array`].
-pub trait ToArray {
-    fn to_arc(self, data_type: &DataType) -> std::sync::Arc<dyn Array>;
-}
-
-/// A trait describing the ability of a struct to convert itself to a Arc'ed [`Array`],
-/// with its [`DataType`] automatically deducted.
-pub trait IntoArray {
-    fn into_arc(self) -> std::sync::Arc<dyn Array>;
-}
-
-/// A trait describing the ability of a struct to create itself from a falible iterator.
-/// Used in the context of creating arrays from non-sized iterators.
-pub trait TryFromIterator<A>: Sized {
-    fn try_from_iter<T: IntoIterator<Item = Result<A>>>(iter: T) -> Result<Self>;
-}
-
-/// A trait describing the ability of a struct to build an Array incrementally.
-/// There are builders for almost all array types.
-pub trait Builder<T>: TryFromIterator<Option<T>> {
-    /// Create the builder with a capacity
-    fn with_capacity(capacity: usize) -> Self;
-
-    /// Push a new item to the builder.
-    /// This operation may panic if the container cannot hold more items.
-    /// For example, if all possible keys are exausted when building a dictionary.
-    fn push(&mut self, item: Option<T>);
-
-    /// Fallible version of `push`, on which the operation errors instead of panicking.
-    /// prefer this if there is no guarantee that the operation will not fail.
-    #[inline]
-    fn try_push(&mut self, item: Option<T>) -> Result<()> {
-        self.push(item);
-        Ok(())
-    }
+/// A trait describing the ability of a struct to create itself from a iterator.
+pub trait TryExtend<A> {
+    fn try_extend<I: IntoIterator<Item = A>>(&mut self, iter: I) -> Result<()>;
 }
 
 fn display_helper<T: std::fmt::Display, I: IntoIterator<Item = Option<T>>>(iter: I) -> Vec<String> {

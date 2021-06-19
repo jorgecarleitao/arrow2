@@ -53,6 +53,7 @@ macro_rules! natural_type {
 /// Do not implement.
 pub unsafe trait NativeType:
     Relation
+    + NaturalDataType
     + Send
     + Sync
     + Sized
@@ -118,6 +119,7 @@ natural_type!(i64, DataType::Int64);
 natural_type!(f32, DataType::Float32);
 natural_type!(f64, DataType::Float64);
 natural_type!(days_ms, DataType::Interval(IntervalUnit::DayTime));
+natural_type!(i128, DataType::Decimal(32, 32)); // users should set the decimal when creating an array
 
 create_relation!(u8, &DataType::UInt8);
 create_relation!(u16, &DataType::UInt16);

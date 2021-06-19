@@ -1,10 +1,10 @@
-use crate::{bitmap::Bitmap, buffer::Buffer, datatypes::DataType};
+use crate::{bitmap::Bitmap, buffer::Buffer, datatypes::DataType, error::Result};
 
 use super::{display_fmt, display_helper, ffi::ToFfi, Array};
 
-mod from;
 mod iterator;
-pub use from::*;
+mod mutable;
+pub use mutable::*;
 
 #[derive(Debug, Clone)]
 pub struct FixedSizeBinaryArray {
@@ -145,5 +145,23 @@ unsafe impl ToFfi for FixedSizeBinaryArray {
 
     fn offset(&self) -> usize {
         self.offset
+    }
+}
+
+impl FixedSizeBinaryArray {
+    pub fn try_from_iter<P: AsRef<[u8]>, I: IntoIterator<Item = Option<P>>>(
+        iter: I,
+        size: usize,
+    ) -> Result<Self> {
+        MutableFixedSizeBinaryArray::try_from_iter(iter, size).map(|x| x.into())
+    }
+
+    pub fn from_iter<P: AsRef<[u8]>, I: IntoIterator<Item = Option<P>>>(
+        iter: I,
+        size: usize,
+    ) -> Self {
+        MutableFixedSizeBinaryArray::try_from_iter(iter, size)
+            .unwrap()
+            .into()
     }
 }

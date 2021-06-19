@@ -70,8 +70,13 @@ pub(super) fn equal(
 
 #[cfg(test)]
 mod tests {
-    use crate::array::{FixedSizeListPrimitive, Primitive};
-    use crate::{array::equal::tests::test_equal, datatypes::DataType};
+    use crate::{
+        array::{
+            equal::tests::test_equal, fixed_size_list::MutableFixedSizeListArray,
+            MutablePrimitiveArray,
+        },
+        datatypes::DataType,
+    };
 
     use super::*;
 
@@ -79,18 +84,20 @@ mod tests {
     fn create_fixed_size_list_array<U: AsRef<[i32]>, T: AsRef<[Option<U>]>>(
         data: T,
     ) -> FixedSizeListArray {
-        let data_type = FixedSizeListArray::default_datatype(DataType::Int32, 3);
-        let list = data
-            .as_ref()
-            .iter()
-            .map(|x| {
-                Some(match x {
-                    Some(x) => x.as_ref().iter().map(|x| Some(*x)).collect::<Vec<_>>(),
-                    None => std::iter::repeat(None).take(3).collect::<Vec<_>>(),
-                })
+        let data = data.as_ref().iter().map(|x| {
+            Some(match x {
+                Some(x) => x.as_ref().iter().map(|x| Some(*x)).collect::<Vec<_>>(),
+                None => std::iter::repeat(None).take(3).collect::<Vec<_>>(),
             })
-            .collect::<FixedSizeListPrimitive<Primitive<i32>, i32>>();
-        list.to(data_type)
+        });
+
+        MutableFixedSizeListArray::<MutablePrimitiveArray<i32>>::try_from_iter(
+            data,
+            3,
+            DataType::Int32,
+        )
+        .unwrap()
+        .into()
     }
 
     #[test]

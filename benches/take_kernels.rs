@@ -41,7 +41,7 @@ fn create_random_index(size: usize, null_density: f32) -> PrimitiveArray<i32> {
                 None
             }
         })
-        .collect::<Primitive<i32>>()
+        .collect::<PrimitiveArray<i32>>()
         .to(DataType::Int32)
 }
 

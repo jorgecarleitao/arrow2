@@ -22,7 +22,6 @@ pub use writer::*;
 
 #[cfg(test)]
 mod tests {
-    use std::iter::FromIterator;
     use std::sync::Arc;
 
     use crate::array::*;
@@ -114,7 +113,7 @@ mod tests {
     #[test]
     fn write_struct_with_list_field() {
         let list_datatype = DataType::List(Box::new(Field::new("c_list", DataType::Utf8, false)));
-        let field_c1 = Field::new("c1", list_datatype.clone(), false);
+        let field_c1 = Field::new("c1", list_datatype, false);
         let field_c2 = Field::new("c2", DataType::Int32, false);
         let schema = Schema::new(vec![field_c1, field_c2]);
 
@@ -123,13 +122,16 @@ mod tests {
         let iter = iter
             .into_iter()
             .map(|x| x.into_iter().map(Some).collect::<Vec<_>>())
-            .map(Some)
-            .map(Result::Ok);
-        let a = ListPrimitive::<i32, Utf8Primitive<i32>, _>::try_from_iter(iter)
-            .unwrap()
-            .to(list_datatype);
+            .map(Some);
+        let mut a = MutableListArray::<i32, MutableUtf8Array<i32>>::new_with_field(
+            MutableUtf8Array::<i32>::new(),
+            "c_list",
+            false,
+        );
+        a.try_extend(iter).unwrap();
+        let a: ListArray<i32> = a.into();
 
-        let b = Primitive::from_slice(&vec![1, 2, 3, 4, 5]).to(DataType::Int32);
+        let b = PrimitiveArray::from_slice(&vec![1, 2, 3, 4, 5]).to(DataType::Int32);
 
         let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(a), Arc::new(b)]).unwrap();
 
@@ -153,10 +155,9 @@ mod tests {
     #[test]
     fn write_nested_list() {
         let list_inner = DataType::List(Box::new(Field::new("b", DataType::Int32, false)));
-        let list_inner_type = Field::new("a", list_inner, false);
-        let list_datatype = DataType::List(Box::new(list_inner_type));
-        let field_c1 = Field::new("c1", list_datatype.clone(), false);
-        let field_c2 = Field::new("c2", DataType::Utf8, false);
+        let list_datatype = DataType::List(Box::new(Field::new("a", list_inner, false)));
+        let field_c1 = Field::new("c1", list_datatype, true);
+        let field_c2 = Field::new("c2", DataType::Utf8, true);
         let schema = Schema::new(vec![field_c1, field_c2]);
 
         let iter = vec![
@@ -166,8 +167,16 @@ mod tests {
         ];
 
         let iter = iter.into_iter().map(Some);
-        let c1 = ListPrimitive::<i32, ListPrimitive<i32, Primitive<i32>, _>, _>::from_iter(iter)
-            .to(list_datatype);
+
+        let inner = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new_with_field(
+            MutablePrimitiveArray::<i32>::new(),
+            "b",
+            false,
+        );
+        let mut c1 =
+            MutableListArray::<i32, MutableListArray<i32, MutablePrimitiveArray<i32>>>::new_with_field(inner, "a", false);
+        c1.try_extend(iter).unwrap();
+        let c1: ListArray<i32> = c1.into();
 
         let c2 = Utf8Array::<i32>::from(&vec![Some("foo"), Some("bar"), None]);
 

@@ -66,7 +66,7 @@ pub fn shift(array: &dyn Array, offset: i64) -> Result<Box<dyn Array>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::array::{Int32Array, Primitive};
+    use crate::array::Int32Array;
     use crate::datatypes::DataType;
 
     use super::*;
@@ -83,13 +83,13 @@ mod tests {
 
     #[test]
     fn shift_many() {
-        let array = Primitive::<i32>::from(&[Some(1), None, Some(3)]).to(DataType::Date32);
+        let array = Int32Array::from(&[Some(1), None, Some(3)]).to(DataType::Date32);
         assert!(shift(&array, 10).is_err());
     }
 
     #[test]
     fn shift_max() {
-        let array = Primitive::<i32>::from(&[Some(1), None, Some(3)]).to(DataType::Date32);
+        let array = Int32Array::from(&[Some(1), None, Some(3)]).to(DataType::Date32);
         let result = shift(&array, 3).unwrap();
 
         let expected = new_null_array(DataType::Date32, 3);

@@ -181,32 +181,32 @@ display!(f64);
 
 #[cfg(test)]
 mod tests {
-    use super::super::Primitive;
+    use super::super::{DaysMsArray, Int128Array, Int32Array, Int64Array};
     use super::*;
 
     #[test]
     fn display_int32() {
-        let array = Primitive::<i32>::from(&[Some(1), None, Some(2)]).to(DataType::Int32);
+        let array = Int32Array::from(&[Some(1), None, Some(2)]);
         assert_eq!(format!("{}", array), "Int32[1, , 2]");
     }
 
     #[test]
     fn display_date32() {
-        let array = Primitive::<i32>::from(&[Some(1), None, Some(2)]).to(DataType::Date32);
+        let array = Int32Array::from(&[Some(1), None, Some(2)]).to(DataType::Date32);
         assert_eq!(format!("{}", array), "Date32[1970-01-02, , 1970-01-03]");
     }
 
     #[test]
     fn display_time32s() {
-        let array = Primitive::<i32>::from(&[Some(1), None, Some(2)])
-            .to(DataType::Time32(TimeUnit::Second));
+        let array =
+            Int32Array::from(&[Some(1), None, Some(2)]).to(DataType::Time32(TimeUnit::Second));
         assert_eq!(format!("{}", array), "Time32(Second)[00:00:01, , 00:00:02]");
     }
 
     #[test]
     fn display_time32ms() {
-        let array = Primitive::<i32>::from(&[Some(1), None, Some(2)])
-            .to(DataType::Time32(TimeUnit::Millisecond));
+        let array =
+            Int32Array::from(&[Some(1), None, Some(2)]).to(DataType::Time32(TimeUnit::Millisecond));
         assert_eq!(
             format!("{}", array),
             "Time32(Millisecond)[00:00:00.001, , 00:00:00.002]"
@@ -215,27 +215,27 @@ mod tests {
 
     #[test]
     fn display_interval_d() {
-        let array = Primitive::<i32>::from(&[Some(1), None, Some(2)])
+        let array = Int32Array::from(&[Some(1), None, Some(2)])
             .to(DataType::Interval(IntervalUnit::YearMonth));
         assert_eq!(format!("{}", array), "Interval(YearMonth)[1d, , 2d]");
     }
 
     #[test]
     fn display_int64() {
-        let array = Primitive::<i64>::from(&[Some(1), None, Some(2)]).to(DataType::Int64);
+        let array = Int64Array::from(&[Some(1), None, Some(2)]).to(DataType::Int64);
         assert_eq!(format!("{}", array), "Int64[1, , 2]");
     }
 
     #[test]
     fn display_date64() {
-        let array = Primitive::<i64>::from(&[Some(1), None, Some(86400000)]).to(DataType::Date64);
+        let array = Int64Array::from(&[Some(1), None, Some(86400000)]).to(DataType::Date64);
         assert_eq!(format!("{}", array), "Date64[1970-01-01, , 1970-01-02]");
     }
 
     #[test]
     fn display_time64us() {
-        let array = Primitive::<i64>::from(&[Some(1), None, Some(2)])
-            .to(DataType::Time64(TimeUnit::Microsecond));
+        let array =
+            Int64Array::from(&[Some(1), None, Some(2)]).to(DataType::Time64(TimeUnit::Microsecond));
         assert_eq!(
             format!("{}", array),
             "Time64(Microsecond)[00:00:00.000001, , 00:00:00.000002]"
@@ -244,8 +244,8 @@ mod tests {
 
     #[test]
     fn display_time64ns() {
-        let array = Primitive::<i64>::from(&[Some(1), None, Some(2)])
-            .to(DataType::Time64(TimeUnit::Nanosecond));
+        let array =
+            Int64Array::from(&[Some(1), None, Some(2)]).to(DataType::Time64(TimeUnit::Nanosecond));
         assert_eq!(
             format!("{}", array),
             "Time64(Nanosecond)[00:00:00.000000001, , 00:00:00.000000002]"
@@ -254,7 +254,7 @@ mod tests {
 
     #[test]
     fn display_timestamp_s() {
-        let array = Primitive::<i64>::from(&[Some(1), None, Some(2)])
+        let array = Int64Array::from(&[Some(1), None, Some(2)])
             .to(DataType::Timestamp(TimeUnit::Second, None));
         assert_eq!(
             format!("{}", array),
@@ -264,7 +264,7 @@ mod tests {
 
     #[test]
     fn display_timestamp_ms() {
-        let array = Primitive::<i64>::from(&[Some(1), None, Some(2)])
+        let array = Int64Array::from(&[Some(1), None, Some(2)])
             .to(DataType::Timestamp(TimeUnit::Millisecond, None));
         assert_eq!(
             format!("{}", array),
@@ -274,7 +274,7 @@ mod tests {
 
     #[test]
     fn display_timestamp_us() {
-        let array = Primitive::<i64>::from(&[Some(1), None, Some(2)])
+        let array = Int64Array::from(&[Some(1), None, Some(2)])
             .to(DataType::Timestamp(TimeUnit::Microsecond, None));
         assert_eq!(
             format!("{}", array),
@@ -284,7 +284,7 @@ mod tests {
 
     #[test]
     fn display_timestamp_ns() {
-        let array = Primitive::<i64>::from(&[Some(1), None, Some(2)])
+        let array = Int64Array::from(&[Some(1), None, Some(2)])
             .to(DataType::Timestamp(TimeUnit::Nanosecond, None));
         assert_eq!(
             format!("{}", array),
@@ -294,28 +294,28 @@ mod tests {
 
     #[test]
     fn display_duration_ms() {
-        let array = Primitive::<i64>::from(&[Some(1), None, Some(2)])
+        let array = Int64Array::from(&[Some(1), None, Some(2)])
             .to(DataType::Duration(TimeUnit::Millisecond));
         assert_eq!(format!("{}", array), "Duration(Millisecond)[1ms, , 2ms]");
     }
 
     #[test]
     fn display_duration_s() {
-        let array = Primitive::<i64>::from(&[Some(1), None, Some(2)])
-            .to(DataType::Duration(TimeUnit::Second));
+        let array =
+            Int64Array::from(&[Some(1), None, Some(2)]).to(DataType::Duration(TimeUnit::Second));
         assert_eq!(format!("{}", array), "Duration(Second)[1s, , 2s]");
     }
 
     #[test]
     fn display_duration_us() {
-        let array = Primitive::<i64>::from(&[Some(1), None, Some(2)])
+        let array = Int64Array::from(&[Some(1), None, Some(2)])
             .to(DataType::Duration(TimeUnit::Microsecond));
         assert_eq!(format!("{}", array), "Duration(Microsecond)[1us, , 2us]");
     }
 
     #[test]
     fn display_duration_ns() {
-        let array = Primitive::<i64>::from(&[Some(1), None, Some(2)])
+        let array = Int64Array::from(&[Some(1), None, Some(2)])
             .to(DataType::Duration(TimeUnit::Nanosecond));
         assert_eq!(format!("{}", array), "Duration(Nanosecond)[1ns, , 2ns]");
     }
@@ -323,22 +323,20 @@ mod tests {
     #[test]
     fn display_decimal() {
         let array =
-            Primitive::<i128>::from(&[Some(12345), None, Some(23456)]).to(DataType::Decimal(5, 2));
+            Int128Array::from(&[Some(12345), None, Some(23456)]).to(DataType::Decimal(5, 2));
         assert_eq!(format!("{}", array), "Decimal(5, 2)[123.45, , 234.56]");
     }
 
     #[test]
     fn display_decimal1() {
         let array =
-            Primitive::<i128>::from(&[Some(12345), None, Some(23456)]).to(DataType::Decimal(5, 1));
+            Int128Array::from(&[Some(12345), None, Some(23456)]).to(DataType::Decimal(5, 1));
         assert_eq!(format!("{}", array), "Decimal(5, 1)[1234.5, , 2345.6]");
     }
 
     #[test]
     fn display_interval_days_ms() {
-        let array =
-            Primitive::<days_ms>::from(&[Some(days_ms::new(1, 1)), None, Some(days_ms::new(2, 2))])
-                .to(DataType::Interval(IntervalUnit::DayTime));
+        let array = DaysMsArray::from(&[Some(days_ms::new(1, 1)), None, Some(days_ms::new(2, 2))]);
         assert_eq!(format!("{}", array), "Interval(DayTime)[1d1ms, , 2d2ms]");
     }
 }
