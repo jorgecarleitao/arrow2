@@ -26,7 +26,7 @@ use crate::{
 
 /// A trait representing an Arrow array. Arrow arrays are trait objects
 /// that are infalibly downcasted to concrete types according to the `Array::data_type`.
-pub trait Array: std::fmt::Debug + Send + Sync + ToFfi {
+pub trait Array: std::fmt::Debug + Send + Sync {
     fn as_any(&self) -> &dyn Any;
 
     /// The length of the [`Array`]. Every array has a length corresponding to the number of
@@ -355,8 +355,9 @@ pub use specification::{Index, Offset};
 pub use struct_::StructArray;
 pub use utf8::{Utf8Array, Utf8Primitive};
 
+pub(crate) use self::ffi::buffers_children;
 pub use self::ffi::FromFfi;
-use self::ffi::ToFfi;
+pub use self::ffi::ToFfi;
 
 /// A type definition [`PrimitiveArray`] for `i8`
 pub type Int8Array = PrimitiveArray<i8>;
