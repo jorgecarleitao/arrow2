@@ -46,6 +46,19 @@ impl<'a, T, I: Iterator<Item = T>> Iterator for ZipValidity<'a, T, I> {
     }
 }
 
+impl<'a, T, I: DoubleEndedIterator<Item = T>> DoubleEndedIterator for ZipValidity<'a, T, I> {
+    #[inline]
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if !self.has_validity {
+            self.values.next_back().map(Some)
+        } else {
+            let is_valid = self.validity_iter.next_back();
+            let value = self.values.next_back();
+            is_valid.map(|x| if x { value } else { None })
+        }
+    }
+}
+
 /// all arrays have known size.
 impl<'a, T, I: Iterator<Item = T>> std::iter::ExactSizeIterator for ZipValidity<'a, T, I> {}
 
@@ -62,15 +75,11 @@ pub fn zip_validity<T, I: Iterator<Item = T>>(
 
 #[cfg(test)]
 mod tests {
-    use std::iter::FromIterator;
-
-    use crate::bitmap::MutableBitmap;
-
     use super::*;
 
     #[test]
     fn basic() {
-        let a: Option<Bitmap> = MutableBitmap::from_iter(vec![true, false]).into();
+        let a = Some(Bitmap::from([true, false]));
         let values = vec![0, 1];
         let zip = zip_validity(values.into_iter(), &a);
 
@@ -80,9 +89,9 @@ mod tests {
 
     #[test]
     fn complete() {
-        let a: Option<Bitmap> =
-            MutableBitmap::from_iter(vec![true, false, true, false, true, false, true, false])
-                .into();
+        let a = Some(Bitmap::from([
+            true, false, true, false, true, false, true, false,
+        ]));
         let values = vec![0, 1, 2, 3, 4, 5, 6, 7];
         let zip = zip_validity(values.into_iter(), &a);
 
@@ -95,7 +104,7 @@ mod tests {
 
     #[test]
     fn slices() {
-        let a: Option<Bitmap> = MutableBitmap::from_iter(vec![true, false]).into();
+        let a = Some(Bitmap::from([true, false]));
         let offsets = vec![0, 2, 3];
         let values = vec![1, 2, 3];
         let iter = offsets.windows(2).map(|x| {
@@ -111,10 +120,9 @@ mod tests {
 
     #[test]
     fn byte() {
-        let a: Option<Bitmap> = MutableBitmap::from_iter(vec![
+        let a = Some(Bitmap::from([
             true, false, true, false, false, true, true, false, true,
-        ])
-        .into();
+        ]));
         let values = vec![0, 1, 2, 3, 4, 5, 6, 7, 8];
         let zip = zip_validity(values.into_iter(), &a);
 
@@ -137,12 +145,9 @@ mod tests {
 
     #[test]
     fn offset() {
-        let a: Bitmap = MutableBitmap::from_iter(vec![
-            true, false, true, false, false, true, true, false, true,
-        ])
-        .into();
+        let a = Bitmap::from([true, false, true, false, false, true, true, false, true]);
         let a = Some(a.slice(1, 8));
-        let values = vec![0, 1, 2, 3, 4, 5, 6, 7, 8];
+        let values = vec![0, 1, 2, 3, 4, 5, 6, 7];
         let zip = zip_validity(values.into_iter(), &a);
 
         let a = zip.collect::<Vec<_>>();
@@ -159,5 +164,20 @@ mod tests {
 
         let a = zip.collect::<Vec<_>>();
         assert_eq!(a, vec![Some(0), Some(1), Some(2)]);
+    }
+
+    #[test]
+    fn rev() {
+        let a = Bitmap::from([true, false, true, false, false, true, true, false, true]);
+        let a = Some(a.slice(1, 8));
+        let values = vec![0, 1, 2, 3, 4, 5, 6, 7];
+        let zip = zip_validity(values.into_iter(), &a);
+
+        let result = zip.rev().collect::<Vec<_>>();
+        let expected = vec![None, Some(1), None, None, Some(4), Some(5), None, Some(7)]
+            .into_iter()
+            .rev()
+            .collect::<Vec<_>>();
+        assert_eq!(result, expected);
     }
 }
