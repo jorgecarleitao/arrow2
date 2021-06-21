@@ -23,7 +23,7 @@ use std::{
 };
 
 use crate::{
-    array::Array,
+    array::{buffers_children, Array},
     bitmap::{utils::bytes_for, Bitmap},
     buffer::{
         bytes::{Bytes, Deallocation},
@@ -324,7 +324,8 @@ impl Ffi_ArrowArray {
     /// This method releases `buffers`. Consumers of this struct *must* call `release` before
     /// releasing this struct, or contents in `buffers` leak.
     fn new(array: Arc<dyn Array>) -> Self {
-        let buffers = array.buffers();
+        let (buffers, children) = buffers_children(array.as_ref());
+
         let buffers_ptr = buffers
             .iter()
             .map(|maybe_buffer| match maybe_buffer {
@@ -335,8 +336,7 @@ impl Ffi_ArrowArray {
             .collect::<Box<[_]>>();
         let n_buffers = buffers.len() as i64;
 
-        let children_ptr = array
-            .children()
+        let children_ptr = children
             .into_iter()
             .map(|child| Box::into_raw(Box::new(Ffi_ArrowArray::new(child))))
             .collect::<Box<_>>();
