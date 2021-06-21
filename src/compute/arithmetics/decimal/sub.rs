@@ -39,14 +39,14 @@ use super::{adjusted_precision_scale, max_value, number_digits};
 /// # Examples
 /// ```
 /// use arrow2::compute::arithmetics::decimal::sub::sub;
-/// use arrow2::array::Primitive;
+/// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
-/// let a = Primitive::from(&vec![Some(1i128), Some(1i128), None, Some(2i128)]).to(DataType::Decimal(5, 2));
-/// let b = Primitive::from(&vec![Some(1i128), Some(2i128), None, Some(2i128)]).to(DataType::Decimal(5, 2));
+/// let a = PrimitiveArray::from(&vec![Some(1i128), Some(1i128), None, Some(2i128)]).to(DataType::Decimal(5, 2));
+/// let b = PrimitiveArray::from(&vec![Some(1i128), Some(2i128), None, Some(2i128)]).to(DataType::Decimal(5, 2));
 ///
 /// let result = sub(&a, &b).unwrap();
-/// let expected = Primitive::from(&vec![Some(0i128), Some(-1i128), None, Some(0i128)]).to(DataType::Decimal(5, 2));
+/// let expected = PrimitiveArray::from(&vec![Some(0i128), Some(-1i128), None, Some(0i128)]).to(DataType::Decimal(5, 2));
 ///
 /// assert_eq!(result, expected);
 /// ```
@@ -92,14 +92,14 @@ pub fn sub(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<Pri
 /// # Examples
 /// ```
 /// use arrow2::compute::arithmetics::decimal::sub::saturating_sub;
-/// use arrow2::array::Primitive;
+/// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
-/// let a = Primitive::from(&vec![Some(-99000i128), Some(11100i128), None, Some(22200i128)]).to(DataType::Decimal(5, 2));
-/// let b = Primitive::from(&vec![Some(01000i128), Some(22200i128), None, Some(11100i128)]).to(DataType::Decimal(5, 2));
+/// let a = PrimitiveArray::from(&vec![Some(-99000i128), Some(11100i128), None, Some(22200i128)]).to(DataType::Decimal(5, 2));
+/// let b = PrimitiveArray::from(&vec![Some(01000i128), Some(22200i128), None, Some(11100i128)]).to(DataType::Decimal(5, 2));
 ///
 /// let result = saturating_sub(&a, &b).unwrap();
-/// let expected = Primitive::from(&vec![Some(-99999i128), Some(-11100i128), None, Some(11100i128)]).to(DataType::Decimal(5, 2));
+/// let expected = PrimitiveArray::from(&vec![Some(-99999i128), Some(-11100i128), None, Some(11100i128)]).to(DataType::Decimal(5, 2));
 ///
 /// assert_eq!(result, expected);
 /// ```
@@ -178,14 +178,14 @@ impl ArraySaturatingSub<PrimitiveArray<i128>> for PrimitiveArray<i128> {
 /// # Examples
 /// ```
 /// use arrow2::compute::arithmetics::decimal::sub::checked_sub;
-/// use arrow2::array::Primitive;
+/// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
-/// let a = Primitive::from(&vec![Some(-99000i128), Some(11100i128), None, Some(22200i128)]).to(DataType::Decimal(5, 2));
-/// let b = Primitive::from(&vec![Some(01000i128), Some(22200i128), None, Some(11100i128)]).to(DataType::Decimal(5, 2));
+/// let a = PrimitiveArray::from(&vec![Some(-99000i128), Some(11100i128), None, Some(22200i128)]).to(DataType::Decimal(5, 2));
+/// let b = PrimitiveArray::from(&vec![Some(01000i128), Some(22200i128), None, Some(11100i128)]).to(DataType::Decimal(5, 2));
 ///
 /// let result = checked_sub(&a, &b).unwrap();
-/// let expected = Primitive::from(&vec![None, Some(-11100i128), None, Some(11100i128)]).to(DataType::Decimal(5, 2));
+/// let expected = PrimitiveArray::from(&vec![None, Some(-11100i128), None, Some(11100i128)]).to(DataType::Decimal(5, 2));
 ///
 /// assert_eq!(result, expected);
 /// ```
@@ -237,13 +237,13 @@ pub fn checked_sub(
 /// # Examples
 /// ```
 /// use arrow2::compute::arithmetics::decimal::sub::adaptive_sub;
-/// use arrow2::array::Primitive;
+/// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
-/// let a = Primitive::from(&vec![Some(99_9999i128)]).to(DataType::Decimal(6, 4));
-/// let b = Primitive::from(&vec![Some(-00_0001i128)]).to(DataType::Decimal(6, 4));
+/// let a = PrimitiveArray::from(&vec![Some(99_9999i128)]).to(DataType::Decimal(6, 4));
+/// let b = PrimitiveArray::from(&vec![Some(-00_0001i128)]).to(DataType::Decimal(6, 4));
 /// let result = adaptive_sub(&a, &b).unwrap();
-/// let expected = Primitive::from(&vec![Some(100_0000i128)]).to(DataType::Decimal(7, 4));
+/// let expected = PrimitiveArray::from(&vec![Some(100_0000i128)]).to(DataType::Decimal(7, 4));
 ///
 /// assert_eq!(result, expected);
 /// ```
@@ -308,12 +308,12 @@ pub fn adaptive_sub(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::array::Primitive;
+    use crate::array::PrimitiveArray;
     use crate::datatypes::DataType;
 
     #[test]
     fn test_subtract_normal() {
-        let a = Primitive::from(&vec![
+        let a = PrimitiveArray::from(&vec![
             Some(11111i128),
             Some(22200i128),
             None,
@@ -321,7 +321,7 @@ mod tests {
         ])
         .to(DataType::Decimal(5, 2));
 
-        let b = Primitive::from(&vec![
+        let b = PrimitiveArray::from(&vec![
             Some(22222i128),
             Some(11100i128),
             None,
@@ -330,7 +330,7 @@ mod tests {
         .to(DataType::Decimal(5, 2));
 
         let result = sub(&a, &b).unwrap();
-        let expected = Primitive::from(&vec![
+        let expected = PrimitiveArray::from(&vec![
             Some(-11111i128),
             Some(11100i128),
             None,
@@ -347,8 +347,8 @@ mod tests {
 
     #[test]
     fn test_subtract_decimal_wrong_precision() {
-        let a = Primitive::from(&vec![None]).to(DataType::Decimal(5, 2));
-        let b = Primitive::from(&vec![None]).to(DataType::Decimal(6, 2));
+        let a = PrimitiveArray::from(&vec![None]).to(DataType::Decimal(5, 2));
+        let b = PrimitiveArray::from(&vec![None]).to(DataType::Decimal(6, 2));
         let result = sub(&a, &b);
 
         if result.is_ok() {
@@ -359,14 +359,14 @@ mod tests {
     #[test]
     #[should_panic(expected = "Overflow in subtract presented for precision 5")]
     fn test_subtract_panic() {
-        let a = Primitive::from(&vec![Some(-99999i128)]).to(DataType::Decimal(5, 2));
-        let b = Primitive::from(&vec![Some(1i128)]).to(DataType::Decimal(5, 2));
+        let a = PrimitiveArray::from(&vec![Some(-99999i128)]).to(DataType::Decimal(5, 2));
+        let b = PrimitiveArray::from(&vec![Some(1i128)]).to(DataType::Decimal(5, 2));
         let _ = sub(&a, &b);
     }
 
     #[test]
     fn test_subtract_saturating() {
-        let a = Primitive::from(&vec![
+        let a = PrimitiveArray::from(&vec![
             Some(11111i128),
             Some(22200i128),
             None,
@@ -374,7 +374,7 @@ mod tests {
         ])
         .to(DataType::Decimal(5, 2));
 
-        let b = Primitive::from(&vec![
+        let b = PrimitiveArray::from(&vec![
             Some(22222i128),
             Some(11100i128),
             None,
@@ -383,7 +383,7 @@ mod tests {
         .to(DataType::Decimal(5, 2));
 
         let result = saturating_sub(&a, &b).unwrap();
-        let expected = Primitive::from(&vec![
+        let expected = PrimitiveArray::from(&vec![
             Some(-11111i128),
             Some(11100i128),
             None,
@@ -400,14 +400,14 @@ mod tests {
 
     #[test]
     fn test_subtract_saturating_overflow() {
-        let a = Primitive::from(&vec![
+        let a = PrimitiveArray::from(&vec![
             Some(-99999i128),
             Some(-99999i128),
             Some(-99999i128),
             Some(99999i128),
         ])
         .to(DataType::Decimal(5, 2));
-        let b = Primitive::from(&vec![
+        let b = PrimitiveArray::from(&vec![
             Some(00001i128),
             Some(00100i128),
             Some(10000i128),
@@ -417,7 +417,7 @@ mod tests {
 
         let result = saturating_sub(&a, &b).unwrap();
 
-        let expected = Primitive::from(&vec![
+        let expected = PrimitiveArray::from(&vec![
             Some(-99999i128),
             Some(-99999i128),
             Some(-99999i128),
@@ -434,7 +434,7 @@ mod tests {
 
     #[test]
     fn test_subtract_checked() {
-        let a = Primitive::from(&vec![
+        let a = PrimitiveArray::from(&vec![
             Some(11111i128),
             Some(22200i128),
             None,
@@ -442,7 +442,7 @@ mod tests {
         ])
         .to(DataType::Decimal(5, 2));
 
-        let b = Primitive::from(&vec![
+        let b = PrimitiveArray::from(&vec![
             Some(22222i128),
             Some(11100i128),
             None,
@@ -451,7 +451,7 @@ mod tests {
         .to(DataType::Decimal(5, 2));
 
         let result = checked_sub(&a, &b).unwrap();
-        let expected = Primitive::from(&vec![
+        let expected = PrimitiveArray::from(&vec![
             Some(-11111i128),
             Some(11100i128),
             None,
@@ -468,10 +468,10 @@ mod tests {
 
     #[test]
     fn test_subtract_checked_overflow() {
-        let a = Primitive::from(&vec![Some(4i128), Some(-99999i128)]).to(DataType::Decimal(5, 2));
-        let b = Primitive::from(&vec![Some(2i128), Some(1i128)]).to(DataType::Decimal(5, 2));
+        let a = PrimitiveArray::from(&vec![Some(4i128), Some(-99999i128)]).to(DataType::Decimal(5, 2));
+        let b = PrimitiveArray::from(&vec![Some(2i128), Some(1i128)]).to(DataType::Decimal(5, 2));
         let result = checked_sub(&a, &b).unwrap();
-        let expected = Primitive::from(&vec![Some(2i128), None]).to(DataType::Decimal(5, 2));
+        let expected = PrimitiveArray::from(&vec![Some(2i128), None]).to(DataType::Decimal(5, 2));
         assert_eq!(result, expected);
     }
 
@@ -481,11 +481,11 @@ mod tests {
         //  11111.11   -> 7, 2
         // ------------------
         // -11099.9989 -> 9, 4
-        let a = Primitive::from(&vec![Some(11_1111i128)]).to(DataType::Decimal(6, 4));
-        let b = Primitive::from(&vec![Some(11111_11i128)]).to(DataType::Decimal(7, 2));
+        let a = PrimitiveArray::from(&vec![Some(11_1111i128)]).to(DataType::Decimal(6, 4));
+        let b = PrimitiveArray::from(&vec![Some(11111_11i128)]).to(DataType::Decimal(7, 2));
         let result = adaptive_sub(&a, &b).unwrap();
 
-        let expected = Primitive::from(&vec![Some(-11099_9989i128)]).to(DataType::Decimal(9, 4));
+        let expected = PrimitiveArray::from(&vec![Some(-11099_9989i128)]).to(DataType::Decimal(9, 4));
 
         assert_eq!(result, expected);
         assert_eq!(result.data_type(), &DataType::Decimal(9, 4));
@@ -494,11 +494,11 @@ mod tests {
         //     0.1111 -> 5, 4
         // -----------------
         // 11110.8889 -> 9, 4
-        let a = Primitive::from(&vec![Some(11111_0i128)]).to(DataType::Decimal(6, 1));
-        let b = Primitive::from(&vec![Some(1111i128)]).to(DataType::Decimal(5, 4));
+        let a = PrimitiveArray::from(&vec![Some(11111_0i128)]).to(DataType::Decimal(6, 1));
+        let b = PrimitiveArray::from(&vec![Some(1111i128)]).to(DataType::Decimal(5, 4));
         let result = adaptive_sub(&a, &b).unwrap();
 
-        let expected = Primitive::from(&vec![Some(11110_8889i128)]).to(DataType::Decimal(9, 4));
+        let expected = PrimitiveArray::from(&vec![Some(11110_8889i128)]).to(DataType::Decimal(9, 4));
 
         assert_eq!(result, expected);
         assert_eq!(result.data_type(), &DataType::Decimal(9, 4));
@@ -507,11 +507,11 @@ mod tests {
         //  11111.111  -> 8, 3
         // -----------------
         // -00000.001  -> 8, 3
-        let a = Primitive::from(&vec![Some(11111_11i128)]).to(DataType::Decimal(7, 2));
-        let b = Primitive::from(&vec![Some(11111_111i128)]).to(DataType::Decimal(8, 3));
+        let a = PrimitiveArray::from(&vec![Some(11111_11i128)]).to(DataType::Decimal(7, 2));
+        let b = PrimitiveArray::from(&vec![Some(11111_111i128)]).to(DataType::Decimal(8, 3));
         let result = adaptive_sub(&a, &b).unwrap();
 
-        let expected = Primitive::from(&vec![Some(-00000_001i128)]).to(DataType::Decimal(8, 3));
+        let expected = PrimitiveArray::from(&vec![Some(-00000_001i128)]).to(DataType::Decimal(8, 3));
 
         assert_eq!(result, expected);
         assert_eq!(result.data_type(), &DataType::Decimal(8, 3));
@@ -520,11 +520,11 @@ mod tests {
         // -00.0001 -> 6, 4
         // -----------------
         // 100.0000 -> 7, 4
-        let a = Primitive::from(&vec![Some(99_9999i128)]).to(DataType::Decimal(6, 4));
-        let b = Primitive::from(&vec![Some(-00_0001i128)]).to(DataType::Decimal(6, 4));
+        let a = PrimitiveArray::from(&vec![Some(99_9999i128)]).to(DataType::Decimal(6, 4));
+        let b = PrimitiveArray::from(&vec![Some(-00_0001i128)]).to(DataType::Decimal(6, 4));
         let result = adaptive_sub(&a, &b).unwrap();
 
-        let expected = Primitive::from(&vec![Some(100_0000i128)]).to(DataType::Decimal(7, 4));
+        let expected = PrimitiveArray::from(&vec![Some(100_0000i128)]).to(DataType::Decimal(7, 4));
 
         assert_eq!(result, expected);
         assert_eq!(result.data_type(), &DataType::Decimal(7, 4));

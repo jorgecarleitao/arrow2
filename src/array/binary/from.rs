@@ -1,15 +1,13 @@
-use std::{iter::FromIterator, sync::Arc};
+use std::iter::FromIterator;
 
 use crate::{
-    array::{Array, Builder, IntoArray, Offset, ToArray, TryFromIterator},
+    array::Offset,
     bitmap::{Bitmap, MutableBitmap},
     buffer::{Buffer, MutableBuffer},
-    datatypes::DataType,
-    error::{ArrowError, Result as ArrowResult},
     trusted_len::TrustedLen,
 };
 
-use super::BinaryArray;
+use super::{BinaryArray, MutableBinaryArray};
 
 impl<O: Offset> BinaryArray<O> {
     pub fn from_slice<T: AsRef<[u8]>, P: AsRef<[T]>>(slice: P) -> Self {
@@ -36,117 +34,10 @@ impl<O: Offset> BinaryArray<O> {
     }
 }
 
-/// auxiliary struct used to create a [`BinaryArray`] out of an iterator
-#[derive(Debug)]
-pub struct BinaryPrimitive<O: Offset> {
-    offsets: MutableBuffer<O>,
-    values: MutableBuffer<u8>,
-    validity: MutableBitmap,
-    // invariant: always equal to the last offset
-    length: O,
-}
-
-impl<O: Offset> BinaryPrimitive<O> {
-    /// Initializes a new [`BinaryPrimitive`] with a pre-allocated capacity of slots.
-    pub fn with_capacity(capacity: usize) -> Self {
-        Self::with_capacities(capacity, 0)
-    }
-
-    /// Initializes a new [`BinaryPrimitive`] with a pre-allocated capacity of slots and values.
-    pub fn with_capacities(capacity: usize, values: usize) -> Self {
-        let mut offsets = MutableBuffer::<O>::with_capacity(capacity + 1);
-        let length = O::default();
-        offsets.push(length);
-
-        Self {
-            offsets,
-            values: MutableBuffer::<u8>::with_capacity(values),
-            validity: MutableBitmap::with_capacity(capacity),
-            length,
-        }
-    }
-}
-
-impl<O: Offset, P: AsRef<[u8]>> FromIterator<Option<P>> for BinaryPrimitive<O> {
-    fn from_iter<I: IntoIterator<Item = Option<P>>>(iter: I) -> Self {
-        Self::try_from_iter(iter.into_iter().map(Ok)).unwrap()
-    }
-}
-
-impl<O: Offset, P> TryFromIterator<Option<P>> for BinaryPrimitive<O>
-where
-    P: AsRef<[u8]>,
-{
-    fn try_from_iter<I: IntoIterator<Item = ArrowResult<Option<P>>>>(iter: I) -> ArrowResult<Self> {
-        let iterator = iter.into_iter();
-        let (lower, _) = iterator.size_hint();
-        let mut primitive = Self::with_capacity(lower);
-        for item in iterator {
-            match item? {
-                Some(x) => primitive.try_push(Some(&x.as_ref()))?,
-                None => primitive.try_push(None)?,
-            }
-        }
-        Ok(primitive)
-    }
-}
-
-impl<O: Offset> Builder<&[u8]> for BinaryPrimitive<O> {
-    fn with_capacity(capacity: usize) -> Self {
-        Self::with_capacity(capacity)
-    }
-
-    #[inline]
-    fn try_push(&mut self, value: Option<&[u8]>) -> ArrowResult<()> {
-        match value {
-            Some(bytes) => {
-                let length =
-                    O::from_usize(bytes.len()).ok_or(ArrowError::DictionaryKeyOverflowError)?;
-                self.length += length;
-                self.offsets.push(self.length);
-                self.values.extend_from_slice(bytes);
-                self.validity.push(true);
-            }
-            None => {
-                self.offsets.push(self.length);
-                self.validity.push(false);
-            }
-        }
-        Ok(())
-    }
-
-    #[inline]
-    fn push(&mut self, value: Option<&[u8]>) {
-        self.try_push(value).unwrap()
-    }
-}
-
-impl<O: Offset> BinaryPrimitive<O> {
-    pub fn to(self) -> BinaryArray<O> {
-        BinaryArray::<O>::from_data(
-            self.offsets.into(),
-            self.values.into(),
-            self.validity.into(),
-        )
-    }
-}
-
-impl<O: Offset> ToArray for BinaryPrimitive<O> {
-    fn to_arc(self, _: &DataType) -> Arc<dyn Array> {
-        Arc::new(self.to())
-    }
-}
-
-impl<O: Offset> IntoArray for BinaryPrimitive<O> {
-    fn into_arc(self) -> Arc<dyn Array> {
-        Arc::new(self.to())
-    }
-}
-
 impl<O: Offset, P: AsRef<[u8]>> FromIterator<Option<P>> for BinaryArray<O> {
     #[inline]
     fn from_iter<I: IntoIterator<Item = Option<P>>>(iter: I) -> Self {
-        BinaryPrimitive::from_iter(iter).to()
+        MutableBinaryArray::from_iter(iter).into()
     }
 }
 
@@ -201,6 +92,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::array::Array;
+
     use super::*;
 
     #[test]

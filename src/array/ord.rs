@@ -126,12 +126,12 @@ macro_rules! dyn_dict {
 /// between two [`Array`].
 /// # Example
 /// ```
-/// use arrow2::array::{ord::build_compare, Primitive};
+/// use arrow2::array::{ord::build_compare, PrimitiveArray};
 /// use arrow2::datatypes::DataType;
 ///
 /// # fn main() -> arrow2::error::Result<()> {
-/// let array1 = Primitive::from_slice(&[1, 2]).to(DataType::Int32);
-/// let array2 = Primitive::from_slice(&[3, 4]).to(DataType::Int32);
+/// let array1 = PrimitiveArray::from_slice(&[1, 2]).to(DataType::Int32);
+/// let array2 = PrimitiveArray::from_slice(&[3, 4]).to(DataType::Int32);
 ///
 /// let cmp = build_compare(&array1, &array2)?;
 ///
@@ -218,7 +218,7 @@ pub mod tests {
 
     #[test]
     fn test_i32() -> Result<()> {
-        let array = Primitive::from_slice(vec![1, 2]).to(DataType::Int32);
+        let array = Int32Array::from_slice(&[1, 2]);
 
         let cmp = build_compare(&array, &array)?;
 
@@ -228,8 +228,8 @@ pub mod tests {
 
     #[test]
     fn test_i32_i32() -> Result<()> {
-        let array1 = Primitive::from_slice(&vec![1]).to(DataType::Int32);
-        let array2 = Primitive::from_slice(&vec![2]).to(DataType::Int32);
+        let array1 = Int32Array::from_slice(&[1]);
+        let array2 = Int32Array::from_slice(&[2]);
 
         let cmp = build_compare(&array1, &array2)?;
 
@@ -249,7 +249,7 @@ pub mod tests {
 
     #[test]
     fn test_f64() -> Result<()> {
-        let array = Primitive::from_slice(&vec![1.0, 2.0]).to(DataType::Float64);
+        let array = Float64Array::from_slice(&[1.0, 2.0]);
 
         let cmp = build_compare(&array, &array)?;
 
@@ -259,7 +259,7 @@ pub mod tests {
 
     #[test]
     fn test_f64_nan() -> Result<()> {
-        let array = Primitive::from_slice(vec![1.0, f64::NAN]).to(DataType::Float64);
+        let array = Float64Array::from_slice(&[1.0, f64::NAN]);
 
         let cmp = build_compare(&array, &array)?;
 
@@ -269,7 +269,7 @@ pub mod tests {
 
     #[test]
     fn test_f64_zeros() -> Result<()> {
-        let array = Primitive::from_slice(vec![-0.0, 0.0]).to(DataType::Float64);
+        let array = Float64Array::from_slice(&[-0.0, 0.0]);
 
         let cmp = build_compare(&array, &array)?;
 
@@ -283,12 +283,10 @@ pub mod tests {
     fn test_dict() -> Result<()> {
         let data = vec!["a", "b", "c", "a", "a", "c", "c"];
 
-        let data = data.into_iter().map(|x| Result::Ok(Some(x)));
-        let array = DictionaryPrimitive::<i32, Utf8Primitive<i32>, &str>::try_from_iter(data)?;
-        let array = array.to(DataType::Dictionary(
-            Box::new(DataType::Int32),
-            Box::new(DataType::Utf8),
-        ));
+        let data = data.into_iter().map(Some);
+        let mut array = MutableDictionaryArray::<i32, MutableUtf8Array<i32>>::new();
+        array.try_extend(data)?;
+        let array: DictionaryArray<i32> = array.into();
 
         let cmp = build_compare(&array, &array)?;
 
@@ -302,14 +300,13 @@ pub mod tests {
     fn test_dict_1() -> Result<()> {
         let data = vec![1, 2, 3, 1, 1, 3, 3];
 
-        let data = data.into_iter().map(|x| Result::Ok(Some(x)));
-        let array = DictionaryPrimitive::<i32, Primitive<i32>, i32>::try_from_iter(data)?;
-        let array = array.to(DataType::Dictionary(
-            Box::new(DataType::Int32),
-            Box::new(DataType::Int32),
-        ));
+        let data = data.into_iter().map(Some);
 
-        let cmp = build_compare(&array, &array)?;
+        let mut array = MutableDictionaryArray::<i32, MutablePrimitiveArray<i32>>::new();
+        array.try_extend(data)?;
+        let array = array.into_arc();
+
+        let cmp = build_compare(array.as_ref(), array.as_ref())?;
 
         assert_eq!(Ordering::Less, (cmp)(0, 1));
         assert_eq!(Ordering::Equal, (cmp)(3, 4));

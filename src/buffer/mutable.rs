@@ -41,6 +41,12 @@ pub struct MutableBuffer<T: NativeType> {
     capacity: usize,
 }
 
+impl<T: NativeType> PartialEq for MutableBuffer<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_slice() == other.as_slice()
+    }
+}
+
 impl<T: NativeType> MutableBuffer<T> {
     /// Creates an empty [`MutableBuffer`]. This does not allocate in the heap.
     #[inline]

@@ -96,69 +96,69 @@ impl<'a, T: NativeType> From<GrowablePrimitive<'a, T>> for PrimitiveArray<T> {
 mod tests {
     use super::*;
 
-    use crate::array::Primitive;
+    use crate::array::PrimitiveArray;
     use crate::datatypes::DataType;
 
     /// tests extending from a primitive array w/ offset nor nulls
     #[test]
     fn test_primitive() {
-        let b = Primitive::<u8>::from(vec![Some(1), Some(2), Some(3)]).to(DataType::UInt8);
+        let b = PrimitiveArray::<u8>::from(vec![Some(1), Some(2), Some(3)]).to(DataType::UInt8);
         let mut a = GrowablePrimitive::new(&[&b], false, 3);
         a.extend(0, 0, 2);
         let result: PrimitiveArray<u8> = a.into();
-        let expected = Primitive::<u8>::from(vec![Some(1), Some(2)]).to(DataType::UInt8);
+        let expected = PrimitiveArray::<u8>::from(vec![Some(1), Some(2)]).to(DataType::UInt8);
         assert_eq!(result, expected);
     }
 
     /// tests extending from a primitive array with offset w/ nulls
     #[test]
     fn test_primitive_offset() {
-        let b = Primitive::<u8>::from(vec![Some(1), Some(2), Some(3)]).to(DataType::UInt8);
+        let b = PrimitiveArray::<u8>::from(vec![Some(1), Some(2), Some(3)]).to(DataType::UInt8);
         let b = b.slice(1, 2);
         let mut a = GrowablePrimitive::new(&[&b], false, 2);
         a.extend(0, 0, 2);
         let result: PrimitiveArray<u8> = a.into();
-        let expected = Primitive::<u8>::from(vec![Some(2), Some(3)]).to(DataType::UInt8);
+        let expected = PrimitiveArray::<u8>::from(vec![Some(2), Some(3)]).to(DataType::UInt8);
         assert_eq!(result, expected);
     }
 
     /// tests extending from a primitive array with offset and nulls
     #[test]
     fn test_primitive_null_offset() {
-        let b = Primitive::<u8>::from(vec![Some(1), None, Some(3)]).to(DataType::UInt8);
+        let b = PrimitiveArray::<u8>::from(vec![Some(1), None, Some(3)]).to(DataType::UInt8);
         let b = b.slice(1, 2);
         let mut a = GrowablePrimitive::new(&[&b], false, 2);
         a.extend(0, 0, 2);
         let result: PrimitiveArray<u8> = a.into();
-        let expected = Primitive::<u8>::from(vec![None, Some(3)]).to(DataType::UInt8);
+        let expected = PrimitiveArray::<u8>::from(vec![None, Some(3)]).to(DataType::UInt8);
         assert_eq!(result, expected);
     }
 
     #[test]
     fn test_primitive_null_offset_validity() {
-        let b = Primitive::<u8>::from(vec![Some(1), Some(2), Some(3)]).to(DataType::UInt8);
+        let b = PrimitiveArray::<u8>::from(vec![Some(1), Some(2), Some(3)]).to(DataType::UInt8);
         let b = b.slice(1, 2);
         let mut a = GrowablePrimitive::new(&[&b], true, 2);
         a.extend(0, 0, 2);
         a.extend_validity(3);
         a.extend(0, 1, 1);
         let result: PrimitiveArray<u8> = a.into();
-        let expected = Primitive::<u8>::from(vec![Some(2), Some(3), None, None, None, Some(3)])
+        let expected = PrimitiveArray::<u8>::from(vec![Some(2), Some(3), None, None, None, Some(3)])
             .to(DataType::UInt8);
         assert_eq!(result, expected);
     }
 
     #[test]
     fn test_primitive_joining_arrays() {
-        let b = Primitive::<u8>::from(vec![Some(1), Some(2), Some(3)]).to(DataType::UInt8);
-        let c = Primitive::<u8>::from(vec![Some(4), Some(5), Some(6)]).to(DataType::UInt8);
+        let b = PrimitiveArray::<u8>::from(vec![Some(1), Some(2), Some(3)]).to(DataType::UInt8);
+        let c = PrimitiveArray::<u8>::from(vec![Some(4), Some(5), Some(6)]).to(DataType::UInt8);
         let mut a = GrowablePrimitive::new(&[&b, &c], false, 4);
         a.extend(0, 0, 2);
         a.extend(1, 1, 2);
         let result: PrimitiveArray<u8> = a.into();
 
         let expected =
-            Primitive::<u8>::from(vec![Some(1), Some(2), Some(5), Some(6)]).to(DataType::UInt8);
+            PrimitiveArray::<u8>::from(vec![Some(1), Some(2), Some(5), Some(6)]).to(DataType::UInt8);
         assert_eq!(result, expected);
     }
 }

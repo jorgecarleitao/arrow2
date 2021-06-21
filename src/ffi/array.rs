@@ -81,7 +81,7 @@ pub fn try_from<A: ArrowArrayRef>(array: A) -> Result<Box<dyn Array>> {
 mod tests {
     use super::*;
     use crate::array::*;
-    use crate::{datatypes::DataType, error::Result, ffi};
+    use crate::{error::Result, ffi};
     use std::sync::Arc;
 
     fn test_release(expected: impl Array + 'static) -> Result<()> {
@@ -161,11 +161,11 @@ mod tests {
             Some(vec![Some(4), None, Some(6)]),
         ];
 
-        let data: ListArray<i32> = data
-            .into_iter()
-            .collect::<ListPrimitive<i32, Primitive<i32>, i32>>()
-            .to(ListArray::<i32>::default_datatype(DataType::Int32));
-        //test_release(data)
-        test_round_trip(data)
+        let mut array = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new();
+        array.try_extend(data)?;
+
+        let array: ListArray<i32> = array.into();
+
+        test_round_trip(array)
     }
 }

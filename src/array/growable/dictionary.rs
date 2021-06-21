@@ -145,14 +145,14 @@ mod tests {
     fn test_single() -> Result<()> {
         let original_data = vec![Some("a"), Some("b"), Some("a")];
 
-        let data = original_data.clone().into_iter().map(Result::Ok);
-        let array = DictionaryPrimitive::<i32, Utf8Primitive<i32>, &str>::try_from_iter(data)?.to(
-            DataType::Dictionary(Box::new(DataType::Int32), Box::new(DataType::Utf8)),
-        );
+        let data = original_data.clone();
+        let mut array = MutableDictionaryArray::<i32, MutableUtf8Array<i32>>::new();
+        array.try_extend(data)?;
+        let array = array.into();
 
         // same values, less keys
         let expected = DictionaryArray::<i32>::from_data(
-            Primitive::from(vec![Some(1), Some(0)]).to(DataType::Int32),
+            PrimitiveArray::from(vec![Some(1), Some(0)]).to(DataType::Int32),
             Arc::new(Utf8Array::<i32>::from(&original_data)),
         );
 
@@ -171,21 +171,21 @@ mod tests {
         let mut original_data1 = vec![Some("a"), Some("b"), None, Some("a")];
         let original_data2 = vec![Some("c"), Some("b"), None, Some("a")];
 
-        let data1 = original_data1.clone().into_iter().map(Result::Ok);
-        let data2 = original_data2.clone().into_iter().map(Result::Ok);
-        let array1 =
-            DictionaryPrimitive::<i32, Utf8Primitive<i32>, &str>::try_from_iter(data1)?.to(
-                DataType::Dictionary(Box::new(DataType::Int32), Box::new(DataType::Utf8)),
-            );
-        let array2 =
-            DictionaryPrimitive::<i32, Utf8Primitive<i32>, &str>::try_from_iter(data2)?.to(
-                DataType::Dictionary(Box::new(DataType::Int32), Box::new(DataType::Utf8)),
-            );
+        let data1 = original_data1.clone();
+        let data2 = original_data2.clone();
+
+        let mut array1 = MutableDictionaryArray::<i32, MutableUtf8Array<i32>>::new();
+        array1.try_extend(data1)?;
+        let array1: DictionaryArray<i32> = array1.into();
+
+        let mut array2 = MutableDictionaryArray::<i32, MutableUtf8Array<i32>>::new();
+        array2.try_extend(data2)?;
+        let array2: DictionaryArray<i32> = array2.into();
 
         // same values, less keys
         original_data1.extend(original_data2.iter().cloned());
         let expected = DictionaryArray::<i32>::from_data(
-            Primitive::from(vec![Some(1), None, Some(3), None]).to(DataType::Int32),
+            PrimitiveArray::from(vec![Some(1), None, Some(3), None]).to(DataType::Int32),
             Arc::new(Utf8Array::<i32>::from_slice(&["a", "b", "c", "b", "a"])),
         );
 

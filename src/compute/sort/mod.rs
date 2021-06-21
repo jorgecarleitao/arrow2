@@ -518,8 +518,8 @@ mod tests {
     ) where
         T: NativeType,
     {
-        let input = Primitive::<T>::from(data).to(data_type.clone());
-        let expected = Primitive::<T>::from(expected_data).to(data_type);
+        let input = PrimitiveArray::<T>::from(data).to(data_type.clone());
+        let expected = PrimitiveArray::<T>::from(expected_data).to(data_type);
         let output = sort(&input, &options).unwrap();
         assert_eq!(expected, output.as_ref())
     }
@@ -551,24 +551,16 @@ mod tests {
         options: SortOptions,
         expected_data: &[Option<&str>],
     ) {
-        let input = data.iter().map(|x| Result::Ok(*x));
-        let input =
-            DictionaryPrimitive::<i32, Utf8Primitive<i32>, &str>::try_from_iter(input).unwrap();
-        let input = input.to(DataType::Dictionary(
-            Box::new(DataType::Int32),
-            Box::new(DataType::Utf8),
-        ));
+        let mut input = MutableDictionaryArray::<i32, MutableUtf8Array<i32>>::new();
+        input.try_extend(data.iter().copied()).unwrap();
+        let input = input.into_arc();
 
-        let expected = expected_data.iter().map(|x| Result::Ok(*x));
-        let expected =
-            DictionaryPrimitive::<i32, Utf8Primitive<i32>, &str>::try_from_iter(expected).unwrap();
-        let expected = expected.to(DataType::Dictionary(
-            Box::new(DataType::Int32),
-            Box::new(DataType::Utf8),
-        ));
+        let mut expected = MutableDictionaryArray::<i32, MutableUtf8Array<i32>>::new();
+        expected.try_extend(expected_data.iter().copied()).unwrap();
+        let expected = expected.into_arc();
 
-        let output = sort(&input, &options).unwrap();
-        assert_eq!(expected, output.as_ref())
+        let output = sort(input.as_ref(), &options).unwrap();
+        assert_eq!(expected.as_ref(), output.as_ref())
     }
 
     /*

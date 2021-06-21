@@ -25,13 +25,13 @@ use super::DataType;
 /// [Arrow specification](https://arrow.apache.org/docs/cpp/api/datatype.html)
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Field {
-    pub(super) name: String,
-    pub(super) data_type: DataType,
-    pub(super) nullable: bool,
-    pub(super) dict_id: i64,
-    pub(super) dict_is_ordered: bool,
+    pub name: String,
+    pub data_type: DataType,
+    pub nullable: bool,
+    pub dict_id: i64,
+    pub dict_is_ordered: bool,
     /// A map of key-value pairs containing additional custom meta data.
-    pub(super) metadata: Option<BTreeMap<String, String>>,
+    pub metadata: Option<BTreeMap<String, String>>,
 }
 
 impl Field {

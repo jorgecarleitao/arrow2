@@ -802,9 +802,9 @@ mod tests {
             None,
         ];
 
-        let iter = values.into_iter().map(Result::Ok);
-        let expected = DictionaryPrimitive::<i16, Utf8Primitive<i32>, _>::try_from_iter(iter)?;
-        let expected = expected.to(data_type);
+        let mut expected = MutableDictionaryArray::<i16, MutableUtf8Array<i32>>::new();
+        expected.try_extend(values)?;
+        let expected: DictionaryArray<i16> = expected.into();
 
         assert_eq!(expected, result.as_ref());
         Ok(())
@@ -883,9 +883,12 @@ mod tests {
             Some(vec![Some("Send Data")]),
         ];
 
-        let iter = expected.into_iter().map(Result::Ok);
-        let expected = ListPrimitive::<i32, DictionaryPrimitive<u64, Utf8Primitive<i32>, _>, _>::try_from_iter(iter)?;
-        let expected = expected.to(data_type);
+        type A = MutableDictionaryArray<u64, MutableUtf8Array<i32>>;
+
+        let mut array = MutableListArray::<i32, A>::new();
+        array.try_extend(expected)?;
+
+        let expected: ListArray<i32> = array.into();
 
         assert_eq!(expected, batch.column(0).as_ref());
         Ok(())

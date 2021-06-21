@@ -13,7 +13,7 @@ macro_rules! key_cast {
         // Failure to cast keys (because they don't fit in the
         // target type) results in NULL values;
         if cast_keys.null_count() > $keys.null_count() {
-            return Err(ArrowError::DictionaryKeyOverflowError);
+            return Err(ArrowError::KeyOverflowError);
         }
         Ok(Box::new(DictionaryArray::<$to_type>::from_data(
             cast_keys, $values,
@@ -54,7 +54,7 @@ where
     let casted_keys = primitive_to_primitive::<K1, K2>(keys, &K2::DATA_TYPE);
 
     if casted_keys.null_count() > keys.null_count() {
-        Err(ArrowError::DictionaryKeyOverflowError)
+        Err(ArrowError::KeyOverflowError)
     } else {
         Ok(DictionaryArray::from_data(casted_keys, values.clone()))
     }

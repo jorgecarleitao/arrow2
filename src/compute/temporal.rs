@@ -209,7 +209,7 @@ mod tests {
 
     #[test]
     fn date64_hour() {
-        let array = Primitive::<i64>::from(&[Some(1514764800000), None, Some(1550636625000)])
+        let array = Int64Array::from(&[Some(1514764800000), None, Some(1550636625000)])
             .to(DataType::Date64);
 
         let result = hour(&array).unwrap();
@@ -219,7 +219,7 @@ mod tests {
 
     #[test]
     fn date32_hour() {
-        let array = Primitive::<i32>::from(&[Some(15147), None, Some(15148)]).to(DataType::Date32);
+        let array = Int32Array::from(&[Some(15147), None, Some(15148)]).to(DataType::Date32);
 
         let result = hour(&array).unwrap();
         let expected = UInt32Array::from(&[Some(0), None, Some(0)]);
@@ -228,8 +228,7 @@ mod tests {
 
     #[test]
     fn time32_second_hour() {
-        let array =
-            Primitive::<i32>::from(&[Some(37800), None]).to(DataType::Time32(TimeUnit::Second));
+        let array = Int32Array::from(&[Some(37800), None]).to(DataType::Time32(TimeUnit::Second));
 
         let result = hour(&array).unwrap();
         let expected = UInt32Array::from(&[Some(10), None]);
@@ -238,7 +237,7 @@ mod tests {
 
     #[test]
     fn time64_micro_hour() {
-        let array = Primitive::<i64>::from(&[Some(37800000000), None])
+        let array = Int64Array::from(&[Some(37800000000), None])
             .to(DataType::Time64(TimeUnit::Microsecond));
 
         let result = hour(&array).unwrap();
@@ -248,7 +247,7 @@ mod tests {
 
     #[test]
     fn timestamp_micro_hour() {
-        let array = Primitive::<i64>::from(&[Some(37800000000), None])
+        let array = Int64Array::from(&[Some(37800000000), None])
             .to(DataType::Timestamp(TimeUnit::Microsecond, None));
 
         let result = hour(&array).unwrap();
@@ -258,7 +257,7 @@ mod tests {
 
     #[test]
     fn timestamp_date64_year() {
-        let array = Primitive::<i64>::from(&[Some(1514764800000), None]).to(DataType::Date64);
+        let array = Int64Array::from(&[Some(1514764800000), None]).to(DataType::Date64);
 
         let result = year(&array).unwrap();
         let expected = Int32Array::from(&[Some(2018), None]);
@@ -267,7 +266,7 @@ mod tests {
 
     #[test]
     fn timestamp_date32_year() {
-        let array = Primitive::<i32>::from(&[Some(15147), None]).to(DataType::Date32);
+        let array = Int32Array::from(&[Some(15147), None]).to(DataType::Date32);
 
         let result = year(&array).unwrap();
         let expected = Int32Array::from(&[Some(2011), None]);
@@ -276,7 +275,7 @@ mod tests {
 
     #[test]
     fn timestamp_micro_year() {
-        let array = Primitive::<i64>::from(&[Some(1612025847000000), None])
+        let array = Int64Array::from(&[Some(1612025847000000), None])
             .to(DataType::Timestamp(TimeUnit::Microsecond, None));
 
         let result = year(&array).unwrap();

@@ -23,10 +23,11 @@ use indexmap::map::IndexMap as HashMap;
 use num::NumCast;
 use serde_json::Value;
 
+use crate::types::NaturalDataType;
 use crate::{
     array::{
         Array, BooleanArray, DictionaryArray, DictionaryKey, ListArray, NullArray, Offset,
-        Primitive, PrimitiveArray, StructArray, Utf8Array,
+        PrimitiveArray, StructArray, Utf8Array,
     },
     bitmap::MutableBitmap,
     buffer::MutableBuffer,
@@ -77,7 +78,7 @@ fn build_extract(data_type: &DataType) -> Extract {
     }
 }
 
-fn read_primitive<T: NativeType + NumCast>(
+fn read_primitive<T: NativeType + NaturalDataType + NumCast>(
     rows: &[&Value],
     data_type: DataType,
 ) -> PrimitiveArray<T> {
@@ -86,7 +87,7 @@ fn read_primitive<T: NativeType + NumCast>(
         Value::Bool(number) => num::cast::cast::<i32, T>(*number as i32),
         _ => None,
     });
-    Primitive::from_trusted_len_iter(iter).to(data_type)
+    PrimitiveArray::from_trusted_len_iter(iter).to(data_type)
 }
 
 fn read_boolean(rows: &[&Value]) -> BooleanArray {
@@ -197,7 +198,7 @@ fn read_dictionary<K: DictionaryKey>(rows: &[&Value], data_type: DataType) -> Di
             },
             None => None,
         })
-        .collect::<Primitive<K>>()
+        .collect::<PrimitiveArray<K>>()
         .to(K::DATA_TYPE);
 
     let values = read(&inner, child.clone());

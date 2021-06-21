@@ -63,7 +63,7 @@ where
                 *last |= if op(lhs, rhs) { 1 << i } else { 0 };
             });
     };
-    (values, lhs.len()).into()
+    MutableBitmap::from_buffer(values, lhs.len())
 }
 
 /// Evaluate `op(lhs, rhs)` for [`PrimitiveArray`]s using a specified
@@ -259,7 +259,6 @@ pub fn compare_scalar<T: NativeType + std::cmp::PartialOrd>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::datatypes::DataType;
 
     /// Evaluate `KERNEL` with two vectors as inputs and assert against the expected output.
     /// `A_VEC` and `B_VEC` can be of type `Vec<i64>` or `Vec<Option<i64>>`.
@@ -557,15 +556,9 @@ mod tests {
 
     #[test]
     fn test_primitive_array_compare_slice() {
-        let a = (0..100)
-            .map(Some)
-            .collect::<Primitive<i32>>()
-            .to(DataType::Int32);
+        let a = (0..100).map(Some).collect::<PrimitiveArray<i32>>();
         let a = a.slice(50, 50);
-        let b = (100..200)
-            .map(Some)
-            .collect::<Primitive<i32>>()
-            .to(DataType::Int32);
+        let b = (100..200).map(Some).collect::<PrimitiveArray<i32>>();
         let b = b.slice(50, 50);
         let actual = lt(&a, &b).unwrap();
         let expected: BooleanArray = (0..50).map(|_| Some(true)).collect();
@@ -574,10 +567,7 @@ mod tests {
 
     #[test]
     fn test_primitive_array_compare_scalar_slice() {
-        let a = (0..100)
-            .map(Some)
-            .collect::<Primitive<i32>>()
-            .to(DataType::Int32);
+        let a = (0..100).map(Some).collect::<PrimitiveArray<i32>>();
         let a = a.slice(50, 50);
         let actual = lt_scalar(&a, 200).unwrap();
         let expected: BooleanArray = (0..50).map(|_| Some(true)).collect();

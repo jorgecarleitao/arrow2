@@ -28,7 +28,7 @@ use pyo3::{libc::uintptr_t, prelude::*};
 
 use arrow2::array::{Array, Int64Array};
 use arrow2::ffi;
-use arrow2::{array::Primitive, compute};
+use arrow2::{array::PrimitiveArray, compute};
 use arrow2::{datatypes::DataType, error::ArrowError};
 
 type ArrayRef = Arc<dyn Array>;
@@ -124,9 +124,10 @@ fn double(array: PyObject, py: Python) -> PyResult<PyObject> {
 #[pyfunction]
 fn double_py(lambda: PyObject, py: Python) -> PyResult<bool> {
     // create
-    let array = Arc::new(Primitive::<i64>::from(vec![Some(1), None, Some(3)]).to(DataType::Int64));
+    let array =
+        Arc::new(PrimitiveArray::<i64>::from(vec![Some(1), None, Some(3)]).to(DataType::Int64));
     let expected =
-        Arc::new(Primitive::<i64>::from(vec![Some(2), None, Some(6)]).to(DataType::Int64))
+        Arc::new(PrimitiveArray::<i64>::from(vec![Some(2), None, Some(6)]).to(DataType::Int64))
             as ArrayRef;
 
     // to py
@@ -184,7 +185,7 @@ fn round_trip(array: PyObject, py: Python) -> PyResult<PyObject> {
 fn import_primitive(array: PyObject, py: Python) -> PyResult<bool> {
     let array = to_rust(array, py)?;
     let expected =
-        Arc::new(Primitive::<i64>::from(vec![Some(2), None, Some(6)]).to(DataType::Int64))
+        Arc::new(PrimitiveArray::<i64>::from(vec![Some(2), None, Some(6)]).to(DataType::Int64))
             as ArrayRef;
 
     Ok(array == expected)
@@ -193,8 +194,9 @@ fn import_primitive(array: PyObject, py: Python) -> PyResult<bool> {
 /// Converts to rust and back to python
 #[pyfunction]
 fn export_primitive(py: Python) -> PyResult<PyObject> {
-    let array = Arc::new(Primitive::<i64>::from(vec![Some(2), None, Some(6)]).to(DataType::Int64))
-        as ArrayRef;
+    let array =
+        Arc::new(PrimitiveArray::<i64>::from(vec![Some(2), None, Some(6)]).to(DataType::Int64))
+            as ArrayRef;
 
     let array = to_py(array, py)?;
 

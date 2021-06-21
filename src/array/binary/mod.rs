@@ -5,6 +5,13 @@ use super::{
     GenericBinaryArray,
 };
 
+mod ffi;
+mod iterator;
+pub use iterator::*;
+mod from;
+mod mutable;
+pub use mutable::*;
+
 #[derive(Debug, Clone)]
 pub struct BinaryArray<O: Offset> {
     data_type: DataType,
@@ -139,12 +146,6 @@ unsafe impl<O: Offset> GenericBinaryArray<O> for BinaryArray<O> {
         self.offsets()
     }
 }
-
-mod ffi;
-mod iterator;
-pub use iterator::*;
-mod from;
-pub use from::*;
 
 #[cfg(test)]
 mod tests {

@@ -19,7 +19,7 @@ pub enum ArrowError {
     Ipc(String),
     /// Error during import or export to/from a format
     ExternalFormat(String),
-    DictionaryKeyOverflowError,
+    KeyOverflowError,
     /// Error during arithmetic operation. Normally returned
     /// during checked operations
     ArithmeticError(String),
@@ -68,7 +68,7 @@ impl Display for ArrowError {
             ArrowError::ExternalFormat(desc) => {
                 write!(f, "External format error: {}", desc)
             }
-            ArrowError::DictionaryKeyOverflowError => {
+            ArrowError::KeyOverflowError => {
                 write!(f, "Dictionary key bigger than the key type")
             }
             ArrowError::ArithmeticError(desc) => {

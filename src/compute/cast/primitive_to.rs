@@ -71,7 +71,7 @@ where
     let iter = from
         .iter()
         .map(|v| v.and_then(|x| num::cast::cast::<I, O>(*x)));
-    Primitive::<O>::from_trusted_len_iter(iter).to(to_type.clone())
+    PrimitiveArray::<O>::from_trusted_len_iter(iter).to(to_type.clone())
 }
 
 /// Cast [`PrimitiveArray`] to a [`PrimitiveArray`] of the same physical type.
@@ -117,13 +117,13 @@ pub(super) fn primitive_to_dictionary_dyn<T: NativeType + Eq + Hash, K: Dictiona
 pub fn primitive_to_dictionary<T: NativeType + Eq + Hash, K: DictionaryKey>(
     from: &PrimitiveArray<T>,
 ) -> Result<DictionaryArray<K>> {
-    let iter = from.iter().map(|x| x.copied()).map(Result::Ok);
-    let primitive = DictionaryPrimitive::<K, Primitive<T>, _>::try_from_iter(iter)?;
+    let iter = from.iter().map(|x| x.copied());
+    let mut array = MutableDictionaryArray::<K, _>::from(MutablePrimitiveArray::<T>::from(
+        from.data_type().clone(),
+    ));
+    array.try_extend(iter)?;
 
-    Ok(primitive.to(DataType::Dictionary(
-        Box::new(K::DATA_TYPE),
-        Box::new(from.data_type().clone()),
-    )))
+    Ok(array.into())
 }
 
 /// Get the time unit as a multiple of a second
