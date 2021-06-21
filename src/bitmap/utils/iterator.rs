@@ -1,31 +1,34 @@
 use crate::trusted_len::TrustedLen;
 
+use super::get_bit_unchecked;
+
 /// An iterator over bits according to the [LSB](https://en.wikipedia.org/wiki/Bit_numbering#Least_significant_bit),
 /// i.e. the bytes `[4u8, 128u8]` correspond to `[false, false, true, false, ..., true]`.
 pub struct BitmapIter<'a> {
-    iter: std::slice::Iter<'a, u8>,
-    current_byte: &'a u8,
-    len: usize,
+    bytes: &'a [u8],
     index: usize,
-    mask: u8,
+    end: usize,
 }
 
 impl<'a> BitmapIter<'a> {
     #[inline]
     pub fn new(slice: &'a [u8], offset: usize, len: usize) -> Self {
+        // example:
+        // slice.len() = 4
+        // offset = 9
+        // len = 23
+        // result:
         let bytes = &slice[offset / 8..];
+        // bytes.len() = 3
+        let index = offset % 8;
+        // index = 9 % 8 = 1
+        let end = len + index;
+        // end = 23 + 1 = 24
+        assert!(end <= bytes.len() * 8);
+        // maximum read before UB in bits: bytes.len() * 8 = 24
+        // the first read from the end is `end - 1`, thus, end = 24 is ok
 
-        let mut iter = bytes.iter();
-
-        let current_byte = iter.next().unwrap_or(&0);
-
-        Self {
-            iter,
-            mask: 1u8.rotate_left(offset as u32),
-            len,
-            index: 0,
-            current_byte,
-        }
+        Self { bytes, index, end }
     }
 }
 
@@ -34,46 +37,31 @@ impl<'a> Iterator for BitmapIter<'a> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index == self.len {
+        if self.index == self.end {
             return None;
-        } else {
-            self.index += 1;
         }
-        let value = self.current_byte & self.mask != 0;
-        self.mask = self.mask.rotate_left(1);
-        if self.mask == 1 {
-            // reached a new byte => try to fetch it from the byte iterator
-            if let Some(next_byte) = self.iter.next() {
-                self.current_byte = next_byte
-            }
-            // no byte: we reached the end.
-        }
-        Some(value)
+        let old = self.index;
+        self.index += 1;
+        // See comment in `new`
+        Some(unsafe { get_bit_unchecked(self.bytes, old) })
     }
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.len - self.index, Some(self.len - self.index))
+        let exact = self.end - self.index;
+        (exact, Some(exact))
     }
+}
 
+impl<'a> DoubleEndedIterator for BitmapIter<'a> {
     #[inline]
-    fn nth(&mut self, n: usize) -> Option<Self::Item> {
-        let (end, overflow) = self.index.overflowing_add(n);
-        if end > self.len || overflow {
-            self.index = self.len;
+    fn next_back(&mut self) -> Option<bool> {
+        if self.index == self.end {
             None
         } else {
-            self.mask = self.mask.rotate_left((n % 8) as u32);
-
-            if (self.index % 8 + n) >= 8 {
-                // need to fetch the new byte.
-                // infalible because self.index + n < self.len;
-                self.current_byte = self.iter.nth((n / 8).saturating_sub(1)).unwrap();
-            };
-            let value = self.current_byte & self.mask != 0;
-            self.mask = self.mask.rotate_left(1);
-            self.index += n;
-            Some(value)
+            self.end -= 1;
+            // See comment in `new`; end was first decreased
+            Some(unsafe { get_bit_unchecked(self.bytes, self.end) })
         }
     }
 }
@@ -111,5 +99,19 @@ mod tests {
         let iter = BitmapIter::new(values, 2, 4);
         let result = iter.collect::<Vec<_>>();
         assert_eq!(result, vec![false, true, true, false])
+    }
+
+    #[test]
+    fn rev() {
+        let values = &[0b01011011u8, 0b01011011u8];
+        let iter = BitmapIter::new(values, 2, 13);
+        let result = iter.rev().collect::<Vec<_>>();
+        assert_eq!(
+            result,
+            vec![false, true, true, false, true, false, true, true, false, true, true, false, true]
+                .into_iter()
+                .rev()
+                .collect::<Vec<_>>()
+        )
     }
 }
