@@ -10,8 +10,7 @@ use super::{MutablePrimitiveArray, PrimitiveArray};
 
 impl<T: NativeType + NaturalDataType, P: AsRef<[Option<T>]>> From<P> for PrimitiveArray<T> {
     fn from(slice: P) -> Self {
-        MutablePrimitiveArray::<T>::from_trusted_len_iter(slice.as_ref().iter().map(|x| x.as_ref()))
-            .into()
+        MutablePrimitiveArray::<T>::from(slice).into()
     }
 }
 

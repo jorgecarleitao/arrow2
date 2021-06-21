@@ -63,7 +63,7 @@ where
                 *last |= if op(lhs, rhs) { 1 << i } else { 0 };
             });
     };
-    (values, lhs.len()).into()
+    MutableBitmap::from_buffer(values, lhs.len())
 }
 
 /// Evaluate `op(lhs, rhs)` for [`PrimitiveArray`]s using a specified

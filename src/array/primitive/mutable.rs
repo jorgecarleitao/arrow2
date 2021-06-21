@@ -12,7 +12,7 @@ use crate::{
 
 use super::PrimitiveArray;
 
-/// The mutable version of [`PrimitiveArray`].
+/// The mutable version of [`PrimitiveArray`]. See [`MutableArray`] for more details.
 #[derive(Debug)]
 pub struct MutablePrimitiveArray<T: NativeType> {
     data_type: DataType,
@@ -30,11 +30,19 @@ impl<T: NativeType> From<MutablePrimitiveArray<T>> for PrimitiveArray<T> {
     }
 }
 
+impl<T: NativeType + NaturalDataType, P: AsRef<[Option<T>]>> From<P> for MutablePrimitiveArray<T> {
+    fn from(slice: P) -> Self {
+        Self::from_trusted_len_iter(slice.as_ref().iter().map(|x| x.as_ref()))
+    }
+}
+
 impl<T: NativeType + NaturalDataType> MutablePrimitiveArray<T> {
+    /// Creates a new empty [`MutablePrimitiveArray`].
     pub fn new() -> Self {
         Self::with_capacity(0)
     }
 
+    /// Creates a new [`MutablePrimitiveArray`] with a capacity.
     pub fn with_capacity(capacity: usize) -> Self {
         Self::with_capacity_from(capacity, T::DATA_TYPE)
     }
@@ -46,8 +54,8 @@ impl<T: NativeType + NaturalDataType> Default for MutablePrimitiveArray<T> {
     }
 }
 
-impl<T: NativeType> MutablePrimitiveArray<T> {
-    pub fn new_from(data_type: DataType) -> Self {
+impl<T: NativeType> From<DataType> for MutablePrimitiveArray<T> {
+    fn from(data_type: DataType) -> Self {
         assert!(T::is_valid(&data_type));
         Self {
             data_type,
@@ -55,7 +63,10 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
             validity: None,
         }
     }
+}
 
+impl<T: NativeType> MutablePrimitiveArray<T> {
+    /// Creates a new [`MutablePrimitiveArray`] from a capacity and [`DataType`].
     pub fn with_capacity_from(capacity: usize, data_type: DataType) -> Self {
         assert!(T::is_valid(&data_type));
         Self {
@@ -65,6 +76,7 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
         }
     }
 
+    /// Reserves `additional` entries.
     pub fn reserve(&mut self, additional: usize) {
         self.values.reserve(additional);
         if let Some(x) = self.validity.as_mut() {
@@ -72,6 +84,7 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
         }
     }
 
+    /// Adds a new value to the array.
     pub fn push(&mut self, value: Option<T>) {
         match value {
             Some(value) => {
@@ -79,7 +92,7 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
                 match &mut self.validity {
                     Some(validity) => validity.push(true),
                     None => {
-                        self.set_validity();
+                        self.init_validity();
                     }
                 }
             }
@@ -93,7 +106,7 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
         }
     }
 
-    fn set_validity(&mut self) {
+    fn init_validity(&mut self) {
         self.validity = Some(MutableBitmap::from_trusted_len_iter(
             std::iter::repeat(false)
                 .take(self.len() - 1)
@@ -102,7 +115,7 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
     }
 
     /// Changes the arrays' [`DataType`], returning a new [`MutablePrimitiveArray`].
-    /// Use to cast the logical type without changing the corresponding physical Type.
+    /// Use to change the logical type without changing the corresponding physical Type.
     /// # Implementation
     /// This operation is `O(1)`.
     pub fn to(self, data_type: DataType) -> Self {
@@ -121,6 +134,54 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
     }
 }
 
+/// Accessors
+impl<T: NativeType> MutablePrimitiveArray<T> {
+    /// Returns its values.
+    pub fn values(&self) -> &MutableBuffer<T> {
+        &self.values
+    }
+
+    /// Mutable slice of values
+    pub fn values_mut_slice(&mut self) -> &mut [T] {
+        self.values.as_mut_slice()
+    }
+}
+
+/// Setters
+impl<T: NativeType> MutablePrimitiveArray<T> {
+    /// Sets position `index` to `value`.
+    /// Note that if it is the first time a null appears in this array,
+    /// this initializes the validity bitmap (`O(N)`).
+    /// # Panic
+    /// Panics iff index is larger than `self.len()`.
+    pub fn set(&mut self, index: usize, value: Option<T>) {
+        self.values[index] = value.unwrap_or_default();
+
+        if value.is_none() && self.validity.is_none() {
+            // When the validity is None, all elements so far are valid. When one of the elements is set fo null,
+            // the validity must be initialized.
+            self.validity = Some(MutableBitmap::from_trusted_len_iter(
+                std::iter::repeat(true).take(self.len()),
+            ));
+        }
+        if let Some(x) = self.validity.as_mut() {
+            x.set(index, value.is_some())
+        }
+    }
+
+    pub fn set_validity(&mut self, validity: Option<MutableBitmap>) {
+        if let Some(validity) = &validity {
+            assert_eq!(self.values.len(), validity.len())
+        }
+        self.validity = validity;
+    }
+
+    pub fn set_values(&mut self, values: MutableBuffer<T>) {
+        assert_eq!(values.len(), self.values.len());
+        self.values = values;
+    }
+}
+
 impl<T: NativeType> Extend<Option<T>> for MutablePrimitiveArray<T> {
     fn extend<I: IntoIterator<Item = Option<T>>>(&mut self, iter: I) {
         let iter = iter.into_iter();
@@ -130,6 +191,7 @@ impl<T: NativeType> Extend<Option<T>> for MutablePrimitiveArray<T> {
 }
 
 impl<T: NativeType> TryExtend<Option<T>> for MutablePrimitiveArray<T> {
+    /// This is infalible and is implemented for consistency with all other types
     fn try_extend<I: IntoIterator<Item = Option<T>>>(&mut self, iter: I) -> Result<()> {
         self.extend(iter);
         Ok(())
@@ -307,7 +369,7 @@ impl<T: NativeType + NaturalDataType, Ptr: std::borrow::Borrow<Option<T>>> FromI
     }
 }
 
-/// Creates a Bitmap and a [`Buffer`] from an iterator of `Option`.
+/// Creates a [`MutableBitmap`] and a [`MutableBuffer`] from an iterator of `Option`.
 /// The first buffer corresponds to a bitmap buffer, the second one
 /// corresponds to a values buffer.
 /// # Safety
@@ -390,19 +452,42 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::Result;
 
     #[test]
-    fn from_iter() -> Result<()> {
-        let a = MutablePrimitiveArray::<i32>::from_iter((0..2).map(Some));
+    fn push() {
+        let mut a = MutablePrimitiveArray::<i32>::new();
+        a.push(Some(1));
+        a.push(None);
         assert_eq!(a.len(), 2);
-        Ok(())
+        assert!(a.is_valid(0));
+        assert!(!a.is_valid(1));
+
+        assert_eq!(a.values(), &MutableBuffer::from([1, 0]));
     }
 
     #[test]
-    fn natural_arc() -> Result<()> {
+    fn set() {
+        let mut a = MutablePrimitiveArray::<i32>::from([Some(1), None]);
+
+        a.set(0, Some(2));
+        a.set(1, Some(1));
+
+        assert_eq!(a.len(), 2);
+        assert!(a.is_valid(0));
+        assert!(a.is_valid(1));
+
+        assert_eq!(a.values(), &MutableBuffer::from([2, 1]));
+    }
+
+    #[test]
+    fn from_iter() {
+        let a = MutablePrimitiveArray::<i32>::from_iter((0..2).map(Some));
+        assert_eq!(a.len(), 2);
+    }
+
+    #[test]
+    fn natural_arc() {
         let a = MutablePrimitiveArray::<i32>::from_slice(&[0, 1]).into_arc();
         assert_eq!(a.len(), 2);
-        Ok(())
     }
 }

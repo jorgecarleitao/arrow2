@@ -24,19 +24,45 @@ use crate::{
     datatypes::{DataType, IntervalUnit},
 };
 
-/// A trait describing an Array that is mutable; i.e. whose values can change.
-/// These arrays are not Send + Sync and cannot be cloned.
+/// A trait describing a mutable array; i.e. an array whose values can change.
+/// Mutable arrays are not `Send + Sync` and cannot be cloned but can be mutated in place,
+/// thereby making them useful to perform numeric operations without allocations.
+/// As in [`Array`], concrete arrays (such as `MutablePrimitiveArray`) implement how they are mutated.
 pub trait MutableArray: std::fmt::Debug {
+    /// The [`DataType`] of the array.
+    fn data_type(&self) -> &DataType;
+
+    /// The length of the array.
     fn len(&self) -> usize;
+
+    /// Whether the array is empty.
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
+    /// The optional validity of the array.
     fn validity(&self) -> &Option<MutableBitmap>;
+
+    /// Convert itself to an (imutable) [`Array`].
     fn as_arc(&mut self) -> Arc<dyn Array>;
-    fn data_type(&self) -> &DataType;
+
+    /// Convert to `Any`, to enable dynamic casting.
     fn as_any(&self) -> &dyn Any;
+
+    /// Convert to mutable `Any`, to enable dynamic casting.
     fn as_mut_any(&mut self) -> &mut dyn Any;
+
+    /// Adds a new null element to the array.
     fn push_null(&mut self);
+
+    /// Whether `index` is valid / set.
+    /// # Panic
+    /// Panics if `index >= self.len()`.
+    fn is_valid(&self, index: usize) -> bool {
+        self.validity()
+            .as_ref()
+            .map(|x| x.get(index))
+            .unwrap_or(true)
+    }
 }
 
 /// A trait representing an Arrow array. Arrow arrays are trait objects
@@ -374,6 +400,7 @@ pub use self::ffi::FromFfi;
 use self::ffi::ToFfi;
 
 /// A trait describing the ability of a struct to create itself from a iterator.
+/// This is similar to [`Extend`], but accepted the creation to error.
 pub trait TryExtend<A> {
     fn try_extend<I: IntoIterator<Item = A>>(&mut self, iter: I) -> Result<()>;
 }

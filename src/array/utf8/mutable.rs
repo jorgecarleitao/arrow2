@@ -10,7 +10,7 @@ use crate::{
 
 use super::Utf8Array;
 
-/// The mutable version of [`PrimitiveArray`].
+/// The mutable version of [`Utf8Array`]. See [`MutableArray`] for more details.
 #[derive(Debug)]
 pub struct MutableUtf8Array<O: Offset> {
     offsets: MutableBuffer<O>,
@@ -35,6 +35,7 @@ impl<O: Offset> Default for MutableUtf8Array<O> {
 }
 
 impl<O: Offset> MutableUtf8Array<O> {
+    /// Initializes a new empty [`MutableUtf8Array`].
     pub fn new() -> Self {
         let mut offsets = MutableBuffer::<O>::new();
         offsets.push(O::default());
@@ -62,11 +63,13 @@ impl<O: Offset> MutableUtf8Array<O> {
         }
     }
 
-    pub fn reserve(&mut self, additional: usize) {
+    /// Reserves `additional` elements and `additional_values` on the values buffer.
+    pub fn reserve(&mut self, additional: usize, additional_values: usize) {
         self.offsets.reserve(additional);
         if let Some(x) = self.validity.as_mut() {
             x.reserve(additional)
         }
+        self.values.reserve(additional_values);
     }
 
     #[inline]
@@ -74,6 +77,9 @@ impl<O: Offset> MutableUtf8Array<O> {
         *self.offsets.last().unwrap()
     }
 
+    /// Tries to push a new element to the array.
+    /// # Error
+    /// This operation errors iff the length of all values (in bytes) exceeds `O` maximum value.
     pub fn try_push<T: AsRef<str>>(&mut self, value: Option<T>) -> Result<()> {
         match value {
             Some(value) => {
@@ -102,6 +108,9 @@ impl<O: Offset> MutableUtf8Array<O> {
         Ok(())
     }
 
+    /// Pushes a new element to the array.
+    /// # Panic
+    /// This operation panics iff the length of all values (in bytes) exceeds `O` maximum value.
     pub fn push<T: AsRef<str>>(&mut self, value: Option<T>) {
         self.try_push(value).unwrap()
     }
@@ -112,6 +121,18 @@ impl<O: Offset> MutableUtf8Array<O> {
                 .take(self.len() - 1)
                 .chain(std::iter::once(true)),
         ))
+    }
+}
+
+impl<O: Offset> MutableUtf8Array<O> {
+    /// returns its values.
+    pub fn values(&self) -> &MutableBuffer<u8> {
+        &self.values
+    }
+
+    /// returns its offsets.
+    pub fn offsets(&self) -> &MutableBuffer<O> {
+        &self.offsets
     }
 }
 
@@ -160,6 +181,10 @@ impl<O: Offset, P: AsRef<str>> FromIterator<Option<P>> for MutableUtf8Array<O> {
 }
 
 impl<O: Offset> MutableUtf8Array<O> {
+    /// Creates a new [`MutableUtf8Array`] from an iterator.
+    /// # Error
+    /// This operation errors iff the total length in bytes on the iterator exceeds `O`'s maximum value.
+    /// (`i32::MAX` or `i64::MAX` respectively).
     fn try_from_iter<P: AsRef<str>, I: IntoIterator<Item = Option<P>>>(iter: I) -> Result<Self> {
         let iterator = iter.into_iter();
         let (lower, _) = iterator.size_hint();
@@ -180,7 +205,7 @@ impl<O: Offset, T: AsRef<str>> Extend<Option<T>> for MutableUtf8Array<O> {
 impl<O: Offset, T: AsRef<str>> TryExtend<Option<T>> for MutableUtf8Array<O> {
     fn try_extend<I: IntoIterator<Item = Option<T>>>(&mut self, iter: I) -> Result<()> {
         let mut iter = iter.into_iter();
-        self.reserve(iter.size_hint().0);
+        self.reserve(iter.size_hint().0, 0);
         iter.try_for_each(|x| self.try_push(x))
     }
 }

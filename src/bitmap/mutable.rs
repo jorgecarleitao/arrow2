@@ -2,7 +2,7 @@ use std::iter::FromIterator;
 
 use crate::{buffer::MutableBuffer, trusted_len::TrustedLen};
 
-use super::utils::{get_bit, null_count, set, set_bit};
+use super::utils::{get_bit, null_count, set, set_bit, BitmapIter};
 use super::Bitmap;
 
 /// A mutable container to store boolean values. This container is equivalent to [`Vec<bool>`], but
@@ -13,6 +13,12 @@ use super::Bitmap;
 pub struct MutableBitmap {
     buffer: MutableBuffer<u8>,
     length: usize,
+}
+
+impl PartialEq for MutableBitmap {
+    fn eq(&self, other: &Self) -> bool {
+        self.iter().eq(other.iter())
+    }
 }
 
 impl MutableBitmap {
@@ -139,10 +145,14 @@ impl MutableBitmap {
     }
 }
 
-impl From<(MutableBuffer<u8>, usize)> for MutableBitmap {
+impl MutableBitmap {
     #[inline]
-    fn from((buffer, length): (MutableBuffer<u8>, usize)) -> Self {
+    pub fn from_buffer(buffer: MutableBuffer<u8>, length: usize) -> Self {
         Self { buffer, length }
+    }
+
+    fn iter(&self) -> BitmapIter {
+        BitmapIter::new(&self.buffer, 0, self.len())
     }
 }
 
@@ -161,6 +171,13 @@ impl From<MutableBitmap> for Option<Bitmap> {
         } else {
             None
         }
+    }
+}
+
+impl<P: AsRef<[bool]>> From<P> for MutableBitmap {
+    #[inline]
+    fn from(slice: P) -> Self {
+        MutableBitmap::from_trusted_len_iter(slice.as_ref().iter().copied())
     }
 }
 
