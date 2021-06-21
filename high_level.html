@@ -146,15 +146,14 @@
                         <h1 id="high-level-api"><a class="header" href="#high-level-api">High-level API</a></h1>
 <p>The simplest way to think about an arrow <code>Array</code> is that it represents
 <code>Vec&lt;Option&lt;T&gt;&gt;</code> and has a logical type associated with it.</p>
-<p>Probably the most simple array in this crate is <code>PrimitiveArray&lt;T&gt;</code>. It can be constructed
+<p>Probably the simplest array in this crate is <code>PrimitiveArray&lt;T&gt;</code>. It can be constructed
 from an iterator as follows:</p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::array::{Array, PrimitiveArray, Primitive};
+<pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::array::{Array, PrimitiveArray};
 </span><span class="boring">use arrow2::datatypes::DataType;
 </span><span class="boring">fn main() {
-</span>let array: PrimitiveArray&lt;i32&gt; = [Some(1), None, Some(123)]
+</span>let array = [Some(1), None, Some(123)]
     .iter()
-    .collect::&lt;Primitive&lt;i32&gt;&gt;()
-    .to(DataType::Int32);
+    .collect::&lt;PrimitiveArray&lt;i32&gt;&gt;();
 assert_eq!(array.len(), 3)
 <span class="boring">}
 </span></code></pre></pre>
@@ -170,17 +169,17 @@ assert_eq!(array.len(), 3)
 <li>It has an associated logical datatype.</li>
 </ul>
 <p>The first difference allows interoperability with Arrow's ecosystem and efficient SIMD operations (we will re-visit this below); the second difference is that it gives semantic meaning to the array. In the example</p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::array::Primitive;
+<pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::array::PrimitiveArray;
 </span><span class="boring">use arrow2::datatypes::DataType;
 </span><span class="boring">fn main() {
-</span>let ints = Primitive::&lt;i32&gt;::from(&amp;[Some(1), None]).to(DataType::Int32);
-let dates = Primitive::&lt;i32&gt;::from(&amp;[Some(1), None]).to(DataType::Date32);
+</span>let ints = PrimitiveArray::&lt;i32&gt;::from(&amp;[Some(1), None]).to(DataType::Int32);
+let dates = PrimitiveArray::&lt;i32&gt;::from(&amp;[Some(1), None]).to(DataType::Date32);
 <span class="boring">}
 </span></code></pre></pre>
 <p><code>ints</code> and <code>dates</code> have the same in-memory representation but different logic representations (e.g. dates are usually represented as a string).</p>
 <p>Some physical types (e.g. <code>i32</code>) have a &quot;natural&quot; logical <code>DataType</code> (e.g. <code>DataType::Int32</code>).
 These types support a more compact notation:</p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::array::{Array, Int32Array, Primitive};
+<pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::array::{Array, Int32Array, PrimitiveArray};
 </span><span class="boring">use arrow2::datatypes::DataType;
 </span><span class="boring">fn main() {
 </span>/// Int32Array = PrimitiveArray&lt;i32&gt;
@@ -208,10 +207,9 @@ assert_eq!(array.len(), 2);
 <h2 id="dynamic-array"><a class="header" href="#dynamic-array">Dynamic Array</a></h2>
 <p>There is a more powerful aspect of arrow arrays, and that is that they all
 implement the trait <code>Array</code> and can be cast to <code>&amp;dyn Array</code>, i.e. they can be turned into
-a trait object. This enables arrays to have types that are dynamic in nature.
-<code>ListArray&lt;i32&gt;</code> is an example of a nested (dynamic) array:</p>
+a trait object. This enables arrays to have types that are dynamic in nature.</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">use std::sync::Arc;
-</span><span class="boring">use arrow2::array::{Array, ListPrimitive, ListArray, Primitive};
+</span><span class="boring">use arrow2::array::{Array, PrimitiveArray};
 </span><span class="boring">use arrow2::datatypes::DataType;
 </span><span class="boring">fn main() {
 </span>let data = vec![
@@ -220,25 +218,20 @@ a trait object. This enables arrays to have types that are dynamic in nature.
     Some(vec![Some(4), None, Some(6)]),
 ];
 
-let a: ListArray&lt;i32&gt; = data
-    .into_iter()
-    .collect::&lt;ListPrimitive&lt;i32, Primitive&lt;i32&gt;, i32&gt;&gt;()
-    .to(ListArray::&lt;i32&gt;::default_datatype(DataType::Int32));
-
-let inner: &amp;Arc&lt;dyn Array&gt; = a.values();
+let a = PrimitiveArray::&lt;i32&gt;::from(&amp;[Some(1), None]);
+let a: &amp;dyn Array = &amp;a;
 <span class="boring">}
 </span></code></pre></pre>
 <p>Note how we have not specified the inner type explicitly in the signature <code>ListArray&lt;i32&gt;</code>.
 Instead, <code>ListArray</code> has an inner <code>Array</code> representing all its values (available via <code>.values()</code>).</p>
 <h3 id="downcast-and-as_any"><a class="header" href="#downcast-and-as_any">Downcast and <code>as_any</code></a></h3>
 <p>Given a trait object <code>&amp;dyn Array</code>, we know its logical type via <code>Array::data_type()</code> and can use it to downcast the array to its concrete type:</p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::array::{Array, PrimitiveArray, Primitive};
+<pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::array::{Array, PrimitiveArray};
 </span><span class="boring">use arrow2::datatypes::DataType;
 </span><span class="boring">fn main() {
-</span>let array: PrimitiveArray&lt;i32&gt; = [Some(1), None, Some(123)]
+</span>let array = [Some(1), None, Some(123)]
     .iter()
-    .collect::&lt;Primitive&lt;i32&gt;&gt;()
-    .to(DataType::Int32);
+    .collect::&lt;PrimitiveArray&lt;i32&gt;&gt;();
 let array = &amp;array as &amp;dyn Array;
 
 let array = array.as_any().downcast_ref::&lt;PrimitiveArray&lt;i32&gt;&gt;().unwrap();
@@ -322,7 +315,7 @@ contiguous memory regions or whether it does not.</p>
 <li><code>Buffer::from_trusted_len_iter</code></li>
 <li><code>Buffer::try_from_trusted_len_iter</code></li>
 </ul>
-<p>If not, then use the builder API, such as <code>Primitive&lt;T&gt;</code>, <code>Utf8Primitive&lt;O&gt;</code>, <code>ListPrimitive</code>, etc.</p>
+<p>If not, then use the builder API, such as <code>MutablePrimitiveArray&lt;T&gt;</code>, <code>MutableUtf8Array&lt;O&gt;</code> or <code>MutableListArray</code>.</p>
 <p>We have seen examples where the latter API was used. In the last example of this page
 you will be introduced to an example of using the former for SIMD.</p>
 <h2 id="into-iterator"><a class="header" href="#into-iterator">Into Iterator</a></h2>
@@ -387,7 +380,7 @@ where
 </li>
 <li>
 <p>We used <code>op</code> on the array's values irrespectively of their validity,
-and cloned its validity. This approach is suitable for operations whose branching off is more expensive than operating over all values. If the operation is expensive, then using <code>Primitive::&lt;O&gt;::from_trusted_len_iter</code> is likely faster.</p>
+and cloned its validity. This approach is suitable for operations whose branching off is more expensive than operating over all values. If the operation is expensive, then using <code>PrimitiveArray::&lt;O&gt;::from_trusted_len_iter</code> is likely faster.</p>
 </li>
 </ol>
 

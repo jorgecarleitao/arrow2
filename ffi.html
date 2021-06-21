@@ -160,7 +160,7 @@ Types currently not supported:</p>
 <h2 id="export"><a class="header" href="#export">Export</a></h2>
 <p>The API to export an <code>Array</code> is as follows:</p>
 <pre><pre class="playground"><code class="language-rust">use std::sync::Arc;
-use arrow2::array::{Array, Primitive};
+use arrow2::array::{Array, PrimitiveArray};
 use arrow2::datatypes::DataType;
 use arrow2::ffi::ArrowArray;
 
@@ -168,7 +168,7 @@ use arrow2::ffi::ArrowArray;
 </span>// Example of an array:
 let array = [Some(1), None, Some(123)]
     .iter()
-    .collect::&lt;Primitive&lt;i32&gt;&gt;()
+    .collect::&lt;PrimitiveArray&lt;i32&gt;&gt;()
     .to(DataType::Int32);
 
 // export the array.
