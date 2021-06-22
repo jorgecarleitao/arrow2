@@ -35,6 +35,7 @@ use num::ToPrimitive;
 mod lex_sort;
 mod primitive;
 
+pub(crate) use lex_sort::{build_compare, Compare};
 pub use lex_sort::{lexsort, lexsort_to_indices, SortColumn};
 
 macro_rules! dyn_sort {
