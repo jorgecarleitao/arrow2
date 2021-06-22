@@ -122,6 +122,12 @@ impl<O: Offset> MutableUtf8Array<O> {
                 .chain(std::iter::once(true)),
         ))
     }
+
+    /// Converts itself into an [`Array`].
+    pub fn into_arc(self) -> Arc<dyn Array> {
+        let a: Utf8Array<O> = self.into();
+        Arc::new(a)
+    }
 }
 
 impl<O: Offset> MutableUtf8Array<O> {

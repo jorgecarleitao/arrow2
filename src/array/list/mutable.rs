@@ -23,7 +23,22 @@ impl<O: Offset, M: MutableArray + Default> MutableListArray<O, M> {
     pub fn new() -> Self {
         let values = M::default();
         let data_type = ListArray::<O>::default_datatype(values.data_type().clone());
-        Self::with_capacity(0, values, data_type)
+        Self::new_from(values, data_type, 0)
+    }
+
+    pub fn with_capacity(capacity: usize) -> Self {
+        let values = M::default();
+        let data_type = ListArray::<O>::default_datatype(values.data_type().clone());
+
+        let mut offsets = MutableBuffer::<O>::with_capacity(capacity + 1);
+        offsets.push(O::default());
+        assert_eq!(values.len(), 0);
+        Self {
+            data_type,
+            offsets,
+            values,
+            validity: None,
+        }
     }
 }
 
@@ -65,7 +80,7 @@ where
 }
 
 impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
-    pub fn with_capacity(capacity: usize, values: M, data_type: DataType) -> Self {
+    pub fn new_from(values: M, data_type: DataType, capacity: usize) -> Self {
         let mut offsets = MutableBuffer::<O>::with_capacity(capacity + 1);
         offsets.push(O::default());
         assert_eq!(values.len(), 0);
@@ -85,7 +100,7 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
         } else {
             DataType::List(field)
         };
-        Self::with_capacity(0, values, data_type)
+        Self::new_from(values, data_type, 0)
     }
 
     pub fn try_push_valid(&mut self) -> Result<()> {
@@ -129,6 +144,12 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
                 .take(self.offsets.len() - 1 - 1)
                 .chain(std::iter::once(true)),
         ))
+    }
+
+    /// Converts itself into an [`Array`].
+    pub fn into_arc(self) -> Arc<dyn Array> {
+        let a: ListArray<O> = self.into();
+        Arc::new(a)
     }
 }
 

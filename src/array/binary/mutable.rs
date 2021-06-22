@@ -112,6 +112,12 @@ impl<O: Offset> MutableBinaryArray<O> {
                 .chain(std::iter::once(true)),
         ))
     }
+
+    /// Converts itself into an [`Array`].
+    pub fn into_arc(self) -> Arc<dyn Array> {
+        let a: BinaryArray<O> = self.into();
+        Arc::new(a)
+    }
 }
 
 impl<O: Offset> MutableArray for MutableBinaryArray<O> {

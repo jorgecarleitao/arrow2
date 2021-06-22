@@ -69,6 +69,12 @@ impl MutableBooleanArray {
                 .chain(std::iter::once(true)),
         ))
     }
+
+    /// Converts itself into an [`Array`].
+    pub fn into_arc(self) -> Arc<dyn Array> {
+        let a: BooleanArray = self.into();
+        Arc::new(a)
+    }
 }
 
 /// Getters
