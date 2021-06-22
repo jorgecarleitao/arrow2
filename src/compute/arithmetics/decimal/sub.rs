@@ -305,6 +305,7 @@ pub fn adaptive_sub(
     }
 }
 
+#[allow(clippy::zero_prefixed_literal, clippy::inconsistent_digit_grouping)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -468,7 +469,8 @@ mod tests {
 
     #[test]
     fn test_subtract_checked_overflow() {
-        let a = PrimitiveArray::from(&vec![Some(4i128), Some(-99999i128)]).to(DataType::Decimal(5, 2));
+        let a =
+            PrimitiveArray::from(&vec![Some(4i128), Some(-99999i128)]).to(DataType::Decimal(5, 2));
         let b = PrimitiveArray::from(&vec![Some(2i128), Some(1i128)]).to(DataType::Decimal(5, 2));
         let result = checked_sub(&a, &b).unwrap();
         let expected = PrimitiveArray::from(&vec![Some(2i128), None]).to(DataType::Decimal(5, 2));
@@ -485,7 +487,8 @@ mod tests {
         let b = PrimitiveArray::from(&vec![Some(11111_11i128)]).to(DataType::Decimal(7, 2));
         let result = adaptive_sub(&a, &b).unwrap();
 
-        let expected = PrimitiveArray::from(&vec![Some(-11099_9989i128)]).to(DataType::Decimal(9, 4));
+        let expected =
+            PrimitiveArray::from(&vec![Some(-11099_9989i128)]).to(DataType::Decimal(9, 4));
 
         assert_eq!(result, expected);
         assert_eq!(result.data_type(), &DataType::Decimal(9, 4));
@@ -498,7 +501,8 @@ mod tests {
         let b = PrimitiveArray::from(&vec![Some(1111i128)]).to(DataType::Decimal(5, 4));
         let result = adaptive_sub(&a, &b).unwrap();
 
-        let expected = PrimitiveArray::from(&vec![Some(11110_8889i128)]).to(DataType::Decimal(9, 4));
+        let expected =
+            PrimitiveArray::from(&vec![Some(11110_8889i128)]).to(DataType::Decimal(9, 4));
 
         assert_eq!(result, expected);
         assert_eq!(result.data_type(), &DataType::Decimal(9, 4));
@@ -511,7 +515,8 @@ mod tests {
         let b = PrimitiveArray::from(&vec![Some(11111_111i128)]).to(DataType::Decimal(8, 3));
         let result = adaptive_sub(&a, &b).unwrap();
 
-        let expected = PrimitiveArray::from(&vec![Some(-00000_001i128)]).to(DataType::Decimal(8, 3));
+        let expected =
+            PrimitiveArray::from(&vec![Some(-00000_001i128)]).to(DataType::Decimal(8, 3));
 
         assert_eq!(result, expected);
         assert_eq!(result.data_type(), &DataType::Decimal(8, 3));

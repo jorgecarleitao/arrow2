@@ -33,9 +33,9 @@ macro_rules! ffi_dyn {
     }};
 }
 
-pub fn buffers_children(
-    array: &dyn Array,
-) -> (Vec<Option<std::ptr::NonNull<u8>>>, Vec<Arc<dyn Array>>) {
+type BuffersChildren = (Vec<Option<std::ptr::NonNull<u8>>>, Vec<Arc<dyn Array>>);
+
+pub fn buffers_children(array: &dyn Array) -> BuffersChildren {
     match array.data_type() {
         DataType::Null => ffi_dyn!(array, NullArray),
         DataType::Boolean => ffi_dyn!(array, BooleanArray),

@@ -5,11 +5,14 @@
 This repository contains a Rust library to work with the [Arrow format](https://arrow.apache.org/).
 It is a re-write of the [official Arrow crate](https://github.com/apache/arrow) using transmute-free operations. See FAQ for details.
 
-See [the guide](https://jorgecarleitao.github.io/arrow2/) and [API docs](https://jorgecarleitao.github.io/arrow2/docs/arrow2/index.html)
+See [the guide](https://jorgecarleitao.github.io/arrow2/) for a general introduction to this crate
+and its general components, and [API docs](https://jorgecarleitao.github.io/arrow2/docs/arrow2/index.html)
+for a detailed documentation of each of its APIs.
 
 ## Design
 
-This repo and crate's primary goal is to offer a safe Rust implementation to interoperate with the Arrow. As such, it
+This repo and crate's primary goal is to offer a safe Rust implementation of the Arrow specification.
+As such, it
 
 * MUST NOT implement any logical type other than the ones defined on the arrow specification, [schema.fbs](https://github.com/apache/arrow/blob/master/format/Schema.fbs).
 * MUST lay out memory according to the [arrow specification](https://arrow.apache.org/docs/format/Columnar.html)
@@ -50,20 +53,20 @@ venv/bin/python parquet_integration/write_parquet.py
 * parquet IO has no `unsafe`
 * IPC supports big endian
 * More predictable JSON reader
+* `MutableArray` API to work with arrays in-place.
 * Generalized parsing of CSV based on logical data types
 * conditional compilation based on cargo `features` to reduce dependencies and size
 * faster IPC reader (different design that avoids an extra copy of all data)
 
 ## Features in the original not available in this crate
 
-* Parquet read of nested types, arrow schema from the metadata, etc.
-* Parquet write V2, nested types, arrow schema to the metadata, etc.
+* Parquet read of nested types, etc.
+* Parquet write V2, nested types, etc.
 
 ## Roadmap
 
-1. parquet read of nested types, arrow schema from the metadata, etc.
-2. parquet nested types, arrow schema to the metadata, etc.
-3. bring documentation up to speed
+1. parquet read of nested types.
+2. bring documentation up to speed
 
 ## How to develop
 

@@ -332,6 +332,7 @@ pub fn adaptive_div(
     }
 }
 
+#[allow(clippy::zero_prefixed_literal, clippy::inconsistent_digit_grouping)]
 #[cfg(test)]
 mod tests {
     use super::*;

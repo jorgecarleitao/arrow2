@@ -336,6 +336,7 @@ pub fn adaptive_mul(
     }
 }
 
+#[allow(clippy::zero_prefixed_literal, clippy::inconsistent_digit_grouping)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -521,10 +522,13 @@ mod tests {
 
     #[test]
     fn test_multiply_checked_overflow() {
-        let a = PrimitiveArray::from(&vec![Some(99999i128), Some(1_00i128)]).to(DataType::Decimal(5, 2));
-        let b = PrimitiveArray::from(&vec![Some(10000i128), Some(2_00i128)]).to(DataType::Decimal(5, 2));
+        let a = PrimitiveArray::from(&vec![Some(99999i128), Some(1_00i128)])
+            .to(DataType::Decimal(5, 2));
+        let b = PrimitiveArray::from(&vec![Some(10000i128), Some(2_00i128)])
+            .to(DataType::Decimal(5, 2));
         let result = checked_mul(&a, &b).unwrap();
-        let expected = PrimitiveArray::from(&vec![None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
+        let expected =
+            PrimitiveArray::from(&vec![None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
 
         assert_eq!(result, expected);
     }
@@ -539,7 +543,8 @@ mod tests {
         let b = PrimitiveArray::from(&vec![Some(10_0000i128)]).to(DataType::Decimal(6, 4));
         let result = adaptive_mul(&a, &b).unwrap();
 
-        let expected = PrimitiveArray::from(&vec![Some(10000_0000i128)]).to(DataType::Decimal(9, 4));
+        let expected =
+            PrimitiveArray::from(&vec![Some(10000_0000i128)]).to(DataType::Decimal(9, 4));
 
         assert_eq!(result, expected);
         assert_eq!(result.data_type(), &DataType::Decimal(9, 4));
@@ -552,7 +557,8 @@ mod tests {
         let b = PrimitiveArray::from(&vec![Some(10_002i128)]).to(DataType::Decimal(5, 3));
         let result = adaptive_mul(&a, &b).unwrap();
 
-        let expected = PrimitiveArray::from(&vec![Some(111132_222i128)]).to(DataType::Decimal(9, 3));
+        let expected =
+            PrimitiveArray::from(&vec![Some(111132_222i128)]).to(DataType::Decimal(9, 3));
 
         assert_eq!(result, expected);
         assert_eq!(result.data_type(), &DataType::Decimal(9, 3));
@@ -565,7 +571,8 @@ mod tests {
         let b = PrimitiveArray::from(&vec![Some(12345_678i128)]).to(DataType::Decimal(8, 3));
         let result = adaptive_mul(&a, &b).unwrap();
 
-        let expected = PrimitiveArray::from(&vec![Some(152415666_514i128)]).to(DataType::Decimal(12, 3));
+        let expected =
+            PrimitiveArray::from(&vec![Some(152415666_514i128)]).to(DataType::Decimal(12, 3));
 
         assert_eq!(result, expected);
         assert_eq!(result.data_type(), &DataType::Decimal(12, 3));

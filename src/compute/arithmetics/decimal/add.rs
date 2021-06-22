@@ -16,7 +16,6 @@
 // under the License.
 
 //! Defines the addition arithmetic kernels for Decimal `PrimitiveArrays`.
-
 use crate::{
     array::{Array, PrimitiveArray},
     buffer::Buffer,
@@ -308,6 +307,7 @@ pub fn adaptive_add(
     }
 }
 
+#[allow(clippy::zero_prefixed_literal, clippy::inconsistent_digit_grouping)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -471,7 +471,8 @@ mod tests {
 
     #[test]
     fn test_add_checked_overflow() {
-        let a = PrimitiveArray::from(&vec![Some(1i128), Some(99999i128)]).to(DataType::Decimal(5, 2));
+        let a =
+            PrimitiveArray::from(&vec![Some(1i128), Some(99999i128)]).to(DataType::Decimal(5, 2));
         let b = PrimitiveArray::from(&vec![Some(1i128), Some(1i128)]).to(DataType::Decimal(5, 2));
         let result = checked_add(&a, &b).unwrap();
         let expected = PrimitiveArray::from(&vec![Some(2i128), None]).to(DataType::Decimal(5, 2));
@@ -492,7 +493,8 @@ mod tests {
         let b = PrimitiveArray::from(&vec![Some(11111_11i128)]).to(DataType::Decimal(7, 2));
         let result = adaptive_add(&a, &b).unwrap();
 
-        let expected = PrimitiveArray::from(&vec![Some(11122_2211i128)]).to(DataType::Decimal(9, 4));
+        let expected =
+            PrimitiveArray::from(&vec![Some(11122_2211i128)]).to(DataType::Decimal(9, 4));
 
         assert_eq!(result, expected);
         assert_eq!(result.data_type(), &DataType::Decimal(9, 4));
@@ -505,7 +507,8 @@ mod tests {
         let b = PrimitiveArray::from(&vec![Some(11111_0i128)]).to(DataType::Decimal(6, 1));
         let result = adaptive_add(&a, &b).unwrap();
 
-        let expected = PrimitiveArray::from(&vec![Some(11111_1111i128)]).to(DataType::Decimal(9, 4));
+        let expected =
+            PrimitiveArray::from(&vec![Some(11111_1111i128)]).to(DataType::Decimal(9, 4));
 
         assert_eq!(result, expected);
         assert_eq!(result.data_type(), &DataType::Decimal(9, 4));
