@@ -14,18 +14,16 @@ impl<'a, T: BitChunk> BitChunksExact<'a, T> {
     #[inline]
     pub fn new(slice: &'a [u8], len: usize) -> Self {
         let size_of = std::mem::size_of::<T>();
-        let bytes_len = (len + 7) / 8;
-        let (iter, remainder) = if size_of != 1 {
-            // case where a chunk has more than one byte
-            let chunks = slice.chunks_exact(size_of);
-            let remainder_bytes = chunks.remainder();
-            (chunks, remainder_bytes)
+
+        let chunks = &slice[..len / 8];
+        let iter = chunks.chunks_exact(size_of);
+
+        let start = if slice.len() > size_of {
+            slice.len() - size_of
         } else {
-            // case where a chunk is exactly one byte
-            let chunks = &slice[..len / 8];
-            let chunks = chunks.chunks_exact(size_of);
-            (chunks, &slice[slice.len() - 1..bytes_len])
+            0
         };
+        let remainder = &slice[start..];
 
         Self {
             iter,
@@ -86,5 +84,31 @@ impl<T: BitChunk> BitChunkIterExact<T> for BitChunksExact<'_, T> {
     #[inline]
     fn remainder(&self) -> T {
         self.remainder()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn basics() {
+        let mut iter = BitChunksExact::<u8>::new(&[0b11111111u8, 0b00000001u8], 9);
+        assert_eq!(iter.next().unwrap(), 0b11111111u8);
+        assert_eq!(iter.remainder(), 0b00000001u8);
+    }
+
+    #[test]
+    fn basics_u16_small() {
+        let mut iter = BitChunksExact::<u16>::new(&[0b11111111u8], 9);
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.remainder(), 0b0000_0000_1111_1111u16);
+    }
+
+    #[test]
+    fn basics_u16() {
+        let mut iter = BitChunksExact::<u16>::new(&[0b11111111u8, 0b00000001u8], 9);
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.remainder(), 0b0000_0001_1111_1111u16);
     }
 }
