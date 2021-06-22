@@ -93,16 +93,16 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
                 self.values.push(value);
                 match &mut self.validity {
                     Some(validity) => validity.push(true),
-                    None => {
-                        self.init_validity();
-                    }
+                    None => {}
                 }
             }
             None => {
                 self.values.push(T::default());
                 match &mut self.validity {
                     Some(validity) => validity.push(false),
-                    None => {}
+                    None => {
+                        self.init_validity();
+                    }
                 }
             }
         }
@@ -110,9 +110,9 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
 
     fn init_validity(&mut self) {
         self.validity = Some(MutableBitmap::from_trusted_len_iter(
-            std::iter::repeat(false)
+            std::iter::repeat(true)
                 .take(self.len() - 1)
-                .chain(std::iter::once(true)),
+                .chain(std::iter::once(false)),
         ))
     }
 
@@ -467,6 +467,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::bitmap::Bitmap;
+
     use super::*;
 
     #[test]
@@ -506,5 +508,14 @@ mod tests {
     fn natural_arc() {
         let a = MutablePrimitiveArray::<i32>::from_slice(&[0, 1]).into_arc();
         assert_eq!(a.len(), 2);
+    }
+
+    #[test]
+    fn only_nulls() {
+        let mut a = MutablePrimitiveArray::<i32>::new();
+        a.push(None);
+        a.push(None);
+        let a: PrimitiveArray<i32> = a.into();
+        assert_eq!(a.validity(), &Some(Bitmap::from([false, false])));
     }
 }

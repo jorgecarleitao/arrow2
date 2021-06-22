@@ -92,16 +92,14 @@ impl<O: Offset> MutableUtf8Array<O> {
 
                 match &mut self.validity {
                     Some(validity) => validity.push(true),
-                    None => {
-                        self.set_validity();
-                    }
+                    None => {}
                 }
             }
             None => {
                 self.offsets.push(self.last_offset());
                 match &mut self.validity {
                     Some(validity) => validity.push(false),
-                    None => {}
+                    None => self.init_validity(),
                 }
             }
         }
@@ -115,11 +113,11 @@ impl<O: Offset> MutableUtf8Array<O> {
         self.try_push(value).unwrap()
     }
 
-    fn set_validity(&mut self) {
+    fn init_validity(&mut self) {
         self.validity = Some(MutableBitmap::from_trusted_len_iter(
-            std::iter::repeat(false)
+            std::iter::repeat(true)
                 .take(self.len() - 1)
-                .chain(std::iter::once(true)),
+                .chain(std::iter::once(false)),
         ))
     }
 
@@ -218,6 +216,8 @@ impl<O: Offset, T: AsRef<str>> TryExtend<Option<T>> for MutableUtf8Array<O> {
 
 #[cfg(test)]
 mod tests {
+    use crate::bitmap::Bitmap;
+
     use super::*;
 
     #[test]
@@ -226,5 +226,14 @@ mod tests {
 
         assert_eq!(b.values.capacity(), 64);
         assert_eq!(b.offsets.capacity(), 16); // 64 bytes
+    }
+
+    #[test]
+    fn push_null() {
+        let mut array = MutableUtf8Array::<i32>::new();
+        array.push::<&str>(None);
+
+        let array: Utf8Array<i32> = array.into();
+        assert_eq!(array.validity(), &Some(Bitmap::from([false])));
     }
 }

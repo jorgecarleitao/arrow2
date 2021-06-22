@@ -50,6 +50,14 @@ impl<M: MutableArray> MutableFixedSizeListArray<M> {
     pub fn values(&self) -> &M {
         &self.values
     }
+
+    fn init_validity(&mut self) {
+        self.validity = Some(MutableBitmap::from_trusted_len_iter(
+            std::iter::repeat(true)
+                .take(self.values.len() - 1)
+                .chain(std::iter::once(false)),
+        ))
+    }
 }
 
 impl<M: MutableArray + 'static> MutableArray for MutableFixedSizeListArray<M> {
@@ -85,6 +93,11 @@ impl<M: MutableArray + 'static> MutableArray for MutableFixedSizeListArray<M> {
         (0..self.size).for_each(|_| {
             self.values.push_null();
         });
+        if let Some(validity) = &mut self.validity {
+            validity.push(false)
+        } else {
+            self.init_validity()
+        }
     }
 }
 

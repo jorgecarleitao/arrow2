@@ -56,16 +56,14 @@ impl MutableFixedSizeBinaryArray {
 
                 match &mut self.validity {
                     Some(validity) => validity.push(true),
-                    None => {
-                        self.set_validity();
-                    }
+                    None => {}
                 }
             }
             None => {
                 self.values.extend_constant(self.size, 0);
                 match &mut self.validity {
                     Some(validity) => validity.push(false),
-                    None => {}
+                    None => self.init_validity(),
                 }
             }
         }
@@ -90,11 +88,11 @@ impl MutableFixedSizeBinaryArray {
         Ok(primitive)
     }
 
-    fn set_validity(&mut self) {
+    fn init_validity(&mut self) {
         self.validity = Some(MutableBitmap::from_trusted_len_iter(
-            std::iter::repeat(false)
+            std::iter::repeat(true)
                 .take(self.len() - 1)
-                .chain(std::iter::once(true)),
+                .chain(std::iter::once(false)),
         ))
     }
 }
@@ -135,6 +133,8 @@ impl MutableArray for MutableFixedSizeBinaryArray {
 
 #[cfg(test)]
 mod tests {
+    use crate::bitmap::Bitmap;
+
     use super::*;
 
     #[test]
@@ -145,5 +145,14 @@ mod tests {
         )
         .unwrap();
         assert_eq!(array.len(), 4);
+    }
+
+    #[test]
+    fn push_null() {
+        let mut array = MutableFixedSizeBinaryArray::new(2);
+        array.push::<&[u8]>(None);
+
+        let array: FixedSizeBinaryArray = array.into();
+        assert_eq!(array.validity(), &Some(Bitmap::from([false])));
     }
 }

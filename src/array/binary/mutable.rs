@@ -75,16 +75,14 @@ impl<O: Offset> MutableBinaryArray<O> {
 
                 match &mut self.validity {
                     Some(validity) => validity.push(true),
-                    None => {
-                        self.set_validity();
-                    }
+                    None => {}
                 }
             }
             None => {
                 self.offsets.push(self.last_offset());
                 match &mut self.validity {
                     Some(validity) => validity.push(false),
-                    None => {}
+                    None => self.init_validity(),
                 }
             }
         }
@@ -105,11 +103,11 @@ impl<O: Offset> MutableBinaryArray<O> {
         Ok(primitive)
     }
 
-    fn set_validity(&mut self) {
+    fn init_validity(&mut self) {
         self.validity = Some(MutableBitmap::from_trusted_len_iter(
-            std::iter::repeat(false)
+            std::iter::repeat(true)
                 .take(self.len() - 1)
-                .chain(std::iter::once(true)),
+                .chain(std::iter::once(false)),
         ))
     }
 

@@ -111,8 +111,6 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
         self.offsets.push(size);
         if let Some(validity) = &mut self.validity {
             validity.push(true)
-        } else {
-            self.set_validity()
         }
         Ok(())
     }
@@ -121,7 +119,7 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
         self.offsets.push(self.last_offset());
         match &mut self.validity {
             Some(validity) => validity.push(false),
-            None => {}
+            None => self.init_validity(),
         }
     }
 
@@ -138,11 +136,11 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
         *self.offsets.last().unwrap()
     }
 
-    fn set_validity(&mut self) {
+    fn init_validity(&mut self) {
         self.validity = Some(MutableBitmap::from_trusted_len_iter(
-            std::iter::repeat(false)
+            std::iter::repeat(true)
                 .take(self.offsets.len() - 1 - 1)
-                .chain(std::iter::once(true)),
+                .chain(std::iter::once(false)),
         ))
     }
 
