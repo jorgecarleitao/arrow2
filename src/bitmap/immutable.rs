@@ -220,7 +220,7 @@ impl Bitmap {
     #[inline]
     pub(crate) fn as_slice(&self) -> &[u8] {
         assert_eq!(self.offset % 8, 0); // slices only make sense when there is no offset
-        let start = self.offset % 8;
+        let start = self.offset / 8;
         let len = self.length.saturating_add(7) / 8;
         &self.bytes[start..start + len]
     }
@@ -239,5 +239,31 @@ impl<'a> Bitmap {
     /// constructs a new iterator
     pub fn iter(&'a self) -> BitmapIter<'a> {
         BitmapIter::<'a>::new(&self.bytes, self.offset, self.length)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn as_slice() {
+        let b = Bitmap::from([true, true, true, true, true, true, true, true, true]);
+
+        let slice = b.as_slice();
+        assert_eq!(slice, &[0b11111111, 0b1]);
+
+        assert_eq!(0, b.offset());
+    }
+
+    #[test]
+    fn as_slice_offset() {
+        let b = Bitmap::from([true, true, true, true, true, true, true, true, true]);
+        let b = b.slice(8, 1);
+
+        let slice = b.as_slice();
+        assert_eq!(slice, &[0b1]);
+
+        assert_eq!(0, b.offset());
     }
 }
