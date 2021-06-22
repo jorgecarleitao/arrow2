@@ -22,11 +22,13 @@ pub struct MutablePrimitiveArray<T: NativeType> {
 
 impl<T: NativeType> From<MutablePrimitiveArray<T>> for PrimitiveArray<T> {
     fn from(other: MutablePrimitiveArray<T>) -> Self {
-        PrimitiveArray::<T>::from_data(
-            other.data_type,
-            other.values.into(),
-            other.validity.map(|x| x.into()),
-        )
+        let validity = if other.validity.as_ref().map(|x| x.null_count()).unwrap_or(0) > 0 {
+            other.validity.map(|x| x.into())
+        } else {
+            None
+        };
+
+        PrimitiveArray::<T>::from_data(other.data_type, other.values.into(), validity)
     }
 }
 
@@ -253,7 +255,7 @@ impl<T: NativeType + NaturalDataType> MutablePrimitiveArray<T> {
         Self {
             data_type: T::DATA_TYPE,
             values,
-            validity: Some(validity),
+            validity,
         }
     }
 
@@ -269,7 +271,7 @@ impl<T: NativeType + NaturalDataType> MutablePrimitiveArray<T> {
         Self {
             data_type: T::DATA_TYPE,
             values,
-            validity: Some(validity),
+            validity,
         }
     }
 
@@ -292,7 +294,7 @@ impl<T: NativeType + NaturalDataType> MutablePrimitiveArray<T> {
         Ok(Self {
             data_type: T::DATA_TYPE,
             values,
-            validity: Some(validity),
+            validity,
         })
     }
 
@@ -308,7 +310,7 @@ impl<T: NativeType + NaturalDataType> MutablePrimitiveArray<T> {
         Ok(Self {
             data_type: T::DATA_TYPE,
             values,
-            validity: Some(validity),
+            validity,
         })
     }
 
@@ -375,7 +377,9 @@ impl<T: NativeType + NaturalDataType, Ptr: std::borrow::Borrow<Option<T>>> FromI
 /// # Safety
 /// The caller must ensure that `iterator` is `TrustedLen`.
 #[inline]
-pub(crate) unsafe fn trusted_len_unzip<I, P, T>(iterator: I) -> (MutableBitmap, MutableBuffer<T>)
+pub(crate) unsafe fn trusted_len_unzip<I, P, T>(
+    iterator: I,
+) -> (Option<MutableBitmap>, MutableBuffer<T>)
 where
     T: NativeType,
     P: std::borrow::Borrow<T>,
@@ -406,6 +410,12 @@ where
     );
     buffer.set_len(len);
 
+    let validity = if validity.null_count() > 0 {
+        Some(validity)
+    } else {
+        None
+    };
+
     (validity, buffer)
 }
 
@@ -414,7 +424,7 @@ where
 #[inline]
 pub(crate) unsafe fn try_trusted_len_unzip<E, I, P, T>(
     iterator: I,
-) -> std::result::Result<(MutableBitmap, MutableBuffer<T>), E>
+) -> std::result::Result<(Option<MutableBitmap>, MutableBuffer<T>), E>
 where
     T: NativeType,
     P: std::borrow::Borrow<T>,
@@ -446,7 +456,13 @@ where
     buffer.set_len(len);
     null.set_len(len);
 
-    Ok((null, buffer))
+    let validity = if null.null_count() > 0 {
+        Some(null)
+    } else {
+        None
+    };
+
+    Ok((validity, buffer))
 }
 
 #[cfg(test)]
@@ -483,6 +499,7 @@ mod tests {
     fn from_iter() {
         let a = MutablePrimitiveArray::<i32>::from_iter((0..2).map(Some));
         assert_eq!(a.len(), 2);
+        assert_eq!(a.validity(), &None);
     }
 
     #[test]
