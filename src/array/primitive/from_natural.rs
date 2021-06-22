@@ -61,8 +61,8 @@ impl<T: NativeType + NaturalDataType> PrimitiveArray<T> {
     /// # Safety
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
     /// I.e. that `size_hint().1` correctly reports its length.
-    pub fn from_trusted_len_iter_unchecked<I: TrustedLen<Item = Option<T>>>(iter: I) -> Self {
-        MutablePrimitiveArray::<T>::from_trusted_len_iter(iter).into()
+    pub unsafe fn from_trusted_len_iter_unchecked<I: Iterator<Item = Option<T>>>(iter: I) -> Self {
+        MutablePrimitiveArray::<T>::from_trusted_len_iter_unchecked(iter).into()
     }
 }
 
