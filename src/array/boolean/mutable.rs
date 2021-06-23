@@ -31,8 +31,12 @@ impl Default for MutableBooleanArray {
 
 impl MutableBooleanArray {
     pub fn new() -> Self {
+        Self::with_capacity(0)
+    }
+
+    pub fn with_capacity(capacity: usize) -> Self {
         Self {
-            values: MutableBitmap::new(),
+            values: MutableBitmap::with_capacity(capacity),
             validity: None,
         }
     }
