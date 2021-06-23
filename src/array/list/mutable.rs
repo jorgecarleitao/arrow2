@@ -103,6 +103,11 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
         Self::new_from(values, data_type, 0)
     }
 
+    pub fn new_with_capacity(values: M, capacity: usize) -> Self {
+        let data_type = ListArray::<O>::default_datatype(values.data_type().clone());
+        Self::new_from(values, data_type, capacity)
+    }
+
     pub fn try_push_valid(&mut self) -> Result<()> {
         let size = self.values.len();
         let size = O::from_usize(size).ok_or(ArrowError::KeyOverflowError)?; // todo: make this error
