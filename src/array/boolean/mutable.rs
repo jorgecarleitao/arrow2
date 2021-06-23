@@ -1,10 +1,12 @@
 use std::iter::FromIterator;
 use std::sync::Arc;
 
+use crate::array::TryExtend;
 use crate::{
     array::{Array, MutableArray},
     bitmap::MutableBitmap,
     datatypes::DataType,
+    error::Result,
     trusted_len::TrustedLen,
 };
 
@@ -38,6 +40,13 @@ impl MutableBooleanArray {
         Self {
             values: MutableBitmap::with_capacity(capacity),
             validity: None,
+        }
+    }
+
+    pub fn reserve(&mut self, additional: usize) {
+        self.values.reserve(additional);
+        if let Some(x) = self.validity.as_mut() {
+            x.reserve(additional)
         }
     }
 
@@ -170,10 +179,12 @@ impl MutableBooleanArray {
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
     /// I.e. that `size_hint().1` correctly reports its length.
     #[inline]
-    pub unsafe fn try_from_trusted_len_iter_unchecked<E, I, P>(iterator: I) -> Result<Self, E>
+    pub unsafe fn try_from_trusted_len_iter_unchecked<E, I, P>(
+        iterator: I,
+    ) -> std::result::Result<Self, E>
     where
         P: std::borrow::Borrow<bool>,
-        I: Iterator<Item = Result<Option<P>, E>>,
+        I: Iterator<Item = std::result::Result<Option<P>, E>>,
     {
         let (validity, values) = try_trusted_len_unzip(iterator)?;
 
@@ -188,10 +199,10 @@ impl MutableBooleanArray {
 
     /// Creates a [`BooleanArray`] from a [`TrustedLen`].
     #[inline]
-    pub fn try_from_trusted_len_iter<E, I, P>(iterator: I) -> Result<Self, E>
+    pub fn try_from_trusted_len_iter<E, I, P>(iterator: I) -> std::result::Result<Self, E>
     where
         P: std::borrow::Borrow<bool>,
-        I: TrustedLen<Item = Result<Option<P>, E>>,
+        I: TrustedLen<Item = std::result::Result<Option<P>, E>>,
     {
         let (validity, values) = unsafe { try_trusted_len_unzip(iterator)? };
 
@@ -245,10 +256,10 @@ where
 #[inline]
 pub(crate) unsafe fn try_trusted_len_unzip<E, I, P>(
     iterator: I,
-) -> Result<(MutableBitmap, MutableBitmap), E>
+) -> std::result::Result<(MutableBitmap, MutableBitmap), E>
 where
     P: std::borrow::Borrow<bool>,
-    I: Iterator<Item = Result<Option<P>, E>>,
+    I: Iterator<Item = std::result::Result<Option<P>, E>>,
 {
     let (_, upper) = iterator.size_hint();
     let len = upper.expect("trusted_len_unzip requires an upper limit");
@@ -331,6 +342,22 @@ impl MutableArray for MutableBooleanArray {
     #[inline]
     fn push_null(&mut self) {
         self.push(None)
+    }
+}
+
+impl Extend<Option<bool>> for MutableBooleanArray {
+    fn extend<I: IntoIterator<Item = Option<bool>>>(&mut self, iter: I) {
+        let iter = iter.into_iter();
+        self.reserve(iter.size_hint().0);
+        iter.for_each(|x| self.push(x))
+    }
+}
+
+impl TryExtend<Option<bool>> for MutableBooleanArray {
+    /// This is infalible and is implemented for consistency with all other types
+    fn try_extend<I: IntoIterator<Item = Option<bool>>>(&mut self, iter: I) -> Result<()> {
+        self.extend(iter);
+        Ok(())
     }
 }
 
