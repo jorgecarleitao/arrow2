@@ -61,9 +61,8 @@ impl FileMetadata {
 }
 
 /// Arrow File reader
-#[derive(Debug)]
-pub struct FileReader<R: Read + Seek + std::fmt::Debug> {
-    reader: R,
+pub struct FileReader<'a, R: Read + Seek> {
+    reader: &'a mut R,
     metadata: FileMetadata,
     current_block: usize,
 }
@@ -219,9 +218,9 @@ pub fn read_batch<R: Read + Seek>(
     }
 }
 
-impl<R: Read + Seek + std::fmt::Debug> FileReader<R> {
+impl<'a, R: Read + Seek> FileReader<'a, R> {
     /// Creates a new reader
-    pub fn new(reader: R, metadata: FileMetadata) -> Self {
+    pub fn new(reader: &'a mut R, metadata: FileMetadata) -> Self {
         Self {
             reader,
             metadata,
@@ -235,7 +234,7 @@ impl<R: Read + Seek + std::fmt::Debug> FileReader<R> {
     }
 }
 
-impl<R: Read + Seek + std::fmt::Debug> Iterator for FileReader<R> {
+impl<'a, R: Read + Seek> Iterator for FileReader<'a, R> {
     type Item = Result<RecordBatch>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -250,7 +249,7 @@ impl<R: Read + Seek + std::fmt::Debug> Iterator for FileReader<R> {
     }
 }
 
-impl<R: Read + Seek + std::fmt::Debug> RecordBatchReader for FileReader<R> {
+impl<'a, R: Read + Seek> RecordBatchReader for FileReader<'a, R> {
     fn schema(&self) -> &Schema {
         &self.metadata.schema
     }
@@ -273,7 +272,7 @@ mod tests {
         ))?;
 
         let metadata = read_file_metadata(&mut file)?;
-        let reader = FileReader::new(file, metadata);
+        let reader = FileReader::new(&mut file, metadata);
 
         // read expected JSON output
         let (schema, batches) = read_gzip_json(version, file_name);

@@ -99,7 +99,7 @@ fn arrow_to_json(arrow_name: &str, json_name: &str, verbose: bool) -> Result<()>
 
     let mut arrow_file = File::open(arrow_name)?;
     let metadata = read::read_file_metadata(&mut arrow_file)?;
-    let reader = read::FileReader::new(arrow_file, metadata);
+    let reader = read::FileReader::new(&mut arrow_file, metadata);
 
     let mut fields: Vec<ArrowJsonField> = vec![];
     for f in reader.schema().fields() {
@@ -137,7 +137,7 @@ fn validate(arrow_name: &str, json_name: &str, verbose: bool) -> Result<()> {
     // open Arrow file
     let mut arrow_file = File::open(arrow_name)?;
     let metadata = read::read_file_metadata(&mut arrow_file)?;
-    let reader = read::FileReader::new(arrow_file, metadata);
+    let reader = read::FileReader::new(&mut arrow_file, metadata);
     let arrow_schema = reader.schema().as_ref().to_owned();
 
     // compare schemas
