@@ -135,6 +135,7 @@ pub fn read_next<R: Read>(
                 &dictionaries_by_field,
                 &mut reader,
                 0,
+                batch.compression(),
             )
             .map(Some)
         }
@@ -155,6 +156,7 @@ pub fn read_next<R: Read>(
                 dictionaries_by_field,
                 &mut dict_reader,
                 0,
+                None,
             )?;
 
             // read the next message until we encounter a RecordBatch

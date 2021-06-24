@@ -22,6 +22,7 @@ use std::sync::Arc;
 use crate::array::*;
 use crate::datatypes::{DataType, Field, Schema};
 use crate::error::{ArrowError, Result};
+use crate::io::ipc::gen::Message::BodyCompression;
 use crate::record_batch::RecordBatch;
 
 use super::super::gen;
@@ -37,7 +38,14 @@ pub fn read_record_batch<R: Read + Seek>(
     dictionaries: &[Option<ArrayRef>],
     reader: &mut R,
     block_offset: u64,
+    compression: Option<BodyCompression>,
 ) -> Result<RecordBatch> {
+    if compression.is_some() {
+        return Err(ArrowError::NotYetImplemented(
+            "IPC format with compression".to_string(),
+        ));
+    }
+
     let buffers = batch
         .buffers()
         .ok_or_else(|| ArrowError::Ipc("Unable to get buffers from IPC RecordBatch".to_string()))?;
@@ -81,6 +89,7 @@ pub fn read_dictionary<R: Read + Seek>(
     dictionaries_by_field: &mut [Option<ArrayRef>],
     reader: &mut R,
     block_offset: u64,
+    compression: Option<BodyCompression>,
 ) -> Result<()> {
     if batch.isDelta() {
         return Err(ArrowError::NotYetImplemented(
@@ -112,6 +121,7 @@ pub fn read_dictionary<R: Read + Seek>(
                 dictionaries_by_field,
                 reader,
                 block_offset,
+                compression,
             )?;
             Some(record_batch.column(0).clone())
         }

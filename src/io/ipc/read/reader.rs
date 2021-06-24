@@ -140,6 +140,7 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
                     &mut dictionaries_by_field,
                     reader,
                     block_offset,
+                    None,
                 )?;
             }
             t => {
@@ -200,6 +201,7 @@ pub fn read_batch<R: Read + Seek>(
             let batch = message.header_as_record_batch().ok_or_else(|| {
                 ArrowError::Ipc("Unable to read IPC message as record batch".to_string())
             })?;
+            let compression = batch.compression();
             read_record_batch(
                 batch,
                 metadata.schema.clone(),
@@ -207,6 +209,7 @@ pub fn read_batch<R: Read + Seek>(
                 &metadata.dictionaries_by_field,
                 reader,
                 block.offset() as u64 + block.metaDataLength() as u64,
+                compression,
             )
             .map(Some)
         }
@@ -279,12 +282,10 @@ mod tests {
 
         assert_eq!(&schema, reader.schema().as_ref());
 
-        batches
-            .iter()
-            .zip(reader.map(|x| x.unwrap()))
-            .for_each(|(lhs, rhs)| {
-                assert_eq!(lhs, &rhs);
-            });
+        batches.iter().zip(reader).try_for_each(|(lhs, rhs)| {
+            assert_eq!(lhs, &rhs?);
+            Result::Ok(())
+        })?;
         Ok(())
     }
 
@@ -292,6 +293,13 @@ mod tests {
     fn read_generated_100_primitive() -> Result<()> {
         test_file("1.0.0-littleendian", "generated_primitive")?;
         test_file("1.0.0-bigendian", "generated_primitive")
+    }
+
+    #[test]
+    fn read_generated_200_compression_lz4() -> Result<()> {
+        let result = test_file("2.0.0-compression", "generated_lz4");
+        assert!(result.is_err());
+        Ok(())
     }
 
     #[test]
