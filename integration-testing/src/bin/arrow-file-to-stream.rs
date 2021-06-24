@@ -27,7 +27,7 @@ fn main() -> Result<()> {
     let filename = &args[1];
     let mut f = File::open(filename)?;
     let metadata = read::read_file_metadata(&mut f)?;
-    let mut reader = read::FileReader::new(f, metadata);
+    let mut reader = read::FileReader::new(&mut f, metadata);
     let schema = reader.schema();
 
     let mut writer = StreamWriter::try_new(std::io::stdout(), &schema)?;
