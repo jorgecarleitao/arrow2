@@ -39,6 +39,10 @@ prettytable-rs = { version = "^0.8", optional = true }
 flatbuffers = { version = "=0.8.4", optional = true }
 hex = { version = "^0.4", optional = true }
 
+# for IPC compression
+lz4 = { version = "1.23.1", optional = true }
+zstd = { version = "^0.6", optional = true }
+
 rand = { version = "0.7", optional = true }
 
 itertools = { version = "^0.10", optional = true }
@@ -68,11 +72,12 @@ doc-comment = "0.3"
 crossbeam-channel = "0.5.1"
 
 [features]
-default = ["io_csv", "io_json", "io_ipc", "io_json_integration", "io_print", "io_parquet", "regex", "merge_sort", "ahash", "benchmarks"]
+default = ["io_csv", "io_json", "io_ipc", "io_ipc_compression", "io_json_integration", "io_print", "io_parquet", "regex", "merge_sort", "ahash", "benchmarks"]
 merge_sort = ["itertools"]
 io_csv = ["csv", "lazy_static", "regex"]
 io_json = ["serde", "serde_derive", "serde_json", "indexmap"]
 io_ipc = ["flatbuffers"]
+io_ipc_compression = ["lz4", "zstd"]
 io_json_integration = ["io_json", "hex"]
 io_print = ["prettytable-rs"]
 # base64 + io_ipc because arrow schemas are stored as base64-encoded ipc format.

@@ -57,6 +57,7 @@ venv/bin/python parquet_integration/write_parquet.py
 * Generalized parsing of CSV based on logical data types
 * conditional compilation based on cargo `features` to reduce dependencies and size
 * faster IPC reader (different design that avoids an extra copy of all data)
+* IPC supports 2.0 (compression)
 
 ## Features in the original not available in this crate
 

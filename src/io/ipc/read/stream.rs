@@ -135,7 +135,6 @@ pub fn read_next<R: Read>(
                 &dictionaries_by_field,
                 &mut reader,
                 0,
-                batch.compression(),
             )
             .map(Some)
         }
@@ -156,7 +155,6 @@ pub fn read_next<R: Read>(
                 dictionaries_by_field,
                 &mut dict_reader,
                 0,
-                None,
             )?;
 
             // read the next message until we encounter a RecordBatch
@@ -314,5 +312,15 @@ mod tests {
     #[test]
     fn read_generated_100_decimal() -> Result<()> {
         test_file("1.0.0-littleendian", "generated_decimal")
+    }
+
+    #[test]
+    fn read_generated_200_compression_lz4() -> Result<()> {
+        test_file("2.0.0-compression", "generated_lz4")
+    }
+
+    #[test]
+    fn read_generated_200_compression_zstd() -> Result<()> {
+        test_file("2.0.0-compression", "generated_zstd")
     }
 }
