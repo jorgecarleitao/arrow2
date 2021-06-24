@@ -103,6 +103,7 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (LargeUtf8, Utf8) => true,
         (LargeUtf8, _) => is_numeric(to_type),
         (_, Utf8) => is_numeric(from_type) || from_type == &Binary,
+        (_, LargeUtf8) => is_numeric(from_type) || from_type == &Binary,
 
         // start numeric casts
         (UInt8, UInt16) => true,
@@ -431,6 +432,34 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
                     .map(|x| x.and_then(|x| std::str::from_utf8(x).ok()));
 
                 let array = Utf8Array::<i32>::from_trusted_len_iter(iter);
+                Ok(Box::new(array))
+            }
+            _ => Err(ArrowError::NotYetImplemented(format!(
+                "Casting from {:?} to {:?} not supported",
+                from_type, to_type,
+            ))),
+        },
+
+        (_, LargeUtf8) => match from_type {
+            UInt8 => primitive_to_utf8_dyn::<u8, i64>(array),
+            UInt16 => primitive_to_utf8_dyn::<u16, i64>(array),
+            UInt32 => primitive_to_utf8_dyn::<u32, i64>(array),
+            UInt64 => primitive_to_utf8_dyn::<u64, i64>(array),
+            Int8 => primitive_to_utf8_dyn::<i8, i64>(array),
+            Int16 => primitive_to_utf8_dyn::<i16, i64>(array),
+            Int32 => primitive_to_utf8_dyn::<i32, i64>(array),
+            Int64 => primitive_to_utf8_dyn::<i64, i64>(array),
+            Float32 => primitive_to_utf8_dyn::<f32, i64>(array),
+            Float64 => primitive_to_utf8_dyn::<f64, i64>(array),
+            Binary => {
+                let array = array.as_any().downcast_ref::<BinaryArray<i32>>().unwrap();
+
+                // perf todo: the offsets are equal; we can speed-up this
+                let iter = array
+                    .iter()
+                    .map(|x| x.and_then(|x| std::str::from_utf8(x).ok()));
+
+                let array = Utf8Array::<i64>::from_trusted_len_iter(iter);
                 Ok(Box::new(array))
             }
             _ => Err(ArrowError::NotYetImplemented(format!(
@@ -829,7 +858,12 @@ mod tests {
             .for_each(|(d1, d2)| {
                 let array = new_null_array(d1.clone(), 10);
                 if can_cast_types(&d1, &d2) {
-                    assert!(cast(array.as_ref(), &d2).is_ok());
+                    let result = cast(array.as_ref(), &d2);
+                    if let Ok(result) = result {
+                        assert_eq!(result.data_type(), &d2);
+                    } else {
+                        panic!("Cast should have not failed")
+                    }
                 } else {
                     assert!(cast(array.as_ref(), &d2).is_err());
                 }
