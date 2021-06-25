@@ -80,6 +80,10 @@ impl<'a> Iterator for SlicesIterator<'a> {
             if self.state == State::Finished {
                 return None;
             }
+            if self.current_len() == self.max_len {
+                return self.finish();
+            }
+
             if self.mask == 1 {
                 // at the beginning of a byte => try to skip it all together
                 match (self.on_region, self.current_byte) {
@@ -144,10 +148,6 @@ impl<'a> Iterator for SlicesIterator<'a> {
                     Some(v) => self.current_byte = v,
                     None => return self.finish(),
                 };
-            }
-
-            if self.current_len() == self.max_len {
-                return self.finish();
             }
         }
     }
@@ -252,6 +252,18 @@ mod tests {
         let values = vec![true, true, true, true, true, true, true, false]
             .into_iter()
             .collect::<Bitmap>();
+        let iter = SlicesIterator::new(&values);
+        let count = iter.slots();
+        assert_eq!(values.null_count() + iter.slots(), values.len());
+
+        let total = iter.into_iter().fold(0, |acc, x| acc + x.1);
+
+        assert_eq!(count, total);
+    }
+
+    #[test]
+    fn past_end_should_not_be_returned() {
+        let values = Bitmap::from_u8_slice(&[0b11111010], 3);
         let iter = SlicesIterator::new(&values);
         let count = iter.slots();
         assert_eq!(values.null_count() + iter.slots(), values.len());
