@@ -117,6 +117,9 @@ pub fn new_serializer<'a>(
                 &options.time_format
             )
         }
+        DataType::Int64 => {
+            dyn_primitive!(i64, array)
+        }
         DataType::Date64 => {
             dyn_date!(
                 i64,
