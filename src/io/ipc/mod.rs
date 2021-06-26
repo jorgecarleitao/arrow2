@@ -26,6 +26,7 @@
 pub mod gen;
 
 pub(crate) mod common;
+mod compression;
 mod convert;
 
 pub use convert::fb_to_schema;

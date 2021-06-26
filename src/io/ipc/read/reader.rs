@@ -279,12 +279,10 @@ mod tests {
 
         assert_eq!(&schema, reader.schema().as_ref());
 
-        batches
-            .iter()
-            .zip(reader.map(|x| x.unwrap()))
-            .for_each(|(lhs, rhs)| {
-                assert_eq!(lhs, &rhs);
-            });
+        batches.iter().zip(reader).try_for_each(|(lhs, rhs)| {
+            assert_eq!(lhs, &rhs?);
+            Result::Ok(())
+        })?;
         Ok(())
     }
 
@@ -370,5 +368,15 @@ mod tests {
     fn read_generated_100_interval() -> Result<()> {
         test_file("1.0.0-littleendian", "generated_interval")?;
         test_file("1.0.0-bigendian", "generated_interval")
+    }
+
+    #[test]
+    fn read_generated_200_compression_lz4() -> Result<()> {
+        test_file("2.0.0-compression", "generated_lz4")
+    }
+
+    #[test]
+    fn read_generated_200_compression_zstd() -> Result<()> {
+        test_file("2.0.0-compression", "generated_zstd")
     }
 }

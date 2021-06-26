@@ -313,4 +313,14 @@ mod tests {
     fn read_generated_100_decimal() -> Result<()> {
         test_file("1.0.0-littleendian", "generated_decimal")
     }
+
+    #[test]
+    fn read_generated_200_compression_lz4() -> Result<()> {
+        test_file("2.0.0-compression", "generated_lz4")
+    }
+
+    #[test]
+    fn read_generated_200_compression_zstd() -> Result<()> {
+        test_file("2.0.0-compression", "generated_zstd")
+    }
 }
