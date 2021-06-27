@@ -83,7 +83,8 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (LargeList(list_from), LargeList(list_to)) => {
             can_cast_types(list_from.data_type(), list_to.data_type())
         }
-        (List(_), _) => false,
+        (List(list_from), LargeList(list_to)) if list_from == list_to => true,
+        (LargeList(list_from), List(list_to)) if list_from == list_to => true,
         (_, List(list_to)) => can_cast_types(from_type, list_to.data_type()),
         (Dictionary(_, from_value_type), Dictionary(_, to_value_type)) => {
             can_cast_types(from_value_type, to_value_type)
@@ -250,6 +251,32 @@ fn cast_list<O: Offset>(array: &ListArray<O>, to_type: &DataType) -> Result<List
     ))
 }
 
+fn cast_list_to_large_list(array: &ListArray<i32>, to_type: &DataType) -> ListArray<i64> {
+    let offsets = array.offsets();
+    let offsets = offsets.iter().map(|x| *x as i64);
+    let offets = Buffer::from_trusted_len_iter(offsets);
+
+    ListArray::<i64>::from_data(
+        to_type.clone(),
+        offets,
+        array.values().clone(),
+        array.validity().clone(),
+    )
+}
+
+fn cast_large_to_list(array: &ListArray<i64>, to_type: &DataType) -> ListArray<i32> {
+    let offsets = array.offsets();
+    let offsets = offsets.iter().map(|x| *x as i32);
+    let offets = Buffer::from_trusted_len_iter(offsets);
+
+    ListArray::<i32>::from_data(
+        to_type.clone(),
+        offets,
+        array.values().clone(),
+        array.validity().clone(),
+    )
+}
+
 /// Cast `array` to the provided data type and return a new [`Array`] with
 /// type `to_type`, if possible.
 ///
@@ -291,10 +318,17 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
             cast_list::<i64>(array.as_any().downcast_ref().unwrap(), to_type)
                 .map(|x| Box::new(x) as Box<dyn Array>)
         }
+        (List(lhs), LargeList(rhs)) if lhs == rhs => Ok(cast_list_to_large_list(
+            array.as_any().downcast_ref().unwrap(),
+            to_type,
+        ))
+        .map(|x| Box::new(x) as Box<dyn Array>),
+        (List(lhs), LargeList(rhs)) if lhs == rhs => Ok(cast_large_to_list(
+            array.as_any().downcast_ref().unwrap(),
+            to_type,
+        ))
+        .map(|x| Box::new(x) as Box<dyn Array>),
 
-        (List(_), _) => Err(ArrowError::NotYetImplemented(
-            "Cannot cast list to non-list data types".to_string(),
-        )),
         (_, List(to)) => {
             // cast primitive to list's primitive
             let values = cast(array, to.data_type())?.into();
