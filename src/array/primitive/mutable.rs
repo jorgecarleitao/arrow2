@@ -108,6 +108,37 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
         }
     }
 
+    /// Extends the [`MutablePrimitiveArray`] from an iterator of trusted len.
+    #[inline]
+    pub fn extend_trusted_len<P, I>(&mut self, iterator: I)
+    where
+        P: std::borrow::Borrow<T>,
+        I: TrustedLen<Item = Option<P>>,
+    {
+        unsafe { self.extend_trusted_len_unchecked(iterator) }
+    }
+
+    /// Extends the [`MutablePrimitiveArray`] from an iterator of trusted len.
+    /// # Safety
+    /// The iterator must be trusted len.
+    #[inline]
+    pub unsafe fn extend_trusted_len_unchecked<P, I>(&mut self, iterator: I)
+    where
+        P: std::borrow::Borrow<T>,
+        I: Iterator<Item = Option<P>>,
+    {
+        if let Some(validity) = self.validity.as_mut() {
+            extend_trusted_len_unzip(iterator, validity, &mut self.values)
+        } else {
+            let mut validity =
+                MutableBitmap::from_trusted_len_iter(std::iter::repeat(true).take(self.len()));
+            extend_trusted_len_unzip(iterator, &mut validity, &mut self.values);
+            if validity.null_count() > 0 {
+                self.validity = Some(validity);
+            }
+        }
+    }
+
     fn init_validity(&mut self) {
         self.validity = Some(MutableBitmap::from_trusted_len_iter(
             std::iter::repeat(true)
@@ -120,6 +151,7 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
     /// Use to change the logical type without changing the corresponding physical Type.
     /// # Implementation
     /// This operation is `O(1)`.
+    #[inline]
     pub fn to(self, data_type: DataType) -> Self {
         assert!(T::is_valid(&data_type));
         Self {
@@ -371,6 +403,39 @@ impl<T: NativeType + NaturalDataType, Ptr: std::borrow::Borrow<Option<T>>> FromI
     }
 }
 
+/// Extends a [`MutableBitmap`] and a [`MutableBuffer`] from an iterator of `Option`.
+/// The first buffer corresponds to a bitmap buffer, the second one
+/// corresponds to a values buffer.
+/// # Safety
+/// The caller must ensure that `iterator` is `TrustedLen`.
+#[inline]
+pub(crate) unsafe fn extend_trusted_len_unzip<I, P, T>(
+    iterator: I,
+    validity: &mut MutableBitmap,
+    buffer: &mut MutableBuffer<T>,
+) where
+    T: NativeType,
+    P: std::borrow::Borrow<T>,
+    I: Iterator<Item = Option<P>>,
+{
+    let (_, upper) = iterator.size_hint();
+    let len = upper.expect("trusted_len_unzip requires an upper limit");
+
+    validity.reserve(len);
+    buffer.reserve(len);
+
+    for item in iterator {
+        let item = if let Some(item) = item {
+            validity.push_unchecked(true);
+            *item.borrow()
+        } else {
+            validity.push_unchecked(false);
+            T::default()
+        };
+        buffer.push_unchecked(item);
+    }
+}
+
 /// Creates a [`MutableBitmap`] and a [`MutableBuffer`] from an iterator of `Option`.
 /// The first buffer corresponds to a bitmap buffer, the second one
 /// corresponds to a values buffer.
@@ -385,30 +450,10 @@ where
     P: std::borrow::Borrow<T>,
     I: Iterator<Item = Option<P>>,
 {
-    let (_, upper) = iterator.size_hint();
-    let len = upper.expect("trusted_len_unzip requires an upper limit");
+    let mut validity = MutableBitmap::new();
+    let mut buffer = MutableBuffer::<T>::new();
 
-    let mut validity = MutableBitmap::with_capacity(len);
-    let mut buffer = MutableBuffer::<T>::with_capacity(len);
-
-    let mut dst = buffer.as_mut_ptr();
-    for item in iterator {
-        let item = if let Some(item) = item {
-            validity.push_unchecked(true);
-            *item.borrow()
-        } else {
-            validity.push_unchecked(false);
-            T::default()
-        };
-        std::ptr::write(dst, item);
-        dst = dst.add(1);
-    }
-    assert_eq!(
-        dst.offset_from(buffer.as_ptr()) as usize,
-        len,
-        "Trusted iterator length was not accurately reported"
-    );
-    buffer.set_len(len);
+    extend_trusted_len_unzip(iterator, &mut validity, &mut buffer);
 
     let validity = if validity.null_count() > 0 {
         Some(validity)
@@ -517,5 +562,26 @@ mod tests {
         a.push(None);
         let a: PrimitiveArray<i32> = a.into();
         assert_eq!(a.validity(), &Some(Bitmap::from([false, false])));
+    }
+
+    #[test]
+    fn from_trusted_len() {
+        let a =
+            MutablePrimitiveArray::<i32>::from_trusted_len_iter(vec![Some(1), None].into_iter());
+        let a: PrimitiveArray<i32> = a.into();
+        assert_eq!(a.validity(), &Some(Bitmap::from([true, false])));
+    }
+
+    #[test]
+    fn extend_trusted_len() {
+        let mut a = MutablePrimitiveArray::<i32>::new();
+        a.extend_trusted_len(vec![Some(1), Some(2)].into_iter());
+        assert_eq!(a.validity(), &None);
+        a.extend_trusted_len(vec![None, Some(4)].into_iter());
+        assert_eq!(
+            a.validity(),
+            &Some(MutableBitmap::from([true, true, false, true]))
+        );
+        assert_eq!(a.values(), &MutableBuffer::<i32>::from([1, 2, 0, 4]));
     }
 }
