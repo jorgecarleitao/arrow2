@@ -5,9 +5,10 @@ This document describes the overall design of this module.
 ## Notation:
 
 * "array" in this module denotes any struct that implements the trait `Array`.
+* "mutable array" in this module denotes any struct that implements the trait `MutableArray`.
 * words in `code` denote existing terms on this implementation.
 
-## Rules:
+## Arrays:
 
 * Every arrow array with a different physical representation MUST be implemented as a struct or generic struct.
 
@@ -50,3 +51,24 @@ This document describes the overall design of this module.
 
 The rational of the above is that it enable us to be fully interoperable with the offset logic supported by the C data interface, while at the same time easily perform array slices
 within Rust's type safety mechanism.
+
+### Mutable Arrays
+
+* An array MAY have a mutable counterpart. E.g. `MutablePrimitiveArray<T>` is the mutable counterpart of `PrimitiveArray<T>`.
+
+* Arrays with mutable counterparts MUST have its own module, and have the mutable counterpart declared in `{module}/mutable.rs`.
+
+* The trait `MutableArray` MUST only be implemented by mutable arrays in this module.
+
+* A mutable array MUST be `#[derive(Debug)]`
+
+* A mutable array with a null bitmap MUST implement it as `Option<MutableBitmap>`
+
+* Converting a `MutableArray` to its immutable counterpart MUST be `O(1)`. Specifically:
+    * it must not allocate
+    * it must not cause `O(N)` data transformations
+
+    This is achieved by converting mutable versions to immutable counterparts (e.g. `MutableBitmap -> Bitmap`).
+
+    The rational is that `MutableArray`s can be used to perform in-place operations under 
+    the arrow spec.
