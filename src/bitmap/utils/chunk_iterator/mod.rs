@@ -40,25 +40,25 @@ fn copy_with_merge<T: BitChunk>(dst: &mut T::Bytes, bytes: &[u8], bit_offset: us
 }
 
 impl<'a, T: BitChunk> BitChunks<'a, T> {
-    pub fn new(buffer: &'a [u8], offset: usize, len: usize) -> Self {
-        assert!(offset + len <= buffer.len() * 8);
+    pub fn new(slice: &'a [u8], offset: usize, len: usize) -> Self {
+        assert!(offset + len <= slice.len() * 8);
 
-        let skip_offset = offset / 8;
+        let slice = &slice[offset / 8..];
         let bit_offset = offset % 8;
         let size_of = std::mem::size_of::<T>();
 
         let bytes_len = (len + bit_offset + 7) / 8;
         let (mut chunks, remainder_bytes) = if size_of != 1 {
             // case where a chunk has more than one byte
-            let chunks = (&buffer[skip_offset..skip_offset + bytes_len]).chunks_exact(size_of);
+            let chunks = (&slice[..bytes_len]).chunks_exact(size_of);
             let remainder_bytes = chunks.remainder();
             (chunks, remainder_bytes)
         } else {
             // case where a chunk is exactly one byte
             let bytes = (len + bit_offset) / 8;
-            let chunks = &buffer[skip_offset..skip_offset + bytes];
+            let chunks = &slice[..bytes];
             let chunks = chunks.chunks_exact(size_of);
-            (chunks, &buffer[buffer.len() - 1..bytes_len])
+            (chunks, &slice[slice.len() - 1..bytes_len])
         };
 
         let remaining = chunks.size_hint().0;
@@ -297,5 +297,29 @@ mod tests {
         for i in 0..4 {
             assert_eq!(a.next().unwrap(), (i + 1) % 3 == 0);
         }
+    }
+
+    #[test]
+    fn basics_1() {
+        let mut iter = BitChunks::<u16>::new(
+            &[0b00000001u8, 0b00000010u8, 0b00000100u8, 0b00001000u8],
+            8,
+            3 * 8,
+        );
+        assert_eq!(iter.next().unwrap(), 0b0000_0100_0000_0010u16);
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.remainder(), 0b0000_0000_0000_1000u16);
+        assert_eq!(iter.remainder_len(), 8);
+    }
+
+    #[test]
+    fn basics_2() {
+        let mut iter = BitChunks::<u16>::new(
+            &[0b00000001u8, 0b00000010u8, 0b00000100u8, 0b00001000u8],
+            7,
+            3 * 8,
+        );
+        assert_eq!(iter.next().unwrap(), 0b0000_1000_0000_0100u16);
+        assert_eq!(iter.next(), None);
     }
 }
