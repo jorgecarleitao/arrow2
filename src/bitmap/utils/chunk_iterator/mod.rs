@@ -20,6 +20,7 @@ pub struct BitChunks<'a, T: BitChunk> {
     chunk_iterator: std::slice::ChunksExact<'a, u8>,
     current: T,
     remainder_bytes: &'a [u8],
+    last_chunk: T,
     remaining: usize,
     /// offset inside a byte
     bit_offset: usize,
@@ -40,26 +41,29 @@ fn copy_with_merge<T: BitChunk>(dst: &mut T::Bytes, bytes: &[u8], bit_offset: us
 }
 
 impl<'a, T: BitChunk> BitChunks<'a, T> {
-    pub fn new(buffer: &'a [u8], offset: usize, len: usize) -> Self {
-        assert!(offset + len <= buffer.len() * 8);
+    pub fn new(slice: &'a [u8], offset: usize, len: usize) -> Self {
+        assert!(offset + len <= slice.len() * 8);
 
-        let skip_offset = offset / 8;
+        let slice = &slice[offset / 8..];
         let bit_offset = offset % 8;
         let size_of = std::mem::size_of::<T>();
 
-        let bytes_len = (len + bit_offset + 7) / 8;
-        let (mut chunks, remainder_bytes) = if size_of != 1 {
-            // case where a chunk has more than one byte
-            let chunks = (&buffer[skip_offset..skip_offset + bytes_len]).chunks_exact(size_of);
-            let remainder_bytes = chunks.remainder();
-            (chunks, remainder_bytes)
-        } else {
-            // case where a chunk is exactly one byte
-            let bytes = (len + bit_offset) / 8;
-            let chunks = &buffer[skip_offset..skip_offset + bytes];
-            let chunks = chunks.chunks_exact(size_of);
-            (chunks, &buffer[buffer.len() - 1..bytes_len])
-        };
+        let bytes_len = len / 8;
+        let bytes_upper_len = (len + bit_offset + 7) / 8;
+        let mut chunks = slice[..bytes_len].chunks_exact(size_of);
+
+        let remainder = &slice[bytes_len - chunks.remainder().len()..bytes_upper_len];
+
+        let remainder_bytes = if chunks.len() == 0 { slice } else { remainder };
+
+        let last_chunk = remainder_bytes
+            .first()
+            .map(|first| {
+                let mut last = T::zero().to_ne_bytes();
+                last[0] = *first;
+                T::from_ne_bytes(last)
+            })
+            .unwrap_or_else(T::zero);
 
         let remaining = chunks.size_hint().0;
 
@@ -77,6 +81,7 @@ impl<'a, T: BitChunk> BitChunks<'a, T> {
             current,
             remaining,
             remainder_bytes,
+            last_chunk,
             bit_offset,
             phantom: std::marker::PhantomData,
         }
@@ -102,6 +107,7 @@ impl<'a, T: BitChunk> BitChunks<'a, T> {
                 // all remaining bytes
                 self.remainder_bytes
                     .iter()
+                    .take(std::mem::size_of::<T>())
                     .enumerate()
                     .for_each(|(i, val)| remainder[i] = *val);
 
@@ -151,10 +157,8 @@ impl<T: BitChunk> Iterator for BitChunks<'_, T> {
                 self.load_next();
                 self.current
             } else {
-                // case where the `next` is incomplete and thus we can only take part of it
-                let mut next = T::zero().to_ne_bytes();
-                next[0] = self.remainder_bytes[0];
-                T::from_ne_bytes(next)
+                // case where the `next` is incomplete and thus we take the remaining
+                self.last_chunk
             };
             merge_reversed(current, next, self.bit_offset)
         };
@@ -212,15 +216,17 @@ mod tests {
     #[test]
     fn basics_offset() {
         let mut iter = BitChunks::<u16>::new(&[0b00000001u8, 0b00000011u8, 0b00000001u8], 1, 16);
-        let r = iter.next().unwrap();
-        assert_eq!(r, 0b1000_0001_1000_0000u16);
         assert_eq!(iter.remainder(), 0);
+        assert_eq!(iter.next().unwrap(), 0b1000_0001_1000_0000u16);
+        assert_eq!(iter.next(), None);
     }
 
     #[test]
     fn basics_offset_remainder() {
-        let a = BitChunks::<u16>::new(&[0b00000001u8, 0b00000011u8, 0b00000001u8], 1, 15);
-        assert_eq!(a.remainder(), 0);
+        let mut a = BitChunks::<u16>::new(&[0b00000001u8, 0b00000011u8, 0b10000001u8], 1, 15);
+        assert_eq!(a.next(), None);
+        assert_eq!(a.remainder(), 0b1000_0001_1000_0000u16);
+        assert_eq!(a.remainder_len(), 15);
     }
 
     #[test]
@@ -278,7 +284,7 @@ mod tests {
             0b00100100, 0b01001001, 0b10010010, 0b00100100, 0b01001001, 0b10010010, 0b00100100,
             0b01001001, 0b10010010, 0b00100100, 0b01001001, 0b10010010, 0b00000100,
         ];
-        let mut iter = BitChunks::<u8>::new(input, 0, 100);
+        let mut iter = BitChunks::<u8>::new(input, 0, 8 * 12 + 4);
         assert_eq!(iter.remainder_len(), 100 - 96);
 
         for j in 0..12 {
@@ -297,5 +303,37 @@ mod tests {
         for i in 0..4 {
             assert_eq!(a.next().unwrap(), (i + 1) % 3 == 0);
         }
+    }
+
+    #[test]
+    fn basics_1() {
+        let mut iter = BitChunks::<u16>::new(
+            &[0b00000001u8, 0b00000010u8, 0b00000100u8, 0b00001000u8],
+            8,
+            3 * 8,
+        );
+        assert_eq!(iter.next().unwrap(), 0b0000_0100_0000_0010u16);
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.remainder(), 0b0000_0000_0000_1000u16);
+        assert_eq!(iter.remainder_len(), 8);
+    }
+
+    #[test]
+    fn basics_2() {
+        let mut iter = BitChunks::<u16>::new(
+            &[0b00000001u8, 0b00000010u8, 0b00000100u8, 0b00001000u8],
+            7,
+            3 * 8,
+        );
+        assert_eq!(iter.remainder(), 0b0000_0000_0001_0000u16);
+        assert_eq!(iter.next().unwrap(), 0b0000_1000_0000_0100u16);
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn remainder_1() {
+        let mut iter = BitChunks::<u64>::new(&[0b11111111u8, 0b00000001u8], 0, 9);
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.remainder(), 0b1_1111_1111u64);
     }
 }
