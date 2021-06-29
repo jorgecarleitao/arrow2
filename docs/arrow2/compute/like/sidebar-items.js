@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["like_utf8","Returns `lhs LIKE rhs` operation on two [`Utf8Array`]."],["like_utf8_scalar","Returns `lhs LIKE rhs` operation."],["nlike_utf8",""],["nlike_utf8_scalar",""]]});
