@@ -146,14 +146,15 @@
                         <h1 id="write-to-parquet"><a class="header" href="#write-to-parquet">Write to Parquet</a></h1>
 <p>When compiled with feature <code>io_parquet</code>, this crate can be used to write parquet files
 from arrow.
-It makes minimal assumptions on how you to decompose CPU and IO intensive tasks.</p>
+It makes minimal assumptions on how you to decompose CPU and IO intensive tasks, as well
+as an higher-level API to abstract away some of this work into an easy to use API.</p>
 <p>First, some notation:</p>
 <ul>
 <li><code>page</code>: part of a column (e.g. similar of a slice of an <code>Array</code>)</li>
 <li><code>column chunk</code>: composed of multiple pages (similar of an <code>Array</code>)</li>
 <li><code>row group</code>: a group of columns with the same length (similar of a <code>RecordBatch</code> in Arrow)</li>
 </ul>
-<p>Here is how to write a single column chunk into a single row group:</p>
+<p>Here is an example of how to write a single column chunk into a single row group:</p>
 <pre><pre class="playground"><code class="language-rust">use std::fs::File;
 use std::iter::once;
 
@@ -214,6 +215,63 @@ fn main() -&gt; Result&lt;()&gt; {
     ]);
     let field = Field::new(&quot;c1&quot;, array.data_type().clone(), true);
     write_single_array(&quot;test.parquet&quot;, &amp;array, field)
+}
+</code></pre></pre>
+<p>For single-threaded writing, this crate offers an API that encapsulates the above logic. It 
+assumes that a <code>RecordBatch</code> is mapped to a single row group with a single page per column.</p>
+<pre><pre class="playground"><code class="language-rust">use std::fs::File;
+use std::sync::Arc;
+
+use arrow2::{
+    array::{Array, Int32Array},
+    datatypes::{Field, Schema},
+    error::Result,
+    io::parquet::write::{write_file, CompressionCodec, RowGroupIterator, WriteOptions},
+    record_batch::RecordBatch,
+};
+
+fn write_batch(path: &amp;str, batch: RecordBatch) -&gt; Result&lt;()&gt; {
+    let schema = batch.schema().clone();
+
+    let options = WriteOptions {
+        write_statistics: true,
+        compression: CompressionCodec::Uncompressed,
+    };
+
+    let iter = vec![Ok(batch)];
+
+    let row_groups = RowGroupIterator::try_new(iter.into_iter(), &amp;schema, options)?;
+
+    // Create a new empty file
+    let mut file = File::create(path)?;
+
+    // Write the file. Note that, at present, any error results in a corrupted file.
+    let parquet_schema = row_groups.parquet_schema().clone();
+    write_file(
+        &amp;mut file,
+        row_groups,
+        &amp;schema,
+        parquet_schema,
+        options,
+        None,
+    )
+}
+
+fn main() -&gt; Result&lt;()&gt; {
+    let array = Int32Array::from(&amp;[
+        Some(0),
+        Some(1),
+        Some(2),
+        Some(3),
+        Some(4),
+        Some(5),
+        Some(6),
+    ]);
+    let field = Field::new(&quot;c1&quot;, array.data_type().clone(), true);
+    let schema = Schema::new(vec![field]);
+    let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(array)])?;
+
+    write_batch(&quot;test.parquet&quot;, batch)
 }
 </code></pre></pre>
 
