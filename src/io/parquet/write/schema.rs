@@ -64,7 +64,8 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             None,
             None,
         )?),
-        DataType::Int64 => Ok(ParquetType::try_from_primitive(
+        // DataType::Duration(_) has no parquet representation => do not apply any logical type
+        DataType::Int64 | DataType::Duration(_) => Ok(ParquetType::try_from_primitive(
             name,
             PhysicalType::Int64,
             repetition,
@@ -254,9 +255,6 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             })),
             None,
         )?),
-        DataType::Duration(_) => Err(ArrowError::InvalidArgumentError(
-            "Converting Duration to parquet not supported".to_string(),
-        )),
         DataType::Struct(fields) => {
             if fields.is_empty() {
                 return Err(ArrowError::InvalidArgumentError(
@@ -312,14 +310,15 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
                 None,
             )?)
         }
+        DataType::Interval(_) => Ok(ParquetType::try_from_primitive(
+            name,
+            PhysicalType::FixedLenByteArray(12),
+            repetition,
+            Some(PrimitiveConvertedType::Interval),
+            None,
+            None,
+        )?),
         /*
-        DataType::Interval(_) => {
-            Type::primitive_type_builder(name, PhysicalType::FIXED_LEN_BYTE_ARRAY)
-                .with_converted_type(ConvertedType::INTERVAL)
-                .with_repetition(repetition)
-                .with_length(12)
-                .build()
-        }
         DataType::FixedSizeBinary(length) => {
             Type::primitive_type_builder(name, PhysicalType::FIXED_LEN_BYTE_ARRAY)
                 .with_repetition(repetition)
