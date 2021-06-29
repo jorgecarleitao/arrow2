@@ -34,10 +34,14 @@ fn copy_with_merge<T: BitChunk>(dst: &mut T::Bytes, bytes: &[u8], bit_offset: us
     let mut last = bytes[bytes.len() - 1];
     last >>= bit_offset;
     dst[0] = last;
-    bytes.windows(2).enumerate().for_each(|(i, w)| {
-        let val = merge_reversed(w[0], w[1], bit_offset);
-        dst[i] = val;
-    });
+    bytes
+        .windows(2)
+        .take(std::mem::size_of::<T>())
+        .enumerate()
+        .for_each(|(i, w)| {
+            let val = merge_reversed(w[0], w[1], bit_offset);
+            dst[i] = val;
+        });
 }
 
 impl<'a, T: BitChunk> BitChunks<'a, T> {
