@@ -71,6 +71,16 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             None,
             None,
         )?),
+        // no natural representation in parquet; leave it as is.
+        // arrow consumers MAY use the arrow schema in the metadata to parse them.
+        DataType::Date64 => Ok(ParquetType::try_from_primitive(
+            name,
+            PhysicalType::Int64,
+            repetition,
+            None,
+            None,
+            None,
+        )?),
         DataType::Float32 => Ok(ParquetType::try_from_primitive(
             name,
             PhysicalType::Float,
@@ -177,6 +187,16 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             })),
             None,
         )?),
+        // no natural representation in parquet; leave it as is.
+        // arrow consumers MAY use the arrow schema in the metadata to parse them.
+        DataType::Timestamp(TimeUnit::Second, _) => Ok(ParquetType::try_from_primitive(
+            name,
+            PhysicalType::Int64,
+            repetition,
+            None,
+            None,
+            None,
+        )?),
         DataType::Timestamp(time_unit, zone) => Ok(ParquetType::try_from_primitive(
             name,
             PhysicalType::Int64,
@@ -185,12 +205,22 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             Some(LogicalType::TIMESTAMP(TimestampType {
                 is_adjusted_to_u_t_c: matches!(zone, Some(z) if !z.as_str().is_empty()),
                 unit: match time_unit {
-                    TimeUnit::Second => ParquetTimeUnit::MILLIS(Default::default()),
+                    TimeUnit::Second => unreachable!(),
                     TimeUnit::Millisecond => ParquetTimeUnit::MILLIS(Default::default()),
                     TimeUnit::Microsecond => ParquetTimeUnit::MICROS(Default::default()),
                     TimeUnit::Nanosecond => ParquetTimeUnit::NANOS(Default::default()),
                 },
             })),
+            None,
+        )?),
+        // no natural representation in parquet; leave it as is.
+        // arrow consumers MAY use the arrow schema in the metadata to parse them.
+        DataType::Time32(TimeUnit::Second) => Ok(ParquetType::try_from_primitive(
+            name,
+            PhysicalType::Int32,
+            repetition,
+            None,
+            None,
             None,
         )?),
         DataType::Time32(TimeUnit::Millisecond) => Ok(ParquetType::try_from_primitive(
