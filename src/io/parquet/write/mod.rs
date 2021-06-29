@@ -10,6 +10,8 @@ mod utils;
 pub mod stream;
 
 use crate::array::*;
+use crate::buffer::Buffer;
+use crate::buffer::MutableBuffer;
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 
@@ -27,6 +29,17 @@ use parquet2::{
 pub use record_batch::RowGroupIterator;
 use schema::schema_to_metadata_key;
 pub use schema::to_parquet_type;
+
+pub(self) fn decimal_length_from_precision(precision: usize) -> usize {
+    // digits = floor(log_10(2^(8*n - 1) - 1))
+    // ceil(digits) = log10(2^(8*n - 1) - 1)
+    // 10^ceil(digits) = 2^(8*n - 1) - 1
+    // 10^ceil(digits) + 1 = 2^(8*n - 1)
+    // log2(10^ceil(digits) + 1) = (8*n - 1)
+    // log2(10^ceil(digits) + 1) + 1 = 8*n
+    // (log2(10^ceil(a) + 1) + 1) / 8 = n
+    (((10.0_f64.powi(precision as i32) + 1.0).log2() + 1.0) / 8.0).ceil() as usize
+}
 
 /// Creates a parquet [`SchemaDescriptor`] from a [`Schema`].
 pub fn to_parquet_schema(schema: &Schema) -> Result<SchemaDescriptor> {
@@ -163,6 +176,55 @@ pub fn array_to_page(
             options,
             descriptor,
         ),
+        DataType::Decimal(precision, _) => {
+            let precision = *precision;
+            if precision <= 9 {
+                let array = array
+                    .as_any()
+                    .downcast_ref::<PrimitiveArray<i128>>()
+                    .unwrap();
+                let values = array.values().iter().map(|x| *x as i32);
+                let values = Buffer::from_trusted_len_iter(values);
+                let array = PrimitiveArray::<i32>::from_data(
+                    DataType::Int32,
+                    values,
+                    array.validity().clone(),
+                );
+                primitive::array_to_page_v1::<i32, i32>(&array, options, descriptor)
+            } else if precision <= 18 {
+                let array = array
+                    .as_any()
+                    .downcast_ref::<PrimitiveArray<i128>>()
+                    .unwrap();
+                let values = array.values().iter().map(|x| *x as i64);
+                let values = Buffer::from_trusted_len_iter(values);
+                let array = PrimitiveArray::<i64>::from_data(
+                    DataType::Int64,
+                    values,
+                    array.validity().clone(),
+                );
+                primitive::array_to_page_v1::<i64, i64>(&array, options, descriptor)
+            } else {
+                let array = array
+                    .as_any()
+                    .downcast_ref::<PrimitiveArray<i128>>()
+                    .unwrap();
+                let size = decimal_length_from_precision(precision);
+
+                let mut values = MutableBuffer::<u8>::new(); // todo: this can be estimated
+
+                array.values().iter().for_each(|x| {
+                    let bytes = &x.to_be_bytes()[16 - size..];
+                    values.extend_from_slice(bytes)
+                });
+                let array = FixedSizeBinaryArray::from_data(
+                    DataType::FixedSizeBinary(size as i32),
+                    values.into(),
+                    array.validity().clone(),
+                );
+                fixed_len_bytes::array_to_page_v1(&array, options, descriptor)
+            }
+        }
         other => Err(ArrowError::NotYetImplemented(format!(
             "Writing the data type {:?} is not yet implemented",
             other

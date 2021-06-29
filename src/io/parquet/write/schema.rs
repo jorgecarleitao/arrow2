@@ -1,13 +1,14 @@
 use parquet2::schema::{
     types::{ParquetType, PhysicalType, PrimitiveConvertedType, TimeUnit as ParquetTimeUnit},
-    FieldRepetitionType, IntType, KeyValue, LogicalType, TimeType, TimestampType,
+    DecimalType, FieldRepetitionType, IntType, KeyValue, LogicalType, TimeType, TimestampType,
 };
 
-use crate::datatypes::{DataType, Field, Schema, TimeUnit};
-use crate::error::{ArrowError, Result};
-
-use crate::io::ipc::write::schema_to_bytes;
-use crate::io::ipc::write::MetadataVersion;
+use crate::{
+    datatypes::{DataType, Field, Schema, TimeUnit},
+    error::{ArrowError, Result},
+    io::ipc::write::{schema_to_bytes, MetadataVersion},
+    io::parquet::write::decimal_length_from_precision,
+};
 
 use super::super::ARROW_SCHEMA_META_KEY;
 
@@ -283,6 +284,34 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             None,
             None,
         )?),
+        DataType::Decimal(precision, scale) => {
+            let precision = *precision;
+            let scale = *scale;
+            let logical_type = Some(LogicalType::DECIMAL(DecimalType {
+                scale: scale as i32,
+                precision: precision as i32,
+            }));
+
+            let physical_type = if precision <= 9 {
+                PhysicalType::Int32
+            } else if precision <= 18 {
+                PhysicalType::Int64
+            } else {
+                let len = decimal_length_from_precision(precision) as i32;
+                PhysicalType::FixedLenByteArray(len)
+            };
+            Ok(ParquetType::try_from_primitive(
+                name,
+                physical_type,
+                repetition,
+                Some(PrimitiveConvertedType::Decimal(
+                    precision as i32,
+                    scale as i32,
+                )),
+                logical_type,
+                None,
+            )?)
+        }
         /*
         DataType::Interval(_) => {
             Type::primitive_type_builder(name, PhysicalType::FIXED_LEN_BYTE_ARRAY)
@@ -295,31 +324,6 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             Type::primitive_type_builder(name, PhysicalType::FIXED_LEN_BYTE_ARRAY)
                 .with_repetition(repetition)
                 .with_length(*length)
-                .build()
-        }
-        DataType::Decimal(precision, scale) => {
-            // Decimal precision determines the Parquet physical type to use.
-            // TODO(ARROW-12018): Enable the below after ARROW-10818 Decimal support
-            //
-            // let (physical_type, length) = if *precision > 1 && *precision <= 9 {
-            //     (PhysicalType::INT32, -1)
-            // } else if *precision <= 18 {
-            //     (PhysicalType::INT64, -1)
-            // } else {
-            //     (
-            //         PhysicalType::FIXED_LEN_BYTE_ARRAY,
-            //         decimal_length_from_precision(*precision) as i32,
-            //     )
-            // };
-            Type::primitive_type_builder(name, PhysicalType::FIXED_LEN_BYTE_ARRAY)
-                .with_repetition(repetition)
-                .with_length(decimal_length_from_precision(*precision) as i32)
-                .with_logical_type(Some(LogicalType::DECIMAL(DecimalType {
-                    scale: *scale as i32,
-                    precision: *precision as i32,
-                })))
-                .with_precision(*precision as i32)
-                .with_scale(*scale as i32)
                 .build()
         }
         DataType::List(f) | DataType::FixedSizeList(f, _) | DataType::LargeList(f) => {

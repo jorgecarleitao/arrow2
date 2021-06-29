@@ -38,14 +38,13 @@ for file in [
     "generated_null_trivial",
     "generated_primitive_large_offsets",
     "generated_datetime",
+    "generated_decimal",
     # requires writing Dictionary
     # "generated_dictionary",
     # requires writing Duration
     # "generated_interval",
     # requires writing Struct
     # "generated_duplicate_fieldnames",
-    # requires writing Decimal
-    # "generated_decimal",
     # requires writing un-nested List
     # "generated_custom_metadata",
 ]:
