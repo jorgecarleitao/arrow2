@@ -19,6 +19,17 @@ def _expected(file: str):
     return pyarrow.ipc.RecordBatchFileReader(get_file_path(file)).read_all()
 
 
+# types without a native parquet logical representation
+# There is currently no specification on how to represent these in parquet,
+# and thus we ignore them in comparisons
+non_native_types = [
+    pyarrow.date64(),
+    pyarrow.time32("s"),
+    pyarrow.timestamp("s"),
+    pyarrow.timestamp("s", tz="UTC"),
+]
+
+
 for file in [
     "generated_primitive",
     "generated_primitive_no_batches",
@@ -26,6 +37,7 @@ for file in [
     "generated_null",
     "generated_null_trivial",
     "generated_primitive_large_offsets",
+    "generated_datetime",
     # requires writing Dictionary
     # "generated_dictionary",
     # requires writing Duration
@@ -34,8 +46,6 @@ for file in [
     # "generated_duplicate_fieldnames",
     # requires writing Decimal
     # "generated_decimal",
-    # requires writing Date64
-    # "generated_datetime",
     # requires writing un-nested List
     # "generated_custom_metadata",
 ]:
@@ -46,4 +56,6 @@ for file in [
     os.remove(path)
 
     for c1, c2 in zip(expected, table):
+        if c1.type in non_native_types:
+            continue
         assert c1 == c2
