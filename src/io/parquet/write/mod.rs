@@ -2,6 +2,7 @@ mod binary;
 mod boolean;
 mod fixed_len_bytes;
 mod primitive;
+mod record_batch;
 mod schema;
 mod utf8;
 mod utils;
@@ -23,6 +24,7 @@ pub use parquet2::{
 use parquet2::{
     metadata::SchemaDescriptor, schema::KeyValue, write::write_file as parquet_write_file,
 };
+pub use record_batch::RowGroupIterator;
 use schema::schema_to_metadata_key;
 pub use schema::to_parquet_type;
 
