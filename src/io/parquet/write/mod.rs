@@ -10,10 +10,11 @@ mod utils;
 pub mod stream;
 
 use crate::array::*;
-use crate::buffer::Buffer;
-use crate::buffer::MutableBuffer;
+use crate::buffer::{Buffer, MutableBuffer};
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
+use crate::types::days_ms;
+use crate::types::NativeType;
 
 use parquet2::metadata::ColumnDescriptor;
 pub use parquet2::{
@@ -130,13 +131,15 @@ pub fn array_to_page(
                 descriptor,
             )
         }
-        DataType::Int64 | DataType::Date64 | DataType::Time64(_) | DataType::Timestamp(_, _) => {
-            primitive::array_to_page_v1::<i64, i64>(
-                array.as_any().downcast_ref().unwrap(),
-                options,
-                descriptor,
-            )
-        }
+        DataType::Int64
+        | DataType::Date64
+        | DataType::Time64(_)
+        | DataType::Timestamp(_, _)
+        | DataType::Duration(_) => primitive::array_to_page_v1::<i64, i64>(
+            array.as_any().downcast_ref().unwrap(),
+            options,
+            descriptor,
+        ),
         DataType::Float32 => primitive::array_to_page_v1::<f32, f32>(
             array.as_any().downcast_ref().unwrap(),
             options,
@@ -170,6 +173,42 @@ pub fn array_to_page(
         DataType::Null => {
             let array = Int32Array::new_null(DataType::Int32, array.len());
             primitive::array_to_page_v1::<i32, i32>(&array, options, descriptor)
+        }
+        DataType::Interval(IntervalUnit::YearMonth) => {
+            let array = array
+                .as_any()
+                .downcast_ref::<PrimitiveArray<i32>>()
+                .unwrap();
+            let mut values = MutableBuffer::<u8>::with_capacity(12 * array.len());
+            array.values().iter().for_each(|x| {
+                let bytes = &x.to_le_bytes();
+                values.extend_from_slice(bytes);
+                values.extend_constant(8, 0);
+            });
+            let array = FixedSizeBinaryArray::from_data(
+                DataType::FixedSizeBinary(12),
+                values.into(),
+                array.validity().clone(),
+            );
+            fixed_len_bytes::array_to_page_v1(&array, options, descriptor)
+        }
+        DataType::Interval(IntervalUnit::DayTime) => {
+            let array = array
+                .as_any()
+                .downcast_ref::<PrimitiveArray<days_ms>>()
+                .unwrap();
+            let mut values = MutableBuffer::<u8>::with_capacity(12 * array.len());
+            array.values().iter().for_each(|x| {
+                let bytes = &x.to_le_bytes();
+                values.extend_constant(4, 0); // months
+                values.extend_from_slice(bytes); // days and seconds
+            });
+            let array = FixedSizeBinaryArray::from_data(
+                DataType::FixedSizeBinary(12),
+                values.into(),
+                array.validity().clone(),
+            );
+            fixed_len_bytes::array_to_page_v1(&array, options, descriptor)
         }
         DataType::FixedSizeBinary(_) => fixed_len_bytes::array_to_page_v1(
             array.as_any().downcast_ref().unwrap(),

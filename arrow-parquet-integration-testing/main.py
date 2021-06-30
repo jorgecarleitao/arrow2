@@ -27,6 +27,10 @@ non_native_types = [
     pyarrow.time32("s"),
     pyarrow.timestamp("s"),
     pyarrow.timestamp("s", tz="UTC"),
+    pyarrow.duration("s"),
+    pyarrow.duration("ms"),
+    pyarrow.duration("us"),
+    pyarrow.duration("ns"),
 ]
 
 
@@ -39,10 +43,9 @@ for file in [
     "generated_primitive_large_offsets",
     "generated_datetime",
     "generated_decimal",
+    "generated_interval",
     # requires writing Dictionary
     # "generated_dictionary",
-    # requires writing Duration
-    # "generated_interval",
     # requires writing Struct
     # "generated_duplicate_fieldnames",
     # requires writing un-nested List
@@ -56,5 +59,8 @@ for file in [
 
     for c1, c2 in zip(expected, table):
         if c1.type in non_native_types:
+            continue
+        if str(c1.type) in ["month_interval", "day_time_interval"]:
+            # pyarrow does not support interval types from parquet
             continue
         assert c1 == c2
