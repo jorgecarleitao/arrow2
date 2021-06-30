@@ -5,10 +5,12 @@ use crate::{buffer::MutableBuffer, trusted_len::TrustedLen};
 use super::utils::{get_bit, null_count, set, set_bit, BitmapIter};
 use super::Bitmap;
 
-/// A mutable container to store boolean values. This container is equivalent to [`Vec<bool>`], but
-/// each bool is stored as a single bit.
+/// A container to store booleans. [`MutableBitmap`] is semantically equivalent
+/// to [`Vec<bool>`], but each value is stored as a single bit, thereby achieving a compression of 8x.
+/// This container is the counterpart of [`MutableBuffer`] for boolean values.
+/// [`MutableBitmap`] can be converted to a [`Bitmap`] at `O(1)`.
 /// # Implementation
-/// This container is backed by [`MutableBuffer<u8>`] and can be converted to a [`Bitmap`] at `O(1)`.
+/// This container is backed by [`MutableBuffer<u8>`].
 #[derive(Debug)]
 pub struct MutableBitmap {
     buffer: MutableBuffer<u8>,

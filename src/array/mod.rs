@@ -1,6 +1,6 @@
-//! This module contains arrays: fixed-length and immutable containers with optional validity
+//! This module contains arrays: fixed-length and immutable containers with optional values
 //! that are layed in memory according to the Arrow specification.
-//! Each type of value has its own `struct`. The main types are:
+//! Each array type has its own `struct`. The following are the main array types:
 //!
 //! * [`PrimitiveArray`], an array of values with a fixed length such as integers, floats, etc.
 //! * [`BooleanArray`], an array of boolean values (stored as a bitmap)
@@ -10,10 +10,13 @@
 //! * [`StructArray`], an array of arrays identified by a string (e.g. `{"a": [1, 2], "b": [true, false]}`)
 //!
 //! This module contains constructors and accessors to operate on the arrays.
-//! All the arrays implement the trait [`Array`] and are often trait objects via [`Array::as_any`].
+//! All the arrays implement the trait [`Array`] and are often trait objects.
 //! Every array has a [`DataType`], which you can access with [`Array::data_type`].
-//! This can be used to `downcast_ref` a `&dyn Array` to concrete structs.
-//! Arrays share memory regions via [`std::sync::Arc`] and can be cloned and sliced at no cost (`O(1)`).
+//! This can be used to `downcast_ref` a `&dyn Array` to a concrete struct.
+//! Arrays can share memory via [`crate::buffer::Buffer`] and thus cloning and slicing is `O(1)`.
+//!
+//! This module also contains the mutable counterparts of arrays, that are neither clonable nor slicable, but that
+//! can be operated in-place, such as [`MutablePrimitiveArray`] and [`MutableUtf8Array`].
 use std::any::Any;
 use std::fmt::Display;
 
@@ -24,49 +27,8 @@ use crate::{
     datatypes::{DataType, IntervalUnit},
 };
 
-/// A trait describing a mutable array; i.e. an array whose values can change.
-/// Mutable arrays are not `Send + Sync` and cannot be cloned but can be mutated in place,
-/// thereby making them useful to perform numeric operations without allocations.
-/// As in [`Array`], concrete arrays (such as `MutablePrimitiveArray`) implement how they are mutated.
-pub trait MutableArray: std::fmt::Debug {
-    /// The [`DataType`] of the array.
-    fn data_type(&self) -> &DataType;
-
-    /// The length of the array.
-    fn len(&self) -> usize;
-
-    /// Whether the array is empty.
-    fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-    /// The optional validity of the array.
-    fn validity(&self) -> &Option<MutableBitmap>;
-
-    /// Convert itself to an (imutable) [`Array`].
-    fn as_arc(&mut self) -> Arc<dyn Array>;
-
-    /// Convert to `Any`, to enable dynamic casting.
-    fn as_any(&self) -> &dyn Any;
-
-    /// Convert to mutable `Any`, to enable dynamic casting.
-    fn as_mut_any(&mut self) -> &mut dyn Any;
-
-    /// Adds a new null element to the array.
-    fn push_null(&mut self);
-
-    /// Whether `index` is valid / set.
-    /// # Panic
-    /// Panics if `index >= self.len()`.
-    fn is_valid(&self, index: usize) -> bool {
-        self.validity()
-            .as_ref()
-            .map(|x| x.get(index))
-            .unwrap_or(true)
-    }
-}
-
-/// A trait representing an Arrow array. Arrow arrays are trait objects
-/// that are infalibly downcasted to concrete types according to the `Array::data_type`.
+/// A trait representing an immutable Arrow array. Arrow arrays are trait objects
+/// that are infalibly downcasted to concrete types according to the [`Array::data_type`].
 pub trait Array: std::fmt::Debug + Send + Sync {
     fn as_any(&self) -> &dyn Any;
 
@@ -126,6 +88,47 @@ pub trait Array: std::fmt::Debug + Send + Sync {
     /// # Panic
     /// This function panics iff `offset + length >= self.len()`.
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array>;
+}
+
+/// A trait describing a mutable array; i.e. an array whose values can be changed.
+/// Mutable arrays are not `Send + Sync` and cannot be cloned but can be mutated in place,
+/// thereby making them useful to perform numeric operations without allocations.
+/// As in [`Array`], concrete arrays (such as [`MutablePrimitiveArray`]) implement how they are mutated.
+pub trait MutableArray: std::fmt::Debug {
+    /// The [`DataType`] of the array.
+    fn data_type(&self) -> &DataType;
+
+    /// The length of the array.
+    fn len(&self) -> usize;
+
+    /// Whether the array is empty.
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+    /// The optional validity of the array.
+    fn validity(&self) -> &Option<MutableBitmap>;
+
+    /// Convert itself to an (imutable) [`Array`].
+    fn as_arc(&mut self) -> Arc<dyn Array>;
+
+    /// Convert to `Any`, to enable dynamic casting.
+    fn as_any(&self) -> &dyn Any;
+
+    /// Convert to mutable `Any`, to enable dynamic casting.
+    fn as_mut_any(&mut self) -> &mut dyn Any;
+
+    /// Adds a new null element to the array.
+    fn push_null(&mut self);
+
+    /// Whether `index` is valid / set.
+    /// # Panic
+    /// Panics if `index >= self.len()`.
+    fn is_valid(&self, index: usize) -> bool {
+        self.validity()
+            .as_ref()
+            .map(|x| x.get(index))
+            .unwrap_or(true)
+    }
 }
 
 macro_rules! general_dyn {

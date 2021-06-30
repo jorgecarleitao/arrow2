@@ -18,11 +18,11 @@ fn capacity_multiple_of_64<T: NativeType>(capacity: usize) -> usize {
     util::round_upto_multiple_of_64(capacity * size_of::<T>()) / size_of::<T>()
 }
 
-/// A [`MutableBuffer`] is Arrow's interface to build a [`Buffer`] out of items, slices and iterators.
-/// [`Buffer`]s created from [`MutableBuffer`] (via `into`) are guaranteed to have its pointer aligned
-/// along cache lines and in multiple of 64 bytes.
-/// Use [MutableBuffer::push] to insert an item, [MutableBuffer::extend_from_slice]
-/// to insert many items, and `into` to convert it to [`Buffer`].
+/// A [`MutableBuffer`] is this crates' interface to store types that are byte-like, such as `i32`.
+/// It behaves like a [`Vec`], with the following differences:
+/// * memory is allocated along cache lines and in multiple of 64 bytes.
+/// * it can only hold types supported by the arrow format (`u8-u64`, `i8-i128`, `f32,f64` and [`crate::types::days_ms`])
+/// A [`MutableBuffer`] can be converted to a [`Buffer`] via `.into`.
 /// # Example
 /// ```
 /// # use arrow2::buffer::{Buffer, MutableBuffer};
