@@ -68,8 +68,8 @@ impl<O: Offset> BinaryArray<O> {
         let offsets = self.offsets.as_slice();
         let offset = offsets[i];
         let offset_1 = offsets[i + 1];
-        let length = (offset_1 - offset).to_usize().unwrap();
-        let offset = offset.to_usize().unwrap();
+        let length = (offset_1 - offset).to_usize();
+        let offset = offset.to_usize();
 
         &self.values.as_slice()[offset..offset + length]
     }
@@ -80,8 +80,8 @@ impl<O: Offset> BinaryArray<O> {
     pub unsafe fn value_unchecked(&self, i: usize) -> &[u8] {
         let offset = *self.offsets.as_ptr().add(i);
         let offset_1 = *self.offsets.as_ptr().add(i + 1);
-        let length = (offset_1 - offset).to_usize().unwrap();
-        let offset = offset.to_usize().unwrap();
+        let length = (offset_1 - offset).to_usize();
+        let offset = offset.to_usize();
 
         std::slice::from_raw_parts(self.values.as_ptr().add(offset), length)
     }

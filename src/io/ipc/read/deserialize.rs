@@ -389,7 +389,7 @@ where
     // Older versions of the IPC format sometimes do not report an offset
     .or_else(|_| Result::Ok(MutableBuffer::<O>::from(&[O::default()]).into()))?;
 
-    let last_offset = offsets.as_slice()[offsets.len() - 1].to_usize().unwrap();
+    let last_offset = offsets.as_slice()[offsets.len() - 1].to_usize();
     let values = read_buffer(
         buffers,
         last_offset,
@@ -435,7 +435,7 @@ where
     // Older versions of the IPC format sometimes do not report an offset
     .or_else(|_| Result::Ok(MutableBuffer::<O>::from(&[O::default()]).into()))?;
 
-    let last_offset = offsets.as_slice()[offsets.len() - 1].to_usize().unwrap();
+    let last_offset = offsets.as_slice()[offsets.len() - 1].to_usize();
     let values = read_buffer(
         buffers,
         last_offset,

@@ -15,10 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::{
-    array::{Array, BinaryArray, Offset, PrimitiveArray},
-    error::Result,
-};
+use crate::array::{Array, BinaryArray, Offset, PrimitiveArray};
 
 use super::generic_binary::*;
 use super::Index;
@@ -27,17 +24,17 @@ use super::Index;
 pub fn take<O: Offset, I: Index>(
     values: &BinaryArray<O>,
     indices: &PrimitiveArray<I>,
-) -> Result<BinaryArray<O>> {
+) -> BinaryArray<O> {
     let indices_has_validity = indices.null_count() > 0;
     let values_has_validity = values.null_count() > 0;
 
     let (offsets, values, validity) = match (values_has_validity, indices_has_validity) {
         (false, false) => {
-            take_no_validity::<O, I>(values.offsets(), values.values(), indices.values())?
+            take_no_validity::<O, I>(values.offsets(), values.values(), indices.values())
         }
-        (true, false) => take_values_validity(values, indices.values())?,
-        (false, true) => take_indices_validity(values.offsets(), values.values(), indices)?,
-        (true, true) => take_values_indices_validity(values, indices)?,
+        (true, false) => take_values_validity(values, indices.values()),
+        (false, true) => take_indices_validity(values.offsets(), values.values(), indices),
+        (true, true) => take_values_indices_validity(values, indices),
     };
-    Ok(BinaryArray::<O>::from_data(offsets, values, validity))
+    BinaryArray::<O>::from_data(offsets, values, validity)
 }

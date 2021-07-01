@@ -18,12 +18,9 @@
 //! Defines take kernel for [`Array`]
 
 use crate::{
-    array::{
-        new_empty_array, Array, BinaryArray, BooleanArray, DictionaryArray, ListArray, NullArray,
-        PrimitiveArray, StructArray, Utf8Array,
-    },
+    array::{new_empty_array, Array, NullArray, PrimitiveArray},
     datatypes::{DataType, IntervalUnit},
-    error::{ArrowError, Result},
+    error::Result,
 };
 
 pub use crate::array::Index;
@@ -41,9 +38,9 @@ macro_rules! downcast_take {
     ($type: ty, $values: expr, $indices: expr) => {{
         let values = $values
             .as_any()
-            .downcast_ref::<PrimitiveArray<$type>>()
+            .downcast_ref()
             .expect("Unable to downcast to a primitive array");
-        Ok(Box::new(primitive::take::<$type, _>(&values, $indices)?))
+        Ok(Box::new(primitive::take::<$type, _>(&values, $indices)))
     }};
 }
 
@@ -51,9 +48,9 @@ macro_rules! downcast_dict_take {
     ($type: ty, $values: expr, $indices: expr) => {{
         let values = $values
             .as_any()
-            .downcast_ref::<DictionaryArray<$type>>()
+            .downcast_ref()
             .expect("Unable to downcast to a primitive array");
-        Ok(Box::new(dict::take::<$type, _>(&values, $indices)?))
+        Ok(Box::new(dict::take::<$type, _>(&values, $indices)))
     }};
 }
 
@@ -65,8 +62,8 @@ pub fn take<O: Index>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result
     match values.data_type() {
         DataType::Null => Ok(Box::new(NullArray::from_data(indices.len()))),
         DataType::Boolean => {
-            let values = values.as_any().downcast_ref::<BooleanArray>().unwrap();
-            Ok(Box::new(boolean::take::<O>(values, indices)?))
+            let values = values.as_any().downcast_ref().unwrap();
+            Ok(Box::new(boolean::take::<O>(values, indices)))
         }
         DataType::Int8 => downcast_take!(i8, values, indices),
         DataType::Int16 => downcast_take!(i16, values, indices),
@@ -88,20 +85,20 @@ pub fn take<O: Index>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result
         DataType::Float64 => downcast_take!(f64, values, indices),
         DataType::Decimal(_, _) => downcast_take!(i128, values, indices),
         DataType::Utf8 => {
-            let values = values.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
-            Ok(Box::new(utf8::take::<i32, _>(values, indices)?))
+            let values = values.as_any().downcast_ref().unwrap();
+            Ok(Box::new(utf8::take::<i32, _>(values, indices)))
         }
         DataType::LargeUtf8 => {
-            let values = values.as_any().downcast_ref::<Utf8Array<i64>>().unwrap();
-            Ok(Box::new(utf8::take::<i64, _>(values, indices)?))
+            let values = values.as_any().downcast_ref().unwrap();
+            Ok(Box::new(utf8::take::<i64, _>(values, indices)))
         }
         DataType::Binary => {
-            let values = values.as_any().downcast_ref::<BinaryArray<i32>>().unwrap();
-            Ok(Box::new(binary::take::<i32, _>(values, indices)?))
+            let values = values.as_any().downcast_ref().unwrap();
+            Ok(Box::new(binary::take::<i32, _>(values, indices)))
         }
         DataType::LargeBinary => {
-            let values = values.as_any().downcast_ref::<BinaryArray<i64>>().unwrap();
-            Ok(Box::new(binary::take::<i64, _>(values, indices)?))
+            let values = values.as_any().downcast_ref().unwrap();
+            Ok(Box::new(binary::take::<i64, _>(values, indices)))
         }
         DataType::Dictionary(key_type, _) => match key_type.as_ref() {
             DataType::Int8 => downcast_dict_take!(i8, values, indices),
@@ -115,16 +112,16 @@ pub fn take<O: Index>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result
             _ => unreachable!(),
         },
         DataType::Struct(_) => {
-            let array = values.as_any().downcast_ref::<StructArray>().unwrap();
+            let array = values.as_any().downcast_ref().unwrap();
             Ok(Box::new(structure::take::<_>(array, indices)?))
         }
         DataType::List(_) => {
-            let array = values.as_any().downcast_ref::<ListArray<i32>>().unwrap();
-            Ok(Box::new(list::take::<i32, O>(array, indices)?))
+            let array = values.as_any().downcast_ref().unwrap();
+            Ok(Box::new(list::take::<i32, O>(array, indices)))
         }
         DataType::LargeList(_) => {
-            let array = values.as_any().downcast_ref::<ListArray<i64>>().unwrap();
-            Ok(Box::new(list::take::<i64, O>(array, indices)?))
+            let array = values.as_any().downcast_ref().unwrap();
+            Ok(Box::new(list::take::<i64, O>(array, indices)))
         }
         t => unimplemented!("Take not supported for data type {:?}", t),
     }
@@ -185,21 +182,12 @@ pub fn can_take(data_type: &DataType) -> bool {
     }
 }
 
-#[inline(always)]
-fn maybe_usize<I: Index>(index: I) -> Result<usize> {
-    index.to_usize().ok_or(ArrowError::KeyOverflowError)
-}
-
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
 
     use crate::datatypes::Field;
-    use crate::{
-        array::{Int32Array, UInt32Array},
-        bitmap::MutableBitmap,
-        types::NativeType,
-    };
+    use crate::{array::*, bitmap::MutableBitmap, types::NativeType};
 
     use super::*;
 

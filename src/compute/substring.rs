@@ -54,8 +54,8 @@ fn utf8_substring<O: Offset>(array: &Utf8Array<O>, start: O, length: &Option<O>)
         new_offsets.push(length_so_far);
 
         // we need usize for ranges
-        let start = start.to_usize().unwrap();
-        let length = length.to_usize().unwrap();
+        let start = start.to_usize();
+        let length = length.to_usize();
 
         new_values.extend_from_slice(&values[start..start + length]);
     });

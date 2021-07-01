@@ -23,7 +23,6 @@ use crate::{
     error::Result,
 };
 
-use super::maybe_usize;
 use super::Index;
 
 #[inline]
@@ -35,23 +34,21 @@ fn take_validity<I: Index>(
     match (validity, indices_validity) {
         (None, _) => Ok(indices_validity.clone()),
         (Some(validity), None) => {
-            let iter = indices.values().iter().map(|x| {
-                let index = maybe_usize(*x)?;
-                Result::Ok(validity.get_bit(index))
+            let iter = indices.values().iter().map(|index| {
+                let index = index.to_usize();
+                validity.get_bit(index)
             });
-            Ok(MutableBitmap::try_from_trusted_len_iter(iter)?.into())
+            Ok(MutableBitmap::from_trusted_len_iter(iter).into())
         }
         (Some(validity), _) => {
-            let iter = indices.iter().map(|x| {
-                Result::Ok(match x {
-                    Some(x) => {
-                        let index = maybe_usize(*x)?;
-                        validity.get_bit(index)
-                    }
-                    None => false,
-                })
+            let iter = indices.iter().map(|x| match x {
+                Some(index) => {
+                    let index = index.to_usize();
+                    validity.get_bit(index)
+                }
+                None => false,
             });
-            Ok(MutableBitmap::try_from_trusted_len_iter(iter)?.into())
+            Ok(MutableBitmap::from_trusted_len_iter(iter).into())
         }
     }
 }

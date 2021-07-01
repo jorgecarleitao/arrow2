@@ -29,8 +29,8 @@ fn extend_offset_values<O: Offset>(
             &offsets[start..start + len + 1],
         );
 
-        let end = offsets[start + len].to_usize().unwrap();
-        let start = offsets[start].to_usize().unwrap();
+        let end = offsets[start + len].to_usize();
+        let start = offsets[start].to_usize();
         let len = end - start;
         growable.values.extend(index, start, len)
     } else {
@@ -46,11 +46,7 @@ fn extend_offset_values<O: Offset>(
                 *last_offset += len;
 
                 // append value
-                inner_values.extend(
-                    index,
-                    offsets[i].to_usize().unwrap(),
-                    len.to_usize().unwrap(),
-                );
+                inner_values.extend(index, offsets[i].to_usize(), len.to_usize());
             }
             // append offset
             new_offsets.push(*last_offset);

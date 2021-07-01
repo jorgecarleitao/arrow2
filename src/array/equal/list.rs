@@ -43,8 +43,8 @@ fn offset_value_equal<O: Offset>(
     rhs_pos: usize,
     len: usize,
 ) -> bool {
-    let lhs_start = lhs_offsets[lhs_pos].to_usize().unwrap();
-    let rhs_start = rhs_offsets[rhs_pos].to_usize().unwrap();
+    let lhs_start = lhs_offsets[lhs_pos].to_usize();
+    let rhs_start = rhs_offsets[rhs_pos].to_usize();
     let lhs_len = lhs_offsets[lhs_pos + len] - lhs_offsets[lhs_pos];
     let rhs_len = rhs_offsets[rhs_pos + len] - rhs_offsets[rhs_pos];
 
@@ -56,7 +56,7 @@ fn offset_value_equal<O: Offset>(
             rhs_validity,
             lhs_start,
             rhs_start,
-            lhs_len.to_usize().unwrap(),
+            lhs_len.to_usize(),
         )
 }
 
@@ -90,10 +90,10 @@ pub(super) fn equal<O: Offset>(
     // however, one is more likely to slice into a list array and get a region that has 0
     // child values.
     // The test that triggered this behaviour had [4, 4] as a slice of 1 value slot.
-    let lhs_child_length = lhs_offsets.get(len).unwrap().to_usize().unwrap()
-        - lhs_offsets.first().unwrap().to_usize().unwrap();
-    let rhs_child_length = rhs_offsets.get(len).unwrap().to_usize().unwrap()
-        - rhs_offsets.first().unwrap().to_usize().unwrap();
+    let lhs_child_length =
+        lhs_offsets.get(len).unwrap().to_usize() - lhs_offsets.first().unwrap().to_usize();
+    let rhs_child_length =
+        rhs_offsets.get(len).unwrap().to_usize() - rhs_offsets.first().unwrap().to_usize();
 
     if lhs_child_length == 0 && lhs_child_length == rhs_child_length {
         return true;
@@ -118,11 +118,9 @@ pub(super) fn equal<O: Offset>(
             rhs_values,
             &child_lhs_validity,
             &child_rhs_validity,
-            lhs_offsets[lhs_start].to_usize().unwrap(),
-            rhs_offsets[rhs_start].to_usize().unwrap(),
-            (lhs_offsets[len] - lhs_offsets[lhs_start])
-                .to_usize()
-                .unwrap(),
+            lhs_offsets[lhs_start].to_usize(),
+            rhs_offsets[rhs_start].to_usize(),
+            (lhs_offsets[len] - lhs_offsets[lhs_start]).to_usize(),
         )
     } else {
         // get a ref of the parent null buffer bytes, to use in testing for nullness
