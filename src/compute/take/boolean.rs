@@ -18,7 +18,6 @@
 use crate::{
     array::{Array, BooleanArray, PrimitiveArray},
     bitmap::{Bitmap, MutableBitmap},
-    error::Result,
 };
 
 use super::Index;
@@ -61,17 +60,17 @@ fn take_indices_validity<I: Index>(
     values: &Bitmap,
     indices: &PrimitiveArray<I>,
 ) -> (Bitmap, Option<Bitmap>) {
-    let null_indices = indices.validity().as_ref().unwrap();
+    let validity = indices.validity().as_ref().unwrap();
 
-    let values = indices.values().iter().map(|index| {
+    let values = indices.values().iter().enumerate().map(|(i, index)| {
         let index = index.to_usize();
         match values.get(index) {
             Some(value) => value,
             None => {
-                if null_indices.get_bit(index) {
-                    panic!("Out-of-bounds index {}", index)
-                } else {
+                if !validity.get_bit(i) {
                     false
+                } else {
+                    panic!("Out-of-bounds index {}", index)
                 }
             }
         }
@@ -108,7 +107,7 @@ fn take_values_indices_validity<I: Index>(
 }
 
 /// `take` implementation for boolean arrays
-pub fn take<I: Index>(values: &BooleanArray, indices: &PrimitiveArray<I>) -> Result<BooleanArray> {
+pub fn take<I: Index>(values: &BooleanArray, indices: &PrimitiveArray<I>) -> BooleanArray {
     let indices_has_validity = indices.null_count() > 0;
     let values_has_validity = values.null_count() > 0;
 
@@ -119,7 +118,7 @@ pub fn take<I: Index>(values: &BooleanArray, indices: &PrimitiveArray<I>) -> Res
         (true, true) => take_values_indices_validity(values, indices),
     };
 
-    Ok(BooleanArray::from_data(values, validity))
+    BooleanArray::from_data(values, validity)
 }
 
 #[cfg(test)]
@@ -154,12 +153,11 @@ mod tests {
     }
 
     #[test]
-    fn all_cases() -> Result<()> {
+    fn all_cases() {
         let cases = _all_cases();
         for (indices, input, expected) in cases {
-            let output = take(&input, &indices)?;
+            let output = take(&input, &indices);
             assert_eq!(expected, output);
         }
-        Ok(())
     }
 }

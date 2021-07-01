@@ -15,12 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::{
-    array::{
-        growable::{Growable, GrowableList},
-        Array, ListArray, Offset, PrimitiveArray,
-    },
-    error::Result,
+use crate::array::{
+    growable::{Growable, GrowableList},
+    Array, ListArray, Offset, PrimitiveArray,
 };
 
 use super::Index;
@@ -29,7 +26,7 @@ use super::Index;
 pub fn take<I: Offset, O: Index>(
     values: &ListArray<I>,
     indices: &PrimitiveArray<O>,
-) -> Result<ListArray<I>> {
+) -> ListArray<I> {
     let mut capacity = 0;
     let arrays = indices
         .values()
@@ -55,14 +52,14 @@ pub fn take<I: Offset, O: Index>(
             }
         }
 
-        Ok(growable.into())
+        growable.into()
     } else {
         let mut growable: GrowableList<I> = GrowableList::new(&array_ref, false, capacity);
         for index in 0..indices.len() {
             growable.extend(index, 0, 1);
         }
 
-        Ok(growable.into())
+        growable.into()
     }
 }
 
@@ -91,7 +88,7 @@ mod tests {
         );
 
         let indices = PrimitiveArray::from(&vec![Some(4i32), Some(1), Some(3)]).to(DataType::Int32);
-        let result = take(&array, &indices).unwrap();
+        let result = take(&array, &indices);
 
         let expected_values = Buffer::from([9, 6, 7, 8]);
         let expected_values =
@@ -125,7 +122,7 @@ mod tests {
 
         let indices =
             PrimitiveArray::from(&vec![Some(4i32), None, Some(2), Some(3)]).to(DataType::Int32);
-        let result = take(&array, &indices).unwrap();
+        let result = take(&array, &indices);
 
         let data_expected = vec![
             Some(vec![Some(9i32)]),
@@ -156,7 +153,7 @@ mod tests {
 
         let indices =
             PrimitiveArray::from(&vec![Some(3i32), None, Some(1), Some(0)]).to(DataType::Int32);
-        let result = take(&array, &indices).unwrap();
+        let result = take(&array, &indices);
 
         let data_expected = vec![
             Some(vec![Some(6i32), Some(7), Some(8)]),
@@ -193,7 +190,7 @@ mod tests {
         );
 
         let indices = PrimitiveArray::from(&vec![Some(0i32), Some(1)]).to(DataType::Int32);
-        let result = take(&nested, &indices).unwrap();
+        let result = take(&nested, &indices);
 
         // expected data
         let expected_values = Buffer::from([1, 2, 3, 4, 5, 6, 7, 8]);

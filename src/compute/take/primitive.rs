@@ -19,7 +19,6 @@ use crate::{
     array::{Array, PrimitiveArray},
     bitmap::{Bitmap, MutableBitmap},
     buffer::{Buffer, MutableBuffer},
-    error::Result,
     types::NativeType,
 };
 
@@ -67,12 +66,12 @@ fn take_indices_validity<T: NativeType, I: Index>(
     indices: &PrimitiveArray<I>,
 ) -> (Buffer<T>, Option<Bitmap>) {
     let validity = indices.validity().as_ref().unwrap();
-    let values = indices.values().iter().map(|index| {
+    let values = indices.values().iter().enumerate().map(|(i, index)| {
         let index = index.to_usize();
         match values.get(index) {
             Some(value) => *value,
             None => {
-                if !validity.get_bit(index) {
+                if !validity.get_bit(i) {
                     T::default()
                 } else {
                     panic!("Out-of-bounds index {}", index)
@@ -115,7 +114,7 @@ fn take_values_indices_validity<T: NativeType, I: Index>(
 pub fn take<T: NativeType, I: Index>(
     values: &PrimitiveArray<T>,
     indices: &PrimitiveArray<I>,
-) -> Result<PrimitiveArray<T>> {
+) -> PrimitiveArray<T> {
     let indices_has_validity = indices.null_count() > 0;
     let values_has_validity = values.null_count() > 0;
     let (buffer, validity) = match (values_has_validity, indices_has_validity) {
@@ -125,9 +124,5 @@ pub fn take<T: NativeType, I: Index>(
         (true, true) => take_values_indices_validity::<T, I>(values, indices),
     };
 
-    Ok(PrimitiveArray::<T>::from_data(
-        values.data_type().clone(),
-        buffer,
-        validity,
-    ))
+    PrimitiveArray::<T>::from_data(values.data_type().clone(), buffer, validity)
 }
