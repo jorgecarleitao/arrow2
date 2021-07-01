@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["schema_to_bytes","Converts"],["write",""],["write_dictionary",""]],"mod":[["common",""]],"struct":[["FileWriter",""],["StreamWriter",""]]});
