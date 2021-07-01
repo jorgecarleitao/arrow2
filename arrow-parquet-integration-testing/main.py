@@ -9,9 +9,11 @@ def get_file_path(file: str):
     return f"../testing/arrow-testing/data/arrow-ipc-stream/integration/1.0.0-littleendian/{file}.arrow_file"
 
 
-def _prepare(file: str):
+def _prepare(file: str, version: str):
     write = f"{file}.parquet"
-    subprocess.call(["cargo", "run", "--", "--json", file, "--output", write])
+    subprocess.call(
+        ["cargo", "run", "--", "--json", file, "--output", write, "--version", version]
+    )
     return write
 
 
@@ -34,33 +36,34 @@ non_native_types = [
 ]
 
 
-for file in [
-    "generated_primitive",
-    "generated_primitive_no_batches",
-    "generated_primitive_zerolength",
-    "generated_null",
-    "generated_null_trivial",
-    "generated_primitive_large_offsets",
-    "generated_datetime",
-    "generated_decimal",
-    "generated_interval",
-    # requires writing Dictionary
-    # "generated_dictionary",
-    # requires writing Struct
-    # "generated_duplicate_fieldnames",
-    # requires writing un-nested List
-    # "generated_custom_metadata",
-]:
-    expected = _expected(file)
-    path = _prepare(file)
+for version in ["1", "2"]:
+    for file in [
+        "generated_primitive",
+        "generated_primitive_no_batches",
+        "generated_primitive_zerolength",
+        "generated_null",
+        "generated_null_trivial",
+        "generated_primitive_large_offsets",
+        "generated_datetime",
+        "generated_decimal",
+        "generated_interval",
+        # requires writing Dictionary
+        # "generated_dictionary",
+        # requires writing Struct
+        # "generated_duplicate_fieldnames",
+        # requires writing un-nested List
+        # "generated_custom_metadata",
+    ]:
+        expected = _expected(file)
+        path = _prepare(file, version)
 
-    table = pq.read_table(path)
-    os.remove(path)
+        table = pq.read_table(path)
+        os.remove(path)
 
-    for c1, c2 in zip(expected, table):
-        if c1.type in non_native_types:
-            continue
-        if str(c1.type) in ["month_interval", "day_time_interval"]:
-            # pyarrow does not support interval types from parquet
-            continue
-        assert c1 == c2
+        for c1, c2 in zip(expected, table):
+            if c1.type in non_native_types:
+                continue
+            if str(c1.type) in ["month_interval", "day_time_interval"]:
+                # pyarrow does not support interval types from parquet
+                continue
+            assert c1 == c2

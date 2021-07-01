@@ -61,7 +61,7 @@ ahash = { version = "0.7", optional = true }
 
 [dependencies.parquet2]
 git = "https://github.com/jorgecarleitao/parquet2"
-rev = "17910746cf39f429bbcd6e2b0e033fbf0759f806"
+rev = "c582beb69fdaef294174288d47e06af086ce8ee5"
 optional = true
 
 [dev-dependencies]

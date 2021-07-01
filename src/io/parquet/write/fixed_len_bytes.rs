@@ -7,7 +7,7 @@ use parquet2::{
     write::WriteOptions,
 };
 
-use super::utils;
+use super::{utils, Version};
 use crate::{
     array::{Array, FixedSizeBinaryArray},
     error::Result,
@@ -22,7 +22,7 @@ pub fn array_to_page_v1(
     let is_optional = is_type_nullable(descriptor.type_());
     let validity = array.validity();
 
-    let mut buffer = utils::write_def_levels(is_optional, validity, array.len())?;
+    let mut buffer = utils::write_def_levels(is_optional, validity, array.len(), Version::V1)?;
 
     if is_optional {
         // append the non-null values

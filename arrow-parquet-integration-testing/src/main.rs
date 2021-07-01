@@ -5,7 +5,7 @@ use arrow2::error::Result;
 use arrow2::io::parquet::write::RowGroupIterator;
 use arrow2::io::{
     json_integration::ArrowJson,
-    parquet::write::{write_file, CompressionCodec, WriteOptions},
+    parquet::write::{write_file, CompressionCodec, Version, WriteOptions},
 };
 use arrow2::{datatypes::Schema, io::json_integration::to_record_batch, record_batch::RecordBatch};
 
@@ -62,6 +62,12 @@ fn main() -> Result<()> {
                 .required(true)
                 .takes_value(true),
         )
+        .arg(
+            Arg::with_name("version")
+                .long("version")
+                .required(true)
+                .takes_value(true),
+        )
         .get_matches();
     let json_file = matches
         .value_of("json")
@@ -69,12 +75,22 @@ fn main() -> Result<()> {
     let write_path = matches
         .value_of("write_path")
         .expect("must provide path to write parquet");
+    let version = matches
+        .value_of("version")
+        .expect("must provide version of parquet");
 
     let (schema, batches) = read_gzip_json("1.0.0-littleendian", json_file);
+
+    let version = if version == "1" {
+        Version::V1
+    } else {
+        Version::V2
+    };
 
     let options = WriteOptions {
         write_statistics: true,
         compression: CompressionCodec::Uncompressed,
+        version,
     };
 
     let row_groups = RowGroupIterator::try_new(batches.into_iter().map(Ok), &schema, options)?;

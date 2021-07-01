@@ -21,7 +21,7 @@ pub use parquet2::{
     compression::CompressionCodec,
     read::CompressedPage,
     schema::types::ParquetType,
-    write::WriteOptions,
+    write::WriteOptions as ParquetWriteOptions,
     write::{DynIter, RowGroupIter},
 };
 use parquet2::{
@@ -30,6 +30,28 @@ use parquet2::{
 pub use record_batch::RowGroupIterator;
 use schema::schema_to_metadata_key;
 pub use schema::to_parquet_type;
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct WriteOptions {
+    pub write_statistics: bool,
+    pub compression: CompressionCodec,
+    pub version: Version,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub enum Version {
+    V1,
+    V2,
+}
+
+impl From<WriteOptions> for ParquetWriteOptions {
+    fn from(options: WriteOptions) -> Self {
+        Self {
+            write_statistics: options.write_statistics,
+            compression: options.compression,
+        }
+    }
+}
 
 pub(self) fn decimal_length_from_precision(precision: usize) -> usize {
     // digits = floor(log_10(2^(8*n - 1) - 1))
@@ -77,7 +99,7 @@ where
         writer,
         row_groups,
         parquet_schema,
-        options,
+        options.into(),
         created_by,
         key_value_metadata,
     )?)
@@ -88,91 +110,110 @@ pub fn array_to_page(
     descriptor: ColumnDescriptor,
     options: WriteOptions,
 ) -> Result<CompressedPage> {
+    let version = options.version;
+    let options = options.into();
     // using plain encoding format
     match array.data_type() {
-        DataType::Boolean => {
-            boolean::array_to_page_v1(array.as_any().downcast_ref().unwrap(), options, descriptor)
-        }
+        DataType::Boolean => boolean::array_to_page(
+            array.as_any().downcast_ref().unwrap(),
+            options,
+            descriptor,
+            version,
+        ),
         // casts below MUST match the casts done at the metadata (field -> parquet type).
-        DataType::UInt8 => primitive::array_to_page_v1::<u8, i32>(
+        DataType::UInt8 => primitive::array_to_page::<u8, i32>(
             array.as_any().downcast_ref().unwrap(),
             options,
             descriptor,
+            version,
         ),
-        DataType::UInt16 => primitive::array_to_page_v1::<u16, i32>(
+        DataType::UInt16 => primitive::array_to_page::<u16, i32>(
             array.as_any().downcast_ref().unwrap(),
             options,
             descriptor,
+            version,
         ),
-        DataType::UInt32 => primitive::array_to_page_v1::<u32, i32>(
+        DataType::UInt32 => primitive::array_to_page::<u32, i32>(
             array.as_any().downcast_ref().unwrap(),
             options,
             descriptor,
+            version,
         ),
-        DataType::UInt64 => primitive::array_to_page_v1::<u64, i64>(
+        DataType::UInt64 => primitive::array_to_page::<u64, i64>(
             array.as_any().downcast_ref().unwrap(),
             options,
             descriptor,
+            version,
         ),
-        DataType::Int8 => primitive::array_to_page_v1::<i8, i32>(
+        DataType::Int8 => primitive::array_to_page::<i8, i32>(
             array.as_any().downcast_ref().unwrap(),
             options,
             descriptor,
+            version,
         ),
-        DataType::Int16 => primitive::array_to_page_v1::<i16, i32>(
+        DataType::Int16 => primitive::array_to_page::<i16, i32>(
             array.as_any().downcast_ref().unwrap(),
             options,
             descriptor,
+            version,
         ),
         DataType::Int32 | DataType::Date32 | DataType::Time32(_) => {
-            primitive::array_to_page_v1::<i32, i32>(
+            primitive::array_to_page::<i32, i32>(
                 array.as_any().downcast_ref().unwrap(),
                 options,
                 descriptor,
+                version,
             )
         }
         DataType::Int64
         | DataType::Date64
         | DataType::Time64(_)
         | DataType::Timestamp(_, _)
-        | DataType::Duration(_) => primitive::array_to_page_v1::<i64, i64>(
+        | DataType::Duration(_) => primitive::array_to_page::<i64, i64>(
             array.as_any().downcast_ref().unwrap(),
             options,
             descriptor,
+            version,
         ),
-        DataType::Float32 => primitive::array_to_page_v1::<f32, f32>(
+        DataType::Float32 => primitive::array_to_page::<f32, f32>(
             array.as_any().downcast_ref().unwrap(),
             options,
             descriptor,
+            version,
         ),
-        DataType::Float64 => primitive::array_to_page_v1::<f64, f64>(
+        DataType::Float64 => primitive::array_to_page::<f64, f64>(
             array.as_any().downcast_ref().unwrap(),
             options,
             descriptor,
+            version,
         ),
-        DataType::Utf8 => utf8::array_to_page_v1::<i32>(
+        DataType::Utf8 => utf8::array_to_page::<i32>(
             array.as_any().downcast_ref().unwrap(),
             options,
             descriptor,
+            version,
         ),
-        DataType::LargeUtf8 => utf8::array_to_page_v1::<i64>(
+        DataType::LargeUtf8 => utf8::array_to_page::<i64>(
             array.as_any().downcast_ref().unwrap(),
             options,
             descriptor,
+            version,
         ),
-        DataType::Binary => binary::array_to_page_v1::<i32>(
+        DataType::Binary => binary::array_to_page::<i32>(
             array.as_any().downcast_ref().unwrap(),
             options,
             descriptor,
+            version,
         ),
-        DataType::LargeBinary => binary::array_to_page_v1::<i64>(
+        DataType::LargeBinary => binary::array_to_page::<i64>(
             array.as_any().downcast_ref().unwrap(),
             options,
             descriptor,
+            version,
         ),
         DataType::Null => {
             let array = Int32Array::new_null(DataType::Int32, array.len());
-            primitive::array_to_page_v1::<i32, i32>(&array, options, descriptor)
+            primitive::array_to_page::<i32, i32>(&array, options, descriptor, version)
         }
         DataType::Interval(IntervalUnit::YearMonth) => {
             let array = array
@@ -229,7 +270,7 @@ pub fn array_to_page(
                     values,
                     array.validity().clone(),
                 );
-                primitive::array_to_page_v1::<i32, i32>(&array, options, descriptor)
+                primitive::array_to_page::<i32, i32>(&array, options, descriptor, version)
             } else if precision <= 18 {
                 let array = array
                     .as_any()
@@ -242,7 +283,7 @@ pub fn array_to_page(
                     values,
                     array.validity().clone(),
                 );
-                primitive::array_to_page_v1::<i64, i64>(&array, options, descriptor)
+                primitive::array_to_page::<i64, i64>(&array, options, descriptor, version)
             } else {
                 let array = array
                     .as_any()
@@ -265,7 +306,7 @@ pub fn array_to_page(
             }
         }
         other => Err(ArrowError::NotYetImplemented(format!(
-            "Writing the data type {:?} is not yet implemented",
+            "Writing parquet V1 pages for data type {:?}",
             other
         ))),
     }
@@ -280,7 +321,12 @@ mod tests {
 
     use super::super::tests::*;
 
-    fn round_trip(column: usize, nullable: bool) -> Result<()> {
+    fn round_trip(
+        column: usize,
+        nullable: bool,
+        version: Version,
+        compression: CompressionCodec,
+    ) -> Result<()> {
         let array = if nullable {
             pyarrow_nullable(column)
         } else {
@@ -297,7 +343,8 @@ mod tests {
 
         let options = WriteOptions {
             write_statistics: true,
-            compression: CompressionCodec::Uncompressed,
+            compression,
+            version,
         };
 
         let parquet_schema = to_parquet_schema(&schema)?;
@@ -331,32 +378,77 @@ mod tests {
     }
 
     #[test]
-    fn test_int32_optional() -> Result<()> {
-        round_trip(0, true)
+    fn test_int64_optional_v1() -> Result<()> {
+        round_trip(0, true, Version::V1, CompressionCodec::Uncompressed)
     }
 
     #[test]
-    fn test_utf8_optional() -> Result<()> {
-        round_trip(2, true)
+    fn test_int64_required_v1() -> Result<()> {
+        round_trip(0, false, Version::V1, CompressionCodec::Uncompressed)
     }
 
     #[test]
-    fn test_bool_optional() -> Result<()> {
-        round_trip(3, true)
+    fn test_int64_optional_v2() -> Result<()> {
+        round_trip(0, true, Version::V2, CompressionCodec::Uncompressed)
     }
 
     #[test]
-    fn test_int64_required() -> Result<()> {
-        round_trip(0, false)
+    fn test_int64_optional_v2_compressed() -> Result<()> {
+        round_trip(0, true, Version::V2, CompressionCodec::Snappy)
     }
 
     #[test]
-    fn test_utf8_required() -> Result<()> {
-        round_trip(2, false)
+    fn test_utf8_optional_v1() -> Result<()> {
+        round_trip(2, true, Version::V1, CompressionCodec::Uncompressed)
     }
 
     #[test]
-    fn test_bool_required() -> Result<()> {
-        round_trip(3, false)
+    fn test_utf8_required_v1() -> Result<()> {
+        round_trip(2, false, Version::V1, CompressionCodec::Uncompressed)
+    }
+
+    #[test]
+    fn test_utf8_optional_v2() -> Result<()> {
+        round_trip(2, true, Version::V2, CompressionCodec::Uncompressed)
+    }
+
+    #[test]
+    fn test_utf8_required_v2() -> Result<()> {
+        round_trip(2, false, Version::V2, CompressionCodec::Uncompressed)
+    }
+
+    #[test]
+    fn test_utf8_optional_v2_compressed() -> Result<()> {
+        round_trip(2, true, Version::V2, CompressionCodec::Snappy)
+    }
+
+    #[test]
+    fn test_utf8_required_v2_compressed() -> Result<()> {
+        round_trip(2, false, Version::V2, CompressionCodec::Snappy)
+    }
+
+    #[test]
+    fn test_bool_optional_v1() -> Result<()> {
+        round_trip(3, true, Version::V1, CompressionCodec::Uncompressed)
+    }
+
+    #[test]
+    fn test_bool_required_v1() -> Result<()> {
+        round_trip(3, false, Version::V1, CompressionCodec::Uncompressed)
+    }
+
+    #[test]
+    fn test_bool_optional_v2_uncompressed() -> Result<()> {
+        round_trip(3, true, Version::V2, CompressionCodec::Uncompressed)
+    }
+
+    #[test]
+    fn test_bool_required_v2_uncompressed() -> Result<()> {
+        round_trip(3, false, Version::V2, CompressionCodec::Uncompressed)
+    }
+
+    #[test]
+    fn test_bool_required_v2_compressed() -> Result<()> {
+        round_trip(3, false, Version::V2, CompressionCodec::Snappy)
     }
 }

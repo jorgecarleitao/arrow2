@@ -5,7 +5,7 @@ use arrow2::{
     array::{Array, Int32Array},
     datatypes::{Field, Schema},
     error::Result,
-    io::parquet::write::{write_file, CompressionCodec, RowGroupIterator, WriteOptions},
+    io::parquet::write::{write_file, CompressionCodec, RowGroupIterator, Version, WriteOptions},
     record_batch::RecordBatch,
 };
 
@@ -15,6 +15,7 @@ fn write_batch(path: &str, batch: RecordBatch) -> Result<()> {
     let options = WriteOptions {
         write_statistics: true,
         compression: CompressionCodec::Uncompressed,
+        version: Version::V2,
     };
 
     let iter = vec![Ok(batch)];

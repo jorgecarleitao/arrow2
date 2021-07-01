@@ -235,6 +235,7 @@ mod tests_integration {
         let options = WriteOptions {
             write_statistics: true,
             compression: CompressionCodec::Uncompressed,
+            version: Version::V1,
         };
 
         let parquet_schema = to_parquet_schema(&schema)?;

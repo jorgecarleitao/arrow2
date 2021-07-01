@@ -6,7 +6,9 @@ use arrow2::{
     array::{Array, Int32Array},
     datatypes::{Field, Schema},
     error::Result,
-    io::parquet::write::{array_to_page, write_file, CompressionCodec, DynIter, WriteOptions},
+    io::parquet::write::{
+        array_to_page, write_file, CompressionCodec, DynIter, Version, WriteOptions,
+    },
 };
 
 fn write_single_array(path: &str, array: &dyn Array, field: Field) -> Result<()> {
@@ -15,6 +17,7 @@ fn write_single_array(path: &str, array: &dyn Array, field: Field) -> Result<()>
     let options = WriteOptions {
         write_statistics: true,
         compression: CompressionCodec::Uncompressed,
+        version: Version::V2,
     };
 
     // map arrow fields to parquet fields

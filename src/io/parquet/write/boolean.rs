@@ -1,14 +1,13 @@
 use parquet2::{
-    compression::create_codec,
-    encoding::{hybrid_rle::bitpacked_encode, Encoding},
+    encoding::hybrid_rle::bitpacked_encode,
     metadata::ColumnDescriptor,
-    read::{CompressedPage, PageHeader},
-    schema::DataPageHeader,
+    read::CompressedPage,
     statistics::{serialize_statistics, BooleanStatistics, ParquetStatistics, Statistics},
     write::WriteOptions,
 };
 
 use super::utils;
+use super::Version;
 use crate::error::Result;
 use crate::{array::*, io::parquet::read::is_type_nullable};
 
@@ -22,16 +21,19 @@ fn encode(iterator: impl Iterator<Item = bool>, buffer: Vec<u8>) -> Result<Vec<u
     Ok(buffer.into_inner())
 }
 
-pub fn array_to_page_v1(
+pub fn array_to_page(
     array: &BooleanArray,
     options: WriteOptions,
     descriptor: ColumnDescriptor,
+    version: Version,
 ) -> Result<CompressedPage> {
     let is_optional = is_type_nullable(descriptor.type_());
 
     let validity = array.validity();
 
-    let buffer = utils::write_def_levels(is_optional, validity, array.len())?;
+    let buffer = utils::write_def_levels(is_optional, validity, array.len(), version)?;
+
+    let definition_levels_byte_length = buffer.len();
 
     let buffer = if is_optional {
         let iter = array.iter().flatten().take(
@@ -48,16 +50,7 @@ pub fn array_to_page_v1(
 
     let uncompressed_page_size = buffer.len();
 
-    let codec = create_codec(&options.compression)?;
-    let buffer = if let Some(mut codec) = codec {
-        // todo: remove this allocation by extending `buffer` directly.
-        // needs refactoring `compress`'s API.
-        let mut tmp = vec![];
-        codec.compress(&buffer, &mut tmp)?;
-        tmp
-    } else {
-        buffer
-    };
+    let buffer = utils::compress(buffer, version, options, definition_levels_byte_length)?;
 
     let statistics = if options.write_statistics {
         Some(build_statistics(array))
@@ -65,22 +58,17 @@ pub fn array_to_page_v1(
         None
     };
 
-    let header = PageHeader::V1(DataPageHeader {
-        num_values: array.len() as i32,
-        encoding: Encoding::Plain,
-        definition_level_encoding: Encoding::Rle,
-        repetition_level_encoding: Encoding::Rle,
-        statistics,
-    });
-
-    Ok(CompressedPage::new(
-        header,
+    utils::build_plain_page(
         buffer,
-        options.compression,
+        version,
+        array.len(),
+        array.null_count(),
         uncompressed_page_size,
-        None,
+        definition_levels_byte_length,
+        statistics,
         descriptor,
-    ))
+        options,
+    )
 }
 
 fn build_statistics(array: &BooleanArray) -> ParquetStatistics {
