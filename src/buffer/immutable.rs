@@ -143,12 +143,7 @@ impl<T: NativeType> Buffer<T> {
 impl<T: NativeType, U: AsRef<[T]>> From<U> for Buffer<T> {
     #[inline]
     fn from(p: U) -> Self {
-        // allocate aligned memory buffer
-        let slice = p.as_ref();
-        let len = slice.len();
-        let mut buffer = MutableBuffer::with_capacity(len);
-        buffer.extend_from_slice(slice);
-        buffer.into()
+        MutableBuffer::from(p).into()
     }
 }
 
