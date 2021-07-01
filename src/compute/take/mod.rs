@@ -23,7 +23,7 @@ use crate::{
         PrimitiveArray, StructArray, Utf8Array,
     },
     datatypes::{DataType, IntervalUnit},
-    error::{ArrowError, Result},
+    error::Result,
 };
 
 pub use crate::array::Index;
@@ -183,11 +183,6 @@ pub fn can_take(data_type: &DataType) -> bool {
         ),
         _ => false,
     }
-}
-
-#[inline(always)]
-fn maybe_usize<I: Index>(index: I) -> Result<usize> {
-    index.to_usize().ok_or(ArrowError::KeyOverflowError)
 }
 
 #[cfg(test)]

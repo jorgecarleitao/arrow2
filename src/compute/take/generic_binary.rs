@@ -22,7 +22,6 @@ use crate::{
     error::Result,
 };
 
-use super::maybe_usize;
 use super::Index;
 
 pub fn take_values<O: Offset>(
@@ -31,17 +30,16 @@ pub fn take_values<O: Offset>(
     offsets: &[O],
     values: &[u8],
 ) -> Result<Buffer<u8>> {
-    let new_len = maybe_usize::<O>(length)?;
+    let new_len = length.to_usize();
     let mut buffer = MutableBuffer::with_capacity(new_len);
     starts
         .iter()
         .zip(offsets.windows(2))
-        .try_for_each(|(start_, window)| {
-            let start = maybe_usize::<O>(*start_)?;
-            let end = maybe_usize::<O>(*start_ + (window[1] - window[0]))?;
+        .for_each(|(start_, window)| {
+            let start = start_.to_usize();
+            let end = (*start_ + (window[1] - window[0])).to_usize();
             buffer.extend_from_slice(&values[start..end]);
-            Result::Ok(())
-        })?;
+        });
     Ok(buffer.into())
 }
 
@@ -54,18 +52,18 @@ pub fn take_no_validity<O: Offset, I: Index>(
     let mut length = O::default();
     let mut buffer = MutableBuffer::<u8>::new();
     let offsets = indices.iter().map(|index| {
-        let index = maybe_usize::<I>(*index)?;
+        let index = index.to_usize();
         let start = offsets[index];
         let length_h = offsets[index + 1] - start;
         length += length_h;
 
-        let _start = maybe_usize::<O>(start)?;
-        let end = maybe_usize::<O>(start + length_h)?;
+        let _start = start.to_usize();
+        let end = (start + length_h).to_usize();
         buffer.extend_from_slice(&values[_start..end]);
-        Result::Ok(length)
+        length
     });
-    let offsets = std::iter::once(Ok(O::default())).chain(offsets);
-    let offsets = Buffer::try_from_trusted_len_iter(offsets)?;
+    let offsets = std::iter::once(O::default()).chain(offsets);
+    let offsets = Buffer::from_trusted_len_iter(offsets);
 
     Ok((offsets, buffer.into(), None))
 }
@@ -84,7 +82,7 @@ pub fn take_values_validity<O: Offset, I: Index, A: GenericBinaryArray<O>>(
 
     let mut starts = MutableBuffer::<O>::with_capacity(indices.len());
     let offsets = indices.iter().map(|index| {
-        let index = maybe_usize::<I>(*index)?;
+        let index = index.to_usize();
         if null_values.get_bit(index) {
             validity.push(true);
             let start = offsets[index];
@@ -94,11 +92,10 @@ pub fn take_values_validity<O: Offset, I: Index, A: GenericBinaryArray<O>>(
             validity.push(false);
             starts.push(O::default());
         }
-        Result::Ok(length)
+        length
     });
-    let offsets = std::iter::once(Ok(O::default())).chain(offsets);
-    let offsets = Buffer::try_from_trusted_len_iter(offsets)?;
-    let starts: Buffer<O> = starts.into();
+    let offsets = std::iter::once(O::default()).chain(offsets);
+    let offsets = Buffer::from_trusted_len_iter(offsets);
 
     let buffer = take_values(length, starts.as_slice(), offsets.as_slice(), values_values)?;
 
@@ -115,7 +112,7 @@ pub fn take_indices_validity<O: Offset, I: Index>(
 
     let mut starts = MutableBuffer::<O>::with_capacity(indices.len());
     let offsets = indices.values().iter().map(|index| {
-        let index = maybe_usize::<I>(*index)?;
+        let index = index.to_usize();
         match offsets.get(index + 1) {
             Some(&next) => {
                 let start = offsets[index];
@@ -124,10 +121,10 @@ pub fn take_indices_validity<O: Offset, I: Index>(
             }
             None => starts.push(O::default()),
         };
-        Result::Ok(length)
+        length
     });
-    let offsets = std::iter::once(Ok(O::default())).chain(offsets);
-    let offsets = Buffer::try_from_trusted_len_iter(offsets)?;
+    let offsets = std::iter::once(O::default()).chain(offsets);
+    let offsets = Buffer::from_trusted_len_iter(offsets);
     let starts: Buffer<O> = starts.into();
 
     let buffer = take_values(length, starts.as_slice(), offsets.as_slice(), values)?;
@@ -151,7 +148,7 @@ pub fn take_values_indices_validity<O: Offset, I: Index, A: GenericBinaryArray<O
     let offsets = indices.iter().map(|index| {
         match index {
             Some(index) => {
-                let index = maybe_usize::<I>(*index)?;
+                let index = index.to_usize();
                 if values_validity.get_bit(index) {
                     validity.push(true);
                     length += offsets[index + 1] - offsets[index];
@@ -166,10 +163,10 @@ pub fn take_values_indices_validity<O: Offset, I: Index, A: GenericBinaryArray<O
                 starts.push(O::default());
             }
         };
-        Result::Ok(length)
+        length
     });
-    let offsets = std::iter::once(Ok(O::default())).chain(offsets);
-    let offsets = Buffer::try_from_trusted_len_iter(offsets)?;
+    let offsets = std::iter::once(O::default()).chain(offsets);
+    let offsets = Buffer::from_trusted_len_iter(offsets);
     let starts: Buffer<O> = starts.into();
 
     let buffer = take_values(length, starts.as_slice(), offsets.as_slice(), values_values)?;

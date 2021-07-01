@@ -21,24 +21,21 @@ use crate::{
     error::Result,
 };
 
-use super::maybe_usize;
 use super::Index;
 
 // take implementation when neither values nor indices contain nulls
-fn take_no_validity<I: Index>(values: &Bitmap, indices: &[I]) -> Result<(Bitmap, Option<Bitmap>)> {
-    let values = indices
-        .iter()
-        .map(|index| Result::Ok(values.get_bit(maybe_usize::<I>(*index)?)));
-    let buffer = Bitmap::try_from_trusted_len_iter(values)?;
+fn take_no_validity<I: Index>(values: &Bitmap, indices: &[I]) -> (Bitmap, Option<Bitmap>) {
+    let values = indices.iter().map(|index| values.get_bit(index.to_usize()));
+    let buffer = Bitmap::from_trusted_len_iter(values);
 
-    Ok((buffer, None))
+    (buffer, None)
 }
 
 // take implementation when only values contain nulls
 fn take_values_validity<I: Index>(
     values: &BooleanArray,
     indices: &[I],
-) -> Result<(Bitmap, Option<Bitmap>)> {
+) -> (Bitmap, Option<Bitmap>) {
     let mut validity = MutableBitmap::with_capacity(indices.len());
 
     let validity_values = values.validity().as_ref().unwrap();
@@ -46,29 +43,29 @@ fn take_values_validity<I: Index>(
     let values_values = values.values();
 
     let values = indices.iter().map(|index| {
-        let index = maybe_usize::<I>(*index)?;
+        let index = index.to_usize();
         if validity_values.get_bit(index) {
             validity.push(true);
         } else {
             validity.push(false);
         }
-        Result::Ok(values_values.get_bit(index))
+        values_values.get_bit(index)
     });
-    let buffer = Bitmap::try_from_trusted_len_iter(values)?;
+    let buffer = Bitmap::from_trusted_len_iter(values);
 
-    Ok((buffer, validity.into()))
+    (buffer, validity.into())
 }
 
 // take implementation when only indices contain nulls
 fn take_indices_validity<I: Index>(
     values: &Bitmap,
     indices: &PrimitiveArray<I>,
-) -> Result<(Bitmap, Option<Bitmap>)> {
+) -> (Bitmap, Option<Bitmap>) {
     let null_indices = indices.validity().as_ref().unwrap();
 
     let values = indices.values().iter().map(|index| {
-        let index = maybe_usize::<I>(*index)?;
-        Result::Ok(match values.get(index) {
+        let index = index.to_usize();
+        match values.get(index) {
             Some(value) => value,
             None => {
                 if null_indices.get_bit(index) {
@@ -77,19 +74,19 @@ fn take_indices_validity<I: Index>(
                     false
                 }
             }
-        })
+        }
     });
 
-    let buffer = Bitmap::try_from_trusted_len_iter(values)?;
+    let buffer = Bitmap::from_trusted_len_iter(values);
 
-    Ok((buffer, indices.validity().clone()))
+    (buffer, indices.validity().clone())
 }
 
 // take implementation when both values and indices contain nulls
 fn take_values_indices_validity<I: Index>(
     values: &BooleanArray,
     indices: &PrimitiveArray<I>,
-) -> Result<(Bitmap, Option<Bitmap>)> {
+) -> (Bitmap, Option<Bitmap>) {
     let mut validity = MutableBitmap::with_capacity(indices.len());
 
     let values_validity = values.validity().as_ref().unwrap();
@@ -97,17 +94,17 @@ fn take_values_indices_validity<I: Index>(
     let values_values = values.values();
     let values = indices.iter().map(|index| match index {
         Some(index) => {
-            let index = maybe_usize::<I>(*index)?;
+            let index = index.to_usize();
             validity.push(values_validity.get_bit(index));
-            Result::Ok(values_values.get_bit(index))
+            values_values.get_bit(index)
         }
         None => {
             validity.push(false);
-            Ok(false)
+            false
         }
     });
-    let values = Bitmap::try_from_trusted_len_iter(values)?;
-    Ok((values, validity.into()))
+    let values = Bitmap::from_trusted_len_iter(values);
+    (values, validity.into())
 }
 
 /// `take` implementation for boolean arrays
@@ -116,10 +113,10 @@ pub fn take<I: Index>(values: &BooleanArray, indices: &PrimitiveArray<I>) -> Res
     let values_has_validity = values.null_count() > 0;
 
     let (values, validity) = match (values_has_validity, indices_has_validity) {
-        (false, false) => take_no_validity(values.values(), indices.values())?,
-        (true, false) => take_values_validity(values, indices.values())?,
-        (false, true) => take_indices_validity(values.values(), indices)?,
-        (true, true) => take_values_indices_validity(values, indices)?,
+        (false, false) => take_no_validity(values.values(), indices.values()),
+        (true, false) => take_values_validity(values, indices.values()),
+        (false, true) => take_indices_validity(values.values(), indices),
+        (true, true) => take_values_indices_validity(values, indices),
     };
 
     Ok(BooleanArray::from_data(values, validity))

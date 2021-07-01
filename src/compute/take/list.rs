@@ -23,7 +23,6 @@ use crate::{
     error::Result,
 };
 
-use super::maybe_usize;
 use super::Index;
 
 /// `take` implementation for ListArrays
@@ -35,13 +34,13 @@ pub fn take<I: Offset, O: Index>(
     let arrays = indices
         .values()
         .iter()
-        .map(|i| {
-            let index = maybe_usize::<O>(*i)?;
+        .map(|index| {
+            let index = index.to_usize();
             let slice = values.slice(index, 1);
             capacity += slice.len();
-            Ok(slice)
+            slice
         })
-        .collect::<Result<Vec<ListArray<I>>>>()?;
+        .collect::<Vec<ListArray<I>>>();
 
     let array_ref: Vec<&dyn Array> = arrays.iter().map(|v| v as &dyn Array).collect();
 

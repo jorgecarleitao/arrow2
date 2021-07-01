@@ -11,8 +11,8 @@ fn offset_value_equal<O: Offset>(
     rhs_pos: usize,
     len: usize,
 ) -> bool {
-    let lhs_start = lhs_offsets[lhs_pos].to_usize().unwrap();
-    let rhs_start = rhs_offsets[rhs_pos].to_usize().unwrap();
+    let lhs_start = lhs_offsets[lhs_pos].to_usize();
+    let rhs_start = rhs_offsets[rhs_pos].to_usize();
     let lhs_len = lhs_offsets[lhs_pos + len] - lhs_offsets[lhs_pos];
     let rhs_len = rhs_offsets[rhs_pos + len] - rhs_offsets[rhs_pos];
 
@@ -22,7 +22,7 @@ fn offset_value_equal<O: Offset>(
             rhs_values,
             lhs_start,
             rhs_start,
-            lhs_len.to_usize().unwrap(),
+            lhs_len.to_usize(),
         )
 }
 
