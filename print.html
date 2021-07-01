@@ -1079,7 +1079,9 @@ use arrow2::{
     array::{Array, Int32Array},
     datatypes::{Field, Schema},
     error::Result,
-    io::parquet::write::{array_to_page, write_file, CompressionCodec, DynIter, WriteOptions},
+    io::parquet::write::{
+        array_to_page, write_file, CompressionCodec, DynIter, Version, WriteOptions,
+    },
 };
 
 fn write_single_array(path: &amp;str, array: &amp;dyn Array, field: Field) -&gt; Result&lt;()&gt; {
@@ -1088,6 +1090,7 @@ fn write_single_array(path: &amp;str, array: &amp;dyn Array, field: Field) -&gt;
     let options = WriteOptions {
         write_statistics: true,
         compression: CompressionCodec::Uncompressed,
+        version: Version::V2,
     };
 
     // map arrow fields to parquet fields
@@ -1142,7 +1145,7 @@ use arrow2::{
     array::{Array, Int32Array},
     datatypes::{Field, Schema},
     error::Result,
-    io::parquet::write::{write_file, CompressionCodec, RowGroupIterator, WriteOptions},
+    io::parquet::write::{write_file, CompressionCodec, RowGroupIterator, Version, WriteOptions},
     record_batch::RecordBatch,
 };
 
@@ -1152,6 +1155,7 @@ fn write_batch(path: &amp;str, batch: RecordBatch) -&gt; Result&lt;()&gt; {
     let options = WriteOptions {
         write_statistics: true,
         compression: CompressionCodec::Uncompressed,
+        version: Version::V2,
     };
 
     let iter = vec![Ok(batch)];
