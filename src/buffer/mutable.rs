@@ -555,7 +555,9 @@ impl Drop for SetLenOnDrop<'_> {
 impl<T: NativeType, P: AsRef<[T]>> From<P> for MutableBuffer<T> {
     #[inline]
     fn from(slice: P) -> Self {
-        MutableBuffer::from_trusted_len_iter(slice.as_ref().iter().copied())
+        let mut buffer = MutableBuffer::new();
+        buffer.extend_from_slice(slice.as_ref());
+        buffer
     }
 }
 
