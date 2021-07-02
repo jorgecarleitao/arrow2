@@ -9,6 +9,7 @@ use super::Bitmap;
 /// to [`Vec<bool>`], but each value is stored as a single bit, thereby achieving a compression of 8x.
 /// This container is the counterpart of [`MutableBuffer`] for boolean values.
 /// [`MutableBitmap`] can be converted to a [`Bitmap`] at `O(1)`.
+/// The main difference against [`Vec<bool>`] is that a bitmap cannot be represented as `&[bool]`.
 /// # Implementation
 /// This container is backed by [`MutableBuffer<u8>`].
 #[derive(Debug)]
@@ -148,11 +149,16 @@ impl MutableBitmap {
 }
 
 impl MutableBitmap {
+    /// Initializes a [`MutableBitmap`] from a [`MutableBuffer<u8>`] and a length.
+    /// # Panic
+    /// Panics iff the length is larger than the length of the buffer times 8.
     #[inline]
     pub fn from_buffer(buffer: MutableBuffer<u8>, length: usize) -> Self {
+        assert!(length <= buffer.len() * 8);
         Self { buffer, length }
     }
 
+    /// Returns an iterator over the values of the [`MutableBitmap`].
     fn iter(&self) -> BitmapIter {
         BitmapIter::new(&self.buffer, 0, self.len())
     }
