@@ -8,7 +8,7 @@ use super::utils;
 use parquet2::{
     encoding::{hybrid_rle, Encoding},
     metadata::{ColumnChunkMetaData, ColumnDescriptor},
-    read::{Page, PageHeader, StreamingIterator},
+    read::{levels, Page, PageHeader, StreamingIterator},
 };
 
 fn read_required(buffer: &[u8], length: u32, values: &mut MutableBitmap) {
@@ -107,7 +107,8 @@ fn extend_from_page(
 
             match (&page.encoding(), page.dictionary_page(), is_optional) {
                 (Encoding::Plain, None, true) => {
-                    let (validity_buffer, values_buffer) = utils::split_buffer_v1(page.buffer());
+                    let (_, validity_buffer, values_buffer) =
+                        levels::split_buffer_v1(page.buffer(), false, is_optional);
                     read_optional(
                         validity_buffer,
                         values_buffer,
@@ -134,8 +135,8 @@ fn extend_from_page(
             let def_level_buffer_length = header.definition_levels_byte_length as usize;
             match (page.encoding(), page.dictionary_page(), is_optional) {
                 (Encoding::Plain, None, true) => {
-                    let (validity_buffer, values_buffer) =
-                        utils::split_buffer_v2(page.buffer(), def_level_buffer_length);
+                    let (_, validity_buffer, values_buffer) =
+                        levels::split_buffer_v2(page.buffer(), 0, def_level_buffer_length);
                     read_optional(
                         validity_buffer,
                         values_buffer,

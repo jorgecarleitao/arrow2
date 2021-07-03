@@ -1,7 +1,6 @@
 use parquet2::{
-    encoding::{hybrid_rle, Encoding},
-    read::{FixedLenByteArrayPageDict, Page, PageHeader, StreamingIterator},
-    serialization::read::levels,
+    encoding::{bitpacking, hybrid_rle, Encoding},
+    read::{levels, FixedLenByteArrayPageDict, Page, PageHeader, StreamingIterator},
 };
 
 use super::{ColumnChunkMetaData, ColumnDescriptor};
@@ -36,8 +35,9 @@ pub(crate) fn read_dict_buffer(
     let indices_buffer = &indices_buffer[1..];
 
     let non_null_indices_len = (indices_buffer.len() * 8 / bit_width as usize) as u32;
+
     let mut indices =
-        levels::rle_decode(&indices_buffer, bit_width as u32, non_null_indices_len).into_iter();
+        bitpacking::Decoder::new(indices_buffer, bit_width, non_null_indices_len as usize);
 
     let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
 
@@ -171,8 +171,8 @@ pub(crate) fn extend_from_page(
 
             match (page.encoding(), page.dictionary_page(), is_optional) {
                 (Encoding::PlainDictionary, Some(dict), true) => {
-                    // split in two buffers: def_levels and data
-                    let (validity_buffer, values_buffer) = utils::split_buffer_v1(page.buffer());
+                    let (_, validity_buffer, values_buffer) =
+                        levels::split_buffer_v1(page.buffer(), false, is_optional);
                     read_dict_buffer(
                         validity_buffer,
                         values_buffer,
@@ -184,8 +184,8 @@ pub(crate) fn extend_from_page(
                     )
                 }
                 (Encoding::Plain, None, true) => {
-                    // split in two buffers: def_levels and data
-                    let (validity_buffer, values_buffer) = utils::split_buffer_v1(page.buffer());
+                    let (_, validity_buffer, values_buffer) =
+                        levels::split_buffer_v1(page.buffer(), false, is_optional);
                     read_optional(
                         validity_buffer,
                         values_buffer,
@@ -214,8 +214,8 @@ pub(crate) fn extend_from_page(
 
             match (page.encoding(), page.dictionary_page(), is_optional) {
                 (Encoding::PlainDictionary, Some(dict), true) => {
-                    let (validity_buffer, values_buffer) =
-                        utils::split_buffer_v2(page.buffer(), def_level_buffer_length);
+                    let (_, validity_buffer, values_buffer) =
+                        levels::split_buffer_v2(page.buffer(), 0, def_level_buffer_length);
                     read_dict_buffer(
                         validity_buffer,
                         values_buffer,
@@ -227,8 +227,8 @@ pub(crate) fn extend_from_page(
                     )
                 }
                 (Encoding::Plain, None, true) => {
-                    let (validity_buffer, values_buffer) =
-                        utils::split_buffer_v2(page.buffer(), def_level_buffer_length);
+                    let (_, validity_buffer, values_buffer) =
+                        levels::split_buffer_v2(page.buffer(), 0, def_level_buffer_length);
                     read_optional(
                         validity_buffer,
                         values_buffer,

@@ -28,22 +28,6 @@ impl<'a> Iterator for BinaryIter<'a> {
     }
 }
 
-#[inline]
-pub fn split_buffer_v1(buffer: &[u8]) -> (&[u8], &[u8]) {
-    let def_level_buffer_length = get_length(&buffer) as usize;
-    (
-        &buffer[4..4 + def_level_buffer_length],
-        &buffer[4 + def_level_buffer_length..],
-    )
-}
-
-pub fn split_buffer_v2(buffer: &[u8], def_level_buffer_length: usize) -> (&[u8], &[u8]) {
-    (
-        &buffer[..def_level_buffer_length],
-        &buffer[def_level_buffer_length..],
-    )
-}
-
 pub fn not_implemented(
     encoding: &Encoding,
     is_optional: bool,

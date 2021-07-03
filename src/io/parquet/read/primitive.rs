@@ -1,9 +1,8 @@
 use std::{convert::TryInto, hint::unreachable_unchecked};
 
 use parquet2::{
-    encoding::{hybrid_rle, Encoding},
-    read::{Page, PageHeader, PrimitivePageDict, StreamingIterator},
-    serialization::read::levels,
+    encoding::{bitpacking, hybrid_rle, Encoding},
+    read::{levels, Page, PageHeader, PrimitivePageDict, StreamingIterator},
     types::NativeType,
 };
 
@@ -70,7 +69,7 @@ fn read_dict_buffer_optional<T, A, F>(
     A: ArrowNativeType,
     F: Fn(T) -> A,
 {
-    let (validity_buffer, indices_buffer) = utils::split_buffer_v1(buffer);
+    let (_, validity_buffer, indices_buffer) = levels::split_buffer_v1(buffer, false, true);
 
     let length = length as usize;
     let dict_values = dict.values();
@@ -81,8 +80,9 @@ fn read_dict_buffer_optional<T, A, F>(
     let indices_buffer = &indices_buffer[1..];
 
     let non_null_indices_len = (indices_buffer.len() * 8 / bit_width as usize) as u32;
+
     let mut indices =
-        levels::rle_decode(&indices_buffer, bit_width as u32, non_null_indices_len).into_iter();
+        bitpacking::Decoder::new(indices_buffer, bit_width, non_null_indices_len as usize);
 
     let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
 
@@ -247,7 +247,8 @@ where
                     op,
                 ),
                 (Encoding::Plain, None, true) => {
-                    let (validity_buffer, values_buffer) = utils::split_buffer_v1(page.buffer());
+                    let (_, validity_buffer, values_buffer) =
+                        levels::split_buffer_v1(page.buffer(), false, is_optional);
                     read_nullable(
                         validity_buffer,
                         values_buffer,
@@ -282,8 +283,8 @@ where
             ),
             (Encoding::Plain, None, true) => {
                 let def_level_buffer_length = header.definition_levels_byte_length as usize;
-                let (validity_buffer, values_buffer) =
-                    utils::split_buffer_v2(page.buffer(), def_level_buffer_length);
+                let (_, validity_buffer, values_buffer) =
+                    levels::split_buffer_v2(page.buffer(), 0, def_level_buffer_length);
                 read_nullable(
                     validity_buffer,
                     values_buffer,

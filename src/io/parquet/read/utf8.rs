@@ -1,8 +1,7 @@
 use parquet2::{
-    encoding::{hybrid_rle, Encoding},
+    encoding::{bitpacking, hybrid_rle, Encoding},
     metadata::{ColumnChunkMetaData, ColumnDescriptor},
-    read::{BinaryPageDict, Page, PageHeader, StreamingIterator},
-    serialization::read::levels,
+    read::{levels, BinaryPageDict, Page, PageHeader, StreamingIterator},
 };
 
 use crate::{
@@ -35,16 +34,16 @@ pub(crate) fn read_dict_buffer<O: Offset>(
     let bit_width = indices_buffer[0];
     let indices_buffer = &indices_buffer[1..];
 
-    let non_null_indices_len = (indices_buffer.len() * 8 / bit_width as usize) as u32;
-    let mut indices =
-        levels::rle_decode(&indices_buffer, bit_width as u32, non_null_indices_len).into_iter();
+    let non_null_indices_len = indices_buffer.len() * 8 / bit_width as usize;
+
+    let mut indices = bitpacking::Decoder::new(indices_buffer, bit_width, non_null_indices_len);
 
     let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
 
     for run in validity_iterator {
         match run {
             hybrid_rle::HybridEncoded::Bitpacked(packed) => {
-                let remaining = length - values.len();
+                let remaining = length - (offsets.len() - 1);
                 let len = std::cmp::min(packed.len() * 8, remaining);
                 for is_valid in BitmapIter::new(packed, 0, len) {
                     validity.push(is_valid);
@@ -100,7 +99,7 @@ pub(crate) fn read_optional<O: Offset>(
         match run {
             hybrid_rle::HybridEncoded::Bitpacked(packed) => {
                 // the pack may contain more items than needed.
-                let remaining = length - values.len();
+                let remaining = length - (offsets.len() - 1);
                 let len = std::cmp::min(packed.len() * 8, remaining);
                 for is_valid in BitmapIter::new(packed, 0, len) {
                     validity.push(is_valid);
@@ -192,8 +191,8 @@ pub(crate) fn extend_from_page<O: Offset>(
 
             match (&page.encoding(), page.dictionary_page(), is_optional) {
                 (Encoding::PlainDictionary, Some(dict), true) => {
-                    // split in two buffers: def_levels and data
-                    let (validity_buffer, values_buffer) = utils::split_buffer_v1(page.buffer());
+                    let (_, validity_buffer, values_buffer) =
+                        levels::split_buffer_v1(page.buffer(), false, is_optional);
                     read_dict_buffer::<O>(
                         validity_buffer,
                         values_buffer,
@@ -205,8 +204,8 @@ pub(crate) fn extend_from_page<O: Offset>(
                     )
                 }
                 (Encoding::Plain, None, true) => {
-                    // split in two buffers: def_levels and data
-                    let (validity_buffer, values_buffer) = utils::split_buffer_v1(page.buffer());
+                    let (_, validity_buffer, values_buffer) =
+                        levels::split_buffer_v1(page.buffer(), false, is_optional);
                     read_optional::<O>(
                         validity_buffer,
                         values_buffer,
@@ -235,8 +234,8 @@ pub(crate) fn extend_from_page<O: Offset>(
 
             match (&page.encoding(), page.dictionary_page(), is_optional) {
                 (Encoding::PlainDictionary, Some(dict), true) => {
-                    let (validity_buffer, values_buffer) =
-                        utils::split_buffer_v2(page.buffer(), def_level_buffer_length);
+                    let (_, validity_buffer, values_buffer) =
+                        levels::split_buffer_v2(page.buffer(), 0, def_level_buffer_length);
                     read_dict_buffer::<O>(
                         validity_buffer,
                         values_buffer,
@@ -248,8 +247,8 @@ pub(crate) fn extend_from_page<O: Offset>(
                     )
                 }
                 (Encoding::Plain, None, true) => {
-                    let (validity_buffer, values_buffer) =
-                        utils::split_buffer_v2(page.buffer(), def_level_buffer_length);
+                    let (_, validity_buffer, values_buffer) =
+                        levels::split_buffer_v2(page.buffer(), 0, def_level_buffer_length);
                     read_optional::<O>(
                         validity_buffer,
                         values_buffer,
