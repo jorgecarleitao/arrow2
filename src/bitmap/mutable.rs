@@ -331,7 +331,7 @@ impl MutableBitmap {
         self.length += length;
     }
 
-    /// Creates a new [`Bitmap`] from an iterator of booleans.
+    /// Creates a new [`MutableBitmap`] from an iterator of booleans.
     /// # Safety
     /// The iterator must report an accurate length.
     pub unsafe fn from_trusted_len_iter_unchecked<I>(iterator: I) -> Self
@@ -347,7 +347,7 @@ impl MutableBitmap {
         Self { buffer, length }
     }
 
-    /// Creates a new [`Bitmap`] from an iterator of booleans.
+    /// Creates a new [`MutableBitmap`] from an iterator of booleans.
     pub fn from_trusted_len_iter<I>(iterator: I) -> Self
     where
         I: TrustedLen<Item = bool>,
@@ -361,7 +361,7 @@ impl MutableBitmap {
         Self { buffer, length }
     }
 
-    /// Creates a new [`Bitmap`] from an iterator of booleans.
+    /// Creates a new [`MutableBitmap`] from an iterator of booleans.
     pub fn try_from_trusted_len_iter<E, I>(iterator: I) -> std::result::Result<Self, E>
     where
         I: TrustedLen<Item = std::result::Result<bool, E>>,
@@ -369,7 +369,7 @@ impl MutableBitmap {
         unsafe { Self::try_from_trusted_len_iter_unchecked(iterator) }
     }
 
-    /// Creates a new [`Bitmap`] from an falible iterator of booleans.
+    /// Creates a new [`MutableBitmap`] from an falible iterator of booleans.
     /// # Safety
     /// The caller must guarantee that the iterator is `TrustedLen`.
     pub unsafe fn try_from_trusted_len_iter_unchecked<E, I>(
