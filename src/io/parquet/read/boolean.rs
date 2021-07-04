@@ -15,10 +15,7 @@ fn read_required(buffer: &[u8], length: u32, values: &mut MutableBitmap) {
     let length = length as usize;
 
     // in PLAIN, booleans are LSB bitpacked and thus we can read them as if they were a bitmap.
-    // note that `values_buffer` contains only non-null values.
-    let values_iterator = BitmapIter::new(buffer, 0, length);
-
-    values.extend_from_trusted_len_iter(values_iterator);
+    values.extend_from_slice(buffer, 0, length);
 }
 
 fn read_optional(
@@ -46,7 +43,6 @@ fn read_optional(
                 let remaining = length - values.len();
                 let len = std::cmp::min(packed_validity.len() * 8, remaining);
                 for is_valid in BitmapIter::new(packed_validity, 0, len) {
-                    validity.push(is_valid);
                     let value = if is_valid {
                         values_iterator.next().unwrap()
                     } else {
@@ -54,6 +50,7 @@ fn read_optional(
                     };
                     values.push(value);
                 }
+                validity.extend_from_slice(packed_validity, 0, len);
             }
             hybrid_rle::HybridEncoded::Rle(value, additional) => {
                 let is_set = value[0] == 1;

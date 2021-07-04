@@ -46,7 +46,6 @@ pub(crate) fn read_dict_buffer<O: Offset>(
                 let remaining = length - (offsets.len() - 1);
                 let len = std::cmp::min(packed.len() * 8, remaining);
                 for is_valid in BitmapIter::new(packed, 0, len) {
-                    validity.push(is_valid);
                     if is_valid {
                         let index = indices.next().unwrap() as usize;
                         let dict_offset_i = dict_offsets[index] as usize;
@@ -57,6 +56,7 @@ pub(crate) fn read_dict_buffer<O: Offset>(
                     };
                     offsets.push(last_offset);
                 }
+                validity.extend_from_slice(packed, 0, len);
             }
             hybrid_rle::HybridEncoded::Rle(value, additional) => {
                 let is_set = value[0] == 1;
@@ -102,7 +102,6 @@ pub(crate) fn read_optional<O: Offset>(
                 let remaining = length - (offsets.len() - 1);
                 let len = std::cmp::min(packed.len() * 8, remaining);
                 for is_valid in BitmapIter::new(packed, 0, len) {
-                    validity.push(is_valid);
                     if is_valid {
                         let value = values_iterator.next().unwrap();
                         last_offset += O::from_usize(value.len()).unwrap();
@@ -110,6 +109,7 @@ pub(crate) fn read_optional<O: Offset>(
                     }
                     offsets.push(last_offset);
                 }
+                validity.extend_from_slice(packed, 0, len);
             }
             hybrid_rle::HybridEncoded::Rle(value, additional) => {
                 let is_set = value[0] == 1;
