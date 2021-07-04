@@ -263,7 +263,7 @@ impl<T: NativeType> MutableBuffer<T> {
     /// # Safety
     /// The caller must ensure that the buffer was properly initialized up to `len`.
     #[inline]
-    pub(crate) unsafe fn set_len(&mut self, len: usize) {
+    pub unsafe fn set_len(&mut self, len: usize) {
         assert!(len <= self.capacity());
         self.len = len;
     }

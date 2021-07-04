@@ -143,8 +143,9 @@ mod tests {
         a.extend_validity(3);
         a.extend(0, 1, 1);
         let result: PrimitiveArray<u8> = a.into();
-        let expected = PrimitiveArray::<u8>::from(vec![Some(2), Some(3), None, None, None, Some(3)])
-            .to(DataType::UInt8);
+        let expected =
+            PrimitiveArray::<u8>::from(vec![Some(2), Some(3), None, None, None, Some(3)])
+                .to(DataType::UInt8);
         assert_eq!(result, expected);
     }
 
@@ -157,8 +158,8 @@ mod tests {
         a.extend(1, 1, 2);
         let result: PrimitiveArray<u8> = a.into();
 
-        let expected =
-            PrimitiveArray::<u8>::from(vec![Some(1), Some(2), Some(5), Some(6)]).to(DataType::UInt8);
+        let expected = PrimitiveArray::<u8>::from(vec![Some(1), Some(2), Some(5), Some(6)])
+            .to(DataType::UInt8);
         assert_eq!(result, expected);
     }
 }
