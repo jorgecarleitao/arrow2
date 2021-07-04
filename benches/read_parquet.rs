@@ -4,8 +4,7 @@ use std::{fs, io::Cursor, path::PathBuf};
 use criterion::{criterion_group, criterion_main, Criterion};
 
 use arrow2::error::Result;
-use arrow2::io::parquet::read::page_iter_to_array;
-use parquet2::read::{get_page_iterator, read_metadata};
+use arrow2::io::parquet::read;
 
 fn to_buffer(size: usize) -> Vec<u8> {
     let dir = env!("CARGO_MANIFEST_DIR");
@@ -20,13 +19,14 @@ fn to_buffer(size: usize) -> Vec<u8> {
 fn read_decompressed_pages(buffer: &[u8], size: usize, column: usize) -> Result<()> {
     let mut file = Cursor::new(buffer);
 
-    let metadata = read_metadata(&mut file)?;
+    let metadata = read::read_metadata(&mut file)?;
 
     let row_group = 0;
-    let iter = get_page_iterator(&metadata, row_group, column, &mut file)?;
+    let pages = read::get_page_iterator(&metadata, row_group, column, &mut file, vec![])?;
+    let mut pages = read::Decompressor::new(pages, vec![]);
 
     let metadata = metadata.row_groups[row_group].column(column);
-    let array = page_iter_to_array(iter, metadata)?;
+    let array = read::page_iter_to_array(&mut pages, metadata)?;
     assert_eq!(array.len(), size);
     Ok(())
 }
