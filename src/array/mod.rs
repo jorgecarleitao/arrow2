@@ -105,10 +105,11 @@ pub trait MutableArray: std::fmt::Debug {
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
+
     /// The optional validity of the array.
     fn validity(&self) -> &Option<MutableBitmap>;
 
-    /// Convert itself to an (imutable) [`Array`].
+    /// Convert itself to an (immutable) [`Array`].
     fn as_arc(&mut self) -> Arc<dyn Array>;
 
     /// Convert to `Any`, to enable dynamic casting.
@@ -123,6 +124,7 @@ pub trait MutableArray: std::fmt::Debug {
     /// Whether `index` is valid / set.
     /// # Panic
     /// Panics if `index >= self.len()`.
+    #[inline]
     fn is_valid(&self, index: usize) -> bool {
         self.validity()
             .as_ref()

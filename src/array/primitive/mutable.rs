@@ -5,7 +5,7 @@ use crate::{
     bitmap::MutableBitmap,
     buffer::MutableBuffer,
     datatypes::DataType,
-    error::Result,
+    error::{ArrowError, Result},
     trusted_len::TrustedLen,
     types::{NativeType, NaturalDataType},
 };
@@ -47,6 +47,39 @@ impl<T: NativeType + NaturalDataType> MutablePrimitiveArray<T> {
     /// Creates a new [`MutablePrimitiveArray`] with a capacity.
     pub fn with_capacity(capacity: usize) -> Self {
         Self::with_capacity_from(capacity, T::DATA_TYPE)
+    }
+
+    /// Create a [`MutablePrimitiveArray`] out of low-end APIs.
+    /// # Panics
+    /// This function panics iff:
+    /// * `data_type` is not supported by the physical type
+    /// * The validity is not `None` and its length is different from the `values`'s length
+    pub fn from_data(
+        data_type: DataType,
+        values: MutableBuffer<T>,
+        validity: Option<MutableBitmap>,
+    ) -> Self {
+        if !T::is_valid(&data_type) {
+            Err(ArrowError::InvalidArgumentError(format!(
+                "Type {} does not support logical type {}",
+                std::any::type_name::<T>(),
+                data_type
+            )))
+            .unwrap()
+        }
+        if let Some(ref validity) = validity {
+            assert_eq!(values.len(), validity.len());
+        }
+        Self {
+            data_type,
+            values,
+            validity,
+        }
+    }
+
+    /// Extract the low-end APIs from the [`MutablePrimitiveArray`].
+    pub fn into_data(self) -> (DataType, MutableBuffer<T>, Option<MutableBitmap>) {
+        (self.data_type, self.values, self.validity)
     }
 }
 
@@ -153,12 +186,7 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
     /// This operation is `O(1)`.
     #[inline]
     pub fn to(self, data_type: DataType) -> Self {
-        assert!(T::is_valid(&data_type));
-        Self {
-            data_type,
-            values: self.values,
-            validity: self.validity,
-        }
+        Self::from_data(data_type, self.values, self.validity)
     }
 
     /// Converts itself into an [`Array`].
@@ -175,7 +203,7 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
         &self.values
     }
 
-    /// Mutable slice of values
+    /// Returns a mutable slice of values.
     pub fn values_mut_slice(&mut self) -> &mut [T] {
         self.values.as_mut_slice()
     }
@@ -203,6 +231,9 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
         }
     }
 
+    /// Sets the validity.
+    /// # Panic
+    /// Panics iff the validity's len is not equal to the existing values' length.
     pub fn set_validity(&mut self, validity: Option<MutableBitmap>) {
         if let Some(validity) = &validity {
             assert_eq!(self.values.len(), validity.len())
@@ -210,6 +241,9 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
         self.validity = validity;
     }
 
+    /// Sets values.
+    /// # Panic
+    /// Panics iff the values' length is not equal to the existing validity's len.
     pub fn set_values(&mut self, values: MutableBuffer<T>) {
         assert_eq!(values.len(), self.values.len());
         self.values = values;
