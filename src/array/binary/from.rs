@@ -47,9 +47,7 @@ impl<O: Offset, P: AsRef<[u8]>> FromIterator<Option<P>> for BinaryArray<O> {
 /// # Safety
 /// The caller must ensure that `iterator` is `TrustedLen`.
 #[inline]
-pub(crate) unsafe fn trusted_len_unzip<O, I, P>(
-    iterator: I,
-) -> (Option<Bitmap>, Buffer<O>, Buffer<u8>)
+pub unsafe fn trusted_len_unzip<O, I, P>(iterator: I) -> (Option<Bitmap>, Buffer<O>, Buffer<u8>)
 where
     O: Offset,
     P: AsRef<[u8]>,

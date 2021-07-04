@@ -397,7 +397,7 @@ pub use null::NullArray;
 pub use primitive::*;
 pub use specification::{Index, Offset};
 pub use struct_::StructArray;
-pub use utf8::{MutableUtf8Array, Utf8Array};
+pub use utf8::{MutableUtf8Array, Utf8Array, Utf8ValuesIter};
 
 pub(crate) use self::ffi::buffers_children;
 pub use self::ffi::FromFfi;

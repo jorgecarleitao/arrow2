@@ -231,7 +231,8 @@ mod tests {
             Some("aa"),
         ]));
         let expected_int: Arc<dyn Array> = Arc::new(
-            PrimitiveArray::<i32>::from(vec![Some(2), Some(3), Some(1), Some(2)]).to(DataType::Int32),
+            PrimitiveArray::<i32>::from(vec![Some(2), Some(3), Some(1), Some(2)])
+                .to(DataType::Int32),
         );
 
         let expected = StructArray::from_data(fields, vec![expected_string, expected_int], None);
