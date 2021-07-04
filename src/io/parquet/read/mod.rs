@@ -319,15 +319,9 @@ mod tests_integration {
     #[test]
     fn all_types() -> Result<()> {
         let path = "testing/parquet-testing/data/alltypes_plain.parquet";
-        let mut reader = std::fs::File::open(path)?;
+        let reader = std::fs::File::open(path)?;
 
-        let file_metadata = read_metadata(&mut reader)?;
-
-        let schema = get_schema(&file_metadata)?;
-        let schema = Arc::new(schema);
-
-        let reader =
-            RecordReader::try_new(reader, Some(schema), None, None, Arc::new(|_, _| true))?;
+        let reader = RecordReader::try_new(reader, None, None, Arc::new(|_, _| true))?;
 
         let batches = reader.collect::<Result<Vec<_>>>()?;
         assert_eq!(batches.len(), 1);

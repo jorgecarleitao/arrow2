@@ -17,32 +17,33 @@ mod tests {
     use crate::datatypes::*;
 
     use crate::error::Result;
-    use crate::io::parquet::read::{
-        get_page_iterator, page_iter_to_array, read_metadata, statistics::*, Decompressor,
-    };
+    use crate::io::parquet::read;
+    use crate::io::parquet::read::statistics::*;
     use std::io::{Read, Seek};
+    use std::sync::Arc;
 
-    type ArrayStats = (Box<dyn Array>, Option<Box<dyn Statistics>>);
+    type ArrayStats = (
+        Arc<dyn Array>,
+        Option<Box<dyn read::statistics::Statistics>>,
+    );
 
     pub fn read_column<R: Read + Seek>(
-        reader: &mut R,
+        mut reader: R,
         row_group: usize,
         column: usize,
     ) -> Result<ArrayStats> {
-        let metadata = read_metadata(reader)?;
-        let iter = get_page_iterator(&metadata, row_group, column, reader, vec![])?;
-        let mut iter = Decompressor::new(iter, vec![]);
+        let metadata = read::read_metadata(&mut reader)?;
+
+        let mut reader =
+            read::RecordReader::try_new(reader, Some(vec![column]), None, Arc::new(|_, _| true))?;
 
         let statistics = metadata.row_groups[row_group]
             .column(column)
             .statistics()
-            .map(|x| deserialize_statistics(x?.as_ref()))
+            .map(|x| read::statistics::deserialize_statistics(x?.as_ref()))
             .transpose()?;
 
-        Ok((
-            page_iter_to_array(&mut iter, metadata.row_groups[row_group].column(column))?,
-            statistics,
-        ))
+        Ok((reader.next().unwrap()?.columns()[0].clone(), statistics))
     }
 
     pub fn pyarrow_nullable(column: usize) -> Box<dyn Array> {
@@ -60,22 +61,19 @@ mod tests {
         ];
 
         match column {
-            0 => Box::new(PrimitiveArray::<i64>::from(i64_values).to(DataType::Int64)),
-            1 => Box::new(
-                PrimitiveArray::<f64>::from(&[
-                    Some(0.0),
-                    Some(1.0),
-                    None,
-                    Some(3.0),
-                    None,
-                    Some(5.0),
-                    Some(6.0),
-                    Some(7.0),
-                    None,
-                    Some(9.0),
-                ])
-                .to(DataType::Float64),
-            ),
+            0 => Box::new(PrimitiveArray::<i64>::from(i64_values)),
+            1 => Box::new(PrimitiveArray::<f64>::from(&[
+                Some(0.0),
+                Some(1.0),
+                None,
+                Some(3.0),
+                None,
+                Some(5.0),
+                Some(6.0),
+                Some(7.0),
+                None,
+                Some(9.0),
+            ])),
             2 => Box::new(Utf8Array::<i32>::from(&vec![
                 Some("Hello".to_string()),
                 None,
@@ -270,7 +268,7 @@ mod tests_integration {
 
     fn integration_read(data: &[u8]) -> Result<(Arc<Schema>, Vec<RecordBatch>)> {
         let reader = Cursor::new(data);
-        let reader = read::RecordReader::try_new(reader, None, None, None, Arc::new(|_, _| true))?;
+        let reader = read::RecordReader::try_new(reader, None, None, Arc::new(|_, _| true))?;
         let schema = reader.schema().clone();
         let batches = reader.collect::<Result<Vec<_>>>()?;
 
