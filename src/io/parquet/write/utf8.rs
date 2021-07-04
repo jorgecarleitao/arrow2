@@ -5,8 +5,8 @@ use parquet2::{
     write::WriteOptions,
 };
 
+use super::binary::ord_binary;
 use super::utils;
-use super::{binary::ord_binary, Version};
 use crate::{
     array::{Array, Offset, Utf8Array},
     error::Result,
@@ -17,12 +17,11 @@ pub fn array_to_page<O: Offset>(
     array: &Utf8Array<O>,
     options: WriteOptions,
     descriptor: ColumnDescriptor,
-    version: Version,
 ) -> Result<CompressedPage> {
     let validity = array.validity();
     let is_optional = is_type_nullable(descriptor.type_());
 
-    let mut buffer = utils::write_def_levels(is_optional, validity, array.len(), version)?;
+    let mut buffer = utils::write_def_levels(is_optional, validity, array.len(), options.version)?;
 
     let definition_levels_byte_length = buffer.len();
 
@@ -46,7 +45,7 @@ pub fn array_to_page<O: Offset>(
     }
     let uncompressed_page_size = buffer.len();
 
-    let buffer = utils::compress(buffer, version, options, definition_levels_byte_length)?;
+    let buffer = utils::compress(buffer, options, definition_levels_byte_length)?;
 
     let statistics = if options.write_statistics {
         Some(build_statistics(array, descriptor.clone()))
@@ -56,7 +55,6 @@ pub fn array_to_page<O: Offset>(
 
     utils::build_plain_page(
         buffer,
-        version,
         array.len(),
         array.null_count(),
         uncompressed_page_size,

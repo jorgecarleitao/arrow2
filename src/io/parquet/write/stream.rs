@@ -1,15 +1,16 @@
 use futures::stream::Stream;
 
+use parquet2::write::RowGroupIter;
 use parquet2::{
     metadata::SchemaDescriptor, schema::KeyValue,
     write::stream::write_stream as parquet_write_stream,
 };
-use parquet2::{write::RowGroupIter, write::WriteOptions};
 
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 
 use super::schema::schema_to_metadata_key;
+use super::WriteOptions;
 
 /// Writes
 pub async fn write_stream<'a, W, I>(

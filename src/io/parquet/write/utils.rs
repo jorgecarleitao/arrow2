@@ -65,7 +65,6 @@ pub fn write_def_levels(
 #[allow(clippy::too_many_arguments)]
 pub fn build_plain_page(
     buffer: Vec<u8>,
-    version: Version,
     len: usize,
     null_count: usize,
     uncompressed_page_size: usize,
@@ -74,7 +73,7 @@ pub fn build_plain_page(
     descriptor: ColumnDescriptor,
     options: WriteOptions,
 ) -> Result<CompressedPage> {
-    match version {
+    match options.version {
         Version::V1 => {
             let header = PageHeader::V1(DataPageHeader {
                 num_values: len as i32,
@@ -119,13 +118,12 @@ pub fn build_plain_page(
 
 pub fn compress(
     mut buffer: Vec<u8>,
-    version: Version,
     options: WriteOptions,
     definition_levels_byte_length: usize,
 ) -> Result<Vec<u8>> {
     let codec = create_codec(&options.compression)?;
     Ok(if let Some(mut codec) = codec {
-        match version {
+        match options.version {
             Version::V1 => {
                 // todo: remove this allocation by extending `buffer` directly.
                 // needs refactoring `compress`'s API.
