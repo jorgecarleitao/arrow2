@@ -407,6 +407,35 @@ impl MutableBitmap {
 
         Ok(Self { buffer, length })
     }
+
+    /// Extends the [`MutableBitmap`] from a slice of bytes with optional offset.
+    /// This is the fastest way to extend a [`MutableBitmap`].
+    /// # Implementation
+    /// When both [`MutableBitmap`]'s length and `offset` are both multiples of 8,
+    /// this function performs a memcopy. Else, it extends [`MutableBitmap`] bit by bit.
+    #[inline]
+    pub fn extend_from_slice(&mut self, slice: &[u8], offset: usize, length: usize) {
+        assert!(offset + length <= slice.len() * 8);
+        let is_aligned = self.length % 8 == 0;
+        let other_is_aligned = offset % 8 == 0;
+        match (is_aligned, other_is_aligned) {
+            (true, true) => {
+                let aligned_offset = offset / 8;
+                let bytes_len = length.saturating_add(7) / 8;
+                let items = &slice[aligned_offset..aligned_offset + bytes_len];
+                self.buffer.extend_from_slice(items);
+                self.length += length;
+            }
+            // todo: further optimize the other branches.
+            _ => self.extend_from_trusted_len_iter(BitmapIter::new(slice, offset, length)),
+        }
+    }
+
+    /// Extends the [`MutableBitmap`] from a [`Bitmap`].
+    #[inline]
+    pub fn extend_from_bitmap(&mut self, bitmap: &Bitmap) {
+        self.extend_from_slice(bitmap.bytes(), bitmap.offset(), bitmap.len());
+    }
 }
 
 impl Default for MutableBitmap {
@@ -555,5 +584,23 @@ mod tests {
         let bitmap = bitmap.unwrap();
         assert_eq!(bitmap.len(), 12);
         assert_eq!(bitmap.as_slice()[0], 0b00000000);
+    }
+
+    #[test]
+    fn test_extend_from_bitmap() {
+        let other = Bitmap::from(&[true, false, true]);
+        let mut bitmap = MutableBitmap::new();
+
+        // call is optimized to perform a memcopy
+        bitmap.extend_from_bitmap(&other);
+
+        assert_eq!(bitmap.len(), 3);
+        assert_eq!(bitmap.buffer[0], 0b00000101);
+
+        // this call iterates over all bits
+        bitmap.extend_from_bitmap(&other);
+
+        assert_eq!(bitmap.len(), 6);
+        assert_eq!(bitmap.buffer[0], 0b00101101);
     }
 }

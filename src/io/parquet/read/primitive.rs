@@ -91,7 +91,6 @@ fn read_dict_buffer_optional<T, A, F>(
                 let remaining = additional - values.len();
                 let len = std::cmp::min(packed.len() * 8, remaining);
                 for is_valid in BitmapIter::new(packed, 0, len) {
-                    validity.push(is_valid);
                     let value = if is_valid {
                         op(dict_values[indices.next().unwrap() as usize])
                     } else {
@@ -99,6 +98,7 @@ fn read_dict_buffer_optional<T, A, F>(
                     };
                     values.push(value);
                 }
+                validity.extend_from_slice(packed, 0, len);
             }
             hybrid_rle::HybridEncoded::Rle(value, additional) => {
                 let is_set = value[0] == 1;
@@ -140,7 +140,6 @@ fn read_nullable<T, A, F>(
                 let remaining = additional - values.len();
                 let len = std::cmp::min(packed.len() * 8, remaining);
                 for is_valid in BitmapIter::new(packed, 0, len) {
-                    validity.push(is_valid);
                     let value = if is_valid {
                         op(chunks.next().unwrap())
                     } else {
@@ -148,6 +147,7 @@ fn read_nullable<T, A, F>(
                     };
                     values.push(value);
                 }
+                validity.extend_from_slice(packed, 0, len);
             }
             hybrid_rle::HybridEncoded::Rle(value, additional) => {
                 let is_set = value[0] == 1;
