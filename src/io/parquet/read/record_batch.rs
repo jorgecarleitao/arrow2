@@ -4,7 +4,11 @@ use std::{
     sync::Arc,
 };
 
-use crate::{datatypes::Schema, error::Result, record_batch::RecordBatch};
+use crate::{
+    datatypes::{Field, Schema},
+    error::{ArrowError, Result},
+    record_batch::RecordBatch,
+};
 
 use super::{
     get_page_iterator, get_schema, page_iter_to_array, read_metadata, Decompressor, FileMetaData,
@@ -17,7 +21,7 @@ type GroupFilter = Arc<dyn Fn(usize, &RowGroupMetaData) -> bool>;
 pub struct RecordReader<R: Read + Seek> {
     reader: R,
     schema: Arc<Schema>,
-    projection: Rc<Vec<usize>>,
+    indices: Rc<Vec<usize>>,
     buffer: Vec<u8>,
     decompress_buffer: Vec<u8>,
     groups_filter: GroupFilter,
@@ -29,22 +33,47 @@ pub struct RecordReader<R: Read + Seek> {
 impl<R: Read + Seek> RecordReader<R> {
     pub fn try_new(
         mut reader: R,
-        schema: Option<Arc<Schema>>,
         projection: Option<Vec<usize>>,
         limit: Option<usize>,
         groups_filter: GroupFilter,
     ) -> Result<Self> {
         let metadata = read_metadata(&mut reader)?;
 
-        let schema = schema
-            .map(Ok)
-            .unwrap_or_else(|| get_schema(&metadata).map(Arc::new))?;
+        let schema = get_schema(&metadata)?;
 
-        let projection = projection.unwrap_or_else(|| (0..schema.fields().len()).collect());
+        let schema_metadata = schema.metadata;
+        let (indices, fields): (Vec<usize>, Vec<Field>) = if let Some(projection) = &projection {
+            schema
+                .fields
+                .into_iter()
+                .enumerate()
+                .filter_map(|(index, f)| {
+                    if projection.iter().any(|&i| i == index) {
+                        Some((index, f))
+                    } else {
+                        None
+                    }
+                })
+                .unzip()
+        } else {
+            schema.fields.into_iter().enumerate().unzip()
+        };
+
+        if let Some(projection) = &projection {
+            if indices.len() != projection.len() {
+                return Err(ArrowError::InvalidArgumentError("While reading parquet, some columns in the projection do not exist in the file".to_string()));
+            }
+        }
+
+        let schema = Arc::new(Schema {
+            fields,
+            metadata: schema_metadata,
+        });
+
         Ok(Self {
             reader,
             schema,
-            projection: Rc::new(projection),
+            indices: Rc::new(indices),
             groups_filter,
             metadata: Rc::new(metadata),
             current_group: 0,
@@ -84,15 +113,16 @@ impl<R: Read + Seek> Iterator for RecordReader<R> {
         let columns_meta = group.columns();
 
         // todo: avoid these clones.
-        let projection = self.projection.clone();
+        let schema = self.schema().clone();
 
         let b1 = std::mem::take(&mut self.buffer);
         let b2 = std::mem::take(&mut self.decompress_buffer);
 
-        let a = self.schema.clone().fields().iter().enumerate().try_fold(
-            (b1, b2, Vec::with_capacity(self.schema.fields().len())),
+        let a = schema.fields().iter().enumerate().try_fold(
+            (b1, b2, Vec::with_capacity(schema.fields().len())),
             |(b1, b2, mut columns), (column, field)| {
-                let column = projection[column];
+                // column according to the file's indexing
+                let column = self.indices[column];
                 let column_meta = &columns_meta[column];
                 let pages = get_page_iterator(&metadata, row_group, column, &mut self.reader, b1)?;
                 let mut pages = Decompressor::new(pages, b2);

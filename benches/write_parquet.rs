@@ -12,16 +12,31 @@ fn write(array: &dyn Array) -> Result<()> {
     let field = Field::new("c1", array.data_type().clone(), true);
     let schema = Schema::new(vec![field]);
 
-    let compression = CompressionCodec::Uncompressed;
+    let options = WriteOptions {
+        write_statistics: false,
+        compression: CompressionCodec::Uncompressed,
+        version: Version::V1,
+    };
 
-    let parquet_type = to_parquet_type(&field)?;
+    let parquet_schema = to_parquet_schema(&schema)?;
 
-    let row_groups = std::iter::once(Result::Ok(std::iter::once(Ok(std::iter::once(
-        array_to_page(array, &parquet_type, compression),
-    )))));
+    let row_groups = std::iter::once(Result::Ok(DynIter::new(std::iter::once(Ok(DynIter::new(
+        std::iter::once(array_to_page(
+            array,
+            parquet_schema.columns()[0].clone(),
+            options,
+        )),
+    ))))));
 
     let mut writer = Cursor::new(vec![]);
-    write_file(&mut writer, row_groups, schema, compression, None)?;
+    write_file(
+        &mut writer,
+        row_groups,
+        &schema,
+        parquet_schema,
+        options,
+        None,
+    )?;
     Ok(())
 }
 
