@@ -21,8 +21,8 @@ pub use parquet2::{
     compression::CompressionCodec,
     read::CompressedPage,
     schema::types::ParquetType,
-    write::WriteOptions as ParquetWriteOptions,
     write::{DynIter, RowGroupIter},
+    write::{Version, WriteOptions},
 };
 use parquet2::{
     metadata::SchemaDescriptor, schema::KeyValue, write::write_file as parquet_write_file,
@@ -30,28 +30,6 @@ use parquet2::{
 pub use record_batch::RowGroupIterator;
 use schema::schema_to_metadata_key;
 pub use schema::to_parquet_type;
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct WriteOptions {
-    pub write_statistics: bool,
-    pub compression: CompressionCodec,
-    pub version: Version,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub enum Version {
-    V1,
-    V2,
-}
-
-impl From<WriteOptions> for ParquetWriteOptions {
-    fn from(options: WriteOptions) -> Self {
-        Self {
-            write_statistics: options.write_statistics,
-            compression: options.compression,
-        }
-    }
-}
 
 pub(self) fn decimal_length_from_precision(precision: usize) -> usize {
     // digits = floor(log_10(2^(8*n - 1) - 1))
@@ -99,7 +77,7 @@ where
         writer,
         row_groups,
         parquet_schema,
-        options.into(),
+        options,
         created_by,
         key_value_metadata,
     )?)
@@ -110,59 +88,47 @@ pub fn array_to_page(
     descriptor: ColumnDescriptor,
     options: WriteOptions,
 ) -> Result<CompressedPage> {
-    let version = options.version;
-    let options = options.into();
     // using plain encoding format
     match array.data_type() {
-        DataType::Boolean => boolean::array_to_page(
-            array.as_any().downcast_ref().unwrap(),
-            options,
-            descriptor,
-            version,
-        ),
+        DataType::Boolean => {
+            boolean::array_to_page(array.as_any().downcast_ref().unwrap(), options, descriptor)
+        }
         // casts below MUST match the casts done at the metadata (field -> parquet type).
         DataType::UInt8 => primitive::array_to_page::<u8, i32>(
             array.as_any().downcast_ref().unwrap(),
             options,
             descriptor,
-            version,
         ),
         DataType::UInt16 => primitive::array_to_page::<u16, i32>(
             array.as_any().downcast_ref().unwrap(),
             options,
             descriptor,
-            version,
         ),
         DataType::UInt32 => primitive::array_to_page::<u32, i32>(
             array.as_any().downcast_ref().unwrap(),
             options,
             descriptor,
-            version,
         ),
         DataType::UInt64 => primitive::array_to_page::<u64, i64>(
             array.as_any().downcast_ref().unwrap(),
             options,
             descriptor,
-            version,
         ),
         DataType::Int8 => primitive::array_to_page::<i8, i32>(
             array.as_any().downcast_ref().unwrap(),
             options,
             descriptor,
-            version,
         ),
         DataType::Int16 => primitive::array_to_page::<i16, i32>(
             array.as_any().downcast_ref().unwrap(),
             options,
             descriptor,
-            version,
         ),
         DataType::Int32 | DataType::Date32 | DataType::Time32(_) => {
             primitive::array_to_page::<i32, i32>(
                 array.as_any().downcast_ref().unwrap(),
                 options,
                 descriptor,
-                version,
             )
         }
         DataType::Int64
@@ -173,47 +139,36 @@ pub fn array_to_page(
             array.as_any().downcast_ref().unwrap(),
             options,
             descriptor,
-            version,
         ),
         DataType::Float32 => primitive::array_to_page::<f32, f32>(
             array.as_any().downcast_ref().unwrap(),
             options,
             descriptor,
-            version,
         ),
         DataType::Float64 => primitive::array_to_page::<f64, f64>(
             array.as_any().downcast_ref().unwrap(),
             options,
             descriptor,
-            version,
         ),
-        DataType::Utf8 => utf8::array_to_page::<i32>(
-            array.as_any().downcast_ref().unwrap(),
-            options,
-            descriptor,
-            version,
-        ),
-        DataType::LargeUtf8 => utf8::array_to_page::<i64>(
-            array.as_any().downcast_ref().unwrap(),
-            options,
-            descriptor,
-            version,
-        ),
+        DataType::Utf8 => {
+            utf8::array_to_page::<i32>(array.as_any().downcast_ref().unwrap(), options, descriptor)
+        }
+        DataType::LargeUtf8 => {
+            utf8::array_to_page::<i64>(array.as_any().downcast_ref().unwrap(), options, descriptor)
+        }
         DataType::Binary => binary::array_to_page::<i32>(
             array.as_any().downcast_ref().unwrap(),
             options,
             descriptor,
-            version,
         ),
         DataType::LargeBinary => binary::array_to_page::<i64>(
             array.as_any().downcast_ref().unwrap(),
             options,
             descriptor,
-            version,
         ),
         DataType::Null => {
             let array = Int32Array::new_null(DataType::Int32, array.len());
-            primitive::array_to_page::<i32, i32>(&array, options, descriptor, version)
+            primitive::array_to_page::<i32, i32>(&array, options, descriptor)
         }
         DataType::Interval(IntervalUnit::YearMonth) => {
             let array = array
@@ -270,7 +225,7 @@ pub fn array_to_page(
                     values,
                     array.validity().clone(),
                 );
-                primitive::array_to_page::<i32, i32>(&array, options, descriptor, version)
+                primitive::array_to_page::<i32, i32>(&array, options, descriptor)
             } else if precision <= 18 {
                 let array = array
                     .as_any()
@@ -283,7 +238,7 @@ pub fn array_to_page(
                     values,
                     array.validity().clone(),
                 );
-                primitive::array_to_page::<i64, i64>(&array, options, descriptor, version)
+                primitive::array_to_page::<i64, i64>(&array, options, descriptor)
             } else {
                 let array = array
                     .as_any()

@@ -7,7 +7,6 @@ use parquet2::{
 };
 
 use super::utils;
-use super::Version;
 use crate::error::Result;
 use crate::{array::*, io::parquet::read::is_type_nullable};
 
@@ -25,13 +24,12 @@ pub fn array_to_page(
     array: &BooleanArray,
     options: WriteOptions,
     descriptor: ColumnDescriptor,
-    version: Version,
 ) -> Result<CompressedPage> {
     let is_optional = is_type_nullable(descriptor.type_());
 
     let validity = array.validity();
 
-    let buffer = utils::write_def_levels(is_optional, validity, array.len(), version)?;
+    let buffer = utils::write_def_levels(is_optional, validity, array.len(), options.version)?;
 
     let definition_levels_byte_length = buffer.len();
 
@@ -50,7 +48,7 @@ pub fn array_to_page(
 
     let uncompressed_page_size = buffer.len();
 
-    let buffer = utils::compress(buffer, version, options, definition_levels_byte_length)?;
+    let buffer = utils::compress(buffer, options, definition_levels_byte_length)?;
 
     let statistics = if options.write_statistics {
         Some(build_statistics(array))
@@ -60,7 +58,6 @@ pub fn array_to_page(
 
     utils::build_plain_page(
         buffer,
-        version,
         array.len(),
         array.null_count(),
         uncompressed_page_size,
