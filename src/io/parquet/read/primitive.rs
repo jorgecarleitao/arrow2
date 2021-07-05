@@ -1,7 +1,7 @@
 use std::{convert::TryInto, hint::unreachable_unchecked};
 
 use parquet2::{
-    encoding::{bitpacking, hybrid_rle, Encoding},
+    encoding::{bitpacking, hybrid_rle, uleb128, Encoding},
     read::{levels, Page, PageHeader, PrimitivePageDict, StreamingIterator},
     types::NativeType,
 };
@@ -77,6 +77,9 @@ fn read_dict_buffer_optional<T, A, F>(
     // SPEC: followed by the values encoded using RLE/Bit packed described above (with the given bit width).
     let bit_width = indices_buffer[0];
     let indices_buffer = &indices_buffer[1..];
+
+    let (_, consumed) = uleb128::decode(&indices_buffer);
+    let indices_buffer = &indices_buffer[consumed..];
 
     let non_null_indices_len = (indices_buffer.len() * 8 / bit_width as usize) as u32;
 

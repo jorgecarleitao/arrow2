@@ -313,6 +313,8 @@ mod tests {
 
 #[cfg(test)]
 mod tests_integration {
+    use crate::array::{BinaryArray, Float32Array, Int32Array};
+
     use super::*;
     use std::sync::Arc;
 
@@ -325,6 +327,33 @@ mod tests_integration {
 
         let batches = reader.collect::<Result<Vec<_>>>()?;
         assert_eq!(batches.len(), 1);
+
+        let result = batches[0]
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int32Array>()
+            .unwrap();
+        assert_eq!(result, &Int32Array::from_slice([4, 5, 6, 7, 2, 3, 0, 1]));
+
+        let result = batches[0]
+            .column(6)
+            .as_any()
+            .downcast_ref::<Float32Array>()
+            .unwrap();
+        assert_eq!(
+            result,
+            &Float32Array::from_slice([0.0, 1.1, 0.0, 1.1, 0.0, 1.1, 0.0, 1.1])
+        );
+
+        let result = batches[0]
+            .column(9)
+            .as_any()
+            .downcast_ref::<BinaryArray<i32>>()
+            .unwrap();
+        assert_eq!(
+            result,
+            &BinaryArray::<i32>::from_slice([[48], [49], [48], [49], [48], [49], [48], [49]])
+        );
 
         Ok(())
     }
