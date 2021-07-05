@@ -224,7 +224,7 @@ fn main() -&gt; Result&lt;()&gt; {
     let file_path = &amp;args[1];
 
     let reader = File::open(file_path)?;
-    let reader = read::RecordReader::try_new(reader, None, None, None, Arc::new(|_, _| true))?;
+    let reader = read::RecordReader::try_new(reader, None, None, Arc::new(|_, _| true))?;
 
     for maybe_batch in reader {
         let batch = maybe_batch?;
