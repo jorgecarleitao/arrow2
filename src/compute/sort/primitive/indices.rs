@@ -82,7 +82,7 @@ where
             // all indices in `indices` are by construction `< array.len() == values.len()`
             unsafe {
                 sort_inner(
-                    &mut indices.as_slice_mut()[validity.null_count()..],
+                    &mut indices.as_mut_slice()[validity.null_count()..],
                     values,
                     cmp,
                     options.descending,
@@ -109,7 +109,7 @@ where
             // all indices in `indices` are by construction `< array.len() == values.len()`
             unsafe {
                 sort_inner(
-                    &mut indices.as_slice_mut()[..last_valid_index],
+                    &mut indices.as_mut_slice()[..last_valid_index],
                     values,
                     cmp,
                     options.descending,
@@ -140,7 +140,7 @@ mod tests {
     where
         T: NativeType + std::cmp::Ord,
     {
-        let input = Primitive::<T>::from(data).to(data_type);
+        let input = PrimitiveArray::<T>::from(data).to(data_type);
         let expected = Int32Array::from_slice(&expected_data);
         let output = indices_sorted_by(&input, ord::total_cmp, &options);
         assert_eq!(output, expected)

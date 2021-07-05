@@ -20,7 +20,7 @@
 //! # Description
 //!
 //! The Arithmetics module is composed by basic arithmetics operations that can
-//! be performed on Primitive Arrays. These operations can be the building for
+//! be performed on PrimitiveArray Arrays. These operations can be the building for
 //! any implementation using Arrow.
 //!
 //! Whenever possible, each of the operations in these modules has variations
@@ -59,7 +59,7 @@ pub mod basic;
 pub mod decimal;
 pub mod time;
 
-use std::ops::{Add, Div, Mul, Neg, Sub};
+use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
 use num::Zero;
 
@@ -113,6 +113,12 @@ pub fn arithmetic(lhs: &dyn Array, op: Operator, rhs: &dyn Array) -> Result<Box<
                 Subtract => decimal::sub::sub(lhs, rhs),
                 Multiply => decimal::mul::mul(lhs, rhs),
                 Divide => decimal::div::div(lhs, rhs),
+                Remainder => {
+                    return Err(ArrowError::NotYetImplemented(format!(
+                        "Arithmetics of ({:?}, {:?}, {:?}) is not supported",
+                        lhs, op, rhs
+                    )))
+                }
             };
 
             res.map(|x| Box::new(x) as Box<dyn Array>)
@@ -176,6 +182,10 @@ pub fn arithmetic(lhs: &dyn Array, op: Operator, rhs: &dyn Array) -> Result<Box<
 pub fn can_arithmetic(lhs: &DataType, op: Operator, rhs: &DataType) -> bool {
     use DataType::*;
     use Operator::*;
+    if let (Decimal(_, _), Remainder, Decimal(_, _)) = (lhs, op, rhs) {
+        return false;
+    };
+
     matches!(
         (lhs, op, rhs),
         (Int8, _, Int8)
@@ -214,6 +224,7 @@ pub enum Operator {
     Subtract,
     Multiply,
     Divide,
+    Remainder,
 }
 
 /// Perform arithmetic operations on two primitive arrays based on the Operator enum
@@ -223,13 +234,20 @@ fn arithmetic_primitive<T>(
     rhs: &PrimitiveArray<T>,
 ) -> Result<PrimitiveArray<T>>
 where
-    T: NativeType + Div<Output = T> + Zero + Add<Output = T> + Sub<Output = T> + Mul<Output = T>,
+    T: NativeType
+        + Div<Output = T>
+        + Zero
+        + Add<Output = T>
+        + Sub<Output = T>
+        + Mul<Output = T>
+        + Rem<Output = T>,
 {
     match op {
         Operator::Add => basic::add::add(lhs, rhs),
         Operator::Subtract => basic::sub::sub(lhs, rhs),
         Operator::Multiply => basic::mul::mul(lhs, rhs),
         Operator::Divide => basic::div::div(lhs, rhs),
+        Operator::Remainder => basic::rem::rem(lhs, rhs),
     }
 }
 
@@ -240,13 +258,20 @@ pub fn arithmetic_primitive_scalar<T>(
     rhs: &T,
 ) -> Result<PrimitiveArray<T>>
 where
-    T: NativeType + Div<Output = T> + Zero + Add<Output = T> + Sub<Output = T> + Mul<Output = T>,
+    T: NativeType
+        + Div<Output = T>
+        + Zero
+        + Add<Output = T>
+        + Sub<Output = T>
+        + Mul<Output = T>
+        + Rem<Output = T>,
 {
     match op {
         Operator::Add => Ok(basic::add::add_scalar(lhs, rhs)),
         Operator::Subtract => Ok(basic::sub::sub_scalar(lhs, rhs)),
         Operator::Multiply => Ok(basic::mul::mul_scalar(lhs, rhs)),
         Operator::Divide => Ok(basic::div::div_scalar(lhs, rhs)),
+        Operator::Remainder => Ok(basic::rem::rem_scalar(lhs, rhs)),
     }
 }
 
@@ -255,12 +280,12 @@ where
 /// # Examples
 /// ```
 /// use arrow2::compute::arithmetics::negate;
-/// use arrow2::array::Primitive;
+/// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
-/// let a = Primitive::from(&vec![None, Some(6), None, Some(7)]).to(DataType::Int32);
+/// let a = PrimitiveArray::from(&vec![None, Some(6), None, Some(7)]).to(DataType::Int32);
 /// let result = negate(&a);
-/// let expected = Primitive::from(&vec![None, Some(-6), None, Some(-7)]).to(DataType::Int32);
+/// let expected = PrimitiveArray::from(&vec![None, Some(-6), None, Some(-7)]).to(DataType::Int32);
 /// assert_eq!(result, expected)
 /// ```
 pub fn negate<T>(array: &PrimitiveArray<T>) -> PrimitiveArray<T>
@@ -368,6 +393,20 @@ pub trait ArrayCheckedDiv<Rhs> {
     fn checked_div(&self, rhs: &Rhs) -> Result<Self::Output>;
 }
 
+/// Defines basic reminder operation for primitive arrays
+pub trait ArrayRem<Rhs> {
+    type Output;
+
+    fn rem(&self, rhs: &Rhs) -> Result<Self::Output>;
+}
+
+/// Defines checked reminder operation for primitive arrays
+pub trait ArrayCheckedRem<Rhs> {
+    type Output;
+
+    fn checked_rem(&self, rhs: &Rhs) -> Result<Self::Output>;
+}
+
 // The decimal primitive array defines different arithmetic functions and
 // it requires specialization
 pub unsafe trait NotI128 {}
@@ -388,7 +427,6 @@ mod tests {
 
     #[test]
     fn consistency() {
-        use crate::array::new_null_array;
         use crate::datatypes::DataType::*;
         use crate::datatypes::TimeUnit;
 
@@ -429,6 +467,7 @@ mod tests {
             Operator::Divide,
             Operator::Subtract,
             Operator::Multiply,
+            Operator::Remainder,
         ];
 
         let cases = datatypes
@@ -438,8 +477,8 @@ mod tests {
             .zip(datatypes.into_iter());
 
         cases.for_each(|((lhs, op), rhs)| {
-            let lhs_a = new_null_array(lhs.clone(), 10);
-            let rhs_a = new_null_array(rhs.clone(), 10);
+            let lhs_a = new_empty_array(lhs.clone());
+            let rhs_a = new_empty_array(rhs.clone());
             if can_arithmetic(&lhs, op, &rhs) {
                 assert!(arithmetic(lhs_a.as_ref(), op, rhs_a.as_ref()).is_ok());
             } else {

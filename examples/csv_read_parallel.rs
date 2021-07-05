@@ -24,8 +24,10 @@ fn parallel_read(path: &str) -> Result<Vec<RecordBatch>> {
         let mut line_number = 0;
         let mut size = 1;
         while size > 0 {
-            let rows = read::read_rows(&mut reader, 0, batch_size).unwrap();
-            line_number += batch_size;
+            let mut rows = vec![read::ByteRecord::default(); batch_size];
+            let rows_read = read::read_rows(&mut reader, 0, &mut rows).unwrap();
+            rows.truncate(rows_read);
+            line_number += rows.len();
             size = rows.len();
             tx.send((rows, line_number)).unwrap();
         }

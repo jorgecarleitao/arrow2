@@ -106,7 +106,7 @@ mod tests {
             let expected = expected
                 .into_iter()
                 .map(|x| x.map(|x| O::from_usize(x).unwrap()))
-                .collect::<Primitive<O>>()
+                .collect::<PrimitiveArray<O>>()
                 .to(data_type);
             assert_eq!(expected, result.as_ref());
         })

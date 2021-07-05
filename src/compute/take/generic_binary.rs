@@ -19,61 +19,54 @@ use crate::{
     array::{Array, GenericBinaryArray, Offset, PrimitiveArray},
     bitmap::{Bitmap, MutableBitmap},
     buffer::{Buffer, MutableBuffer},
-    error::Result,
 };
 
-use super::maybe_usize;
+use super::Index;
 
-pub fn take_values<O: Offset>(
-    length: O,
-    starts: &[O],
-    offsets: &[O],
-    values: &[u8],
-) -> Result<Buffer<u8>> {
-    let new_len = maybe_usize::<O>(length)?;
+pub fn take_values<O: Offset>(length: O, starts: &[O], offsets: &[O], values: &[u8]) -> Buffer<u8> {
+    let new_len = length.to_usize();
     let mut buffer = MutableBuffer::with_capacity(new_len);
     starts
         .iter()
         .zip(offsets.windows(2))
-        .try_for_each(|(start_, window)| {
-            let start = maybe_usize::<O>(*start_)?;
-            let end = maybe_usize::<O>(*start_ + (window[1] - window[0]))?;
+        .for_each(|(start_, window)| {
+            let start = start_.to_usize();
+            let end = (*start_ + (window[1] - window[0])).to_usize();
             buffer.extend_from_slice(&values[start..end]);
-            Result::Ok(())
-        })?;
-    Ok(buffer.into())
+        });
+    buffer.into()
 }
 
 // take implementation when neither values nor indices contain nulls
-pub fn take_no_validity<O: Offset, I: Offset>(
+pub fn take_no_validity<O: Offset, I: Index>(
     offsets: &[O],
     values: &[u8],
     indices: &[I],
-) -> Result<(Buffer<O>, Buffer<u8>, Option<Bitmap>)> {
+) -> (Buffer<O>, Buffer<u8>, Option<Bitmap>) {
     let mut length = O::default();
     let mut buffer = MutableBuffer::<u8>::new();
     let offsets = indices.iter().map(|index| {
-        let index = maybe_usize::<I>(*index)?;
+        let index = index.to_usize();
         let start = offsets[index];
         let length_h = offsets[index + 1] - start;
         length += length_h;
 
-        let _start = maybe_usize::<O>(start)?;
-        let end = maybe_usize::<O>(start + length_h)?;
+        let _start = start.to_usize();
+        let end = (start + length_h).to_usize();
         buffer.extend_from_slice(&values[_start..end]);
-        Result::Ok(length)
+        length
     });
-    let offsets = std::iter::once(Ok(O::default())).chain(offsets);
-    let offsets = Buffer::try_from_trusted_len_iter(offsets)?;
+    let offsets = std::iter::once(O::default()).chain(offsets);
+    let offsets = Buffer::from_trusted_len_iter(offsets);
 
-    Ok((offsets, buffer.into(), None))
+    (offsets, buffer.into(), None)
 }
 
 // take implementation when only values contain nulls
-pub fn take_values_validity<O: Offset, I: Offset, A: GenericBinaryArray<O>>(
+pub fn take_values_validity<O: Offset, I: Index, A: GenericBinaryArray<O>>(
     values: &A,
     indices: &[I],
-) -> Result<(Buffer<O>, Buffer<u8>, Option<Bitmap>)> {
+) -> (Buffer<O>, Buffer<u8>, Option<Bitmap>) {
     let mut length = O::default();
     let mut validity = MutableBitmap::with_capacity(indices.len());
 
@@ -83,7 +76,7 @@ pub fn take_values_validity<O: Offset, I: Offset, A: GenericBinaryArray<O>>(
 
     let mut starts = MutableBuffer::<O>::with_capacity(indices.len());
     let offsets = indices.iter().map(|index| {
-        let index = maybe_usize::<I>(*index)?;
+        let index = index.to_usize();
         if null_values.get_bit(index) {
             validity.push(true);
             let start = offsets[index];
@@ -93,28 +86,27 @@ pub fn take_values_validity<O: Offset, I: Offset, A: GenericBinaryArray<O>>(
             validity.push(false);
             starts.push(O::default());
         }
-        Result::Ok(length)
+        length
     });
-    let offsets = std::iter::once(Ok(O::default())).chain(offsets);
-    let offsets = Buffer::try_from_trusted_len_iter(offsets)?;
-    let starts: Buffer<O> = starts.into();
+    let offsets = std::iter::once(O::default()).chain(offsets);
+    let offsets = Buffer::from_trusted_len_iter(offsets);
 
-    let buffer = take_values(length, starts.as_slice(), offsets.as_slice(), values_values)?;
+    let buffer = take_values(length, starts.as_slice(), offsets.as_slice(), values_values);
 
-    Ok((offsets, buffer, validity.into()))
+    (offsets, buffer, validity.into())
 }
 
 // take implementation when only indices contain nulls
-pub fn take_indices_validity<O: Offset, I: Offset>(
+pub fn take_indices_validity<O: Offset, I: Index>(
     offsets: &[O],
     values: &[u8],
     indices: &PrimitiveArray<I>,
-) -> Result<(Buffer<O>, Buffer<u8>, Option<Bitmap>)> {
+) -> (Buffer<O>, Buffer<u8>, Option<Bitmap>) {
     let mut length = O::default();
 
     let mut starts = MutableBuffer::<O>::with_capacity(indices.len());
     let offsets = indices.values().iter().map(|index| {
-        let index = maybe_usize::<I>(*index)?;
+        let index = index.to_usize();
         match offsets.get(index + 1) {
             Some(&next) => {
                 let start = offsets[index];
@@ -123,22 +115,22 @@ pub fn take_indices_validity<O: Offset, I: Offset>(
             }
             None => starts.push(O::default()),
         };
-        Result::Ok(length)
+        length
     });
-    let offsets = std::iter::once(Ok(O::default())).chain(offsets);
-    let offsets = Buffer::try_from_trusted_len_iter(offsets)?;
+    let offsets = std::iter::once(O::default()).chain(offsets);
+    let offsets = Buffer::from_trusted_len_iter(offsets);
     let starts: Buffer<O> = starts.into();
 
-    let buffer = take_values(length, starts.as_slice(), offsets.as_slice(), values)?;
+    let buffer = take_values(length, starts.as_slice(), offsets.as_slice(), values);
 
-    Ok((offsets, buffer, indices.validity().clone()))
+    (offsets, buffer, indices.validity().clone())
 }
 
 // take implementation when both indices and values contain nulls
-pub fn take_values_indices_validity<O: Offset, I: Offset, A: GenericBinaryArray<O>>(
+pub fn take_values_indices_validity<O: Offset, I: Index, A: GenericBinaryArray<O>>(
     values: &A,
     indices: &PrimitiveArray<I>,
-) -> Result<(Buffer<O>, Buffer<u8>, Option<Bitmap>)> {
+) -> (Buffer<O>, Buffer<u8>, Option<Bitmap>) {
     let mut length = O::default();
     let mut validity = MutableBitmap::with_capacity(indices.len());
 
@@ -150,7 +142,7 @@ pub fn take_values_indices_validity<O: Offset, I: Offset, A: GenericBinaryArray<
     let offsets = indices.iter().map(|index| {
         match index {
             Some(index) => {
-                let index = maybe_usize::<I>(*index)?;
+                let index = index.to_usize();
                 if values_validity.get_bit(index) {
                     validity.push(true);
                     length += offsets[index + 1] - offsets[index];
@@ -165,13 +157,13 @@ pub fn take_values_indices_validity<O: Offset, I: Offset, A: GenericBinaryArray<
                 starts.push(O::default());
             }
         };
-        Result::Ok(length)
+        length
     });
-    let offsets = std::iter::once(Ok(O::default())).chain(offsets);
-    let offsets = Buffer::try_from_trusted_len_iter(offsets)?;
+    let offsets = std::iter::once(O::default()).chain(offsets);
+    let offsets = Buffer::from_trusted_len_iter(offsets);
     let starts: Buffer<O> = starts.into();
 
-    let buffer = take_values(length, starts.as_slice(), offsets.as_slice(), values_values)?;
+    let buffer = take_values(length, starts.as_slice(), offsets.as_slice(), values_values);
 
-    Ok((offsets, buffer, validity.into()))
+    (offsets, buffer, validity.into())
 }

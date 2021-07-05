@@ -1,17 +1,13 @@
-use std::{iter::FromIterator, sync::Arc};
+use std::iter::FromIterator;
 
+use crate::trusted_len::TrustedLen;
 use crate::{
-    array::{Array, Builder, IntoArray, Offset, ToArray, TryFromIterator},
+    array::Offset,
     bitmap::{Bitmap, MutableBitmap},
     buffer::{Buffer, MutableBuffer},
-    datatypes::DataType,
-};
-use crate::{
-    error::{ArrowError, Result as ArrowResult},
-    trusted_len::TrustedLen,
 };
 
-use super::Utf8Array;
+use super::{MutableUtf8Array, Utf8Array};
 
 impl<O: Offset> Utf8Array<O> {
     /// Creates a new [`Utf8Array`] from a slice of `&str`.
@@ -33,6 +29,13 @@ impl<O: Offset> Utf8Array<O> {
         iterator: I,
     ) -> Self {
         let (offsets, values) = unsafe { trusted_len_values_iter(iterator) };
+        Self::from_data(offsets, values, None)
+    }
+
+    /// Creates a new [`Utf8Array`] from a [`Iterator`] of `&str`.
+    pub fn from_iter_values<T: AsRef<str>, I: IntoIterator<Item = T>>(iter: I) -> Self {
+        let iterator = iter.into_iter();
+        let (offsets, values) = values_iter(iterator);
         Self::from_data(offsets, values, None)
     }
 }
@@ -172,6 +175,33 @@ where
     (offsets.into(), values.into())
 }
 
+/// Creates two [`Buffer`]s from an iterator of `&str`.
+/// The first buffer corresponds to a offset buffer, the second to a values buffer.
+#[inline]
+fn values_iter<O, I, P>(iterator: I) -> (Buffer<O>, Buffer<u8>)
+where
+    O: Offset,
+    P: AsRef<str>,
+    I: Iterator<Item = P>,
+{
+    let (lower, _) = iterator.size_hint();
+
+    let mut offsets = MutableBuffer::<O>::with_capacity(lower + 1);
+    let mut values = MutableBuffer::<u8>::new();
+
+    let mut length = O::default();
+    offsets.push(length);
+
+    for item in iterator {
+        let s = item.as_ref();
+        length += O::from_usize(s.len()).unwrap();
+        values.extend_from_slice(s.as_bytes());
+
+        offsets.push(length)
+    }
+    (offsets.into(), values.into())
+}
+
 /// # Safety
 /// The caller must ensure that `iterator` is `TrustedLen`.
 #[inline]
@@ -217,115 +247,17 @@ where
     Ok((null.into(), offsets.into(), values.into()))
 }
 
-/// auxiliary struct used to create a [`PrimitiveArray`] out of an iterator
-#[derive(Debug)]
-pub struct Utf8Primitive<O: Offset> {
-    offsets: MutableBuffer<O>,
-    values: MutableBuffer<u8>,
-    validity: MutableBitmap,
-    // invariant: always equal to the last offset
-    length: O,
-}
-
-impl<O: Offset, P: AsRef<str>> FromIterator<Option<P>> for Utf8Primitive<O> {
-    fn from_iter<I: IntoIterator<Item = Option<P>>>(iter: I) -> Self {
-        Self::try_from_iter(iter.into_iter().map(Ok)).unwrap()
-    }
-}
-
 impl<O: Offset, P: AsRef<str>> FromIterator<Option<P>> for Utf8Array<O> {
     #[inline]
     fn from_iter<I: IntoIterator<Item = Option<P>>>(iter: I) -> Self {
-        Utf8Primitive::from_iter(iter).to()
-    }
-}
-
-impl<O: Offset, P> TryFromIterator<Option<P>> for Utf8Primitive<O>
-where
-    P: AsRef<str>,
-{
-    fn try_from_iter<I: IntoIterator<Item = ArrowResult<Option<P>>>>(iter: I) -> ArrowResult<Self> {
-        let iterator = iter.into_iter();
-        let (lower, _) = iterator.size_hint();
-        let mut primitive = Self::with_capacity(lower);
-        for item in iterator {
-            match item? {
-                Some(x) => primitive.try_push(Some(&x.as_ref()))?,
-                None => primitive.try_push(None)?,
-            }
-        }
-        Ok(primitive)
-    }
-}
-
-impl<O: Offset> Builder<&str> for Utf8Primitive<O> {
-    #[inline]
-    fn with_capacity(capacity: usize) -> Self {
-        let mut offsets = MutableBuffer::<O>::with_capacity(capacity + 1);
-        let length = O::default();
-        unsafe { offsets.push_unchecked(length) };
-
-        Self {
-            offsets,
-            values: MutableBuffer::<u8>::new(),
-            validity: MutableBitmap::with_capacity(capacity),
-            length,
-        }
-    }
-
-    #[inline]
-    fn try_push(&mut self, value: Option<&&str>) -> ArrowResult<()> {
-        match value {
-            Some(v) => {
-                let bytes = v.as_bytes();
-                let length =
-                    O::from_usize(bytes.len()).ok_or(ArrowError::DictionaryKeyOverflowError)?;
-                self.length += length;
-                self.offsets.push(self.length);
-                self.values.extend_from_slice(bytes);
-                self.validity.push(true);
-            }
-            None => {
-                self.offsets.push(self.length);
-                self.validity.push(false);
-            }
-        }
-        Ok(())
-    }
-
-    #[inline]
-    fn push(&mut self, value: Option<&&str>) {
-        self.try_push(value).unwrap()
-    }
-}
-
-impl<O: Offset> Utf8Primitive<O> {
-    pub fn to(self) -> Utf8Array<O> {
-        // Soundness: all methods from `Utf8Primitive` receive &str
-        unsafe {
-            Utf8Array::<O>::from_data_unchecked(
-                self.offsets.into(),
-                self.values.into(),
-                self.validity.into(),
-            )
-        }
-    }
-}
-
-impl<O: Offset> ToArray for Utf8Primitive<O> {
-    fn to_arc(self, _: &DataType) -> Arc<dyn Array> {
-        Arc::new(self.to())
-    }
-}
-
-impl<O: Offset> IntoArray for Utf8Primitive<O> {
-    fn into_arc(self) -> Arc<dyn Array> {
-        Arc::new(self.to())
+        MutableUtf8Array::from_iter(iter).into()
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::array::Array;
+
     use super::*;
 
     #[test]
@@ -335,5 +267,14 @@ mod tests {
         let a = array.validity().as_ref().unwrap();
         assert_eq!(a.len(), 3);
         assert_eq!(a.as_slice()[0], 0b00000011);
+    }
+
+    #[test]
+    fn test_from_iter_values() {
+        let b = Utf8Array::<i32>::from_iter_values(vec!["a", "b", "cc"]);
+
+        let offsets = Buffer::from(&[0, 1, 2, 4]);
+        let values = Buffer::from("abcc".as_bytes());
+        assert_eq!(b, Utf8Array::<i32>::from_data(offsets, values, None));
     }
 }

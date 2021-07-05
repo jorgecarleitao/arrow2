@@ -1,31 +1,36 @@
 use parquet2::{
-    compression::create_codec,
-    encoding::Encoding,
-    read::{CompressedPage, PageV1},
-    schema::{CompressionCodec, DataPageHeader},
+    metadata::ColumnDescriptor,
+    read::CompressedPage,
+    statistics::{serialize_statistics, ParquetStatistics, PrimitiveStatistics, Statistics},
     types::NativeType,
+    write::WriteOptions,
 };
 
 use super::utils;
 use crate::{
     array::{Array, PrimitiveArray},
     error::Result,
+    io::parquet::read::is_type_nullable,
     types::NativeType as ArrowNativeType,
 };
 
-pub fn array_to_page_v1<T, R>(
+pub fn array_to_page<T, R>(
     array: &PrimitiveArray<T>,
-    compression: CompressionCodec,
-    is_optional: bool,
+    options: WriteOptions,
+    descriptor: ColumnDescriptor,
 ) -> Result<CompressedPage>
 where
     T: ArrowNativeType,
     R: NativeType,
     T: num::cast::AsPrimitive<R>,
 {
+    let is_optional = is_type_nullable(descriptor.type_());
+
     let validity = array.validity();
 
-    let mut buffer = utils::write_def_levels(is_optional, validity, array.len())?;
+    let mut buffer = utils::write_def_levels(is_optional, validity, array.len(), options.version)?;
+
+    let definition_levels_byte_length = buffer.len();
 
     if is_optional {
         // append the non-null values
@@ -44,31 +49,55 @@ where
     }
     let uncompressed_page_size = buffer.len();
 
-    let codec = create_codec(&compression)?;
-    let buffer = if let Some(mut codec) = codec {
-        // todo: remove this allocation by extending `buffer` directly.
-        // needs refactoring `compress`'s API.
-        let mut tmp = vec![];
-        codec.compress(&buffer, &mut tmp)?;
-        tmp
+    let buffer = utils::compress(buffer, options, definition_levels_byte_length)?;
+
+    let statistics = if options.write_statistics {
+        Some(build_statistics(array, descriptor.clone()))
     } else {
-        buffer
+        None
     };
 
-    let header = DataPageHeader {
-        num_values: array.len() as i32,
-        encoding: Encoding::Plain,
-        definition_level_encoding: Encoding::Rle,
-        repetition_level_encoding: Encoding::Rle,
-        statistics: None,
-    };
-
-    Ok(CompressedPage::V1(PageV1 {
+    utils::build_plain_page(
         buffer,
-        header,
-        compression,
+        array.len(),
+        array.null_count(),
         uncompressed_page_size,
-        dictionary_page: None,
-        statistics: None,
-    }))
+        definition_levels_byte_length,
+        statistics,
+        descriptor,
+        options,
+    )
+}
+
+fn build_statistics<T, R>(
+    array: &PrimitiveArray<T>,
+    descriptor: ColumnDescriptor,
+) -> ParquetStatistics
+where
+    T: ArrowNativeType,
+    R: NativeType,
+    T: num::cast::AsPrimitive<R>,
+{
+    let statistics = &PrimitiveStatistics::<R> {
+        descriptor,
+        null_count: Some(array.null_count() as i64),
+        distinct_count: None,
+        max_value: array
+            .iter()
+            .flatten()
+            .map(|x| {
+                let x: R = x.as_();
+                x
+            })
+            .max_by(|x, y| x.ord(y)),
+        min_value: array
+            .iter()
+            .flatten()
+            .map(|x| {
+                let x: R = x.as_();
+                x
+            })
+            .min_by(|x, y| x.ord(y)),
+    } as &dyn Statistics;
+    serialize_statistics(statistics)
 }

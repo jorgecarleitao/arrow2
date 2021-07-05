@@ -29,8 +29,8 @@ fn extend_offset_values<O: Offset>(
             &offsets[start..start + len + 1],
         );
 
-        let end = offsets[start + len].to_usize().unwrap();
-        let start = offsets[start].to_usize().unwrap();
+        let end = offsets[start + len].to_usize();
+        let start = offsets[start].to_usize();
         let len = end - start;
         growable.values.extend(index, start, len)
     } else {
@@ -46,11 +46,7 @@ fn extend_offset_values<O: Offset>(
                 *last_offset += len;
 
                 // append value
-                inner_values.extend(
-                    index,
-                    offsets[i].to_usize().unwrap(),
-                    len.to_usize().unwrap(),
-                );
+                inner_values.extend(index, offsets[i].to_usize(), len.to_usize());
             }
             // append offset
             new_offsets.push(*last_offset);
@@ -162,8 +158,13 @@ impl<'a, O: Offset> From<GrowableList<'a, O>> for ListArray<O> {
 mod tests {
     use super::*;
 
-    use crate::array::{ListPrimitive, Primitive};
-    use crate::{array::ListArray, datatypes::DataType};
+    use crate::array::{ListArray, MutableListArray, MutablePrimitiveArray, TryExtend};
+
+    fn create_list_array(data: Vec<Option<Vec<Option<i32>>>>) -> ListArray<i32> {
+        let mut array = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new();
+        array.try_extend(data).unwrap();
+        array.into()
+    }
 
     #[test]
     fn basic() {
@@ -173,8 +174,7 @@ mod tests {
             Some(vec![Some(6i32), Some(7), Some(8)]),
         ];
 
-        let array: ListPrimitive<i32, Primitive<i32>, i32> = data.into_iter().collect();
-        let array = array.to(ListArray::<i32>::default_datatype(DataType::Int32));
+        let array = create_list_array(data);
 
         let mut a = GrowableList::new(&[&array], false, 0);
         a.extend(0, 0, 1);
@@ -182,8 +182,7 @@ mod tests {
         let result: ListArray<i32> = a.into();
 
         let expected = vec![Some(vec![Some(1i32), Some(2), Some(3)])];
-        let expected: ListPrimitive<i32, Primitive<i32>, i32> = expected.into_iter().collect();
-        let expected = expected.to(ListArray::<i32>::default_datatype(DataType::Int32));
+        let expected = create_list_array(expected);
 
         assert_eq!(result, expected)
     }
@@ -195,8 +194,7 @@ mod tests {
             None,
             Some(vec![Some(6i32), Some(7), Some(8)]),
         ];
-        let array: ListPrimitive<i32, Primitive<i32>, i32> = data.into_iter().collect();
-        let array = array.to(ListArray::<i32>::default_datatype(DataType::Int32));
+        let array = create_list_array(data);
         let array = array.slice(1, 2);
 
         let mut a = GrowableList::new(&[&array], false, 0);
@@ -205,8 +203,7 @@ mod tests {
         let result: ListArray<i32> = a.into();
 
         let expected = vec![Some(vec![Some(6i32), Some(7), Some(8)])];
-        let expected: ListPrimitive<i32, Primitive<i32>, i32> = expected.into_iter().collect();
-        let expected = expected.to(ListArray::<i32>::default_datatype(DataType::Int32));
+        let expected = create_list_array(expected);
 
         assert_eq!(result, expected)
     }
@@ -218,8 +215,7 @@ mod tests {
             None,
             Some(vec![Some(6i32), None, Some(8)]),
         ];
-        let array: ListPrimitive<i32, Primitive<i32>, i32> = data.into_iter().collect();
-        let array = array.to(ListArray::<i32>::default_datatype(DataType::Int32));
+        let array = create_list_array(data);
         let array = array.slice(1, 2);
 
         let mut a = GrowableList::new(&[&array], false, 0);
@@ -228,8 +224,7 @@ mod tests {
         let result: ListArray<i32> = a.into();
 
         let expected = vec![Some(vec![Some(6i32), None, Some(8)])];
-        let expected: ListPrimitive<i32, Primitive<i32>, i32> = expected.into_iter().collect();
-        let expected = expected.to(ListArray::<i32>::default_datatype(DataType::Int32));
+        let expected = create_list_array(expected);
 
         assert_eq!(result, expected)
     }
@@ -241,16 +236,14 @@ mod tests {
             None,
             Some(vec![Some(6i32), None, Some(8)]),
         ];
-        let array_1: ListPrimitive<i32, Primitive<i32>, i32> = data_1.into_iter().collect();
-        let array_1 = array_1.to(ListArray::<i32>::default_datatype(DataType::Int32));
+        let array_1 = create_list_array(data_1);
 
         let data_2 = vec![
             Some(vec![Some(8i32), Some(7), Some(6)]),
             Some(vec![Some(5i32), None, Some(4)]),
             Some(vec![Some(2i32), Some(1), Some(0)]),
         ];
-        let array_2: ListPrimitive<i32, Primitive<i32>, i32> = data_2.into_iter().collect();
-        let array_2 = array_2.to(ListArray::<i32>::default_datatype(DataType::Int32));
+        let array_2 = create_list_array(data_2);
 
         let arrays: Vec<&dyn Array> = vec![&array_1, &array_2];
 
@@ -260,13 +253,12 @@ mod tests {
 
         let result: ListArray<i32> = a.into();
 
-        let expected_data = vec![
+        let expected = vec![
             Some(vec![Some(1i32), Some(2), Some(3)]),
             None,
             Some(vec![Some(5i32), None, Some(4)]),
         ];
-        let expected: ListPrimitive<i32, Primitive<i32>, i32> = expected_data.into_iter().collect();
-        let expected = expected.to(ListArray::<i32>::default_datatype(DataType::Int32));
+        let expected = create_list_array(expected);
 
         assert_eq!(result, expected);
     }

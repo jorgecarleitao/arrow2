@@ -11,8 +11,8 @@ pub(super) fn equal<T: NativeType>(
     rhs_start: usize,
     len: usize,
 ) -> bool {
-    let lhs_values = &lhs.values();
-    let rhs_values = &rhs.values();
+    let lhs_values = lhs.values();
+    let rhs_values = rhs.values();
 
     let lhs_null_count = count_validity(lhs_validity, lhs_start, len);
     let rhs_null_count = count_validity(rhs_validity, rhs_start, len);

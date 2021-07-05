@@ -1,14 +1,12 @@
 use std::iter::FromIterator;
 use std::sync::Arc;
 
-use crate::{
-    bits::{get_bit, get_bit_unchecked, null_count, BitChunk, BitChunks},
-    buffer::bytes::Bytes,
-    buffer::MutableBuffer,
-    trusted_len::TrustedLen,
-};
+use crate::{buffer::bytes::Bytes, buffer::MutableBuffer, trusted_len::TrustedLen};
 
-use super::{BitmapIter, MutableBitmap};
+use super::{
+    utils::{get_bit, get_bit_unchecked, null_count, BitChunk, BitChunks, BitmapIter},
+    MutableBitmap,
+};
 
 /// An immutable container whose API is optimized to handle bitmaps. All quantities on this
 /// container's API are measured in bits.
@@ -72,6 +70,23 @@ impl Bitmap {
         }
     }
 
+    /// Creates a new [`Bitmap`] from [`MutableBuffer`] and a length.
+    /// # Panic
+    /// Panics iff `length <= buffer.len() * 8`
+    #[inline]
+    pub fn from_u8_buffer(buffer: MutableBuffer<u8>, length: usize) -> Self {
+        Bitmap::from_bytes(buffer.into(), length)
+    }
+
+    /// Creates a new [`Bitmap`] from [`Bytes`] and a length.
+    /// # Panic
+    /// Panics iff `length <= bytes.len() * 8`
+    #[inline]
+    pub fn from_u8_slice<T: AsRef<[u8]>>(buffer: T, length: usize) -> Self {
+        let buffer = MutableBuffer::<u8>::from(buffer.as_ref());
+        Bitmap::from_u8_buffer(buffer, length)
+    }
+
     /// Counts the nulls (unset bits) starting from `offset` bits and for `length` bits.
     #[inline]
     pub fn null_count_range(&self, offset: usize, length: usize) -> usize {
@@ -130,10 +145,9 @@ impl Bitmap {
     }
 }
 
-impl<P: AsRef<[u8]>> From<(P, usize)> for Bitmap {
-    fn from((bytes, length): (P, usize)) -> Self {
-        let buffer = MutableBuffer::<u8>::from(bytes.as_ref());
-        (buffer, length).into()
+impl<P: AsRef<[bool]>> From<P> for Bitmap {
+    fn from(slice: P) -> Self {
+        Self::from_trusted_len_iter(slice.as_ref().iter().copied())
     }
 }
 
@@ -200,15 +214,15 @@ impl Bitmap {
 impl Bitmap {
     #[inline]
     pub(crate) fn offset(&self) -> usize {
-        self.offset
+        self.offset % 8
     }
 
     #[inline]
     pub(crate) fn as_slice(&self) -> &[u8] {
         assert_eq!(self.offset % 8, 0); // slices only make sense when there is no offset
-        let start = self.offset % 8;
+        let start = self.offset / 8;
         let len = self.length.saturating_add(7) / 8;
-        &self.bytes[start..len]
+        &self.bytes[start..start + len]
     }
 }
 
@@ -225,5 +239,31 @@ impl<'a> Bitmap {
     /// constructs a new iterator
     pub fn iter(&'a self) -> BitmapIter<'a> {
         BitmapIter::<'a>::new(&self.bytes, self.offset, self.length)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn as_slice() {
+        let b = Bitmap::from([true, true, true, true, true, true, true, true, true]);
+
+        let slice = b.as_slice();
+        assert_eq!(slice, &[0b11111111, 0b1]);
+
+        assert_eq!(0, b.offset());
+    }
+
+    #[test]
+    fn as_slice_offset() {
+        let b = Bitmap::from([true, true, true, true, true, true, true, true, true]);
+        let b = b.slice(8, 1);
+
+        let slice = b.as_slice();
+        assert_eq!(slice, &[0b1]);
+
+        assert_eq!(0, b.offset());
     }
 }

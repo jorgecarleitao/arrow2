@@ -57,10 +57,10 @@ fn create_table(results: &[RecordBatch]) -> Result<Table> {
 
         for row in 0..batch.num_rows() {
             let mut cells = Vec::new();
-            for col in 0..batch.num_columns() {
+            (0..batch.num_columns()).for_each(|col| {
                 let string = displayes[col](row);
                 cells.push(Cell::new(&string));
-            }
+            });
             table.add_row(Row::new(cells));
         }
     }
@@ -159,16 +159,10 @@ mod tests {
         let field_type = DataType::Dictionary(Box::new(DataType::Int32), Box::new(DataType::Utf8));
         let schema = Arc::new(Schema::new(vec![Field::new("d1", field_type, true)]));
 
-        let array = DictionaryPrimitive::<i32, Utf8Primitive<i32>, _>::try_from_iter(
-            vec![
-                Ok(Some("one".as_ref())),
-                Ok(None),
-                Ok(Some("three".as_ref())),
-            ]
-            .into_iter(),
-        )
-        .unwrap()
-        .into_arc();
+        let mut array = MutableDictionaryArray::<i32, MutableUtf8Array<i32>>::new();
+
+        array.try_extend(vec![Some("one"), None, Some("three")])?;
+        let array = array.into_arc();
 
         let batch = RecordBatch::try_new(schema, vec![array])?;
 
@@ -196,7 +190,7 @@ mod tests {
     /// formatting that array with `write`
     macro_rules! check_datetime {
         ($ty:ty, $datatype:expr, $value:expr, $EXPECTED_RESULT:expr) => {
-            let array = Primitive::<$ty>::from(&[Some($value), None]).to_arc(&$datatype);
+            let array = Arc::new(PrimitiveArray::<$ty>::from(&[Some($value), None]).to($datatype));
 
             let schema = Arc::new(Schema::new(vec![Field::new(
                 "f",

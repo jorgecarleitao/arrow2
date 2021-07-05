@@ -81,16 +81,16 @@ fn logical_list_bitmap<O: Offset>(
     parent_bitmap: &Option<Bitmap>,
     child_bitmap: &Option<Bitmap>,
 ) -> Option<Bitmap> {
-    let first_offset = offsets.first().unwrap().to_usize().unwrap();
-    let last_offset = offsets.get(offsets.len() - 1).unwrap().to_usize().unwrap();
+    let first_offset = offsets.first().unwrap().to_usize();
+    let last_offset = offsets.get(offsets.len() - 1).unwrap().to_usize();
     let length = last_offset - first_offset;
 
     match (parent_bitmap, child_bitmap) {
         (Some(parent_bitmap), Some(child_bitmap)) => {
             let mut buffer = MutableBitmap::with_capacity(length);
             offsets.windows(2).enumerate().for_each(|(index, window)| {
-                let start = window[0].to_usize().unwrap();
-                let end = window[1].to_usize().unwrap();
+                let start = window[0].to_usize();
+                let end = window[1].to_usize();
                 let mask = parent_bitmap.get_bit(index);
                 (start..end).for_each(|child_index| {
                     let is_set = mask && child_bitmap.get_bit(child_index);
@@ -102,8 +102,8 @@ fn logical_list_bitmap<O: Offset>(
         (None, Some(child_bitmap)) => {
             let mut buffer = MutableBitmap::with_capacity(length);
             offsets.windows(2).for_each(|window| {
-                let start = window[0].to_usize().unwrap();
-                let end = window[1].to_usize().unwrap();
+                let start = window[0].to_usize();
+                let end = window[1].to_usize();
                 (start..end).for_each(|child_index| {
                     buffer.push(child_bitmap.get_bit(child_index));
                 });
@@ -113,8 +113,8 @@ fn logical_list_bitmap<O: Offset>(
         (Some(parent_bitmap), None) => {
             let mut buffer = MutableBitmap::with_capacity(length);
             offsets.windows(2).enumerate().for_each(|(index, window)| {
-                let start = window[0].to_usize().unwrap();
-                let end = window[1].to_usize().unwrap();
+                let start = window[0].to_usize();
+                let end = window[1].to_usize();
                 let mask = parent_bitmap.get_bit(index);
                 (start..end).for_each(|_| {
                     buffer.push(mask);

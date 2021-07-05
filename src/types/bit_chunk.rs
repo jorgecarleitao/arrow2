@@ -15,9 +15,9 @@ pub unsafe trait BitChunk:
     + BitAnd<Output = Self>
     + ShlAssign
     + Not<Output = Self>
-    + ShrAssign<u32>
-    + ShlAssign<u32>
-    + Shl<u32, Output = Self>
+    + ShrAssign<usize>
+    + ShlAssign<usize>
+    + Shl<usize, Output = Self>
     + Eq
     + BitAndAssign
     + BitOr<Output = Self>

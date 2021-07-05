@@ -1,21 +1,27 @@
 use std::iter::FromIterator;
 
-use crate::{
-    bits::{null_count, set},
-    buffer::MutableBuffer,
-    trusted_len::TrustedLen,
-};
+use crate::{buffer::MutableBuffer, trusted_len::TrustedLen};
 
+use super::utils::{get_bit, null_count, set, set_bit, BitmapIter};
 use super::Bitmap;
 
-/// A mutable container to store boolean values. This container is equivalent to [`Vec<bool>`], but
-/// each bool is stored as a single bit.
+/// A container to store booleans. [`MutableBitmap`] is semantically equivalent
+/// to [`Vec<bool>`], but each value is stored as a single bit, thereby achieving a compression of 8x.
+/// This container is the counterpart of [`MutableBuffer`] for boolean values.
+/// [`MutableBitmap`] can be converted to a [`Bitmap`] at `O(1)`.
+/// The main difference against [`Vec<bool>`] is that a bitmap cannot be represented as `&[bool]`.
 /// # Implementation
-/// This container is backed by [`MutableBuffer<u8>`] and can be converted to a [`Bitmap`] at `O(1)`.
+/// This container is backed by [`MutableBuffer<u8>`].
 #[derive(Debug)]
 pub struct MutableBitmap {
     buffer: MutableBuffer<u8>,
     length: usize,
+}
+
+impl PartialEq for MutableBitmap {
+    fn eq(&self, other: &Self) -> bool {
+        self.iter().eq(other.iter())
+    }
 }
 
 impl MutableBitmap {
@@ -60,8 +66,8 @@ impl MutableBitmap {
             self.buffer.push(0);
         }
         if value {
-            let byte = self.buffer.as_slice_mut().last_mut().unwrap();
-            *byte = set(*byte, self.length % 8);
+            let byte = self.buffer.as_mut_slice().last_mut().unwrap();
+            *byte = set(*byte, self.length % 8, true);
         };
         self.length += 1;
     }
@@ -71,17 +77,17 @@ impl MutableBitmap {
         self.buffer.capacity() * 8
     }
 
-    /// Pushes a new bit to the container
+    /// Pushes a new bit to the [`MutableBitmap`]
     /// # Safety
-    /// The caller must ensure that the container has sufficient capacity.
+    /// The caller must ensure that the [`MutableBitmap`] has sufficient capacity.
     #[inline]
     pub unsafe fn push_unchecked(&mut self, value: bool) {
         if self.length % 8 == 0 {
             self.buffer.push_unchecked(0);
         }
         if value {
-            let byte = self.buffer.as_slice_mut().last_mut().unwrap();
-            *byte = set(*byte, self.length % 8);
+            let byte = self.buffer.as_mut_slice().last_mut().unwrap();
+            *byte = set(*byte, self.length % 8, true);
         };
         self.length += 1;
     }
@@ -124,19 +130,37 @@ impl MutableBitmap {
             self.length += additional;
         }
     }
-}
 
-impl From<(MutableBuffer<u8>, usize)> for MutableBitmap {
+    /// Returns whether the position `index` is set.
+    /// # Panics
+    /// Panics iff `index >= self.len()`.
     #[inline]
-    fn from((buffer, length): (MutableBuffer<u8>, usize)) -> Self {
-        Self { buffer, length }
+    pub fn get(&self, index: usize) -> bool {
+        get_bit(&self.buffer, index)
+    }
+
+    /// Sets the position `index` to `value`
+    /// # Panics
+    /// Panics iff `index >= self.len()`.
+    #[inline]
+    pub fn set(&mut self, index: usize, value: bool) {
+        set_bit(&mut self.buffer.as_mut_slice(), index, value)
     }
 }
 
-impl From<(MutableBuffer<u8>, usize)> for Bitmap {
+impl MutableBitmap {
+    /// Initializes a [`MutableBitmap`] from a [`MutableBuffer<u8>`] and a length.
+    /// # Panic
+    /// Panics iff the length is larger than the length of the buffer times 8.
     #[inline]
-    fn from((buffer, length): (MutableBuffer<u8>, usize)) -> Self {
-        Bitmap::from_bytes(buffer.into(), length)
+    pub fn from_buffer(buffer: MutableBuffer<u8>, length: usize) -> Self {
+        assert!(length <= buffer.len() * 8);
+        Self { buffer, length }
+    }
+
+    /// Returns an iterator over the values of the [`MutableBitmap`].
+    fn iter(&self) -> BitmapIter {
+        BitmapIter::new(&self.buffer, 0, self.len())
     }
 }
 
@@ -155,6 +179,13 @@ impl From<MutableBitmap> for Option<Bitmap> {
         } else {
             None
         }
+    }
+}
+
+impl<P: AsRef<[bool]>> From<P> for MutableBitmap {
+    #[inline]
+    fn from(slice: P) -> Self {
+        MutableBitmap::from_trusted_len_iter(slice.as_ref().iter().copied())
     }
 }
 
@@ -223,7 +254,7 @@ fn extend<I: Iterator<Item = bool>>(buffer: &mut [u8], length: usize, mut iterat
     buffer[..chunks].iter_mut().for_each(|byte| {
         (0..8).for_each(|i| {
             if iterator.next().unwrap() {
-                *byte = set(*byte, i)
+                *byte = set(*byte, i, true)
             }
         })
     });
@@ -232,7 +263,7 @@ fn extend<I: Iterator<Item = bool>>(buffer: &mut [u8], length: usize, mut iterat
         let last = &mut buffer[chunks];
         iterator.enumerate().for_each(|(i, value)| {
             if value {
-                *last = set(*last, i)
+                *last = set(*last, i, true)
             }
         });
     }
@@ -263,11 +294,11 @@ impl MutableBitmap {
                 self.buffer.push(0);
             }
             // the iterator will not fill the last byte
-            let byte = self.buffer.as_slice_mut().last_mut().unwrap();
+            let byte = self.buffer.as_mut_slice().last_mut().unwrap();
             let mut i = bit_offset;
             for value in iterator {
                 if value {
-                    *byte = set(*byte, i);
+                    *byte = set(*byte, i, true);
                 }
                 i += 1;
             }
@@ -280,11 +311,11 @@ impl MutableBitmap {
 
         if bit_offset != 0 {
             // we are in the middle of a byte; lets finish it
-            let byte = self.buffer.as_slice_mut().last_mut().unwrap();
+            let byte = self.buffer.as_mut_slice().last_mut().unwrap();
             (bit_offset..8).for_each(|i| {
                 let value = iterator.next().unwrap();
                 if value {
-                    *byte = set(*byte, i);
+                    *byte = set(*byte, i, true);
                 }
             });
             self.length += 8 - bit_offset;
@@ -300,7 +331,7 @@ impl MutableBitmap {
         self.length += length;
     }
 
-    /// Creates a new [`Bitmap`] from an iterator of booleans.
+    /// Creates a new [`MutableBitmap`] from an iterator of booleans.
     /// # Safety
     /// The iterator must report an accurate length.
     pub unsafe fn from_trusted_len_iter_unchecked<I>(iterator: I) -> Self
@@ -316,7 +347,7 @@ impl MutableBitmap {
         Self { buffer, length }
     }
 
-    /// Creates a new [`Bitmap`] from an iterator of booleans.
+    /// Creates a new [`MutableBitmap`] from an iterator of booleans.
     pub fn from_trusted_len_iter<I>(iterator: I) -> Self
     where
         I: TrustedLen<Item = bool>,
@@ -330,7 +361,7 @@ impl MutableBitmap {
         Self { buffer, length }
     }
 
-    /// Creates a new [`Bitmap`] from an iterator of booleans.
+    /// Creates a new [`MutableBitmap`] from an iterator of booleans.
     pub fn try_from_trusted_len_iter<E, I>(iterator: I) -> std::result::Result<Self, E>
     where
         I: TrustedLen<Item = std::result::Result<bool, E>>,
@@ -338,7 +369,7 @@ impl MutableBitmap {
         unsafe { Self::try_from_trusted_len_iter_unchecked(iterator) }
     }
 
-    /// Creates a new [`Bitmap`] from an falible iterator of booleans.
+    /// Creates a new [`MutableBitmap`] from an falible iterator of booleans.
     /// # Safety
     /// The caller must guarantee that the iterator is `TrustedLen`.
     pub unsafe fn try_from_trusted_len_iter_unchecked<E, I>(
@@ -354,11 +385,11 @@ impl MutableBitmap {
         let chunks = length / 8;
         let reminder = length % 8;
 
-        let data = buffer.as_slice_mut();
+        let data = buffer.as_mut_slice();
         data[..chunks].iter_mut().try_for_each(|byte| {
             (0..8).try_for_each(|i| {
                 if iterator.next().unwrap()? {
-                    *byte = set(*byte, i)
+                    *byte = set(*byte, i, true)
                 };
                 Ok(())
             })
@@ -368,13 +399,42 @@ impl MutableBitmap {
             let last = &mut data[chunks];
             iterator.enumerate().try_for_each(|(i, value)| {
                 if value? {
-                    *last = set(*last, i)
+                    *last = set(*last, i, true)
                 }
                 Ok(())
             })?;
         }
 
         Ok(Self { buffer, length })
+    }
+
+    /// Extends the [`MutableBitmap`] from a slice of bytes with optional offset.
+    /// This is the fastest way to extend a [`MutableBitmap`].
+    /// # Implementation
+    /// When both [`MutableBitmap`]'s length and `offset` are both multiples of 8,
+    /// this function performs a memcopy. Else, it extends [`MutableBitmap`] bit by bit.
+    #[inline]
+    pub fn extend_from_slice(&mut self, slice: &[u8], offset: usize, length: usize) {
+        assert!(offset + length <= slice.len() * 8);
+        let is_aligned = self.length % 8 == 0;
+        let other_is_aligned = offset % 8 == 0;
+        match (is_aligned, other_is_aligned) {
+            (true, true) => {
+                let aligned_offset = offset / 8;
+                let bytes_len = length.saturating_add(7) / 8;
+                let items = &slice[aligned_offset..aligned_offset + bytes_len];
+                self.buffer.extend_from_slice(items);
+                self.length += length;
+            }
+            // todo: further optimize the other branches.
+            _ => self.extend_from_trusted_len_iter(BitmapIter::new(slice, offset, length)),
+        }
+    }
+
+    /// Extends the [`MutableBitmap`] from a [`Bitmap`].
+    #[inline]
+    pub fn extend_from_bitmap(&mut self, bitmap: &Bitmap) {
+        self.extend_from_slice(bitmap.bytes(), bitmap.offset(), bitmap.len());
     }
 }
 
@@ -420,8 +480,7 @@ mod tests {
         let bitmap: Bitmap = bitmap.into();
         assert_eq!(bitmap.len(), 10);
 
-        assert_eq!(bitmap.as_slice()[0], 0b11111001);
-        assert_eq!(bitmap.as_slice()[1], 0b00000011);
+        assert_eq!(bitmap.as_slice(), &[0b11111001, 0b00000011]);
     }
 
     #[test]
@@ -505,5 +564,43 @@ mod tests {
         for (i, v) in iter {
             assert_eq!((i - 1) % 6 == 0, v);
         }
+    }
+
+    #[test]
+    fn test_set() {
+        let mut bitmap = MutableBitmap::from_len_zeroed(12);
+        bitmap.set(0, true);
+        assert_eq!(bitmap.get(0), true);
+        bitmap.set(0, false);
+        assert_eq!(bitmap.get(0), false);
+
+        bitmap.set(11, true);
+        assert_eq!(bitmap.get(11), true);
+        bitmap.set(11, false);
+        assert_eq!(bitmap.get(11), false);
+        bitmap.set(11, true);
+
+        let bitmap: Option<Bitmap> = bitmap.into();
+        let bitmap = bitmap.unwrap();
+        assert_eq!(bitmap.len(), 12);
+        assert_eq!(bitmap.as_slice()[0], 0b00000000);
+    }
+
+    #[test]
+    fn test_extend_from_bitmap() {
+        let other = Bitmap::from(&[true, false, true]);
+        let mut bitmap = MutableBitmap::new();
+
+        // call is optimized to perform a memcopy
+        bitmap.extend_from_bitmap(&other);
+
+        assert_eq!(bitmap.len(), 3);
+        assert_eq!(bitmap.buffer[0], 0b00000101);
+
+        // this call iterates over all bits
+        bitmap.extend_from_bitmap(&other);
+
+        assert_eq!(bitmap.len(), 6);
+        assert_eq!(bitmap.buffer[0], 0b00101101);
     }
 }

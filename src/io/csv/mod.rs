@@ -16,11 +16,5 @@ impl From<chrono::ParseError> for ArrowError {
     }
 }
 
-impl From<std::str::Utf8Error> for ArrowError {
-    fn from(error: std::str::Utf8Error) -> Self {
-        ArrowError::External("".to_string(), Box::new(error))
-    }
-}
-
 pub mod read;
 pub mod write;

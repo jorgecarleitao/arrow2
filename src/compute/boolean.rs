@@ -150,7 +150,6 @@ mod tests {
     use super::*;
 
     use crate::array::*;
-    use crate::datatypes::*;
 
     #[test]
     fn test_bool_array_and() {
@@ -362,7 +361,7 @@ mod tests {
 
     #[test]
     fn test_nonnull_array_is_null() {
-        let a = Primitive::from_slice(vec![1, 2, 3, 4]).to(DataType::Int32);
+        let a = Int32Array::from_slice(&[1, 2, 3, 4]);
 
         let res = is_null(&a);
 
@@ -373,8 +372,7 @@ mod tests {
 
     #[test]
     fn test_nonnull_array_with_offset_is_null() {
-        let a = Primitive::from_slice(vec![1, 2, 3, 4, 5, 6, 7, 8, 7, 6, 5, 4, 3, 2, 1])
-            .to(DataType::Int32);
+        let a = Int32Array::from_slice(vec![1, 2, 3, 4, 5, 6, 7, 8, 7, 6, 5, 4, 3, 2, 1]);
         let a = a.slice(8, 4);
 
         let res = is_null(&a);
@@ -386,7 +384,7 @@ mod tests {
 
     #[test]
     fn test_nonnull_array_is_not_null() {
-        let a = Primitive::from_slice(vec![1, 2, 3, 4]).to(DataType::Int32);
+        let a = Int32Array::from_slice(&[1, 2, 3, 4]);
 
         let res = is_not_null(&a);
 
@@ -397,20 +395,19 @@ mod tests {
 
     #[test]
     fn test_nonnull_array_with_offset_is_not_null() {
-        let a = Primitive::from_slice(vec![1, 2, 3, 4, 5, 6, 7, 8, 7, 6, 5, 4, 3, 2, 1])
-            .to(DataType::Int32);
+        let a = Int32Array::from_slice(&[1, 2, 3, 4, 5, 6, 7, 8, 7, 6, 5, 4, 3, 2, 1]);
         let a = a.slice(8, 4);
 
         let res = is_not_null(&a);
 
-        let expected = BooleanArray::from_slice(vec![true, true, true, true]);
+        let expected = BooleanArray::from_slice(&[true, true, true, true]);
 
         assert_eq!(expected, res);
     }
 
     #[test]
     fn test_nullable_array_is_null() {
-        let a = Primitive::from(vec![Some(1), None, Some(3), None]).to(DataType::Int32);
+        let a = Int32Array::from(vec![Some(1), None, Some(3), None]);
 
         let res = is_null(&a);
 
@@ -421,7 +418,7 @@ mod tests {
 
     #[test]
     fn test_nullable_array_with_offset_is_null() {
-        let a = Primitive::from(vec![
+        let a = Int32Array::from(vec![
             None,
             None,
             None,
@@ -439,8 +436,7 @@ mod tests {
             Some(4),
             None,
             None,
-        ])
-        .to(DataType::Int32);
+        ]);
         let a = a.slice(8, 4);
 
         let res = is_null(&a);
@@ -452,7 +448,7 @@ mod tests {
 
     #[test]
     fn test_nullable_array_is_not_null() {
-        let a = Primitive::from(vec![Some(1), None, Some(3), None]).to(DataType::Int32);
+        let a = Int32Array::from(vec![Some(1), None, Some(3), None]);
 
         let res = is_not_null(&a);
 
@@ -463,7 +459,7 @@ mod tests {
 
     #[test]
     fn test_nullable_array_with_offset_is_not_null() {
-        let a = Primitive::from(vec![
+        let a = Int32Array::from(vec![
             None,
             None,
             None,
@@ -481,8 +477,7 @@ mod tests {
             Some(4),
             None,
             None,
-        ])
-        .to(DataType::Int32);
+        ]);
         let a = a.slice(8, 4);
 
         let res = is_not_null(&a);

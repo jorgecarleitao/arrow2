@@ -15,32 +15,29 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::{
-    array::{
-        growable::{Growable, GrowableList},
-        Array, ListArray, Offset, PrimitiveArray,
-    },
-    error::Result,
+use crate::array::{
+    growable::{Growable, GrowableList},
+    Array, ListArray, Offset, PrimitiveArray,
 };
 
-use super::maybe_usize;
+use super::Index;
 
 /// `take` implementation for ListArrays
-pub fn take<I: Offset, O: Offset>(
+pub fn take<I: Offset, O: Index>(
     values: &ListArray<I>,
     indices: &PrimitiveArray<O>,
-) -> Result<ListArray<I>> {
+) -> ListArray<I> {
     let mut capacity = 0;
     let arrays = indices
         .values()
         .iter()
-        .map(|i| {
-            let index = maybe_usize::<O>(*i)?;
+        .map(|index| {
+            let index = index.to_usize();
             let slice = values.slice(index, 1);
             capacity += slice.len();
-            Ok(slice)
+            slice
         })
-        .collect::<Result<Vec<ListArray<I>>>>()?;
+        .collect::<Vec<ListArray<I>>>();
 
     let array_ref: Vec<&dyn Array> = arrays.iter().map(|v| v as &dyn Array).collect();
 
@@ -55,14 +52,14 @@ pub fn take<I: Offset, O: Offset>(
             }
         }
 
-        Ok(growable.into())
+        growable.into()
     } else {
         let mut growable: GrowableList<I> = GrowableList::new(&array_ref, false, capacity);
         for index in 0..indices.len() {
             growable.extend(index, 0, 1);
         }
 
-        Ok(growable.into())
+        growable.into()
     }
 }
 
@@ -70,7 +67,7 @@ pub fn take<I: Offset, O: Offset>(
 mod tests {
     use super::*;
     use crate::{
-        array::{ListPrimitive, Primitive, PrimitiveArray},
+        array::{MutableListArray, MutablePrimitiveArray, PrimitiveArray, TryExtend},
         bitmap::Bitmap,
         buffer::Buffer,
         datatypes::DataType,
@@ -90,8 +87,8 @@ mod tests {
             None,
         );
 
-        let indices = Primitive::from(&vec![Some(4i32), Some(1), Some(3)]).to(DataType::Int32);
-        let result = take(&array, &indices).unwrap();
+        let indices = PrimitiveArray::from(&vec![Some(4i32), Some(1), Some(3)]).to(DataType::Int32);
+        let result = take(&array, &indices);
 
         let expected_values = Buffer::from([9, 6, 7, 8]);
         let expected_values =
@@ -124,8 +121,8 @@ mod tests {
         );
 
         let indices =
-            Primitive::from(&vec![Some(4i32), None, Some(2), Some(3)]).to(DataType::Int32);
-        let result = take(&array, &indices).unwrap();
+            PrimitiveArray::from(&vec![Some(4i32), None, Some(2), Some(3)]).to(DataType::Int32);
+        let result = take(&array, &indices);
 
         let data_expected = vec![
             Some(vec![Some(9i32)]),
@@ -133,8 +130,10 @@ mod tests {
             Some(vec![Some(2i32), Some(3), Some(4), Some(5)]),
             Some(vec![Some(6i32), Some(7), Some(8)]),
         ];
-        let expected: ListPrimitive<i32, Primitive<i32>, i32> = data_expected.into_iter().collect();
-        let expected = expected.to(ListArray::<i32>::default_datatype(DataType::Int32));
+
+        let mut expected = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new();
+        expected.try_extend(data_expected).unwrap();
+        let expected: ListArray<i32> = expected.into();
 
         assert_eq!(result, expected)
     }
@@ -147,12 +146,14 @@ mod tests {
             Some(vec![Some(9i32)]),
             Some(vec![Some(6i32), Some(7), Some(8)]),
         ];
-        let array: ListPrimitive<i32, Primitive<i32>, i32> = values.into_iter().collect();
-        let array = array.to(ListArray::<i32>::default_datatype(DataType::Int32));
+
+        let mut array = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new();
+        array.try_extend(values).unwrap();
+        let array: ListArray<i32> = array.into();
 
         let indices =
-            Primitive::from(&vec![Some(3i32), None, Some(1), Some(0)]).to(DataType::Int32);
-        let result = take(&array, &indices).unwrap();
+            PrimitiveArray::from(&vec![Some(3i32), None, Some(1), Some(0)]).to(DataType::Int32);
+        let result = take(&array, &indices);
 
         let data_expected = vec![
             Some(vec![Some(6i32), Some(7), Some(8)]),
@@ -160,8 +161,9 @@ mod tests {
             None,
             Some(vec![Some(2i32), Some(3), Some(4), Some(5)]),
         ];
-        let expected: ListPrimitive<i32, Primitive<i32>, i32> = data_expected.into_iter().collect();
-        let expected = expected.to(ListArray::<i32>::default_datatype(DataType::Int32));
+        let mut expected = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new();
+        expected.try_extend(data_expected).unwrap();
+        let expected: ListArray<i32> = expected.into();
 
         assert_eq!(result, expected)
     }
@@ -187,8 +189,8 @@ mod tests {
             None,
         );
 
-        let indices = Primitive::from(&vec![Some(0i32), Some(1)]).to(DataType::Int32);
-        let result = take(&nested, &indices).unwrap();
+        let indices = PrimitiveArray::from(&vec![Some(0i32), Some(1)]).to(DataType::Int32);
+        let result = take(&nested, &indices);
 
         // expected data
         let expected_values = Buffer::from([1, 2, 3, 4, 5, 6, 7, 8]);

@@ -176,3 +176,7 @@ impl DataType {
         }
     }
 }
+
+// backward compatibility
+use std::sync::Arc;
+pub type SchemaRef = Arc<Schema>;

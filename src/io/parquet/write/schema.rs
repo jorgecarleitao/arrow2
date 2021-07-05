@@ -1,13 +1,14 @@
 use parquet2::schema::{
     types::{ParquetType, PhysicalType, PrimitiveConvertedType, TimeUnit as ParquetTimeUnit},
-    FieldRepetitionType, IntType, KeyValue, LogicalType, TimeType, TimestampType,
+    DecimalType, FieldRepetitionType, IntType, KeyValue, LogicalType, TimeType, TimestampType,
 };
 
-use crate::datatypes::{DataType, Field, Schema, TimeUnit};
-use crate::error::{ArrowError, Result};
-
-use crate::io::ipc::write::schema_to_bytes;
-use crate::io::ipc::write::MetadataVersion;
+use crate::{
+    datatypes::{DataType, Field, Schema, TimeUnit},
+    error::{ArrowError, Result},
+    io::ipc::write::{schema_to_bytes, MetadataVersion},
+    io::parquet::write::decimal_length_from_precision,
+};
 
 use super::super::ARROW_SCHEMA_META_KEY;
 
@@ -63,7 +64,18 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             None,
             None,
         )?),
-        DataType::Int64 => Ok(ParquetType::try_from_primitive(
+        // DataType::Duration(_) has no parquet representation => do not apply any logical type
+        DataType::Int64 | DataType::Duration(_) => Ok(ParquetType::try_from_primitive(
+            name,
+            PhysicalType::Int64,
+            repetition,
+            None,
+            None,
+            None,
+        )?),
+        // no natural representation in parquet; leave it as is.
+        // arrow consumers MAY use the arrow schema in the metadata to parse them.
+        DataType::Date64 => Ok(ParquetType::try_from_primitive(
             name,
             PhysicalType::Int64,
             repetition,
@@ -177,6 +189,16 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             })),
             None,
         )?),
+        // no natural representation in parquet; leave it as is.
+        // arrow consumers MAY use the arrow schema in the metadata to parse them.
+        DataType::Timestamp(TimeUnit::Second, _) => Ok(ParquetType::try_from_primitive(
+            name,
+            PhysicalType::Int64,
+            repetition,
+            None,
+            None,
+            None,
+        )?),
         DataType::Timestamp(time_unit, zone) => Ok(ParquetType::try_from_primitive(
             name,
             PhysicalType::Int64,
@@ -185,12 +207,22 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             Some(LogicalType::TIMESTAMP(TimestampType {
                 is_adjusted_to_u_t_c: matches!(zone, Some(z) if !z.as_str().is_empty()),
                 unit: match time_unit {
-                    TimeUnit::Second => ParquetTimeUnit::MILLIS(Default::default()),
+                    TimeUnit::Second => unreachable!(),
                     TimeUnit::Millisecond => ParquetTimeUnit::MILLIS(Default::default()),
                     TimeUnit::Microsecond => ParquetTimeUnit::MICROS(Default::default()),
                     TimeUnit::Nanosecond => ParquetTimeUnit::NANOS(Default::default()),
                 },
             })),
+            None,
+        )?),
+        // no natural representation in parquet; leave it as is.
+        // arrow consumers MAY use the arrow schema in the metadata to parse them.
+        DataType::Time32(TimeUnit::Second) => Ok(ParquetType::try_from_primitive(
+            name,
+            PhysicalType::Int32,
+            repetition,
+            None,
+            None,
             None,
         )?),
         DataType::Time32(TimeUnit::Millisecond) => Ok(ParquetType::try_from_primitive(
@@ -223,9 +255,6 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             })),
             None,
         )?),
-        DataType::Duration(_) => Err(ArrowError::InvalidArgumentError(
-            "Converting Duration to parquet not supported".to_string(),
-        )),
         DataType::Struct(fields) => {
             if fields.is_empty() {
                 return Err(ArrowError::InvalidArgumentError(
@@ -253,43 +282,47 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             None,
             None,
         )?),
-        /*
-        DataType::Interval(_) => {
-            Type::primitive_type_builder(name, PhysicalType::FIXED_LEN_BYTE_ARRAY)
-                .with_converted_type(ConvertedType::INTERVAL)
-                .with_repetition(repetition)
-                .with_length(12)
-                .build()
+        DataType::Decimal(precision, scale) => {
+            let precision = *precision;
+            let scale = *scale;
+            let logical_type = Some(LogicalType::DECIMAL(DecimalType {
+                scale: scale as i32,
+                precision: precision as i32,
+            }));
+
+            let physical_type = if precision <= 9 {
+                PhysicalType::Int32
+            } else if precision <= 18 {
+                PhysicalType::Int64
+            } else {
+                let len = decimal_length_from_precision(precision) as i32;
+                PhysicalType::FixedLenByteArray(len)
+            };
+            Ok(ParquetType::try_from_primitive(
+                name,
+                physical_type,
+                repetition,
+                Some(PrimitiveConvertedType::Decimal(
+                    precision as i32,
+                    scale as i32,
+                )),
+                logical_type,
+                None,
+            )?)
         }
+        DataType::Interval(_) => Ok(ParquetType::try_from_primitive(
+            name,
+            PhysicalType::FixedLenByteArray(12),
+            repetition,
+            Some(PrimitiveConvertedType::Interval),
+            None,
+            None,
+        )?),
+        /*
         DataType::FixedSizeBinary(length) => {
             Type::primitive_type_builder(name, PhysicalType::FIXED_LEN_BYTE_ARRAY)
                 .with_repetition(repetition)
                 .with_length(*length)
-                .build()
-        }
-        DataType::Decimal(precision, scale) => {
-            // Decimal precision determines the Parquet physical type to use.
-            // TODO(ARROW-12018): Enable the below after ARROW-10818 Decimal support
-            //
-            // let (physical_type, length) = if *precision > 1 && *precision <= 9 {
-            //     (PhysicalType::INT32, -1)
-            // } else if *precision <= 18 {
-            //     (PhysicalType::INT64, -1)
-            // } else {
-            //     (
-            //         PhysicalType::FIXED_LEN_BYTE_ARRAY,
-            //         decimal_length_from_precision(*precision) as i32,
-            //     )
-            // };
-            Type::primitive_type_builder(name, PhysicalType::FIXED_LEN_BYTE_ARRAY)
-                .with_repetition(repetition)
-                .with_length(decimal_length_from_precision(*precision) as i32)
-                .with_logical_type(Some(LogicalType::DECIMAL(DecimalType {
-                    scale: *scale as i32,
-                    precision: *precision as i32,
-                })))
-                .with_precision(*precision as i32)
-                .with_scale(*scale as i32)
                 .build()
         }
         DataType::List(f) | DataType::FixedSizeList(f, _) | DataType::LargeList(f) => {

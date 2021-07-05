@@ -34,7 +34,7 @@ fn bench_op_scalar<T>(arr_a: &PrimitiveArray<T>, value_b: T, op: Operator)
 where
     T: NativeType + std::cmp::PartialOrd,
 {
-    primtive_compare_scalar(
+    primitive_compare_scalar(
         criterion::black_box(arr_a),
         criterion::black_box(value_b),
         op,

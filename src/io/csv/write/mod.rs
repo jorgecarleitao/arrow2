@@ -102,10 +102,10 @@ mod tests {
         ]);
         let c2 = Float64Array::from([Some(123.564532), None, Some(-556132.25)]);
         let c3 = UInt32Array::from_slice(&[3, 2, 1]);
-        let c4 = BooleanArray::from(vec![Some(true), Some(false), None]);
-        let c5 = Primitive::<i64>::from([None, Some(1555584887378), Some(1555555555555)])
+        let c4 = BooleanArray::from(&[Some(true), Some(false), None]);
+        let c5 = PrimitiveArray::<i64>::from([None, Some(1555584887378), Some(1555555555555)])
             .to(DataType::Timestamp(TimeUnit::Millisecond, None));
-        let c6 = Primitive::<i32>::from_slice(vec![1234, 24680, 85563])
+        let c6 = PrimitiveArray::<i32>::from_slice(&[1234, 24680, 85563])
             .to(DataType::Time32(TimeUnit::Second));
 
         RecordBatch::try_new(

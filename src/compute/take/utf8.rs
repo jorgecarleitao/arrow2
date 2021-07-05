@@ -15,30 +15,28 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::{
-    array::{Array, Offset, PrimitiveArray, Utf8Array},
-    error::Result,
-};
+use crate::array::{Array, Offset, PrimitiveArray, Utf8Array};
 
 use super::generic_binary::*;
+use super::Index;
 
 /// `take` implementation for utf8 arrays
-pub fn take<O: Offset, I: Offset>(
+pub fn take<O: Offset, I: Index>(
     values: &Utf8Array<O>,
     indices: &PrimitiveArray<I>,
-) -> Result<Utf8Array<O>> {
+) -> Utf8Array<O> {
     let indices_has_validity = indices.null_count() > 0;
     let values_has_validity = values.null_count() > 0;
 
     let (offsets, values, validity) = match (values_has_validity, indices_has_validity) {
         (false, false) => {
-            take_no_validity::<O, I>(values.offsets(), values.values(), indices.values())?
+            take_no_validity::<O, I>(values.offsets(), values.values(), indices.values())
         }
-        (true, false) => take_values_validity(values, indices.values())?,
-        (false, true) => take_indices_validity(values.offsets(), values.values(), indices)?,
-        (true, true) => take_values_indices_validity(values, indices)?,
+        (true, false) => take_values_validity(values, indices.values()),
+        (false, true) => take_indices_validity(values.offsets(), values.values(), indices),
+        (true, true) => take_values_indices_validity(values, indices),
     };
-    Ok(unsafe { Utf8Array::<O>::from_data_unchecked(offsets, values, validity) })
+    unsafe { Utf8Array::<O>::from_data_unchecked(offsets, values, validity) }
 }
 
 #[cfg(test)]
@@ -73,17 +71,16 @@ mod tests {
     }
 
     #[test]
-    fn all_cases() -> Result<()> {
+    fn all_cases() {
         let cases = _all_cases::<i32>();
         for (indices, input, expected) in cases {
-            let output = take(&input, &indices)?;
+            let output = take(&input, &indices);
             assert_eq!(expected, output);
         }
         let cases = _all_cases::<i64>();
         for (indices, input, expected) in cases {
-            let output = take(&input, &indices)?;
+            let output = take(&input, &indices);
             assert_eq!(expected, output);
         }
-        Ok(())
     }
 }

@@ -1,6 +1,6 @@
-//! This module contains arrays: fixed-length and immutable containers with optional validity
+//! This module contains arrays: fixed-length and immutable containers with optional values
 //! that are layed in memory according to the Arrow specification.
-//! Each type of value has its own `struct`. The main types are:
+//! Each array type has its own `struct`. The following are the main array types:
 //!
 //! * [`PrimitiveArray`], an array of values with a fixed length such as integers, floats, etc.
 //! * [`BooleanArray`], an array of boolean values (stored as a bitmap)
@@ -10,23 +10,26 @@
 //! * [`StructArray`], an array of arrays identified by a string (e.g. `{"a": [1, 2], "b": [true, false]}`)
 //!
 //! This module contains constructors and accessors to operate on the arrays.
-//! All the arrays implement the trait [`Array`] and are often trait objects via [`Array::as_any`].
+//! All the arrays implement the trait [`Array`] and are often trait objects.
 //! Every array has a [`DataType`], which you can access with [`Array::data_type`].
-//! This can be used to `downcast_ref` a `&dyn Array` to concrete structs.
-//! Arrays share memory regions via [`std::sync::Arc`] and can be cloned and sliced at no cost (`O(1)`).
+//! This can be used to `downcast_ref` a `&dyn Array` to a concrete struct.
+//! Arrays can share memory via [`crate::buffer::Buffer`] and thus cloning and slicing is `O(1)`.
+//!
+//! This module also contains the mutable counterparts of arrays, that are neither clonable nor slicable, but that
+//! can be operated in-place, such as [`MutablePrimitiveArray`] and [`MutableUtf8Array`].
 use std::any::Any;
 use std::fmt::Display;
 
 use crate::error::Result;
 use crate::types::days_ms;
 use crate::{
-    bitmap::Bitmap,
+    bitmap::{Bitmap, MutableBitmap},
     datatypes::{DataType, IntervalUnit},
 };
 
-/// A trait representing an Arrow array. Arrow arrays are trait objects
-/// that are infalibly downcasted to concrete types according to the `Array::data_type`.
-pub trait Array: std::fmt::Debug + Send + Sync + ToFfi {
+/// A trait representing an immutable Arrow array. Arrow arrays are trait objects
+/// that are infalibly downcasted to concrete types according to the [`Array::data_type`].
+pub trait Array: std::fmt::Debug + Send + Sync {
     fn as_any(&self) -> &dyn Any;
 
     /// The length of the [`Array`]. Every array has a length corresponding to the number of
@@ -85,6 +88,49 @@ pub trait Array: std::fmt::Debug + Send + Sync + ToFfi {
     /// # Panic
     /// This function panics iff `offset + length >= self.len()`.
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array>;
+}
+
+/// A trait describing a mutable array; i.e. an array whose values can be changed.
+/// Mutable arrays are not `Send + Sync` and cannot be cloned but can be mutated in place,
+/// thereby making them useful to perform numeric operations without allocations.
+/// As in [`Array`], concrete arrays (such as [`MutablePrimitiveArray`]) implement how they are mutated.
+pub trait MutableArray: std::fmt::Debug {
+    /// The [`DataType`] of the array.
+    fn data_type(&self) -> &DataType;
+
+    /// The length of the array.
+    fn len(&self) -> usize;
+
+    /// Whether the array is empty.
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// The optional validity of the array.
+    fn validity(&self) -> &Option<MutableBitmap>;
+
+    /// Convert itself to an (immutable) [`Array`].
+    fn as_arc(&mut self) -> Arc<dyn Array>;
+
+    /// Convert to `Any`, to enable dynamic casting.
+    fn as_any(&self) -> &dyn Any;
+
+    /// Convert to mutable `Any`, to enable dynamic casting.
+    fn as_mut_any(&mut self) -> &mut dyn Any;
+
+    /// Adds a new null element to the array.
+    fn push_null(&mut self);
+
+    /// Whether `index` is valid / set.
+    /// # Panic
+    /// Panics if `index >= self.len()`.
+    #[inline]
+    fn is_valid(&self, index: usize) -> bool {
+        self.validity()
+            .as_ref()
+            .map(|x| x.get(index))
+            .unwrap_or(true)
+    }
 }
 
 macro_rules! general_dyn {
@@ -343,78 +389,26 @@ pub mod ord;
 
 pub use display::get_display;
 
-pub use binary::{BinaryArray, BinaryPrimitive};
-pub use boolean::BooleanArray;
-pub use dictionary::{DictionaryArray, DictionaryKey, DictionaryPrimitive};
-pub use fixed_size_binary::{FixedSizeBinaryArray, FixedSizeBinaryPrimitive};
-pub use fixed_size_list::{FixedSizeListArray, FixedSizeListPrimitive};
-pub use list::{ListArray, ListPrimitive};
+pub use binary::{BinaryArray, MutableBinaryArray};
+pub use boolean::{BooleanArray, MutableBooleanArray};
+pub use dictionary::{DictionaryArray, DictionaryKey, MutableDictionaryArray};
+pub use fixed_size_binary::FixedSizeBinaryArray;
+pub use fixed_size_list::FixedSizeListArray;
+pub use list::{ListArray, MutableListArray};
 pub use null::NullArray;
-pub use primitive::{Primitive, PrimitiveArray};
-pub use specification::Offset;
+pub use primitive::*;
+pub use specification::{Index, Offset};
 pub use struct_::StructArray;
-pub use utf8::{Utf8Array, Utf8Primitive};
+pub use utf8::{MutableUtf8Array, Utf8Array, Utf8ValuesIter};
 
+pub(crate) use self::ffi::buffers_children;
 pub use self::ffi::FromFfi;
-use self::ffi::ToFfi;
+pub use self::ffi::ToFfi;
 
-/// A type definition [`PrimitiveArray`] for `i8`
-pub type Int8Array = PrimitiveArray<i8>;
-/// A type definition [`PrimitiveArray`] for `i16`
-pub type Int16Array = PrimitiveArray<i16>;
-/// A type definition [`PrimitiveArray`] for `i32`
-pub type Int32Array = PrimitiveArray<i32>;
-/// A type definition [`PrimitiveArray`] for `i64`
-pub type Int64Array = PrimitiveArray<i64>;
-/// A type definition [`PrimitiveArray`] for `i128`
-pub type Int128Array = PrimitiveArray<i128>;
-/// A type definition [`PrimitiveArray`] for `f32`
-pub type Float32Array = PrimitiveArray<f32>;
-/// A type definition [`PrimitiveArray`] for `f64`
-pub type Float64Array = PrimitiveArray<f64>;
-/// A type definition [`PrimitiveArray`] for `u8`
-pub type UInt8Array = PrimitiveArray<u8>;
-/// A type definition [`PrimitiveArray`] for `u16`
-pub type UInt16Array = PrimitiveArray<u16>;
-/// A type definition [`PrimitiveArray`] for `u32`
-pub type UInt32Array = PrimitiveArray<u32>;
-/// A type definition [`PrimitiveArray`] for `u64`
-pub type UInt64Array = PrimitiveArray<u64>;
-
-/// A trait describing the ability of a struct to convert itself to a Arc'ed [`Array`].
-pub trait ToArray {
-    fn to_arc(self, data_type: &DataType) -> std::sync::Arc<dyn Array>;
-}
-
-/// A trait describing the ability of a struct to convert itself to a Arc'ed [`Array`],
-/// with its [`DataType`] automatically deducted.
-pub trait IntoArray {
-    fn into_arc(self) -> std::sync::Arc<dyn Array>;
-}
-
-/// A trait describing the ability of a struct to create itself from a falible iterator
-/// Used in the context of creating arrays from non-sized iterators.
-pub trait TryFromIterator<A>: Sized {
-    fn try_from_iter<T: IntoIterator<Item = Result<A>>>(iter: T) -> Result<Self>;
-}
-
-/// A trait describing the ability of a struct to build itself from an iterator into an [`Array`].
-pub trait Builder<T>: TryFromIterator<Option<T>> {
-    /// Create the builder with a capacity
-    fn with_capacity(capacity: usize) -> Self;
-
-    /// Push a new item to the builder.
-    /// This operation may panic if the container cannot hold more items.
-    /// For example, if all possible keys are exausted when building a dictionary.
-    fn push(&mut self, item: Option<&T>);
-
-    /// Fallible version of `push`, on which the operation errors instead of panicking.
-    /// prefer this if there is no guarantee that the operation will not fail.
-    #[inline]
-    fn try_push(&mut self, item: Option<&T>) -> Result<()> {
-        self.push(item);
-        Ok(())
-    }
+/// A trait describing the ability of a struct to create itself from a iterator.
+/// This is similar to [`Extend`], but accepted the creation to error.
+pub trait TryExtend<A> {
+    fn try_extend<I: IntoIterator<Item = A>>(&mut self, iter: I) -> Result<()>;
 }
 
 fn display_helper<T: std::fmt::Display, I: IntoIterator<Item = Option<T>>>(iter: I) -> Vec<String> {
@@ -524,3 +518,7 @@ mod tests {
         assert!(a);
     }
 }
+
+// backward compatibility
+use std::sync::Arc;
+pub type ArrayRef = Arc<dyn Array>;

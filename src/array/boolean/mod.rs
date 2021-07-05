@@ -2,6 +2,14 @@ use crate::{bitmap::Bitmap, datatypes::DataType};
 
 use super::{display_fmt, Array};
 
+mod ffi;
+mod from;
+mod iterator;
+mod mutable;
+
+pub use iterator::*;
+pub use mutable::*;
+
 /// A [`BooleanArray`] is arrow's equivalent to `Vec<Option<bool>>`, i.e.
 /// an array designed for highly performant operations on optionally nullable booleans.
 /// The size of this struct is `O(1)` as all data is stored behind an `Arc`.
@@ -60,10 +68,19 @@ impl BooleanArray {
         }
     }
 
-    /// Returns the element at index `i` as &str
+    /// Returns the element at index `i` as bool
     #[inline]
     pub fn value(&self, i: usize) -> bool {
         self.values.get_bit(i)
+    }
+
+    /// Returns the element at index `i` as bool
+    ///
+    /// # Safety
+    /// Caller must be sure that `i < self.len()`
+    #[inline]
+    pub unsafe fn value_unchecked(&self, i: usize) -> bool {
+        self.values.get_bit_unchecked(i)
     }
 
     /// Returns the values bitmap of this [`BooleanArray`].
@@ -114,28 +131,24 @@ impl<P: AsRef<[Option<bool>]>> From<P> for BooleanArray {
     }
 }
 
-mod ffi;
-mod iterator;
-pub use iterator::*;
-
-mod from;
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::iter::FromIterator;
 
     #[test]
     fn basics() {
         let data = vec![Some(true), None, Some(false)];
 
-        let array = BooleanArray::from_iter(data);
+        let array: BooleanArray = data.into_iter().collect();
 
         assert_eq!(array.value(0), true);
         assert_eq!(array.value(1), false);
         assert_eq!(array.value(2), false);
-        assert_eq!(array.values(), &Bitmap::from((&[0b00000001], 3)));
-        assert_eq!(array.validity(), &Some(Bitmap::from((&[0b00000101], 3))));
+        assert_eq!(array.values(), &Bitmap::from_u8_slice(&[0b00000001], 3));
+        assert_eq!(
+            array.validity(),
+            &Some(Bitmap::from_u8_slice(&[0b00000101], 3))
+        );
         assert_eq!(array.is_valid(0), true);
         assert_eq!(array.is_valid(1), false);
         assert_eq!(array.is_valid(2), true);

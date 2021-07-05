@@ -6,6 +6,13 @@ use super::{
     Array, GenericBinaryArray, Offset,
 };
 
+mod ffi;
+mod from;
+mod iterator;
+mod mutable;
+pub use iterator::*;
+pub use mutable::*;
+
 /// A [`Utf8Array`] is arrow's equivalent of `Vec<Option<String>>`, i.e.
 /// an array designed for highly performant operations on optionally nullable strings.
 /// The size of this struct is `O(1)` as all data is stored behind an `Arc`.
@@ -99,8 +106,8 @@ impl<O: Offset> Utf8Array<O> {
     pub unsafe fn value_unchecked(&self, i: usize) -> &str {
         let offset = *self.offsets.as_ptr().add(i);
         let offset_1 = *self.offsets.as_ptr().add(i + 1);
-        let length = (offset_1 - offset).to_usize().unwrap();
-        let offset = offset.to_usize().unwrap();
+        let length = (offset_1 - offset).to_usize();
+        let offset = offset.to_usize();
 
         // Soundness: `from_data` verifies that each slot is utf8 and offsets are built correctly.
         let slice = std::slice::from_raw_parts(self.values.as_ptr().add(offset), length);
@@ -130,8 +137,8 @@ impl<O: Offset> Utf8Array<O> {
         let offsets = self.offsets.as_slice();
         let offset = offsets[i];
         let offset_1 = offsets[i + 1];
-        let length = (offset_1 - offset).to_usize().unwrap();
-        let offset = offset.to_usize().unwrap();
+        let length = (offset_1 - offset).to_usize();
+        let offset = offset.to_usize();
 
         let slice = &self.values.as_slice()[offset..offset + length];
         // todo: validate utf8 so that we can use the unsafe version
@@ -140,25 +147,13 @@ impl<O: Offset> Utf8Array<O> {
 
     /// Returns the offsets of this [`Utf8Array`].
     #[inline]
-    pub fn offsets(&self) -> &[O] {
-        self.offsets.as_slice()
-    }
-
-    /// Returns the offset [`Buffer`] of this [`Utf8Array`].
-    #[inline]
-    pub fn offsets_buffer(&self) -> &Buffer<O> {
+    pub fn offsets(&self) -> &Buffer<O> {
         &self.offsets
     }
 
-    /// Returns the values of this [`Utf8Array`] as a slice of `u8`
+    /// Returns the values of this [`Utf8Array`].
     #[inline]
-    pub fn values(&self) -> &[u8] {
-        self.values.as_slice()
-    }
-
-    /// Returns the values [`Buffer`] of this [`Utf8Array`]
-    #[inline]
-    pub fn values_buffer(&self) -> &Buffer<u8> {
+    pub fn values(&self) -> &Buffer<u8> {
         &self.values
     }
 }
@@ -206,12 +201,6 @@ unsafe impl<O: Offset> GenericBinaryArray<O> for Utf8Array<O> {
     }
 }
 
-mod ffi;
-mod from;
-pub use from::*;
-mod iterator;
-pub use iterator::*;
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -227,16 +216,19 @@ mod tests {
         assert_eq!(array.value(1), "");
         assert_eq!(array.value(2), "hello2");
         assert_eq!(unsafe { array.value_unchecked(2) }, "hello2");
-        assert_eq!(array.values(), b"hellohello2");
-        assert_eq!(array.offsets(), &[0, 5, 5, 11]);
-        assert_eq!(array.validity(), &Some(Bitmap::from((&[0b00000101], 3))));
+        assert_eq!(array.values().as_slice(), b"hellohello2");
+        assert_eq!(array.offsets().as_slice(), &[0, 5, 5, 11]);
+        assert_eq!(
+            array.validity(),
+            &Some(Bitmap::from_u8_slice(&[0b00000101], 3))
+        );
         assert_eq!(array.is_valid(0), true);
         assert_eq!(array.is_valid(1), false);
         assert_eq!(array.is_valid(2), true);
 
         let array2 = Utf8Array::<i32>::from_data(
-            array.offsets_buffer().clone(),
-            array.values_buffer().clone(),
+            array.offsets().clone(),
+            array.values().clone(),
             array.validity().clone(),
         );
         assert_eq!(array, array2);
@@ -245,15 +237,15 @@ mod tests {
         assert_eq!(array.value(0), "");
         assert_eq!(array.value(1), "hello2");
         // note how this keeps everything: the offsets were sliced
-        assert_eq!(array.values(), b"hellohello2");
-        assert_eq!(array.offsets(), &[5, 5, 11]);
+        assert_eq!(array.values().as_slice(), b"hellohello2");
+        assert_eq!(array.offsets().as_slice(), &[5, 5, 11]);
     }
 
     #[test]
     fn empty() {
         let array = Utf8Array::<i32>::new_empty();
-        assert_eq!(array.values(), b"");
-        assert_eq!(array.offsets(), &[0]);
+        assert_eq!(array.values().as_slice(), b"");
+        assert_eq!(array.offsets().as_slice(), &[0]);
         assert_eq!(array.validity(), &None);
     }
 }

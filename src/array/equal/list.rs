@@ -43,8 +43,8 @@ fn offset_value_equal<O: Offset>(
     rhs_pos: usize,
     len: usize,
 ) -> bool {
-    let lhs_start = lhs_offsets[lhs_pos].to_usize().unwrap();
-    let rhs_start = rhs_offsets[rhs_pos].to_usize().unwrap();
+    let lhs_start = lhs_offsets[lhs_pos].to_usize();
+    let rhs_start = rhs_offsets[rhs_pos].to_usize();
     let lhs_len = lhs_offsets[lhs_pos + len] - lhs_offsets[lhs_pos];
     let rhs_len = rhs_offsets[rhs_pos + len] - rhs_offsets[rhs_pos];
 
@@ -56,7 +56,7 @@ fn offset_value_equal<O: Offset>(
             rhs_validity,
             lhs_start,
             rhs_start,
-            lhs_len.to_usize().unwrap(),
+            lhs_len.to_usize(),
         )
 }
 
@@ -90,10 +90,10 @@ pub(super) fn equal<O: Offset>(
     // however, one is more likely to slice into a list array and get a region that has 0
     // child values.
     // The test that triggered this behaviour had [4, 4] as a slice of 1 value slot.
-    let lhs_child_length = lhs_offsets.get(len).unwrap().to_usize().unwrap()
-        - lhs_offsets.first().unwrap().to_usize().unwrap();
-    let rhs_child_length = rhs_offsets.get(len).unwrap().to_usize().unwrap()
-        - rhs_offsets.first().unwrap().to_usize().unwrap();
+    let lhs_child_length =
+        lhs_offsets.get(len).unwrap().to_usize() - lhs_offsets.first().unwrap().to_usize();
+    let rhs_child_length =
+        rhs_offsets.get(len).unwrap().to_usize() - rhs_offsets.first().unwrap().to_usize();
 
     if lhs_child_length == 0 && lhs_child_length == rhs_child_length {
         return true;
@@ -118,11 +118,9 @@ pub(super) fn equal<O: Offset>(
             rhs_values,
             &child_lhs_validity,
             &child_rhs_validity,
-            lhs_offsets[lhs_start].to_usize().unwrap(),
-            rhs_offsets[rhs_start].to_usize().unwrap(),
-            (lhs_offsets[len] - lhs_offsets[lhs_start])
-                .to_usize()
-                .unwrap(),
+            lhs_offsets[lhs_start].to_usize(),
+            rhs_offsets[rhs_start].to_usize(),
+            (lhs_offsets[len] - lhs_offsets[lhs_start]).to_usize(),
         )
     } else {
         // get a ref of the parent null buffer bytes, to use in testing for nullness
@@ -155,22 +153,19 @@ pub(super) fn equal<O: Offset>(
 
 #[cfg(test)]
 mod tests {
-    use crate::array::{ListPrimitive, Primitive};
-    use crate::{array::equal::tests::test_equal, datatypes::DataType};
+    use crate::array::equal::tests::test_equal;
+    use crate::array::{MutableListArray, MutablePrimitiveArray, TryExtend};
 
     use super::*;
 
     fn create_list_array<U: AsRef<[i32]>, T: AsRef<[Option<U>]>>(data: T) -> ListArray<i32> {
-        let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
-        let list = data
-            .as_ref()
-            .iter()
-            .map(|x| {
-                x.as_ref()
-                    .map(|x| x.as_ref().iter().map(|x| Some(*x)).collect::<Vec<_>>())
-            })
-            .collect::<ListPrimitive<i32, Primitive<i32>, i32>>();
-        list.to(data_type)
+        let iter = data.as_ref().iter().map(|x| {
+            x.as_ref()
+                .map(|x| x.as_ref().iter().map(|x| Some(*x)).collect::<Vec<_>>())
+        });
+        let mut array = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new();
+        array.try_extend(iter).unwrap();
+        array.into()
     }
 
     #[test]

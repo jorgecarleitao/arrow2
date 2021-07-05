@@ -15,28 +15,20 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::{
-    array::{DictionaryArray, DictionaryKey, Offset, PrimitiveArray},
-    error::Result,
-};
+use crate::array::{DictionaryArray, DictionaryKey, PrimitiveArray};
 
 use super::primitive::take as take_primitive;
+use super::Index;
 
 /// `take` implementation for dictionary arrays
 ///
 /// applies `take` to the keys of the dictionary array and returns a new dictionary array
 /// with the same dictionary values and reordered keys
-pub fn take<K, I>(
-    values: &DictionaryArray<K>,
-    indices: &PrimitiveArray<I>,
-) -> Result<DictionaryArray<K>>
+pub fn take<K, I>(values: &DictionaryArray<K>, indices: &PrimitiveArray<I>) -> DictionaryArray<K>
 where
     K: DictionaryKey,
-    I: Offset,
+    I: Index,
 {
-    let keys = take_primitive::<K, I>(values.keys(), indices)?;
-    Ok(DictionaryArray::<K>::from_data(
-        keys,
-        values.values().clone(),
-    ))
+    let keys = take_primitive::<K, I>(values.keys(), indices);
+    DictionaryArray::<K>::from_data(keys, values.values().clone())
 }

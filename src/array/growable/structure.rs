@@ -124,7 +124,7 @@ impl<'a> From<GrowableStruct<'a>> for StructArray {
 mod tests {
     use std::iter::FromIterator;
 
-    use crate::array::{Primitive, Utf8Array};
+    use crate::array::{PrimitiveArray, Utf8Array};
     use crate::bitmap::Bitmap;
     use crate::datatypes::{DataType, Field};
 
@@ -139,7 +139,7 @@ mod tests {
             Some("doe"),
         ]));
         let ints: Arc<dyn Array> = Arc::new(
-            Primitive::<i32>::from(vec![Some(1), Some(2), Some(3), Some(4), Some(5)])
+            PrimitiveArray::<i32>::from(vec![Some(1), Some(2), Some(3), Some(4), Some(5)])
                 .to(DataType::Int32),
         );
         let fields = vec![
@@ -195,7 +195,7 @@ mod tests {
         let array = StructArray::from_data(
             fields.clone(),
             values.clone(),
-            Some(Bitmap::from((&[0b00000010], 5))),
+            Some(Bitmap::from_u8_slice(&[0b00000010], 5)),
         );
 
         let mut a = GrowableStruct::new(&[&array], false, 0);
@@ -206,7 +206,7 @@ mod tests {
         let expected = StructArray::from_data(
             fields,
             vec![values[0].slice(1, 2).into(), values[1].slice(1, 2).into()],
-            Some(Bitmap::from((&[0b00000010], 5)).slice(1, 2)),
+            Some(Bitmap::from_u8_slice(&[0b00000010], 5).slice(1, 2)),
         );
 
         assert_eq!(result, expected)
@@ -231,7 +231,8 @@ mod tests {
             Some("aa"),
         ]));
         let expected_int: Arc<dyn Array> = Arc::new(
-            Primitive::<i32>::from(vec![Some(2), Some(3), Some(1), Some(2)]).to(DataType::Int32),
+            PrimitiveArray::<i32>::from(vec![Some(2), Some(3), Some(1), Some(2)])
+                .to(DataType::Int32),
         );
 
         let expected = StructArray::from_data(fields, vec![expected_string, expected_int], None);

@@ -19,7 +19,7 @@ pub enum ArrowError {
     Ipc(String),
     /// Error during import or export to/from a format
     ExternalFormat(String),
-    DictionaryKeyOverflowError,
+    KeyOverflowError,
     /// Error during arithmetic operation. Normally returned
     /// during checked operations
     ArithmeticError(String),
@@ -36,6 +36,12 @@ impl ArrowError {
 impl From<::std::io::Error> for ArrowError {
     fn from(error: std::io::Error) -> Self {
         ArrowError::Io(error)
+    }
+}
+
+impl From<std::str::Utf8Error> for ArrowError {
+    fn from(error: std::str::Utf8Error) -> Self {
+        ArrowError::External("".to_string(), Box::new(error))
     }
 }
 
@@ -62,7 +68,7 @@ impl Display for ArrowError {
             ArrowError::ExternalFormat(desc) => {
                 write!(f, "External format error: {}", desc)
             }
-            ArrowError::DictionaryKeyOverflowError => {
+            ArrowError::KeyOverflowError => {
                 write!(f, "Dictionary key bigger than the key type")
             }
             ArrowError::ArithmeticError(desc) => {

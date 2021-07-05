@@ -1,7 +1,22 @@
-use std::{
-    collections::hash_map::DefaultHasher,
-    hash::{Hash, Hasher},
-};
+use std::hash::{Hash, Hasher};
+
+#[cfg(feature = "ahash")]
+use ahash::AHasher as DefaultHasher;
+#[cfg(not(feature = "ahash"))]
+use std::collections::hash_map::DefaultHasher;
+
+#[cfg(feature = "ahash")]
+macro_rules! new_hasher {
+    () => {
+        DefaultHasher::new_with_keys(0, 0)
+    };
+}
+#[cfg(not(feature = "ahash"))]
+macro_rules! new_hasher {
+    () => {
+        DefaultHasher::new()
+    };
+}
 
 use crate::{
     array::{Array, BinaryArray, BooleanArray, Offset, PrimitiveArray, Utf8Array},
@@ -18,7 +33,7 @@ pub fn hash_primitive<T: NativeType + Hash>(array: &PrimitiveArray<T>) -> Primit
     unary(
         array,
         |x| {
-            let mut hasher = DefaultHasher::new();
+            let mut hasher = new_hasher!();
             x.hash(&mut hasher);
             hasher.finish()
         },
@@ -29,7 +44,7 @@ pub fn hash_primitive<T: NativeType + Hash>(array: &PrimitiveArray<T>) -> Primit
 /// Element-wise hash of a [`BooleanArray`]. Validity is preserved.
 pub fn hash_boolean(array: &BooleanArray) -> PrimitiveArray<u64> {
     let iter = array.values_iter().map(|x| {
-        let mut hasher = DefaultHasher::new();
+        let mut hasher = new_hasher!();
         x.hash(&mut hasher);
         hasher.finish()
     });
@@ -40,7 +55,7 @@ pub fn hash_boolean(array: &BooleanArray) -> PrimitiveArray<u64> {
 /// Element-wise hash of a [`Utf8Array`]. Validity is preserved.
 pub fn hash_utf8<O: Offset>(array: &Utf8Array<O>) -> PrimitiveArray<u64> {
     let iter = array.values_iter().map(|x| {
-        let mut hasher = DefaultHasher::new();
+        let mut hasher = new_hasher!();
         x.hash(&mut hasher);
         hasher.finish()
     });
@@ -51,7 +66,7 @@ pub fn hash_utf8<O: Offset>(array: &Utf8Array<O>) -> PrimitiveArray<u64> {
 /// Element-wise hash of a [`BinaryArray`]. Validity is preserved.
 pub fn hash_binary<O: Offset>(array: &BinaryArray<O>) -> PrimitiveArray<u64> {
     let iter = array.values_iter().map(|x| {
-        let mut hasher = DefaultHasher::new();
+        let mut hasher = new_hasher!();
         x.hash(&mut hasher);
         hasher.finish()
     });

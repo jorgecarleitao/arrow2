@@ -18,13 +18,12 @@
 //! Defines take kernel for [`Array`]
 
 use crate::{
-    array::{
-        new_empty_array, Array, BinaryArray, BooleanArray, DictionaryArray, ListArray, NullArray,
-        Offset, PrimitiveArray, StructArray, Utf8Array,
-    },
+    array::{new_empty_array, Array, NullArray, PrimitiveArray},
     datatypes::{DataType, IntervalUnit},
-    error::{ArrowError, Result},
+    error::Result,
 };
+
+pub use crate::array::Index;
 
 mod binary;
 mod boolean;
@@ -39,9 +38,9 @@ macro_rules! downcast_take {
     ($type: ty, $values: expr, $indices: expr) => {{
         let values = $values
             .as_any()
-            .downcast_ref::<PrimitiveArray<$type>>()
+            .downcast_ref()
             .expect("Unable to downcast to a primitive array");
-        Ok(Box::new(primitive::take::<$type, _>(&values, $indices)?))
+        Ok(Box::new(primitive::take::<$type, _>(&values, $indices)))
     }};
 }
 
@@ -49,13 +48,13 @@ macro_rules! downcast_dict_take {
     ($type: ty, $values: expr, $indices: expr) => {{
         let values = $values
             .as_any()
-            .downcast_ref::<DictionaryArray<$type>>()
+            .downcast_ref()
             .expect("Unable to downcast to a primitive array");
-        Ok(Box::new(dict::take::<$type, _>(&values, $indices)?))
+        Ok(Box::new(dict::take::<$type, _>(&values, $indices)))
     }};
 }
 
-pub fn take<O: Offset>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result<Box<dyn Array>> {
+pub fn take<O: Index>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result<Box<dyn Array>> {
     if indices.len() == 0 {
         return Ok(new_empty_array(values.data_type().clone()));
     }
@@ -63,8 +62,8 @@ pub fn take<O: Offset>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Resul
     match values.data_type() {
         DataType::Null => Ok(Box::new(NullArray::from_data(indices.len()))),
         DataType::Boolean => {
-            let values = values.as_any().downcast_ref::<BooleanArray>().unwrap();
-            Ok(Box::new(boolean::take::<O>(values, indices)?))
+            let values = values.as_any().downcast_ref().unwrap();
+            Ok(Box::new(boolean::take::<O>(values, indices)))
         }
         DataType::Int8 => downcast_take!(i8, values, indices),
         DataType::Int16 => downcast_take!(i16, values, indices),
@@ -86,20 +85,20 @@ pub fn take<O: Offset>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Resul
         DataType::Float64 => downcast_take!(f64, values, indices),
         DataType::Decimal(_, _) => downcast_take!(i128, values, indices),
         DataType::Utf8 => {
-            let values = values.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
-            Ok(Box::new(utf8::take::<i32, _>(values, indices)?))
+            let values = values.as_any().downcast_ref().unwrap();
+            Ok(Box::new(utf8::take::<i32, _>(values, indices)))
         }
         DataType::LargeUtf8 => {
-            let values = values.as_any().downcast_ref::<Utf8Array<i64>>().unwrap();
-            Ok(Box::new(utf8::take::<i64, _>(values, indices)?))
+            let values = values.as_any().downcast_ref().unwrap();
+            Ok(Box::new(utf8::take::<i64, _>(values, indices)))
         }
         DataType::Binary => {
-            let values = values.as_any().downcast_ref::<BinaryArray<i32>>().unwrap();
-            Ok(Box::new(binary::take::<i32, _>(values, indices)?))
+            let values = values.as_any().downcast_ref().unwrap();
+            Ok(Box::new(binary::take::<i32, _>(values, indices)))
         }
         DataType::LargeBinary => {
-            let values = values.as_any().downcast_ref::<BinaryArray<i64>>().unwrap();
-            Ok(Box::new(binary::take::<i64, _>(values, indices)?))
+            let values = values.as_any().downcast_ref().unwrap();
+            Ok(Box::new(binary::take::<i64, _>(values, indices)))
         }
         DataType::Dictionary(key_type, _) => match key_type.as_ref() {
             DataType::Int8 => downcast_dict_take!(i8, values, indices),
@@ -113,16 +112,16 @@ pub fn take<O: Offset>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Resul
             _ => unreachable!(),
         },
         DataType::Struct(_) => {
-            let array = values.as_any().downcast_ref::<StructArray>().unwrap();
+            let array = values.as_any().downcast_ref().unwrap();
             Ok(Box::new(structure::take::<_>(array, indices)?))
         }
         DataType::List(_) => {
-            let array = values.as_any().downcast_ref::<ListArray<i32>>().unwrap();
-            Ok(Box::new(list::take::<i32, O>(array, indices)?))
+            let array = values.as_any().downcast_ref().unwrap();
+            Ok(Box::new(list::take::<i32, O>(array, indices)))
         }
         DataType::LargeList(_) => {
-            let array = values.as_any().downcast_ref::<ListArray<i64>>().unwrap();
-            Ok(Box::new(list::take::<i64, O>(array, indices)?))
+            let array = values.as_any().downcast_ref().unwrap();
+            Ok(Box::new(list::take::<i64, O>(array, indices)))
         }
         t => unimplemented!("Take not supported for data type {:?}", t),
     }
@@ -183,23 +182,12 @@ pub fn can_take(data_type: &DataType) -> bool {
     }
 }
 
-#[inline(always)]
-fn maybe_usize<I: Offset>(index: I) -> Result<usize> {
-    index
-        .to_usize()
-        .ok_or(ArrowError::DictionaryKeyOverflowError)
-}
-
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
 
     use crate::datatypes::Field;
-    use crate::{
-        array::{Int32Array, Primitive},
-        bitmap::MutableBitmap,
-        types::NativeType,
-    };
+    use crate::{array::*, bitmap::MutableBitmap, types::NativeType};
 
     use super::*;
 
@@ -212,8 +200,8 @@ mod tests {
     where
         T: NativeType,
     {
-        let output = Primitive::<T>::from(data).to(data_type.clone());
-        let expected = Primitive::<T>::from(expected_data).to(data_type);
+        let output = PrimitiveArray::<T>::from(data).to(data_type.clone());
+        let expected = PrimitiveArray::<T>::from(expected_data).to(data_type);
         let output = take(&output, indices)?;
         assert_eq!(expected, output.as_ref());
         Ok(())
@@ -261,7 +249,7 @@ mod tests {
 
     fn create_test_struct() -> StructArray {
         let boolean = BooleanArray::from_slice(&[true, false, false, true]);
-        let int = Primitive::from_slice(&[42, 28, 19, 31]).to(DataType::Int32);
+        let int = Int32Array::from_slice(&[42, 28, 19, 31]);
         let validity = vec![true, true, false, true]
             .into_iter()
             .collect::<MutableBitmap>()
@@ -347,12 +335,10 @@ mod tests {
         datatypes.into_iter().for_each(|d1| {
             let array = new_null_array(d1.clone(), 10);
             if can_take(&d1) {
-                let indices =
-                    Primitive::<i32>::from(&[Some(1), Some(2), None, Some(3)]).to(DataType::Int32);
+                let indices = Int32Array::from(&[Some(1), Some(2), None, Some(3)]);
                 assert!(take(array.as_ref(), &indices).is_ok());
             } else {
-                let indices =
-                    Primitive::<i32>::from(&[Some(1), Some(2), None, Some(3)]).to(DataType::Int32);
+                let indices = Int32Array::from(&[Some(1), Some(2), None, Some(3)]);
                 assert!(take(array.as_ref(), &indices).is_err());
             }
         });
@@ -361,6 +347,14 @@ mod tests {
     #[test]
     fn empty() {
         let indices = Int32Array::from_slice(&[]);
+        let values = BooleanArray::from(vec![Some(true), Some(false)]);
+        let a = take(&values, &indices).unwrap();
+        assert_eq!(a.len(), 0)
+    }
+
+    #[test]
+    fn unsigned_take() {
+        let indices = UInt32Array::from_slice(&[]);
         let values = BooleanArray::from(vec![Some(true), Some(false)]);
         let a = take(&values, &indices).unwrap();
         assert_eq!(a.len(), 0)

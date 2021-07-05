@@ -68,8 +68,8 @@ pub(super) fn extend_offset_values<O: Offset>(
     start: usize,
     len: usize,
 ) {
-    let start_values = offsets[start].to_usize().unwrap();
-    let end_values = offsets[start + len].to_usize().unwrap();
+    let start_values = offsets[start].to_usize();
+    let end_values = offsets[start + len].to_usize();
     let new_values = &values[start_values..end_values];
     buffer.extend_from_slice(new_values);
 }

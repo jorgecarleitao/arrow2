@@ -25,10 +25,15 @@ fn parallel_read(path: &str) -> Result<Vec<Box<dyn Array>>> {
             for row_group in 0..producer_metadata.row_groups.len() {
                 let start = SystemTime::now();
                 println!("produce start: {} {}", column, row_group);
-                let pages =
-                    read::get_page_iterator(&producer_metadata, row_group, column, &mut file)
-                        .unwrap()
-                        .collect::<Vec<_>>();
+                let pages = read::get_page_iterator(
+                    &producer_metadata,
+                    row_group,
+                    column,
+                    &mut file,
+                    vec![],
+                )
+                .unwrap()
+                .collect::<Vec<_>>();
                 println!(
                     "produce end - {:?}: {} {}",
                     start.elapsed().unwrap(),
@@ -51,7 +56,12 @@ fn parallel_read(path: &str) -> Result<Vec<Box<dyn Array>>> {
             let start = SystemTime::now();
             println!("consumer start - {} {}", column, row_group);
             let metadata = metadata_consumer.row_groups[row_group].column(column);
-            let array = read::page_iter_to_array(iter.into_iter(), metadata).unwrap();
+
+            let pages = iter
+                .into_iter()
+                .map(|x| x.and_then(|x| read::decompress(x, &mut vec![])));
+            let mut pages = read::streaming_iterator::convert(pages);
+            let array = read::page_iter_to_array(&mut pages, metadata).unwrap();
             println!(
                 "consumer end - {:?}: {} {}",
                 start.elapsed().unwrap(),

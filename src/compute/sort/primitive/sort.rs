@@ -18,8 +18,7 @@
 use crate::buffer::MutableBuffer;
 use crate::{
     array::{Array, PrimitiveArray},
-    bitmap::MutableBitmap,
-    bits::SlicesIterator,
+    bitmap::{utils::SlicesIterator, MutableBitmap},
     types::NativeType,
 };
 
@@ -63,7 +62,7 @@ where
                 buffer.extend_from_slice(&values[start..start + len])
             }
             sort_inner(
-                &mut buffer.as_slice_mut()[validity.null_count()..],
+                &mut buffer.as_mut_slice()[validity.null_count()..],
                 cmp,
                 options.descending,
             )
@@ -74,7 +73,7 @@ where
             for (start, len) in slices {
                 buffer.extend_from_slice(&values[start..start + len])
             }
-            sort_inner(&mut buffer.as_slice_mut(), cmp, options.descending);
+            sort_inner(&mut buffer.as_mut_slice(), cmp, options.descending);
 
             (0..validity.null_count()).for_each(|_| buffer.push(T::default()));
         };
@@ -84,7 +83,7 @@ where
         let mut buffer = MutableBuffer::<T>::new();
         buffer.extend_from_slice(values);
 
-        sort_inner(&mut buffer.as_slice_mut(), cmp, options.descending);
+        sort_inner(&mut buffer.as_mut_slice(), cmp, options.descending);
 
         (buffer, None)
     };
@@ -96,7 +95,7 @@ mod tests {
     use super::*;
 
     use crate::array::ord;
-    use crate::array::Primitive;
+    use crate::array::PrimitiveArray;
     use crate::datatypes::DataType;
 
     fn test_sort_primitive_arrays<T>(
@@ -107,8 +106,8 @@ mod tests {
     ) where
         T: NativeType + std::cmp::Ord,
     {
-        let input = Primitive::<T>::from(data).to(data_type.clone());
-        let expected = Primitive::<T>::from(expected_data).to(data_type);
+        let input = PrimitiveArray::<T>::from(data).to(data_type.clone());
+        let expected = PrimitiveArray::<T>::from(expected_data).to(data_type);
         let output = sort_by(&input, ord::total_cmp, &options);
         assert_eq!(expected, output)
     }

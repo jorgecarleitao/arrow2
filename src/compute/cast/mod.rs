@@ -22,12 +22,14 @@ use crate::{
     error::{ArrowError, Result},
 };
 
+mod binary_to;
 mod boolean_to;
 mod dictionary_to;
 mod primitive_to;
 mod timestamps;
 mod utf8_to;
 
+pub use binary_to::*;
 pub use boolean_to::*;
 pub use dictionary_to::*;
 pub use primitive_to::*;
@@ -78,7 +80,11 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (List(list_from), List(list_to)) => {
             can_cast_types(list_from.data_type(), list_to.data_type())
         }
-        (List(_), _) => false,
+        (LargeList(list_from), LargeList(list_to)) => {
+            can_cast_types(list_from.data_type(), list_to.data_type())
+        }
+        (List(list_from), LargeList(list_to)) if list_from == list_to => true,
+        (LargeList(list_from), List(list_to)) if list_from == list_to => true,
         (_, List(list_to)) => can_cast_types(from_type, list_to.data_type()),
         (Dictionary(_, from_value_type), Dictionary(_, to_value_type)) => {
             can_cast_types(from_value_type, to_value_type)
@@ -92,10 +98,13 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (Utf8, Date32) => true,
         (Utf8, Date64) => true,
         (Utf8, Timestamp(TimeUnit::Nanosecond, None)) => true,
+        (Utf8, LargeUtf8) => true,
         (Utf8, _) => is_numeric(to_type),
         (LargeUtf8, Timestamp(TimeUnit::Nanosecond, None)) => true,
+        (LargeUtf8, Utf8) => true,
         (LargeUtf8, _) => is_numeric(to_type),
         (_, Utf8) => is_numeric(from_type) || from_type == &Binary,
+        (_, LargeUtf8) => is_numeric(from_type) || from_type == &Binary,
 
         // start numeric casts
         (UInt8, UInt16) => true,
@@ -223,11 +232,49 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (Timestamp(_, _), Timestamp(_, _)) => true,
         (Timestamp(_, _), Date32) => true,
         (Timestamp(_, _), Date64) => true,
-        // date64 to timestamp might not make sense,
         (Int64, Duration(_)) => true,
+        (Duration(_), Int64) => true,
         (Null, Int32) => true,
         (_, _) => false,
     }
+}
+
+fn cast_list<O: Offset>(array: &ListArray<O>, to_type: &DataType) -> Result<ListArray<O>> {
+    let values = array.values();
+    let new_values = cast(values.as_ref(), ListArray::<O>::get_child_type(to_type))?.into();
+
+    Ok(ListArray::<O>::from_data(
+        to_type.clone(),
+        array.offsets().clone(),
+        new_values,
+        array.validity().clone(),
+    ))
+}
+
+fn cast_list_to_large_list(array: &ListArray<i32>, to_type: &DataType) -> ListArray<i64> {
+    let offsets = array.offsets();
+    let offsets = offsets.iter().map(|x| *x as i64);
+    let offets = Buffer::from_trusted_len_iter(offsets);
+
+    ListArray::<i64>::from_data(
+        to_type.clone(),
+        offets,
+        array.values().clone(),
+        array.validity().clone(),
+    )
+}
+
+fn cast_large_to_list(array: &ListArray<i64>, to_type: &DataType) -> ListArray<i32> {
+    let offsets = array.offsets();
+    let offsets = offsets.iter().map(|x| *x as i32);
+    let offets = Buffer::from_trusted_len_iter(offsets);
+
+    ListArray::<i32>::from_data(
+        to_type.clone(),
+        offets,
+        array.values().clone(),
+        array.validity().clone(),
+    )
 }
 
 /// Cast `array` to the provided data type and return a new [`Array`] with
@@ -239,7 +286,7 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
 ///   in integer casts return null
 /// * Numeric to boolean: 0 returns `false`, any other value returns `true`
 /// * List to List: the underlying data type is cast
-/// * Primitive to List: a list array with 1 value per slot is created
+/// * PrimitiveArray to List: a list array with 1 value per slot is created
 /// * Date32 and Date64: precision lost when going to higher interval
 /// * Time32 and Time64: precision lost when going to higher interval
 /// * Timestamp and Date{32|64}: precision lost when going to higher interval
@@ -265,24 +312,23 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
         (_, Struct(_)) => Err(ArrowError::NotYetImplemented(
             "Cannot cast to struct from other types".to_string(),
         )),
-        (List(_), List(to)) => {
-            let array = array.as_any().downcast_ref::<ListArray<i32>>().unwrap();
-
-            let values = array.values();
-            let new_values = cast(values.as_ref(), to.data_type())?.into();
-
-            let list = ListArray::<i32>::from_data(
-                to_type.clone(),
-                array.offsets_buffer().clone(),
-                new_values,
-                array.validity().clone(),
-            );
-            Ok(Box::new(list))
+        (List(_), List(_)) => cast_list::<i32>(array.as_any().downcast_ref().unwrap(), to_type)
+            .map(|x| Box::new(x) as Box<dyn Array>),
+        (LargeList(_), LargeList(_)) => {
+            cast_list::<i64>(array.as_any().downcast_ref().unwrap(), to_type)
+                .map(|x| Box::new(x) as Box<dyn Array>)
         }
+        (List(lhs), LargeList(rhs)) if lhs == rhs => Ok(cast_list_to_large_list(
+            array.as_any().downcast_ref().unwrap(),
+            to_type,
+        ))
+        .map(|x| Box::new(x) as Box<dyn Array>),
+        (List(lhs), LargeList(rhs)) if lhs == rhs => Ok(cast_large_to_list(
+            array.as_any().downcast_ref().unwrap(),
+            to_type,
+        ))
+        .map(|x| Box::new(x) as Box<dyn Array>),
 
-        (List(_), _) => Err(ArrowError::NotYetImplemented(
-            "Cannot cast list to non-list data types".to_string(),
-        )),
         (_, List(to)) => {
             // cast primitive to list's primitive
             let values = cast(array, to.data_type())?.into();
@@ -369,6 +415,9 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
             Float64 => utf8_to_primitive_dyn::<i32, f64>(array, to_type),
             Date32 => utf8_to_date32_dyn::<i32>(array),
             Date64 => utf8_to_date64_dyn::<i32>(array),
+            LargeUtf8 => Ok(Box::new(utf8_to_large_utf8(
+                array.as_any().downcast_ref().unwrap(),
+            ))),
             Timestamp(TimeUnit::Nanosecond, None) => utf8_to_timestamp_ns_dyn::<i32>(array),
             _ => Err(ArrowError::NotYetImplemented(format!(
                 "Casting from {:?} to {:?} not supported",
@@ -388,6 +437,8 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
             Float64 => utf8_to_primitive_dyn::<i64, f64>(array, to_type),
             Date32 => utf8_to_date32_dyn::<i64>(array),
             Date64 => utf8_to_date64_dyn::<i64>(array),
+            Utf8 => utf8_large_to_utf8(array.as_any().downcast_ref().unwrap())
+                .map(|x| Box::new(x) as Box<dyn Array>),
             Timestamp(TimeUnit::Nanosecond, None) => utf8_to_timestamp_ns_dyn::<i64>(array),
             _ => Err(ArrowError::NotYetImplemented(format!(
                 "Casting from {:?} to {:?} not supported",
@@ -422,6 +473,40 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
                 from_type, to_type,
             ))),
         },
+
+        (_, LargeUtf8) => match from_type {
+            UInt8 => primitive_to_utf8_dyn::<u8, i64>(array),
+            UInt16 => primitive_to_utf8_dyn::<u16, i64>(array),
+            UInt32 => primitive_to_utf8_dyn::<u32, i64>(array),
+            UInt64 => primitive_to_utf8_dyn::<u64, i64>(array),
+            Int8 => primitive_to_utf8_dyn::<i8, i64>(array),
+            Int16 => primitive_to_utf8_dyn::<i16, i64>(array),
+            Int32 => primitive_to_utf8_dyn::<i32, i64>(array),
+            Int64 => primitive_to_utf8_dyn::<i64, i64>(array),
+            Float32 => primitive_to_utf8_dyn::<f32, i64>(array),
+            Float64 => primitive_to_utf8_dyn::<f64, i64>(array),
+            Binary => {
+                let array = array.as_any().downcast_ref::<BinaryArray<i32>>().unwrap();
+
+                // perf todo: the offsets are equal; we can speed-up this
+                let iter = array
+                    .iter()
+                    .map(|x| x.and_then(|x| std::str::from_utf8(x).ok()));
+
+                let array = Utf8Array::<i64>::from_trusted_len_iter(iter);
+                Ok(Box::new(array))
+            }
+            _ => Err(ArrowError::NotYetImplemented(format!(
+                "Casting from {:?} to {:?} not supported",
+                from_type, to_type,
+            ))),
+        },
+
+        (Binary, LargeBinary) => Ok(Box::new(binary_to_large_binary(
+            array.as_any().downcast_ref().unwrap(),
+        ))),
+        (LargeBinary, Binary) => binary_large_to_binary(array.as_any().downcast_ref().unwrap())
+            .map(|x| Box::new(x) as Box<dyn Array>),
 
         // start numeric casts
         (UInt8, UInt16) => primitive_to_primitive_dyn::<u8, u16>(array, to_type),
@@ -573,8 +658,8 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
         (Timestamp(from_unit, _), Date32) => primitive_dyn!(array, timestamp_to_date32, from_unit),
         (Timestamp(from_unit, _), Date64) => primitive_dyn!(array, timestamp_to_date64, from_unit),
 
-        // date64 to timestamp might not make sense,
         (Int64, Duration(_)) => primitive_to_same_primitive_dyn::<i64>(array, to_type),
+        (Duration(_), Int64) => primitive_to_same_primitive_dyn::<i64>(array, to_type),
 
         // null to primitive/flat types
         //(Null, Int32) => Ok(Box::new(Int32Array::from(vec![None; array.len()]))),
@@ -669,7 +754,7 @@ mod tests {
         .unwrap();
 
         let arr = b.as_any().downcast_ref::<ListArray<i32>>().unwrap();
-        assert_eq!(&[0, 1, 2, 3, 4, 5], arr.offsets());
+        assert_eq!(&[0, 1, 2, 3, 4, 5], arr.offsets().as_slice());
         let values = arr.values();
         let c = values
             .as_any()
@@ -692,7 +777,7 @@ mod tests {
         .unwrap();
 
         let arr = b.as_any().downcast_ref::<ListArray<i32>>().unwrap();
-        assert_eq!(&[0, 1, 2, 3, 4, 5], arr.offsets());
+        assert_eq!(&[0, 1, 2, 3, 4, 5], arr.offsets().as_slice());
         let values = arr.values();
         let c = values.as_any().downcast_ref::<Int32Array>().unwrap();
 
@@ -715,7 +800,7 @@ mod tests {
         .unwrap();
 
         let arr = b.as_any().downcast_ref::<ListArray<i32>>().unwrap();
-        assert_eq!(&[0, 1, 2, 3, 4], arr.offsets());
+        assert_eq!(&[0, 1, 2, 3, 4], arr.offsets().as_slice());
         let values = arr.values();
         let c = values.as_any().downcast_ref::<Float64Array>().unwrap();
 
@@ -798,6 +883,7 @@ mod tests {
             Duration(TimeUnit::Millisecond),
             Duration(TimeUnit::Microsecond),
             Duration(TimeUnit::Nanosecond),
+            List(Box::new(Field::new("a", Utf8, true))),
         ];
         datatypes
             .clone()
@@ -806,7 +892,12 @@ mod tests {
             .for_each(|(d1, d2)| {
                 let array = new_null_array(d1.clone(), 10);
                 if can_cast_types(&d1, &d2) {
-                    assert!(cast(array.as_ref(), &d2).is_ok());
+                    let result = cast(array.as_ref(), &d2);
+                    if let Ok(result) = result {
+                        assert_eq!(result.data_type(), &d2);
+                    } else {
+                        panic!("Cast should have not failed")
+                    }
                 } else {
                     assert!(cast(array.as_ref(), &d2).is_err());
                 }

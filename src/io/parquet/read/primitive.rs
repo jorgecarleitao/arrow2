@@ -1,9 +1,8 @@
 use std::{convert::TryInto, hint::unreachable_unchecked};
 
 use parquet2::{
-    encoding::{hybrid_rle, Encoding},
-    read::{decompress_page, CompressedPage, Page, PrimitivePageDict},
-    serialization::read::levels,
+    encoding::{bitpacking, hybrid_rle, Encoding},
+    read::{levels, Page, PageHeader, PrimitivePageDict, StreamingIterator},
     types::NativeType,
 };
 
@@ -11,7 +10,7 @@ use super::utils;
 use super::{ColumnChunkMetaData, ColumnDescriptor};
 use crate::{
     array::PrimitiveArray,
-    bitmap::{BitmapIter, MutableBitmap},
+    bitmap::{utils::BitmapIter, MutableBitmap},
     buffer::MutableBuffer,
     datatypes::DataType,
     error::{ArrowError, Result},
@@ -60,7 +59,7 @@ unsafe impl<'a, T: NativeType> TrustedLen for ExactChunksIter<'a, T> {}
 
 fn read_dict_buffer_optional<T, A, F>(
     buffer: &[u8],
-    length: u32,
+    additional: usize,
     dict: &PrimitivePageDict<T>,
     values: &mut MutableBuffer<A>,
     validity: &mut MutableBitmap,
@@ -70,9 +69,8 @@ fn read_dict_buffer_optional<T, A, F>(
     A: ArrowNativeType,
     F: Fn(T) -> A,
 {
-    let (validity_buffer, indices_buffer) = utils::split_buffer_v1(buffer);
+    let (_, validity_buffer, indices_buffer) = levels::split_buffer_v1(buffer, false, true);
 
-    let length = length as usize;
     let dict_values = dict.values();
 
     // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
@@ -81,18 +79,18 @@ fn read_dict_buffer_optional<T, A, F>(
     let indices_buffer = &indices_buffer[1..];
 
     let non_null_indices_len = (indices_buffer.len() * 8 / bit_width as usize) as u32;
+
     let mut indices =
-        levels::rle_decode(&indices_buffer, bit_width as u32, non_null_indices_len).into_iter();
+        bitpacking::Decoder::new(indices_buffer, bit_width, non_null_indices_len as usize);
 
     let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
 
     for run in validity_iterator {
         match run {
             hybrid_rle::HybridEncoded::Bitpacked(packed) => {
-                let remaining = length - values.len();
+                let remaining = additional - values.len();
                 let len = std::cmp::min(packed.len() * 8, remaining);
                 for is_valid in BitmapIter::new(packed, 0, len) {
-                    validity.push(is_valid);
                     let value = if is_valid {
                         op(dict_values[indices.next().unwrap() as usize])
                     } else {
@@ -100,6 +98,7 @@ fn read_dict_buffer_optional<T, A, F>(
                     };
                     values.push(value);
                 }
+                validity.extend_from_slice(packed, 0, len);
             }
             hybrid_rle::HybridEncoded::Rle(value, additional) => {
                 let is_set = value[0] == 1;
@@ -121,7 +120,7 @@ fn read_dict_buffer_optional<T, A, F>(
 fn read_nullable<T, A, F>(
     validity_buffer: &[u8],
     values_buffer: &[u8],
-    length: u32,
+    additional: usize,
     values: &mut MutableBuffer<A>,
     validity: &mut MutableBitmap,
     op: F,
@@ -130,8 +129,6 @@ fn read_nullable<T, A, F>(
     A: ArrowNativeType,
     F: Fn(T) -> A,
 {
-    let length = length as usize;
-
     let mut chunks = ExactChunksIter::<T>::new(values_buffer);
 
     let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
@@ -140,10 +137,9 @@ fn read_nullable<T, A, F>(
         match run {
             hybrid_rle::HybridEncoded::Bitpacked(packed) => {
                 // the pack may contain more items than needed.
-                let remaining = length - values.len();
+                let remaining = additional - values.len();
                 let len = std::cmp::min(packed.len() * 8, remaining);
                 for is_valid in BitmapIter::new(packed, 0, len) {
-                    validity.push(is_valid);
                     let value = if is_valid {
                         op(chunks.next().unwrap())
                     } else {
@@ -151,6 +147,7 @@ fn read_nullable<T, A, F>(
                     };
                     values.push(value);
                 }
+                validity.extend_from_slice(packed, 0, len);
             }
             hybrid_rle::HybridEncoded::Rle(value, additional) => {
                 let is_set = value[0] == 1;
@@ -168,16 +165,17 @@ fn read_nullable<T, A, F>(
     }
 }
 
-fn read_required<T, A, F>(values_buffer: &[u8], length: u32, values: &mut MutableBuffer<A>, op: F)
-where
+fn read_required<T, A, F>(
+    values_buffer: &[u8],
+    additional: usize,
+    values: &mut MutableBuffer<A>,
+    op: F,
+) where
     T: NativeType,
     A: ArrowNativeType,
     F: Fn(T) -> A,
 {
-    assert_eq!(
-        values_buffer.len(),
-        length as usize * std::mem::size_of::<T>()
-    );
+    assert_eq!(values_buffer.len(), additional * std::mem::size_of::<T>());
     let iterator = ExactChunksIter::<T>::new(values_buffer);
 
     let iterator = iterator.map(|value| op(value));
@@ -194,16 +192,23 @@ pub fn iter_to_array<T, A, I, E, F>(
 where
     ArrowError: From<E>,
     T: NativeType,
+    E: Clone,
     A: ArrowNativeType,
     F: Copy + Fn(T) -> A,
-    I: Iterator<Item = std::result::Result<CompressedPage, E>>,
+    I: StreamingIterator<Item = std::result::Result<Page, E>>,
 {
     let capacity = metadata.num_values() as usize;
     let mut values = MutableBuffer::<A>::with_capacity(capacity);
     let mut validity = MutableBitmap::with_capacity(capacity);
-    iter.try_for_each(|page| {
-        extend_from_page(page?, metadata.descriptor(), &mut values, &mut validity, op)
-    })?;
+    while let Some(page) = iter.next() {
+        extend_from_page(
+            page.as_ref().map_err(|x| x.clone())?,
+            metadata.descriptor(),
+            &mut values,
+            &mut validity,
+            op,
+        )?
+    }
 
     Ok(PrimitiveArray::from_data(
         data_type,
@@ -213,7 +218,7 @@ where
 }
 
 fn extend_from_page<T, A, F>(
-    page: CompressedPage,
+    page: &Page,
     descriptor: &ColumnDescriptor,
     values: &mut MutableBuffer<A>,
     validity: &mut MutableBitmap,
@@ -224,77 +229,79 @@ where
     A: ArrowNativeType,
     F: Fn(T) -> A,
 {
-    let page = decompress_page(page)?;
+    let additional = page.num_values();
+
     assert_eq!(descriptor.max_rep_level(), 0);
     let is_optional = descriptor.max_def_level() == 1;
-    match page {
-        Page::V1(page) => {
-            assert_eq!(page.header.definition_level_encoding, Encoding::Rle);
+    match page.header() {
+        PageHeader::V1(header) => {
+            assert_eq!(header.definition_level_encoding, Encoding::Rle);
 
-            match (&page.header.encoding, &page.dictionary_page, is_optional) {
+            match (&page.encoding(), page.dictionary_page(), is_optional) {
                 (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer_optional(
-                    &page.buffer,
-                    page.header.num_values as u32,
+                    page.buffer(),
+                    additional,
                     dict.as_any().downcast_ref().unwrap(),
                     values,
                     validity,
                     op,
                 ),
                 (Encoding::Plain, None, true) => {
-                    let (validity_buffer, values_buffer) = utils::split_buffer_v1(&page.buffer);
+                    let (_, validity_buffer, values_buffer) =
+                        levels::split_buffer_v1(page.buffer(), false, is_optional);
                     read_nullable(
                         validity_buffer,
                         values_buffer,
-                        page.header.num_values as u32,
+                        additional,
                         values,
                         validity,
                         op,
                     )
                 }
                 (Encoding::Plain, None, false) => {
-                    read_required(&page.buffer, page.header.num_values as u32, values, op)
+                    read_required(page.buffer(), additional, values, op)
                 }
                 _ => {
                     return Err(utils::not_implemented(
-                        &page.header.encoding,
+                        &page.encoding(),
                         is_optional,
-                        page.dictionary_page.is_some(),
+                        page.dictionary_page().is_some(),
                         "V1",
                         "primitive",
                     ))
                 }
             }
         }
-        Page::V2(page) => match (&page.header.encoding, &page.dictionary_page, is_optional) {
+        PageHeader::V2(header) => match (&page.encoding(), page.dictionary_page(), is_optional) {
             (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer_optional(
-                &page.buffer,
-                page.header.num_values as u32,
+                page.buffer(),
+                additional,
                 dict.as_any().downcast_ref().unwrap(),
                 values,
                 validity,
                 op,
             ),
             (Encoding::Plain, None, true) => {
-                let def_level_buffer_length = page.header.definition_levels_byte_length as usize;
-                let (validity_buffer, values_buffer) =
-                    utils::split_buffer_v2(&page.buffer, def_level_buffer_length);
+                let def_level_buffer_length = header.definition_levels_byte_length as usize;
+                let (_, validity_buffer, values_buffer) =
+                    levels::split_buffer_v2(page.buffer(), 0, def_level_buffer_length);
                 read_nullable(
                     validity_buffer,
                     values_buffer,
-                    page.header.num_values as u32,
+                    additional,
                     values,
                     validity,
                     op,
                 )
             }
             (Encoding::Plain, None, false) => {
-                read_required::<T, A, F>(&page.buffer, page.header.num_values as u32, values, op)
+                read_required::<T, A, F>(page.buffer(), additional, values, op)
             }
             _ => {
                 return Err(utils::not_implemented(
-                    &page.header.encoding,
+                    &page.encoding(),
                     is_optional,
-                    page.dictionary_page.is_some(),
+                    page.dictionary_page().is_some(),
                     "V2",
                     "primitive",
                 ))

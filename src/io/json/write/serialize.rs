@@ -338,13 +338,13 @@ fn set_column_for_json_rows(
 /// # Example
 /// ```
 /// use std::sync::Arc;
-/// use arrow2::array::Primitive;
+/// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::{DataType, Field, Schema};
 /// use arrow2::io::json;
 /// use arrow2::record_batch::RecordBatch;
 ///
 /// let schema = Arc::new(Schema::new(vec![Field::new("a", DataType::Int32, false)]));
-/// let a = Primitive::from_slice(&[1i32, 2, 3]).to(DataType::Int32);
+/// let a = PrimitiveArray::from_slice(&[1i32, 2, 3]).to(DataType::Int32);
 /// let batch = RecordBatch::try_new(schema, vec![Arc::new(a)]).unwrap();
 ///
 /// let json_rows = json::write_record_batches(&[batch]);

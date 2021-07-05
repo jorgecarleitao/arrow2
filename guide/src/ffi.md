@@ -20,7 +20,7 @@ The API to export an `Array` is as follows:
 
 ```rust
 use std::sync::Arc;
-use arrow2::array::{Array, Primitive};
+use arrow2::array::{Array, PrimitiveArray};
 use arrow2::datatypes::DataType;
 use arrow2::ffi::ArrowArray;
 
@@ -28,7 +28,7 @@ use arrow2::ffi::ArrowArray;
 // Example of an array:
 let array = [Some(1), None, Some(123)]
     .iter()
-    .collect::<Primitive<i32>>()
+    .collect::<PrimitiveArray<i32>>()
     .to(DataType::Int32);
 
 // export the array.

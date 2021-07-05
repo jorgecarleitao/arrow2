@@ -20,7 +20,7 @@ fn read_column_chunk(path: &str, row_group: usize, column: usize) -> Result<Box<
     // Construct an iterator over pages. This binds `file` to this iterator, and each iteration
     // is IO intensive as it will read a compressed page into memory. There is almost no CPU work
     // on this operation
-    let iter = read::get_page_iterator(&file_metadata, row_group, column, &mut file)?;
+    let pages = read::get_page_iterator(&file_metadata, row_group, column, &mut file, vec![])?;
 
     // get the columns' metadata
     let metadata = file_metadata.row_groups[row_group].column(column);
@@ -29,7 +29,9 @@ fn read_column_chunk(path: &str, row_group: usize, column: usize) -> Result<Box<
     // immediately decompressed, decoded, deserialized to arrow and deallocated.
     // This uses a combination of IO and CPU. At this point, `array` is the arrow-corresponding
     // array of the parquets' physical type.
-    let array = read::page_iter_to_array(iter, metadata)?;
+    // `Decompressor` re-uses an internal buffer for de-compression, thereby maximizing memory re-use.
+    let mut pages = read::Decompressor::new(pages, vec![]);
+    let array = read::page_iter_to_array(&mut pages, metadata)?;
 
     // Cast the array to the corresponding Arrow's data type. When the physical type
     // is the same, this operation is `O(1)`. Otherwise, it incurs some CPU cost.

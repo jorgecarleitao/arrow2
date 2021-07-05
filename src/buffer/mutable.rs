@@ -18,11 +18,11 @@ fn capacity_multiple_of_64<T: NativeType>(capacity: usize) -> usize {
     util::round_upto_multiple_of_64(capacity * size_of::<T>()) / size_of::<T>()
 }
 
-/// A [`MutableBuffer`] is Arrow's interface to build a [`Buffer`] out of items, slices and iterators.
-/// [`Buffer`]s created from [`MutableBuffer`] (via `into`) are guaranteed to have its pointer aligned
-/// along cache lines and in multiple of 64 bytes.
-/// Use [MutableBuffer::push] to insert an item, [MutableBuffer::extend_from_slice]
-/// to insert many items, and `into` to convert it to [`Buffer`].
+/// A [`MutableBuffer`] is this crates' interface to store types that are byte-like, such as `i32`.
+/// It behaves like a [`Vec`], with the following differences:
+/// * memory is allocated along cache lines and in multiple of 64 bytes.
+/// * it can only hold types supported by the arrow format (`u8-u64`, `i8-i128`, `f32,f64` and [`crate::types::days_ms`])
+/// A [`MutableBuffer`] can be converted to a [`Buffer`] via `.into`.
 /// # Example
 /// ```
 /// # use arrow2::buffer::{Buffer, MutableBuffer};
@@ -39,6 +39,12 @@ pub struct MutableBuffer<T: NativeType> {
     // invariant: len <= capacity
     len: usize,
     capacity: usize,
+}
+
+impl<T: NativeType> PartialEq for MutableBuffer<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_slice() == other.as_slice()
+    }
 }
 
 impl<T: NativeType> MutableBuffer<T> {
@@ -73,7 +79,7 @@ impl<T: NativeType> MutableBuffer<T> {
     /// let mut buffer = MutableBuffer::<u8>::from_len_zeroed(127);
     /// assert_eq!(buffer.len(), 127);
     /// assert!(buffer.capacity() >= 127);
-    /// let data = buffer.as_slice_mut();
+    /// let data = buffer.as_mut_slice();
     /// assert_eq!(data[126], 0u8);
     /// ```
     #[inline]
@@ -188,7 +194,7 @@ impl<T: NativeType> MutableBuffer<T> {
 
     /// Returns the data stored in this buffer as a mutable slice.
     #[inline]
-    pub fn as_slice_mut(&mut self) -> &mut [T] {
+    pub fn as_mut_slice(&mut self) -> &mut [T] {
         self
     }
 
@@ -259,7 +265,7 @@ impl<T: NativeType> MutableBuffer<T> {
     /// # Safety
     /// The caller must ensure that the buffer was properly initialized up to `len`.
     #[inline]
-    pub(crate) unsafe fn set_len(&mut self, len: usize) {
+    pub unsafe fn set_len(&mut self, len: usize) {
         assert!(len <= self.capacity());
         self.len = len;
     }
@@ -551,7 +557,9 @@ impl Drop for SetLenOnDrop<'_> {
 impl<T: NativeType, P: AsRef<[T]>> From<P> for MutableBuffer<T> {
     #[inline]
     fn from(slice: P) -> Self {
-        MutableBuffer::from_trusted_len_iter(slice.as_ref().iter().copied())
+        let mut buffer = MutableBuffer::new();
+        buffer.extend_from_slice(slice.as_ref());
+        buffer
     }
 }
 
@@ -639,7 +647,7 @@ mod tests {
         b.resize(3, 1);
         assert_eq!(b.len(), 3);
         assert_eq!(b.as_slice(), &[1, 1, 1]);
-        assert_eq!(b.as_slice_mut(), &[1, 1, 1]);
+        assert_eq!(b.as_mut_slice(), &[1, 1, 1]);
     }
 
     // branch that uses alloc_zeroed

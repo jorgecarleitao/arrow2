@@ -65,9 +65,10 @@ pub fn read_record_batch<R: Read + Seek>(
                 reader,
                 block_offset,
                 is_little_endian,
+                batch.compression(),
             )
         })
-        .collect::<std::io::Result<Vec<_>>>()?;
+        .collect::<Result<Vec<_>>>()?;
 
     RecordBatch::try_new(schema.clone(), arrays)
 }
