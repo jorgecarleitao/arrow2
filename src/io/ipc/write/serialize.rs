@@ -99,8 +99,10 @@ fn write_binary<O: Offset>(
         arrow_data,
         offset,
     );
+    let first = array.offsets().first().unwrap().to_usize();
+    let last = array.offsets().last().unwrap().to_usize();
     write_bytes(
-        &to_bytes(array.values(), is_little_endian),
+        &to_bytes(&array.values()[first..last], is_little_endian),
         buffers,
         arrow_data,
         offset,
@@ -127,8 +129,10 @@ fn write_utf8<O: Offset>(
         arrow_data,
         offset,
     );
+    let first = array.offsets().first().unwrap().to_usize();
+    let last = array.offsets().last().unwrap().to_usize();
     write_bytes(
-        &to_bytes(array.values(), is_little_endian),
+        &to_bytes(&array.values()[first..last], is_little_endian),
         buffers,
         arrow_data,
         offset,
@@ -181,8 +185,10 @@ fn write_list<O: Offset>(
         arrow_data,
         offset,
     );
+    let first = array.offsets().first().unwrap().to_usize();
+    let last = array.offsets().last().unwrap().to_usize();
     write(
-        array.values().as_ref(),
+        array.values().slice(first, last - first).as_ref(),
         buffers,
         arrow_data,
         nodes,
