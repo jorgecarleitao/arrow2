@@ -23,6 +23,7 @@ use crate::{
     bitmap::Bitmap,
     datatypes::{DataType, IntervalUnit},
     io::ipc::gen::Message,
+    trusted_len::TrustedLen,
     types::{days_ms, NativeType},
 };
 
@@ -37,12 +38,7 @@ fn _write_primitive<T: NativeType>(
     offset: &mut i64,
     is_little_endian: bool,
 ) {
-    write_bytes(
-        &to_le_bytes_bitmap(array.validity(), array.len()),
-        buffers,
-        arrow_data,
-        offset,
-    );
+    write_bitmap(array.validity(), array.len(), buffers, arrow_data, offset);
     write_bytes(
         &to_bytes(array.values(), is_little_endian),
         buffers,
@@ -70,13 +66,15 @@ fn write_boolean(
     _: bool,
 ) {
     let array = array.as_any().downcast_ref::<BooleanArray>().unwrap();
-    write_bytes(
-        &to_le_bytes_bitmap(array.validity(), array.len()),
+
+    write_bitmap(array.validity(), array.len(), buffers, arrow_data, offset);
+    write_bitmap(
+        &Some(array.values().clone()),
+        array.len(),
         buffers,
         arrow_data,
         offset,
     );
-    write_bytes(&to_le_bitmap(array.values()), buffers, arrow_data, offset);
 }
 
 fn write_binary<O: Offset>(
@@ -87,12 +85,7 @@ fn write_binary<O: Offset>(
     is_little_endian: bool,
 ) {
     let array = array.as_any().downcast_ref::<BinaryArray<O>>().unwrap();
-    write_bytes(
-        &to_le_bytes_bitmap(array.validity(), array.len()),
-        buffers,
-        arrow_data,
-        offset,
-    );
+    write_bitmap(array.validity(), array.len(), buffers, arrow_data, offset);
     write_bytes(
         &to_bytes(array.offsets(), is_little_endian),
         buffers,
@@ -115,12 +108,7 @@ fn write_utf8<O: Offset>(
     is_little_endian: bool,
 ) {
     let array = array.as_any().downcast_ref::<Utf8Array<O>>().unwrap();
-    write_bytes(
-        &to_le_bytes_bitmap(array.validity(), array.len()),
-        buffers,
-        arrow_data,
-        offset,
-    );
+    write_bitmap(array.validity(), array.len(), buffers, arrow_data, offset);
     write_bytes(
         &to_bytes(array.offsets(), is_little_endian),
         buffers,
@@ -146,12 +134,7 @@ fn write_fixed_size_binary(
         .as_any()
         .downcast_ref::<FixedSizeBinaryArray>()
         .unwrap();
-    write_bytes(
-        &to_le_bytes_bitmap(array.validity(), array.len()),
-        buffers,
-        arrow_data,
-        offset,
-    );
+    write_bitmap(array.validity(), array.len(), buffers, arrow_data, offset);
     write_bytes(
         &to_bytes(array.values(), is_little_endian),
         buffers,
@@ -169,12 +152,7 @@ fn write_list<O: Offset>(
     is_little_endian: bool,
 ) {
     let array = array.as_any().downcast_ref::<ListArray<O>>().unwrap();
-    write_bytes(
-        &to_le_bytes_bitmap(array.validity(), array.len()),
-        buffers,
-        arrow_data,
-        offset,
-    );
+    write_bitmap(array.validity(), array.len(), buffers, arrow_data, offset);
     write_bytes(
         &to_bytes(array.offsets(), is_little_endian),
         buffers,
@@ -200,12 +178,7 @@ pub fn write_struct(
     is_little_endian: bool,
 ) {
     let array = array.as_any().downcast_ref::<StructArray>().unwrap();
-    write_bytes(
-        &to_le_bytes_bitmap(array.validity(), array.len()),
-        buffers,
-        arrow_data,
-        offset,
-    );
+    write_bitmap(array.validity(), array.len(), buffers, arrow_data, offset);
     array.values().iter().for_each(|array| {
         write(
             array.as_ref(),
@@ -227,12 +200,7 @@ fn write_fixed_size_list(
     is_little_endian: bool,
 ) {
     let array = array.as_any().downcast_ref::<FixedSizeListArray>().unwrap();
-    write_bytes(
-        &to_le_bytes_bitmap(array.validity(), array.len()),
-        buffers,
-        arrow_data,
-        offset,
-    );
+    write_bitmap(array.validity(), array.len(), buffers, arrow_data, offset);
     write(
         array.values().as_ref(),
         buffers,
@@ -476,6 +444,53 @@ fn write_bytes(
     *offset += total_len;
 }
 
+/// writes `bytes` to `arrow_data` updating `buffers` and `offset` and guaranteeing a 8 byte boundary.
+fn write_bytes_from_iter<I: TrustedLen<Item = u8>>(
+    bytes: I,
+    buffers: &mut Vec<Schema::Buffer>,
+    arrow_data: &mut Vec<u8>,
+    offset: &mut i64,
+) {
+    let len = bytes.size_hint().0;
+    let pad_len = pad_to_8(len as u32);
+    let total_len: i64 = (len + pad_len) as i64;
+    // assert_eq!(len % 8, 0, "Buffer width not a multiple of 8 bytes");
+    buffers.push(Schema::Buffer::new(*offset, total_len));
+    arrow_data.extend(bytes);
+    arrow_data.extend_from_slice(&vec![0u8; pad_len][..]);
+    *offset += total_len;
+}
+
+fn write_bitmap(
+    bitmap: &Option<Bitmap>,
+    length: usize,
+    buffers: &mut Vec<Schema::Buffer>,
+    arrow_data: &mut Vec<u8>,
+    offset: &mut i64,
+) {
+    match bitmap {
+        Some(bitmap) => {
+            assert_eq!(bitmap.len(), length);
+            if bitmap.offset() != 0 {
+                // case where we can't slice the bitmap as the offsets are not multiple of 8
+                let bytes = Bitmap::from_trusted_len_iter(bitmap.iter());
+                write_bytes(bytes.as_slice(), buffers, arrow_data, offset)
+            } else {
+                write_bytes(bitmap.as_slice(), buffers, arrow_data, offset)
+            }
+        }
+        None => {
+            // in IPC, the null bitmap is always be present
+            write_bytes_from_iter(
+                std::iter::repeat(1).take(length.saturating_add(7) / 8),
+                buffers,
+                arrow_data,
+                offset,
+            )
+        }
+    }
+}
+
 /// converts the buffer to a bytes in little endian
 #[inline]
 fn to_bytes<T: NativeType>(values: &[T], is_little_endian: bool) -> Vec<u8> {
@@ -493,32 +508,5 @@ fn to_bytes<T: NativeType>(values: &[T], is_little_endian: bool) -> Vec<u8> {
             .map(|x| x.as_ref().to_vec())
             .flatten()
             .collect::<Vec<_>>()
-    }
-}
-
-#[inline]
-fn to_le_bitmap(bitmap: &Bitmap) -> Vec<u8> {
-    if bitmap.offset() != 0 {
-        // case where we can't slice the bitmap as the offsets are not multiple of 8
-        Bitmap::from_trusted_len_iter(bitmap.iter())
-            .as_slice()
-            .to_vec()
-    } else {
-        bitmap.as_slice().to_vec()
-    }
-}
-
-#[inline]
-fn to_le_bytes_bitmap(bitmap: &Option<Bitmap>, length: usize) -> Vec<u8> {
-    match bitmap {
-        Some(bitmap) => {
-            assert_eq!(bitmap.len(), length);
-            to_le_bitmap(bitmap)
-        }
-        None => {
-            // in IPC, the null bitmap is always be present
-            let bitmap = Bitmap::from_trusted_len_iter(std::iter::repeat(true).take(length));
-            bitmap.as_slice().to_vec()
-        }
     }
 }
