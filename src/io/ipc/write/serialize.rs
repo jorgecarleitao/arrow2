@@ -80,6 +80,40 @@ fn write_boolean(
     );
 }
 
+fn write_generic_binary<O: Offset>(
+    validity: &Option<Bitmap>,
+    offsets: &[O],
+    values: &[u8],
+    buffers: &mut Vec<Schema::Buffer>,
+    arrow_data: &mut Vec<u8>,
+    offset: &mut i64,
+    is_little_endian: bool,
+) {
+    write_bitmap(validity, offsets.len() - 1, buffers, arrow_data, offset);
+
+    let first = *offsets.first().unwrap();
+    let last = *offsets.last().unwrap();
+    if first == O::default() {
+        write_buffer(offsets, buffers, arrow_data, offset, is_little_endian);
+    } else {
+        write_buffer_from_iter(
+            offsets.iter().map(|x| *x - first),
+            buffers,
+            arrow_data,
+            offset,
+            is_little_endian,
+        );
+    }
+
+    write_buffer(
+        &values[first.to_usize()..last.to_usize()],
+        buffers,
+        arrow_data,
+        offset,
+        is_little_endian,
+    );
+}
+
 fn write_binary<O: Offset>(
     array: &dyn Array,
     buffers: &mut Vec<Schema::Buffer>,
@@ -88,16 +122,9 @@ fn write_binary<O: Offset>(
     is_little_endian: bool,
 ) {
     let array = array.as_any().downcast_ref::<BinaryArray<O>>().unwrap();
-    write_bitmap(array.validity(), array.len(), buffers, arrow_data, offset);
-
-    write_buffer(
+    write_generic_binary(
+        array.validity(),
         array.offsets(),
-        buffers,
-        arrow_data,
-        offset,
-        is_little_endian,
-    );
-    write_buffer(
         array.values(),
         buffers,
         arrow_data,
@@ -114,16 +141,9 @@ fn write_utf8<O: Offset>(
     is_little_endian: bool,
 ) {
     let array = array.as_any().downcast_ref::<Utf8Array<O>>().unwrap();
-    write_bitmap(array.validity(), array.len(), buffers, arrow_data, offset);
-
-    write_buffer(
+    write_generic_binary(
+        array.validity(),
         array.offsets(),
-        buffers,
-        arrow_data,
-        offset,
-        is_little_endian,
-    );
-    write_buffer(
         array.values(),
         buffers,
         arrow_data,
@@ -162,16 +182,30 @@ fn write_list<O: Offset>(
     is_little_endian: bool,
 ) {
     let array = array.as_any().downcast_ref::<ListArray<O>>().unwrap();
-    write_bitmap(array.validity(), array.len(), buffers, arrow_data, offset);
-    write_buffer(
-        array.offsets(),
-        buffers,
-        arrow_data,
-        offset,
-        is_little_endian,
-    );
+    let offsets = array.offsets();
+    let validity = array.validity();
+
+    write_bitmap(validity, offsets.len() - 1, buffers, arrow_data, offset);
+
+    let first = *offsets.first().unwrap();
+    let last = *offsets.last().unwrap();
+    if first == O::default() {
+        write_buffer(offsets, buffers, arrow_data, offset, is_little_endian);
+    } else {
+        write_buffer_from_iter(
+            offsets.iter().map(|x| *x - first),
+            buffers,
+            arrow_data,
+            offset,
+            is_little_endian,
+        );
+    }
+
     write(
-        array.values().as_ref(),
+        array
+            .values()
+            .slice(first.to_usize(), last.to_usize() - first.to_usize())
+            .as_ref(),
         buffers,
         arrow_data,
         nodes,
@@ -503,7 +537,7 @@ fn write_bitmap(
 }
 
 #[inline]
-fn _write_buffer_from_iter<'a, T: NativeType, I: TrustedLen<Item = &'a T>>(
+fn _write_buffer_from_iter<T: NativeType, I: TrustedLen<Item = T>>(
     buffer: I,
     arrow_data: &mut Vec<u8>,
     is_little_endian: bool,
@@ -512,11 +546,11 @@ fn _write_buffer_from_iter<'a, T: NativeType, I: TrustedLen<Item = &'a T>>(
     arrow_data.reserve(len * std::mem::size_of::<T>());
     if is_little_endian {
         buffer
-            .map(T::to_le_bytes)
+            .map(|x| T::to_le_bytes(&x))
             .for_each(|x| arrow_data.extend_from_slice(x.as_ref()))
     } else {
         buffer
-            .map(T::to_be_bytes)
+            .map(|x| T::to_be_bytes(&x))
             .for_each(|x| arrow_data.extend_from_slice(x.as_ref()))
     }
 }
@@ -531,7 +565,7 @@ fn _write_buffer<T: NativeType>(buffer: &[T], arrow_data: &mut Vec<u8>, is_littl
         };
         arrow_data.extend_from_slice(buffer);
     } else {
-        _write_buffer_from_iter(buffer.iter(), arrow_data, is_little_endian)
+        _write_buffer_from_iter(buffer.iter().copied(), arrow_data, is_little_endian)
     }
 }
 
@@ -556,7 +590,7 @@ fn write_buffer<T: NativeType>(
 }
 
 /// writes `bytes` to `arrow_data` updating `buffers` and `offset` and guaranteeing a 8 byte boundary.
-fn write_buffer_from_iter<'a, T: NativeType, I: TrustedLen<Item = &'a T>>(
+fn write_buffer_from_iter<T: NativeType, I: TrustedLen<Item = T>>(
     buffer: I,
     buffers: &mut Vec<Schema::Buffer>,
     arrow_data: &mut Vec<u8>,
