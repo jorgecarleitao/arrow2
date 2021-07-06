@@ -22,6 +22,7 @@ use crate::{
     },
     bitmap::Bitmap,
     datatypes::{DataType, IntervalUnit},
+    endianess::is_native_little_endian,
     io::ipc::gen::Message,
     trusted_len::TrustedLen,
     types::{days_ms, NativeType},
@@ -39,12 +40,14 @@ fn _write_primitive<T: NativeType>(
     is_little_endian: bool,
 ) {
     write_bitmap(array.validity(), array.len(), buffers, arrow_data, offset);
-    write_bytes(
-        &to_bytes(array.values(), is_little_endian),
+
+    write_buffer(
+        array.values(),
         buffers,
         arrow_data,
         offset,
-    );
+        is_little_endian,
+    )
 }
 
 fn write_primitive<T: NativeType>(
@@ -86,17 +89,20 @@ fn write_binary<O: Offset>(
 ) {
     let array = array.as_any().downcast_ref::<BinaryArray<O>>().unwrap();
     write_bitmap(array.validity(), array.len(), buffers, arrow_data, offset);
-    write_bytes(
-        &to_bytes(array.offsets(), is_little_endian),
+
+    write_buffer(
+        array.offsets(),
         buffers,
         arrow_data,
         offset,
+        is_little_endian,
     );
-    write_bytes(
-        &to_bytes(array.values(), is_little_endian),
+    write_buffer(
+        array.values(),
         buffers,
         arrow_data,
         offset,
+        is_little_endian,
     );
 }
 
@@ -109,17 +115,20 @@ fn write_utf8<O: Offset>(
 ) {
     let array = array.as_any().downcast_ref::<Utf8Array<O>>().unwrap();
     write_bitmap(array.validity(), array.len(), buffers, arrow_data, offset);
-    write_bytes(
-        &to_bytes(array.offsets(), is_little_endian),
+
+    write_buffer(
+        array.offsets(),
         buffers,
         arrow_data,
         offset,
+        is_little_endian,
     );
-    write_bytes(
-        &to_bytes(array.values(), is_little_endian),
+    write_buffer(
+        array.values(),
         buffers,
         arrow_data,
         offset,
+        is_little_endian,
     );
 }
 
@@ -135,11 +144,12 @@ fn write_fixed_size_binary(
         .downcast_ref::<FixedSizeBinaryArray>()
         .unwrap();
     write_bitmap(array.validity(), array.len(), buffers, arrow_data, offset);
-    write_bytes(
-        &to_bytes(array.values(), is_little_endian),
+    write_buffer(
+        array.values(),
         buffers,
         arrow_data,
         offset,
+        is_little_endian,
     );
 }
 
@@ -153,11 +163,12 @@ fn write_list<O: Offset>(
 ) {
     let array = array.as_any().downcast_ref::<ListArray<O>>().unwrap();
     write_bitmap(array.validity(), array.len(), buffers, arrow_data, offset);
-    write_bytes(
-        &to_bytes(array.offsets(), is_little_endian),
+    write_buffer(
+        array.offsets(),
         buffers,
         arrow_data,
         offset,
+        is_little_endian,
     );
     write(
         array.values().as_ref(),
@@ -491,22 +502,50 @@ fn write_bitmap(
     }
 }
 
-/// converts the buffer to a bytes in little endian
-#[inline]
-fn to_bytes<T: NativeType>(values: &[T], is_little_endian: bool) -> Vec<u8> {
-    if is_little_endian {
-        values
-            .iter()
-            .map(T::to_le_bytes)
-            .map(|x| x.as_ref().to_vec())
-            .flatten()
-            .collect::<Vec<_>>()
-    } else {
-        values
-            .iter()
-            .map(T::to_be_bytes)
-            .map(|x| x.as_ref().to_vec())
-            .flatten()
-            .collect::<Vec<_>>()
+fn _write_buffer<T: NativeType>(bytes: &[T], arrow_data: &mut Vec<u8>, is_little_endian: bool) {
+    match (is_little_endian, is_native_little_endian()) {
+        (true, true) | (false, false) => {
+            let bytes = unsafe {
+                std::slice::from_raw_parts(
+                    bytes.as_ptr() as *const u8,
+                    bytes.len() * std::mem::size_of::<T>(),
+                )
+            };
+            arrow_data.extend_from_slice(bytes);
+        }
+        (true, false) => {
+            arrow_data.reserve(bytes.len() * std::mem::size_of::<T>());
+            bytes
+                .iter()
+                .map(T::to_le_bytes)
+                .for_each(|x| arrow_data.extend_from_slice(x.as_ref()))
+        }
+        (false, true) => {
+            arrow_data.reserve(bytes.len() * std::mem::size_of::<T>());
+            bytes
+                .iter()
+                .map(T::to_be_bytes)
+                .for_each(|x| arrow_data.extend_from_slice(x.as_ref()))
+        }
     }
+}
+
+/// writes `bytes` to `arrow_data` updating `buffers` and `offset` and guaranteeing a 8 byte boundary.
+fn write_buffer<T: NativeType>(
+    buffer: &[T],
+    buffers: &mut Vec<Schema::Buffer>,
+    arrow_data: &mut Vec<u8>,
+    offset: &mut i64,
+    is_little_endian: bool,
+) {
+    let len = buffer.len() * std::mem::size_of::<T>();
+    let pad_len = pad_to_8(len as u32);
+    let total_len: i64 = (len + pad_len) as i64;
+    // assert_eq!(len % 8, 0, "Buffer width not a multiple of 8 bytes");
+    buffers.push(Schema::Buffer::new(*offset, total_len));
+
+    _write_buffer(buffer, arrow_data, is_little_endian);
+
+    arrow_data.extend_from_slice(&vec![0u8; pad_len][..]);
+    *offset += total_len;
 }
