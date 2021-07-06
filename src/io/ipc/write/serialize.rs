@@ -502,31 +502,36 @@ fn write_bitmap(
     }
 }
 
-fn _write_buffer<T: NativeType>(bytes: &[T], arrow_data: &mut Vec<u8>, is_little_endian: bool) {
-    match (is_little_endian, is_native_little_endian()) {
-        (true, true) | (false, false) => {
-            let bytes = unsafe {
-                std::slice::from_raw_parts(
-                    bytes.as_ptr() as *const u8,
-                    bytes.len() * std::mem::size_of::<T>(),
-                )
-            };
-            arrow_data.extend_from_slice(bytes);
-        }
-        (true, false) => {
-            arrow_data.reserve(bytes.len() * std::mem::size_of::<T>());
-            bytes
-                .iter()
-                .map(T::to_le_bytes)
-                .for_each(|x| arrow_data.extend_from_slice(x.as_ref()))
-        }
-        (false, true) => {
-            arrow_data.reserve(bytes.len() * std::mem::size_of::<T>());
-            bytes
-                .iter()
-                .map(T::to_be_bytes)
-                .for_each(|x| arrow_data.extend_from_slice(x.as_ref()))
-        }
+#[inline]
+fn _write_buffer_from_iter<'a, T: NativeType, I: TrustedLen<Item = &'a T>>(
+    buffer: I,
+    arrow_data: &mut Vec<u8>,
+    is_little_endian: bool,
+) {
+    let len = buffer.size_hint().0;
+    arrow_data.reserve(len * std::mem::size_of::<T>());
+    if is_little_endian {
+        buffer
+            .map(T::to_le_bytes)
+            .for_each(|x| arrow_data.extend_from_slice(x.as_ref()))
+    } else {
+        buffer
+            .map(T::to_be_bytes)
+            .for_each(|x| arrow_data.extend_from_slice(x.as_ref()))
+    }
+}
+
+fn _write_buffer<T: NativeType>(buffer: &[T], arrow_data: &mut Vec<u8>, is_little_endian: bool) {
+    if is_little_endian == is_native_little_endian() {
+        let buffer = unsafe {
+            std::slice::from_raw_parts(
+                buffer.as_ptr() as *const u8,
+                buffer.len() * std::mem::size_of::<T>(),
+            )
+        };
+        arrow_data.extend_from_slice(buffer);
+    } else {
+        _write_buffer_from_iter(buffer.iter(), arrow_data, is_little_endian)
     }
 }
 
@@ -545,6 +550,26 @@ fn write_buffer<T: NativeType>(
     buffers.push(Schema::Buffer::new(*offset, total_len));
 
     _write_buffer(buffer, arrow_data, is_little_endian);
+
+    arrow_data.extend_from_slice(&vec![0u8; pad_len][..]);
+    *offset += total_len;
+}
+
+/// writes `bytes` to `arrow_data` updating `buffers` and `offset` and guaranteeing a 8 byte boundary.
+fn write_buffer_from_iter<'a, T: NativeType, I: TrustedLen<Item = &'a T>>(
+    buffer: I,
+    buffers: &mut Vec<Schema::Buffer>,
+    arrow_data: &mut Vec<u8>,
+    offset: &mut i64,
+    is_little_endian: bool,
+) {
+    let len = buffer.size_hint().0 * std::mem::size_of::<T>();
+    let pad_len = pad_to_8(len as u32);
+    let total_len: i64 = (len + pad_len) as i64;
+    // assert_eq!(len % 8, 0, "Buffer width not a multiple of 8 bytes");
+    buffers.push(Schema::Buffer::new(*offset, total_len));
+
+    _write_buffer_from_iter(buffer, arrow_data, is_little_endian);
 
     arrow_data.extend_from_slice(&vec![0u8; pad_len][..]);
     *offset += total_len;
