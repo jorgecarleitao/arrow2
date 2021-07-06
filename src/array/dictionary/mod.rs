@@ -6,7 +6,9 @@ use crate::{
     types::{NativeType, NaturalDataType},
 };
 
+mod iterator;
 mod mutable;
+pub use iterator::*;
 pub use mutable::*;
 
 use super::{ffi::ToFfi, new_empty_array, primitive::PrimitiveArray, Array};
@@ -85,6 +87,13 @@ impl<K: DictionaryKey> DictionaryArray<K> {
     #[inline]
     pub fn values(&self) -> &Arc<dyn Array> {
         &self.values
+    }
+
+    /// Returns the values of the [`DictionaryArray`].
+    #[inline]
+    pub fn value(&self, index: usize) -> Box<dyn Array> {
+        let index = self.keys.value(index).to_usize().unwrap();
+        self.values.clone().slice(index, 1)
     }
 }
 

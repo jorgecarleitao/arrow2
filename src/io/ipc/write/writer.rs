@@ -352,7 +352,7 @@ mod tests {
 
         let mut array = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new();
         array.try_extend(data).unwrap();
-        let array = array.into_arc();
+        let array = array.into_arc().slice(1, 2).into();
         let batch = RecordBatch::try_from_iter(vec![("a", array)]).unwrap();
         test_round_trip(batch)
     }
