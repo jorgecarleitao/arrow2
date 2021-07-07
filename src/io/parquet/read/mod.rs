@@ -64,11 +64,26 @@ fn page_iter_i64<I: StreamingIterator<Item = std::result::Result<Page, ParquetEr
 ) -> Result<Box<dyn Array>> {
     let data_type = schema::from_int64(logical_type, converted_type)?;
 
-    match data_type {
-        DataType::UInt64 => primitive::iter_to_array(iter, metadata, data_type, |x: i64| x as u64)
-            .map(|x| Box::new(x) as Box<dyn Array>),
-        _ => primitive::iter_to_array(iter, metadata, data_type, |x: i64| x as i64)
-            .map(|x| Box::new(x) as Box<dyn Array>),
+    let is_nested = metadata.descriptor().max_rep_level() > 0;
+
+    if is_nested {
+        let real_type = schema::to_data_type(metadata.descriptor().base_type())?.unwrap();
+
+        match data_type {
+            DataType::UInt64 => {
+                primitive::iter_to_array_nested(iter, metadata, real_type, |x: i64| x as u64)
+            }
+            _ => primitive::iter_to_array_nested(iter, metadata, real_type, |x: i64| x as i64),
+        }
+    } else {
+        match data_type {
+            DataType::UInt64 => {
+                primitive::iter_to_array(iter, metadata, data_type, |x: i64| x as u64)
+                    .map(|x| Box::new(x) as Box<dyn Array>)
+            }
+            _ => primitive::iter_to_array(iter, metadata, data_type, |x: i64| x as i64)
+                .map(|x| Box::new(x) as Box<dyn Array>),
+        }
     }
 }
 
@@ -147,7 +162,7 @@ pub fn page_iter_to_array<I: StreamingIterator<Item = std::result::Result<Page, 
     iter: &mut I,
     metadata: &ColumnChunkMetaData,
 ) -> Result<Box<dyn Array>> {
-    match metadata.descriptor().type_() {
+    match metadata.descriptor().base_type() {
         ParquetType::PrimitiveType {
             physical_type,
             converted_type,
@@ -192,7 +207,23 @@ pub fn page_iter_to_array<I: StreamingIterator<Item = std::result::Result<Page, 
                 p, c, l
             ))),
         },
-        _ => todo!(),
+        _ => {
+            // get all primitives in the type_ and their max rep levels
+            match metadata.descriptor().type_() {
+                ParquetType::PrimitiveType {
+                    physical_type,
+                    converted_type,
+                    logical_type,
+                    ..
+                } => match (physical_type, converted_type, logical_type) {
+                    (PhysicalType::Int64, _, _) => {
+                        page_iter_i64(iter, metadata, converted_type, logical_type)
+                    }
+                    _ => todo!(),
+                },
+                _ => unreachable!(),
+            }
+        }
     }
 }
 
@@ -203,34 +234,41 @@ mod tests {
     use super::super::tests::*;
     use super::*;
 
-    fn test_pyarrow_integration(column: usize, version: usize, required: bool) -> Result<()> {
+    fn test_pyarrow_integration(
+        column: usize,
+        version: usize,
+        type_: &str,
+        required: bool,
+    ) -> Result<()> {
         if std::env::var("ARROW2_IGNORE_PARQUET").is_ok() {
             return Ok(());
         }
         let path = if required {
             format!(
-                "fixtures/pyarrow3/v{}/basic_{}_10.parquet",
-                version, "required"
+                "fixtures/pyarrow3/v{}/{}_{}_10.parquet",
+                version, type_, "required"
             )
         } else {
             format!(
-                "fixtures/pyarrow3/v{}/basic_{}_10.parquet",
-                version, "nullable"
+                "fixtures/pyarrow3/v{}/{}_{}_10.parquet",
+                version, type_, "nullable"
             )
         };
         let mut file = File::open(path).unwrap();
         let (array, statistics) = read_column(&mut file, 0, column)?;
 
-        let expected = if required {
-            pyarrow_required(column)
-        } else {
-            pyarrow_nullable(column)
+        let expected = match (type_, required) {
+            ("basic", true) => pyarrow_required(column),
+            ("basic", false) => pyarrow_nullable(column),
+            ("nested", false) => pyarrow_nested_nullable(column),
+            _ => unreachable!(),
         };
 
-        let expected_statistics = if required {
-            pyarrow_required_statistics(column)
-        } else {
-            pyarrow_nullable_statistics(column)
+        let expected_statistics = match (type_, required) {
+            ("basic", true) => pyarrow_required_statistics(column),
+            ("basic", false) => pyarrow_nullable_statistics(column),
+            ("nested", false) => pyarrow_nullable_statistics(column),
+            _ => unreachable!(),
         };
 
         assert_eq!(expected.as_ref(), array.as_ref());
@@ -241,73 +279,78 @@ mod tests {
 
     #[test]
     fn v1_int64_nullable() -> Result<()> {
-        test_pyarrow_integration(0, 1, false)
+        test_pyarrow_integration(0, 1, "basic", false)
     }
 
     #[test]
     fn v1_int64_required() -> Result<()> {
-        test_pyarrow_integration(0, 1, true)
+        test_pyarrow_integration(0, 1, "basic", true)
     }
 
     #[test]
     fn v1_float64_nullable() -> Result<()> {
-        test_pyarrow_integration(1, 1, false)
+        test_pyarrow_integration(1, 1, "basic", false)
     }
 
     #[test]
     fn v1_utf8_nullable() -> Result<()> {
-        test_pyarrow_integration(2, 1, false)
+        test_pyarrow_integration(2, 1, "basic", false)
     }
 
     #[test]
     fn v1_utf8_required() -> Result<()> {
-        test_pyarrow_integration(2, 1, true)
+        test_pyarrow_integration(2, 1, "basic", true)
     }
 
     #[test]
     fn v1_boolean_nullable() -> Result<()> {
-        test_pyarrow_integration(3, 1, false)
+        test_pyarrow_integration(3, 1, "basic", false)
     }
 
     #[test]
     fn v1_boolean_required() -> Result<()> {
-        test_pyarrow_integration(3, 1, true)
+        test_pyarrow_integration(3, 1, "basic", true)
     }
 
     #[test]
     fn v1_timestamp_nullable() -> Result<()> {
-        test_pyarrow_integration(4, 1, false)
+        test_pyarrow_integration(4, 1, "basic", false)
     }
 
     #[test]
     #[ignore] // pyarrow issue; see https://issues.apache.org/jira/browse/ARROW-12201
     fn v1_u32_nullable() -> Result<()> {
-        test_pyarrow_integration(5, 1, false)
+        test_pyarrow_integration(5, 1, "basic", false)
     }
 
     #[test]
     fn v2_int64_nullable() -> Result<()> {
-        test_pyarrow_integration(0, 2, false)
+        test_pyarrow_integration(0, 2, "basic", false)
     }
 
     #[test]
     fn v2_utf8_nullable() -> Result<()> {
-        test_pyarrow_integration(2, 2, false)
+        test_pyarrow_integration(2, 2, "basic", false)
     }
 
     #[test]
     fn v2_utf8_required() -> Result<()> {
-        test_pyarrow_integration(2, 2, true)
+        test_pyarrow_integration(2, 2, "basic", true)
     }
 
     #[test]
     fn v2_boolean_nullable() -> Result<()> {
-        test_pyarrow_integration(3, 2, false)
+        test_pyarrow_integration(3, 2, "basic", false)
     }
 
     #[test]
     fn v2_boolean_required() -> Result<()> {
-        test_pyarrow_integration(3, 2, true)
+        test_pyarrow_integration(3, 2, "basic", true)
+    }
+
+    #[test]
+    fn v2_nested_nullable() -> Result<()> {
+        test_pyarrow_integration(0, 2, "nested", false)
     }
 }
 

@@ -14,6 +14,8 @@ impl From<parquet2::error::ParquetError> for ArrowError {
 #[cfg(test)]
 mod tests {
     use crate::array::*;
+    use crate::bitmap::Bitmap;
+    use crate::buffer::Buffer;
     use crate::datatypes::*;
 
     use crate::error::Result;
@@ -44,6 +46,32 @@ mod tests {
             .transpose()?;
 
         Ok((reader.next().unwrap()?.columns()[0].clone(), statistics))
+    }
+
+    pub fn pyarrow_nested_nullable(_column: usize) -> Box<dyn Array> {
+        // [[0, 1], None, [2, None, 3], [4, 5, 6], [], [7, 8, 9], None, [10]]
+        let values = Arc::new(PrimitiveArray::<i64>::from(&[
+            Some(0),
+            Some(1),
+            Some(2),
+            None,
+            Some(3),
+            Some(4),
+            Some(5),
+            Some(6),
+            Some(7),
+            Some(8),
+            Some(9),
+            Some(10),
+        ])) as Arc<dyn Array>;
+        let offsets = Buffer::<i32>::from([0, 2, 2, 5, 8, 8, 11, 11, 12]);
+        let validity = Some(Bitmap::from([
+            true, false, true, true, true, true, false, true,
+        ]));
+        let data_type = DataType::List(Box::new(Field::new("item", DataType::Int64, true)));
+        Box::new(ListArray::<i32>::from_data(
+            data_type, offsets, values, validity,
+        ))
     }
 
     pub fn pyarrow_nullable(column: usize) -> Box<dyn Array> {

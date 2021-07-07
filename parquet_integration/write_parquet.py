@@ -72,6 +72,21 @@ def case_basic_required(size=1):
     )
 
 
+def case_nested(size):
+    items = [[0, 1], None, [2, None, 3], [4, 5, 6], [], [7, 8, 9], None, [10]]
+    fields = [
+        pa.field("list_int64", pa.list_(pa.int64())),
+    ]
+    schema = pa.schema(fields)
+    return (
+        {
+            "list_int64": items * size,
+        },
+        schema,
+        f"nested_nullable_{size*10}.parquet",
+    )
+
+
 def write_pyarrow(case, size=1, page_version=1):
     data, schema, path = case(size)
 
@@ -96,6 +111,9 @@ write_pyarrow(case_basic_nullable, 1, 2)  # V2
 
 write_pyarrow(case_basic_required, 1, 1)  # V1
 write_pyarrow(case_basic_required, 1, 2)  # V2
+
+write_pyarrow(case_nested, 1, 1)  # V1
+write_pyarrow(case_nested, 1, 2)  # V2
 
 
 def case_benches(size):
