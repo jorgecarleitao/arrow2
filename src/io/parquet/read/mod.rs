@@ -368,6 +368,16 @@ mod tests {
     fn v1_nested_int64_nullable_required() -> Result<()> {
         test_pyarrow_integration(1, 1, "nested", false)
     }
+
+    #[test]
+    fn v2_nested_int64_required_required() -> Result<()> {
+        test_pyarrow_integration(2, 2, "nested", false)
+    }
+
+    #[test]
+    fn v1_nested_int64_required_required() -> Result<()> {
+        test_pyarrow_integration(2, 1, "nested", false)
+    }
 }
 
 #[cfg(test)]

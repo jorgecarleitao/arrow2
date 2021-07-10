@@ -7,6 +7,7 @@ use parquet2::{
     types::NativeType,
 };
 
+use super::super::nested_utils::extend_offsets;
 use super::ColumnDescriptor;
 use super::{super::utils, utils::ExactChunksIter, Nested};
 use crate::{
@@ -48,30 +49,6 @@ where
 {
     let iterator = new_values.map(|v| op(v));
     values.extend_from_trusted_len_iter(iterator);
-}
-
-fn read_offsets<R, D>(
-    rep_levels: R,
-    def_levels: D,
-    is_nullable: bool,
-    max_rep: u32,
-    max_def: u32,
-    nested: &mut Vec<Box<dyn Nested>>,
-) where
-    R: Iterator<Item = u32>,
-    D: Iterator<Item = u32>,
-{
-    assert_eq!(max_rep, 1);
-    let mut values_count = 0;
-    rep_levels.zip(def_levels).for_each(|(rep, def)| {
-        if rep == 0 {
-            nested[0].push(values_count, def != 0);
-        }
-        if def == max_def || (is_nullable && def == max_def - 1) {
-            values_count += 1;
-        }
-    });
-    nested[0].close(values_count);
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -121,7 +98,7 @@ fn read<T, A, F>(
                 additional as u32,
             );
 
-            read_offsets(
+            extend_offsets(
                 rep_levels,
                 def_levels,
                 is_nullable,

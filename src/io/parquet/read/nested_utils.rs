@@ -90,3 +90,27 @@ impl NestedValid {
         Self { offsets }
     }
 }
+
+pub fn extend_offsets<R, D>(
+    rep_levels: R,
+    def_levels: D,
+    is_nullable: bool,
+    max_rep: u32,
+    max_def: u32,
+    nested: &mut Vec<Box<dyn Nested>>,
+) where
+    R: Iterator<Item = u32>,
+    D: Iterator<Item = u32>,
+{
+    assert_eq!(max_rep, 1);
+    let mut values_count = 0;
+    rep_levels.zip(def_levels).for_each(|(rep, def)| {
+        if rep == 0 {
+            nested[0].push(values_count, def != 0);
+        }
+        if def == max_def || (is_nullable && def == max_def - 1) {
+            values_count += 1;
+        }
+    });
+    nested[0].close(values_count);
+}

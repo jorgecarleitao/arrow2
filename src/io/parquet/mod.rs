@@ -49,11 +49,8 @@ mod tests {
     }
 
     pub fn pyarrow_nested_nullable(column: usize) -> Box<dyn Array> {
-        let is_nullable = match column {
-            0 => true,
-            1 => false,
-            _ => unreachable!(),
-        };
+        let offsets = Buffer::<i32>::from([0, 2, 2, 5, 8, 8, 11, 11, 12]);
+
         let values = match column {
             0 => {
                 // [[0, 1], None, [2, None, 3], [4, 5, 6], [], [7, 8, 9], None, [10]]
@@ -72,7 +69,7 @@ mod tests {
                     Some(10),
                 ])) as Arc<dyn Array>
             }
-            1 => {
+            1 | 2 => {
                 // [[0, 1], None, [2, 0, 3], [4, 5, 6], [], [7, 8, 9], None, [10]]
                 Arc::new(PrimitiveArray::<i64>::from(&[
                     Some(0),
@@ -91,14 +88,34 @@ mod tests {
             }
             _ => unreachable!(),
         };
-        let offsets = Buffer::<i32>::from([0, 2, 2, 5, 8, 8, 11, 11, 12]);
-        let validity = Some(Bitmap::from([
-            true, false, true, true, true, true, false, true,
-        ]));
-        let data_type = DataType::List(Box::new(Field::new("item", DataType::Int64, is_nullable)));
-        Box::new(ListArray::<i32>::from_data(
-            data_type, offsets, values, validity,
-        ))
+
+        match column {
+            0 | 1 => {
+                let is_nullable = match column {
+                    0 => true,
+                    1 => false,
+                    _ => unreachable!(),
+                };
+
+                let validity = Some(Bitmap::from([
+                    true, false, true, true, true, true, false, true,
+                ]));
+                let data_type =
+                    DataType::List(Box::new(Field::new("item", DataType::Int64, is_nullable)));
+                Box::new(ListArray::<i32>::from_data(
+                    data_type, offsets, values, validity,
+                ))
+            }
+            2 => {
+                // [[0, 1], [], [2, None, 3], [4, 5, 6], [], [7, 8, 9], [], [10]]
+                let data_type =
+                    DataType::List(Box::new(Field::new("item", DataType::Int64, false)));
+                Box::new(ListArray::<i32>::from_data(
+                    data_type, offsets, values, None,
+                ))
+            }
+            _ => unreachable!(),
+        }
     }
 
     pub fn pyarrow_nullable(column: usize) -> Box<dyn Array> {
