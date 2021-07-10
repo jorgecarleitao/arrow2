@@ -6,14 +6,16 @@ use std::sync::Arc;
 
 use parquet2::{
     read::{Page, StreamingIterator},
+    schema::{types::ParquetType, Repetition},
     types::NativeType,
 };
 
+use super::nested_utils::*;
 use super::{ColumnChunkMetaData, ColumnDescriptor};
 use crate::{
     array::{Array, ListArray, PrimitiveArray},
     bitmap::MutableBitmap,
-    buffer::MutableBuffer,
+    buffer::{Buffer, MutableBuffer},
     datatypes::DataType,
     error::{ArrowError, Result},
     types::NativeType as ArrowNativeType,
@@ -53,18 +55,21 @@ where
     ))
 }
 
-#[derive(Debug, Default)]
-pub struct Nested {
-    pub validity: MutableBitmap,
-    pub offsets: MutableBuffer<i64>,
-}
-
-impl Nested {
-    pub fn new(capacity: usize) -> Self {
-        let mut offsets = MutableBuffer::<i64>::with_capacity(capacity + 1);
-        offsets.push(0);
-        let validity = MutableBitmap::with_capacity(capacity);
-        Self { validity, offsets }
+fn is_nullable(type_: &ParquetType, container: &mut Vec<bool>) {
+    match type_ {
+        ParquetType::PrimitiveType { basic_info, .. } => {
+            container.push(super::schema::is_nullable(basic_info));
+        }
+        ParquetType::GroupType {
+            basic_info, fields, ..
+        } => {
+            if basic_info.repetition() != &Repetition::Repeated {
+                container.push(super::schema::is_nullable(basic_info));
+            }
+            for field in fields {
+                is_nullable(field, container)
+            }
+        }
     }
 }
 
@@ -86,15 +91,27 @@ where
     let mut values = MutableBuffer::<A>::with_capacity(capacity);
     let mut validity = MutableBitmap::with_capacity(capacity);
 
-    // -2: 1 for the null buffer of the primitive type; 1 for the emptyness of the list
-    let mut nested = (0..metadata.descriptor().max_def_level() - 2)
-        .map(|_| Nested::new(capacity))
+    let mut nullable = Vec::new();
+    is_nullable(metadata.descriptor().base_type(), &mut nullable);
+    // the primitive's nullability is the last on the list
+    let is_nullable = nullable.pop().unwrap();
+
+    let mut nested = nullable
+        .iter()
+        .map(|is_nullable| {
+            if *is_nullable {
+                Box::new(NestedOptional::with_capacity(capacity)) as Box<dyn Nested>
+            } else {
+                Box::new(NestedValid::with_capacity(capacity)) as Box<dyn Nested>
+            }
+        })
         .collect::<Vec<_>>();
 
     while let Some(page) = iter.next() {
         nested::extend_from_page(
             page.as_ref().map_err(|x| x.clone())?,
             metadata.descriptor(),
+            is_nullable,
             &mut nested,
             &mut values,
             &mut validity,
@@ -110,16 +127,11 @@ where
                 validity.into(),
             ));
 
-            let nested = std::mem::take(&mut nested[0]);
-            let Nested { offsets, validity } = nested;
+            let (offsets, validity) = nested[0].inner();
 
-            let offsets =
-                MutableBuffer::<i32>::from_trusted_len_iter(offsets.iter().map(|x| *x as i32));
+            let offsets = Buffer::<i32>::from_trusted_len_iter(offsets.iter().map(|x| *x as i32));
             Box::new(ListArray::<i32>::from_data(
-                data_type,
-                offsets.into(),
-                values,
-                validity.into(),
+                data_type, offsets, values, validity,
             ))
         }
         DataType::LargeList(ref inner) => {
@@ -129,14 +141,10 @@ where
                 validity.into(),
             ));
 
-            let nested = std::mem::take(&mut nested[0]);
-            let Nested { offsets, validity } = nested;
+            let (offsets, validity) = nested[0].inner();
 
             Box::new(ListArray::<i64>::from_data(
-                data_type,
-                offsets.into(),
-                values,
-                validity.into(),
+                data_type, offsets, values, validity,
             ))
         }
         _ => {

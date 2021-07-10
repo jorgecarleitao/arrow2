@@ -3,6 +3,7 @@ use std::io::{Read, Seek};
 mod binary;
 mod boolean;
 mod fixed_size_binary;
+mod nested_utils;
 mod primitive;
 mod record_batch;
 pub mod schema;
@@ -267,7 +268,7 @@ mod tests {
         let expected_statistics = match (type_, required) {
             ("basic", true) => pyarrow_required_statistics(column),
             ("basic", false) => pyarrow_nullable_statistics(column),
-            ("nested", false) => pyarrow_nullable_statistics(column),
+            ("nested", false) => pyarrow_nested_nullable_statistics(column),
             _ => unreachable!(),
         };
 
@@ -349,8 +350,23 @@ mod tests {
     }
 
     #[test]
-    fn v2_nested_nullable() -> Result<()> {
+    fn v2_nested_int64_nullable() -> Result<()> {
         test_pyarrow_integration(0, 2, "nested", false)
+    }
+
+    #[test]
+    fn v1_nested_int64_nullable() -> Result<()> {
+        test_pyarrow_integration(0, 1, "nested", false)
+    }
+
+    #[test]
+    fn v2_nested_int64_nullable_required() -> Result<()> {
+        test_pyarrow_integration(1, 2, "nested", false)
+    }
+
+    #[test]
+    fn v1_nested_int64_nullable_required() -> Result<()> {
+        test_pyarrow_integration(1, 1, "nested", false)
     }
 }
 

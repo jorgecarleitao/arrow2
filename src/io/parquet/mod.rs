@@ -48,27 +48,54 @@ mod tests {
         Ok((reader.next().unwrap()?.columns()[0].clone(), statistics))
     }
 
-    pub fn pyarrow_nested_nullable(_column: usize) -> Box<dyn Array> {
-        // [[0, 1], None, [2, None, 3], [4, 5, 6], [], [7, 8, 9], None, [10]]
-        let values = Arc::new(PrimitiveArray::<i64>::from(&[
-            Some(0),
-            Some(1),
-            Some(2),
-            None,
-            Some(3),
-            Some(4),
-            Some(5),
-            Some(6),
-            Some(7),
-            Some(8),
-            Some(9),
-            Some(10),
-        ])) as Arc<dyn Array>;
+    pub fn pyarrow_nested_nullable(column: usize) -> Box<dyn Array> {
+        let is_nullable = match column {
+            0 => true,
+            1 => false,
+            _ => unreachable!(),
+        };
+        let values = match column {
+            0 => {
+                // [[0, 1], None, [2, None, 3], [4, 5, 6], [], [7, 8, 9], None, [10]]
+                Arc::new(PrimitiveArray::<i64>::from(&[
+                    Some(0),
+                    Some(1),
+                    Some(2),
+                    None,
+                    Some(3),
+                    Some(4),
+                    Some(5),
+                    Some(6),
+                    Some(7),
+                    Some(8),
+                    Some(9),
+                    Some(10),
+                ])) as Arc<dyn Array>
+            }
+            1 => {
+                // [[0, 1], None, [2, 0, 3], [4, 5, 6], [], [7, 8, 9], None, [10]]
+                Arc::new(PrimitiveArray::<i64>::from(&[
+                    Some(0),
+                    Some(1),
+                    Some(2),
+                    Some(0),
+                    Some(3),
+                    Some(4),
+                    Some(5),
+                    Some(6),
+                    Some(7),
+                    Some(8),
+                    Some(9),
+                    Some(10),
+                ])) as Arc<dyn Array>
+            }
+            _ => unreachable!(),
+        };
         let offsets = Buffer::<i32>::from([0, 2, 2, 5, 8, 8, 11, 11, 12]);
         let validity = Some(Bitmap::from([
             true, false, true, true, true, true, false, true,
         ]));
-        let data_type = DataType::List(Box::new(Field::new("item", DataType::Int64, true)));
+        let data_type = DataType::List(Box::new(Field::new("item", DataType::Int64, is_nullable)));
         Box::new(ListArray::<i32>::from_data(
             data_type, offsets, values, validity,
         ))
@@ -239,6 +266,16 @@ mod tests {
             }),
             _ => unreachable!(),
         }
+    }
+
+    pub fn pyarrow_nested_nullable_statistics(_column: usize) -> Box<dyn Statistics> {
+        Box::new(PrimitiveStatistics::<i64> {
+            data_type: DataType::Int64,
+            distinct_count: None,
+            null_count: Some(3),
+            min_value: Some(0),
+            max_value: Some(9),
+        })
     }
 }
 
