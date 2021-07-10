@@ -10,4 +10,5 @@
     - [Write CSV](./io/csv_write.md)
     - [Read Parquet](./io/parquet_read.md)
     - [Write Parquet](./io/parquet_write.md)
-    - [Read Arrow IPC files](./io/ipc_file_read.md)
+    - [Read Arrow](./io/ipc_read.md)
+    - [Write Arrow](./io/ipc_write.md)
