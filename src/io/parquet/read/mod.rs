@@ -74,16 +74,20 @@ fn page_iter_i64<I: StreamingIterator<Item = std::result::Result<Page, ParquetEr
             DataType::UInt64 => {
                 primitive::iter_to_array_nested(iter, metadata, real_type, |x: i64| x as u64)
             }
+            DataType::UInt32 => {
+                primitive::iter_to_array_nested(iter, metadata, real_type, |x: i32| x as u32)
+            }
             _ => primitive::iter_to_array_nested(iter, metadata, real_type, |x: i64| x as i64),
         }
     } else {
         match data_type {
             DataType::UInt64 => {
                 primitive::iter_to_array(iter, metadata, data_type, |x: i64| x as u64)
-                    .map(|x| Box::new(x) as Box<dyn Array>)
             }
-            _ => primitive::iter_to_array(iter, metadata, data_type, |x: i64| x as i64)
-                .map(|x| Box::new(x) as Box<dyn Array>),
+            DataType::UInt32 => {
+                primitive::iter_to_array(iter, metadata, data_type, |x: i32| x as u32)
+            }
+            _ => primitive::iter_to_array(iter, metadata, data_type, |x: i64| x as i64),
         }
     }
 }
@@ -97,19 +101,25 @@ fn page_iter_i32<I: StreamingIterator<Item = std::result::Result<Page, ParquetEr
     let data_type = schema::from_int32(logical_type, converted_type)?;
 
     use DataType::*;
-    match data_type {
-        UInt8 => primitive::iter_to_array(iter, metadata, data_type, |x: i32| x as u8)
-            .map(|x| Box::new(x) as Box<dyn Array>),
-        UInt16 => primitive::iter_to_array(iter, metadata, data_type, |x: i32| x as u16)
-            .map(|x| Box::new(x) as Box<dyn Array>),
-        UInt32 => primitive::iter_to_array(iter, metadata, data_type, |x: i32| x as u32)
-            .map(|x| Box::new(x) as Box<dyn Array>),
-        Int8 => primitive::iter_to_array(iter, metadata, data_type, |x: i32| x as i8)
-            .map(|x| Box::new(x) as Box<dyn Array>),
-        Int16 => primitive::iter_to_array(iter, metadata, data_type, |x: i32| x as i16)
-            .map(|x| Box::new(x) as Box<dyn Array>),
-        _ => primitive::iter_to_array(iter, metadata, data_type, |x: i32| x)
-            .map(|x| Box::new(x) as Box<dyn Array>),
+
+    if metadata.descriptor().max_rep_level() > 0 {
+        let real_type = schema::to_data_type(metadata.descriptor().base_type())?.unwrap();
+
+        match data_type {
+            UInt8 => primitive::iter_to_array_nested(iter, metadata, real_type, |x: i32| x as u8),
+            UInt16 => primitive::iter_to_array_nested(iter, metadata, real_type, |x: i32| x as u16),
+            Int8 => primitive::iter_to_array_nested(iter, metadata, real_type, |x: i32| x as i8),
+            Int16 => primitive::iter_to_array_nested(iter, metadata, real_type, |x: i32| x as i16),
+            _ => primitive::iter_to_array_nested(iter, metadata, real_type, |x: i32| x),
+        }
+    } else {
+        match data_type {
+            UInt8 => primitive::iter_to_array(iter, metadata, data_type, |x: i32| x as u8),
+            UInt16 => primitive::iter_to_array(iter, metadata, data_type, |x: i32| x as u16),
+            Int8 => primitive::iter_to_array(iter, metadata, data_type, |x: i32| x as i8),
+            Int16 => primitive::iter_to_array(iter, metadata, data_type, |x: i32| x as i16),
+            _ => primitive::iter_to_array(iter, metadata, data_type, |x: i32| x),
+        }
     }
 }
 
@@ -176,18 +186,12 @@ pub fn page_iter_to_array<I: StreamingIterator<Item = std::result::Result<Page, 
             (PhysicalType::Int64, _, _) => {
                 page_iter_i64(iter, metadata, converted_type, logical_type)
             }
-            (PhysicalType::Float, None, None) => Ok(Box::new(primitive::iter_to_array(
-                iter,
-                metadata,
-                DataType::Float32,
-                |x: f32| x,
-            )?)),
-            (PhysicalType::Double, None, None) => Ok(Box::new(primitive::iter_to_array(
-                iter,
-                metadata,
-                DataType::Float64,
-                |x: f64| x,
-            )?)),
+            (PhysicalType::Float, None, None) => {
+                primitive::iter_to_array(iter, metadata, DataType::Float32, |x: f32| x)
+            }
+            (PhysicalType::Double, None, None) => {
+                primitive::iter_to_array(iter, metadata, DataType::Float64, |x: f64| x)
+            }
             (PhysicalType::Boolean, None, None) => {
                 Ok(Box::new(boolean::iter_to_array(iter, metadata)?))
             }
@@ -197,12 +201,12 @@ pub fn page_iter_to_array<I: StreamingIterator<Item = std::result::Result<Page, 
             (PhysicalType::FixedLenByteArray(length), _, _) => {
                 page_iter_fixed_len_byte_array(iter, length, metadata, converted_type, logical_type)
             }
-            (PhysicalType::Int96, _, _) => Ok(Box::new(primitive::iter_to_array(
+            (PhysicalType::Int96, _, _) => primitive::iter_to_array(
                 iter,
                 metadata,
                 DataType::Timestamp(TimeUnit::Nanosecond, None),
                 int96_to_i64_ns,
-            )?)),
+            ),
             (p, c, l) => Err(ArrowError::NotYetImplemented(format!(
                 "The conversion of ({:?}, {:?}, {:?}) to arrow still not implemented",
                 p, c, l
@@ -219,6 +223,9 @@ pub fn page_iter_to_array<I: StreamingIterator<Item = std::result::Result<Page, 
                 } => match (physical_type, converted_type, logical_type) {
                     (PhysicalType::Int64, _, _) => {
                         page_iter_i64(iter, metadata, converted_type, logical_type)
+                    }
+                    (PhysicalType::Int32, _, _) => {
+                        page_iter_i32(iter, metadata, converted_type, logical_type)
                     }
                     _ => todo!(),
                 },
@@ -377,6 +384,11 @@ mod tests {
     #[test]
     fn v1_nested_int64_required_required() -> Result<()> {
         test_pyarrow_integration(2, 1, "nested", false)
+    }
+
+    #[test]
+    fn v2_nested_i16() -> Result<()> {
+        test_pyarrow_integration(3, 2, "nested", false)
     }
 }
 

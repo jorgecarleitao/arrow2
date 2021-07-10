@@ -86,22 +86,36 @@ mod tests {
                     Some(10),
                 ])) as Arc<dyn Array>
             }
+            3 => Arc::new(PrimitiveArray::<i16>::from(&[
+                Some(0),
+                Some(1),
+                Some(2),
+                None,
+                Some(3),
+                Some(4),
+                Some(5),
+                Some(6),
+                Some(7),
+                Some(8),
+                Some(9),
+                Some(10),
+            ])) as Arc<dyn Array>,
             _ => unreachable!(),
         };
 
         match column {
-            0 | 1 => {
-                let is_nullable = match column {
-                    0 => true,
-                    1 => false,
+            0 | 1 | 3 => {
+                let field = match column {
+                    0 => Field::new("item", DataType::Int64, true),
+                    1 => Field::new("item", DataType::Int64, false),
+                    3 => Field::new("item", DataType::Int16, true),
                     _ => unreachable!(),
                 };
 
                 let validity = Some(Bitmap::from([
                     true, false, true, true, true, true, false, true,
                 ]));
-                let data_type =
-                    DataType::List(Box::new(Field::new("item", DataType::Int64, is_nullable)));
+                let data_type = DataType::List(Box::new(field));
                 Box::new(ListArray::<i32>::from_data(
                     data_type, offsets, values, validity,
                 ))
@@ -285,14 +299,23 @@ mod tests {
         }
     }
 
-    pub fn pyarrow_nested_nullable_statistics(_column: usize) -> Box<dyn Statistics> {
-        Box::new(PrimitiveStatistics::<i64> {
-            data_type: DataType::Int64,
-            distinct_count: None,
-            null_count: Some(3),
-            min_value: Some(0),
-            max_value: Some(9),
-        })
+    pub fn pyarrow_nested_nullable_statistics(column: usize) -> Box<dyn Statistics> {
+        match column {
+            3 => Box::new(PrimitiveStatistics::<i16> {
+                data_type: DataType::Int16,
+                distinct_count: None,
+                null_count: Some(1),
+                min_value: Some(0),
+                max_value: Some(10),
+            }),
+            _ => Box::new(PrimitiveStatistics::<i64> {
+                data_type: DataType::Int64,
+                distinct_count: None,
+                null_count: Some(3),
+                min_value: Some(0),
+                max_value: Some(9),
+            }),
+        }
     }
 }
 

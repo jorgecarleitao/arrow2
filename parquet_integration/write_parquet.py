@@ -76,6 +76,7 @@ def case_nested(size):
     items_nullable = [[0, 1], None, [2, None, 3], [4, 5, 6], [], [7, 8, 9], None, [10]]
     items_required = [[0, 1], None, [2, 0, 3], [4, 5, 6], [], [7, 8, 9], None, [10]]
     all_required = [[0, 1], [], [2, 0, 3], [4, 5, 6], [], [7, 8, 9], [], [10]]
+    i16 = [[0, 1], None, [2, None, 3], [4, 5, 6], [], [7, 8, 9], None, [10]]
     fields = [
         pa.field("list_int64", pa.list_(pa.int64())),
         pa.field("list_int64_required", pa.list_(pa.field("item", pa.int64(), False))),
@@ -84,6 +85,7 @@ def case_nested(size):
             pa.list_(pa.field("item", pa.int64(), False)),
             False,
         ),
+        pa.field("list_int16", pa.list_(pa.int16())),
     ]
     schema = pa.schema(fields)
     return (
@@ -91,6 +93,7 @@ def case_nested(size):
             "list_int64": items_nullable * size,
             "list_int64_required": items_required * size,
             "list_int64_required_required": all_required * size,
+            "list_int16": i16 * size,
         },
         schema,
         f"nested_nullable_{size*10}.parquet",

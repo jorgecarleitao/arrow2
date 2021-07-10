@@ -25,7 +25,7 @@ pub fn iter_to_array<T, A, I, E, F>(
     metadata: &ColumnChunkMetaData,
     data_type: DataType,
     op: F,
-) -> Result<PrimitiveArray<A>>
+) -> Result<Box<dyn Array>>
 where
     ArrowError: From<E>,
     T: NativeType,
@@ -47,11 +47,11 @@ where
         )?
     }
 
-    Ok(PrimitiveArray::from_data(
+    Ok(Box::new(PrimitiveArray::from_data(
         data_type,
         values.into(),
         validity.into(),
-    ))
+    )))
 }
 
 pub fn iter_to_array_nested<T, A, I, E, F>(
