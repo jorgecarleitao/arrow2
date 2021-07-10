@@ -17,7 +17,7 @@ pub trait Index: NativeType {
 /// # Safety
 /// Do not implement.
 pub unsafe trait Offset:
-    Index + NaturalDataType + Num + Ord + std::ops::AddAssign + num::CheckedAdd
+    Index + NaturalDataType + Num + Ord + std::ops::AddAssign + std::ops::Sub + num::CheckedAdd
 {
     fn is_large() -> bool;
 

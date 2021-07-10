@@ -1,71 +1,7 @@
-use crate::datatypes::DataType;
-use crate::{
-    array::{Array, FixedSizeListArray},
-    bitmap::Bitmap,
-};
+use crate::array::{Array, FixedSizeListArray};
 
-use super::{
-    equal_range,
-    utils::{child_logical_null_buffer, count_validity},
-};
-
-pub(super) fn equal(
-    lhs: &FixedSizeListArray,
-    rhs: &FixedSizeListArray,
-    lhs_validity: &Option<Bitmap>,
-    rhs_validity: &Option<Bitmap>,
-    lhs_start: usize,
-    rhs_start: usize,
-    len: usize,
-) -> bool {
-    let size = match lhs.data_type() {
-        DataType::FixedSizeList(_, i) => *i as usize,
-        _ => unreachable!(),
-    };
-
-    let lhs_values = lhs.values().as_ref();
-    let rhs_values = rhs.values().as_ref();
-
-    let child_lhs_validity = child_logical_null_buffer(lhs, lhs_validity, lhs_values);
-    let child_rhs_validity = child_logical_null_buffer(rhs, rhs_validity, rhs_values);
-
-    let lhs_null_count = count_validity(lhs_validity, lhs_start, len);
-    let rhs_null_count = count_validity(rhs_validity, rhs_start, len);
-
-    if lhs_null_count == 0 && rhs_null_count == 0 {
-        equal_range(
-            lhs_values,
-            rhs_values,
-            &child_lhs_validity,
-            &child_rhs_validity,
-            size * lhs_start,
-            size * rhs_start,
-            size * len,
-        )
-    } else {
-        let lhs_bitmap = lhs_validity.as_ref().unwrap();
-        let rhs_bitmap = lhs_validity.as_ref().unwrap();
-
-        (0..len).all(|i| {
-            let lhs_pos = lhs_start + i;
-            let rhs_pos = rhs_start + i;
-
-            let lhs_is_null = !lhs_bitmap.get_bit(lhs_pos);
-            let rhs_is_null = !rhs_bitmap.get_bit(rhs_pos);
-
-            lhs_is_null
-                || (lhs_is_null == rhs_is_null)
-                    && equal_range(
-                        lhs_values,
-                        rhs_values,
-                        &child_lhs_validity,
-                        &child_rhs_validity,
-                        lhs_pos * size,
-                        rhs_pos * size,
-                        size, // 1 * size since we are comparing a single entry
-                    )
-        })
-    }
+pub(super) fn equal(lhs: &FixedSizeListArray, rhs: &FixedSizeListArray) -> bool {
+    lhs.data_type() == rhs.data_type() && lhs.len() == rhs.len() && lhs.iter().eq(rhs.iter())
 }
 
 #[cfg(test)]

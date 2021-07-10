@@ -142,3 +142,7 @@ harness = false
 [[bench]]
 name = "aggregate"
 harness = false
+
+[[bench]]
+name = "write_ipc"
+harness = false

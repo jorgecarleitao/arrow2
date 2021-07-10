@@ -175,6 +175,34 @@ mod tests {
         read::{read_file_metadata, FileReader},
     };
 
+    fn test_round_trip(batch: RecordBatch) -> Result<()> {
+        let mut result = Vec::<u8>::new();
+
+        // write IPC version 5
+        {
+            let options = IpcWriteOptions::try_new(8, false, gen::Schema::MetadataVersion::V5)?;
+            let mut writer =
+                FileWriter::try_new_with_options(&mut result, batch.schema(), options)?;
+            writer.write(&batch)?;
+            writer.finish()?;
+        }
+        let mut reader = Cursor::new(result);
+        let metadata = read_file_metadata(&mut reader)?;
+        let schema = metadata.schema().clone();
+
+        let reader = FileReader::new(&mut reader, metadata);
+
+        // read expected JSON output
+        let (expected_schema, expected_batches) = (batch.schema().clone(), vec![batch]);
+
+        assert_eq!(schema.as_ref(), expected_schema.as_ref());
+
+        let batches = reader.collect::<Result<Vec<_>>>()?;
+
+        assert_eq!(batches, expected_batches);
+        Ok(())
+    }
+
     fn test_file(version: &str, file_name: &str) -> Result<()> {
         let (schema, batches) = read_gzip_json(version, file_name);
 
@@ -300,5 +328,32 @@ mod tests {
     fn write_100_decimal() -> Result<()> {
         test_file("1.0.0-littleendian", "generated_decimal")?;
         test_file("1.0.0-bigendian", "generated_decimal")
+    }
+
+    #[test]
+    fn write_sliced_utf8() -> Result<()> {
+        use crate::array::{Array, Utf8Array};
+        use std::sync::Arc;
+        let array =
+            Arc::new(Utf8Array::<i32>::from_slice(["aa", "bb"]).slice(1, 1)) as Arc<dyn Array>;
+        let batch = RecordBatch::try_from_iter(vec![("a", array)]).unwrap();
+        test_round_trip(batch)
+    }
+
+    #[test]
+    fn write_sliced_list() -> Result<()> {
+        use crate::array::{MutableListArray, MutablePrimitiveArray, TryExtend};
+
+        let data = vec![
+            Some(vec![Some(1i32), Some(2), Some(3)]),
+            None,
+            Some(vec![Some(4), None, Some(6)]),
+        ];
+
+        let mut array = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new();
+        array.try_extend(data).unwrap();
+        let array = array.into_arc().slice(1, 2).into();
+        let batch = RecordBatch::try_from_iter(vec![("a", array)]).unwrap();
+        test_round_trip(batch)
     }
 }
