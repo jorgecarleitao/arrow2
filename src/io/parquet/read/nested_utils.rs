@@ -1,3 +1,5 @@
+use parquet2::schema::{types::ParquetType, Repetition};
+
 use crate::{
     bitmap::{Bitmap, MutableBitmap},
     buffer::{Buffer, MutableBuffer},
@@ -113,4 +115,22 @@ pub fn extend_offsets<R, D>(
         }
     });
     nested[0].close(values_count);
+}
+
+pub fn is_nullable(type_: &ParquetType, container: &mut Vec<bool>) {
+    match type_ {
+        ParquetType::PrimitiveType { basic_info, .. } => {
+            container.push(super::schema::is_nullable(basic_info));
+        }
+        ParquetType::GroupType {
+            basic_info, fields, ..
+        } => {
+            if basic_info.repetition() != &Repetition::Repeated {
+                container.push(super::schema::is_nullable(basic_info));
+            }
+            for field in fields {
+                is_nullable(field, container)
+            }
+        }
+    }
 }

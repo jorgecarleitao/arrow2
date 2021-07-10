@@ -6,7 +6,6 @@ use std::sync::Arc;
 
 use parquet2::{
     read::{Page, StreamingIterator},
-    schema::{types::ParquetType, Repetition},
     types::NativeType,
 };
 
@@ -53,24 +52,6 @@ where
         values.into(),
         validity.into(),
     ))
-}
-
-fn is_nullable(type_: &ParquetType, container: &mut Vec<bool>) {
-    match type_ {
-        ParquetType::PrimitiveType { basic_info, .. } => {
-            container.push(super::schema::is_nullable(basic_info));
-        }
-        ParquetType::GroupType {
-            basic_info, fields, ..
-        } => {
-            if basic_info.repetition() != &Repetition::Repeated {
-                container.push(super::schema::is_nullable(basic_info));
-            }
-            for field in fields {
-                is_nullable(field, container)
-            }
-        }
-    }
 }
 
 pub fn iter_to_array_nested<T, A, I, E, F>(
