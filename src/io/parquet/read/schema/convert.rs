@@ -319,7 +319,7 @@ fn to_group_type(
 }
 
 /// Checks whether this schema is nullable.
-pub(super) fn is_nullable(basic_info: &BasicTypeInfo) -> bool {
+pub(crate) fn is_nullable(basic_info: &BasicTypeInfo) -> bool {
     match basic_info.repetition() {
         Repetition::Optional => true,
         Repetition::Repeated => true,

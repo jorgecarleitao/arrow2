@@ -5,17 +5,18 @@ use parquet2::{
 };
 
 use crate::{
-    array::{Offset, Utf8Array},
+    array::{Array, BinaryArray, Offset, Utf8Array},
     bitmap::{utils::BitmapIter, MutableBitmap},
     buffer::MutableBuffer,
+    datatypes::DataType,
     error::{ArrowError, Result},
 };
 
-use super::utils;
+use super::super::utils;
 
 /// Assumptions: No rep levels
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn read_dict_buffer<O: Offset>(
+fn read_dict_buffer<O: Offset>(
     validity_buffer: &[u8],
     indices_buffer: &[u8],
     length: u32,
@@ -82,15 +83,14 @@ pub(crate) fn read_dict_buffer<O: Offset>(
     }
 }
 
-pub(crate) fn read_optional<O: Offset>(
+fn read_optional<O: Offset>(
     validity_buffer: &[u8],
     values_buffer: &[u8],
-    length: u32,
+    length: usize,
     offsets: &mut MutableBuffer<O>,
     values: &mut MutableBuffer<u8>,
     validity: &mut MutableBitmap,
 ) {
-    let length = length as usize;
     let mut last_offset = *offsets.as_mut_slice().last().unwrap();
 
     // values_buffer: first 4 bytes are len, remaining is values
@@ -132,9 +132,9 @@ pub(crate) fn read_optional<O: Offset>(
     }
 }
 
-pub(crate) fn read_required<O: Offset>(
+pub(super) fn read_required<O: Offset>(
     buffer: &[u8],
-    _length: u32,
+    _length: usize,
     offsets: &mut MutableBuffer<O>,
     values: &mut MutableBuffer<u8>,
 ) {
@@ -149,36 +149,7 @@ pub(crate) fn read_required<O: Offset>(
     }
 }
 
-pub fn iter_to_array<O, I, E>(mut iter: I, metadata: &ColumnChunkMetaData) -> Result<Utf8Array<O>>
-where
-    ArrowError: From<E>,
-    E: Clone,
-    O: Offset,
-    I: StreamingIterator<Item = std::result::Result<Page, E>>,
-{
-    let capacity = metadata.num_values() as usize;
-    let mut values = MutableBuffer::<u8>::with_capacity(0);
-    let mut offsets = MutableBuffer::<O>::with_capacity(1 + capacity);
-    offsets.push(O::default());
-    let mut validity = MutableBitmap::with_capacity(capacity);
-    while let Some(page) = iter.next() {
-        extend_from_page(
-            page.as_ref().map_err(|x| x.clone())?,
-            metadata.descriptor(),
-            &mut offsets,
-            &mut values,
-            &mut validity,
-        )?
-    }
-
-    Ok(Utf8Array::from_data(
-        offsets.into(),
-        values.into(),
-        validity.into(),
-    ))
-}
-
-pub(crate) fn extend_from_page<O: Offset>(
+fn extend_from_page<O: Offset>(
     page: &Page,
     descriptor: &ColumnDescriptor,
     offsets: &mut MutableBuffer<O>,
@@ -212,14 +183,14 @@ pub(crate) fn extend_from_page<O: Offset>(
                     read_optional::<O>(
                         validity_buffer,
                         values_buffer,
-                        page.num_values() as u32,
+                        page.num_values(),
                         offsets,
                         values,
                         validity,
                     )
                 }
                 (Encoding::Plain, None, false) => {
-                    read_required::<O>(page.buffer(), page.num_values() as u32, offsets, values)
+                    read_required::<O>(page.buffer(), page.num_values(), offsets, values)
                 }
                 _ => {
                     return Err(utils::not_implemented(
@@ -255,14 +226,14 @@ pub(crate) fn extend_from_page<O: Offset>(
                     read_optional::<O>(
                         validity_buffer,
                         values_buffer,
-                        page.num_values() as u32,
+                        page.num_values(),
                         offsets,
                         values,
                         validity,
                     )
                 }
                 (Encoding::Plain, None, false) => {
-                    read_required::<O>(page.buffer(), page.num_values() as u32, offsets, values)
+                    read_required::<O>(page.buffer(), page.num_values(), offsets, values)
                 }
                 _ => {
                     return Err(utils::not_implemented(
@@ -277,4 +248,45 @@ pub(crate) fn extend_from_page<O: Offset>(
         }
     };
     Ok(())
+}
+
+pub fn iter_to_array<O, I, E>(
+    mut iter: I,
+    metadata: &ColumnChunkMetaData,
+    data_type: &DataType,
+) -> Result<Box<dyn Array>>
+where
+    ArrowError: From<E>,
+    O: Offset,
+    E: Clone,
+    I: StreamingIterator<Item = std::result::Result<Page, E>>,
+{
+    let capacity = metadata.num_values() as usize;
+    let mut values = MutableBuffer::<u8>::with_capacity(0);
+    let mut offsets = MutableBuffer::<O>::with_capacity(1 + capacity);
+    offsets.push(O::default());
+    let mut validity = MutableBitmap::with_capacity(capacity);
+    while let Some(page) = iter.next() {
+        extend_from_page(
+            page.as_ref().map_err(|x| x.clone())?,
+            metadata.descriptor(),
+            &mut offsets,
+            &mut values,
+            &mut validity,
+        )?
+    }
+
+    Ok(match data_type {
+        DataType::LargeBinary | DataType::Binary => Box::new(BinaryArray::from_data(
+            offsets.into(),
+            values.into(),
+            validity.into(),
+        )),
+        DataType::LargeUtf8 | DataType::Utf8 => Box::new(Utf8Array::from_data(
+            offsets.into(),
+            values.into(),
+            validity.into(),
+        )),
+        _ => unreachable!(),
+    })
 }

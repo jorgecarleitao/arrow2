@@ -72,6 +72,70 @@ def case_basic_required(size=1):
     )
 
 
+def case_nested(size):
+    items_nullable = [[0, 1], None, [2, None, 3], [4, 5, 6], [], [7, 8, 9], None, [10]]
+    items_required = [[0, 1], None, [2, 0, 3], [4, 5, 6], [], [7, 8, 9], None, [10]]
+    all_required = [[0, 1], [], [2, 0, 3], [4, 5, 6], [], [7, 8, 9], [], [10]]
+    i16 = [[0, 1], None, [2, None, 3], [4, 5, 6], [], [7, 8, 9], None, [10]]
+    boolean = [
+        [False, True],
+        None,
+        [True, None, False],
+        [True, False, True],
+        [],
+        [False, False, False],
+        None,
+        [True],
+    ]
+    items_nested = [
+        [[0, 1]],
+        None,
+        [[2, None], [3]],
+        [[4, 5], [6]],
+        [],
+        [[7], None, [9]],
+        None,
+        [[10]],
+    ]
+    string = [
+        ["Hello", "bbb"],
+        None,
+        ["aa", None, ""],
+        ["bbb", "aa", "ccc"],
+        [],
+        ["abc", "bbb", "bbb"],
+        None,
+        [""],
+    ]
+    fields = [
+        pa.field("list_int64", pa.list_(pa.int64())),
+        pa.field("list_int64_required", pa.list_(pa.field("item", pa.int64(), False))),
+        pa.field(
+            "list_int64_required_required",
+            pa.list_(pa.field("item", pa.int64(), False)),
+            False,
+        ),
+        pa.field("list_int16", pa.list_(pa.int16())),
+        pa.field("list_bool", pa.list_(pa.bool_())),
+        pa.field("list_utf8", pa.list_(pa.utf8())),
+        pa.field("list_nested_i64", pa.list_(pa.list_(pa.int64()))),
+    ]
+    schema = pa.schema(fields)
+    return (
+        {
+            "list_int64": items_nullable * size,
+            "list_int64_required": items_required * size,
+            "list_int64_required_required": all_required * size,
+            "list_int16": i16 * size,
+            "list_bool": boolean * size,
+            "list_utf8": string * size,
+            "list_nested_i64": items_nested * size,
+        },
+        schema,
+        f"nested_nullable_{size*10}.parquet",
+    )
+
+
 def write_pyarrow(case, size=1, page_version=1):
     data, schema, path = case(size)
 
@@ -96,6 +160,9 @@ write_pyarrow(case_basic_nullable, 1, 2)  # V2
 
 write_pyarrow(case_basic_required, 1, 1)  # V1
 write_pyarrow(case_basic_required, 1, 2)  # V2
+
+write_pyarrow(case_nested, 1, 1)  # V1
+write_pyarrow(case_nested, 1, 2)  # V2
 
 
 def case_benches(size):

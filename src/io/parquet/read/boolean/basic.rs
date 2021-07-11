@@ -4,29 +4,25 @@ use crate::{
     error::{ArrowError, Result},
 };
 
-use super::utils;
+use super::super::utils;
 use parquet2::{
     encoding::{hybrid_rle, Encoding},
     metadata::{ColumnChunkMetaData, ColumnDescriptor},
     read::{levels, Page, PageHeader, StreamingIterator},
 };
 
-fn read_required(buffer: &[u8], length: u32, values: &mut MutableBitmap) {
-    let length = length as usize;
-
+pub(super) fn read_required(buffer: &[u8], additional: usize, values: &mut MutableBitmap) {
     // in PLAIN, booleans are LSB bitpacked and thus we can read them as if they were a bitmap.
-    values.extend_from_slice(buffer, 0, length);
+    values.extend_from_slice(buffer, 0, additional);
 }
 
 fn read_optional(
     validity_buffer: &[u8],
     values_buffer: &[u8],
-    length: u32,
+    length: usize,
     values: &mut MutableBitmap,
     validity: &mut MutableBitmap,
 ) {
-    let length = length as usize;
-
     let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
 
     // in PLAIN, booleans are LSB bitpacked and thus we can read them as if they were a bitmap.
@@ -109,13 +105,13 @@ fn extend_from_page(
                     read_optional(
                         validity_buffer,
                         values_buffer,
-                        page.num_values() as u32,
+                        page.num_values(),
                         values,
                         validity,
                     )
                 }
                 (Encoding::Plain, None, false) => {
-                    read_required(page.buffer(), page.num_values() as u32, values)
+                    read_required(page.buffer(), page.num_values(), values)
                 }
                 _ => {
                     return Err(utils::not_implemented(
@@ -137,13 +133,13 @@ fn extend_from_page(
                     read_optional(
                         validity_buffer,
                         values_buffer,
-                        page.num_values() as u32,
+                        page.num_values(),
                         values,
                         validity,
                     )
                 }
                 (Encoding::Plain, None, false) => {
-                    read_required(page.buffer(), page.num_values() as u32, values)
+                    read_required(page.buffer(), page.num_values(), values)
                 }
                 _ => {
                     return Err(utils::not_implemented(
