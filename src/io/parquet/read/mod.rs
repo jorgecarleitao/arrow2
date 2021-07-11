@@ -8,7 +8,6 @@ mod primitive;
 mod record_batch;
 pub mod schema;
 pub mod statistics;
-mod utf8;
 mod utils;
 
 use crate::{
@@ -128,18 +127,14 @@ fn page_iter_byte_array<I: StreamingIterator<Item = std::result::Result<Page, Pa
     let data_type = schema::from_byte_array(logical_type, converted_type)?;
 
     use DataType::*;
-    Ok(match data_type {
-        Utf8 => Box::new(utf8::iter_to_array::<i32, _, _>(iter, metadata)?),
-        LargeUtf8 => Box::new(utf8::iter_to_array::<i64, _, _>(iter, metadata)?),
-        Binary => Box::new(binary::iter_to_array::<i32, _, _>(iter, metadata)?),
-        LargeBinary => Box::new(binary::iter_to_array::<i64, _, _>(iter, metadata)?),
-        other => {
-            return Err(ArrowError::NotYetImplemented(format!(
-                "Can't read {:?} from parquet",
-                other
-            )))
-        }
-    })
+    match data_type {
+        Binary | Utf8 => binary::iter_to_array::<i32, _, _>(iter, metadata, &data_type),
+        LargeBinary | LargeUtf8 => binary::iter_to_array::<i64, _, _>(iter, metadata, &data_type),
+        other => Err(ArrowError::NotYetImplemented(format!(
+            "Can't read {:?} from parquet",
+            other
+        ))),
+    }
 }
 
 fn page_iter_fixed_len_byte_array<
