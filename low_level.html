@@ -82,7 +82,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="index.html"><strong aria-hidden="true">1.</strong> Arrow2</a></li><li class="chapter-item expanded "><a href="arrow.html"><strong aria-hidden="true">2.</strong> The arrow format</a></li><li class="chapter-item expanded "><a href="low_level.html" class="active"><strong aria-hidden="true">3.</strong> Low-level API</a></li><li class="chapter-item expanded "><a href="high_level.html"><strong aria-hidden="true">4.</strong> High-level API</a></li><li class="chapter-item expanded "><a href="ffi.html"><strong aria-hidden="true">5.</strong> Foreign interfaces</a></li><li class="chapter-item expanded "><a href="io/index.html"><strong aria-hidden="true">6.</strong> IO</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="io/csv_reader.html"><strong aria-hidden="true">6.1.</strong> Read CSV</a></li><li class="chapter-item expanded "><a href="io/csv_write.html"><strong aria-hidden="true">6.2.</strong> Write CSV</a></li><li class="chapter-item expanded "><a href="io/parquet_read.html"><strong aria-hidden="true">6.3.</strong> Read Parquet</a></li><li class="chapter-item expanded "><a href="io/parquet_write.html"><strong aria-hidden="true">6.4.</strong> Write Parquet</a></li><li class="chapter-item expanded "><a href="io/ipc_read.html"><strong aria-hidden="true">6.5.</strong> Read Arrow</a></li><li class="chapter-item expanded "><a href="io/ipc_write.html"><strong aria-hidden="true">6.6.</strong> Write Arrow</a></li></ol></li></ol>            </div>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="index.html"><strong aria-hidden="true">1.</strong> Arrow2</a></li><li class="chapter-item expanded "><a href="arrow.html"><strong aria-hidden="true">2.</strong> The arrow format</a></li><li class="chapter-item expanded "><a href="low_level.html" class="active"><strong aria-hidden="true">3.</strong> Low-level API</a></li><li class="chapter-item expanded "><a href="high_level.html"><strong aria-hidden="true">4.</strong> High-level API</a></li><li class="chapter-item expanded "><a href="metadata.html"><strong aria-hidden="true">5.</strong> Metadata</a></li><li class="chapter-item expanded "><a href="ffi.html"><strong aria-hidden="true">6.</strong> Foreign interfaces</a></li><li class="chapter-item expanded "><a href="io/index.html"><strong aria-hidden="true">7.</strong> IO</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="io/csv_reader.html"><strong aria-hidden="true">7.1.</strong> Read CSV</a></li><li class="chapter-item expanded "><a href="io/csv_write.html"><strong aria-hidden="true">7.2.</strong> Write CSV</a></li><li class="chapter-item expanded "><a href="io/parquet_read.html"><strong aria-hidden="true">7.3.</strong> Read Parquet</a></li><li class="chapter-item expanded "><a href="io/parquet_write.html"><strong aria-hidden="true">7.4.</strong> Write Parquet</a></li><li class="chapter-item expanded "><a href="io/ipc_read.html"><strong aria-hidden="true">7.5.</strong> Read Arrow</a></li><li class="chapter-item expanded "><a href="io/ipc_write.html"><strong aria-hidden="true">7.6.</strong> Write Arrow</a></li></ol></li></ol>            </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
 
@@ -168,39 +168,46 @@ let x = x.slice(1, 2);
 assert_eq!(x.as_slice(), &amp;[2, 3]);
 <span class="boring">}
 </span></code></pre></pre>
-<p>Using a <code>MutableBuffer&lt;f64&gt;</code>:</p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::buffer::{Buffer, MutableBuffer};
+<p>Using a <code>MutableBuffer&lt;i64&gt;</code>:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::buffer::MutableBuffer;
 </span><span class="boring">fn main() {
-</span>let mut x = MutableBuffer::with_capacity(4);
-(0..3).for_each(|i| {
-    x.push(i as f64)
-});
-let x: Buffer&lt;f64&gt; = x.into();
-assert_eq!(x.as_slice(), &amp;[0.0, 1.0, 2.0]);
+</span>let mut x: MutableBuffer&lt;i64&gt; = (0..3).collect();
+x[1] = 5;
+x.push(10);
+assert_eq!(x.as_slice(), &amp;[0, 5, 2, 10])
 <span class="boring">}
 </span></code></pre></pre>
-<p>In this context, <code>MutableBuffer</code> is the closest API to rust's <code>Vec</code>.</p>
 <p>The following demonstrates how to efficiently
 perform an operation from an iterator of <a href="https://doc.rust-lang.org/std/iter/trait.TrustedLen.html">TrustedLen</a>:</p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">use std::iter::FromIterator;
-</span><span class="boring">use arrow2::buffer::{Buffer, MutableBuffer};
+<pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::buffer::MutableBuffer;
 </span><span class="boring">fn main() {
-</span>let x = Buffer::from_iter((0..1000));
-let iter = x.as_slice().iter().map(|x| x * 2);
-let y = Buffer::from_trusted_len_iter(iter);
-assert_eq!(y.as_slice()[50], 100);
+</span>let x = (0..1000).collect::&lt;Vec&lt;_&gt;&gt;();
+let y = MutableBuffer::from_trusted_len_iter(x.iter().map(|x| x * 2));
+assert_eq!(y[50], 100);
 <span class="boring">}
 </span></code></pre></pre>
 <p>Using <code>from_trusted_len_iter</code> often causes the compiler to auto-vectorize.</p>
-<p>We will now see how these containers are used in higher-level structures: Arrays.</p>
+<p>In this context, <code>MutableBuffer</code> has an almost identical API to Rust's <code>Vec</code>.
+However, contrarily to <code>Vec</code>, <code>Buffer</code> and <code>MutableBuffer</code> only supports
+the following physical types:</p>
+<ul>
+<li><code>i8-i128</code></li>
+<li><code>u8-u64</code></li>
+<li><code>f32</code> and <code>f64</code></li>
+<li><code>arrow2::types::days_ms</code></li>
+</ul>
+<p>This is because the arrow specification only supports the above Rust types; all other complex
+types supported by arrow are built on top of these types, which enables Arrow to be a highly
+interoperable in-memory format.</p>
 <h2 id="bitmaps"><a class="header" href="#bitmaps">Bitmaps</a></h2>
 <p>Arrow's in-memory arrangement of boolean values is different from <code>Vec&lt;bool&gt;</code>. Specifically,
 arrow uses individual bits to represent a boolean, as opposed to the usual byte that <code>bool</code> holds.
 Besides the 8x compression, this makes the validity particularly useful for 
 <a href="https://en.wikipedia.org/wiki/AVX-512">AVX512</a> masks.
-The disadvantage is that an arrows' bitmap is not represented as a Rust slice, as Rust slices use
-pointer arithmetics, whose smallest size is a byte.</p>
-<p>Arrow2 has two containers for bitmaps: <code>Bitmap</code> (immutable and sharable) and <code>MutableBitmap</code> (mutable):</p>
+One tradeoff is that an arrows' bitmap is not represented as a Rust slice, as Rust slices use
+pointer arithmetics, whose smallest unit is a byte.</p>
+<p>Arrow2 has two containers for bitmaps: <code>Bitmap</code> (immutable and sharable)
+and <code>MutableBitmap</code> (mutable):</p>
 <pre><pre class="playground"><code class="language-rust">use arrow2::bitmap::Bitmap;
 <span class="boring">fn main() {
 </span>let x = Bitmap::from(&amp;[true, false]);

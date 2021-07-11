@@ -82,7 +82,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="index.html" class="active"><strong aria-hidden="true">1.</strong> Arrow2</a></li><li class="chapter-item expanded "><a href="arrow.html"><strong aria-hidden="true">2.</strong> The arrow format</a></li><li class="chapter-item expanded "><a href="low_level.html"><strong aria-hidden="true">3.</strong> Low-level API</a></li><li class="chapter-item expanded "><a href="high_level.html"><strong aria-hidden="true">4.</strong> High-level API</a></li><li class="chapter-item expanded "><a href="ffi.html"><strong aria-hidden="true">5.</strong> Foreign interfaces</a></li><li class="chapter-item expanded "><a href="io/index.html"><strong aria-hidden="true">6.</strong> IO</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="io/csv_reader.html"><strong aria-hidden="true">6.1.</strong> Read CSV</a></li><li class="chapter-item expanded "><a href="io/csv_write.html"><strong aria-hidden="true">6.2.</strong> Write CSV</a></li><li class="chapter-item expanded "><a href="io/parquet_read.html"><strong aria-hidden="true">6.3.</strong> Read Parquet</a></li><li class="chapter-item expanded "><a href="io/parquet_write.html"><strong aria-hidden="true">6.4.</strong> Write Parquet</a></li><li class="chapter-item expanded "><a href="io/ipc_read.html"><strong aria-hidden="true">6.5.</strong> Read Arrow</a></li><li class="chapter-item expanded "><a href="io/ipc_write.html"><strong aria-hidden="true">6.6.</strong> Write Arrow</a></li></ol></li></ol>            </div>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="index.html" class="active"><strong aria-hidden="true">1.</strong> Arrow2</a></li><li class="chapter-item expanded "><a href="arrow.html"><strong aria-hidden="true">2.</strong> The arrow format</a></li><li class="chapter-item expanded "><a href="low_level.html"><strong aria-hidden="true">3.</strong> Low-level API</a></li><li class="chapter-item expanded "><a href="high_level.html"><strong aria-hidden="true">4.</strong> High-level API</a></li><li class="chapter-item expanded "><a href="metadata.html"><strong aria-hidden="true">5.</strong> Metadata</a></li><li class="chapter-item expanded "><a href="ffi.html"><strong aria-hidden="true">6.</strong> Foreign interfaces</a></li><li class="chapter-item expanded "><a href="io/index.html"><strong aria-hidden="true">7.</strong> IO</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="io/csv_reader.html"><strong aria-hidden="true">7.1.</strong> Read CSV</a></li><li class="chapter-item expanded "><a href="io/csv_write.html"><strong aria-hidden="true">7.2.</strong> Write CSV</a></li><li class="chapter-item expanded "><a href="io/parquet_read.html"><strong aria-hidden="true">7.3.</strong> Read Parquet</a></li><li class="chapter-item expanded "><a href="io/parquet_write.html"><strong aria-hidden="true">7.4.</strong> Write Parquet</a></li><li class="chapter-item expanded "><a href="io/ipc_read.html"><strong aria-hidden="true">7.5.</strong> Read Arrow</a></li><li class="chapter-item expanded "><a href="io/ipc_write.html"><strong aria-hidden="true">7.6.</strong> Write Arrow</a></li></ol></li></ol>            </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
 
@@ -147,11 +147,12 @@
 <p>Arrow2 is a Rust library that implements data structures and functionality enabling
 interoperability with the arrow format.</p>
 <p>The typical use-case for this library is to perform CPU and memory-intensive analytics in a format that supports heterogeneous data structures, null values, and IPC and FFI interfaces across languages.</p>
-<p>Arrow2 is divided into two main parts: a <a href="./low_level.html">low-level API</a> to efficiently
-operate with contiguous memory regions, and a <a href="./high_level.html">high-level API</a> to operate with
-arrow arrays, logical types, schemas, etc.</p>
-<p>This repo started as an experiment forked from the Apache arrow project to offer a transmute-free
-Rust implementation of that crate.</p>
+<p>Arrow2 is divided into three main parts: </p>
+<ul>
+<li>a <a href="./low_level.html">low-level API</a> to efficiently operate with contiguous memory regions;</li>
+<li>a <a href="./high_level.html">high-level API</a> to operate with arrow arrays;</li>
+<li>a <a href="./metadata.html">metadata API</a> to declare and operate with logical types and metadata.</li>
+</ul>
 <h2 id="cargo-features"><a class="header" href="#cargo-features">Cargo features</a></h2>
 <p>This crate has a significant number of cargo features to reduce compilation times and dependencies blowup.
 There is also a feature <code>simd</code>, that requires the nightly channel, that produces more explicit SIMD instructions via <a href="https://github.com/rust-lang/packed_simd"><code>packed_simd</code></a>.</p>
