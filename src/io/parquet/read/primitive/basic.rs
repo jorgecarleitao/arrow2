@@ -15,7 +15,8 @@ use crate::{
 };
 
 fn read_dict_buffer_optional<T, A, F>(
-    buffer: &[u8],
+    validity_buffer: &[u8],
+    indices_buffer: &[u8],
     additional: usize,
     dict: &PrimitivePageDict<T>,
     values: &mut MutableBuffer<A>,
@@ -26,8 +27,6 @@ fn read_dict_buffer_optional<T, A, F>(
     A: ArrowNativeType,
     F: Fn(T) -> A,
 {
-    let (_, validity_buffer, indices_buffer) = levels::split_buffer_v1(buffer, false, true);
-
     let dict_values = dict.values();
 
     // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
@@ -38,10 +37,9 @@ fn read_dict_buffer_optional<T, A, F>(
     let (_, consumed) = uleb128::decode(&indices_buffer);
     let indices_buffer = &indices_buffer[consumed..];
 
-    let non_null_indices_len = (indices_buffer.len() * 8 / bit_width as usize) as u32;
+    let non_null_indices_len = indices_buffer.len() * 8 / bit_width as usize;
 
-    let mut indices =
-        bitpacking::Decoder::new(indices_buffer, bit_width, non_null_indices_len as usize);
+    let mut indices = bitpacking::Decoder::new(indices_buffer, bit_width, non_null_indices_len);
 
     let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
 
@@ -163,27 +161,27 @@ where
         PageHeader::V1(header) => {
             assert_eq!(header.definition_level_encoding, Encoding::Rle);
 
+            let (_, validity_buffer, values_buffer) =
+                levels::split_buffer_v1(page.buffer(), false, is_optional);
+
             match (&page.encoding(), page.dictionary_page(), is_optional) {
                 (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer_optional(
-                    page.buffer(),
+                    validity_buffer,
+                    values_buffer,
                     additional,
                     dict.as_any().downcast_ref().unwrap(),
                     values,
                     validity,
                     op,
                 ),
-                (Encoding::Plain, None, true) => {
-                    let (_, validity_buffer, values_buffer) =
-                        levels::split_buffer_v1(page.buffer(), false, is_optional);
-                    read_nullable(
-                        validity_buffer,
-                        values_buffer,
-                        additional,
-                        values,
-                        validity,
-                        op,
-                    )
-                }
+                (Encoding::Plain, None, true) => read_nullable(
+                    validity_buffer,
+                    values_buffer,
+                    additional,
+                    values,
+                    validity,
+                    op,
+                ),
                 (Encoding::Plain, None, false) => {
                     read_required(page.buffer(), additional, values, op)
                 }
@@ -198,41 +196,43 @@ where
                 }
             }
         }
-        PageHeader::V2(header) => match (&page.encoding(), page.dictionary_page(), is_optional) {
-            (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer_optional(
-                page.buffer(),
-                additional,
-                dict.as_any().downcast_ref().unwrap(),
-                values,
-                validity,
-                op,
-            ),
-            (Encoding::Plain, None, true) => {
-                let def_level_buffer_length = header.definition_levels_byte_length as usize;
-                let (_, validity_buffer, values_buffer) =
-                    levels::split_buffer_v2(page.buffer(), 0, def_level_buffer_length);
-                read_nullable(
+        PageHeader::V2(header) => {
+            let def_level_buffer_length = header.definition_levels_byte_length as usize;
+
+            let (_, validity_buffer, values_buffer) =
+                levels::split_buffer_v2(page.buffer(), 0, def_level_buffer_length);
+            match (&page.encoding(), page.dictionary_page(), is_optional) {
+                (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer_optional(
+                    validity_buffer,
+                    values_buffer,
+                    additional,
+                    dict.as_any().downcast_ref().unwrap(),
+                    values,
+                    validity,
+                    op,
+                ),
+                (Encoding::Plain, None, true) => read_nullable(
                     validity_buffer,
                     values_buffer,
                     additional,
                     values,
                     validity,
                     op,
-                )
+                ),
+                (Encoding::Plain, None, false) => {
+                    read_required::<T, A, F>(page.buffer(), additional, values, op)
+                }
+                _ => {
+                    return Err(other_utils::not_implemented(
+                        &page.encoding(),
+                        is_optional,
+                        page.dictionary_page().is_some(),
+                        "V2",
+                        "primitive",
+                    ))
+                }
             }
-            (Encoding::Plain, None, false) => {
-                read_required::<T, A, F>(page.buffer(), additional, values, op)
-            }
-            _ => {
-                return Err(other_utils::not_implemented(
-                    &page.encoding(),
-                    is_optional,
-                    page.dictionary_page().is_some(),
-                    "V2",
-                    "primitive",
-                ))
-            }
-        },
+        }
     };
     Ok(())
 }
