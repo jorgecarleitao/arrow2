@@ -100,15 +100,30 @@ mod tests {
                 Some(9),
                 Some(10),
             ])) as Arc<dyn Array>,
+            4 => Arc::new(BooleanArray::from(&[
+                Some(false),
+                Some(true),
+                Some(true),
+                None,
+                Some(false),
+                Some(true),
+                Some(false),
+                Some(true),
+                Some(false),
+                Some(false),
+                Some(false),
+                Some(true),
+            ])) as Arc<dyn Array>,
             _ => unreachable!(),
         };
 
         match column {
-            0 | 1 | 3 => {
+            0 | 1 | 3 | 4 => {
                 let field = match column {
                     0 => Field::new("item", DataType::Int64, true),
                     1 => Field::new("item", DataType::Int64, false),
                     3 => Field::new("item", DataType::Int16, true),
+                    4 => Field::new("item", DataType::Boolean, true),
                     _ => unreachable!(),
                 };
 
@@ -307,6 +322,12 @@ mod tests {
                 null_count: Some(1),
                 min_value: Some(0),
                 max_value: Some(10),
+            }),
+            4 => Box::new(BooleanStatistics {
+                distinct_count: None,
+                null_count: Some(1),
+                min_value: Some(false),
+                max_value: Some(true),
             }),
             _ => Box::new(PrimitiveStatistics::<i64> {
                 data_type: DataType::Int64,

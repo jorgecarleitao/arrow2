@@ -12,9 +12,9 @@ use parquet2::{
 use super::nested_utils::*;
 use super::{ColumnChunkMetaData, ColumnDescriptor};
 use crate::{
-    array::{Array, ListArray, PrimitiveArray},
+    array::{Array, PrimitiveArray},
     bitmap::MutableBitmap,
-    buffer::{Buffer, MutableBuffer},
+    buffer::MutableBuffer,
     datatypes::DataType,
     error::{ArrowError, Result},
     types::NativeType as ArrowNativeType,
@@ -72,21 +72,7 @@ where
     let mut values = MutableBuffer::<A>::with_capacity(capacity);
     let mut validity = MutableBitmap::with_capacity(capacity);
 
-    let mut nullable = Vec::new();
-    is_nullable(metadata.descriptor().base_type(), &mut nullable);
-    // the primitive's nullability is the last on the list
-    let is_nullable = nullable.pop().unwrap();
-
-    let mut nested = nullable
-        .iter()
-        .map(|is_nullable| {
-            if *is_nullable {
-                Box::new(NestedOptional::with_capacity(capacity)) as Box<dyn Nested>
-            } else {
-                Box::new(NestedValid::with_capacity(capacity)) as Box<dyn Nested>
-            }
-        })
-        .collect::<Vec<_>>();
+    let (mut nested, is_nullable) = init_nested(metadata.descriptor().base_type(), capacity);
 
     while let Some(page) = iter.next() {
         nested::extend_from_page(
@@ -100,39 +86,24 @@ where
         )?
     }
 
-    Ok(match data_type {
-        DataType::List(ref inner) => {
-            let values = Arc::new(PrimitiveArray::<A>::from_data(
-                inner.data_type().clone(),
-                values.into(),
-                validity.into(),
-            ));
-
-            let (offsets, validity) = nested[0].inner();
-
-            let offsets = Buffer::<i32>::from_trusted_len_iter(offsets.iter().map(|x| *x as i32));
-            Box::new(ListArray::<i32>::from_data(
-                data_type, offsets, values, validity,
-            ))
-        }
-        DataType::LargeList(ref inner) => {
-            let values = Arc::new(PrimitiveArray::<A>::from_data(
-                inner.data_type().clone(),
-                values.into(),
-                validity.into(),
-            ));
-
-            let (offsets, validity) = nested[0].inner();
-
-            Box::new(ListArray::<i64>::from_data(
-                data_type, offsets, values, validity,
-            ))
-        }
+    let values = match data_type {
+        DataType::List(ref inner) => Arc::new(PrimitiveArray::<A>::from_data(
+            inner.data_type().clone(),
+            values.into(),
+            validity.into(),
+        )),
+        DataType::LargeList(ref inner) => Arc::new(PrimitiveArray::<A>::from_data(
+            inner.data_type().clone(),
+            values.into(),
+            validity.into(),
+        )),
         _ => {
             return Err(ArrowError::NotYetImplemented(format!(
                 "Read nested datatype {:?}",
                 data_type
             )))
         }
-    })
+    };
+
+    create_list(data_type, &mut nested, values)
 }

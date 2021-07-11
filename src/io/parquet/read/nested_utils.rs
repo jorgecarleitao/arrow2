@@ -1,8 +1,13 @@
+use std::sync::Arc;
+
 use parquet2::schema::{types::ParquetType, Repetition};
 
 use crate::{
+    array::{Array, ListArray},
     bitmap::{Bitmap, MutableBitmap},
     buffer::{Buffer, MutableBuffer},
+    datatypes::DataType,
+    error::{ArrowError, Result},
 };
 
 pub trait Nested: std::fmt::Debug {
@@ -133,4 +138,55 @@ pub fn is_nullable(type_: &ParquetType, container: &mut Vec<bool>) {
             }
         }
     }
+}
+
+pub fn init_nested(base_type: &ParquetType, capacity: usize) -> (Vec<Box<dyn Nested>>, bool) {
+    let mut nullable = Vec::new();
+    is_nullable(base_type, &mut nullable);
+    // the primitive's nullability is the last on the list
+    let is_nullable = nullable.pop().unwrap();
+
+    (
+        nullable
+            .iter()
+            .map(|is_nullable| {
+                if *is_nullable {
+                    Box::new(NestedOptional::with_capacity(capacity)) as Box<dyn Nested>
+                } else {
+                    Box::new(NestedValid::with_capacity(capacity)) as Box<dyn Nested>
+                }
+            })
+            .collect(),
+        is_nullable,
+    )
+}
+
+pub fn create_list(
+    data_type: DataType,
+    nested: &mut [Box<dyn Nested>],
+    values: Arc<dyn Array>,
+) -> Result<Box<dyn Array>> {
+    Ok(match data_type {
+        DataType::List(_) => {
+            let (offsets, validity) = nested[0].inner();
+
+            let offsets = Buffer::<i32>::from_trusted_len_iter(offsets.iter().map(|x| *x as i32));
+            Box::new(ListArray::<i32>::from_data(
+                data_type, offsets, values, validity,
+            ))
+        }
+        DataType::LargeList(_) => {
+            let (offsets, validity) = nested[0].inner();
+
+            Box::new(ListArray::<i64>::from_data(
+                data_type, offsets, values, validity,
+            ))
+        }
+        _ => {
+            return Err(ArrowError::NotYetImplemented(format!(
+                "Read nested datatype {:?}",
+                data_type
+            )))
+        }
+    })
 }

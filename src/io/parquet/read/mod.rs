@@ -74,18 +74,12 @@ fn page_iter_i64<I: StreamingIterator<Item = std::result::Result<Page, ParquetEr
             DataType::UInt64 => {
                 primitive::iter_to_array_nested(iter, metadata, real_type, |x: i64| x as u64)
             }
-            DataType::UInt32 => {
-                primitive::iter_to_array_nested(iter, metadata, real_type, |x: i32| x as u32)
-            }
             _ => primitive::iter_to_array_nested(iter, metadata, real_type, |x: i64| x as i64),
         }
     } else {
         match data_type {
             DataType::UInt64 => {
                 primitive::iter_to_array(iter, metadata, data_type, |x: i64| x as u64)
-            }
-            DataType::UInt32 => {
-                primitive::iter_to_array(iter, metadata, data_type, |x: i32| x as u32)
             }
             _ => primitive::iter_to_array(iter, metadata, data_type, |x: i64| x as i64),
         }
@@ -108,6 +102,7 @@ fn page_iter_i32<I: StreamingIterator<Item = std::result::Result<Page, ParquetEr
         match data_type {
             UInt8 => primitive::iter_to_array_nested(iter, metadata, real_type, |x: i32| x as u8),
             UInt16 => primitive::iter_to_array_nested(iter, metadata, real_type, |x: i32| x as u16),
+            UInt32 => primitive::iter_to_array_nested(iter, metadata, real_type, |x: i32| x as u32),
             Int8 => primitive::iter_to_array_nested(iter, metadata, real_type, |x: i32| x as i8),
             Int16 => primitive::iter_to_array_nested(iter, metadata, real_type, |x: i32| x as i16),
             _ => primitive::iter_to_array_nested(iter, metadata, real_type, |x: i32| x),
@@ -116,6 +111,7 @@ fn page_iter_i32<I: StreamingIterator<Item = std::result::Result<Page, ParquetEr
         match data_type {
             UInt8 => primitive::iter_to_array(iter, metadata, data_type, |x: i32| x as u8),
             UInt16 => primitive::iter_to_array(iter, metadata, data_type, |x: i32| x as u16),
+            UInt32 => primitive::iter_to_array(iter, metadata, data_type, |x: i32| x as u32),
             Int8 => primitive::iter_to_array(iter, metadata, data_type, |x: i32| x as i8),
             Int16 => primitive::iter_to_array(iter, metadata, data_type, |x: i32| x as i16),
             _ => primitive::iter_to_array(iter, metadata, data_type, |x: i32| x),
@@ -221,6 +217,11 @@ pub fn page_iter_to_array<I: StreamingIterator<Item = std::result::Result<Page, 
                     logical_type,
                     ..
                 } => match (physical_type, converted_type, logical_type) {
+                    (PhysicalType::Boolean, None, None) => {
+                        let real_type =
+                            schema::to_data_type(metadata.descriptor().base_type())?.unwrap();
+                        boolean::iter_to_array_nested(iter, metadata, real_type)
+                    }
                     (PhysicalType::Int64, _, _) => {
                         page_iter_i64(iter, metadata, converted_type, logical_type)
                     }
@@ -389,6 +390,21 @@ mod tests {
     #[test]
     fn v2_nested_i16() -> Result<()> {
         test_pyarrow_integration(3, 2, "nested", false)
+    }
+
+    #[test]
+    fn v1_nested_i16() -> Result<()> {
+        test_pyarrow_integration(3, 1, "nested", false)
+    }
+
+    #[test]
+    fn v2_nested_bool() -> Result<()> {
+        test_pyarrow_integration(4, 2, "nested", false)
+    }
+
+    #[test]
+    fn v1_nested_bool() -> Result<()> {
+        test_pyarrow_integration(4, 1, "nested", false)
     }
 }
 
