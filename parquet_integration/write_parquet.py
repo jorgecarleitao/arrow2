@@ -87,6 +87,16 @@ def case_nested(size):
         None,
         [True],
     ]
+    string = [
+        ["Hello", "bbb"],
+        None,
+        ["aa", None, ""],
+        ["bbb", "aa", "ccc"],
+        [],
+        ["abc", "bbb", "bbb"],
+        None,
+        [""],
+    ]
     fields = [
         pa.field("list_int64", pa.list_(pa.int64())),
         pa.field("list_int64_required", pa.list_(pa.field("item", pa.int64(), False))),
@@ -97,6 +107,7 @@ def case_nested(size):
         ),
         pa.field("list_int16", pa.list_(pa.int16())),
         pa.field("list_bool", pa.list_(pa.bool_())),
+        pa.field("list_utf8", pa.list_(pa.utf8())),
     ]
     schema = pa.schema(fields)
     return (
@@ -106,6 +117,7 @@ def case_nested(size):
             "list_int64_required_required": all_required * size,
             "list_int16": i16 * size,
             "list_bool": boolean * size,
+            "list_utf8": string * size,
         },
         schema,
         f"nested_nullable_{size*10}.parquet",

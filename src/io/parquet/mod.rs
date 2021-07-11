@@ -114,16 +114,43 @@ mod tests {
                 Some(false),
                 Some(true),
             ])) as Arc<dyn Array>,
+            /*
+                string = [
+                    ["Hello", "bbb"],
+                    None,
+                    ["aa", None, ""],
+                    ["bbb", "aa", "ccc"],
+                    [],
+                    ["abc", "bbb", "bbb"],
+                    None,
+                    [""],
+                ]
+            */
+            5 => Arc::new(Utf8Array::<i32>::from(&[
+                Some("Hello".to_string()),
+                Some("bbb".to_string()),
+                Some("aa".to_string()),
+                None,
+                Some("".to_string()),
+                Some("bbb".to_string()),
+                Some("aa".to_string()),
+                Some("ccc".to_string()),
+                Some("abc".to_string()),
+                Some("bbb".to_string()),
+                Some("bbb".to_string()),
+                Some("".to_string()),
+            ])),
             _ => unreachable!(),
         };
 
         match column {
-            0 | 1 | 3 | 4 => {
+            0 | 1 | 3 | 4 | 5 => {
                 let field = match column {
                     0 => Field::new("item", DataType::Int64, true),
                     1 => Field::new("item", DataType::Int64, false),
                     3 => Field::new("item", DataType::Int16, true),
                     4 => Field::new("item", DataType::Boolean, true),
+                    5 => Field::new("item", DataType::Utf8, true),
                     _ => unreachable!(),
                 };
 
@@ -175,7 +202,7 @@ mod tests {
                 None,
                 Some(9.0),
             ])),
-            2 => Box::new(Utf8Array::<i32>::from(&vec![
+            2 => Box::new(Utf8Array::<i32>::from(&[
                 Some("Hello".to_string()),
                 None,
                 Some("aa".to_string()),
@@ -328,6 +355,12 @@ mod tests {
                 null_count: Some(1),
                 min_value: Some(false),
                 max_value: Some(true),
+            }),
+            5 => Box::new(Utf8Statistics {
+                distinct_count: None,
+                null_count: Some(1),
+                min_value: Some("".to_string()),
+                max_value: Some("def".to_string()),
             }),
             _ => Box::new(PrimitiveStatistics::<i64> {
                 data_type: DataType::Int64,

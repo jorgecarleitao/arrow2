@@ -86,12 +86,11 @@ fn read_dict_buffer<O: Offset>(
 fn read_optional<O: Offset>(
     validity_buffer: &[u8],
     values_buffer: &[u8],
-    length: u32,
+    length: usize,
     offsets: &mut MutableBuffer<O>,
     values: &mut MutableBuffer<u8>,
     validity: &mut MutableBitmap,
 ) {
-    let length = length as usize;
     let mut last_offset = *offsets.as_mut_slice().last().unwrap();
 
     // values_buffer: first 4 bytes are len, remaining is values
@@ -133,9 +132,9 @@ fn read_optional<O: Offset>(
     }
 }
 
-fn read_required<O: Offset>(
+pub(super) fn read_required<O: Offset>(
     buffer: &[u8],
-    _length: u32,
+    _length: usize,
     offsets: &mut MutableBuffer<O>,
     values: &mut MutableBuffer<u8>,
 ) {
@@ -184,14 +183,14 @@ fn extend_from_page<O: Offset>(
                     read_optional::<O>(
                         validity_buffer,
                         values_buffer,
-                        page.num_values() as u32,
+                        page.num_values(),
                         offsets,
                         values,
                         validity,
                     )
                 }
                 (Encoding::Plain, None, false) => {
-                    read_required::<O>(page.buffer(), page.num_values() as u32, offsets, values)
+                    read_required::<O>(page.buffer(), page.num_values(), offsets, values)
                 }
                 _ => {
                     return Err(utils::not_implemented(
@@ -227,14 +226,14 @@ fn extend_from_page<O: Offset>(
                     read_optional::<O>(
                         validity_buffer,
                         values_buffer,
-                        page.num_values() as u32,
+                        page.num_values(),
                         offsets,
                         values,
                         validity,
                     )
                 }
                 (Encoding::Plain, None, false) => {
-                    read_required::<O>(page.buffer(), page.num_values() as u32, offsets, values)
+                    read_required::<O>(page.buffer(), page.num_values(), offsets, values)
                 }
                 _ => {
                     return Err(utils::not_implemented(

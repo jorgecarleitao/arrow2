@@ -126,14 +126,32 @@ fn page_iter_byte_array<I: StreamingIterator<Item = std::result::Result<Page, Pa
 ) -> Result<Box<dyn Array>> {
     let data_type = schema::from_byte_array(logical_type, converted_type)?;
 
-    use DataType::*;
-    match data_type {
-        Binary | Utf8 => binary::iter_to_array::<i32, _, _>(iter, metadata, &data_type),
-        LargeBinary | LargeUtf8 => binary::iter_to_array::<i64, _, _>(iter, metadata, &data_type),
-        other => Err(ArrowError::NotYetImplemented(format!(
-            "Can't read {:?} from parquet",
-            other
-        ))),
+    if metadata.descriptor().max_rep_level() > 0 {
+        let real_type = schema::to_data_type(metadata.descriptor().base_type())?.unwrap();
+
+        use DataType::*;
+        match data_type {
+            Binary | Utf8 => binary::iter_to_array_nested::<i32, _, _>(iter, metadata, real_type),
+            LargeBinary | LargeUtf8 => {
+                binary::iter_to_array_nested::<i64, _, _>(iter, metadata, real_type)
+            }
+            other => Err(ArrowError::NotYetImplemented(format!(
+                "Can't read {:?} from parquet",
+                other
+            ))),
+        }
+    } else {
+        use DataType::*;
+        match data_type {
+            Binary | Utf8 => binary::iter_to_array::<i32, _, _>(iter, metadata, &data_type),
+            LargeBinary | LargeUtf8 => {
+                binary::iter_to_array::<i64, _, _>(iter, metadata, &data_type)
+            }
+            other => Err(ArrowError::NotYetImplemented(format!(
+                "Can't read {:?} from parquet",
+                other
+            ))),
+        }
     }
 }
 
@@ -222,6 +240,9 @@ pub fn page_iter_to_array<I: StreamingIterator<Item = std::result::Result<Page, 
                     }
                     (PhysicalType::Int32, _, _) => {
                         page_iter_i32(iter, metadata, converted_type, logical_type)
+                    }
+                    (PhysicalType::ByteArray, _, _) => {
+                        page_iter_byte_array(iter, metadata, converted_type, logical_type)
                     }
                     _ => todo!(),
                 },
@@ -400,6 +421,16 @@ mod tests {
     #[test]
     fn v1_nested_bool() -> Result<()> {
         test_pyarrow_integration(4, 1, "nested", false)
+    }
+
+    #[test]
+    fn v2_nested_utf8() -> Result<()> {
+        test_pyarrow_integration(5, 2, "nested", false)
+    }
+
+    #[test]
+    fn v1_nested_utf8() -> Result<()> {
+        test_pyarrow_integration(5, 1, "nested", false)
     }
 }
 
