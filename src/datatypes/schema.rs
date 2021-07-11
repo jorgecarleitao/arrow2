@@ -74,6 +74,15 @@ impl Schema {
         Self { fields, metadata }
     }
 
+    /// Creates a new [`Field`] with metadata.
+    #[inline]
+    pub fn with_metadata(self, metadata: HashMap<String, String>) -> Self {
+        Self {
+            fields: self.fields,
+            metadata,
+        }
+    }
+
     /// Merge schema into self if it is compatible. Struct fields will be merged recursively.
     ///
     /// Example:

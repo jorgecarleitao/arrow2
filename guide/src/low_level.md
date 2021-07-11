@@ -31,39 +31,44 @@ assert_eq!(x.as_slice(), &[2, 3]);
 # }
 ```
 
-Using a `MutableBuffer<f64>`:
+Using a `MutableBuffer<i64>`:
 
 ```rust
-# use arrow2::buffer::{Buffer, MutableBuffer};
+# use arrow2::buffer::MutableBuffer;
 # fn main() {
-let mut x = MutableBuffer::with_capacity(4);
-(0..3).for_each(|i| {
-    x.push(i as f64)
-});
-let x: Buffer<f64> = x.into();
-assert_eq!(x.as_slice(), &[0.0, 1.0, 2.0]);
+let mut x: MutableBuffer<i64> = (0..3).collect();
+x[1] = 5;
+x.push(10);
+assert_eq!(x.as_slice(), &[0, 5, 2, 10])
 # }
 ```
-
-In this context, `MutableBuffer` is the closest API to rust's `Vec`.
 
 The following demonstrates how to efficiently
 perform an operation from an iterator of [TrustedLen](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html):
 
 ```rust
-# use std::iter::FromIterator;
-# use arrow2::buffer::{Buffer, MutableBuffer};
+# use arrow2::buffer::MutableBuffer;
 # fn main() {
-let x = Buffer::from_iter((0..1000));
-let iter = x.as_slice().iter().map(|x| x * 2);
-let y = Buffer::from_trusted_len_iter(iter);
-assert_eq!(y.as_slice()[50], 100);
+let x = (0..1000).collect::<Vec<_>>();
+let y = MutableBuffer::from_trusted_len_iter(x.iter().map(|x| x * 2));
+assert_eq!(y[50], 100);
 # }
 ```
 
 Using `from_trusted_len_iter` often causes the compiler to auto-vectorize.
 
-We will now see how these containers are used in higher-level structures: Arrays.
+In this context, `MutableBuffer` has an almost identical API to Rust's `Vec`.
+However, contrarily to `Vec`, `Buffer` and `MutableBuffer` only supports
+the following physical types:
+
+* `i8-i128`
+* `u8-u64`
+* `f32` and `f64`
+* `arrow2::types::days_ms`
+
+This is because the arrow specification only supports the above Rust types; all other complex
+types supported by arrow are built on top of these types, which enables Arrow to be a highly
+interoperable in-memory format.
 
 ## Bitmaps
 
@@ -71,10 +76,11 @@ Arrow's in-memory arrangement of boolean values is different from `Vec<bool>`. S
 arrow uses individual bits to represent a boolean, as opposed to the usual byte that `bool` holds.
 Besides the 8x compression, this makes the validity particularly useful for 
 [AVX512](https://en.wikipedia.org/wiki/AVX-512) masks.
-The disadvantage is that an arrows' bitmap is not represented as a Rust slice, as Rust slices use
-pointer arithmetics, whose smallest size is a byte.
+One tradeoff is that an arrows' bitmap is not represented as a Rust slice, as Rust slices use
+pointer arithmetics, whose smallest unit is a byte.
 
-Arrow2 has two containers for bitmaps: `Bitmap` (immutable and sharable) and `MutableBitmap` (mutable):
+Arrow2 has two containers for bitmaps: `Bitmap` (immutable and sharable)
+and `MutableBitmap` (mutable):
 
 ```rust
 use arrow2::bitmap::Bitmap;

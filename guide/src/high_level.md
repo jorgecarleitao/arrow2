@@ -1,7 +1,7 @@
 # High-level API
 
 The simplest way to think about an arrow `Array` is that it represents
-`Vec<Option<T>>` and has a logical type associated with it.
+`Vec<Option<T>>` and has a logical type (see [metadata](../metadata.md))) associated with it.
 
 Probably the simplest array in this crate is `PrimitiveArray<T>`. It can be constructed
 from an iterator as follows:
