@@ -172,32 +172,27 @@ pub(crate) fn extend_from_page(
         PageHeader::V1(header) => {
             assert_eq!(header.definition_level_encoding, Encoding::Rle);
 
+            let (_, validity_buffer, values_buffer) =
+                levels::split_buffer_v1(page.buffer(), false, is_optional);
+
             match (page.encoding(), page.dictionary_page(), is_optional) {
-                (Encoding::PlainDictionary, Some(dict), true) => {
-                    let (_, validity_buffer, values_buffer) =
-                        levels::split_buffer_v1(page.buffer(), false, is_optional);
-                    read_dict_buffer(
-                        validity_buffer,
-                        values_buffer,
-                        page.num_values() as u32,
-                        size,
-                        dict.as_any().downcast_ref().unwrap(),
-                        values,
-                        validity,
-                    )
-                }
-                (Encoding::Plain, None, true) => {
-                    let (_, validity_buffer, values_buffer) =
-                        levels::split_buffer_v1(page.buffer(), false, is_optional);
-                    read_optional(
-                        validity_buffer,
-                        values_buffer,
-                        page.num_values() as u32,
-                        size,
-                        values,
-                        validity,
-                    )
-                }
+                (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer(
+                    validity_buffer,
+                    values_buffer,
+                    page.num_values() as u32,
+                    size,
+                    dict.as_any().downcast_ref().unwrap(),
+                    values,
+                    validity,
+                ),
+                (Encoding::Plain, None, true) => read_optional(
+                    validity_buffer,
+                    values_buffer,
+                    page.num_values() as u32,
+                    size,
+                    values,
+                    validity,
+                ),
                 (Encoding::Plain, None, false) => {
                     read_required(page.buffer(), page.num_values() as u32, size, values)
                 }

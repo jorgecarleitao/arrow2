@@ -1,7 +1,6 @@
 import pyarrow as pa
 import pyarrow.parquet
 import os
-import shutil
 
 PYARROW_PATH = "fixtures/pyarrow3"
 
@@ -136,10 +135,12 @@ def case_nested(size):
     )
 
 
-def write_pyarrow(case, size=1, page_version=1):
+def write_pyarrow(case, size=1, page_version=1, use_dictionary=False):
     data, schema, path = case(size)
 
     base_path = f"{PYARROW_PATH}/v{page_version}"
+    if use_dictionary:
+        base_path = f"{base_path}/dict"
 
     t = pa.table(data, schema=schema)
     os.makedirs(base_path, exist_ok=True)
@@ -147,7 +148,7 @@ def write_pyarrow(case, size=1, page_version=1):
         t,
         f"{base_path}/{path}",
         row_group_size=2 ** 40,
-        use_dictionary=False,
+        use_dictionary=use_dictionary,
         compression=None,
         write_statistics=True,
         data_page_size=2 ** 40,  # i.e. a large number to ensure a single page
@@ -155,14 +156,10 @@ def write_pyarrow(case, size=1, page_version=1):
     )
 
 
-write_pyarrow(case_basic_nullable, 1, 1)  # V1
-write_pyarrow(case_basic_nullable, 1, 2)  # V2
-
-write_pyarrow(case_basic_required, 1, 1)  # V1
-write_pyarrow(case_basic_required, 1, 2)  # V2
-
-write_pyarrow(case_nested, 1, 1)  # V1
-write_pyarrow(case_nested, 1, 2)  # V2
+for case in [case_basic_nullable, case_basic_required, case_nested]:
+    for version in [1, 2]:
+        for use_dict in [True, False]:
+            write_pyarrow(case, 1, version, use_dict)
 
 
 def case_benches(size):
