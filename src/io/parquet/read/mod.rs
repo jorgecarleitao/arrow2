@@ -432,6 +432,12 @@ mod tests {
     fn v1_nested_utf8() -> Result<()> {
         test_pyarrow_integration(5, 1, "nested", false)
     }
+
+    #[test]
+    #[should_panic(expected = "assertion failed: `(left == right)`\n  left: `2`,\n right: `1`")]
+    fn v2_nested_nested() {
+        let _ = test_pyarrow_integration(6, 1, "nested", false);
+    }
 }
 
 #[cfg(test)]
