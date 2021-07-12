@@ -72,7 +72,7 @@ doc-comment = "0.3"
 crossbeam-channel = "0.5.1"
 
 [features]
-default = ["io_csv", "io_json", "io_ipc", "io_ipc_compression", "io_json_integration", "io_print", "io_parquet", "regex", "merge_sort", "ahash", "benchmarks"]
+default = ["io_csv", "io_json", "io_ipc", "io_ipc_compression", "io_json_integration", "io_print", "io_parquet", "regex", "merge_sort", "ahash", "benchmarks", "compute"]
 merge_sort = ["itertools"]
 io_csv = ["csv", "lazy_static", "regex"]
 io_json = ["serde", "serde_derive", "serde_json", "indexmap"]
@@ -80,6 +80,8 @@ io_ipc = ["flatbuffers"]
 io_ipc_compression = ["lz4", "zstd"]
 io_json_integration = ["io_json", "hex"]
 io_print = ["prettytable-rs"]
+# the compute kernels. Disabling this significantly reduces compile time.
+compute = []
 # base64 + io_ipc because arrow schemas are stored as base64-encoded ipc format.
 io_parquet = ["parquet2", "io_ipc", "base64", "futures"]
 benchmarks = ["rand"]
