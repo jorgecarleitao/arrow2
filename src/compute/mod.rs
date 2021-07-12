@@ -22,6 +22,7 @@ pub mod if_then_else;
 pub mod length;
 pub mod limit;
 pub mod nullif;
+pub mod partition;
 pub mod sort;
 pub mod substring;
 pub mod take;
