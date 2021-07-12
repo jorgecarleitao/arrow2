@@ -7,6 +7,7 @@ pub mod error;
 pub mod trusted_len;
 pub mod types;
 
+#[cfg(feature = "compute")]
 pub mod compute;
 pub mod io;
 pub mod record_batch;
