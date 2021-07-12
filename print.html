@@ -940,7 +940,6 @@ It makes minimal assumptions on how you to decompose CPU and IO intensive tasks.
 <p>Here is how to read a single column chunk from a single row group:</p>
 <pre><pre class="playground"><code class="language-rust">use std::fs::File;
 
-use arrow2::compute::cast::cast;
 use arrow2::io::parquet::read;
 use arrow2::{array::Array, error::Result};
 
@@ -965,17 +964,17 @@ fn read_column_chunk(path: &amp;str, row_group: usize, column: usize) -&gt; Resu
     // get the columns' metadata
     let metadata = file_metadata.row_groups[row_group].column(column);
 
+    // get the columns' logical type
+    let data_type = arrow_schema.fields()[column].data_type().clone();
+
     // This is the actual work. In this case, pages are read (by calling `iter.next()`) and are
     // immediately decompressed, decoded, deserialized to arrow and deallocated.
     // This uses a combination of IO and CPU. At this point, `array` is the arrow-corresponding
     // array of the parquets' physical type.
     // `Decompressor` re-uses an internal buffer for de-compression, thereby maximizing memory re-use.
     let mut pages = read::Decompressor::new(pages, vec![]);
-    let array = read::page_iter_to_array(&amp;mut pages, metadata)?;
 
-    // Cast the array to the corresponding Arrow's data type. When the physical type
-    // is the same, this operation is `O(1)`. Otherwise, it incurs some CPU cost.
-    cast(array.as_ref(), arrow_schema.field(column).data_type())
+    read::page_iter_to_array(&amp;mut pages, metadata, data_type)
 }
 
 fn main() -&gt; Result&lt;()&gt; {
@@ -1032,7 +1031,7 @@ use std::sync::Arc;
 use std::thread;
 use std::time::SystemTime;
 
-use arrow2::{array::Array, compute::cast::cast, error::Result, io::parquet::read};
+use arrow2::{array::Array, error::Result, io::parquet::read};
 
 fn parallel_read(path: &amp;str) -&gt; Result&lt;Vec&lt;Box&lt;dyn Array&gt;&gt;&gt; {
     // prepare a channel to send serialized records from threads
@@ -1083,22 +1082,20 @@ fn parallel_read(path: &amp;str) -&gt; Result&lt;Vec&lt;Box&lt;dyn Array&gt;&gt;
             let start = SystemTime::now();
             println!(&quot;consumer start - {} {}&quot;, column, row_group);
             let metadata = metadata_consumer.row_groups[row_group].column(column);
+            let data_type = arrow_schema_consumer.fields()[column].data_type().clone();
 
             let pages = iter
                 .into_iter()
                 .map(|x| x.and_then(|x| read::decompress(x, &amp;mut vec![])));
             let mut pages = read::streaming_iterator::convert(pages);
-            let array = read::page_iter_to_array(&amp;mut pages, metadata).unwrap();
+            let array = read::page_iter_to_array(&amp;mut pages, metadata, data_type);
             println!(
                 &quot;consumer end - {:?}: {} {}&quot;,
                 start.elapsed().unwrap(),
                 column,
                 row_group
             );
-            cast(
-                array.as_ref(),
-                arrow_schema_consumer.field(column).data_type(),
-            )
+            array
         });
         children.push(child);
     }
