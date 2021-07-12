@@ -1,3 +1,5 @@
+use std::io::Cursor;
+
 use parquet2::{
     compression::create_codec,
     encoding::Encoding,
@@ -7,7 +9,7 @@ use parquet2::{
     write::WriteOptions,
 };
 
-use super::{utils, Version};
+use super::utils;
 use crate::{
     array::{Array, FixedSizeBinaryArray},
     error::Result,
@@ -22,7 +24,15 @@ pub fn array_to_page_v1(
     let is_optional = is_type_nullable(descriptor.type_());
     let validity = array.validity();
 
-    let mut buffer = utils::write_def_levels(is_optional, validity, array.len(), Version::V1)?;
+    let mut buffer = Cursor::new(vec![]);
+    utils::write_def_levels(
+        &mut buffer,
+        is_optional,
+        validity,
+        array.len(),
+        options.version,
+    )?;
+    let mut buffer = buffer.into_inner();
 
     if is_optional {
         // append the non-null values

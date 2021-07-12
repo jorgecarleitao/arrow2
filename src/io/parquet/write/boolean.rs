@@ -1,3 +1,5 @@
+use std::io::Cursor;
+
 use parquet2::{
     encoding::hybrid_rle::bitpacked_encode,
     metadata::ColumnDescriptor,
@@ -29,7 +31,15 @@ pub fn array_to_page(
 
     let validity = array.validity();
 
-    let buffer = utils::write_def_levels(is_optional, validity, array.len(), options.version)?;
+    let mut buffer = Cursor::new(vec![]);
+    utils::write_def_levels(
+        &mut buffer,
+        is_optional,
+        validity,
+        array.len(),
+        options.version,
+    )?;
+    let buffer = buffer.into_inner();
 
     let definition_levels_byte_length = buffer.len();
 

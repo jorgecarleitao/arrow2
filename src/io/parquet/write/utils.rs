@@ -1,9 +1,10 @@
+use std::io::{Seek, SeekFrom, Write};
+
 use crate::bitmap::Bitmap;
-use parquet2::compression::create_codec;
-use parquet2::encoding::hybrid_rle::encode;
 
 use parquet2::{
-    encoding::Encoding,
+    compression::create_codec,
+    encoding::{hybrid_rle::encode, Encoding},
     metadata::ColumnDescriptor,
     read::{CompressedPage, PageHeader},
     schema::{CompressionCodec, DataPageHeader, DataPageHeaderV2},
@@ -16,49 +17,58 @@ use crate::error::Result;
 use super::Version;
 
 #[inline]
-fn encode_iter_v1<I: Iterator<Item = bool>>(iter: I) -> Result<Vec<u8>> {
-    let mut buffer = std::io::Cursor::new(vec![0; 4]);
-    buffer.set_position(4);
-    encode(&mut buffer, iter)?;
-    let mut buffer = buffer.into_inner();
-    let length = buffer.len() - 4;
-    // todo: pay this small debt (loop?)
-    let length = length.to_le_bytes();
-    buffer[0] = length[0];
-    buffer[1] = length[1];
-    buffer[2] = length[2];
-    buffer[3] = length[3];
-    Ok(buffer)
+fn encode_iter_v1<W: Write + Seek, I: Iterator<Item = bool>>(
+    writer: &mut W,
+    iter: I,
+) -> Result<()> {
+    writer.write_all(&[0; 4])?;
+    let start = writer.stream_position()?;
+    encode(writer, iter)?;
+    let end = writer.stream_position()?;
+    let length = end - start;
+
+    // write the first 4 bytes as length
+    writer.seek(SeekFrom::Current(-(length as i64) - 4))?;
+    writer.write_all((length as i32).to_le_bytes().as_ref())?;
+
+    // return to the last position
+    writer.seek(SeekFrom::Current(end as i64))?;
+    Ok(())
 }
 
 #[inline]
-fn encode_iter_v2<I: Iterator<Item = bool>>(iter: I) -> Result<Vec<u8>> {
-    let mut buffer = vec![];
-    encode(&mut buffer, iter)?;
-    Ok(buffer)
+fn encode_iter_v2<W: Write + Seek, I: Iterator<Item = bool>>(
+    writer: &mut W,
+    iter: I,
+) -> Result<()> {
+    Ok(encode(writer, iter)?)
 }
 
-fn encode_iter<I: Iterator<Item = bool>>(iter: I, version: Version) -> Result<Vec<u8>> {
+fn encode_iter<W: Write + Seek, I: Iterator<Item = bool>>(
+    writer: &mut W,
+    iter: I,
+    version: Version,
+) -> Result<()> {
     match version {
-        Version::V1 => encode_iter_v1(iter),
-        Version::V2 => encode_iter_v2(iter),
+        Version::V1 => encode_iter_v1(writer, iter),
+        Version::V2 => encode_iter_v2(writer, iter),
     }
 }
 
 /// writes the def levels to a `Vec<u8>` and returns it.
-/// Note that this function
 #[inline]
-pub fn write_def_levels(
+pub fn write_def_levels<W: Write + Seek>(
+    writer: &mut W,
     is_optional: bool,
     validity: &Option<Bitmap>,
     len: usize,
     version: Version,
-) -> Result<Vec<u8>> {
+) -> Result<()> {
     // encode def levels
     match (is_optional, validity) {
-        (true, Some(validity)) => encode_iter(validity.iter(), version),
-        (true, None) => encode_iter(std::iter::repeat(true).take(len), version),
-        _ => Ok(vec![]), // is required => no def levels
+        (true, Some(validity)) => encode_iter(writer, validity.iter(), version),
+        (true, None) => encode_iter(writer, std::iter::repeat(true).take(len), version),
+        _ => Ok(()), // is required => no def levels
     }
 }
 
