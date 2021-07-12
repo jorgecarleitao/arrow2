@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::thread;
 use std::time::SystemTime;
 
-use arrow2::{array::Array, compute::cast::cast, error::Result, io::parquet::read};
+use arrow2::{array::Array, error::Result, io::parquet::read};
 
 fn parallel_read(path: &str) -> Result<Vec<Box<dyn Array>>> {
     // prepare a channel to send serialized records from threads
@@ -56,22 +56,20 @@ fn parallel_read(path: &str) -> Result<Vec<Box<dyn Array>>> {
             let start = SystemTime::now();
             println!("consumer start - {} {}", column, row_group);
             let metadata = metadata_consumer.row_groups[row_group].column(column);
+            let data_type = arrow_schema_consumer.fields()[column].data_type().clone();
 
             let pages = iter
                 .into_iter()
                 .map(|x| x.and_then(|x| read::decompress(x, &mut vec![])));
             let mut pages = read::streaming_iterator::convert(pages);
-            let array = read::page_iter_to_array(&mut pages, metadata).unwrap();
+            let array = read::page_iter_to_array(&mut pages, metadata, data_type);
             println!(
                 "consumer end - {:?}: {} {}",
                 start.elapsed().unwrap(),
                 column,
                 row_group
             );
-            cast(
-                array.as_ref(),
-                arrow_schema_consumer.field(column).data_type(),
-            )
+            array
         });
         children.push(child);
     }
