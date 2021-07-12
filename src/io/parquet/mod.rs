@@ -379,6 +379,9 @@ mod tests_integration {
     use std::sync::Arc;
 
     use super::write::CompressionCodec;
+    use crate::array::{Array, PrimitiveArray, Utf8Array};
+    use crate::datatypes::DataType;
+    use crate::datatypes::TimeUnit;
     use crate::datatypes::*;
     use crate::record_batch::*;
 
@@ -451,5 +454,30 @@ mod tests_integration {
     fn roundtrip_100_primitive() -> Result<()> {
         test_file("1.0.0-littleendian", "generated_primitive")?;
         test_file("1.0.0-bigendian", "generated_primitive")
+    }
+
+    /// Tests that when arrow-specific types (Duration and LargeUtf8) are written to parquet, we can rountrip its
+    /// logical types.
+    #[test]
+    fn test_arrow_type() -> Result<()> {
+        let dt1 = DataType::Duration(TimeUnit::Second);
+        let array = PrimitiveArray::<i64>::from([Some(1), None, Some(2)]).to(dt1.clone());
+        let array2 = Utf8Array::<i64>::from([Some("a"), None, Some("bb")]);
+        let schema = Schema::new(vec![
+            Field::new("a1", dt1, true),
+            Field::new("a2", array2.data_type().clone(), true),
+        ]);
+        let batch = RecordBatch::try_new(
+            Arc::new(schema.clone()),
+            vec![Arc::new(array), Arc::new(array2)],
+        )?;
+
+        let r = integration_write(&schema, &[batch.clone()])?;
+
+        let (new_schema, new_batches) = integration_read(&r)?;
+
+        assert_eq!(new_schema.as_ref(), &schema);
+        assert_eq!(new_batches, vec![batch]);
+        Ok(())
     }
 }

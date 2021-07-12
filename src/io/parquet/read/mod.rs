@@ -59,21 +59,20 @@ pub fn read_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetaData> {
 fn page_iter_i64<I: StreamingIterator<Item = std::result::Result<Page, ParquetError>>>(
     iter: I,
     metadata: &ColumnChunkMetaData,
-    converted_type: &Option<PrimitiveConvertedType>,
-    logical_type: &Option<LogicalType>,
+    data_type: DataType,
 ) -> Result<Box<dyn Array>> {
-    let data_type = schema::from_int64(logical_type, converted_type)?;
+    if metadata.descriptor().max_rep_level() > 0 {
+        let inner = match data_type {
+            DataType::List(ref inner) => inner.data_type(),
+            DataType::LargeList(ref inner) => inner.data_type(),
+            _ => unimplemented!(),
+        };
 
-    let is_nested = metadata.descriptor().max_rep_level() > 0;
-
-    if is_nested {
-        let real_type = schema::to_data_type(metadata.descriptor().base_type())?.unwrap();
-
-        match data_type {
+        match inner {
             DataType::UInt64 => {
-                primitive::iter_to_array_nested(iter, metadata, real_type, |x: i64| x as u64)
+                primitive::iter_to_array_nested(iter, metadata, data_type, |x: i64| x as u64)
             }
-            _ => primitive::iter_to_array_nested(iter, metadata, real_type, |x: i64| x as i64),
+            _ => primitive::iter_to_array_nested(iter, metadata, data_type, |x: i64| x as i64),
         }
     } else {
         match data_type {
@@ -88,23 +87,24 @@ fn page_iter_i64<I: StreamingIterator<Item = std::result::Result<Page, ParquetEr
 fn page_iter_i32<I: StreamingIterator<Item = std::result::Result<Page, ParquetError>>>(
     iter: I,
     metadata: &ColumnChunkMetaData,
-    converted_type: &Option<PrimitiveConvertedType>,
-    logical_type: &Option<LogicalType>,
+    data_type: DataType,
 ) -> Result<Box<dyn Array>> {
-    let data_type = schema::from_int32(logical_type, converted_type)?;
-
     use DataType::*;
 
     if metadata.descriptor().max_rep_level() > 0 {
-        let real_type = schema::to_data_type(metadata.descriptor().base_type())?.unwrap();
+        let inner = match data_type {
+            List(ref inner) => inner.data_type(),
+            LargeList(ref inner) => inner.data_type(),
+            _ => unimplemented!(),
+        };
 
-        match data_type {
-            UInt8 => primitive::iter_to_array_nested(iter, metadata, real_type, |x: i32| x as u8),
-            UInt16 => primitive::iter_to_array_nested(iter, metadata, real_type, |x: i32| x as u16),
-            UInt32 => primitive::iter_to_array_nested(iter, metadata, real_type, |x: i32| x as u32),
-            Int8 => primitive::iter_to_array_nested(iter, metadata, real_type, |x: i32| x as i8),
-            Int16 => primitive::iter_to_array_nested(iter, metadata, real_type, |x: i32| x as i16),
-            _ => primitive::iter_to_array_nested(iter, metadata, real_type, |x: i32| x),
+        match inner {
+            UInt8 => primitive::iter_to_array_nested(iter, metadata, data_type, |x: i32| x as u8),
+            UInt16 => primitive::iter_to_array_nested(iter, metadata, data_type, |x: i32| x as u16),
+            UInt32 => primitive::iter_to_array_nested(iter, metadata, data_type, |x: i32| x as u32),
+            Int8 => primitive::iter_to_array_nested(iter, metadata, data_type, |x: i32| x as i8),
+            Int16 => primitive::iter_to_array_nested(iter, metadata, data_type, |x: i32| x as i16),
+            _ => primitive::iter_to_array_nested(iter, metadata, data_type, |x: i32| x),
         }
     } else {
         match data_type {
@@ -121,19 +121,21 @@ fn page_iter_i32<I: StreamingIterator<Item = std::result::Result<Page, ParquetEr
 fn page_iter_byte_array<I: StreamingIterator<Item = std::result::Result<Page, ParquetError>>>(
     iter: I,
     metadata: &ColumnChunkMetaData,
-    converted_type: &Option<PrimitiveConvertedType>,
-    logical_type: &Option<LogicalType>,
+    data_type: DataType,
 ) -> Result<Box<dyn Array>> {
-    let data_type = schema::from_byte_array(logical_type, converted_type)?;
+    use DataType::*;
 
     if metadata.descriptor().max_rep_level() > 0 {
-        let real_type = schema::to_data_type(metadata.descriptor().base_type())?.unwrap();
+        let inner = match data_type {
+            List(ref inner) => inner.data_type(),
+            LargeList(ref inner) => inner.data_type(),
+            _ => unimplemented!(),
+        };
 
-        use DataType::*;
-        match data_type {
-            Binary | Utf8 => binary::iter_to_array_nested::<i32, _, _>(iter, metadata, real_type),
+        match inner {
+            Binary | Utf8 => binary::iter_to_array_nested::<i32, _, _>(iter, metadata, data_type),
             LargeBinary | LargeUtf8 => {
-                binary::iter_to_array_nested::<i64, _, _>(iter, metadata, real_type)
+                binary::iter_to_array_nested::<i64, _, _>(iter, metadata, data_type)
             }
             other => Err(ArrowError::NotYetImplemented(format!(
                 "Can't read {:?} from parquet",
@@ -141,7 +143,6 @@ fn page_iter_byte_array<I: StreamingIterator<Item = std::result::Result<Page, Pa
             ))),
         }
     } else {
-        use DataType::*;
         match data_type {
             Binary | Utf8 => binary::iter_to_array::<i32, _, _>(iter, metadata, &data_type),
             LargeBinary | LargeUtf8 => {
@@ -159,13 +160,9 @@ fn page_iter_fixed_len_byte_array<
     I: StreamingIterator<Item = std::result::Result<Page, ParquetError>>,
 >(
     iter: I,
-    length: &i32,
     metadata: &ColumnChunkMetaData,
-    converted_type: &Option<PrimitiveConvertedType>,
-    logical_type: &Option<LogicalType>,
+    data_type: DataType,
 ) -> Result<Box<dyn Array>> {
-    let data_type = schema::from_fixed_len_byte_array(length, logical_type, converted_type);
-
     use DataType::*;
     Ok(match data_type {
         FixedSizeBinary(size) => Box::new(fixed_size_binary::iter_to_array(iter, size, metadata)?),
@@ -181,6 +178,7 @@ fn page_iter_fixed_len_byte_array<
 pub fn page_iter_to_array<I: StreamingIterator<Item = std::result::Result<Page, ParquetError>>>(
     iter: &mut I,
     metadata: &ColumnChunkMetaData,
+    data_type: DataType,
 ) -> Result<Box<dyn Array>> {
     match metadata.descriptor().base_type() {
         ParquetType::PrimitiveType {
@@ -189,12 +187,8 @@ pub fn page_iter_to_array<I: StreamingIterator<Item = std::result::Result<Page, 
             logical_type,
             ..
         } => match (physical_type, converted_type, logical_type) {
-            (PhysicalType::Int32, _, _) => {
-                page_iter_i32(iter, metadata, converted_type, logical_type)
-            }
-            (PhysicalType::Int64, _, _) => {
-                page_iter_i64(iter, metadata, converted_type, logical_type)
-            }
+            (PhysicalType::Int32, _, _) => page_iter_i32(iter, metadata, data_type),
+            (PhysicalType::Int64, _, _) => page_iter_i64(iter, metadata, data_type),
             (PhysicalType::Float, None, None) => {
                 primitive::iter_to_array(iter, metadata, DataType::Float32, |x: f32| x)
             }
@@ -204,11 +198,9 @@ pub fn page_iter_to_array<I: StreamingIterator<Item = std::result::Result<Page, 
             (PhysicalType::Boolean, None, None) => {
                 Ok(Box::new(boolean::iter_to_array(iter, metadata)?))
             }
-            (PhysicalType::ByteArray, _, _) => {
-                page_iter_byte_array(iter, metadata, converted_type, logical_type)
-            }
-            (PhysicalType::FixedLenByteArray(length), _, _) => {
-                page_iter_fixed_len_byte_array(iter, length, metadata, converted_type, logical_type)
+            (PhysicalType::ByteArray, _, _) => page_iter_byte_array(iter, metadata, data_type),
+            (PhysicalType::FixedLenByteArray(_), _, _) => {
+                page_iter_fixed_len_byte_array(iter, metadata, data_type)
             }
             (PhysicalType::Int96, _, _) => primitive::iter_to_array(
                 iter,
@@ -235,14 +227,10 @@ pub fn page_iter_to_array<I: StreamingIterator<Item = std::result::Result<Page, 
                             schema::to_data_type(metadata.descriptor().base_type())?.unwrap();
                         boolean::iter_to_array_nested(iter, metadata, real_type)
                     }
-                    (PhysicalType::Int64, _, _) => {
-                        page_iter_i64(iter, metadata, converted_type, logical_type)
-                    }
-                    (PhysicalType::Int32, _, _) => {
-                        page_iter_i32(iter, metadata, converted_type, logical_type)
-                    }
+                    (PhysicalType::Int64, _, _) => page_iter_i64(iter, metadata, data_type),
+                    (PhysicalType::Int32, _, _) => page_iter_i32(iter, metadata, data_type),
                     (PhysicalType::ByteArray, _, _) => {
-                        page_iter_byte_array(iter, metadata, converted_type, logical_type)
+                        page_iter_byte_array(iter, metadata, data_type)
                     }
                     _ => todo!(),
                 },
