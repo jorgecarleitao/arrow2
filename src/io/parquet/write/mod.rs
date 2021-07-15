@@ -190,7 +190,7 @@ pub fn array_to_page(
                 values.into(),
                 array.validity().clone(),
             );
-            fixed_len_bytes::array_to_page_v1(&array, options, descriptor)
+            fixed_len_bytes::array_to_page(&array, options, descriptor)
         }
         DataType::Interval(IntervalUnit::DayTime) => {
             let array = array
@@ -208,9 +208,9 @@ pub fn array_to_page(
                 values.into(),
                 array.validity().clone(),
             );
-            fixed_len_bytes::array_to_page_v1(&array, options, descriptor)
+            fixed_len_bytes::array_to_page(&array, options, descriptor)
         }
-        DataType::FixedSizeBinary(_) => fixed_len_bytes::array_to_page_v1(
+        DataType::FixedSizeBinary(_) => fixed_len_bytes::array_to_page(
             array.as_any().downcast_ref().unwrap(),
             options,
             descriptor,
@@ -261,7 +261,7 @@ pub fn array_to_page(
                     values.into(),
                     array.validity().clone(),
                 );
-                fixed_len_bytes::array_to_page_v1(&array, options, descriptor)
+                fixed_len_bytes::array_to_page(&array, options, descriptor)
             }
         }
         DataType::FixedSizeList(_, _) | DataType::List(_) | DataType::LargeList(_) => {

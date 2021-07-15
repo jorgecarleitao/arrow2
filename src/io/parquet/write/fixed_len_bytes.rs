@@ -1,9 +1,5 @@
 use parquet2::{
-    compression::create_codec,
-    encoding::Encoding,
-    metadata::ColumnDescriptor,
-    read::{CompressedPage, PageHeader},
-    schema::DataPageHeader,
+    compression::create_codec, metadata::ColumnDescriptor, read::CompressedPage,
     write::WriteOptions,
 };
 
@@ -14,7 +10,7 @@ use crate::{
     io::parquet::read::is_type_nullable,
 };
 
-pub fn array_to_page_v1(
+pub fn array_to_page(
     array: &FixedSizeBinaryArray,
     options: WriteOptions,
     descriptor: ColumnDescriptor,
@@ -30,6 +26,8 @@ pub fn array_to_page_v1(
         array.len(),
         options.version,
     )?;
+
+    let definition_levels_byte_length = buffer.len();
 
     if is_optional {
         // append the non-null values
@@ -56,20 +54,15 @@ pub fn array_to_page_v1(
         buffer
     };
 
-    let header = PageHeader::V1(DataPageHeader {
-        num_values: array.len() as i32,
-        encoding: Encoding::Plain,
-        definition_level_encoding: Encoding::Rle,
-        repetition_level_encoding: Encoding::Rle,
-        statistics: None,
-    });
-
-    Ok(CompressedPage::new(
-        header,
+    utils::build_plain_page(
         buffer,
-        options.compression,
+        array.len(),
+        array.null_count(),
         uncompressed_page_size,
+        0,
+        definition_levels_byte_length,
         None,
         descriptor,
-    ))
+        options,
+    )
 }
