@@ -6,18 +6,17 @@ use parquet2::{
     write::WriteOptions,
 };
 
-use super::utils;
+use super::super::utils;
 use crate::error::Result;
 use crate::{array::*, io::parquet::read::is_type_nullable};
 
 #[inline]
-fn encode(iterator: impl Iterator<Item = bool>, buffer: Vec<u8>) -> Result<Vec<u8>> {
+pub(super) fn encode(iterator: impl Iterator<Item = bool>, buffer: &mut Vec<u8>) -> Result<()> {
     // encode values using bitpacking
     let len = buffer.len();
     let mut buffer = std::io::Cursor::new(buffer);
     buffer.set_position(len as u64);
-    bitpacked_encode(&mut buffer, iterator)?;
-    Ok(buffer.into_inner())
+    Ok(bitpacked_encode(&mut buffer, iterator)?)
 }
 
 pub fn array_to_page(
@@ -40,17 +39,17 @@ pub fn array_to_page(
 
     let definition_levels_byte_length = buffer.len();
 
-    let buffer = if is_optional {
+    if is_optional {
         let iter = array.iter().flatten().take(
             validity
                 .as_ref()
                 .map(|x| x.len() - x.null_count())
                 .unwrap_or_else(|| array.len()),
         );
-        encode(iter, buffer)
+        encode(iter, &mut buffer)
     } else {
         let iter = array.values().iter();
-        encode(iter, buffer)
+        encode(iter, &mut buffer)
     }?;
 
     let uncompressed_page_size = buffer.len();
@@ -76,7 +75,7 @@ pub fn array_to_page(
     )
 }
 
-fn build_statistics(array: &BooleanArray) -> ParquetStatistics {
+pub(super) fn build_statistics(array: &BooleanArray) -> ParquetStatistics {
     let statistics = &BooleanStatistics {
         null_count: Some(array.null_count() as i64),
         distinct_count: None,

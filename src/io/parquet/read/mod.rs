@@ -223,9 +223,7 @@ pub fn page_iter_to_array<I: StreamingIterator<Item = std::result::Result<Page, 
                     ..
                 } => match (physical_type, converted_type, logical_type) {
                     (PhysicalType::Boolean, None, None) => {
-                        let real_type =
-                            schema::to_data_type(metadata.descriptor().base_type())?.unwrap();
-                        boolean::iter_to_array_nested(iter, metadata, real_type)
+                        boolean::iter_to_array_nested(iter, metadata, data_type)
                     }
                     (PhysicalType::Int64, _, _) => page_iter_i64(iter, metadata, data_type),
                     (PhysicalType::Int32, _, _) => page_iter_i32(iter, metadata, data_type),

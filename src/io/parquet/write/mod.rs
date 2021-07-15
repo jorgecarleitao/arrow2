@@ -293,7 +293,18 @@ fn list_array_to_page<O: Offset>(
     options: WriteOptions,
 ) -> Result<CompressedPage> {
     use DataType::*;
-    match array.data_type() {
+    match array.values().data_type() {
+        Boolean => {
+            let values = array.values().as_any().downcast_ref().unwrap();
+            let is_optional = is_type_nullable(descriptor.type_());
+
+            boolean::nested_array_to_page::<O>(
+                values,
+                options,
+                descriptor,
+                NestedInfo::new(array.offsets(), array.validity(), is_optional),
+            )
+        }
         UInt8 => dyn_nested_prim!(u8, i32, O, array, descriptor, options),
         UInt16 => dyn_nested_prim!(u16, i32, O, array, descriptor, options),
         UInt32 => dyn_nested_prim!(u32, i32, O, array, descriptor, options),
@@ -487,5 +498,10 @@ mod tests {
     #[test]
     fn test_list_int64_optional_v1() -> Result<()> {
         round_trip(0, true, true, Version::V1, CompressionCodec::Uncompressed)
+    }
+
+    #[test]
+    fn test_list_bool_optional_v2() -> Result<()> {
+        round_trip(4, true, true, Version::V2, CompressionCodec::Uncompressed)
     }
 }
