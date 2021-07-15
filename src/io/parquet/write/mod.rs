@@ -279,18 +279,25 @@ mod tests {
     fn round_trip(
         column: usize,
         nullable: bool,
+        nested: bool,
         version: Version,
         compression: CompressionCodec,
     ) -> Result<()> {
-        let array = if nullable {
-            pyarrow_nullable(column)
+        let (array, statistics) = if nested {
+            (
+                pyarrow_nested_nullable(column),
+                pyarrow_nested_nullable_statistics(column),
+            )
+        } else if nullable {
+            (
+                pyarrow_nullable(column),
+                pyarrow_nullable_statistics(column),
+            )
         } else {
-            pyarrow_required(column)
-        };
-        let statistics = if nullable {
-            pyarrow_nullable_statistics(column)
-        } else {
-            pyarrow_required_statistics(column)
+            (
+                pyarrow_required(column),
+                pyarrow_required_statistics(column),
+            )
         };
 
         let field = Field::new("a1", array.data_type().clone(), nullable);
@@ -334,76 +341,76 @@ mod tests {
 
     #[test]
     fn test_int64_optional_v1() -> Result<()> {
-        round_trip(0, true, Version::V1, CompressionCodec::Uncompressed)
+        round_trip(0, true, false, Version::V1, CompressionCodec::Uncompressed)
     }
 
     #[test]
     fn test_int64_required_v1() -> Result<()> {
-        round_trip(0, false, Version::V1, CompressionCodec::Uncompressed)
+        round_trip(0, false, false, Version::V1, CompressionCodec::Uncompressed)
     }
 
     #[test]
     fn test_int64_optional_v2() -> Result<()> {
-        round_trip(0, true, Version::V2, CompressionCodec::Uncompressed)
+        round_trip(0, true, false, Version::V2, CompressionCodec::Uncompressed)
     }
 
     #[test]
     fn test_int64_optional_v2_compressed() -> Result<()> {
-        round_trip(0, true, Version::V2, CompressionCodec::Snappy)
+        round_trip(0, true, false, Version::V2, CompressionCodec::Snappy)
     }
 
     #[test]
     fn test_utf8_optional_v1() -> Result<()> {
-        round_trip(2, true, Version::V1, CompressionCodec::Uncompressed)
+        round_trip(2, true, false, Version::V1, CompressionCodec::Uncompressed)
     }
 
     #[test]
     fn test_utf8_required_v1() -> Result<()> {
-        round_trip(2, false, Version::V1, CompressionCodec::Uncompressed)
+        round_trip(2, false, false, Version::V1, CompressionCodec::Uncompressed)
     }
 
     #[test]
     fn test_utf8_optional_v2() -> Result<()> {
-        round_trip(2, true, Version::V2, CompressionCodec::Uncompressed)
+        round_trip(2, true, false, Version::V2, CompressionCodec::Uncompressed)
     }
 
     #[test]
     fn test_utf8_required_v2() -> Result<()> {
-        round_trip(2, false, Version::V2, CompressionCodec::Uncompressed)
+        round_trip(2, false, false, Version::V2, CompressionCodec::Uncompressed)
     }
 
     #[test]
     fn test_utf8_optional_v2_compressed() -> Result<()> {
-        round_trip(2, true, Version::V2, CompressionCodec::Snappy)
+        round_trip(2, true, false, Version::V2, CompressionCodec::Snappy)
     }
 
     #[test]
     fn test_utf8_required_v2_compressed() -> Result<()> {
-        round_trip(2, false, Version::V2, CompressionCodec::Snappy)
+        round_trip(2, false, false, Version::V2, CompressionCodec::Snappy)
     }
 
     #[test]
     fn test_bool_optional_v1() -> Result<()> {
-        round_trip(3, true, Version::V1, CompressionCodec::Uncompressed)
+        round_trip(3, true, false, Version::V1, CompressionCodec::Uncompressed)
     }
 
     #[test]
     fn test_bool_required_v1() -> Result<()> {
-        round_trip(3, false, Version::V1, CompressionCodec::Uncompressed)
+        round_trip(3, false, false, Version::V1, CompressionCodec::Uncompressed)
     }
 
     #[test]
     fn test_bool_optional_v2_uncompressed() -> Result<()> {
-        round_trip(3, true, Version::V2, CompressionCodec::Uncompressed)
+        round_trip(3, true, false, Version::V2, CompressionCodec::Uncompressed)
     }
 
     #[test]
     fn test_bool_required_v2_uncompressed() -> Result<()> {
-        round_trip(3, false, Version::V2, CompressionCodec::Uncompressed)
+        round_trip(3, false, false, Version::V2, CompressionCodec::Uncompressed)
     }
 
     #[test]
     fn test_bool_required_v2_compressed() -> Result<()> {
-        round_trip(3, false, Version::V2, CompressionCodec::Snappy)
+        round_trip(3, false, false, Version::V2, CompressionCodec::Snappy)
     }
 }

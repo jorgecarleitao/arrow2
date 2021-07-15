@@ -1,5 +1,3 @@
-use std::io::Cursor;
-
 use parquet2::{
     compression::create_codec,
     encoding::Encoding,
@@ -24,7 +22,7 @@ pub fn array_to_page_v1(
     let is_optional = is_type_nullable(descriptor.type_());
     let validity = array.validity();
 
-    let mut buffer = Cursor::new(vec![]);
+    let mut buffer = vec![];
     utils::write_def_levels(
         &mut buffer,
         is_optional,
@@ -32,7 +30,6 @@ pub fn array_to_page_v1(
         array.len(),
         options.version,
     )?;
-    let mut buffer = buffer.into_inner();
 
     if is_optional {
         // append the non-null values

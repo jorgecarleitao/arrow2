@@ -1,5 +1,3 @@
-use std::io::Cursor;
-
 use parquet2::{
     metadata::ColumnDescriptor,
     read::CompressedPage,
@@ -30,7 +28,7 @@ where
 
     let validity = array.validity();
 
-    let mut buffer = Cursor::new(vec![]);
+    let mut buffer = vec![];
     utils::write_def_levels(
         &mut buffer,
         is_optional,
@@ -38,7 +36,6 @@ where
         array.len(),
         options.version,
     )?;
-    let mut buffer = buffer.into_inner();
 
     let definition_levels_byte_length = buffer.len();
 
@@ -79,7 +76,7 @@ where
     )
 }
 
-fn build_statistics<T, R>(
+pub fn build_statistics<T, R>(
     array: &PrimitiveArray<T>,
     descriptor: ColumnDescriptor,
 ) -> ParquetStatistics

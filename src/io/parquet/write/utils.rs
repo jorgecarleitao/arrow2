@@ -1,10 +1,8 @@
-use std::io::{Seek, SeekFrom, Write};
-
 use crate::bitmap::Bitmap;
 
 use parquet2::{
     compression::create_codec,
-    encoding::{hybrid_rle::encode, Encoding},
+    encoding::{hybrid_rle::encode_bool, Encoding},
     metadata::ColumnDescriptor,
     read::{CompressedPage, PageHeader},
     schema::{CompressionCodec, DataPageHeader, DataPageHeaderV2},
@@ -17,35 +15,26 @@ use crate::error::Result;
 use super::Version;
 
 #[inline]
-fn encode_iter_v1<W: Write + Seek, I: Iterator<Item = bool>>(
-    writer: &mut W,
-    iter: I,
-) -> Result<()> {
-    writer.write_all(&[0; 4])?;
-    let start = writer.stream_position()?;
-    encode(writer, iter)?;
-    let end = writer.stream_position()?;
+fn encode_iter_v1<I: Iterator<Item = bool>>(buffer: &mut Vec<u8>, iter: I) -> Result<()> {
+    buffer.extend_from_slice(&[0; 4]);
+    let start = buffer.len();
+    encode_bool(buffer, iter)?;
+    let end = buffer.len();
     let length = end - start;
 
     // write the first 4 bytes as length
-    writer.seek(SeekFrom::Current(-(length as i64) - 4))?;
-    writer.write_all((length as i32).to_le_bytes().as_ref())?;
-
-    // return to the last position
-    writer.seek(SeekFrom::Current(end as i64))?;
+    let length = (length as i32).to_le_bytes();
+    (0..4).for_each(|i| buffer[start - 4 + i] = length[i]);
     Ok(())
 }
 
 #[inline]
-fn encode_iter_v2<W: Write + Seek, I: Iterator<Item = bool>>(
-    writer: &mut W,
-    iter: I,
-) -> Result<()> {
-    Ok(encode(writer, iter)?)
+fn encode_iter_v2<I: Iterator<Item = bool>>(writer: &mut Vec<u8>, iter: I) -> Result<()> {
+    Ok(encode_bool(writer, iter)?)
 }
 
-fn encode_iter<W: Write + Seek, I: Iterator<Item = bool>>(
-    writer: &mut W,
+fn encode_iter<I: Iterator<Item = bool>>(
+    writer: &mut Vec<u8>,
     iter: I,
     version: Version,
 ) -> Result<()> {
@@ -57,8 +46,8 @@ fn encode_iter<W: Write + Seek, I: Iterator<Item = bool>>(
 
 /// writes the def levels to a `Vec<u8>` and returns it.
 #[inline]
-pub fn write_def_levels<W: Write + Seek>(
-    writer: &mut W,
+pub fn write_def_levels(
+    writer: &mut Vec<u8>,
     is_optional: bool,
     validity: &Option<Bitmap>,
     len: usize,

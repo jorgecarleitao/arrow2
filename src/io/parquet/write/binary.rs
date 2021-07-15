@@ -1,5 +1,3 @@
-use std::io::Cursor;
-
 use parquet2::{
     metadata::ColumnDescriptor,
     read::CompressedPage,
@@ -22,7 +20,7 @@ pub fn array_to_page<O: Offset>(
     let validity = array.validity();
     let is_optional = is_type_nullable(descriptor.type_());
 
-    let mut buffer = Cursor::new(vec![]);
+    let mut buffer = vec![];
     utils::write_def_levels(
         &mut buffer,
         is_optional,
@@ -30,7 +28,6 @@ pub fn array_to_page<O: Offset>(
         array.len(),
         options.version,
     )?;
-    let mut buffer = buffer.into_inner();
 
     let definition_levels_byte_length = buffer.len();
 
