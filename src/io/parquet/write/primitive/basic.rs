@@ -6,7 +6,7 @@ use parquet2::{
     write::WriteOptions,
 };
 
-use super::utils;
+use super::super::utils;
 use crate::{
     array::{Array, PrimitiveArray},
     error::Result,
@@ -69,6 +69,7 @@ where
         array.len(),
         array.null_count(),
         uncompressed_page_size,
+        0,
         definition_levels_byte_length,
         statistics,
         descriptor,

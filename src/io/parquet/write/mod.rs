@@ -1,6 +1,7 @@
 mod binary;
 mod boolean;
 mod fixed_len_bytes;
+mod levels;
 mod primitive;
 mod record_batch;
 mod schema;
@@ -13,6 +14,8 @@ use crate::array::*;
 use crate::buffer::{Buffer, MutableBuffer};
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
+use crate::io::parquet::read::is_type_nullable;
+use crate::io::parquet::write::levels::NestedInfo;
 use crate::types::days_ms;
 use crate::types::NativeType;
 
@@ -260,10 +263,72 @@ pub fn array_to_page(
                 fixed_len_bytes::array_to_page_v1(&array, options, descriptor)
             }
         }
+        DataType::List(_) | DataType::LargeList(_) => {
+            nested_array_to_page(array, descriptor, options)
+        }
         other => Err(ArrowError::NotYetImplemented(format!(
             "Writing parquet V1 pages for data type {:?}",
             other
         ))),
+    }
+}
+
+macro_rules! dyn_nested_prim {
+    ($from:ty, $to:ty, $offset:ty, $array:expr, $descriptor:expr, $options:expr) => {{
+        let values = $array.values().as_any().downcast_ref().unwrap();
+        let is_optional = is_type_nullable($descriptor.type_());
+
+        primitive::nested_array_to_page::<$from, $to, $offset>(
+            values,
+            $options,
+            $descriptor,
+            NestedInfo::new($array.offsets(), $array.validity(), is_optional),
+        )
+    }};
+}
+
+fn list_array_to_page<O: Offset>(
+    array: &ListArray<O>,
+    descriptor: ColumnDescriptor,
+    options: WriteOptions,
+) -> Result<CompressedPage> {
+    use DataType::*;
+    match array.data_type() {
+        UInt8 => dyn_nested_prim!(u8, i32, O, array, descriptor, options),
+        UInt16 => dyn_nested_prim!(u16, i32, O, array, descriptor, options),
+        UInt32 => dyn_nested_prim!(u32, i32, O, array, descriptor, options),
+        UInt64 => dyn_nested_prim!(u64, i64, O, array, descriptor, options),
+
+        Int8 => dyn_nested_prim!(i8, i32, O, array, descriptor, options),
+        Int16 => dyn_nested_prim!(i16, i32, O, array, descriptor, options),
+        Int32 | Date32 | Time32(_) => {
+            dyn_nested_prim!(i32, i32, O, array, descriptor, options)
+        }
+        Int64 | Date64 | Time64(_) | Timestamp(_, _) | Duration(_) => {
+            dyn_nested_prim!(i64, i64, O, array, descriptor, options)
+        }
+
+        Float32 => dyn_nested_prim!(f32, f32, O, array, descriptor, options),
+        Float64 => dyn_nested_prim!(f64, f64, O, array, descriptor, options),
+        _ => todo!(),
+    }
+}
+
+fn nested_array_to_page(
+    array: &dyn Array,
+    descriptor: ColumnDescriptor,
+    options: WriteOptions,
+) -> Result<CompressedPage> {
+    match array.data_type() {
+        DataType::List(_) => {
+            let array = array.as_any().downcast_ref::<ListArray<i32>>().unwrap();
+            list_array_to_page(array, descriptor, options)
+        }
+        DataType::LargeList(_) => {
+            let array = array.as_any().downcast_ref::<ListArray<i64>>().unwrap();
+            list_array_to_page(array, descriptor, options)
+        }
+        _ => todo!(),
     }
 }
 
@@ -412,5 +477,15 @@ mod tests {
     #[test]
     fn test_bool_required_v2_compressed() -> Result<()> {
         round_trip(3, false, false, Version::V2, CompressionCodec::Snappy)
+    }
+
+    #[test]
+    fn test_list_int64_optional_v2() -> Result<()> {
+        round_trip(0, true, true, Version::V2, CompressionCodec::Uncompressed)
+    }
+
+    #[test]
+    fn test_list_int64_optional_v1() -> Result<()> {
+        round_trip(0, true, true, Version::V1, CompressionCodec::Uncompressed)
     }
 }

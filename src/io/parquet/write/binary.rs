@@ -64,6 +64,7 @@ pub fn array_to_page<O: Offset>(
         array.len(),
         array.null_count(),
         uncompressed_page_size,
+        0,
         definition_levels_byte_length,
         statistics,
         descriptor,
