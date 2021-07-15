@@ -1,27 +1,21 @@
-use parquet2::{
-    metadata::ColumnDescriptor, read::CompressedPage, types::NativeType, write::WriteOptions,
-};
+use parquet2::{metadata::ColumnDescriptor, read::CompressedPage, write::WriteOptions};
 
-use super::super::levels;
-use super::super::utils;
+use super::super::{levels, utils};
 use super::basic::{build_statistics, encode_plain};
 use crate::{
-    array::{Array, Offset, PrimitiveArray},
+    array::{Array, Offset, Utf8Array},
     error::Result,
     io::parquet::read::is_type_nullable,
-    types::NativeType as ArrowNativeType,
 };
 
-pub fn array_to_page<T, R, O>(
-    array: &PrimitiveArray<T>,
+pub fn array_to_page<O, OO>(
+    array: &Utf8Array<O>,
     options: WriteOptions,
     descriptor: ColumnDescriptor,
-    nested: levels::NestedInfo<O>,
+    nested: levels::NestedInfo<OO>,
 ) -> Result<CompressedPage>
 where
-    T: ArrowNativeType,
-    R: NativeType,
-    T: num::cast::AsPrimitive<R>,
+    OO: Offset,
     O: Offset,
 {
     let is_optional = is_type_nullable(descriptor.type_());

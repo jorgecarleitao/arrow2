@@ -14,6 +14,29 @@ use crate::{
     types::NativeType as ArrowNativeType,
 };
 
+pub(super) fn encode_plain<T, R>(array: &PrimitiveArray<T>, is_optional: bool, buffer: &mut Vec<u8>)
+where
+    T: ArrowNativeType,
+    R: NativeType,
+    T: num::cast::AsPrimitive<R>,
+{
+    if is_optional {
+        // append the non-null values
+        array.iter().for_each(|x| {
+            if let Some(x) = x {
+                let parquet_native: R = x.as_();
+                buffer.extend_from_slice(parquet_native.to_le_bytes().as_ref())
+            }
+        });
+    } else {
+        // append all values
+        array.values().iter().for_each(|x| {
+            let parquet_native: R = x.as_();
+            buffer.extend_from_slice(parquet_native.to_le_bytes().as_ref())
+        });
+    }
+}
+
 pub fn array_to_page<T, R>(
     array: &PrimitiveArray<T>,
     options: WriteOptions,
@@ -39,21 +62,8 @@ where
 
     let definition_levels_byte_length = buffer.len();
 
-    if is_optional {
-        // append the non-null values
-        array.iter().for_each(|x| {
-            if let Some(x) = x {
-                let parquet_native: R = x.as_();
-                buffer.extend_from_slice(parquet_native.to_le_bytes().as_ref())
-            }
-        });
-    } else {
-        // append all values
-        array.values().iter().for_each(|x| {
-            let parquet_native: R = x.as_();
-            buffer.extend_from_slice(parquet_native.to_le_bytes().as_ref())
-        });
-    }
+    encode_plain(array, is_optional, &mut buffer);
+
     let uncompressed_page_size = buffer.len();
 
     let buffer = utils::compress(buffer, options, definition_levels_byte_length)?;

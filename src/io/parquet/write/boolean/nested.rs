@@ -1,7 +1,7 @@
 use parquet2::{metadata::ColumnDescriptor, read::CompressedPage, write::WriteOptions};
 
 use super::super::{levels, utils};
-use super::basic::{build_statistics, encode};
+use super::basic::{build_statistics, encode_plain};
 use crate::{
     array::{Array, BooleanArray, Offset},
     error::Result,
@@ -28,18 +28,7 @@ where
     levels::write_def_levels(&mut buffer, &nested, validity, options.version)?;
     let definition_levels_byte_length = buffer.len() - repetition_levels_byte_length;
 
-    if is_optional {
-        let iter = array.iter().flatten().take(
-            validity
-                .as_ref()
-                .map(|x| x.len() - x.null_count())
-                .unwrap_or_else(|| array.len()),
-        );
-        encode(iter, &mut buffer)
-    } else {
-        let iter = array.values().iter();
-        encode(iter, &mut buffer)
-    }?;
+    encode_plain(array, is_optional, &mut buffer)?;
 
     let uncompressed_page_size = buffer.len();
 

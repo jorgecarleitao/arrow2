@@ -10,13 +10,32 @@ use super::super::utils;
 use crate::error::Result;
 use crate::{array::*, io::parquet::read::is_type_nullable};
 
-#[inline]
-pub(super) fn encode(iterator: impl Iterator<Item = bool>, buffer: &mut Vec<u8>) -> Result<()> {
+fn encode(iterator: impl Iterator<Item = bool>, buffer: &mut Vec<u8>) -> Result<()> {
     // encode values using bitpacking
     let len = buffer.len();
     let mut buffer = std::io::Cursor::new(buffer);
     buffer.set_position(len as u64);
     Ok(bitpacked_encode(&mut buffer, iterator)?)
+}
+
+pub(super) fn encode_plain(
+    array: &BooleanArray,
+    is_optional: bool,
+    buffer: &mut Vec<u8>,
+) -> Result<()> {
+    if is_optional {
+        let iter = array.iter().flatten().take(
+            array
+                .validity()
+                .as_ref()
+                .map(|x| x.len() - x.null_count())
+                .unwrap_or_else(|| array.len()),
+        );
+        encode(iter, buffer)
+    } else {
+        let iter = array.values().iter();
+        encode(iter, buffer)
+    }
 }
 
 pub fn array_to_page(
@@ -39,18 +58,7 @@ pub fn array_to_page(
 
     let definition_levels_byte_length = buffer.len();
 
-    if is_optional {
-        let iter = array.iter().flatten().take(
-            validity
-                .as_ref()
-                .map(|x| x.len() - x.null_count())
-                .unwrap_or_else(|| array.len()),
-        );
-        encode(iter, &mut buffer)
-    } else {
-        let iter = array.values().iter();
-        encode(iter, &mut buffer)
-    }?;
+    encode_plain(array, is_optional, &mut buffer)?;
 
     let uncompressed_page_size = buffer.len();
 

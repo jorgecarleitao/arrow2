@@ -11,6 +11,7 @@ mod utils;
 pub mod stream;
 
 use crate::array::*;
+use crate::bitmap::Bitmap;
 use crate::buffer::{Buffer, MutableBuffer};
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
@@ -263,7 +264,7 @@ pub fn array_to_page(
                 fixed_len_bytes::array_to_page_v1(&array, options, descriptor)
             }
         }
-        DataType::List(_) | DataType::LargeList(_) => {
+        DataType::FixedSizeList(_, _) | DataType::List(_) | DataType::LargeList(_) => {
             nested_array_to_page(array, descriptor, options)
         }
         other => Err(ArrowError::NotYetImplemented(format!(
@@ -274,53 +275,73 @@ pub fn array_to_page(
 }
 
 macro_rules! dyn_nested_prim {
-    ($from:ty, $to:ty, $offset:ty, $array:expr, $descriptor:expr, $options:expr) => {{
-        let values = $array.values().as_any().downcast_ref().unwrap();
-        let is_optional = is_type_nullable($descriptor.type_());
+    ($from:ty, $to:ty, $offset:ty, $values:expr, $nested:expr,$descriptor:expr, $options:expr) => {{
+        let values = $values.as_any().downcast_ref().unwrap();
 
         primitive::nested_array_to_page::<$from, $to, $offset>(
             values,
             $options,
             $descriptor,
-            NestedInfo::new($array.offsets(), $array.validity(), is_optional),
+            $nested,
         )
     }};
 }
 
 fn list_array_to_page<O: Offset>(
-    array: &ListArray<O>,
+    offsets: &[O],
+    validity: &Option<Bitmap>,
+    values: &dyn Array,
     descriptor: ColumnDescriptor,
     options: WriteOptions,
 ) -> Result<CompressedPage> {
     use DataType::*;
-    match array.values().data_type() {
+    let is_optional = is_type_nullable(descriptor.type_());
+    let nested = NestedInfo::new(offsets, validity, is_optional);
+
+    match values.data_type() {
         Boolean => {
-            let values = array.values().as_any().downcast_ref().unwrap();
+            let values = values.as_any().downcast_ref().unwrap();
+            boolean::nested_array_to_page::<O>(values, options, descriptor, nested)
+        }
+        UInt8 => dyn_nested_prim!(u8, i32, O, values, nested, descriptor, options),
+        UInt16 => dyn_nested_prim!(u16, i32, O, values, nested, descriptor, options),
+        UInt32 => dyn_nested_prim!(u32, i32, O, values, nested, descriptor, options),
+        UInt64 => dyn_nested_prim!(u64, i64, O, values, nested, descriptor, options),
+
+        Int8 => dyn_nested_prim!(i8, i32, O, values, nested, descriptor, options),
+        Int16 => dyn_nested_prim!(i16, i32, O, values, nested, descriptor, options),
+        Int32 | Date32 | Time32(_) => {
+            dyn_nested_prim!(i32, i32, O, values, nested, descriptor, options)
+        }
+        Int64 | Date64 | Time64(_) | Timestamp(_, _) | Duration(_) => {
+            dyn_nested_prim!(i64, i64, O, values, nested, descriptor, options)
+        }
+
+        Float32 => dyn_nested_prim!(f32, f32, O, values, nested, descriptor, options),
+        Float64 => dyn_nested_prim!(f64, f64, O, values, nested, descriptor, options),
+
+        Utf8 => {
+            let values = values.as_any().downcast_ref().unwrap();
             let is_optional = is_type_nullable(descriptor.type_());
 
-            boolean::nested_array_to_page::<O>(
+            utf8::nested_array_to_page::<i32, O>(
                 values,
                 options,
                 descriptor,
-                NestedInfo::new(array.offsets(), array.validity(), is_optional),
+                NestedInfo::new(offsets, validity, is_optional),
             )
         }
-        UInt8 => dyn_nested_prim!(u8, i32, O, array, descriptor, options),
-        UInt16 => dyn_nested_prim!(u16, i32, O, array, descriptor, options),
-        UInt32 => dyn_nested_prim!(u32, i32, O, array, descriptor, options),
-        UInt64 => dyn_nested_prim!(u64, i64, O, array, descriptor, options),
+        LargeUtf8 => {
+            let values = values.as_any().downcast_ref().unwrap();
+            let is_optional = is_type_nullable(descriptor.type_());
 
-        Int8 => dyn_nested_prim!(i8, i32, O, array, descriptor, options),
-        Int16 => dyn_nested_prim!(i16, i32, O, array, descriptor, options),
-        Int32 | Date32 | Time32(_) => {
-            dyn_nested_prim!(i32, i32, O, array, descriptor, options)
+            utf8::nested_array_to_page::<i64, O>(
+                values,
+                options,
+                descriptor,
+                NestedInfo::new(offsets, validity, is_optional),
+            )
         }
-        Int64 | Date64 | Time64(_) | Timestamp(_, _) | Duration(_) => {
-            dyn_nested_prim!(i64, i64, O, array, descriptor, options)
-        }
-
-        Float32 => dyn_nested_prim!(f32, f32, O, array, descriptor, options),
-        Float64 => dyn_nested_prim!(f64, f64, O, array, descriptor, options),
         _ => todo!(),
     }
 }
@@ -333,11 +354,36 @@ fn nested_array_to_page(
     match array.data_type() {
         DataType::List(_) => {
             let array = array.as_any().downcast_ref::<ListArray<i32>>().unwrap();
-            list_array_to_page(array, descriptor, options)
+            list_array_to_page(
+                array.offsets(),
+                array.validity(),
+                array.values().as_ref(),
+                descriptor,
+                options,
+            )
         }
         DataType::LargeList(_) => {
             let array = array.as_any().downcast_ref::<ListArray<i64>>().unwrap();
-            list_array_to_page(array, descriptor, options)
+            list_array_to_page(
+                array.offsets(),
+                array.validity(),
+                array.values().as_ref(),
+                descriptor,
+                options,
+            )
+        }
+        DataType::FixedSizeList(_, size) => {
+            let array = array.as_any().downcast_ref::<FixedSizeListArray>().unwrap();
+            let offsets = (0..array.len())
+                .map(|x| size * x as i32)
+                .collect::<Vec<_>>();
+            list_array_to_page(
+                &offsets,
+                array.validity(),
+                array.values().as_ref(),
+                descriptor,
+                options,
+            )
         }
         _ => todo!(),
     }
@@ -503,5 +549,20 @@ mod tests {
     #[test]
     fn test_list_bool_optional_v2() -> Result<()> {
         round_trip(4, true, true, Version::V2, CompressionCodec::Uncompressed)
+    }
+
+    #[test]
+    fn test_list_bool_optional_v1() -> Result<()> {
+        round_trip(4, true, true, Version::V1, CompressionCodec::Uncompressed)
+    }
+
+    #[test]
+    fn test_list_utf8_optional_v2() -> Result<()> {
+        round_trip(5, true, true, Version::V2, CompressionCodec::Uncompressed)
+    }
+
+    #[test]
+    fn test_list_utf8_optional_v1() -> Result<()> {
+        round_trip(5, true, true, Version::V1, CompressionCodec::Uncompressed)
     }
 }

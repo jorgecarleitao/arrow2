@@ -5,13 +5,37 @@ use parquet2::{
     write::WriteOptions,
 };
 
-use super::binary::ord_binary;
-use super::utils;
+use super::super::binary::ord_binary;
+use super::super::utils;
 use crate::{
     array::{Array, Offset, Utf8Array},
     error::Result,
     io::parquet::read::is_type_nullable,
 };
+
+pub(super) fn encode_plain<O: Offset>(
+    array: &Utf8Array<O>,
+    is_optional: bool,
+    buffer: &mut Vec<u8>,
+) {
+    if is_optional {
+        array.iter().for_each(|x| {
+            if let Some(x) = x {
+                // BYTE_ARRAY: first 4 bytes denote length in littleendian.
+                let len = (x.len() as u32).to_le_bytes();
+                buffer.extend_from_slice(&len);
+                buffer.extend_from_slice(x.as_bytes());
+            }
+        })
+    } else {
+        array.values_iter().for_each(|x| {
+            // BYTE_ARRAY: first 4 bytes denote length in littleendian.
+            let len = (x.len() as u32).to_le_bytes();
+            buffer.extend_from_slice(&len);
+            buffer.extend_from_slice(x.as_bytes());
+        })
+    }
+}
 
 pub fn array_to_page<O: Offset>(
     array: &Utf8Array<O>,
@@ -32,24 +56,8 @@ pub fn array_to_page<O: Offset>(
 
     let definition_levels_byte_length = buffer.len();
 
-    // append the non-null values
-    if is_optional {
-        array.iter().for_each(|x| {
-            if let Some(x) = x {
-                // BYTE_ARRAY: first 4 bytes denote length in littleendian.
-                let len = (x.len() as u32).to_le_bytes();
-                buffer.extend_from_slice(&len);
-                buffer.extend_from_slice(x.as_bytes());
-            }
-        })
-    } else {
-        array.values_iter().for_each(|x| {
-            // BYTE_ARRAY: first 4 bytes denote length in littleendian.
-            let len = (x.len() as u32).to_le_bytes();
-            buffer.extend_from_slice(&len);
-            buffer.extend_from_slice(x.as_bytes());
-        })
-    }
+    encode_plain(array, is_optional, &mut buffer);
+
     let uncompressed_page_size = buffer.len();
 
     let buffer = utils::compress(buffer, options, definition_levels_byte_length)?;
@@ -73,7 +81,7 @@ pub fn array_to_page<O: Offset>(
     )
 }
 
-fn build_statistics<O: Offset>(
+pub(super) fn build_statistics<O: Offset>(
     array: &Utf8Array<O>,
     descriptor: ColumnDescriptor,
 ) -> ParquetStatistics {
