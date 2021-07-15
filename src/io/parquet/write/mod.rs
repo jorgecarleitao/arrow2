@@ -342,6 +342,28 @@ fn list_array_to_page<O: Offset>(
                 NestedInfo::new(offsets, validity, is_optional),
             )
         }
+        Binary => {
+            let values = values.as_any().downcast_ref().unwrap();
+            let is_optional = is_type_nullable(descriptor.type_());
+
+            binary::nested_array_to_page::<i32, O>(
+                values,
+                options,
+                descriptor,
+                NestedInfo::new(offsets, validity, is_optional),
+            )
+        }
+        LargeBinary => {
+            let values = values.as_any().downcast_ref().unwrap();
+            let is_optional = is_type_nullable(descriptor.type_());
+
+            binary::nested_array_to_page::<i64, O>(
+                values,
+                options,
+                descriptor,
+                NestedInfo::new(offsets, validity, is_optional),
+            )
+        }
         _ => todo!(),
     }
 }
@@ -564,5 +586,15 @@ mod tests {
     #[test]
     fn test_list_utf8_optional_v1() -> Result<()> {
         round_trip(5, true, true, Version::V1, CompressionCodec::Uncompressed)
+    }
+
+    #[test]
+    fn test_list_large_binary_optional_v2() -> Result<()> {
+        round_trip(6, true, true, Version::V2, CompressionCodec::Uncompressed)
+    }
+
+    #[test]
+    fn test_list_large_binary_optional_v1() -> Result<()> {
+        round_trip(6, true, true, Version::V1, CompressionCodec::Uncompressed)
     }
 }

@@ -441,9 +441,19 @@ mod tests {
         test_pyarrow_integration(5, 1, "nested", false, false)
     }
 
+    #[test]
+    fn v2_nested_large_binary() -> Result<()> {
+        test_pyarrow_integration(6, 2, "nested", false, false)
+    }
+
+    #[test]
+    fn v1_nested_large_binary() -> Result<()> {
+        test_pyarrow_integration(6, 1, "nested", false, false)
+    }
+
     /*#[test]
     fn v2_nested_nested() {
-        let _ = test_pyarrow_integration(6, 1, "nested",false, false);
+        let _ = test_pyarrow_integration(7, 1, "nested",false, false);
     }*/
 }
 

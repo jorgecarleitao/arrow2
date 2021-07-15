@@ -5,12 +5,37 @@ use parquet2::{
     write::WriteOptions,
 };
 
-use super::utils;
+use super::super::utils;
 use crate::{
     array::{Array, BinaryArray, Offset},
     error::Result,
     io::parquet::read::is_type_nullable,
 };
+
+pub(super) fn encode_plain<O: Offset>(
+    array: &BinaryArray<O>,
+    is_optional: bool,
+    buffer: &mut Vec<u8>,
+) {
+    // append the non-null values
+    if is_optional {
+        array.iter().for_each(|x| {
+            if let Some(x) = x {
+                // BYTE_ARRAY: first 4 bytes denote length in littleendian.
+                let len = (x.len() as u32).to_le_bytes();
+                buffer.extend_from_slice(&len);
+                buffer.extend_from_slice(x);
+            }
+        })
+    } else {
+        array.values_iter().for_each(|x| {
+            // BYTE_ARRAY: first 4 bytes denote length in littleendian.
+            let len = (x.len() as u32).to_le_bytes();
+            buffer.extend_from_slice(&len);
+            buffer.extend_from_slice(x);
+        })
+    }
+}
 
 pub fn array_to_page<O: Offset>(
     array: &BinaryArray<O>,
@@ -31,24 +56,8 @@ pub fn array_to_page<O: Offset>(
 
     let definition_levels_byte_length = buffer.len();
 
-    // append the non-null values
-    if is_optional {
-        array.iter().for_each(|x| {
-            if let Some(x) = x {
-                // BYTE_ARRAY: first 4 bytes denote length in littleendian.
-                let len = (x.len() as u32).to_le_bytes();
-                buffer.extend_from_slice(&len);
-                buffer.extend_from_slice(x);
-            }
-        })
-    } else {
-        array.values_iter().for_each(|x| {
-            // BYTE_ARRAY: first 4 bytes denote length in littleendian.
-            let len = (x.len() as u32).to_le_bytes();
-            buffer.extend_from_slice(&len);
-            buffer.extend_from_slice(x);
-        })
-    }
+    encode_plain(array, is_optional, &mut buffer);
+
     let uncompressed_page_size = buffer.len();
 
     let buffer = utils::compress(buffer, options, definition_levels_byte_length)?;
@@ -72,7 +81,7 @@ pub fn array_to_page<O: Offset>(
     )
 }
 
-fn build_statistics<O: Offset>(
+pub(super) fn build_statistics<O: Offset>(
     array: &BinaryArray<O>,
     descriptor: ColumnDescriptor,
 ) -> ParquetStatistics {
