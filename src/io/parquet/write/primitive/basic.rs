@@ -6,7 +6,7 @@ use parquet2::{
     write::WriteOptions,
 };
 
-use super::utils;
+use super::super::utils;
 use crate::{
     array::{Array, PrimitiveArray},
     error::Result,
@@ -14,24 +14,12 @@ use crate::{
     types::NativeType as ArrowNativeType,
 };
 
-pub fn array_to_page<T, R>(
-    array: &PrimitiveArray<T>,
-    options: WriteOptions,
-    descriptor: ColumnDescriptor,
-) -> Result<CompressedPage>
+pub(super) fn encode_plain<T, R>(array: &PrimitiveArray<T>, is_optional: bool, buffer: &mut Vec<u8>)
 where
     T: ArrowNativeType,
     R: NativeType,
     T: num::cast::AsPrimitive<R>,
 {
-    let is_optional = is_type_nullable(descriptor.type_());
-
-    let validity = array.validity();
-
-    let mut buffer = utils::write_def_levels(is_optional, validity, array.len(), options.version)?;
-
-    let definition_levels_byte_length = buffer.len();
-
     if is_optional {
         // append the non-null values
         array.iter().for_each(|x| {
@@ -47,6 +35,35 @@ where
             buffer.extend_from_slice(parquet_native.to_le_bytes().as_ref())
         });
     }
+}
+
+pub fn array_to_page<T, R>(
+    array: &PrimitiveArray<T>,
+    options: WriteOptions,
+    descriptor: ColumnDescriptor,
+) -> Result<CompressedPage>
+where
+    T: ArrowNativeType,
+    R: NativeType,
+    T: num::cast::AsPrimitive<R>,
+{
+    let is_optional = is_type_nullable(descriptor.type_());
+
+    let validity = array.validity();
+
+    let mut buffer = vec![];
+    utils::write_def_levels(
+        &mut buffer,
+        is_optional,
+        validity,
+        array.len(),
+        options.version,
+    )?;
+
+    let definition_levels_byte_length = buffer.len();
+
+    encode_plain(array, is_optional, &mut buffer);
+
     let uncompressed_page_size = buffer.len();
 
     let buffer = utils::compress(buffer, options, definition_levels_byte_length)?;
@@ -62,6 +79,7 @@ where
         array.len(),
         array.null_count(),
         uncompressed_page_size,
+        0,
         definition_levels_byte_length,
         statistics,
         descriptor,
@@ -69,7 +87,7 @@ where
     )
 }
 
-fn build_statistics<T, R>(
+pub fn build_statistics<T, R>(
     array: &PrimitiveArray<T>,
     descriptor: ColumnDescriptor,
 ) -> ParquetStatistics

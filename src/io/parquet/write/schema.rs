@@ -318,23 +318,28 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             None,
             None,
         )?),
+        DataType::List(f) | DataType::FixedSizeList(f, _) | DataType::LargeList(f) => {
+            Ok(ParquetType::try_from_group(
+                name,
+                repetition,
+                None,
+                Some(LogicalType::LIST(Default::default())),
+                vec![ParquetType::try_from_group(
+                    "list".to_string(),
+                    FieldRepetitionType::Repeated,
+                    None,
+                    None,
+                    vec![to_parquet_type(f)?],
+                    None,
+                )?],
+                None,
+            )?)
+        }
         /*
         DataType::FixedSizeBinary(length) => {
             Type::primitive_type_builder(name, PhysicalType::FIXED_LEN_BYTE_ARRAY)
                 .with_repetition(repetition)
                 .with_length(*length)
-                .build()
-        }
-        DataType::List(f) | DataType::FixedSizeList(f, _) | DataType::LargeList(f) => {
-            Type::group_type_builder(name)
-                .with_fields(&mut vec![Arc::new(
-                    Type::group_type_builder("list")
-                        .with_fields(&mut vec![Arc::new(arrow_to_parquet_type(f)?)])
-                        .with_repetition(Repetition::REPEATED)
-                        .build()?,
-                )])
-                .with_logical_type(Some(LogicalType::LIST(Default::default())))
-                .with_repetition(repetition)
                 .build()
         }
         */

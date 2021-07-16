@@ -1,6 +1,7 @@
 mod binary;
 mod boolean;
 mod fixed_len_bytes;
+mod levels;
 mod primitive;
 mod record_batch;
 mod schema;
@@ -10,9 +11,12 @@ mod utils;
 pub mod stream;
 
 use crate::array::*;
+use crate::bitmap::Bitmap;
 use crate::buffer::{Buffer, MutableBuffer};
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
+use crate::io::parquet::read::is_type_nullable;
+use crate::io::parquet::write::levels::NestedInfo;
 use crate::types::days_ms;
 use crate::types::NativeType;
 
@@ -186,7 +190,7 @@ pub fn array_to_page(
                 values.into(),
                 array.validity().clone(),
             );
-            fixed_len_bytes::array_to_page_v1(&array, options, descriptor)
+            fixed_len_bytes::array_to_page(&array, options, descriptor)
         }
         DataType::Interval(IntervalUnit::DayTime) => {
             let array = array
@@ -204,9 +208,9 @@ pub fn array_to_page(
                 values.into(),
                 array.validity().clone(),
             );
-            fixed_len_bytes::array_to_page_v1(&array, options, descriptor)
+            fixed_len_bytes::array_to_page(&array, options, descriptor)
         }
-        DataType::FixedSizeBinary(_) => fixed_len_bytes::array_to_page_v1(
+        DataType::FixedSizeBinary(_) => fixed_len_bytes::array_to_page(
             array.as_any().downcast_ref().unwrap(),
             options,
             descriptor,
@@ -257,13 +261,153 @@ pub fn array_to_page(
                     values.into(),
                     array.validity().clone(),
                 );
-                fixed_len_bytes::array_to_page_v1(&array, options, descriptor)
+                fixed_len_bytes::array_to_page(&array, options, descriptor)
             }
+        }
+        DataType::FixedSizeList(_, _) | DataType::List(_) | DataType::LargeList(_) => {
+            nested_array_to_page(array, descriptor, options)
         }
         other => Err(ArrowError::NotYetImplemented(format!(
             "Writing parquet V1 pages for data type {:?}",
             other
         ))),
+    }
+}
+
+macro_rules! dyn_nested_prim {
+    ($from:ty, $to:ty, $offset:ty, $values:expr, $nested:expr,$descriptor:expr, $options:expr) => {{
+        let values = $values.as_any().downcast_ref().unwrap();
+
+        primitive::nested_array_to_page::<$from, $to, $offset>(
+            values,
+            $options,
+            $descriptor,
+            $nested,
+        )
+    }};
+}
+
+fn list_array_to_page<O: Offset>(
+    offsets: &[O],
+    validity: &Option<Bitmap>,
+    values: &dyn Array,
+    descriptor: ColumnDescriptor,
+    options: WriteOptions,
+) -> Result<CompressedPage> {
+    use DataType::*;
+    let is_optional = is_type_nullable(descriptor.type_());
+    let nested = NestedInfo::new(offsets, validity, is_optional);
+
+    match values.data_type() {
+        Boolean => {
+            let values = values.as_any().downcast_ref().unwrap();
+            boolean::nested_array_to_page::<O>(values, options, descriptor, nested)
+        }
+        UInt8 => dyn_nested_prim!(u8, i32, O, values, nested, descriptor, options),
+        UInt16 => dyn_nested_prim!(u16, i32, O, values, nested, descriptor, options),
+        UInt32 => dyn_nested_prim!(u32, i32, O, values, nested, descriptor, options),
+        UInt64 => dyn_nested_prim!(u64, i64, O, values, nested, descriptor, options),
+
+        Int8 => dyn_nested_prim!(i8, i32, O, values, nested, descriptor, options),
+        Int16 => dyn_nested_prim!(i16, i32, O, values, nested, descriptor, options),
+        Int32 | Date32 | Time32(_) => {
+            dyn_nested_prim!(i32, i32, O, values, nested, descriptor, options)
+        }
+        Int64 | Date64 | Time64(_) | Timestamp(_, _) | Duration(_) => {
+            dyn_nested_prim!(i64, i64, O, values, nested, descriptor, options)
+        }
+
+        Float32 => dyn_nested_prim!(f32, f32, O, values, nested, descriptor, options),
+        Float64 => dyn_nested_prim!(f64, f64, O, values, nested, descriptor, options),
+
+        Utf8 => {
+            let values = values.as_any().downcast_ref().unwrap();
+            let is_optional = is_type_nullable(descriptor.type_());
+
+            utf8::nested_array_to_page::<i32, O>(
+                values,
+                options,
+                descriptor,
+                NestedInfo::new(offsets, validity, is_optional),
+            )
+        }
+        LargeUtf8 => {
+            let values = values.as_any().downcast_ref().unwrap();
+            let is_optional = is_type_nullable(descriptor.type_());
+
+            utf8::nested_array_to_page::<i64, O>(
+                values,
+                options,
+                descriptor,
+                NestedInfo::new(offsets, validity, is_optional),
+            )
+        }
+        Binary => {
+            let values = values.as_any().downcast_ref().unwrap();
+            let is_optional = is_type_nullable(descriptor.type_());
+
+            binary::nested_array_to_page::<i32, O>(
+                values,
+                options,
+                descriptor,
+                NestedInfo::new(offsets, validity, is_optional),
+            )
+        }
+        LargeBinary => {
+            let values = values.as_any().downcast_ref().unwrap();
+            let is_optional = is_type_nullable(descriptor.type_());
+
+            binary::nested_array_to_page::<i64, O>(
+                values,
+                options,
+                descriptor,
+                NestedInfo::new(offsets, validity, is_optional),
+            )
+        }
+        _ => todo!(),
+    }
+}
+
+fn nested_array_to_page(
+    array: &dyn Array,
+    descriptor: ColumnDescriptor,
+    options: WriteOptions,
+) -> Result<CompressedPage> {
+    match array.data_type() {
+        DataType::List(_) => {
+            let array = array.as_any().downcast_ref::<ListArray<i32>>().unwrap();
+            list_array_to_page(
+                array.offsets(),
+                array.validity(),
+                array.values().as_ref(),
+                descriptor,
+                options,
+            )
+        }
+        DataType::LargeList(_) => {
+            let array = array.as_any().downcast_ref::<ListArray<i64>>().unwrap();
+            list_array_to_page(
+                array.offsets(),
+                array.validity(),
+                array.values().as_ref(),
+                descriptor,
+                options,
+            )
+        }
+        DataType::FixedSizeList(_, size) => {
+            let array = array.as_any().downcast_ref::<FixedSizeListArray>().unwrap();
+            let offsets = (0..array.len())
+                .map(|x| size * x as i32)
+                .collect::<Vec<_>>();
+            list_array_to_page(
+                &offsets,
+                array.validity(),
+                array.values().as_ref(),
+                descriptor,
+                options,
+            )
+        }
+        _ => todo!(),
     }
 }
 
@@ -279,18 +423,25 @@ mod tests {
     fn round_trip(
         column: usize,
         nullable: bool,
+        nested: bool,
         version: Version,
         compression: CompressionCodec,
     ) -> Result<()> {
-        let array = if nullable {
-            pyarrow_nullable(column)
+        let (array, statistics) = if nested {
+            (
+                pyarrow_nested_nullable(column),
+                pyarrow_nested_nullable_statistics(column),
+            )
+        } else if nullable {
+            (
+                pyarrow_nullable(column),
+                pyarrow_nullable_statistics(column),
+            )
         } else {
-            pyarrow_required(column)
-        };
-        let statistics = if nullable {
-            pyarrow_nullable_statistics(column)
-        } else {
-            pyarrow_required_statistics(column)
+            (
+                pyarrow_required(column),
+                pyarrow_required_statistics(column),
+            )
         };
 
         let field = Field::new("a1", array.data_type().clone(), nullable);
@@ -334,76 +485,116 @@ mod tests {
 
     #[test]
     fn test_int64_optional_v1() -> Result<()> {
-        round_trip(0, true, Version::V1, CompressionCodec::Uncompressed)
+        round_trip(0, true, false, Version::V1, CompressionCodec::Uncompressed)
     }
 
     #[test]
     fn test_int64_required_v1() -> Result<()> {
-        round_trip(0, false, Version::V1, CompressionCodec::Uncompressed)
+        round_trip(0, false, false, Version::V1, CompressionCodec::Uncompressed)
     }
 
     #[test]
     fn test_int64_optional_v2() -> Result<()> {
-        round_trip(0, true, Version::V2, CompressionCodec::Uncompressed)
+        round_trip(0, true, false, Version::V2, CompressionCodec::Uncompressed)
     }
 
     #[test]
     fn test_int64_optional_v2_compressed() -> Result<()> {
-        round_trip(0, true, Version::V2, CompressionCodec::Snappy)
+        round_trip(0, true, false, Version::V2, CompressionCodec::Snappy)
     }
 
     #[test]
     fn test_utf8_optional_v1() -> Result<()> {
-        round_trip(2, true, Version::V1, CompressionCodec::Uncompressed)
+        round_trip(2, true, false, Version::V1, CompressionCodec::Uncompressed)
     }
 
     #[test]
     fn test_utf8_required_v1() -> Result<()> {
-        round_trip(2, false, Version::V1, CompressionCodec::Uncompressed)
+        round_trip(2, false, false, Version::V1, CompressionCodec::Uncompressed)
     }
 
     #[test]
     fn test_utf8_optional_v2() -> Result<()> {
-        round_trip(2, true, Version::V2, CompressionCodec::Uncompressed)
+        round_trip(2, true, false, Version::V2, CompressionCodec::Uncompressed)
     }
 
     #[test]
     fn test_utf8_required_v2() -> Result<()> {
-        round_trip(2, false, Version::V2, CompressionCodec::Uncompressed)
+        round_trip(2, false, false, Version::V2, CompressionCodec::Uncompressed)
     }
 
     #[test]
     fn test_utf8_optional_v2_compressed() -> Result<()> {
-        round_trip(2, true, Version::V2, CompressionCodec::Snappy)
+        round_trip(2, true, false, Version::V2, CompressionCodec::Snappy)
     }
 
     #[test]
     fn test_utf8_required_v2_compressed() -> Result<()> {
-        round_trip(2, false, Version::V2, CompressionCodec::Snappy)
+        round_trip(2, false, false, Version::V2, CompressionCodec::Snappy)
     }
 
     #[test]
     fn test_bool_optional_v1() -> Result<()> {
-        round_trip(3, true, Version::V1, CompressionCodec::Uncompressed)
+        round_trip(3, true, false, Version::V1, CompressionCodec::Uncompressed)
     }
 
     #[test]
     fn test_bool_required_v1() -> Result<()> {
-        round_trip(3, false, Version::V1, CompressionCodec::Uncompressed)
+        round_trip(3, false, false, Version::V1, CompressionCodec::Uncompressed)
     }
 
     #[test]
     fn test_bool_optional_v2_uncompressed() -> Result<()> {
-        round_trip(3, true, Version::V2, CompressionCodec::Uncompressed)
+        round_trip(3, true, false, Version::V2, CompressionCodec::Uncompressed)
     }
 
     #[test]
     fn test_bool_required_v2_uncompressed() -> Result<()> {
-        round_trip(3, false, Version::V2, CompressionCodec::Uncompressed)
+        round_trip(3, false, false, Version::V2, CompressionCodec::Uncompressed)
     }
 
     #[test]
     fn test_bool_required_v2_compressed() -> Result<()> {
-        round_trip(3, false, Version::V2, CompressionCodec::Snappy)
+        round_trip(3, false, false, Version::V2, CompressionCodec::Snappy)
+    }
+
+    #[test]
+    fn test_list_int64_optional_v2() -> Result<()> {
+        round_trip(0, true, true, Version::V2, CompressionCodec::Uncompressed)
+    }
+
+    #[test]
+    fn test_list_int64_optional_v1() -> Result<()> {
+        round_trip(0, true, true, Version::V1, CompressionCodec::Uncompressed)
+    }
+
+    #[test]
+    fn test_list_bool_optional_v2() -> Result<()> {
+        round_trip(4, true, true, Version::V2, CompressionCodec::Uncompressed)
+    }
+
+    #[test]
+    fn test_list_bool_optional_v1() -> Result<()> {
+        round_trip(4, true, true, Version::V1, CompressionCodec::Uncompressed)
+    }
+
+    #[test]
+    fn test_list_utf8_optional_v2() -> Result<()> {
+        round_trip(5, true, true, Version::V2, CompressionCodec::Uncompressed)
+    }
+
+    #[test]
+    fn test_list_utf8_optional_v1() -> Result<()> {
+        round_trip(5, true, true, Version::V1, CompressionCodec::Uncompressed)
+    }
+
+    #[test]
+    fn test_list_large_binary_optional_v2() -> Result<()> {
+        round_trip(6, true, true, Version::V2, CompressionCodec::Uncompressed)
+    }
+
+    #[test]
+    fn test_list_large_binary_optional_v1() -> Result<()> {
+        round_trip(6, true, true, Version::V1, CompressionCodec::Uncompressed)
     }
 }

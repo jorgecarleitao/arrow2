@@ -140,17 +140,32 @@ mod tests {
                 Some("bbb".to_string()),
                 Some("".to_string()),
             ])),
+            6 => Arc::new(BinaryArray::<i64>::from(&[
+                Some(b"Hello".to_vec()),
+                Some(b"bbb".to_vec()),
+                Some(b"aa".to_vec()),
+                None,
+                Some(b"".to_vec()),
+                Some(b"bbb".to_vec()),
+                Some(b"aa".to_vec()),
+                Some(b"ccc".to_vec()),
+                Some(b"abc".to_vec()),
+                Some(b"bbb".to_vec()),
+                Some(b"bbb".to_vec()),
+                Some(b"".to_vec()),
+            ])),
             _ => unreachable!(),
         };
 
         match column {
-            0 | 1 | 3 | 4 | 5 => {
+            0 | 1 | 3 | 4 | 5 | 6 => {
                 let field = match column {
                     0 => Field::new("item", DataType::Int64, true),
                     1 => Field::new("item", DataType::Int64, false),
                     3 => Field::new("item", DataType::Int16, true),
                     4 => Field::new("item", DataType::Boolean, true),
                     5 => Field::new("item", DataType::Utf8, true),
+                    6 => Field::new("item", DataType::LargeBinary, true),
                     _ => unreachable!(),
                 };
 
@@ -361,6 +376,12 @@ mod tests {
                 null_count: Some(1),
                 min_value: Some("".to_string()),
                 max_value: Some("def".to_string()),
+            }),
+            6 => Box::new(BinaryStatistics {
+                distinct_count: None,
+                null_count: Some(1),
+                min_value: Some(b"".to_vec()),
+                max_value: Some(b"def".to_vec()),
             }),
             _ => Box::new(PrimitiveStatistics::<i64> {
                 data_type: DataType::Int64,

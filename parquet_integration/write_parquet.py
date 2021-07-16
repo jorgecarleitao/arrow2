@@ -117,6 +117,7 @@ def case_nested(size):
         pa.field("list_int16", pa.list_(pa.int16())),
         pa.field("list_bool", pa.list_(pa.bool_())),
         pa.field("list_utf8", pa.list_(pa.utf8())),
+        pa.field("list_large_binary", pa.list_(pa.large_binary())),
         pa.field("list_nested_i64", pa.list_(pa.list_(pa.int64()))),
     ]
     schema = pa.schema(fields)
@@ -128,6 +129,7 @@ def case_nested(size):
             "list_int16": i16 * size,
             "list_bool": boolean * size,
             "list_utf8": string * size,
+            "list_large_binary": string * size,
             "list_nested_i64": items_nested * size,
         },
         schema,
