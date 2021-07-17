@@ -127,7 +127,7 @@ impl<R: Read + Seek> Iterator for RecordReader<R> {
                 let pages = get_page_iterator(&metadata, row_group, column, &mut self.reader, b1)?;
                 let mut pages = Decompressor::new(pages, b2);
 
-                let array = page_iter_to_array(&mut pages, column_meta)?;
+                let array = page_iter_to_array(&mut pages, column_meta, field.data_type().clone())?;
 
                 let array = if array.len() > remaining_rows {
                     array.slice(0, remaining_rows)
@@ -135,9 +135,7 @@ impl<R: Read + Seek> Iterator for RecordReader<R> {
                     array
                 };
 
-                let c = crate::compute::cast::cast(array.as_ref(), field.data_type())
-                    .map(|x| x.into())?;
-                columns.push(c);
+                columns.push(array.into());
                 let (b1, b2) = pages.into_buffers();
                 Result::Ok((b1, b2, columns))
             },

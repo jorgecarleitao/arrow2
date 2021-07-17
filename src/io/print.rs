@@ -70,7 +70,7 @@ fn create_table(results: &[RecordBatch]) -> Result<Table> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{array::*, datatypes::*};
+    use crate::{array::*, bitmap::Bitmap, datatypes::*};
 
     use super::*;
     use std::sync::Arc;
@@ -371,5 +371,43 @@ mod tests {
             11111111,
             expected
         );
+    }
+
+    #[test]
+    fn test_write_struct() -> Result<()> {
+        let fields = vec![
+            Field::new("a", DataType::Int32, true),
+            Field::new("b", DataType::Utf8, true),
+        ];
+        let values = vec![
+            Arc::new(Int32Array::from(&[Some(1), None, Some(2)])) as Arc<dyn Array>,
+            Arc::new(Utf8Array::<i32>::from(&[Some("a"), Some("b"), Some("c")])) as Arc<dyn Array>,
+        ];
+
+        let validity = Some(Bitmap::from(&[true, false, true]));
+
+        let array = StructArray::from_data(fields, values, validity);
+
+        let schema = Schema::new(vec![Field::new("a", array.data_type().clone(), true)]);
+
+        let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(array)])?;
+
+        let table = write(&[batch])?;
+
+        let expected = vec![
+            "+--------------+",
+            "| a            |",
+            "+--------------+",
+            "| {a: 1, b: a} |",
+            "|              |",
+            "| {a: 2, b: c} |",
+            "+--------------+",
+        ];
+
+        let actual: Vec<&str> = table.lines().collect();
+
+        assert_eq!(expected, actual, "Actual result:\n{}", table);
+
+        Ok(())
     }
 }

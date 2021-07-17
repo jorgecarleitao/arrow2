@@ -65,11 +65,23 @@ impl Field {
         }
     }
 
+    /// Creates a new [`Field`] with metadata.
+    #[inline]
+    pub fn with_metadata(self, metadata: BTreeMap<String, String>) -> Self {
+        Self {
+            name: self.name,
+            data_type: self.data_type,
+            nullable: self.nullable,
+            dict_id: self.dict_id,
+            dict_is_ordered: self.dict_is_ordered,
+            metadata: Some(metadata),
+        }
+    }
+
     /// Sets the [`Field`]'s optional metadata.
     /// The metadata is set as `None` for empty map.
     #[inline]
     pub fn set_metadata(&mut self, metadata: Option<BTreeMap<String, String>>) {
-        // To make serde happy, convert Some(empty_map) to None.
         self.metadata = None;
         if let Some(v) = metadata {
             if !v.is_empty() {

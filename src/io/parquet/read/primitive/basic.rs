@@ -1,64 +1,22 @@
-use std::{convert::TryInto, hint::unreachable_unchecked};
-
 use parquet2::{
     encoding::{bitpacking, hybrid_rle, uleb128, Encoding},
-    read::{levels, Page, PageHeader, PrimitivePageDict, StreamingIterator},
+    read::{levels, Page, PageHeader, PrimitivePageDict},
     types::NativeType,
 };
 
-use super::utils;
-use super::{ColumnChunkMetaData, ColumnDescriptor};
+use super::super::utils as other_utils;
+use super::utils::ExactChunksIter;
+use super::ColumnDescriptor;
 use crate::{
-    array::PrimitiveArray,
     bitmap::{utils::BitmapIter, MutableBitmap},
     buffer::MutableBuffer,
-    datatypes::DataType,
-    error::{ArrowError, Result},
-    trusted_len::TrustedLen,
+    error::Result,
     types::NativeType as ArrowNativeType,
 };
 
-struct ExactChunksIter<'a, T: NativeType> {
-    chunks: std::slice::ChunksExact<'a, u8>,
-    phantom: std::marker::PhantomData<T>,
-}
-
-impl<'a, T: NativeType> ExactChunksIter<'a, T> {
-    #[inline]
-    pub fn new(slice: &'a [u8]) -> Self {
-        assert_eq!(slice.len() % std::mem::size_of::<T>(), 0);
-        let chunks = slice.chunks_exact(std::mem::size_of::<T>());
-        Self {
-            chunks,
-            phantom: std::marker::PhantomData,
-        }
-    }
-}
-
-impl<'a, T: NativeType> Iterator for ExactChunksIter<'a, T> {
-    type Item = T;
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        self.chunks.next().map(|chunk| {
-            let chunk: <T as NativeType>::Bytes = match chunk.try_into() {
-                Ok(v) => v,
-                Err(_) => unsafe { unreachable_unchecked() },
-            };
-            T::from_le_bytes(chunk)
-        })
-    }
-
-    #[inline]
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.chunks.size_hint()
-    }
-}
-
-unsafe impl<'a, T: NativeType> TrustedLen for ExactChunksIter<'a, T> {}
-
 fn read_dict_buffer_optional<T, A, F>(
-    buffer: &[u8],
+    validity_buffer: &[u8],
+    indices_buffer: &[u8],
     additional: usize,
     dict: &PrimitivePageDict<T>,
     values: &mut MutableBuffer<A>,
@@ -69,8 +27,6 @@ fn read_dict_buffer_optional<T, A, F>(
     A: ArrowNativeType,
     F: Fn(T) -> A,
 {
-    let (_, validity_buffer, indices_buffer) = levels::split_buffer_v1(buffer, false, true);
-
     let dict_values = dict.values();
 
     // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
@@ -81,10 +37,9 @@ fn read_dict_buffer_optional<T, A, F>(
     let (_, consumed) = uleb128::decode(&indices_buffer);
     let indices_buffer = &indices_buffer[consumed..];
 
-    let non_null_indices_len = (indices_buffer.len() * 8 / bit_width as usize) as u32;
+    let non_null_indices_len = indices_buffer.len() * 8 / bit_width as usize;
 
-    let mut indices =
-        bitpacking::Decoder::new(indices_buffer, bit_width, non_null_indices_len as usize);
+    let mut indices = bitpacking::Decoder::new(indices_buffer, bit_width, non_null_indices_len);
 
     let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
 
@@ -186,41 +141,7 @@ fn read_required<T, A, F>(
     values.extend_from_trusted_len_iter(iterator);
 }
 
-pub fn iter_to_array<T, A, I, E, F>(
-    mut iter: I,
-    metadata: &ColumnChunkMetaData,
-    data_type: DataType,
-    op: F,
-) -> Result<PrimitiveArray<A>>
-where
-    ArrowError: From<E>,
-    T: NativeType,
-    E: Clone,
-    A: ArrowNativeType,
-    F: Copy + Fn(T) -> A,
-    I: StreamingIterator<Item = std::result::Result<Page, E>>,
-{
-    let capacity = metadata.num_values() as usize;
-    let mut values = MutableBuffer::<A>::with_capacity(capacity);
-    let mut validity = MutableBitmap::with_capacity(capacity);
-    while let Some(page) = iter.next() {
-        extend_from_page(
-            page.as_ref().map_err(|x| x.clone())?,
-            metadata.descriptor(),
-            &mut values,
-            &mut validity,
-            op,
-        )?
-    }
-
-    Ok(PrimitiveArray::from_data(
-        data_type,
-        values.into(),
-        validity.into(),
-    ))
-}
-
-fn extend_from_page<T, A, F>(
+pub fn extend_from_page<T, A, F>(
     page: &Page,
     descriptor: &ColumnDescriptor,
     values: &mut MutableBuffer<A>,
@@ -240,32 +161,32 @@ where
         PageHeader::V1(header) => {
             assert_eq!(header.definition_level_encoding, Encoding::Rle);
 
+            let (_, validity_buffer, values_buffer) =
+                levels::split_buffer_v1(page.buffer(), false, is_optional);
+
             match (&page.encoding(), page.dictionary_page(), is_optional) {
                 (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer_optional(
-                    page.buffer(),
+                    validity_buffer,
+                    values_buffer,
                     additional,
                     dict.as_any().downcast_ref().unwrap(),
                     values,
                     validity,
                     op,
                 ),
-                (Encoding::Plain, None, true) => {
-                    let (_, validity_buffer, values_buffer) =
-                        levels::split_buffer_v1(page.buffer(), false, is_optional);
-                    read_nullable(
-                        validity_buffer,
-                        values_buffer,
-                        additional,
-                        values,
-                        validity,
-                        op,
-                    )
-                }
+                (Encoding::Plain, None, true) => read_nullable(
+                    validity_buffer,
+                    values_buffer,
+                    additional,
+                    values,
+                    validity,
+                    op,
+                ),
                 (Encoding::Plain, None, false) => {
                     read_required(page.buffer(), additional, values, op)
                 }
                 _ => {
-                    return Err(utils::not_implemented(
+                    return Err(other_utils::not_implemented(
                         &page.encoding(),
                         is_optional,
                         page.dictionary_page().is_some(),
@@ -275,41 +196,43 @@ where
                 }
             }
         }
-        PageHeader::V2(header) => match (&page.encoding(), page.dictionary_page(), is_optional) {
-            (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer_optional(
-                page.buffer(),
-                additional,
-                dict.as_any().downcast_ref().unwrap(),
-                values,
-                validity,
-                op,
-            ),
-            (Encoding::Plain, None, true) => {
-                let def_level_buffer_length = header.definition_levels_byte_length as usize;
-                let (_, validity_buffer, values_buffer) =
-                    levels::split_buffer_v2(page.buffer(), 0, def_level_buffer_length);
-                read_nullable(
+        PageHeader::V2(header) => {
+            let def_level_buffer_length = header.definition_levels_byte_length as usize;
+
+            let (_, validity_buffer, values_buffer) =
+                levels::split_buffer_v2(page.buffer(), 0, def_level_buffer_length);
+            match (&page.encoding(), page.dictionary_page(), is_optional) {
+                (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer_optional(
+                    validity_buffer,
+                    values_buffer,
+                    additional,
+                    dict.as_any().downcast_ref().unwrap(),
+                    values,
+                    validity,
+                    op,
+                ),
+                (Encoding::Plain, None, true) => read_nullable(
                     validity_buffer,
                     values_buffer,
                     additional,
                     values,
                     validity,
                     op,
-                )
+                ),
+                (Encoding::Plain, None, false) => {
+                    read_required::<T, A, F>(page.buffer(), additional, values, op)
+                }
+                _ => {
+                    return Err(other_utils::not_implemented(
+                        &page.encoding(),
+                        is_optional,
+                        page.dictionary_page().is_some(),
+                        "V2",
+                        "primitive",
+                    ))
+                }
             }
-            (Encoding::Plain, None, false) => {
-                read_required::<T, A, F>(page.buffer(), additional, values, op)
-            }
-            _ => {
-                return Err(utils::not_implemented(
-                    &page.encoding(),
-                    is_optional,
-                    page.dictionary_page().is_some(),
-                    "V2",
-                    "primitive",
-                ))
-            }
-        },
+        }
     };
     Ok(())
 }

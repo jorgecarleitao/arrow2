@@ -1,9 +1,8 @@
 use crate::bitmap::Bitmap;
-use parquet2::compression::create_codec;
-use parquet2::encoding::hybrid_rle::encode;
 
 use parquet2::{
-    encoding::Encoding,
+    compression::create_codec,
+    encoding::{hybrid_rle::encode_bool, Encoding},
     metadata::ColumnDescriptor,
     read::{CompressedPage, PageHeader},
     schema::{CompressionCodec, DataPageHeader, DataPageHeaderV2},
@@ -15,50 +14,47 @@ use crate::error::Result;
 
 use super::Version;
 
-#[inline]
-fn encode_iter_v1<I: Iterator<Item = bool>>(iter: I) -> Result<Vec<u8>> {
-    let mut buffer = std::io::Cursor::new(vec![0; 4]);
-    buffer.set_position(4);
-    encode(&mut buffer, iter)?;
-    let mut buffer = buffer.into_inner();
-    let length = buffer.len() - 4;
-    // todo: pay this small debt (loop?)
-    let length = length.to_le_bytes();
-    buffer[0] = length[0];
-    buffer[1] = length[1];
-    buffer[2] = length[2];
-    buffer[3] = length[3];
-    Ok(buffer)
+fn encode_iter_v1<I: Iterator<Item = bool>>(buffer: &mut Vec<u8>, iter: I) -> Result<()> {
+    buffer.extend_from_slice(&[0; 4]);
+    let start = buffer.len();
+    encode_bool(buffer, iter)?;
+    let end = buffer.len();
+    let length = end - start;
+
+    // write the first 4 bytes as length
+    let length = (length as i32).to_le_bytes();
+    (0..4).for_each(|i| buffer[start - 4 + i] = length[i]);
+    Ok(())
 }
 
-#[inline]
-fn encode_iter_v2<I: Iterator<Item = bool>>(iter: I) -> Result<Vec<u8>> {
-    let mut buffer = vec![];
-    encode(&mut buffer, iter)?;
-    Ok(buffer)
+fn encode_iter_v2<I: Iterator<Item = bool>>(writer: &mut Vec<u8>, iter: I) -> Result<()> {
+    Ok(encode_bool(writer, iter)?)
 }
 
-fn encode_iter<I: Iterator<Item = bool>>(iter: I, version: Version) -> Result<Vec<u8>> {
+fn encode_iter<I: Iterator<Item = bool>>(
+    writer: &mut Vec<u8>,
+    iter: I,
+    version: Version,
+) -> Result<()> {
     match version {
-        Version::V1 => encode_iter_v1(iter),
-        Version::V2 => encode_iter_v2(iter),
+        Version::V1 => encode_iter_v1(writer, iter),
+        Version::V2 => encode_iter_v2(writer, iter),
     }
 }
 
 /// writes the def levels to a `Vec<u8>` and returns it.
-/// Note that this function
-#[inline]
 pub fn write_def_levels(
+    writer: &mut Vec<u8>,
     is_optional: bool,
     validity: &Option<Bitmap>,
     len: usize,
     version: Version,
-) -> Result<Vec<u8>> {
+) -> Result<()> {
     // encode def levels
     match (is_optional, validity) {
-        (true, Some(validity)) => encode_iter(validity.iter(), version),
-        (true, None) => encode_iter(std::iter::repeat(true).take(len), version),
-        _ => Ok(vec![]), // is required => no def levels
+        (true, Some(validity)) => encode_iter(writer, validity.iter(), version),
+        (true, None) => encode_iter(writer, std::iter::repeat(true).take(len), version),
+        _ => Ok(()), // is required => no def levels
     }
 }
 
@@ -68,6 +64,7 @@ pub fn build_plain_page(
     len: usize,
     null_count: usize,
     uncompressed_page_size: usize,
+    repetition_levels_byte_length: usize,
     definition_levels_byte_length: usize,
     statistics: Option<ParquetStatistics>,
     descriptor: ColumnDescriptor,
@@ -99,7 +96,7 @@ pub fn build_plain_page(
                 num_nulls: null_count as i32,
                 num_rows: len as i32,
                 definition_levels_byte_length: definition_levels_byte_length as i32,
-                repetition_levels_byte_length: 0,
+                repetition_levels_byte_length: repetition_levels_byte_length as i32,
                 is_compressed: Some(options.compression != CompressionCodec::Uncompressed),
                 statistics,
             });
@@ -119,7 +116,7 @@ pub fn build_plain_page(
 pub fn compress(
     mut buffer: Vec<u8>,
     options: WriteOptions,
-    definition_levels_byte_length: usize,
+    levels_byte_length: usize,
 ) -> Result<Vec<u8>> {
     let codec = create_codec(&options.compression)?;
     Ok(if let Some(mut codec) = codec {
@@ -135,8 +132,8 @@ pub fn compress(
                 // todo: remove this allocation by extending `buffer` directly.
                 // needs refactoring `compress`'s API.
                 let mut tmp = vec![];
-                codec.compress(&buffer[definition_levels_byte_length..], &mut tmp)?;
-                buffer.truncate(definition_levels_byte_length);
+                codec.compress(&buffer[levels_byte_length..], &mut tmp)?;
+                buffer.truncate(levels_byte_length);
                 buffer.extend_from_slice(&tmp);
                 buffer
             }

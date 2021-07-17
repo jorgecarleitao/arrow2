@@ -89,9 +89,9 @@ fn build_is_valid(array: &dyn Array) -> IsValid {
     }
 }
 
-type Compare<'a> = Box<dyn Fn(usize, usize) -> Ordering + 'a>;
+pub(crate) type Compare<'a> = Box<dyn Fn(usize, usize) -> Ordering + 'a>;
 
-fn build_compare(array: &dyn Array, sort_option: SortOptions) -> Result<Compare> {
+pub(crate) fn build_compare(array: &dyn Array, sort_option: SortOptions) -> Result<Compare> {
     let is_valid = build_is_valid(array);
     let comparator = ord::build_compare(array, array)?;
 

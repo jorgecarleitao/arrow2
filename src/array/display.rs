@@ -30,7 +30,8 @@ macro_rules! dyn_dict {
     }};
 }
 
-/// Returns a function of index returning the string representation of the array.
+/// Returns a function of index returning the string representation of the _value_ of `array`.
+/// This does not take nulls into account.
 /// # Errors
 /// This function errors iff the datatype is not yet supported for printing.
 pub fn get_value_display<'a>(array: &'a dyn Array) -> Result<Box<dyn Fn(usize) -> String + 'a>> {
@@ -155,15 +156,37 @@ pub fn get_value_display<'a>(array: &'a dyn Array) -> Result<Box<dyn Fn(usize) -
             DataType::UInt64 => dyn_dict!(array, u64),
             _ => unreachable!(),
         },
-        other => {
-            return Err(ArrowError::NotYetImplemented(format!(
-                "Priting of datatype {:?} with timezones is not yet implemented.",
-                other
-            )))
+        Struct(_) => {
+            let a = array.as_any().downcast_ref::<StructArray>().unwrap();
+            let displays = a
+                .values()
+                .iter()
+                .map(|x| get_value_display(x.as_ref()))
+                .collect::<Result<Vec<_>>>()?;
+            Box::new(move |row: usize| {
+                let mut string = displays
+                    .iter()
+                    .zip(a.fields().iter().map(|f| f.name()))
+                    .map(|(f, name)| (f(row), name))
+                    .fold("{".to_string(), |mut acc, (v, name)| {
+                        acc.push_str(&format!("{}: {}, ", name, v));
+                        acc
+                    });
+                if string.len() > 1 {
+                    // remove last ", "
+                    string.pop();
+                    string.pop();
+                }
+                string.push('}');
+                string
+            })
         }
+        _ => unreachable!(),
     })
 }
 
+/// Returns a function of index returning the string representation of the item of `array`.
+/// This outputs an empty string on nulls.
 pub fn get_display<'a>(array: &'a dyn Array) -> Result<Box<dyn Fn(usize) -> String + 'a>> {
     let value_display = get_value_display(array)?;
     Ok(Box::new(move |row| {

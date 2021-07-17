@@ -1,6 +1,5 @@
 use std::fs::File;
 
-use arrow2::compute::cast::cast;
 use arrow2::io::parquet::read;
 use arrow2::{array::Array, error::Result};
 
@@ -25,17 +24,17 @@ fn read_column_chunk(path: &str, row_group: usize, column: usize) -> Result<Box<
     // get the columns' metadata
     let metadata = file_metadata.row_groups[row_group].column(column);
 
+    // get the columns' logical type
+    let data_type = arrow_schema.fields()[column].data_type().clone();
+
     // This is the actual work. In this case, pages are read (by calling `iter.next()`) and are
     // immediately decompressed, decoded, deserialized to arrow and deallocated.
     // This uses a combination of IO and CPU. At this point, `array` is the arrow-corresponding
     // array of the parquets' physical type.
     // `Decompressor` re-uses an internal buffer for de-compression, thereby maximizing memory re-use.
     let mut pages = read::Decompressor::new(pages, vec![]);
-    let array = read::page_iter_to_array(&mut pages, metadata)?;
 
-    // Cast the array to the corresponding Arrow's data type. When the physical type
-    // is the same, this operation is `O(1)`. Otherwise, it incurs some CPU cost.
-    cast(array.as_ref(), arrow_schema.field(column).data_type())
+    read::page_iter_to_array(&mut pages, metadata, data_type)
 }
 
 fn main() -> Result<()> {

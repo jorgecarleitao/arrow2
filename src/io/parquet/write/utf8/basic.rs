@@ -5,33 +5,26 @@ use parquet2::{
     write::WriteOptions,
 };
 
-use super::utils;
+use super::super::binary::ord_binary;
+use super::super::utils;
 use crate::{
-    array::{Array, BinaryArray, Offset},
+    array::{Array, Offset, Utf8Array},
     error::Result,
     io::parquet::read::is_type_nullable,
 };
 
-pub fn array_to_page<O: Offset>(
-    array: &BinaryArray<O>,
-    options: WriteOptions,
-    descriptor: ColumnDescriptor,
-) -> Result<CompressedPage> {
-    let validity = array.validity();
-    let is_optional = is_type_nullable(descriptor.type_());
-
-    let mut buffer = utils::write_def_levels(is_optional, validity, array.len(), options.version)?;
-
-    let definition_levels_byte_length = buffer.len();
-
-    // append the non-null values
+pub(super) fn encode_plain<O: Offset>(
+    array: &Utf8Array<O>,
+    is_optional: bool,
+    buffer: &mut Vec<u8>,
+) {
     if is_optional {
         array.iter().for_each(|x| {
             if let Some(x) = x {
                 // BYTE_ARRAY: first 4 bytes denote length in littleendian.
                 let len = (x.len() as u32).to_le_bytes();
                 buffer.extend_from_slice(&len);
-                buffer.extend_from_slice(x);
+                buffer.extend_from_slice(x.as_bytes());
             }
         })
     } else {
@@ -39,9 +32,32 @@ pub fn array_to_page<O: Offset>(
             // BYTE_ARRAY: first 4 bytes denote length in littleendian.
             let len = (x.len() as u32).to_le_bytes();
             buffer.extend_from_slice(&len);
-            buffer.extend_from_slice(x);
+            buffer.extend_from_slice(x.as_bytes());
         })
     }
+}
+
+pub fn array_to_page<O: Offset>(
+    array: &Utf8Array<O>,
+    options: WriteOptions,
+    descriptor: ColumnDescriptor,
+) -> Result<CompressedPage> {
+    let validity = array.validity();
+    let is_optional = is_type_nullable(descriptor.type_());
+
+    let mut buffer = vec![];
+    utils::write_def_levels(
+        &mut buffer,
+        is_optional,
+        validity,
+        array.len(),
+        options.version,
+    )?;
+
+    let definition_levels_byte_length = buffer.len();
+
+    encode_plain(array, is_optional, &mut buffer);
+
     let uncompressed_page_size = buffer.len();
 
     let buffer = utils::compress(buffer, options, definition_levels_byte_length)?;
@@ -57,6 +73,7 @@ pub fn array_to_page<O: Offset>(
         array.len(),
         array.null_count(),
         uncompressed_page_size,
+        0,
         definition_levels_byte_length,
         statistics,
         descriptor,
@@ -64,8 +81,8 @@ pub fn array_to_page<O: Offset>(
     )
 }
 
-fn build_statistics<O: Offset>(
-    array: &BinaryArray<O>,
+pub(super) fn build_statistics<O: Offset>(
+    array: &Utf8Array<O>,
     descriptor: ColumnDescriptor,
 ) -> ParquetStatistics {
     let statistics = &BinaryStatistics {
@@ -75,33 +92,15 @@ fn build_statistics<O: Offset>(
         max_value: array
             .iter()
             .flatten()
+            .map(|x| x.as_bytes())
             .max_by(|x, y| ord_binary(x, y))
             .map(|x| x.to_vec()),
         min_value: array
             .iter()
             .flatten()
+            .map(|x| x.as_bytes())
             .min_by(|x, y| ord_binary(x, y))
             .map(|x| x.to_vec()),
     } as &dyn Statistics;
     serialize_statistics(statistics)
-}
-
-/// Returns the ordering of two binary values. This corresponds to pyarrows' ordering
-/// of statistics.
-pub(crate) fn ord_binary<'a>(a: &'a [u8], b: &'a [u8]) -> std::cmp::Ordering {
-    use std::cmp::Ordering::*;
-    match (a.is_empty(), b.is_empty()) {
-        (true, true) => return Equal,
-        (true, false) => return Less,
-        (false, true) => return Greater,
-        (false, false) => {}
-    }
-
-    for (v1, v2) in a.iter().zip(b.iter()) {
-        match v1.cmp(v2) {
-            Equal => continue,
-            other => return other,
-        }
-    }
-    Equal
 }

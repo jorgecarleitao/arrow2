@@ -14,6 +14,8 @@ impl From<parquet2::error::ParquetError> for ArrowError {
 #[cfg(test)]
 mod tests {
     use crate::array::*;
+    use crate::bitmap::Bitmap;
+    use crate::buffer::Buffer;
     use crate::datatypes::*;
 
     use crate::error::Result;
@@ -46,6 +48,147 @@ mod tests {
         Ok((reader.next().unwrap()?.columns()[0].clone(), statistics))
     }
 
+    pub fn pyarrow_nested_nullable(column: usize) -> Box<dyn Array> {
+        let offsets = Buffer::<i32>::from([0, 2, 2, 5, 8, 8, 11, 11, 12]);
+
+        let values = match column {
+            0 => {
+                // [[0, 1], None, [2, None, 3], [4, 5, 6], [], [7, 8, 9], None, [10]]
+                Arc::new(PrimitiveArray::<i64>::from(&[
+                    Some(0),
+                    Some(1),
+                    Some(2),
+                    None,
+                    Some(3),
+                    Some(4),
+                    Some(5),
+                    Some(6),
+                    Some(7),
+                    Some(8),
+                    Some(9),
+                    Some(10),
+                ])) as Arc<dyn Array>
+            }
+            1 | 2 => {
+                // [[0, 1], None, [2, 0, 3], [4, 5, 6], [], [7, 8, 9], None, [10]]
+                Arc::new(PrimitiveArray::<i64>::from(&[
+                    Some(0),
+                    Some(1),
+                    Some(2),
+                    Some(0),
+                    Some(3),
+                    Some(4),
+                    Some(5),
+                    Some(6),
+                    Some(7),
+                    Some(8),
+                    Some(9),
+                    Some(10),
+                ])) as Arc<dyn Array>
+            }
+            3 => Arc::new(PrimitiveArray::<i16>::from(&[
+                Some(0),
+                Some(1),
+                Some(2),
+                None,
+                Some(3),
+                Some(4),
+                Some(5),
+                Some(6),
+                Some(7),
+                Some(8),
+                Some(9),
+                Some(10),
+            ])) as Arc<dyn Array>,
+            4 => Arc::new(BooleanArray::from(&[
+                Some(false),
+                Some(true),
+                Some(true),
+                None,
+                Some(false),
+                Some(true),
+                Some(false),
+                Some(true),
+                Some(false),
+                Some(false),
+                Some(false),
+                Some(true),
+            ])) as Arc<dyn Array>,
+            /*
+                string = [
+                    ["Hello", "bbb"],
+                    None,
+                    ["aa", None, ""],
+                    ["bbb", "aa", "ccc"],
+                    [],
+                    ["abc", "bbb", "bbb"],
+                    None,
+                    [""],
+                ]
+            */
+            5 => Arc::new(Utf8Array::<i32>::from(&[
+                Some("Hello".to_string()),
+                Some("bbb".to_string()),
+                Some("aa".to_string()),
+                None,
+                Some("".to_string()),
+                Some("bbb".to_string()),
+                Some("aa".to_string()),
+                Some("ccc".to_string()),
+                Some("abc".to_string()),
+                Some("bbb".to_string()),
+                Some("bbb".to_string()),
+                Some("".to_string()),
+            ])),
+            6 => Arc::new(BinaryArray::<i64>::from(&[
+                Some(b"Hello".to_vec()),
+                Some(b"bbb".to_vec()),
+                Some(b"aa".to_vec()),
+                None,
+                Some(b"".to_vec()),
+                Some(b"bbb".to_vec()),
+                Some(b"aa".to_vec()),
+                Some(b"ccc".to_vec()),
+                Some(b"abc".to_vec()),
+                Some(b"bbb".to_vec()),
+                Some(b"bbb".to_vec()),
+                Some(b"".to_vec()),
+            ])),
+            _ => unreachable!(),
+        };
+
+        match column {
+            0 | 1 | 3 | 4 | 5 | 6 => {
+                let field = match column {
+                    0 => Field::new("item", DataType::Int64, true),
+                    1 => Field::new("item", DataType::Int64, false),
+                    3 => Field::new("item", DataType::Int16, true),
+                    4 => Field::new("item", DataType::Boolean, true),
+                    5 => Field::new("item", DataType::Utf8, true),
+                    6 => Field::new("item", DataType::LargeBinary, true),
+                    _ => unreachable!(),
+                };
+
+                let validity = Some(Bitmap::from([
+                    true, false, true, true, true, true, false, true,
+                ]));
+                let data_type = DataType::List(Box::new(field));
+                Box::new(ListArray::<i32>::from_data(
+                    data_type, offsets, values, validity,
+                ))
+            }
+            2 => {
+                // [[0, 1], [], [2, None, 3], [4, 5, 6], [], [7, 8, 9], [], [10]]
+                let data_type =
+                    DataType::List(Box::new(Field::new("item", DataType::Int64, false)));
+                Box::new(ListArray::<i32>::from_data(
+                    data_type, offsets, values, None,
+                ))
+            }
+            _ => unreachable!(),
+        }
+    }
+
     pub fn pyarrow_nullable(column: usize) -> Box<dyn Array> {
         let i64_values = &[
             Some(0),
@@ -74,7 +217,7 @@ mod tests {
                 None,
                 Some(9.0),
             ])),
-            2 => Box::new(Utf8Array::<i32>::from(&vec![
+            2 => Box::new(Utf8Array::<i32>::from(&[
                 Some("Hello".to_string()),
                 None,
                 Some("aa".to_string()),
@@ -212,6 +355,43 @@ mod tests {
             _ => unreachable!(),
         }
     }
+
+    pub fn pyarrow_nested_nullable_statistics(column: usize) -> Box<dyn Statistics> {
+        match column {
+            3 => Box::new(PrimitiveStatistics::<i16> {
+                data_type: DataType::Int16,
+                distinct_count: None,
+                null_count: Some(1),
+                min_value: Some(0),
+                max_value: Some(10),
+            }),
+            4 => Box::new(BooleanStatistics {
+                distinct_count: None,
+                null_count: Some(1),
+                min_value: Some(false),
+                max_value: Some(true),
+            }),
+            5 => Box::new(Utf8Statistics {
+                distinct_count: None,
+                null_count: Some(1),
+                min_value: Some("".to_string()),
+                max_value: Some("def".to_string()),
+            }),
+            6 => Box::new(BinaryStatistics {
+                distinct_count: None,
+                null_count: Some(1),
+                min_value: Some(b"".to_vec()),
+                max_value: Some(b"def".to_vec()),
+            }),
+            _ => Box::new(PrimitiveStatistics::<i64> {
+                data_type: DataType::Int64,
+                distinct_count: None,
+                null_count: Some(3),
+                min_value: Some(0),
+                max_value: Some(9),
+            }),
+        }
+    }
 }
 
 /// Round-trip with parquet using the same integration files used for IPC integration tests.
@@ -220,6 +400,9 @@ mod tests_integration {
     use std::sync::Arc;
 
     use super::write::CompressionCodec;
+    use crate::array::{Array, PrimitiveArray, Utf8Array};
+    use crate::datatypes::DataType;
+    use crate::datatypes::TimeUnit;
     use crate::datatypes::*;
     use crate::record_batch::*;
 
@@ -292,5 +475,30 @@ mod tests_integration {
     fn roundtrip_100_primitive() -> Result<()> {
         test_file("1.0.0-littleendian", "generated_primitive")?;
         test_file("1.0.0-bigendian", "generated_primitive")
+    }
+
+    /// Tests that when arrow-specific types (Duration and LargeUtf8) are written to parquet, we can rountrip its
+    /// logical types.
+    #[test]
+    fn test_arrow_type() -> Result<()> {
+        let dt1 = DataType::Duration(TimeUnit::Second);
+        let array = PrimitiveArray::<i64>::from([Some(1), None, Some(2)]).to(dt1.clone());
+        let array2 = Utf8Array::<i64>::from([Some("a"), None, Some("bb")]);
+        let schema = Schema::new(vec![
+            Field::new("a1", dt1, true),
+            Field::new("a2", array2.data_type().clone(), true),
+        ]);
+        let batch = RecordBatch::try_new(
+            Arc::new(schema.clone()),
+            vec![Arc::new(array), Arc::new(array2)],
+        )?;
+
+        let r = integration_write(&schema, &[batch.clone()])?;
+
+        let (new_schema, new_batches) = integration_read(&r)?;
+
+        assert_eq!(new_schema.as_ref(), &schema);
+        assert_eq!(new_batches, vec![batch]);
+        Ok(())
     }
 }

@@ -1,5 +1,10 @@
 # IO
 
-Arrow2 currently supports 2 main formats, JSON and CSV, both read and write.
+This crate offers optional features that enable interoperability with different formats:
 
-This guide currently describes [reading from CSV](./csv_reader.md).
+* Arrow (`io_ipc`)
+* CSV (`io_csv`)
+* Parquet (`io_parquet`)
+* Json (`io_json`)
+
+In this section you can find a guide and examples for each one of them.

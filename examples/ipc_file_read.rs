@@ -2,6 +2,7 @@ use std::fs::File;
 
 use arrow2::error::Result;
 use arrow2::io::ipc::read::{read_file_metadata, FileReader};
+use arrow2::io::print;
 use arrow2::record_batch::RecordBatch;
 
 fn read_batches(path: &str) -> Result<Vec<RecordBatch>> {
@@ -23,6 +24,6 @@ fn main() -> Result<()> {
     let file_path = &args[1];
 
     let batches = read_batches(file_path)?;
-    println!("{:?}", batches);
+    print::print(&batches)?;
     Ok(())
 }
