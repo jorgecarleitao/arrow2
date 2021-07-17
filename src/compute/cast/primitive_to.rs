@@ -66,8 +66,6 @@ where
     I: NativeType + num::NumCast,
     O: NativeType + num::NumCast,
 {
-    let from = from.as_any().downcast_ref::<PrimitiveArray<I>>().unwrap();
-
     let iter = from
         .iter()
         .map(|v| v.and_then(|x| num::cast::cast::<I, O>(*x)));
