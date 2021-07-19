@@ -8,6 +8,7 @@ use arrow2::{
     io::parquet::write::{write_file, CompressionCodec, RowGroupIterator, Version, WriteOptions},
     record_batch::RecordBatch,
 };
+use parquet2::schema::Encoding;
 
 fn write_batch(path: &str, batch: RecordBatch) -> Result<()> {
     let schema = batch.schema().clone();
@@ -20,7 +21,8 @@ fn write_batch(path: &str, batch: RecordBatch) -> Result<()> {
 
     let iter = vec![Ok(batch)];
 
-    let row_groups = RowGroupIterator::try_new(iter.into_iter(), &schema, options)?;
+    let row_groups =
+        RowGroupIterator::try_new(iter.into_iter(), &schema, options, vec![Encoding::Plain])?;
 
     // Create a new empty file
     let mut file = File::create(path)?;

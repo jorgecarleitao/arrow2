@@ -6,6 +6,7 @@ use crate::{
 
 use super::BinaryArray;
 
+#[derive(Debug, Clone)]
 pub struct BinaryValueIter<'a, O: Offset> {
     array: &'a BinaryArray<O>,
     index: usize,

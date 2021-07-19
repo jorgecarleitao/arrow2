@@ -1,4 +1,5 @@
 use parquet2::{
+    encoding::{delta_bitpacked, Encoding},
     metadata::ColumnDescriptor,
     read::CompressedPage,
     statistics::{serialize_statistics, BinaryStatistics, ParquetStatistics, Statistics},
@@ -8,7 +9,8 @@ use parquet2::{
 use super::super::utils;
 use crate::{
     array::{Array, BinaryArray, Offset},
-    error::Result,
+    bitmap::Bitmap,
+    error::{ArrowError, Result},
     io::parquet::read::is_type_nullable,
 };
 
@@ -41,6 +43,7 @@ pub fn array_to_page<O: Offset>(
     array: &BinaryArray<O>,
     options: WriteOptions,
     descriptor: ColumnDescriptor,
+    encoding: Encoding,
 ) -> Result<CompressedPage> {
     let validity = array.validity();
     let is_optional = is_type_nullable(descriptor.type_());
@@ -56,7 +59,23 @@ pub fn array_to_page<O: Offset>(
 
     let definition_levels_byte_length = buffer.len();
 
-    encode_plain(array, is_optional, &mut buffer);
+    match encoding {
+        Encoding::Plain => encode_plain(array, is_optional, &mut buffer),
+        Encoding::DeltaLengthByteArray => encode_delta(
+            array.values(),
+            array.offsets(),
+            array.validity(),
+            is_optional,
+            &mut buffer,
+        ),
+        _ => {
+            return Err(ArrowError::InvalidArgumentError(format!(
+                "Datatype {:?} cannot be encoded by {:?} encoding",
+                array.data_type(),
+                encoding
+            )))
+        }
+    }
 
     let uncompressed_page_size = buffer.len();
 
@@ -78,6 +97,7 @@ pub fn array_to_page<O: Offset>(
         statistics,
         descriptor,
         options,
+        encoding,
     )
 }
 
@@ -101,6 +121,38 @@ pub(super) fn build_statistics<O: Offset>(
             .map(|x| x.to_vec()),
     } as &dyn Statistics;
     serialize_statistics(statistics)
+}
+
+pub(crate) fn encode_delta<O: Offset>(
+    values: &[u8],
+    offsets: &[O],
+    validity: &Option<Bitmap>,
+    is_optional: bool,
+    buffer: &mut Vec<u8>,
+) {
+    if is_optional {
+        if let Some(validity) = validity {
+            let lengths = offsets
+                .windows(2)
+                .map(|w| (w[1] - w[0]).to_isize() as i32)
+                .zip(validity.iter())
+                .flat_map(|(x, is_valid)| if is_valid { Some(x) } else { None });
+            let length = offsets.len() - 1 - validity.null_count();
+            let lengths = utils::ExactSizedIter::new(lengths, length);
+
+            delta_bitpacked::encode(lengths, buffer);
+        } else {
+            let lengths = offsets.windows(2).map(|w| (w[1] - w[0]).to_isize() as i32);
+            delta_bitpacked::encode(lengths, buffer);
+        }
+    } else {
+        let lengths = offsets.windows(2).map(|w| (w[1] - w[0]).to_isize() as i32);
+        delta_bitpacked::encode(lengths, buffer);
+    }
+
+    buffer.extend_from_slice(
+        &values[offsets.first().unwrap().to_usize()..offsets.last().unwrap().to_usize()],
+    )
 }
 
 /// Returns the ordering of two binary values. This corresponds to pyarrows' ordering

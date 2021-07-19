@@ -25,6 +25,7 @@ pub use parquet2::{
     compression::CompressionCodec,
     read::CompressedPage,
     schema::types::ParquetType,
+    schema::Encoding,
     write::{DynIter, RowGroupIter},
     write::{Version, WriteOptions},
 };
@@ -87,13 +88,35 @@ where
     )?)
 }
 
+/// Checks whether the `data_type` can be encoded as `encoding`.
+/// Note that this is whether this implementation supports it, which is not necessarily
+/// what the parquet spec allows.
+pub fn can_encode(data_type: &DataType, encoding: Encoding) -> bool {
+    matches!(
+        (encoding, data_type),
+        (Encoding::Plain, _)
+            | (
+                Encoding::DeltaLengthByteArray,
+                DataType::Binary | DataType::LargeBinary | DataType::Utf8 | DataType::LargeUtf8,
+            )
+    )
+}
+
 pub fn array_to_page(
     array: &dyn Array,
     descriptor: ColumnDescriptor,
     options: WriteOptions,
+    encoding: Encoding,
 ) -> Result<CompressedPage> {
-    // using plain encoding format
-    match array.data_type() {
+    let data_type = array.data_type();
+    if !can_encode(data_type, encoding) {
+        return Err(ArrowError::InvalidArgumentError(format!(
+            "The datatype {:?} cannot be encoded by {:?}",
+            data_type, encoding
+        )));
+    }
+
+    match data_type {
         DataType::Boolean => {
             boolean::array_to_page(array.as_any().downcast_ref().unwrap(), options, descriptor)
         }
@@ -154,21 +177,29 @@ pub fn array_to_page(
             options,
             descriptor,
         ),
-        DataType::Utf8 => {
-            utf8::array_to_page::<i32>(array.as_any().downcast_ref().unwrap(), options, descriptor)
-        }
-        DataType::LargeUtf8 => {
-            utf8::array_to_page::<i64>(array.as_any().downcast_ref().unwrap(), options, descriptor)
-        }
+        DataType::Utf8 => utf8::array_to_page::<i32>(
+            array.as_any().downcast_ref().unwrap(),
+            options,
+            descriptor,
+            encoding,
+        ),
+        DataType::LargeUtf8 => utf8::array_to_page::<i64>(
+            array.as_any().downcast_ref().unwrap(),
+            options,
+            descriptor,
+            encoding,
+        ),
         DataType::Binary => binary::array_to_page::<i32>(
             array.as_any().downcast_ref().unwrap(),
             options,
             descriptor,
+            encoding,
         ),
         DataType::LargeBinary => binary::array_to_page::<i64>(
             array.as_any().downcast_ref().unwrap(),
             options,
             descriptor,
+            encoding,
         ),
         DataType::Null => {
             let array = Int32Array::new_null(DataType::Int32, array.len());
@@ -426,6 +457,7 @@ mod tests {
         nested: bool,
         version: Version,
         compression: CompressionCodec,
+        encoding: Encoding,
     ) -> Result<()> {
         let (array, statistics) = if nested {
             (
@@ -462,7 +494,7 @@ mod tests {
             std::iter::once(Result::Ok(DynIter::new(std::iter::once(Ok(DynIter::new(
                 std::iter::once(array.as_ref())
                     .zip(parquet_schema.columns().to_vec().into_iter())
-                    .map(|(array, descriptor)| array_to_page(array, descriptor, options)),
+                    .map(|(array, descriptor)| array_to_page(array, descriptor, options, encoding)),
             ))))));
 
         let mut writer = Cursor::new(vec![]);
@@ -485,116 +517,289 @@ mod tests {
 
     #[test]
     fn test_int64_optional_v1() -> Result<()> {
-        round_trip(0, true, false, Version::V1, CompressionCodec::Uncompressed)
+        round_trip(
+            0,
+            true,
+            false,
+            Version::V1,
+            CompressionCodec::Uncompressed,
+            Encoding::Plain,
+        )
     }
 
     #[test]
     fn test_int64_required_v1() -> Result<()> {
-        round_trip(0, false, false, Version::V1, CompressionCodec::Uncompressed)
+        round_trip(
+            0,
+            false,
+            false,
+            Version::V1,
+            CompressionCodec::Uncompressed,
+            Encoding::Plain,
+        )
     }
 
     #[test]
     fn test_int64_optional_v2() -> Result<()> {
-        round_trip(0, true, false, Version::V2, CompressionCodec::Uncompressed)
+        round_trip(
+            0,
+            true,
+            false,
+            Version::V2,
+            CompressionCodec::Uncompressed,
+            Encoding::Plain,
+        )
     }
 
     #[test]
     fn test_int64_optional_v2_compressed() -> Result<()> {
-        round_trip(0, true, false, Version::V2, CompressionCodec::Snappy)
+        round_trip(
+            0,
+            true,
+            false,
+            Version::V2,
+            CompressionCodec::Snappy,
+            Encoding::Plain,
+        )
     }
 
     #[test]
     fn test_utf8_optional_v1() -> Result<()> {
-        round_trip(2, true, false, Version::V1, CompressionCodec::Uncompressed)
+        round_trip(
+            2,
+            true,
+            false,
+            Version::V1,
+            CompressionCodec::Uncompressed,
+            Encoding::Plain,
+        )
     }
 
     #[test]
     fn test_utf8_required_v1() -> Result<()> {
-        round_trip(2, false, false, Version::V1, CompressionCodec::Uncompressed)
+        round_trip(
+            2,
+            false,
+            false,
+            Version::V1,
+            CompressionCodec::Uncompressed,
+            Encoding::Plain,
+        )
     }
 
     #[test]
     fn test_utf8_optional_v2() -> Result<()> {
-        round_trip(2, true, false, Version::V2, CompressionCodec::Uncompressed)
+        round_trip(
+            2,
+            true,
+            false,
+            Version::V2,
+            CompressionCodec::Uncompressed,
+            Encoding::Plain,
+        )
     }
 
     #[test]
     fn test_utf8_required_v2() -> Result<()> {
-        round_trip(2, false, false, Version::V2, CompressionCodec::Uncompressed)
+        round_trip(
+            2,
+            false,
+            false,
+            Version::V2,
+            CompressionCodec::Uncompressed,
+            Encoding::Plain,
+        )
     }
 
     #[test]
     fn test_utf8_optional_v2_compressed() -> Result<()> {
-        round_trip(2, true, false, Version::V2, CompressionCodec::Snappy)
+        round_trip(
+            2,
+            true,
+            false,
+            Version::V2,
+            CompressionCodec::Snappy,
+            Encoding::Plain,
+        )
     }
 
     #[test]
     fn test_utf8_required_v2_compressed() -> Result<()> {
-        round_trip(2, false, false, Version::V2, CompressionCodec::Snappy)
+        round_trip(
+            2,
+            false,
+            false,
+            Version::V2,
+            CompressionCodec::Snappy,
+            Encoding::Plain,
+        )
     }
 
     #[test]
     fn test_bool_optional_v1() -> Result<()> {
-        round_trip(3, true, false, Version::V1, CompressionCodec::Uncompressed)
+        round_trip(
+            3,
+            true,
+            false,
+            Version::V1,
+            CompressionCodec::Uncompressed,
+            Encoding::Plain,
+        )
     }
 
     #[test]
     fn test_bool_required_v1() -> Result<()> {
-        round_trip(3, false, false, Version::V1, CompressionCodec::Uncompressed)
+        round_trip(
+            3,
+            false,
+            false,
+            Version::V1,
+            CompressionCodec::Uncompressed,
+            Encoding::Plain,
+        )
     }
 
     #[test]
     fn test_bool_optional_v2_uncompressed() -> Result<()> {
-        round_trip(3, true, false, Version::V2, CompressionCodec::Uncompressed)
+        round_trip(
+            3,
+            true,
+            false,
+            Version::V2,
+            CompressionCodec::Uncompressed,
+            Encoding::Plain,
+        )
     }
 
     #[test]
     fn test_bool_required_v2_uncompressed() -> Result<()> {
-        round_trip(3, false, false, Version::V2, CompressionCodec::Uncompressed)
+        round_trip(
+            3,
+            false,
+            false,
+            Version::V2,
+            CompressionCodec::Uncompressed,
+            Encoding::Plain,
+        )
     }
 
     #[test]
     fn test_bool_required_v2_compressed() -> Result<()> {
-        round_trip(3, false, false, Version::V2, CompressionCodec::Snappy)
+        round_trip(
+            3,
+            false,
+            false,
+            Version::V2,
+            CompressionCodec::Snappy,
+            Encoding::Plain,
+        )
     }
 
     #[test]
     fn test_list_int64_optional_v2() -> Result<()> {
-        round_trip(0, true, true, Version::V2, CompressionCodec::Uncompressed)
+        round_trip(
+            0,
+            true,
+            true,
+            Version::V2,
+            CompressionCodec::Uncompressed,
+            Encoding::Plain,
+        )
     }
 
     #[test]
     fn test_list_int64_optional_v1() -> Result<()> {
-        round_trip(0, true, true, Version::V1, CompressionCodec::Uncompressed)
+        round_trip(
+            0,
+            true,
+            true,
+            Version::V1,
+            CompressionCodec::Uncompressed,
+            Encoding::Plain,
+        )
     }
 
     #[test]
     fn test_list_bool_optional_v2() -> Result<()> {
-        round_trip(4, true, true, Version::V2, CompressionCodec::Uncompressed)
+        round_trip(
+            4,
+            true,
+            true,
+            Version::V2,
+            CompressionCodec::Uncompressed,
+            Encoding::Plain,
+        )
     }
 
     #[test]
     fn test_list_bool_optional_v1() -> Result<()> {
-        round_trip(4, true, true, Version::V1, CompressionCodec::Uncompressed)
+        round_trip(
+            4,
+            true,
+            true,
+            Version::V1,
+            CompressionCodec::Uncompressed,
+            Encoding::Plain,
+        )
     }
 
     #[test]
     fn test_list_utf8_optional_v2() -> Result<()> {
-        round_trip(5, true, true, Version::V2, CompressionCodec::Uncompressed)
+        round_trip(
+            5,
+            true,
+            true,
+            Version::V2,
+            CompressionCodec::Uncompressed,
+            Encoding::Plain,
+        )
     }
 
     #[test]
     fn test_list_utf8_optional_v1() -> Result<()> {
-        round_trip(5, true, true, Version::V1, CompressionCodec::Uncompressed)
+        round_trip(
+            5,
+            true,
+            true,
+            Version::V1,
+            CompressionCodec::Uncompressed,
+            Encoding::Plain,
+        )
     }
 
     #[test]
     fn test_list_large_binary_optional_v2() -> Result<()> {
-        round_trip(6, true, true, Version::V2, CompressionCodec::Uncompressed)
+        round_trip(
+            6,
+            true,
+            true,
+            Version::V2,
+            CompressionCodec::Uncompressed,
+            Encoding::Plain,
+        )
     }
 
     #[test]
     fn test_list_large_binary_optional_v1() -> Result<()> {
-        round_trip(6, true, true, Version::V1, CompressionCodec::Uncompressed)
+        round_trip(
+            6,
+            true,
+            true,
+            Version::V1,
+            CompressionCodec::Uncompressed,
+            Encoding::Plain,
+        )
+    }
+
+    #[test]
+    fn test_utf8_optional_v2_delta() -> Result<()> {
+        round_trip(
+            2,
+            true,
+            false,
+            Version::V2,
+            CompressionCodec::Uncompressed,
+            Encoding::DeltaLengthByteArray,
+        )
     }
 }

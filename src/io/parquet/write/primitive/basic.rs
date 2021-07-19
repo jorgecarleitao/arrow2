@@ -1,6 +1,7 @@
 use parquet2::{
     metadata::ColumnDescriptor,
     read::CompressedPage,
+    schema::Encoding,
     statistics::{serialize_statistics, ParquetStatistics, PrimitiveStatistics, Statistics},
     types::NativeType,
     write::WriteOptions,
@@ -84,6 +85,7 @@ where
         statistics,
         descriptor,
         options,
+        Encoding::Plain,
     )
 }
 

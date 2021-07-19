@@ -21,7 +21,11 @@ pub unsafe trait Offset:
 {
     fn is_large() -> bool;
 
+    fn to_isize(&self) -> isize;
+
     fn from_usize(value: usize) -> Option<Self>;
+
+    fn from_isize(value: isize) -> Option<Self>;
 }
 
 unsafe impl Offset for i32 {
@@ -34,6 +38,16 @@ unsafe impl Offset for i32 {
     fn from_usize(value: usize) -> Option<Self> {
         Self::try_from(value).ok()
     }
+
+    #[inline]
+    fn from_isize(value: isize) -> Option<Self> {
+        Self::try_from(value).ok()
+    }
+
+    #[inline]
+    fn to_isize(&self) -> isize {
+        *self as isize
+    }
 }
 
 unsafe impl Offset for i64 {
@@ -45,6 +59,16 @@ unsafe impl Offset for i64 {
     #[inline]
     fn from_usize(value: usize) -> Option<Self> {
         Some(value as i64)
+    }
+
+    #[inline]
+    fn from_isize(value: isize) -> Option<Self> {
+        Self::try_from(value).ok()
+    }
+
+    #[inline]
+    fn to_isize(&self) -> isize {
+        *self as isize
     }
 }
 
