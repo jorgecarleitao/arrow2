@@ -164,7 +164,7 @@ use arrow2::{
     datatypes::{Field, Schema},
     error::Result,
     io::parquet::write::{
-        array_to_page, write_file, CompressionCodec, DynIter, Version, WriteOptions,
+        array_to_page, write_file, CompressionCodec, DynIter, Encoding, Version, WriteOptions,
     },
 };
 
@@ -176,6 +176,7 @@ fn write_single_array(path: &amp;str, array: &amp;dyn Array, field: Field) -&gt;
         compression: CompressionCodec::Uncompressed,
         version: Version::V2,
     };
+    let encoding = Encoding::Plain;
 
     // map arrow fields to parquet fields
     let parquet_schema = to_parquet_schema(&amp;schema)?;
@@ -189,7 +190,7 @@ fn write_single_array(path: &amp;str, array: &amp;dyn Array, field: Field) -&gt;
     let row_groups = once(Result::Ok(DynIter::new(once(Ok(DynIter::new(
         once(array)
             .zip(parquet_schema.columns().to_vec().into_iter())
-            .map(|(array, descriptor)| array_to_page(array, descriptor, options)),
+            .map(|(array, descriptor)| array_to_page(array, descriptor, options, encoding)),
     ))))));
 
     // Create a new empty file
@@ -232,6 +233,7 @@ use arrow2::{
     io::parquet::write::{write_file, CompressionCodec, RowGroupIterator, Version, WriteOptions},
     record_batch::RecordBatch,
 };
+use parquet2::schema::Encoding;
 
 fn write_batch(path: &amp;str, batch: RecordBatch) -&gt; Result&lt;()&gt; {
     let schema = batch.schema().clone();
@@ -244,7 +246,8 @@ fn write_batch(path: &amp;str, batch: RecordBatch) -&gt; Result&lt;()&gt; {
 
     let iter = vec![Ok(batch)];
 
-    let row_groups = RowGroupIterator::try_new(iter.into_iter(), &amp;schema, options)?;
+    let row_groups =
+        RowGroupIterator::try_new(iter.into_iter(), &amp;schema, options, vec![Encoding::Plain])?;
 
     // Create a new empty file
     let mut file = File::create(path)?;
