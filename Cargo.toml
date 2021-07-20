@@ -57,10 +57,7 @@ futures = { version = "0.3", optional = true }
 # for faster hashing
 ahash = { version = "0.7", optional = true }
 
-[dependencies.parquet2]
-git = "https://github.com/jorgecarleitao/parquet2"
-rev = "cb15fe350d1f95560a5ef9ba0b599e9999315790"
-optional = true
+parquet2 = { version = "0.1", optional = true }
 
 [dev-dependencies]
 rand = "0.7"
