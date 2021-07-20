@@ -2,7 +2,7 @@
 name = "arrow2"
 version = "0.1.0"
 license = "Apache-2.0"
-description = "Implementation of Apache Arrow spec in safe Rust"
+description = "Unofficial implementation of Apache Arrow spec in safe Rust"
 homepage = "https://github.com/jorgecarleitao/arrow2"
 repository = "https://github.com/jorgecarleitao/arrow2"
 authors = ["Jorge C. Leitao <jorgecarleitao@gmail.com>", "Apache Arrow <dev@arrow.apache.org>"]
