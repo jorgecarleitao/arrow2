@@ -34,9 +34,7 @@ indexmap = { version = "^1.6", optional = true }
 # used to print columns in a nice columnar format
 prettytable-rs = { version = "^0.8", optional = true }
 
-# flatbuffers does not follow semVer :/
-# see https://github.com/google/flatbuffers/issues/6600
-flatbuffers = { version = "=0.8.4", optional = true }
+flatbuffers = { version = "=2.0.0", optional = true }
 hex = { version = "^0.4", optional = true }
 
 # for IPC compression
