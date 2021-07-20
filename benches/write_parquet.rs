@@ -8,7 +8,7 @@ use arrow2::error::Result;
 use arrow2::io::parquet::write::*;
 use arrow2::util::bench_util::{create_boolean_array, create_primitive_array, create_string_array};
 
-fn write(array: &dyn Array) -> Result<()> {
+fn write(array: &dyn Array, encoding: Encoding) -> Result<()> {
     let field = Field::new("c1", array.data_type().clone(), true);
     let schema = Schema::new(vec![field]);
 
@@ -25,6 +25,7 @@ fn write(array: &dyn Array) -> Result<()> {
             array,
             parquet_schema.columns()[0].clone(),
             options,
+            encoding,
         )),
     ))))));
 
@@ -44,19 +45,27 @@ fn add_benchmark(c: &mut Criterion) {
     (0..=10).step_by(2).for_each(|i| {
         let array = &create_primitive_array::<i64>(1024 * 2usize.pow(i), DataType::Int64, 0.1);
         let a = format!("write i64 2^{}", 10 + i);
-        c.bench_function(&a, |b| b.iter(|| write(array).unwrap()));
+        c.bench_function(&a, |b| b.iter(|| write(array, Encoding::Plain).unwrap()));
     });
 
     (0..=10).step_by(2).for_each(|i| {
         let array = &create_boolean_array(1024 * 2usize.pow(i), 0.1, 0.5);
         let a = format!("write bool 2^{}", 10 + i);
-        c.bench_function(&a, |b| b.iter(|| write(array).unwrap()));
+        c.bench_function(&a, |b| b.iter(|| write(array, Encoding::Plain).unwrap()));
     });
 
     (0..=10).step_by(2).for_each(|i| {
         let array = &create_string_array::<i32>(1024 * 2usize.pow(i), 0.1);
         let a = format!("write utf8 2^{}", 10 + i);
-        c.bench_function(&a, |b| b.iter(|| write(array).unwrap()));
+        c.bench_function(&a, |b| b.iter(|| write(array, Encoding::Plain).unwrap()));
+    });
+
+    (0..=10).step_by(2).for_each(|i| {
+        let array = &create_string_array::<i32>(1024 * 2usize.pow(i), 0.1);
+        let a = format!("write utf8 delta 2^{}", 10 + i);
+        c.bench_function(&a, |b| {
+            b.iter(|| write(array, Encoding::DeltaLengthByteArray).unwrap())
+        });
     });
 }
 

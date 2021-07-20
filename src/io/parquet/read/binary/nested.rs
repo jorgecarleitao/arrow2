@@ -11,7 +11,7 @@ use parquet2::{
 
 use super::super::nested_utils::*;
 use super::super::utils;
-use super::basic::read_required;
+use super::basic::read_plain_required;
 use crate::{
     array::{Array, BinaryArray, Offset, Utf8Array},
     bitmap::MutableBitmap,
@@ -85,7 +85,7 @@ fn read<O: Offset>(
                     validity,
                 )
             } else {
-                read_required(values_buffer, additional, offsets, values)
+                read_plain_required(values_buffer, additional, offsets, values)
             }
 
             let def_levels = RLEDecoder::new(

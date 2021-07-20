@@ -10,6 +10,16 @@ pub struct ZipValidity<'a, T, I: Iterator<Item = T>> {
     has_validity: bool,
 }
 
+impl<'a, T, I: Iterator<Item = T> + Clone> Clone for ZipValidity<'a, T, I> {
+    fn clone(&self) -> Self {
+        Self {
+            values: self.values.clone(),
+            validity_iter: self.validity_iter.clone(),
+            has_validity: self.has_validity,
+        }
+    }
+}
+
 impl<'a, T, I: Iterator<Item = T>> ZipValidity<'a, T, I> {
     #[inline]
     pub fn new(values: I, validity: &'a Option<Bitmap>) -> Self {

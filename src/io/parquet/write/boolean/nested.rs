@@ -1,3 +1,4 @@
+use parquet2::schema::Encoding;
 use parquet2::{metadata::ColumnDescriptor, read::CompressedPage, write::WriteOptions};
 
 use super::super::{levels, utils};
@@ -54,5 +55,6 @@ where
         statistics,
         descriptor,
         options,
+        Encoding::Plain,
     )
 }

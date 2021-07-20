@@ -1,15 +1,16 @@
 use parquet2::{
+    encoding::Encoding,
     metadata::ColumnDescriptor,
     read::CompressedPage,
     statistics::{serialize_statistics, BinaryStatistics, ParquetStatistics, Statistics},
     write::WriteOptions,
 };
 
-use super::super::binary::ord_binary;
+use super::super::binary::{encode_delta, ord_binary};
 use super::super::utils;
 use crate::{
     array::{Array, Offset, Utf8Array},
-    error::Result,
+    error::{ArrowError, Result},
     io::parquet::read::is_type_nullable,
 };
 
@@ -41,6 +42,7 @@ pub fn array_to_page<O: Offset>(
     array: &Utf8Array<O>,
     options: WriteOptions,
     descriptor: ColumnDescriptor,
+    encoding: Encoding,
 ) -> Result<CompressedPage> {
     let validity = array.validity();
     let is_optional = is_type_nullable(descriptor.type_());
@@ -56,7 +58,23 @@ pub fn array_to_page<O: Offset>(
 
     let definition_levels_byte_length = buffer.len();
 
-    encode_plain(array, is_optional, &mut buffer);
+    match encoding {
+        Encoding::Plain => encode_plain(array, is_optional, &mut buffer),
+        Encoding::DeltaLengthByteArray => encode_delta(
+            array.values(),
+            array.offsets(),
+            array.validity(),
+            is_optional,
+            &mut buffer,
+        ),
+        _ => {
+            return Err(ArrowError::InvalidArgumentError(format!(
+                "Datatype {:?} cannot be encoded by {:?} encoding",
+                array.data_type(),
+                encoding
+            )))
+        }
+    }
 
     let uncompressed_page_size = buffer.len();
 
@@ -78,6 +96,7 @@ pub fn array_to_page<O: Offset>(
         statistics,
         descriptor,
         options,
+        encoding,
     )
 }
 

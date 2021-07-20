@@ -1,5 +1,6 @@
 use super::{
-    array_to_page, to_parquet_schema, DynIter, RowGroupIter, SchemaDescriptor, WriteOptions,
+    array_to_page, to_parquet_schema, DynIter, Encoding, RowGroupIter, SchemaDescriptor,
+    WriteOptions,
 };
 use crate::{
     datatypes::Schema,
@@ -14,17 +15,26 @@ pub struct RowGroupIterator<I: Iterator<Item = Result<RecordBatch>>> {
     iter: I,
     options: WriteOptions,
     parquet_schema: SchemaDescriptor,
+    encodings: Vec<Encoding>,
 }
 
 impl<I: Iterator<Item = Result<RecordBatch>>> RowGroupIterator<I> {
     /// Creates a new [`RowGroupIterator`] from an iterator over [`RecordBatch`].
-    pub fn try_new(iter: I, schema: &Schema, options: WriteOptions) -> Result<Self> {
+    pub fn try_new(
+        iter: I,
+        schema: &Schema,
+        options: WriteOptions,
+        encodings: Vec<Encoding>,
+    ) -> Result<Self> {
+        assert_eq!(schema.fields().len(), encodings.len());
+
         let parquet_schema = to_parquet_schema(schema)?;
 
         Ok(Self {
             iter,
             options,
             parquet_schema,
+            encodings,
         })
     }
 
@@ -40,16 +50,20 @@ impl<I: Iterator<Item = Result<RecordBatch>>> Iterator for RowGroupIterator<I> {
         let options = self.options;
 
         self.iter.next().map(|batch| {
-            let columns = batch?.columns().to_vec();
+            let batch = batch?;
+            let columns = batch.columns().to_vec();
+            let encodings = self.encodings.clone();
             Ok(DynIter::new(
                 columns
                     .into_iter()
                     .zip(self.parquet_schema.columns().to_vec().into_iter())
-                    .map(move |(array, type_)| {
+                    .zip(encodings.into_iter())
+                    .map(move |((array, type_), encoding)| {
                         Ok(DynIter::new(std::iter::once(array_to_page(
                             array.as_ref(),
                             type_,
                             options,
+                            encoding,
                         ))))
                     }),
             ))

@@ -429,6 +429,7 @@ mod tests_integration {
                         array.as_ref(),
                         type_,
                         options,
+                        Encoding::Plain,
                     ))))
                 },
             ));
