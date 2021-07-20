@@ -51,7 +51,7 @@ venv/bin/python parquet_integration/write_parquet.py
 * Uses Rust's compiler whenever possible to prove that memory reads are sound
 * Reading parquet is 10-20x faster (single core) and deserialization is parallelizable
 * Writing parquet is 3-10x faster (single core) and serialization is parallelizable
-\* parquet IO has no `unsafe`
+* parquet IO has no `unsafe`
 * IPC supports big endian
 * More predictable JSON reader
 * `MutableArray` API to work with arrays in-place.
