@@ -51,13 +51,11 @@ venv/bin/python parquet_integration/write_parquet.py
 * Uses Rust's compiler whenever possible to prove that memory reads are sound
 * Reading parquet is 10-20x faster (single core) and deserialization is parallelizable
 * Writing parquet is 3-10x faster (single core) and serialization is parallelizable
-* MIRI checks on non-IO components (MIRI and file systems are a bit funny atm)
 * parquet IO has no `unsafe`
 * IPC supports big endian
 * More predictable JSON reader
 * `MutableArray` API to work with arrays in-place.
 * Generalized parsing of CSV based on logical data types
-* conditional compilation based on cargo `features` to reduce dependencies and size
 * faster IPC reader (different design that avoids an extra copy of all data)
 * IPC supports 2.0 (compression)
 
