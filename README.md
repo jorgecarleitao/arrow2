@@ -3,11 +3,13 @@
 ![test](https://github.com/jorgecarleitao/arrow2/actions/workflows/test.yml/badge.svg)
 
 This repository contains a Rust library to work with the [Arrow format](https://arrow.apache.org/).
-It is a re-write of the [official Arrow crate](https://github.com/apache/arrow) using transmute-free operations. See FAQ for details.
+It is a re-write of the [official Arrow crate](https://github.com/apache/arrow) using
+transmute-free operations. See FAQ for details.
 
 See [the guide](https://jorgecarleitao.github.io/arrow2/) for a general introduction to this crate
-and its general components, and [API docs](https://jorgecarleitao.github.io/arrow2/docs/arrow2/index.html)
-for a detailed documentation of each of its APIs.
+and its general components, and
+[API docs](https://jorgecarleitao.github.io/arrow2/docs/arrow2/index.html) for a detailed
+documentation of each of its APIs.
 
 ## Design
 
@@ -44,7 +46,7 @@ venv/bin/pip install pyarrow==3
 venv/bin/python parquet_integration/write_parquet.py
 ```
 
-## Features in this crate and not in the original
+## Features in this crate and not in the official
 
 * Uses Rust's compiler whenever possible to prove that memory reads are sound
 * Reading parquet is 10-20x faster (single core) and deserialization is parallelizable
@@ -55,14 +57,18 @@ venv/bin/python parquet_integration/write_parquet.py
 * More predictable JSON reader
 * `MutableArray` API to work with arrays in-place.
 * Generalized parsing of CSV based on logical data types
-* conditional compilation based on cargo `features` to reduce dependencies and size
 * faster IPC reader (different design that avoids an extra copy of all data)
 * IPC supports 2.0 (compression)
 
 ## Features in the original not available in this crate
 
-* Parquet read of nested types, etc.
-* Parquet write V2, nested types, etc.
+* Parquet read and write of struct and nested lists.
+* Union and Map types
+
+## Features in this crate not in pyarrow
+
+* Read and write of delta-encoded utf8 to and from parquet
+* parquet roundtrip of all arrow types.
 
 ## Roadmap
 
@@ -109,7 +115,7 @@ When a user wishes to read from a buffer, e.g. to perform a mathematical operati
 
 Arrow currently transmutes buffers on almost all operations, and very often does not verify that there is type alignment nor correct length when we transmute it to a slice of type `&[T]`.
 
-Just as an example, in v3.0.0, the following code compiles, does not panic, is unsound and results in UB:
+Just as an example, in v5.0.0, the following code compiles, does not panic, is unsound and results in UB:
 
 ```rust
 let buffer = Buffer::from_slic_ref(&[0i32, 2i32])
@@ -176,13 +182,7 @@ Maybe. The primary reason to have this repo and crate is to be able to propotype
 
 Furthermore, the arrow project currently has a release mechanism that is unsuitable for this type of work:
 
-* The Apache Arrow project has a single git repository with all 10+ implementations, ranging from C++, Python, C#, Julia, Rust, and execution engines such as Grandiva and DataFusion. A git ref corresponds to all of them, and a commit is about any/all of them.
-
-The implication is this work would require a proibitive number of Jira issues for each PR to the crate, as well as an inhumane number of PRs, reviews, etc.
-
-Another consequence is that it is impossible to release a different design of the arrow crate without breaking every dependency within the project which makes it difficult to iterate.
-
-* A release of the Apache consists of a release of all implementations of the arrow format at once, with the same version. It is currently at `3.0.0`.
+* A release of the Apache consists of a release of all implementations of the arrow format at once, with the same version. It is currently at `5.0.0`.
 
 This implies that the crate version is independent of the changelog or its API stability, which violates SemVer. This procedure makes the crate incompatible with Rusts' (and many others') ecosystem that heavily relies on SemVer to constraint software versions.
 

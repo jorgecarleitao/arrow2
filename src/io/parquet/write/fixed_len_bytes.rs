@@ -1,5 +1,5 @@
 use parquet2::{
-    compression::create_codec, metadata::ColumnDescriptor, read::CompressedPage,
+    compression::create_codec, metadata::ColumnDescriptor, read::CompressedPage, schema::Encoding,
     write::WriteOptions,
 };
 
@@ -64,5 +64,6 @@ pub fn array_to_page(
         None,
         descriptor,
         options,
+        Encoding::Plain,
     )
 }

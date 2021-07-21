@@ -69,12 +69,13 @@ pub fn build_plain_page(
     statistics: Option<ParquetStatistics>,
     descriptor: ColumnDescriptor,
     options: WriteOptions,
+    encoding: Encoding,
 ) -> Result<CompressedPage> {
     match options.version {
         Version::V1 => {
             let header = PageHeader::V1(DataPageHeader {
                 num_values: len as i32,
-                encoding: Encoding::Plain,
+                encoding,
                 definition_level_encoding: Encoding::Rle,
                 repetition_level_encoding: Encoding::Rle,
                 statistics,
@@ -92,7 +93,7 @@ pub fn build_plain_page(
         Version::V2 => {
             let header = PageHeader::V2(DataPageHeaderV2 {
                 num_values: len as i32,
-                encoding: Encoding::Plain,
+                encoding,
                 num_nulls: null_count as i32,
                 num_rows: len as i32,
                 definition_levels_byte_length: definition_levels_byte_length as i32,
@@ -141,4 +142,45 @@ pub fn compress(
     } else {
         buffer
     })
+}
+
+/// Auxiliary iterator adapter to declare the size hint of an iterator.
+pub(super) struct ExactSizedIter<T, I: Iterator<Item = T>> {
+    iter: I,
+    remaining: usize,
+}
+
+impl<T, I: Iterator<Item = T> + Clone> Clone for ExactSizedIter<T, I> {
+    fn clone(&self) -> Self {
+        Self {
+            iter: self.iter.clone(),
+            remaining: self.remaining,
+        }
+    }
+}
+
+impl<T, I: Iterator<Item = T>> ExactSizedIter<T, I> {
+    pub fn new(iter: I, length: usize) -> Self {
+        Self {
+            iter,
+            remaining: length,
+        }
+    }
+}
+
+impl<T, I: Iterator<Item = T>> Iterator for ExactSizedIter<T, I> {
+    type Item = T;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|x| {
+            self.remaining -= 1;
+            x
+        })
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.remaining, Some(self.remaining))
+    }
 }

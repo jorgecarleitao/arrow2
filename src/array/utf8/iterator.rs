@@ -7,6 +7,7 @@ use crate::{
 use super::Utf8Array;
 
 /// Iterator of values of an `Utf8Array`.
+#[derive(Debug, Clone)]
 pub struct Utf8ValuesIter<'a, O: Offset> {
     array: &'a Utf8Array<O>,
     index: usize,

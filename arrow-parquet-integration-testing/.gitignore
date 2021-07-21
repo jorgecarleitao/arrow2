@@ -5,4 +5,4 @@ lcov.info
 Cargo.lock
 fixtures
 settings.json
-dev/
+*.parquet

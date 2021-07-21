@@ -2,12 +2,13 @@
 name = "arrow2"
 version = "0.1.0"
 license = "Apache-2.0"
-description = "Implementation of Apache Arrow spec in safe Rust"
+description = "Unofficial implementation of Apache Arrow spec in safe Rust"
 homepage = "https://github.com/jorgecarleitao/arrow2"
 repository = "https://github.com/jorgecarleitao/arrow2"
 authors = ["Jorge C. Leitao <jorgecarleitao@gmail.com>", "Apache Arrow <dev@arrow.apache.org>"]
 keywords = [ "arrow", "analytics" ]
 edition = "2018"
+exclude = ["testing/"]
 
 [lib]
 name = "arrow2"
@@ -34,9 +35,7 @@ indexmap = { version = "^1.6", optional = true }
 # used to print columns in a nice columnar format
 prettytable-rs = { version = "^0.8", optional = true }
 
-# flatbuffers does not follow semVer :/
-# see https://github.com/google/flatbuffers/issues/6600
-flatbuffers = { version = "=0.8.4", optional = true }
+flatbuffers = { version = "=2.0.0", optional = true }
 hex = { version = "^0.4", optional = true }
 
 # for IPC compression
@@ -59,10 +58,7 @@ futures = { version = "0.3", optional = true }
 # for faster hashing
 ahash = { version = "0.7", optional = true }
 
-[dependencies.parquet2]
-git = "https://github.com/jorgecarleitao/parquet2"
-rev = "cb15fe350d1f95560a5ef9ba0b599e9999315790"
-optional = true
+parquet2 = { version = "0.1", optional = true }
 
 [dev-dependencies]
 rand = "0.7"

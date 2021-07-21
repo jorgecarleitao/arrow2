@@ -46,5 +46,7 @@ jobs:
           python -m venv venv
           source venv/bin/activate
           pip install --upgrade pip
-          pip install pyarrow
+          pip install pyarrow pyspark
           python main.py
+          # test delta encoding against spark (pyarrow does not support it)
+          python main_spark.py

@@ -7,7 +7,7 @@ use arrow2::{
     datatypes::{Field, Schema},
     error::Result,
     io::parquet::write::{
-        array_to_page, write_file, CompressionCodec, DynIter, Version, WriteOptions,
+        array_to_page, write_file, CompressionCodec, DynIter, Encoding, Version, WriteOptions,
     },
 };
 
@@ -19,6 +19,7 @@ fn write_single_array(path: &str, array: &dyn Array, field: Field) -> Result<()>
         compression: CompressionCodec::Uncompressed,
         version: Version::V2,
     };
+    let encoding = Encoding::Plain;
 
     // map arrow fields to parquet fields
     let parquet_schema = to_parquet_schema(&schema)?;
@@ -32,7 +33,7 @@ fn write_single_array(path: &str, array: &dyn Array, field: Field) -> Result<()>
     let row_groups = once(Result::Ok(DynIter::new(once(Ok(DynIter::new(
         once(array)
             .zip(parquet_schema.columns().to_vec().into_iter())
-            .map(|(array, descriptor)| array_to_page(array, descriptor, options)),
+            .map(|(array, descriptor)| array_to_page(array, descriptor, options, encoding)),
     ))))));
 
     // Create a new empty file

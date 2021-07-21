@@ -1,3 +1,4 @@
+use parquet2::schema::Encoding;
 use parquet2::{
     metadata::ColumnDescriptor, read::CompressedPage, types::NativeType, write::WriteOptions,
 };
@@ -61,5 +62,6 @@ where
         statistics,
         descriptor,
         options,
+        Encoding::Plain,
     )
 }

@@ -2,6 +2,7 @@ use parquet2::{
     encoding::hybrid_rle::bitpacked_encode,
     metadata::ColumnDescriptor,
     read::CompressedPage,
+    schema::Encoding,
     statistics::{serialize_statistics, BooleanStatistics, ParquetStatistics, Statistics},
     write::WriteOptions,
 };
@@ -80,6 +81,7 @@ pub fn array_to_page(
         statistics,
         descriptor,
         options,
+        Encoding::Plain,
     )
 }
 

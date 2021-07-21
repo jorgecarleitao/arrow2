@@ -4,6 +4,7 @@ use super::get_bit_unchecked;
 
 /// An iterator over bits according to the [LSB](https://en.wikipedia.org/wiki/Bit_numbering#Least_significant_bit),
 /// i.e. the bytes `[4u8, 128u8]` correspond to `[false, false, true, false, ..., true]`.
+#[derive(Debug, Clone)]
 pub struct BitmapIter<'a> {
     bytes: &'a [u8],
     index: usize,
