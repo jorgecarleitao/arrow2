@@ -141,24 +141,24 @@ mod tests {
 
         let array: BooleanArray = data.into_iter().collect();
 
-        assert_eq!(array.value(0), true);
-        assert_eq!(array.value(1), false);
-        assert_eq!(array.value(2), false);
+        assert!(array.value(0));
+        assert!(!array.value(1));
+        assert!(!array.value(2));
         assert_eq!(array.values(), &Bitmap::from_u8_slice(&[0b00000001], 3));
         assert_eq!(
             array.validity(),
             &Some(Bitmap::from_u8_slice(&[0b00000101], 3))
         );
-        assert_eq!(array.is_valid(0), true);
-        assert_eq!(array.is_valid(1), false);
-        assert_eq!(array.is_valid(2), true);
+        assert!(array.is_valid(0));
+        assert!(!array.is_valid(1));
+        assert!(array.is_valid(2));
 
         let array2 = BooleanArray::from_data(array.values().clone(), array.validity().clone());
         assert_eq!(array, array2);
 
         let array = array.slice(1, 2);
-        assert_eq!(array.value(0), false);
-        assert_eq!(array.value(1), false);
+        assert!(!array.value(0));
+        assert!(!array.value(1));
     }
 
     #[test]

@@ -37,8 +37,8 @@ pub fn or(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
     let validity = match (lhs_validity, rhs_validity) {
         (Some(lhs_validity), Some(rhs_validity)) => {
             Some(quaternary(
-                &lhs_values,
-                &rhs_values,
+                lhs_values,
+                rhs_values,
                 lhs_validity,
                 rhs_validity,
                 // see https://en.wikipedia.org/wiki/Three-valued_logic#Kleene_and_Priest_logics
@@ -55,8 +55,8 @@ pub fn or(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
         (Some(lhs_validity), None) => {
             // B != U
             Some(ternary(
-                &lhs_values,
-                &rhs_values,
+                lhs_values,
+                rhs_values,
                 lhs_validity,
                 // see https://en.wikipedia.org/wiki/Three-valued_logic#Kleene_and_Priest_logics
                 |lhs, rhs, lhs_v| {
@@ -71,8 +71,8 @@ pub fn or(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
         }
         (None, Some(rhs_validity)) => {
             Some(ternary(
-                &lhs_values,
-                &rhs_values,
+                lhs_values,
+                rhs_values,
                 rhs_validity,
                 // see https://en.wikipedia.org/wiki/Three-valued_logic#Kleene_and_Priest_logics
                 |lhs, rhs, rhs_v| {
@@ -123,8 +123,8 @@ pub fn and(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
     let validity = match (lhs_validity, rhs_validity) {
         (Some(lhs_validity), Some(rhs_validity)) => {
             Some(quaternary(
-                &lhs_values,
-                &rhs_values,
+                lhs_values,
+                rhs_values,
                 lhs_validity,
                 rhs_validity,
                 // see https://en.wikipedia.org/wiki/Three-valued_logic#Kleene_and_Priest_logics
@@ -140,8 +140,8 @@ pub fn and(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
         }
         (Some(lhs_validity), None) => {
             Some(ternary(
-                &lhs_values,
-                &rhs_values,
+                lhs_values,
+                rhs_values,
                 lhs_validity,
                 // see https://en.wikipedia.org/wiki/Three-valued_logic#Kleene_and_Priest_logics
                 |lhs, rhs, lhs_v| {
@@ -156,8 +156,8 @@ pub fn and(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
         }
         (None, Some(rhs_validity)) => {
             Some(ternary(
-                &lhs_values,
-                &rhs_values,
+                lhs_values,
+                rhs_values,
                 rhs_validity,
                 // see https://en.wikipedia.org/wiki/Three-valued_logic#Kleene_and_Priest_logics
                 |lhs, rhs, rhs_v| {

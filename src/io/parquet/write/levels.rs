@@ -164,7 +164,7 @@ impl<'a, O: Offset> NestedInfo<'a, O> {
     }
 
     pub fn offsets(&self) -> &'a [O] {
-        &self.offsets
+        self.offsets
     }
 }
 
@@ -197,13 +197,13 @@ pub fn write_rep_levels<O: Offset>(
     match version {
         Version::V1 => {
             write_levels_v1(buffer, |buffer: &mut Vec<u8>| {
-                let levels = RepLevelsIter::new(&nested.offsets);
+                let levels = RepLevelsIter::new(nested.offsets);
                 encode_u32(buffer, levels, num_bits)?;
                 Ok(())
             })?;
         }
         Version::V2 => {
-            let levels = RepLevelsIter::new(&nested.offsets);
+            let levels = RepLevelsIter::new(nested.offsets);
 
             encode_u32(buffer, levels, num_bits)?;
         }
@@ -224,13 +224,13 @@ pub fn write_def_levels<O: Offset>(
     match version {
         Version::V1 => {
             write_levels_v1(buffer, |buffer: &mut Vec<u8>| {
-                let levels = DefLevelsIter::new(&nested.offsets, &nested.validity, validity);
+                let levels = DefLevelsIter::new(nested.offsets, nested.validity, validity);
                 encode_u32(buffer, levels, num_bits)?;
                 Ok(())
             })?;
         }
         Version::V2 => {
-            let levels = DefLevelsIter::new(&nested.offsets, &nested.validity, validity);
+            let levels = DefLevelsIter::new(nested.offsets, nested.validity, validity);
             encode_u32(buffer, levels, num_bits)?;
         }
     }

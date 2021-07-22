@@ -34,7 +34,7 @@ fn min_max_string<O: Offset, F: Fn(&str, &str) -> bool>(
 
         for i in 0..array.len() {
             let item = array.value(i);
-            if validity.get_bit(i) && (!has_value || cmp(&n, item)) {
+            if validity.get_bit(i) && (!has_value || cmp(n, item)) {
                 has_value = true;
                 n = item;
             }
@@ -45,7 +45,7 @@ fn min_max_string<O: Offset, F: Fn(&str, &str) -> bool>(
         for i in 1..array.len() {
             // loop is up to `len`.
             let item = unsafe { array.value_unchecked(i) };
-            if cmp(&n, item) {
+            if cmp(n, item) {
                 n = item;
             }
         }

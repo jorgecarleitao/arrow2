@@ -560,7 +560,7 @@ mod tests {
         unsafe { b.extend_from_trusted_len_iter_unchecked(iter) };
         let b: Bitmap = b.into();
         let mut iter = b.iter().enumerate();
-        assert_eq!(iter.next().unwrap().1, true);
+        assert!(iter.next().unwrap().1);
         for (i, v) in iter {
             assert_eq!((i - 1) % 6 == 0, v);
         }
@@ -570,14 +570,14 @@ mod tests {
     fn test_set() {
         let mut bitmap = MutableBitmap::from_len_zeroed(12);
         bitmap.set(0, true);
-        assert_eq!(bitmap.get(0), true);
+        assert!(bitmap.get(0));
         bitmap.set(0, false);
-        assert_eq!(bitmap.get(0), false);
+        assert!(!bitmap.get(0));
 
         bitmap.set(11, true);
-        assert_eq!(bitmap.get(11), true);
+        assert!(bitmap.get(11));
         bitmap.set(11, false);
-        assert_eq!(bitmap.get(11), false);
+        assert!(!bitmap.get(11));
         bitmap.set(11, true);
 
         let bitmap: Option<Bitmap> = bitmap.into();

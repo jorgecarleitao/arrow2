@@ -181,7 +181,7 @@ fn to_list<O: Offset>(
 
     let child_field = ListArray::<O>::get_child_field(&data_type);
     let children = &json_col.children.as_ref().unwrap()[0];
-    let values = to_array(&child_field, children, dictionaries)?;
+    let values = to_array(child_field, children, dictionaries)?;
     let offsets = to_offsets::<O>(json_col.offset.as_ref());
     Ok(Arc::new(ListArray::<O>::from_data(
         data_type, offsets, values, validity,
@@ -290,7 +290,7 @@ pub fn to_array(
             let validity = to_validity(&json_col.validity);
 
             let children = &json_col.children.as_ref().unwrap()[0];
-            let values = to_array(&child_field, children, dictionaries)?;
+            let values = to_array(child_field, children, dictionaries)?;
 
             Ok(Arc::new(FixedSizeListArray::from_data(
                 data_type.clone(),
@@ -337,7 +337,7 @@ pub fn to_record_batch(
         .fields()
         .iter()
         .zip(&json_batch.columns)
-        .map(|(field, json_col)| to_array(field, &json_col, json_dictionaries))
+        .map(|(field, json_col)| to_array(field, json_col, json_dictionaries))
         .collect::<Result<Vec<_>>>()?;
 
     RecordBatch::try_new(Arc::new(schema.clone()), columns)

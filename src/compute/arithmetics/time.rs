@@ -496,7 +496,7 @@ mod tests {
         let expected = PrimitiveArray::from(&vec![Some(10i64), Some(20i64), None, Some(30i64)])
             .to(DataType::Duration(TimeUnit::Second));
 
-        let result = subtract_timestamps(&timestamp_a, &&timestamp_b).unwrap();
+        let result = subtract_timestamps(&timestamp_a, &timestamp_b).unwrap();
         assert_eq!(result, expected);
     }
 
@@ -526,7 +526,7 @@ mod tests {
         ])
         .to(DataType::Duration(TimeUnit::Millisecond));
 
-        let result = subtract_timestamps(&timestamp_a, &&timestamp_b).unwrap();
+        let result = subtract_timestamps(&timestamp_a, &timestamp_b).unwrap();
         assert_eq!(result, expected);
     }
 

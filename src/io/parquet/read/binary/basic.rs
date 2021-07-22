@@ -35,14 +35,14 @@ fn read_dict_buffer<O: Offset>(
     let bit_width = indices_buffer[0];
     let indices_buffer = &indices_buffer[1..];
 
-    let (_, consumed) = uleb128::decode(&indices_buffer);
+    let (_, consumed) = uleb128::decode(indices_buffer);
     let indices_buffer = &indices_buffer[consumed..];
 
     let non_null_indices_len = indices_buffer.len() * 8 / bit_width as usize;
 
     let mut indices = bitpacking::Decoder::new(indices_buffer, bit_width, non_null_indices_len);
 
-    let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
+    let validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
 
     for run in validity_iterator {
         match run {
@@ -96,7 +96,7 @@ fn read_delta_optional<O: Offset>(
     // values_buffer: first 4 bytes are len, remaining is values
     let mut values_iterator = delta_length_byte_array::Decoder::new(values_buffer);
 
-    let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
+    let validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
 
     // offsets:
     for run in validity_iterator {
@@ -148,7 +148,7 @@ fn read_plain_optional<O: Offset>(
     // values_buffer: first 4 bytes are len, remaining is values
     let mut values_iterator = utils::BinaryIter::new(values_buffer);
 
-    let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
+    let validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
 
     for run in validity_iterator {
         match run {

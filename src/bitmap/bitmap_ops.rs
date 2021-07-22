@@ -174,7 +174,7 @@ impl Not for &Bitmap {
     type Output = Bitmap;
 
     fn not(self) -> Bitmap {
-        unary(&self, |a| !a)
+        unary(self, |a| !a)
     }
 }
 
@@ -194,28 +194,28 @@ mod test {
     fn test_eq() {
         let lhs = create_bitmap([0b01101010], 8);
         let rhs = create_bitmap([0b01001110], 8);
-        assert_eq!(eq(&lhs, &rhs), false);
-        assert_eq!(eq(&lhs, &lhs), true);
+        assert!(!eq(&lhs, &rhs));
+        assert!(eq(&lhs, &lhs));
     }
 
     #[test]
     fn test_eq_len() {
         let lhs = create_bitmap([0b01101010], 6);
         let rhs = create_bitmap([0b00101010], 6);
-        assert_eq!(eq(&lhs, &rhs), true);
+        assert!(eq(&lhs, &rhs));
         let rhs = create_bitmap([0b00001010], 6);
-        assert_eq!(eq(&lhs, &rhs), false);
+        assert!(!eq(&lhs, &rhs));
     }
 
     #[test]
     fn test_eq_slice() {
         let lhs = create_bitmap([0b10101010], 8).slice(1, 7);
         let rhs = create_bitmap([0b10101011], 8).slice(1, 7);
-        assert_eq!(eq(&lhs, &rhs), true);
+        assert!(eq(&lhs, &rhs));
 
         let lhs = create_bitmap([0b10101010], 8).slice(2, 6);
         let rhs = create_bitmap([0b10101110], 8).slice(2, 6);
-        assert_eq!(eq(&lhs, &rhs), false);
+        assert!(!eq(&lhs, &rhs));
     }
 
     #[test]

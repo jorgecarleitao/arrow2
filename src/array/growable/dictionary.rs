@@ -25,7 +25,7 @@ fn concatenate_values<K: DictionaryKey>(
     arrays_values: &[&dyn Array],
     capacity: usize,
 ) -> (Arc<dyn Array>, Vec<usize>) {
-    let mut mutable = make_growable(&arrays_values, false, capacity);
+    let mut mutable = make_growable(arrays_values, false, capacity);
     let mut offsets = Vec::with_capacity(arrays_keys.len() + 1);
     offsets.push(0);
     for (i, values) in arrays_values.iter().enumerate() {

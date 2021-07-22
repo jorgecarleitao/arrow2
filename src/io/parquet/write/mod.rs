@@ -248,11 +248,11 @@ pub fn array_to_page(
         ),
         DataType::Decimal(precision, _) => {
             let precision = *precision;
+            let array = array
+                .as_any()
+                .downcast_ref::<PrimitiveArray<i128>>()
+                .unwrap();
             if precision <= 9 {
-                let array = array
-                    .as_any()
-                    .downcast_ref::<PrimitiveArray<i128>>()
-                    .unwrap();
                 let values = array.values().iter().map(|x| *x as i32);
                 let values = Buffer::from_trusted_len_iter(values);
                 let array = PrimitiveArray::<i32>::from_data(
@@ -262,10 +262,6 @@ pub fn array_to_page(
                 );
                 primitive::array_to_page::<i32, i32>(&array, options, descriptor)
             } else if precision <= 18 {
-                let array = array
-                    .as_any()
-                    .downcast_ref::<PrimitiveArray<i128>>()
-                    .unwrap();
                 let values = array.values().iter().map(|x| *x as i64);
                 let values = Buffer::from_trusted_len_iter(values);
                 let array = PrimitiveArray::<i64>::from_data(
@@ -275,10 +271,6 @@ pub fn array_to_page(
                 );
                 primitive::array_to_page::<i64, i64>(&array, options, descriptor)
             } else {
-                let array = array
-                    .as_any()
-                    .downcast_ref::<PrimitiveArray<i128>>()
-                    .unwrap();
                 let size = decimal_length_from_precision(precision);
 
                 let mut values = MutableBuffer::<u8>::new(); // todo: this can be estimated

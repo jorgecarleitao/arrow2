@@ -621,21 +621,21 @@ mod tests {
     fn default() {
         let b = MutableBuffer::<i32>::default();
         assert_eq!(b.len(), 0);
-        assert_eq!(b.is_empty(), true);
+        assert!(b.is_empty());
     }
 
     #[test]
     fn with_capacity() {
         let b = MutableBuffer::<i32>::with_capacity(6);
         assert!(b.capacity() >= 6);
-        assert_eq!(b.is_empty(), true);
+        assert!(b.is_empty());
     }
 
     #[test]
     fn from_len_zeroed() {
         let b = MutableBuffer::<i32>::from_len_zeroed(3);
         assert_eq!(b.len(), 3);
-        assert_eq!(b.is_empty(), false);
+        assert!(!b.is_empty());
         assert_eq!(b.as_slice(), &[0, 0, 0]);
     }
 

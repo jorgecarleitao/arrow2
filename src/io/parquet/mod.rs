@@ -419,7 +419,7 @@ mod tests_integration {
             version: Version::V1,
         };
 
-        let parquet_schema = to_parquet_schema(&schema)?;
+        let parquet_schema = to_parquet_schema(schema)?;
         let descritors = parquet_schema.columns().to_vec().into_iter();
 
         let row_groups = batches.iter().map(|batch| {
