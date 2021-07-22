@@ -168,4 +168,25 @@ mod tests {
 
         test_round_trip(array)
     }
+
+    #[test]
+    fn test_list_list() -> Result<()> {
+        let data = vec![
+            Some(vec![
+                Some(vec![None]),
+                Some(vec![Some(2)]),
+                Some(vec![Some(3)]),
+            ]),
+            None,
+            Some(vec![Some(vec![Some(4), None, Some(6)])]),
+        ];
+
+        let mut array =
+            MutableListArray::<i32, MutableListArray<i32, MutablePrimitiveArray<i32>>>::new();
+        array.try_extend(data)?;
+
+        let array: ListArray<i32> = array.into();
+
+        test_round_trip(array)
+    }
 }
