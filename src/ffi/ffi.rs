@@ -29,7 +29,7 @@ use crate::{
         bytes::{Bytes, Deallocation},
         Buffer,
     },
-    datatypes::{DataType, Field, TimeUnit},
+    datatypes::{DataType, Field, IntervalUnit, TimeUnit},
     error::{ArrowError, Result},
     types::NativeType,
 };
@@ -200,6 +200,12 @@ fn to_field(schema: &Ffi_ArrowSchema) -> Result<Field> {
         "ttm" => DataType::Time32(TimeUnit::Millisecond),
         "ttu" => DataType::Time64(TimeUnit::Microsecond),
         "ttn" => DataType::Time64(TimeUnit::Nanosecond),
+        "tDs" => DataType::Duration(TimeUnit::Second),
+        "tDm" => DataType::Duration(TimeUnit::Millisecond),
+        "tDu" => DataType::Duration(TimeUnit::Microsecond),
+        "tDn" => DataType::Duration(TimeUnit::Nanosecond),
+        "tiM" => DataType::Interval(IntervalUnit::YearMonth),
+        "tiD" => DataType::Interval(IntervalUnit::DayTime),
         "+l" => {
             let child = schema.child(0);
             DataType::List(Box::new(to_field(child)?))
@@ -215,10 +221,43 @@ fn to_field(schema: &Ffi_ArrowSchema) -> Result<Field> {
             DataType::Struct(children)
         }
         other => {
-            return Err(ArrowError::Ffi(format!(
-                "The datatype \"{}\" is still not supported in Rust implementation",
-                other
-            )))
+            let parts = other.split(':').collect::<Vec<_>>();
+            if parts.len() == 2 && parts[0] == "tss" {
+                DataType::Timestamp(TimeUnit::Second, Some(parts[1].to_string()))
+            } else if parts.len() == 2 && parts[0] == "tsm" {
+                DataType::Timestamp(TimeUnit::Millisecond, Some(parts[1].to_string()))
+            } else if parts.len() == 2 && parts[0] == "tsu" {
+                DataType::Timestamp(TimeUnit::Microsecond, Some(parts[1].to_string()))
+            } else if parts.len() == 2 && parts[0] == "tsn" {
+                DataType::Timestamp(TimeUnit::Nanosecond, Some(parts[1].to_string()))
+            } else if parts.len() == 2 && parts[0] == "d" {
+                let parts = parts[1].split(',').collect::<Vec<_>>();
+                if parts.len() < 2 || parts.len() > 3 {
+                    return Err(ArrowError::Ffi(
+                        "Decimal must contain 2 or 3 comma-separated values".to_string(),
+                    ));
+                };
+                if parts.len() == 3 {
+                    let bit_width = parts[0].parse::<usize>().map_err(|_| {
+                        ArrowError::Ffi("Decimal bit width is not a valid integer".to_string())
+                    })?;
+                    if bit_width != 128 {
+                        return Err(ArrowError::Ffi("Decimal256 is not supported".to_string()));
+                    }
+                }
+                let precision = parts[0].parse::<usize>().map_err(|_| {
+                    ArrowError::Ffi("Decimal precision is not a valid integer".to_string())
+                })?;
+                let scale = parts[1].parse::<usize>().map_err(|_| {
+                    ArrowError::Ffi("Decimal scale is not a valid integer".to_string())
+                })?;
+                DataType::Decimal(precision, scale)
+            } else {
+                return Err(ArrowError::Ffi(format!(
+                    "The datatype \"{}\" is still not supported in Rust implementation",
+                    other
+                )));
+            }
         }
     };
     Ok(Field::new(schema.name(), data_type, schema.nullable()))
@@ -250,15 +289,33 @@ fn to_format(data_type: &DataType) -> Result<String> {
         DataType::Time32(TimeUnit::Millisecond) => "ttm",
         DataType::Time64(TimeUnit::Microsecond) => "ttu",
         DataType::Time64(TimeUnit::Nanosecond) => "ttn",
+        DataType::Duration(TimeUnit::Second) => "tDs",
+        DataType::Duration(TimeUnit::Millisecond) => "tDm",
+        DataType::Duration(TimeUnit::Microsecond) => "tDu",
+        DataType::Duration(TimeUnit::Nanosecond) => "tDn",
+        DataType::Interval(IntervalUnit::YearMonth) => "tiM",
+        DataType::Interval(IntervalUnit::DayTime) => "tiD",
+        DataType::Timestamp(unit, tz) => {
+            let unit = match unit {
+                TimeUnit::Second => "s",
+                TimeUnit::Millisecond => "m",
+                TimeUnit::Microsecond => "u",
+                TimeUnit::Nanosecond => "n",
+            };
+            return Ok(format!(
+                "ts{}:{}",
+                unit,
+                tz.as_ref().map(|x| x.as_ref()).unwrap_or("")
+            ));
+        }
+        DataType::Decimal(precision, scale) => return Ok(format!("d:{},{}", precision, scale)),
         DataType::List(_) => "+l",
         DataType::LargeList(_) => "+L",
         DataType::Struct(_) => "+s",
-        z => {
-            return Err(ArrowError::Ffi(format!(
-                "The datatype \"{:?}\" is still not supported in Rust implementation",
-                z
-            )))
-        }
+        DataType::FixedSizeBinary(size) => return Ok(format!("w{}", size)),
+        DataType::FixedSizeList(_, size) => return Ok(format!("+w:{}", size)),
+        DataType::Union(_) => todo!(),
+        _ => todo!(),
     }
     .to_string())
 }
