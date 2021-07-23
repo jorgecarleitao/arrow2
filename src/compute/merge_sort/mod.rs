@@ -637,8 +637,8 @@ mod tests {
         let options = SortOptions::default();
 
         // sort individually, potentially in parallel.
-        let a0 = sort(a0, &options)?;
-        let a1 = sort(a1, &options)?;
+        let a0 = sort(a0, &options, None)?;
+        let a1 = sort(a1, &options, None)?;
 
         // merge then. If multiple arrays, this can be applied in parallel.
         let result = merge_sort(a0.as_ref(), a1.as_ref(), &options)?;

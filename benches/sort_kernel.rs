@@ -35,11 +35,11 @@ fn bench_lexsort(arr_a: &dyn Array, array_b: &dyn Array) {
         },
     ];
 
-    criterion::black_box(lexsort(&columns).unwrap());
+    criterion::black_box(lexsort(&columns, None).unwrap());
 }
 
 fn bench_sort(arr_a: &dyn Array) {
-    sort(criterion::black_box(arr_a), &SortOptions::default()).unwrap();
+    sort(criterion::black_box(arr_a), &SortOptions::default(), None).unwrap();
 }
 
 fn add_benchmark(c: &mut Criterion) {
