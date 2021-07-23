@@ -34,14 +34,14 @@ fn read_dict_buffer_optional<T, A, F>(
     let bit_width = indices_buffer[0];
     let indices_buffer = &indices_buffer[1..];
 
-    let (_, consumed) = uleb128::decode(&indices_buffer);
+    let (_, consumed) = uleb128::decode(indices_buffer);
     let indices_buffer = &indices_buffer[consumed..];
 
     let non_null_indices_len = indices_buffer.len() * 8 / bit_width as usize;
 
     let mut indices = bitpacking::Decoder::new(indices_buffer, bit_width, non_null_indices_len);
 
-    let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
+    let validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
 
     for run in validity_iterator {
         match run {
@@ -89,7 +89,7 @@ fn read_nullable<T, A, F>(
 {
     let mut chunks = ExactChunksIter::<T>::new(values_buffer);
 
-    let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
+    let validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
 
     for run in validity_iterator {
         match run {

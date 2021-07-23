@@ -91,21 +91,21 @@ mod tests {
             0b01000000, 0b11111111,
         ];
         for i in 0..8 {
-            assert_eq!(get_bit(input, i), false);
+            assert!(!get_bit(input, i));
         }
-        assert_eq!(get_bit(input, 8), true);
+        assert!(get_bit(input, 8));
         for i in 8 + 1..2 * 8 {
-            assert_eq!(get_bit(input, i), false);
+            assert!(!get_bit(input, i));
         }
-        assert_eq!(get_bit(input, 2 * 8 + 1), true);
+        assert!(get_bit(input, 2 * 8 + 1));
         for i in 2 * 8 + 2..3 * 8 {
-            assert_eq!(get_bit(input, i), false);
+            assert!(!get_bit(input, i));
         }
-        assert_eq!(get_bit(input, 3 * 8 + 2), true);
+        assert!(get_bit(input, 3 * 8 + 2));
         for i in 3 * 8 + 3..4 * 8 {
-            assert_eq!(get_bit(input, i), false);
+            assert!(!get_bit(input, i));
         }
-        assert_eq!(get_bit(input, 4 * 8 + 3), true);
+        assert!(get_bit(input, 4 * 8 + 3));
     }
 
     #[test]

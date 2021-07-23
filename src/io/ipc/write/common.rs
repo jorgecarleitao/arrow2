@@ -386,7 +386,7 @@ pub fn write_message<W: Write>(
     let aligned_size = (flatbuf_size + prefix_size + a) & !a;
     let padding_bytes = aligned_size - flatbuf_size - prefix_size;
 
-    write_continuation(writer, &write_options, (aligned_size - prefix_size) as i32)?;
+    write_continuation(writer, write_options, (aligned_size - prefix_size) as i32)?;
 
     // write the flatbuf
     if flatbuf_size > 0 {

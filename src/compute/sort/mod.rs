@@ -112,7 +112,7 @@ pub fn sort_to_indices(values: &dyn Array, options: &SortOptions) -> Result<Int3
     match values.data_type() {
         DataType::Boolean => {
             let (v, n) = partition_validity(values);
-            Ok(sort_boolean(values, v, n, &options))
+            Ok(sort_boolean(values, v, n, options))
         }
         DataType::Int8 => dyn_sort_indices!(i8, values, ord::total_cmp, options),
         DataType::Int16 => dyn_sort_indices!(i16, values, ord::total_cmp, options),
@@ -138,23 +138,23 @@ pub fn sort_to_indices(values: &dyn Array, options: &SortOptions) -> Result<Int3
         }
         DataType::Utf8 => {
             let (v, n) = partition_validity(values);
-            Ok(sort_utf8::<i32>(values, v, n, &options))
+            Ok(sort_utf8::<i32>(values, v, n, options))
         }
         DataType::LargeUtf8 => {
             let (v, n) = partition_validity(values);
-            Ok(sort_utf8::<i64>(values, v, n, &options))
+            Ok(sort_utf8::<i64>(values, v, n, options))
         }
         DataType::List(field) => {
             let (v, n) = partition_validity(values);
             match field.data_type() {
-                DataType::Int8 => Ok(sort_list::<i32, i8>(values, v, n, &options)),
-                DataType::Int16 => Ok(sort_list::<i32, i16>(values, v, n, &options)),
-                DataType::Int32 => Ok(sort_list::<i32, i32>(values, v, n, &options)),
-                DataType::Int64 => Ok(sort_list::<i32, i64>(values, v, n, &options)),
-                DataType::UInt8 => Ok(sort_list::<i32, u8>(values, v, n, &options)),
-                DataType::UInt16 => Ok(sort_list::<i32, u16>(values, v, n, &options)),
-                DataType::UInt32 => Ok(sort_list::<i32, u32>(values, v, n, &options)),
-                DataType::UInt64 => Ok(sort_list::<i32, u64>(values, v, n, &options)),
+                DataType::Int8 => Ok(sort_list::<i32, i8>(values, v, n, options)),
+                DataType::Int16 => Ok(sort_list::<i32, i16>(values, v, n, options)),
+                DataType::Int32 => Ok(sort_list::<i32, i32>(values, v, n, options)),
+                DataType::Int64 => Ok(sort_list::<i32, i64>(values, v, n, options)),
+                DataType::UInt8 => Ok(sort_list::<i32, u8>(values, v, n, options)),
+                DataType::UInt16 => Ok(sort_list::<i32, u16>(values, v, n, options)),
+                DataType::UInt32 => Ok(sort_list::<i32, u32>(values, v, n, options)),
+                DataType::UInt64 => Ok(sort_list::<i32, u64>(values, v, n, options)),
                 t => Err(ArrowError::NotYetImplemented(format!(
                     "Sort not supported for list type {:?}",
                     t
@@ -164,14 +164,14 @@ pub fn sort_to_indices(values: &dyn Array, options: &SortOptions) -> Result<Int3
         DataType::LargeList(field) => {
             let (v, n) = partition_validity(values);
             match field.data_type() {
-                DataType::Int8 => Ok(sort_list::<i64, i8>(values, v, n, &options)),
-                DataType::Int16 => Ok(sort_list::<i64, i16>(values, v, n, &options)),
-                DataType::Int32 => Ok(sort_list::<i64, i32>(values, v, n, &options)),
-                DataType::Int64 => Ok(sort_list::<i64, i64>(values, v, n, &options)),
-                DataType::UInt8 => Ok(sort_list::<i64, u8>(values, v, n, &options)),
-                DataType::UInt16 => Ok(sort_list::<i64, u16>(values, v, n, &options)),
-                DataType::UInt32 => Ok(sort_list::<i64, u32>(values, v, n, &options)),
-                DataType::UInt64 => Ok(sort_list::<i64, u64>(values, v, n, &options)),
+                DataType::Int8 => Ok(sort_list::<i64, i8>(values, v, n, options)),
+                DataType::Int16 => Ok(sort_list::<i64, i16>(values, v, n, options)),
+                DataType::Int32 => Ok(sort_list::<i64, i32>(values, v, n, options)),
+                DataType::Int64 => Ok(sort_list::<i64, i64>(values, v, n, options)),
+                DataType::UInt8 => Ok(sort_list::<i64, u8>(values, v, n, options)),
+                DataType::UInt16 => Ok(sort_list::<i64, u16>(values, v, n, options)),
+                DataType::UInt32 => Ok(sort_list::<i64, u32>(values, v, n, options)),
+                DataType::UInt64 => Ok(sort_list::<i64, u64>(values, v, n, options)),
                 t => Err(ArrowError::NotYetImplemented(format!(
                     "Sort not supported for list type {:?}",
                     t
@@ -181,14 +181,14 @@ pub fn sort_to_indices(values: &dyn Array, options: &SortOptions) -> Result<Int3
         DataType::FixedSizeList(field, _) => {
             let (v, n) = partition_validity(values);
             match field.data_type() {
-                DataType::Int8 => Ok(sort_list::<i32, i8>(values, v, n, &options)),
-                DataType::Int16 => Ok(sort_list::<i32, i16>(values, v, n, &options)),
-                DataType::Int32 => Ok(sort_list::<i32, i32>(values, v, n, &options)),
-                DataType::Int64 => Ok(sort_list::<i32, i64>(values, v, n, &options)),
-                DataType::UInt8 => Ok(sort_list::<i32, u8>(values, v, n, &options)),
-                DataType::UInt16 => Ok(sort_list::<i32, u16>(values, v, n, &options)),
-                DataType::UInt32 => Ok(sort_list::<i32, u32>(values, v, n, &options)),
-                DataType::UInt64 => Ok(sort_list::<i32, u64>(values, v, n, &options)),
+                DataType::Int8 => Ok(sort_list::<i32, i8>(values, v, n, options)),
+                DataType::Int16 => Ok(sort_list::<i32, i16>(values, v, n, options)),
+                DataType::Int32 => Ok(sort_list::<i32, i32>(values, v, n, options)),
+                DataType::Int64 => Ok(sort_list::<i32, i64>(values, v, n, options)),
+                DataType::UInt8 => Ok(sort_list::<i32, u8>(values, v, n, options)),
+                DataType::UInt16 => Ok(sort_list::<i32, u16>(values, v, n, options)),
+                DataType::UInt32 => Ok(sort_list::<i32, u32>(values, v, n, options)),
+                DataType::UInt64 => Ok(sort_list::<i32, u64>(values, v, n, options)),
                 t => Err(ArrowError::NotYetImplemented(format!(
                     "Sort not supported for list type {:?}",
                     t
@@ -198,14 +198,14 @@ pub fn sort_to_indices(values: &dyn Array, options: &SortOptions) -> Result<Int3
         DataType::Dictionary(key_type, value_type) if *value_type.as_ref() == DataType::Utf8 => {
             let (v, n) = partition_validity(values);
             match key_type.as_ref() {
-                DataType::Int8 => Ok(sort_string_dictionary::<i8>(values, v, n, &options)),
-                DataType::Int16 => Ok(sort_string_dictionary::<i16>(values, v, n, &options)),
-                DataType::Int32 => Ok(sort_string_dictionary::<i32>(values, v, n, &options)),
-                DataType::Int64 => Ok(sort_string_dictionary::<i64>(values, v, n, &options)),
-                DataType::UInt8 => Ok(sort_string_dictionary::<u8>(values, v, n, &options)),
-                DataType::UInt16 => Ok(sort_string_dictionary::<u16>(values, v, n, &options)),
-                DataType::UInt32 => Ok(sort_string_dictionary::<u32>(values, v, n, &options)),
-                DataType::UInt64 => Ok(sort_string_dictionary::<u64>(values, v, n, &options)),
+                DataType::Int8 => Ok(sort_string_dictionary::<i8>(values, v, n, options)),
+                DataType::Int16 => Ok(sort_string_dictionary::<i16>(values, v, n, options)),
+                DataType::Int32 => Ok(sort_string_dictionary::<i32>(values, v, n, options)),
+                DataType::Int64 => Ok(sort_string_dictionary::<i64>(values, v, n, options)),
+                DataType::UInt8 => Ok(sort_string_dictionary::<u8>(values, v, n, options)),
+                DataType::UInt16 => Ok(sort_string_dictionary::<u16>(values, v, n, options)),
+                DataType::UInt32 => Ok(sort_string_dictionary::<u32>(values, v, n, options)),
+                DataType::UInt64 => Ok(sort_string_dictionary::<u64>(values, v, n, options)),
                 t => Err(ArrowError::NotYetImplemented(format!(
                     "Sort not supported for dictionary key type {:?}",
                     t
@@ -407,7 +407,7 @@ where
 {
     let mut valids = value_indices
         .into_iter()
-        .map(|index| (index, value_fn(&values, index)))
+        .map(|index| (index, value_fn(values, index)))
         .collect::<Vec<(i32, &str)>>();
     let mut nulls = null_indices;
     if !options.descending {
@@ -1095,17 +1095,13 @@ mod tests {
 
         datatypes.into_iter().for_each(|d1| {
             let array = new_null_array(d1.clone(), 10);
+            let options = SortOptions {
+                descending: true,
+                nulls_first: true,
+            };
             if can_sort(&d1) {
-                let options = SortOptions {
-                    descending: true,
-                    nulls_first: true,
-                };
                 assert!(sort(array.as_ref(), &options).is_ok());
             } else {
-                let options = SortOptions {
-                    descending: true,
-                    nulls_first: true,
-                };
                 assert!(sort(array.as_ref(), &options).is_err());
             }
         });

@@ -303,7 +303,7 @@ where
 
     let validity = read_validity(
         buffers,
-        &field_node,
+        field_node,
         reader,
         block_offset,
         is_little_endian,
@@ -336,7 +336,7 @@ fn read_boolean<R: Read + Seek>(
     let length = field_node.length() as usize;
     let validity = read_validity(
         buffers,
-        &field_node,
+        field_node,
         reader,
         block_offset,
         is_little_endian,
@@ -371,7 +371,7 @@ where
 
     let validity = read_validity(
         buffers,
-        &field_node,
+        field_node,
         reader,
         block_offset,
         is_little_endian,
@@ -417,7 +417,7 @@ where
 
     let validity = read_validity(
         buffers,
-        &field_node,
+        field_node,
         reader,
         block_offset,
         is_little_endian,
@@ -461,7 +461,7 @@ fn read_fixed_size_binary<R: Read + Seek>(
 
     let validity = read_validity(
         buffers,
-        &field_node,
+        field_node,
         reader,
         block_offset,
         is_little_endian,
@@ -502,7 +502,7 @@ where
 
     let validity = read_validity(
         buffers,
-        &field_node,
+        field_node,
         reader,
         block_offset,
         is_little_endian,
@@ -549,7 +549,7 @@ fn read_fixed_size_list<R: Read + Seek>(
 
     let validity = read_validity(
         buffers,
-        &field_node,
+        field_node,
         reader,
         block_offset,
         is_little_endian,
@@ -585,7 +585,7 @@ fn read_struct<R: Read + Seek>(
 
     let validity = read_validity(
         buffers,
-        &field_node,
+        field_node,
         reader,
         block_offset,
         is_little_endian,

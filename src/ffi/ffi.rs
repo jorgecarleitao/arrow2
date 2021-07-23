@@ -607,7 +607,7 @@ impl ArrowArrayRef for Arc<ArrowArray> {
     }
 
     fn parent(&self) -> &Arc<ArrowArray> {
-        &self
+        self
     }
 
     fn array(&self) -> &Ffi_ArrowArray {

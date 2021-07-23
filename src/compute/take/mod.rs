@@ -334,11 +334,10 @@ mod tests {
 
         datatypes.into_iter().for_each(|d1| {
             let array = new_null_array(d1.clone(), 10);
+            let indices = Int32Array::from(&[Some(1), Some(2), None, Some(3)]);
             if can_take(&d1) {
-                let indices = Int32Array::from(&[Some(1), Some(2), None, Some(3)]);
                 assert!(take(array.as_ref(), &indices).is_ok());
             } else {
-                let indices = Int32Array::from(&[Some(1), Some(2), None, Some(3)]);
                 assert!(take(array.as_ref(), &indices).is_err());
             }
         });

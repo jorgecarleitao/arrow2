@@ -69,7 +69,7 @@ pub fn infer_schema<R: Read + Seek, F: Fn(&str) -> DataType>(
         match possibilities.len() {
             1 => {
                 for dtype in possibilities.iter() {
-                    fields.push(Field::new(&field_name, dtype.clone(), true));
+                    fields.push(Field::new(field_name, dtype.clone(), true));
                 }
             }
             2 => {
@@ -77,13 +77,13 @@ pub fn infer_schema<R: Read + Seek, F: Fn(&str) -> DataType>(
                     && possibilities.contains(&DataType::Float64)
                 {
                     // we have an integer and double, fall down to double
-                    fields.push(Field::new(&field_name, DataType::Float64, true));
+                    fields.push(Field::new(field_name, DataType::Float64, true));
                 } else {
                     // default to Utf8 for conflicting datatypes (e.g bool and int)
-                    fields.push(Field::new(&field_name, DataType::Utf8, true));
+                    fields.push(Field::new(field_name, DataType::Utf8, true));
                 }
             }
-            _ => fields.push(Field::new(&field_name, DataType::Utf8, true)),
+            _ => fields.push(Field::new(field_name, DataType::Utf8, true)),
         }
     }
 

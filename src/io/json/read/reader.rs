@@ -341,8 +341,8 @@ mod tests {
             .as_any()
             .downcast_ref::<BooleanArray>()
             .unwrap();
-        assert_eq!(false, cc.value(0));
-        assert_eq!(true, cc.value(10));
+        assert!(!cc.value(0));
+        assert!(cc.value(10));
         let dd = batch
             .column(d.0)
             .as_any()
@@ -381,34 +381,34 @@ mod tests {
             .as_any()
             .downcast_ref::<PrimitiveArray<i64>>()
             .unwrap();
-        assert_eq!(true, aa.is_valid(0));
-        assert_eq!(false, aa.is_valid(1));
-        assert_eq!(false, aa.is_valid(11));
+        assert!(aa.is_valid(0));
+        assert!(!aa.is_valid(1));
+        assert!(!aa.is_valid(11));
         let bb = batch
             .column(b.0)
             .as_any()
             .downcast_ref::<PrimitiveArray<f64>>()
             .unwrap();
-        assert_eq!(true, bb.is_valid(0));
-        assert_eq!(false, bb.is_valid(2));
-        assert_eq!(false, bb.is_valid(11));
+        assert!(bb.is_valid(0));
+        assert!(!bb.is_valid(2));
+        assert!(!bb.is_valid(11));
         let cc = batch
             .column(c.0)
             .as_any()
             .downcast_ref::<BooleanArray>()
             .unwrap();
-        assert_eq!(true, cc.is_valid(0));
-        assert_eq!(false, cc.is_valid(4));
-        assert_eq!(false, cc.is_valid(11));
+        assert!(cc.is_valid(0));
+        assert!(!cc.is_valid(4));
+        assert!(!cc.is_valid(11));
         let dd = batch
             .column(d.0)
             .as_any()
             .downcast_ref::<Utf8Array<i32>>()
             .unwrap();
-        assert_eq!(false, dd.is_valid(0));
-        assert_eq!(true, dd.is_valid(1));
-        assert_eq!(false, dd.is_valid(4));
-        assert_eq!(false, dd.is_valid(11));
+        assert!(!dd.is_valid(0));
+        assert!(dd.is_valid(1));
+        assert!(!dd.is_valid(4));
+        assert!(!dd.is_valid(11));
     }
 
     #[test]
@@ -451,7 +451,7 @@ mod tests {
             .unwrap();
         assert_eq!(1, aa.value(0));
         // test that a 64bit value is returned as null due to overflowing
-        assert_eq!(false, aa.is_valid(11));
+        assert!(!aa.is_valid(11));
         let bb = batch
             .column(b.0)
             .as_any()
@@ -546,7 +546,7 @@ mod tests {
         assert_eq!(9, bb.len());
         assert!((2.0 - bb.value(0)).abs() < f64::EPSILON);
         assert!((-6.1 - bb.value(5)).abs() < f64::EPSILON);
-        assert_eq!(false, bb.is_valid(7));
+        assert!(!bb.is_valid(7));
 
         let cc = batch
             .column(c.0)
@@ -556,9 +556,9 @@ mod tests {
         let cc = cc.values();
         let cc = cc.as_any().downcast_ref::<BooleanArray>().unwrap();
         assert_eq!(6, cc.len());
-        assert_eq!(false, cc.value(0));
-        assert_eq!(false, cc.value(4));
-        assert_eq!(false, cc.is_valid(5));
+        assert!(!cc.value(0));
+        assert!(!cc.value(4));
+        assert!(!cc.is_valid(5));
     }
 
     #[test]

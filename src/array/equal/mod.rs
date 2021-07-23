@@ -424,8 +424,8 @@ mod tests {
 
     pub(super) fn test_equal(lhs: &dyn Array, rhs: &dyn Array, expected: bool) {
         // equality is symmetric
-        assert_eq!(equal(lhs, lhs), true, "\n{:?}\n{:?}", lhs, lhs);
-        assert_eq!(equal(rhs, rhs), true, "\n{:?}\n{:?}", rhs, rhs);
+        assert!(equal(lhs, lhs), "\n{:?}\n{:?}", lhs, lhs);
+        assert!(equal(rhs, rhs), "\n{:?}\n{:?}", rhs, rhs);
 
         assert_eq!(equal(lhs, rhs), expected, "\n{:?}\n{:?}", lhs, rhs);
         assert_eq!(equal(rhs, lhs), expected, "\n{:?}\n{:?}", rhs, lhs);

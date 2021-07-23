@@ -23,7 +23,7 @@ fn read_optional(
     values: &mut MutableBitmap,
     validity: &mut MutableBitmap,
 ) {
-    let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
+    let validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
 
     // in PLAIN, booleans are LSB bitpacked and thus we can read them as if they were a bitmap.
     // note that `values_buffer` contains only non-null values.
