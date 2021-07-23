@@ -21,6 +21,7 @@ use crate::{
     array::{new_empty_array, Array, NullArray, PrimitiveArray},
     datatypes::{DataType, IntervalUnit},
     error::Result,
+    types::days_ms,
 };
 
 pub use crate::array::Index;
@@ -76,6 +77,7 @@ pub fn take<O: Index>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result
         | DataType::Time64(_)
         | DataType::Duration(_)
         | DataType::Timestamp(_, _) => downcast_take!(i64, values, indices),
+        DataType::Interval(IntervalUnit::DayTime) => downcast_take!(days_ms, values, indices),
         DataType::UInt8 => downcast_take!(u8, values, indices),
         DataType::UInt16 => downcast_take!(u16, values, indices),
         DataType::UInt32 => downcast_take!(u32, values, indices),
@@ -146,7 +148,7 @@ pub fn can_take(data_type: &DataType) -> bool {
         | DataType::Int32
         | DataType::Date32
         | DataType::Time32(_)
-        | DataType::Interval(IntervalUnit::YearMonth)
+        | DataType::Interval(_)
         | DataType::Int64
         | DataType::Date64
         | DataType::Time64(_)
@@ -318,6 +320,8 @@ mod tests {
             Timestamp(TimeUnit::Nanosecond, None),
             Time64(TimeUnit::Microsecond),
             Time64(TimeUnit::Nanosecond),
+            Interval(IntervalUnit::DayTime),
+            Interval(IntervalUnit::YearMonth),
             Date32,
             Time32(TimeUnit::Second),
             Time32(TimeUnit::Millisecond),
