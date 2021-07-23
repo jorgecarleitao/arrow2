@@ -1,11 +1,9 @@
 use crate::{
     array::{Array, PrimitiveArray},
-    buffer::MutableBuffer,
-    datatypes::DataType,
     types::NativeType,
 };
 
-use super::super::common::sort_unstable_by;
+use super::super::common;
 use super::super::SortOptions;
 
 /// Unstable sort of indices.
@@ -19,111 +17,16 @@ where
     T: NativeType,
     F: Fn(&T, &T) -> std::cmp::Ordering,
 {
-    let descending = options.descending;
-    let values = array.values();
-    let validity = array.validity();
-
-    let limit = limit.unwrap_or_else(|| array.len());
-    // Safety: without this, we go out of bounds when limit >= array.len().
-    let limit = limit.min(array.len());
-
-    let indices = if let Some(validity) = validity {
-        let mut indices = MutableBuffer::<i32>::from_len_zeroed(array.len());
-
-        if options.nulls_first {
-            let mut nulls = 0;
-            let mut valids = 0;
-            validity
-                .iter()
-                .zip(0..array.len() as i32)
-                .for_each(|(is_valid, index)| {
-                    if is_valid {
-                        indices[validity.null_count() + valids] = index;
-                        valids += 1;
-                    } else {
-                        indices[nulls] = index;
-                        nulls += 1;
-                    }
-                });
-
-            if limit > validity.null_count() {
-                // when limit is larger, we must sort values:
-
-                // Soundness:
-                // all indices in `indices` are by construction `< array.len() == values.len()`
-                // limit is by construction < indices.len()
-                let limit = limit - validity.null_count();
-                let indices = &mut indices.as_mut_slice()[validity.null_count()..];
-                unsafe {
-                    sort_unstable_by(
-                        indices,
-                        |x: usize| *values.as_slice().get_unchecked(x),
-                        cmp,
-                        options.descending,
-                        limit,
-                    )
-                }
-            }
-        } else {
-            let last_valid_index = array.len() - validity.null_count();
-            let mut nulls = 0;
-            let mut valids = 0;
-            validity
-                .iter()
-                .zip(0..array.len() as i32)
-                .for_each(|(x, index)| {
-                    if x {
-                        indices[valids] = index;
-                        valids += 1;
-                    } else {
-                        indices[last_valid_index + nulls] = index;
-                        nulls += 1;
-                    }
-                });
-
-            // Soundness:
-            // all indices in `indices` are by construction `< array.len() == values.len()`
-            // limit is by construction <= values.len()
-            let limit = limit.min(last_valid_index);
-            let indices = &mut indices.as_mut_slice()[..last_valid_index];
-            unsafe {
-                sort_unstable_by(
-                    indices,
-                    |x: usize| *values.as_slice().get_unchecked(x),
-                    cmp,
-                    options.descending,
-                    limit,
-                )
-            };
-        }
-
-        indices.truncate(limit);
-        indices.shrink_to_fit();
-
-        indices
-    } else {
-        let mut indices =
-            unsafe { MutableBuffer::from_trusted_len_iter_unchecked(0..values.len() as i32) };
-
-        // Soundness:
-        // indices are by construction `< values.len()`
-        // limit is by construction `< values.len()`
-        unsafe {
-            sort_unstable_by(
-                &mut indices,
-                |x: usize| *values.as_slice().get_unchecked(x),
-                cmp,
-                descending,
-                limit,
-            )
-        };
-
-        indices.truncate(limit);
-        indices.shrink_to_fit();
-
-        indices
-    };
-    PrimitiveArray::<i32>::from_data(DataType::Int32, indices.into(), None)
+    unsafe {
+        common::indices_sorted_unstable_by(
+            array.validity(),
+            |x: usize| *array.values().as_slice().get_unchecked(x),
+            cmp,
+            array.len(),
+            options,
+            limit,
+        )
+    }
 }
 
 #[cfg(test)]
@@ -131,6 +34,7 @@ mod tests {
     use super::*;
     use crate::array::ord;
     use crate::array::*;
+    use crate::datatypes::DataType;
 
     fn test<T>(
         data: &[Option<T>],

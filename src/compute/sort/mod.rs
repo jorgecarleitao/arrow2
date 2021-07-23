@@ -1,4 +1,4 @@
-use std::cmp::{Ordering, Reverse};
+use std::cmp::Ordering;
 
 use crate::array::ord;
 use crate::compute::take;
@@ -6,7 +6,6 @@ use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 use crate::{
     array::*,
-    buffer::Buffer,
     types::{days_ms, NativeType},
 };
 
@@ -17,6 +16,7 @@ mod boolean;
 mod common;
 mod lex_sort;
 mod primitive;
+mod utf8;
 
 pub(crate) use lex_sort::{build_compare, Compare};
 pub use lex_sort::{lexsort, lexsort_to_indices, SortColumn};
@@ -132,14 +132,16 @@ pub fn sort_to_indices(
         DataType::Interval(IntervalUnit::DayTime) => {
             dyn_sort_indices!(days_ms, values, ord::total_cmp, options, limit)
         }
-        DataType::Utf8 => {
-            let (v, n) = partition_validity(values);
-            Ok(sort_utf8::<i32>(values, v, n, options, limit))
-        }
-        DataType::LargeUtf8 => {
-            let (v, n) = partition_validity(values);
-            Ok(sort_utf8::<i64>(values, v, n, options, limit))
-        }
+        DataType::Utf8 => Ok(utf8::indices_sorted_unstable_by::<i32>(
+            values.as_any().downcast_ref().unwrap(),
+            options,
+            limit,
+        )),
+        DataType::LargeUtf8 => Ok(utf8::indices_sorted_unstable_by::<i64>(
+            values.as_any().downcast_ref().unwrap(),
+            options,
+            limit,
+        )),
         DataType::List(field) => {
             let (v, n) = partition_validity(values);
             match field.data_type() {
@@ -191,25 +193,70 @@ pub fn sort_to_indices(
                 ))),
             }
         }
-        DataType::Dictionary(key_type, value_type) if *value_type.as_ref() == DataType::Utf8 => {
-            let (v, n) = partition_validity(values);
-            match key_type.as_ref() {
-                DataType::Int8 => Ok(sort_string_dictionary::<i8>(values, v, n, options, limit)),
-                DataType::Int16 => Ok(sort_string_dictionary::<i16>(values, v, n, options, limit)),
-                DataType::Int32 => Ok(sort_string_dictionary::<i32>(values, v, n, options, limit)),
-                DataType::Int64 => Ok(sort_string_dictionary::<i64>(values, v, n, options, limit)),
-                DataType::UInt8 => Ok(sort_string_dictionary::<u8>(values, v, n, options, limit)),
-                DataType::UInt16 => Ok(sort_string_dictionary::<u16>(values, v, n, options, limit)),
-                DataType::UInt32 => Ok(sort_string_dictionary::<u32>(values, v, n, options, limit)),
-                DataType::UInt64 => Ok(sort_string_dictionary::<u64>(values, v, n, options, limit)),
-                t => Err(ArrowError::NotYetImplemented(format!(
-                    "Sort not supported for dictionary key type {:?}",
-                    t
-                ))),
-            }
-        }
+        DataType::Dictionary(key_type, value_type) => match value_type.as_ref() {
+            DataType::Utf8 => sort_dict::<i32>(values, key_type.as_ref(), options, limit),
+            DataType::LargeUtf8 => sort_dict::<i64>(values, key_type.as_ref(), options, limit),
+            t => Err(ArrowError::NotYetImplemented(format!(
+                "Sort not supported for dictionary type with keys {:?}",
+                t
+            ))),
+        },
         t => Err(ArrowError::NotYetImplemented(format!(
             "Sort not supported for data type {:?}",
+            t
+        ))),
+    }
+}
+
+fn sort_dict<O: Offset>(
+    values: &dyn Array,
+    key_type: &DataType,
+    options: &SortOptions,
+    limit: Option<usize>,
+) -> Result<Int32Array> {
+    match key_type {
+        DataType::Int8 => Ok(utf8::indices_sorted_unstable_by_dictionary::<i8, O>(
+            values.as_any().downcast_ref().unwrap(),
+            options,
+            limit,
+        )),
+        DataType::Int16 => Ok(utf8::indices_sorted_unstable_by_dictionary::<i16, O>(
+            values.as_any().downcast_ref().unwrap(),
+            options,
+            limit,
+        )),
+        DataType::Int32 => Ok(utf8::indices_sorted_unstable_by_dictionary::<i32, O>(
+            values.as_any().downcast_ref().unwrap(),
+            options,
+            limit,
+        )),
+        DataType::Int64 => Ok(utf8::indices_sorted_unstable_by_dictionary::<i64, O>(
+            values.as_any().downcast_ref().unwrap(),
+            options,
+            limit,
+        )),
+        DataType::UInt8 => Ok(utf8::indices_sorted_unstable_by_dictionary::<u8, O>(
+            values.as_any().downcast_ref().unwrap(),
+            options,
+            limit,
+        )),
+        DataType::UInt16 => Ok(utf8::indices_sorted_unstable_by_dictionary::<u16, O>(
+            values.as_any().downcast_ref().unwrap(),
+            options,
+            limit,
+        )),
+        DataType::UInt32 => Ok(utf8::indices_sorted_unstable_by_dictionary::<u32, O>(
+            values.as_any().downcast_ref().unwrap(),
+            options,
+            limit,
+        )),
+        DataType::UInt64 => Ok(utf8::indices_sorted_unstable_by_dictionary::<u64, O>(
+            values.as_any().downcast_ref().unwrap(),
+            options,
+            limit,
+        )),
+        t => Err(ArrowError::NotYetImplemented(format!(
+            "Sort not supported for dictionary key type {:?}",
             t
         ))),
     }
@@ -297,100 +344,6 @@ impl Default for SortOptions {
             nulls_first: true,
         }
     }
-}
-
-/// Sort strings
-fn sort_utf8<O: Offset>(
-    values: &dyn Array,
-    value_indices: Vec<i32>,
-    null_indices: Vec<i32>,
-    options: &SortOptions,
-    limit: Option<usize>,
-) -> Int32Array {
-    let values = values.as_any().downcast_ref::<Utf8Array<O>>().unwrap();
-
-    sort_string_helper(
-        values,
-        value_indices,
-        null_indices,
-        options,
-        limit,
-        |array, idx| array.value(idx as usize),
-    )
-}
-
-/// Sort dictionary encoded strings
-fn sort_string_dictionary<T: DictionaryKey>(
-    values: &dyn Array,
-    value_indices: Vec<i32>,
-    null_indices: Vec<i32>,
-    options: &SortOptions,
-    limit: Option<usize>,
-) -> Int32Array {
-    let values: &DictionaryArray<T> = values
-        .as_any()
-        .downcast_ref::<DictionaryArray<T>>()
-        .unwrap();
-
-    let keys = values.keys();
-
-    let dict = values.values();
-    let dict = dict.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
-
-    sort_string_helper(
-        keys,
-        value_indices,
-        null_indices,
-        options,
-        limit,
-        |array: &PrimitiveArray<T>, idx| -> &str {
-            let key: T = array.value(idx as usize);
-            dict.value(key.to_usize().unwrap())
-        },
-    )
-}
-
-/// shared implementation between dictionary encoded and plain string arrays
-#[inline]
-fn sort_string_helper<'a, A: Array, F>(
-    values: &'a A,
-    value_indices: Vec<i32>,
-    null_indices: Vec<i32>,
-    options: &SortOptions,
-    limit: Option<usize>,
-    value_fn: F,
-) -> Int32Array
-where
-    F: Fn(&'a A, i32) -> &str,
-{
-    let mut valids = value_indices
-        .into_iter()
-        .map(|index| (index, value_fn(values, index)))
-        .collect::<Vec<(i32, &str)>>();
-    let mut nulls = null_indices;
-    if !options.descending {
-        valids.sort_by_key(|a| a.1);
-    } else {
-        valids.sort_by_key(|a| Reverse(a.1));
-        nulls.reverse();
-    }
-
-    let valids = valids.iter().map(|tuple| tuple.0);
-
-    let values = if options.nulls_first {
-        let values = nulls
-            .into_iter()
-            .chain(valids)
-            .take(limit.unwrap_or_else(|| values.len()));
-        Buffer::<i32>::from_trusted_len_iter(values)
-    } else {
-        let values = valids
-            .chain(nulls.into_iter())
-            .take(limit.unwrap_or_else(|| values.len()));
-        Buffer::<i32>::from_trusted_len_iter(values)
-    };
-
-    PrimitiveArray::<i32>::from_data(DataType::Int32, values, None)
 }
 
 fn sort_list<O, T>(
@@ -670,6 +623,7 @@ mod tests {
                 descending: false,
                 nulls_first: true,
             },
+            // &[3, 0, 5, 1, 4, 2] is also valid
             &[0, 3, 5, 1, 4, 2],
         );
 
@@ -686,7 +640,8 @@ mod tests {
                 descending: true,
                 nulls_first: false,
             },
-            &[2, 4, 1, 5, 3, 0],
+            // &[2, 4, 1, 5, 3, 0] is also valid
+            &[2, 4, 1, 5, 0, 3],
         );
 
         test_sort_to_indices_string_arrays(
@@ -702,6 +657,7 @@ mod tests {
                 descending: false,
                 nulls_first: true,
             },
+            // &[3, 0, 5, 1, 4, 2] is also valid
             &[0, 3, 5, 1, 4, 2],
         );
 
@@ -718,7 +674,8 @@ mod tests {
                 descending: true,
                 nulls_first: true,
             },
-            &[3, 0, 2, 4, 1, 5],
+            // &[3, 0, 2, 4, 1, 5] is also valid
+            &[0, 3, 2, 4, 1, 5],
         );
     }
 
