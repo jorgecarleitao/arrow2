@@ -49,7 +49,7 @@ pub struct SortColumn<'a> {
 ///             nulls_first: false,
 ///         }),
 ///     },
-/// ]).unwrap();
+/// ], None).unwrap();
 ///
 /// let sorted = sorted_columns[0].as_any().downcast_ref::<Int64Array>().unwrap();
 /// assert_eq!(sorted.value(1), -64);
