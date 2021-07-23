@@ -1,6 +1,10 @@
 # Arrow2: Transmute-free Arrow
 
-![test](https://github.com/jorgecarleitao/arrow2/actions/workflows/test.yml/badge.svg)
+[![test](https://github.com/jorgecarleitao/arrow2/actions/workflows/test.yml/badge.svg)](https://github.com/jorgecarleitao/arrow2/actions/workflows/Build.yml)
+[![](http://meritbadge.herokuapp.com/arrow2)](https://crates.io/crates/arrow2)
+[![](https://img.shields.io/crates/d/arrow2.svg)](https://crates.io/crates/arrow2)
+[![](https://img.shields.io/crates/dv/arrow2.svg)](https://crates.io/crates/arrow2)
+[![](https://docs.rs/arrow2/badge.svg)](https://docs.rs/arrow2/)
 
 This repository contains a Rust library to work with the [Arrow format](https://arrow.apache.org/).
 It is a re-write of the [official Arrow crate](https://github.com/apache/arrow) using
