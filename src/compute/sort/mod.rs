@@ -14,6 +14,7 @@ use crate::buffer::MutableBuffer;
 use num::ToPrimitive;
 
 mod boolean;
+mod common;
 mod lex_sort;
 mod primitive;
 
