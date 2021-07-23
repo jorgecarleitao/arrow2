@@ -24,12 +24,17 @@ import arrow_pyarrow_integration_testing
 
 class TestCase(unittest.TestCase):
     def setUp(self):
-        self.old_allocated_rust = arrow_pyarrow_integration_testing.total_allocated_bytes()
+        self.old_allocated_rust = (
+            arrow_pyarrow_integration_testing.total_allocated_bytes()
+        )
         self.old_allocated_cpp = pyarrow.total_allocated_bytes()
 
     def tearDown(self):
         # No leak of Rust
-        self.assertEqual(self.old_allocated_rust, arrow_pyarrow_integration_testing.total_allocated_bytes())
+        self.assertEqual(
+            self.old_allocated_rust,
+            arrow_pyarrow_integration_testing.total_allocated_bytes(),
+        )
 
         # No leak of C++ memory
         self.assertEqual(self.old_allocated_cpp, pyarrow.total_allocated_bytes())
@@ -46,6 +51,7 @@ class TestCase(unittest.TestCase):
         """
         Rust -> Python -> Rust
         """
+
         def double(array):
             array = array.to_pylist()
             return pyarrow.array([x * 2 if x is not None else None for x in array])
@@ -102,9 +108,9 @@ class TestCase(unittest.TestCase):
         """
         Python -> Rust -> Python
         """
-        a = pyarrow.array([None, 1, 2], pyarrow.time32('s'))
+        a = pyarrow.array([None, 1, 2], pyarrow.time32("s"))
         b = arrow_pyarrow_integration_testing.concatenate(a)
-        expected = pyarrow.array([None, 1, 2] + [None, 1, 2], pyarrow.time32('s'))
+        expected = pyarrow.array([None, 1, 2] + [None, 1, 2], pyarrow.time32("s"))
         self.assertEqual(b, expected)
 
     def test_list_array(self):
@@ -112,7 +118,9 @@ class TestCase(unittest.TestCase):
         Python -> Rust -> Python
         """
         for _ in range(2):
-            a = pyarrow.array([[], None, [1, 2], [4, 5, 6]], pyarrow.list_(pyarrow.int64()))
+            a = pyarrow.array(
+                [[], None, [1, 2], [4, 5, 6]], pyarrow.list_(pyarrow.int64())
+            )
             b = arrow_pyarrow_integration_testing.round_trip(a)
 
             b.validate(full=True)
@@ -124,18 +132,36 @@ class TestCase(unittest.TestCase):
         Python -> Rust -> Python
         """
         fields = [
-            ('f1', pyarrow.int32()),
-            ('f2', pyarrow.string()),
+            ("f1", pyarrow.int32()),
+            ("f2", pyarrow.string()),
         ]
-        a = pyarrow.array([
-            {"f1": 1, "f2": "a"},
-            None,
-            {"f1": 3, "f2": None},
-            {"f1": None, "f2": "d"},
-            {"f1": None, "f2": None},
-        ], pyarrow.struct(fields))
+        a = pyarrow.array(
+            [
+                {"f1": 1, "f2": "a"},
+                None,
+                {"f1": 3, "f2": None},
+                {"f1": None, "f2": "d"},
+                {"f1": None, "f2": None},
+            ],
+            pyarrow.struct(fields),
+        )
         b = arrow_pyarrow_integration_testing.round_trip(a)
 
         b.validate(full=True)
         assert a.to_pylist() == b.to_pylist()
         assert a.type == b.type
+
+    def test_list_list_array(self):
+        """
+        Python -> Rust -> Python
+        """
+        for _ in range(2):
+            a = pyarrow.array(
+                [[None], None, [[1], [2]], [[4, 5], [6]]],
+                pyarrow.list_(pyarrow.list_(pyarrow.int64())),
+            )
+            b = arrow_pyarrow_integration_testing.round_trip(a)
+
+            b.validate(full=True)
+            assert a.to_pylist() == b.to_pylist()
+            assert a.type == b.type

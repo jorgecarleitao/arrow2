@@ -643,10 +643,6 @@ impl<'a> ArrowArrayRef for ArrowArrayChild<'a> {
     fn schema(&self) -> &Ffi_ArrowSchema {
         self.schema
     }
-
-    fn child(&self, _: usize) -> Result<ArrowArrayChild> {
-        todo!()
-    }
 }
 
 impl<'a> ArrowArrayChild<'a> {
