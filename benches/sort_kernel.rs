@@ -66,6 +66,11 @@ fn add_benchmark(c: &mut Criterion) {
         c.bench_function(&format!("lexsort null 2^{} f32", log2_size), |b| {
             b.iter(|| bench_lexsort(&arr_a, &arr_b))
         });
+
+        let arr_a = create_string_array::<i32>(size, 0.1);
+        c.bench_function(&format!("sort utf8 null 2^{}", log2_size), |b| {
+            b.iter(|| bench_sort(&arr_a))
+        });
     });
 }
 
