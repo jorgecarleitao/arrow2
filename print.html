@@ -746,7 +746,7 @@ fn main() -&gt; Result&lt;()&gt; {
 
     let file_path = &amp;args[1];
 
-    let batch = read_path(&amp;file_path, None)?;
+    let batch = read_path(file_path, None)?;
     println!(&quot;{:?}&quot;, batch);
     Ok(())
 }
@@ -985,7 +985,7 @@ fn main() -&gt; Result&lt;()&gt; {
     let column = args[2].parse::&lt;usize&gt;().unwrap();
     let row_group = args[3].parse::&lt;usize&gt;().unwrap();
 
-    let array = read_column_chunk(&amp;file_path, row_group, column)?;
+    let array = read_column_chunk(file_path, row_group, column)?;
     println!(&quot;{}&quot;, array);
     Ok(())
 }

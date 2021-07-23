@@ -194,7 +194,7 @@ fn main() -&gt; Result&lt;()&gt; {
 
     let file_path = &amp;args[1];
 
-    let batch = read_path(&amp;file_path, None)?;
+    let batch = read_path(file_path, None)?;
     println!(&quot;{:?}&quot;, batch);
     Ok(())
 }

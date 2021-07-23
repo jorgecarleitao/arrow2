@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["can_hour","Checks if an array of type `datatype` can perform hour operation"],["can_year","Checks if an array of type `datatype` can perform year operation"],["hour","Extracts the hours of a given temporal array as an array of integers"],["year","Extracts the hours of a given temporal array as an array of integers"]]});
