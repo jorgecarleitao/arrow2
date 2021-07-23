@@ -46,17 +46,15 @@ where
     let validity = array.validity();
 
     let (buffer, validity) = if let Some(validity) = validity {
-        let nulls = (0..validity.null_count()).map(|_| false);
-        let valids = (validity.null_count()..array.len()).map(|_| true);
+        let nulls = std::iter::repeat(false).take(validity.null_count());
+        let valids = std::iter::repeat(true).take(array.len() - validity.null_count());
 
         let mut buffer = MutableBuffer::<T>::with_capacity(array.len());
         let mut new_validity = MutableBitmap::with_capacity(array.len());
         let slices = SlicesIterator::new(validity);
 
         if options.nulls_first {
-            nulls
-                .chain(valids)
-                .for_each(|value| unsafe { new_validity.push_unchecked(value) });
+            new_validity.extend_from_trusted_len_iter(nulls.chain(valids));
             (0..validity.null_count()).for_each(|_| buffer.push(T::default()));
             for (start, len) in slices {
                 buffer.extend_from_slice(&values[start..start + len])
@@ -67,9 +65,7 @@ where
                 options.descending,
             )
         } else {
-            valids
-                .chain(nulls)
-                .for_each(|value| unsafe { new_validity.push_unchecked(value) });
+            new_validity.extend_from_trusted_len_iter(valids.chain(nulls));
             for (start, len) in slices {
                 buffer.extend_from_slice(&values[start..start + len])
             }
