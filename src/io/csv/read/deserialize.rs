@@ -174,7 +174,7 @@ where
     F: Fn(&[ByteRecord], usize, DataType, usize) -> Result<Arc<dyn Array>>,
 {
     let projection: Vec<usize> = match projection {
-        Some(ref v) => v.to_vec(),
+        Some(v) => v.to_vec(),
         None => fields.iter().enumerate().map(|(i, _)| i).collect(),
     };
     let projected_fields: Vec<Field> = projection.iter().map(|i| fields[*i].clone()).collect();

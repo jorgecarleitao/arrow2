@@ -92,7 +92,7 @@ fn compare_f64<'a>(left: &'a dyn Array, right: &'a dyn Array) -> DynComparator<'
 fn compare_string<'a, O: Offset>(left: &'a dyn Array, right: &'a dyn Array) -> DynComparator<'a> {
     let left = left.as_any().downcast_ref::<Utf8Array<O>>().unwrap();
     let right = right.as_any().downcast_ref::<Utf8Array<O>>().unwrap();
-    Box::new(move |i, j| left.value(i).cmp(&right.value(j)))
+    Box::new(move |i, j| left.value(i).cmp(right.value(j)))
 }
 
 fn compare_dict<'a, K>(

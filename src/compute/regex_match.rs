@@ -104,7 +104,7 @@ mod tests {
     ) {
         let lhs = Utf8Array::<O>::from_slice(lhs);
         let expected = BooleanArray::from_slice(expected);
-        let result = op(&lhs, &pattern).unwrap();
+        let result = op(&lhs, pattern).unwrap();
         assert_eq!(result, expected);
     }
 

@@ -37,7 +37,7 @@ where
     let left_buffer = lhs.values();
     let right_buffer = rhs.values();
 
-    let values = op(&left_buffer, &right_buffer);
+    let values = op(left_buffer, right_buffer);
 
     Ok(BooleanArray::from_data(values, validity))
 }
@@ -60,7 +60,7 @@ where
 /// # }
 /// ```
 pub fn and(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
-    binary_boolean_kernel(&lhs, &rhs, |lhs, rhs| lhs & rhs)
+    binary_boolean_kernel(lhs, rhs, |lhs, rhs| lhs & rhs)
 }
 
 /// Performs `OR` operation on two arrays. If either left or right value is null then the
@@ -81,7 +81,7 @@ pub fn and(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
 /// # }
 /// ```
 pub fn or(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
-    binary_boolean_kernel(&lhs, &rhs, |lhs, rhs| lhs | rhs)
+    binary_boolean_kernel(lhs, rhs, |lhs, rhs| lhs | rhs)
 }
 
 /// Performs unary `NOT` operation on an arrays. If value is null then the result is also
@@ -352,7 +352,7 @@ mod tests {
         let b = b.slice(2, 4);
         let b = b.as_any().downcast_ref::<BooleanArray>().unwrap();
 
-        let c = and(&a, &b).unwrap();
+        let c = and(a, b).unwrap();
 
         let expected = BooleanArray::from(vec![Some(false), Some(false), None, Some(true)]);
 

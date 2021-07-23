@@ -46,7 +46,7 @@ fn create_random_index(size: usize, null_density: f32) -> PrimitiveArray<i32> {
 }
 
 fn bench_take(values: &dyn Array, indices: &PrimitiveArray<i32>) {
-    criterion::black_box(take::take(values, &indices).unwrap());
+    criterion::black_box(take::take(values, indices).unwrap());
 }
 
 fn add_benchmark(c: &mut Criterion) {

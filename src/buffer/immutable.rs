@@ -171,14 +171,14 @@ mod tests {
     fn test_new() {
         let buffer = Buffer::<i32>::new();
         assert_eq!(buffer.len(), 0);
-        assert_eq!(buffer.is_empty(), true);
+        assert!(buffer.is_empty());
     }
 
     #[test]
     fn test_new_zeroed() {
         let buffer = Buffer::<i32>::new_zeroed(2);
         assert_eq!(buffer.len(), 2);
-        assert_eq!(buffer.is_empty(), false);
+        assert!(!buffer.is_empty());
         assert_eq!(buffer.as_slice(), &[0, 0]);
     }
 

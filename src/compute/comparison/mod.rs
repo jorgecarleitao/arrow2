@@ -236,11 +236,10 @@ mod tests {
 
         datatypes.into_iter().for_each(|d1| {
             let array = new_null_array(d1.clone(), 10);
+            let op = Operator::Eq;
             if can_compare(&d1) {
-                let op = Operator::Eq;
                 assert!(compare(array.as_ref(), array.as_ref(), op).is_ok());
             } else {
-                let op = Operator::Eq;
                 assert!(compare(array.as_ref(), array.as_ref(), op).is_err());
             }
         });

@@ -57,12 +57,12 @@ impl TryFrom<&ParquetByteArrayStatistics> for Utf8Statistics {
             min_value: stats
                 .min_value
                 .as_ref()
-                .map(|x| std::str::from_utf8(&x).map(|x| x.to_string()))
+                .map(|x| std::str::from_utf8(x).map(|x| x.to_string()))
                 .transpose()?,
             max_value: stats
                 .max_value
                 .as_ref()
-                .map(|x| std::str::from_utf8(&x).map(|x| x.to_string()))
+                .map(|x| std::str::from_utf8(x).map(|x| x.to_string()))
                 .transpose()?,
         })
     }

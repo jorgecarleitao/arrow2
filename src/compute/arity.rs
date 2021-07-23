@@ -120,7 +120,7 @@ where
     // the iteration, then the validity is changed to None to mark the value
     // as Null
     let bitmap: Bitmap = mut_bitmap.into();
-    let validity = combine_validities(&array.validity(), &Some(bitmap));
+    let validity = combine_validities(array.validity(), &Some(bitmap));
 
     PrimitiveArray::<O>::from_data(data_type, values, validity)
 }

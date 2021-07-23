@@ -34,7 +34,7 @@ pub(crate) fn read_dict_buffer(
     let bit_width = indices_buffer[0];
     let indices_buffer = &indices_buffer[1..];
 
-    let (_, consumed) = uleb128::decode(&indices_buffer);
+    let (_, consumed) = uleb128::decode(indices_buffer);
     let indices_buffer = &indices_buffer[consumed..];
 
     let non_null_indices_len = (indices_buffer.len() * 8 / bit_width as usize) as u32;
@@ -42,7 +42,7 @@ pub(crate) fn read_dict_buffer(
     let mut indices =
         bitpacking::Decoder::new(indices_buffer, bit_width, non_null_indices_len as usize);
 
-    let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
+    let validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
 
     for run in validity_iterator {
         match run {
@@ -89,7 +89,7 @@ pub(crate) fn read_optional(
     assert_eq!(values_buffer.len() % size, 0);
     let mut values_iterator = values_buffer.chunks_exact(size);
 
-    let validity_iterator = hybrid_rle::Decoder::new(&validity_buffer, 1);
+    let validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
 
     for run in validity_iterator {
         match run {

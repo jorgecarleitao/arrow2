@@ -45,7 +45,7 @@ fn main() -> Result<()> {
     let column = args[2].parse::<usize>().unwrap();
     let row_group = args[3].parse::<usize>().unwrap();
 
-    let array = read_column_chunk(&file_path, row_group, column)?;
+    let array = read_column_chunk(file_path, row_group, column)?;
     println!("{}", array);
     Ok(())
 }
