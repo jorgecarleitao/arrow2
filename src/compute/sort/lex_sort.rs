@@ -3,9 +3,8 @@ use std::cmp::Ordering;
 use crate::compute::take;
 use crate::error::{ArrowError, Result};
 use crate::{
-    array::{ord, Array, PrimitiveArray},
+    array::{ord, Array, Index, PrimitiveArray},
     buffer::MutableBuffer,
-    datatypes::DataType,
 };
 
 use super::{sort_to_indices, SortOptions};
@@ -37,7 +36,7 @@ pub struct SortColumn<'a> {
 /// let int64 = Int64Array::from(&[None, Some(-2), Some(89), Some(-64), Some(101)]);
 /// let utf8 = Utf8Array::<i32>::from(&vec![Some("hello"), Some("world"), Some(","), Some("foobar"), Some("!")]);
 ///
-/// let sorted_columns = lexsort(&vec![
+/// let sorted_columns = lexsort::<i32>(&vec![
 ///     SortColumn {
 ///         values: &int64,
 ///         options: None,
@@ -55,8 +54,11 @@ pub struct SortColumn<'a> {
 /// assert_eq!(sorted.value(1), -64);
 /// assert!(sorted.is_null(0));
 /// ```
-pub fn lexsort(columns: &[SortColumn], limit: Option<usize>) -> Result<Vec<Box<dyn Array>>> {
-    let indices = lexsort_to_indices(columns, limit)?;
+pub fn lexsort<I: Index>(
+    columns: &[SortColumn],
+    limit: Option<usize>,
+) -> Result<Vec<Box<dyn Array>>> {
+    let indices = lexsort_to_indices::<I>(columns, limit)?;
     columns
         .iter()
         .map(|c| take::take(c.values, &indices))
@@ -118,12 +120,12 @@ pub(crate) fn build_compare(array: &dyn Array, sort_option: SortOptions) -> Resu
     })
 }
 
-/// Sorts a list of [`SortColumn`] into a non-nullable [`PrimitiveArray<i32>`]
+/// Sorts a list of [`SortColumn`] into a non-nullable [`PrimitiveArray`]
 /// representing the indices that would sort the columns.
-pub fn lexsort_to_indices(
+pub fn lexsort_to_indices<I: Index>(
     columns: &[SortColumn],
     limit: Option<usize>,
-) -> Result<PrimitiveArray<i32>> {
+) -> Result<PrimitiveArray<I>> {
     if columns.is_empty() {
         return Err(ArrowError::InvalidArgumentError(
             "Sort requires at least one column".to_string(),
@@ -150,9 +152,9 @@ pub fn lexsort_to_indices(
         })
         .collect::<Result<Vec<Compare>>>()?;
 
-    let lex_comparator = |a_idx: &i32, b_idx: &i32| -> Ordering {
-        let a_idx = *a_idx as usize;
-        let b_idx = *b_idx as usize;
+    let lex_comparator = |a_idx: &I, b_idx: &I| -> Ordering {
+        let a_idx = a_idx.to_usize();
+        let b_idx = b_idx.to_usize();
         for comparator in comparators.iter() {
             match comparator(a_idx, b_idx) {
                 Ordering::Equal => continue,
@@ -164,8 +166,11 @@ pub fn lexsort_to_indices(
     };
 
     // Safety: `0..row_count` is TrustedLen
-    let mut values =
-        unsafe { MutableBuffer::<i32>::from_trusted_len_iter_unchecked(0..row_count as i32) };
+    let mut values = unsafe {
+        MutableBuffer::from_trusted_len_iter_unchecked(
+            (0..row_count).map(|x| I::from_usize(x).unwrap()),
+        )
+    };
 
     if let Some(limit) = limit {
         let limit = limit.min(row_count);
@@ -176,8 +181,8 @@ pub fn lexsort_to_indices(
         values.sort_unstable_by(lex_comparator);
     }
 
-    Ok(PrimitiveArray::<i32>::from_data(
-        DataType::Int32,
+    Ok(PrimitiveArray::<I>::from_data(
+        I::DATA_TYPE,
         values.into(),
         None,
     ))
@@ -190,10 +195,10 @@ mod tests {
     use super::*;
 
     fn test_lex_sort_arrays(input: Vec<SortColumn>, expected: Vec<Box<dyn Array>>) {
-        let sorted = lexsort(&input, None).unwrap();
+        let sorted = lexsort::<i32>(&input, None).unwrap();
         assert_eq!(sorted, expected);
 
-        let sorted = lexsort(&input, Some(2)).unwrap();
+        let sorted = lexsort::<i32>(&input, Some(2)).unwrap();
         let expected = expected
             .into_iter()
             .map(|x| x.slice(0, 2))

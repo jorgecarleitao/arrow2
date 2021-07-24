@@ -1,24 +1,24 @@
-use crate::array::{Array, Int32Array, Offset, Utf8Array};
+use crate::array::{Array, Index, Offset, PrimitiveArray, Utf8Array};
 use crate::array::{DictionaryArray, DictionaryKey};
 
 use super::common;
 use super::SortOptions;
 
-pub(super) fn indices_sorted_unstable_by<O: Offset>(
+pub(super) fn indices_sorted_unstable_by<I: Index, O: Offset>(
     array: &Utf8Array<O>,
     options: &SortOptions,
     limit: Option<usize>,
-) -> Int32Array {
+) -> PrimitiveArray<I> {
     let get = |idx| unsafe { array.value_unchecked(idx as usize) };
     let cmp = |lhs: &&str, rhs: &&str| lhs.cmp(rhs);
     common::indices_sorted_unstable_by(array.validity(), get, cmp, array.len(), options, limit)
 }
 
-pub(super) fn indices_sorted_unstable_by_dictionary<K: DictionaryKey, O: Offset>(
+pub(super) fn indices_sorted_unstable_by_dictionary<I: Index, K: DictionaryKey, O: Offset>(
     array: &DictionaryArray<K>,
     options: &SortOptions,
     limit: Option<usize>,
-) -> Int32Array {
+) -> PrimitiveArray<I> {
     let keys = array.keys();
 
     let dict = array
