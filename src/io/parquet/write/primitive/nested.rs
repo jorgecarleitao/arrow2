@@ -1,6 +1,6 @@
 use parquet2::schema::Encoding;
 use parquet2::{
-    metadata::ColumnDescriptor, read::CompressedPage, types::NativeType, write::WriteOptions,
+    metadata::ColumnDescriptor, page::CompressedDataPage, types::NativeType, write::WriteOptions,
 };
 
 use super::super::levels;
@@ -18,7 +18,7 @@ pub fn array_to_page<T, R, O>(
     options: WriteOptions,
     descriptor: ColumnDescriptor,
     nested: levels::NestedInfo<O>,
-) -> Result<CompressedPage>
+) -> Result<CompressedDataPage>
 where
     T: ArrowNativeType,
     R: NativeType,

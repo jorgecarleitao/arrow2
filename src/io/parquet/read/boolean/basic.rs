@@ -8,7 +8,8 @@ use super::super::utils;
 use parquet2::{
     encoding::{hybrid_rle, Encoding},
     metadata::{ColumnChunkMetaData, ColumnDescriptor},
-    read::{levels, Page, PageHeader, StreamingIterator},
+    page::{DataPage, DataPageHeader},
+    read::{levels, StreamingIterator},
 };
 
 pub(super) fn read_required(buffer: &[u8], additional: usize, values: &mut MutableBitmap) {
@@ -68,7 +69,7 @@ pub fn iter_to_array<I, E>(mut iter: I, metadata: &ColumnChunkMetaData) -> Resul
 where
     ArrowError: From<E>,
     E: Clone,
-    I: StreamingIterator<Item = std::result::Result<Page, E>>,
+    I: StreamingIterator<Item = std::result::Result<DataPage, E>>,
 {
     let capacity = metadata.num_values() as usize;
     let mut values = MutableBitmap::with_capacity(capacity);
@@ -86,7 +87,7 @@ where
 }
 
 fn extend_from_page(
-    page: &Page,
+    page: &DataPage,
     descriptor: &ColumnDescriptor,
     values: &mut MutableBitmap,
     validity: &mut MutableBitmap,
@@ -95,7 +96,7 @@ fn extend_from_page(
     assert!(descriptor.max_def_level() <= 1);
     let is_optional = descriptor.max_def_level() == 1;
     match page.header() {
-        PageHeader::V1(header) => {
+        DataPageHeader::V1(header) => {
             assert_eq!(header.definition_level_encoding, Encoding::Rle);
 
             match (&page.encoding(), page.dictionary_page(), is_optional) {
@@ -124,7 +125,7 @@ fn extend_from_page(
                 }
             }
         }
-        PageHeader::V2(header) => {
+        DataPageHeader::V2(header) => {
             let def_level_buffer_length = header.definition_levels_byte_length as usize;
             match (page.encoding(), page.dictionary_page(), is_optional) {
                 (Encoding::Plain, None, true) => {

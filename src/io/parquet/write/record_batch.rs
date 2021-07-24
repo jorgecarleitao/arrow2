@@ -1,5 +1,5 @@
 use super::{
-    array_to_page, to_parquet_schema, DynIter, Encoding, RowGroupIter, SchemaDescriptor,
+    array_to_pages, to_parquet_schema, DynIter, Encoding, RowGroupIter, SchemaDescriptor,
     WriteOptions,
 };
 use crate::{
@@ -59,12 +59,7 @@ impl<I: Iterator<Item = Result<RecordBatch>>> Iterator for RowGroupIterator<I> {
                     .zip(self.parquet_schema.columns().to_vec().into_iter())
                     .zip(encodings.into_iter())
                     .map(move |((array, type_), encoding)| {
-                        Ok(DynIter::new(std::iter::once(array_to_page(
-                            array.as_ref(),
-                            type_,
-                            options,
-                            encoding,
-                        ))))
+                        array_to_pages(array, type_, options, encoding)
                     }),
             ))
         })

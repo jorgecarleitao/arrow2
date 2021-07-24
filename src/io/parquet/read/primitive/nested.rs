@@ -1,9 +1,7 @@
 use parquet2::{
     encoding::Encoding,
-    read::{
-        levels::{get_bit_width, split_buffer_v1, split_buffer_v2, RLEDecoder},
-        Page, PageHeader,
-    },
+    page::{DataPage, DataPageHeader},
+    read::levels::{get_bit_width, split_buffer_v1, split_buffer_v2, RLEDecoder},
     types::NativeType,
 };
 
@@ -112,7 +110,7 @@ fn read<T, A, F>(
 }
 
 pub fn extend_from_page<T, A, F>(
-    page: &Page,
+    page: &DataPage,
     descriptor: &ColumnDescriptor,
     is_nullable: bool,
     nested: &mut Vec<Box<dyn Nested>>,
@@ -128,7 +126,7 @@ where
     let additional = page.num_values();
 
     match page.header() {
-        PageHeader::V1(header) => {
+        DataPageHeader::V1(header) => {
             assert_eq!(header.definition_level_encoding, Encoding::Rle);
             assert_eq!(header.repetition_level_encoding, Encoding::Rle);
 
@@ -170,7 +168,7 @@ where
                 }
             }
         }
-        PageHeader::V2(header) => match (&page.encoding(), page.dictionary_page()) {
+        DataPageHeader::V2(header) => match (&page.encoding(), page.dictionary_page()) {
             (Encoding::Plain, None) => {
                 let def_level_buffer_length = header.definition_levels_byte_length as usize;
                 let rep_level_buffer_length = header.repetition_levels_byte_length as usize;

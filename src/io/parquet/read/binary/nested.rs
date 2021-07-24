@@ -3,9 +3,10 @@ use std::sync::Arc;
 use parquet2::{
     encoding::Encoding,
     metadata::{ColumnChunkMetaData, ColumnDescriptor},
+    page::{DataPage, DataPageHeader},
     read::{
         levels::{get_bit_width, split_buffer_v1, split_buffer_v2, RLEDecoder},
-        Page, PageHeader, StreamingIterator,
+        StreamingIterator,
     },
 };
 
@@ -108,7 +109,7 @@ fn read<O: Offset>(
 }
 
 fn extend_from_page<O: Offset>(
-    page: &Page,
+    page: &DataPage,
     descriptor: &ColumnDescriptor,
     is_nullable: bool,
     nested: &mut Vec<Box<dyn Nested>>,
@@ -119,7 +120,7 @@ fn extend_from_page<O: Offset>(
     let additional = page.num_values();
 
     match page.header() {
-        PageHeader::V1(header) => {
+        DataPageHeader::V1(header) => {
             assert_eq!(header.definition_level_encoding, Encoding::Rle);
             assert_eq!(header.repetition_level_encoding, Encoding::Rle);
 
@@ -161,7 +162,7 @@ fn extend_from_page<O: Offset>(
                 }
             }
         }
-        PageHeader::V2(header) => match (&page.encoding(), page.dictionary_page()) {
+        DataPageHeader::V2(header) => match (&page.encoding(), page.dictionary_page()) {
             (Encoding::Plain, None) => {
                 let def_level_buffer_length = header.definition_levels_byte_length as usize;
                 let rep_level_buffer_length = header.repetition_levels_byte_length as usize;
@@ -207,7 +208,7 @@ where
     O: Offset,
     ArrowError: From<E>,
     E: Clone,
-    I: StreamingIterator<Item = std::result::Result<Page, E>>,
+    I: StreamingIterator<Item = std::result::Result<DataPage, E>>,
 {
     let capacity = metadata.num_values() as usize;
     let mut values = MutableBuffer::<u8>::with_capacity(0);

@@ -22,10 +22,10 @@ pub use schema::{get_schema, is_type_nullable, FileMetaData};
 pub use parquet2::{
     error::ParquetError,
     metadata::{ColumnChunkMetaData, ColumnDescriptor, RowGroupMetaData},
+    page::{CompressedDataPage, DataPage, DataPageHeader},
     read::{
         decompress, get_page_iterator as _get_page_iterator, read_metadata as _read_metadata,
-        streaming_iterator, CompressedPage, Decompressor, Page, PageHeader, PageIterator,
-        StreamingIterator,
+        streaming_iterator, Decompressor, PageIterator, StreamingIterator,
     },
     schema::{
         types::{LogicalType, ParquetType, PhysicalType, PrimitiveConvertedType},
@@ -52,7 +52,9 @@ pub fn read_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetaData> {
     Ok(_read_metadata(reader)?)
 }
 
-pub fn page_iter_to_array<I: StreamingIterator<Item = std::result::Result<Page, ParquetError>>>(
+pub fn page_iter_to_array<
+    I: StreamingIterator<Item = std::result::Result<DataPage, ParquetError>>,
+>(
     iter: &mut I,
     metadata: &ColumnChunkMetaData,
     data_type: DataType,
@@ -140,6 +142,20 @@ pub fn page_iter_to_array<I: StreamingIterator<Item = std::result::Result<Page, 
                 other
             ))),
         },
+
+        Dictionary(ref key, ref values) => match key.as_ref() {
+            Int32 => match values.as_ref() {
+                Int32 => primitive::iter_to_dict_array::<i32, _, _, _, _, _>(
+                    iter,
+                    metadata,
+                    data_type,
+                    |x: i32| x as i32,
+                ),
+                _ => todo!(),
+            },
+            _ => todo!(),
+        },
+
         other => Err(ArrowError::NotYetImplemented(format!(
             "The conversion of {:?} to arrow still not implemented",
             other
@@ -194,7 +210,7 @@ mod tests {
         };
 
         assert_eq!(expected.as_ref(), array.as_ref());
-        assert_eq!(expected_statistics.as_ref(), statistics.unwrap().as_ref());
+        assert_eq!(expected_statistics, statistics);
 
         Ok(())
     }

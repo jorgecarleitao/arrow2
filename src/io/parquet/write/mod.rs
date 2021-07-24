@@ -1,5 +1,6 @@
 mod binary;
 mod boolean;
+mod dictionary;
 mod fixed_len_bytes;
 mod levels;
 mod primitive;
@@ -9,6 +10,8 @@ mod utf8;
 mod utils;
 
 pub mod stream;
+
+use std::sync::Arc;
 
 use crate::array::*;
 use crate::bitmap::Bitmap;
@@ -23,7 +26,7 @@ use crate::types::NativeType;
 use parquet2::metadata::ColumnDescriptor;
 pub use parquet2::{
     compression::CompressionCodec,
-    read::CompressedPage,
+    page::{CompressedDataPage, CompressedPage},
     schema::types::ParquetType,
     schema::Encoding,
     write::{DynIter, RowGroupIter},
@@ -89,7 +92,7 @@ where
 }
 
 /// Checks whether the `data_type` can be encoded as `encoding`.
-/// Note that this is whether this implementation supports it, which is not necessarily
+/// Note that this is whether this implementation supports it, which is a subset of
 /// what the parquet spec allows.
 pub fn can_encode(data_type: &DataType, encoding: Encoding) -> bool {
     matches!(
@@ -99,7 +102,52 @@ pub fn can_encode(data_type: &DataType, encoding: Encoding) -> bool {
                 Encoding::DeltaLengthByteArray,
                 DataType::Binary | DataType::LargeBinary | DataType::Utf8 | DataType::LargeUtf8,
             )
+            | (Encoding::RleDictionary, DataType::Dictionary(_, _))
+            | (Encoding::PlainDictionary, DataType::Dictionary(_, _))
     )
+}
+
+/// Returns an iterator of compressed pages,
+pub fn array_to_pages(
+    array: Arc<dyn Array>,
+    descriptor: ColumnDescriptor,
+    options: WriteOptions,
+    encoding: Encoding,
+) -> Result<DynIter<'static, Result<CompressedPage>>> {
+    match array.data_type() {
+        DataType::Dictionary(key, _) => match key.as_ref() {
+            DataType::Int8 => dictionary::array_to_pages::<i8>(
+                array.as_any().downcast_ref().unwrap(),
+                descriptor,
+                options,
+                encoding,
+            ),
+            DataType::Int16 => dictionary::array_to_pages::<i16>(
+                array.as_any().downcast_ref().unwrap(),
+                descriptor,
+                options,
+                encoding,
+            ),
+            DataType::Int32 => dictionary::array_to_pages::<i32>(
+                array.as_any().downcast_ref().unwrap(),
+                descriptor,
+                options,
+                encoding,
+            ),
+            DataType::Int64 => dictionary::array_to_pages::<i64>(
+                array.as_any().downcast_ref().unwrap(),
+                descriptor,
+                options,
+                encoding,
+            ),
+            other => Err(ArrowError::NotYetImplemented(format!(
+                "Writing parquet pages for data type {:?}",
+                other
+            ))),
+        },
+        _ => array_to_page(array.as_ref(), descriptor, options, encoding)
+            .map(|page| DynIter::new(std::iter::once(Ok(page)))),
+    }
 }
 
 pub fn array_to_page(
@@ -295,6 +343,7 @@ pub fn array_to_page(
             other
         ))),
     }
+    .map(CompressedPage::Data)
 }
 
 macro_rules! dyn_nested_prim {
@@ -316,7 +365,7 @@ fn list_array_to_page<O: Offset>(
     values: &dyn Array,
     descriptor: ColumnDescriptor,
     options: WriteOptions,
-) -> Result<CompressedPage> {
+) -> Result<CompressedDataPage> {
     use DataType::*;
     let is_optional = is_type_nullable(descriptor.type_());
     let nested = NestedInfo::new(offsets, validity, is_optional);
@@ -395,7 +444,7 @@ fn nested_array_to_page(
     array: &dyn Array,
     descriptor: ColumnDescriptor,
     options: WriteOptions,
-) -> Result<CompressedPage> {
+) -> Result<CompressedDataPage> {
     match array.data_type() {
         DataType::List(_) => {
             let array = array.as_any().downcast_ref::<ListArray<i32>>().unwrap();
@@ -438,7 +487,7 @@ fn nested_array_to_page(
 mod tests {
     use super::*;
 
-    use crate::error::Result;
+    use crate::{error::Result, record_batch::RecordBatch};
     use std::io::Cursor;
 
     use super::super::tests::*;
@@ -467,6 +516,7 @@ mod tests {
                 pyarrow_required_statistics(column),
             )
         };
+        let array: Arc<dyn Array> = array.into();
 
         let field = Field::new("a1", array.data_type().clone(), nullable);
         let schema = Schema::new(vec![field]);
@@ -479,15 +529,13 @@ mod tests {
 
         let parquet_schema = to_parquet_schema(&schema)?;
 
-        // one row group
-        // one column chunk
-        // one page
+        let iter = vec![RecordBatch::try_new(
+            Arc::new(schema.clone()),
+            vec![array.clone()],
+        )];
+
         let row_groups =
-            std::iter::once(Result::Ok(DynIter::new(std::iter::once(Ok(DynIter::new(
-                std::iter::once(array.as_ref())
-                    .zip(parquet_schema.columns().to_vec().into_iter())
-                    .map(|(array, descriptor)| array_to_page(array, descriptor, options, encoding)),
-            ))))));
+            RowGroupIterator::try_new(iter.into_iter(), &schema, options, vec![encoding])?;
 
         let mut writer = Cursor::new(vec![]);
         write_file(
@@ -503,7 +551,7 @@ mod tests {
 
         let (result, stats) = read_column(&mut Cursor::new(data), 0, 0)?;
         assert_eq!(array.as_ref(), result.as_ref());
-        assert_eq!(statistics.as_ref(), stats.unwrap().as_ref());
+        assert_eq!(statistics.as_ref(), stats.as_ref());
         Ok(())
     }
 
@@ -792,6 +840,18 @@ mod tests {
             Version::V2,
             CompressionCodec::Uncompressed,
             Encoding::DeltaLengthByteArray,
+        )
+    }
+
+    #[test]
+    fn test_i32_optional_v2_dict() -> Result<()> {
+        round_trip(
+            6,
+            true,
+            false,
+            Version::V2,
+            CompressionCodec::Uncompressed,
+            Encoding::RleDictionary,
         )
     }
 }

@@ -250,14 +250,19 @@ mod tests {
                     .iter()
                     .map(|x| x.map(|x| x as u32))
                     .collect::<Vec<_>>();
-                Box::new(PrimitiveArray::<u32>::from(values).to(DataType::UInt32))
+                Box::new(PrimitiveArray::<u32>::from(values))
+            }
+            6 => {
+                let keys = PrimitiveArray::<i32>::from([Some(0), Some(1), None, Some(1)]);
+                let values = Arc::new(PrimitiveArray::<i32>::from_slice([10, 200]));
+                Box::new(DictionaryArray::<i32>::from_data(keys, values))
             }
             _ => unreachable!(),
         }
     }
 
-    pub fn pyarrow_nullable_statistics(column: usize) -> Box<dyn Statistics> {
-        match column {
+    pub fn pyarrow_nullable_statistics(column: usize) -> Option<Box<dyn Statistics>> {
+        Some(match column {
             0 => Box::new(PrimitiveStatistics::<i64> {
                 data_type: DataType::Int64,
                 distinct_count: None,
@@ -300,8 +305,9 @@ mod tests {
                 min_value: Some(0),
                 max_value: Some(9),
             }),
+            6 => return None,
             _ => unreachable!(),
-        }
+        })
     }
 
     // these values match the values in `integration`
@@ -331,8 +337,8 @@ mod tests {
         }
     }
 
-    pub fn pyarrow_required_statistics(column: usize) -> Box<dyn Statistics> {
-        match column {
+    pub fn pyarrow_required_statistics(column: usize) -> Option<Box<dyn Statistics>> {
+        Some(match column {
             0 => Box::new(PrimitiveStatistics::<i64> {
                 data_type: DataType::Int64,
                 null_count: Some(0),
@@ -353,11 +359,11 @@ mod tests {
                 max_value: Some("def".to_string()),
             }),
             _ => unreachable!(),
-        }
+        })
     }
 
-    pub fn pyarrow_nested_nullable_statistics(column: usize) -> Box<dyn Statistics> {
-        match column {
+    pub fn pyarrow_nested_nullable_statistics(column: usize) -> Option<Box<dyn Statistics>> {
+        Some(match column {
             3 => Box::new(PrimitiveStatistics::<i16> {
                 data_type: DataType::Int16,
                 distinct_count: None,
@@ -390,7 +396,7 @@ mod tests {
                 min_value: Some(0),
                 max_value: Some(9),
             }),
-        }
+        })
     }
 }
 

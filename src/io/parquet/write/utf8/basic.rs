@@ -1,7 +1,7 @@
 use parquet2::{
     encoding::Encoding,
     metadata::ColumnDescriptor,
-    read::CompressedPage,
+    page::CompressedDataPage,
     statistics::{serialize_statistics, BinaryStatistics, ParquetStatistics, Statistics},
     write::WriteOptions,
 };
@@ -14,7 +14,7 @@ use crate::{
     io::parquet::read::is_type_nullable,
 };
 
-pub(super) fn encode_plain<O: Offset>(
+pub(crate) fn encode_plain<O: Offset>(
     array: &Utf8Array<O>,
     is_optional: bool,
     buffer: &mut Vec<u8>,
@@ -43,7 +43,7 @@ pub fn array_to_page<O: Offset>(
     options: WriteOptions,
     descriptor: ColumnDescriptor,
     encoding: Encoding,
-) -> Result<CompressedPage> {
+) -> Result<CompressedDataPage> {
     let validity = array.validity();
     let is_optional = is_type_nullable(descriptor.type_());
 
