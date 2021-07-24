@@ -186,6 +186,15 @@ impl<T: NativeType> MutableBuffer<T> {
         self.len = 0
     }
 
+    /// Shortens the buffer.
+    /// If `len` is greater or equal to the buffers' current length, this has no effect.
+    #[inline]
+    pub fn truncate(&mut self, len: usize) {
+        if len < self.len {
+            self.len = len;
+        }
+    }
+
     /// Returns the data stored in this buffer as a slice.
     #[inline]
     pub fn as_slice(&self) -> &[T] {

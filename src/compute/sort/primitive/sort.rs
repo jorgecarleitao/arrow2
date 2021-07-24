@@ -15,7 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::buffer::MutableBuffer;
+use crate::bitmap::Bitmap;
+use crate::buffer::{Buffer, MutableBuffer};
 use crate::{
     array::{Array, PrimitiveArray},
     bitmap::{utils::SlicesIterator, MutableBitmap},
@@ -24,11 +25,32 @@ use crate::{
 
 use super::super::SortOptions;
 
-fn sort_inner<T, F>(values: &mut [T], mut cmp: F, descending: bool)
+/// # Safety
+/// `indices[i] < values.len()` for all i
+#[inline]
+fn k_element_sort_inner<T, F>(values: &mut [T], descending: bool, limit: usize, mut cmp: F)
 where
     T: NativeType,
     F: FnMut(&T, &T) -> std::cmp::Ordering,
 {
+    if descending {
+        let (before, _, _) = values.select_nth_unstable_by(limit, |x, y| cmp(x, y).reverse());
+        before.sort_unstable_by(|x, y| cmp(x, y));
+    } else {
+        let (before, _, _) = values.select_nth_unstable_by(limit, |x, y| cmp(x, y));
+        before.sort_unstable_by(|x, y| cmp(x, y));
+    }
+}
+
+fn sort_values<T, F>(values: &mut [T], mut cmp: F, descending: bool, limit: usize)
+where
+    T: NativeType,
+    F: FnMut(&T, &T) -> std::cmp::Ordering,
+{
+    if limit != values.len() {
+        return k_element_sort_inner(values, descending, limit, cmp);
+    }
+
     if descending {
         values.sort_unstable_by(|x, y| cmp(x, y).reverse());
     } else {
@@ -36,54 +58,106 @@ where
     };
 }
 
-/// Sorts a [`PrimitiveArray`] according to `cmp` comparator and [`SortOptions`].
-pub fn sort_by<T, F>(array: &PrimitiveArray<T>, cmp: F, options: &SortOptions) -> PrimitiveArray<T>
+fn sort_nullable<T, F>(
+    values: &[T],
+    validity: &Bitmap,
+    cmp: F,
+    options: &SortOptions,
+    limit: usize,
+) -> (Buffer<T>, Option<Bitmap>)
 where
     T: NativeType,
     F: FnMut(&T, &T) -> std::cmp::Ordering,
 {
+    assert!(limit <= values.len());
+    if options.nulls_first && limit < validity.null_count() {
+        let mut buffer = MutableBuffer::<T>::with_capacity(limit);
+        buffer.extend_constant(limit, T::default());
+        let bitmap = MutableBitmap::from_trusted_len_iter(std::iter::repeat(false).take(limit));
+        return (buffer.into(), bitmap.into());
+    }
+
+    let nulls = std::iter::repeat(false).take(validity.null_count());
+    let valids = std::iter::repeat(true).take(values.len() - validity.null_count());
+
+    let mut buffer = MutableBuffer::<T>::with_capacity(values.len());
+    let mut new_validity = MutableBitmap::with_capacity(values.len());
+    let slices = SlicesIterator::new(validity);
+
+    if options.nulls_first {
+        // validity is [0,0,0,...,1,1,1,1]
+        new_validity.extend_from_trusted_len_iter(nulls.chain(valids).take(limit));
+
+        // extend buffer with constants followed by non-null values
+        buffer.extend_constant(validity.null_count(), T::default());
+        for (start, len) in slices {
+            buffer.extend_from_slice(&values[start..start + len])
+        }
+
+        // sort values
+        sort_values(
+            &mut buffer.as_mut_slice()[validity.null_count()..],
+            cmp,
+            options.descending,
+            limit - validity.null_count(),
+        );
+    } else {
+        // validity is [1,1,1,...,0,0,0,0]
+        new_validity.extend_from_trusted_len_iter(valids.chain(nulls).take(limit));
+
+        // extend buffer with non-null values
+        for (start, len) in slices {
+            buffer.extend_from_slice(&values[start..start + len])
+        }
+
+        // sort all non-null values
+        sort_values(
+            &mut buffer.as_mut_slice(),
+            cmp,
+            options.descending,
+            limit - validity.null_count(),
+        );
+
+        if limit > values.len() - validity.null_count() {
+            // extend remaining with nulls
+            buffer.extend_constant(validity.null_count(), T::default());
+        }
+    };
+    // values are sorted, we can now truncate the remaining.
+    buffer.truncate(limit);
+
+    (buffer.into(), new_validity.into())
+}
+
+/// Sorts a [`PrimitiveArray`] according to `cmp` comparator and [`SortOptions`].
+pub fn sort_by<T, F>(
+    array: &PrimitiveArray<T>,
+    cmp: F,
+    options: &SortOptions,
+    limit: Option<usize>,
+) -> PrimitiveArray<T>
+where
+    T: NativeType,
+    F: FnMut(&T, &T) -> std::cmp::Ordering,
+{
+    let limit = limit.unwrap_or_else(|| array.len());
+    let limit = limit.min(array.len());
+
     let values = array.values();
     let validity = array.validity();
 
     let (buffer, validity) = if let Some(validity) = validity {
-        let nulls = std::iter::repeat(false).take(validity.null_count());
-        let valids = std::iter::repeat(true).take(array.len() - validity.null_count());
-
-        let mut buffer = MutableBuffer::<T>::with_capacity(array.len());
-        let mut new_validity = MutableBitmap::with_capacity(array.len());
-        let slices = SlicesIterator::new(validity);
-
-        if options.nulls_first {
-            new_validity.extend_from_trusted_len_iter(nulls.chain(valids));
-            (0..validity.null_count()).for_each(|_| buffer.push(T::default()));
-            for (start, len) in slices {
-                buffer.extend_from_slice(&values[start..start + len])
-            }
-            sort_inner(
-                &mut buffer.as_mut_slice()[validity.null_count()..],
-                cmp,
-                options.descending,
-            )
-        } else {
-            new_validity.extend_from_trusted_len_iter(valids.chain(nulls));
-            for (start, len) in slices {
-                buffer.extend_from_slice(&values[start..start + len])
-            }
-            sort_inner(&mut buffer.as_mut_slice(), cmp, options.descending);
-
-            (0..validity.null_count()).for_each(|_| buffer.push(T::default()));
-        };
-
-        (buffer, new_validity.into())
+        sort_nullable(values, validity, cmp, options, limit)
     } else {
         let mut buffer = MutableBuffer::<T>::new();
         buffer.extend_from_slice(values);
 
-        sort_inner(&mut buffer.as_mut_slice(), cmp, options.descending);
+        sort_values(&mut buffer.as_mut_slice(), cmp, options.descending, limit);
+        buffer.truncate(limit);
 
-        (buffer, None)
+        (buffer.into(), None)
     };
-    PrimitiveArray::<T>::from_data(array.data_type().clone(), buffer.into(), validity)
+    PrimitiveArray::<T>::from_data(array.data_type().clone(), buffer, validity)
 }
 
 #[cfg(test)]
@@ -103,8 +177,13 @@ mod tests {
         T: NativeType + std::cmp::Ord,
     {
         let input = PrimitiveArray::<T>::from(data).to(data_type.clone());
-        let expected = PrimitiveArray::<T>::from(expected_data).to(data_type);
-        let output = sort_by(&input, ord::total_cmp, &options);
+        let expected = PrimitiveArray::<T>::from(expected_data).to(data_type.clone());
+        let output = sort_by(&input, ord::total_cmp, &options, None);
+        assert_eq!(expected, output);
+
+        // with limit
+        let expected = PrimitiveArray::<T>::from(&expected_data[..3]).to(data_type);
+        let output = sort_by(&input, ord::total_cmp, &options, Some(3));
         assert_eq!(expected, output)
     }
 

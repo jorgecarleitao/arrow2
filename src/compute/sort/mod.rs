@@ -1,23 +1,4 @@
-// Licensed to the Apache Software Foundation (ASF) under one
-// or more contributor license agreements.  See the NOTICE file
-// distributed with this work for additional information
-// regarding copyright ownership.  The ASF licenses this file
-// to you under the Apache License, Version 2.0 (the
-// "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
-
-//! Defines sort kernel for `ArrayRef`
-
-use std::cmp::{Ordering, Reverse};
+use std::cmp::Ordering;
 
 use crate::array::ord;
 use crate::compute::take;
@@ -25,64 +6,69 @@ use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 use crate::{
     array::*,
-    buffer::Buffer,
     types::{days_ms, NativeType},
 };
 
 use crate::buffer::MutableBuffer;
 use num::ToPrimitive;
 
+mod boolean;
+mod common;
 mod lex_sort;
 mod primitive;
+mod utf8;
 
 pub(crate) use lex_sort::{build_compare, Compare};
 pub use lex_sort::{lexsort, lexsort_to_indices, SortColumn};
 
 macro_rules! dyn_sort {
-    ($ty:ty, $array:expr, $cmp:expr, $options:expr) => {{
+    ($ty:ty, $array:expr, $cmp:expr, $options:expr, $limit:expr) => {{
         let array = $array
             .as_any()
             .downcast_ref::<PrimitiveArray<$ty>>()
             .unwrap();
         Ok(Box::new(primitive::sort_by::<$ty, _>(
-            &array, $cmp, $options,
+            &array, $cmp, $options, $limit,
         )))
     }};
 }
 
-/// Sort the `ArrayRef` using `SortOptions`.
+/// Sort the [`Array`] using [`SortOptions`].
 ///
-/// Performs a stable sort on values and indices. Nulls are ordered according to the `nulls_first` flag in `options`.
+/// Performs an unstable sort on values and indices. Nulls are ordered according to the `nulls_first` flag in `options`.
 /// Floats are sorted using IEEE 754 totalOrder
-///
-/// Returns an `ArrowError::ComputeError(String)` if the array type is either unsupported by `sort_to_indices` or `take`.
-///
-pub fn sort(values: &dyn Array, options: &SortOptions) -> Result<Box<dyn Array>> {
+/// # Errors
+/// Errors if the [`DataType`] is not supported.
+pub fn sort(
+    values: &dyn Array,
+    options: &SortOptions,
+    limit: Option<usize>,
+) -> Result<Box<dyn Array>> {
     match values.data_type() {
-        DataType::Int8 => dyn_sort!(i8, values, ord::total_cmp, options),
-        DataType::Int16 => dyn_sort!(i16, values, ord::total_cmp, options),
+        DataType::Int8 => dyn_sort!(i8, values, ord::total_cmp, options, limit),
+        DataType::Int16 => dyn_sort!(i16, values, ord::total_cmp, options, limit),
         DataType::Int32
         | DataType::Date32
         | DataType::Time32(_)
         | DataType::Interval(IntervalUnit::YearMonth) => {
-            dyn_sort!(i32, values, ord::total_cmp, options)
+            dyn_sort!(i32, values, ord::total_cmp, options, limit)
         }
         DataType::Int64
         | DataType::Date64
         | DataType::Time64(_)
         | DataType::Timestamp(_, None)
-        | DataType::Duration(_) => dyn_sort!(i64, values, ord::total_cmp, options),
-        DataType::UInt8 => dyn_sort!(u8, values, ord::total_cmp, options),
-        DataType::UInt16 => dyn_sort!(u16, values, ord::total_cmp, options),
-        DataType::UInt32 => dyn_sort!(u32, values, ord::total_cmp, options),
-        DataType::UInt64 => dyn_sort!(u64, values, ord::total_cmp, options),
-        DataType::Float32 => dyn_sort!(f32, values, ord::total_cmp_f32, options),
-        DataType::Float64 => dyn_sort!(f64, values, ord::total_cmp_f64, options),
+        | DataType::Duration(_) => dyn_sort!(i64, values, ord::total_cmp, options, limit),
+        DataType::UInt8 => dyn_sort!(u8, values, ord::total_cmp, options, limit),
+        DataType::UInt16 => dyn_sort!(u16, values, ord::total_cmp, options, limit),
+        DataType::UInt32 => dyn_sort!(u32, values, ord::total_cmp, options, limit),
+        DataType::UInt64 => dyn_sort!(u64, values, ord::total_cmp, options, limit),
+        DataType::Float32 => dyn_sort!(f32, values, ord::total_cmp_f32, options, limit),
+        DataType::Float64 => dyn_sort!(f64, values, ord::total_cmp_f64, options, limit),
         DataType::Interval(IntervalUnit::DayTime) => {
-            dyn_sort!(days_ms, values, ord::total_cmp, options)
+            dyn_sort!(days_ms, values, ord::total_cmp, options, limit)
         }
         _ => {
-            let indices = sort_to_indices(values, options)?;
+            let indices = sort_to_indices(values, options, limit)?;
             take::take(values, &indices)
         }
     }
@@ -95,66 +81,78 @@ fn partition_validity(array: &dyn Array) -> (Vec<i32>, Vec<i32>) {
 }
 
 macro_rules! dyn_sort_indices {
-    ($ty:ty, $array:expr, $cmp:expr, $options:expr) => {{
+    ($ty:ty, $array:expr, $cmp:expr, $options:expr, $limit:expr) => {{
         let array = $array
             .as_any()
             .downcast_ref::<PrimitiveArray<$ty>>()
             .unwrap();
-        Ok(primitive::indices_sorted_by::<$ty, _>(
-            &array, $cmp, $options,
+        Ok(primitive::indices_sorted_unstable_by::<$ty, _>(
+            &array, $cmp, $options, $limit,
         ))
     }};
 }
 
-/// Sort elements from `ArrayRef` into an unsigned integer (`UInt32Array`) of indices.
+/// Sort elements from `values` into [`Int32Array`] of indices.
 /// For floating point arrays any NaN values are considered to be greater than any other non-null value
-pub fn sort_to_indices(values: &dyn Array, options: &SortOptions) -> Result<Int32Array> {
+pub fn sort_to_indices(
+    values: &dyn Array,
+    options: &SortOptions,
+    limit: Option<usize>,
+) -> Result<Int32Array> {
     match values.data_type() {
         DataType::Boolean => {
             let (v, n) = partition_validity(values);
-            Ok(sort_boolean(values, v, n, options))
+            Ok(boolean::sort_boolean(
+                values.as_any().downcast_ref().unwrap(),
+                v,
+                n,
+                options,
+                limit,
+            ))
         }
-        DataType::Int8 => dyn_sort_indices!(i8, values, ord::total_cmp, options),
-        DataType::Int16 => dyn_sort_indices!(i16, values, ord::total_cmp, options),
+        DataType::Int8 => dyn_sort_indices!(i8, values, ord::total_cmp, options, limit),
+        DataType::Int16 => dyn_sort_indices!(i16, values, ord::total_cmp, options, limit),
         DataType::Int32
         | DataType::Date32
         | DataType::Time32(_)
         | DataType::Interval(IntervalUnit::YearMonth) => {
-            dyn_sort_indices!(i32, values, ord::total_cmp, options)
+            dyn_sort_indices!(i32, values, ord::total_cmp, options, limit)
         }
         DataType::Int64
         | DataType::Date64
         | DataType::Time64(_)
         | DataType::Timestamp(_, None)
-        | DataType::Duration(_) => dyn_sort_indices!(i64, values, ord::total_cmp, options),
-        DataType::UInt8 => dyn_sort_indices!(u8, values, ord::total_cmp, options),
-        DataType::UInt16 => dyn_sort_indices!(u16, values, ord::total_cmp, options),
-        DataType::UInt32 => dyn_sort_indices!(u32, values, ord::total_cmp, options),
-        DataType::UInt64 => dyn_sort_indices!(u64, values, ord::total_cmp, options),
-        DataType::Float32 => dyn_sort_indices!(f32, values, ord::total_cmp_f32, options),
-        DataType::Float64 => dyn_sort_indices!(f64, values, ord::total_cmp_f64, options),
+        | DataType::Duration(_) => dyn_sort_indices!(i64, values, ord::total_cmp, options, limit),
+        DataType::UInt8 => dyn_sort_indices!(u8, values, ord::total_cmp, options, limit),
+        DataType::UInt16 => dyn_sort_indices!(u16, values, ord::total_cmp, options, limit),
+        DataType::UInt32 => dyn_sort_indices!(u32, values, ord::total_cmp, options, limit),
+        DataType::UInt64 => dyn_sort_indices!(u64, values, ord::total_cmp, options, limit),
+        DataType::Float32 => dyn_sort_indices!(f32, values, ord::total_cmp_f32, options, limit),
+        DataType::Float64 => dyn_sort_indices!(f64, values, ord::total_cmp_f64, options, limit),
         DataType::Interval(IntervalUnit::DayTime) => {
-            dyn_sort_indices!(days_ms, values, ord::total_cmp, options)
+            dyn_sort_indices!(days_ms, values, ord::total_cmp, options, limit)
         }
-        DataType::Utf8 => {
-            let (v, n) = partition_validity(values);
-            Ok(sort_utf8::<i32>(values, v, n, options))
-        }
-        DataType::LargeUtf8 => {
-            let (v, n) = partition_validity(values);
-            Ok(sort_utf8::<i64>(values, v, n, options))
-        }
+        DataType::Utf8 => Ok(utf8::indices_sorted_unstable_by::<i32>(
+            values.as_any().downcast_ref().unwrap(),
+            options,
+            limit,
+        )),
+        DataType::LargeUtf8 => Ok(utf8::indices_sorted_unstable_by::<i64>(
+            values.as_any().downcast_ref().unwrap(),
+            options,
+            limit,
+        )),
         DataType::List(field) => {
             let (v, n) = partition_validity(values);
             match field.data_type() {
-                DataType::Int8 => Ok(sort_list::<i32, i8>(values, v, n, options)),
-                DataType::Int16 => Ok(sort_list::<i32, i16>(values, v, n, options)),
-                DataType::Int32 => Ok(sort_list::<i32, i32>(values, v, n, options)),
-                DataType::Int64 => Ok(sort_list::<i32, i64>(values, v, n, options)),
-                DataType::UInt8 => Ok(sort_list::<i32, u8>(values, v, n, options)),
-                DataType::UInt16 => Ok(sort_list::<i32, u16>(values, v, n, options)),
-                DataType::UInt32 => Ok(sort_list::<i32, u32>(values, v, n, options)),
-                DataType::UInt64 => Ok(sort_list::<i32, u64>(values, v, n, options)),
+                DataType::Int8 => Ok(sort_list::<i32, i8>(values, v, n, options, limit)),
+                DataType::Int16 => Ok(sort_list::<i32, i16>(values, v, n, options, limit)),
+                DataType::Int32 => Ok(sort_list::<i32, i32>(values, v, n, options, limit)),
+                DataType::Int64 => Ok(sort_list::<i32, i64>(values, v, n, options, limit)),
+                DataType::UInt8 => Ok(sort_list::<i32, u8>(values, v, n, options, limit)),
+                DataType::UInt16 => Ok(sort_list::<i32, u16>(values, v, n, options, limit)),
+                DataType::UInt32 => Ok(sort_list::<i32, u32>(values, v, n, options, limit)),
+                DataType::UInt64 => Ok(sort_list::<i32, u64>(values, v, n, options, limit)),
                 t => Err(ArrowError::NotYetImplemented(format!(
                     "Sort not supported for list type {:?}",
                     t
@@ -164,14 +162,14 @@ pub fn sort_to_indices(values: &dyn Array, options: &SortOptions) -> Result<Int3
         DataType::LargeList(field) => {
             let (v, n) = partition_validity(values);
             match field.data_type() {
-                DataType::Int8 => Ok(sort_list::<i64, i8>(values, v, n, options)),
-                DataType::Int16 => Ok(sort_list::<i64, i16>(values, v, n, options)),
-                DataType::Int32 => Ok(sort_list::<i64, i32>(values, v, n, options)),
-                DataType::Int64 => Ok(sort_list::<i64, i64>(values, v, n, options)),
-                DataType::UInt8 => Ok(sort_list::<i64, u8>(values, v, n, options)),
-                DataType::UInt16 => Ok(sort_list::<i64, u16>(values, v, n, options)),
-                DataType::UInt32 => Ok(sort_list::<i64, u32>(values, v, n, options)),
-                DataType::UInt64 => Ok(sort_list::<i64, u64>(values, v, n, options)),
+                DataType::Int8 => Ok(sort_list::<i64, i8>(values, v, n, options, limit)),
+                DataType::Int16 => Ok(sort_list::<i64, i16>(values, v, n, options, limit)),
+                DataType::Int32 => Ok(sort_list::<i64, i32>(values, v, n, options, limit)),
+                DataType::Int64 => Ok(sort_list::<i64, i64>(values, v, n, options, limit)),
+                DataType::UInt8 => Ok(sort_list::<i64, u8>(values, v, n, options, limit)),
+                DataType::UInt16 => Ok(sort_list::<i64, u16>(values, v, n, options, limit)),
+                DataType::UInt32 => Ok(sort_list::<i64, u32>(values, v, n, options, limit)),
+                DataType::UInt64 => Ok(sort_list::<i64, u64>(values, v, n, options, limit)),
                 t => Err(ArrowError::NotYetImplemented(format!(
                     "Sort not supported for list type {:?}",
                     t
@@ -181,39 +179,84 @@ pub fn sort_to_indices(values: &dyn Array, options: &SortOptions) -> Result<Int3
         DataType::FixedSizeList(field, _) => {
             let (v, n) = partition_validity(values);
             match field.data_type() {
-                DataType::Int8 => Ok(sort_list::<i32, i8>(values, v, n, options)),
-                DataType::Int16 => Ok(sort_list::<i32, i16>(values, v, n, options)),
-                DataType::Int32 => Ok(sort_list::<i32, i32>(values, v, n, options)),
-                DataType::Int64 => Ok(sort_list::<i32, i64>(values, v, n, options)),
-                DataType::UInt8 => Ok(sort_list::<i32, u8>(values, v, n, options)),
-                DataType::UInt16 => Ok(sort_list::<i32, u16>(values, v, n, options)),
-                DataType::UInt32 => Ok(sort_list::<i32, u32>(values, v, n, options)),
-                DataType::UInt64 => Ok(sort_list::<i32, u64>(values, v, n, options)),
+                DataType::Int8 => Ok(sort_list::<i32, i8>(values, v, n, options, limit)),
+                DataType::Int16 => Ok(sort_list::<i32, i16>(values, v, n, options, limit)),
+                DataType::Int32 => Ok(sort_list::<i32, i32>(values, v, n, options, limit)),
+                DataType::Int64 => Ok(sort_list::<i32, i64>(values, v, n, options, limit)),
+                DataType::UInt8 => Ok(sort_list::<i32, u8>(values, v, n, options, limit)),
+                DataType::UInt16 => Ok(sort_list::<i32, u16>(values, v, n, options, limit)),
+                DataType::UInt32 => Ok(sort_list::<i32, u32>(values, v, n, options, limit)),
+                DataType::UInt64 => Ok(sort_list::<i32, u64>(values, v, n, options, limit)),
                 t => Err(ArrowError::NotYetImplemented(format!(
                     "Sort not supported for list type {:?}",
                     t
                 ))),
             }
         }
-        DataType::Dictionary(key_type, value_type) if *value_type.as_ref() == DataType::Utf8 => {
-            let (v, n) = partition_validity(values);
-            match key_type.as_ref() {
-                DataType::Int8 => Ok(sort_string_dictionary::<i8>(values, v, n, options)),
-                DataType::Int16 => Ok(sort_string_dictionary::<i16>(values, v, n, options)),
-                DataType::Int32 => Ok(sort_string_dictionary::<i32>(values, v, n, options)),
-                DataType::Int64 => Ok(sort_string_dictionary::<i64>(values, v, n, options)),
-                DataType::UInt8 => Ok(sort_string_dictionary::<u8>(values, v, n, options)),
-                DataType::UInt16 => Ok(sort_string_dictionary::<u16>(values, v, n, options)),
-                DataType::UInt32 => Ok(sort_string_dictionary::<u32>(values, v, n, options)),
-                DataType::UInt64 => Ok(sort_string_dictionary::<u64>(values, v, n, options)),
-                t => Err(ArrowError::NotYetImplemented(format!(
-                    "Sort not supported for dictionary key type {:?}",
-                    t
-                ))),
-            }
-        }
+        DataType::Dictionary(key_type, value_type) => match value_type.as_ref() {
+            DataType::Utf8 => sort_dict::<i32>(values, key_type.as_ref(), options, limit),
+            DataType::LargeUtf8 => sort_dict::<i64>(values, key_type.as_ref(), options, limit),
+            t => Err(ArrowError::NotYetImplemented(format!(
+                "Sort not supported for dictionary type with keys {:?}",
+                t
+            ))),
+        },
         t => Err(ArrowError::NotYetImplemented(format!(
             "Sort not supported for data type {:?}",
+            t
+        ))),
+    }
+}
+
+fn sort_dict<O: Offset>(
+    values: &dyn Array,
+    key_type: &DataType,
+    options: &SortOptions,
+    limit: Option<usize>,
+) -> Result<Int32Array> {
+    match key_type {
+        DataType::Int8 => Ok(utf8::indices_sorted_unstable_by_dictionary::<i8, O>(
+            values.as_any().downcast_ref().unwrap(),
+            options,
+            limit,
+        )),
+        DataType::Int16 => Ok(utf8::indices_sorted_unstable_by_dictionary::<i16, O>(
+            values.as_any().downcast_ref().unwrap(),
+            options,
+            limit,
+        )),
+        DataType::Int32 => Ok(utf8::indices_sorted_unstable_by_dictionary::<i32, O>(
+            values.as_any().downcast_ref().unwrap(),
+            options,
+            limit,
+        )),
+        DataType::Int64 => Ok(utf8::indices_sorted_unstable_by_dictionary::<i64, O>(
+            values.as_any().downcast_ref().unwrap(),
+            options,
+            limit,
+        )),
+        DataType::UInt8 => Ok(utf8::indices_sorted_unstable_by_dictionary::<u8, O>(
+            values.as_any().downcast_ref().unwrap(),
+            options,
+            limit,
+        )),
+        DataType::UInt16 => Ok(utf8::indices_sorted_unstable_by_dictionary::<u16, O>(
+            values.as_any().downcast_ref().unwrap(),
+            options,
+            limit,
+        )),
+        DataType::UInt32 => Ok(utf8::indices_sorted_unstable_by_dictionary::<u32, O>(
+            values.as_any().downcast_ref().unwrap(),
+            options,
+            limit,
+        )),
+        DataType::UInt64 => Ok(utf8::indices_sorted_unstable_by_dictionary::<u64, O>(
+            values.as_any().downcast_ref().unwrap(),
+            options,
+            limit,
+        )),
+        t => Err(ArrowError::NotYetImplemented(format!(
+            "Sort not supported for dictionary key type {:?}",
             t
         ))),
     }
@@ -303,138 +346,12 @@ impl Default for SortOptions {
     }
 }
 
-/// Sort primitive values
-fn sort_boolean(
-    values: &dyn Array,
-    value_indices: Vec<i32>,
-    null_indices: Vec<i32>,
-    options: &SortOptions,
-) -> Int32Array {
-    let values = values
-        .as_any()
-        .downcast_ref::<BooleanArray>()
-        .expect("Unable to downcast to boolean array");
-    let descending = options.descending;
-
-    // create tuples that are used for sorting
-    let mut valids = value_indices
-        .into_iter()
-        .map(|index| (index, values.value(index as usize)))
-        .collect::<Vec<(i32, bool)>>();
-
-    let mut nulls = null_indices;
-
-    if !descending {
-        valids.sort_by(|a, b| a.1.cmp(&b.1));
-    } else {
-        valids.sort_by(|a, b| a.1.cmp(&b.1).reverse());
-        // reverse to keep a stable ordering
-        nulls.reverse();
-    }
-
-    let mut values = MutableBuffer::<i32>::with_capacity(values.len());
-
-    if options.nulls_first {
-        values.extend_from_slice(nulls.as_slice());
-        valids.iter().for_each(|x| values.push(x.0));
-    } else {
-        // nulls last
-        valids.iter().for_each(|x| values.push(x.0));
-        values.extend_from_slice(nulls.as_slice());
-    }
-
-    Int32Array::from_data(DataType::Int32, values.into(), None)
-}
-
-/// Sort strings
-fn sort_utf8<O: Offset>(
-    values: &dyn Array,
-    value_indices: Vec<i32>,
-    null_indices: Vec<i32>,
-    options: &SortOptions,
-) -> Int32Array {
-    let values = values.as_any().downcast_ref::<Utf8Array<O>>().unwrap();
-
-    sort_string_helper(
-        values,
-        value_indices,
-        null_indices,
-        options,
-        |array, idx| array.value(idx as usize),
-    )
-}
-
-/// Sort dictionary encoded strings
-fn sort_string_dictionary<T: DictionaryKey>(
-    values: &dyn Array,
-    value_indices: Vec<i32>,
-    null_indices: Vec<i32>,
-    options: &SortOptions,
-) -> Int32Array {
-    let values: &DictionaryArray<T> = values
-        .as_any()
-        .downcast_ref::<DictionaryArray<T>>()
-        .unwrap();
-
-    let keys = values.keys();
-
-    let dict = values.values();
-    let dict = dict.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
-
-    sort_string_helper(
-        keys,
-        value_indices,
-        null_indices,
-        options,
-        |array: &PrimitiveArray<T>, idx| -> &str {
-            let key: T = array.value(idx as usize);
-            dict.value(key.to_usize().unwrap())
-        },
-    )
-}
-
-/// shared implementation between dictionary encoded and plain string arrays
-#[inline]
-fn sort_string_helper<'a, A: Array, F>(
-    values: &'a A,
-    value_indices: Vec<i32>,
-    null_indices: Vec<i32>,
-    options: &SortOptions,
-    value_fn: F,
-) -> Int32Array
-where
-    F: Fn(&'a A, i32) -> &str,
-{
-    let mut valids = value_indices
-        .into_iter()
-        .map(|index| (index, value_fn(values, index)))
-        .collect::<Vec<(i32, &str)>>();
-    let mut nulls = null_indices;
-    if !options.descending {
-        valids.sort_by_key(|a| a.1);
-    } else {
-        valids.sort_by_key(|a| Reverse(a.1));
-        nulls.reverse();
-    }
-
-    let valids = valids.iter().map(|tuple| tuple.0);
-
-    let values = if options.nulls_first {
-        let values = nulls.into_iter().chain(valids);
-        Buffer::<i32>::from_trusted_len_iter(values)
-    } else {
-        let values = valids.chain(nulls.into_iter());
-        Buffer::<i32>::from_trusted_len_iter(values)
-    };
-
-    PrimitiveArray::<i32>::from_data(DataType::Int32, values, None)
-}
-
 fn sort_list<O, T>(
     values: &dyn Array,
     value_indices: Vec<i32>,
     null_indices: Vec<i32>,
     options: &SortOptions,
+    limit: Option<usize>,
 ) -> Int32Array
 where
     O: Offset,
@@ -469,17 +386,19 @@ where
 
     let values = valids.iter().map(|tuple| tuple.0);
 
-    let values = if options.nulls_first {
+    let mut values = if options.nulls_first {
         let mut buffer = MutableBuffer::<i32>::from_trusted_len_iter(null_indices.into_iter());
-        values.for_each(|x| buffer.push(x));
-        buffer.into()
+        buffer.extend(values);
+        buffer
     } else {
         let mut buffer = MutableBuffer::<i32>::from_trusted_len_iter(values);
-        null_indices.iter().for_each(|x| buffer.push(*x));
-        buffer.into()
+        buffer.extend(null_indices);
+        buffer
     };
 
-    PrimitiveArray::<i32>::from_data(DataType::Int32, values, None)
+    values.truncate(limit.unwrap_or_else(|| values.len()));
+
+    PrimitiveArray::<i32>::from_data(DataType::Int32, values.into(), None)
 }
 
 /// Compare two `Array`s based on the ordering defined in [ord](crate::array::ord).
@@ -507,7 +426,7 @@ mod tests {
     ) {
         let output = BooleanArray::from(data);
         let expected = Int32Array::from_slice(expected_data);
-        let output = sort_to_indices(&output, &options).unwrap();
+        let output = sort_to_indices(&output, &options, None).unwrap();
         assert_eq!(output, expected)
     }
 
@@ -521,7 +440,7 @@ mod tests {
     {
         let input = PrimitiveArray::<T>::from(data).to(data_type.clone());
         let expected = PrimitiveArray::<T>::from(expected_data).to(data_type);
-        let output = sort(&input, &options).unwrap();
+        let output = sort(&input, &options, None).unwrap();
         assert_eq!(expected, output.as_ref())
     }
 
@@ -532,7 +451,7 @@ mod tests {
     ) {
         let input = Utf8Array::<i32>::from(&data.to_vec());
         let expected = Int32Array::from_slice(expected_data);
-        let output = sort_to_indices(&input, &options).unwrap();
+        let output = sort_to_indices(&input, &options, None).unwrap();
         assert_eq!(output, expected)
     }
 
@@ -543,7 +462,7 @@ mod tests {
     ) {
         let input = Utf8Array::<i32>::from(&data.to_vec());
         let expected = Utf8Array::<i32>::from(&expected_data.to_vec());
-        let output = sort(&input, &options).unwrap();
+        let output = sort(&input, &options, None).unwrap();
         assert_eq!(expected, output.as_ref())
     }
 
@@ -560,7 +479,7 @@ mod tests {
         expected.try_extend(expected_data.iter().copied()).unwrap();
         let expected = expected.into_arc();
 
-        let output = sort(input.as_ref(), &options).unwrap();
+        let output = sort(input.as_ref(), &options, None).unwrap();
         assert_eq!(expected.as_ref(), output.as_ref())
     }
 
@@ -704,6 +623,7 @@ mod tests {
                 descending: false,
                 nulls_first: true,
             },
+            // &[3, 0, 5, 1, 4, 2] is also valid
             &[0, 3, 5, 1, 4, 2],
         );
 
@@ -720,7 +640,8 @@ mod tests {
                 descending: true,
                 nulls_first: false,
             },
-            &[2, 4, 1, 5, 3, 0],
+            // &[2, 4, 1, 5, 3, 0] is also valid
+            &[2, 4, 1, 5, 0, 3],
         );
 
         test_sort_to_indices_string_arrays(
@@ -736,6 +657,7 @@ mod tests {
                 descending: false,
                 nulls_first: true,
             },
+            // &[3, 0, 5, 1, 4, 2] is also valid
             &[0, 3, 5, 1, 4, 2],
         );
 
@@ -752,7 +674,8 @@ mod tests {
                 descending: true,
                 nulls_first: true,
             },
-            &[3, 0, 2, 4, 1, 5],
+            // &[3, 0, 2, 4, 1, 5] is also valid
+            &[0, 3, 2, 4, 1, 5],
         );
     }
 
@@ -1100,9 +1023,9 @@ mod tests {
                 nulls_first: true,
             };
             if can_sort(&d1) {
-                assert!(sort(array.as_ref(), &options).is_ok());
+                assert!(sort(array.as_ref(), &options, None).is_ok());
             } else {
-                assert!(sort(array.as_ref(), &options).is_err());
+                assert!(sort(array.as_ref(), &options, None).is_err());
             }
         });
     }
