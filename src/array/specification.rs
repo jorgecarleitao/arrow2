@@ -8,8 +8,9 @@ use crate::{
 };
 
 /// Trait describing any type that can be used to index a slot of an array.
-pub trait Index: NativeType {
+pub trait Index: NativeType + NaturalDataType {
     fn to_usize(&self) -> usize;
+    fn from_usize(index: usize) -> Option<Self>;
 }
 
 /// Trait describing types that can be used as offsets as per Arrow specification.
@@ -17,13 +18,11 @@ pub trait Index: NativeType {
 /// # Safety
 /// Do not implement.
 pub unsafe trait Offset:
-    Index + NaturalDataType + Num + Ord + std::ops::AddAssign + std::ops::Sub + num::CheckedAdd
+    Index + Num + Ord + std::ops::AddAssign + std::ops::Sub + num::CheckedAdd
 {
     fn is_large() -> bool;
 
     fn to_isize(&self) -> isize;
-
-    fn from_usize(value: usize) -> Option<Self>;
 
     fn from_isize(value: isize) -> Option<Self>;
 }
@@ -32,11 +31,6 @@ unsafe impl Offset for i32 {
     #[inline]
     fn is_large() -> bool {
         false
-    }
-
-    #[inline]
-    fn from_usize(value: usize) -> Option<Self> {
-        Self::try_from(value).ok()
     }
 
     #[inline]
@@ -57,11 +51,6 @@ unsafe impl Offset for i64 {
     }
 
     #[inline]
-    fn from_usize(value: usize) -> Option<Self> {
-        Some(value as i64)
-    }
-
-    #[inline]
     fn from_isize(value: isize) -> Option<Self> {
         Self::try_from(value).ok()
     }
@@ -77,12 +66,22 @@ impl Index for i32 {
     fn to_usize(&self) -> usize {
         *self as usize
     }
+
+    #[inline]
+    fn from_usize(value: usize) -> Option<Self> {
+        Self::try_from(value).ok()
+    }
 }
 
 impl Index for i64 {
     #[inline]
     fn to_usize(&self) -> usize {
         *self as usize
+    }
+
+    #[inline]
+    fn from_usize(value: usize) -> Option<Self> {
+        Self::try_from(value).ok()
     }
 }
 
@@ -91,12 +90,22 @@ impl Index for u32 {
     fn to_usize(&self) -> usize {
         *self as usize
     }
+
+    #[inline]
+    fn from_usize(value: usize) -> Option<Self> {
+        Self::try_from(value).ok()
+    }
 }
 
 impl Index for u64 {
     #[inline]
     fn to_usize(&self) -> usize {
         *self as usize
+    }
+
+    #[inline]
+    fn from_usize(value: usize) -> Option<Self> {
+        Self::try_from(value).ok()
     }
 }
 

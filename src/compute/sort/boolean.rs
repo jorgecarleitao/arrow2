@@ -1,26 +1,25 @@
 use crate::{
-    array::{Array, BooleanArray, Int32Array},
+    array::{Array, BooleanArray, Index, PrimitiveArray},
     buffer::MutableBuffer,
-    datatypes::DataType,
 };
 
 use super::SortOptions;
 
 /// Returns the indices that would sort a [`BooleanArray`].
-pub fn sort_boolean(
+pub fn sort_boolean<I: Index>(
     values: &BooleanArray,
-    value_indices: Vec<i32>,
-    null_indices: Vec<i32>,
+    value_indices: Vec<I>,
+    null_indices: Vec<I>,
     options: &SortOptions,
     limit: Option<usize>,
-) -> Int32Array {
+) -> PrimitiveArray<I> {
     let descending = options.descending;
 
     // create tuples that are used for sorting
     let mut valids = value_indices
         .into_iter()
-        .map(|index| (index, values.value(index as usize)))
-        .collect::<Vec<(i32, bool)>>();
+        .map(|index| (index, values.value(index.to_usize())))
+        .collect::<Vec<(I, bool)>>();
 
     let mut nulls = null_indices;
 
@@ -32,7 +31,7 @@ pub fn sort_boolean(
         nulls.reverse();
     }
 
-    let mut values = MutableBuffer::<i32>::with_capacity(values.len());
+    let mut values = MutableBuffer::<I>::with_capacity(values.len());
 
     if options.nulls_first {
         values.extend_from_slice(nulls.as_slice());
@@ -48,5 +47,5 @@ pub fn sort_boolean(
         values.truncate(limit);
     }
 
-    Int32Array::from_data(DataType::Int32, values.into(), None)
+    PrimitiveArray::<I>::from_data(I::DATA_TYPE, values.into(), None)
 }
