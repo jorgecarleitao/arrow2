@@ -10,17 +10,11 @@ use super::BinaryArray;
 
 unsafe impl<O: Offset> ToFfi for BinaryArray<O> {
     fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>> {
-        unsafe {
-            vec![
-                self.validity.as_ref().map(|x| x.as_ptr()),
-                Some(std::ptr::NonNull::new_unchecked(
-                    self.offsets.as_ptr() as *mut u8
-                )),
-                Some(std::ptr::NonNull::new_unchecked(
-                    self.values.as_ptr() as *mut u8
-                )),
-            ]
-        }
+        vec![
+            self.validity.as_ref().map(|x| x.as_ptr()),
+            std::ptr::NonNull::new(self.offsets.as_ptr() as *mut u8),
+            std::ptr::NonNull::new(self.values.as_ptr() as *mut u8),
+        ]
     }
 
     #[inline]
