@@ -38,6 +38,7 @@ To not run them, pass `ARROW2_IGNORE_PARQUET` to the tests (the tests will be ma
 ```bash
 git clone git@github.com:jorgecarleitao/arrow2.git
 cd arrow2
+git submodule update --init
 ARROW2_IGNORE_PARQUET= cargo test
 ```
 
