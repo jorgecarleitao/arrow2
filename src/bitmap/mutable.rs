@@ -374,7 +374,6 @@ impl MutableBitmap {
     /// Creates a new [`MutableBitmap`] from an falible iterator of booleans.
     /// # Safety
     /// The caller must guarantee that the iterator is `TrustedLen`.
-    #[inline]
     pub unsafe fn try_from_trusted_len_iter_unchecked<E, I>(
         mut iterator: I,
     ) -> std::result::Result<Self, E>
