@@ -35,11 +35,11 @@ fn bench_lexsort(arr_a: &dyn Array, array_b: &dyn Array) {
         },
     ];
 
-    criterion::black_box(lexsort(&columns).unwrap());
+    criterion::black_box(lexsort(&columns, None).unwrap());
 }
 
 fn bench_sort(arr_a: &dyn Array) {
-    sort(criterion::black_box(arr_a), &SortOptions::default()).unwrap();
+    sort(criterion::black_box(arr_a), &SortOptions::default(), None).unwrap();
 }
 
 fn add_benchmark(c: &mut Criterion) {
@@ -65,6 +65,11 @@ fn add_benchmark(c: &mut Criterion) {
         let arr_b = create_primitive_array_with_seed::<f32>(size, DataType::Float32, 0.5, 43);
         c.bench_function(&format!("lexsort null 2^{} f32", log2_size), |b| {
             b.iter(|| bench_lexsort(&arr_a, &arr_b))
+        });
+
+        let arr_a = create_string_array::<i32>(size, 0.1);
+        c.bench_function(&format!("sort utf8 null 2^{}", log2_size), |b| {
+            b.iter(|| bench_sort(&arr_a))
         });
     });
 }
