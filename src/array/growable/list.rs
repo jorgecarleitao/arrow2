@@ -67,6 +67,57 @@ pub struct GrowableList<'a, O: Offset> {
 }
 
 impl<'a, O: Offset> GrowableList<'a, O> {
+    fn finish_new(
+        arrays: Vec<&'a ListArray<O>>,
+        inner: Vec<&'a dyn Array>,
+        extend_null_bits: Vec<ExtendNullBits<'a>>,
+        capacity: usize,
+        use_validity: bool,
+    ) -> Self {
+        let values = make_growable(&inner, use_validity, 0);
+
+        let mut offsets = MutableBuffer::with_capacity(capacity + 1);
+        let length = O::default();
+        unsafe { offsets.push_unchecked(length) };
+
+        Self {
+            arrays,
+            offsets,
+            values,
+            validity: MutableBitmap::with_capacity(capacity),
+            last_offset: O::default(),
+            extend_null_bits,
+        }
+    }
+
+    pub fn new_from_lists<Arr: AsRef<ListArray<O>>>(
+        arrays: &'a [Arr],
+        mut use_validity: bool,
+        capacity: usize,
+    ) -> Self {
+        // if any of the arrays has nulls, insertions from any array requires setting bits
+        // as there is at least one array with nulls.
+        if use_validity || arrays.iter().any(|array| array.as_ref().null_count() > 0) {
+            use_validity = true;
+        };
+
+        let extend_null_bits = arrays
+            .iter()
+            .map(|array| build_extend_null_bits(array.as_ref(), use_validity))
+            .collect();
+
+        let arrays = arrays
+            .iter()
+            .map(|array| array.as_ref())
+            .collect::<Vec<_>>();
+
+        let inner = arrays
+            .iter()
+            .map(|array| array.values().as_ref())
+            .collect::<Vec<_>>();
+        Self::finish_new(arrays, inner, extend_null_bits, capacity, use_validity)
+    }
+
     /// # Panics
     /// This function panics if any of the `arrays` is not downcastable to `PrimitiveArray<T>`.
     pub fn new(arrays: &[&'a dyn Array], mut use_validity: bool, capacity: usize) -> Self {
@@ -90,20 +141,7 @@ impl<'a, O: Offset> GrowableList<'a, O> {
             .iter()
             .map(|array| array.values().as_ref())
             .collect::<Vec<_>>();
-        let values = make_growable(&inner, use_validity, 0);
-
-        let mut offsets = MutableBuffer::with_capacity(capacity + 1);
-        let length = O::default();
-        unsafe { offsets.push_unchecked(length) };
-
-        Self {
-            arrays,
-            offsets,
-            values,
-            validity: MutableBitmap::with_capacity(capacity),
-            last_offset: O::default(),
-            extend_null_bits,
-        }
+        Self::finish_new(arrays, inner, extend_null_bits, capacity, use_validity)
     }
 
     fn to(&mut self) -> ListArray<O> {

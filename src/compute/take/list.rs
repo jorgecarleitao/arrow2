@@ -22,6 +22,12 @@ use crate::array::{
 
 use super::Index;
 
+impl<O: Offset> AsRef<ListArray<O>> for ListArray<O> {
+    fn as_ref(&self) -> &ListArray<O> {
+        self
+    }
+}
+
 /// `take` implementation for ListArrays
 pub fn take<I: Offset, O: Index>(
     values: &ListArray<I>,
@@ -39,10 +45,8 @@ pub fn take<I: Offset, O: Index>(
         })
         .collect::<Vec<ListArray<I>>>();
 
-    let array_ref: Vec<&dyn Array> = arrays.iter().map(|v| v as &dyn Array).collect();
-
     if let Some(validity) = indices.validity() {
-        let mut growable: GrowableList<I> = GrowableList::new(&array_ref, true, capacity);
+        let mut growable: GrowableList<I> = GrowableList::new_from_lists(&arrays, true, capacity);
 
         for index in 0..indices.len() {
             if validity.get_bit(index) {
@@ -54,7 +58,7 @@ pub fn take<I: Offset, O: Index>(
 
         growable.into()
     } else {
-        let mut growable: GrowableList<I> = GrowableList::new(&array_ref, false, capacity);
+        let mut growable: GrowableList<I> = GrowableList::new_from_lists(&arrays, false, capacity);
         for index in 0..indices.len() {
             growable.extend(index, 0, 1);
         }
