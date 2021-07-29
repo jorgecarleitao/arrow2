@@ -124,6 +124,8 @@ fn add_benchmark(c: &mut Criterion) {
         b.iter(|| bench_built_filter(&sparse_filter, &data_array))
     });
 
+    let data_array = create_primitive_array::<f32>(size, DataType::Float32, 0.0);
+
     let field = Field::new("c1", data_array.data_type().clone(), true);
     let schema = Schema::new(vec![field]);
 
