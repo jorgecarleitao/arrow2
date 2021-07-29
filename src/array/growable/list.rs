@@ -72,7 +72,7 @@ impl<'a, O: Offset> GrowableList<'a, O> {
     pub fn new(arrays: &[&'a dyn Array], mut use_validity: bool, capacity: usize) -> Self {
         // if any of the arrays has nulls, insertions from any array requires setting bits
         // as there is at least one array with nulls.
-        if arrays.iter().any(|array| array.null_count() > 0) {
+        if use_validity || arrays.iter().any(|array| array.null_count() > 0) {
             use_validity = true;
         };
 

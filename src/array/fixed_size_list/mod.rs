@@ -133,4 +133,8 @@ unsafe impl ToFfi for FixedSizeListArray {
     fn offset(&self) -> usize {
         self.offset
     }
+
+    fn children(&self) -> Vec<Arc<dyn Array>> {
+        vec![self.values().clone()]
+    }
 }

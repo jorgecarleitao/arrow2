@@ -17,6 +17,7 @@
 # under the License.
 
 import unittest
+import decimal
 
 import pyarrow
 import arrow_pyarrow_integration_testing
@@ -95,6 +96,19 @@ class TestCase(unittest.TestCase):
         b = arrow_pyarrow_integration_testing.round_trip(a)
         c = pyarrow.array(["a", None, "ccc"])
         self.assertEqual(b, c)
+
+    def test_decimal_roundtrip(self):
+        """
+        Python -> Rust -> Python
+        """
+        data = [
+            round(decimal.Decimal(722.82), 2),
+            round(decimal.Decimal(-934.11), 2),
+            None
+        ]
+        a = pyarrow.array(data, pyarrow.decimal128(5, 2))
+        b = arrow_pyarrow_integration_testing.round_trip(a)
+        self.assertEqual(a, b)
 
     def test_string_python(self):
         """

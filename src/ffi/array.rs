@@ -81,6 +81,7 @@ pub fn try_from<A: ArrowArrayRef>(array: A) -> Result<Box<dyn Array>> {
 mod tests {
     use super::*;
     use crate::array::*;
+    use crate::datatypes::TimeUnit;
     use crate::{error::Result, ffi};
     use std::sync::Arc;
 
@@ -143,6 +144,15 @@ mod tests {
     fn test_binary() -> Result<()> {
         let data =
             BinaryArray::<i32>::from(&vec![Some(b"a".as_ref()), None, Some(b"bb".as_ref()), None]);
+        test_round_trip(data)
+    }
+
+    #[test]
+    fn test_timestamp_tz() -> Result<()> {
+        let data = Int64Array::from(&vec![Some(2), None, None]).to(DataType::Timestamp(
+            TimeUnit::Second,
+            Some("UTC".to_string()),
+        ));
         test_round_trip(data)
     }
 
