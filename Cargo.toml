@@ -15,7 +15,7 @@ name = "arrow2"
 bench = false
 
 [dependencies]
-num = "^0.3"
+num = "^0.4"
 chrono = "^0.4"
 # To efficiently cast numbers to strings
 lexical-core = "^0.7"
@@ -42,7 +42,7 @@ hex = { version = "^0.4", optional = true }
 lz4 = { version = "1.23.1", optional = true }
 zstd = { version = "^0.6", optional = true }
 
-rand = { version = "0.7", optional = true }
+rand = { version = "0.8", optional = true }
 
 itertools = { version = "^0.10", optional = true }
 
@@ -61,7 +61,7 @@ ahash = { version = "0.7", optional = true }
 parquet2 = { version = "0.1", optional = true }
 
 [dev-dependencies]
-rand = "0.7"
+rand = "0.8"
 criterion = "0.3"
 flate2 = "1"
 doc-comment = "0.3"
