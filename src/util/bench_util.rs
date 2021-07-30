@@ -103,7 +103,11 @@ pub fn create_string_array<O: Offset>(size: usize, null_density: f32) -> Utf8Arr
             if rng.gen::<f32>() < null_density {
                 None
             } else {
-                let value = rng.sample_iter(&Alphanumeric).take(4).collect::<String>();
+                let value = rng
+                    .sample_iter(&Alphanumeric)
+                    .take(4)
+                    .map(char::from)
+                    .collect::<String>();
                 Some(value)
             }
         })
