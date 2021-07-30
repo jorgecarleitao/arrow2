@@ -21,10 +21,14 @@ pub struct GrowablePrimitive<'a, T: NativeType> {
 }
 
 impl<'a, T: NativeType> GrowablePrimitive<'a, T> {
-    pub fn new(arrays: &[&'a PrimitiveArray<T>], mut use_validity: bool, capacity: usize) -> Self {
+    pub fn new(
+        arrays: Vec<&'a PrimitiveArray<T>>,
+        mut use_validity: bool,
+        capacity: usize,
+    ) -> Self {
         // if any of the arrays has nulls, insertions from any array requires setting bits
         // as there is at least one array with nulls.
-        if arrays.iter().any(|array| array.null_count() > 0) {
+        if !use_validity & arrays.iter().any(|array| array.null_count() > 0) {
             use_validity = true;
         };
 
@@ -103,7 +107,7 @@ mod tests {
     #[test]
     fn test_primitive() {
         let b = PrimitiveArray::<u8>::from(vec![Some(1), Some(2), Some(3)]).to(DataType::UInt8);
-        let mut a = GrowablePrimitive::new(&[&b], false, 3);
+        let mut a = GrowablePrimitive::new(vec![&b], false, 3);
         a.extend(0, 0, 2);
         let result: PrimitiveArray<u8> = a.into();
         let expected = PrimitiveArray::<u8>::from(vec![Some(1), Some(2)]).to(DataType::UInt8);
@@ -115,7 +119,7 @@ mod tests {
     fn test_primitive_offset() {
         let b = PrimitiveArray::<u8>::from(vec![Some(1), Some(2), Some(3)]).to(DataType::UInt8);
         let b = b.slice(1, 2);
-        let mut a = GrowablePrimitive::new(&[&b], false, 2);
+        let mut a = GrowablePrimitive::new(vec![&b], false, 2);
         a.extend(0, 0, 2);
         let result: PrimitiveArray<u8> = a.into();
         let expected = PrimitiveArray::<u8>::from(vec![Some(2), Some(3)]).to(DataType::UInt8);
@@ -127,7 +131,7 @@ mod tests {
     fn test_primitive_null_offset() {
         let b = PrimitiveArray::<u8>::from(vec![Some(1), None, Some(3)]).to(DataType::UInt8);
         let b = b.slice(1, 2);
-        let mut a = GrowablePrimitive::new(&[&b], false, 2);
+        let mut a = GrowablePrimitive::new(vec![&b], false, 2);
         a.extend(0, 0, 2);
         let result: PrimitiveArray<u8> = a.into();
         let expected = PrimitiveArray::<u8>::from(vec![None, Some(3)]).to(DataType::UInt8);
@@ -138,7 +142,7 @@ mod tests {
     fn test_primitive_null_offset_validity() {
         let b = PrimitiveArray::<u8>::from(vec![Some(1), Some(2), Some(3)]).to(DataType::UInt8);
         let b = b.slice(1, 2);
-        let mut a = GrowablePrimitive::new(&[&b], true, 2);
+        let mut a = GrowablePrimitive::new(vec![&b], true, 2);
         a.extend(0, 0, 2);
         a.extend_validity(3);
         a.extend(0, 1, 1);
@@ -153,7 +157,7 @@ mod tests {
     fn test_primitive_joining_arrays() {
         let b = PrimitiveArray::<u8>::from(vec![Some(1), Some(2), Some(3)]).to(DataType::UInt8);
         let c = PrimitiveArray::<u8>::from(vec![Some(4), Some(5), Some(6)]).to(DataType::UInt8);
-        let mut a = GrowablePrimitive::new(&[&b, &c], false, 4);
+        let mut a = GrowablePrimitive::new(vec![&b, &c], false, 4);
         a.extend(0, 0, 2);
         a.extend(1, 1, 2);
         let result: PrimitiveArray<u8> = a.into();

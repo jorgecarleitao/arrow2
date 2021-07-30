@@ -39,10 +39,10 @@ pub fn take<I: Offset, O: Index>(
         })
         .collect::<Vec<ListArray<I>>>();
 
-    let array_ref: Vec<&dyn Array> = arrays.iter().map(|v| v as &dyn Array).collect();
+    let arrays = arrays.iter().collect();
 
     if let Some(validity) = indices.validity() {
-        let mut growable: GrowableList<I> = GrowableList::new(&array_ref, true, capacity);
+        let mut growable: GrowableList<I> = GrowableList::new(arrays, true, capacity);
 
         for index in 0..indices.len() {
             if validity.get_bit(index) {
@@ -54,7 +54,7 @@ pub fn take<I: Offset, O: Index>(
 
         growable.into()
     } else {
-        let mut growable: GrowableList<I> = GrowableList::new(&array_ref, false, capacity);
+        let mut growable: GrowableList<I> = GrowableList::new(arrays, false, capacity);
         for index in 0..indices.len() {
             growable.extend(index, 0, 1);
         }

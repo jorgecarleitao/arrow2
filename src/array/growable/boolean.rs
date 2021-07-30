@@ -21,12 +21,10 @@ pub struct GrowableBoolean<'a> {
 }
 
 impl<'a> GrowableBoolean<'a> {
-    /// # Panics
-    /// This function panics if any of the `arrays` is not downcastable to `PrimitiveArray<T>`.
-    pub fn new(arrays: &[&'a dyn Array], mut use_validity: bool, capacity: usize) -> Self {
+    pub fn new(arrays: Vec<&'a BooleanArray>, mut use_validity: bool, capacity: usize) -> Self {
         // if any of the arrays has nulls, insertions from any array requires setting bits
         // as there is at least one array with nulls.
-        if arrays.iter().any(|array| array.null_count() > 0) {
+        if !use_validity & arrays.iter().any(|array| array.null_count() > 0) {
             use_validity = true;
         };
 
@@ -34,11 +32,6 @@ impl<'a> GrowableBoolean<'a> {
             .iter()
             .map(|array| build_extend_null_bits(*array, use_validity))
             .collect();
-
-        let arrays = arrays
-            .iter()
-            .map(|array| array.as_any().downcast_ref::<BooleanArray>().unwrap())
-            .collect::<Vec<_>>();
 
         Self {
             arrays,
@@ -94,7 +87,7 @@ mod tests {
     fn test_bool() {
         let array = BooleanArray::from(vec![Some(false), Some(true), None, Some(false)]);
 
-        let mut a = GrowableBoolean::new(&[&array], false, 0);
+        let mut a = GrowableBoolean::new(vec![&array], false, 0);
 
         a.extend(0, 1, 2);
 
