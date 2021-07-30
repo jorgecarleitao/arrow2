@@ -204,3 +204,11 @@ at your option.
 ### Contribution
 
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
+
+## How to generate the changelog
+
+Run
+
+```bash
+docker run -it --rm -v "$(pwd)":/usr/local/src/your-app githubchangeloggenerator/github-changelog-generator --user jorgecarleitao --project arrow2 --token TOKEN --future-release v0.2.0
+```
