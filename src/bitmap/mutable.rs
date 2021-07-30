@@ -434,7 +434,7 @@ impl MutableBitmap {
     /// Extends the [`MutableBitmap`] from a [`Bitmap`].
     #[inline]
     pub fn extend_from_bitmap(&mut self, bitmap: &Bitmap) {
-        self.extend_from_slice(bitmap.bytes(), bitmap.offset(), bitmap.len());
+        self.extend_from_slice(bitmap.as_slice(), bitmap.offset(), bitmap.len());
     }
 }
 

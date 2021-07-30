@@ -29,7 +29,7 @@ pub struct SlicesIterator<'a> {
 impl<'a> SlicesIterator<'a> {
     pub fn new(values: &'a Bitmap) -> Self {
         let offset = values.offset();
-        let buffer = &values.bytes()[offset / 8..];
+        let buffer = values.as_slice();
         let mut iter = buffer.iter();
 
         let (current_byte, state) = match iter.next() {
@@ -271,5 +271,17 @@ mod tests {
         let total = iter.into_iter().fold(0, |acc, x| acc + x.1);
 
         assert_eq!(count, total);
+    }
+
+    #[test]
+    fn sliced() {
+        let values = Bitmap::from_u8_slice(&[0b11111010, 0b11111011], 16);
+        let values = values.slice(8, 2);
+        let iter = SlicesIterator::new(&values);
+
+        let chunks = iter.collect::<Vec<_>>();
+
+        // the first "11" in the second byte
+        assert_eq!(chunks, vec![(0, 2)]);
     }
 }
