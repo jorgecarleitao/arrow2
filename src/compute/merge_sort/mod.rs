@@ -93,19 +93,28 @@ pub fn take_arrays<I: IntoIterator<Item = MergeSlice>>(
 ) -> Box<dyn Array> {
     let slices = slices.into_iter();
     let len = arrays.iter().map(|array| array.len()).sum();
+
     let limit = limit.unwrap_or(len);
+    let limit = limit.min(len);
     let mut growable = make_growable(arrays, false, limit);
 
-    let mut current_len = 0;
-    for (index, start, len) in slices {
-        if len + current_len >= limit {
-            growable.extend(index, start, limit - current_len);
-            break;
-        } else {
+    if limit == len {
+        let mut current_len = 0;
+        for (index, start, len) in slices {
+            if len + current_len >= limit {
+                growable.extend(index, start, limit - current_len);
+                break;
+            } else {
+                growable.extend(index, start, len);
+                current_len += len;
+            }
+        }
+    } else {
+        for (index, start, len) in slices {
             growable.extend(index, start, len);
-            current_len += len;
         }
     }
+
     growable.as_box()
 }
 
