@@ -98,7 +98,7 @@ pub fn take_arrays<I: IntoIterator<Item = MergeSlice>>(
     let limit = limit.min(len);
     let mut growable = make_growable(arrays, false, limit);
 
-    if limit == len {
+    if limit != len {
         let mut current_len = 0;
         for (index, start, len) in slices {
             if len + current_len >= limit {
