@@ -58,7 +58,7 @@ futures = { version = "0.3", optional = true }
 # for faster hashing
 ahash = { version = "0.7", optional = true }
 
-parquet2 = { version = "0.1", optional = true }
+parquet2 = { version = "0.1", optional = true, default_features = false, features = ["stream"] }
 
 [dev-dependencies]
 rand = "0.7"
@@ -68,12 +68,33 @@ doc-comment = "0.3"
 crossbeam-channel = "0.5.1"
 
 [features]
-default = ["io_csv", "io_json", "io_ipc", "io_ipc_compression", "io_json_integration", "io_print", "io_parquet", "regex", "merge_sort", "ahash", "benchmarks", "compute"]
+default = [
+    "io_csv",
+    "io_json",
+    "io_ipc",
+    "io_ipc_compression",
+    "io_json_integration",
+    "io_print",
+    "io_parquet",
+    "io_parquet_compression",
+    "regex",
+    "merge_sort",
+    "ahash",
+    "benchmarks",
+    "compute",
+]
 merge_sort = ["itertools"]
 io_csv = ["csv", "lazy_static", "regex"]
 io_json = ["serde", "serde_derive", "serde_json", "indexmap"]
 io_ipc = ["flatbuffers"]
 io_ipc_compression = ["lz4", "zstd"]
+io_parquet_compression = [
+    "parquet2/zstd",
+    "parquet2/snappy",
+    "parquet2/gzip",
+    "parquet2/lz4",
+    "parquet2/brotli",
+]
 io_json_integration = ["io_json", "hex"]
 io_print = ["prettytable-rs"]
 # the compute kernels. Disabling this significantly reduces compile time.
@@ -88,6 +109,8 @@ skip_feature_sets = [
     ["benchmarks"],
     ["merge_sort"],
     ["io_json_integration"],
+    # this does not change the public API
+    ["io_parquet_compression"],
     ["simd"],
 ]
 
