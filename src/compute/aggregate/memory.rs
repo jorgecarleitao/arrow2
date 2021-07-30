@@ -4,7 +4,7 @@ use crate::datatypes::{DataType, IntervalUnit};
 use crate::types::days_ms;
 
 fn validity_size(validity: &Option<Bitmap>) -> usize {
-    validity.as_ref().map(|b| b.bytes().len()).unwrap_or(0)
+    validity.as_ref().map(|b| b.as_slice().len()).unwrap_or(0)
 }
 
 macro_rules! dyn_primitive {
@@ -55,7 +55,7 @@ pub fn estimated_bytes_size(array: &dyn Array) -> usize {
         Null => 0,
         Boolean => {
             let array = array.as_any().downcast_ref::<BooleanArray>().unwrap();
-            array.values().bytes().len() + validity_size(array.validity())
+            array.values().as_slice().len() + validity_size(array.validity())
         }
         Int8 => dyn_primitive!(array, i8),
         Int16 => dyn_primitive!(array, i16),
