@@ -24,7 +24,7 @@ pub struct GrowableUtf8<'a, O: Offset> {
 }
 
 impl<'a, O: Offset> GrowableUtf8<'a, O> {
-    pub fn new(arrays: &[&'a Utf8Array<O>], mut use_validity: bool, capacity: usize) -> Self {
+    pub fn new(arrays: Vec<&'a Utf8Array<O>>, mut use_validity: bool, capacity: usize) -> Self {
         // if any of the arrays has nulls, insertions from any array requires setting bits
         // as there is at least one array with nulls.
         if arrays.iter().any(|array| array.null_count() > 0) {
@@ -117,7 +117,7 @@ mod tests {
     fn test_variable_sized_validity() {
         let array = Utf8Array::<i32>::from_iter(vec![Some("a"), Some("bc"), None, Some("defh")]);
 
-        let mut a = GrowableUtf8::new(&[&array], false, 0);
+        let mut a = GrowableUtf8::new(vec![&array], false, 0);
 
         a.extend(0, 1, 2);
 
@@ -134,7 +134,7 @@ mod tests {
         let array = Utf8Array::<i32>::from_iter(vec![Some("a"), Some("bc"), None, Some("defh")]);
         let array = array.slice(1, 3);
 
-        let mut a = GrowableUtf8::new(&[&array], false, 0);
+        let mut a = GrowableUtf8::new(vec![&array], false, 0);
 
         a.extend(0, 0, 3);
 
@@ -149,7 +149,7 @@ mod tests {
         let array = Utf8Array::<i32>::from_iter(vec![Some("a"), Some("bc"), None, Some("defh")]);
         let array = array.slice(1, 3);
 
-        let mut a = GrowableUtf8::new(&[&array], false, 0);
+        let mut a = GrowableUtf8::new(vec![&array], false, 0);
 
         a.extend(0, 0, 3);
 
@@ -164,7 +164,7 @@ mod tests {
         let array1 = Utf8Array::<i32>::from_slice(&["hello", "world"]);
         let array2 = Utf8Array::<i32>::from(&[Some("1"), None]);
 
-        let mut a = GrowableUtf8::new(&[&array1, &array2], false, 5);
+        let mut a = GrowableUtf8::new(vec![&array1, &array2], false, 5);
 
         a.extend(0, 0, 2);
         a.extend(1, 0, 2);
@@ -181,7 +181,7 @@ mod tests {
         let array = Utf8Array::<i32>::from_iter(vec![Some("a"), Some("bc"), None, Some("defh")]);
         let array = array.slice(1, 3);
 
-        let mut a = GrowableUtf8::new(&[&array], true, 0);
+        let mut a = GrowableUtf8::new(vec![&array], true, 0);
 
         a.extend(0, 1, 2);
         a.extend_validity(1);

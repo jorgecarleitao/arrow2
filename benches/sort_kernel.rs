@@ -35,7 +35,7 @@ fn bench_lexsort(arr_a: &dyn Array, array_b: &dyn Array) {
         },
     ];
 
-    criterion::black_box(lexsort(&columns, None).unwrap());
+    criterion::black_box(lexsort::<u32>(&columns, None).unwrap());
 }
 
 fn bench_sort(arr_a: &dyn Array) {

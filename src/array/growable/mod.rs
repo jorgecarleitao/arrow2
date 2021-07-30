@@ -53,15 +53,10 @@ macro_rules! dyn_growable {
     ($ty:ty, $arrays:expr, $use_validity:expr, $capacity:expr) => {{
         let arrays = $arrays
             .iter()
-            .map(|array| {
-                array
-                    .as_any()
-                    .downcast_ref::<PrimitiveArray<$ty>>()
-                    .unwrap()
-            })
+            .map(|array| array.as_any().downcast_ref().unwrap())
             .collect::<Vec<_>>();
         Box::new(primitive::GrowablePrimitive::<$ty>::new(
-            &arrays,
+            arrays,
             $use_validity,
             $capacity,
         ))
@@ -103,11 +98,17 @@ pub fn make_growable<'a>(
 
     match data_type {
         DataType::Null => Box::new(null::GrowableNull::new()),
-        DataType::Boolean => Box::new(boolean::GrowableBoolean::new(
-            arrays,
-            use_validity,
-            capacity,
-        )),
+        DataType::Boolean => {
+            let arrays = arrays
+                .iter()
+                .map(|array| array.as_any().downcast_ref().unwrap())
+                .collect::<Vec<_>>();
+            Box::new(boolean::GrowableBoolean::new(
+                arrays,
+                use_validity,
+                capacity,
+            ))
+        }
         DataType::Int8 => dyn_growable!(i8, arrays, use_validity, capacity),
         DataType::Int16 => dyn_growable!(i16, arrays, use_validity, capacity),
         DataType::Int32
@@ -137,10 +138,10 @@ pub fn make_growable<'a>(
         DataType::Utf8 => {
             let arrays = arrays
                 .iter()
-                .map(|array| array.as_any().downcast_ref::<Utf8Array<i32>>().unwrap())
+                .map(|array| array.as_any().downcast_ref().unwrap())
                 .collect::<Vec<_>>();
             Box::new(utf8::GrowableUtf8::<i32>::new(
-                &arrays,
+                arrays,
                 use_validity,
                 capacity,
             ))
@@ -148,45 +149,81 @@ pub fn make_growable<'a>(
         DataType::LargeUtf8 => {
             let arrays = arrays
                 .iter()
-                .map(|array| array.as_any().downcast_ref::<Utf8Array<i64>>().unwrap())
+                .map(|array| array.as_any().downcast_ref().unwrap())
                 .collect::<Vec<_>>();
             Box::new(utf8::GrowableUtf8::<i64>::new(
-                &arrays,
+                arrays,
                 use_validity,
                 capacity,
             ))
         }
-        DataType::Binary => Box::new(binary::GrowableBinary::<i32>::new(
-            arrays,
-            use_validity,
-            capacity,
-        )),
-        DataType::LargeBinary => Box::new(binary::GrowableBinary::<i64>::new(
-            arrays,
-            use_validity,
-            capacity,
-        )),
-        DataType::FixedSizeBinary(_) => Box::new(fixed_binary::GrowableFixedSizeBinary::new(
-            arrays,
-            use_validity,
-            capacity,
-        )),
+        DataType::Binary => {
+            let arrays = arrays
+                .iter()
+                .map(|array| array.as_any().downcast_ref().unwrap())
+                .collect::<Vec<_>>();
+            Box::new(binary::GrowableBinary::<i32>::new(
+                arrays,
+                use_validity,
+                capacity,
+            ))
+        }
+        DataType::LargeBinary => {
+            let arrays = arrays
+                .iter()
+                .map(|array| array.as_any().downcast_ref().unwrap())
+                .collect::<Vec<_>>();
+            Box::new(binary::GrowableBinary::<i64>::new(
+                arrays,
+                use_validity,
+                capacity,
+            ))
+        }
+        DataType::FixedSizeBinary(_) => {
+            let arrays = arrays
+                .iter()
+                .map(|array| array.as_any().downcast_ref().unwrap())
+                .collect::<Vec<_>>();
+            Box::new(fixed_binary::GrowableFixedSizeBinary::new(
+                arrays,
+                use_validity,
+                capacity,
+            ))
+        }
 
-        DataType::List(_) => Box::new(list::GrowableList::<i32>::new(
-            arrays,
-            use_validity,
-            capacity,
-        )),
-        DataType::LargeList(_) => Box::new(list::GrowableList::<i64>::new(
-            arrays,
-            use_validity,
-            capacity,
-        )),
-        DataType::Struct(_) => Box::new(structure::GrowableStruct::new(
-            arrays,
-            use_validity,
-            capacity,
-        )),
+        DataType::List(_) => {
+            let arrays = arrays
+                .iter()
+                .map(|array| array.as_any().downcast_ref().unwrap())
+                .collect::<Vec<_>>();
+            Box::new(list::GrowableList::<i32>::new(
+                arrays,
+                use_validity,
+                capacity,
+            ))
+        }
+        DataType::LargeList(_) => {
+            let arrays = arrays
+                .iter()
+                .map(|array| array.as_any().downcast_ref().unwrap())
+                .collect::<Vec<_>>();
+            Box::new(list::GrowableList::<i64>::new(
+                arrays,
+                use_validity,
+                capacity,
+            ))
+        }
+        DataType::Struct(_) => {
+            let arrays = arrays
+                .iter()
+                .map(|array| array.as_any().downcast_ref().unwrap())
+                .collect::<Vec<_>>();
+            Box::new(structure::GrowableStruct::new(
+                arrays,
+                use_validity,
+                capacity,
+            ))
+        }
         DataType::FixedSizeList(_, _) => todo!(),
         DataType::Union(_) => todo!(),
         DataType::Dictionary(key, _) => match key.as_ref() {

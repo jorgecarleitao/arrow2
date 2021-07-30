@@ -166,11 +166,6 @@ impl Bitmap {
     pub fn chunks<T: BitChunk>(&self) -> BitChunks<T> {
         BitChunks::new(&self.bytes, self.offset, self.length)
     }
-
-    #[inline]
-    pub(crate) fn bytes(&self) -> &[u8] {
-        &self.bytes
-    }
 }
 
 impl Bitmap {
@@ -217,9 +212,9 @@ impl Bitmap {
         self.offset % 8
     }
 
+    /// Returns the byte slice of this Bitmap.
     #[inline]
     pub(crate) fn as_slice(&self) -> &[u8] {
-        assert_eq!(self.offset % 8, 0); // slices only make sense when there is no offset
         let start = self.offset / 8;
         let len = self.length.saturating_add(7) / 8;
         &self.bytes[start..start + len]

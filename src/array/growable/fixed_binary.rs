@@ -23,9 +23,11 @@ pub struct GrowableFixedSizeBinary<'a> {
 }
 
 impl<'a> GrowableFixedSizeBinary<'a> {
-    /// # Panics
-    /// This function panics if any of the `arrays` is not downcastable to `FixedSizeBinaryArray`.
-    pub fn new(arrays: &[&'a dyn Array], mut use_validity: bool, capacity: usize) -> Self {
+    pub fn new(
+        arrays: Vec<&'a FixedSizeBinaryArray>,
+        mut use_validity: bool,
+        capacity: usize,
+    ) -> Self {
         // if any of the arrays has nulls, insertions from any array requires setting bits
         // as there is at least one array with nulls.
         if arrays.iter().any(|array| array.null_count() > 0) {
@@ -36,16 +38,6 @@ impl<'a> GrowableFixedSizeBinary<'a> {
             .iter()
             .map(|array| build_extend_null_bits(*array, use_validity))
             .collect();
-
-        let arrays = arrays
-            .iter()
-            .map(|array| {
-                array
-                    .as_any()
-                    .downcast_ref::<FixedSizeBinaryArray>()
-                    .unwrap()
-            })
-            .collect::<Vec<_>>();
 
         let size = *FixedSizeBinaryArray::get_size(arrays[0].data_type()) as usize;
         Self {
@@ -115,7 +107,7 @@ mod tests {
         let array =
             FixedSizeBinaryArray::from_iter(vec![Some(b"ab"), Some(b"bc"), None, Some(b"de")], 2);
 
-        let mut a = GrowableFixedSizeBinary::new(&[&array], false, 0);
+        let mut a = GrowableFixedSizeBinary::new(vec![&array], false, 0);
 
         a.extend(0, 1, 2);
 
@@ -133,7 +125,7 @@ mod tests {
             FixedSizeBinaryArray::from_iter(vec![Some(b"ab"), Some(b"bc"), None, Some(b"fh")], 2);
         let array = array.slice(1, 3);
 
-        let mut a = GrowableFixedSizeBinary::new(&[&array], false, 0);
+        let mut a = GrowableFixedSizeBinary::new(vec![&array], false, 0);
 
         a.extend(0, 0, 3);
 
@@ -148,7 +140,7 @@ mod tests {
         let array1 = FixedSizeBinaryArray::from_iter(vec![Some("hello"), Some("world")], 5);
         let array2 = FixedSizeBinaryArray::from_iter(vec![Some("12345"), None], 5);
 
-        let mut a = GrowableFixedSizeBinary::new(&[&array1, &array2], false, 5);
+        let mut a = GrowableFixedSizeBinary::new(vec![&array1, &array2], false, 5);
 
         a.extend(0, 0, 2);
         a.extend(1, 0, 2);
@@ -168,7 +160,7 @@ mod tests {
             FixedSizeBinaryArray::from_iter(vec![Some("aa"), Some("bc"), None, Some("fh")], 2);
         let array = array.slice(1, 3);
 
-        let mut a = GrowableFixedSizeBinary::new(&[&array], true, 0);
+        let mut a = GrowableFixedSizeBinary::new(vec![&array], true, 0);
 
         a.extend(0, 1, 2);
         a.extend_validity(1);
@@ -186,7 +178,7 @@ mod tests {
         let array = array.slice(1, 2);
         // = [[0, 1], [0, 2]] due to the offset = 1
 
-        let mut a = GrowableFixedSizeBinary::new(&[&array], false, 0);
+        let mut a = GrowableFixedSizeBinary::new(vec![&array], false, 0);
 
         a.extend(0, 1, 1);
         a.extend(0, 0, 1);

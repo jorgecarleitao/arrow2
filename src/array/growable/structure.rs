@@ -24,7 +24,7 @@ pub struct GrowableStruct<'a> {
 impl<'a> GrowableStruct<'a> {
     /// # Panics
     /// This function panics if any of the `arrays` is not downcastable to `PrimitiveArray<T>`.
-    pub fn new(arrays: &[&'a dyn Array], mut use_validity: bool, capacity: usize) -> Self {
+    pub fn new(arrays: Vec<&'a StructArray>, mut use_validity: bool, capacity: usize) -> Self {
         // if any of the arrays has nulls, insertions from any array requires setting bits
         // as there is at least one array with nulls.
         if arrays.iter().any(|array| array.null_count() > 0) {
@@ -155,7 +155,7 @@ mod tests {
 
         let array = StructArray::from_data(fields.clone(), values.clone(), None);
 
-        let mut a = GrowableStruct::new(&[&array], false, 0);
+        let mut a = GrowableStruct::new(vec![&array], false, 0);
 
         a.extend(0, 1, 2);
         let result: StructArray = a.into();
@@ -174,7 +174,7 @@ mod tests {
 
         let array = StructArray::from_data(fields.clone(), values.clone(), None).slice(1, 3);
 
-        let mut a = GrowableStruct::new(&[&array], false, 0);
+        let mut a = GrowableStruct::new(vec![&array], false, 0);
 
         a.extend(0, 1, 2);
         let result: StructArray = a.into();
@@ -198,7 +198,7 @@ mod tests {
             Some(Bitmap::from_u8_slice(&[0b00000010], 5)),
         );
 
-        let mut a = GrowableStruct::new(&[&array], false, 0);
+        let mut a = GrowableStruct::new(vec![&array], false, 0);
 
         a.extend(0, 1, 2);
         let result: StructArray = a.into();
@@ -218,7 +218,7 @@ mod tests {
 
         let array = StructArray::from_data(fields.clone(), values.clone(), None);
 
-        let mut mutable = GrowableStruct::new(&[&array, &array], false, 0);
+        let mut mutable = GrowableStruct::new(vec![&array, &array], false, 0);
 
         mutable.extend(0, 1, 2);
         mutable.extend(1, 0, 2);

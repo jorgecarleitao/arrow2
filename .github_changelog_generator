@@ -1,0 +1,5 @@
+since-tag=v0.1.0
+pr-wo-labels=false
+add-sections={"features":{"prefix":"**Enhancements:**","labels":["enhancement"]}, "documentation":{"prefix":"**Documentation updates:**","labels":["documentation"]}}
+enhancement-label=**New features:**
+enhancement-labels=feature

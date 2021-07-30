@@ -26,10 +26,10 @@ pub struct GrowableBinary<'a, O: Offset> {
 impl<'a, O: Offset> GrowableBinary<'a, O> {
     /// # Panics
     /// This function panics if any of the `arrays` is not downcastable to `PrimitiveArray<T>`.
-    pub fn new(arrays: &[&'a dyn Array], mut use_validity: bool, capacity: usize) -> Self {
+    pub fn new(arrays: Vec<&'a BinaryArray<O>>, mut use_validity: bool, capacity: usize) -> Self {
         // if any of the arrays has nulls, insertions from any array requires setting bits
         // as there is at least one array with nulls.
-        if arrays.iter().any(|array| array.null_count() > 0) {
+        if !use_validity & arrays.iter().any(|array| array.null_count() > 0) {
             use_validity = true;
         };
 
@@ -37,11 +37,6 @@ impl<'a, O: Offset> GrowableBinary<'a, O> {
             .iter()
             .map(|array| build_extend_null_bits(*array, use_validity))
             .collect();
-
-        let arrays = arrays
-            .iter()
-            .map(|array| array.as_any().downcast_ref::<BinaryArray<O>>().unwrap())
-            .collect::<Vec<_>>();
 
         let mut offsets = MutableBuffer::with_capacity(capacity + 1);
         let length = O::default();
@@ -114,7 +109,7 @@ mod tests {
     fn test_variable_sized_validity() {
         let array = BinaryArray::<i32>::from_iter(vec![Some("a"), Some("bc"), None, Some("defh")]);
 
-        let mut a = GrowableBinary::new(&[&array], false, 0);
+        let mut a = GrowableBinary::new(vec![&array], false, 0);
 
         a.extend(0, 1, 2);
 
@@ -131,7 +126,7 @@ mod tests {
         let array = BinaryArray::<i32>::from_iter(vec![Some("a"), Some("bc"), None, Some("defh")]);
         let array = array.slice(1, 3);
 
-        let mut a = GrowableBinary::new(&[&array], false, 0);
+        let mut a = GrowableBinary::new(vec![&array], false, 0);
 
         a.extend(0, 0, 3);
 
@@ -146,7 +141,7 @@ mod tests {
         let array = BinaryArray::<i32>::from_iter(vec![Some("a"), Some("bc"), None, Some("defh")]);
         let array = array.slice(1, 3);
 
-        let mut a = GrowableBinary::new(&[&array], false, 0);
+        let mut a = GrowableBinary::new(vec![&array], false, 0);
 
         a.extend(0, 0, 3);
 
@@ -161,7 +156,7 @@ mod tests {
         let array1 = BinaryArray::<i32>::from_slice(vec![b"hello", b"world"]);
         let array2 = BinaryArray::<i32>::from_iter(vec![Some("1"), None]);
 
-        let mut a = GrowableBinary::new(&[&array1, &array2], false, 5);
+        let mut a = GrowableBinary::new(vec![&array1, &array2], false, 5);
 
         a.extend(0, 0, 2);
         a.extend(1, 0, 2);
@@ -178,7 +173,7 @@ mod tests {
         let array = BinaryArray::<i32>::from_iter(vec![Some("a"), Some("bc"), None, Some("defh")]);
         let array = array.slice(1, 3);
 
-        let mut a = GrowableBinary::new(&[&array], true, 0);
+        let mut a = GrowableBinary::new(vec![&array], true, 0);
 
         a.extend(0, 1, 2);
         a.extend_validity(1);
