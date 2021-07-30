@@ -26,6 +26,7 @@ use crate::record_batch::{RecordBatch, RecordBatchReader};
 use super::super::{convert, gen};
 use super::super::{ARROW_MAGIC, CONTINUATION_MARKER};
 use super::common::*;
+use flatbuffers::VerifierOptions;
 
 type ArrayRef = Arc<dyn Array>;
 
@@ -95,7 +96,17 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
     reader.seek(SeekFrom::End(-10 - footer_len as i64))?;
     reader.read_exact(&mut footer_data)?;
 
-    let footer = gen::File::root_as_footer(&footer_data[..])
+    // set flatbuffer verification options to the same settings as the C++ arrow implementation.
+    // Heuristic: tables in a Arrow flatbuffers buffer must take at least 1 bit
+    // each in average (ARROW-11559).
+    // Especially, the only recursive table (the `Field` table in Schema.fbs)
+    // must have a non-empty `type` member.
+    let verifier_options = VerifierOptions {
+        max_depth: 128,
+        max_tables: footer_len as usize * 8,
+        ..Default::default()
+    };
+    let footer = gen::File::root_as_footer_with_opts(&verifier_options, &footer_data[..])
         .map_err(|err| ArrowError::Ipc(format!("Unable to get root as footer: {:?}", err)))?;
 
     let blocks = footer.recordBatches().ok_or_else(|| {
