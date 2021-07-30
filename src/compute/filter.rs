@@ -254,14 +254,23 @@ pub fn filter(array: &dyn Array, filter: &BooleanArray) -> Result<Box<dyn Array>
 /// Therefore, it is considered undefined behavior to pass `filter` with null values.
 pub fn filter_record_batch(
     record_batch: &RecordBatch,
-    filter: &BooleanArray,
+    filter_values: &BooleanArray,
 ) -> Result<RecordBatch> {
-    let filter = build_filter(filter)?;
-    let filtered_arrays = record_batch
-        .columns()
-        .iter()
-        .map(|a| filter(a.as_ref()).into())
-        .collect();
+    let num_colums = record_batch.columns().len();
+
+    let filtered_arrays = match num_colums {
+        1 => {
+            vec![filter(record_batch.columns()[0].as_ref(), filter_values)?.into()]
+        }
+        _ => {
+            let filter = build_filter(filter_values)?;
+            record_batch
+                .columns()
+                .iter()
+                .map(|a| filter(a.as_ref()).into())
+                .collect()
+        }
+    };
     RecordBatch::try_new(record_batch.schema().clone(), filtered_arrays)
 }
 

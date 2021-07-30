@@ -16,9 +16,12 @@
 // under the License.
 extern crate arrow2;
 
+use std::sync::Arc;
+
 use arrow2::array::*;
-use arrow2::compute::filter::{build_filter, filter, Filter};
-use arrow2::datatypes::DataType;
+use arrow2::compute::filter::{build_filter, filter, filter_record_batch, Filter};
+use arrow2::datatypes::{DataType, Field, Schema};
+use arrow2::record_batch::RecordBatch;
 use arrow2::util::bench_util::*;
 
 use criterion::{criterion_group, criterion_main, Criterion};
@@ -119,6 +122,17 @@ fn add_benchmark(c: &mut Criterion) {
     });
     c.bench_function("filter context string low selectivity", |b| {
         b.iter(|| bench_built_filter(&sparse_filter, &data_array))
+    });
+
+    let data_array = create_primitive_array::<f32>(size, DataType::Float32, 0.0);
+
+    let field = Field::new("c1", data_array.data_type().clone(), true);
+    let schema = Schema::new(vec![field]);
+
+    let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(data_array)]).unwrap();
+
+    c.bench_function("filter single record batch", |b| {
+        b.iter(|| filter_record_batch(&batch, &filter_array))
     });
 }
 
