@@ -228,7 +228,8 @@ pub enum Operator {
 }
 
 /// Perform arithmetic operations on two primitive arrays based on the Operator enum
-fn arithmetic_primitive<T>(
+//
+pub fn arithmetic_primitive<T>(
     lhs: &PrimitiveArray<T>,
     op: Operator,
     rhs: &PrimitiveArray<T>,
