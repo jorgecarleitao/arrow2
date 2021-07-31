@@ -83,7 +83,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="index.html"><strong aria-hidden="true">1.</strong> Arrow2</a></li><li class="chapter-item expanded "><a href="arrow.html"><strong aria-hidden="true">2.</strong> The arrow format</a></li><li class="chapter-item expanded "><a href="low_level.html"><strong aria-hidden="true">3.</strong> Low-level API</a></li><li class="chapter-item expanded "><a href="high_level.html"><strong aria-hidden="true">4.</strong> High-level API</a></li><li class="chapter-item expanded "><a href="metadata.html"><strong aria-hidden="true">5.</strong> Metadata</a></li><li class="chapter-item expanded "><a href="ffi.html"><strong aria-hidden="true">6.</strong> Foreign interfaces</a></li><li class="chapter-item expanded "><a href="io/index.html"><strong aria-hidden="true">7.</strong> IO</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="io/csv_reader.html"><strong aria-hidden="true">7.1.</strong> Read CSV</a></li><li class="chapter-item expanded "><a href="io/csv_write.html"><strong aria-hidden="true">7.2.</strong> Write CSV</a></li><li class="chapter-item expanded "><a href="io/parquet_read.html"><strong aria-hidden="true">7.3.</strong> Read Parquet</a></li><li class="chapter-item expanded "><a href="io/parquet_write.html"><strong aria-hidden="true">7.4.</strong> Write Parquet</a></li><li class="chapter-item expanded "><a href="io/ipc_read.html"><strong aria-hidden="true">7.5.</strong> Read Arrow</a></li><li class="chapter-item expanded "><a href="io/ipc_write.html"><strong aria-hidden="true">7.6.</strong> Write Arrow</a></li></ol></li></ol>            </div>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="index.html"><strong aria-hidden="true">1.</strong> Arrow2</a></li><li class="chapter-item expanded "><a href="arrow.html"><strong aria-hidden="true">2.</strong> The arrow format</a></li><li class="chapter-item expanded "><a href="low_level.html"><strong aria-hidden="true">3.</strong> Low-level API</a></li><li class="chapter-item expanded "><a href="high_level.html"><strong aria-hidden="true">4.</strong> High-level API</a></li><li class="chapter-item expanded "><a href="compute.html"><strong aria-hidden="true">5.</strong> Compute</a></li><li class="chapter-item expanded "><a href="metadata.html"><strong aria-hidden="true">6.</strong> Metadata</a></li><li class="chapter-item expanded "><a href="ffi.html"><strong aria-hidden="true">7.</strong> Foreign interfaces</a></li><li class="chapter-item expanded "><a href="io/index.html"><strong aria-hidden="true">8.</strong> IO</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="io/csv_reader.html"><strong aria-hidden="true">8.1.</strong> Read CSV</a></li><li class="chapter-item expanded "><a href="io/csv_write.html"><strong aria-hidden="true">8.2.</strong> Write CSV</a></li><li class="chapter-item expanded "><a href="io/parquet_read.html"><strong aria-hidden="true">8.3.</strong> Read Parquet</a></li><li class="chapter-item expanded "><a href="io/parquet_write.html"><strong aria-hidden="true">8.4.</strong> Write Parquet</a></li><li class="chapter-item expanded "><a href="io/ipc_read.html"><strong aria-hidden="true">8.5.</strong> Read Arrow</a></li><li class="chapter-item expanded "><a href="io/ipc_write.html"><strong aria-hidden="true">8.6.</strong> Write Arrow</a></li></ol></li></ol>            </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
 
@@ -573,6 +573,109 @@ where
 and cloned its validity. This approach is suitable for operations whose branching off is more expensive than operating over all values. If the operation is expensive, then using <code>PrimitiveArray::&lt;O&gt;::from_trusted_len_iter</code> is likely faster.</p>
 </li>
 </ol>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="compute-api"><a class="header" href="#compute-api">Compute API</a></h1>
+<p>When compiled with the feature <code>compute</code>, this crate offers a wide range of functions to perform both vertical (e.g. add two arrays) and horizontal (compute the sum of an array) operations.</p>
+<pre><pre class="playground"><code class="language-rust">use arrow2::array::{Array, PrimitiveArray};
+use arrow2::compute::arithmetics::*;
+use arrow2::compute::arity::{binary, unary};
+use arrow2::datatypes::DataType;
+use arrow2::error::Result;
+
+fn main() -&gt; Result&lt;()&gt; {
+    // say we have two arrays
+    let array0 = PrimitiveArray::&lt;i64&gt;::from(&amp;[Some(1), Some(2), Some(3)]);
+    let array1 = PrimitiveArray::&lt;i64&gt;::from(&amp;[Some(4), None, Some(6)]);
+
+    // we can add them as follows:
+    let added = arithmetic_primitive(&amp;array0, Operator::Add, &amp;array1)?;
+    assert_eq!(
+        added,
+        PrimitiveArray::&lt;i64&gt;::from(&amp;[Some(5), None, Some(9)])
+    );
+
+    // subtract:
+    let subtracted = arithmetic_primitive(&amp;array0, Operator::Subtract, &amp;array1)?;
+    assert_eq!(
+        subtracted,
+        PrimitiveArray::&lt;i64&gt;::from(&amp;[Some(-3), None, Some(-3)])
+    );
+
+    // add a scalar:
+    let plus10 = arithmetic_primitive_scalar(&amp;array0, Operator::Add, &amp;10)?;
+    assert_eq!(
+        plus10,
+        PrimitiveArray::&lt;i64&gt;::from(&amp;[Some(11), Some(12), Some(13)])
+    );
+
+    // when the array is a trait object, there is a similar API
+    let array0 = &amp;array0 as &amp;dyn Array;
+    let array1 = &amp;array1 as &amp;dyn Array;
+
+    // check whether the logical types support addition (they could be any `Array`).
+    assert!(can_arithmetic(
+        array0.data_type(),
+        Operator::Add,
+        array1.data_type()
+    ));
+
+    // add them
+    let added = arithmetic(array0, Operator::Add, array1).unwrap();
+    assert_eq!(
+        PrimitiveArray::&lt;i64&gt;::from(&amp;[Some(5), None, Some(9)]),
+        added.as_ref(),
+    );
+
+    // a more exotic implementation: arbitrary binary operations
+    // this is compiled to SIMD when intrinsics exist.
+    let array0 = PrimitiveArray::&lt;i64&gt;::from(&amp;[Some(1), Some(2), Some(3)]);
+    let array1 = PrimitiveArray::&lt;i64&gt;::from(&amp;[Some(4), None, Some(6)]);
+
+    let op = |x: i64, y: i64| x.pow(2) + y.pow(2);
+    let r = binary(&amp;array0, &amp;array1, DataType::Int64, op)?;
+    assert_eq!(
+        r,
+        PrimitiveArray::&lt;i64&gt;::from(&amp;[Some(1 + 16), None, Some(9 + 36)])
+    );
+
+    // arbitrary unary operations
+    // this is compiled to SIMD when intrinsics exist.
+    let array0 = PrimitiveArray::&lt;f64&gt;::from(&amp;[Some(4.0), None, Some(6.0)]);
+    let r = unary(
+        &amp;array0,
+        |x| x.cos().powi(2) + x.sin().powi(2),
+        DataType::Float64,
+    );
+    assert!((r.values()[0] - 1.0).abs() &lt; 0.0001);
+    assert!(r.is_null(1));
+    assert!((r.values()[2] - 1.0).abs() &lt; 0.0001);
+
+    // finally, a transformation that changes types:
+    let array0 = PrimitiveArray::&lt;f64&gt;::from(&amp;[Some(4.4), None, Some(4.6)]);
+    let rounded = unary(&amp;array0, |x| x.round() as i64, DataType::Int64);
+    assert_eq!(
+        rounded,
+        PrimitiveArray::&lt;i64&gt;::from(&amp;[Some(4), None, Some(5)])
+    );
+
+    Ok(())
+}
+</code></pre></pre>
+<p>An overview of the implemented functionality.</p>
+<ul>
+<li>arithmetics, checked, saturating, etc.</li>
+<li><code>sum</code>, <code>min</code> and <code>max</code></li>
+<li><code>unary</code>, <code>binary</code>, etc.</li>
+<li><code>comparison</code></li>
+<li><code>cast</code></li>
+<li><code>take</code>, <code>filter</code>, <code>concat</code></li>
+<li><code>sort</code>, <code>hash</code>, <code>merge-sort</code></li>
+<li><code>if-then-else</code></li>
+<li><code>nullif</code></li>
+<li><code>lenght</code> (of string)</li>
+<li><code>hour</code>, <code>year</code> (of temporal logical types)</li>
+<li><code>regex</code></li>
+<li>(list) <code>contains</code></li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="metadata"><a class="header" href="#metadata">Metadata</a></h1>
 <pre><pre class="playground"><code class="language-rust">use std::collections::{BTreeMap, HashMap};
 

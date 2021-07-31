@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["fb_to_schema","Deserialize a Schema table from IPC format to Schema data type"]],"mod":[["gen","Generated code"],["read",""],["write",""]]});

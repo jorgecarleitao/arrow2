@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>The arrow format - arrow2 documentation</title>
+        <title>Compute - arrow2 documentation</title>
                 
 
         <!-- Custom HTML head -->
@@ -82,7 +82,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="index.html"><strong aria-hidden="true">1.</strong> Arrow2</a></li><li class="chapter-item expanded "><a href="arrow.html" class="active"><strong aria-hidden="true">2.</strong> The arrow format</a></li><li class="chapter-item expanded "><a href="low_level.html"><strong aria-hidden="true">3.</strong> Low-level API</a></li><li class="chapter-item expanded "><a href="high_level.html"><strong aria-hidden="true">4.</strong> High-level API</a></li><li class="chapter-item expanded "><a href="compute.html"><strong aria-hidden="true">5.</strong> Compute</a></li><li class="chapter-item expanded "><a href="metadata.html"><strong aria-hidden="true">6.</strong> Metadata</a></li><li class="chapter-item expanded "><a href="ffi.html"><strong aria-hidden="true">7.</strong> Foreign interfaces</a></li><li class="chapter-item expanded "><a href="io/index.html"><strong aria-hidden="true">8.</strong> IO</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="io/csv_reader.html"><strong aria-hidden="true">8.1.</strong> Read CSV</a></li><li class="chapter-item expanded "><a href="io/csv_write.html"><strong aria-hidden="true">8.2.</strong> Write CSV</a></li><li class="chapter-item expanded "><a href="io/parquet_read.html"><strong aria-hidden="true">8.3.</strong> Read Parquet</a></li><li class="chapter-item expanded "><a href="io/parquet_write.html"><strong aria-hidden="true">8.4.</strong> Write Parquet</a></li><li class="chapter-item expanded "><a href="io/ipc_read.html"><strong aria-hidden="true">8.5.</strong> Read Arrow</a></li><li class="chapter-item expanded "><a href="io/ipc_write.html"><strong aria-hidden="true">8.6.</strong> Write Arrow</a></li></ol></li></ol>            </div>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="index.html"><strong aria-hidden="true">1.</strong> Arrow2</a></li><li class="chapter-item expanded "><a href="arrow.html"><strong aria-hidden="true">2.</strong> The arrow format</a></li><li class="chapter-item expanded "><a href="low_level.html"><strong aria-hidden="true">3.</strong> Low-level API</a></li><li class="chapter-item expanded "><a href="high_level.html"><strong aria-hidden="true">4.</strong> High-level API</a></li><li class="chapter-item expanded "><a href="compute.html" class="active"><strong aria-hidden="true">5.</strong> Compute</a></li><li class="chapter-item expanded "><a href="metadata.html"><strong aria-hidden="true">6.</strong> Metadata</a></li><li class="chapter-item expanded "><a href="ffi.html"><strong aria-hidden="true">7.</strong> Foreign interfaces</a></li><li class="chapter-item expanded "><a href="io/index.html"><strong aria-hidden="true">8.</strong> IO</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="io/csv_reader.html"><strong aria-hidden="true">8.1.</strong> Read CSV</a></li><li class="chapter-item expanded "><a href="io/csv_write.html"><strong aria-hidden="true">8.2.</strong> Write CSV</a></li><li class="chapter-item expanded "><a href="io/parquet_read.html"><strong aria-hidden="true">8.3.</strong> Read Parquet</a></li><li class="chapter-item expanded "><a href="io/parquet_write.html"><strong aria-hidden="true">8.4.</strong> Write Parquet</a></li><li class="chapter-item expanded "><a href="io/ipc_read.html"><strong aria-hidden="true">8.5.</strong> Read Arrow</a></li><li class="chapter-item expanded "><a href="io/ipc_write.html"><strong aria-hidden="true">8.6.</strong> Write Arrow</a></li></ol></li></ol>            </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
 
@@ -143,108 +143,119 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
-<p>Welcome to the Arrow2 guide for the Rust programming language.  This guide was
-created to help you become familiar with the Arrow2 crate and its
-functionalities.</p>
-<h2 id="what-is-apache-arrow"><a class="header" href="#what-is-apache-arrow">What is Apache Arrow?</a></h2>
-<p>According to its <a href="https://arrow.apache.org">website</a> Apache Arrow is defined
-as:</p>
-<blockquote>
-<p>A language-independent columnar memory format for flat and hierarchical data,
-organized for efficient analytic operations on modern hardware like CPUs and
-GPUs. The Arrow memory format also supports zero-copy reads for
-lightning-fast data access without serialization overhead.</p>
-</blockquote>
-<p>After reading the description you have probably come to the conclusion that
-Apache Arrow sounds great and that it will give anyone working with data enough
-tools to improve a data processing workflow.  But that's the catch, on its own
-Apache Arrow is not an application or library that can be installed and used.
-The objective of Apache Arrow is to define a set of specifications that need to
-be followed by an implementation in order to allow:</p>
-<ol>
-<li>fast in-memory data access</li>
-<li>sharing and zero copy of data between processes</li>
-</ol>
-<h3 id="fast-in-memory-data-access"><a class="header" href="#fast-in-memory-data-access">Fast in-memory data access</a></h3>
-<p>Apache Arrow allows fast memory access by defining its <a href="https://arrow.apache.org/overview/">in-memory columnar
-format</a>. This columnar format defines a
-standard and efficient in-memory representation of various datatypes, plain or
-nested
-(<a href="https://github.com/apache/arrow/blob/master/docs/source/format/Columnar.rst">reference</a>).</p>
-<p>In other words, the Apache Arrow project has created a series of rules or
-specifications to define how a datatype (int, float, string, list, etc.) is
-stored in memory. Since the objective of the project is to store large amounts
-of data in memory for further manipulation or querying, it uses a columnar data
-definition. This means that when a dataset (data defined with several columns)
-is stored in memory, it no longer maintains its rows representation but it is
-changed to a columnar representation.</p>
-<p>For example, lets say we have a dataset that is defined with three columns
-named: <em>session_id</em>, <em>timestamp</em> and <em>source_id</em> (image below). Traditionally,
-this file should be represented in memory maintaining its row representation
-(image below, left). This means that the fields representing a row would be kept
-next to each other. This makes memory management harder to achieve because there
-are different datatypes next to each other; in this case a long, a date and a
-string. Each of these datatypes will have different memory requirements (for
-example, 8 bytes, 16 bytes or 32 bytes).</p>
-<p align="center">
-  <img src="images/simd.png">
-</p>
-<p>By changing the in memory representation of the file to a columnar form (image
-above, right), the in-memory arrangement of the data becomes more efficient.
-Similar datatypes are stored next to each other, making the access and columnar
-querying faster to perform.</p>
-<h3 id="sharing-data-between-processes"><a class="header" href="#sharing-data-between-processes">Sharing data between processes</a></h3>
-<p>Imagine a typical workflow for a data engineer. There is a process that is
-producing data that belongs to a service monitoring the performance of a sales
-page.  This data has to be read, processed and stored. Probably the engineer
-would first set a script that is reading the data and storing the result in a
-CSV or Parquet file. Then the engineer would need to create a pipeline to read
-the file and transfer the data to a database. Once the data is stored some
-analysis is needed to be done on the data, maybe Pandas is used to read the data
-and extract information. Or, perhaps Spark is used to create a pipeline that
-reads the database in order to create a stream of data to feed a dashboard. The
-copy and convert process may end up looking like this:</p>
-<p align="center">
-  <img src="images/copy.png">
-</p>
-<p>As it can be seen, the data is copied and converted several times. This happens
-every time a process needs to query the data.</p>
-<p>By using a standard that all languages and processes can understand, the data
-doesn't need to be copied and converted. There can be a single in-memory data
-representation that can be used to feed all the required processes. The data
-sharing can be done regarding the language that is used.</p>
-<p align="center">
-  <img src="images/shared.png">
-</p>
-<p>And thanks to this standardization the data can also be shared with processes
-that don't share the same memory. By creating a data server, packets of data
-with known structure (RecordBatch) can be sent across computers (or pods) and
-the receiving process doesn't need to spend time coding and decoding the data
-to a known format. The data is ready to be used once its being received.</p>
-<p align="center">
-  <img src="images/recordbatch.png">
-</p>
-<h2 id="the-arrow2-crate"><a class="header" href="#the-arrow2-crate">The Arrow2 crate</a></h2>
-<p>These and other collateral benefits can only be achieved thanks to the work done
-by the people collaborating in the Apache Arrow project. By looking at the
-project <a href="https://github.com/apache/arrow">github page</a>, there are libraries for
-the most common languages used today, and that includes Rust.</p>
-<p>The Rust Arrow2 crate is a collection of structs and implementations that define
-all the elements required to create Arrow arrays that follow the Apache Arrow
-specification. In the next sections the basic blocks for working with the
-crate will be discussed, providing enough examples to give you familiarity
-to construct, share and query Arrow arrays.</p>
+                        <h1 id="compute-api"><a class="header" href="#compute-api">Compute API</a></h1>
+<p>When compiled with the feature <code>compute</code>, this crate offers a wide range of functions to perform both vertical (e.g. add two arrays) and horizontal (compute the sum of an array) operations.</p>
+<pre><pre class="playground"><code class="language-rust">use arrow2::array::{Array, PrimitiveArray};
+use arrow2::compute::arithmetics::*;
+use arrow2::compute::arity::{binary, unary};
+use arrow2::datatypes::DataType;
+use arrow2::error::Result;
+
+fn main() -&gt; Result&lt;()&gt; {
+    // say we have two arrays
+    let array0 = PrimitiveArray::&lt;i64&gt;::from(&amp;[Some(1), Some(2), Some(3)]);
+    let array1 = PrimitiveArray::&lt;i64&gt;::from(&amp;[Some(4), None, Some(6)]);
+
+    // we can add them as follows:
+    let added = arithmetic_primitive(&amp;array0, Operator::Add, &amp;array1)?;
+    assert_eq!(
+        added,
+        PrimitiveArray::&lt;i64&gt;::from(&amp;[Some(5), None, Some(9)])
+    );
+
+    // subtract:
+    let subtracted = arithmetic_primitive(&amp;array0, Operator::Subtract, &amp;array1)?;
+    assert_eq!(
+        subtracted,
+        PrimitiveArray::&lt;i64&gt;::from(&amp;[Some(-3), None, Some(-3)])
+    );
+
+    // add a scalar:
+    let plus10 = arithmetic_primitive_scalar(&amp;array0, Operator::Add, &amp;10)?;
+    assert_eq!(
+        plus10,
+        PrimitiveArray::&lt;i64&gt;::from(&amp;[Some(11), Some(12), Some(13)])
+    );
+
+    // when the array is a trait object, there is a similar API
+    let array0 = &amp;array0 as &amp;dyn Array;
+    let array1 = &amp;array1 as &amp;dyn Array;
+
+    // check whether the logical types support addition (they could be any `Array`).
+    assert!(can_arithmetic(
+        array0.data_type(),
+        Operator::Add,
+        array1.data_type()
+    ));
+
+    // add them
+    let added = arithmetic(array0, Operator::Add, array1).unwrap();
+    assert_eq!(
+        PrimitiveArray::&lt;i64&gt;::from(&amp;[Some(5), None, Some(9)]),
+        added.as_ref(),
+    );
+
+    // a more exotic implementation: arbitrary binary operations
+    // this is compiled to SIMD when intrinsics exist.
+    let array0 = PrimitiveArray::&lt;i64&gt;::from(&amp;[Some(1), Some(2), Some(3)]);
+    let array1 = PrimitiveArray::&lt;i64&gt;::from(&amp;[Some(4), None, Some(6)]);
+
+    let op = |x: i64, y: i64| x.pow(2) + y.pow(2);
+    let r = binary(&amp;array0, &amp;array1, DataType::Int64, op)?;
+    assert_eq!(
+        r,
+        PrimitiveArray::&lt;i64&gt;::from(&amp;[Some(1 + 16), None, Some(9 + 36)])
+    );
+
+    // arbitrary unary operations
+    // this is compiled to SIMD when intrinsics exist.
+    let array0 = PrimitiveArray::&lt;f64&gt;::from(&amp;[Some(4.0), None, Some(6.0)]);
+    let r = unary(
+        &amp;array0,
+        |x| x.cos().powi(2) + x.sin().powi(2),
+        DataType::Float64,
+    );
+    assert!((r.values()[0] - 1.0).abs() &lt; 0.0001);
+    assert!(r.is_null(1));
+    assert!((r.values()[2] - 1.0).abs() &lt; 0.0001);
+
+    // finally, a transformation that changes types:
+    let array0 = PrimitiveArray::&lt;f64&gt;::from(&amp;[Some(4.4), None, Some(4.6)]);
+    let rounded = unary(&amp;array0, |x| x.round() as i64, DataType::Int64);
+    assert_eq!(
+        rounded,
+        PrimitiveArray::&lt;i64&gt;::from(&amp;[Some(4), None, Some(5)])
+    );
+
+    Ok(())
+}
+</code></pre></pre>
+<p>An overview of the implemented functionality.</p>
+<ul>
+<li>arithmetics, checked, saturating, etc.</li>
+<li><code>sum</code>, <code>min</code> and <code>max</code></li>
+<li><code>unary</code>, <code>binary</code>, etc.</li>
+<li><code>comparison</code></li>
+<li><code>cast</code></li>
+<li><code>take</code>, <code>filter</code>, <code>concat</code></li>
+<li><code>sort</code>, <code>hash</code>, <code>merge-sort</code></li>
+<li><code>if-then-else</code></li>
+<li><code>nullif</code></li>
+<li><code>lenght</code> (of string)</li>
+<li><code>hour</code>, <code>year</code> (of temporal logical types)</li>
+<li><code>regex</code></li>
+<li>(list) <code>contains</code></li>
+</ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                                                    <a rel="prev" href="index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                                    <a rel="prev" href="high_level.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
-                                                    <a rel="next" href="low_level.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                                    <a rel="next" href="metadata.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -254,11 +265,11 @@ to construct, share and query Arrow arrays.</p>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                                    <a rel="prev" href="index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                    <a rel="prev" href="high_level.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
-                                    <a rel="next" href="low_level.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                    <a rel="next" href="metadata.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                             </nav>
