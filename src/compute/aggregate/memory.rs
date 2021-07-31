@@ -109,7 +109,7 @@ pub fn estimated_bytes_size(array: &dyn Array) -> usize {
                 .sum::<usize>()
                 + validity_size(array.validity())
         }
-        Union(_) => unreachable!(),
+        Union(_, _, _) => unreachable!(),
         Dictionary(keys, _) => match keys.as_ref() {
             Int8 => dyn_dict!(array, i8),
             Int16 => dyn_dict!(array, i16),

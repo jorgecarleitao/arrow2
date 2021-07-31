@@ -217,6 +217,7 @@ pub fn read_batch<R: Read + Seek>(
                 projection,
                 metadata.is_little_endian,
                 &metadata.dictionaries_by_field,
+                metadata.version,
                 reader,
                 block.offset() as u64 + block.metaDataLength() as u64,
             )
@@ -413,6 +414,16 @@ mod tests {
     fn read_generated_100_interval() -> Result<()> {
         test_file("1.0.0-littleendian", "generated_interval")?;
         test_file("1.0.0-bigendian", "generated_interval")
+    }
+
+    #[test]
+    fn read_generated_100_union() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_union")
+    }
+
+    #[test]
+    fn read_generated_017_union() -> Result<()> {
+        test_file("0.17.1", "generated_union")
     }
 
     #[test]

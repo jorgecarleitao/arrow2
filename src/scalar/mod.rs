@@ -130,7 +130,7 @@ pub fn new_scalar(array: &dyn Array, index: usize) -> Box<dyn Scalar> {
         }
         FixedSizeBinary(_) => todo!(),
         FixedSizeList(_, _) => todo!(),
-        Union(_) => todo!(),
+        Union(_, _, _) => todo!(),
         Dictionary(_, _) => todo!(),
     }
 }

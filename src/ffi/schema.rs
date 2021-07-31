@@ -316,7 +316,7 @@ fn to_format(data_type: &DataType) -> Result<String> {
         DataType::Struct(_) => "+s",
         DataType::FixedSizeBinary(size) => return Ok(format!("w{}", size)),
         DataType::FixedSizeList(_, size) => return Ok(format!("+w:{}", size)),
-        DataType::Union(_) => todo!(),
+        DataType::Union(_, _, _) => todo!(),
         DataType::Dictionary(index, _) => return to_format(index.as_ref()),
         _ => todo!(),
     }

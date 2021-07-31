@@ -9,6 +9,8 @@ use std::{
     sync::Arc,
 };
 
+use gen::Schema::MetadataVersion;
+
 use crate::datatypes::{DataType, IntervalUnit};
 use crate::error::Result;
 use crate::io::ipc::gen::Message::BodyCompression;
@@ -27,6 +29,7 @@ pub fn read<R: Read + Seek>(
     block_offset: u64,
     is_little_endian: bool,
     compression: Option<BodyCompression>,
+    version: MetadataVersion,
 ) -> Result<Arc<dyn Array>> {
     match data_type {
         DataType::Null => {
@@ -229,6 +232,7 @@ pub fn read<R: Read + Seek>(
             block_offset,
             is_little_endian,
             compression,
+            version,
         )
         .map(|x| Arc::new(x) as Arc<dyn Array>),
         DataType::LargeList(_) => read_list::<i64, _>(
@@ -239,6 +243,7 @@ pub fn read<R: Read + Seek>(
             block_offset,
             is_little_endian,
             compression,
+            version,
         )
         .map(|x| Arc::new(x) as Arc<dyn Array>),
         DataType::FixedSizeList(_, _) => read_fixed_size_list(
@@ -249,6 +254,7 @@ pub fn read<R: Read + Seek>(
             block_offset,
             is_little_endian,
             compression,
+            version,
         )
         .map(|x| Arc::new(x) as Arc<dyn Array>),
         DataType::Struct(_) => read_struct(
@@ -259,6 +265,7 @@ pub fn read<R: Read + Seek>(
             block_offset,
             is_little_endian,
             compression,
+            version,
         )
         .map(|x| Arc::new(x) as Arc<dyn Array>),
         DataType::Dictionary(ref key_type, _) => match key_type.as_ref() {
@@ -328,7 +335,17 @@ pub fn read<R: Read + Seek>(
             .map(|x| Arc::new(x) as Arc<dyn Array>),
             _ => unreachable!(),
         },
-        DataType::Union(_) => unimplemented!(),
+        DataType::Union(_, _, _) => read_union(
+            field_nodes,
+            data_type,
+            buffers,
+            reader,
+            block_offset,
+            is_little_endian,
+            compression,
+            version,
+        )
+        .map(|x| Arc::new(x) as Arc<dyn Array>),
     }
 }
 
@@ -367,6 +384,6 @@ pub fn skip(
         DataType::FixedSizeList(_, _) => skip_fixed_size_list(field_nodes, data_type, buffers),
         DataType::Struct(_) => skip_struct(field_nodes, data_type, buffers),
         DataType::Dictionary(_, _) => skip_dictionary(field_nodes, buffers),
-        DataType::Union(_) => unimplemented!(),
+        DataType::Union(_, _, _) => skip_union(field_nodes, data_type, buffers),
     }
 }

@@ -145,6 +145,7 @@ There is a many-to-one relationship between `DataType` and an Array (i.e. a phys
 | `FixedSizeBinary(_)`  | `FixedSizeBinaryArray`    |
 | `FixedSizeList(_,_)`  | `FixedSizeListArray`      |
 | `Struct(_)`           | `StructArray`             |
+| `Union(_,_,_)`        | `UnionArray`              |
 | `Dictionary(UInt8,_)` | `DictionaryArray<u8>`     |
 | `Dictionary(UInt16,_)`| `DictionaryArray<u16>`    |
 | `Dictionary(UInt32,_)`| `DictionaryArray<u32>`    |

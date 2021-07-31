@@ -56,7 +56,7 @@ impl ToJson for DataType {
                 json!({"name": "fixedsizebinary", "byteWidth": byte_width})
             }
             DataType::Struct(_) => json!({"name": "struct"}),
-            DataType::Union(_) => json!({"name": "union"}),
+            DataType::Union(_, _, _) => json!({"name": "union"}),
             DataType::List(_) => json!({ "name": "list"}),
             DataType::LargeList(_) => json!({ "name": "largelist"}),
             DataType::FixedSizeList(_, length) => {
@@ -333,6 +333,19 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
             }
         }
         "struct" => DataType::Struct(children),
+        "union" => {
+            let is_sparse = if let Some(Value::String(mode)) = item.get("mode") {
+                mode == "SPARSE"
+            } else {
+                return Err(ArrowError::Schema("union requires mode".to_string()));
+            };
+            let ids = if let Some(Value::Array(ids)) = item.get("typeIds") {
+                Some(ids.iter().map(|x| x.as_i64().unwrap() as i32).collect())
+            } else {
+                return Err(ArrowError::Schema("union requires ids".to_string()));
+            };
+            DataType::Union(children, ids, is_sparse)
+        }
         other => {
             return Err(ArrowError::Schema(format!(
                 "invalid json value type \"{}\"",

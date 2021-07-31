@@ -16,10 +16,7 @@
 // under the License.
 
 use crate::{
-    array::{
-        Array, BinaryArray, BooleanArray, DictionaryArray, DictionaryKey, FixedSizeBinaryArray,
-        FixedSizeListArray, ListArray, Offset, PrimitiveArray, StructArray, Utf8Array,
-    },
+    array::*,
     bitmap::Bitmap,
     datatypes::{DataType, IntervalUnit},
     endianess::is_native_little_endian,
@@ -233,6 +230,33 @@ pub fn write_struct(
             offset,
             is_little_endian,
         );
+    });
+}
+
+pub fn write_union(
+    array: &dyn Array,
+    buffers: &mut Vec<Schema::Buffer>,
+    arrow_data: &mut Vec<u8>,
+    nodes: &mut Vec<Message::FieldNode>,
+    offset: &mut i64,
+    is_little_endian: bool,
+) {
+    let array = array.as_any().downcast_ref::<UnionArray>().unwrap();
+
+    write_buffer(array.types(), buffers, arrow_data, offset, is_little_endian);
+
+    if let Some(offsets) = array.offsets() {
+        write_buffer(offsets, buffers, arrow_data, offset, is_little_endian);
+    }
+    array.fields().iter().for_each(|array| {
+        write(
+            array.as_ref(),
+            buffers,
+            arrow_data,
+            nodes,
+            offset,
+            is_little_endian,
+        )
     });
 }
 
@@ -467,7 +491,9 @@ pub fn write(
                 true,
             );
         }
-        DataType::Union(_) => unimplemented!(),
+        DataType::Union(_, _, _) => {
+            write_union(array, buffers, arrow_data, nodes, offset, is_little_endian);
+        }
     }
 }
 

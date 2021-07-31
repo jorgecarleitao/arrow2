@@ -2,6 +2,8 @@ use std::collections::VecDeque;
 use std::convert::TryInto;
 use std::io::{Read, Seek};
 
+use gen::Schema::MetadataVersion;
+
 use crate::array::{ListArray, Offset};
 use crate::buffer::Buffer;
 use crate::datatypes::DataType;
@@ -20,6 +22,7 @@ pub fn read_list<O: Offset, R: Read + Seek>(
     block_offset: u64,
     is_little_endian: bool,
     compression: Option<BodyCompression>,
+    version: MetadataVersion,
 ) -> Result<ListArray<O>>
 where
     Vec<u8>: TryInto<O::Bytes>,
@@ -56,6 +59,7 @@ where
         block_offset,
         is_little_endian,
         compression,
+        version,
     )?;
     Ok(ListArray::from_data(data_type, offsets, values, validity))
 }

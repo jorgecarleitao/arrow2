@@ -18,3 +18,5 @@ mod null;
 pub use null::*;
 mod dictionary;
 pub use dictionary::*;
+mod union;
+pub use union::*;

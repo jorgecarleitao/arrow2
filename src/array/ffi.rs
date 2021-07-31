@@ -85,7 +85,7 @@ pub fn buffers_children_dictionary(array: &dyn Array) -> BuffersChildren {
         DataType::LargeList(_) => ffi_dyn!(array, ListArray::<i64>),
         DataType::FixedSizeList(_, _) => ffi_dyn!(array, FixedSizeListArray),
         DataType::Struct(_) => ffi_dyn!(array, StructArray),
-        DataType::Union(_) => unimplemented!(),
+        DataType::Union(_, _, _) => unimplemented!(),
         DataType::Dictionary(key_type, _) => match key_type.as_ref() {
             DataType::Int8 => ffi_dict_dyn!(array, DictionaryArray::<i8>),
             DataType::Int16 => ffi_dict_dyn!(array, DictionaryArray::<i16>),

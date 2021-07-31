@@ -1,6 +1,8 @@
 use std::collections::VecDeque;
 use std::io::{Read, Seek};
 
+use gen::Schema::MetadataVersion;
+
 use crate::array::FixedSizeListArray;
 use crate::datatypes::DataType;
 use crate::error::Result;
@@ -18,6 +20,7 @@ pub fn read_fixed_size_list<R: Read + Seek>(
     block_offset: u64,
     is_little_endian: bool,
     compression: Option<BodyCompression>,
+    version: MetadataVersion,
 ) -> Result<FixedSizeListArray> {
     let field_node = field_nodes.pop_front().unwrap().0;
 
@@ -40,6 +43,7 @@ pub fn read_fixed_size_list<R: Read + Seek>(
         block_offset,
         is_little_endian,
         compression,
+        version,
     )?;
     Ok(FixedSizeListArray::from_data(data_type, values, validity))
 }

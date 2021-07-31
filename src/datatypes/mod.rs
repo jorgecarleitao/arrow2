@@ -103,7 +103,8 @@ pub enum DataType {
     /// A nested datatype that contains a number of sub-fields.
     Struct(Vec<Field>),
     /// A nested datatype that can represent slots of differing types.
-    Union(Vec<Field>),
+    /// Third argument represents sparsness
+    Union(Vec<Field>, Option<Vec<i32>>, bool),
     /// A dictionary encoded array (`key_type`, `value_type`), where
     /// each array element is an index of `key_type` into an
     /// associated dictionary of `value_type`.

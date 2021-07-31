@@ -1,5 +1,3 @@
-use std::unimplemented;
-
 use crate::{
     datatypes::{DataType, IntervalUnit},
     types::{days_ms, NativeType},
@@ -19,6 +17,7 @@ mod list;
 mod null;
 mod primitive;
 mod struct_;
+mod union;
 mod utf8;
 
 impl PartialEq for dyn Array {
@@ -323,7 +322,11 @@ pub fn equal(lhs: &dyn Array, rhs: &dyn Array) -> bool {
             let rhs = rhs.as_any().downcast_ref().unwrap();
             fixed_size_list::equal(lhs, rhs)
         }
-        DataType::Union(_) => unimplemented!(),
+        DataType::Union(_, _, _) => {
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            union::equal(lhs, rhs)
+        }
     }
 }
 

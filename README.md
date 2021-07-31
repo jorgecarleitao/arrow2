@@ -63,8 +63,9 @@ venv/bin/python parquet_integration/write_parquet.py
 * IPC supports big endian
 * `MutableArray` API to work in-memory in-place.
 * faster IPC reader (different design that avoids an extra copy of all data)
-* IPC supports 2.0 (compression)
+* IPC supports 2.0 feather (compression)
 * FFI support for dictionary-encoded arrays
+* All arrow types implemented pass the IPC integration tests against other implementations
 
 ### Parquet
 
@@ -81,7 +82,7 @@ venv/bin/python parquet_integration/write_parquet.py
 ## Features in the original not available in this crate
 
 * Parquet read and write of struct and nested lists.
-* Union and Map types
+* Map types
 
 ## Features in this crate not in pyarrow
 

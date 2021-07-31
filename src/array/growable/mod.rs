@@ -225,7 +225,7 @@ pub fn make_growable<'a>(
             ))
         }
         DataType::FixedSizeList(_, _) => todo!(),
-        DataType::Union(_) => todo!(),
+        DataType::Union(_, _, _) => todo!(),
         DataType::Dictionary(key, _) => match key.as_ref() {
             DataType::UInt8 => dyn_dict_growable!(u8, arrays, use_validity, capacity),
             DataType::UInt16 => dyn_dict_growable!(u16, arrays, use_validity, capacity),
