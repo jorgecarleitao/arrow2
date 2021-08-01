@@ -77,7 +77,7 @@ use crate::error::Result;
 /// This representation is useful when building arrays in memory as it allows to memcopy slices of arrays.
 /// This is particularly useful in merge-sort because sorted arrays (passed to the merge-sort) are more likely
 /// to have contiguous blocks of sorted elements (than by random).
-type MergeSlice = (usize, usize, usize);
+pub type MergeSlice = (usize, usize, usize);
 
 /// Takes N arrays together through `slices` under the assumption that the slices have
 /// a total coverage of the arrays.
