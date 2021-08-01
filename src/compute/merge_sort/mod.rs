@@ -234,7 +234,7 @@ fn recursive_merge_sort(slices: &[&[MergeSlice]], comparator: &Comparator) -> Ve
 
 // An iterator adapter that merge-sorts two iterators of `MergeSlice` into a single `MergeSlice`
 // such that the resulting `MergeSlice`s are ordered according to `comparator`.
-struct MergeSortSlices<'a, L, R>
+pub struct MergeSortSlices<'a, L, R>
 where
     L: Iterator<Item = &'a MergeSlice>,
     R: Iterator<Item = &'a MergeSlice>,
@@ -426,7 +426,11 @@ where
 /// Given two iterators of slices representing two sets of sorted [`Array`]s, and a `comparator` bound to those [`Array`]s,
 /// returns a new iterator of slices denoting how to `take` slices from each of the arrays such that the resulting
 /// array is sorted according to `comparator`
-fn merge_sort_slices<'a, L: Iterator<Item = &'a MergeSlice>, R: Iterator<Item = &'a MergeSlice>>(
+pub fn merge_sort_slices<
+    'a,
+    L: Iterator<Item = &'a MergeSlice>,
+    R: Iterator<Item = &'a MergeSlice>,
+>(
     lhs: L,
     rhs: R,
     comparator: &'a Comparator,
@@ -439,7 +443,7 @@ type Comparator<'a> = Box<dyn Fn(usize, usize, usize, usize) -> Ordering + 'a>;
 type IsValid<'a> = Box<dyn Fn(usize) -> bool + 'a>;
 
 /// returns a comparison function between any two arrays of each pair of arrays, according to `SortOptions`.
-fn build_comparator<'a>(
+pub fn build_comparator<'a>(
     pairs: &'a [(&'a [&'a dyn Array], &SortOptions)],
 ) -> Result<Comparator<'a>> {
     // prepare the comparison function of _values_ between all pairs of arrays
