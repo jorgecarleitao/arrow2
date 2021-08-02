@@ -11,8 +11,8 @@ use super::SortOptions;
 /// * `get` is only called for `0 <= i < limit`
 /// * `cmp` is only called from the co-domain of `get`.
 #[inline]
-fn k_element_sort_inner<I: Index, T, F>(
-    indices: &mut [I],
+fn k_element_sort_inner<T, F>(
+    indices: &mut [usize],
     values: &[T],
     descending: bool,
     limit: usize,
@@ -21,28 +21,28 @@ fn k_element_sort_inner<I: Index, T, F>(
     F: FnMut(&T, &T) -> std::cmp::Ordering,
 {
     if descending {
-        let compare = |lhs: &I, rhs: &I| unsafe {
-            let lhs = values.get_unchecked(lhs.to_usize());
-            let rhs = values.get_unchecked(rhs.to_usize());
+        let compare = |lhs: &usize, rhs: &usize| unsafe {
+            let lhs = values.get_unchecked(*lhs);
+            let rhs = values.get_unchecked(*rhs);
             cmp(lhs, rhs).reverse()
         };
         let (before, _, _) = indices.select_nth_unstable_by(limit, compare);
-        let compare = |lhs: &I, rhs: &I| unsafe {
-            let lhs = values.get_unchecked(lhs.to_usize());
-            let rhs = values.get_unchecked(rhs.to_usize());
+        let compare = |lhs: &usize, rhs: &usize| unsafe {
+            let lhs = values.get_unchecked(*lhs);
+            let rhs = values.get_unchecked(*rhs);
             cmp(lhs, rhs).reverse()
         };
         before.sort_unstable_by(compare);
     } else {
-        let compare = |lhs: &I, rhs: &I| unsafe {
-            let lhs = values.get_unchecked(lhs.to_usize());
-            let rhs = values.get_unchecked(rhs.to_usize());
+        let compare = |lhs: &usize, rhs: &usize| unsafe {
+            let lhs = values.get_unchecked(*lhs);
+            let rhs = values.get_unchecked(*rhs);
             cmp(lhs, rhs)
         };
         let (before, _, _) = indices.select_nth_unstable_by(limit, compare);
-        let compare = |lhs: &I, rhs: &I| unsafe {
-            let lhs = values.get_unchecked(lhs.to_usize());
-            let rhs = values.get_unchecked(rhs.to_usize());
+        let compare = |lhs: &usize, rhs: &usize| unsafe {
+            let lhs = values.get_unchecked(*lhs);
+            let rhs = values.get_unchecked(*rhs);
             cmp(lhs, rhs)
         };
         before.sort_unstable_by(compare);
@@ -54,14 +54,13 @@ fn k_element_sort_inner<I: Index, T, F>(
 /// * `get` is only called for `0 <= i < limit`
 /// * `cmp` is only called from the co-domain of `get`.
 #[inline]
-fn sort_unstable_by<I, T, F>(
-    indices: &mut [I],
+fn sort_unstable_by<T, F>(
+    indices: &mut [usize],
     values: &[T],
     mut cmp: F,
     descending: bool,
     limit: usize,
 ) where
-    I: Index,
     F: FnMut(&T, &T) -> std::cmp::Ordering,
 {
     if limit != indices.len() {
@@ -70,14 +69,14 @@ fn sort_unstable_by<I, T, F>(
 
     if descending {
         indices.sort_unstable_by(|lhs, rhs| unsafe {
-            let lhs = values.get_unchecked(lhs.to_usize());
-            let rhs = values.get_unchecked(rhs.to_usize());
+            let lhs = values.get_unchecked(*lhs);
+            let rhs = values.get_unchecked(*rhs);
             cmp(lhs, rhs).reverse()
         })
     } else {
         indices.sort_unstable_by(|lhs, rhs| unsafe {
-            let lhs = values.get_unchecked(lhs.to_usize());
-            let rhs = values.get_unchecked(rhs.to_usize());
+            let lhs = values.get_unchecked(*lhs);
+            let rhs = values.get_unchecked(*rhs);
             cmp(lhs, rhs)
         })
     }
@@ -107,7 +106,7 @@ where
     let limit = limit.min(length);
 
     let indices = if let Some(validity) = validity {
-        let mut indices = MutableBuffer::<I>::from_len_zeroed(length);
+        let mut indices = vec![length; 0usize];
 
         if options.nulls_first {
             let mut nulls = 0;
@@ -117,10 +116,10 @@ where
                 .zip(0..length)
                 .for_each(|(is_valid, index)| {
                     if is_valid {
-                        indices[validity.null_count() + valids] = I::from_usize(index).unwrap();
+                        indices[validity.null_count() + valids] = index;
                         valids += 1;
                     } else {
-                        indices[nulls] = I::from_usize(index).unwrap();
+                        indices[nulls] = index;
                         nulls += 1;
                     }
                 });
@@ -141,10 +140,10 @@ where
             let mut valids = 0;
             validity.iter().zip(0..length).for_each(|(x, index)| {
                 if x {
-                    indices[valids] = I::from_usize(index).unwrap();
+                    indices[valids] = index;
                     valids += 1;
                 } else {
-                    indices[last_valid_index + nulls] = I::from_usize(index).unwrap();
+                    indices[last_valid_index + nulls] = index;
                     nulls += 1;
                 }
             });
@@ -162,12 +161,7 @@ where
 
         indices
     } else {
-        let mut indices = unsafe {
-            MutableBuffer::from_trusted_len_iter_unchecked(
-                (0..length).map(|x| I::from_usize(x).unwrap()),
-            )
-        };
-
+        let mut indices = vec![length; 0usize];
         // Soundness:
         // indices are by construction `< values.len()`
         // limit is by construction `< values.len()`
@@ -175,8 +169,13 @@ where
 
         indices.truncate(limit);
         indices.shrink_to_fit();
-
         indices
     };
-    PrimitiveArray::<I>::from_data(I::DATA_TYPE, indices.into(), None)
+    let mut buffer_indices = MutableBuffer::<I>::with_capacity(indices.len());
+    unsafe {
+        buffer_indices.extend_from_trusted_len_iter_unchecked(
+            indices.iter().map(|c| I::from_usize(*c).unwrap()),
+        );
+    }
+    PrimitiveArray::<I>::from_data(I::DATA_TYPE, buffer_indices.into(), None)
 }

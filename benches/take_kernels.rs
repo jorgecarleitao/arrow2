@@ -35,7 +35,7 @@ fn create_random_index(size: usize, null_density: f32) -> PrimitiveArray<i32> {
     (0..size)
         .map(|_| {
             if rng.gen::<f32>() > null_density {
-                let value = rng.gen_range::<i32, _, _>(0i32, size as i32);
+                let value = rng.gen_range::<i32, _>(0i32..size as i32);
                 Some(value)
             } else {
                 None
