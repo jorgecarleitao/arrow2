@@ -128,7 +128,8 @@ where
 /// Applies a binary operations to two primitive arrays. This is the fastest
 /// way to perform an operation on two primitive array when the benefits of a
 /// vectorized operation outweighs the cost of branching nulls and non-nulls.
-///
+/// # Errors
+/// This function errors iff the arrays have a different length.
 /// # Implementation
 /// This will apply the function for all values, including those on null slots.
 /// This implies that the operation must be infallible for any value of the
