@@ -161,12 +161,11 @@ where
 
         indices
     } else {
-        let mut indices = vec![length; 0usize];
+        let mut indices: Vec<usize> = (0..length as usize).collect();
         // Soundness:
         // indices are by construction `< values.len()`
         // limit is by construction `< values.len()`
         sort_unstable_by(&mut indices, values, cmp, descending, limit);
-
         indices.truncate(limit);
         indices.shrink_to_fit();
         indices
