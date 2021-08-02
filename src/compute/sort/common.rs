@@ -11,40 +11,39 @@ use super::SortOptions;
 /// * `get` is only called for `0 <= i < limit`
 /// * `cmp` is only called from the co-domain of `get`.
 #[inline]
-fn k_element_sort_inner<I: Index, T, G, F>(
+fn k_element_sort_inner<I: Index, T, F>(
     indices: &mut [I],
-    get: G,
+    values: &[T],
     descending: bool,
     limit: usize,
     mut cmp: F,
 ) where
-    G: Fn(usize) -> T,
     F: FnMut(&T, &T) -> std::cmp::Ordering,
 {
     if descending {
-        let compare = |lhs: &I, rhs: &I| {
-            let lhs = get(lhs.to_usize());
-            let rhs = get(rhs.to_usize());
-            cmp(&lhs, &rhs).reverse()
+        let compare = |lhs: &I, rhs: &I| unsafe {
+            let lhs = values.get_unchecked(lhs.to_usize());
+            let rhs = values.get_unchecked(rhs.to_usize());
+            cmp(lhs, rhs).reverse()
         };
         let (before, _, _) = indices.select_nth_unstable_by(limit, compare);
-        let compare = |lhs: &I, rhs: &I| {
-            let lhs = get(lhs.to_usize());
-            let rhs = get(rhs.to_usize());
-            cmp(&lhs, &rhs).reverse()
+        let compare = |lhs: &I, rhs: &I| unsafe {
+            let lhs = values.get_unchecked(lhs.to_usize());
+            let rhs = values.get_unchecked(rhs.to_usize());
+            cmp(lhs, rhs).reverse()
         };
         before.sort_unstable_by(compare);
     } else {
-        let compare = |lhs: &I, rhs: &I| {
-            let lhs = get(lhs.to_usize());
-            let rhs = get(rhs.to_usize());
-            cmp(&lhs, &rhs)
+        let compare = |lhs: &I, rhs: &I| unsafe {
+            let lhs = values.get_unchecked(lhs.to_usize());
+            let rhs = values.get_unchecked(rhs.to_usize());
+            cmp(lhs, rhs)
         };
         let (before, _, _) = indices.select_nth_unstable_by(limit, compare);
-        let compare = |lhs: &I, rhs: &I| {
-            let lhs = get(lhs.to_usize());
-            let rhs = get(rhs.to_usize());
-            cmp(&lhs, &rhs)
+        let compare = |lhs: &I, rhs: &I| unsafe {
+            let lhs = values.get_unchecked(lhs.to_usize());
+            let rhs = values.get_unchecked(rhs.to_usize());
+            cmp(lhs, rhs)
         };
         before.sort_unstable_by(compare);
     }
@@ -55,32 +54,31 @@ fn k_element_sort_inner<I: Index, T, G, F>(
 /// * `get` is only called for `0 <= i < limit`
 /// * `cmp` is only called from the co-domain of `get`.
 #[inline]
-fn sort_unstable_by<I, T, G, F>(
+fn sort_unstable_by<I, T, F>(
     indices: &mut [I],
-    get: G,
+    values: &[T],
     mut cmp: F,
     descending: bool,
     limit: usize,
 ) where
     I: Index,
-    G: Fn(usize) -> T,
     F: FnMut(&T, &T) -> std::cmp::Ordering,
 {
     if limit != indices.len() {
-        return k_element_sort_inner(indices, get, descending, limit, cmp);
+        return k_element_sort_inner(indices, values, descending, limit, cmp);
     }
 
     if descending {
-        indices.sort_unstable_by(|lhs, rhs| {
-            let lhs = get(lhs.to_usize());
-            let rhs = get(rhs.to_usize());
-            cmp(&lhs, &rhs).reverse()
+        indices.sort_unstable_by(|lhs, rhs| unsafe {
+            let lhs = values.get_unchecked(lhs.to_usize());
+            let rhs = values.get_unchecked(rhs.to_usize());
+            cmp(lhs, rhs).reverse()
         })
     } else {
-        indices.sort_unstable_by(|lhs, rhs| {
-            let lhs = get(lhs.to_usize());
-            let rhs = get(rhs.to_usize());
-            cmp(&lhs, &rhs)
+        indices.sort_unstable_by(|lhs, rhs| unsafe {
+            let lhs = values.get_unchecked(lhs.to_usize());
+            let rhs = values.get_unchecked(rhs.to_usize());
+            cmp(lhs, rhs)
         })
     }
 }
@@ -90,9 +88,9 @@ fn sort_unstable_by<I, T, G, F>(
 /// * `get` is only called for `0 <= i < length`
 /// * `cmp` is only called from the co-domain of `get`.
 #[inline]
-pub(super) fn indices_sorted_unstable_by<I, T, G, F>(
+pub(super) fn indices_sorted_unstable_by<I, T, F>(
     validity: &Option<Bitmap>,
-    get: G,
+    values: &[T],
     cmp: F,
     length: usize,
     options: &SortOptions,
@@ -100,7 +98,6 @@ pub(super) fn indices_sorted_unstable_by<I, T, G, F>(
 ) -> PrimitiveArray<I>
 where
     I: Index,
-    G: Fn(usize) -> T,
     F: Fn(&T, &T) -> std::cmp::Ordering,
 {
     let descending = options.descending;
@@ -136,7 +133,7 @@ where
                 // limit is by construction < indices.len()
                 let limit = limit - validity.null_count();
                 let indices = &mut indices.as_mut_slice()[validity.null_count()..];
-                sort_unstable_by(indices, get, cmp, options.descending, limit)
+                sort_unstable_by(indices, values, cmp, options.descending, limit)
             }
         } else {
             let last_valid_index = length - validity.null_count();
@@ -157,7 +154,7 @@ where
             // limit is by construction <= values.len()
             let limit = limit.min(last_valid_index);
             let indices = &mut indices.as_mut_slice()[..last_valid_index];
-            sort_unstable_by(indices, get, cmp, options.descending, limit);
+            sort_unstable_by(indices, values, cmp, options.descending, limit);
         }
 
         indices.truncate(limit);
@@ -174,7 +171,7 @@ where
         // Soundness:
         // indices are by construction `< values.len()`
         // limit is by construction `< values.len()`
-        sort_unstable_by(&mut indices, get, cmp, descending, limit);
+        sort_unstable_by(&mut indices, values, cmp, descending, limit);
 
         indices.truncate(limit);
         indices.shrink_to_fit();

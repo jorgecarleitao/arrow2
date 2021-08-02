@@ -9,9 +9,13 @@ pub(super) fn indices_sorted_unstable_by<I: Index, O: Offset>(
     options: &SortOptions,
     limit: Option<usize>,
 ) -> PrimitiveArray<I> {
-    let get = |idx| unsafe { array.value_unchecked(idx as usize) };
+    let values = unsafe {
+        (0..array.len())
+            .map(|idx| array.value_unchecked(idx as usize))
+            .collect::<Vec<_>>()
+    };
     let cmp = |lhs: &&str, rhs: &&str| lhs.cmp(rhs);
-    common::indices_sorted_unstable_by(array.validity(), get, cmp, array.len(), options, limit)
+    common::indices_sorted_unstable_by(array.validity(), &values, cmp, array.len(), options, limit)
 }
 
 pub(super) fn indices_sorted_unstable_by_dictionary<I: Index, K: DictionaryKey, O: Offset>(
@@ -27,11 +31,16 @@ pub(super) fn indices_sorted_unstable_by_dictionary<I: Index, K: DictionaryKey, 
         .downcast_ref::<Utf8Array<O>>()
         .unwrap();
 
-    let get = |idx| unsafe {
-        let index = keys.value_unchecked(idx as usize);
-        // Note: there is no check that the keys are within bounds of the dictionary.
-        dict.value(index.to_usize().unwrap())
+    let values = unsafe {
+        (0..array.len())
+            .map(|idx| {
+                let index = keys.value_unchecked(idx as usize);
+                // Note: there is no check that the keys are within bounds of the dictionary.
+                dict.value(index.to_usize().unwrap())
+            })
+            .collect::<Vec<_>>()
     };
+
     let cmp = |lhs: &&str, rhs: &&str| lhs.cmp(rhs);
-    common::indices_sorted_unstable_by(array.validity(), get, cmp, array.len(), options, limit)
+    common::indices_sorted_unstable_by(array.validity(), &values, cmp, array.len(), options, limit)
 }
