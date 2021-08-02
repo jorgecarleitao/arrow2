@@ -24,13 +24,13 @@ fn k_element_sort_inner<T, F>(
         let compare = |lhs: &usize, rhs: &usize| unsafe {
             let lhs = values.get_unchecked(*lhs);
             let rhs = values.get_unchecked(*rhs);
-            cmp(lhs, rhs).reverse()
+            cmp(rhs, lhs)
         };
         let (before, _, _) = indices.select_nth_unstable_by(limit, compare);
         let compare = |lhs: &usize, rhs: &usize| unsafe {
             let lhs = values.get_unchecked(*lhs);
             let rhs = values.get_unchecked(*rhs);
-            cmp(lhs, rhs).reverse()
+            cmp(rhs, lhs)
         };
         before.sort_unstable_by(compare);
     } else {
