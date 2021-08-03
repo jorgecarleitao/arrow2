@@ -18,14 +18,17 @@ where
     T: NativeType,
     F: Fn(&T, &T) -> std::cmp::Ordering,
 {
-    common::indices_sorted_unstable_by(
-        array.validity(),
-        array.values().as_slice(),
-        cmp,
-        array.len(),
-        options,
-        limit,
-    )
+    let values = array.values().as_slice();
+    unsafe {
+        common::indices_sorted_unstable_by(
+            array.validity(),
+            |x: usize| *values.get_unchecked(x),
+            cmp,
+            array.len(),
+            options,
+            limit,
+        )
+    }
 }
 
 #[cfg(test)]
