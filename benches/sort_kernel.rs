@@ -19,7 +19,7 @@
 extern crate criterion;
 use criterion::Criterion;
 
-use arrow2::compute::sort::{lexsort, sort, SortColumn, SortOptions};
+use arrow2::compute::sort::{lexsort, sort, sort_to_indices, SortColumn, SortOptions};
 use arrow2::util::bench_util::*;
 use arrow2::{array::*, datatypes::*};
 
@@ -42,6 +42,15 @@ fn bench_sort(arr_a: &dyn Array) {
     sort(criterion::black_box(arr_a), &SortOptions::default(), None).unwrap();
 }
 
+fn bench_sort_limit(arr_a: &dyn Array) {
+    let _: PrimitiveArray<u32> = sort_to_indices(
+        criterion::black_box(arr_a),
+        &SortOptions::default(),
+        Some(100),
+    )
+    .unwrap();
+}
+
 fn add_benchmark(c: &mut Criterion) {
     (10..=20).step_by(2).for_each(|log2_size| {
         let size = 2usize.pow(log2_size);
@@ -49,6 +58,10 @@ fn add_benchmark(c: &mut Criterion) {
 
         c.bench_function(&format!("sort 2^{} f32", log2_size), |b| {
             b.iter(|| bench_sort(&arr_a))
+        });
+
+        c.bench_function(&format!("sort-limit 2^{} f32", log2_size), |b| {
+            b.iter(|| bench_sort_limit(&arr_a))
         });
 
         let arr_b = create_primitive_array_with_seed::<f32>(size, DataType::Float32, 0.0, 43);

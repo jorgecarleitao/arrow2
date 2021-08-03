@@ -387,7 +387,7 @@ where
     if !options.descending {
         valids.sort_by(|a, b| cmp_array(a.1.as_ref(), b.1.as_ref()))
     } else {
-        valids.sort_by(|a, b| cmp_array(a.1.as_ref(), b.1.as_ref()).reverse())
+        valids.sort_by(|a, b| cmp_array(b.1.as_ref(), a.1.as_ref()))
     }
 
     let values = valids.iter().map(|tuple| tuple.0);

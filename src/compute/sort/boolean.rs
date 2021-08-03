@@ -26,7 +26,7 @@ pub fn sort_boolean<I: Index>(
     if !descending {
         valids.sort_by(|a, b| a.1.cmp(&b.1));
     } else {
-        valids.sort_by(|a, b| a.1.cmp(&b.1).reverse());
+        valids.sort_by(|a, b| b.1.cmp(&a.1));
         // reverse to keep a stable ordering
         nulls.reverse();
     }

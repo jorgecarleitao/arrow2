@@ -8,9 +8,12 @@ use crate::{
 };
 
 /// Trait describing any type that can be used to index a slot of an array.
-pub trait Index: NativeType + NaturalDataType {
+pub trait Index: NativeType + NaturalDataType + std::iter::Step {
     fn to_usize(&self) -> usize;
     fn from_usize(index: usize) -> Option<Self>;
+    fn is_usize() -> bool {
+        false
+    }
 }
 
 /// Trait describing types that can be used as offsets as per Arrow specification.
@@ -95,6 +98,10 @@ impl Index for u32 {
     fn from_usize(value: usize) -> Option<Self> {
         Self::try_from(value).ok()
     }
+
+    fn is_usize() -> bool {
+        std::mem::size_of::<Self>() == std::mem::size_of::<usize>()
+    }
 }
 
 impl Index for u64 {
@@ -106,6 +113,10 @@ impl Index for u64 {
     #[inline]
     fn from_usize(value: usize) -> Option<Self> {
         Self::try_from(value).ok()
+    }
+
+    fn is_usize() -> bool {
+        std::mem::size_of::<Self>() == std::mem::size_of::<usize>()
     }
 }
 
