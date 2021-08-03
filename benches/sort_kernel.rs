@@ -23,8 +23,6 @@ use arrow2::compute::sort::{lexsort, sort, sort_to_indices, SortColumn, SortOpti
 use arrow2::util::bench_util::*;
 use arrow2::{array::*, datatypes::*};
 
-use pprof::criterion::{Output, PProfProfiler};
-
 fn bench_lexsort(arr_a: &dyn Array, array_b: &dyn Array) {
     let columns = vec![
         SortColumn {
@@ -89,9 +87,5 @@ fn add_benchmark(c: &mut Criterion) {
     });
 }
 
-criterion_group! {
-    name =  benches;
-    config = Criterion::default().with_profiler(PProfProfiler::new(100, Output::Flamegraph(None)));
-    targets = add_benchmark
-}
+criterion_group!(benches, add_benchmark);
 criterion_main!(benches);

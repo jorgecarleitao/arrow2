@@ -66,7 +66,6 @@ criterion = "0.3"
 flate2 = "1"
 doc-comment = "0.3"
 crossbeam-channel = "0.5.1"
-pprof = { version = "0.5.0", features = ["flamegraph", "criterion"] }
 
 [features]
 default = ["io_csv", "io_json", "io_ipc", "io_ipc_compression", "io_json_integration", "io_print", "io_parquet", "regex", "merge_sort", "ahash", "benchmarks", "compute"]
