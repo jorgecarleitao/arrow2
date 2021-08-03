@@ -291,6 +291,29 @@ where
             None => self.right = None,
         }
     }
+
+    /// Collect the MergeSortSlices to be a vec for reusing
+    #[warn(dead_code)]
+    pub fn to_vec(self, limit: Option<usize>) -> Vec<MergeSlice> {
+        match limit {
+            Some(limit) => {
+                let mut v = Vec::with_capacity(limit);
+                let mut current_len = 0;
+                for (index, start, len) in self {
+                    v.push((index, start, len));
+
+                    if len + current_len >= limit {
+                        break;
+                    } else {
+                        current_len += len;
+                    }
+                }
+
+                v
+            }
+            None => self.into_iter().collect(),
+        }
+    }
 }
 
 impl<'a, L, R> Iterator for MergeSortSlices<'a, L, R>

@@ -96,10 +96,7 @@ where
     let limit = limit.min(length);
 
     let indices = if let Some(validity) = validity {
-        let mut indices = MutableBuffer::<I>::with_capacity(length);
-        unsafe {
-            indices.set_len(length);
-        }
+        let mut indices = MutableBuffer::<I>::from_len(length);
         if options.nulls_first {
             let mut nulls = 0;
             let mut valids = 0;
@@ -122,12 +119,12 @@ where
                 // Soundness:
                 // all indices in `indices` are by construction `< array.len() == values.len()`
                 // limit is by construction < indices.len()
-                let limit = limit - validity.null_count();
+                let limit = limit.saturating_sub(validity.null_count());
                 let indices = &mut indices.as_mut_slice()[validity.null_count()..];
                 sort_unstable_by(indices, values, cmp, options.descending, limit)
             }
         } else {
-            let last_valid_index = length - validity.null_count();
+            let last_valid_index = length.saturating_sub(validity.null_count());
             let mut nulls = 0;
             let mut valids = 0;
             validity.iter().zip(0..length).for_each(|(x, index)| {
