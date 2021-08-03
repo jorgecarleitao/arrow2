@@ -271,7 +271,7 @@ jobs:
           export CARGO_HOME="/github/home/.cargo"
           export CARGO_TARGET_DIR="/github/home/target"
           # no need 
-          cargo build --no-default-features --features=merge_sort,io_ipc,io_csv,io_json --target wasm32-unknown-unknown
+          cargo build --no-default-features --features=merge_sort,io_ipc,io_csv,io_json,io_parquet --target wasm32-unknown-unknown
 
   linux-simd-test:
     name: SIMD
