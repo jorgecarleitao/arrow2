@@ -216,7 +216,7 @@ impl Bitmap {
     #[inline]
     pub(crate) fn as_slice(&self) -> &[u8] {
         let start = self.offset / 8;
-        let len = self.length.saturating_add(7) / 8;
+        let len = (self.offset() + self.length).saturating_add(7) / 8;
         &self.bytes[start..start + len]
     }
 }
@@ -260,5 +260,16 @@ mod tests {
         assert_eq!(slice, &[0b1]);
 
         assert_eq!(0, b.offset());
+    }
+
+    #[test]
+    fn as_slice_offset_middle() {
+        let b = Bitmap::from_u8_slice(&[0, 0, 0, 0b00010101], 27);
+        let b = b.slice(22, 5);
+
+        let slice = b.as_slice();
+        assert_eq!(slice, &[0, 0b00010101]);
+
+        assert_eq!(6, b.offset());
     }
 }
