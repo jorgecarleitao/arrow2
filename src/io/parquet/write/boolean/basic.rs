@@ -1,7 +1,7 @@
 use parquet2::{
     encoding::hybrid_rle::bitpacked_encode,
     metadata::ColumnDescriptor,
-    read::CompressedPage,
+    page::CompressedDataPage,
     schema::Encoding,
     statistics::{serialize_statistics, BooleanStatistics, ParquetStatistics, Statistics},
     write::WriteOptions,
@@ -43,7 +43,7 @@ pub fn array_to_page(
     array: &BooleanArray,
     options: WriteOptions,
     descriptor: ColumnDescriptor,
-) -> Result<CompressedPage> {
+) -> Result<CompressedDataPage> {
     let is_optional = is_type_nullable(descriptor.type_());
 
     let validity = array.validity();

@@ -1,5 +1,5 @@
 use parquet2::schema::Encoding;
-use parquet2::{metadata::ColumnDescriptor, read::CompressedPage, write::WriteOptions};
+use parquet2::{metadata::ColumnDescriptor, page::CompressedDataPage, write::WriteOptions};
 
 use super::super::{levels, utils};
 use super::basic::{build_statistics, encode_plain};
@@ -14,7 +14,7 @@ pub fn array_to_page<O, OO>(
     options: WriteOptions,
     descriptor: ColumnDescriptor,
     nested: levels::NestedInfo<OO>,
-) -> Result<CompressedPage>
+) -> Result<CompressedDataPage>
 where
     OO: Offset,
     O: Offset,

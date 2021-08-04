@@ -1,6 +1,7 @@
 use parquet2::{
     encoding::{bitpacking, hybrid_rle, uleb128, Encoding},
-    read::{levels, FixedLenByteArrayPageDict, Page, PageHeader, StreamingIterator},
+    page::{DataPage, DataPageHeader, FixedLenByteArrayPageDict},
+    read::{levels, StreamingIterator},
 };
 
 use super::{ColumnChunkMetaData, ColumnDescriptor};
@@ -136,7 +137,7 @@ pub fn iter_to_array<I, E>(
 where
     ArrowError: From<E>,
     E: Clone,
-    I: StreamingIterator<Item = std::result::Result<Page, E>>,
+    I: StreamingIterator<Item = std::result::Result<DataPage, E>>,
 {
     let capacity = metadata.num_values() as usize;
     let mut values = MutableBuffer::<u8>::with_capacity(capacity * size as usize);
@@ -159,7 +160,7 @@ where
 }
 
 pub(crate) fn extend_from_page(
-    page: &Page,
+    page: &DataPage,
     size: i32,
     descriptor: &ColumnDescriptor,
     values: &mut MutableBuffer<u8>,
@@ -169,7 +170,7 @@ pub(crate) fn extend_from_page(
     assert!(descriptor.max_def_level() <= 1);
     let is_optional = descriptor.max_def_level() == 1;
     match page.header() {
-        PageHeader::V1(header) => {
+        DataPageHeader::V1(header) => {
             assert_eq!(header.definition_level_encoding, Encoding::Rle);
 
             let (_, validity_buffer, values_buffer) =
@@ -207,7 +208,7 @@ pub(crate) fn extend_from_page(
                 }
             }
         }
-        PageHeader::V2(header) => {
+        DataPageHeader::V2(header) => {
             let def_level_buffer_length = header.definition_levels_byte_length as usize;
 
             match (page.encoding(), page.dictionary_page(), is_optional) {

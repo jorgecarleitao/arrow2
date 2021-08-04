@@ -1,6 +1,6 @@
 use parquet2::{
-    compression::create_codec, metadata::ColumnDescriptor, read::CompressedPage, schema::Encoding,
-    write::WriteOptions,
+    compression::create_codec, metadata::ColumnDescriptor, page::CompressedDataPage,
+    schema::Encoding, write::WriteOptions,
 };
 
 use super::utils;
@@ -14,7 +14,7 @@ pub fn array_to_page(
     array: &FixedSizeBinaryArray,
     options: WriteOptions,
     descriptor: ColumnDescriptor,
-) -> Result<CompressedPage> {
+) -> Result<CompressedDataPage> {
     let is_optional = is_type_nullable(descriptor.type_());
     let validity = array.validity();
 

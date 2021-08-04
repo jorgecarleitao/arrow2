@@ -65,7 +65,8 @@ def variations():
             "generated_datetime",
             "generated_decimal",
             "generated_interval",
-            # requires writing Dictionary
+            # see https://issues.apache.org/jira/browse/ARROW-13486 and
+            # https://issues.apache.org/jira/browse/ARROW-13487
             # "generated_dictionary",
             # requires writing Struct
             # "generated_duplicate_fieldnames",
