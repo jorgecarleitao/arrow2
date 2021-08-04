@@ -127,15 +127,18 @@ where
             let last_valid_index = length.saturating_sub(validity.null_count());
             let mut nulls = 0;
             let mut valids = 0;
-            validity.iter().zip(0..length).for_each(|(x, index)| {
-                if x {
-                    indices[valids] = I::from_usize(index).unwrap();
-                    valids += 1;
-                } else {
-                    indices[last_valid_index + nulls] = I::from_usize(index).unwrap();
-                    nulls += 1;
-                }
-            });
+            validity
+                .iter()
+                .zip(I::range(0, length).unwrap())
+                .for_each(|(x, index)| {
+                    if x {
+                        indices[valids] = index;
+                        valids += 1;
+                    } else {
+                        indices[last_valid_index + nulls] = index;
+                        nulls += 1;
+                    }
+                });
 
             // Soundness:
             // all indices in `indices` are by construction `< array.len() == values.len()`
