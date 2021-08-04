@@ -14,7 +14,9 @@ use std::{
 
 mod bit_chunk;
 pub use bit_chunk::{BitChunk, BitChunkIter};
+mod index;
 pub mod simd;
+pub use index::*;
 
 use crate::datatypes::{DataType, IntervalUnit, TimeUnit};
 

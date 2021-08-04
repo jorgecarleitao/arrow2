@@ -1,6 +1,7 @@
 use crate::{
-    array::{Array, BooleanArray, Index, PrimitiveArray},
+    array::{Array, BooleanArray, PrimitiveArray},
     buffer::MutableBuffer,
+    types::Index,
 };
 
 use super::SortOptions;

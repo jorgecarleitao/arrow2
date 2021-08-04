@@ -1,6 +1,6 @@
 use crate::{
-    array::{Array, Index, PrimitiveArray},
-    types::NativeType,
+    array::{Array, PrimitiveArray},
+    types::{Index, NativeType},
 };
 
 use super::super::common;

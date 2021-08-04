@@ -6,7 +6,7 @@ use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 use crate::{
     array::*,
-    types::{days_ms, NativeType},
+    types::{days_ms, Index, NativeType},
 };
 
 use crate::buffer::MutableBuffer;

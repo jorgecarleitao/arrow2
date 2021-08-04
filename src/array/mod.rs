@@ -397,7 +397,7 @@ pub use fixed_size_list::FixedSizeListArray;
 pub use list::{ListArray, MutableListArray};
 pub use null::NullArray;
 pub use primitive::*;
-pub use specification::{Index, Offset};
+pub use specification::Offset;
 pub use struct_::StructArray;
 pub use utf8::{MutableUtf8Array, Utf8Array, Utf8ValuesIter};
 
