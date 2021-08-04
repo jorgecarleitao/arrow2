@@ -93,6 +93,15 @@ impl<T: NativeType> MutableBuffer<T> {
         }
     }
 
+    /// Allocates a new [MutableBuffer] with `len` and capacity to be at least `len` where
+    /// all bytes are not initialized
+    #[inline]
+    pub unsafe fn from_len(len: usize) -> Self {
+        let mut buffer = MutableBuffer::with_capacity(len);
+        buffer.set_len(len);
+        buffer
+    }
+
     /// Ensures that this buffer has at least `self.len + additional` bytes. This re-allocates iff
     /// `self.len + additional > capacity`.
     /// # Example

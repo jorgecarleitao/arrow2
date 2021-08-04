@@ -177,6 +177,7 @@ pub fn lexsort_to_indices<I: Index>(
         let (before, _, _) = values.select_nth_unstable_by(limit, lex_comparator);
         before.sort_unstable_by(lex_comparator);
         values.truncate(limit);
+        values.shrink_to_fit();
     } else {
         values.sort_unstable_by(lex_comparator);
     }

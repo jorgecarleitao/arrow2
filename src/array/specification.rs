@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use num::Num;
 
 use crate::{
-    buffer::Buffer,
+    buffer::{Buffer, MutableBuffer},
     types::{NativeType, NaturalDataType},
 };
 
@@ -11,6 +11,11 @@ use crate::{
 pub trait Index: NativeType + NaturalDataType {
     fn to_usize(&self) -> usize;
     fn from_usize(index: usize) -> Option<Self>;
+    fn is_usize() -> bool {
+        false
+    }
+
+    fn buffer_from_range(start: usize, end: usize) -> Option<MutableBuffer<Self>>;
 }
 
 /// Trait describing types that can be used as offsets as per Arrow specification.
@@ -71,6 +76,19 @@ impl Index for i32 {
     fn from_usize(value: usize) -> Option<Self> {
         Self::try_from(value).ok()
     }
+
+    fn buffer_from_range(start: usize, end: usize) -> Option<MutableBuffer<Self>> {
+        let start = Self::from_usize(start);
+        let end = Self::from_usize(end);
+        match (start, end) {
+            (Some(start), Some(end)) => unsafe {
+                Some(MutableBuffer::<Self>::from_trusted_len_iter_unchecked(
+                    start..end,
+                ))
+            },
+            _ => None,
+        }
+    }
 }
 
 impl Index for i64 {
@@ -82,6 +100,19 @@ impl Index for i64 {
     #[inline]
     fn from_usize(value: usize) -> Option<Self> {
         Self::try_from(value).ok()
+    }
+
+    fn buffer_from_range(start: usize, end: usize) -> Option<MutableBuffer<Self>> {
+        let start = Self::from_usize(start);
+        let end = Self::from_usize(end);
+        match (start, end) {
+            (Some(start), Some(end)) => unsafe {
+                Some(MutableBuffer::<Self>::from_trusted_len_iter_unchecked(
+                    start..end,
+                ))
+            },
+            _ => None,
+        }
     }
 }
 
@@ -95,6 +126,23 @@ impl Index for u32 {
     fn from_usize(value: usize) -> Option<Self> {
         Self::try_from(value).ok()
     }
+
+    fn is_usize() -> bool {
+        std::mem::size_of::<Self>() == std::mem::size_of::<usize>()
+    }
+
+    fn buffer_from_range(start: usize, end: usize) -> Option<MutableBuffer<Self>> {
+        let start = Self::from_usize(start);
+        let end = Self::from_usize(end);
+        match (start, end) {
+            (Some(start), Some(end)) => unsafe {
+                Some(MutableBuffer::<Self>::from_trusted_len_iter_unchecked(
+                    start..end,
+                ))
+            },
+            _ => None,
+        }
+    }
 }
 
 impl Index for u64 {
@@ -106,6 +154,23 @@ impl Index for u64 {
     #[inline]
     fn from_usize(value: usize) -> Option<Self> {
         Self::try_from(value).ok()
+    }
+
+    fn is_usize() -> bool {
+        std::mem::size_of::<Self>() == std::mem::size_of::<usize>()
+    }
+
+    fn buffer_from_range(start: usize, end: usize) -> Option<MutableBuffer<Self>> {
+        let start = Self::from_usize(start);
+        let end = Self::from_usize(end);
+        match (start, end) {
+            (Some(start), Some(end)) => unsafe {
+                Some(MutableBuffer::<Self>::from_trusted_len_iter_unchecked(
+                    start..end,
+                ))
+            },
+            _ => None,
+        }
     }
 }
 

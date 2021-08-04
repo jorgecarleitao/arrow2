@@ -26,7 +26,7 @@ pub fn sort_boolean<I: Index>(
     if !descending {
         valids.sort_by(|a, b| a.1.cmp(&b.1));
     } else {
-        valids.sort_by(|a, b| a.1.cmp(&b.1).reverse());
+        valids.sort_by(|a, b| b.1.cmp(&a.1));
         // reverse to keep a stable ordering
         nulls.reverse();
     }
@@ -45,6 +45,7 @@ pub fn sort_boolean<I: Index>(
     // un-efficient; there are much more performant ways of sorting nulls above, anyways.
     if let Some(limit) = limit {
         values.truncate(limit);
+        values.shrink_to_fit();
     }
 
     PrimitiveArray::<I>::from_data(I::DATA_TYPE, values.into(), None)

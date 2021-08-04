@@ -32,6 +32,7 @@ pub(super) fn indices_sorted_unstable_by_dictionary<I: Index, K: DictionaryKey, 
         // Note: there is no check that the keys are within bounds of the dictionary.
         dict.value(index.to_usize().unwrap())
     };
+
     let cmp = |lhs: &&str, rhs: &&str| lhs.cmp(rhs);
     common::indices_sorted_unstable_by(array.validity(), get, cmp, array.len(), options, limit)
 }
