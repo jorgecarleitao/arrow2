@@ -125,6 +125,7 @@ where
     };
     // values are sorted, we can now truncate the remaining.
     buffer.truncate(limit);
+    buffer.shrink_to_fit();
 
     (buffer.into(), new_validity.into())
 }
@@ -154,6 +155,7 @@ where
 
         sort_values(&mut buffer.as_mut_slice(), cmp, options.descending, limit);
         buffer.truncate(limit);
+        buffer.shrink_to_fit();
 
         (buffer.into(), None)
     };
