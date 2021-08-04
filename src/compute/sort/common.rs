@@ -96,7 +96,7 @@ where
     let limit = limit.min(length);
 
     let indices = if let Some(validity) = validity {
-        let mut indices = unsafe { MutableBuffer::<I>::from_len(length) };
+        let mut indices = MutableBuffer::<I>::from_len_zeroed(length);
         if options.nulls_first {
             let mut nulls = 0;
             let mut valids = 0;
