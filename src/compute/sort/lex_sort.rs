@@ -3,8 +3,9 @@ use std::cmp::Ordering;
 use crate::compute::take;
 use crate::error::{ArrowError, Result};
 use crate::{
-    array::{ord, Array, Index, PrimitiveArray},
+    array::{ord, Array, PrimitiveArray},
     buffer::MutableBuffer,
+    types::Index,
 };
 
 use super::{sort_to_indices, SortOptions};

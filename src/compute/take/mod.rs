@@ -21,10 +21,8 @@ use crate::{
     array::{new_empty_array, Array, NullArray, PrimitiveArray},
     datatypes::{DataType, IntervalUnit},
     error::Result,
-    types::days_ms,
+    types::{days_ms, Index},
 };
-
-pub use crate::array::Index;
 
 mod binary;
 mod boolean;

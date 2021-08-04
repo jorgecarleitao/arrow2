@@ -1,8 +1,4 @@
-use crate::{
-    array::{Index, PrimitiveArray},
-    bitmap::Bitmap,
-    buffer::MutableBuffer,
-};
+use crate::{array::PrimitiveArray, bitmap::Bitmap, buffer::MutableBuffer, types::Index};
 
 use super::SortOptions;
 
@@ -106,13 +102,13 @@ where
             let mut valids = 0;
             validity
                 .iter()
-                .zip(0..length)
+                .zip(I::range(0, length).unwrap())
                 .for_each(|(is_valid, index)| {
                     if is_valid {
-                        indices[validity.null_count() + valids] = I::from_usize(index).unwrap();
+                        indices[validity.null_count() + valids] = index;
                         valids += 1;
                     } else {
-                        indices[nulls] = I::from_usize(index).unwrap();
+                        indices[nulls] = index;
                         nulls += 1;
                     }
                 });
@@ -154,7 +150,8 @@ where
 
         indices
     } else {
-        let mut indices = Index::buffer_from_range(0, length).unwrap();
+        let mut indices = MutableBuffer::from_trusted_len_iter(I::range(0, length).unwrap());
+
         // Soundness:
         // indices are by construction `< values.len()`
         // limit is by construction `< values.len()`
