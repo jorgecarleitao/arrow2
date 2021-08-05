@@ -36,9 +36,11 @@ pub use primitive_to::*;
 pub use timestamps::*;
 pub use utf8_to::*;
 
-/// options that define how Cast kernels should behave
+/// options defining how Cast kernels behave
 #[derive(Clone, Copy, Debug)]
 pub struct CastOptions {
+    /// default to false
+    /// if set to true, the cast will use AsPrimitive to convert the primitive value, this could be more efficient
     pub ignore_overflow: bool,
 }
 
@@ -47,6 +49,14 @@ impl Default for CastOptions {
         Self {
             ignore_overflow: false,
         }
+    }
+}
+
+impl CastOptions {
+    fn with_ignore_overflow(&self, v: bool) -> Self {
+        let mut option = self.clone();
+        option.ignore_overflow = v;
+        option
     }
 }
 
@@ -328,6 +338,8 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
     if from_type == to_type {
         return Ok(clone(array));
     }
+
+    let as_options = options.with_ignore_overflow(true);
     match (from_type, to_type) {
         (Struct(_), _) => Err(ArrowError::NotYetImplemented(
             "Cannot cast from struct to other types".to_string(),
@@ -534,29 +546,29 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
             .map(|x| Box::new(x) as Box<dyn Array>),
 
         // start numeric casts
-        (UInt8, UInt16) => primitive_to_primitive_dyn::<u8, u16>(array, to_type, options),
-        (UInt8, UInt32) => primitive_to_primitive_dyn::<u8, u32>(array, to_type, options),
-        (UInt8, UInt64) => primitive_to_primitive_dyn::<u8, u64>(array, to_type, options),
+        (UInt8, UInt16) => primitive_to_primitive_dyn::<u8, u16>(array, to_type, as_options),
+        (UInt8, UInt32) => primitive_to_primitive_dyn::<u8, u32>(array, to_type, as_options),
+        (UInt8, UInt64) => primitive_to_primitive_dyn::<u8, u64>(array, to_type, as_options),
         (UInt8, Int8) => primitive_to_primitive_dyn::<u8, i8>(array, to_type, options),
         (UInt8, Int16) => primitive_to_primitive_dyn::<u8, i16>(array, to_type, options),
         (UInt8, Int32) => primitive_to_primitive_dyn::<u8, i32>(array, to_type, options),
         (UInt8, Int64) => primitive_to_primitive_dyn::<u8, i64>(array, to_type, options),
-        (UInt8, Float32) => primitive_to_primitive_dyn::<u8, f32>(array, to_type, options),
-        (UInt8, Float64) => primitive_to_primitive_dyn::<u8, f64>(array, to_type, options),
+        (UInt8, Float32) => primitive_to_primitive_dyn::<u8, f32>(array, to_type, as_options),
+        (UInt8, Float64) => primitive_to_primitive_dyn::<u8, f64>(array, to_type, as_options),
 
         (UInt16, UInt8) => primitive_to_primitive_dyn::<u16, u8>(array, to_type, options),
-        (UInt16, UInt32) => primitive_to_primitive_dyn::<u16, u32>(array, to_type, options),
-        (UInt16, UInt64) => primitive_to_primitive_dyn::<u16, u64>(array, to_type, options),
+        (UInt16, UInt32) => primitive_to_primitive_dyn::<u16, u32>(array, to_type, as_options),
+        (UInt16, UInt64) => primitive_to_primitive_dyn::<u16, u64>(array, to_type, as_options),
         (UInt16, Int8) => primitive_to_primitive_dyn::<u16, i8>(array, to_type, options),
         (UInt16, Int16) => primitive_to_primitive_dyn::<u16, i16>(array, to_type, options),
         (UInt16, Int32) => primitive_to_primitive_dyn::<u16, i32>(array, to_type, options),
         (UInt16, Int64) => primitive_to_primitive_dyn::<u16, i64>(array, to_type, options),
-        (UInt16, Float32) => primitive_to_primitive_dyn::<u16, f32>(array, to_type, options),
-        (UInt16, Float64) => primitive_to_primitive_dyn::<u16, f64>(array, to_type, options),
+        (UInt16, Float32) => primitive_to_primitive_dyn::<u16, f32>(array, to_type, as_options),
+        (UInt16, Float64) => primitive_to_primitive_dyn::<u16, f64>(array, to_type, as_options),
 
         (UInt32, UInt8) => primitive_to_primitive_dyn::<u32, u8>(array, to_type, options),
         (UInt32, UInt16) => primitive_to_primitive_dyn::<u32, u16>(array, to_type, options),
-        (UInt32, UInt64) => primitive_to_primitive_dyn::<u32, u64>(array, to_type, options),
+        (UInt32, UInt64) => primitive_to_primitive_dyn::<u32, u64>(array, to_type, as_options),
         (UInt32, Int8) => primitive_to_primitive_dyn::<u32, i8>(array, to_type, options),
         (UInt32, Int16) => primitive_to_primitive_dyn::<u32, i16>(array, to_type, options),
         (UInt32, Int32) => primitive_to_primitive_dyn::<u32, i32>(array, to_type, options),
@@ -578,21 +590,21 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
         (Int8, UInt16) => primitive_to_primitive_dyn::<i8, u16>(array, to_type, options),
         (Int8, UInt32) => primitive_to_primitive_dyn::<i8, u32>(array, to_type, options),
         (Int8, UInt64) => primitive_to_primitive_dyn::<i8, u64>(array, to_type, options),
-        (Int8, Int16) => primitive_to_primitive_dyn::<i8, i16>(array, to_type, options),
-        (Int8, Int32) => primitive_to_primitive_dyn::<i8, i32>(array, to_type, options),
-        (Int8, Int64) => primitive_to_primitive_dyn::<i8, i64>(array, to_type, options),
-        (Int8, Float32) => primitive_to_primitive_dyn::<i8, f32>(array, to_type, options),
-        (Int8, Float64) => primitive_to_primitive_dyn::<i8, f64>(array, to_type, options),
+        (Int8, Int16) => primitive_to_primitive_dyn::<i8, i16>(array, to_type, as_options),
+        (Int8, Int32) => primitive_to_primitive_dyn::<i8, i32>(array, to_type, as_options),
+        (Int8, Int64) => primitive_to_primitive_dyn::<i8, i64>(array, to_type, as_options),
+        (Int8, Float32) => primitive_to_primitive_dyn::<i8, f32>(array, to_type, as_options),
+        (Int8, Float64) => primitive_to_primitive_dyn::<i8, f64>(array, to_type, as_options),
 
         (Int16, UInt8) => primitive_to_primitive_dyn::<i16, u8>(array, to_type, options),
         (Int16, UInt16) => primitive_to_primitive_dyn::<i16, u16>(array, to_type, options),
         (Int16, UInt32) => primitive_to_primitive_dyn::<i16, u32>(array, to_type, options),
         (Int16, UInt64) => primitive_to_primitive_dyn::<i16, u64>(array, to_type, options),
         (Int16, Int8) => primitive_to_primitive_dyn::<i16, i8>(array, to_type, options),
-        (Int16, Int32) => primitive_to_primitive_dyn::<i16, i32>(array, to_type, options),
-        (Int16, Int64) => primitive_to_primitive_dyn::<i16, i64>(array, to_type, options),
-        (Int16, Float32) => primitive_to_primitive_dyn::<i16, f32>(array, to_type, options),
-        (Int16, Float64) => primitive_to_primitive_dyn::<i16, f64>(array, to_type, options),
+        (Int16, Int32) => primitive_to_primitive_dyn::<i16, i32>(array, to_type, as_options),
+        (Int16, Int64) => primitive_to_primitive_dyn::<i16, i64>(array, to_type, as_options),
+        (Int16, Float32) => primitive_to_primitive_dyn::<i16, f32>(array, to_type, as_options),
+        (Int16, Float64) => primitive_to_primitive_dyn::<i16, f64>(array, to_type, as_options),
 
         (Int32, UInt8) => primitive_to_primitive_dyn::<i32, u8>(array, to_type, options),
         (Int32, UInt16) => primitive_to_primitive_dyn::<i32, u16>(array, to_type, options),
@@ -600,7 +612,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
         (Int32, UInt64) => primitive_to_primitive_dyn::<i32, u64>(array, to_type, options),
         (Int32, Int8) => primitive_to_primitive_dyn::<i32, i8>(array, to_type, options),
         (Int32, Int16) => primitive_to_primitive_dyn::<i32, i16>(array, to_type, options),
-        (Int32, Int64) => primitive_to_primitive_dyn::<i32, i64>(array, to_type, options),
+        (Int32, Int64) => primitive_to_primitive_dyn::<i32, i64>(array, to_type, as_options),
         (Int32, Float32) => primitive_to_primitive_dyn::<i32, f32>(array, to_type, options),
         (Int32, Float64) => primitive_to_primitive_dyn::<i32, f64>(array, to_type, options),
 
@@ -621,8 +633,9 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
         (Float32, Int8) => primitive_to_primitive_dyn::<f32, i8>(array, to_type, options),
         (Float32, Int16) => primitive_to_primitive_dyn::<f32, i16>(array, to_type, options),
         (Float32, Int32) => primitive_to_primitive_dyn::<f32, i32>(array, to_type, options),
-        (Float32, Int64) => primitive_to_primitive_dyn::<f32, i64>(array, to_type, options),
-        (Float32, Float64) => primitive_to_primitive_dyn::<f32, f64>(array, to_type, options),
+        // float32: 3.4E-38 to 3.4E+38
+        (Float32, Int64) => primitive_to_primitive_dyn::<f32, i64>(array, to_type, as_options),
+        (Float32, Float64) => primitive_to_primitive_dyn::<f32, f64>(array, to_type, as_options),
 
         (Float64, UInt8) => primitive_to_primitive_dyn::<f64, u8>(array, to_type, options),
         (Float64, UInt16) => primitive_to_primitive_dyn::<f64, u16>(array, to_type, options),
@@ -741,6 +754,86 @@ mod tests {
         assert!((9.0 - c.value(4)).abs() < f64::EPSILON);
     }
 
+    #[test]
+    fn i32_as_f64_no_overflow() {
+        let array = Int32Array::from_slice(&[5, 6, 7, 8, 9]);
+        let b = cast(
+            &array,
+            &DataType::Float64,
+            CastOptions {
+                ignore_overflow: true,
+            },
+        )
+        .unwrap();
+        let c = b.as_any().downcast_ref::<Float64Array>().unwrap();
+        assert!((5.0 - c.value(0)).abs() < f64::EPSILON);
+        assert!((6.0 - c.value(1)).abs() < f64::EPSILON);
+        assert!((7.0 - c.value(2)).abs() < f64::EPSILON);
+        assert!((8.0 - c.value(3)).abs() < f64::EPSILON);
+        assert!((9.0 - c.value(4)).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn u16_as_u8_overflow() {
+        let array = UInt16Array::from_slice(&[255, 256, 257, 258, 259]);
+        let b = cast(
+            &array,
+            &DataType::UInt8,
+            CastOptions {
+                ignore_overflow: true,
+            },
+        )
+        .unwrap();
+        let c = b.as_any().downcast_ref::<UInt8Array>().unwrap();
+        let values = c.values().as_slice();
+        assert_eq!(values, &[255, 0, 1, 2, 3])
+    }
+
+    #[test]
+    fn u16_as_u8_no_overflow() {
+        let array = UInt16Array::from_slice(&[1, 2, 3, 4, 5]);
+        let b = cast(
+            &array,
+            &DataType::UInt8,
+            CastOptions {
+                ignore_overflow: true,
+            },
+        )
+        .unwrap();
+        let c = b.as_any().downcast_ref::<UInt8Array>().unwrap();
+        let values = c.values().as_slice();
+        assert_eq!(values, &[1, 2, 3, 4, 5])
+    }
+
+    #[test]
+    fn f32_as_u8_overflow() {
+        let array = Float32Array::from_slice(&[1.1, 5000.0]);
+        let b = cast(
+            &array,
+            &DataType::UInt8,
+            CastOptions {
+                ignore_overflow: false,
+            },
+        )
+        .unwrap();
+        let c = b.as_any().downcast_ref::<UInt8Array>().unwrap();
+        let expected = UInt8Array::from(&[Some(1), None]);
+        assert_eq!(c, &expected);
+
+        let b = cast(
+            &array,
+            &DataType::UInt8,
+            CastOptions {
+                ignore_overflow: true,
+            },
+        )
+        .unwrap();
+        let c = b.as_any().downcast_ref::<UInt8Array>().unwrap();
+        let expected = UInt8Array::from(&[Some(1), Some(255)]);
+        assert_eq!(c, &expected);
+    }
+
+    #[test]
     fn i32_to_u8() {
         let array = Int32Array::from_slice(&[-5, 6, -7, 8, 100000000]);
         let b = cast(&array, &DataType::UInt8, CastOptions::default()).unwrap();
@@ -946,7 +1039,7 @@ mod tests {
         expected_type: DataType,
     ) {
         let a = PrimitiveArray::<I>::from_slice(lhs).to(lhs_type);
-        let b = cast(&a, &expected_type).unwrap();
+        let b = cast(&a, &expected_type, CastOptions::default()).unwrap();
         let b = b.as_any().downcast_ref::<PrimitiveArray<O>>().unwrap();
         let expected = PrimitiveArray::<O>::from_slice(expected).to(expected_type);
         assert_eq!(b, &expected);
@@ -1038,7 +1131,7 @@ mod tests {
 
         // Cast to a dictionary (same value type, Utf8)
         let cast_type = DataType::Dictionary(Box::new(DataType::UInt8), Box::new(DataType::Utf8));
-        let result = cast(&array, &cast_type, SortOptions::default()).expect("cast failed");
+        let result = cast(&array, &cast_type, CastOptions::default()).expect("cast failed");
 
         let mut expected = MutableDictionaryArray::<u8, MutableUtf8Array<i32>>::new();
         expected
@@ -1056,7 +1149,7 @@ mod tests {
             .unwrap();
         let array: DictionaryArray<u8> = array.into();
 
-        let result = cast(&array, &DataType::Utf8, SortOptions::default()).expect("cast failed");
+        let result = cast(&array, &DataType::Utf8, CastOptions::default()).expect("cast failed");
 
         let expected = Utf8Array::<i32>::from(&[Some("one"), None, Some("three"), Some("one")]);
 
@@ -1069,7 +1162,7 @@ mod tests {
 
         // Cast to a dictionary (same value type, Utf8)
         let cast_type = DataType::Dictionary(Box::new(DataType::UInt8), Box::new(DataType::Int32));
-        let result = cast(&array, &cast_type, SortOptions::default()).expect("cast failed");
+        let result = cast(&array, &cast_type, CastOptions::default()).expect("cast failed");
 
         let mut expected = MutableDictionaryArray::<u8, MutablePrimitiveArray<i32>>::new();
         expected
@@ -1098,7 +1191,7 @@ mod tests {
         expected.try_extend(expected_data).unwrap();
         let expected: ListArray<i32> = expected.into();
 
-        let result = cast(&array, expected.data_type(), SortOptions::default()).unwrap();
+        let result = cast(&array, expected.data_type(), CastOptions::default()).unwrap();
         assert_eq!(expected, result.as_ref());
     }
 

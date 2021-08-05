@@ -79,7 +79,8 @@ where
     PrimitiveArray::<O>::from_trusted_len_iter(iter).to(to_type.clone())
 }
 
-/// Cast [`PrimitiveArray`] as a [`PrimitiveArray`] of another physical type via numeric conversion.
+/// Cast [`PrimitiveArray`] as a [`PrimitiveArray`]
+/// Same as `number as to_number_type` in rust
 pub fn primitive_as_primitive<I, O>(
     from: &PrimitiveArray<I>,
     to_type: &DataType,
