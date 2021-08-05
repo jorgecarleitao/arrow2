@@ -36,8 +36,13 @@ mod tests {
     ) -> Result<ArrayStats> {
         let metadata = read::read_metadata(&mut reader)?;
 
-        let mut reader =
-            read::RecordReader::try_new(reader, Some(vec![column]), None, Arc::new(|_, _| true))?;
+        let mut reader = read::RecordReader::try_new(
+            reader,
+            Some(vec![column]),
+            None,
+            Arc::new(|_, _| true),
+            None,
+        )?;
 
         let statistics = metadata.row_groups[row_group]
             .column(column)
@@ -458,7 +463,7 @@ mod tests_integration {
 
     fn integration_read(data: &[u8]) -> Result<(Arc<Schema>, Vec<RecordBatch>)> {
         let reader = Cursor::new(data);
-        let reader = read::RecordReader::try_new(reader, None, None, Arc::new(|_, _| true))?;
+        let reader = read::RecordReader::try_new(reader, None, None, Arc::new(|_, _| true), None)?;
         let schema = reader.schema().clone();
         let batches = reader.collect::<Result<Vec<_>>>()?;
 

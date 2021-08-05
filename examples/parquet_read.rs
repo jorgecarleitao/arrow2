@@ -19,7 +19,8 @@ fn read_column_chunk(path: &str, row_group: usize, column: usize) -> Result<Box<
     // Construct an iterator over pages. This binds `file` to this iterator, and each iteration
     // is IO intensive as it will read a compressed page into memory. There is almost no CPU work
     // on this operation
-    let pages = read::get_page_iterator(&file_metadata, row_group, column, &mut file, vec![])?;
+    let pages =
+        read::get_page_iterator(&file_metadata, row_group, column, &mut file, None, vec![])?;
 
     // get the columns' metadata
     let metadata = file_metadata.row_groups[row_group].column(column);

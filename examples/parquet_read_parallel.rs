@@ -30,6 +30,7 @@ fn parallel_read(path: &str) -> Result<Vec<Box<dyn Array>>> {
                     row_group,
                     column,
                     &mut file,
+                    None,
                     vec![],
                 )
                 .unwrap()
