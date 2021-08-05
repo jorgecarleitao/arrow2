@@ -17,8 +17,7 @@
 
 use crate::{array::*, error::Result, record_batch::RecordBatch};
 
-use prettytable::format;
-use prettytable::{Cell, Row, Table};
+use comfy_table::{Cell, Table};
 
 /// Returns a visual representation of multiple [`RecordBatch`]es.
 pub fn write(batches: &[RecordBatch]) -> Result<String> {
@@ -27,14 +26,14 @@ pub fn write(batches: &[RecordBatch]) -> Result<String> {
 
 /// Prints a visual representation of record batches to stdout
 pub fn print(results: &[RecordBatch]) -> Result<()> {
-    create_table(results)?.printstd();
+    println!("{}", create_table(results)?);
     Ok(())
 }
 
 /// Convert a series of record batches into a table
 fn create_table(results: &[RecordBatch]) -> Result<Table> {
     let mut table = Table::new();
-    table.set_format(*format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
+    table.load_preset("||--+-++|    ++++++");
 
     if results.is_empty() {
         return Ok(table);
@@ -46,7 +45,7 @@ fn create_table(results: &[RecordBatch]) -> Result<Table> {
     for field in schema.fields() {
         header.push(Cell::new(field.name()));
     }
-    table.set_titles(Row::new(header));
+    table.set_header(header);
 
     for batch in results {
         let displayes = batch
@@ -61,7 +60,7 @@ fn create_table(results: &[RecordBatch]) -> Result<Table> {
                 let string = displayes[col](row);
                 cells.push(Cell::new(&string));
             });
-            table.add_row(Row::new(cells));
+            table.add_row(cells);
         }
     }
 
