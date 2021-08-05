@@ -33,7 +33,7 @@ serde_json = { version = "^1.0", features = ["preserve_order"], optional = true 
 indexmap = { version = "^1.6", optional = true }
 
 # used to print columns in a nice columnar format
-prettytable-rs = { version = "^0.8", optional = true }
+comfy-table = { version = "4.0", optional = true }
 
 flatbuffers = { version = "=2.0.0", optional = true }
 hex = { version = "^0.4", optional = true }
@@ -96,7 +96,7 @@ io_parquet_compression = [
     "parquet2/brotli",
 ]
 io_json_integration = ["io_json", "hex"]
-io_print = ["prettytable-rs"]
+io_print = ["comfy-table"]
 # the compute kernels. Disabling this significantly reduces compile time.
 compute = []
 # base64 + io_ipc because arrow schemas are stored as base64-encoded ipc format.
