@@ -741,6 +741,41 @@ mod tests {
     }
 
     #[test]
+    fn test_cast_i32_as_f64() {
+        let array = Int32Array::from_slice(&[5, 6, 7, 8, 9]);
+        let b = cast(
+            &array,
+            &DataType::Float64,
+            CastOptions {
+                ignore_overflow: true,
+            },
+        )
+        .unwrap();
+        let c = b.as_any().downcast_ref::<Float64Array>().unwrap();
+        assert!((5.0 - c.value(0)).abs() < f64::EPSILON);
+        assert!((6.0 - c.value(1)).abs() < f64::EPSILON);
+        assert!((7.0 - c.value(2)).abs() < f64::EPSILON);
+        assert!((8.0 - c.value(3)).abs() < f64::EPSILON);
+        assert!((9.0 - c.value(4)).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_cast_u16_as_u8() {
+        let array = UInt16Array::from_slice(&[255, 256, 257, 258, 259]);
+        let b = cast(
+            &array,
+            &DataType::UInt8,
+            CastOptions {
+                ignore_overflow: true,
+            },
+        )
+        .unwrap();
+        let c = b.as_any().downcast_ref::<UInt8Array>().unwrap();
+        let values = c.values().as_slice();
+        assert_eq!(values, &[255, 0, 1, 2, 3])
+    }
+
+    #[test]
     fn test_cast_i32_to_u8() {
         let array = Int32Array::from_slice(&[-5, 6, -7, 8, 100000000]);
         let b = cast(&array, &DataType::UInt8, CastOptions::default()).unwrap();
