@@ -1,4 +1,4 @@
-use super::{cast, primitive_to_primitive};
+use super::{cast, primitive_to_primitive, CastOptions};
 use crate::{
     array::{Array, DictionaryArray, DictionaryKey, PrimitiveArray},
     compute::take::take,
@@ -28,11 +28,12 @@ macro_rules! key_cast {
 pub fn dictionary_to_dictionary_values<K: DictionaryKey>(
     from: &DictionaryArray<K>,
     values_type: &DataType,
+    options: CastOptions,
 ) -> Result<DictionaryArray<K>> {
     let keys = from.keys();
     let values = from.values();
 
-    let values = cast(values.as_ref(), values_type)?.into();
+    let values = cast(values.as_ref(), values_type, options)?.into();
     Ok(DictionaryArray::from_data(keys.clone(), values))
 }
 
@@ -63,6 +64,7 @@ where
 pub(super) fn dictionary_cast_dyn<K: DictionaryKey>(
     array: &dyn Array,
     to_type: &DataType,
+    options: CastOptions,
 ) -> Result<Box<dyn Array>> {
     let array = array.as_any().downcast_ref::<DictionaryArray<K>>().unwrap();
     let keys = array.keys();
@@ -70,7 +72,7 @@ pub(super) fn dictionary_cast_dyn<K: DictionaryKey>(
 
     match to_type {
         DataType::Dictionary(to_keys_type, to_values_type) => {
-            let values = cast(values.as_ref(), to_values_type)?.into();
+            let values = cast(values.as_ref(), to_values_type, options)?.into();
 
             // create the appropriate array type
             match to_keys_type.as_ref() {
@@ -85,7 +87,7 @@ pub(super) fn dictionary_cast_dyn<K: DictionaryKey>(
                 _ => unreachable!(),
             }
         }
-        _ => unpack_dictionary::<K>(keys, values.as_ref(), to_type),
+        _ => unpack_dictionary::<K>(keys, values.as_ref(), to_type, options),
     }
 }
 
@@ -94,13 +96,14 @@ fn unpack_dictionary<K>(
     keys: &PrimitiveArray<K>,
     values: &dyn Array,
     to_type: &DataType,
+    options: CastOptions,
 ) -> Result<Box<dyn Array>>
 where
     K: DictionaryKey,
 {
     // attempt to cast the dict values to the target type
     // use the take kernel to expand out the dictionary
-    let values = cast(values, to_type)?;
+    let values = cast(values, to_type, options)?;
 
     // take requires first casting i32
     let indices = primitive_to_primitive::<_, i32>(keys, &DataType::Int32);

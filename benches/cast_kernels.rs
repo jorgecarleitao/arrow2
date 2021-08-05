@@ -22,7 +22,7 @@ use rand::distributions::Uniform;
 use rand::Rng;
 
 use arrow2::array::*;
-use arrow2::compute::cast;
+use arrow2::compute::cast::{self, CastOptions};
 use arrow2::datatypes::*;
 use arrow2::util::bench_util::*;
 
@@ -72,7 +72,7 @@ fn build_utf8_date_time_array(size: usize, with_nulls: bool) -> Utf8Array<i32> {
 
 // cast array from specified primitive array type to desired data type
 fn cast_array(array: &dyn Array, to_type: DataType) {
-    criterion::black_box(cast::cast(array, &to_type).unwrap());
+    criterion::black_box(cast::cast(array, &to_type, CastOptions::default()).unwrap());
 }
 
 fn add_benchmark(c: &mut Criterion) {
@@ -80,7 +80,7 @@ fn add_benchmark(c: &mut Criterion) {
     let i32_array = create_primitive_array::<i32>(size, DataType::Int32, 0.1);
     let i64_array = create_primitive_array::<i64>(size, DataType::Int64, 0.1);
     let f32_array = create_primitive_array::<f32>(size, DataType::Float32, 0.1);
-    let f32_utf8_array = cast::cast(&f32_array, &DataType::Utf8).unwrap();
+    let f32_utf8_array = cast::cast(&f32_array, &DataType::Utf8, CastOptions::default()).unwrap();
 
     let f64_array = create_primitive_array::<f64>(size, DataType::Float64, 0.1);
     let date64_array = create_primitive_array::<i64>(size, DataType::Date64, 0.1);
