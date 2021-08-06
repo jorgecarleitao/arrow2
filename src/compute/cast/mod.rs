@@ -333,7 +333,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
     cast_with_options(array, to_type, CastOptions { wrapped: false })
 }
 
-/// Similar to cast, but overflowing cast will be wrapped
+/// Similar to [`cast`], but overflowing cast is wrapped
 /// Behavior:
 /// * PrimitiveArray to PrimitiveArray: overflowing cast will be wrapped (i.e. `256i16 as u8 = 0` vectorized).
 pub fn wrapped_cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
