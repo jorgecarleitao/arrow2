@@ -1,6 +1,6 @@
 use parquet2::{
     metadata::ColumnDescriptor,
-    read::CompressedPage,
+    page::CompressedDataPage,
     schema::Encoding,
     statistics::{serialize_statistics, ParquetStatistics, PrimitiveStatistics, Statistics},
     types::NativeType,
@@ -15,7 +15,7 @@ use crate::{
     types::NativeType as ArrowNativeType,
 };
 
-pub(super) fn encode_plain<T, R>(array: &PrimitiveArray<T>, is_optional: bool, buffer: &mut Vec<u8>)
+pub(crate) fn encode_plain<T, R>(array: &PrimitiveArray<T>, is_optional: bool, buffer: &mut Vec<u8>)
 where
     T: ArrowNativeType,
     R: NativeType,
@@ -42,7 +42,7 @@ pub fn array_to_page<T, R>(
     array: &PrimitiveArray<T>,
     options: WriteOptions,
     descriptor: ColumnDescriptor,
-) -> Result<CompressedPage>
+) -> Result<CompressedDataPage>
 where
     T: ArrowNativeType,
     R: NativeType,

@@ -3,9 +3,10 @@ use std::sync::Arc;
 use parquet2::{
     encoding::Encoding,
     metadata::{ColumnChunkMetaData, ColumnDescriptor},
+    page::{DataPage, DataPageHeader},
     read::{
         levels::{get_bit_width, split_buffer_v1, split_buffer_v2, RLEDecoder},
-        Page, PageHeader, StreamingIterator,
+        StreamingIterator,
     },
 };
 
@@ -95,7 +96,7 @@ fn read(
 }
 
 fn extend_from_page(
-    page: &Page,
+    page: &DataPage,
     descriptor: &ColumnDescriptor,
     is_nullable: bool,
     nested: &mut Vec<Box<dyn Nested>>,
@@ -105,7 +106,7 @@ fn extend_from_page(
     let additional = page.num_values();
 
     match page.header() {
-        PageHeader::V1(header) => {
+        DataPageHeader::V1(header) => {
             assert_eq!(header.definition_level_encoding, Encoding::Rle);
             assert_eq!(header.repetition_level_encoding, Encoding::Rle);
 
@@ -146,7 +147,7 @@ fn extend_from_page(
                 }
             }
         }
-        PageHeader::V2(header) => match (&page.encoding(), page.dictionary_page()) {
+        DataPageHeader::V2(header) => match (&page.encoding(), page.dictionary_page()) {
             (Encoding::Plain, None) => {
                 let def_level_buffer_length = header.definition_levels_byte_length as usize;
                 let rep_level_buffer_length = header.repetition_levels_byte_length as usize;
@@ -190,7 +191,7 @@ pub fn iter_to_array<I, E>(
 where
     ArrowError: From<E>,
     E: Clone,
-    I: StreamingIterator<Item = std::result::Result<Page, E>>,
+    I: StreamingIterator<Item = std::result::Result<DataPage, E>>,
 {
     let capacity = metadata.num_values() as usize;
     let mut values = MutableBitmap::with_capacity(capacity);

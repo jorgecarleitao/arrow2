@@ -284,4 +284,13 @@ mod tests {
         // the first "11" in the second byte
         assert_eq!(chunks, vec![(0, 2)]);
     }
+
+    #[test]
+    fn remainder_1() {
+        let values = Bitmap::from_u8_slice(&[0, 0, 0b00000000, 0b00010101], 27);
+        let values = values.slice(22, 5);
+        let iter = SlicesIterator::new(&values);
+        let chunks = iter.collect::<Vec<_>>();
+        assert_eq!(chunks, vec![(2, 1), (4, 1)]);
+    }
 }

@@ -2,24 +2,13 @@ use std::convert::TryFrom;
 
 use num::Num;
 
-use crate::{
-    buffer::Buffer,
-    types::{NativeType, NaturalDataType},
-};
-
-/// Trait describing any type that can be used to index a slot of an array.
-pub trait Index: NativeType + NaturalDataType {
-    fn to_usize(&self) -> usize;
-    fn from_usize(index: usize) -> Option<Self>;
-}
+use crate::{buffer::Buffer, types::Index};
 
 /// Trait describing types that can be used as offsets as per Arrow specification.
 /// This trait is only implemented for `i32` and `i64`, the two sizes part of the specification.
 /// # Safety
 /// Do not implement.
-pub unsafe trait Offset:
-    Index + Num + Ord + std::ops::AddAssign + std::ops::Sub + num::CheckedAdd
-{
+pub unsafe trait Offset: Index + Num + Ord + num::CheckedAdd {
     fn is_large() -> bool;
 
     fn to_isize(&self) -> isize;
@@ -58,54 +47,6 @@ unsafe impl Offset for i64 {
     #[inline]
     fn to_isize(&self) -> isize {
         *self as isize
-    }
-}
-
-impl Index for i32 {
-    #[inline]
-    fn to_usize(&self) -> usize {
-        *self as usize
-    }
-
-    #[inline]
-    fn from_usize(value: usize) -> Option<Self> {
-        Self::try_from(value).ok()
-    }
-}
-
-impl Index for i64 {
-    #[inline]
-    fn to_usize(&self) -> usize {
-        *self as usize
-    }
-
-    #[inline]
-    fn from_usize(value: usize) -> Option<Self> {
-        Self::try_from(value).ok()
-    }
-}
-
-impl Index for u32 {
-    #[inline]
-    fn to_usize(&self) -> usize {
-        *self as usize
-    }
-
-    #[inline]
-    fn from_usize(value: usize) -> Option<Self> {
-        Self::try_from(value).ok()
-    }
-}
-
-impl Index for u64 {
-    #[inline]
-    fn to_usize(&self) -> usize {
-        *self as usize
-    }
-
-    #[inline]
-    fn from_usize(value: usize) -> Option<Self> {
-        Self::try_from(value).ok()
     }
 }
 

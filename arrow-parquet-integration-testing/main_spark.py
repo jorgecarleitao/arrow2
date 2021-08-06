@@ -6,27 +6,40 @@ import pyspark.sql
 
 from main import _prepare, _expected
 
-_file = "generated_primitive"
-_version = "2"
-_encoding = "delta"
-column = ("utf8_nullable", 24)
 
-expected = _expected(_file)
-expected = next(c for i, c in enumerate(expected) if i == column[1])
-expected = expected.combine_chunks().tolist()
+def test(file: str, version: str, column, encoding: str):
+    """
+    Tests that pyspark can read a parquet file written by arrow2.
 
-path = _prepare(_file, _version, _encoding, [column[1]])
+    In arrow2: read IPC, write parquet
+    In pyarrow: read (same) IPC to Python
+    In pyspark: read (written) parquet to Python
+    assert that they are equal
+    """
+    # write parquet
+    path = _prepare(file, version, encoding, [column[1]])
 
-spark = pyspark.sql.SparkSession.builder.config(
-    # see https://stackoverflow.com/a/62024670/931303
-    "spark.sql.parquet.enableVectorizedReader",
-    "false",
-).getOrCreate()
+    # read IPC to Python
+    expected = _expected(file)
+    expected = next(c for i, c in enumerate(expected) if i == column[1])
+    expected = expected.combine_chunks().tolist()
 
-df = spark.read.parquet(path)
+    # read parquet to Python
+    spark = pyspark.sql.SparkSession.builder.config(
+        # see https://stackoverflow.com/a/62024670/931303
+        "spark.sql.parquet.enableVectorizedReader",
+        "false",
+    ).getOrCreate()
 
-r = df.select(column[0]).collect()
-os.remove(path)
+    result = spark.read.parquet(path).select(column[0]).collect()
+    result = [r[column[0]] for r in result]
+    os.remove(path)
 
-result = [r[column[0]] for r in r]
-assert expected == result
+    # assert equality
+    assert expected == result
+
+
+test("generated_primitive", "2", ("utf8_nullable", 24), "delta")
+
+test("generated_dictionary", "1", ("dict0", 0), "")
+test("generated_dictionary", "2", ("dict0", 0), "")

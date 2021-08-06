@@ -1,7 +1,8 @@
 use parquet2::{
     encoding::{bitpacking, delta_length_byte_array, hybrid_rle, uleb128, Encoding},
     metadata::{ColumnChunkMetaData, ColumnDescriptor},
-    read::{levels, BinaryPageDict, Page, PageHeader, StreamingIterator},
+    page::{BinaryPageDict, DataPage, DataPageHeader},
+    read::{levels, StreamingIterator},
 };
 
 use crate::{
@@ -202,7 +203,7 @@ pub(super) fn read_plain_required<O: Offset>(
 }
 
 fn extend_from_page<O: Offset>(
-    page: &Page,
+    page: &DataPage,
     descriptor: &ColumnDescriptor,
     offsets: &mut MutableBuffer<O>,
     values: &mut MutableBuffer<u8>,
@@ -212,22 +213,24 @@ fn extend_from_page<O: Offset>(
     assert!(descriptor.max_def_level() <= 1);
     let is_optional = descriptor.max_def_level() == 1;
     match page.header() {
-        PageHeader::V1(header) => {
+        DataPageHeader::V1(header) => {
             assert_eq!(header.definition_level_encoding, Encoding::Rle);
 
             let (_, validity_buffer, values_buffer) =
                 levels::split_buffer_v1(page.buffer(), false, is_optional);
 
             match (&page.encoding(), page.dictionary_page(), is_optional) {
-                (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer::<O>(
-                    validity_buffer,
-                    values_buffer,
-                    page.num_values() as u32,
-                    dict.as_any().downcast_ref().unwrap(),
-                    offsets,
-                    values,
-                    validity,
-                ),
+                (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
+                    read_dict_buffer::<O>(
+                        validity_buffer,
+                        values_buffer,
+                        page.num_values() as u32,
+                        dict.as_any().downcast_ref().unwrap(),
+                        offsets,
+                        values,
+                        validity,
+                    )
+                }
                 (Encoding::DeltaLengthByteArray, None, true) => read_delta_optional::<O>(
                     validity_buffer,
                     values_buffer,
@@ -258,22 +261,24 @@ fn extend_from_page<O: Offset>(
                 }
             }
         }
-        PageHeader::V2(header) => {
+        DataPageHeader::V2(header) => {
             let def_level_buffer_length = header.definition_levels_byte_length as usize;
 
             let (_, validity_buffer, values_buffer) =
                 levels::split_buffer_v2(page.buffer(), 0, def_level_buffer_length);
 
             match (page.encoding(), page.dictionary_page(), is_optional) {
-                (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer::<O>(
-                    validity_buffer,
-                    values_buffer,
-                    page.num_values() as u32,
-                    dict.as_any().downcast_ref().unwrap(),
-                    offsets,
-                    values,
-                    validity,
-                ),
+                (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
+                    read_dict_buffer::<O>(
+                        validity_buffer,
+                        values_buffer,
+                        page.num_values() as u32,
+                        dict.as_any().downcast_ref().unwrap(),
+                        offsets,
+                        values,
+                        validity,
+                    )
+                }
                 (Encoding::Plain, None, true) => read_plain_optional::<O>(
                     validity_buffer,
                     values_buffer,
@@ -317,7 +322,7 @@ where
     ArrowError: From<E>,
     O: Offset,
     E: Clone,
-    I: StreamingIterator<Item = std::result::Result<Page, E>>,
+    I: StreamingIterator<Item = std::result::Result<DataPage, E>>,
 {
     let capacity = metadata.num_values() as usize;
     let mut values = MutableBuffer::<u8>::with_capacity(0);

@@ -291,6 +291,29 @@ where
             None => self.right = None,
         }
     }
+
+    /// Collect the MergeSortSlices to be a vec for reusing
+    #[warn(dead_code)]
+    pub fn to_vec(self, limit: Option<usize>) -> Vec<MergeSlice> {
+        match limit {
+            Some(limit) => {
+                let mut v = Vec::with_capacity(limit);
+                let mut current_len = 0;
+                for (index, start, len) in self {
+                    if len + current_len >= limit {
+                        v.push((index, start, limit - current_len));
+                        break;
+                    } else {
+                        v.push((index, start, len));
+                    }
+                    current_len += len;
+                }
+
+                v
+            }
+            None => self.into_iter().collect(),
+        }
+    }
 }
 
 impl<'a, L, R> Iterator for MergeSortSlices<'a, L, R>
@@ -559,6 +582,22 @@ mod tests {
         let expected = Int32Array::from_slice(&[0, 1, 2, 3, 4]);
         // values are right
         assert_eq!(expected, array.as_ref());
+        Ok(())
+    }
+
+    #[test]
+    fn test_merge_slices_to_vec() -> Result<()> {
+        let a0: &dyn Array = &Int32Array::from_slice(&[0, 2, 4, 6, 8]);
+        let a1: &dyn Array = &Int32Array::from_slice(&[1, 3, 5, 7, 9]);
+
+        let options = SortOptions::default();
+        let arrays = vec![a0, a1];
+        let pairs = vec![(arrays.as_ref(), &options)];
+        let comparator = build_comparator(&pairs)?;
+
+        let slices = merge_sort_slices(once(&(0, 0, 5)), once(&(1, 0, 5)), &comparator);
+        let vec = slices.to_vec(Some(5));
+        assert_eq!(vec, [(0, 0, 1), (1, 0, 1), (0, 1, 1), (1, 1, 1), (0, 2, 1)]);
         Ok(())
     }
 

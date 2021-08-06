@@ -1,34 +1,41 @@
+use std::sync::Arc;
+
 use parquet2::{
-    encoding::{bitpacking, hybrid_rle, uleb128, Encoding},
+    encoding::{bitpacking, hybrid_rle, uleb128},
     page::{DataPage, DataPageHeader, PrimitivePageDict},
-    read::levels,
+    read::{levels, StreamingIterator},
+    schema::Encoding,
     types::NativeType,
 };
 
 use super::super::utils as other_utils;
-use super::utils::ExactChunksIter;
-use super::ColumnDescriptor;
+use super::{ColumnChunkMetaData, ColumnDescriptor};
 use crate::{
+    array::{Array, DictionaryArray, DictionaryKey, PrimitiveArray},
     bitmap::{utils::BitmapIter, MutableBitmap},
     buffer::MutableBuffer,
-    error::Result,
+    datatypes::DataType,
+    error::{ArrowError, Result},
     types::NativeType as ArrowNativeType,
 };
 
-fn read_dict_buffer_optional<T, A, F>(
+fn read_dict_optional<K, T, A, F>(
     validity_buffer: &[u8],
     indices_buffer: &[u8],
     additional: usize,
     dict: &PrimitivePageDict<T>,
+    indices: &mut MutableBuffer<K>,
     values: &mut MutableBuffer<A>,
     validity: &mut MutableBitmap,
     op: F,
 ) where
+    K: DictionaryKey,
     T: NativeType,
     A: ArrowNativeType,
     F: Fn(T) -> A,
 {
     let dict_values = dict.values();
+    values.extend_from_trusted_len_iter(dict_values.iter().map(|x| op(*x)));
 
     // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
     // SPEC: followed by the values encoded using RLE/Bit packed described above (with the given bit width).
@@ -40,22 +47,22 @@ fn read_dict_buffer_optional<T, A, F>(
 
     let non_null_indices_len = indices_buffer.len() * 8 / bit_width as usize;
 
-    let mut indices = bitpacking::Decoder::new(indices_buffer, bit_width, non_null_indices_len);
+    let mut new_indices = bitpacking::Decoder::new(indices_buffer, bit_width, non_null_indices_len);
 
     let validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
 
     for run in validity_iterator {
         match run {
             hybrid_rle::HybridEncoded::Bitpacked(packed) => {
-                let remaining = additional - values.len();
+                let remaining = additional - indices.len();
                 let len = std::cmp::min(packed.len() * 8, remaining);
                 for is_valid in BitmapIter::new(packed, 0, len) {
                     let value = if is_valid {
-                        op(dict_values[indices.next().unwrap() as usize])
+                        K::from_u32(new_indices.next().unwrap()).unwrap()
                     } else {
-                        A::default()
+                        K::default()
                     };
-                    values.push(value);
+                    indices.push(value);
                 }
                 validity.extend_from_slice(packed, 0, len);
             }
@@ -64,9 +71,8 @@ fn read_dict_buffer_optional<T, A, F>(
                 validity.extend_constant(additional, is_set);
                 if is_set {
                     (0..additional).for_each(|_| {
-                        let index = indices.next().unwrap() as usize;
-                        let value = op(dict_values[index]);
-                        values.push(value)
+                        let index = K::from_u32(new_indices.next().unwrap()).unwrap();
+                        indices.push(index)
                     })
                 } else {
                     values.extend_constant(additional, A::default())
@@ -76,80 +82,16 @@ fn read_dict_buffer_optional<T, A, F>(
     }
 }
 
-fn read_nullable<T, A, F>(
-    validity_buffer: &[u8],
-    values_buffer: &[u8],
-    additional: usize,
-    values: &mut MutableBuffer<A>,
-    validity: &mut MutableBitmap,
-    op: F,
-) where
-    T: NativeType,
-    A: ArrowNativeType,
-    F: Fn(T) -> A,
-{
-    let mut chunks = ExactChunksIter::<T>::new(values_buffer);
-
-    let validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
-
-    for run in validity_iterator {
-        match run {
-            hybrid_rle::HybridEncoded::Bitpacked(packed) => {
-                // the pack may contain more items than needed.
-                let remaining = additional - values.len();
-                let len = std::cmp::min(packed.len() * 8, remaining);
-                for is_valid in BitmapIter::new(packed, 0, len) {
-                    let value = if is_valid {
-                        op(chunks.next().unwrap())
-                    } else {
-                        A::default()
-                    };
-                    values.push(value);
-                }
-                validity.extend_from_slice(packed, 0, len);
-            }
-            hybrid_rle::HybridEncoded::Rle(value, additional) => {
-                let is_set = value[0] == 1;
-                validity.extend_constant(additional, is_set);
-                if is_set {
-                    (0..additional).for_each(|_| {
-                        let value = op(chunks.next().unwrap());
-                        values.push(value)
-                    })
-                } else {
-                    values.extend_constant(additional, A::default())
-                }
-            }
-        }
-    }
-}
-
-fn read_required<T, A, F>(
-    values_buffer: &[u8],
-    additional: usize,
-    values: &mut MutableBuffer<A>,
-    op: F,
-) where
-    T: NativeType,
-    A: ArrowNativeType,
-    F: Fn(T) -> A,
-{
-    assert_eq!(values_buffer.len(), additional * std::mem::size_of::<T>());
-    let iterator = ExactChunksIter::<T>::new(values_buffer);
-
-    let iterator = iterator.map(|value| op(value));
-
-    values.extend_from_trusted_len_iter(iterator);
-}
-
-pub fn extend_from_page<T, A, F>(
+fn extend_from_page<K, T, A, F>(
     page: &DataPage,
     descriptor: &ColumnDescriptor,
+    indices: &mut MutableBuffer<K>,
     values: &mut MutableBuffer<A>,
     validity: &mut MutableBitmap,
     op: F,
 ) -> Result<()>
 where
+    K: DictionaryKey,
     T: NativeType,
     A: ArrowNativeType,
     F: Fn(T) -> A,
@@ -167,26 +109,16 @@ where
 
             match (&page.encoding(), page.dictionary_page(), is_optional) {
                 (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
-                    read_dict_buffer_optional(
+                    read_dict_optional(
                         validity_buffer,
                         values_buffer,
                         additional,
                         dict.as_any().downcast_ref().unwrap(),
+                        indices,
                         values,
                         validity,
                         op,
                     )
-                }
-                (Encoding::Plain, None, true) => read_nullable(
-                    validity_buffer,
-                    values_buffer,
-                    additional,
-                    values,
-                    validity,
-                    op,
-                ),
-                (Encoding::Plain, None, false) => {
-                    read_required(page.buffer(), additional, values, op)
                 }
                 _ => {
                     return Err(other_utils::not_implemented(
@@ -206,26 +138,16 @@ where
                 levels::split_buffer_v2(page.buffer(), 0, def_level_buffer_length);
             match (&page.encoding(), page.dictionary_page(), is_optional) {
                 (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
-                    read_dict_buffer_optional(
+                    read_dict_optional(
                         validity_buffer,
                         values_buffer,
                         additional,
                         dict.as_any().downcast_ref().unwrap(),
+                        indices,
                         values,
                         validity,
                         op,
                     )
-                }
-                (Encoding::Plain, None, true) => read_nullable(
-                    validity_buffer,
-                    values_buffer,
-                    additional,
-                    values,
-                    validity,
-                    op,
-                ),
-                (Encoding::Plain, None, false) => {
-                    read_required::<T, A, F>(page.buffer(), additional, values, op)
                 }
                 _ => {
                     return Err(other_utils::not_implemented(
@@ -240,4 +162,40 @@ where
         }
     };
     Ok(())
+}
+
+pub fn iter_to_array<K, T, A, I, E, F>(
+    mut iter: I,
+    metadata: &ColumnChunkMetaData,
+    data_type: DataType,
+    op: F,
+) -> Result<Box<dyn Array>>
+where
+    ArrowError: From<E>,
+    T: NativeType,
+    K: DictionaryKey,
+    E: Clone,
+    A: ArrowNativeType,
+    F: Copy + Fn(T) -> A,
+    I: StreamingIterator<Item = std::result::Result<DataPage, E>>,
+{
+    let capacity = metadata.num_values() as usize;
+    let mut indices = MutableBuffer::<K>::with_capacity(capacity);
+    let mut values = MutableBuffer::<A>::with_capacity(capacity);
+    let mut validity = MutableBitmap::with_capacity(capacity);
+    while let Some(page) = iter.next() {
+        extend_from_page(
+            page.as_ref().map_err(|x| x.clone())?,
+            metadata.descriptor(),
+            &mut indices,
+            &mut values,
+            &mut validity,
+            op,
+        )?
+    }
+
+    let keys = PrimitiveArray::from_data(K::DATA_TYPE, indices.into(), validity.into());
+    let data_type = DictionaryArray::<K>::get_child(&data_type).clone();
+    let values = Arc::new(PrimitiveArray::from_data(data_type, values.into(), None));
+    Ok(Box::new(DictionaryArray::<K>::from_data(keys, values)))
 }

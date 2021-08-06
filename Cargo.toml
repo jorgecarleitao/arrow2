@@ -33,14 +33,14 @@ serde_json = { version = "^1.0", features = ["preserve_order"], optional = true 
 indexmap = { version = "^1.6", optional = true }
 
 # used to print columns in a nice columnar format
-prettytable-rs = { version = "^0.8", optional = true }
+comfy-table = { version = "4.0", optional = true }
 
 flatbuffers = { version = "=2.0.0", optional = true }
 hex = { version = "^0.4", optional = true }
 
 # for IPC compression
 lz4 = { version = "1.23.1", optional = true }
-zstd = { version = "^0.6", optional = true }
+zstd = { version = "0.9", optional = true }
 
 rand = { version = "0.8", optional = true }
 
@@ -58,7 +58,7 @@ futures = { version = "0.3", optional = true }
 # for faster hashing
 ahash = { version = "0.7", optional = true }
 
-parquet2 = { version = "0.1", optional = true }
+parquet2 = { version = "0.2", optional = true, default_features = false, features = ["stream"] }
 
 [dev-dependencies]
 rand = "0.8"
@@ -68,14 +68,35 @@ doc-comment = "0.3"
 crossbeam-channel = "0.5.1"
 
 [features]
-default = ["io_csv", "io_json", "io_ipc", "io_ipc_compression", "io_json_integration", "io_print", "io_parquet", "regex", "merge_sort", "ahash", "benchmarks", "compute"]
+default = [
+    "io_csv",
+    "io_json",
+    "io_ipc",
+    "io_ipc_compression",
+    "io_json_integration",
+    "io_print",
+    "io_parquet",
+    "io_parquet_compression",
+    "regex",
+    "merge_sort",
+    "ahash",
+    "benchmarks",
+    "compute",
+]
 merge_sort = ["itertools"]
 io_csv = ["csv", "lazy_static", "regex"]
 io_json = ["serde", "serde_derive", "serde_json", "indexmap"]
 io_ipc = ["flatbuffers"]
 io_ipc_compression = ["lz4", "zstd"]
+io_parquet_compression = [
+    "parquet2/zstd",
+    "parquet2/snappy",
+    "parquet2/gzip",
+    "parquet2/lz4",
+    "parquet2/brotli",
+]
 io_json_integration = ["io_json", "hex"]
-io_print = ["prettytable-rs"]
+io_print = ["comfy-table"]
 # the compute kernels. Disabling this significantly reduces compile time.
 compute = []
 # base64 + io_ipc because arrow schemas are stored as base64-encoded ipc format.
@@ -88,6 +109,8 @@ skip_feature_sets = [
     ["benchmarks"],
     ["merge_sort"],
     ["io_json_integration"],
+    # this does not change the public API
+    ["io_parquet_compression"],
     ["simd"],
 ]
 

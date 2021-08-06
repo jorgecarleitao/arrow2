@@ -14,7 +14,7 @@ fn add_benchmark(c: &mut Criterion) {
     let i32_array = create_primitive_array::<i32>(1026 * 10, DataType::Int32, 0.0);
     c.bench_function("growable::primitive::non_null::non_null", |b| {
         b.iter(|| {
-            let mut a = GrowablePrimitive::new(&[&i32_array], false, 1026 * 10);
+            let mut a = GrowablePrimitive::new(vec![&i32_array], false, 1026 * 10);
             values
                 .clone()
                 .into_iter()
@@ -25,7 +25,7 @@ fn add_benchmark(c: &mut Criterion) {
     let i32_array = create_primitive_array::<i32>(1026 * 10, DataType::Int32, 0.0);
     c.bench_function("growable::primitive::non_null::null", |b| {
         b.iter(|| {
-            let mut a = GrowablePrimitive::new(&[&i32_array], true, 1026 * 10);
+            let mut a = GrowablePrimitive::new(vec![&i32_array], true, 1026 * 10);
             values.clone().into_iter().for_each(|start| {
                 if start % 2 == 0 {
                     a.extend_validity(10);
@@ -41,7 +41,7 @@ fn add_benchmark(c: &mut Criterion) {
     let values = values.collect::<Vec<_>>();
     c.bench_function("growable::primitive::null::non_null", |b| {
         b.iter(|| {
-            let mut a = GrowablePrimitive::new(&[&i32_array], false, 1026 * 10);
+            let mut a = GrowablePrimitive::new(vec![&i32_array], false, 1026 * 10);
             values
                 .clone()
                 .into_iter()
@@ -50,7 +50,7 @@ fn add_benchmark(c: &mut Criterion) {
     });
     c.bench_function("growable::primitive::null::null", |b| {
         b.iter(|| {
-            let mut a = GrowablePrimitive::new(&[&i32_array], true, 1026 * 10);
+            let mut a = GrowablePrimitive::new(vec![&i32_array], true, 1026 * 10);
             values.clone().into_iter().for_each(|start| {
                 if start % 2 == 0 {
                     a.extend_validity(10);

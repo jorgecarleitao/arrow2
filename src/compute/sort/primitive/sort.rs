@@ -34,7 +34,7 @@ where
     F: FnMut(&T, &T) -> std::cmp::Ordering,
 {
     if descending {
-        let (before, _, _) = values.select_nth_unstable_by(limit, |x, y| cmp(x, y).reverse());
+        let (before, _, _) = values.select_nth_unstable_by(limit, |x, y| cmp(y, x));
         before.sort_unstable_by(|x, y| cmp(x, y));
     } else {
         let (before, _, _) = values.select_nth_unstable_by(limit, |x, y| cmp(x, y));
@@ -52,7 +52,7 @@ where
     }
 
     if descending {
-        values.sort_unstable_by(|x, y| cmp(x, y).reverse());
+        values.sort_unstable_by(|x, y| cmp(y, x));
     } else {
         values.sort_unstable_by(cmp);
     };
@@ -125,6 +125,7 @@ where
     };
     // values are sorted, we can now truncate the remaining.
     buffer.truncate(limit);
+    buffer.shrink_to_fit();
 
     (buffer.into(), new_validity.into())
 }
@@ -154,6 +155,7 @@ where
 
         sort_values(&mut buffer.as_mut_slice(), cmp, options.descending, limit);
         buffer.truncate(limit);
+        buffer.shrink_to_fit();
 
         (buffer.into(), None)
     };

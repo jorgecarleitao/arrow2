@@ -48,5 +48,5 @@ jobs:
           pip install --upgrade pip
           pip install pyarrow pyspark
           python main.py
-          # test delta encoding against spark (pyarrow does not support it)
+          # test against spark
           python main_spark.py

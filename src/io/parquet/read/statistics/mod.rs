@@ -24,6 +24,12 @@ impl PartialEq for &dyn Statistics {
     }
 }
 
+impl PartialEq for Box<dyn Statistics> {
+    fn eq(&self, other: &Self) -> bool {
+        self.data_type() == other.data_type()
+    }
+}
+
 pub fn deserialize_statistics(stats: &dyn ParquetStatistics) -> Result<Box<dyn Statistics>> {
     match stats.physical_type() {
         PhysicalType::Int32 => {

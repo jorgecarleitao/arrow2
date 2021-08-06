@@ -1,8 +1,4 @@
-use crate::{
-    array::{Index, PrimitiveArray},
-    bitmap::Bitmap,
-    buffer::MutableBuffer,
-};
+use crate::{array::PrimitiveArray, bitmap::Bitmap, buffer::MutableBuffer, types::Index};
 
 use super::SortOptions;
 
@@ -22,31 +18,21 @@ fn k_element_sort_inner<I: Index, T, G, F>(
     F: FnMut(&T, &T) -> std::cmp::Ordering,
 {
     if descending {
-        let compare = |lhs: &I, rhs: &I| {
+        let mut compare = |lhs: &I, rhs: &I| {
             let lhs = get(lhs.to_usize());
             let rhs = get(rhs.to_usize());
-            cmp(&lhs, &rhs).reverse()
+            cmp(&rhs, &lhs)
         };
-        let (before, _, _) = indices.select_nth_unstable_by(limit, compare);
-        let compare = |lhs: &I, rhs: &I| {
-            let lhs = get(lhs.to_usize());
-            let rhs = get(rhs.to_usize());
-            cmp(&lhs, &rhs).reverse()
-        };
-        before.sort_unstable_by(compare);
+        let (before, _, _) = indices.select_nth_unstable_by(limit, &mut compare);
+        before.sort_unstable_by(&mut compare);
     } else {
-        let compare = |lhs: &I, rhs: &I| {
+        let mut compare = |lhs: &I, rhs: &I| {
             let lhs = get(lhs.to_usize());
             let rhs = get(rhs.to_usize());
             cmp(&lhs, &rhs)
         };
-        let (before, _, _) = indices.select_nth_unstable_by(limit, compare);
-        let compare = |lhs: &I, rhs: &I| {
-            let lhs = get(lhs.to_usize());
-            let rhs = get(rhs.to_usize());
-            cmp(&lhs, &rhs)
-        };
-        before.sort_unstable_by(compare);
+        let (before, _, _) = indices.select_nth_unstable_by(limit, &mut compare);
+        before.sort_unstable_by(&mut compare);
     }
 }
 
@@ -74,7 +60,7 @@ fn sort_unstable_by<I, T, G, F>(
         indices.sort_unstable_by(|lhs, rhs| {
             let lhs = get(lhs.to_usize());
             let rhs = get(rhs.to_usize());
-            cmp(&lhs, &rhs).reverse()
+            cmp(&rhs, &lhs)
         })
     } else {
         indices.sort_unstable_by(|lhs, rhs| {
@@ -111,19 +97,18 @@ where
 
     let indices = if let Some(validity) = validity {
         let mut indices = MutableBuffer::<I>::from_len_zeroed(length);
-
         if options.nulls_first {
             let mut nulls = 0;
             let mut valids = 0;
             validity
                 .iter()
-                .zip(0..length)
+                .zip(I::range(0, length).unwrap())
                 .for_each(|(is_valid, index)| {
                     if is_valid {
-                        indices[validity.null_count() + valids] = I::from_usize(index).unwrap();
+                        indices[validity.null_count() + valids] = index;
                         valids += 1;
                     } else {
-                        indices[nulls] = I::from_usize(index).unwrap();
+                        indices[nulls] = index;
                         nulls += 1;
                     }
                 });
@@ -134,23 +119,26 @@ where
                 // Soundness:
                 // all indices in `indices` are by construction `< array.len() == values.len()`
                 // limit is by construction < indices.len()
-                let limit = limit - validity.null_count();
+                let limit = limit.saturating_sub(validity.null_count());
                 let indices = &mut indices.as_mut_slice()[validity.null_count()..];
                 sort_unstable_by(indices, get, cmp, options.descending, limit)
             }
         } else {
-            let last_valid_index = length - validity.null_count();
+            let last_valid_index = length.saturating_sub(validity.null_count());
             let mut nulls = 0;
             let mut valids = 0;
-            validity.iter().zip(0..length).for_each(|(x, index)| {
-                if x {
-                    indices[valids] = I::from_usize(index).unwrap();
-                    valids += 1;
-                } else {
-                    indices[last_valid_index + nulls] = I::from_usize(index).unwrap();
-                    nulls += 1;
-                }
-            });
+            validity
+                .iter()
+                .zip(I::range(0, length).unwrap())
+                .for_each(|(x, index)| {
+                    if x {
+                        indices[valids] = index;
+                        valids += 1;
+                    } else {
+                        indices[last_valid_index + nulls] = index;
+                        nulls += 1;
+                    }
+                });
 
             // Soundness:
             // all indices in `indices` are by construction `< array.len() == values.len()`
@@ -165,21 +153,16 @@ where
 
         indices
     } else {
-        let mut indices = unsafe {
-            MutableBuffer::from_trusted_len_iter_unchecked(
-                (0..length).map(|x| I::from_usize(x).unwrap()),
-            )
-        };
+        let mut indices = MutableBuffer::from_trusted_len_iter(I::range(0, length).unwrap());
 
         // Soundness:
         // indices are by construction `< values.len()`
         // limit is by construction `< values.len()`
         sort_unstable_by(&mut indices, get, cmp, descending, limit);
-
         indices.truncate(limit);
         indices.shrink_to_fit();
-
         indices
     };
+
     PrimitiveArray::<I>::from_data(I::DATA_TYPE, indices.into(), None)
 }

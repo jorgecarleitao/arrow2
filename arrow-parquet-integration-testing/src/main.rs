@@ -162,6 +162,7 @@ fn main() -> Result<()> {
         .fields()
         .iter()
         .map(|x| match x.data_type() {
+            DataType::Dictionary(_, _) => Encoding::RleDictionary,
             DataType::Utf8 | DataType::LargeUtf8 => {
                 if utf8_encoding == "delta" {
                     Encoding::DeltaLengthByteArray

@@ -4,8 +4,8 @@ use parquet2::{
     compression::create_codec,
     encoding::{hybrid_rle::encode_bool, Encoding},
     metadata::ColumnDescriptor,
-    read::{CompressedPage, PageHeader},
-    schema::{CompressionCodec, DataPageHeader, DataPageHeaderV2},
+    page::{CompressedDataPage, DataPageHeader, DataPageHeaderV1, DataPageHeaderV2},
+    schema::CompressionCodec,
     statistics::ParquetStatistics,
     write::WriteOptions,
 };
@@ -70,10 +70,10 @@ pub fn build_plain_page(
     descriptor: ColumnDescriptor,
     options: WriteOptions,
     encoding: Encoding,
-) -> Result<CompressedPage> {
+) -> Result<CompressedDataPage> {
     match options.version {
         Version::V1 => {
-            let header = PageHeader::V1(DataPageHeader {
+            let header = DataPageHeader::V1(DataPageHeaderV1 {
                 num_values: len as i32,
                 encoding,
                 definition_level_encoding: Encoding::Rle,
@@ -81,7 +81,7 @@ pub fn build_plain_page(
                 statistics,
             });
 
-            Ok(CompressedPage::new(
+            Ok(CompressedDataPage::new(
                 header,
                 buffer,
                 options.compression,
@@ -91,7 +91,7 @@ pub fn build_plain_page(
             ))
         }
         Version::V2 => {
-            let header = PageHeader::V2(DataPageHeaderV2 {
+            let header = DataPageHeader::V2(DataPageHeaderV2 {
                 num_values: len as i32,
                 encoding,
                 num_nulls: null_count as i32,
@@ -102,7 +102,7 @@ pub fn build_plain_page(
                 statistics,
             });
 
-            Ok(CompressedPage::new(
+            Ok(CompressedDataPage::new(
                 header,
                 buffer,
                 options.compression,
@@ -183,4 +183,10 @@ impl<T, I: Iterator<Item = T>> Iterator for ExactSizedIter<T, I> {
     fn size_hint(&self) -> (usize, Option<usize>) {
         (self.remaining, Some(self.remaining))
     }
+}
+
+/// Returns the number of bits needed to bitpack `max`
+#[inline]
+pub fn get_bit_width(max: u64) -> u32 {
+    64 - max.leading_zeros()
 }

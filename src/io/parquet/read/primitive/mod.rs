@@ -1,13 +1,11 @@
 mod basic;
+mod dictionary;
 mod nested;
 mod utils;
 
 use std::sync::Arc;
 
-use parquet2::{
-    read::{Page, StreamingIterator},
-    types::NativeType,
-};
+use parquet2::{page::DataPage, read::StreamingIterator, types::NativeType};
 
 use super::nested_utils::*;
 use super::{ColumnChunkMetaData, ColumnDescriptor};
@@ -19,6 +17,8 @@ use crate::{
     error::{ArrowError, Result},
     types::NativeType as ArrowNativeType,
 };
+
+pub use dictionary::iter_to_array as iter_to_dict_array;
 
 pub fn iter_to_array<T, A, I, E, F>(
     mut iter: I,
@@ -32,7 +32,7 @@ where
     E: Clone,
     A: ArrowNativeType,
     F: Copy + Fn(T) -> A,
-    I: StreamingIterator<Item = std::result::Result<Page, E>>,
+    I: StreamingIterator<Item = std::result::Result<DataPage, E>>,
 {
     let capacity = metadata.num_values() as usize;
     let mut values = MutableBuffer::<A>::with_capacity(capacity);
@@ -46,6 +46,11 @@ where
             op,
         )?
     }
+
+    let data_type = match data_type {
+        DataType::Dictionary(_, values) => values.as_ref().clone(),
+        _ => data_type,
+    };
 
     Ok(Box::new(PrimitiveArray::from_data(
         data_type,
@@ -66,7 +71,7 @@ where
     E: Clone,
     A: ArrowNativeType,
     F: Copy + Fn(T) -> A,
-    I: StreamingIterator<Item = std::result::Result<Page, E>>,
+    I: StreamingIterator<Item = std::result::Result<DataPage, E>>,
 {
     let capacity = metadata.num_values() as usize;
     let mut values = MutableBuffer::<A>::with_capacity(capacity);
