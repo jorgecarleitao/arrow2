@@ -42,21 +42,19 @@ pub struct CastOptions {
     /// default to false
     /// whether an overflowing cast should be converted to `None` (default), or be wrapped (i.e. `256i16 as u8 = 0` vectorized).
     /// Settings this to `true` is 5-6x faster for numeric types.
-    pub ignore_overflow: bool,
+    pub wrapped: bool,
 }
 
 impl Default for CastOptions {
     fn default() -> Self {
-        Self {
-            ignore_overflow: false,
-        }
+        Self { wrapped: false }
     }
 }
 
 impl CastOptions {
-    fn with_ignore_overflow(&self, v: bool) -> Self {
+    fn with_wrapped(&self, v: bool) -> Self {
         let mut option = self.clone();
-        option.ignore_overflow = v;
+        option.wrapped = v;
         option
     }
 }
@@ -270,7 +268,7 @@ fn cast_list<O: Offset>(
     options: CastOptions,
 ) -> Result<ListArray<O>> {
     let values = array.values();
-    let new_values = cast(
+    let new_values = cast_with_options(
         values.as_ref(),
         ListArray::<O>::get_child_type(to_type),
         options,
@@ -315,6 +313,7 @@ fn cast_large_to_list(array: &ListArray<i64>, to_type: &DataType) -> ListArray<i
 /// type `to_type`, if possible.
 ///
 /// Behavior:
+/// * PrimitiveArray to PrimitiveArray: overflowing cast will be None
 /// * Boolean to Utf8: `true` => '1', `false` => `0`
 /// * Utf8 to numeric: strings that can't be parsed to numbers return null, float strings
 ///   in integer casts return null
@@ -325,13 +324,28 @@ fn cast_large_to_list(array: &ListArray<i64>, to_type: &DataType) -> ListArray<i
 /// * Time32 and Time64: precision lost when going to higher interval
 /// * Timestamp and Date{32|64}: precision lost when going to higher interval
 /// * Temporal to/from backing primitive: zero-copy with data type change
-///
 /// Unsupported Casts
 /// * To or from `StructArray`
 /// * List to primitive
 /// * Utf8 to boolean
 /// * Interval and duration
-pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Result<Box<dyn Array>> {
+pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
+    cast_with_options(array, to_type, CastOptions { wrapped: false })
+}
+
+/// Similar to cast, but overflowing cast will be wrapped
+/// Behavior:
+/// * PrimitiveArray to PrimitiveArray: overflowing cast will be wrapped (i.e. `256i16 as u8 = 0` vectorized).
+pub fn wrapped_cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
+    cast_with_options(array, to_type, CastOptions { wrapped: true })
+}
+
+#[inline]
+pub fn cast_with_options(
+    array: &dyn Array,
+    to_type: &DataType,
+    options: CastOptions,
+) -> Result<Box<dyn Array>> {
     use DataType::*;
     let from_type = array.data_type();
 
@@ -340,7 +354,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
         return Ok(clone(array));
     }
 
-    let as_options = options.with_ignore_overflow(true);
+    let as_options = options.with_wrapped(true);
     match (from_type, to_type) {
         (Struct(_), _) => Err(ArrowError::NotYetImplemented(
             "Cannot cast from struct to other types".to_string(),
@@ -369,7 +383,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
 
         (_, List(to)) => {
             // cast primitive to list's primitive
-            let values = cast(array, to.data_type(), options)?.into();
+            let values = cast_with_options(array, to.data_type(), options)?.into();
             // create offsets, where if array.len() = 2, we have [0,1,2]
             let offsets =
                 unsafe { Buffer::from_trusted_len_iter_unchecked(0..=array.len() as i32) };
@@ -717,7 +731,7 @@ fn cast_to_dictionary<K: DictionaryKey>(
     dict_value_type: &DataType,
     options: CastOptions,
 ) -> Result<Box<dyn Array>> {
-    let array = cast(array, dict_value_type, options)?;
+    let array = cast_with_options(array, dict_value_type, options)?;
     let array = array.as_ref();
     match *dict_value_type {
         DataType::Int8 => primitive_to_dictionary_dyn::<i8, K>(array),
@@ -745,7 +759,7 @@ mod tests {
     #[test]
     fn i32_to_f64() {
         let array = Int32Array::from_slice(&[5, 6, 7, 8, 9]);
-        let b = cast(&array, &DataType::Float64, CastOptions::default()).unwrap();
+        let b = cast(&array, &DataType::Float64).unwrap();
         let c = b.as_any().downcast_ref::<Float64Array>().unwrap();
         assert!((5.0 - c.value(0)).abs() < f64::EPSILON);
         assert!((6.0 - c.value(1)).abs() < f64::EPSILON);
@@ -757,14 +771,7 @@ mod tests {
     #[test]
     fn i32_as_f64_no_overflow() {
         let array = Int32Array::from_slice(&[5, 6, 7, 8, 9]);
-        let b = cast(
-            &array,
-            &DataType::Float64,
-            CastOptions {
-                ignore_overflow: true,
-            },
-        )
-        .unwrap();
+        let b = wrapped_cast(&array, &DataType::Float64).unwrap();
         let c = b.as_any().downcast_ref::<Float64Array>().unwrap();
         assert!((5.0 - c.value(0)).abs() < f64::EPSILON);
         assert!((6.0 - c.value(1)).abs() < f64::EPSILON);
@@ -776,30 +783,19 @@ mod tests {
     #[test]
     fn u16_as_u8_overflow() {
         let array = UInt16Array::from_slice(&[255, 256, 257, 258, 259]);
-        let b = cast(
-            &array,
-            &DataType::UInt8,
-            CastOptions {
-                ignore_overflow: true,
-            },
-        )
-        .unwrap();
+        let b = wrapped_cast(&array, &DataType::UInt8).unwrap();
         let c = b.as_any().downcast_ref::<UInt8Array>().unwrap();
         let values = c.values().as_slice();
+
+        println!("{}", 255u8.wrapping_add(10));
+
         assert_eq!(values, &[255, 0, 1, 2, 3])
     }
 
     #[test]
     fn u16_as_u8_no_overflow() {
         let array = UInt16Array::from_slice(&[1, 2, 3, 4, 5]);
-        let b = cast(
-            &array,
-            &DataType::UInt8,
-            CastOptions {
-                ignore_overflow: true,
-            },
-        )
-        .unwrap();
+        let b = wrapped_cast(&array, &DataType::UInt8).unwrap();
         let c = b.as_any().downcast_ref::<UInt8Array>().unwrap();
         let values = c.values().as_slice();
         assert_eq!(values, &[1, 2, 3, 4, 5])
@@ -894,26 +890,12 @@ mod tests {
     #[test]
     fn f32_as_u8_overflow() {
         let array = Float32Array::from_slice(&[1.1, 5000.0]);
-        let b = cast(
-            &array,
-            &DataType::UInt8,
-            CastOptions {
-                ignore_overflow: false,
-            },
-        )
-        .unwrap();
+        let b = cast(&array, &DataType::UInt8).unwrap();
         let c = b.as_any().downcast_ref::<UInt8Array>().unwrap();
         let expected = UInt8Array::from(&[Some(1), None]);
         assert_eq!(c, &expected);
 
-        let b = cast(
-            &array,
-            &DataType::UInt8,
-            CastOptions {
-                ignore_overflow: true,
-            },
-        )
-        .unwrap();
+        let b = cast_with_options(&array, &DataType::UInt8, CastOptions { wrapped: true }).unwrap();
         let c = b.as_any().downcast_ref::<UInt8Array>().unwrap();
         let expected = UInt8Array::from(&[Some(1), Some(255)]);
         assert_eq!(c, &expected);
@@ -922,7 +904,7 @@ mod tests {
     #[test]
     fn i32_to_u8() {
         let array = Int32Array::from_slice(&[-5, 6, -7, 8, 100000000]);
-        let b = cast(&array, &DataType::UInt8, CastOptions::default()).unwrap();
+        let b = cast(&array, &DataType::UInt8).unwrap();
         let expected = UInt8Array::from(&[None, Some(6), None, Some(8), None]);
         let c = b.as_any().downcast_ref::<UInt8Array>().unwrap();
         assert_eq!(c, &expected);
@@ -932,7 +914,7 @@ mod tests {
     fn i32_to_u8_sliced() {
         let array = Int32Array::from_slice(&[-5, 6, -7, 8, 100000000]);
         let array = array.slice(2, 3);
-        let b = cast(&array, &DataType::UInt8, CastOptions::default()).unwrap();
+        let b = cast(&array, &DataType::UInt8).unwrap();
         let expected = UInt8Array::from(&[None, Some(8), None]);
         let c = b.as_any().downcast_ref::<UInt8Array>().unwrap();
         assert_eq!(c, &expected);
@@ -941,7 +923,7 @@ mod tests {
     #[test]
     fn i32_to_i32() {
         let array = Int32Array::from_slice(&[5, 6, 7, 8, 9]);
-        let b = cast(&array, &DataType::Int32, CastOptions::default()).unwrap();
+        let b = cast(&array, &DataType::Int32).unwrap();
         let c = b.as_any().downcast_ref::<Int32Array>().unwrap();
 
         let expected = &[5, 6, 7, 8, 9];
@@ -955,7 +937,6 @@ mod tests {
         let b = cast(
             &array,
             &DataType::List(Box::new(Field::new("item", DataType::Int32, true))),
-            CastOptions::default(),
         )
         .unwrap();
 
@@ -979,7 +960,6 @@ mod tests {
         let b = cast(
             &array,
             &DataType::List(Box::new(Field::new("item", DataType::Int32, true))),
-            CastOptions::default(),
         )
         .unwrap();
 
@@ -1003,7 +983,6 @@ mod tests {
         let b = cast(
             &array,
             &DataType::List(Box::new(Field::new("item", DataType::Float64, true))),
-            CastOptions::default(),
         )
         .unwrap();
 
@@ -1020,7 +999,7 @@ mod tests {
     #[test]
     fn utf8_to_i32() {
         let array = Utf8Array::<i32>::from_slice(&["5", "6", "seven", "8", "9.1"]);
-        let b = cast(&array, &DataType::Int32, CastOptions::default()).unwrap();
+        let b = cast(&array, &DataType::Int32).unwrap();
         let c = b.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
 
         let expected = &[Some(5), Some(6), None, Some(8), None];
@@ -1031,7 +1010,7 @@ mod tests {
     #[test]
     fn bool_to_i32() {
         let array = BooleanArray::from(vec![Some(true), Some(false), None]);
-        let b = cast(&array, &DataType::Int32, CastOptions::default()).unwrap();
+        let b = cast(&array, &DataType::Int32).unwrap();
         let c = b.as_any().downcast_ref::<Int32Array>().unwrap();
 
         let expected = &[Some(1), Some(0), None];
@@ -1042,7 +1021,7 @@ mod tests {
     #[test]
     fn bool_to_f64() {
         let array = BooleanArray::from(vec![Some(true), Some(false), None]);
-        let b = cast(&array, &DataType::Float64, CastOptions::default()).unwrap();
+        let b = cast(&array, &DataType::Float64).unwrap();
         let c = b.as_any().downcast_ref::<Float64Array>().unwrap();
 
         let expected = &[Some(1.0), Some(0.0), None];
@@ -1054,12 +1033,7 @@ mod tests {
     #[should_panic(expected = "Casting from Int32 to Timestamp(Microsecond, None) not supported")]
     fn int32_to_timestamp() {
         let array = Int32Array::from(&[Some(2), Some(10), None]);
-        cast(
-            &array,
-            &DataType::Timestamp(TimeUnit::Microsecond, None),
-            CastOptions::default(),
-        )
-        .unwrap();
+        cast(&array, &DataType::Timestamp(TimeUnit::Microsecond, None)).unwrap();
     }
 
     #[test]
@@ -1106,14 +1080,16 @@ mod tests {
             .for_each(|(d1, d2)| {
                 let array = new_null_array(d1.clone(), 10);
                 if can_cast_types(&d1, &d2) {
-                    let result = cast(array.as_ref(), &d2, CastOptions::default());
+                    let result = cast(array.as_ref(), &d2);
                     if let Ok(result) = result {
                         assert_eq!(result.data_type(), &d2);
                     } else {
                         panic!("Cast should have not failed")
                     }
                 } else {
-                    assert!(cast(array.as_ref(), &d2, CastOptions::default()).is_err());
+                    assert!(
+                        cast_with_options(array.as_ref(), &d2, CastOptions::default()).is_err()
+                    );
                 }
             });
     }
@@ -1125,7 +1101,7 @@ mod tests {
         expected_type: DataType,
     ) {
         let a = PrimitiveArray::<I>::from_slice(lhs).to(lhs_type);
-        let b = cast(&a, &expected_type, CastOptions::default()).unwrap();
+        let b = cast(&a, &expected_type).unwrap();
         let b = b.as_any().downcast_ref::<PrimitiveArray<O>>().unwrap();
         let expected = PrimitiveArray::<O>::from_slice(expected).to(expected_type);
         assert_eq!(b, &expected);
@@ -1217,7 +1193,7 @@ mod tests {
 
         // Cast to a dictionary (same value type, Utf8)
         let cast_type = DataType::Dictionary(Box::new(DataType::UInt8), Box::new(DataType::Utf8));
-        let result = cast(&array, &cast_type, CastOptions::default()).expect("cast failed");
+        let result = cast(&array, &cast_type).expect("cast failed");
 
         let mut expected = MutableDictionaryArray::<u8, MutableUtf8Array<i32>>::new();
         expected
@@ -1235,7 +1211,7 @@ mod tests {
             .unwrap();
         let array: DictionaryArray<u8> = array.into();
 
-        let result = cast(&array, &DataType::Utf8, CastOptions::default()).expect("cast failed");
+        let result = cast(&array, &DataType::Utf8).expect("cast failed");
 
         let expected = Utf8Array::<i32>::from(&[Some("one"), None, Some("three"), Some("one")]);
 
@@ -1248,7 +1224,7 @@ mod tests {
 
         // Cast to a dictionary (same value type, Utf8)
         let cast_type = DataType::Dictionary(Box::new(DataType::UInt8), Box::new(DataType::Int32));
-        let result = cast(&array, &cast_type, CastOptions::default()).expect("cast failed");
+        let result = cast(&array, &cast_type).expect("cast failed");
 
         let mut expected = MutableDictionaryArray::<u8, MutablePrimitiveArray<i32>>::new();
         expected
@@ -1277,7 +1253,7 @@ mod tests {
         expected.try_extend(expected_data).unwrap();
         let expected: ListArray<i32> = expected.into();
 
-        let result = cast(&array, expected.data_type(), CastOptions::default()).unwrap();
+        let result = cast(&array, expected.data_type()).unwrap();
         assert_eq!(expected, result.as_ref());
     }
 
@@ -1302,7 +1278,7 @@ mod tests {
         let array: ArrayRef = Arc::new(builder.finish());
 
         let cast_type = Dictionary(Box::new(Int8), Box::new(Utf8));
-        let res = cast(&array, &cast_type);
+        let res = cast_with_options(&array, &cast_type);
         assert, CastOptions::default())!(res.is_err());
         let actual_error = format!("{:?}", res);
         let expected_error = "Could not convert 72 dictionary indexes from Int32 to Int8";
@@ -1334,7 +1310,7 @@ mod tests {
         let array: ArrayRef = Arc::new(builder.finish());
 
         let cast_type = Dictionary(Box::new(Int8), Box::new(Utf8));
-        let res = cast(&array, &cast_type);
+        let res = cast_with_options(&array, &cast_type);
         assert, CastOptions::default())!(res.is_err());
         let actual_error = format!("{:?}", res);
         let expected_error = "Could not convert 72 dictionary indexes from Int32 to Int8";
@@ -1360,7 +1336,7 @@ mod tests {
             "2000",                // just a year is invalid
         ]);
         let array = Arc::new(a) as ArrayRef;
-        let b = cast(&array, &DataType::Date32, CastOptions::default()).unwrap();
+        let b = cast_with_options(&array, &DataType::Date32, CastOptions::default()).unwrap();
         let c = b.as_any().downcast_ref::<Date32Array>().unwrap();
 
         // test valid inputs
@@ -1391,7 +1367,7 @@ mod tests {
             "2000-01-01",          // just a date is invalid
         ]);
         let array = Arc::new(a) as ArrayRef;
-        let b = cast(&array, &DataType::Date64, CastOptions::default()).unwrap();
+        let b = cast_with_options(&array, &DataType::Date64, CastOptions::default()).unwrap();
         let c = b.as_any().downcast_ref::<Date64Array>().unwrap();
 
         // test valid inputs

@@ -57,7 +57,7 @@ where
     O: NativeType + num::NumCast,
 {
     let from = from.as_any().downcast_ref::<PrimitiveArray<I>>().unwrap();
-    if options.ignore_overflow {
+    if options.wrapped {
         Ok(Box::new(primitive_as_primitive::<I, O>(from, to_type)))
     } else {
         Ok(Box::new(primitive_to_primitive::<I, O>(from, to_type)))
