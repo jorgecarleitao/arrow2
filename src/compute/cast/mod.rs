@@ -573,8 +573,8 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
         (UInt32, Int16) => primitive_to_primitive_dyn::<u32, i16>(array, to_type, options),
         (UInt32, Int32) => primitive_to_primitive_dyn::<u32, i32>(array, to_type, options),
         (UInt32, Int64) => primitive_to_primitive_dyn::<u32, i64>(array, to_type, options),
-        (UInt32, Float32) => primitive_to_primitive_dyn::<u32, f32>(array, to_type, options),
-        (UInt32, Float64) => primitive_to_primitive_dyn::<u32, f64>(array, to_type, options),
+        (UInt32, Float32) => primitive_to_primitive_dyn::<u32, f32>(array, to_type, as_options),
+        (UInt32, Float64) => primitive_to_primitive_dyn::<u32, f64>(array, to_type, as_options),
 
         (UInt64, UInt8) => primitive_to_primitive_dyn::<u64, u8>(array, to_type, options),
         (UInt64, UInt16) => primitive_to_primitive_dyn::<u64, u16>(array, to_type, options),
@@ -583,8 +583,8 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
         (UInt64, Int16) => primitive_to_primitive_dyn::<u64, i16>(array, to_type, options),
         (UInt64, Int32) => primitive_to_primitive_dyn::<u64, i32>(array, to_type, options),
         (UInt64, Int64) => primitive_to_primitive_dyn::<u64, i64>(array, to_type, options),
-        (UInt64, Float32) => primitive_to_primitive_dyn::<u64, f32>(array, to_type, options),
-        (UInt64, Float64) => primitive_to_primitive_dyn::<u64, f64>(array, to_type, options),
+        (UInt64, Float32) => primitive_to_primitive_dyn::<u64, f32>(array, to_type, as_options),
+        (UInt64, Float64) => primitive_to_primitive_dyn::<u64, f64>(array, to_type, as_options),
 
         (Int8, UInt8) => primitive_to_primitive_dyn::<i8, u8>(array, to_type, options),
         (Int8, UInt16) => primitive_to_primitive_dyn::<i8, u16>(array, to_type, options),
@@ -613,8 +613,8 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
         (Int32, Int8) => primitive_to_primitive_dyn::<i32, i8>(array, to_type, options),
         (Int32, Int16) => primitive_to_primitive_dyn::<i32, i16>(array, to_type, options),
         (Int32, Int64) => primitive_to_primitive_dyn::<i32, i64>(array, to_type, as_options),
-        (Int32, Float32) => primitive_to_primitive_dyn::<i32, f32>(array, to_type, options),
-        (Int32, Float64) => primitive_to_primitive_dyn::<i32, f64>(array, to_type, options),
+        (Int32, Float32) => primitive_to_primitive_dyn::<i32, f32>(array, to_type, as_options),
+        (Int32, Float64) => primitive_to_primitive_dyn::<i32, f64>(array, to_type, as_options),
 
         (Int64, UInt8) => primitive_to_primitive_dyn::<i64, u8>(array, to_type, options),
         (Int64, UInt16) => primitive_to_primitive_dyn::<i64, u16>(array, to_type, options),
@@ -624,7 +624,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
         (Int64, Int16) => primitive_to_primitive_dyn::<i64, i16>(array, to_type, options),
         (Int64, Int32) => primitive_to_primitive_dyn::<i64, i32>(array, to_type, options),
         (Int64, Float32) => primitive_to_primitive_dyn::<i64, f32>(array, to_type, options),
-        (Int64, Float64) => primitive_to_primitive_dyn::<i64, f64>(array, to_type, options),
+        (Int64, Float64) => primitive_to_primitive_dyn::<i64, f64>(array, to_type, as_options),
 
         (Float32, UInt8) => primitive_to_primitive_dyn::<f32, u8>(array, to_type, options),
         (Float32, UInt16) => primitive_to_primitive_dyn::<f32, u16>(array, to_type, options),
@@ -633,8 +633,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
         (Float32, Int8) => primitive_to_primitive_dyn::<f32, i8>(array, to_type, options),
         (Float32, Int16) => primitive_to_primitive_dyn::<f32, i16>(array, to_type, options),
         (Float32, Int32) => primitive_to_primitive_dyn::<f32, i32>(array, to_type, options),
-        // float32: 3.4E-38 to 3.4E+38
-        (Float32, Int64) => primitive_to_primitive_dyn::<f32, i64>(array, to_type, as_options),
+        (Float32, Int64) => primitive_to_primitive_dyn::<f32, i64>(array, to_type, options),
         (Float32, Float64) => primitive_to_primitive_dyn::<f32, f64>(array, to_type, as_options),
 
         (Float64, UInt8) => primitive_to_primitive_dyn::<f64, u8>(array, to_type, options),
@@ -803,6 +802,92 @@ mod tests {
         let c = b.as_any().downcast_ref::<UInt8Array>().unwrap();
         let values = c.values().as_slice();
         assert_eq!(values, &[1, 2, 3, 4, 5])
+    }
+
+    #[test]
+    fn float_range_max() {
+        //floats to integers
+        let u: Option<u32> = num::cast(f32::MAX);
+        assert_eq!(u, None);
+        let u: Option<u64> = num::cast(f32::MAX);
+        assert_eq!(u, None);
+
+        let u: Option<i32> = num::cast(f32::MAX);
+        assert_eq!(u, None);
+        let u: Option<i64> = num::cast(f32::MAX);
+        assert_eq!(u, None);
+
+        let u: Option<u32> = num::cast(f64::MAX);
+        assert_eq!(u, None);
+        let u: Option<u64> = num::cast(f64::MAX);
+        assert_eq!(u, None);
+
+        let u: Option<i32> = num::cast(f64::MAX);
+        assert_eq!(u, None);
+        let u: Option<i64> = num::cast(f64::MAX);
+        assert_eq!(u, None);
+
+        //integers to floats
+        let u: Option<f32> = num::cast(u32::MAX);
+        assert!(u.is_some());
+        let u: Option<f64> = num::cast(u32::MAX);
+        assert!(u.is_some());
+
+        let u: Option<f32> = num::cast(i32::MAX);
+        assert!(u.is_some());
+        let u: Option<f64> = num::cast(i32::MAX);
+        assert!(u.is_some());
+
+        let u: Option<f64> = num::cast(i64::MAX);
+        assert!(u.is_some());
+        let u: Option<f64> = num::cast(u64::MAX);
+        assert!(u.is_some());
+
+        let u: Option<f64> = num::cast(f32::MAX);
+        assert!(u.is_some());
+    }
+
+    #[test]
+    fn float_range_min() {
+        //floats to integers
+        let u: Option<u32> = num::cast(f32::MIN);
+        assert_eq!(u, None);
+        let u: Option<u64> = num::cast(f32::MIN);
+        assert_eq!(u, None);
+
+        let u: Option<i32> = num::cast(f32::MIN);
+        assert_eq!(u, None);
+        let u: Option<i64> = num::cast(f32::MIN);
+        assert_eq!(u, None);
+
+        let u: Option<u32> = num::cast(f64::MIN);
+        assert_eq!(u, None);
+        let u: Option<u64> = num::cast(f64::MIN);
+        assert_eq!(u, None);
+
+        let u: Option<i32> = num::cast(f64::MIN);
+        assert_eq!(u, None);
+        let u: Option<i64> = num::cast(f64::MIN);
+        assert_eq!(u, None);
+
+        //integers to floats
+        let u: Option<f32> = num::cast(u32::MIN);
+        assert!(u.is_some());
+        let u: Option<f64> = num::cast(u32::MIN);
+        assert!(u.is_some());
+
+        let u: Option<f32> = num::cast(i32::MIN);
+        assert!(u.is_some());
+        let u: Option<f64> = num::cast(i32::MIN);
+        assert!(u.is_some());
+
+        let u: Option<f64> = num::cast(i64::MIN);
+        assert!(u.is_some());
+        let u: Option<f64> = num::cast(u64::MIN);
+        assert!(u.is_some());
+
+        let u: Option<f64> = num::cast(f32::MIN);
+        assert!(u.is_some());
     }
 
     #[test]
