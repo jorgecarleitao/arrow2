@@ -42,7 +42,7 @@ pub struct CastOptions {
     /// default to false
     /// whether an overflowing cast should be converted to `None` (default), or be wrapped (i.e. `256i16 as u8 = 0` vectorized).
     /// Settings this to `true` is 5-6x faster for numeric types.
-    pub wrapped: bool,
+    wrapped: bool,
 }
 
 impl Default for CastOptions {
@@ -336,7 +336,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
 /// Similar to [`cast`], but overflowing cast is wrapped
 /// Behavior:
 /// * PrimitiveArray to PrimitiveArray: overflowing cast will be wrapped (i.e. `256i16 as u8 = 0` vectorized).
-pub fn wrapped_cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
+pub fn wrapping_cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
     cast_with_options(array, to_type, CastOptions { wrapped: true })
 }
 
@@ -771,7 +771,7 @@ mod tests {
     #[test]
     fn i32_as_f64_no_overflow() {
         let array = Int32Array::from_slice(&[5, 6, 7, 8, 9]);
-        let b = wrapped_cast(&array, &DataType::Float64).unwrap();
+        let b = wrapping_cast(&array, &DataType::Float64).unwrap();
         let c = b.as_any().downcast_ref::<Float64Array>().unwrap();
         assert!((5.0 - c.value(0)).abs() < f64::EPSILON);
         assert!((6.0 - c.value(1)).abs() < f64::EPSILON);
@@ -783,7 +783,7 @@ mod tests {
     #[test]
     fn u16_as_u8_overflow() {
         let array = UInt16Array::from_slice(&[255, 256, 257, 258, 259]);
-        let b = wrapped_cast(&array, &DataType::UInt8).unwrap();
+        let b = wrapping_cast(&array, &DataType::UInt8).unwrap();
         let c = b.as_any().downcast_ref::<UInt8Array>().unwrap();
         let values = c.values().as_slice();
 
@@ -795,7 +795,7 @@ mod tests {
     #[test]
     fn u16_as_u8_no_overflow() {
         let array = UInt16Array::from_slice(&[1, 2, 3, 4, 5]);
-        let b = wrapped_cast(&array, &DataType::UInt8).unwrap();
+        let b = wrapping_cast(&array, &DataType::UInt8).unwrap();
         let c = b.as_any().downcast_ref::<UInt8Array>().unwrap();
         let values = c.values().as_slice();
         assert_eq!(values, &[1, 2, 3, 4, 5])
