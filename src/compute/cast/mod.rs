@@ -40,7 +40,8 @@ pub use utf8_to::*;
 #[derive(Clone, Copy, Debug)]
 pub struct CastOptions {
     /// default to false
-    /// if set to true, the cast will use AsPrimitive to convert the primitive value, this could be more efficient
+    /// whether an overflowing cast should be converted to `None` (default), or be wrapped (i.e. `256i16 as u8 = 0` vectorized).
+    /// Settings this to `true` is 5-6x faster for numeric types.
     pub ignore_overflow: bool,
 }
 
