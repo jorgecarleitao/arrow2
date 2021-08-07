@@ -1,4 +1,4 @@
-use super::{primitive_to_primitive, CastOptions};
+use super::{primitive_as_primitive, primitive_to_primitive, CastOptions};
 use crate::{
     array::{Array, DictionaryArray, DictionaryKey, PrimitiveArray},
     compute::{cast::cast_with_options, take::take},
@@ -28,12 +28,24 @@ macro_rules! key_cast {
 pub fn dictionary_to_dictionary_values<K: DictionaryKey>(
     from: &DictionaryArray<K>,
     values_type: &DataType,
-    options: CastOptions,
 ) -> Result<DictionaryArray<K>> {
     let keys = from.keys();
     let values = from.values();
 
-    let values = cast_with_options(values.as_ref(), values_type, options)?.into();
+    let values = cast_with_options(values.as_ref(), values_type, CastOptions::default())?.into();
+    Ok(DictionaryArray::from_data(keys.clone(), values))
+}
+
+/// Similar to dictionary_to_dictionary_values, but overflowing cast is wrapped
+pub fn wrapping_dictionary_to_dictionary_values<K: DictionaryKey>(
+    from: &DictionaryArray<K>,
+    values_type: &DataType,
+) -> Result<DictionaryArray<K>> {
+    let keys = from.keys();
+    let values = from.values();
+
+    let values =
+        cast_with_options(values.as_ref(), values_type, CastOptions { wrapped: true })?.into();
     Ok(DictionaryArray::from_data(keys.clone(), values))
 }
 
@@ -53,6 +65,26 @@ where
     let values = from.values();
 
     let casted_keys = primitive_to_primitive::<K1, K2>(keys, &K2::DATA_TYPE);
+
+    if casted_keys.null_count() > keys.null_count() {
+        Err(ArrowError::KeyOverflowError)
+    } else {
+        Ok(DictionaryArray::from_data(casted_keys, values.clone()))
+    }
+}
+
+/// Similar to dictionary_to_dictionary_keys, but overflowing cast is wrapped
+pub fn wrapping_dictionary_to_dictionary_keys<K1, K2>(
+    from: &DictionaryArray<K1>,
+) -> Result<DictionaryArray<K2>>
+where
+    K1: DictionaryKey + num::traits::AsPrimitive<K2>,
+    K2: DictionaryKey,
+{
+    let keys = from.keys();
+    let values = from.values();
+
+    let casted_keys = primitive_as_primitive::<K1, K2>(keys, &K2::DATA_TYPE);
 
     if casted_keys.null_count() > keys.null_count() {
         Err(ArrowError::KeyOverflowError)

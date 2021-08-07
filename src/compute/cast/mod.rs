@@ -38,7 +38,7 @@ pub use utf8_to::*;
 
 /// options defining how Cast kernels behave
 #[derive(Clone, Copy, Debug)]
-pub struct CastOptions {
+struct CastOptions {
     /// default to false
     /// whether an overflowing cast should be converted to `None` (default), or be wrapped (i.e. `256i16 as u8 = 0` vectorized).
     /// Settings this to `true` is 5-6x faster for numeric types.
@@ -341,7 +341,7 @@ pub fn wrapping_cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Ar
 }
 
 #[inline]
-pub fn cast_with_options(
+fn cast_with_options(
     array: &dyn Array,
     to_type: &DataType,
     options: CastOptions,
