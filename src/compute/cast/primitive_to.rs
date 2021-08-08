@@ -10,6 +10,8 @@ use crate::{
 };
 use crate::{error::Result, util::lexical_to_string};
 
+use super::CastOptions;
+
 /// Returns a [`BooleanArray`] where every element is different from zero.
 /// Validity is preserved.
 pub fn primitive_to_boolean<T: NativeType>(from: &PrimitiveArray<T>) -> BooleanArray {
@@ -48,13 +50,18 @@ where
 pub(super) fn primitive_to_primitive_dyn<I, O>(
     from: &dyn Array,
     to_type: &DataType,
+    options: CastOptions,
 ) -> Result<Box<dyn Array>>
 where
-    I: NativeType + num::NumCast,
+    I: NativeType + num::NumCast + num::traits::AsPrimitive<O>,
     O: NativeType + num::NumCast,
 {
     let from = from.as_any().downcast_ref::<PrimitiveArray<I>>().unwrap();
-    Ok(Box::new(primitive_to_primitive::<I, O>(from, to_type)))
+    if options.wrapped {
+        Ok(Box::new(primitive_as_primitive::<I, O>(from, to_type)))
+    } else {
+        Ok(Box::new(primitive_to_primitive::<I, O>(from, to_type)))
+    }
 }
 
 /// Cast [`PrimitiveArray`] to a [`PrimitiveArray`] of another physical type via numeric conversion.
@@ -70,6 +77,23 @@ where
         .iter()
         .map(|v| v.and_then(|x| num::cast::cast::<I, O>(*x)));
     PrimitiveArray::<O>::from_trusted_len_iter(iter).to(to_type.clone())
+}
+
+/// Cast [`PrimitiveArray`] as a [`PrimitiveArray`]
+/// Same as `number as to_number_type` in rust
+pub fn primitive_as_primitive<I, O>(
+    from: &PrimitiveArray<I>,
+    to_type: &DataType,
+) -> PrimitiveArray<O>
+where
+    I: NativeType + num::traits::AsPrimitive<O>,
+    O: NativeType,
+{
+    unary(
+        from,
+        |x| num::traits::AsPrimitive::<O>::as_(x),
+        to_type.clone(),
+    )
 }
 
 /// Cast [`PrimitiveArray`] to a [`PrimitiveArray`] of the same physical type.

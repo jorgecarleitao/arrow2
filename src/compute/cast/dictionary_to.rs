@@ -1,7 +1,7 @@
-use super::{cast, primitive_to_primitive};
+use super::{primitive_as_primitive, primitive_to_primitive, CastOptions};
 use crate::{
     array::{Array, DictionaryArray, DictionaryKey, PrimitiveArray},
-    compute::take::take,
+    compute::{cast::cast_with_options, take::take},
     datatypes::DataType,
     error::{ArrowError, Result},
 };
@@ -32,7 +32,20 @@ pub fn dictionary_to_dictionary_values<K: DictionaryKey>(
     let keys = from.keys();
     let values = from.values();
 
-    let values = cast(values.as_ref(), values_type)?.into();
+    let values = cast_with_options(values.as_ref(), values_type, CastOptions::default())?.into();
+    Ok(DictionaryArray::from_data(keys.clone(), values))
+}
+
+/// Similar to dictionary_to_dictionary_values, but overflowing cast is wrapped
+pub fn wrapping_dictionary_to_dictionary_values<K: DictionaryKey>(
+    from: &DictionaryArray<K>,
+    values_type: &DataType,
+) -> Result<DictionaryArray<K>> {
+    let keys = from.keys();
+    let values = from.values();
+
+    let values =
+        cast_with_options(values.as_ref(), values_type, CastOptions { wrapped: true })?.into();
     Ok(DictionaryArray::from_data(keys.clone(), values))
 }
 
@@ -60,9 +73,30 @@ where
     }
 }
 
+/// Similar to dictionary_to_dictionary_keys, but overflowing cast is wrapped
+pub fn wrapping_dictionary_to_dictionary_keys<K1, K2>(
+    from: &DictionaryArray<K1>,
+) -> Result<DictionaryArray<K2>>
+where
+    K1: DictionaryKey + num::traits::AsPrimitive<K2>,
+    K2: DictionaryKey,
+{
+    let keys = from.keys();
+    let values = from.values();
+
+    let casted_keys = primitive_as_primitive::<K1, K2>(keys, &K2::DATA_TYPE);
+
+    if casted_keys.null_count() > keys.null_count() {
+        Err(ArrowError::KeyOverflowError)
+    } else {
+        Ok(DictionaryArray::from_data(casted_keys, values.clone()))
+    }
+}
+
 pub(super) fn dictionary_cast_dyn<K: DictionaryKey>(
     array: &dyn Array,
     to_type: &DataType,
+    options: CastOptions,
 ) -> Result<Box<dyn Array>> {
     let array = array.as_any().downcast_ref::<DictionaryArray<K>>().unwrap();
     let keys = array.keys();
@@ -70,7 +104,7 @@ pub(super) fn dictionary_cast_dyn<K: DictionaryKey>(
 
     match to_type {
         DataType::Dictionary(to_keys_type, to_values_type) => {
-            let values = cast(values.as_ref(), to_values_type)?.into();
+            let values = cast_with_options(values.as_ref(), to_values_type, options)?.into();
 
             // create the appropriate array type
             match to_keys_type.as_ref() {
@@ -85,7 +119,7 @@ pub(super) fn dictionary_cast_dyn<K: DictionaryKey>(
                 _ => unreachable!(),
             }
         }
-        _ => unpack_dictionary::<K>(keys, values.as_ref(), to_type),
+        _ => unpack_dictionary::<K>(keys, values.as_ref(), to_type, options),
     }
 }
 
@@ -94,13 +128,14 @@ fn unpack_dictionary<K>(
     keys: &PrimitiveArray<K>,
     values: &dyn Array,
     to_type: &DataType,
+    options: CastOptions,
 ) -> Result<Box<dyn Array>>
 where
     K: DictionaryKey,
 {
     // attempt to cast the dict values to the target type
     // use the take kernel to expand out the dictionary
-    let values = cast(values, to_type)?;
+    let values = cast_with_options(values, to_type, options)?;
 
     // take requires first casting i32
     let indices = primitive_to_primitive::<_, i32>(keys, &DataType::Int32);
