@@ -31,11 +31,9 @@ pub struct BitChunks<'a, T: BitChunk> {
 /// writes `bytes` into `dst`.
 #[inline]
 fn copy_with_merge<T: BitChunk>(dst: &mut T::Bytes, bytes: &[u8], bit_offset: usize) {
-    let mut last = bytes[bytes.len() - 1];
-    last >>= bit_offset;
-    dst[0] = last;
     bytes
         .windows(2)
+        .chain(std::iter::once([bytes[bytes.len() - 1], 0].as_ref()))
         .take(std::mem::size_of::<T>())
         .enumerate()
         .for_each(|(i, w)| {
@@ -339,5 +337,24 @@ mod tests {
         let mut iter = BitChunks::<u64>::new(&[0b11111111u8, 0b00000001u8], 0, 9);
         assert_eq!(iter.next(), None);
         assert_eq!(iter.remainder(), 0b1_1111_1111u64);
+    }
+
+    #[test]
+    fn remainder_2() {
+        // (i % 3 == 0) in bitmap
+        let input: &[u8] = &[
+            0b01001001, 0b10010010, 0b00100100, 0b01001001, 0b10010010, 0b00100100, 0b01001001,
+            0b10010010, 0b00100100, 0b01001001, /* 73 */
+            0b10010010, /* 146 */
+            0b00100100, 0b00001001,
+        ];
+        let offset = 10; // 8 + 2
+        let length = 90;
+
+        let mut iter = BitChunks::<u64>::new(input, offset, length);
+        let first: u64 = 0b0100100100100100100100100100100100100100100100100100100100100100;
+        assert_eq!(first, iter.next().unwrap());
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.remainder(), 0b10010010010010010010010010u64);
     }
 }
