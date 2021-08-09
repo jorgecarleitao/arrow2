@@ -1,12 +1,16 @@
-use std::io::{Read, Seek};
+use std::{
+    io::{Read, Seek},
+    sync::Arc,
+};
 
-use futures::Stream;
+use futures::{AsyncRead, AsyncSeek, Stream};
 pub use parquet2::{
     error::ParquetError,
     metadata::{ColumnChunkMetaData, ColumnDescriptor, RowGroupMetaData},
     page::{CompressedDataPage, DataPage, DataPageHeader},
     read::{
-        decompress, get_page_iterator as _get_page_iterator, read_metadata as _read_metadata,
+        decompress, get_page_iterator as _get_page_iterator, get_page_stream as _get_page_stream,
+        read_metadata as _read_metadata, read_metadata_async as _read_metadata_async,
         streaming_iterator, Decompressor, PageFilter, PageIterator, StreamingIterator,
     },
     schema::types::{
@@ -54,9 +58,29 @@ pub fn get_page_iterator<'b, RR: Read + Seek>(
     )?)
 }
 
-/// Reads parquets' metadata.
+/// Creates a new iterator of compressed pages.
+pub async fn get_page_stream<'a, RR: AsyncRead + Unpin + Send + AsyncSeek>(
+    metadata: &'a FileMetaData,
+    row_group: usize,
+    column: usize,
+    reader: &'a mut RR,
+    pages_filter: Option<PageFilter>,
+    buffer: Vec<u8>,
+) -> Result<impl Stream<Item = std::result::Result<CompressedDataPage, ParquetError>> + 'a> {
+    let pages_filter = pages_filter.unwrap_or_else(|| Arc::new(|_, _| true));
+    Ok(_get_page_stream(metadata, row_group, column, reader, buffer, pages_filter).await?)
+}
+
+/// Reads parquets' metadata syncronously.
 pub fn read_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetaData> {
     Ok(_read_metadata(reader)?)
+}
+
+/// Reads parquets' metadata asynchronously.
+pub async fn read_metadata_async<R: AsyncRead + AsyncSeek + Send + Unpin>(
+    reader: &mut R,
+) -> Result<FileMetaData> {
+    Ok(_read_metadata_async(reader).await?)
 }
 
 pub fn page_iter_to_array<
