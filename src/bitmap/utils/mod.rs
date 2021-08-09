@@ -65,6 +65,8 @@ pub fn bytes_for(bits: usize) -> usize {
 
 #[inline]
 pub fn null_count(slice: &[u8], offset: usize, len: usize) -> usize {
+    //return BitmapIter::new(slice, offset, len).filter(|x| !*x).count();
+
     // u64 results in optimal performance (verified via benches)
     let mut chunks = chunk_iterator::BitChunks::<u64>::new(slice, offset, len);
 
@@ -137,5 +139,12 @@ mod tests {
         assert_eq!(null_count(input, 12, 2), 1);
         assert_eq!(null_count(input, 13, 2), 1);
         assert_eq!(null_count(input, 14, 2), 1);
+    }
+
+    #[test]
+    fn null_count_1() {
+        // offset = 10, len = 90 => remainder
+        let input: &[u8] = &[73, 146, 36, 73, 146, 36, 73, 146, 36, 73, 146, 36, 9];
+        assert_eq!(null_count(input, 10, 90), 60);
     }
 }
