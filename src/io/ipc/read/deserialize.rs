@@ -331,3 +331,42 @@ pub fn read<R: Read + Seek>(
         DataType::Union(_) => unimplemented!(),
     }
 }
+
+pub fn skip(
+    field_nodes: &mut VecDeque<Node>,
+    data_type: &DataType,
+    buffers: &mut VecDeque<&gen::Schema::Buffer>,
+) {
+    match data_type {
+        DataType::Null => skip_null(field_nodes),
+        DataType::Boolean => skip_boolean(field_nodes, buffers),
+        DataType::Int8
+        | DataType::Int16
+        | DataType::Int32
+        | DataType::Date32
+        | DataType::Time32(_)
+        | DataType::Interval(_)
+        | DataType::Int64
+        | DataType::Date64
+        | DataType::Time64(_)
+        | DataType::Timestamp(_, _)
+        | DataType::Duration(_)
+        | DataType::Decimal(_, _)
+        | DataType::UInt8
+        | DataType::UInt16
+        | DataType::UInt32
+        | DataType::UInt64
+        | DataType::Float32
+        | DataType::Float16
+        | DataType::Float64 => skip_primitive(field_nodes, buffers),
+        DataType::LargeBinary | DataType::Binary => skip_binary(field_nodes, buffers),
+        DataType::LargeUtf8 | DataType::Utf8 => skip_utf8(field_nodes, buffers),
+        DataType::FixedSizeBinary(_) => skip_fixed_size_binary(field_nodes, buffers),
+        DataType::List(_) => skip_list::<i32>(field_nodes, data_type, buffers),
+        DataType::LargeList(_) => skip_list::<i64>(field_nodes, data_type, buffers),
+        DataType::FixedSizeList(_, _) => skip_fixed_size_list(field_nodes, data_type, buffers),
+        DataType::Struct(_) => skip_struct(field_nodes, data_type, buffers),
+        DataType::Dictionary(_, _) => skip_dictionary(field_nodes, buffers),
+        DataType::Union(_) => unimplemented!(),
+    }
+}

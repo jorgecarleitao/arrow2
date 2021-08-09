@@ -7,7 +7,7 @@ use crate::error::Result;
 use crate::io::ipc::gen::Message::BodyCompression;
 
 use super::super::super::gen;
-use super::super::deserialize::{read, Node};
+use super::super::deserialize::{read, skip, Node};
 use super::super::read_basic::*;
 
 pub fn read_struct<R: Read + Seek>(
@@ -48,4 +48,20 @@ pub fn read_struct<R: Read + Seek>(
         .collect::<Result<Vec<_>>>()?;
 
     Ok(StructArray::from_data(fields.to_vec(), values, validity))
+}
+
+pub fn skip_struct(
+    field_nodes: &mut VecDeque<Node>,
+    data_type: &DataType,
+    buffers: &mut VecDeque<&gen::Schema::Buffer>,
+) {
+    let _ = field_nodes.pop_front().unwrap();
+
+    let _ = buffers.pop_front().unwrap();
+
+    let fields = StructArray::get_fields(data_type);
+
+    fields
+        .iter()
+        .for_each(|field| skip(field_nodes, field.data_type(), buffers))
 }

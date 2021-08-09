@@ -7,7 +7,7 @@ use crate::error::Result;
 use crate::io::ipc::gen::Message::BodyCompression;
 
 use super::super::super::gen;
-use super::super::deserialize::{read, Node};
+use super::super::deserialize::{read, skip, Node};
 use super::super::read_basic::*;
 
 pub fn read_fixed_size_list<R: Read + Seek>(
@@ -42,4 +42,18 @@ pub fn read_fixed_size_list<R: Read + Seek>(
         compression,
     )?;
     Ok(FixedSizeListArray::from_data(data_type, values, validity))
+}
+
+pub fn skip_fixed_size_list(
+    field_nodes: &mut VecDeque<Node>,
+    data_type: &DataType,
+    buffers: &mut VecDeque<&gen::Schema::Buffer>,
+) {
+    let _ = field_nodes.pop_front().unwrap();
+
+    let _ = buffers.pop_front().unwrap();
+
+    let (data_type, _) = FixedSizeListArray::get_child_and_size(data_type);
+
+    skip(field_nodes, data_type, buffers)
 }
