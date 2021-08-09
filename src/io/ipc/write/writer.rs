@@ -190,7 +190,7 @@ mod tests {
         let metadata = read_file_metadata(&mut reader)?;
         let schema = metadata.schema().clone();
 
-        let reader = FileReader::new(&mut reader, metadata);
+        let reader = FileReader::new(&mut reader, metadata, None);
 
         // read expected JSON output
         let (expected_schema, expected_batches) = (batch.schema().clone(), vec![batch]);
@@ -221,7 +221,7 @@ mod tests {
         let metadata = read_file_metadata(&mut reader)?;
         let schema = metadata.schema().clone();
 
-        let reader = FileReader::new(&mut reader, metadata);
+        let reader = FileReader::new(&mut reader, metadata, None);
 
         // read expected JSON output
         let (expected_schema, expected_batches) = read_gzip_json(version, file_name);

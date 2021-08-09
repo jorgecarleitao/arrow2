@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::io::{Read, Seek};
 use std::sync::Arc;
 
@@ -25,7 +25,7 @@ use crate::error::{ArrowError, Result};
 use crate::record_batch::RecordBatch;
 
 use super::super::gen;
-use super::deserialize::read;
+use super::deserialize::{read, skip};
 
 type ArrayRef = Arc<dyn Array>;
 
@@ -33,6 +33,7 @@ type ArrayRef = Arc<dyn Array>;
 pub fn read_record_batch<R: Read + Seek>(
     batch: gen::Message::RecordBatch,
     schema: Arc<Schema>,
+    projection: Option<(&HashSet<usize>, Arc<Schema>)>,
     is_little_endian: bool,
     dictionaries: &[Option<ArrayRef>],
     reader: &mut R,
@@ -54,23 +55,52 @@ pub fn read_record_batch<R: Read + Seek>(
         .zip(dictionaries)
         .collect::<VecDeque<_>>();
 
-    let arrays = schema
-        .fields()
-        .iter()
-        .map(|field| {
-            read(
-                &mut field_nodes,
-                field.data_type().clone(),
-                &mut buffers,
-                reader,
-                block_offset,
-                is_little_endian,
-                batch.compression(),
-            )
-        })
-        .collect::<Result<Vec<_>>>()?;
+    let (schema, columns) = if let Some(projection) = projection {
+        let projected_schema = projection.1.clone();
+        let projection = (0..schema.fields().len()).map(|x| projection.0.contains(&x));
 
-    RecordBatch::try_new(schema.clone(), arrays)
+        let arrays = schema
+            .fields()
+            .iter()
+            .zip(projection)
+            .map(|(field, is_taken)| {
+                if is_taken {
+                    Some(read(
+                        &mut field_nodes,
+                        field.data_type().clone(),
+                        &mut buffers,
+                        reader,
+                        block_offset,
+                        is_little_endian,
+                        batch.compression(),
+                    ))
+                } else {
+                    skip(&mut field_nodes, field.data_type(), &mut buffers);
+                    None
+                }
+            })
+            .flatten()
+            .collect::<Result<Vec<_>>>()?;
+        (projected_schema, arrays)
+    } else {
+        let arrays = schema
+            .fields()
+            .iter()
+            .map(|field| {
+                read(
+                    &mut field_nodes,
+                    field.data_type().clone(),
+                    &mut buffers,
+                    reader,
+                    block_offset,
+                    is_little_endian,
+                    batch.compression(),
+                )
+            })
+            .collect::<Result<Vec<_>>>()?;
+        (schema.clone(), arrays)
+    };
+    RecordBatch::try_new(schema, columns)
 }
 
 /// Read the dictionary from the buffer and provided metadata,
@@ -109,6 +139,7 @@ pub fn read_dictionary<R: Read + Seek>(
             let record_batch = read_record_batch(
                 batch.data().unwrap(),
                 schema,
+                None,
                 is_little_endian,
                 dictionaries_by_field,
                 reader,

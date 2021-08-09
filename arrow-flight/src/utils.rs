@@ -164,7 +164,8 @@ pub fn flight_data_to_arrow_batch(
         .map(|batch| {
             read_record_batch(
                 batch,
-                schema,
+                schema.clone(),
+                None,
                 is_little_endian,
                 &dictionaries_by_field,
                 &mut reader,
