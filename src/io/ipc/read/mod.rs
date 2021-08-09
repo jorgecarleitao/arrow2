@@ -17,6 +17,7 @@
 
 mod common;
 mod deserialize;
+mod read_basic;
 mod reader;
 mod stream;
 
