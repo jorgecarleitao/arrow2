@@ -53,7 +53,7 @@ impl Default for CastOptions {
 
 impl CastOptions {
     fn with_wrapped(&self, v: bool) -> Self {
-        let mut option = self.clone();
+        let mut option = *self;
         option.wrapped = v;
         option
     }
@@ -1234,6 +1234,7 @@ mod tests {
         assert_eq!(expected, result.as_ref());
     }
 
+    #[test]
     fn list_to_list() {
         let data = vec![
             Some(vec![Some(1i32), Some(2), Some(3)]),
