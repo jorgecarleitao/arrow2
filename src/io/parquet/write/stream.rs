@@ -2,7 +2,7 @@ use futures::stream::Stream;
 
 use parquet2::write::RowGroupIter;
 use parquet2::{
-    metadata::SchemaDescriptor, schema::KeyValue,
+    metadata::{KeyValue, SchemaDescriptor},
     write::stream::write_stream as parquet_write_stream,
 };
 

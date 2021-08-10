@@ -405,7 +405,7 @@ mod tests {
 mod tests_integration {
     use std::sync::Arc;
 
-    use super::write::CompressionCodec;
+    use super::write::Compression;
     use crate::array::{Array, PrimitiveArray, Utf8Array};
     use crate::datatypes::DataType;
     use crate::datatypes::TimeUnit;
@@ -421,7 +421,7 @@ mod tests_integration {
     fn integration_write(schema: &Schema, batches: &[RecordBatch]) -> Result<Vec<u8>> {
         let options = WriteOptions {
             write_statistics: true,
-            compression: CompressionCodec::Uncompressed,
+            compression: Compression::Uncompressed,
             version: Version::V1,
         };
 

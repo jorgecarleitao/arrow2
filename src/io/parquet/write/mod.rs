@@ -23,17 +23,13 @@ use crate::io::parquet::write::levels::NestedInfo;
 use crate::types::days_ms;
 use crate::types::NativeType;
 
-use parquet2::metadata::ColumnDescriptor;
 pub use parquet2::{
-    compression::CompressionCodec,
+    compression::Compression,
+    encoding::Encoding,
+    metadata::{ColumnDescriptor, KeyValue, SchemaDescriptor},
     page::{CompressedDataPage, CompressedPage},
     schema::types::ParquetType,
-    schema::Encoding,
-    write::{DynIter, RowGroupIter},
-    write::{Version, WriteOptions},
-};
-use parquet2::{
-    metadata::SchemaDescriptor, schema::KeyValue, write::write_file as parquet_write_file,
+    write::{write_file as parquet_write_file, DynIter, RowGroupIter, Version, WriteOptions},
 };
 pub use record_batch::RowGroupIterator;
 use schema::schema_to_metadata_key;
@@ -497,7 +493,7 @@ mod tests {
         nullable: bool,
         nested: bool,
         version: Version,
-        compression: CompressionCodec,
+        compression: Compression,
         encoding: Encoding,
     ) -> Result<()> {
         let (array, statistics) = if nested {
@@ -562,7 +558,7 @@ mod tests {
             true,
             false,
             Version::V1,
-            CompressionCodec::Uncompressed,
+            Compression::Uncompressed,
             Encoding::Plain,
         )
     }
@@ -574,7 +570,7 @@ mod tests {
             false,
             false,
             Version::V1,
-            CompressionCodec::Uncompressed,
+            Compression::Uncompressed,
             Encoding::Plain,
         )
     }
@@ -586,7 +582,7 @@ mod tests {
             true,
             false,
             Version::V2,
-            CompressionCodec::Uncompressed,
+            Compression::Uncompressed,
             Encoding::Plain,
         )
     }
@@ -598,7 +594,7 @@ mod tests {
             true,
             false,
             Version::V2,
-            CompressionCodec::Snappy,
+            Compression::Snappy,
             Encoding::Plain,
         )
     }
@@ -610,7 +606,7 @@ mod tests {
             true,
             false,
             Version::V1,
-            CompressionCodec::Uncompressed,
+            Compression::Uncompressed,
             Encoding::Plain,
         )
     }
@@ -622,7 +618,7 @@ mod tests {
             false,
             false,
             Version::V1,
-            CompressionCodec::Uncompressed,
+            Compression::Uncompressed,
             Encoding::Plain,
         )
     }
@@ -634,7 +630,7 @@ mod tests {
             true,
             false,
             Version::V2,
-            CompressionCodec::Uncompressed,
+            Compression::Uncompressed,
             Encoding::Plain,
         )
     }
@@ -646,7 +642,7 @@ mod tests {
             false,
             false,
             Version::V2,
-            CompressionCodec::Uncompressed,
+            Compression::Uncompressed,
             Encoding::Plain,
         )
     }
@@ -658,7 +654,7 @@ mod tests {
             true,
             false,
             Version::V2,
-            CompressionCodec::Snappy,
+            Compression::Snappy,
             Encoding::Plain,
         )
     }
@@ -670,7 +666,7 @@ mod tests {
             false,
             false,
             Version::V2,
-            CompressionCodec::Snappy,
+            Compression::Snappy,
             Encoding::Plain,
         )
     }
@@ -682,7 +678,7 @@ mod tests {
             true,
             false,
             Version::V1,
-            CompressionCodec::Uncompressed,
+            Compression::Uncompressed,
             Encoding::Plain,
         )
     }
@@ -694,7 +690,7 @@ mod tests {
             false,
             false,
             Version::V1,
-            CompressionCodec::Uncompressed,
+            Compression::Uncompressed,
             Encoding::Plain,
         )
     }
@@ -706,7 +702,7 @@ mod tests {
             true,
             false,
             Version::V2,
-            CompressionCodec::Uncompressed,
+            Compression::Uncompressed,
             Encoding::Plain,
         )
     }
@@ -718,7 +714,7 @@ mod tests {
             false,
             false,
             Version::V2,
-            CompressionCodec::Uncompressed,
+            Compression::Uncompressed,
             Encoding::Plain,
         )
     }
@@ -730,7 +726,7 @@ mod tests {
             false,
             false,
             Version::V2,
-            CompressionCodec::Snappy,
+            Compression::Snappy,
             Encoding::Plain,
         )
     }
@@ -742,7 +738,7 @@ mod tests {
             true,
             true,
             Version::V2,
-            CompressionCodec::Uncompressed,
+            Compression::Uncompressed,
             Encoding::Plain,
         )
     }
@@ -754,7 +750,7 @@ mod tests {
             true,
             true,
             Version::V1,
-            CompressionCodec::Uncompressed,
+            Compression::Uncompressed,
             Encoding::Plain,
         )
     }
@@ -766,7 +762,7 @@ mod tests {
             true,
             true,
             Version::V2,
-            CompressionCodec::Uncompressed,
+            Compression::Uncompressed,
             Encoding::Plain,
         )
     }
@@ -778,7 +774,7 @@ mod tests {
             true,
             true,
             Version::V1,
-            CompressionCodec::Uncompressed,
+            Compression::Uncompressed,
             Encoding::Plain,
         )
     }
@@ -790,7 +786,7 @@ mod tests {
             true,
             true,
             Version::V2,
-            CompressionCodec::Uncompressed,
+            Compression::Uncompressed,
             Encoding::Plain,
         )
     }
@@ -802,7 +798,7 @@ mod tests {
             true,
             true,
             Version::V1,
-            CompressionCodec::Uncompressed,
+            Compression::Uncompressed,
             Encoding::Plain,
         )
     }
@@ -814,7 +810,7 @@ mod tests {
             true,
             true,
             Version::V2,
-            CompressionCodec::Uncompressed,
+            Compression::Uncompressed,
             Encoding::Plain,
         )
     }
@@ -826,7 +822,7 @@ mod tests {
             true,
             true,
             Version::V1,
-            CompressionCodec::Uncompressed,
+            Compression::Uncompressed,
             Encoding::Plain,
         )
     }
@@ -838,7 +834,7 @@ mod tests {
             true,
             false,
             Version::V2,
-            CompressionCodec::Uncompressed,
+            Compression::Uncompressed,
             Encoding::DeltaLengthByteArray,
         )
     }
@@ -850,7 +846,7 @@ mod tests {
             true,
             false,
             Version::V2,
-            CompressionCodec::Uncompressed,
+            Compression::Uncompressed,
             Encoding::RleDictionary,
         )
     }

@@ -1,7 +1,7 @@
 use parquet2::{
+    encoding::Encoding,
     metadata::ColumnDescriptor,
     page::CompressedDataPage,
-    schema::Encoding,
     statistics::{serialize_statistics, ParquetStatistics, PrimitiveStatistics, Statistics},
     types::NativeType,
     write::WriteOptions,

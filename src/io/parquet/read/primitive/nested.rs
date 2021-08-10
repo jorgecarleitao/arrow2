@@ -1,6 +1,6 @@
 use parquet2::{
     encoding::Encoding,
-    page::{DataPage, DataPageHeader},
+    page::{DataPage, DataPageHeader, DataPageHeaderExt},
     read::levels::{get_bit_width, split_buffer_v1, split_buffer_v2, RLEDecoder},
     types::NativeType,
 };
@@ -127,8 +127,8 @@ where
 
     match page.header() {
         DataPageHeader::V1(header) => {
-            assert_eq!(header.definition_level_encoding, Encoding::Rle);
-            assert_eq!(header.repetition_level_encoding, Encoding::Rle);
+            assert_eq!(header.definition_level_encoding(), Encoding::Rle);
+            assert_eq!(header.repetition_level_encoding(), Encoding::Rle);
 
             match (&page.encoding(), page.dictionary_page()) {
                 (Encoding::Plain, None) => {
@@ -143,11 +143,11 @@ where
                         values_buffer,
                         additional,
                         (
-                            &header.repetition_level_encoding,
+                            &header.repetition_level_encoding(),
                             descriptor.max_rep_level(),
                         ),
                         (
-                            &header.definition_level_encoding,
+                            &header.definition_level_encoding(),
                             descriptor.max_def_level(),
                         ),
                         is_nullable,

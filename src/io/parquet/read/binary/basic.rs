@@ -1,7 +1,7 @@
 use parquet2::{
     encoding::{bitpacking, delta_length_byte_array, hybrid_rle, uleb128, Encoding},
     metadata::{ColumnChunkMetaData, ColumnDescriptor},
-    page::{BinaryPageDict, DataPage, DataPageHeader},
+    page::{BinaryPageDict, DataPage, DataPageHeader, DataPageHeaderExt},
     read::{levels, StreamingIterator},
 };
 
@@ -214,7 +214,7 @@ fn extend_from_page<O: Offset>(
     let is_optional = descriptor.max_def_level() == 1;
     match page.header() {
         DataPageHeader::V1(header) => {
-            assert_eq!(header.definition_level_encoding, Encoding::Rle);
+            assert_eq!(header.definition_level_encoding(), Encoding::Rle);
 
             let (_, validity_buffer, values_buffer) =
                 levels::split_buffer_v1(page.buffer(), false, is_optional);

@@ -6,9 +6,9 @@ use parquet2::{
     schema::{
         types::{
             BasicTypeInfo, GroupConvertedType, LogicalType, ParquetType, PhysicalType,
-            PrimitiveConvertedType, TimeUnit as ParquetTimeUnit,
+            PrimitiveConvertedType, TimeUnit as ParquetTimeUnit, TimestampType,
         },
-        Repetition, TimestampType,
+        Repetition,
     },
 };
 

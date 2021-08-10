@@ -1,6 +1,6 @@
 use parquet2::{
-    compression::create_codec, metadata::ColumnDescriptor, page::CompressedDataPage,
-    schema::Encoding, write::WriteOptions,
+    compression::create_codec, encoding::Encoding, metadata::ColumnDescriptor,
+    page::CompressedDataPage, write::WriteOptions,
 };
 
 use super::utils;
