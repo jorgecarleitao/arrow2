@@ -280,13 +280,27 @@ fn create_child(
 ) -> Result<ArrowArrayChild<'static>> {
     assert!(index < array.n_children as usize);
     assert!(!array.children.is_null());
-    assert!(!array.children.is_null());
     unsafe {
         let arr_ptr = *array.children.add(index);
         let schema_ptr = schema.child(index);
         assert!(!arr_ptr.is_null());
         let arr_ptr = &*arr_ptr;
         Ok(ArrowArrayChild::from_raw(arr_ptr, schema_ptr, parent))
+    }
+}
+
+fn create_dictionary(
+    array: &Ffi_ArrowArray,
+    schema: &Ffi_ArrowSchema,
+    parent: Arc<ArrowArray>,
+) -> Result<Option<ArrowArrayChild<'static>>> {
+    let schema = schema.dictionary();
+    if let Some(schema) = schema {
+        assert!(!array.dictionary.is_null());
+        let array = unsafe { &*array.dictionary };
+        Ok(Some(ArrowArrayChild::from_raw(array, schema, parent)))
+    } else {
+        Ok(None)
     }
 }
 
@@ -332,6 +346,10 @@ pub trait ArrowArrayRef {
 
     fn child(&self, index: usize) -> Result<ArrowArrayChild> {
         create_child(self.array(), self.schema(), self.parent().clone(), index)
+    }
+
+    fn dictionary(&self) -> Result<Option<ArrowArrayChild>> {
+        create_dictionary(self.array(), self.schema(), self.parent().clone())
     }
 
     fn parent(&self) -> &Arc<ArrowArray>;

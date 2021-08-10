@@ -131,6 +131,13 @@ impl Ffi_ArrowSchema {
         unsafe { self.children.add(index).as_ref().unwrap().as_ref().unwrap() }
     }
 
+    pub fn dictionary(&self) -> Option<&'static Self> {
+        if self.dictionary.is_null() {
+            return None;
+        };
+        Some(unsafe { self.dictionary.as_ref().unwrap() })
+    }
+
     pub fn nullable(&self) -> bool {
         (self.flags / 2) & 1 == 1
     }
@@ -146,7 +153,19 @@ impl Drop for Ffi_ArrowSchema {
 }
 
 pub fn to_field(schema: &Ffi_ArrowSchema) -> Result<Field> {
-    let data_type = match schema.format() {
+    let dictionary = schema.dictionary();
+    let data_type = if let Some(dictionary) = dictionary {
+        let indices_data_type = to_data_type(schema)?;
+        let values_data_type = to_data_type(dictionary)?;
+        DataType::Dictionary(Box::new(indices_data_type), Box::new(values_data_type))
+    } else {
+        to_data_type(schema)?
+    };
+    Ok(Field::new(schema.name(), data_type, schema.nullable()))
+}
+
+fn to_data_type(schema: &Ffi_ArrowSchema) -> Result<DataType> {
+    Ok(match schema.format() {
         "n" => DataType::Null,
         "b" => DataType::Boolean,
         "c" => DataType::Int8,
@@ -229,8 +248,7 @@ pub fn to_field(schema: &Ffi_ArrowSchema) -> Result<Field> {
                 )));
             }
         }
-    };
-    Ok(Field::new(schema.name(), data_type, schema.nullable()))
+    })
 }
 
 /// the inverse of [to_field]

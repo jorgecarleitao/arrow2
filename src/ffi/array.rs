@@ -22,7 +22,7 @@ use crate::array::{BooleanArray, FromFfi};
 use crate::error::{ArrowError, Result};
 use crate::types::days_ms;
 use crate::{
-    array::{Array, BinaryArray, ListArray, PrimitiveArray, StructArray, Utf8Array},
+    array::*,
     datatypes::{DataType, IntervalUnit},
 };
 
@@ -66,6 +66,15 @@ pub fn try_from<A: ArrowArrayRef>(array: A) -> Result<Box<dyn Array>> {
         DataType::List(_) => Box::new(ListArray::<i32>::try_from_ffi(array)?),
         DataType::LargeList(_) => Box::new(ListArray::<i64>::try_from_ffi(array)?),
         DataType::Struct(_) => Box::new(StructArray::try_from_ffi(array)?),
+        DataType::Dictionary(keys, _) => match keys.as_ref() {
+            DataType::Int64 => Box::new(DictionaryArray::<i64>::try_from_ffi(array)?),
+            other => {
+                return Err(ArrowError::NotYetImplemented(format!(
+                    "Reading dictionary of keys \"{}\" is not yet supported.",
+                    other
+                )))
+            }
+        },
         data_type => {
             return Err(ArrowError::NotYetImplemented(format!(
                 "Reading DataType \"{}\" is not yet supported.",

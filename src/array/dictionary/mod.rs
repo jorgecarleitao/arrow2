@@ -6,12 +6,13 @@ use crate::{
     types::{NativeType, NaturalDataType},
 };
 
+mod ffi;
 mod iterator;
 mod mutable;
 pub use iterator::*;
 pub use mutable::*;
 
-use super::{ffi::ToFfi, new_empty_array, primitive::PrimitiveArray, Array};
+use super::{new_empty_array, primitive::PrimitiveArray, Array};
 
 /// Trait denoting [`NativeType`]s that can be used as keys of a dictionary.
 pub trait DictionaryKey: NativeType + NaturalDataType + num::NumCast + num::FromPrimitive {}
@@ -141,16 +142,5 @@ where
         writeln!(f, "keys: {},", self.keys())?;
         writeln!(f, "values: {},", self.values())?;
         write!(f, "}}")
-    }
-}
-
-unsafe impl<K: DictionaryKey> ToFfi for DictionaryArray<K> {
-    fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>> {
-        vec![self.keys.validity().as_ref().map(|x| x.as_ptr())]
-    }
-
-    #[inline]
-    fn offset(&self) -> usize {
-        self.offset
     }
 }
