@@ -1,7 +1,6 @@
 use crate::array::*;
 use crate::bitmap::Bitmap;
 use crate::datatypes::PhysicalType;
-use crate::types::days_ms;
 
 fn validity_size(validity: &Option<Bitmap>) -> usize {
     validity.as_ref().map(|b| b.as_slice().0.len()).unwrap_or(0)

@@ -323,6 +323,7 @@ fn to_format(data_type: &DataType) -> String {
         DataType::Duration(TimeUnit::Nanosecond) => "tDn".to_string(),
         DataType::Interval(IntervalUnit::YearMonth) => "tiM".to_string(),
         DataType::Interval(IntervalUnit::DayTime) => "tiD".to_string(),
+        DataType::Interval(IntervalUnit::MonthDayNano) => todo!("Not in the spec yet."),
         DataType::Timestamp(unit, tz) => {
             let unit = match unit {
                 TimeUnit::Second => "s".to_string(),

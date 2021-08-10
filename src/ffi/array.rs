@@ -20,7 +20,6 @@
 use super::ffi::ArrowArrayRef;
 use crate::array::{BooleanArray, FromFfi};
 use crate::error::{ArrowError, Result};
-use crate::types::days_ms;
 use crate::{array::*, datatypes::PhysicalType};
 
 /// Reads a valid `ffi` interface into a `Box<dyn Array>`

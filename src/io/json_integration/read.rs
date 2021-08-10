@@ -27,7 +27,7 @@ use crate::{
     datatypes::{DataType, PhysicalType, PrimitiveType, Schema},
     error::{ArrowError, Result},
     record_batch::RecordBatch,
-    types::{days_ms, NativeType},
+    types::{days_ms, months_days_ns, NativeType},
 };
 
 use super::{ArrowJsonBatch, ArrowJsonColumn, ArrowJsonDictionaryBatch};
@@ -58,7 +58,7 @@ fn to_offsets<O: Offset>(offsets: Option<&Vec<Value>>) -> Buffer<O> {
         .collect()
 }
 
-fn to_interval(value: &Value) -> days_ms {
+fn to_days_ms(value: &Value) -> days_ms {
     if let Value::Object(v) = value {
         let days = v.get("days").unwrap();
         let milliseconds = v.get("milliseconds").unwrap();
@@ -75,7 +75,26 @@ fn to_interval(value: &Value) -> days_ms {
     }
 }
 
-fn to_primitive_interval(
+fn to_months_days_ns(value: &Value) -> months_days_ns {
+    if let Value::Object(v) = value {
+        let months = v.get("months").unwrap();
+        let days = v.get("days").unwrap();
+        let nanoseconds = v.get("nanoseconds").unwrap();
+        match (months, days, nanoseconds) {
+            (Value::Number(months), Value::Number(days), Value::Number(nanoseconds)) => {
+                let months = months.as_i64().unwrap() as i32;
+                let days = days.as_i64().unwrap() as i32;
+                let nanoseconds = nanoseconds.as_i64().unwrap();
+                months_days_ns::new(months, days, nanoseconds)
+            }
+            (_, _, _) => panic!(),
+        }
+    } else {
+        panic!()
+    }
+}
+
+fn to_primitive_days_ms(
     json_col: &ArrowJsonColumn,
     data_type: DataType,
 ) -> PrimitiveArray<days_ms> {
@@ -85,9 +104,24 @@ fn to_primitive_interval(
         .as_ref()
         .unwrap()
         .iter()
-        .map(to_interval)
+        .map(to_days_ms)
         .collect();
     PrimitiveArray::<days_ms>::from_data(data_type, values, validity)
+}
+
+fn to_primitive_months_days_ns(
+    json_col: &ArrowJsonColumn,
+    data_type: DataType,
+) -> PrimitiveArray<months_days_ns> {
+    let validity = to_validity(&json_col.validity);
+    let values = json_col
+        .data
+        .as_ref()
+        .unwrap()
+        .iter()
+        .map(to_months_days_ns)
+        .collect();
+    PrimitiveArray::<months_days_ns>::from_data(data_type, values, validity)
 }
 
 fn to_decimal(json_col: &ArrowJsonColumn, data_type: DataType) -> PrimitiveArray<i128> {
@@ -246,8 +280,9 @@ pub fn to_array(
         Primitive(PrimitiveType::Int32) => Ok(Arc::new(to_primitive::<i32>(json_col, data_type))),
         Primitive(PrimitiveType::Int64) => Ok(Arc::new(to_primitive::<i64>(json_col, data_type))),
         Primitive(PrimitiveType::Int128) => Ok(Arc::new(to_decimal(json_col, data_type))),
-        Primitive(PrimitiveType::DaysMs) => {
-            Ok(Arc::new(to_primitive_interval(json_col, data_type)))
+        Primitive(PrimitiveType::DaysMs) => Ok(Arc::new(to_primitive_days_ms(json_col, data_type))),
+        Primitive(PrimitiveType::MonthDayNano) => {
+            Ok(Arc::new(to_primitive_months_days_ns(json_col, data_type)))
         }
         Primitive(PrimitiveType::UInt8) => Ok(Arc::new(to_primitive::<u8>(json_col, data_type))),
         Primitive(PrimitiveType::UInt16) => Ok(Arc::new(to_primitive::<u16>(json_col, data_type))),

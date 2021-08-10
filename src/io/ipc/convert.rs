@@ -255,6 +255,7 @@ fn get_data_type(field: ipc::Field, extension: Extension, may_be_dictionary: boo
             match interval.unit() {
                 ipc::IntervalUnit::YEAR_MONTH => DataType::Interval(IntervalUnit::YearMonth),
                 ipc::IntervalUnit::DAY_TIME => DataType::Interval(IntervalUnit::DayTime),
+                ipc::IntervalUnit::MONTH_DAY_NANO => DataType::Interval(IntervalUnit::MonthDayNano),
                 z => panic!("Interval type with unit of {:?} unsupported", z),
             }
         }
@@ -604,6 +605,7 @@ pub(crate) fn get_fb_field_type<'a>(
             let interval_unit = match unit {
                 IntervalUnit::YearMonth => ipc::IntervalUnit::YEAR_MONTH,
                 IntervalUnit::DayTime => ipc::IntervalUnit::DAY_TIME,
+                IntervalUnit::MonthDayNano => ipc::IntervalUnit::MONTH_DAY_NANO,
             };
             builder.add_unit(interval_unit);
             FbFieldType {

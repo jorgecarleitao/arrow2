@@ -11,10 +11,10 @@ use std::{
 
 use gen::Schema::MetadataVersion;
 
+use crate::array::*;
 use crate::datatypes::{DataType, PhysicalType};
 use crate::error::Result;
 use crate::io::ipc::gen::Message::BodyCompression;
-use crate::{array::*, types::days_ms};
 
 use super::super::gen;
 use super::array::*;

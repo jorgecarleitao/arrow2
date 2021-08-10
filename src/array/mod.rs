@@ -17,7 +17,7 @@ use std::any::Any;
 use std::fmt::Display;
 
 use crate::error::Result;
-use crate::types::days_ms;
+use crate::types::{days_ms, months_days_ns};
 use crate::{
     bitmap::{Bitmap, MutableBitmap},
     datatypes::DataType,
@@ -186,6 +186,7 @@ macro_rules! with_match_primitive_type {(
 ) => ({
     macro_rules! __with_ty__ {( $_ $T:ident ) => ( $($body)* )}
     use crate::datatypes::PrimitiveType::*;
+    use crate::types::{days_ms, months_days_ns};
     match $key_type {
         Int8 => __with_ty__! { i8 },
         Int16 => __with_ty__! { i16 },
@@ -193,6 +194,7 @@ macro_rules! with_match_primitive_type {(
         Int64 => __with_ty__! { i64 },
         Int128 => __with_ty__! { i128 },
         DaysMs => __with_ty__! { days_ms },
+        MonthDayNano => __with_ty__! { months_days_ns },
         UInt8 => __with_ty__! { u8 },
         UInt16 => __with_ty__! { u16 },
         UInt32 => __with_ty__! { u32 },

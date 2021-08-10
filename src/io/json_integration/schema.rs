@@ -104,6 +104,7 @@ impl ToJson for DataType {
             DataType::Interval(unit) => json!({"name": "interval", "unit": match unit {
                 IntervalUnit::YearMonth => "YEAR_MONTH",
                 IntervalUnit::DayTime => "DAY_TIME",
+                IntervalUnit::MonthDayNano => "MONTH_DAY_NANO",
             }}),
             DataType::Duration(unit) => json!({"name": "duration", "unit": match unit {
                 TimeUnit::Second => "SECOND",
@@ -328,6 +329,7 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
         "interval" => match item.get("unit") {
             Some(p) if p == "DAY_TIME" => DataType::Interval(IntervalUnit::DayTime),
             Some(p) if p == "YEAR_MONTH" => DataType::Interval(IntervalUnit::YearMonth),
+            Some(p) if p == "MONTH_DAY_NANO" => DataType::Interval(IntervalUnit::MonthDayNano),
             _ => {
                 return Err(ArrowError::Schema(
                     "interval unit missing or invalid".to_string(),
