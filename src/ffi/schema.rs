@@ -9,6 +9,7 @@ use crate::{
 struct SchemaPrivateData {
     field: Field,
     children_ptr: Box<[*mut Ffi_ArrowSchema]>,
+    dictionary: Option<*mut Ffi_ArrowSchema>,
 }
 
 /// ABI-compatible struct for `ArrowSchema` from C Data Interface
@@ -43,6 +44,10 @@ unsafe extern "C" fn c_release_schema(schema: *mut Ffi_ArrowSchema) {
         let _ = Box::from_raw(*child);
     }
 
+    if let Some(ptr) = private.dictionary {
+        let _ = Box::from_raw(ptr);
+    }
+
     schema.release = None;
 }
 
@@ -75,9 +80,18 @@ impl Ffi_ArrowSchema {
 
         let flags = field.is_nullable() as i64 * 2;
 
+        let dictionary = if let DataType::Dictionary(_, values) = field.data_type() {
+            // we do not store field info in the dict values, so can't recover it all :(
+            let field = Field::new("item", values.as_ref().clone(), true);
+            Some(Box::new(Ffi_ArrowSchema::try_new(field)?))
+        } else {
+            None
+        };
+
         let mut private = Box::new(SchemaPrivateData {
             field,
             children_ptr,
+            dictionary: dictionary.map(Box::into_raw),
         });
 
         // <https://arrow.apache.org/docs/format/CDataInterface.html#c.ArrowSchema>
@@ -88,7 +102,7 @@ impl Ffi_ArrowSchema {
             flags,
             n_children,
             children: private.children_ptr.as_mut_ptr(),
-            dictionary: std::ptr::null_mut(),
+            dictionary: private.dictionary.unwrap_or(std::ptr::null_mut()),
             release: Some(c_release_schema),
             private_data: Box::into_raw(private) as *mut ::std::os::raw::c_void,
         })

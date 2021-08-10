@@ -67,13 +67,15 @@ pub fn try_from<A: ArrowArrayRef>(array: A) -> Result<Box<dyn Array>> {
         DataType::LargeList(_) => Box::new(ListArray::<i64>::try_from_ffi(array)?),
         DataType::Struct(_) => Box::new(StructArray::try_from_ffi(array)?),
         DataType::Dictionary(keys, _) => match keys.as_ref() {
+            DataType::Int8 => Box::new(DictionaryArray::<i8>::try_from_ffi(array)?),
+            DataType::Int16 => Box::new(DictionaryArray::<i16>::try_from_ffi(array)?),
+            DataType::Int32 => Box::new(DictionaryArray::<i32>::try_from_ffi(array)?),
             DataType::Int64 => Box::new(DictionaryArray::<i64>::try_from_ffi(array)?),
-            other => {
-                return Err(ArrowError::NotYetImplemented(format!(
-                    "Reading dictionary of keys \"{}\" is not yet supported.",
-                    other
-                )))
-            }
+            DataType::UInt8 => Box::new(DictionaryArray::<u8>::try_from_ffi(array)?),
+            DataType::UInt16 => Box::new(DictionaryArray::<u16>::try_from_ffi(array)?),
+            DataType::UInt32 => Box::new(DictionaryArray::<u32>::try_from_ffi(array)?),
+            DataType::UInt64 => Box::new(DictionaryArray::<u64>::try_from_ffi(array)?),
+            _ => unreachable!(),
         },
         data_type => {
             return Err(ArrowError::NotYetImplemented(format!(
@@ -89,7 +91,6 @@ pub fn try_from<A: ArrowArrayRef>(array: A) -> Result<Box<dyn Array>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::array::*;
     use crate::datatypes::TimeUnit;
     use crate::{error::Result, ffi};
     use std::sync::Arc;
@@ -209,7 +210,6 @@ mod tests {
         test_round_trip(array)
     }
 
-    /*
     #[test]
     fn test_dict() -> Result<()> {
         let data = vec![Some("a"), Some("a"), None, Some("b")];
@@ -221,5 +221,4 @@ mod tests {
 
         test_round_trip(array)
     }
-     */
 }

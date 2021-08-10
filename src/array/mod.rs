@@ -401,7 +401,7 @@ pub use specification::Offset;
 pub use struct_::StructArray;
 pub use utf8::{MutableUtf8Array, Utf8Array, Utf8ValuesIter};
 
-pub(crate) use self::ffi::buffers_children;
+pub(crate) use self::ffi::buffers_children_dictionary;
 pub use self::ffi::FromFfi;
 pub use self::ffi::ToFfi;
 

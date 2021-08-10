@@ -19,7 +19,7 @@ use std::{ptr::NonNull, sync::Arc};
 
 use super::schema::{to_field, Ffi_ArrowSchema};
 use crate::{
-    array::{buffers_children, Array},
+    array::{buffers_children_dictionary, Array},
     bitmap::{utils::bytes_for, Bitmap},
     buffer::{
         bytes::{Bytes, Deallocation},
@@ -75,6 +75,10 @@ unsafe extern "C" fn c_release_array(array: *mut Ffi_ArrowArray) {
         let _ = Box::from_raw(*child);
     }
 
+    if let Some(ptr) = private.dictionary_ptr {
+        let _ = Box::from_raw(ptr);
+    }
+
     array.release = None;
 }
 
@@ -83,6 +87,7 @@ struct PrivateData {
     array: Arc<dyn Array>,
     buffers_ptr: Box<[*const std::os::raw::c_void]>,
     children_ptr: Box<[*mut Ffi_ArrowArray]>,
+    dictionary_ptr: Option<*mut Ffi_ArrowArray>,
 }
 
 impl Ffi_ArrowArray {
@@ -91,7 +96,7 @@ impl Ffi_ArrowArray {
     /// This method releases `buffers`. Consumers of this struct *must* call `release` before
     /// releasing this struct, or contents in `buffers` leak.
     fn new(array: Arc<dyn Array>) -> Self {
-        let (buffers, children) = buffers_children(array.as_ref());
+        let (buffers, children, dictionary) = buffers_children_dictionary(array.as_ref());
 
         let buffers_ptr = buffers
             .iter()
@@ -109,6 +114,9 @@ impl Ffi_ArrowArray {
             .collect::<Box<_>>();
         let n_children = children_ptr.len() as i64;
 
+        let dictionary_ptr =
+            dictionary.map(|array| Box::into_raw(Box::new(Ffi_ArrowArray::new(array))));
+
         let length = array.len() as i64;
         let null_count = array.null_count() as i64;
 
@@ -116,6 +124,7 @@ impl Ffi_ArrowArray {
             array,
             buffers_ptr,
             children_ptr,
+            dictionary_ptr,
         });
 
         Self {
@@ -126,7 +135,7 @@ impl Ffi_ArrowArray {
             n_children,
             buffers: private_data.buffers_ptr.as_mut_ptr(),
             children: private_data.children_ptr.as_mut_ptr(),
-            dictionary: std::ptr::null_mut(),
+            dictionary: private_data.dictionary_ptr.unwrap_or(std::ptr::null_mut()),
             release: Some(c_release_array),
             private_data: Box::into_raw(private_data) as *mut ::std::os::raw::c_void,
         }
