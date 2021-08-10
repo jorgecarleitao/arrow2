@@ -32,8 +32,8 @@ use crate::{
 /// * the data type is not supported
 /// * the interface is not valid (e.g. a null pointer)
 pub fn try_from<A: ArrowArrayRef>(array: A) -> Result<Box<dyn Array>> {
-    let data_type = array.data_type()?;
-    let array: Box<dyn Array> = match data_type {
+    let field = array.field()?;
+    let array: Box<dyn Array> = match field.data_type() {
         DataType::Boolean => Box::new(BooleanArray::try_from_ffi(array)?),
         DataType::Int8 => Box::new(PrimitiveArray::<i8>::try_from_ffi(array)?),
         DataType::Int16 => Box::new(PrimitiveArray::<i16>::try_from_ffi(array)?),
@@ -199,4 +199,18 @@ mod tests {
 
         test_round_trip(array)
     }
+
+    /*
+    #[test]
+    fn test_dict() -> Result<()> {
+        let data = vec![Some("a"), Some("a"), None, Some("b")];
+
+        let mut array = MutableDictionaryArray::<i32, MutableUtf8Array<i32>>::new();
+        array.try_extend(data)?;
+
+        let array: DictionaryArray<i32> = array.into();
+
+        test_round_trip(array)
+    }
+     */
 }
