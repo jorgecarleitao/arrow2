@@ -106,7 +106,7 @@ impl FlightService for FlightServiceImpl {
             .get(&key)
             .ok_or_else(|| Status::not_found(format!("Could not find flight. {}", key)))?;
 
-        let options = ipc::write::common::IpcWriteOptions::default();
+        let options = ipc::write::IpcWriteOptions::default();
 
         let schema = std::iter::once({
             Ok(arrow_flight::utils::flight_data_from_arrow_schema(
@@ -174,7 +174,7 @@ impl FlightService for FlightServiceImpl {
 
                 let total_records: usize = flight.chunks.iter().map(|chunk| chunk.num_rows()).sum();
 
-                let options = ipc::write::common::IpcWriteOptions::default();
+                let options = ipc::write::IpcWriteOptions::default();
                 let schema =
                     arrow_flight::utils::ipc_message_from_arrow_schema(&flight.schema, &options)
                         .expect(
