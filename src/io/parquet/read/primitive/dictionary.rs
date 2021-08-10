@@ -1,10 +1,9 @@
 use std::sync::Arc;
 
 use parquet2::{
-    encoding::{bitpacking, hybrid_rle, uleb128},
-    page::{DataPage, DataPageHeader, PrimitivePageDict},
+    encoding::{bitpacking, hybrid_rle, uleb128, Encoding},
+    page::{DataPage, DataPageHeader, DataPageHeaderExt, PrimitivePageDict},
     read::{levels, StreamingIterator},
-    schema::Encoding,
     types::NativeType,
 };
 
@@ -102,7 +101,7 @@ where
     let is_optional = descriptor.max_def_level() == 1;
     match page.header() {
         DataPageHeader::V1(header) => {
-            assert_eq!(header.definition_level_encoding, Encoding::Rle);
+            assert_eq!(header.definition_level_encoding(), Encoding::Rle);
 
             let (_, validity_buffer, values_buffer) =
                 levels::split_buffer_v1(page.buffer(), false, is_optional);

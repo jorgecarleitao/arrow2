@@ -14,7 +14,7 @@ fn write(array: &dyn Array, encoding: Encoding) -> Result<()> {
 
     let options = WriteOptions {
         write_statistics: false,
-        compression: CompressionCodec::Uncompressed,
+        compression: Compression::Uncompressed,
         version: Version::V1,
     };
 

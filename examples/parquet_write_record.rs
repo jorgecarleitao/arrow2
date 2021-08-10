@@ -5,17 +5,18 @@ use arrow2::{
     array::{Array, Int32Array},
     datatypes::{Field, Schema},
     error::Result,
-    io::parquet::write::{write_file, CompressionCodec, RowGroupIterator, Version, WriteOptions},
+    io::parquet::write::{
+        write_file, Compression, Encoding, RowGroupIterator, Version, WriteOptions,
+    },
     record_batch::RecordBatch,
 };
-use parquet2::schema::Encoding;
 
 fn write_batch(path: &str, batch: RecordBatch) -> Result<()> {
     let schema = batch.schema().clone();
 
     let options = WriteOptions {
         write_statistics: true,
-        compression: CompressionCodec::Uncompressed,
+        compression: Compression::Uncompressed,
         version: Version::V2,
     };
 

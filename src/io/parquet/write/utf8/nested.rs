@@ -1,4 +1,4 @@
-use parquet2::schema::Encoding;
+use parquet2::encoding::Encoding;
 use parquet2::{metadata::ColumnDescriptor, page::CompressedDataPage, write::WriteOptions};
 
 use super::super::{levels, utils};

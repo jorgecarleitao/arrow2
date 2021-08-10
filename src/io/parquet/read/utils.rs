@@ -1,4 +1,4 @@
-use parquet2::{encoding::get_length, schema::Encoding};
+use parquet2::encoding::{get_length, Encoding};
 
 use crate::error::ArrowError;
 

@@ -1,6 +1,12 @@
-use parquet2::schema::{
-    types::{ParquetType, PhysicalType, PrimitiveConvertedType, TimeUnit as ParquetTimeUnit},
-    DecimalType, FieldRepetitionType, IntType, KeyValue, LogicalType, TimeType, TimestampType,
+use parquet2::{
+    metadata::KeyValue,
+    schema::{
+        types::{
+            DecimalType, IntType, LogicalType, ParquetType, PhysicalType, PrimitiveConvertedType,
+            TimeType, TimeUnit as ParquetTimeUnit, TimestampType,
+        },
+        Repetition,
+    },
 };
 
 use crate::{
@@ -34,9 +40,9 @@ pub fn schema_to_metadata_key(schema: &Schema) -> KeyValue {
 pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
     let name = field.name().clone();
     let repetition = if field.is_nullable() {
-        FieldRepetitionType::Optional
+        Repetition::Optional
     } else {
-        FieldRepetitionType::Required
+        Repetition::Required
     };
     // create type from field
     match field.data_type() {
@@ -326,7 +332,7 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
                 Some(LogicalType::LIST(Default::default())),
                 vec![ParquetType::try_from_group(
                     "list".to_string(),
-                    FieldRepetitionType::Repeated,
+                    Repetition::Repeated,
                     None,
                     None,
                     vec![to_parquet_type(f)?],
@@ -335,14 +341,6 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
                 None,
             )?)
         }
-        /*
-        DataType::FixedSizeBinary(length) => {
-            Type::primitive_type_builder(name, PhysicalType::FIXED_LEN_BYTE_ARRAY)
-                .with_repetition(repetition)
-                .with_length(*length)
-                .build()
-        }
-        */
         other => Err(ArrowError::NotYetImplemented(format!(
             "Writing the data type {:?} is not yet implemented",
             other

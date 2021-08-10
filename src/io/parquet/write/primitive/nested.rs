@@ -1,6 +1,6 @@
-use parquet2::schema::Encoding;
 use parquet2::{
-    metadata::ColumnDescriptor, page::CompressedDataPage, types::NativeType, write::WriteOptions,
+    encoding::Encoding, metadata::ColumnDescriptor, page::CompressedDataPage, types::NativeType,
+    write::WriteOptions,
 };
 
 use super::super::levels;

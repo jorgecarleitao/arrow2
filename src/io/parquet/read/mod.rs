@@ -27,8 +27,8 @@ pub use parquet2::{
         decompress, get_page_iterator as _get_page_iterator, read_metadata as _read_metadata,
         streaming_iterator, Decompressor, PageIterator, StreamingIterator,
     },
-    schema::{
-        types::{LogicalType, ParquetType, PhysicalType, PrimitiveConvertedType},
+    schema::types::{
+        LogicalType, ParquetType, PhysicalType, PrimitiveConvertedType,
         TimeUnit as ParquetTimeUnit, TimestampType,
     },
     types::int96_to_i64_ns,
@@ -43,7 +43,7 @@ pub fn get_page_iterator<'b, RR: Read + Seek>(
     buffer: Vec<u8>,
 ) -> Result<PageIterator<'b, RR>> {
     Ok(_get_page_iterator(
-        metadata, row_group, column, reader, buffer,
+        metadata, row_group, column, reader, None, buffer,
     )?)
 }
 

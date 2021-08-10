@@ -2,14 +2,17 @@ use std::fs::File;
 use std::sync::Arc;
 use std::{collections::HashMap, convert::TryFrom, io::Read};
 
-use arrow2::datatypes::DataType;
-use arrow2::error::Result;
-use arrow2::io::parquet::write::{Encoding, RowGroupIterator};
-use arrow2::io::{
-    json_integration::ArrowJson,
-    parquet::write::{write_file, CompressionCodec, Version, WriteOptions},
+use arrow2::{
+    datatypes::{DataType, Schema},
+    error::Result,
+    io::{
+        json_integration::{to_record_batch, ArrowJson},
+        parquet::write::{
+            write_file, Compression, Encoding, RowGroupIterator, Version, WriteOptions,
+        },
+    },
+    record_batch::RecordBatch,
 };
-use arrow2::{datatypes::Schema, io::json_integration::to_record_batch, record_batch::RecordBatch};
 
 use clap::{App, Arg};
 
@@ -154,7 +157,7 @@ fn main() -> Result<()> {
 
     let options = WriteOptions {
         write_statistics: true,
-        compression: CompressionCodec::Uncompressed,
+        compression: Compression::Uncompressed,
         version,
     };
 

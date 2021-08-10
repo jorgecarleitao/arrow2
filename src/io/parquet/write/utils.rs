@@ -1,11 +1,10 @@
 use crate::bitmap::Bitmap;
 
 use parquet2::{
-    compression::create_codec,
+    compression::{create_codec, Compression},
     encoding::{hybrid_rle::encode_bool, Encoding},
     metadata::ColumnDescriptor,
     page::{CompressedDataPage, DataPageHeader, DataPageHeaderV1, DataPageHeaderV2},
-    schema::CompressionCodec,
     statistics::ParquetStatistics,
     write::WriteOptions,
 };
@@ -75,9 +74,9 @@ pub fn build_plain_page(
         Version::V1 => {
             let header = DataPageHeader::V1(DataPageHeaderV1 {
                 num_values: len as i32,
-                encoding,
-                definition_level_encoding: Encoding::Rle,
-                repetition_level_encoding: Encoding::Rle,
+                encoding: encoding.into(),
+                definition_level_encoding: Encoding::Rle.into(),
+                repetition_level_encoding: Encoding::Rle.into(),
                 statistics,
             });
 
@@ -93,12 +92,12 @@ pub fn build_plain_page(
         Version::V2 => {
             let header = DataPageHeader::V2(DataPageHeaderV2 {
                 num_values: len as i32,
-                encoding,
+                encoding: encoding.into(),
                 num_nulls: null_count as i32,
                 num_rows: len as i32,
                 definition_levels_byte_length: definition_levels_byte_length as i32,
                 repetition_levels_byte_length: repetition_levels_byte_length as i32,
-                is_compressed: Some(options.compression != CompressionCodec::Uncompressed),
+                is_compressed: Some(options.compression != Compression::Uncompressed),
                 statistics,
             });
 

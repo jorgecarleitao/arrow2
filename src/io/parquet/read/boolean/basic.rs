@@ -8,7 +8,7 @@ use super::super::utils;
 use parquet2::{
     encoding::{hybrid_rle, Encoding},
     metadata::{ColumnChunkMetaData, ColumnDescriptor},
-    page::{DataPage, DataPageHeader},
+    page::{DataPage, DataPageHeader, DataPageHeaderExt},
     read::{levels, StreamingIterator},
 };
 
@@ -97,7 +97,7 @@ fn extend_from_page(
     let is_optional = descriptor.max_def_level() == 1;
     match page.header() {
         DataPageHeader::V1(header) => {
-            assert_eq!(header.definition_level_encoding, Encoding::Rle);
+            assert_eq!(header.definition_level_encoding(), Encoding::Rle);
 
             match (&page.encoding(), page.dictionary_page(), is_optional) {
                 (Encoding::Plain, None, true) => {
