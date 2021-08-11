@@ -243,7 +243,13 @@ pub async fn page_stream_to_array<I: Stream<Item = std::result::Result<DataPage,
         LargeBinary | LargeUtf8 => {
             binary::stream_to_array::<i64, _, _>(pages, metadata, &data_type).await
         }
-        _ => todo!(),
+        FixedSizeBinary(size) => Ok(Box::new(
+            fixed_size_binary::stream_to_array(pages, size, metadata).await?,
+        )),
+        other => Err(ArrowError::NotYetImplemented(format!(
+            "Async conversion of {:?}",
+            other
+        ))),
     }
 }
 
