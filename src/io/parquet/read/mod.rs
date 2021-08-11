@@ -25,7 +25,7 @@ pub use parquet2::{
     page::{CompressedDataPage, DataPage, DataPageHeader},
     read::{
         decompress, get_page_iterator as _get_page_iterator, read_metadata as _read_metadata,
-        streaming_iterator, Decompressor, PageIterator, StreamingIterator,
+        streaming_iterator, Decompressor, PageFilter, PageIterator, StreamingIterator,
     },
     schema::types::{
         LogicalType, ParquetType, PhysicalType, PrimitiveConvertedType,
@@ -40,10 +40,16 @@ pub fn get_page_iterator<'b, RR: Read + Seek>(
     row_group: usize,
     column: usize,
     reader: &'b mut RR,
+    pages_filter: Option<PageFilter>,
     buffer: Vec<u8>,
 ) -> Result<PageIterator<'b, RR>> {
     Ok(_get_page_iterator(
-        metadata, row_group, column, reader, None, buffer,
+        metadata,
+        row_group,
+        column,
+        reader,
+        pages_filter,
+        buffer,
     )?)
 }
 
@@ -394,7 +400,7 @@ mod tests_integration {
         let path = "testing/parquet-testing/data/alltypes_plain.parquet";
         let reader = std::fs::File::open(path)?;
 
-        let reader = RecordReader::try_new(reader, None, None, Arc::new(|_, _| true))?;
+        let reader = RecordReader::try_new(reader, None, None, Arc::new(|_, _| true), None)?;
 
         let batches = reader.collect::<Result<Vec<_>>>()?;
         assert_eq!(batches.len(), 1);
