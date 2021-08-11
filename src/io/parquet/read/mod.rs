@@ -1,4 +1,30 @@
-use std::io::{Read, Seek};
+use std::{
+    io::{Read, Seek},
+    sync::Arc,
+};
+
+use futures::{AsyncRead, AsyncSeek, Stream};
+pub use parquet2::{
+    error::ParquetError,
+    metadata::{ColumnChunkMetaData, ColumnDescriptor, RowGroupMetaData},
+    page::{CompressedDataPage, DataPage, DataPageHeader},
+    read::{
+        decompress, get_page_iterator as _get_page_iterator, get_page_stream as _get_page_stream,
+        read_metadata as _read_metadata, read_metadata_async as _read_metadata_async,
+        streaming_iterator, Decompressor, PageFilter, PageIterator, StreamingIterator,
+    },
+    schema::types::{
+        LogicalType, ParquetType, PhysicalType, PrimitiveConvertedType,
+        TimeUnit as ParquetTimeUnit, TimestampType,
+    },
+    types::int96_to_i64_ns,
+};
+
+use crate::{
+    array::Array,
+    datatypes::{DataType, IntervalUnit, TimeUnit},
+    error::{ArrowError, Result},
+};
 
 mod binary;
 mod boolean;
@@ -10,29 +36,8 @@ pub mod schema;
 pub mod statistics;
 mod utils;
 
-use crate::{
-    array::Array,
-    datatypes::{DataType, IntervalUnit, TimeUnit},
-    error::{ArrowError, Result},
-};
-
 pub use record_batch::RecordReader;
 pub use schema::{get_schema, is_type_nullable, FileMetaData};
-
-pub use parquet2::{
-    error::ParquetError,
-    metadata::{ColumnChunkMetaData, ColumnDescriptor, RowGroupMetaData},
-    page::{CompressedDataPage, DataPage, DataPageHeader},
-    read::{
-        decompress, get_page_iterator as _get_page_iterator, read_metadata as _read_metadata,
-        streaming_iterator, Decompressor, PageFilter, PageIterator, StreamingIterator,
-    },
-    schema::types::{
-        LogicalType, ParquetType, PhysicalType, PrimitiveConvertedType,
-        TimeUnit as ParquetTimeUnit, TimestampType,
-    },
-    types::int96_to_i64_ns,
-};
 
 /// Creates a new iterator of compressed pages.
 pub fn get_page_iterator<'b, RR: Read + Seek>(
@@ -53,9 +58,29 @@ pub fn get_page_iterator<'b, RR: Read + Seek>(
     )?)
 }
 
-/// Reads parquets' metadata.
+/// Creates a new iterator of compressed pages.
+pub async fn get_page_stream<'a, RR: AsyncRead + Unpin + Send + AsyncSeek>(
+    metadata: &'a FileMetaData,
+    row_group: usize,
+    column: usize,
+    reader: &'a mut RR,
+    pages_filter: Option<PageFilter>,
+    buffer: Vec<u8>,
+) -> Result<impl Stream<Item = std::result::Result<CompressedDataPage, ParquetError>> + 'a> {
+    let pages_filter = pages_filter.unwrap_or_else(|| Arc::new(|_, _| true));
+    Ok(_get_page_stream(metadata, row_group, column, reader, buffer, pages_filter).await?)
+}
+
+/// Reads parquets' metadata syncronously.
 pub fn read_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetaData> {
     Ok(_read_metadata(reader)?)
+}
+
+/// Reads parquets' metadata asynchronously.
+pub async fn read_metadata_async<R: AsyncRead + AsyncSeek + Send + Unpin>(
+    reader: &mut R,
+) -> Result<FileMetaData> {
+    Ok(_read_metadata_async(reader).await?)
 }
 
 pub fn page_iter_to_array<
@@ -164,6 +189,65 @@ pub fn page_iter_to_array<
 
         other => Err(ArrowError::NotYetImplemented(format!(
             "The conversion of {:?} to arrow still not implemented",
+            other
+        ))),
+    }
+}
+
+// Converts an async stream of compressed data pages into an [`Array`].
+pub async fn page_stream_to_array<I: Stream<Item = std::result::Result<DataPage, ParquetError>>>(
+    pages: I,
+    metadata: &ColumnChunkMetaData,
+    data_type: DataType,
+) -> Result<Box<dyn Array>> {
+    use DataType::*;
+    match data_type {
+        // INT32
+        UInt8 => primitive::stream_to_array(pages, metadata, data_type, |x: i32| x as u8).await,
+        UInt16 => primitive::stream_to_array(pages, metadata, data_type, |x: i32| x as u16).await,
+        UInt32 => primitive::stream_to_array(pages, metadata, data_type, |x: i32| x as u32).await,
+        Int8 => primitive::stream_to_array(pages, metadata, data_type, |x: i32| x as i8).await,
+        Int16 => primitive::stream_to_array(pages, metadata, data_type, |x: i32| x as i16).await,
+        Int32 | Date32 | Time32(_) | Interval(IntervalUnit::YearMonth) => {
+            primitive::stream_to_array(pages, metadata, data_type, |x: i32| x as i32).await
+        }
+
+        Timestamp(TimeUnit::Nanosecond, None) => match metadata.descriptor().type_() {
+            ParquetType::PrimitiveType { physical_type, .. } => match physical_type {
+                PhysicalType::Int96 => {
+                    primitive::stream_to_array(
+                        pages,
+                        metadata,
+                        DataType::Timestamp(TimeUnit::Nanosecond, None),
+                        int96_to_i64_ns,
+                    )
+                    .await
+                }
+                _ => primitive::stream_to_array(pages, metadata, data_type, |x: i64| x).await,
+            },
+            _ => unreachable!(),
+        },
+
+        // INT64
+        Int64 | Date64 | Time64(_) | Duration(_) | Timestamp(_, _) => {
+            primitive::stream_to_array(pages, metadata, data_type, |x: i64| x).await
+        }
+        UInt64 => primitive::stream_to_array(pages, metadata, data_type, |x: i64| x as u64).await,
+
+        Float32 => primitive::stream_to_array(pages, metadata, data_type, |x: f32| x).await,
+        Float64 => primitive::stream_to_array(pages, metadata, data_type, |x: f64| x).await,
+
+        Boolean => Ok(Box::new(boolean::stream_to_array(pages, metadata).await?)),
+
+        Binary | Utf8 => binary::stream_to_array::<i32, _, _>(pages, metadata, &data_type).await,
+        LargeBinary | LargeUtf8 => {
+            binary::stream_to_array::<i64, _, _>(pages, metadata, &data_type).await
+        }
+        FixedSizeBinary(size) => Ok(Box::new(
+            fixed_size_binary::stream_to_array(pages, size, metadata).await?,
+        )),
+        other => Err(ArrowError::NotYetImplemented(format!(
+            "Async conversion of {:?}",
             other
         ))),
     }

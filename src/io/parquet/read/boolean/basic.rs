@@ -5,6 +5,8 @@ use crate::{
 };
 
 use super::super::utils;
+
+use futures::{pin_mut, Stream, StreamExt};
 use parquet2::{
     encoding::{hybrid_rle, Encoding},
     metadata::{ColumnChunkMetaData, ColumnDescriptor},
@@ -75,6 +77,30 @@ where
     let mut values = MutableBitmap::with_capacity(capacity);
     let mut validity = MutableBitmap::with_capacity(capacity);
     while let Some(page) = iter.next() {
+        extend_from_page(
+            page.as_ref().map_err(|x| x.clone())?,
+            metadata.descriptor(),
+            &mut values,
+            &mut validity,
+        )?
+    }
+
+    Ok(BooleanArray::from_data(values.into(), validity.into()))
+}
+
+pub async fn stream_to_array<I, E>(pages: I, metadata: &ColumnChunkMetaData) -> Result<BooleanArray>
+where
+    ArrowError: From<E>,
+    E: Clone,
+    I: Stream<Item = std::result::Result<DataPage, E>>,
+{
+    let capacity = metadata.num_values() as usize;
+    let mut values = MutableBitmap::with_capacity(capacity);
+    let mut validity = MutableBitmap::with_capacity(capacity);
+
+    pin_mut!(pages); // needed for iteration
+
+    while let Some(page) = pages.next().await {
         extend_from_page(
             page.as_ref().map_err(|x| x.clone())?,
             metadata.descriptor(),

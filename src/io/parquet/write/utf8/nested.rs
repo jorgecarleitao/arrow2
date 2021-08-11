@@ -1,5 +1,6 @@
-use parquet2::encoding::Encoding;
-use parquet2::{metadata::ColumnDescriptor, page::CompressedDataPage, write::WriteOptions};
+use parquet2::{
+    encoding::Encoding, metadata::ColumnDescriptor, page::CompressedDataPage, write::WriteOptions,
+};
 
 use super::super::{levels, utils};
 use super::basic::{build_statistics, encode_plain};

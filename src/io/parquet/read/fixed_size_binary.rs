@@ -1,3 +1,4 @@
+use futures::{pin_mut, Stream, StreamExt};
 use parquet2::{
     encoding::{bitpacking, hybrid_rle, uleb128, Encoding},
     page::{DataPage, DataPageHeader, DataPageHeaderExt, FixedLenByteArrayPageDict},
@@ -143,6 +144,39 @@ where
     let mut values = MutableBuffer::<u8>::with_capacity(capacity * size as usize);
     let mut validity = MutableBitmap::with_capacity(capacity);
     while let Some(page) = iter.next() {
+        extend_from_page(
+            page.as_ref().map_err(|x| x.clone())?,
+            size,
+            metadata.descriptor(),
+            &mut values,
+            &mut validity,
+        )?
+    }
+
+    Ok(FixedSizeBinaryArray::from_data(
+        DataType::FixedSizeBinary(size),
+        values.into(),
+        validity.into(),
+    ))
+}
+
+pub async fn stream_to_array<I, E>(
+    pages: I,
+    size: i32,
+    metadata: &ColumnChunkMetaData,
+) -> Result<FixedSizeBinaryArray>
+where
+    ArrowError: From<E>,
+    E: Clone,
+    I: Stream<Item = std::result::Result<DataPage, E>>,
+{
+    let capacity = metadata.num_values() as usize;
+    let mut values = MutableBuffer::<u8>::with_capacity(capacity * size as usize);
+    let mut validity = MutableBitmap::with_capacity(capacity);
+
+    pin_mut!(pages); // needed for iteration
+
+    while let Some(page) = pages.next().await {
         extend_from_page(
             page.as_ref().map_err(|x| x.clone())?,
             size,
