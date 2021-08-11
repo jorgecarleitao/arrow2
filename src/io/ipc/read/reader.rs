@@ -66,6 +66,7 @@ pub struct FileReader<'a, R: Read + Seek> {
     reader: &'a mut R,
     metadata: FileMetadata,
     current_block: usize,
+    projection: Option<(Vec<usize>, Arc<Schema>)>,
 }
 
 /// Read the IPC file's metadata
@@ -173,6 +174,7 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
 pub fn read_batch<R: Read + Seek>(
     reader: &mut R,
     metadata: &FileMetadata,
+    projection: Option<(&[usize], Arc<Schema>)>,
     block: usize,
 ) -> Result<Option<RecordBatch>> {
     let block = metadata.blocks[block];
@@ -212,6 +214,7 @@ pub fn read_batch<R: Read + Seek>(
             read_record_batch(
                 batch,
                 metadata.schema.clone(),
+                projection,
                 metadata.is_little_endian,
                 &metadata.dictionaries_by_field,
                 reader,
@@ -228,18 +231,43 @@ pub fn read_batch<R: Read + Seek>(
 }
 
 impl<'a, R: Read + Seek> FileReader<'a, R> {
-    /// Creates a new reader
-    pub fn new(reader: &'a mut R, metadata: FileMetadata) -> Self {
+    /// Creates a new [`FileReader`]. Use `projection` to only take certain columns.
+    /// # Panic
+    /// Panics iff the projection is not in increasing order (e.g. `[1, 0]` nor `[0, 1, 1]` are valid)
+    pub fn new(reader: &'a mut R, metadata: FileMetadata, projection: Option<Vec<usize>>) -> Self {
+        if let Some(projection) = projection.as_ref() {
+            let _ = projection.iter().fold(0, |mut acc, v| {
+                assert!(
+                    *v > acc,
+                    "The projection on IPC must be ordered and non-overlapping"
+                );
+                acc = *v;
+                acc
+            });
+        }
+        let projection = projection.map(|projection| {
+            let fields = metadata.schema().fields();
+            let fields = projection.iter().map(|x| fields[*x].clone()).collect();
+            let schema = Arc::new(Schema {
+                fields,
+                metadata: metadata.schema().metadata().clone(),
+            });
+            (projection, schema)
+        });
         Self {
             reader,
             metadata,
+            projection,
             current_block: 0,
         }
     }
 
     /// Return the schema of the file
     pub fn schema(&self) -> &Arc<Schema> {
-        &self.metadata.schema
+        self.projection
+            .as_ref()
+            .map(|x| &x.1)
+            .unwrap_or(&self.metadata.schema)
     }
 }
 
@@ -251,7 +279,15 @@ impl<'a, R: Read + Seek> Iterator for FileReader<'a, R> {
         if self.current_block < self.metadata.total_blocks {
             let block = self.current_block;
             self.current_block += 1;
-            read_batch(&mut self.reader, &self.metadata, block).transpose()
+            read_batch(
+                &mut self.reader,
+                &self.metadata,
+                self.projection
+                    .as_ref()
+                    .map(|x| (x.0.as_ref(), x.1.clone())),
+                block,
+            )
+            .transpose()
         } else {
             None
         }
@@ -260,7 +296,7 @@ impl<'a, R: Read + Seek> Iterator for FileReader<'a, R> {
 
 impl<'a, R: Read + Seek> RecordBatchReader for FileReader<'a, R> {
     fn schema(&self) -> &Schema {
-        &self.metadata.schema
+        self.schema().as_ref()
     }
 }
 
@@ -281,7 +317,7 @@ mod tests {
         ))?;
 
         let metadata = read_file_metadata(&mut file)?;
-        let reader = FileReader::new(&mut file, metadata);
+        let reader = FileReader::new(&mut file, metadata, None);
 
         // read expected JSON output
         let (schema, batches) = read_gzip_json(version, file_name);
@@ -387,5 +423,31 @@ mod tests {
     #[test]
     fn read_generated_200_compression_zstd() -> Result<()> {
         test_file("2.0.0-compression", "generated_zstd")
+    }
+
+    fn test_projection(version: &str, file_name: &str, column: usize) -> Result<()> {
+        let testdata = crate::util::test_util::arrow_test_data();
+        let mut file = File::open(format!(
+            "{}/arrow-ipc-stream/integration/{}/{}.arrow_file",
+            testdata, version, file_name
+        ))?;
+
+        let metadata = read_file_metadata(&mut file)?;
+        let mut reader = FileReader::new(&mut file, metadata, Some(vec![column]));
+
+        assert_eq!(reader.schema().fields().len(), 1);
+
+        reader.try_for_each(|rhs| {
+            assert_eq!(rhs?.num_columns(), 1);
+            Result::Ok(())
+        })?;
+        Ok(())
+    }
+
+    #[test]
+    fn read_projected() -> Result<()> {
+        test_projection("1.0.0-littleendian", "generated_primitive", 1)?;
+        test_projection("1.0.0-littleendian", "generated_dictionary", 2)?;
+        test_projection("1.0.0-littleendian", "generated_nested", 1)
     }
 }

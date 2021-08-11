@@ -292,6 +292,7 @@ async fn record_batch_from_message(
     let arrow_batch_result = ipc::read::read_record_batch(
         ipc_batch,
         schema_ref,
+        None,
         true,
         &dictionaries_by_field,
         &mut reader,

@@ -131,6 +131,7 @@ pub fn read_next<R: Read>(
             read_record_batch(
                 batch,
                 metadata.schema.clone(),
+                None,
                 metadata.is_little_endian,
                 dictionaries_by_field,
                 &mut reader,
