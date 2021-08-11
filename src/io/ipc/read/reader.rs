@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use std::collections::HashSet;
 use std::io::{Read, Seek, SeekFrom};
 use std::sync::Arc;
 
@@ -67,7 +66,7 @@ pub struct FileReader<'a, R: Read + Seek> {
     reader: &'a mut R,
     metadata: FileMetadata,
     current_block: usize,
-    projection: Option<(HashSet<usize>, Arc<Schema>)>,
+    projection: Option<(Vec<usize>, Arc<Schema>)>,
 }
 
 /// Read the IPC file's metadata
@@ -175,7 +174,7 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
 pub fn read_batch<R: Read + Seek>(
     reader: &mut R,
     metadata: &FileMetadata,
-    projection: Option<(&HashSet<usize>, Arc<Schema>)>,
+    projection: Option<(&[usize], Arc<Schema>)>,
     block: usize,
 ) -> Result<Option<RecordBatch>> {
     let block = metadata.blocks[block];
@@ -233,20 +232,22 @@ pub fn read_batch<R: Read + Seek>(
 
 impl<'a, R: Read + Seek> FileReader<'a, R> {
     /// Creates a new [`FileReader`]. Use `projection` to only take certain columns.
-    pub fn new(
-        reader: &'a mut R,
-        metadata: FileMetadata,
-        projection: Option<HashSet<usize>>,
-    ) -> Self {
+    /// # Panic
+    /// Panics iff the projection is not in increasing order (e.g. `[1, 0]` nor `[0, 1, 1]` are valid)
+    pub fn new(reader: &'a mut R, metadata: FileMetadata, projection: Option<Vec<usize>>) -> Self {
+        if let Some(projection) = projection.as_ref() {
+            let _ = projection.iter().fold(0, |mut acc, v| {
+                assert!(
+                    *v > acc,
+                    "The projection on IPC must be ordered and non-overlapping"
+                );
+                acc = *v;
+                acc
+            });
+        }
         let projection = projection.map(|projection| {
-            let fields = metadata
-                .schema()
-                .fields()
-                .iter()
-                .enumerate()
-                .filter(|x| projection.contains(&x.0))
-                .map(|x| x.1.clone())
-                .collect();
+            let fields = metadata.schema().fields();
+            let fields = projection.iter().map(|x| fields[*x].clone()).collect();
             let schema = Arc::new(Schema {
                 fields,
                 metadata: metadata.schema().metadata().clone(),
@@ -281,7 +282,9 @@ impl<'a, R: Read + Seek> Iterator for FileReader<'a, R> {
             read_batch(
                 &mut self.reader,
                 &self.metadata,
-                self.projection.as_ref().map(|x| (&x.0, x.1.clone())),
+                self.projection
+                    .as_ref()
+                    .map(|x| (x.0.as_ref(), x.1.clone())),
                 block,
             )
             .transpose()
@@ -430,11 +433,7 @@ mod tests {
         ))?;
 
         let metadata = read_file_metadata(&mut file)?;
-        let mut reader = FileReader::new(
-            &mut file,
-            metadata,
-            Some(vec![column].into_iter().collect()),
-        );
+        let mut reader = FileReader::new(&mut file, metadata, Some(vec![column]));
 
         assert_eq!(reader.schema().fields().len(), 1);
 
