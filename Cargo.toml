@@ -60,6 +60,9 @@ ahash = { version = "0.7", optional = true }
 
 parquet2 = { version = "0.3", optional = true, default_features = false, features = ["stream"] }
 
+# for division/remainder optimization at runtime
+strength_reduce = { version = "0.2", optional = true }
+
 [dev-dependencies]
 rand = "0.8"
 criterion = "0.3"
@@ -98,7 +101,7 @@ io_parquet_compression = [
 io_json_integration = ["io_json", "hex"]
 io_print = ["comfy-table"]
 # the compute kernels. Disabling this significantly reduces compile time.
-compute = []
+compute = ["strength_reduce"]
 # base64 + io_ipc because arrow schemas are stored as base64-encoded ipc format.
 io_parquet = ["parquet2", "io_ipc", "base64", "futures"]
 benchmarks = ["rand"]
@@ -166,4 +169,8 @@ harness = false
 
 [[bench]]
 name = "write_ipc"
+harness = false
+
+[[bench]]
+name = "arithmetic_kernels"
 harness = false

@@ -61,7 +61,7 @@ pub mod time;
 
 use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
-use num::Zero;
+use num::{NumCast, Zero};
 
 use crate::datatypes::{DataType, TimeUnit};
 use crate::error::{ArrowError, Result};
@@ -265,7 +265,8 @@ where
         + Add<Output = T>
         + Sub<Output = T>
         + Mul<Output = T>
-        + Rem<Output = T>,
+        + Rem<Output = T>
+        + NumCast,
 {
     match op {
         Operator::Add => Ok(basic::add::add_scalar(lhs, rhs)),

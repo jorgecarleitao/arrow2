@@ -6,3 +6,4 @@ Cargo.lock
 fixtures
 settings.json
 dev/
+.idea/
