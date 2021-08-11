@@ -1,7 +1,7 @@
-since-tag=v0.2.0
-future-release=v0.3.0
+since-tag=v0.3.0
+future-release=v0.4.0
 pr-wo-labels=false
-add-sections={"features":{"prefix":"**Enhancements:**","labels":["enhancement"]}, "documentation":{"prefix":"**Documentation updates:**","labels":["documentation"]}}
+add-sections={"features":{"prefix":"**Enhancements:**","labels":["enhancement"]}, "documentation":{"prefix":"**Documentation updates:**","labels":["documentation"]}, "testing":{"prefix":"**Testing updates:**","labels":["testing"]}}
 enhancement-label=**New features:**
 enhancement-labels=feature
 base=CHANGELOG.md

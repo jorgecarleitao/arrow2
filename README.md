@@ -65,7 +65,7 @@ venv/bin/python parquet_integration/write_parquet.py
 * `MutableArray` API to work in-memory in-place.
 * faster IPC reader (different design that avoids an extra copy of all data)
 * IPC supports 2.0 (compression)
-* FFI support for dictionary-encoded arrays and union array
+* All implemented arrow types pass FFI integration tests against pyarrow / C++
 * All implemented arrow types pass IPC integration tests against other implementations
 
 ### Parquet
