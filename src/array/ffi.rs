@@ -29,13 +29,28 @@ pub unsafe trait FromFfi<T: ffi::ArrowArrayRef>: Sized {
 macro_rules! ffi_dyn {
     ($array:expr, $ty:ty) => {{
         let array = $array.as_any().downcast_ref::<$ty>().unwrap();
-        (array.buffers(), array.children())
+        (array.buffers(), array.children(), None)
     }};
 }
 
-type BuffersChildren = (Vec<Option<std::ptr::NonNull<u8>>>, Vec<Arc<dyn Array>>);
+macro_rules! ffi_dict_dyn {
+    ($array:expr, $ty:ty) => {{
+        let array = $array.as_any().downcast_ref::<$ty>().unwrap();
+        (
+            array.buffers(),
+            array.children(),
+            Some(array.values().clone()),
+        )
+    }};
+}
 
-pub fn buffers_children(array: &dyn Array) -> BuffersChildren {
+type BuffersChildren = (
+    Vec<Option<std::ptr::NonNull<u8>>>,
+    Vec<Arc<dyn Array>>,
+    Option<Arc<dyn Array>>,
+);
+
+pub fn buffers_children_dictionary(array: &dyn Array) -> BuffersChildren {
     match array.data_type() {
         DataType::Null => ffi_dyn!(array, NullArray),
         DataType::Boolean => ffi_dyn!(array, BooleanArray),
@@ -72,14 +87,14 @@ pub fn buffers_children(array: &dyn Array) -> BuffersChildren {
         DataType::Struct(_) => ffi_dyn!(array, StructArray),
         DataType::Union(_) => unimplemented!(),
         DataType::Dictionary(key_type, _) => match key_type.as_ref() {
-            DataType::Int8 => ffi_dyn!(array, DictionaryArray::<i8>),
-            DataType::Int16 => ffi_dyn!(array, DictionaryArray::<i16>),
-            DataType::Int32 => ffi_dyn!(array, DictionaryArray::<i32>),
-            DataType::Int64 => ffi_dyn!(array, DictionaryArray::<i64>),
-            DataType::UInt8 => ffi_dyn!(array, DictionaryArray::<u8>),
-            DataType::UInt16 => ffi_dyn!(array, DictionaryArray::<u16>),
-            DataType::UInt32 => ffi_dyn!(array, DictionaryArray::<u32>),
-            DataType::UInt64 => ffi_dyn!(array, DictionaryArray::<u64>),
+            DataType::Int8 => ffi_dict_dyn!(array, DictionaryArray::<i8>),
+            DataType::Int16 => ffi_dict_dyn!(array, DictionaryArray::<i16>),
+            DataType::Int32 => ffi_dict_dyn!(array, DictionaryArray::<i32>),
+            DataType::Int64 => ffi_dict_dyn!(array, DictionaryArray::<i64>),
+            DataType::UInt8 => ffi_dict_dyn!(array, DictionaryArray::<u8>),
+            DataType::UInt16 => ffi_dict_dyn!(array, DictionaryArray::<u16>),
+            DataType::UInt32 => ffi_dict_dyn!(array, DictionaryArray::<u32>),
+            DataType::UInt64 => ffi_dict_dyn!(array, DictionaryArray::<u64>),
             _ => unreachable!(),
         },
     }

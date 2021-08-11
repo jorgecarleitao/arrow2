@@ -77,8 +77,8 @@ impl StructArray {
 }
 
 impl StructArray {
-    pub fn get_fields(datatype: &DataType) -> &[Field] {
-        if let DataType::Struct(fields) = datatype {
+    pub fn get_fields(data_type: &DataType) -> &[Field] {
+        if let DataType::Struct(fields) = data_type {
             fields
         } else {
             panic!("Wrong datatype passed to Struct.")
@@ -139,8 +139,8 @@ unsafe impl ToFfi for StructArray {
 
 unsafe impl<A: ffi::ArrowArrayRef> FromFfi<A> for StructArray {
     fn try_from_ffi(array: A) -> Result<Self> {
-        let data_type = array.data_type()?;
-        let fields = Self::get_fields(&data_type).to_vec();
+        let field = array.field()?;
+        let fields = Self::get_fields(field.data_type()).to_vec();
 
         let length = array.array().len();
         let offset = array.array().offset();

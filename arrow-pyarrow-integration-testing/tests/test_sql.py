@@ -104,7 +104,7 @@ class TestCase(unittest.TestCase):
         data = [
             round(decimal.Decimal(722.82), 2),
             round(decimal.Decimal(-934.11), 2),
-            None
+            None,
         ]
         a = pyarrow.array(data, pyarrow.decimal128(5, 2))
         b = arrow_pyarrow_integration_testing.round_trip(a)
@@ -179,3 +179,17 @@ class TestCase(unittest.TestCase):
             b.validate(full=True)
             assert a.to_pylist() == b.to_pylist()
             assert a.type == b.type
+
+    def test_dict(self):
+        """
+        Python -> Rust -> Python
+        """
+        a = pyarrow.array(
+            ["a", "a", "b", None, "c"],
+            pyarrow.dictionary(pyarrow.int64(), pyarrow.utf8()),
+        )
+        b = arrow_pyarrow_integration_testing.round_trip(a)
+
+        b.validate(full=True)
+        assert a.to_pylist() == b.to_pylist()
+        assert a.type == b.type

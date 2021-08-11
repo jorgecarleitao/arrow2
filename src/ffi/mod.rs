@@ -3,6 +3,7 @@
 mod array;
 #[allow(clippy::module_inception)]
 mod ffi;
+mod schema;
 
 pub use array::try_from;
 pub use ffi::{create_empty, export_to_c, ArrowArray, ArrowArrayRef};
