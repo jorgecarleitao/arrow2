@@ -10,18 +10,19 @@ use crate::{bitmap::Bitmap, buffer::MutableBuffer, types::NativeType};
 use super::super::compression;
 use super::super::gen;
 
-fn read_big_endian<T: NativeType, R: Read + Seek>(
+fn read_swapped<T: NativeType, R: Read + Seek>(
     reader: &mut R,
-    bytes: usize,
+    length: usize,
     buffer: &mut MutableBuffer<T>,
     is_little_endian: bool,
 ) -> Result<()> {
     // slow case where we must reverse bits
-    let mut slice = vec![0u8; bytes];
+    let mut slice = vec![0u8; length * std::mem::size_of::<T>()];
     reader.read_exact(&mut slice)?;
 
+    let chunks = slice.chunks_exact(std::mem::size_of::<T>());
     if !is_little_endian {
-        let chunks = slice.chunks_exact(std::mem::size_of::<T>());
+        // machine is little endian, file is big endian
         buffer
             .as_mut_slice()
             .iter_mut()
@@ -35,6 +36,9 @@ fn read_big_endian<T: NativeType, R: Read + Seek>(
                 Result::Ok(())
             })
             .unwrap();
+    } else {
+        // machine is big endian, file is little endian
+        todo!("reading little endian files from big endian machines not yet implemented.")
     }
     Ok(())
 }
@@ -42,10 +46,10 @@ fn read_big_endian<T: NativeType, R: Read + Seek>(
 fn read_uncompressed_buffer<T: NativeType, R: Read + Seek>(
     reader: &mut R,
     buffer_length: usize,
-    bytes: usize,
     length: usize,
     is_little_endian: bool,
 ) -> Result<MutableBuffer<T>> {
+    let bytes = length * std::mem::size_of::<T>();
     if bytes > buffer_length {
         return Err(ArrowError::Ipc(
             format!("The slots of the array times the physical size must \
@@ -68,11 +72,14 @@ fn read_uncompressed_buffer<T: NativeType, R: Read + Seek>(
         // fast case where we can just copy the contents as is
         unsafe {
             // transmute T to bytes.
-            let slice = std::slice::from_raw_parts_mut(buffer.as_mut_ptr() as *mut u8, bytes);
+            let slice = std::slice::from_raw_parts_mut(
+                buffer.as_mut_ptr() as *mut u8,
+                length * std::mem::size_of::<T>(),
+            );
             reader.read_exact(slice)?;
         }
     } else {
-        read_big_endian(reader, bytes, &mut buffer, is_little_endian)?;
+        read_swapped(reader, length, &mut buffer, is_little_endian)?;
     }
     Ok(buffer)
 }
@@ -144,18 +151,13 @@ pub fn read_buffer<T: NativeType, R: Read + Seek>(
 
     let buffer_length = buf.length() as usize;
 
-    let bytes = length * std::mem::size_of::<T>();
-
     if let Some(compression) = compression {
         Ok(
             read_compressed_buffer(reader, buffer_length, length, is_little_endian, compression)?
                 .into(),
         )
     } else {
-        Ok(
-            read_uncompressed_buffer(reader, buffer_length, bytes, length, is_little_endian)?
-                .into(),
-        )
+        Ok(read_uncompressed_buffer(reader, buffer_length, length, is_little_endian)?.into())
     }
 }
 
