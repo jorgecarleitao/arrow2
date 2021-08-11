@@ -1393,7 +1393,7 @@ fn read_batches(path: &amp;str) -&gt; Result&lt;Vec&lt;RecordBatch&gt;&gt; {
     let metadata = read_file_metadata(&amp;mut file)?;
 
     // Simplest way: use the reader, an iterator over batches.
-    let reader = FileReader::new(&amp;mut file, metadata);
+    let reader = FileReader::new(&amp;mut file, metadata, None);
 
     reader.collect()
 }
