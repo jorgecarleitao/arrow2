@@ -1,4 +1,7 @@
 use crate::bitmap::utils::{BitChunkIterExact, BitChunksExact};
+use crate::datatypes::{DataType, IntervalUnit};
+use crate::error::{ArrowError, Result};
+use crate::scalar::*;
 use crate::types::simd::*;
 use crate::types::NativeType;
 use crate::{
@@ -279,6 +282,94 @@ pub fn max_boolean(array: &BooleanArray) -> Option<bool> {
         .find(|&b| b == Some(true))
         .flatten()
         .or(Some(false))
+}
+
+macro_rules! dyn_primitive {
+    ($ty:ty, $array:expr, $f:ident) => {{
+        let array = $array
+            .as_any()
+            .downcast_ref::<PrimitiveArray<$ty>>()
+            .unwrap();
+        Box::new(PrimitiveScalar::<$ty>::new(
+            $array.data_type().clone(),
+            $f::<$ty>(array),
+        ))
+    }};
+}
+
+macro_rules! dyn_generic {
+    ($array_ty:ty, $scalar_ty:ty, $array:expr, $f:ident) => {{
+        let array = $array.as_any().downcast_ref::<$array_ty>().unwrap();
+        Box::new(<$scalar_ty>::new($f(array)))
+    }};
+}
+
+pub fn max(array: &dyn Array) -> Result<Box<dyn Scalar>> {
+    Ok(match array.data_type() {
+        DataType::Boolean => dyn_generic!(BooleanArray, BooleanScalar, array, max_boolean),
+        DataType::Int8 => dyn_primitive!(i8, array, max_primitive),
+        DataType::Int16 => dyn_primitive!(i16, array, max_primitive),
+        DataType::Int32
+        | DataType::Date32
+        | DataType::Time32(_)
+        | DataType::Interval(IntervalUnit::YearMonth) => {
+            dyn_primitive!(i32, array, max_primitive)
+        }
+        DataType::Int64
+        | DataType::Date64
+        | DataType::Time64(_)
+        | DataType::Timestamp(_, _)
+        | DataType::Duration(_) => dyn_primitive!(i64, array, max_primitive),
+        DataType::UInt8 => dyn_primitive!(u8, array, max_primitive),
+        DataType::UInt16 => dyn_primitive!(u16, array, max_primitive),
+        DataType::UInt32 => dyn_primitive!(u32, array, max_primitive),
+        DataType::UInt64 => dyn_primitive!(u64, array, max_primitive),
+        DataType::Float16 => unreachable!(),
+        DataType::Float32 => dyn_primitive!(f32, array, max_primitive),
+        DataType::Float64 => dyn_primitive!(f64, array, max_primitive),
+        DataType::Utf8 => dyn_generic!(Utf8Array<i32>, Utf8Scalar<i32>, array, max_string),
+        DataType::LargeUtf8 => dyn_generic!(Utf8Array<i64>, Utf8Scalar<i64>, array, max_string),
+        _ => {
+            return Err(ArrowError::InvalidArgumentError(format!(
+                "The `max` operator does not support type `{}`",
+                array.data_type(),
+            )))
+        }
+    })
+}
+
+pub fn min(array: &dyn Array) -> Result<Box<dyn Scalar>> {
+    Ok(match array.data_type() {
+        DataType::Boolean => dyn_generic!(BooleanArray, BooleanScalar, array, min_boolean),
+        DataType::Int8 => dyn_primitive!(i8, array, min_primitive),
+        DataType::Int16 => dyn_primitive!(i16, array, min_primitive),
+        DataType::Int32
+        | DataType::Date32
+        | DataType::Time32(_)
+        | DataType::Interval(IntervalUnit::YearMonth) => {
+            dyn_primitive!(i32, array, min_primitive)
+        }
+        DataType::Int64
+        | DataType::Date64
+        | DataType::Time64(_)
+        | DataType::Timestamp(_, _)
+        | DataType::Duration(_) => dyn_primitive!(i64, array, min_primitive),
+        DataType::UInt8 => dyn_primitive!(u8, array, min_primitive),
+        DataType::UInt16 => dyn_primitive!(u16, array, min_primitive),
+        DataType::UInt32 => dyn_primitive!(u32, array, min_primitive),
+        DataType::UInt64 => dyn_primitive!(u64, array, min_primitive),
+        DataType::Float16 => unreachable!(),
+        DataType::Float32 => dyn_primitive!(f32, array, min_primitive),
+        DataType::Float64 => dyn_primitive!(f64, array, min_primitive),
+        DataType::Utf8 => dyn_generic!(Utf8Array<i32>, Utf8Scalar<i32>, array, min_string),
+        DataType::LargeUtf8 => dyn_generic!(Utf8Array<i64>, Utf8Scalar<i64>, array, min_string),
+        _ => {
+            return Err(ArrowError::InvalidArgumentError(format!(
+                "The `max` operator does not support type `{}`",
+                array.data_type(),
+            )))
+        }
+    })
 }
 
 #[cfg(test)]
