@@ -1062,7 +1062,8 @@ fn read_column_chunk(path: &amp;str, row_group: usize, column: usize) -&gt; Resu
     // Construct an iterator over pages. This binds `file` to this iterator, and each iteration
     // is IO intensive as it will read a compressed page into memory. There is almost no CPU work
     // on this operation
-    let pages = read::get_page_iterator(&amp;file_metadata, row_group, column, &amp;mut file, vec![])?;
+    let pages =
+        read::get_page_iterator(&amp;file_metadata, row_group, column, &amp;mut file, None, vec![])?;
 
     // get the columns' metadata
     let metadata = file_metadata.row_groups[row_group].column(column);
@@ -1110,7 +1111,7 @@ fn main() -&gt; Result&lt;()&gt; {
     let file_path = &amp;args[1];
 
     let reader = File::open(file_path)?;
-    let reader = read::RecordReader::try_new(reader, None, None, Arc::new(|_, _| true))?;
+    let reader = read::RecordReader::try_new(reader, None, None, Arc::new(|_, _| true), None)?;
 
     for maybe_batch in reader {
         let batch = maybe_batch?;
@@ -1159,6 +1160,7 @@ fn parallel_read(path: &amp;str) -&gt; Result&lt;Vec&lt;Box&lt;dyn Array&gt;&gt;
                     row_group,
                     column,
                     &amp;mut file,
+                    None,
                     vec![],
                 )
                 .unwrap()
