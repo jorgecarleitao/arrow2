@@ -23,7 +23,7 @@ use std::{
 use serde_derive::Deserialize;
 use serde_json::{json, Value};
 
-use crate::error::ArrowError;
+use crate::error::{ArrowError, Result};
 
 use crate::datatypes::{DataType, Field, IntervalUnit, Schema, TimeUnit};
 
@@ -149,185 +149,203 @@ impl ToJson for Field {
     }
 }
 
-impl TryFrom<&Value> for DataType {
-    type Error = ArrowError;
-
-    fn try_from(value: &Value) -> Result<Self, Self::Error> {
-        let default_field = Field::new("", DataType::Boolean, true);
-        match *value {
-            Value::Object(ref map) => match map.get("name") {
-                Some(s) if s == "null" => Ok(DataType::Null),
-                Some(s) if s == "bool" => Ok(DataType::Boolean),
-                Some(s) if s == "binary" => Ok(DataType::Binary),
-                Some(s) if s == "largebinary" => Ok(DataType::LargeBinary),
-                Some(s) if s == "utf8" => Ok(DataType::Utf8),
-                Some(s) if s == "largeutf8" => Ok(DataType::LargeUtf8),
-                Some(s) if s == "fixedsizebinary" => {
-                    // return a list with any type as its child isn't defined in the map
-                    if let Some(Value::Number(size)) = map.get("byteWidth") {
-                        Ok(DataType::FixedSizeBinary(size.as_i64().unwrap() as i32))
-                    } else {
-                        Err(ArrowError::Schema(
-                            "Expecting a byteWidth for fixedsizebinary".to_string(),
-                        ))
-                    }
-                }
-                Some(s) if s == "decimal" => {
-                    // return a list with any type as its child isn't defined in the map
-                    let precision = match map.get("precision") {
-                        Some(p) => Ok(p.as_u64().unwrap() as usize),
-                        None => Err(ArrowError::Schema(
-                            "Expecting a precision for decimal".to_string(),
-                        )),
-                    };
-                    let scale = match map.get("scale") {
-                        Some(s) => Ok(s.as_u64().unwrap() as usize),
-                        _ => Err(ArrowError::Schema(
-                            "Expecting a scale for decimal".to_string(),
-                        )),
-                    };
-
-                    Ok(DataType::Decimal(precision?, scale?))
-                }
-                Some(s) if s == "floatingpoint" => match map.get("precision") {
-                    Some(p) if p == "HALF" => Ok(DataType::Float16),
-                    Some(p) if p == "SINGLE" => Ok(DataType::Float32),
-                    Some(p) if p == "DOUBLE" => Ok(DataType::Float64),
-                    _ => Err(ArrowError::Schema(
-                        "floatingpoint precision missing or invalid".to_string(),
-                    )),
-                },
-                Some(s) if s == "timestamp" => {
-                    let unit = match map.get("unit") {
-                        Some(p) if p == "SECOND" => Ok(TimeUnit::Second),
-                        Some(p) if p == "MILLISECOND" => Ok(TimeUnit::Millisecond),
-                        Some(p) if p == "MICROSECOND" => Ok(TimeUnit::Microsecond),
-                        Some(p) if p == "NANOSECOND" => Ok(TimeUnit::Nanosecond),
-                        _ => Err(ArrowError::Schema(
-                            "timestamp unit missing or invalid".to_string(),
-                        )),
-                    };
-                    let tz = match map.get("timezone") {
-                        None => Ok(None),
-                        Some(Value::String(tz)) => Ok(Some(tz.clone())),
-                        _ => Err(ArrowError::Schema("timezone must be a string".to_string())),
-                    };
-                    Ok(DataType::Timestamp(unit?, tz?))
-                }
-                Some(s) if s == "date" => match map.get("unit") {
-                    Some(p) if p == "DAY" => Ok(DataType::Date32),
-                    Some(p) if p == "MILLISECOND" => Ok(DataType::Date64),
-                    _ => Err(ArrowError::Schema(
-                        "date unit missing or invalid".to_string(),
-                    )),
-                },
-                Some(s) if s == "time" => {
-                    let unit = match map.get("unit") {
-                        Some(p) if p == "SECOND" => Ok(TimeUnit::Second),
-                        Some(p) if p == "MILLISECOND" => Ok(TimeUnit::Millisecond),
-                        Some(p) if p == "MICROSECOND" => Ok(TimeUnit::Microsecond),
-                        Some(p) if p == "NANOSECOND" => Ok(TimeUnit::Nanosecond),
-                        _ => Err(ArrowError::Schema(
-                            "time unit missing or invalid".to_string(),
-                        )),
-                    };
-                    match map.get("bitWidth") {
-                        Some(p) if p == 32 => Ok(DataType::Time32(unit?)),
-                        Some(p) if p == 64 => Ok(DataType::Time64(unit?)),
-                        _ => Err(ArrowError::Schema(
-                            "time bitWidth missing or invalid".to_string(),
-                        )),
-                    }
-                }
-                Some(s) if s == "duration" => match map.get("unit") {
-                    Some(p) if p == "SECOND" => Ok(DataType::Duration(TimeUnit::Second)),
-                    Some(p) if p == "MILLISECOND" => Ok(DataType::Duration(TimeUnit::Millisecond)),
-                    Some(p) if p == "MICROSECOND" => Ok(DataType::Duration(TimeUnit::Microsecond)),
-                    Some(p) if p == "NANOSECOND" => Ok(DataType::Duration(TimeUnit::Nanosecond)),
-                    _ => Err(ArrowError::Schema(
-                        "time unit missing or invalid".to_string(),
-                    )),
-                },
-                Some(s) if s == "interval" => match map.get("unit") {
-                    Some(p) if p == "DAY_TIME" => Ok(DataType::Interval(IntervalUnit::DayTime)),
-                    Some(p) if p == "YEAR_MONTH" => Ok(DataType::Interval(IntervalUnit::YearMonth)),
-                    _ => Err(ArrowError::Schema(
-                        "interval unit missing or invalid".to_string(),
-                    )),
-                },
-                Some(s) if s == "int" => match map.get("isSigned") {
-                    Some(&Value::Bool(true)) => match map.get("bitWidth") {
-                        Some(&Value::Number(ref n)) => match n.as_u64() {
-                            Some(8) => Ok(DataType::Int8),
-                            Some(16) => Ok(DataType::Int16),
-                            Some(32) => Ok(DataType::Int32),
-                            Some(64) => Ok(DataType::Int64),
-                            _ => Err(ArrowError::Schema(
-                                "int bitWidth missing or invalid".to_string(),
-                            )),
-                        },
-                        _ => Err(ArrowError::Schema(
-                            "int bitWidth missing or invalid".to_string(),
-                        )),
-                    },
-                    Some(&Value::Bool(false)) => match map.get("bitWidth") {
-                        Some(&Value::Number(ref n)) => match n.as_u64() {
-                            Some(8) => Ok(DataType::UInt8),
-                            Some(16) => Ok(DataType::UInt16),
-                            Some(32) => Ok(DataType::UInt32),
-                            Some(64) => Ok(DataType::UInt64),
-                            _ => Err(ArrowError::Schema(
-                                "int bitWidth missing or invalid".to_string(),
-                            )),
-                        },
-                        _ => Err(ArrowError::Schema(
-                            "int bitWidth missing or invalid".to_string(),
-                        )),
-                    },
-                    _ => Err(ArrowError::Schema(
-                        "int signed missing or invalid".to_string(),
-                    )),
-                },
-                Some(s) if s == "list" => {
-                    // return a list with any type as its child isn't defined in the map
-                    Ok(DataType::List(Box::new(default_field)))
-                }
-                Some(s) if s == "largelist" => {
-                    // return a largelist with any type as its child isn't defined in the map
-                    Ok(DataType::LargeList(Box::new(default_field)))
-                }
-                Some(s) if s == "fixedsizelist" => {
-                    // return a list with any type as its child isn't defined in the map
-                    if let Some(Value::Number(size)) = map.get("listSize") {
-                        Ok(DataType::FixedSizeList(
-                            Box::new(default_field),
-                            size.as_i64().unwrap() as i32,
-                        ))
-                    } else {
-                        Err(ArrowError::Schema(
-                            "Expecting a listSize for fixedsizelist".to_string(),
-                        ))
-                    }
-                }
-                Some(s) if s == "struct" => {
-                    // return an empty `struct` type as its children aren't defined in the map
-                    Ok(DataType::Struct(vec![]))
-                }
-                Some(other) => Err(ArrowError::Schema(format!(
-                    "invalid or unsupported type name: {} in {:?}",
-                    other, value
-                ))),
-                None => Err(ArrowError::Schema("type name missing".to_string())),
-            },
-            _ => Err(ArrowError::Schema("invalid json value type".to_string())),
-        }
+fn to_time_unit(item: Option<&Value>) -> Result<TimeUnit> {
+    match item {
+        Some(p) if p == "SECOND" => Ok(TimeUnit::Second),
+        Some(p) if p == "MILLISECOND" => Ok(TimeUnit::Millisecond),
+        Some(p) if p == "MICROSECOND" => Ok(TimeUnit::Microsecond),
+        Some(p) if p == "NANOSECOND" => Ok(TimeUnit::Nanosecond),
+        _ => Err(ArrowError::Schema(
+            "time unit missing or invalid".to_string(),
+        )),
     }
+}
+
+fn children(children: Option<&Value>) -> Result<Vec<Field>> {
+    children
+        .map(|x| {
+            if let Value::Array(values) = x {
+                values
+                    .iter()
+                    .map(Field::try_from)
+                    .collect::<Result<Vec<_>>>()
+            } else {
+                Err(ArrowError::Schema("children must be an array".to_string()))
+            }
+        })
+        .unwrap_or_else(|| Ok(vec![]))
+}
+
+fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
+    let type_ = item
+        .get("name")
+        .ok_or_else(|| ArrowError::Schema("type missing".to_string()))?;
+
+    let type_ = if let Value::String(name) = type_ {
+        name.as_str()
+    } else {
+        return Err(ArrowError::Schema("type is not a string".to_string()));
+    };
+
+    use DataType::*;
+    Ok(match type_ {
+        "null" => Null,
+        "bool" => Boolean,
+        "binary" => Binary,
+        "largebinary" => LargeBinary,
+        "fixedsizebinary" => {
+            // return a list with any type as its child isn't defined in the map
+            if let Some(Value::Number(size)) = item.get("byteWidth") {
+                DataType::FixedSizeBinary(size.as_i64().unwrap() as i32)
+            } else {
+                return Err(ArrowError::Schema(
+                    "Expecting a byteWidth for fixedsizebinary".to_string(),
+                ));
+            }
+        }
+        "utf8" => Utf8,
+        "largeutf8" => LargeUtf8,
+        "decimal" => {
+            // return a list with any type as its child isn't defined in the map
+            let precision = match item.get("precision") {
+                Some(p) => Ok(p.as_u64().unwrap() as usize),
+                None => Err(ArrowError::Schema(
+                    "Expecting a precision for decimal".to_string(),
+                )),
+            };
+            let scale = match item.get("scale") {
+                Some(s) => Ok(s.as_u64().unwrap() as usize),
+                _ => Err(ArrowError::Schema(
+                    "Expecting a scale for decimal".to_string(),
+                )),
+            };
+
+            DataType::Decimal(precision?, scale?)
+        }
+        "floatingpoint" => match item.get("precision") {
+            Some(p) if p == "HALF" => DataType::Float16,
+            Some(p) if p == "SINGLE" => DataType::Float32,
+            Some(p) if p == "DOUBLE" => DataType::Float64,
+            _ => {
+                return Err(ArrowError::Schema(
+                    "floatingpoint precision missing or invalid".to_string(),
+                ))
+            }
+        },
+        "timestamp" => {
+            let unit = to_time_unit(item.get("unit"))?;
+            let tz = match item.get("timezone") {
+                None => Ok(None),
+                Some(Value::String(tz)) => Ok(Some(tz.clone())),
+                _ => Err(ArrowError::Schema("timezone must be a string".to_string())),
+            }?;
+            DataType::Timestamp(unit, tz)
+        }
+        "date" => match item.get("unit") {
+            Some(p) if p == "DAY" => DataType::Date32,
+            Some(p) if p == "MILLISECOND" => DataType::Date64,
+            _ => {
+                return Err(ArrowError::Schema(
+                    "date unit missing or invalid".to_string(),
+                ))
+            }
+        },
+        "time" => {
+            let unit = to_time_unit(item.get("unit"))?;
+            match item.get("bitWidth") {
+                Some(p) if p == 32 => DataType::Time32(unit),
+                Some(p) if p == 64 => DataType::Time64(unit),
+                _ => {
+                    return Err(ArrowError::Schema(
+                        "time bitWidth missing or invalid".to_string(),
+                    ))
+                }
+            }
+        }
+        "duration" => {
+            let unit = to_time_unit(item.get("unit"))?;
+            DataType::Duration(unit)
+        }
+        "interval" => match item.get("unit") {
+            Some(p) if p == "DAY_TIME" => DataType::Interval(IntervalUnit::DayTime),
+            Some(p) if p == "YEAR_MONTH" => DataType::Interval(IntervalUnit::YearMonth),
+            _ => {
+                return Err(ArrowError::Schema(
+                    "interval unit missing or invalid".to_string(),
+                ))
+            }
+        },
+        "int" => match item.get("isSigned") {
+            Some(&Value::Bool(true)) => match item.get("bitWidth") {
+                Some(&Value::Number(ref n)) => match n.as_u64() {
+                    Some(8) => DataType::Int8,
+                    Some(16) => DataType::Int16,
+                    Some(32) => DataType::Int32,
+                    Some(64) => DataType::Int64,
+                    _ => {
+                        return Err(ArrowError::Schema(
+                            "int bitWidth missing or invalid".to_string(),
+                        ))
+                    }
+                },
+                _ => {
+                    return Err(ArrowError::Schema(
+                        "int bitWidth missing or invalid".to_string(),
+                    ))
+                }
+            },
+            Some(&Value::Bool(false)) => match item.get("bitWidth") {
+                Some(&Value::Number(ref n)) => match n.as_u64() {
+                    Some(8) => DataType::UInt8,
+                    Some(16) => DataType::UInt16,
+                    Some(32) => DataType::UInt32,
+                    Some(64) => DataType::UInt64,
+                    _ => {
+                        return Err(ArrowError::Schema(
+                            "int bitWidth missing or invalid".to_string(),
+                        ))
+                    }
+                },
+                _ => {
+                    return Err(ArrowError::Schema(
+                        "int bitWidth missing or invalid".to_string(),
+                    ))
+                }
+            },
+            _ => {
+                return Err(ArrowError::Schema(
+                    "int signed missing or invalid".to_string(),
+                ))
+            }
+        },
+        "list" => DataType::List(Box::new(children.pop().unwrap())),
+        "largelist" => DataType::LargeList(Box::new(children.pop().unwrap())),
+        "fixedsizelist" => {
+            if let Some(Value::Number(size)) = item.get("listSize") {
+                DataType::FixedSizeList(
+                    Box::new(children.pop().unwrap()),
+                    size.as_i64().unwrap() as i32,
+                )
+            } else {
+                return Err(ArrowError::Schema(
+                    "Expecting a listSize for fixedsizelist".to_string(),
+                ));
+            }
+        }
+        "struct" => DataType::Struct(children),
+        other => {
+            return Err(ArrowError::Schema(format!(
+                "invalid json value type \"{}\"",
+                other
+            )))
+        }
+    })
 }
 
 impl TryFrom<&Value> for Field {
     type Error = ArrowError;
 
-    fn try_from(value: &Value) -> Result<Self, Self::Error> {
+    fn try_from(value: &Value) -> Result<Self> {
         match *value {
             Value::Object(ref map) => {
                 let name = match map.get("name") {
@@ -346,14 +364,14 @@ impl TryFrom<&Value> for Field {
                         ));
                     }
                 };
-                let data_type = match map.get("type") {
-                    Some(t) => DataType::try_from(t)?,
-                    _ => {
-                        return Err(ArrowError::Schema(
-                            "Field missing 'type' attribute".to_string(),
-                        ));
-                    }
-                };
+
+                let children = children(map.get("children"))?;
+
+                let data_type = to_data_type(
+                    map.get("type")
+                        .ok_or_else(|| ArrowError::Schema("type missing".to_string()))?,
+                    children,
+                )?;
 
                 // Referenced example file: testing/data/arrow-ipc-stream/integration/1.0.0-littleendian/generated_custom_metadata.json.gz
                 let metadata = match map.get("metadata") {
@@ -415,72 +433,13 @@ impl TryFrom<&Value> for Field {
                     _ => None,
                 };
 
-                // if data_type is a struct or list, get its children
-                let data_type = match data_type {
-                    DataType::List(_) | DataType::LargeList(_) | DataType::FixedSizeList(_, _) => {
-                        match map.get("children") {
-                            Some(Value::Array(values)) => {
-                                if values.len() != 1 {
-                                    return Err(ArrowError::Schema(
-                                    "Field 'children' must have one element for a list data type".to_string(),
-                                ));
-                                }
-                                match data_type {
-                                    DataType::List(_) => {
-                                        DataType::List(Box::new(Self::try_from(&values[0])?))
-                                    }
-                                    DataType::LargeList(_) => {
-                                        DataType::LargeList(Box::new(Self::try_from(&values[0])?))
-                                    }
-                                    DataType::FixedSizeList(_, int) => DataType::FixedSizeList(
-                                        Box::new(Self::try_from(&values[0])?),
-                                        int,
-                                    ),
-                                    _ => unreachable!(
-                                        "Data type should be a list, largelist or fixedsizelist"
-                                    ),
-                                }
-                            }
-                            Some(_) => {
-                                return Err(ArrowError::Schema(
-                                    "Field 'children' must be an array".to_string(),
-                                ))
-                            }
-                            None => {
-                                return Err(ArrowError::Schema(
-                                    "Field missing 'children' attribute".to_string(),
-                                ));
-                            }
-                        }
-                    }
-                    DataType::Struct(mut fields) => match map.get("children") {
-                        Some(Value::Array(values)) => {
-                            let struct_fields: Result<Vec<Field>, _> =
-                                values.iter().map(Field::try_from).collect();
-                            fields.append(&mut struct_fields?);
-                            DataType::Struct(fields)
-                        }
-                        Some(_) => {
-                            return Err(ArrowError::Schema(
-                                "Field 'children' must be an array".to_string(),
-                            ))
-                        }
-                        None => {
-                            return Err(ArrowError::Schema(
-                                "Field missing 'children' attribute".to_string(),
-                            ));
-                        }
-                    },
-                    _ => data_type,
-                };
-
                 let mut dict_id = 0;
                 let mut dict_is_ordered = false;
 
                 let data_type = match map.get("dictionary") {
                     Some(dictionary) => {
                         let index_type = match dictionary.get("indexType") {
-                            Some(t) => DataType::try_from(t)?,
+                            Some(t) => to_data_type(t, vec![])?,
                             _ => {
                                 return Err(ArrowError::Schema(
                                     "Field missing 'indexType' attribute".to_string(),
@@ -535,7 +494,7 @@ struct MetadataKeyValue {
 
 /// Parse a `metadata` definition from a JSON representation.
 /// The JSON can either be an Object or an Array of Objects.
-fn from_metadata(json: &Value) -> Result<HashMap<String, String>, ArrowError> {
+fn from_metadata(json: &Value) -> Result<HashMap<String, String>> {
     match json {
         Value::Array(_) => {
             let mut hashmap = HashMap::new();
@@ -556,7 +515,7 @@ fn from_metadata(json: &Value) -> Result<HashMap<String, String>, ArrowError> {
                     ))
                 }
             })
-            .collect::<Result<_, _>>(),
+            .collect::<Result<_>>(),
         _ => Err(ArrowError::Schema(
             "`metadata` field must be an object".to_string(),
         )),
@@ -566,14 +525,11 @@ fn from_metadata(json: &Value) -> Result<HashMap<String, String>, ArrowError> {
 impl TryFrom<&Value> for Schema {
     type Error = ArrowError;
 
-    fn try_from(json: &Value) -> Result<Self, Self::Error> {
+    fn try_from(json: &Value) -> Result<Self> {
         match *json {
             Value::Object(ref schema) => {
                 let fields = if let Some(Value::Array(fields)) = schema.get("fields") {
-                    fields
-                        .iter()
-                        .map(Field::try_from)
-                        .collect::<Result<_, _>>()?
+                    fields.iter().map(Field::try_from).collect::<Result<_>>()?
                 } else {
                     return Err(ArrowError::Schema(
                         "Schema fields should be an array".to_string(),
