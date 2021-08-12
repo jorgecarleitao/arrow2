@@ -1,5 +1,5 @@
 diff --git a/dev/archery/archery/integration/datagen.py b/dev/archery/archery/integration/datagen.py
-index d0c4b3d6c..bc4b83e68 100644
+index d0c4b3d6c..936351c80 100644
 --- a/dev/archery/archery/integration/datagen.py
 +++ b/dev/archery/archery/integration/datagen.py
 @@ -1568,8 +1568,7 @@ def get_generated_json_files(tempdir=None):
@@ -12,7 +12,7 @@ index d0c4b3d6c..bc4b83e68 100644
  
          generate_decimal256_case()
          .skip_category('Go')  # TODO(ARROW-7948): Decimal + Go
-@@ -1579,8 +1578,7 @@ def get_generated_json_files(tempdir=None):
+@@ -1579,13 +1578,11 @@ def get_generated_json_files(tempdir=None):
          generate_datetime_case(),
  
          generate_interval_case()
@@ -22,7 +22,13 @@ index d0c4b3d6c..bc4b83e68 100644
  
          generate_month_day_nano_interval_case()
          .skip_category('Go')
-@@ -1603,13 +1601,11 @@ def get_generated_json_files(tempdir=None):
+-        .skip_category('JS')
+-        .skip_category('Rust'),
++        .skip_category('JS'),
+ 
+ 
+         generate_map_case()
+@@ -1603,13 +1600,11 @@ def get_generated_json_files(tempdir=None):
  
          generate_nested_large_offsets_case()
          .skip_category('Go')
