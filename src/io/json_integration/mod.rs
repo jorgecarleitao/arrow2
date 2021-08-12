@@ -23,8 +23,9 @@ use serde_derive::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 use crate::datatypes::*;
-use crate::io::json::ToJson;
 
+mod schema;
+use schema::ToJson;
 mod read;
 mod write;
 pub use read::to_record_batch;

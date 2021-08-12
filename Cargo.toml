@@ -88,7 +88,7 @@ default = [
 ]
 merge_sort = ["itertools"]
 io_csv = ["csv", "lazy_static", "regex"]
-io_json = ["serde", "serde_derive", "serde_json", "indexmap"]
+io_json = ["serde", "serde_json", "indexmap"]
 io_ipc = ["flatbuffers"]
 io_ipc_compression = ["lz4", "zstd"]
 io_parquet_compression = [
@@ -98,7 +98,9 @@ io_parquet_compression = [
     "parquet2/lz4",
     "parquet2/brotli",
 ]
-io_json_integration = ["io_json", "hex"]
+# io_json: its dependencies + error handling
+# serde_derive: there is some derive around
+io_json_integration = ["io_json", "serde_derive", "hex"]
 io_print = ["comfy-table"]
 # the compute kernels. Disabling this significantly reduces compile time.
 compute = ["strength_reduce"]
