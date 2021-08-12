@@ -1,0 +1,49 @@
+diff --git a/dev/archery/archery/integration/datagen.py b/dev/archery/archery/integration/datagen.py
+index 62fe17bff..67f72acdc 100644
+--- a/dev/archery/archery/integration/datagen.py
++++ b/dev/archery/archery/integration/datagen.py
+@@ -1526,8 +1526,7 @@ def get_generated_json_files(tempdir=None):
+         .skip_category('Go')    # TODO(ARROW-7901)
+         .skip_category('JS'),   # TODO(ARROW-7900)
+ 
+-        generate_decimal128_case()
+-        .skip_category('Rust'),
++        generate_decimal128_case(),
+ 
+         generate_decimal256_case()
+         .skip_category('Go')  # TODO(ARROW-7948): Decimal + Go
+@@ -1537,8 +1536,7 @@ def get_generated_json_files(tempdir=None):
+         generate_datetime_case(),
+ 
+         generate_interval_case()
+-        .skip_category('JS')  # TODO(ARROW-5239): Intervals + JS
+-        .skip_category('Rust'),
++        .skip_category('JS'),  # TODO(ARROW-5239): Intervals + JS
+ 
+         generate_map_case()
+         .skip_category('Rust'),
+@@ -1555,8 +1553,7 @@ def get_generated_json_files(tempdir=None):
+ 
+         generate_nested_large_offsets_case()
+         .skip_category('Go')
+-        .skip_category('JS')
+-        .skip_category('Rust'),
++        .skip_category('JS'),
+ 
+         generate_unions_case()
+         .skip_category('Go')
+diff --git a/dev/archery/archery/integration/runner.py b/dev/archery/archery/integration/runner.py
+index 6f4c1385a..b46597232 100644
+--- a/dev/archery/archery/integration/runner.py
++++ b/dev/archery/archery/integration/runner.py
+@@ -132,10 +132,8 @@ class IntegrationRunner(object):
+                 skip.add("Go")
+                 skip.add("Java")
+                 skip.add("JS")
+-                skip.add("Rust")
+             if prefix == '2.0.0-compression':
+                 skip.add("JS")
+-                skip.add("Rust")
+ 
+             # See https://github.com/apache/arrow/pull/9822 for how to
+             # disable specific compression type tests.
