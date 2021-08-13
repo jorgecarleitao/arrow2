@@ -7,7 +7,7 @@ use crate::{
     scalar::{new_scalar, Scalar},
 };
 
-use super::Array;
+use super::{new_empty_array, Array};
 
 mod iterator;
 
@@ -31,6 +31,32 @@ pub struct UnionArray {
 }
 
 impl UnionArray {
+    pub fn new_empty(data_type: DataType) -> Self {
+        if let DataType::Union(f, _, is_sparse) = &data_type {
+            let fields = f
+                .iter()
+                .map(|x| new_empty_array(x.data_type().clone()).into())
+                .collect();
+
+            let offsets = if *is_sparse {
+                None
+            } else {
+                Some(Buffer::new())
+            };
+
+            Self {
+                data_type,
+                fields_hash: HashMap::new(),
+                fields,
+                offsets,
+                types: Buffer::new(),
+                offset: 0,
+            }
+        } else {
+            panic!("Union struct must be created with the corresponding Union DataType")
+        }
+    }
+
     pub fn from_data(
         data_type: DataType,
         types: Buffer<i8>,

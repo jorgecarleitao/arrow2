@@ -242,7 +242,7 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
         DataType::LargeList(_) => Box::new(ListArray::<i64>::new_empty(data_type)),
         DataType::FixedSizeList(_, _) => Box::new(FixedSizeListArray::new_empty(data_type)),
         DataType::Struct(fields) => Box::new(StructArray::new_empty(&fields)),
-        DataType::Union(_, _, _) => unimplemented!(),
+        DataType::Union(_, _, _) => Box::new(UnionArray::new_empty(data_type)),
         DataType::Dictionary(key_type, value_type) => match key_type.as_ref() {
             DataType::Int8 => Box::new(DictionaryArray::<i8>::new_empty(*value_type)),
             DataType::Int16 => Box::new(DictionaryArray::<i16>::new_empty(*value_type)),
@@ -296,7 +296,7 @@ pub fn new_null_array(data_type: DataType, length: usize) -> Box<dyn Array> {
         DataType::LargeList(_) => Box::new(ListArray::<i64>::new_null(data_type, length)),
         DataType::FixedSizeList(_, _) => Box::new(FixedSizeListArray::new_null(data_type, length)),
         DataType::Struct(fields) => Box::new(StructArray::new_null(&fields, length)),
-        DataType::Union(_, _, _) => unimplemented!(),
+        DataType::Union(_, _, _) => todo!(),
         DataType::Dictionary(key_type, value_type) => match key_type.as_ref() {
             DataType::Int8 => Box::new(DictionaryArray::<i8>::new_null(*value_type, length)),
             DataType::Int16 => Box::new(DictionaryArray::<i16>::new_null(*value_type, length)),
@@ -357,7 +357,7 @@ pub fn clone(array: &dyn Array) -> Box<dyn Array> {
         DataType::LargeList(_) => clone_dyn!(array, ListArray::<i64>),
         DataType::FixedSizeList(_, _) => clone_dyn!(array, FixedSizeListArray),
         DataType::Struct(_) => clone_dyn!(array, StructArray),
-        DataType::Union(_, _, _) => unimplemented!(),
+        DataType::Union(_, _, _) => clone_dyn!(array, UnionArray),
         DataType::Dictionary(key_type, _) => match key_type.as_ref() {
             DataType::Int8 => clone_dyn!(array, DictionaryArray::<i8>),
             DataType::Int16 => clone_dyn!(array, DictionaryArray::<i16>),
@@ -503,6 +503,8 @@ mod tests {
             DataType::Utf8,
             DataType::Binary,
             DataType::List(Box::new(Field::new("a", DataType::Binary, true))),
+            DataType::Union(vec![Field::new("a", DataType::Binary, true)], None, true),
+            DataType::Union(vec![Field::new("a", DataType::Binary, true)], None, false),
         ];
         let a = datatypes.into_iter().all(|x| new_empty_array(x).len() == 0);
         assert!(a);
