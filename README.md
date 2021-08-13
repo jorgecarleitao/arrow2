@@ -91,7 +91,7 @@ venv/bin/python parquet_integration/write_parquet.py
 
 ## Features in pyarrow not in this crate
 
-Too many to enumerate; e.g. nested dictionary arrays, union, map, nested parquet.
+Too many to enumerate; e.g. nested dictionary arrays, map, nested parquet.
 
 ## How to develop
 
