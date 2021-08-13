@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["Buffer","Buffer represents a contiguous memory region that can be shared with other buffers and across thread boundaries."],["MutableBuffer","A [`MutableBuffer`] is this crates’ interface to store types that are byte-like, such as `i32`. It behaves like a [`Vec`], with the following differences:"]]});
