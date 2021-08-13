@@ -2,7 +2,7 @@ use std::iter::FromIterator;
 
 use crate::{buffer::MutableBuffer, trusted_len::TrustedLen};
 
-use super::utils::{get_bit, null_count, set, set_bit, BitmapIter};
+use super::utils::{fmt, get_bit, null_count, set, set_bit, BitmapIter};
 use super::Bitmap;
 
 /// A container to store booleans. [`MutableBitmap`] is semantically equivalent
@@ -12,10 +12,15 @@ use super::Bitmap;
 /// The main difference against [`Vec<bool>`] is that a bitmap cannot be represented as `&[bool]`.
 /// # Implementation
 /// This container is backed by [`MutableBuffer<u8>`].
-#[derive(Debug)]
 pub struct MutableBitmap {
     buffer: MutableBuffer<u8>,
     length: usize,
+}
+
+impl std::fmt::Debug for MutableBitmap {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        fmt(&self.buffer, 0, self.len(), f)
+    }
 }
 
 impl PartialEq for MutableBitmap {
@@ -602,5 +607,23 @@ mod tests {
 
         assert_eq!(bitmap.len(), 6);
         assert_eq!(bitmap.buffer[0], 0b00101101);
+    }
+
+    #[test]
+    fn test_debug() {
+        let mut b = MutableBitmap::new();
+        assert_eq!(format!("{:?}", b), "[]");
+        b.push(true);
+        b.push(false);
+        assert_eq!(format!("{:?}", b), "[0b______01]");
+        b.push(false);
+        b.push(false);
+        b.push(false);
+        b.push(false);
+        b.push(true);
+        b.push(true);
+        assert_eq!(format!("{:?}", b), "[0b11000001]");
+        b.push(true);
+        assert_eq!(format!("{:?}", b), "[0b11000001, 0b_______1]");
     }
 }

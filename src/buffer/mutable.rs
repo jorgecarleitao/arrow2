@@ -1,7 +1,7 @@
 use std::iter::FromIterator;
+use std::mem::size_of;
 use std::ptr::NonNull;
 use std::usize;
-use std::{fmt::Debug, mem::size_of};
 
 use crate::types::NativeType;
 use crate::{alloc, trusted_len::TrustedLen};
@@ -32,13 +32,18 @@ fn capacity_multiple_of_64<T: NativeType>(capacity: usize) -> usize {
 /// let buffer: Buffer<u32> = buffer.into();
 /// assert_eq!(buffer.as_slice(), &[256, 1])
 /// ```
-#[derive(Debug)]
 pub struct MutableBuffer<T: NativeType> {
     // dangling iff capacity = 0
     ptr: NonNull<T>,
     // invariant: len <= capacity
     len: usize,
     capacity: usize,
+}
+
+impl<T: NativeType> std::fmt::Debug for MutableBuffer<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(&**self, f)
+    }
 }
 
 impl<T: NativeType> PartialEq for MutableBuffer<T> {
@@ -769,5 +774,12 @@ mod tests {
         let b = (0..3).collect::<MutableBuffer<i32>>();
         let b: Bytes<i32> = b.into();
         assert_eq!(b.as_ref(), &[0, 1, 2]);
+    }
+
+    #[test]
+    fn test_debug() {
+        let buffer = MutableBuffer::<i32>::from(&[0, 1, 2, 3]);
+        let a = format!("{:?}", buffer);
+        assert_eq!(a, "[0, 1, 2, 3]")
     }
 }

@@ -1,9 +1,11 @@
 mod chunk_iterator;
+mod fmt;
 mod iterator;
 mod slice_iterator;
 mod zip_validity;
 
 pub use chunk_iterator::{BitChunk, BitChunkIterExact, BitChunks, BitChunksExact};
+pub use fmt::fmt;
 pub use iterator::BitmapIter;
 pub use slice_iterator::SlicesIterator;
 pub use zip_validity::{zip_validity, ZipValidity};
