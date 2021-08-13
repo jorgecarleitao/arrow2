@@ -25,7 +25,6 @@
 use crate::array::*;
 use crate::datatypes::{DataType, IntervalUnit};
 use crate::error::{ArrowError, Result};
-use crate::types::days_ms;
 
 mod boolean;
 mod primitive;
@@ -110,17 +109,6 @@ pub fn compare(lhs: &dyn Array, rhs: &dyn Array, operator: Operator) -> Result<B
         DataType::Float64 => {
             let lhs = lhs.as_any().downcast_ref::<Float64Array>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<Float64Array>().unwrap();
-            primitive::compare(lhs, rhs, operator)
-        }
-        DataType::Interval(IntervalUnit::DayTime) => {
-            let lhs = lhs
-                .as_any()
-                .downcast_ref::<PrimitiveArray<days_ms>>()
-                .unwrap();
-            let rhs = rhs
-                .as_any()
-                .downcast_ref::<PrimitiveArray<days_ms>>()
-                .unwrap();
             primitive::compare(lhs, rhs, operator)
         }
         DataType::Utf8 => {

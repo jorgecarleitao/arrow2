@@ -6,7 +6,7 @@ use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 use crate::{
     array::*,
-    types::{days_ms, Index, NativeType},
+    types::{Index, NativeType},
 };
 
 use crate::buffer::MutableBuffer;
@@ -63,9 +63,6 @@ pub fn sort(
         DataType::UInt64 => dyn_sort!(u64, values, ord::total_cmp, options, limit),
         DataType::Float32 => dyn_sort!(f32, values, ord::total_cmp_f32, options, limit),
         DataType::Float64 => dyn_sort!(f64, values, ord::total_cmp_f64, options, limit),
-        DataType::Interval(IntervalUnit::DayTime) => {
-            dyn_sort!(days_ms, values, ord::total_cmp, options, limit)
-        }
         _ => {
             let indices = sort_to_indices::<u64>(values, options, limit)?;
             take::take(values, &indices)
@@ -134,9 +131,6 @@ pub fn sort_to_indices<I: Index>(
         DataType::UInt64 => dyn_sort_indices!(I, u64, values, ord::total_cmp, options, limit),
         DataType::Float32 => dyn_sort_indices!(I, f32, values, ord::total_cmp_f32, options, limit),
         DataType::Float64 => dyn_sort_indices!(I, f64, values, ord::total_cmp_f64, options, limit),
-        DataType::Interval(IntervalUnit::DayTime) => {
-            dyn_sort_indices!(I, days_ms, values, ord::total_cmp, options, limit)
-        }
         DataType::Utf8 => Ok(utf8::indices_sorted_unstable_by::<I, i32>(
             values.as_any().downcast_ref().unwrap(),
             options,
