@@ -4,10 +4,7 @@ use std::cmp::Ordering;
 
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
-use crate::{
-    array::*,
-    types::{days_ms, NativeType},
-};
+use crate::{array::*, types::NativeType};
 
 /// Compare the values at two arbitrary indices in two arrays.
 pub type DynComparator<'a> = Box<dyn Fn(usize, usize) -> Ordering + 'a>;
@@ -180,7 +177,6 @@ pub fn build_compare<'a>(left: &'a dyn Array, right: &'a dyn Array) -> Result<Dy
         | (Duration(Nanosecond), Duration(Nanosecond)) => compare_primitives::<i64>(left, right),
         (Float32, Float32) => compare_f32(left, right),
         (Float64, Float64) => compare_f64(left, right),
-        (Interval(DayTime), Interval(DayTime)) => compare_primitives::<days_ms>(left, right),
         (Utf8, Utf8) => compare_string::<i32>(left, right),
         (LargeUtf8, LargeUtf8) => compare_string::<i64>(left, right),
         (Dictionary(key_type_lhs, _), Dictionary(key_type_rhs, _)) => {
