@@ -33,7 +33,6 @@ unsafe impl<A: ffi::ArrowArrayRef> FromFfi<A> for UnionArray {
         let data_type = field.data_type().clone();
         let fields = Self::get_fields(field.data_type());
 
-        // 0 is null bitmap (which was deprecated for the union type)
         let mut types = unsafe { array.buffer::<i8>(0) }?;
         let offsets = if Self::is_sparse(&data_type) {
             None
