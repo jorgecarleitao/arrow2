@@ -69,6 +69,10 @@ impl Ffi_ArrowSchema {
                 .iter()
                 .map(|field| Ok(Box::new(Ffi_ArrowSchema::try_new(field.clone())?)))
                 .collect::<Result<Vec<_>>>()?,
+            DataType::Union(fields, _, _) => fields
+                .iter()
+                .map(|field| Ok(Box::new(Ffi_ArrowSchema::try_new(field.clone())?)))
+                .collect::<Result<Vec<_>>>()?,
             _ => vec![],
         };
         // note: this cannot be done along with the above because the above is fallible and this op leaks.
@@ -255,6 +259,21 @@ fn to_data_type(schema: &Ffi_ArrowSchema) -> Result<DataType> {
                     ArrowError::Ffi("Decimal scale is not a valid integer".to_string())
                 })?;
                 DataType::Decimal(precision, scale)
+            } else if !parts.is_empty() && ((parts[0] == "+us") || (parts[0] == "+ud")) {
+                // union
+                let is_sparse = parts[0] == "+us";
+                let type_ids = parts[1]
+                    .split(',')
+                    .map(|x| {
+                        x.parse::<i32>().map_err(|_| {
+                            ArrowError::Ffi("Union type id is not a valid integer".to_string())
+                        })
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+                let fields = (0..schema.n_children as usize)
+                    .map(|x| to_field(schema.child(x)))
+                    .collect::<Result<Vec<_>>>()?;
+                DataType::Union(fields, Some(type_ids), is_sparse)
             } else {
                 return Err(ArrowError::Ffi(format!(
                     "The datatype \"{}\" is still not supported in Rust implementation",
@@ -316,7 +335,19 @@ fn to_format(data_type: &DataType) -> Result<String> {
         DataType::Struct(_) => "+s",
         DataType::FixedSizeBinary(size) => return Ok(format!("w{}", size)),
         DataType::FixedSizeList(_, size) => return Ok(format!("+w:{}", size)),
-        DataType::Union(_, _, _) => todo!(),
+        DataType::Union(f, ids, is_sparse) => {
+            let sparsness = if *is_sparse { 's' } else { 'd' };
+            let mut r = format!("+u{}:", sparsness);
+            let ids = if let Some(ids) = ids {
+                ids.iter()
+                    .fold(String::new(), |a, b| a + &b.to_string() + ",")
+            } else {
+                (0..f.len()).fold(String::new(), |a, b| a + &b.to_string() + ",")
+            };
+            let ids = &ids[..ids.len() - 1]; // take away last ","
+            r.push_str(ids);
+            return Ok(r);
+        }
         DataType::Dictionary(index, _) => return to_format(index.as_ref()),
         _ => todo!(),
     }

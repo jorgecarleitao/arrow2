@@ -9,6 +9,7 @@ use crate::{
 
 use super::{new_empty_array, Array};
 
+mod ffi;
 mod iterator;
 
 /// A union
@@ -168,7 +169,15 @@ impl UnionArray {
         if let DataType::Union(fields, _, _) = data_type {
             fields
         } else {
-            panic!("Wrong datatype passed to Struct.")
+            panic!("Wrong datatype passed to UnionArray.")
+        }
+    }
+
+    pub fn is_sparse(data_type: &DataType) -> bool {
+        if let DataType::Union(_, _, is_sparse) = data_type {
+            *is_sparse
+        } else {
+            panic!("Wrong datatype passed to UnionArray.")
         }
     }
 }
