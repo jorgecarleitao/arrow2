@@ -4,7 +4,7 @@ use std::sync::Arc;
 use crate::{buffer::bytes::Bytes, buffer::MutableBuffer, trusted_len::TrustedLen};
 
 use super::{
-    utils::{get_bit, get_bit_unchecked, null_count, BitChunk, BitChunks, BitmapIter},
+    utils::{fmt, get_bit, get_bit_unchecked, null_count, BitChunk, BitChunks, BitmapIter},
     MutableBitmap,
 };
 
@@ -14,7 +14,7 @@ use super::{
 /// * memory on this container is sharable across thread boundaries
 /// * Cloning [`Bitmap`] is `O(1)`
 /// * Slicing [`Bitmap`] is `O(1)`
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Bitmap {
     bytes: Arc<Bytes<u8>>,
     // both are measured in bits. They are used to bound the bitmap to a region of Bytes.
@@ -22,6 +22,12 @@ pub struct Bitmap {
     length: usize,
     // this is a cache: it must be computed on initialization
     null_count: usize,
+}
+
+impl std::fmt::Debug for Bitmap {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        fmt(&self.bytes, self.offset, self.length, f)
+    }
 }
 
 impl Default for Bitmap {
@@ -271,5 +277,13 @@ mod tests {
         assert_eq!(slice, &[0, 0b00010101]);
 
         assert_eq!(6, b.offset());
+    }
+
+    #[test]
+    fn test_debug() {
+        let b = Bitmap::from([true, true, false, true, true, true, true, true, true]);
+        let b = b.slice(2, 7);
+
+        assert_eq!(format!("{:?}", b), "[0b111110__, 0b_______1]");
     }
 }

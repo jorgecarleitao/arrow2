@@ -1,6 +1,4 @@
-use std::sync::Arc;
-use std::{convert::AsRef, usize};
-use std::{fmt::Debug, iter::FromIterator};
+use std::{convert::AsRef, iter::FromIterator, sync::Arc, usize};
 
 use crate::{trusted_len::TrustedLen, types::NativeType};
 
@@ -9,7 +7,7 @@ use super::mutable::MutableBuffer;
 
 /// Buffer represents a contiguous memory region that can be shared with other buffers and across
 /// thread boundaries.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq)]
 pub struct Buffer<T: NativeType> {
     /// the internal byte buffer.
     data: Arc<Bytes<T>>,
@@ -20,6 +18,12 @@ pub struct Buffer<T: NativeType> {
     // the length of the buffer. Given a region `data` of N bytes, [offset..offset+length] is visible
     // to this buffer.
     length: usize,
+}
+
+impl<T: NativeType> std::fmt::Debug for Buffer<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(&**self, f)
+    }
 }
 
 impl<T: NativeType> Default for Buffer<T> {
@@ -225,5 +229,13 @@ mod tests {
         let buffer = buffer.slice(1, 2);
         let ptr = buffer.as_ptr();
         assert_eq!(unsafe { *ptr }, 1);
+    }
+
+    #[test]
+    fn test_debug() {
+        let buffer = Buffer::<i32>::from(&[0, 1, 2, 3]);
+        let buffer = buffer.slice(1, 2);
+        let a = format!("{:?}", buffer);
+        assert_eq!(a, "[1, 2]")
     }
 }
