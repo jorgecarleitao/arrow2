@@ -1405,7 +1405,7 @@ fn main() -&gt; Result&lt;()&gt; {
     let file_path = &amp;args[1];
 
     let batches = read_batches(file_path)?;
-    print::print(&amp;batches)?;
+    print::print(&amp;batches);
     Ok(())
 }
 </code></pre></pre>
