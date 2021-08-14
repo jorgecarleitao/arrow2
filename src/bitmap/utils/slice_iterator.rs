@@ -28,8 +28,7 @@ pub struct SlicesIterator<'a> {
 
 impl<'a> SlicesIterator<'a> {
     pub fn new(values: &'a Bitmap) -> Self {
-        let offset = values.offset();
-        let buffer = values.as_slice();
+        let (buffer, offset, _) = values.as_slice();
         let mut iter = buffer.iter();
 
         let (current_byte, state) = match iter.next() {

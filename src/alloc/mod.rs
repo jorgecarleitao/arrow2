@@ -29,7 +29,7 @@ use crate::types::NativeType;
 
 mod alignment;
 
-use alignment::ALIGNMENT;
+pub use alignment::ALIGNMENT;
 
 // If this number is not zero after all objects have been `drop`, there is a memory leak
 pub static mut ALLOCATIONS: AtomicIsize = AtomicIsize::new(0);
@@ -39,8 +39,10 @@ pub fn total_allocated_bytes() -> isize {
     unsafe { ALLOCATIONS.load(std::sync::atomic::Ordering::SeqCst) }
 }
 
+/// # Safety
+/// This pointer may only be used to check if memory is allocated.
 #[inline]
-unsafe fn dangling<T: NativeType>() -> NonNull<T> {
+pub unsafe fn dangling<T: NativeType>() -> NonNull<T> {
     NonNull::new_unchecked(ALIGNMENT as *mut T)
 }
 

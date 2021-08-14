@@ -211,19 +211,17 @@ impl Bitmap {
     }
 }
 
-// Methods used for IPC
 impl Bitmap {
-    #[inline]
-    pub(crate) fn offset(&self) -> usize {
-        self.offset % 8
-    }
-
     /// Returns the byte slice of this Bitmap.
     #[inline]
-    pub(crate) fn as_slice(&self) -> &[u8] {
+    pub fn as_slice(&self) -> (&[u8], usize, usize) {
         let start = self.offset / 8;
-        let len = (self.offset() + self.length).saturating_add(7) / 8;
-        &self.bytes[start..start + len]
+        let len = (self.offset % 8 + self.length).saturating_add(7) / 8;
+        (
+            &self.bytes[start..start + len],
+            self.offset % 8,
+            self.length,
+        )
     }
 }
 
@@ -240,50 +238,5 @@ impl<'a> Bitmap {
     /// constructs a new iterator
     pub fn iter(&'a self) -> BitmapIter<'a> {
         BitmapIter::<'a>::new(&self.bytes, self.offset, self.length)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn as_slice() {
-        let b = Bitmap::from([true, true, true, true, true, true, true, true, true]);
-
-        let slice = b.as_slice();
-        assert_eq!(slice, &[0b11111111, 0b1]);
-
-        assert_eq!(0, b.offset());
-    }
-
-    #[test]
-    fn as_slice_offset() {
-        let b = Bitmap::from([true, true, true, true, true, true, true, true, true]);
-        let b = b.slice(8, 1);
-
-        let slice = b.as_slice();
-        assert_eq!(slice, &[0b1]);
-
-        assert_eq!(0, b.offset());
-    }
-
-    #[test]
-    fn as_slice_offset_middle() {
-        let b = Bitmap::from_u8_slice(&[0, 0, 0, 0b00010101], 27);
-        let b = b.slice(22, 5);
-
-        let slice = b.as_slice();
-        assert_eq!(slice, &[0, 0b00010101]);
-
-        assert_eq!(6, b.offset());
-    }
-
-    #[test]
-    fn test_debug() {
-        let b = Bitmap::from([true, true, false, true, true, true, true, true, true]);
-        let b = b.slice(2, 7);
-
-        assert_eq!(format!("{:?}", b), "[0b111110__, 0b_______1]");
     }
 }

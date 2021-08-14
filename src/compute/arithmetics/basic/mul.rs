@@ -413,19 +413,19 @@ mod tests {
         let (result, overflow) = overflowing_mul(&a, &b).unwrap();
         let expected = Int32Array::from(&[None, None, None, Some(36)]);
         assert_eq!(result, expected);
-        assert_eq!(overflow.as_slice()[0], 0b0000);
+        assert_eq!(overflow, Bitmap::from([false, false, false, false]));
 
         let a = Int8Array::from(&[Some(1i8), Some(-100i8)]);
         let b = Int8Array::from(&[Some(1i8), Some(100i8)]);
         let (result, overflow) = overflowing_mul(&a, &b).unwrap();
         let expected = Int8Array::from(&[Some(1i8), Some(-16i8)]);
         assert_eq!(result, expected);
-        assert_eq!(overflow.as_slice()[0], 0b10);
+        assert_eq!(overflow, Bitmap::from([false, true]));
 
         // Trait testing
         let (result, overflow) = a.overflowing_mul(&b).unwrap();
         assert_eq!(result, expected);
-        assert_eq!(overflow.as_slice()[0], 0b10);
+        assert_eq!(overflow, Bitmap::from([false, true]));
     }
 
     #[test]
@@ -480,17 +480,17 @@ mod tests {
         let (result, overflow) = overflowing_mul_scalar(&a, &1i32);
         let expected = Int32Array::from(&[None, Some(6), None, Some(6)]);
         assert_eq!(result, expected);
-        assert_eq!(overflow.as_slice()[0], 0b0000);
+        assert_eq!(overflow, Bitmap::from([false, false, false, false]));
 
         let a = Int8Array::from(&[Some(1i8), Some(-100i8)]);
         let (result, overflow) = overflowing_mul_scalar(&a, &100i8);
         let expected = Int8Array::from(&[Some(100i8), Some(-16i8)]);
         assert_eq!(result, expected);
-        assert_eq!(overflow.as_slice()[0], 0b10);
+        assert_eq!(overflow, Bitmap::from([false, true]));
 
         // Trait testing
         let (result, overflow) = a.overflowing_mul(&100i8).unwrap();
         assert_eq!(result, expected);
-        assert_eq!(overflow.as_slice()[0], 0b10);
+        assert_eq!(overflow, Bitmap::from([false, true]));
     }
 }

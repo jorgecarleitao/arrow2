@@ -421,19 +421,19 @@ mod tests {
         let (result, overflow) = overflowing_add(&a, &b).unwrap();
         let expected = Int32Array::from(&[None, None, None, Some(12)]);
         assert_eq!(result, expected);
-        assert_eq!(overflow.as_slice()[0], 0b0000);
+        assert_eq!(overflow, Bitmap::from([false, false, false, false]));
 
         let a = Int8Array::from(&[Some(1i8), Some(100i8)]);
         let b = Int8Array::from(&[Some(1i8), Some(100i8)]);
         let (result, overflow) = overflowing_add(&a, &b).unwrap();
         let expected = Int8Array::from(&[Some(2i8), Some(-56i8)]);
         assert_eq!(result, expected);
-        assert_eq!(overflow.as_slice()[0], 0b10);
+        assert_eq!(overflow, Bitmap::from([false, true]));
 
         // Trait testing
         let (result, overflow) = a.overflowing_add(&b).unwrap();
         assert_eq!(result, expected);
-        assert_eq!(overflow.as_slice()[0], 0b10);
+        assert_eq!(overflow, Bitmap::from([false, true]));
     }
 
     #[test]
@@ -488,17 +488,17 @@ mod tests {
         let (result, overflow) = overflowing_add_scalar(&a, &1i32);
         let expected = Int32Array::from(&vec![None, Some(7), None, Some(7)]);
         assert_eq!(result, expected);
-        assert_eq!(overflow.as_slice()[0], 0b0000);
+        assert_eq!(overflow, Bitmap::from([false, false, false, false]));
 
         let a = Int8Array::from(&vec![Some(1i8), Some(100i8)]);
         let (result, overflow) = overflowing_add_scalar(&a, &100i8);
         let expected = Int8Array::from(&vec![Some(101i8), Some(-56i8)]);
         assert_eq!(result, expected);
-        assert_eq!(overflow.as_slice()[0], 0b10);
+        assert_eq!(overflow, Bitmap::from([false, true]));
 
         // Trait testing
         let (result, overflow) = a.overflowing_add(&100i8).unwrap();
         assert_eq!(result, expected);
-        assert_eq!(overflow.as_slice()[0], 0b10);
+        assert_eq!(overflow, Bitmap::from([false, true]));
     }
 }
