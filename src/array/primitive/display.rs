@@ -1,188 +1,24 @@
-use crate::{datatypes::*, temporal_conversions, types::days_ms};
+use crate::types::NativeType;
 
+use super::super::display::get_value_display;
 use super::super::{display_fmt, Array};
 use super::PrimitiveArray;
 
-impl std::fmt::Display for PrimitiveArray<i32> {
+impl<T: NativeType> std::fmt::Display for PrimitiveArray<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let display = get_value_display(self);
         let new_lines = false;
         let head = &format!("{}", self.data_type());
-        match self.data_type() {
-            DataType::Int32 => display_fmt(self.iter(), head, f, new_lines),
-            DataType::Date32 => display_fmt(
-                self.iter()
-                    .map(|x| x.copied().map(temporal_conversions::date32_to_date)),
-                head,
-                f,
-                new_lines,
-            ),
-            DataType::Time32(TimeUnit::Second) => display_fmt(
-                self.iter()
-                    .map(|x| x.copied().map(temporal_conversions::time32s_to_time)),
-                head,
-                f,
-                new_lines,
-            ),
-            DataType::Time32(TimeUnit::Millisecond) => display_fmt(
-                self.iter()
-                    .map(|x| x.copied().map(temporal_conversions::time32ms_to_time)),
-                head,
-                f,
-                new_lines,
-            ),
-            DataType::Interval(IntervalUnit::YearMonth) => display_fmt(
-                self.iter().map(|x| x.map(|x| format!("{}d", x))),
-                head,
-                f,
-                new_lines,
-            ),
-            _ => unreachable!(),
-        }
-    }
-}
-
-impl std::fmt::Display for PrimitiveArray<i64> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let new_lines = false;
-        let head = &format!("{}", self.data_type());
-        match self.data_type() {
-            DataType::Int64 => display_fmt(self.iter(), head, f, new_lines),
-            DataType::Date64 => display_fmt(
-                self.iter()
-                    .map(|x| x.copied().map(temporal_conversions::date64_to_date)),
-                head,
-                f,
-                new_lines,
-            ),
-            DataType::Time64(TimeUnit::Microsecond) => display_fmt(
-                self.iter()
-                    .map(|x| x.copied().map(temporal_conversions::time64us_to_time)),
-                head,
-                f,
-                new_lines,
-            ),
-            DataType::Time64(TimeUnit::Nanosecond) => display_fmt(
-                self.iter()
-                    .map(|x| x.copied().map(temporal_conversions::time64ns_to_time)),
-                head,
-                f,
-                new_lines,
-            ),
-            DataType::Timestamp(TimeUnit::Second, None) => display_fmt(
-                self.iter().map(|x| {
-                    x.copied()
-                        .map(temporal_conversions::timestamp_s_to_datetime)
-                }),
-                head,
-                f,
-                new_lines,
-            ),
-            DataType::Timestamp(TimeUnit::Millisecond, None) => display_fmt(
-                self.iter().map(|x| {
-                    x.copied()
-                        .map(temporal_conversions::timestamp_ms_to_datetime)
-                }),
-                head,
-                f,
-                new_lines,
-            ),
-            DataType::Timestamp(TimeUnit::Microsecond, None) => display_fmt(
-                self.iter().map(|x| {
-                    x.copied()
-                        .map(temporal_conversions::timestamp_us_to_datetime)
-                }),
-                head,
-                f,
-                new_lines,
-            ),
-            DataType::Timestamp(TimeUnit::Nanosecond, None) => display_fmt(
-                self.iter().map(|x| {
-                    x.copied()
-                        .map(temporal_conversions::timestamp_ns_to_datetime)
-                }),
-                head,
-                f,
-                new_lines,
-            ),
-            DataType::Duration(unit) => {
-                let unit = match unit {
-                    TimeUnit::Second => "s",
-                    TimeUnit::Millisecond => "ms",
-                    TimeUnit::Microsecond => "us",
-                    TimeUnit::Nanosecond => "ns",
-                };
-                display_fmt(
-                    self.iter()
-                        .map(|x| x.copied().map(|x| format!("{}{}", x, unit))),
-                    head,
-                    f,
-                    new_lines,
-                )
-            }
-            // todo
-            DataType::Timestamp(_, Some(_)) => display_fmt(self.iter(), head, f, new_lines),
-            _ => unreachable!(),
-        }
-    }
-}
-
-impl std::fmt::Display for PrimitiveArray<i128> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.data_type() {
-            DataType::Decimal(_, scale) => {
-                let new_lines = false;
-                let head = &format!("{}", self.data_type());
-                // The number 999.99 has a precision of 5 and scale of 2
-                let iter = self.iter().map(|x| {
-                    x.copied().map(|x| {
-                        let base = x / 10i128.pow(*scale as u32);
-                        let decimals = x - base * 10i128.pow(*scale as u32);
-                        format!("{}.{}", base, decimals)
-                    })
-                });
-                display_fmt(iter, head, f, new_lines)
-            }
-            _ => unreachable!(),
-        }
-    }
-}
-
-impl std::fmt::Display for PrimitiveArray<days_ms> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let new_lines = false;
-        let head = &format!("{}", self.data_type());
-        let iter = self.iter().map(|x| {
-            x.copied()
-                .map(|x| format!("{}d{}ms", x.days(), x.milliseconds()))
-        });
+        let iter = self.iter().enumerate().map(|(i, x)| x.map(|_| display(i)));
         display_fmt(iter, head, f, new_lines)
     }
 }
 
-macro_rules! display {
-    ($ty:ty) => {
-        impl std::fmt::Display for PrimitiveArray<$ty> {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                let head = &format!("{}", self.data_type());
-                display_fmt(self.iter(), head, f, false)
-            }
-        }
-    };
-}
-
-display!(i8);
-display!(i16);
-display!(u8);
-display!(u16);
-display!(u32);
-display!(u64);
-display!(f32);
-display!(f64);
-
 #[cfg(test)]
 mod tests {
     use super::super::{DaysMsArray, Int128Array, Int32Array, Int64Array};
-    use super::*;
+    use crate::datatypes::*;
+    use crate::types::days_ms;
 
     #[test]
     fn display_int32() {
@@ -217,7 +53,7 @@ mod tests {
     fn display_interval_d() {
         let array = Int32Array::from(&[Some(1), None, Some(2)])
             .to(DataType::Interval(IntervalUnit::YearMonth));
-        assert_eq!(format!("{}", array), "Interval(YearMonth)[1d, , 2d]");
+        assert_eq!(format!("{}", array), "Interval(YearMonth)[1m, , 2m]");
     }
 
     #[test]

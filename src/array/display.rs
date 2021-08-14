@@ -1,7 +1,6 @@
 use crate::{
     array::*,
     datatypes::{DataType, IntervalUnit, TimeUnit},
-    error::{ArrowError, Result},
     temporal_conversions,
 };
 
@@ -25,18 +24,16 @@ macro_rules! dyn_dict {
             .downcast_ref::<DictionaryArray<$ty>>()
             .unwrap();
         let keys = a.keys();
-        let display = get_value_display(a.values().as_ref())?;
+        let display = get_value_display(a.values().as_ref());
         Box::new(move |row: usize| display(keys.value(row) as usize))
     }};
 }
 
 /// Returns a function of index returning the string representation of the _value_ of `array`.
 /// This does not take nulls into account.
-/// # Errors
-/// This function errors iff the datatype is not yet supported for printing.
-pub fn get_value_display<'a>(array: &'a dyn Array) -> Result<Box<dyn Fn(usize) -> String + 'a>> {
+pub fn get_value_display<'a>(array: &'a dyn Array) -> Box<dyn Fn(usize) -> String + 'a> {
     use DataType::*;
-    Ok(match array.data_type() {
+    match array.data_type() {
         Null => Box::new(|_: usize| "".to_string()),
         Boolean => {
             let a = array.as_any().downcast_ref::<BooleanArray>().unwrap();
@@ -61,31 +58,75 @@ pub fn get_value_display<'a>(array: &'a dyn Array) -> Result<Box<dyn Fn(usize) -
         Time32(TimeUnit::Millisecond) => {
             dyn_primitive!(array, i32, temporal_conversions::time32ms_to_time)
         }
+        Time32(_) => unreachable!(), // remaining are not valid
         Time64(TimeUnit::Microsecond) => {
             dyn_primitive!(array, i64, temporal_conversions::time64us_to_time)
         }
         Time64(TimeUnit::Nanosecond) => {
             dyn_primitive!(array, i64, temporal_conversions::time64ns_to_time)
         }
-        Timestamp(TimeUnit::Second, None) => {
-            dyn_primitive!(array, i64, temporal_conversions::timestamp_s_to_datetime)
+        Time64(_) => unreachable!(), // remaining are not valid
+        Timestamp(TimeUnit::Second, tz) => {
+            if let Some(tz) = tz {
+                dyn_primitive!(array, i64, |x| {
+                    format!(
+                        "{} {}",
+                        temporal_conversions::timestamp_s_to_datetime(x),
+                        tz
+                    )
+                })
+            } else {
+                dyn_primitive!(array, i64, temporal_conversions::timestamp_s_to_datetime)
+            }
         }
-        Timestamp(TimeUnit::Millisecond, None) => {
-            dyn_primitive!(array, i64, temporal_conversions::timestamp_ms_to_datetime)
+        Timestamp(TimeUnit::Millisecond, tz) => {
+            if let Some(tz) = tz {
+                dyn_primitive!(array, i64, |x| {
+                    format!(
+                        "{} {}",
+                        temporal_conversions::timestamp_ms_to_datetime(x),
+                        tz
+                    )
+                })
+            } else {
+                dyn_primitive!(array, i64, temporal_conversions::timestamp_ms_to_datetime)
+            }
         }
-        Timestamp(TimeUnit::Microsecond, None) => {
-            dyn_primitive!(array, i64, temporal_conversions::timestamp_us_to_datetime)
+        Timestamp(TimeUnit::Microsecond, tz) => {
+            if let Some(tz) = tz {
+                dyn_primitive!(array, i64, |x| {
+                    format!(
+                        "{} {}",
+                        temporal_conversions::timestamp_us_to_datetime(x),
+                        tz
+                    )
+                })
+            } else {
+                dyn_primitive!(array, i64, temporal_conversions::timestamp_us_to_datetime)
+            }
         }
-        Timestamp(TimeUnit::Nanosecond, None) => {
-            dyn_primitive!(array, i64, temporal_conversions::timestamp_ns_to_datetime)
-        }
-        Timestamp(_, _) => {
-            return Err(ArrowError::NotYetImplemented(
-                "Priting of timestamps with timezones is not yet implemented.".to_string(),
-            ))
+        Timestamp(TimeUnit::Nanosecond, tz) => {
+            if let Some(tz) = tz {
+                dyn_primitive!(array, i64, |x| {
+                    format!(
+                        "{} {}",
+                        temporal_conversions::timestamp_ns_to_datetime(x),
+                        tz
+                    )
+                })
+            } else {
+                dyn_primitive!(array, i64, temporal_conversions::timestamp_ns_to_datetime)
+            }
         }
         Interval(IntervalUnit::YearMonth) => {
             dyn_primitive!(array, i32, |x| format!("{}m", x))
+        }
+        Interval(IntervalUnit::DayTime) => {
+            dyn_primitive!(array, days_ms, |x: days_ms| format!(
+                "{}d{}ms",
+                x.days(),
+                x.milliseconds()
+            ))
         }
         Duration(TimeUnit::Second) => dyn_primitive!(array, i64, |x| format!("{}s", x)),
         Duration(TimeUnit::Millisecond) => dyn_primitive!(array, i64, |x| format!("{}ms", x)),
@@ -123,7 +164,7 @@ pub fn get_value_display<'a>(array: &'a dyn Array) -> Result<Box<dyn Fn(usize) -
         }
         List(_) => {
             let f = |x: Box<dyn Array>| {
-                let display = get_value_display(x.as_ref()).unwrap();
+                let display = get_value_display(x.as_ref());
                 let string_values = (0..x.len()).map(|i| display(i)).collect::<Vec<String>>();
                 format!("[{}]", string_values.join(", "))
             };
@@ -131,7 +172,7 @@ pub fn get_value_display<'a>(array: &'a dyn Array) -> Result<Box<dyn Fn(usize) -
         }
         FixedSizeList(_, _) => {
             let f = |x: Box<dyn Array>| {
-                let display = get_value_display(x.as_ref()).unwrap();
+                let display = get_value_display(x.as_ref());
                 let string_values = (0..x.len()).map(|i| display(i)).collect::<Vec<String>>();
                 format!("[{}]", string_values.join(", "))
             };
@@ -139,13 +180,13 @@ pub fn get_value_display<'a>(array: &'a dyn Array) -> Result<Box<dyn Fn(usize) -
         }
         LargeList(_) => {
             let f = |x: Box<dyn Array>| {
-                let display = get_value_display(x.as_ref()).unwrap();
+                let display = get_value_display(x.as_ref());
                 let string_values = (0..x.len()).map(|i| display(i)).collect::<Vec<String>>();
                 format!("[{}]", string_values.join(", "))
             };
             dyn_display!(array, ListArray<i64>, f)
         }
-        DataType::Dictionary(key_type, _) => match key_type.as_ref() {
+        Dictionary(key_type, _) => match key_type.as_ref() {
             DataType::Int8 => dyn_dict!(array, i8),
             DataType::Int16 => dyn_dict!(array, i16),
             DataType::Int32 => dyn_dict!(array, i32),
@@ -162,7 +203,7 @@ pub fn get_value_display<'a>(array: &'a dyn Array) -> Result<Box<dyn Fn(usize) -
                 .values()
                 .iter()
                 .map(|x| get_value_display(x.as_ref()))
-                .collect::<Result<Vec<_>>>()?;
+                .collect::<Vec<_>>();
             Box::new(move |row: usize| {
                 let mut string = displays
                     .iter()
@@ -181,19 +222,19 @@ pub fn get_value_display<'a>(array: &'a dyn Array) -> Result<Box<dyn Fn(usize) -
                 string
             })
         }
-        _ => unreachable!(),
-    })
+        Union(_) => todo!(),
+    }
 }
 
 /// Returns a function of index returning the string representation of the item of `array`.
 /// This outputs an empty string on nulls.
-pub fn get_display<'a>(array: &'a dyn Array) -> Result<Box<dyn Fn(usize) -> String + 'a>> {
-    let value_display = get_value_display(array)?;
-    Ok(Box::new(move |row| {
+pub fn get_display<'a>(array: &'a dyn Array) -> Box<dyn Fn(usize) -> String + 'a> {
+    let value_display = get_value_display(array);
+    Box::new(move |row| {
         if array.is_null(row) {
             "".to_string()
         } else {
             value_display(row)
         }
-    }))
+    })
 }

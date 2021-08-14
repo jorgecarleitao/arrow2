@@ -24,6 +24,6 @@ fn main() -> Result<()> {
     let file_path = &args[1];
 
     let batches = read_batches(file_path)?;
-    print::print(&batches)?;
+    print::print(&batches);
     Ok(())
 }
