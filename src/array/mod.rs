@@ -392,12 +392,13 @@ pub mod growable;
 pub mod ord;
 
 pub use display::get_display;
+pub use equal::equal;
 
 pub use binary::{BinaryArray, MutableBinaryArray};
 pub use boolean::{BooleanArray, MutableBooleanArray};
 pub use dictionary::{DictionaryArray, DictionaryKey, MutableDictionaryArray};
 pub use fixed_size_binary::FixedSizeBinaryArray;
-pub use fixed_size_list::FixedSizeListArray;
+pub use fixed_size_list::{FixedSizeListArray, MutableFixedSizeListArray};
 pub use list::{ListArray, MutableListArray};
 pub use null::NullArray;
 pub use primitive::*;
