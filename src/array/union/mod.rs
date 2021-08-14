@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use crate::{
-    array::{display::get_value_display, display_fmt, new_empty_array, Array},
+    array::{display::get_value_display, display_fmt, new_empty_array, new_null_array, Array},
     bitmap::Bitmap,
     buffer::Buffer,
     datatypes::{DataType, Field},
@@ -35,6 +35,28 @@ pub struct UnionArray {
 }
 
 impl UnionArray {
+    pub fn new_null(data_type: DataType, length: usize) -> Self {
+        if let DataType::Union(f, _, is_sparse) = &data_type {
+            let fields = f
+                .iter()
+                .map(|x| new_null_array(x.data_type().clone(), length).into())
+                .collect();
+
+            let offsets = if *is_sparse {
+                None
+            } else {
+                Some((0..length as i32).collect::<Buffer<i32>>())
+            };
+
+            // all from the same field
+            let types = Buffer::new_zeroed(length);
+
+            Self::from_data(data_type, types, fields, offsets)
+        } else {
+            panic!("Union struct must be created with the corresponding Union DataType")
+        }
+    }
+
     pub fn new_empty(data_type: DataType) -> Self {
         if let DataType::Union(f, _, is_sparse) = &data_type {
             let fields = f

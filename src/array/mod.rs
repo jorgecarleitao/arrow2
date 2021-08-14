@@ -296,7 +296,7 @@ pub fn new_null_array(data_type: DataType, length: usize) -> Box<dyn Array> {
         DataType::LargeList(_) => Box::new(ListArray::<i64>::new_null(data_type, length)),
         DataType::FixedSizeList(_, _) => Box::new(FixedSizeListArray::new_null(data_type, length)),
         DataType::Struct(fields) => Box::new(StructArray::new_null(&fields, length)),
-        DataType::Union(_, _, _) => todo!(),
+        DataType::Union(_, _, _) => Box::new(UnionArray::new_null(data_type, length)),
         DataType::Dictionary(key_type, value_type) => match key_type.as_ref() {
             DataType::Int8 => Box::new(DictionaryArray::<i8>::new_null(*value_type, length)),
             DataType::Int16 => Box::new(DictionaryArray::<i16>::new_null(*value_type, length)),
