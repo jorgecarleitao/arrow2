@@ -2,6 +2,8 @@ use arrow2::bitmap::utils::*;
 
 mod chunk_iter;
 mod iterator;
+mod slice_iterator;
+mod zip_validity;
 
 #[test]
 fn test_get_bit() {
