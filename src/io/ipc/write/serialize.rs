@@ -542,12 +542,14 @@ fn write_bitmap(
     match bitmap {
         Some(bitmap) => {
             assert_eq!(bitmap.len(), length);
-            if bitmap.offset() != 0 {
+            let (slice, slice_offset, _) = bitmap.as_slice();
+            if slice_offset != 0 {
                 // case where we can't slice the bitmap as the offsets are not multiple of 8
                 let bytes = Bitmap::from_trusted_len_iter(bitmap.iter());
-                write_bytes(bytes.as_slice(), buffers, arrow_data, offset)
+                let (slice, _, _) = bytes.as_slice();
+                write_bytes(slice, buffers, arrow_data, offset)
             } else {
-                write_bytes(bitmap.as_slice(), buffers, arrow_data, offset)
+                write_bytes(slice, buffers, arrow_data, offset)
             }
         }
         None => {

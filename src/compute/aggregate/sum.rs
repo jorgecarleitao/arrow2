@@ -75,9 +75,9 @@ where
     T: NativeType + Simd,
     T::Simd: Add<Output = T::Simd> + Sum<T>,
 {
-    if bitmap.offset() == 0 {
-        let validity_masks =
-            BitChunksExact::<<T::Simd as NativeSimd>::Chunk>::new(bitmap.as_slice(), bitmap.len());
+    let (slice, offset, length) = bitmap.as_slice();
+    if offset == 0 {
+        let validity_masks = BitChunksExact::<<T::Simd as NativeSimd>::Chunk>::new(slice, length);
         null_sum_impl(values, validity_masks)
     } else {
         let validity_masks = bitmap.chunks::<<T::Simd as NativeSimd>::Chunk>();
