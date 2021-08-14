@@ -3,10 +3,7 @@ use crate::{
     types::{days_ms, NativeType},
 };
 
-use super::{
-    primitive::PrimitiveArray, Array, BinaryArray, BooleanArray, DictionaryArray, DictionaryKey,
-    FixedSizeBinaryArray, FixedSizeListArray, ListArray, NullArray, Offset, StructArray, Utf8Array,
-};
+use super::*;
 
 mod binary;
 mod boolean;
@@ -141,6 +138,18 @@ impl<K: DictionaryKey> PartialEq<DictionaryArray<K>> for DictionaryArray<K> {
 }
 
 impl<K: DictionaryKey> PartialEq<&dyn Array> for DictionaryArray<K> {
+    fn eq(&self, other: &&dyn Array) -> bool {
+        equal(self, *other)
+    }
+}
+
+impl PartialEq<UnionArray> for UnionArray {
+    fn eq(&self, other: &Self) -> bool {
+        equal(self, other)
+    }
+}
+
+impl PartialEq<&dyn Array> for UnionArray {
     fn eq(&self, other: &&dyn Array) -> bool {
         equal(self, *other)
     }
