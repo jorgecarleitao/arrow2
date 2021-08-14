@@ -67,7 +67,7 @@ fn create_table(results: &[RecordBatch]) -> Table {
 
 #[cfg(test)]
 mod tests {
-    use crate::{array::*, bitmap::Bitmap, datatypes::*, error::Result};
+    use crate::{array::*, bitmap::Bitmap, buffer::Buffer, datatypes::*, error::Result};
 
     use super::*;
     use std::sync::Arc;
@@ -418,6 +418,38 @@ mod tests {
             "|              |",
             "| {a: 2, b: c} |",
             "+--------------+",
+        ];
+
+        let actual: Vec<&str> = table.lines().collect();
+
+        assert_eq!(expected, actual, "Actual result:\n{}", table);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_write_union() -> Result<()> {
+        let fields = vec![
+            Field::new("a", DataType::Int32, true),
+            Field::new("b", DataType::Utf8, true),
+        ];
+        let data_type = DataType::Union(fields, None, true);
+        let types = Buffer::from(&[0, 0, 1]);
+        let fields = vec![
+            Arc::new(Int32Array::from(&[Some(1), None, Some(2)])) as Arc<dyn Array>,
+            Arc::new(Utf8Array::<i32>::from(&[Some("a"), Some("b"), Some("c")])) as Arc<dyn Array>,
+        ];
+
+        let array = UnionArray::from_data(data_type, types, fields, None);
+
+        let schema = Schema::new(vec![Field::new("a", array.data_type().clone(), true)]);
+
+        let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(array)])?;
+
+        let table = write(&[batch]);
+
+        let expected = vec![
+            "+---+", "| a |", "+---+", "| 1 |", "|   |", "| c |", "+---+",
         ];
 
         let actual: Vec<&str> = table.lines().collect();

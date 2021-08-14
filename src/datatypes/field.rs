@@ -200,8 +200,8 @@ impl Field {
                     ));
                 }
             },
-            DataType::Union(nested_fields) => match &from.data_type {
-                DataType::Union(from_nested_fields) => {
+            DataType::Union(nested_fields, _, _) => match &from.data_type {
+                DataType::Union(from_nested_fields, _, _) => {
                     for from_field in from_nested_fields {
                         let mut is_new_field = true;
                         for self_field in nested_fields.iter_mut() {

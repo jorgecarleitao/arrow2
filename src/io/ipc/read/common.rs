@@ -19,6 +19,8 @@ use std::collections::{HashMap, VecDeque};
 use std::io::{Read, Seek};
 use std::sync::Arc;
 
+use gen::Schema::MetadataVersion;
+
 use crate::array::*;
 use crate::datatypes::{DataType, Field, Schema};
 use crate::error::{ArrowError, Result};
@@ -96,6 +98,7 @@ pub fn read_record_batch<R: Read + Seek>(
     projection: Option<(&[usize], Arc<Schema>)>,
     is_little_endian: bool,
     dictionaries: &[Option<ArrayRef>],
+    version: MetadataVersion,
     reader: &mut R,
     block_offset: u64,
 ) -> Result<RecordBatch> {
@@ -130,6 +133,7 @@ pub fn read_record_batch<R: Read + Seek>(
                     block_offset,
                     is_little_endian,
                     batch.compression(),
+                    version,
                 )),
                 ProjectionResult::NotSelected(field) => {
                     skip(&mut field_nodes, field.data_type(), &mut buffers);
@@ -152,6 +156,7 @@ pub fn read_record_batch<R: Read + Seek>(
                     block_offset,
                     is_little_endian,
                     batch.compression(),
+                    version,
                 )
             })
             .collect::<Result<Vec<_>>>()?;
@@ -199,6 +204,7 @@ pub fn read_dictionary<R: Read + Seek>(
                 None,
                 is_little_endian,
                 dictionaries_by_field,
+                MetadataVersion::V5,
                 reader,
                 block_offset,
             )?;

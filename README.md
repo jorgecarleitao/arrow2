@@ -64,7 +64,8 @@ venv/bin/python parquet_integration/write_parquet.py
 * `MutableArray` API to work in-memory in-place.
 * faster IPC reader (different design that avoids an extra copy of all data)
 * IPC supports 2.0 (compression)
-* FFI support for dictionary-encoded arrays
+* FFI support for dictionary-encoded arrays and union array
+* All implemented arrow types pass IPC integration tests against other implementations
 
 ### Parquet
 
@@ -81,7 +82,7 @@ venv/bin/python parquet_integration/write_parquet.py
 ## Features in the original not available in this crate
 
 * Parquet read and write of struct and nested lists.
-* Union and Map types
+* Map types
 
 ## Features in this crate not in pyarrow
 
@@ -90,7 +91,7 @@ venv/bin/python parquet_integration/write_parquet.py
 
 ## Features in pyarrow not in this crate
 
-Too many to enumerate; e.g. nested dictionary arrays, union, map, nested parquet.
+Too many to enumerate; e.g. nested dictionary arrays, map, nested parquet.
 
 ## How to develop
 

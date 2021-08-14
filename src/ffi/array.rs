@@ -77,6 +77,7 @@ pub fn try_from<A: ArrowArrayRef>(array: A) -> Result<Box<dyn Array>> {
             DataType::UInt64 => Box::new(DictionaryArray::<u64>::try_from_ffi(array)?),
             _ => unreachable!(),
         },
+        DataType::Union(_, _, _) => Box::new(UnionArray::try_from_ffi(array)?),
         data_type => {
             return Err(ArrowError::NotYetImplemented(format!(
                 "Reading DataType \"{}\" is not yet supported.",

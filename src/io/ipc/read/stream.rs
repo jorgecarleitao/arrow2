@@ -18,6 +18,8 @@
 use std::io::Read;
 use std::sync::Arc;
 
+use gen::Schema::MetadataVersion;
+
 use crate::array::*;
 use crate::datatypes::Schema;
 use crate::error::{ArrowError, Result};
@@ -33,6 +35,8 @@ type ArrayRef = Arc<dyn Array>;
 pub struct StreamMetadata {
     /// The schema that is read from the stream's first message
     schema: Arc<Schema>,
+
+    version: MetadataVersion,
 
     /// Whether the incoming stream is little-endian
     is_little_endian: bool,
@@ -57,6 +61,7 @@ pub fn read_stream_metadata<R: Read>(reader: &mut R) -> Result<StreamMetadata> {
 
     let message = gen::Message::root_as_message(meta_buffer.as_slice())
         .map_err(|err| ArrowError::Ipc(format!("Unable to get root as message: {:?}", err)))?;
+    let version = message.version();
     // message header is a Schema, so read it
     let ipc_schema: gen::Schema::Schema = message
         .header_as_schema()
@@ -66,6 +71,7 @@ pub fn read_stream_metadata<R: Read>(reader: &mut R) -> Result<StreamMetadata> {
 
     Ok(StreamMetadata {
         schema,
+        version,
         is_little_endian,
     })
 }
@@ -134,6 +140,7 @@ pub fn read_next<R: Read>(
                 None,
                 metadata.is_little_endian,
                 dictionaries_by_field,
+                metadata.version,
                 &mut reader,
                 0,
             )
@@ -323,5 +330,10 @@ mod tests {
     #[test]
     fn read_generated_200_compression_zstd() -> Result<()> {
         test_file("2.0.0-compression", "generated_zstd")
+    }
+
+    #[test]
+    fn read_generated_017_union() -> Result<()> {
+        test_file("0.17.1", "generated_union")
     }
 }

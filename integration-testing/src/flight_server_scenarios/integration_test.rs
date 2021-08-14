@@ -25,6 +25,7 @@ use arrow2::{
     datatypes::*,
     io::ipc,
     io::ipc::gen::Message::{Message, MessageHeader},
+    io::ipc::gen::Schema::MetadataVersion,
     record_batch::RecordBatch,
 };
 use arrow_flight::flight_descriptor::*;
@@ -295,6 +296,7 @@ async fn record_batch_from_message(
         None,
         true,
         &dictionaries_by_field,
+        MetadataVersion::V5,
         &mut reader,
         0,
     );

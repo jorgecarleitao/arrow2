@@ -25,6 +25,7 @@ pub fn from_record_batch(batch: &RecordBatch) -> ArrowJsonBatch {
                     validity: Some(validity),
                     data: Some(data),
                     offset: None,
+                    type_id: None,
                     children: None,
                 }
             }
@@ -34,6 +35,7 @@ pub fn from_record_batch(batch: &RecordBatch) -> ArrowJsonBatch {
                 validity: None,
                 data: None,
                 offset: None,
+                type_id: None,
                 children: None,
             },
         };

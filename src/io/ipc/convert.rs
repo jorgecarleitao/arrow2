@@ -19,6 +19,7 @@
 
 use crate::datatypes::{DataType, Field, IntervalUnit, Schema, TimeUnit};
 use crate::endianess::is_native_little_endian;
+use crate::io::ipc::convert::ipc::UnionMode;
 
 mod ipc {
     pub use super::super::gen::File::*;
@@ -275,6 +276,22 @@ pub(crate) fn get_data_type(field: ipc::Field, may_be_dictionary: bool) -> DataT
         ipc::Type::Decimal => {
             let fsb = field.type_as_decimal().unwrap();
             DataType::Decimal(fsb.precision() as usize, fsb.scale() as usize)
+        }
+        ipc::Type::Union => {
+            let type_ = field.type_as_union().unwrap();
+
+            let is_sparse = type_.mode() == UnionMode::Sparse;
+
+            let ids = type_.typeIds().map(|x| x.iter().collect());
+
+            let fields = if let Some(children) = field.children() {
+                (0..children.len())
+                    .map(|i| children.get(i).into())
+                    .collect()
+            } else {
+                vec![]
+            };
+            DataType::Union(fields, ids, is_sparse)
         }
         t => unimplemented!("Type {:?} not supported", t),
     }
@@ -604,7 +621,27 @@ pub(crate) fn get_fb_field_type<'a>(
                 children: Some(fbb.create_vector(&empty_fields[..])),
             }
         }
-        t => unimplemented!("Type {:?} not supported", t),
+        Union(fields, ids, is_sparse) => {
+            let children: Vec<_> = fields.iter().map(|field| build_field(fbb, field)).collect();
+
+            let ids = ids.as_ref().map(|ids| fbb.create_vector(ids));
+
+            let mut builder = ipc::UnionBuilder::new(fbb);
+            builder.add_mode(if *is_sparse {
+                UnionMode::Sparse
+            } else {
+                UnionMode::Dense
+            });
+
+            if let Some(ids) = ids {
+                builder.add_typeIds(ids);
+            }
+            FbFieldType {
+                type_type: ipc::Type::Union,
+                type_: builder.finish().as_union_value(),
+                children: Some(fbb.create_vector(&children)),
+            }
+        }
     }
 }
 

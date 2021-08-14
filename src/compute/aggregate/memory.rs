@@ -109,7 +109,22 @@ pub fn estimated_bytes_size(array: &dyn Array) -> usize {
                 .sum::<usize>()
                 + validity_size(array.validity())
         }
-        Union(_) => unreachable!(),
+        Union(_, _, _) => {
+            let array = array.as_any().downcast_ref::<UnionArray>().unwrap();
+            let types = array.types().len() * std::mem::size_of::<i8>();
+            let offsets = array
+                .offsets()
+                .as_ref()
+                .map(|x| x.len() * std::mem::size_of::<i32>())
+                .unwrap_or_default();
+            let fields = array
+                .fields()
+                .iter()
+                .map(|x| x.as_ref())
+                .map(estimated_bytes_size)
+                .sum::<usize>();
+            types + offsets + fields
+        }
         Dictionary(keys, _) => match keys.as_ref() {
             Int8 => dyn_dict!(array, i8),
             Int16 => dyn_dict!(array, i16),

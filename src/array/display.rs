@@ -222,7 +222,18 @@ pub fn get_value_display<'a>(array: &'a dyn Array) -> Box<dyn Fn(usize) -> Strin
                 string
             })
         }
-        Union(_) => todo!(),
+        Union(_, _, _) => {
+            let array = array.as_any().downcast_ref::<UnionArray>().unwrap();
+            let displays = array
+                .fields()
+                .iter()
+                .map(|x| get_display(x.as_ref()))
+                .collect::<Vec<_>>();
+            Box::new(move |row: usize| {
+                let (field, index) = array.index(row);
+                displays[field](index)
+            })
+        }
     }
 }
 

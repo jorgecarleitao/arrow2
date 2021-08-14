@@ -331,6 +331,17 @@ mod tests {
     }
 
     #[test]
+    fn write_100_union() -> Result<()> {
+        test_file("1.0.0-littleendian", "generated_union")?;
+        test_file("1.0.0-bigendian", "generated_union")
+    }
+
+    #[test]
+    fn write_generated_017_union() -> Result<()> {
+        test_file("0.17.1", "generated_union")
+    }
+
+    #[test]
     fn write_sliced_utf8() -> Result<()> {
         use crate::array::{Array, Utf8Array};
         use std::sync::Arc;
