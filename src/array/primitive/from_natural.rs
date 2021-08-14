@@ -65,30 +65,3 @@ impl<T: NativeType + NaturalDataType> PrimitiveArray<T> {
         MutablePrimitiveArray::<T>::from_trusted_len_iter_unchecked(iter).into()
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use crate::array::Array;
-
-    use super::*;
-    use std::iter::FromIterator;
-
-    #[test]
-    fn bla() {
-        let data = vec![Some(1), None, Some(10)];
-
-        let array = PrimitiveArray::from(data.clone());
-        assert_eq!(array.len(), 3);
-
-        let array = PrimitiveArray::from_iter(data);
-        assert_eq!(array.len(), 3);
-
-        let data = vec![1i32, 2, 3];
-
-        let array = PrimitiveArray::from_values(data.clone());
-        assert_eq!(array.len(), 3);
-
-        let array = PrimitiveArray::from_trusted_len_values_iter(data.into_iter());
-        assert_eq!(array.len(), 3);
-    }
-}

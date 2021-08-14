@@ -11,7 +11,7 @@ use arrow2::datatypes::*;
 use arrow2::{bitmap::Bitmap, buffer::Buffer, error::Result, io::json::*};
 
 #[test]
-fn test_json_basic() {
+fn json_basic() {
     let builder = ReaderBuilder::new().infer_schema(None).with_batch_size(64);
     let mut reader: Reader<File> = builder
         .build::<File>(File::open("test/data/basic.json").unwrap())
@@ -69,7 +69,7 @@ fn test_json_basic() {
 }
 
 #[test]
-fn test_json_basic_with_nulls() {
+fn json_basic_with_nulls() {
     let builder = ReaderBuilder::new().infer_schema(None).with_batch_size(64);
     let mut reader: Reader<File> = builder
         .build::<File>(File::open("test/data/basic_nulls.json").unwrap())
@@ -128,7 +128,7 @@ fn test_json_basic_with_nulls() {
 }
 
 #[test]
-fn test_json_basic_schema() {
+fn json_basic_schema() {
     let schema = Arc::new(Schema::new(vec![
         Field::new("a", DataType::Int32, false),
         Field::new("b", DataType::Float32, false),
@@ -178,7 +178,7 @@ fn test_json_basic_schema() {
 }
 
 #[test]
-fn test_json_basic_schema_projection() {
+fn json_basic_schema_projection() {
     // We test implicit and explicit projection:
     // Implicit: omitting fields from a schema
     // Explicit: supplying a vec of fields to take
@@ -218,7 +218,7 @@ fn test_json_basic_schema_projection() {
 }
 
 #[test]
-fn test_json_arrays() {
+fn json_arrays() {
     let builder = ReaderBuilder::new().infer_schema(None).with_batch_size(64);
     let mut reader: Reader<File> = builder
         .build::<File>(File::open("test/data/arrays.json").unwrap())
@@ -278,7 +278,7 @@ fn test_json_arrays() {
 }
 
 #[test]
-fn test_invalid_json_infer_schema() {
+fn invalid_json_infer_schema() {
     let re = infer_json_schema_from_seekable(
         &mut BufReader::new(File::open("test/data/uk_cities_with_headers.csv").unwrap()),
         None,
@@ -290,7 +290,7 @@ fn test_invalid_json_infer_schema() {
 }
 
 #[test]
-fn test_invalid_json_read_record() {
+fn invalid_json_read_record() {
     let schema = Arc::new(Schema::new(vec![Field::new(
         "a",
         DataType::Struct(vec![Field::new("a", DataType::Utf8, true)]),
@@ -307,7 +307,7 @@ fn test_invalid_json_read_record() {
 }
 
 #[test]
-fn test_mixed_json_arrays() {
+fn mixed_json_arrays() {
     let builder = ReaderBuilder::new().infer_schema(None).with_batch_size(64);
     let mut reader: Reader<File> = builder
         .build::<File>(File::open("test/data/mixed_arrays.json").unwrap())
@@ -382,7 +382,7 @@ fn test_mixed_json_arrays() {
 }
 
 #[test]
-fn test_nested_struct_json_arrays() {
+fn nested_struct_json_arrays() {
     let d_field = Field::new("d", DataType::Utf8, true);
     let c_field = Field::new("c", DataType::Struct(vec![d_field.clone()]), true);
     let a_field = Field::new(
@@ -417,7 +417,7 @@ fn test_nested_struct_json_arrays() {
 }
 
 #[test]
-fn test_nested_list_json_arrays() {
+fn nested_list_json_arrays() {
     let d_field = Field::new("d", DataType::Utf8, true);
     let c_field = Field::new("c", DataType::Struct(vec![d_field.clone()]), true);
     let b_field = Field::new("b", DataType::Boolean, true);
@@ -478,7 +478,7 @@ fn test_nested_list_json_arrays() {
 }
 
 #[test]
-fn test_dictionary_from_json_basic_with_nulls() -> Result<()> {
+fn dictionary_from_json_basic_with_nulls() -> Result<()> {
     let schema = Arc::new(Schema::new(vec![Field::new(
         "d",
         DataType::Dictionary(Box::new(DataType::Int16), Box::new(DataType::Utf8)),
@@ -527,7 +527,7 @@ fn test_dictionary_from_json_basic_with_nulls() -> Result<()> {
 }
 
 #[test]
-fn test_skip_empty_lines() {
+fn skip_empty_lines() {
     let builder = ReaderBuilder::new().infer_schema(None).with_batch_size(64);
     let json_content = "
     {\"a\": 1}
@@ -547,7 +547,7 @@ fn test_skip_empty_lines() {
 }
 
 #[test]
-fn test_row_type_validation() {
+fn row_type_validation() {
     let builder = ReaderBuilder::new().infer_schema(None).with_batch_size(64);
     let json_content = "
     [1, \"hello\"]
@@ -560,7 +560,7 @@ fn test_row_type_validation() {
 }
 
 #[test]
-fn test_list_of_string_dictionary_from_json_with_nulls() -> Result<()> {
+fn list_of_string_dictionary_from_json_with_nulls() -> Result<()> {
     let data_type = DataType::List(Box::new(Field::new(
         "item",
         DataType::Dictionary(Box::new(DataType::UInt64), Box::new(DataType::Utf8)),
@@ -611,7 +611,7 @@ fn test_list_of_string_dictionary_from_json_with_nulls() -> Result<()> {
 }
 
 #[test]
-fn test_with_multiple_batches() {
+fn with_multiple_batches() {
     let builder = ReaderBuilder::new()
         .infer_schema(Some(4))
         .with_batch_size(5);
@@ -628,7 +628,7 @@ fn test_with_multiple_batches() {
 }
 
 #[test]
-fn test_json_infer_schema() {
+fn json_infer_schema() {
     let schema = Schema::new(vec![
         Field::new("a", DataType::Int64, true),
         Field::new(

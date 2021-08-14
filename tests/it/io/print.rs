@@ -6,7 +6,7 @@ use arrow2::{
 };
 
 #[test]
-fn test_write() -> Result<()> {
+fn write_basics() -> Result<()> {
     // define a schema.
     let schema = Arc::new(Schema::new(vec![
         Field::new("a", DataType::Utf8, true),
@@ -48,7 +48,7 @@ fn test_write() -> Result<()> {
 }
 
 #[test]
-fn test_write_null() -> Result<()> {
+fn write_null() -> Result<()> {
     let schema = Arc::new(Schema::new(vec![
         Field::new("a", DataType::Utf8, true),
         Field::new("b", DataType::Int32, true),
@@ -85,7 +85,7 @@ fn test_write_null() -> Result<()> {
 }
 
 #[test]
-fn test_write_dictionary() -> Result<()> {
+fn write_dictionary() -> Result<()> {
     // define a schema.
     let field_type = DataType::Dictionary(Box::new(DataType::Int32), Box::new(DataType::Utf8));
     let schema = Arc::new(Schema::new(vec![Field::new("d1", field_type, true)]));
@@ -140,7 +140,7 @@ macro_rules! check_datetime {
 }
 
 #[test]
-fn test_write_timestamp_second() {
+fn write_timestamp_second() {
     let expected = vec![
         "+---------------------+",
         "| f                   |",
@@ -158,7 +158,7 @@ fn test_write_timestamp_second() {
 }
 
 #[test]
-fn test_write_timestamp_second_with_tz() {
+fn write_timestamp_second_with_tz() {
     let expected = vec![
         "+-------------------------+",
         "| f                       |",
@@ -176,7 +176,7 @@ fn test_write_timestamp_second_with_tz() {
 }
 
 #[test]
-fn test_write_timestamp_millisecond() {
+fn write_timestamp_millisecond() {
     let expected = vec![
         "+-------------------------+",
         "| f                       |",
@@ -194,7 +194,7 @@ fn test_write_timestamp_millisecond() {
 }
 
 #[test]
-fn test_write_timestamp_microsecond() {
+fn write_timestamp_microsecond() {
     let expected = vec![
         "+----------------------------+",
         "| f                          |",
@@ -212,7 +212,7 @@ fn test_write_timestamp_microsecond() {
 }
 
 #[test]
-fn test_write_timestamp_nanosecond() {
+fn write_timestamp_nanosecond() {
     let expected = vec![
         "+-------------------------------+",
         "| f                             |",
@@ -230,7 +230,7 @@ fn test_write_timestamp_nanosecond() {
 }
 
 #[test]
-fn test_write_date_32() {
+fn write_date_32() {
     let expected = vec![
         "+------------+",
         "| f          |",
@@ -243,7 +243,7 @@ fn test_write_date_32() {
 }
 
 #[test]
-fn test_write_date_64() {
+fn write_date_64() {
     let expected = vec![
         "+------------+",
         "| f          |",
@@ -256,7 +256,7 @@ fn test_write_date_64() {
 }
 
 #[test]
-fn test_write_time_32_second() {
+fn write_time_32_second() {
     let expected = vec![
         "+----------+",
         "| f        |",
@@ -269,7 +269,7 @@ fn test_write_time_32_second() {
 }
 
 #[test]
-fn test_write_time_32_millisecond() {
+fn write_time_32_millisecond() {
     let expected = vec![
         "+--------------+",
         "| f            |",
@@ -287,7 +287,7 @@ fn test_write_time_32_millisecond() {
 }
 
 #[test]
-fn test_write_time_64_microsecond() {
+fn write_time_64_microsecond() {
     let expected = vec![
         "+-----------------+",
         "| f               |",
@@ -305,7 +305,7 @@ fn test_write_time_64_microsecond() {
 }
 
 #[test]
-fn test_write_time_64_nanosecond() {
+fn write_time_64_nanosecond() {
     let expected = vec![
         "+--------------------+",
         "| f                  |",
@@ -323,7 +323,7 @@ fn test_write_time_64_nanosecond() {
 }
 
 #[test]
-fn test_write_struct() -> Result<()> {
+fn write_struct() -> Result<()> {
     let fields = vec![
         Field::new("a", DataType::Int32, true),
         Field::new("b", DataType::Utf8, true),
@@ -361,7 +361,7 @@ fn test_write_struct() -> Result<()> {
 }
 
 #[test]
-fn test_write_union() -> Result<()> {
+fn write_union() -> Result<()> {
     let fields = vec![
         Field::new("a", DataType::Int32, true),
         Field::new("b", DataType::Utf8, true),

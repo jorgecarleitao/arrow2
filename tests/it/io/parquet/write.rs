@@ -68,7 +68,7 @@ fn round_trip(
 }
 
 #[test]
-fn test_int64_optional_v1() -> Result<()> {
+fn int64_optional_v1() -> Result<()> {
     round_trip(
         0,
         true,
@@ -80,7 +80,7 @@ fn test_int64_optional_v1() -> Result<()> {
 }
 
 #[test]
-fn test_int64_required_v1() -> Result<()> {
+fn int64_required_v1() -> Result<()> {
     round_trip(
         0,
         false,
@@ -92,7 +92,7 @@ fn test_int64_required_v1() -> Result<()> {
 }
 
 #[test]
-fn test_int64_optional_v2() -> Result<()> {
+fn int64_optional_v2() -> Result<()> {
     round_trip(
         0,
         true,
@@ -104,7 +104,7 @@ fn test_int64_optional_v2() -> Result<()> {
 }
 
 #[test]
-fn test_int64_optional_v2_compressed() -> Result<()> {
+fn int64_optional_v2_compressed() -> Result<()> {
     round_trip(
         0,
         true,
@@ -116,7 +116,7 @@ fn test_int64_optional_v2_compressed() -> Result<()> {
 }
 
 #[test]
-fn test_utf8_optional_v1() -> Result<()> {
+fn utf8_optional_v1() -> Result<()> {
     round_trip(
         2,
         true,
@@ -128,7 +128,7 @@ fn test_utf8_optional_v1() -> Result<()> {
 }
 
 #[test]
-fn test_utf8_required_v1() -> Result<()> {
+fn utf8_required_v1() -> Result<()> {
     round_trip(
         2,
         false,
@@ -140,7 +140,7 @@ fn test_utf8_required_v1() -> Result<()> {
 }
 
 #[test]
-fn test_utf8_optional_v2() -> Result<()> {
+fn utf8_optional_v2() -> Result<()> {
     round_trip(
         2,
         true,
@@ -152,7 +152,7 @@ fn test_utf8_optional_v2() -> Result<()> {
 }
 
 #[test]
-fn test_utf8_required_v2() -> Result<()> {
+fn utf8_required_v2() -> Result<()> {
     round_trip(
         2,
         false,
@@ -164,7 +164,7 @@ fn test_utf8_required_v2() -> Result<()> {
 }
 
 #[test]
-fn test_utf8_optional_v2_compressed() -> Result<()> {
+fn utf8_optional_v2_compressed() -> Result<()> {
     round_trip(
         2,
         true,
@@ -176,7 +176,7 @@ fn test_utf8_optional_v2_compressed() -> Result<()> {
 }
 
 #[test]
-fn test_utf8_required_v2_compressed() -> Result<()> {
+fn utf8_required_v2_compressed() -> Result<()> {
     round_trip(
         2,
         false,
@@ -188,7 +188,7 @@ fn test_utf8_required_v2_compressed() -> Result<()> {
 }
 
 #[test]
-fn test_bool_optional_v1() -> Result<()> {
+fn bool_optional_v1() -> Result<()> {
     round_trip(
         3,
         true,
@@ -200,7 +200,7 @@ fn test_bool_optional_v1() -> Result<()> {
 }
 
 #[test]
-fn test_bool_required_v1() -> Result<()> {
+fn bool_required_v1() -> Result<()> {
     round_trip(
         3,
         false,
@@ -212,7 +212,7 @@ fn test_bool_required_v1() -> Result<()> {
 }
 
 #[test]
-fn test_bool_optional_v2_uncompressed() -> Result<()> {
+fn bool_optional_v2_uncompressed() -> Result<()> {
     round_trip(
         3,
         true,
@@ -224,7 +224,7 @@ fn test_bool_optional_v2_uncompressed() -> Result<()> {
 }
 
 #[test]
-fn test_bool_required_v2_uncompressed() -> Result<()> {
+fn bool_required_v2_uncompressed() -> Result<()> {
     round_trip(
         3,
         false,
@@ -236,7 +236,7 @@ fn test_bool_required_v2_uncompressed() -> Result<()> {
 }
 
 #[test]
-fn test_bool_required_v2_compressed() -> Result<()> {
+fn bool_required_v2_compressed() -> Result<()> {
     round_trip(
         3,
         false,
@@ -248,7 +248,7 @@ fn test_bool_required_v2_compressed() -> Result<()> {
 }
 
 #[test]
-fn test_list_int64_optional_v2() -> Result<()> {
+fn list_int64_optional_v2() -> Result<()> {
     round_trip(
         0,
         true,
@@ -260,7 +260,7 @@ fn test_list_int64_optional_v2() -> Result<()> {
 }
 
 #[test]
-fn test_list_int64_optional_v1() -> Result<()> {
+fn list_int64_optional_v1() -> Result<()> {
     round_trip(
         0,
         true,
@@ -272,7 +272,7 @@ fn test_list_int64_optional_v1() -> Result<()> {
 }
 
 #[test]
-fn test_list_bool_optional_v2() -> Result<()> {
+fn list_bool_optional_v2() -> Result<()> {
     round_trip(
         4,
         true,
@@ -284,7 +284,7 @@ fn test_list_bool_optional_v2() -> Result<()> {
 }
 
 #[test]
-fn test_list_bool_optional_v1() -> Result<()> {
+fn list_bool_optional_v1() -> Result<()> {
     round_trip(
         4,
         true,
@@ -296,7 +296,7 @@ fn test_list_bool_optional_v1() -> Result<()> {
 }
 
 #[test]
-fn test_list_utf8_optional_v2() -> Result<()> {
+fn list_utf8_optional_v2() -> Result<()> {
     round_trip(
         5,
         true,
@@ -308,7 +308,7 @@ fn test_list_utf8_optional_v2() -> Result<()> {
 }
 
 #[test]
-fn test_list_utf8_optional_v1() -> Result<()> {
+fn list_utf8_optional_v1() -> Result<()> {
     round_trip(
         5,
         true,
@@ -320,7 +320,7 @@ fn test_list_utf8_optional_v1() -> Result<()> {
 }
 
 #[test]
-fn test_list_large_binary_optional_v2() -> Result<()> {
+fn list_large_binary_optional_v2() -> Result<()> {
     round_trip(
         6,
         true,
@@ -332,7 +332,7 @@ fn test_list_large_binary_optional_v2() -> Result<()> {
 }
 
 #[test]
-fn test_list_large_binary_optional_v1() -> Result<()> {
+fn list_large_binary_optional_v1() -> Result<()> {
     round_trip(
         6,
         true,
@@ -344,7 +344,7 @@ fn test_list_large_binary_optional_v1() -> Result<()> {
 }
 
 #[test]
-fn test_utf8_optional_v2_delta() -> Result<()> {
+fn utf8_optional_v2_delta() -> Result<()> {
     round_trip(
         2,
         true,
@@ -356,7 +356,7 @@ fn test_utf8_optional_v2_delta() -> Result<()> {
 }
 
 #[test]
-fn test_i32_optional_v2_dict() -> Result<()> {
+fn i32_optional_v2_dict() -> Result<()> {
     round_trip(
         6,
         true,

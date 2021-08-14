@@ -213,27 +213,3 @@ impl<O: Offset, T: AsRef<str>> TryExtend<Option<T>> for MutableUtf8Array<O> {
         iter.try_for_each(|x| self.try_push(x))
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use crate::bitmap::Bitmap;
-
-    use super::*;
-
-    #[test]
-    fn test_capacities() {
-        let b = MutableUtf8Array::<i32>::with_capacities(1, 10);
-
-        assert_eq!(b.values.capacity(), 64);
-        assert_eq!(b.offsets.capacity(), 16); // 64 bytes
-    }
-
-    #[test]
-    fn push_null() {
-        let mut array = MutableUtf8Array::<i32>::new();
-        array.push::<&str>(None);
-
-        let array: Utf8Array<i32> = array.into();
-        assert_eq!(array.validity(), &Some(Bitmap::from([false])));
-    }
-}

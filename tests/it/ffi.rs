@@ -30,44 +30,44 @@ fn test_round_trip(expected: impl Array + Clone + 'static) -> Result<()> {
 }
 
 #[test]
-fn test_u32() -> Result<()> {
+fn u32() -> Result<()> {
     let data = Int32Array::from(&[Some(2), None, Some(1), None]);
     test_release(data)
 }
 
 #[test]
-fn test_u64() -> Result<()> {
+fn u64() -> Result<()> {
     let data = UInt64Array::from(&[Some(2), None, Some(1), None]);
     test_round_trip(data)
 }
 
 #[test]
-fn test_i64() -> Result<()> {
+fn i64() -> Result<()> {
     let data = Int64Array::from(&[Some(2), None, Some(1), None]);
     test_round_trip(data)
 }
 
 #[test]
-fn test_utf8() -> Result<()> {
+fn utf8() -> Result<()> {
     let data = Utf8Array::<i32>::from(&vec![Some("a"), None, Some("bb"), None]);
     test_round_trip(data)
 }
 
 #[test]
-fn test_large_utf8() -> Result<()> {
+fn large_utf8() -> Result<()> {
     let data = Utf8Array::<i64>::from(&vec![Some("a"), None, Some("bb"), None]);
     test_round_trip(data)
 }
 
 #[test]
-fn test_binary() -> Result<()> {
+fn binary() -> Result<()> {
     let data =
         BinaryArray::<i32>::from(&vec![Some(b"a".as_ref()), None, Some(b"bb".as_ref()), None]);
     test_round_trip(data)
 }
 
 #[test]
-fn test_timestamp_tz() -> Result<()> {
+fn timestamp_tz() -> Result<()> {
     let data = Int64Array::from(&vec![Some(2), None, None]).to(DataType::Timestamp(
         TimeUnit::Second,
         Some("UTC".to_string()),
@@ -76,14 +76,14 @@ fn test_timestamp_tz() -> Result<()> {
 }
 
 #[test]
-fn test_large_binary() -> Result<()> {
+fn large_binary() -> Result<()> {
     let data =
         BinaryArray::<i64>::from(&vec![Some(b"a".as_ref()), None, Some(b"bb".as_ref()), None]);
     test_round_trip(data)
 }
 
 #[test]
-fn test_list() -> Result<()> {
+fn list() -> Result<()> {
     let data = vec![
         Some(vec![Some(1i32), Some(2), Some(3)]),
         None,
@@ -99,7 +99,7 @@ fn test_list() -> Result<()> {
 }
 
 #[test]
-fn test_list_list() -> Result<()> {
+fn list_list() -> Result<()> {
     let data = vec![
         Some(vec![
             Some(vec![None]),
@@ -120,7 +120,7 @@ fn test_list_list() -> Result<()> {
 }
 
 #[test]
-fn test_dict() -> Result<()> {
+fn dict() -> Result<()> {
     let data = vec![Some("a"), Some("a"), None, Some("b")];
 
     let mut array = MutableDictionaryArray::<i32, MutableUtf8Array<i32>>::new();
