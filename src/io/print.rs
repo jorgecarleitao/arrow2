@@ -15,28 +15,27 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::{array::*, error::Result, record_batch::RecordBatch};
+use crate::{array::*, record_batch::RecordBatch};
 
 use comfy_table::{Cell, Table};
 
 /// Returns a visual representation of multiple [`RecordBatch`]es.
-pub fn write(batches: &[RecordBatch]) -> Result<String> {
-    Ok(create_table(batches)?.to_string())
+pub fn write(batches: &[RecordBatch]) -> String {
+    create_table(batches).to_string()
 }
 
 /// Prints a visual representation of record batches to stdout
-pub fn print(results: &[RecordBatch]) -> Result<()> {
-    println!("{}", create_table(results)?);
-    Ok(())
+pub fn print(results: &[RecordBatch]) {
+    println!("{}", create_table(results))
 }
 
 /// Convert a series of record batches into a table
-fn create_table(results: &[RecordBatch]) -> Result<Table> {
+fn create_table(results: &[RecordBatch]) -> Table {
     let mut table = Table::new();
     table.load_preset("||--+-++|    ++++++");
 
     if results.is_empty() {
-        return Ok(table);
+        return table;
     }
 
     let schema = results[0].schema();
@@ -52,7 +51,7 @@ fn create_table(results: &[RecordBatch]) -> Result<Table> {
             .columns()
             .iter()
             .map(|array| get_display(array.as_ref()))
-            .collect::<Result<Vec<_>>>()?;
+            .collect::<Vec<_>>();
 
         for row in 0..batch.num_rows() {
             let mut cells = Vec::new();
@@ -63,13 +62,12 @@ fn create_table(results: &[RecordBatch]) -> Result<Table> {
             table.add_row(cells);
         }
     }
-
-    Ok(table)
+    table
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{array::*, bitmap::Bitmap, datatypes::*};
+    use crate::{array::*, bitmap::Bitmap, datatypes::*, error::Result};
 
     use super::*;
     use std::sync::Arc;
@@ -96,7 +94,7 @@ mod tests {
             ],
         )?;
 
-        let table = write(&[batch])?;
+        let table = write(&[batch]);
 
         let expected = vec![
             "+---+-----+",
@@ -117,7 +115,7 @@ mod tests {
     }
 
     #[test]
-    fn test_write_null() {
+    fn test_write_null() -> Result<()> {
         let schema = Arc::new(Schema::new(vec![
             Field::new("a", DataType::Utf8, true),
             Field::new("b", DataType::Int32, true),
@@ -132,9 +130,9 @@ mod tests {
             .collect();
 
         // define data (null)
-        let batch = RecordBatch::try_new(schema, arrays).unwrap();
+        let batch = RecordBatch::try_new(schema, arrays)?;
 
-        let table = write(&[batch]).unwrap();
+        let table = write(&[batch]);
 
         let expected = vec![
             "+---+---+---+",
@@ -150,6 +148,7 @@ mod tests {
         let actual: Vec<&str> = table.lines().collect();
 
         assert_eq!(expected, actual, "Actual result:\n{:#?}", table);
+        Ok(())
     }
 
     #[test]
@@ -165,7 +164,7 @@ mod tests {
 
         let batch = RecordBatch::try_new(schema, vec![array])?;
 
-        let table = write(&[batch])?;
+        let table = write(&[batch]);
 
         let expected = vec![
             "+-------+",
@@ -198,7 +197,7 @@ mod tests {
             )]));
             let batch = RecordBatch::try_new(schema, vec![array]).unwrap();
 
-            let table = write(&[batch]).expect("formatting batches");
+            let table = write(&[batch]);
 
             let expected = $EXPECTED_RESULT;
             let actual: Vec<&str> = table.lines().collect();
@@ -220,6 +219,24 @@ mod tests {
         check_datetime!(
             i64,
             DataType::Timestamp(TimeUnit::Second, None),
+            11111111,
+            expected
+        );
+    }
+
+    #[test]
+    fn test_write_timestamp_second_with_tz() {
+        let expected = vec![
+            "+-------------------------+",
+            "| f                       |",
+            "+-------------------------+",
+            "| 1970-05-09 14:25:11 UTC |",
+            "|                         |",
+            "+-------------------------+",
+        ];
+        check_datetime!(
+            i64,
+            DataType::Timestamp(TimeUnit::Second, Some("UTC".to_string())),
             11111111,
             expected
         );
@@ -391,7 +408,7 @@ mod tests {
 
         let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(array)])?;
 
-        let table = write(&[batch])?;
+        let table = write(&[batch]);
 
         let expected = vec![
             "+--------------+",
