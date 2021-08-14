@@ -33,7 +33,7 @@ fn as_slice_offset_middle() {
 }
 
 #[test]
-fn test_debug() {
+fn debug() {
     let b = Bitmap::from([true, true, false, true, true, true, true, true, true]);
     let b = b.slice(2, 7);
 

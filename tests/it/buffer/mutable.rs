@@ -135,7 +135,7 @@ fn to_buffer() {
 }
 
 #[test]
-fn test_debug() {
+fn debug() {
     let buffer = MutableBuffer::<i32>::from(&[0, 1, 2, 3]);
     let a = format!("{:?}", buffer);
     assert_eq!(a, "[0, 1, 2, 3]")

@@ -6,7 +6,7 @@ mod slice_iterator;
 mod zip_validity;
 
 #[test]
-fn test_get_bit() {
+fn get_bit_basics() {
     let input: &[u8] = &[
         0b00000000, 0b00000001, 0b00000010, 0b00000100, 0b00001000, 0b00010000, 0b00100000,
         0b01000000, 0b11111111,
@@ -30,7 +30,7 @@ fn test_get_bit() {
 }
 
 #[test]
-fn test_null_count() {
+fn null_count_basics() {
     let input: &[u8] = &[
         0b01001001, 0b00000001, 0b00000010, 0b00000100, 0b00001000, 0b00010000, 0b00100000,
         0b01000000, 0b11111111,

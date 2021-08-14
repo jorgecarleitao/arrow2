@@ -1,7 +1,7 @@
 use arrow2::bitmap::{Bitmap, MutableBitmap};
 
 #[test]
-fn test_trusted_len() {
+fn trusted_len() {
     let data = vec![true; 65];
     let bitmap = MutableBitmap::from_trusted_len_iter(data.into_iter());
     let bitmap: Bitmap = bitmap.into();
@@ -11,7 +11,7 @@ fn test_trusted_len() {
 }
 
 #[test]
-fn test_trusted_len_small() {
+fn trusted_len_small() {
     let data = vec![true; 7];
     let bitmap = MutableBitmap::from_trusted_len_iter(data.into_iter());
     let bitmap: Bitmap = bitmap.into();
@@ -21,7 +21,7 @@ fn test_trusted_len_small() {
 }
 
 #[test]
-fn test_push() {
+fn push() {
     let mut bitmap = MutableBitmap::new();
     bitmap.push(true);
     bitmap.push(false);
@@ -36,7 +36,7 @@ fn test_push() {
 }
 
 #[test]
-fn test_push_small() {
+fn push_small() {
     let mut bitmap = MutableBitmap::new();
     bitmap.push(true);
     bitmap.push(true);
@@ -48,7 +48,7 @@ fn test_push_small() {
 }
 
 #[test]
-fn test_push_exact_zeros() {
+fn push_exact_zeros() {
     let mut bitmap = MutableBitmap::new();
     for _ in 0..8 {
         bitmap.push(false)
@@ -60,7 +60,7 @@ fn test_push_exact_zeros() {
 }
 
 #[test]
-fn test_push_exact_ones() {
+fn push_exact_ones() {
     let mut bitmap = MutableBitmap::new();
     for _ in 0..8 {
         bitmap.push(true)
@@ -70,7 +70,7 @@ fn test_push_exact_ones() {
 }
 
 #[test]
-fn test_capacity() {
+fn capacity() {
     let b = MutableBitmap::with_capacity(10);
     assert_eq!(b.capacity(), 512);
 
@@ -83,7 +83,7 @@ fn test_capacity() {
 }
 
 #[test]
-fn test_capacity_push() {
+fn capacity_push() {
     let mut b = MutableBitmap::with_capacity(512);
     (0..512).for_each(|_| b.push(true));
     assert_eq!(b.capacity(), 512);
@@ -92,7 +92,7 @@ fn test_capacity_push() {
 }
 
 #[test]
-fn test_extend() {
+fn extend() {
     let mut b = MutableBitmap::new();
 
     let iter = (0..512).map(|i| i % 6 == 0);
@@ -104,7 +104,7 @@ fn test_extend() {
 }
 
 #[test]
-fn test_extend_offset() {
+fn extend_offset() {
     let mut b = MutableBitmap::new();
     b.push(true);
 
@@ -119,7 +119,7 @@ fn test_extend_offset() {
 }
 
 #[test]
-fn test_set() {
+fn set() {
     let mut bitmap = MutableBitmap::from_len_zeroed(12);
     bitmap.set(0, true);
     assert!(bitmap.get(0));
@@ -139,7 +139,7 @@ fn test_set() {
 }
 
 #[test]
-fn test_extend_from_bitmap() {
+fn extend_from_bitmap() {
     let other = Bitmap::from(&[true, false, true]);
     let mut bitmap = MutableBitmap::new();
 
@@ -157,7 +157,7 @@ fn test_extend_from_bitmap() {
 }
 
 #[test]
-fn test_debug() {
+fn debug() {
     let mut b = MutableBitmap::new();
     assert_eq!(format!("{:?}", b), "[]");
     b.push(true);
