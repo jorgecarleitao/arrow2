@@ -188,7 +188,7 @@ impl Display for dyn Array {
             DataType::LargeList(_) => fmt_dyn!(self, ListArray::<i64>, f),
             DataType::FixedSizeList(_, _) => fmt_dyn!(self, FixedSizeListArray, f),
             DataType::Struct(_) => fmt_dyn!(self, StructArray, f),
-            DataType::Union(_, _, _) => unimplemented!(),
+            DataType::Union(_, _, _) => fmt_dyn!(self, UnionArray, f),
             DataType::Dictionary(key_type, _) => match key_type.as_ref() {
                 DataType::Int8 => fmt_dyn!(self, DictionaryArray::<i8>, f),
                 DataType::Int16 => fmt_dyn!(self, DictionaryArray::<i16>, f),

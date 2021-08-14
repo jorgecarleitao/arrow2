@@ -1,18 +1,20 @@
 use std::{collections::HashMap, sync::Arc};
 
 use crate::{
+    array::{display::get_value_display, display_fmt, new_empty_array, Array},
     bitmap::Bitmap,
     buffer::Buffer,
     datatypes::{DataType, Field},
     scalar::{new_scalar, Scalar},
 };
 
-use super::{new_empty_array, Array};
-
 mod ffi;
 mod iterator;
 
-/// A union
+type FieldEntry = (usize, Arc<dyn Array>);
+
+/// [`UnionArray`] represents an array whose each slot can contain different values.
+///
 // How to read a value at slot i:
 // ```
 // let index = self.types()[i] as usize;
@@ -24,7 +26,8 @@ mod iterator;
 #[derive(Debug, Clone)]
 pub struct UnionArray {
     types: Buffer<i8>,
-    fields_hash: HashMap<i8, Arc<dyn Array>>,
+    // None represents when there is no typeid
+    fields_hash: Option<HashMap<i8, FieldEntry>>,
     fields: Vec<Arc<dyn Array>>,
     offsets: Option<Buffer<i32>>,
     data_type: DataType,
@@ -47,7 +50,7 @@ impl UnionArray {
 
             Self {
                 data_type,
-                fields_hash: HashMap::new(),
+                fields_hash: None,
                 fields,
                 offsets,
                 types: Buffer::new(),
@@ -65,10 +68,6 @@ impl UnionArray {
         offsets: Option<Buffer<i32>>,
     ) -> Self {
         let fields_hash = if let DataType::Union(f, ids, is_sparse) = &data_type {
-            let ids: Vec<i8> = ids
-                .as_ref()
-                .map(|x| x.iter().map(|x| *x as i8).collect())
-                .unwrap_or_else(|| (0..f.len() as i8).collect());
             if f.len() != fields.len() {
                 panic!(
                     "The number of `fields` must equal the number of fields in the Union DataType"
@@ -84,7 +83,14 @@ impl UnionArray {
             if offsets.is_none() != *is_sparse {
                 panic!("Sparsness flag must equal to noness of offsets in UnionArray")
             }
-            ids.into_iter().zip(fields.iter().cloned()).collect()
+            ids.as_ref().map(|ids| {
+                ids.iter()
+                    .map(|x| *x as i8)
+                    .enumerate()
+                    .zip(fields.iter().cloned())
+                    .map(|((i, type_), field)| (type_, (i, field)))
+                    .collect()
+            })
         } else {
             panic!("Union struct must be created with the corresponding Union DataType")
         };
@@ -113,15 +119,40 @@ impl UnionArray {
         &self.types
     }
 
-    pub fn value(&self, index: usize) -> Box<dyn Scalar> {
-        let field_index = self.types()[index];
-        let field = self.fields_hash[&field_index].as_ref();
-        let offset = self
-            .offsets()
+    #[inline]
+    fn field(&self, type_: i8) -> &Arc<dyn Array> {
+        self.fields_hash
+            .as_ref()
+            .map(|x| &x[&type_].1)
+            .unwrap_or_else(|| &self.fields[type_ as usize])
+    }
+
+    #[inline]
+    fn field_slot(&self, index: usize) -> usize {
+        self.offsets()
             .as_ref()
             .map(|x| x[index] as usize)
-            .unwrap_or(index);
-        new_scalar(field, offset)
+            .unwrap_or(index)
+    }
+
+    /// Returns the index and slot of the field to select from `self.fields`.
+    pub fn index(&self, index: usize) -> (usize, usize) {
+        let type_ = self.types()[index];
+        let field_index = self
+            .fields_hash
+            .as_ref()
+            .map(|x| x[&type_].0)
+            .unwrap_or_else(|| type_ as usize);
+        let index = self.field_slot(index);
+        (field_index, index)
+    }
+
+    /// Returns the slot `index` as a [`Scalar`].
+    pub fn value(&self, index: usize) -> Box<dyn Scalar> {
+        let type_ = self.types()[index];
+        let field = self.field(type_);
+        let index = self.field_slot(index);
+        new_scalar(field.as_ref(), index)
     }
 
     /// Returns a slice of this [`UnionArray`].
@@ -179,5 +210,44 @@ impl UnionArray {
         } else {
             panic!("Wrong datatype passed to UnionArray.")
         }
+    }
+}
+
+impl std::fmt::Display for UnionArray {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let display = get_value_display(self);
+        let new_lines = false;
+        let head = "UnionArray";
+        let iter = self
+            .iter()
+            .enumerate()
+            .map(|(i, x)| if x.is_valid() { Some(display(i)) } else { None });
+        display_fmt(iter, head, f, new_lines)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{array::*, buffer::Buffer, datatypes::*, error::Result};
+
+    #[test]
+    fn display() -> Result<()> {
+        let fields = vec![
+            Field::new("a", DataType::Int32, true),
+            Field::new("b", DataType::Utf8, true),
+        ];
+        let data_type = DataType::Union(fields, None, true);
+        let types = Buffer::from(&[0, 0, 1]);
+        let fields = vec![
+            Arc::new(Int32Array::from(&[Some(1), None, Some(2)])) as Arc<dyn Array>,
+            Arc::new(Utf8Array::<i32>::from(&[Some("a"), Some("b"), Some("c")])) as Arc<dyn Array>,
+        ];
+
+        let array = UnionArray::from_data(data_type, types, fields, None);
+
+        assert_eq!(format!("{}", array), "UnionArray[1, , c]");
+
+        Ok(())
     }
 }
