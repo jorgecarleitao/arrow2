@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
 use arrow2::{
-    array::*, bitmap::Bitmap, datatypes::*, error::Result, io::print::*, record_batch::RecordBatch,
+    array::*, bitmap::Bitmap, buffer::Buffer, datatypes::*, error::Result, io::print::*,
+    record_batch::RecordBatch,
 };
 
 #[test]

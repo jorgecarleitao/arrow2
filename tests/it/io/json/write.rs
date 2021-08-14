@@ -5,7 +5,7 @@ use arrow2::{
     bitmap::Bitmap,
     buffer::Buffer,
     datatypes::{DataType, Field, Schema},
-    io::json::write::*,
+    io::json::LineDelimitedWriter,
     record_batch::RecordBatch,
 };
 
