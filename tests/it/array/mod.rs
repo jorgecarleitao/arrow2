@@ -1,5 +1,9 @@
 mod binary;
 mod boolean;
+mod dictionary;
 mod equal;
+mod fixed_size_binary;
+mod fixed_size_list;
+mod list;
 mod primitive;
 mod utf8;

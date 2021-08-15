@@ -397,7 +397,7 @@ pub use equal::equal;
 pub use binary::{BinaryArray, MutableBinaryArray};
 pub use boolean::{BooleanArray, MutableBooleanArray};
 pub use dictionary::{DictionaryArray, DictionaryKey, MutableDictionaryArray};
-pub use fixed_size_binary::FixedSizeBinaryArray;
+pub use fixed_size_binary::{FixedSizeBinaryArray, MutableFixedSizeBinaryArray};
 pub use fixed_size_list::{FixedSizeListArray, MutableFixedSizeListArray};
 pub use list::{ListArray, MutableListArray};
 pub use null::NullArray;
