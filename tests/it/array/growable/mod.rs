@@ -5,7 +5,7 @@ mod fixed_binary;
 mod list;
 mod null;
 mod primitive;
-mod structure;
+mod struct_;
 mod utf8;
 
 /*
