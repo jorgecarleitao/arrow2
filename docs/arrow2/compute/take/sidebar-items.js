@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["can_take","Checks if an array of type `datatype` can perform take operation"],["take",""]]});
