@@ -392,12 +392,13 @@ pub mod growable;
 pub mod ord;
 
 pub use display::get_display;
+pub use equal::equal;
 
 pub use binary::{BinaryArray, MutableBinaryArray};
 pub use boolean::{BooleanArray, MutableBooleanArray};
 pub use dictionary::{DictionaryArray, DictionaryKey, MutableDictionaryArray};
-pub use fixed_size_binary::FixedSizeBinaryArray;
-pub use fixed_size_list::FixedSizeListArray;
+pub use fixed_size_binary::{FixedSizeBinaryArray, MutableFixedSizeBinaryArray};
+pub use fixed_size_list::{FixedSizeListArray, MutableFixedSizeListArray};
 pub use list::{ListArray, MutableListArray};
 pub use null::NullArray;
 pub use primitive::*;
@@ -473,57 +474,6 @@ pub trait IterableListArray: Array {
 pub unsafe trait GenericBinaryArray<O: Offset>: Array {
     fn values(&self) -> &[u8];
     fn offsets(&self) -> &[O];
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::datatypes::*;
-
-    #[test]
-    fn nulls() {
-        let datatypes = vec![
-            DataType::Int32,
-            DataType::Float64,
-            DataType::Utf8,
-            DataType::Binary,
-            DataType::List(Box::new(Field::new("a", DataType::Binary, true))),
-        ];
-        let a = datatypes
-            .into_iter()
-            .all(|x| new_null_array(x, 10).null_count() == 10);
-        assert!(a);
-    }
-
-    #[test]
-    fn empty() {
-        let datatypes = vec![
-            DataType::Int32,
-            DataType::Float64,
-            DataType::Utf8,
-            DataType::Binary,
-            DataType::List(Box::new(Field::new("a", DataType::Binary, true))),
-            DataType::Union(vec![Field::new("a", DataType::Binary, true)], None, true),
-            DataType::Union(vec![Field::new("a", DataType::Binary, true)], None, false),
-        ];
-        let a = datatypes.into_iter().all(|x| new_empty_array(x).len() == 0);
-        assert!(a);
-    }
-
-    #[test]
-    fn test_clone() {
-        let datatypes = vec![
-            DataType::Int32,
-            DataType::Float64,
-            DataType::Utf8,
-            DataType::Binary,
-            DataType::List(Box::new(Field::new("a", DataType::Binary, true))),
-        ];
-        let a = datatypes
-            .into_iter()
-            .all(|x| clone(new_null_array(x.clone(), 10).as_ref()) == new_null_array(x, 10));
-        assert!(a);
-    }
 }
 
 // backward compatibility

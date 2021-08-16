@@ -9,3 +9,6 @@ mod ipc;
 
 #[cfg(feature = "io_parquet")]
 mod parquet;
+
+#[cfg(feature = "io_csv")]
+mod csv;

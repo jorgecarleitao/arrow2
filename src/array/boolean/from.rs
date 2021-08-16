@@ -71,26 +71,3 @@ impl<Ptr: std::borrow::Borrow<Option<bool>>> FromIterator<Ptr> for BooleanArray 
         MutableBooleanArray::from_iter(iter).into()
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::array::Array;
-    use crate::error::Result;
-
-    #[test]
-    fn from_trusted_len_iter() -> Result<()> {
-        let iter = std::iter::repeat(true).take(2).map(Some);
-        let a = BooleanArray::from_trusted_len_iter(iter);
-        assert_eq!(a.len(), 2);
-        Ok(())
-    }
-
-    #[test]
-    fn from_iter() -> Result<()> {
-        let iter = std::iter::repeat(true).take(2).map(Some);
-        let a = BooleanArray::from_iter(iter);
-        assert_eq!(a.len(), 2);
-        Ok(())
-    }
-}

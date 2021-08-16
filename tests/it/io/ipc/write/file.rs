@@ -8,7 +8,7 @@ use arrow2::record_batch::RecordBatch;
 
 use crate::io::ipc::common::read_gzip_json;
 
-fn test_round_trip(batch: RecordBatch) -> Result<()> {
+fn round_trip(batch: RecordBatch) -> Result<()> {
     let mut result = Vec::<u8>::new();
 
     // write IPC version 5
@@ -178,7 +178,7 @@ fn write_sliced_utf8() -> Result<()> {
     use std::sync::Arc;
     let array = Arc::new(Utf8Array::<i32>::from_slice(["aa", "bb"]).slice(1, 1)) as Arc<dyn Array>;
     let batch = RecordBatch::try_from_iter(vec![("a", array)]).unwrap();
-    test_round_trip(batch)
+    round_trip(batch)
 }
 
 #[test]
@@ -193,5 +193,5 @@ fn write_sliced_list() -> Result<()> {
     array.try_extend(data).unwrap();
     let array = array.into_arc().slice(1, 2).into();
     let batch = RecordBatch::try_from_iter(vec![("a", array)]).unwrap();
-    test_round_trip(batch)
+    round_trip(batch)
 }

@@ -253,27 +253,3 @@ impl<O: Offset, P: AsRef<str>> FromIterator<Option<P>> for Utf8Array<O> {
         MutableUtf8Array::from_iter(iter).into()
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use crate::array::Array;
-
-    use super::*;
-
-    #[test]
-    fn test_from() {
-        let array = Utf8Array::<i32>::from(&[Some("hello"), Some(" "), None]);
-
-        let a = array.validity().as_ref().unwrap();
-        assert_eq!(a, &Bitmap::from([true, true, false]));
-    }
-
-    #[test]
-    fn test_from_iter_values() {
-        let b = Utf8Array::<i32>::from_iter_values(vec!["a", "b", "cc"]);
-
-        let offsets = Buffer::from(&[0, 1, 2, 4]);
-        let values = Buffer::from("abcc".as_bytes());
-        assert_eq!(b, Utf8Array::<i32>::from_data(offsets, values, None));
-    }
-}
