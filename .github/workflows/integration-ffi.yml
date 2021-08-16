@@ -1,10 +1,9 @@
-name: FFI integration
+name: Integration FFI
 
 on: [push, pull_request]
 
 jobs:
-  # test FFI against the C-Data interface exposed by pyarrow
-  pyarrow-integration-test:
+  docker:
     name: Test
     runs-on: ubuntu-latest
     steps:
@@ -23,7 +22,6 @@ jobs:
         uses: actions/cache@v2
         with:
           path: /home/runner/target
-          # this key is not equal because maturin uses different compilation flags.
           key: ${{ runner.os }}-amd64-target-maturin-cache
       - uses: actions/setup-python@v2
         with:
