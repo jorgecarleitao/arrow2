@@ -39,6 +39,13 @@ impl MutableBitmap {
         }
     }
 
+    /// Empties the [`MutableBitmap`].
+    #[inline]
+    pub fn clear(&mut self) {
+        self.length = 0;
+        self.buffer.clear();
+    }
+
     /// Initializes a zeroed [`MutableBitmap`].
     #[inline]
     pub fn from_len_zeroed(length: usize) -> Self {
