@@ -133,19 +133,21 @@ impl Decoder {
 /// use std::sync::Arc;
 /// use arrow2::datatypes::{DataType, Field, Schema};
 /// use arrow2::io::json;
-/// use std::fs::File;
-/// use std::io::BufReader;
+/// use std::io::{Cursor, BufReader};
 ///
 /// let schema = Arc::new(Schema::new(vec![
-///     Field::new("a", DataType::Float64, false),
-///     Field::new("b", DataType::Float64, false),
-///     Field::new("c", DataType::Float64, false),
+///     Field::new("a", DataType::Int64, true),
+///     Field::new("b", DataType::Float32, true),
+///     Field::new("c", DataType::Boolean, true),
+///     Field::new("d", DataType::Utf8, true),
 /// ]));
 ///
-/// let file = File::open("test/data/basic.json").unwrap();
-///
-/// let mut json = json::Reader::new(BufReader::new(file), schema, 1024, None);
-/// let batch = json.next().unwrap().unwrap();
+/// let data = r#"{"a":1, "b":2.0, "c":false, "d":"4"}
+/// {"a":-10, "b":-3.5, "c":true, "d":null}
+/// {"a":100000000, "b":0.6, "d":"text"}"#;
+/// let mut reader = BufReader::new(Cursor::new(data));
+/// let mut reader = json::Reader::new(&mut reader, schema, 1024, None);
+/// let batch = reader.next().unwrap().unwrap();
 /// ```
 #[derive(Debug)]
 pub struct Reader<R: Read> {

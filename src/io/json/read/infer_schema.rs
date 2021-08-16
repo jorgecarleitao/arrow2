@@ -170,20 +170,18 @@ fn generate_schema(spec: HashMap<String, HashSet<DataType>>) -> Result<Schema> {
 ///
 /// # Examples
 /// ```
-/// use std::fs::File;
-/// use std::io::{BufReader, SeekFrom, Seek};
-/// use flate2::read::GzDecoder;
+/// use std::io::{BufReader, Cursor, SeekFrom, Seek};
 /// use arrow2::io::json::infer_json_schema;
 ///
-/// let mut file = File::open("test/data/mixed_arrays.json.gz").unwrap();
+/// let data = r#"{"a":1, "b":[2.0, 1.3, -6.1], "c":[false, true], "d":4.1}
+/// {"a":-10, "b":[2.0, 1.3, -6.1], "c":null, "d":null}
+/// {"a":2, "b":[2.0, null, -6.1], "c":[false, null], "d":"text"}
+/// {"a":3, "b":4, "c": true, "d":[1, false, "array", 2.4]}
+/// "#;
 ///
 /// // file's cursor's offset at 0
-/// let mut reader = BufReader::new(GzDecoder::new(&file));
+/// let mut reader = BufReader::new(Cursor::new(data));
 /// let inferred_schema = infer_json_schema(&mut reader, None).unwrap();
-/// // cursor's offset at end of file
-///
-/// // seek back to start so that the original file is usable again
-/// file.seek(SeekFrom::Start(0)).unwrap();
 /// ```
 pub fn infer_json_schema<R: Read>(
     reader: &mut BufReader<R>,
@@ -345,14 +343,17 @@ where
 /// # Examples
 /// ```
 /// use std::fs::File;
-/// use std::io::BufReader;
+/// use std::io::{BufReader, Cursor};
 /// use arrow2::io::json::infer_json_schema_from_seekable;
 ///
-/// let file = File::open("test/data/mixed_arrays.json").unwrap();
-/// // file's cursor's offset at 0
-/// let mut reader = BufReader::new(file);
+/// let data = r#"{"a":1, "b":[2.0, 1.3, -6.1], "c":[false, true], "d":4.1}
+/// {"a":-10, "b":[2.0, 1.3, -6.1], "c":null, "d":null}
+/// {"a":2, "b":[2.0, null, -6.1], "c":[false, null], "d":"text"}
+/// {"a":3, "b":4, "c": true, "d":[1, false, "array", 2.4]}
+/// "#;
+/// let mut reader = BufReader::new(Cursor::new(data));
 /// let inferred_schema = infer_json_schema_from_seekable(&mut reader, None).unwrap();
-/// // file's cursor's offset automatically set at 0
+/// // cursor's position automatically set at 0
 /// ```
 pub fn infer_json_schema_from_seekable<R: Read + Seek>(
     reader: &mut BufReader<R>,
