@@ -8,7 +8,22 @@ use arrow2::io::csv::read::*;
 
 #[test]
 fn read() -> Result<()> {
-    let mut reader = ReaderBuilder::new().from_path("test/data/uk_cities_with_headers.csv")?;
+    let data = r#"city,lat,lng
+"Elgin, Scotland, the UK",57.653484,-3.335724
+"Stoke-on-Trent, Staffordshire, the UK",53.002666,-2.179404
+"Solihull, Birmingham, UK",52.412811,-1.778197
+"Cardiff, Cardiff county, UK",51.481583,-3.179090
+"Eastbourne, East Sussex, UK",50.768036,0.290472
+"Oxford, Oxfordshire, UK",51.752022,-1.257677
+"London, UK",51.509865,-0.118092
+"Swindon, Swindon, UK",51.568535,-1.772232
+"Gravesend, Kent, UK",51.441883,0.370759
+"Northampton, Northamptonshire, UK",52.240479,-0.902656
+"Rugby, Warwickshire, UK",52.370876,-1.265032
+"Sutton Coldfield, West Midlands, UK",52.570385,-1.824042
+"Harlow, Essex, UK",51.772938,0.102310
+"Aberdeen, Aberdeen City, UK",57.149651,-2.099075"#;
+    let mut reader = ReaderBuilder::new().from_reader(Cursor::new(data));
 
     let schema = Arc::new(infer_schema(&mut reader, None, true, &infer)?);
 
@@ -26,7 +41,7 @@ fn read() -> Result<()> {
     let batch_schema = batch.schema();
 
     assert_eq!(&schema, batch_schema);
-    assert_eq!(37, batch.num_rows());
+    assert_eq!(14, batch.num_rows());
     assert_eq!(3, batch.num_columns());
 
     let lat = batch

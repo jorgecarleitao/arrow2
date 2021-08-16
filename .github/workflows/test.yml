@@ -159,11 +159,11 @@ jobs:
         env:
           RUST_BACKTRACE: full
           RUST_LOG: 'trace'
-        # --skip io: miri does not handle IO very well, unfortunately.
+        # --skip io: miri can't handle opening of files, so we skip those
         run: |
           cargo miri setup
           cargo clean
-          cargo miri test -- --skip io
+          cargo miri test -- --skip io::parquet --skip io::ipc
 
   coverage:
     name: Coverage
