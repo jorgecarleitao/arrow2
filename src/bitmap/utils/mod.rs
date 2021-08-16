@@ -4,6 +4,7 @@ mod iterator;
 mod slice_iterator;
 mod zip_validity;
 
+pub(crate) use chunk_iterator::merge_reversed;
 pub use chunk_iterator::{BitChunk, BitChunkIterExact, BitChunks, BitChunksExact};
 pub use fmt::fmt;
 pub use iterator::BitmapIter;

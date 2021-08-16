@@ -55,8 +55,9 @@ impl<'a> Growable<'a> for GrowableBoolean<'a> {
 
         let array = self.arrays[index];
         let values = array.values();
-        let iter = (start..start + len).map(|i| values.get_bit(i));
-        unsafe { self.values.extend_from_trusted_len_iter_unchecked(iter) };
+
+        let (slice, offset, _) = values.as_slice();
+        self.values.extend_from_slice(slice, start + offset, len);
     }
 
     fn extend_validity(&mut self, additional: usize) {
