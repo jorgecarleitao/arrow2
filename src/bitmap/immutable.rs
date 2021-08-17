@@ -26,7 +26,8 @@ pub struct Bitmap {
 
 impl std::fmt::Debug for Bitmap {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        fmt(&self.bytes, self.offset, self.length, f)
+        let (bytes, offset, len) = self.as_slice();
+        fmt(bytes, offset, len, f)
     }
 }
 
@@ -111,8 +112,8 @@ impl Bitmap {
     /// exceeds the allocated capacity of `self`.
     #[inline]
     pub fn slice(mut self, offset: usize, length: usize) -> Self {
+        assert!(offset + length <= self.length);
         self.offset += offset;
-        assert!(self.offset + length <= self.bytes.len() * 8);
         self.length = length;
         self.null_count = null_count(&self.bytes, self.offset, self.length);
         self

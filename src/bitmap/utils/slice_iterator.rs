@@ -87,7 +87,7 @@ impl<'a> Iterator for SlicesIterator<'a> {
                 // at the beginning of a byte => try to skip it all together
                 match (self.on_region, self.current_byte) {
                     (true, &255u8) => {
-                        self.len += 8;
+                        self.len = std::cmp::min(self.max_len - self.start, self.len + 8);
                         match self.values.next() {
                             Some(v) => self.current_byte = v,
                             None => return self.finish(),
@@ -95,7 +95,7 @@ impl<'a> Iterator for SlicesIterator<'a> {
                         continue;
                     }
                     (false, &0) => {
-                        self.len += 8;
+                        self.len = std::cmp::min(self.max_len - self.start, self.len + 8);
                         match self.values.next() {
                             Some(v) => self.current_byte = v,
                             None => return self.finish(),
