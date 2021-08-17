@@ -6,5 +6,3 @@ mod ffi;
 
 mod io;
 mod test_util;
-
-mod filter;

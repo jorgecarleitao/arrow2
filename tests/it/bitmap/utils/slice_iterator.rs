@@ -1,3 +1,8 @@
+use rand::distributions::{Bernoulli, Uniform};
+use rand::prelude::StdRng;
+use rand::Rng;
+use rand::SeedableRng;
+
 use arrow2::bitmap::utils::SlicesIterator;
 use arrow2::bitmap::Bitmap;
 
@@ -136,4 +141,29 @@ fn remainder_1() {
     let iter = SlicesIterator::new(&values);
     let chunks = iter.collect::<Vec<_>>();
     assert_eq!(chunks, vec![(2, 1), (4, 1)]);
+}
+
+#[test]
+fn filter_slices() {
+    let mut rng = StdRng::seed_from_u64(42);
+    let length = 500;
+
+    let mask: Bitmap = (0..length)
+        .map(|_| {
+            let v: bool = (&mut rng).sample(Bernoulli::new(0.5).unwrap());
+            v
+        })
+        .collect();
+
+    for offset in 100usize..(length - 1) {
+        let len = (&mut rng).sample(Uniform::new(0, length - offset));
+        let mask_s = mask.clone().slice(offset, len);
+
+        let iter = SlicesIterator::new(&mask_s);
+        iter.for_each(|(start, slice_len)| {
+            if start + slice_len > len {
+                panic!("Fail")
+            }
+        });
+    }
 }
