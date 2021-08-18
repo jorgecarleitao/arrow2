@@ -78,10 +78,8 @@ impl MutableBitmap {
         if self.length % 8 == 0 {
             self.buffer.push(0);
         }
-        if value {
-            let byte = self.buffer.as_mut_slice().last_mut().unwrap();
-            *byte = set(*byte, self.length % 8, true);
-        };
+        let byte = self.buffer.as_mut_slice().last_mut().unwrap();
+        *byte = set(*byte, self.length % 8, value);
         self.length += 1;
     }
 
@@ -216,11 +214,6 @@ impl MutableBitmap {
     pub fn from_buffer(buffer: MutableBuffer<u8>, length: usize) -> Self {
         assert!(length <= buffer.len() * 8);
         Self { buffer, length }
-    }
-
-    /// Returns an iterator over the values of the [`MutableBitmap`].
-    fn iter(&self) -> BitmapIter {
-        BitmapIter::new(&self.buffer, 0, self.len())
     }
 }
 
@@ -544,5 +537,21 @@ impl MutableBitmap {
 impl Default for MutableBitmap {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl<'a> IntoIterator for &'a MutableBitmap {
+    type Item = bool;
+    type IntoIter = BitmapIter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        BitmapIter::<'a>::new(&self.buffer, 0, self.length)
+    }
+}
+
+impl<'a> MutableBitmap {
+    /// constructs a new iterator over the values of [`MutableBitmap`].
+    pub fn iter(&'a self) -> BitmapIter<'a> {
+        BitmapIter::<'a>::new(&self.buffer, 0, self.length)
     }
 }
