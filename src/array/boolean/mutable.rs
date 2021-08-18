@@ -25,6 +25,13 @@ impl From<MutableBooleanArray> for BooleanArray {
     }
 }
 
+impl<P: AsRef<[Option<bool>]>> From<P> for MutableBooleanArray {
+    /// Creates a new [`MutableBooleanArray`] out of a slice of Optional `bool`.
+    fn from(slice: P) -> Self {
+        Self::from_trusted_len_iter(slice.as_ref().iter().map(|x| x.as_ref()))
+    }
+}
+
 impl Default for MutableBooleanArray {
     fn default() -> Self {
         Self::new()
@@ -74,11 +81,10 @@ impl MutableBooleanArray {
     }
 
     fn init_validity(&mut self) {
-        self.validity = Some(MutableBitmap::from_trusted_len_iter(
-            std::iter::repeat(true)
-                .take(self.len() - 1)
-                .chain(std::iter::once(false)),
-        ))
+        let mut validity = MutableBitmap::new();
+        validity.extend_constant(self.len(), true);
+        validity.set(self.len() - 1, false);
+        self.validity = Some(validity)
     }
 
     /// Converts itself into an [`Array`].
@@ -358,5 +364,11 @@ impl TryExtend<Option<bool>> for MutableBooleanArray {
     fn try_extend<I: IntoIterator<Item = Option<bool>>>(&mut self, iter: I) -> Result<()> {
         self.extend(iter);
         Ok(())
+    }
+}
+
+impl PartialEq for MutableBooleanArray {
+    fn eq(&self, other: &Self) -> bool {
+        self.iter().eq(other.iter())
     }
 }

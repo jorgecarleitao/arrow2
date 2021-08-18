@@ -125,8 +125,7 @@ impl std::fmt::Display for BooleanArray {
 
 impl<P: AsRef<[Option<bool>]>> From<P> for BooleanArray {
     /// Creates a new [`BooleanArray`] out of a slice of Optional `bool`.
-    #[inline]
     fn from(slice: P) -> Self {
-        Self::from_trusted_len_iter(slice.as_ref().iter().map(|x| x.as_ref()))
+        MutableBooleanArray::from(slice).into()
     }
 }
