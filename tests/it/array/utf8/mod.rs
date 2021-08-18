@@ -1,4 +1,4 @@
-use arrow2::{array::*, bitmap::Bitmap, buffer::Buffer};
+use arrow2::{array::*, bitmap::Bitmap, buffer::Buffer, error::Result};
 
 mod mutable;
 
@@ -54,8 +54,41 @@ fn from() {
 }
 
 #[test]
+fn from_slice() {
+    let b = Utf8Array::<i32>::from_slice(&["a", "b", "cc"]);
+
+    let offsets = Buffer::from(&[0, 1, 2, 4]);
+    let values = Buffer::from("abcc".as_bytes());
+    assert_eq!(b, Utf8Array::<i32>::from_data(offsets, values, None));
+}
+
+#[test]
 fn from_iter_values() {
-    let b = Utf8Array::<i32>::from_iter_values(vec!["a", "b", "cc"]);
+    let b = Utf8Array::<i32>::from_iter_values(["a", "b", "cc"].iter());
+
+    let offsets = Buffer::from(&[0, 1, 2, 4]);
+    let values = Buffer::from("abcc".as_bytes());
+    assert_eq!(b, Utf8Array::<i32>::from_data(offsets, values, None));
+}
+
+#[test]
+fn from_trusted_len_iter() {
+    let b =
+        Utf8Array::<i32>::from_trusted_len_iter(vec![Some("a"), Some("b"), Some("cc")].into_iter());
+
+    let offsets = Buffer::from(&[0, 1, 2, 4]);
+    let values = Buffer::from("abcc".as_bytes());
+    assert_eq!(b, Utf8Array::<i32>::from_data(offsets, values, None));
+}
+
+#[test]
+fn try_from_trusted_len_iter() {
+    let b = Utf8Array::<i32>::try_from_trusted_len_iter(
+        vec![Some("a"), Some("b"), Some("cc")]
+            .into_iter()
+            .map(Result::Ok),
+    )
+    .unwrap();
 
     let offsets = Buffer::from(&[0, 1, 2, 4]);
     let values = Buffer::from("abcc".as_bytes());

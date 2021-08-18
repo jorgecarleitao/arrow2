@@ -258,7 +258,8 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
 }
 
 /// Creates a new [`Array`] of [`DataType`] `data_type` and `length`.
-/// The array is guaranteed to have [`Array::null_count`] equal to [`Array::len`].
+/// The array is guaranteed to have [`Array::null_count`] equal to [`Array::len`]
+/// for all types except Union, which does not have a validity.
 pub fn new_null_array(data_type: DataType, length: usize) -> Box<dyn Array> {
     match data_type {
         DataType::Null => Box::new(NullArray::new_null(length)),

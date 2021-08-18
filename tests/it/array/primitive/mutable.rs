@@ -3,6 +3,7 @@ use arrow2::{
     bitmap::{Bitmap, MutableBitmap},
     buffer::MutableBuffer,
     datatypes::DataType,
+    error::Result,
 };
 use std::iter::FromIterator;
 
@@ -139,4 +140,11 @@ fn set_values() {
     let mut a = MutablePrimitiveArray::<i32>::from_slice([1, 2]);
     a.set_values(MutableBuffer::from([1, 3]));
     assert_eq!(a.values().as_slice(), [1, 3]);
+}
+
+#[test]
+fn try_from_trusted_len_iter() {
+    let iter = std::iter::repeat(Some(1)).take(2).map(Result::Ok);
+    let a = MutablePrimitiveArray::try_from_trusted_len_iter(iter).unwrap();
+    assert_eq!(a, MutablePrimitiveArray::from([Some(1), Some(1)]));
 }
