@@ -50,6 +50,9 @@ impl<'a> IntoIterator for &'a FixedSizeBinaryArray {
 impl<'a> FixedSizeBinaryArray {
     /// constructs a new iterator
     pub fn iter(&'a self) -> ZipValidity<'a, &'a [u8], FixedSizeBinaryValuesIter<'a>> {
-        zip_validity(FixedSizeBinaryValuesIter::new(self), &self.validity)
+        zip_validity(
+            FixedSizeBinaryValuesIter::new(self),
+            self.validity.as_ref().map(|x| x.iter()),
+        )
     }
 }

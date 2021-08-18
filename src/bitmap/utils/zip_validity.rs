@@ -1,4 +1,4 @@
-use crate::{bitmap::Bitmap, trusted_len::TrustedLen};
+use crate::trusted_len::TrustedLen;
 
 use super::BitmapIter;
 
@@ -21,17 +21,14 @@ impl<'a, T, I: Iterator<Item = T> + Clone> Clone for ZipValidity<'a, T, I> {
 }
 
 impl<'a, T, I: Iterator<Item = T>> ZipValidity<'a, T, I> {
-    #[inline]
-    pub fn new(values: I, validity: &'a Option<Bitmap>) -> Self {
-        let validity_iter = validity
-            .as_ref()
-            .map(|x| x.iter())
-            .unwrap_or_else(|| BitmapIter::new(&[], 0, 0));
+    pub fn new(values: I, validity: Option<BitmapIter<'a>>) -> Self {
+        let has_validity = validity.as_ref().is_some();
+        let validity_iter = validity.unwrap_or_else(|| BitmapIter::new(&[], 0, 0));
 
         Self {
             values,
             validity_iter,
-            has_validity: validity.is_some(),
+            has_validity,
         }
     }
 }
@@ -75,10 +72,9 @@ impl<'a, T, I: Iterator<Item = T>> std::iter::ExactSizeIterator for ZipValidity<
 unsafe impl<T, I: TrustedLen<Item = T>> TrustedLen for ZipValidity<'_, T, I> {}
 
 /// Returns an iterator adapter that returns Option<T> according to an optional validity.
-#[inline]
 pub fn zip_validity<T, I: Iterator<Item = T>>(
     values: I,
-    validity: &Option<Bitmap>,
+    validity: Option<BitmapIter>,
 ) -> ZipValidity<T, I> {
-    ZipValidity::<T, I>::new(values, validity)
+    ZipValidity::new(values, validity)
 }

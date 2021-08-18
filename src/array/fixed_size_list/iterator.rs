@@ -26,7 +26,10 @@ impl<'a> IntoIterator for &'a FixedSizeListArray {
 impl<'a> FixedSizeListArray {
     /// Returns an iterator of `Option<Box<dyn Array>>`
     pub fn iter(&'a self) -> ZipIter<'a> {
-        zip_validity(ListValuesIter::new(self), &self.validity)
+        zip_validity(
+            ListValuesIter::new(self),
+            self.validity.as_ref().map(|x| x.iter()),
+        )
     }
 
     /// Returns an iterator of `Box<dyn Array>`
