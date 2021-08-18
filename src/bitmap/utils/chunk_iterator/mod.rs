@@ -7,7 +7,7 @@ pub use crate::types::BitChunk;
 pub use chunks_exact::BitChunksExact;
 
 use crate::{trusted_len::TrustedLen, types::BitChunkIter};
-use merge::merge_reversed;
+pub(crate) use merge::merge_reversed;
 
 pub trait BitChunkIterExact<B: BitChunk>: Iterator<Item = B> {
     fn remainder(&self) -> B;

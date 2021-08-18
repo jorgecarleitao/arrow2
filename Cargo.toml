@@ -176,3 +176,11 @@ harness = false
 [[bench]]
 name = "arithmetic_kernels"
 harness = false
+
+[[bench]]
+name = "bitmap"
+harness = false
+
+[[bench]]
+name = "concat"
+harness = false

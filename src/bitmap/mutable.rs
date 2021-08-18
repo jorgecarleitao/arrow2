@@ -1,5 +1,6 @@
 use std::iter::FromIterator;
 
+use crate::bitmap::utils::merge_reversed;
 use crate::{buffer::MutableBuffer, trusted_len::TrustedLen};
 
 use super::utils::{fmt, get_bit, null_count, set, set_bit, BitmapIter};
@@ -37,6 +38,13 @@ impl MutableBitmap {
             buffer: MutableBuffer::new(),
             length: 0,
         }
+    }
+
+    /// Empties the [`MutableBitmap`].
+    #[inline]
+    pub fn clear(&mut self) {
+        self.length = 0;
+        self.buffer.clear();
     }
 
     /// Initializes a zeroed [`MutableBitmap`].
@@ -123,16 +131,63 @@ impl MutableBitmap {
         self.length = len;
     }
 
+    fn extend_set(&mut self, mut additional: usize) {
+        let offset = self.length % 8;
+        let added = if offset != 0 {
+            // offset != 0 => at least one byte in the buffer
+            let last_index = self.buffer.len() - 1;
+            let last = &mut self.buffer[last_index];
+
+            let remaining = 0b11111111u8;
+            let remaining = remaining >> 8usize.saturating_sub(additional);
+            let remaining = remaining << offset;
+            *last |= remaining;
+            std::cmp::min(additional, 8 - offset)
+        } else {
+            0
+        };
+        self.length += added;
+        additional = additional.saturating_sub(added);
+        if additional > 0 {
+            debug_assert_eq!(self.length % 8, 0);
+            let existing = self.buffer.len();
+            let required = (self.length + additional).saturating_add(7) / 8;
+            // add remaining as full bytes
+            self.buffer.extend_from_trusted_len_iter(
+                std::iter::repeat(0b11111111u8).take(required - existing),
+            );
+            self.length += additional;
+        }
+    }
+
+    fn extend_unset(&mut self, mut additional: usize) {
+        let offset = self.length % 8;
+        let added = if offset != 0 {
+            // offset != 0 => at least one byte in the buffer
+            let last_index = self.buffer.len() - 1;
+            let last = &mut self.buffer[last_index];
+            *last &= 0b11111111u8 >> (8 - offset); // unset them
+            std::cmp::min(additional, 8 - offset)
+        } else {
+            0
+        };
+        self.length += added;
+        additional = additional.saturating_sub(added);
+        if additional > 0 {
+            debug_assert_eq!(self.length % 8, 0);
+            self.buffer
+                .resize((self.length + additional).saturating_add(7) / 8, 0);
+            self.length += additional;
+        }
+    }
+
     /// Extends [`MutableBitmap`] by `additional` values of constant `value`.
     #[inline]
     pub fn extend_constant(&mut self, additional: usize, value: bool) {
         if value {
-            let iter = std::iter::repeat(true).take(additional);
-            self.extend_from_trusted_len_iter(iter);
+            self.extend_set(additional)
         } else {
-            self.buffer
-                .resize((self.length + additional).saturating_add(7) / 8, 0);
-            self.length += additional;
+            self.extend_unset(additional)
         }
     }
 
@@ -413,6 +468,42 @@ impl MutableBitmap {
         Ok(Self { buffer, length })
     }
 
+    fn extend_unaligned(&mut self, slice: &[u8], offset: usize, length: usize) {
+        let own_offset = self.length % 8;
+        // e.g.
+        // [a, b, --101010]     <- to be extended
+        // [00111111, 11010101] <- to extend
+        // [a, b, 11101010, --001111] expected result
+        let aligned_offset = offset / 8;
+        let bytes_len = length.saturating_add(7) / 8;
+        let items = &slice[aligned_offset..aligned_offset + bytes_len];
+        // self has some offset => we need to shift all `items`, and merge the first
+        let buffer = self.buffer.as_mut_slice();
+        let last = &mut buffer[buffer.len() - 1];
+
+        // --101010 | 00111111 << 6 = 11101010
+        // erase previous
+        *last &= 0b11111111u8 >> (8 - own_offset); // unset before setting
+        *last |= items[0] << own_offset;
+
+        let remaining = [items[items.len() - 1], 0];
+        let bytes = items
+            .windows(2)
+            .chain(std::iter::once(remaining.as_ref()))
+            .map(|w| merge_reversed(w[0], w[1], 8 - own_offset));
+        self.buffer.extend_from_trusted_len_iter(bytes);
+
+        self.length += length;
+    }
+
+    fn extend_aligned(&mut self, slice: &[u8], offset: usize, length: usize) {
+        let aligned_offset = offset / 8;
+        let bytes_len = length.saturating_add(7) / 8;
+        let items = &slice[aligned_offset..aligned_offset + bytes_len];
+        self.buffer.extend_from_slice(items);
+        self.length += length;
+    }
+
     /// Extends the [`MutableBitmap`] from a slice of bytes with optional offset.
     /// This is the fastest way to extend a [`MutableBitmap`].
     /// # Implementation
@@ -421,16 +512,14 @@ impl MutableBitmap {
     #[inline]
     pub fn extend_from_slice(&mut self, slice: &[u8], offset: usize, length: usize) {
         assert!(offset + length <= slice.len() * 8);
+        if length == 0 {
+            return;
+        };
         let is_aligned = self.length % 8 == 0;
         let other_is_aligned = offset % 8 == 0;
         match (is_aligned, other_is_aligned) {
-            (true, true) => {
-                let aligned_offset = offset / 8;
-                let bytes_len = length.saturating_add(7) / 8;
-                let items = &slice[aligned_offset..aligned_offset + bytes_len];
-                self.buffer.extend_from_slice(items);
-                self.length += length;
-            }
+            (true, true) => self.extend_aligned(slice, offset, length),
+            (false, true) => self.extend_unaligned(slice, offset, length),
             // todo: further optimize the other branches.
             _ => self.extend_from_trusted_len_iter(BitmapIter::new(slice, offset, length)),
         }
