@@ -70,7 +70,10 @@ impl<'a, K: DictionaryKey> IntoIterator for &'a DictionaryArray<K> {
 impl<'a, K: DictionaryKey> DictionaryArray<K> {
     /// Returns an iterator of `Option<Box<dyn Array>>`
     pub fn iter(&'a self) -> ZipIter<'a, K> {
-        zip_validity(DictionaryValuesIter::new(self), self.keys.validity())
+        zip_validity(
+            DictionaryValuesIter::new(self),
+            self.keys.validity().as_ref().map(|x| x.iter()),
+        )
     }
 
     /// Returns an iterator of `Box<dyn Array>`

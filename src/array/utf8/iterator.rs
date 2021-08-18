@@ -68,7 +68,10 @@ impl<'a, O: Offset> IntoIterator for &'a Utf8Array<O> {
 impl<'a, O: Offset> Utf8Array<O> {
     /// Returns an iterator of `Option<&str>`
     pub fn iter(&'a self) -> ZipValidity<'a, &'a str, Utf8ValuesIter<'a, O>> {
-        zip_validity(Utf8ValuesIter::new(self), &self.validity)
+        zip_validity(
+            Utf8ValuesIter::new(self),
+            self.validity.as_ref().map(|x| x.iter()),
+        )
     }
 
     /// Returns an iterator of `&str`
