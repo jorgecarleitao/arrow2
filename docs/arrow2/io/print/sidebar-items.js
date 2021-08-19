@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["print","Prints a visual representation of record batches to stdout"],["write","Returns a visual representation of multiple [`RecordBatch`]es."]]});
