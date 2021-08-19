@@ -11,7 +11,7 @@ fn main() -> Result<()> {
     let file_path = &args[1];
 
     let reader = File::open(file_path)?;
-    let reader = read::RecordReader::try_new(reader, None, None, Arc::new(|_, _| true))?;
+    let reader = read::RecordReader::try_new(reader, None, None, Arc::new(|_, _| true), None)?;
 
     for maybe_batch in reader {
         let batch = maybe_batch?;

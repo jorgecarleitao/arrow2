@@ -3,7 +3,7 @@ use std::sync::Arc;
 use parquet2::{
     encoding::Encoding,
     metadata::{ColumnChunkMetaData, ColumnDescriptor},
-    page::{DataPage, DataPageHeader},
+    page::{DataPage, DataPageHeader, DataPageHeaderExt},
     read::{
         levels::{get_bit_width, split_buffer_v1, split_buffer_v2, RLEDecoder},
         StreamingIterator,
@@ -107,8 +107,8 @@ fn extend_from_page(
 
     match page.header() {
         DataPageHeader::V1(header) => {
-            assert_eq!(header.definition_level_encoding, Encoding::Rle);
-            assert_eq!(header.repetition_level_encoding, Encoding::Rle);
+            assert_eq!(header.definition_level_encoding(), Encoding::Rle);
+            assert_eq!(header.repetition_level_encoding(), Encoding::Rle);
 
             match (&page.encoding(), page.dictionary_page()) {
                 (Encoding::Plain, None) => {
@@ -123,11 +123,11 @@ fn extend_from_page(
                         values_buffer,
                         additional,
                         (
-                            &header.repetition_level_encoding,
+                            &header.repetition_level_encoding(),
                             descriptor.max_rep_level(),
                         ),
                         (
-                            &header.definition_level_encoding,
+                            &header.definition_level_encoding(),
                             descriptor.max_def_level(),
                         ),
                         is_nullable,

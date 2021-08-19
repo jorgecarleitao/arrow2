@@ -22,7 +22,7 @@ use crate::array::{BooleanArray, FromFfi};
 use crate::error::{ArrowError, Result};
 use crate::types::days_ms;
 use crate::{
-    array::{Array, BinaryArray, ListArray, PrimitiveArray, StructArray, Utf8Array},
+    array::*,
     datatypes::{DataType, IntervalUnit},
 };
 
@@ -32,8 +32,8 @@ use crate::{
 /// * the data type is not supported
 /// * the interface is not valid (e.g. a null pointer)
 pub fn try_from<A: ArrowArrayRef>(array: A) -> Result<Box<dyn Array>> {
-    let data_type = array.data_type()?;
-    let array: Box<dyn Array> = match data_type {
+    let field = array.field()?;
+    let array: Box<dyn Array> = match field.data_type() {
         DataType::Boolean => Box::new(BooleanArray::try_from_ffi(array)?),
         DataType::Int8 => Box::new(PrimitiveArray::<i8>::try_from_ffi(array)?),
         DataType::Int16 => Box::new(PrimitiveArray::<i16>::try_from_ffi(array)?),
@@ -66,6 +66,18 @@ pub fn try_from<A: ArrowArrayRef>(array: A) -> Result<Box<dyn Array>> {
         DataType::List(_) => Box::new(ListArray::<i32>::try_from_ffi(array)?),
         DataType::LargeList(_) => Box::new(ListArray::<i64>::try_from_ffi(array)?),
         DataType::Struct(_) => Box::new(StructArray::try_from_ffi(array)?),
+        DataType::Dictionary(keys, _) => match keys.as_ref() {
+            DataType::Int8 => Box::new(DictionaryArray::<i8>::try_from_ffi(array)?),
+            DataType::Int16 => Box::new(DictionaryArray::<i16>::try_from_ffi(array)?),
+            DataType::Int32 => Box::new(DictionaryArray::<i32>::try_from_ffi(array)?),
+            DataType::Int64 => Box::new(DictionaryArray::<i64>::try_from_ffi(array)?),
+            DataType::UInt8 => Box::new(DictionaryArray::<u8>::try_from_ffi(array)?),
+            DataType::UInt16 => Box::new(DictionaryArray::<u16>::try_from_ffi(array)?),
+            DataType::UInt32 => Box::new(DictionaryArray::<u32>::try_from_ffi(array)?),
+            DataType::UInt64 => Box::new(DictionaryArray::<u64>::try_from_ffi(array)?),
+            _ => unreachable!(),
+        },
+        DataType::Union(_, _, _) => Box::new(UnionArray::try_from_ffi(array)?),
         data_type => {
             return Err(ArrowError::NotYetImplemented(format!(
                 "Reading DataType \"{}\" is not yet supported.",
@@ -75,128 +87,4 @@ pub fn try_from<A: ArrowArrayRef>(array: A) -> Result<Box<dyn Array>> {
     };
 
     Ok(array)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::array::*;
-    use crate::datatypes::TimeUnit;
-    use crate::{error::Result, ffi};
-    use std::sync::Arc;
-
-    fn test_release(expected: impl Array + 'static) -> Result<()> {
-        // create a `ArrowArray` from the data.
-        let b: Arc<dyn Array> = Arc::new(expected);
-
-        // export the array as 2 pointers.
-        let _ = ffi::export_to_c(b)?;
-
-        Ok(())
-    }
-
-    fn test_round_trip(expected: impl Array + Clone + 'static) -> Result<()> {
-        let b: Arc<dyn Array> = Arc::new(expected.clone());
-        let expected = Box::new(expected) as Box<dyn Array>;
-
-        // create a `ArrowArray` from the data.
-        let array = Arc::new(ffi::export_to_c(b)?);
-
-        let (_, _) = array.references();
-
-        let result = try_from(array)?;
-
-        assert_eq!(&result, &expected);
-        Ok(())
-    }
-
-    #[test]
-    fn test_u32() -> Result<()> {
-        let data = Int32Array::from(&[Some(2), None, Some(1), None]);
-        test_release(data)
-    }
-
-    #[test]
-    fn test_u64() -> Result<()> {
-        let data = UInt64Array::from(&[Some(2), None, Some(1), None]);
-        test_round_trip(data)
-    }
-
-    #[test]
-    fn test_i64() -> Result<()> {
-        let data = Int64Array::from(&[Some(2), None, Some(1), None]);
-        test_round_trip(data)
-    }
-
-    #[test]
-    fn test_utf8() -> Result<()> {
-        let data = Utf8Array::<i32>::from(&vec![Some("a"), None, Some("bb"), None]);
-        test_round_trip(data)
-    }
-
-    #[test]
-    fn test_large_utf8() -> Result<()> {
-        let data = Utf8Array::<i64>::from(&vec![Some("a"), None, Some("bb"), None]);
-        test_round_trip(data)
-    }
-
-    #[test]
-    fn test_binary() -> Result<()> {
-        let data =
-            BinaryArray::<i32>::from(&vec![Some(b"a".as_ref()), None, Some(b"bb".as_ref()), None]);
-        test_round_trip(data)
-    }
-
-    #[test]
-    fn test_timestamp_tz() -> Result<()> {
-        let data = Int64Array::from(&vec![Some(2), None, None]).to(DataType::Timestamp(
-            TimeUnit::Second,
-            Some("UTC".to_string()),
-        ));
-        test_round_trip(data)
-    }
-
-    #[test]
-    fn test_large_binary() -> Result<()> {
-        let data =
-            BinaryArray::<i64>::from(&vec![Some(b"a".as_ref()), None, Some(b"bb".as_ref()), None]);
-        test_round_trip(data)
-    }
-
-    #[test]
-    fn test_list() -> Result<()> {
-        let data = vec![
-            Some(vec![Some(1i32), Some(2), Some(3)]),
-            None,
-            Some(vec![Some(4), None, Some(6)]),
-        ];
-
-        let mut array = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new();
-        array.try_extend(data)?;
-
-        let array: ListArray<i32> = array.into();
-
-        test_round_trip(array)
-    }
-
-    #[test]
-    fn test_list_list() -> Result<()> {
-        let data = vec![
-            Some(vec![
-                Some(vec![None]),
-                Some(vec![Some(2)]),
-                Some(vec![Some(3)]),
-            ]),
-            None,
-            Some(vec![Some(vec![Some(4), None, Some(6)])]),
-        ];
-
-        let mut array =
-            MutableListArray::<i32, MutableListArray<i32, MutablePrimitiveArray<i32>>>::new();
-        array.try_extend(data)?;
-
-        let array: ListArray<i32> = array.into();
-
-        test_round_trip(array)
-    }
 }

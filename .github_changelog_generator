@@ -1,5 +1,7 @@
-since-tag=v0.1.0
+since-tag=v0.2.0
+future-release=v0.3.0
 pr-wo-labels=false
 add-sections={"features":{"prefix":"**Enhancements:**","labels":["enhancement"]}, "documentation":{"prefix":"**Documentation updates:**","labels":["documentation"]}}
 enhancement-label=**New features:**
 enhancement-labels=feature
+base=CHANGELOG.md

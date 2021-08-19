@@ -26,6 +26,7 @@ use arrow2::{
     datatypes::*,
     error::{ArrowError, Result},
     io::ipc,
+    io::ipc::gen::Schema::MetadataVersion,
     io::ipc::read::read_record_batch,
     io::ipc::write,
     io::ipc::write::common::{encoded_batch, DictionaryTracker, EncodedData, IpcWriteOptions},
@@ -164,9 +165,11 @@ pub fn flight_data_to_arrow_batch(
         .map(|batch| {
             read_record_batch(
                 batch,
-                schema,
+                schema.clone(),
+                None,
                 is_little_endian,
                 &dictionaries_by_field,
+                MetadataVersion::V5,
                 &mut reader,
                 0,
             )

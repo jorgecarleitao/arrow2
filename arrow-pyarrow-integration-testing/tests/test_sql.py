@@ -104,7 +104,7 @@ class TestCase(unittest.TestCase):
         data = [
             round(decimal.Decimal(722.82), 2),
             round(decimal.Decimal(-934.11), 2),
-            None
+            None,
         ]
         a = pyarrow.array(data, pyarrow.decimal128(5, 2))
         b = arrow_pyarrow_integration_testing.round_trip(a)
@@ -179,3 +179,52 @@ class TestCase(unittest.TestCase):
             b.validate(full=True)
             assert a.to_pylist() == b.to_pylist()
             assert a.type == b.type
+
+    def test_dict(self):
+        """
+        Python -> Rust -> Python
+        """
+        a = pyarrow.array(
+            ["a", "a", "b", None, "c"],
+            pyarrow.dictionary(pyarrow.int64(), pyarrow.utf8()),
+        )
+        b = arrow_pyarrow_integration_testing.round_trip(a)
+
+        b.validate(full=True)
+        assert a.to_pylist() == b.to_pylist()
+        assert a.type == b.type
+
+    def test_sparse_union(self):
+        """
+        Python -> Rust -> Python
+        """
+        a = pyarrow.UnionArray.from_sparse(
+            pyarrow.array([0, 1, 1, 0, 1], pyarrow.int8()),
+            [
+                pyarrow.array(["a", "", "", "", "c"], pyarrow.utf8()),
+                pyarrow.array([0, 1, 2, None, 0], pyarrow.int64()),
+            ],
+        )
+        b = arrow_pyarrow_integration_testing.round_trip(a)
+
+        b.validate(full=True)
+        assert a.to_pylist() == b.to_pylist()
+        assert a.type == b.type
+
+    def test_dense_union(self):
+        """
+        Python -> Rust -> Python
+        """
+        a = pyarrow.UnionArray.from_dense(
+            pyarrow.array([0, 1, 1, 0, 1], pyarrow.int8()),
+            pyarrow.array([0, 1, 2, 3, 4], type=pyarrow.int32()),
+            [
+                pyarrow.array(["a", "", "", "", "c"], pyarrow.utf8()),
+                pyarrow.array([0, 1, 2, None, 0], pyarrow.int64()),
+            ],
+        )
+        b = arrow_pyarrow_integration_testing.round_trip(a)
+
+        b.validate(full=True)
+        assert a.to_pylist() == b.to_pylist()
+        assert a.type == b.type

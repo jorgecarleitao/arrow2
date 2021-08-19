@@ -159,11 +159,11 @@ jobs:
         env:
           RUST_BACKTRACE: full
           RUST_LOG: 'trace'
-        # --skip io: miri does not handle IO very well, unfortunately.
+        # --skip io: miri can't handle opening of files, so we skip those
         run: |
           cargo miri setup
           cargo clean
-          cargo miri test -- --skip io
+          cargo miri test -- --skip io::parquet --skip io::ipc
 
   coverage:
     name: Coverage
@@ -271,7 +271,7 @@ jobs:
           export CARGO_HOME="/github/home/.cargo"
           export CARGO_TARGET_DIR="/github/home/target"
           # no need 
-          cargo build --no-default-features --features=merge_sort,io_ipc,io_csv,io_json,io_parquet --target wasm32-unknown-unknown
+          cargo build --no-default-features --features=merge_sort,io_ipc,io_csv,io_print,io_json,io_parquet --target wasm32-unknown-unknown
 
   linux-simd-test:
     name: SIMD

@@ -255,7 +255,6 @@ pub fn read(rows: &[&Value], data_type: DataType) -> Arc<dyn Array> {
         /*
         DataType::FixedSizeBinary(_) => Box::new(FixedSizeBinaryArray::new_empty(data_type)),
         DataType::FixedSizeList(_, _) => Box::new(FixedSizeListArray::new_empty(data_type)),
-        DataType::Union(_) => unimplemented!(),
         DataType::Decimal(_, _) => Box::new(PrimitiveArray::<i128>::new_empty(data_type)),
         */
     }

@@ -4,7 +4,7 @@ use crate::datatypes::{DataType, IntervalUnit};
 use crate::types::days_ms;
 
 fn validity_size(validity: &Option<Bitmap>) -> usize {
-    validity.as_ref().map(|b| b.as_slice().len()).unwrap_or(0)
+    validity.as_ref().map(|b| b.as_slice().0.len()).unwrap_or(0)
 }
 
 macro_rules! dyn_primitive {
@@ -55,7 +55,7 @@ pub fn estimated_bytes_size(array: &dyn Array) -> usize {
         Null => 0,
         Boolean => {
             let array = array.as_any().downcast_ref::<BooleanArray>().unwrap();
-            array.values().as_slice().len() + validity_size(array.validity())
+            array.values().as_slice().0.len() + validity_size(array.validity())
         }
         Int8 => dyn_primitive!(array, i8),
         Int16 => dyn_primitive!(array, i16),
@@ -109,7 +109,22 @@ pub fn estimated_bytes_size(array: &dyn Array) -> usize {
                 .sum::<usize>()
                 + validity_size(array.validity())
         }
-        Union(_) => unreachable!(),
+        Union(_, _, _) => {
+            let array = array.as_any().downcast_ref::<UnionArray>().unwrap();
+            let types = array.types().len() * std::mem::size_of::<i8>();
+            let offsets = array
+                .offsets()
+                .as_ref()
+                .map(|x| x.len() * std::mem::size_of::<i32>())
+                .unwrap_or_default();
+            let fields = array
+                .fields()
+                .iter()
+                .map(|x| x.as_ref())
+                .map(estimated_bytes_size)
+                .sum::<usize>();
+            types + offsets + fields
+        }
         Dictionary(keys, _) => match keys.as_ref() {
             Int8 => dyn_dict!(array, i8),
             Int16 => dyn_dict!(array, i16),

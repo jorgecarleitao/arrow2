@@ -23,8 +23,9 @@ use serde_derive::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 use crate::datatypes::*;
-use crate::io::json::ToJson;
 
+mod schema;
+use schema::ToJson;
 mod read;
 mod write;
 pub use read::to_record_batch;
@@ -137,5 +138,7 @@ pub struct ArrowJsonColumn {
     pub data: Option<Vec<Value>>,
     #[serde(rename = "OFFSET")]
     pub offset: Option<Vec<Value>>, // leaving as Value as 64-bit offsets are strings
+    #[serde(rename = "TYPE_ID")]
+    pub type_id: Option<Vec<Value>>, // for union types
     pub children: Option<Vec<ArrowJsonColumn>>,
 }

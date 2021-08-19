@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use num::Num;
 
-use crate::{buffer::Buffer, types::Index};
+use crate::types::Index;
 
 /// Trait describing types that can be used as offsets as per Arrow specification.
 /// This trait is only implemented for `i32` and `i64`, the two sizes part of the specification.
@@ -51,14 +51,12 @@ unsafe impl Offset for i64 {
 }
 
 #[inline]
-pub fn check_offsets<O: Offset>(offsets: &Buffer<O>, values_len: usize) -> usize {
+pub fn check_offsets<O: Offset>(offsets: &[O], values_len: usize) -> usize {
     assert!(
         !offsets.is_empty(),
         "The length of the offset buffer must be larger than 1"
     );
     let len = offsets.len() - 1;
-
-    let offsets = offsets.as_slice();
 
     let last_offset = offsets[len];
     let last_offset = last_offset.to_usize();
@@ -71,9 +69,9 @@ pub fn check_offsets<O: Offset>(offsets: &Buffer<O>, values_len: usize) -> usize
 }
 
 #[inline]
-pub fn check_offsets_and_utf8<O: Offset>(offsets: &Buffer<O>, values: &Buffer<u8>) -> usize {
+pub fn check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) -> usize {
     let len = check_offsets(offsets, values.len());
-    offsets.as_slice().windows(2).for_each(|window| {
+    offsets.windows(2).for_each(|window| {
         let start = window[0].to_usize();
         let end = window[1].to_usize();
         assert!(end <= values.len());

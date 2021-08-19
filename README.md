@@ -1,6 +1,7 @@
 # Arrow2: Transmute-free Arrow
 
 [![test](https://github.com/jorgecarleitao/arrow2/actions/workflows/test.yml/badge.svg)](https://github.com/jorgecarleitao/arrow2/actions/workflows/Build.yml)
+[![codecov](https://codecov.io/gh/jorgecarleitao/arrow2/branch/main/graph/badge.svg?token=AgyTF60R3D)](https://codecov.io/gh/jorgecarleitao/arrow2)
 [![](https://img.shields.io/crates/d/arrow2.svg)](https://crates.io/crates/arrow2)
 [![](https://img.shields.io/crates/dv/arrow2.svg)](https://crates.io/crates/arrow2)
 [![](https://docs.rs/arrow2/badge.svg)](https://docs.rs/arrow2/)
@@ -52,32 +53,46 @@ venv/bin/python parquet_integration/write_parquet.py
 
 ## Features in this crate and not in the official
 
+### Safety and Security
+
+* safe by design (i.e. no transmutes, runtime type checking nor pointer casts)
 * Uses Rust's compiler whenever possible to prove that memory reads are sound
-* Reading parquet is 10-20x faster (single core) and deserialization is parallelizable
-* Writing parquet is 3-10x faster (single core) and serialization is parallelizable
-* MIRI checks on non-IO components (MIRI and file systems are a bit funny atm)
-* parquet IO has no `unsafe`
+* All non-IO components pass MIRI checks (MIRI and file systems are a bit funny atm)
+
+### Arrow Format
+
 * IPC supports big endian
-* More predictable JSON reader
-* `MutableArray` API to work with arrays in-place.
-* Generalized parsing of CSV based on logical data types
+* `MutableArray` API to work in-memory in-place.
 * faster IPC reader (different design that avoids an extra copy of all data)
 * IPC supports 2.0 (compression)
+* FFI support for dictionary-encoded arrays and union array
+* All implemented arrow types pass IPC integration tests against other implementations
+
+### Parquet
+
+* Reading parquet is 10-20x faster (single core) and deserialization is parallelizable
+* Writing parquet is 3-10x faster (single core) and serialization is parallelizable
+* parquet IO has no `unsafe`
+* parquet IO supports `async` read
+
+### Others
+
+* More predictable JSON reader
+* Generalized parsing of CSV based on logical data types
 
 ## Features in the original not available in this crate
 
 * Parquet read and write of struct and nested lists.
-* Union and Map types
+* Map types
 
 ## Features in this crate not in pyarrow
 
 * Read and write of delta-encoded utf8 to and from parquet
-* parquet roundtrip of all arrow types.
+* parquet roundtrip of all supported arrow types.
 
-## Roadmap
+## Features in pyarrow not in this crate
 
-1. parquet read of nested types.
-2. bring documentation up to speed
+Too many to enumerate; e.g. nested dictionary arrays, map, nested parquet.
 
 ## How to develop
 

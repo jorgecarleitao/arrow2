@@ -222,9 +222,9 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
         if value.is_none() && self.validity.is_none() {
             // When the validity is None, all elements so far are valid. When one of the elements is set fo null,
             // the validity must be initialized.
-            self.validity = Some(MutableBitmap::from_trusted_len_iter(
-                std::iter::repeat(true).take(self.len()),
-            ));
+            let mut validity = MutableBitmap::new();
+            validity.extend_constant(self.len(), true);
+            self.validity = Some(validity);
         }
         if let Some(x) = self.validity.as_mut() {
             x.set(index, value.is_some())
@@ -332,13 +332,7 @@ impl<T: NativeType + NaturalDataType> MutablePrimitiveArray<T> {
         P: std::borrow::Borrow<T>,
         I: TrustedLen<Item = Option<P>>,
     {
-        let (validity, values) = unsafe { trusted_len_unzip(iterator) };
-
-        Self {
-            data_type: T::DATA_TYPE,
-            values,
-            validity,
-        }
+        unsafe { Self::from_trusted_len_iter_unchecked(iterator) }
     }
 
     /// Creates a [`MutablePrimitiveArray`] from an fallible iterator of trusted length.
@@ -371,13 +365,7 @@ impl<T: NativeType + NaturalDataType> MutablePrimitiveArray<T> {
         P: std::borrow::Borrow<T>,
         I: TrustedLen<Item = std::result::Result<Option<P>, E>>,
     {
-        let (validity, values) = unsafe { try_trusted_len_unzip(iterator) }?;
-
-        Ok(Self {
-            data_type: T::DATA_TYPE,
-            values,
-            validity,
-        })
+        unsafe { Self::try_from_trusted_len_iter_unchecked(iterator) }
     }
 
     /// Creates a new [`MutablePrimitiveArray`] out an iterator over values
@@ -544,78 +532,8 @@ where
     Ok((validity, buffer))
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::bitmap::Bitmap;
-
-    use super::*;
-
-    #[test]
-    fn push() {
-        let mut a = MutablePrimitiveArray::<i32>::new();
-        a.push(Some(1));
-        a.push(None);
-        assert_eq!(a.len(), 2);
-        assert!(a.is_valid(0));
-        assert!(!a.is_valid(1));
-
-        assert_eq!(a.values(), &MutableBuffer::from([1, 0]));
-    }
-
-    #[test]
-    fn set() {
-        let mut a = MutablePrimitiveArray::<i32>::from([Some(1), None]);
-
-        a.set(0, Some(2));
-        a.set(1, Some(1));
-
-        assert_eq!(a.len(), 2);
-        assert!(a.is_valid(0));
-        assert!(a.is_valid(1));
-
-        assert_eq!(a.values(), &MutableBuffer::from([2, 1]));
-    }
-
-    #[test]
-    fn from_iter() {
-        let a = MutablePrimitiveArray::<i32>::from_iter((0..2).map(Some));
-        assert_eq!(a.len(), 2);
-        assert_eq!(a.validity(), &None);
-    }
-
-    #[test]
-    fn natural_arc() {
-        let a = MutablePrimitiveArray::<i32>::from_slice(&[0, 1]).into_arc();
-        assert_eq!(a.len(), 2);
-    }
-
-    #[test]
-    fn only_nulls() {
-        let mut a = MutablePrimitiveArray::<i32>::new();
-        a.push(None);
-        a.push(None);
-        let a: PrimitiveArray<i32> = a.into();
-        assert_eq!(a.validity(), &Some(Bitmap::from([false, false])));
-    }
-
-    #[test]
-    fn from_trusted_len() {
-        let a =
-            MutablePrimitiveArray::<i32>::from_trusted_len_iter(vec![Some(1), None].into_iter());
-        let a: PrimitiveArray<i32> = a.into();
-        assert_eq!(a.validity(), &Some(Bitmap::from([true, false])));
-    }
-
-    #[test]
-    fn extend_trusted_len() {
-        let mut a = MutablePrimitiveArray::<i32>::new();
-        a.extend_trusted_len(vec![Some(1), Some(2)].into_iter());
-        assert_eq!(a.validity(), &None);
-        a.extend_trusted_len(vec![None, Some(4)].into_iter());
-        assert_eq!(
-            a.validity(),
-            &Some(MutableBitmap::from([true, true, false, true]))
-        );
-        assert_eq!(a.values(), &MutableBuffer::<i32>::from([1, 2, 0, 4]));
+impl<T: NativeType> PartialEq for MutablePrimitiveArray<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.iter().eq(other.iter())
     }
 }

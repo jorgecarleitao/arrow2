@@ -22,7 +22,7 @@ use serde_json::Value;
 
 use crate::{
     array::*,
-    bitmap::Bitmap,
+    bitmap::{Bitmap, MutableBitmap},
     buffer::Buffer,
     datatypes::{DataType, Field, IntervalUnit, Schema},
     error::{ArrowError, Result},
@@ -33,9 +33,12 @@ use crate::{
 use super::{ArrowJsonBatch, ArrowJsonColumn, ArrowJsonDictionaryBatch};
 
 fn to_validity(validity: &Option<Vec<u8>>) -> Option<Bitmap> {
-    validity
-        .as_ref()
-        .map(|x| x.iter().map(|is_valid| *is_valid == 1).collect::<Bitmap>())
+    validity.as_ref().and_then(|x| {
+        x.iter()
+            .map(|is_valid| *is_valid == 1)
+            .collect::<MutableBitmap>()
+            .into()
+    })
 }
 
 fn to_offsets<O: Offset>(offsets: Option<&Vec<Value>>) -> Buffer<O> {
@@ -174,10 +177,7 @@ fn to_list<O: Offset>(
     data_type: DataType,
     dictionaries: &HashMap<i64, ArrowJsonDictionaryBatch>,
 ) -> Result<Arc<dyn Array>> {
-    let validity = json_col
-        .validity
-        .as_ref()
-        .map(|x| x.iter().map(|is_valid| *is_valid == 1).collect::<Bitmap>());
+    let validity = to_validity(&json_col.validity);
 
     let child_field = ListArray::<O>::get_child_field(&data_type);
     let children = &json_col.children.as_ref().unwrap()[0];
@@ -222,21 +222,15 @@ pub fn to_array(
     match data_type {
         DataType::Null => Ok(Arc::new(NullArray::from_data(json_col.count))),
         DataType::Boolean => {
-            let array = json_col
-                .validity
+            let validity = to_validity(&json_col.validity);
+            let values = json_col
+                .data
                 .as_ref()
                 .unwrap()
                 .iter()
-                .zip(json_col.data.as_ref().unwrap())
-                .map(|(is_valid, value)| {
-                    if *is_valid == 1 {
-                        Some(value.as_bool().unwrap())
-                    } else {
-                        None
-                    }
-                })
-                .collect::<BooleanArray>();
-            Ok(Arc::new(array))
+                .map(|value| value.as_bool().unwrap())
+                .collect::<Bitmap>();
+            Ok(Arc::new(BooleanArray::from_data(values, validity)))
         }
         DataType::Int8 => Ok(Arc::new(to_primitive::<i8>(json_col, data_type.clone()))),
         DataType::Int16 => Ok(Arc::new(to_primitive::<i16>(json_col, data_type.clone()))),
@@ -322,9 +316,51 @@ pub fn to_array(
             _ => unreachable!(),
         },
         DataType::Float16 => unreachable!(),
-        DataType::Union(_) => Err(ArrowError::NotYetImplemented(
-            "Union not supported".to_string(),
-        )),
+        DataType::Union(fields, _, _) => {
+            let fields = fields
+                .iter()
+                .zip(json_col.children.as_ref().unwrap())
+                .map(|(field, col)| to_array(field, col, dictionaries))
+                .collect::<Result<Vec<_>>>()?;
+
+            let types = json_col
+                .type_id
+                .as_ref()
+                .map(|x| {
+                    x.iter()
+                        .map(|value| match value {
+                            Value::Number(x) => {
+                                x.as_i64().and_then(num::cast::cast::<i64, i8>).unwrap()
+                            }
+                            Value::String(x) => x.parse::<i8>().ok().unwrap(),
+                            _ => {
+                                panic!()
+                            }
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+
+            let offsets = json_col
+                .offset
+                .as_ref()
+                .map(|x| {
+                    Some(
+                        x.iter()
+                            .map(|value| match value {
+                                Value::Number(x) => {
+                                    x.as_i64().and_then(num::cast::cast::<i64, i32>).unwrap()
+                                }
+                                _ => panic!(),
+                            })
+                            .collect(),
+                    )
+                })
+                .unwrap_or_default();
+
+            let array = UnionArray::from_data(data_type.clone(), types, fields, offsets);
+            Ok(Arc::new(array))
+        }
     }
 }
 

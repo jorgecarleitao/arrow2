@@ -89,11 +89,7 @@ where
     I: NativeType + num::traits::AsPrimitive<O>,
     O: NativeType,
 {
-    unary(
-        from,
-        |x| num::traits::AsPrimitive::<O>::as_(x),
-        to_type.clone(),
-    )
+    unary(from, num::traits::AsPrimitive::<O>::as_, to_type.clone())
 }
 
 /// Cast [`PrimitiveArray`] to a [`PrimitiveArray`] of the same physical type.

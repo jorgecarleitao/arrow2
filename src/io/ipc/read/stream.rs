@@ -18,6 +18,8 @@
 use std::io::Read;
 use std::sync::Arc;
 
+use gen::Schema::MetadataVersion;
+
 use crate::array::*;
 use crate::datatypes::Schema;
 use crate::error::{ArrowError, Result};
@@ -33,6 +35,8 @@ type ArrayRef = Arc<dyn Array>;
 pub struct StreamMetadata {
     /// The schema that is read from the stream's first message
     schema: Arc<Schema>,
+
+    version: MetadataVersion,
 
     /// Whether the incoming stream is little-endian
     is_little_endian: bool,
@@ -57,6 +61,7 @@ pub fn read_stream_metadata<R: Read>(reader: &mut R) -> Result<StreamMetadata> {
 
     let message = gen::Message::root_as_message(meta_buffer.as_slice())
         .map_err(|err| ArrowError::Ipc(format!("Unable to get root as message: {:?}", err)))?;
+    let version = message.version();
     // message header is a Schema, so read it
     let ipc_schema: gen::Schema::Schema = message
         .header_as_schema()
@@ -66,6 +71,7 @@ pub fn read_stream_metadata<R: Read>(reader: &mut R) -> Result<StreamMetadata> {
 
     Ok(StreamMetadata {
         schema,
+        version,
         is_little_endian,
     })
 }
@@ -131,8 +137,10 @@ pub fn read_next<R: Read>(
             read_record_batch(
                 batch,
                 metadata.schema.clone(),
+                None,
                 metadata.is_little_endian,
                 dictionaries_by_field,
+                metadata.version,
                 &mut reader,
                 0,
             )
@@ -229,98 +237,5 @@ impl<R: Read> Iterator for StreamReader<R> {
 impl<R: Read> RecordBatchReader for StreamReader<R> {
     fn schema(&self) -> &Schema {
         self.metadata.schema.as_ref()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    use crate::io::ipc::common::tests::read_gzip_json;
-
-    use std::fs::File;
-
-    fn test_file(version: &str, file_name: &str) -> Result<()> {
-        let testdata = crate::util::test_util::arrow_test_data();
-        let mut file = File::open(format!(
-            "{}/arrow-ipc-stream/integration/{}/{}.stream",
-            testdata, version, file_name
-        ))?;
-
-        let metadata = read_stream_metadata(&mut file)?;
-        let reader = StreamReader::new(file, metadata);
-
-        // read expected JSON output
-        let (schema, batches) = read_gzip_json(version, file_name);
-
-        assert_eq!(&schema, reader.schema().as_ref());
-
-        batches
-            .iter()
-            .zip(reader.map(|x| x.unwrap()))
-            .for_each(|(lhs, rhs)| {
-                assert_eq!(lhs, &rhs);
-            });
-        Ok(())
-    }
-
-    #[test]
-    fn read_generated_100_primitive() -> Result<()> {
-        test_file("1.0.0-littleendian", "generated_primitive")
-    }
-
-    #[test]
-    fn read_generated_100_datetime() -> Result<()> {
-        test_file("1.0.0-littleendian", "generated_datetime")
-    }
-
-    #[test]
-    fn read_generated_100_null_trivial() -> Result<()> {
-        test_file("1.0.0-littleendian", "generated_null_trivial")
-    }
-
-    #[test]
-    fn read_generated_100_null() -> Result<()> {
-        test_file("1.0.0-littleendian", "generated_null")
-    }
-
-    #[test]
-    fn read_generated_100_primitive_zerolength() -> Result<()> {
-        test_file("1.0.0-littleendian", "generated_primitive_zerolength")
-    }
-
-    #[test]
-    fn read_generated_100_primitive_primitive_no_batches() -> Result<()> {
-        test_file("1.0.0-littleendian", "generated_primitive_no_batches")
-    }
-
-    #[test]
-    fn read_generated_100_dictionary() -> Result<()> {
-        test_file("1.0.0-littleendian", "generated_dictionary")
-    }
-
-    #[test]
-    fn read_generated_100_nested() -> Result<()> {
-        test_file("1.0.0-littleendian", "generated_nested")
-    }
-
-    #[test]
-    fn read_generated_100_interval() -> Result<()> {
-        test_file("1.0.0-littleendian", "generated_interval")
-    }
-
-    #[test]
-    fn read_generated_100_decimal() -> Result<()> {
-        test_file("1.0.0-littleendian", "generated_decimal")
-    }
-
-    #[test]
-    fn read_generated_200_compression_lz4() -> Result<()> {
-        test_file("2.0.0-compression", "generated_lz4")
-    }
-
-    #[test]
-    fn read_generated_200_compression_zstd() -> Result<()> {
-        test_file("2.0.0-compression", "generated_zstd")
     }
 }

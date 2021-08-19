@@ -1,8 +1,7 @@
 use parquet2::{
-    encoding::hybrid_rle::bitpacked_encode,
+    encoding::{hybrid_rle::bitpacked_encode, Encoding},
     metadata::ColumnDescriptor,
     page::CompressedDataPage,
-    schema::Encoding,
     statistics::{serialize_statistics, BooleanStatistics, ParquetStatistics, Statistics},
     write::WriteOptions,
 };

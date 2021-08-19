@@ -66,6 +66,7 @@ pub struct FileReader<'a, R: Read + Seek> {
     reader: &'a mut R,
     metadata: FileMetadata,
     current_block: usize,
+    projection: Option<(Vec<usize>, Arc<Schema>)>,
 }
 
 /// Read the IPC file's metadata
@@ -173,6 +174,7 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
 pub fn read_batch<R: Read + Seek>(
     reader: &mut R,
     metadata: &FileMetadata,
+    projection: Option<(&[usize], Arc<Schema>)>,
     block: usize,
 ) -> Result<Option<RecordBatch>> {
     let block = metadata.blocks[block];
@@ -212,8 +214,10 @@ pub fn read_batch<R: Read + Seek>(
             read_record_batch(
                 batch,
                 metadata.schema.clone(),
+                projection,
                 metadata.is_little_endian,
                 &metadata.dictionaries_by_field,
+                metadata.version,
                 reader,
                 block.offset() as u64 + block.metaDataLength() as u64,
             )
@@ -228,18 +232,43 @@ pub fn read_batch<R: Read + Seek>(
 }
 
 impl<'a, R: Read + Seek> FileReader<'a, R> {
-    /// Creates a new reader
-    pub fn new(reader: &'a mut R, metadata: FileMetadata) -> Self {
+    /// Creates a new [`FileReader`]. Use `projection` to only take certain columns.
+    /// # Panic
+    /// Panics iff the projection is not in increasing order (e.g. `[1, 0]` nor `[0, 1, 1]` are valid)
+    pub fn new(reader: &'a mut R, metadata: FileMetadata, projection: Option<Vec<usize>>) -> Self {
+        if let Some(projection) = projection.as_ref() {
+            let _ = projection.iter().fold(0, |mut acc, v| {
+                assert!(
+                    *v > acc,
+                    "The projection on IPC must be ordered and non-overlapping"
+                );
+                acc = *v;
+                acc
+            });
+        }
+        let projection = projection.map(|projection| {
+            let fields = metadata.schema().fields();
+            let fields = projection.iter().map(|x| fields[*x].clone()).collect();
+            let schema = Arc::new(Schema {
+                fields,
+                metadata: metadata.schema().metadata().clone(),
+            });
+            (projection, schema)
+        });
         Self {
             reader,
             metadata,
+            projection,
             current_block: 0,
         }
     }
 
     /// Return the schema of the file
     pub fn schema(&self) -> &Arc<Schema> {
-        &self.metadata.schema
+        self.projection
+            .as_ref()
+            .map(|x| &x.1)
+            .unwrap_or(&self.metadata.schema)
     }
 }
 
@@ -251,7 +280,15 @@ impl<'a, R: Read + Seek> Iterator for FileReader<'a, R> {
         if self.current_block < self.metadata.total_blocks {
             let block = self.current_block;
             self.current_block += 1;
-            read_batch(&mut self.reader, &self.metadata, block).transpose()
+            read_batch(
+                &mut self.reader,
+                &self.metadata,
+                self.projection
+                    .as_ref()
+                    .map(|x| (x.0.as_ref(), x.1.clone())),
+                block,
+            )
+            .transpose()
         } else {
             None
         }
@@ -260,132 +297,6 @@ impl<'a, R: Read + Seek> Iterator for FileReader<'a, R> {
 
 impl<'a, R: Read + Seek> RecordBatchReader for FileReader<'a, R> {
     fn schema(&self) -> &Schema {
-        &self.metadata.schema
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::fs::File;
-
-    use crate::error::Result;
-    use crate::io::ipc::common::tests::read_gzip_json;
-
-    use super::*;
-
-    fn test_file(version: &str, file_name: &str) -> Result<()> {
-        let testdata = crate::util::test_util::arrow_test_data();
-        let mut file = File::open(format!(
-            "{}/arrow-ipc-stream/integration/{}/{}.arrow_file",
-            testdata, version, file_name
-        ))?;
-
-        let metadata = read_file_metadata(&mut file)?;
-        let reader = FileReader::new(&mut file, metadata);
-
-        // read expected JSON output
-        let (schema, batches) = read_gzip_json(version, file_name);
-
-        assert_eq!(&schema, reader.schema().as_ref());
-
-        batches.iter().zip(reader).try_for_each(|(lhs, rhs)| {
-            assert_eq!(lhs, &rhs?);
-            Result::Ok(())
-        })?;
-        Ok(())
-    }
-
-    #[test]
-    fn read_generated_100_primitive() -> Result<()> {
-        test_file("1.0.0-littleendian", "generated_primitive")?;
-        test_file("1.0.0-bigendian", "generated_primitive")
-    }
-
-    #[test]
-    fn read_generated_100_primitive_large_offsets() -> Result<()> {
-        test_file("1.0.0-littleendian", "generated_primitive_large_offsets")?;
-        test_file("1.0.0-bigendian", "generated_primitive_large_offsets")
-    }
-
-    #[test]
-    fn read_generated_100_datetime() -> Result<()> {
-        test_file("1.0.0-littleendian", "generated_datetime")?;
-        test_file("1.0.0-bigendian", "generated_datetime")
-    }
-
-    #[test]
-    fn read_generated_100_null_trivial() -> Result<()> {
-        test_file("1.0.0-littleendian", "generated_null_trivial")?;
-        test_file("1.0.0-bigendian", "generated_null_trivial")
-    }
-
-    #[test]
-    fn read_generated_100_null() -> Result<()> {
-        test_file("1.0.0-littleendian", "generated_null")?;
-        test_file("1.0.0-bigendian", "generated_null")
-    }
-
-    #[test]
-    fn read_generated_100_primitive_zerolength() -> Result<()> {
-        test_file("1.0.0-littleendian", "generated_primitive_zerolength")?;
-        test_file("1.0.0-bigendian", "generated_primitive_zerolength")
-    }
-
-    #[test]
-    fn read_generated_100_primitive_primitive_no_batches() -> Result<()> {
-        test_file("1.0.0-littleendian", "generated_primitive_no_batches")?;
-        test_file("1.0.0-bigendian", "generated_primitive_no_batches")
-    }
-
-    #[test]
-    fn read_generated_100_dictionary() -> Result<()> {
-        test_file("1.0.0-littleendian", "generated_dictionary")?;
-        test_file("1.0.0-bigendian", "generated_dictionary")
-    }
-
-    #[test]
-    fn read_100_custom_metadata() -> Result<()> {
-        test_file("1.0.0-littleendian", "generated_custom_metadata")?;
-        test_file("1.0.0-bigendian", "generated_custom_metadata")
-    }
-
-    #[test]
-    fn read_generated_100_nested_large_offsets() -> Result<()> {
-        test_file("1.0.0-littleendian", "generated_nested_large_offsets")?;
-        test_file("1.0.0-bigendian", "generated_nested_large_offsets")
-    }
-
-    #[test]
-    fn read_generated_100_nested() -> Result<()> {
-        test_file("1.0.0-littleendian", "generated_nested")?;
-        test_file("1.0.0-bigendian", "generated_nested")
-    }
-
-    #[test]
-    fn read_generated_100_dictionary_unsigned() -> Result<()> {
-        test_file("1.0.0-littleendian", "generated_dictionary_unsigned")?;
-        test_file("1.0.0-bigendian", "generated_dictionary_unsigned")
-    }
-
-    #[test]
-    fn read_generated_100_decimal() -> Result<()> {
-        test_file("1.0.0-littleendian", "generated_decimal")?;
-        test_file("1.0.0-bigendian", "generated_decimal")
-    }
-
-    #[test]
-    fn read_generated_100_interval() -> Result<()> {
-        test_file("1.0.0-littleendian", "generated_interval")?;
-        test_file("1.0.0-bigendian", "generated_interval")
-    }
-
-    #[test]
-    fn read_generated_200_compression_lz4() -> Result<()> {
-        test_file("2.0.0-compression", "generated_lz4")
-    }
-
-    #[test]
-    fn read_generated_200_compression_zstd() -> Result<()> {
-        test_file("2.0.0-compression", "generated_zstd")
+        self.schema().as_ref()
     }
 }

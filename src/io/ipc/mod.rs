@@ -25,7 +25,6 @@
 #[allow(clippy::redundant_field_names)]
 pub mod gen;
 
-pub(crate) mod common;
 mod compression;
 mod convert;
 

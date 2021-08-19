@@ -4,7 +4,7 @@ use std::sync::Arc;
 use crate::{buffer::bytes::Bytes, buffer::MutableBuffer, trusted_len::TrustedLen};
 
 use super::{
-    utils::{get_bit, get_bit_unchecked, null_count, BitChunk, BitChunks, BitmapIter},
+    utils::{fmt, get_bit, get_bit_unchecked, null_count, BitChunk, BitChunks, BitmapIter},
     MutableBitmap,
 };
 
@@ -14,7 +14,7 @@ use super::{
 /// * memory on this container is sharable across thread boundaries
 /// * Cloning [`Bitmap`] is `O(1)`
 /// * Slicing [`Bitmap`] is `O(1)`
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Bitmap {
     bytes: Arc<Bytes<u8>>,
     // both are measured in bits. They are used to bound the bitmap to a region of Bytes.
@@ -22,6 +22,13 @@ pub struct Bitmap {
     length: usize,
     // this is a cache: it must be computed on initialization
     null_count: usize,
+}
+
+impl std::fmt::Debug for Bitmap {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let (bytes, offset, len) = self.as_slice();
+        fmt(bytes, offset, len, f)
+    }
 }
 
 impl Default for Bitmap {
@@ -105,8 +112,8 @@ impl Bitmap {
     /// exceeds the allocated capacity of `self`.
     #[inline]
     pub fn slice(mut self, offset: usize, length: usize) -> Self {
+        assert!(offset + length <= self.length);
         self.offset += offset;
-        assert!(self.offset + length <= self.bytes.len() * 8);
         self.length = length;
         self.null_count = null_count(&self.bytes, self.offset, self.length);
         self
@@ -205,19 +212,17 @@ impl Bitmap {
     }
 }
 
-// Methods used for IPC
 impl Bitmap {
-    #[inline]
-    pub(crate) fn offset(&self) -> usize {
-        self.offset % 8
-    }
-
     /// Returns the byte slice of this Bitmap.
     #[inline]
-    pub(crate) fn as_slice(&self) -> &[u8] {
+    pub fn as_slice(&self) -> (&[u8], usize, usize) {
         let start = self.offset / 8;
-        let len = (self.offset() + self.length).saturating_add(7) / 8;
-        &self.bytes[start..start + len]
+        let len = (self.offset % 8 + self.length).saturating_add(7) / 8;
+        (
+            &self.bytes[start..start + len],
+            self.offset % 8,
+            self.length,
+        )
     }
 }
 
@@ -234,42 +239,5 @@ impl<'a> Bitmap {
     /// constructs a new iterator
     pub fn iter(&'a self) -> BitmapIter<'a> {
         BitmapIter::<'a>::new(&self.bytes, self.offset, self.length)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn as_slice() {
-        let b = Bitmap::from([true, true, true, true, true, true, true, true, true]);
-
-        let slice = b.as_slice();
-        assert_eq!(slice, &[0b11111111, 0b1]);
-
-        assert_eq!(0, b.offset());
-    }
-
-    #[test]
-    fn as_slice_offset() {
-        let b = Bitmap::from([true, true, true, true, true, true, true, true, true]);
-        let b = b.slice(8, 1);
-
-        let slice = b.as_slice();
-        assert_eq!(slice, &[0b1]);
-
-        assert_eq!(0, b.offset());
-    }
-
-    #[test]
-    fn as_slice_offset_middle() {
-        let b = Bitmap::from_u8_slice(&[0, 0, 0, 0b00010101], 27);
-        let b = b.slice(22, 5);
-
-        let slice = b.as_slice();
-        assert_eq!(slice, &[0, 0b00010101]);
-
-        assert_eq!(6, b.offset());
     }
 }

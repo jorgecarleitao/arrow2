@@ -3,6 +3,9 @@ use std::ops::Add;
 use multiversion::multiversion;
 
 use crate::bitmap::utils::{BitChunkIterExact, BitChunksExact};
+use crate::datatypes::{DataType, IntervalUnit};
+use crate::error::{ArrowError, Result};
+use crate::scalar::*;
 use crate::types::simd::*;
 use crate::types::NativeType;
 use crate::{
@@ -72,9 +75,9 @@ where
     T: NativeType + Simd,
     T::Simd: Add<Output = T::Simd> + Sum<T>,
 {
-    if bitmap.offset() == 0 {
-        let validity_masks =
-            BitChunksExact::<<T::Simd as NativeSimd>::Chunk>::new(bitmap.as_slice(), bitmap.len());
+    let (slice, offset, length) = bitmap.as_slice();
+    if offset == 0 {
+        let validity_masks = BitChunksExact::<<T::Simd as NativeSimd>::Chunk>::new(slice, length);
         null_sum_impl(values, validity_masks)
     } else {
         let validity_masks = bitmap.chunks::<<T::Simd as NativeSimd>::Chunk>();
@@ -85,7 +88,7 @@ where
 /// Returns the sum of values in the array.
 ///
 /// Returns `None` if the array is empty or only contains null values.
-pub fn sum<T>(array: &PrimitiveArray<T>) -> Option<T>
+pub fn sum_primitive<T>(array: &PrimitiveArray<T>) -> Option<T>
 where
     T: NativeType + Simd,
     T::Simd: Add<Output = T::Simd> + Sum<T>,
@@ -102,6 +105,76 @@ where
     }
 }
 
+macro_rules! dyn_sum {
+    ($ty:ty, $array:expr) => {{
+        let array = $array
+            .as_any()
+            .downcast_ref::<PrimitiveArray<$ty>>()
+            .unwrap();
+        Box::new(PrimitiveScalar::<$ty>::new(
+            $array.data_type().clone(),
+            sum_primitive::<$ty>(array),
+        ))
+    }};
+}
+
+pub fn can_sum(data_type: &DataType) -> bool {
+    use DataType::*;
+    matches!(
+        data_type,
+        Int8 | Int16
+            | Date32
+            | Time32(_)
+            | Interval(IntervalUnit::YearMonth)
+            | Int64
+            | Date64
+            | Time64(_)
+            | Timestamp(_, _)
+            | Duration(_)
+            | UInt8
+            | UInt16
+            | UInt32
+            | UInt64
+            | Float32
+            | Float64
+    )
+}
+
+/// Returns the sum of all elements in `array` as a [`Scalar`] of the same physical
+/// and logical types as `array`.
+/// # Error
+/// Errors iff the operation is not supported.
+pub fn sum(array: &dyn Array) -> Result<Box<dyn Scalar>> {
+    Ok(match array.data_type() {
+        DataType::Int8 => dyn_sum!(i8, array),
+        DataType::Int16 => dyn_sum!(i16, array),
+        DataType::Int32
+        | DataType::Date32
+        | DataType::Time32(_)
+        | DataType::Interval(IntervalUnit::YearMonth) => {
+            dyn_sum!(i32, array)
+        }
+        DataType::Int64
+        | DataType::Date64
+        | DataType::Time64(_)
+        | DataType::Timestamp(_, _)
+        | DataType::Duration(_) => dyn_sum!(i64, array),
+        DataType::UInt8 => dyn_sum!(u8, array),
+        DataType::UInt16 => dyn_sum!(u16, array),
+        DataType::UInt32 => dyn_sum!(u32, array),
+        DataType::UInt64 => dyn_sum!(u64, array),
+        DataType::Float16 => unreachable!(),
+        DataType::Float32 => dyn_sum!(f32, array),
+        DataType::Float64 => dyn_sum!(f64, array),
+        _ => {
+            return Err(ArrowError::InvalidArgumentError(format!(
+                "The `sum` operator does not support type `{}`",
+                array.data_type(),
+            )))
+        }
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::super::super::arithmetics;
@@ -111,25 +184,34 @@ mod tests {
     #[test]
     fn test_primitive_array_sum() {
         let a = Int32Array::from_slice(&[1, 2, 3, 4, 5]);
-        assert_eq!(15, sum(&a).unwrap());
+        assert_eq!(
+            &PrimitiveScalar::<i32>::from(Some(15)) as &dyn Scalar,
+            sum(&a).unwrap().as_ref()
+        );
+
+        let a = a.to(DataType::Date32);
+        assert_eq!(
+            &PrimitiveScalar::<i32>::from(Some(15)).to(DataType::Date32) as &dyn Scalar,
+            sum(&a).unwrap().as_ref()
+        );
     }
 
     #[test]
     fn test_primitive_array_float_sum() {
         let a = Float64Array::from_slice(&[1.1f64, 2.2, 3.3, 4.4, 5.5]);
-        assert!((16.5 - sum(&a).unwrap()).abs() < f64::EPSILON);
+        assert!((16.5 - sum_primitive(&a).unwrap()).abs() < f64::EPSILON);
     }
 
     #[test]
     fn test_primitive_array_sum_with_nulls() {
         let a = Int32Array::from(&[None, Some(2), Some(3), None, Some(5)]);
-        assert_eq!(10, sum(&a).unwrap());
+        assert_eq!(10, sum_primitive(&a).unwrap());
     }
 
     #[test]
     fn test_primitive_array_sum_all_nulls() {
         let a = Int32Array::from(&[None, None, None]);
-        assert_eq!(None, sum(&a));
+        assert_eq!(None, sum_primitive(&a));
     }
 
     #[test]
@@ -142,6 +224,9 @@ mod tests {
             .collect();
         // create an array that actually has non-zero values at the invalid indices
         let c = arithmetics::basic::add::add(&a, &b).unwrap();
-        assert_eq!(Some((1..=100).filter(|i| i % 3 == 0).sum()), sum(&c));
+        assert_eq!(
+            Some((1..=100).filter(|i| i % 3 == 0).sum()),
+            sum_primitive(&c)
+        );
     }
 }

@@ -56,6 +56,9 @@ pub trait Array: std::fmt::Debug + Send + Sync {
     /// This is `O(1)`.
     #[inline]
     fn null_count(&self) -> usize {
+        if self.data_type() == &DataType::Null {
+            return self.len();
+        };
         self.validity()
             .as_ref()
             .map(|x| x.null_count())
@@ -185,7 +188,7 @@ impl Display for dyn Array {
             DataType::LargeList(_) => fmt_dyn!(self, ListArray::<i64>, f),
             DataType::FixedSizeList(_, _) => fmt_dyn!(self, FixedSizeListArray, f),
             DataType::Struct(_) => fmt_dyn!(self, StructArray, f),
-            DataType::Union(_) => unimplemented!(),
+            DataType::Union(_, _, _) => fmt_dyn!(self, UnionArray, f),
             DataType::Dictionary(key_type, _) => match key_type.as_ref() {
                 DataType::Int8 => fmt_dyn!(self, DictionaryArray::<i8>, f),
                 DataType::Int16 => fmt_dyn!(self, DictionaryArray::<i16>, f),
@@ -239,7 +242,7 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
         DataType::LargeList(_) => Box::new(ListArray::<i64>::new_empty(data_type)),
         DataType::FixedSizeList(_, _) => Box::new(FixedSizeListArray::new_empty(data_type)),
         DataType::Struct(fields) => Box::new(StructArray::new_empty(&fields)),
-        DataType::Union(_) => unimplemented!(),
+        DataType::Union(_, _, _) => Box::new(UnionArray::new_empty(data_type)),
         DataType::Dictionary(key_type, value_type) => match key_type.as_ref() {
             DataType::Int8 => Box::new(DictionaryArray::<i8>::new_empty(*value_type)),
             DataType::Int16 => Box::new(DictionaryArray::<i16>::new_empty(*value_type)),
@@ -255,7 +258,8 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
 }
 
 /// Creates a new [`Array`] of [`DataType`] `data_type` and `length`.
-/// The array is guaranteed to have [`Array::null_count`] equal to [`Array::len`].
+/// The array is guaranteed to have [`Array::null_count`] equal to [`Array::len`]
+/// for all types except Union, which does not have a validity.
 pub fn new_null_array(data_type: DataType, length: usize) -> Box<dyn Array> {
     match data_type {
         DataType::Null => Box::new(NullArray::new_null(length)),
@@ -293,7 +297,7 @@ pub fn new_null_array(data_type: DataType, length: usize) -> Box<dyn Array> {
         DataType::LargeList(_) => Box::new(ListArray::<i64>::new_null(data_type, length)),
         DataType::FixedSizeList(_, _) => Box::new(FixedSizeListArray::new_null(data_type, length)),
         DataType::Struct(fields) => Box::new(StructArray::new_null(&fields, length)),
-        DataType::Union(_) => unimplemented!(),
+        DataType::Union(_, _, _) => Box::new(UnionArray::new_null(data_type, length)),
         DataType::Dictionary(key_type, value_type) => match key_type.as_ref() {
             DataType::Int8 => Box::new(DictionaryArray::<i8>::new_null(*value_type, length)),
             DataType::Int16 => Box::new(DictionaryArray::<i16>::new_null(*value_type, length)),
@@ -354,7 +358,7 @@ pub fn clone(array: &dyn Array) -> Box<dyn Array> {
         DataType::LargeList(_) => clone_dyn!(array, ListArray::<i64>),
         DataType::FixedSizeList(_, _) => clone_dyn!(array, FixedSizeListArray),
         DataType::Struct(_) => clone_dyn!(array, StructArray),
-        DataType::Union(_) => unimplemented!(),
+        DataType::Union(_, _, _) => clone_dyn!(array, UnionArray),
         DataType::Dictionary(key_type, _) => match key_type.as_ref() {
             DataType::Int8 => clone_dyn!(array, DictionaryArray::<i8>),
             DataType::Int16 => clone_dyn!(array, DictionaryArray::<i16>),
@@ -380,6 +384,7 @@ mod null;
 mod primitive;
 mod specification;
 mod struct_;
+mod union;
 mod utf8;
 
 mod equal;
@@ -388,20 +393,22 @@ pub mod growable;
 pub mod ord;
 
 pub use display::get_display;
+pub use equal::equal;
 
 pub use binary::{BinaryArray, MutableBinaryArray};
 pub use boolean::{BooleanArray, MutableBooleanArray};
 pub use dictionary::{DictionaryArray, DictionaryKey, MutableDictionaryArray};
-pub use fixed_size_binary::FixedSizeBinaryArray;
-pub use fixed_size_list::FixedSizeListArray;
+pub use fixed_size_binary::{FixedSizeBinaryArray, MutableFixedSizeBinaryArray};
+pub use fixed_size_list::{FixedSizeListArray, MutableFixedSizeListArray};
 pub use list::{ListArray, MutableListArray};
 pub use null::NullArray;
 pub use primitive::*;
 pub use specification::Offset;
 pub use struct_::StructArray;
+pub use union::UnionArray;
 pub use utf8::{MutableUtf8Array, Utf8Array, Utf8ValuesIter};
 
-pub(crate) use self::ffi::buffers_children;
+pub(crate) use self::ffi::buffers_children_dictionary;
 pub use self::ffi::FromFfi;
 pub use self::ffi::ToFfi;
 
@@ -468,55 +475,6 @@ pub trait IterableListArray: Array {
 pub unsafe trait GenericBinaryArray<O: Offset>: Array {
     fn values(&self) -> &[u8];
     fn offsets(&self) -> &[O];
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::datatypes::*;
-
-    #[test]
-    fn nulls() {
-        let datatypes = vec![
-            DataType::Int32,
-            DataType::Float64,
-            DataType::Utf8,
-            DataType::Binary,
-            DataType::List(Box::new(Field::new("a", DataType::Binary, true))),
-        ];
-        let a = datatypes
-            .into_iter()
-            .all(|x| new_null_array(x, 10).null_count() == 10);
-        assert!(a);
-    }
-
-    #[test]
-    fn empty() {
-        let datatypes = vec![
-            DataType::Int32,
-            DataType::Float64,
-            DataType::Utf8,
-            DataType::Binary,
-            DataType::List(Box::new(Field::new("a", DataType::Binary, true))),
-        ];
-        let a = datatypes.into_iter().all(|x| new_empty_array(x).len() == 0);
-        assert!(a);
-    }
-
-    #[test]
-    fn test_clone() {
-        let datatypes = vec![
-            DataType::Int32,
-            DataType::Float64,
-            DataType::Utf8,
-            DataType::Binary,
-            DataType::List(Box::new(Field::new("a", DataType::Binary, true))),
-        ];
-        let a = datatypes
-            .into_iter()
-            .all(|x| clone(new_null_array(x.clone(), 10).as_ref()) == new_null_array(x, 10));
-        assert!(a);
-    }
 }
 
 // backward compatibility

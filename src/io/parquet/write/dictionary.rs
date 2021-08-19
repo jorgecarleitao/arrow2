@@ -1,8 +1,9 @@
-use parquet2::encoding::hybrid_rle::encode_u32;
-use parquet2::page::{CompressedDictPage, CompressedPage};
-use parquet2::schema::Encoding;
-use parquet2::write::DynIter;
-use parquet2::{metadata::ColumnDescriptor, write::WriteOptions};
+use parquet2::{
+    encoding::{hybrid_rle::encode_u32, Encoding},
+    metadata::ColumnDescriptor,
+    page::{CompressedDictPage, CompressedPage},
+    write::{DynIter, WriteOptions},
+};
 
 use super::binary::encode_plain as binary_encode_plain;
 use super::primitive::encode_plain as primitive_encode_plain;

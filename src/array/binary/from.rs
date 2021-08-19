@@ -87,19 +87,3 @@ where
 
     (null.into(), offsets.into(), values.into())
 }
-
-#[cfg(test)]
-mod tests {
-    use crate::array::Array;
-
-    use super::*;
-
-    #[test]
-    fn test_from() {
-        let array = BinaryArray::<i32>::from(&[Some(b"hello".as_ref()), Some(b" ".as_ref()), None]);
-
-        let a = array.validity().as_ref().unwrap();
-        assert_eq!(a.len(), 3);
-        assert_eq!(a.as_slice()[0], 0b00000011);
-    }
-}

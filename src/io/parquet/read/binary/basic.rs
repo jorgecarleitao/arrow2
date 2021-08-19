@@ -1,7 +1,8 @@
+use futures::{pin_mut, Stream, StreamExt};
 use parquet2::{
     encoding::{bitpacking, delta_length_byte_array, hybrid_rle, uleb128, Encoding},
     metadata::{ColumnChunkMetaData, ColumnDescriptor},
-    page::{BinaryPageDict, DataPage, DataPageHeader},
+    page::{BinaryPageDict, DataPage, DataPageHeader, DataPageHeaderExt},
     read::{levels, StreamingIterator},
 };
 
@@ -214,7 +215,7 @@ fn extend_from_page<O: Offset>(
     let is_optional = descriptor.max_def_level() == 1;
     match page.header() {
         DataPageHeader::V1(header) => {
-            assert_eq!(header.definition_level_encoding, Encoding::Rle);
+            assert_eq!(header.definition_level_encoding(), Encoding::Rle);
 
             let (_, validity_buffer, values_buffer) =
                 levels::split_buffer_v1(page.buffer(), false, is_optional);
@@ -330,6 +331,50 @@ where
     offsets.push(O::default());
     let mut validity = MutableBitmap::with_capacity(capacity);
     while let Some(page) = iter.next() {
+        extend_from_page(
+            page.as_ref().map_err(|x| x.clone())?,
+            metadata.descriptor(),
+            &mut offsets,
+            &mut values,
+            &mut validity,
+        )?
+    }
+
+    Ok(match data_type {
+        DataType::LargeBinary | DataType::Binary => Box::new(BinaryArray::from_data(
+            offsets.into(),
+            values.into(),
+            validity.into(),
+        )),
+        DataType::LargeUtf8 | DataType::Utf8 => Box::new(Utf8Array::from_data(
+            offsets.into(),
+            values.into(),
+            validity.into(),
+        )),
+        _ => unreachable!(),
+    })
+}
+
+pub async fn stream_to_array<O, I, E>(
+    pages: I,
+    metadata: &ColumnChunkMetaData,
+    data_type: &DataType,
+) -> Result<Box<dyn Array>>
+where
+    ArrowError: From<E>,
+    O: Offset,
+    E: Clone,
+    I: Stream<Item = std::result::Result<DataPage, E>>,
+{
+    let capacity = metadata.num_values() as usize;
+    let mut values = MutableBuffer::<u8>::with_capacity(0);
+    let mut offsets = MutableBuffer::<O>::with_capacity(1 + capacity);
+    offsets.push(O::default());
+    let mut validity = MutableBitmap::with_capacity(capacity);
+
+    pin_mut!(pages); // needed for iteration
+
+    while let Some(page) = pages.next().await {
         extend_from_page(
             page.as_ref().map_err(|x| x.clone())?,
             metadata.descriptor(),

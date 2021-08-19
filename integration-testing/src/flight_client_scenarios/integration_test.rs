@@ -76,7 +76,7 @@ async fn upload_data(
 ) -> Result {
     let (mut upload_tx, upload_rx) = mpsc::channel(10);
 
-    let options = write::common::IpcWriteOptions::default();
+    let options = write::IpcWriteOptions::default();
     let mut schema_flight_data =
         arrow_flight::utils::flight_data_from_arrow_schema(&schema, &options);
     schema_flight_data.flight_descriptor = Some(descriptor.clone());
@@ -128,7 +128,7 @@ async fn send_batch(
     upload_tx: &mut mpsc::Sender<FlightData>,
     metadata: &[u8],
     batch: &RecordBatch,
-    options: &write::common::IpcWriteOptions,
+    options: &write::IpcWriteOptions,
 ) -> Result {
     let (dictionary_flight_data, mut batch_flight_data) =
         arrow_flight::utils::flight_data_from_arrow_batch(batch, &options);

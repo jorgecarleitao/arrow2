@@ -55,8 +55,9 @@ impl<'a> Growable<'a> for GrowableBoolean<'a> {
 
         let array = self.arrays[index];
         let values = array.values();
-        let iter = (start..start + len).map(|i| values.get_bit(i));
-        unsafe { self.values.extend_from_trusted_len_iter_unchecked(iter) };
+
+        let (slice, offset, _) = values.as_slice();
+        self.values.extend_from_slice(slice, start + offset, len);
     }
 
     fn extend_validity(&mut self, additional: usize) {
@@ -76,24 +77,5 @@ impl<'a> Growable<'a> for GrowableBoolean<'a> {
 impl<'a> From<GrowableBoolean<'a>> for BooleanArray {
     fn from(val: GrowableBoolean<'a>) -> Self {
         BooleanArray::from_data(val.values.into(), val.validity.into())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_bool() {
-        let array = BooleanArray::from(vec![Some(false), Some(true), None, Some(false)]);
-
-        let mut a = GrowableBoolean::new(vec![&array], false, 0);
-
-        a.extend(0, 1, 2);
-
-        let result: BooleanArray = a.into();
-
-        let expected = BooleanArray::from(vec![Some(true), None]);
-        assert_eq!(result, expected);
     }
 }

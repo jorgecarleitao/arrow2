@@ -39,8 +39,5 @@ pub fn lexical_to_string<N: lexical_core::ToLexical>(n: N) -> String {
     unsafe { String::from_utf8_unchecked(lexical_to_bytes(n)) }
 }
 
-#[cfg(test)]
-pub mod test_util;
-
 #[cfg(feature = "benchmarks")]
 pub mod bench_util;

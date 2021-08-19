@@ -52,7 +52,10 @@ impl<'a, O: Offset> IntoIterator for &'a BinaryArray<O> {
 impl<'a, O: Offset> BinaryArray<O> {
     /// Returns an iterator of `Option<&[u8]>`
     pub fn iter(&'a self) -> ZipValidity<'a, &'a [u8], BinaryValueIter<'a, O>> {
-        zip_validity(BinaryValueIter::new(self), &self.validity)
+        zip_validity(
+            BinaryValueIter::new(self),
+            self.validity.as_ref().map(|x| x.iter()),
+        )
     }
 
     /// Returns an iterator of `&[u8]`

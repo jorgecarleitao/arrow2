@@ -25,6 +25,7 @@ use arrow2::{
     datatypes::*,
     io::ipc,
     io::ipc::gen::Message::{Message, MessageHeader},
+    io::ipc::gen::Schema::MetadataVersion,
     record_batch::RecordBatch,
 };
 use arrow_flight::flight_descriptor::*;
@@ -106,7 +107,7 @@ impl FlightService for FlightServiceImpl {
             .get(&key)
             .ok_or_else(|| Status::not_found(format!("Could not find flight. {}", key)))?;
 
-        let options = ipc::write::common::IpcWriteOptions::default();
+        let options = ipc::write::IpcWriteOptions::default();
 
         let schema = std::iter::once({
             Ok(arrow_flight::utils::flight_data_from_arrow_schema(
@@ -174,7 +175,7 @@ impl FlightService for FlightServiceImpl {
 
                 let total_records: usize = flight.chunks.iter().map(|chunk| chunk.num_rows()).sum();
 
-                let options = ipc::write::common::IpcWriteOptions::default();
+                let options = ipc::write::IpcWriteOptions::default();
                 let schema =
                     arrow_flight::utils::ipc_message_from_arrow_schema(&flight.schema, &options)
                         .expect(
@@ -292,8 +293,10 @@ async fn record_batch_from_message(
     let arrow_batch_result = ipc::read::read_record_batch(
         ipc_batch,
         schema_ref,
+        None,
         true,
         &dictionaries_by_field,
+        MetadataVersion::V5,
         &mut reader,
         0,
     );

@@ -7,7 +7,7 @@ use arrow2::{
     datatypes::{Field, Schema},
     error::Result,
     io::parquet::write::{
-        array_to_page, write_file, CompressionCodec, DynIter, Encoding, Version, WriteOptions,
+        array_to_page, write_file, Compression, DynIter, Encoding, Version, WriteOptions,
     },
 };
 
@@ -16,7 +16,7 @@ fn write_single_array(path: &str, array: &dyn Array, field: Field) -> Result<()>
 
     let options = WriteOptions {
         write_statistics: true,
-        compression: CompressionCodec::Uncompressed,
+        compression: Compression::Uncompressed,
         version: Version::V2,
     };
     let encoding = Encoding::Plain;

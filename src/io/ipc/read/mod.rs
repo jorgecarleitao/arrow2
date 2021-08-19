@@ -15,8 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
+mod array;
 mod common;
 mod deserialize;
+mod read_basic;
 mod reader;
 mod stream;
 

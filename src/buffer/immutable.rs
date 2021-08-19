@@ -1,6 +1,4 @@
-use std::sync::Arc;
-use std::{convert::AsRef, usize};
-use std::{fmt::Debug, iter::FromIterator};
+use std::{convert::AsRef, iter::FromIterator, sync::Arc, usize};
 
 use crate::{trusted_len::TrustedLen, types::NativeType};
 
@@ -9,7 +7,7 @@ use super::mutable::MutableBuffer;
 
 /// Buffer represents a contiguous memory region that can be shared with other buffers and across
 /// thread boundaries.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq)]
 pub struct Buffer<T: NativeType> {
     /// the internal byte buffer.
     data: Arc<Bytes<T>>,
@@ -20,6 +18,12 @@ pub struct Buffer<T: NativeType> {
     // the length of the buffer. Given a region `data` of N bytes, [offset..offset+length] is visible
     // to this buffer.
     length: usize,
+}
+
+impl<T: NativeType> std::fmt::Debug for Buffer<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(&**self, f)
+    }
 }
 
 impl<T: NativeType> Default for Buffer<T> {
@@ -160,70 +164,5 @@ impl<T: NativeType> FromIterator<T> for Buffer<T> {
     #[inline]
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
         MutableBuffer::from_iter(iter).into()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_new() {
-        let buffer = Buffer::<i32>::new();
-        assert_eq!(buffer.len(), 0);
-        assert!(buffer.is_empty());
-    }
-
-    #[test]
-    fn test_new_zeroed() {
-        let buffer = Buffer::<i32>::new_zeroed(2);
-        assert_eq!(buffer.len(), 2);
-        assert!(!buffer.is_empty());
-        assert_eq!(buffer.as_slice(), &[0, 0]);
-    }
-
-    #[test]
-    fn test_from_slice() {
-        let buffer = Buffer::<i32>::from(&[0, 1, 2]);
-        assert_eq!(buffer.len(), 3);
-        assert_eq!(buffer.as_slice(), &[0, 1, 2]);
-    }
-
-    #[test]
-    fn test_slice() {
-        let buffer = Buffer::<i32>::from(&[0, 1, 2, 3]);
-        let buffer = buffer.slice(1, 2);
-        assert_eq!(buffer.len(), 2);
-        assert_eq!(buffer.as_slice(), &[1, 2]);
-    }
-
-    #[test]
-    fn test_from_iter() {
-        let buffer = (0..3).collect::<Buffer<i32>>();
-        assert_eq!(buffer.len(), 3);
-        assert_eq!(buffer.as_slice(), &[0, 1, 2]);
-    }
-
-    #[test]
-    fn test_from_trusted_len_iter() {
-        let buffer = unsafe { Buffer::<i32>::from_trusted_len_iter_unchecked(0..3) };
-        assert_eq!(buffer.len(), 3);
-        assert_eq!(buffer.as_slice(), &[0, 1, 2]);
-    }
-
-    #[test]
-    fn test_try_from_trusted_len_iter() {
-        let iter = (0..3).map(Result::<_, String>::Ok);
-        let buffer = unsafe { Buffer::<i32>::try_from_trusted_len_iter_unchecked(iter) }.unwrap();
-        assert_eq!(buffer.len(), 3);
-        assert_eq!(buffer.as_slice(), &[0, 1, 2]);
-    }
-
-    #[test]
-    fn test_as_ptr() {
-        let buffer = Buffer::<i32>::from(&[0, 1, 2, 3]);
-        let buffer = buffer.slice(1, 2);
-        let ptr = buffer.as_ptr();
-        assert_eq!(unsafe { *ptr }, 1);
     }
 }

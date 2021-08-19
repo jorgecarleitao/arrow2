@@ -44,21 +44,3 @@ impl From<GrowableNull> for NullArray {
         NullArray::from_data(val.length)
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_null() {
-        let mut mutable = GrowableNull::new();
-
-        mutable.extend(0, 1, 2);
-        mutable.extend(1, 0, 1);
-
-        let result: NullArray = mutable.into();
-
-        let expected = NullArray::from_data(3);
-        assert_eq!(result, expected);
-    }
-}

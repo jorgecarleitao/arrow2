@@ -7,10 +7,7 @@
 //! represent chunks of bits (e.g. `u8`, `u16`), and [`BitChunkIter`], that can be used to
 //! iterate over bitmaps in [`BitChunk`]s.
 //! Finally, this module also contains traits used to compile code optimized for SIMD instructions at [`simd`].
-use std::{
-    cmp::{Ord, Ordering},
-    convert::TryFrom,
-};
+use std::convert::TryFrom;
 
 mod bit_chunk;
 pub use bit_chunk::{BitChunk, BitChunkIter};
@@ -229,20 +226,5 @@ impl days_ms {
     #[inline]
     pub fn milliseconds(&self) -> i32 {
         self.0[1]
-    }
-}
-
-impl Ord for days_ms {
-    fn cmp(&self, other: &Self) -> Ordering {
-        match self.days().cmp(&other.days()) {
-            Ordering::Equal => self.milliseconds().cmp(&other.milliseconds()),
-            other => other,
-        }
-    }
-}
-
-impl PartialOrd for days_ms {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
     }
 }

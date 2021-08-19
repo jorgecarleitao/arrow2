@@ -12,7 +12,7 @@ use crate::{
 
 use super::{
     get_page_iterator, get_schema, page_iter_to_array, read_metadata, Decompressor, FileMetaData,
-    RowGroupMetaData,
+    PageFilter, RowGroupMetaData,
 };
 
 type GroupFilter = Arc<dyn Fn(usize, &RowGroupMetaData) -> bool>;
@@ -25,6 +25,7 @@ pub struct RecordReader<R: Read + Seek> {
     buffer: Vec<u8>,
     decompress_buffer: Vec<u8>,
     groups_filter: GroupFilter,
+    pages_filter: Option<PageFilter>,
     metadata: Rc<FileMetaData>,
     current_group: usize,
     remaining_rows: usize,
@@ -36,6 +37,7 @@ impl<R: Read + Seek> RecordReader<R> {
         projection: Option<Vec<usize>>,
         limit: Option<usize>,
         groups_filter: GroupFilter,
+        pages_filter: Option<PageFilter>,
     ) -> Result<Self> {
         let metadata = read_metadata(&mut reader)?;
 
@@ -75,6 +77,7 @@ impl<R: Read + Seek> RecordReader<R> {
             schema,
             indices: Rc::new(indices),
             groups_filter,
+            pages_filter,
             metadata: Rc::new(metadata),
             current_group: 0,
             buffer: vec![],
@@ -124,7 +127,15 @@ impl<R: Read + Seek> Iterator for RecordReader<R> {
                 // column according to the file's indexing
                 let column = self.indices[column];
                 let column_meta = &columns_meta[column];
-                let pages = get_page_iterator(&metadata, row_group, column, &mut self.reader, b1)?;
+                let pages = get_page_iterator(
+                    &metadata,
+                    row_group,
+                    column,
+                    &mut self.reader,
+                    self.pages_filter.clone(),
+                    b1,
+                )?;
+
                 let mut pages = Decompressor::new(pages, b2);
 
                 let array = page_iter_to_array(&mut pages, column_meta, field.data_type().clone())?;

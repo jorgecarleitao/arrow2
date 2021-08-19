@@ -29,7 +29,7 @@ use crate::types::NativeType;
 
 mod alignment;
 
-use alignment::ALIGNMENT;
+pub use alignment::ALIGNMENT;
 
 // If this number is not zero after all objects have been `drop`, there is a memory leak
 pub static mut ALLOCATIONS: AtomicIsize = AtomicIsize::new(0);
@@ -39,8 +39,10 @@ pub fn total_allocated_bytes() -> isize {
     unsafe { ALLOCATIONS.load(std::sync::atomic::Ordering::SeqCst) }
 }
 
+/// # Safety
+/// This pointer may only be used to check if memory is allocated.
 #[inline]
-unsafe fn dangling<T: NativeType>() -> NonNull<T> {
+pub unsafe fn dangling<T: NativeType>() -> NonNull<T> {
     NonNull::new_unchecked(ALIGNMENT as *mut T)
 }
 
@@ -128,57 +130,4 @@ pub unsafe fn reallocate<T: NativeType>(
     NonNull::new(raw_ptr).unwrap_or_else(|| {
         handle_alloc_error(Layout::from_size_align_unchecked(new_size, ALIGNMENT))
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_allocate_dangling() {
-        let p = allocate_aligned::<u32>(0);
-        assert_eq!(0, (p.as_ptr() as usize) % ALIGNMENT);
-    }
-
-    #[test]
-    fn test_allocate() {
-        let p = allocate_aligned::<u32>(1024);
-        assert_eq!(0, (p.as_ptr() as usize) % ALIGNMENT);
-        unsafe { free_aligned(p, 1024) };
-    }
-
-    #[test]
-    fn test_allocate_zeroed() {
-        let p = allocate_aligned_zeroed::<u32>(1024);
-        assert_eq!(0, (p.as_ptr() as usize) % ALIGNMENT);
-        unsafe { free_aligned(p, 1024) };
-    }
-
-    #[test]
-    fn test_reallocate_from_zero() {
-        let ptr = allocate_aligned::<u32>(0);
-        let ptr = unsafe { reallocate(ptr, 0, 512) };
-        unsafe { free_aligned(ptr, 512) };
-    }
-
-    #[test]
-    fn test_reallocate_from_alloc() {
-        let ptr = allocate_aligned::<u32>(32);
-        let ptr = unsafe { reallocate(ptr, 32, 64) };
-        unsafe { free_aligned(ptr, 64) };
-    }
-
-    #[test]
-    fn test_reallocate_smaller() {
-        let ptr = allocate_aligned::<u32>(32);
-        let ptr = unsafe { reallocate(ptr, 32, 16) };
-        unsafe { free_aligned(ptr, 16) };
-    }
-
-    #[test]
-    fn test_reallocate_to_zero() {
-        let ptr = allocate_aligned::<u32>(32);
-        let ptr = unsafe { reallocate(ptr, 32, 0) };
-        assert_eq!(ptr, unsafe { dangling() });
-    }
 }

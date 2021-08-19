@@ -4,10 +4,7 @@ use std::cmp::Ordering;
 
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
-use crate::{
-    array::*,
-    types::{days_ms, NativeType},
-};
+use crate::{array::*, types::NativeType};
 
 /// Compare the values at two arbitrary indices in two arrays.
 pub type DynComparator<'a> = Box<dyn Fn(usize, usize) -> Ordering + 'a>;
@@ -180,7 +177,6 @@ pub fn build_compare<'a>(left: &'a dyn Array, right: &'a dyn Array) -> Result<Dy
         | (Duration(Nanosecond), Duration(Nanosecond)) => compare_primitives::<i64>(left, right),
         (Float32, Float32) => compare_f32(left, right),
         (Float64, Float64) => compare_f64(left, right),
-        (Interval(DayTime), Interval(DayTime)) => compare_primitives::<days_ms>(left, right),
         (Utf8, Utf8) => compare_string::<i32>(left, right),
         (LargeUtf8, LargeUtf8) => compare_string::<i64>(left, right),
         (Dictionary(key_type_lhs, _), Dictionary(key_type_rhs, _)) => {
@@ -208,109 +204,4 @@ pub fn build_compare<'a>(left: &'a dyn Array, right: &'a dyn Array) -> Result<Dy
             )))
         }
     })
-}
-
-#[cfg(test)]
-pub mod tests {
-    use super::*;
-    use crate::error::Result;
-    use std::cmp::Ordering;
-
-    #[test]
-    fn test_i32() -> Result<()> {
-        let array = Int32Array::from_slice(&[1, 2]);
-
-        let cmp = build_compare(&array, &array)?;
-
-        assert_eq!(Ordering::Less, (cmp)(0, 1));
-        Ok(())
-    }
-
-    #[test]
-    fn test_i32_i32() -> Result<()> {
-        let array1 = Int32Array::from_slice(&[1]);
-        let array2 = Int32Array::from_slice(&[2]);
-
-        let cmp = build_compare(&array1, &array2)?;
-
-        assert_eq!(Ordering::Less, (cmp)(0, 0));
-        Ok(())
-    }
-
-    #[test]
-    fn test_f32() -> Result<()> {
-        let array = &Float32Array::from_slice(&[1.0, 2.0]);
-
-        let cmp = build_compare(array, array)?;
-
-        assert_eq!(Ordering::Less, (cmp)(0, 1));
-        Ok(())
-    }
-
-    #[test]
-    fn test_f64() -> Result<()> {
-        let array = Float64Array::from_slice(&[1.0, 2.0]);
-
-        let cmp = build_compare(&array, &array)?;
-
-        assert_eq!(Ordering::Less, (cmp)(0, 1));
-        Ok(())
-    }
-
-    #[test]
-    fn test_f64_nan() -> Result<()> {
-        let array = Float64Array::from_slice(&[1.0, f64::NAN]);
-
-        let cmp = build_compare(&array, &array)?;
-
-        assert_eq!(Ordering::Less, (cmp)(0, 1));
-        Ok(())
-    }
-
-    #[test]
-    fn test_f64_zeros() -> Result<()> {
-        let array = Float64Array::from_slice(&[-0.0, 0.0]);
-
-        let cmp = build_compare(&array, &array)?;
-
-        // official IEEE 754 (2008 revision)
-        assert_eq!(Ordering::Less, (cmp)(0, 1));
-        assert_eq!(Ordering::Greater, (cmp)(1, 0));
-        Ok(())
-    }
-
-    #[test]
-    fn test_dict() -> Result<()> {
-        let data = vec!["a", "b", "c", "a", "a", "c", "c"];
-
-        let data = data.into_iter().map(Some);
-        let mut array = MutableDictionaryArray::<i32, MutableUtf8Array<i32>>::new();
-        array.try_extend(data)?;
-        let array: DictionaryArray<i32> = array.into();
-
-        let cmp = build_compare(&array, &array)?;
-
-        assert_eq!(Ordering::Less, (cmp)(0, 1));
-        assert_eq!(Ordering::Equal, (cmp)(3, 4));
-        assert_eq!(Ordering::Greater, (cmp)(2, 3));
-        Ok(())
-    }
-
-    #[test]
-    fn test_dict_1() -> Result<()> {
-        let data = vec![1, 2, 3, 1, 1, 3, 3];
-
-        let data = data.into_iter().map(Some);
-
-        let mut array = MutableDictionaryArray::<i32, MutablePrimitiveArray<i32>>::new();
-        array.try_extend(data)?;
-        let array = array.into_arc();
-
-        let cmp = build_compare(array.as_ref(), array.as_ref())?;
-
-        assert_eq!(Ordering::Less, (cmp)(0, 1));
-        assert_eq!(Ordering::Equal, (cmp)(3, 4));
-        assert_eq!(Ordering::Greater, (cmp)(2, 3));
-        Ok(())
-    }
 }
