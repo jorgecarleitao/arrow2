@@ -76,14 +76,14 @@ pub fn read_stream_metadata<R: Read>(reader: &mut R) -> Result<StreamMetadata> {
     })
 }
 
-pub enum State {
+pub enum StreamState {
     Waiting,
     Some(RecordBatch),
 }
 
-impl State {
+impl StreamState {
     pub fn unwrap(self) -> RecordBatch {
-        if let State::Some(batch) = self {
+        if let StreamState::Some(batch) = self {
             batch
         } else {
             panic!("The batch is not available")
@@ -96,7 +96,7 @@ pub fn read_next<R: Read>(
     reader: &mut R,
     metadata: &StreamMetadata,
     dictionaries_by_field: &mut Vec<Option<ArrayRef>>,
-) -> Result<Option<State>> {
+) -> Result<Option<StreamState>> {
     // determine metadata length
     let mut meta_size: [u8; 4] = [0; 4];
 
@@ -107,7 +107,7 @@ pub fn read_next<R: Read>(
                 // Handle EOF without the "0xFFFFFFFF 0x00000000"
                 // valid according to:
                 // https://arrow.apache.org/docs/format/Columnar.html#ipc-streaming-format
-                Ok(Some(State::Waiting))
+                Ok(Some(StreamState::Waiting))
             } else {
                 Err(ArrowError::from(e))
             };
@@ -159,7 +159,7 @@ pub fn read_next<R: Read>(
                 &mut reader,
                 0,
             )
-            .map(|x| Some(State::Some(x)))
+            .map(|x| Some(StreamState::Some(x)))
         }
         gen::Message::MessageHeader::DictionaryBatch => {
             let batch = message.header_as_dictionary_batch().ok_or_else(|| {
@@ -183,7 +183,7 @@ pub fn read_next<R: Read>(
             // read the next message until we encounter a RecordBatch
             read_next(reader, metadata, dictionaries_by_field)
         }
-        gen::Message::MessageHeader::NONE => Ok(Some(State::Waiting)),
+        gen::Message::MessageHeader::NONE => Ok(Some(StreamState::Waiting)),
         t => Err(ArrowError::Ipc(format!(
             "Reading types other than record batches not yet supported, unable to read {:?} ",
             t
@@ -225,7 +225,7 @@ impl<R: Read> StreamReader<R> {
         self.finished
     }
 
-    fn maybe_next(&mut self) -> Result<Option<State>> {
+    fn maybe_next(&mut self) -> Result<Option<StreamState>> {
         if self.finished {
             return Ok(None);
         }
@@ -242,7 +242,7 @@ impl<R: Read> StreamReader<R> {
 }
 
 impl<R: Read> Iterator for StreamReader<R> {
-    type Item = Result<State>;
+    type Item = Result<StreamState>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.maybe_next().transpose()
