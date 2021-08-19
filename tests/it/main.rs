@@ -7,4 +7,5 @@ mod ffi;
 mod io;
 mod test_util;
 
+#[cfg(feature = "compute")]
 mod compute;

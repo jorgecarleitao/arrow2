@@ -69,12 +69,11 @@ impl<'a> Growable<'a> for GrowableFixedSizeBinary<'a> {
         let values = array.values();
 
         self.values
-            .extend_from_slice(&values[start * self.size..start * self.size + len * self.size]);
+            .extend_from_slice(&values[start * self.size..(start + len) * self.size]);
     }
 
     fn extend_validity(&mut self, additional: usize) {
-        self.values
-            .extend_from_slice(&vec![0; self.size * additional]);
+        self.values.extend_constant(self.size * additional, 0);
         self.validity.extend_constant(additional, false);
     }
 
