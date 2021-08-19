@@ -1,4 +1,5 @@
 use arrow2::array::{MutableArray, MutableBooleanArray};
+use arrow2::error::Result;
 
 #[test]
 fn set() {
@@ -36,5 +37,12 @@ fn from_trusted_len_iter() {
 fn from_iter() {
     let iter = std::iter::repeat(true).take(2).map(Some);
     let a: MutableBooleanArray = iter.collect();
+    assert_eq!(a, MutableBooleanArray::from([Some(true), Some(true)]));
+}
+
+#[test]
+fn try_from_trusted_len_iter() {
+    let iter = std::iter::repeat(Some(true)).take(2).map(Result::Ok);
+    let a = MutableBooleanArray::try_from_trusted_len_iter(iter).unwrap();
     assert_eq!(a, MutableBooleanArray::from([Some(true), Some(true)]));
 }

@@ -332,13 +332,7 @@ impl<T: NativeType + NaturalDataType> MutablePrimitiveArray<T> {
         P: std::borrow::Borrow<T>,
         I: TrustedLen<Item = Option<P>>,
     {
-        let (validity, values) = unsafe { trusted_len_unzip(iterator) };
-
-        Self {
-            data_type: T::DATA_TYPE,
-            values,
-            validity,
-        }
+        unsafe { Self::from_trusted_len_iter_unchecked(iterator) }
     }
 
     /// Creates a [`MutablePrimitiveArray`] from an fallible iterator of trusted length.
@@ -371,13 +365,7 @@ impl<T: NativeType + NaturalDataType> MutablePrimitiveArray<T> {
         P: std::borrow::Borrow<T>,
         I: TrustedLen<Item = std::result::Result<Option<P>, E>>,
     {
-        let (validity, values) = unsafe { try_trusted_len_unzip(iterator) }?;
-
-        Ok(Self {
-            data_type: T::DATA_TYPE,
-            values,
-            validity,
-        })
+        unsafe { Self::try_from_trusted_len_iter_unchecked(iterator) }
     }
 
     /// Creates a new [`MutablePrimitiveArray`] out an iterator over values
@@ -542,4 +530,10 @@ where
     };
 
     Ok((validity, buffer))
+}
+
+impl<T: NativeType> PartialEq for MutablePrimitiveArray<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.iter().eq(other.iter())
+    }
 }

@@ -27,6 +27,16 @@ fn nulls() {
         .into_iter()
         .all(|x| new_null_array(x, 10).null_count() == 10);
     assert!(a);
+
+    // unions' null count is always 0
+    let datatypes = vec![
+        DataType::Union(vec![Field::new("a", DataType::Binary, true)], None, false),
+        DataType::Union(vec![Field::new("a", DataType::Binary, true)], None, true),
+    ];
+    let a = datatypes
+        .into_iter()
+        .all(|x| new_null_array(x, 10).null_count() == 0);
+    assert!(a);
 }
 
 #[test]

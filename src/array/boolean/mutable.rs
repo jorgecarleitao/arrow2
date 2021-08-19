@@ -169,15 +169,7 @@ impl MutableBooleanArray {
         P: std::borrow::Borrow<bool>,
         I: TrustedLen<Item = Option<P>>,
     {
-        let (validity, values) = unsafe { trusted_len_unzip(iterator) };
-
-        let validity = if validity.null_count() > 0 {
-            Some(validity)
-        } else {
-            None
-        };
-
-        Self::from_data(values, validity)
+        unsafe { Self::from_trusted_len_iter_unchecked(iterator) }
     }
 
     /// Creates a [`BooleanArray`] from an falible iterator of trusted length.
@@ -210,15 +202,7 @@ impl MutableBooleanArray {
         P: std::borrow::Borrow<bool>,
         I: TrustedLen<Item = std::result::Result<Option<P>, E>>,
     {
-        let (validity, values) = unsafe { try_trusted_len_unzip(iterator)? };
-
-        let validity = if validity.null_count() > 0 {
-            Some(validity)
-        } else {
-            None
-        };
-
-        Ok(Self::from_data(values, validity))
+        unsafe { Self::try_from_trusted_len_iter_unchecked(iterator) }
     }
 }
 
