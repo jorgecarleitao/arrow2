@@ -98,22 +98,32 @@ fn many() {
 
     let array = StructArray::from_data(fields.clone(), values.clone(), None);
 
-    let mut mutable = GrowableStruct::new(vec![&array, &array], false, 0);
+    let mut mutable = GrowableStruct::new(vec![&array, &array], true, 0);
 
     mutable.extend(0, 1, 2);
     mutable.extend(1, 0, 2);
-    let result: StructArray = mutable.into();
+    mutable.extend_validity(1);
+    let result = mutable.as_box();
 
     let expected_string: Arc<dyn Array> = Arc::new(Utf8Array::<i32>::from(&[
         Some("aa"),
         None,
         Some("a"),
         Some("aa"),
+        None,
     ]));
-    let expected_int: Arc<dyn Array> = Arc::new(
-        PrimitiveArray::<i32>::from(vec![Some(2), Some(3), Some(1), Some(2)]).to(DataType::Int32),
-    );
+    let expected_int: Arc<dyn Array> = Arc::new(PrimitiveArray::<i32>::from(vec![
+        Some(2),
+        Some(3),
+        Some(1),
+        Some(2),
+        None,
+    ]));
 
-    let expected = StructArray::from_data(fields, vec![expected_string, expected_int], None);
-    assert_eq!(result, expected)
+    let expected = StructArray::from_data(
+        fields,
+        vec![expected_string, expected_int],
+        Some(Bitmap::from([true, true, true, true, false])),
+    );
+    assert_eq!(expected, result.as_ref())
 }

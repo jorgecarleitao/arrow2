@@ -1,6 +1,7 @@
 # Arrow2: Transmute-free Arrow
 
 [![test](https://github.com/jorgecarleitao/arrow2/actions/workflows/test.yml/badge.svg)](https://github.com/jorgecarleitao/arrow2/actions/workflows/Build.yml)
+[![codecov](https://codecov.io/gh/jorgecarleitao/arrow2/branch/main/graph/badge.svg?token=AgyTF60R3D)](https://codecov.io/gh/jorgecarleitao/arrow2)
 [![](https://img.shields.io/crates/d/arrow2.svg)](https://crates.io/crates/arrow2)
 [![](https://img.shields.io/crates/dv/arrow2.svg)](https://crates.io/crates/arrow2)
 [![](https://docs.rs/arrow2/badge.svg)](https://docs.rs/arrow2/)
