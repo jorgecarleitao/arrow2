@@ -53,30 +53,3 @@ impl From<Option<bool>> for BooleanScalar {
         Self::new(v)
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[allow(clippy::eq_op)]
-    #[test]
-    fn equal() {
-        let a = BooleanScalar::from(Some(true));
-        let b = BooleanScalar::from(None);
-        assert_eq!(a, a);
-        assert_eq!(b, b);
-        assert!(a != b);
-        let b = BooleanScalar::from(Some(false));
-        assert!(a != b);
-        assert_eq!(b, b);
-    }
-
-    #[test]
-    fn basics() {
-        let a = BooleanScalar::new(Some(true));
-
-        assert!(a.value());
-        assert_eq!(a.data_type(), &DataType::Boolean);
-        assert!(a.is_valid());
-    }
-}
