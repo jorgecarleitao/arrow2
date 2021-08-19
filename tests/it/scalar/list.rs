@@ -34,7 +34,7 @@ fn basics() {
         Some(Arc::new(BooleanArray::from_slice([true, false])) as Arc<dyn Array>),
     );
 
-    assert_eq!(BooleanArray::from_slice([true, false]), a.value().as_ref());
+    assert_eq!(BooleanArray::from_slice([true, false]), a.values().as_ref());
     assert_eq!(a.data_type(), &dt);
     assert!(a.is_valid());
 
