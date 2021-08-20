@@ -25,10 +25,7 @@ use serde_json::Value;
 
 use crate::types::NaturalDataType;
 use crate::{
-    array::{
-        Array, BooleanArray, DictionaryArray, DictionaryKey, ListArray, NullArray, Offset,
-        PrimitiveArray, StructArray, Utf8Array,
-    },
+    array::*,
     bitmap::MutableBitmap,
     buffer::MutableBuffer,
     datatypes::{DataType, IntervalUnit},
@@ -88,6 +85,14 @@ fn read_primitive<T: NativeType + NaturalDataType + NumCast>(
         _ => None,
     });
     PrimitiveArray::from_trusted_len_iter(iter).to(data_type)
+}
+
+fn read_binary<O: Offset>(rows: &[&Value]) -> BinaryArray<O> {
+    let iter = rows.iter().map(|row| match row {
+        Value::String(v) => Some(v.as_bytes()),
+        _ => None,
+    });
+    BinaryArray::from_trusted_len_iter(iter)
 }
 
 fn read_boolean(rows: &[&Value]) -> BooleanArray {
@@ -236,9 +241,8 @@ pub fn read(rows: &[&Value], data_type: DataType) -> Arc<dyn Array> {
         DataType::LargeUtf8 => Arc::new(read_utf8::<i64>(rows)),
         DataType::List(_) => Arc::new(read_list::<i32>(rows, data_type)),
         DataType::LargeList(_) => Arc::new(read_list::<i64>(rows, data_type)),
-        // unsupported
-        //DataType::Binary => Box::new(BinaryArray::<i32>::new_empty()),
-        //DataType::LargeBinary => Box::new(BinaryArray::<i64>::new_empty()),
+        DataType::Binary => Arc::new(read_binary::<i32>(rows)),
+        DataType::LargeBinary => Arc::new(read_binary::<i64>(rows)),
         DataType::Struct(_) => Arc::new(read_struct(rows, data_type)),
         DataType::Dictionary(key_type, _) => match key_type.as_ref() {
             DataType::Int8 => Arc::new(read_dictionary::<i8>(rows, data_type)),
