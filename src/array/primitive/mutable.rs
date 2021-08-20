@@ -173,11 +173,10 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
     }
 
     fn init_validity(&mut self) {
-        self.validity = Some(MutableBitmap::from_trusted_len_iter(
-            std::iter::repeat(true)
-                .take(self.len() - 1)
-                .chain(std::iter::once(false)),
-        ))
+        let mut validity = MutableBitmap::new();
+        validity.extend_constant(self.len(), true);
+        validity.set(self.len() - 1, false);
+        self.validity = Some(validity)
     }
 
     /// Changes the arrays' [`DataType`], returning a new [`MutablePrimitiveArray`].

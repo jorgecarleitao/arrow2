@@ -161,3 +161,20 @@ impl FixedSizeBinaryArray {
             .into()
     }
 }
+
+pub trait FixedSizeBinaryValues {
+    fn values(&self) -> &[u8];
+    fn size(&self) -> usize;
+}
+
+impl FixedSizeBinaryValues for FixedSizeBinaryArray {
+    #[inline]
+    fn values(&self) -> &[u8] {
+        &self.values
+    }
+
+    #[inline]
+    fn size(&self) -> usize {
+        self.size as usize
+    }
+}

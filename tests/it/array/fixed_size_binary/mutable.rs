@@ -1,8 +1,44 @@
 use arrow2::array::*;
-use arrow2::bitmap::Bitmap;
+use arrow2::bitmap::{Bitmap, MutableBitmap};
+use arrow2::buffer::MutableBuffer;
+use arrow2::datatypes::DataType;
 
 #[test]
 fn basic() {
+    let a = MutableFixedSizeBinaryArray::from_data(2, MutableBuffer::from([1, 2, 3, 4]), None);
+    assert_eq!(a.len(), 2);
+    assert_eq!(a.data_type(), &DataType::FixedSizeBinary(2));
+    assert_eq!(a.values(), &MutableBuffer::from([1, 2, 3, 4]));
+    assert_eq!(a.validity(), &None);
+    assert_eq!(a.value(1), &[3, 4]);
+    assert_eq!(unsafe { a.value_unchecked(1) }, &[3, 4]);
+}
+
+#[allow(clippy::eq_op)]
+#[test]
+fn equal() {
+    let a = MutableFixedSizeBinaryArray::from_data(2, MutableBuffer::from([1, 2, 3, 4]), None);
+    assert_eq!(a, a);
+    let b = MutableFixedSizeBinaryArray::from_data(2, MutableBuffer::from([1, 2]), None);
+    assert_eq!(b, b);
+    assert!(a != b);
+    let a = MutableFixedSizeBinaryArray::from_data(
+        2,
+        MutableBuffer::from([1, 2, 3, 4]),
+        Some(MutableBitmap::from([true, false])),
+    );
+    let b = MutableFixedSizeBinaryArray::from_data(
+        2,
+        MutableBuffer::from([1, 2, 3, 4]),
+        Some(MutableBitmap::from([false, true])),
+    );
+    assert_eq!(a, a);
+    assert_eq!(b, b);
+    assert!(a != b);
+}
+
+#[test]
+fn try_from_iter() {
     let array = MutableFixedSizeBinaryArray::try_from_iter(
         vec![Some(b"ab"), Some(b"bc"), None, Some(b"fh")],
         2,
