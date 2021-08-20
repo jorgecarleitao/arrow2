@@ -10,12 +10,10 @@ mod mutable;
 pub use iterator::*;
 pub use mutable::*;
 
-/// A [`BooleanArray`] is arrow's equivalent to `Vec<Option<bool>>`, i.e.
-/// an array designed for highly performant operations on optionally nullable booleans.
-/// The size of this struct is `O(1)` as all data is stored behind an `Arc`.
+/// A [`BooleanArray`] is arrow's equivalent to an immutable `Vec<Option<bool>>`, i.e.
+/// The size of this struct is `O(1)` as all data is stored behind an `Arc`, and
 #[derive(Debug, Clone)]
 pub struct BooleanArray {
-    data_type: DataType,
     values: Bitmap,
     validity: Option<Bitmap>,
     offset: usize,
@@ -45,7 +43,6 @@ impl BooleanArray {
             assert_eq!(values.len(), validity.len());
         }
         Self {
-            data_type: DataType::Boolean,
             values,
             validity,
             offset: 0,
@@ -61,7 +58,6 @@ impl BooleanArray {
     pub fn slice(&self, offset: usize, length: usize) -> Self {
         let validity = self.validity.clone().map(|x| x.slice(offset, length));
         Self {
-            data_type: self.data_type.clone(),
             values: self.values.clone().slice(offset, length),
             validity,
             offset: self.offset + offset,
@@ -103,7 +99,7 @@ impl Array for BooleanArray {
 
     #[inline]
     fn data_type(&self) -> &DataType {
-        &self.data_type
+        &DataType::Boolean
     }
 
     #[inline]

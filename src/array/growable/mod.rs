@@ -35,7 +35,7 @@ pub trait Growable<'a> {
     /// This function panics if the range is out of bounds, i.e. if `start + len >= array.len()`.
     fn extend(&mut self, index: usize, start: usize, len: usize);
 
-    /// Extends this [`GrowableArray`] with null elements, disregarding the bound arrays
+    /// Extends this [`Growable`] with null elements, disregarding the bound arrays
     fn extend_validity(&mut self, additional: usize);
 
     /// Converts itself to an `Arc<dyn Array>`, thereby finishing the mutation.

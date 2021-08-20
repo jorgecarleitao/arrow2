@@ -33,7 +33,7 @@
 use crate::array::{growable::make_growable, Array};
 use crate::error::{ArrowError, Result};
 
-/// Concatenate multiple [Array] of the same type into a single [ArrayRef].
+/// Concatenate multiple [Array] of the same type into a single [`Array`].
 pub fn concatenate(arrays: &[&dyn Array]) -> Result<Box<dyn Array>> {
     if arrays.is_empty() {
         return Err(ArrowError::InvalidArgumentError(

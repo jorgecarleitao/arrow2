@@ -85,7 +85,7 @@ impl Bitmap {
         Bitmap::from_bytes(buffer.into(), length)
     }
 
-    /// Creates a new [`Bitmap`] from [`Bytes`] and a length.
+    /// Creates a new [`Bitmap`] from a slice and length.
     /// # Panic
     /// Panics iff `length <= bytes.len() * 8`
     #[inline]
