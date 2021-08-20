@@ -1,46 +1,54 @@
-use crate::array::Array;
 use crate::bitmap::utils::{zip_validity, ZipValidity};
 
-use super::FixedSizeBinaryArray;
+use super::super::MutableArray;
+use super::{FixedSizeBinaryArray, FixedSizeBinaryValues, MutableFixedSizeBinaryArray};
 
 /// # Safety
 /// This iterator is `TrustedLen`
-pub struct FixedSizeBinaryValuesIter<'a> {
-    array: &'a FixedSizeBinaryArray,
+pub struct FixedSizeBinaryValuesIter<'a, T: FixedSizeBinaryValues> {
+    array: &'a T,
+    len: usize,
     index: usize,
 }
 
-impl<'a> FixedSizeBinaryValuesIter<'a> {
+impl<'a, T: FixedSizeBinaryValues> FixedSizeBinaryValuesIter<'a, T> {
     #[inline]
-    pub fn new(array: &'a FixedSizeBinaryArray) -> Self {
-        Self { array, index: 0 }
+    pub fn new(array: &'a T) -> Self {
+        Self {
+            array,
+            len: array.values().len() / array.size(),
+            index: 0,
+        }
     }
 }
 
-impl<'a> Iterator for FixedSizeBinaryValuesIter<'a> {
+impl<'a, T: FixedSizeBinaryValues> Iterator for FixedSizeBinaryValuesIter<'a, T> {
     type Item = &'a [u8];
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index >= self.array.len() {
+        if self.index >= self.len {
             return None;
-        } else {
-            self.index += 1;
         }
-        Some(unsafe { self.array.value_unchecked(self.index - 1) })
+        let index = self.index;
+        let r = Some(unsafe {
+            std::slice::from_raw_parts(
+                self.array.values().as_ptr().add(index * self.array.size()),
+                self.array.size(),
+            )
+        });
+        self.index += 1;
+        r
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (
-            self.array.len() - self.index,
-            Some(self.array.len() - self.index),
-        )
+        (self.len - self.index, Some(self.len - self.index))
     }
 }
 
 impl<'a> IntoIterator for &'a FixedSizeBinaryArray {
     type Item = Option<&'a [u8]>;
-    type IntoIter = ZipValidity<'a, &'a [u8], FixedSizeBinaryValuesIter<'a>>;
+    type IntoIter = ZipValidity<'a, &'a [u8], FixedSizeBinaryValuesIter<'a, FixedSizeBinaryArray>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
@@ -49,10 +57,34 @@ impl<'a> IntoIterator for &'a FixedSizeBinaryArray {
 
 impl<'a> FixedSizeBinaryArray {
     /// constructs a new iterator
-    pub fn iter(&'a self) -> ZipValidity<'a, &'a [u8], FixedSizeBinaryValuesIter<'a>> {
+    pub fn iter(
+        &'a self,
+    ) -> ZipValidity<'a, &'a [u8], FixedSizeBinaryValuesIter<'a, FixedSizeBinaryArray>> {
         zip_validity(
             FixedSizeBinaryValuesIter::new(self),
             self.validity.as_ref().map(|x| x.iter()),
+        )
+    }
+}
+
+impl<'a> IntoIterator for &'a MutableFixedSizeBinaryArray {
+    type Item = Option<&'a [u8]>;
+    type IntoIter =
+        ZipValidity<'a, &'a [u8], FixedSizeBinaryValuesIter<'a, MutableFixedSizeBinaryArray>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<'a> MutableFixedSizeBinaryArray {
+    /// constructs a new iterator
+    pub fn iter(
+        &'a self,
+    ) -> ZipValidity<'a, &'a [u8], FixedSizeBinaryValuesIter<'a, MutableFixedSizeBinaryArray>> {
+        zip_validity(
+            FixedSizeBinaryValuesIter::new(self),
+            self.validity().as_ref().map(|x| x.iter()),
         )
     }
 }
