@@ -12,7 +12,8 @@ use crate::{
 
 use super::BooleanArray;
 
-/// The mutable version of [`BooleanArray`]. See [`MutableArray`] for more details.
+/// The Arrow's equivalent to `Vec<Option<bool>>`, but with `1/16` of its size.
+/// Converting a [`MutableBooleanArray`] into a [`BooleanArray`] is `O(1)`.
 #[derive(Debug)]
 pub struct MutableBooleanArray {
     values: MutableBitmap,

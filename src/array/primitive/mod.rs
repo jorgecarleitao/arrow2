@@ -20,6 +20,15 @@ pub use mutable::*;
 /// an array designed for highly performant operations on optionally nullable slots,
 /// backed by a physical type of a physical byte-width, such as `i32` or `f64`.
 /// The size of this struct is `O(1)` as all data is stored behind an [`std::sync::Arc`].
+/// # Example
+/// ```
+/// use arrow2::array::PrimitiveArray;
+/// # fn main() {
+/// let array = PrimitiveArray::<i32>::from([Some(1), None, Some(2)]);
+/// assert_eq!(array.value(0), 1);
+/// assert_eq!(array.values().as_slice(), &[1, 0, 2]);
+/// # }
+/// ```
 #[derive(Debug, Clone)]
 pub struct PrimitiveArray<T: NativeType> {
     data_type: DataType,
