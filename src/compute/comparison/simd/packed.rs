@@ -1,3 +1,5 @@
+use std::convert::TryInto;
+
 use super::{set, Simd8, Simd8Lanes};
 
 use packed_simd::*;

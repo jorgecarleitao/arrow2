@@ -1,3 +1,21 @@
+use crate::types::NativeType;
+
+/// [`NativeType`] that supports a representation of 8 lanes
+pub trait Simd8: NativeType {
+    type Simd: Simd8Lanes<Self>;
+}
+
+pub trait Simd8Lanes<T>: Copy {
+    fn from_chunk(v: &[T]) -> Self;
+    fn from_incomplete_chunk(v: &[T], remaining: T) -> Self;
+    fn eq(self, other: Self) -> u8;
+    fn neq(self, other: Self) -> u8;
+    fn lt_eq(self, other: Self) -> u8;
+    fn lt(self, other: Self) -> u8;
+    fn gt(self, other: Self) -> u8;
+    fn gt_eq(self, other: Self) -> u8;
+}
+
 #[inline]
 pub(super) fn set<T: Copy, F: Fn(T, T) -> bool>(lhs: [T; 8], rhs: [T; 8], op: F) -> u8 {
     let mut byte = 0u8;
@@ -71,21 +89,3 @@ pub use native::*;
 mod packed;
 #[cfg(feature = "simd")]
 pub use packed::*;
-
-use crate::types::NativeType;
-
-/// [`NativeType`] that supports a representation of 8 lanes
-pub trait Simd8: NativeType {
-    type Simd: Simd8Lanes<Self>;
-}
-
-pub trait Simd8Lanes<T> {
-    fn from_chunk(v: &[T]) -> Self;
-    fn from_incomplete_chunk(v: &[T], remaining: T) -> Self;
-    fn eq(self, other: Self) -> u8;
-    fn neq(self, other: Self) -> u8;
-    fn lt_eq(self, other: Self) -> u8;
-    fn lt(self, other: Self) -> u8;
-    fn gt(self, other: Self) -> u8;
-    fn gt_eq(self, other: Self) -> u8;
-}
