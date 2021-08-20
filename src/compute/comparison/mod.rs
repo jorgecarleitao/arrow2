@@ -30,6 +30,9 @@ mod boolean;
 mod primitive;
 mod utf8;
 
+mod simd;
+pub use simd::{Simd8, Simd8Lanes};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Operator {
     Lt,

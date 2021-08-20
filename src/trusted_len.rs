@@ -26,6 +26,8 @@ where
 {
 }
 
+unsafe impl<T> TrustedLen for std::slice::ChunksExact<'_, T> {}
+
 unsafe impl<T> TrustedLen for std::slice::Windows<'_, T> {}
 
 unsafe impl<A, B> TrustedLen for std::iter::Chain<A, B>
