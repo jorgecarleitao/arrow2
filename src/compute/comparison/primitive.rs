@@ -23,12 +23,13 @@ use crate::{
     error::{ArrowError, Result},
 };
 
+use super::simd::{Simd8, Simd8Lanes};
 use super::{super::utils::combine_validities, Operator};
 
 pub(crate) fn compare_values_op<T, F>(lhs: &[T], rhs: &[T], op: F) -> MutableBitmap
 where
-    T: NativeType,
-    F: Fn(T, T) -> bool,
+    T: NativeType + Simd8,
+    F: Fn(T::Simd, T::Simd) -> u8,
 {
     assert_eq!(lhs.len(), rhs.len());
     let mut values = MutableBuffer::from_len_zeroed((lhs.len() + 7) / 8);
@@ -45,23 +46,15 @@ where
         .zip(lhs_chunks_iter)
         .zip(rhs_chunks_iter)
         .for_each(|((byte, lhs), rhs)| {
-            lhs.iter()
-                .zip(rhs.iter())
-                .enumerate()
-                .for_each(|(i, (&lhs, &rhs))| {
-                    *byte |= if op(lhs, rhs) { 1 << i } else { 0 };
-                });
+            let lhs = T::Simd::from_chunk(lhs);
+            let rhs = T::Simd::from_chunk(rhs);
+            *byte = op(lhs, rhs);
         });
 
     if !lhs_remainder.is_empty() {
-        let last = &mut values[chunks];
-        lhs_remainder
-            .iter()
-            .zip(rhs_remainder.iter())
-            .enumerate()
-            .for_each(|(i, (&lhs, &rhs))| {
-                *last |= if op(lhs, rhs) { 1 << i } else { 0 };
-            });
+        let lhs = T::Simd::from_incomplete_chunk(lhs_remainder, T::default());
+        let rhs = T::Simd::from_incomplete_chunk(rhs_remainder, T::default());
+        values[chunks] = op(lhs, rhs);
     };
     MutableBitmap::from_buffer(values, lhs.len())
 }
@@ -70,8 +63,8 @@ where
 /// comparison function.
 fn compare_op<T, F>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>, op: F) -> Result<BooleanArray>
 where
-    T: NativeType,
-    F: Fn(T, T) -> bool,
+    T: NativeType + Simd8,
+    F: Fn(T::Simd, T::Simd) -> u8,
 {
     if lhs.len() != rhs.len() {
         return Err(ArrowError::InvalidArgumentError(
@@ -126,9 +119,9 @@ where
 /// Perform `lhs == rhs` operation on two arrays.
 pub fn eq<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<BooleanArray>
 where
-    T: NativeType,
+    T: NativeType + Simd8,
 {
-    compare_op(lhs, rhs, |a, b| a == b)
+    compare_op(lhs, rhs, |a, b| a.eq(b))
 }
 
 /// Perform `left == right` operation on an array and a scalar value.
@@ -142,9 +135,9 @@ where
 /// Perform `left != right` operation on two arrays.
 pub fn neq<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<BooleanArray>
 where
-    T: NativeType,
+    T: NativeType + Simd8,
 {
-    compare_op(lhs, rhs, |a, b| a != b)
+    compare_op(lhs, rhs, |a, b| a.neq(b))
 }
 
 /// Perform `left != right` operation on an array and a scalar value.
@@ -158,9 +151,9 @@ where
 /// Perform `left < right` operation on two arrays.
 pub fn lt<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<BooleanArray>
 where
-    T: NativeType + std::cmp::PartialOrd,
+    T: NativeType + Simd8,
 {
-    compare_op(lhs, rhs, |a, b| a < b)
+    compare_op(lhs, rhs, |a, b| a.lt(b))
 }
 
 /// Perform `left < right` operation on an array and a scalar value.
@@ -174,9 +167,9 @@ where
 /// Perform `left <= right` operation on two arrays.
 pub fn lt_eq<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<BooleanArray>
 where
-    T: NativeType + std::cmp::PartialOrd,
+    T: NativeType + Simd8,
 {
-    compare_op(lhs, rhs, |a, b| a <= b)
+    compare_op(lhs, rhs, |a, b| a.lt_eq(b))
 }
 
 /// Perform `left <= right` operation on an array and a scalar value.
@@ -192,9 +185,9 @@ where
 /// values.
 pub fn gt<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<BooleanArray>
 where
-    T: NativeType + std::cmp::PartialOrd,
+    T: NativeType + Simd8,
 {
-    compare_op(lhs, rhs, |a, b| a > b)
+    compare_op(lhs, rhs, |a, b| a.gt(b))
 }
 
 /// Perform `left > right` operation on an array and a scalar value.
@@ -210,9 +203,9 @@ where
 /// values.
 pub fn gt_eq<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<BooleanArray>
 where
-    T: NativeType + std::cmp::PartialOrd,
+    T: NativeType + Simd8,
 {
-    compare_op(lhs, rhs, |a, b| a >= b)
+    compare_op(lhs, rhs, |a, b| a.gt_eq(b))
 }
 
 /// Perform `left >= right` operation on an array and a scalar value.
@@ -224,7 +217,7 @@ where
     compare_op_scalar(lhs, rhs, |a, b| a >= b)
 }
 
-pub fn compare<T: NativeType + std::cmp::PartialOrd>(
+pub fn compare<T: NativeType + std::cmp::PartialOrd + Simd8>(
     lhs: &PrimitiveArray<T>,
     rhs: &PrimitiveArray<T>,
     op: Operator,
