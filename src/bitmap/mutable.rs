@@ -148,7 +148,7 @@ impl MutableBitmap {
         additional = additional.saturating_sub(added);
         if additional > 0 {
             debug_assert_eq!(self.length % 8, 0);
-            let existing = self.buffer.len();
+            let existing = self.length.saturating_add(7) / 8;
             let required = (self.length + additional).saturating_add(7) / 8;
             // add remaining as full bytes
             self.buffer.extend_from_trusted_len_iter(
