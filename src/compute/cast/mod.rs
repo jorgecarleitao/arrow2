@@ -239,9 +239,11 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (Int32, Date32) => true,
         (Int32, Time32(_)) => true,
         (Date32, Int32) => true,
+        (Date32, Int64) => true,
         (Time32(_), Int32) => true,
         (Int64, Date64) => true,
         (Int64, Time64(_)) => true,
+        (Date64, Int32) => true,
         (Date64, Int64) => true,
         (Time64(_), Int64) => true,
         (Date32, Date64) => true,
@@ -674,6 +676,7 @@ fn cast_with_options(
         }
         // No support for microsecond/nanosecond with i32
         (Date32, Int32) => primitive_to_same_primitive_dyn::<i32>(array, to_type),
+        (Date32, Int64) => primitive_to_primitive_dyn::<i32, i64>(array, to_type, options),
         (Time32(_), Int32) => primitive_to_same_primitive_dyn::<i32>(array, to_type),
         (Int64, Date64) => primitive_to_same_primitive_dyn::<i64>(array, to_type),
         // No support for second/milliseconds with i64
@@ -684,6 +687,7 @@ fn cast_with_options(
             primitive_to_same_primitive_dyn::<i64>(array, to_type)
         }
 
+        (Date64, Int32) => primitive_to_primitive_dyn::<i64, i32>(array, to_type, options),
         (Date64, Int64) => primitive_to_same_primitive_dyn::<i64>(array, to_type),
         (Time64(_), Int64) => primitive_to_same_primitive_dyn::<i64>(array, to_type),
         (Date32, Date64) => primitive_dyn!(array, date32_to_date64),

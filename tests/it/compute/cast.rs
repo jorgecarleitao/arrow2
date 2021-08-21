@@ -379,6 +379,26 @@ fn date32_to_int32() {
 }
 
 #[test]
+fn date64_to_int32() {
+    test_primitive_to_primitive(
+        &[10000i64, 17890],
+        DataType::Date64,
+        &[10000i32, 17890],
+        DataType::Int32,
+    );
+}
+
+#[test]
+fn date32_to_int64() {
+    test_primitive_to_primitive(
+        &[10000i32, 17890],
+        DataType::Date32,
+        &[10000i64, 17890],
+        DataType::Int64,
+    );
+}
+
+#[test]
 fn int32_to_date32() {
     test_primitive_to_primitive(
         &[10000i32, 17890],
