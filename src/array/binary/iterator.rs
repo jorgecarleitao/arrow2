@@ -6,6 +6,7 @@ use crate::{
 
 use super::BinaryArray;
 
+/// Iterator over slices of `&[u8]`.
 #[derive(Debug, Clone)]
 pub struct BinaryValueIter<'a, O: Offset> {
     array: &'a BinaryArray<O>,
@@ -13,7 +14,6 @@ pub struct BinaryValueIter<'a, O: Offset> {
 }
 
 impl<'a, O: Offset> BinaryValueIter<'a, O> {
-    #[inline]
     pub fn new(array: &'a BinaryArray<O>) -> Self {
         Self { array, index: 0 }
     }

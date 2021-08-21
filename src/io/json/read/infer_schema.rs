@@ -338,7 +338,7 @@ where
 /// If `max_read_records` is not set, the whole file is read to infer its field types.
 ///
 /// Contrary to [`infer_json_schema`], this function will seek back to the start of the `reader`.
-/// That way, the `reader` can be used immediately afterwards to create a [`Reader`].
+/// That way, the `reader` can be used immediately afterwards.
 ///
 /// # Examples
 /// ```

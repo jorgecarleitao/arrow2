@@ -51,7 +51,7 @@ pub fn nullif_primitive<T: NativeType + Simd8>(
     ))
 }
 
-/// Returns whether [`nulliff`] is implemented for the datatypes.
+/// Returns whether [`nullif`] is implemented for the datatypes.
 pub fn can_nullif(lhs: &DataType, rhs: &DataType) -> bool {
     if lhs != rhs {
         return false;

@@ -10,12 +10,10 @@ mod mutable;
 pub use iterator::*;
 pub use mutable::*;
 
-/// A [`BooleanArray`] is arrow's equivalent to `Vec<Option<bool>>`, i.e.
-/// an array designed for highly performant operations on optionally nullable booleans.
-/// The size of this struct is `O(1)` as all data is stored behind an `Arc`.
+/// The Arrow's equivalent to an immutable `Vec<Option<bool>>`, but with `1/16` of its size.
+/// Cloning and slicing this struct is `O(1)`.
 #[derive(Debug, Clone)]
 pub struct BooleanArray {
-    data_type: DataType,
     values: Bitmap,
     validity: Option<Bitmap>,
     offset: usize,
@@ -45,7 +43,6 @@ impl BooleanArray {
             assert_eq!(values.len(), validity.len());
         }
         Self {
-            data_type: DataType::Boolean,
             values,
             validity,
             offset: 0,
@@ -54,28 +51,28 @@ impl BooleanArray {
 
     /// Returns a slice of this [`BooleanArray`].
     /// # Implementation
-    /// This operation is `O(1)` as it amounts to essentially increase two ref counts.
+    /// This operation is `O(1)` as it amounts to increase two ref counts.
     /// # Panic
     /// This function panics iff `offset + length >= self.len()`.
     #[inline]
     pub fn slice(&self, offset: usize, length: usize) -> Self {
         let validity = self.validity.clone().map(|x| x.slice(offset, length));
         Self {
-            data_type: self.data_type.clone(),
             values: self.values.clone().slice(offset, length),
             validity,
             offset: self.offset + offset,
         }
     }
 
-    /// Returns the element at index `i` as bool
+    /// Returns the value at index `i`
+    /// # Panic
+    /// This function panics iff `i >= self.len()`.
     #[inline]
     pub fn value(&self, i: usize) -> bool {
         self.values.get_bit(i)
     }
 
     /// Returns the element at index `i` as bool
-    ///
     /// # Safety
     /// Caller must be sure that `i < self.len()`
     #[inline]
@@ -83,7 +80,7 @@ impl BooleanArray {
         self.values.get_bit_unchecked(i)
     }
 
-    /// Returns the values bitmap of this [`BooleanArray`].
+    /// Returns the values of this [`BooleanArray`].
     #[inline]
     pub fn values(&self) -> &Bitmap {
         &self.values
@@ -103,7 +100,7 @@ impl Array for BooleanArray {
 
     #[inline]
     fn data_type(&self) -> &DataType {
-        &self.data_type
+        &DataType::Boolean
     }
 
     #[inline]
@@ -120,12 +117,5 @@ impl Array for BooleanArray {
 impl std::fmt::Display for BooleanArray {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         display_fmt(self.iter(), "BooleanArray", f, false)
-    }
-}
-
-impl<P: AsRef<[Option<bool>]>> From<P> for BooleanArray {
-    /// Creates a new [`BooleanArray`] out of a slice of Optional `bool`.
-    fn from(slice: P) -> Self {
-        MutableBooleanArray::from(slice).into()
     }
 }

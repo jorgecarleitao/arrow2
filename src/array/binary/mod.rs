@@ -12,6 +12,7 @@ mod from;
 mod mutable;
 pub use mutable::*;
 
+/// A [`BinaryArray`] is a nullable array of bytes - the Arrow equivalent of `Vec<Option<Vec<u8>>>`.
 #[derive(Debug, Clone)]
 pub struct BinaryArray<O: Offset> {
     data_type: DataType,
@@ -21,11 +22,14 @@ pub struct BinaryArray<O: Offset> {
     offset: usize,
 }
 
+// constructors
 impl<O: Offset> BinaryArray<O> {
+    /// Creates an empty [`BinaryArray`], i.e. whose `.len` is zero.
     pub fn new_empty() -> Self {
         Self::from_data(Buffer::from(&[O::zero()]), Buffer::new(), None)
     }
 
+    /// Creates an null [`BinaryArray`], i.e. whose `.null_count() == .len()`.
     #[inline]
     pub fn new_null(length: usize) -> Self {
         Self::from_data(
@@ -35,8 +39,16 @@ impl<O: Offset> BinaryArray<O> {
         )
     }
 
+    /// Creates a new [`BinaryArray`] from lower-level parts
+    /// # Panics
+    /// * The length of the offset buffer must be larger than 1
+    /// * The length of the values must be equal to the last offset value
     pub fn from_data(offsets: Buffer<O>, values: Buffer<u8>, validity: Option<Bitmap>) -> Self {
         check_offsets(&offsets, values.len());
+
+        if let Some(validity) = &validity {
+            assert_eq!(offsets.len() - 1, validity.len());
+        }
 
         Self {
             data_type: if O::is_large() {
@@ -51,6 +63,11 @@ impl<O: Offset> BinaryArray<O> {
         }
     }
 
+    /// Creates a new [`BinaryArray`] by slicing this [`BinaryArray`].
+    /// # Implementation
+    /// This function is `O(1)`: all data will be shared between both arrays.
+    /// # Panics
+    /// iff `offset + length > self.len()`.
     pub fn slice(&self, offset: usize, length: usize) -> Self {
         let validity = self.validity.clone().map(|x| x.slice(offset, length));
         let offsets = self.offsets.clone().slice(offset, length + 1);
@@ -62,8 +79,13 @@ impl<O: Offset> BinaryArray<O> {
             offset: self.offset + offset,
         }
     }
+}
 
-    /// Returns the element at index `i` as &str
+// accessors
+impl<O: Offset> BinaryArray<O> {
+    /// Returns the element at index `i`
+    /// # Panics
+    /// iff `i > self.len()`
     pub fn value(&self, i: usize) -> &[u8] {
         let offsets = self.offsets.as_slice();
         let offset = offsets[i];
@@ -71,10 +93,10 @@ impl<O: Offset> BinaryArray<O> {
         let length = (offset_1 - offset).to_usize();
         let offset = offset.to_usize();
 
-        &self.values.as_slice()[offset..offset + length]
+        &self.values[offset..offset + length]
     }
 
-    /// Returns the element at index `i` as &str
+    /// Returns the element at index `i`
     /// # Safety
     /// Assumes that the `i < self.len`.
     pub unsafe fn value_unchecked(&self, i: usize) -> &[u8] {
@@ -83,14 +105,16 @@ impl<O: Offset> BinaryArray<O> {
         let length = (offset_1 - offset).to_usize();
         let offset = offset.to_usize();
 
-        std::slice::from_raw_parts(self.values.as_ptr().add(offset), length)
+        &self.values[offset..offset + length]
     }
 
+    /// Returns the offsets that slice `.values()` to return valid values.
     #[inline]
     pub fn offsets(&self) -> &Buffer<O> {
         &self.offsets
     }
 
+    /// Returns all values in this array. Use `.offsets()` to slice them.
     #[inline]
     pub fn values(&self) -> &Buffer<u8> {
         &self.values

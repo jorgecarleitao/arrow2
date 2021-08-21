@@ -85,7 +85,7 @@ pub type MergeSlice = (usize, usize, usize);
 /// # Panic
 /// This function panics if:
 /// * `max(slices[i].0) >= arrays.len()`, as it indicates that the slices point to an array out of bounds from `arrays`.
-/// * the arrays do not have the same [DataType] (as it makes no sense to take together from them)
+/// * the arrays do not have the same [`crate::datatypes::DataType`] (as it makes no sense to take together from them)
 pub fn take_arrays<I: IntoIterator<Item = MergeSlice>>(
     arrays: &[&dyn Array],
     slices: I,
@@ -118,12 +118,12 @@ pub fn take_arrays<I: IntoIterator<Item = MergeSlice>>(
     growable.as_box()
 }
 
-/// Combines two sorted [Array]s of the same [DataType] into a single sorted array.
+/// Combines two sorted [Array]s of the same [`crate::datatypes::DataType`] into a single sorted array.
 /// If the arrays are not sorted (which this function does not check), the result is wrong.
 /// # Error
 /// This function errors when:
-/// * the arrays have a different [DataType]
-/// * the arrays have a [DataType] that has no order relationship
+/// * the arrays have a different [`crate::datatypes::DataType`]
+/// * the arrays have a [`crate::datatypes::DataType`] that has no order relationship
 /// # Example
 /// ```rust
 /// use arrow2::array::Int32Array;
@@ -179,7 +179,8 @@ pub fn merge_sort(
 /// ```
 /// # Error
 /// This function errors if the arrays `a0i` are not pairwise sortable. This happens when either
-/// they have not the same [DataType] or when their [DataType] does not correspond to a sortable type.
+/// they have not the same [`crate::datatypes::DataType`] or when their [`crate::datatypes::DataType`]
+/// does not correspond to a sortable type.
 /// # Panic
 /// This function panics if:
 /// * `pairs` has no elements

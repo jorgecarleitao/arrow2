@@ -462,7 +462,7 @@ impl<T: NativeType> MutableBuffer<T> {
     /// Creates a [`MutableBuffer`] from an [`Iterator`] with a trusted (upper) length or errors
     /// if any of the items of the iterator is an error.
     /// Prefer this to `collect` whenever possible, as it is faster ~60% faster.
-    /// The only difference between this and [`try_from_trusted_len_iter`] is that this works
+    /// The only difference between this and [`Self::try_from_trusted_len_iter`] is that this works
     /// on any iterator, while `try_from_trusted_len_iter` requires the iterator to implement the trait
     /// [`TrustedLen`], which not every iterator currently implements due to limitations of the Rust compiler.
     /// # Safety

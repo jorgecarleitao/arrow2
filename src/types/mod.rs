@@ -6,7 +6,7 @@
 //! Another important trait is [`BitChunk`], describing types that can be used to
 //! represent chunks of bits (e.g. `u8`, `u16`), and [`BitChunkIter`], that can be used to
 //! iterate over bitmaps in [`BitChunk`]s.
-//! Finally, this module also contains traits used to compile code optimized for SIMD instructions at [`simd`].
+//! Finally, this module also contains traits used to compile code optimized for SIMD instructions at [`mod@simd`].
 use std::convert::TryFrom;
 
 mod bit_chunk;

@@ -13,17 +13,16 @@ mod mutable;
 pub use iterator::*;
 pub use mutable::*;
 
-/// A [`Utf8Array`] is arrow's equivalent of `Vec<Option<String>>`, i.e.
-/// an array designed for highly performant operations on optionally nullable strings.
-/// The size of this struct is `O(1)` as all data is stored behind an `Arc`.
+/// A [`Utf8Array`] is arrow's equivalent of an immutable `Vec<Option<String>>`.
+/// Cloning and slicing this struct is `O(1)`.
 /// # Example
 /// ```
-/// use std::iter::FromIterator;
 /// use arrow2::array::Utf8Array;
 /// # fn main() {
-/// let data = vec![Some("hello"), None, Some("hello2")];
-/// let array = Utf8Array::<i32>::from_iter(data);
-/// assert_eq!(array.value(0), "hello");
+/// let array = Utf8Array::<i32>::from([Some("hi"), None, Some("there")]);
+/// assert_eq!(array.value(0), "hi");
+/// assert_eq!(array.values().as_slice(), b"hithere".as_ref());
+/// assert_eq!(array.offsets().as_slice(), &[0, 2, 2, 2 + 5]);
 /// # }
 /// ```
 #[derive(Debug, Clone)]
