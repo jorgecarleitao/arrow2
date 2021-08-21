@@ -182,6 +182,10 @@ impl MutableBitmap {
     /// Extends [`MutableBitmap`] by `additional` values of constant `value`.
     #[inline]
     pub fn extend_constant(&mut self, additional: usize, value: bool) {
+        if additional == 0 {
+            return;
+        }
+
         if value {
             self.extend_set(additional)
         } else {
