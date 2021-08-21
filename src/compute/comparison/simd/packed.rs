@@ -13,7 +13,7 @@ macro_rules! simd8 {
         impl Simd8Lanes<$type> for $md {
             #[inline]
             fn from_chunk(v: &[$type]) -> Self {
-                <$md>::from_slice_aligned(v)
+                <$md>::from_slice_unaligned(v)
             }
 
             #[inline]

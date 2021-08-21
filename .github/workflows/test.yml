@@ -306,4 +306,4 @@ jobs:
           export CARGO_HOME="/github/home/.cargo"
           export CARGO_TARGET_DIR="/github/home/target"
           # no need to run over all features: simd only affects the core
-          cargo test --no-default-features --features simd --lib
+          cargo test --no-default-features --features compute,simd --lib
