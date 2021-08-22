@@ -1,9 +1,8 @@
 use std::iter::FromIterator;
 use std::sync::Arc;
 
-use crate::array::TryExtend;
 use crate::{
-    array::{Array, MutableArray},
+    array::{Array, MutableArray, TryExtend, TryPush},
     bitmap::MutableBitmap,
     datatypes::DataType,
     error::Result,
@@ -348,6 +347,14 @@ impl TryExtend<Option<bool>> for MutableBooleanArray {
     /// This is infalible and is implemented for consistency with all other types
     fn try_extend<I: IntoIterator<Item = Option<bool>>>(&mut self, iter: I) -> Result<()> {
         self.extend(iter);
+        Ok(())
+    }
+}
+
+impl TryPush<Option<bool>> for MutableBooleanArray {
+    /// This is infalible and is implemented for consistency with all other types
+    fn try_push(&mut self, item: Option<bool>) -> Result<()> {
+        self.push(item);
         Ok(())
     }
 }

@@ -1,7 +1,7 @@
 use std::{iter::FromIterator, sync::Arc};
 
 use crate::{
-    array::{Array, MutableArray, Offset, TryExtend},
+    array::{Array, MutableArray, Offset, TryExtend, TryPush},
     bitmap::MutableBitmap,
     buffer::MutableBuffer,
     datatypes::DataType,
@@ -61,34 +61,9 @@ impl<O: Offset> MutableBinaryArray<O> {
         *self.offsets.last().unwrap()
     }
 
-    pub fn try_push<T: AsRef<[u8]>>(&mut self, value: Option<T>) -> Result<()> {
-        match value {
-            Some(value) => {
-                let bytes = value.as_ref();
-
-                let size = O::from_usize(self.values.len() + bytes.len())
-                    .ok_or(ArrowError::KeyOverflowError)?;
-
-                self.values.extend_from_slice(bytes);
-
-                self.offsets.push(size);
-
-                match &mut self.validity {
-                    Some(validity) => validity.push(true),
-                    None => {}
-                }
-            }
-            None => {
-                self.offsets.push(self.last_offset());
-                match &mut self.validity {
-                    Some(validity) => validity.push(false),
-                    None => self.init_validity(),
-                }
-            }
-        }
-        Ok(())
-    }
-
+    /// Pushes a new element to the array.
+    /// # Panic
+    /// This operation panics iff the length of all values (in bytes) exceeds `O` maximum value.
     pub fn push<T: AsRef<[u8]>>(&mut self, value: Option<T>) {
         self.try_push(value).unwrap()
     }
@@ -174,5 +149,35 @@ impl<O: Offset, T: AsRef<[u8]>> TryExtend<Option<T>> for MutableBinaryArray<O> {
         let mut iter = iter.into_iter();
         self.reserve(iter.size_hint().0);
         iter.try_for_each(|x| self.try_push(x))
+    }
+}
+
+impl<O: Offset, T: AsRef<[u8]>> TryPush<Option<T>> for MutableBinaryArray<O> {
+    fn try_push(&mut self, value: Option<T>) -> Result<()> {
+        match value {
+            Some(value) => {
+                let bytes = value.as_ref();
+
+                let size = O::from_usize(self.values.len() + bytes.len())
+                    .ok_or(ArrowError::KeyOverflowError)?;
+
+                self.values.extend_from_slice(bytes);
+
+                self.offsets.push(size);
+
+                match &mut self.validity {
+                    Some(validity) => validity.push(true),
+                    None => {}
+                }
+            }
+            None => {
+                self.offsets.push(self.last_offset());
+                match &mut self.validity {
+                    Some(validity) => validity.push(false),
+                    None => self.init_validity(),
+                }
+            }
+        }
+        Ok(())
     }
 }

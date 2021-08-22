@@ -1,7 +1,7 @@
 use std::{iter::FromIterator, sync::Arc};
 
 use crate::{
-    array::{Array, MutableArray, TryExtend},
+    array::{Array, MutableArray, TryExtend, TryPush},
     bitmap::MutableBitmap,
     buffer::MutableBuffer,
     datatypes::DataType,
@@ -262,6 +262,14 @@ impl<T: NativeType> TryExtend<Option<T>> for MutablePrimitiveArray<T> {
     /// This is infalible and is implemented for consistency with all other types
     fn try_extend<I: IntoIterator<Item = Option<T>>>(&mut self, iter: I) -> Result<()> {
         self.extend(iter);
+        Ok(())
+    }
+}
+
+impl<T: NativeType> TryPush<Option<T>> for MutablePrimitiveArray<T> {
+    /// This is infalible and is implemented for consistency with all other types
+    fn try_push(&mut self, item: Option<T>) -> Result<()> {
+        self.push(item);
         Ok(())
     }
 }
