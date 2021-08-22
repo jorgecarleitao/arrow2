@@ -57,77 +57,77 @@ pub fn compare(lhs: &dyn Array, rhs: &dyn Array, operator: Operator) -> Result<B
             boolean::compare(lhs, rhs, operator)
         }
         DataType::Int8 => {
-            let lhs = lhs.as_any().downcast_ref::<Int8Array>().unwrap();
-            let rhs = rhs.as_any().downcast_ref::<Int8Array>().unwrap();
-            primitive::compare(lhs, rhs, operator)
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            primitive::compare::<i8>(lhs, rhs, operator)
         }
         DataType::Int16 => {
-            let lhs = lhs.as_any().downcast_ref::<Int16Array>().unwrap();
-            let rhs = rhs.as_any().downcast_ref::<Int16Array>().unwrap();
-            primitive::compare(lhs, rhs, operator)
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            primitive::compare::<i16>(lhs, rhs, operator)
         }
         DataType::Int32
         | DataType::Date32
         | DataType::Time32(_)
         | DataType::Interval(IntervalUnit::YearMonth) => {
-            let lhs = lhs.as_any().downcast_ref::<Int32Array>().unwrap();
-            let rhs = rhs.as_any().downcast_ref::<Int32Array>().unwrap();
-            primitive::compare(lhs, rhs, operator)
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            primitive::compare::<i32>(lhs, rhs, operator)
         }
         DataType::Int64
         | DataType::Timestamp(_, None)
         | DataType::Date64
         | DataType::Time64(_)
         | DataType::Duration(_) => {
-            let lhs = lhs.as_any().downcast_ref::<Int64Array>().unwrap();
-            let rhs = rhs.as_any().downcast_ref::<Int64Array>().unwrap();
-            primitive::compare(lhs, rhs, operator)
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            primitive::compare::<i64>(lhs, rhs, operator)
         }
         DataType::UInt8 => {
-            let lhs = lhs.as_any().downcast_ref::<UInt8Array>().unwrap();
-            let rhs = rhs.as_any().downcast_ref::<UInt8Array>().unwrap();
-            primitive::compare(lhs, rhs, operator)
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            primitive::compare::<u8>(lhs, rhs, operator)
         }
         DataType::UInt16 => {
-            let lhs = lhs.as_any().downcast_ref::<UInt16Array>().unwrap();
-            let rhs = rhs.as_any().downcast_ref::<UInt16Array>().unwrap();
-            primitive::compare(lhs, rhs, operator)
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            primitive::compare::<u16>(lhs, rhs, operator)
         }
         DataType::UInt32 => {
-            let lhs = lhs.as_any().downcast_ref::<UInt32Array>().unwrap();
-            let rhs = rhs.as_any().downcast_ref::<UInt32Array>().unwrap();
-            primitive::compare(lhs, rhs, operator)
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            primitive::compare::<u32>(lhs, rhs, operator)
         }
         DataType::UInt64 => {
-            let lhs = lhs.as_any().downcast_ref::<UInt64Array>().unwrap();
-            let rhs = rhs.as_any().downcast_ref::<UInt64Array>().unwrap();
-            primitive::compare(lhs, rhs, operator)
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            primitive::compare::<u64>(lhs, rhs, operator)
         }
         DataType::Float16 => unreachable!(),
         DataType::Float32 => {
-            let lhs = lhs.as_any().downcast_ref::<Float32Array>().unwrap();
-            let rhs = rhs.as_any().downcast_ref::<Float32Array>().unwrap();
-            primitive::compare(lhs, rhs, operator)
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            primitive::compare::<f32>(lhs, rhs, operator)
         }
         DataType::Float64 => {
-            let lhs = lhs.as_any().downcast_ref::<Float64Array>().unwrap();
-            let rhs = rhs.as_any().downcast_ref::<Float64Array>().unwrap();
-            primitive::compare(lhs, rhs, operator)
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            primitive::compare::<f64>(lhs, rhs, operator)
         }
         DataType::Utf8 => {
-            let lhs = lhs.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
-            let rhs = rhs.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
-            utf8::compare(lhs, rhs, operator)
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            utf8::compare::<i32>(lhs, rhs, operator)
         }
         DataType::LargeUtf8 => {
-            let lhs = lhs.as_any().downcast_ref::<Utf8Array<i64>>().unwrap();
-            let rhs = rhs.as_any().downcast_ref::<Utf8Array<i64>>().unwrap();
-            utf8::compare(lhs, rhs, operator)
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            utf8::compare::<i64>(lhs, rhs, operator)
         }
         DataType::Decimal(_, _) => {
-            let lhs = lhs.as_any().downcast_ref::<Int128Array>().unwrap();
-            let rhs = rhs.as_any().downcast_ref::<Int128Array>().unwrap();
-            primitive::compare(lhs, rhs, operator)
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            primitive::compare::<i128>(lhs, rhs, operator)
         }
         _ => Err(ArrowError::NotYetImplemented(format!(
             "Comparison between {:?} is not supported",
