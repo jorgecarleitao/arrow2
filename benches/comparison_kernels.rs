@@ -38,8 +38,7 @@ where
         criterion::black_box(arr_a),
         criterion::black_box(value_b),
         op,
-    )
-    .unwrap();
+    );
 }
 
 fn add_benchmark(c: &mut Criterion) {

@@ -16,6 +16,7 @@
 // under the License.
 
 use crate::error::{ArrowError, Result};
+use crate::scalar::{Scalar, Utf8Scalar};
 use crate::{array::*, bitmap::Bitmap};
 
 use super::{super::utils::combine_validities, Operator};
@@ -140,7 +141,22 @@ pub fn compare<O: Offset>(
     }
 }
 
-pub fn compare_scalar<O: Offset>(lhs: &Utf8Array<O>, rhs: &str, op: Operator) -> BooleanArray {
+pub fn compare_scalar<O: Offset>(
+    lhs: &Utf8Array<O>,
+    rhs: &Utf8Scalar<O>,
+    op: Operator,
+) -> BooleanArray {
+    if !rhs.is_valid() {
+        return BooleanArray::new_null(lhs.len());
+    }
+    compare_scalar_non_null(lhs, rhs.value(), op)
+}
+
+pub fn compare_scalar_non_null<O: Offset>(
+    lhs: &Utf8Array<O>,
+    rhs: &str,
+    op: Operator,
+) -> BooleanArray {
     match op {
         Operator::Eq => eq_scalar(lhs, rhs),
         Operator::Neq => neq_scalar(lhs, rhs),
