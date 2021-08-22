@@ -16,6 +16,7 @@
 // under the License.
 
 use crate::bitmap::Bitmap;
+use crate::scalar::{PrimitiveScalar, Scalar};
 use crate::{array::*, types::NativeType};
 use crate::{
     bitmap::MutableBitmap,
@@ -76,7 +77,7 @@ where
 
 /// Evaluate `op(left, right)` for [`PrimitiveArray`] and scalar using
 /// a specified comparison function.
-pub fn compare_op_scalar<T, F>(lhs: &PrimitiveArray<T>, rhs: T, op: F) -> Result<BooleanArray>
+pub fn compare_op_scalar<T, F>(lhs: &PrimitiveArray<T>, rhs: T, op: F) -> BooleanArray
 where
     T: NativeType + Simd8,
     F: Fn(T::Simd, T::Simd) -> u8,
@@ -99,10 +100,7 @@ where
         values.push(op(lhs, rhs))
     };
 
-    Ok(BooleanArray::from_data(
-        Bitmap::from_u8_buffer(values, lhs.len()),
-        validity,
-    ))
+    BooleanArray::from_data(Bitmap::from_u8_buffer(values, lhs.len()), validity)
 }
 
 /// Perform `lhs == rhs` operation on two arrays.
@@ -114,7 +112,7 @@ where
 }
 
 /// Perform `left == right` operation on an array and a scalar value.
-pub fn eq_scalar<T>(lhs: &PrimitiveArray<T>, rhs: T) -> Result<BooleanArray>
+pub fn eq_scalar<T>(lhs: &PrimitiveArray<T>, rhs: T) -> BooleanArray
 where
     T: NativeType + Simd8,
 {
@@ -130,7 +128,7 @@ where
 }
 
 /// Perform `left != right` operation on an array and a scalar value.
-pub fn neq_scalar<T>(lhs: &PrimitiveArray<T>, rhs: T) -> Result<BooleanArray>
+pub fn neq_scalar<T>(lhs: &PrimitiveArray<T>, rhs: T) -> BooleanArray
 where
     T: NativeType + Simd8,
 {
@@ -146,7 +144,7 @@ where
 }
 
 /// Perform `left < right` operation on an array and a scalar value.
-pub fn lt_scalar<T>(lhs: &PrimitiveArray<T>, rhs: T) -> Result<BooleanArray>
+pub fn lt_scalar<T>(lhs: &PrimitiveArray<T>, rhs: T) -> BooleanArray
 where
     T: NativeType + Simd8,
 {
@@ -163,7 +161,7 @@ where
 
 /// Perform `left <= right` operation on an array and a scalar value.
 /// Null values are less than non-null values.
-pub fn lt_eq_scalar<T>(lhs: &PrimitiveArray<T>, rhs: T) -> Result<BooleanArray>
+pub fn lt_eq_scalar<T>(lhs: &PrimitiveArray<T>, rhs: T) -> BooleanArray
 where
     T: NativeType + Simd8,
 {
@@ -181,7 +179,7 @@ where
 
 /// Perform `left > right` operation on an array and a scalar value.
 /// Non-null values are greater than null values.
-pub fn gt_scalar<T>(lhs: &PrimitiveArray<T>, rhs: T) -> Result<BooleanArray>
+pub fn gt_scalar<T>(lhs: &PrimitiveArray<T>, rhs: T) -> BooleanArray
 where
     T: NativeType + Simd8,
 {
@@ -199,7 +197,7 @@ where
 
 /// Perform `left >= right` operation on an array and a scalar value.
 /// Non-null values are greater than null values.
-pub fn gt_eq_scalar<T>(lhs: &PrimitiveArray<T>, rhs: T) -> Result<BooleanArray>
+pub fn gt_eq_scalar<T>(lhs: &PrimitiveArray<T>, rhs: T) -> BooleanArray
 where
     T: NativeType + Simd8,
 {
@@ -223,9 +221,20 @@ pub fn compare<T: NativeType + Simd8>(
 
 pub fn compare_scalar<T: NativeType + Simd8>(
     lhs: &PrimitiveArray<T>,
+    rhs: &PrimitiveScalar<T>,
+    op: Operator,
+) -> BooleanArray {
+    if !rhs.is_valid() {
+        return BooleanArray::new_null(lhs.len());
+    }
+    compare_scalar_non_null(lhs, rhs.value(), op)
+}
+
+pub fn compare_scalar_non_null<T: NativeType + Simd8>(
+    lhs: &PrimitiveArray<T>,
     rhs: T,
     op: Operator,
-) -> Result<BooleanArray> {
+) -> BooleanArray {
     match op {
         Operator::Eq => eq_scalar(lhs, rhs),
         Operator::Neq => neq_scalar(lhs, rhs),
@@ -271,7 +280,7 @@ mod tests {
     macro_rules! cmp_i64_scalar_options {
         ($KERNEL:ident, $A_VEC:expr, $B:literal, $EXPECTED:expr) => {
             let a = Int64Array::from($A_VEC);
-            let c = $KERNEL(&a, $B).unwrap();
+            let c = $KERNEL(&a, $B);
             assert_eq!(BooleanArray::from($EXPECTED), c);
         };
     }
@@ -279,7 +288,7 @@ mod tests {
     macro_rules! cmp_i64_scalar {
         ($KERNEL:ident, $A_VEC:expr, $B:literal, $EXPECTED:expr) => {
             let a = Int64Array::from_slice($A_VEC);
-            let c = $KERNEL(&a, $B).unwrap();
+            let c = $KERNEL(&a, $B);
             assert_eq!(BooleanArray::from_slice($EXPECTED), c);
         };
     }
@@ -551,7 +560,7 @@ mod tests {
     fn test_primitive_array_compare_scalar_slice() {
         let a = (0..100).map(Some).collect::<PrimitiveArray<i32>>();
         let a = a.slice(50, 50);
-        let actual = lt_scalar(&a, 200).unwrap();
+        let actual = lt_scalar(&a, 200);
         let expected: BooleanArray = (0..50).map(|_| Some(true)).collect();
         assert_eq!(expected, actual);
     }
