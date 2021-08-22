@@ -414,6 +414,12 @@ pub trait TryExtend<A> {
     fn try_extend<I: IntoIterator<Item = A>>(&mut self, iter: I) -> Result<()>;
 }
 
+/// A trait describing the ability of a struct to receive new items.
+pub trait TryPush<A> {
+    /// Tries to push a new element.
+    fn try_push(&mut self, item: A) -> Result<()>;
+}
+
 fn display_helper<T: std::fmt::Display, I: IntoIterator<Item = Option<T>>>(iter: I) -> Vec<String> {
     let iterator = iter.into_iter();
     let len = iterator.size_hint().0;

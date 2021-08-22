@@ -29,3 +29,11 @@ fn basics() {
     );
     assert_eq!(expected, array);
 }
+
+#[test]
+fn push() {
+    let mut array = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new();
+    array
+        .try_push(Some(vec![Some(1i32), Some(2), Some(3)]))
+        .unwrap();
+}
