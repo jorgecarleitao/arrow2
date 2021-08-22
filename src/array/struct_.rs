@@ -52,6 +52,20 @@ impl StructArray {
         }
     }
 
+    pub fn into_data(self) -> (Vec<Field>, Vec<Arc<dyn Array>>, Option<Bitmap>) {
+        let Self {
+            data_type,
+            values,
+            validity,
+        } = self;
+        let fields = if let DataType::Struct(fields) = data_type {
+            fields
+        } else {
+            unreachable!()
+        };
+        (fields, values, validity)
+    }
+
     pub fn slice(&self, offset: usize, length: usize) -> Self {
         let validity = self.validity.clone().map(|x| x.slice(offset, length));
         Self {

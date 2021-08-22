@@ -91,22 +91,18 @@ fn number_of_fields_mismatch() {
 fn from_struct_array() {
     let boolean = Arc::new(BooleanArray::from_slice(&[false, false, true, true])) as ArrayRef;
     let int = Arc::new(Int32Array::from_slice(&[42, 28, 19, 31])) as ArrayRef;
-    let struct_array = StructArray::from_data(
-        vec![
-            Field::new("b", DataType::Boolean, false),
-            Field::new("c", DataType::Int32, false),
-        ],
-        vec![boolean.clone(), int.clone()],
-        None,
-    );
 
-    let batch = RecordBatch::from(&struct_array);
+    let fields = vec![
+        Field::new("b", DataType::Boolean, false),
+        Field::new("c", DataType::Int32, false),
+    ];
+
+    let array = StructArray::from_data(fields.clone(), vec![boolean.clone(), int.clone()], None);
+
+    let batch = RecordBatch::from(array);
     assert_eq!(2, batch.num_columns());
     assert_eq!(4, batch.num_rows());
-    assert_eq!(
-        struct_array.data_type(),
-        &DataType::Struct(batch.schema().fields().to_vec())
-    );
+    assert_eq!(&fields, batch.schema().fields());
     assert_eq!(boolean.as_ref(), batch.column(0).as_ref());
     assert_eq!(int.as_ref(), batch.column(1).as_ref());
 }
