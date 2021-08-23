@@ -96,11 +96,16 @@ fn to_rust(ob: PyObject, py: Python) -> PyResult<ArrayRef> {
 }
 
 fn to_py(array: ArrayRef, py: Python) -> PyResult<PyObject> {
-    let schema_ptr = ffi::export_field_to_c(&Field::new("", array.data_type().clone(), true));
-    let array_ptr = ffi::export_array_to_c(array);
+    let array_ptr = Box::new(ffi::Ffi_ArrowArray::empty());
+    let schema_ptr = Box::new(ffi::Ffi_ArrowSchema::empty());
 
-    let schema_ptr = &*schema_ptr as *const ffi::Ffi_ArrowSchema;
-    let array_ptr = &*array_ptr as *const ffi::Ffi_ArrowArray;
+    let array_ptr = Box::into_raw(array_ptr);
+    let schema_ptr = Box::into_raw(schema_ptr);
+
+    unsafe {
+        ffi::export_field_to_c(&Field::new("", array.data_type().clone(), true), schema_ptr);
+        ffi::export_array_to_c(array, array_ptr);
+    };
 
     let pa = py.import("pyarrow")?;
 
@@ -108,6 +113,11 @@ fn to_py(array: ArrayRef, py: Python) -> PyResult<PyObject> {
         "_import_from_c",
         (array_ptr as uintptr_t, schema_ptr as uintptr_t),
     )?;
+
+    unsafe {
+        Box::from_raw(array_ptr);
+        Box::from_raw(schema_ptr);
+    };
 
     Ok(array.to_object(py))
 }
