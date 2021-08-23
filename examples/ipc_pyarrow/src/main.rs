@@ -1,5 +1,4 @@
-use std::fs::File;
-use std::io::BufReader;
+use std::net::TcpStream;
 use std::thread;
 use std::time::Duration;
 
@@ -9,7 +8,9 @@ use arrow2::error::Result;
 use arrow2::io::ipc::read;
 
 fn main() -> Result<()> {
-    let mut reader = File::open("data.arrows")?;
+    const ADDRESS: &str = "127.0.0.1:12989";
+
+    let mut reader = TcpStream::connect(ADDRESS)?;
     let metadata = read::read_stream_metadata(&mut reader)?;
     let mut stream = read::StreamReader::new(&mut reader, metadata);
 
@@ -21,7 +22,7 @@ fn main() -> Result<()> {
                     idx += 1;
                     println!("batch: {:?}", idx)
                 }
-                Ok(read::StreamState::Waiting) => thread::sleep(Duration::from_millis(4000)),
+                Ok(read::StreamState::Waiting) => thread::sleep(Duration::from_millis(2000)),
                 Err(l) => println!("{:?} ({})", l, idx),
             },
             None => break,

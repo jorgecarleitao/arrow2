@@ -1,6 +1,11 @@
 import pyarrow as pa
 from time import sleep
+import socket
 
+# Set up the data exchange socket
+sk = socket.socket()
+sk.bind(("127.0.0.1", 12989))
+sk.listen()
 
 data = [
     pa.array([1, 2, 3, 4]),
@@ -9,8 +14,11 @@ data = [
 ]
 
 batch = pa.record_batch(data, names=["f0", "f1", "f2"])
-writer = pa.ipc.new_stream("data.arrows", batch.schema)
-while True:
-    for _ in range(10):
-        writer.write(batch)
-    sleep(1)
+
+# Accept incoming connection and stream the data away
+connection, address = sk.accept()
+dummy_socket_file = connection.makefile("wb")
+with pa.RecordBatchStreamWriter(dummy_socket_file, batch.schema) as writer:
+    for i in range(50):
+        writer.write_batch(batch)
+        sleep(1)
