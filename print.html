@@ -83,7 +83,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="index.html"><strong aria-hidden="true">1.</strong> Arrow2</a></li><li class="chapter-item expanded "><a href="arrow.html"><strong aria-hidden="true">2.</strong> The arrow format</a></li><li class="chapter-item expanded "><a href="low_level.html"><strong aria-hidden="true">3.</strong> Low-level API</a></li><li class="chapter-item expanded "><a href="high_level.html"><strong aria-hidden="true">4.</strong> High-level API</a></li><li class="chapter-item expanded "><a href="compute.html"><strong aria-hidden="true">5.</strong> Compute</a></li><li class="chapter-item expanded "><a href="metadata.html"><strong aria-hidden="true">6.</strong> Metadata</a></li><li class="chapter-item expanded "><a href="ffi.html"><strong aria-hidden="true">7.</strong> Foreign interfaces</a></li><li class="chapter-item expanded "><a href="io/index.html"><strong aria-hidden="true">8.</strong> IO</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="io/csv_reader.html"><strong aria-hidden="true">8.1.</strong> Read CSV</a></li><li class="chapter-item expanded "><a href="io/csv_write.html"><strong aria-hidden="true">8.2.</strong> Write CSV</a></li><li class="chapter-item expanded "><a href="io/parquet_read.html"><strong aria-hidden="true">8.3.</strong> Read Parquet</a></li><li class="chapter-item expanded "><a href="io/parquet_write.html"><strong aria-hidden="true">8.4.</strong> Write Parquet</a></li><li class="chapter-item expanded "><a href="io/ipc_read.html"><strong aria-hidden="true">8.5.</strong> Read Arrow</a></li><li class="chapter-item expanded "><a href="io/ipc_write.html"><strong aria-hidden="true">8.6.</strong> Write Arrow</a></li></ol></li></ol>            </div>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="index.html"><strong aria-hidden="true">1.</strong> Arrow2</a></li><li class="chapter-item expanded "><a href="arrow.html"><strong aria-hidden="true">2.</strong> The arrow format</a></li><li class="chapter-item expanded "><a href="low_level.html"><strong aria-hidden="true">3.</strong> Low-level API</a></li><li class="chapter-item expanded "><a href="high_level.html"><strong aria-hidden="true">4.</strong> High-level API</a></li><li class="chapter-item expanded "><a href="compute.html"><strong aria-hidden="true">5.</strong> Compute</a></li><li class="chapter-item expanded "><a href="metadata.html"><strong aria-hidden="true">6.</strong> Metadata</a></li><li class="chapter-item expanded "><a href="ffi.html"><strong aria-hidden="true">7.</strong> Foreign interfaces</a></li><li class="chapter-item expanded "><a href="io/index.html"><strong aria-hidden="true">8.</strong> IO</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="io/csv_reader.html"><strong aria-hidden="true">8.1.</strong> Read CSV</a></li><li class="chapter-item expanded "><a href="io/csv_write.html"><strong aria-hidden="true">8.2.</strong> Write CSV</a></li><li class="chapter-item expanded "><a href="io/parquet_read.html"><strong aria-hidden="true">8.3.</strong> Read Parquet</a></li><li class="chapter-item expanded "><a href="io/parquet_write.html"><strong aria-hidden="true">8.4.</strong> Write Parquet</a></li><li class="chapter-item expanded "><a href="io/ipc_read.html"><strong aria-hidden="true">8.5.</strong> Read Arrow</a></li><li class="chapter-item expanded "><a href="io/ipc_stream_read.html"><strong aria-hidden="true">8.6.</strong> Read Arrow stream</a></li><li class="chapter-item expanded "><a href="io/ipc_write.html"><strong aria-hidden="true">8.7.</strong> Write Arrow</a></li></ol></li></ol>            </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
 
@@ -1410,6 +1410,78 @@ fn main() -&gt; Result&lt;()&gt; {
     Ok(())
 }
 </code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="read-arrow-streams"><a class="header" href="#read-arrow-streams">Read Arrow streams</a></h1>
+<p>When compiled with feature <code>io_ipc</code>, this crate can be used to read Arrow streams.</p>
+<p>The example below shows how to read from a stream:</p>
+<pre><pre class="playground"><code class="language-rust">use std::net::TcpStream;
+use std::thread;
+use std::time::Duration;
+
+use arrow2::array::{Array, Int64Array};
+use arrow2::datatypes::DataType;
+use arrow2::error::Result;
+use arrow2::io::ipc::read;
+
+fn main() -&gt; Result&lt;()&gt; {
+    const ADDRESS: &amp;str = &quot;127.0.0.1:12989&quot;;
+
+    let mut reader = TcpStream::connect(ADDRESS)?;
+    let metadata = read::read_stream_metadata(&amp;mut reader)?;
+    let mut stream = read::StreamReader::new(&amp;mut reader, metadata);
+
+    let mut idx = 0;
+    loop {
+        match stream.next() {
+            Some(x) =&gt; match x {
+                Ok(read::StreamState::Some(b)) =&gt; {
+                    idx += 1;
+                    println!(&quot;batch: {:?}&quot;, idx)
+                }
+                Ok(read::StreamState::Waiting) =&gt; thread::sleep(Duration::from_millis(2000)),
+                Err(l) =&gt; println!(&quot;{:?} ({})&quot;, l, idx),
+            },
+            None =&gt; break,
+        };
+    }
+
+    Ok(())
+}
+</code></pre></pre>
+<p>e.g. written by pyarrow:</p>
+<pre><code class="language-python ignore">import pyarrow as pa
+from time import sleep
+import socket
+
+# Set up the data exchange socket
+sk = socket.socket()
+sk.bind((&quot;127.0.0.1&quot;, 12989))
+sk.listen()
+
+data = [
+    pa.array([1, 2, 3, 4]),
+    pa.array([&quot;foo&quot;, &quot;bar&quot;, &quot;baz&quot;, None]),
+    pa.array([True, None, False, True]),
+]
+
+batch = pa.record_batch(data, names=[&quot;f0&quot;, &quot;f1&quot;, &quot;f2&quot;])
+
+# Accept incoming connection and stream the data away
+connection, address = sk.accept()
+dummy_socket_file = connection.makefile(&quot;wb&quot;)
+with pa.RecordBatchStreamWriter(dummy_socket_file, batch.schema) as writer:
+    for i in range(50):
+        writer.write_batch(batch)
+        sleep(1)
+</code></pre>
+<p>via</p>
+<pre><code class="language-bash ignore">python main.py &amp;
+PRODUCER_PID=$!
+
+sleep 1 # wait for metadata to be available.
+cargo run
+
+kill $PRODUCER_PID
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="write-arrow"><a class="header" href="#write-arrow">Write Arrow</a></h1>
 <p>When compiled with feature <code>io_ipc</code>, this crate can be used to write Arrow files.</p>
 <p>An Arrow file is composed by a header, a footer, and blocks of <code>RecordBatch</code>es.</p>
