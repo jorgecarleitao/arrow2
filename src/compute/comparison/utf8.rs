@@ -37,12 +37,9 @@ where
     let validity = combine_validities(lhs.validity(), rhs.validity());
 
     let values = lhs
-        .iter()
-        .zip(rhs.iter())
-        .map(|(lhs, rhs)| match (lhs, rhs) {
-            (Some(lhs), Some(rhs)) => op(lhs, rhs),
-            _ => false,
-        });
+        .values_iter()
+        .zip(rhs.values_iter())
+        .map(|(lhs, rhs)| op(lhs, rhs));
     let values = Bitmap::from_trusted_len_iter(values);
 
     Ok(BooleanArray::from_data(values, validity))
@@ -57,10 +54,7 @@ where
 {
     let validity = lhs.validity().clone();
 
-    let values = lhs.iter().map(|lhs| match lhs {
-        None => false,
-        Some(lhs) => op(lhs, rhs),
-    });
+    let values = lhs.values_iter().map(|lhs| op(lhs, rhs));
     let values = Bitmap::from_trusted_len_iter(values);
 
     BooleanArray::from_data(values, validity)
