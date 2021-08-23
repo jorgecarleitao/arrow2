@@ -452,13 +452,23 @@ impl<'a> ArrowArrayChild<'a> {
 }
 
 /// Exports an `Array` to the C data interface.
-pub fn export_to_c(array: Arc<dyn Array>) -> Result<ArrowArray> {
+pub fn export_array_to_c(array: Arc<dyn Array>) -> Result<ArrowArray> {
     let field = Field::new("", array.data_type().clone(), array.null_count() != 0);
 
     Ok(ArrowArray {
         array: Arc::new(Ffi_ArrowArray::new(array)),
-        schema: Arc::new(Ffi_ArrowSchema::try_new(field)?),
+        schema: Arc::new(Ffi_ArrowSchema::new(&field)),
     })
+}
+
+/// Exports a [`Field`] to the C data interface.
+pub fn export_field_to_c(field: &Field) -> Arc<Ffi_ArrowSchema> {
+    Arc::new(Ffi_ArrowSchema::new(field))
+}
+
+/// Imports a [`Field`] from the C data interface.
+pub fn import_field_from_c(field: &Ffi_ArrowSchema) -> Result<Field> {
+    to_field(field)
 }
 
 pub fn create_empty() -> ArrowArray {

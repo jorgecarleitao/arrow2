@@ -1,5 +1,5 @@
 use arrow2::array::*;
-use arrow2::datatypes::{DataType, TimeUnit};
+use arrow2::datatypes::{DataType, Field, TimeUnit};
 use arrow2::ffi::try_from;
 use arrow2::{error::Result, ffi};
 use std::sync::Arc;
@@ -9,7 +9,7 @@ fn test_release(expected: impl Array + 'static) -> Result<()> {
     let b: Arc<dyn Array> = Arc::new(expected);
 
     // export the array as 2 pointers.
-    let _ = ffi::export_to_c(b)?;
+    let _ = ffi::export_array_to_c(b)?;
 
     Ok(())
 }
@@ -19,13 +19,23 @@ fn test_round_trip(expected: impl Array + Clone + 'static) -> Result<()> {
     let expected = Box::new(expected) as Box<dyn Array>;
 
     // create a `ArrowArray` from the data.
-    let array = Arc::new(ffi::export_to_c(b)?);
+    let array = Arc::new(ffi::export_array_to_c(b)?);
 
     let (_, _) = array.references();
 
     let result = try_from(array)?;
 
     assert_eq!(&result, &expected);
+    Ok(())
+}
+
+fn test_round_trip_schema(expected: Field) -> Result<()> {
+    // create a `ArrowArray` from the data.
+    let schema = ffi::export_field_to_c(&expected);
+
+    let result = ffi::import_field_from_c(&schema)?;
+
+    assert_eq!(result, expected);
     Ok(())
 }
 
@@ -129,4 +139,21 @@ fn dict() -> Result<()> {
     let array: DictionaryArray<i32> = array.into();
 
     test_round_trip(array)
+}
+
+#[test]
+fn schema() -> Result<()> {
+    let field = Field::new(
+        "a",
+        DataType::List(Box::new(Field::new("a", DataType::UInt32, true))),
+        true,
+    );
+    test_round_trip_schema(field)?;
+
+    let field = Field::new(
+        "a",
+        DataType::Dictionary(Box::new(DataType::UInt32), Box::new(DataType::Utf8)),
+        true,
+    );
+    test_round_trip_schema(field)
 }

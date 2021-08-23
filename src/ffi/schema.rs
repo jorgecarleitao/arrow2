@@ -7,7 +7,6 @@ use crate::{
 
 #[allow(dead_code)]
 struct SchemaPrivateData {
-    field: Field,
     children_ptr: Box<[*mut Ffi_ArrowSchema]>,
     dictionary: Option<*mut Ffi_ArrowSchema>,
 }
@@ -52,27 +51,27 @@ unsafe extern "C" fn c_release_schema(schema: *mut Ffi_ArrowSchema) {
 }
 
 impl Ffi_ArrowSchema {
-    /// create a new [`Ffi_ArrowSchema`]. This fails if the fields' [`DataType`] is not supported.
-    pub fn try_new(field: Field) -> Result<Ffi_ArrowSchema> {
-        let format = to_format(field.data_type())?;
+    /// creates a new [Ffi_ArrowSchema]
+    pub fn new(field: &Field) -> Self {
+        let format = to_format(field.data_type());
         let name = field.name().clone();
 
         // allocate (and hold) the children
         let children_vec = match field.data_type() {
             DataType::List(field) => {
-                vec![Box::new(Ffi_ArrowSchema::try_new(field.as_ref().clone())?)]
+                vec![Box::new(Ffi_ArrowSchema::new(field.as_ref()))]
             }
             DataType::LargeList(field) => {
-                vec![Box::new(Ffi_ArrowSchema::try_new(field.as_ref().clone())?)]
+                vec![Box::new(Ffi_ArrowSchema::new(field.as_ref()))]
             }
             DataType::Struct(fields) => fields
                 .iter()
-                .map(|field| Ok(Box::new(Ffi_ArrowSchema::try_new(field.clone())?)))
-                .collect::<Result<Vec<_>>>()?,
+                .map(|field| Box::new(Ffi_ArrowSchema::new(field)))
+                .collect::<Vec<_>>(),
             DataType::Union(fields, _, _) => fields
                 .iter()
-                .map(|field| Ok(Box::new(Ffi_ArrowSchema::try_new(field.clone())?)))
-                .collect::<Result<Vec<_>>>()?,
+                .map(|field| Box::new(Ffi_ArrowSchema::new(field)))
+                .collect::<Vec<_>>(),
             _ => vec![],
         };
         // note: this cannot be done along with the above because the above is fallible and this op leaks.
@@ -87,19 +86,18 @@ impl Ffi_ArrowSchema {
         let dictionary = if let DataType::Dictionary(_, values) = field.data_type() {
             // we do not store field info in the dict values, so can't recover it all :(
             let field = Field::new("item", values.as_ref().clone(), true);
-            Some(Box::new(Ffi_ArrowSchema::try_new(field)?))
+            Some(Box::new(Ffi_ArrowSchema::new(&field)))
         } else {
             None
         };
 
         let mut private = Box::new(SchemaPrivateData {
-            field,
             children_ptr,
             dictionary: dictionary.map(Box::into_raw),
         });
 
         // <https://arrow.apache.org/docs/format/CDataInterface.html#c.ArrowSchema>
-        Ok(Ffi_ArrowSchema {
+        Self {
             format: CString::new(format).unwrap().into_raw(),
             name: CString::new(name).unwrap().into_raw(),
             metadata: std::ptr::null_mut(),
@@ -109,7 +107,7 @@ impl Ffi_ArrowSchema {
             dictionary: private.dictionary.unwrap_or(std::ptr::null_mut()),
             release: Some(c_release_schema),
             private_data: Box::into_raw(private) as *mut ::std::os::raw::c_void,
-        })
+        }
     }
 
     /// create an empty [Ffi_ArrowSchema]
@@ -285,56 +283,62 @@ fn to_data_type(schema: &Ffi_ArrowSchema) -> Result<DataType> {
 }
 
 /// the inverse of [to_field]
-fn to_format(data_type: &DataType) -> Result<String> {
-    Ok(match data_type {
-        DataType::Null => "n",
-        DataType::Boolean => "b",
-        DataType::Int8 => "c",
-        DataType::UInt8 => "C",
-        DataType::Int16 => "s",
-        DataType::UInt16 => "S",
-        DataType::Int32 => "i",
-        DataType::UInt32 => "I",
-        DataType::Int64 => "l",
-        DataType::UInt64 => "L",
-        DataType::Float16 => "e",
-        DataType::Float32 => "f",
-        DataType::Float64 => "g",
-        DataType::Binary => "z",
-        DataType::LargeBinary => "Z",
-        DataType::Utf8 => "u",
-        DataType::LargeUtf8 => "U",
-        DataType::Date32 => "tdD",
-        DataType::Date64 => "tdm",
-        DataType::Time32(TimeUnit::Second) => "tts",
-        DataType::Time32(TimeUnit::Millisecond) => "ttm",
-        DataType::Time64(TimeUnit::Microsecond) => "ttu",
-        DataType::Time64(TimeUnit::Nanosecond) => "ttn",
-        DataType::Duration(TimeUnit::Second) => "tDs",
-        DataType::Duration(TimeUnit::Millisecond) => "tDm",
-        DataType::Duration(TimeUnit::Microsecond) => "tDu",
-        DataType::Duration(TimeUnit::Nanosecond) => "tDn",
-        DataType::Interval(IntervalUnit::YearMonth) => "tiM",
-        DataType::Interval(IntervalUnit::DayTime) => "tiD",
+fn to_format(data_type: &DataType) -> String {
+    match data_type {
+        DataType::Null => "n".to_string(),
+        DataType::Boolean => "b".to_string(),
+        DataType::Int8 => "c".to_string(),
+        DataType::UInt8 => "C".to_string(),
+        DataType::Int16 => "s".to_string(),
+        DataType::UInt16 => "S".to_string(),
+        DataType::Int32 => "i".to_string(),
+        DataType::UInt32 => "I".to_string(),
+        DataType::Int64 => "l".to_string(),
+        DataType::UInt64 => "L".to_string(),
+        DataType::Float16 => "e".to_string(),
+        DataType::Float32 => "f".to_string(),
+        DataType::Float64 => "g".to_string(),
+        DataType::Binary => "z".to_string(),
+        DataType::LargeBinary => "Z".to_string(),
+        DataType::Utf8 => "u".to_string(),
+        DataType::LargeUtf8 => "U".to_string(),
+        DataType::Date32 => "tdD".to_string(),
+        DataType::Date64 => "tdm".to_string(),
+        DataType::Time32(TimeUnit::Second) => "tts".to_string(),
+        DataType::Time32(TimeUnit::Millisecond) => "ttm".to_string(),
+        DataType::Time32(_) => {
+            unreachable!("Time32 is only supported for seconds and milliseconds")
+        }
+        DataType::Time64(TimeUnit::Microsecond) => "ttu".to_string(),
+        DataType::Time64(TimeUnit::Nanosecond) => "ttn".to_string(),
+        DataType::Time64(_) => {
+            unreachable!("Time64 is only supported for micro and nanoseconds")
+        }
+        DataType::Duration(TimeUnit::Second) => "tDs".to_string(),
+        DataType::Duration(TimeUnit::Millisecond) => "tDm".to_string(),
+        DataType::Duration(TimeUnit::Microsecond) => "tDu".to_string(),
+        DataType::Duration(TimeUnit::Nanosecond) => "tDn".to_string(),
+        DataType::Interval(IntervalUnit::YearMonth) => "tiM".to_string(),
+        DataType::Interval(IntervalUnit::DayTime) => "tiD".to_string(),
         DataType::Timestamp(unit, tz) => {
             let unit = match unit {
-                TimeUnit::Second => "s",
-                TimeUnit::Millisecond => "m",
-                TimeUnit::Microsecond => "u",
-                TimeUnit::Nanosecond => "n",
+                TimeUnit::Second => "s".to_string(),
+                TimeUnit::Millisecond => "m".to_string(),
+                TimeUnit::Microsecond => "u".to_string(),
+                TimeUnit::Nanosecond => "n".to_string(),
             };
-            return Ok(format!(
+            format!(
                 "ts{}:{}",
                 unit,
                 tz.as_ref().map(|x| x.as_ref()).unwrap_or("")
-            ));
+            )
         }
-        DataType::Decimal(precision, scale) => return Ok(format!("d:{},{}", precision, scale)),
-        DataType::List(_) => "+l",
-        DataType::LargeList(_) => "+L",
-        DataType::Struct(_) => "+s",
-        DataType::FixedSizeBinary(size) => return Ok(format!("w{}", size)),
-        DataType::FixedSizeList(_, size) => return Ok(format!("+w:{}", size)),
+        DataType::Decimal(precision, scale) => format!("d:{},{}", precision, scale),
+        DataType::List(_) => "+l".to_string(),
+        DataType::LargeList(_) => "+L".to_string(),
+        DataType::Struct(_) => "+s".to_string(),
+        DataType::FixedSizeBinary(size) => format!("w{}", size),
+        DataType::FixedSizeList(_, size) => format!("+w:{}", size),
         DataType::Union(f, ids, is_sparse) => {
             let sparsness = if *is_sparse { 's' } else { 'd' };
             let mut r = format!("+u{}:", sparsness);
@@ -346,10 +350,8 @@ fn to_format(data_type: &DataType) -> Result<String> {
             };
             let ids = &ids[..ids.len() - 1]; // take away last ","
             r.push_str(ids);
-            return Ok(r);
+            r
         }
-        DataType::Dictionary(index, _) => return to_format(index.as_ref()),
-        _ => todo!(),
+        DataType::Dictionary(index, _) => to_format(index.as_ref()),
     }
-    .to_string())
 }

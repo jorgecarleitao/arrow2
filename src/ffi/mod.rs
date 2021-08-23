@@ -6,4 +6,7 @@ mod ffi;
 mod schema;
 
 pub use array::try_from;
-pub use ffi::{create_empty, export_to_c, ArrowArray, ArrowArrayRef};
+pub use ffi::{
+    create_empty, export_array_to_c, export_field_to_c, import_field_from_c, ArrowArray,
+    ArrowArrayRef,
+};
