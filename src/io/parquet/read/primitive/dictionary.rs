@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use parquet2::{
     encoding::{bitpacking, hybrid_rle, uleb128, Encoding},
-    page::{DataPage, DataPageHeader, DataPageHeaderExt, PrimitivePageDict},
-    read::{levels, StreamingIterator},
+    page::{DataPage, PrimitivePageDict},
+    read::StreamingIterator,
     types::NativeType,
 };
 
@@ -99,67 +99,32 @@ where
 
     assert_eq!(descriptor.max_rep_level(), 0);
     let is_optional = descriptor.max_def_level() == 1;
-    match page.header() {
-        DataPageHeader::V1(header) => {
-            assert_eq!(header.definition_level_encoding(), Encoding::Rle);
 
-            let (_, validity_buffer, values_buffer) =
-                levels::split_buffer_v1(page.buffer(), false, is_optional);
+    let (validity_buffer, values_buffer, version) = other_utils::split_buffer(page, is_optional);
 
-            match (&page.encoding(), page.dictionary_page(), is_optional) {
-                (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
-                    read_dict_optional(
-                        validity_buffer,
-                        values_buffer,
-                        additional,
-                        dict.as_any().downcast_ref().unwrap(),
-                        indices,
-                        values,
-                        validity,
-                        op,
-                    )
-                }
-                _ => {
-                    return Err(other_utils::not_implemented(
-                        &page.encoding(),
-                        is_optional,
-                        page.dictionary_page().is_some(),
-                        "V1",
-                        "primitive",
-                    ))
-                }
-            }
+    match (&page.encoding(), page.dictionary_page(), is_optional) {
+        (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
+            read_dict_optional(
+                validity_buffer,
+                values_buffer,
+                additional,
+                dict.as_any().downcast_ref().unwrap(),
+                indices,
+                values,
+                validity,
+                op,
+            )
         }
-        DataPageHeader::V2(header) => {
-            let def_level_buffer_length = header.definition_levels_byte_length as usize;
-
-            let (_, validity_buffer, values_buffer) =
-                levels::split_buffer_v2(page.buffer(), 0, def_level_buffer_length);
-            match (&page.encoding(), page.dictionary_page(), is_optional) {
-                (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
-                    read_dict_optional(
-                        validity_buffer,
-                        values_buffer,
-                        additional,
-                        dict.as_any().downcast_ref().unwrap(),
-                        indices,
-                        values,
-                        validity,
-                        op,
-                    )
-                }
-                _ => {
-                    return Err(other_utils::not_implemented(
-                        &page.encoding(),
-                        is_optional,
-                        page.dictionary_page().is_some(),
-                        "V2",
-                        "primitive",
-                    ))
-                }
-            }
+        _ => {
+            return Err(other_utils::not_implemented(
+                &page.encoding(),
+                is_optional,
+                page.dictionary_page().is_some(),
+                version,
+                "primitive",
+            ))
         }
-    };
+    }
     Ok(())
 }
 
