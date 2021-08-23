@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["and","Logical ‘and’ with Kleene logic"],["or","Logical ‘or’ with Kleene logic"]]});
