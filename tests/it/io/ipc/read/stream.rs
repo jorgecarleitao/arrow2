@@ -22,7 +22,7 @@ fn test_file(version: &str, file_name: &str) -> Result<()> {
 
     batches
         .iter()
-        .zip(reader.map(|x| x.unwrap()))
+        .zip(reader.map(|x| x.unwrap().unwrap()))
         .for_each(|(lhs, rhs)| {
             assert_eq!(lhs, &rhs);
         });

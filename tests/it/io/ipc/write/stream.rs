@@ -34,7 +34,10 @@ fn test_file(version: &str, file_name: &str) {
 
     assert_eq!(schema.as_ref(), &expected_schema);
 
-    let batches = reader.collect::<Result<Vec<_>>>().unwrap();
+    let batches = reader
+        .map(|x| x.map(|x| x.unwrap()))
+        .collect::<Result<Vec<_>>>()
+        .unwrap();
 
     assert_eq!(batches, expected_batches);
 }

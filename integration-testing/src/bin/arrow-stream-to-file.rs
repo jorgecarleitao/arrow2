@@ -29,9 +29,9 @@ fn main() -> Result<()> {
 
     let mut writer = io::stdout();
 
-    let mut writer = FileWriter::try_new(&mut writer, &schema)?;
+    let mut writer = FileWriter::try_new(&mut writer, schema)?;
 
-    arrow_stream_reader.try_for_each(|batch| writer.write(&batch?))?;
+    arrow_stream_reader.try_for_each(|batch| writer.write(&batch?.unwrap()))?;
     writer.finish()?;
 
     Ok(())

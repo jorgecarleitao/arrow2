@@ -62,6 +62,9 @@ pub fn read_arrow_stream(version: &str, file_name: &str) -> (Schema, Vec<RecordB
 
     (
         schema.as_ref().clone(),
-        reader.collect::<Result<_>>().unwrap(),
+        reader
+            .map(|x| x.map(|x| x.unwrap()))
+            .collect::<Result<_>>()
+            .unwrap(),
     )
 }

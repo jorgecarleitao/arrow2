@@ -13,4 +13,5 @@
     - [Read Parquet](./io/parquet_read.md)
     - [Write Parquet](./io/parquet_write.md)
     - [Read Arrow](./io/ipc_read.md)
+    - [Read Arrow stream](./io/ipc_stream_read.md)
     - [Write Arrow](./io/ipc_write.md)
