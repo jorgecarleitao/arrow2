@@ -1,10 +1,10 @@
-name: Integration
+name: Integration IPC / Flight
 
 on: [push, pull_request]
 
 jobs:
   docker:
-    name: Integration Test
+    name: Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Arrow
