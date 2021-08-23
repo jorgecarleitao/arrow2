@@ -10,8 +10,8 @@ use futures::{pin_mut, Stream, StreamExt};
 use parquet2::{
     encoding::{hybrid_rle, Encoding},
     metadata::{ColumnChunkMetaData, ColumnDescriptor},
-    page::{DataPage, DataPageHeader, DataPageHeaderExt},
-    read::{levels, StreamingIterator},
+    page::DataPage,
+    read::StreamingIterator,
 };
 
 pub(super) fn read_required(buffer: &[u8], additional: usize, values: &mut MutableBitmap) {
@@ -121,64 +121,27 @@ fn extend_from_page(
     assert_eq!(descriptor.max_rep_level(), 0);
     assert!(descriptor.max_def_level() <= 1);
     let is_optional = descriptor.max_def_level() == 1;
-    match page.header() {
-        DataPageHeader::V1(header) => {
-            assert_eq!(header.definition_level_encoding(), Encoding::Rle);
 
-            match (&page.encoding(), page.dictionary_page(), is_optional) {
-                (Encoding::Plain, None, true) => {
-                    let (_, validity_buffer, values_buffer) =
-                        levels::split_buffer_v1(page.buffer(), false, is_optional);
-                    read_optional(
-                        validity_buffer,
-                        values_buffer,
-                        page.num_values(),
-                        values,
-                        validity,
-                    )
-                }
-                (Encoding::Plain, None, false) => {
-                    read_required(page.buffer(), page.num_values(), values)
-                }
-                _ => {
-                    return Err(utils::not_implemented(
-                        &page.encoding(),
-                        is_optional,
-                        page.dictionary_page().is_some(),
-                        "V1",
-                        "Boolean",
-                    ))
-                }
-            }
+    let (validity_buffer, values_buffer, version) = utils::split_buffer(page, is_optional);
+
+    match (page.encoding(), page.dictionary_page(), is_optional) {
+        (Encoding::Plain, None, true) => read_optional(
+            validity_buffer,
+            values_buffer,
+            page.num_values(),
+            values,
+            validity,
+        ),
+        (Encoding::Plain, None, false) => read_required(page.buffer(), page.num_values(), values),
+        _ => {
+            return Err(utils::not_implemented(
+                &page.encoding(),
+                is_optional,
+                page.dictionary_page().is_some(),
+                version,
+                "Boolean",
+            ))
         }
-        DataPageHeader::V2(header) => {
-            let def_level_buffer_length = header.definition_levels_byte_length as usize;
-            match (page.encoding(), page.dictionary_page(), is_optional) {
-                (Encoding::Plain, None, true) => {
-                    let (_, validity_buffer, values_buffer) =
-                        levels::split_buffer_v2(page.buffer(), 0, def_level_buffer_length);
-                    read_optional(
-                        validity_buffer,
-                        values_buffer,
-                        page.num_values(),
-                        values,
-                        validity,
-                    )
-                }
-                (Encoding::Plain, None, false) => {
-                    read_required(page.buffer(), page.num_values(), values)
-                }
-                _ => {
-                    return Err(utils::not_implemented(
-                        &page.encoding(),
-                        is_optional,
-                        page.dictionary_page().is_some(),
-                        "V2",
-                        "Boolean",
-                    ))
-                }
-            }
-        }
-    };
+    }
     Ok(())
 }

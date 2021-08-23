@@ -2,8 +2,8 @@ use futures::{pin_mut, Stream, StreamExt};
 use parquet2::{
     encoding::{bitpacking, delta_length_byte_array, hybrid_rle, uleb128, Encoding},
     metadata::{ColumnChunkMetaData, ColumnDescriptor},
-    page::{BinaryPageDict, DataPage, DataPageHeader, DataPageHeaderExt},
-    read::{levels, StreamingIterator},
+    page::{BinaryPageDict, DataPage},
+    read::StreamingIterator,
 };
 
 use crate::{
@@ -213,102 +213,48 @@ fn extend_from_page<O: Offset>(
     assert_eq!(descriptor.max_rep_level(), 0);
     assert!(descriptor.max_def_level() <= 1);
     let is_optional = descriptor.max_def_level() == 1;
-    match page.header() {
-        DataPageHeader::V1(header) => {
-            assert_eq!(header.definition_level_encoding(), Encoding::Rle);
 
-            let (_, validity_buffer, values_buffer) =
-                levels::split_buffer_v1(page.buffer(), false, is_optional);
+    let (validity_buffer, values_buffer, version) = utils::split_buffer(page, is_optional);
 
-            match (&page.encoding(), page.dictionary_page(), is_optional) {
-                (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
-                    read_dict_buffer::<O>(
-                        validity_buffer,
-                        values_buffer,
-                        page.num_values() as u32,
-                        dict.as_any().downcast_ref().unwrap(),
-                        offsets,
-                        values,
-                        validity,
-                    )
-                }
-                (Encoding::DeltaLengthByteArray, None, true) => read_delta_optional::<O>(
-                    validity_buffer,
-                    values_buffer,
-                    page.num_values(),
-                    offsets,
-                    values,
-                    validity,
-                ),
-                (Encoding::Plain, None, true) => read_plain_optional::<O>(
-                    validity_buffer,
-                    values_buffer,
-                    page.num_values(),
-                    offsets,
-                    values,
-                    validity,
-                ),
-                (Encoding::Plain, None, false) => {
-                    read_plain_required::<O>(page.buffer(), page.num_values(), offsets, values)
-                }
-                _ => {
-                    return Err(utils::not_implemented(
-                        &page.encoding(),
-                        is_optional,
-                        page.dictionary_page().is_some(),
-                        "V1",
-                        "Binary",
-                    ))
-                }
-            }
+    match (&page.encoding(), page.dictionary_page(), is_optional) {
+        (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
+            read_dict_buffer::<O>(
+                validity_buffer,
+                values_buffer,
+                page.num_values() as u32,
+                dict.as_any().downcast_ref().unwrap(),
+                offsets,
+                values,
+                validity,
+            )
         }
-        DataPageHeader::V2(header) => {
-            let def_level_buffer_length = header.definition_levels_byte_length as usize;
-
-            let (_, validity_buffer, values_buffer) =
-                levels::split_buffer_v2(page.buffer(), 0, def_level_buffer_length);
-
-            match (page.encoding(), page.dictionary_page(), is_optional) {
-                (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
-                    read_dict_buffer::<O>(
-                        validity_buffer,
-                        values_buffer,
-                        page.num_values() as u32,
-                        dict.as_any().downcast_ref().unwrap(),
-                        offsets,
-                        values,
-                        validity,
-                    )
-                }
-                (Encoding::Plain, None, true) => read_plain_optional::<O>(
-                    validity_buffer,
-                    values_buffer,
-                    page.num_values(),
-                    offsets,
-                    values,
-                    validity,
-                ),
-                (Encoding::DeltaLengthByteArray, None, true) => read_delta_optional::<O>(
-                    validity_buffer,
-                    values_buffer,
-                    page.num_values(),
-                    offsets,
-                    values,
-                    validity,
-                ),
-                (Encoding::Plain, None, false) => {
-                    read_plain_required::<O>(page.buffer(), page.num_values(), offsets, values)
-                }
-                _ => {
-                    return Err(utils::not_implemented(
-                        &page.encoding(),
-                        is_optional,
-                        page.dictionary_page().is_some(),
-                        "V2",
-                        "Binary",
-                    ))
-                }
-            }
+        (Encoding::DeltaLengthByteArray, None, true) => read_delta_optional::<O>(
+            validity_buffer,
+            values_buffer,
+            page.num_values(),
+            offsets,
+            values,
+            validity,
+        ),
+        (Encoding::Plain, None, true) => read_plain_optional::<O>(
+            validity_buffer,
+            values_buffer,
+            page.num_values(),
+            offsets,
+            values,
+            validity,
+        ),
+        (Encoding::Plain, None, false) => {
+            read_plain_required::<O>(page.buffer(), page.num_values(), offsets, values)
+        }
+        _ => {
+            return Err(utils::not_implemented(
+                &page.encoding(),
+                is_optional,
+                page.dictionary_page().is_some(),
+                version,
+                "Binary",
+            ))
         }
     };
     Ok(())
