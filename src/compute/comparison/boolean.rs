@@ -1,22 +1,6 @@
-// Licensed to the Apache Software Foundation (ASF) under one
-// or more contributor license agreements.  See the NOTICE file
-// distributed with this work for additional information
-// regarding copyright ownership.  The ASF licenses this file
-// to you under the Apache License, Version 2.0 (the
-// "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
-
 use crate::array::*;
 use crate::bitmap::Bitmap;
+use crate::buffer::MutableBuffer;
 use crate::scalar::{BooleanScalar, Scalar};
 use crate::{
     bitmap::MutableBitmap,
@@ -27,20 +11,30 @@ use super::{super::utils::combine_validities, Operator};
 
 pub fn compare_values_op<F>(lhs: &Bitmap, rhs: &Bitmap, op: F) -> MutableBitmap
 where
-    F: Fn(bool, bool) -> bool,
+    F: Fn(u8, u8) -> u8,
 {
     assert_eq!(lhs.len(), rhs.len());
-    let lhs_iter = lhs.iter();
-    let rhs_iter = rhs.iter();
+    let lhs_iter = lhs.chunks();
+    let rhs_iter = rhs.chunks();
+    let lhs_remainder = lhs_iter.remainder();
+    let rhs_remainder = rhs_iter.remainder();
 
-    MutableBitmap::from_trusted_len_iter(lhs_iter.zip(rhs_iter).map(|(x, y)| op(x, y)))
+    let mut values = MutableBuffer::with_capacity((lhs.len() + 7) / 8);
+    let iter = lhs_iter.zip(rhs_iter).map(|(x, y)| op(x, y));
+    values.extend_from_trusted_len_iter(iter);
+
+    if lhs.len() % 8 != 0 {
+        values.push(op(lhs_remainder, rhs_remainder))
+    };
+
+    MutableBitmap::from_buffer(values, lhs.len())
 }
 
 /// Evaluate `op(lhs, rhs)` for [`BooleanArray`]s using a specified
 /// comparison function.
 fn compare_op<F>(lhs: &BooleanArray, rhs: &BooleanArray, op: F) -> Result<BooleanArray>
 where
-    F: Fn(bool, bool) -> bool,
+    F: Fn(u8, u8) -> u8,
 {
     if lhs.len() != rhs.len() {
         return Err(ArrowError::InvalidArgumentError(
@@ -59,32 +53,41 @@ where
 /// a specified comparison function.
 pub fn compare_op_scalar<F>(lhs: &BooleanArray, rhs: bool, op: F) -> BooleanArray
 where
-    F: Fn(bool, bool) -> bool,
+    F: Fn(u8, u8) -> u8,
 {
-    let lhs_iter = lhs.values().iter();
+    let lhs_iter = lhs.values().chunks();
+    let lhs_remainder = lhs_iter.remainder();
+    let rhs = if rhs { 0b11111111 } else { 0 };
 
-    let values = Bitmap::from_trusted_len_iter(lhs_iter.map(|x| op(x, rhs)));
+    let mut values = MutableBuffer::with_capacity((lhs.len() + 7) / 8);
+    let iter = lhs_iter.map(|x| op(x, rhs));
+    values.extend_from_trusted_len_iter(iter);
+
+    if lhs.len() % 8 != 0 {
+        values.push(op(lhs_remainder, rhs))
+    };
+    let values = MutableBitmap::from_buffer(values, lhs.len()).into();
     BooleanArray::from_data(values, lhs.validity().clone())
 }
 
 /// Perform `lhs == rhs` operation on two arrays.
 pub fn eq(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
-    compare_op(lhs, rhs, |a, b| a == b)
+    compare_op(lhs, rhs, |a, b| !(a ^ b))
 }
 
 /// Perform `left == right` operation on an array and a scalar value.
 pub fn eq_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
-    compare_op_scalar(lhs, rhs, |a, b| a == b)
+    compare_op_scalar(lhs, rhs, |a, b| !(a ^ b))
 }
 
 /// Perform `left != right` operation on two arrays.
 pub fn neq(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
-    compare_op(lhs, rhs, |a, b| a != b)
+    compare_op(lhs, rhs, |a, b| a ^ b)
 }
 
 /// Perform `left != right` operation on an array and a scalar value.
 pub fn neq_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
-    compare_op_scalar(lhs, rhs, |a, b| a != b)
+    compare_op_scalar(lhs, rhs, |a, b| a ^ b)
 }
 
 /// Perform `left < right` operation on two arrays.
@@ -99,13 +102,13 @@ pub fn lt_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
 
 /// Perform `left <= right` operation on two arrays.
 pub fn lt_eq(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
-    compare_op(lhs, rhs, |a, b| a <= b)
+    compare_op(lhs, rhs, |a, b| !a | b)
 }
 
 /// Perform `left <= right` operation on an array and a scalar value.
 /// Null values are less than non-null values.
 pub fn lt_eq_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
-    compare_op_scalar(lhs, rhs, |a, b| a <= b)
+    compare_op_scalar(lhs, rhs, |a, b| !a | b)
 }
 
 /// Perform `left > right` operation on two arrays. Non-null values are greater than null
@@ -123,13 +126,13 @@ pub fn gt_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
 /// Perform `left >= right` operation on two arrays. Non-null values are greater than null
 /// values.
 pub fn gt_eq(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
-    compare_op(lhs, rhs, |a, b| a >= b)
+    compare_op(lhs, rhs, |a, b| a | !b)
 }
 
 /// Perform `left >= right` operation on an array and a scalar value.
 /// Non-null values are greater than null values.
 pub fn gt_eq_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
-    compare_op_scalar(lhs, rhs, |a, b| a >= b)
+    compare_op_scalar(lhs, rhs, |a, b| a | !b)
 }
 
 pub fn compare(lhs: &BooleanArray, rhs: &BooleanArray, op: Operator) -> Result<BooleanArray> {
