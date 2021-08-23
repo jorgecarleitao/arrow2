@@ -29,7 +29,10 @@ use pyo3::{libc::uintptr_t, prelude::*};
 use arrow2::array::{Array, Int64Array};
 use arrow2::ffi;
 use arrow2::{array::PrimitiveArray, compute};
-use arrow2::{datatypes::DataType, error::ArrowError};
+use arrow2::{
+    datatypes::{DataType, Field},
+    error::ArrowError,
+};
 
 type ArrayRef = Arc<dyn Array>;
 
@@ -72,8 +75,11 @@ impl From<PyO3ArrowError> for PyErr {
 
 fn to_rust(ob: PyObject, py: Python) -> PyResult<ArrayRef> {
     // prepare a pointer to receive the Array struct
-    let array = Arc::new(ffi::create_empty());
-    let (array_ptr, schema_ptr) = array.references();
+    let array = Box::new(ffi::Ffi_ArrowArray::empty());
+    let schema = Box::new(ffi::Ffi_ArrowSchema::empty());
+
+    let array_ptr = &*array as *const ffi::Ffi_ArrowArray;
+    let schema_ptr = &*schema as *const ffi::Ffi_ArrowSchema;
 
     // make the conversion through PyArrow's private API
     // this changes the pointer's memory and is thus unsafe. In particular, `_export_to_c` can go out of bounds
@@ -83,13 +89,18 @@ fn to_rust(ob: PyObject, py: Python) -> PyResult<ArrayRef> {
         (array_ptr as uintptr_t, schema_ptr as uintptr_t),
     )?;
 
-    Ok(ffi::try_from(array).map_err(PyO3ArrowError::from)?.into())
+    let field = ffi::import_field_from_c(schema.as_ref()).map_err(PyO3ArrowError::from)?;
+    let array = ffi::import_array_from_c(array, &field).map_err(PyO3ArrowError::from)?;
+
+    Ok(array.into())
 }
 
 fn to_py(array: ArrayRef, py: Python) -> PyResult<PyObject> {
-    let array_ptr = ffi::export_to_c(array).map_err(PyO3ArrowError::from)?;
+    let schema_ptr = ffi::export_field_to_c(&Field::new("", array.data_type().clone(), true));
+    let array_ptr = ffi::export_array_to_c(array);
 
-    let (array_ptr, schema_ptr) = array_ptr.references();
+    let schema_ptr = &*schema_ptr as *const ffi::Ffi_ArrowSchema;
+    let array_ptr = &*array_ptr as *const ffi::Ffi_ArrowArray;
 
     let pa = py.import("pyarrow")?;
 
@@ -112,7 +123,7 @@ fn double(array: PyObject, py: Python) -> PyResult<PyObject> {
         PyO3ArrowError::ArrowError(ArrowError::Ffi("Expects an int64".to_string()))
     })?;
     let array =
-        compute::arithmetics::basic::add::add(&array, &array).map_err(PyO3ArrowError::from)?;
+        compute::arithmetics::basic::add::add(array, array).map_err(PyO3ArrowError::from)?;
     let array = Arc::new(array);
 
     // export

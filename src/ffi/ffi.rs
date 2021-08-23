@@ -95,8 +95,7 @@ impl Ffi_ArrowArray {
     /// # Safety
     /// This method releases `buffers`. Consumers of this struct *must* call `release` before
     /// releasing this struct, or contents in `buffers` leak.
-    pub fn new(array: Arc<dyn Array>) -> Self {
-        println!("{:?}", array);
+    pub(crate) fn new(array: Arc<dyn Array>) -> Self {
         let (buffers, children, dictionary) = buffers_children_dictionary(array.as_ref());
 
         let buffers_ptr = buffers
@@ -115,7 +114,6 @@ impl Ffi_ArrowArray {
             .collect::<Box<_>>();
         let n_children = children_ptr.len() as i64;
 
-        println!("{:?}", dictionary);
         let dictionary_ptr =
             dictionary.map(|array| Box::into_raw(Box::new(Ffi_ArrowArray::new(array))));
 
@@ -144,7 +142,7 @@ impl Ffi_ArrowArray {
     }
 
     // create an empty `Ffi_ArrowArray`, which can be used to import data into
-    fn empty() -> Self {
+    pub fn empty() -> Self {
         Self {
             length: 0,
             null_count: 0,
@@ -160,22 +158,17 @@ impl Ffi_ArrowArray {
     }
 
     /// the length of the array
-    pub fn len(&self) -> usize {
+    pub(crate) fn len(&self) -> usize {
         self.length as usize
     }
 
-    /// whether the array is empty
-    pub fn is_empty(&self) -> bool {
-        self.length == 0
-    }
-
     /// the offset of the array
-    pub fn offset(&self) -> usize {
+    pub(crate) fn offset(&self) -> usize {
         self.offset as usize
     }
 
     /// the null count of the array
-    pub fn null_count(&self) -> usize {
+    pub(crate) fn null_count(&self) -> usize {
         self.null_count as usize
     }
 }
@@ -390,12 +383,12 @@ pub trait ArrowArrayRef {
 /// Furthermore, this struct assumes that the incoming data agrees with the C data interface.
 #[derive(Debug)]
 pub struct ArrowArray {
-    array: Arc<Ffi_ArrowArray>,
+    array: Box<Ffi_ArrowArray>,
     field: Field,
 }
 
 impl ArrowArray {
-    pub fn new(array: Arc<Ffi_ArrowArray>, field: Field) -> Self {
+    pub fn new(array: Box<Ffi_ArrowArray>, field: Field) -> Self {
         Self { array, field }
     }
 }

@@ -3,24 +3,24 @@ use arrow2::datatypes::{DataType, Field, TimeUnit};
 use arrow2::{error::Result, ffi};
 use std::sync::Arc;
 
-fn test_release(expected: impl Array + 'static) -> Result<()> {
-    // create a `ArrowArray` from the data.
-    let b: Arc<dyn Array> = Arc::new(expected);
-
-    // export the array
-    let _ = ffi::export_array_to_c(b);
-
-    Ok(())
-}
-
 fn test_round_trip(expected: impl Array + Clone + 'static) -> Result<()> {
     let array: Arc<dyn Array> = Arc::new(expected.clone());
     let field = Field::new("a", array.data_type().clone(), true);
     let expected = Box::new(expected) as Box<dyn Array>;
 
-    // create references
-    let array_ptr = ffi::export_array_to_c(array);
-    let schema_ptr = ffi::export_field_to_c(&field);
+    let array_ptr = Box::new(ffi::Ffi_ArrowArray::empty());
+    let schema_ptr = Box::new(ffi::Ffi_ArrowSchema::empty());
+
+    let array_ptr = Box::into_raw(array_ptr);
+    let schema_ptr = Box::into_raw(schema_ptr);
+
+    unsafe {
+        ffi::export_array_to_c(array, array_ptr);
+        ffi::export_field_to_c(&field, schema_ptr);
+    }
+
+    let array_ptr = unsafe { Box::from_raw(array_ptr) };
+    let schema_ptr = unsafe { Box::from_raw(schema_ptr) };
 
     // import references
     let result_field = ffi::import_field_from_c(schema_ptr.as_ref())?;
@@ -31,20 +31,26 @@ fn test_round_trip(expected: impl Array + Clone + 'static) -> Result<()> {
     Ok(())
 }
 
-fn test_round_trip_schema(expected: Field) -> Result<()> {
+fn test_round_trip_schema(field: Field) -> Result<()> {
     // create a `ArrowArray` from the data.
-    let schema = ffi::export_field_to_c(&expected);
+    let schema_ptr = Box::new(ffi::Ffi_ArrowSchema::empty());
 
-    let result = ffi::import_field_from_c(&schema)?;
+    let schema_ptr = Box::into_raw(schema_ptr);
 
-    assert_eq!(result, expected);
+    unsafe { ffi::export_field_to_c(&field, schema_ptr) };
+
+    let schema_ptr = unsafe { Box::from_raw(schema_ptr) };
+
+    let result = ffi::import_field_from_c(schema_ptr.as_ref())?;
+
+    assert_eq!(result, field);
     Ok(())
 }
 
 #[test]
 fn u32() -> Result<()> {
     let data = Int32Array::from(&[Some(2), None, Some(1), None]);
-    test_release(data)
+    test_round_trip(data)
 }
 
 #[test]

@@ -13,7 +13,7 @@ struct SchemaPrivateData {
 
 /// ABI-compatible struct for `ArrowSchema` from C Data Interface
 /// See <https://arrow.apache.org/docs/format/CDataInterface.html#structure-definitions>
-/// This was created by bindgen
+// This was created by bindgen
 #[repr(C)]
 #[derive(Debug)]
 pub struct Ffi_ArrowSchema {
@@ -52,7 +52,7 @@ unsafe extern "C" fn c_release_schema(schema: *mut Ffi_ArrowSchema) {
 
 impl Ffi_ArrowSchema {
     /// creates a new [Ffi_ArrowSchema]
-    pub fn new(field: &Field) -> Self {
+    pub(crate) fn new(field: &Field) -> Self {
         let format = to_format(field.data_type());
         let name = field.name().clone();
 
@@ -126,7 +126,7 @@ impl Ffi_ArrowSchema {
     }
 
     /// returns the format of this schema.
-    pub fn format(&self) -> &str {
+    pub(crate) fn format(&self) -> &str {
         assert!(!self.format.is_null());
         // safe because the lifetime of `self.format` equals `self`
         unsafe { CStr::from_ptr(self.format) }
@@ -135,26 +135,26 @@ impl Ffi_ArrowSchema {
     }
 
     /// returns the name of this schema.
-    pub fn name(&self) -> &str {
+    pub(crate) fn name(&self) -> &str {
         assert!(!self.name.is_null());
         // safe because the lifetime of `self.name` equals `self`
         unsafe { CStr::from_ptr(self.name) }.to_str().unwrap()
     }
 
-    pub fn child(&self, index: usize) -> &'static Self {
+    pub(crate) fn child(&self, index: usize) -> &'static Self {
         assert!(index < self.n_children as usize);
         assert!(!self.name.is_null());
         unsafe { self.children.add(index).as_ref().unwrap().as_ref().unwrap() }
     }
 
-    pub fn dictionary(&self) -> Option<&'static Self> {
+    pub(crate) fn dictionary(&self) -> Option<&'static Self> {
         if self.dictionary.is_null() {
             return None;
         };
         Some(unsafe { self.dictionary.as_ref().unwrap() })
     }
 
-    pub fn nullable(&self) -> bool {
+    pub(crate) fn nullable(&self) -> bool {
         (self.flags / 2) & 1 == 1
     }
 }
