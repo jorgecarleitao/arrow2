@@ -1,6 +1,5 @@
 use arrow2::array::*;
 use arrow2::datatypes::{DataType, Field, TimeUnit};
-use arrow2::ffi::try_from;
 use arrow2::{error::Result, ffi};
 use std::sync::Arc;
 
@@ -8,24 +7,27 @@ fn test_release(expected: impl Array + 'static) -> Result<()> {
     // create a `ArrowArray` from the data.
     let b: Arc<dyn Array> = Arc::new(expected);
 
-    // export the array as 2 pointers.
-    let _ = ffi::export_array_to_c(b)?;
+    // export the array
+    let _ = ffi::export_array_to_c(b);
 
     Ok(())
 }
 
 fn test_round_trip(expected: impl Array + Clone + 'static) -> Result<()> {
-    let b: Arc<dyn Array> = Arc::new(expected.clone());
+    let array: Arc<dyn Array> = Arc::new(expected.clone());
+    let field = Field::new("a", array.data_type().clone(), true);
     let expected = Box::new(expected) as Box<dyn Array>;
 
-    // create a `ArrowArray` from the data.
-    let array = Arc::new(ffi::export_array_to_c(b)?);
+    // create references
+    let array_ptr = ffi::export_array_to_c(array);
+    let schema_ptr = ffi::export_field_to_c(&field);
 
-    let (_, _) = array.references();
+    // import references
+    let result_field = ffi::import_field_from_c(schema_ptr.as_ref())?;
+    let result_array = ffi::import_array_from_c(array_ptr, &result_field)?;
 
-    let result = try_from(array)?;
-
-    assert_eq!(&result, &expected);
+    assert_eq!(&result_array, &expected);
+    assert_eq!(result_field, field);
     Ok(())
 }
 

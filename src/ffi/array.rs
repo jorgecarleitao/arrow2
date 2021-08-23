@@ -32,8 +32,7 @@ use crate::{
 /// * the data type is not supported
 /// * the interface is not valid (e.g. a null pointer)
 pub fn try_from<A: ArrowArrayRef>(array: A) -> Result<Box<dyn Array>> {
-    let field = array.field()?;
-    let array: Box<dyn Array> = match field.data_type() {
+    let array: Box<dyn Array> = match array.field().data_type() {
         DataType::Boolean => Box::new(BooleanArray::try_from_ffi(array)?),
         DataType::Int8 => Box::new(PrimitiveArray::<i8>::try_from_ffi(array)?),
         DataType::Int16 => Box::new(PrimitiveArray::<i16>::try_from_ffi(array)?),

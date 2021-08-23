@@ -85,7 +85,7 @@ impl Ffi_ArrowSchema {
 
         let dictionary = if let DataType::Dictionary(_, values) = field.data_type() {
             // we do not store field info in the dict values, so can't recover it all :(
-            let field = Field::new("item", values.as_ref().clone(), true);
+            let field = Field::new("", values.as_ref().clone(), true);
             Some(Box::new(Ffi_ArrowSchema::new(&field)))
         } else {
             None
@@ -172,8 +172,11 @@ pub fn to_field(schema: &Ffi_ArrowSchema) -> Result<Field> {
     let dictionary = schema.dictionary();
     let data_type = if let Some(dictionary) = dictionary {
         let indices_data_type = to_data_type(schema)?;
-        let values_data_type = to_data_type(dictionary)?;
-        DataType::Dictionary(Box::new(indices_data_type), Box::new(values_data_type))
+        let values = to_field(dictionary)?;
+        DataType::Dictionary(
+            Box::new(indices_data_type),
+            Box::new(values.data_type().clone()),
+        )
     } else {
         to_data_type(schema)?
     };
@@ -353,5 +356,18 @@ fn to_format(data_type: &DataType) -> String {
             r
         }
         DataType::Dictionary(index, _) => to_format(index.as_ref()),
+    }
+}
+
+pub(super) fn get_field_child(field: &Field, index: usize) -> Result<Field> {
+    match (index, field.data_type()) {
+        (0, DataType::List(field)) => Ok(field.as_ref().clone()),
+        (0, DataType::LargeList(field)) => Ok(field.as_ref().clone()),
+        (index, DataType::Struct(fields)) => Ok(fields[index].clone()),
+        (index, DataType::Union(fields, _, _)) => Ok(fields[index].clone()),
+        (child, data_type) => Err(ArrowError::Ffi(format!(
+            "Requested child {} to type {:?} that has no such child",
+            child, data_type
+        ))),
     }
 }

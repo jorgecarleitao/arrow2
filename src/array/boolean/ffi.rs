@@ -23,7 +23,7 @@ unsafe impl ToFfi for BooleanArray {
 
 unsafe impl<A: ffi::ArrowArrayRef> FromFfi<A> for BooleanArray {
     fn try_from_ffi(array: A) -> Result<Self> {
-        let data_type = array.field()?.data_type().clone();
+        let data_type = array.field().data_type().clone();
         assert_eq!(data_type, DataType::Boolean);
         let length = array.array().len();
         let offset = array.array().offset();

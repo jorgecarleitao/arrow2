@@ -17,7 +17,6 @@
 
 use std::{ptr::NonNull, sync::Arc};
 
-use super::schema::{to_field, Ffi_ArrowSchema};
 use crate::{
     array::{buffers_children_dictionary, Array},
     bitmap::{utils::bytes_for, Bitmap},
@@ -27,6 +26,7 @@ use crate::{
     },
     datatypes::{DataType, Field},
     error::{ArrowError, Result},
+    ffi::schema::get_field_child,
     types::NativeType,
 };
 
@@ -95,7 +95,8 @@ impl Ffi_ArrowArray {
     /// # Safety
     /// This method releases `buffers`. Consumers of this struct *must* call `release` before
     /// releasing this struct, or contents in `buffers` leak.
-    fn new(array: Arc<dyn Array>) -> Self {
+    pub fn new(array: Arc<dyn Array>) -> Self {
+        println!("{:?}", array);
         let (buffers, children, dictionary) = buffers_children_dictionary(array.as_ref());
 
         let buffers_ptr = buffers
@@ -114,6 +115,7 @@ impl Ffi_ArrowArray {
             .collect::<Box<_>>();
         let n_children = children_ptr.len() as i64;
 
+        println!("{:?}", dictionary);
         let dictionary_ptr =
             dictionary.map(|array| Box::into_raw(Box::new(Ffi_ArrowArray::new(array))));
 
@@ -283,31 +285,32 @@ fn buffer_len(array: &Ffi_ArrowArray, data_type: &DataType, i: usize) -> Result<
 
 fn create_child(
     array: &Ffi_ArrowArray,
-    schema: &Ffi_ArrowSchema,
+    field: &Field,
     parent: Arc<ArrowArray>,
     index: usize,
 ) -> Result<ArrowArrayChild<'static>> {
+    let field = get_field_child(field, index)?;
     assert!(index < array.n_children as usize);
     assert!(!array.children.is_null());
     unsafe {
         let arr_ptr = *array.children.add(index);
-        let schema_ptr = schema.child(index);
         assert!(!arr_ptr.is_null());
         let arr_ptr = &*arr_ptr;
-        Ok(ArrowArrayChild::from_raw(arr_ptr, schema_ptr, parent))
+
+        Ok(ArrowArrayChild::from_raw(arr_ptr, field, parent))
     }
 }
 
 fn create_dictionary(
     array: &Ffi_ArrowArray,
-    schema: &Ffi_ArrowSchema,
+    field: &Field,
     parent: Arc<ArrowArray>,
 ) -> Result<Option<ArrowArrayChild<'static>>> {
-    let schema = schema.dictionary();
-    if let Some(schema) = schema {
+    if let DataType::Dictionary(_, values) = field.data_type() {
+        let field = Field::new("", values.as_ref().clone(), true);
         assert!(!array.dictionary.is_null());
         let array = unsafe { &*array.dictionary };
-        Ok(Some(ArrowArrayChild::from_raw(array, schema, parent)))
+        Ok(Some(ArrowArrayChild::from_raw(array, field, parent)))
     } else {
         Ok(None)
     }
@@ -339,7 +342,7 @@ pub trait ArrowArrayRef {
         // +1 to ignore null bitmap
         create_buffer::<T>(
             self.array(),
-            self.field()?.data_type(),
+            self.field().data_type(),
             self.deallocation(),
             index + 1,
         )
@@ -354,17 +357,16 @@ pub trait ArrowArrayRef {
     }
 
     fn child(&self, index: usize) -> Result<ArrowArrayChild> {
-        create_child(self.array(), self.schema(), self.parent().clone(), index)
+        create_child(self.array(), self.field(), self.parent().clone(), index)
     }
 
     fn dictionary(&self) -> Result<Option<ArrowArrayChild>> {
-        create_dictionary(self.array(), self.schema(), self.parent().clone())
+        create_dictionary(self.array(), self.field(), self.parent().clone())
     }
 
     fn parent(&self) -> &Arc<ArrowArray>;
     fn array(&self) -> &Ffi_ArrowArray;
-    fn schema(&self) -> &Ffi_ArrowSchema;
-    fn field(&self) -> Result<Field>;
+    fn field(&self) -> &Field;
 }
 
 /// Struct used to move an Array from and to the C Data Interface.
@@ -389,13 +391,19 @@ pub trait ArrowArrayRef {
 #[derive(Debug)]
 pub struct ArrowArray {
     array: Arc<Ffi_ArrowArray>,
-    schema: Arc<Ffi_ArrowSchema>,
+    field: Field,
+}
+
+impl ArrowArray {
+    pub fn new(array: Arc<Ffi_ArrowArray>, field: Field) -> Self {
+        Self { array, field }
+    }
 }
 
 impl ArrowArrayRef for Arc<ArrowArray> {
     /// the data_type as declared in the schema
-    fn field(&self) -> Result<Field> {
-        to_field(&self.schema)
+    fn field(&self) -> &Field {
+        &self.field
     }
 
     fn parent(&self) -> &Arc<ArrowArray> {
@@ -405,23 +413,19 @@ impl ArrowArrayRef for Arc<ArrowArray> {
     fn array(&self) -> &Ffi_ArrowArray {
         self.array.as_ref()
     }
-
-    fn schema(&self) -> &Ffi_ArrowSchema {
-        self.schema.as_ref()
-    }
 }
 
 #[derive(Debug)]
 pub struct ArrowArrayChild<'a> {
     array: &'a Ffi_ArrowArray,
-    schema: &'a Ffi_ArrowSchema,
+    field: Field,
     parent: Arc<ArrowArray>,
 }
 
 impl<'a> ArrowArrayRef for ArrowArrayChild<'a> {
     /// the data_type as declared in the schema
-    fn field(&self) -> Result<Field> {
-        to_field(self.schema)
+    fn field(&self) -> &Field {
+        &self.field
     }
 
     fn parent(&self) -> &Arc<ArrowArray> {
@@ -431,58 +435,14 @@ impl<'a> ArrowArrayRef for ArrowArrayChild<'a> {
     fn array(&self) -> &Ffi_ArrowArray {
         self.array
     }
-
-    fn schema(&self) -> &Ffi_ArrowSchema {
-        self.schema
-    }
 }
 
 impl<'a> ArrowArrayChild<'a> {
-    fn from_raw(
-        array: &'a Ffi_ArrowArray,
-        schema: &'a Ffi_ArrowSchema,
-        parent: Arc<ArrowArray>,
-    ) -> Self {
+    fn from_raw(array: &'a Ffi_ArrowArray, field: Field, parent: Arc<ArrowArray>) -> Self {
         Self {
             array,
-            schema,
+            field,
             parent,
         }
-    }
-}
-
-/// Exports an `Array` to the C data interface.
-pub fn export_array_to_c(array: Arc<dyn Array>) -> Result<ArrowArray> {
-    let field = Field::new("", array.data_type().clone(), array.null_count() != 0);
-
-    Ok(ArrowArray {
-        array: Arc::new(Ffi_ArrowArray::new(array)),
-        schema: Arc::new(Ffi_ArrowSchema::new(&field)),
-    })
-}
-
-/// Exports a [`Field`] to the C data interface.
-pub fn export_field_to_c(field: &Field) -> Arc<Ffi_ArrowSchema> {
-    Arc::new(Ffi_ArrowSchema::new(field))
-}
-
-/// Imports a [`Field`] from the C data interface.
-pub fn import_field_from_c(field: &Ffi_ArrowSchema) -> Result<Field> {
-    to_field(field)
-}
-
-pub fn create_empty() -> ArrowArray {
-    ArrowArray {
-        array: Arc::new(Ffi_ArrowArray::empty()),
-        schema: Arc::new(Ffi_ArrowSchema::empty()),
-    }
-}
-
-impl ArrowArray {
-    pub fn references(&self) -> (*mut Ffi_ArrowArray, *mut Ffi_ArrowSchema) {
-        (
-            self.array.as_ref() as *const Ffi_ArrowArray as *mut Ffi_ArrowArray,
-            self.schema.as_ref() as *const Ffi_ArrowSchema as *mut Ffi_ArrowSchema,
-        )
     }
 }
