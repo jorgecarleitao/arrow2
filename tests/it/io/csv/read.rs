@@ -173,3 +173,15 @@ fn float32() -> Result<()> {
     assert_eq!(expected, result.as_ref());
     Ok(())
 }
+
+#[test]
+fn binary() -> Result<()> {
+    let input = vec!["aa", "bb"];
+    let input = input.join("\n");
+
+    let expected = BinaryArray::<i32>::from([Some(b"aa"), Some(b"bb")]);
+
+    let result = test_deserialize(&input, DataType::Binary)?;
+    assert_eq!(expected, result.as_ref());
+    Ok(())
+}
