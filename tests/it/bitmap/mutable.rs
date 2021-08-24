@@ -312,3 +312,15 @@ fn extend_constant1() {
         }
     }
 }
+
+#[test]
+fn extend_bitmap_one() {
+    for offset in 0..7 {
+        let mut b = MutableBitmap::new();
+        for _ in 0..4 {
+            b.extend_from_slice(&[!0], offset, 1);
+            b.extend_from_slice(&[!0], offset, 1);
+        }
+        assert_eq!(b.as_slice(), &[0b11111111]);
+    }
+}
