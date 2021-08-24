@@ -278,49 +278,13 @@ pub fn equal(lhs: &dyn Array, rhs: &dyn Array) -> bool {
             let rhs = rhs.as_any().downcast_ref::<StructArray>().unwrap();
             struct_::equal(lhs, rhs)
         }
-        DataType::Dictionary(key_type, _) => match key_type.as_ref() {
-            DataType::Int8 => {
+        DataType::Dictionary(key_type, _) => {
+            with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
                 let lhs = lhs.as_any().downcast_ref().unwrap();
                 let rhs = rhs.as_any().downcast_ref().unwrap();
-                dictionary::equal::<i8>(lhs, rhs)
-            }
-            DataType::Int16 => {
-                let lhs = lhs.as_any().downcast_ref().unwrap();
-                let rhs = rhs.as_any().downcast_ref().unwrap();
-                dictionary::equal::<i16>(lhs, rhs)
-            }
-            DataType::Int32 => {
-                let lhs = lhs.as_any().downcast_ref().unwrap();
-                let rhs = rhs.as_any().downcast_ref().unwrap();
-                dictionary::equal::<i32>(lhs, rhs)
-            }
-            DataType::Int64 => {
-                let lhs = lhs.as_any().downcast_ref().unwrap();
-                let rhs = rhs.as_any().downcast_ref().unwrap();
-                dictionary::equal::<i64>(lhs, rhs)
-            }
-            DataType::UInt8 => {
-                let lhs = lhs.as_any().downcast_ref().unwrap();
-                let rhs = rhs.as_any().downcast_ref().unwrap();
-                dictionary::equal::<u8>(lhs, rhs)
-            }
-            DataType::UInt16 => {
-                let lhs = lhs.as_any().downcast_ref().unwrap();
-                let rhs = rhs.as_any().downcast_ref().unwrap();
-                dictionary::equal::<u16>(lhs, rhs)
-            }
-            DataType::UInt32 => {
-                let lhs = lhs.as_any().downcast_ref().unwrap();
-                let rhs = rhs.as_any().downcast_ref().unwrap();
-                dictionary::equal::<u32>(lhs, rhs)
-            }
-            DataType::UInt64 => {
-                let lhs = lhs.as_any().downcast_ref().unwrap();
-                let rhs = rhs.as_any().downcast_ref().unwrap();
-                dictionary::equal::<u64>(lhs, rhs)
-            }
-            _ => unreachable!(),
-        },
+                dictionary::equal::<$T>(lhs, rhs)
+            })
+        }
         DataType::FixedSizeBinary(_) => {
             let lhs = lhs.as_any().downcast_ref().unwrap();
             let rhs = rhs.as_any().downcast_ref().unwrap();

@@ -244,17 +244,11 @@ pub fn read(rows: &[&Value], data_type: DataType) -> Arc<dyn Array> {
         DataType::Binary => Arc::new(read_binary::<i32>(rows)),
         DataType::LargeBinary => Arc::new(read_binary::<i64>(rows)),
         DataType::Struct(_) => Arc::new(read_struct(rows, data_type)),
-        DataType::Dictionary(key_type, _) => match key_type.as_ref() {
-            DataType::Int8 => Arc::new(read_dictionary::<i8>(rows, data_type)),
-            DataType::Int16 => Arc::new(read_dictionary::<i16>(rows, data_type)),
-            DataType::Int32 => Arc::new(read_dictionary::<i32>(rows, data_type)),
-            DataType::Int64 => Arc::new(read_dictionary::<i64>(rows, data_type)),
-            DataType::UInt8 => Arc::new(read_dictionary::<u8>(rows, data_type)),
-            DataType::UInt16 => Arc::new(read_dictionary::<u16>(rows, data_type)),
-            DataType::UInt32 => Arc::new(read_dictionary::<u32>(rows, data_type)),
-            DataType::UInt64 => Arc::new(read_dictionary::<u64>(rows, data_type)),
-            _ => unreachable!(),
-        },
+        DataType::Dictionary(key_type, _) => {
+            with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
+                Arc::new(read_dictionary::<$T>(rows, data_type))
+            })
+        }
         _ => todo!(),
         /*
         DataType::FixedSizeBinary(_) => Box::new(FixedSizeBinaryArray::new_empty(data_type)),

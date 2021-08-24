@@ -66,17 +66,11 @@ pub fn try_from<A: ArrowArrayRef>(array: A) -> Result<Box<dyn Array>> {
         DataType::List(_) => Box::new(ListArray::<i32>::try_from_ffi(array)?),
         DataType::LargeList(_) => Box::new(ListArray::<i64>::try_from_ffi(array)?),
         DataType::Struct(_) => Box::new(StructArray::try_from_ffi(array)?),
-        DataType::Dictionary(keys, _) => match keys.as_ref() {
-            DataType::Int8 => Box::new(DictionaryArray::<i8>::try_from_ffi(array)?),
-            DataType::Int16 => Box::new(DictionaryArray::<i16>::try_from_ffi(array)?),
-            DataType::Int32 => Box::new(DictionaryArray::<i32>::try_from_ffi(array)?),
-            DataType::Int64 => Box::new(DictionaryArray::<i64>::try_from_ffi(array)?),
-            DataType::UInt8 => Box::new(DictionaryArray::<u8>::try_from_ffi(array)?),
-            DataType::UInt16 => Box::new(DictionaryArray::<u16>::try_from_ffi(array)?),
-            DataType::UInt32 => Box::new(DictionaryArray::<u32>::try_from_ffi(array)?),
-            DataType::UInt64 => Box::new(DictionaryArray::<u64>::try_from_ffi(array)?),
-            _ => unreachable!(),
-        },
+        DataType::Dictionary(key_type, _) => {
+            with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
+                Box::new(DictionaryArray::<$T>::try_from_ffi(array)?)
+            })
+        }
         DataType::Union(_, _, _) => Box::new(UnionArray::try_from_ffi(array)?),
         data_type => {
             return Err(ArrowError::NotYetImplemented(format!(

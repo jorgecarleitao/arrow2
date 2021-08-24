@@ -107,17 +107,9 @@ pub(super) fn dictionary_cast_dyn<K: DictionaryKey>(
             let values = cast_with_options(values.as_ref(), to_values_type, options)?.into();
 
             // create the appropriate array type
-            match to_keys_type.as_ref() {
-                DataType::Int8 => key_cast!(keys, values, array, to_keys_type, i8),
-                DataType::Int16 => key_cast!(keys, values, array, to_keys_type, i16),
-                DataType::Int32 => key_cast!(keys, values, array, to_keys_type, i32),
-                DataType::Int64 => key_cast!(keys, values, array, to_keys_type, i64),
-                DataType::UInt8 => key_cast!(keys, values, array, to_keys_type, u8),
-                DataType::UInt16 => key_cast!(keys, values, array, to_keys_type, u16),
-                DataType::UInt32 => key_cast!(keys, values, array, to_keys_type, u32),
-                DataType::UInt64 => key_cast!(keys, values, array, to_keys_type, u64),
-                _ => unreachable!(),
-            }
+            with_match_dictionary_key_type!(to_keys_type.as_ref(), |$T| {
+                key_cast!(keys, values, array, to_keys_type, $T)
+            })
         }
         _ => unpack_dictionary::<K>(keys, values.as_ref(), to_type, options),
     }

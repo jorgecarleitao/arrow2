@@ -226,16 +226,10 @@ pub fn make_growable<'a>(
         }
         DataType::FixedSizeList(_, _) => todo!(),
         DataType::Union(_, _, _) => todo!(),
-        DataType::Dictionary(key, _) => match key.as_ref() {
-            DataType::UInt8 => dyn_dict_growable!(u8, arrays, use_validity, capacity),
-            DataType::UInt16 => dyn_dict_growable!(u16, arrays, use_validity, capacity),
-            DataType::UInt32 => dyn_dict_growable!(u32, arrays, use_validity, capacity),
-            DataType::UInt64 => dyn_dict_growable!(u64, arrays, use_validity, capacity),
-            DataType::Int8 => dyn_dict_growable!(i8, arrays, use_validity, capacity),
-            DataType::Int16 => dyn_dict_growable!(i16, arrays, use_validity, capacity),
-            DataType::Int32 => dyn_dict_growable!(i32, arrays, use_validity, capacity),
-            DataType::Int64 => dyn_dict_growable!(i64, arrays, use_validity, capacity),
-            _ => unreachable!(),
-        },
+        DataType::Dictionary(key_type, _) => {
+            with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
+                dyn_dict_growable!($T, arrays, use_validity, capacity)
+            })
+        }
     }
 }

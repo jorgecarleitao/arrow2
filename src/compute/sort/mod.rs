@@ -193,8 +193,18 @@ pub fn sort_to_indices<I: Index>(
             }
         }
         DataType::Dictionary(key_type, value_type) => match value_type.as_ref() {
-            DataType::Utf8 => sort_dict::<I, i32>(values, key_type.as_ref(), options, limit),
-            DataType::LargeUtf8 => sort_dict::<I, i64>(values, key_type.as_ref(), options, limit),
+            DataType::Utf8 => Ok(sort_dict::<I, i32>(
+                values,
+                key_type.as_ref(),
+                options,
+                limit,
+            )),
+            DataType::LargeUtf8 => Ok(sort_dict::<I, i64>(
+                values,
+                key_type.as_ref(),
+                options,
+                limit,
+            )),
             t => Err(ArrowError::NotYetImplemented(format!(
                 "Sort not supported for dictionary type with keys {:?}",
                 t
@@ -212,53 +222,14 @@ fn sort_dict<I: Index, O: Offset>(
     key_type: &DataType,
     options: &SortOptions,
     limit: Option<usize>,
-) -> Result<PrimitiveArray<I>> {
-    match key_type {
-        DataType::Int8 => Ok(utf8::indices_sorted_unstable_by_dictionary::<I, i8, O>(
+) -> PrimitiveArray<I> {
+    with_match_dictionary_key_type!(key_type, |$T| {
+        utf8::indices_sorted_unstable_by_dictionary::<I, $T, O>(
             values.as_any().downcast_ref().unwrap(),
             options,
             limit,
-        )),
-        DataType::Int16 => Ok(utf8::indices_sorted_unstable_by_dictionary::<I, i16, O>(
-            values.as_any().downcast_ref().unwrap(),
-            options,
-            limit,
-        )),
-        DataType::Int32 => Ok(utf8::indices_sorted_unstable_by_dictionary::<I, i32, O>(
-            values.as_any().downcast_ref().unwrap(),
-            options,
-            limit,
-        )),
-        DataType::Int64 => Ok(utf8::indices_sorted_unstable_by_dictionary::<I, i64, O>(
-            values.as_any().downcast_ref().unwrap(),
-            options,
-            limit,
-        )),
-        DataType::UInt8 => Ok(utf8::indices_sorted_unstable_by_dictionary::<I, u8, O>(
-            values.as_any().downcast_ref().unwrap(),
-            options,
-            limit,
-        )),
-        DataType::UInt16 => Ok(utf8::indices_sorted_unstable_by_dictionary::<I, u16, O>(
-            values.as_any().downcast_ref().unwrap(),
-            options,
-            limit,
-        )),
-        DataType::UInt32 => Ok(utf8::indices_sorted_unstable_by_dictionary::<I, u32, O>(
-            values.as_any().downcast_ref().unwrap(),
-            options,
-            limit,
-        )),
-        DataType::UInt64 => Ok(utf8::indices_sorted_unstable_by_dictionary::<I, u64, O>(
-            values.as_any().downcast_ref().unwrap(),
-            options,
-            limit,
-        )),
-        t => Err(ArrowError::NotYetImplemented(format!(
-            "Sort not supported for dictionary key type {:?}",
-            t
-        ))),
-    }
+        )
+    })
 }
 
 /// Checks if an array of type `datatype` can be sorted

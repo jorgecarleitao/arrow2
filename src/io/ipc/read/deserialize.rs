@@ -268,73 +268,18 @@ pub fn read<R: Read + Seek>(
             version,
         )
         .map(|x| Arc::new(x) as Arc<dyn Array>),
-        DataType::Dictionary(ref key_type, _) => match key_type.as_ref() {
-            DataType::Int8 => read_dictionary::<i8, _>(
-                field_nodes,
-                buffers,
-                reader,
-                block_offset,
-                is_little_endian,
-            )
-            .map(|x| Arc::new(x) as Arc<dyn Array>),
-            DataType::Int16 => read_dictionary::<i16, _>(
-                field_nodes,
-                buffers,
-                reader,
-                block_offset,
-                is_little_endian,
-            )
-            .map(|x| Arc::new(x) as Arc<dyn Array>),
-            DataType::Int32 => read_dictionary::<i32, _>(
-                field_nodes,
-                buffers,
-                reader,
-                block_offset,
-                is_little_endian,
-            )
-            .map(|x| Arc::new(x) as Arc<dyn Array>),
-            DataType::Int64 => read_dictionary::<i64, _>(
-                field_nodes,
-                buffers,
-                reader,
-                block_offset,
-                is_little_endian,
-            )
-            .map(|x| Arc::new(x) as Arc<dyn Array>),
-            DataType::UInt8 => read_dictionary::<u8, _>(
-                field_nodes,
-                buffers,
-                reader,
-                block_offset,
-                is_little_endian,
-            )
-            .map(|x| Arc::new(x) as Arc<dyn Array>),
-            DataType::UInt16 => read_dictionary::<u16, _>(
-                field_nodes,
-                buffers,
-                reader,
-                block_offset,
-                is_little_endian,
-            )
-            .map(|x| Arc::new(x) as Arc<dyn Array>),
-            DataType::UInt32 => read_dictionary::<u32, _>(
-                field_nodes,
-                buffers,
-                reader,
-                block_offset,
-                is_little_endian,
-            )
-            .map(|x| Arc::new(x) as Arc<dyn Array>),
-            DataType::UInt64 => read_dictionary::<u64, _>(
-                field_nodes,
-                buffers,
-                reader,
-                block_offset,
-                is_little_endian,
-            )
-            .map(|x| Arc::new(x) as Arc<dyn Array>),
-            _ => unreachable!(),
-        },
+        DataType::Dictionary(ref key_type, _) => {
+            with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
+                read_dictionary::<$T, _>(
+                    field_nodes,
+                    buffers,
+                    reader,
+                    block_offset,
+                    is_little_endian,
+                )
+                .map(|x| Arc::new(x) as Arc<dyn Array>)
+            })
+        }
         DataType::Union(_, _, _) => read_union(
             field_nodes,
             data_type,
