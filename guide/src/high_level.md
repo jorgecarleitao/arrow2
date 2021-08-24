@@ -34,8 +34,8 @@ The first difference allows interoperability with Arrow's ecosystem and efficien
 # use arrow2::array::PrimitiveArray;
 # use arrow2::datatypes::DataType;
 # fn main() {
-let ints = PrimitiveArray::<i32>::from(&[Some(1), None]).to(DataType::Int32);
-let dates = PrimitiveArray::<i32>::from(&[Some(1), None]).to(DataType::Date32);
+let ints = PrimitiveArray::<i32>::from([Some(1), None]);
+let dates = PrimitiveArray::<i32>::from([Some(1), None]);
 # }
 ```
 

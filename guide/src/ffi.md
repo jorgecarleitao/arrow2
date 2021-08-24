@@ -28,8 +28,7 @@ use arrow2::ffi::ArrowArray;
 // Example of an array:
 let array = [Some(1), None, Some(123)]
     .iter()
-    .collect::<PrimitiveArray<i32>>()
-    .to(DataType::Int32);
+    .collect::<PrimitiveArray<i32>>();
 
 // export the array.
 let ffi_array = ffi::export_to_c(Arc::new(array))?;

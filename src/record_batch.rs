@@ -61,7 +61,7 @@ impl RecordBatch {
     /// # use arrow2::datatypes::{Schema, Field, DataType};
     /// # use arrow2::record_batch::RecordBatch;
     /// # fn main() -> arrow2::error::Result<()> {
-    /// let id_array = PrimitiveArray::from_slice(&[1i32, 2, 3, 4, 5]).to(DataType::Int32);
+    /// let id_array = PrimitiveArray::from_slice([1i32, 2, 3, 4, 5]);
     /// let schema = Arc::new(Schema::new(vec![
     ///     Field::new("id", DataType::Int32, false)
     /// ]));
@@ -180,7 +180,7 @@ impl RecordBatch {
     /// # use arrow2::datatypes::{Schema, Field, DataType};
     /// # use arrow2::record_batch::RecordBatch;
     /// # fn main() -> arrow2::error::Result<()> {
-    /// let id_array = PrimitiveArray::from_slice(&[1i32, 2, 3, 4, 5]).to(DataType::Int32);
+    /// let id_array = PrimitiveArray::from_slice([1i32, 2, 3, 4, 5]);
     /// let schema = Arc::new(Schema::new(vec![
     ///     Field::new("id", DataType::Int32, false)
     /// ]));
@@ -209,7 +209,7 @@ impl RecordBatch {
     /// # use arrow2::datatypes::{Schema, Field, DataType};
     /// # use arrow2::record_batch::RecordBatch;
     /// # fn main() -> arrow2::error::Result<()> {
-    /// let id_array = PrimitiveArray::from_slice(&[1i32, 2, 3, 4, 5]).to(DataType::Int32);
+    /// let id_array = PrimitiveArray::from_slice([1i32, 2, 3, 4, 5]);
     /// let schema = Arc::new(Schema::new(vec![
     ///     Field::new("id", DataType::Int32, false)
     /// ]));

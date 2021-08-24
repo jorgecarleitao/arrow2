@@ -124,11 +124,8 @@ fn double(array: PyObject, py: Python) -> PyResult<PyObject> {
 #[pyfunction]
 fn double_py(lambda: PyObject, py: Python) -> PyResult<bool> {
     // create
-    let array =
-        Arc::new(PrimitiveArray::<i64>::from(vec![Some(1), None, Some(3)]).to(DataType::Int64));
-    let expected =
-        Arc::new(PrimitiveArray::<i64>::from(vec![Some(2), None, Some(6)]).to(DataType::Int64))
-            as ArrayRef;
+    let array = Arc::new(PrimitiveArray::<i64>::from(vec![Some(1), None, Some(3)]));
+    let expected = Arc::new(PrimitiveArray::<i64>::from(vec![Some(2), None, Some(6)])) as ArrayRef;
 
     // to py
     let array = to_py(array, py)?;
@@ -184,9 +181,7 @@ fn round_trip(array: PyObject, py: Python) -> PyResult<PyObject> {
 #[pyfunction]
 fn import_primitive(array: PyObject, py: Python) -> PyResult<bool> {
     let array = to_rust(array, py)?;
-    let expected =
-        Arc::new(PrimitiveArray::<i64>::from(vec![Some(2), None, Some(6)]).to(DataType::Int64))
-            as ArrayRef;
+    let expected = Arc::new(PrimitiveArray::<i64>::from(vec![Some(2), None, Some(6)])) as ArrayRef;
 
     Ok(array == expected)
 }
@@ -194,9 +189,7 @@ fn import_primitive(array: PyObject, py: Python) -> PyResult<bool> {
 /// Converts to rust and back to python
 #[pyfunction]
 fn export_primitive(py: Python) -> PyResult<PyObject> {
-    let array =
-        Arc::new(PrimitiveArray::<i64>::from(vec![Some(2), None, Some(6)]).to(DataType::Int64))
-            as ArrayRef;
+    let array = Arc::new(PrimitiveArray::<i64>::from(vec![Some(2), None, Some(6)])) as ArrayRef;
 
     let array = to_py(array, py)?;
 

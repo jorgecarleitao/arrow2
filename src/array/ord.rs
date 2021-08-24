@@ -124,11 +124,10 @@ macro_rules! dyn_dict {
 /// # Example
 /// ```
 /// use arrow2::array::{ord::build_compare, PrimitiveArray};
-/// use arrow2::datatypes::DataType;
 ///
 /// # fn main() -> arrow2::error::Result<()> {
-/// let array1 = PrimitiveArray::from_slice(&[1, 2]).to(DataType::Int32);
-/// let array2 = PrimitiveArray::from_slice(&[3, 4]).to(DataType::Int32);
+/// let array1 = PrimitiveArray::from_slice([1, 2]);
+/// let array2 = PrimitiveArray::from_slice([3, 4]);
 ///
 /// let cmp = build_compare(&array1, &array2)?;
 ///
