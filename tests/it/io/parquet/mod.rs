@@ -315,7 +315,7 @@ pub fn pyarrow_required(column: usize) -> Box<dyn Array> {
     ];
 
     match column {
-        0 => Box::new(PrimitiveArray::<i64>::from(i64_values).to(DataType::Int64)),
+        0 => Box::new(PrimitiveArray::<i64>::from(i64_values)),
         3 => Box::new(BooleanArray::from_slice(&[
             true, true, false, false, false, true, true, true, true, true,
         ])),

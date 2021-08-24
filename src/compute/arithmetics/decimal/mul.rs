@@ -43,11 +43,11 @@ use super::{adjusted_precision_scale, max_value, number_digits};
 /// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
-/// let a = PrimitiveArray::from(&vec![Some(1_00i128), Some(1_00i128), None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
-/// let b = PrimitiveArray::from(&vec![Some(1_00i128), Some(2_00i128), None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
+/// let a = PrimitiveArray::from([Some(1_00i128), Some(1_00i128), None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
+/// let b = PrimitiveArray::from([Some(1_00i128), Some(2_00i128), None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
 ///
 /// let result = mul(&a, &b).unwrap();
-/// let expected = PrimitiveArray::from(&vec![Some(1_00i128), Some(2_00i128), None, Some(4_00i128)]).to(DataType::Decimal(5, 2));
+/// let expected = PrimitiveArray::from([Some(1_00i128), Some(2_00i128), None, Some(4_00i128)]).to(DataType::Decimal(5, 2));
 ///
 /// assert_eq!(result, expected);
 /// ```
@@ -113,11 +113,11 @@ pub fn mul(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<Pri
 /// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
-/// let a = PrimitiveArray::from(&vec![Some(999_99i128), Some(1_00i128), None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
-/// let b = PrimitiveArray::from(&vec![Some(10_00i128), Some(2_00i128), None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
+/// let a = PrimitiveArray::from([Some(999_99i128), Some(1_00i128), None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
+/// let b = PrimitiveArray::from([Some(10_00i128), Some(2_00i128), None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
 ///
 /// let result = saturating_mul(&a, &b).unwrap();
-/// let expected = PrimitiveArray::from(&vec![Some(999_99i128), Some(2_00i128), None, Some(4_00i128)]).to(DataType::Decimal(5, 2));
+/// let expected = PrimitiveArray::from([Some(999_99i128), Some(2_00i128), None, Some(4_00i128)]).to(DataType::Decimal(5, 2));
 ///
 /// assert_eq!(result, expected);
 /// ```
@@ -176,11 +176,11 @@ pub fn saturating_mul(
 /// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
-/// let a = PrimitiveArray::from(&vec![Some(999_99i128), Some(1_00i128), None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
-/// let b = PrimitiveArray::from(&vec![Some(10_00i128), Some(2_00i128), None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
+/// let a = PrimitiveArray::from([Some(999_99i128), Some(1_00i128), None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
+/// let b = PrimitiveArray::from([Some(10_00i128), Some(2_00i128), None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
 ///
 /// let result = checked_mul(&a, &b).unwrap();
-/// let expected = PrimitiveArray::from(&vec![None, Some(2_00i128), None, Some(4_00i128)]).to(DataType::Decimal(5, 2));
+/// let expected = PrimitiveArray::from([None, Some(2_00i128), None, Some(4_00i128)]).to(DataType::Decimal(5, 2));
 ///
 /// assert_eq!(result, expected);
 /// ```
@@ -266,10 +266,10 @@ impl ArraySaturatingMul<PrimitiveArray<i128>> for PrimitiveArray<i128> {
 /// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
-/// let a = PrimitiveArray::from(&vec![Some(11111_0i128), Some(1_0i128)]).to(DataType::Decimal(6, 1));
-/// let b = PrimitiveArray::from(&vec![Some(10_002i128), Some(2_000i128)]).to(DataType::Decimal(5, 3));
+/// let a = PrimitiveArray::from([Some(11111_0i128), Some(1_0i128)]).to(DataType::Decimal(6, 1));
+/// let b = PrimitiveArray::from([Some(10_002i128), Some(2_000i128)]).to(DataType::Decimal(5, 3));
 /// let result = adaptive_mul(&a, &b).unwrap();
-/// let expected = PrimitiveArray::from(&vec![Some(111132_222i128), Some(2_000i128)]).to(DataType::Decimal(9, 3));
+/// let expected = PrimitiveArray::from([Some(111132_222i128), Some(2_000i128)]).to(DataType::Decimal(9, 3));
 ///
 /// assert_eq!(result, expected);
 /// ```
@@ -349,7 +349,7 @@ mod tests {
         //   222.22 -->     22222
         // --------       -------
         // 24690.86 <-- 246908642
-        let a = PrimitiveArray::from(&vec![
+        let a = PrimitiveArray::from([
             Some(111_11i128),
             Some(10_00i128),
             Some(20_00i128),
@@ -359,7 +359,7 @@ mod tests {
         ])
         .to(DataType::Decimal(7, 2));
 
-        let b = PrimitiveArray::from(&vec![
+        let b = PrimitiveArray::from([
             Some(222_22i128),
             Some(2_00i128),
             Some(3_00i128),
@@ -370,7 +370,7 @@ mod tests {
         .to(DataType::Decimal(7, 2));
 
         let result = mul(&a, &b).unwrap();
-        let expected = PrimitiveArray::from(&vec![
+        let expected = PrimitiveArray::from([
             Some(24690_86i128),
             Some(20_00i128),
             Some(60_00i128),
@@ -389,8 +389,8 @@ mod tests {
 
     #[test]
     fn test_multiply_decimal_wrong_precision() {
-        let a = PrimitiveArray::from(&vec![None]).to(DataType::Decimal(5, 2));
-        let b = PrimitiveArray::from(&vec![None]).to(DataType::Decimal(6, 2));
+        let a = PrimitiveArray::from([None]).to(DataType::Decimal(5, 2));
+        let b = PrimitiveArray::from([None]).to(DataType::Decimal(6, 2));
         let result = mul(&a, &b);
 
         if result.is_ok() {
@@ -401,14 +401,14 @@ mod tests {
     #[test]
     #[should_panic(expected = "Overflow in multiplication presented for precision 5")]
     fn test_multiply_panic() {
-        let a = PrimitiveArray::from(&vec![Some(99999i128)]).to(DataType::Decimal(5, 2));
-        let b = PrimitiveArray::from(&vec![Some(100_00i128)]).to(DataType::Decimal(5, 2));
+        let a = PrimitiveArray::from([Some(99999i128)]).to(DataType::Decimal(5, 2));
+        let b = PrimitiveArray::from([Some(100_00i128)]).to(DataType::Decimal(5, 2));
         let _ = mul(&a, &b);
     }
 
     #[test]
     fn test_multiply_saturating() {
-        let a = PrimitiveArray::from(&vec![
+        let a = PrimitiveArray::from([
             Some(111_11i128),
             Some(10_00i128),
             Some(20_00i128),
@@ -418,7 +418,7 @@ mod tests {
         ])
         .to(DataType::Decimal(7, 2));
 
-        let b = PrimitiveArray::from(&vec![
+        let b = PrimitiveArray::from([
             Some(222_22i128),
             Some(2_00i128),
             Some(3_00i128),
@@ -429,7 +429,7 @@ mod tests {
         .to(DataType::Decimal(7, 2));
 
         let result = saturating_mul(&a, &b).unwrap();
-        let expected = PrimitiveArray::from(&vec![
+        let expected = PrimitiveArray::from([
             Some(24690_86i128),
             Some(20_00i128),
             Some(60_00i128),
@@ -448,14 +448,14 @@ mod tests {
 
     #[test]
     fn test_multiply_saturating_overflow() {
-        let a = PrimitiveArray::from(&vec![
+        let a = PrimitiveArray::from([
             Some(99999i128),
             Some(99999i128),
             Some(99999i128),
             Some(99999i128),
         ])
         .to(DataType::Decimal(5, 2));
-        let b = PrimitiveArray::from(&vec![
+        let b = PrimitiveArray::from([
             Some(-00100i128),
             Some(01000i128),
             Some(10000i128),
@@ -465,7 +465,7 @@ mod tests {
 
         let result = saturating_mul(&a, &b).unwrap();
 
-        let expected = PrimitiveArray::from(&vec![
+        let expected = PrimitiveArray::from([
             Some(-99999i128),
             Some(99999i128),
             Some(99999i128),
@@ -482,7 +482,7 @@ mod tests {
 
     #[test]
     fn test_multiply_checked() {
-        let a = PrimitiveArray::from(&vec![
+        let a = PrimitiveArray::from([
             Some(111_11i128),
             Some(10_00i128),
             Some(20_00i128),
@@ -492,7 +492,7 @@ mod tests {
         ])
         .to(DataType::Decimal(7, 2));
 
-        let b = PrimitiveArray::from(&vec![
+        let b = PrimitiveArray::from([
             Some(222_22i128),
             Some(2_00i128),
             Some(3_00i128),
@@ -503,7 +503,7 @@ mod tests {
         .to(DataType::Decimal(7, 2));
 
         let result = checked_mul(&a, &b).unwrap();
-        let expected = PrimitiveArray::from(&vec![
+        let expected = PrimitiveArray::from([
             Some(24690_86i128),
             Some(20_00i128),
             Some(60_00i128),
@@ -522,13 +522,10 @@ mod tests {
 
     #[test]
     fn test_multiply_checked_overflow() {
-        let a = PrimitiveArray::from(&vec![Some(99999i128), Some(1_00i128)])
-            .to(DataType::Decimal(5, 2));
-        let b = PrimitiveArray::from(&vec![Some(10000i128), Some(2_00i128)])
-            .to(DataType::Decimal(5, 2));
+        let a = PrimitiveArray::from([Some(99999i128), Some(1_00i128)]).to(DataType::Decimal(5, 2));
+        let b = PrimitiveArray::from([Some(10000i128), Some(2_00i128)]).to(DataType::Decimal(5, 2));
         let result = checked_mul(&a, &b).unwrap();
-        let expected =
-            PrimitiveArray::from(&vec![None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
+        let expected = PrimitiveArray::from([None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
 
         assert_eq!(result, expected);
     }
@@ -539,12 +536,11 @@ mod tests {
         //    10.0000 -> 6, 4
         // -----------------
         // 10000.0000 -> 9, 4
-        let a = PrimitiveArray::from(&vec![Some(1000_00i128)]).to(DataType::Decimal(7, 2));
-        let b = PrimitiveArray::from(&vec![Some(10_0000i128)]).to(DataType::Decimal(6, 4));
+        let a = PrimitiveArray::from([Some(1000_00i128)]).to(DataType::Decimal(7, 2));
+        let b = PrimitiveArray::from([Some(10_0000i128)]).to(DataType::Decimal(6, 4));
         let result = adaptive_mul(&a, &b).unwrap();
 
-        let expected =
-            PrimitiveArray::from(&vec![Some(10000_0000i128)]).to(DataType::Decimal(9, 4));
+        let expected = PrimitiveArray::from([Some(10000_0000i128)]).to(DataType::Decimal(9, 4));
 
         assert_eq!(result, expected);
         assert_eq!(result.data_type(), &DataType::Decimal(9, 4));
@@ -553,12 +549,11 @@ mod tests {
         //      10.002  -> 5, 3
         // -----------------
         //  111132.222  -> 9, 3
-        let a = PrimitiveArray::from(&vec![Some(11111_0i128)]).to(DataType::Decimal(6, 1));
-        let b = PrimitiveArray::from(&vec![Some(10_002i128)]).to(DataType::Decimal(5, 3));
+        let a = PrimitiveArray::from([Some(11111_0i128)]).to(DataType::Decimal(6, 1));
+        let b = PrimitiveArray::from([Some(10_002i128)]).to(DataType::Decimal(5, 3));
         let result = adaptive_mul(&a, &b).unwrap();
 
-        let expected =
-            PrimitiveArray::from(&vec![Some(111132_222i128)]).to(DataType::Decimal(9, 3));
+        let expected = PrimitiveArray::from([Some(111132_222i128)]).to(DataType::Decimal(9, 3));
 
         assert_eq!(result, expected);
         assert_eq!(result.data_type(), &DataType::Decimal(9, 3));
@@ -567,12 +562,11 @@ mod tests {
         //     12345.678  ->  8, 3
         // -----------------
         // 152415666.514  -> 11, 3
-        let a = PrimitiveArray::from(&vec![Some(12345_67i128)]).to(DataType::Decimal(7, 2));
-        let b = PrimitiveArray::from(&vec![Some(12345_678i128)]).to(DataType::Decimal(8, 3));
+        let a = PrimitiveArray::from([Some(12345_67i128)]).to(DataType::Decimal(7, 2));
+        let b = PrimitiveArray::from([Some(12345_678i128)]).to(DataType::Decimal(8, 3));
         let result = adaptive_mul(&a, &b).unwrap();
 
-        let expected =
-            PrimitiveArray::from(&vec![Some(152415666_514i128)]).to(DataType::Decimal(12, 3));
+        let expected = PrimitiveArray::from([Some(152415666_514i128)]).to(DataType::Decimal(12, 3));
 
         assert_eq!(result, expected);
         assert_eq!(result.data_type(), &DataType::Decimal(12, 3));

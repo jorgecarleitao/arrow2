@@ -87,7 +87,7 @@ mod tests {
             None,
         );
 
-        let indices = PrimitiveArray::from(&vec![Some(4i32), Some(1), Some(3)]).to(DataType::Int32);
+        let indices = PrimitiveArray::from([Some(4i32), Some(1), Some(3)]);
         let result = take(&array, &indices);
 
         let expected_values = Buffer::from([9, 6, 7, 8]);
@@ -120,8 +120,7 @@ mod tests {
             Some(validity),
         );
 
-        let indices =
-            PrimitiveArray::from(&vec![Some(4i32), None, Some(2), Some(3)]).to(DataType::Int32);
+        let indices = PrimitiveArray::from([Some(4i32), None, Some(2), Some(3)]);
         let result = take(&array, &indices);
 
         let data_expected = vec![
@@ -151,8 +150,7 @@ mod tests {
         array.try_extend(values).unwrap();
         let array: ListArray<i32> = array.into();
 
-        let indices =
-            PrimitiveArray::from(&vec![Some(3i32), None, Some(1), Some(0)]).to(DataType::Int32);
+        let indices = PrimitiveArray::from([Some(3i32), None, Some(1), Some(0)]);
         let result = take(&array, &indices);
 
         let data_expected = vec![
@@ -189,7 +187,7 @@ mod tests {
             None,
         );
 
-        let indices = PrimitiveArray::from(&vec![Some(0i32), Some(1)]).to(DataType::Int32);
+        let indices = PrimitiveArray::from([Some(0i32), Some(1)]);
         let result = take(&nested, &indices);
 
         // expected data

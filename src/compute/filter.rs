@@ -173,15 +173,14 @@ pub fn build_filter(filter: &BooleanArray) -> Result<Filter> {
 /// # Example
 /// ```rust
 /// # use arrow2::array::{Int32Array, PrimitiveArray, BooleanArray};
-/// # use arrow2::datatypes::DataType;
 /// # use arrow2::error::Result;
 /// # use arrow2::compute::filter::filter;
 /// # fn main() -> Result<()> {
-/// let array = PrimitiveArray::from_slice(&vec![5, 6, 7, 8, 9]).to(DataType::Int32);
+/// let array = PrimitiveArray::from_slice([5, 6, 7, 8, 9]);
 /// let filter_array = BooleanArray::from_slice(&vec![true, false, false, true, false]);
 /// let c = filter(&array, &filter_array)?;
 /// let c = c.as_any().downcast_ref::<Int32Array>().unwrap();
-/// assert_eq!(c, &PrimitiveArray::from_slice(vec![5, 8]).to(DataType::Int32));
+/// assert_eq!(c, &PrimitiveArray::from_slice(vec![5, 8]));
 /// # Ok(())
 /// # }
 /// ```

@@ -42,7 +42,6 @@ fn create_random_index(size: usize, null_density: f32) -> PrimitiveArray<i32> {
             }
         })
         .collect::<PrimitiveArray<i32>>()
-        .to(DataType::Int32)
 }
 
 fn bench_take(values: &dyn Array, indices: &PrimitiveArray<i32>) {

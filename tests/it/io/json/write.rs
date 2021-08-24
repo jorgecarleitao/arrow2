@@ -107,7 +107,7 @@ fn write_struct_with_list_field() {
     a.try_extend(iter).unwrap();
     let a: ListArray<i32> = a.into();
 
-    let b = PrimitiveArray::from_slice(&vec![1, 2, 3, 4, 5]).to(DataType::Int32);
+    let b = PrimitiveArray::from_slice([1, 2, 3, 4, 5]);
 
     let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(a), Arc::new(b)]).unwrap();
 
