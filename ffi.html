@@ -168,8 +168,7 @@ use arrow2::ffi::ArrowArray;
 </span>// Example of an array:
 let array = [Some(1), None, Some(123)]
     .iter()
-    .collect::&lt;PrimitiveArray&lt;i32&gt;&gt;()
-    .to(DataType::Int32);
+    .collect::&lt;PrimitiveArray&lt;i32&gt;&gt;();
 
 // export the array.
 let ffi_array = ffi::export_to_c(Arc::new(array))?;

@@ -362,8 +362,8 @@ assert_eq!(array.len(), 3)
 <pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::array::PrimitiveArray;
 </span><span class="boring">use arrow2::datatypes::DataType;
 </span><span class="boring">fn main() {
-</span>let ints = PrimitiveArray::&lt;i32&gt;::from(&amp;[Some(1), None]).to(DataType::Int32);
-let dates = PrimitiveArray::&lt;i32&gt;::from(&amp;[Some(1), None]).to(DataType::Date32);
+</span>let ints = PrimitiveArray::&lt;i32&gt;::from([Some(1), None]);
+let dates = PrimitiveArray::&lt;i32&gt;::from([Some(1), None]);
 <span class="boring">}
 </span></code></pre></pre>
 <p><code>ints</code> and <code>dates</code> have the same in-memory representation but different logic representations (e.g. dates are usually represented as a string).</p>
@@ -758,8 +758,7 @@ use arrow2::ffi::ArrowArray;
 </span>// Example of an array:
 let array = [Some(1), None, Some(123)]
     .iter()
-    .collect::&lt;PrimitiveArray&lt;i32&gt;&gt;()
-    .to(DataType::Int32);
+    .collect::&lt;PrimitiveArray&lt;i32&gt;&gt;();
 
 // export the array.
 let ffi_array = ffi::export_to_c(Arc::new(array))?;
