@@ -146,6 +146,23 @@ macro_rules! fmt_dyn {
     }};
 }
 
+macro_rules! with_match_dictionary_key_type {(
+    $key_type:expr, | $_:tt $T:ident | $($body:tt)*
+) => ({
+    macro_rules! __with_ty__ {( $_ $T:ident ) => ( $($body)* )}
+    match $key_type {
+        DataType::Int8 => __with_ty__! { i8 },
+        DataType::Int16 => __with_ty__! { i16 },
+        DataType::Int32 => __with_ty__! { i32 },
+        DataType::Int64 => __with_ty__! { i64 },
+        DataType::UInt8 => __with_ty__! { u8 },
+        DataType::UInt16 => __with_ty__! { u16 },
+        DataType::UInt32 => __with_ty__! { u32 },
+        DataType::UInt64 => __with_ty__! { u64 },
+        _ => ::core::unreachable!("A dictionary key type can only be of integer types"),
+    }
+})}
+
 impl Display for dyn Array {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.data_type() {
@@ -185,17 +202,11 @@ impl Display for dyn Array {
             DataType::FixedSizeList(_, _) => fmt_dyn!(self, FixedSizeListArray, f),
             DataType::Struct(_) => fmt_dyn!(self, StructArray, f),
             DataType::Union(_, _, _) => fmt_dyn!(self, UnionArray, f),
-            DataType::Dictionary(key_type, _) => match key_type.as_ref() {
-                DataType::Int8 => fmt_dyn!(self, DictionaryArray::<i8>, f),
-                DataType::Int16 => fmt_dyn!(self, DictionaryArray::<i16>, f),
-                DataType::Int32 => fmt_dyn!(self, DictionaryArray::<i32>, f),
-                DataType::Int64 => fmt_dyn!(self, DictionaryArray::<i64>, f),
-                DataType::UInt8 => fmt_dyn!(self, DictionaryArray::<u8>, f),
-                DataType::UInt16 => fmt_dyn!(self, DictionaryArray::<u16>, f),
-                DataType::UInt32 => fmt_dyn!(self, DictionaryArray::<u32>, f),
-                DataType::UInt64 => fmt_dyn!(self, DictionaryArray::<u64>, f),
-                _ => unreachable!(),
-            },
+            DataType::Dictionary(key_type, _) => {
+                with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
+                    fmt_dyn!(self, DictionaryArray::<$T>, f)
+                })
+            }
         }
     }
 }
@@ -239,17 +250,11 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
         DataType::FixedSizeList(_, _) => Box::new(FixedSizeListArray::new_empty(data_type)),
         DataType::Struct(fields) => Box::new(StructArray::new_empty(&fields)),
         DataType::Union(_, _, _) => Box::new(UnionArray::new_empty(data_type)),
-        DataType::Dictionary(key_type, value_type) => match key_type.as_ref() {
-            DataType::Int8 => Box::new(DictionaryArray::<i8>::new_empty(*value_type)),
-            DataType::Int16 => Box::new(DictionaryArray::<i16>::new_empty(*value_type)),
-            DataType::Int32 => Box::new(DictionaryArray::<i32>::new_empty(*value_type)),
-            DataType::Int64 => Box::new(DictionaryArray::<i64>::new_empty(*value_type)),
-            DataType::UInt8 => Box::new(DictionaryArray::<u8>::new_empty(*value_type)),
-            DataType::UInt16 => Box::new(DictionaryArray::<u16>::new_empty(*value_type)),
-            DataType::UInt32 => Box::new(DictionaryArray::<u32>::new_empty(*value_type)),
-            DataType::UInt64 => Box::new(DictionaryArray::<u64>::new_empty(*value_type)),
-            _ => unreachable!(),
-        },
+        DataType::Dictionary(key_type, value_type) => {
+            with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
+                Box::new(DictionaryArray::<$T>::new_empty(*value_type))
+            })
+        }
     }
 }
 
@@ -294,17 +299,11 @@ pub fn new_null_array(data_type: DataType, length: usize) -> Box<dyn Array> {
         DataType::FixedSizeList(_, _) => Box::new(FixedSizeListArray::new_null(data_type, length)),
         DataType::Struct(fields) => Box::new(StructArray::new_null(&fields, length)),
         DataType::Union(_, _, _) => Box::new(UnionArray::new_null(data_type, length)),
-        DataType::Dictionary(key_type, value_type) => match key_type.as_ref() {
-            DataType::Int8 => Box::new(DictionaryArray::<i8>::new_null(*value_type, length)),
-            DataType::Int16 => Box::new(DictionaryArray::<i16>::new_null(*value_type, length)),
-            DataType::Int32 => Box::new(DictionaryArray::<i32>::new_null(*value_type, length)),
-            DataType::Int64 => Box::new(DictionaryArray::<i64>::new_null(*value_type, length)),
-            DataType::UInt8 => Box::new(DictionaryArray::<u8>::new_null(*value_type, length)),
-            DataType::UInt16 => Box::new(DictionaryArray::<u16>::new_null(*value_type, length)),
-            DataType::UInt32 => Box::new(DictionaryArray::<u32>::new_null(*value_type, length)),
-            DataType::UInt64 => Box::new(DictionaryArray::<u64>::new_null(*value_type, length)),
-            _ => unreachable!(),
-        },
+        DataType::Dictionary(key_type, value_type) => {
+            with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
+                Box::new(DictionaryArray::<$T>::new_null(*value_type, length))
+            })
+        }
     }
 }
 
@@ -355,17 +354,11 @@ pub fn clone(array: &dyn Array) -> Box<dyn Array> {
         DataType::FixedSizeList(_, _) => clone_dyn!(array, FixedSizeListArray),
         DataType::Struct(_) => clone_dyn!(array, StructArray),
         DataType::Union(_, _, _) => clone_dyn!(array, UnionArray),
-        DataType::Dictionary(key_type, _) => match key_type.as_ref() {
-            DataType::Int8 => clone_dyn!(array, DictionaryArray::<i8>),
-            DataType::Int16 => clone_dyn!(array, DictionaryArray::<i16>),
-            DataType::Int32 => clone_dyn!(array, DictionaryArray::<i32>),
-            DataType::Int64 => clone_dyn!(array, DictionaryArray::<i64>),
-            DataType::UInt8 => clone_dyn!(array, DictionaryArray::<u8>),
-            DataType::UInt16 => clone_dyn!(array, DictionaryArray::<u16>),
-            DataType::UInt32 => clone_dyn!(array, DictionaryArray::<u32>),
-            DataType::UInt64 => clone_dyn!(array, DictionaryArray::<u64>),
-            _ => unreachable!(),
-        },
+        DataType::Dictionary(key_type, _) => {
+            with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
+                clone_dyn!(array, DictionaryArray::<$T>)
+            })
+        }
     }
 }
 

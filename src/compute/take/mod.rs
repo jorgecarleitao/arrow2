@@ -100,17 +100,11 @@ pub fn take<O: Index>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result
             let values = values.as_any().downcast_ref().unwrap();
             Ok(Box::new(binary::take::<i64, _>(values, indices)))
         }
-        DataType::Dictionary(key_type, _) => match key_type.as_ref() {
-            DataType::Int8 => downcast_dict_take!(i8, values, indices),
-            DataType::Int16 => downcast_dict_take!(i16, values, indices),
-            DataType::Int32 => downcast_dict_take!(i32, values, indices),
-            DataType::Int64 => downcast_dict_take!(i64, values, indices),
-            DataType::UInt8 => downcast_dict_take!(u8, values, indices),
-            DataType::UInt16 => downcast_dict_take!(u16, values, indices),
-            DataType::UInt32 => downcast_dict_take!(u32, values, indices),
-            DataType::UInt64 => downcast_dict_take!(u64, values, indices),
-            _ => unreachable!(),
-        },
+        DataType::Dictionary(key_type, _) => {
+            with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
+                downcast_dict_take!($T, values, indices)
+            })
+        }
         DataType::Struct(_) => {
             let array = values.as_any().downcast_ref().unwrap();
             Ok(Box::new(structure::take::<_>(array, indices)?))

@@ -304,17 +304,11 @@ pub fn to_array(
             let array = StructArray::from_data(fields.clone(), values, validity);
             Ok(Arc::new(array))
         }
-        DataType::Dictionary(key_type, _) => match key_type.as_ref() {
-            DataType::Int8 => to_dictionary::<i8>(field, json_col, dictionaries),
-            DataType::Int16 => to_dictionary::<i16>(field, json_col, dictionaries),
-            DataType::Int32 => to_dictionary::<i32>(field, json_col, dictionaries),
-            DataType::Int64 => to_dictionary::<i64>(field, json_col, dictionaries),
-            DataType::UInt8 => to_dictionary::<u8>(field, json_col, dictionaries),
-            DataType::UInt16 => to_dictionary::<u16>(field, json_col, dictionaries),
-            DataType::UInt32 => to_dictionary::<u32>(field, json_col, dictionaries),
-            DataType::UInt64 => to_dictionary::<u64>(field, json_col, dictionaries),
-            _ => unreachable!(),
-        },
+        DataType::Dictionary(key_type, _) => {
+            with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
+                to_dictionary::<$T>(field, json_col, dictionaries)
+            })
+        }
         DataType::Float16 => unreachable!(),
         DataType::Union(fields, _, _) => {
             let fields = fields

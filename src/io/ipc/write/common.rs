@@ -274,65 +274,15 @@ impl DictionaryTracker {
     ///   inserted.
     pub fn insert(&mut self, dict_id: i64, array: &Arc<dyn Array>) -> Result<bool> {
         let values = match array.data_type() {
-            DataType::Dictionary(d, _) => match d.as_ref() {
-                DataType::Int8 => {
+            DataType::Dictionary(key_type, _) => {
+                with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
                     let array = array
                         .as_any()
-                        .downcast_ref::<DictionaryArray<i8>>()
+                        .downcast_ref::<DictionaryArray<$T>>()
                         .unwrap();
                     array.values()
-                }
-                DataType::Int16 => {
-                    let array = array
-                        .as_any()
-                        .downcast_ref::<DictionaryArray<i16>>()
-                        .unwrap();
-                    array.values()
-                }
-                DataType::Int32 => {
-                    let array = array
-                        .as_any()
-                        .downcast_ref::<DictionaryArray<i32>>()
-                        .unwrap();
-                    array.values()
-                }
-                DataType::Int64 => {
-                    let array = array
-                        .as_any()
-                        .downcast_ref::<DictionaryArray<i64>>()
-                        .unwrap();
-                    array.values()
-                }
-                DataType::UInt8 => {
-                    let array = array
-                        .as_any()
-                        .downcast_ref::<DictionaryArray<u8>>()
-                        .unwrap();
-                    array.values()
-                }
-                DataType::UInt16 => {
-                    let array = array
-                        .as_any()
-                        .downcast_ref::<DictionaryArray<u16>>()
-                        .unwrap();
-                    array.values()
-                }
-                DataType::UInt32 => {
-                    let array = array
-                        .as_any()
-                        .downcast_ref::<DictionaryArray<u32>>()
-                        .unwrap();
-                    array.values()
-                }
-                DataType::UInt64 => {
-                    let array = array
-                        .as_any()
-                        .downcast_ref::<DictionaryArray<u64>>()
-                        .unwrap();
-                    array.values()
-                }
-                _ => unreachable!(),
-            },
+                })
+            }
             _ => unreachable!(),
         };
 

@@ -317,81 +317,19 @@ pub fn write_dictionary(
     write_keys: bool,
 ) -> usize {
     match array.data_type() {
-        DataType::Dictionary(key_type, _) => match key_type.as_ref() {
-            DataType::Int8 => _write_dictionary::<i8>(
-                array,
-                buffers,
-                arrow_data,
-                nodes,
-                offset,
-                is_little_endian,
-                write_keys,
-            ),
-            DataType::Int16 => _write_dictionary::<i16>(
-                array,
-                buffers,
-                arrow_data,
-                nodes,
-                offset,
-                is_little_endian,
-                write_keys,
-            ),
-            DataType::Int32 => _write_dictionary::<i32>(
-                array,
-                buffers,
-                arrow_data,
-                nodes,
-                offset,
-                is_little_endian,
-                write_keys,
-            ),
-            DataType::Int64 => _write_dictionary::<i64>(
-                array,
-                buffers,
-                arrow_data,
-                nodes,
-                offset,
-                is_little_endian,
-                write_keys,
-            ),
-            DataType::UInt8 => _write_dictionary::<u8>(
-                array,
-                buffers,
-                arrow_data,
-                nodes,
-                offset,
-                is_little_endian,
-                write_keys,
-            ),
-            DataType::UInt16 => _write_dictionary::<u16>(
-                array,
-                buffers,
-                arrow_data,
-                nodes,
-                offset,
-                is_little_endian,
-                write_keys,
-            ),
-            DataType::UInt32 => _write_dictionary::<u32>(
-                array,
-                buffers,
-                arrow_data,
-                nodes,
-                offset,
-                is_little_endian,
-                write_keys,
-            ),
-            DataType::UInt64 => _write_dictionary::<u64>(
-                array,
-                buffers,
-                arrow_data,
-                nodes,
-                offset,
-                is_little_endian,
-                write_keys,
-            ),
-            _ => unreachable!(),
-        },
+        DataType::Dictionary(key_type, _) => {
+            with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
+                _write_dictionary::<$T>(
+                    array,
+                    buffers,
+                    arrow_data,
+                    nodes,
+                    offset,
+                    is_little_endian,
+                    write_keys,
+                )
+            })
+        }
         _ => unreachable!(),
     }
 }

@@ -1,4 +1,5 @@
 pub mod alloc;
+#[macro_use]
 pub mod array;
 pub mod bitmap;
 pub mod buffer;
