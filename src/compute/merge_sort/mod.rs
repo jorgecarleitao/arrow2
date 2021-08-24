@@ -532,7 +532,7 @@ pub fn build_comparator<'a>(
 
 #[cfg(test)]
 mod tests {
-    use crate::array::{Int32Array, Utf8Array};
+    use crate::array::{BooleanArray, Int32Array, UInt64Array, Utf8Array};
     use crate::compute::sort::sort;
 
     use super::*;
@@ -727,6 +727,34 @@ mod tests {
         let result = merge_sort(a0.as_ref(), a1.as_ref(), &options, None)?;
 
         assert_eq!(expected, result.as_ref());
+        Ok(())
+    }
+
+    #[test]
+    fn test_sort2() -> Result<()> {
+        let data0 = vec![true, true, true, true];
+        let data1 = vec![true, true, true, true];
+
+        let mut expected_data = [data0.clone(), data1.clone()].concat();
+        expected_data.sort_unstable();
+        let expected = BooleanArray::from_slice(&expected_data);
+        let a0: &dyn Array = &BooleanArray::from_slice(&data0);
+        let a1: &dyn Array = &BooleanArray::from_slice(&data1);
+
+        // sort individually, potentially in parallel.
+        let options = SortOptions::default();
+
+        let n0: &dyn Array = &UInt64Array::from_slice(&[1, 3, 5, 7]);
+        let n1: &dyn Array = &UInt64Array::from_slice(&[2, 4, 6, 8]);
+        let arrays = vec![n0, n1];
+        let pairs = vec![(arrays.as_ref(), &options)];
+        let comparator = build_comparator(&pairs)?;
+        let slices =
+            merge_sort_slices(once(&(0, 0, 4)), once(&(1, 0, 4)), &comparator).collect::<Vec<_>>();
+
+        let array = take_arrays(&[a0, a1], slices, None);
+
+        assert_eq!(expected, array.as_ref());
         Ok(())
     }
 }
