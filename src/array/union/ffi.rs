@@ -29,7 +29,7 @@ unsafe impl ToFfi for UnionArray {
 
 unsafe impl<A: ffi::ArrowArrayRef> FromFfi<A> for UnionArray {
     fn try_from_ffi(array: A) -> Result<Self> {
-        let field = array.field()?;
+        let field = array.field();
         let data_type = field.data_type().clone();
         let fields = Self::get_fields(field.data_type());
 
