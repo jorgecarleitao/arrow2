@@ -21,7 +21,7 @@ pub use parquet2::{
 };
 
 use crate::{
-    array::Array,
+    array::{Array, DictionaryKey},
     datatypes::{DataType, IntervalUnit, TimeUnit},
     error::{ArrowError, Result},
 };
@@ -81,6 +81,89 @@ pub async fn read_metadata_async<R: AsyncRead + AsyncSeek + Send + Unpin>(
     reader: &mut R,
 ) -> Result<FileMetaData> {
     Ok(_read_metadata_async(reader).await?)
+}
+
+fn dict_read<
+    K: DictionaryKey,
+    I: StreamingIterator<Item = std::result::Result<DataPage, ParquetError>>,
+>(
+    iter: &mut I,
+    metadata: &ColumnChunkMetaData,
+    data_type: DataType,
+) -> Result<Box<dyn Array>> {
+    use DataType::*;
+    let values_data_type = if let Dictionary(_, v) = &data_type {
+        v.as_ref()
+    } else {
+        panic!()
+    };
+
+    match values_data_type {
+        UInt8 => primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+            iter,
+            metadata,
+            data_type,
+            |x: i32| x as u8,
+        ),
+        UInt16 => primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+            iter,
+            metadata,
+            data_type,
+            |x: i32| x as u16,
+        ),
+        UInt32 => primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+            iter,
+            metadata,
+            data_type,
+            |x: i32| x as u32,
+        ),
+        Int8 => primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+            iter,
+            metadata,
+            data_type,
+            |x: i32| x as i8,
+        ),
+        Int16 => primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+            iter,
+            metadata,
+            data_type,
+            |x: i32| x as i16,
+        ),
+        Int32 | Date32 | Time32(_) | Interval(IntervalUnit::YearMonth) => {
+            primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+                iter,
+                metadata,
+                data_type,
+                |x: i32| x as i32,
+            )
+        }
+        Timestamp(TimeUnit::Nanosecond, None) => match metadata.descriptor().type_() {
+            ParquetType::PrimitiveType { physical_type, .. } => match physical_type {
+                PhysicalType::Int96 => primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+                    iter,
+                    metadata,
+                    DataType::Timestamp(TimeUnit::Nanosecond, None),
+                    int96_to_i64_ns,
+                ),
+                _ => primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+                    iter,
+                    metadata,
+                    data_type,
+                    |x: i64| x,
+                ),
+            },
+            _ => unreachable!(),
+        },
+        Int64 | Date64 | Time64(_) | Duration(_) | Timestamp(_, _) => {
+            primitive::iter_to_dict_array::<K, _, _, _, _, _>(iter, metadata, data_type, |x: i64| x)
+        }
+        Utf8 => binary::iter_to_dict_array::<K, i32, _, _>(iter, metadata),
+        LargeUtf8 => binary::iter_to_dict_array::<K, i64, _, _>(iter, metadata),
+        other => Err(ArrowError::NotYetImplemented(format!(
+            "Reading dictionaries of type {:?}",
+            other
+        ))),
+    }
 }
 
 pub fn page_iter_to_array<
@@ -174,17 +257,16 @@ pub fn page_iter_to_array<
             ))),
         },
 
-        Dictionary(ref key, ref values) => match key.as_ref() {
-            Int32 => match values.as_ref() {
-                Int32 => primitive::iter_to_dict_array::<i32, _, _, _, _, _>(
-                    iter,
-                    metadata,
-                    data_type,
-                    |x: i32| x as i32,
-                ),
-                _ => todo!(),
-            },
-            _ => todo!(),
+        Dictionary(ref key, _) => match key.as_ref() {
+            Int8 => dict_read::<i8, _>(iter, metadata, data_type),
+            Int16 => dict_read::<i16, _>(iter, metadata, data_type),
+            Int32 => dict_read::<i32, _>(iter, metadata, data_type),
+            Int64 => dict_read::<i64, _>(iter, metadata, data_type),
+            UInt8 => dict_read::<u8, _>(iter, metadata, data_type),
+            UInt16 => dict_read::<u16, _>(iter, metadata, data_type),
+            UInt32 => dict_read::<u32, _>(iter, metadata, data_type),
+            UInt64 => dict_read::<u64, _>(iter, metadata, data_type),
+            _ => unreachable!(),
         },
 
         other => Err(ArrowError::NotYetImplemented(format!(

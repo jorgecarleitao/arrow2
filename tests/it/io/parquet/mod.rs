@@ -402,12 +402,12 @@ fn integration_write(schema: &Schema, batches: &[RecordBatch]) -> Result<Vec<u8>
     let row_groups = batches.iter().map(|batch| {
         let iterator = DynIter::new(batch.columns().iter().zip(descritors.clone()).map(
             |(array, type_)| {
-                Ok(DynIter::new(std::iter::once(array_to_page(
-                    array.as_ref(),
-                    type_,
-                    options,
-                    Encoding::Plain,
-                ))))
+                let encoding = if let DataType::Dictionary(_, _) = array.data_type() {
+                    Encoding::RleDictionary
+                } else {
+                    Encoding::Plain
+                };
+                array_to_pages(array.as_ref(), type_, options, encoding)
             },
         ));
         Ok(iterator)
@@ -453,6 +453,12 @@ fn test_file(version: &str, file_name: &str) -> Result<()> {
 fn roundtrip_100_primitive() -> Result<()> {
     test_file("1.0.0-littleendian", "generated_primitive")?;
     test_file("1.0.0-bigendian", "generated_primitive")
+}
+
+#[test]
+fn roundtrip_100_dict() -> Result<()> {
+    test_file("1.0.0-littleendian", "generated_dictionary")?;
+    test_file("1.0.0-bigendian", "generated_dictionary")
 }
 
 /// Tests that when arrow-specific types (Duration and LargeUtf8) are written to parquet, we can rountrip its

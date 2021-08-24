@@ -59,7 +59,7 @@ impl<I: Iterator<Item = Result<RecordBatch>>> Iterator for RowGroupIterator<I> {
                     .zip(self.parquet_schema.columns().to_vec().into_iter())
                     .zip(encodings.into_iter())
                     .map(move |((array, type_), encoding)| {
-                        array_to_pages(array, type_, options, encoding)
+                        array_to_pages(array.as_ref(), type_, options, encoding)
                     }),
             ))
         })
