@@ -148,57 +148,64 @@
 has a specification, which allows languages to share data
 structures via foreign interfaces at zero cost (i.e. via pointers).
 This is known as the <a href="https://arrow.apache.org/docs/format/CDataInterface.html">C Data interface</a>.</p>
-<p>This crate supports importing from and exporting to most of <code>DataType</code>s.
-Types currently not supported:</p>
-<ul>
-<li><code>FixedSizeBinary</code></li>
-<li><code>Union</code></li>
-<li><code>Dictionary</code></li>
-<li><code>FixedSizeList</code></li>
-<li><code>Null</code></li>
-</ul>
-<h2 id="export"><a class="header" href="#export">Export</a></h2>
-<p>The API to export an <code>Array</code> is as follows:</p>
-<pre><pre class="playground"><code class="language-rust">use std::sync::Arc;
-use arrow2::array::{Array, PrimitiveArray};
-use arrow2::datatypes::DataType;
-use arrow2::ffi::ArrowArray;
-
-<span class="boring">fn main() {
-</span>// Example of an array:
-let array = [Some(1), None, Some(123)]
-    .iter()
-    .collect::&lt;PrimitiveArray&lt;i32&gt;&gt;();
-
-// export the array.
-let ffi_array = ffi::export_to_c(Arc::new(array))?;
-
-// these are mutable pointers to `ArrowArray` and `ArrowSchema` of the C data interface
-let (array_ptr, schema_ptr) = ffi_array.references();
-<span class="boring">}
-</span></code></pre></pre>
-<h2 id="import"><a class="header" href="#import">Import</a></h2>
-<p>The API to import works similarly:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use arrow2::array::Array;
+<p>This crate supports importing from and exporting to all <code>DataType</code>s. Follow the
+example below to learn how to import and export:</p>
+<pre><pre class="playground"><code class="language-rust">use arrow2::array::{Array, PrimitiveArray};
+use arrow2::datatypes::Field;
+use arrow2::error::Result;
 use arrow2::ffi;
+use std::sync::Arc;
 
-let array = Arc::new(ffi::create_empty());
+unsafe fn export(
+    array: Arc&lt;dyn Array&gt;,
+    array_ptr: *mut ffi::Ffi_ArrowArray,
+    schema_ptr: *mut ffi::Ffi_ArrowSchema,
+) {
+    let field = Field::new(&quot;a&quot;, array.data_type().clone(), true);
+    ffi::export_array_to_c(array, array_ptr);
+    ffi::export_field_to_c(&amp;field, schema_ptr);
+}
 
-// non-owned mutable pointers.
-let (array_ptr, schema_ptr) = array.references();
+fn import(
+    array: Box&lt;ffi::Ffi_ArrowArray&gt;,
+    schema: &amp;ffi::Ffi_ArrowSchema,
+) -&gt; Result&lt;Box&lt;dyn Array&gt;&gt; {
+    let field = ffi::import_field_from_c(schema)?;
+    ffi::import_array_from_c(array, &amp;field)
+}
 
-// write to the pointers using any C data interface exporter
+fn main() -&gt; Result&lt;()&gt; {
+    // let's assume that we have an array:
+    let array = Arc::new(PrimitiveArray::&lt;i32&gt;::from([Some(1), None, Some(123)])) as Arc&lt;dyn Array&gt;;
 
-// consume it to a `Box&lt;dyn Array&gt;`
-let array = ffi::try_from(array)?;
-<span class="boring">}
-</span></code></pre></pre>
-<p>This assumes that the exporter writes to <code>array_ptr</code> and <code>schema_ptr</code> 
-according to the c data interface. This is an intrinsically <code>unsafe</code> operation.
-Failing to do so results in UB.</p>
+    // the goal is to export this array and import it back via FFI.
+    // to import, we initialize the structs that will receive the data
+    let array_ptr = Box::new(ffi::Ffi_ArrowArray::empty());
+    let schema_ptr = Box::new(ffi::Ffi_ArrowSchema::empty());
+
+    // since FFIs work in raw pointers, let's temporarily relinquish ownership so that producers
+    // can write into it in a thread-safe manner
+    let array_ptr = Box::into_raw(array_ptr);
+    let schema_ptr = Box::into_raw(schema_ptr);
+
+    // this is where a producer (in this case also us ^_^) writes to the pointers' location.
+    // `array` here could be anything or not even be available, if this was e.g. from Python.
+    // Safety: we just allocated the pointers correctly.
+    unsafe { export(array.clone(), array_ptr, schema_ptr) };
+
+    // we can now take ownership back, since we are responsible for deallocating this memory.
+    // Safety: we just into_raw them.
+    let array_ptr = unsafe { Box::from_raw(array_ptr) };
+    let schema_ptr = unsafe { Box::from_raw(schema_ptr) };
+
+    // and finally interpret the written memory into a new array.
+    let new_array = import(array_ptr, schema_ptr.as_ref())?;
+
+    // which is equal to the exported array
+    assert_eq!(array.as_ref(), new_array.as_ref());
+    Ok(())
+}
+</code></pre></pre>
 
                     </main>
 
