@@ -24,7 +24,7 @@ macro_rules! dyn_dict {
             .downcast_ref::<DictionaryArray<$ty>>()
             .unwrap();
         let keys = a.keys();
-        let display = get_value_display(a.values().as_ref());
+        let display = get_display(a.values().as_ref());
         Box::new(move |row: usize| display(keys.value(row) as usize))
     }};
 }
