@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::{
     bitmap::Bitmap,
     datatypes::DataType,
+    scalar::{new_scalar, Scalar},
     types::{NativeType, NaturalDataType},
 };
 
@@ -90,11 +91,11 @@ impl<K: DictionaryKey> DictionaryArray<K> {
         &self.values
     }
 
-    /// Returns the values of the [`DictionaryArray`].
+    /// Returns the value of the [`DictionaryArray`] at position `i`.
     #[inline]
-    pub fn value(&self, index: usize) -> Box<dyn Array> {
+    pub fn value(&self, index: usize) -> Box<dyn Scalar> {
         let index = self.keys.value(index).to_usize().unwrap();
-        self.values.clone().slice(index, 1)
+        new_scalar(self.values.as_ref(), index)
     }
 }
 

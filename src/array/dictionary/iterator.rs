@@ -1,5 +1,6 @@
 use crate::array::Array;
 use crate::bitmap::utils::{zip_validity, ZipValidity};
+use crate::scalar::Scalar;
 use crate::trusted_len::TrustedLen;
 
 use super::{DictionaryArray, DictionaryKey};
@@ -23,7 +24,7 @@ impl<'a, K: DictionaryKey> DictionaryValuesIter<'a, K> {
 }
 
 impl<'a, K: DictionaryKey> Iterator for DictionaryValuesIter<'a, K> {
-    type Item = Box<dyn Array>;
+    type Item = Box<dyn Scalar>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
@@ -56,10 +57,10 @@ impl<'a, K: DictionaryKey> DoubleEndedIterator for DictionaryValuesIter<'a, K> {
 }
 
 type ValuesIter<'a, K> = DictionaryValuesIter<'a, K>;
-type ZipIter<'a, K> = ZipValidity<'a, Box<dyn Array>, ValuesIter<'a, K>>;
+type ZipIter<'a, K> = ZipValidity<'a, Box<dyn Scalar>, ValuesIter<'a, K>>;
 
 impl<'a, K: DictionaryKey> IntoIterator for &'a DictionaryArray<K> {
-    type Item = Option<Box<dyn Array>>;
+    type Item = Option<Box<dyn Scalar>>;
     type IntoIter = ZipIter<'a, K>;
 
     fn into_iter(self) -> Self::IntoIter {
