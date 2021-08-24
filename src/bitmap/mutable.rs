@@ -15,6 +15,7 @@ use super::Bitmap;
 /// This container is backed by [`MutableBuffer<u8>`].
 pub struct MutableBitmap {
     buffer: MutableBuffer<u8>,
+    // invariant: length.saturating_add(7) / 8 == buffer.len();
     length: usize,
 }
 
@@ -466,12 +467,16 @@ impl MutableBitmap {
     }
 
     fn extend_unaligned(&mut self, slice: &[u8], offset: usize, length: usize) {
-        let own_offset = self.length % 8;
         // e.g.
         // [a, b, --101010]     <- to be extended
         // [00111111, 11010101] <- to extend
         // [a, b, 11101010, --001111] expected result
+
         let aligned_offset = offset / 8;
+        let own_offset = self.length % 8;
+        debug_assert_eq!(offset % 8, 0); // assumed invariant
+        debug_assert!(own_offset != 0); // assumed invariant
+
         let bytes_len = length.saturating_add(7) / 8;
         let items = &slice[aligned_offset..aligned_offset + bytes_len];
         // self has some offset => we need to shift all `items`, and merge the first
@@ -483,11 +488,19 @@ impl MutableBitmap {
         *last &= 0b11111111u8 >> (8 - own_offset); // unset before setting
         *last |= items[0] << own_offset;
 
+        if length + own_offset <= 8 {
+            // no new bytes needed
+            self.length += length;
+            return;
+        }
+        let additional = length - (8 - own_offset);
+
         let remaining = [items[items.len() - 1], 0];
         let bytes = items
             .windows(2)
             .chain(std::iter::once(remaining.as_ref()))
-            .map(|w| merge_reversed(w[0], w[1], 8 - own_offset));
+            .map(|w| merge_reversed(w[0], w[1], 8 - own_offset))
+            .take(additional.saturating_add(7) / 8);
         self.buffer.extend_from_trusted_len_iter(bytes);
 
         self.length += length;
@@ -520,6 +533,8 @@ impl MutableBitmap {
             // todo: further optimize the other branches.
             _ => self.extend_from_trusted_len_iter(BitmapIter::new(slice, offset, length)),
         }
+        // internal invariant:
+        debug_assert_eq!(self.length.saturating_add(7) / 8, self.buffer.len());
     }
 
     /// Extends the [`MutableBitmap`] from a [`Bitmap`].
