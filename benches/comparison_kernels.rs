@@ -42,6 +42,16 @@ fn add_benchmark(c: &mut Criterion) {
         c.bench_function(&format!("bool scalar 2^{}", log2_size), |b| {
             b.iter(|| bench_op_scalar(&arr_a, &BooleanScalar::from(Some(true)), Operator::Eq))
         });
+
+        let arr_a = create_string_array::<i32>(size, 0.1, 42);
+        let arr_b = create_string_array::<i32>(size, 0.1, 43);
+        c.bench_function(&format!("utf8 2^{}", log2_size), |b| {
+            b.iter(|| bench_op(&arr_a, &arr_b, Operator::Eq))
+        });
+
+        c.bench_function(&format!("utf8 2^{}", log2_size), |b| {
+            b.iter(|| bench_op_scalar(&arr_a, &Utf8Scalar::<i32>::from(Some("abc")), Operator::Eq))
+        });
     })
 }
 

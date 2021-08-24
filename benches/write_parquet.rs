@@ -55,13 +55,13 @@ fn add_benchmark(c: &mut Criterion) {
     });
 
     (0..=10).step_by(2).for_each(|i| {
-        let array = &create_string_array::<i32>(1024 * 2usize.pow(i), 0.1);
+        let array = &create_string_array::<i32>(1024 * 2usize.pow(i), 0.1, 42);
         let a = format!("write utf8 2^{}", 10 + i);
         c.bench_function(&a, |b| b.iter(|| write(array, Encoding::Plain).unwrap()));
     });
 
     (0..=10).step_by(2).for_each(|i| {
-        let array = &create_string_array::<i32>(1024 * 2usize.pow(i), 0.1);
+        let array = &create_string_array::<i32>(1024 * 2usize.pow(i), 0.1, 42);
         let a = format!("write utf8 delta 2^{}", 10 + i);
         c.bench_function(&a, |b| {
             b.iter(|| write(array, Encoding::DeltaLengthByteArray).unwrap())
