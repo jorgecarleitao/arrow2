@@ -219,7 +219,8 @@ pub fn to_array(
     dictionaries: &HashMap<i64, ArrowJsonDictionaryBatch>,
 ) -> Result<Arc<dyn Array>> {
     let data_type = field.data_type();
-    match data_type {
+    let physical_type = data_type.to_physical_type();
+    match physical_type {
         DataType::Null => Ok(Arc::new(NullArray::from_data(json_col.count))),
         DataType::Boolean => {
             let validity = to_validity(&json_col.validity);
@@ -234,17 +235,8 @@ pub fn to_array(
         }
         DataType::Int8 => Ok(Arc::new(to_primitive::<i8>(json_col, data_type.clone()))),
         DataType::Int16 => Ok(Arc::new(to_primitive::<i16>(json_col, data_type.clone()))),
-        DataType::Int32
-        | DataType::Date32
-        | DataType::Time32(_)
-        | DataType::Interval(IntervalUnit::YearMonth) => {
-            Ok(Arc::new(to_primitive::<i32>(json_col, data_type.clone())))
-        }
-        DataType::Int64
-        | DataType::Date64
-        | DataType::Time64(_)
-        | DataType::Timestamp(_, _)
-        | DataType::Duration(_) => Ok(Arc::new(to_primitive::<i64>(json_col, data_type.clone()))),
+        DataType::Int32 => Ok(Arc::new(to_primitive::<i32>(json_col, data_type.clone()))),
+        DataType::Int64 => Ok(Arc::new(to_primitive::<i64>(json_col, data_type.clone()))),
         DataType::Interval(IntervalUnit::DayTime) => {
             Ok(Arc::new(to_primitive_interval(json_col, data_type.clone())))
         }
@@ -355,6 +347,7 @@ pub fn to_array(
             let array = UnionArray::from_data(data_type.clone(), types, fields, offsets);
             Ok(Arc::new(array))
         }
+        _ => unreachable!(),
     }
 }
 

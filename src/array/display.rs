@@ -234,6 +234,7 @@ pub fn get_value_display<'a>(array: &'a dyn Array) -> Box<dyn Fn(usize) -> Strin
                 displays[field](index)
             })
         }
+        Extension(ty) => ty.get_display(array),
     }
 }
 

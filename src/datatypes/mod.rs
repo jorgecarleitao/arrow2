@@ -6,9 +6,11 @@
 //! * [`Schema`]
 //! * [`TimeUnit`]
 //! * [`IntervalUnit`]
+mod extension;
 mod field;
 mod schema;
 
+pub use extension::Extension;
 pub use field::Field;
 pub use schema::Schema;
 
@@ -123,7 +125,7 @@ pub enum DataType {
     Decimal(usize, usize),
 
     /// Extension types spec as: https://arrow.apache.org/docs/format/Columnar.html#extension-types
-    Extension(String, Box<DataType>, Option<BTreeMap<String, String>>),
+    Extension(Box<dyn Extension>),
 }
 
 impl std::fmt::Display for DataType {
@@ -191,7 +193,7 @@ impl DataType {
             | DataType::Time64(_)
             | DataType::Timestamp(_, _)
             | DataType::Duration(_) => DataType::Int64,
-            DataType::Extension(_, t, _) => t.to_physical_type(),
+            DataType::Extension(t) => t.physical_type(),
 
             _ => unreachable!(),
         }
@@ -231,5 +233,5 @@ impl DataType {
 }
 
 // backward compatibility
-use std::{collections::BTreeMap, sync::Arc};
+use std::sync::Arc;
 pub type SchemaRef = Arc<Schema>;

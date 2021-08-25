@@ -782,9 +782,10 @@ impl Type {
     pub const LargeBinary: Self = Self(19);
     pub const LargeUtf8: Self = Self(20);
     pub const LargeList: Self = Self(21);
+    pub const Extension: Self = Self(22);
 
     pub const ENUM_MIN: u8 = 0;
-    pub const ENUM_MAX: u8 = 21;
+    pub const ENUM_MAX: u8 = 22;
     pub const ENUM_VALUES: &'static [Self] = &[
         Self::NONE,
         Self::Null,
@@ -808,6 +809,7 @@ impl Type {
         Self::LargeBinary,
         Self::LargeUtf8,
         Self::LargeList,
+        Self::Extension,
     ];
     /// Returns the variant's name or "" if unknown.
     pub fn variant_name(self) -> Option<&'static str> {
