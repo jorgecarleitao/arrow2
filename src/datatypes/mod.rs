@@ -224,6 +224,7 @@ impl DataType {
     pub fn is_phsical_type(&self) -> bool {
         match self {
             DataType::Null
+            | DataType::Boolean
             | DataType::Int8
             | DataType::Int16
             | DataType::Int32
