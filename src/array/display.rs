@@ -32,8 +32,16 @@ macro_rules! dyn_dict {
 /// Returns a function of index returning the string representation of the _value_ of `array`.
 /// This does not take nulls into account.
 pub fn get_value_display<'a>(array: &'a dyn Array) -> Box<dyn Fn(usize) -> String + 'a> {
+    get_value_display_by_type(array, array.data_type())
+}
+
+#[inline]
+fn get_value_display_by_type<'a>(
+    array: &'a dyn Array,
+    data_type: &'a DataType,
+) -> Box<dyn Fn(usize) -> String + 'a> {
     use DataType::*;
-    match array.data_type() {
+    match data_type {
         Null => Box::new(|_: usize| "".to_string()),
         Boolean => {
             let a = array.as_any().downcast_ref::<BooleanArray>().unwrap();
@@ -234,7 +242,9 @@ pub fn get_value_display<'a>(array: &'a dyn Array) -> Box<dyn Fn(usize) -> Strin
                 displays[field](index)
             })
         }
-        Extension(ty) => ty.get_display(array),
+        Extension(ty) => ty
+            .get_display(array)
+            .unwrap_or(get_value_display_by_type(array, ty.data_type())),
     }
 }
 

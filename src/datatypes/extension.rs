@@ -28,9 +28,13 @@ pub trait Extension: std::fmt::Debug + Send + Sync {
     fn metadata(&self) -> &Option<HashMap<String, String>>;
 
     // https://arrow.apache.org/docs/format/CDataInterface.html#extension-arrays
-    fn to_format(&self) -> String;
-    //
-    fn get_display<'a>(&self, array: &'a dyn Array) -> Box<dyn Fn(usize) -> String + 'a>;
+    fn to_format(&self) -> &str;
+
+    /// Returns a function of index returning the string representation of the _value_ of `array`
+    /// optional, fall back to the physical data_type's `get_display`
+    fn get_display<'a>(&self, _array: &'a dyn Array) -> Option<Box<dyn Fn(usize) -> String + 'a>> {
+        None
+    }
 }
 
 impl PartialEq for dyn Extension + '_ {

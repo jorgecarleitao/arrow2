@@ -29,6 +29,7 @@ pub use schema::Schema;
 /// Nested types can themselves be nested within other arrays.
 /// For more information on these types please see
 /// [the physical memory layout of Apache Arrow](https://arrow.apache.org/docs/format/Columnar.html#physical-memory-layout).
+#[allow(clippy::derive_hash_xor_eq)]
 #[derive(Debug, Clone, Eq, Hash, PartialOrd, Ord)]
 pub enum DataType {
     /// Null type, representing an array without values or validity, only a length.
@@ -151,7 +152,7 @@ impl PartialEq for DataType {
             (Self::Dictionary(l0, l1), Self::Dictionary(r0, r1)) => l0 == r0 && l1 == r1,
             (Self::Decimal(l0, l1), Self::Decimal(r0, r1)) => l0 == r0 && l1 == r1,
             (Self::Extension(l0), Self::Extension(r0)) => l0 == r0,
-            _ => core::mem::discriminant(self) == core::mem::discriminant(other),
+            _ => false,
         }
     }
 }
@@ -222,36 +223,35 @@ impl DataType {
     }
 
     pub fn is_phsical_type(&self) -> bool {
-        match self {
+        matches!(
+            self,
             DataType::Null
-            | DataType::Boolean
-            | DataType::Int8
-            | DataType::Int16
-            | DataType::Int32
-            | DataType::Int64
-            | DataType::UInt8
-            | DataType::UInt16
-            | DataType::UInt32
-            | DataType::UInt64
-            | DataType::Float16
-            | DataType::Float32
-            | DataType::Float64
-            | DataType::Binary
-            | DataType::LargeBinary
-            | DataType::FixedSizeBinary(_)
-            | DataType::Utf8
-            | DataType::LargeUtf8
-            | DataType::List(_)
-            | DataType::LargeList(_)
-            | DataType::FixedSizeList(_, _)
-            | DataType::Struct(_)
-            | DataType::Union(_, _, _)
-            | DataType::Dictionary(_, _)
-            | DataType::Interval(IntervalUnit::DayTime)
-            | DataType::Decimal(_, _) => true,
-
-            _ => false,
-        }
+                | DataType::Boolean
+                | DataType::Int8
+                | DataType::Int16
+                | DataType::Int32
+                | DataType::Int64
+                | DataType::UInt8
+                | DataType::UInt16
+                | DataType::UInt32
+                | DataType::UInt64
+                | DataType::Float16
+                | DataType::Float32
+                | DataType::Float64
+                | DataType::Binary
+                | DataType::LargeBinary
+                | DataType::FixedSizeBinary(_)
+                | DataType::Utf8
+                | DataType::LargeUtf8
+                | DataType::List(_)
+                | DataType::LargeList(_)
+                | DataType::FixedSizeList(_, _)
+                | DataType::Struct(_)
+                | DataType::Union(_, _, _)
+                | DataType::Dictionary(_, _)
+                | DataType::Interval(IntervalUnit::DayTime)
+                | DataType::Decimal(_, _)
+        )
     }
 }
 
