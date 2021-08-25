@@ -96,7 +96,8 @@ pub fn make_growable<'a>(
     let data_type = arrays[0].data_type();
     assert!(arrays.iter().all(|&item| item.data_type() == data_type));
 
-    match data_type {
+    let physical_type = data_type.to_physical_type();
+    match physical_type {
         DataType::Null => Box::new(null::GrowableNull::new()),
         DataType::Boolean => {
             let arrays = arrays
@@ -111,17 +112,10 @@ pub fn make_growable<'a>(
         }
         DataType::Int8 => dyn_growable!(i8, arrays, use_validity, capacity),
         DataType::Int16 => dyn_growable!(i16, arrays, use_validity, capacity),
-        DataType::Int32
-        | DataType::Date32
-        | DataType::Time32(_)
-        | DataType::Interval(IntervalUnit::YearMonth) => {
+        DataType::Int32 => {
             dyn_growable!(i32, arrays, use_validity, capacity)
         }
-        DataType::Int64
-        | DataType::Date64
-        | DataType::Time64(_)
-        | DataType::Timestamp(_, _)
-        | DataType::Duration(_) => {
+        DataType::Int64 => {
             dyn_growable!(i64, arrays, use_validity, capacity)
         }
         DataType::Interval(IntervalUnit::DayTime) => {
@@ -231,5 +225,6 @@ pub fn make_growable<'a>(
                 dyn_dict_growable!($T, arrays, use_validity, capacity)
             })
         }
+        _ => unreachable!(),
     }
 }

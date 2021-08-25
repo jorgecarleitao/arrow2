@@ -164,7 +164,9 @@ pub fn equal(lhs: &dyn Array, rhs: &dyn Array) -> bool {
         return false;
     }
 
-    match lhs.data_type() {
+    let physical_type = lhs.data_type().to_physical_type();
+
+    match physical_type {
         DataType::Null => {
             let lhs = lhs.as_any().downcast_ref().unwrap();
             let rhs = rhs.as_any().downcast_ref().unwrap();
@@ -205,19 +207,12 @@ pub fn equal(lhs: &dyn Array, rhs: &dyn Array) -> bool {
             let rhs = rhs.as_any().downcast_ref().unwrap();
             primitive::equal::<i16>(lhs, rhs)
         }
-        DataType::Int32
-        | DataType::Date32
-        | DataType::Time32(_)
-        | DataType::Interval(IntervalUnit::YearMonth) => {
+        DataType::Int32 => {
             let lhs = lhs.as_any().downcast_ref().unwrap();
             let rhs = rhs.as_any().downcast_ref().unwrap();
             primitive::equal::<i32>(lhs, rhs)
         }
-        DataType::Int64
-        | DataType::Date64
-        | DataType::Time64(_)
-        | DataType::Timestamp(_, _)
-        | DataType::Duration(_) => {
+        DataType::Int64 => {
             let lhs = lhs.as_any().downcast_ref().unwrap();
             let rhs = rhs.as_any().downcast_ref().unwrap();
             primitive::equal::<i64>(lhs, rhs)
@@ -300,5 +295,6 @@ pub fn equal(lhs: &dyn Array, rhs: &dyn Array) -> bool {
             let rhs = rhs.as_any().downcast_ref().unwrap();
             union::equal(lhs, rhs)
         }
+        _ => unreachable!(),
     }
 }

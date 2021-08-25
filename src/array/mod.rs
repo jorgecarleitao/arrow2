@@ -165,25 +165,19 @@ macro_rules! with_match_dictionary_key_type {(
 
 impl Display for dyn Array {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.data_type() {
+        let physical_type = self.data_type().to_physical_type();
+        match physical_type {
             DataType::Null => fmt_dyn!(self, NullArray, f),
             DataType::Boolean => fmt_dyn!(self, BooleanArray, f),
             DataType::Int8 => fmt_dyn!(self, PrimitiveArray<i8>, f),
             DataType::Int16 => fmt_dyn!(self, PrimitiveArray<i16>, f),
-            DataType::Int32
-            | DataType::Date32
-            | DataType::Time32(_)
-            | DataType::Interval(IntervalUnit::YearMonth) => {
+            DataType::Int32 => {
                 fmt_dyn!(self, PrimitiveArray<i32>, f)
             }
             DataType::Interval(IntervalUnit::DayTime) => {
                 fmt_dyn!(self, PrimitiveArray<days_ms>, f)
             }
-            DataType::Int64
-            | DataType::Date64
-            | DataType::Time64(_)
-            | DataType::Timestamp(_, _)
-            | DataType::Duration(_) => fmt_dyn!(self, PrimitiveArray<i64>, f),
+            DataType::Int64 => fmt_dyn!(self, PrimitiveArray<i64>, f),
             DataType::Decimal(_, _) => fmt_dyn!(self, PrimitiveArray<i128>, f),
             DataType::UInt8 => fmt_dyn!(self, PrimitiveArray<u8>, f),
             DataType::UInt16 => fmt_dyn!(self, PrimitiveArray<u16>, f),
@@ -207,31 +201,24 @@ impl Display for dyn Array {
                     fmt_dyn!(self, DictionaryArray::<$T>, f)
                 })
             }
+            _ => unreachable!(),
         }
     }
 }
 
 /// Creates a new [`Array`] with a [`Array::len`] of 0.
 pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
-    match data_type {
+    let physical_type = data_type.to_physical_type();
+    match physical_type {
         DataType::Null => Box::new(NullArray::new_empty()),
         DataType::Boolean => Box::new(BooleanArray::new_empty()),
         DataType::Int8 => Box::new(PrimitiveArray::<i8>::new_empty(data_type)),
         DataType::Int16 => Box::new(PrimitiveArray::<i16>::new_empty(data_type)),
-        DataType::Int32
-        | DataType::Date32
-        | DataType::Time32(_)
-        | DataType::Interval(IntervalUnit::YearMonth) => {
-            Box::new(PrimitiveArray::<i32>::new_empty(data_type))
-        }
+        DataType::Int32 => Box::new(PrimitiveArray::<i32>::new_empty(data_type)),
         DataType::Interval(IntervalUnit::DayTime) => {
             Box::new(PrimitiveArray::<days_ms>::new_empty(data_type))
         }
-        DataType::Int64
-        | DataType::Date64
-        | DataType::Time64(_)
-        | DataType::Timestamp(_, _)
-        | DataType::Duration(_) => Box::new(PrimitiveArray::<i64>::new_empty(data_type)),
+        DataType::Int64 => Box::new(PrimitiveArray::<i64>::new_empty(data_type)),
         DataType::Decimal(_, _) => Box::new(PrimitiveArray::<i128>::new_empty(data_type)),
         DataType::UInt8 => Box::new(PrimitiveArray::<u8>::new_empty(data_type)),
         DataType::UInt16 => Box::new(PrimitiveArray::<u16>::new_empty(data_type)),
@@ -255,6 +242,7 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
                 Box::new(DictionaryArray::<$T>::new_empty(*value_type))
             })
         }
+        _ => unreachable!(),
     }
 }
 
@@ -262,25 +250,17 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
 /// The array is guaranteed to have [`Array::null_count`] equal to [`Array::len`]
 /// for all types except Union, which does not have a validity.
 pub fn new_null_array(data_type: DataType, length: usize) -> Box<dyn Array> {
-    match data_type {
+    let physical_type = data_type.to_physical_type();
+    match physical_type {
         DataType::Null => Box::new(NullArray::new_null(length)),
         DataType::Boolean => Box::new(BooleanArray::new_null(length)),
         DataType::Int8 => Box::new(PrimitiveArray::<i8>::new_null(data_type, length)),
         DataType::Int16 => Box::new(PrimitiveArray::<i16>::new_null(data_type, length)),
-        DataType::Int32
-        | DataType::Date32
-        | DataType::Time32(_)
-        | DataType::Interval(IntervalUnit::YearMonth) => {
-            Box::new(PrimitiveArray::<i32>::new_null(data_type, length))
-        }
+        DataType::Int32 => Box::new(PrimitiveArray::<i32>::new_null(data_type, length)),
         DataType::Interval(IntervalUnit::DayTime) => {
             Box::new(PrimitiveArray::<days_ms>::new_null(data_type, length))
         }
-        DataType::Int64
-        | DataType::Date64
-        | DataType::Time64(_)
-        | DataType::Timestamp(_, _)
-        | DataType::Duration(_) => Box::new(PrimitiveArray::<i64>::new_null(data_type, length)),
+        DataType::Int64 => Box::new(PrimitiveArray::<i64>::new_null(data_type, length)),
         DataType::Decimal(_, _) => Box::new(PrimitiveArray::<i128>::new_null(data_type, length)),
         DataType::UInt8 => Box::new(PrimitiveArray::<u8>::new_null(data_type, length)),
         DataType::UInt16 => Box::new(PrimitiveArray::<u16>::new_null(data_type, length)),
@@ -304,6 +284,7 @@ pub fn new_null_array(data_type: DataType, length: usize) -> Box<dyn Array> {
                 Box::new(DictionaryArray::<$T>::new_null(*value_type, length))
             })
         }
+        _ => unreachable!(),
     }
 }
 
@@ -319,23 +300,17 @@ macro_rules! clone_dyn {
 /// This operation is `O(1)` over `len`, as it amounts to increase two ref counts
 /// and moving the concrete struct under a `Box`.
 pub fn clone(array: &dyn Array) -> Box<dyn Array> {
-    match array.data_type() {
+    let physical_type = array.data_type().to_physical_type();
+    match physical_type {
         DataType::Null => clone_dyn!(array, NullArray),
         DataType::Boolean => clone_dyn!(array, BooleanArray),
         DataType::Int8 => clone_dyn!(array, PrimitiveArray<i8>),
         DataType::Int16 => clone_dyn!(array, PrimitiveArray<i16>),
-        DataType::Int32
-        | DataType::Date32
-        | DataType::Time32(_)
-        | DataType::Interval(IntervalUnit::YearMonth) => {
+        DataType::Int32 => {
             clone_dyn!(array, PrimitiveArray<i32>)
         }
         DataType::Interval(IntervalUnit::DayTime) => clone_dyn!(array, PrimitiveArray<days_ms>),
-        DataType::Int64
-        | DataType::Date64
-        | DataType::Time64(_)
-        | DataType::Timestamp(_, _)
-        | DataType::Duration(_) => clone_dyn!(array, PrimitiveArray<i64>),
+        DataType::Int64 => clone_dyn!(array, PrimitiveArray<i64>),
         DataType::Decimal(_, _) => clone_dyn!(array, PrimitiveArray<i128>),
         DataType::UInt8 => clone_dyn!(array, PrimitiveArray<u8>),
         DataType::UInt16 => clone_dyn!(array, PrimitiveArray<u16>),
@@ -359,6 +334,7 @@ pub fn clone(array: &dyn Array) -> Box<dyn Array> {
                 clone_dyn!(array, DictionaryArray::<$T>)
             })
         }
+        _ => unreachable!(),
     }
 }
 

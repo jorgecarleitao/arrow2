@@ -386,6 +386,7 @@ fn type_to_field_type(data_type: &DataType) -> ipc::Type {
         Union(_, _, _) => ipc::Type::Union,
         Struct(_) => ipc::Type::Struct_,
         Dictionary(_, v) => type_to_field_type(v),
+        Extension(_, ty, _) => type_to_field_type(ty),
     }
 }
 

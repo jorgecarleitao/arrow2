@@ -51,7 +51,8 @@ macro_rules! dyn_dict {
 /// FFI buffers are included in this estimation.
 pub fn estimated_bytes_size(array: &dyn Array) -> usize {
     use DataType::*;
-    match array.data_type() {
+    let physical_type = array.data_type().to_physical_type();
+    match physical_type {
         Null => 0,
         Boolean => {
             let array = array.as_any().downcast_ref::<BooleanArray>().unwrap();
@@ -59,10 +60,10 @@ pub fn estimated_bytes_size(array: &dyn Array) -> usize {
         }
         Int8 => dyn_primitive!(array, i8),
         Int16 => dyn_primitive!(array, i16),
-        Int32 | Date32 | Time32(_) | Interval(IntervalUnit::YearMonth) => {
+        Int32 => {
             dyn_primitive!(array, i32)
         }
-        Int64 | Date64 | Timestamp(_, _) | Time64(_) | Duration(_) => dyn_primitive!(array, i64),
+        Int64 => dyn_primitive!(array, i64),
         UInt8 => dyn_primitive!(array, u16),
         UInt16 => dyn_primitive!(array, u16),
         UInt32 => dyn_primitive!(array, u32),
@@ -136,6 +137,7 @@ pub fn estimated_bytes_size(array: &dyn Array) -> usize {
             UInt64 => dyn_dict!(array, u64),
             _ => unreachable!(),
         },
+        _ => unreachable!(),
     }
 }
 

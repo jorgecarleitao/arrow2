@@ -179,6 +179,55 @@ impl DataType {
             _ => self == other,
         }
     }
+
+    pub(crate) fn to_physical_type(&self) -> DataType {
+        match self {
+            t if t.is_phsical_type() => t.clone(),
+            DataType::Date32
+            | DataType::Time32(_)
+            | DataType::Interval(IntervalUnit::YearMonth) => DataType::Int32,
+
+            DataType::Date64
+            | DataType::Time64(_)
+            | DataType::Timestamp(_, _)
+            | DataType::Duration(_) => DataType::Int64,
+            DataType::Extension(_, t, _) => t.to_physical_type(),
+
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn is_phsical_type(&self) -> bool {
+        match self {
+            DataType::Null
+            | DataType::Int8
+            | DataType::Int16
+            | DataType::Int32
+            | DataType::Int64
+            | DataType::UInt8
+            | DataType::UInt16
+            | DataType::UInt32
+            | DataType::UInt64
+            | DataType::Float16
+            | DataType::Float32
+            | DataType::Float64
+            | DataType::Binary
+            | DataType::LargeBinary
+            | DataType::FixedSizeBinary(_)
+            | DataType::Utf8
+            | DataType::LargeUtf8
+            | DataType::List(_)
+            | DataType::LargeList(_)
+            | DataType::FixedSizeList(_, _)
+            | DataType::Struct(_)
+            | DataType::Union(_, _, _)
+            | DataType::Dictionary(_, _)
+            | DataType::Interval(IntervalUnit::DayTime)
+            | DataType::Decimal(_, _) => true,
+
+            _ => false,
+        }
+    }
 }
 
 // backward compatibility

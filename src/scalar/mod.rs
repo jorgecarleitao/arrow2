@@ -83,7 +83,9 @@ macro_rules! dyn_new_list {
 /// creates a new [`Scalar`] from an [`Array`].
 pub fn new_scalar(array: &dyn Array, index: usize) -> Box<dyn Scalar> {
     use DataType::*;
-    match array.data_type() {
+
+    let physical_type = array.data_type().to_physical_type();
+    match physical_type {
         Null => Box::new(NullScalar::new()),
         Boolean => {
             let array = array.as_any().downcast_ref::<BooleanArray>().unwrap();
@@ -96,10 +98,10 @@ pub fn new_scalar(array: &dyn Array, index: usize) -> Box<dyn Scalar> {
         }
         Int8 => dyn_new!(array, index, i8),
         Int16 => dyn_new!(array, index, i16),
-        Int32 | Date32 | Time32(_) | Interval(IntervalUnit::YearMonth) => {
+        Int32 => {
             dyn_new!(array, index, i32)
         }
-        Int64 | Date64 | Time64(_) | Duration(_) | Timestamp(_, _) => dyn_new!(array, index, i64),
+        Int64 => dyn_new!(array, index, i64),
         Interval(IntervalUnit::DayTime) => dyn_new!(array, index, days_ms),
         UInt8 => dyn_new!(array, index, u8),
         UInt16 => dyn_new!(array, index, u16),
@@ -132,5 +134,6 @@ pub fn new_scalar(array: &dyn Array, index: usize) -> Box<dyn Scalar> {
         FixedSizeList(_, _) => todo!(),
         Union(_, _, _) => todo!(),
         Dictionary(_, _) => todo!(),
+        _ => unreachable!(),
     }
 }

@@ -40,23 +40,17 @@ type BuffersChildren = (
 );
 
 pub fn buffers_children_dictionary(array: &dyn Array) -> BuffersChildren {
-    match array.data_type() {
+    let physical_type = array.data_type().to_physical_type();
+    match physical_type {
         DataType::Null => ffi_dyn!(array, NullArray),
         DataType::Boolean => ffi_dyn!(array, BooleanArray),
         DataType::Int8 => ffi_dyn!(array, PrimitiveArray<i8>),
         DataType::Int16 => ffi_dyn!(array, PrimitiveArray<i16>),
-        DataType::Int32
-        | DataType::Date32
-        | DataType::Time32(_)
-        | DataType::Interval(IntervalUnit::YearMonth) => {
+        DataType::Int32 => {
             ffi_dyn!(array, PrimitiveArray<i32>)
         }
         DataType::Interval(IntervalUnit::DayTime) => ffi_dyn!(array, PrimitiveArray<days_ms>),
-        DataType::Int64
-        | DataType::Date64
-        | DataType::Time64(_)
-        | DataType::Timestamp(_, _)
-        | DataType::Duration(_) => ffi_dyn!(array, PrimitiveArray<i64>),
+        DataType::Int64 => ffi_dyn!(array, PrimitiveArray<i64>),
         DataType::Decimal(_, _) => ffi_dyn!(array, PrimitiveArray<i128>),
         DataType::UInt8 => ffi_dyn!(array, PrimitiveArray<u8>),
         DataType::UInt16 => ffi_dyn!(array, PrimitiveArray<u16>),
@@ -85,5 +79,7 @@ pub fn buffers_children_dictionary(array: &dyn Array) -> BuffersChildren {
                 )
             })
         }
+
+        _ => unreachable!(),
     }
 }
