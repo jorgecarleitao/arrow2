@@ -114,8 +114,8 @@ impl ToJson for DataType {
             DataType::Decimal(precision, scale) => {
                 json!({"name": "decimal", "precision": precision, "scale": scale})
             }
-            DataType::Extension(name, ty, metadata) => {
-                json!({"name": name, "type": format!("{}", ty), "metadata": metadata})
+            DataType::Extension(ex) => {
+                json!({"name": ex.name(), "type": format!("{}", ex.data_type()), "metadata": ex.metadata()})
             }
         }
     }

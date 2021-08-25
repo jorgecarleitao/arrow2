@@ -291,6 +291,9 @@ pub fn read<R: Read + Seek>(
             version,
         )
         .map(|x| Arc::new(x) as Arc<dyn Array>),
+        DataType::Extension(ex) => {
+            todo!("extension");
+        }
     }
 }
 
@@ -330,5 +333,8 @@ pub fn skip(
         DataType::Struct(_) => skip_struct(field_nodes, data_type, buffers),
         DataType::Dictionary(_, _) => skip_dictionary(field_nodes, buffers),
         DataType::Union(_, _, _) => skip_union(field_nodes, data_type, buffers),
+        DataType::Extension(ex) => {
+            todo!("extension");
+        }
     }
 }

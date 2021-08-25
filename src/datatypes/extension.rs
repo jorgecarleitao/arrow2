@@ -20,11 +20,44 @@ use crate::array::Array;
 use core::hash::Hash;
 use std::collections::HashMap;
 
-pub trait Extension: std::fmt::Debug + Send + Sync + Hash + Ord {
+pub trait Extension: std::fmt::Debug + Send + Sync {
     fn name(&self) -> &str;
     /// Returns physical_type
     fn data_type(&self) -> &DataType;
+    fn to_bytes(&self) -> Vec<u8>;
     fn metadata(&self) -> &Option<HashMap<String, String>>;
 
-    // fn get_display_value<'a>(&self, array: &'a dyn Array) -> Box<dyn Fn(usize) -> String + 'a>;
+    // https://arrow.apache.org/docs/format/CDataInterface.html#extension-arrays
+    fn to_format(&self) -> String;
+    //
+    fn get_display<'a>(&self, array: &'a dyn Array) -> Box<dyn Fn(usize) -> String + 'a>;
+}
+
+impl PartialEq for dyn Extension + '_ {
+    fn eq(&self, other: &Self) -> bool {
+        self.name() == other.name()
+            && self.data_type() == other.data_type()
+            && self.metadata() == other.metadata()
+    }
+}
+
+impl Eq for dyn Extension + '_ {}
+
+impl Hash for dyn Extension + '_ {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        let bytes = self.to_bytes();
+        state.write(&bytes);
+    }
+}
+
+impl PartialOrd for dyn Extension + '_ {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.name().partial_cmp(other.name())
+    }
+}
+
+impl Ord for dyn Extension + '_ {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.name().cmp(other.name())
+    }
 }

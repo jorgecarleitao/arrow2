@@ -257,6 +257,14 @@ impl Field {
                     ));
                 }
             }
+
+            DataType::Extension(_ex) => {
+                if self.data_type != from.data_type || self.metadata() != from.metadata() {
+                    return Err(ArrowError::Schema(
+                        "Fail to merge schema Field due to conflicting datatype".to_string(),
+                    ));
+                }
+            }
         }
         if from.nullable {
             self.nullable = from.nullable;

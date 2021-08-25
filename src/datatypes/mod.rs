@@ -193,7 +193,7 @@ impl DataType {
             | DataType::Time64(_)
             | DataType::Timestamp(_, _)
             | DataType::Duration(_) => DataType::Int64,
-            DataType::Extension(t) => t.physical_type(),
+            DataType::Extension(t) => t.data_type().clone(),
 
             _ => unreachable!(),
         }

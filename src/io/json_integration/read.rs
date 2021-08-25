@@ -276,7 +276,7 @@ pub fn to_array(
             let validity = to_validity(&json_col.validity);
 
             let children = &json_col.children.as_ref().unwrap()[0];
-            let values = to_array(child_field, children, dictionaries)?;
+            let values = to_array(child_field.as_ref(), children, dictionaries)?;
 
             Ok(Arc::new(FixedSizeListArray::from_data(
                 data_type.clone(),

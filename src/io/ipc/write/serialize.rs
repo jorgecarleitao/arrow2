@@ -432,6 +432,9 @@ pub fn write(
         DataType::Union(_, _, _) => {
             write_union(array, buffers, arrow_data, nodes, offset, is_little_endian);
         }
+        DataType::Extension(ex) => {
+            todo!("extension");
+        }
     }
 }
 
