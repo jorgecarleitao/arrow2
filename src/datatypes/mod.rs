@@ -121,6 +121,9 @@ pub enum DataType {
     /// scale is the number of decimal places.
     /// The number 999.99 has a precision of 5 and scale of 2.
     Decimal(usize, usize),
+
+    /// Extension types spec as: https://arrow.apache.org/docs/format/Columnar.html#extension-types
+    Extension(String, Box<DataType>, Option<BTreeMap<String, String>>),
 }
 
 impl std::fmt::Display for DataType {
@@ -179,5 +182,5 @@ impl DataType {
 }
 
 // backward compatibility
-use std::sync::Arc;
+use std::{collections::BTreeMap, sync::Arc};
 pub type SchemaRef = Arc<Schema>;
