@@ -152,7 +152,7 @@ impl PartialEq for DataType {
             (Self::Dictionary(l0, l1), Self::Dictionary(r0, r1)) => l0 == r0 && l1 == r1,
             (Self::Decimal(l0, l1), Self::Decimal(r0, r1)) => l0 == r0 && l1 == r1,
             (Self::Extension(l0), Self::Extension(r0)) => l0 == r0,
-            _ => false,
+            _ => core::mem::discriminant(self) == core::mem::discriminant(other),
         }
     }
 }
