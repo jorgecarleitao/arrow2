@@ -75,7 +75,19 @@ fn build_extract(data_type: &DataType) -> Extract {
     }
 }
 
-fn read_primitive<T: NativeType + NaturalDataType + NumCast>(
+fn read_int<T: NativeType + NaturalDataType + NumCast>(
+    rows: &[&Value],
+    data_type: DataType,
+) -> PrimitiveArray<T> {
+    let iter = rows.iter().map(|row| match row {
+        Value::Number(number) => number.as_i64().and_then(num::cast::cast::<i64, T>),
+        Value::Bool(number) => num::cast::cast::<i32, T>(*number as i32),
+        _ => None,
+    });
+    PrimitiveArray::from_trusted_len_iter(iter).to(data_type)
+}
+
+fn read_float<T: NativeType + NaturalDataType + NumCast>(
     rows: &[&Value],
     data_type: DataType,
 ) -> PrimitiveArray<T> {
@@ -214,14 +226,12 @@ pub fn read(rows: &[&Value], data_type: DataType) -> Arc<dyn Array> {
     match &data_type {
         DataType::Null => Arc::new(NullArray::from_data(rows.len())),
         DataType::Boolean => Arc::new(read_boolean(rows)),
-        DataType::Int8 => Arc::new(read_primitive::<i8>(rows, data_type)),
-        DataType::Int16 => Arc::new(read_primitive::<i16>(rows, data_type)),
+        DataType::Int8 => Arc::new(read_int::<i8>(rows, data_type)),
+        DataType::Int16 => Arc::new(read_int::<i16>(rows, data_type)),
         DataType::Int32
         | DataType::Date32
         | DataType::Time32(_)
-        | DataType::Interval(IntervalUnit::YearMonth) => {
-            Arc::new(read_primitive::<i32>(rows, data_type))
-        }
+        | DataType::Interval(IntervalUnit::YearMonth) => Arc::new(read_int::<i32>(rows, data_type)),
         DataType::Interval(IntervalUnit::DayTime) => {
             unimplemented!("There is no natural representation of DayTime in JSON.")
         }
@@ -229,14 +239,14 @@ pub fn read(rows: &[&Value], data_type: DataType) -> Arc<dyn Array> {
         | DataType::Date64
         | DataType::Time64(_)
         | DataType::Timestamp(_, _)
-        | DataType::Duration(_) => Arc::new(read_primitive::<i64>(rows, data_type)),
-        DataType::UInt8 => Arc::new(read_primitive::<u8>(rows, data_type)),
-        DataType::UInt16 => Arc::new(read_primitive::<u16>(rows, data_type)),
-        DataType::UInt32 => Arc::new(read_primitive::<u32>(rows, data_type)),
-        DataType::UInt64 => Arc::new(read_primitive::<u64>(rows, data_type)),
+        | DataType::Duration(_) => Arc::new(read_int::<i64>(rows, data_type)),
+        DataType::UInt8 => Arc::new(read_int::<u8>(rows, data_type)),
+        DataType::UInt16 => Arc::new(read_int::<u16>(rows, data_type)),
+        DataType::UInt32 => Arc::new(read_int::<u32>(rows, data_type)),
+        DataType::UInt64 => Arc::new(read_int::<u64>(rows, data_type)),
         DataType::Float16 => unreachable!(),
-        DataType::Float32 => Arc::new(read_primitive::<f32>(rows, data_type)),
-        DataType::Float64 => Arc::new(read_primitive::<f64>(rows, data_type)),
+        DataType::Float32 => Arc::new(read_float::<f32>(rows, data_type)),
+        DataType::Float64 => Arc::new(read_float::<f64>(rows, data_type)),
         DataType::Utf8 => Arc::new(read_utf8::<i32>(rows)),
         DataType::LargeUtf8 => Arc::new(read_utf8::<i64>(rows)),
         DataType::List(_) => Arc::new(read_list::<i32>(rows, data_type)),
