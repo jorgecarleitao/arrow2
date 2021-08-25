@@ -29,7 +29,7 @@ pub use schema::Schema;
 /// Nested types can themselves be nested within other arrays.
 /// For more information on these types please see
 /// [the physical memory layout of Apache Arrow](https://arrow.apache.org/docs/format/Columnar.html#physical-memory-layout).
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, Eq, Hash, PartialOrd, Ord)]
 pub enum DataType {
     /// Null type, representing an array without values or validity, only a length.
     Null,
@@ -125,12 +125,34 @@ pub enum DataType {
     Decimal(usize, usize),
 
     /// Extension types spec as: https://arrow.apache.org/docs/format/Columnar.html#extension-types
-    Extension(Box<dyn Extension>),
+    Extension(Arc<dyn Extension>),
 }
 
 impl std::fmt::Display for DataType {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{:?}", self)
+    }
+}
+
+impl PartialEq for DataType {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Timestamp(l0, l1), Self::Timestamp(r0, r1)) => l0 == r0 && l1 == r1,
+            (Self::Time32(l0), Self::Time32(r0)) => l0 == r0,
+            (Self::Time64(l0), Self::Time64(r0)) => l0 == r0,
+            (Self::Duration(l0), Self::Duration(r0)) => l0 == r0,
+            (Self::Interval(l0), Self::Interval(r0)) => l0 == r0,
+            (Self::FixedSizeBinary(l0), Self::FixedSizeBinary(r0)) => l0 == r0,
+            (Self::List(l0), Self::List(r0)) => l0 == r0,
+            (Self::FixedSizeList(l0, l1), Self::FixedSizeList(r0, r1)) => l0 == r0 && l1 == r1,
+            (Self::LargeList(l0), Self::LargeList(r0)) => l0 == r0,
+            (Self::Struct(l0), Self::Struct(r0)) => l0 == r0,
+            (Self::Union(l0, l1, l2), Self::Union(r0, r1, r2)) => l0 == r0 && l1 == r1 && l2 == r2,
+            (Self::Dictionary(l0, l1), Self::Dictionary(r0, r1)) => l0 == r0 && l1 == r1,
+            (Self::Decimal(l0, l1), Self::Decimal(r0, r1)) => l0 == r0 && l1 == r1,
+            (Self::Extension(l0), Self::Extension(r0)) => l0 == r0,
+            _ => core::mem::discriminant(self) == core::mem::discriminant(other),
+        }
     }
 }
 
