@@ -10,6 +10,9 @@ mod extension;
 mod field;
 mod schema;
 
+pub use extension::get_extension_type;
+pub use extension::register_extension_type;
+pub use extension::unregister_extension_type;
 pub use extension::Extension;
 pub use field::Field;
 pub use schema::Schema;
