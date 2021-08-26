@@ -16,6 +16,7 @@
 // under the License.
 
 use crate::bitmap::Bitmap;
+use crate::datatypes::DataType;
 use crate::scalar::{PrimitiveScalar, Scalar};
 use crate::{array::*, types::NativeType};
 use crate::{
@@ -72,7 +73,10 @@ where
 
     let values = compare_values_op(lhs.values(), rhs.values(), op);
 
-    Ok(BooleanArray::from_data(values.into(), validity))
+    Ok(BooleanArray::from_data_default_type(
+        values.into(),
+        validity,
+    ))
 }
 
 /// Evaluate `op(left, right)` for [`PrimitiveArray`] and scalar using
@@ -100,7 +104,7 @@ where
         values.push(op(lhs, rhs))
     };
 
-    BooleanArray::from_data(Bitmap::from_u8_buffer(values, lhs.len()), validity)
+    BooleanArray::from_data_default_type(Bitmap::from_u8_buffer(values, lhs.len()), validity)
 }
 
 /// Perform `lhs == rhs` operation on two arrays.
@@ -225,7 +229,7 @@ pub fn compare_scalar<T: NativeType + Simd8>(
     op: Operator,
 ) -> BooleanArray {
     if !rhs.is_valid() {
-        return BooleanArray::new_null(lhs.len());
+        return BooleanArray::new_null(DataType::Boolean, lhs.len());
     }
     compare_scalar_non_null(lhs, rhs.value(), op)
 }

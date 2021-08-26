@@ -53,7 +53,10 @@ fn try_from_trusted_len_iter() {
 
 #[test]
 fn reserve() {
-    let mut a = MutableBooleanArray::from_data(MutableBitmap::new(), Some(MutableBitmap::new()));
+    let mut a = MutableBooleanArray::from_data_default_type(
+        MutableBitmap::new(),
+        Some(MutableBitmap::new()),
+    );
 
     a.reserve(10);
     assert!(a.validity().as_ref().unwrap().capacity() > 0);

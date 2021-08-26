@@ -18,7 +18,7 @@ pub fn primitive_to_boolean<T: NativeType>(from: &PrimitiveArray<T>) -> BooleanA
     let iter = from.values().iter().map(|v| *v != T::default());
     let values = Bitmap::from_trusted_len_iter(iter);
 
-    BooleanArray::from_data(values, from.validity().clone())
+    BooleanArray::from_data_default_type(values, from.validity().clone())
 }
 
 pub(super) fn primitive_to_boolean_dyn<T>(from: &dyn Array) -> Result<Box<dyn Array>>

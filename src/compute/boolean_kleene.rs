@@ -28,6 +28,12 @@ pub fn or(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
         ));
     }
 
+    if lhs.data_type() != rhs.data_type() {
+        return Err(ArrowError::InvalidArgumentError(
+            "Arrays must have the same logical type".to_string(),
+        ));
+    }
+
     let lhs_values = lhs.values();
     let rhs_values = rhs.values();
 
@@ -87,7 +93,11 @@ pub fn or(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
         }
         (None, None) => None,
     };
-    Ok(BooleanArray::from_data(lhs_values | rhs_values, validity))
+    Ok(BooleanArray::from_data(
+        lhs.data_type().clone(),
+        lhs_values | rhs_values,
+        validity,
+    ))
 }
 
 /// Logical 'and' with [Kleene logic](https://en.wikipedia.org/wiki/Three-valued_logic#Kleene_and_Priest_logics)
@@ -111,6 +121,12 @@ pub fn and(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
     if lhs.len() != rhs.len() {
         return Err(ArrowError::InvalidArgumentError(
             "Cannot perform bitwise operation on arrays of different length".to_string(),
+        ));
+    }
+
+    if lhs.data_type() != rhs.data_type() {
+        return Err(ArrowError::InvalidArgumentError(
+            "Arrays must have the same logical type".to_string(),
         ));
     }
 
@@ -172,7 +188,11 @@ pub fn and(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
         }
         (None, None) => None,
     };
-    Ok(BooleanArray::from_data(lhs_values & rhs_values, validity))
+    Ok(BooleanArray::from_data(
+        lhs.data_type().clone(),
+        lhs_values & rhs_values,
+        validity,
+    ))
 }
 
 #[cfg(test)]

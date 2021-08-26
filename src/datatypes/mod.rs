@@ -180,6 +180,38 @@ pub enum IntervalUnit {
     DayTime,
 }
 
+/// Physical data type which could be converted from DataType
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PhysicalDataType {
+    Null,
+    Boolean,
+    Int8,
+    Int16,
+    Int32,
+    Int64,
+    Int128,
+    UInt8,
+    UInt16,
+    UInt32,
+    UInt64,
+    Float16,
+    Float32,
+    Float64,
+    DaysMs,
+
+    Binary,
+    FixedSizeBinary(i32),
+    LargeBinary,
+    Utf8,
+    LargeUtf8,
+    List(Box<Field>),
+    FixedSizeList(Box<Field>, i32),
+    LargeList(Box<Field>),
+    Struct(Vec<Field>),
+    Union(Vec<Field>, Option<Vec<i32>>, bool),
+    Dictionary(Box<DataType>, Box<DataType>),
+}
+
 impl DataType {
     /// Compares the datatype with another, ignoring nested field names
     /// and metadata.
@@ -205,20 +237,44 @@ impl DataType {
         }
     }
 
-    pub(crate) fn to_physical_type(&self) -> DataType {
+    pub(crate) fn to_physical_type(&self) -> PhysicalDataType {
         match self {
-            t if t.is_phsical_type() => t.clone(),
-            DataType::Date32
+            DataType::Null => PhysicalDataType::Null,
+            DataType::Boolean => PhysicalDataType::Boolean,
+            DataType::UInt8 => PhysicalDataType::UInt8,
+            DataType::UInt16 => PhysicalDataType::UInt16,
+            DataType::UInt32 => PhysicalDataType::UInt32,
+            DataType::UInt64 => PhysicalDataType::UInt64,
+            DataType::Int8 => PhysicalDataType::Int8,
+            DataType::Int16 => PhysicalDataType::Int16,
+            DataType::Int32
+            | DataType::Date32
             | DataType::Time32(_)
-            | DataType::Interval(IntervalUnit::YearMonth) => DataType::Int32,
-
-            DataType::Date64
+            | DataType::Interval(IntervalUnit::YearMonth) => PhysicalDataType::Int32,
+            DataType::Int64
+            | DataType::Date64
             | DataType::Time64(_)
             | DataType::Timestamp(_, _)
-            | DataType::Duration(_) => DataType::Int64,
-            DataType::Extension(t) => t.data_type().clone(),
-
-            _ => unreachable!(),
+            | DataType::Duration(_) => PhysicalDataType::Int64,
+            DataType::Decimal(_, _) => PhysicalDataType::Int128,
+            DataType::Interval(IntervalUnit::DayTime) => PhysicalDataType::DaysMs,
+            DataType::Float16 => PhysicalDataType::Float16,
+            DataType::Float32 => PhysicalDataType::Float32,
+            DataType::Float64 => PhysicalDataType::Float64,
+            DataType::Utf8 => PhysicalDataType::Utf8,
+            DataType::LargeUtf8 => PhysicalDataType::LargeUtf8,
+            DataType::Binary => PhysicalDataType::Binary,
+            DataType::LargeBinary => PhysicalDataType::LargeBinary,
+            DataType::List(x) => PhysicalDataType::List(x.clone()),
+            DataType::LargeList(x) => PhysicalDataType::LargeList(x.clone()),
+            DataType::Struct(x) => PhysicalDataType::Struct(x.clone()),
+            DataType::Dictionary(k, v) => PhysicalDataType::Dictionary(k.clone(), v.clone()),
+            DataType::FixedSizeBinary(size) => PhysicalDataType::FixedSizeBinary(*size),
+            DataType::FixedSizeList(x, size) => PhysicalDataType::FixedSizeList(x.clone(), *size),
+            DataType::Union(f, ids, is_sparse) => {
+                PhysicalDataType::Union(f.clone(), ids.clone(), *is_sparse)
+            }
+            DataType::Extension(ty) => ty.data_type().to_physical_type(),
         }
     }
 

@@ -486,7 +486,7 @@ mod tests {
 
     #[test]
     fn test_boolean_min_max_empty() {
-        let a = BooleanArray::new_empty();
+        let a = BooleanArray::new_empty(DataType::Boolean);
         assert_eq!(None, min_boolean(&a));
         assert_eq!(None, max_boolean(&a));
     }

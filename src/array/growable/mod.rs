@@ -98,8 +98,8 @@ pub fn make_growable<'a>(
 
     let physical_type = data_type.to_physical_type();
     match physical_type {
-        DataType::Null => Box::new(null::GrowableNull::new()),
-        DataType::Boolean => {
+        PhysicalDataType::Null => Box::new(null::GrowableNull::new()),
+        PhysicalDataType::Boolean => {
             let arrays = arrays
                 .iter()
                 .map(|array| array.as_any().downcast_ref().unwrap())
@@ -110,26 +110,26 @@ pub fn make_growable<'a>(
                 capacity,
             ))
         }
-        DataType::Int8 => dyn_growable!(i8, arrays, use_validity, capacity),
-        DataType::Int16 => dyn_growable!(i16, arrays, use_validity, capacity),
-        DataType::Int32 => {
+        PhysicalDataType::Int8 => dyn_growable!(i8, arrays, use_validity, capacity),
+        PhysicalDataType::Int16 => dyn_growable!(i16, arrays, use_validity, capacity),
+        PhysicalDataType::Int32 => {
             dyn_growable!(i32, arrays, use_validity, capacity)
         }
-        DataType::Int64 => {
+        PhysicalDataType::Int64 => {
             dyn_growable!(i64, arrays, use_validity, capacity)
         }
-        DataType::Interval(IntervalUnit::DayTime) => {
+        PhysicalDataType::DaysMs => {
             dyn_growable!(days_ms, arrays, use_validity, capacity)
         }
-        DataType::Decimal(_, _) => dyn_growable!(i128, arrays, use_validity, capacity),
-        DataType::UInt8 => dyn_growable!(u8, arrays, use_validity, capacity),
-        DataType::UInt16 => dyn_growable!(u16, arrays, use_validity, capacity),
-        DataType::UInt32 => dyn_growable!(u32, arrays, use_validity, capacity),
-        DataType::UInt64 => dyn_growable!(u64, arrays, use_validity, capacity),
-        DataType::Float16 => unreachable!(),
-        DataType::Float32 => dyn_growable!(f32, arrays, use_validity, capacity),
-        DataType::Float64 => dyn_growable!(f64, arrays, use_validity, capacity),
-        DataType::Utf8 => {
+        PhysicalDataType::Int128 => dyn_growable!(i128, arrays, use_validity, capacity),
+        PhysicalDataType::UInt8 => dyn_growable!(u8, arrays, use_validity, capacity),
+        PhysicalDataType::UInt16 => dyn_growable!(u16, arrays, use_validity, capacity),
+        PhysicalDataType::UInt32 => dyn_growable!(u32, arrays, use_validity, capacity),
+        PhysicalDataType::UInt64 => dyn_growable!(u64, arrays, use_validity, capacity),
+        PhysicalDataType::Float16 => unreachable!(),
+        PhysicalDataType::Float32 => dyn_growable!(f32, arrays, use_validity, capacity),
+        PhysicalDataType::Float64 => dyn_growable!(f64, arrays, use_validity, capacity),
+        PhysicalDataType::Utf8 => {
             let arrays = arrays
                 .iter()
                 .map(|array| array.as_any().downcast_ref().unwrap())
@@ -140,7 +140,7 @@ pub fn make_growable<'a>(
                 capacity,
             ))
         }
-        DataType::LargeUtf8 => {
+        PhysicalDataType::LargeUtf8 => {
             let arrays = arrays
                 .iter()
                 .map(|array| array.as_any().downcast_ref().unwrap())
@@ -151,7 +151,7 @@ pub fn make_growable<'a>(
                 capacity,
             ))
         }
-        DataType::Binary => {
+        PhysicalDataType::Binary => {
             let arrays = arrays
                 .iter()
                 .map(|array| array.as_any().downcast_ref().unwrap())
@@ -162,7 +162,7 @@ pub fn make_growable<'a>(
                 capacity,
             ))
         }
-        DataType::LargeBinary => {
+        PhysicalDataType::LargeBinary => {
             let arrays = arrays
                 .iter()
                 .map(|array| array.as_any().downcast_ref().unwrap())
@@ -173,7 +173,7 @@ pub fn make_growable<'a>(
                 capacity,
             ))
         }
-        DataType::FixedSizeBinary(_) => {
+        PhysicalDataType::FixedSizeBinary(_) => {
             let arrays = arrays
                 .iter()
                 .map(|array| array.as_any().downcast_ref().unwrap())
@@ -185,7 +185,7 @@ pub fn make_growable<'a>(
             ))
         }
 
-        DataType::List(_) => {
+        PhysicalDataType::List(_) => {
             let arrays = arrays
                 .iter()
                 .map(|array| array.as_any().downcast_ref().unwrap())
@@ -196,7 +196,7 @@ pub fn make_growable<'a>(
                 capacity,
             ))
         }
-        DataType::LargeList(_) => {
+        PhysicalDataType::LargeList(_) => {
             let arrays = arrays
                 .iter()
                 .map(|array| array.as_any().downcast_ref().unwrap())
@@ -207,7 +207,7 @@ pub fn make_growable<'a>(
                 capacity,
             ))
         }
-        DataType::Struct(_) => {
+        PhysicalDataType::Struct(_) => {
             let arrays = arrays
                 .iter()
                 .map(|array| array.as_any().downcast_ref().unwrap())
@@ -218,13 +218,12 @@ pub fn make_growable<'a>(
                 capacity,
             ))
         }
-        DataType::FixedSizeList(_, _) => todo!(),
-        DataType::Union(_, _, _) => todo!(),
-        DataType::Dictionary(key_type, _) => {
+        PhysicalDataType::FixedSizeList(_, _) => todo!(),
+        PhysicalDataType::Union(_, _, _) => todo!(),
+        PhysicalDataType::Dictionary(key_type, _) => {
             with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
                 dyn_dict_growable!($T, arrays, use_validity, capacity)
             })
         }
-        _ => unreachable!(),
     }
 }

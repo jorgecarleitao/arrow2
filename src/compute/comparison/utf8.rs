@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+use crate::datatypes::DataType;
 use crate::error::{ArrowError, Result};
 use crate::scalar::{Scalar, Utf8Scalar};
 use crate::{array::*, bitmap::Bitmap};
@@ -42,7 +43,7 @@ where
         .map(|(lhs, rhs)| op(lhs, rhs));
     let values = Bitmap::from_trusted_len_iter(values);
 
-    Ok(BooleanArray::from_data(values, validity))
+    Ok(BooleanArray::from_data_default_type(values, validity))
 }
 
 /// Evaluate `op(lhs, rhs)` for [`PrimitiveArray`] and scalar using
@@ -57,7 +58,7 @@ where
     let values = lhs.values_iter().map(|lhs| op(lhs, rhs));
     let values = Bitmap::from_trusted_len_iter(values);
 
-    BooleanArray::from_data(values, validity)
+    BooleanArray::from_data_default_type(values, validity)
 }
 
 /// Perform `lhs == rhs` operation on [`StringArray`] / [`LargeStringArray`].
@@ -141,7 +142,7 @@ pub fn compare_scalar<O: Offset>(
     op: Operator,
 ) -> BooleanArray {
     if !rhs.is_valid() {
-        return BooleanArray::new_null(lhs.len());
+        return BooleanArray::new_null(DataType::Boolean, lhs.len());
     }
     compare_scalar_non_null(lhs, rhs.value(), op)
 }

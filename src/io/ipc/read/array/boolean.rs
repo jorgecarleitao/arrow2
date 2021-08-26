@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 use std::io::{Read, Seek};
 
 use crate::array::BooleanArray;
+use crate::datatypes::DataType;
 use crate::error::Result;
 
 use super::super::super::gen;
@@ -10,6 +11,7 @@ use super::super::read_basic::*;
 
 pub fn read_boolean<R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
+    data_type: DataType,
     buffers: &mut VecDeque<&gen::Schema::Buffer>,
     reader: &mut R,
     block_offset: u64,
@@ -35,7 +37,7 @@ pub fn read_boolean<R: Read + Seek>(
         is_little_endian,
         None,
     )?;
-    Ok(BooleanArray::from_data(values, validity))
+    Ok(BooleanArray::from_data(data_type, values, validity))
 }
 
 pub fn skip_boolean(

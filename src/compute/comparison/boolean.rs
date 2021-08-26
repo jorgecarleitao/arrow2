@@ -42,11 +42,21 @@ where
         ));
     }
 
+    if lhs.data_type() != rhs.data_type() {
+        return Err(ArrowError::InvalidArgumentError(
+            "Arrays must have the same logical type".to_string(),
+        ));
+    }
+
     let validity = combine_validities(lhs.validity(), rhs.validity());
 
     let values = compare_values_op(lhs.values(), rhs.values(), op);
 
-    Ok(BooleanArray::from_data(values.into(), validity))
+    Ok(BooleanArray::from_data(
+        lhs.data_type().clone(),
+        values.into(),
+        validity,
+    ))
 }
 
 /// Evaluate `op(left, right)` for [`BooleanArray`] and scalar using
@@ -67,7 +77,7 @@ where
         values.push(op(lhs_remainder, rhs))
     };
     let values = MutableBitmap::from_buffer(values, lhs.len()).into();
-    BooleanArray::from_data(values, lhs.validity().clone())
+    BooleanArray::from_data_default_type(values, lhs.validity().clone())
 }
 
 /// Perform `lhs == rhs` operation on two arrays.
@@ -148,7 +158,7 @@ pub fn compare(lhs: &BooleanArray, rhs: &BooleanArray, op: Operator) -> Result<B
 
 pub fn compare_scalar(lhs: &BooleanArray, rhs: &BooleanScalar, op: Operator) -> BooleanArray {
     if !rhs.is_valid() {
-        return BooleanArray::new_null(lhs.len());
+        return BooleanArray::new_null(lhs.data_type().clone(), lhs.len());
     }
     compare_scalar_non_null(lhs, rhs.value(), op)
 }

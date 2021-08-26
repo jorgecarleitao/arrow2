@@ -1,6 +1,6 @@
 use crate::array::*;
 use crate::bitmap::Bitmap;
-use crate::datatypes::{DataType, IntervalUnit};
+use crate::datatypes::{DataType, PhysicalDataType};
 use crate::types::days_ms;
 
 fn validity_size(validity: &Option<Bitmap>) -> usize {
@@ -50,7 +50,7 @@ macro_rules! dyn_dict {
 ///
 /// FFI buffers are included in this estimation.
 pub fn estimated_bytes_size(array: &dyn Array) -> usize {
-    use DataType::*;
+    use PhysicalDataType::*;
     let physical_type = array.data_type().to_physical_type();
     match physical_type {
         Null => 0,
@@ -71,8 +71,8 @@ pub fn estimated_bytes_size(array: &dyn Array) -> usize {
         Float16 => unreachable!(),
         Float32 => dyn_primitive!(array, f32),
         Float64 => dyn_primitive!(array, f64),
-        Decimal(_, _) => dyn_primitive!(array, i128),
-        Interval(IntervalUnit::DayTime) => dyn_primitive!(array, days_ms),
+        Int128 => dyn_primitive!(array, i128),
+        DaysMs => dyn_primitive!(array, days_ms),
         Binary => dyn_binary!(array, BinaryArray<i32>, i32),
         FixedSizeBinary(_) => {
             let array = array
@@ -127,17 +127,16 @@ pub fn estimated_bytes_size(array: &dyn Array) -> usize {
             types + offsets + fields
         }
         Dictionary(keys, _) => match keys.as_ref() {
-            Int8 => dyn_dict!(array, i8),
-            Int16 => dyn_dict!(array, i16),
-            Int32 => dyn_dict!(array, i32),
-            Int64 => dyn_dict!(array, i64),
-            UInt8 => dyn_dict!(array, u8),
-            UInt16 => dyn_dict!(array, u16),
-            UInt32 => dyn_dict!(array, u32),
-            UInt64 => dyn_dict!(array, u64),
+            DataType::Int8 => dyn_dict!(array, i8),
+            DataType::Int16 => dyn_dict!(array, i16),
+            DataType::Int32 => dyn_dict!(array, i32),
+            DataType::Int64 => dyn_dict!(array, i64),
+            DataType::UInt8 => dyn_dict!(array, u8),
+            DataType::UInt16 => dyn_dict!(array, u16),
+            DataType::UInt32 => dyn_dict!(array, u32),
+            DataType::UInt64 => dyn_dict!(array, u64),
             _ => unreachable!(),
         },
-        _ => unreachable!(),
     }
 }
 

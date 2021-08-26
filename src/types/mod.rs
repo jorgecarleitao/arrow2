@@ -15,7 +15,7 @@ mod index;
 pub mod simd;
 pub use index::*;
 
-use crate::datatypes::{DataType, IntervalUnit, TimeUnit};
+use crate::datatypes::{DataType, IntervalUnit, PhysicalDataType};
 
 /// Trait denoting anything that has a natural logical [`DataType`].
 /// For example, [`DataType::Int32`] for `i32`.
@@ -32,7 +32,8 @@ macro_rules! create_relation {
         unsafe impl Relation for $native_ty {
             #[inline]
             fn is_valid(data_type: &DataType) -> bool {
-                matches!(data_type, $($impl_pattern)|+)
+                let physical_data_type = data_type.to_physical_type();
+                matches!(&physical_data_type, $($impl_pattern)|+)
             }
         }
     };
@@ -120,34 +121,19 @@ natural_type!(f64, DataType::Float64);
 natural_type!(days_ms, DataType::Interval(IntervalUnit::DayTime));
 natural_type!(i128, DataType::Decimal(32, 32)); // users should set the decimal when creating an array
 
-create_relation!(u8, &DataType::UInt8);
-create_relation!(u16, &DataType::UInt16);
-create_relation!(u32, &DataType::UInt32);
-create_relation!(u64, &DataType::UInt64);
-create_relation!(i8, &DataType::Int8);
-create_relation!(i16, &DataType::Int16);
-create_relation!(
-    i32,
-    &DataType::Int32
-        | &DataType::Date32
-        | &DataType::Time32(TimeUnit::Millisecond)
-        | &DataType::Time32(TimeUnit::Second)
-        | &DataType::Interval(IntervalUnit::YearMonth)
-);
+create_relation!(u8, &PhysicalDataType::UInt8);
+create_relation!(u16, &PhysicalDataType::UInt16);
+create_relation!(u32, &PhysicalDataType::UInt32);
+create_relation!(u64, &PhysicalDataType::UInt64);
+create_relation!(i8, &PhysicalDataType::Int8);
+create_relation!(i16, &PhysicalDataType::Int16);
+create_relation!(i32, &PhysicalDataType::Int32);
 
-create_relation!(
-    i64,
-    &DataType::Int64
-        | &DataType::Date64
-        | &DataType::Time64(TimeUnit::Microsecond)
-        | &DataType::Time64(TimeUnit::Nanosecond)
-        | &DataType::Timestamp(_, _)
-        | &DataType::Duration(_)
-);
+create_relation!(i64, &PhysicalDataType::Int64);
 
-create_relation!(i128, &DataType::Decimal(_, _));
-create_relation!(f32, &DataType::Float32);
-create_relation!(f64, &DataType::Float64);
+create_relation!(i128, &PhysicalDataType::Int128);
+create_relation!(f32, &PhysicalDataType::Float32);
+create_relation!(f64, &PhysicalDataType::Float64);
 
 /// The in-memory representation of the DayMillisecond variant of arrow's "Interval" logical type.
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash)]
@@ -210,7 +196,7 @@ unsafe impl NativeType for days_ms {
     }
 }
 
-create_relation!(days_ms, &DataType::Interval(IntervalUnit::DayTime));
+create_relation!(days_ms, &PhysicalDataType::DaysMs);
 
 impl days_ms {
     #[inline]

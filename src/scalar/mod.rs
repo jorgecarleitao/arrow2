@@ -82,7 +82,7 @@ macro_rules! dyn_new_list {
 
 /// creates a new [`Scalar`] from an [`Array`].
 pub fn new_scalar(array: &dyn Array, index: usize) -> Box<dyn Scalar> {
-    use DataType::*;
+    use PhysicalDataType::*;
 
     let physical_type = array.data_type().to_physical_type();
     match physical_type {
@@ -102,12 +102,12 @@ pub fn new_scalar(array: &dyn Array, index: usize) -> Box<dyn Scalar> {
             dyn_new!(array, index, i32)
         }
         Int64 => dyn_new!(array, index, i64),
-        Interval(IntervalUnit::DayTime) => dyn_new!(array, index, days_ms),
+        DaysMs => dyn_new!(array, index, days_ms),
         UInt8 => dyn_new!(array, index, u8),
         UInt16 => dyn_new!(array, index, u16),
         UInt32 => dyn_new!(array, index, u32),
         UInt64 => dyn_new!(array, index, u64),
-        Decimal(_, _) => dyn_new!(array, index, i128),
+        Int128 => dyn_new!(array, index, i128),
         Float16 => unreachable!(),
         Float32 => dyn_new!(array, index, f32),
         Float64 => dyn_new!(array, index, f64),
@@ -134,6 +134,5 @@ pub fn new_scalar(array: &dyn Array, index: usize) -> Box<dyn Scalar> {
         FixedSizeList(_, _) => todo!(),
         Union(_, _, _) => todo!(),
         Dictionary(_, _) => todo!(),
-        _ => unreachable!(),
     }
 }

@@ -210,7 +210,11 @@ where
         )?
     }
 
-    let values = Arc::new(BooleanArray::from_data(values.into(), validity.into()));
+    let values = Arc::new(BooleanArray::from_data(
+        data_type.clone(),
+        values.into(),
+        validity.into(),
+    ));
 
     create_list(data_type, &mut nested, values)
 }

@@ -36,10 +36,15 @@ pub fn read<R: Read + Seek>(
             let array = read_null(field_nodes);
             Ok(Arc::new(array))
         }
-        DataType::Boolean => {
-            read_boolean(field_nodes, buffers, reader, block_offset, is_little_endian)
-                .map(|x| Arc::new(x) as Arc<dyn Array>)
-        }
+        DataType::Boolean => read_boolean(
+            field_nodes,
+            data_type,
+            buffers,
+            reader,
+            block_offset,
+            is_little_endian,
+        )
+        .map(|x| Arc::new(x) as Arc<dyn Array>),
         DataType::Int8 => read_primitive::<i8, _>(
             field_nodes,
             data_type,

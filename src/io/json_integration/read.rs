@@ -24,7 +24,7 @@ use crate::{
     array::*,
     bitmap::{Bitmap, MutableBitmap},
     buffer::Buffer,
-    datatypes::{DataType, Field, IntervalUnit, Schema},
+    datatypes::{DataType, Field, PhysicalDataType, Schema},
     error::{ArrowError, Result},
     record_batch::RecordBatch,
     types::{days_ms, NativeType},
@@ -221,8 +221,8 @@ pub fn to_array(
     let data_type = field.data_type();
     let physical_type = data_type.to_physical_type();
     match physical_type {
-        DataType::Null => Ok(Arc::new(NullArray::from_data(json_col.count))),
-        DataType::Boolean => {
+        PhysicalDataType::Null => Ok(Arc::new(NullArray::from_data(json_col.count))),
+        PhysicalDataType::Boolean => {
             let validity = to_validity(&json_col.validity);
             let values = json_col
                 .data
@@ -231,27 +231,31 @@ pub fn to_array(
                 .iter()
                 .map(|value| value.as_bool().unwrap())
                 .collect::<Bitmap>();
-            Ok(Arc::new(BooleanArray::from_data(values, validity)))
+            Ok(Arc::new(BooleanArray::from_data(
+                data_type.clone(),
+                values,
+                validity,
+            )))
         }
-        DataType::Int8 => Ok(Arc::new(to_primitive::<i8>(json_col, data_type.clone()))),
-        DataType::Int16 => Ok(Arc::new(to_primitive::<i16>(json_col, data_type.clone()))),
-        DataType::Int32 => Ok(Arc::new(to_primitive::<i32>(json_col, data_type.clone()))),
-        DataType::Int64 => Ok(Arc::new(to_primitive::<i64>(json_col, data_type.clone()))),
-        DataType::Interval(IntervalUnit::DayTime) => {
+        PhysicalDataType::Int8 => Ok(Arc::new(to_primitive::<i8>(json_col, data_type.clone()))),
+        PhysicalDataType::Int16 => Ok(Arc::new(to_primitive::<i16>(json_col, data_type.clone()))),
+        PhysicalDataType::Int32 => Ok(Arc::new(to_primitive::<i32>(json_col, data_type.clone()))),
+        PhysicalDataType::Int64 => Ok(Arc::new(to_primitive::<i64>(json_col, data_type.clone()))),
+        PhysicalDataType::DaysMs => {
             Ok(Arc::new(to_primitive_interval(json_col, data_type.clone())))
         }
-        DataType::Decimal(_, _) => Ok(Arc::new(to_decimal(json_col, data_type.clone()))),
-        DataType::UInt8 => Ok(Arc::new(to_primitive::<u8>(json_col, data_type.clone()))),
-        DataType::UInt16 => Ok(Arc::new(to_primitive::<u16>(json_col, data_type.clone()))),
-        DataType::UInt32 => Ok(Arc::new(to_primitive::<u32>(json_col, data_type.clone()))),
-        DataType::UInt64 => Ok(Arc::new(to_primitive::<u64>(json_col, data_type.clone()))),
-        DataType::Float32 => Ok(Arc::new(to_primitive::<f32>(json_col, data_type.clone()))),
-        DataType::Float64 => Ok(Arc::new(to_primitive::<f64>(json_col, data_type.clone()))),
-        DataType::Binary => Ok(to_binary::<i32>(json_col)),
-        DataType::LargeBinary => Ok(to_binary::<i64>(json_col)),
-        DataType::Utf8 => Ok(to_utf8::<i32>(json_col)),
-        DataType::LargeUtf8 => Ok(to_utf8::<i64>(json_col)),
-        DataType::FixedSizeBinary(_) => {
+        PhysicalDataType::Int128 => Ok(Arc::new(to_decimal(json_col, data_type.clone()))),
+        PhysicalDataType::UInt8 => Ok(Arc::new(to_primitive::<u8>(json_col, data_type.clone()))),
+        PhysicalDataType::UInt16 => Ok(Arc::new(to_primitive::<u16>(json_col, data_type.clone()))),
+        PhysicalDataType::UInt32 => Ok(Arc::new(to_primitive::<u32>(json_col, data_type.clone()))),
+        PhysicalDataType::UInt64 => Ok(Arc::new(to_primitive::<u64>(json_col, data_type.clone()))),
+        PhysicalDataType::Float32 => Ok(Arc::new(to_primitive::<f32>(json_col, data_type.clone()))),
+        PhysicalDataType::Float64 => Ok(Arc::new(to_primitive::<f64>(json_col, data_type.clone()))),
+        PhysicalDataType::Binary => Ok(to_binary::<i32>(json_col)),
+        PhysicalDataType::LargeBinary => Ok(to_binary::<i64>(json_col)),
+        PhysicalDataType::Utf8 => Ok(to_utf8::<i32>(json_col)),
+        PhysicalDataType::LargeUtf8 => Ok(to_utf8::<i64>(json_col)),
+        PhysicalDataType::FixedSizeBinary(_) => {
             let validity = to_validity(&json_col.validity);
 
             let values = json_col
@@ -269,10 +273,10 @@ pub fn to_array(
             )))
         }
 
-        DataType::List(_) => to_list::<i32>(json_col, data_type.clone(), dictionaries),
-        DataType::LargeList(_) => to_list::<i64>(json_col, data_type.clone(), dictionaries),
+        PhysicalDataType::List(_) => to_list::<i32>(json_col, data_type.clone(), dictionaries),
+        PhysicalDataType::LargeList(_) => to_list::<i64>(json_col, data_type.clone(), dictionaries),
 
-        DataType::FixedSizeList(child_field, _) => {
+        PhysicalDataType::FixedSizeList(child_field, _) => {
             let validity = to_validity(&json_col.validity);
 
             let children = &json_col.children.as_ref().unwrap()[0];
@@ -284,7 +288,7 @@ pub fn to_array(
                 validity,
             )))
         }
-        DataType::Struct(fields) => {
+        PhysicalDataType::Struct(fields) => {
             let validity = to_validity(&json_col.validity);
 
             let values = fields
@@ -296,13 +300,13 @@ pub fn to_array(
             let array = StructArray::from_data(fields.clone(), values, validity);
             Ok(Arc::new(array))
         }
-        DataType::Dictionary(key_type, _) => {
+        PhysicalDataType::Dictionary(key_type, _) => {
             with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
                 to_dictionary::<$T>(field, json_col, dictionaries)
             })
         }
-        DataType::Float16 => unreachable!(),
-        DataType::Union(fields, _, _) => {
+        PhysicalDataType::Float16 => unreachable!(),
+        PhysicalDataType::Union(fields, _, _) => {
             let fields = fields
                 .iter()
                 .zip(json_col.children.as_ref().unwrap())
@@ -347,7 +351,6 @@ pub fn to_array(
             let array = UnionArray::from_data(data_type.clone(), types, fields, offsets);
             Ok(Arc::new(array))
         }
-        _ => unreachable!(),
     }
 }
 

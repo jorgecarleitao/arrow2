@@ -16,12 +16,10 @@
 use std::any::Any;
 use std::fmt::Display;
 
+use crate::bitmap::{Bitmap, MutableBitmap};
+use crate::datatypes::{DataType, PhysicalDataType};
 use crate::error::Result;
 use crate::types::days_ms;
-use crate::{
-    bitmap::{Bitmap, MutableBitmap},
-    datatypes::{DataType, IntervalUnit},
-};
 
 /// A trait representing an immutable Arrow array. Arrow arrays are trait objects
 /// that are infalibly downcasted to concrete types according to the [`Array::data_type`].
@@ -167,41 +165,40 @@ impl Display for dyn Array {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let physical_type = self.data_type().to_physical_type();
         match physical_type {
-            DataType::Null => fmt_dyn!(self, NullArray, f),
-            DataType::Boolean => fmt_dyn!(self, BooleanArray, f),
-            DataType::Int8 => fmt_dyn!(self, PrimitiveArray<i8>, f),
-            DataType::Int16 => fmt_dyn!(self, PrimitiveArray<i16>, f),
-            DataType::Int32 => {
+            PhysicalDataType::Null => fmt_dyn!(self, NullArray, f),
+            PhysicalDataType::Boolean => fmt_dyn!(self, BooleanArray, f),
+            PhysicalDataType::Int8 => fmt_dyn!(self, PrimitiveArray<i8>, f),
+            PhysicalDataType::Int16 => fmt_dyn!(self, PrimitiveArray<i16>, f),
+            PhysicalDataType::Int32 => {
                 fmt_dyn!(self, PrimitiveArray<i32>, f)
             }
-            DataType::Interval(IntervalUnit::DayTime) => {
+            PhysicalDataType::DaysMs => {
                 fmt_dyn!(self, PrimitiveArray<days_ms>, f)
             }
-            DataType::Int64 => fmt_dyn!(self, PrimitiveArray<i64>, f),
-            DataType::Decimal(_, _) => fmt_dyn!(self, PrimitiveArray<i128>, f),
-            DataType::UInt8 => fmt_dyn!(self, PrimitiveArray<u8>, f),
-            DataType::UInt16 => fmt_dyn!(self, PrimitiveArray<u16>, f),
-            DataType::UInt32 => fmt_dyn!(self, PrimitiveArray<u32>, f),
-            DataType::UInt64 => fmt_dyn!(self, PrimitiveArray<u64>, f),
-            DataType::Float16 => unreachable!(),
-            DataType::Float32 => fmt_dyn!(self, PrimitiveArray<f32>, f),
-            DataType::Float64 => fmt_dyn!(self, PrimitiveArray<f64>, f),
-            DataType::Binary => fmt_dyn!(self, BinaryArray<i32>, f),
-            DataType::LargeBinary => fmt_dyn!(self, BinaryArray<i64>, f),
-            DataType::FixedSizeBinary(_) => fmt_dyn!(self, FixedSizeBinaryArray, f),
-            DataType::Utf8 => fmt_dyn!(self, Utf8Array::<i32>, f),
-            DataType::LargeUtf8 => fmt_dyn!(self, Utf8Array::<i64>, f),
-            DataType::List(_) => fmt_dyn!(self, ListArray::<i32>, f),
-            DataType::LargeList(_) => fmt_dyn!(self, ListArray::<i64>, f),
-            DataType::FixedSizeList(_, _) => fmt_dyn!(self, FixedSizeListArray, f),
-            DataType::Struct(_) => fmt_dyn!(self, StructArray, f),
-            DataType::Union(_, _, _) => fmt_dyn!(self, UnionArray, f),
-            DataType::Dictionary(key_type, _) => {
+            PhysicalDataType::Int64 => fmt_dyn!(self, PrimitiveArray<i64>, f),
+            PhysicalDataType::Int128 => fmt_dyn!(self, PrimitiveArray<i128>, f),
+            PhysicalDataType::UInt8 => fmt_dyn!(self, PrimitiveArray<u8>, f),
+            PhysicalDataType::UInt16 => fmt_dyn!(self, PrimitiveArray<u16>, f),
+            PhysicalDataType::UInt32 => fmt_dyn!(self, PrimitiveArray<u32>, f),
+            PhysicalDataType::UInt64 => fmt_dyn!(self, PrimitiveArray<u64>, f),
+            PhysicalDataType::Float16 => unreachable!(),
+            PhysicalDataType::Float32 => fmt_dyn!(self, PrimitiveArray<f32>, f),
+            PhysicalDataType::Float64 => fmt_dyn!(self, PrimitiveArray<f64>, f),
+            PhysicalDataType::Binary => fmt_dyn!(self, BinaryArray<i32>, f),
+            PhysicalDataType::LargeBinary => fmt_dyn!(self, BinaryArray<i64>, f),
+            PhysicalDataType::FixedSizeBinary(_) => fmt_dyn!(self, FixedSizeBinaryArray, f),
+            PhysicalDataType::Utf8 => fmt_dyn!(self, Utf8Array::<i32>, f),
+            PhysicalDataType::LargeUtf8 => fmt_dyn!(self, Utf8Array::<i64>, f),
+            PhysicalDataType::List(_) => fmt_dyn!(self, ListArray::<i32>, f),
+            PhysicalDataType::LargeList(_) => fmt_dyn!(self, ListArray::<i64>, f),
+            PhysicalDataType::FixedSizeList(_, _) => fmt_dyn!(self, FixedSizeListArray, f),
+            PhysicalDataType::Struct(_) => fmt_dyn!(self, StructArray, f),
+            PhysicalDataType::Union(_, _, _) => fmt_dyn!(self, UnionArray, f),
+            PhysicalDataType::Dictionary(key_type, _) => {
                 with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
                     fmt_dyn!(self, DictionaryArray::<$T>, f)
                 })
             }
-            _ => unreachable!(),
         }
     }
 }
@@ -210,39 +207,38 @@ impl Display for dyn Array {
 pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
     let physical_type = data_type.to_physical_type();
     match physical_type {
-        DataType::Null => Box::new(NullArray::new_empty()),
-        DataType::Boolean => Box::new(BooleanArray::new_empty()),
-        DataType::Int8 => Box::new(PrimitiveArray::<i8>::new_empty(data_type)),
-        DataType::Int16 => Box::new(PrimitiveArray::<i16>::new_empty(data_type)),
-        DataType::Int32 => Box::new(PrimitiveArray::<i32>::new_empty(data_type)),
-        DataType::Interval(IntervalUnit::DayTime) => {
-            Box::new(PrimitiveArray::<days_ms>::new_empty(data_type))
+        PhysicalDataType::Null => Box::new(NullArray::new_empty()),
+        PhysicalDataType::Boolean => Box::new(BooleanArray::new_empty(data_type)),
+        PhysicalDataType::Int8 => Box::new(PrimitiveArray::<i8>::new_empty(data_type)),
+        PhysicalDataType::Int16 => Box::new(PrimitiveArray::<i16>::new_empty(data_type)),
+        PhysicalDataType::Int32 => Box::new(PrimitiveArray::<i32>::new_empty(data_type)),
+        PhysicalDataType::DaysMs => Box::new(PrimitiveArray::<days_ms>::new_empty(data_type)),
+        PhysicalDataType::Int64 => Box::new(PrimitiveArray::<i64>::new_empty(data_type)),
+        PhysicalDataType::Int128 => Box::new(PrimitiveArray::<i128>::new_empty(data_type)),
+        PhysicalDataType::UInt8 => Box::new(PrimitiveArray::<u8>::new_empty(data_type)),
+        PhysicalDataType::UInt16 => Box::new(PrimitiveArray::<u16>::new_empty(data_type)),
+        PhysicalDataType::UInt32 => Box::new(PrimitiveArray::<u32>::new_empty(data_type)),
+        PhysicalDataType::UInt64 => Box::new(PrimitiveArray::<u64>::new_empty(data_type)),
+        PhysicalDataType::Float16 => unreachable!(),
+        PhysicalDataType::Float32 => Box::new(PrimitiveArray::<f32>::new_empty(data_type)),
+        PhysicalDataType::Float64 => Box::new(PrimitiveArray::<f64>::new_empty(data_type)),
+        PhysicalDataType::Binary => Box::new(BinaryArray::<i32>::new_empty()),
+        PhysicalDataType::LargeBinary => Box::new(BinaryArray::<i64>::new_empty()),
+        PhysicalDataType::FixedSizeBinary(_) => {
+            Box::new(FixedSizeBinaryArray::new_empty(data_type))
         }
-        DataType::Int64 => Box::new(PrimitiveArray::<i64>::new_empty(data_type)),
-        DataType::Decimal(_, _) => Box::new(PrimitiveArray::<i128>::new_empty(data_type)),
-        DataType::UInt8 => Box::new(PrimitiveArray::<u8>::new_empty(data_type)),
-        DataType::UInt16 => Box::new(PrimitiveArray::<u16>::new_empty(data_type)),
-        DataType::UInt32 => Box::new(PrimitiveArray::<u32>::new_empty(data_type)),
-        DataType::UInt64 => Box::new(PrimitiveArray::<u64>::new_empty(data_type)),
-        DataType::Float16 => unreachable!(),
-        DataType::Float32 => Box::new(PrimitiveArray::<f32>::new_empty(data_type)),
-        DataType::Float64 => Box::new(PrimitiveArray::<f64>::new_empty(data_type)),
-        DataType::Binary => Box::new(BinaryArray::<i32>::new_empty()),
-        DataType::LargeBinary => Box::new(BinaryArray::<i64>::new_empty()),
-        DataType::FixedSizeBinary(_) => Box::new(FixedSizeBinaryArray::new_empty(data_type)),
-        DataType::Utf8 => Box::new(Utf8Array::<i32>::new_empty()),
-        DataType::LargeUtf8 => Box::new(Utf8Array::<i64>::new_empty()),
-        DataType::List(_) => Box::new(ListArray::<i32>::new_empty(data_type)),
-        DataType::LargeList(_) => Box::new(ListArray::<i64>::new_empty(data_type)),
-        DataType::FixedSizeList(_, _) => Box::new(FixedSizeListArray::new_empty(data_type)),
-        DataType::Struct(fields) => Box::new(StructArray::new_empty(&fields)),
-        DataType::Union(_, _, _) => Box::new(UnionArray::new_empty(data_type)),
-        DataType::Dictionary(key_type, value_type) => {
+        PhysicalDataType::Utf8 => Box::new(Utf8Array::<i32>::new_empty()),
+        PhysicalDataType::LargeUtf8 => Box::new(Utf8Array::<i64>::new_empty()),
+        PhysicalDataType::List(_) => Box::new(ListArray::<i32>::new_empty(data_type)),
+        PhysicalDataType::LargeList(_) => Box::new(ListArray::<i64>::new_empty(data_type)),
+        PhysicalDataType::FixedSizeList(_, _) => Box::new(FixedSizeListArray::new_empty(data_type)),
+        PhysicalDataType::Struct(fields) => Box::new(StructArray::new_empty(&fields)),
+        PhysicalDataType::Union(_, _, _) => Box::new(UnionArray::new_empty(data_type)),
+        PhysicalDataType::Dictionary(key_type, value_type) => {
             with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
                 Box::new(DictionaryArray::<$T>::new_empty(*value_type))
             })
         }
-        _ => unreachable!(),
     }
 }
 
@@ -252,39 +248,42 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
 pub fn new_null_array(data_type: DataType, length: usize) -> Box<dyn Array> {
     let physical_type = data_type.to_physical_type();
     match physical_type {
-        DataType::Null => Box::new(NullArray::new_null(length)),
-        DataType::Boolean => Box::new(BooleanArray::new_null(length)),
-        DataType::Int8 => Box::new(PrimitiveArray::<i8>::new_null(data_type, length)),
-        DataType::Int16 => Box::new(PrimitiveArray::<i16>::new_null(data_type, length)),
-        DataType::Int32 => Box::new(PrimitiveArray::<i32>::new_null(data_type, length)),
-        DataType::Interval(IntervalUnit::DayTime) => {
+        PhysicalDataType::Null => Box::new(NullArray::new_null(length)),
+        PhysicalDataType::Boolean => Box::new(BooleanArray::new_null(data_type, length)),
+        PhysicalDataType::Int8 => Box::new(PrimitiveArray::<i8>::new_null(data_type, length)),
+        PhysicalDataType::Int16 => Box::new(PrimitiveArray::<i16>::new_null(data_type, length)),
+        PhysicalDataType::Int32 => Box::new(PrimitiveArray::<i32>::new_null(data_type, length)),
+        PhysicalDataType::DaysMs => {
             Box::new(PrimitiveArray::<days_ms>::new_null(data_type, length))
         }
-        DataType::Int64 => Box::new(PrimitiveArray::<i64>::new_null(data_type, length)),
-        DataType::Decimal(_, _) => Box::new(PrimitiveArray::<i128>::new_null(data_type, length)),
-        DataType::UInt8 => Box::new(PrimitiveArray::<u8>::new_null(data_type, length)),
-        DataType::UInt16 => Box::new(PrimitiveArray::<u16>::new_null(data_type, length)),
-        DataType::UInt32 => Box::new(PrimitiveArray::<u32>::new_null(data_type, length)),
-        DataType::UInt64 => Box::new(PrimitiveArray::<u64>::new_null(data_type, length)),
-        DataType::Float16 => unreachable!(),
-        DataType::Float32 => Box::new(PrimitiveArray::<f32>::new_null(data_type, length)),
-        DataType::Float64 => Box::new(PrimitiveArray::<f64>::new_null(data_type, length)),
-        DataType::Binary => Box::new(BinaryArray::<i32>::new_null(length)),
-        DataType::LargeBinary => Box::new(BinaryArray::<i64>::new_null(length)),
-        DataType::FixedSizeBinary(_) => Box::new(FixedSizeBinaryArray::new_null(data_type, length)),
-        DataType::Utf8 => Box::new(Utf8Array::<i32>::new_null(length)),
-        DataType::LargeUtf8 => Box::new(Utf8Array::<i64>::new_null(length)),
-        DataType::List(_) => Box::new(ListArray::<i32>::new_null(data_type, length)),
-        DataType::LargeList(_) => Box::new(ListArray::<i64>::new_null(data_type, length)),
-        DataType::FixedSizeList(_, _) => Box::new(FixedSizeListArray::new_null(data_type, length)),
-        DataType::Struct(fields) => Box::new(StructArray::new_null(&fields, length)),
-        DataType::Union(_, _, _) => Box::new(UnionArray::new_null(data_type, length)),
-        DataType::Dictionary(key_type, value_type) => {
+        PhysicalDataType::Int64 => Box::new(PrimitiveArray::<i64>::new_null(data_type, length)),
+        PhysicalDataType::Int128 => Box::new(PrimitiveArray::<i128>::new_null(data_type, length)),
+        PhysicalDataType::UInt8 => Box::new(PrimitiveArray::<u8>::new_null(data_type, length)),
+        PhysicalDataType::UInt16 => Box::new(PrimitiveArray::<u16>::new_null(data_type, length)),
+        PhysicalDataType::UInt32 => Box::new(PrimitiveArray::<u32>::new_null(data_type, length)),
+        PhysicalDataType::UInt64 => Box::new(PrimitiveArray::<u64>::new_null(data_type, length)),
+        PhysicalDataType::Float16 => unreachable!(),
+        PhysicalDataType::Float32 => Box::new(PrimitiveArray::<f32>::new_null(data_type, length)),
+        PhysicalDataType::Float64 => Box::new(PrimitiveArray::<f64>::new_null(data_type, length)),
+        PhysicalDataType::Binary => Box::new(BinaryArray::<i32>::new_null(length)),
+        PhysicalDataType::LargeBinary => Box::new(BinaryArray::<i64>::new_null(length)),
+        PhysicalDataType::FixedSizeBinary(_) => {
+            Box::new(FixedSizeBinaryArray::new_null(data_type, length))
+        }
+        PhysicalDataType::Utf8 => Box::new(Utf8Array::<i32>::new_null(length)),
+        PhysicalDataType::LargeUtf8 => Box::new(Utf8Array::<i64>::new_null(length)),
+        PhysicalDataType::List(_) => Box::new(ListArray::<i32>::new_null(data_type, length)),
+        PhysicalDataType::LargeList(_) => Box::new(ListArray::<i64>::new_null(data_type, length)),
+        PhysicalDataType::FixedSizeList(_, _) => {
+            Box::new(FixedSizeListArray::new_null(data_type, length))
+        }
+        PhysicalDataType::Struct(fields) => Box::new(StructArray::new_null(&fields, length)),
+        PhysicalDataType::Union(_, _, _) => Box::new(UnionArray::new_null(data_type, length)),
+        PhysicalDataType::Dictionary(key_type, value_type) => {
             with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
                 Box::new(DictionaryArray::<$T>::new_null(*value_type, length))
             })
         }
-        _ => unreachable!(),
     }
 }
 
@@ -302,39 +301,40 @@ macro_rules! clone_dyn {
 pub fn clone(array: &dyn Array) -> Box<dyn Array> {
     let physical_type = array.data_type().to_physical_type();
     match physical_type {
-        DataType::Null => clone_dyn!(array, NullArray),
-        DataType::Boolean => clone_dyn!(array, BooleanArray),
-        DataType::Int8 => clone_dyn!(array, PrimitiveArray<i8>),
-        DataType::Int16 => clone_dyn!(array, PrimitiveArray<i16>),
-        DataType::Int32 => {
+        PhysicalDataType::Null => clone_dyn!(array, NullArray),
+        PhysicalDataType::Boolean => clone_dyn!(array, BooleanArray),
+        PhysicalDataType::Int8 => clone_dyn!(array, PrimitiveArray<i8>),
+        PhysicalDataType::Int16 => clone_dyn!(array, PrimitiveArray<i16>),
+        PhysicalDataType::Int32 => {
             clone_dyn!(array, PrimitiveArray<i32>)
         }
-        DataType::Interval(IntervalUnit::DayTime) => clone_dyn!(array, PrimitiveArray<days_ms>),
-        DataType::Int64 => clone_dyn!(array, PrimitiveArray<i64>),
-        DataType::Decimal(_, _) => clone_dyn!(array, PrimitiveArray<i128>),
-        DataType::UInt8 => clone_dyn!(array, PrimitiveArray<u8>),
-        DataType::UInt16 => clone_dyn!(array, PrimitiveArray<u16>),
-        DataType::UInt32 => clone_dyn!(array, PrimitiveArray<u32>),
-        DataType::UInt64 => clone_dyn!(array, PrimitiveArray<u64>),
-        DataType::Float16 => unreachable!(),
-        DataType::Float32 => clone_dyn!(array, PrimitiveArray<f32>),
-        DataType::Float64 => clone_dyn!(array, PrimitiveArray<f64>),
-        DataType::Binary => clone_dyn!(array, BinaryArray<i32>),
-        DataType::LargeBinary => clone_dyn!(array, BinaryArray<i64>),
-        DataType::FixedSizeBinary(_) => clone_dyn!(array, FixedSizeBinaryArray),
-        DataType::Utf8 => clone_dyn!(array, Utf8Array::<i32>),
-        DataType::LargeUtf8 => clone_dyn!(array, Utf8Array::<i64>),
-        DataType::List(_) => clone_dyn!(array, ListArray::<i32>),
-        DataType::LargeList(_) => clone_dyn!(array, ListArray::<i64>),
-        DataType::FixedSizeList(_, _) => clone_dyn!(array, FixedSizeListArray),
-        DataType::Struct(_) => clone_dyn!(array, StructArray),
-        DataType::Union(_, _, _) => clone_dyn!(array, UnionArray),
-        DataType::Dictionary(key_type, _) => {
+        PhysicalDataType::DaysMs => {
+            clone_dyn!(array, PrimitiveArray<days_ms>)
+        }
+        PhysicalDataType::Int64 => clone_dyn!(array, PrimitiveArray<i64>),
+        PhysicalDataType::Int128 => clone_dyn!(array, PrimitiveArray<i128>),
+        PhysicalDataType::UInt8 => clone_dyn!(array, PrimitiveArray<u8>),
+        PhysicalDataType::UInt16 => clone_dyn!(array, PrimitiveArray<u16>),
+        PhysicalDataType::UInt32 => clone_dyn!(array, PrimitiveArray<u32>),
+        PhysicalDataType::UInt64 => clone_dyn!(array, PrimitiveArray<u64>),
+        PhysicalDataType::Float16 => unreachable!(),
+        PhysicalDataType::Float32 => clone_dyn!(array, PrimitiveArray<f32>),
+        PhysicalDataType::Float64 => clone_dyn!(array, PrimitiveArray<f64>),
+        PhysicalDataType::Binary => clone_dyn!(array, BinaryArray<i32>),
+        PhysicalDataType::LargeBinary => clone_dyn!(array, BinaryArray<i64>),
+        PhysicalDataType::FixedSizeBinary(_) => clone_dyn!(array, FixedSizeBinaryArray),
+        PhysicalDataType::Utf8 => clone_dyn!(array, Utf8Array::<i32>),
+        PhysicalDataType::LargeUtf8 => clone_dyn!(array, Utf8Array::<i64>),
+        PhysicalDataType::List(_) => clone_dyn!(array, ListArray::<i32>),
+        PhysicalDataType::LargeList(_) => clone_dyn!(array, ListArray::<i64>),
+        PhysicalDataType::FixedSizeList(_, _) => clone_dyn!(array, FixedSizeListArray),
+        PhysicalDataType::Struct(_) => clone_dyn!(array, StructArray),
+        PhysicalDataType::Union(_, _, _) => clone_dyn!(array, UnionArray),
+        PhysicalDataType::Dictionary(key_type, _) => {
             with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
-                clone_dyn!(array, DictionaryArray::<$T>)
+            clone_dyn!(array, DictionaryArray::<$T>)
             })
         }
-        _ => unreachable!(),
     }
 }
 

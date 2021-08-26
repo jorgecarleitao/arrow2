@@ -32,6 +32,12 @@ where
         ));
     }
 
+    if lhs.data_type() != rhs.data_type() {
+        return Err(ArrowError::InvalidArgumentError(
+            "Arrays must have the same logical type".to_string(),
+        ));
+    }
+
     let validity = combine_validities(lhs.validity(), rhs.validity());
 
     let left_buffer = lhs.values();
@@ -39,7 +45,11 @@ where
 
     let values = op(left_buffer, right_buffer);
 
-    Ok(BooleanArray::from_data(values, validity))
+    Ok(BooleanArray::from_data(
+        lhs.data_type().clone(),
+        values,
+        validity,
+    ))
 }
 
 /// Performs `AND` operation on two arrays. If either left or right value is null then the
@@ -93,13 +103,13 @@ pub fn or(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
 /// # fn main() {
 /// let a = BooleanArray::from(vec![Some(false), Some(true), None]);
 /// let not_a = not(&a);
-/// assert_eq!(not_a, BooleanArray::from(vec![Some(true), Some(false), None]));
+/// assert_eq!(not_a, BooleanArray::from(DataType::Boolean, vec![Some(true), Some(false), None]));
 /// # }
 /// ```
 pub fn not(array: &BooleanArray) -> BooleanArray {
     let values = !array.values();
     let validity = array.validity().clone();
-    BooleanArray::from_data(values, validity)
+    BooleanArray::from_data(array.data_type().clone(), values, validity)
 }
 
 /// Returns a non-null [BooleanArray] with whether each value of the array is null.
@@ -123,7 +133,7 @@ pub fn is_null(input: &dyn Array) -> BooleanArray {
         Some(buffer) => !buffer,
     };
 
-    BooleanArray::from_data(values, None)
+    BooleanArray::from_data_default_type(values, None)
 }
 
 /// Returns a non-null [BooleanArray] with whether each value of the array is not null.
@@ -142,7 +152,7 @@ pub fn is_not_null(input: &dyn Array) -> BooleanArray {
         None => Bitmap::from_trusted_len_iter(std::iter::repeat(true).take(input.len())),
         Some(buffer) => buffer.clone(),
     };
-    BooleanArray::from_data(values, None)
+    BooleanArray::from_data_default_type(values, None)
 }
 
 #[cfg(test)]

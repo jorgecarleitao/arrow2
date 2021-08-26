@@ -1,6 +1,7 @@
 use crate::{
     array::BooleanArray,
     bitmap::{utils::BitmapIter, MutableBitmap},
+    datatypes::DataType,
     error::{ArrowError, Result},
 };
 
@@ -67,7 +68,11 @@ fn read_optional(
     }
 }
 
-pub fn iter_to_array<I, E>(mut iter: I, metadata: &ColumnChunkMetaData) -> Result<BooleanArray>
+pub fn iter_to_array<I, E>(
+    mut iter: I,
+    metadata: &ColumnChunkMetaData,
+    data_type: DataType,
+) -> Result<BooleanArray>
 where
     ArrowError: From<E>,
     E: Clone,
@@ -85,10 +90,18 @@ where
         )?
     }
 
-    Ok(BooleanArray::from_data(values.into(), validity.into()))
+    Ok(BooleanArray::from_data(
+        data_type,
+        values.into(),
+        validity.into(),
+    ))
 }
 
-pub async fn stream_to_array<I, E>(pages: I, metadata: &ColumnChunkMetaData) -> Result<BooleanArray>
+pub async fn stream_to_array<I, E>(
+    pages: I,
+    metadata: &ColumnChunkMetaData,
+    data_type: DataType,
+) -> Result<BooleanArray>
 where
     ArrowError: From<E>,
     E: Clone,
@@ -109,7 +122,11 @@ where
         )?
     }
 
-    Ok(BooleanArray::from_data(values.into(), validity.into()))
+    Ok(BooleanArray::from_data(
+        data_type,
+        values.into(),
+        validity.into(),
+    ))
 }
 
 fn extend_from_page(

@@ -207,7 +207,7 @@ pub fn page_iter_to_array<
         Float32 => primitive::iter_to_array(iter, metadata, data_type, |x: f32| x),
         Float64 => primitive::iter_to_array(iter, metadata, data_type, |x: f64| x),
 
-        Boolean => Ok(Box::new(boolean::iter_to_array(iter, metadata)?)),
+        Boolean => Ok(Box::new(boolean::iter_to_array(iter, metadata, data_type)?)),
 
         Binary | Utf8 => binary::iter_to_array::<i32, _, _>(iter, metadata, &data_type),
         LargeBinary | LargeUtf8 => binary::iter_to_array::<i64, _, _>(iter, metadata, &data_type),
@@ -319,7 +319,9 @@ pub async fn page_stream_to_array<I: Stream<Item = std::result::Result<DataPage,
         Float32 => primitive::stream_to_array(pages, metadata, data_type, |x: f32| x).await,
         Float64 => primitive::stream_to_array(pages, metadata, data_type, |x: f64| x).await,
 
-        Boolean => Ok(Box::new(boolean::stream_to_array(pages, metadata).await?)),
+        Boolean => Ok(Box::new(
+            boolean::stream_to_array(pages, metadata, data_type).await?,
+        )),
 
         Binary | Utf8 => binary::stream_to_array::<i32, _, _>(pages, metadata, &data_type).await,
         LargeBinary | LargeUtf8 => {
