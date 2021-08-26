@@ -152,6 +152,11 @@ fn test_projection(version: &str, file_name: &str, column: usize) -> Result<()> 
 }
 
 #[test]
+fn read_generated_extension() -> Result<()> {
+    test_file("1.0.0-littleendian", "generated_extension")
+}
+
+#[test]
 fn read_projected() -> Result<()> {
     test_projection("1.0.0-littleendian", "generated_primitive", 1)?;
     test_projection("1.0.0-littleendian", "generated_dictionary", 2)?;

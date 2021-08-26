@@ -103,7 +103,7 @@ pub fn or(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
 /// # fn main() {
 /// let a = BooleanArray::from(vec![Some(false), Some(true), None]);
 /// let not_a = not(&a);
-/// assert_eq!(not_a, BooleanArray::from(DataType::Boolean, vec![Some(true), Some(false), None]));
+/// assert_eq!(not_a, BooleanArray::from(vec![Some(true), Some(false), None]));
 /// # }
 /// ```
 pub fn not(array: &BooleanArray) -> BooleanArray {
