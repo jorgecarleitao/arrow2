@@ -210,8 +210,19 @@ where
         )?
     }
 
+    let inner_data_type = match data_type {
+        DataType::List(ref inner) => inner.data_type(),
+        DataType::LargeList(ref inner) => inner.data_type(),
+        _ => {
+            return Err(ArrowError::NotYetImplemented(format!(
+                "Read nested datatype {:?}",
+                data_type
+            )))
+        }
+    };
+
     let values = Arc::new(BooleanArray::from_data(
-        data_type.clone(),
+        inner_data_type.clone(),
         values.into(),
         validity.into(),
     ));
