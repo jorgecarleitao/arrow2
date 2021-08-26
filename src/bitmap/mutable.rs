@@ -5,6 +5,7 @@ use crate::{buffer::MutableBuffer, trusted_len::TrustedLen};
 
 use super::utils::{count_zeros, fmt, get_bit, set, set_bit, BitmapIter};
 use super::Bitmap;
+use crate::buffer::bytes::Bytes;
 
 /// A container to store booleans. [`MutableBitmap`] is semantically equivalent
 /// to [`Vec<bool>`], but each value is stored as a single bit, thereby achieving a compression of 8x.
@@ -219,6 +220,12 @@ impl MutableBitmap {
     pub fn from_buffer(buffer: MutableBuffer<u8>, length: usize) -> Self {
         assert!(length <= buffer.len() * 8);
         Self { buffer, length }
+    }
+}
+
+impl From<MutableBitmap> for Bytes<u8> {
+    fn from(buffer: MutableBitmap) -> Self {
+        buffer.buffer.into()
     }
 }
 

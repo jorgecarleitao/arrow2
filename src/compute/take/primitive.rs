@@ -45,18 +45,29 @@ fn take_values_validity<T: NativeType, I: Index>(
 
     let values_values = values.values();
 
+    let mut null_count = 0usize;
     let values = indices.iter().map(|index| {
         let index = index.to_usize();
         if null_values.get_bit(index) {
             null.push(true);
         } else {
+            null_count += 1;
             null.push(false);
         }
         values_values[index]
     });
     let buffer = MutableBuffer::from_trusted_len_iter(values);
+    // Safety:
+    // null count is just computed
+    let nulls = unsafe {
+        Some(Bitmap::from_bytes_and_null_count(
+            null,
+            indices.len(),
+            null_count,
+        ))
+    };
 
-    (buffer.into(), null.into())
+    (buffer.into(), nulls)
 }
 
 // take implementation when only indices contain nulls

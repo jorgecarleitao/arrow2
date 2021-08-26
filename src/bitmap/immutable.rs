@@ -77,6 +77,30 @@ impl Bitmap {
         }
     }
 
+    /// Creates a new [`Bitmap`] from [`Bytes`], a length and a known null_count.
+    /// # Panic
+    /// Panics iff `length <= bytes.len() * 8`
+    ///
+    /// # Safety
+    ///
+    /// The caller is responsible for correctly passing the null_count
+    #[inline]
+    pub unsafe fn from_bytes_and_null_count(
+        bytes: MutableBitmap,
+        length: usize,
+        null_count: usize,
+    ) -> Self {
+        assert!(length <= bytes.len() * 8);
+        let buffer: Bytes<u8> = bytes.into();
+        debug_assert_eq!(null_count, count_zeros(&buffer, 0, length));
+        Self {
+            length,
+            offset: 0,
+            bytes: Arc::new(buffer),
+            null_count,
+        }
+    }
+
     /// Creates a new [`Bitmap`] from [`MutableBuffer`] and a length.
     /// # Panic
     /// Panics iff `length <= buffer.len() * 8`
