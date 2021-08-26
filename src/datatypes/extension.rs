@@ -103,14 +103,14 @@ pub fn register_extension_type(ex: Box<dyn Extension>) -> Result<()> {
     Ok(())
 }
 
-pub fn unregister_extension_type(ex: Box<dyn Extension>) {
+pub fn unregister_extension_type(name: &str) {
     let mut map = EXTENSION_FACTORY.write().unwrap();
-    map.remove(ex.name());
+    map.remove(name);
 }
 
-pub fn get_extension_type(ex: Box<dyn Extension>) -> Option<Arc<dyn Extension>> {
+pub fn get_extension_type(name: &str) -> Option<Arc<dyn Extension>> {
     let map = EXTENSION_FACTORY.read().unwrap();
-    let result = map.get(ex.name()).map(|f| f.clone());
+    let result = map.get(name).map(|f| f.clone());
 
     result
 }

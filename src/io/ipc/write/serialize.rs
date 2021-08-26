@@ -18,7 +18,7 @@
 use crate::{
     array::*,
     bitmap::Bitmap,
-    datatypes::{DataType, IntervalUnit},
+    datatypes::{DataType, PhysicalDataType},
     endianess::is_native_little_endian,
     io::ipc::gen::Message,
     trusted_len::TrustedLen,
@@ -346,79 +346,77 @@ pub fn write(
         array.len() as i64,
         array.null_count() as i64,
     ));
-    match array.data_type() {
-        DataType::Null => (),
-        DataType::Boolean => write_boolean(array, buffers, arrow_data, offset, is_little_endian),
-        DataType::Int8 => {
+    let physical_type = array.data_type().to_physical_type();
+    match physical_type {
+        PhysicalDataType::Null => (),
+        PhysicalDataType::Boolean => {
+            write_boolean(array, buffers, arrow_data, offset, is_little_endian)
+        }
+        PhysicalDataType::Int8 => {
             write_primitive::<i8>(array, buffers, arrow_data, offset, is_little_endian)
         }
-        DataType::Int16 => {
+        PhysicalDataType::Int16 => {
             write_primitive::<i16>(array, buffers, arrow_data, offset, is_little_endian)
         }
-        DataType::Int32
-        | DataType::Date32
-        | DataType::Time32(_)
-        | DataType::Interval(IntervalUnit::YearMonth) => {
+        PhysicalDataType::Int32 => {
             write_primitive::<i32>(array, buffers, arrow_data, offset, is_little_endian)
         }
-        DataType::Int64
-        | DataType::Date64
-        | DataType::Time64(_)
-        | DataType::Timestamp(_, _)
-        | DataType::Duration(_) => {
+        PhysicalDataType::Int64 => {
             write_primitive::<i64>(array, buffers, arrow_data, offset, is_little_endian)
         }
-        DataType::Decimal(_, _) => {
+        PhysicalDataType::Int128 => {
             write_primitive::<i128>(array, buffers, arrow_data, offset, is_little_endian)
         }
-        DataType::Interval(IntervalUnit::DayTime) => {
+        PhysicalDataType::DaysMs => {
             write_primitive::<days_ms>(array, buffers, arrow_data, offset, is_little_endian)
         }
-        DataType::UInt8 => {
+        PhysicalDataType::UInt8 => {
             write_primitive::<u8>(array, buffers, arrow_data, offset, is_little_endian)
         }
-        DataType::UInt16 => {
+        PhysicalDataType::UInt16 => {
             write_primitive::<u16>(array, buffers, arrow_data, offset, is_little_endian)
         }
-        DataType::UInt32 => {
+        PhysicalDataType::UInt32 => {
             write_primitive::<u32>(array, buffers, arrow_data, offset, is_little_endian)
         }
-        DataType::UInt64 => {
+        PhysicalDataType::UInt64 => {
             write_primitive::<u64>(array, buffers, arrow_data, offset, is_little_endian)
         }
-        DataType::Float16 => unreachable!(),
-        DataType::Float32 => {
+        PhysicalDataType::Float16 => unreachable!(),
+        PhysicalDataType::Float32 => {
             write_primitive::<f32>(array, buffers, arrow_data, offset, is_little_endian)
         }
-        DataType::Float64 => {
+        PhysicalDataType::Float64 => {
             write_primitive::<f64>(array, buffers, arrow_data, offset, is_little_endian)
         }
-        DataType::Binary => {
+        PhysicalDataType::Binary => {
             write_binary::<i32>(array, buffers, arrow_data, offset, is_little_endian)
         }
-        DataType::LargeBinary => {
+        PhysicalDataType::LargeBinary => {
             write_binary::<i64>(array, buffers, arrow_data, offset, is_little_endian)
         }
-        DataType::FixedSizeBinary(_) => {
+        PhysicalDataType::FixedSizeBinary(_) => {
             write_fixed_size_binary(array, buffers, arrow_data, offset, is_little_endian)
         }
-        DataType::Utf8 => write_utf8::<i32>(array, buffers, arrow_data, offset, is_little_endian),
-        DataType::LargeUtf8 => {
+        PhysicalDataType::Utf8 => {
+            write_utf8::<i32>(array, buffers, arrow_data, offset, is_little_endian)
+        }
+        PhysicalDataType::LargeUtf8 => {
             write_utf8::<i64>(array, buffers, arrow_data, offset, is_little_endian)
         }
-        DataType::List(_) => {
+        PhysicalDataType::List(_) => {
             write_list::<i32>(array, buffers, arrow_data, nodes, offset, is_little_endian)
         }
-        DataType::LargeList(_) => {
+        PhysicalDataType::LargeList(_) => {
             write_list::<i64>(array, buffers, arrow_data, nodes, offset, is_little_endian)
         }
-        DataType::FixedSizeList(_, _) => {
+        PhysicalDataType::FixedSizeList(_, _) => {
             write_fixed_size_list(array, buffers, arrow_data, nodes, offset, is_little_endian)
         }
-        DataType::Struct(_) => {
+        PhysicalDataType::Struct(_) => {
             write_struct(array, buffers, arrow_data, nodes, offset, is_little_endian)
         }
-        DataType::Dictionary(_, _) => {
+        PhysicalDataType::Dictionary(_, _) => {
             write_dictionary(
                 array,
                 buffers,
@@ -429,11 +427,8 @@ pub fn write(
                 true,
             );
         }
-        DataType::Union(_, _, _) => {
+        PhysicalDataType::Union(_, _, _) => {
             write_union(array, buffers, arrow_data, nodes, offset, is_little_endian);
-        }
-        DataType::Extension(ex) => {
-            todo!("extension");
         }
     }
 }

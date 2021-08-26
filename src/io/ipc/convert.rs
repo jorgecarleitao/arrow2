@@ -17,7 +17,7 @@
 
 //! Utilities for converting between IPC types and native Arrow types
 
-use crate::datatypes::{DataType, Field, IntervalUnit, Schema, TimeUnit};
+use crate::datatypes::{get_extension_type, DataType, Field, IntervalUnit, Schema, TimeUnit};
 use crate::endianess::is_native_little_endian;
 use crate::io::ipc::convert::ipc::UnionMode;
 
@@ -92,6 +92,12 @@ impl<'a> From<ipc::Field<'a>> for Field {
             for kv in list {
                 if let (Some(k), Some(v)) = (kv.key(), kv.value()) {
                     metadata_map.insert(k.to_string(), v.to_string());
+                }
+            }
+
+            if let Some(v) = metadata_map.get("ARROW::extension::name") {
+                if let Some(extension) = get_extension_type(v) {
+                    arrow_field.data_type = DataType::Extension(extension);
                 }
             }
             metadata = Some(metadata_map);
@@ -658,9 +664,7 @@ pub(crate) fn get_fb_field_type<'a>(
                 children: Some(fbb.create_vector(&children)),
             }
         }
-        Extension(ex) => {
-            todo!("extension");
-        }
+        Extension(ex) => get_fb_field_type(ex.data_type(), is_nullable, fbb),
     }
 }
 

@@ -356,7 +356,7 @@ fn to_format(data_type: &DataType) -> String {
             r
         }
         DataType::Dictionary(index, _) => to_format(index.as_ref()),
-        DataType::Extension(ty) => format!("{:?}", ty),
+        DataType::Extension(ty) => to_format(ty.data_type()),
     }
 }
 
