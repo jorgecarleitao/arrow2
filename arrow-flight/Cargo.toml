@@ -27,10 +27,10 @@ license = "Apache-2.0"
 
 [dependencies]
 arrow2 = { path = "../", features = ["io_ipc"], default-features = false }
-tonic = "0.4"
+tonic = "0.5.2"
 bytes = "1"
-prost = "0.7"
-prost-derive = "0.7"
+prost = "0.8.0"
+prost-derive = "0.8.0"
 tokio = { version = "1.0", features = ["macros", "rt", "rt-multi-thread"] }
 futures = { version = "0.3", default-features = false, features = ["alloc"]}
 
