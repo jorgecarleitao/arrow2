@@ -30,7 +30,7 @@ pub trait Extension: std::fmt::Debug + Send + Sync {
     /// Returns physical_type
     fn data_type(&self) -> &DataType;
 
-    // Eg: metadata: Some({"ARROW:extension:metadata": "uuid-serialized", "ARROW:extension:name": "uuid"})
+    // Eg: metadata: Some({"ARROW:extension:metadata": "uuid-serialized", "ARROW::extension::name": "uuid"})
     fn metadata(&self) -> &BTreeMap<String, String>;
 
     /// Returns a function of index returning the string representation of the _value_ of `array`
@@ -86,11 +86,11 @@ lazy_static! {
 pub fn register_extension_type(ex: Box<dyn Extension>) -> Result<()> {
     // validate the metadata for the extension type
     let name = ex.name();
-    match ex.metadata().get("ARROW:extension:name") {
+    match ex.metadata().get("ARROW::extension::name") {
         Some(v) if v == name => {}
         _ => {
             return Err(ArrowError::Schema(
-                "Extension metadata must has right value in key: 'ARROW:extension:name'"
+                "Extension metadata must has right value in key: 'ARROW::extension::name'"
                     .to_string(),
             ))
         }
