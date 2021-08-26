@@ -141,7 +141,7 @@ name = "length_kernel"
 harness = false
 
 [[bench]]
-name = "null_count"
+name = "count_zeros"
 harness = false
 
 [[bench]]
