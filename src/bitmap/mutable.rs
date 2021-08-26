@@ -3,7 +3,7 @@ use std::iter::FromIterator;
 use crate::bitmap::utils::merge_reversed;
 use crate::{buffer::MutableBuffer, trusted_len::TrustedLen};
 
-use super::utils::{fmt, get_bit, null_count, set, set_bit, BitmapIter};
+use super::utils::{count_zeros, fmt, get_bit, set, set_bit, BitmapIter};
 use super::Bitmap;
 
 /// A container to store booleans. [`MutableBitmap`] is semantically equivalent
@@ -107,7 +107,7 @@ impl MutableBitmap {
     /// Returns the number of unset bits on this [`MutableBitmap`].
     #[inline]
     pub fn null_count(&self) -> usize {
-        null_count(&self.buffer, 0, self.length)
+        count_zeros(&self.buffer, 0, self.length)
     }
 
     /// Returns the length of the [`MutableBitmap`].

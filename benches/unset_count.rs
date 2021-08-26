@@ -1,4 +1,4 @@
-use arrow2::bitmap::utils::null_count;
+use arrow2::bitmap::utils::count_zeros;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
@@ -10,12 +10,12 @@ fn add_benchmark(c: &mut Criterion) {
             .map(|x| 0b01011011u8.rotate_left(x))
             .collect::<Vec<_>>();
 
-        c.bench_function(&format!("unset_count 2^{}", log2_size), |b| {
-            b.iter(|| null_count(&bytes, 0, bytes.len() * 8))
+        c.bench_function(&format!("count_zeros 2^{}", log2_size), |b| {
+            b.iter(|| count_zeros(&bytes, 0, bytes.len() * 8))
         });
 
-        c.bench_function(&format!("unset_count offset 2^{}", log2_size), |b| {
-            b.iter(|| null_count(&bytes, 10, bytes.len() * 8 - 10))
+        c.bench_function(&format!("count_zeros offset 2^{}", log2_size), |b| {
+            b.iter(|| count_zeros(&bytes, 10, bytes.len() * 8 - 10))
         });
     })
 }
