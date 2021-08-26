@@ -8,9 +8,30 @@ use crate::{
     temporal_conversions::*,
     types::NativeType,
 };
-use crate::{error::Result, util::lexical_to_string};
+use crate::{
+    error::Result,
+    util::{lexical_to_bytes, lexical_to_string},
+};
 
 use super::CastOptions;
+
+/// Returns a [`BinaryArray`] where every element is the binary representation of the number.
+pub fn primitive_to_binary<T: NativeType + lexical_core::ToLexical, O: Offset>(
+    from: &PrimitiveArray<T>,
+) -> BinaryArray<O> {
+    let iter = from.iter().map(|x| x.map(|x| lexical_to_bytes(*x)));
+
+    BinaryArray::from_trusted_len_iter(iter)
+}
+
+pub(super) fn primitive_to_binary_dyn<T, O>(from: &dyn Array) -> Result<Box<dyn Array>>
+where
+    O: Offset,
+    T: NativeType + lexical_core::ToLexical,
+{
+    let from = from.as_any().downcast_ref().unwrap();
+    Ok(Box::new(primitive_to_binary::<T, O>(from)))
+}
 
 /// Returns a [`BooleanArray`] where every element is different from zero.
 /// Validity is preserved.

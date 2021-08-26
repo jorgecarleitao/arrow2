@@ -116,7 +116,13 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (_, Dictionary(_, value_type)) => can_cast_types(from_type, value_type),
 
         (_, Boolean) => is_numeric(from_type),
-        (Boolean, _) => is_numeric(to_type) || to_type == &Utf8 || to_type == &LargeUtf8,
+        (Boolean, _) => {
+            is_numeric(to_type)
+                || to_type == &Utf8
+                || to_type == &LargeUtf8
+                || to_type == &Binary
+                || to_type == &LargeBinary
+        }
 
         (Utf8, Date32) => true,
         (Utf8, Date64) => true,
@@ -130,8 +136,11 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (LargeUtf8, _) => is_numeric(to_type),
         (_, Utf8) => is_numeric(from_type) || from_type == &Binary,
         (_, LargeUtf8) => is_numeric(from_type) || from_type == &Binary,
-        (Binary, LargeBinary) => true,
-        (LargeBinary, Binary) => true,
+
+        (Binary, _) => is_numeric(to_type) || to_type == &LargeBinary,
+        (LargeBinary, _) => is_numeric(to_type) || to_type == &Binary,
+        (_, Binary) => is_numeric(from_type),
+        (_, LargeBinary) => is_numeric(from_type),
 
         // start numeric casts
         (UInt8, UInt16) => true,
@@ -454,6 +463,8 @@ fn cast_with_options(
             Float64 => boolean_to_primitive_dyn::<f64>(array),
             Utf8 => boolean_to_utf8_dyn::<i32>(array),
             LargeUtf8 => boolean_to_utf8_dyn::<i64>(array),
+            Binary => boolean_to_binary_dyn::<i32>(array),
+            LargeBinary => boolean_to_binary_dyn::<i64>(array),
             _ => Err(ArrowError::NotYetImplemented(format!(
                 "Casting from {:?} to {:?} not supported",
                 from_type, to_type,
@@ -560,14 +571,81 @@ fn cast_with_options(
             ))),
         },
 
-        (Binary, LargeBinary) => Ok(Box::new(binary_to_large_binary(
-            array.as_any().downcast_ref().unwrap(),
-            to_type.clone(),
-        ))),
-        (LargeBinary, Binary) => {
-            binary_large_to_binary(array.as_any().downcast_ref().unwrap(), to_type.clone())
-                .map(|x| Box::new(x) as Box<dyn Array>)
-        }
+        (Binary, _) => match to_type {
+            UInt8 => binary_to_primitive_dyn::<i32, u8>(array, to_type),
+            UInt16 => binary_to_primitive_dyn::<i32, u16>(array, to_type),
+            UInt32 => binary_to_primitive_dyn::<i32, u32>(array, to_type),
+            UInt64 => binary_to_primitive_dyn::<i32, u64>(array, to_type),
+            Int8 => binary_to_primitive_dyn::<i32, i8>(array, to_type),
+            Int16 => binary_to_primitive_dyn::<i32, i16>(array, to_type),
+            Int32 => binary_to_primitive_dyn::<i32, i32>(array, to_type),
+            Int64 => binary_to_primitive_dyn::<i32, i64>(array, to_type),
+            Float32 => binary_to_primitive_dyn::<i32, f32>(array, to_type),
+            Float64 => binary_to_primitive_dyn::<i32, f64>(array, to_type),
+            LargeBinary => Ok(Box::new(binary_to_large_binary(
+                array.as_any().downcast_ref().unwrap(),
+                to_type.clone(),
+            ))),
+            _ => Err(ArrowError::NotYetImplemented(format!(
+                "Casting from {:?} to {:?} not supported",
+                from_type, to_type,
+            ))),
+        },
+
+        (LargeBinary, _) => match to_type {
+            UInt8 => binary_to_primitive_dyn::<i64, u8>(array, to_type),
+            UInt16 => binary_to_primitive_dyn::<i64, u16>(array, to_type),
+            UInt32 => binary_to_primitive_dyn::<i64, u32>(array, to_type),
+            UInt64 => binary_to_primitive_dyn::<i64, u64>(array, to_type),
+            Int8 => binary_to_primitive_dyn::<i64, i8>(array, to_type),
+            Int16 => binary_to_primitive_dyn::<i64, i16>(array, to_type),
+            Int32 => binary_to_primitive_dyn::<i64, i32>(array, to_type),
+            Int64 => binary_to_primitive_dyn::<i64, i64>(array, to_type),
+            Float32 => binary_to_primitive_dyn::<i64, f32>(array, to_type),
+            Float64 => binary_to_primitive_dyn::<i64, f64>(array, to_type),
+            Binary => {
+                binary_large_to_binary(array.as_any().downcast_ref().unwrap(), to_type.clone())
+                    .map(|x| Box::new(x) as Box<dyn Array>)
+            }
+            _ => Err(ArrowError::NotYetImplemented(format!(
+                "Casting from {:?} to {:?} not supported",
+                from_type, to_type,
+            ))),
+        },
+
+        (_, Binary) => match from_type {
+            UInt8 => primitive_to_binary_dyn::<u8, i32>(array),
+            UInt16 => primitive_to_binary_dyn::<u16, i32>(array),
+            UInt32 => primitive_to_binary_dyn::<u32, i32>(array),
+            UInt64 => primitive_to_binary_dyn::<u64, i32>(array),
+            Int8 => primitive_to_binary_dyn::<i8, i32>(array),
+            Int16 => primitive_to_binary_dyn::<i16, i32>(array),
+            Int32 => primitive_to_binary_dyn::<i32, i32>(array),
+            Int64 => primitive_to_binary_dyn::<i64, i32>(array),
+            Float32 => primitive_to_binary_dyn::<f32, i32>(array),
+            Float64 => primitive_to_binary_dyn::<f64, i32>(array),
+            _ => Err(ArrowError::NotYetImplemented(format!(
+                "Casting from {:?} to {:?} not supported",
+                from_type, to_type,
+            ))),
+        },
+
+        (_, LargeBinary) => match from_type {
+            UInt8 => primitive_to_binary_dyn::<u8, i64>(array),
+            UInt16 => primitive_to_binary_dyn::<u16, i64>(array),
+            UInt32 => primitive_to_binary_dyn::<u32, i64>(array),
+            UInt64 => primitive_to_binary_dyn::<u64, i64>(array),
+            Int8 => primitive_to_binary_dyn::<i8, i64>(array),
+            Int16 => primitive_to_binary_dyn::<i16, i64>(array),
+            Int32 => primitive_to_binary_dyn::<i32, i64>(array),
+            Int64 => primitive_to_binary_dyn::<i64, i64>(array),
+            Float32 => primitive_to_binary_dyn::<f32, i64>(array),
+            Float64 => primitive_to_binary_dyn::<f64, i64>(array),
+            _ => Err(ArrowError::NotYetImplemented(format!(
+                "Casting from {:?} to {:?} not supported",
+                from_type, to_type,
+            ))),
+        },
 
         // start numeric casts
         (UInt8, UInt16) => primitive_to_primitive_dyn::<u8, u16>(array, to_type, as_options),
@@ -755,6 +833,8 @@ fn cast_to_dictionary<K: DictionaryKey>(
         DataType::UInt64 => primitive_to_dictionary_dyn::<u64, K>(array),
         DataType::Utf8 => utf8_to_dictionary_dyn::<i32, K>(array),
         DataType::LargeUtf8 => utf8_to_dictionary_dyn::<i64, K>(array),
+        DataType::Binary => binary_to_dictionary_dyn::<i32, K>(array),
+        DataType::LargeBinary => binary_to_dictionary_dyn::<i64, K>(array),
         _ => Err(ArrowError::NotYetImplemented(format!(
             "Unsupported output type for dictionary packing: {:?}",
             dict_value_type

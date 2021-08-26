@@ -92,6 +92,12 @@ fn compare_string<'a, O: Offset>(left: &'a dyn Array, right: &'a dyn Array) -> D
     Box::new(move |i, j| left.value(i).cmp(right.value(j)))
 }
 
+fn compare_binary<'a, O: Offset>(left: &'a dyn Array, right: &'a dyn Array) -> DynComparator<'a> {
+    let left = left.as_any().downcast_ref::<BinaryArray<O>>().unwrap();
+    let right = right.as_any().downcast_ref::<BinaryArray<O>>().unwrap();
+    Box::new(move |i, j| left.value(i).cmp(right.value(j)))
+}
+
 fn compare_dict<'a, K>(
     left: &'a DictionaryArray<K>,
     right: &'a DictionaryArray<K>,
@@ -178,6 +184,8 @@ pub fn build_compare<'a>(left: &'a dyn Array, right: &'a dyn Array) -> Result<Dy
         (Float64, Float64) => compare_f64(left, right),
         (Utf8, Utf8) => compare_string::<i32>(left, right),
         (LargeUtf8, LargeUtf8) => compare_string::<i64>(left, right),
+        (Binary, Binary) => compare_binary::<i32>(left, right),
+        (LargeBinary, LargeBinary) => compare_binary::<i64>(left, right),
         (Dictionary(key_type_lhs, _), Dictionary(key_type_rhs, _)) => {
             match (key_type_lhs.as_ref(), key_type_rhs.as_ref()) {
                 (UInt8, UInt8) => dyn_dict!(u8, left, right),

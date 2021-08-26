@@ -22,6 +22,7 @@ use crate::datatypes::{DataType, IntervalUnit};
 use crate::error::{ArrowError, Result};
 use crate::scalar::Scalar;
 
+mod binary;
 mod boolean;
 mod primitive;
 mod utf8;
@@ -131,6 +132,16 @@ pub fn compare(lhs: &dyn Array, rhs: &dyn Array, operator: Operator) -> Result<B
             let rhs = rhs.as_any().downcast_ref().unwrap();
             primitive::compare::<i128>(lhs, rhs, operator)
         }
+        DataType::Binary => {
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            binary::compare::<i32>(lhs, rhs, operator)
+        }
+        DataType::LargeBinary => {
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            binary::compare::<i64>(lhs, rhs, operator)
+        }
         _ => Err(ArrowError::NotYetImplemented(format!(
             "Comparison between {:?} is not supported",
             data_type
@@ -233,6 +244,16 @@ pub fn compare_scalar(
             let rhs = rhs.as_any().downcast_ref().unwrap();
             utf8::compare_scalar::<i64>(lhs, rhs, operator)
         }
+        DataType::Binary => {
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            binary::compare_scalar::<i32>(lhs, rhs, operator)
+        }
+        DataType::LargeBinary => {
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            binary::compare_scalar::<i64>(lhs, rhs, operator)
+        }
         _ => {
             return Err(ArrowError::NotYetImplemented(format!(
                 "Comparison between {:?} is not supported",
@@ -242,6 +263,7 @@ pub fn compare_scalar(
     })
 }
 
+pub use binary::compare_scalar_non_null as binary_compare_scalar;
 pub use boolean::compare_scalar_non_null as boolean_compare_scalar;
 pub use primitive::compare_scalar_non_null as primitive_compare_scalar;
 pub(crate) use primitive::compare_values_op as primitive_compare_values_op;
@@ -259,7 +281,7 @@ pub use utf8::compare_scalar_non_null as utf8_compare_scalar;
 /// assert_eq!(can_compare(&data_type), true);
 ///
 /// let data_type = DataType::LargeBinary;
-/// assert_eq!(can_compare(&data_type), false)
+/// assert_eq!(can_compare(&data_type), true)
 /// ```
 pub fn can_compare(data_type: &DataType) -> bool {
     matches!(
@@ -285,6 +307,8 @@ pub fn can_compare(data_type: &DataType) -> bool {
             | DataType::Utf8
             | DataType::LargeUtf8
             | DataType::Decimal(_, _)
+            | DataType::Binary
+            | DataType::LargeBinary
     )
 }
 
