@@ -17,13 +17,13 @@
 use super::DataType;
 use crate::array::Array;
 use core::hash::Hash;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 pub trait Extension: std::fmt::Debug + Send + Sync {
     fn name(&self) -> &str;
     /// Returns physical_type
     fn data_type(&self) -> &DataType;
-    fn metadata(&self) -> &Option<HashMap<String, String>>;
+    fn metadata(&self) -> &Option<BTreeMap<String, String>>;
 
     /// Returns a function of index returning the string representation of the _value_ of `array`
     /// optional, fall back to the physical data_type's `get_display`

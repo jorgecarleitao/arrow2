@@ -37,13 +37,20 @@ pub struct Field {
 impl Field {
     /// Creates a new field
     pub fn new(name: &str, data_type: DataType, nullable: bool) -> Self {
+        let mut metadata = None;
+        let mut dt = data_type.clone();
+        if let DataType::Extension(v) = &data_type {
+            dt = v.data_type().clone();
+            metadata = v.metadata().clone();
+        }
+
         Field {
             name: name.to_string(),
-            data_type,
+            data_type: dt,
             nullable,
             dict_id: 0,
             dict_is_ordered: false,
-            metadata: None,
+            metadata,
         }
     }
 
