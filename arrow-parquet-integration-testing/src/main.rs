@@ -183,12 +183,13 @@ fn main() -> Result<()> {
 
     let mut writer = File::create(write_path)?;
 
-    write_file(
+    let _ = write_file(
         &mut writer,
         row_groups,
         &schema,
         parquet_schema,
         options,
         None,
-    )
+    )?;
+    Ok(())
 }

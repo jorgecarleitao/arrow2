@@ -1,8 +1,6 @@
 use parquet2::encoding::{get_length, Encoding};
-use parquet2::{
-    page::{DataPage, DataPageHeader, DataPageHeaderExt},
-    read::levels,
-};
+use parquet2::metadata::ColumnDescriptor;
+use parquet2::page::{split_buffer as _split_buffer, DataPage, DataPageHeader};
 
 use crate::error::ArrowError;
 
@@ -47,21 +45,15 @@ pub fn not_implemented(
     ))
 }
 
-pub fn split_buffer(page: &DataPage, is_optional: bool) -> (&[u8], &[u8], &'static str) {
-    match page.header() {
-        DataPageHeader::V1(header) => {
-            assert_eq!(header.definition_level_encoding(), Encoding::Rle);
+pub fn split_buffer<'a>(
+    page: &'a DataPage,
+    descriptor: &ColumnDescriptor,
+) -> (&'a [u8], &'a [u8], &'a [u8], &'static str) {
+    let (rep_levels, validity_buffer, values_buffer) = _split_buffer(page, descriptor);
 
-            let (_, validity_buffer, values_buffer) =
-                levels::split_buffer_v1(page.buffer(), false, is_optional);
-            (validity_buffer, values_buffer, "V1")
-        }
-        DataPageHeader::V2(header) => {
-            let def_level_buffer_length = header.definition_levels_byte_length as usize;
-
-            let (_, validity_buffer, values_buffer) =
-                levels::split_buffer_v2(page.buffer(), 0, def_level_buffer_length);
-            (validity_buffer, values_buffer, "V2")
-        }
-    }
+    let version = match page.header() {
+        DataPageHeader::V1(_) => "V1",
+        DataPageHeader::V2(_) => "V2",
+    };
+    (rep_levels, validity_buffer, values_buffer, version)
 }

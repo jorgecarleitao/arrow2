@@ -400,16 +400,19 @@ fn integration_write(schema: &Schema, batches: &[RecordBatch]) -> Result<Vec<u8>
     let descritors = parquet_schema.columns().to_vec().into_iter();
 
     let row_groups = batches.iter().map(|batch| {
-        let iterator = DynIter::new(batch.columns().iter().zip(descritors.clone()).map(
-            |(array, type_)| {
+        let iterator = batch
+            .columns()
+            .iter()
+            .zip(descritors.clone())
+            .map(|(array, type_)| {
                 let encoding = if let DataType::Dictionary(_, _) = array.data_type() {
                     Encoding::RleDictionary
                 } else {
                     Encoding::Plain
                 };
-                array_to_pages(array.as_ref(), type_, options, encoding)
-            },
-        ));
+                array_to_pages(array.clone(), type_, options, encoding)
+            });
+        let iterator = DynIter::new(iterator);
         Ok(iterator)
     });
 

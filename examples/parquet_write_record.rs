@@ -30,14 +30,15 @@ fn write_batch(path: &str, batch: RecordBatch) -> Result<()> {
 
     // Write the file. Note that, at present, any error results in a corrupted file.
     let parquet_schema = row_groups.parquet_schema().clone();
-    write_file(
+    let _ = write_file(
         &mut file,
         row_groups,
         &schema,
         parquet_schema,
         options,
         None,
-    )
+    )?;
+    Ok(())
 }
 
 fn main() -> Result<()> {

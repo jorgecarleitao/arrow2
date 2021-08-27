@@ -1,5 +1,5 @@
 use parquet2::{
-    encoding::{bitpacking, hybrid_rle, uleb128, Encoding},
+    encoding::{hybrid_rle, Encoding},
     page::{DataPage, PrimitivePageDict},
     types::NativeType,
 };
@@ -34,12 +34,8 @@ fn read_dict_buffer_optional<T, A, F>(
     let bit_width = indices_buffer[0];
     let indices_buffer = &indices_buffer[1..];
 
-    let (_, consumed) = uleb128::decode(indices_buffer);
-    let indices_buffer = &indices_buffer[consumed..];
-
-    let non_null_indices_len = indices_buffer.len() * 8 / bit_width as usize;
-
-    let mut indices = bitpacking::Decoder::new(indices_buffer, bit_width, non_null_indices_len);
+    let mut indices =
+        hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional);
 
     let validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
 
@@ -158,7 +154,7 @@ where
     assert_eq!(descriptor.max_rep_level(), 0);
     let is_optional = descriptor.max_def_level() == 1;
 
-    let (validity_buffer, values_buffer, version) = other_utils::split_buffer(page, is_optional);
+    let (_, validity_buffer, values_buffer, version) = other_utils::split_buffer(page, descriptor);
 
     match (&page.encoding(), page.dictionary_page(), is_optional) {
         (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
