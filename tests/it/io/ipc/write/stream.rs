@@ -30,7 +30,7 @@ fn test_file(version: &str, file_name: &str) {
     let schema = reader.schema().clone();
 
     // read expected JSON output
-    let (expected_schema, expected_batches) = read_gzip_json(version, file_name);
+    let (expected_schema, expected_batches) = read_gzip_json(version, file_name).unwrap();
 
     assert_eq!(schema.as_ref(), &expected_schema);
 

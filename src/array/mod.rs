@@ -207,6 +207,7 @@ impl Display for dyn Array {
                     fmt_dyn!(self, DictionaryArray::<$T>, f)
                 })
             }
+            DataType::Extension(_, _, _) => todo!(),
         }
     }
 }
@@ -255,6 +256,7 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
                 Box::new(DictionaryArray::<$T>::new_empty(*value_type))
             })
         }
+        DataType::Extension(_, _, _) => Box::new(ExtensionArray::new_empty(data_type)),
     }
 }
 
@@ -304,6 +306,7 @@ pub fn new_null_array(data_type: DataType, length: usize) -> Box<dyn Array> {
                 Box::new(DictionaryArray::<$T>::new_null(*value_type, length))
             })
         }
+        DataType::Extension(_, _, _) => Box::new(ExtensionArray::new_null(data_type, length)),
     }
 }
 
@@ -359,6 +362,7 @@ pub fn clone(array: &dyn Array) -> Box<dyn Array> {
                 clone_dyn!(array, DictionaryArray::<$T>)
             })
         }
+        DataType::Extension(_, _, _) => clone_dyn!(array, ExtensionArray),
     }
 }
 
@@ -366,6 +370,7 @@ mod binary;
 mod boolean;
 mod dictionary;
 mod display;
+mod extension;
 mod fixed_size_binary;
 mod fixed_size_list;
 mod list;
@@ -387,6 +392,7 @@ pub use equal::equal;
 pub use binary::{BinaryArray, MutableBinaryArray};
 pub use boolean::{BooleanArray, MutableBooleanArray};
 pub use dictionary::{DictionaryArray, DictionaryKey, MutableDictionaryArray};
+pub use extension::ExtensionArray;
 pub use fixed_size_binary::{FixedSizeBinaryArray, MutableFixedSizeBinaryArray};
 pub use fixed_size_list::{FixedSizeListArray, MutableFixedSizeListArray};
 pub use list::{ListArray, MutableListArray};

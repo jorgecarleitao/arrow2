@@ -355,6 +355,20 @@ pub fn to_array(
             let array = UnionArray::from_data(data_type.clone(), types, fields, offsets);
             Ok(Arc::new(array))
         }
+        DataType::Extension(_, inner, _) => {
+            let field = Field::new_dict(
+                field.name(),
+                inner.as_ref().clone(),
+                field.is_nullable(),
+                field.dict_id().unwrap_or(0),
+                field.dict_is_ordered().unwrap_or(false),
+            );
+            let inner = to_array(&field, json_col, dictionaries)?;
+            Ok(Arc::new(ExtensionArray::from_data(
+                data_type.clone(),
+                inner,
+            )))
+        }
     }
 }
 

@@ -23,7 +23,7 @@ use super::DataType;
 
 /// A logical [`DataType`] and its associated metadata per
 /// [Arrow specification](https://arrow.apache.org/docs/cpp/api/datatype.html)
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Field {
     pub name: String,
     pub data_type: DataType,
@@ -250,6 +250,7 @@ impl Field {
             | DataType::FixedSizeBinary(_)
             | DataType::Utf8
             | DataType::LargeUtf8
+            | DataType::Extension(_, _, _)
             | DataType::Decimal(_, _) => {
                 if self.data_type != from.data_type {
                     return Err(ArrowError::Schema(

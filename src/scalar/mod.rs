@@ -132,5 +132,9 @@ pub fn new_scalar(array: &dyn Array, index: usize) -> Box<dyn Scalar> {
         FixedSizeList(_, _) => todo!(),
         Union(_, _, _) => todo!(),
         Dictionary(_, _) => todo!(),
+        Extension(_, _, _) => {
+            let array = array.as_any().downcast_ref::<ExtensionArray>().unwrap();
+            new_scalar(array.inner(), index)
+        }
     }
 }

@@ -231,5 +231,6 @@ pub fn make_growable<'a>(
                 dyn_dict_growable!($T, arrays, use_validity, capacity)
             })
         }
+        DataType::Extension(_, _, _) => todo!(),
     }
 }

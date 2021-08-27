@@ -291,6 +291,20 @@ pub fn read<R: Read + Seek>(
             version,
         )
         .map(|x| Arc::new(x) as Arc<dyn Array>),
+        DataType::Extension(_, ref inner_data_type, _) => {
+            // extension type has the same arrow representation as its inner.
+            let inner = read(
+                field_nodes,
+                inner_data_type.as_ref().clone(),
+                buffers,
+                reader,
+                block_offset,
+                is_little_endian,
+                compression,
+                version,
+            )?;
+            Ok(Arc::new(ExtensionArray::from_data(data_type, inner)))
+        }
     }
 }
 
@@ -330,5 +344,6 @@ pub fn skip(
         DataType::Struct(_) => skip_struct(field_nodes, data_type, buffers),
         DataType::Dictionary(_, _) => skip_dictionary(field_nodes, buffers),
         DataType::Union(_, _, _) => skip_union(field_nodes, data_type, buffers),
+        DataType::Extension(_, data_type, _) => skip(field_nodes, data_type.as_ref(), buffers),
     }
 }

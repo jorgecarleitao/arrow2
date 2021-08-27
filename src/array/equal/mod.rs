@@ -8,6 +8,7 @@ use super::*;
 mod binary;
 mod boolean;
 mod dictionary;
+mod extension;
 mod fixed_size_binary;
 mod fixed_size_list;
 mod list;
@@ -126,6 +127,18 @@ impl PartialEq<StructArray> for StructArray {
 }
 
 impl PartialEq<&dyn Array> for StructArray {
+    fn eq(&self, other: &&dyn Array) -> bool {
+        equal(self, *other)
+    }
+}
+
+impl PartialEq<ExtensionArray> for ExtensionArray {
+    fn eq(&self, other: &Self) -> bool {
+        equal(self, other)
+    }
+}
+
+impl PartialEq<&dyn Array> for ExtensionArray {
     fn eq(&self, other: &&dyn Array) -> bool {
         equal(self, *other)
     }
@@ -299,6 +312,11 @@ pub fn equal(lhs: &dyn Array, rhs: &dyn Array) -> bool {
             let lhs = lhs.as_any().downcast_ref().unwrap();
             let rhs = rhs.as_any().downcast_ref().unwrap();
             union::equal(lhs, rhs)
+        }
+        DataType::Extension(_, _, _) => {
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            extension::equal(lhs, rhs)
         }
     }
 }

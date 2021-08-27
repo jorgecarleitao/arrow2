@@ -234,6 +234,10 @@ pub fn get_value_display<'a>(array: &'a dyn Array) -> Box<dyn Fn(usize) -> Strin
                 displays[field](index)
             })
         }
+        Extension(_, _, _) => {
+            let array = array.as_any().downcast_ref::<ExtensionArray>().unwrap();
+            get_value_display(array.inner())
+        }
     }
 }
 

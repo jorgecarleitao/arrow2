@@ -136,6 +136,10 @@ pub fn estimated_bytes_size(array: &dyn Array) -> usize {
             UInt64 => dyn_dict!(array, u64),
             _ => unreachable!(),
         },
+        Extension(_, _, _) => {
+            let array = array.as_any().downcast_ref::<ExtensionArray>().unwrap();
+            estimated_bytes_size(array.inner())
+        }
     }
 }
 

@@ -356,6 +356,7 @@ fn to_format(data_type: &DataType) -> String {
             r
         }
         DataType::Dictionary(index, _) => to_format(index.as_ref()),
+        DataType::Extension(_, inner, _) => to_format(inner.as_ref()),
     }
 }
 

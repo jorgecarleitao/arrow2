@@ -334,7 +334,7 @@ pub fn write_dictionary(
     }
 }
 
-pub fn write(
+fn write_array(
     array: &dyn Array,
     buffers: &mut Vec<Schema::Buffer>,
     arrow_data: &mut Vec<u8>,
@@ -342,10 +342,6 @@ pub fn write(
     offset: &mut i64,
     is_little_endian: bool,
 ) {
-    nodes.push(Message::FieldNode::new(
-        array.len() as i64,
-        array.null_count() as i64,
-    ));
     match array.data_type() {
         DataType::Null => (),
         DataType::Boolean => write_boolean(array, buffers, arrow_data, offset, is_little_endian),
@@ -432,7 +428,33 @@ pub fn write(
         DataType::Union(_, _, _) => {
             write_union(array, buffers, arrow_data, nodes, offset, is_little_endian);
         }
+        DataType::Extension(_, _, _) => {
+            let array = array.as_any().downcast_ref::<ExtensionArray>().unwrap();
+            write_array(
+                array.inner(),
+                buffers,
+                arrow_data,
+                nodes,
+                offset,
+                is_little_endian,
+            )
+        }
     }
+}
+
+pub fn write(
+    array: &dyn Array,
+    buffers: &mut Vec<Schema::Buffer>,
+    arrow_data: &mut Vec<u8>,
+    nodes: &mut Vec<Message::FieldNode>,
+    offset: &mut i64,
+    is_little_endian: bool,
+) {
+    nodes.push(Message::FieldNode::new(
+        array.len() as i64,
+        array.null_count() as i64,
+    ));
+    write_array(array, buffers, arrow_data, nodes, offset, is_little_endian)
 }
 
 /// writes `bytes` to `arrow_data` updating `buffers` and `offset` and guaranteeing a 8 byte boundary.

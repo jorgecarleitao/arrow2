@@ -27,7 +27,7 @@ pub use schema::Schema;
 /// Nested types can themselves be nested within other arrays.
 /// For more information on these types please see
 /// [the physical memory layout of Apache Arrow](https://arrow.apache.org/docs/format/Columnar.html#physical-memory-layout).
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum DataType {
     /// Null type, representing an array without values or validity, only a length.
     Null,
@@ -121,6 +121,8 @@ pub enum DataType {
     /// scale is the number of decimal places.
     /// The number 999.99 has a precision of 5 and scale of 2.
     Decimal(usize, usize),
+    /// Extension type.
+    Extension(String, Box<DataType>, Option<String>),
 }
 
 impl std::fmt::Display for DataType {
