@@ -333,8 +333,8 @@ pub(crate) struct FbFieldType<'b> {
 fn write_metadata<'a>(
     fbb: &mut FlatBufferBuilder<'a>,
     metadata: &BTreeMap<String, String>,
-) -> Vec<WIPOffset<ipc::KeyValue<'a>>> {
-    let mut kv_vec = vec![];
+    kv_vec: &mut Vec<WIPOffset<ipc::KeyValue<'a>>>,
+) {
     for (k, v) in metadata {
         if k != "ARROW:extension:name" || k != "ARROW:extension:metadata" {
             let kv_args = ipc::KeyValueArgs {
@@ -344,7 +344,6 @@ fn write_metadata<'a>(
             kv_vec.push(ipc::KeyValue::create(fbb, &kv_args));
         }
     }
-    kv_vec
 }
 
 /// Create an IPC Field from an Arrow Field
@@ -352,28 +351,32 @@ pub(crate) fn build_field<'a>(
     fbb: &mut FlatBufferBuilder<'a>,
     field: &Field,
 ) -> WIPOffset<ipc::Field<'a>> {
-    // Optional custom metadata.
-    let mut fb_metadata = None;
+    // custom metadata.
+    let mut kv_vec = vec![];
+    if let DataType::Extension(name, _, metadata) = field.data_type() {
+        // append extension information.
+        let kv_args = ipc::KeyValueArgs {
+            key: Some(fbb.create_string("ARROW:extension:name")),
+            value: Some(fbb.create_string(name.as_str())),
+        };
+        kv_vec.push(ipc::KeyValue::create(fbb, &kv_args));
+        if let Some(metadata) = metadata {
+            let kv_args = ipc::KeyValueArgs {
+                key: Some(fbb.create_string("ARROW:extension:metadata")),
+                value: Some(fbb.create_string(metadata.as_str())),
+            };
+            kv_vec.push(ipc::KeyValue::create(fbb, &kv_args));
+        }
+    }
     if let Some(metadata) = field.metadata() {
         if !metadata.is_empty() {
-            let mut kv_vec = write_metadata(fbb, metadata);
-            if let DataType::Extension(name, _, metadata) = field.data_type() {
-                // append extension information.
-                let kv_args = ipc::KeyValueArgs {
-                    key: Some(fbb.create_string("ARROW:extension:name")),
-                    value: Some(fbb.create_string(name.as_str())),
-                };
-                kv_vec.push(ipc::KeyValue::create(fbb, &kv_args));
-                if let Some(metadata) = metadata {
-                    let kv_args = ipc::KeyValueArgs {
-                        key: Some(fbb.create_string("ARROW:extension:metadata")),
-                        value: Some(fbb.create_string(metadata.as_str())),
-                    };
-                    kv_vec.push(ipc::KeyValue::create(fbb, &kv_args));
-                }
-            }
-            fb_metadata = Some(fbb.create_vector(&kv_vec));
+            write_metadata(fbb, metadata, &mut kv_vec);
         }
+    };
+    let fb_metadata = if !kv_vec.is_empty() {
+        Some(fbb.create_vector(&kv_vec))
+    } else {
+        None
     };
 
     let fb_field_name = fbb.create_string(field.name().as_str());
