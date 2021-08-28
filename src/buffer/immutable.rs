@@ -5,8 +5,14 @@ use crate::{trusted_len::TrustedLen, types::NativeType};
 use super::bytes::Bytes;
 use super::mutable::MutableBuffer;
 
-/// Buffer represents a contiguous memory region that can be shared with other buffers and across
-/// thread boundaries.
+/// [`Buffer`] is a contiguous memory region that can
+/// be shared across thread boundaries.
+/// The easiest way to think about `Buffer<T>` is being equivalent to
+/// an immutable `Vec<T>`, with the following differences:
+/// * `T` must be [`NativeType`]
+/// * clone is `O(1)`
+/// * memory is sharable across thread boundaries (it is under an `Arc`)
+/// * it supports external allocated memory (FFI)
 #[derive(Clone, PartialEq)]
 pub struct Buffer<T: NativeType> {
     /// the internal byte buffer.
