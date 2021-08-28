@@ -78,7 +78,7 @@ pub fn wrapping_dictionary_to_dictionary_keys<K1, K2>(
     from: &DictionaryArray<K1>,
 ) -> Result<DictionaryArray<K2>>
 where
-    K1: DictionaryKey + num::traits::AsPrimitive<K2>,
+    K1: DictionaryKey + num_traits::AsPrimitive<K2>,
     K2: DictionaryKey,
 {
     let keys = from.keys();

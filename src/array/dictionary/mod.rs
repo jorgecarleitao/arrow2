@@ -16,7 +16,10 @@ pub use mutable::*;
 use super::{new_empty_array, primitive::PrimitiveArray, Array};
 
 /// Trait denoting [`NativeType`]s that can be used as keys of a dictionary.
-pub trait DictionaryKey: NativeType + NaturalDataType + num::NumCast + num::FromPrimitive {}
+pub trait DictionaryKey:
+    NativeType + NaturalDataType + num_traits::NumCast + num_traits::FromPrimitive
+{
+}
 
 impl DictionaryKey for i8 {}
 impl DictionaryKey for i16 {}

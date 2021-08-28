@@ -53,8 +53,8 @@ pub(super) fn primitive_to_primitive_dyn<I, O>(
     options: CastOptions,
 ) -> Result<Box<dyn Array>>
 where
-    I: NativeType + num::NumCast + num::traits::AsPrimitive<O>,
-    O: NativeType + num::NumCast,
+    I: NativeType + num_traits::NumCast + num_traits::AsPrimitive<O>,
+    O: NativeType + num_traits::NumCast,
 {
     let from = from.as_any().downcast_ref::<PrimitiveArray<I>>().unwrap();
     if options.wrapped {
@@ -70,12 +70,12 @@ pub fn primitive_to_primitive<I, O>(
     to_type: &DataType,
 ) -> PrimitiveArray<O>
 where
-    I: NativeType + num::NumCast,
-    O: NativeType + num::NumCast,
+    I: NativeType + num_traits::NumCast,
+    O: NativeType + num_traits::NumCast,
 {
     let iter = from
         .iter()
-        .map(|v| v.and_then(|x| num::cast::cast::<I, O>(*x)));
+        .map(|v| v.and_then(|x| num_traits::cast::cast::<I, O>(*x)));
     PrimitiveArray::<O>::from_trusted_len_iter(iter).to(to_type.clone())
 }
 
@@ -86,10 +86,10 @@ pub fn primitive_as_primitive<I, O>(
     to_type: &DataType,
 ) -> PrimitiveArray<O>
 where
-    I: NativeType + num::traits::AsPrimitive<O>,
+    I: NativeType + num_traits::AsPrimitive<O>,
     O: NativeType,
 {
-    unary(from, num::traits::AsPrimitive::<O>::as_, to_type.clone())
+    unary(from, num_traits::AsPrimitive::<O>::as_, to_type.clone())
 }
 
 /// Cast [`PrimitiveArray`] to a [`PrimitiveArray`] of the same physical type.

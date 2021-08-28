@@ -19,7 +19,7 @@ pub(crate) fn encode_plain<T, R>(array: &PrimitiveArray<T>, is_optional: bool, b
 where
     T: ArrowNativeType,
     R: NativeType,
-    T: num::cast::AsPrimitive<R>,
+    T: num_traits::AsPrimitive<R>,
 {
     if is_optional {
         // append the non-null values
@@ -46,7 +46,7 @@ pub fn array_to_page<T, R>(
 where
     T: ArrowNativeType,
     R: NativeType,
-    T: num::cast::AsPrimitive<R>,
+    T: num_traits::AsPrimitive<R>,
 {
     let is_optional = is_type_nullable(descriptor.type_());
 
@@ -96,7 +96,7 @@ pub fn build_statistics<T, R>(
 where
     T: ArrowNativeType,
     R: NativeType,
-    T: num::cast::AsPrimitive<R>,
+    T: num_traits::AsPrimitive<R>,
 {
     let statistics = &PrimitiveStatistics::<R> {
         descriptor,

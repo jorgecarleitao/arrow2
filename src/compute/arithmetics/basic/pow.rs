@@ -1,5 +1,5 @@
 //! Definition of basic pow operations with primitive arrays
-use num::{checked_pow, traits::Pow, CheckedMul, One, Zero};
+use num_traits::{checked_pow, CheckedMul, One, Pow, Zero};
 
 use crate::{
     array::{Array, PrimitiveArray},

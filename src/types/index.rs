@@ -48,7 +48,7 @@ pub trait Index:
     + NaturalDataType
     + std::ops::AddAssign
     + std::ops::Sub<Output = Self>
-    + num::One
+    + num_traits::One
     + PartialOrd
 {
     fn to_usize(&self) -> usize;

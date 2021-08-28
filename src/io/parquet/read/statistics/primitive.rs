@@ -26,7 +26,7 @@ impl<T, R> From<(&ParquetPrimitiveStatistics<R>, DataType)> for PrimitiveStatist
 where
     T: NativeType,
     R: ParquetNativeType,
-    R: num::cast::AsPrimitive<T>,
+    R: num_traits::AsPrimitive<T>,
 {
     fn from((stats, data_type): (&ParquetPrimitiveStatistics<R>, DataType)) -> Self {
         Self {

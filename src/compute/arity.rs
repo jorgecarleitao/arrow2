@@ -1,18 +1,13 @@
 //! Defines kernels suitable to perform operations to primitive arrays.
 
-use num::Zero;
-
 use super::utils::combine_validities;
 use crate::{
-    bitmap::{Bitmap, MutableBitmap},
-    error::{ArrowError, Result},
-};
-
-use crate::buffer::Buffer;
-use crate::types::NativeType;
-use crate::{
     array::{Array, PrimitiveArray},
+    bitmap::{Bitmap, MutableBitmap},
+    buffer::Buffer,
     datatypes::DataType,
+    error::{ArrowError, Result},
+    types::NativeType,
 };
 
 /// Applies an unary and infallible function to a primitive array. This is the
@@ -97,7 +92,7 @@ pub fn unary_checked<I, F, O>(
 ) -> PrimitiveArray<O>
 where
     I: NativeType,
-    O: NativeType + Zero,
+    O: NativeType,
     F: Fn(I) -> Option<O>,
 {
     let mut mut_bitmap = MutableBitmap::with_capacity(array.len());
@@ -109,7 +104,7 @@ where
         }
         None => {
             mut_bitmap.push(false);
-            O::zero()
+            O::default()
         }
     });
 
@@ -247,7 +242,7 @@ pub fn binary_checked<T, D, F>(
     op: F,
 ) -> Result<PrimitiveArray<T>>
 where
-    T: NativeType + Zero,
+    T: NativeType,
     D: NativeType,
     F: Fn(T, D) -> Option<T>,
 {
@@ -270,7 +265,7 @@ where
             }
             None => {
                 mut_bitmap.push(false);
-                T::zero()
+                T::default()
             }
         });
 

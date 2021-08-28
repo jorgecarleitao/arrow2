@@ -24,7 +24,7 @@ use arrow2::util::bench_util::*;
 use arrow2::{
     compute::arithmetics::basic::div::div_scalar, datatypes::DataType, types::NativeType,
 };
-use num::NumCast;
+use num_traits::NumCast;
 use std::ops::Div;
 
 fn bench_div_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T)

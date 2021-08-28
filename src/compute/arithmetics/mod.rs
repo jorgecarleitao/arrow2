@@ -61,7 +61,7 @@ pub mod time;
 
 use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
-use num::{NumCast, Zero};
+use num_traits::{NumCast, Zero};
 
 use crate::datatypes::{DataType, TimeUnit};
 use crate::error::{ArrowError, Result};
