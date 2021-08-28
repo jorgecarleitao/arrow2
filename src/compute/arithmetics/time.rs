@@ -11,7 +11,7 @@
 
 use std::ops::{Add, Sub};
 
-use num::cast::AsPrimitive;
+use num_traits::AsPrimitive;
 
 use crate::{
     array::{Array, PrimitiveArray},

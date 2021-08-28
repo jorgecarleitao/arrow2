@@ -1,7 +1,7 @@
 //! Definition of basic div operations with primitive arrays
 use std::ops::Div;
 
-use num::{CheckedDiv, NumCast, Zero};
+use num_traits::{CheckedDiv, NumCast, Zero};
 
 use crate::datatypes::DataType;
 use crate::{

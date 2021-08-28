@@ -10,7 +10,7 @@ use crate::{
 
 pub(super) fn boolean_to_primitive_dyn<T>(array: &dyn Array) -> Result<Box<dyn Array>>
 where
-    T: NativeType + NaturalDataType + num::One,
+    T: NativeType + NaturalDataType + num_traits::One,
 {
     let array = array.as_any().downcast_ref().unwrap();
     Ok(Box::new(boolean_to_primitive::<T>(array)))
@@ -19,7 +19,7 @@ where
 /// Casts the [`BooleanArray`] to a [`PrimitiveArray`].
 pub fn boolean_to_primitive<T>(from: &BooleanArray) -> PrimitiveArray<T>
 where
-    T: NativeType + NaturalDataType + num::One,
+    T: NativeType + NaturalDataType + num_traits::One,
 {
     let iter = from
         .values()

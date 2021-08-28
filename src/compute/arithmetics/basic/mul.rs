@@ -1,10 +1,7 @@
 //! Definition of basic mul operations with primitive arrays
 use std::ops::Mul;
 
-use num::{
-    traits::{ops::overflowing::OverflowingMul, SaturatingMul},
-    CheckedMul, Zero,
-};
+use num_traits::{ops::overflowing::OverflowingMul, CheckedMul, SaturatingMul, Zero};
 
 use crate::{
     array::{Array, PrimitiveArray},

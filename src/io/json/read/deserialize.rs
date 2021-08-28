@@ -20,7 +20,7 @@ use std::{collections::hash_map::DefaultHasher, sync::Arc};
 
 use hash_hasher::HashedMap;
 use indexmap::map::IndexMap as HashMap;
-use num::NumCast;
+use num_traits::NumCast;
 use serde_json::Value;
 
 use crate::types::NaturalDataType;
@@ -80,8 +80,8 @@ fn read_int<T: NativeType + NaturalDataType + NumCast>(
     data_type: DataType,
 ) -> PrimitiveArray<T> {
     let iter = rows.iter().map(|row| match row {
-        Value::Number(number) => number.as_i64().and_then(num::cast::cast::<i64, T>),
-        Value::Bool(number) => num::cast::cast::<i32, T>(*number as i32),
+        Value::Number(number) => number.as_i64().and_then(num_traits::cast::<i64, T>),
+        Value::Bool(number) => num_traits::cast::<i32, T>(*number as i32),
         _ => None,
     });
     PrimitiveArray::from_trusted_len_iter(iter).to(data_type)
@@ -92,8 +92,8 @@ fn read_float<T: NativeType + NaturalDataType + NumCast>(
     data_type: DataType,
 ) -> PrimitiveArray<T> {
     let iter = rows.iter().map(|row| match row {
-        Value::Number(number) => number.as_f64().and_then(num::cast::cast::<f64, T>),
-        Value::Bool(number) => num::cast::cast::<i32, T>(*number as i32),
+        Value::Number(number) => number.as_f64().and_then(num_traits::cast::<f64, T>),
+        Value::Bool(number) => num_traits::cast::<i32, T>(*number as i32),
         _ => None,
     });
     PrimitiveArray::from_trusted_len_iter(iter).to(data_type)

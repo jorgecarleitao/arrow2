@@ -1,10 +1,7 @@
 //! Definition of basic add operations with primitive arrays
 use std::ops::Add;
 
-use num::{
-    traits::{ops::overflowing::OverflowingAdd, SaturatingAdd},
-    CheckedAdd, Zero,
-};
+use num_traits::{ops::overflowing::OverflowingAdd, CheckedAdd, SaturatingAdd, Zero};
 
 use crate::{
     array::{Array, PrimitiveArray},

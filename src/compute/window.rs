@@ -18,7 +18,7 @@
 //! Defines windowing functions, like `shift`ing
 
 use crate::compute::concat;
-use num::{abs, clamp};
+use num_traits::{abs, clamp};
 
 use crate::{
     array::{new_null_array, Array},

@@ -1,10 +1,7 @@
 //! Definition of basic sub operations with primitive arrays
 use std::ops::Sub;
 
-use num::{
-    traits::{ops::overflowing::OverflowingSub, SaturatingSub},
-    CheckedSub, Zero,
-};
+use num_traits::{ops::overflowing::OverflowingSub, CheckedSub, SaturatingSub, Zero};
 
 use crate::{
     array::{Array, PrimitiveArray},

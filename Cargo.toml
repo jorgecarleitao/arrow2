@@ -15,7 +15,7 @@ name = "arrow2"
 bench = false
 
 [dependencies]
-num = "^0.4"
+num-traits = "0.2"
 chrono = "^0.4"
 # To efficiently cast numbers to strings
 lexical-core = { version = "0.7", optional = true }
