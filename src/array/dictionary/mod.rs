@@ -50,10 +50,14 @@ impl<K: DictionaryKey> DictionaryArray<K> {
     /// Returns an [`DictionaryArray`] whose all elements are null
     #[inline]
     pub fn new_null(data_type: DataType, length: usize) -> Self {
-        Self::from_data(
-            PrimitiveArray::<K>::new_null(K::DATA_TYPE, length),
-            new_empty_array(data_type).into(),
-        )
+        if let DataType::Dictionary(_, data_type) = data_type {
+            Self::from_data(
+                PrimitiveArray::<K>::new_null(K::DATA_TYPE, length),
+                new_empty_array(data_type.as_ref().clone()).into(),
+            )
+        } else {
+            panic!("DictionaryArray must be initialized with DataType::Dictionary");
+        }
     }
 
     /// The canonical method to create a new [`DictionaryArray`].

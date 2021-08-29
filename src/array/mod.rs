@@ -300,9 +300,9 @@ pub fn new_null_array(data_type: DataType, length: usize) -> Box<dyn Array> {
         DataType::FixedSizeList(_, _) => Box::new(FixedSizeListArray::new_null(data_type, length)),
         DataType::Struct(_) => Box::new(StructArray::new_null(data_type, length)),
         DataType::Union(_, _, _) => Box::new(UnionArray::new_null(data_type, length)),
-        DataType::Dictionary(key_type, value_type) => {
+        DataType::Dictionary(ref key_type, _) => {
             with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
-                Box::new(DictionaryArray::<$T>::new_null(*value_type, length))
+                Box::new(DictionaryArray::<$T>::new_null(data_type, length))
             })
         }
     }
