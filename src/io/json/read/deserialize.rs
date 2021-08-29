@@ -188,7 +188,7 @@ fn read_struct(rows: &[&Value], data_type: DataType) -> StructArray {
         .map(|(_, (data_type, values))| read(&values, data_type.clone()))
         .collect::<Vec<_>>();
 
-    StructArray::from_data(fields.to_vec(), values, None)
+    StructArray::from_data(data_type, values, None)
 }
 
 fn read_dictionary<K: DictionaryKey>(rows: &[&Value], data_type: DataType) -> DictionaryArray<K> {

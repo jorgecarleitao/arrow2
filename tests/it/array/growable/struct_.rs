@@ -7,7 +7,7 @@ use arrow2::array::{
 use arrow2::bitmap::Bitmap;
 use arrow2::datatypes::{DataType, Field};
 
-fn some_values() -> (Vec<Field>, Vec<Arc<dyn Array>>) {
+fn some_values() -> (DataType, Vec<Arc<dyn Array>>) {
     let strings: Arc<dyn Array> = Arc::new(Utf8Array::<i32>::from(&[
         Some("a"),
         Some("aa"),
@@ -26,7 +26,7 @@ fn some_values() -> (Vec<Field>, Vec<Arc<dyn Array>>) {
         Field::new("f1", DataType::Utf8, true),
         Field::new("f2", DataType::Int32, true),
     ];
-    (fields, vec![strings, ints])
+    (DataType::Struct(fields), vec![strings, ints])
 }
 
 #[test]

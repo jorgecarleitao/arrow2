@@ -51,7 +51,7 @@ pub fn read_struct<R: Read + Seek>(
         })
         .collect::<Result<Vec<_>>>()?;
 
-    Ok(StructArray::from_data(fields.to_vec(), values, validity))
+    Ok(StructArray::from_data(data_type, values, validity))
 }
 
 pub fn skip_struct(

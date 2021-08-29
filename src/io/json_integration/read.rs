@@ -301,7 +301,7 @@ pub fn to_array(
                 .map(|(field, col)| to_array(field, col, dictionaries))
                 .collect::<Result<Vec<_>>>()?;
 
-            let array = StructArray::from_data(fields.clone(), values, validity);
+            let array = StructArray::from_data(data_type.clone(), values, validity);
             Ok(Arc::new(array))
         }
         DataType::Dictionary(key_type, _) => {

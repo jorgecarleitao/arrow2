@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::{
     array::{Array, StructArray},
     bitmap::MutableBitmap,
+    datatypes::DataType,
 };
 
 use super::{
@@ -68,7 +69,11 @@ impl<'a> GrowableStruct<'a> {
         let values = std::mem::take(&mut self.values);
         let values = values.into_iter().map(|mut x| x.as_arc()).collect();
 
-        StructArray::from_data(self.arrays[0].fields().to_vec(), values, validity.into())
+        StructArray::from_data(
+            DataType::Struct(self.arrays[0].fields().to_vec()),
+            values,
+            validity.into(),
+        )
     }
 }
 
@@ -116,6 +121,10 @@ impl<'a> From<GrowableStruct<'a>> for StructArray {
     fn from(val: GrowableStruct<'a>) -> Self {
         let values = val.values.into_iter().map(|mut x| x.as_arc()).collect();
 
-        StructArray::from_data(val.arrays[0].fields().to_vec(), values, val.validity.into())
+        StructArray::from_data(
+            DataType::Struct(val.arrays[0].fields().to_vec()),
+            values,
+            val.validity.into(),
+        )
     }
 }

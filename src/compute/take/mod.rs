@@ -253,7 +253,7 @@ mod tests {
             Field::new("b", DataType::Int32, true),
         ];
         StructArray::from_data(
-            fields,
+            DataType::Struct(fields),
             vec![
                 Arc::new(boolean) as Arc<dyn Array>,
                 Arc::new(int) as Arc<dyn Array>,
@@ -277,7 +277,7 @@ mod tests {
             .collect::<MutableBitmap>()
             .into();
         let expected = StructArray::from_data(
-            array.fields().to_vec(),
+            array.data_type().clone(),
             vec![
                 Arc::new(boolean) as Arc<dyn Array>,
                 Arc::new(int) as Arc<dyn Array>,

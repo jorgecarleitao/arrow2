@@ -35,21 +35,29 @@ pub struct StructArray {
 
 impl StructArray {
     /// Creates an empty [`StructArray`].
-    pub fn new_empty(fields: &[Field]) -> Self {
-        let values = fields
-            .iter()
-            .map(|field| new_empty_array(field.data_type().clone()).into())
-            .collect();
-        Self::from_data(fields.to_vec(), values, None)
+    pub fn new_empty(data_type: DataType) -> Self {
+        if let DataType::Struct(fields) = &data_type {
+            let values = fields
+                .iter()
+                .map(|field| new_empty_array(field.data_type().clone()).into())
+                .collect();
+            Self::from_data(data_type, values, None)
+        } else {
+            panic!("StructArray must be initialized with DataType::Struct");
+        }
     }
 
     /// Creates a null [`StructArray`] of length `length`.
-    pub fn new_null(fields: &[Field], length: usize) -> Self {
-        let values = fields
-            .iter()
-            .map(|field| new_null_array(field.data_type().clone(), length).into())
-            .collect();
-        Self::from_data(fields.to_vec(), values, Some(Bitmap::new_zeroed(length)))
+    pub fn new_null(data_type: DataType, length: usize) -> Self {
+        if let DataType::Struct(fields) = &data_type {
+            let values = fields
+                .iter()
+                .map(|field| new_null_array(field.data_type().clone(), length).into())
+                .collect();
+            Self::from_data(data_type, values, Some(Bitmap::new_zeroed(length)))
+        } else {
+            panic!("StructArray must be initialized with DataType::Struct");
+        }
     }
 
     /// Canonical method to create a [`StructArray`].
@@ -58,20 +66,24 @@ impl StructArray {
     /// * values's len is different from Fields' length.
     /// * any element of values has a different length than the first element.
     pub fn from_data(
-        fields: Vec<Field>,
+        data_type: DataType,
         values: Vec<Arc<dyn Array>>,
         validity: Option<Bitmap>,
     ) -> Self {
-        assert!(!fields.is_empty());
-        assert_eq!(fields.len(), values.len());
-        assert!(values.iter().all(|x| x.len() == values[0].len()));
-        if let Some(ref validity) = validity {
-            assert_eq!(values[0].len(), validity.len());
-        }
-        Self {
-            data_type: DataType::Struct(fields),
-            values,
-            validity,
+        if let DataType::Struct(fields) = &data_type {
+            assert!(!fields.is_empty());
+            assert_eq!(fields.len(), values.len());
+            assert!(values.iter().all(|x| x.len() == values[0].len()));
+            if let Some(ref validity) = validity {
+                assert_eq!(values[0].len(), validity.len());
+            }
+            Self {
+                data_type,
+                values,
+                validity,
+            }
+        } else {
+            panic!("StructArray must be initialized with DataType::Struct");
         }
     }
 
@@ -199,6 +211,6 @@ unsafe impl<A: ffi::ArrowArrayRef> FromFfi<A> for StructArray {
         if offset > 0 {
             validity = validity.map(|x| x.slice(offset, length))
         }
-        Ok(Self::from_data(fields, values, validity))
+        Ok(Self::from_data(DataType::Struct(fields), values, validity))
     }
 }

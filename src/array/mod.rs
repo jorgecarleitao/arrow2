@@ -249,7 +249,7 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
         DataType::List(_) => Box::new(ListArray::<i32>::new_empty(data_type)),
         DataType::LargeList(_) => Box::new(ListArray::<i64>::new_empty(data_type)),
         DataType::FixedSizeList(_, _) => Box::new(FixedSizeListArray::new_empty(data_type)),
-        DataType::Struct(fields) => Box::new(StructArray::new_empty(&fields)),
+        DataType::Struct(_) => Box::new(StructArray::new_empty(data_type)),
         DataType::Union(_, _, _) => Box::new(UnionArray::new_empty(data_type)),
         DataType::Dictionary(key_type, value_type) => {
             with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
@@ -298,7 +298,7 @@ pub fn new_null_array(data_type: DataType, length: usize) -> Box<dyn Array> {
         DataType::List(_) => Box::new(ListArray::<i32>::new_null(data_type, length)),
         DataType::LargeList(_) => Box::new(ListArray::<i64>::new_null(data_type, length)),
         DataType::FixedSizeList(_, _) => Box::new(FixedSizeListArray::new_null(data_type, length)),
-        DataType::Struct(fields) => Box::new(StructArray::new_null(&fields, length)),
+        DataType::Struct(_) => Box::new(StructArray::new_null(data_type, length)),
         DataType::Union(_, _, _) => Box::new(UnionArray::new_null(data_type, length)),
         DataType::Dictionary(key_type, value_type) => {
             with_match_dictionary_key_type!(key_type.as_ref(), |$T| {

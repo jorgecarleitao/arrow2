@@ -61,7 +61,7 @@ pub fn take<I: Index>(array: &StructArray, indices: &PrimitiveArray<I>) -> Resul
         .collect::<Result<_>>()?;
     let validity = take_validity(array.validity(), indices)?;
     Ok(StructArray::from_data(
-        array.fields().to_vec(),
+        array.data_type().clone(),
         values,
         validity,
     ))

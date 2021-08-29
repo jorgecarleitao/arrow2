@@ -360,7 +360,7 @@ fn write_struct() -> Result<()> {
 
     let validity = Some(Bitmap::from(&[true, false, true]));
 
-    let array = StructArray::from_data(fields, values, validity);
+    let array = StructArray::from_data(DataType::Struct(fields), values, validity);
 
     let schema = Schema::new(vec![Field::new("a", array.data_type().clone(), true)]);
 
