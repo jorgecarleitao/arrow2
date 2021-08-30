@@ -21,10 +21,7 @@ use super::ffi::ArrowArrayRef;
 use crate::array::{BooleanArray, FromFfi};
 use crate::error::{ArrowError, Result};
 use crate::types::days_ms;
-use crate::{
-    array::*,
-    datatypes::{DataType, IntervalUnit},
-};
+use crate::{array::*, datatypes::PhysicalType};
 
 /// Reads a valid `ffi` interface into a `Box<dyn Array>`
 /// # Errors
@@ -32,52 +29,39 @@ use crate::{
 /// * the data type is not supported
 /// * the interface is not valid (e.g. a null pointer)
 pub fn try_from<A: ArrowArrayRef>(array: A) -> Result<Box<dyn Array>> {
-    let array: Box<dyn Array> = match array.field().data_type() {
-        DataType::Boolean => Box::new(BooleanArray::try_from_ffi(array)?),
-        DataType::Int8 => Box::new(PrimitiveArray::<i8>::try_from_ffi(array)?),
-        DataType::Int16 => Box::new(PrimitiveArray::<i16>::try_from_ffi(array)?),
-        DataType::Int32
-        | DataType::Date32
-        | DataType::Time32(_)
-        | DataType::Interval(IntervalUnit::YearMonth) => {
-            Box::new(PrimitiveArray::<i32>::try_from_ffi(array)?)
-        }
-        DataType::Interval(IntervalUnit::DayTime) => {
-            Box::new(PrimitiveArray::<days_ms>::try_from_ffi(array)?)
-        }
-        DataType::Int64
-        | DataType::Date64
-        | DataType::Time64(_)
-        | DataType::Timestamp(_, _)
-        | DataType::Duration(_) => Box::new(PrimitiveArray::<i64>::try_from_ffi(array)?),
-        DataType::Decimal(_, _) => Box::new(PrimitiveArray::<i128>::try_from_ffi(array)?),
-        DataType::UInt8 => Box::new(PrimitiveArray::<u8>::try_from_ffi(array)?),
-        DataType::UInt16 => Box::new(PrimitiveArray::<u16>::try_from_ffi(array)?),
-        DataType::UInt32 => Box::new(PrimitiveArray::<u32>::try_from_ffi(array)?),
-        DataType::UInt64 => Box::new(PrimitiveArray::<u64>::try_from_ffi(array)?),
-        DataType::Float16 => unreachable!(),
-        DataType::Float32 => Box::new(PrimitiveArray::<f32>::try_from_ffi(array)?),
-        DataType::Float64 => Box::new(PrimitiveArray::<f64>::try_from_ffi(array)?),
-        DataType::Utf8 => Box::new(Utf8Array::<i32>::try_from_ffi(array)?),
-        DataType::LargeUtf8 => Box::new(Utf8Array::<i64>::try_from_ffi(array)?),
-        DataType::Binary => Box::new(BinaryArray::<i32>::try_from_ffi(array)?),
-        DataType::LargeBinary => Box::new(BinaryArray::<i64>::try_from_ffi(array)?),
-        DataType::List(_) => Box::new(ListArray::<i32>::try_from_ffi(array)?),
-        DataType::LargeList(_) => Box::new(ListArray::<i64>::try_from_ffi(array)?),
-        DataType::Struct(_) => Box::new(StructArray::try_from_ffi(array)?),
-        DataType::Dictionary(key_type, _) => {
-            with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
+    use PhysicalType::*;
+    Ok(match array.field().data_type().to_physical_type() {
+        Boolean => Box::new(BooleanArray::try_from_ffi(array)?),
+        Int8 => Box::new(PrimitiveArray::<i8>::try_from_ffi(array)?),
+        Int16 => Box::new(PrimitiveArray::<i16>::try_from_ffi(array)?),
+        Int32 => Box::new(PrimitiveArray::<i32>::try_from_ffi(array)?),
+        DaysMs => Box::new(PrimitiveArray::<days_ms>::try_from_ffi(array)?),
+        Int64 => Box::new(PrimitiveArray::<i64>::try_from_ffi(array)?),
+        Int128 => Box::new(PrimitiveArray::<i128>::try_from_ffi(array)?),
+        UInt8 => Box::new(PrimitiveArray::<u8>::try_from_ffi(array)?),
+        UInt16 => Box::new(PrimitiveArray::<u16>::try_from_ffi(array)?),
+        UInt32 => Box::new(PrimitiveArray::<u32>::try_from_ffi(array)?),
+        UInt64 => Box::new(PrimitiveArray::<u64>::try_from_ffi(array)?),
+        Float32 => Box::new(PrimitiveArray::<f32>::try_from_ffi(array)?),
+        Float64 => Box::new(PrimitiveArray::<f64>::try_from_ffi(array)?),
+        Utf8 => Box::new(Utf8Array::<i32>::try_from_ffi(array)?),
+        LargeUtf8 => Box::new(Utf8Array::<i64>::try_from_ffi(array)?),
+        Binary => Box::new(BinaryArray::<i32>::try_from_ffi(array)?),
+        LargeBinary => Box::new(BinaryArray::<i64>::try_from_ffi(array)?),
+        List => Box::new(ListArray::<i32>::try_from_ffi(array)?),
+        LargeList => Box::new(ListArray::<i64>::try_from_ffi(array)?),
+        Struct => Box::new(StructArray::try_from_ffi(array)?),
+        Dictionary(key_type) => {
+            with_match_physical_dictionary_key_type!(key_type, |$T| {
                 Box::new(DictionaryArray::<$T>::try_from_ffi(array)?)
             })
         }
-        DataType::Union(_, _, _) => Box::new(UnionArray::try_from_ffi(array)?),
+        Union => Box::new(UnionArray::try_from_ffi(array)?),
         data_type => {
             return Err(ArrowError::NotYetImplemented(format!(
-                "Reading DataType \"{}\" is not yet supported.",
+                "Importing PhysicalType \"{:?}\" is not yet supported.",
                 data_type
             )))
         }
-    };
-
-    Ok(array)
+    })
 }

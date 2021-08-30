@@ -1,8 +1,10 @@
 //! Metadata declarations such as [`DataType`], [`Field`] and [`Schema`].
 mod field;
+mod physical_type;
 mod schema;
 
 pub use field::Field;
+pub(crate) use physical_type::*;
 pub use schema::Schema;
 
 /// The set of datatypes that are supported by this implementation of Apache Arrow.
@@ -168,6 +170,53 @@ impl DataType {
             }
             _ => self == other,
         }
+    }
+
+    /// Returns the physical type of the logical type
+    pub(crate) fn to_physical_type(&self) -> PhysicalType {
+        use DataType::*;
+        match self {
+            Null => PhysicalType::Null,
+            Boolean => PhysicalType::Boolean,
+            Int8 => PhysicalType::Int8,
+            Int16 => PhysicalType::Int16,
+            Int32 | Date32 | Time32(_) | Interval(IntervalUnit::YearMonth) => PhysicalType::Int32,
+            Int64 | Date64 | Timestamp(_, _) | Time64(_) | Duration(_) => PhysicalType::Int64,
+            Decimal(_, _) => PhysicalType::Int128,
+            UInt8 => PhysicalType::UInt8,
+            UInt16 => PhysicalType::UInt16,
+            UInt32 => PhysicalType::UInt32,
+            UInt64 => PhysicalType::UInt64,
+            Float16 => unreachable!(),
+            Float32 => PhysicalType::Float32,
+            Float64 => PhysicalType::Float64,
+            Interval(IntervalUnit::DayTime) => PhysicalType::DaysMs,
+            Binary => PhysicalType::Binary,
+            FixedSizeBinary(_) => PhysicalType::FixedSizeBinary,
+            LargeBinary => PhysicalType::LargeBinary,
+            Utf8 => PhysicalType::Utf8,
+            LargeUtf8 => PhysicalType::LargeUtf8,
+            List(_) => PhysicalType::List,
+            FixedSizeList(_, _) => PhysicalType::FixedSizeList,
+            LargeList(_) => PhysicalType::LargeList,
+            Struct(_) => PhysicalType::Struct,
+            Union(_, _, _) => PhysicalType::Union,
+            Dictionary(key, _) => PhysicalType::Dictionary(to_dictionary_index_type(key.as_ref())),
+        }
+    }
+}
+
+fn to_dictionary_index_type(data_type: &DataType) -> DictionaryIndexType {
+    match data_type {
+        DataType::Int8 => DictionaryIndexType::Int8,
+        DataType::Int16 => DictionaryIndexType::Int16,
+        DataType::Int32 => DictionaryIndexType::Int32,
+        DataType::Int64 => DictionaryIndexType::Int64,
+        DataType::UInt8 => DictionaryIndexType::UInt8,
+        DataType::UInt16 => DictionaryIndexType::UInt16,
+        DataType::UInt32 => DictionaryIndexType::UInt32,
+        DataType::UInt64 => DictionaryIndexType::UInt64,
+        _ => ::core::unreachable!("A dictionary key type can only be of integer types"),
     }
 }
 

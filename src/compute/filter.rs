@@ -15,12 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
+use crate::array::growable::make_growable;
 use crate::array::growable::Growable;
 use crate::record_batch::RecordBatch;
-use crate::{
-    array::growable::make_growable,
-    datatypes::{DataType, IntervalUnit},
-};
 use crate::{array::*, bitmap::Bitmap, types::NativeType};
 use crate::{
     bitmap::{utils::SlicesIterator, MutableBitmap},
@@ -88,7 +85,7 @@ fn filter_growable<'a>(growable: &mut impl Growable<'a>, chunks: &[(usize, usize
         .for_each(|(start, len)| growable.extend(0, *start, *len));
 }
 
-macro_rules! dyn_build_filter {
+macro_rules! dyn_filter {
     ($ty:ty, $array:expr, $filter_count:expr, $chunks:expr) => {{
         let array = $array.as_any().downcast_ref().unwrap();
         let mut growable =
@@ -109,60 +106,42 @@ pub fn build_filter(filter: &BooleanArray) -> Result<Filter> {
     let filter_count = iter.slots();
     let chunks = iter.collect::<Vec<_>>();
 
-    Ok(Box::new(move |array: &dyn Array| match array.data_type() {
-        DataType::UInt8 => {
-            dyn_build_filter!(u8, array, filter_count, chunks)
-        }
-        DataType::UInt16 => {
-            dyn_build_filter!(u16, array, filter_count, chunks)
-        }
-        DataType::UInt32 => {
-            dyn_build_filter!(u32, array, filter_count, chunks)
-        }
-        DataType::UInt64 => {
-            dyn_build_filter!(u64, array, filter_count, chunks)
-        }
-        DataType::Int8 => {
-            dyn_build_filter!(i8, array, filter_count, chunks)
-        }
-        DataType::Int16 => {
-            dyn_build_filter!(i16, array, filter_count, chunks)
-        }
-        DataType::Int32
-        | DataType::Date32
-        | DataType::Time32(_)
-        | DataType::Interval(IntervalUnit::YearMonth) => {
-            dyn_build_filter!(i32, array, filter_count, chunks)
-        }
-        DataType::Int64
-        | DataType::Date64
-        | DataType::Time64(_)
-        | DataType::Timestamp(_, _)
-        | DataType::Duration(_) => {
-            dyn_build_filter!(i64, array, filter_count, chunks)
-        }
-        DataType::Interval(IntervalUnit::DayTime) => {
-            dyn_build_filter!(days_ms, array, filter_count, chunks)
-        }
-        DataType::Float32 => {
-            dyn_build_filter!(f32, array, filter_count, chunks)
-        }
-        DataType::Float64 => {
-            dyn_build_filter!(f64, array, filter_count, chunks)
-        }
-        DataType::Utf8 => {
-            let array = array.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
-            let mut growable = growable::GrowableUtf8::<i32>::new(vec![array], false, filter_count);
-            filter_growable(&mut growable, &chunks);
-            let array: Utf8Array<i32> = growable.into();
-            Box::new(array)
-        }
-        _ => {
-            let mut mutable = make_growable(&[array], false, filter_count);
-            chunks
-                .iter()
-                .for_each(|(start, len)| mutable.extend(0, *start, *len));
-            mutable.as_box()
+    use crate::datatypes::PhysicalType::*;
+    Ok(Box::new(move |array: &dyn Array| {
+        match array.data_type().to_physical_type() {
+            UInt8 => dyn_filter!(u8, array, filter_count, chunks),
+            UInt16 => dyn_filter!(u16, array, filter_count, chunks),
+            UInt32 => dyn_filter!(u32, array, filter_count, chunks),
+            UInt64 => dyn_filter!(u64, array, filter_count, chunks),
+            Int8 => dyn_filter!(i8, array, filter_count, chunks),
+            Int16 => dyn_filter!(i16, array, filter_count, chunks),
+            Int32 => dyn_filter!(i32, array, filter_count, chunks),
+            Int64 => dyn_filter!(i64, array, filter_count, chunks),
+            Int128 => dyn_filter!(i128, array, filter_count, chunks),
+            DaysMs => dyn_filter!(days_ms, array, filter_count, chunks),
+            Float32 => dyn_filter!(f32, array, filter_count, chunks),
+            Float64 => dyn_filter!(f64, array, filter_count, chunks),
+            Utf8 => {
+                let array = array.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
+                let mut growable = growable::GrowableUtf8::new(vec![array], false, filter_count);
+                filter_growable(&mut growable, &chunks);
+                let array: Utf8Array<i32> = growable.into();
+                Box::new(array)
+            }
+            LargeUtf8 => {
+                let array = array.as_any().downcast_ref::<Utf8Array<i64>>().unwrap();
+                let mut growable = growable::GrowableUtf8::new(vec![array], false, filter_count);
+                filter_growable(&mut growable, &chunks);
+                let array: Utf8Array<i64> = growable.into();
+                Box::new(array)
+            }
+            _ => {
+                let mut mutable = make_growable(&[array], false, filter_count);
+                chunks
+                    .iter()
+                    .for_each(|(start, len)| mutable.extend(0, *start, *len));
+                mutable.as_box()
+            }
         }
     }))
 }
@@ -185,55 +164,53 @@ pub fn build_filter(filter: &BooleanArray) -> Result<Filter> {
 /// # }
 /// ```
 pub fn filter(array: &dyn Array, filter: &BooleanArray) -> Result<Box<dyn Array>> {
-    match array.data_type() {
-        DataType::UInt8 => {
+    use crate::datatypes::PhysicalType::*;
+    match array.data_type().to_physical_type() {
+        UInt8 => {
             let array = array.as_any().downcast_ref().unwrap();
             Ok(Box::new(filter_primitive::<u8>(array, filter)))
         }
-        DataType::UInt16 => {
+        UInt16 => {
             let array = array.as_any().downcast_ref().unwrap();
             Ok(Box::new(filter_primitive::<u16>(array, filter)))
         }
-        DataType::UInt32 => {
+        UInt32 => {
             let array = array.as_any().downcast_ref().unwrap();
             Ok(Box::new(filter_primitive::<u32>(array, filter)))
         }
-        DataType::UInt64 => {
+        UInt64 => {
             let array = array.as_any().downcast_ref().unwrap();
             Ok(Box::new(filter_primitive::<u64>(array, filter)))
         }
-        DataType::Int8 => {
+        Int8 => {
             let array = array.as_any().downcast_ref().unwrap();
             Ok(Box::new(filter_primitive::<i8>(array, filter)))
         }
-        DataType::Int16 => {
+        Int16 => {
             let array = array.as_any().downcast_ref().unwrap();
             Ok(Box::new(filter_primitive::<i16>(array, filter)))
         }
-        DataType::Int32
-        | DataType::Date32
-        | DataType::Time32(_)
-        | DataType::Interval(IntervalUnit::YearMonth) => {
+        Int32 => {
             let array = array.as_any().downcast_ref().unwrap();
             Ok(Box::new(filter_primitive::<i32>(array, filter)))
         }
-        DataType::Int64
-        | DataType::Date64
-        | DataType::Time64(_)
-        | DataType::Timestamp(_, _)
-        | DataType::Duration(_) => {
+        Int64 => {
             let array = array.as_any().downcast_ref().unwrap();
             Ok(Box::new(filter_primitive::<i64>(array, filter)))
         }
-        DataType::Interval(IntervalUnit::DayTime) => {
+        Int128 => {
+            let array = array.as_any().downcast_ref().unwrap();
+            Ok(Box::new(filter_primitive::<i128>(array, filter)))
+        }
+        DaysMs => {
             let array = array.as_any().downcast_ref().unwrap();
             Ok(Box::new(filter_primitive::<days_ms>(array, filter)))
         }
-        DataType::Float32 => {
+        Float32 => {
             let array = array.as_any().downcast_ref().unwrap();
             Ok(Box::new(filter_primitive::<f32>(array, filter)))
         }
-        DataType::Float64 => {
+        Float64 => {
             let array = array.as_any().downcast_ref().unwrap();
             Ok(Box::new(filter_primitive::<f64>(array, filter)))
         }

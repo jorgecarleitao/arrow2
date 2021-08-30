@@ -11,7 +11,7 @@ use std::{
 
 use gen::Schema::MetadataVersion;
 
-use crate::datatypes::{DataType, IntervalUnit};
+use crate::datatypes::{DataType, PhysicalType};
 use crate::error::Result;
 use crate::io::ipc::gen::Message::BodyCompression;
 use crate::{array::*, types::days_ms};
@@ -31,12 +31,13 @@ pub fn read<R: Read + Seek>(
     compression: Option<BodyCompression>,
     version: MetadataVersion,
 ) -> Result<Arc<dyn Array>> {
-    match data_type {
-        DataType::Null => {
+    use PhysicalType::*;
+    match data_type.to_physical_type() {
+        Null => {
             let array = read_null(field_nodes, data_type);
             Ok(Arc::new(array))
         }
-        DataType::Boolean => read_boolean(
+        Boolean => read_boolean(
             field_nodes,
             data_type,
             buffers,
@@ -45,17 +46,7 @@ pub fn read<R: Read + Seek>(
             is_little_endian,
         )
         .map(|x| Arc::new(x) as Arc<dyn Array>),
-        DataType::Int8 => read_primitive::<i8, _>(
-            field_nodes,
-            data_type,
-            buffers,
-            reader,
-            block_offset,
-            is_little_endian,
-            compression,
-        )
-        .map(|x| Arc::new(x) as Arc<dyn Array>),
-        DataType::Int16 => read_primitive::<i16, _>(
+        Int8 => read_primitive::<i8, _>(
             field_nodes,
             data_type,
             buffers,
@@ -65,10 +56,7 @@ pub fn read<R: Read + Seek>(
             compression,
         )
         .map(|x| Arc::new(x) as Arc<dyn Array>),
-        DataType::Int32
-        | DataType::Date32
-        | DataType::Time32(_)
-        | DataType::Interval(IntervalUnit::YearMonth) => read_primitive::<i32, _>(
+        Int16 => read_primitive::<i16, _>(
             field_nodes,
             data_type,
             buffers,
@@ -78,11 +66,7 @@ pub fn read<R: Read + Seek>(
             compression,
         )
         .map(|x| Arc::new(x) as Arc<dyn Array>),
-        DataType::Int64
-        | DataType::Date64
-        | DataType::Time64(_)
-        | DataType::Timestamp(_, _)
-        | DataType::Duration(_) => read_primitive::<i64, _>(
+        Int32 => read_primitive::<i32, _>(
             field_nodes,
             data_type,
             buffers,
@@ -92,7 +76,7 @@ pub fn read<R: Read + Seek>(
             compression,
         )
         .map(|x| Arc::new(x) as Arc<dyn Array>),
-        DataType::Decimal(_, _) => read_primitive::<i128, _>(
+        Int64 => read_primitive::<i64, _>(
             field_nodes,
             data_type,
             buffers,
@@ -102,7 +86,7 @@ pub fn read<R: Read + Seek>(
             compression,
         )
         .map(|x| Arc::new(x) as Arc<dyn Array>),
-        DataType::Interval(IntervalUnit::DayTime) => read_primitive::<days_ms, _>(
+        Int128 => read_primitive::<i128, _>(
             field_nodes,
             data_type,
             buffers,
@@ -112,7 +96,7 @@ pub fn read<R: Read + Seek>(
             compression,
         )
         .map(|x| Arc::new(x) as Arc<dyn Array>),
-        DataType::UInt8 => read_primitive::<u8, _>(
+        DaysMs => read_primitive::<days_ms, _>(
             field_nodes,
             data_type,
             buffers,
@@ -122,7 +106,7 @@ pub fn read<R: Read + Seek>(
             compression,
         )
         .map(|x| Arc::new(x) as Arc<dyn Array>),
-        DataType::UInt16 => read_primitive::<u16, _>(
+        UInt8 => read_primitive::<u8, _>(
             field_nodes,
             data_type,
             buffers,
@@ -132,7 +116,7 @@ pub fn read<R: Read + Seek>(
             compression,
         )
         .map(|x| Arc::new(x) as Arc<dyn Array>),
-        DataType::UInt32 => read_primitive::<u32, _>(
+        UInt16 => read_primitive::<u16, _>(
             field_nodes,
             data_type,
             buffers,
@@ -142,7 +126,7 @@ pub fn read<R: Read + Seek>(
             compression,
         )
         .map(|x| Arc::new(x) as Arc<dyn Array>),
-        DataType::UInt64 => read_primitive::<u64, _>(
+        UInt32 => read_primitive::<u32, _>(
             field_nodes,
             data_type,
             buffers,
@@ -152,8 +136,7 @@ pub fn read<R: Read + Seek>(
             compression,
         )
         .map(|x| Arc::new(x) as Arc<dyn Array>),
-        DataType::Float16 => unreachable!(),
-        DataType::Float32 => read_primitive::<f32, _>(
+        UInt64 => read_primitive::<u64, _>(
             field_nodes,
             data_type,
             buffers,
@@ -163,7 +146,7 @@ pub fn read<R: Read + Seek>(
             compression,
         )
         .map(|x| Arc::new(x) as Arc<dyn Array>),
-        DataType::Float64 => read_primitive::<f64, _>(
+        Float32 => read_primitive::<f32, _>(
             field_nodes,
             data_type,
             buffers,
@@ -173,7 +156,17 @@ pub fn read<R: Read + Seek>(
             compression,
         )
         .map(|x| Arc::new(x) as Arc<dyn Array>),
-        DataType::Binary => {
+        Float64 => read_primitive::<f64, _>(
+            field_nodes,
+            data_type,
+            buffers,
+            reader,
+            block_offset,
+            is_little_endian,
+            compression,
+        )
+        .map(|x| Arc::new(x) as Arc<dyn Array>),
+        Binary => {
             let array = read_binary::<i32, _>(
                 field_nodes,
                 data_type,
@@ -185,7 +178,7 @@ pub fn read<R: Read + Seek>(
             )?;
             Ok(Arc::new(array))
         }
-        DataType::LargeBinary => {
+        LargeBinary => {
             let array = read_binary::<i64, _>(
                 field_nodes,
                 data_type,
@@ -197,7 +190,7 @@ pub fn read<R: Read + Seek>(
             )?;
             Ok(Arc::new(array))
         }
-        DataType::FixedSizeBinary(_) => {
+        FixedSizeBinary => {
             let array = read_fixed_size_binary(
                 field_nodes,
                 data_type,
@@ -209,7 +202,7 @@ pub fn read<R: Read + Seek>(
             )?;
             Ok(Arc::new(array))
         }
-        DataType::Utf8 => {
+        Utf8 => {
             let array = read_utf8::<i32, _>(
                 field_nodes,
                 data_type,
@@ -221,7 +214,7 @@ pub fn read<R: Read + Seek>(
             )?;
             Ok(Arc::new(array))
         }
-        DataType::LargeUtf8 => {
+        LargeUtf8 => {
             let array = read_utf8::<i64, _>(
                 field_nodes,
                 data_type,
@@ -233,7 +226,7 @@ pub fn read<R: Read + Seek>(
             )?;
             Ok(Arc::new(array))
         }
-        DataType::List(_) => read_list::<i32, _>(
+        List => read_list::<i32, _>(
             field_nodes,
             data_type,
             buffers,
@@ -244,7 +237,7 @@ pub fn read<R: Read + Seek>(
             version,
         )
         .map(|x| Arc::new(x) as Arc<dyn Array>),
-        DataType::LargeList(_) => read_list::<i64, _>(
+        LargeList => read_list::<i64, _>(
             field_nodes,
             data_type,
             buffers,
@@ -255,7 +248,7 @@ pub fn read<R: Read + Seek>(
             version,
         )
         .map(|x| Arc::new(x) as Arc<dyn Array>),
-        DataType::FixedSizeList(_, _) => read_fixed_size_list(
+        FixedSizeList => read_fixed_size_list(
             field_nodes,
             data_type,
             buffers,
@@ -266,7 +259,7 @@ pub fn read<R: Read + Seek>(
             version,
         )
         .map(|x| Arc::new(x) as Arc<dyn Array>),
-        DataType::Struct(_) => read_struct(
+        Struct => read_struct(
             field_nodes,
             data_type,
             buffers,
@@ -277,8 +270,8 @@ pub fn read<R: Read + Seek>(
             version,
         )
         .map(|x| Arc::new(x) as Arc<dyn Array>),
-        DataType::Dictionary(ref key_type, _) => {
-            with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
+        Dictionary(key_type) => {
+            with_match_physical_dictionary_key_type!(key_type, |$T| {
                 read_dictionary::<$T, _>(
                     field_nodes,
                     buffers,
@@ -289,7 +282,7 @@ pub fn read<R: Read + Seek>(
                 .map(|x| Arc::new(x) as Arc<dyn Array>)
             })
         }
-        DataType::Union(_, _, _) => read_union(
+        Union => read_union(
             field_nodes,
             data_type,
             buffers,
@@ -308,36 +301,20 @@ pub fn skip(
     data_type: &DataType,
     buffers: &mut VecDeque<&gen::Schema::Buffer>,
 ) {
-    match data_type {
-        DataType::Null => skip_null(field_nodes),
-        DataType::Boolean => skip_boolean(field_nodes, buffers),
-        DataType::Int8
-        | DataType::Int16
-        | DataType::Int32
-        | DataType::Date32
-        | DataType::Time32(_)
-        | DataType::Interval(_)
-        | DataType::Int64
-        | DataType::Date64
-        | DataType::Time64(_)
-        | DataType::Timestamp(_, _)
-        | DataType::Duration(_)
-        | DataType::Decimal(_, _)
-        | DataType::UInt8
-        | DataType::UInt16
-        | DataType::UInt32
-        | DataType::UInt64
-        | DataType::Float32
-        | DataType::Float16
-        | DataType::Float64 => skip_primitive(field_nodes, buffers),
-        DataType::LargeBinary | DataType::Binary => skip_binary(field_nodes, buffers),
-        DataType::LargeUtf8 | DataType::Utf8 => skip_utf8(field_nodes, buffers),
-        DataType::FixedSizeBinary(_) => skip_fixed_size_binary(field_nodes, buffers),
-        DataType::List(_) => skip_list::<i32>(field_nodes, data_type, buffers),
-        DataType::LargeList(_) => skip_list::<i64>(field_nodes, data_type, buffers),
-        DataType::FixedSizeList(_, _) => skip_fixed_size_list(field_nodes, data_type, buffers),
-        DataType::Struct(_) => skip_struct(field_nodes, data_type, buffers),
-        DataType::Dictionary(_, _) => skip_dictionary(field_nodes, buffers),
-        DataType::Union(_, _, _) => skip_union(field_nodes, data_type, buffers),
+    use PhysicalType::*;
+    match data_type.to_physical_type() {
+        Null => skip_null(field_nodes),
+        Boolean => skip_boolean(field_nodes, buffers),
+        Int8 | Int16 | Int32 | Int64 | Int128 | UInt8 | UInt16 | UInt32 | UInt64 | Float32
+        | Float64 | DaysMs => skip_primitive(field_nodes, buffers),
+        LargeBinary | Binary => skip_binary(field_nodes, buffers),
+        LargeUtf8 | Utf8 => skip_utf8(field_nodes, buffers),
+        FixedSizeBinary => skip_fixed_size_binary(field_nodes, buffers),
+        List => skip_list::<i32>(field_nodes, data_type, buffers),
+        LargeList => skip_list::<i64>(field_nodes, data_type, buffers),
+        FixedSizeList => skip_fixed_size_list(field_nodes, data_type, buffers),
+        Struct => skip_struct(field_nodes, data_type, buffers),
+        Dictionary(_) => skip_dictionary(field_nodes, buffers),
+        Union => skip_union(field_nodes, data_type, buffers),
     }
 }
