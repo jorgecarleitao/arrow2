@@ -10,8 +10,11 @@ pub enum ArrowError {
     NotYetImplemented(String),
     /// Triggered by an external error, such as CSV, serde, chrono.
     External(String, Box<dyn Error + Send + Sync>),
+    /// Error associated with incompatible schemas.
     Schema(String),
+    /// Errors associated with IO
     Io(std::io::Error),
+    /// When an invalid argument is passed to a function.
     InvalidArgumentError(String),
     /// Error during import or export to/from C Data Interface
     Ffi(String),
@@ -19,10 +22,13 @@ pub enum ArrowError {
     Ipc(String),
     /// Error during import or export to/from a format
     ExternalFormat(String),
+    /// Whenever pushing to a container fails because it does not support more entries.
+    /// (e.g. maximum size of the keys of a dictionary overflowed)
     KeyOverflowError,
     /// Error during arithmetic operation. Normally returned
     /// during checked operations
     ArithmeticError(String),
+    /// Any other error.
     Other(String),
 }
 
@@ -83,4 +89,5 @@ impl Display for ArrowError {
 
 impl Error for ArrowError {}
 
+/// Typedef for a [`std::result::Result`] of an [`ArrowError`].
 pub type Result<T> = std::result::Result<T, ArrowError>;

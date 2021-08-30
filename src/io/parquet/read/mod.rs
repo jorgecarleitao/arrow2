@@ -1,3 +1,4 @@
+//! APIs to read from Parquet format.
 use std::{
     io::{Read, Seek},
     sync::Arc,

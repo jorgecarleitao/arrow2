@@ -13,6 +13,8 @@ use super::BooleanArray;
 
 /// The Arrow's equivalent to `Vec<Option<bool>>`, but with `1/16` of its size.
 /// Converting a [`MutableBooleanArray`] into a [`BooleanArray`] is `O(1)`.
+/// # Implementation
+/// This struct does not allocate a validity until one is required (i.e. push a null to it).
 #[derive(Debug)]
 pub struct MutableBooleanArray {
     values: MutableBitmap,
@@ -39,10 +41,12 @@ impl Default for MutableBooleanArray {
 }
 
 impl MutableBooleanArray {
+    /// Creates an new empty [`MutableBooleanArray`].
     pub fn new() -> Self {
         Self::with_capacity(0)
     }
 
+    /// Creates an new [`MutableBooleanArray`] with a capacity of values.
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             values: MutableBitmap::with_capacity(capacity),
@@ -50,6 +54,7 @@ impl MutableBooleanArray {
         }
     }
 
+    /// Reserves `additional` slots.
     pub fn reserve(&mut self, additional: usize) {
         self.values.reserve(additional);
         if let Some(x) = self.validity.as_mut() {
@@ -57,10 +62,12 @@ impl MutableBooleanArray {
         }
     }
 
+    /// Canonical method to create a new [`MutableBooleanArray`].
     pub fn from_data(values: MutableBitmap, validity: Option<MutableBitmap>) -> Self {
         Self { values, validity }
     }
 
+    /// Pushes a new entry to [`MutableBooleanArray`].
     pub fn push(&mut self, value: Option<bool>) {
         match value {
             Some(value) => {

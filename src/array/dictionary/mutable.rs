@@ -43,6 +43,7 @@ impl<K: DictionaryKey, M: MutableArray> From<M> for MutableDictionaryArray<K, M>
 }
 
 impl<K: DictionaryKey, M: MutableArray + Default> MutableDictionaryArray<K, M> {
+    /// Creates an empty [`MutableDictionaryArray`].
     pub fn new() -> Self {
         let values = M::default();
         Self {
@@ -83,18 +84,22 @@ impl<K: DictionaryKey, M: MutableArray> MutableDictionaryArray<K, M> {
         }
     }
 
+    /// pushes a null value
     pub fn push_null(&mut self) {
         self.keys.push(None)
     }
 
+    /// returns a mutable reference to the inner values.
     pub fn mut_values(&mut self) -> &mut M {
         &mut self.values
     }
 
+    /// returns a reference to the inner values.
     pub fn values(&self) -> &M {
         &self.values
     }
 
+    /// converts itself into `Arc<dyn Array>`
     pub fn into_arc(self) -> Arc<dyn Array> {
         let a: DictionaryArray<K> = self.into();
         Arc::new(a)

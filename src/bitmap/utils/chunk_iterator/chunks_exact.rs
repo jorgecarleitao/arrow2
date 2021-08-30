@@ -2,7 +2,7 @@ use std::{convert::TryInto, slice::ChunksExact};
 
 use super::{BitChunk, BitChunkIterExact};
 
-/// An iterator over a [`BitChunk`] from a slice of bytes.
+/// An iterator over a slice of bytes in [`BitChunk`]s.
 #[derive(Debug)]
 pub struct BitChunksExact<'a, T: BitChunk> {
     iter: ChunksExact<'a, u8>,
@@ -11,6 +11,7 @@ pub struct BitChunksExact<'a, T: BitChunk> {
 }
 
 impl<'a, T: BitChunk> BitChunksExact<'a, T> {
+    /// Creates a new [`BitChunksExact`].
     #[inline]
     pub fn new(slice: &'a [u8], len: usize) -> Self {
         let size_of = std::mem::size_of::<T>();
@@ -32,16 +33,19 @@ impl<'a, T: BitChunk> BitChunksExact<'a, T> {
         }
     }
 
+    /// Returns the number of chunks of this iterator
     #[inline]
     pub fn len(&self) -> usize {
         self.iter.len()
     }
 
+    /// Returns whether there are still elements in this iterator
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
+    /// Returns the remaining [`BitChunk`]. It is zero iff `len / 8 == 0`.
     #[inline]
     pub fn remainder(&self) -> T {
         let remainder_bytes = self.remainder;

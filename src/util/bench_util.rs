@@ -52,6 +52,7 @@ where
         .to(data_type)
 }
 
+/// Creates a new [`PrimitiveArray`] from random values with a pre-set seed.
 pub fn create_primitive_array_with_seed<T>(
     size: usize,
     data_type: DataType,

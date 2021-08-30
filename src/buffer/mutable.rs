@@ -609,6 +609,7 @@ impl From<MutableBuffer<u64>> for MutableBuffer<u8> {
 }
 
 impl MutableBuffer<u8> {
+    /// Creates a [`MutableBuffer<u8>`] from an iterator of `u64`.
     #[inline]
     pub fn from_chunk_iter<I: TrustedLen<Item = u64>>(iter: I) -> Self {
         MutableBuffer::from_trusted_len_iter(iter).into()

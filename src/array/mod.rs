@@ -26,6 +26,7 @@ use crate::{
 /// A trait representing an immutable Arrow array. Arrow arrays are trait objects
 /// that are infalibly downcasted to concrete types according to the [`Array::data_type`].
 pub trait Array: std::fmt::Debug + Send + Sync {
+    /// Convert to trait object.
     fn as_any(&self) -> &dyn Any;
 
     /// The length of the [`Array`]. Every array has a length corresponding to the number of
@@ -404,6 +405,7 @@ pub use self::ffi::ToFfi;
 /// A trait describing the ability of a struct to create itself from a iterator.
 /// This is similar to [`Extend`], but accepted the creation to error.
 pub trait TryExtend<A> {
+    /// Fallible version of [`Extend::extend`].
     fn try_extend<I: IntoIterator<Item = A>>(&mut self, iter: I) -> Result<()>;
 }
 
@@ -468,10 +470,14 @@ pub trait IterableListArray: Array {
 /// 2. `offsets[i] >= offsets[i-1] for all i`
 /// 3. `offsets[i] < values.len() for all i`
 pub unsafe trait GenericBinaryArray<O: Offset>: Array {
+    /// The values of the array
     fn values(&self) -> &[u8];
+    /// The offsets of the array
     fn offsets(&self) -> &[O];
 }
 
 // backward compatibility
 use std::sync::Arc;
+
+/// A type def of [`Array`].
 pub type ArrayRef = Arc<dyn Array>;

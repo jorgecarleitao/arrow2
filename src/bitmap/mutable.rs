@@ -84,6 +84,7 @@ impl MutableBitmap {
         self.length += 1;
     }
 
+    /// Returns the capacity of [`MutableBitmap`] in number of bits.
     #[inline]
     pub fn capacity(&self) -> usize {
         self.buffer.capacity() * 8

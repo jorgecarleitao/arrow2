@@ -6,6 +6,8 @@ mod iterator;
 mod mutable;
 pub use mutable::*;
 
+/// The Arrow's equivalent to an immutable `Vec<Option<[u8; size]>>`.
+/// Cloning and slicing this struct is `O(1)`.
 #[derive(Debug, Clone)]
 pub struct FixedSizeBinaryArray {
     size: i32, // this is redundant with `data_type`, but useful to not have to deconstruct the data_type.
@@ -16,12 +18,12 @@ pub struct FixedSizeBinaryArray {
 }
 
 impl FixedSizeBinaryArray {
-    #[inline]
+    /// Returns a new empty [`FixedSizeBinaryArray`].
     pub fn new_empty(data_type: DataType) -> Self {
         Self::from_data(data_type, Buffer::new(), None)
     }
 
-    #[inline]
+    /// Returns a new null [`FixedSizeBinaryArray`].
     pub fn new_null(data_type: DataType, length: usize) -> Self {
         Self::from_data(
             data_type,
@@ -30,7 +32,7 @@ impl FixedSizeBinaryArray {
         )
     }
 
-    #[inline]
+    /// Returns a new [`FixedSizeBinaryArray`].
     pub fn from_data(data_type: DataType, values: Buffer<u8>, validity: Option<Bitmap>) -> Self {
         let size = *Self::get_size(&data_type);
 
@@ -45,7 +47,9 @@ impl FixedSizeBinaryArray {
         }
     }
 
-    #[inline]
+    /// Returns a slice of this [`FixedSizeBinaryArray`].
+    /// # Implementation
+    /// This operation is `O(1)` as it amounts to increase 3 ref counts.
     pub fn slice(&self, offset: usize, length: usize) -> Self {
         let validity = self.validity.clone().map(|x| x.slice(offset, length));
         let values = self
@@ -61,11 +65,14 @@ impl FixedSizeBinaryArray {
         }
     }
 
-    #[inline]
+    /// Returns the values allocated on this [`FixedSizeBinaryArray`].
     pub fn values(&self) -> &Buffer<u8> {
         &self.values
     }
 
+    /// Returns value at position `i`.
+    /// # Panic
+    /// Panics iff `i >= self.len()`.
     #[inline]
     pub fn value(&self, i: usize) -> &[u8] {
         &self.values()[i * self.size as usize..(i + 1) * self.size as usize]
@@ -82,7 +89,7 @@ impl FixedSizeBinaryArray {
         )
     }
 
-    #[inline]
+    /// Returns the size
     pub fn size(&self) -> usize {
         self.size as usize
     }
@@ -145,6 +152,7 @@ unsafe impl ToFfi for FixedSizeBinaryArray {
 }
 
 impl FixedSizeBinaryArray {
+    /// Creates a [`FixedSizeBinaryArray`] from an fallible iterator of optional `[u8]`.
     pub fn try_from_iter<P: AsRef<[u8]>, I: IntoIterator<Item = Option<P>>>(
         iter: I,
         size: usize,
@@ -152,6 +160,7 @@ impl FixedSizeBinaryArray {
         MutableFixedSizeBinaryArray::try_from_iter(iter, size).map(|x| x.into())
     }
 
+    /// Creates a [`FixedSizeBinaryArray`] from an iterator of optional `[u8]`.
     pub fn from_iter<P: AsRef<[u8]>, I: IntoIterator<Item = Option<P>>>(
         iter: I,
         size: usize,

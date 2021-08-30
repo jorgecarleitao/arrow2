@@ -1,6 +1,6 @@
 use crate::bitmap::Bitmap;
 
-/// Internal state of [SlicesIterator]
+/// Internal state of [`SlicesIterator`]
 #[derive(Debug, Clone, PartialEq)]
 enum State {
     // normal iteration
@@ -27,6 +27,7 @@ pub struct SlicesIterator<'a> {
 }
 
 impl<'a> SlicesIterator<'a> {
+    /// Creates a new [`SlicesIterator`]
     pub fn new(values: &'a Bitmap) -> Self {
         let (buffer, offset, _) = values.as_slice();
         let mut iter = buffer.iter();

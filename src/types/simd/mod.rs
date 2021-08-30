@@ -1,19 +1,26 @@
+//! Contains traits and implementations of multi-data used in SIMD.
+//! The actual representation is driven by the feature flag `"simd"`, which, if set,
+//! uses `packed_simd2` to get the intrinsics.
 use super::{BitChunk, NativeType};
 
+/// Describes the ability to convert itself from a [`BitChunk`].
 pub trait FromMaskChunk<T> {
     /// Convert itself from a slice.
     fn from_chunk(v: T) -> Self;
 }
 
-/// A struct lends itself well to be compiled leveraging SIMD
+/// A struct that lends itself well to be compiled leveraging SIMD
 pub trait NativeSimd: Default {
+    /// Number of lanes
     const LANES: usize;
     /// The [`NativeType`] of this struct. E.g. `f32` for a `NativeSimd = f32x16`.
     type Native: NativeType;
     /// The type holding bits for masks.
     type Chunk: BitChunk;
+    /// Type used for masking.
     type Mask: FromMaskChunk<Self::Chunk>;
 
+    /// Sets values to `default` based on `mask`.
     fn select(self, mask: Self::Mask, default: Self) -> Self;
 
     /// Convert itself from a slice.

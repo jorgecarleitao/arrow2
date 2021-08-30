@@ -9,10 +9,13 @@ use crate::types::Index;
 /// # Safety
 /// Do not implement.
 pub unsafe trait Offset: Index + Num + Ord + num_traits::CheckedAdd {
+    /// Whether it is `i32` or `i64`
     fn is_large() -> bool;
 
+    /// converts itself to `isize`
     fn to_isize(&self) -> isize;
 
+    /// converts from `isize`
     fn from_isize(value: isize) -> Option<Self>;
 }
 

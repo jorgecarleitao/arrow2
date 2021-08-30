@@ -11,15 +11,17 @@ pub struct NullArray {
 }
 
 impl NullArray {
+    /// Returns a new empty [`NullArray`].
     pub fn new_empty() -> Self {
         Self::from_data(0)
     }
 
-    /// Returns a new null array
+    /// Returns a new [`NullArray`].
     pub fn new_null(length: usize) -> Self {
         Self::from_data(length)
     }
 
+    /// Returns a new [`NullArray`].
     pub fn from_data(length: usize) -> Self {
         Self {
             data_type: DataType::Null,
@@ -28,6 +30,7 @@ impl NullArray {
         }
     }
 
+    /// Returns a slice of the [`NullArray`].
     pub fn slice(&self, offset: usize, length: usize) -> Self {
         Self {
             data_type: self.data_type.clone(),
