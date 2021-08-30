@@ -35,10 +35,11 @@ impl From<MutableFixedSizeBinaryArray> for FixedSizeBinaryArray {
 impl MutableFixedSizeBinaryArray {
     /// Canonical method to create a new [`MutableFixedSizeBinaryArray`].
     pub fn from_data(
-        size: usize,
+        data_type: DataType,
         values: MutableBuffer<u8>,
         validity: Option<MutableBitmap>,
     ) -> Self {
+        let size = *FixedSizeBinaryArray::get_size(&data_type) as usize;
         assert_eq!(
             values.len() % size,
             0,
@@ -52,7 +53,7 @@ impl MutableFixedSizeBinaryArray {
             );
         }
         Self {
-            data_type: DataType::FixedSizeBinary(size as i32),
+            data_type,
             size,
             values,
             validity,
@@ -67,7 +68,7 @@ impl MutableFixedSizeBinaryArray {
     /// Creates a new [`MutableFixedSizeBinaryArray`] with capacity for `capacity` entries.
     pub fn with_capacity(size: usize, capacity: usize) -> Self {
         Self::from_data(
-            size,
+            DataType::FixedSizeBinary(size as i32),
             MutableBuffer::<u8>::with_capacity(capacity * size),
             None,
         )

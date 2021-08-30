@@ -70,20 +70,17 @@ impl StructArray {
         values: Vec<Arc<dyn Array>>,
         validity: Option<Bitmap>,
     ) -> Self {
-        if let DataType::Struct(fields) = &data_type {
-            assert!(!fields.is_empty());
-            assert_eq!(fields.len(), values.len());
-            assert!(values.iter().all(|x| x.len() == values[0].len()));
-            if let Some(ref validity) = validity {
-                assert_eq!(values[0].len(), validity.len());
-            }
-            Self {
-                data_type,
-                values,
-                validity,
-            }
-        } else {
-            panic!("StructArray must be initialized with DataType::Struct");
+        let fields = Self::get_fields(&data_type);
+        assert!(!fields.is_empty());
+        assert_eq!(fields.len(), values.len());
+        assert!(values.iter().all(|x| x.len() == values[0].len()));
+        if let Some(ref validity) = validity {
+            assert_eq!(values[0].len(), validity.len());
+        }
+        Self {
+            data_type,
+            values,
+            validity,
         }
     }
 
@@ -134,10 +131,10 @@ impl StructArray {
 impl StructArray {
     /// Returns the fields the `DataType::Struct`.
     pub fn get_fields(data_type: &DataType) -> &[Field] {
-        if let DataType::Struct(fields) = data_type {
-            fields
-        } else {
-            panic!("Wrong datatype passed to Struct.")
+        match data_type {
+            DataType::Struct(fields) => fields,
+            DataType::Extension(_, inner, _) => Self::get_fields(inner),
+            _ => panic!("Wrong datatype passed to Struct."),
         }
     }
 }

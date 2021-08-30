@@ -89,33 +89,30 @@ impl UnionArray {
         fields: Vec<Arc<dyn Array>>,
         offsets: Option<Buffer<i32>>,
     ) -> Self {
-        let fields_hash = if let DataType::Union(f, ids, is_sparse) = &data_type {
-            if f.len() != fields.len() {
-                panic!(
-                    "The number of `fields` must equal the number of fields in the Union DataType"
-                )
-            };
-            let same_data_types = f
-                .iter()
-                .zip(fields.iter())
-                .all(|(f, array)| f.data_type() == array.data_type());
-            if !same_data_types {
-                panic!("All fields' datatype in the union must equal the datatypes on the fields.")
-            }
-            if offsets.is_none() != *is_sparse {
-                panic!("Sparsness flag must equal to noness of offsets in UnionArray")
-            }
-            ids.as_ref().map(|ids| {
-                ids.iter()
-                    .map(|x| *x as i8)
-                    .enumerate()
-                    .zip(fields.iter().cloned())
-                    .map(|((i, type_), field)| (type_, (i, field)))
-                    .collect()
-            })
-        } else {
-            panic!("Union struct must be created with the corresponding Union DataType")
+        let (f, ids, is_sparse) = Self::get_all(&data_type);
+
+        if f.len() != fields.len() {
+            panic!("The number of `fields` must equal the number of fields in the Union DataType")
         };
+        let same_data_types = f
+            .iter()
+            .zip(fields.iter())
+            .all(|(f, array)| f.data_type() == array.data_type());
+        if !same_data_types {
+            panic!("All fields' datatype in the union must equal the datatypes on the fields.")
+        }
+        if offsets.is_none() != is_sparse {
+            panic!("Sparsness flag must equal to noness of offsets in UnionArray")
+        }
+        let fields_hash = ids.as_ref().map(|ids| {
+            ids.iter()
+                .map(|x| *x as i8)
+                .enumerate()
+                .zip(fields.iter().cloned())
+                .map(|((i, type_), field)| (type_, (i, field)))
+                .collect()
+        });
+
         // not validated:
         // * `offsets` is valid
         // * max id < fields.len()
@@ -218,20 +215,22 @@ impl Array for UnionArray {
 }
 
 impl UnionArray {
-    pub fn get_fields(data_type: &DataType) -> &[Field] {
-        if let DataType::Union(fields, _, _) = data_type {
-            fields
-        } else {
-            panic!("Wrong datatype passed to UnionArray.")
+    fn get_all(data_type: &DataType) -> (&[Field], Option<&[i32]>, bool) {
+        match data_type {
+            DataType::Union(fields, ids, is_sparse) => {
+                (fields, ids.as_ref().map(|x| x.as_ref()), *is_sparse)
+            }
+            DataType::Extension(_, inner, _) => Self::get_all(inner),
+            _ => panic!("Wrong datatype passed to UnionArray."),
         }
     }
 
+    pub fn get_fields(data_type: &DataType) -> &[Field] {
+        Self::get_all(data_type).0
+    }
+
     pub fn is_sparse(data_type: &DataType) -> bool {
-        if let DataType::Union(_, _, is_sparse) = data_type {
-            *is_sparse
-        } else {
-            panic!("Wrong datatype passed to UnionArray.")
-        }
+        Self::get_all(data_type).2
     }
 }
 

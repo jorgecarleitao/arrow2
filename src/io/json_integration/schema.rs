@@ -26,6 +26,7 @@ use serde_json::{json, Value};
 use crate::error::{ArrowError, Result};
 
 use crate::datatypes::{DataType, Field, IntervalUnit, Schema, TimeUnit};
+use crate::io::ipc::get_extension;
 
 pub trait ToJson {
     /// Generate a JSON representation
@@ -114,6 +115,7 @@ impl ToJson for DataType {
             DataType::Decimal(precision, scale) => {
                 json!({"name": "decimal", "precision": precision, "scale": scale})
             }
+            DataType::Extension(_, inner_data_type, _) => inner_data_type.to_json(),
         }
     }
 }
@@ -174,6 +176,63 @@ fn children(children: Option<&Value>) -> Result<Vec<Field>> {
             }
         })
         .unwrap_or_else(|| Ok(vec![]))
+}
+
+fn read_metadata(metadata: &Value) -> Result<BTreeMap<String, String>> {
+    match metadata {
+        Value::Array(ref values) => {
+            let mut res: BTreeMap<String, String> = BTreeMap::new();
+            for value in values {
+                match value.as_object() {
+                    Some(map) => {
+                        if map.len() != 2 {
+                            return Err(ArrowError::Schema(
+                                "Field 'metadata' must have exact two entries for each key-value map".to_string(),
+                            ));
+                        }
+                        if let (Some(k), Some(v)) = (map.get("key"), map.get("value")) {
+                            if let (Some(k_str), Some(v_str)) = (k.as_str(), v.as_str()) {
+                                res.insert(k_str.to_string().clone(), v_str.to_string().clone());
+                            } else {
+                                return Err(ArrowError::Schema(
+                                    "Field 'metadata' must have map value of string type"
+                                        .to_string(),
+                                ));
+                            }
+                        } else {
+                            return Err(ArrowError::Schema(
+                                "Field 'metadata' lacks map keys named \"key\" or \"value\""
+                                    .to_string(),
+                            ));
+                        }
+                    }
+                    _ => {
+                        return Err(ArrowError::Schema(
+                            "Field 'metadata' contains non-object key-value pair".to_string(),
+                        ));
+                    }
+                }
+            }
+            Ok(res)
+        }
+        Value::Object(ref values) => {
+            let mut res: BTreeMap<String, String> = BTreeMap::new();
+            for (k, v) in values {
+                if let Some(str_value) = v.as_str() {
+                    res.insert(k.clone(), str_value.to_string().clone());
+                } else {
+                    return Err(ArrowError::Schema(format!(
+                        "Field 'metadata' contains non-string value for key {}",
+                        k
+                    )));
+                }
+            }
+            Ok(res)
+        }
+        _ => Err(ArrowError::Schema(
+            "Invalid json value type for field".to_string(),
+        )),
+    }
 }
 
 fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
@@ -380,104 +439,60 @@ impl TryFrom<&Value> for Field {
 
                 let children = children(map.get("children"))?;
 
-                let data_type = to_data_type(
-                    map.get("type")
-                        .ok_or_else(|| ArrowError::Schema("type missing".to_string()))?,
-                    children,
-                )?;
-
-                // Referenced example file: testing/data/arrow-ipc-stream/integration/1.0.0-littleendian/generated_custom_metadata.json.gz
-                let metadata = match map.get("metadata") {
-                    Some(&Value::Array(ref values)) => {
-                        let mut res: BTreeMap<String, String> = BTreeMap::new();
-                        for value in values {
-                            match value.as_object() {
-                                Some(map) => {
-                                    if map.len() != 2 {
-                                        return Err(ArrowError::Schema(
-                                            "Field 'metadata' must have exact two entries for each key-value map".to_string(),
-                                        ));
-                                    }
-                                    if let (Some(k), Some(v)) = (map.get("key"), map.get("value")) {
-                                        if let (Some(k_str), Some(v_str)) = (k.as_str(), v.as_str())
-                                        {
-                                            res.insert(
-                                                k_str.to_string().clone(),
-                                                v_str.to_string().clone(),
-                                            );
-                                        } else {
-                                            return Err(ArrowError::Schema("Field 'metadata' must have map value of string type".to_string()));
-                                        }
-                                    } else {
-                                        return Err(ArrowError::Schema("Field 'metadata' lacks map keys named \"key\" or \"value\"".to_string()));
-                                    }
-                                }
-                                _ => {
-                                    return Err(ArrowError::Schema(
-                                        "Field 'metadata' contains non-object key-value pair"
-                                            .to_string(),
-                                    ));
-                                }
-                            }
-                        }
-                        Some(res)
-                    }
-                    // We also support map format, because Schema's metadata supports this.
-                    // See https://github.com/apache/arrow/pull/5907
-                    Some(&Value::Object(ref values)) => {
-                        let mut res: BTreeMap<String, String> = BTreeMap::new();
-                        for (k, v) in values {
-                            if let Some(str_value) = v.as_str() {
-                                res.insert(k.clone(), str_value.to_string().clone());
-                            } else {
-                                return Err(ArrowError::Schema(format!(
-                                    "Field 'metadata' contains non-string value for key {}",
-                                    k
-                                )));
-                            }
-                        }
-                        Some(res)
-                    }
-                    Some(_) => {
-                        return Err(ArrowError::Schema(
-                            "Field `metadata` is not json array".to_string(),
-                        ));
-                    }
-                    _ => None,
+                let metadata = if let Some(metadata) = map.get("metadata") {
+                    Some(read_metadata(metadata)?)
+                } else {
+                    None
                 };
 
-                let mut dict_id = 0;
-                let mut dict_is_ordered = false;
+                let extension = get_extension(&metadata);
 
-                let data_type = match map.get("dictionary") {
-                    Some(dictionary) => {
-                        let index_type = match dictionary.get("indexType") {
-                            Some(t) => to_data_type(t, vec![])?,
-                            _ => {
-                                return Err(ArrowError::Schema(
-                                    "Field missing 'indexType' attribute".to_string(),
-                                ));
-                            }
-                        };
-                        dict_id = match dictionary.get("id") {
-                            Some(Value::Number(n)) => n.as_i64().unwrap(),
-                            _ => {
-                                return Err(ArrowError::Schema(
-                                    "Field missing 'id' attribute".to_string(),
-                                ));
-                            }
-                        };
-                        dict_is_ordered = match dictionary.get("isOrdered") {
-                            Some(&Value::Bool(n)) => n,
-                            _ => {
-                                return Err(ArrowError::Schema(
-                                    "Field missing 'isOrdered' attribute".to_string(),
-                                ));
-                            }
-                        };
-                        DataType::Dictionary(Box::new(index_type), Box::new(data_type))
-                    }
-                    _ => data_type,
+                let type_ = map
+                    .get("type")
+                    .ok_or_else(|| ArrowError::Schema("type missing".to_string()))?;
+
+                let data_type = to_data_type(type_, children)?;
+
+                let data_type = if let Some((name, metadata)) = extension {
+                    DataType::Extension(name, Box::new(data_type), metadata)
+                } else {
+                    data_type
+                };
+
+                let data_type = if let Some(dictionary) = map.get("dictionary") {
+                    let index_type = match dictionary.get("indexType") {
+                        Some(t) => to_data_type(t, vec![])?,
+                        _ => {
+                            return Err(ArrowError::Schema(
+                                "Field missing 'indexType' attribute".to_string(),
+                            ));
+                        }
+                    };
+                    DataType::Dictionary(Box::new(index_type), Box::new(data_type))
+                } else {
+                    data_type
+                };
+
+                let (dict_id, dict_is_ordered) = if let Some(dictionary) = map.get("dictionary") {
+                    let dict_id = match dictionary.get("id") {
+                        Some(Value::Number(n)) => n.as_i64().unwrap(),
+                        _ => {
+                            return Err(ArrowError::Schema(
+                                "Field missing 'id' attribute".to_string(),
+                            ));
+                        }
+                    };
+                    let dict_is_ordered = match dictionary.get("isOrdered") {
+                        Some(&Value::Bool(n)) => n,
+                        _ => {
+                            return Err(ArrowError::Schema(
+                                "Field missing 'isOrdered' attribute".to_string(),
+                            ));
+                        }
+                    };
+                    (dict_id, dict_is_ordered)
+                } else {
+                    (0, false)
                 };
                 let mut f = Field::new_dict(&name, data_type, nullable, dict_id, dict_is_ordered);
                 f.set_metadata(metadata);

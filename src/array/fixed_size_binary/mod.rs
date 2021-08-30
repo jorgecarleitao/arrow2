@@ -99,6 +99,7 @@ impl FixedSizeBinaryArray {
     pub(crate) fn get_size(data_type: &DataType) -> &i32 {
         match data_type {
             DataType::FixedSizeBinary(size) => size,
+            DataType::Extension(_, child, _) => Self::get_size(child),
             _ => panic!("Wrong DataType"),
         }
     }

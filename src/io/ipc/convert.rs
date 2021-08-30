@@ -32,6 +32,9 @@ use std::collections::{BTreeMap, HashMap};
 
 use DataType::*;
 
+type Metadata = Option<BTreeMap<String, String>>;
+type Extension = Option<(String, Option<String>)>;
+
 pub fn schema_to_fb_offset<'a>(
     fbb: &mut FlatBufferBuilder<'a>,
     schema: &Schema,
@@ -67,35 +70,53 @@ pub fn schema_to_fb_offset<'a>(
     builder.finish()
 }
 
+fn read_metadata(field: &ipc::Field) -> Metadata {
+    if let Some(list) = field.custom_metadata() {
+        let mut metadata_map = BTreeMap::default();
+        for kv in list {
+            if let (Some(k), Some(v)) = (kv.key(), kv.value()) {
+                metadata_map.insert(k.to_string(), v.to_string());
+            }
+        }
+        Some(metadata_map)
+    } else {
+        None
+    }
+}
+
+pub(crate) fn get_extension(metadata: &Metadata) -> Extension {
+    if let Some(metadata) = metadata {
+        if let Some(name) = metadata.get("ARROW:extension:name") {
+            let metadata = metadata.get("ARROW:extension:metadata").cloned();
+            Some((name.clone(), metadata))
+        } else {
+            None
+        }
+    } else {
+        None
+    }
+}
+
 /// Convert an IPC Field to Arrow Field
 impl<'a> From<ipc::Field<'a>> for Field {
     fn from(field: ipc::Field) -> Field {
+        let metadata = read_metadata(&field);
+
+        let extension = get_extension(&metadata);
+
+        let data_type = get_data_type(field, extension, true);
+
         let mut arrow_field = if let Some(dictionary) = field.dictionary() {
             Field::new_dict(
                 field.name().unwrap(),
-                get_data_type(field, true),
+                data_type,
                 field.nullable(),
                 dictionary.id(),
                 dictionary.isOrdered(),
             )
         } else {
-            Field::new(
-                field.name().unwrap(),
-                get_data_type(field, true),
-                field.nullable(),
-            )
+            Field::new(field.name().unwrap(), data_type, field.nullable())
         };
-
-        let mut metadata = None;
-        if let Some(list) = field.custom_metadata() {
-            let mut metadata_map = BTreeMap::default();
-            for kv in list {
-                if let (Some(k), Some(v)) = (kv.key(), kv.value()) {
-                    metadata_map.insert(k.to_string(), v.to_string());
-                }
-            }
-            metadata = Some(metadata_map);
-        }
 
         arrow_field.set_metadata(metadata);
         arrow_field
@@ -132,7 +153,7 @@ pub fn fb_to_schema(fb: ipc::Schema) -> (Schema, bool) {
 }
 
 /// Get the Arrow data type from the flatbuffer Field table
-pub(crate) fn get_data_type(field: ipc::Field, may_be_dictionary: bool) -> DataType {
+fn get_data_type(field: ipc::Field, extension: Extension, may_be_dictionary: bool) -> DataType {
     if let Some(dictionary) = field.dictionary() {
         if may_be_dictionary {
             let int = dictionary.indexType().unwrap();
@@ -149,9 +170,15 @@ pub(crate) fn get_data_type(field: ipc::Field, may_be_dictionary: bool) -> DataT
             };
             return DataType::Dictionary(
                 Box::new(index_type),
-                Box::new(get_data_type(field, false)),
+                Box::new(get_data_type(field, extension, false)),
             );
         }
+    }
+
+    if let Some(extension) = extension {
+        let (name, metadata) = extension;
+        let data_type = get_data_type(field, None, false);
+        return DataType::Extension(name, Box::new(data_type), metadata);
     }
 
     match field.type_type() {
@@ -303,26 +330,57 @@ pub(crate) struct FbFieldType<'b> {
     pub(crate) children: Option<WIPOffset<Vector<'b, ForwardsUOffset<ipc::Field<'b>>>>>,
 }
 
+fn write_metadata<'a>(
+    fbb: &mut FlatBufferBuilder<'a>,
+    metadata: &BTreeMap<String, String>,
+    kv_vec: &mut Vec<WIPOffset<ipc::KeyValue<'a>>>,
+) {
+    for (k, v) in metadata {
+        if k != "ARROW:extension:name" && k != "ARROW:extension:metadata" {
+            let kv_args = ipc::KeyValueArgs {
+                key: Some(fbb.create_string(k.as_str())),
+                value: Some(fbb.create_string(v.as_str())),
+            };
+            kv_vec.push(ipc::KeyValue::create(fbb, &kv_args));
+        }
+    }
+}
+
 /// Create an IPC Field from an Arrow Field
 pub(crate) fn build_field<'a>(
     fbb: &mut FlatBufferBuilder<'a>,
     field: &Field,
 ) -> WIPOffset<ipc::Field<'a>> {
-    // Optional custom metadata.
-    let mut fb_metadata = None;
+    // custom metadata.
+    let mut kv_vec = vec![];
+    if let DataType::Extension(name, _, metadata) = field.data_type() {
+        // append extension information.
+
+        // metadata
+        if let Some(metadata) = metadata {
+            let kv_args = ipc::KeyValueArgs {
+                key: Some(fbb.create_string("ARROW:extension:metadata")),
+                value: Some(fbb.create_string(metadata.as_str())),
+            };
+            kv_vec.push(ipc::KeyValue::create(fbb, &kv_args));
+        }
+
+        // name
+        let kv_args = ipc::KeyValueArgs {
+            key: Some(fbb.create_string("ARROW:extension:name")),
+            value: Some(fbb.create_string(name.as_str())),
+        };
+        kv_vec.push(ipc::KeyValue::create(fbb, &kv_args));
+    }
     if let Some(metadata) = field.metadata() {
         if !metadata.is_empty() {
-            let mut kv_vec = vec![];
-            for (k, v) in metadata {
-                let kv_args = ipc::KeyValueArgs {
-                    key: Some(fbb.create_string(k.as_str())),
-                    value: Some(fbb.create_string(v.as_str())),
-                };
-                let kv_offset = ipc::KeyValue::create(fbb, &kv_args);
-                kv_vec.push(kv_offset);
-            }
-            fb_metadata = Some(fbb.create_vector(&kv_vec));
+            write_metadata(fbb, metadata, &mut kv_vec);
         }
+    };
+    let fb_metadata = if !kv_vec.is_empty() {
+        Some(fbb.create_vector(&kv_vec))
+    } else {
+        None
     };
 
     let fb_field_name = fbb.create_string(field.name().as_str());
@@ -386,6 +444,7 @@ fn type_to_field_type(data_type: &DataType) -> ipc::Type {
         Union(_, _, _) => ipc::Type::Union,
         Struct(_) => ipc::Type::Struct_,
         Dictionary(_, v) => type_to_field_type(v),
+        Extension(_, v, _) => type_to_field_type(v),
     }
 }
 
@@ -625,6 +684,7 @@ pub(crate) fn get_fb_field_type<'a>(
             // type in the DictionaryEncoding metadata in the parent field
             get_fb_field_type(value_type, is_nullable, fbb)
         }
+        Extension(_, value_type, _) => get_fb_field_type(value_type, is_nullable, fbb),
         Decimal(precision, scale) => {
             let mut builder = ipc::DecimalBuilder::new(fbb);
             builder.add_precision(*precision as i32);
