@@ -244,16 +244,16 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
         DataType::Binary => Box::new(BinaryArray::<i32>::new_empty()),
         DataType::LargeBinary => Box::new(BinaryArray::<i64>::new_empty()),
         DataType::FixedSizeBinary(_) => Box::new(FixedSizeBinaryArray::new_empty(data_type)),
-        DataType::Utf8 => Box::new(Utf8Array::<i32>::new_empty()),
-        DataType::LargeUtf8 => Box::new(Utf8Array::<i64>::new_empty()),
+        DataType::Utf8 => Box::new(Utf8Array::<i32>::new_empty(data_type)),
+        DataType::LargeUtf8 => Box::new(Utf8Array::<i64>::new_empty(data_type)),
         DataType::List(_) => Box::new(ListArray::<i32>::new_empty(data_type)),
         DataType::LargeList(_) => Box::new(ListArray::<i64>::new_empty(data_type)),
         DataType::FixedSizeList(_, _) => Box::new(FixedSizeListArray::new_empty(data_type)),
         DataType::Struct(_) => Box::new(StructArray::new_empty(data_type)),
         DataType::Union(_, _, _) => Box::new(UnionArray::new_empty(data_type)),
-        DataType::Dictionary(key_type, value_type) => {
+        DataType::Dictionary(ref key_type, _) => {
             with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
-                Box::new(DictionaryArray::<$T>::new_empty(*value_type))
+                Box::new(DictionaryArray::<$T>::new_empty(data_type))
             })
         }
     }
@@ -293,8 +293,8 @@ pub fn new_null_array(data_type: DataType, length: usize) -> Box<dyn Array> {
         DataType::Binary => Box::new(BinaryArray::<i32>::new_null(length)),
         DataType::LargeBinary => Box::new(BinaryArray::<i64>::new_null(length)),
         DataType::FixedSizeBinary(_) => Box::new(FixedSizeBinaryArray::new_null(data_type, length)),
-        DataType::Utf8 => Box::new(Utf8Array::<i32>::new_null(length)),
-        DataType::LargeUtf8 => Box::new(Utf8Array::<i64>::new_null(length)),
+        DataType::Utf8 => Box::new(Utf8Array::<i32>::new_null(data_type, length)),
+        DataType::LargeUtf8 => Box::new(Utf8Array::<i64>::new_null(data_type, length)),
         DataType::List(_) => Box::new(ListArray::<i32>::new_null(data_type, length)),
         DataType::LargeList(_) => Box::new(ListArray::<i64>::new_null(data_type, length)),
         DataType::FixedSizeList(_, _) => Box::new(FixedSizeListArray::new_null(data_type, length)),

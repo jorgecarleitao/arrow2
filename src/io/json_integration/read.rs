@@ -158,7 +158,7 @@ fn to_binary<O: Offset>(json_col: &ArrowJsonColumn) -> Arc<dyn Array> {
     Arc::new(BinaryArray::from_data(offsets, values, validity))
 }
 
-fn to_utf8<O: Offset>(json_col: &ArrowJsonColumn) -> Arc<dyn Array> {
+fn to_utf8<O: Offset>(json_col: &ArrowJsonColumn, data_type: DataType) -> Arc<dyn Array> {
     let validity = to_validity(&json_col.validity);
     let offsets = to_offsets::<O>(json_col.offset.as_ref());
     let values = json_col
@@ -169,7 +169,7 @@ fn to_utf8<O: Offset>(json_col: &ArrowJsonColumn) -> Arc<dyn Array> {
         .map(|value| value.as_str().unwrap().as_bytes().to_vec())
         .flatten()
         .collect();
-    Arc::new(Utf8Array::from_data(offsets, values, validity))
+    Arc::new(Utf8Array::from_data(data_type, offsets, values, validity))
 }
 
 fn to_list<O: Offset>(
@@ -257,8 +257,8 @@ pub fn to_array(
         DataType::Float64 => Ok(Arc::new(to_primitive::<f64>(json_col, data_type.clone()))),
         DataType::Binary => Ok(to_binary::<i32>(json_col)),
         DataType::LargeBinary => Ok(to_binary::<i64>(json_col)),
-        DataType::Utf8 => Ok(to_utf8::<i32>(json_col)),
-        DataType::LargeUtf8 => Ok(to_utf8::<i64>(json_col)),
+        DataType::Utf8 => Ok(to_utf8::<i32>(json_col, data_type.clone())),
+        DataType::LargeUtf8 => Ok(to_utf8::<i64>(json_col, data_type.clone())),
         DataType::FixedSizeBinary(_) => {
             let validity = to_validity(&json_col.validity);
 

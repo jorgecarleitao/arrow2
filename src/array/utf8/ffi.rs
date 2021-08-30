@@ -32,6 +32,7 @@ unsafe impl<O: Offset, A: ffi::ArrowArrayRef> FromFfi<A> for Utf8Array<O> {
             offsets = offsets.slice(offset, length);
             validity = validity.map(|x| x.slice(offset, length))
         }
-        Ok(Self::from_data(offsets, values, validity))
+        let data_type = Self::default_data_type();
+        Ok(Self::from_data(data_type, offsets, values, validity))
     }
 }

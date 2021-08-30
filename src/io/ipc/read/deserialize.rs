@@ -205,6 +205,7 @@ pub fn read<R: Read + Seek>(
         DataType::Utf8 => {
             let array = read_utf8::<i32, _>(
                 field_nodes,
+                data_type,
                 buffers,
                 reader,
                 block_offset,
@@ -216,6 +217,7 @@ pub fn read<R: Read + Seek>(
         DataType::LargeUtf8 => {
             let array = read_utf8::<i64, _>(
                 field_nodes,
+                data_type,
                 buffers,
                 reader,
                 block_offset,

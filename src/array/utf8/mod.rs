@@ -37,14 +37,17 @@ pub struct Utf8Array<O: Offset> {
 impl<O: Offset> Utf8Array<O> {
     /// Returns a new empty [`Utf8Array`].
     #[inline]
-    pub fn new_empty() -> Self {
-        unsafe { Self::from_data_unchecked(Buffer::from(&[O::zero()]), Buffer::new(), None) }
+    pub fn new_empty(data_type: DataType) -> Self {
+        unsafe {
+            Self::from_data_unchecked(data_type, Buffer::from(&[O::zero()]), Buffer::new(), None)
+        }
     }
 
     /// Returns a new [`Utf8Array`] whose all slots are null / `None`.
     #[inline]
-    pub fn new_null(length: usize) -> Self {
+    pub fn new_null(data_type: DataType, length: usize) -> Self {
         Self::from_data(
+            data_type,
             Buffer::new_zeroed(length + 1),
             Buffer::new(),
             Some(Bitmap::new_zeroed(length)),
@@ -54,21 +57,23 @@ impl<O: Offset> Utf8Array<O> {
     /// The canonical method to create a [`Utf8Array`] out of low-end APIs.
     /// # Panics
     /// This function panics iff:
+    /// * The `data_type`'s physical type is not consistent with the offset `O`.
     /// * The `offsets` and `values` are consistent
     /// * The `values` between `offsets` are utf8 encoded
     /// * The validity is not `None` and its length is different from `offsets`'s length minus one.
-    pub fn from_data(offsets: Buffer<O>, values: Buffer<u8>, validity: Option<Bitmap>) -> Self {
+    pub fn from_data(
+        data_type: DataType,
+        offsets: Buffer<O>,
+        values: Buffer<u8>,
+        validity: Option<Bitmap>,
+    ) -> Self {
         check_offsets_and_utf8(&offsets, &values);
         if let Some(ref validity) = validity {
             assert_eq!(offsets.len() - 1, validity.len());
         }
 
         Self {
-            data_type: if O::is_large() {
-                DataType::LargeUtf8
-            } else {
-                DataType::Utf8
-            },
+            data_type,
             offsets,
             values,
             validity,
@@ -76,10 +81,20 @@ impl<O: Offset> Utf8Array<O> {
         }
     }
 
+    /// Returns the default [`DataType`], `DataType::Utf8` or `DataType::LargeUtf8`
+    pub fn default_data_type() -> DataType {
+        if O::is_large() {
+            DataType::LargeUtf8
+        } else {
+            DataType::Utf8
+        }
+    }
+
     /// The same as [`Utf8Array::from_data`] but does not check for utf8.
     /// # Safety
     /// `values` buffer must contain valid utf8 between every `offset`
     pub unsafe fn from_data_unchecked(
+        data_type: DataType,
         offsets: Buffer<O>,
         values: Buffer<u8>,
         validity: Option<Bitmap>,
@@ -87,11 +102,7 @@ impl<O: Offset> Utf8Array<O> {
         check_offsets(&offsets, values.len());
 
         Self {
-            data_type: if O::is_large() {
-                DataType::LargeUtf8
-            } else {
-                DataType::Utf8
-            },
+            data_type,
             offsets,
             values,
             validity,

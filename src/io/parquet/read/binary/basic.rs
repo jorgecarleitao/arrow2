@@ -288,6 +288,7 @@ where
             validity.into(),
         )),
         DataType::LargeUtf8 | DataType::Utf8 => Box::new(Utf8Array::from_data(
+            data_type.clone(),
             offsets.into(),
             values.into(),
             validity.into(),
@@ -332,6 +333,7 @@ where
             validity.into(),
         )),
         DataType::LargeUtf8 | DataType::Utf8 => Box::new(Utf8Array::from_data(
+            data_type.clone(),
             offsets.into(),
             values.into(),
             validity.into(),

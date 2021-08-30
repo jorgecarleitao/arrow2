@@ -152,8 +152,8 @@ fn dict_read<
         Int64 | Date64 | Time64(_) | Duration(_) | Timestamp(_, _) => {
             primitive::iter_to_dict_array::<K, _, _, _, _, _>(iter, metadata, data_type, |x: i64| x)
         }
-        Utf8 => binary::iter_to_dict_array::<K, i32, _, _>(iter, metadata),
-        LargeUtf8 => binary::iter_to_dict_array::<K, i64, _, _>(iter, metadata),
+        Utf8 => binary::iter_to_dict_array::<K, i32, _, _>(iter, metadata, data_type),
+        LargeUtf8 => binary::iter_to_dict_array::<K, i64, _, _>(iter, metadata, data_type),
         other => Err(ArrowError::NotYetImplemented(format!(
             "Reading dictionaries of type {:?}",
             other

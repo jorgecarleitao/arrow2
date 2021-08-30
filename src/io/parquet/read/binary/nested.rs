@@ -194,6 +194,7 @@ where
             validity.into(),
         )) as Arc<dyn Array>,
         DataType::LargeUtf8 | DataType::Utf8 => Arc::new(Utf8Array::from_data(
+            inner_data_type.clone(),
             offsets.into(),
             values.into(),
             validity.into(),

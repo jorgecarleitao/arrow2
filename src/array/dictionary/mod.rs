@@ -43,17 +43,21 @@ pub struct DictionaryArray<K: DictionaryKey> {
 impl<K: DictionaryKey> DictionaryArray<K> {
     /// Returns a new empty [`DictionaryArray`].
     pub fn new_empty(data_type: DataType) -> Self {
-        let values = new_empty_array(data_type).into();
-        Self::from_data(PrimitiveArray::<K>::new_empty(K::DATA_TYPE), values)
+        if let DataType::Dictionary(_, values) = data_type {
+            let values = new_empty_array(values.as_ref().clone()).into();
+            Self::from_data(PrimitiveArray::<K>::new_empty(K::DATA_TYPE), values)
+        } else {
+            panic!("DictionaryArray must be initialized with DataType::Dictionary");
+        }
     }
 
     /// Returns an [`DictionaryArray`] whose all elements are null
     #[inline]
     pub fn new_null(data_type: DataType, length: usize) -> Self {
-        if let DataType::Dictionary(_, data_type) = data_type {
+        if let DataType::Dictionary(_, values) = data_type {
             Self::from_data(
                 PrimitiveArray::<K>::new_null(K::DATA_TYPE, length),
-                new_empty_array(data_type.as_ref().clone()).into(),
+                new_empty_array(values.as_ref().clone()).into(),
             )
         } else {
             panic!("DictionaryArray must be initialized with DataType::Dictionary");

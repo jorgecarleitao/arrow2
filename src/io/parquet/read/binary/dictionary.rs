@@ -12,6 +12,7 @@ use crate::{
     array::{Array, DictionaryArray, DictionaryKey, Offset, PrimitiveArray, Utf8Array},
     bitmap::{utils::BitmapIter, MutableBitmap},
     buffer::MutableBuffer,
+    datatypes::DataType,
     error::{ArrowError, Result},
 };
 
@@ -124,6 +125,7 @@ where
 pub fn iter_to_array<K, O, I, E>(
     mut iter: I,
     metadata: &ColumnChunkMetaData,
+    data_type: DataType,
 ) -> Result<Box<dyn Array>>
 where
     ArrowError: From<E>,
@@ -149,6 +151,11 @@ where
     }
 
     let keys = PrimitiveArray::from_data(K::DATA_TYPE, indices.into(), validity.into());
-    let values = Arc::new(Utf8Array::from_data(offsets.into(), values.into(), None));
+    let values = Arc::new(Utf8Array::from_data(
+        data_type,
+        offsets.into(),
+        values.into(),
+        None,
+    ));
     Ok(Box::new(DictionaryArray::<K>::from_data(keys, values)))
 }
