@@ -151,6 +151,7 @@ where
     }
 
     let keys = PrimitiveArray::from_data(K::DATA_TYPE, indices.into(), validity.into());
+    let data_type = DictionaryArray::<K>::get_child(&data_type).clone();
     let values = Arc::new(Utf8Array::from_data(
         data_type,
         offsets.into(),

@@ -562,9 +562,12 @@ fn cast_with_options(
 
         (Binary, LargeBinary) => Ok(Box::new(binary_to_large_binary(
             array.as_any().downcast_ref().unwrap(),
+            to_type.clone(),
         ))),
-        (LargeBinary, Binary) => binary_large_to_binary(array.as_any().downcast_ref().unwrap())
-            .map(|x| Box::new(x) as Box<dyn Array>),
+        (LargeBinary, Binary) => {
+            binary_large_to_binary(array.as_any().downcast_ref().unwrap(), to_type.clone())
+                .map(|x| Box::new(x) as Box<dyn Array>)
+        }
 
         // start numeric casts
         (UInt8, UInt16) => primitive_to_primitive_dyn::<u8, u16>(array, to_type, as_options),

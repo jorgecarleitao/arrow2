@@ -144,7 +144,7 @@ fn to_primitive<T: NativeType + NumCast>(
     PrimitiveArray::<T>::from_data(data_type, values, validity)
 }
 
-fn to_binary<O: Offset>(json_col: &ArrowJsonColumn) -> Arc<dyn Array> {
+fn to_binary<O: Offset>(json_col: &ArrowJsonColumn, data_type: DataType) -> Arc<dyn Array> {
     let validity = to_validity(&json_col.validity);
     let offsets = to_offsets::<O>(json_col.offset.as_ref());
     let values = json_col
@@ -155,7 +155,7 @@ fn to_binary<O: Offset>(json_col: &ArrowJsonColumn) -> Arc<dyn Array> {
         .map(|value| value.as_str().map(|x| hex::decode(x).unwrap()).unwrap())
         .flatten()
         .collect();
-    Arc::new(BinaryArray::from_data(offsets, values, validity))
+    Arc::new(BinaryArray::from_data(data_type, offsets, values, validity))
 }
 
 fn to_utf8<O: Offset>(json_col: &ArrowJsonColumn, data_type: DataType) -> Arc<dyn Array> {
@@ -262,8 +262,8 @@ pub fn to_array(
         DataType::UInt64 => Ok(Arc::new(to_primitive::<u64>(json_col, data_type.clone()))),
         DataType::Float32 => Ok(Arc::new(to_primitive::<f32>(json_col, data_type.clone()))),
         DataType::Float64 => Ok(Arc::new(to_primitive::<f64>(json_col, data_type.clone()))),
-        DataType::Binary => Ok(to_binary::<i32>(json_col)),
-        DataType::LargeBinary => Ok(to_binary::<i64>(json_col)),
+        DataType::Binary => Ok(to_binary::<i32>(json_col, data_type.clone())),
+        DataType::LargeBinary => Ok(to_binary::<i64>(json_col, data_type.clone())),
         DataType::Utf8 => Ok(to_utf8::<i32>(json_col, data_type.clone())),
         DataType::LargeUtf8 => Ok(to_utf8::<i64>(json_col, data_type.clone())),
         DataType::FixedSizeBinary(_) => {

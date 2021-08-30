@@ -24,9 +24,10 @@ pub struct GrowableBoolean<'a> {
 
 impl<'a> GrowableBoolean<'a> {
     pub fn new(arrays: Vec<&'a BooleanArray>, mut use_validity: bool, capacity: usize) -> Self {
+        let data_type = arrays[0].data_type().clone();
+
         // if any of the arrays has nulls, insertions from any array requires setting bits
         // as there is at least one array with nulls.
-        let data_type = arrays[0].data_type().clone();
         if !use_validity & arrays.iter().any(|array| array.null_count() > 0) {
             use_validity = true;
         };

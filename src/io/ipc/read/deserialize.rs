@@ -176,6 +176,7 @@ pub fn read<R: Read + Seek>(
         DataType::Binary => {
             let array = read_binary::<i32, _>(
                 field_nodes,
+                data_type,
                 buffers,
                 reader,
                 block_offset,
@@ -187,6 +188,7 @@ pub fn read<R: Read + Seek>(
         DataType::LargeBinary => {
             let array = read_binary::<i64, _>(
                 field_nodes,
+                data_type,
                 buffers,
                 reader,
                 block_offset,

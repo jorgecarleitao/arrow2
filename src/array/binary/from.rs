@@ -31,7 +31,7 @@ impl<O: Offset> BinaryArray<O> {
         // soundness: I is `TrustedLen`
         let (validity, offsets, values) = unsafe { trusted_len_unzip(iterator) };
 
-        Self::from_data(offsets, values, validity)
+        Self::from_data(Self::default_data_type(), offsets, values, validity)
     }
 }
 

@@ -16,6 +16,7 @@ use super::BinaryArray;
 /// This struct does not allocate a validity until one is required (i.e. push a null to it).
 #[derive(Debug)]
 pub struct MutableBinaryArray<O: Offset> {
+    data_type: DataType,
     offsets: MutableBuffer<O>,
     values: MutableBuffer<u8>,
     validity: Option<MutableBitmap>,
@@ -24,6 +25,7 @@ pub struct MutableBinaryArray<O: Offset> {
 impl<O: Offset> From<MutableBinaryArray<O>> for BinaryArray<O> {
     fn from(other: MutableBinaryArray<O>) -> Self {
         BinaryArray::<O>::from_data(
+            other.data_type,
             other.offsets.into(),
             other.values.into(),
             other.validity.map(|x| x.into()),
@@ -52,6 +54,7 @@ impl<O: Offset> MutableBinaryArray<O> {
         let mut offsets = MutableBuffer::<O>::with_capacity(capacity + 1);
         offsets.push(O::default());
         Self {
+            data_type: BinaryArray::<O>::default_data_type(),
             offsets,
             values: MutableBuffer::<u8>::new(),
             validity: None,
@@ -114,6 +117,7 @@ impl<O: Offset> MutableArray for MutableBinaryArray<O> {
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
         Arc::new(BinaryArray::from_data(
+            self.data_type.clone(),
             std::mem::take(&mut self.offsets).into(),
             std::mem::take(&mut self.values).into(),
             std::mem::take(&mut self.validity).map(|x| x.into()),
@@ -121,11 +125,7 @@ impl<O: Offset> MutableArray for MutableBinaryArray<O> {
     }
 
     fn data_type(&self) -> &DataType {
-        if O::is_large() {
-            &DataType::LargeUtf8
-        } else {
-            &DataType::Utf8
-        }
+        &self.data_type
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
