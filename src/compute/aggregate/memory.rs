@@ -1,6 +1,6 @@
 use crate::array::*;
 use crate::bitmap::Bitmap;
-use crate::datatypes::{DataType, IntervalUnit};
+use crate::datatypes::PhysicalType;
 use crate::types::days_ms;
 
 fn validity_size(validity: &Option<Bitmap>) -> usize {
@@ -50,8 +50,8 @@ macro_rules! dyn_dict {
 ///
 /// FFI buffers are included in this estimation.
 pub fn estimated_bytes_size(array: &dyn Array) -> usize {
-    use DataType::*;
-    match array.data_type() {
+    use PhysicalType::*;
+    match array.data_type().to_physical_type() {
         Null => 0,
         Boolean => {
             let array = array.as_any().downcast_ref::<BooleanArray>().unwrap();
@@ -59,21 +59,18 @@ pub fn estimated_bytes_size(array: &dyn Array) -> usize {
         }
         Int8 => dyn_primitive!(array, i8),
         Int16 => dyn_primitive!(array, i16),
-        Int32 | Date32 | Time32(_) | Interval(IntervalUnit::YearMonth) => {
-            dyn_primitive!(array, i32)
-        }
-        Int64 | Date64 | Timestamp(_, _) | Time64(_) | Duration(_) => dyn_primitive!(array, i64),
+        Int32 => dyn_primitive!(array, i32),
+        Int64 => dyn_primitive!(array, i64),
+        Int128 => dyn_primitive!(array, i128),
+        DaysMs => dyn_primitive!(array, days_ms),
         UInt8 => dyn_primitive!(array, u16),
         UInt16 => dyn_primitive!(array, u16),
         UInt32 => dyn_primitive!(array, u32),
         UInt64 => dyn_primitive!(array, u64),
-        Float16 => unreachable!(),
         Float32 => dyn_primitive!(array, f32),
         Float64 => dyn_primitive!(array, f64),
-        Decimal(_, _) => dyn_primitive!(array, i128),
-        Interval(IntervalUnit::DayTime) => dyn_primitive!(array, days_ms),
         Binary => dyn_binary!(array, BinaryArray<i32>, i32),
-        FixedSizeBinary(_) => {
+        FixedSizeBinary => {
             let array = array
                 .as_any()
                 .downcast_ref::<FixedSizeBinaryArray>()
@@ -83,23 +80,23 @@ pub fn estimated_bytes_size(array: &dyn Array) -> usize {
         LargeBinary => dyn_binary!(array, BinaryArray<i64>, i64),
         Utf8 => dyn_binary!(array, Utf8Array<i32>, i32),
         LargeUtf8 => dyn_binary!(array, Utf8Array<i64>, i64),
-        List(_) => {
+        List => {
             let array = array.as_any().downcast_ref::<ListArray<i32>>().unwrap();
             estimated_bytes_size(array.values().as_ref())
                 + array.offsets().len() * std::mem::size_of::<i32>()
                 + validity_size(array.validity())
         }
-        FixedSizeList(_, _) => {
+        FixedSizeList => {
             let array = array.as_any().downcast_ref::<ListArray<i64>>().unwrap();
             estimated_bytes_size(array.values().as_ref()) + validity_size(array.validity())
         }
-        LargeList(_) => {
+        LargeList => {
             let array = array.as_any().downcast_ref::<ListArray<i64>>().unwrap();
             estimated_bytes_size(array.values().as_ref())
                 + array.offsets().len() * std::mem::size_of::<i64>()
                 + validity_size(array.validity())
         }
-        Struct(_) => {
+        Struct => {
             let array = array.as_any().downcast_ref::<StructArray>().unwrap();
             array
                 .values()
@@ -109,7 +106,7 @@ pub fn estimated_bytes_size(array: &dyn Array) -> usize {
                 .sum::<usize>()
                 + validity_size(array.validity())
         }
-        Union(_, _, _) => {
+        Union => {
             let array = array.as_any().downcast_ref::<UnionArray>().unwrap();
             let types = array.types().len() * std::mem::size_of::<i8>();
             let offsets = array
@@ -125,17 +122,9 @@ pub fn estimated_bytes_size(array: &dyn Array) -> usize {
                 .sum::<usize>();
             types + offsets + fields
         }
-        Dictionary(keys, _) => match keys.as_ref() {
-            Int8 => dyn_dict!(array, i8),
-            Int16 => dyn_dict!(array, i16),
-            Int32 => dyn_dict!(array, i32),
-            Int64 => dyn_dict!(array, i64),
-            UInt8 => dyn_dict!(array, u8),
-            UInt16 => dyn_dict!(array, u16),
-            UInt32 => dyn_dict!(array, u32),
-            UInt64 => dyn_dict!(array, u64),
-            _ => unreachable!(),
-        },
+        Dictionary(key_type) => with_match_physical_dictionary_key_type!(key_type, |$T| {
+            dyn_dict!(array, $T)
+        }),
     }
 }
 
