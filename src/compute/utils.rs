@@ -18,6 +18,7 @@
 use crate::{
     array::{Array, BooleanArray, Offset, Utf8Array},
     bitmap::Bitmap,
+    datatypes::DataType,
 };
 
 pub fn combine_validities(lhs: &Option<Bitmap>, rhs: &Option<Bitmap>) -> Option<Bitmap> {
@@ -42,5 +43,5 @@ pub fn unary_utf8_boolean<O: Offset, F: Fn(&str) -> bool>(
         op(value.unwrap())
     });
     let values = Bitmap::from_trusted_len_iter(iterator);
-    BooleanArray::from_data(values, validity)
+    BooleanArray::from_data(DataType::Boolean, values, validity)
 }

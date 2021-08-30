@@ -233,7 +233,11 @@ pub fn to_array(
                 .iter()
                 .map(|value| value.as_bool().unwrap())
                 .collect::<Bitmap>();
-            Ok(Arc::new(BooleanArray::from_data(values, validity)))
+            Ok(Arc::new(BooleanArray::from_data(
+                data_type.clone(),
+                values,
+                validity,
+            )))
         }
         DataType::Int8 => Ok(Arc::new(to_primitive::<i8>(json_col, data_type.clone()))),
         DataType::Int16 => Ok(Arc::new(to_primitive::<i16>(json_col, data_type.clone()))),

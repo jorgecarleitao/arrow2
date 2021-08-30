@@ -34,6 +34,6 @@ unsafe impl<A: ffi::ArrowArrayRef> FromFfi<A> for BooleanArray {
             values = values.slice(offset, length);
             validity = validity.map(|x| x.slice(offset, length))
         }
-        Ok(Self::from_data(values, validity))
+        Ok(Self::from_data(data_type, values, validity))
     }
 }

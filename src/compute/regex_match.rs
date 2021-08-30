@@ -21,6 +21,7 @@ use regex::Regex;
 
 use super::utils::{combine_validities, unary_utf8_boolean};
 use crate::array::{BooleanArray, Offset, Utf8Array};
+use crate::datatypes::DataType;
 use crate::error::{ArrowError, Result};
 use crate::{array::*, bitmap::Bitmap};
 
@@ -59,7 +60,11 @@ pub fn regex_match<O: Offset>(values: &Utf8Array<O>, regex: &Utf8Array<O>) -> Re
     });
     let new_values = Bitmap::try_from_trusted_len_iter(iterator)?;
 
-    Ok(BooleanArray::from_data(new_values, validity))
+    Ok(BooleanArray::from_data(
+        DataType::Boolean,
+        new_values,
+        validity,
+    ))
 }
 
 /// Regex matches

@@ -1,3 +1,4 @@
+use crate::datatypes::DataType;
 use crate::error::{ArrowError, Result};
 use crate::{
     array::{Array, BooleanArray},
@@ -87,7 +88,11 @@ pub fn or(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
         }
         (None, None) => None,
     };
-    Ok(BooleanArray::from_data(lhs_values | rhs_values, validity))
+    Ok(BooleanArray::from_data(
+        DataType::Boolean,
+        lhs_values | rhs_values,
+        validity,
+    ))
 }
 
 /// Logical 'and' with [Kleene logic](https://en.wikipedia.org/wiki/Three-valued_logic#Kleene_and_Priest_logics)
@@ -172,7 +177,11 @@ pub fn and(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
         }
         (None, None) => None,
     };
-    Ok(BooleanArray::from_data(lhs_values & rhs_values, validity))
+    Ok(BooleanArray::from_data(
+        DataType::Boolean,
+        lhs_values & rhs_values,
+        validity,
+    ))
 }
 
 #[cfg(test)]

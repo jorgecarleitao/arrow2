@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::{
     array::{Array, BooleanArray},
     bitmap::MutableBitmap,
+    datatypes::DataType,
 };
 
 use super::{
@@ -13,6 +14,7 @@ use super::{
 /// Concrete [`Growable`] for the [`BooleanArray`].
 pub struct GrowableBoolean<'a> {
     arrays: Vec<&'a BooleanArray>,
+    data_type: DataType,
     validity: MutableBitmap,
     values: MutableBitmap,
     // function used to extend nulls from arrays. This function's lifetime is bound to the array
@@ -24,6 +26,7 @@ impl<'a> GrowableBoolean<'a> {
     pub fn new(arrays: Vec<&'a BooleanArray>, mut use_validity: bool, capacity: usize) -> Self {
         // if any of the arrays has nulls, insertions from any array requires setting bits
         // as there is at least one array with nulls.
+        let data_type = arrays[0].data_type().clone();
         if !use_validity & arrays.iter().any(|array| array.null_count() > 0) {
             use_validity = true;
         };
@@ -35,6 +38,7 @@ impl<'a> GrowableBoolean<'a> {
 
         Self {
             arrays,
+            data_type,
             values: MutableBitmap::with_capacity(capacity),
             validity: MutableBitmap::with_capacity(capacity),
             extend_null_bits,
@@ -45,7 +49,7 @@ impl<'a> GrowableBoolean<'a> {
         let validity = std::mem::take(&mut self.validity);
         let values = std::mem::take(&mut self.values);
 
-        BooleanArray::from_data(values.into(), validity.into())
+        BooleanArray::from_data(self.data_type.clone(), values.into(), validity.into())
     }
 }
 
@@ -76,6 +80,6 @@ impl<'a> Growable<'a> for GrowableBoolean<'a> {
 
 impl<'a> From<GrowableBoolean<'a>> for BooleanArray {
     fn from(val: GrowableBoolean<'a>) -> Self {
-        BooleanArray::from_data(val.values.into(), val.validity.into())
+        BooleanArray::from_data(val.data_type, val.values.into(), val.validity.into())
     }
 }

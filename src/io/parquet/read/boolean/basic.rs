@@ -1,6 +1,7 @@
 use crate::{
     array::BooleanArray,
     bitmap::{utils::BitmapIter, MutableBitmap},
+    datatypes::DataType,
     error::{ArrowError, Result},
 };
 
@@ -85,7 +86,11 @@ where
         )?
     }
 
-    Ok(BooleanArray::from_data(values.into(), validity.into()))
+    Ok(BooleanArray::from_data(
+        DataType::Boolean,
+        values.into(),
+        validity.into(),
+    ))
 }
 
 pub async fn stream_to_array<I, E>(pages: I, metadata: &ColumnChunkMetaData) -> Result<BooleanArray>
@@ -109,7 +114,11 @@ where
         )?
     }
 
-    Ok(BooleanArray::from_data(values.into(), validity.into()))
+    Ok(BooleanArray::from_data(
+        DataType::Boolean,
+        values.into(),
+        validity.into(),
+    ))
 }
 
 fn extend_from_page(

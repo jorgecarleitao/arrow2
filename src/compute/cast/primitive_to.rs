@@ -14,19 +14,25 @@ use super::CastOptions;
 
 /// Returns a [`BooleanArray`] where every element is different from zero.
 /// Validity is preserved.
-pub fn primitive_to_boolean<T: NativeType>(from: &PrimitiveArray<T>) -> BooleanArray {
+pub fn primitive_to_boolean<T: NativeType>(
+    from: &PrimitiveArray<T>,
+    to_type: DataType,
+) -> BooleanArray {
     let iter = from.values().iter().map(|v| *v != T::default());
     let values = Bitmap::from_trusted_len_iter(iter);
 
-    BooleanArray::from_data(values, from.validity().clone())
+    BooleanArray::from_data(to_type, values, from.validity().clone())
 }
 
-pub(super) fn primitive_to_boolean_dyn<T>(from: &dyn Array) -> Result<Box<dyn Array>>
+pub(super) fn primitive_to_boolean_dyn<T>(
+    from: &dyn Array,
+    to_type: DataType,
+) -> Result<Box<dyn Array>>
 where
     T: NativeType,
 {
     let from = from.as_any().downcast_ref().unwrap();
-    Ok(Box::new(primitive_to_boolean::<T>(from)))
+    Ok(Box::new(primitive_to_boolean::<T>(from, to_type)))
 }
 
 /// Returns a [`Utf8Array`] where every element is the utf8 representation of the number.
