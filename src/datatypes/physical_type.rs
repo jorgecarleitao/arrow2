@@ -1,5 +1,4 @@
-/// Represents a physical type: a unique in-memory representation.
-/// A physical type has a one-to-many relationship with a [`crate::datatypes::DataType`].
+/// the set of valid indices used to index a dictionary-encoded Array.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DictionaryIndexType {
     /// A signed 8-bit integer.
@@ -20,13 +19,14 @@ pub enum DictionaryIndexType {
     UInt64,
 }
 
-/// Represents a physical type: a unique in-memory representation of an Arrow array.
+/// The set of physical types: unique in-memory representations of an Arrow array.
 /// A physical type has a one-to-many relationship with a [`crate::datatypes::DataType`] and
-/// a one-to-one mapping with all structs in this crate that implement [`crate::array::Array`].
+/// a one-to-one mapping with each struct in this crate that implements [`crate::array::Array`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PhysicalType {
+    /// A Null with no allocation.
     Null,
-    /// A boolean datatype representing the values `true` and `false`.
+    /// A boolean represented as a single bit.
     Boolean,
     /// A signed 8-bit integer.
     Int8,
@@ -55,7 +55,6 @@ pub enum PhysicalType {
     /// Opaque binary data of variable length.
     Binary,
     /// Opaque binary data of fixed size.
-    /// Enum parameter specifies the number of bytes per value.
     FixedSizeBinary,
     /// Opaque binary data of variable length and 64-bit offsets.
     LargeBinary,
@@ -63,26 +62,16 @@ pub enum PhysicalType {
     Utf8,
     /// A variable-length string in Unicode with UFT-8 encoding and 64-bit offsets.
     LargeUtf8,
-    /// A list of some logical data type with variable length.
+    /// A list of some data type with variable length.
     List,
-    /// A list of some logical data type with fixed length.
+    /// A list of some data type with fixed length.
     FixedSizeList,
-    /// A list of some logical data type with variable length and 64-bit offsets.
+    /// A list of some data type with variable length and 64-bit offsets.
     LargeList,
-    /// A nested datatype that contains a number of sub-fields.
+    /// A nested type that contains an arbitrary number of fields.
     Struct,
-    /// A nested datatype that can represent slots of differing types.
-    /// Third argument represents sparsness
+    /// A nested type that represents slots of differing types.
     Union,
-    /// A dictionary encoded array (`key_type`, `value_type`), where
-    /// each array element is an index of `key_type` into an
-    /// associated dictionary of `value_type`.
-    ///
-    /// Dictionary arrays are used to store columns of `value_type`
-    /// that contain many repeated values using less memory, but with
-    /// a higher CPU overhead for some operations.
-    ///
-    /// This type mostly used to represent low cardinality string
-    /// arrays or a limited set of primitive types as integers.
+    /// A dictionary encoded array by `DictionaryIndexType`.
     Dictionary(DictionaryIndexType),
 }

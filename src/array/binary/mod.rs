@@ -56,7 +56,7 @@ impl<O: Offset> BinaryArray<O> {
             assert_eq!(offsets.len() - 1, validity.len());
         }
 
-        if data_type != Self::default_data_type() {
+        if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
             panic!("BinaryArray can only be initialized with DataType::Binary or DataType::LargeBinary")
         }
 

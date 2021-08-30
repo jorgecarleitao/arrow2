@@ -4,7 +4,7 @@ mod physical_type;
 mod schema;
 
 pub use field::Field;
-pub(crate) use physical_type::*;
+pub use physical_type::*;
 pub use schema::Schema;
 
 /// The set of datatypes that are supported by this implementation of Apache Arrow.
@@ -172,8 +172,8 @@ impl DataType {
         }
     }
 
-    /// Returns the physical type of the logical type
-    pub(crate) fn to_physical_type(&self) -> PhysicalType {
+    /// the [`PhysicalType`] of this [`DataType`].
+    pub fn to_physical_type(&self) -> PhysicalType {
         use DataType::*;
         match self {
             Null => PhysicalType::Null,

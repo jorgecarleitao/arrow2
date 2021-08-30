@@ -31,12 +31,11 @@ pub unsafe trait Relation {
 }
 
 macro_rules! create_relation {
-    ($native_ty:ty, $($impl_pattern:pat)|+) => {
+    ($native_ty:ty, $physical_ty:expr) => {
         unsafe impl Relation for $native_ty {
             #[inline]
             fn is_valid(data_type: &DataType) -> bool {
-                let physical_type = data_type.to_physical_type();
-                matches!(physical_type, $($impl_pattern)|+)
+                data_type.to_physical_type() == $physical_ty
             }
         }
     };

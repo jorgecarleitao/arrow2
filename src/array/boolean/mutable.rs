@@ -4,7 +4,7 @@ use std::sync::Arc;
 use crate::{
     array::{Array, MutableArray, TryExtend, TryPush},
     bitmap::MutableBitmap,
-    datatypes::DataType,
+    datatypes::{DataType, PhysicalType},
     error::Result,
     trusted_len::TrustedLen,
 };
@@ -74,6 +74,9 @@ impl MutableBooleanArray {
         values: MutableBitmap,
         validity: Option<MutableBitmap>,
     ) -> Self {
+        if data_type.to_physical_type() != PhysicalType::Boolean {
+            panic!("MutableBooleanArray can only be initialized with DataType::Boolean")
+        }
         Self {
             data_type,
             values,

@@ -1,4 +1,7 @@
-use crate::{bitmap::Bitmap, datatypes::DataType};
+use crate::{
+    bitmap::Bitmap,
+    datatypes::{DataType, PhysicalType},
+};
 
 use super::{display_fmt, Array};
 
@@ -39,6 +42,9 @@ impl BooleanArray {
     pub fn from_data(data_type: DataType, values: Bitmap, validity: Option<Bitmap>) -> Self {
         if let Some(ref validity) = validity {
             assert_eq!(values.len(), validity.len());
+        }
+        if data_type.to_physical_type() != PhysicalType::Boolean {
+            panic!("BooleanArray can only be initialized with DataType::Boolean")
         }
         Self {
             data_type,

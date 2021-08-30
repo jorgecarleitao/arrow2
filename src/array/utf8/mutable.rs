@@ -46,11 +46,7 @@ impl<O: Offset> MutableUtf8Array<O> {
         let mut offsets = MutableBuffer::<O>::new();
         offsets.push(O::default());
         Self {
-            data_type: if O::is_large() {
-                DataType::LargeUtf8
-            } else {
-                DataType::Utf8
-            },
+            data_type: Self::default_data_type(),
             offsets,
             values: MutableBuffer::<u8>::new(),
             validity: None,
@@ -73,10 +69,8 @@ impl<O: Offset> MutableUtf8Array<O> {
         if let Some(ref validity) = validity {
             assert_eq!(offsets.len() - 1, validity.len());
         }
-        if O::is_large() {
-            assert_eq!(data_type, DataType::LargeUtf8)
-        } else {
-            assert_eq!(data_type, DataType::Utf8)
+        if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
+            panic!("MutableUtf8Array can only be initialized with DataType::Utf8 or DataType::LargeUtf8")
         }
         Self {
             data_type,
@@ -103,10 +97,8 @@ impl<O: Offset> MutableUtf8Array<O> {
         if let Some(ref validity) = validity {
             assert_eq!(offsets.len() - 1, validity.len());
         }
-        if O::is_large() {
-            assert_eq!(data_type, DataType::LargeUtf8)
-        } else {
-            assert_eq!(data_type, DataType::Utf8)
+        if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
+            panic!("MutableUtf8Array can only be initialized with DataType::Utf8 or DataType::LargeUtf8")
         }
         Self {
             data_type,
@@ -117,11 +109,7 @@ impl<O: Offset> MutableUtf8Array<O> {
     }
 
     fn default_data_type() -> DataType {
-        if O::is_large() {
-            DataType::LargeUtf8
-        } else {
-            DataType::Utf8
-        }
+        Utf8Array::<O>::default_data_type()
     }
 
     /// Initializes a new [`MutableUtf8Array`] with a pre-allocated capacity of slots.

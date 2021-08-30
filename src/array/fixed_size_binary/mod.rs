@@ -40,7 +40,7 @@ impl FixedSizeBinaryArray {
 
         Self {
             size,
-            data_type: DataType::FixedSizeBinary(size),
+            data_type,
             values,
             validity,
             offset: 0,
@@ -97,10 +97,9 @@ impl FixedSizeBinaryArray {
 
 impl FixedSizeBinaryArray {
     pub(crate) fn get_size(data_type: &DataType) -> &i32 {
-        if let DataType::FixedSizeBinary(size) = data_type {
-            size
-        } else {
-            panic!("Wrong DataType")
+        match data_type {
+            DataType::FixedSizeBinary(size) => size,
+            _ => panic!("Wrong DataType"),
         }
     }
 }

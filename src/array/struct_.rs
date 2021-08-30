@@ -24,7 +24,7 @@ use super::{ffi::ToFfi, new_empty_array, new_null_array, Array, FromFfi};
 ///     Field::new("c", DataType::Int32, false),
 /// ];
 ///
-/// let array = StructArray::from_data(fields, vec![boolean, int], None);
+/// let array = StructArray::from_data(DataType::Struct(fields), vec![boolean, int], None);
 /// ```
 #[derive(Debug, Clone)]
 pub struct StructArray {

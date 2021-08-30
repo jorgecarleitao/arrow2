@@ -72,7 +72,7 @@ impl<O: Offset> Utf8Array<O> {
             assert_eq!(offsets.len() - 1, validity.len());
         }
 
-        if data_type != Self::default_data_type() {
+        if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
             panic!("Utf8Array can only be initialized with DataType::Utf8 or DataType::LargeUtf8")
         }
 
@@ -104,6 +104,10 @@ impl<O: Offset> Utf8Array<O> {
         validity: Option<Bitmap>,
     ) -> Self {
         check_offsets(&offsets, values.len());
+
+        if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
+            panic!("Utf8Array can only be initialized with DataType::Utf8 or DataType::LargeUtf8")
+        }
 
         Self {
             data_type,
