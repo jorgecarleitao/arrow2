@@ -34,8 +34,6 @@ fn u16_as_u8_overflow() {
     let c = b.as_any().downcast_ref::<UInt8Array>().unwrap();
     let values = c.values().as_slice();
 
-    println!("{}", 255u8.wrapping_add(10));
-
     assert_eq!(values, &[255, 0, 1, 2, 3])
 }
 

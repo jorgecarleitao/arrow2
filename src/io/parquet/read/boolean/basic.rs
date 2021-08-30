@@ -122,7 +122,7 @@ fn extend_from_page(
     assert!(descriptor.max_def_level() <= 1);
     let is_optional = descriptor.max_def_level() == 1;
 
-    let (validity_buffer, values_buffer, version) = utils::split_buffer(page, is_optional);
+    let (_, validity_buffer, values_buffer, version) = utils::split_buffer(page, descriptor);
 
     match (page.encoding(), page.dictionary_page(), is_optional) {
         (Encoding::Plain, None, true) => read_optional(

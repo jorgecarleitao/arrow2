@@ -1,13 +1,10 @@
 use std::sync::Arc;
 
 use parquet2::{
-    encoding::Encoding,
+    encoding::{hybrid_rle::HybridRleDecoder, Encoding},
     metadata::{ColumnChunkMetaData, ColumnDescriptor},
-    page::{DataPage, DataPageHeader, DataPageHeaderExt},
-    read::{
-        levels::{get_bit_width, split_buffer_v1, split_buffer_v2, RLEDecoder},
-        StreamingIterator,
-    },
+    page::DataPage,
+    read::{levels::get_bit_width, StreamingIterator},
 };
 
 use super::super::nested_utils::*;
@@ -65,16 +62,13 @@ fn read<O: Offset>(
 
     match (rep_level_encoding.0, def_level_encoding.0) {
         (Encoding::Rle, Encoding::Rle) => {
-            let rep_levels = RLEDecoder::new(
-                rep_levels,
-                get_bit_width(rep_level_encoding.1),
-                additional as u32,
-            );
+            let rep_levels =
+                HybridRleDecoder::new(rep_levels, get_bit_width(rep_level_encoding.1), additional);
             if is_nullable {
-                let def_levels = RLEDecoder::new(
+                let def_levels = HybridRleDecoder::new(
                     def_levels,
                     get_bit_width(def_level_encoding.1),
-                    additional as u32,
+                    additional,
                 );
                 let new_values = utils::BinaryIter::new(values_buffer);
                 read_values(
@@ -89,11 +83,8 @@ fn read<O: Offset>(
                 read_plain_required(values_buffer, additional, offsets, values)
             }
 
-            let def_levels = RLEDecoder::new(
-                def_levels,
-                get_bit_width(def_level_encoding.1),
-                additional as u32,
-            );
+            let def_levels =
+                HybridRleDecoder::new(def_levels, get_bit_width(def_level_encoding.1), additional);
 
             extend_offsets(
                 rep_levels,
@@ -119,83 +110,38 @@ fn extend_from_page<O: Offset>(
 ) -> Result<()> {
     let additional = page.num_values();
 
-    match page.header() {
-        DataPageHeader::V1(header) => {
-            assert_eq!(header.definition_level_encoding(), Encoding::Rle);
-            assert_eq!(header.repetition_level_encoding(), Encoding::Rle);
+    let (rep_levels, def_levels, values_buffer, version) = utils::split_buffer(page, descriptor);
 
-            match (&page.encoding(), page.dictionary_page()) {
-                (Encoding::Plain, None) => {
-                    let (rep_levels, def_levels, values_buffer) = split_buffer_v1(
-                        page.buffer(),
-                        descriptor.max_rep_level() > 0,
-                        descriptor.max_def_level() > 0,
-                    );
-                    read(
-                        rep_levels,
-                        def_levels,
-                        values_buffer,
-                        additional,
-                        (
-                            &header.repetition_level_encoding(),
-                            descriptor.max_rep_level(),
-                        ),
-                        (
-                            &header.definition_level_encoding(),
-                            descriptor.max_def_level(),
-                        ),
-                        is_nullable,
-                        nested,
-                        offsets,
-                        values,
-                        validity,
-                    )
-                }
-                _ => {
-                    return Err(utils::not_implemented(
-                        &page.encoding(),
-                        is_nullable,
-                        page.dictionary_page().is_some(),
-                        "V1",
-                        "primitive",
-                    ))
-                }
-            }
+    match (&page.encoding(), page.dictionary_page()) {
+        (Encoding::Plain, None) => read(
+            rep_levels,
+            def_levels,
+            values_buffer,
+            additional,
+            (
+                &page.repetition_level_encoding(),
+                descriptor.max_rep_level(),
+            ),
+            (
+                &page.definition_level_encoding(),
+                descriptor.max_def_level(),
+            ),
+            is_nullable,
+            nested,
+            offsets,
+            values,
+            validity,
+        ),
+        _ => {
+            return Err(utils::not_implemented(
+                &page.encoding(),
+                is_nullable,
+                page.dictionary_page().is_some(),
+                version,
+                "primitive",
+            ))
         }
-        DataPageHeader::V2(header) => match (&page.encoding(), page.dictionary_page()) {
-            (Encoding::Plain, None) => {
-                let def_level_buffer_length = header.definition_levels_byte_length as usize;
-                let rep_level_buffer_length = header.repetition_levels_byte_length as usize;
-                let (rep_levels, def_levels, values_buffer) = split_buffer_v2(
-                    page.buffer(),
-                    rep_level_buffer_length,
-                    def_level_buffer_length,
-                );
-                read(
-                    rep_levels,
-                    def_levels,
-                    values_buffer,
-                    additional,
-                    (&Encoding::Rle, descriptor.max_rep_level()),
-                    (&Encoding::Rle, descriptor.max_def_level()),
-                    is_nullable,
-                    nested,
-                    offsets,
-                    values,
-                    validity,
-                )
-            }
-            _ => {
-                return Err(utils::not_implemented(
-                    &page.encoding(),
-                    is_nullable,
-                    page.dictionary_page().is_some(),
-                    "V2",
-                    "primitive",
-                ))
-            }
-        },
-    };
+    }
     Ok(())
 }
 

@@ -24,17 +24,11 @@ fn parallel_read(path: &str) -> Result<Vec<Box<dyn Array>>> {
         for column in 0..producer_metadata.schema().num_columns() {
             for row_group in 0..producer_metadata.row_groups.len() {
                 let start = SystemTime::now();
+                let column_metadata = producer_metadata.row_groups[row_group].column(column);
                 println!("produce start: {} {}", column, row_group);
-                let pages = read::get_page_iterator(
-                    &producer_metadata,
-                    row_group,
-                    column,
-                    &mut file,
-                    None,
-                    vec![],
-                )
-                .unwrap()
-                .collect::<Vec<_>>();
+                let pages = read::get_page_iterator(column_metadata, &mut file, None, vec![])
+                    .unwrap()
+                    .collect::<Vec<_>>();
                 println!(
                     "produce end - {:?}: {} {}",
                     start.elapsed().unwrap(),

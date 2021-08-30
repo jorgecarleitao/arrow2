@@ -11,6 +11,8 @@ mod utils;
 
 pub mod stream;
 
+use std::sync::Arc;
+
 use crate::array::*;
 use crate::bitmap::Bitmap;
 use crate::buffer::{Buffer, MutableBuffer};
@@ -62,7 +64,7 @@ pub fn write_file<'a, W, I>(
     parquet_schema: SchemaDescriptor,
     options: WriteOptions,
     key_value_metadata: Option<Vec<KeyValue>>,
-) -> Result<()>
+) -> Result<u64>
 where
     W: std::io::Write + std::io::Seek,
     I: Iterator<Item = Result<RowGroupIter<'a, ArrowError>>>,
@@ -103,7 +105,7 @@ pub fn can_encode(data_type: &DataType, encoding: Encoding) -> bool {
 
 /// Returns an iterator of compressed pages,
 pub fn array_to_pages(
-    array: &dyn Array,
+    array: Arc<dyn Array>,
     descriptor: ColumnDescriptor,
     options: WriteOptions,
     encoding: Encoding,
@@ -119,7 +121,7 @@ pub fn array_to_pages(
                 )
             })
         }
-        _ => array_to_page(array, descriptor, options, encoding)
+        _ => array_to_page(array.as_ref(), descriptor, options, encoding)
             .map(|page| DynIter::new(std::iter::once(Ok(page)))),
     }
 }

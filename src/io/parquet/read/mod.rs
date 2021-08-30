@@ -41,17 +41,13 @@ pub use schema::{get_schema, is_type_nullable, FileMetaData};
 
 /// Creates a new iterator of compressed pages.
 pub fn get_page_iterator<'b, RR: Read + Seek>(
-    metadata: &FileMetaData,
-    row_group: usize,
-    column: usize,
+    column_metadata: &ColumnChunkMetaData,
     reader: &'b mut RR,
     pages_filter: Option<PageFilter>,
     buffer: Vec<u8>,
 ) -> Result<PageIterator<'b, RR>> {
     Ok(_get_page_iterator(
-        metadata,
-        row_group,
-        column,
+        column_metadata,
         reader,
         pages_filter,
         buffer,
@@ -60,15 +56,13 @@ pub fn get_page_iterator<'b, RR: Read + Seek>(
 
 /// Creates a new iterator of compressed pages.
 pub async fn get_page_stream<'a, RR: AsyncRead + Unpin + Send + AsyncSeek>(
-    metadata: &'a FileMetaData,
-    row_group: usize,
-    column: usize,
+    column_metadata: &'a ColumnChunkMetaData,
     reader: &'a mut RR,
     pages_filter: Option<PageFilter>,
     buffer: Vec<u8>,
 ) -> Result<impl Stream<Item = std::result::Result<CompressedDataPage, ParquetError>> + 'a> {
     let pages_filter = pages_filter.unwrap_or_else(|| Arc::new(|_, _| true));
-    Ok(_get_page_stream(metadata, row_group, column, reader, buffer, pages_filter).await?)
+    Ok(_get_page_stream(column_metadata, reader, buffer, pages_filter).await?)
 }
 
 /// Reads parquets' metadata syncronously.

@@ -126,11 +126,9 @@ impl<R: Read + Seek> Iterator for RecordReader<R> {
             |(b1, b2, mut columns), (column, field)| {
                 // column according to the file's indexing
                 let column = self.indices[column];
-                let column_meta = &columns_meta[column];
+                let column_metadata = &columns_meta[column];
                 let pages = get_page_iterator(
-                    &metadata,
-                    row_group,
-                    column,
+                    column_metadata,
                     &mut self.reader,
                     self.pages_filter.clone(),
                     b1,
@@ -138,7 +136,8 @@ impl<R: Read + Seek> Iterator for RecordReader<R> {
 
                 let mut pages = Decompressor::new(pages, b2);
 
-                let array = page_iter_to_array(&mut pages, column_meta, field.data_type().clone())?;
+                let array =
+                    page_iter_to_array(&mut pages, column_metadata, field.data_type().clone())?;
 
                 let array = if array.len() > remaining_rows {
                     array.slice(0, remaining_rows)

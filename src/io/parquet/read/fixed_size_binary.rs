@@ -1,6 +1,6 @@
 use futures::{pin_mut, Stream, StreamExt};
 use parquet2::{
-    encoding::{bitpacking, hybrid_rle, uleb128, Encoding},
+    encoding::{hybrid_rle, Encoding},
     page::{DataPage, FixedLenByteArrayPageDict},
     read::StreamingIterator,
 };
@@ -36,13 +36,7 @@ pub(crate) fn read_dict_buffer(
     let bit_width = indices_buffer[0];
     let indices_buffer = &indices_buffer[1..];
 
-    let (_, consumed) = uleb128::decode(indices_buffer);
-    let indices_buffer = &indices_buffer[consumed..];
-
-    let non_null_indices_len = (indices_buffer.len() * 8 / bit_width as usize) as u32;
-
-    let mut indices =
-        bitpacking::Decoder::new(indices_buffer, bit_width, non_null_indices_len as usize);
+    let mut indices = hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, length);
 
     let validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
 
@@ -204,7 +198,7 @@ pub(crate) fn extend_from_page(
     assert!(descriptor.max_def_level() <= 1);
     let is_optional = descriptor.max_def_level() == 1;
 
-    let (validity_buffer, values_buffer, version) = utils::split_buffer(page, is_optional);
+    let (_, validity_buffer, values_buffer, version) = utils::split_buffer(page, descriptor);
 
     match (page.encoding(), page.dictionary_page(), is_optional) {
         (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer(

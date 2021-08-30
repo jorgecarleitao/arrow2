@@ -20,10 +20,10 @@ pub async fn write_stream<'a, W, I>(
     parquet_schema: SchemaDescriptor,
     options: WriteOptions,
     key_value_metadata: Option<Vec<KeyValue>>,
-) -> Result<()>
+) -> Result<u64>
 where
     W: std::io::Write + std::io::Seek,
-    I: Stream<Item = Result<RowGroupIter<'a, ArrowError>>>,
+    I: Stream<Item = Result<RowGroupIter<'static, ArrowError>>>,
 {
     let key_value_metadata = key_value_metadata
         .map(|mut x| {

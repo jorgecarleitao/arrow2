@@ -18,7 +18,7 @@ pub struct RowGroupIterator<I: Iterator<Item = Result<RecordBatch>>> {
     encodings: Vec<Encoding>,
 }
 
-impl<I: Iterator<Item = Result<RecordBatch>>> RowGroupIterator<I> {
+impl<'a, I: Iterator<Item = Result<RecordBatch>>> RowGroupIterator<I> {
     /// Creates a new [`RowGroupIterator`] from an iterator over [`RecordBatch`].
     pub fn try_new(
         iter: I,
@@ -59,7 +59,7 @@ impl<I: Iterator<Item = Result<RecordBatch>>> Iterator for RowGroupIterator<I> {
                     .zip(self.parquet_schema.columns().to_vec().into_iter())
                     .zip(encodings.into_iter())
                     .map(move |((array, type_), encoding)| {
-                        array_to_pages(array.as_ref(), type_, options, encoding)
+                        array_to_pages(array, type_, options, encoding)
                     }),
             ))
         })
