@@ -197,14 +197,15 @@ fn write_single_array(path: &amp;str, array: &amp;dyn Array, field: Field) -&gt;
     let mut file = File::create(path)?;
 
     // Write the file. Note that, at present, any error results in a corrupted file.
-    write_file(
+    let _ = write_file(
         &amp;mut file,
         row_groups,
         &amp;schema,
         parquet_schema,
         options,
         None,
-    )
+    )?;
+    Ok(())
 }
 
 fn main() -&gt; Result&lt;()&gt; {
@@ -255,14 +256,15 @@ fn write_batch(path: &amp;str, batch: RecordBatch) -&gt; Result&lt;()&gt; {
 
     // Write the file. Note that, at present, any error results in a corrupted file.
     let parquet_schema = row_groups.parquet_schema().clone();
-    write_file(
+    let _ = write_file(
         &amp;mut file,
         row_groups,
         &amp;schema,
         parquet_schema,
         options,
         None,
-    )
+    )?;
+    Ok(())
 }
 
 fn main() -&gt; Result&lt;()&gt; {

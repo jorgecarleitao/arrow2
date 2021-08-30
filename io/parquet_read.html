@@ -172,14 +172,13 @@ fn read_column_chunk(path: &amp;str, row_group: usize, column: usize) -&gt; Resu
     // the parquet's physical, converted and logical types.
     let arrow_schema = read::get_schema(&amp;file_metadata)?;
 
+    // get the columns' metadata
+    let metadata = file_metadata.row_groups[row_group].column(column);
+
     // Construct an iterator over pages. This binds `file` to this iterator, and each iteration
     // is IO intensive as it will read a compressed page into memory. There is almost no CPU work
     // on this operation
-    let pages =
-        read::get_page_iterator(&amp;file_metadata, row_group, column, &amp;mut file, None, vec![])?;
-
-    // get the columns' metadata
-    let metadata = file_metadata.row_groups[row_group].column(column);
+    let pages = read::get_page_iterator(metadata, &amp;mut file, None, vec![])?;
 
     // get the columns' logical type
     let data_type = arrow_schema.fields()[column].data_type().clone();
@@ -267,17 +266,11 @@ fn parallel_read(path: &amp;str) -&gt; Result&lt;Vec&lt;Box&lt;dyn Array&gt;&gt;
         for column in 0..producer_metadata.schema().num_columns() {
             for row_group in 0..producer_metadata.row_groups.len() {
                 let start = SystemTime::now();
+                let column_metadata = producer_metadata.row_groups[row_group].column(column);
                 println!(&quot;produce start: {} {}&quot;, column, row_group);
-                let pages = read::get_page_iterator(
-                    &amp;producer_metadata,
-                    row_group,
-                    column,
-                    &amp;mut file,
-                    None,
-                    vec![],
-                )
-                .unwrap()
-                .collect::&lt;Vec&lt;_&gt;&gt;();
+                let pages = read::get_page_iterator(column_metadata, &amp;mut file, None, vec![])
+                    .unwrap()
+                    .collect::&lt;Vec&lt;_&gt;&gt;();
                 println!(
                     &quot;produce end - {:?}: {} {}&quot;,
                     start.elapsed().unwrap(),
