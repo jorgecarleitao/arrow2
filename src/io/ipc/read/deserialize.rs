@@ -33,7 +33,7 @@ pub fn read<R: Read + Seek>(
 ) -> Result<Arc<dyn Array>> {
     match data_type {
         DataType::Null => {
-            let array = read_null(field_nodes);
+            let array = read_null(field_nodes, data_type);
             Ok(Arc::new(array))
         }
         DataType::Boolean => {

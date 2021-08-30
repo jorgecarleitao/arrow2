@@ -97,7 +97,7 @@ pub fn make_growable<'a>(
     assert!(arrays.iter().all(|&item| item.data_type() == data_type));
 
     match data_type {
-        DataType::Null => Box::new(null::GrowableNull::new()),
+        DataType::Null => Box::new(null::GrowableNull::new(data_type.clone())),
         DataType::Boolean => {
             let arrays = arrays
                 .iter()

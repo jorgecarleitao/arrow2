@@ -215,7 +215,7 @@ impl Display for dyn Array {
 /// Creates a new [`Array`] with a [`Array::len`] of 0.
 pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
     match data_type {
-        DataType::Null => Box::new(NullArray::new_empty()),
+        DataType::Null => Box::new(NullArray::new_empty(data_type)),
         DataType::Boolean => Box::new(BooleanArray::new_empty()),
         DataType::Int8 => Box::new(PrimitiveArray::<i8>::new_empty(data_type)),
         DataType::Int16 => Box::new(PrimitiveArray::<i16>::new_empty(data_type)),
@@ -264,7 +264,7 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
 /// for all types except Union, which does not have a validity.
 pub fn new_null_array(data_type: DataType, length: usize) -> Box<dyn Array> {
     match data_type {
-        DataType::Null => Box::new(NullArray::new_null(length)),
+        DataType::Null => Box::new(NullArray::new_null(data_type, length)),
         DataType::Boolean => Box::new(BooleanArray::new_null(length)),
         DataType::Int8 => Box::new(PrimitiveArray::<i8>::new_null(data_type, length)),
         DataType::Int16 => Box::new(PrimitiveArray::<i16>::new_null(data_type, length)),

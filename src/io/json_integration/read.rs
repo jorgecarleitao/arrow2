@@ -220,7 +220,10 @@ pub fn to_array(
 ) -> Result<Arc<dyn Array>> {
     let data_type = field.data_type();
     match data_type {
-        DataType::Null => Ok(Arc::new(NullArray::from_data(json_col.count))),
+        DataType::Null => Ok(Arc::new(NullArray::from_data(
+            data_type.clone(),
+            json_col.count,
+        ))),
         DataType::Boolean => {
             let validity = to_validity(&json_col.validity);
             let values = json_col

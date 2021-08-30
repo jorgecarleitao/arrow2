@@ -59,7 +59,10 @@ pub fn take<O: Index>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result
     }
 
     match values.data_type() {
-        DataType::Null => Ok(Box::new(NullArray::from_data(indices.len()))),
+        DataType::Null => Ok(Box::new(NullArray::from_data(
+            values.data_type().clone(),
+            indices.len(),
+        ))),
         DataType::Boolean => {
             let values = values.as_any().downcast_ref().unwrap();
             Ok(Box::new(boolean::take::<O>(values, indices)))
