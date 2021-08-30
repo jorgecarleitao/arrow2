@@ -1,4 +1,4 @@
-//! This module contains traits to handle all _physical_ types used in this crate.
+//! traits to handle _all physical types_ used in this crate.
 //! Most physical types used in this crate are native Rust types, like `i32`.
 //! The most important trait is [`NativeType`], implemented for all Arrow types
 //! with a Rust correspondence (such as `i32` or `f64`).
@@ -20,10 +20,13 @@ use crate::datatypes::{DataType, IntervalUnit, TimeUnit};
 /// Trait denoting anything that has a natural logical [`DataType`].
 /// For example, [`DataType::Int32`] for `i32`.
 pub trait NaturalDataType {
+    /// The natural [`DataType`].
     const DATA_TYPE: DataType;
 }
 
+/// describes whether a [`DataType`] is valid.
 pub unsafe trait Relation {
+    /// Whether `data_type` is a valid [`DataType`].
     fn is_valid(data_type: &DataType) -> bool;
 }
 
@@ -46,7 +49,7 @@ macro_rules! natural_type {
     };
 }
 
-/// Trait declaring any type that can be allocated, serialized and deserialized by this crate.
+/// Declares any type that can be allocated, serialized and deserialized by this crate.
 /// All data-heavy memory operations are implemented for this trait alone.
 /// # Safety
 /// Do not implement.
@@ -64,12 +67,16 @@ pub unsafe trait NativeType:
     + Sized
     + 'static
 {
+    /// Type denoting its representation as bytes
     type Bytes: AsRef<[u8]> + for<'a> TryFrom<&'a [u8]>;
 
+    /// To bytes in little endian
     fn to_le_bytes(&self) -> Self::Bytes;
 
+    /// To bytes in big endian
     fn to_be_bytes(&self) -> Self::Bytes;
 
+    /// From bytes in big endian
     fn from_be_bytes(bytes: Self::Bytes) -> Self;
 }
 
@@ -213,16 +220,19 @@ unsafe impl NativeType for days_ms {
 create_relation!(days_ms, &DataType::Interval(IntervalUnit::DayTime));
 
 impl days_ms {
+    /// A new [`days_ms`].
     #[inline]
     pub fn new(days: i32, milliseconds: i32) -> Self {
         Self([days, milliseconds])
     }
 
+    /// The number of days
     #[inline]
     pub fn days(&self) -> i32 {
         self.0[0]
     }
 
+    /// The number of milliseconds
     #[inline]
     pub fn milliseconds(&self) -> i32 {
         self.0[1]

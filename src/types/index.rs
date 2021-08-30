@@ -13,6 +13,7 @@ pub struct IndexRange<I: Index> {
 }
 
 impl<I: Index> IndexRange<I> {
+    /// Returns a new [`IndexRange`].
     pub fn new(start: I, end: I) -> Self {
         assert!(end >= start);
         Self { start, end }
@@ -42,7 +43,7 @@ impl<I: Index> Iterator for IndexRange<I> {
 /// Safety: a range is always of known length
 unsafe impl<I: Index> TrustedLen for IndexRange<I> {}
 
-/// Trait describing any type that can be used to index a slot of an array.
+/// Types that can be used to index a slot of an array.
 pub trait Index:
     NativeType
     + NaturalDataType
@@ -51,9 +52,12 @@ pub trait Index:
     + num_traits::One
     + PartialOrd
 {
+    /// Convert itself to [`usize`].
     fn to_usize(&self) -> usize;
+    /// Convert itself from [`usize`].
     fn from_usize(index: usize) -> Option<Self>;
 
+    /// An iterator from (inclusive) `start` to (exclusive) `end`.
     fn range(start: usize, end: usize) -> Option<IndexRange<Self>> {
         let start = Self::from_usize(start);
         let end = Self::from_usize(end);

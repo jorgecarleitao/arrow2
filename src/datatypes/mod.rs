@@ -1,11 +1,4 @@
-//! This module contains logical types defined in the
-//! [Arrow specification](https://arrow.apache.org/docs/cpp/api/datatype.html):
-//!
-//! * [`DataType`]
-//! * [`Field`]
-//! * [`Schema`]
-//! * [`TimeUnit`]
-//! * [`IntervalUnit`]
+//! Metadata declarations such as [`DataType`], [`Field`] and [`Schema`].
 mod field;
 mod schema;
 
@@ -180,4 +173,5 @@ impl DataType {
 
 // backward compatibility
 use std::sync::Arc;
+/// typedef for [`Arc<Schema>`].
 pub type SchemaRef = Arc<Schema>;

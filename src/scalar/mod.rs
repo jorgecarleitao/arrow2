@@ -1,3 +1,5 @@
+//! Declares the [`Scalar`] API, an optional, trait object representing
+//! the zero-dimension of an [`crate::array::Array`].
 use std::any::Any;
 
 use crate::{array::*, datatypes::*, types::days_ms};
@@ -18,6 +20,7 @@ pub use null::*;
 mod struct_;
 pub use struct_::*;
 
+/// Trait object declaring an optional value with a logical type.
 pub trait Scalar: std::fmt::Debug {
     fn as_any(&self) -> &dyn Any;
 

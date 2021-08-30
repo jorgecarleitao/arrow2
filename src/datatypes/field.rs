@@ -25,10 +25,15 @@ use super::DataType;
 /// [Arrow specification](https://arrow.apache.org/docs/cpp/api/datatype.html)
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Field {
+    /// Its name
     pub name: String,
+    /// Its logical [`DataType`]
     pub data_type: DataType,
+    /// Whether its values can be null or not
     pub nullable: bool,
+    /// The dictionary id of this field (currently un-used)
     pub dict_id: i64,
+    /// Whether the dictionary's values are ordered
     pub dict_is_ordered: bool,
     /// A map of key-value pairs containing additional custom meta data.
     pub metadata: Option<BTreeMap<String, String>>,

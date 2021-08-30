@@ -14,6 +14,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+//! Common utilities used to write to Arrow's IPC format.
 
 use std::io::Write;
 use std::{collections::HashMap, sync::Arc};

@@ -9,6 +9,23 @@ use crate::{
 
 use super::{ffi::ToFfi, new_empty_array, new_null_array, Array, FromFfi};
 
+/// A [`StructArray`] is a nested [`Array`] with an optional validity representing
+/// multiple [`Array`] with the same number of rows.
+/// # Example
+/// ```
+/// use std::sync::Arc;
+/// use arrow2::array::*;
+/// use arrow2::datatypes::*;
+/// let boolean = Arc::new(BooleanArray::from_slice(&[false, false, true, true])) as Arc<dyn Array>;
+/// let int = Arc::new(Int32Array::from_slice(&[42, 28, 19, 31])) as Arc<dyn Array>;
+///
+/// let fields = vec![
+///     Field::new("b", DataType::Boolean, false),
+///     Field::new("c", DataType::Int32, false),
+/// ];
+///
+/// let array = StructArray::from_data(fields, vec![boolean, int], None);
+/// ```
 #[derive(Debug, Clone)]
 pub struct StructArray {
     data_type: DataType,
@@ -17,6 +34,7 @@ pub struct StructArray {
 }
 
 impl StructArray {
+    /// Creates an empty [`StructArray`].
     pub fn new_empty(fields: &[Field]) -> Self {
         let values = fields
             .iter()
@@ -25,7 +43,7 @@ impl StructArray {
         Self::from_data(fields.to_vec(), values, None)
     }
 
-    #[inline]
+    /// Creates a null [`StructArray`] of length `length`.
     pub fn new_null(fields: &[Field], length: usize) -> Self {
         let values = fields
             .iter()
@@ -34,6 +52,11 @@ impl StructArray {
         Self::from_data(fields.to_vec(), values, Some(Bitmap::new_zeroed(length)))
     }
 
+    /// Canonical method to create a [`StructArray`].
+    /// # Panics
+    /// * fields are empty
+    /// * values's len is different from Fields' length.
+    /// * any element of values has a different length than the first element.
     pub fn from_data(
         fields: Vec<Field>,
         values: Vec<Arc<dyn Array>>,
@@ -52,6 +75,7 @@ impl StructArray {
         }
     }
 
+    /// Deconstructs the [`StructArray`] into its individual components.
     pub fn into_data(self) -> (Vec<Field>, Vec<Arc<dyn Array>>, Option<Bitmap>) {
         let Self {
             data_type,
@@ -66,6 +90,11 @@ impl StructArray {
         (fields, values, validity)
     }
 
+    /// Creates a new [`StructArray`] that is a slice of `self`.
+    /// # Panics
+    /// * `offset + length` must be smaller than `self.len()`.
+    /// # Implementation
+    /// This operation is `O(F)` where `F` is the number of fields.
     pub fn slice(&self, offset: usize, length: usize) -> Self {
         let validity = self.validity.clone().map(|x| x.slice(offset, length));
         Self {
@@ -79,18 +108,19 @@ impl StructArray {
         }
     }
 
-    #[inline]
+    /// Returns the values of this [`StructArray`].
     pub fn values(&self) -> &[Arc<dyn Array>] {
         &self.values
     }
 
-    #[inline]
+    /// Returns the fields of this [`StructArray`].
     pub fn fields(&self) -> &[Field] {
         Self::get_fields(&self.data_type)
     }
 }
 
 impl StructArray {
+    /// Returns the fields the `DataType::Struct`.
     pub fn get_fields(data_type: &DataType) -> &[Field] {
         if let DataType::Struct(fields) = data_type {
             fields

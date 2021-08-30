@@ -21,6 +21,7 @@ impl<'a, T, I: Iterator<Item = T> + Clone> Clone for ZipValidity<'a, T, I> {
 }
 
 impl<'a, T, I: Iterator<Item = T>> ZipValidity<'a, T, I> {
+    /// Creates a new [`ZipValidity`].
     pub fn new(values: I, validity: Option<BitmapIter<'a>>) -> Self {
         let has_validity = validity.as_ref().is_some();
         let validity_iter = validity.unwrap_or_else(|| BitmapIter::new(&[], 0, 0));

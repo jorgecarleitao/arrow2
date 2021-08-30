@@ -4,7 +4,7 @@ use crate::{array::Offset, trusted_len::TrustedLen};
 
 use super::ListArray;
 
-/// Iterator of values of an `ListArray`.
+/// Iterator of values of an [`ListArray`].
 pub struct ListValuesIter<'a, A: IterableListArray> {
     array: &'a A,
     index: usize,

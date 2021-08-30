@@ -10,7 +10,10 @@ use crate::{
 
 use super::{FixedSizeBinaryArray, FixedSizeBinaryValues};
 
-/// Mutable version of [`FixedSizeBinaryArray`].
+/// The Arrow's equivalent to a mutable `Vec<Option<[u8; size]>>`.
+/// Converting a [`MutableFixedSizeBinaryArray`] into a [`FixedSizeBinaryArray`] is `O(1)`.
+/// # Implementation
+/// This struct does not allocate a validity until one is required (i.e. push a null to it).
 #[derive(Debug)]
 pub struct MutableFixedSizeBinaryArray {
     data_type: DataType,
@@ -30,6 +33,7 @@ impl From<MutableFixedSizeBinaryArray> for FixedSizeBinaryArray {
 }
 
 impl MutableFixedSizeBinaryArray {
+    /// Canonical method to create a new [`MutableFixedSizeBinaryArray`].
     pub fn from_data(
         size: usize,
         values: MutableBuffer<u8>,
@@ -55,10 +59,12 @@ impl MutableFixedSizeBinaryArray {
         }
     }
 
+    /// Creates a new empty [`MutableFixedSizeBinaryArray`].
     pub fn new(size: usize) -> Self {
         Self::with_capacity(size, 0)
     }
 
+    /// Creates a new [`MutableFixedSizeBinaryArray`] with capacity for `capacity` entries.
     pub fn with_capacity(size: usize, capacity: usize) -> Self {
         Self::from_data(
             size,
@@ -67,6 +73,9 @@ impl MutableFixedSizeBinaryArray {
         )
     }
 
+    /// tries to push a new entry to [`MutableFixedSizeBinaryArray`].
+    /// # Error
+    /// Errors iff the size of `value` is not equal to its own size.
     #[inline]
     pub fn try_push<P: AsRef<[u8]>>(&mut self, value: Option<P>) -> Result<()> {
         match value {
@@ -95,11 +104,17 @@ impl MutableFixedSizeBinaryArray {
         Ok(())
     }
 
+    /// pushes a new entry to [`MutableFixedSizeBinaryArray`].
+    /// # Panics
+    /// Panics iff the size of `value` is not equal to its own size.
     #[inline]
     pub fn push<P: AsRef<[u8]>>(&mut self, value: Option<P>) {
         self.try_push(value).unwrap()
     }
 
+    /// Creates a new [`MutableFixedSizeBinaryArray`] from an iterator of values.
+    /// # Errors
+    /// Errors iff the size of any of the `value` is not equal to its own size.
     pub fn try_from_iter<P: AsRef<[u8]>, I: IntoIterator<Item = Option<P>>>(
         iter: I,
         size: usize,

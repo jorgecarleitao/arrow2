@@ -1,3 +1,4 @@
+//! General utilities for bitmaps representing items where LSB is the first item.
 mod chunk_iterator;
 mod fmt;
 mod iterator;

@@ -10,7 +10,10 @@ use crate::{
 
 use super::BinaryArray;
 
-/// The mutable version of [`BinaryArray`].
+/// The Arrow's equivalent to `Vec<Option<Vec<u8>>>`.
+/// Converting a [`MutableBinaryArray`] into a [`BinaryArray`] is `O(1)`.
+/// # Implementation
+/// This struct does not allocate a validity until one is required (i.e. push a null to it).
 #[derive(Debug)]
 pub struct MutableBinaryArray<O: Offset> {
     offsets: MutableBuffer<O>,
@@ -35,10 +38,16 @@ impl<O: Offset> Default for MutableBinaryArray<O> {
 }
 
 impl<O: Offset> MutableBinaryArray<O> {
+    /// Creates a new empty [`MutableBinaryArray`].
+    /// # Implementation
+    /// This allocates a [`MutableBuffer`] of one element
     pub fn new() -> Self {
         Self::with_capacity(0)
     }
 
+    /// Creates a new [`MutableBinaryArray`] with capacity for `capacity` values.
+    /// # Implementation
+    /// This does not allocate the validity.
     pub fn with_capacity(capacity: usize) -> Self {
         let mut offsets = MutableBuffer::<O>::with_capacity(capacity + 1);
         offsets.push(O::default());
@@ -49,6 +58,7 @@ impl<O: Offset> MutableBinaryArray<O> {
         }
     }
 
+    /// Reserves `additional` slots.
     pub fn reserve(&mut self, additional: usize) {
         self.offsets.reserve(additional);
         if let Some(x) = self.validity.as_mut() {

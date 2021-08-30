@@ -40,11 +40,13 @@ impl<T: NativeType> Default for Buffer<T> {
 }
 
 impl<T: NativeType> Buffer<T> {
+    /// Creates an empty [`Buffer`].
     #[inline]
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Creates a new [`Buffer`] filled with zeros.
     #[inline]
     pub fn new_zeroed(length: usize) -> Self {
         MutableBuffer::from_len_zeroed(length).into()

@@ -1,3 +1,5 @@
+//! Doc provided by README
+
 pub mod alloc;
 #[macro_use]
 pub mod array;

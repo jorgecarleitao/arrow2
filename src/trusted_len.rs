@@ -1,3 +1,4 @@
+//! Declares [`TrustedLen`].
 use std::slice::Iter;
 
 /// An iterator of known, fixed size.

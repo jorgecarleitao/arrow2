@@ -1,3 +1,4 @@
+//! APIs to write to Parquet format.
 mod binary;
 mod boolean;
 mod dictionary;
