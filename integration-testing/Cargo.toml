@@ -30,7 +30,7 @@ publish = false
 logging = ["tracing-subscriber"]
 
 [dependencies]
-arrow2 = { path = "../", features = ["io_ipc", "io_json_integration"], default-features = false }
+arrow2 = { path = "../", features = ["io_ipc", "io_ipc_compression", "io_json_integration"], default-features = false }
 arrow-flight = { path = "../arrow-flight" }
 async-trait = "0.1.41"
 clap = "2.33"
