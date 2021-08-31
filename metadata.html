@@ -186,13 +186,15 @@ fn main() {
 semantical types defined in Arrow.</p>
 <p>In Arrow2, logical types are declared as variants of the <code>enum</code> <code>arrow2::datatypes::DataType</code>.
 For example, <code>DataType::Int32</code> represents a signed integer of 32 bits.</p>
-<p>Each logical type has an associated in-memory physical representation and is associated to specific
-semantics. For example, <code>Date32</code> has the same in-memory representation as <code>Int32</code>, but the value
-represents the number of days since UNIX epoch.</p>
-<p>Logical types are metadata: they annotate arrays with extra information about in-memory data.</p>
+<p>Each <code>DataType</code> has an associated <code>enum PhysicalType</code> (many-to-one) representing the
+particular in-memory representation, and is associated to specific semantics.
+For example, both <code>DataType::Date32</code> and <code>DataType::Int32</code> have the same <code>PhysicalType</code>
+(<code>PhysicalType::Primitive(PrimitiveType::Int32)</code>) but <code>Date32</code> represents the number of
+days since UNIX epoch.</p>
+<p>Logical types are metadata: they annotate physical types with extra information about data.</p>
 <h2 id="field-column-metadata"><a class="header" href="#field-column-metadata"><code>Field</code> (column metadata)</a></h2>
-<p>Besides logical types, the arrow format supports other relevant metadata to the format. All this 
-information is stored in <code>arrow2::datatypes::Field</code>.</p>
+<p>Besides logical types, the arrow format supports other relevant metadata to the format.
+All this information is stored in <code>arrow2::datatypes::Field</code>.</p>
 <p>A <code>Field</code> is arrow's metadata associated to a column in the context of a columnar format. 
 It has a name, a logical type <code>DataType</code>, whether the column is nullable, etc.</p>
 <h2 id="schema-table-metadata"><a class="header" href="#schema-table-metadata"><code>Schema</code> (table metadata)</a></h2>

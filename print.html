@@ -337,50 +337,60 @@ assert_eq!(x.get(1), true);
 <p>The simplest way to think about an arrow <code>Array</code> is that it represents
 <code>Vec&lt;Option&lt;T&gt;&gt;</code> and has a logical type (see <a href="../metadata.html">metadata</a>)) associated with it.</p>
 <p>Probably the simplest array in this crate is <code>PrimitiveArray&lt;T&gt;</code>. It can be constructed
-from an iterator as follows:</p>
+from a slice as follows:</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::array::{Array, PrimitiveArray};
-</span><span class="boring">use arrow2::datatypes::DataType;
 </span><span class="boring">fn main() {
-</span>let array = [Some(1), None, Some(123)]
-    .iter()
-    .collect::&lt;PrimitiveArray&lt;i32&gt;&gt;();
+</span>let array = PrimitiveArray::&lt;i32&gt;::from([Some(1), None, Some(123)]);
+assert_eq!(array.len(), 3)
+<span class="boring">}
+</span></code></pre></pre>
+<p>from a slice of values,</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::array::{Array, PrimitiveArray};
+</span><span class="boring">fn main() {
+</span>let array = PrimitiveArray::&lt;f32&gt;::from_slice([1.0, 0.0, 123.0]);
+assert_eq!(array.len(), 3)
+<span class="boring">}
+</span></code></pre></pre>
+<p>or from an iterator</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::array::{Array, PrimitiveArray};
+</span><span class="boring">fn main() {
+</span>let array: PrimitiveArray&lt;u64&gt; = [Some(1), None, Some(123)].iter().collect();
 assert_eq!(array.len(), 3)
 <span class="boring">}
 </span></code></pre></pre>
 <p>A <code>PrimitiveArray</code> has 3 components:</p>
 <ol>
-<li>A physical type (<code>i32</code>)</li>
+<li>A physical type (e.g. <code>i32</code>)</li>
 <li>A logical type (e.g. <code>DataType::Int32</code>)</li>
 <li>Data</li>
 </ol>
 <p>The main differences from a <code>Vec&lt;Option&lt;T&gt;&gt;</code> are:</p>
 <ul>
-<li>Its data is laid out in memory as a <code>Buffer&lt;T&gt;</code> and an <code>Option&lt;Bitmap&gt;</code>.</li>
-<li>It has an associated logical datatype.</li>
+<li>Its data is laid out in memory as a <code>Buffer&lt;T&gt;</code> and an <code>Option&lt;Bitmap&gt;</code> (see [../low_level.md])</li>
+<li>It has an associated logical type (<code>DataType</code>).</li>
 </ul>
-<p>The first difference allows interoperability with Arrow's ecosystem and efficient SIMD operations (we will re-visit this below); the second difference is that it gives semantic meaning to the array. In the example</p>
+<p>The first allows interoperability with Arrow's ecosystem and efficient SIMD operations
+(we will re-visit this below); the second is that it gives semantic meaning to the array.
+In the example</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::array::PrimitiveArray;
 </span><span class="boring">use arrow2::datatypes::DataType;
 </span><span class="boring">fn main() {
 </span>let ints = PrimitiveArray::&lt;i32&gt;::from([Some(1), None]);
-let dates = PrimitiveArray::&lt;i32&gt;::from([Some(1), None]);
+let dates = PrimitiveArray::&lt;i32&gt;::from([Some(1), None]).to(DataType::Date32);
 <span class="boring">}
 </span></code></pre></pre>
-<p><code>ints</code> and <code>dates</code> have the same in-memory representation but different logic representations (e.g. dates are usually represented as a string).</p>
-<p>Some physical types (e.g. <code>i32</code>) have a &quot;natural&quot; logical <code>DataType</code> (e.g. <code>DataType::Int32</code>).
-These types support a more compact notation:</p>
+<p><code>ints</code> and <code>dates</code> have the same in-memory representation but different logic
+representations (e.g. dates are usually printed to users as &quot;yyyy-mm-dd&quot;).</p>
+<p>All physical types (e.g. <code>i32</code>) have a &quot;natural&quot; logical <code>DataType</code> (e.g. <code>DataType::Int32</code>)
+which is assigned when allocating arrays from iterators, slices, etc.</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::array::{Array, Int32Array, PrimitiveArray};
 </span><span class="boring">use arrow2::datatypes::DataType;
 </span><span class="boring">fn main() {
-</span>/// Int32Array = PrimitiveArray&lt;i32&gt;
-let array = [Some(1), None, Some(123)].iter().collect::&lt;Int32Array&gt;();
-assert_eq!(array.len(), 3);
-let array = Int32Array::from(&amp;[Some(1), None, Some(123)]);
-assert_eq!(array.len(), 3);
-let array = Int32Array::from_slice(&amp;[1, 123]);
-assert_eq!(array.len(), 2);
+</span>let array = PrimitiveArray::&lt;i32&gt;::from_slice([1, 0, 123]);
+assert_eq!(array.data_type(), &amp;DataType::Int32);
 <span class="boring">}
 </span></code></pre></pre>
+<p>they can be cheaply converted to via <code>.to(DataType)</code>.</p>
 <p>The following arrays are supported:</p>
 <ul>
 <li><code>NullArray</code> (just holds nulls)</li>
@@ -391,104 +401,72 @@ assert_eq!(array.len(), 2);
 <li><code>FixedSizeBinaryArray</code> (like <code>BinaryArray</code>, but fixed size)</li>
 <li><code>ListArray&lt;i32&gt;</code> and <code>ListArray&lt;i64&gt;</code> (nested arrays)</li>
 <li><code>FixedSizeListArray</code> (nested arrays of fixed size)</li>
-<li><code>StructArray</code> (when each row has different logical types)</li>
+<li><code>StructArray</code> (every row has multiple logical types)</li>
+<li><code>UnionArray</code> (every row has a different logical type)</li>
 <li><code>DictionaryArray&lt;K&gt;</code> (nested array with encoded values)</li>
 </ul>
 <h2 id="dynamic-array"><a class="header" href="#dynamic-array">Dynamic Array</a></h2>
 <p>There is a more powerful aspect of arrow arrays, and that is that they all
 implement the trait <code>Array</code> and can be cast to <code>&amp;dyn Array</code>, i.e. they can be turned into
 a trait object. This enables arrays to have types that are dynamic in nature.</p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">use std::sync::Arc;
-</span><span class="boring">use arrow2::array::{Array, PrimitiveArray};
-</span><span class="boring">use arrow2::datatypes::DataType;
+<pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::array::{Array, PrimitiveArray};
 </span><span class="boring">fn main() {
-</span>let data = vec![
-    Some(vec![Some(1i32), Some(2), Some(3)]),
-    None,
-    Some(vec![Some(4), None, Some(6)]),
-];
-
-let a = PrimitiveArray::&lt;i32&gt;::from(&amp;[Some(1), None]);
+</span>let a = PrimitiveArray::&lt;i32&gt;::from(&amp;[Some(1), None]);
 let a: &amp;dyn Array = &amp;a;
 <span class="boring">}
 </span></code></pre></pre>
-<p>Note how we have not specified the inner type explicitly in the signature <code>ListArray&lt;i32&gt;</code>.
-Instead, <code>ListArray</code> has an inner <code>Array</code> representing all its values (available via <code>.values()</code>).</p>
 <h3 id="downcast-and-as_any"><a class="header" href="#downcast-and-as_any">Downcast and <code>as_any</code></a></h3>
-<p>Given a trait object <code>&amp;dyn Array</code>, we know its logical type via <code>Array::data_type()</code> and can use it to downcast the array to its concrete type:</p>
+<p>Given a trait object <code>array: &amp;dyn Array</code>, we know its physical type via
+<code>PhysicalType: array.data_type().to_physical_type()</code>, which we use to downcast the array
+to its concrete type:</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::array::{Array, PrimitiveArray};
-</span><span class="boring">use arrow2::datatypes::DataType;
+</span><span class="boring">use arrow2::datatypes::PhysicalType;
 </span><span class="boring">fn main() {
-</span>let array = [Some(1), None, Some(123)]
-    .iter()
-    .collect::&lt;PrimitiveArray&lt;i32&gt;&gt;();
+</span>let array = PrimitiveArray::&lt;i32&gt;::from(&amp;[Some(1), None]);
 let array = &amp;array as &amp;dyn Array;
-
-let array = array.as_any().downcast_ref::&lt;PrimitiveArray&lt;i32&gt;&gt;().unwrap();
+// ...
+let physical_type: PhysicalType = array.data_type().to_physical_type();
 <span class="boring">}
 </span></code></pre></pre>
-<p>There is a many-to-one relationship between <code>DataType</code> and an Array (i.e. a physical representation). The relationship is the following:</p>
-<table><thead><tr><th><code>DataType</code></th><th><code>PhysicalType</code></th></tr></thead><tbody>
-<tr><td><code>UInt8</code></td><td><code>PrimitiveArray&lt;u8&gt;</code></td></tr>
-<tr><td><code>UInt16</code></td><td><code>PrimitiveArray&lt;u16&gt;</code></td></tr>
-<tr><td><code>UInt32</code></td><td><code>PrimitiveArray&lt;u32&gt;</code></td></tr>
-<tr><td><code>UInt64</code></td><td><code>PrimitiveArray&lt;u64&gt;</code></td></tr>
-<tr><td><code>Int8</code></td><td><code>PrimitiveArray&lt;i8&gt;</code></td></tr>
-<tr><td><code>Int16</code></td><td><code>PrimitiveArray&lt;i16&gt;</code></td></tr>
-<tr><td><code>Int32</code></td><td><code>PrimitiveArray&lt;i32&gt;</code></td></tr>
-<tr><td><code>Int64</code></td><td><code>PrimitiveArray&lt;i64&gt;</code></td></tr>
-<tr><td><code>Float32</code></td><td><code>PrimitiveArray&lt;f32&gt;</code></td></tr>
-<tr><td><code>Float64</code></td><td><code>PrimitiveArray&lt;f64&gt;</code></td></tr>
-<tr><td><code>Decimal(_,_)</code></td><td><code>PrimitiveArray&lt;i128&gt;</code></td></tr>
-<tr><td><code>Date32</code></td><td><code>PrimitiveArray&lt;i32&gt;</code></td></tr>
-<tr><td><code>Date64</code></td><td><code>PrimitiveArray&lt;i64&gt;</code></td></tr>
-<tr><td><code>Time32(_)</code></td><td><code>PrimitiveArray&lt;i32&gt;</code></td></tr>
-<tr><td><code>Time64(_)</code></td><td><code>PrimitiveArray&lt;i64&gt;</code></td></tr>
-<tr><td><code>Timestamp(_,_)</code></td><td><code>PrimitiveArray&lt;i64&gt;</code></td></tr>
-<tr><td><code>Interval(YearMonth)</code></td><td><code>PrimitiveArray&lt;i32&gt;</code></td></tr>
-<tr><td><code>Interval(DayTime)</code></td><td><code>PrimitiveArray&lt;days_ms&gt;</code></td></tr>
-<tr><td><code>Duration(_)</code></td><td><code>PrimitiveArray&lt;i64&gt;</code></td></tr>
+<p>There is a one to one relationship between each variant of <code>PhysicalType</code> (an enum) and
+an each implementation of <code>Array</code> (a struct):</p>
+<table><thead><tr><th><code>PhysicalType</code></th><th><code>Array</code></th></tr></thead><tbody>
+<tr><td><code>Primitive(_)</code></td><td><code>PrimitiveArray&lt;_&gt;</code></td></tr>
 <tr><td><code>Binary</code></td><td><code>BinaryArray&lt;i32&gt;</code></td></tr>
 <tr><td><code>LargeBinary</code></td><td><code>BinaryArray&lt;i64&gt;</code></td></tr>
 <tr><td><code>Utf8</code></td><td><code>Utf8Array&lt;i32&gt;</code></td></tr>
 <tr><td><code>LargeUtf8</code></td><td><code>Utf8Array&lt;i64&gt;</code></td></tr>
 <tr><td><code>List</code></td><td><code>ListArray&lt;i32&gt;</code></td></tr>
 <tr><td><code>LargeList</code></td><td><code>ListArray&lt;i64&gt;</code></td></tr>
-<tr><td><code>FixedSizeBinary(_)</code></td><td><code>FixedSizeBinaryArray</code></td></tr>
-<tr><td><code>FixedSizeList(_,_)</code></td><td><code>FixedSizeListArray</code></td></tr>
-<tr><td><code>Struct(_)</code></td><td><code>StructArray</code></td></tr>
-<tr><td><code>Union(_,_,_)</code></td><td><code>UnionArray</code></td></tr>
-<tr><td><code>Dictionary(UInt8,_)</code></td><td><code>DictionaryArray&lt;u8&gt;</code></td></tr>
-<tr><td><code>Dictionary(UInt16,_)</code></td><td><code>DictionaryArray&lt;u16&gt;</code></td></tr>
-<tr><td><code>Dictionary(UInt32,_)</code></td><td><code>DictionaryArray&lt;u32&gt;</code></td></tr>
-<tr><td><code>Dictionary(UInt64,_)</code></td><td><code>DictionaryArray&lt;u64&gt;</code></td></tr>
-<tr><td><code>Dictionary(Int8,_)</code></td><td><code>DictionaryArray&lt;i8&gt;</code></td></tr>
-<tr><td><code>Dictionary(Int16,_)</code></td><td><code>DictionaryArray&lt;i16&gt;</code></td></tr>
-<tr><td><code>Dictionary(Int32,_)</code></td><td><code>DictionaryArray&lt;i32&gt;</code></td></tr>
-<tr><td><code>Dictionary(Int64,_)</code></td><td><code>DictionaryArray&lt;i64&gt;</code></td></tr>
+<tr><td><code>FixedSizeBinary</code></td><td><code>FixedSizeBinaryArray</code></td></tr>
+<tr><td><code>FixedSizeList</code></td><td><code>FixedSizeListArray</code></td></tr>
+<tr><td><code>Struct</code></td><td><code>StructArray</code></td></tr>
+<tr><td><code>Union</code></td><td><code>UnionArray</code></td></tr>
+<tr><td><code>Dictionary(_)</code></td><td><code>DictionaryArray&lt;_&gt;</code></td></tr>
 </tbody></table>
-<p>In this context, a common pattern to write operators that receive <code>&amp;dyn Array</code> is:</p>
+<p>where <code>_</code> represents each of the variants (e.g. <code>PrimitiveType::Int32 &lt;-&gt; i32</code>).</p>
+<p>In this context, a common idiom in using <code>Array</code> as a trait object is as follows:</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>use arrow2::datatypes::DataType;
+</span>use arrow2::datatypes::{PhysicalType, PrimitiveType};
 use arrow2::array::{Array, PrimitiveArray};
 
 fn float_operator(array: &amp;dyn Array) -&gt; Result&lt;Box&lt;dyn Array&gt;, String&gt; {
-    match array.data_type() {
-        DataType::Float32 =&gt; {
+    match array.data_type().to_physical_type() {
+        PhysicalType::Primitive(PrimitiveType::Float32) =&gt; {
             let array = array.as_any().downcast_ref::&lt;PrimitiveArray&lt;f32&gt;&gt;().unwrap();
             // let array = f32-specific operator
             let array = array.clone();
             Ok(Box::new(array))
         }
-        DataType::Float64 =&gt; {
+        PhysicalType::Primitive(PrimitiveType::Float64) =&gt; {
             let array = array.as_any().downcast_ref::&lt;PrimitiveArray&lt;f64&gt;&gt;().unwrap();
             // let array = f64-specific operator
             let array = array.clone();
             Ok(Box::new(array))
         }
-        _ =&gt; Err(&quot;This operator is only valid for float point.&quot;.to_string()),
+        _ =&gt; Err(&quot;This operator is only valid for float point arrays&quot;.to_string()),
     }
 }
 <span class="boring">}
@@ -537,7 +515,8 @@ an array <code>array: &amp;PrimitiveArray&lt;T&gt;</code>, the following applies
 bitwise operations, it is often more performant to operate on chunks of bits instead of single bits. <code>chunks</code> offers a <code>TrustedLen</code> of <code>u64</code> with the bits + an extra <code>u64</code> remainder. We expose two functions, <code>unary(Bitmap, Fn) -&gt; Bitmap</code> and <code>binary(Bitmap, Bitmap, Fn) -&gt; Bitmap</code> that use this API to efficiently perform bitmap operations.</p>
 <h2 id="vectorized-operations"><a class="header" href="#vectorized-operations">Vectorized operations</a></h2>
 <p>One of the main advantages of the arrow format and its memory layout is that
-it often enables SIMD. For example, an unary operation <code>op</code> on a <code>PrimitiveArray</code> is likely auto-vectorized on the following code:</p>
+it often enables SIMD. For example, an unary operation <code>op</code> on a <code>PrimitiveArray</code>
+likely emits SIMD instructions on the following code:</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -720,13 +699,15 @@ fn main() {
 semantical types defined in Arrow.</p>
 <p>In Arrow2, logical types are declared as variants of the <code>enum</code> <code>arrow2::datatypes::DataType</code>.
 For example, <code>DataType::Int32</code> represents a signed integer of 32 bits.</p>
-<p>Each logical type has an associated in-memory physical representation and is associated to specific
-semantics. For example, <code>Date32</code> has the same in-memory representation as <code>Int32</code>, but the value
-represents the number of days since UNIX epoch.</p>
-<p>Logical types are metadata: they annotate arrays with extra information about in-memory data.</p>
+<p>Each <code>DataType</code> has an associated <code>enum PhysicalType</code> (many-to-one) representing the
+particular in-memory representation, and is associated to specific semantics.
+For example, both <code>DataType::Date32</code> and <code>DataType::Int32</code> have the same <code>PhysicalType</code>
+(<code>PhysicalType::Primitive(PrimitiveType::Int32)</code>) but <code>Date32</code> represents the number of
+days since UNIX epoch.</p>
+<p>Logical types are metadata: they annotate physical types with extra information about data.</p>
 <h2 id="field-column-metadata"><a class="header" href="#field-column-metadata"><code>Field</code> (column metadata)</a></h2>
-<p>Besides logical types, the arrow format supports other relevant metadata to the format. All this 
-information is stored in <code>arrow2::datatypes::Field</code>.</p>
+<p>Besides logical types, the arrow format supports other relevant metadata to the format.
+All this information is stored in <code>arrow2::datatypes::Field</code>.</p>
 <p>A <code>Field</code> is arrow's metadata associated to a column in the context of a columnar format. 
 It has a name, a logical type <code>DataType</code>, whether the column is nullable, etc.</p>
 <h2 id="schema-table-metadata"><a class="header" href="#schema-table-metadata"><code>Schema</code> (table metadata)</a></h2>
