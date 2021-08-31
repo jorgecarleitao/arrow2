@@ -4,59 +4,75 @@ The simplest way to think about an arrow `Array` is that it represents
 `Vec<Option<T>>` and has a logical type (see [metadata](../metadata.md))) associated with it.
 
 Probably the simplest array in this crate is `PrimitiveArray<T>`. It can be constructed
-from an iterator as follows:
+from a slice as follows:
 
 ```rust
 # use arrow2::array::{Array, PrimitiveArray};
-# use arrow2::datatypes::DataType;
 # fn main() {
-let array = [Some(1), None, Some(123)]
-    .iter()
-    .collect::<PrimitiveArray<i32>>();
+let array = PrimitiveArray<i32>::from([Some(1), None, Some(123)]);
+assert_eq!(array.len(), 3)
+# }
+```
+
+from a slice of values,
+
+```rust
+# use arrow2::array::{Array, PrimitiveArray};
+# fn main() {
+let array = PrimitiveArray<i32>::from_slice([1, 0, 123]);
+assert_eq!(array.len(), 3)
+# }
+```
+
+or from an iterator
+
+```rust
+# use arrow2::array::{Array, PrimitiveArray};
+# fn main() {
+let array: PrimitiveArray<i32> = [Some(1), None, Some(123)].iter().collect();
 assert_eq!(array.len(), 3)
 # }
 ```
 
 A `PrimitiveArray` has 3 components:
 
-1. A physical type (`i32`)
+1. A physical type (e.g. `i32`)
 2. A logical type (e.g. `DataType::Int32`)
 3. Data
 
 The main differences from a `Vec<Option<T>>` are:
 
-* Its data is laid out in memory as a `Buffer<T>` and an `Option<Bitmap>`.
-* It has an associated logical datatype.
+* Its data is laid out in memory as a `Buffer<T>` and an `Option<Bitmap>` (see [../low_level.md])
+* It has an associated logical type (`DataType`).
 
-The first difference allows interoperability with Arrow's ecosystem and efficient SIMD operations (we will re-visit this below); the second difference is that it gives semantic meaning to the array. In the example
+The first allows interoperability with Arrow's ecosystem and efficient SIMD operations
+(we will re-visit this below); the second is that it gives semantic meaning to the array.
+In the example
 
 ```rust
 # use arrow2::array::PrimitiveArray;
 # use arrow2::datatypes::DataType;
 # fn main() {
 let ints = PrimitiveArray::<i32>::from([Some(1), None]);
-let dates = PrimitiveArray::<i32>::from([Some(1), None]);
+let dates = PrimitiveArray::<i32>::from([Some(1), None]).to(DataType::Date32);
 # }
 ```
 
-`ints` and `dates` have the same in-memory representation but different logic representations (e.g. dates are usually represented as a string).
+`ints` and `dates` have the same in-memory representation but different logic
+representations (e.g. dates are usually printed to users as "yyyy-mm-dd").
 
-Some physical types (e.g. `i32`) have a "natural" logical `DataType` (e.g. `DataType::Int32`).
-These types support a more compact notation:
+All physical types (e.g. `i32`) have a "natural" logical `DataType` (e.g. `DataType::Int32`)
+which is assigned when allocating arrays from iterators, slices, etc.
 
 ```rust
 # use arrow2::array::{Array, Int32Array, PrimitiveArray};
 # use arrow2::datatypes::DataType;
 # fn main() {
-/// Int32Array = PrimitiveArray<i32>
-let array = [Some(1), None, Some(123)].iter().collect::<Int32Array>();
-assert_eq!(array.len(), 3);
-let array = Int32Array::from(&[Some(1), None, Some(123)]);
-assert_eq!(array.len(), 3);
-let array = Int32Array::from_slice(&[1, 123]);
-assert_eq!(array.len(), 2);
+let array = PrimitiveArray<i32>::from_slice([1, 0, 123]);
+assert_eq!(array.data_type(), &DataType::Int32);
 # }
 ```
+they can be cheaply converted to via `.to(DataType)`.
 
 The following arrays are supported:
 
@@ -68,7 +84,8 @@ The following arrays are supported:
 * `FixedSizeBinaryArray` (like `BinaryArray`, but fixed size)
 * `ListArray<i32>` and `ListArray<i64>` (nested arrays)
 * `FixedSizeListArray` (nested arrays of fixed size)
-* `StructArray` (when each row has different logical types)
+* `StructArray` (every row has multiple logical types)
+* `UnionArray` (every row has a different logical type)
 * `DictionaryArray<K>` (nested array with encoded values)
 
 ## Dynamic Array
@@ -78,107 +95,71 @@ implement the trait `Array` and can be cast to `&dyn Array`, i.e. they can be tu
 a trait object. This enables arrays to have types that are dynamic in nature.
 
 ```rust
-# use std::sync::Arc;
 # use arrow2::array::{Array, PrimitiveArray};
-# use arrow2::datatypes::DataType;
 # fn main() {
-let data = vec![
-    Some(vec![Some(1i32), Some(2), Some(3)]),
-    None,
-    Some(vec![Some(4), None, Some(6)]),
-];
-
 let a = PrimitiveArray::<i32>::from(&[Some(1), None]);
 let a: &dyn Array = &a;
 # }
 ```
 
-Note how we have not specified the inner type explicitly in the signature `ListArray<i32>`.
-Instead, `ListArray` has an inner `Array` representing all its values (available via `.values()`).
-
 ### Downcast and `as_any`
 
-Given a trait object `&dyn Array`, we know its logical type via `Array::data_type()` and can use it to downcast the array to its concrete type:
+Given a trait object `array: &dyn Array`, we know its physical type via
+`array.data_type().to_physical_type()`, which we use to downcast the array
+to its concrete type:
 
 ```rust
 # use arrow2::array::{Array, PrimitiveArray};
-# use arrow2::datatypes::DataType;
+# use arrow2::datatypes::PhysicalType;
 # fn main() {
-let array = [Some(1), None, Some(123)]
-    .iter()
-    .collect::<PrimitiveArray<i32>>();
+let a = PrimitiveArray::<i32>::from(&[Some(1), None]);
 let array = &array as &dyn Array;
 
-let array = array.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
+match array.data_type().to_physical_type() {
+    PhysicalType::Int32 => {
+        let array = array.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
+        let values: &[i32] = array.values();
+        assert_eq!(values, &[1, 0]);
+    }
+    _ => todo!()
+}
 # }
 ```
 
 There is a many-to-one relationship between `DataType` and an Array (i.e. a physical representation). The relationship is the following:
 
-| `DataType`            | `PhysicalType`            |
-|-----------------------|---------------------------|
-| `UInt8`               | `PrimitiveArray<u8>`      |
-| `UInt16`              | `PrimitiveArray<u16>`     |
-| `UInt32`              | `PrimitiveArray<u32>`     |
-| `UInt64`              | `PrimitiveArray<u64>`     |
-| `Int8`                | `PrimitiveArray<i8>`      |
-| `Int16`               | `PrimitiveArray<i16>`     |
-| `Int32`               | `PrimitiveArray<i32>`     |
-| `Int64`               | `PrimitiveArray<i64>`     |
-| `Float32`             | `PrimitiveArray<f32>`     |
-| `Float64`             | `PrimitiveArray<f64>`     |
-| `Decimal(_,_)`        | `PrimitiveArray<i128>`    |
-| `Date32`              | `PrimitiveArray<i32>`     |
-| `Date64`              | `PrimitiveArray<i64>`     |
-| `Time32(_)`           | `PrimitiveArray<i32>`     |
-| `Time64(_)`           | `PrimitiveArray<i64>`     |
-| `Timestamp(_,_)`      | `PrimitiveArray<i64>`     |
-| `Interval(YearMonth)` | `PrimitiveArray<i32>`     |
-| `Interval(DayTime)`   | `PrimitiveArray<days_ms>` |
-| `Duration(_)`         | `PrimitiveArray<i64>`     |
-| `Binary`              | `BinaryArray<i32>`        |
-| `LargeBinary`         | `BinaryArray<i64>`        |
-| `Utf8`                | `Utf8Array<i32>`          |
-| `LargeUtf8`           | `Utf8Array<i64>`          |
-| `List`                | `ListArray<i32>`          |
-| `LargeList`           | `ListArray<i64>`          |
-| `FixedSizeBinary(_)`  | `FixedSizeBinaryArray`    |
-| `FixedSizeList(_,_)`  | `FixedSizeListArray`      |
-| `Struct(_)`           | `StructArray`             |
-| `Union(_,_,_)`        | `UnionArray`              |
-| `Dictionary(UInt8,_)` | `DictionaryArray<u8>`     |
-| `Dictionary(UInt16,_)`| `DictionaryArray<u16>`    |
-| `Dictionary(UInt32,_)`| `DictionaryArray<u32>`    |
-| `Dictionary(UInt64,_)`| `DictionaryArray<u64>`    |
-| `Dictionary(Int8,_)`  | `DictionaryArray<i8>`     |
-| `Dictionary(Int16,_)` | `DictionaryArray<i16>`    |
-| `Dictionary(Int32,_)` | `DictionaryArray<i32>`    |
-| `Dictionary(Int64,_)` | `DictionaryArray<i64>`    |
-
-In this context, a common pattern to write operators that receive `&dyn Array` is:
-
-```rust
-use arrow2::datatypes::DataType;
-use arrow2::array::{Array, PrimitiveArray};
-
-fn float_operator(array: &dyn Array) -> Result<Box<dyn Array>, String> {
-    match array.data_type() {
-        DataType::Float32 => {
-            let array = array.as_any().downcast_ref::<PrimitiveArray<f32>>().unwrap();
-            // let array = f32-specific operator
-            let array = array.clone();
-            Ok(Box::new(array))
-        }
-        DataType::Float64 => {
-            let array = array.as_any().downcast_ref::<PrimitiveArray<f64>>().unwrap();
-            // let array = f64-specific operator
-            let array = array.clone();
-            Ok(Box::new(array))
-        }
-        _ => Err("This operator is only valid for float point.".to_string()),
-    }
-}
-```
+| `PhysicalType`       | `PhysicalType`            |
+|----------------------|---------------------------|
+| `UInt8`              | `PrimitiveArray<u8>`      |
+| `UInt16`             | `PrimitiveArray<u16>`     |
+| `UInt32`             | `PrimitiveArray<u32>`     |
+| `UInt64`             | `PrimitiveArray<u64>`     |
+| `Int8`               | `PrimitiveArray<i8>`      |
+| `Int16`              | `PrimitiveArray<i16>`     |
+| `Int32`              | `PrimitiveArray<i32>`     |
+| `Int64`              | `PrimitiveArray<i64>`     |
+| `Int128`             | `PrimitiveArray<i128>`    |
+| `Float32`            | `PrimitiveArray<f32>`     |
+| `Float64`            | `PrimitiveArray<f64>`     |
+| `DaysMs`             | `PrimitiveArray<days_ms>` |
+| `Binary`             | `BinaryArray<i32>`        |
+| `LargeBinary`        | `BinaryArray<i64>`        |
+| `Utf8`               | `Utf8Array<i32>`          |
+| `LargeUtf8`          | `Utf8Array<i64>`          |
+| `List`               | `ListArray<i32>`          |
+| `LargeList`          | `ListArray<i64>`          |
+| `FixedSizeBinary`    | `FixedSizeBinaryArray`    |
+| `FixedSizeList`      | `FixedSizeListArray`      |
+| `Struct`             | `StructArray`             |
+| `Union`              | `UnionArray`              |
+| `Dictionary(UInt8)`  | `DictionaryArray<u8>`     |
+| `Dictionary(UInt16)` | `DictionaryArray<u16>`    |
+| `Dictionary(UInt32)` | `DictionaryArray<u32>`    |
+| `Dictionary(UInt64)` | `DictionaryArray<u64>`    |
+| `Dictionary(Int8)`   | `DictionaryArray<i8>`     |
+| `Dictionary(Int16)`  | `DictionaryArray<i16>`    |
+| `Dictionary(Int32)`  | `DictionaryArray<i32>`    |
+| `Dictionary(Int64)`  | `DictionaryArray<i64>`    |
 
 ## From Iterator
 
