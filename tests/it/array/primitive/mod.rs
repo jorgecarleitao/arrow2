@@ -1,5 +1,11 @@
-use arrow2::{array::*, bitmap::Bitmap, datatypes::*, types::days_ms};
 use std::iter::FromIterator;
+
+use arrow2::{
+    array::*,
+    bitmap::Bitmap,
+    datatypes::*,
+    types::{days_ms, months_days_ns},
+};
 
 mod mutable;
 
@@ -219,4 +225,34 @@ fn display_decimal1() {
 fn display_interval_days_ms() {
     let array = DaysMsArray::from(&[Some(days_ms::new(1, 1)), None, Some(days_ms::new(2, 2))]);
     assert_eq!(format!("{}", array), "Interval(DayTime)[1d1ms, , 2d2ms]");
+}
+
+#[test]
+fn display_months_days_ns() {
+    let data = &[
+        Some(months_days_ns::new(1, 1, 2)),
+        None,
+        Some(months_days_ns::new(2, 3, 3)),
+    ];
+
+    let array = MonthsDaysNsArray::from(&data);
+
+    assert_eq!(
+        format!("{}", array),
+        "Interval(MonthDayNano)[1m1d2ns, , 2m3d3ns]"
+    );
+}
+
+#[test]
+fn months_days_ns() {
+    let data = &[
+        months_days_ns::new(1, 1, 2),
+        months_days_ns::new(1, 1, 3),
+        months_days_ns::new(2, 3, 3),
+    ];
+
+    let array = MonthsDaysNsArray::from_slice(&data);
+
+    let a = array.values().as_slice();
+    assert_eq!(a, data.as_ref());
 }

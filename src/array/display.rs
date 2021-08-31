@@ -128,6 +128,15 @@ pub fn get_value_display<'a>(array: &'a dyn Array) -> Box<dyn Fn(usize) -> Strin
                 x.milliseconds()
             ))
         }
+
+        Interval(IntervalUnit::MonthDayNano) => {
+            dyn_primitive!(array, months_days_ns, |x: months_days_ns| format!(
+                "{}m{}d{}ns",
+                x.months(),
+                x.days(),
+                x.ns()
+            ))
+        }
         Duration(TimeUnit::Second) => dyn_primitive!(array, i64, |x| format!("{}s", x)),
         Duration(TimeUnit::Millisecond) => dyn_primitive!(array, i64, |x| format!("{}ms", x)),
         Duration(TimeUnit::Microsecond) => dyn_primitive!(array, i64, |x| format!("{}us", x)),

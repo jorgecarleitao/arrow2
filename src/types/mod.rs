@@ -125,6 +125,10 @@ natural_type!(i64, DataType::Int64);
 natural_type!(f32, DataType::Float32);
 natural_type!(f64, DataType::Float64);
 natural_type!(days_ms, DataType::Interval(IntervalUnit::DayTime));
+natural_type!(
+    months_days_ns,
+    DataType::Interval(IntervalUnit::MonthDayNano)
+);
 natural_type!(i128, DataType::Decimal(32, 32)); // users should set the decimal when creating an array
 
 create_relation!(u8, PhysicalType::Primitive(PrimitiveType::UInt8));
@@ -219,5 +223,110 @@ impl days_ms {
     #[inline]
     pub fn milliseconds(&self) -> i32 {
         self.0[1]
+    }
+}
+
+/// The in-memory representation of the MonthDayNano variant of the "Interval" logical type.
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash)]
+#[allow(non_camel_case_types)]
+#[repr(C)]
+pub struct months_days_ns(i32, i32, i64);
+
+impl std::fmt::Display for months_days_ns {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}m {}d {}ns", self.months(), self.days(), self.ns())
+    }
+}
+
+unsafe impl NativeType for months_days_ns {
+    type Bytes = [u8; 16];
+    #[inline]
+    fn to_le_bytes(&self) -> Self::Bytes {
+        let months = self.months().to_le_bytes();
+        let days = self.days().to_le_bytes();
+        let ns = self.ns().to_le_bytes();
+        let mut result = [0; 16];
+        result[0] = months[0];
+        result[1] = months[1];
+        result[2] = months[2];
+        result[3] = months[3];
+        result[4] = days[0];
+        result[5] = days[1];
+        result[6] = days[2];
+        result[7] = days[3];
+        (0..8).for_each(|i| {
+            result[8 + i] = ns[i];
+        });
+        result
+    }
+
+    #[inline]
+    fn to_be_bytes(&self) -> Self::Bytes {
+        let months = self.months().to_be_bytes();
+        let days = self.days().to_be_bytes();
+        let ns = self.ns().to_be_bytes();
+        let mut result = [0; 16];
+        result[0] = months[0];
+        result[1] = months[1];
+        result[2] = months[2];
+        result[3] = months[3];
+        result[4] = days[0];
+        result[5] = days[1];
+        result[6] = days[2];
+        result[7] = days[3];
+        (0..8).for_each(|i| {
+            result[8 + i] = ns[i];
+        });
+        result
+    }
+
+    #[inline]
+    fn from_be_bytes(bytes: Self::Bytes) -> Self {
+        let mut months = [0; 4];
+        months[0] = bytes[0];
+        months[1] = bytes[1];
+        months[2] = bytes[2];
+        months[3] = bytes[3];
+        let mut days = [0; 4];
+        days[0] = bytes[4];
+        days[1] = bytes[5];
+        days[2] = bytes[6];
+        days[3] = bytes[7];
+        let mut ns = [0; 8];
+        (0..8).for_each(|i| {
+            ns[i] = bytes[8 + i];
+        });
+        Self(
+            i32::from_be_bytes(months),
+            i32::from_be_bytes(days),
+            i64::from_be_bytes(ns),
+        )
+    }
+}
+
+create_relation!(
+    months_days_ns,
+    PhysicalType::Primitive(PrimitiveType::MonthDayNano)
+);
+
+impl months_days_ns {
+    #[inline]
+    pub fn new(months: i32, days: i32, nanoseconds: i64) -> Self {
+        Self(months, days, nanoseconds)
+    }
+
+    #[inline]
+    pub fn months(&self) -> i32 {
+        self.0
+    }
+
+    #[inline]
+    pub fn days(&self) -> i32 {
+        self.1
+    }
+
+    #[inline]
+    pub fn ns(&self) -> i64 {
+        self.2
     }
 }

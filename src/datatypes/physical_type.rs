@@ -45,6 +45,8 @@ pub enum PrimitiveType {
     Float64,
     /// Two i32 representing days and ms
     DaysMs,
+    /// months_days_ns(i32, i32, i64)
+    MonthDayNano,
 }
 
 /// The set of physical types: unique in-memory representations of an Arrow array.

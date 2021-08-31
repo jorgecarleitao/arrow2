@@ -2,7 +2,7 @@
 //! the zero-dimension of an [`crate::array::Array`].
 use std::any::Any;
 
-use crate::{array::*, datatypes::*, types::days_ms};
+use crate::{array::*, datatypes::*};
 
 mod equal;
 mod primitive;

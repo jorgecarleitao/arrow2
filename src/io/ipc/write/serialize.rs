@@ -22,7 +22,7 @@ use crate::{
     endianess::is_native_little_endian,
     io::ipc::gen::Message,
     trusted_len::TrustedLen,
-    types::{days_ms, NativeType},
+    types::NativeType,
 };
 
 use crate::io::ipc::gen::Schema;

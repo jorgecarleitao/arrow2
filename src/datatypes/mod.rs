@@ -147,6 +147,13 @@ pub enum IntervalUnit {
     /// Indicates the number of elapsed days and milliseconds,
     /// stored as 2 contiguous 32-bit integers (8-bytes in total).
     DayTime,
+    /// The values are stored contiguously in 16 byte blocks. Months and
+    /// days are encoded as 32 bit integers and nanoseconds is encoded as a
+    /// 64 bit integer. All integers are signed. Each field is independent
+    /// (e.g. there is no constraint that nanoseconds have the same sign
+    /// as days or that the quantitiy of nanoseconds represents less
+    /// then a day's worth of time).
+    MonthDayNano,
 }
 
 impl DataType {
@@ -197,6 +204,9 @@ impl DataType {
             Float32 => PhysicalType::Primitive(PrimitiveType::Float32),
             Float64 => PhysicalType::Primitive(PrimitiveType::Float64),
             Interval(IntervalUnit::DayTime) => PhysicalType::Primitive(PrimitiveType::DaysMs),
+            Interval(IntervalUnit::MonthDayNano) => {
+                PhysicalType::Primitive(PrimitiveType::MonthDayNano)
+            }
             Binary => PhysicalType::Binary,
             FixedSizeBinary(_) => PhysicalType::FixedSizeBinary,
             LargeBinary => PhysicalType::LargeBinary,

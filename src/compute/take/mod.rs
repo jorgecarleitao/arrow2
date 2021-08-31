@@ -21,7 +21,7 @@ use crate::{
     array::{new_empty_array, Array, NullArray, PrimitiveArray},
     datatypes::DataType,
     error::Result,
-    types::{days_ms, Index},
+    types::Index,
 };
 
 mod binary;
