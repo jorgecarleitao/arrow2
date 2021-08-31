@@ -92,6 +92,7 @@ impl<'a, A, I: Iterator<Item = A>> Iterator for ProjectionIter<'a, A, I> {
 /// Creates a record batch from binary data using the `ipc::RecordBatch` indexes and the `Schema`
 /// # Panic
 /// Panics iff the projection is not in increasing order (e.g. `[1, 0]` nor `[0, 1, 1]` are valid)
+#[allow(clippy::too_many_arguments)]
 pub fn read_record_batch<R: Read + Seek>(
     batch: gen::Message::RecordBatch,
     schema: Arc<Schema>,

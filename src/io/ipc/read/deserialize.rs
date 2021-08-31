@@ -21,6 +21,7 @@ use super::array::*;
 
 pub type Node<'a> = (&'a gen::Message::FieldNode, &'a Option<Arc<dyn Array>>);
 
+#[allow(clippy::too_many_arguments)]
 pub fn read<R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
     data_type: DataType,
@@ -46,126 +47,18 @@ pub fn read<R: Read + Seek>(
             is_little_endian,
         )
         .map(|x| Arc::new(x) as Arc<dyn Array>),
-        Int8 => read_primitive::<i8, _>(
-            field_nodes,
-            data_type,
-            buffers,
-            reader,
-            block_offset,
-            is_little_endian,
-            compression,
-        )
-        .map(|x| Arc::new(x) as Arc<dyn Array>),
-        Int16 => read_primitive::<i16, _>(
-            field_nodes,
-            data_type,
-            buffers,
-            reader,
-            block_offset,
-            is_little_endian,
-            compression,
-        )
-        .map(|x| Arc::new(x) as Arc<dyn Array>),
-        Int32 => read_primitive::<i32, _>(
-            field_nodes,
-            data_type,
-            buffers,
-            reader,
-            block_offset,
-            is_little_endian,
-            compression,
-        )
-        .map(|x| Arc::new(x) as Arc<dyn Array>),
-        Int64 => read_primitive::<i64, _>(
-            field_nodes,
-            data_type,
-            buffers,
-            reader,
-            block_offset,
-            is_little_endian,
-            compression,
-        )
-        .map(|x| Arc::new(x) as Arc<dyn Array>),
-        Int128 => read_primitive::<i128, _>(
-            field_nodes,
-            data_type,
-            buffers,
-            reader,
-            block_offset,
-            is_little_endian,
-            compression,
-        )
-        .map(|x| Arc::new(x) as Arc<dyn Array>),
-        DaysMs => read_primitive::<days_ms, _>(
-            field_nodes,
-            data_type,
-            buffers,
-            reader,
-            block_offset,
-            is_little_endian,
-            compression,
-        )
-        .map(|x| Arc::new(x) as Arc<dyn Array>),
-        UInt8 => read_primitive::<u8, _>(
-            field_nodes,
-            data_type,
-            buffers,
-            reader,
-            block_offset,
-            is_little_endian,
-            compression,
-        )
-        .map(|x| Arc::new(x) as Arc<dyn Array>),
-        UInt16 => read_primitive::<u16, _>(
-            field_nodes,
-            data_type,
-            buffers,
-            reader,
-            block_offset,
-            is_little_endian,
-            compression,
-        )
-        .map(|x| Arc::new(x) as Arc<dyn Array>),
-        UInt32 => read_primitive::<u32, _>(
-            field_nodes,
-            data_type,
-            buffers,
-            reader,
-            block_offset,
-            is_little_endian,
-            compression,
-        )
-        .map(|x| Arc::new(x) as Arc<dyn Array>),
-        UInt64 => read_primitive::<u64, _>(
-            field_nodes,
-            data_type,
-            buffers,
-            reader,
-            block_offset,
-            is_little_endian,
-            compression,
-        )
-        .map(|x| Arc::new(x) as Arc<dyn Array>),
-        Float32 => read_primitive::<f32, _>(
-            field_nodes,
-            data_type,
-            buffers,
-            reader,
-            block_offset,
-            is_little_endian,
-            compression,
-        )
-        .map(|x| Arc::new(x) as Arc<dyn Array>),
-        Float64 => read_primitive::<f64, _>(
-            field_nodes,
-            data_type,
-            buffers,
-            reader,
-            block_offset,
-            is_little_endian,
-            compression,
-        )
-        .map(|x| Arc::new(x) as Arc<dyn Array>),
+        Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
+            read_primitive::<$T, _>(
+                field_nodes,
+                data_type,
+                buffers,
+                reader,
+                block_offset,
+                is_little_endian,
+                compression,
+            )
+            .map(|x| Arc::new(x) as Arc<dyn Array>)
+        }),
         Binary => {
             let array = read_binary::<i32, _>(
                 field_nodes,
@@ -305,8 +198,7 @@ pub fn skip(
     match data_type.to_physical_type() {
         Null => skip_null(field_nodes),
         Boolean => skip_boolean(field_nodes, buffers),
-        Int8 | Int16 | Int32 | Int64 | Int128 | UInt8 | UInt16 | UInt32 | UInt64 | Float32
-        | Float64 | DaysMs => skip_primitive(field_nodes, buffers),
+        Primitive(_) => skip_primitive(field_nodes, buffers),
         LargeBinary | Binary => skip_binary(field_nodes, buffers),
         LargeUtf8 | Utf8 => skip_utf8(field_nodes, buffers),
         FixedSizeBinary => skip_fixed_size_binary(field_nodes, buffers),

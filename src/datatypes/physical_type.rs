@@ -19,15 +19,8 @@ pub enum DictionaryIndexType {
     UInt64,
 }
 
-/// The set of physical types: unique in-memory representations of an Arrow array.
-/// A physical type has a one-to-many relationship with a [`crate::datatypes::DataType`] and
-/// a one-to-one mapping with each struct in this crate that implements [`crate::array::Array`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum PhysicalType {
-    /// A Null with no allocation.
-    Null,
-    /// A boolean represented as a single bit.
-    Boolean,
+pub enum PrimitiveType {
     /// A signed 8-bit integer.
     Int8,
     /// A signed 16-bit integer.
@@ -52,6 +45,19 @@ pub enum PhysicalType {
     Float64,
     /// Two i32 representing days and ms
     DaysMs,
+}
+
+/// The set of physical types: unique in-memory representations of an Arrow array.
+/// A physical type has a one-to-many relationship with a [`crate::datatypes::DataType`] and
+/// a one-to-one mapping with each struct in this crate that implements [`crate::array::Array`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PhysicalType {
+    /// A Null with no allocation.
+    Null,
+    /// A boolean represented as a single bit.
+    Boolean,
+    /// An array where each slot has a known compile-time size.
+    Primitive(PrimitiveType),
     /// Opaque binary data of variable length.
     Binary,
     /// Opaque binary data of fixed size.

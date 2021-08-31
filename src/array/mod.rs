@@ -181,24 +181,36 @@ macro_rules! with_match_physical_dictionary_key_type {(
     }
 })}
 
+macro_rules! with_match_primitive_type {(
+    $key_type:expr, | $_:tt $T:ident | $($body:tt)*
+) => ({
+    macro_rules! __with_ty__ {( $_ $T:ident ) => ( $($body)* )}
+    use crate::datatypes::PrimitiveType::*;
+    match $key_type {
+        Int8 => __with_ty__! { i8 },
+        Int16 => __with_ty__! { i16 },
+        Int32 => __with_ty__! { i32 },
+        Int64 => __with_ty__! { i64 },
+        Int128 => __with_ty__! { i128 },
+        DaysMs => __with_ty__! { days_ms },
+        UInt8 => __with_ty__! { u8 },
+        UInt16 => __with_ty__! { u16 },
+        UInt32 => __with_ty__! { u32 },
+        UInt64 => __with_ty__! { u64 },
+        Float32 => __with_ty__! { f32 },
+        Float64 => __with_ty__! { f64 },
+    }
+})}
+
 impl Display for dyn Array {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use crate::datatypes::PhysicalType::*;
         match self.data_type().to_physical_type() {
             Null => fmt_dyn!(self, NullArray, f),
             Boolean => fmt_dyn!(self, BooleanArray, f),
-            Int8 => fmt_dyn!(self, PrimitiveArray<i8>, f),
-            Int16 => fmt_dyn!(self, PrimitiveArray<i16>, f),
-            Int32 => fmt_dyn!(self, PrimitiveArray<i32>, f),
-            DaysMs => fmt_dyn!(self, PrimitiveArray<days_ms>, f),
-            Int64 => fmt_dyn!(self, PrimitiveArray<i64>, f),
-            Int128 => fmt_dyn!(self, PrimitiveArray<i128>, f),
-            UInt8 => fmt_dyn!(self, PrimitiveArray<u8>, f),
-            UInt16 => fmt_dyn!(self, PrimitiveArray<u16>, f),
-            UInt32 => fmt_dyn!(self, PrimitiveArray<u32>, f),
-            UInt64 => fmt_dyn!(self, PrimitiveArray<u64>, f),
-            Float32 => fmt_dyn!(self, PrimitiveArray<f32>, f),
-            Float64 => fmt_dyn!(self, PrimitiveArray<f64>, f),
+            Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
+                fmt_dyn!(self, PrimitiveArray<$T>, f)
+            }),
             Binary => fmt_dyn!(self, BinaryArray<i32>, f),
             LargeBinary => fmt_dyn!(self, BinaryArray<i64>, f),
             FixedSizeBinary => fmt_dyn!(self, FixedSizeBinaryArray, f),
@@ -224,18 +236,9 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
     match data_type.to_physical_type() {
         Null => Box::new(NullArray::new_empty(data_type)),
         Boolean => Box::new(BooleanArray::new_empty(data_type)),
-        Int8 => Box::new(PrimitiveArray::<i8>::new_empty(data_type)),
-        Int16 => Box::new(PrimitiveArray::<i16>::new_empty(data_type)),
-        Int32 => Box::new(PrimitiveArray::<i32>::new_empty(data_type)),
-        DaysMs => Box::new(PrimitiveArray::<days_ms>::new_empty(data_type)),
-        Int64 => Box::new(PrimitiveArray::<i64>::new_empty(data_type)),
-        Int128 => Box::new(PrimitiveArray::<i128>::new_empty(data_type)),
-        UInt8 => Box::new(PrimitiveArray::<u8>::new_empty(data_type)),
-        UInt16 => Box::new(PrimitiveArray::<u16>::new_empty(data_type)),
-        UInt32 => Box::new(PrimitiveArray::<u32>::new_empty(data_type)),
-        UInt64 => Box::new(PrimitiveArray::<u64>::new_empty(data_type)),
-        Float32 => Box::new(PrimitiveArray::<f32>::new_empty(data_type)),
-        Float64 => Box::new(PrimitiveArray::<f64>::new_empty(data_type)),
+        Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
+            Box::new(PrimitiveArray::<$T>::new_empty(data_type))
+        }),
         Binary => Box::new(BinaryArray::<i32>::new_empty(data_type)),
         LargeBinary => Box::new(BinaryArray::<i64>::new_empty(data_type)),
         FixedSizeBinary => Box::new(FixedSizeBinaryArray::new_empty(data_type)),
@@ -262,18 +265,9 @@ pub fn new_null_array(data_type: DataType, length: usize) -> Box<dyn Array> {
     match data_type.to_physical_type() {
         Null => Box::new(NullArray::new_null(data_type, length)),
         Boolean => Box::new(BooleanArray::new_null(data_type, length)),
-        Int8 => Box::new(PrimitiveArray::<i8>::new_null(data_type, length)),
-        Int16 => Box::new(PrimitiveArray::<i16>::new_null(data_type, length)),
-        Int32 => Box::new(PrimitiveArray::<i32>::new_null(data_type, length)),
-        DaysMs => Box::new(PrimitiveArray::<days_ms>::new_null(data_type, length)),
-        Int64 => Box::new(PrimitiveArray::<i64>::new_null(data_type, length)),
-        Int128 => Box::new(PrimitiveArray::<i128>::new_null(data_type, length)),
-        UInt8 => Box::new(PrimitiveArray::<u8>::new_null(data_type, length)),
-        UInt16 => Box::new(PrimitiveArray::<u16>::new_null(data_type, length)),
-        UInt32 => Box::new(PrimitiveArray::<u32>::new_null(data_type, length)),
-        UInt64 => Box::new(PrimitiveArray::<u64>::new_null(data_type, length)),
-        Float32 => Box::new(PrimitiveArray::<f32>::new_null(data_type, length)),
-        Float64 => Box::new(PrimitiveArray::<f64>::new_null(data_type, length)),
+        Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
+            Box::new(PrimitiveArray::<$T>::new_null(data_type, length))
+        }),
         Binary => Box::new(BinaryArray::<i32>::new_null(data_type, length)),
         LargeBinary => Box::new(BinaryArray::<i64>::new_null(data_type, length)),
         FixedSizeBinary => Box::new(FixedSizeBinaryArray::new_null(data_type, length)),
@@ -308,18 +302,9 @@ pub fn clone(array: &dyn Array) -> Box<dyn Array> {
     match array.data_type().to_physical_type() {
         Null => clone_dyn!(array, NullArray),
         Boolean => clone_dyn!(array, BooleanArray),
-        Int8 => clone_dyn!(array, PrimitiveArray<i8>),
-        Int16 => clone_dyn!(array, PrimitiveArray<i16>),
-        Int32 => clone_dyn!(array, PrimitiveArray<i32>),
-        DaysMs => clone_dyn!(array, PrimitiveArray<days_ms>),
-        Int64 => clone_dyn!(array, PrimitiveArray<i64>),
-        Int128 => clone_dyn!(array, PrimitiveArray<i128>),
-        UInt8 => clone_dyn!(array, PrimitiveArray<u8>),
-        UInt16 => clone_dyn!(array, PrimitiveArray<u16>),
-        UInt32 => clone_dyn!(array, PrimitiveArray<u32>),
-        UInt64 => clone_dyn!(array, PrimitiveArray<u64>),
-        Float32 => clone_dyn!(array, PrimitiveArray<f32>),
-        Float64 => clone_dyn!(array, PrimitiveArray<f64>),
+        Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
+            clone_dyn!(array, PrimitiveArray<$T>)
+        }),
         Binary => clone_dyn!(array, BinaryArray<i32>),
         LargeBinary => clone_dyn!(array, BinaryArray<i64>),
         FixedSizeBinary => clone_dyn!(array, FixedSizeBinaryArray),

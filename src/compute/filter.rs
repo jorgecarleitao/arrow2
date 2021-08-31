@@ -85,17 +85,6 @@ fn filter_growable<'a>(growable: &mut impl Growable<'a>, chunks: &[(usize, usize
         .for_each(|(start, len)| growable.extend(0, *start, *len));
 }
 
-macro_rules! dyn_filter {
-    ($ty:ty, $array:expr, $filter_count:expr, $chunks:expr) => {{
-        let array = $array.as_any().downcast_ref().unwrap();
-        let mut growable =
-            growable::GrowablePrimitive::<$ty>::new(vec![array], false, $filter_count);
-        filter_growable(&mut growable, &$chunks);
-        let array: PrimitiveArray<$ty> = growable.into();
-        Box::new(array)
-    }};
-}
-
 /// Returns a prepared function optimized to filter multiple arrays.
 /// Creating this function requires time, but using it is faster than [filter] when the
 /// same filter needs to be applied to multiple arrays (e.g. a multi-column `RecordBatch`).
@@ -109,18 +98,14 @@ pub fn build_filter(filter: &BooleanArray) -> Result<Filter> {
     use crate::datatypes::PhysicalType::*;
     Ok(Box::new(move |array: &dyn Array| {
         match array.data_type().to_physical_type() {
-            UInt8 => dyn_filter!(u8, array, filter_count, chunks),
-            UInt16 => dyn_filter!(u16, array, filter_count, chunks),
-            UInt32 => dyn_filter!(u32, array, filter_count, chunks),
-            UInt64 => dyn_filter!(u64, array, filter_count, chunks),
-            Int8 => dyn_filter!(i8, array, filter_count, chunks),
-            Int16 => dyn_filter!(i16, array, filter_count, chunks),
-            Int32 => dyn_filter!(i32, array, filter_count, chunks),
-            Int64 => dyn_filter!(i64, array, filter_count, chunks),
-            Int128 => dyn_filter!(i128, array, filter_count, chunks),
-            DaysMs => dyn_filter!(days_ms, array, filter_count, chunks),
-            Float32 => dyn_filter!(f32, array, filter_count, chunks),
-            Float64 => dyn_filter!(f64, array, filter_count, chunks),
+            Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
+                let array = array.as_any().downcast_ref().unwrap();
+                let mut growable =
+                    growable::GrowablePrimitive::<$T>::new(vec![array], false, filter_count);
+                filter_growable(&mut growable, &chunks);
+                let array: PrimitiveArray<$T> = growable.into();
+                Box::new(array)
+            }),
             Utf8 => {
                 let array = array.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
                 let mut growable = growable::GrowableUtf8::new(vec![array], false, filter_count);
@@ -166,54 +151,10 @@ pub fn build_filter(filter: &BooleanArray) -> Result<Filter> {
 pub fn filter(array: &dyn Array, filter: &BooleanArray) -> Result<Box<dyn Array>> {
     use crate::datatypes::PhysicalType::*;
     match array.data_type().to_physical_type() {
-        UInt8 => {
+        Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
             let array = array.as_any().downcast_ref().unwrap();
-            Ok(Box::new(filter_primitive::<u8>(array, filter)))
-        }
-        UInt16 => {
-            let array = array.as_any().downcast_ref().unwrap();
-            Ok(Box::new(filter_primitive::<u16>(array, filter)))
-        }
-        UInt32 => {
-            let array = array.as_any().downcast_ref().unwrap();
-            Ok(Box::new(filter_primitive::<u32>(array, filter)))
-        }
-        UInt64 => {
-            let array = array.as_any().downcast_ref().unwrap();
-            Ok(Box::new(filter_primitive::<u64>(array, filter)))
-        }
-        Int8 => {
-            let array = array.as_any().downcast_ref().unwrap();
-            Ok(Box::new(filter_primitive::<i8>(array, filter)))
-        }
-        Int16 => {
-            let array = array.as_any().downcast_ref().unwrap();
-            Ok(Box::new(filter_primitive::<i16>(array, filter)))
-        }
-        Int32 => {
-            let array = array.as_any().downcast_ref().unwrap();
-            Ok(Box::new(filter_primitive::<i32>(array, filter)))
-        }
-        Int64 => {
-            let array = array.as_any().downcast_ref().unwrap();
-            Ok(Box::new(filter_primitive::<i64>(array, filter)))
-        }
-        Int128 => {
-            let array = array.as_any().downcast_ref().unwrap();
-            Ok(Box::new(filter_primitive::<i128>(array, filter)))
-        }
-        DaysMs => {
-            let array = array.as_any().downcast_ref().unwrap();
-            Ok(Box::new(filter_primitive::<days_ms>(array, filter)))
-        }
-        Float32 => {
-            let array = array.as_any().downcast_ref().unwrap();
-            Ok(Box::new(filter_primitive::<f32>(array, filter)))
-        }
-        Float64 => {
-            let array = array.as_any().downcast_ref().unwrap();
-            Ok(Box::new(filter_primitive::<f64>(array, filter)))
-        }
+            Ok(Box::new(filter_primitive::<$T>(array, filter)))
+        }),
         _ => {
             let iter = SlicesIterator::new(filter.values());
             let mut mutable = make_growable(&[array], false, iter.slots());

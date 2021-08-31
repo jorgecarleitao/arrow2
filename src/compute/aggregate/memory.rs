@@ -7,17 +7,6 @@ fn validity_size(validity: &Option<Bitmap>) -> usize {
     validity.as_ref().map(|b| b.as_slice().0.len()).unwrap_or(0)
 }
 
-macro_rules! dyn_primitive {
-    ($array:expr, $ty:ty) => {{
-        let array = $array
-            .as_any()
-            .downcast_ref::<PrimitiveArray<$ty>>()
-            .unwrap();
-
-        array.values().len() * std::mem::size_of::<$ty>() + validity_size(array.validity())
-    }};
-}
-
 macro_rules! dyn_binary {
     ($array:expr, $ty:ty, $o:ty) => {{
         let array = $array.as_any().downcast_ref::<$ty>().unwrap();
@@ -57,18 +46,14 @@ pub fn estimated_bytes_size(array: &dyn Array) -> usize {
             let array = array.as_any().downcast_ref::<BooleanArray>().unwrap();
             array.values().as_slice().0.len() + validity_size(array.validity())
         }
-        Int8 => dyn_primitive!(array, i8),
-        Int16 => dyn_primitive!(array, i16),
-        Int32 => dyn_primitive!(array, i32),
-        Int64 => dyn_primitive!(array, i64),
-        Int128 => dyn_primitive!(array, i128),
-        DaysMs => dyn_primitive!(array, days_ms),
-        UInt8 => dyn_primitive!(array, u16),
-        UInt16 => dyn_primitive!(array, u16),
-        UInt32 => dyn_primitive!(array, u32),
-        UInt64 => dyn_primitive!(array, u64),
-        Float32 => dyn_primitive!(array, f32),
-        Float64 => dyn_primitive!(array, f64),
+        Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
+            let array = array
+                .as_any()
+                .downcast_ref::<PrimitiveArray<$T>>()
+                .unwrap();
+
+            array.values().len() * std::mem::size_of::<$T>() + validity_size(array.validity())
+        }),
         Binary => dyn_binary!(array, BinaryArray<i32>, i32),
         FixedSizeBinary => {
             let array = array

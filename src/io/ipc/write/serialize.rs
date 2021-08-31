@@ -350,18 +350,9 @@ pub fn write(
     match array.data_type().to_physical_type() {
         Null => (),
         Boolean => write_boolean(array, buffers, arrow_data, offset, is_little_endian),
-        Int8 => write_primitive::<i8>(array, buffers, arrow_data, offset, is_little_endian),
-        Int16 => write_primitive::<i16>(array, buffers, arrow_data, offset, is_little_endian),
-        Int32 => write_primitive::<i32>(array, buffers, arrow_data, offset, is_little_endian),
-        Int64 => write_primitive::<i64>(array, buffers, arrow_data, offset, is_little_endian),
-        Int128 => write_primitive::<i128>(array, buffers, arrow_data, offset, is_little_endian),
-        DaysMs => write_primitive::<days_ms>(array, buffers, arrow_data, offset, is_little_endian),
-        UInt8 => write_primitive::<u8>(array, buffers, arrow_data, offset, is_little_endian),
-        UInt16 => write_primitive::<u16>(array, buffers, arrow_data, offset, is_little_endian),
-        UInt32 => write_primitive::<u32>(array, buffers, arrow_data, offset, is_little_endian),
-        UInt64 => write_primitive::<u64>(array, buffers, arrow_data, offset, is_little_endian),
-        Float32 => write_primitive::<f32>(array, buffers, arrow_data, offset, is_little_endian),
-        Float64 => write_primitive::<f64>(array, buffers, arrow_data, offset, is_little_endian),
+        Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
+            write_primitive::<$T>(array, buffers, arrow_data, offset, is_little_endian)
+        }),
         Binary => write_binary::<i32>(array, buffers, arrow_data, offset, is_little_endian),
         LargeBinary => write_binary::<i64>(array, buffers, arrow_data, offset, is_little_endian),
         FixedSizeBinary => {

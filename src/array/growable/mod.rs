@@ -110,18 +110,9 @@ pub fn make_growable<'a>(
                 capacity,
             ))
         }
-        Int8 => dyn_growable!(i8, arrays, use_validity, capacity),
-        Int16 => dyn_growable!(i16, arrays, use_validity, capacity),
-        Int32 => dyn_growable!(i32, arrays, use_validity, capacity),
-        Int64 => dyn_growable!(i64, arrays, use_validity, capacity),
-        Int128 => dyn_growable!(i128, arrays, use_validity, capacity),
-        DaysMs => dyn_growable!(days_ms, arrays, use_validity, capacity),
-        UInt8 => dyn_growable!(u8, arrays, use_validity, capacity),
-        UInt16 => dyn_growable!(u16, arrays, use_validity, capacity),
-        UInt32 => dyn_growable!(u32, arrays, use_validity, capacity),
-        UInt64 => dyn_growable!(u64, arrays, use_validity, capacity),
-        Float32 => dyn_growable!(f32, arrays, use_validity, capacity),
-        Float64 => dyn_growable!(f64, arrays, use_validity, capacity),
+        Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
+            dyn_growable!($T, arrays, use_validity, capacity)
+        }),
         Utf8 => {
             let arrays = arrays
                 .iter()

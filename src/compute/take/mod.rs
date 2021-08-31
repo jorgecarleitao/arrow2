@@ -33,26 +33,6 @@ mod primitive;
 mod structure;
 mod utf8;
 
-macro_rules! downcast_take {
-    ($type: ty, $values: expr, $indices: expr) => {{
-        let values = $values
-            .as_any()
-            .downcast_ref()
-            .expect("Unable to downcast to a primitive array");
-        Ok(Box::new(primitive::take::<$type, _>(&values, $indices)))
-    }};
-}
-
-macro_rules! downcast_dict_take {
-    ($type: ty, $values: expr, $indices: expr) => {{
-        let values = $values
-            .as_any()
-            .downcast_ref()
-            .expect("Unable to downcast to a primitive array");
-        Ok(Box::new(dict::take::<$type, _>(&values, $indices)))
-    }};
-}
-
 pub fn take<O: Index>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result<Box<dyn Array>> {
     if indices.len() == 0 {
         return Ok(new_empty_array(values.data_type().clone()));
@@ -68,18 +48,10 @@ pub fn take<O: Index>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result
             let values = values.as_any().downcast_ref().unwrap();
             Ok(Box::new(boolean::take::<O>(values, indices)))
         }
-        Int8 => downcast_take!(i8, values, indices),
-        Int16 => downcast_take!(i16, values, indices),
-        Int32 => downcast_take!(i32, values, indices),
-        Int64 => downcast_take!(i64, values, indices),
-        Int128 => downcast_take!(i128, values, indices),
-        DaysMs => downcast_take!(days_ms, values, indices),
-        UInt8 => downcast_take!(u8, values, indices),
-        UInt16 => downcast_take!(u16, values, indices),
-        UInt32 => downcast_take!(u32, values, indices),
-        UInt64 => downcast_take!(u64, values, indices),
-        Float32 => downcast_take!(f32, values, indices),
-        Float64 => downcast_take!(f64, values, indices),
+        Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
+            let values = values.as_any().downcast_ref().unwrap();
+            Ok(Box::new(primitive::take::<$T, _>(&values, indices)))
+        }),
         Utf8 => {
             let values = values.as_any().downcast_ref().unwrap();
             Ok(Box::new(utf8::take::<i32, _>(values, indices)))
@@ -98,7 +70,8 @@ pub fn take<O: Index>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result
         }
         Dictionary(key_type) => {
             with_match_physical_dictionary_key_type!(key_type, |$T| {
-                downcast_dict_take!($T, values, indices)
+                let values = values.as_any().downcast_ref().unwrap();
+                Ok(Box::new(dict::take::<$T, _>(&values, indices)))
             })
         }
         Struct => {

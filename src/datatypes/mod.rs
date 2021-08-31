@@ -178,19 +178,23 @@ impl DataType {
         match self {
             Null => PhysicalType::Null,
             Boolean => PhysicalType::Boolean,
-            Int8 => PhysicalType::Int8,
-            Int16 => PhysicalType::Int16,
-            Int32 | Date32 | Time32(_) | Interval(IntervalUnit::YearMonth) => PhysicalType::Int32,
-            Int64 | Date64 | Timestamp(_, _) | Time64(_) | Duration(_) => PhysicalType::Int64,
-            Decimal(_, _) => PhysicalType::Int128,
-            UInt8 => PhysicalType::UInt8,
-            UInt16 => PhysicalType::UInt16,
-            UInt32 => PhysicalType::UInt32,
-            UInt64 => PhysicalType::UInt64,
+            Int8 => PhysicalType::Primitive(PrimitiveType::Int8),
+            Int16 => PhysicalType::Primitive(PrimitiveType::Int16),
+            Int32 | Date32 | Time32(_) | Interval(IntervalUnit::YearMonth) => {
+                PhysicalType::Primitive(PrimitiveType::Int32)
+            }
+            Int64 | Date64 | Timestamp(_, _) | Time64(_) | Duration(_) => {
+                PhysicalType::Primitive(PrimitiveType::Int64)
+            }
+            Decimal(_, _) => PhysicalType::Primitive(PrimitiveType::Int128),
+            UInt8 => PhysicalType::Primitive(PrimitiveType::UInt8),
+            UInt16 => PhysicalType::Primitive(PrimitiveType::UInt16),
+            UInt32 => PhysicalType::Primitive(PrimitiveType::UInt32),
+            UInt64 => PhysicalType::Primitive(PrimitiveType::UInt64),
             Float16 => unreachable!(),
-            Float32 => PhysicalType::Float32,
-            Float64 => PhysicalType::Float64,
-            Interval(IntervalUnit::DayTime) => PhysicalType::DaysMs,
+            Float32 => PhysicalType::Primitive(PrimitiveType::Float32),
+            Float64 => PhysicalType::Primitive(PrimitiveType::Float64),
+            Interval(IntervalUnit::DayTime) => PhysicalType::Primitive(PrimitiveType::DaysMs),
             Binary => PhysicalType::Binary,
             FixedSizeBinary(_) => PhysicalType::FixedSizeBinary,
             LargeBinary => PhysicalType::LargeBinary,

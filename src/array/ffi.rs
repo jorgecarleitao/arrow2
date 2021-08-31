@@ -45,18 +45,9 @@ pub fn buffers_children_dictionary(array: &dyn Array) -> BuffersChildren {
     match array.data_type().to_physical_type() {
         Null => ffi_dyn!(array, NullArray),
         Boolean => ffi_dyn!(array, BooleanArray),
-        Int8 => ffi_dyn!(array, PrimitiveArray<i8>),
-        Int16 => ffi_dyn!(array, PrimitiveArray<i16>),
-        Int32 => ffi_dyn!(array, PrimitiveArray<i32>),
-        DaysMs => ffi_dyn!(array, PrimitiveArray<days_ms>),
-        Int64 => ffi_dyn!(array, PrimitiveArray<i64>),
-        Int128 => ffi_dyn!(array, PrimitiveArray<i128>),
-        UInt8 => ffi_dyn!(array, PrimitiveArray<u8>),
-        UInt16 => ffi_dyn!(array, PrimitiveArray<u16>),
-        UInt32 => ffi_dyn!(array, PrimitiveArray<u32>),
-        UInt64 => ffi_dyn!(array, PrimitiveArray<u64>),
-        Float32 => ffi_dyn!(array, PrimitiveArray<f32>),
-        Float64 => ffi_dyn!(array, PrimitiveArray<f64>),
+        Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
+            ffi_dyn!(array, PrimitiveArray<$T>)
+        }),
         Binary => ffi_dyn!(array, BinaryArray<i32>),
         LargeBinary => ffi_dyn!(array, BinaryArray<i64>),
         FixedSizeBinary => ffi_dyn!(array, FixedSizeBinaryArray),

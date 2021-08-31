@@ -32,18 +32,9 @@ pub fn try_from<A: ArrowArrayRef>(array: A) -> Result<Box<dyn Array>> {
     use PhysicalType::*;
     Ok(match array.field().data_type().to_physical_type() {
         Boolean => Box::new(BooleanArray::try_from_ffi(array)?),
-        Int8 => Box::new(PrimitiveArray::<i8>::try_from_ffi(array)?),
-        Int16 => Box::new(PrimitiveArray::<i16>::try_from_ffi(array)?),
-        Int32 => Box::new(PrimitiveArray::<i32>::try_from_ffi(array)?),
-        DaysMs => Box::new(PrimitiveArray::<days_ms>::try_from_ffi(array)?),
-        Int64 => Box::new(PrimitiveArray::<i64>::try_from_ffi(array)?),
-        Int128 => Box::new(PrimitiveArray::<i128>::try_from_ffi(array)?),
-        UInt8 => Box::new(PrimitiveArray::<u8>::try_from_ffi(array)?),
-        UInt16 => Box::new(PrimitiveArray::<u16>::try_from_ffi(array)?),
-        UInt32 => Box::new(PrimitiveArray::<u32>::try_from_ffi(array)?),
-        UInt64 => Box::new(PrimitiveArray::<u64>::try_from_ffi(array)?),
-        Float32 => Box::new(PrimitiveArray::<f32>::try_from_ffi(array)?),
-        Float64 => Box::new(PrimitiveArray::<f64>::try_from_ffi(array)?),
+        Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
+            Box::new(PrimitiveArray::<$T>::try_from_ffi(array)?)
+        }),
         Utf8 => Box::new(Utf8Array::<i32>::try_from_ffi(array)?),
         LargeUtf8 => Box::new(Utf8Array::<i64>::try_from_ffi(array)?),
         Binary => Box::new(BinaryArray::<i32>::try_from_ffi(array)?),

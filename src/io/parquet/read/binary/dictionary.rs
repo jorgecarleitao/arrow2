@@ -16,6 +16,7 @@ use crate::{
     error::{ArrowError, Result},
 };
 
+#[allow(clippy::too_many_arguments)]
 fn read_dict_optional<K, O>(
     validity_buffer: &[u8],
     indices_buffer: &[u8],

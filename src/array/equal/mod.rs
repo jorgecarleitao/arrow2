@@ -173,66 +173,11 @@ pub fn equal(lhs: &dyn Array, rhs: &dyn Array) -> bool {
             let rhs = rhs.as_any().downcast_ref().unwrap();
             boolean::equal(lhs, rhs)
         }
-        UInt8 => {
+        Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
             let lhs = lhs.as_any().downcast_ref().unwrap();
             let rhs = rhs.as_any().downcast_ref().unwrap();
-            primitive::equal::<u8>(lhs, rhs)
-        }
-        UInt16 => {
-            let lhs = lhs.as_any().downcast_ref().unwrap();
-            let rhs = rhs.as_any().downcast_ref().unwrap();
-            primitive::equal::<u16>(lhs, rhs)
-        }
-        UInt32 => {
-            let lhs = lhs.as_any().downcast_ref().unwrap();
-            let rhs = rhs.as_any().downcast_ref().unwrap();
-            primitive::equal::<u32>(lhs, rhs)
-        }
-        UInt64 => {
-            let lhs = lhs.as_any().downcast_ref().unwrap();
-            let rhs = rhs.as_any().downcast_ref().unwrap();
-            primitive::equal::<u64>(lhs, rhs)
-        }
-        Int8 => {
-            let lhs = lhs.as_any().downcast_ref().unwrap();
-            let rhs = rhs.as_any().downcast_ref().unwrap();
-            primitive::equal::<i8>(lhs, rhs)
-        }
-        Int16 => {
-            let lhs = lhs.as_any().downcast_ref().unwrap();
-            let rhs = rhs.as_any().downcast_ref().unwrap();
-            primitive::equal::<i16>(lhs, rhs)
-        }
-        Int32 => {
-            let lhs = lhs.as_any().downcast_ref().unwrap();
-            let rhs = rhs.as_any().downcast_ref().unwrap();
-            primitive::equal::<i32>(lhs, rhs)
-        }
-        Int64 => {
-            let lhs = lhs.as_any().downcast_ref().unwrap();
-            let rhs = rhs.as_any().downcast_ref().unwrap();
-            primitive::equal::<i64>(lhs, rhs)
-        }
-        Int128 => {
-            let lhs = lhs.as_any().downcast_ref().unwrap();
-            let rhs = rhs.as_any().downcast_ref().unwrap();
-            primitive::equal::<i128>(lhs, rhs)
-        }
-        DaysMs => {
-            let lhs = lhs.as_any().downcast_ref().unwrap();
-            let rhs = rhs.as_any().downcast_ref().unwrap();
-            primitive::equal::<days_ms>(lhs, rhs)
-        }
-        Float32 => {
-            let lhs = lhs.as_any().downcast_ref().unwrap();
-            let rhs = rhs.as_any().downcast_ref().unwrap();
-            primitive::equal::<f32>(lhs, rhs)
-        }
-        Float64 => {
-            let lhs = lhs.as_any().downcast_ref().unwrap();
-            let rhs = rhs.as_any().downcast_ref().unwrap();
-            primitive::equal::<f64>(lhs, rhs)
-        }
+            primitive::equal::<$T>(lhs, rhs)
+        }),
         Utf8 => {
             let lhs = lhs.as_any().downcast_ref().unwrap();
             let rhs = rhs.as_any().downcast_ref().unwrap();
