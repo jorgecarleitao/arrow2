@@ -7,6 +7,7 @@
 - [Compute](./compute.md)
 - [Metadata](./metadata.md)
 - [Foreign interfaces](./ffi.md)
+- [Extension](./extension.md)
 - [IO](./io/README.md)
     - [Read CSV](./io/csv_reader.md)
     - [Write CSV](./io/csv_write.md)

@@ -43,25 +43,19 @@ pub struct DictionaryArray<K: DictionaryKey> {
 impl<K: DictionaryKey> DictionaryArray<K> {
     /// Returns a new empty [`DictionaryArray`].
     pub fn new_empty(data_type: DataType) -> Self {
-        if let DataType::Dictionary(_, values) = data_type {
-            let values = new_empty_array(values.as_ref().clone()).into();
-            Self::from_data(PrimitiveArray::<K>::new_empty(K::DATA_TYPE), values)
-        } else {
-            panic!("DictionaryArray must be initialized with DataType::Dictionary");
-        }
+        let values = Self::get_child(&data_type);
+        let values = new_empty_array(values.clone()).into();
+        Self::from_data(PrimitiveArray::<K>::new_empty(K::DATA_TYPE), values)
     }
 
     /// Returns an [`DictionaryArray`] whose all elements are null
     #[inline]
     pub fn new_null(data_type: DataType, length: usize) -> Self {
-        if let DataType::Dictionary(_, values) = data_type {
-            Self::from_data(
-                PrimitiveArray::<K>::new_null(K::DATA_TYPE, length),
-                new_empty_array(values.as_ref().clone()).into(),
-            )
-        } else {
-            panic!("DictionaryArray must be initialized with DataType::Dictionary");
-        }
+        let values = Self::get_child(&data_type);
+        Self::from_data(
+            PrimitiveArray::<K>::new_null(K::DATA_TYPE, length),
+            new_empty_array(values.clone()).into(),
+        )
     }
 
     /// The canonical method to create a new [`DictionaryArray`].
@@ -112,10 +106,10 @@ impl<K: DictionaryKey> DictionaryArray<K> {
 
 impl<K: DictionaryKey> DictionaryArray<K> {
     pub(crate) fn get_child(data_type: &DataType) -> &DataType {
-        if let DataType::Dictionary(_, values) = data_type {
-            values.as_ref()
-        } else {
-            panic!("Wrong DataType")
+        match data_type {
+            DataType::Dictionary(_, values) => values.as_ref(),
+            DataType::Extension(_, inner, _) => Self::get_child(inner),
+            _ => panic!("DictionaryArray must be initialized with DataType::Dictionary"),
         }
     }
 }

@@ -16,7 +16,7 @@ fn test_file(version: &str, file_name: &str) -> Result<()> {
     let reader = FileReader::new(&mut file, metadata, None);
 
     // read expected JSON output
-    let (schema, batches) = read_gzip_json(version, file_name);
+    let (schema, batches) = read_gzip_json(version, file_name)?;
 
     assert_eq!(&schema, reader.schema().as_ref());
 
@@ -115,6 +115,11 @@ fn read_generated_100_interval() -> Result<()> {
 fn read_generated_100_union() -> Result<()> {
     test_file("1.0.0-littleendian", "generated_union")?;
     test_file("1.0.0-bigendian", "generated_union")
+}
+
+#[test]
+fn read_generated_100_extension() -> Result<()> {
+    test_file("1.0.0-littleendian", "generated_extension")
 }
 
 #[test]

@@ -29,21 +29,6 @@ pub trait Scalar: std::fmt::Debug {
     fn data_type(&self) -> &DataType;
 }
 
-macro_rules! dyn_new {
-    ($array:expr, $index:expr, $type:ty) => {{
-        let array = $array
-            .as_any()
-            .downcast_ref::<PrimitiveArray<$type>>()
-            .unwrap();
-        let value = if array.is_valid($index) {
-            Some(array.value($index))
-        } else {
-            None
-        };
-        Box::new(PrimitiveScalar::new(array.data_type().clone(), value))
-    }};
-}
-
 macro_rules! dyn_new_utf8 {
     ($array:expr, $index:expr, $type:ty) => {{
         let array = $array.as_any().downcast_ref::<Utf8Array<$type>>().unwrap();
@@ -85,8 +70,8 @@ macro_rules! dyn_new_list {
 
 /// creates a new [`Scalar`] from an [`Array`].
 pub fn new_scalar(array: &dyn Array, index: usize) -> Box<dyn Scalar> {
-    use DataType::*;
-    match array.data_type() {
+    use PhysicalType::*;
+    match array.data_type().to_physical_type() {
         Null => Box::new(NullScalar::new()),
         Boolean => {
             let array = array.as_any().downcast_ref::<BooleanArray>().unwrap();
@@ -97,28 +82,25 @@ pub fn new_scalar(array: &dyn Array, index: usize) -> Box<dyn Scalar> {
             };
             Box::new(BooleanScalar::new(value))
         }
-        Int8 => dyn_new!(array, index, i8),
-        Int16 => dyn_new!(array, index, i16),
-        Int32 | Date32 | Time32(_) | Interval(IntervalUnit::YearMonth) => {
-            dyn_new!(array, index, i32)
-        }
-        Int64 | Date64 | Time64(_) | Duration(_) | Timestamp(_, _) => dyn_new!(array, index, i64),
-        Interval(IntervalUnit::DayTime) => dyn_new!(array, index, days_ms),
-        UInt8 => dyn_new!(array, index, u8),
-        UInt16 => dyn_new!(array, index, u16),
-        UInt32 => dyn_new!(array, index, u32),
-        UInt64 => dyn_new!(array, index, u64),
-        Decimal(_, _) => dyn_new!(array, index, i128),
-        Float16 => unreachable!(),
-        Float32 => dyn_new!(array, index, f32),
-        Float64 => dyn_new!(array, index, f64),
+        Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
+            let array = array
+                .as_any()
+                .downcast_ref::<PrimitiveArray<$T>>()
+                .unwrap();
+            let value = if array.is_valid(index) {
+                Some(array.value(index))
+            } else {
+                None
+            };
+            Box::new(PrimitiveScalar::new(array.data_type().clone(), value))
+        }),
         Utf8 => dyn_new_utf8!(array, index, i32),
         LargeUtf8 => dyn_new_utf8!(array, index, i64),
         Binary => dyn_new_binary!(array, index, i32),
         LargeBinary => dyn_new_binary!(array, index, i64),
-        List(_) => dyn_new_list!(array, index, i32),
-        LargeList(_) => dyn_new_list!(array, index, i64),
-        Struct(_) => {
+        List => dyn_new_list!(array, index, i32),
+        LargeList => dyn_new_list!(array, index, i64),
+        Struct => {
             let array = array.as_any().downcast_ref::<StructArray>().unwrap();
             if array.is_valid(index) {
                 let values = array
@@ -131,9 +113,9 @@ pub fn new_scalar(array: &dyn Array, index: usize) -> Box<dyn Scalar> {
                 Box::new(StructScalar::new(array.data_type().clone(), None))
             }
         }
-        FixedSizeBinary(_) => todo!(),
-        FixedSizeList(_, _) => todo!(),
-        Union(_, _, _) => todo!(),
-        Dictionary(_, _) => todo!(),
+        FixedSizeBinary => todo!(),
+        FixedSizeList => todo!(),
+        Union => todo!(),
+        Dictionary(_) => todo!(),
     }
 }

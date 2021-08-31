@@ -96,12 +96,12 @@ impl FixedSizeListArray {
     pub(crate) fn get_child_and_size(data_type: &DataType) -> (&Field, &i32) {
         match data_type {
             DataType::FixedSizeList(child, size) => (child.as_ref(), size),
+            DataType::Extension(_, child, _) => Self::get_child_and_size(child),
             _ => panic!("Wrong DataType"),
         }
     }
 
     /// Returns a [`DataType`] consistent with this Array.
-    #[inline]
     pub fn default_datatype(data_type: DataType, size: usize) -> DataType {
         let field = Box::new(Field::new("item", data_type, true));
         DataType::FixedSizeList(field, size as i32)

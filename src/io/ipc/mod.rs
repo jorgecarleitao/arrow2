@@ -13,6 +13,7 @@ mod compression;
 mod convert;
 
 pub use convert::fb_to_schema;
+pub(crate) use convert::get_extension;
 pub use gen::Message::root_as_message;
 pub mod read;
 pub mod write;
