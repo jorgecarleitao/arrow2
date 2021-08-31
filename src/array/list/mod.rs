@@ -133,15 +133,15 @@ impl<O: Offset> ListArray<O> {
     #[inline]
     pub fn get_child_field(data_type: &DataType) -> &Field {
         if O::is_large() {
-            if let DataType::LargeList(child) = data_type {
-                child.as_ref()
-            } else {
-                panic!("Wrong DataType")
+            match data_type {
+                DataType::LargeList(child) => child.as_ref(),
+                _ => panic!("Wrong DataType"),
             }
-        } else if let DataType::List(child) = data_type {
-            child.as_ref()
         } else {
-            panic!("Wrong DataType")
+            match data_type {
+                DataType::List(child) => child.as_ref(),
+                _ => panic!("Wrong DataType"),
+            }
         }
     }
 

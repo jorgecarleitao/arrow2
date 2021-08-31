@@ -51,11 +51,11 @@ fn write_nested_structs() {
     ]);
 
     let c1 = StructArray::from_data(
-        fields,
+        DataType::Struct(fields),
         vec![
             Arc::new(Int32Array::from(&[Some(1), None, Some(5)])),
             Arc::new(StructArray::from_data(
-                vec![c121],
+                DataType::Struct(vec![c121]),
                 vec![Arc::new(Utf8Array::<i32>::from(&vec![
                     Some("e"),
                     Some("f"),
@@ -192,11 +192,11 @@ fn write_list_of_struct() {
     let schema = Schema::new(vec![field_c1, field_c2]);
 
     let s = StructArray::from_data(
-        fields,
+        DataType::Struct(fields),
         vec![
             Arc::new(Int32Array::from(&[Some(1), None, Some(5)])),
             Arc::new(StructArray::from_data(
-                inner,
+               DataType::Struct(inner),
                 vec![Arc::new(Utf8Array::<i32>::from(&vec![
                     Some("e"),
                     Some("f"),

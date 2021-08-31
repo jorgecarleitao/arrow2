@@ -25,14 +25,15 @@ pub struct BinaryArray<O: Offset> {
 // constructors
 impl<O: Offset> BinaryArray<O> {
     /// Creates an empty [`BinaryArray`], i.e. whose `.len` is zero.
-    pub fn new_empty() -> Self {
-        Self::from_data(Buffer::from(&[O::zero()]), Buffer::new(), None)
+    pub fn new_empty(data_type: DataType) -> Self {
+        Self::from_data(data_type, Buffer::from(&[O::zero()]), Buffer::new(), None)
     }
 
     /// Creates an null [`BinaryArray`], i.e. whose `.null_count() == .len()`.
     #[inline]
-    pub fn new_null(length: usize) -> Self {
+    pub fn new_null(data_type: DataType, length: usize) -> Self {
         Self::from_data(
+            data_type,
             Buffer::new_zeroed(length + 1),
             Buffer::new(),
             Some(Bitmap::new_zeroed(length)),
@@ -43,23 +44,37 @@ impl<O: Offset> BinaryArray<O> {
     /// # Panics
     /// * The length of the offset buffer must be larger than 1
     /// * The length of the values must be equal to the last offset value
-    pub fn from_data(offsets: Buffer<O>, values: Buffer<u8>, validity: Option<Bitmap>) -> Self {
+    pub fn from_data(
+        data_type: DataType,
+        offsets: Buffer<O>,
+        values: Buffer<u8>,
+        validity: Option<Bitmap>,
+    ) -> Self {
         check_offsets(&offsets, values.len());
 
         if let Some(validity) = &validity {
             assert_eq!(offsets.len() - 1, validity.len());
         }
 
+        if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
+            panic!("BinaryArray can only be initialized with DataType::Binary or DataType::LargeBinary")
+        }
+
         Self {
-            data_type: if O::is_large() {
-                DataType::LargeBinary
-            } else {
-                DataType::Binary
-            },
+            data_type,
             offsets,
             values,
             validity,
             offset: 0,
+        }
+    }
+
+    /// Returns the default [`DataType`], `DataType::Binary` or `DataType::LargeBinary`
+    pub fn default_data_type() -> DataType {
+        if O::is_large() {
+            DataType::LargeBinary
+        } else {
+            DataType::Binary
         }
     }
 

@@ -426,16 +426,16 @@ fn cast_with_options(
             ))),
         },
         (_, Boolean) => match from_type {
-            UInt8 => primitive_to_boolean_dyn::<u8>(array),
-            UInt16 => primitive_to_boolean_dyn::<u16>(array),
-            UInt32 => primitive_to_boolean_dyn::<u32>(array),
-            UInt64 => primitive_to_boolean_dyn::<u64>(array),
-            Int8 => primitive_to_boolean_dyn::<i8>(array),
-            Int16 => primitive_to_boolean_dyn::<i16>(array),
-            Int32 => primitive_to_boolean_dyn::<i32>(array),
-            Int64 => primitive_to_boolean_dyn::<i64>(array),
-            Float32 => primitive_to_boolean_dyn::<f32>(array),
-            Float64 => primitive_to_boolean_dyn::<f64>(array),
+            UInt8 => primitive_to_boolean_dyn::<u8>(array, to_type.clone()),
+            UInt16 => primitive_to_boolean_dyn::<u16>(array, to_type.clone()),
+            UInt32 => primitive_to_boolean_dyn::<u32>(array, to_type.clone()),
+            UInt64 => primitive_to_boolean_dyn::<u64>(array, to_type.clone()),
+            Int8 => primitive_to_boolean_dyn::<i8>(array, to_type.clone()),
+            Int16 => primitive_to_boolean_dyn::<i16>(array, to_type.clone()),
+            Int32 => primitive_to_boolean_dyn::<i32>(array, to_type.clone()),
+            Int64 => primitive_to_boolean_dyn::<i64>(array, to_type.clone()),
+            Float32 => primitive_to_boolean_dyn::<f32>(array, to_type.clone()),
+            Float64 => primitive_to_boolean_dyn::<f64>(array, to_type.clone()),
             _ => Err(ArrowError::NotYetImplemented(format!(
                 "Casting from {:?} to {:?} not supported",
                 from_type, to_type,
@@ -562,9 +562,12 @@ fn cast_with_options(
 
         (Binary, LargeBinary) => Ok(Box::new(binary_to_large_binary(
             array.as_any().downcast_ref().unwrap(),
+            to_type.clone(),
         ))),
-        (LargeBinary, Binary) => binary_large_to_binary(array.as_any().downcast_ref().unwrap())
-            .map(|x| Box::new(x) as Box<dyn Array>),
+        (LargeBinary, Binary) => {
+            binary_large_to_binary(array.as_any().downcast_ref().unwrap(), to_type.clone())
+                .map(|x| Box::new(x) as Box<dyn Array>)
+        }
 
         // start numeric casts
         (UInt8, UInt16) => primitive_to_primitive_dyn::<u8, u16>(array, to_type, as_options),

@@ -360,7 +360,7 @@ impl From<RecordBatch> for StructArray {
             .zip(batch.columns.iter())
             .map(|t| (t.0.clone(), t.1.clone()))
             .unzip();
-        StructArray::from_data(fields, values, None)
+        StructArray::from_data(DataType::Struct(fields), values, None)
     }
 }
 

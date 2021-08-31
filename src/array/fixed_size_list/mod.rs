@@ -26,13 +26,18 @@ pub struct FixedSizeListArray {
 impl FixedSizeListArray {
     /// Returns a new empty [`FixedSizeListArray`].
     pub fn new_empty(data_type: DataType) -> Self {
-        let values = new_empty_array(Self::get_child_and_size(&data_type).0.clone()).into();
+        let values =
+            new_empty_array(Self::get_child_and_size(&data_type).0.data_type().clone()).into();
         Self::from_data(data_type, values, None)
     }
 
     /// Returns a new null [`FixedSizeListArray`].
     pub fn new_null(data_type: DataType, length: usize) -> Self {
-        let values = new_null_array(Self::get_child_and_size(&data_type).0.clone(), length).into();
+        let values = new_null_array(
+            Self::get_child_and_size(&data_type).0.data_type().clone(),
+            length,
+        )
+        .into();
         Self::from_data(data_type, values, Some(Bitmap::new_zeroed(length)))
     }
 
@@ -88,11 +93,10 @@ impl FixedSizeListArray {
 }
 
 impl FixedSizeListArray {
-    pub(crate) fn get_child_and_size(data_type: &DataType) -> (&DataType, &i32) {
-        if let DataType::FixedSizeList(field, size) = data_type {
-            (field.data_type(), size)
-        } else {
-            panic!("Wrong DataType")
+    pub(crate) fn get_child_and_size(data_type: &DataType) -> (&Field, &i32) {
+        match data_type {
+            DataType::FixedSizeList(child, size) => (child.as_ref(), size),
+            _ => panic!("Wrong DataType"),
         }
     }
 

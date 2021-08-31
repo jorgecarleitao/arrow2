@@ -1,6 +1,7 @@
 use arrow2::{
     array::{Array, BinaryArray},
     bitmap::Bitmap,
+    datatypes::DataType,
 };
 
 #[test]
@@ -24,6 +25,7 @@ fn basics() {
     assert!(array.is_valid(2));
 
     let array2 = BinaryArray::<i32>::from_data(
+        DataType::Binary,
         array.offsets().clone(),
         array.values().clone(),
         array.validity().clone(),
@@ -40,7 +42,7 @@ fn basics() {
 
 #[test]
 fn empty() {
-    let array = BinaryArray::<i32>::new_empty();
+    let array = BinaryArray::<i32>::new_empty(DataType::Binary);
     assert_eq!(array.values().as_slice(), b"");
     assert_eq!(array.offsets().as_slice(), &[0]);
     assert_eq!(array.validity(), &None);

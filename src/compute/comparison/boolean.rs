@@ -1,6 +1,7 @@
 use crate::array::*;
 use crate::bitmap::Bitmap;
 use crate::buffer::MutableBuffer;
+use crate::datatypes::DataType;
 use crate::scalar::{BooleanScalar, Scalar};
 use crate::{
     bitmap::MutableBitmap,
@@ -46,7 +47,11 @@ where
 
     let values = compare_values_op(lhs.values(), rhs.values(), op);
 
-    Ok(BooleanArray::from_data(values.into(), validity))
+    Ok(BooleanArray::from_data(
+        DataType::Boolean,
+        values.into(),
+        validity,
+    ))
 }
 
 /// Evaluate `op(left, right)` for [`BooleanArray`] and scalar using
@@ -67,7 +72,7 @@ where
         values.push(op(lhs_remainder, rhs))
     };
     let values = MutableBitmap::from_buffer(values, lhs.len()).into();
-    BooleanArray::from_data(values, lhs.validity().clone())
+    BooleanArray::from_data(DataType::Boolean, values, lhs.validity().clone())
 }
 
 /// Perform `lhs == rhs` operation on two arrays.
@@ -148,7 +153,7 @@ pub fn compare(lhs: &BooleanArray, rhs: &BooleanArray, op: Operator) -> Result<B
 
 pub fn compare_scalar(lhs: &BooleanArray, rhs: &BooleanScalar, op: Operator) -> BooleanArray {
     if !rhs.is_valid() {
-        return BooleanArray::new_null(lhs.len());
+        return BooleanArray::new_null(DataType::Boolean, lhs.len());
     }
     compare_scalar_non_null(lhs, rhs.value(), op)
 }

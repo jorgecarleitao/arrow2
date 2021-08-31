@@ -1,4 +1,4 @@
-use arrow2::{array::*, bitmap::Bitmap, buffer::Buffer, error::Result};
+use arrow2::{array::*, bitmap::Bitmap, buffer::Buffer, datatypes::DataType, error::Result};
 
 mod mutable;
 
@@ -23,6 +23,7 @@ fn basics() {
     assert!(array.is_valid(2));
 
     let array2 = Utf8Array::<i32>::from_data(
+        DataType::Utf8,
         array.offsets().clone(),
         array.values().clone(),
         array.validity().clone(),
@@ -39,7 +40,7 @@ fn basics() {
 
 #[test]
 fn empty() {
-    let array = Utf8Array::<i32>::new_empty();
+    let array = Utf8Array::<i32>::new_empty(DataType::Utf8);
     assert_eq!(array.values().as_slice(), b"");
     assert_eq!(array.offsets().as_slice(), &[0]);
     assert_eq!(array.validity(), &None);
@@ -59,7 +60,10 @@ fn from_slice() {
 
     let offsets = Buffer::from(&[0, 1, 2, 4]);
     let values = Buffer::from("abcc".as_bytes());
-    assert_eq!(b, Utf8Array::<i32>::from_data(offsets, values, None));
+    assert_eq!(
+        b,
+        Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None)
+    );
 }
 
 #[test]
@@ -68,7 +72,10 @@ fn from_iter_values() {
 
     let offsets = Buffer::from(&[0, 1, 2, 4]);
     let values = Buffer::from("abcc".as_bytes());
-    assert_eq!(b, Utf8Array::<i32>::from_data(offsets, values, None));
+    assert_eq!(
+        b,
+        Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None)
+    );
 }
 
 #[test]
@@ -78,7 +85,10 @@ fn from_trusted_len_iter() {
 
     let offsets = Buffer::from(&[0, 1, 2, 4]);
     let values = Buffer::from("abcc".as_bytes());
-    assert_eq!(b, Utf8Array::<i32>::from_data(offsets, values, None));
+    assert_eq!(
+        b,
+        Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None)
+    );
 }
 
 #[test]
@@ -92,5 +102,8 @@ fn try_from_trusted_len_iter() {
 
     let offsets = Buffer::from(&[0, 1, 2, 4]);
     let values = Buffer::from("abcc".as_bytes());
-    assert_eq!(b, Utf8Array::<i32>::from_data(offsets, values, None));
+    assert_eq!(
+        b,
+        Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None)
+    );
 }

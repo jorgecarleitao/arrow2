@@ -1,5 +1,6 @@
 use arrow2::array::{MutableArray, MutableBooleanArray};
 use arrow2::bitmap::MutableBitmap;
+use arrow2::datatypes::DataType;
 use arrow2::error::Result;
 
 #[test]
@@ -53,7 +54,11 @@ fn try_from_trusted_len_iter() {
 
 #[test]
 fn reserve() {
-    let mut a = MutableBooleanArray::from_data(MutableBitmap::new(), Some(MutableBitmap::new()));
+    let mut a = MutableBooleanArray::from_data(
+        DataType::Boolean,
+        MutableBitmap::new(),
+        Some(MutableBitmap::new()),
+    );
 
     a.reserve(10);
     assert!(a.validity().as_ref().unwrap().capacity() > 0);

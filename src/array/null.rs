@@ -12,19 +12,19 @@ pub struct NullArray {
 
 impl NullArray {
     /// Returns a new empty [`NullArray`].
-    pub fn new_empty() -> Self {
-        Self::from_data(0)
+    pub fn new_empty(data_type: DataType) -> Self {
+        Self::from_data(data_type, 0)
     }
 
     /// Returns a new [`NullArray`].
-    pub fn new_null(length: usize) -> Self {
-        Self::from_data(length)
+    pub fn new_null(data_type: DataType, length: usize) -> Self {
+        Self::from_data(data_type, length)
     }
 
     /// Returns a new [`NullArray`].
-    pub fn from_data(length: usize) -> Self {
+    pub fn from_data(data_type: DataType, length: usize) -> Self {
         Self {
-            data_type: DataType::Null,
+            data_type,
             length,
             offset: 0,
         }

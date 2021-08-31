@@ -108,6 +108,7 @@ fn take_values_indices_validity<I: Index>(
 
 /// `take` implementation for boolean arrays
 pub fn take<I: Index>(values: &BooleanArray, indices: &PrimitiveArray<I>) -> BooleanArray {
+    let data_type = values.data_type().clone();
     let indices_has_validity = indices.null_count() > 0;
     let values_has_validity = values.null_count() > 0;
 
@@ -118,7 +119,7 @@ pub fn take<I: Index>(values: &BooleanArray, indices: &PrimitiveArray<I>) -> Boo
         (true, true) => take_values_indices_validity(values, indices),
     };
 
-    BooleanArray::from_data(values, validity)
+    BooleanArray::from_data(data_type, values, validity)
 }
 
 #[cfg(test)]

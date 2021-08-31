@@ -18,6 +18,7 @@ use crate::{
     types::NativeType as ArrowNativeType,
 };
 
+#[allow(clippy::too_many_arguments)]
 fn read_dict_optional<K, T, A, F>(
     validity_buffer: &[u8],
     indices_buffer: &[u8],

@@ -144,7 +144,7 @@ fn to_primitive<T: NativeType + NumCast>(
     PrimitiveArray::<T>::from_data(data_type, values, validity)
 }
 
-fn to_binary<O: Offset>(json_col: &ArrowJsonColumn) -> Arc<dyn Array> {
+fn to_binary<O: Offset>(json_col: &ArrowJsonColumn, data_type: DataType) -> Arc<dyn Array> {
     let validity = to_validity(&json_col.validity);
     let offsets = to_offsets::<O>(json_col.offset.as_ref());
     let values = json_col
@@ -155,10 +155,10 @@ fn to_binary<O: Offset>(json_col: &ArrowJsonColumn) -> Arc<dyn Array> {
         .map(|value| value.as_str().map(|x| hex::decode(x).unwrap()).unwrap())
         .flatten()
         .collect();
-    Arc::new(BinaryArray::from_data(offsets, values, validity))
+    Arc::new(BinaryArray::from_data(data_type, offsets, values, validity))
 }
 
-fn to_utf8<O: Offset>(json_col: &ArrowJsonColumn) -> Arc<dyn Array> {
+fn to_utf8<O: Offset>(json_col: &ArrowJsonColumn, data_type: DataType) -> Arc<dyn Array> {
     let validity = to_validity(&json_col.validity);
     let offsets = to_offsets::<O>(json_col.offset.as_ref());
     let values = json_col
@@ -169,7 +169,7 @@ fn to_utf8<O: Offset>(json_col: &ArrowJsonColumn) -> Arc<dyn Array> {
         .map(|value| value.as_str().unwrap().as_bytes().to_vec())
         .flatten()
         .collect();
-    Arc::new(Utf8Array::from_data(offsets, values, validity))
+    Arc::new(Utf8Array::from_data(data_type, offsets, values, validity))
 }
 
 fn to_list<O: Offset>(
@@ -220,7 +220,10 @@ pub fn to_array(
 ) -> Result<Arc<dyn Array>> {
     let data_type = field.data_type();
     match data_type {
-        DataType::Null => Ok(Arc::new(NullArray::from_data(json_col.count))),
+        DataType::Null => Ok(Arc::new(NullArray::from_data(
+            data_type.clone(),
+            json_col.count,
+        ))),
         DataType::Boolean => {
             let validity = to_validity(&json_col.validity);
             let values = json_col
@@ -230,7 +233,11 @@ pub fn to_array(
                 .iter()
                 .map(|value| value.as_bool().unwrap())
                 .collect::<Bitmap>();
-            Ok(Arc::new(BooleanArray::from_data(values, validity)))
+            Ok(Arc::new(BooleanArray::from_data(
+                data_type.clone(),
+                values,
+                validity,
+            )))
         }
         DataType::Int8 => Ok(Arc::new(to_primitive::<i8>(json_col, data_type.clone()))),
         DataType::Int16 => Ok(Arc::new(to_primitive::<i16>(json_col, data_type.clone()))),
@@ -255,10 +262,10 @@ pub fn to_array(
         DataType::UInt64 => Ok(Arc::new(to_primitive::<u64>(json_col, data_type.clone()))),
         DataType::Float32 => Ok(Arc::new(to_primitive::<f32>(json_col, data_type.clone()))),
         DataType::Float64 => Ok(Arc::new(to_primitive::<f64>(json_col, data_type.clone()))),
-        DataType::Binary => Ok(to_binary::<i32>(json_col)),
-        DataType::LargeBinary => Ok(to_binary::<i64>(json_col)),
-        DataType::Utf8 => Ok(to_utf8::<i32>(json_col)),
-        DataType::LargeUtf8 => Ok(to_utf8::<i64>(json_col)),
+        DataType::Binary => Ok(to_binary::<i32>(json_col, data_type.clone())),
+        DataType::LargeBinary => Ok(to_binary::<i64>(json_col, data_type.clone())),
+        DataType::Utf8 => Ok(to_utf8::<i32>(json_col, data_type.clone())),
+        DataType::LargeUtf8 => Ok(to_utf8::<i64>(json_col, data_type.clone())),
         DataType::FixedSizeBinary(_) => {
             let validity = to_validity(&json_col.validity);
 
@@ -301,7 +308,7 @@ pub fn to_array(
                 .map(|(field, col)| to_array(field, col, dictionaries))
                 .collect::<Result<Vec<_>>>()?;
 
-            let array = StructArray::from_data(fields.clone(), values, validity);
+            let array = StructArray::from_data(data_type.clone(), values, validity);
             Ok(Arc::new(array))
         }
         DataType::Dictionary(key_type, _) => {

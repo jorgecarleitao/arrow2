@@ -157,7 +157,22 @@ where
         )?
     }
 
-    let values = Arc::new(BooleanArray::from_data(values.into(), validity.into()));
+    let inner_data_type = match data_type {
+        DataType::List(ref inner) => inner.data_type(),
+        DataType::LargeList(ref inner) => inner.data_type(),
+        _ => {
+            return Err(ArrowError::NotYetImplemented(format!(
+                "Read nested datatype {:?}",
+                data_type
+            )))
+        }
+    };
+
+    let values = Arc::new(BooleanArray::from_data(
+        inner_data_type.clone(),
+        values.into(),
+        validity.into(),
+    ));
 
     create_list(data_type, &mut nested, values)
 }

@@ -4,6 +4,7 @@ use crate::{
     array::{Array, BinaryArray, Offset},
     bitmap::MutableBitmap,
     buffer::MutableBuffer,
+    datatypes::DataType,
 };
 
 use super::{
@@ -14,6 +15,7 @@ use super::{
 /// Concrete [`Growable`] for the [`BinaryArray`].
 pub struct GrowableBinary<'a, O: Offset> {
     arrays: Vec<&'a BinaryArray<O>>,
+    data_type: DataType,
     validity: MutableBitmap,
     values: MutableBuffer<u8>,
     offsets: MutableBuffer<O>,
@@ -25,8 +27,10 @@ pub struct GrowableBinary<'a, O: Offset> {
 
 impl<'a, O: Offset> GrowableBinary<'a, O> {
     /// # Panics
-    /// This function panics if any of the `arrays` is not downcastable to `PrimitiveArray<T>`.
+    /// If `arrays` is empty.
     pub fn new(arrays: Vec<&'a BinaryArray<O>>, mut use_validity: bool, capacity: usize) -> Self {
+        let data_type = arrays[0].data_type().clone();
+
         // if any of the arrays has nulls, insertions from any array requires setting bits
         // as there is at least one array with nulls.
         if !use_validity & arrays.iter().any(|array| array.null_count() > 0) {
@@ -44,6 +48,7 @@ impl<'a, O: Offset> GrowableBinary<'a, O> {
 
         Self {
             arrays,
+            data_type,
             values: MutableBuffer::with_capacity(0),
             offsets,
             length,
@@ -53,11 +58,12 @@ impl<'a, O: Offset> GrowableBinary<'a, O> {
     }
 
     fn to(&mut self) -> BinaryArray<O> {
+        let data_type = self.data_type.clone();
         let validity = std::mem::take(&mut self.validity);
         let offsets = std::mem::take(&mut self.offsets);
         let values = std::mem::take(&mut self.values);
 
-        BinaryArray::<O>::from_data(offsets.into(), values.into(), validity.into())
+        BinaryArray::<O>::from_data(data_type, offsets.into(), values.into(), validity.into())
     }
 }
 
@@ -94,6 +100,6 @@ impl<'a, O: Offset> Growable<'a> for GrowableBinary<'a, O> {
 
 impl<'a, O: Offset> From<GrowableBinary<'a, O>> for BinaryArray<O> {
     fn from(val: GrowableBinary<'a, O>) -> Self {
-        BinaryArray::<O>::from_data(val.offsets.into(), val.values.into(), val.validity.into())
+        BinaryArray::<O>::from_data(val.data_type, val.offsets.into(), val.values.into(), val.validity.into())
     }
 }

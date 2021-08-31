@@ -60,7 +60,12 @@ fn utf8_substring<O: Offset>(array: &Utf8Array<O>, start: O, length: &Option<O>)
         new_values.extend_from_slice(&values[start..start + length]);
     });
 
-    Utf8Array::<O>::from_data(new_offsets.into(), new_values.into(), validity.clone())
+    Utf8Array::<O>::from_data(
+        array.data_type().clone(),
+        new_offsets.into(),
+        new_values.into(),
+        validity.clone(),
+    )
 }
 
 /// Returns an ArrayRef with a substring starting from `start` and with optional length `length` of each of the elements in `array`.

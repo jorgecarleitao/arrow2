@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use regex::Regex;
 
+use crate::datatypes::DataType;
 use crate::{array::*, bitmap::Bitmap};
 use crate::{
     compute::utils::combine_validities,
@@ -52,7 +53,7 @@ fn a_like_utf8<O: Offset, F: Fn(bool) -> bool>(
             }
         }))?;
 
-    Ok(BooleanArray::from_data(values, validity))
+    Ok(BooleanArray::from_data(DataType::Boolean, values, validity))
 }
 
 /// Returns `lhs LIKE rhs` operation on two [`Utf8Array`].
@@ -112,7 +113,11 @@ fn a_like_utf8_scalar<O: Offset, F: Fn(bool) -> bool>(
         })?;
         Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(re.is_match(x))))
     };
-    Ok(BooleanArray::from_data(values, validity.clone()))
+    Ok(BooleanArray::from_data(
+        DataType::Boolean,
+        values,
+        validity.clone(),
+    ))
 }
 
 /// Returns `lhs LIKE rhs` operation.

@@ -4,7 +4,7 @@ use std::sync::Arc;
 use crate::{
     array::{Array, MutableArray, TryExtend, TryPush},
     bitmap::MutableBitmap,
-    datatypes::DataType,
+    datatypes::{DataType, PhysicalType},
     error::Result,
     trusted_len::TrustedLen,
 };
@@ -17,13 +17,18 @@ use super::BooleanArray;
 /// This struct does not allocate a validity until one is required (i.e. push a null to it).
 #[derive(Debug)]
 pub struct MutableBooleanArray {
+    data_type: DataType,
     values: MutableBitmap,
     validity: Option<MutableBitmap>,
 }
 
 impl From<MutableBooleanArray> for BooleanArray {
     fn from(other: MutableBooleanArray) -> Self {
-        BooleanArray::from_data(other.values.into(), other.validity.map(|x| x.into()))
+        BooleanArray::from_data(
+            other.data_type,
+            other.values.into(),
+            other.validity.map(|x| x.into()),
+        )
     }
 }
 
@@ -49,6 +54,7 @@ impl MutableBooleanArray {
     /// Creates an new [`MutableBooleanArray`] with a capacity of values.
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
+            data_type: DataType::Boolean,
             values: MutableBitmap::with_capacity(capacity),
             validity: None,
         }
@@ -63,8 +69,19 @@ impl MutableBooleanArray {
     }
 
     /// Canonical method to create a new [`MutableBooleanArray`].
-    pub fn from_data(values: MutableBitmap, validity: Option<MutableBitmap>) -> Self {
-        Self { values, validity }
+    pub fn from_data(
+        data_type: DataType,
+        values: MutableBitmap,
+        validity: Option<MutableBitmap>,
+    ) -> Self {
+        if data_type.to_physical_type() != PhysicalType::Boolean {
+            panic!("MutableBooleanArray can only be initialized with DataType::Boolean")
+        }
+        Self {
+            data_type,
+            values,
+            validity,
+        }
     }
 
     /// Pushes a new entry to [`MutableBooleanArray`].
@@ -137,7 +154,11 @@ impl MutableBooleanArray {
     /// Creates a new [`MutableBooleanArray`] from an [`TrustedLen`] of `bool`.
     #[inline]
     pub fn from_trusted_len_values_iter<I: TrustedLen<Item = bool>>(iterator: I) -> Self {
-        Self::from_data(MutableBitmap::from_trusted_len_iter(iterator), None)
+        Self::from_data(
+            DataType::Boolean,
+            MutableBitmap::from_trusted_len_iter(iterator),
+            None,
+        )
     }
 
     /// Creates a new [`MutableBooleanArray`] from a slice of `bool`.
@@ -166,7 +187,7 @@ impl MutableBooleanArray {
             None
         };
 
-        Self::from_data(values, validity)
+        Self::from_data(DataType::Boolean, values, validity)
     }
 
     /// Creates a [`BooleanArray`] from a [`TrustedLen`].
@@ -199,7 +220,7 @@ impl MutableBooleanArray {
             None
         };
 
-        Ok(Self::from_data(values, validity))
+        Ok(Self::from_data(DataType::Boolean, values, validity))
     }
 
     /// Creates a [`BooleanArray`] from a [`TrustedLen`].
@@ -304,7 +325,7 @@ impl<Ptr: std::borrow::Borrow<Option<bool>>> FromIterator<Ptr> for MutableBoolea
             })
             .collect();
 
-        MutableBooleanArray::from_data(values, validity.into())
+        MutableBooleanArray::from_data(DataType::Boolean, values, validity.into())
     }
 }
 
@@ -319,13 +340,14 @@ impl MutableArray for MutableBooleanArray {
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
         Arc::new(BooleanArray::from_data(
+            self.data_type.clone(),
             std::mem::take(&mut self.values).into(),
             std::mem::take(&mut self.validity).map(|x| x.into()),
         ))
     }
 
     fn data_type(&self) -> &DataType {
-        &DataType::Boolean
+        &self.data_type
     }
 
     fn as_any(&self) -> &dyn std::any::Any {

@@ -17,6 +17,7 @@
 
 use crate::array::{Array, BooleanArray};
 use crate::bitmap::{Bitmap, MutableBitmap};
+use crate::datatypes::DataType;
 use crate::error::{ArrowError, Result};
 
 use super::utils::combine_validities;
@@ -39,7 +40,7 @@ where
 
     let values = op(left_buffer, right_buffer);
 
-    Ok(BooleanArray::from_data(values, validity))
+    Ok(BooleanArray::from_data(DataType::Boolean, values, validity))
 }
 
 /// Performs `AND` operation on two arrays. If either left or right value is null then the
@@ -99,7 +100,7 @@ pub fn or(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
 pub fn not(array: &BooleanArray) -> BooleanArray {
     let values = !array.values();
     let validity = array.validity().clone();
-    BooleanArray::from_data(values, validity)
+    BooleanArray::from_data(DataType::Boolean, values, validity)
 }
 
 /// Returns a non-null [BooleanArray] with whether each value of the array is null.
@@ -123,7 +124,7 @@ pub fn is_null(input: &dyn Array) -> BooleanArray {
         Some(buffer) => !buffer,
     };
 
-    BooleanArray::from_data(values, None)
+    BooleanArray::from_data(DataType::Boolean, values, None)
 }
 
 /// Returns a non-null [BooleanArray] with whether each value of the array is not null.
@@ -142,7 +143,7 @@ pub fn is_not_null(input: &dyn Array) -> BooleanArray {
         None => Bitmap::from_trusted_len_iter(std::iter::repeat(true).take(input.len())),
         Some(buffer) => buffer.clone(),
     };
-    BooleanArray::from_data(values, None)
+    BooleanArray::from_data(DataType::Boolean, values, None)
 }
 
 #[cfg(test)]

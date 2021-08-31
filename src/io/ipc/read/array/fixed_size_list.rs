@@ -12,6 +12,7 @@ use super::super::super::gen;
 use super::super::deserialize::{read, skip, Node};
 use super::super::read_basic::*;
 
+#[allow(clippy::too_many_arguments)]
 pub fn read_fixed_size_list<R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
     data_type: DataType,
@@ -37,7 +38,7 @@ pub fn read_fixed_size_list<R: Read + Seek>(
 
     let values = read(
         field_nodes,
-        value_data_type.clone(),
+        value_data_type.data_type().clone(),
         buffers,
         reader,
         block_offset,
@@ -57,7 +58,7 @@ pub fn skip_fixed_size_list(
 
     let _ = buffers.pop_front().unwrap();
 
-    let (data_type, _) = FixedSizeListArray::get_child_and_size(data_type);
+    let (field, _) = FixedSizeListArray::get_child_and_size(data_type);
 
-    skip(field_nodes, data_type, buffers)
+    skip(field_nodes, field.data_type(), buffers)
 }

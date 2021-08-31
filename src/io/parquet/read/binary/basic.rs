@@ -283,11 +283,13 @@ where
 
     Ok(match data_type {
         DataType::LargeBinary | DataType::Binary => Box::new(BinaryArray::from_data(
+            data_type.clone(),
             offsets.into(),
             values.into(),
             validity.into(),
         )),
         DataType::LargeUtf8 | DataType::Utf8 => Box::new(Utf8Array::from_data(
+            data_type.clone(),
             offsets.into(),
             values.into(),
             validity.into(),
@@ -327,11 +329,13 @@ where
 
     Ok(match data_type {
         DataType::LargeBinary | DataType::Binary => Box::new(BinaryArray::from_data(
+            data_type.clone(),
             offsets.into(),
             values.into(),
             validity.into(),
         )),
         DataType::LargeUtf8 | DataType::Utf8 => Box::new(Utf8Array::from_data(
+            data_type.clone(),
             offsets.into(),
             values.into(),
             validity.into(),

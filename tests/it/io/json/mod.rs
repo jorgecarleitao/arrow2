@@ -212,11 +212,11 @@ fn case_struct() -> (String, Schema, Vec<Box<dyn Array>>) {
 
     // build expected output
     let d = Utf8Array::<i32>::from(&vec![Some("text"), None, Some("text"), None]);
-    let c = StructArray::from_data(vec![d_field], vec![Arc::new(d)], None);
+    let c = StructArray::from_data(DataType::Struct(vec![d_field]), vec![Arc::new(d)], None);
 
     let b = BooleanArray::from(vec![Some(true), Some(false), Some(true), None]);
     let expected = StructArray::from_data(
-        vec![Field::new("b", DataType::Boolean, true), c_field],
+        DataType::Struct(vec![Field::new("b", DataType::Boolean, true), c_field]),
         vec![Arc::new(b), Arc::new(c)],
         None,
     );

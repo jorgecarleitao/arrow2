@@ -12,6 +12,7 @@ use super::super::super::gen;
 use super::super::deserialize::{read, skip, Node};
 use super::super::read_basic::*;
 
+#[allow(clippy::too_many_arguments)]
 pub fn read_struct<R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
     data_type: DataType,
@@ -51,7 +52,7 @@ pub fn read_struct<R: Read + Seek>(
         })
         .collect::<Result<Vec<_>>>()?;
 
-    Ok(StructArray::from_data(fields.to_vec(), values, validity))
+    Ok(StructArray::from_data(data_type, values, validity))
 }
 
 pub fn skip_struct(

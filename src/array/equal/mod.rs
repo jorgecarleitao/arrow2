@@ -1,7 +1,4 @@
-use crate::{
-    datatypes::{DataType, IntervalUnit},
-    types::{days_ms, NativeType},
-};
+use crate::types::{days_ms, NativeType};
 
 use super::*;
 
@@ -164,138 +161,76 @@ pub fn equal(lhs: &dyn Array, rhs: &dyn Array) -> bool {
         return false;
     }
 
-    match lhs.data_type() {
-        DataType::Null => {
+    use crate::datatypes::PhysicalType::*;
+    match lhs.data_type().to_physical_type() {
+        Null => {
             let lhs = lhs.as_any().downcast_ref().unwrap();
             let rhs = rhs.as_any().downcast_ref().unwrap();
             null::equal(lhs, rhs)
         }
-        DataType::Boolean => {
+        Boolean => {
             let lhs = lhs.as_any().downcast_ref().unwrap();
             let rhs = rhs.as_any().downcast_ref().unwrap();
             boolean::equal(lhs, rhs)
         }
-        DataType::UInt8 => {
+        Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
             let lhs = lhs.as_any().downcast_ref().unwrap();
             let rhs = rhs.as_any().downcast_ref().unwrap();
-            primitive::equal::<u8>(lhs, rhs)
-        }
-        DataType::UInt16 => {
-            let lhs = lhs.as_any().downcast_ref().unwrap();
-            let rhs = rhs.as_any().downcast_ref().unwrap();
-            primitive::equal::<u16>(lhs, rhs)
-        }
-        DataType::UInt32 => {
-            let lhs = lhs.as_any().downcast_ref().unwrap();
-            let rhs = rhs.as_any().downcast_ref().unwrap();
-            primitive::equal::<u32>(lhs, rhs)
-        }
-        DataType::UInt64 => {
-            let lhs = lhs.as_any().downcast_ref().unwrap();
-            let rhs = rhs.as_any().downcast_ref().unwrap();
-            primitive::equal::<u64>(lhs, rhs)
-        }
-        DataType::Int8 => {
-            let lhs = lhs.as_any().downcast_ref().unwrap();
-            let rhs = rhs.as_any().downcast_ref().unwrap();
-            primitive::equal::<i8>(lhs, rhs)
-        }
-        DataType::Int16 => {
-            let lhs = lhs.as_any().downcast_ref().unwrap();
-            let rhs = rhs.as_any().downcast_ref().unwrap();
-            primitive::equal::<i16>(lhs, rhs)
-        }
-        DataType::Int32
-        | DataType::Date32
-        | DataType::Time32(_)
-        | DataType::Interval(IntervalUnit::YearMonth) => {
-            let lhs = lhs.as_any().downcast_ref().unwrap();
-            let rhs = rhs.as_any().downcast_ref().unwrap();
-            primitive::equal::<i32>(lhs, rhs)
-        }
-        DataType::Int64
-        | DataType::Date64
-        | DataType::Time64(_)
-        | DataType::Timestamp(_, _)
-        | DataType::Duration(_) => {
-            let lhs = lhs.as_any().downcast_ref().unwrap();
-            let rhs = rhs.as_any().downcast_ref().unwrap();
-            primitive::equal::<i64>(lhs, rhs)
-        }
-        DataType::Decimal(_, _) => {
-            let lhs = lhs.as_any().downcast_ref().unwrap();
-            let rhs = rhs.as_any().downcast_ref().unwrap();
-            primitive::equal::<i128>(lhs, rhs)
-        }
-        DataType::Interval(IntervalUnit::DayTime) => {
-            let lhs = lhs.as_any().downcast_ref().unwrap();
-            let rhs = rhs.as_any().downcast_ref().unwrap();
-            primitive::equal::<days_ms>(lhs, rhs)
-        }
-        DataType::Float16 => unreachable!(),
-        DataType::Float32 => {
-            let lhs = lhs.as_any().downcast_ref().unwrap();
-            let rhs = rhs.as_any().downcast_ref().unwrap();
-            primitive::equal::<f32>(lhs, rhs)
-        }
-        DataType::Float64 => {
-            let lhs = lhs.as_any().downcast_ref().unwrap();
-            let rhs = rhs.as_any().downcast_ref().unwrap();
-            primitive::equal::<f64>(lhs, rhs)
-        }
-        DataType::Utf8 => {
+            primitive::equal::<$T>(lhs, rhs)
+        }),
+        Utf8 => {
             let lhs = lhs.as_any().downcast_ref().unwrap();
             let rhs = rhs.as_any().downcast_ref().unwrap();
             utf8::equal::<i32>(lhs, rhs)
         }
-        DataType::LargeUtf8 => {
+        LargeUtf8 => {
             let lhs = lhs.as_any().downcast_ref().unwrap();
             let rhs = rhs.as_any().downcast_ref().unwrap();
             utf8::equal::<i64>(lhs, rhs)
         }
-        DataType::Binary => {
+        Binary => {
             let lhs = lhs.as_any().downcast_ref().unwrap();
             let rhs = rhs.as_any().downcast_ref().unwrap();
             binary::equal::<i32>(lhs, rhs)
         }
-        DataType::LargeBinary => {
+        LargeBinary => {
             let lhs = lhs.as_any().downcast_ref().unwrap();
             let rhs = rhs.as_any().downcast_ref().unwrap();
             binary::equal::<i64>(lhs, rhs)
         }
-        DataType::List(_) => {
+        List => {
             let lhs = lhs.as_any().downcast_ref().unwrap();
             let rhs = rhs.as_any().downcast_ref().unwrap();
             list::equal::<i32>(lhs, rhs)
         }
-        DataType::LargeList(_) => {
+        LargeList => {
             let lhs = lhs.as_any().downcast_ref().unwrap();
             let rhs = rhs.as_any().downcast_ref().unwrap();
             list::equal::<i64>(lhs, rhs)
         }
-        DataType::Struct(_) => {
+        Struct => {
             let lhs = lhs.as_any().downcast_ref::<StructArray>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<StructArray>().unwrap();
             struct_::equal(lhs, rhs)
         }
-        DataType::Dictionary(key_type, _) => {
-            with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
+        Dictionary(key_type) => {
+            with_match_physical_dictionary_key_type!(key_type, |$T| {
                 let lhs = lhs.as_any().downcast_ref().unwrap();
                 let rhs = rhs.as_any().downcast_ref().unwrap();
                 dictionary::equal::<$T>(lhs, rhs)
             })
         }
-        DataType::FixedSizeBinary(_) => {
+        FixedSizeBinary => {
             let lhs = lhs.as_any().downcast_ref().unwrap();
             let rhs = rhs.as_any().downcast_ref().unwrap();
             fixed_size_binary::equal(lhs, rhs)
         }
-        DataType::FixedSizeList(_, _) => {
+        FixedSizeList => {
             let lhs = lhs.as_any().downcast_ref().unwrap();
             let rhs = rhs.as_any().downcast_ref().unwrap();
             fixed_size_list::equal(lhs, rhs)
         }
-        DataType::Union(_, _, _) => {
+        Union => {
             let lhs = lhs.as_any().downcast_ref().unwrap();
             let rhs = rhs.as_any().downcast_ref().unwrap();
             union::equal(lhs, rhs)
