@@ -9,7 +9,7 @@ from a slice as follows:
 ```rust
 # use arrow2::array::{Array, PrimitiveArray};
 # fn main() {
-let array = PrimitiveArray<i32>::from([Some(1), None, Some(123)]);
+let array = PrimitiveArray::<i32>::from([Some(1), None, Some(123)]);
 assert_eq!(array.len(), 3)
 # }
 ```
@@ -19,7 +19,7 @@ from a slice of values,
 ```rust
 # use arrow2::array::{Array, PrimitiveArray};
 # fn main() {
-let array = PrimitiveArray<i32>::from_slice([1, 0, 123]);
+let array = PrimitiveArray::<f32>::from_slice([1.0, 0.0, 123.0]);
 assert_eq!(array.len(), 3)
 # }
 ```
@@ -29,7 +29,7 @@ or from an iterator
 ```rust
 # use arrow2::array::{Array, PrimitiveArray};
 # fn main() {
-let array: PrimitiveArray<i32> = [Some(1), None, Some(123)].iter().collect();
+let array: PrimitiveArray<u64> = [Some(1), None, Some(123)].iter().collect();
 assert_eq!(array.len(), 3)
 # }
 ```
@@ -68,7 +68,7 @@ which is assigned when allocating arrays from iterators, slices, etc.
 # use arrow2::array::{Array, Int32Array, PrimitiveArray};
 # use arrow2::datatypes::DataType;
 # fn main() {
-let array = PrimitiveArray<i32>::from_slice([1, 0, 123]);
+let array = PrimitiveArray::<i32>::from_slice([1, 0, 123]);
 assert_eq!(array.data_type(), &DataType::Int32);
 # }
 ```
@@ -105,61 +105,64 @@ let a: &dyn Array = &a;
 ### Downcast and `as_any`
 
 Given a trait object `array: &dyn Array`, we know its physical type via
-`array.data_type().to_physical_type()`, which we use to downcast the array
+`PhysicalType: array.data_type().to_physical_type()`, which we use to downcast the array
 to its concrete type:
 
 ```rust
 # use arrow2::array::{Array, PrimitiveArray};
 # use arrow2::datatypes::PhysicalType;
 # fn main() {
-let a = PrimitiveArray::<i32>::from(&[Some(1), None]);
+let array = PrimitiveArray::<i32>::from(&[Some(1), None]);
 let array = &array as &dyn Array;
-
-match array.data_type().to_physical_type() {
-    PhysicalType::Int32 => {
-        let array = array.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
-        let values: &[i32] = array.values();
-        assert_eq!(values, &[1, 0]);
-    }
-    _ => todo!()
-}
+// ...
+let physical_type: PhysicalType = array.data_type().to_physical_type();
 # }
 ```
 
-There is a many-to-one relationship between `DataType` and an Array (i.e. a physical representation). The relationship is the following:
+There is a one to one relationship between each variant of `PhysicalType` (an enum) and
+an each implementation of `Array` (a struct):
 
-| `PhysicalType`       | `PhysicalType`            |
-|----------------------|---------------------------|
-| `UInt8`              | `PrimitiveArray<u8>`      |
-| `UInt16`             | `PrimitiveArray<u16>`     |
-| `UInt32`             | `PrimitiveArray<u32>`     |
-| `UInt64`             | `PrimitiveArray<u64>`     |
-| `Int8`               | `PrimitiveArray<i8>`      |
-| `Int16`              | `PrimitiveArray<i16>`     |
-| `Int32`              | `PrimitiveArray<i32>`     |
-| `Int64`              | `PrimitiveArray<i64>`     |
-| `Int128`             | `PrimitiveArray<i128>`    |
-| `Float32`            | `PrimitiveArray<f32>`     |
-| `Float64`            | `PrimitiveArray<f64>`     |
-| `DaysMs`             | `PrimitiveArray<days_ms>` |
-| `Binary`             | `BinaryArray<i32>`        |
-| `LargeBinary`        | `BinaryArray<i64>`        |
-| `Utf8`               | `Utf8Array<i32>`          |
-| `LargeUtf8`          | `Utf8Array<i64>`          |
-| `List`               | `ListArray<i32>`          |
-| `LargeList`          | `ListArray<i64>`          |
-| `FixedSizeBinary`    | `FixedSizeBinaryArray`    |
-| `FixedSizeList`      | `FixedSizeListArray`      |
-| `Struct`             | `StructArray`             |
-| `Union`              | `UnionArray`              |
-| `Dictionary(UInt8)`  | `DictionaryArray<u8>`     |
-| `Dictionary(UInt16)` | `DictionaryArray<u16>`    |
-| `Dictionary(UInt32)` | `DictionaryArray<u32>`    |
-| `Dictionary(UInt64)` | `DictionaryArray<u64>`    |
-| `Dictionary(Int8)`   | `DictionaryArray<i8>`     |
-| `Dictionary(Int16)`  | `DictionaryArray<i16>`    |
-| `Dictionary(Int32)`  | `DictionaryArray<i32>`    |
-| `Dictionary(Int64)`  | `DictionaryArray<i64>`    |
+| `PhysicalType`    | `Array`                |
+|-------------------|------------------------|
+| `Primitive(_)`    | `PrimitiveArray<_>`    |
+| `Binary`          | `BinaryArray<i32>`     |
+| `LargeBinary`     | `BinaryArray<i64>`     |
+| `Utf8`            | `Utf8Array<i32>`       |
+| `LargeUtf8`       | `Utf8Array<i64>`       |
+| `List`            | `ListArray<i32>`       |
+| `LargeList`       | `ListArray<i64>`       |
+| `FixedSizeBinary` | `FixedSizeBinaryArray` |
+| `FixedSizeList`   | `FixedSizeListArray`   |
+| `Struct`          | `StructArray`          |
+| `Union`           | `UnionArray`           |
+| `Dictionary(_)`   | `DictionaryArray<_>`   |
+
+where `_` represents each of the variants (e.g. `PrimitiveType::Int32 <-> i32`).
+
+In this context, a common idiom in using `Array` as a trait object is as follows:
+
+```rust
+use arrow2::datatypes::{PhysicalType, PrimitiveType};
+use arrow2::array::{Array, PrimitiveArray};
+
+fn float_operator(array: &dyn Array) -> Result<Box<dyn Array>, String> {
+    match array.data_type().to_physical_type() {
+        PhysicalType::Primitive(PrimitiveType::Float32) => {
+            let array = array.as_any().downcast_ref::<PrimitiveArray<f32>>().unwrap();
+            // let array = f32-specific operator
+            let array = array.clone();
+            Ok(Box::new(array))
+        }
+        PhysicalType::Primitive(PrimitiveType::Float64) => {
+            let array = array.as_any().downcast_ref::<PrimitiveArray<f64>>().unwrap();
+            // let array = f64-specific operator
+            let array = array.clone();
+            Ok(Box::new(array))
+        }
+        _ => Err("This operator is only valid for float point arrays".to_string()),
+    }
+}
+```
 
 ## From Iterator
 
@@ -218,7 +221,8 @@ bitwise operations, it is often more performant to operate on chunks of bits ins
 ## Vectorized operations
 
 One of the main advantages of the arrow format and its memory layout is that
-it often enables SIMD. For example, an unary operation `op` on a `PrimitiveArray` is likely auto-vectorized on the following code:
+it often enables SIMD. For example, an unary operation `op` on a `PrimitiveArray`
+likely emits SIMD instructions on the following code:
 
 ```rust
 # use arrow2::buffer::Buffer;
