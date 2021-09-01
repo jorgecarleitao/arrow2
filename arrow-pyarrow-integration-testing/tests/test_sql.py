@@ -23,6 +23,14 @@ import pyarrow
 import arrow_pyarrow_integration_testing
 
 
+class UuidType(pyarrow.PyExtensionType):
+    def __init__(self):
+        super().__init__(pyarrow.binary(16))
+
+    def __reduce__(self):
+        return UuidType, ()
+
+
 class TestCase(unittest.TestCase):
     def setUp(self):
         self.old_allocated_rust = (
@@ -176,6 +184,13 @@ class TestCase(unittest.TestCase):
 
     def test_field_metadata(self):
         field = pyarrow.field("aa", pyarrow.bool_(), {"a": "b"})
+        result = arrow_pyarrow_integration_testing.round_trip_field(field)
+        assert field == result
+        assert field.metadata == result.metadata
+
+    # see https://issues.apache.org/jira/browse/ARROW-13855
+    def _test_field_extension(self):
+        field = pyarrow.field("aa", UuidType())
         result = arrow_pyarrow_integration_testing.round_trip_field(field)
         assert field == result
         assert field.metadata == result.metadata

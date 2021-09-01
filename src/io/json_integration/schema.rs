@@ -25,8 +25,7 @@ use serde_json::{json, Value};
 
 use crate::error::{ArrowError, Result};
 
-use crate::datatypes::{DataType, Field, IntervalUnit, Schema, TimeUnit};
-use crate::io::ipc::get_extension;
+use crate::datatypes::{get_extension, DataType, Field, IntervalUnit, Schema, TimeUnit};
 
 pub trait ToJson {
     /// Generate a JSON representation
