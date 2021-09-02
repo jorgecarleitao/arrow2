@@ -231,7 +231,7 @@ fn extend_from_page<O: Offset>(
             values,
             validity,
         ),
-        (Encoding::Plain, None, true) => read_plain_optional::<O>(
+        (Encoding::Plain, _, true) => read_plain_optional::<O>(
             validity_buffer,
             values_buffer,
             page.num_values(),
@@ -239,7 +239,7 @@ fn extend_from_page<O: Offset>(
             values,
             validity,
         ),
-        (Encoding::Plain, None, false) => {
+        (Encoding::Plain, _, false) => {
             read_plain_required::<O>(page.buffer(), page.num_values(), offsets, values)
         }
         _ => {
