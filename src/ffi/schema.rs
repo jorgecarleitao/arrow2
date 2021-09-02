@@ -1,4 +1,4 @@
-use std::{ffi::CStr, ffi::CString, ptr};
+use std::{collections::BTreeMap, convert::TryInto, ffi::CStr, ffi::CString, ptr};
 
 use crate::{
     datatypes::{DataType, Field, IntervalUnit, TimeUnit},
@@ -7,6 +7,9 @@ use crate::{
 
 #[allow(dead_code)]
 struct SchemaPrivateData {
+    name: CString,
+    format: CString,
+    metadata: Option<Vec<u8>>,
     children_ptr: Box<[*mut Ffi_ArrowSchema]>,
     dictionary: Option<*mut Ffi_ArrowSchema>,
 }
@@ -35,9 +38,6 @@ unsafe extern "C" fn c_release_schema(schema: *mut Ffi_ArrowSchema) {
     }
     let schema = &mut *schema;
 
-    // take ownership back to release it.
-    CString::from_raw(schema.format as *mut std::os::raw::c_char);
-    CString::from_raw(schema.name as *mut std::os::raw::c_char);
     let private = Box::from_raw(schema.private_data as *mut SchemaPrivateData);
     for child in private.children_ptr.iter() {
         let _ = Box::from_raw(*child);
@@ -91,16 +91,28 @@ impl Ffi_ArrowSchema {
             None
         };
 
+        let metadata = field.metadata().as_ref().map(metadata_to_bytes);
+
+        let name = CString::new(name).unwrap();
+        let format = CString::new(format).unwrap();
+
         let mut private = Box::new(SchemaPrivateData {
+            name,
+            format,
+            metadata,
             children_ptr,
             dictionary: dictionary.map(Box::into_raw),
         });
 
         // <https://arrow.apache.org/docs/format/CDataInterface.html#c.ArrowSchema>
         Self {
-            format: CString::new(format).unwrap().into_raw(),
-            name: CString::new(name).unwrap().into_raw(),
-            metadata: std::ptr::null_mut(),
+            format: private.format.as_ptr(),
+            name: private.name.as_ptr(),
+            metadata: private
+                .metadata
+                .as_ref()
+                .map(|x| x.as_ptr())
+                .unwrap_or(std::ptr::null()) as *const ::std::os::raw::c_char,
             flags,
             n_children,
             children: private.children_ptr.as_mut_ptr(),
@@ -180,7 +192,10 @@ pub fn to_field(schema: &Ffi_ArrowSchema) -> Result<Field> {
     } else {
         to_data_type(schema)?
     };
-    Ok(Field::new(schema.name(), data_type, schema.nullable()))
+    let metadata = unsafe { metadata_from_bytes(schema.metadata) };
+    let mut field = Field::new(schema.name(), data_type, schema.nullable());
+    field.set_metadata(metadata);
+    Ok(field)
 }
 
 fn to_data_type(schema: &Ffi_ArrowSchema) -> Result<DataType> {
@@ -374,4 +389,50 @@ pub(super) fn get_field_child(field: &Field, index: usize) -> Result<Field> {
             child, data_type
         ))),
     }
+}
+
+fn metadata_to_bytes(metadata: &BTreeMap<String, String>) -> Vec<u8> {
+    let a = (metadata.len() as i32).to_ne_bytes().to_vec();
+    metadata.iter().fold(a, |mut acc, (key, value)| {
+        acc.extend((key.len() as i32).to_ne_bytes());
+        acc.extend(key.as_bytes());
+        acc.extend((value.len() as i32).to_ne_bytes());
+        acc.extend(value.as_bytes());
+        acc
+    })
+}
+
+unsafe fn read_ne_i32(ptr: *const u8) -> i32 {
+    let slice = std::slice::from_raw_parts(ptr, 4);
+    i32::from_ne_bytes(slice.try_into().unwrap())
+}
+
+unsafe fn read_bytes(ptr: *const u8, len: usize) -> &'static str {
+    let slice = std::slice::from_raw_parts(ptr, len);
+    std::str::from_utf8(slice).unwrap()
+}
+
+unsafe fn metadata_from_bytes(
+    data: *const ::std::os::raw::c_char,
+) -> Option<BTreeMap<String, String>> {
+    let mut data = data as *const u8; // u8 = i8
+    if data.is_null() {
+        return None;
+    };
+    let len = read_ne_i32(data);
+    data = data.add(4);
+
+    let mut result = BTreeMap::new();
+    for _ in 0..len {
+        let key_len = read_ne_i32(data) as usize;
+        data = data.add(4);
+        let key = read_bytes(data, key_len);
+        data = data.add(key_len);
+        let value_len = read_ne_i32(data) as usize;
+        data = data.add(4);
+        let value = read_bytes(data, value_len);
+        data = data.add(value_len);
+        result.insert(key.to_string(), value.to_string());
+    }
+    Some(result)
 }
