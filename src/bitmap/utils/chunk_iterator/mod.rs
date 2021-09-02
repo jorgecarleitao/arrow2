@@ -10,7 +10,7 @@ use crate::{trusted_len::TrustedLen, types::BitChunkIter};
 pub(crate) use merge::merge_reversed;
 
 /// Trait representing an exact iterator over bytes in [`BitChunk`].
-pub trait BitChunkIterExact<B: BitChunk>: Iterator<Item = B> {
+pub trait BitChunkIterExact<B: BitChunk>: TrustedLen<Item = B> {
     /// The remainder of the iterator.
     fn remainder(&self) -> B;
 }

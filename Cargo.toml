@@ -183,3 +183,7 @@ harness = false
 [[bench]]
 name = "concat"
 harness = false
+
+[[bench]]
+name = "bitmap_ops"
+harness = false
