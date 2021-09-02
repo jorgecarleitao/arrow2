@@ -1,5 +1,7 @@
 use std::{convert::TryInto, slice::ChunksExact};
 
+use crate::trusted_len::TrustedLen;
+
 use super::{BitChunk, BitChunkIterExact};
 
 /// An iterator over a slice of bytes in [`BitChunk`]s.
@@ -83,6 +85,8 @@ impl<T: BitChunk> Iterator for BitChunksExact<'_, T> {
         self.iter.size_hint()
     }
 }
+
+unsafe impl<T: BitChunk> TrustedLen for BitChunksExact<'_, T> {}
 
 impl<T: BitChunk> BitChunkIterExact<T> for BitChunksExact<'_, T> {
     #[inline]

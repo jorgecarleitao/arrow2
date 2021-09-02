@@ -2,7 +2,10 @@ use std::ops::{BitAnd, BitOr, Not};
 
 use crate::buffer::MutableBuffer;
 
-use super::Bitmap;
+use super::{
+    utils::{BitChunkIterExact, BitChunksExact},
+    Bitmap,
+};
 
 /// Apply a bitwise operation `op` to four inputs and return the result as a [`Bitmap`].
 pub fn quaternary<F>(a1: &Bitmap, a2: &Bitmap, a3: &Bitmap, a4: &Bitmap, op: F) -> Bitmap
@@ -100,23 +103,33 @@ where
     Bitmap::from_u8_buffer(buffer, length)
 }
 
+fn unary_impl<F, I>(iter: I, op: F, length: usize) -> Bitmap
+where
+    I: BitChunkIterExact<u64>,
+    F: Fn(u64) -> u64,
+{
+    let rem = op(iter.remainder());
+
+    let iterator = iter.map(|left| op(left)).chain(std::iter::once(rem));
+
+    let buffer = MutableBuffer::from_trusted_len_iter(iterator);
+
+    Bitmap::from_u8_buffer(buffer.into(), length)
+}
+
 /// Apply a bitwise operation `op` to one input and return the result as a [`Bitmap`].
 pub fn unary<F>(lhs: &Bitmap, op: F) -> Bitmap
 where
     F: Fn(u64) -> u64,
 {
-    let mut lhs_chunks = lhs.chunks();
-
-    let chunks = lhs_chunks.by_ref().map(|left| op(left));
-    let mut buffer = unsafe { MutableBuffer::from_chunk_iter_unchecked(chunks) };
-
-    let remainder_bytes = lhs_chunks.remainder_len().saturating_add(7) / 8;
-    let rem = op(lhs_chunks.remainder());
-
-    let rem = &rem.to_ne_bytes()[..remainder_bytes];
-    buffer.extend_from_slice(rem);
-
-    Bitmap::from_u8_buffer(buffer, lhs.len())
+    let (slice, offset, length) = lhs.as_slice();
+    if offset == 0 {
+        let iter = BitChunksExact::<u64>::new(slice, length);
+        unary_impl(iter, op, lhs.len())
+    } else {
+        let iter = lhs.chunks::<u64>();
+        unary_impl(iter, op, lhs.len())
+    }
 }
 
 fn and(lhs: &Bitmap, rhs: &Bitmap) -> Bitmap {
