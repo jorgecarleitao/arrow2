@@ -96,7 +96,7 @@ where
     Ok(BooleanArray::from_data(DataType::Boolean, values, validity))
 }
 
-/// Checks if a [`GenericListArray`] contains a value in the [`BinaryArray`]
+/// Checks if a [`ListArray`] contains a value in the [`BinaryArray`]
 fn contains_binary<O, OO>(list: &ListArray<O>, values: &BinaryArray<OO>) -> Result<BooleanArray>
 where
     O: Offset,

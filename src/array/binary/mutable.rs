@@ -192,7 +192,6 @@ impl<O: Offset> MutableBinaryArray<O> {
     {
         let (validity, offsets, values) = trusted_len_unzip(iterator);
 
-        // soundness: P is `str`
         Self::from_data(Self::default_data_type(), offsets, values, validity)
     }
 
@@ -207,14 +206,13 @@ impl<O: Offset> MutableBinaryArray<O> {
         unsafe { Self::from_trusted_len_iter_unchecked(iterator) }
     }
 
-    /// Creates a new [`BinaryArray`] from a [`TrustedLen`] of `&str`.
+    /// Creates a new [`BinaryArray`] from a [`TrustedLen`] of `&[u8]`.
     #[inline]
     pub fn from_trusted_len_values_iter<T: AsRef<[u8]>, I: TrustedLen<Item = T>>(
         iterator: I,
     ) -> Self {
         // soundness: I is `TrustedLen`
         let (offsets, values) = unsafe { trusted_len_values_iter(iterator) };
-        // soundness: T is AsRef<[u8]>
         Self::from_data(Self::default_data_type(), offsets, values, None)
     }
 
@@ -235,7 +233,6 @@ impl<O: Offset> MutableBinaryArray<O> {
         // soundness: assumed trusted len
         let (validity, offsets, values) = try_trusted_len_unzip(iterator)?;
 
-        // soundness: P is `str`
         Ok(Self::from_data(
             Self::default_data_type(),
             offsets,
@@ -258,7 +255,6 @@ impl<O: Offset> MutableBinaryArray<O> {
     /// Creates a new [`MutableBinaryArray`] from a [`Iterator`] of `&[u8]`.
     pub fn from_iter_values<T: AsRef<[u8]>, I: Iterator<Item = T>>(iterator: I) -> Self {
         let (offsets, values) = values_iter(iterator);
-        // soundness: T: AsRef<[u8]>
         Self::from_data(Self::default_data_type(), offsets, values, None)
     }
 }

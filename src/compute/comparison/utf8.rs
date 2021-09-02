@@ -22,7 +22,7 @@ use crate::{array::*, bitmap::Bitmap};
 
 use super::{super::utils::combine_validities, Operator};
 
-/// Evaluate `op(lhs, rhs)` for [`PrimitiveArray`]s using a specified
+/// Evaluate `op(lhs, rhs)` for [`Utf8Array`]s using a specified
 /// comparison function.
 fn compare_op<O, F>(lhs: &Utf8Array<O>, rhs: &Utf8Array<O>, op: F) -> Result<BooleanArray>
 where
@@ -46,7 +46,7 @@ where
     Ok(BooleanArray::from_data(DataType::Boolean, values, validity))
 }
 
-/// Evaluate `op(lhs, rhs)` for [`PrimitiveArray`] and scalar using
+/// Evaluate `op(lhs, rhs)` for [`Utf8Array`] and scalar using
 /// a specified comparison function.
 fn compare_op_scalar<O, F>(lhs: &Utf8Array<O>, rhs: &str, op: F) -> BooleanArray
 where
@@ -61,62 +61,62 @@ where
     BooleanArray::from_data(DataType::Boolean, values, validity)
 }
 
-/// Perform `lhs == rhs` operation on [`StringArray`] / [`LargeStringArray`].
+/// Perform `lhs == rhs` operation on [`Utf8Array`].
 fn eq<O: Offset>(lhs: &Utf8Array<O>, rhs: &Utf8Array<O>) -> Result<BooleanArray> {
     compare_op(lhs, rhs, |a, b| a == b)
 }
 
-/// Perform `lhs == rhs` operation on [`StringArray`] / [`LargeStringArray`] and a scalar.
+/// Perform `lhs == rhs` operation on [`Utf8Array`] and a scalar.
 fn eq_scalar<O: Offset>(lhs: &Utf8Array<O>, rhs: &str) -> BooleanArray {
     compare_op_scalar(lhs, rhs, |a, b| a == b)
 }
 
-/// Perform `lhs != rhs` operation on [`StringArray`] / [`LargeStringArray`].
+/// Perform `lhs != rhs` operation on [`Utf8Array`].
 fn neq<O: Offset>(lhs: &Utf8Array<O>, rhs: &Utf8Array<O>) -> Result<BooleanArray> {
     compare_op(lhs, rhs, |a, b| a != b)
 }
 
-/// Perform `lhs != rhs` operation on [`StringArray`] / [`LargeStringArray`] and a scalar.
+/// Perform `lhs != rhs` operation on [`Utf8Array`] and a scalar.
 fn neq_scalar<O: Offset>(lhs: &Utf8Array<O>, rhs: &str) -> BooleanArray {
     compare_op_scalar(lhs, rhs, |a, b| a != b)
 }
 
-/// Perform `lhs < rhs` operation on [`StringArray`] / [`LargeStringArray`].
+/// Perform `lhs < rhs` operation on [`Utf8Array`].
 fn lt<O: Offset>(lhs: &Utf8Array<O>, rhs: &Utf8Array<O>) -> Result<BooleanArray> {
     compare_op(lhs, rhs, |a, b| a < b)
 }
 
-/// Perform `lhs < rhs` operation on [`StringArray`] / [`LargeStringArray`] and a scalar.
+/// Perform `lhs < rhs` operation on [`Utf8Array`] and a scalar.
 fn lt_scalar<O: Offset>(lhs: &Utf8Array<O>, rhs: &str) -> BooleanArray {
     compare_op_scalar(lhs, rhs, |a, b| a < b)
 }
 
-/// Perform `lhs <= rhs` operation on [`StringArray`] / [`LargeStringArray`].
+/// Perform `lhs <= rhs` operation on [`Utf8Array`].
 fn lt_eq<O: Offset>(lhs: &Utf8Array<O>, rhs: &Utf8Array<O>) -> Result<BooleanArray> {
     compare_op(lhs, rhs, |a, b| a <= b)
 }
 
-/// Perform `lhs <= rhs` operation on [`StringArray`] / [`LargeStringArray`] and a scalar.
+/// Perform `lhs <= rhs` operation on [`Utf8Array`] and a scalar.
 fn lt_eq_scalar<O: Offset>(lhs: &Utf8Array<O>, rhs: &str) -> BooleanArray {
     compare_op_scalar(lhs, rhs, |a, b| a <= b)
 }
 
-/// Perform `lhs > rhs` operation on [`StringArray`] / [`LargeStringArray`].
+/// Perform `lhs > rhs` operation on [`Utf8Array`].
 fn gt<O: Offset>(lhs: &Utf8Array<O>, rhs: &Utf8Array<O>) -> Result<BooleanArray> {
     compare_op(lhs, rhs, |a, b| a > b)
 }
 
-/// Perform `lhs > rhs` operation on [`StringArray`] / [`LargeStringArray`] and a scalar.
+/// Perform `lhs > rhs` operation on [`Utf8Array`] and a scalar.
 fn gt_scalar<O: Offset>(lhs: &Utf8Array<O>, rhs: &str) -> BooleanArray {
     compare_op_scalar(lhs, rhs, |a, b| a > b)
 }
 
-/// Perform `lhs >= rhs` operation on [`StringArray`] / [`LargeStringArray`].
+/// Perform `lhs >= rhs` operation on [`Utf8Array`].
 fn gt_eq<O: Offset>(lhs: &Utf8Array<O>, rhs: &Utf8Array<O>) -> Result<BooleanArray> {
     compare_op(lhs, rhs, |a, b| a >= b)
 }
 
-/// Perform `lhs >= rhs` operation on [`StringArray`] / [`LargeStringArray`] and a scalar.
+/// Perform `lhs >= rhs` operation on [`Utf8Array`] and a scalar.
 fn gt_eq_scalar<O: Offset>(lhs: &Utf8Array<O>, rhs: &str) -> BooleanArray {
     compare_op_scalar(lhs, rhs, |a, b| a >= b)
 }
