@@ -16,7 +16,7 @@ bench = false
 
 [dependencies]
 num-traits = "0.2"
-chrono = "^0.4"
+chrono = { version = "0.4", default_features = false, features = ["std"] }
 # To efficiently cast numbers to strings
 lexical-core = { version = "0.7", optional = true }
 # We need to Hash values before sending them to an hasher. This
