@@ -780,12 +780,59 @@ fn main() -&gt; Result&lt;()&gt; {
 <div style="break-before: page; page-break-before: always;"></div><h1 id="extension-types"><a class="header" href="#extension-types">Extension types</a></h1>
 <p>This crate supports Arrows' <a href="https://arrow.apache.org/docs/format/Columnar.html#extension-types">&quot;extension type&quot;</a>, to declare, use, and share custom logical types.
 The follow example shows how to declare one:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>{{#include ../../../examples/extension.rs}}
-<span class="boring">}
-</span></code></pre></pre>
+<pre><pre class="playground"><code class="language-rust">use std::io::{Cursor, Seek, Write};
+use std::sync::Arc;
+
+use arrow2::array::*;
+use arrow2::datatypes::*;
+use arrow2::error::Result;
+use arrow2::io::ipc::read;
+use arrow2::io::ipc::write;
+use arrow2::record_batch::RecordBatch;
+
+fn main() -&gt; Result&lt;()&gt; {
+    // declare an extension.
+    let extension_type =
+        DataType::Extension(&quot;date16&quot;.to_string(), Box::new(DataType::UInt16), None);
+
+    // initialize an array with it.
+    let array = UInt16Array::from_slice([1, 2]).to(extension_type.clone());
+
+    // from here on, it works as usual
+    let mut buffer = Cursor::new(vec![]);
+
+    // write to IPC
+    write_ipc(&amp;mut buffer, array)?;
+
+    // read it back
+    let batch = read_ipc(&amp;buffer.into_inner())?;
+
+    // and verify that the datatype is preserved.
+    let array = &amp;batch.columns()[0];
+    assert_eq!(array.data_type(), &amp;extension_type);
+
+    // see https://arrow.apache.org/docs/format/Columnar.html#extension-types
+    // for consuming by other consumers.
+    Ok(())
+}
+
+fn write_ipc&lt;W: Write + Seek&gt;(writer: &amp;mut W, array: impl Array + 'static) -&gt; Result&lt;()&gt; {
+    let schema = Schema::new(vec![Field::new(&quot;a&quot;, array.data_type().clone(), false)]);
+
+    let mut writer = write::FileWriter::try_new(writer, &amp;schema)?;
+
+    let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(array)])?;
+
+    writer.write(&amp;batch)
+}
+
+fn read_ipc(reader: &amp;[u8]) -&gt; Result&lt;RecordBatch&gt; {
+    let mut reader = Cursor::new(reader);
+    let metadata = read::read_file_metadata(&amp;mut reader)?;
+    let mut reader = read::FileReader::new(&amp;mut reader, metadata, None);
+    reader.next().unwrap()
+}
+</code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="io"><a class="header" href="#io">IO</a></h1>
 <p>This crate offers optional features that enable interoperability with different formats:</p>
 <ul>
