@@ -623,3 +623,8 @@ impl MutableBuffer<u8> {
         MutableBuffer::from_trusted_len_iter_unchecked(iter).into()
     }
 }
+
+// This is sound because `NativeType` is `Send+Sync`, and
+// `MutableBuffer` has the invariants of `Vec<T>` (which is `Send+Sync`)
+unsafe impl<T: NativeType> Send for MutableBuffer<T> {}
+unsafe impl<T: NativeType> Sync for MutableBuffer<T> {}
