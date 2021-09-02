@@ -70,7 +70,8 @@ doc-comment = "0.3"
 crossbeam-channel = "0.5.1"
 
 [features]
-default = [
+default = []
+full = [
     "io_csv",
     "io_json",
     "io_ipc",
@@ -82,7 +83,6 @@ default = [
     "regex",
     "merge_sort",
     "ahash",
-    "benchmarks",
     "compute",
 ]
 merge_sort = ["itertools"]
