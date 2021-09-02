@@ -4,5 +4,5 @@ This crate supports Arrows' ["extension type"](https://arrow.apache.org/docs/for
 The follow example shows how to declare one:
 
 ```rust
-{{#include ../../../examples/extension.rs}}
+{{#include ../../examples/extension.rs}}
 ```
