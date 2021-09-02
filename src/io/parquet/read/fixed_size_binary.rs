@@ -210,7 +210,7 @@ pub(crate) fn extend_from_page(
             values,
             validity,
         ),
-        (Encoding::Plain, None, true) => read_optional(
+        (Encoding::Plain, _, true) => read_optional(
             validity_buffer,
             values_buffer,
             page.num_values() as u32,
@@ -218,7 +218,9 @@ pub(crate) fn extend_from_page(
             values,
             validity,
         ),
-        (Encoding::Plain, None, false) => {
+        // it can happen that there is a dictionary but the encoding is plain because
+        // it falled back.
+        (Encoding::Plain, _, false) => {
             read_required(page.buffer(), page.num_values() as u32, size, values)
         }
         _ => {

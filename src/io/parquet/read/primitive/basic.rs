@@ -168,7 +168,9 @@ where
                 op,
             )
         }
-        (Encoding::Plain, None, true) => read_nullable(
+        // it can happen that there is a dictionary but the encoding is plain because
+        // it falled back.
+        (Encoding::Plain, _, true) => read_nullable(
             validity_buffer,
             values_buffer,
             additional,
@@ -176,7 +178,7 @@ where
             validity,
             op,
         ),
-        (Encoding::Plain, None, false) => read_required(page.buffer(), additional, values, op),
+        (Encoding::Plain, _, false) => read_required(page.buffer(), additional, values, op),
         _ => {
             return Err(other_utils::not_implemented(
                 &page.encoding(),
