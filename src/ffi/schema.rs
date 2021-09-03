@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, convert::TryInto, ffi::CStr, ffi::CString, ptr};
 
 use crate::{
-    datatypes::{DataType, Field, IntervalUnit, TimeUnit},
+    datatypes::{DataType, Extension, Field, IntervalUnit, Metadata, TimeUnit},
     error::{ArrowError, Result},
 };
 
@@ -91,7 +91,26 @@ impl Ffi_ArrowSchema {
             None
         };
 
-        let metadata = field.metadata().as_ref().map(metadata_to_bytes);
+        let metadata = field.metadata();
+
+        let metadata = if let DataType::Extension(name, _, extension_metadata) = field.data_type() {
+            // append extension information.
+            let mut metadata = metadata.clone().unwrap_or_default();
+
+            // metadata
+            if let Some(extension_metadata) = extension_metadata {
+                metadata.insert(
+                    "ARROW:extension:metadata".to_string(),
+                    extension_metadata.clone(),
+                );
+            }
+
+            metadata.insert("ARROW:extension:name".to_string(), name.clone());
+
+            Some(metadata_to_bytes(&metadata))
+        } else {
+            metadata.as_ref().map(metadata_to_bytes)
+        };
 
         let name = CString::new(name).unwrap();
         let format = CString::new(format).unwrap();
@@ -192,7 +211,14 @@ pub fn to_field(schema: &Ffi_ArrowSchema) -> Result<Field> {
     } else {
         to_data_type(schema)?
     };
-    let metadata = unsafe { metadata_from_bytes(schema.metadata) };
+    let (metadata, extension) = unsafe { metadata_from_bytes(schema.metadata) };
+
+    let data_type = if let Some((name, extension_metadata)) = extension {
+        DataType::Extension(name, Box::new(data_type), extension_metadata)
+    } else {
+        data_type
+    };
+
     let mut field = Field::new(schema.name(), data_type, schema.nullable());
     field.set_metadata(metadata);
     Ok(field)
@@ -412,17 +438,17 @@ unsafe fn read_bytes(ptr: *const u8, len: usize) -> &'static str {
     std::str::from_utf8(slice).unwrap()
 }
 
-unsafe fn metadata_from_bytes(
-    data: *const ::std::os::raw::c_char,
-) -> Option<BTreeMap<String, String>> {
+unsafe fn metadata_from_bytes(data: *const ::std::os::raw::c_char) -> (Metadata, Extension) {
     let mut data = data as *const u8; // u8 = i8
     if data.is_null() {
-        return None;
+        return (None, None);
     };
     let len = read_ne_i32(data);
     data = data.add(4);
 
     let mut result = BTreeMap::new();
+    let mut extension_name = None;
+    let mut extension_metadata = None;
     for _ in 0..len {
         let key_len = read_ne_i32(data) as usize;
         data = data.add(4);
@@ -432,7 +458,18 @@ unsafe fn metadata_from_bytes(
         data = data.add(4);
         let value = read_bytes(data, value_len);
         data = data.add(value_len);
-        result.insert(key.to_string(), value.to_string());
+        match key {
+            "ARROW:extension:name" => {
+                extension_name = Some(value.to_string());
+            }
+            "ARROW:extension:metadata" => {
+                extension_metadata = Some(value.to_string());
+            }
+            _ => {
+                result.insert(key.to_string(), value.to_string());
+            }
+        };
     }
-    Some(result)
+    let extension = extension_name.map(|name| (name, extension_metadata));
+    (Some(result), extension)
 }

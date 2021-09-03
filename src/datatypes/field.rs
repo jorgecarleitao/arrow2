@@ -277,3 +277,19 @@ impl std::fmt::Display for Field {
         write!(f, "{:?}", self)
     }
 }
+
+pub(crate) type Metadata = Option<BTreeMap<String, String>>;
+pub(crate) type Extension = Option<(String, Option<String>)>;
+
+pub(crate) fn get_extension(metadata: &Option<BTreeMap<String, String>>) -> Extension {
+    if let Some(metadata) = metadata {
+        if let Some(name) = metadata.get("ARROW:extension:name") {
+            let metadata = metadata.get("ARROW:extension:metadata").cloned();
+            Some((name.clone(), metadata))
+        } else {
+            None
+        }
+    } else {
+        None
+    }
+}

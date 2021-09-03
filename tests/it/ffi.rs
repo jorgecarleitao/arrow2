@@ -172,3 +172,13 @@ fn schema() -> Result<()> {
     let field = field.with_metadata(metadata);
     test_round_trip_schema(field)
 }
+
+#[test]
+fn extension() -> Result<()> {
+    let field = Field::new(
+        "a",
+        DataType::Extension("a".to_string(), Box::new(DataType::Int32), None),
+        true,
+    );
+    test_round_trip_schema(field)
+}

@@ -7,6 +7,8 @@ pub use field::Field;
 pub use physical_type::*;
 pub use schema::Schema;
 
+pub(crate) use field::{get_extension, Extension, Metadata};
+
 /// The set of datatypes that are supported by this implementation of Apache Arrow.
 ///
 /// The Arrow specification on data types includes some more types.

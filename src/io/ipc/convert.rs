@@ -17,7 +17,9 @@
 
 //! Utilities for converting between IPC types and native Arrow types
 
-use crate::datatypes::{DataType, Field, IntervalUnit, Schema, TimeUnit};
+use crate::datatypes::{
+    get_extension, DataType, Extension, Field, IntervalUnit, Metadata, Schema, TimeUnit,
+};
 use crate::endianess::is_native_little_endian;
 use crate::io::ipc::convert::ipc::UnionMode;
 
@@ -31,9 +33,6 @@ use flatbuffers::{FlatBufferBuilder, ForwardsUOffset, UnionWIPOffset, Vector, WI
 use std::collections::{BTreeMap, HashMap};
 
 use DataType::*;
-
-type Metadata = Option<BTreeMap<String, String>>;
-type Extension = Option<(String, Option<String>)>;
 
 pub fn schema_to_fb_offset<'a>(
     fbb: &mut FlatBufferBuilder<'a>,
@@ -79,19 +78,6 @@ fn read_metadata(field: &ipc::Field) -> Metadata {
             }
         }
         Some(metadata_map)
-    } else {
-        None
-    }
-}
-
-pub(crate) fn get_extension(metadata: &Metadata) -> Extension {
-    if let Some(metadata) = metadata {
-        if let Some(name) = metadata.get("ARROW:extension:name") {
-            let metadata = metadata.get("ARROW:extension:metadata").cloned();
-            Some((name.clone(), metadata))
-        } else {
-            None
-        }
     } else {
         None
     }
