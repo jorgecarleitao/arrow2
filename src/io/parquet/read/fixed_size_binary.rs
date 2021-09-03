@@ -21,14 +21,14 @@ use super::utils;
 pub(crate) fn read_dict_buffer(
     validity_buffer: &[u8],
     indices_buffer: &[u8],
-    length: u32,
+    additional: usize,
     size: i32,
     dict: &FixedLenByteArrayPageDict,
     values: &mut MutableBuffer<u8>,
     validity: &mut MutableBitmap,
 ) {
-    let length = length as usize;
     let size = size as usize;
+    let length = values.len() * size + additional;
     let dict_values = dict.values();
 
     // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
@@ -43,7 +43,7 @@ pub(crate) fn read_dict_buffer(
     for run in validity_iterator {
         match run {
             hybrid_rle::HybridEncoded::Bitpacked(packed) => {
-                let remaining = length - values.len();
+                let remaining = length - values.len() * size;
                 let len = std::cmp::min(packed.len() * 8, remaining);
                 for is_valid in BitmapIter::new(packed, 0, len) {
                     validity.push(is_valid);
@@ -74,13 +74,13 @@ pub(crate) fn read_dict_buffer(
 pub(crate) fn read_optional(
     validity_buffer: &[u8],
     values_buffer: &[u8],
-    length: u32,
+    additional: usize,
     size: i32,
     values: &mut MutableBuffer<u8>,
     validity: &mut MutableBitmap,
 ) {
-    let length = length as usize;
     let size = size as usize;
+    let length = values.len() * size + additional;
 
     assert_eq!(values_buffer.len() % size, 0);
     let mut values_iterator = values_buffer.chunks_exact(size);
@@ -91,7 +91,7 @@ pub(crate) fn read_optional(
         match run {
             hybrid_rle::HybridEncoded::Bitpacked(packed) => {
                 // the pack may contain more items than needed.
-                let remaining = length - values.len();
+                let remaining = length - values.len() * size;
                 let len = std::cmp::min(packed.len() * 8, remaining);
                 for is_valid in BitmapIter::new(packed, 0, len) {
                     validity.push(is_valid);
@@ -119,8 +119,13 @@ pub(crate) fn read_optional(
     }
 }
 
-pub(crate) fn read_required(buffer: &[u8], length: u32, size: i32, values: &mut MutableBuffer<u8>) {
-    assert_eq!(buffer.len(), length as usize * size as usize);
+pub(crate) fn read_required(
+    buffer: &[u8],
+    additional: usize,
+    size: i32,
+    values: &mut MutableBuffer<u8>,
+) {
+    assert_eq!(buffer.len(), additional * size as usize);
     values.extend_from_slice(buffer);
 }
 
@@ -194,6 +199,7 @@ pub(crate) fn extend_from_page(
     values: &mut MutableBuffer<u8>,
     validity: &mut MutableBitmap,
 ) -> Result<()> {
+    let additional = page.num_values();
     assert_eq!(descriptor.max_rep_level(), 0);
     assert!(descriptor.max_def_level() <= 1);
     let is_optional = descriptor.max_def_level() == 1;
@@ -204,7 +210,7 @@ pub(crate) fn extend_from_page(
         (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer(
             validity_buffer,
             values_buffer,
-            page.num_values() as u32,
+            additional,
             size,
             dict.as_any().downcast_ref().unwrap(),
             values,
@@ -213,16 +219,14 @@ pub(crate) fn extend_from_page(
         (Encoding::Plain, _, true) => read_optional(
             validity_buffer,
             values_buffer,
-            page.num_values() as u32,
+            additional,
             size,
             values,
             validity,
         ),
         // it can happen that there is a dictionary but the encoding is plain because
         // it falled back.
-        (Encoding::Plain, _, false) => {
-            read_required(page.buffer(), page.num_values() as u32, size, values)
-        }
+        (Encoding::Plain, _, false) => read_required(page.buffer(), additional, size, values),
         _ => {
             return Err(utils::not_implemented(
                 &page.encoding(),

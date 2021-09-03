@@ -30,6 +30,7 @@ fn read_dict_optional<K, O>(
     K: DictionaryKey,
     O: Offset,
 {
+    let length = indices.len() + additional;
     values.extend_from_slice(dict.values());
     offsets.extend(
         dict.offsets()
@@ -50,7 +51,7 @@ fn read_dict_optional<K, O>(
     for run in validity_iterator {
         match run {
             hybrid_rle::HybridEncoded::Bitpacked(packed) => {
-                let remaining = additional - indices.len();
+                let remaining = length - indices.len();
                 let len = std::cmp::min(packed.len() * 8, remaining);
                 for is_valid in BitmapIter::new(packed, 0, len) {
                     let value = if is_valid {

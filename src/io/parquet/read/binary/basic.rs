@@ -21,13 +21,13 @@ use super::super::utils;
 fn read_dict_buffer<O: Offset>(
     validity_buffer: &[u8],
     indices_buffer: &[u8],
-    length: u32,
+    additional: usize,
     dict: &BinaryPageDict,
     offsets: &mut MutableBuffer<O>,
     values: &mut MutableBuffer<u8>,
     validity: &mut MutableBitmap,
 ) {
-    let length = length as usize;
+    let length = (offsets.len() - 1) + additional;
     let dict_values = dict.values();
     let dict_offsets = dict.offsets();
     let mut last_offset = *offsets.as_mut_slice().last().unwrap();
@@ -83,11 +83,12 @@ fn read_dict_buffer<O: Offset>(
 fn read_delta_optional<O: Offset>(
     validity_buffer: &[u8],
     values_buffer: &[u8],
-    length: usize,
+    additional: usize,
     offsets: &mut MutableBuffer<O>,
     values: &mut MutableBuffer<u8>,
     validity: &mut MutableBitmap,
 ) {
+    let length = (offsets.len() - 1) + additional;
     let mut last_offset = *offsets.as_mut_slice().last().unwrap();
 
     // values_buffer: first 4 bytes are len, remaining is values
@@ -135,11 +136,12 @@ fn read_delta_optional<O: Offset>(
 fn read_plain_optional<O: Offset>(
     validity_buffer: &[u8],
     values_buffer: &[u8],
-    length: usize,
+    additional: usize,
     offsets: &mut MutableBuffer<O>,
     values: &mut MutableBuffer<u8>,
     validity: &mut MutableBitmap,
 ) {
+    let length = (offsets.len() - 1) + additional;
     let mut last_offset = *offsets.as_mut_slice().last().unwrap();
 
     // values_buffer: first 4 bytes are len, remaining is values
@@ -205,6 +207,7 @@ fn extend_from_page<O: Offset>(
     values: &mut MutableBuffer<u8>,
     validity: &mut MutableBitmap,
 ) -> Result<()> {
+    let additional = page.num_values();
     assert_eq!(descriptor.max_rep_level(), 0);
     assert!(descriptor.max_def_level() <= 1);
     let is_optional = descriptor.max_def_level() == 1;
@@ -216,7 +219,7 @@ fn extend_from_page<O: Offset>(
             read_dict_buffer::<O>(
                 validity_buffer,
                 values_buffer,
-                page.num_values() as u32,
+                additional,
                 dict.as_any().downcast_ref().unwrap(),
                 offsets,
                 values,
@@ -226,7 +229,7 @@ fn extend_from_page<O: Offset>(
         (Encoding::DeltaLengthByteArray, None, true) => read_delta_optional::<O>(
             validity_buffer,
             values_buffer,
-            page.num_values(),
+            additional,
             offsets,
             values,
             validity,
@@ -234,7 +237,7 @@ fn extend_from_page<O: Offset>(
         (Encoding::Plain, _, true) => read_plain_optional::<O>(
             validity_buffer,
             values_buffer,
-            page.num_values(),
+            additional,
             offsets,
             values,
             validity,
