@@ -68,11 +68,11 @@ pub fn get_value_display<'a>(array: &'a dyn Array) -> Box<dyn Fn(usize) -> Strin
         Time64(_) => unreachable!(), // remaining are not valid
         Timestamp(TimeUnit::Second, tz) => {
             if let Some(tz) = tz {
+                let offset = temporal_conversions::parse_offset(tz).unwrap();
                 dyn_primitive!(array, i64, |x| {
-                    format!(
-                        "{} {}",
+                    chrono::DateTime::<chrono::FixedOffset>::from_utc(
                         temporal_conversions::timestamp_s_to_datetime(x),
-                        tz
+                        offset,
                     )
                 })
             } else {
@@ -81,11 +81,11 @@ pub fn get_value_display<'a>(array: &'a dyn Array) -> Box<dyn Fn(usize) -> Strin
         }
         Timestamp(TimeUnit::Millisecond, tz) => {
             if let Some(tz) = tz {
+                let offset = temporal_conversions::parse_offset(tz).unwrap();
                 dyn_primitive!(array, i64, |x| {
-                    format!(
-                        "{} {}",
+                    chrono::DateTime::<chrono::FixedOffset>::from_utc(
                         temporal_conversions::timestamp_ms_to_datetime(x),
-                        tz
+                        offset,
                     )
                 })
             } else {
@@ -94,11 +94,11 @@ pub fn get_value_display<'a>(array: &'a dyn Array) -> Box<dyn Fn(usize) -> Strin
         }
         Timestamp(TimeUnit::Microsecond, tz) => {
             if let Some(tz) = tz {
+                let offset = temporal_conversions::parse_offset(tz).unwrap();
                 dyn_primitive!(array, i64, |x| {
-                    format!(
-                        "{} {}",
+                    chrono::DateTime::<chrono::FixedOffset>::from_utc(
                         temporal_conversions::timestamp_us_to_datetime(x),
-                        tz
+                        offset,
                     )
                 })
             } else {
@@ -107,11 +107,11 @@ pub fn get_value_display<'a>(array: &'a dyn Array) -> Box<dyn Fn(usize) -> Strin
         }
         Timestamp(TimeUnit::Nanosecond, tz) => {
             if let Some(tz) = tz {
+                let offset = temporal_conversions::parse_offset(tz).unwrap();
                 dyn_primitive!(array, i64, |x| {
-                    format!(
-                        "{} {}",
+                    chrono::DateTime::<chrono::FixedOffset>::from_utc(
                         temporal_conversions::timestamp_ns_to_datetime(x),
-                        tz
+                        offset,
                     )
                 })
             } else {

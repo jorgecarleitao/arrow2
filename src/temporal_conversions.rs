@@ -1,7 +1,11 @@
 //! Conversion methods for dates and times.
 
-use crate::datatypes::TimeUnit;
-use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
+use chrono::{FixedOffset, NaiveDate, NaiveDateTime, NaiveTime};
+
+use crate::{
+    datatypes::TimeUnit,
+    error::{ArrowError, Result},
+};
 
 /// Number of seconds in a day
 pub const SECONDS_IN_DAY: i64 = 86_400;
@@ -148,4 +152,29 @@ pub fn timeunit_scale(a: &TimeUnit, b: &TimeUnit) -> f64 {
         (TimeUnit::Nanosecond, TimeUnit::Microsecond) => 1_000.0,
         (TimeUnit::Nanosecond, TimeUnit::Nanosecond) => 1.0,
     }
+}
+
+pub(crate) fn parse_offset(offset: &str) -> Result<FixedOffset> {
+    if offset == "UTC" {
+        return Ok(FixedOffset::east(0));
+    }
+    let mut a = offset.split(':');
+    let first = a.next().map(Ok).unwrap_or_else(|| {
+        Err(ArrowError::InvalidArgumentError(
+            "timezone offset must be of the form [-]00:00".to_string(),
+        ))
+    })?;
+    let last = a.next().map(Ok).unwrap_or_else(|| {
+        Err(ArrowError::InvalidArgumentError(
+            "timezone offset must be of the form [-]00:00".to_string(),
+        ))
+    })?;
+    let hours: i32 = first.parse().map_err(|_| {
+        ArrowError::InvalidArgumentError("timezone offset must be of the form [-]00:00".to_string())
+    })?;
+    let minutes: i32 = last.parse().map_err(|_| {
+        ArrowError::InvalidArgumentError("timezone offset must be of the form [-]00:00".to_string())
+    })?;
+
+    Ok(FixedOffset::east(hours * 60 * 60 + minutes * 60))
 }

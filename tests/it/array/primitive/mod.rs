@@ -182,6 +182,18 @@ fn display_timestamp_ns() {
 }
 
 #[test]
+fn display_timestamp_tz_ns() {
+    let array = Int64Array::from(&[Some(1), None, Some(2)]).to(DataType::Timestamp(
+        TimeUnit::Nanosecond,
+        Some("+02:00".to_string()),
+    ));
+    assert_eq!(
+        format!("{}", array),
+        "Timestamp(Nanosecond, Some(\"+02:00\"))[1970-01-01 02:00:00.000000001 +02:00, , 1970-01-01 02:00:00.000000002 +02:00]"
+    );
+}
+
+#[test]
 fn display_duration_ms() {
     let array =
         Int64Array::from(&[Some(1), None, Some(2)]).to(DataType::Duration(TimeUnit::Millisecond));
