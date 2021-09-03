@@ -4,6 +4,8 @@ use arrow2::{
     datatypes::DataType,
 };
 
+mod mutable;
+
 #[test]
 fn basics() {
     let data = vec![Some(b"hello".to_vec()), None, Some(b"hello2".to_vec())];
@@ -54,4 +56,18 @@ fn from() {
 
     let a = array.validity().as_ref().unwrap();
     assert_eq!(a, &Bitmap::from([true, true, false]));
+}
+
+#[test]
+fn from_trusted_len_iter() {
+    let iter = std::iter::repeat(b"hello").take(2).map(Some);
+    let a = BinaryArray::<i32>::from_trusted_len_iter(iter);
+    assert_eq!(a.len(), 2);
+}
+
+#[test]
+fn from_iter() {
+    let iter = std::iter::repeat(b"hello").take(2).map(Some);
+    let a: BinaryArray<i32> = iter.collect();
+    assert_eq!(a.len(), 2);
 }

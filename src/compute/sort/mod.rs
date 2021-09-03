@@ -11,6 +11,7 @@ use crate::{
 
 use crate::buffer::MutableBuffer;
 
+mod binary;
 mod boolean;
 mod common;
 mod lex_sort;
@@ -141,6 +142,16 @@ pub fn sort_to_indices<I: Index>(
             options,
             limit,
         )),
+        DataType::Binary => Ok(binary::indices_sorted_unstable_by::<I, i32>(
+            values.as_any().downcast_ref().unwrap(),
+            options,
+            limit,
+        )),
+        DataType::LargeBinary => Ok(binary::indices_sorted_unstable_by::<I, i64>(
+            values.as_any().downcast_ref().unwrap(),
+            options,
+            limit,
+        )),
         DataType::List(field) => {
             let (v, n) = partition_validity(values);
             match field.data_type() {
@@ -243,7 +254,7 @@ fn sort_dict<I: Index, O: Offset>(
 /// assert_eq!(can_sort(&data_type), true);
 ///
 /// let data_type = DataType::LargeBinary;
-/// assert_eq!(can_sort(&data_type), false)
+/// assert_eq!(can_sort(&data_type), true)
 /// ```
 pub fn can_sort(data_type: &DataType) -> bool {
     match data_type {
@@ -266,7 +277,9 @@ pub fn can_sort(data_type: &DataType) -> bool {
         | DataType::Float32
         | DataType::Float64
         | DataType::Utf8
-        | DataType::LargeUtf8 => true,
+        | DataType::LargeUtf8
+        | DataType::Binary
+        | DataType::LargeBinary => true,
         DataType::List(field) | DataType::LargeList(field) | DataType::FixedSizeList(field, _) => {
             matches!(
                 field.data_type(),

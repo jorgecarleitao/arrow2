@@ -68,11 +68,76 @@ fn utf8_substring<O: Offset>(array: &Utf8Array<O>, start: O, length: &Option<O>)
     )
 }
 
+fn binary_substring<O: Offset>(
+    array: &BinaryArray<O>,
+    start: O,
+    length: &Option<O>,
+) -> BinaryArray<O> {
+    let validity = array.validity();
+    let offsets = array.offsets();
+    let values = array.values();
+
+    let mut new_offsets = MutableBuffer::<O>::with_capacity(array.len() + 1);
+    let mut new_values = MutableBuffer::<u8>::new(); // we have no way to estimate how much this will be.
+
+    let mut length_so_far = O::zero();
+    new_offsets.push(length_so_far);
+
+    offsets.windows(2).for_each(|windows| {
+        let length_i: O = windows[1] - windows[0];
+
+        // compute where we should start slicing this entry
+        let start = windows[0]
+            + if start >= O::zero() {
+                start
+            } else {
+                length_i + start
+            };
+        let start = start.max(windows[0]).min(windows[1]);
+
+        let length: O = length
+            .unwrap_or(length_i)
+            // .max(0) is not needed as it is guaranteed
+            .min(windows[1] - start); // so we do not go beyond this entry
+        length_so_far += length;
+        new_offsets.push(length_so_far);
+
+        // we need usize for ranges
+        let start = start.to_usize();
+        let length = length.to_usize();
+
+        new_values.extend_from_slice(&values[start..start + length]);
+    });
+
+    BinaryArray::<O>::from_data(
+        array.data_type().clone(),
+        new_offsets.into(),
+        new_values.into(),
+        validity.clone(),
+    )
+}
+
 /// Returns an ArrayRef with a substring starting from `start` and with optional length `length` of each of the elements in `array`.
 /// `start` can be negative, in which case the start counts from the end of the string.
 /// this function errors when the passed array is not a \[Large\]String array.
 pub fn substring(array: &dyn Array, start: i64, length: &Option<u64>) -> Result<Box<dyn Array>> {
     match array.data_type() {
+        DataType::Binary => Ok(Box::new(binary_substring(
+            array
+                .as_any()
+                .downcast_ref::<BinaryArray<i32>>()
+                .expect("A binary is expected"),
+            start as i32,
+            &length.map(|e| e as i32),
+        ))),
+        DataType::LargeBinary => Ok(Box::new(binary_substring(
+            array
+                .as_any()
+                .downcast_ref::<BinaryArray<i64>>()
+                .expect("A large binary is expected"),
+            start,
+            &length.map(|e| e as i64),
+        ))),
         DataType::LargeUtf8 => Ok(Box::new(utf8_substring(
             array
                 .as_any()
@@ -110,14 +175,17 @@ pub fn substring(array: &dyn Array, start: i64, length: &Option<u64>) -> Result<
 /// assert_eq!(can_substring(&data_type), false);
 /// ```
 pub fn can_substring(data_type: &DataType) -> bool {
-    matches!(data_type, DataType::LargeUtf8 | DataType::Utf8)
+    matches!(
+        data_type,
+        DataType::LargeUtf8 | DataType::Utf8 | DataType::LargeBinary | DataType::Binary
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn with_nulls<O: Offset>() -> Result<()> {
+    fn with_nulls_utf8<O: Offset>() -> Result<()> {
         let cases = vec![
             // identity
             (
@@ -174,15 +242,15 @@ mod tests {
 
     #[test]
     fn with_nulls_string() -> Result<()> {
-        with_nulls::<i32>()
+        with_nulls_utf8::<i32>()
     }
 
     #[test]
     fn with_nulls_large_string() -> Result<()> {
-        with_nulls::<i64>()
+        with_nulls_utf8::<i64>()
     }
 
-    fn without_nulls<O: Offset>() -> Result<()> {
+    fn without_nulls_utf8<O: Offset>() -> Result<()> {
         let cases = vec![
             // increase start
             (
@@ -253,12 +321,156 @@ mod tests {
 
     #[test]
     fn without_nulls_string() -> Result<()> {
-        without_nulls::<i32>()
+        without_nulls_utf8::<i32>()
     }
 
     #[test]
     fn without_nulls_large_string() -> Result<()> {
-        without_nulls::<i64>()
+        without_nulls_utf8::<i64>()
+    }
+
+    fn with_null_binarys<O: Offset>() -> Result<()> {
+        let cases = vec![
+            // identity
+            (
+                vec![Some(b"hello"), None, Some(b"world")],
+                0,
+                None,
+                vec![Some("hello"), None, Some("world")],
+            ),
+            // 0 length -> Nothing
+            (
+                vec![Some(b"hello"), None, Some(b"world")],
+                0,
+                Some(0),
+                vec![Some(""), None, Some("")],
+            ),
+            // high start -> Nothing
+            (
+                vec![Some(b"hello"), None, Some(b"world")],
+                1000,
+                Some(0),
+                vec![Some(""), None, Some("")],
+            ),
+            // high negative start -> identity
+            (
+                vec![Some(b"hello"), None, Some(b"world")],
+                -1000,
+                None,
+                vec![Some("hello"), None, Some("world")],
+            ),
+            // high length -> identity
+            (
+                vec![Some(b"hello"), None, Some(b"world")],
+                0,
+                Some(1000),
+                vec![Some("hello"), None, Some("world")],
+            ),
+        ];
+
+        cases
+            .into_iter()
+            .try_for_each::<_, Result<()>>(|(array, start, length, expected)| {
+                let array = BinaryArray::<O>::from(&array);
+                let result = substring(&array, start, &length)?;
+                assert_eq!(array.len(), result.len());
+
+                let result = result.as_any().downcast_ref::<BinaryArray<O>>().unwrap();
+                let expected = BinaryArray::<O>::from(&expected);
+                assert_eq!(&expected, result);
+                Ok(())
+            })?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn with_nulls_binary() -> Result<()> {
+        with_null_binarys::<i32>()
+    }
+
+    #[test]
+    fn with_nulls_large_binary() -> Result<()> {
+        with_null_binarys::<i64>()
+    }
+
+    fn without_null_binarys<O: Offset>() -> Result<()> {
+        let cases = vec![
+            // increase start
+            (
+                vec!["hello", "", "word"],
+                0,
+                None,
+                vec!["hello", "", "word"],
+            ),
+            (vec!["hello", "", "word"], 1, None, vec!["ello", "", "ord"]),
+            (vec!["hello", "", "word"], 2, None, vec!["llo", "", "rd"]),
+            (vec!["hello", "", "word"], 3, None, vec!["lo", "", "d"]),
+            (vec!["hello", "", "word"], 10, None, vec!["", "", ""]),
+            // increase start negatively
+            (vec!["hello", "", "word"], -1, None, vec!["o", "", "d"]),
+            (vec!["hello", "", "word"], -2, None, vec!["lo", "", "rd"]),
+            (vec!["hello", "", "word"], -3, None, vec!["llo", "", "ord"]),
+            (
+                vec!["hello", "", "word"],
+                -10,
+                None,
+                vec!["hello", "", "word"],
+            ),
+            // increase length
+            (vec!["hello", "", "word"], 1, Some(1), vec!["e", "", "o"]),
+            (vec!["hello", "", "word"], 1, Some(2), vec!["el", "", "or"]),
+            (
+                vec!["hello", "", "word"],
+                1,
+                Some(3),
+                vec!["ell", "", "ord"],
+            ),
+            (
+                vec!["hello", "", "word"],
+                1,
+                Some(4),
+                vec!["ello", "", "ord"],
+            ),
+            (vec!["hello", "", "word"], -3, Some(1), vec!["l", "", "o"]),
+            (vec!["hello", "", "word"], -3, Some(2), vec!["ll", "", "or"]),
+            (
+                vec!["hello", "", "word"],
+                -3,
+                Some(3),
+                vec!["llo", "", "ord"],
+            ),
+            (
+                vec!["hello", "", "word"],
+                -3,
+                Some(4),
+                vec!["llo", "", "ord"],
+            ),
+        ];
+
+        cases
+            .into_iter()
+            .try_for_each::<_, Result<()>>(|(array, start, length, expected)| {
+                let array = BinaryArray::<O>::from_slice(&array);
+                let result = substring(&array, start, &length)?;
+                assert_eq!(array.len(), result.len());
+                let result = result.as_any().downcast_ref::<BinaryArray<O>>().unwrap();
+                let expected = BinaryArray::<O>::from_slice(&expected);
+                assert_eq!(&expected, result);
+                Ok(())
+            })?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn without_nulls_binary() -> Result<()> {
+        without_null_binarys::<i32>()
+    }
+
+    #[test]
+    fn without_nulls_large_binary() -> Result<()> {
+        without_null_binarys::<i64>()
     }
 
     #[test]

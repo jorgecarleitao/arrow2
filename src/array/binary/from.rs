@@ -1,18 +1,13 @@
 use std::iter::FromIterator;
 
-use crate::{
-    array::Offset,
-    bitmap::{Bitmap, MutableBitmap},
-    buffer::{Buffer, MutableBuffer},
-    trusted_len::TrustedLen,
-};
+use crate::{array::Offset, trusted_len::TrustedLen};
 
 use super::{BinaryArray, MutableBinaryArray};
 
 impl<O: Offset> BinaryArray<O> {
     /// Creates a new [`BinaryArray`] from slices of `&[u8]`.
     pub fn from_slice<T: AsRef<[u8]>, P: AsRef<[T]>>(slice: P) -> Self {
-        Self::from_iter(slice.as_ref().iter().map(Some))
+        Self::from_trusted_len_values_iter(slice.as_ref().iter())
     }
 
     /// Creates a new [`BinaryArray`] from a slice of optional `&[u8]`.
@@ -23,15 +18,15 @@ impl<O: Offset> BinaryArray<O> {
 
     /// Creates a [`BinaryArray`] from an iterator of trusted length.
     #[inline]
-    pub fn from_trusted_len_iter<I, P>(iterator: I) -> Self
-    where
-        P: AsRef<[u8]>,
-        I: TrustedLen<Item = Option<P>>,
-    {
-        // soundness: I is `TrustedLen`
-        let (validity, offsets, values) = unsafe { trusted_len_unzip(iterator) };
+    pub fn from_trusted_len_values_iter<T: AsRef<[u8]>, I: TrustedLen<Item = T>>(
+        iterator: I,
+    ) -> Self {
+        MutableBinaryArray::<O>::from_trusted_len_values_iter(iterator).into()
+    }
 
-        Self::from_data(Self::default_data_type(), offsets, values, validity)
+    /// Creates a new [`BinaryArray`] from a [`Iterator`] of `&str`.
+    pub fn from_iter_values<T: AsRef<[u8]>, I: Iterator<Item = T>>(iterator: I) -> Self {
+        MutableBinaryArray::<O>::from_iter_values(iterator).into()
     }
 }
 
@@ -42,49 +37,52 @@ impl<O: Offset, P: AsRef<[u8]>> FromIterator<Option<P>> for BinaryArray<O> {
     }
 }
 
-/// Creates [`Bitmap`] and two [`Buffer`]s from an iterator of `Option`.
-/// The first buffer corresponds to a offset buffer, the second one
-/// corresponds to a values buffer.
-/// # Safety
-/// The caller must ensure that `iterator` is `TrustedLen`.
-#[inline]
-pub unsafe fn trusted_len_unzip<O, I, P>(iterator: I) -> (Option<Bitmap>, Buffer<O>, Buffer<u8>)
-where
-    O: Offset,
-    P: AsRef<[u8]>,
-    I: Iterator<Item = Option<P>>,
-{
-    let (_, upper) = iterator.size_hint();
-    let len = upper.expect("trusted_len_unzip requires an upper limit");
-
-    let mut null = MutableBitmap::with_capacity(len);
-    let mut offsets = MutableBuffer::<O>::with_capacity(len + 1);
-    let mut values = MutableBuffer::<u8>::new();
-
-    let mut length = O::default();
-    let mut dst = offsets.as_mut_ptr();
-    std::ptr::write(dst, length);
-    dst = dst.add(1);
-    for item in iterator {
-        if let Some(item) = item {
-            null.push(true);
-            let s = item.as_ref();
-            length += O::from_usize(s.len()).unwrap();
-            values.extend_from_slice(s);
-        } else {
-            null.push(false);
-            values.extend_from_slice(b"");
-        };
-
-        std::ptr::write(dst, length);
-        dst = dst.add(1);
+impl<O: Offset> BinaryArray<O> {
+    /// Creates a [`BinaryArray`] from an iterator of trusted length.
+    /// # Safety
+    /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
+    /// I.e. that `size_hint().1` correctly reports its length.
+    #[inline]
+    pub unsafe fn from_trusted_len_iter_unchecked<I, P>(iterator: I) -> Self
+    where
+        P: AsRef<[u8]>,
+        I: Iterator<Item = Option<P>>,
+    {
+        MutableBinaryArray::<O>::from_trusted_len_iter_unchecked(iterator).into()
     }
-    assert_eq!(
-        dst.offset_from(offsets.as_ptr()) as usize,
-        len + 1,
-        "Trusted iterator length was not accurately reported"
-    );
-    offsets.set_len(len + 1);
 
-    (null.into(), offsets.into(), values.into())
+    /// Creates a [`BinaryArray`] from an iterator of trusted length.
+    #[inline]
+    pub fn from_trusted_len_iter<I, P>(iterator: I) -> Self
+    where
+        P: AsRef<[u8]>,
+        I: TrustedLen<Item = Option<P>>,
+    {
+        // soundness: I is `TrustedLen`
+        unsafe { Self::from_trusted_len_iter_unchecked(iterator) }
+    }
+
+    /// Creates a [`BinaryArray`] from an falible iterator of trusted length.
+    /// # Safety
+    /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
+    /// I.e. that `size_hint().1` correctly reports its length.
+    #[inline]
+    pub unsafe fn try_from_trusted_len_iter_unchecked<E, I, P>(iterator: I) -> Result<Self, E>
+    where
+        P: AsRef<[u8]>,
+        I: IntoIterator<Item = Result<Option<P>, E>>,
+    {
+        MutableBinaryArray::<O>::try_from_trusted_len_iter_unchecked(iterator).map(|x| x.into())
+    }
+
+    /// Creates a [`BinaryArray`] from an fallible iterator of trusted length.
+    #[inline]
+    pub fn try_from_trusted_len_iter<E, I, P>(iter: I) -> Result<Self, E>
+    where
+        P: AsRef<[u8]>,
+        I: TrustedLen<Item = Result<Option<P>, E>>,
+    {
+        // soundness: I: TrustedLen
+        unsafe { Self::try_from_trusted_len_iter_unchecked(iter) }
+    }
 }

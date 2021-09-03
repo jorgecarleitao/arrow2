@@ -154,6 +154,26 @@ fn i32_to_list_f64_nullable_sliced() {
 }
 
 #[test]
+fn i32_to_binary() {
+    let array = Int32Array::from_slice(&[5, 6, 7]);
+    let b = cast(&array, &DataType::Binary).unwrap();
+    let expected = BinaryArray::<i32>::from(&[Some(b"5"), Some(b"6"), Some(b"7")]);
+    let c = b.as_any().downcast_ref::<BinaryArray<i32>>().unwrap();
+    assert_eq!(c, &expected);
+}
+
+#[test]
+fn binary_to_i32() {
+    let array = BinaryArray::<i32>::from_slice(&["5", "6", "seven", "8", "9.1"]);
+    let b = cast(&array, &DataType::Int32).unwrap();
+    let c = b.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
+
+    let expected = &[Some(5), Some(6), None, Some(8), None];
+    let expected = Int32Array::from(expected);
+    assert_eq!(c, &expected);
+}
+
+#[test]
 fn utf8_to_i32() {
     let array = Utf8Array::<i32>::from_slice(&["5", "6", "seven", "8", "9.1"]);
     let b = cast(&array, &DataType::Int32).unwrap();
@@ -183,6 +203,26 @@ fn bool_to_f64() {
 
     let expected = &[Some(1.0), Some(0.0), None];
     let expected = Float64Array::from(expected);
+    assert_eq!(c, &expected);
+}
+
+#[test]
+fn bool_to_utf8() {
+    let array = BooleanArray::from(vec![Some(true), Some(false), None]);
+    let b = cast(&array, &DataType::Utf8).unwrap();
+    let c = b.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
+
+    let expected = Utf8Array::<i32>::from(&[Some("1"), Some("0"), Some("0")]);
+    assert_eq!(c, &expected);
+}
+
+#[test]
+fn bool_to_binary() {
+    let array = BooleanArray::from(vec![Some(true), Some(false), None]);
+    let b = cast(&array, &DataType::Binary).unwrap();
+    let c = b.as_any().downcast_ref::<BinaryArray<i32>>().unwrap();
+
+    let expected = BinaryArray::<i32>::from(&[Some("1"), Some("0"), Some("0")]);
     assert_eq!(c, &expected);
 }
 

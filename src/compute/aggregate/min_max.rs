@@ -5,7 +5,7 @@ use crate::scalar::*;
 use crate::types::simd::*;
 use crate::types::NativeType;
 use crate::{
-    array::{Array, BooleanArray, Offset, PrimitiveArray, Utf8Array},
+    array::{Array, BinaryArray, BooleanArray, Offset, PrimitiveArray, Utf8Array},
     bitmap::Bitmap,
 };
 
@@ -18,6 +18,42 @@ pub trait SimdOrd<T> {
     fn min(self, x: Self) -> Self;
     fn new_min() -> Self;
     fn new_max() -> Self;
+}
+
+/// Helper macro to perform min/max of binarys.
+fn min_max_binary<O: Offset, F: Fn(&[u8], &[u8]) -> bool>(
+    array: &BinaryArray<O>,
+    cmp: F,
+) -> Option<&[u8]> {
+    let null_count = array.null_count();
+
+    if null_count == array.len() || array.len() == 0 {
+        return None;
+    }
+    let mut n;
+    if let Some(validity) = array.validity() {
+        n = "".as_bytes();
+        let mut has_value = false;
+
+        for i in 0..array.len() {
+            let item = array.value(i);
+            if validity.get_bit(i) && (!has_value || cmp(n, item)) {
+                has_value = true;
+                n = item;
+            }
+        }
+    } else {
+        // array.len() == 0 checked above
+        n = unsafe { array.value_unchecked(0) };
+        for i in 1..array.len() {
+            // loop is up to `len`.
+            let item = unsafe { array.value_unchecked(i) };
+            if cmp(n, item) {
+                n = item;
+            }
+        }
+    }
+    Some(n)
 }
 
 /// Helper macro to perform min/max of strings
@@ -224,6 +260,16 @@ where
     })
 }
 
+/// Returns the maximum value in the binary array, according to the natural order.
+pub fn max_binary<O: Offset>(array: &BinaryArray<O>) -> Option<&[u8]> {
+    min_max_binary(array, |a, b| a < b)
+}
+
+/// Returns the minimum value in the binary array, according to the natural order.
+pub fn min_binary<O: Offset>(array: &BinaryArray<O>) -> Option<&[u8]> {
+    min_max_binary(array, |a, b| a > b)
+}
+
 /// Returns the maximum value in the string array, according to the natural order.
 pub fn max_string<O: Offset>(array: &Utf8Array<O>) -> Option<&str> {
     min_max_string(array, |a, b| a < b)
@@ -329,6 +375,10 @@ pub fn max(array: &dyn Array) -> Result<Box<dyn Scalar>> {
         DataType::Float64 => dyn_primitive!(f64, array, max_primitive),
         DataType::Utf8 => dyn_generic!(Utf8Array<i32>, Utf8Scalar<i32>, array, max_string),
         DataType::LargeUtf8 => dyn_generic!(Utf8Array<i64>, Utf8Scalar<i64>, array, max_string),
+        DataType::Binary => dyn_generic!(BinaryArray<i32>, BinaryScalar<i32>, array, max_binary),
+        DataType::LargeBinary => {
+            dyn_generic!(BinaryArray<i64>, BinaryScalar<i64>, array, max_binary)
+        }
         _ => {
             return Err(ArrowError::InvalidArgumentError(format!(
                 "The `max` operator does not support type `{}`",
@@ -363,6 +413,10 @@ pub fn min(array: &dyn Array) -> Result<Box<dyn Scalar>> {
         DataType::Float64 => dyn_primitive!(f64, array, min_primitive),
         DataType::Utf8 => dyn_generic!(Utf8Array<i32>, Utf8Scalar<i32>, array, min_string),
         DataType::LargeUtf8 => dyn_generic!(Utf8Array<i64>, Utf8Scalar<i64>, array, min_string),
+        DataType::Binary => dyn_generic!(BinaryArray<i32>, BinaryScalar<i32>, array, min_binary),
+        DataType::LargeBinary => {
+            dyn_generic!(BinaryArray<i64>, BinaryScalar<i64>, array, min_binary)
+        }
         _ => {
             return Err(ArrowError::InvalidArgumentError(format!(
                 "The `max` operator does not support type `{}`",
@@ -537,5 +591,26 @@ mod tests {
         let a = BooleanArray::from(&[Some(true)]);
         assert_eq!(Some(true), min_boolean(&a));
         assert_eq!(Some(true), max_boolean(&a));
+    }
+
+    #[test]
+    fn test_binary_min_max_with_nulls() {
+        let a = BinaryArray::<i32>::from(&[Some(b"b"), None, None, Some(b"a"), Some(b"c")]);
+        assert_eq!("a".as_bytes(), min_binary(&a).unwrap());
+        assert_eq!("c".as_bytes(), max_binary(&a).unwrap());
+    }
+
+    #[test]
+    fn test_binary_min_max_all_nulls() {
+        let a = BinaryArray::<i32>::from(&[None::<&[u8]>, None]);
+        assert_eq!(None, min_binary(&a));
+        assert_eq!(None, max_binary(&a));
+    }
+
+    #[test]
+    fn test_binary_min_max_1() {
+        let a = BinaryArray::<i32>::from(&[None, None, Some(b"b"), Some(b"a")]);
+        assert_eq!(Some("a".as_bytes()), min_binary(&a));
+        assert_eq!(Some("b".as_bytes()), max_binary(&a));
     }
 }

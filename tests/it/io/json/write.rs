@@ -196,7 +196,7 @@ fn write_list_of_struct() {
         vec![
             Arc::new(Int32Array::from(&[Some(1), None, Some(5)])),
             Arc::new(StructArray::from_data(
-               DataType::Struct(inner),
+                DataType::Struct(inner),
                 vec![Arc::new(Utf8Array::<i32>::from(&vec![
                     Some("e"),
                     Some("f"),

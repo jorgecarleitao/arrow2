@@ -532,7 +532,7 @@ pub fn build_comparator<'a>(
 
 #[cfg(test)]
 mod tests {
-    use crate::array::{Int32Array, Utf8Array};
+    use crate::array::{BinaryArray, Int32Array, Utf8Array};
     use crate::compute::sort::sort;
 
     use super::*;
@@ -635,6 +635,37 @@ mod tests {
 
         // values are right
         assert_eq!(expected, array.as_ref());
+        Ok(())
+    }
+
+    #[test]
+    fn test_merge_binary() -> Result<()> {
+        let a0: &dyn Array = &BinaryArray::<i32>::from_slice(&[b"a", b"c", b"d", b"e"]);
+        let a1: &dyn Array = &BinaryArray::<i32>::from_slice(&[b"b", b"y", b"z", b"z"]);
+
+        let options = SortOptions::default();
+        let arrays = vec![a0, a1];
+        let pairs = vec![(arrays.as_ref(), &options)];
+        let comparator = build_comparator(&pairs)?;
+
+        // (0, 0, 4) corresponds to slice ["a", "c", "d", "e"] of a0
+        // (1, 0, 4) corresponds to slice ["b", "y", "z", "z"] of a1
+
+        let result =
+            merge_sort_slices(once(&(0, 0, 4)), once(&(1, 0, 4)), &comparator).collect::<Vec<_>>();
+
+        // "a" (a0) , "b" (a1) ,  ["c", "d", "e"] (a0), ["y", "z", "z"] (a1)
+        // (0, 0, 1), (1, 0, 1),      (0, 1, 3)       ,      (1, 1, 3)
+        assert_eq!(result, vec![(0, 0, 1), (1, 0, 1), (0, 1, 3), (1, 1, 3)]);
+
+        // (0, 1, 2) corresponds to slice ["c", "d"] of a0
+        // (1, 0, 3) corresponds to slice ["b", "y", "z"] of a1
+        let result =
+            merge_sort_slices(once(&(0, 1, 2)), once(&(1, 0, 3)), &comparator).collect::<Vec<_>>();
+
+        // "b" (a1) , ["c", "d"] (a0) , ["y", "z"]
+        // (1, 0, 1), (0, 1, 2)       , (1, 1, 2)
+        assert_eq!(result, vec![(1, 0, 1), (0, 1, 2), (1, 1, 2)]);
         Ok(())
     }
 
