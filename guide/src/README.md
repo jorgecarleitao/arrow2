@@ -13,5 +13,19 @@ Arrow2 is divided into three main parts:
 
 ## Cargo features
 
-This crate has a significant number of cargo features to reduce compilation times and dependencies blowup.
-There is also a feature `simd`, that requires the nightly channel, that produces more explicit SIMD instructions via [`packed_simd`](https://github.com/rust-lang/packed_simd).
+This crate has a significant number of cargo features to reduce compilation
+time and number of dependencies. The feature `"full"` activates most
+functionality, such as:
+
+* `io_ipc`: to interact with the IPC format
+* `io_ipc_compression`: to read and write compressed IPC (v2)
+* `io_csv` to read and write CSV
+* `io_json` to read and write JSON
+* `io_parquet` to read and write parquet
+* `io_parquet_compression` to read and write compressed parquet
+* `io_print` to write batches to formatted ASCII tables
+* `compute` to operate on arrays (addition, sum, sort, etc.)
+
+The feature `simd` (not part of `full`) produces more explicit SIMD instructions
+via [`packed_simd`](https://github.com/rust-lang/packed_simd), but requires the 
+nightly channel.

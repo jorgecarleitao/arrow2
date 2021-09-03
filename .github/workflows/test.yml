@@ -77,7 +77,7 @@ jobs:
         run: |
           export CARGO_HOME="/github/home/.cargo"
           export CARGO_TARGET_DIR="/github/home/target"
-          cargo test
+          cargo test --features full
 
   windows-and-macos:
     name: ${{ matrix.os }}
@@ -99,7 +99,7 @@ jobs:
       - name: Run
         shell: bash
         # no need to run the whole thing. Rust guarantees interoperability
-        run: ARROW2_IGNORE_PARQUET= cargo test --lib
+        run: ARROW2_IGNORE_PARQUET= cargo test --features full
 
   clippy:
     name: Clippy
@@ -134,7 +134,7 @@ jobs:
         run: |
           export CARGO_HOME="/github/home/.cargo"
           export CARGO_TARGET_DIR="/github/home/target"
-          cargo clippy
+          cargo clippy --features full
 
   miri-checks:
     name: Miri
@@ -163,7 +163,7 @@ jobs:
         run: |
           cargo miri setup
           cargo clean
-          cargo miri test -- --skip io::parquet --skip io::ipc
+          cargo miri test --features full -- --skip io::parquet --skip io::ipc
 
   coverage:
     name: Coverage
@@ -199,7 +199,7 @@ jobs:
           # 2020-11-15: There is a cargo-tarpaulin regression in 0.17.0
           # see https://github.com/xd009642/tarpaulin/issues/618
           cargo install --version 0.16.0 cargo-tarpaulin
-          cargo tarpaulin --out Xml
+          cargo tarpaulin --features full --out Xml
       - name: Report coverage
         continue-on-error: true
         run: bash <(curl -s https://codecov.io/bash)
