@@ -26,14 +26,12 @@ mod binary_to;
 mod boolean_to;
 mod dictionary_to;
 mod primitive_to;
-mod timestamps;
 mod utf8_to;
 
 pub use binary_to::*;
 pub use boolean_to::*;
 pub use dictionary_to::*;
 pub use primitive_to::*;
-pub use timestamps::*;
 pub use utf8_to::*;
 
 /// options defining how Cast kernels behave
@@ -487,7 +485,10 @@ fn cast_with_options(
             LargeUtf8 => Ok(Box::new(utf8_to_large_utf8(
                 array.as_any().downcast_ref().unwrap(),
             ))),
-            Timestamp(TimeUnit::Nanosecond, None) => utf8_to_timestamp_ns_dyn::<i32>(array),
+            Timestamp(TimeUnit::Nanosecond, None) => utf8_to_naive_timestamp_ns_dyn::<i32>(array),
+            Timestamp(TimeUnit::Nanosecond, Some(tz)) => {
+                utf8_to_timestamp_ns_dyn::<i32>(array, tz.clone())
+            }
             _ => Err(ArrowError::NotYetImplemented(format!(
                 "Casting from {:?} to {:?} not supported",
                 from_type, to_type,
@@ -508,7 +509,10 @@ fn cast_with_options(
             Date64 => utf8_to_date64_dyn::<i64>(array),
             Utf8 => utf8_large_to_utf8(array.as_any().downcast_ref().unwrap())
                 .map(|x| Box::new(x) as Box<dyn Array>),
-            Timestamp(TimeUnit::Nanosecond, None) => utf8_to_timestamp_ns_dyn::<i64>(array),
+            Timestamp(TimeUnit::Nanosecond, Some(tz)) => {
+                utf8_to_timestamp_ns_dyn::<i64>(array, tz.clone())
+            }
+            Timestamp(TimeUnit::Nanosecond, None) => utf8_to_naive_timestamp_ns_dyn::<i64>(array),
             _ => Err(ArrowError::NotYetImplemented(format!(
                 "Casting from {:?} to {:?} not supported",
                 from_type, to_type,
