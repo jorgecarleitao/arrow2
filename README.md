@@ -74,7 +74,7 @@ venv/bin/python parquet_integration/write_parquet.py
 * Reading parquet is 10-20x faster (single core) and deserialization is parallelizable
 * Writing parquet is 3-10x faster (single core) and serialization is parallelizable
 * parquet IO has no `unsafe`
-* parquet IO supports `async` read
+* parquet IO supports `async`
 
 ### Others
 
