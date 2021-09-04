@@ -780,7 +780,7 @@ fn cast_with_options(
             primitive_dyn!(array, time32ms_to_time32s)
         }
         (Time32(from_unit), Time64(to_unit)) => {
-            primitive_dyn!(array, time32_to_time64, from_unit, to_unit)
+            primitive_dyn!(array, time32_to_time64, *from_unit, *to_unit)
         }
         (Time64(TimeUnit::Microsecond), Time64(TimeUnit::Nanosecond)) => {
             primitive_dyn!(array, time64us_to_time64ns)
@@ -789,15 +789,15 @@ fn cast_with_options(
             primitive_dyn!(array, time64ns_to_time64us)
         }
         (Time64(from_unit), Time32(to_unit)) => {
-            primitive_dyn!(array, time64_to_time32, from_unit, to_unit)
+            primitive_dyn!(array, time64_to_time32, *from_unit, *to_unit)
         }
         (Timestamp(_, _), Int64) => primitive_to_same_primitive_dyn::<i64>(array, to_type),
         (Int64, Timestamp(_, _)) => primitive_to_same_primitive_dyn::<i64>(array, to_type),
         (Timestamp(from_unit, tz1), Timestamp(to_unit, tz2)) if tz1 == tz2 => {
-            primitive_dyn!(array, timestamp_to_timestamp, from_unit, to_unit, tz2)
+            primitive_dyn!(array, timestamp_to_timestamp, *from_unit, *to_unit, tz2)
         }
-        (Timestamp(from_unit, _), Date32) => primitive_dyn!(array, timestamp_to_date32, from_unit),
-        (Timestamp(from_unit, _), Date64) => primitive_dyn!(array, timestamp_to_date64, from_unit),
+        (Timestamp(from_unit, _), Date32) => primitive_dyn!(array, timestamp_to_date32, *from_unit),
+        (Timestamp(from_unit, _), Date64) => primitive_dyn!(array, timestamp_to_date64, *from_unit),
 
         (Int64, Duration(_)) => primitive_to_same_primitive_dyn::<i64>(array, to_type),
         (Duration(_), Int64) => primitive_to_same_primitive_dyn::<i64>(array, to_type),

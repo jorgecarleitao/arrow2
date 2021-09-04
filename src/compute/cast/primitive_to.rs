@@ -172,7 +172,7 @@ pub fn primitive_to_dictionary<T: NativeType + Eq + Hash, K: DictionaryKey>(
 }
 
 /// Get the time unit as a multiple of a second
-const fn time_unit_multiple(unit: &TimeUnit) -> i64 {
+const fn time_unit_multiple(unit: TimeUnit) -> i64 {
     match unit {
         TimeUnit::Second => 1,
         TimeUnit::Millisecond => MILLISECONDS,
@@ -205,10 +205,7 @@ pub fn time64ns_to_time64us(from: &PrimitiveArray<i64>) -> PrimitiveArray<i64> {
     unary(from, |x| x / 1000, DataType::Time64(TimeUnit::Microsecond))
 }
 
-pub fn timestamp_to_date64(
-    from: &PrimitiveArray<i64>,
-    from_unit: &TimeUnit,
-) -> PrimitiveArray<i64> {
+pub fn timestamp_to_date64(from: &PrimitiveArray<i64>, from_unit: TimeUnit) -> PrimitiveArray<i64> {
     let from_size = time_unit_multiple(from_unit);
     let to_size = MILLISECONDS;
     let to_type = DataType::Date64;
@@ -224,33 +221,26 @@ pub fn timestamp_to_date64(
     }
 }
 
-pub fn timestamp_to_date32(
-    from: &PrimitiveArray<i64>,
-    from_unit: &TimeUnit,
-) -> PrimitiveArray<i32> {
+pub fn timestamp_to_date32(from: &PrimitiveArray<i64>, from_unit: TimeUnit) -> PrimitiveArray<i32> {
     let from_size = time_unit_multiple(from_unit) * SECONDS_IN_DAY;
     unary(from, |x| (x / from_size) as i32, DataType::Date32)
 }
 
 pub fn time32_to_time64(
     from: &PrimitiveArray<i32>,
-    from_unit: &TimeUnit,
-    to_unit: &TimeUnit,
+    from_unit: TimeUnit,
+    to_unit: TimeUnit,
 ) -> PrimitiveArray<i64> {
     let from_size = time_unit_multiple(from_unit);
     let to_size = time_unit_multiple(to_unit);
     let divisor = to_size / from_size;
-    unary(
-        from,
-        |x| (x as i64 * divisor),
-        DataType::Time64(to_unit.clone()),
-    )
+    unary(from, |x| (x as i64 * divisor), DataType::Time64(to_unit))
 }
 
 pub fn time64_to_time32(
     from: &PrimitiveArray<i64>,
-    from_unit: &TimeUnit,
-    to_unit: &TimeUnit,
+    from_unit: TimeUnit,
+    to_unit: TimeUnit,
 ) -> PrimitiveArray<i32> {
     let from_size = time_unit_multiple(from_unit);
     let to_size = time_unit_multiple(to_unit);
@@ -258,19 +248,19 @@ pub fn time64_to_time32(
     unary(
         from,
         |x| (x as i64 / divisor) as i32,
-        DataType::Time32(to_unit.clone()),
+        DataType::Time32(to_unit),
     )
 }
 
 pub fn timestamp_to_timestamp(
     from: &PrimitiveArray<i64>,
-    from_unit: &TimeUnit,
-    to_unit: &TimeUnit,
+    from_unit: TimeUnit,
+    to_unit: TimeUnit,
     tz: &Option<String>,
 ) -> PrimitiveArray<i64> {
     let from_size = time_unit_multiple(from_unit);
     let to_size = time_unit_multiple(to_unit);
-    let to_type = DataType::Timestamp(to_unit.clone(), tz.clone());
+    let to_type = DataType::Timestamp(to_unit, tz.clone());
     // we either divide or multiply, depending on size of each unit
     if from_size >= to_size {
         unary(from, |x| (x / (from_size / to_size)), to_type)
