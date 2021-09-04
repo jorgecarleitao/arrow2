@@ -16,17 +16,13 @@ impl<'a, T: BitChunk> BitChunksExact<'a, T> {
     /// Creates a new [`BitChunksExact`].
     #[inline]
     pub fn new(slice: &'a [u8], len: usize) -> Self {
+        assert!(len <= slice.len() * 8);
         let size_of = std::mem::size_of::<T>();
 
-        let chunks = &slice[..len / 8];
+        let split = (len / 8 / size_of) * size_of;
+        let chunks = &slice[..split];
+        let remainder = &slice[split..];
         let iter = chunks.chunks_exact(size_of);
-
-        let start = if slice.len() > size_of {
-            slice.len() - size_of
-        } else {
-            0
-        };
-        let remainder = &slice[start..];
 
         Self {
             iter,
