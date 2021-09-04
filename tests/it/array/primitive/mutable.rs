@@ -148,3 +148,10 @@ fn try_from_trusted_len_iter() {
     let a = MutablePrimitiveArray::try_from_trusted_len_iter(iter).unwrap();
     assert_eq!(a, MutablePrimitiveArray::from([Some(1), Some(1)]));
 }
+
+#[test]
+#[should_panic]
+fn wrong_data_type() {
+    let values = MutableBuffer::from(b"abbb");
+    MutablePrimitiveArray::from_data(DataType::Utf8, values, None);
+}
