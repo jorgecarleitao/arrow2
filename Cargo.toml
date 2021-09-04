@@ -18,7 +18,7 @@ bench = false
 num-traits = "0.2"
 chrono = "^0.4"
 # To efficiently cast numbers to strings
-lexical-core = { version = "0.7", optional = true }
+lexical-core = { version = "0.8", optional = true }
 # We need to Hash values before sending them to an hasher. This
 # crate provides HashMap that assumes pre-hashed values.
 hash_hasher = "^2.0.3"
