@@ -31,8 +31,8 @@ fn filter_nonnull_primitive<T: NativeType>(
     assert_eq!(array.len(), mask.len());
     let filter_count = mask.len() - mask.null_count();
 
+    let mut buffer = MutableBuffer::<T>::with_capacity(filter_count);
     if let Some(validity) = array.validity() {
-        let mut buffer = MutableBuffer::<T>::with_capacity(filter_count);
         let mut new_validity = MutableBitmap::with_capacity(filter_count);
 
         array
@@ -53,8 +53,6 @@ fn filter_nonnull_primitive<T: NativeType>(
             new_validity.into(),
         )
     } else {
-        let mut buffer = MutableBuffer::<T>::with_capacity(filter_count);
-
         array
             .values()
             .iter()
