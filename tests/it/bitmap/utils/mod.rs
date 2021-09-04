@@ -1,5 +1,6 @@
 use arrow2::bitmap::utils::*;
 
+mod bit_chunks_exact;
 mod chunk_iter;
 mod iterator;
 mod slice_iterator;

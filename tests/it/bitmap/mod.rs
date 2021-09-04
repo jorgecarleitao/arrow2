@@ -1,3 +1,4 @@
+mod bitmap_ops;
 mod immutable;
 mod mutable;
 mod utils;
