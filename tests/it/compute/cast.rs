@@ -227,10 +227,9 @@ fn bool_to_binary() {
 }
 
 #[test]
-#[should_panic(expected = "Casting from Int32 to Timestamp(Microsecond, None) not supported")]
 fn int32_to_timestamp() {
     let array = Int32Array::from(&[Some(2), Some(10), None]);
-    cast(&array, &DataType::Timestamp(TimeUnit::Microsecond, None)).unwrap();
+    assert!(cast(&array, &DataType::Timestamp(TimeUnit::Microsecond, None)).is_err());
 }
 
 #[test]
@@ -251,6 +250,7 @@ fn consistency() {
         Float64,
         Timestamp(TimeUnit::Second, None),
         Timestamp(TimeUnit::Millisecond, None),
+        Timestamp(TimeUnit::Millisecond, Some("+01:00".to_string())),
         Timestamp(TimeUnit::Microsecond, None),
         Timestamp(TimeUnit::Nanosecond, None),
         Time64(TimeUnit::Microsecond),
@@ -468,6 +468,54 @@ fn list_to_list() {
     let expected: ListArray<i32> = expected.into();
 
     let result = cast(&array, expected.data_type()).unwrap();
+    assert_eq!(expected, result.as_ref());
+}
+
+#[test]
+fn timestamp_with_tz_to_utf8() {
+    let tz = "-02:00".to_string();
+    let expected =
+        Utf8Array::<i32>::from_slice(&["1996-12-19T16:39:57-02:00", "1996-12-19T17:39:57-02:00"]);
+    let array = Int64Array::from_slice(&[851020797000000000, 851024397000000000])
+        .to(DataType::Timestamp(TimeUnit::Nanosecond, Some(tz)));
+
+    let result = cast(&array, expected.data_type()).expect("cast failed");
+    assert_eq!(expected, result.as_ref());
+}
+
+#[test]
+fn utf8_to_timestamp_with_tz() {
+    let tz = "-02:00".to_string();
+    let array =
+        Utf8Array::<i32>::from_slice(&["1996-12-19T16:39:57-02:00", "1996-12-19T17:39:57-02:00"]);
+    // the timezone is used to map the time to UTC.
+    let expected = Int64Array::from_slice(&[851020797000000000, 851024397000000000])
+        .to(DataType::Timestamp(TimeUnit::Nanosecond, Some(tz)));
+
+    let result = cast(&array, expected.data_type()).expect("cast failed");
+    assert_eq!(expected, result.as_ref());
+}
+
+#[test]
+fn utf8_to_naive_timestamp() {
+    let array =
+        Utf8Array::<i32>::from_slice(&["1996-12-19T16:39:57-02:00", "1996-12-19T17:39:57-02:00"]);
+    // the timezone is disregarded from the string and we assume UTC
+    let expected = Int64Array::from_slice(&[851013597000000000, 851017197000000000])
+        .to(DataType::Timestamp(TimeUnit::Nanosecond, None));
+
+    let result = cast(&array, expected.data_type()).expect("cast failed");
+    assert_eq!(expected, result.as_ref());
+}
+
+#[test]
+fn naive_timestamp_to_utf8() {
+    let array = Int64Array::from_slice(&[851013597000000000, 851017197000000000])
+        .to(DataType::Timestamp(TimeUnit::Nanosecond, None));
+
+    let expected = Utf8Array::<i32>::from_slice(&["1996-12-19 16:39:57", "1996-12-19 17:39:57"]);
+
+    let result = cast(&array, expected.data_type()).expect("cast failed");
     assert_eq!(expected, result.as_ref());
 }
 

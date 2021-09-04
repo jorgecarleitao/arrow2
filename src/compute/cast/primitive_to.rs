@@ -5,6 +5,7 @@ use crate::{
     bitmap::Bitmap,
     compute::arity::unary,
     datatypes::{DataType, TimeUnit},
+    error::ArrowError,
     temporal_conversions::*,
     types::NativeType,
 };
@@ -266,5 +267,146 @@ pub fn timestamp_to_timestamp(
         unary(from, |x| (x / (from_size / to_size)), to_type)
     } else {
         unary(from, |x| (x * (to_size / from_size)), to_type)
+    }
+}
+
+fn timestamp_to_utf8_impl<O: Offset, T: chrono::TimeZone>(
+    from: &PrimitiveArray<i64>,
+    time_unit: TimeUnit,
+    timezone: T,
+) -> Utf8Array<O>
+where
+    T::Offset: std::fmt::Display,
+{
+    match time_unit {
+        TimeUnit::Nanosecond => {
+            let iter = from.iter().map(|x| {
+                x.map(|x| {
+                    let datetime = timestamp_ns_to_datetime(*x);
+                    let offset = timezone.offset_from_utc_datetime(&datetime);
+                    chrono::DateTime::<T>::from_utc(datetime, offset).to_rfc3339()
+                })
+            });
+            Utf8Array::from_trusted_len_iter(iter)
+        }
+        TimeUnit::Microsecond => {
+            let iter = from.iter().map(|x| {
+                x.map(|x| {
+                    let datetime = timestamp_us_to_datetime(*x);
+                    let offset = timezone.offset_from_utc_datetime(&datetime);
+                    chrono::DateTime::<T>::from_utc(datetime, offset).to_rfc3339()
+                })
+            });
+            Utf8Array::from_trusted_len_iter(iter)
+        }
+        TimeUnit::Millisecond => {
+            let iter = from.iter().map(|x| {
+                x.map(|x| {
+                    let datetime = timestamp_ms_to_datetime(*x);
+                    let offset = timezone.offset_from_utc_datetime(&datetime);
+                    chrono::DateTime::<T>::from_utc(datetime, offset).to_rfc3339()
+                })
+            });
+            Utf8Array::from_trusted_len_iter(iter)
+        }
+        TimeUnit::Second => {
+            let iter = from.iter().map(|x| {
+                x.map(|x| {
+                    let datetime = timestamp_s_to_datetime(*x);
+                    let offset = timezone.offset_from_utc_datetime(&datetime);
+                    chrono::DateTime::<T>::from_utc(datetime, offset).to_rfc3339()
+                })
+            });
+            Utf8Array::from_trusted_len_iter(iter)
+        }
+    }
+}
+
+#[cfg(feature = "chrono-tz")]
+fn chrono_tz_timestamp_to_utf8<O: Offset>(
+    from: &PrimitiveArray<i64>,
+    time_unit: TimeUnit,
+    timezone_str: &str,
+) -> Result<Utf8Array<O>> {
+    let timezone = parse_offset_tz(timezone_str);
+    if let Some(timezone) = timezone {
+        Ok(timestamp_to_utf8_impl::<O, chrono_tz::Tz>(
+            from, time_unit, timezone,
+        ))
+    } else {
+        Err(ArrowError::InvalidArgumentError(format!(
+            "timezone \"{}\" cannot be parsed",
+            timezone_str
+        )))
+    }
+}
+
+#[cfg(not(feature = "chrono-tz"))]
+fn chrono_tz_timestamp_to_utf8<O: Offset>(
+    _: &PrimitiveArray<i64>,
+    _: TimeUnit,
+    timezone_str: &str,
+) -> Result<Utf8Array<O>> {
+    Err(ArrowError::InvalidArgumentError(format!(
+        "timezone \"{}\" cannot be parsed (feature chrono-tz is not active)",
+        timezone_str
+    )))
+}
+
+/// Returns a [`Utf8Array`] where every element is the utf8 representation of the timestamp in the rfc3339 format.
+pub fn timestamp_to_utf8<O: Offset>(
+    from: &PrimitiveArray<i64>,
+    time_unit: TimeUnit,
+    timezone_str: &str,
+) -> Result<Utf8Array<O>> {
+    let timezone = parse_offset(timezone_str);
+
+    if let Ok(timezone) = timezone {
+        Ok(timestamp_to_utf8_impl::<O, chrono::FixedOffset>(
+            from, time_unit, timezone,
+        ))
+    } else {
+        chrono_tz_timestamp_to_utf8(from, time_unit, timezone_str)
+    }
+}
+
+/// Returns a [`Utf8Array`] where every element is the utf8 representation of the timestamp in the rfc3339 format.
+pub fn naive_timestamp_to_utf8<O: Offset>(
+    from: &PrimitiveArray<i64>,
+    time_unit: TimeUnit,
+) -> Utf8Array<O> {
+    match time_unit {
+        TimeUnit::Nanosecond => {
+            let iter = from.iter().map(|x| {
+                x.copied()
+                    .map(timestamp_ns_to_datetime)
+                    .map(|x| x.to_string())
+            });
+            Utf8Array::from_trusted_len_iter(iter)
+        }
+        TimeUnit::Microsecond => {
+            let iter = from.iter().map(|x| {
+                x.copied()
+                    .map(timestamp_us_to_datetime)
+                    .map(|x| x.to_string())
+            });
+            Utf8Array::from_trusted_len_iter(iter)
+        }
+        TimeUnit::Millisecond => {
+            let iter = from.iter().map(|x| {
+                x.copied()
+                    .map(timestamp_ms_to_datetime)
+                    .map(|x| x.to_string())
+            });
+            Utf8Array::from_trusted_len_iter(iter)
+        }
+        TimeUnit::Second => {
+            let iter = from.iter().map(|x| {
+                x.copied()
+                    .map(timestamp_s_to_datetime)
+                    .map(|x| x.to_string())
+            });
+            Utf8Array::from_trusted_len_iter(iter)
+        }
     }
 }

@@ -8,7 +8,7 @@ use chrono::{
 use crate::datatypes::{DataType, TimeUnit};
 use crate::error::Result;
 use crate::{
-    array::{Int64Array, Offset, Utf8Array},
+    array::{Offset, PrimitiveArray, Utf8Array},
     error::ArrowError,
 };
 
@@ -159,34 +159,38 @@ pub fn timeunit_scale(a: TimeUnit, b: TimeUnit) -> f64 {
     }
 }
 
-pub(crate) fn parse_offset(offset: &str) -> Result<FixedOffset> {
+/// Parses an offset of the form `"+WX:YZ"` or `"UTC"` into [`FixedOffset`].
+/// # Errors
+/// If the offset is not in any of the allowed forms.
+pub fn parse_offset(offset: &str) -> Result<FixedOffset> {
     if offset == "UTC" {
         return Ok(FixedOffset::east(0));
     }
+    let error = "timezone offset must be of the form [-]00:00";
+
     let mut a = offset.split(':');
-    let first = a.next().map(Ok).unwrap_or_else(|| {
-        Err(ArrowError::InvalidArgumentError(
-            "timezone offset must be of the form [-]00:00".to_string(),
-        ))
-    })?;
-    let last = a.next().map(Ok).unwrap_or_else(|| {
-        Err(ArrowError::InvalidArgumentError(
-            "timezone offset must be of the form [-]00:00".to_string(),
-        ))
-    })?;
-    let hours: i32 = first.parse().map_err(|_| {
-        ArrowError::InvalidArgumentError("timezone offset must be of the form [-]00:00".to_string())
-    })?;
-    let minutes: i32 = last.parse().map_err(|_| {
-        ArrowError::InvalidArgumentError("timezone offset must be of the form [-]00:00".to_string())
-    })?;
+    let first = a
+        .next()
+        .map(Ok)
+        .unwrap_or_else(|| Err(ArrowError::InvalidArgumentError(error.to_string())))?;
+    let last = a
+        .next()
+        .map(Ok)
+        .unwrap_or_else(|| Err(ArrowError::InvalidArgumentError(error.to_string())))?;
+    let hours: i32 = first
+        .parse()
+        .map_err(|_| ArrowError::InvalidArgumentError(error.to_string()))?;
+    let minutes: i32 = last
+        .parse()
+        .map_err(|_| ArrowError::InvalidArgumentError(error.to_string()))?;
 
     Ok(FixedOffset::east(hours * 60 * 60 + minutes * 60))
 }
 
-// not public to not expose TimeZone
+/// Parses `value` to `Option<i64>` consistent with the Arrow's definition of timestamp with timezone.
+/// `tz` must be built from `timezone` (either via [`parse_offset`] or `chrono-tz`).
 #[inline]
-pub(crate) fn utf8_to_timestamp_ns_scalar<T: chrono::TimeZone>(
+pub fn utf8_to_timestamp_ns_scalar<T: chrono::TimeZone>(
     value: &str,
     fmt: &str,
     tz: &T,
@@ -196,7 +200,9 @@ pub(crate) fn utf8_to_timestamp_ns_scalar<T: chrono::TimeZone>(
     let r = parse(&mut parsed, value, fmt).ok();
     if r.is_some() {
         parsed
-            .to_datetime_with_timezone(tz)
+            .to_datetime()
+            .map(|x| x.naive_utc())
+            .map(|x| tz.from_utc_datetime(&x))
             .map(|x| x.timestamp_nanos())
             .ok()
     } else {
@@ -204,6 +210,7 @@ pub(crate) fn utf8_to_timestamp_ns_scalar<T: chrono::TimeZone>(
     }
 }
 
+/// Parses `value` to `Option<i64>` consistent with the Arrow's definition of timestamp without timezone.
 #[inline]
 pub fn utf8_to_naive_timestamp_ns_scalar(value: &str, fmt: &str) -> Option<i64> {
     let fmt = StrftimeItems::new(fmt);
@@ -220,13 +227,18 @@ fn utf8_to_timestamp_ns_impl<O: Offset, T: chrono::TimeZone>(
     fmt: &str,
     timezone: String,
     tz: T,
-) -> Int64Array {
+) -> PrimitiveArray<i64> {
     let iter = array
         .iter()
         .map(|x| x.and_then(|x| utf8_to_timestamp_ns_scalar(x, fmt, &tz)));
 
-    Int64Array::from_trusted_len_iter(iter)
+    PrimitiveArray::from_trusted_len_iter(iter)
         .to(DataType::Timestamp(TimeUnit::Nanosecond, Some(timezone)))
+}
+
+#[cfg(feature = "chrono-tz")]
+pub(crate) fn parse_offset_tz(tz: &str) -> Option<chrono_tz::Tz> {
+    tz.parse::<chrono_tz::Tz>().ok()
 }
 
 #[cfg(feature = "chrono-tz")]
@@ -234,9 +246,9 @@ fn chrono_tz_utf_to_timestamp_ns<O: Offset>(
     array: &Utf8Array<O>,
     fmt: &str,
     timezone: String,
-) -> Result<Int64Array> {
-    let tz = timezone.as_str().parse::<chrono_tz::Tz>();
-    if let Ok(tz) = tz {
+) -> Result<PrimitiveArray<i64>> {
+    let tz = parse_offset_tz(&timezone);
+    if let Some(tz) = tz {
         Ok(utf8_to_timestamp_ns_impl(array, fmt, timezone, tz))
     } else {
         Err(ArrowError::InvalidArgumentError(format!(
@@ -251,23 +263,26 @@ fn chrono_tz_utf_to_timestamp_ns<O: Offset>(
     _: &Utf8Array<O>,
     _: &str,
     timezone: String,
-) -> Result<Int64Array> {
+) -> Result<PrimitiveArray<i64>> {
     Err(ArrowError::InvalidArgumentError(format!(
         "timezone \"{}\" cannot be parsed (feature chrono-tz is not active)",
         timezone
     )))
 }
 
-/// Parses a [`Utf8Array`] to a time-aware timestamp, i.e. [`Int64Array`] with type `Timestamp(Nanosecond, Some(timezone))`.
-/// When the value represents a string with another timezone, a conversion is applied.
-/// Null elements remain null; non-parsable elements are set to null.
+/// Parses a [`Utf8Array`] to a timeozone-aware timestamp, i.e. [`PrimitiveArray<i64>`] with type `Timestamp(Nanosecond, Some(timezone))`.
+/// # Implementation
+/// * parsed values with timezone other than `timezone` are converted to `timezone`.
+/// * parsed values without timezone are null. Use [`utf8_to_naive_timestamp_ns`] to parse naive timezones.
+/// * Null elements remain null; non-parsable elements are null.
+/// The feature `"chrono-tz"` enables IANA and zoneinfo formats for `timezone`.
 /// # Error
-/// This function errors iff `timezone` is not parsiable to an offset.
+/// This function errors iff `timezone` is not parsable to an offset.
 pub fn utf8_to_timestamp_ns<O: Offset>(
     array: &Utf8Array<O>,
     fmt: &str,
     timezone: String,
-) -> Result<Int64Array> {
+) -> Result<PrimitiveArray<i64>> {
     let tz = parse_offset(timezone.as_str());
 
     if let Ok(tz) = tz {
@@ -277,13 +292,17 @@ pub fn utf8_to_timestamp_ns<O: Offset>(
     }
 }
 
-/// Parses a [`Utf8Array`] to naive timestamp, i.e. [`Int64Array`] with type `Timestamp(Nanosecond, None)`.
+/// Parses a [`Utf8Array`] to naive timestamp, i.e.
+/// [`PrimitiveArray<i64>`] with type `Timestamp(Nanosecond, None)`.
 /// Timezones are ignored.
 /// Null elements remain null; non-parsable elements are set to null.
-pub fn utf8_to_naive_timestamp_ns<O: Offset>(array: &Utf8Array<O>, fmt: &str) -> Int64Array {
+pub fn utf8_to_naive_timestamp_ns<O: Offset>(
+    array: &Utf8Array<O>,
+    fmt: &str,
+) -> PrimitiveArray<i64> {
     let iter = array
         .iter()
         .map(|x| x.and_then(|x| utf8_to_naive_timestamp_ns_scalar(x, fmt)));
 
-    Int64Array::from_trusted_len_iter(iter).to(DataType::Timestamp(TimeUnit::Nanosecond, None))
+    PrimitiveArray::from_trusted_len_iter(iter).to(DataType::Timestamp(TimeUnit::Nanosecond, None))
 }
