@@ -107,3 +107,27 @@ fn try_from_trusted_len_iter() {
         Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None)
     );
 }
+
+#[test]
+#[should_panic]
+fn not_utf8() {
+    let offsets = Buffer::from(&[0, 4]);
+    let values = Buffer::from([0, 159, 146, 150]); // invalid utf8
+    Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
+}
+
+#[test]
+#[should_panic]
+fn wrong_offsets() {
+    let offsets = Buffer::from(&[0, 5, 4]); // invalid offsets
+    let values = Buffer::from(b"abbbbb");
+    Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
+}
+
+#[test]
+#[should_panic]
+fn wrong_data_type() {
+    let offsets = Buffer::from(&[0, 4]); // invalid offsets
+    let values = Buffer::from(b"abbb");
+    Utf8Array::<i32>::from_data(DataType::Int8, offsets, values, None);
+}

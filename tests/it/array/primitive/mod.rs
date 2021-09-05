@@ -3,6 +3,7 @@ use std::iter::FromIterator;
 use arrow2::{
     array::*,
     bitmap::Bitmap,
+    buffer::Buffer,
     datatypes::*,
     types::{days_ms, months_days_ns},
 };
@@ -267,4 +268,11 @@ fn months_days_ns() {
 
     let a = array.values().as_slice();
     assert_eq!(a, data.as_ref());
+}
+
+#[test]
+#[should_panic]
+fn wrong_data_type() {
+    let values = Buffer::from(b"abbb");
+    PrimitiveArray::from_data(DataType::Utf8, values, None);
 }
