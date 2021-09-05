@@ -1,4 +1,7 @@
+mod iterator;
 mod serialize;
+
+use iterator::StreamingIterator;
 
 use std::io::Write;
 
@@ -15,7 +18,7 @@ use crate::{datatypes::Schema, error::Result};
 fn new_serializers<'a>(
     batch: &'a RecordBatch,
     options: &'a SerializeOptions,
-) -> Result<Vec<Box<dyn Iterator<Item = Vec<u8>> + 'a>>> {
+) -> Result<Vec<Box<dyn StreamingIterator<Item = [u8]> + 'a>>> {
     batch
         .columns()
         .iter()
@@ -34,7 +37,7 @@ pub fn serialize(batch: &RecordBatch, options: &SerializeOptions) -> Result<Vec<
         serializers
             .iter_mut()
             // `unwrap` is infalible because `array.len()` equals `num_rows` on a `RecordBatch`
-            .for_each(|iter| record.push_field(&iter.next().unwrap()));
+            .for_each(|iter| record.push_field(iter.next().unwrap()));
     });
     Ok(records)
 }
@@ -54,7 +57,7 @@ pub fn write_batch<W: Write>(
         serializers
             .iter_mut()
             // `unwrap` is infalible because `array.len()` equals `num_rows` on a `RecordBatch`
-            .for_each(|iter| record.push_field(&iter.next().unwrap()));
+            .for_each(|iter| record.push_field(iter.next().unwrap()));
         writer.write_byte_record(&record)?;
         record.clear();
         Result::Ok(())
