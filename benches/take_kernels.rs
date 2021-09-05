@@ -58,37 +58,37 @@ fn add_benchmark(c: &mut Criterion) {
             b.iter(|| bench_take(&values, &indices_nulls))
         });
 
-        let values = create_string_array::<i32>(512, 0.0, 42);
+        let values = create_string_array::<i32>(512, 4, 0.0, 42);
         c.bench_function(&format!("take str 2^{}", log2_size), |b| {
             b.iter(|| bench_take(&values, &indices))
         });
 
-        let values = create_string_array::<i32>(512, 0.0, 42);
+        let values = create_string_array::<i32>(512, 4, 0.0, 42);
         c.bench_function(&format!("take str nulls 2^{}", log2_size), |b| {
             b.iter(|| bench_take(&values, &indices_nulls))
         });
     });
 
-    let values = create_string_array::<i32>(512, 0.0, 42);
+    let values = create_string_array::<i32>(512, 4, 0.0, 42);
     let indices = create_random_index(512, 0.5);
     c.bench_function("take str null indices 512", |b| {
         b.iter(|| bench_take(&values, &indices))
     });
 
-    let values = create_string_array::<i32>(1024, 0.0, 42);
+    let values = create_string_array::<i32>(1024, 4, 0.0, 42);
     let indices = create_random_index(1024, 0.5);
     c.bench_function("take str null indices 1024", |b| {
         b.iter(|| bench_take(&values, &indices))
     });
 
-    let values = create_string_array::<i32>(1024, 0.5, 42);
+    let values = create_string_array::<i32>(1024, 4, 0.5, 42);
 
     let indices = create_random_index(1024, 0.0);
     c.bench_function("take str null values 1024", |b| {
         b.iter(|| bench_take(&values, &indices))
     });
 
-    let values = create_string_array::<i32>(1024, 0.5, 42);
+    let values = create_string_array::<i32>(1024, 4, 0.5, 42);
     let indices = create_random_index(1024, 0.5);
     c.bench_function("take str null values null indices 1024", |b| {
         b.iter(|| bench_take(&values, &indices))

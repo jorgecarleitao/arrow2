@@ -187,3 +187,7 @@ harness = false
 [[bench]]
 name = "bitmap_ops"
 harness = false
+
+[[bench]]
+name = "write_csv"
+harness = false
