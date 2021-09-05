@@ -133,7 +133,7 @@ pub fn timestamp_ns_to_datetime(v: i64) -> NaiveDateTime {
 /// Calculates the scale factor between two TimeUnits. The function returns the
 /// scale that should multiply the TimeUnit "b" to have the same time scale as
 /// the TimeUnit "a".
-pub fn timeunit_scale(a: &TimeUnit, b: &TimeUnit) -> f64 {
+pub fn timeunit_scale(a: TimeUnit, b: TimeUnit) -> f64 {
     match (a, b) {
         (TimeUnit::Second, TimeUnit::Second) => 1.0,
         (TimeUnit::Second, TimeUnit::Millisecond) => 0.001,

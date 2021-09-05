@@ -36,20 +36,20 @@ fn create_scale(lhs: &DataType, rhs: &DataType) -> Result<f64> {
         | (DataType::Time32(timeunit_a), DataType::Duration(timeunit_b))
         | (DataType::Time64(timeunit_a), DataType::Duration(timeunit_b)) => {
             // The scale is based on the TimeUnit that each of the numbers have.
-            timeunit_scale(timeunit_a, timeunit_b)
+            timeunit_scale(*timeunit_a, *timeunit_b)
         }
         (DataType::Date32, DataType::Duration(timeunit)) => {
             // Date32 represents the time elapsed time since UNIX epoch
             // (1970-01-01) in days (32 bits). The duration value has to be
             // scaled to days to be able to add the value to the Date.
-            timeunit_scale(&TimeUnit::Second, timeunit) / SECONDS_IN_DAY as f64
+            timeunit_scale(TimeUnit::Second, *timeunit) / SECONDS_IN_DAY as f64
         }
         (DataType::Date64, DataType::Duration(timeunit)) => {
             // Date64 represents the time elapsed time since UNIX epoch
             // (1970-01-01) in milliseconds (64 bits). The duration value has
             // to be scaled to milliseconds to be able to add the value to the
             // Date.
-            timeunit_scale(&TimeUnit::Millisecond, timeunit)
+            timeunit_scale(TimeUnit::Millisecond, *timeunit)
         }
         _ => {
             return Err(ArrowError::InvalidArgumentError(
@@ -216,10 +216,10 @@ pub fn subtract_timestamps(
         (DataType::Timestamp(timeunit_a, None), DataType::Timestamp(timeunit_b, None)) => {
             // Closure for the binary operation. The closure contains the scale
             // required to calculate the difference between the timestamps.
-            let scale = timeunit_scale(timeunit_a, timeunit_b);
+            let scale = timeunit_scale(*timeunit_a, *timeunit_b);
             let op = move |a, b| a - (b as f64 * scale) as i64;
 
-            binary(lhs, rhs, DataType::Duration(timeunit_a.clone()), op)
+            binary(lhs, rhs, DataType::Duration(*timeunit_a), op)
         }
         _ => Err(ArrowError::InvalidArgumentError(
             "Incorrect data type for the arguments".to_string(),
