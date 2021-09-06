@@ -3,12 +3,15 @@ use std::{
     ops::{BitAnd, BitAndAssign, BitOr, Not, Shl, ShlAssign, ShrAssign},
 };
 
-/// Something that can be use as a chunk of bits. This is used to create masks of a given number
-/// of lengths, whose width is `1`. In `simd_packed` notation, this corresponds to `m1xY`.
+use super::NativeType;
+
+/// Something that can be use as a chunk of bits. This is used to create masks ofa given number
+/// of length, whose width is `1`. In `simd_packed` notation, this corresponds to `m1xY`.
 /// # Safety
 /// Do not implement.
 pub unsafe trait BitChunk:
     Sized
+    + NativeType
     + Copy
     + std::fmt::Debug
     + Binary
@@ -22,12 +25,6 @@ pub unsafe trait BitChunk:
     + BitAndAssign
     + BitOr<Output = Self>
 {
-    /// The representation of this type in the stack.
-    type Bytes: std::ops::Index<usize, Output = u8>
-        + std::ops::IndexMut<usize, Output = u8>
-        + for<'a> std::convert::TryFrom<&'a [u8]>
-        + std::fmt::Debug;
-
     /// A value with a single bit set at the most right position.
     fn one() -> Self;
     /// A value with no bits set.
@@ -39,8 +36,6 @@ pub unsafe trait BitChunk:
 }
 
 unsafe impl BitChunk for u8 {
-    type Bytes = [u8; 1];
-
     #[inline(always)]
     fn zero() -> Self {
         0
@@ -63,8 +58,6 @@ unsafe impl BitChunk for u8 {
 }
 
 unsafe impl BitChunk for u16 {
-    type Bytes = [u8; 2];
-
     #[inline(always)]
     fn zero() -> Self {
         0
@@ -87,8 +80,6 @@ unsafe impl BitChunk for u16 {
 }
 
 unsafe impl BitChunk for u32 {
-    type Bytes = [u8; 4];
-
     #[inline(always)]
     fn zero() -> Self {
         0
@@ -111,8 +102,6 @@ unsafe impl BitChunk for u32 {
 }
 
 unsafe impl BitChunk for u64 {
-    type Bytes = [u8; 8];
-
     #[inline(always)]
     fn zero() -> Self {
         0

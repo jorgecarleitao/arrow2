@@ -5,7 +5,6 @@ use std::slice;
 use std::{fmt::Debug, fmt::Formatter};
 use std::{ptr::NonNull, sync::Arc};
 
-use crate::alloc;
 use crate::ffi;
 use crate::types::NativeType;
 
@@ -80,11 +79,6 @@ impl<T: NativeType> Bytes<T> {
     }
 
     #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.len == 0
-    }
-
-    #[inline]
     pub fn ptr(&self) -> NonNull<T> {
         self.ptr
     }
@@ -94,9 +88,9 @@ impl<T: NativeType> Drop for Bytes<T> {
     #[inline]
     fn drop(&mut self) {
         match &self.deallocation {
-            Deallocation::Native(capacity) => {
-                unsafe { alloc::free_aligned(self.ptr, *capacity) };
-            }
+            Deallocation::Native(capacity) => unsafe {
+                Vec::from_raw_parts(self.ptr.as_ptr(), self.len, *capacity);
+            },
             // foreign interface knows how to deallocate itself.
             Deallocation::Foreign(_) => (),
         }
@@ -127,6 +121,6 @@ impl<T: NativeType> Debug for Bytes<T> {
     }
 }
 
-// This is sound because `Bytes` is an imutable container
+// This is sound because `Bytes` is an immutable container
 unsafe impl<T: NativeType> Send for Bytes<T> {}
 unsafe impl<T: NativeType> Sync for Bytes<T> {}

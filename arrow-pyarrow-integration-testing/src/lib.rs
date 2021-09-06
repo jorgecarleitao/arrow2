@@ -152,14 +152,8 @@ fn round_trip_field(array: PyObject, py: Python) -> PyResult<PyObject> {
     to_py_field(&field, py)
 }
 
-#[pyfunction]
-fn total_allocated_bytes() -> PyResult<isize> {
-    Ok(arrow2::total_allocated_bytes())
-}
-
 #[pymodule]
 fn arrow_pyarrow_integration_testing(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(total_allocated_bytes, m)?)?;
     m.add_function(wrap_pyfunction!(round_trip_array, m)?)?;
     m.add_function(wrap_pyfunction!(round_trip_field, m)?)?;
     Ok(())

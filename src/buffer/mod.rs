@@ -6,7 +6,6 @@ mod immutable;
 mod mutable;
 
 pub(crate) mod bytes;
-pub(crate) mod util;
 
 pub use immutable::Buffer;
 pub use mutable::MutableBuffer;

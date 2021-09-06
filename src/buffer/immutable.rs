@@ -53,8 +53,7 @@ impl<T: NativeType> Buffer<T> {
     }
 
     /// Auxiliary method to create a new Buffer
-    #[inline]
-    pub fn from_bytes(bytes: Bytes<T>) -> Self {
+    pub(crate) fn from_bytes(bytes: Bytes<T>) -> Self {
         let length = bytes.len();
         Buffer {
             data: Arc::new(bytes),
