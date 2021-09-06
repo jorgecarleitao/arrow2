@@ -232,7 +232,10 @@ fn a_like_binary_scalar<O: Offset, F: Fn(bool) -> bool>(
 ) -> Result<BooleanArray> {
     let validity = lhs.validity();
     let pattern = std::str::from_utf8(rhs).map_err(|e| {
-        ArrowError::InvalidArgumentError(format!("Unable to convert the LIKE pattern to string: {}", e))
+        ArrowError::InvalidArgumentError(format!(
+            "Unable to convert the LIKE pattern to string: {}",
+            e
+        ))
     })?;
 
     let values = if !pattern.contains(is_like_pattern) {

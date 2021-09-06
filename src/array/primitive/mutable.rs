@@ -172,6 +172,52 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
             }
         }
     }
+    /// Extends the [`MutablePrimitiveArray`] from an iterator of values of trusted len.
+    /// This differs from `extend_trusted_len` which accepts in iterator of optional values.
+    #[inline]
+    pub fn extend_trusted_len_values<I>(&mut self, iterator: I)
+    where
+        I: TrustedLen<Item = T>,
+    {
+        unsafe { self.extend_trusted_len_values_unchecked(iterator) }
+    }
+
+    /// Extends the [`MutablePrimitiveArray`] from an iterator of values of trusted len.
+    /// This differs from `extend_trusted_len_unchecked` which accepts in iterator of optional values.
+    /// # Safety
+    /// The iterator must be trusted len.
+    #[inline]
+    pub unsafe fn extend_trusted_len_values_unchecked<I>(&mut self, iterator: I)
+    where
+        I: Iterator<Item = T>,
+    {
+        let size = iterator
+            .size_hint()
+            .1
+            .expect("upper bound should be set by trusted len iter");
+        self.values.extend_from_trusted_len_iter_unchecked(iterator);
+        self.update_all_valid(size);
+    }
+
+    #[inline]
+    /// Extends the [`MutablePrimitiveArray`] from a slice
+    pub fn extend_from_slice(&mut self, items: &[T]) {
+        self.values.extend_from_slice(items);
+        self.update_all_valid(items.len());
+    }
+
+    fn update_all_valid(&mut self, additional: usize) {
+        if let Some(validity) = self.validity.as_mut() {
+            validity.extend_constant(additional, true);
+        } else {
+            let validity = MutableBitmap::from_trusted_len_iter(
+                std::iter::repeat(true).take(self.len() + additional),
+            );
+            if validity.null_count() > 0 {
+                self.validity = Some(validity);
+            }
+        }
+    }
 
     fn init_validity(&mut self) {
         let mut validity = MutableBitmap::new();
