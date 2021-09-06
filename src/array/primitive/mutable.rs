@@ -191,28 +191,25 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
     where
         I: Iterator<Item = T>,
     {
-        let size = iterator
-            .size_hint()
-            .1
-            .expect("upper bound should be set by trusted len iter");
         self.values.extend_from_trusted_len_iter_unchecked(iterator);
-        self.update_all_valid(size);
+        self.update_all_valid();
     }
 
     #[inline]
     /// Extends the [`MutablePrimitiveArray`] from a slice
     pub fn extend_from_slice(&mut self, items: &[T]) {
         self.values.extend_from_slice(items);
-        self.update_all_valid(items.len());
+        self.update_all_valid();
     }
 
-    fn update_all_valid(&mut self, additional: usize) {
+    fn update_all_valid(&mut self) {
+        // get len before mutable borrow
+        let len = self.len();
         if let Some(validity) = self.validity.as_mut() {
-            validity.extend_constant(additional, true);
+            validity.extend_constant(len - validity.len(), true);
         } else {
-            let validity = MutableBitmap::from_trusted_len_iter(
-                std::iter::repeat(true).take(self.len() + additional),
-            );
+            let mut validity = MutableBitmap::new();
+            validity.extend_constant(len, true);
             if validity.null_count() > 0 {
                 self.validity = Some(validity);
             }
