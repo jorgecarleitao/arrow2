@@ -98,10 +98,8 @@ impl MutableBitmap {
         if self.length % 8 == 0 {
             self.buffer.push_unchecked(0);
         }
-        if value {
-            let byte = self.buffer.as_mut_slice().last_mut().unwrap();
-            *byte = set(*byte, self.length % 8, true);
-        };
+        let byte = self.buffer.as_mut_slice().last_mut().unwrap();
+        *byte = set(*byte, self.length % 8, value);
         self.length += 1;
     }
 
