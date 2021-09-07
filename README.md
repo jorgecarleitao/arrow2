@@ -226,5 +226,5 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 Run
 
 ```bash
-docker run -it --rm -v "$(pwd)":/usr/local/src/your-app githubchangeloggenerator/github-changelog-generator --user jorgecarleitao --project arrow2 --token TOKEN --future-release v0.2.0
+docker run -it --rm -v "$(pwd)":/usr/local/src/your-app githubchangeloggenerator/github-changelog-generator --user jorgecarleitao --project arrow2 --token TOKEN
 ```

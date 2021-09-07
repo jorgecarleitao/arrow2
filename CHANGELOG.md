@@ -1,5 +1,68 @@
 # Changelog
 
+## [v0.5.0](https://github.com/jorgecarleitao/arrow2/tree/v0.5.0) (2021-09-07)
+
+[Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.4.0...v0.5.0)
+
+**Breaking changes:**
+
+- Added `Extension` to `DataType` [\#361](https://github.com/jorgecarleitao/arrow2/issues/361)
+- `MonthDayNano` added to enum `IntervalUnit` [\#360](https://github.com/jorgecarleitao/arrow2/issues/360)
+- Make `io::parquet::write::write_*` return size of file in bytes [\#354](https://github.com/jorgecarleitao/arrow2/issues/354)
+- Renamed `bitmap::utils::null_count` to `bitmap::utils::count_zeros` [\#342](https://github.com/jorgecarleitao/arrow2/issues/342)
+- Made `GroupFilter` optional in parquet's`RecordReader` and added method to set it. [\#386](https://github.com/jorgecarleitao/arrow2/pull/386) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Removed `PartialOrd` and `Ord` of all enums in `datatypes` [\#379](https://github.com/jorgecarleitao/arrow2/pull/379) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Made `cargo` features not default [\#369](https://github.com/jorgecarleitao/arrow2/pull/369) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Prepare APIs for extension types [\#357](https://github.com/jorgecarleitao/arrow2/pull/357) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**New features:**
+
+- Added support for `async` parquet write [\#372](https://github.com/jorgecarleitao/arrow2/pull/372) ([GrandChaman](https://github.com/GrandChaman))
+- Add support to extension types in FFI [\#363](https://github.com/jorgecarleitao/arrow2/pull/363) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support for field's metadata via FFI [\#362](https://github.com/jorgecarleitao/arrow2/pull/362) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support for `Extension` \(logical\) type [\#359](https://github.com/jorgecarleitao/arrow2/pull/359) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support for compute to `BinaryArray` [\#346](https://github.com/jorgecarleitao/arrow2/pull/346) ([zhyass](https://github.com/zhyass))
+- Added support for reading binary from CSV [\#337](https://github.com/jorgecarleitao/arrow2/pull/337) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support for `MONTH_DAY_NANO` interval type [\#268](https://github.com/jorgecarleitao/arrow2/pull/268) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Fixed bugs:**
+
+- Parquet read skips a few rows at the end of the page [\#373](https://github.com/jorgecarleitao/arrow2/issues/373)
+- `parquet_read` fails when a column has too many rows with string values [\#366](https://github.com/jorgecarleitao/arrow2/issues/366)
+- `parquet_read` panics with `index_out_of_bounds` [\#351](https://github.com/jorgecarleitao/arrow2/issues/351)
+- Fixed error in `MutableBitmap::push_unchecked` [\#384](https://github.com/jorgecarleitao/arrow2/pull/384) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed display of timestamp with tz. [\#375](https://github.com/jorgecarleitao/arrow2/pull/375) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Enhancements:**
+
+- Added `extend_*values` to `MutablePrimitiveArray` [\#383](https://github.com/jorgecarleitao/arrow2/pull/383) ([ritchie46](https://github.com/ritchie46))
+- Improved performance of writing to CSV \(20-25%\) [\#382](https://github.com/jorgecarleitao/arrow2/pull/382) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Bumped `lexical-core` [\#378](https://github.com/jorgecarleitao/arrow2/pull/378) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed casting of utf8 \<\> Timestamp with and without timezone [\#376](https://github.com/jorgecarleitao/arrow2/pull/376) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added `Send+Sync` to `MutableBuffer` [\#368](https://github.com/jorgecarleitao/arrow2/pull/368) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Improved performance of unary \_not\_ for aligned bitmaps \(3x\) [\#365](https://github.com/jorgecarleitao/arrow2/pull/365) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Reduced dependencies within `num` [\#353](https://github.com/jorgecarleitao/arrow2/pull/353) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Bumped to parquet2 v0.4 [\#352](https://github.com/jorgecarleitao/arrow2/pull/352) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Bumped tonic and prost in flight [\#344](https://github.com/jorgecarleitao/arrow2/pull/344) ([PsiACE](https://github.com/PsiACE))
+- Improved null count calculation \(5x\) [\#343](https://github.com/jorgecarleitao/arrow2/pull/343) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Improved perf of deserializing integers from json \(30%\) [\#340](https://github.com/jorgecarleitao/arrow2/pull/340) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Simplified code of json schema inference [\#339](https://github.com/jorgecarleitao/arrow2/pull/339) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Documentation updates:**
+
+- Moved guide examples to examples/ [\#387](https://github.com/jorgecarleitao/arrow2/pull/387) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added more docs. [\#358](https://github.com/jorgecarleitao/arrow2/pull/358) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Improved API docs. [\#355](https://github.com/jorgecarleitao/arrow2/pull/355) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Testing updates:**
+
+- Moved tests to `tests/` [\#389](https://github.com/jorgecarleitao/arrow2/pull/389) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Moved compute tests to tests/ [\#388](https://github.com/jorgecarleitao/arrow2/pull/388) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added more tests. [\#380](https://github.com/jorgecarleitao/arrow2/pull/380) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Pinned nightly in SIMD tests [\#364](https://github.com/jorgecarleitao/arrow2/pull/364) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Improved benches for take [\#348](https://github.com/jorgecarleitao/arrow2/pull/348) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Made IPC integration tests run tests that are not run by arrow-rs [\#278](https://github.com/jorgecarleitao/arrow2/pull/278) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
 ## [v0.4.0](https://github.com/jorgecarleitao/arrow2/tree/v0.4.0) (2021-08-24)
 
 [Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.3.0...v0.4.0)
