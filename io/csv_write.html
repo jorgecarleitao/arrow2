@@ -147,12 +147,15 @@
 <p>When compiled with feature <code>io_csv</code>, you can use this crate to write CSV files.</p>
 <p>This crate relies on <a href="https://crates.io/crates/csv">the crate csv</a> to write well-formed CSV files, which your code should also depend on.</p>
 <p>The following example writes a batch as a CSV file with the default configuration:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use arrow2::io::csv::write;
-use arrow2::record_batch::RecordBatch;
-use arrow2::error::Result;
+<pre><pre class="playground"><code class="language-rust">use std::sync::Arc;
+
+use arrow2::{
+    array::{Array, Int32Array},
+    datatypes::{Field, Schema},
+    error::Result,
+    io::csv::write,
+    record_batch::RecordBatch,
+};
 
 fn write_batch(path: &amp;str, batches: &amp;[RecordBatch]) -&gt; Result&lt;()&gt; {
     let writer = &amp;mut write::WriterBuilder::new().from_path(path)?;
@@ -160,27 +163,45 @@ fn write_batch(path: &amp;str, batches: &amp;[RecordBatch]) -&gt; Result&lt;()&g
     write::write_header(writer, batches[0].schema())?;
 
     let options = write::SerializeOptions::default();
-    batches.iter().try_for_each(|batch| {
-        write::write_batch(writer, batch, &amp;options)
-    })
+    batches
+        .iter()
+        .try_for_each(|batch| write::write_batch(writer, batch, &amp;options))
 }
-<span class="boring">}
-</span></code></pre></pre>
+
+fn main() -&gt; Result&lt;()&gt; {
+    let array = Int32Array::from(&amp;[
+        Some(0),
+        Some(1),
+        Some(2),
+        Some(3),
+        Some(4),
+        Some(5),
+        Some(6),
+    ]);
+    let field = Field::new(&quot;c1&quot;, array.data_type().clone(), true);
+    let schema = Schema::new(vec![field]);
+    let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(array)])?;
+
+    write_batch(&quot;example.csv&quot;, &amp;[batch])
+}
+</code></pre></pre>
 <h2 id="parallelism"><a class="header" href="#parallelism">Parallelism</a></h2>
 <p>This crate exposes functionality to decouple serialization from writing.</p>
 <p>In the example above, the serialization and writing to a file is done synchronously.
 However, these typically deal with different bounds: serialization is often CPU bounded, while writing is often IO bounded. We can trade-off these through a higher memory usage.</p>
 <p>Suppose that we know that we are getting CPU-bounded at serialization, and would like to offload that workload to other threads, at the cost of a higher memory usage. We would achieve this as follows (two batches for simplicity):</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use std::sync::mpsc::{Sender, Receiver};
-use std::sync::mpsc;
+<pre><pre class="playground"><code class="language-rust">use std::sync::mpsc;
+use std::sync::mpsc::{Receiver, Sender};
+use std::sync::Arc;
 use std::thread;
 
-use arrow2::io::csv::write;
-use arrow2::record_batch::RecordBatch;
-use arrow2::error::Result;
+use arrow2::{
+    array::{Array, Int32Array},
+    datatypes::{Field, Schema},
+    error::Result,
+    io::csv::write,
+    record_batch::RecordBatch,
+};
 
 fn parallel_write(path: &amp;str, batches: [RecordBatch; 2]) -&gt; Result&lt;()&gt; {
     let options = write::SerializeOptions::default();
@@ -193,26 +214,26 @@ fn parallel_write(path: &amp;str, batches: [RecordBatch; 2]) -&gt; Result&lt;()&
     let (tx, rx): (Sender&lt;_&gt;, Receiver&lt;_&gt;) = mpsc::channel();
     let mut children = Vec::new();
 
-    for id in 0..2 {
-        // The sender endpoint can be copied
+    (0..2).for_each(|id| {
+        // The sender endpoint can be cloned
         let thread_tx = tx.clone();
 
         let options = options.clone();
-        let batch = batches[id].clone();  // note: this is cheap
+        let batch = batches[id].clone(); // note: this is cheap
         let child = thread::spawn(move || {
             let records = write::serialize(&amp;batch, &amp;options).unwrap();
             thread_tx.send(records).unwrap();
         });
 
         children.push(child);
-    }
+    });
 
     for _ in 0..2 {
         // block: assumes that the order of batches matter.
         let records = rx.recv().unwrap();
-        records.iter().try_for_each(|record| {
-            writer.write_byte_record(record)
-        })?
+        records
+            .iter()
+            .try_for_each(|record| writer.write_byte_record(record))?
     }
 
     for child in children {
@@ -221,8 +242,24 @@ fn parallel_write(path: &amp;str, batches: [RecordBatch; 2]) -&gt; Result&lt;()&
 
     Ok(())
 }
-<span class="boring">}
-</span></code></pre></pre>
+
+fn main() -&gt; Result&lt;()&gt; {
+    let array = Int32Array::from(&amp;[
+        Some(0),
+        Some(1),
+        Some(2),
+        Some(3),
+        Some(4),
+        Some(5),
+        Some(6),
+    ]);
+    let field = Field::new(&quot;c1&quot;, array.data_type().clone(), true);
+    let schema = Schema::new(vec![field]);
+    let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(array)])?;
+
+    parallel_write(&quot;example.csv&quot;, [batch.clone(), batch])
+}
+</code></pre></pre>
 
                     </main>
 
