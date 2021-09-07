@@ -211,7 +211,6 @@ on the same thread, which may hurt performance if one of them is a bottleneck.</
 <p>For single-threaded reading, buffers used to read and decompress pages can be re-used.
 This create offers an API that encapsulates the above logic:</p>
 <pre><pre class="playground"><code class="language-rust">use std::fs::File;
-use std::sync::Arc;
 
 use arrow2::error::Result;
 use arrow2::io::parquet::read;
@@ -223,7 +222,7 @@ fn main() -&gt; Result&lt;()&gt; {
     let file_path = &amp;args[1];
 
     let reader = File::open(file_path)?;
-    let reader = read::RecordReader::try_new(reader, None, None, Arc::new(|_, _| true), None)?;
+    let reader = read::RecordReader::try_new(reader, None, None, None, None)?;
 
     for maybe_batch in reader {
         let batch = maybe_batch?;
