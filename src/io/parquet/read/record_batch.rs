@@ -90,6 +90,10 @@ impl<R: Read + Seek> RecordReader<R> {
         &self.schema
     }
 
+    pub fn metadata(&self) -> &FileMetaData {
+        self.metadata.as_ref()
+    }
+
     pub fn set_groups_filter(&mut self, groups_filter: GroupFilter) {
         self.groups_filter = Some(groups_filter);
     }
