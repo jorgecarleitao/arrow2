@@ -21,13 +21,7 @@ pub fn read_column<R: Read + Seek>(
 ) -> Result<ArrayStats> {
     let metadata = read_metadata(&mut reader)?;
 
-    let mut reader = RecordReader::try_new(
-        reader,
-        Some(vec![column]),
-        None,
-        Arc::new(|_, _| true),
-        None,
-    )?;
+    let mut reader = RecordReader::try_new(reader, Some(vec![column]), None, None, None)?;
 
     let statistics = metadata.row_groups[row_group]
         .column(column)
@@ -432,7 +426,7 @@ fn integration_write(schema: &Schema, batches: &[RecordBatch]) -> Result<Vec<u8>
 
 fn integration_read(data: &[u8]) -> Result<(Arc<Schema>, Vec<RecordBatch>)> {
     let reader = Cursor::new(data);
-    let reader = RecordReader::try_new(reader, None, None, Arc::new(|_, _| true), None)?;
+    let reader = RecordReader::try_new(reader, None, None, None, None)?;
     let schema = reader.schema().clone();
     let batches = reader.collect::<Result<Vec<_>>>()?;
 
