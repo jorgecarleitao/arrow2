@@ -8,4 +8,10 @@ mod length;
 #[cfg(feature = "regex")]
 mod like;
 mod limit;
+mod partition;
+#[cfg(feature = "regex")]
+mod regex_match;
 mod sort;
+mod substring;
+mod temporal;
+mod window;
