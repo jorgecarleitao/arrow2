@@ -1,5 +1,4 @@
 use std::fs::File;
-use std::sync::Arc;
 
 use arrow2::array::*;
 use arrow2::error::Result;
@@ -223,7 +222,7 @@ fn all_types() -> Result<()> {
     let path = "testing/parquet-testing/data/alltypes_plain.parquet";
     let reader = std::fs::File::open(path)?;
 
-    let reader = RecordReader::try_new(reader, None, None, Arc::new(|_, _| true), None)?;
+    let reader = RecordReader::try_new(reader, None, None, None, None)?;
 
     let batches = reader.collect::<Result<Vec<_>>>()?;
     assert_eq!(batches.len(), 1);

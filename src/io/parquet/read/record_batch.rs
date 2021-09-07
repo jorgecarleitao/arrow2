@@ -24,7 +24,7 @@ pub struct RecordReader<R: Read + Seek> {
     indices: Rc<Vec<usize>>,
     buffer: Vec<u8>,
     decompress_buffer: Vec<u8>,
-    groups_filter: GroupFilter,
+    groups_filter: Option<GroupFilter>,
     pages_filter: Option<PageFilter>,
     metadata: Rc<FileMetaData>,
     current_group: usize,
@@ -36,7 +36,7 @@ impl<R: Read + Seek> RecordReader<R> {
         mut reader: R,
         projection: Option<Vec<usize>>,
         limit: Option<usize>,
-        groups_filter: GroupFilter,
+        groups_filter: Option<GroupFilter>,
         pages_filter: Option<PageFilter>,
     ) -> Result<Self> {
         let metadata = read_metadata(&mut reader)?;
@@ -89,6 +89,10 @@ impl<R: Read + Seek> RecordReader<R> {
     pub fn schema(&self) -> &Arc<Schema> {
         &self.schema
     }
+
+    pub fn set_groups_filter(&mut self, groups_filter: GroupFilter) {
+        self.groups_filter = Some(groups_filter);
+    }
 }
 
 impl<R: Read + Seek> Iterator for RecordReader<R> {
@@ -109,9 +113,11 @@ impl<R: Read + Seek> Iterator for RecordReader<R> {
         let row_group = self.current_group;
         let metadata = self.metadata.clone();
         let group = &metadata.row_groups[row_group];
-        if !(self.groups_filter)(row_group, group) {
-            self.current_group += 1;
-            return self.next();
+        if let Some(groups_filter) = self.groups_filter.as_ref() {
+            if !(groups_filter)(row_group, group) {
+                self.current_group += 1;
+                return self.next();
+            }
         }
         let columns_meta = group.columns();
 

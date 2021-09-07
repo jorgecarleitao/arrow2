@@ -1,5 +1,4 @@
 use std::io::Read;
-use std::sync::Arc;
 use std::{fs, io::Cursor, path::PathBuf};
 
 use criterion::{criterion_group, criterion_main, Criterion};
@@ -20,8 +19,7 @@ fn to_buffer(size: usize) -> Vec<u8> {
 fn read_decompressed_pages(buffer: &[u8], size: usize, column: usize) -> Result<()> {
     let file = Cursor::new(buffer);
 
-    let reader =
-        read::RecordReader::try_new(file, Some(vec![column]), None, Arc::new(|_, _| true), None)?;
+    let reader = read::RecordReader::try_new(file, Some(vec![column]), None, None, None)?;
 
     for maybe_batch in reader {
         let batch = maybe_batch?;
