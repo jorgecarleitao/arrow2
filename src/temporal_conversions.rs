@@ -237,11 +237,13 @@ fn utf8_to_timestamp_ns_impl<O: Offset, T: chrono::TimeZone>(
 }
 
 #[cfg(feature = "chrono-tz")]
+#[cfg_attr(docsrs, doc(cfg(feature = "chrono-tz")))]
 pub(crate) fn parse_offset_tz(tz: &str) -> Option<chrono_tz::Tz> {
     tz.parse::<chrono_tz::Tz>().ok()
 }
 
 #[cfg(feature = "chrono-tz")]
+#[cfg_attr(docsrs, doc(cfg(feature = "chrono-tz")))]
 fn chrono_tz_utf_to_timestamp_ns<O: Offset>(
     array: &Utf8Array<O>,
     fmt: &str,
