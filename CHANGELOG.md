@@ -1,5 +1,14 @@
 # Changelog
 
+## [v0.5.1](https://github.com/jorgecarleitao/arrow2/tree/v0.5.1) (2021-09-09)
+
+[Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.5.0...v0.5.1)
+
+**Documentation updates:**
+
+- \[0.5\] The docs `io` module has no submodules [\#390](https://github.com/jorgecarleitao/arrow2/issues/390)
+- Made docs be compiled with feature `full` [\#391](https://github.com/jorgecarleitao/arrow2/pull/391) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
 ## [v0.5.0](https://github.com/jorgecarleitao/arrow2/tree/v0.5.0) (2021-09-07)
 
 [Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.4.0...v0.5.0)
