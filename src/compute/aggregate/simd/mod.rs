@@ -5,4 +5,5 @@ pub use native::*;
 #[cfg(feature = "simd")]
 mod packed;
 #[cfg(feature = "simd")]
+#[cfg_attr(docsrs, doc(cfg(feature = "simd")))]
 pub use packed::*;

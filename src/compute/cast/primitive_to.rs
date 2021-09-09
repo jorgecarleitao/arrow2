@@ -323,6 +323,7 @@ where
 }
 
 #[cfg(feature = "chrono-tz")]
+#[cfg_attr(docsrs, doc(cfg(feature = "chrono-tz")))]
 fn chrono_tz_timestamp_to_utf8<O: Offset>(
     from: &PrimitiveArray<i64>,
     time_unit: TimeUnit,

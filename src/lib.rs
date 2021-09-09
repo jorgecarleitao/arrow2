@@ -1,5 +1,7 @@
 //! Doc provided by README
 
+#![cfg_attr(docsrs, feature(doc_cfg))]
+
 pub mod alloc;
 #[macro_use]
 pub mod array;
@@ -12,6 +14,7 @@ pub mod trusted_len;
 pub mod types;
 
 #[cfg(feature = "compute")]
+#[cfg_attr(docsrs, doc(cfg(feature = "compute")))]
 pub mod compute;
 pub mod io;
 pub mod record_batch;
