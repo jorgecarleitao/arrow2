@@ -24,10 +24,7 @@ jobs:
           components: rustfmt, rust-src
 
       - name: Build Documentation
-        run: cargo doc --all --no-deps
-
-      - name: Build Documentation
-        run: cargo doc --all --no-deps
+        run: cargo doc --features full --no-deps
 
       - name: Deploy
         if: github.ref == 'refs/heads/main'
