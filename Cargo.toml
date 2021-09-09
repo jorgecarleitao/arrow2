@@ -71,6 +71,10 @@ flate2 = "1"
 doc-comment = "0.3"
 crossbeam-channel = "0.5.1"
 
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
 [features]
 default = []
 full = [
