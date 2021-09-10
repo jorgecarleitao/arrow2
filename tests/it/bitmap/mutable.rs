@@ -324,3 +324,15 @@ fn extend_bitmap_one() {
         assert_eq!(b.as_slice(), &[0b11111111]);
     }
 }
+
+#[test]
+fn extend_bitmap_other() {
+    let mut a = MutableBitmap::from([true, true, true, false, true, true, true, false, true, true]);
+    a.extend_from_slice(&[0b01111110u8, 0b10111111, 0b11011111, 0b00000111], 20, 2);
+    assert_eq!(
+        a,
+        MutableBitmap::from([
+            true, true, true, false, true, true, true, false, true, true, true, false
+        ])
+    );
+}
