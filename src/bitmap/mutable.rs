@@ -310,18 +310,14 @@ fn extend<I: Iterator<Item = bool>>(buffer: &mut [u8], length: usize, mut iterat
 
     buffer[..chunks].iter_mut().for_each(|byte| {
         (0..8).for_each(|i| {
-            if iterator.next().unwrap() {
-                *byte = set(*byte, i, true)
-            }
+            *byte = set(*byte, i, iterator.next().unwrap());
         })
     });
 
     if reminder != 0 {
         let last = &mut buffer[chunks];
         iterator.enumerate().for_each(|(i, value)| {
-            if value {
-                *last = set(*last, i, true)
-            }
+            *last = set(*last, i, value);
         });
     }
 }
@@ -354,9 +350,7 @@ impl MutableBitmap {
             let byte = self.buffer.as_mut_slice().last_mut().unwrap();
             let mut i = bit_offset;
             for value in iterator {
-                if value {
-                    *byte = set(*byte, i, true);
-                }
+                *byte = set(*byte, i, value);
                 i += 1;
             }
             self.length += length;
@@ -370,10 +364,7 @@ impl MutableBitmap {
             // we are in the middle of a byte; lets finish it
             let byte = self.buffer.as_mut_slice().last_mut().unwrap();
             (bit_offset..8).for_each(|i| {
-                let value = iterator.next().unwrap();
-                if value {
-                    *byte = set(*byte, i, true);
-                }
+                *byte = set(*byte, i, iterator.next().unwrap());
             });
             self.length += 8 - bit_offset;
             length -= 8 - bit_offset;
@@ -445,9 +436,7 @@ impl MutableBitmap {
         let data = buffer.as_mut_slice();
         data[..chunks].iter_mut().try_for_each(|byte| {
             (0..8).try_for_each(|i| {
-                if iterator.next().unwrap()? {
-                    *byte = set(*byte, i, true)
-                };
+                *byte = set(*byte, i, iterator.next().unwrap()?);
                 Ok(())
             })
         })?;
@@ -455,9 +444,7 @@ impl MutableBitmap {
         if reminder != 0 {
             let last = &mut data[chunks];
             iterator.enumerate().try_for_each(|(i, value)| {
-                if value? {
-                    *last = set(*last, i, true)
-                }
+                *last = set(*last, i, value?);
                 Ok(())
             })?;
         }
