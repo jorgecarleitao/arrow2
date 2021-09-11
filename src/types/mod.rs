@@ -6,6 +6,7 @@
 //! represent chunks of bits (e.g. `u8`, `u16`), and [`BitChunkIter`], that can be used to
 //! iterate over bitmaps in [`BitChunk`]s.
 //! Finally, this module also contains traits used to compile code optimized for SIMD instructions at [`mod@simd`].
+use std::cmp::Ordering;
 use std::convert::TryFrom;
 
 mod bit_chunk;
@@ -143,7 +144,7 @@ create_relation!(f32, PhysicalType::Primitive(PrimitiveType::Float32));
 create_relation!(f64, PhysicalType::Primitive(PrimitiveType::Float64));
 
 /// The in-memory representation of the DayMillisecond variant of arrow's "Interval" logical type.
-#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, Default, Eq, Hash)]
 #[allow(non_camel_case_types)]
 pub struct days_ms([i32; 2]);
 
@@ -225,8 +226,36 @@ impl days_ms {
     }
 }
 
+const MS_IN_DAY: i32 = 86_400_000;
+
+impl Ord for days_ms {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let self_days = self.days() + self.milliseconds() / MS_IN_DAY;
+        let other_days = other.days() + other.milliseconds() / MS_IN_DAY;
+        let ord = self_days.cmp(&other_days);
+        match ord {
+            Ordering::Greater | Ordering::Less => ord,
+            Ordering::Equal => {
+                (self.milliseconds() % MS_IN_DAY).cmp(&(other.milliseconds() % MS_IN_DAY))
+            }
+        }
+    }
+}
+
+impl PartialOrd for days_ms {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for days_ms {
+    fn eq(&self, other: &Self) -> bool {
+        self.cmp(other) == Ordering::Equal
+    }
+}
+
 /// The in-memory representation of the MonthDayNano variant of the "Interval" logical type.
-#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, Default, Eq, Hash)]
 #[allow(non_camel_case_types)]
 #[repr(C)]
 pub struct months_days_ns(i32, i32, i64);
@@ -327,5 +356,119 @@ impl months_days_ns {
     #[inline]
     pub fn ns(&self) -> i64 {
         self.2
+    }
+}
+
+const NS_IN_DAY: i64 = 86_400_000_000_000;
+
+impl PartialOrd for months_days_ns {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        let self_days = self.days() as i64 + self.ns() / NS_IN_DAY;
+        let other_days = other.days() as i64 + other.ns() / NS_IN_DAY;
+
+        if self.months() == other.months() {
+            // when months are equal, we have a total order
+            Some((self_days, self.ns() % NS_IN_DAY).cmp(&(other_days, other.ns() % NS_IN_DAY)))
+        } else {
+            // Order between months=1,days=0 and months=0,days=30 is undefined because max number
+            // of days in a month depends on which month we are in.
+            if self_days.abs() >= 28 || other_days.abs() >= 28 {
+                return None;
+            }
+
+            // when |days| is less than 28, we know it has to be smaller than 1 month, so a total
+            // order can be defined.
+            Some((self.months(), self_days, self.ns() % NS_IN_DAY).cmp(&(
+                other.months(),
+                other_days,
+                other.ns() % NS_IN_DAY,
+            )))
+        }
+    }
+}
+
+impl PartialEq for months_days_ns {
+    fn eq(&self, other: &Self) -> bool {
+        match self.partial_cmp(other) {
+            Some(Ordering::Equal) => true,
+            _ => false,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn days_ms_total_order() {
+        assert_eq!(days_ms::new(1, 0), days_ms::new(1, 0));
+        assert_eq!(days_ms::new(1, 0), days_ms::new(0, MS_IN_DAY));
+        assert_eq!(days_ms::new(1, 0), days_ms::new(-1, MS_IN_DAY * 2));
+        assert_eq!(days_ms::new(1, 0), days_ms::new(2, -MS_IN_DAY));
+
+        assert_eq!(days_ms::new(1, 0).cmp(&days_ms::new(1, 1)), Ordering::Less);
+        assert_eq!(
+            days_ms::new(1, 0).cmp(&days_ms::new(2, -MS_IN_DAY + 1)),
+            Ordering::Less
+        );
+
+        assert_eq!(
+            days_ms::new(10, 0).cmp(&days_ms::new(1, 1)),
+            Ordering::Greater
+        );
+        assert_eq!(
+            days_ms::new(0, MS_IN_DAY + 2).cmp(&days_ms::new(1, 1)),
+            Ordering::Greater
+        );
+        assert_eq!(
+            days_ms::new(-1, MS_IN_DAY * 2 + 2).cmp(&days_ms::new(1, 1)),
+            Ordering::Greater
+        );
+    }
+
+    #[test]
+    fn months_days_ns_partial_order() {
+        assert_eq!(months_days_ns::new(1, 0, 0), months_days_ns::new(1, 0, 0));
+        assert!(months_days_ns::new(1, 30, 0) != months_days_ns::new(2, 0, 0));
+
+        // order undefined
+        assert_eq!(
+            months_days_ns::new(1, 28, 0).partial_cmp(&months_days_ns::new(2, 0, 0)),
+            None,
+        );
+        assert_eq!(
+            months_days_ns::new(-1, -28, 0).partial_cmp(&months_days_ns::new(-2, 0, 0)),
+            None,
+        );
+        // ns overflow causing order to be undefined
+        assert_eq!(
+            months_days_ns::new(1, 27, NS_IN_DAY + 1).partial_cmp(&months_days_ns::new(2, 0, 0)),
+            None,
+        );
+        assert_eq!(
+            months_days_ns::new(1, -27, -NS_IN_DAY - 1).partial_cmp(&months_days_ns::new(2, 0, 0)),
+            None,
+        );
+
+        // total order when months are not equal, but |days| < 28
+        assert_eq!(
+            months_days_ns::new(1, 27, 0).partial_cmp(&months_days_ns::new(2, 0, 0)),
+            Some(Ordering::Less),
+        );
+        assert_eq!(
+            months_days_ns::new(1, 27, 0).partial_cmp(&months_days_ns::new(-2, 12, 1)),
+            Some(Ordering::Greater),
+        );
+
+        // total order when months are equal
+        assert_eq!(
+            months_days_ns::new(2, -28, 0).partial_cmp(&months_days_ns::new(2, 0, 0)),
+            Some(Ordering::Less),
+        );
+        assert_eq!(
+            months_days_ns::new(0, 28, 0).partial_cmp(&months_days_ns::new(0, 0, 1)),
+            Some(Ordering::Greater),
+        );
     }
 }
