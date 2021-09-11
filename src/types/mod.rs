@@ -144,7 +144,7 @@ create_relation!(f32, PhysicalType::Primitive(PrimitiveType::Float32));
 create_relation!(f64, PhysicalType::Primitive(PrimitiveType::Float64));
 
 /// The in-memory representation of the DayMillisecond variant of arrow's "Interval" logical type.
-#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, PartialOrd, Eq, Hash)]
 #[allow(non_camel_case_types)]
 pub struct days_ms([i32; 2]);
 
@@ -227,7 +227,7 @@ impl days_ms {
 }
 
 /// The in-memory representation of the MonthDayNano variant of the "Interval" logical type.
-#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, PartialOrd, Eq, Hash)]
 #[allow(non_camel_case_types)]
 #[repr(C)]
 pub struct months_days_ns(i32, i32, i64);
