@@ -163,6 +163,12 @@ fn write_100_decimal() -> Result<()> {
 }
 
 #[test]
+fn write_100_extension() -> Result<()> {
+    test_file("1.0.0-littleendian", "generated_extension")?;
+    test_file("1.0.0-bigendian", "generated_extension")
+}
+
+#[test]
 fn write_100_union() -> Result<()> {
     test_file("1.0.0-littleendian", "generated_union")?;
     test_file("1.0.0-bigendian", "generated_union")
