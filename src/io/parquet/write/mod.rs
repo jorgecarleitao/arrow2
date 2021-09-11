@@ -141,7 +141,7 @@ pub fn array_to_page(
         )));
     }
 
-    match data_type {
+    match data_type.to_logical_type() {
         DataType::Boolean => {
             boolean::array_to_page(array.as_any().downcast_ref().unwrap(), options, descriptor)
         }

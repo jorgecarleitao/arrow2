@@ -458,6 +458,12 @@ fn roundtrip_100_dict() -> Result<()> {
     test_file("1.0.0-bigendian", "generated_dictionary")
 }
 
+#[test]
+fn roundtrip_100_extension() -> Result<()> {
+    test_file("1.0.0-littleendian", "generated_extension")?;
+    test_file("1.0.0-bigendian", "generated_extension")
+}
+
 /// Tests that when arrow-specific types (Duration and LargeUtf8) are written to parquet, we can rountrip its
 /// logical types.
 #[test]

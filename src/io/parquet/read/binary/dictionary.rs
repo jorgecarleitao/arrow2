@@ -32,7 +32,7 @@ fn read_dict_optional<K, O>(
 {
     let length = indices.len() + additional;
     values.extend_from_slice(dict.values());
-    offsets.extend(
+    offsets.extend_from_trusted_len_iter(
         dict.offsets()
             .iter()
             .map(|x| O::from_usize(*x as usize).unwrap()),
@@ -152,6 +152,10 @@ where
         )?
     }
 
+    if offsets.len() == 0 {
+        // the array is empty and thus we need to push the first offset ourselves.
+        offsets.push(O::zero());
+    };
     let keys = PrimitiveArray::from_data(K::DATA_TYPE, indices.into(), validity.into());
     let data_type = DictionaryArray::<K>::get_child(&data_type).clone();
     let values = Arc::new(Utf8Array::from_data(
