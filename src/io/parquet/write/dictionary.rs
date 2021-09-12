@@ -136,7 +136,7 @@ where
     match encoding {
         Encoding::PlainDictionary | Encoding::RleDictionary => {
             // write DictPage
-            let dict_page = match array.values().data_type() {
+            let dict_page = match array.values().data_type().to_logical_type() {
                 DataType::Int8 => dyn_prim!(i8, i32, array),
                 DataType::Int16 => dyn_prim!(i16, i32, array),
                 DataType::Int32 | DataType::Date32 | DataType::Time32(_) => {

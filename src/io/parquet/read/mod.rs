@@ -93,7 +93,7 @@ fn dict_read<
         panic!()
     };
 
-    match values_data_type {
+    match values_data_type.to_logical_type() {
         UInt8 => primitive::iter_to_dict_array::<K, _, _, _, _, _>(
             iter,
             metadata,
@@ -169,7 +169,7 @@ pub fn page_iter_to_array<
     data_type: DataType,
 ) -> Result<Box<dyn Array>> {
     use DataType::*;
-    match data_type {
+    match data_type.to_logical_type() {
         // INT32
         UInt8 => primitive::iter_to_array(iter, metadata, data_type, |x: i32| x as u8),
         UInt16 => primitive::iter_to_array(iter, metadata, data_type, |x: i32| x as u16),
@@ -207,7 +207,7 @@ pub fn page_iter_to_array<
         Binary | Utf8 => binary::iter_to_array::<i32, _, _>(iter, metadata, &data_type),
         LargeBinary | LargeUtf8 => binary::iter_to_array::<i64, _, _>(iter, metadata, &data_type),
         FixedSizeBinary(size) => Ok(Box::new(fixed_size_binary::iter_to_array(
-            iter, size, metadata,
+            iter, data_type, metadata,
         )?)),
 
         List(ref inner) => match inner.data_type() {
@@ -247,7 +247,7 @@ pub fn page_iter_to_array<
                 binary::iter_to_array_nested::<i64, _, _>(iter, metadata, data_type)
             }
             other => Err(ArrowError::NotYetImplemented(format!(
-                "The conversion of {:?} to arrow still not implemented",
+                "Reading {:?} from parquet still not implemented",
                 other
             ))),
         },
@@ -265,7 +265,7 @@ pub fn page_iter_to_array<
         },
 
         other => Err(ArrowError::NotYetImplemented(format!(
-            "The conversion of {:?} to arrow still not implemented",
+            "Reading {:?} from parquet still not implemented",
             other
         ))),
     }
@@ -278,7 +278,7 @@ pub async fn page_stream_to_array<I: Stream<Item = std::result::Result<DataPage,
     data_type: DataType,
 ) -> Result<Box<dyn Array>> {
     use DataType::*;
-    match data_type {
+    match data_type.to_logical_type() {
         // INT32
         UInt8 => primitive::stream_to_array(pages, metadata, data_type, |x: i32| x as u8).await,
         UInt16 => primitive::stream_to_array(pages, metadata, data_type, |x: i32| x as u16).await,
@@ -321,7 +321,7 @@ pub async fn page_stream_to_array<I: Stream<Item = std::result::Result<DataPage,
             binary::stream_to_array::<i64, _, _>(pages, metadata, &data_type).await
         }
         FixedSizeBinary(size) => Ok(Box::new(
-            fixed_size_binary::stream_to_array(pages, size, metadata).await?,
+            fixed_size_binary::stream_to_array(pages, data_type, metadata).await?,
         )),
         other => Err(ArrowError::NotYetImplemented(format!(
             "Async conversion of {:?}",

@@ -45,7 +45,7 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
         Repetition::Required
     };
     // create type from field
-    match field.data_type() {
+    match field.data_type().to_logical_type() {
         DataType::Null => Ok(ParquetType::try_from_primitive(
             name,
             PhysicalType::Int32,

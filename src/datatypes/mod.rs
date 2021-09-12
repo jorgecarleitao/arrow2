@@ -9,26 +9,17 @@ pub use schema::Schema;
 
 pub(crate) use field::{get_extension, Extension, Metadata};
 
-/// The set of datatypes that are supported by this implementation of Apache Arrow.
-///
-/// The Arrow specification on data types includes some more types.
-/// See also [`Schema.fbs`](https://github.com/apache/arrow/blob/master/format/Schema.fbs)
-/// for Arrow's specification.
-///
-/// The variants of this enum include primitive fixed size types as well as parametric or
-/// nested types.
-/// Currently the Rust implementation supports the following  nested types:
-///  - `List<T>`
-///  - `Struct<T, U, V, ...>`
-///
-/// Nested types can themselves be nested within other arrays.
-/// For more information on these types please see
-/// [the physical memory layout of Apache Arrow](https://arrow.apache.org/docs/format/Columnar.html#physical-memory-layout).
+/// The set of supported logical types.
+/// Each variant uniquely identifies a logical type, which define specific semantics to the data (e.g. how it should be represented).
+/// A [`DataType`] has an unique corresponding [`PhysicalType`], obtained via [`DataType::to_physical_type`],
+/// which uniquely identifies an in-memory representation of data.
+/// The [`DataType::Extension`] is special in that it augments a [`DataType`] with metadata to support custom types.
+/// Use `to_logical_type` to desugar such type and return its correspoding logical type.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum DataType {
-    /// Null type, representing an array without values or validity, only a length.
+    /// Null type
     Null,
-    /// A boolean datatype representing the values `true` and `false`.
+    /// `true` and `false`.
     Boolean,
     /// A signed 8-bit integer.
     Int8,
@@ -221,6 +212,17 @@ impl DataType {
             Union(_, _, _) => PhysicalType::Union,
             Dictionary(key, _) => PhysicalType::Dictionary(to_dictionary_index_type(key.as_ref())),
             Extension(_, key, _) => key.to_physical_type(),
+        }
+    }
+
+    /// Returns `&self` for all but [`DataType::Extension`]. For [`DataType::Extension`],
+    /// (recursively) returns the inner [`DataType`].
+    /// Never returns the variant [`DataType::Extension`].
+    pub fn to_logical_type(&self) -> &DataType {
+        use DataType::*;
+        match self {
+            Extension(_, key, _) => key.to_logical_type(),
+            _ => self,
         }
     }
 }

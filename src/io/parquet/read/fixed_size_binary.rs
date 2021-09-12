@@ -22,12 +22,11 @@ pub(crate) fn read_dict_buffer(
     validity_buffer: &[u8],
     indices_buffer: &[u8],
     additional: usize,
-    size: i32,
+    size: usize,
     dict: &FixedLenByteArrayPageDict,
     values: &mut MutableBuffer<u8>,
     validity: &mut MutableBitmap,
 ) {
-    let size = size as usize;
     let length = values.len() * size + additional;
     let dict_values = dict.values();
 
@@ -75,11 +74,10 @@ pub(crate) fn read_optional(
     validity_buffer: &[u8],
     values_buffer: &[u8],
     additional: usize,
-    size: i32,
+    size: usize,
     values: &mut MutableBuffer<u8>,
     validity: &mut MutableBitmap,
 ) {
-    let size = size as usize;
     let length = values.len() * size + additional;
 
     assert_eq!(values_buffer.len() % size, 0);
@@ -122,16 +120,16 @@ pub(crate) fn read_optional(
 pub(crate) fn read_required(
     buffer: &[u8],
     additional: usize,
-    size: i32,
+    size: usize,
     values: &mut MutableBuffer<u8>,
 ) {
-    assert_eq!(buffer.len(), additional * size as usize);
+    assert_eq!(buffer.len(), additional * size);
     values.extend_from_slice(buffer);
 }
 
 pub fn iter_to_array<I, E>(
     mut iter: I,
-    size: i32,
+    data_type: DataType,
     metadata: &ColumnChunkMetaData,
 ) -> Result<FixedSizeBinaryArray>
 where
@@ -139,8 +137,10 @@ where
     E: Clone,
     I: StreamingIterator<Item = std::result::Result<DataPage, E>>,
 {
+    let size = *FixedSizeBinaryArray::get_size(&data_type) as usize;
+
     let capacity = metadata.num_values() as usize;
-    let mut values = MutableBuffer::<u8>::with_capacity(capacity * size as usize);
+    let mut values = MutableBuffer::<u8>::with_capacity(capacity * size);
     let mut validity = MutableBitmap::with_capacity(capacity);
     while let Some(page) = iter.next() {
         extend_from_page(
@@ -153,7 +153,7 @@ where
     }
 
     Ok(FixedSizeBinaryArray::from_data(
-        DataType::FixedSizeBinary(size),
+        data_type,
         values.into(),
         validity.into(),
     ))
@@ -161,7 +161,7 @@ where
 
 pub async fn stream_to_array<I, E>(
     pages: I,
-    size: i32,
+    data_type: DataType,
     metadata: &ColumnChunkMetaData,
 ) -> Result<FixedSizeBinaryArray>
 where
@@ -169,8 +169,10 @@ where
     E: Clone,
     I: Stream<Item = std::result::Result<DataPage, E>>,
 {
+    let size = *FixedSizeBinaryArray::get_size(&data_type) as usize;
+
     let capacity = metadata.num_values() as usize;
-    let mut values = MutableBuffer::<u8>::with_capacity(capacity * size as usize);
+    let mut values = MutableBuffer::<u8>::with_capacity(capacity * size);
     let mut validity = MutableBitmap::with_capacity(capacity);
 
     pin_mut!(pages); // needed for iteration
@@ -186,7 +188,7 @@ where
     }
 
     Ok(FixedSizeBinaryArray::from_data(
-        DataType::FixedSizeBinary(size),
+        data_type,
         values.into(),
         validity.into(),
     ))
@@ -194,7 +196,7 @@ where
 
 pub(crate) fn extend_from_page(
     page: &DataPage,
-    size: i32,
+    size: usize,
     descriptor: &ColumnDescriptor,
     values: &mut MutableBuffer<u8>,
     validity: &mut MutableBitmap,
