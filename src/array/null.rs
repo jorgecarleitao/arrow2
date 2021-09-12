@@ -1,4 +1,8 @@
-use crate::{bitmap::Bitmap, datatypes::DataType};
+use crate::{
+    bitmap::Bitmap,
+    datatypes::DataType,
+    error::{ArrowError, Result},
+};
 
 use super::{ffi::ToFfi, Array};
 
@@ -62,6 +66,11 @@ impl Array for NullArray {
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+    fn with_validity(&self, _: Option<Bitmap>) -> Result<Box<dyn Array>> {
+        Err(ArrowError::Other(
+            "cannot set validity of a null array".into(),
+        ))
     }
 }
 

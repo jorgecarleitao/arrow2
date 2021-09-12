@@ -1,6 +1,7 @@
 use crate::{
     bitmap::Bitmap,
     datatypes::{DataType, PhysicalType},
+    error::{ArrowError, Result},
 };
 
 use super::{display_fmt, Array};
@@ -117,6 +118,16 @@ impl Array for BooleanArray {
     #[inline]
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+    fn with_validity(&self, validity: Option<Bitmap>) -> Result<Box<dyn Array>> {
+        if matches!(&validity, Some(bitmap) if bitmap.len() < self.len()) {
+            return Err(ArrowError::InvalidArgumentError(
+                "validity should be as least as large as the array".into(),
+            ));
+        }
+        let mut arr = self.clone();
+        arr.validity = validity;
+        Ok(Box::new(arr))
     }
 }
 

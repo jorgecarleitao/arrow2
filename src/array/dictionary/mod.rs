@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::{
     bitmap::Bitmap,
     datatypes::DataType,
+    error::Result,
     scalar::{new_scalar, Scalar},
     types::{NativeType, NaturalDataType},
 };
@@ -136,6 +137,9 @@ impl<K: DictionaryKey> Array for DictionaryArray<K> {
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+    fn with_validity(&self, validity: Option<Bitmap>) -> Result<Box<dyn Array>> {
+        self.values.with_validity(validity)
     }
 }
 

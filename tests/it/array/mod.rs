@@ -11,7 +11,9 @@ mod primitive;
 mod union;
 mod utf8;
 
-use arrow2::array::{clone, new_empty_array, new_null_array};
+use arrow2::array::{clone, new_empty_array, new_null_array, Array, PrimitiveArray};
+use arrow2::bitmap::Bitmap;
+use arrow2::datatypes::PhysicalType::Primitive;
 use arrow2::datatypes::{DataType, Field};
 
 #[test]
@@ -67,4 +69,15 @@ fn test_clone() {
         .into_iter()
         .all(|x| clone(new_null_array(x.clone(), 10).as_ref()) == new_null_array(x, 10));
     assert!(a);
+}
+
+#[test]
+fn test_with_validity() {
+    let arr = PrimitiveArray::from_slice(&[1i32, 2, 3]);
+    let validity = Bitmap::from(&[true, false, true]);
+    let arr = arr.with_validity(Some(validity)).unwrap();
+    let arr_ref = arr.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
+
+    let expected = PrimitiveArray::from(&[Some(1i32), None, Some(3)]);
+    assert_eq!(arr_ref, &expected);
 }

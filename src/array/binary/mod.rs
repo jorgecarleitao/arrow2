@@ -1,4 +1,9 @@
-use crate::{bitmap::Bitmap, buffer::Buffer, datatypes::DataType};
+use crate::{
+    bitmap::Bitmap,
+    buffer::Buffer,
+    datatypes::DataType,
+    error::{ArrowError, Result},
+};
 
 use super::{
     display_fmt, display_helper, specification::check_offsets, specification::Offset, Array,
@@ -158,6 +163,16 @@ impl<O: Offset> Array for BinaryArray<O> {
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+    fn with_validity(&self, validity: Option<Bitmap>) -> Result<Box<dyn Array>> {
+        if matches!(&validity, Some(bitmap) if bitmap.len() < self.len()) {
+            return Err(ArrowError::InvalidArgumentError(
+                "validity should be as least as large as the array".into(),
+            ));
+        }
+        let mut arr = self.clone();
+        arr.validity = validity;
+        Ok(Box::new(arr))
     }
 }
 

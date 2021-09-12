@@ -5,6 +5,7 @@ use crate::{
     bitmap::Bitmap,
     buffer::Buffer,
     datatypes::{DataType, Field},
+    error::{ArrowError, Result},
     scalar::{new_scalar, Scalar},
 };
 
@@ -211,6 +212,11 @@ impl Array for UnionArray {
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+    fn with_validity(&self, _: Option<Bitmap>) -> Result<Box<dyn Array>> {
+        Err(ArrowError::Other(
+            "cannot set validity of a union array".into(),
+        ))
     }
 }
 
