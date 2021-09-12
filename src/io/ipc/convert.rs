@@ -333,6 +333,29 @@ fn write_metadata<'a>(
     }
 }
 
+fn write_extension<'a>(
+    fbb: &mut FlatBufferBuilder<'a>,
+    name: &str,
+    metadata: &Option<String>,
+    kv_vec: &mut Vec<WIPOffset<ipc::KeyValue<'a>>>,
+) {
+    // metadata
+    if let Some(metadata) = metadata {
+        let kv_args = ipc::KeyValueArgs {
+            key: Some(fbb.create_string("ARROW:extension:metadata")),
+            value: Some(fbb.create_string(metadata.as_str())),
+        };
+        kv_vec.push(ipc::KeyValue::create(fbb, &kv_args));
+    }
+
+    // name
+    let kv_args = ipc::KeyValueArgs {
+        key: Some(fbb.create_string("ARROW:extension:name")),
+        value: Some(fbb.create_string(name)),
+    };
+    kv_vec.push(ipc::KeyValue::create(fbb, &kv_args));
+}
+
 /// Create an IPC Field from an Arrow Field
 pub(crate) fn build_field<'a>(
     fbb: &mut FlatBufferBuilder<'a>,
@@ -341,39 +364,16 @@ pub(crate) fn build_field<'a>(
     // custom metadata.
     let mut kv_vec = vec![];
     if let DataType::Extension(name, _, metadata) = field.data_type() {
-        // append extension information.
-
-        // metadata
-        if let Some(metadata) = metadata {
-            let kv_args = ipc::KeyValueArgs {
-                key: Some(fbb.create_string("ARROW:extension:metadata")),
-                value: Some(fbb.create_string(metadata.as_str())),
-            };
-            kv_vec.push(ipc::KeyValue::create(fbb, &kv_args));
-        }
-
-        // name
-        let kv_args = ipc::KeyValueArgs {
-            key: Some(fbb.create_string("ARROW:extension:name")),
-            value: Some(fbb.create_string(name.as_str())),
-        };
-        kv_vec.push(ipc::KeyValue::create(fbb, &kv_args));
+        write_extension(fbb, name, metadata, &mut kv_vec);
     }
-    if let Some(metadata) = field.metadata() {
-        if !metadata.is_empty() {
-            write_metadata(fbb, metadata, &mut kv_vec);
-        }
-    };
-    let fb_metadata = if !kv_vec.is_empty() {
-        Some(fbb.create_vector(&kv_vec))
-    } else {
-        None
-    };
 
     let fb_field_name = fbb.create_string(field.name().as_str());
     let field_type = get_fb_field_type(field.data_type(), field.is_nullable(), fbb);
 
-    let fb_dictionary = if let Dictionary(index_type, _) = field.data_type() {
+    let fb_dictionary = if let Dictionary(index_type, inner) = field.data_type() {
+        if let DataType::Extension(name, _, metadata) = inner.as_ref() {
+            write_extension(fbb, name, metadata, &mut kv_vec);
+        }
         Some(get_fb_dictionary(
             index_type,
             field
@@ -384,6 +384,17 @@ pub(crate) fn build_field<'a>(
                 .expect("All Dictionary types have `dict_is_ordered`"),
             fbb,
         ))
+    } else {
+        None
+    };
+
+    if let Some(metadata) = field.metadata() {
+        if !metadata.is_empty() {
+            write_metadata(fbb, metadata, &mut kv_vec);
+        }
+    };
+    let fb_metadata = if !kv_vec.is_empty() {
+        Some(fbb.create_vector(&kv_vec))
     } else {
         None
     };
