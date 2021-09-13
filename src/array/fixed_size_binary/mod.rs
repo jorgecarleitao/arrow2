@@ -96,9 +96,9 @@ impl FixedSizeBinaryArray {
 
     /// Sets the validity bitmap on this [`FixedSizeBinaryArray`].
     /// # Panic
-    /// This function panics iff `validity.len() < self.len()`.
+    /// This function panics iff `validity.len() != self.len()`.
     pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
-        if matches!(&validity, Some(bitmap) if bitmap.len() < self.len()) {
+        if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
             panic!("validity should be as least as large as the array")
         }
         let mut arr = self.clone();
