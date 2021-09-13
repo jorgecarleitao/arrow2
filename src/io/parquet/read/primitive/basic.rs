@@ -84,7 +84,6 @@ fn read_dict_buffer_required<T, A, F>(
     A: ArrowNativeType,
     F: Fn(T) -> A,
 {
-    let length = additional + values.len();
     let dict_values = dict.values();
 
     // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
