@@ -72,6 +72,37 @@ fn read_dict_buffer_optional<T, A, F>(
     }
 }
 
+fn read_dict_buffer_required<T, A, F>(
+    indices_buffer: &[u8],
+    additional: usize,
+    dict: &PrimitivePageDict<T>,
+    values: &mut MutableBuffer<A>,
+    validity: &mut MutableBitmap,
+    op: F,
+) where
+    T: NativeType,
+    A: ArrowNativeType,
+    F: Fn(T) -> A,
+{
+    let length = additional + values.len();
+    let dict_values = dict.values();
+
+    // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
+    // SPEC: followed by the values encoded using RLE/Bit packed described above (with the given bit width).
+    let bit_width = indices_buffer[0];
+    let indices_buffer = &indices_buffer[1..];
+
+    let indices =
+        hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional);
+
+    for index in indices {
+        let value = op(dict_values[index as usize]);
+        values.push(value);
+    }
+
+    validity.extend_constant(additional, true);
+}
+
 fn read_nullable<T, A, F>(
     validity_buffer: &[u8],
     values_buffer: &[u8],
@@ -162,6 +193,16 @@ where
         (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
             read_dict_buffer_optional(
                 validity_buffer,
+                values_buffer,
+                additional,
+                dict.as_any().downcast_ref().unwrap(),
+                values,
+                validity,
+                op,
+            )
+        }
+        (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false) => {
+            read_dict_buffer_required(
                 values_buffer,
                 additional,
                 dict.as_any().downcast_ref().unwrap(),
