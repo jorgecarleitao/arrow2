@@ -93,10 +93,7 @@ fn read_dict_buffer_required<T, A, F>(
 
     let indices = hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional);
 
-    for index in indices {
-        let value = op(dict_values[index as usize]);
-        values.push(value);
-    }
+    values.extend(indices.map(|index| op(dict_values[index as usize])));
 
     validity.extend_constant(additional, true);
 }
