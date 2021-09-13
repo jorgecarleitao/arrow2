@@ -113,6 +113,16 @@ fn v1_int64_nullable_dict() -> Result<()> {
 }
 
 #[test]
+fn v2_int64_required_dict() -> Result<()> {
+    test_pyarrow_integration(0, 2, "basic", true, true)
+}
+
+#[test]
+fn v1_int64_required_dict() -> Result<()> {
+    test_pyarrow_integration(0, 1, "basic", true, true)
+}
+
+#[test]
 fn v2_utf8_nullable() -> Result<()> {
     test_pyarrow_integration(2, 2, "basic", false, false)
 }
