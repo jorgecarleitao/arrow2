@@ -92,8 +92,7 @@ fn read_dict_buffer_required<T, A, F>(
     let bit_width = indices_buffer[0];
     let indices_buffer = &indices_buffer[1..];
 
-    let indices =
-        hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional);
+    let indices = hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional);
 
     for index in indices {
         let value = op(dict_values[index as usize]);
