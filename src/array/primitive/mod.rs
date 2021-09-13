@@ -2,7 +2,7 @@ use crate::{
     bitmap::Bitmap,
     buffer::Buffer,
     datatypes::*,
-    error::{ArrowError, Result},
+    error::ArrowError,
     types::{days_ms, months_days_ns, NativeType},
 };
 
@@ -94,6 +94,18 @@ impl<T: NativeType> PrimitiveArray<T> {
         }
     }
 
+    /// Sets the validity bitmap on this [`PrimitiveArray`].
+    /// # Panic
+    /// This function panics iff `validity.len() < self.len()`.
+    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
+        if matches!(&validity, Some(bitmap) if bitmap.len() < self.len()) {
+            panic!("validity should be as least as large as the array")
+        }
+        let mut arr = self.clone();
+        arr.validity = validity;
+        arr
+    }
+
     /// The values [`Buffer`].
     #[inline]
     pub fn values(&self) -> &Buffer<T> {
@@ -162,15 +174,8 @@ impl<T: NativeType> Array for PrimitiveArray<T> {
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
     }
-    fn with_validity(&self, validity: Option<Bitmap>) -> Result<Box<dyn Array>> {
-        if matches!(&validity, Some(bitmap) if bitmap.len() < self.len()) {
-            return Err(ArrowError::InvalidArgumentError(
-                "validity should be as least as large as the array".into(),
-            ));
-        }
-        let mut arr = self.clone();
-        arr.validity = validity;
-        Ok(Box::new(arr))
+    fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
+        Box::new(self.with_validity(validity))
     }
 }
 

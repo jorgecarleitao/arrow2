@@ -90,7 +90,9 @@ pub trait Array: std::fmt::Debug + Send + Sync {
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array>;
 
     /// Sets the validity bitmap on this [`Array`].
-    fn with_validity(&self, validity: Option<Bitmap>) -> Result<Box<dyn Array>>;
+    /// # Panic
+    /// This function panics iff `validity.len() < self.len()`.
+    fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array>;
 }
 
 /// A trait describing a mutable array; i.e. an array whose values can be changed.

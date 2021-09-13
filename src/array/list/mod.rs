@@ -4,7 +4,6 @@ use crate::{
     bitmap::Bitmap,
     buffer::Buffer,
     datatypes::{DataType, Field},
-    error::{ArrowError, Result},
 };
 
 use super::{
@@ -118,6 +117,18 @@ impl<O: Offset> ListArray<O> {
     pub fn values(&self) -> &Arc<dyn Array> {
         &self.values
     }
+
+    /// Sets the validity bitmap on this [`ListArray`].
+    /// # Panic
+    /// This function panics iff `validity.len() < self.len()`.
+    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
+        if matches!(&validity, Some(bitmap) if bitmap.len() < self.len()) {
+            panic!("validity should be as least as large as the array")
+        }
+        let mut arr = self.clone();
+        arr.validity = validity;
+        arr
+    }
 }
 
 impl<O: Offset> ListArray<O> {
@@ -175,15 +186,8 @@ impl<O: Offset> Array for ListArray<O> {
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
     }
-    fn with_validity(&self, validity: Option<Bitmap>) -> Result<Box<dyn Array>> {
-        if matches!(&validity, Some(bitmap) if bitmap.len() < self.len()) {
-            return Err(ArrowError::InvalidArgumentError(
-                "validity should be as least as large as the array".into(),
-            ));
-        }
-        let mut arr = self.clone();
-        arr.validity = validity;
-        Ok(Box::new(arr))
+    fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
+        Box::new(self.with_validity(validity))
     }
 }
 

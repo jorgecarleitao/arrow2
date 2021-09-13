@@ -75,7 +75,7 @@ fn test_clone() {
 fn test_with_validity() {
     let arr = PrimitiveArray::from_slice(&[1i32, 2, 3]);
     let validity = Bitmap::from(&[true, false, true]);
-    let arr = arr.with_validity(Some(validity)).unwrap();
+    let arr = arr.with_validity(Some(validity));
     let arr_ref = arr.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
 
     let expected = PrimitiveArray::from(&[Some(1i32), None, Some(3)]);

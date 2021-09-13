@@ -1,9 +1,4 @@
-use crate::{
-    bitmap::Bitmap,
-    buffer::Buffer,
-    datatypes::DataType,
-    error::{ArrowError, Result},
-};
+use crate::{bitmap::Bitmap, buffer::Buffer, datatypes::DataType};
 
 use super::{
     display_fmt,
@@ -155,6 +150,18 @@ impl<O: Offset> Utf8Array<O> {
         }
     }
 
+    /// Sets the validity bitmap on this [`Utf8Array`].
+    /// # Panic
+    /// This function panics iff `validity.len() < self.len()`.
+    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
+        if matches!(&validity, Some(bitmap) if bitmap.len() < self.len()) {
+            panic!("validity should be as least as large as the array")
+        }
+        let mut arr = self.clone();
+        arr.validity = validity;
+        arr
+    }
+
     /// Returns the element at index `i` as &str
     pub fn value(&self, i: usize) -> &str {
         let offsets = self.offsets.as_slice();
@@ -204,15 +211,8 @@ impl<O: Offset> Array for Utf8Array<O> {
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
     }
-    fn with_validity(&self, validity: Option<Bitmap>) -> Result<Box<dyn Array>> {
-        if matches!(&validity, Some(bitmap) if bitmap.len() < self.len()) {
-            return Err(ArrowError::InvalidArgumentError(
-                "validity should be as least as large as the array".into(),
-            ));
-        }
-        let mut arr = self.clone();
-        arr.validity = validity;
-        Ok(Box::new(arr))
+    fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
+        Box::new(self.with_validity(validity))
     }
 }
 
