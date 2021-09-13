@@ -94,6 +94,18 @@ impl<O: Offset> BinaryArray<O> {
             offset: self.offset + offset,
         }
     }
+
+    /// Sets the validity bitmap on this [`BinaryArray`].
+    /// # Panic
+    /// This function panics iff `validity.len() != self.len()`.
+    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
+        if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
+            panic!("validity should be as least as large as the array")
+        }
+        let mut arr = self.clone();
+        arr.validity = validity;
+        arr
+    }
 }
 
 // accessors
@@ -158,6 +170,9 @@ impl<O: Offset> Array for BinaryArray<O> {
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+    fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
+        Box::new(self.with_validity(validity))
     }
 }
 

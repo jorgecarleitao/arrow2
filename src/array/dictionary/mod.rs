@@ -83,6 +83,18 @@ impl<K: DictionaryKey> DictionaryArray<K> {
         }
     }
 
+    /// Sets the validity bitmap on this [`Array`].
+    /// # Panic
+    /// This function panics iff `validity.len() != self.len()`.
+    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
+        if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
+            panic!("validity should be as least as large as the array")
+        }
+        let mut arr = self.clone();
+        arr.values = Arc::from(arr.values.with_validity(validity));
+        arr
+    }
+
     /// Returns the keys of the [`DictionaryArray`]. These keys can be used to fetch values
     /// from `values`.
     #[inline]
@@ -136,6 +148,9 @@ impl<K: DictionaryKey> Array for DictionaryArray<K> {
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+    fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
+        Box::new(self.with_validity(validity))
     }
 }
 

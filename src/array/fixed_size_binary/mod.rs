@@ -93,6 +93,18 @@ impl FixedSizeBinaryArray {
     pub fn size(&self) -> usize {
         self.size as usize
     }
+
+    /// Sets the validity bitmap on this [`FixedSizeBinaryArray`].
+    /// # Panic
+    /// This function panics iff `validity.len() != self.len()`.
+    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
+        if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
+            panic!("validity should be as least as large as the array")
+        }
+        let mut arr = self.clone();
+        arr.validity = validity;
+        arr
+    }
 }
 
 impl FixedSizeBinaryArray {
@@ -127,6 +139,9 @@ impl Array for FixedSizeBinaryArray {
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+    fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
+        Box::new(self.with_validity(validity))
     }
 }
 

@@ -212,6 +212,9 @@ impl Array for UnionArray {
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
     }
+    fn with_validity(&self, _: Option<Bitmap>) -> Box<dyn Array> {
+        panic!("cannot set validity of a union array")
+    }
 }
 
 impl UnionArray {
