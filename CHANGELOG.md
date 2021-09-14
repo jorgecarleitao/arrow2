@@ -1,5 +1,27 @@
 # Changelog
 
+## [v0.5.3](https://github.com/jorgecarleitao/arrow2/tree/v0.5.3) (2021-09-14)
+
+[Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.5.2...v0.5.3)
+
+**New features:**
+
+- Added support to read and write extension types to and from parquet [\#396](https://github.com/jorgecarleitao/arrow2/pull/396) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Fixed bugs:**
+
+- Fixed error writing dictionary extension to IPC [\#397](https://github.com/jorgecarleitao/arrow2/pull/397) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed error in extending `MutableBitmap` [\#393](https://github.com/jorgecarleitao/arrow2/pull/393) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Enhancements:**
+
+- Added support to read dict-encoded required primitive types from parquet [\#402](https://github.com/jorgecarleitao/arrow2/pull/402) ([Dandandan](https://github.com/Dandandan))
+- Added `Array::with_validity` [\#399](https://github.com/jorgecarleitao/arrow2/pull/399) ([ritchie46](https://github.com/ritchie46))
+
+**Testing updates:**
+
+- Fix testing of SIMD [\#394](https://github.com/jorgecarleitao/arrow2/pull/394) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
 ## [v0.5.1](https://github.com/jorgecarleitao/arrow2/tree/v0.5.1) (2021-09-09)
 
 [Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.5.0...v0.5.1)
