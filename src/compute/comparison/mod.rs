@@ -90,14 +90,14 @@ mod simd;
 pub use simd::{Simd8, Simd8Lanes};
 
 pub use binary::compare as binary_compare;
-pub use binary::compare_scalar_non_null as binary_compare_scalar;
+pub use binary::compare_scalar as binary_compare_scalar;
 pub use boolean::compare as boolean_compare;
-pub use boolean::compare_scalar_non_null as boolean_compare_scalar;
+pub use boolean::compare_scalar as boolean_compare_scalar;
 pub use primitive::compare as primitive_compare;
-pub use primitive::compare_scalar_non_null as primitive_compare_scalar;
+pub use primitive::compare_scalar as primitive_compare_scalar;
 pub(crate) use primitive::compare_values_op as primitive_compare_values_op;
 pub use utf8::compare as utf8_compare;
-pub use utf8::compare_scalar_non_null as utf8_compare_scalar;
+pub use utf8::compare_scalar as utf8_compare_scalar;
 
 /// Comparison operators, such as `>` ([`Operator::Gt`])
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
