@@ -15,7 +15,66 @@
 // specific language governing permissions and limitations
 // under the License.
 
-//! Defines basic comparison kernels.
+//! Basic comparison kernels.
+//!
+//! The module contains functions that compare either an array and a scalar
+//! or two arrays of the same [`DataType`]. The scalar-oriented functions are
+//! suffixed with `_scalar`. In general, these comparison functions receive as
+//! inputs the two items for comparison and an [`Operator`] which specifies the
+//! type of comparison that will be conducted, such as `<=` ([`Operator::LtEq`]).
+//!
+//! Much like the parent module [`crate::compute`](compute), the comparison functions
+//! have two variants - a statically typed one ([`primitive_compare`])
+//! which expects concrete types such as [`Int8Array`] and a dynamically typed
+//! variant ([`compare`]) that compares values of type `&dyn Array` and errors
+//! if the underlying concrete types mismsatch. The statically-typed functions
+//! are appropriately prefixed with the concrete types they expect.
+//!
+//! Also note that the scalar-based comparison functions for the concrete types,
+//! like [`primitive_compare_scalar`], are infallible and always return a
+//! [`BooleanArray`] while the rest of the functions always wrap the returned
+//! array in a [`Result`] due to their internal checks of the data types and
+//! lengths.
+//!
+//! # Examples
+//!
+//! Compare two [`PrimitiveArray`]s:
+//! ```
+//! use arrow2::compute::comparison::{primitive_compare, Operator};
+//! # use arrow2::array::{BooleanArray, PrimitiveArray};
+//! # use arrow2::error::{ArrowError, Result};
+//!
+//! let array1 = PrimitiveArray::<i32>::from([Some(1), None, Some(2)]);
+//! let array2 = PrimitiveArray::<i32>::from([Some(1), None, Some(1)]);
+//! let result = primitive_compare(&array1, &array2, Operator::Gt)?;
+//! assert_eq!(result, BooleanArray::from([Some(false), None, Some(true)]));
+//! # Ok::<(), ArrowError>(())
+//! ```
+//! Compare two dynamically-typed arrays (trait objects):
+//! ```
+//! use arrow2::compute::comparison::{compare, Operator};
+//! # use arrow2::array::{Array, BooleanArray, PrimitiveArray};
+//! # use arrow2::error::{ArrowError, Result};
+//!
+//! let array1: &dyn Array = &PrimitiveArray::<f64>::from(&[Some(10.0), None, Some(20.0)]);
+//! let array2: &dyn Array = &PrimitiveArray::<f64>::from(&[Some(10.0), None, Some(10.0)]);
+//! let result = compare(array1, array2, Operator::LtEq)?;
+//! assert_eq!(result, BooleanArray::from([Some(true), None, Some(false)]));
+//! # Ok::<(), ArrowError>(())
+//! ```
+//! Compare an array of strings to a "scalar", i.e a word (note that we use
+//! [`Operator::Neq`]):
+//! ```
+//! use arrow2::compute::comparison::{utf8_compare_scalar, Operator};
+//! # use arrow2::array::{Array, BooleanArray, Utf8Array};
+//! # use arrow2::error::{ArrowError, Result};
+//!
+//! let array = Utf8Array::<i32>::from([Some("compute"), None, Some("compare")]);
+//! let word = "compare";
+//! let result = utf8_compare_scalar(&array, word, Operator::Neq);
+//! assert_eq!(result, BooleanArray::from([Some(true), None, Some(false)]));
+//! # Ok::<(), ArrowError>(())
+//! ```
 
 use crate::array::*;
 use crate::datatypes::{DataType, IntervalUnit};
@@ -30,6 +89,17 @@ mod utf8;
 mod simd;
 pub use simd::{Simd8, Simd8Lanes};
 
+pub use binary::compare as binary_compare;
+pub use binary::compare_scalar_non_null as binary_compare_scalar;
+pub use boolean::compare as boolean_compare;
+pub use boolean::compare_scalar_non_null as boolean_compare_scalar;
+pub use primitive::compare as primitive_compare;
+pub use primitive::compare_scalar_non_null as primitive_compare_scalar;
+pub(crate) use primitive::compare_values_op as primitive_compare_values_op;
+pub use utf8::compare as utf8_compare;
+pub use utf8::compare_scalar_non_null as utf8_compare_scalar;
+
+/// Comparison operators, such as `>` ([`Operator::Gt`])
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Operator {
     Lt,
@@ -262,13 +332,6 @@ pub fn compare_scalar(
         }
     })
 }
-
-pub use binary::compare_scalar_non_null as binary_compare_scalar;
-pub use boolean::compare_scalar_non_null as boolean_compare_scalar;
-pub use primitive::compare_scalar_non_null as primitive_compare_scalar;
-pub(crate) use primitive::compare_values_op as primitive_compare_values_op;
-pub use utf8::compare_scalar_non_null as utf8_compare_scalar;
-
 /// Checks if an array of type `datatype` can be compared with another array of
 /// the same type.
 ///
