@@ -1,6 +1,7 @@
 use arrow2::{
     array::{Array, BinaryArray},
     bitmap::Bitmap,
+    buffer::Buffer,
     datatypes::DataType,
 };
 
@@ -70,4 +71,67 @@ fn from_iter() {
     let iter = std::iter::repeat(b"hello").take(2).map(Some);
     let a: BinaryArray<i32> = iter.collect();
     assert_eq!(a.len(), 2);
+}
+
+#[test]
+fn with_validity() {
+    let array = BinaryArray::<i32>::from(&[Some(b"hello".as_ref()), Some(b" ".as_ref()), None]);
+
+    let array = array.with_validity(None);
+
+    let a = array.validity();
+    assert_eq!(a, &None);
+}
+
+#[test]
+#[should_panic]
+fn wrong_offsets() {
+    let offsets = Buffer::from(&[0, 5, 4]); // invalid offsets
+    let values = Buffer::from(b"abbbbb");
+    BinaryArray::<i32>::from_data(DataType::Binary, offsets, values, None);
+}
+
+#[test]
+#[should_panic]
+fn wrong_data_type() {
+    let offsets = Buffer::from(&[0, 4]);
+    let values = Buffer::from(b"abbb");
+    BinaryArray::<i32>::from_data(DataType::Int8, offsets, values, None);
+}
+
+#[test]
+#[should_panic]
+fn value_with_wrong_offsets_panics() {
+    let offsets = Buffer::from(&[0, 10, 11, 4]);
+    let values = Buffer::from(b"abbb");
+    // the 10-11 is not checked
+    let array = BinaryArray::<i32>::from_data(DataType::Binary, offsets, values, None);
+
+    // but access is still checked (and panics)
+    // without checks, this would result in reading beyond bounds
+    array.value(0);
+}
+
+#[test]
+#[should_panic]
+fn index_out_of_bounds_panics() {
+    let offsets = Buffer::from(&[0, 1, 2, 4]);
+    let values = Buffer::from(b"abbb");
+    let array = BinaryArray::<i32>::from_data(DataType::Utf8, offsets, values, None);
+
+    array.value(3);
+}
+
+#[test]
+#[should_panic]
+fn value_unchecked_with_wrong_offsets_panics() {
+    let offsets = Buffer::from(&[0, 10, 11, 4]);
+    let values = Buffer::from(b"abbb");
+    // the 10-11 is not checked
+    let array = BinaryArray::<i32>::from_data(DataType::Binary, offsets, values, None);
+
+    // but access is still checked (and panics)
+    // without checks, this would result in reading beyond bounds,
+    // even if `0` is in bounds
+    unsafe { array.value_unchecked(0) };
 }

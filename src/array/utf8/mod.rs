@@ -94,7 +94,7 @@ impl<O: Offset> Utf8Array<O> {
         }
     }
 
-    /// The same as [`Utf8Array::from_data`] but does not check for utf8.
+    /// The same as [`Utf8Array::from_data`] but does not check for valid utf8.
     /// # Safety
     /// `values` buffer must contain valid utf8 between every `offset`
     pub unsafe fn from_data_unchecked(
@@ -122,13 +122,14 @@ impl<O: Offset> Utf8Array<O> {
     /// # Safety
     /// This function is safe `iff` `i < self.len`.
     pub unsafe fn value_unchecked(&self, i: usize) -> &str {
-        let offset = *self.offsets.as_ptr().add(i);
-        let offset_1 = *self.offsets.as_ptr().add(i + 1);
+        // soundness: the invariant of the function
+        let offset = *self.offsets.get_unchecked(i);
+        let offset_1 = *self.offsets.get_unchecked(i + 1);
         let length = (offset_1 - offset).to_usize();
         let offset = offset.to_usize();
 
-        // Soundness: `from_data` verifies that each slot is utf8 and offsets are built correctly.
-        let slice = std::slice::from_raw_parts(self.values.as_ptr().add(offset), length);
+        let slice = &self.values.as_slice()[offset..offset + length];
+        // soundness: the invariant of the struct
         std::str::from_utf8_unchecked(slice)
     }
 
@@ -171,8 +172,8 @@ impl<O: Offset> Utf8Array<O> {
         let offset = offset.to_usize();
 
         let slice = &self.values.as_slice()[offset..offset + length];
-        // todo: validate utf8 so that we can use the unsafe version
-        std::str::from_utf8(slice).unwrap()
+        // soundness: we always check for utf8 soundness on constructors.
+        unsafe { std::str::from_utf8_unchecked(slice) }
     }
 
     /// Returns the offsets of this [`Utf8Array`].

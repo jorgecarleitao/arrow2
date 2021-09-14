@@ -95,12 +95,12 @@ impl<O: Offset> BinaryArray<O> {
         }
     }
 
-    /// Sets the validity bitmap on this [`BinaryArray`].
+    /// Clones this [`BinaryArray`] with a different validity.
     /// # Panic
-    /// This function panics iff `validity.len() != self.len()`.
+    /// Panics iff `validity.len() != self.len()`.
     pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
         if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
-            panic!("validity should be as least as large as the array")
+            panic!("validity's length must be equal to the array's length")
         }
         let mut arr = self.clone();
         arr.validity = validity;
@@ -112,7 +112,7 @@ impl<O: Offset> BinaryArray<O> {
 impl<O: Offset> BinaryArray<O> {
     /// Returns the element at index `i`
     /// # Panics
-    /// iff `i > self.len()`
+    /// iff `i >= self.len()`
     pub fn value(&self, i: usize) -> &[u8] {
         let offsets = self.offsets.as_slice();
         let offset = offsets[i];
@@ -127,8 +127,8 @@ impl<O: Offset> BinaryArray<O> {
     /// # Safety
     /// Assumes that the `i < self.len`.
     pub unsafe fn value_unchecked(&self, i: usize) -> &[u8] {
-        let offset = *self.offsets.as_ptr().add(i);
-        let offset_1 = *self.offsets.as_ptr().add(i + 1);
+        let offset = *self.offsets.get_unchecked(i);
+        let offset_1 = *self.offsets.get_unchecked(i + 1);
         let length = (offset_1 - offset).to_usize();
         let offset = offset.to_usize();
 

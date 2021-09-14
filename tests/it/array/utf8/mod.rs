@@ -127,7 +127,44 @@ fn wrong_offsets() {
 #[test]
 #[should_panic]
 fn wrong_data_type() {
-    let offsets = Buffer::from(&[0, 4]); // invalid offsets
+    let offsets = Buffer::from(&[0, 4]);
     let values = Buffer::from(b"abbb");
     Utf8Array::<i32>::from_data(DataType::Int8, offsets, values, None);
+}
+
+#[test]
+#[should_panic]
+fn value_with_wrong_offsets_panics() {
+    let offsets = Buffer::from(&[0, 10, 11, 4]);
+    let values = Buffer::from(b"abbb");
+    // the 10-11 is not checked
+    let array = Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
+
+    // but access is still checked (and panics)
+    // without checks, this would result in reading beyond bounds
+    array.value(0);
+}
+
+#[test]
+#[should_panic]
+fn index_out_of_bounds_panics() {
+    let offsets = Buffer::from(&[0, 1, 2, 4]);
+    let values = Buffer::from(b"abbb");
+    let array = Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
+
+    array.value(3);
+}
+
+#[test]
+#[should_panic]
+fn value_unchecked_with_wrong_offsets_panics() {
+    let offsets = Buffer::from(&[0, 10, 11, 4]);
+    let values = Buffer::from(b"abbb");
+    // the 10-11 is not checked
+    let array = Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
+
+    // but access is still checked (and panics)
+    // without checks, this would result in reading beyond bounds,
+    // even if index `0` is in bounds
+    unsafe { array.value_unchecked(0) };
 }
