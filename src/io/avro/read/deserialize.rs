@@ -39,7 +39,15 @@ pub fn deserialize(mut block: &[u8], rows: usize, schema: Arc<Schema>) -> Result
 
     // this is _the_ expensive transpose (rows -> columns)
     for row in (0..rows) {
-        for array in &mut arrays {
+        for (array, field) in arrays.iter_mut().zip(schema.fields().iter()) {
+            if field.is_nullable() {
+                // variant 0 is always the null in a union array
+                if util::zigzag_i64(&mut block)? == 0 {
+                    array.push_null();
+                    continue;
+                }
+            }
+
             match array.data_type().to_physical_type() {
                 PhysicalType::Boolean => {
                     let is_valid = block[0] == 1;

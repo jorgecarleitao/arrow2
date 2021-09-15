@@ -21,7 +21,8 @@ fn schema() -> (AvroSchema, Schema) {
             {"name": "c", "type": "int"},
             {"name": "d", "type": "bytes"},
             {"name": "e", "type": "double"},
-            {"name": "f", "type": "boolean"}
+            {"name": "f", "type": "boolean"},
+            {"name": "h", "type": ["null", "string"], "default": null}
         ]
     }
 "#;
@@ -33,6 +34,7 @@ fn schema() -> (AvroSchema, Schema) {
         Field::new("d", DataType::Binary, false),
         Field::new("e", DataType::Float64, false),
         Field::new("f", DataType::Boolean, false),
+        Field::new("h", DataType::Utf8, true),
     ]);
 
     (AvroSchema::parse_str(raw_schema).unwrap(), schema)
@@ -51,6 +53,7 @@ fn write() -> Result<(Vec<u8>, RecordBatch)> {
     record.put("d", b"foo".as_ref());
     record.put("e", 1.0f64);
     record.put("f", true);
+    record.put("h", Some("foo"));
     writer.append(record)?;
 
     let mut record = Record::new(writer.schema()).unwrap();
@@ -60,6 +63,7 @@ fn write() -> Result<(Vec<u8>, RecordBatch)> {
     record.put("d", b"bar".as_ref());
     record.put("e", 2.0f64);
     record.put("f", false);
+    record.put("h", None::<&str>);
     writer.append(record)?;
 
     let columns = vec![
@@ -69,6 +73,7 @@ fn write() -> Result<(Vec<u8>, RecordBatch)> {
         Arc::new(BinaryArray::<i32>::from_slice([b"foo", b"bar"])) as Arc<dyn Array>,
         Arc::new(PrimitiveArray::<f64>::from_slice([1.0, 2.0])) as Arc<dyn Array>,
         Arc::new(BooleanArray::from_slice([true, false])) as Arc<dyn Array>,
+        Arc::new(Utf8Array::<i32>::from([Some("foo"), None])) as Arc<dyn Array>,
     ];
 
     let expected = RecordBatch::try_new(Arc::new(schema), columns).unwrap();
