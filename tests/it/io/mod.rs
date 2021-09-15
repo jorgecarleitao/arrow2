@@ -10,5 +10,8 @@ mod ipc;
 #[cfg(feature = "io_parquet")]
 mod parquet;
 
+#[cfg(feature = "io_avro")]
+mod avro;
+
 #[cfg(feature = "io_csv")]
 mod csv;
