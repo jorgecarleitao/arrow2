@@ -1,6 +1,6 @@
 # CSV reader
 
-When compiled with feature `io_csv`, you can use this crate to read CSV files.
+When compiled with feature `read_csv`, you can use this crate to read CSV files.
 This crate makes minimal assumptions on how you want to read a CSV, and offers a large degree of customization to it, along with a useful default.
 
 ## Background

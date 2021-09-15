@@ -16,5 +16,8 @@ impl From<chrono::ParseError> for ArrowError {
     }
 }
 
+#[cfg(feature = "read_csv")]
 pub mod read;
+
+#[cfg(feature = "write_csv")]
 pub mod write;

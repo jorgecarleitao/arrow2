@@ -10,5 +10,5 @@ mod ipc;
 #[cfg(feature = "io_parquet")]
 mod parquet;
 
-#[cfg(feature = "io_csv")]
+#[cfg(any(feature = "read_csv", feature = "write_csv"))]
 mod csv;

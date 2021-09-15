@@ -1,6 +1,6 @@
 //! Interact with different formats such as Arrow, CSV, parquet, etc.
-#[cfg(feature = "io_csv")]
-#[cfg_attr(docsrs, doc(cfg(feature = "io_csv")))]
+#[cfg(any(feature = "read_csv", feature = "write_csv"))]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "read_csv", feature = "write_csv"))))]
 pub mod csv;
 
 #[cfg(feature = "io_json")]

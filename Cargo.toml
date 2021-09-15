@@ -78,7 +78,8 @@ rustdoc-args = ["--cfg", "docsrs"]
 [features]
 default = []
 full = [
-    "io_csv",
+    "read_csv",
+    "write_csv",
     "io_json",
     "io_ipc",
     "io_ipc_compression",
@@ -94,7 +95,8 @@ full = [
     "chrono-tz",
 ]
 merge_sort = ["itertools"]
-io_csv = ["csv", "lazy_static", "regex", "lexical-core", "streaming-iterator"]
+read_csv = ["csv", "lexical-core", "regex", "lazy_static"]
+write_csv = ["csv", "lexical-core", "streaming-iterator"]
 io_json = ["serde", "serde_json", "indexmap"]
 io_ipc = ["flatbuffers"]
 io_ipc_compression = ["lz4", "zstd"]

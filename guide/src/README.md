@@ -19,7 +19,8 @@ functionality, such as:
 
 * `io_ipc`: to interact with the IPC format
 * `io_ipc_compression`: to read and write compressed IPC (v2)
-* `io_csv` to read and write CSV
+* `read_csv` to read CSV
+* `write_csv` to write CSV
 * `io_json` to read and write JSON
 * `io_parquet` to read and write parquet
 * `io_parquet_compression` to read and write compressed parquet

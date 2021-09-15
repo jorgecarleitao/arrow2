@@ -1,6 +1,6 @@
 # Write CSV
 
-When compiled with feature `io_csv`, you can use this crate to write CSV files.
+When compiled with feature `write_csv`, you can use this crate to write CSV files.
 
 This crate relies on [the crate csv](https://crates.io/crates/csv) to write well-formed CSV files, which your code should also depend on.
 
