@@ -2,7 +2,6 @@ use std::io::Read;
 use std::sync::Arc;
 
 use avro_rs::Codec;
-use avro_rs::Reader as AvroReader;
 use streaming_iterator::StreamingIterator;
 
 mod deserialize;

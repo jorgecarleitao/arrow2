@@ -38,7 +38,7 @@ pub fn deserialize(mut block: &[u8], rows: usize, schema: Arc<Schema>) -> Result
         .collect::<Result<_>>()?;
 
     // this is _the_ expensive transpose (rows -> columns)
-    for row in (0..rows) {
+    for _ in 0..rows {
         for (array, field) in arrays.iter_mut().zip(schema.fields().iter()) {
             if field.is_nullable() {
                 // variant 0 is always the null in a union array
@@ -99,7 +99,7 @@ pub fn deserialize(mut block: &[u8], rows: usize, schema: Arc<Schema>) -> Result
                     }
                 }
                 PhysicalType::Utf8 => {
-                    let len: usize = util::zigzag_i64(&mut block)?.try_into().map_err(|e| {
+                    let len: usize = util::zigzag_i64(&mut block)?.try_into().map_err(|_| {
                         ArrowError::ExternalFormat(
                             "Avro format contains a non-usize number of bytes".to_string(),
                         )
@@ -114,7 +114,7 @@ pub fn deserialize(mut block: &[u8], rows: usize, schema: Arc<Schema>) -> Result
                     array.push(Some(data))
                 }
                 PhysicalType::Binary => {
-                    let len: usize = util::zigzag_i64(&mut block)?.try_into().map_err(|e| {
+                    let len: usize = util::zigzag_i64(&mut block)?.try_into().map_err(|_| {
                         ArrowError::ExternalFormat(
                             "Avro format contains a non-usize number of bytes".to_string(),
                         )

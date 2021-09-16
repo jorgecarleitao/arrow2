@@ -13,7 +13,6 @@ mod utf8;
 
 use arrow2::array::{clone, new_empty_array, new_null_array, Array, PrimitiveArray};
 use arrow2::bitmap::Bitmap;
-use arrow2::datatypes::PhysicalType::Primitive;
 use arrow2::datatypes::{DataType, Field};
 
 #[test]
