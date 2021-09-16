@@ -118,11 +118,17 @@ simd = ["packed_simd"]
 
 [package.metadata.cargo-all-features]
 skip_feature_sets = [
+    # full is tested independently and is not to be used with other features.
+    ["full"],
+    # very small scope with no API changes.
+    ["ahash"],
     ["benchmarks"],
     ["merge_sort"],
     ["io_json_integration"],
     # this does not change the public API
     ["io_parquet_compression"],
+    ["io_ipc_compression"],
+    # tested in separate
     ["simd"],
 ]
 
