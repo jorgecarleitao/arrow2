@@ -206,7 +206,7 @@ pub fn page_iter_to_array<
 
         Binary | Utf8 => binary::iter_to_array::<i32, _, _>(iter, metadata, &data_type),
         LargeBinary | LargeUtf8 => binary::iter_to_array::<i64, _, _>(iter, metadata, &data_type),
-        FixedSizeBinary(size) => Ok(Box::new(fixed_size_binary::iter_to_array(
+        FixedSizeBinary(_) => Ok(Box::new(fixed_size_binary::iter_to_array(
             iter, data_type, metadata,
         )?)),
 
@@ -320,7 +320,7 @@ pub async fn page_stream_to_array<I: Stream<Item = std::result::Result<DataPage,
         LargeBinary | LargeUtf8 => {
             binary::stream_to_array::<i64, _, _>(pages, metadata, &data_type).await
         }
-        FixedSizeBinary(size) => Ok(Box::new(
+        FixedSizeBinary(_) => Ok(Box::new(
             fixed_size_binary::stream_to_array(pages, data_type, metadata).await?,
         )),
         other => Err(ArrowError::NotYetImplemented(format!(

@@ -152,7 +152,7 @@ where
         )?
     }
 
-    if offsets.len() == 0 {
+    if offsets.is_empty() {
         // the array is empty and thus we need to push the first offset ourselves.
         offsets.push(O::zero());
     };
