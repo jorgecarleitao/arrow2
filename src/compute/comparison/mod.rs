@@ -67,11 +67,12 @@
 //! ```
 //! use arrow2::compute::comparison::{utf8_compare_scalar, Operator};
 //! # use arrow2::array::{Array, BooleanArray, Utf8Array};
+//! # use arrow2::scalar::Utf8Scalar;
 //! # use arrow2::error::{ArrowError, Result};
 //!
 //! let array = Utf8Array::<i32>::from([Some("compute"), None, Some("compare")]);
-//! let word = "compare";
-//! let result = utf8_compare_scalar(&array, word, Operator::Neq);
+//! let word = Utf8Scalar::new(Some("compare"));
+//! let result = utf8_compare_scalar(&array, &word, Operator::Neq);
 //! assert_eq!(result, BooleanArray::from([Some(true), None, Some(false)]));
 //! # Ok::<(), ArrowError>(())
 //! ```
