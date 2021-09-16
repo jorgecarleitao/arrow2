@@ -121,6 +121,13 @@ fn gt_eq_scalar<O: Offset>(lhs: &Utf8Array<O>, rhs: &str) -> BooleanArray {
     compare_op_scalar(lhs, rhs, |a, b| a >= b)
 }
 
+/// Compare two [`Utf8Array`]s using the given [`Operator`].
+///
+/// # Errors
+/// When the two arrays have different lengths.
+///
+/// Check the [crate::compute::comparison](module documentation) for usage
+/// examples.
 pub fn compare<O: Offset>(
     lhs: &Utf8Array<O>,
     rhs: &Utf8Array<O>,
@@ -136,6 +143,11 @@ pub fn compare<O: Offset>(
     }
 }
 
+/// Compare a [`Utf8Array`] and a scalar value using the given
+/// [`Operator`].
+///
+/// Check the [crate::compute::comparison](module documentation) for usage
+/// examples.
 pub fn compare_scalar<O: Offset>(
     lhs: &Utf8Array<O>,
     rhs: &Utf8Scalar<O>,

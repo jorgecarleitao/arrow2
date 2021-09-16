@@ -140,6 +140,13 @@ pub fn gt_eq_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
     compare_op_scalar(lhs, rhs, |a, b| a | !b)
 }
 
+/// Compare two [`BooleanArray`]s using the given [`Operator`].
+///
+/// # Errors
+/// When the two arrays have different lengths.
+///
+/// Check the [crate::compute::comparison](module documentation) for usage
+/// examples.
 pub fn compare(lhs: &BooleanArray, rhs: &BooleanArray, op: Operator) -> Result<BooleanArray> {
     match op {
         Operator::Eq => eq(lhs, rhs),
@@ -151,6 +158,11 @@ pub fn compare(lhs: &BooleanArray, rhs: &BooleanArray, op: Operator) -> Result<B
     }
 }
 
+/// Compare a [`BooleanArray`] and a scalar value using the given
+/// [`Operator`].
+///
+/// Check the [crate::compute::comparison](module documentation) for usage
+/// examples.
 pub fn compare_scalar(lhs: &BooleanArray, rhs: &BooleanScalar, op: Operator) -> BooleanArray {
     if !rhs.is_valid() {
         return BooleanArray::new_null(DataType::Boolean, lhs.len());

@@ -213,6 +213,13 @@ where
     compare_op_scalar(lhs, rhs, |a, b| a.gt_eq(b))
 }
 
+/// Compare two [`PrimitiveArray`]s using the given [`Operator`].
+///
+/// # Errors
+/// When the two arrays have different lengths.
+///
+/// Check the [crate::compute::comparison](module documentation) for usage
+/// examples.
 pub fn compare<T: NativeType + Simd8>(
     lhs: &PrimitiveArray<T>,
     rhs: &PrimitiveArray<T>,
@@ -228,6 +235,11 @@ pub fn compare<T: NativeType + Simd8>(
     }
 }
 
+/// Compare a [`PrimitiveArray`] and a scalar value using the given
+/// [`Operator`].
+///
+/// Check the [crate::compute::comparison](module documentation) for usage
+/// examples.
 pub fn compare_scalar<T: NativeType + Simd8>(
     lhs: &PrimitiveArray<T>,
     rhs: &PrimitiveScalar<T>,
