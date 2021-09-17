@@ -45,3 +45,42 @@ fn wrong_data_type() {
     let values = MutableBuffer::from(b"abbb");
     MutableUtf8Array::<i32>::from_data(DataType::Int8, offsets, values, None);
 }
+
+#[test]
+fn test_extend_trusted_len_values() {
+    let mut array = MutableUtf8Array::<i32>::new();
+
+    array.extend_trusted_len_values(["hi", "there"].iter());
+    array.extend_trusted_len_values(["hello"].iter());
+    array.extend_trusted_len(vec![Some("again"), None].into_iter());
+
+    let array: Utf8Array<i32> = array.into();
+
+    assert_eq!(array.values().as_slice(), b"hitherehelloagain");
+    assert_eq!(array.offsets().as_slice(), &[0, 2, 7, 12, 17, 17]);
+    assert_eq!(
+        array.validity(),
+        &Some(Bitmap::from_u8_slice(&[0b00001111], 5))
+    );
+}
+
+#[test]
+fn test_extend_trusted_len() {
+    let mut array = MutableUtf8Array::<i32>::new();
+
+    // TODO Understand why the following is not possible
+    //array.extend_trusted_len([Some("hi"), Some("there")].into_iter());
+
+    array.extend_trusted_len(vec![Some("hi"), Some("there")].into_iter());
+    array.extend_trusted_len(vec![None, Some("hello")].into_iter());
+    array.extend_trusted_len_values(["again"].iter());
+
+    let array: Utf8Array<i32> = array.into();
+
+    assert_eq!(array.values().as_slice(), b"hitherehelloagain");
+    assert_eq!(array.offsets().as_slice(), &[0, 2, 7, 7, 12, 17]);
+    assert_eq!(
+        array.validity(),
+        &Some(Bitmap::from_u8_slice(&[0b00011011], 5))
+    );
+}
