@@ -1,6 +1,6 @@
 use std::ops::Rem;
 
-use num::{traits::CheckedRem, NumCast, Zero};
+use num_traits::{CheckedRem, NumCast, Zero};
 
 use crate::datatypes::DataType;
 use crate::{

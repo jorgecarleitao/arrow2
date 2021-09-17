@@ -20,15 +20,12 @@ use std::{collections::hash_map::DefaultHasher, sync::Arc};
 
 use hash_hasher::HashedMap;
 use indexmap::map::IndexMap as HashMap;
-use num::NumCast;
+use num_traits::NumCast;
 use serde_json::Value;
 
 use crate::types::NaturalDataType;
 use crate::{
-    array::{
-        Array, BooleanArray, DictionaryArray, DictionaryKey, ListArray, NullArray, Offset,
-        PrimitiveArray, StructArray, Utf8Array,
-    },
+    array::*,
     bitmap::MutableBitmap,
     buffer::MutableBuffer,
     datatypes::{DataType, IntervalUnit},
@@ -78,16 +75,36 @@ fn build_extract(data_type: &DataType) -> Extract {
     }
 }
 
-fn read_primitive<T: NativeType + NaturalDataType + NumCast>(
+fn read_int<T: NativeType + NaturalDataType + NumCast>(
     rows: &[&Value],
     data_type: DataType,
 ) -> PrimitiveArray<T> {
     let iter = rows.iter().map(|row| match row {
-        Value::Number(number) => number.as_f64().and_then(num::cast::cast::<f64, T>),
-        Value::Bool(number) => num::cast::cast::<i32, T>(*number as i32),
+        Value::Number(number) => number.as_i64().and_then(num_traits::cast::<i64, T>),
+        Value::Bool(number) => num_traits::cast::<i32, T>(*number as i32),
         _ => None,
     });
     PrimitiveArray::from_trusted_len_iter(iter).to(data_type)
+}
+
+fn read_float<T: NativeType + NaturalDataType + NumCast>(
+    rows: &[&Value],
+    data_type: DataType,
+) -> PrimitiveArray<T> {
+    let iter = rows.iter().map(|row| match row {
+        Value::Number(number) => number.as_f64().and_then(num_traits::cast::<f64, T>),
+        Value::Bool(number) => num_traits::cast::<i32, T>(*number as i32),
+        _ => None,
+    });
+    PrimitiveArray::from_trusted_len_iter(iter).to(data_type)
+}
+
+fn read_binary<O: Offset>(rows: &[&Value]) -> BinaryArray<O> {
+    let iter = rows.iter().map(|row| match row {
+        Value::String(v) => Some(v.as_bytes()),
+        _ => None,
+    });
+    BinaryArray::from_trusted_len_iter(iter)
 }
 
 fn read_boolean(rows: &[&Value]) -> BooleanArray {
@@ -171,7 +188,7 @@ fn read_struct(rows: &[&Value], data_type: DataType) -> StructArray {
         .map(|(_, (data_type, values))| read(&values, data_type.clone()))
         .collect::<Vec<_>>();
 
-    StructArray::from_data(fields.to_vec(), values, None)
+    StructArray::from_data(data_type, values, None)
 }
 
 fn read_dictionary<K: DictionaryKey>(rows: &[&Value], data_type: DataType) -> DictionaryArray<K> {
@@ -207,16 +224,14 @@ fn read_dictionary<K: DictionaryKey>(rows: &[&Value], data_type: DataType) -> Di
 
 pub fn read(rows: &[&Value], data_type: DataType) -> Arc<dyn Array> {
     match &data_type {
-        DataType::Null => Arc::new(NullArray::from_data(rows.len())),
+        DataType::Null => Arc::new(NullArray::from_data(data_type, rows.len())),
         DataType::Boolean => Arc::new(read_boolean(rows)),
-        DataType::Int8 => Arc::new(read_primitive::<i8>(rows, data_type)),
-        DataType::Int16 => Arc::new(read_primitive::<i16>(rows, data_type)),
+        DataType::Int8 => Arc::new(read_int::<i8>(rows, data_type)),
+        DataType::Int16 => Arc::new(read_int::<i16>(rows, data_type)),
         DataType::Int32
         | DataType::Date32
         | DataType::Time32(_)
-        | DataType::Interval(IntervalUnit::YearMonth) => {
-            Arc::new(read_primitive::<i32>(rows, data_type))
-        }
+        | DataType::Interval(IntervalUnit::YearMonth) => Arc::new(read_int::<i32>(rows, data_type)),
         DataType::Interval(IntervalUnit::DayTime) => {
             unimplemented!("There is no natural representation of DayTime in JSON.")
         }
@@ -224,33 +239,26 @@ pub fn read(rows: &[&Value], data_type: DataType) -> Arc<dyn Array> {
         | DataType::Date64
         | DataType::Time64(_)
         | DataType::Timestamp(_, _)
-        | DataType::Duration(_) => Arc::new(read_primitive::<i64>(rows, data_type)),
-        DataType::UInt8 => Arc::new(read_primitive::<u8>(rows, data_type)),
-        DataType::UInt16 => Arc::new(read_primitive::<u16>(rows, data_type)),
-        DataType::UInt32 => Arc::new(read_primitive::<u32>(rows, data_type)),
-        DataType::UInt64 => Arc::new(read_primitive::<u64>(rows, data_type)),
+        | DataType::Duration(_) => Arc::new(read_int::<i64>(rows, data_type)),
+        DataType::UInt8 => Arc::new(read_int::<u8>(rows, data_type)),
+        DataType::UInt16 => Arc::new(read_int::<u16>(rows, data_type)),
+        DataType::UInt32 => Arc::new(read_int::<u32>(rows, data_type)),
+        DataType::UInt64 => Arc::new(read_int::<u64>(rows, data_type)),
         DataType::Float16 => unreachable!(),
-        DataType::Float32 => Arc::new(read_primitive::<f32>(rows, data_type)),
-        DataType::Float64 => Arc::new(read_primitive::<f64>(rows, data_type)),
+        DataType::Float32 => Arc::new(read_float::<f32>(rows, data_type)),
+        DataType::Float64 => Arc::new(read_float::<f64>(rows, data_type)),
         DataType::Utf8 => Arc::new(read_utf8::<i32>(rows)),
         DataType::LargeUtf8 => Arc::new(read_utf8::<i64>(rows)),
         DataType::List(_) => Arc::new(read_list::<i32>(rows, data_type)),
         DataType::LargeList(_) => Arc::new(read_list::<i64>(rows, data_type)),
-        // unsupported
-        //DataType::Binary => Box::new(BinaryArray::<i32>::new_empty()),
-        //DataType::LargeBinary => Box::new(BinaryArray::<i64>::new_empty()),
+        DataType::Binary => Arc::new(read_binary::<i32>(rows)),
+        DataType::LargeBinary => Arc::new(read_binary::<i64>(rows)),
         DataType::Struct(_) => Arc::new(read_struct(rows, data_type)),
-        DataType::Dictionary(key_type, _) => match key_type.as_ref() {
-            DataType::Int8 => Arc::new(read_dictionary::<i8>(rows, data_type)),
-            DataType::Int16 => Arc::new(read_dictionary::<i16>(rows, data_type)),
-            DataType::Int32 => Arc::new(read_dictionary::<i32>(rows, data_type)),
-            DataType::Int64 => Arc::new(read_dictionary::<i64>(rows, data_type)),
-            DataType::UInt8 => Arc::new(read_dictionary::<u8>(rows, data_type)),
-            DataType::UInt16 => Arc::new(read_dictionary::<u16>(rows, data_type)),
-            DataType::UInt32 => Arc::new(read_dictionary::<u32>(rows, data_type)),
-            DataType::UInt64 => Arc::new(read_dictionary::<u64>(rows, data_type)),
-            _ => unreachable!(),
-        },
+        DataType::Dictionary(key_type, _) => {
+            with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
+                Arc::new(read_dictionary::<$T>(rows, data_type))
+            })
+        }
         _ => todo!(),
         /*
         DataType::FixedSizeBinary(_) => Box::new(FixedSizeBinaryArray::new_empty(data_type)),

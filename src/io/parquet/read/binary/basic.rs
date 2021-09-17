@@ -1,9 +1,9 @@
 use futures::{pin_mut, Stream, StreamExt};
 use parquet2::{
-    encoding::{bitpacking, delta_length_byte_array, hybrid_rle, uleb128, Encoding},
+    encoding::{delta_length_byte_array, hybrid_rle, Encoding},
     metadata::{ColumnChunkMetaData, ColumnDescriptor},
-    page::{BinaryPageDict, DataPage, DataPageHeader, DataPageHeaderExt},
-    read::{levels, StreamingIterator},
+    page::{BinaryPageDict, DataPage},
+    read::StreamingIterator,
 };
 
 use crate::{
@@ -21,13 +21,13 @@ use super::super::utils;
 fn read_dict_buffer<O: Offset>(
     validity_buffer: &[u8],
     indices_buffer: &[u8],
-    length: u32,
+    additional: usize,
     dict: &BinaryPageDict,
     offsets: &mut MutableBuffer<O>,
     values: &mut MutableBuffer<u8>,
     validity: &mut MutableBitmap,
 ) {
-    let length = length as usize;
+    let length = (offsets.len() - 1) + additional;
     let dict_values = dict.values();
     let dict_offsets = dict.offsets();
     let mut last_offset = *offsets.as_mut_slice().last().unwrap();
@@ -37,12 +37,7 @@ fn read_dict_buffer<O: Offset>(
     let bit_width = indices_buffer[0];
     let indices_buffer = &indices_buffer[1..];
 
-    let (_, consumed) = uleb128::decode(indices_buffer);
-    let indices_buffer = &indices_buffer[consumed..];
-
-    let non_null_indices_len = indices_buffer.len() * 8 / bit_width as usize;
-
-    let mut indices = bitpacking::Decoder::new(indices_buffer, bit_width, non_null_indices_len);
+    let mut indices = hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, length);
 
     let validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
 
@@ -88,11 +83,12 @@ fn read_dict_buffer<O: Offset>(
 fn read_delta_optional<O: Offset>(
     validity_buffer: &[u8],
     values_buffer: &[u8],
-    length: usize,
+    additional: usize,
     offsets: &mut MutableBuffer<O>,
     values: &mut MutableBuffer<u8>,
     validity: &mut MutableBitmap,
 ) {
+    let length = (offsets.len() - 1) + additional;
     let mut last_offset = *offsets.as_mut_slice().last().unwrap();
 
     // values_buffer: first 4 bytes are len, remaining is values
@@ -140,11 +136,12 @@ fn read_delta_optional<O: Offset>(
 fn read_plain_optional<O: Offset>(
     validity_buffer: &[u8],
     values_buffer: &[u8],
-    length: usize,
+    additional: usize,
     offsets: &mut MutableBuffer<O>,
     values: &mut MutableBuffer<u8>,
     validity: &mut MutableBitmap,
 ) {
+    let length = (offsets.len() - 1) + additional;
     let mut last_offset = *offsets.as_mut_slice().last().unwrap();
 
     // values_buffer: first 4 bytes are len, remaining is values
@@ -210,105 +207,52 @@ fn extend_from_page<O: Offset>(
     values: &mut MutableBuffer<u8>,
     validity: &mut MutableBitmap,
 ) -> Result<()> {
+    let additional = page.num_values();
     assert_eq!(descriptor.max_rep_level(), 0);
     assert!(descriptor.max_def_level() <= 1);
     let is_optional = descriptor.max_def_level() == 1;
-    match page.header() {
-        DataPageHeader::V1(header) => {
-            assert_eq!(header.definition_level_encoding(), Encoding::Rle);
 
-            let (_, validity_buffer, values_buffer) =
-                levels::split_buffer_v1(page.buffer(), false, is_optional);
+    let (_, validity_buffer, values_buffer, version) = utils::split_buffer(page, descriptor);
 
-            match (&page.encoding(), page.dictionary_page(), is_optional) {
-                (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
-                    read_dict_buffer::<O>(
-                        validity_buffer,
-                        values_buffer,
-                        page.num_values() as u32,
-                        dict.as_any().downcast_ref().unwrap(),
-                        offsets,
-                        values,
-                        validity,
-                    )
-                }
-                (Encoding::DeltaLengthByteArray, None, true) => read_delta_optional::<O>(
-                    validity_buffer,
-                    values_buffer,
-                    page.num_values(),
-                    offsets,
-                    values,
-                    validity,
-                ),
-                (Encoding::Plain, None, true) => read_plain_optional::<O>(
-                    validity_buffer,
-                    values_buffer,
-                    page.num_values(),
-                    offsets,
-                    values,
-                    validity,
-                ),
-                (Encoding::Plain, None, false) => {
-                    read_plain_required::<O>(page.buffer(), page.num_values(), offsets, values)
-                }
-                _ => {
-                    return Err(utils::not_implemented(
-                        &page.encoding(),
-                        is_optional,
-                        page.dictionary_page().is_some(),
-                        "V1",
-                        "Binary",
-                    ))
-                }
-            }
+    match (&page.encoding(), page.dictionary_page(), is_optional) {
+        (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
+            read_dict_buffer::<O>(
+                validity_buffer,
+                values_buffer,
+                additional,
+                dict.as_any().downcast_ref().unwrap(),
+                offsets,
+                values,
+                validity,
+            )
         }
-        DataPageHeader::V2(header) => {
-            let def_level_buffer_length = header.definition_levels_byte_length as usize;
-
-            let (_, validity_buffer, values_buffer) =
-                levels::split_buffer_v2(page.buffer(), 0, def_level_buffer_length);
-
-            match (page.encoding(), page.dictionary_page(), is_optional) {
-                (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
-                    read_dict_buffer::<O>(
-                        validity_buffer,
-                        values_buffer,
-                        page.num_values() as u32,
-                        dict.as_any().downcast_ref().unwrap(),
-                        offsets,
-                        values,
-                        validity,
-                    )
-                }
-                (Encoding::Plain, None, true) => read_plain_optional::<O>(
-                    validity_buffer,
-                    values_buffer,
-                    page.num_values(),
-                    offsets,
-                    values,
-                    validity,
-                ),
-                (Encoding::DeltaLengthByteArray, None, true) => read_delta_optional::<O>(
-                    validity_buffer,
-                    values_buffer,
-                    page.num_values(),
-                    offsets,
-                    values,
-                    validity,
-                ),
-                (Encoding::Plain, None, false) => {
-                    read_plain_required::<O>(page.buffer(), page.num_values(), offsets, values)
-                }
-                _ => {
-                    return Err(utils::not_implemented(
-                        &page.encoding(),
-                        is_optional,
-                        page.dictionary_page().is_some(),
-                        "V2",
-                        "Binary",
-                    ))
-                }
-            }
+        (Encoding::DeltaLengthByteArray, None, true) => read_delta_optional::<O>(
+            validity_buffer,
+            values_buffer,
+            additional,
+            offsets,
+            values,
+            validity,
+        ),
+        (Encoding::Plain, _, true) => read_plain_optional::<O>(
+            validity_buffer,
+            values_buffer,
+            additional,
+            offsets,
+            values,
+            validity,
+        ),
+        (Encoding::Plain, _, false) => {
+            read_plain_required::<O>(page.buffer(), page.num_values(), offsets, values)
+        }
+        _ => {
+            return Err(utils::not_implemented(
+                &page.encoding(),
+                is_optional,
+                page.dictionary_page().is_some(),
+                version,
+                "Binary",
+            ))
         }
     };
     Ok(())
@@ -342,11 +286,13 @@ where
 
     Ok(match data_type {
         DataType::LargeBinary | DataType::Binary => Box::new(BinaryArray::from_data(
+            data_type.clone(),
             offsets.into(),
             values.into(),
             validity.into(),
         )),
         DataType::LargeUtf8 | DataType::Utf8 => Box::new(Utf8Array::from_data(
+            data_type.clone(),
             offsets.into(),
             values.into(),
             validity.into(),
@@ -386,11 +332,13 @@ where
 
     Ok(match data_type {
         DataType::LargeBinary | DataType::Binary => Box::new(BinaryArray::from_data(
+            data_type.clone(),
             offsets.into(),
             values.into(),
             validity.into(),
         )),
         DataType::LargeUtf8 | DataType::Utf8 => Box::new(Utf8Array::from_data(
+            data_type.clone(),
             offsets.into(),
             values.into(),
             validity.into(),

@@ -1,3 +1,4 @@
+//! Declares [`TrustedLen`].
 use std::slice::Iter;
 
 /// An iterator of known, fixed size.
@@ -25,6 +26,8 @@ where
     B: TrustedLen,
 {
 }
+
+unsafe impl<T> TrustedLen for std::slice::ChunksExact<'_, T> {}
 
 unsafe impl<T> TrustedLen for std::slice::Windows<'_, T> {}
 

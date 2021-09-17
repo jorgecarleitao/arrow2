@@ -1,5 +1,4 @@
 use std::fs::File;
-use std::sync::Arc;
 
 use arrow2::array::*;
 use arrow2::error::Result;
@@ -114,6 +113,16 @@ fn v1_int64_nullable_dict() -> Result<()> {
 }
 
 #[test]
+fn v2_int64_required_dict() -> Result<()> {
+    test_pyarrow_integration(0, 2, "basic", true, true)
+}
+
+#[test]
+fn v1_int64_required_dict() -> Result<()> {
+    test_pyarrow_integration(0, 1, "basic", true, true)
+}
+
+#[test]
 fn v2_utf8_nullable() -> Result<()> {
     test_pyarrow_integration(2, 2, "basic", false, false)
 }
@@ -223,7 +232,7 @@ fn all_types() -> Result<()> {
     let path = "testing/parquet-testing/data/alltypes_plain.parquet";
     let reader = std::fs::File::open(path)?;
 
-    let reader = RecordReader::try_new(reader, None, None, Arc::new(|_, _| true), None)?;
+    let reader = RecordReader::try_new(reader, None, None, None, None)?;
 
     let batches = reader.collect::<Result<Vec<_>>>()?;
     assert_eq!(batches.len(), 1);

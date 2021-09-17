@@ -12,6 +12,8 @@ pub use iterator::*;
 mod mutable;
 pub use mutable::*;
 
+/// The Arrow's equivalent to an immutable `Vec<Option<[T; size]>>` where `T` is an Arrow type.
+/// Cloning and slicing this struct is `O(1)`.
 #[derive(Debug, Clone)]
 pub struct FixedSizeListArray {
     size: i32, // this is redundant with `data_type`, but useful to not have to deconstruct the data_type.
@@ -22,16 +24,24 @@ pub struct FixedSizeListArray {
 }
 
 impl FixedSizeListArray {
+    /// Returns a new empty [`FixedSizeListArray`].
     pub fn new_empty(data_type: DataType) -> Self {
-        let values = new_empty_array(Self::get_child_and_size(&data_type).0.clone()).into();
+        let values =
+            new_empty_array(Self::get_child_and_size(&data_type).0.data_type().clone()).into();
         Self::from_data(data_type, values, None)
     }
 
+    /// Returns a new null [`FixedSizeListArray`].
     pub fn new_null(data_type: DataType, length: usize) -> Self {
-        let values = new_null_array(Self::get_child_and_size(&data_type).0.clone(), length).into();
+        let values = new_null_array(
+            Self::get_child_and_size(&data_type).0.data_type().clone(),
+            length,
+        )
+        .into();
         Self::from_data(data_type, values, Some(Bitmap::new_zeroed(length)))
     }
 
+    /// Returns a [`FixedSizeListArray`].
     pub fn from_data(
         data_type: DataType,
         values: Arc<dyn Array>,
@@ -50,6 +60,9 @@ impl FixedSizeListArray {
         }
     }
 
+    /// Returns a slice of this [`FixedSizeListArray`].
+    /// # Implementation
+    /// This operation is `O(1)`.
     pub fn slice(&self, offset: usize, length: usize) -> Self {
         let validity = self.validity.clone().map(|x| x.slice(offset, length));
         let values = self
@@ -66,28 +79,41 @@ impl FixedSizeListArray {
         }
     }
 
-    #[inline]
+    /// Returns the inner array.
     pub fn values(&self) -> &Arc<dyn Array> {
         &self.values
     }
 
+    /// Returns the `Vec<T>` at position `i`.
     #[inline]
     pub fn value(&self, i: usize) -> Box<dyn Array> {
         self.values
             .slice(i * self.size as usize, self.size as usize)
     }
+
+    /// Sets the validity bitmap on this [`FixedSizeListArray`].
+    /// # Panic
+    /// This function panics iff `validity.len() != self.len()`.
+    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
+        if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
+            panic!("validity should be as least as large as the array")
+        }
+        let mut arr = self.clone();
+        arr.validity = validity;
+        arr
+    }
 }
 
 impl FixedSizeListArray {
-    pub(crate) fn get_child_and_size(data_type: &DataType) -> (&DataType, &i32) {
-        if let DataType::FixedSizeList(field, size) = data_type {
-            (field.data_type(), size)
-        } else {
-            panic!("Wrong DataType")
+    pub(crate) fn get_child_and_size(data_type: &DataType) -> (&Field, &i32) {
+        match data_type {
+            DataType::FixedSizeList(child, size) => (child.as_ref(), size),
+            DataType::Extension(_, child, _) => Self::get_child_and_size(child),
+            _ => panic!("Wrong DataType"),
         }
     }
 
-    #[inline]
+    /// Returns a [`DataType`] consistent with this Array.
     pub fn default_datatype(data_type: DataType, size: usize) -> DataType {
         let field = Box::new(Field::new("item", data_type, true));
         DataType::FixedSizeList(field, size as i32)
@@ -116,6 +142,9 @@ impl Array for FixedSizeListArray {
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+    fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
+        Box::new(self.with_validity(validity))
     }
 }
 

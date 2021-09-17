@@ -52,6 +52,7 @@ where
         .to(data_type)
 }
 
+/// Creates a new [`PrimitiveArray`] from random values with a pre-set seed.
 pub fn create_primitive_array_with_seed<T>(
     size: usize,
     data_type: DataType,
@@ -94,18 +95,23 @@ where
         .collect()
 }
 
-/// Creates an random (but fixed-seeded) array of a given size and null density
-pub fn create_string_array<O: Offset>(size: usize, null_density: f32) -> Utf8Array<O> {
-    let rng = &mut seedable_rng();
+/// Creates an random (but fixed-seeded) [`Utf8Array`] of a given length, number of characters and null density.
+pub fn create_string_array<O: Offset>(
+    length: usize,
+    size: usize,
+    null_density: f32,
+    seed: u64,
+) -> Utf8Array<O> {
+    let mut rng = StdRng::seed_from_u64(seed);
 
-    (0..size)
+    (0..length)
         .map(|_| {
             if rng.gen::<f32>() < null_density {
                 None
             } else {
-                let value = rng
+                let value = (&mut rng)
                     .sample_iter(&Alphanumeric)
-                    .take(4)
+                    .take(size)
                     .map(char::from)
                     .collect::<String>();
                 Some(value)

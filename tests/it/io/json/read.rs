@@ -154,7 +154,7 @@ fn nested_list_arrays() {
         None,
     ]);
 
-    let c = StructArray::from_data(vec![d_field], vec![Arc::new(d)], None);
+    let c = StructArray::from_data(DataType::Struct(vec![d_field]), vec![Arc::new(d)], None);
 
     let b = BooleanArray::from(vec![
         Some(true),
@@ -165,7 +165,7 @@ fn nested_list_arrays() {
         Some(true),
     ]);
     let a_struct = StructArray::from_data(
-        vec![b_field, c_field],
+        DataType::Struct(vec![b_field, c_field]),
         vec![Arc::new(b) as Arc<dyn Array>, Arc::new(c) as Arc<dyn Array>],
         None,
     );

@@ -4,7 +4,7 @@ use std::sync::Arc;
 use crate::{buffer::bytes::Bytes, buffer::MutableBuffer, trusted_len::TrustedLen};
 
 use super::{
-    utils::{fmt, get_bit, get_bit_unchecked, null_count, BitChunk, BitChunks, BitmapIter},
+    utils::{count_zeros, fmt, get_bit, get_bit_unchecked, BitChunk, BitChunks, BitmapIter},
     MutableBitmap,
 };
 
@@ -68,7 +68,7 @@ impl Bitmap {
     #[inline]
     pub(crate) fn from_bytes(bytes: Bytes<u8>, length: usize) -> Self {
         assert!(length <= bytes.len() * 8);
-        let null_count = null_count(&bytes, 0, length);
+        let null_count = count_zeros(&bytes, 0, length);
         Self {
             length,
             offset: 0,
@@ -85,7 +85,7 @@ impl Bitmap {
         Bitmap::from_bytes(buffer.into(), length)
     }
 
-    /// Creates a new [`Bitmap`] from [`Bytes`] and a length.
+    /// Creates a new [`Bitmap`] from a slice and length.
     /// # Panic
     /// Panics iff `length <= bytes.len() * 8`
     #[inline]
@@ -97,7 +97,7 @@ impl Bitmap {
     /// Counts the nulls (unset bits) starting from `offset` bits and for `length` bits.
     #[inline]
     pub fn null_count_range(&self, offset: usize, length: usize) -> usize {
-        null_count(&self.bytes, self.offset + offset, length)
+        count_zeros(&self.bytes, self.offset + offset, length)
     }
 
     /// Returns the number of unset bits on this [`Bitmap`].
@@ -115,7 +115,7 @@ impl Bitmap {
         assert!(offset + length <= self.length);
         self.offset += offset;
         self.length = length;
-        self.null_count = null_count(&self.bytes, self.offset, self.length);
+        self.null_count = count_zeros(&self.bytes, self.offset, self.length);
         self
     }
 

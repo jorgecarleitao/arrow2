@@ -18,7 +18,7 @@ pub struct RowGroupIterator<I: Iterator<Item = Result<RecordBatch>>> {
     encodings: Vec<Encoding>,
 }
 
-impl<I: Iterator<Item = Result<RecordBatch>>> RowGroupIterator<I> {
+impl<'a, I: Iterator<Item = Result<RecordBatch>>> RowGroupIterator<I> {
     /// Creates a new [`RowGroupIterator`] from an iterator over [`RecordBatch`].
     pub fn try_new(
         iter: I,

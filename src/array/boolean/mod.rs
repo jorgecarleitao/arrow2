@@ -1,4 +1,7 @@
-use crate::{bitmap::Bitmap, datatypes::DataType};
+use crate::{
+    bitmap::Bitmap,
+    datatypes::{DataType, PhysicalType},
+};
 
 use super::{display_fmt, Array};
 
@@ -10,9 +13,8 @@ mod mutable;
 pub use iterator::*;
 pub use mutable::*;
 
-/// A [`BooleanArray`] is arrow's equivalent to `Vec<Option<bool>>`, i.e.
-/// an array designed for highly performant operations on optionally nullable booleans.
-/// The size of this struct is `O(1)` as all data is stored behind an `Arc`.
+/// The Arrow's equivalent to an immutable `Vec<Option<bool>>`, but with `1/16` of its size.
+/// Cloning and slicing this struct is `O(1)`.
 #[derive(Debug, Clone)]
 pub struct BooleanArray {
     data_type: DataType,
@@ -23,29 +25,29 @@ pub struct BooleanArray {
 
 impl BooleanArray {
     /// Returns a new empty [`BooleanArray`].
-    #[inline]
-    pub fn new_empty() -> Self {
-        Self::from_data(Bitmap::new(), None)
+    pub fn new_empty(data_type: DataType) -> Self {
+        Self::from_data(data_type, Bitmap::new(), None)
     }
 
     /// Returns a new [`BooleanArray`] whose all slots are null / `None`.
-    #[inline]
-    pub fn new_null(length: usize) -> Self {
+    pub fn new_null(data_type: DataType, length: usize) -> Self {
         let bitmap = Bitmap::new_zeroed(length);
-        Self::from_data(bitmap.clone(), Some(bitmap))
+        Self::from_data(data_type, bitmap.clone(), Some(bitmap))
     }
 
     /// The canonical method to create a [`BooleanArray`] out of low-end APIs.
     /// # Panics
     /// This function panics iff:
     /// * The validity is not `None` and its length is different from `values`'s length
-    #[inline]
-    pub fn from_data(values: Bitmap, validity: Option<Bitmap>) -> Self {
+    pub fn from_data(data_type: DataType, values: Bitmap, validity: Option<Bitmap>) -> Self {
         if let Some(ref validity) = validity {
             assert_eq!(values.len(), validity.len());
         }
+        if data_type.to_physical_type() != PhysicalType::Boolean {
+            panic!("BooleanArray can only be initialized with DataType::Boolean")
+        }
         Self {
-            data_type: DataType::Boolean,
+            data_type,
             values,
             validity,
             offset: 0,
@@ -54,7 +56,7 @@ impl BooleanArray {
 
     /// Returns a slice of this [`BooleanArray`].
     /// # Implementation
-    /// This operation is `O(1)` as it amounts to essentially increase two ref counts.
+    /// This operation is `O(1)` as it amounts to increase two ref counts.
     /// # Panic
     /// This function panics iff `offset + length >= self.len()`.
     #[inline]
@@ -68,14 +70,15 @@ impl BooleanArray {
         }
     }
 
-    /// Returns the element at index `i` as bool
+    /// Returns the value at index `i`
+    /// # Panic
+    /// This function panics iff `i >= self.len()`.
     #[inline]
     pub fn value(&self, i: usize) -> bool {
         self.values.get_bit(i)
     }
 
     /// Returns the element at index `i` as bool
-    ///
     /// # Safety
     /// Caller must be sure that `i < self.len()`
     #[inline]
@@ -83,10 +86,22 @@ impl BooleanArray {
         self.values.get_bit_unchecked(i)
     }
 
-    /// Returns the values bitmap of this [`BooleanArray`].
+    /// Returns the values of this [`BooleanArray`].
     #[inline]
     pub fn values(&self) -> &Bitmap {
         &self.values
+    }
+
+    /// Sets the validity bitmap on this [`BooleanArray`].
+    /// # Panic
+    /// This function panics iff `validity.len() != self.len()`.
+    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
+        if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
+            panic!("validity should be as least as large as the array")
+        }
+        let mut arr = self.clone();
+        arr.validity = validity;
+        arr
     }
 }
 
@@ -115,17 +130,13 @@ impl Array for BooleanArray {
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
     }
+    fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
+        Box::new(self.with_validity(validity))
+    }
 }
 
 impl std::fmt::Display for BooleanArray {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         display_fmt(self.iter(), "BooleanArray", f, false)
-    }
-}
-
-impl<P: AsRef<[Option<bool>]>> From<P> for BooleanArray {
-    /// Creates a new [`BooleanArray`] out of a slice of Optional `bool`.
-    fn from(slice: P) -> Self {
-        MutableBooleanArray::from(slice).into()
     }
 }

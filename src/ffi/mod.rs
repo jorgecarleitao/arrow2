@@ -5,5 +5,40 @@ mod array;
 mod ffi;
 mod schema;
 
-pub use array::try_from;
-pub use ffi::{create_empty, export_to_c, ArrowArray, ArrowArrayRef};
+pub(crate) use array::try_from;
+pub(crate) use ffi::{ArrowArray, ArrowArrayRef};
+
+use std::sync::Arc;
+
+use crate::array::Array;
+use crate::datatypes::Field;
+use crate::error::Result;
+
+pub use ffi::Ffi_ArrowArray;
+pub use schema::Ffi_ArrowSchema;
+
+use self::schema::to_field;
+
+/// Exports an `Array` to the C data interface.
+/// # Safety
+/// The pointer must be allocated and valid
+pub unsafe fn export_array_to_c(array: Arc<dyn Array>, ptr: *mut Ffi_ArrowArray) {
+    *ptr = Ffi_ArrowArray::new(array);
+}
+
+/// Exports a [`Field`] to the C data interface.
+/// # Safety
+/// The pointer must be allocated and valid
+pub unsafe fn export_field_to_c(field: &Field, ptr: *mut Ffi_ArrowSchema) {
+    *ptr = Ffi_ArrowSchema::new(field)
+}
+
+/// Imports a [`Field`] from the C data interface.
+pub fn import_field_from_c(field: &Ffi_ArrowSchema) -> Result<Field> {
+    to_field(field)
+}
+
+/// Imports a [`Field`] from the C data interface.
+pub fn import_array_from_c(array: Box<Ffi_ArrowArray>, field: &Field) -> Result<Box<dyn Array>> {
+    try_from(Arc::new(ArrowArray::new(array, field.clone())))
+}

@@ -17,13 +17,9 @@
 
 [package]
 name = "arrow-pyarrow-integration-testing"
-description = ""
-version = "4.0.0-SNAPSHOT"
-homepage = "https://github.com/apache/arrow-rs"
-repository = "https://github.com/apache/arrow-rs"
-authors = ["Apache Arrow <dev@arrow.apache.org>"]
+version = "0.0.0"
+authors = ["Jorge C. Leitao <jorgecarleitao@gmail.com>", "Apache Arrow <dev@arrow.apache.org>"]
 license = "Apache-2.0"
-keywords = [ "arrow" ]
 edition = "2018"
 
 [lib]
@@ -31,8 +27,8 @@ name = "arrow_pyarrow_integration_testing"
 crate-type = ["cdylib"]
 
 [dependencies]
-arrow2 = { path = "../", default-features = false, features = ["compute"] }
-pyo3 = { version = "0.12.1", features = ["extension-module"] }
+arrow2 = { path = "../", default-features = false }
+pyo3 = { version = "0.14", features = ["extension-module"] }
 
 [package.metadata.maturin]
 requires-dist = ["pyarrow>=1"]

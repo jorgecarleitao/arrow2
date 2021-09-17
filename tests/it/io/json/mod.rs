@@ -167,8 +167,8 @@ fn case_basics() -> (String, Schema, Vec<Box<dyn Array>>) {
 }
 
 fn case_basics_schema() -> (String, Schema, Vec<Box<dyn Array>>) {
-    let data = r#"{"a":1, "b":2.0, "c":false, "d":"4"}
-    {"a":10, "b":-3.5, "c":true, "d":null}
+    let data = r#"{"a":1, "b":2.0, "c":false, "d":"4", "e":"4"}
+    {"a":10, "b":-3.5, "c":true, "d":null, "e":"text"}
     {"a":100000000, "b":0.6, "d":"text"}"#
         .to_string();
     let schema = Schema::new(vec![
@@ -176,11 +176,17 @@ fn case_basics_schema() -> (String, Schema, Vec<Box<dyn Array>>) {
         Field::new("b", DataType::Float32, true),
         Field::new("c", DataType::Boolean, true),
         // note how "d" is not here
+        Field::new("e", DataType::Binary, true),
     ]);
     let columns = vec![
         Box::new(UInt32Array::from_slice(&[1, 10, 100000000])) as Box<dyn Array>,
         Box::new(Float32Array::from_slice(&[2.0, -3.5, 0.6])),
         Box::new(BooleanArray::from(&[Some(false), Some(true), None])),
+        Box::new(BinaryArray::<i32>::from(&[
+            Some(b"4".as_ref()),
+            Some(b"text".as_ref()),
+            None,
+        ])),
     ];
     (data, schema, columns)
 }
@@ -206,11 +212,11 @@ fn case_struct() -> (String, Schema, Vec<Box<dyn Array>>) {
 
     // build expected output
     let d = Utf8Array::<i32>::from(&vec![Some("text"), None, Some("text"), None]);
-    let c = StructArray::from_data(vec![d_field], vec![Arc::new(d)], None);
+    let c = StructArray::from_data(DataType::Struct(vec![d_field]), vec![Arc::new(d)], None);
 
     let b = BooleanArray::from(vec![Some(true), Some(false), Some(true), None]);
     let expected = StructArray::from_data(
-        vec![Field::new("b", DataType::Boolean, true), c_field],
+        DataType::Struct(vec![Field::new("b", DataType::Boolean, true), c_field]),
         vec![Arc::new(b), Arc::new(c)],
         None,
     );

@@ -224,6 +224,11 @@ fn extend_set() {
     assert_eq!(b.as_slice(), &[0b00110000]);
     assert_eq!(b.len(), 4 + 2);
 
+    let mut b = MutableBitmap::from(&[false, false, false, false]);
+    b.extend_constant(8, true);
+    assert_eq!(b.as_slice(), &[0b11110000, 0b11111111]);
+    assert_eq!(b.len(), 4 + 8);
+
     let mut b = MutableBitmap::from(&[true, true]);
     b.extend_constant(3, true);
     assert_eq!(b.as_slice(), &[0b00011111]);
@@ -274,4 +279,60 @@ fn extend_bitmap() {
     b.extend_from_slice(&[0b00001011], 0, 4);
     assert_eq!(b.as_slice(), &[0b01111111, 0b00000001]);
     assert_eq!(b.len(), 5 + 4);
+}
+
+#[test]
+fn extend_constant1() {
+    use std::iter::FromIterator;
+    for i in 0..64 {
+        for j in 0..64 {
+            let mut b = MutableBitmap::new();
+            b.extend_constant(i, false);
+            b.extend_constant(j, true);
+            assert_eq!(
+                b,
+                MutableBitmap::from_iter(
+                    std::iter::repeat(false)
+                        .take(i)
+                        .chain(std::iter::repeat(true).take(j))
+                )
+            );
+
+            let mut b = MutableBitmap::new();
+            b.extend_constant(i, true);
+            b.extend_constant(j, false);
+            assert_eq!(
+                b,
+                MutableBitmap::from_iter(
+                    std::iter::repeat(true)
+                        .take(i)
+                        .chain(std::iter::repeat(false).take(j))
+                )
+            );
+        }
+    }
+}
+
+#[test]
+fn extend_bitmap_one() {
+    for offset in 0..7 {
+        let mut b = MutableBitmap::new();
+        for _ in 0..4 {
+            b.extend_from_slice(&[!0], offset, 1);
+            b.extend_from_slice(&[!0], offset, 1);
+        }
+        assert_eq!(b.as_slice(), &[0b11111111]);
+    }
+}
+
+#[test]
+fn extend_bitmap_other() {
+    let mut a = MutableBitmap::from([true, true, true, false, true, true, true, false, true, true]);
+    a.extend_from_slice(&[0b01111110u8, 0b10111111, 0b11011111, 0b00000111], 20, 2);
+    assert_eq!(
+        a,
+        MutableBitmap::from([
+            true, true, true, false, true, true, true, false, true, true, true, false
+        ])
+    );
 }

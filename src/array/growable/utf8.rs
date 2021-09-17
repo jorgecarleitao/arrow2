@@ -56,7 +56,12 @@ impl<'a, O: Offset> GrowableUtf8<'a, O> {
         let values = std::mem::take(&mut self.values);
 
         unsafe {
-            Utf8Array::<O>::from_data_unchecked(offsets.into(), values.into(), validity.into())
+            Utf8Array::<O>::from_data_unchecked(
+                self.arrays[0].data_type().clone(),
+                offsets.into(),
+                values.into(),
+                validity.into(),
+            )
         }
     }
 }
@@ -96,6 +101,7 @@ impl<'a, O: Offset> From<GrowableUtf8<'a, O>> for Utf8Array<O> {
     fn from(val: GrowableUtf8<'a, O>) -> Self {
         unsafe {
             Utf8Array::<O>::from_data_unchecked(
+                val.arrays[0].data_type().clone(),
                 val.offsets.into(),
                 val.values.into(),
                 val.validity.into(),

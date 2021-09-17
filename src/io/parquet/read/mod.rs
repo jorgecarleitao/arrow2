@@ -1,3 +1,4 @@
+//! APIs to read from Parquet format.
 use std::{
     io::{Read, Seek},
     sync::Arc,
@@ -21,7 +22,7 @@ pub use parquet2::{
 };
 
 use crate::{
-    array::Array,
+    array::{Array, DictionaryKey},
     datatypes::{DataType, IntervalUnit, TimeUnit},
     error::{ArrowError, Result},
 };
@@ -41,17 +42,13 @@ pub use schema::{get_schema, is_type_nullable, FileMetaData};
 
 /// Creates a new iterator of compressed pages.
 pub fn get_page_iterator<'b, RR: Read + Seek>(
-    metadata: &FileMetaData,
-    row_group: usize,
-    column: usize,
+    column_metadata: &ColumnChunkMetaData,
     reader: &'b mut RR,
     pages_filter: Option<PageFilter>,
     buffer: Vec<u8>,
 ) -> Result<PageIterator<'b, RR>> {
     Ok(_get_page_iterator(
-        metadata,
-        row_group,
-        column,
+        column_metadata,
         reader,
         pages_filter,
         buffer,
@@ -60,15 +57,13 @@ pub fn get_page_iterator<'b, RR: Read + Seek>(
 
 /// Creates a new iterator of compressed pages.
 pub async fn get_page_stream<'a, RR: AsyncRead + Unpin + Send + AsyncSeek>(
-    metadata: &'a FileMetaData,
-    row_group: usize,
-    column: usize,
+    column_metadata: &'a ColumnChunkMetaData,
     reader: &'a mut RR,
     pages_filter: Option<PageFilter>,
     buffer: Vec<u8>,
 ) -> Result<impl Stream<Item = std::result::Result<CompressedDataPage, ParquetError>> + 'a> {
     let pages_filter = pages_filter.unwrap_or_else(|| Arc::new(|_, _| true));
-    Ok(_get_page_stream(metadata, row_group, column, reader, buffer, pages_filter).await?)
+    Ok(_get_page_stream(column_metadata, reader, buffer, pages_filter).await?)
 }
 
 /// Reads parquets' metadata syncronously.
@@ -83,6 +78,89 @@ pub async fn read_metadata_async<R: AsyncRead + AsyncSeek + Send + Unpin>(
     Ok(_read_metadata_async(reader).await?)
 }
 
+fn dict_read<
+    K: DictionaryKey,
+    I: StreamingIterator<Item = std::result::Result<DataPage, ParquetError>>,
+>(
+    iter: &mut I,
+    metadata: &ColumnChunkMetaData,
+    data_type: DataType,
+) -> Result<Box<dyn Array>> {
+    use DataType::*;
+    let values_data_type = if let Dictionary(_, v) = &data_type {
+        v.as_ref()
+    } else {
+        panic!()
+    };
+
+    match values_data_type.to_logical_type() {
+        UInt8 => primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+            iter,
+            metadata,
+            data_type,
+            |x: i32| x as u8,
+        ),
+        UInt16 => primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+            iter,
+            metadata,
+            data_type,
+            |x: i32| x as u16,
+        ),
+        UInt32 => primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+            iter,
+            metadata,
+            data_type,
+            |x: i32| x as u32,
+        ),
+        Int8 => primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+            iter,
+            metadata,
+            data_type,
+            |x: i32| x as i8,
+        ),
+        Int16 => primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+            iter,
+            metadata,
+            data_type,
+            |x: i32| x as i16,
+        ),
+        Int32 | Date32 | Time32(_) | Interval(IntervalUnit::YearMonth) => {
+            primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+                iter,
+                metadata,
+                data_type,
+                |x: i32| x as i32,
+            )
+        }
+        Timestamp(TimeUnit::Nanosecond, None) => match metadata.descriptor().type_() {
+            ParquetType::PrimitiveType { physical_type, .. } => match physical_type {
+                PhysicalType::Int96 => primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+                    iter,
+                    metadata,
+                    DataType::Timestamp(TimeUnit::Nanosecond, None),
+                    int96_to_i64_ns,
+                ),
+                _ => primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+                    iter,
+                    metadata,
+                    data_type,
+                    |x: i64| x,
+                ),
+            },
+            _ => unreachable!(),
+        },
+        Int64 | Date64 | Time64(_) | Duration(_) | Timestamp(_, _) => {
+            primitive::iter_to_dict_array::<K, _, _, _, _, _>(iter, metadata, data_type, |x: i64| x)
+        }
+        Utf8 => binary::iter_to_dict_array::<K, i32, _, _>(iter, metadata, data_type),
+        LargeUtf8 => binary::iter_to_dict_array::<K, i64, _, _>(iter, metadata, data_type),
+        other => Err(ArrowError::NotYetImplemented(format!(
+            "Reading dictionaries of type {:?}",
+            other
+        ))),
+    }
+}
+
 pub fn page_iter_to_array<
     I: StreamingIterator<Item = std::result::Result<DataPage, ParquetError>>,
 >(
@@ -91,7 +169,7 @@ pub fn page_iter_to_array<
     data_type: DataType,
 ) -> Result<Box<dyn Array>> {
     use DataType::*;
-    match data_type {
+    match data_type.to_logical_type() {
         // INT32
         UInt8 => primitive::iter_to_array(iter, metadata, data_type, |x: i32| x as u8),
         UInt16 => primitive::iter_to_array(iter, metadata, data_type, |x: i32| x as u16),
@@ -128,8 +206,8 @@ pub fn page_iter_to_array<
 
         Binary | Utf8 => binary::iter_to_array::<i32, _, _>(iter, metadata, &data_type),
         LargeBinary | LargeUtf8 => binary::iter_to_array::<i64, _, _>(iter, metadata, &data_type),
-        FixedSizeBinary(size) => Ok(Box::new(fixed_size_binary::iter_to_array(
-            iter, size, metadata,
+        FixedSizeBinary(_) => Ok(Box::new(fixed_size_binary::iter_to_array(
+            iter, data_type, metadata,
         )?)),
 
         List(ref inner) => match inner.data_type() {
@@ -169,26 +247,25 @@ pub fn page_iter_to_array<
                 binary::iter_to_array_nested::<i64, _, _>(iter, metadata, data_type)
             }
             other => Err(ArrowError::NotYetImplemented(format!(
-                "The conversion of {:?} to arrow still not implemented",
+                "Reading {:?} from parquet still not implemented",
                 other
             ))),
         },
 
-        Dictionary(ref key, ref values) => match key.as_ref() {
-            Int32 => match values.as_ref() {
-                Int32 => primitive::iter_to_dict_array::<i32, _, _, _, _, _>(
-                    iter,
-                    metadata,
-                    data_type,
-                    |x: i32| x as i32,
-                ),
-                _ => todo!(),
-            },
-            _ => todo!(),
+        Dictionary(ref key, _) => match key.as_ref() {
+            Int8 => dict_read::<i8, _>(iter, metadata, data_type),
+            Int16 => dict_read::<i16, _>(iter, metadata, data_type),
+            Int32 => dict_read::<i32, _>(iter, metadata, data_type),
+            Int64 => dict_read::<i64, _>(iter, metadata, data_type),
+            UInt8 => dict_read::<u8, _>(iter, metadata, data_type),
+            UInt16 => dict_read::<u16, _>(iter, metadata, data_type),
+            UInt32 => dict_read::<u32, _>(iter, metadata, data_type),
+            UInt64 => dict_read::<u64, _>(iter, metadata, data_type),
+            _ => unreachable!(),
         },
 
         other => Err(ArrowError::NotYetImplemented(format!(
-            "The conversion of {:?} to arrow still not implemented",
+            "Reading {:?} from parquet still not implemented",
             other
         ))),
     }
@@ -201,7 +278,7 @@ pub async fn page_stream_to_array<I: Stream<Item = std::result::Result<DataPage,
     data_type: DataType,
 ) -> Result<Box<dyn Array>> {
     use DataType::*;
-    match data_type {
+    match data_type.to_logical_type() {
         // INT32
         UInt8 => primitive::stream_to_array(pages, metadata, data_type, |x: i32| x as u8).await,
         UInt16 => primitive::stream_to_array(pages, metadata, data_type, |x: i32| x as u16).await,
@@ -243,8 +320,8 @@ pub async fn page_stream_to_array<I: Stream<Item = std::result::Result<DataPage,
         LargeBinary | LargeUtf8 => {
             binary::stream_to_array::<i64, _, _>(pages, metadata, &data_type).await
         }
-        FixedSizeBinary(size) => Ok(Box::new(
-            fixed_size_binary::stream_to_array(pages, size, metadata).await?,
+        FixedSizeBinary(_) => Ok(Box::new(
+            fixed_size_binary::stream_to_array(pages, data_type, metadata).await?,
         )),
         other => Err(ArrowError::NotYetImplemented(format!(
             "Async conversion of {:?}",

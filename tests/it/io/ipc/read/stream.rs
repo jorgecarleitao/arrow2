@@ -16,13 +16,13 @@ fn test_file(version: &str, file_name: &str) -> Result<()> {
     let reader = StreamReader::new(file, metadata);
 
     // read expected JSON output
-    let (schema, batches) = read_gzip_json(version, file_name);
+    let (schema, batches) = read_gzip_json(version, file_name)?;
 
     assert_eq!(&schema, reader.schema().as_ref());
 
     batches
         .iter()
-        .zip(reader.map(|x| x.unwrap()))
+        .zip(reader.map(|x| x.unwrap().unwrap()))
         .for_each(|(lhs, rhs)| {
             assert_eq!(lhs, &rhs);
         });

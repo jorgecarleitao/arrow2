@@ -22,7 +22,7 @@ pub fn array_to_page<T, R, O>(
 where
     T: ArrowNativeType,
     R: NativeType,
-    T: num::cast::AsPrimitive<R>,
+    T: num_traits::AsPrimitive<R>,
     O: Offset,
 {
     let is_optional = is_type_nullable(descriptor.type_());

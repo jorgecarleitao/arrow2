@@ -1,10 +1,15 @@
+use lexical_core::ToLexical;
+
 use crate::temporal_conversions;
-use crate::util::lexical_to_bytes;
+use crate::types::NativeType;
+use crate::util::lexical_to_bytes_mut;
 use crate::{
     array::{Array, BinaryArray, BooleanArray, PrimitiveArray, Utf8Array},
     datatypes::{DataType, TimeUnit},
     error::Result,
 };
+
+use super::iterator::{BufStreamingIterator, StreamingIterator};
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct SerializeOptions {
@@ -23,16 +28,24 @@ impl Default for SerializeOptions {
     }
 }
 
+fn primitive_write<'a, T: NativeType + ToLexical>(
+    array: &'a PrimitiveArray<T>,
+) -> Box<dyn StreamingIterator<Item = [u8]> + 'a> {
+    Box::new(BufStreamingIterator::new(
+        array.iter(),
+        |x, buf| {
+            if let Some(x) = x {
+                lexical_to_bytes_mut(*x, buf)
+            }
+        },
+        vec![],
+    ))
+}
+
 macro_rules! dyn_primitive {
-    ($ty:ident, $array:expr) => {{
-        let array = $array
-            .as_any()
-            .downcast_ref::<PrimitiveArray<$ty>>()
-            .unwrap();
-        let iter = array
-            .iter()
-            .map(move |x| x.map(|x| lexical_to_bytes(*x)).unwrap_or(vec![]));
-        Box::new(iter)
+    ($ty:ty, $array:expr) => {{
+        let array = $array.as_any().downcast_ref().unwrap();
+        primitive_write::<$ty>(array)
     }};
 }
 
@@ -42,11 +55,15 @@ macro_rules! dyn_date {
             .as_any()
             .downcast_ref::<PrimitiveArray<$ty>>()
             .unwrap();
-        let iter = array.iter().map(move |x| {
-            x.map(|x| ($fn)(*x).format($format).to_string().into_bytes())
-                .unwrap_or_default()
-        });
-        Box::new(iter)
+        Box::new(BufStreamingIterator::new(
+            array.iter(),
+            move |x, buf| {
+                if let Some(x) = x {
+                    buf.extend_from_slice(($fn)(*x).format($format).to_string().as_bytes())
+                }
+            },
+            vec![],
+        ))
     }};
 }
 
@@ -62,15 +79,23 @@ macro_rules! dyn_date {
 pub fn new_serializer<'a>(
     array: &'a dyn Array,
     options: &'a SerializeOptions,
-) -> Result<Box<dyn Iterator<Item = Vec<u8>> + 'a>> {
+) -> Result<Box<dyn StreamingIterator<Item = [u8]> + 'a>> {
     Ok(match array.data_type() {
         DataType::Boolean => {
             let array = array.as_any().downcast_ref::<BooleanArray>().unwrap();
-            Box::new(
-                array
-                    .iter()
-                    .map(|x| x.map(|x| x.to_string().into_bytes()).unwrap_or_default()),
-            )
+            Box::new(BufStreamingIterator::new(
+                array.iter(),
+                |x, buf| {
+                    if let Some(x) = x {
+                        if x {
+                            buf.extend_from_slice(b"true");
+                        } else {
+                            buf.extend_from_slice(b"false");
+                        }
+                    }
+                },
+                vec![],
+            ))
         }
         DataType::UInt8 => {
             dyn_primitive!(u8, array)
@@ -184,35 +209,51 @@ pub fn new_serializer<'a>(
         }
         DataType::Utf8 => {
             let array = array.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
-            Box::new(
-                array
-                    .iter()
-                    .map(|x| x.map(|x| x.to_string().into_bytes()).unwrap_or_default()),
-            )
+            Box::new(BufStreamingIterator::new(
+                array.iter(),
+                |x, buf| {
+                    if let Some(x) = x {
+                        buf.extend_from_slice(x.as_bytes());
+                    }
+                },
+                vec![],
+            ))
         }
         DataType::LargeUtf8 => {
             let array = array.as_any().downcast_ref::<Utf8Array<i64>>().unwrap();
-            Box::new(
-                array
-                    .iter()
-                    .map(|x| x.map(|x| x.to_string().into_bytes()).unwrap_or_default()),
-            )
+            Box::new(BufStreamingIterator::new(
+                array.iter(),
+                |x, buf| {
+                    if let Some(x) = x {
+                        buf.extend_from_slice(x.as_bytes());
+                    }
+                },
+                vec![],
+            ))
         }
         DataType::Binary => {
             let array = array.as_any().downcast_ref::<BinaryArray<i32>>().unwrap();
-            Box::new(
-                array
-                    .iter()
-                    .map(|x| x.map(|x| x.to_vec()).unwrap_or_default()),
-            )
+            Box::new(BufStreamingIterator::new(
+                array.iter(),
+                |x, buf| {
+                    if let Some(x) = x {
+                        buf.extend_from_slice(x);
+                    }
+                },
+                vec![],
+            ))
         }
         DataType::LargeBinary => {
             let array = array.as_any().downcast_ref::<BinaryArray<i64>>().unwrap();
-            Box::new(
-                array
-                    .iter()
-                    .map(|x| x.map(|x| x.to_vec()).unwrap_or_default()),
-            )
+            Box::new(BufStreamingIterator::new(
+                array.iter(),
+                |x, buf| {
+                    if let Some(x) = x {
+                        buf.extend_from_slice(x);
+                    }
+                },
+                vec![],
+            ))
         }
         _ => todo!(),
     })

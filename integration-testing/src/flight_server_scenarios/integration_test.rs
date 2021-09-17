@@ -295,7 +295,7 @@ async fn record_batch_from_message(
         schema_ref,
         None,
         true,
-        &dictionaries_by_field,
+        dictionaries_by_field,
         MetadataVersion::V5,
         &mut reader,
         0,

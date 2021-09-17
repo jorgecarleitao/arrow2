@@ -8,9 +8,12 @@ use crate::{
     error::{ArrowError, Result},
 };
 
-use super::FixedSizeBinaryArray;
+use super::{FixedSizeBinaryArray, FixedSizeBinaryValues};
 
-/// Mutable version of [`FixedSizeBinaryArray`].
+/// The Arrow's equivalent to a mutable `Vec<Option<[u8; size]>>`.
+/// Converting a [`MutableFixedSizeBinaryArray`] into a [`FixedSizeBinaryArray`] is `O(1)`.
+/// # Implementation
+/// This struct does not allocate a validity until one is required (i.e. push a null to it).
 #[derive(Debug)]
 pub struct MutableFixedSizeBinaryArray {
     data_type: DataType,
@@ -30,19 +33,51 @@ impl From<MutableFixedSizeBinaryArray> for FixedSizeBinaryArray {
 }
 
 impl MutableFixedSizeBinaryArray {
+    /// Canonical method to create a new [`MutableFixedSizeBinaryArray`].
+    pub fn from_data(
+        data_type: DataType,
+        values: MutableBuffer<u8>,
+        validity: Option<MutableBitmap>,
+    ) -> Self {
+        let size = *FixedSizeBinaryArray::get_size(&data_type) as usize;
+        assert_eq!(
+            values.len() % size,
+            0,
+            "The len of values must be a multiple of size"
+        );
+        if let Some(validity) = &validity {
+            assert_eq!(
+                validity.len(),
+                values.len() / size,
+                "The len of the validity must be equal to values / size"
+            );
+        }
+        Self {
+            data_type,
+            size,
+            values,
+            validity,
+        }
+    }
+
+    /// Creates a new empty [`MutableFixedSizeBinaryArray`].
     pub fn new(size: usize) -> Self {
         Self::with_capacity(size, 0)
     }
 
+    /// Creates a new [`MutableFixedSizeBinaryArray`] with capacity for `capacity` entries.
     pub fn with_capacity(size: usize, capacity: usize) -> Self {
-        Self {
-            data_type: DataType::FixedSizeBinary(size as i32),
-            size,
-            values: MutableBuffer::<u8>::with_capacity(capacity * size),
-            validity: None,
-        }
+        Self::from_data(
+            DataType::FixedSizeBinary(size as i32),
+            MutableBuffer::<u8>::with_capacity(capacity * size),
+            None,
+        )
     }
 
+    /// tries to push a new entry to [`MutableFixedSizeBinaryArray`].
+    /// # Error
+    /// Errors iff the size of `value` is not equal to its own size.
+    #[inline]
     pub fn try_push<P: AsRef<[u8]>>(&mut self, value: Option<P>) -> Result<()> {
         match value {
             Some(bytes) => {
@@ -70,11 +105,17 @@ impl MutableFixedSizeBinaryArray {
         Ok(())
     }
 
+    /// pushes a new entry to [`MutableFixedSizeBinaryArray`].
+    /// # Panics
+    /// Panics iff the size of `value` is not equal to its own size.
     #[inline]
     pub fn push<P: AsRef<[u8]>>(&mut self, value: Option<P>) {
         self.try_push(value).unwrap()
     }
 
+    /// Creates a new [`MutableFixedSizeBinaryArray`] from an iterator of values.
+    /// # Errors
+    /// Errors iff the size of any of the `value` is not equal to its own size.
     pub fn try_from_iter<P: AsRef<[u8]>, I: IntoIterator<Item = Option<P>>>(
         iter: I,
         size: usize,
@@ -89,11 +130,37 @@ impl MutableFixedSizeBinaryArray {
     }
 
     fn init_validity(&mut self) {
-        self.validity = Some(MutableBitmap::from_trusted_len_iter(
-            std::iter::repeat(true)
-                .take(self.len() - 1)
-                .chain(std::iter::once(false)),
-        ))
+        let mut validity = MutableBitmap::new();
+        validity.extend_constant(self.len(), true);
+        validity.set(self.len() - 1, false);
+        self.validity = Some(validity)
+    }
+
+    /// Returns the element at index `i` as `&[u8]`
+    #[inline]
+    pub fn value(&self, i: usize) -> &[u8] {
+        &self.values[i * self.size..(i + 1) * self.size]
+    }
+
+    /// Returns the element at index `i` as `&[u8]`
+    /// # Safety
+    /// Assumes that the `i < self.len`.
+    #[inline]
+    pub unsafe fn value_unchecked(&self, i: usize) -> &[u8] {
+        std::slice::from_raw_parts(self.values.as_ptr().add(i * self.size), self.size)
+    }
+}
+
+/// Accessors
+impl MutableFixedSizeBinaryArray {
+    /// Returns its values.
+    pub fn values(&self) -> &MutableBuffer<u8> {
+        &self.values
+    }
+
+    /// Returns a mutable slice of values.
+    pub fn values_mut_slice(&mut self) -> &mut [u8] {
+        self.values.as_mut_slice()
     }
 }
 
@@ -128,5 +195,23 @@ impl MutableArray for MutableFixedSizeBinaryArray {
 
     fn push_null(&mut self) {
         self.values.extend_constant(self.size, 0);
+    }
+}
+
+impl FixedSizeBinaryValues for MutableFixedSizeBinaryArray {
+    #[inline]
+    fn values(&self) -> &[u8] {
+        &self.values
+    }
+
+    #[inline]
+    fn size(&self) -> usize {
+        self.size
+    }
+}
+
+impl PartialEq for MutableFixedSizeBinaryArray {
+    fn eq(&self, other: &Self) -> bool {
+        self.iter().eq(other.iter())
     }
 }

@@ -3,7 +3,7 @@ use std::{iter::FromIterator, sync::Arc};
 use crate::{
     array::{
         specification::{check_offsets, check_offsets_and_utf8},
-        Array, MutableArray, Offset, TryExtend,
+        Array, MutableArray, Offset, TryExtend, TryPush,
     },
     bitmap::MutableBitmap,
     buffer::MutableBuffer,
@@ -17,6 +17,7 @@ use super::Utf8Array;
 /// The mutable version of [`Utf8Array`]. See [`MutableArray`] for more details.
 #[derive(Debug)]
 pub struct MutableUtf8Array<O: Offset> {
+    data_type: DataType,
     offsets: MutableBuffer<O>,
     values: MutableBuffer<u8>,
     validity: Option<MutableBitmap>,
@@ -25,6 +26,7 @@ pub struct MutableUtf8Array<O: Offset> {
 impl<O: Offset> From<MutableUtf8Array<O>> for Utf8Array<O> {
     fn from(other: MutableUtf8Array<O>) -> Self {
         Utf8Array::<O>::from_data(
+            other.data_type,
             other.offsets.into(),
             other.values.into(),
             other.validity.map(|x| x.into()),
@@ -44,6 +46,7 @@ impl<O: Offset> MutableUtf8Array<O> {
         let mut offsets = MutableBuffer::<O>::new();
         offsets.push(O::default());
         Self {
+            data_type: Self::default_data_type(),
             offsets,
             values: MutableBuffer::<u8>::new(),
             validity: None,
@@ -57,6 +60,7 @@ impl<O: Offset> MutableUtf8Array<O> {
     /// * The `values` between `offsets` are not utf8 encoded
     /// * The validity is not `None` and its length is different from `offsets`'s length minus one.
     pub fn from_data(
+        data_type: DataType,
         offsets: MutableBuffer<O>,
         values: MutableBuffer<u8>,
         validity: Option<MutableBitmap>,
@@ -65,7 +69,11 @@ impl<O: Offset> MutableUtf8Array<O> {
         if let Some(ref validity) = validity {
             assert_eq!(offsets.len() - 1, validity.len());
         }
+        if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
+            panic!("MutableUtf8Array can only be initialized with DataType::Utf8 or DataType::LargeUtf8")
+        }
         Self {
+            data_type,
             offsets,
             values,
             validity,
@@ -80,6 +88,7 @@ impl<O: Offset> MutableUtf8Array<O> {
     /// * The `offsets` and `values` are inconsistent
     /// * The validity is not `None` and its length is different from `offsets`'s length minus one.
     pub unsafe fn from_data_unchecked(
+        data_type: DataType,
         offsets: MutableBuffer<O>,
         values: MutableBuffer<u8>,
         validity: Option<MutableBitmap>,
@@ -88,11 +97,19 @@ impl<O: Offset> MutableUtf8Array<O> {
         if let Some(ref validity) = validity {
             assert_eq!(offsets.len() - 1, validity.len());
         }
+        if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
+            panic!("MutableUtf8Array can only be initialized with DataType::Utf8 or DataType::LargeUtf8")
+        }
         Self {
+            data_type,
             offsets,
             values,
             validity,
         }
+    }
+
+    fn default_data_type() -> DataType {
+        Utf8Array::<O>::default_data_type()
     }
 
     /// Initializes a new [`MutableUtf8Array`] with a pre-allocated capacity of slots.
@@ -106,6 +123,7 @@ impl<O: Offset> MutableUtf8Array<O> {
         offsets.push(O::default());
 
         Self {
+            data_type: Self::default_data_type(),
             offsets,
             values: MutableBuffer::<u8>::with_capacity(values),
             validity: None,
@@ -124,35 +142,6 @@ impl<O: Offset> MutableUtf8Array<O> {
     #[inline]
     fn last_offset(&self) -> O {
         *self.offsets.last().unwrap()
-    }
-
-    /// Tries to push a new element to the array.
-    /// # Error
-    /// This operation errors iff the length of all values (in bytes) exceeds `O` maximum value.
-    pub fn try_push<T: AsRef<str>>(&mut self, value: Option<T>) -> Result<()> {
-        match value {
-            Some(value) => {
-                let bytes = value.as_ref().as_bytes();
-                self.values.extend_from_slice(bytes);
-
-                let size = O::from_usize(self.values.len()).ok_or(ArrowError::KeyOverflowError)?;
-
-                self.offsets.push(size);
-
-                match &mut self.validity {
-                    Some(validity) => validity.push(true),
-                    None => {}
-                }
-            }
-            None => {
-                self.offsets.push(self.last_offset());
-                match &mut self.validity {
-                    Some(validity) => validity.push(false),
-                    None => self.init_validity(),
-                }
-            }
-        }
-        Ok(())
     }
 
     /// Pushes a new element to the array.
@@ -200,6 +189,7 @@ impl<O: Offset> MutableArray for MutableUtf8Array<O> {
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
         Arc::new(Utf8Array::from_data(
+            Self::default_data_type(),
             std::mem::take(&mut self.offsets).into(),
             std::mem::take(&mut self.values).into(),
             std::mem::take(&mut self.validity).map(|x| x.into()),
@@ -247,7 +237,7 @@ impl<O: Offset> MutableUtf8Array<O> {
         let (validity, offsets, values) = trusted_len_unzip(iterator);
 
         // soundness: P is `str`
-        Self::from_data_unchecked(offsets, values, validity)
+        Self::from_data_unchecked(Self::default_data_type(), offsets, values, validity)
     }
 
     /// Creates a [`MutableUtf8Array`] from an iterator of trusted length.
@@ -269,7 +259,7 @@ impl<O: Offset> MutableUtf8Array<O> {
         // soundness: I is `TrustedLen`
         let (offsets, values) = unsafe { trusted_len_values_iter(iterator) };
         // soundness: T is AsRef<str>
-        unsafe { Self::from_data_unchecked(offsets, values, None) }
+        unsafe { Self::from_data_unchecked(Self::default_data_type(), offsets, values, None) }
     }
 
     /// Creates a new [`MutableUtf8Array`] from an iterator.
@@ -304,7 +294,12 @@ impl<O: Offset> MutableUtf8Array<O> {
         let (validity, offsets, values) = try_trusted_len_unzip(iterator)?;
 
         // soundness: P is `str`
-        Ok(Self::from_data_unchecked(offsets, values, validity))
+        Ok(Self::from_data_unchecked(
+            Self::default_data_type(),
+            offsets,
+            values,
+            validity,
+        ))
     }
 
     /// Creates a [`MutableUtf8Array`] from an falible iterator of trusted length.
@@ -322,7 +317,7 @@ impl<O: Offset> MutableUtf8Array<O> {
     pub fn from_iter_values<T: AsRef<str>, I: Iterator<Item = T>>(iterator: I) -> Self {
         let (offsets, values) = values_iter(iterator);
         // soundness: T: AsRef<str>
-        unsafe { Self::from_data_unchecked(offsets, values, None) }
+        unsafe { Self::from_data_unchecked(Self::default_data_type(), offsets, values, None) }
     }
 }
 
@@ -337,6 +332,34 @@ impl<O: Offset, T: AsRef<str>> TryExtend<Option<T>> for MutableUtf8Array<O> {
         let mut iter = iter.into_iter();
         self.reserve(iter.size_hint().0, 0);
         iter.try_for_each(|x| self.try_push(x))
+    }
+}
+
+impl<O: Offset, T: AsRef<str>> TryPush<Option<T>> for MutableUtf8Array<O> {
+    fn try_push(&mut self, value: Option<T>) -> Result<()> {
+        match value {
+            Some(value) => {
+                let bytes = value.as_ref().as_bytes();
+                self.values.extend_from_slice(bytes);
+
+                let size = O::from_usize(self.values.len()).ok_or(ArrowError::KeyOverflowError)?;
+
+                self.offsets.push(size);
+
+                match &mut self.validity {
+                    Some(validity) => validity.push(true),
+                    None => {}
+                }
+            }
+            None => {
+                self.offsets.push(self.last_offset());
+                match &mut self.validity {
+                    Some(validity) => validity.push(false),
+                    None => self.init_validity(),
+                }
+            }
+        }
+        Ok(())
     }
 }
 

@@ -1,20 +1,22 @@
-use std::{ffi::CStr, ffi::CString, ptr};
+use std::{collections::BTreeMap, convert::TryInto, ffi::CStr, ffi::CString, ptr};
 
 use crate::{
-    datatypes::{DataType, Field, IntervalUnit, TimeUnit},
+    datatypes::{DataType, Extension, Field, IntervalUnit, Metadata, TimeUnit},
     error::{ArrowError, Result},
 };
 
 #[allow(dead_code)]
 struct SchemaPrivateData {
-    field: Field,
+    name: CString,
+    format: CString,
+    metadata: Option<Vec<u8>>,
     children_ptr: Box<[*mut Ffi_ArrowSchema]>,
     dictionary: Option<*mut Ffi_ArrowSchema>,
 }
 
 /// ABI-compatible struct for `ArrowSchema` from C Data Interface
 /// See <https://arrow.apache.org/docs/format/CDataInterface.html#structure-definitions>
-/// This was created by bindgen
+// This was created by bindgen
 #[repr(C)]
 #[derive(Debug)]
 pub struct Ffi_ArrowSchema {
@@ -36,9 +38,6 @@ unsafe extern "C" fn c_release_schema(schema: *mut Ffi_ArrowSchema) {
     }
     let schema = &mut *schema;
 
-    // take ownership back to release it.
-    CString::from_raw(schema.format as *mut std::os::raw::c_char);
-    CString::from_raw(schema.name as *mut std::os::raw::c_char);
     let private = Box::from_raw(schema.private_data as *mut SchemaPrivateData);
     for child in private.children_ptr.iter() {
         let _ = Box::from_raw(*child);
@@ -52,27 +51,27 @@ unsafe extern "C" fn c_release_schema(schema: *mut Ffi_ArrowSchema) {
 }
 
 impl Ffi_ArrowSchema {
-    /// create a new [`Ffi_ArrowSchema`]. This fails if the fields' [`DataType`] is not supported.
-    pub fn try_new(field: Field) -> Result<Ffi_ArrowSchema> {
-        let format = to_format(field.data_type())?;
+    /// creates a new [Ffi_ArrowSchema]
+    pub(crate) fn new(field: &Field) -> Self {
+        let format = to_format(field.data_type());
         let name = field.name().clone();
 
         // allocate (and hold) the children
         let children_vec = match field.data_type() {
             DataType::List(field) => {
-                vec![Box::new(Ffi_ArrowSchema::try_new(field.as_ref().clone())?)]
+                vec![Box::new(Ffi_ArrowSchema::new(field.as_ref()))]
             }
             DataType::LargeList(field) => {
-                vec![Box::new(Ffi_ArrowSchema::try_new(field.as_ref().clone())?)]
+                vec![Box::new(Ffi_ArrowSchema::new(field.as_ref()))]
             }
             DataType::Struct(fields) => fields
                 .iter()
-                .map(|field| Ok(Box::new(Ffi_ArrowSchema::try_new(field.clone())?)))
-                .collect::<Result<Vec<_>>>()?,
+                .map(|field| Box::new(Ffi_ArrowSchema::new(field)))
+                .collect::<Vec<_>>(),
             DataType::Union(fields, _, _) => fields
                 .iter()
-                .map(|field| Ok(Box::new(Ffi_ArrowSchema::try_new(field.clone())?)))
-                .collect::<Result<Vec<_>>>()?,
+                .map(|field| Box::new(Ffi_ArrowSchema::new(field)))
+                .collect::<Vec<_>>(),
             _ => vec![],
         };
         // note: this cannot be done along with the above because the above is fallible and this op leaks.
@@ -86,30 +85,60 @@ impl Ffi_ArrowSchema {
 
         let dictionary = if let DataType::Dictionary(_, values) = field.data_type() {
             // we do not store field info in the dict values, so can't recover it all :(
-            let field = Field::new("item", values.as_ref().clone(), true);
-            Some(Box::new(Ffi_ArrowSchema::try_new(field)?))
+            let field = Field::new("", values.as_ref().clone(), true);
+            Some(Box::new(Ffi_ArrowSchema::new(&field)))
         } else {
             None
         };
 
+        let metadata = field.metadata();
+
+        let metadata = if let DataType::Extension(name, _, extension_metadata) = field.data_type() {
+            // append extension information.
+            let mut metadata = metadata.clone().unwrap_or_default();
+
+            // metadata
+            if let Some(extension_metadata) = extension_metadata {
+                metadata.insert(
+                    "ARROW:extension:metadata".to_string(),
+                    extension_metadata.clone(),
+                );
+            }
+
+            metadata.insert("ARROW:extension:name".to_string(), name.clone());
+
+            Some(metadata_to_bytes(&metadata))
+        } else {
+            metadata.as_ref().map(metadata_to_bytes)
+        };
+
+        let name = CString::new(name).unwrap();
+        let format = CString::new(format).unwrap();
+
         let mut private = Box::new(SchemaPrivateData {
-            field,
+            name,
+            format,
+            metadata,
             children_ptr,
             dictionary: dictionary.map(Box::into_raw),
         });
 
         // <https://arrow.apache.org/docs/format/CDataInterface.html#c.ArrowSchema>
-        Ok(Ffi_ArrowSchema {
-            format: CString::new(format).unwrap().into_raw(),
-            name: CString::new(name).unwrap().into_raw(),
-            metadata: std::ptr::null_mut(),
+        Self {
+            format: private.format.as_ptr(),
+            name: private.name.as_ptr(),
+            metadata: private
+                .metadata
+                .as_ref()
+                .map(|x| x.as_ptr())
+                .unwrap_or(std::ptr::null()) as *const ::std::os::raw::c_char,
             flags,
             n_children,
             children: private.children_ptr.as_mut_ptr(),
             dictionary: private.dictionary.unwrap_or(std::ptr::null_mut()),
             release: Some(c_release_schema),
             private_data: Box::into_raw(private) as *mut ::std::os::raw::c_void,
-        })
+        }
     }
 
     /// create an empty [Ffi_ArrowSchema]
@@ -128,7 +157,7 @@ impl Ffi_ArrowSchema {
     }
 
     /// returns the format of this schema.
-    pub fn format(&self) -> &str {
+    pub(crate) fn format(&self) -> &str {
         assert!(!self.format.is_null());
         // safe because the lifetime of `self.format` equals `self`
         unsafe { CStr::from_ptr(self.format) }
@@ -137,26 +166,26 @@ impl Ffi_ArrowSchema {
     }
 
     /// returns the name of this schema.
-    pub fn name(&self) -> &str {
+    pub(crate) fn name(&self) -> &str {
         assert!(!self.name.is_null());
         // safe because the lifetime of `self.name` equals `self`
         unsafe { CStr::from_ptr(self.name) }.to_str().unwrap()
     }
 
-    pub fn child(&self, index: usize) -> &'static Self {
+    pub(crate) fn child(&self, index: usize) -> &'static Self {
         assert!(index < self.n_children as usize);
         assert!(!self.name.is_null());
         unsafe { self.children.add(index).as_ref().unwrap().as_ref().unwrap() }
     }
 
-    pub fn dictionary(&self) -> Option<&'static Self> {
+    pub(crate) fn dictionary(&self) -> Option<&'static Self> {
         if self.dictionary.is_null() {
             return None;
         };
         Some(unsafe { self.dictionary.as_ref().unwrap() })
     }
 
-    pub fn nullable(&self) -> bool {
+    pub(crate) fn nullable(&self) -> bool {
         (self.flags / 2) & 1 == 1
     }
 }
@@ -174,12 +203,25 @@ pub fn to_field(schema: &Ffi_ArrowSchema) -> Result<Field> {
     let dictionary = schema.dictionary();
     let data_type = if let Some(dictionary) = dictionary {
         let indices_data_type = to_data_type(schema)?;
-        let values_data_type = to_data_type(dictionary)?;
-        DataType::Dictionary(Box::new(indices_data_type), Box::new(values_data_type))
+        let values = to_field(dictionary)?;
+        DataType::Dictionary(
+            Box::new(indices_data_type),
+            Box::new(values.data_type().clone()),
+        )
     } else {
         to_data_type(schema)?
     };
-    Ok(Field::new(schema.name(), data_type, schema.nullable()))
+    let (metadata, extension) = unsafe { metadata_from_bytes(schema.metadata) };
+
+    let data_type = if let Some((name, extension_metadata)) = extension {
+        DataType::Extension(name, Box::new(data_type), extension_metadata)
+    } else {
+        data_type
+    };
+
+    let mut field = Field::new(schema.name(), data_type, schema.nullable());
+    field.set_metadata(metadata);
+    Ok(field)
 }
 
 fn to_data_type(schema: &Ffi_ArrowSchema) -> Result<DataType> {
@@ -285,56 +327,65 @@ fn to_data_type(schema: &Ffi_ArrowSchema) -> Result<DataType> {
 }
 
 /// the inverse of [to_field]
-fn to_format(data_type: &DataType) -> Result<String> {
-    Ok(match data_type {
-        DataType::Null => "n",
-        DataType::Boolean => "b",
-        DataType::Int8 => "c",
-        DataType::UInt8 => "C",
-        DataType::Int16 => "s",
-        DataType::UInt16 => "S",
-        DataType::Int32 => "i",
-        DataType::UInt32 => "I",
-        DataType::Int64 => "l",
-        DataType::UInt64 => "L",
-        DataType::Float16 => "e",
-        DataType::Float32 => "f",
-        DataType::Float64 => "g",
-        DataType::Binary => "z",
-        DataType::LargeBinary => "Z",
-        DataType::Utf8 => "u",
-        DataType::LargeUtf8 => "U",
-        DataType::Date32 => "tdD",
-        DataType::Date64 => "tdm",
-        DataType::Time32(TimeUnit::Second) => "tts",
-        DataType::Time32(TimeUnit::Millisecond) => "ttm",
-        DataType::Time64(TimeUnit::Microsecond) => "ttu",
-        DataType::Time64(TimeUnit::Nanosecond) => "ttn",
-        DataType::Duration(TimeUnit::Second) => "tDs",
-        DataType::Duration(TimeUnit::Millisecond) => "tDm",
-        DataType::Duration(TimeUnit::Microsecond) => "tDu",
-        DataType::Duration(TimeUnit::Nanosecond) => "tDn",
-        DataType::Interval(IntervalUnit::YearMonth) => "tiM",
-        DataType::Interval(IntervalUnit::DayTime) => "tiD",
+fn to_format(data_type: &DataType) -> String {
+    match data_type {
+        DataType::Null => "n".to_string(),
+        DataType::Boolean => "b".to_string(),
+        DataType::Int8 => "c".to_string(),
+        DataType::UInt8 => "C".to_string(),
+        DataType::Int16 => "s".to_string(),
+        DataType::UInt16 => "S".to_string(),
+        DataType::Int32 => "i".to_string(),
+        DataType::UInt32 => "I".to_string(),
+        DataType::Int64 => "l".to_string(),
+        DataType::UInt64 => "L".to_string(),
+        DataType::Float16 => "e".to_string(),
+        DataType::Float32 => "f".to_string(),
+        DataType::Float64 => "g".to_string(),
+        DataType::Binary => "z".to_string(),
+        DataType::LargeBinary => "Z".to_string(),
+        DataType::Utf8 => "u".to_string(),
+        DataType::LargeUtf8 => "U".to_string(),
+        DataType::Date32 => "tdD".to_string(),
+        DataType::Date64 => "tdm".to_string(),
+        DataType::Time32(TimeUnit::Second) => "tts".to_string(),
+        DataType::Time32(TimeUnit::Millisecond) => "ttm".to_string(),
+        DataType::Time32(_) => {
+            unreachable!("Time32 is only supported for seconds and milliseconds")
+        }
+        DataType::Time64(TimeUnit::Microsecond) => "ttu".to_string(),
+        DataType::Time64(TimeUnit::Nanosecond) => "ttn".to_string(),
+        DataType::Time64(_) => {
+            unreachable!("Time64 is only supported for micro and nanoseconds")
+        }
+        DataType::Duration(TimeUnit::Second) => "tDs".to_string(),
+        DataType::Duration(TimeUnit::Millisecond) => "tDm".to_string(),
+        DataType::Duration(TimeUnit::Microsecond) => "tDu".to_string(),
+        DataType::Duration(TimeUnit::Nanosecond) => "tDn".to_string(),
+        DataType::Interval(IntervalUnit::YearMonth) => "tiM".to_string(),
+        DataType::Interval(IntervalUnit::DayTime) => "tiD".to_string(),
+        DataType::Interval(IntervalUnit::MonthDayNano) => {
+            todo!("Spec for FFI for MonthDayNano still not defined.")
+        }
         DataType::Timestamp(unit, tz) => {
             let unit = match unit {
-                TimeUnit::Second => "s",
-                TimeUnit::Millisecond => "m",
-                TimeUnit::Microsecond => "u",
-                TimeUnit::Nanosecond => "n",
+                TimeUnit::Second => "s".to_string(),
+                TimeUnit::Millisecond => "m".to_string(),
+                TimeUnit::Microsecond => "u".to_string(),
+                TimeUnit::Nanosecond => "n".to_string(),
             };
-            return Ok(format!(
+            format!(
                 "ts{}:{}",
                 unit,
                 tz.as_ref().map(|x| x.as_ref()).unwrap_or("")
-            ));
+            )
         }
-        DataType::Decimal(precision, scale) => return Ok(format!("d:{},{}", precision, scale)),
-        DataType::List(_) => "+l",
-        DataType::LargeList(_) => "+L",
-        DataType::Struct(_) => "+s",
-        DataType::FixedSizeBinary(size) => return Ok(format!("w{}", size)),
-        DataType::FixedSizeList(_, size) => return Ok(format!("+w:{}", size)),
+        DataType::Decimal(precision, scale) => format!("d:{},{}", precision, scale),
+        DataType::List(_) => "+l".to_string(),
+        DataType::LargeList(_) => "+L".to_string(),
+        DataType::Struct(_) => "+s".to_string(),
+        DataType::FixedSizeBinary(size) => format!("w{}", size),
+        DataType::FixedSizeList(_, size) => format!("+w:{}", size),
         DataType::Union(f, ids, is_sparse) => {
             let sparsness = if *is_sparse { 's' } else { 'd' };
             let mut r = format!("+u{}:", sparsness);
@@ -346,10 +397,79 @@ fn to_format(data_type: &DataType) -> Result<String> {
             };
             let ids = &ids[..ids.len() - 1]; // take away last ","
             r.push_str(ids);
-            return Ok(r);
+            r
         }
-        DataType::Dictionary(index, _) => return to_format(index.as_ref()),
-        _ => todo!(),
+        DataType::Dictionary(index, _) => to_format(index.as_ref()),
+        DataType::Extension(_, inner, _) => to_format(inner.as_ref()),
     }
-    .to_string())
+}
+
+pub(super) fn get_field_child(field: &Field, index: usize) -> Result<Field> {
+    match (index, field.data_type()) {
+        (0, DataType::List(field)) => Ok(field.as_ref().clone()),
+        (0, DataType::LargeList(field)) => Ok(field.as_ref().clone()),
+        (index, DataType::Struct(fields)) => Ok(fields[index].clone()),
+        (index, DataType::Union(fields, _, _)) => Ok(fields[index].clone()),
+        (child, data_type) => Err(ArrowError::Ffi(format!(
+            "Requested child {} to type {:?} that has no such child",
+            child, data_type
+        ))),
+    }
+}
+
+fn metadata_to_bytes(metadata: &BTreeMap<String, String>) -> Vec<u8> {
+    let a = (metadata.len() as i32).to_ne_bytes().to_vec();
+    metadata.iter().fold(a, |mut acc, (key, value)| {
+        acc.extend((key.len() as i32).to_ne_bytes());
+        acc.extend(key.as_bytes());
+        acc.extend((value.len() as i32).to_ne_bytes());
+        acc.extend(value.as_bytes());
+        acc
+    })
+}
+
+unsafe fn read_ne_i32(ptr: *const u8) -> i32 {
+    let slice = std::slice::from_raw_parts(ptr, 4);
+    i32::from_ne_bytes(slice.try_into().unwrap())
+}
+
+unsafe fn read_bytes(ptr: *const u8, len: usize) -> &'static str {
+    let slice = std::slice::from_raw_parts(ptr, len);
+    std::str::from_utf8(slice).unwrap()
+}
+
+unsafe fn metadata_from_bytes(data: *const ::std::os::raw::c_char) -> (Metadata, Extension) {
+    let mut data = data as *const u8; // u8 = i8
+    if data.is_null() {
+        return (None, None);
+    };
+    let len = read_ne_i32(data);
+    data = data.add(4);
+
+    let mut result = BTreeMap::new();
+    let mut extension_name = None;
+    let mut extension_metadata = None;
+    for _ in 0..len {
+        let key_len = read_ne_i32(data) as usize;
+        data = data.add(4);
+        let key = read_bytes(data, key_len);
+        data = data.add(key_len);
+        let value_len = read_ne_i32(data) as usize;
+        data = data.add(4);
+        let value = read_bytes(data, value_len);
+        data = data.add(value_len);
+        match key {
+            "ARROW:extension:name" => {
+                extension_name = Some(value.to_string());
+            }
+            "ARROW:extension:metadata" => {
+                extension_metadata = Some(value.to_string());
+            }
+            _ => {
+                result.insert(key.to_string(), value.to_string());
+            }
+        };
+    }
+    let extension = extension_name.map(|name| (name, extension_metadata));
+    (Some(result), extension)
 }

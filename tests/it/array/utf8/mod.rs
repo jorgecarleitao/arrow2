@@ -1,4 +1,4 @@
-use arrow2::{array::*, bitmap::Bitmap, buffer::Buffer, error::Result};
+use arrow2::{array::*, bitmap::Bitmap, buffer::Buffer, datatypes::DataType, error::Result};
 
 mod mutable;
 
@@ -23,6 +23,7 @@ fn basics() {
     assert!(array.is_valid(2));
 
     let array2 = Utf8Array::<i32>::from_data(
+        DataType::Utf8,
         array.offsets().clone(),
         array.values().clone(),
         array.validity().clone(),
@@ -39,7 +40,7 @@ fn basics() {
 
 #[test]
 fn empty() {
-    let array = Utf8Array::<i32>::new_empty();
+    let array = Utf8Array::<i32>::new_empty(DataType::Utf8);
     assert_eq!(array.values().as_slice(), b"");
     assert_eq!(array.offsets().as_slice(), &[0]);
     assert_eq!(array.validity(), &None);
@@ -59,7 +60,10 @@ fn from_slice() {
 
     let offsets = Buffer::from(&[0, 1, 2, 4]);
     let values = Buffer::from("abcc".as_bytes());
-    assert_eq!(b, Utf8Array::<i32>::from_data(offsets, values, None));
+    assert_eq!(
+        b,
+        Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None)
+    );
 }
 
 #[test]
@@ -68,7 +72,10 @@ fn from_iter_values() {
 
     let offsets = Buffer::from(&[0, 1, 2, 4]);
     let values = Buffer::from("abcc".as_bytes());
-    assert_eq!(b, Utf8Array::<i32>::from_data(offsets, values, None));
+    assert_eq!(
+        b,
+        Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None)
+    );
 }
 
 #[test]
@@ -78,7 +85,10 @@ fn from_trusted_len_iter() {
 
     let offsets = Buffer::from(&[0, 1, 2, 4]);
     let values = Buffer::from("abcc".as_bytes());
-    assert_eq!(b, Utf8Array::<i32>::from_data(offsets, values, None));
+    assert_eq!(
+        b,
+        Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None)
+    );
 }
 
 #[test]
@@ -92,5 +102,69 @@ fn try_from_trusted_len_iter() {
 
     let offsets = Buffer::from(&[0, 1, 2, 4]);
     let values = Buffer::from("abcc".as_bytes());
-    assert_eq!(b, Utf8Array::<i32>::from_data(offsets, values, None));
+    assert_eq!(
+        b,
+        Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None)
+    );
+}
+
+#[test]
+#[should_panic]
+fn not_utf8() {
+    let offsets = Buffer::from(&[0, 4]);
+    let values = Buffer::from([0, 159, 146, 150]); // invalid utf8
+    Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
+}
+
+#[test]
+#[should_panic]
+fn wrong_offsets() {
+    let offsets = Buffer::from(&[0, 5, 4]); // invalid offsets
+    let values = Buffer::from(b"abbbbb");
+    Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
+}
+
+#[test]
+#[should_panic]
+fn wrong_data_type() {
+    let offsets = Buffer::from(&[0, 4]);
+    let values = Buffer::from(b"abbb");
+    Utf8Array::<i32>::from_data(DataType::Int8, offsets, values, None);
+}
+
+#[test]
+#[should_panic]
+fn value_with_wrong_offsets_panics() {
+    let offsets = Buffer::from(&[0, 10, 11, 4]);
+    let values = Buffer::from(b"abbb");
+    // the 10-11 is not checked
+    let array = Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
+
+    // but access is still checked (and panics)
+    // without checks, this would result in reading beyond bounds
+    array.value(0);
+}
+
+#[test]
+#[should_panic]
+fn index_out_of_bounds_panics() {
+    let offsets = Buffer::from(&[0, 1, 2, 4]);
+    let values = Buffer::from(b"abbb");
+    let array = Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
+
+    array.value(3);
+}
+
+#[test]
+#[should_panic]
+fn value_unchecked_with_wrong_offsets_panics() {
+    let offsets = Buffer::from(&[0, 10, 11, 4]);
+    let values = Buffer::from(b"abbb");
+    // the 10-11 is not checked
+    let array = Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
+
+    // but access is still checked (and panics)
+    // without checks, this would result in reading beyond bounds,
+    // even if index `0` is in bounds
+    unsafe { array.value_unchecked(0) };
 }

@@ -40,14 +40,15 @@ fn write_single_array(path: &str, array: &dyn Array, field: Field) -> Result<()>
     let mut file = File::create(path)?;
 
     // Write the file. Note that, at present, any error results in a corrupted file.
-    write_file(
+    let _ = write_file(
         &mut file,
         row_groups,
         &schema,
         parquet_schema,
         options,
         None,
-    )
+    )?;
+    Ok(())
 }
 
 fn main() -> Result<()> {

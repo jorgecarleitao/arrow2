@@ -43,3 +43,9 @@ test("generated_primitive", "2", ("utf8_nullable", 24), "delta")
 
 test("generated_dictionary", "1", ("dict0", 0), "")
 test("generated_dictionary", "2", ("dict0", 0), "")
+
+test("generated_dictionary", "1", ("dict1", 1), "")
+test("generated_dictionary", "2", ("dict1", 1), "")
+
+test("generated_dictionary", "1", ("dict2", 2), "")
+test("generated_dictionary", "2", ("dict2", 2), "")

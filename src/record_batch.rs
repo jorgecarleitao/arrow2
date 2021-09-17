@@ -61,7 +61,7 @@ impl RecordBatch {
     /// # use arrow2::datatypes::{Schema, Field, DataType};
     /// # use arrow2::record_batch::RecordBatch;
     /// # fn main() -> arrow2::error::Result<()> {
-    /// let id_array = PrimitiveArray::from_slice(&[1i32, 2, 3, 4, 5]).to(DataType::Int32);
+    /// let id_array = PrimitiveArray::from_slice([1i32, 2, 3, 4, 5]);
     /// let schema = Arc::new(Schema::new(vec![
     ///     Field::new("id", DataType::Int32, false)
     /// ]));
@@ -180,7 +180,7 @@ impl RecordBatch {
     /// # use arrow2::datatypes::{Schema, Field, DataType};
     /// # use arrow2::record_batch::RecordBatch;
     /// # fn main() -> arrow2::error::Result<()> {
-    /// let id_array = PrimitiveArray::from_slice(&[1i32, 2, 3, 4, 5]).to(DataType::Int32);
+    /// let id_array = PrimitiveArray::from_slice([1i32, 2, 3, 4, 5]);
     /// let schema = Arc::new(Schema::new(vec![
     ///     Field::new("id", DataType::Int32, false)
     /// ]));
@@ -209,7 +209,7 @@ impl RecordBatch {
     /// # use arrow2::datatypes::{Schema, Field, DataType};
     /// # use arrow2::record_batch::RecordBatch;
     /// # fn main() -> arrow2::error::Result<()> {
-    /// let id_array = PrimitiveArray::from_slice(&[1i32, 2, 3, 4, 5]).to(DataType::Int32);
+    /// let id_array = PrimitiveArray::from_slice([1i32, 2, 3, 4, 5]);
     /// let schema = Arc::new(Schema::new(vec![
     ///     Field::new("id", DataType::Int32, false)
     /// ]));
@@ -339,17 +339,14 @@ impl Default for RecordBatchOptions {
     }
 }
 
-impl From<&StructArray> for RecordBatch {
-    /// Create a record batch from struct array.
-    ///
-    /// This currently does not flatten and nested struct types
-    fn from(struct_array: &StructArray) -> Self {
-        if let DataType::Struct(fields) = struct_array.data_type() {
-            let schema = Arc::new(Schema::new(fields.clone()));
-            let columns = struct_array.values().to_vec();
-            RecordBatch { schema, columns }
-        } else {
-            unreachable!("unable to get datatype as struct")
+impl From<StructArray> for RecordBatch {
+    /// # Panics iff the null count of the array is not null.
+    fn from(array: StructArray) -> Self {
+        assert!(array.null_count() == 0);
+        let (fields, values, _) = array.into_data();
+        RecordBatch {
+            schema: Arc::new(Schema::new(fields)),
+            columns: values,
         }
     }
 }
@@ -363,7 +360,7 @@ impl From<RecordBatch> for StructArray {
             .zip(batch.columns.iter())
             .map(|t| (t.0.clone(), t.1.clone()))
             .unzip();
-        StructArray::from_data(fields, values, None)
+        StructArray::from_data(DataType::Struct(fields), values, None)
     }
 }
 

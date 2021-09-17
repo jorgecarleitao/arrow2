@@ -4,6 +4,13 @@ use crate::trusted_len::TrustedLen;
 
 use super::{BooleanArray, MutableBooleanArray};
 
+impl<P: AsRef<[Option<bool>]>> From<P> for BooleanArray {
+    /// Creates a new [`BooleanArray`] out of a slice of Optional `bool`.
+    fn from(slice: P) -> Self {
+        MutableBooleanArray::from(slice).into()
+    }
+}
+
 impl BooleanArray {
     /// Creates a new [`BooleanArray`] from an [`TrustedLen`] of `bool`.
     #[inline]

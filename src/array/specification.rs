@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use num::Num;
+use num_traits::Num;
 
 use crate::types::Index;
 
@@ -8,11 +8,14 @@ use crate::types::Index;
 /// This trait is only implemented for `i32` and `i64`, the two sizes part of the specification.
 /// # Safety
 /// Do not implement.
-pub unsafe trait Offset: Index + Num + Ord + num::CheckedAdd {
+pub unsafe trait Offset: Index + Num + Ord + num_traits::CheckedAdd {
+    /// Whether it is `i32` or `i64`
     fn is_large() -> bool;
 
+    /// converts itself to `isize`
     fn to_isize(&self) -> isize;
 
+    /// converts from `isize`
     fn from_isize(value: isize) -> Option<Self>;
 }
 

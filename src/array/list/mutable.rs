@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    array::{Array, MutableArray, Offset, TryExtend},
+    array::{Array, MutableArray, Offset, TryExtend, TryPush},
     bitmap::MutableBitmap,
     buffer::MutableBuffer,
     datatypes::{DataType, Field},
@@ -67,13 +67,25 @@ where
 {
     fn try_extend<II: IntoIterator<Item = Option<I>>>(&mut self, iter: II) -> Result<()> {
         for items in iter {
-            if let Some(items) = items {
-                let values = self.mut_values();
-                values.try_extend(items)?;
-                self.try_push_valid()?;
-            } else {
-                self.push_null();
-            }
+            self.try_push(items)?;
+        }
+        Ok(())
+    }
+}
+
+impl<O, M, I, T> TryPush<Option<I>> for MutableListArray<O, M>
+where
+    O: Offset,
+    M: MutableArray + TryExtend<Option<T>>,
+    I: IntoIterator<Item = Option<T>>,
+{
+    fn try_push(&mut self, item: Option<I>) -> Result<()> {
+        if let Some(items) = item {
+            let values = self.mut_values();
+            values.try_extend(items)?;
+            self.try_push_valid()?;
+        } else {
+            self.push_null();
         }
         Ok(())
     }

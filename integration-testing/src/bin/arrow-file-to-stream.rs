@@ -30,7 +30,7 @@ fn main() -> Result<()> {
     let mut reader = read::FileReader::new(&mut f, metadata, None);
     let schema = reader.schema();
 
-    let mut writer = StreamWriter::try_new(std::io::stdout(), &schema)?;
+    let mut writer = StreamWriter::try_new(std::io::stdout(), schema)?;
 
     reader.try_for_each(|batch| {
         let batch = batch?;

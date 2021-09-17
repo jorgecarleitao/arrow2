@@ -18,11 +18,11 @@
 use crate::{
     array::*,
     bitmap::Bitmap,
-    datatypes::{DataType, IntervalUnit},
+    datatypes::{DataType, PhysicalType},
     endianess::is_native_little_endian,
     io::ipc::gen::Message,
     trusted_len::TrustedLen,
-    types::{days_ms, NativeType},
+    types::NativeType,
 };
 
 use crate::io::ipc::gen::Schema;
@@ -317,81 +317,19 @@ pub fn write_dictionary(
     write_keys: bool,
 ) -> usize {
     match array.data_type() {
-        DataType::Dictionary(key_type, _) => match key_type.as_ref() {
-            DataType::Int8 => _write_dictionary::<i8>(
-                array,
-                buffers,
-                arrow_data,
-                nodes,
-                offset,
-                is_little_endian,
-                write_keys,
-            ),
-            DataType::Int16 => _write_dictionary::<i16>(
-                array,
-                buffers,
-                arrow_data,
-                nodes,
-                offset,
-                is_little_endian,
-                write_keys,
-            ),
-            DataType::Int32 => _write_dictionary::<i32>(
-                array,
-                buffers,
-                arrow_data,
-                nodes,
-                offset,
-                is_little_endian,
-                write_keys,
-            ),
-            DataType::Int64 => _write_dictionary::<i64>(
-                array,
-                buffers,
-                arrow_data,
-                nodes,
-                offset,
-                is_little_endian,
-                write_keys,
-            ),
-            DataType::UInt8 => _write_dictionary::<u8>(
-                array,
-                buffers,
-                arrow_data,
-                nodes,
-                offset,
-                is_little_endian,
-                write_keys,
-            ),
-            DataType::UInt16 => _write_dictionary::<u16>(
-                array,
-                buffers,
-                arrow_data,
-                nodes,
-                offset,
-                is_little_endian,
-                write_keys,
-            ),
-            DataType::UInt32 => _write_dictionary::<u32>(
-                array,
-                buffers,
-                arrow_data,
-                nodes,
-                offset,
-                is_little_endian,
-                write_keys,
-            ),
-            DataType::UInt64 => _write_dictionary::<u64>(
-                array,
-                buffers,
-                arrow_data,
-                nodes,
-                offset,
-                is_little_endian,
-                write_keys,
-            ),
-            _ => unreachable!(),
-        },
+        DataType::Dictionary(key_type, _) => {
+            with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
+                _write_dictionary::<$T>(
+                    array,
+                    buffers,
+                    arrow_data,
+                    nodes,
+                    offset,
+                    is_little_endian,
+                    write_keys,
+                )
+            })
+        }
         _ => unreachable!(),
     }
 }
@@ -408,79 +346,27 @@ pub fn write(
         array.len() as i64,
         array.null_count() as i64,
     ));
-    match array.data_type() {
-        DataType::Null => (),
-        DataType::Boolean => write_boolean(array, buffers, arrow_data, offset, is_little_endian),
-        DataType::Int8 => {
-            write_primitive::<i8>(array, buffers, arrow_data, offset, is_little_endian)
-        }
-        DataType::Int16 => {
-            write_primitive::<i16>(array, buffers, arrow_data, offset, is_little_endian)
-        }
-        DataType::Int32
-        | DataType::Date32
-        | DataType::Time32(_)
-        | DataType::Interval(IntervalUnit::YearMonth) => {
-            write_primitive::<i32>(array, buffers, arrow_data, offset, is_little_endian)
-        }
-        DataType::Int64
-        | DataType::Date64
-        | DataType::Time64(_)
-        | DataType::Timestamp(_, _)
-        | DataType::Duration(_) => {
-            write_primitive::<i64>(array, buffers, arrow_data, offset, is_little_endian)
-        }
-        DataType::Decimal(_, _) => {
-            write_primitive::<i128>(array, buffers, arrow_data, offset, is_little_endian)
-        }
-        DataType::Interval(IntervalUnit::DayTime) => {
-            write_primitive::<days_ms>(array, buffers, arrow_data, offset, is_little_endian)
-        }
-        DataType::UInt8 => {
-            write_primitive::<u8>(array, buffers, arrow_data, offset, is_little_endian)
-        }
-        DataType::UInt16 => {
-            write_primitive::<u16>(array, buffers, arrow_data, offset, is_little_endian)
-        }
-        DataType::UInt32 => {
-            write_primitive::<u32>(array, buffers, arrow_data, offset, is_little_endian)
-        }
-        DataType::UInt64 => {
-            write_primitive::<u64>(array, buffers, arrow_data, offset, is_little_endian)
-        }
-        DataType::Float16 => unreachable!(),
-        DataType::Float32 => {
-            write_primitive::<f32>(array, buffers, arrow_data, offset, is_little_endian)
-        }
-        DataType::Float64 => {
-            write_primitive::<f64>(array, buffers, arrow_data, offset, is_little_endian)
-        }
-        DataType::Binary => {
-            write_binary::<i32>(array, buffers, arrow_data, offset, is_little_endian)
-        }
-        DataType::LargeBinary => {
-            write_binary::<i64>(array, buffers, arrow_data, offset, is_little_endian)
-        }
-        DataType::FixedSizeBinary(_) => {
+    use PhysicalType::*;
+    match array.data_type().to_physical_type() {
+        Null => (),
+        Boolean => write_boolean(array, buffers, arrow_data, offset, is_little_endian),
+        Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
+            write_primitive::<$T>(array, buffers, arrow_data, offset, is_little_endian)
+        }),
+        Binary => write_binary::<i32>(array, buffers, arrow_data, offset, is_little_endian),
+        LargeBinary => write_binary::<i64>(array, buffers, arrow_data, offset, is_little_endian),
+        FixedSizeBinary => {
             write_fixed_size_binary(array, buffers, arrow_data, offset, is_little_endian)
         }
-        DataType::Utf8 => write_utf8::<i32>(array, buffers, arrow_data, offset, is_little_endian),
-        DataType::LargeUtf8 => {
-            write_utf8::<i64>(array, buffers, arrow_data, offset, is_little_endian)
-        }
-        DataType::List(_) => {
-            write_list::<i32>(array, buffers, arrow_data, nodes, offset, is_little_endian)
-        }
-        DataType::LargeList(_) => {
-            write_list::<i64>(array, buffers, arrow_data, nodes, offset, is_little_endian)
-        }
-        DataType::FixedSizeList(_, _) => {
+        Utf8 => write_utf8::<i32>(array, buffers, arrow_data, offset, is_little_endian),
+        LargeUtf8 => write_utf8::<i64>(array, buffers, arrow_data, offset, is_little_endian),
+        List => write_list::<i32>(array, buffers, arrow_data, nodes, offset, is_little_endian),
+        LargeList => write_list::<i64>(array, buffers, arrow_data, nodes, offset, is_little_endian),
+        FixedSizeList => {
             write_fixed_size_list(array, buffers, arrow_data, nodes, offset, is_little_endian)
         }
-        DataType::Struct(_) => {
-            write_struct(array, buffers, arrow_data, nodes, offset, is_little_endian)
-        }
-        DataType::Dictionary(_, _) => {
+        Struct => write_struct(array, buffers, arrow_data, nodes, offset, is_little_endian),
+        Dictionary(_) => {
             write_dictionary(
                 array,
                 buffers,
@@ -491,7 +377,7 @@ pub fn write(
                 true,
             );
         }
-        DataType::Union(_, _, _) => {
+        Union => {
             write_union(array, buffers, arrow_data, nodes, offset, is_little_endian);
         }
     }

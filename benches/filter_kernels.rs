@@ -40,7 +40,8 @@ fn add_benchmark(c: &mut Criterion) {
         let size = 2usize.pow(log2_size);
 
         let filter_array = create_boolean_array(size, 0.0, 0.9);
-        let filter_array = BooleanArray::from_data(filter_array.values().clone(), None);
+        let filter_array =
+            BooleanArray::from_data(DataType::Boolean, filter_array.values().clone(), None);
 
         let arr_a = create_primitive_array::<f32>(size, DataType::Float32, 0.0);
         c.bench_function(&format!("filter 2^{} f32", log2_size), |b| {
@@ -113,7 +114,7 @@ fn add_benchmark(c: &mut Criterion) {
         b.iter(|| bench_built_filter(&sparse_filter, &data_array))
     });
 
-    let data_array = create_string_array::<i32>(size, 0.5);
+    let data_array = create_string_array::<i32>(size, 4, 0.5, 42);
     c.bench_function("filter context string", |b| {
         b.iter(|| bench_built_filter(&filter, &data_array))
     });

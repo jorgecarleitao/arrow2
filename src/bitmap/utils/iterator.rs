@@ -12,7 +12,7 @@ pub struct BitmapIter<'a> {
 }
 
 impl<'a> BitmapIter<'a> {
-    #[inline]
+    /// Creates a new [`BitmapIter`].
     pub fn new(slice: &'a [u8], offset: usize, len: usize) -> Self {
         // example:
         // slice.len() = 4

@@ -1,10 +1,10 @@
-name: Integration parquet
+name: Integration Parquet
 
 on: [push, pull_request]
 
 jobs:
   docker:
-    name: Integration Test
+    name: Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2

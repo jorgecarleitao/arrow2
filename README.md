@@ -65,7 +65,8 @@ venv/bin/python parquet_integration/write_parquet.py
 * `MutableArray` API to work in-memory in-place.
 * faster IPC reader (different design that avoids an extra copy of all data)
 * IPC supports 2.0 (compression)
-* FFI support for dictionary-encoded arrays and union array
+* Extension type supported
+* All implemented arrow types pass FFI integration tests against pyarrow / C++
 * All implemented arrow types pass IPC integration tests against other implementations
 
 ### Parquet
@@ -73,7 +74,7 @@ venv/bin/python parquet_integration/write_parquet.py
 * Reading parquet is 10-20x faster (single core) and deserialization is parallelizable
 * Writing parquet is 3-10x faster (single core) and serialization is parallelizable
 * parquet IO has no `unsafe`
-* parquet IO supports `async` read
+* parquet IO supports `async`
 
 ### Others
 
@@ -83,7 +84,7 @@ venv/bin/python parquet_integration/write_parquet.py
 ## Features in the original not available in this crate
 
 * Parquet read and write of struct and nested lists.
-* Map types
+* Map type
 
 ## Features in this crate not in pyarrow
 
@@ -222,8 +223,12 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 
 ## How to generate the changelog
 
-Run
+```bash
+docker run -it --rm -v "$(pwd)":/usr/local/src/your-app githubchangeloggenerator/github-changelog-generator --user jorgecarleitao --project arrow2 --token TOKEN
+```
+
+## How to publish
 
 ```bash
-docker run -it --rm -v "$(pwd)":/usr/local/src/your-app githubchangeloggenerator/github-changelog-generator --user jorgecarleitao --project arrow2 --token TOKEN --future-release v0.2.0
+cargo publish --features full
 ```

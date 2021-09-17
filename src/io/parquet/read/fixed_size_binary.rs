@@ -1,8 +1,8 @@
 use futures::{pin_mut, Stream, StreamExt};
 use parquet2::{
-    encoding::{bitpacking, hybrid_rle, uleb128, Encoding},
-    page::{DataPage, DataPageHeader, DataPageHeaderExt, FixedLenByteArrayPageDict},
-    read::{levels, StreamingIterator},
+    encoding::{hybrid_rle, Encoding},
+    page::{DataPage, FixedLenByteArrayPageDict},
+    read::StreamingIterator,
 };
 
 use super::{ColumnChunkMetaData, ColumnDescriptor};
@@ -21,14 +21,13 @@ use super::utils;
 pub(crate) fn read_dict_buffer(
     validity_buffer: &[u8],
     indices_buffer: &[u8],
-    length: u32,
-    size: i32,
+    additional: usize,
+    size: usize,
     dict: &FixedLenByteArrayPageDict,
     values: &mut MutableBuffer<u8>,
     validity: &mut MutableBitmap,
 ) {
-    let length = length as usize;
-    let size = size as usize;
+    let length = values.len() * size + additional;
     let dict_values = dict.values();
 
     // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
@@ -36,20 +35,14 @@ pub(crate) fn read_dict_buffer(
     let bit_width = indices_buffer[0];
     let indices_buffer = &indices_buffer[1..];
 
-    let (_, consumed) = uleb128::decode(indices_buffer);
-    let indices_buffer = &indices_buffer[consumed..];
-
-    let non_null_indices_len = (indices_buffer.len() * 8 / bit_width as usize) as u32;
-
-    let mut indices =
-        bitpacking::Decoder::new(indices_buffer, bit_width, non_null_indices_len as usize);
+    let mut indices = hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, length);
 
     let validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
 
     for run in validity_iterator {
         match run {
             hybrid_rle::HybridEncoded::Bitpacked(packed) => {
-                let remaining = length - values.len();
+                let remaining = length - values.len() * size;
                 let len = std::cmp::min(packed.len() * 8, remaining);
                 for is_valid in BitmapIter::new(packed, 0, len) {
                     validity.push(is_valid);
@@ -80,13 +73,12 @@ pub(crate) fn read_dict_buffer(
 pub(crate) fn read_optional(
     validity_buffer: &[u8],
     values_buffer: &[u8],
-    length: u32,
-    size: i32,
+    additional: usize,
+    size: usize,
     values: &mut MutableBuffer<u8>,
     validity: &mut MutableBitmap,
 ) {
-    let length = length as usize;
-    let size = size as usize;
+    let length = values.len() * size + additional;
 
     assert_eq!(values_buffer.len() % size, 0);
     let mut values_iterator = values_buffer.chunks_exact(size);
@@ -97,7 +89,7 @@ pub(crate) fn read_optional(
         match run {
             hybrid_rle::HybridEncoded::Bitpacked(packed) => {
                 // the pack may contain more items than needed.
-                let remaining = length - values.len();
+                let remaining = length - values.len() * size;
                 let len = std::cmp::min(packed.len() * 8, remaining);
                 for is_valid in BitmapIter::new(packed, 0, len) {
                     validity.push(is_valid);
@@ -125,14 +117,19 @@ pub(crate) fn read_optional(
     }
 }
 
-pub(crate) fn read_required(buffer: &[u8], length: u32, size: i32, values: &mut MutableBuffer<u8>) {
-    assert_eq!(buffer.len(), length as usize * size as usize);
+pub(crate) fn read_required(
+    buffer: &[u8],
+    additional: usize,
+    size: usize,
+    values: &mut MutableBuffer<u8>,
+) {
+    assert_eq!(buffer.len(), additional * size);
     values.extend_from_slice(buffer);
 }
 
 pub fn iter_to_array<I, E>(
     mut iter: I,
-    size: i32,
+    data_type: DataType,
     metadata: &ColumnChunkMetaData,
 ) -> Result<FixedSizeBinaryArray>
 where
@@ -140,8 +137,10 @@ where
     E: Clone,
     I: StreamingIterator<Item = std::result::Result<DataPage, E>>,
 {
+    let size = *FixedSizeBinaryArray::get_size(&data_type) as usize;
+
     let capacity = metadata.num_values() as usize;
-    let mut values = MutableBuffer::<u8>::with_capacity(capacity * size as usize);
+    let mut values = MutableBuffer::<u8>::with_capacity(capacity * size);
     let mut validity = MutableBitmap::with_capacity(capacity);
     while let Some(page) = iter.next() {
         extend_from_page(
@@ -154,7 +153,7 @@ where
     }
 
     Ok(FixedSizeBinaryArray::from_data(
-        DataType::FixedSizeBinary(size),
+        data_type,
         values.into(),
         validity.into(),
     ))
@@ -162,7 +161,7 @@ where
 
 pub async fn stream_to_array<I, E>(
     pages: I,
-    size: i32,
+    data_type: DataType,
     metadata: &ColumnChunkMetaData,
 ) -> Result<FixedSizeBinaryArray>
 where
@@ -170,8 +169,10 @@ where
     E: Clone,
     I: Stream<Item = std::result::Result<DataPage, E>>,
 {
+    let size = *FixedSizeBinaryArray::get_size(&data_type) as usize;
+
     let capacity = metadata.num_values() as usize;
-    let mut values = MutableBuffer::<u8>::with_capacity(capacity * size as usize);
+    let mut values = MutableBuffer::<u8>::with_capacity(capacity * size);
     let mut validity = MutableBitmap::with_capacity(capacity);
 
     pin_mut!(pages); // needed for iteration
@@ -187,7 +188,7 @@ where
     }
 
     Ok(FixedSizeBinaryArray::from_data(
-        DataType::FixedSizeBinary(size),
+        data_type,
         values.into(),
         validity.into(),
     ))
@@ -195,96 +196,48 @@ where
 
 pub(crate) fn extend_from_page(
     page: &DataPage,
-    size: i32,
+    size: usize,
     descriptor: &ColumnDescriptor,
     values: &mut MutableBuffer<u8>,
     validity: &mut MutableBitmap,
 ) -> Result<()> {
+    let additional = page.num_values();
     assert_eq!(descriptor.max_rep_level(), 0);
     assert!(descriptor.max_def_level() <= 1);
     let is_optional = descriptor.max_def_level() == 1;
-    match page.header() {
-        DataPageHeader::V1(header) => {
-            assert_eq!(header.definition_level_encoding(), Encoding::Rle);
 
-            let (_, validity_buffer, values_buffer) =
-                levels::split_buffer_v1(page.buffer(), false, is_optional);
+    let (_, validity_buffer, values_buffer, version) = utils::split_buffer(page, descriptor);
 
-            match (page.encoding(), page.dictionary_page(), is_optional) {
-                (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer(
-                    validity_buffer,
-                    values_buffer,
-                    page.num_values() as u32,
-                    size,
-                    dict.as_any().downcast_ref().unwrap(),
-                    values,
-                    validity,
-                ),
-                (Encoding::Plain, None, true) => read_optional(
-                    validity_buffer,
-                    values_buffer,
-                    page.num_values() as u32,
-                    size,
-                    values,
-                    validity,
-                ),
-                (Encoding::Plain, None, false) => {
-                    read_required(page.buffer(), page.num_values() as u32, size, values)
-                }
-                _ => {
-                    return Err(utils::not_implemented(
-                        &page.encoding(),
-                        is_optional,
-                        page.dictionary_page().is_some(),
-                        "V1",
-                        "Binary",
-                    ))
-                }
-            }
+    match (page.encoding(), page.dictionary_page(), is_optional) {
+        (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer(
+            validity_buffer,
+            values_buffer,
+            additional,
+            size,
+            dict.as_any().downcast_ref().unwrap(),
+            values,
+            validity,
+        ),
+        (Encoding::Plain, _, true) => read_optional(
+            validity_buffer,
+            values_buffer,
+            additional,
+            size,
+            values,
+            validity,
+        ),
+        // it can happen that there is a dictionary but the encoding is plain because
+        // it falled back.
+        (Encoding::Plain, _, false) => read_required(page.buffer(), additional, size, values),
+        _ => {
+            return Err(utils::not_implemented(
+                &page.encoding(),
+                is_optional,
+                page.dictionary_page().is_some(),
+                version,
+                "FixedSizeBinary",
+            ))
         }
-        DataPageHeader::V2(header) => {
-            let def_level_buffer_length = header.definition_levels_byte_length as usize;
-
-            match (page.encoding(), page.dictionary_page(), is_optional) {
-                (Encoding::PlainDictionary, Some(dict), true) => {
-                    let (_, validity_buffer, values_buffer) =
-                        levels::split_buffer_v2(page.buffer(), 0, def_level_buffer_length);
-                    read_dict_buffer(
-                        validity_buffer,
-                        values_buffer,
-                        page.num_values() as u32,
-                        size,
-                        dict.as_any().downcast_ref().unwrap(),
-                        values,
-                        validity,
-                    )
-                }
-                (Encoding::Plain, None, true) => {
-                    let (_, validity_buffer, values_buffer) =
-                        levels::split_buffer_v2(page.buffer(), 0, def_level_buffer_length);
-                    read_optional(
-                        validity_buffer,
-                        values_buffer,
-                        page.num_values() as u32,
-                        size,
-                        values,
-                        validity,
-                    )
-                }
-                (Encoding::Plain, None, false) => {
-                    read_required(page.buffer(), page.num_values() as u32, size, values)
-                }
-                _ => {
-                    return Err(utils::not_implemented(
-                        &page.encoding(),
-                        is_optional,
-                        page.dictionary_page().is_some(),
-                        "V2",
-                        "Binary",
-                    ))
-                }
-            }
-        }
-    };
+    }
     Ok(())
 }

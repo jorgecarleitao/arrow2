@@ -4,6 +4,7 @@ use std::io::{Read, Seek};
 
 use crate::array::{BinaryArray, Offset};
 use crate::buffer::Buffer;
+use crate::datatypes::DataType;
 use crate::error::Result;
 use crate::io::ipc::gen::Message::BodyCompression;
 use crate::types::NativeType;
@@ -14,6 +15,7 @@ use super::super::read_basic::*;
 
 pub fn read_binary<O: Offset, R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
+    data_type: DataType,
     buffers: &mut VecDeque<&gen::Schema::Buffer>,
     reader: &mut R,
     block_offset: u64,
@@ -55,7 +57,9 @@ where
         compression,
     )?;
 
-    Ok(BinaryArray::<O>::from_data(offsets, values, validity))
+    Ok(BinaryArray::<O>::from_data(
+        data_type, offsets, values, validity,
+    ))
 }
 
 pub fn skip_binary(field_nodes: &mut VecDeque<Node>, buffers: &mut VecDeque<&gen::Schema::Buffer>) {

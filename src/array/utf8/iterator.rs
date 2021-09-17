@@ -15,7 +15,7 @@ pub struct Utf8ValuesIter<'a, O: Offset> {
 }
 
 impl<'a, O: Offset> Utf8ValuesIter<'a, O> {
-    #[inline]
+    /// Creates a new [`Utf8ValuesIter`]
     pub fn new(array: &'a Utf8Array<O>) -> Self {
         Self {
             array,

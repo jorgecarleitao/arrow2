@@ -30,16 +30,16 @@ publish = false
 logging = ["tracing-subscriber"]
 
 [dependencies]
-arrow2 = { path = "../", features = ["io_ipc", "io_json_integration"], default-features = false }
+arrow2 = { path = "../", features = ["io_ipc", "io_ipc_compression", "io_json_integration"], default-features = false }
 arrow-flight = { path = "../arrow-flight" }
 async-trait = "0.1.41"
 clap = "2.33"
 futures = "0.3"
 hex = "0.4"
-prost = "0.7"
+prost = "0.8"
 serde = { version = "1.0", features = ["rc"] }
 serde_derive = "1.0"
 serde_json = { version = "1.0", features = ["preserve_order"] }
 tokio = { version = "1.0", features = ["macros", "rt", "rt-multi-thread"] }
-tonic = "0.4"
+tonic = "0.5.2"
 tracing-subscriber = { version = "0.2.15", optional = true }

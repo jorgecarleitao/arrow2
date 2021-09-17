@@ -117,10 +117,21 @@ impl<O: Offset> ListArray<O> {
     pub fn values(&self) -> &Arc<dyn Array> {
         &self.values
     }
+
+    /// Sets the validity bitmap on this [`ListArray`].
+    /// # Panic
+    /// This function panics iff `validity.len() != self.len()`.
+    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
+        if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
+            panic!("validity should be as least as large as the array")
+        }
+        let mut arr = self.clone();
+        arr.validity = validity;
+        arr
+    }
 }
 
 impl<O: Offset> ListArray<O> {
-    #[inline]
     pub fn default_datatype(data_type: DataType) -> DataType {
         let field = Box::new(Field::new("item", data_type, true));
         if O::is_large() {
@@ -130,22 +141,22 @@ impl<O: Offset> ListArray<O> {
         }
     }
 
-    #[inline]
     pub fn get_child_field(data_type: &DataType) -> &Field {
         if O::is_large() {
-            if let DataType::LargeList(child) = data_type {
-                child.as_ref()
-            } else {
-                panic!("Wrong DataType")
+            match data_type {
+                DataType::LargeList(child) => child.as_ref(),
+                DataType::Extension(_, child, _) => Self::get_child_field(child),
+                _ => panic!("Wrong DataType"),
             }
-        } else if let DataType::List(child) = data_type {
-            child.as_ref()
         } else {
-            panic!("Wrong DataType")
+            match data_type {
+                DataType::List(child) => child.as_ref(),
+                DataType::Extension(_, child, _) => Self::get_child_field(child),
+                _ => panic!("Wrong DataType"),
+            }
         }
     }
 
-    #[inline]
     pub fn get_child_type(data_type: &DataType) -> &DataType {
         Self::get_child_field(data_type).data_type()
     }
@@ -174,6 +185,9 @@ impl<O: Offset> Array for ListArray<O> {
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+    fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
+        Box::new(self.with_validity(validity))
     }
 }
 

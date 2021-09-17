@@ -1,4 +1,6 @@
 use parquet2::encoding::{get_length, Encoding};
+use parquet2::metadata::ColumnDescriptor;
+use parquet2::page::{split_buffer as _split_buffer, DataPage, DataPageHeader};
 
 use crate::error::ArrowError;
 
@@ -41,4 +43,17 @@ pub fn not_implemented(
         "Decoding \"{:?}\"-encoded{} {} {} pages is not yet implemented for {}",
         encoding, dict, required, version, physical_type
     ))
+}
+
+pub fn split_buffer<'a>(
+    page: &'a DataPage,
+    descriptor: &ColumnDescriptor,
+) -> (&'a [u8], &'a [u8], &'a [u8], &'static str) {
+    let (rep_levels, validity_buffer, values_buffer) = _split_buffer(page, descriptor);
+
+    let version = match page.header() {
+        DataPageHeader::V1(_) => "V1",
+        DataPageHeader::V2(_) => "V2",
+    };
+    (rep_levels, validity_buffer, values_buffer, version)
 }

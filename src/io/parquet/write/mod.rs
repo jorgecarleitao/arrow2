@@ -1,3 +1,4 @@
+//! APIs to write to Parquet format.
 mod binary;
 mod boolean;
 mod dictionary;
@@ -64,7 +65,7 @@ pub fn write_file<'a, W, I>(
     parquet_schema: SchemaDescriptor,
     options: WriteOptions,
     key_value_metadata: Option<Vec<KeyValue>>,
-) -> Result<()>
+) -> Result<u64>
 where
     W: std::io::Write + std::io::Seek,
     I: Iterator<Item = Result<RowGroupIter<'a, ArrowError>>>,
@@ -111,36 +112,16 @@ pub fn array_to_pages(
     encoding: Encoding,
 ) -> Result<DynIter<'static, Result<CompressedPage>>> {
     match array.data_type() {
-        DataType::Dictionary(key, _) => match key.as_ref() {
-            DataType::Int8 => dictionary::array_to_pages::<i8>(
-                array.as_any().downcast_ref().unwrap(),
-                descriptor,
-                options,
-                encoding,
-            ),
-            DataType::Int16 => dictionary::array_to_pages::<i16>(
-                array.as_any().downcast_ref().unwrap(),
-                descriptor,
-                options,
-                encoding,
-            ),
-            DataType::Int32 => dictionary::array_to_pages::<i32>(
-                array.as_any().downcast_ref().unwrap(),
-                descriptor,
-                options,
-                encoding,
-            ),
-            DataType::Int64 => dictionary::array_to_pages::<i64>(
-                array.as_any().downcast_ref().unwrap(),
-                descriptor,
-                options,
-                encoding,
-            ),
-            other => Err(ArrowError::NotYetImplemented(format!(
-                "Writing parquet pages for data type {:?}",
-                other
-            ))),
-        },
+        DataType::Dictionary(key_type, _) => {
+            with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
+                dictionary::array_to_pages::<$T>(
+                    array.as_any().downcast_ref().unwrap(),
+                    descriptor,
+                    options,
+                    encoding,
+                )
+            })
+        }
         _ => array_to_page(array.as_ref(), descriptor, options, encoding)
             .map(|page| DynIter::new(std::iter::once(Ok(page)))),
     }
@@ -160,7 +141,7 @@ pub fn array_to_page(
         )));
     }
 
-    match data_type {
+    match data_type.to_logical_type() {
         DataType::Boolean => {
             boolean::array_to_page(array.as_any().downcast_ref().unwrap(), options, descriptor)
         }

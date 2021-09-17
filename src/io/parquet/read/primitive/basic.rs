@@ -1,7 +1,6 @@
 use parquet2::{
-    encoding::{bitpacking, hybrid_rle, uleb128, Encoding},
-    page::{DataPage, DataPageHeader, DataPageHeaderExt, PrimitivePageDict},
-    read::levels,
+    encoding::{hybrid_rle, Encoding},
+    page::{DataPage, PrimitivePageDict},
     types::NativeType,
 };
 
@@ -28,6 +27,7 @@ fn read_dict_buffer_optional<T, A, F>(
     A: ArrowNativeType,
     F: Fn(T) -> A,
 {
+    let length = additional + values.len();
     let dict_values = dict.values();
 
     // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
@@ -35,19 +35,15 @@ fn read_dict_buffer_optional<T, A, F>(
     let bit_width = indices_buffer[0];
     let indices_buffer = &indices_buffer[1..];
 
-    let (_, consumed) = uleb128::decode(indices_buffer);
-    let indices_buffer = &indices_buffer[consumed..];
-
-    let non_null_indices_len = indices_buffer.len() * 8 / bit_width as usize;
-
-    let mut indices = bitpacking::Decoder::new(indices_buffer, bit_width, non_null_indices_len);
+    let mut indices =
+        hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional);
 
     let validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
 
     for run in validity_iterator {
         match run {
             hybrid_rle::HybridEncoded::Bitpacked(packed) => {
-                let remaining = additional - values.len();
+                let remaining = length - values.len();
                 let len = std::cmp::min(packed.len() * 8, remaining);
                 for is_valid in BitmapIter::new(packed, 0, len) {
                     let value = if is_valid {
@@ -76,6 +72,32 @@ fn read_dict_buffer_optional<T, A, F>(
     }
 }
 
+fn read_dict_buffer_required<T, A, F>(
+    indices_buffer: &[u8],
+    additional: usize,
+    dict: &PrimitivePageDict<T>,
+    values: &mut MutableBuffer<A>,
+    validity: &mut MutableBitmap,
+    op: F,
+) where
+    T: NativeType,
+    A: ArrowNativeType,
+    F: Fn(T) -> A,
+{
+    let dict_values = dict.values();
+
+    // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
+    // SPEC: followed by the values encoded using RLE/Bit packed described above (with the given bit width).
+    let bit_width = indices_buffer[0];
+    let indices_buffer = &indices_buffer[1..];
+
+    let indices = hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional);
+
+    values.extend(indices.map(|index| op(dict_values[index as usize])));
+
+    validity.extend_constant(additional, true);
+}
+
 fn read_nullable<T, A, F>(
     validity_buffer: &[u8],
     values_buffer: &[u8],
@@ -88,6 +110,7 @@ fn read_nullable<T, A, F>(
     A: ArrowNativeType,
     F: Fn(T) -> A,
 {
+    let length = additional + values.len();
     let mut chunks = ExactChunksIter::<T>::new(values_buffer);
 
     let validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
@@ -96,7 +119,7 @@ fn read_nullable<T, A, F>(
         match run {
             hybrid_rle::HybridEncoded::Bitpacked(packed) => {
                 // the pack may contain more items than needed.
-                let remaining = additional - values.len();
+                let remaining = length - values.len();
                 let len = std::cmp::min(packed.len() * 8, remaining);
                 for is_valid in BitmapIter::new(packed, 0, len) {
                     let value = if is_valid {
@@ -158,86 +181,51 @@ where
 
     assert_eq!(descriptor.max_rep_level(), 0);
     let is_optional = descriptor.max_def_level() == 1;
-    match page.header() {
-        DataPageHeader::V1(header) => {
-            assert_eq!(header.definition_level_encoding(), Encoding::Rle);
 
-            let (_, validity_buffer, values_buffer) =
-                levels::split_buffer_v1(page.buffer(), false, is_optional);
+    let (_, validity_buffer, values_buffer, version) = other_utils::split_buffer(page, descriptor);
 
-            match (&page.encoding(), page.dictionary_page(), is_optional) {
-                (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
-                    read_dict_buffer_optional(
-                        validity_buffer,
-                        values_buffer,
-                        additional,
-                        dict.as_any().downcast_ref().unwrap(),
-                        values,
-                        validity,
-                        op,
-                    )
-                }
-                (Encoding::Plain, None, true) => read_nullable(
-                    validity_buffer,
-                    values_buffer,
-                    additional,
-                    values,
-                    validity,
-                    op,
-                ),
-                (Encoding::Plain, None, false) => {
-                    read_required(page.buffer(), additional, values, op)
-                }
-                _ => {
-                    return Err(other_utils::not_implemented(
-                        &page.encoding(),
-                        is_optional,
-                        page.dictionary_page().is_some(),
-                        "V1",
-                        "primitive",
-                    ))
-                }
-            }
+    match (&page.encoding(), page.dictionary_page(), is_optional) {
+        (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
+            read_dict_buffer_optional(
+                validity_buffer,
+                values_buffer,
+                additional,
+                dict.as_any().downcast_ref().unwrap(),
+                values,
+                validity,
+                op,
+            )
         }
-        DataPageHeader::V2(header) => {
-            let def_level_buffer_length = header.definition_levels_byte_length as usize;
-
-            let (_, validity_buffer, values_buffer) =
-                levels::split_buffer_v2(page.buffer(), 0, def_level_buffer_length);
-            match (&page.encoding(), page.dictionary_page(), is_optional) {
-                (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
-                    read_dict_buffer_optional(
-                        validity_buffer,
-                        values_buffer,
-                        additional,
-                        dict.as_any().downcast_ref().unwrap(),
-                        values,
-                        validity,
-                        op,
-                    )
-                }
-                (Encoding::Plain, None, true) => read_nullable(
-                    validity_buffer,
-                    values_buffer,
-                    additional,
-                    values,
-                    validity,
-                    op,
-                ),
-                (Encoding::Plain, None, false) => {
-                    read_required::<T, A, F>(page.buffer(), additional, values, op)
-                }
-                _ => {
-                    return Err(other_utils::not_implemented(
-                        &page.encoding(),
-                        is_optional,
-                        page.dictionary_page().is_some(),
-                        "V2",
-                        "primitive",
-                    ))
-                }
-            }
+        (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false) => {
+            read_dict_buffer_required(
+                values_buffer,
+                additional,
+                dict.as_any().downcast_ref().unwrap(),
+                values,
+                validity,
+                op,
+            )
         }
-    };
+        // it can happen that there is a dictionary but the encoding is plain because
+        // it falled back.
+        (Encoding::Plain, _, true) => read_nullable(
+            validity_buffer,
+            values_buffer,
+            additional,
+            values,
+            validity,
+            op,
+        ),
+        (Encoding::Plain, _, false) => read_required(page.buffer(), additional, values, op),
+        _ => {
+            return Err(other_utils::not_implemented(
+                &page.encoding(),
+                is_optional,
+                page.dictionary_page().is_some(),
+                version,
+                "primitive",
+            ))
+        }
+    }
     Ok(())
 }

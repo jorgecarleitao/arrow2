@@ -61,7 +61,7 @@ pub mod time;
 
 use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
-use num::{NumCast, Zero};
+use num_traits::{NumCast, Zero};
 
 use crate::datatypes::{DataType, TimeUnit};
 use crate::error::{ArrowError, Result};
@@ -283,11 +283,10 @@ where
 /// ```
 /// use arrow2::compute::arithmetics::negate;
 /// use arrow2::array::PrimitiveArray;
-/// use arrow2::datatypes::DataType;
 ///
-/// let a = PrimitiveArray::from(&vec![None, Some(6), None, Some(7)]).to(DataType::Int32);
+/// let a = PrimitiveArray::from([None, Some(6), None, Some(7)]);
 /// let result = negate(&a);
-/// let expected = PrimitiveArray::from(&vec![None, Some(-6), None, Some(-7)]).to(DataType::Int32);
+/// let expected = PrimitiveArray::from([None, Some(-6), None, Some(-7)]);
 /// assert_eq!(result, expected)
 /// ```
 pub fn negate<T>(array: &PrimitiveArray<T>) -> PrimitiveArray<T>

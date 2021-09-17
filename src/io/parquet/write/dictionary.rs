@@ -26,12 +26,14 @@ fn encode_keys<K: DictionaryKey>(
 
     let mut buffer = vec![];
 
-    if let Some(validity) = validity {
-        let projected_val = array.iter().map(|x| {
+    let null_count = if let Some(validity) = validity {
+        let projected_validity = array.iter().map(|x| {
             x.map(|x| validity.get_bit(x.to_usize().unwrap()))
                 .unwrap_or(false)
         });
-        let projected_val = Bitmap::from_trusted_len_iter(projected_val);
+        let projected_val = Bitmap::from_trusted_len_iter(projected_validity);
+
+        let null_count = projected_val.null_count();
 
         utils::write_def_levels(
             &mut buffer,
@@ -40,6 +42,7 @@ fn encode_keys<K: DictionaryKey>(
             array.len(),
             options.version,
         )?;
+        null_count
     } else {
         utils::write_def_levels(
             &mut buffer,
@@ -48,7 +51,8 @@ fn encode_keys<K: DictionaryKey>(
             array.len(),
             options.version,
         )?;
-    }
+        array.null_count()
+    };
 
     let definition_levels_byte_length = buffer.len();
 
@@ -70,7 +74,7 @@ fn encode_keys<K: DictionaryKey>(
             .flatten();
         let num_bits = utils::get_bit_width(keys.clone().max().unwrap_or(0) as u64) as u8;
 
-        let keys = utils::ExactSizedIter::new(keys, array.len() - array.null_count());
+        let keys = utils::ExactSizedIter::new(keys, array.len() - null_count);
 
         // num_bits as a single byte
         buffer.push(num_bits);
@@ -104,7 +108,7 @@ fn encode_keys<K: DictionaryKey>(
         None,
         descriptor,
         options,
-        Encoding::PlainDictionary,
+        Encoding::RleDictionary,
     )
     .map(CompressedPage::Data)
 }
@@ -132,7 +136,7 @@ where
     match encoding {
         Encoding::PlainDictionary | Encoding::RleDictionary => {
             // write DictPage
-            let dict_page = match array.values().data_type() {
+            let dict_page = match array.values().data_type().to_logical_type() {
                 DataType::Int8 => dyn_prim!(i8, i32, array),
                 DataType::Int16 => dyn_prim!(i16, i32, array),
                 DataType::Int32 | DataType::Date32 | DataType::Time32(_) => {

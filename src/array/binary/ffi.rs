@@ -25,7 +25,7 @@ unsafe impl<O: Offset> ToFfi for BinaryArray<O> {
 
 unsafe impl<O: Offset, A: ffi::ArrowArrayRef> FromFfi<A> for BinaryArray<O> {
     fn try_from_ffi(array: A) -> Result<Self> {
-        let data_type = array.field()?.data_type().clone();
+        let data_type = array.field().data_type().clone();
         let expected = if O::is_large() {
             DataType::LargeBinary
         } else {
@@ -44,6 +44,11 @@ unsafe impl<O: Offset, A: ffi::ArrowArrayRef> FromFfi<A> for BinaryArray<O> {
             validity = validity.map(|x| x.slice(offset, length))
         }
 
-        Ok(Self::from_data(offsets, values, validity))
+        Ok(Self::from_data(
+            Self::default_data_type(),
+            offsets,
+            values,
+            validity,
+        ))
     }
 }

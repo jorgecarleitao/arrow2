@@ -23,6 +23,14 @@ import pyarrow
 import arrow_pyarrow_integration_testing
 
 
+class UuidType(pyarrow.PyExtensionType):
+    def __init__(self):
+        super().__init__(pyarrow.binary(16))
+
+    def __reduce__(self):
+        return UuidType, ()
+
+
 class TestCase(unittest.TestCase):
     def setUp(self):
         self.old_allocated_rust = (
@@ -40,60 +48,12 @@ class TestCase(unittest.TestCase):
         # No leak of C++ memory
         self.assertEqual(self.old_allocated_cpp, pyarrow.total_allocated_bytes())
 
-    def test_primitive_python(self):
-        """
-        Python -> Rust -> Python
-        """
-        a = pyarrow.array([1, 2, 3])
-        b = arrow_pyarrow_integration_testing.double(a)
-        self.assertEqual(b, pyarrow.array([2, 4, 6]))
-
-    def test_primitive_rust(self):
-        """
-        Rust -> Python -> Rust
-        """
-
-        def double(array):
-            array = array.to_pylist()
-            return pyarrow.array([x * 2 if x is not None else None for x in array])
-
-        is_correct = arrow_pyarrow_integration_testing.double_py(double)
-        self.assertTrue(is_correct)
-
-    def test_import_primitive(self):
-        """
-        Python -> Rust
-        """
-        old_allocated = pyarrow.total_allocated_bytes()
-
-        a = pyarrow.array([2, None, 6])
-
-        is_correct = arrow_pyarrow_integration_testing.import_primitive(a)
-        self.assertTrue(is_correct)
-        # No leak of C++ memory
-        del a
-        self.assertEqual(old_allocated, pyarrow.total_allocated_bytes())
-
-    def test_export_primitive(self):
-        """
-        Python -> Rust
-        """
-        old_allocated = pyarrow.total_allocated_bytes()
-
-        expected = pyarrow.array([2, None, 6])
-
-        result = arrow_pyarrow_integration_testing.export_primitive()
-        self.assertEqual(expected, result)
-        # No leak of C++ memory
-        del expected
-        self.assertEqual(old_allocated, pyarrow.total_allocated_bytes())
-
     def test_string_roundtrip(self):
         """
         Python -> Rust -> Python
         """
         a = pyarrow.array(["a", None, "ccc"])
-        b = arrow_pyarrow_integration_testing.round_trip(a)
+        b = arrow_pyarrow_integration_testing.round_trip_array(a)
         c = pyarrow.array(["a", None, "ccc"])
         self.assertEqual(b, c)
 
@@ -107,25 +67,8 @@ class TestCase(unittest.TestCase):
             None,
         ]
         a = pyarrow.array(data, pyarrow.decimal128(5, 2))
-        b = arrow_pyarrow_integration_testing.round_trip(a)
+        b = arrow_pyarrow_integration_testing.round_trip_array(a)
         self.assertEqual(a, b)
-
-    def test_string_python(self):
-        """
-        Python -> Rust -> Python
-        """
-        a = pyarrow.array(["a", None, "ccc"])
-        b = arrow_pyarrow_integration_testing.substring(a, 1)
-        self.assertEqual(b, pyarrow.array(["", None, "cc"]))
-
-    def test_time32_python(self):
-        """
-        Python -> Rust -> Python
-        """
-        a = pyarrow.array([None, 1, 2], pyarrow.time32("s"))
-        b = arrow_pyarrow_integration_testing.concatenate(a)
-        expected = pyarrow.array([None, 1, 2] + [None, 1, 2], pyarrow.time32("s"))
-        self.assertEqual(b, expected)
 
     def test_list_array(self):
         """
@@ -135,7 +78,7 @@ class TestCase(unittest.TestCase):
             a = pyarrow.array(
                 [[], None, [1, 2], [4, 5, 6]], pyarrow.list_(pyarrow.int64())
             )
-            b = arrow_pyarrow_integration_testing.round_trip(a)
+            b = arrow_pyarrow_integration_testing.round_trip_array(a)
 
             b.validate(full=True)
             assert a.to_pylist() == b.to_pylist()
@@ -159,7 +102,7 @@ class TestCase(unittest.TestCase):
             ],
             pyarrow.struct(fields),
         )
-        b = arrow_pyarrow_integration_testing.round_trip(a)
+        b = arrow_pyarrow_integration_testing.round_trip_array(a)
 
         b.validate(full=True)
         assert a.to_pylist() == b.to_pylist()
@@ -174,7 +117,7 @@ class TestCase(unittest.TestCase):
                 [[None], None, [[1], [2]], [[4, 5], [6]]],
                 pyarrow.list_(pyarrow.list_(pyarrow.int64())),
             )
-            b = arrow_pyarrow_integration_testing.round_trip(a)
+            b = arrow_pyarrow_integration_testing.round_trip_array(a)
 
             b.validate(full=True)
             assert a.to_pylist() == b.to_pylist()
@@ -188,7 +131,7 @@ class TestCase(unittest.TestCase):
             ["a", "a", "b", None, "c"],
             pyarrow.dictionary(pyarrow.int64(), pyarrow.utf8()),
         )
-        b = arrow_pyarrow_integration_testing.round_trip(a)
+        b = arrow_pyarrow_integration_testing.round_trip_array(a)
 
         b.validate(full=True)
         assert a.to_pylist() == b.to_pylist()
@@ -205,7 +148,7 @@ class TestCase(unittest.TestCase):
                 pyarrow.array([0, 1, 2, None, 0], pyarrow.int64()),
             ],
         )
-        b = arrow_pyarrow_integration_testing.round_trip(a)
+        b = arrow_pyarrow_integration_testing.round_trip_array(a)
 
         b.validate(full=True)
         assert a.to_pylist() == b.to_pylist()
@@ -223,8 +166,31 @@ class TestCase(unittest.TestCase):
                 pyarrow.array([0, 1, 2, None, 0], pyarrow.int64()),
             ],
         )
-        b = arrow_pyarrow_integration_testing.round_trip(a)
+        b = arrow_pyarrow_integration_testing.round_trip_array(a)
 
         b.validate(full=True)
         assert a.to_pylist() == b.to_pylist()
         assert a.type == b.type
+
+    def test_field(self):
+        field = pyarrow.field("aa", pyarrow.bool_())
+        result = arrow_pyarrow_integration_testing.round_trip_field(field)
+        assert field == result
+
+    def test_field_nested(self):
+        field = pyarrow.field("aa", pyarrow.list_(pyarrow.field("ab", pyarrow.bool_())))
+        result = arrow_pyarrow_integration_testing.round_trip_field(field)
+        assert field == result
+
+    def test_field_metadata(self):
+        field = pyarrow.field("aa", pyarrow.bool_(), {"a": "b"})
+        result = arrow_pyarrow_integration_testing.round_trip_field(field)
+        assert field == result
+        assert field.metadata == result.metadata
+
+    # see https://issues.apache.org/jira/browse/ARROW-13855
+    def _test_field_extension(self):
+        field = pyarrow.field("aa", UuidType())
+        result = arrow_pyarrow_integration_testing.round_trip_field(field)
+        assert field == result
+        assert field.metadata == result.metadata

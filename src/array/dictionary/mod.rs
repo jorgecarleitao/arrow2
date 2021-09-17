@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::{
     bitmap::Bitmap,
     datatypes::DataType,
+    scalar::{new_scalar, Scalar},
     types::{NativeType, NaturalDataType},
 };
 
@@ -15,7 +16,10 @@ pub use mutable::*;
 use super::{new_empty_array, primitive::PrimitiveArray, Array};
 
 /// Trait denoting [`NativeType`]s that can be used as keys of a dictionary.
-pub trait DictionaryKey: NativeType + NaturalDataType + num::NumCast + num::FromPrimitive {}
+pub trait DictionaryKey:
+    NativeType + NaturalDataType + num_traits::NumCast + num_traits::FromPrimitive
+{
+}
 
 impl DictionaryKey for i8 {}
 impl DictionaryKey for i16 {}
@@ -39,16 +43,18 @@ pub struct DictionaryArray<K: DictionaryKey> {
 impl<K: DictionaryKey> DictionaryArray<K> {
     /// Returns a new empty [`DictionaryArray`].
     pub fn new_empty(data_type: DataType) -> Self {
-        let values = new_empty_array(data_type).into();
+        let values = Self::get_child(&data_type);
+        let values = new_empty_array(values.clone()).into();
         Self::from_data(PrimitiveArray::<K>::new_empty(K::DATA_TYPE), values)
     }
 
     /// Returns an [`DictionaryArray`] whose all elements are null
     #[inline]
     pub fn new_null(data_type: DataType, length: usize) -> Self {
+        let values = Self::get_child(&data_type);
         Self::from_data(
             PrimitiveArray::<K>::new_null(K::DATA_TYPE, length),
-            new_empty_array(data_type).into(),
+            new_empty_array(values.clone()).into(),
         )
     }
 
@@ -77,6 +83,18 @@ impl<K: DictionaryKey> DictionaryArray<K> {
         }
     }
 
+    /// Sets the validity bitmap on this [`Array`].
+    /// # Panic
+    /// This function panics iff `validity.len() != self.len()`.
+    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
+        if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
+            panic!("validity should be as least as large as the array")
+        }
+        let mut arr = self.clone();
+        arr.values = Arc::from(arr.values.with_validity(validity));
+        arr
+    }
+
     /// Returns the keys of the [`DictionaryArray`]. These keys can be used to fetch values
     /// from `values`.
     #[inline]
@@ -90,20 +108,20 @@ impl<K: DictionaryKey> DictionaryArray<K> {
         &self.values
     }
 
-    /// Returns the values of the [`DictionaryArray`].
+    /// Returns the value of the [`DictionaryArray`] at position `i`.
     #[inline]
-    pub fn value(&self, index: usize) -> Box<dyn Array> {
+    pub fn value(&self, index: usize) -> Box<dyn Scalar> {
         let index = self.keys.value(index).to_usize().unwrap();
-        self.values.clone().slice(index, 1)
+        new_scalar(self.values.as_ref(), index)
     }
 }
 
 impl<K: DictionaryKey> DictionaryArray<K> {
     pub(crate) fn get_child(data_type: &DataType) -> &DataType {
-        if let DataType::Dictionary(_, values) = data_type {
-            values.as_ref()
-        } else {
-            panic!("Wrong DataType")
+        match data_type {
+            DataType::Dictionary(_, values) => values.as_ref(),
+            DataType::Extension(_, inner, _) => Self::get_child(inner),
+            _ => panic!("DictionaryArray must be initialized with DataType::Dictionary"),
         }
     }
 }
@@ -130,6 +148,9 @@ impl<K: DictionaryKey> Array for DictionaryArray<K> {
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+    fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
+        Box::new(self.with_validity(validity))
     }
 }
 

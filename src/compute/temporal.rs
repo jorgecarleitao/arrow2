@@ -23,10 +23,120 @@ use crate::array::*;
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 use crate::temporal_conversions::*;
+use crate::types::NativeType;
+use crate::types::NaturalDataType;
 
 use super::arity::unary;
 
-/// Extracts the hours of a given temporal array as an array of integers
+fn extract_impl<T, A, F>(
+    array: &PrimitiveArray<i64>,
+    time_unit: TimeUnit,
+    timezone: T,
+    extract: F,
+) -> PrimitiveArray<A>
+where
+    T: chrono::TimeZone,
+    A: NativeType + NaturalDataType,
+    F: Fn(chrono::DateTime<T>) -> A,
+{
+    match time_unit {
+        TimeUnit::Second => {
+            let op = |x| {
+                let datetime = timestamp_s_to_datetime(x);
+                let offset = timezone.offset_from_utc_datetime(&datetime);
+                extract(chrono::DateTime::<T>::from_utc(datetime, offset))
+            };
+            unary(array, op, DataType::UInt32)
+        }
+        TimeUnit::Millisecond => {
+            let op = |x| {
+                let datetime = timestamp_ms_to_datetime(x);
+                let offset = timezone.offset_from_utc_datetime(&datetime);
+                extract(chrono::DateTime::<T>::from_utc(datetime, offset))
+            };
+            unary(array, op, A::DATA_TYPE)
+        }
+        TimeUnit::Microsecond => {
+            let op = |x| {
+                let datetime = timestamp_us_to_datetime(x);
+                let offset = timezone.offset_from_utc_datetime(&datetime);
+                extract(chrono::DateTime::<T>::from_utc(datetime, offset))
+            };
+            unary(array, op, A::DATA_TYPE)
+        }
+        TimeUnit::Nanosecond => {
+            let op = |x| {
+                let datetime = timestamp_ns_to_datetime(x);
+                let offset = timezone.offset_from_utc_datetime(&datetime);
+                extract(chrono::DateTime::<T>::from_utc(datetime, offset))
+            };
+            unary(array, op, A::DATA_TYPE)
+        }
+    }
+}
+
+#[cfg(feature = "chrono-tz")]
+#[cfg_attr(docsrs, doc(cfg(feature = "chrono-tz")))]
+fn chrono_tz_hour(
+    array: &PrimitiveArray<i64>,
+    time_unit: TimeUnit,
+    timezone_str: &str,
+) -> Result<PrimitiveArray<u32>> {
+    let timezone = parse_offset_tz(timezone_str);
+    if let Some(timezone) = timezone {
+        Ok(extract_impl(array, time_unit, timezone, |x| x.hour()))
+    } else {
+        Err(ArrowError::InvalidArgumentError(format!(
+            "timezone \"{}\" cannot be parsed",
+            timezone_str
+        )))
+    }
+}
+
+#[cfg(not(feature = "chrono-tz"))]
+fn chrono_tz_hour(
+    _: &PrimitiveArray<i64>,
+    _: TimeUnit,
+    timezone_str: &str,
+) -> Result<PrimitiveArray<u32>> {
+    Err(ArrowError::InvalidArgumentError(format!(
+        "timezone \"{}\" cannot be parsed (feature chrono-tz is not active)",
+        timezone_str
+    )))
+}
+
+#[cfg(feature = "chrono-tz")]
+#[cfg_attr(docsrs, doc(cfg(feature = "chrono-tz")))]
+fn chrono_tz_year(
+    array: &PrimitiveArray<i64>,
+    time_unit: TimeUnit,
+    timezone_str: &str,
+) -> Result<PrimitiveArray<i32>> {
+    let timezone = parse_offset_tz(timezone_str);
+    if let Some(timezone) = timezone {
+        Ok(extract_impl(array, time_unit, timezone, |x| x.year()))
+    } else {
+        Err(ArrowError::InvalidArgumentError(format!(
+            "timezone \"{}\" cannot be parsed",
+            timezone_str
+        )))
+    }
+}
+
+#[cfg(not(feature = "chrono-tz"))]
+fn chrono_tz_year(
+    _: &PrimitiveArray<i64>,
+    _: TimeUnit,
+    timezone_str: &str,
+) -> Result<PrimitiveArray<i32>> {
+    Err(ArrowError::InvalidArgumentError(format!(
+        "timezone \"{}\" cannot be parsed (feature chrono-tz is not active)",
+        timezone_str
+    )))
+}
+
+/// Extracts the hours of a temporal array as [`PrimitiveArray<u32>`].
+/// Use [`can_hour`] to check if this operation is supported for the target [`DataType`].
 pub fn hour(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
     let final_data_type = DataType::UInt32;
     match array.data_type() {
@@ -37,7 +147,7 @@ pub fn hour(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
                 .unwrap();
             Ok(unary(array, |x| time32s_to_time(x).hour(), final_data_type))
         }
-        DataType::Time32(TimeUnit::Microsecond) => {
+        DataType::Time32(TimeUnit::Millisecond) => {
             let array = array
                 .as_any()
                 .downcast_ref::<PrimitiveArray<i32>>()
@@ -105,6 +215,18 @@ pub fn hour(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
             };
             Ok(unary(array, op, final_data_type))
         }
+        DataType::Timestamp(time_unit, Some(timezone_str)) => {
+            let time_unit = *time_unit;
+            let timezone = parse_offset(timezone_str);
+
+            let array = array.as_any().downcast_ref().unwrap();
+
+            if let Ok(timezone) = timezone {
+                Ok(extract_impl(array, time_unit, timezone, |x| x.hour()))
+            } else {
+                chrono_tz_hour(array, time_unit, timezone_str)
+            }
+        }
         dt => Err(ArrowError::NotYetImplemented(format!(
             "\"hour\" does not support type {:?}",
             dt
@@ -129,16 +251,17 @@ pub fn can_hour(data_type: &DataType) -> bool {
     matches!(
         data_type,
         DataType::Time32(TimeUnit::Second)
-            | DataType::Time32(TimeUnit::Microsecond)
+            | DataType::Time32(TimeUnit::Millisecond)
             | DataType::Time64(TimeUnit::Microsecond)
             | DataType::Time64(TimeUnit::Nanosecond)
             | DataType::Date32
             | DataType::Date64
-            | DataType::Timestamp(_, None)
+            | DataType::Timestamp(_, _)
     )
 }
 
-/// Extracts the hours of a given temporal array as an array of integers
+/// Extracts the years of a temporal array as [`PrimitiveArray<i32>`].
+/// Use [`can_year`] to check if this operation is supported for the target [`DataType`].
 pub fn year(array: &dyn Array) -> Result<PrimitiveArray<i32>> {
     let final_data_type = DataType::Int32;
     match array.data_type() {
@@ -177,6 +300,18 @@ pub fn year(array: &dyn Array) -> Result<PrimitiveArray<i32>> {
             };
             Ok(unary(array, op, final_data_type))
         }
+        DataType::Timestamp(time_unit, Some(timezone_str)) => {
+            let time_unit = *time_unit;
+            let timezone = parse_offset(timezone_str);
+
+            let array = array.as_any().downcast_ref().unwrap();
+
+            if let Ok(timezone) = timezone {
+                Ok(extract_impl(array, time_unit, timezone, |x| x.year()))
+            } else {
+                chrono_tz_year(array, time_unit, timezone_str)
+            }
+        }
         dt => Err(ArrowError::NotYetImplemented(format!(
             "\"year\" does not support type {:?}",
             dt
@@ -200,184 +335,6 @@ pub fn year(array: &dyn Array) -> Result<PrimitiveArray<i32>> {
 pub fn can_year(data_type: &DataType) -> bool {
     matches!(
         data_type,
-        DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, None)
+        DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, _)
     )
-}
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn date64_hour() {
-        let array = Int64Array::from(&[Some(1514764800000), None, Some(1550636625000)])
-            .to(DataType::Date64);
-
-        let result = hour(&array).unwrap();
-        let expected = UInt32Array::from(&[Some(0), None, Some(4)]);
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn date32_hour() {
-        let array = Int32Array::from(&[Some(15147), None, Some(15148)]).to(DataType::Date32);
-
-        let result = hour(&array).unwrap();
-        let expected = UInt32Array::from(&[Some(0), None, Some(0)]);
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn time32_second_hour() {
-        let array = Int32Array::from(&[Some(37800), None]).to(DataType::Time32(TimeUnit::Second));
-
-        let result = hour(&array).unwrap();
-        let expected = UInt32Array::from(&[Some(10), None]);
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn time64_micro_hour() {
-        let array = Int64Array::from(&[Some(37800000000), None])
-            .to(DataType::Time64(TimeUnit::Microsecond));
-
-        let result = hour(&array).unwrap();
-        let expected = UInt32Array::from(&[Some(10), None]);
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn timestamp_micro_hour() {
-        let array = Int64Array::from(&[Some(37800000000), None])
-            .to(DataType::Timestamp(TimeUnit::Microsecond, None));
-
-        let result = hour(&array).unwrap();
-        let expected = UInt32Array::from(&[Some(10), None]);
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn timestamp_date64_year() {
-        let array = Int64Array::from(&[Some(1514764800000), None]).to(DataType::Date64);
-
-        let result = year(&array).unwrap();
-        let expected = Int32Array::from(&[Some(2018), None]);
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn timestamp_date32_year() {
-        let array = Int32Array::from(&[Some(15147), None]).to(DataType::Date32);
-
-        let result = year(&array).unwrap();
-        let expected = Int32Array::from(&[Some(2011), None]);
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn timestamp_micro_year() {
-        let array = Int64Array::from(&[Some(1612025847000000), None])
-            .to(DataType::Timestamp(TimeUnit::Microsecond, None));
-
-        let result = year(&array).unwrap();
-        let expected = Int32Array::from(&[Some(2021), None]);
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn consistency_hour() {
-        use crate::array::new_null_array;
-        use crate::datatypes::DataType::*;
-        use crate::datatypes::TimeUnit;
-
-        let datatypes = vec![
-            Null,
-            Boolean,
-            UInt8,
-            UInt16,
-            UInt32,
-            UInt64,
-            Int8,
-            Int16,
-            Int32,
-            Int64,
-            Float32,
-            Float64,
-            Timestamp(TimeUnit::Second, None),
-            Timestamp(TimeUnit::Millisecond, None),
-            Timestamp(TimeUnit::Microsecond, None),
-            Timestamp(TimeUnit::Nanosecond, None),
-            Time64(TimeUnit::Microsecond),
-            Time64(TimeUnit::Nanosecond),
-            Date32,
-            Time32(TimeUnit::Second),
-            Time32(TimeUnit::Millisecond),
-            Date64,
-            Utf8,
-            LargeUtf8,
-            Binary,
-            LargeBinary,
-            Duration(TimeUnit::Second),
-            Duration(TimeUnit::Millisecond),
-            Duration(TimeUnit::Microsecond),
-            Duration(TimeUnit::Nanosecond),
-        ];
-
-        datatypes.into_iter().for_each(|d1| {
-            let array = new_null_array(d1.clone(), 10);
-            if can_hour(&d1) {
-                assert!(hour(array.as_ref()).is_ok());
-            } else {
-                assert!(hour(array.as_ref()).is_err());
-            }
-        });
-    }
-
-    #[test]
-    fn consistency_year() {
-        use crate::array::new_null_array;
-        use crate::datatypes::DataType::*;
-        use crate::datatypes::TimeUnit;
-
-        let datatypes = vec![
-            Null,
-            Boolean,
-            UInt8,
-            UInt16,
-            UInt32,
-            UInt64,
-            Int8,
-            Int16,
-            Int32,
-            Int64,
-            Float32,
-            Float64,
-            Timestamp(TimeUnit::Second, None),
-            Timestamp(TimeUnit::Millisecond, None),
-            Timestamp(TimeUnit::Microsecond, None),
-            Timestamp(TimeUnit::Nanosecond, None),
-            Time64(TimeUnit::Microsecond),
-            Time64(TimeUnit::Nanosecond),
-            Date32,
-            Time32(TimeUnit::Second),
-            Time32(TimeUnit::Millisecond),
-            Date64,
-            Utf8,
-            LargeUtf8,
-            Binary,
-            LargeBinary,
-            Duration(TimeUnit::Second),
-            Duration(TimeUnit::Millisecond),
-            Duration(TimeUnit::Microsecond),
-            Duration(TimeUnit::Nanosecond),
-        ];
-
-        datatypes.into_iter().for_each(|d1| {
-            let array = new_null_array(d1.clone(), 10);
-            if can_year(&d1) {
-                assert!(year(array.as_ref()).is_ok());
-            } else {
-                assert!(year(array.as_ref()).is_err());
-            }
-        });
-    }
 }

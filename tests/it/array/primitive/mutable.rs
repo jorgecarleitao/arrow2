@@ -127,6 +127,38 @@ fn extend_trusted_len() {
 }
 
 #[test]
+fn extend_trusted_len_values() {
+    let mut a = MutablePrimitiveArray::<i32>::new();
+    a.extend_trusted_len_values(vec![1, 2, 3].into_iter());
+    assert_eq!(a.validity(), &None);
+    assert_eq!(a.values(), &MutableBuffer::<i32>::from([1, 2, 3]));
+
+    let mut a = MutablePrimitiveArray::<i32>::new();
+    a.push(None);
+    a.extend_trusted_len_values(vec![1, 2].into_iter());
+    assert_eq!(
+        a.validity(),
+        &Some(MutableBitmap::from([false, true, true]))
+    );
+}
+
+#[test]
+fn extend_from_slice() {
+    let mut a = MutablePrimitiveArray::<i32>::new();
+    a.extend_from_slice(&[1, 2, 3]);
+    assert_eq!(a.validity(), &None);
+    assert_eq!(a.values(), &MutableBuffer::<i32>::from([1, 2, 3]));
+
+    let mut a = MutablePrimitiveArray::<i32>::new();
+    a.push(None);
+    a.extend_from_slice(&[1, 2]);
+    assert_eq!(
+        a.validity(),
+        &Some(MutableBitmap::from([false, true, true]))
+    );
+}
+
+#[test]
 fn set_validity() {
     let mut a = MutablePrimitiveArray::<i32>::new();
     a.extend_trusted_len(vec![Some(1), Some(2)].into_iter());
@@ -147,4 +179,11 @@ fn try_from_trusted_len_iter() {
     let iter = std::iter::repeat(Some(1)).take(2).map(Result::Ok);
     let a = MutablePrimitiveArray::try_from_trusted_len_iter(iter).unwrap();
     assert_eq!(a, MutablePrimitiveArray::from([Some(1), Some(1)]));
+}
+
+#[test]
+#[should_panic]
+fn wrong_data_type() {
+    let values = MutableBuffer::from(b"abbb");
+    MutablePrimitiveArray::from_data(DataType::Utf8, values, None);
 }

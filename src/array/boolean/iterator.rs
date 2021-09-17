@@ -14,7 +14,7 @@ impl<'a> IntoIterator for &'a BooleanArray {
 }
 
 impl<'a> BooleanArray {
-    /// constructs a new iterator
+    /// Returns an iterator over the optional values of this [`BooleanArray`].
     #[inline]
     pub fn iter(&'a self) -> ZipValidity<'a, bool, BitmapIter<'a>> {
         zip_validity(
@@ -23,7 +23,7 @@ impl<'a> BooleanArray {
         )
     }
 
-    /// Returns an iterator of `bool`
+    /// Returns an iterator over the values of this [`BooleanArray`]
     #[inline]
     pub fn values_iter(&'a self) -> BitmapIter<'a> {
         self.values().iter()
@@ -41,7 +41,7 @@ impl<'a> IntoIterator for &'a MutableBooleanArray {
 }
 
 impl<'a> MutableBooleanArray {
-    /// Returns an iterator over `Option<bool>`
+    /// Returns an iterator over the optional values of this [`MutableBooleanArray`].
     #[inline]
     pub fn iter(&'a self) -> ZipValidity<'a, bool, BitmapIter<'a>> {
         zip_validity(
@@ -50,7 +50,7 @@ impl<'a> MutableBooleanArray {
         )
     }
 
-    /// Returns an iterator of `bool`
+    /// Returns an iterator over the values of this [`MutableBooleanArray`]
     #[inline]
     pub fn values_iter(&'a self) -> BitmapIter<'a> {
         self.values().iter()

@@ -3,7 +3,7 @@ use crate::{
     buffer::Buffer,
     datatypes::*,
     error::ArrowError,
-    types::{days_ms, NativeType},
+    types::{days_ms, months_days_ns, NativeType},
 };
 
 use super::Array;
@@ -20,6 +20,15 @@ pub use mutable::*;
 /// an array designed for highly performant operations on optionally nullable slots,
 /// backed by a physical type of a physical byte-width, such as `i32` or `f64`.
 /// The size of this struct is `O(1)` as all data is stored behind an [`std::sync::Arc`].
+/// # Example
+/// ```
+/// use arrow2::array::PrimitiveArray;
+/// # fn main() {
+/// let array = PrimitiveArray::<i32>::from([Some(1), None, Some(2)]);
+/// assert_eq!(array.value(0), 1);
+/// assert_eq!(array.values().as_slice(), &[1, 0, 2]);
+/// # }
+/// ```
 #[derive(Debug, Clone)]
 pub struct PrimitiveArray<T: NativeType> {
     data_type: DataType,
@@ -83,6 +92,18 @@ impl<T: NativeType> PrimitiveArray<T> {
             validity,
             offset: self.offset + offset,
         }
+    }
+
+    /// Sets the validity bitmap on this [`PrimitiveArray`].
+    /// # Panic
+    /// This function panics iff `validity.len() != self.len()`.
+    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
+        if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
+            panic!("validity should be as least as large as the array")
+        }
+        let mut arr = self.clone();
+        arr.validity = validity;
+        arr
     }
 
     /// The values [`Buffer`].
@@ -153,6 +174,9 @@ impl<T: NativeType> Array for PrimitiveArray<T> {
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
     }
+    fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
+        Box::new(self.with_validity(validity))
+    }
 }
 
 /// A type definition [`PrimitiveArray`] for `i8`
@@ -167,6 +191,8 @@ pub type Int64Array = PrimitiveArray<i64>;
 pub type Int128Array = PrimitiveArray<i128>;
 /// A type definition [`PrimitiveArray`] for [`days_ms`]
 pub type DaysMsArray = PrimitiveArray<days_ms>;
+/// A type definition [`PrimitiveArray`] for [`months_days_ns`]
+pub type MonthsDaysNsArray = PrimitiveArray<months_days_ns>;
 /// A type definition [`PrimitiveArray`] for `f32`
 pub type Float32Array = PrimitiveArray<f32>;
 /// A type definition [`PrimitiveArray`] for `f64`
@@ -192,6 +218,8 @@ pub type Int64Vec = MutablePrimitiveArray<i64>;
 pub type Int128Vec = MutablePrimitiveArray<i128>;
 /// A type definition [`MutablePrimitiveArray`] for [`days_ms`]
 pub type DaysMsVec = MutablePrimitiveArray<days_ms>;
+/// A type definition [`MutablePrimitiveArray`] for [`months_days_ns`]
+pub type MonthsDaysNsVec = MutablePrimitiveArray<months_days_ns>;
 /// A type definition [`MutablePrimitiveArray`] for `f32`
 pub type Float32Vec = MutablePrimitiveArray<f32>;
 /// A type definition [`MutablePrimitiveArray`] for `f64`

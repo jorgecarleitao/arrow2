@@ -11,23 +11,26 @@ pub struct NullArray {
 }
 
 impl NullArray {
-    pub fn new_empty() -> Self {
-        Self::from_data(0)
+    /// Returns a new empty [`NullArray`].
+    pub fn new_empty(data_type: DataType) -> Self {
+        Self::from_data(data_type, 0)
     }
 
-    /// Returns a new null array
-    pub fn new_null(length: usize) -> Self {
-        Self::from_data(length)
+    /// Returns a new [`NullArray`].
+    pub fn new_null(data_type: DataType, length: usize) -> Self {
+        Self::from_data(data_type, length)
     }
 
-    pub fn from_data(length: usize) -> Self {
+    /// Returns a new [`NullArray`].
+    pub fn from_data(data_type: DataType, length: usize) -> Self {
         Self {
-            data_type: DataType::Null,
+            data_type,
             length,
             offset: 0,
         }
     }
 
+    /// Returns a slice of the [`NullArray`].
     pub fn slice(&self, offset: usize, length: usize) -> Self {
         Self {
             data_type: self.data_type.clone(),
@@ -59,6 +62,9 @@ impl Array for NullArray {
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+    fn with_validity(&self, _: Option<Bitmap>) -> Box<dyn Array> {
+        panic!("cannot set validity of a null array")
     }
 }
 

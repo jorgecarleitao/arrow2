@@ -1,3 +1,4 @@
+//! APIs to read from and write to Parquet format.
 use crate::error::ArrowError;
 
 pub mod read;

@@ -17,7 +17,7 @@
 
 use crate::types::NativeType;
 use crate::{
-    array::{Array, BooleanArray, ListArray, Offset, PrimitiveArray, Utf8Array},
+    array::{Array, BinaryArray, BooleanArray, ListArray, Offset, PrimitiveArray, Utf8Array},
     bitmap::Bitmap,
 };
 use crate::{
@@ -59,7 +59,7 @@ where
     });
     let values = Bitmap::from_trusted_len_iter(values);
 
-    Ok(BooleanArray::from_data(values, validity))
+    Ok(BooleanArray::from_data(DataType::Boolean, values, validity))
 }
 
 /// Checks if a [`GenericListArray`] contains a value in the [`Utf8Array`]
@@ -93,7 +93,41 @@ where
     });
     let values = Bitmap::from_trusted_len_iter(values);
 
-    Ok(BooleanArray::from_data(values, validity))
+    Ok(BooleanArray::from_data(DataType::Boolean, values, validity))
+}
+
+/// Checks if a [`ListArray`] contains a value in the [`BinaryArray`]
+fn contains_binary<O, OO>(list: &ListArray<O>, values: &BinaryArray<OO>) -> Result<BooleanArray>
+where
+    O: Offset,
+    OO: Offset,
+{
+    if list.len() != values.len() {
+        return Err(ArrowError::InvalidArgumentError(
+            "Contains requires arrays of the same length".to_string(),
+        ));
+    }
+    if list.values().data_type() != values.data_type() {
+        return Err(ArrowError::InvalidArgumentError(
+            "Contains requires the inner array to be of the same logical type".to_string(),
+        ));
+    }
+
+    let validity = combine_validities(list.validity(), values.validity());
+
+    let values = list.iter().zip(values.iter()).map(|(list, values)| {
+        if list.is_none() | values.is_none() {
+            // validity takes care of this
+            return false;
+        };
+        let list = list.unwrap();
+        let list = list.as_any().downcast_ref::<BinaryArray<OO>>().unwrap();
+        let values = values.unwrap();
+        list.iter().any(|x| x.map(|x| x == values).unwrap_or(false))
+    });
+    let values = Bitmap::from_trusted_len_iter(values);
+
+    Ok(BooleanArray::from_data(DataType::Boolean, values, validity))
 }
 
 macro_rules! primitive {
@@ -131,6 +165,26 @@ pub fn contains(list: &dyn Array, values: &dyn Array) -> Result<BooleanArray> {
             let list = list.as_any().downcast_ref::<ListArray<i64>>().unwrap();
             let values = values.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
             contains_utf8(list, values)
+        }
+        (DataType::List(_), DataType::Binary) => {
+            let list = list.as_any().downcast_ref::<ListArray<i32>>().unwrap();
+            let values = values.as_any().downcast_ref::<BinaryArray<i32>>().unwrap();
+            contains_binary(list, values)
+        }
+        (DataType::List(_), DataType::LargeBinary) => {
+            let list = list.as_any().downcast_ref::<ListArray<i32>>().unwrap();
+            let values = values.as_any().downcast_ref::<BinaryArray<i64>>().unwrap();
+            contains_binary(list, values)
+        }
+        (DataType::LargeList(_), DataType::LargeBinary) => {
+            let list = list.as_any().downcast_ref::<ListArray<i64>>().unwrap();
+            let values = values.as_any().downcast_ref::<BinaryArray<i64>>().unwrap();
+            contains_binary(list, values)
+        }
+        (DataType::LargeList(_), DataType::Binary) => {
+            let list = list.as_any().downcast_ref::<ListArray<i64>>().unwrap();
+            let values = values.as_any().downcast_ref::<BinaryArray<i32>>().unwrap();
+            contains_binary(list, values)
         }
         (DataType::List(_), DataType::Int8) => primitive!(list, values, i32, i8),
         (DataType::List(_), DataType::Int16) => primitive!(list, values, i32, i16),
@@ -189,6 +243,31 @@ mod tests {
         ]);
 
         let mut a = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new();
+        a.try_extend(data).unwrap();
+        let a: ListArray<i32> = a.into();
+
+        let result = contains(&a, &values).unwrap();
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_contains_binary() {
+        let data = vec![
+            Some(vec![Some(b"a"), Some(b"b"), None]),
+            Some(vec![Some(b"a"), Some(b"b"), None]),
+            Some(vec![Some(b"a"), Some(b"b"), None]),
+            None,
+        ];
+        let values = BinaryArray::<i32>::from(&[Some(b"a"), Some(b"c"), None, Some(b"a")]);
+        let expected = BooleanArray::from(vec![
+            Some(true),
+            Some(false),
+            None,
+            None
+        ]);
+
+        let mut a = MutableListArray::<i32, MutableBinaryArray<i32>>::new();
         a.try_extend(data).unwrap();
         let a: ListArray<i32> = a.into();
 

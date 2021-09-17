@@ -58,6 +58,11 @@ fn deserialize_utf8<O: Offset>(rows: &[ByteRecord], column: usize) -> Arc<dyn Ar
     Arc::new(Utf8Array::<O>::from_trusted_len_iter(iter))
 }
 
+fn deserialize_binary<O: Offset>(rows: &[ByteRecord], column: usize) -> Arc<dyn Array> {
+    let iter = rows.iter().map(|row| row.get(column));
+    Arc::new(BinaryArray::<O>::from_trusted_len_iter(iter))
+}
+
 pub fn deserialize_column(
     rows: &[ByteRecord],
     column: usize,
@@ -151,6 +156,8 @@ pub fn deserialize_column(
         }
         Utf8 => deserialize_utf8::<i32>(rows, column),
         LargeUtf8 => deserialize_utf8::<i64>(rows, column),
+        Binary => deserialize_binary::<i32>(rows, column),
+        LargeBinary => deserialize_binary::<i64>(rows, column),
         other => {
             return Err(ArrowError::NotYetImplemented(format!(
                 "Deserializing type \"{:?}\" is not implemented",

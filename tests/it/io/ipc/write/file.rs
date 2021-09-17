@@ -36,7 +36,7 @@ fn round_trip(batch: RecordBatch) -> Result<()> {
 }
 
 fn test_file(version: &str, file_name: &str) -> Result<()> {
-    let (schema, batches) = read_gzip_json(version, file_name);
+    let (schema, batches) = read_gzip_json(version, file_name)?;
 
     let mut result = Vec::<u8>::new();
 
@@ -56,7 +56,7 @@ fn test_file(version: &str, file_name: &str) -> Result<()> {
     let reader = FileReader::new(&mut reader, metadata, None);
 
     // read expected JSON output
-    let (expected_schema, expected_batches) = read_gzip_json(version, file_name);
+    let (expected_schema, expected_batches) = read_gzip_json(version, file_name)?;
 
     assert_eq!(schema.as_ref(), &expected_schema);
 
@@ -160,6 +160,12 @@ fn write_100_custom_metadata() -> Result<()> {
 fn write_100_decimal() -> Result<()> {
     test_file("1.0.0-littleendian", "generated_decimal")?;
     test_file("1.0.0-bigendian", "generated_decimal")
+}
+
+#[test]
+fn write_100_extension() -> Result<()> {
+    test_file("1.0.0-littleendian", "generated_extension")?;
+    test_file("1.0.0-bigendian", "generated_extension")
 }
 
 #[test]

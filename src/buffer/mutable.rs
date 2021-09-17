@@ -18,7 +18,7 @@ fn capacity_multiple_of_64<T: NativeType>(capacity: usize) -> usize {
     util::round_upto_multiple_of_64(capacity * size_of::<T>()) / size_of::<T>()
 }
 
-/// A [`MutableBuffer`] is this crates' interface to store types that are byte-like, such as `i32`.
+/// A [`MutableBuffer`] is this crates' interface to store types that are byte-like such as `i32`.
 /// It behaves like a [`Vec`], with the following differences:
 /// * memory is allocated along cache lines and in multiple of 64 bytes.
 /// * it can only hold types supported by the arrow format (`u8-u64`, `i8-i128`, `f32,f64` and [`crate::types::days_ms`])
@@ -29,6 +29,7 @@ fn capacity_multiple_of_64<T: NativeType>(capacity: usize) -> usize {
 /// let mut buffer = MutableBuffer::<u32>::new();
 /// buffer.push(256);
 /// buffer.extend_from_slice(&[1]);
+/// assert_eq!(buffer.as_slice(), &[256, 1]);
 /// let buffer: Buffer<u32> = buffer.into();
 /// assert_eq!(buffer.as_slice(), &[256, 1])
 /// ```
@@ -76,8 +77,8 @@ impl<T: NativeType> MutableBuffer<T> {
         }
     }
 
-    /// Allocates a new [MutableBuffer] with `len` and capacity to be at least `len` where
-    /// all bytes are guaranteed to be `0u8`.
+    /// Allocates a new [MutableBuffer] with `len` and capacity to be at least `len`
+    /// where data is zeroed.
     /// # Example
     /// ```
     /// # use arrow2::buffer::{Buffer, MutableBuffer};
@@ -165,13 +166,13 @@ impl<T: NativeType> MutableBuffer<T> {
         self.len = new_len;
     }
 
-    /// Returns whether this buffer is empty or not.
+    /// Returns whether this buffer is empty.
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }
 
-    /// Returns the length (the number of bytes written) in this buffer.
+    /// Returns the length (the number of items) in this buffer.
     /// The invariant `buffer.len() <= buffer.capacity()` is always upheld.
     #[inline]
     pub fn len(&self) -> usize {
@@ -226,7 +227,7 @@ impl<T: NativeType> MutableBuffer<T> {
         self.ptr.as_ptr()
     }
 
-    /// Extends this buffer from a slice of items that can be represented in bytes, increasing its capacity if needed.
+    /// Extends this buffer from a slice of items, increasing its capacity if needed.
     /// # Example
     /// ```
     /// # use arrow2::buffer::MutableBuffer;
@@ -246,7 +247,7 @@ impl<T: NativeType> MutableBuffer<T> {
         self.len += additional;
     }
 
-    /// Extends the buffer with a new item, increasing its capacity if needed.
+    /// Pushes a new item to the buffer, increasing its capacity if needed.
     /// # Example
     /// ```
     /// # use arrow2::buffer::MutableBuffer;
@@ -264,9 +265,9 @@ impl<T: NativeType> MutableBuffer<T> {
         self.len += 1;
     }
 
-    /// Extends the buffer with a new item, without checking for sufficient capacity
+    /// Extends the buffer with a new item without checking for sufficient capacity
     /// Safety
-    /// Caller must ensure that the capacity()-len()>=size_of<T>()
+    /// Caller must ensure that `self.capacity() - self.len() >= 1`
     #[inline]
     pub(crate) unsafe fn push_unchecked(&mut self, item: T) {
         unsafe {
@@ -276,14 +277,19 @@ impl<T: NativeType> MutableBuffer<T> {
         self.len += 1;
     }
 
+    /// Sets the length of this buffer.
+    /// # Panic
+    /// Panics iff `len > capacity`.
     /// # Safety
-    /// The caller must ensure that the buffer was properly initialized up to `len`.
+    /// The caller must ensure no reads are performed on any
+    /// item within `[len, capacity - len]`
     #[inline]
     pub unsafe fn set_len(&mut self, len: usize) {
         assert!(len <= self.capacity());
         self.len = len;
     }
 
+    /// Extends this buffer by `additional` items of value `value`.
     #[inline]
     pub fn extend_constant(&mut self, additional: usize, value: T) {
         self.resize(self.len() + additional, value)
@@ -336,21 +342,14 @@ unsafe fn reallocate<T: NativeType>(
 
 impl<A: NativeType> Extend<A> for MutableBuffer<A> {
     fn extend<T: IntoIterator<Item = A>>(&mut self, iter: T) {
-        let iterator = iter.into_iter();
-        self.extend_from_iter(iterator)
-    }
-}
-
-impl<T: NativeType> MutableBuffer<T> {
-    #[inline]
-    fn extend_from_iter<I: Iterator<Item = T>>(&mut self, mut iterator: I) {
+        let mut iterator = iter.into_iter();
         let (lower, _) = iterator.size_hint();
         let additional = lower;
         self.reserve(additional);
 
         // this is necessary because of https://github.com/rust-lang/rust/issues/32155
         let mut len = SetLenOnDrop::new(&mut self.len);
-        let mut dst = unsafe { self.ptr.as_ptr().add(len.local_len) as *mut T };
+        let mut dst = unsafe { self.ptr.as_ptr().add(len.local_len) as *mut A };
         let capacity = self.capacity;
 
         while len.local_len < capacity {
@@ -368,7 +367,9 @@ impl<T: NativeType> MutableBuffer<T> {
 
         iterator.for_each(|item| self.push(item));
     }
+}
 
+impl<T: NativeType> MutableBuffer<T> {
     /// Extends `self` from a [`TrustedLen`] iterator.
     #[inline]
     pub fn extend_from_trusted_len_iter<I: TrustedLen<Item = T>>(&mut self, iterator: I) {
@@ -411,7 +412,7 @@ impl<T: NativeType> MutableBuffer<T> {
     /// # use arrow2::buffer::MutableBuffer;
     /// let v = vec![1u32];
     /// let iter = v.iter().map(|x| x * 2);
-    /// let buffer = unsafe { MutableBuffer::from_trusted_len_iter(iter) };
+    /// let buffer = MutableBuffer::from_trusted_len_iter(iter);
     /// assert_eq!(buffer.len(), 1)
     /// ```
     /// # Safety
@@ -430,14 +431,6 @@ impl<T: NativeType> MutableBuffer<T> {
 
     /// Creates a [`MutableBuffer`] from an [`Iterator`] with a trusted (upper) length.
     /// Prefer this to `collect` whenever possible, as it is faster ~60% faster.
-    /// # Example
-    /// ```
-    /// # use arrow2::buffer::MutableBuffer;
-    /// let v = vec![1u32];
-    /// let iter = v.iter().map(|x| x * 2);
-    /// let buffer = unsafe { MutableBuffer::from_trusted_len_iter(iter) };
-    /// assert_eq!(buffer.len(), 1)
-    /// ```
     /// # Safety
     /// This method assumes that the iterator's size is correct and is undefined behavior
     /// to use it on an iterator that reports an incorrect length.
@@ -452,8 +445,7 @@ impl<T: NativeType> MutableBuffer<T> {
         buffer
     }
 
-    /// Creates a [`MutableBuffer`] from an [`Iterator`] with a [`TrustedLen`] iterator, or errors
-    /// if any of the items of the iterator is an error.
+    /// Creates a [`MutableBuffer`] from a fallible [`TrustedLen`] iterator.
     #[inline]
     pub fn try_from_trusted_len_iter<E, I: TrustedLen<Item = std::result::Result<T, E>>>(
         iterator: I,
@@ -464,7 +456,7 @@ impl<T: NativeType> MutableBuffer<T> {
     /// Creates a [`MutableBuffer`] from an [`Iterator`] with a trusted (upper) length or errors
     /// if any of the items of the iterator is an error.
     /// Prefer this to `collect` whenever possible, as it is faster ~60% faster.
-    /// The only difference between this and [`try_from_trusted_len_iter`] is that this works
+    /// The only difference between this and [`Self::try_from_trusted_len_iter`] is that this works
     /// on any iterator, while `try_from_trusted_len_iter` requires the iterator to implement the trait
     /// [`TrustedLen`], which not every iterator currently implements due to limitations of the Rust compiler.
     /// # Safety
@@ -517,7 +509,7 @@ impl<T: NativeType> FromIterator<T> for MutableBuffer<T> {
             }
         };
 
-        buffer.extend_from_iter(iterator);
+        buffer.extend(iterator);
         buffer
     }
 }
@@ -619,6 +611,7 @@ impl From<MutableBuffer<u64>> for MutableBuffer<u8> {
 }
 
 impl MutableBuffer<u8> {
+    /// Creates a [`MutableBuffer<u8>`] from an iterator of `u64`.
     #[inline]
     pub fn from_chunk_iter<I: TrustedLen<Item = u64>>(iter: I) -> Self {
         MutableBuffer::from_trusted_len_iter(iter).into()
@@ -632,3 +625,8 @@ impl MutableBuffer<u8> {
         MutableBuffer::from_trusted_len_iter_unchecked(iter).into()
     }
 }
+
+// This is sound because `NativeType` is `Send+Sync`, and
+// `MutableBuffer` has the invariants of `Vec<T>` (which is `Send+Sync`)
+unsafe impl<T: NativeType> Send for MutableBuffer<T> {}
+unsafe impl<T: NativeType> Sync for MutableBuffer<T> {}

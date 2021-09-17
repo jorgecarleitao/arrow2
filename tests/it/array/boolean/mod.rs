@@ -1,6 +1,7 @@
 use arrow2::{
     array::{Array, BooleanArray},
     bitmap::Bitmap,
+    datatypes::DataType,
 };
 
 mod mutable;
@@ -23,7 +24,11 @@ fn basics() {
     assert!(!array.is_valid(1));
     assert!(array.is_valid(2));
 
-    let array2 = BooleanArray::from_data(array.values().clone(), array.validity().clone());
+    let array2 = BooleanArray::from_data(
+        DataType::Boolean,
+        array.values().clone(),
+        array.validity().clone(),
+    );
     assert_eq!(array, array2);
 
     let array = array.slice(1, 2);
@@ -33,7 +38,7 @@ fn basics() {
 
 #[test]
 fn empty() {
-    let array = BooleanArray::new_empty();
+    let array = BooleanArray::new_empty(DataType::Boolean);
     assert_eq!(array.values().len(), 0);
     assert_eq!(array.validity(), &None);
 }

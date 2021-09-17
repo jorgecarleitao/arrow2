@@ -116,6 +116,31 @@ fn write_dictionary() -> Result<()> {
     Ok(())
 }
 
+#[test]
+fn dictionary_validities() -> Result<()> {
+    // define a schema.
+    let field_type = DataType::Dictionary(Box::new(DataType::Int32), Box::new(DataType::Int32));
+    let schema = Arc::new(Schema::new(vec![Field::new("d1", field_type, true)]));
+
+    let keys = PrimitiveArray::<i32>::from([Some(1), None, Some(0)]);
+    let values = PrimitiveArray::<i32>::from([None, Some(10)]);
+    let array = DictionaryArray::<i32>::from_data(keys, Arc::new(values));
+
+    let batch = RecordBatch::try_new(schema, vec![Arc::new(array)])?;
+
+    let table = write(&[batch]);
+
+    let expected = vec![
+        "+----+", "| d1 |", "+----+", "| 10 |", "|    |", "|    |", "+----+",
+    ];
+
+    let actual: Vec<&str> = table.lines().collect();
+
+    assert_eq!(expected, actual, "Actual result:\n{}", table);
+
+    Ok(())
+}
+
 /// Generate an array with type $ARRAYTYPE with a numeric value of
 /// $VALUE, and compare $EXPECTED_RESULT to the output of
 /// formatting that array with `write`
@@ -160,12 +185,12 @@ fn write_timestamp_second() {
 #[test]
 fn write_timestamp_second_with_tz() {
     let expected = vec![
-        "+-------------------------+",
-        "| f                       |",
-        "+-------------------------+",
-        "| 1970-05-09 14:25:11 UTC |",
-        "|                         |",
-        "+-------------------------+",
+        "+----------------------------+",
+        "| f                          |",
+        "+----------------------------+",
+        "| 1970-05-09 14:25:11 +00:00 |",
+        "|                            |",
+        "+----------------------------+",
     ];
     check_datetime!(
         i64,
@@ -335,7 +360,7 @@ fn write_struct() -> Result<()> {
 
     let validity = Some(Bitmap::from(&[true, false, true]));
 
-    let array = StructArray::from_data(fields, values, validity);
+    let array = StructArray::from_data(DataType::Struct(fields), values, validity);
 
     let schema = Schema::new(vec![Field::new("a", array.data_type().clone(), true)]);
 

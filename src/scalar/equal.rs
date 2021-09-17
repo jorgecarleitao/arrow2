@@ -1,4 +1,5 @@
 use super::*;
+use crate::types::days_ms;
 
 impl PartialEq for dyn Scalar {
     fn eq(&self, other: &Self) -> bool {

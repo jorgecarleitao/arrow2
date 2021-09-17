@@ -1,15 +1,20 @@
-use arrow2::array::growable::{Growable, GrowableNull};
-use arrow2::array::*;
+use arrow2::{
+    array::{
+        growable::{Growable, GrowableNull},
+        NullArray,
+    },
+    datatypes::DataType,
+};
 
 #[test]
 fn null() {
-    let mut mutable = GrowableNull::new();
+    let mut mutable = GrowableNull::default();
 
     mutable.extend(0, 1, 2);
     mutable.extend(1, 0, 1);
 
     let result: NullArray = mutable.into();
 
-    let expected = NullArray::from_data(3);
+    let expected = NullArray::from_data(DataType::Null, 3);
     assert_eq!(result, expected);
 }

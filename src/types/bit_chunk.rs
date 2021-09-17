@@ -22,14 +22,19 @@ pub unsafe trait BitChunk:
     + BitAndAssign
     + BitOr<Output = Self>
 {
+    /// The representation of this type in the stack.
     type Bytes: std::ops::Index<usize, Output = u8>
         + std::ops::IndexMut<usize, Output = u8>
         + for<'a> std::convert::TryFrom<&'a [u8]>
         + std::fmt::Debug;
 
+    /// A value with a single bit set at the most right position.
     fn one() -> Self;
+    /// A value with no bits set.
     fn zero() -> Self;
+    /// convert itself into bytes.
     fn to_ne_bytes(self) -> Self::Bytes;
+    /// convert itself from bytes.
     fn from_ne_bytes(v: Self::Bytes) -> Self;
 }
 
@@ -148,6 +153,7 @@ pub struct BitChunkIter<T: BitChunk> {
 }
 
 impl<T: BitChunk> BitChunkIter<T> {
+    /// Creates a new [`BitChunkIter`] with `len` bits.
     #[inline]
     pub fn new(value: T, len: usize) -> Self {
         assert!(len <= std::mem::size_of::<T>() * 8);

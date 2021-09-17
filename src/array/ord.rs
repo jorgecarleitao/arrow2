@@ -7,7 +7,7 @@ use crate::error::{ArrowError, Result};
 use crate::{array::*, types::NativeType};
 
 /// Compare the values at two arbitrary indices in two arrays.
-pub type DynComparator<'a> = Box<dyn Fn(usize, usize) -> Ordering + 'a>;
+pub type DynComparator = Box<dyn Fn(usize, usize) -> Ordering + Send + Sync>;
 
 /// implements comparison using IEEE 754 total ordering for f32
 // Original implementation from https://doc.rust-lang.org/std/primitive.f32.html#method.total_cmp
@@ -47,60 +47,57 @@ where
     l.cmp(r)
 }
 
-fn compare_primitives<'a, T: NativeType + Ord>(
-    left: &'a dyn Array,
-    right: &'a dyn Array,
-) -> DynComparator<'a> {
-    let left = left.as_any().downcast_ref::<PrimitiveArray<T>>().unwrap();
-    let right = right.as_any().downcast_ref::<PrimitiveArray<T>>().unwrap();
-    let left = left.values();
-    let right = right.values();
-    Box::new(move |i, j| total_cmp(&left[i], &right[j]))
+fn compare_primitives<T: NativeType + Ord>(left: &dyn Array, right: &dyn Array) -> DynComparator {
+    let left = left.as_any().downcast_ref::<PrimitiveArray<T>>().unwrap().clone();
+    let right = right.as_any().downcast_ref::<PrimitiveArray<T>>().unwrap().clone();
+    Box::new(move |i, j| total_cmp(&left.value(i), &right.value(j)))
 }
 
-fn compare_boolean<'a>(left: &'a dyn Array, right: &'a dyn Array) -> DynComparator<'a> {
-    let left = left.as_any().downcast_ref::<BooleanArray>().unwrap();
-    let right = right.as_any().downcast_ref::<BooleanArray>().unwrap();
+fn compare_boolean(left: &dyn Array, right: &dyn Array) -> DynComparator {
+    let left = left.as_any().downcast_ref::<BooleanArray>().unwrap().clone();
+    let right = right.as_any().downcast_ref::<BooleanArray>().unwrap().clone();
     Box::new(move |i, j| left.value(i).cmp(&right.value(j)))
 }
 
-fn compare_f32<'a>(left: &'a dyn Array, right: &'a dyn Array) -> DynComparator<'a> {
-    let left = left.as_any().downcast_ref::<PrimitiveArray<f32>>().unwrap();
+fn compare_f32(left: &dyn Array, right: &dyn Array) -> DynComparator {
+    let left = left.as_any().downcast_ref::<PrimitiveArray<f32>>().unwrap().clone();
     let right = right
         .as_any()
         .downcast_ref::<PrimitiveArray<f32>>()
-        .unwrap();
-    let left = left.values();
-    let right = right.values();
-    Box::new(move |i, j| total_cmp_f32(&left[i], &right[j]))
+        .unwrap().clone();
+    Box::new(move |i, j| total_cmp_f32(&left.value(i), &right.value(j)))
 }
 
-fn compare_f64<'a>(left: &'a dyn Array, right: &'a dyn Array) -> DynComparator<'a> {
-    let left = left.as_any().downcast_ref::<PrimitiveArray<f64>>().unwrap();
+fn compare_f64(left: &dyn Array, right: &dyn Array) -> DynComparator {
+    let left = left.as_any().downcast_ref::<PrimitiveArray<f64>>().unwrap().clone();
     let right = right
         .as_any()
         .downcast_ref::<PrimitiveArray<f64>>()
-        .unwrap();
-    let left = left.values();
-    let right = right.values();
-    Box::new(move |i, j| total_cmp_f64(&left[i], &right[j]))
+        .unwrap().clone();
+    Box::new(move |i, j| total_cmp_f64(&left.value(i), &right.value(j)))
 }
 
-fn compare_string<'a, O: Offset>(left: &'a dyn Array, right: &'a dyn Array) -> DynComparator<'a> {
-    let left = left.as_any().downcast_ref::<Utf8Array<O>>().unwrap();
-    let right = right.as_any().downcast_ref::<Utf8Array<O>>().unwrap();
+fn compare_string<O: Offset>(left: &dyn Array, right: &dyn Array) -> DynComparator {
+    let left = left.as_any().downcast_ref::<Utf8Array<O>>().unwrap().clone();
+    let right = right.as_any().downcast_ref::<Utf8Array<O>>().unwrap().clone();
     Box::new(move |i, j| left.value(i).cmp(right.value(j)))
 }
 
-fn compare_dict<'a, K>(
-    left: &'a DictionaryArray<K>,
-    right: &'a DictionaryArray<K>,
-) -> Result<DynComparator<'a>>
+fn compare_binary<O: Offset>(left: &dyn Array, right: &dyn Array) -> DynComparator {
+    let left = left.as_any().downcast_ref::<BinaryArray<O>>().unwrap().clone();
+    let right = right.as_any().downcast_ref::<BinaryArray<O>>().unwrap().clone();
+    Box::new(move |i, j| left.value(i).cmp(right.value(j)))
+}
+
+fn compare_dict<K>(
+    left: &DictionaryArray<K>,
+    right: &DictionaryArray<K>,
+) -> Result<DynComparator>
 where
     K: DictionaryKey,
 {
-    let left_keys = left.keys().values();
-    let right_keys = right.keys().values();
+    let left_keys = left.keys().values().clone();
+    let right_keys = right.keys().values().clone();
 
     let comparator = build_compare(left.values().as_ref(), right.values().as_ref())?;
 
@@ -124,11 +121,10 @@ macro_rules! dyn_dict {
 /// # Example
 /// ```
 /// use arrow2::array::{ord::build_compare, PrimitiveArray};
-/// use arrow2::datatypes::DataType;
 ///
 /// # fn main() -> arrow2::error::Result<()> {
-/// let array1 = PrimitiveArray::from_slice(&[1, 2]).to(DataType::Int32);
-/// let array2 = PrimitiveArray::from_slice(&[3, 4]).to(DataType::Int32);
+/// let array1 = PrimitiveArray::from_slice([1, 2]);
+/// let array2 = PrimitiveArray::from_slice([3, 4]);
 ///
 /// let cmp = build_compare(&array1, &array2)?;
 ///
@@ -140,8 +136,7 @@ macro_rules! dyn_dict {
 /// # Error
 /// The arrays' [`DataType`] must be equal and the types must have a natural order.
 // This is a factory of comparisons.
-// The lifetime 'a enforces that we cannot use the closure beyond any of the array's lifetime.
-pub fn build_compare<'a>(left: &'a dyn Array, right: &'a dyn Array) -> Result<DynComparator<'a>> {
+pub fn build_compare(left: &dyn Array, right: &dyn Array) -> Result<DynComparator> {
     use DataType::*;
     use IntervalUnit::*;
     use TimeUnit::*;
@@ -179,6 +174,8 @@ pub fn build_compare<'a>(left: &'a dyn Array, right: &'a dyn Array) -> Result<Dy
         (Float64, Float64) => compare_f64(left, right),
         (Utf8, Utf8) => compare_string::<i32>(left, right),
         (LargeUtf8, LargeUtf8) => compare_string::<i64>(left, right),
+        (Binary, Binary) => compare_binary::<i32>(left, right),
+        (LargeBinary, LargeBinary) => compare_binary::<i64>(left, right),
         (Dictionary(key_type_lhs, _), Dictionary(key_type_rhs, _)) => {
             match (key_type_lhs.as_ref(), key_type_rhs.as_ref()) {
                 (UInt8, UInt8) => dyn_dict!(u8, left, right),

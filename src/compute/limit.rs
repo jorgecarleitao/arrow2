@@ -27,18 +27,3 @@ pub fn limit(array: &dyn Array, num_elements: usize) -> Box<dyn Array> {
     let lim = num_elements.min(array.len());
     array.slice(0, lim)
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::array::*;
-
-    #[test]
-    fn test_limit_array() {
-        let a = Int32Array::from_slice(&[5, 6, 7, 8, 9]);
-        let b = limit(&a, 3);
-        let c = b.as_ref().as_any().downcast_ref::<Int32Array>().unwrap();
-        let expected = Int32Array::from_slice(&[5, 6, 7]);
-        assert_eq!(&expected, c);
-    }
-}

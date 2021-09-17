@@ -21,13 +21,7 @@ pub fn read_column<R: Read + Seek>(
 ) -> Result<ArrayStats> {
     let metadata = read_metadata(&mut reader)?;
 
-    let mut reader = RecordReader::try_new(
-        reader,
-        Some(vec![column]),
-        None,
-        Arc::new(|_, _| true),
-        None,
-    )?;
+    let mut reader = RecordReader::try_new(reader, Some(vec![column]), None, None, None)?;
 
     let statistics = metadata.row_groups[row_group]
         .column(column)
@@ -315,7 +309,7 @@ pub fn pyarrow_required(column: usize) -> Box<dyn Array> {
     ];
 
     match column {
-        0 => Box::new(PrimitiveArray::<i64>::from(i64_values).to(DataType::Int64)),
+        0 => Box::new(PrimitiveArray::<i64>::from(i64_values)),
         3 => Box::new(BooleanArray::from_slice(&[
             true, true, false, false, false, true, true, true, true, true,
         ])),
@@ -400,16 +394,19 @@ fn integration_write(schema: &Schema, batches: &[RecordBatch]) -> Result<Vec<u8>
     let descritors = parquet_schema.columns().to_vec().into_iter();
 
     let row_groups = batches.iter().map(|batch| {
-        let iterator = DynIter::new(batch.columns().iter().zip(descritors.clone()).map(
-            |(array, type_)| {
-                Ok(DynIter::new(std::iter::once(array_to_page(
-                    array.as_ref(),
-                    type_,
-                    options,
-                    Encoding::Plain,
-                ))))
-            },
-        ));
+        let iterator = batch
+            .columns()
+            .iter()
+            .zip(descritors.clone())
+            .map(|(array, type_)| {
+                let encoding = if let DataType::Dictionary(_, _) = array.data_type() {
+                    Encoding::RleDictionary
+                } else {
+                    Encoding::Plain
+                };
+                array_to_pages(array.clone(), type_, options, encoding)
+            });
+        let iterator = DynIter::new(iterator);
         Ok(iterator)
     });
 
@@ -429,7 +426,7 @@ fn integration_write(schema: &Schema, batches: &[RecordBatch]) -> Result<Vec<u8>
 
 fn integration_read(data: &[u8]) -> Result<(Arc<Schema>, Vec<RecordBatch>)> {
     let reader = Cursor::new(data);
-    let reader = RecordReader::try_new(reader, None, None, Arc::new(|_, _| true), None)?;
+    let reader = RecordReader::try_new(reader, None, None, None, None)?;
     let schema = reader.schema().clone();
     let batches = reader.collect::<Result<Vec<_>>>()?;
 
@@ -437,7 +434,7 @@ fn integration_read(data: &[u8]) -> Result<(Arc<Schema>, Vec<RecordBatch>)> {
 }
 
 fn test_file(version: &str, file_name: &str) -> Result<()> {
-    let (schema, batches) = read_gzip_json(version, file_name);
+    let (schema, batches) = read_gzip_json(version, file_name)?;
 
     let data = integration_write(&schema, &batches)?;
 
@@ -453,6 +450,18 @@ fn test_file(version: &str, file_name: &str) -> Result<()> {
 fn roundtrip_100_primitive() -> Result<()> {
     test_file("1.0.0-littleendian", "generated_primitive")?;
     test_file("1.0.0-bigendian", "generated_primitive")
+}
+
+#[test]
+fn roundtrip_100_dict() -> Result<()> {
+    test_file("1.0.0-littleendian", "generated_dictionary")?;
+    test_file("1.0.0-bigendian", "generated_dictionary")
+}
+
+#[test]
+fn roundtrip_100_extension() -> Result<()> {
+    test_file("1.0.0-littleendian", "generated_extension")?;
+    test_file("1.0.0-bigendian", "generated_extension")
 }
 
 /// Tests that when arrow-specific types (Duration and LargeUtf8) are written to parquet, we can rountrip its

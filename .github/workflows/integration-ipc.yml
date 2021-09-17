@@ -1,10 +1,10 @@
-name: Integration
+name: Integration IPC / Flight
 
 on: [push, pull_request]
 
 jobs:
   docker:
-    name: Integration Test
+    name: Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Arrow
@@ -25,6 +25,9 @@ jobs:
       # which is incompatible with this. Let's monkey patch it
       - name: Fix compilation
         run: cp rust/integration-testing/rust_build.sh ci/scripts/rust_build.sh
+      # unskip many of the tests
+      - name: Test more cases
+        run: git apply rust/integration-testing/unskip.patch
       - name: Setup Python
         uses: actions/setup-python@v1
         with:

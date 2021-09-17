@@ -1,6 +1,7 @@
 use crate::error::Result;
 
 #[cfg(feature = "io_ipc_compression")]
+#[cfg_attr(docsrs, doc(cfg(feature = "io_ipc_compression")))]
 pub fn decompress_lz4(input_buf: &[u8], output_buf: &mut [u8]) -> Result<()> {
     use std::io::Read;
     let mut decoder = lz4::Decoder::new(input_buf)?;
@@ -8,6 +9,7 @@ pub fn decompress_lz4(input_buf: &[u8], output_buf: &mut [u8]) -> Result<()> {
 }
 
 #[cfg(feature = "io_ipc_compression")]
+#[cfg_attr(docsrs, doc(cfg(feature = "io_ipc_compression")))]
 pub fn decompress_zstd(input_buf: &[u8], output_buf: &mut [u8]) -> Result<()> {
     use std::io::Read;
     let mut decoder = zstd::Decoder::new(input_buf)?;

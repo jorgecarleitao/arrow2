@@ -23,7 +23,7 @@ use gen::Schema::MetadataVersion;
 use crate::array::*;
 use crate::datatypes::Schema;
 use crate::error::{ArrowError, Result};
-use crate::record_batch::{RecordBatch, RecordBatchReader};
+use crate::record_batch::RecordBatch;
 
 use super::super::CONTINUATION_MARKER;
 use super::super::{convert, gen};
@@ -76,12 +76,27 @@ pub fn read_stream_metadata<R: Read>(reader: &mut R) -> Result<StreamMetadata> {
     })
 }
 
+pub enum StreamState {
+    Waiting,
+    Some(RecordBatch),
+}
+
+impl StreamState {
+    pub fn unwrap(self) -> RecordBatch {
+        if let StreamState::Some(batch) = self {
+            batch
+        } else {
+            panic!("The batch is not available")
+        }
+    }
+}
+
 /// Reads the next item
 pub fn read_next<R: Read>(
     reader: &mut R,
     metadata: &StreamMetadata,
     dictionaries_by_field: &mut Vec<Option<ArrayRef>>,
-) -> Result<Option<RecordBatch>> {
+) -> Result<Option<StreamState>> {
     // determine metadata length
     let mut meta_size: [u8; 4] = [0; 4];
 
@@ -92,7 +107,7 @@ pub fn read_next<R: Read>(
                 // Handle EOF without the "0xFFFFFFFF 0x00000000"
                 // valid according to:
                 // https://arrow.apache.org/docs/format/Columnar.html#ipc-streaming-format
-                Ok(None)
+                Ok(Some(StreamState::Waiting))
             } else {
                 Err(ArrowError::from(e))
             };
@@ -144,7 +159,7 @@ pub fn read_next<R: Read>(
                 &mut reader,
                 0,
             )
-            .map(Some)
+            .map(|x| Some(StreamState::Some(x)))
         }
         gen::Message::MessageHeader::DictionaryBatch => {
             let batch = message.header_as_dictionary_batch().ok_or_else(|| {
@@ -168,7 +183,7 @@ pub fn read_next<R: Read>(
             // read the next message until we encounter a RecordBatch
             read_next(reader, metadata, dictionaries_by_field)
         }
-        gen::Message::MessageHeader::NONE => Ok(None),
+        gen::Message::MessageHeader::NONE => Ok(Some(StreamState::Waiting)),
         t => Err(ArrowError::Ipc(format!(
             "Reading types other than record batches not yet supported, unable to read {:?} ",
             t
@@ -210,32 +225,26 @@ impl<R: Read> StreamReader<R> {
         self.finished
     }
 
-    fn maybe_next(&mut self) -> Result<Option<RecordBatch>> {
+    fn maybe_next(&mut self) -> Result<Option<StreamState>> {
+        if self.finished {
+            return Ok(None);
+        }
         let batch = read_next(
             &mut self.reader,
             &self.metadata,
             &mut self.dictionaries_by_field,
         )?;
         if batch.is_none() {
-            self.finished = false;
-        }
-        if self.finished {
-            return Ok(None);
+            self.finished = true;
         }
         Ok(batch)
     }
 }
 
 impl<R: Read> Iterator for StreamReader<R> {
-    type Item = Result<RecordBatch>;
+    type Item = Result<StreamState>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.maybe_next().transpose()
-    }
-}
-
-impl<R: Read> RecordBatchReader for StreamReader<R> {
-    fn schema(&self) -> &Schema {
-        self.metadata.schema.as_ref()
     }
 }

@@ -1,5 +1,5 @@
 use crate::array::PrimitiveArray;
-use crate::compute::comparison::primitive_compare_values_op;
+use crate::compute::comparison::{primitive_compare_values_op, Simd8, Simd8Lanes};
 use crate::datatypes::DataType;
 use crate::error::{ArrowError, Result};
 use crate::{array::Array, types::NativeType};
@@ -29,7 +29,7 @@ use super::utils::combine_validities;
 /// This function errors iff
 /// * The arguments do not have the same logical type
 /// * The arguments do not have the same length
-pub fn nullif_primitive<T: NativeType>(
+pub fn nullif_primitive<T: NativeType + Simd8>(
     lhs: &PrimitiveArray<T>,
     rhs: &PrimitiveArray<T>,
 ) -> Result<PrimitiveArray<T>> {
@@ -39,7 +39,7 @@ pub fn nullif_primitive<T: NativeType>(
         ));
     }
 
-    let equal = primitive_compare_values_op(lhs.values(), rhs.values(), |lhs, rhs| lhs != rhs);
+    let equal = primitive_compare_values_op(lhs.values(), rhs.values(), |lhs, rhs| lhs.neq(rhs));
     let equal = equal.into();
 
     let validity = combine_validities(lhs.validity(), &equal);
@@ -51,7 +51,7 @@ pub fn nullif_primitive<T: NativeType>(
     ))
 }
 
-/// Returns whether [`nulliff`] is implemented for the datatypes.
+/// Returns whether [`nullif`] is implemented for the datatypes.
 pub fn can_nullif(lhs: &DataType, rhs: &DataType) -> bool {
     if lhs != rhs {
         return false;

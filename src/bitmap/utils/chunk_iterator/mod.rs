@@ -9,7 +9,9 @@ pub use chunks_exact::BitChunksExact;
 use crate::{trusted_len::TrustedLen, types::BitChunkIter};
 pub(crate) use merge::merge_reversed;
 
-pub trait BitChunkIterExact<B: BitChunk>: Iterator<Item = B> {
+/// Trait representing an exact iterator over bytes in [`BitChunk`].
+pub trait BitChunkIterExact<B: BitChunk>: TrustedLen<Item = B> {
+    /// The remainder of the iterator.
     fn remainder(&self) -> B;
 }
 
@@ -43,6 +45,7 @@ fn copy_with_merge<T: BitChunk>(dst: &mut T::Bytes, bytes: &[u8], bit_offset: us
 }
 
 impl<'a, T: BitChunk> BitChunks<'a, T> {
+    /// Creates a [`BitChunks`].
     pub fn new(slice: &'a [u8], offset: usize, len: usize) -> Self {
         assert!(offset + len <= slice.len() * 8);
 
@@ -97,7 +100,7 @@ impl<'a, T: BitChunk> BitChunks<'a, T> {
         };
     }
 
-    #[inline]
+    /// Returns the remainder [`BitChunk`].
     pub fn remainder(&self) -> T {
         // remaining bytes may not fit in `size_of::<T>()`. We complement
         // them to fit by allocating T and writing to it byte by byte
@@ -124,13 +127,12 @@ impl<'a, T: BitChunk> BitChunks<'a, T> {
         T::from_ne_bytes(remainder)
     }
 
-    // in bits
-    #[inline]
+    /// Returns the remainder bits in [`BitChunks::remainder`].
     pub fn remainder_len(&self) -> usize {
         self.len - (std::mem::size_of::<T>() * ((self.len / 8) / std::mem::size_of::<T>()) * 8)
     }
 
-    #[inline]
+    /// Returns an iterator over the remainder bits.
     pub fn remainder_iter(&self) -> BitChunkIter<T> {
         BitChunkIter::new(self.remainder(), self.remainder_len())
     }

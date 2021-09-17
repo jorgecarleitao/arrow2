@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use parquet2::{
-    encoding::{bitpacking, hybrid_rle, uleb128, Encoding},
-    page::{DataPage, DataPageHeader, DataPageHeaderExt, PrimitivePageDict},
-    read::{levels, StreamingIterator},
+    encoding::{hybrid_rle, Encoding},
+    page::{DataPage, PrimitivePageDict},
+    read::StreamingIterator,
     types::NativeType,
 };
 
-use super::super::utils as other_utils;
+use super::super::utils;
 use super::{ColumnChunkMetaData, ColumnDescriptor};
 use crate::{
     array::{Array, DictionaryArray, DictionaryKey, PrimitiveArray},
@@ -18,6 +18,7 @@ use crate::{
     types::NativeType as ArrowNativeType,
 };
 
+#[allow(clippy::too_many_arguments)]
 fn read_dict_optional<K, T, A, F>(
     validity_buffer: &[u8],
     indices_buffer: &[u8],
@@ -41,12 +42,9 @@ fn read_dict_optional<K, T, A, F>(
     let bit_width = indices_buffer[0];
     let indices_buffer = &indices_buffer[1..];
 
-    let (_, consumed) = uleb128::decode(indices_buffer);
-    let indices_buffer = &indices_buffer[consumed..];
-
-    let non_null_indices_len = indices_buffer.len() * 8 / bit_width as usize;
-
-    let mut new_indices = bitpacking::Decoder::new(indices_buffer, bit_width, non_null_indices_len);
+    println!("indices_buffer: {:?}", indices_buffer);
+    let mut new_indices =
+        hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional);
 
     let validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
 
@@ -99,67 +97,32 @@ where
 
     assert_eq!(descriptor.max_rep_level(), 0);
     let is_optional = descriptor.max_def_level() == 1;
-    match page.header() {
-        DataPageHeader::V1(header) => {
-            assert_eq!(header.definition_level_encoding(), Encoding::Rle);
 
-            let (_, validity_buffer, values_buffer) =
-                levels::split_buffer_v1(page.buffer(), false, is_optional);
+    let (_, validity_buffer, values_buffer, version) = utils::split_buffer(page, descriptor);
 
-            match (&page.encoding(), page.dictionary_page(), is_optional) {
-                (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
-                    read_dict_optional(
-                        validity_buffer,
-                        values_buffer,
-                        additional,
-                        dict.as_any().downcast_ref().unwrap(),
-                        indices,
-                        values,
-                        validity,
-                        op,
-                    )
-                }
-                _ => {
-                    return Err(other_utils::not_implemented(
-                        &page.encoding(),
-                        is_optional,
-                        page.dictionary_page().is_some(),
-                        "V1",
-                        "primitive",
-                    ))
-                }
-            }
+    match (&page.encoding(), page.dictionary_page(), is_optional) {
+        (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
+            read_dict_optional(
+                validity_buffer,
+                values_buffer,
+                additional,
+                dict.as_any().downcast_ref().unwrap(),
+                indices,
+                values,
+                validity,
+                op,
+            )
         }
-        DataPageHeader::V2(header) => {
-            let def_level_buffer_length = header.definition_levels_byte_length as usize;
-
-            let (_, validity_buffer, values_buffer) =
-                levels::split_buffer_v2(page.buffer(), 0, def_level_buffer_length);
-            match (&page.encoding(), page.dictionary_page(), is_optional) {
-                (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
-                    read_dict_optional(
-                        validity_buffer,
-                        values_buffer,
-                        additional,
-                        dict.as_any().downcast_ref().unwrap(),
-                        indices,
-                        values,
-                        validity,
-                        op,
-                    )
-                }
-                _ => {
-                    return Err(other_utils::not_implemented(
-                        &page.encoding(),
-                        is_optional,
-                        page.dictionary_page().is_some(),
-                        "V2",
-                        "primitive",
-                    ))
-                }
-            }
+        _ => {
+            return Err(utils::not_implemented(
+                &page.encoding(),
+                is_optional,
+                page.dictionary_page().is_some(),
+                version,
+                "primitive",
+            ))
         }
-    };
+    }
     Ok(())
 }
 

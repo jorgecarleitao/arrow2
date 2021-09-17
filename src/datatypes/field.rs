@@ -23,12 +23,17 @@ use super::DataType;
 
 /// A logical [`DataType`] and its associated metadata per
 /// [Arrow specification](https://arrow.apache.org/docs/cpp/api/datatype.html)
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Field {
+    /// Its name
     pub name: String,
+    /// Its logical [`DataType`]
     pub data_type: DataType,
+    /// Whether its values can be null or not
     pub nullable: bool,
+    /// The dictionary id of this field (currently un-used)
     pub dict_id: i64,
+    /// Whether the dictionary's values are ordered
     pub dict_is_ordered: bool,
     /// A map of key-value pairs containing additional custom meta data.
     pub metadata: Option<BTreeMap<String, String>>,
@@ -250,6 +255,7 @@ impl Field {
             | DataType::FixedSizeBinary(_)
             | DataType::Utf8
             | DataType::LargeUtf8
+            | DataType::Extension(_, _, _)
             | DataType::Decimal(_, _) => {
                 if self.data_type != from.data_type {
                     return Err(ArrowError::Schema(
@@ -269,5 +275,21 @@ impl Field {
 impl std::fmt::Display for Field {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{:?}", self)
+    }
+}
+
+pub(crate) type Metadata = Option<BTreeMap<String, String>>;
+pub(crate) type Extension = Option<(String, Option<String>)>;
+
+pub(crate) fn get_extension(metadata: &Option<BTreeMap<String, String>>) -> Extension {
+    if let Some(metadata) = metadata {
+        if let Some(name) = metadata.get("ARROW:extension:name") {
+            let metadata = metadata.get("ARROW:extension:metadata").cloned();
+            Some((name.clone(), metadata))
+        } else {
+            None
+        }
+    } else {
+        None
     }
 }
