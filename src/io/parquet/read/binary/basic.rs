@@ -80,6 +80,38 @@ fn read_dict_buffer<O: Offset>(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
+fn read_dict_required<O: Offset>(
+    indices_buffer: &[u8],
+    additional: usize,
+    dict: &BinaryPageDict,
+    offsets: &mut MutableBuffer<O>,
+    values: &mut MutableBuffer<u8>,
+    validity: &mut MutableBitmap,
+) {
+    let dict_values = dict.values();
+    let dict_offsets = dict.offsets();
+    let mut last_offset = *offsets.as_mut_slice().last().unwrap();
+
+    // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
+    // SPEC: followed by the values encoded using RLE/Bit packed described above (with the given bit width).
+    let bit_width = indices_buffer[0];
+    let indices_buffer = &indices_buffer[1..];
+
+    let indices = hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional);
+
+    for index in indices {
+        let index = index as usize;
+        let dict_offset_i = dict_offsets[index] as usize;
+        let dict_offset_ip1 = dict_offsets[index + 1] as usize;
+        let length = dict_offset_ip1 - dict_offset_i;
+        last_offset += O::from_usize(length).unwrap();
+        offsets.push(last_offset);
+        values.extend_from_slice(&dict_values[dict_offset_i..dict_offset_ip1]);
+    }
+    validity.extend_constant(additional, true);
+}
+
 fn read_delta_optional<O: Offset>(
     validity_buffer: &[u8],
     values_buffer: &[u8],
@@ -218,6 +250,16 @@ fn extend_from_page<O: Offset>(
         (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
             read_dict_buffer::<O>(
                 validity_buffer,
+                values_buffer,
+                additional,
+                dict.as_any().downcast_ref().unwrap(),
+                offsets,
+                values,
+                validity,
+            )
+        }
+        (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false) => {
+            read_dict_required::<O>(
                 values_buffer,
                 additional,
                 dict.as_any().downcast_ref().unwrap(),
