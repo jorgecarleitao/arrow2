@@ -60,6 +60,8 @@ ahash = { version = "0.7", optional = true }
 
 parquet2 = { version = "0.4", optional = true, default_features = false, features = ["stream"] }
 
+avro-rs = { version = "0.13", optional = true, default_features = false }
+
 # for division/remainder optimization at runtime
 strength_reduce = { version = "0.2", optional = true }
 multiversion = { version = "0.6.1", optional = true }
@@ -86,6 +88,7 @@ full = [
     "io_print",
     "io_parquet",
     "io_parquet_compression",
+    "io_avro",
     "regex",
     "merge_sort",
     "ahash",
@@ -107,6 +110,7 @@ io_parquet_compression = [
     "parquet2/lz4",
     "parquet2/brotli",
 ]
+io_avro = ["avro-rs", "streaming-iterator", "serde_json"]
 # io_json: its dependencies + error handling
 # serde_derive: there is some derive around
 io_json_integration = ["io_json", "serde_derive", "hex"]

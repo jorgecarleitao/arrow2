@@ -19,6 +19,10 @@ pub mod json_integration;
 #[cfg_attr(docsrs, doc(cfg(feature = "io_parquet")))]
 pub mod parquet;
 
+#[cfg(feature = "io_avro")]
+#[cfg_attr(docsrs, doc(cfg(feature = "io_avro")))]
+pub mod avro;
+
 #[cfg(feature = "io_print")]
 #[cfg_attr(docsrs, doc(cfg(feature = "io_print")))]
 pub mod print;
