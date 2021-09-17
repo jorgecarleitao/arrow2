@@ -68,9 +68,6 @@ fn test_extend_trusted_len_values() {
 fn test_extend_trusted_len() {
     let mut array = MutableUtf8Array::<i32>::new();
 
-    // TODO Understand why the following is not possible
-    //array.extend_trusted_len([Some("hi"), Some("there")].into_iter());
-
     array.extend_trusted_len(vec![Some("hi"), Some("there")].into_iter());
     array.extend_trusted_len(vec![None, Some("hello")].into_iter());
     array.extend_trusted_len_values(["again"].iter());
