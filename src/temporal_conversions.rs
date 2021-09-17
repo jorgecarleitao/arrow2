@@ -2,14 +2,17 @@
 
 use chrono::{
     format::{parse, Parsed, StrftimeItems},
-    FixedOffset, NaiveDate, NaiveDateTime, NaiveTime,
+    Datelike, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime,
 };
 
-use crate::datatypes::{DataType, TimeUnit};
 use crate::error::Result;
 use crate::{
     array::{Offset, PrimitiveArray, Utf8Array},
     error::ArrowError,
+};
+use crate::{
+    datatypes::{DataType, TimeUnit},
+    types::months_days_ns,
 };
 
 /// Number of seconds in a day
@@ -98,8 +101,8 @@ pub fn time64ns_to_time(v: i64) -> NaiveTime {
 
 /// converts a `i64` representing a `timestamp(s)` to [`NaiveDateTime`]
 #[inline]
-pub fn timestamp_s_to_datetime(v: i64) -> NaiveDateTime {
-    NaiveDateTime::from_timestamp(v, 0)
+pub fn timestamp_s_to_datetime(seconds: i64) -> NaiveDateTime {
+    NaiveDateTime::from_timestamp(seconds, 0)
 }
 
 /// converts a `i64` representing a `timestamp(ms)` to [`NaiveDateTime`]
@@ -133,6 +136,27 @@ pub fn timestamp_ns_to_datetime(v: i64) -> NaiveDateTime {
         // discard extracted seconds
         (v % NANOSECONDS) as u32,
     )
+}
+
+/// Converts a timestamp in `time_unit` and `timezone` into [`chrono::DateTime`].
+#[inline]
+pub fn timestamp_to_naive_datetime(timestamp: i64, time_unit: TimeUnit) -> chrono::NaiveDateTime {
+    match time_unit {
+        TimeUnit::Second => timestamp_s_to_datetime(timestamp),
+        TimeUnit::Millisecond => timestamp_ms_to_datetime(timestamp),
+        TimeUnit::Microsecond => timestamp_us_to_datetime(timestamp),
+        TimeUnit::Nanosecond => timestamp_ns_to_datetime(timestamp),
+    }
+}
+
+/// Converts a timestamp in `time_unit` and `timezone` into [`chrono::DateTime`].
+#[inline]
+pub fn timestamp_to_datetime<T: chrono::TimeZone>(
+    timestamp: i64,
+    time_unit: TimeUnit,
+    timezone: &T,
+) -> chrono::DateTime<T> {
+    timezone.from_utc_datetime(&timestamp_to_naive_datetime(timestamp, time_unit))
 }
 
 /// Calculates the scale factor between two TimeUnits. The function returns the
@@ -238,8 +262,10 @@ fn utf8_to_timestamp_ns_impl<O: Offset, T: chrono::TimeZone>(
 
 #[cfg(feature = "chrono-tz")]
 #[cfg_attr(docsrs, doc(cfg(feature = "chrono-tz")))]
-pub(crate) fn parse_offset_tz(tz: &str) -> Option<chrono_tz::Tz> {
-    tz.parse::<chrono_tz::Tz>().ok()
+pub fn parse_offset_tz(timezone: &str) -> Result<chrono_tz::Tz> {
+    timezone.parse::<chrono_tz::Tz>().map_err(|_| {
+        ArrowError::InvalidArgumentError(format!("timezone \"{}\" cannot be parsed", timezone))
+    })
 }
 
 #[cfg(feature = "chrono-tz")]
@@ -249,15 +275,8 @@ fn chrono_tz_utf_to_timestamp_ns<O: Offset>(
     fmt: &str,
     timezone: String,
 ) -> Result<PrimitiveArray<i64>> {
-    let tz = parse_offset_tz(&timezone);
-    if let Some(tz) = tz {
-        Ok(utf8_to_timestamp_ns_impl(array, fmt, timezone, tz))
-    } else {
-        Err(ArrowError::InvalidArgumentError(format!(
-            "timezone \"{}\" cannot be parsed",
-            timezone
-        )))
-    }
+    let tz = parse_offset_tz(&timezone)?;
+    Ok(utf8_to_timestamp_ns_impl(array, fmt, timezone, tz))
 }
 
 #[cfg(not(feature = "chrono-tz"))]
@@ -307,4 +326,73 @@ pub fn utf8_to_naive_timestamp_ns<O: Offset>(
         .map(|x| x.and_then(|x| utf8_to_naive_timestamp_ns_scalar(x, fmt)));
 
     PrimitiveArray::from_trusted_len_iter(iter).to(DataType::Timestamp(TimeUnit::Nanosecond, None))
+}
+
+fn add_month(year: i32, month: u32, months: i32) -> chrono::NaiveDate {
+    let new_year = (year * 12 + (month - 1) as i32 + months) / 12;
+    let new_month = (year * 12 + (month - 1) as i32 + months) % 12 + 1;
+    chrono::NaiveDate::from_ymd(new_year, new_month as u32, 1)
+}
+
+fn get_days_between_months(year: i32, month: u32, months: i32) -> i64 {
+    add_month(year, month, months)
+        .signed_duration_since(chrono::NaiveDate::from_ymd(year, month, 1))
+        .num_days()
+}
+
+/// Adds an `interval` to a `timestamp` in `time_unit` units without timezone.
+#[inline]
+pub fn add_naive_interval(timestamp: i64, time_unit: TimeUnit, interval: months_days_ns) -> i64 {
+    // convert seconds to a DateTime of a given offset.
+    let datetime = match time_unit {
+        TimeUnit::Second => timestamp_s_to_datetime(timestamp),
+        TimeUnit::Millisecond => timestamp_ms_to_datetime(timestamp),
+        TimeUnit::Microsecond => timestamp_us_to_datetime(timestamp),
+        TimeUnit::Nanosecond => timestamp_ns_to_datetime(timestamp),
+    };
+
+    // compute the number of days in the interval, which depends on the particular year and month (leap days)
+    let delta_days = get_days_between_months(datetime.year(), datetime.month(), interval.months())
+        + interval.days() as i64;
+
+    // add; no leap hours are considered
+    let new_datetime_tz = datetime
+        + chrono::Duration::nanoseconds(delta_days * 24 * 60 * 60 * 1_000_000_000 + interval.ns());
+
+    // convert back to the target unit
+    match time_unit {
+        TimeUnit::Second => new_datetime_tz.timestamp_millis() / 1000,
+        TimeUnit::Millisecond => new_datetime_tz.timestamp_millis(),
+        TimeUnit::Microsecond => new_datetime_tz.timestamp_nanos() / 1000,
+        TimeUnit::Nanosecond => new_datetime_tz.timestamp_nanos(),
+    }
+}
+
+/// Adds an `interval` to a `timestamp` in `time_unit` units and timezone `timezone`.
+#[inline]
+pub fn add_interval<T: chrono::TimeZone>(
+    timestamp: i64,
+    time_unit: TimeUnit,
+    interval: months_days_ns,
+    timezone: &T,
+) -> i64 {
+    // convert seconds to a DateTime of a given offset.
+    let datetime_tz = timestamp_to_datetime(timestamp, time_unit, timezone);
+
+    // compute the number of days in the interval, which depends on the particular year and month (leap days)
+    let delta_days =
+        get_days_between_months(datetime_tz.year(), datetime_tz.month(), interval.months())
+            + interval.days() as i64;
+
+    // add; tz will take care of leap hours
+    let new_datetime_tz = datetime_tz
+        + chrono::Duration::nanoseconds(delta_days * 24 * 60 * 60 * 1_000_000_000 + interval.ns());
+
+    // convert back to the target unit
+    match time_unit {
+        TimeUnit::Second => new_datetime_tz.timestamp_millis() / 1000,
+        TimeUnit::Millisecond => new_datetime_tz.timestamp_millis(),
+        TimeUnit::Microsecond => new_datetime_tz.timestamp_nanos() / 1000,
+        TimeUnit::Nanosecond => new_datetime_tz.timestamp_nanos(),
+    }
 }

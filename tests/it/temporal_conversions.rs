@@ -1,5 +1,7 @@
 use arrow2::array::*;
+use arrow2::datatypes::TimeUnit;
 use arrow2::temporal_conversions;
+use arrow2::types::months_days_ns;
 
 #[test]
 fn naive() {
@@ -63,4 +65,77 @@ fn tz_aware_no_timezone() {
     ]);
     let r = temporal_conversions::utf8_to_timestamp_ns(&array, fmt, tz).unwrap();
     assert_eq!(format!("{}", r), expected);
+}
+
+#[test]
+fn add_interval_fixed_offset() {
+    // 1972 has a leap year on the 29th.
+    let timestamp = 68086800; // Mon Feb 28 1972 01:00:00 GMT+0000
+    let timeunit = TimeUnit::Second;
+    let timezone = temporal_conversions::parse_offset("+01:00").unwrap();
+
+    let r = temporal_conversions::add_interval(
+        timestamp,
+        timeunit,
+        months_days_ns::new(0, 1, 60_000_000_000),
+        &timezone,
+    );
+    let r = temporal_conversions::timestamp_to_datetime(r, timeunit, &timezone);
+    assert_eq!("1972-02-29 02:01:00 +01:00", format!("{}", r));
+
+    let r = temporal_conversions::add_interval(
+        timestamp,
+        timeunit,
+        months_days_ns::new(1, 1, 60_000_000_000),
+        &timezone,
+    );
+    let r = temporal_conversions::timestamp_to_datetime(r, timeunit, &timezone);
+    assert_eq!("1972-03-29 02:01:00 +01:00", format!("{}", r));
+
+    let r = temporal_conversions::add_interval(
+        timestamp,
+        timeunit,
+        months_days_ns::new(24, 1, 60_000_000_000),
+        &timezone,
+    );
+    let r = temporal_conversions::timestamp_to_datetime(r, timeunit, &timezone);
+    assert_eq!("1974-03-01 02:01:00 +01:00", format!("{}", r));
+
+    let r = temporal_conversions::add_interval(
+        timestamp,
+        timeunit,
+        months_days_ns::new(-1, 1, 60_000_000_000),
+        &timezone,
+    );
+    let r = temporal_conversions::timestamp_to_datetime(r, timeunit, &timezone);
+    assert_eq!("1972-01-29 02:01:00 +01:00", format!("{}", r));
+}
+
+#[cfg(feature = "chrono-tz")]
+#[test]
+fn add_interval_timezone() {
+    // current time is Sun Mar 29 2020 00:00:00 GMT+0000 (Western European Standard Time)
+    // 1 hour later is Sun Mar 29 2020 02:00:00 GMT+0100 (Western European Summer Time)
+    let timestamp = 1585440000;
+    let timeunit = TimeUnit::Second;
+    let timezone = temporal_conversions::parse_offset_tz("Europe/Lisbon").unwrap();
+
+    let r = temporal_conversions::add_interval(
+        timestamp,
+        timeunit,
+        months_days_ns::new(0, 0, 60 * 60 * 1_000_000_000),
+        &timezone,
+    );
+    let r = temporal_conversions::timestamp_to_datetime(r, timeunit, &timezone);
+    assert_eq!("2020-03-29 02:00:00 WEST", format!("{}", r));
+
+    // crosses two summer time changes and thus adds only 1 hour
+    let r = temporal_conversions::add_interval(
+        timestamp,
+        timeunit,
+        months_days_ns::new(7, 0, 60 * 60 * 1_000_000_000),
+        &timezone,
+    );
+    let r = temporal_conversions::timestamp_to_datetime(r, timeunit, &timezone);
+    assert_eq!("2020-10-29 01:00:00 WET", format!("{}", r));
 }

@@ -63,7 +63,7 @@ use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
 use num_traits::{NumCast, Zero};
 
-use crate::datatypes::{DataType, TimeUnit};
+use crate::datatypes::{DataType, IntervalUnit, TimeUnit};
 use crate::error::{ArrowError, Result};
 use crate::types::NativeType;
 use crate::{array::*, bitmap::Bitmap};
@@ -145,6 +145,11 @@ pub fn arithmetic(lhs: &dyn Array, op: Operator, rhs: &dyn Array) -> Result<Box<
             let rhs = rhs.as_any().downcast_ref().unwrap();
             time::add_duration::<i64>(lhs, rhs).map(|x| Box::new(x) as Box<dyn Array>)
         }
+        (Timestamp(_, _), Add, Interval(IntervalUnit::MonthDayNano)) => {
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            time::add_interval(lhs, rhs).map(|x| Box::new(x) as Box<dyn Array>)
+        }
         (Time64(TimeUnit::Microsecond), Subtract, Duration(_))
         | (Time64(TimeUnit::Nanosecond), Subtract, Duration(_))
         | (Date64, Subtract, Duration(_))
@@ -214,6 +219,7 @@ pub fn can_arithmetic(lhs: &DataType, op: Operator, rhs: &DataType) -> bool {
             | (Time64(TimeUnit::Nanosecond), Add, Duration(_))
             | (Timestamp(_, _), Subtract, Duration(_))
             | (Timestamp(_, _), Add, Duration(_))
+            | (Timestamp(_, _), Add, Interval(IntervalUnit::MonthDayNano))
             | (Timestamp(_, None), Subtract, Timestamp(_, None))
     )
 }
@@ -462,6 +468,7 @@ mod tests {
             Duration(TimeUnit::Millisecond),
             Duration(TimeUnit::Microsecond),
             Duration(TimeUnit::Nanosecond),
+            Interval(IntervalUnit::MonthDayNano),
         ];
         let operators = vec![
             Operator::Add,
