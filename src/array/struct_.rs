@@ -8,6 +8,7 @@ use crate::{
 };
 
 use super::{ffi::ToFfi, new_empty_array, new_null_array, Array, FromFfi};
+use crate::array::ArrayRef;
 
 /// A [`StructArray`] is a nested [`Array`] with an optional validity representing
 /// multiple [`Array`] with the same number of rows.
@@ -134,9 +135,36 @@ impl StructArray {
         &self.values
     }
 
+    /// Returns the field at `pos`.
+    pub fn value(&self, pos: usize) -> &ArrayRef {
+        &self.values[pos]
+    }
+
+    /// Return the number of fields in this struct array
+    pub fn num_columns(&self) -> usize {
+        self.values.len()
+    }
+
     /// Returns the fields of this [`StructArray`].
     pub fn fields(&self) -> &[Field] {
         Self::get_fields(&self.data_type)
+    }
+
+    /// Return field names in this struct array
+    pub fn column_names(&self) -> Vec<&str> {
+        self.fields().iter().map(|f| f.name.as_str()).collect()
+    }
+
+    /// Return child array whose field name equals to column_name
+    ///
+    /// Note: A schema can currently have duplicate field names, in which case
+    /// the first field will always be selected.
+    /// This issue will be addressed in [ARROW-11178](https://issues.apache.org/jira/browse/ARROW-11178)
+    pub fn column_by_name(&self, column_name: &str) -> Option<&ArrayRef> {
+        self.column_names()
+            .iter()
+            .position(|c| c == &column_name)
+            .map(|pos| self.value(pos))
     }
 }
 

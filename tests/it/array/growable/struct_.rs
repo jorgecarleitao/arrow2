@@ -45,7 +45,11 @@ fn basic() {
         vec![values[0].slice(1, 2).into(), values[1].slice(1, 2).into()],
         None,
     );
-    assert_eq!(result, expected)
+    assert_eq!(result, expected);
+    assert_eq!(result.column_names(), expected.column_names());
+    assert_eq!(result.num_columns(), expected.num_columns());
+    assert_eq!(result.column_by_name("f1"), expected.column_by_name("f1"));
+    assert_eq!(result.column_by_name("f2"), expected.column_by_name("f2"));
 }
 
 #[test]
