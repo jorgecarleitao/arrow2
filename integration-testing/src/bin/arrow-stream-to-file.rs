@@ -27,9 +27,9 @@ fn main() -> Result<()> {
     let mut arrow_stream_reader = read::StreamReader::new(reader, metadata);
     let schema = arrow_stream_reader.schema();
 
-    let mut writer = io::stdout();
+    let writer = io::stdout();
 
-    let mut writer = FileWriter::try_new(&mut writer, schema)?;
+    let mut writer = FileWriter::try_new(writer, schema)?;
 
     arrow_stream_reader.try_for_each(|batch| writer.write(&batch?.unwrap()))?;
     writer.finish()?;

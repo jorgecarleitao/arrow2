@@ -20,7 +20,7 @@
 //! The `FileWriter` and `StreamWriter` have similar interfaces,
 //! however the `FileWriter` expects a reader that supports `Seek`ing
 
-use std::io::Write;
+use std::io::{Error, Write, BufWriter};
 
 use super::super::ARROW_MAGIC;
 use super::{
@@ -37,9 +37,9 @@ use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 use crate::record_batch::RecordBatch;
 
-pub struct FileWriter<'a, W: Write> {
+pub struct FileWriter<W: Write> {
     /// The object to write to
-    writer: &'a mut W,
+    writer: BufWriter<W>,
     /// IPC write options
     write_options: IpcWriteOptions,
     /// A reference to the schema, used in validating record batches
@@ -56,19 +56,20 @@ pub struct FileWriter<'a, W: Write> {
     dictionary_tracker: DictionaryTracker,
 }
 
-impl<'a, W: Write> FileWriter<'a, W> {
+impl<W: Write> FileWriter<W> {
     /// Try create a new writer, with the schema written as part of the header
-    pub fn try_new(writer: &'a mut W, schema: &Schema) -> Result<Self> {
+    pub fn try_new(writer: W, schema: &Schema) -> Result<Self> {
         let write_options = IpcWriteOptions::default();
         Self::try_new_with_options(writer, schema, write_options)
     }
 
     /// Try create a new writer with IpcWriteOptions
     pub fn try_new_with_options(
-        writer: &'a mut W,
+        writer: W,
         schema: &Schema,
         write_options: IpcWriteOptions,
     ) -> Result<Self> {
+        let mut writer = BufWriter::new(writer);
         // write magic to header
         writer.write_all(&ARROW_MAGIC[..])?;
         // create an 8-byte boundary after the header
@@ -78,7 +79,7 @@ impl<'a, W: Write> FileWriter<'a, W> {
             ipc_message: schema_to_bytes(schema, *write_options.metadata_version()),
             arrow_data: vec![],
         };
-        let (meta, data) = write_message(writer, encoded_message, &write_options)?;
+        let (meta, data) = write_message(&mut writer, encoded_message, &write_options)?;
         Ok(Self {
             writer,
             write_options,
@@ -89,6 +90,10 @@ impl<'a, W: Write> FileWriter<'a, W> {
             finished: false,
             dictionary_tracker: DictionaryTracker::new(true),
         })
+    }
+
+    pub fn into_inner(self) -> Result<W> {
+        self.writer.into_inner().map_err(|e| Error::from(e).into())
     }
 
     /// Write a record batch to the file
@@ -151,14 +156,5 @@ impl<'a, W: Write> FileWriter<'a, W> {
         self.finished = true;
 
         Ok(())
-    }
-}
-
-/// Finish the file if it is not 'finished' when it goes out of scope
-impl<'a, W: Write> Drop for FileWriter<'a, W> {
-    fn drop(&mut self) {
-        if !self.finished {
-            self.finish().unwrap();
-        }
     }
 }

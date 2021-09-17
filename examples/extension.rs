@@ -17,10 +17,10 @@ fn main() -> Result<()> {
     let array = UInt16Array::from_slice([1, 2]).to(extension_type.clone());
 
     // from here on, it works as usual
-    let mut buffer = Cursor::new(vec![]);
+    let buffer = Cursor::new(vec![]);
 
     // write to IPC
-    write_ipc(&mut buffer, array)?;
+    write_ipc(buffer, array)?;
 
     // read it back
     let batch = read_ipc(&buffer.into_inner())?;
@@ -34,7 +34,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn write_ipc<W: Write + Seek>(writer: &mut W, array: impl Array + 'static) -> Result<()> {
+fn write_ipc<W: Write + Seek>(writer: W, array: impl Array + 'static) -> Result<()> {
     let schema = Schema::new(vec![Field::new("a", array.data_type().clone(), false)]);
 
     let mut writer = write::FileWriter::try_new(writer, &schema)?;

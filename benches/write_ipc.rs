@@ -15,8 +15,8 @@ fn write(array: &dyn Array) -> Result<()> {
     let schema = Schema::new(vec![field]);
     let batch = RecordBatch::try_new(Arc::new(schema.clone()), vec![clone(array).into()])?;
 
-    let mut writer = Cursor::new(vec![]);
-    let mut writer = FileWriter::try_new(&mut writer, &schema)?;
+    let writer = Cursor::new(vec![]);
+    let mut writer = FileWriter::try_new(writer, &schema)?;
 
     writer.write(&batch)
 }
