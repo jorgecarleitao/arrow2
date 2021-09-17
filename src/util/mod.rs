@@ -1,8 +1,8 @@
 //! Misc utilities used in different places in the crate.
 
-#[cfg(any(feature = "compute", feature = "io_csv"))]
+#[cfg(any(feature = "compute", feature = "io_csv_write", feature = "io_csv_read"))]
 mod lexical;
-#[cfg(any(feature = "compute", feature = "io_csv"))]
+#[cfg(any(feature = "compute", feature = "io_csv_write", feature = "io_csv_read"))]
 pub use lexical::*;
 
 #[cfg(feature = "benchmarks")]
