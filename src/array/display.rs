@@ -66,56 +66,31 @@ pub fn get_value_display<'a>(array: &'a dyn Array) -> Box<dyn Fn(usize) -> Strin
             dyn_primitive!(array, i64, temporal_conversions::time64ns_to_time)
         }
         Time64(_) => unreachable!(), // remaining are not valid
-        Timestamp(TimeUnit::Second, tz) => {
+        Timestamp(time_unit, tz) => {
             if let Some(tz) = tz {
-                let offset = temporal_conversions::parse_offset(tz).unwrap();
-                dyn_primitive!(array, i64, |x| {
-                    chrono::DateTime::<chrono::FixedOffset>::from_utc(
-                        temporal_conversions::timestamp_s_to_datetime(x),
-                        offset,
-                    )
-                })
+                let timezone = temporal_conversions::parse_offset(tz);
+                match timezone {
+                    Ok(timezone) => {
+                        dyn_primitive!(array, i64, |time| {
+                            temporal_conversions::timestamp_to_datetime(time, *time_unit, &timezone)
+                        })
+                    }
+                    #[cfg(feature = "chrono-tz")]
+                    Err(_) => {
+                        let timezone = temporal_conversions::parse_offset_tz(tz).unwrap();
+                        dyn_primitive!(array, i64, |time| {
+                            temporal_conversions::timestamp_to_datetime(time, *time_unit, &timezone)
+                        })
+                    }
+                    #[cfg(not(feature = "chrono-tz"))]
+                    _ => panic!(
+                        "Invalid Offset format (must be [-]00:00) or chrono-tz feature not active"
+                    ),
+                }
             } else {
-                dyn_primitive!(array, i64, temporal_conversions::timestamp_s_to_datetime)
-            }
-        }
-        Timestamp(TimeUnit::Millisecond, tz) => {
-            if let Some(tz) = tz {
-                let offset = temporal_conversions::parse_offset(tz).unwrap();
-                dyn_primitive!(array, i64, |x| {
-                    chrono::DateTime::<chrono::FixedOffset>::from_utc(
-                        temporal_conversions::timestamp_ms_to_datetime(x),
-                        offset,
-                    )
+                dyn_primitive!(array, i64, |time| {
+                    temporal_conversions::timestamp_to_naive_datetime(time, *time_unit)
                 })
-            } else {
-                dyn_primitive!(array, i64, temporal_conversions::timestamp_ms_to_datetime)
-            }
-        }
-        Timestamp(TimeUnit::Microsecond, tz) => {
-            if let Some(tz) = tz {
-                let offset = temporal_conversions::parse_offset(tz).unwrap();
-                dyn_primitive!(array, i64, |x| {
-                    chrono::DateTime::<chrono::FixedOffset>::from_utc(
-                        temporal_conversions::timestamp_us_to_datetime(x),
-                        offset,
-                    )
-                })
-            } else {
-                dyn_primitive!(array, i64, temporal_conversions::timestamp_us_to_datetime)
-            }
-        }
-        Timestamp(TimeUnit::Nanosecond, tz) => {
-            if let Some(tz) = tz {
-                let offset = temporal_conversions::parse_offset(tz).unwrap();
-                dyn_primitive!(array, i64, |x| {
-                    chrono::DateTime::<chrono::FixedOffset>::from_utc(
-                        temporal_conversions::timestamp_ns_to_datetime(x),
-                        offset,
-                    )
-                })
-            } else {
-                dyn_primitive!(array, i64, temporal_conversions::timestamp_ns_to_datetime)
             }
         }
         Interval(IntervalUnit::YearMonth) => {
