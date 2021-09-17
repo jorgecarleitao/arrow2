@@ -527,7 +527,7 @@ where
     P: AsRef<str>,
     I: Iterator<Item = P>,
 {
-    let mut offsets = MutableBuffer::<O>::with_capacity(1);
+    let mut offsets = MutableBuffer::<O>::with_capacity(1 + iterator.size_hint().1.unwrap());
     let mut values = MutableBuffer::<u8>::new();
 
     offsets.push_unchecked(O::default());
