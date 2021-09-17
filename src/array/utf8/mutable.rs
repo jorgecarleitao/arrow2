@@ -552,9 +552,9 @@ unsafe fn extend_from_trusted_len_values_iter<I, P, O>(
     I: Iterator<Item = P>,
 {
     let (_, upper) = iterator.size_hint();
-    let len = upper.expect("extend_from_trusted_len_iter_values requires an upper limit");
+    let additional = upper.expect("extend_from_trusted_len_iter_values requires an upper limit");
 
-    offsets.reserve(len);
+    offsets.reserve(additional);
 
     let mut length = *offsets.last().unwrap();
 
@@ -574,11 +574,11 @@ unsafe fn extend_from_trusted_len_values_iter<I, P, O>(
 
     assert_eq!(
         dst.offset_from(offsets.as_ptr()) as usize,
-        offsets.len() + len,
+        offsets.len() + additional,
         "Trusted iterator length was not accurately reported"
     );
 
-    offsets.set_len(offsets.len() + len);
+    offsets.set_len(offsets.len() + additional);
 }
 
 /// Populates `offsets`, `values`, and validity [`Buffer`] with information
@@ -597,10 +597,10 @@ unsafe fn extend_from_trusted_len_iter<O, I, P>(
     I: Iterator<Item = Option<P>>,
 {
     let (_, upper) = iterator.size_hint();
-    let len = upper.expect("extend_from_trusted_len_values_iter requires an upper limit");
+    let additional = upper.expect("extend_from_trusted_len_values_iter requires an upper limit");
 
-    offsets.reserve(len);
-    validity.reserve(len);
+    offsets.reserve(additional);
+    validity.reserve(additional);
 
     let mut length = *offsets.last().unwrap();
 
@@ -626,11 +626,11 @@ unsafe fn extend_from_trusted_len_iter<O, I, P>(
 
     assert_eq!(
         dst.offset_from(offsets.as_ptr()) as usize,
-        offsets.len() + len,
+        offsets.len() + additional,
         "Trusted iterator length was not accurately reported"
     );
 
-    offsets.set_len(offsets.len() + len);
+    offsets.set_len(offsets.len() + additional);
 }
 
 /// Creates two [`MutableBuffer`]s from an iterator of `&str`.
