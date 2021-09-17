@@ -276,9 +276,9 @@ impl<O: Offset> MutableUtf8Array<O> {
         I: Iterator<Item = Option<P>>,
     {
         if self.validity.is_none() {
-            self.validity = Some(MutableBitmap::from_trusted_len_iter(
-                std::iter::repeat(true).take(self.len()),
-            ));
+            let mut validity = MutableBitmap::new();
+            validity.extend_constant(self.len(), true);
+            self.validity = Some(validity);
         }
 
         extend_from_trusted_len_iter(
