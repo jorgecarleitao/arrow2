@@ -20,10 +20,10 @@ fn main() -> Result<()> {
     let buffer = Cursor::new(vec![]);
 
     // write to IPC
-    write_ipc(buffer, array)?;
+    let result_buffer = write_ipc(buffer, array)?;
 
     // read it back
-    let batch = read_ipc(&buffer.into_inner())?;
+    let batch = read_ipc(&result_buffer.into_inner())?;
 
     // and verify that the datatype is preserved.
     let array = &batch.columns()[0];
@@ -34,14 +34,16 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn write_ipc<W: Write + Seek>(writer: W, array: impl Array + 'static) -> Result<()> {
+fn write_ipc<W: Write + Seek>(writer: W, array: impl Array + 'static) -> Result<W> {
     let schema = Schema::new(vec![Field::new("a", array.data_type().clone(), false)]);
 
     let mut writer = write::FileWriter::try_new(writer, &schema)?;
 
     let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(array)])?;
 
-    writer.write(&batch)
+    writer.write(&batch);
+
+    writer.into_inner()
 }
 
 fn read_ipc(reader: &[u8]) -> Result<RecordBatch> {
