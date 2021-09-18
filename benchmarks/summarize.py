@@ -6,6 +6,7 @@ def _read_reports(engine: str):
     root = {
         "arrow2": "target/criterion",
         "pyarrow": "benchmarks/runs",
+        "arrow": "target/criterion",
     }[engine]
 
     result = []
@@ -32,20 +33,29 @@ def _read_reports(engine: str):
     return result
 
 
-def _print_report(result):
+def _print_report(engine, result):
+    result = list(filter(lambda x: x["engine"] == engine, result))
+
+    task = {
+        "arrow2": "read",
+        "pyarrow": "read",
+        "arrow": "read_arrow",
+    }[engine]
+
     for ty in ["i64", "bool", "utf8", "utf8 dict"]:
-        print(ty)
+        print(engine, ty)
         r = filter(lambda x: x["type"] == ty, result)
+        r = filter(lambda x: x["task"] == task, r)
         r = sorted(r, key=lambda x: x["size"])
         for row in r:
             print(row["time"])
 
 
 def print_report():
-    for engine in ["arrow2", "pyarrow"]:
+    for engine in ["arrow2", "pyarrow", "arrow"]:
         print(engine)
         result = _read_reports(engine)
-        _print_report(result)
+        _print_report(engine, result)
 
 
 print_report()

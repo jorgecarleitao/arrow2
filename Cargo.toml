@@ -80,6 +80,8 @@ crossbeam-channel = "0.5.1"
 # used to run formal property testing
 proptest = { version = "1", default_features = false, features = ["std"] }
 
+parquet = { version = "5.0.0" }
+
 [package.metadata.docs.rs]
 features = ["full"]
 rustdoc-args = ["--cfg", "docsrs"]
@@ -194,6 +196,10 @@ harness = false
 
 [[bench]]
 name = "read_parquet"
+harness = false
+
+[[bench]]
+name = "read_parquet_arrow"
 harness = false
 
 [[bench]]

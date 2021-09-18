@@ -217,6 +217,7 @@ def case_benches(size):
 
 
 # for read benchmarks
+<<<<<<< HEAD
 for i in range(10, 22, 2):
     # two pages (dict)
     write_pyarrow(case_benches, 2 ** i, 1, True, False, False)
@@ -228,3 +229,8 @@ for i in range(10, 22, 2):
     write_pyarrow(case_benches, 2 ** i, 1, False, True, True)
     # single compressed page
     write_pyarrow(case_benches, 2 ** i, 1, False, False, True)
+=======
+for i in range(3 + 10, 3 + 22, 2):
+    write_pyarrow(case_benches, 2 ** i, 1)  # V1
+    write_pyarrow(case_benches, 2 ** i, 1, True)  # V1
+>>>>>>> Added more benches.
