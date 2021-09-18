@@ -312,7 +312,7 @@ where
     I: StreamingIterator<Item = std::result::Result<DataPage, E>>,
 {
     let capacity = metadata.num_values() as usize;
-    let mut values = MutableBuffer::<u8>::with_capacity(0);
+    let mut values = MutableBuffer::<u8>::with_capacity(capacity);
     let mut offsets = MutableBuffer::<O>::with_capacity(1 + capacity);
     offsets.push(O::default());
     let mut validity = MutableBitmap::with_capacity(capacity);
@@ -355,7 +355,7 @@ where
     I: Stream<Item = std::result::Result<DataPage, E>>,
 {
     let capacity = metadata.num_values() as usize;
-    let mut values = MutableBuffer::<u8>::with_capacity(0);
+    let mut values = MutableBuffer::<u8>::with_capacity(capacity);
     let mut offsets = MutableBuffer::<O>::with_capacity(1 + capacity);
     offsets.push(O::default());
     let mut validity = MutableBitmap::with_capacity(capacity);
