@@ -78,7 +78,7 @@ features = ["full"]
 rustdoc-args = ["--cfg", "docsrs"]
 
 [features]
-default = ["compute"]
+default = []
 full = [
     "io_csv",
     "io_json",
