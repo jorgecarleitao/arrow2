@@ -56,7 +56,7 @@ packed_simd = { version = "0.3", optional = true, package = "packed_simd_2" }
 futures = { version = "0.3", optional = true }
 
 # for faster hashing
-ahash = "0.7"
+ahash = { version="0.7", optional = true }
 
 parquet2 = { version = "0.5", optional = true, default_features = false, features = ["stream"] }
 
@@ -115,7 +115,7 @@ io_avro = ["avro-rs", "streaming-iterator", "serde_json"]
 io_json_integration = ["io_json", "serde_derive", "hex"]
 io_print = ["comfy-table"]
 # the compute kernels. Disabling this significantly reduces compile time.
-compute = ["strength_reduce", "multiversion", "lexical-core"]
+compute = ["strength_reduce", "multiversion", "lexical-core", "ahash"]
 # base64 + io_ipc because arrow schemas are stored as base64-encoded ipc format.
 io_parquet = ["parquet2", "io_ipc", "base64", "futures"]
 benchmarks = ["rand"]
