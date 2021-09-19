@@ -1,4 +1,5 @@
 use ahash::{CallHasher, RandomState};
+use multiversion::multiversion;
 use std::hash::Hash;
 
 macro_rules! new_state {
@@ -18,6 +19,8 @@ use crate::{
 use super::arity::unary;
 
 /// Element-wise hash of a [`PrimitiveArray`]. Validity is preserved.
+#[multiversion]
+#[clone(target = "x86_64+aes+sse3+ssse3+avx+avx2")]
 pub fn hash_primitive<T: NativeType + Hash>(array: &PrimitiveArray<T>) -> PrimitiveArray<u64> {
     let state = new_state!();
 
@@ -25,6 +28,8 @@ pub fn hash_primitive<T: NativeType + Hash>(array: &PrimitiveArray<T>) -> Primit
 }
 
 /// Element-wise hash of a [`BooleanArray`]. Validity is preserved.
+#[multiversion]
+#[clone(target = "x86_64+aes+sse3+ssse3+avx+avx2")]
 pub fn hash_boolean(array: &BooleanArray) -> PrimitiveArray<u64> {
     let state = new_state!();
 
@@ -33,6 +38,8 @@ pub fn hash_boolean(array: &BooleanArray) -> PrimitiveArray<u64> {
     PrimitiveArray::<u64>::from_data(DataType::UInt64, values, array.validity().clone())
 }
 
+#[multiversion]
+#[clone(target = "x86_64+aes+sse3+ssse3+avx+avx2")]
 /// Element-wise hash of a [`Utf8Array`]. Validity is preserved.
 pub fn hash_utf8<O: Offset>(array: &Utf8Array<O>) -> PrimitiveArray<u64> {
     let state = new_state!();
