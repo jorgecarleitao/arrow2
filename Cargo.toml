@@ -130,6 +130,13 @@ skip_feature_sets = [
     ["ahash"],
     ["benchmarks"],
     ["merge_sort"],
+    # io are additive APIs and do not interact
+    ["io_csv"],
+    ["io_csv_read"],
+    ["io_csv_write"],
+    ["io_avro"],
+    ["io_json"],
+    ["io_parquet"],
     ["io_json_integration"],
     # this does not change the public API
     ["io_parquet_compression"],
