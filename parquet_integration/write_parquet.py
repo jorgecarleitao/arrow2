@@ -10,7 +10,7 @@ def case_basic_nullable(size=1):
     float64 = [0.0, 1.0, None, 3.0, None, 5.0, 6.0, 7.0, None, 9.0]
     string = ["Hello", None, "aa", "", None, "abc", None, None, "def", "aaa"]
     boolean = [True, None, False, False, None, True, None, None, True, True]
-    string_large = ["ABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCD"] * 10
+    string_large = ["ABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCD😃🌚🕳👊"] * 10
 
     fields = [
         pa.field("int64", pa.int64()),
