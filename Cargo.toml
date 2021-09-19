@@ -226,3 +226,7 @@ harness = false
 [[bench]]
 name = "hash_kernel"
 harness = false
+
+[[bench]]
+name = "iter_utf8"
+harness = false
