@@ -10,6 +10,7 @@ def case_basic_nullable(size=1):
     float64 = [0.0, 1.0, None, 3.0, None, 5.0, 6.0, 7.0, None, 9.0]
     string = ["Hello", None, "aa", "", None, "abc", None, None, "def", "aaa"]
     boolean = [True, None, False, False, None, True, None, None, True, True]
+    string_large_emoji = ["😃🌚🕳👊🚅🚑🎐🚘✨⛎⛹📔🔫😭🀄️🏗🚵🍒⏮🏎🎼🌥🌀🕎⛴💀™️📈🍋🅿️🌉✅⚜🏓🏜💅📖🚾🛤☺️☑️🕊🌁📡💵📮🌷💡🍩🏬💫🏩🍵🎼◽️❌♥️🛌🕹🍰🗄💷▪️🔲🏛👡👽🍭🛤▶️🍫😵🏔🎁🌫☎️✈️〰️👚🐫🍺🎢🔵👊🗒🆘🎡💌♋️➕♉️🖐🎶📒™️👛😆👠🐛🌫🦄⚫️😕🍙🕠♨️➿🔰💺🕳😶👳😙🌧🍽🏘🐰🍗🍲🐏🌂🌆🗂🚀👓↘️📀🔰"] * 10
 
     fields = [
         pa.field("int64", pa.int64()),
@@ -18,6 +19,7 @@ def case_basic_nullable(size=1):
         pa.field("bool", pa.bool_()),
         pa.field("date", pa.timestamp("ms")),
         pa.field("uint32", pa.uint32()),
+        pa.field("string_large_emoji", pa.utf8()),
     ]
     schema = pa.schema(fields)
 
@@ -29,6 +31,7 @@ def case_basic_nullable(size=1):
             "bool": boolean * size,
             "date": int64 * size,
             "uint32": int64 * size,
+            "string_large_emoji": string_large_emoji * size,
         },
         schema,
         f"basic_nullable_{size*10}.parquet",
