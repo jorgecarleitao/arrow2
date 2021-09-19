@@ -52,7 +52,7 @@ where
 
 fn deserialize_utf8<O: Offset>(rows: &[ByteRecord], column: usize) -> Arc<dyn Array> {
     let iter = rows.iter().map(|row| match row.get(column) {
-        Some(bytes) => std::str::from_utf8(bytes).ok(),
+        Some(bytes) => simdutf8::basic::from_utf8(bytes).ok(),
         None => None,
     });
     Arc::new(Utf8Array::<O>::from_trusted_len_iter(iter))
@@ -111,20 +111,20 @@ pub fn deserialize_column(
             lexical_core::parse::<f64>(bytes).ok()
         }),
         Date32 => deserialize_primitive(rows, column, datatype, |bytes| {
-            std::str::from_utf8(bytes)
+            simdutf8::basic::from_utf8(bytes)
                 .ok()
                 .and_then(|x| x.parse::<chrono::NaiveDate>().ok())
                 .map(|x| x.num_days_from_ce() - EPOCH_DAYS_FROM_CE)
         }),
         Date64 => deserialize_primitive(rows, column, datatype, |bytes| {
-            std::str::from_utf8(bytes)
+            simdutf8::basic::from_utf8(bytes)
                 .ok()
                 .and_then(|x| x.parse::<chrono::NaiveDateTime>().ok())
                 .map(|x| x.timestamp_millis())
         }),
         Timestamp(TimeUnit::Nanosecond, None) => {
             deserialize_primitive(rows, column, datatype, |bytes| {
-                std::str::from_utf8(bytes)
+                simdutf8::basic::from_utf8(bytes)
                     .ok()
                     .and_then(|x| x.parse::<chrono::NaiveDateTime>().ok())
                     .map(|x| x.timestamp_nanos())
@@ -132,7 +132,7 @@ pub fn deserialize_column(
         }
         Timestamp(TimeUnit::Microsecond, None) => {
             deserialize_primitive(rows, column, datatype, |bytes| {
-                std::str::from_utf8(bytes)
+                simdutf8::basic::from_utf8(bytes)
                     .ok()
                     .and_then(|x| x.parse::<chrono::NaiveDateTime>().ok())
                     .map(|x| x.timestamp_nanos() / 1000)
@@ -140,7 +140,7 @@ pub fn deserialize_column(
         }
         Timestamp(TimeUnit::Millisecond, None) => {
             deserialize_primitive(rows, column, datatype, |bytes| {
-                std::str::from_utf8(bytes)
+                simdutf8::basic::from_utf8(bytes)
                     .ok()
                     .and_then(|x| x.parse::<chrono::NaiveDateTime>().ok())
                     .map(|x| x.timestamp_nanos() / 1_000_000)
@@ -148,7 +148,7 @@ pub fn deserialize_column(
         }
         Timestamp(TimeUnit::Second, None) => {
             deserialize_primitive(rows, column, datatype, |bytes| {
-                std::str::from_utf8(bytes)
+                simdutf8::basic::from_utf8(bytes)
                     .ok()
                     .and_then(|x| x.parse::<chrono::NaiveDateTime>().ok())
                     .map(|x| x.timestamp_nanos() / 1_000_000_000)

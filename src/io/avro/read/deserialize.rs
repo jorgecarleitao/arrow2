@@ -104,7 +104,7 @@ pub fn deserialize(mut block: &[u8], rows: usize, schema: Arc<Schema>) -> Result
                             "Avro format contains a non-usize number of bytes".to_string(),
                         )
                     })?;
-                    let data = std::str::from_utf8(&block[..len])?;
+                    let data = simdutf8::basic::from_utf8(&block[..len])?;
                     block = &block[len..];
 
                     let array = array

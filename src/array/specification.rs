@@ -79,10 +79,8 @@ pub fn check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) -> usize 
         let end = window[1].to_usize();
         assert!(end <= values.len());
         let slice = unsafe { std::slice::from_raw_parts(values.as_ptr().add(start), end - start) };
-        #[cfg(feature = "simdutf8")]
-        simdutf8::basic::from_utf8(slice).expect("A non-utf8 string was passed.");
         #[cfg(not(feature = "simdutf8"))]
-        std::str::from_utf8(slice).expect("A non-utf8 string was passed.");
+        simdutf8::basic::from_utf8(slice).expect("A non-utf8 string was passed.");
     });
     len
 }

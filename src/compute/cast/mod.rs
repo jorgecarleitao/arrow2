@@ -538,7 +538,7 @@ fn cast_with_options(
                 // perf todo: the offsets are equal; we can speed-up this
                 let iter = array
                     .iter()
-                    .map(|x| x.and_then(|x| std::str::from_utf8(x).ok()));
+                    .map(|x| x.and_then(|x| simdutf8::basic::from_utf8(x).ok()));
 
                 let array = Utf8Array::<i32>::from_trusted_len_iter(iter);
                 Ok(Box::new(array))
@@ -574,7 +574,7 @@ fn cast_with_options(
                 // perf todo: the offsets are equal; we can speed-up this
                 let iter = array
                     .iter()
-                    .map(|x| x.and_then(|x| std::str::from_utf8(x).ok()));
+                    .map(|x| x.and_then(|x| simdutf8::basic::from_utf8(x).ok()));
 
                 let array = Utf8Array::<i64>::from_trusted_len_iter(iter);
                 Ok(Box::new(array))

@@ -74,7 +74,7 @@ pub fn read_schema<R: Read>(reader: &mut R) -> AvroResult<(Schema, Codec, [u8; 1
             .get("avro.codec")
             .and_then(|codec| {
                 if let Value::Bytes(ref bytes) = *codec {
-                    std::str::from_utf8(bytes.as_ref()).ok()
+                    simdutf8::basic::from_utf8(bytes.as_ref()).ok()
                 } else {
                     None
                 }
