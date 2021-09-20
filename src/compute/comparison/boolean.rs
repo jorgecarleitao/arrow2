@@ -72,7 +72,7 @@ where
         values.push(op(lhs_remainder, rhs))
     };
     let values = MutableBitmap::from_buffer(values, lhs.len()).into();
-    BooleanArray::from_data(DataType::Boolean, values, lhs.validity().clone())
+    BooleanArray::from_data(DataType::Boolean, values, lhs.validity().cloned())
 }
 
 /// Perform `lhs == rhs` operation on two arrays.

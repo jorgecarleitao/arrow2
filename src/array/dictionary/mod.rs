@@ -142,7 +142,7 @@ impl<K: DictionaryKey> Array for DictionaryArray<K> {
         &self.data_type
     }
 
-    fn validity(&self) -> &Option<Bitmap> {
+    fn validity(&self) -> Option<&Bitmap> {
         self.keys.validity()
     }
 

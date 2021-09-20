@@ -322,8 +322,8 @@ impl<T: NativeType> MutableArray for MutablePrimitiveArray<T> {
         self.values.len()
     }
 
-    fn validity(&self) -> &Option<MutableBitmap> {
-        &self.validity
+    fn validity(&self) -> Option<&MutableBitmap> {
+        self.validity.as_ref()
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {

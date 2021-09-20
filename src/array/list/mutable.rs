@@ -173,8 +173,8 @@ impl<O: Offset, M: MutableArray + 'static> MutableArray for MutableListArray<O, 
         self.offsets.len() - 1
     }
 
-    fn validity(&self) -> &Option<MutableBitmap> {
-        &self.validity
+    fn validity(&self) -> Option<&MutableBitmap> {
+        self.validity.as_ref()
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {

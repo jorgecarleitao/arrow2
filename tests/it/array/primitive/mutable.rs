@@ -88,7 +88,7 @@ fn set() {
 fn from_iter() {
     let a = MutablePrimitiveArray::<i32>::from_iter((0..2).map(Some));
     assert_eq!(a.len(), 2);
-    assert_eq!(a.validity(), &None);
+    assert_eq!(a.validity(), None);
 }
 
 #[test]
@@ -103,25 +103,25 @@ fn only_nulls() {
     a.push(None);
     a.push(None);
     let a: PrimitiveArray<i32> = a.into();
-    assert_eq!(a.validity(), &Some(Bitmap::from([false, false])));
+    assert_eq!(a.validity(), Some(&Bitmap::from([false, false])));
 }
 
 #[test]
 fn from_trusted_len() {
     let a = MutablePrimitiveArray::<i32>::from_trusted_len_iter(vec![Some(1), None].into_iter());
     let a: PrimitiveArray<i32> = a.into();
-    assert_eq!(a.validity(), &Some(Bitmap::from([true, false])));
+    assert_eq!(a.validity(), Some(&Bitmap::from([true, false])));
 }
 
 #[test]
 fn extend_trusted_len() {
     let mut a = MutablePrimitiveArray::<i32>::new();
     a.extend_trusted_len(vec![Some(1), Some(2)].into_iter());
-    assert_eq!(a.validity(), &None);
+    assert_eq!(a.validity(), None);
     a.extend_trusted_len(vec![None, Some(4)].into_iter());
     assert_eq!(
         a.validity(),
-        &Some(MutableBitmap::from([true, true, false, true]))
+        Some(&MutableBitmap::from([true, true, false, true]))
     );
     assert_eq!(a.values(), &MutableBuffer::<i32>::from([1, 2, 0, 4]));
 }
@@ -130,7 +130,7 @@ fn extend_trusted_len() {
 fn extend_trusted_len_values() {
     let mut a = MutablePrimitiveArray::<i32>::new();
     a.extend_trusted_len_values(vec![1, 2, 3].into_iter());
-    assert_eq!(a.validity(), &None);
+    assert_eq!(a.validity(), None);
     assert_eq!(a.values(), &MutableBuffer::<i32>::from([1, 2, 3]));
 
     let mut a = MutablePrimitiveArray::<i32>::new();
@@ -138,7 +138,7 @@ fn extend_trusted_len_values() {
     a.extend_trusted_len_values(vec![1, 2].into_iter());
     assert_eq!(
         a.validity(),
-        &Some(MutableBitmap::from([false, true, true]))
+        Some(&MutableBitmap::from([false, true, true]))
     );
 }
 
@@ -146,7 +146,7 @@ fn extend_trusted_len_values() {
 fn extend_from_slice() {
     let mut a = MutablePrimitiveArray::<i32>::new();
     a.extend_from_slice(&[1, 2, 3]);
-    assert_eq!(a.validity(), &None);
+    assert_eq!(a.validity(), None);
     assert_eq!(a.values(), &MutableBuffer::<i32>::from([1, 2, 3]));
 
     let mut a = MutablePrimitiveArray::<i32>::new();
@@ -154,7 +154,7 @@ fn extend_from_slice() {
     a.extend_from_slice(&[1, 2]);
     assert_eq!(
         a.validity(),
-        &Some(MutableBitmap::from([false, true, true]))
+        Some(&MutableBitmap::from([false, true, true]))
     );
 }
 
@@ -162,9 +162,9 @@ fn extend_from_slice() {
 fn set_validity() {
     let mut a = MutablePrimitiveArray::<i32>::new();
     a.extend_trusted_len(vec![Some(1), Some(2)].into_iter());
-    assert_eq!(a.validity(), &None);
+    assert_eq!(a.validity(), None);
     a.set_validity(Some(MutableBitmap::from([false, true])));
-    assert_eq!(a.validity(), &Some(MutableBitmap::from([false, true])));
+    assert_eq!(a.validity(), Some(&MutableBitmap::from([false, true])));
 }
 
 #[test]

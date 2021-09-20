@@ -99,7 +99,7 @@ pub fn or(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
 /// ```
 pub fn not(array: &BooleanArray) -> BooleanArray {
     let values = !array.values();
-    let validity = array.validity().clone();
+    let validity = array.validity().cloned();
     BooleanArray::from_data(DataType::Boolean, values, validity)
 }
 

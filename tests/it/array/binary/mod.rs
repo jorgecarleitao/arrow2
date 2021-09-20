@@ -21,7 +21,7 @@ fn basics() {
     assert_eq!(array.offsets().as_slice(), &[0, 5, 5, 11]);
     assert_eq!(
         array.validity(),
-        &Some(Bitmap::from_u8_slice(&[0b00000101], 3))
+        Some(&Bitmap::from_u8_slice(&[0b00000101], 3))
     );
     assert!(array.is_valid(0));
     assert!(!array.is_valid(1));
@@ -31,7 +31,7 @@ fn basics() {
         DataType::Binary,
         array.offsets().clone(),
         array.values().clone(),
-        array.validity().clone(),
+        array.validity().cloned(),
     );
     assert_eq!(array, array2);
 
@@ -48,14 +48,14 @@ fn empty() {
     let array = BinaryArray::<i32>::new_empty(DataType::Binary);
     assert_eq!(array.values().as_slice(), b"");
     assert_eq!(array.offsets().as_slice(), &[0]);
-    assert_eq!(array.validity(), &None);
+    assert_eq!(array.validity(), None);
 }
 
 #[test]
 fn from() {
     let array = BinaryArray::<i32>::from(&[Some(b"hello".as_ref()), Some(b" ".as_ref()), None]);
 
-    let a = array.validity().as_ref().unwrap();
+    let a = array.validity().unwrap();
     assert_eq!(a, &Bitmap::from([true, true, false]));
 }
 
@@ -80,7 +80,7 @@ fn with_validity() {
     let array = array.with_validity(None);
 
     let a = array.validity();
-    assert_eq!(a, &None);
+    assert_eq!(a, None);
 }
 
 #[test]

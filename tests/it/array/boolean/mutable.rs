@@ -61,6 +61,6 @@ fn reserve() {
     );
 
     a.reserve(10);
-    assert!(a.validity().as_ref().unwrap().capacity() > 0);
+    assert!(a.validity().unwrap().capacity() > 0);
     assert!(a.values().capacity() > 0)
 }

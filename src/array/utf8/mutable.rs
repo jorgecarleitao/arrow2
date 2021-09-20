@@ -183,8 +183,8 @@ impl<O: Offset> MutableArray for MutableUtf8Array<O> {
         self.offsets.len() - 1
     }
 
-    fn validity(&self) -> &Option<MutableBitmap> {
-        &self.validity
+    fn validity(&self) -> Option<&MutableBitmap> {
+        self.validity.as_ref()
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {

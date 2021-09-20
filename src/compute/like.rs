@@ -117,7 +117,7 @@ fn a_like_utf8_scalar<O: Offset, F: Fn(bool) -> bool>(
     Ok(BooleanArray::from_data(
         DataType::Boolean,
         values,
-        validity.clone(),
+        validity.cloned(),
     ))
 }
 
@@ -261,7 +261,7 @@ fn a_like_binary_scalar<O: Offset, F: Fn(bool) -> bool>(
     Ok(BooleanArray::from_data(
         DataType::Boolean,
         values,
-        validity.clone(),
+        validity.cloned(),
     ))
 }
 

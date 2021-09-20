@@ -18,7 +18,7 @@ use crate::io::parquet::write::utils;
 fn encode_keys<K: DictionaryKey>(
     array: &PrimitiveArray<K>,
     // todo: merge this to not discard values' validity
-    validity: &Option<Bitmap>,
+    validity: Option<&Bitmap>,
     descriptor: ColumnDescriptor,
     options: WriteOptions,
 ) -> Result<CompressedPage> {
@@ -38,7 +38,7 @@ fn encode_keys<K: DictionaryKey>(
         utils::write_def_levels(
             &mut buffer,
             is_optional,
-            &Some(projected_val),
+            Some(&projected_val),
             array.len(),
             options.version,
         )?;

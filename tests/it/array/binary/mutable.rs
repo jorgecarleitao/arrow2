@@ -7,5 +7,5 @@ fn push_null() {
     array.push::<&str>(None);
 
     let array: BinaryArray<i32> = array.into();
-    assert_eq!(array.validity(), &Some(Bitmap::from([false])));
+    assert_eq!(array.validity(), Some(&Bitmap::from([false])));
 }

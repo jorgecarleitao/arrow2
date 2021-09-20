@@ -169,8 +169,8 @@ impl MutableArray for MutableFixedSizeBinaryArray {
         self.values.len() / self.size
     }
 
-    fn validity(&self) -> &Option<MutableBitmap> {
-        &self.validity
+    fn validity(&self) -> Option<&MutableBitmap> {
+        self.validity.as_ref()
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {

@@ -334,8 +334,8 @@ impl MutableArray for MutableBooleanArray {
         self.values.len()
     }
 
-    fn validity(&self) -> &Option<MutableBitmap> {
-        &self.validity
+    fn validity(&self) -> Option<&MutableBitmap> {
+        self.validity.as_ref()
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {

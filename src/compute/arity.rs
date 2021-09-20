@@ -29,7 +29,7 @@ where
     let values = array.values().iter().map(|v| op(*v));
     let values = Buffer::from_trusted_len_iter(values);
 
-    PrimitiveArray::<O>::from_data(data_type, values, array.validity().clone())
+    PrimitiveArray::<O>::from_data(data_type, values, array.validity().cloned())
 }
 
 /// Version of unary that checks for errors in the closure used to create the
@@ -50,7 +50,7 @@ where
     Ok(PrimitiveArray::<O>::from_data(
         data_type,
         values,
-        array.validity().clone(),
+        array.validity().cloned(),
     ))
 }
 
@@ -77,7 +77,7 @@ where
     let values = Buffer::from_trusted_len_iter(values);
 
     (
-        PrimitiveArray::<O>::from_data(data_type, values, array.validity().clone()),
+        PrimitiveArray::<O>::from_data(data_type, values, array.validity().cloned()),
         mut_bitmap.into(),
     )
 }
@@ -115,7 +115,7 @@ where
     // the iteration, then the validity is changed to None to mark the value
     // as Null
     let bitmap: Bitmap = mut_bitmap.into();
-    let validity = combine_validities(array.validity(), &Some(bitmap));
+    let validity = combine_validities(array.validity(), Some(&bitmap));
 
     PrimitiveArray::<O>::from_data(data_type, values, validity)
 }
@@ -278,7 +278,7 @@ where
     // creation of the values with the iterator. If an error was found during
     // the iteration, then the validity is changed to None to mark the value
     // as Null
-    let validity = combine_validities(&validity, &Some(bitmap));
+    let validity = combine_validities(validity.as_ref(), Some(&bitmap));
 
     Ok(PrimitiveArray::<T>::from_data(data_type, values, validity))
 }

@@ -13,7 +13,7 @@ fn basic() {
     assert_eq!(a.len(), 2);
     assert_eq!(a.data_type(), &DataType::FixedSizeBinary(2));
     assert_eq!(a.values(), &MutableBuffer::from([1, 2, 3, 4]));
-    assert_eq!(a.validity(), &None);
+    assert_eq!(a.validity(), None);
     assert_eq!(a.value(1), &[3, 4]);
     assert_eq!(unsafe { a.value_unchecked(1) }, &[3, 4]);
 }
@@ -65,5 +65,5 @@ fn push_null() {
     array.push::<&[u8]>(None);
 
     let array: FixedSizeBinaryArray = array.into();
-    assert_eq!(array.validity(), &Some(Bitmap::from([false])));
+    assert_eq!(array.validity(), Some(&Bitmap::from([false])));
 }

@@ -45,7 +45,7 @@ pub trait Array: std::fmt::Debug + Send + Sync {
     /// The validity of the [`Array`]: every array has an optional [`Bitmap`] that, when available
     /// specifies whether the array slot is valid or not (null).
     /// When the validity is [`None`], all slots are valid.
-    fn validity(&self) -> &Option<Bitmap>;
+    fn validity(&self) -> Option<&Bitmap>;
 
     /// The number of null slots on this [`Array`].
     /// # Implementation
@@ -111,7 +111,7 @@ pub trait MutableArray: std::fmt::Debug {
     }
 
     /// The optional validity of the array.
-    fn validity(&self) -> &Option<MutableBitmap>;
+    fn validity(&self) -> Option<&MutableBitmap>;
 
     /// Convert itself to an (immutable) [`Array`].
     fn as_arc(&mut self) -> Arc<dyn Array>;

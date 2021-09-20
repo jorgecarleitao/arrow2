@@ -45,7 +45,7 @@ fn encode_iter<I: Iterator<Item = bool>>(
 pub fn write_def_levels(
     writer: &mut Vec<u8>,
     is_optional: bool,
-    validity: &Option<Bitmap>,
+    validity: Option<&Bitmap>,
     len: usize,
     version: Version,
 ) -> Result<()> {

@@ -53,7 +53,7 @@ where
     O: Offset,
     F: Fn(&[u8], &[u8]) -> bool,
 {
-    let validity = lhs.validity().clone();
+    let validity = lhs.validity().cloned();
 
     let values = lhs.values_iter().map(|lhs| op(lhs, rhs));
     let values = Bitmap::from_trusted_len_iter(values);

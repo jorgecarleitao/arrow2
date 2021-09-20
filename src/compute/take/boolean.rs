@@ -37,7 +37,7 @@ fn take_values_validity<I: Index>(
 ) -> (Bitmap, Option<Bitmap>) {
     let mut validity = MutableBitmap::with_capacity(indices.len());
 
-    let validity_values = values.validity().as_ref().unwrap();
+    let validity_values = values.validity().unwrap();
 
     let values_values = values.values();
 
@@ -60,7 +60,7 @@ fn take_indices_validity<I: Index>(
     values: &Bitmap,
     indices: &PrimitiveArray<I>,
 ) -> (Bitmap, Option<Bitmap>) {
-    let validity = indices.validity().as_ref().unwrap();
+    let validity = indices.validity().unwrap();
 
     let values = indices.values().iter().enumerate().map(|(i, index)| {
         let index = index.to_usize();
@@ -78,7 +78,7 @@ fn take_indices_validity<I: Index>(
 
     let buffer = Bitmap::from_trusted_len_iter(values);
 
-    (buffer, indices.validity().clone())
+    (buffer, indices.validity().cloned())
 }
 
 // take implementation when both values and indices contain nulls
@@ -88,7 +88,7 @@ fn take_values_indices_validity<I: Index>(
 ) -> (Bitmap, Option<Bitmap>) {
     let mut validity = MutableBitmap::with_capacity(indices.len());
 
-    let values_validity = values.validity().as_ref().unwrap();
+    let values_validity = values.validity().unwrap();
 
     let values_values = values.values();
     let values = indices.iter().map(|index| match index {
