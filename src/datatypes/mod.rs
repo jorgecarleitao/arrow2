@@ -11,8 +11,8 @@ pub(crate) use field::{get_extension, Extension, Metadata};
 
 /// The set of supported logical types.
 /// Each variant uniquely identifies a logical type, which define specific semantics to the data (e.g. how it should be represented).
-/// A [`DataType`] has an unique corresponding [`PhysicalType`], obtained via [`DataType::to_physical_type`],
-/// which uniquely identifies an in-memory representation of data.
+/// Each variant has a corresponding [`PhysicalType`], obtained via [`DataType::to_physical_type`],
+/// which declares the in-memory representation of data.
 /// The [`DataType::Extension`] is special in that it augments a [`DataType`] with metadata to support custom types.
 /// Use `to_logical_type` to desugar such type and return its correspoding logical type.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -119,7 +119,7 @@ impl std::fmt::Display for DataType {
     }
 }
 
-/// Time units defined in Arrow.
+/// The time units defined in Arrow.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TimeUnit {
     /// Time in seconds.
