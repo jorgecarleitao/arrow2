@@ -2,7 +2,7 @@ use std::{iter::FromIterator, sync::Arc};
 
 use crate::{
     array::{
-        specification::{check_offsets, check_offsets_and_utf8},
+        specification::{check_offsets_and_utf8, check_offsets_minimal},
         Array, MutableArray, Offset, TryExtend, TryPush,
     },
     bitmap::MutableBitmap,
@@ -93,7 +93,7 @@ impl<O: Offset> MutableUtf8Array<O> {
         values: MutableBuffer<u8>,
         validity: Option<MutableBitmap>,
     ) -> Self {
-        check_offsets(&offsets, values.len());
+        check_offsets_minimal(&offsets, values.len());
         if let Some(ref validity) = validity {
             assert_eq!(offsets.len() - 1, validity.len());
         }
@@ -267,7 +267,7 @@ impl<O: Offset> MutableUtf8Array<O> {
     }
 
     /// Extends [`MutableUtf8Array`] from an iterator of trusted len.
-    /// #Safety
+    /// # Safety
     /// The iterator must be trusted len.
     #[inline]
     pub unsafe fn extend_trusted_len_unchecked<I, P>(&mut self, iterator: I)
