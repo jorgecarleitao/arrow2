@@ -48,51 +48,90 @@ where
 }
 
 fn compare_primitives<T: NativeType + Ord>(left: &dyn Array, right: &dyn Array) -> DynComparator {
-    let left = left.as_any().downcast_ref::<PrimitiveArray<T>>().unwrap().clone();
-    let right = right.as_any().downcast_ref::<PrimitiveArray<T>>().unwrap().clone();
+    let left = left
+        .as_any()
+        .downcast_ref::<PrimitiveArray<T>>()
+        .unwrap()
+        .clone();
+    let right = right
+        .as_any()
+        .downcast_ref::<PrimitiveArray<T>>()
+        .unwrap()
+        .clone();
     Box::new(move |i, j| total_cmp(&left.value(i), &right.value(j)))
 }
 
 fn compare_boolean(left: &dyn Array, right: &dyn Array) -> DynComparator {
-    let left = left.as_any().downcast_ref::<BooleanArray>().unwrap().clone();
-    let right = right.as_any().downcast_ref::<BooleanArray>().unwrap().clone();
+    let left = left
+        .as_any()
+        .downcast_ref::<BooleanArray>()
+        .unwrap()
+        .clone();
+    let right = right
+        .as_any()
+        .downcast_ref::<BooleanArray>()
+        .unwrap()
+        .clone();
     Box::new(move |i, j| left.value(i).cmp(&right.value(j)))
 }
 
 fn compare_f32(left: &dyn Array, right: &dyn Array) -> DynComparator {
-    let left = left.as_any().downcast_ref::<PrimitiveArray<f32>>().unwrap().clone();
+    let left = left
+        .as_any()
+        .downcast_ref::<PrimitiveArray<f32>>()
+        .unwrap()
+        .clone();
     let right = right
         .as_any()
         .downcast_ref::<PrimitiveArray<f32>>()
-        .unwrap().clone();
+        .unwrap()
+        .clone();
     Box::new(move |i, j| total_cmp_f32(&left.value(i), &right.value(j)))
 }
 
 fn compare_f64(left: &dyn Array, right: &dyn Array) -> DynComparator {
-    let left = left.as_any().downcast_ref::<PrimitiveArray<f64>>().unwrap().clone();
+    let left = left
+        .as_any()
+        .downcast_ref::<PrimitiveArray<f64>>()
+        .unwrap()
+        .clone();
     let right = right
         .as_any()
         .downcast_ref::<PrimitiveArray<f64>>()
-        .unwrap().clone();
+        .unwrap()
+        .clone();
     Box::new(move |i, j| total_cmp_f64(&left.value(i), &right.value(j)))
 }
 
 fn compare_string<O: Offset>(left: &dyn Array, right: &dyn Array) -> DynComparator {
-    let left = left.as_any().downcast_ref::<Utf8Array<O>>().unwrap().clone();
-    let right = right.as_any().downcast_ref::<Utf8Array<O>>().unwrap().clone();
+    let left = left
+        .as_any()
+        .downcast_ref::<Utf8Array<O>>()
+        .unwrap()
+        .clone();
+    let right = right
+        .as_any()
+        .downcast_ref::<Utf8Array<O>>()
+        .unwrap()
+        .clone();
     Box::new(move |i, j| left.value(i).cmp(right.value(j)))
 }
 
 fn compare_binary<O: Offset>(left: &dyn Array, right: &dyn Array) -> DynComparator {
-    let left = left.as_any().downcast_ref::<BinaryArray<O>>().unwrap().clone();
-    let right = right.as_any().downcast_ref::<BinaryArray<O>>().unwrap().clone();
+    let left = left
+        .as_any()
+        .downcast_ref::<BinaryArray<O>>()
+        .unwrap()
+        .clone();
+    let right = right
+        .as_any()
+        .downcast_ref::<BinaryArray<O>>()
+        .unwrap()
+        .clone();
     Box::new(move |i, j| left.value(i).cmp(right.value(j)))
 }
 
-fn compare_dict<K>(
-    left: &DictionaryArray<K>,
-    right: &DictionaryArray<K>,
-) -> Result<DynComparator>
+fn compare_dict<K>(left: &DictionaryArray<K>, right: &DictionaryArray<K>) -> Result<DynComparator>
 where
     K: DictionaryKey,
 {

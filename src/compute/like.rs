@@ -173,7 +173,7 @@ fn a_like_binary<O: Offset, F: Fn(bool) -> bool>(
                     let pattern = if let Some(pattern) = map.get(pattern) {
                         pattern
                     } else {
-                        let re_pattern = std::str::from_utf8(pattern)
+                        let re_pattern = simdutf8::basic::from_utf8(pattern)
                             .unwrap()
                             .replace("%", ".*")
                             .replace("_", ".");
@@ -231,7 +231,7 @@ fn a_like_binary_scalar<O: Offset, F: Fn(bool) -> bool>(
     op: F,
 ) -> Result<BooleanArray> {
     let validity = lhs.validity();
-    let pattern = std::str::from_utf8(rhs).map_err(|e| {
+    let pattern = simdutf8::basic::from_utf8(rhs).map_err(|e| {
         ArrowError::InvalidArgumentError(format!(
             "Unable to convert the LIKE pattern to string: {}",
             e

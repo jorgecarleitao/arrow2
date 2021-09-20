@@ -435,7 +435,7 @@ unsafe fn read_ne_i32(ptr: *const u8) -> i32 {
 
 unsafe fn read_bytes(ptr: *const u8, len: usize) -> &'static str {
     let slice = std::slice::from_raw_parts(ptr, len);
-    std::str::from_utf8(slice).unwrap()
+    simdutf8::basic::from_utf8(slice).unwrap()
 }
 
 unsafe fn metadata_from_bytes(data: *const ::std::os::raw::c_char) -> (Metadata, Extension) {
