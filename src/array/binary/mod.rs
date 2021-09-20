@@ -155,6 +155,12 @@ impl<O: Offset> BinaryArray<O> {
         self.values.get_unchecked(start..end)
     }
 
+    /// The optional validity.
+    #[inline]
+    pub fn validity(&self) -> Option<&Bitmap> {
+        self.validity.as_ref()
+    }
+
     /// Returns the offsets that slice `.values()` to return valid values.
     #[inline]
     pub fn offsets(&self) -> &Buffer<O> {

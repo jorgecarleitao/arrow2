@@ -16,7 +16,7 @@
 // under the License.
 
 use crate::{
-    array::{Array, BooleanArray, Offset, Utf8Array},
+    array::{BooleanArray, Offset, Utf8Array},
     bitmap::Bitmap,
     datatypes::DataType,
 };

@@ -132,33 +132,6 @@ impl<O: Offset> Utf8Array<O> {
         }
     }
 
-    /// Returns the element at index `i` as &str
-    /// # Safety
-    /// This function is safe iff `i < self.len`.
-    pub unsafe fn value_unchecked(&self, i: usize) -> &str {
-        // soundness: the invariant of the function
-        let start = self.offsets.get_unchecked(i).to_usize();
-        let end = self.offsets.get_unchecked(i + 1).to_usize();
-
-        // soundness: the invariant of the struct
-        let slice = self.values.get_unchecked(start..end);
-
-        // soundness: the invariant of the struct
-        std::str::from_utf8_unchecked(slice)
-    }
-
-    /// Returns the element at index `i`
-    pub fn value(&self, i: usize) -> &str {
-        let start = self.offsets[i].to_usize();
-        let end = self.offsets[i + 1].to_usize();
-
-        // soundness: the invariant of the struct
-        let slice = unsafe { self.values.get_unchecked(start..end) };
-
-        // soundness: we always check for utf8 soundness on constructors.
-        unsafe { std::str::from_utf8_unchecked(slice) }
-    }
-
     /// Returns a slice of this [`Utf8Array`].
     /// # Implementation
     /// This operation is `O(1)` as it amounts to essentially increase two ref counts.
@@ -202,6 +175,42 @@ impl<O: Offset> Utf8Array<O> {
         let mut arr = self.clone();
         arr.validity = validity;
         arr
+    }
+}
+
+// Accessors
+impl<O: Offset> Utf8Array<O> {
+    /// Returns the element at index `i` as &str
+    /// # Safety
+    /// This function is safe iff `i < self.len`.
+    pub unsafe fn value_unchecked(&self, i: usize) -> &str {
+        // soundness: the invariant of the function
+        let start = self.offsets.get_unchecked(i).to_usize();
+        let end = self.offsets.get_unchecked(i + 1).to_usize();
+
+        // soundness: the invariant of the struct
+        let slice = self.values.get_unchecked(start..end);
+
+        // soundness: the invariant of the struct
+        std::str::from_utf8_unchecked(slice)
+    }
+
+    /// Returns the element at index `i`
+    pub fn value(&self, i: usize) -> &str {
+        let start = self.offsets[i].to_usize();
+        let end = self.offsets[i + 1].to_usize();
+
+        // soundness: the invariant of the struct
+        let slice = unsafe { self.values.get_unchecked(start..end) };
+
+        // soundness: we always check for utf8 soundness on constructors.
+        unsafe { std::str::from_utf8_unchecked(slice) }
+    }
+
+    /// The optional validity.
+    #[inline]
+    pub fn validity(&self) -> Option<&Bitmap> {
+        self.validity.as_ref()
     }
 
     /// Returns the offsets of this [`Utf8Array`].
