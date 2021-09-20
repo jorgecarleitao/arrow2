@@ -22,7 +22,7 @@ use arrow2::array::*;
 use arrow2::compute::filter::{build_filter, filter, filter_record_batch, Filter};
 use arrow2::datatypes::{DataType, Field, Schema};
 use arrow2::record_batch::RecordBatch;
-use arrow2::util::bench_util::*;
+use arrow2::util::
 
 use criterion::{criterion_group, criterion_main, Criterion};
 

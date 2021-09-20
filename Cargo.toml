@@ -96,7 +96,6 @@ full = [
     "io_avro",
     "regex",
     "merge_sort",
-    "ahash",
     "compute",
     # parses timezones used in timestamp conversions
     "chrono-tz",
@@ -121,7 +120,7 @@ io_avro = ["avro-rs", "streaming-iterator", "serde_json"]
 io_json_integration = ["io_json", "serde_derive", "hex"]
 io_print = ["comfy-table"]
 # the compute kernels. Disabling this significantly reduces compile time.
-compute = ["strength_reduce", "multiversion", "lexical-core"]
+compute = ["strength_reduce", "multiversion", "lexical-core", "ahash"]
 # base64 + io_ipc because arrow schemas are stored as base64-encoded ipc format.
 io_parquet = ["parquet2", "io_ipc", "base64", "futures"]
 benchmarks = ["rand"]
@@ -222,4 +221,8 @@ harness = false
 
 [[bench]]
 name = "write_csv"
+harness = false
+
+[[bench]]
+name = "hash_kernel"
 harness = false
