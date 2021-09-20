@@ -47,8 +47,7 @@ pub trait Array: std::fmt::Debug + Send + Sync {
     /// When the validity is [`None`], all slots are valid.
     fn validity(&self) -> &Option<Bitmap>;
 
-    /// The number of null slots on this [`Array`]. This is usually used to branch
-    /// implementations to cases where optimizations can be made.
+    /// The number of null slots on this [`Array`].
     /// # Implementation
     /// This is `O(1)`.
     #[inline]

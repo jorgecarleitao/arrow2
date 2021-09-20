@@ -23,7 +23,9 @@ impl<T: NativeType + NaturalDataType, Ptr: std::borrow::Borrow<Option<T>>> FromI
 }
 
 impl<T: NativeType + NaturalDataType> PrimitiveArray<T> {
-    /// Creates a new array out an iterator over values
+    /// Creates a (non-null) [`PrimitiveArray`] from an iterator of values.
+    /// # Implementation
+    /// This does not assume that the iterator has a known length.
     pub fn from_values<I: IntoIterator<Item = T>>(iter: I) -> Self {
         Self::from_data(
             T::DATA_TYPE,
@@ -32,14 +34,18 @@ impl<T: NativeType + NaturalDataType> PrimitiveArray<T> {
         )
     }
 
-    /// Creates a new array out an iterator over values
+    /// Creates a (non-null) [`PrimitiveArray`] from a slice of values.
+    /// # Implementation
+    /// This is essentially a memcopy and is the fastest way to create a [`PrimitiveArray`].
     pub fn from_slice<P: AsRef<[T]>>(slice: P) -> Self {
         Self::from_data(T::DATA_TYPE, Buffer::<T>::from(slice), None)
     }
 }
 
 impl<T: NativeType + NaturalDataType> PrimitiveArray<T> {
-    /// Creates a new array out an iterator over values
+    /// Creates a (non-null) [`PrimitiveArray`] from a [`TrustedLen`] of values.
+    /// # Implementation
+    /// This does not assume that the iterator has a known length.
     pub fn from_trusted_len_values_iter<I: TrustedLen<Item = T>>(iter: I) -> Self {
         MutablePrimitiveArray::<T>::from_trusted_len_values_iter(iter).into()
     }
@@ -52,12 +58,12 @@ impl<T: NativeType + NaturalDataType> PrimitiveArray<T> {
         MutablePrimitiveArray::<T>::from_trusted_len_values_iter_unchecked(iter).into()
     }
 
-    /// Creates a new [`PrimitiveArray`] from an iterator over optional values
+    /// Creates a [`PrimitiveArray`] from a [`TrustedLen`] of optional values.
     pub fn from_trusted_len_iter<I: TrustedLen<Item = Option<T>>>(iter: I) -> Self {
         MutablePrimitiveArray::<T>::from_trusted_len_iter(iter).into()
     }
 
-    /// Creates a new [`PrimitiveArray`] from an iterator over optional values
+    /// Creates a [`PrimitiveArray`] from an iterator of optional values.
     /// # Safety
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
     /// I.e. that `size_hint().1` correctly reports its length.
