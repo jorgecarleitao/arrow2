@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["read_metadata",""]],"struct":[["BlockStreamIterator","[`StreamingIterator`] of blocks of avro data"],["Decompressor","[`StreamingIterator`] of blocks of decompressed avro data"],["Reader","Single threaded, blocking reader of Avro files; [`Iterator`] of [`RecordBatch`]es."]]});
