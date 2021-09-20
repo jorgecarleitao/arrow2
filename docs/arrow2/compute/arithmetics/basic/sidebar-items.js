@@ -1,1 +1,0 @@
-initSidebarItems({"mod":[["add","Definition of basic add operations with primitive arrays"],["div","Definition of basic div operations with primitive arrays"],["mul","Definition of basic mul operations with primitive arrays"],["pow","Definition of basic pow operations with primitive arrays"],["rem",""],["sub","Definition of basic sub operations with primitive arrays"]]});
