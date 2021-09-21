@@ -41,9 +41,9 @@ fn write_ipc<W: Write + Seek>(writer: W, array: impl Array + 'static) -> Result<
 
     let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(array)])?;
 
-    writer.write(&batch);
+    writer.write(&batch)?;
 
-    writer.into_inner()
+    Ok(writer.into_inner())
 }
 
 fn read_ipc(reader: &[u8]) -> Result<RecordBatch> {

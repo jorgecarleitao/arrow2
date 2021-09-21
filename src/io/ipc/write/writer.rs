@@ -20,7 +20,7 @@
 //! The `FileWriter` and `StreamWriter` have similar interfaces,
 //! however the `FileWriter` expects a reader that supports `Seek`ing
 
-use std::io::{Error, Write, BufWriter};
+use std::io::Write;
 
 use super::super::ARROW_MAGIC;
 use super::{
@@ -39,7 +39,7 @@ use crate::record_batch::RecordBatch;
 
 pub struct FileWriter<W: Write> {
     /// The object to write to
-    writer: BufWriter<W>,
+    writer: W,
     /// IPC write options
     write_options: IpcWriteOptions,
     /// A reference to the schema, used in validating record batches
@@ -65,11 +65,10 @@ impl<W: Write> FileWriter<W> {
 
     /// Try create a new writer with IpcWriteOptions
     pub fn try_new_with_options(
-        writer: W,
+        mut writer: W,
         schema: &Schema,
         write_options: IpcWriteOptions,
     ) -> Result<Self> {
-        let mut writer = BufWriter::new(writer);
         // write magic to header
         writer.write_all(&ARROW_MAGIC[..])?;
         // create an 8-byte boundary after the header
@@ -92,8 +91,8 @@ impl<W: Write> FileWriter<W> {
         })
     }
 
-    pub fn into_inner(self) -> Result<W> {
-        self.writer.into_inner().map_err(|e| Error::from(e).into())
+    pub fn into_inner(self) -> W {
+        self.writer
     }
 
     /// Write a record batch to the file

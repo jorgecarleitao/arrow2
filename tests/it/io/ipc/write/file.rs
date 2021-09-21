@@ -17,7 +17,7 @@ fn round_trip(batch: RecordBatch) -> Result<()> {
         let mut writer = FileWriter::try_new_with_options(result, batch.schema(), options)?;
         writer.write(&batch)?;
         writer.finish()?;
-        writer.into_inner()?
+        writer.into_inner()
     };
     let mut reader = Cursor::new(written_result);
     let metadata = read_file_metadata(&mut reader)?;
@@ -49,7 +49,7 @@ fn test_file(version: &str, file_name: &str) -> Result<()> {
             writer.write(&batch)?;
         }
         writer.finish()?;
-        writer.into_inner()?
+        writer.into_inner()
     };
     let mut reader = Cursor::new(written_result);
     let metadata = read_file_metadata(&mut reader)?;
