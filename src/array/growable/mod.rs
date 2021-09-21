@@ -25,9 +25,9 @@ pub use dictionary::GrowableDictionary;
 
 mod utils;
 
-/// A trait describing a struct that can be extended from slices of pre-existing [`Array`]s.
-/// This is used in operations where a new array is built out of other arrays such,
-/// as filtering and concatenation.
+/// Describes a struct that can be extended from slices of other pre-existing [`Array`]s.
+/// This is used in operations where a new array is built out of other arrays such
+/// as filter and concatenation.
 pub trait Growable<'a> {
     /// Extends this [`Growable`] with elements from the bounded [`Array`] at index `index` from
     /// a slice starting at `start` and length `len`.
@@ -38,13 +38,13 @@ pub trait Growable<'a> {
     /// Extends this [`Growable`] with null elements, disregarding the bound arrays
     fn extend_validity(&mut self, additional: usize);
 
-    /// Converts itself to an `Arc<dyn Array>`, thereby finishing the mutation.
-    /// Self will be empty after such operation
+    /// Converts this [`Growable`] to an [`Arc<dyn Array>`], thereby finishing the mutation.
+    /// Self will be empty after such operation.
     fn as_arc(&mut self) -> std::sync::Arc<dyn Array> {
         self.as_box().into()
     }
 
-    /// Converts itself to an `Box<dyn Array>`, thereby finishing the mutation.
+    /// Converts this [`Growable`] to an [`Box<dyn Array>`], thereby finishing the mutation.
     /// Self will be empty after such operation
     fn as_box(&mut self) -> Box<dyn Array>;
 }
@@ -82,11 +82,11 @@ macro_rules! dyn_dict_growable {
     }};
 }
 
-/// Creates a new [`Growable`] from an arbitrary number of dynamic [`Array`]s.
+/// Creates a new [`Growable`] from an arbitrary number of [`Array`]s.
 /// # Panics
 /// This function panics iff
 /// * the arrays do not have the same [`DataType`].
-/// * `arrays.is_empty`.
+/// * `arrays.is_empty()`.
 pub fn make_growable<'a>(
     arrays: &[&'a dyn Array],
     use_validity: bool,
