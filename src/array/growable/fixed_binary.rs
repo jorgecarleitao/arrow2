@@ -16,13 +16,14 @@ pub struct GrowableFixedSizeBinary<'a> {
     arrays: Vec<&'a FixedSizeBinaryArray>,
     validity: MutableBitmap,
     values: MutableBuffer<u8>,
-    // function used to extend nulls from arrays. This function's lifetime is bound to the array
-    // because it reads nulls from it.
     extend_null_bits: Vec<ExtendNullBits<'a>>,
     size: usize, // just a cache
 }
 
 impl<'a> GrowableFixedSizeBinary<'a> {
+    /// Creates a new [`GrowableFixedSizeBinary`] bound to `arrays` with a pre-allocated `capacity`.
+    /// # Panics
+    /// If `arrays` is empty.
     pub fn new(
         arrays: Vec<&'a FixedSizeBinaryArray>,
         mut use_validity: bool,

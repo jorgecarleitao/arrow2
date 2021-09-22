@@ -2,22 +2,27 @@ use std::sync::Arc;
 
 use crate::{
     array::{Array, DictionaryArray, DictionaryKey, PrimitiveArray},
-    bitmap::{Bitmap, MutableBitmap},
+    bitmap::MutableBitmap,
     buffer::MutableBuffer,
 };
 
-use super::{make_growable, utils::extend_validity, Growable};
+use super::{
+    make_growable,
+    utils::{build_extend_null_bits, ExtendNullBits},
+    Growable,
+};
 
 /// Concrete [`Growable`] for the [`DictionaryArray`].
-#[derive(Debug)]
+/// # Implementation
+/// This growable does not perform collision checks and instead concatenates
+/// the values of each [`DictionaryArray`] one after the other.
 pub struct GrowableDictionary<'a, K: DictionaryKey> {
     keys_values: Vec<&'a [K]>,
-    keys_validities: Vec<&'a Option<Bitmap>>,
     key_values: MutableBuffer<K>,
     key_validity: MutableBitmap,
-    use_validity: bool,
     offsets: Vec<usize>,
     values: Arc<dyn Array>,
+    extend_null_bits: Vec<ExtendNullBits<'a>>,
 }
 
 fn concatenate_values<K: DictionaryKey>(
@@ -36,6 +41,9 @@ fn concatenate_values<K: DictionaryKey>(
 }
 
 impl<'a, T: DictionaryKey> GrowableDictionary<'a, T> {
+    /// Creates a new [`GrowableDictionary`] bound to `arrays` with a pre-allocated `capacity`.
+    /// # Panics
+    /// If `arrays` is empty.
     pub fn new(arrays: &[&'a DictionaryArray<T>], mut use_validity: bool, capacity: usize) -> Self {
         // if any of the arrays has nulls, insertions from any array requires setting bits
         // as there is at least one array with nulls.
@@ -48,10 +56,11 @@ impl<'a, T: DictionaryKey> GrowableDictionary<'a, T> {
             .iter()
             .map(|array| array.values().as_slice())
             .collect::<Vec<_>>();
-        let keys_validities = arrays_keys
+
+        let extend_null_bits = arrays
             .iter()
-            .map(|array| array.validity())
-            .collect::<Vec<_>>();
+            .map(|array| build_extend_null_bits(array.keys(), use_validity))
+            .collect();
 
         let arrays_values = arrays
             .iter()
@@ -63,11 +72,10 @@ impl<'a, T: DictionaryKey> GrowableDictionary<'a, T> {
         Self {
             offsets,
             values,
-            use_validity,
             keys_values,
-            keys_validities,
             key_values: MutableBuffer::with_capacity(capacity),
             key_validity: MutableBitmap::with_capacity(capacity),
+            extend_null_bits,
         }
     }
 
@@ -85,13 +93,7 @@ impl<'a, T: DictionaryKey> GrowableDictionary<'a, T> {
 impl<'a, T: DictionaryKey> Growable<'a> for GrowableDictionary<'a, T> {
     #[inline]
     fn extend(&mut self, index: usize, start: usize, len: usize) {
-        extend_validity(
-            &mut self.key_validity,
-            self.keys_validities[index],
-            start,
-            len,
-            self.use_validity,
-        );
+        (self.extend_null_bits[index])(&mut self.key_validity, start, len);
 
         let values = &self.keys_values[index][start..start + len];
         let offset = self.offsets[index];
@@ -104,8 +106,7 @@ impl<'a, T: DictionaryKey> Growable<'a> for GrowableDictionary<'a, T> {
 
     #[inline]
     fn extend_validity(&mut self, additional: usize) {
-        self.key_values
-            .resize(self.key_values.len() + additional, T::default());
+        self.key_values.extend_constant(additional, T::default());
         self.key_validity.extend_constant(additional, false);
     }
 

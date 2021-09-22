@@ -2,25 +2,30 @@ use std::sync::Arc;
 
 use crate::{
     array::{Array, PrimitiveArray},
-    bitmap::{Bitmap, MutableBitmap},
+    bitmap::MutableBitmap,
     buffer::MutableBuffer,
     datatypes::DataType,
     types::NativeType,
 };
 
-use super::{utils::extend_validity, Growable};
+use super::{
+    utils::{build_extend_null_bits, ExtendNullBits},
+    Growable,
+};
 
 /// Concrete [`Growable`] for the [`PrimitiveArray`].
 pub struct GrowablePrimitive<'a, T: NativeType> {
     data_type: DataType,
     arrays: Vec<&'a [T]>,
-    validities: Vec<&'a Option<Bitmap>>,
-    use_validity: bool,
     validity: MutableBitmap,
     values: MutableBuffer<T>,
+    extend_null_bits: Vec<ExtendNullBits<'a>>,
 }
 
 impl<'a, T: NativeType> GrowablePrimitive<'a, T> {
+    /// Creates a new [`GrowablePrimitive`] bound to `arrays` with a pre-allocated `capacity`.
+    /// # Panics
+    /// If `arrays` is empty.
     pub fn new(
         arrays: Vec<&'a PrimitiveArray<T>>,
         mut use_validity: bool,
@@ -33,10 +38,12 @@ impl<'a, T: NativeType> GrowablePrimitive<'a, T> {
         };
 
         let data_type = arrays[0].data_type().clone();
-        let validities = arrays
+
+        let extend_null_bits = arrays
             .iter()
-            .map(|array| array.validity())
-            .collect::<Vec<_>>();
+            .map(|array| build_extend_null_bits(*array, use_validity))
+            .collect();
+
         let arrays = arrays
             .iter()
             .map(|array| array.values().as_slice())
@@ -45,10 +52,9 @@ impl<'a, T: NativeType> GrowablePrimitive<'a, T> {
         Self {
             data_type,
             arrays,
-            validities,
-            use_validity,
             values: MutableBuffer::with_capacity(capacity),
             validity: MutableBitmap::with_capacity(capacity),
+            extend_null_bits,
         }
     }
 
@@ -64,8 +70,7 @@ impl<'a, T: NativeType> GrowablePrimitive<'a, T> {
 impl<'a, T: NativeType> Growable<'a> for GrowablePrimitive<'a, T> {
     #[inline]
     fn extend(&mut self, index: usize, start: usize, len: usize) {
-        let validity = self.validities[index];
-        extend_validity(&mut self.validity, validity, start, len, self.use_validity);
+        (self.extend_null_bits[index])(&mut self.validity, start, len);
 
         let values = self.arrays[index];
         self.values.extend_from_slice(&values[start..start + len]);

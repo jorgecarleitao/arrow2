@@ -18,12 +18,13 @@ pub struct GrowableUtf8<'a, O: Offset> {
     values: MutableBuffer<u8>,
     offsets: MutableBuffer<O>,
     length: O, // always equal to the last offset at `offsets`.
-    // function used to extend nulls from arrays. This function's lifetime is bound to the array
-    // because it reads nulls from it.
     extend_null_bits: Vec<ExtendNullBits<'a>>,
 }
 
 impl<'a, O: Offset> GrowableUtf8<'a, O> {
+    /// Creates a new [`GrowableUtf8`] bound to `arrays` with a pre-allocated `capacity`.
+    /// # Panics
+    /// If `arrays` is empty.
     pub fn new(arrays: Vec<&'a Utf8Array<O>>, mut use_validity: bool, capacity: usize) -> Self {
         // if any of the arrays has nulls, insertions from any array requires setting bits
         // as there is at least one array with nulls.

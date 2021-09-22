@@ -20,6 +20,7 @@ impl Default for GrowableNull {
 }
 
 impl GrowableNull {
+    /// Creates a new [`GrowableNull`].
     pub fn new(data_type: DataType) -> Self {
         Self {
             data_type,
