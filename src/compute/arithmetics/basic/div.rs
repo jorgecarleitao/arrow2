@@ -25,10 +25,10 @@ use strength_reduce::{
 /// use arrow2::compute::arithmetics::basic::div::div;
 /// use arrow2::array::Int32Array;
 ///
-/// let a = Int32Array::from(&[Some(10), Some(6)]);
-/// let b = Int32Array::from(&[Some(5), Some(6)]);
+/// let a = Int32Array::from(&[Some(10), Some(1), Some(6)]);
+/// let b = Int32Array::from(&[Some(5), None, Some(6)]);
 /// let result = div(&a, &b).unwrap();
-/// let expected = Int32Array::from(&[Some(2), Some(1)]);
+/// let expected = Int32Array::from(&[Some(2), None, Some(1)]);
 /// assert_eq!(result, expected)
 /// ```
 pub fn div<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<PrimitiveArray<T>>
@@ -41,7 +41,21 @@ where
         ));
     }
 
-    binary(lhs, rhs, lhs.data_type().clone(), |a, b| a / b)
+    if rhs.null_count() == 0 {
+        binary(lhs, rhs, lhs.data_type().clone(), |a, b| a / b)
+    } else {
+        if lhs.len() != rhs.len() {
+            return Err(ArrowError::InvalidArgumentError(
+                "Arrays must have the same length".to_string(),
+            ));
+        }
+        let values = lhs.iter().zip(rhs.iter()).map(|(l, r)| match (l, r) {
+            (Some(l), Some(r)) => Some(*l / *r),
+            _ => None,
+        });
+
+        Ok(PrimitiveArray::from_trusted_len_iter(values).to(lhs.data_type().clone()))
+    }
 }
 
 /// Checked division of two primitive arrays. If the result from the division
