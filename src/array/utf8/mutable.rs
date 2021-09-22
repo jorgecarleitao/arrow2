@@ -2,7 +2,7 @@ use std::{iter::FromIterator, sync::Arc};
 
 use crate::{
     array::{
-        specification::{check_offsets, check_offsets_and_utf8},
+        specification::{check_offsets_and_utf8, check_offsets_minimal},
         Array, MutableArray, Offset, TryExtend, TryPush,
     },
     bitmap::MutableBitmap,
@@ -93,7 +93,7 @@ impl<O: Offset> MutableUtf8Array<O> {
         values: MutableBuffer<u8>,
         validity: Option<MutableBitmap>,
     ) -> Self {
-        check_offsets(&offsets, values.len());
+        check_offsets_minimal(&offsets, values.len());
         if let Some(ref validity) = validity {
             assert_eq!(offsets.len() - 1, validity.len());
         }
@@ -224,6 +224,75 @@ impl<O: Offset, P: AsRef<str>> FromIterator<Option<P>> for MutableUtf8Array<O> {
 }
 
 impl<O: Offset> MutableUtf8Array<O> {
+    /// Extends the [`MutableUtf8Array`] from an iterator of values of trusted len.
+    /// This differs from `extended_trusted_len` which accepts iterator of optional values.
+    #[inline]
+    pub fn extend_trusted_len_values<I, P>(&mut self, iterator: I)
+    where
+        P: AsRef<str>,
+        I: TrustedLen<Item = P>,
+    {
+        unsafe { self.extend_trusted_len_values_unchecked(iterator) }
+    }
+
+    /// Extends the [`MutableUtf8Array`] from an iterator of values of trusted len.
+    /// This differs from `extended_trusted_len_unchecked` which accepts iterator of optional
+    /// values.
+    /// # Safety
+    /// The iterator must be trusted len.
+    #[inline]
+    pub unsafe fn extend_trusted_len_values_unchecked<I, P>(&mut self, iterator: I)
+    where
+        P: AsRef<str>,
+        I: Iterator<Item = P>,
+    {
+        let (_, upper) = iterator.size_hint();
+        let additional = upper.expect("extend_trusted_len_values requires an upper limit");
+
+        extend_from_trusted_len_values_iter(&mut self.offsets, &mut self.values, iterator);
+
+        if let Some(validity) = self.validity.as_mut() {
+            validity.extend_constant(additional, true);
+        }
+    }
+
+    /// Extends the [`MutableUtf8Array`] from an iterator of trusted len.
+    #[inline]
+    pub fn extend_trusted_len<I, P>(&mut self, iterator: I)
+    where
+        P: AsRef<str>,
+        I: TrustedLen<Item = Option<P>>,
+    {
+        unsafe { self.extend_trusted_len_unchecked(iterator) }
+    }
+
+    /// Extends [`MutableUtf8Array`] from an iterator of trusted len.
+    /// # Safety
+    /// The iterator must be trusted len.
+    #[inline]
+    pub unsafe fn extend_trusted_len_unchecked<I, P>(&mut self, iterator: I)
+    where
+        P: AsRef<str>,
+        I: Iterator<Item = Option<P>>,
+    {
+        if self.validity.is_none() {
+            let mut validity = MutableBitmap::new();
+            validity.extend_constant(self.len(), true);
+            self.validity = Some(validity);
+        }
+
+        extend_from_trusted_len_iter(
+            &mut self.offsets,
+            &mut self.values,
+            &mut self.validity.as_mut().unwrap(),
+            iterator,
+        );
+
+        if self.validity.as_mut().unwrap().null_count() == 0 {
+            self.validity = None;
+        }
+    }
+
     /// Creates a [`MutableUtf8Array`] from an iterator of trusted length.
     /// # Safety
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
@@ -377,37 +446,13 @@ where
     P: AsRef<str>,
     I: Iterator<Item = Option<P>>,
 {
-    let (_, upper) = iterator.size_hint();
-    let len = upper.expect("trusted_len_unzip requires an upper limit");
-
-    let mut validity = MutableBitmap::with_capacity(len);
-    let mut offsets = MutableBuffer::<O>::with_capacity(len + 1);
+    let mut offsets = MutableBuffer::<O>::with_capacity(1);
     let mut values = MutableBuffer::<u8>::new();
+    let mut validity = MutableBitmap::new();
 
-    let mut length = O::default();
-    let mut dst = offsets.as_mut_ptr();
-    std::ptr::write(dst, length);
-    dst = dst.add(1);
-    for item in iterator {
-        if let Some(item) = item {
-            validity.push(true);
-            let s = item.as_ref();
-            length += O::from_usize(s.len()).unwrap();
-            values.extend_from_slice(s.as_bytes());
-        } else {
-            validity.push(false);
-            values.extend_from_slice(b"");
-        };
+    offsets.push_unchecked(O::default());
 
-        std::ptr::write(dst, length);
-        dst = dst.add(1);
-    }
-    assert_eq!(
-        dst.offset_from(offsets.as_ptr()) as usize,
-        len + 1,
-        "Trusted iterator length was not accurately reported"
-    );
-    offsets.set_len(len + 1);
+    extend_from_trusted_len_iter(&mut offsets, &mut values, &mut validity, iterator);
 
     let validity = if validity.null_count() > 0 {
         Some(validity)
@@ -482,32 +527,110 @@ where
     P: AsRef<str>,
     I: Iterator<Item = P>,
 {
-    let (_, upper) = iterator.size_hint();
-    let len = upper.expect("trusted_len_unzip requires an upper limit");
-
-    let mut offsets = MutableBuffer::<O>::with_capacity(len + 1);
+    let mut offsets = MutableBuffer::<O>::with_capacity(1 + iterator.size_hint().1.unwrap());
     let mut values = MutableBuffer::<u8>::new();
 
-    let mut length = O::default();
-    let mut dst = offsets.as_mut_ptr();
-    std::ptr::write(dst, length);
-    dst = dst.add(1);
-    for item in iterator {
-        let s = item.as_ref();
-        length += O::from_usize(s.len()).unwrap();
-        values.extend_from_slice(s.as_bytes());
+    offsets.push_unchecked(O::default());
 
-        std::ptr::write(dst, length);
-        dst = dst.add(1);
-    }
-    assert_eq!(
-        dst.offset_from(offsets.as_ptr()) as usize,
-        len + 1,
-        "Trusted iterator length was not accurately reported"
-    );
-    offsets.set_len(len + 1);
+    extend_from_trusted_len_values_iter(&mut offsets, &mut values, iterator);
 
     (offsets, values)
+}
+
+/// Populates `offsets` and `values` [`Buffer`] with information
+/// extracted from the incoming iterator.
+/// # Safety
+/// The caller must ensure that `iterator` is [`TrustedLen`]
+#[inline]
+unsafe fn extend_from_trusted_len_values_iter<I, P, O>(
+    offsets: &mut MutableBuffer<O>,
+    values: &mut MutableBuffer<u8>,
+    iterator: I,
+) where
+    O: Offset,
+    P: AsRef<str>,
+    I: Iterator<Item = P>,
+{
+    let (_, upper) = iterator.size_hint();
+    let additional = upper.expect("extend_from_trusted_len_iter_values requires an upper limit");
+
+    offsets.reserve(additional);
+
+    let mut length = *offsets.last().unwrap();
+
+    let mut dst = offsets.as_mut_ptr();
+    dst = dst.add(offsets.len());
+
+    for item in iterator {
+        let s = item.as_ref();
+
+        length += O::from_usize(s.len()).unwrap();
+
+        values.extend_from_slice(s.as_bytes());
+        std::ptr::write(dst, length);
+
+        dst = dst.add(1);
+    }
+
+    assert_eq!(
+        dst.offset_from(offsets.as_ptr()) as usize,
+        offsets.len() + additional,
+        "Trusted iterator length was not accurately reported"
+    );
+
+    offsets.set_len(offsets.len() + additional);
+}
+
+/// Populates `offsets`, `values`, and validity [`Buffer`] with information
+/// extracted from the incoming iterator.
+/// # Safety
+/// The caller must ensure that `iterator` is [`TrustedLen`]
+#[inline]
+unsafe fn extend_from_trusted_len_iter<O, I, P>(
+    offsets: &mut MutableBuffer<O>,
+    values: &mut MutableBuffer<u8>,
+    validity: &mut MutableBitmap,
+    iterator: I,
+) where
+    O: Offset,
+    P: AsRef<str>,
+    I: Iterator<Item = Option<P>>,
+{
+    let (_, upper) = iterator.size_hint();
+    let additional = upper.expect("extend_from_trusted_len_values_iter requires an upper limit");
+
+    offsets.reserve(additional);
+    validity.reserve(additional);
+
+    let mut length = *offsets.last().unwrap();
+
+    let mut dst = offsets.as_mut_ptr();
+    dst = dst.add(offsets.len());
+
+    for item in iterator {
+        if let Some(item) = item {
+            let s = item.as_ref();
+
+            length += O::from_usize(s.len()).unwrap();
+
+            values.extend_from_slice(s.as_bytes());
+            validity.push_unchecked(true);
+        } else {
+            validity.push_unchecked(false);
+        };
+
+        std::ptr::write(dst, length);
+
+        dst = dst.add(1);
+    }
+
+    assert_eq!(
+        dst.offset_from(offsets.as_ptr()) as usize,
+        offsets.len() + additional,
+        "Trusted iterator length was not accurately reported"
+    );
+
+    offsets.set_len(offsets.len() + additional);
 }
 
 /// Creates two [`MutableBuffer`]s from an iterator of `&str`.

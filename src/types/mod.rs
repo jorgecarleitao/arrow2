@@ -1,7 +1,6 @@
-//! traits to handle _all physical types_ used in this crate.
+//! traits to handle _all native types_ used in this crate.
 //! Most physical types used in this crate are native Rust types, like `i32`.
-//! The most important trait is [`NativeType`], implemented for all Arrow types
-//! with a Rust correspondence (such as `i32` or `f64`).
+//! The most important trait is [`NativeType`], the generic trait of [`crate::array::PrimitiveArray`].
 //!
 //! Another important trait is [`BitChunk`], describing types that can be used to
 //! represent chunks of bits (e.g. `u8`, `u16`), and [`BitChunkIter`], that can be used to

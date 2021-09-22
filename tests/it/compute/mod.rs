@@ -1,7 +1,11 @@
+mod aggregate;
+mod arithmetics;
 mod boolean;
 mod boolean_kleene;
 mod cast;
+mod comparison;
 mod concat;
+mod contains;
 mod filter;
 mod hash;
 mod if_then_else;
@@ -16,5 +20,6 @@ mod partition;
 mod regex_match;
 mod sort;
 mod substring;
+mod take;
 mod temporal;
 mod window;

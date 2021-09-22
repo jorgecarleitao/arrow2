@@ -42,6 +42,11 @@ fn add_benchmark(c: &mut Criterion) {
             b.iter(|| read_decompressed_pages(&buffer, size * 8, 2).unwrap())
         });
 
+        let a = format!("read utf8 large 2^{}", i);
+        c.bench_function(&a, |b| {
+            b.iter(|| read_decompressed_pages(&buffer, size * 8, 6).unwrap())
+        });
+
         let a = format!("read bool 2^{}", i);
         c.bench_function(&a, |b| {
             b.iter(|| read_decompressed_pages(&buffer, size * 8, 3).unwrap())

@@ -1,3 +1,5 @@
+mod lex_sort;
+
 use arrow2::array::*;
 use arrow2::compute::sort::*;
 use arrow2::datatypes::*;

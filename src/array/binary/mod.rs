@@ -13,6 +13,10 @@ mod mutable;
 pub use mutable::*;
 
 /// A [`BinaryArray`] is a nullable array of bytes - the Arrow equivalent of `Vec<Option<Vec<u8>>>`.
+/// # Safety
+/// The following invariants hold:
+/// * Two consecutives `offsets` casted (`as`) to `usize` are valid slices of `values`.
+/// * `len` is equal to `validity.len()`, when defined.
 #[derive(Debug, Clone)]
 pub struct BinaryArray<O: Offset> {
     data_type: DataType,
@@ -42,8 +46,10 @@ impl<O: Offset> BinaryArray<O> {
 
     /// Creates a new [`BinaryArray`] from lower-level parts
     /// # Panics
-    /// * The length of the offset buffer must be larger than 1
-    /// * The length of the values must be equal to the last offset value
+    /// * the offsets are not monotonically increasing
+    /// * The last offset is not equal to the values' length.
+    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * The `data_type`'s physical type is not equal to `Binary` or `LargeBinary`.
     pub fn from_data(
         data_type: DataType,
         offsets: Buffer<O>,
@@ -114,25 +120,23 @@ impl<O: Offset> BinaryArray<O> {
     /// # Panics
     /// iff `i >= self.len()`
     pub fn value(&self, i: usize) -> &[u8] {
-        let offsets = self.offsets.as_slice();
-        let offset = offsets[i];
-        let offset_1 = offsets[i + 1];
-        let length = (offset_1 - offset).to_usize();
-        let offset = offset.to_usize();
+        let start = self.offsets[i].to_usize();
+        let end = self.offsets[i + 1].to_usize();
 
-        &self.values[offset..offset + length]
+        // soundness: the invariant of the struct
+        unsafe { self.values.get_unchecked(start..end) }
     }
 
     /// Returns the element at index `i`
     /// # Safety
     /// Assumes that the `i < self.len`.
     pub unsafe fn value_unchecked(&self, i: usize) -> &[u8] {
-        let offset = *self.offsets.get_unchecked(i);
-        let offset_1 = *self.offsets.get_unchecked(i + 1);
-        let length = (offset_1 - offset).to_usize();
-        let offset = offset.to_usize();
+        // soundness: the invariant of the function
+        let start = self.offsets.get_unchecked(i).to_usize();
+        let end = self.offsets.get_unchecked(i + 1).to_usize();
 
-        &self.values[offset..offset + length]
+        // soundness: the invariant of the struct
+        self.values.get_unchecked(start..end)
     }
 
     /// Returns the offsets that slice `.values()` to return valid values.

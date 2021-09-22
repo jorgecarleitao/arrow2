@@ -53,8 +53,7 @@ unsafe impl Offset for i64 {
     }
 }
 
-#[inline]
-pub fn check_offsets<O: Offset>(offsets: &[O], values_len: usize) -> usize {
+pub fn check_offsets_minimal<O: Offset>(offsets: &[O], values_len: usize) -> usize {
     assert!(
         !offsets.is_empty(),
         "The length of the offset buffer must be larger than 1"
@@ -71,15 +70,33 @@ pub fn check_offsets<O: Offset>(offsets: &[O], values_len: usize) -> usize {
     len
 }
 
-#[inline]
-pub fn check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) -> usize {
-    let len = check_offsets(offsets, values.len());
+/// # Panics iff:
+/// * the `offsets` is not monotonically increasing, or
+/// * any slice of `values` between two consecutive pairs from `offsets` is invalid `utf8`, or
+/// * any offset is larger or equal to `values_len`.
+pub fn check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) {
     offsets.windows(2).for_each(|window| {
         let start = window[0].to_usize();
         let end = window[1].to_usize();
-        assert!(end <= values.len());
-        let slice = unsafe { std::slice::from_raw_parts(values.as_ptr().add(start), end - start) };
-        std::str::from_utf8(slice).expect("A non-utf8 string was passed.");
+        // assert monotonicity
+        assert!(start <= end);
+        // assert bounds
+        let slice = &values[start..end];
+        // assert utf8
+        simdutf8::basic::from_utf8(slice).expect("A non-utf8 string was passed.");
     });
-    len
+}
+
+/// # Panics iff:
+/// * the `offsets` is not monotonically increasing, or
+/// * any offset is larger or equal to `values_len`.
+pub fn check_offsets<O: Offset>(offsets: &[O], values_len: usize) {
+    offsets.windows(2).for_each(|window| {
+        let start = window[0].to_usize();
+        let end = window[1].to_usize();
+        // assert monotonicity
+        assert!(start <= end);
+        // assert bound
+        assert!(end <= values_len);
+    });
 }

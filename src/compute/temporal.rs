@@ -82,15 +82,8 @@ fn chrono_tz_hour(
     time_unit: TimeUnit,
     timezone_str: &str,
 ) -> Result<PrimitiveArray<u32>> {
-    let timezone = parse_offset_tz(timezone_str);
-    if let Some(timezone) = timezone {
-        Ok(extract_impl(array, time_unit, timezone, |x| x.hour()))
-    } else {
-        Err(ArrowError::InvalidArgumentError(format!(
-            "timezone \"{}\" cannot be parsed",
-            timezone_str
-        )))
-    }
+    let timezone = parse_offset_tz(timezone_str)?;
+    Ok(extract_impl(array, time_unit, timezone, |x| x.hour()))
 }
 
 #[cfg(not(feature = "chrono-tz"))]
@@ -112,15 +105,8 @@ fn chrono_tz_year(
     time_unit: TimeUnit,
     timezone_str: &str,
 ) -> Result<PrimitiveArray<i32>> {
-    let timezone = parse_offset_tz(timezone_str);
-    if let Some(timezone) = timezone {
-        Ok(extract_impl(array, time_unit, timezone, |x| x.year()))
-    } else {
-        Err(ArrowError::InvalidArgumentError(format!(
-            "timezone \"{}\" cannot be parsed",
-            timezone_str
-        )))
-    }
+    let timezone = parse_offset_tz(timezone_str)?;
+    Ok(extract_impl(array, time_unit, timezone, |x| x.year()))
 }
 
 #[cfg(not(feature = "chrono-tz"))]

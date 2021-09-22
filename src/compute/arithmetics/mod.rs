@@ -63,7 +63,7 @@ use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
 use num_traits::{NumCast, Zero};
 
-use crate::datatypes::{DataType, TimeUnit};
+use crate::datatypes::{DataType, IntervalUnit, TimeUnit};
 use crate::error::{ArrowError, Result};
 use crate::types::NativeType;
 use crate::{array::*, bitmap::Bitmap};
@@ -145,6 +145,11 @@ pub fn arithmetic(lhs: &dyn Array, op: Operator, rhs: &dyn Array) -> Result<Box<
             let rhs = rhs.as_any().downcast_ref().unwrap();
             time::add_duration::<i64>(lhs, rhs).map(|x| Box::new(x) as Box<dyn Array>)
         }
+        (Timestamp(_, _), Add, Interval(IntervalUnit::MonthDayNano)) => {
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            time::add_interval(lhs, rhs).map(|x| Box::new(x) as Box<dyn Array>)
+        }
         (Time64(TimeUnit::Microsecond), Subtract, Duration(_))
         | (Time64(TimeUnit::Nanosecond), Subtract, Duration(_))
         | (Date64, Subtract, Duration(_))
@@ -214,6 +219,7 @@ pub fn can_arithmetic(lhs: &DataType, op: Operator, rhs: &DataType) -> bool {
             | (Time64(TimeUnit::Nanosecond), Add, Duration(_))
             | (Timestamp(_, _), Subtract, Duration(_))
             | (Timestamp(_, _), Add, Duration(_))
+            | (Timestamp(_, _), Add, Interval(IntervalUnit::MonthDayNano))
             | (Timestamp(_, None), Subtract, Timestamp(_, None))
     )
 }
@@ -421,70 +427,3 @@ unsafe impl NotI128 for i32 {}
 unsafe impl NotI128 for i64 {}
 unsafe impl NotI128 for f32 {}
 unsafe impl NotI128 for f64 {}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn consistency() {
-        use crate::datatypes::DataType::*;
-        use crate::datatypes::TimeUnit;
-
-        let datatypes = vec![
-            Null,
-            Boolean,
-            UInt8,
-            UInt16,
-            UInt32,
-            UInt64,
-            Int8,
-            Int16,
-            Int32,
-            Int64,
-            Float32,
-            Float64,
-            Timestamp(TimeUnit::Second, None),
-            Timestamp(TimeUnit::Millisecond, None),
-            Timestamp(TimeUnit::Microsecond, None),
-            Timestamp(TimeUnit::Nanosecond, None),
-            Time64(TimeUnit::Microsecond),
-            Time64(TimeUnit::Nanosecond),
-            Date32,
-            Time32(TimeUnit::Second),
-            Time32(TimeUnit::Millisecond),
-            Date64,
-            Utf8,
-            LargeUtf8,
-            Binary,
-            LargeBinary,
-            Duration(TimeUnit::Second),
-            Duration(TimeUnit::Millisecond),
-            Duration(TimeUnit::Microsecond),
-            Duration(TimeUnit::Nanosecond),
-        ];
-        let operators = vec![
-            Operator::Add,
-            Operator::Divide,
-            Operator::Subtract,
-            Operator::Multiply,
-            Operator::Remainder,
-        ];
-
-        let cases = datatypes
-            .clone()
-            .into_iter()
-            .zip(operators.into_iter())
-            .zip(datatypes.into_iter());
-
-        cases.for_each(|((lhs, op), rhs)| {
-            let lhs_a = new_empty_array(lhs.clone());
-            let rhs_a = new_empty_array(rhs.clone());
-            if can_arithmetic(&lhs, op, &rhs) {
-                assert!(arithmetic(lhs_a.as_ref(), op, rhs_a.as_ref()).is_ok());
-            } else {
-                assert!(arithmetic(lhs_a.as_ref(), op, rhs_a.as_ref()).is_err());
-            }
-        });
-    }
-}
