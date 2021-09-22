@@ -79,6 +79,26 @@ fn naive_timestamp_micro_year() {
 }
 
 #[test]
+fn date64_month() {
+    let array = Int64Array::from(&[Some(1514764800000), None]).to(DataType::Date64);
+    let result = month(&array).unwrap();
+
+    let expected = UInt32Array::from(&[Some(1), None]);
+
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn date64_day() {
+    let array = Int64Array::from(&[Some(1614764800000), None]).to(DataType::Date64);
+    let result = day(&array).unwrap();
+
+    let expected = UInt32Array::from(&[Some(3), None]);
+
+    assert_eq!(result, expected);
+}
+
+#[test]
 fn timestamp_micro_hour() {
     let array = Int64Array::from(&[Some(1621877130000000), None]).to(DataType::Timestamp(
         TimeUnit::Microsecond,
