@@ -813,13 +813,13 @@ fn main() -&gt; Result&lt;()&gt; {
     let array = UInt16Array::from_slice([1, 2]).to(extension_type.clone());
 
     // from here on, it works as usual
-    let mut buffer = Cursor::new(vec![]);
+    let buffer = Cursor::new(vec![]);
 
     // write to IPC
-    write_ipc(&amp;mut buffer, array)?;
+    let result_buffer = write_ipc(buffer, array)?;
 
     // read it back
-    let batch = read_ipc(&amp;buffer.into_inner())?;
+    let batch = read_ipc(&amp;result_buffer.into_inner())?;
 
     // and verify that the datatype is preserved.
     let array = &amp;batch.columns()[0];
@@ -830,14 +830,16 @@ fn main() -&gt; Result&lt;()&gt; {
     Ok(())
 }
 
-fn write_ipc&lt;W: Write + Seek&gt;(writer: &amp;mut W, array: impl Array + 'static) -&gt; Result&lt;()&gt; {
+fn write_ipc&lt;W: Write + Seek&gt;(writer: W, array: impl Array + 'static) -&gt; Result&lt;W&gt; {
     let schema = Schema::new(vec![Field::new(&quot;a&quot;, array.data_type().clone(), false)]);
 
     let mut writer = write::FileWriter::try_new(writer, &amp;schema)?;
 
     let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(array)])?;
 
-    writer.write(&amp;batch)
+    writer.write(&amp;batch)?;
+
+    Ok(writer.into_inner())
 }
 
 fn read_ipc(reader: &amp;[u8]) -&gt; Result&lt;RecordBatch&gt; {
@@ -1584,9 +1586,9 @@ use arrow2::io::ipc::write;
 use arrow2::record_batch::RecordBatch;
 
 fn write_batches(path: &amp;str, schema: &amp;Schema, batches: &amp;[RecordBatch]) -&gt; Result&lt;()&gt; {
-    let mut file = File::create(path)?;
+    let file = File::create(path)?;
 
-    let mut writer = write::FileWriter::try_new(&amp;mut file, schema)?;
+    let mut writer = write::FileWriter::try_new(file, schema)?;
 
     for batch in batches {
         writer.write(batch)?
