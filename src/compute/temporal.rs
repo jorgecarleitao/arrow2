@@ -362,20 +362,44 @@ where
 /// assert_eq!(can_year(&data_type), false);
 /// ```
 pub fn can_year(data_type: &DataType) -> bool {
-    matches!(
-        data_type,
-        DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, _)
-    )
+    can_date(data_type)
 }
 
+/// Checks if an array of type `datatype` can perform month operation
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::temporal::can_month;
+/// use arrow2::datatypes::{DataType};
+///
+/// let data_type = DataType::Date32;
+/// assert_eq!(can_month(&data_type), true);
+
+/// let data_type = DataType::Int8;
+/// assert_eq!(can_month(&data_type), false);
+/// ```
 pub fn can_month(data_type: &DataType) -> bool {
-    matches!(
-        data_type,
-        DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, _)
-    )
+    can_date(data_type)
 }
 
+/// Checks if an array of type `datatype` can perform day operation
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::temporal::can_day;
+/// use arrow2::datatypes::{DataType};
+///
+/// let data_type = DataType::Date32;
+/// assert_eq!(can_day(&data_type), true);
+
+/// let data_type = DataType::Int8;
+/// assert_eq!(can_day(&data_type), false);
+/// ```
 pub fn can_day(data_type: &DataType) -> bool {
+    can_date(data_type)
+}
+
+fn can_date(data_type: &DataType) -> bool {
     matches!(
         data_type,
         DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, _)
@@ -396,32 +420,44 @@ pub fn can_day(data_type: &DataType) -> bool {
 /// assert_eq!(can_hour(&data_type), false);
 /// ```
 pub fn can_hour(data_type: &DataType) -> bool {
-    matches!(
-        data_type,
-        DataType::Time32(TimeUnit::Second)
-            | DataType::Time32(TimeUnit::Millisecond)
-            | DataType::Time64(TimeUnit::Microsecond)
-            | DataType::Time64(TimeUnit::Nanosecond)
-            | DataType::Date32
-            | DataType::Date64
-            | DataType::Timestamp(_, _)
-    )
+    can_time(data_type)
 }
 
+/// Checks if an array of type `datatype` can perform minute operation
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::temporal::can_minute;
+/// use arrow2::datatypes::{DataType, TimeUnit};
+///
+/// let data_type = DataType::Time32(TimeUnit::Second);
+/// assert_eq!(can_minute(&data_type), true);
+
+/// let data_type = DataType::Int8;
+/// assert_eq!(can_minute(&data_type), false);
+/// ```
 pub fn can_minute(data_type: &DataType) -> bool {
-    matches!(
-        data_type,
-        DataType::Time32(TimeUnit::Second)
-            | DataType::Time32(TimeUnit::Millisecond)
-            | DataType::Time64(TimeUnit::Microsecond)
-            | DataType::Time64(TimeUnit::Nanosecond)
-            | DataType::Date32
-            | DataType::Date64
-            | DataType::Timestamp(_, _)
-    )
+    can_time(data_type)
 }
 
+/// Checks if an array of type `datatype` can perform second operation
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::temporal::can_second;
+/// use arrow2::datatypes::{DataType, TimeUnit};
+///
+/// let data_type = DataType::Time32(TimeUnit::Second);
+/// assert_eq!(can_second(&data_type), true);
+
+/// let data_type = DataType::Int8;
+/// assert_eq!(can_second(&data_type), false);
+/// ```
 pub fn can_second(data_type: &DataType) -> bool {
+    can_time(data_type)
+}
+
+fn can_time(data_type: &DataType) -> bool {
     matches!(
         data_type,
         DataType::Time32(TimeUnit::Second)
