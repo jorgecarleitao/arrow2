@@ -276,14 +276,14 @@ impl<T: NativeType> MutableBuffer<T> {
     }
 
     /// Sets the length of this buffer.
-    /// # Panic
-    /// Panics iff `len > capacity`.
-    /// # Safety
-    /// The caller must ensure no reads are performed on any
-    /// item within `[len, capacity - len]`
+    /// # Safety:
+    /// The caller must uphold the following invariants:
+    /// * ensure no reads are performed on any
+    ///     item within `[len, capacity - len]`
+    /// * ensure `len <= self.capacity()`
     #[inline]
     pub unsafe fn set_len(&mut self, len: usize) {
-        assert!(len <= self.capacity());
+        debug_assert!(len <= self.capacity());
         self.len = len;
     }
 
