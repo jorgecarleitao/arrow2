@@ -3,6 +3,26 @@ use arrow2::compute::temporal::*;
 use arrow2::datatypes::*;
 
 #[test]
+fn date64_second() {
+    let array =
+        Int64Array::from(&[Some(1514764800000), None, Some(1550636625000)]).to(DataType::Date64);
+
+    let result = second(&array).unwrap();
+    let expected = UInt32Array::from(&[Some(0), None, Some(45)]);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn date64_minute() {
+    let array =
+        Int64Array::from(&[Some(1514764800000), None, Some(1550636625000)]).to(DataType::Date64);
+
+    let result = minute(&array).unwrap();
+    let expected = UInt32Array::from(&[Some(0), None, Some(23)]);
+    assert_eq!(result, expected);
+}
+
+#[test]
 fn date64_hour() {
     let array =
         Int64Array::from(&[Some(1514764800000), None, Some(1550636625000)]).to(DataType::Date64);

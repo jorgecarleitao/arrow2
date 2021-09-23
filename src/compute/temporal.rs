@@ -77,29 +77,6 @@ where
 
 #[cfg(feature = "chrono-tz")]
 #[cfg_attr(docsrs, doc(cfg(feature = "chrono-tz")))]
-fn chrono_tz_hour(
-    array: &PrimitiveArray<i64>,
-    time_unit: TimeUnit,
-    timezone_str: &str,
-) -> Result<PrimitiveArray<u32>> {
-    let timezone = parse_offset_tz(timezone_str)?;
-    Ok(extract_impl(array, time_unit, timezone, |x| x.hour()))
-}
-
-#[cfg(not(feature = "chrono-tz"))]
-fn chrono_tz_hour(
-    _: &PrimitiveArray<i64>,
-    _: TimeUnit,
-    timezone_str: &str,
-) -> Result<PrimitiveArray<u32>> {
-    Err(ArrowError::InvalidArgumentError(format!(
-        "timezone \"{}\" cannot be parsed (feature chrono-tz is not active)",
-        timezone_str
-    )))
-}
-
-#[cfg(feature = "chrono-tz")]
-#[cfg_attr(docsrs, doc(cfg(feature = "chrono-tz")))]
 fn chrono_tz<F, O>(
     array: &PrimitiveArray<i64>,
     time_unit: TimeUnit,
@@ -134,82 +111,12 @@ where
 /// Extracts the hours of a temporal array as [`PrimitiveArray<u32>`].
 /// Use [`can_hour`] to check if this operation is supported for the target [`DataType`].
 pub fn hour(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
-    let final_data_type = DataType::UInt32;
     match array.data_type() {
-        DataType::Time32(TimeUnit::Second) => {
-            let array = array
-                .as_any()
-                .downcast_ref::<PrimitiveArray<i32>>()
-                .unwrap();
-            Ok(unary(array, |x| time32s_to_time(x).hour(), final_data_type))
+        DataType::Date32 | DataType::Date64 | &DataType::Timestamp(_, None) => {
+            date_like(array, DataType::UInt32, |x| x.hour())
         }
-        DataType::Time32(TimeUnit::Millisecond) => {
-            let array = array
-                .as_any()
-                .downcast_ref::<PrimitiveArray<i32>>()
-                .unwrap();
-            Ok(unary(
-                array,
-                |x| time32ms_to_time(x).hour(),
-                final_data_type,
-            ))
-        }
-        DataType::Time64(TimeUnit::Microsecond) => {
-            let array = array
-                .as_any()
-                .downcast_ref::<PrimitiveArray<i64>>()
-                .unwrap();
-            Ok(unary(
-                array,
-                |x| time64us_to_time(x).hour(),
-                final_data_type,
-            ))
-        }
-        DataType::Time64(TimeUnit::Nanosecond) => {
-            let array = array
-                .as_any()
-                .downcast_ref::<PrimitiveArray<i64>>()
-                .unwrap();
-            Ok(unary(
-                array,
-                |x| time64ns_to_time(x).hour(),
-                final_data_type,
-            ))
-        }
-        DataType::Date32 => {
-            let array = array
-                .as_any()
-                .downcast_ref::<PrimitiveArray<i32>>()
-                .unwrap();
-            Ok(unary(
-                array,
-                |x| date32_to_datetime(x).hour(),
-                final_data_type,
-            ))
-        }
-        DataType::Date64 => {
-            let array = array
-                .as_any()
-                .downcast_ref::<PrimitiveArray<i64>>()
-                .unwrap();
-            Ok(unary(
-                array,
-                |x| date64_to_datetime(x).hour(),
-                final_data_type,
-            ))
-        }
-        DataType::Timestamp(time_unit, None) => {
-            let array = array
-                .as_any()
-                .downcast_ref::<PrimitiveArray<i64>>()
-                .unwrap();
-            let op = match time_unit {
-                TimeUnit::Second => |x| timestamp_s_to_datetime(x).hour(),
-                TimeUnit::Millisecond => |x| timestamp_ms_to_datetime(x).hour(),
-                TimeUnit::Microsecond => |x| timestamp_us_to_datetime(x).hour(),
-                TimeUnit::Nanosecond => |x| timestamp_ns_to_datetime(x).hour(),
-            };
-            Ok(unary(array, op, final_data_type))
+        DataType::Time32(_) | DataType::Time64(_) => {
+            time_like(array, DataType::UInt32, |x| x.hour())
         }
         DataType::Timestamp(time_unit, Some(timezone_str)) => {
             let time_unit = *time_unit;
@@ -220,13 +127,109 @@ pub fn hour(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
             if let Ok(timezone) = timezone {
                 Ok(extract_impl(array, time_unit, timezone, |x| x.hour()))
             } else {
-                chrono_tz_hour(array, time_unit, timezone_str)
+                chrono_tz(array, time_unit, timezone_str, |x| x.hour())
             }
         }
         dt => Err(ArrowError::NotYetImplemented(format!(
             "\"hour\" does not support type {:?}",
             dt
         ))),
+    }
+}
+
+/// Extracts the minutes of a temporal array as [`PrimitiveArray<u32>`].
+/// Use [`can_minute`] to check if this operation is supported for the target [`DataType`].
+pub fn minute(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
+    match array.data_type() {
+        DataType::Date32 | DataType::Date64 | &DataType::Timestamp(_, None) => {
+            date_like(array, DataType::UInt32, |x| x.minute())
+        }
+        DataType::Time32(_) | DataType::Time64(_) => {
+            time_like(array, DataType::UInt32, |x| x.minute())
+        }
+        DataType::Timestamp(time_unit, Some(timezone_str)) => {
+            let time_unit = *time_unit;
+            let timezone = parse_offset(timezone_str);
+
+            let array = array.as_any().downcast_ref().unwrap();
+
+            if let Ok(timezone) = timezone {
+                Ok(extract_impl(array, time_unit, timezone, |x| x.minute()))
+            } else {
+                chrono_tz(array, time_unit, timezone_str, |x| x.minute())
+            }
+        }
+        dt => Err(ArrowError::NotYetImplemented(format!(
+            "\"minute\" does not support type {:?}",
+            dt
+        ))),
+    }
+}
+
+/// Extracts the seconds of a temporal array as [`PrimitiveArray<u32>`].
+/// Use [`can_second`] to check if this operation is supported for the target [`DataType`].
+pub fn second(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
+    match array.data_type() {
+        DataType::Date32 | DataType::Date64 | &DataType::Timestamp(_, None) => {
+            date_like(array, DataType::UInt32, |x| x.second())
+        }
+        DataType::Time32(_) | DataType::Time64(_) => {
+            time_like(array, DataType::UInt32, |x| x.second())
+        }
+        DataType::Timestamp(time_unit, Some(timezone_str)) => {
+            let time_unit = *time_unit;
+            let timezone = parse_offset(timezone_str);
+
+            let array = array.as_any().downcast_ref().unwrap();
+
+            if let Ok(timezone) = timezone {
+                Ok(extract_impl(array, time_unit, timezone, |x| x.second()))
+            } else {
+                chrono_tz(array, time_unit, timezone_str, |x| x.second())
+            }
+        }
+        dt => Err(ArrowError::NotYetImplemented(format!(
+            "\"second\" does not support type {:?}",
+            dt
+        ))),
+    }
+}
+
+fn time_like<F, O>(array: &dyn Array, data_type: DataType, op: F) -> Result<PrimitiveArray<O>>
+where
+    O: NativeType,
+    F: Fn(chrono::NaiveTime) -> O,
+{
+    match array.data_type() {
+        DataType::Time32(TimeUnit::Second) => {
+            let array = array
+                .as_any()
+                .downcast_ref::<PrimitiveArray<i32>>()
+                .unwrap();
+            Ok(unary(array, |x| op(time32s_to_time(x)), data_type))
+        }
+        DataType::Time32(TimeUnit::Millisecond) => {
+            let array = array
+                .as_any()
+                .downcast_ref::<PrimitiveArray<i32>>()
+                .unwrap();
+            Ok(unary(array, |x| op(time32ms_to_time(x)), data_type))
+        }
+        DataType::Time64(TimeUnit::Microsecond) => {
+            let array = array
+                .as_any()
+                .downcast_ref::<PrimitiveArray<i64>>()
+                .unwrap();
+            Ok(unary(array, |x| op(time64us_to_time(x)), data_type))
+        }
+        DataType::Time64(TimeUnit::Nanosecond) => {
+            let array = array
+                .as_any()
+                .downcast_ref::<PrimitiveArray<i64>>()
+                .unwrap();
+            Ok(unary(array, |x| op(time64ns_to_time(x)), data_type))
+        }
+        _ => unreachable!(),
     }
 }
 
@@ -244,6 +247,32 @@ pub fn hour(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
 /// assert_eq!(can_hour(&data_type), false);
 /// ```
 pub fn can_hour(data_type: &DataType) -> bool {
+    matches!(
+        data_type,
+        DataType::Time32(TimeUnit::Second)
+            | DataType::Time32(TimeUnit::Millisecond)
+            | DataType::Time64(TimeUnit::Microsecond)
+            | DataType::Time64(TimeUnit::Nanosecond)
+            | DataType::Date32
+            | DataType::Date64
+            | DataType::Timestamp(_, _)
+    )
+}
+
+pub fn can_minute(data_type: &DataType) -> bool {
+    matches!(
+        data_type,
+        DataType::Time32(TimeUnit::Second)
+            | DataType::Time32(TimeUnit::Millisecond)
+            | DataType::Time64(TimeUnit::Microsecond)
+            | DataType::Time64(TimeUnit::Nanosecond)
+            | DataType::Date32
+            | DataType::Date64
+            | DataType::Timestamp(_, _)
+    )
+}
+
+pub fn can_second(data_type: &DataType) -> bool {
     matches!(
         data_type,
         DataType::Time32(TimeUnit::Second)
