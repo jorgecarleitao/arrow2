@@ -7,7 +7,6 @@ use super::{
     utils::{count_zeros, fmt, get_bit, get_bit_unchecked, BitChunk, BitChunks, BitmapIter},
     MutableBitmap,
 };
-use num_traits::zero;
 
 /// An immutable container whose API is optimized to handle bitmaps. All quantities on this
 /// container's API are measured in bits.
