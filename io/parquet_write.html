@@ -154,6 +154,7 @@ as an higher-level API to abstract away some of this work into an easy to use AP
 <li><code>column chunk</code>: composed of multiple pages (similar of an <code>Array</code>)</li>
 <li><code>row group</code>: a group of columns with the same length (similar of a <code>RecordBatch</code> in Arrow)</li>
 </ul>
+<h2 id="single-threaded"><a class="header" href="#single-threaded">Single threaded</a></h2>
 <p>Here is an example of how to write a single column chunk into a single row group:</p>
 <pre><pre class="playground"><code class="language-rust">use std::fs::File;
 use std::iter::once;
@@ -282,6 +283,108 @@ fn main() -&gt; Result&lt;()&gt; {
     let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(array)])?;
 
     write_batch(&quot;test.parquet&quot;, batch)
+}
+</code></pre></pre>
+<h2 id="multi-threaded-writing"><a class="header" href="#multi-threaded-writing">Multi-threaded writing</a></h2>
+<p>As user of this crate, you will need to decide how you would like to parallelize,
+and whether order is important. Below you can find an example where we
+use <a href="https://crates.io/crates/rayon"><code>rayon</code></a> to perform the heavy lift of
+encoding and compression.
+This operation is <a href="https://en.wikipedia.org/wiki/Embarrassingly_parallel">embarrassingly parallel</a>
+and results in a speed up equal to minimum between the number of cores
+and number of columns in the record.</p>
+<pre><pre class="playground"><code class="language-rust">/// Example demonstrating how to write to parquet in parallel.
+use std::sync::Arc;
+
+use rayon::prelude::*;
+
+use arrow2::{
+    array::*, datatypes::PhysicalType, error::Result, io::parquet::write::*,
+    record_batch::RecordBatch,
+};
+
+fn parallel_write(path: &amp;str, batch: &amp;RecordBatch) -&gt; Result&lt;()&gt; {
+    let options = WriteOptions {
+        write_statistics: true,
+        compression: Compression::Snappy,
+        version: Version::V2,
+    };
+    let encodings = batch.schema().fields().par_iter().map(|field| {
+        match field.data_type().to_physical_type() {
+            // let's be fancy and use delta-encoding for binary fields
+            PhysicalType::Binary
+            | PhysicalType::LargeBinary
+            | PhysicalType::Utf8
+            | PhysicalType::LargeUtf8 =&gt; Encoding::DeltaLengthByteArray,
+            // remaining is plain
+            _ =&gt; Encoding::Plain,
+        }
+    });
+
+    let parquet_schema = to_parquet_schema(batch.schema())?;
+
+    // write batch to pages; parallelized by rayon
+    let columns = batch
+        .columns()
+        .par_iter()
+        .zip(parquet_schema.columns().to_vec().into_par_iter())
+        .zip(encodings)
+        .map(|((array, descriptor), encoding)| {
+            let array = array.clone();
+
+            // create encoded and compressed pages this column
+            Ok(array_to_pages(array, descriptor, options, encoding)?.collect::&lt;Vec&lt;_&gt;&gt;())
+        })
+        .collect::&lt;Result&lt;Vec&lt;_&gt;&gt;&gt;()?;
+
+    // create the iterator over groups (one in this case)
+    // (for more batches, create the iterator from them here)
+    let row_groups = std::iter::once(Result::Ok(DynIter::new(
+        columns
+            .into_iter()
+            .map(|column| Ok(DynIter::new(column.into_iter()))),
+    )));
+
+    // Create a new empty file
+    let mut file = std::fs::File::create(path)?;
+
+    // Write the file.
+    let _file_size = write_file(
+        &amp;mut file,
+        row_groups,
+        batch.schema(),
+        parquet_schema,
+        options,
+        None,
+    )?;
+
+    Ok(())
+}
+
+fn create_batch(size: usize) -&gt; Result&lt;RecordBatch&gt; {
+    let c1: Int32Array = (0..size)
+        .map(|x| if x % 9 == 0 { None } else { Some(x as i32) })
+        .collect();
+    let c2: Utf8Array&lt;i32&gt; = (0..size)
+        .map(|x| {
+            if x % 8 == 0 {
+                None
+            } else {
+                Some(x.to_string())
+            }
+        })
+        .collect();
+
+    RecordBatch::try_from_iter([
+        (&quot;c1&quot;, Arc::new(c1) as Arc&lt;dyn Array&gt;),
+        (&quot;c2&quot;, Arc::new(c2) as Arc&lt;dyn Array&gt;),
+    ])
+}
+
+fn main() -&gt; Result&lt;()&gt; {
+    let batch = create_batch(10_000_000)?;
+
+    parallel_write(&quot;example.parquet&quot;, &amp;batch)
 }
 </code></pre></pre>
 
