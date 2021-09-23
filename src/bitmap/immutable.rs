@@ -7,6 +7,7 @@ use super::{
     utils::{count_zeros, fmt, get_bit, get_bit_unchecked, BitChunk, BitChunks, BitmapIter},
     MutableBitmap,
 };
+use num_traits::zero;
 
 /// An immutable container whose API is optimized to handle bitmaps. All quantities on this
 /// container's API are measured in bits.
@@ -126,8 +127,11 @@ impl Bitmap {
             // count the null values in the slice
             self.null_count = count_zeros(&self.bytes, offset, length);
         } else {
-            // subtract the null count of the chunk we slice off
-            self.null_count -= count_zeros(&self.bytes, self.offset, self.offset + offset)
+            // subtract the null count of the chunks we slice off
+            let start_end = self.offset + offset + length;
+            let head_count = count_zeros(&self.bytes, self.offset, offset);
+            let tail_count = count_zeros(&self.bytes, start_end, self.length - length - offset);
+            self.null_count -= head_count + tail_count;
         }
         self.offset += offset;
         self.length = length;
