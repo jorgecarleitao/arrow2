@@ -18,6 +18,33 @@ fn add_benchmark(c: &mut Criterion) {
                 assert!(r.null_count() > 0);
             })
         });
+
+        let offset = ((size as f64) * 0.1) as usize;
+        let len = ((size as f64) * 0.85) as usize;
+
+        c.bench_function(
+            &format!("bitmap count zeros 85% slice 2^{}", log2_size),
+            |b| {
+                b.iter(|| {
+                    let r = bitmap.clone().slice(offset, len);
+                    assert!(r.null_count() > 0);
+                })
+            },
+        );
+
+        let offset = ((size as f64) * 0.2) as usize;
+        let len = ((size as f64) * 0.51) as usize;
+
+        c.bench_function(
+            &format!("bitmap count zeros 51% slice 2^{}", log2_size),
+            |b| {
+                b.iter(|| {
+                    let r = bitmap.clone().slice(offset, len);
+                    assert!(r.null_count() > 0);
+                })
+            },
+        );
+
         let bitmap1 = bitmap.clone().slice(1, size - 1);
         c.bench_function(&format!("bitmap not 2^{}", log2_size), |b| {
             b.iter(|| {
