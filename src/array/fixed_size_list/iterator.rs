@@ -6,8 +6,8 @@ use crate::{
 use super::FixedSizeListArray;
 
 impl IterableListArray for FixedSizeListArray {
-    fn value(&self, i: usize) -> Box<dyn Array> {
-        FixedSizeListArray::value(self, i)
+    unsafe fn value_unchecked(&self, i: usize) -> Box<dyn Array> {
+        FixedSizeListArray::value_unchecked(self, i)
     }
 }
 

@@ -165,9 +165,24 @@ impl<O: Offset> Utf8Array<O> {
     /// # Panic
     /// This function panics iff `offset + length >= self.len()`.
     pub fn slice(&self, offset: usize, length: usize) -> Self {
-        let validity = self.validity.clone().map(|x| x.slice(offset, length));
+        assert!(
+            offset + length <= self.len(),
+            "the offset of the new Buffer cannot exceed the existing length"
+        );
+        unsafe { self.slice_unchecked(offset, length) }
+    }
+    /// Returns a slice of this [`Utf8Array`].
+    /// # Implementation
+    /// This operation is `O(1)` as it amounts to essentially increase two ref counts.
+    /// # Safety
+    /// The caller must ensure that `offset + length < self.len()`.
+    pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
+        let validity = self
+            .validity
+            .clone()
+            .map(|x| x.slice_unchecked(offset, length));
         // + 1: `length == 0` implies that we take the first offset.
-        let offsets = self.offsets.clone().slice(offset, length + 1);
+        let offsets = self.offsets.clone().slice_unchecked(offset, length + 1);
         Self {
             data_type: self.data_type.clone(),
             offsets,
@@ -224,6 +239,9 @@ impl<O: Offset> Array for Utf8Array<O> {
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+    unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
+        Box::new(self.slice_unchecked(offset, length))
     }
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.with_validity(validity))

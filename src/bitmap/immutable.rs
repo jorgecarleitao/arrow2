@@ -108,11 +108,19 @@ impl Bitmap {
 
     /// Slices `self`, offseting by `offset` and truncating up to `length` bits.
     /// # Panic
-    /// Panics iff `self.offset + offset + length <= self.bytes.len() * 8`, i.e. if the offset and `length`
+    /// Panics iff `self.offset + offset + length >= self.bytes.len() * 8`, i.e. if the offset and `length`
     /// exceeds the allocated capacity of `self`.
     #[inline]
-    pub fn slice(mut self, offset: usize, length: usize) -> Self {
+    pub fn slice(self, offset: usize, length: usize) -> Self {
         assert!(offset + length <= self.length);
+        unsafe { self.slice_unchecked(offset, length) }
+    }
+
+    /// Slices `self`, offseting by `offset` and truncating up to `length` bits.
+    /// # Safety
+    /// The caller must ensure that `self.offset + offset + length <= self.bytes.len() * 8`
+    #[inline]
+    pub unsafe fn slice_unchecked(mut self, offset: usize, length: usize) -> Self {
         self.offset += offset;
         self.length = length;
         self.null_count = count_zeros(&self.bytes, self.offset, self.length);

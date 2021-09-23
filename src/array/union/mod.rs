@@ -190,6 +190,23 @@ impl UnionArray {
             offset: self.offset + offset,
         }
     }
+
+    /// Returns a slice of this [`UnionArray`].
+    /// # Implementation
+    /// This operation is `O(F)` where `F` is the number of fields.
+    /// # Safety
+    /// The caller must ensure that `offset + length < self.len()`.
+    #[inline]
+    pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
+        Self {
+            data_type: self.data_type.clone(),
+            fields: self.fields.clone(),
+            fields_hash: self.fields_hash.clone(),
+            types: self.types.clone().slice_unchecked(offset, length),
+            offsets: self.offsets.clone(),
+            offset: self.offset + offset,
+        }
+    }
 }
 
 impl Array for UnionArray {
@@ -211,6 +228,9 @@ impl Array for UnionArray {
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+    unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
+        Box::new(self.slice_unchecked(offset, length))
     }
     fn with_validity(&self, _: Option<Bitmap>) -> Box<dyn Array> {
         panic!("cannot set validity of a union array")

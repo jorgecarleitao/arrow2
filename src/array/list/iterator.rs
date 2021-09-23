@@ -32,7 +32,9 @@ impl<'a, A: IterableListArray> Iterator for ListValuesIter<'a, A> {
         }
         let old = self.index;
         self.index += 1;
-        Some(self.array.value(old))
+        // Safety:
+        // self.end is maximized by the length of the array
+        Some(unsafe { self.array.value_unchecked(old) })
     }
 
     #[inline]
@@ -50,14 +52,16 @@ impl<'a, A: IterableListArray> DoubleEndedIterator for ListValuesIter<'a, A> {
             None
         } else {
             self.end -= 1;
-            Some(self.array.value(self.end))
+            // Safety:
+            // self.end is maximized by the length of the array
+            Some(unsafe { self.array.value_unchecked(self.end) })
         }
     }
 }
 
 impl<O: Offset> IterableListArray for ListArray<O> {
-    fn value(&self, i: usize) -> Box<dyn Array> {
-        ListArray::<O>::value(self, i)
+    unsafe fn value_unchecked(&self, i: usize) -> Box<dyn Array> {
+        ListArray::<O>::value_unchecked(self, i)
     }
 }
 
