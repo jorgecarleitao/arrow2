@@ -175,7 +175,7 @@ impl<O: Offset> Utf8Array<O> {
     /// # Implementation
     /// This operation is `O(1)` as it amounts to essentially increase two ref counts.
     /// # Safety
-    /// The caller must ensure that `offset + length < self.len()`.
+    /// The caller must ensure that `offset + length <= self.len()`.
     pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
         let validity = self
             .validity

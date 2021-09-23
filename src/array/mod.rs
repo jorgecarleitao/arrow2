@@ -93,7 +93,7 @@ pub trait Array: std::fmt::Debug + Send + Sync {
     /// This operation is `O(1)` over `len`, as it amounts to increase two ref counts
     /// and moving the struct to the heap.
     /// # Safety
-    /// The caller must ensure that `offset + length < self.len()`
+    /// The caller must ensure that `offset + length <=| self.len()`
     unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array>;
 
     /// Sets the validity bitmap on this [`Array`].
@@ -434,8 +434,8 @@ fn display_fmt<T: std::fmt::Display, I: IntoIterator<Item = Option<T>>>(
 
 /// Trait that list arrays implement for the purposes of DRY.
 pub trait IterableListArray: Array {
-    // # Safety:
-    // The caller must ensure that `i < self.len()`
+    /// # Safety:
+    /// The caller must ensure that `i < self.len()`
     unsafe fn value_unchecked(&self, i: usize) -> Box<dyn Array>;
 }
 

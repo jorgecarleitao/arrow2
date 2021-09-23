@@ -64,7 +64,7 @@ impl FixedSizeListArray {
     /// # Implementation
     /// This operation is `O(1)`.
     /// # Panics
-    /// panics iff `offset + length >= self.len()`
+    /// panics iff `offset + length > self.len()`
     pub fn slice(&self, offset: usize, length: usize) -> Self {
         assert!(
             offset + length <= self.len(),
@@ -77,7 +77,7 @@ impl FixedSizeListArray {
     /// # Implementation
     /// This operation is `O(1)`.
     /// # Safety
-    /// The caller must ensure that `offset + length < self.len()`.
+    /// The caller must ensure that `offset + length <= self.len()`.
     pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
         let validity = self
             .validity

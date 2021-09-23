@@ -116,7 +116,7 @@ impl StructArray {
     /// # Implementation
     /// This operation is `O(F)` where `F` is the number of fields.
     /// # Safety
-    /// The caller must ensure that `offset + length < self.len()`.
+    /// The caller must ensure that `offset + length <= self.len()`.
     pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
         let validity = self
             .validity

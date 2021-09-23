@@ -101,7 +101,7 @@ impl<O: Offset> BinaryArray<O> {
     /// # Implementation
     /// This function is `O(1)`: all data will be shared between both arrays.
     /// # Safety
-    /// The caller must ensure that `offset + length < self.len()`.
+    /// The caller must ensure that `offset + length <= self.len()`.
     pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
         let validity = self
             .validity

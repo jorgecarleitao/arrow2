@@ -51,7 +51,7 @@ impl FixedSizeBinaryArray {
     /// # Implementation
     /// This operation is `O(1)` as it amounts to increase 3 ref counts.
     /// # Panics
-    /// panics iff `offset + length >= self.len()`
+    /// panics iff `offset + length > self.len()`
     pub fn slice(&self, offset: usize, length: usize) -> Self {
         assert!(
             offset + length <= self.len(),
@@ -64,7 +64,7 @@ impl FixedSizeBinaryArray {
     /// # Implementation
     /// This operation is `O(1)` as it amounts to increase 3 ref counts.
     /// # Safety
-    /// The caller must ensure that `offset + length < self.len()`.
+    /// The caller must ensure that `offset + length <= self.len()`.
     pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
         let validity = self
             .validity

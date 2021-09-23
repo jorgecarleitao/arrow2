@@ -118,7 +118,7 @@ impl Bitmap {
 
     /// Slices `self`, offseting by `offset` and truncating up to `length` bits.
     /// # Safety
-    /// The caller must ensure that `self.offset + offset + length <= self.bytes.len() * 8`
+    /// The caller must ensure that `self.offset + offset + length <= self.len()`
     #[inline]
     pub unsafe fn slice_unchecked(mut self, offset: usize, length: usize) -> Self {
         self.offset += offset;
