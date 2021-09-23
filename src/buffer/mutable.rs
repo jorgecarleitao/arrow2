@@ -6,13 +6,15 @@ use crate::trusted_len::TrustedLen;
 use crate::types::{BitChunk, NativeType};
 
 use super::bytes::{Bytes, Deallocation};
+#[cfg(feature = "cache_aligned")]
+use crate::vec::AlignedVec as Vec;
 
 use super::immutable::Buffer;
 
 /// A [`MutableBuffer`] is this crates' interface to store types that are byte-like such as `i32`.
-/// It behaves like a [`Vec`], with the following differences:
-/// * memory is allocated along cache lines and in multiple of 64 bytes.
-/// * it can only hold types supported by the arrow format (`u8-u64`, `i8-i128`, `f32,f64` and [`crate::types::days_ms`])
+/// It behaves like a [`Vec`] but can only hold types supported by the arrow format
+/// (`u8-u64`, `i8-i128`, `f32,f64`, [`crate::types::days_ms`] and [`crate::types::months_days_ns`]).
+/// When the feature `cache_aligned` is active, memory is allocated along cache lines and in multiple of 64 bytes.
 /// A [`MutableBuffer`] can be converted to a [`Buffer`] via `.into`.
 /// # Example
 /// ```
@@ -26,6 +28,14 @@ use super::immutable::Buffer;
 /// ```
 pub struct MutableBuffer<T: NativeType> {
     data: Vec<T>,
+}
+
+#[cfg(not(feature = "cache_aligned"))]
+#[cfg_attr(docsrs, doc(cfg(not(feature = "cache_aligned"))))]
+impl<T: NativeType> From<MutableBuffer<T>> for Vec<T> {
+    fn from(data: MutableBuffer<T>) -> Self {
+        data.data
+    }
 }
 
 impl<T: NativeType> std::fmt::Debug for MutableBuffer<T> {
@@ -55,6 +65,14 @@ impl<T: NativeType> MutableBuffer<T> {
         }
     }
 
+    /// Takes ownership of [`Vec`].
+    #[cfg(not(feature = "cache_aligned"))]
+    #[cfg_attr(docsrs, doc(cfg(not(feature = "cache_aligned"))))]
+    #[inline]
+    pub fn from_vec(data: Vec<T>) -> Self {
+        Self { data }
+    }
+
     /// Allocates a new [MutableBuffer] with `len` and capacity to be at least `len`
     /// where data is zeroed.
     /// # Example
@@ -68,9 +86,11 @@ impl<T: NativeType> MutableBuffer<T> {
     /// ```
     #[inline]
     pub fn from_len_zeroed(len: usize) -> Self {
-        Self {
-            data: vec![T::default(); len],
-        }
+        #[cfg(not(feature = "cache_aligned"))]
+        let data = vec![T::default(); len];
+        #[cfg(feature = "cache_aligned")]
+        let data = Vec::from_len_zeroed(len);
+        Self { data }
     }
 
     /// Ensures that this buffer has at least `self.len + additional` bytes. This re-allocates iff

@@ -7,6 +7,8 @@ use std::{ptr::NonNull, sync::Arc};
 
 use crate::ffi;
 use crate::types::NativeType;
+#[cfg(feature = "cache_aligned")]
+use crate::vec::AlignedVec as Vec;
 
 /// Mode of deallocating memory regions
 pub enum Deallocation {
@@ -89,7 +91,10 @@ impl<T: NativeType> Drop for Bytes<T> {
     fn drop(&mut self) {
         match &self.deallocation {
             Deallocation::Native(capacity) => unsafe {
-                Vec::from_raw_parts(self.ptr.as_ptr(), self.len, *capacity);
+                #[cfg(feature = "cache_aligned")]
+                let _ = Vec::from_raw_parts(self.ptr, self.len, *capacity);
+                #[cfg(not(feature = "cache_aligned"))]
+                let _ = Vec::from_raw_parts(self.ptr.as_ptr(), self.len, *capacity);
             },
             // foreign interface knows how to deallocate itself.
             Deallocation::Foreign(_) => (),

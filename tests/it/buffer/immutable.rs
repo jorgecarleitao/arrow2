@@ -67,3 +67,11 @@ fn debug() {
     let a = format!("{:?}", buffer);
     assert_eq!(a, "[1, 2]")
 }
+
+#[cfg(not(feature = "cache_aligned"))]
+#[test]
+fn from_vec() {
+    let buffer = Buffer::<i32>::from_vec(vec![0, 1, 2]);
+    assert_eq!(buffer.len(), 3);
+    assert_eq!(buffer.as_slice(), &[0, 1, 2]);
+}

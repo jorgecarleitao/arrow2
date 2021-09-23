@@ -4,6 +4,8 @@
 
 #[macro_use]
 pub mod array;
+#[cfg(feature = "cache_aligned")]
+mod alloc;
 pub mod bitmap;
 pub mod buffer;
 mod endianess;
@@ -11,6 +13,8 @@ pub mod error;
 pub mod scalar;
 pub mod trusted_len;
 pub mod types;
+#[cfg(feature = "cache_aligned")]
+mod vec;
 
 #[cfg(feature = "compute")]
 #[cfg_attr(docsrs, doc(cfg(feature = "compute")))]
