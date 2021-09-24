@@ -28,151 +28,91 @@ use crate::types::NaturalDataType;
 
 use super::arity::unary;
 
+macro_rules! date_like {
+    ($extract:ident, $array:ident, $data_type:path) => {
+        match $array.data_type() {
+            DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, None) => {
+                date_variants($array, $data_type, |x| x.$extract())
+            }
+            DataType::Timestamp(time_unit, Some(timezone_str)) => {
+                let array = $array.as_any().downcast_ref().unwrap();
+
+                if let Ok(timezone) = parse_offset(timezone_str) {
+                    Ok(extract_impl(array, *time_unit, timezone, |x| x.$extract()))
+                } else {
+                    chrono_tz(array, *time_unit, timezone_str, |x| x.$extract())
+                }
+            }
+            dt => Err(ArrowError::NotYetImplemented(format!(
+                "\"{}\" does not support type {:?}",
+                stringify!($extract),
+                dt
+            ))),
+        }
+    };
+}
+
 /// Extracts the years of a temporal array as [`PrimitiveArray<i32>`].
 /// Use [`can_year`] to check if this operation is supported for the target [`DataType`].
 pub fn year(array: &dyn Array) -> Result<PrimitiveArray<i32>> {
-    match array.data_type() {
-        DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, None) => {
-            date_variants(array, DataType::Int32, |x| x.year())
-        }
-        DataType::Timestamp(time_unit, Some(timezone_str)) => {
-            let array = array.as_any().downcast_ref().unwrap();
-
-            if let Ok(timezone) = parse_offset(timezone_str) {
-                Ok(extract_impl(array, *time_unit, timezone, |x| x.year()))
-            } else {
-                chrono_tz(array, *time_unit, timezone_str, |x| x.year())
-            }
-        }
-        dt => Err(ArrowError::NotYetImplemented(format!(
-            "\"year\" does not support type {:?}",
-            dt
-        ))),
-    }
+    date_like!(year, array, DataType::Int32)
 }
 
 /// Extracts the months of a temporal array as [`PrimitiveArray<u32>`].
 /// Use [`can_month`] to check if this operation is supported for the target [`DataType`].
 pub fn month(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
-    match array.data_type() {
-        DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, None) => {
-            date_variants(array, DataType::UInt32, |x| x.month())
-        }
-        DataType::Timestamp(time_unit, Some(timezone_str)) => {
-            let array = array.as_any().downcast_ref().unwrap();
-
-            if let Ok(timezone) = parse_offset(timezone_str) {
-                Ok(extract_impl(array, *time_unit, timezone, |x| x.month()))
-            } else {
-                chrono_tz(array, *time_unit, timezone_str, |x| x.month())
-            }
-        }
-        dt => Err(ArrowError::NotYetImplemented(format!(
-            "\"month\" does not support type {:?}",
-            dt
-        ))),
-    }
+    date_like!(month, array, DataType::UInt32)
 }
 
 /// Extracts the days of a temporal array as [`PrimitiveArray<u32>`].
 /// Use [`can_day`] to check if this operation is supported for the target [`DataType`].
 pub fn day(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
-    match array.data_type() {
-        DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, None) => {
-            date_variants(array, DataType::UInt32, |x| x.day())
-        }
-        DataType::Timestamp(time_unit, Some(timezone_str)) => {
-            let array = array.as_any().downcast_ref().unwrap();
+    date_like!(day, array, DataType::UInt32)
+}
 
-            if let Ok(timezone) = parse_offset(timezone_str) {
-                Ok(extract_impl(array, *time_unit, timezone, |x| x.day()))
-            } else {
-                chrono_tz(array, *time_unit, timezone_str, |x| x.day())
+macro_rules! time_like {
+    ($extract:ident, $array:ident, $data_type:path) => {
+        match $array.data_type() {
+            DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, None) => {
+                date_variants($array, $data_type, |x| x.$extract())
             }
+            DataType::Time32(_) | DataType::Time64(_) => {
+                time_variants($array, DataType::UInt32, |x| x.$extract())
+            }
+            DataType::Timestamp(time_unit, Some(timezone_str)) => {
+                let array = $array.as_any().downcast_ref().unwrap();
+
+                if let Ok(timezone) = parse_offset(timezone_str) {
+                    Ok(extract_impl(array, *time_unit, timezone, |x| x.$extract()))
+                } else {
+                    chrono_tz(array, *time_unit, timezone_str, |x| x.$extract())
+                }
+            }
+            dt => Err(ArrowError::NotYetImplemented(format!(
+                "\"{}\" does not support type {:?}",
+                stringify!($extract),
+                dt
+            ))),
         }
-        dt => Err(ArrowError::NotYetImplemented(format!(
-            "\"day\" does not support type {:?}",
-            dt
-        ))),
-    }
+    };
 }
 
 /// Extracts the hours of a temporal array as [`PrimitiveArray<u32>`].
 /// Use [`can_hour`] to check if this operation is supported for the target [`DataType`].
 pub fn hour(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
-    match array.data_type() {
-        DataType::Date32 | DataType::Date64 | &DataType::Timestamp(_, None) => {
-            date_variants(array, DataType::UInt32, |x| x.hour())
-        }
-        DataType::Time32(_) | DataType::Time64(_) => {
-            time_variants(array, DataType::UInt32, |x| x.hour())
-        }
-        DataType::Timestamp(time_unit, Some(timezone_str)) => {
-            let array = array.as_any().downcast_ref().unwrap();
-
-            if let Ok(timezone) = parse_offset(timezone_str) {
-                Ok(extract_impl(array, *time_unit, timezone, |x| x.hour()))
-            } else {
-                chrono_tz(array, *time_unit, timezone_str, |x| x.hour())
-            }
-        }
-        dt => Err(ArrowError::NotYetImplemented(format!(
-            "\"hour\" does not support type {:?}",
-            dt
-        ))),
-    }
+    time_like!(hour, array, DataType::UInt32)
 }
 
 /// Extracts the minutes of a temporal array as [`PrimitiveArray<u32>`].
 /// Use [`can_minute`] to check if this operation is supported for the target [`DataType`].
 pub fn minute(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
-    match array.data_type() {
-        DataType::Date32 | DataType::Date64 | &DataType::Timestamp(_, None) => {
-            date_variants(array, DataType::UInt32, |x| x.minute())
-        }
-        DataType::Time32(_) | DataType::Time64(_) => {
-            time_variants(array, DataType::UInt32, |x| x.minute())
-        }
-        DataType::Timestamp(time_unit, Some(timezone_str)) => {
-            let array = array.as_any().downcast_ref().unwrap();
-
-            if let Ok(timezone) = parse_offset(timezone_str) {
-                Ok(extract_impl(array, *time_unit, timezone, |x| x.minute()))
-            } else {
-                chrono_tz(array, *time_unit, timezone_str, |x| x.minute())
-            }
-        }
-        dt => Err(ArrowError::NotYetImplemented(format!(
-            "\"minute\" does not support type {:?}",
-            dt
-        ))),
-    }
+    time_like!(minute, array, DataType::UInt32)
 }
 
 /// Extracts the seconds of a temporal array as [`PrimitiveArray<u32>`].
 /// Use [`can_second`] to check if this operation is supported for the target [`DataType`].
 pub fn second(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
-    match array.data_type() {
-        DataType::Date32 | DataType::Date64 | &DataType::Timestamp(_, None) => {
-            date_variants(array, DataType::UInt32, |x| x.second())
-        }
-        DataType::Time32(_) | DataType::Time64(_) => {
-            time_variants(array, DataType::UInt32, |x| x.second())
-        }
-        DataType::Timestamp(time_unit, Some(timezone_str)) => {
-            let array = array.as_any().downcast_ref().unwrap();
-
-            if let Ok(timezone) = parse_offset(timezone_str) {
-                Ok(extract_impl(array, *time_unit, timezone, |x| x.second()))
-            } else {
-                chrono_tz(array, *time_unit, timezone_str, |x| x.second())
-            }
-        }
-        dt => Err(ArrowError::NotYetImplemented(format!(
-            "\"second\" does not support type {:?}",
-            dt
-        ))),
-    }
+    time_like!(second, array, DataType::UInt32)
 }
 
 pub fn date_variants<F, O>(
