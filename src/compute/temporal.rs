@@ -33,7 +33,7 @@ use super::arity::unary;
 pub fn year(array: &dyn Array) -> Result<PrimitiveArray<i32>> {
     match array.data_type() {
         DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, None) => {
-            date_like(array, DataType::Int32, |x| x.year())
+            date_variants(array, DataType::Int32, |x| x.year())
         }
         DataType::Timestamp(time_unit, Some(timezone_str)) => {
             let time_unit = *time_unit;
@@ -59,7 +59,7 @@ pub fn year(array: &dyn Array) -> Result<PrimitiveArray<i32>> {
 pub fn month(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
     match array.data_type() {
         DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, None) => {
-            date_like(array, DataType::UInt32, |x| x.month())
+            date_variants(array, DataType::UInt32, |x| x.month())
         }
         DataType::Timestamp(time_unit, Some(timezone_str)) => {
             let time_unit = *time_unit;
@@ -85,7 +85,7 @@ pub fn month(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
 pub fn day(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
     match array.data_type() {
         DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, None) => {
-            date_like(array, DataType::UInt32, |x| x.day())
+            date_variants(array, DataType::UInt32, |x| x.day())
         }
         DataType::Timestamp(time_unit, Some(timezone_str)) => {
             let time_unit = *time_unit;
@@ -111,10 +111,10 @@ pub fn day(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
 pub fn hour(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
     match array.data_type() {
         DataType::Date32 | DataType::Date64 | &DataType::Timestamp(_, None) => {
-            date_like(array, DataType::UInt32, |x| x.hour())
+            date_variants(array, DataType::UInt32, |x| x.hour())
         }
         DataType::Time32(_) | DataType::Time64(_) => {
-            time_like(array, DataType::UInt32, |x| x.hour())
+            time_variants(array, DataType::UInt32, |x| x.hour())
         }
         DataType::Timestamp(time_unit, Some(timezone_str)) => {
             let time_unit = *time_unit;
@@ -140,10 +140,10 @@ pub fn hour(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
 pub fn minute(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
     match array.data_type() {
         DataType::Date32 | DataType::Date64 | &DataType::Timestamp(_, None) => {
-            date_like(array, DataType::UInt32, |x| x.minute())
+            date_variants(array, DataType::UInt32, |x| x.minute())
         }
         DataType::Time32(_) | DataType::Time64(_) => {
-            time_like(array, DataType::UInt32, |x| x.minute())
+            time_variants(array, DataType::UInt32, |x| x.minute())
         }
         DataType::Timestamp(time_unit, Some(timezone_str)) => {
             let time_unit = *time_unit;
@@ -169,10 +169,10 @@ pub fn minute(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
 pub fn second(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
     match array.data_type() {
         DataType::Date32 | DataType::Date64 | &DataType::Timestamp(_, None) => {
-            date_like(array, DataType::UInt32, |x| x.second())
+            date_variants(array, DataType::UInt32, |x| x.second())
         }
         DataType::Time32(_) | DataType::Time64(_) => {
-            time_like(array, DataType::UInt32, |x| x.second())
+            time_variants(array, DataType::UInt32, |x| x.second())
         }
         DataType::Timestamp(time_unit, Some(timezone_str)) => {
             let time_unit = *time_unit;
@@ -193,7 +193,11 @@ pub fn second(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
     }
 }
 
-pub fn date_like<F, O>(array: &dyn Array, data_type: DataType, op: F) -> Result<PrimitiveArray<O>>
+pub fn date_variants<F, O>(
+    array: &dyn Array,
+    data_type: DataType,
+    op: F,
+) -> Result<PrimitiveArray<O>>
 where
     O: NativeType,
     F: Fn(chrono::NaiveDateTime) -> O,
@@ -230,7 +234,7 @@ where
     }
 }
 
-fn time_like<F, O>(array: &dyn Array, data_type: DataType, op: F) -> Result<PrimitiveArray<O>>
+fn time_variants<F, O>(array: &dyn Array, data_type: DataType, op: F) -> Result<PrimitiveArray<O>>
 where
     O: NativeType,
     F: Fn(chrono::NaiveTime) -> O,
