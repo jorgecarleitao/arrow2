@@ -71,6 +71,30 @@ fn naive_timestamp_micro_hour() {
 }
 
 #[test]
+fn date64_weekday() {
+    let array = Int64Array::from(&[Some(1514764800000), None, Some(86400000)]).to(DataType::Date64);
+
+    let result = weekday(&array).unwrap();
+    let expected = UInt32Array::from(&[Some(1), None, Some(5)]);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn date64_iso_week() {
+    let array = Int64Array::from(&[
+        Some(1514764800000),
+        None,
+        Some(1515456000000),
+        Some(1514678400000),
+    ])
+    .to(DataType::Date64);
+
+    let result = iso_week(&array).unwrap();
+    let expected = UInt32Array::from(&[Some(1), None, Some(2), Some(52)]);
+    assert_eq!(result, expected);
+}
+
+#[test]
 fn date64_year() {
     let array = Int64Array::from(&[Some(1514764800000), None]).to(DataType::Date64);
 
