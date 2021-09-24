@@ -36,15 +36,12 @@ pub fn year(array: &dyn Array) -> Result<PrimitiveArray<i32>> {
             date_variants(array, DataType::Int32, |x| x.year())
         }
         DataType::Timestamp(time_unit, Some(timezone_str)) => {
-            let time_unit = *time_unit;
-            let timezone = parse_offset(timezone_str);
-
             let array = array.as_any().downcast_ref().unwrap();
 
-            if let Ok(timezone) = timezone {
-                Ok(extract_impl(array, time_unit, timezone, |x| x.year()))
+            if let Ok(timezone) = parse_offset(timezone_str) {
+                Ok(extract_impl(array, *time_unit, timezone, |x| x.year()))
             } else {
-                chrono_tz(array, time_unit, timezone_str, |x| x.year())
+                chrono_tz(array, *time_unit, timezone_str, |x| x.year())
             }
         }
         dt => Err(ArrowError::NotYetImplemented(format!(
@@ -62,15 +59,12 @@ pub fn month(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
             date_variants(array, DataType::UInt32, |x| x.month())
         }
         DataType::Timestamp(time_unit, Some(timezone_str)) => {
-            let time_unit = *time_unit;
-            let timezone = parse_offset(timezone_str);
-
             let array = array.as_any().downcast_ref().unwrap();
 
-            if let Ok(timezone) = timezone {
-                Ok(extract_impl(array, time_unit, timezone, |x| x.month()))
+            if let Ok(timezone) = parse_offset(timezone_str) {
+                Ok(extract_impl(array, *time_unit, timezone, |x| x.month()))
             } else {
-                chrono_tz(array, time_unit, timezone_str, |x| x.month())
+                chrono_tz(array, *time_unit, timezone_str, |x| x.month())
             }
         }
         dt => Err(ArrowError::NotYetImplemented(format!(
@@ -88,15 +82,12 @@ pub fn day(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
             date_variants(array, DataType::UInt32, |x| x.day())
         }
         DataType::Timestamp(time_unit, Some(timezone_str)) => {
-            let time_unit = *time_unit;
-            let timezone = parse_offset(timezone_str);
-
             let array = array.as_any().downcast_ref().unwrap();
 
-            if let Ok(timezone) = timezone {
-                Ok(extract_impl(array, time_unit, timezone, |x| x.day()))
+            if let Ok(timezone) = parse_offset(timezone_str) {
+                Ok(extract_impl(array, *time_unit, timezone, |x| x.day()))
             } else {
-                chrono_tz(array, time_unit, timezone_str, |x| x.day())
+                chrono_tz(array, *time_unit, timezone_str, |x| x.day())
             }
         }
         dt => Err(ArrowError::NotYetImplemented(format!(
@@ -117,15 +108,12 @@ pub fn hour(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
             time_variants(array, DataType::UInt32, |x| x.hour())
         }
         DataType::Timestamp(time_unit, Some(timezone_str)) => {
-            let time_unit = *time_unit;
-            let timezone = parse_offset(timezone_str);
-
             let array = array.as_any().downcast_ref().unwrap();
 
-            if let Ok(timezone) = timezone {
-                Ok(extract_impl(array, time_unit, timezone, |x| x.hour()))
+            if let Ok(timezone) = parse_offset(timezone_str) {
+                Ok(extract_impl(array, *time_unit, timezone, |x| x.hour()))
             } else {
-                chrono_tz(array, time_unit, timezone_str, |x| x.hour())
+                chrono_tz(array, *time_unit, timezone_str, |x| x.hour())
             }
         }
         dt => Err(ArrowError::NotYetImplemented(format!(
@@ -146,15 +134,12 @@ pub fn minute(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
             time_variants(array, DataType::UInt32, |x| x.minute())
         }
         DataType::Timestamp(time_unit, Some(timezone_str)) => {
-            let time_unit = *time_unit;
-            let timezone = parse_offset(timezone_str);
-
             let array = array.as_any().downcast_ref().unwrap();
 
-            if let Ok(timezone) = timezone {
-                Ok(extract_impl(array, time_unit, timezone, |x| x.minute()))
+            if let Ok(timezone) = parse_offset(timezone_str) {
+                Ok(extract_impl(array, *time_unit, timezone, |x| x.minute()))
             } else {
-                chrono_tz(array, time_unit, timezone_str, |x| x.minute())
+                chrono_tz(array, *time_unit, timezone_str, |x| x.minute())
             }
         }
         dt => Err(ArrowError::NotYetImplemented(format!(
@@ -175,15 +160,12 @@ pub fn second(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
             time_variants(array, DataType::UInt32, |x| x.second())
         }
         DataType::Timestamp(time_unit, Some(timezone_str)) => {
-            let time_unit = *time_unit;
-            let timezone = parse_offset(timezone_str);
-
             let array = array.as_any().downcast_ref().unwrap();
 
-            if let Ok(timezone) = timezone {
-                Ok(extract_impl(array, time_unit, timezone, |x| x.second()))
+            if let Ok(timezone) = parse_offset(timezone_str) {
+                Ok(extract_impl(array, *time_unit, timezone, |x| x.second()))
             } else {
-                chrono_tz(array, time_unit, timezone_str, |x| x.second())
+                chrono_tz(array, *time_unit, timezone_str, |x| x.second())
             }
         }
         dt => Err(ArrowError::NotYetImplemented(format!(
@@ -297,7 +279,7 @@ fn chrono_tz<F, O>(
 ) -> Result<PrimitiveArray<O>>
 where
     O: NativeType,
-    F: Fn(chrono::DateTime<chrono_tz::Tz>) -> O,
+    F: Fn(chrono::DateTime<chrono::FixedOffset>) -> O,
 {
     Err(ArrowError::InvalidArgumentError(format!(
         "timezone \"{}\" cannot be parsed (feature chrono-tz is not active)",
