@@ -241,7 +241,7 @@ impl<T: NativeType> MutableBuffer<T> {
     }
 
     /// Shrinks the capacity of the [`MutableBuffer`] to fit its current length.
-    /// The new capacity will be a multiple of 64 bytes.
+    /// When the feature `cache_aligned`, the new capacity will be a multiple of 64 bytes.
     ///
     /// # Example
     /// ```
@@ -253,7 +253,7 @@ impl<T: NativeType> MutableBuffer<T> {
     /// buffer.push(2);
     ///
     /// buffer.shrink_to_fit();
-    /// assert!(buffer.capacity() == 2);
+    /// assert!(buffer.capacity() < 16);  // 2 or 8 depending on feature `cache_aligned`
     /// ```
     pub fn shrink_to_fit(&mut self) {
         self.data.shrink_to_fit();

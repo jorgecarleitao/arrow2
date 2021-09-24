@@ -98,7 +98,7 @@ full = [
     "merge_sort",
     "compute",
     # parses timezones used in timestamp conversions
-    "chrono-tz",
+    "chrono-tz"
 ]
 merge_sort = ["itertools"]
 io_csv = ["io_csv_read", "io_csv_write"]

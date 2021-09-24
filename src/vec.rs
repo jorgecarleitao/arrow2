@@ -36,13 +36,19 @@ unsafe fn reallocate<T: NativeType>(
     (ptr, new_capacity)
 }
 
-/// An interface equivalent to `std::vec::Vec` with an allocator aligned along cache-lines.
-pub struct AlignedVec<T: NativeType> {
+/// An interface equivalent to `std::vec::Vec` with an allocator aligned along cache lines.
+pub(crate) struct AlignedVec<T: NativeType> {
     // dangling iff capacity = 0
     ptr: NonNull<T>,
     // invariant: len <= capacity
     len: usize,
     capacity: usize,
+}
+
+impl<T: NativeType> Drop for AlignedVec<T> {
+    fn drop(&mut self) {
+        unsafe { alloc::free_aligned(self.ptr, self.capacity) }
+    }
 }
 
 impl<T: NativeType> AlignedVec<T> {
