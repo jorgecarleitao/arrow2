@@ -83,26 +83,28 @@ pub fn year(array: &dyn Array) -> Result<PrimitiveArray<i32>> {
 }
 
 /// Extracts the months of a temporal array as [`PrimitiveArray<u32>`].
+/// Value ranges from 1 to 12.
 /// Use [`can_month`] to check if this operation is supported for the target [`DataType`].
 pub fn month(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
     date_like!(month, array, DataType::UInt32)
 }
 
 /// Extracts the days of a temporal array as [`PrimitiveArray<u32>`].
+/// Value ranges from 1 to 32 (Last day depends on month).
 /// Use [`can_day`] to check if this operation is supported for the target [`DataType`].
 pub fn day(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
     date_like!(day, array, DataType::UInt32)
 }
 
 /// Extracts weekday of a temporal array as [`PrimitiveArray<u32>`].
-/// Monday is 1, Tuesday is 2, ... Sunday is 7
+/// Monday is 1, Tuesday is 2, ..., Sunday is 7.
 /// Use [`can_weekday`] to check if this operation is supported for the target [`DataType`]
 pub fn weekday(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
     date_like!(u32_weekday, array, DataType::UInt32)
 }
 
 /// Extracts ISO week of a temporal array as [`PrimitiveArray<u32>`]
-/// Value ranges from 1 to 53.
+/// Value ranges from 1 to 53 (Last week depends on the year).
 /// Use [`can_iso_week`] to check if this operation is supported for the target [`DataType`]
 pub fn iso_week(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
     date_like!(u32_iso_week, array, DataType::UInt32)
@@ -138,18 +140,21 @@ macro_rules! time_like {
 }
 
 /// Extracts the hours of a temporal array as [`PrimitiveArray<u32>`].
+/// Value ranges from 0 to 23.
 /// Use [`can_hour`] to check if this operation is supported for the target [`DataType`].
 pub fn hour(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
     time_like!(hour, array, DataType::UInt32)
 }
 
 /// Extracts the minutes of a temporal array as [`PrimitiveArray<u32>`].
+/// Value ranges from 0 to 59.
 /// Use [`can_minute`] to check if this operation is supported for the target [`DataType`].
 pub fn minute(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
     time_like!(minute, array, DataType::UInt32)
 }
 
 /// Extracts the seconds of a temporal array as [`PrimitiveArray<u32>`].
+/// Value ranges from 0 to 59.
 /// Use [`can_second`] to check if this operation is supported for the target [`DataType`].
 pub fn second(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
     time_like!(second, array, DataType::UInt32)
