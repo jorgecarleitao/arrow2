@@ -69,7 +69,7 @@ pub fn take_values_validity<O: Offset, I: Index, A: GenericBinaryArray<O>>(
     let mut length = O::default();
     let mut validity = MutableBitmap::with_capacity(indices.len());
 
-    let null_values = values.validity().as_ref().unwrap();
+    let null_values = values.validity().unwrap();
     let offsets = values.offsets();
     let values_values = values.values();
 
@@ -122,7 +122,7 @@ pub fn take_indices_validity<O: Offset, I: Index>(
 
     let buffer = take_values(length, starts.as_slice(), offsets.as_slice(), values);
 
-    (offsets, buffer, indices.validity().clone())
+    (offsets, buffer, indices.validity().cloned())
 }
 
 // take implementation when both indices and values contain nulls
@@ -133,7 +133,7 @@ pub fn take_values_indices_validity<O: Offset, I: Index, A: GenericBinaryArray<O
     let mut length = O::default();
     let mut validity = MutableBitmap::with_capacity(indices.len());
 
-    let values_validity = values.validity().as_ref().unwrap();
+    let values_validity = values.validity().unwrap();
     let offsets = values.offsets();
     let values_values = values.values();
 

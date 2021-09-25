@@ -209,7 +209,7 @@ Like `FromIterator`, this crate contains two sets of APIs to iterate over data. 
 an array `array: &PrimitiveArray<T>`, the following applies:
 
 1. If you need to iterate over `Option<&T>`, use `array.iter()`
-2. If you can operate over the values and validity independently, use `array.values() -> &Buffer<T>` and `array.validity() -> &Option<Bitmap>`
+2. If you can operate over the values and validity independently, use `array.values() -> &Buffer<T>` and `array.validity() -> Option<&Bitmap>`
 
 Note that case 1 is useful when e.g. you want to perform an operation that depends on both validity and values, while the latter is suitable for SIMD and copies, as they return contiguous memory regions (buffers and bitmaps). We will see below how to leverage these APIs.
 
@@ -241,7 +241,7 @@ where
     let values = array.values().iter().map(|v| op(*v));
     let values = Buffer::from_trusted_len_iter(values);
 
-    PrimitiveArray::<O>::from_data(data_type.clone(), values, array.validity().clone())
+    PrimitiveArray::<O>::from_data(data_type.clone(), values, array.validity().cloned())
 }
 ```
 

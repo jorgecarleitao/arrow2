@@ -7,7 +7,7 @@ pub fn binary_to_large_binary(from: &BinaryArray<i32>, to_data_type: DataType) -
     let values = from.values().clone();
     let offsets = from.offsets().iter().map(|x| *x as i64);
     let offsets = Buffer::from_trusted_len_iter(offsets);
-    BinaryArray::<i64>::from_data(to_data_type, offsets, values, from.validity().clone())
+    BinaryArray::<i64>::from_data(to_data_type, offsets, values, from.validity().cloned())
 }
 
 pub fn binary_large_to_binary(
@@ -24,7 +24,7 @@ pub fn binary_large_to_binary(
         to_data_type,
         offsets,
         values,
-        from.validity().clone(),
+        from.validity().cloned(),
     ))
 }
 

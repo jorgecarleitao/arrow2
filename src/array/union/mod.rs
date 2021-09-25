@@ -205,8 +205,8 @@ impl Array for UnionArray {
         &self.data_type
     }
 
-    fn validity(&self) -> &Option<Bitmap> {
-        &None
+    fn validity(&self) -> Option<&Bitmap> {
+        None
     }
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {

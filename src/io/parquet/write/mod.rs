@@ -244,7 +244,7 @@ pub fn array_to_page(
             let array = FixedSizeBinaryArray::from_data(
                 DataType::FixedSizeBinary(12),
                 values.into(),
-                array.validity().clone(),
+                array.validity().cloned(),
             );
             fixed_len_bytes::array_to_page(&array, options, descriptor)
         }
@@ -262,7 +262,7 @@ pub fn array_to_page(
             let array = FixedSizeBinaryArray::from_data(
                 DataType::FixedSizeBinary(12),
                 values.into(),
-                array.validity().clone(),
+                array.validity().cloned(),
             );
             fixed_len_bytes::array_to_page(&array, options, descriptor)
         }
@@ -283,7 +283,7 @@ pub fn array_to_page(
                 let array = PrimitiveArray::<i32>::from_data(
                     DataType::Int32,
                     values,
-                    array.validity().clone(),
+                    array.validity().cloned(),
                 );
                 primitive::array_to_page::<i32, i32>(&array, options, descriptor)
             } else if precision <= 18 {
@@ -292,7 +292,7 @@ pub fn array_to_page(
                 let array = PrimitiveArray::<i64>::from_data(
                     DataType::Int64,
                     values,
-                    array.validity().clone(),
+                    array.validity().cloned(),
                 );
                 primitive::array_to_page::<i64, i64>(&array, options, descriptor)
             } else {
@@ -307,7 +307,7 @@ pub fn array_to_page(
                 let array = FixedSizeBinaryArray::from_data(
                     DataType::FixedSizeBinary(size as i32),
                     values.into(),
-                    array.validity().clone(),
+                    array.validity().cloned(),
                 );
                 fixed_len_bytes::array_to_page(&array, options, descriptor)
             }
@@ -338,7 +338,7 @@ macro_rules! dyn_nested_prim {
 
 fn list_array_to_page<O: Offset>(
     offsets: &[O],
-    validity: &Option<Bitmap>,
+    validity: Option<&Bitmap>,
     values: &dyn Array,
     descriptor: ColumnDescriptor,
     options: WriteOptions,

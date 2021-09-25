@@ -111,7 +111,7 @@ impl<K: DictionaryKey, M: 'static + MutableArray> MutableArray for MutableDictio
         self.keys.len()
     }
 
-    fn validity(&self) -> &Option<MutableBitmap> {
+    fn validity(&self) -> Option<&MutableBitmap> {
         self.keys.validity()
     }
 

@@ -294,7 +294,7 @@ fn cast_list<O: Offset>(
         to_type.clone(),
         array.offsets().clone(),
         new_values,
-        array.validity().clone(),
+        array.validity().cloned(),
     ))
 }
 
@@ -307,7 +307,7 @@ fn cast_list_to_large_list(array: &ListArray<i32>, to_type: &DataType) -> ListAr
         to_type.clone(),
         offets,
         array.values().clone(),
-        array.validity().clone(),
+        array.validity().cloned(),
     )
 }
 
@@ -320,7 +320,7 @@ fn cast_large_to_list(array: &ListArray<i64>, to_type: &DataType) -> ListArray<i
         to_type.clone(),
         offets,
         array.values().clone(),
-        array.validity().clone(),
+        array.validity().cloned(),
     )
 }
 

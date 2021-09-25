@@ -27,7 +27,7 @@ pub use mutable::*;
 /// # fn main() {
 /// let array = PrimitiveArray::from([Some(1), None, Some(10)]);
 /// assert_eq!(array.values().as_slice(), &[1, 0, 10]);
-/// assert_eq!(array.validity(), &Some(Bitmap::from([true, false, true])));
+/// assert_eq!(array.validity(), Some(&Bitmap::from([true, false, true])));
 /// # }
 /// ```
 #[derive(Debug, Clone)]
@@ -169,8 +169,8 @@ impl<T: NativeType> Array for PrimitiveArray<T> {
         &self.data_type
     }
 
-    fn validity(&self) -> &Option<Bitmap> {
-        &self.validity
+    fn validity(&self) -> Option<&Bitmap> {
+        self.validity.as_ref()
     }
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {

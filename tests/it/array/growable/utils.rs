@@ -44,7 +44,7 @@ pub(super) fn build_extend_null_bits(array: &dyn Array, use_validity: bool) -> E
 #[inline]
 pub(super) fn extend_validity(
     mutable_validity: &mut MutableBitmap,
-    validity: &Option<Bitmap>,
+    validity: Option<&Bitmap>,
     start: usize,
     len: usize,
     use_validity: bool,

@@ -69,7 +69,7 @@ fn write_boolean(
 
     write_bitmap(array.validity(), array.len(), buffers, arrow_data, offset);
     write_bitmap(
-        &Some(array.values().clone()),
+        Some(&array.values().clone()),
         array.len(),
         buffers,
         arrow_data,
@@ -78,7 +78,7 @@ fn write_boolean(
 }
 
 fn write_generic_binary<O: Offset>(
-    validity: &Option<Bitmap>,
+    validity: Option<&Bitmap>,
     offsets: &[O],
     values: &[u8],
     buffers: &mut Vec<Schema::Buffer>,
@@ -419,7 +419,7 @@ fn write_bytes_from_iter<I: TrustedLen<Item = u8>>(
 }
 
 fn write_bitmap(
-    bitmap: &Option<Bitmap>,
+    bitmap: Option<&Bitmap>,
     length: usize,
     buffers: &mut Vec<Schema::Buffer>,
     arrow_data: &mut Vec<u8>,

@@ -122,8 +122,8 @@ impl Array for BooleanArray {
     }
 
     #[inline]
-    fn validity(&self) -> &Option<Bitmap> {
-        &self.validity
+    fn validity(&self) -> Option<&Bitmap> {
+        self.validity.as_ref()
     }
 
     #[inline]

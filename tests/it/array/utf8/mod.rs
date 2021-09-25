@@ -16,7 +16,7 @@ fn basics() {
     assert_eq!(array.offsets().as_slice(), &[0, 5, 5, 11]);
     assert_eq!(
         array.validity(),
-        &Some(Bitmap::from_u8_slice(&[0b00000101], 3))
+        Some(&Bitmap::from_u8_slice(&[0b00000101], 3))
     );
     assert!(array.is_valid(0));
     assert!(!array.is_valid(1));
@@ -26,7 +26,7 @@ fn basics() {
         DataType::Utf8,
         array.offsets().clone(),
         array.values().clone(),
-        array.validity().clone(),
+        array.validity().cloned(),
     );
     assert_eq!(array, array2);
 
@@ -43,14 +43,14 @@ fn empty() {
     let array = Utf8Array::<i32>::new_empty(DataType::Utf8);
     assert_eq!(array.values().as_slice(), b"");
     assert_eq!(array.offsets().as_slice(), &[0]);
-    assert_eq!(array.validity(), &None);
+    assert_eq!(array.validity(), None);
 }
 
 #[test]
 fn from() {
     let array = Utf8Array::<i32>::from(&[Some("hello"), Some(" "), None]);
 
-    let a = array.validity().as_ref().unwrap();
+    let a = array.validity().unwrap();
     assert_eq!(a, &Bitmap::from([true, true, false]));
 }
 

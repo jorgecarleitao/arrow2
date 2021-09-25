@@ -77,7 +77,7 @@ fn sort_unstable_by<I, T, G, F>(
 /// * `cmp` is only called from the co-domain of `get`.
 #[inline]
 pub(super) fn indices_sorted_unstable_by<I, T, G, F>(
-    validity: &Option<Bitmap>,
+    validity: Option<&Bitmap>,
     get: G,
     cmp: F,
     length: usize,

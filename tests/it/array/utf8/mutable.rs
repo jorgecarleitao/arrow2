@@ -17,7 +17,7 @@ fn push_null() {
     array.push::<&str>(None);
 
     let array: Utf8Array<i32> = array.into();
-    assert_eq!(array.validity(), &Some(Bitmap::from([false])));
+    assert_eq!(array.validity(), Some(&Bitmap::from([false])));
 }
 
 /// Safety guarantee
@@ -60,7 +60,7 @@ fn test_extend_trusted_len_values() {
     assert_eq!(array.offsets().as_slice(), &[0, 2, 7, 12, 17, 17]);
     assert_eq!(
         array.validity(),
-        &Some(Bitmap::from_u8_slice(&[0b00001111], 5))
+        Some(&Bitmap::from_u8_slice(&[0b00001111], 5))
     );
 }
 
@@ -78,6 +78,6 @@ fn test_extend_trusted_len() {
     assert_eq!(array.offsets().as_slice(), &[0, 2, 7, 7, 12, 17]);
     assert_eq!(
         array.validity(),
-        &Some(Bitmap::from_u8_slice(&[0b00011011], 5))
+        Some(&Bitmap::from_u8_slice(&[0b00011011], 5))
     );
 }

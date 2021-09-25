@@ -1,4 +1,5 @@
 use crate::array::PrimitiveArray;
+use crate::bitmap::Bitmap;
 use crate::compute::comparison::{primitive_compare_values_op, Simd8, Simd8Lanes};
 use crate::datatypes::DataType;
 use crate::error::{ArrowError, Result};
@@ -40,9 +41,9 @@ pub fn nullif_primitive<T: NativeType + Simd8>(
     }
 
     let equal = primitive_compare_values_op(lhs.values(), rhs.values(), |lhs, rhs| lhs.neq(rhs));
-    let equal = equal.into();
+    let equal: Option<Bitmap> = equal.into();
 
-    let validity = combine_validities(lhs.validity(), &equal);
+    let validity = combine_validities(lhs.validity(), equal.as_ref());
 
     Ok(PrimitiveArray::<T>::from_data(
         lhs.data_type().clone(),

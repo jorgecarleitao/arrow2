@@ -27,7 +27,7 @@ where
         .map(|x| if x { T::one() } else { T::default() });
     let values = Buffer::<T>::from_trusted_len_iter(iter);
 
-    PrimitiveArray::<T>::from_data(T::DATA_TYPE, values, from.validity().clone())
+    PrimitiveArray::<T>::from_data(T::DATA_TYPE, values, from.validity().cloned())
 }
 
 /// Casts the [`BooleanArray`] to a [`Utf8Array`], casting trues to `"1"` and falses to `"0"`

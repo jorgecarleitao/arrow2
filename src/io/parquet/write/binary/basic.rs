@@ -126,7 +126,7 @@ pub(super) fn build_statistics<O: Offset>(
 pub(crate) fn encode_delta<O: Offset>(
     values: &[u8],
     offsets: &[O],
-    validity: &Option<Bitmap>,
+    validity: Option<&Bitmap>,
     is_optional: bool,
     buffer: &mut Vec<u8>,
 ) {
