@@ -115,6 +115,13 @@ impl<K: DictionaryKey, M: 'static + MutableArray> MutableArray for MutableDictio
         self.keys.validity()
     }
 
+    fn as_box(&mut self) -> Box<dyn Array> {
+        Box::new(DictionaryArray::<K>::from_data(
+            std::mem::take(&mut self.keys).into(),
+            self.values.as_arc(),
+        ))
+    }
+
     fn as_arc(&mut self) -> Arc<dyn Array> {
         Arc::new(DictionaryArray::<K>::from_data(
             std::mem::take(&mut self.keys).into(),
