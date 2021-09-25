@@ -205,36 +205,22 @@ impl TestData {
                 nanosecond: Some(UInt32Array::from(&[Some(0), None])),
             },
             DataType::Timestamp(TimeUnit::Microsecond, None) => TestData {
+                // 68216970000000 (Epoch Microsecond) has 29th Feb (leap year)
                 input: Box::new(
-                    Int64Array::from(&[Some(1612025847000000), None]).to(data_type.clone()),
+                    Int64Array::from(&[Some(1612025847000000), None, Some(68216970000000)])
+                        .to(data_type.clone()),
                 ),
-                year: Some(Int32Array::from(&[Some(2021), None])),
-                month: Some(UInt32Array::from(&[Some(1), None])),
-                day: Some(UInt32Array::from(&[Some(30), None])),
-                weekday: Some(UInt32Array::from(&[Some(6), None])),
-                iso_week: Some(UInt32Array::from(&[Some(4), None])),
-                hour: Some(UInt32Array::from(&[Some(16), None])),
-                minute: Some(UInt32Array::from(&[Some(57), None])),
-                second: Some(UInt32Array::from(&[Some(27), None])),
-                nanosecond: Some(UInt32Array::from(&[Some(0), None])),
+                year: Some(Int32Array::from(&[Some(2021), None, Some(1972)])),
+                month: Some(UInt32Array::from(&[Some(1), None, Some(2)])),
+                day: Some(UInt32Array::from(&[Some(30), None, Some(29)])),
+                weekday: Some(UInt32Array::from(&[Some(6), None, Some(2)])),
+                iso_week: Some(UInt32Array::from(&[Some(4), None, Some(9)])),
+                hour: Some(UInt32Array::from(&[Some(16), None, Some(13)])),
+                minute: Some(UInt32Array::from(&[Some(57), None, Some(9)])),
+                second: Some(UInt32Array::from(&[Some(27), None, Some(30)])),
+                nanosecond: Some(UInt32Array::from(&[Some(0), None, Some(0)])),
             },
-            DataType::Timestamp(TimeUnit::Microsecond, Some(_)) => TestData {
-                // NOTE We hardcode the timezone as an offset, we ignore
-                // the zone sent through `data_type`
-                input: Box::new(Int64Array::from(&[Some(1621877130000000), None]).to(
-                    DataType::Timestamp(TimeUnit::Microsecond, Some("+01:00".to_string())),
-                )),
-                year: Some(Int32Array::from(&[Some(2021), None])),
-                month: Some(UInt32Array::from(&[Some(5), None])),
-                day: Some(UInt32Array::from(&[Some(24), None])),
-                weekday: Some(UInt32Array::from(&[Some(1), None])),
-                iso_week: Some(UInt32Array::from(&[Some(21), None])),
-                hour: Some(UInt32Array::from(&[Some(18), None])),
-                minute: Some(UInt32Array::from(&[Some(25), None])),
-                second: Some(UInt32Array::from(&[Some(30), None])),
-                nanosecond: Some(UInt32Array::from(&[Some(0), None])),
-            },
-            _ => todo!(),
+            _ => unreachable!(),
         }
     }
 
@@ -245,8 +231,6 @@ impl TestData {
             DataType::Time32(TimeUnit::Second),
             DataType::Time64(TimeUnit::Microsecond),
             DataType::Timestamp(TimeUnit::Microsecond, None),
-            // NOTE The timezone value will be ignored
-            DataType::Timestamp(TimeUnit::Microsecond, Some("+01:00".to_string())),
         ]
     }
 
@@ -255,34 +239,203 @@ impl TestData {
             DataType::Date32,
             DataType::Date64,
             DataType::Timestamp(TimeUnit::Microsecond, None),
-            // NOTE The timezone value will be ignored
-            DataType::Timestamp(TimeUnit::Microsecond, Some("+01:00".to_string())),
         ]
     }
 }
 
 #[cfg(feature = "chrono-tz")]
 #[test]
-fn timestamp_micro_hour_tz() {
-    let timestamp = 1621877130000000; // Mon May 24 2021 17:25:30 GMT+0000
-    let array = Int64Array::from(&[Some(timestamp), None]).to(DataType::Timestamp(
-        TimeUnit::Microsecond,
-        Some("GMT".to_string()),
-    ));
+fn temporal_tz_hour() {
+    let test_data = test_data_tz();
 
-    let result = hour(&array).unwrap();
-    let expected = UInt32Array::from(&[Some(17), None]);
-    assert_eq!(result, expected);
+    for data in test_data {
+        let result = hour(&*data.input).unwrap();
 
-    // (Western European Summer Time in Lisbon) => +1 hour
-    let array = Int64Array::from(&[Some(timestamp), None]).to(DataType::Timestamp(
-        TimeUnit::Microsecond,
-        Some("Europe/Lisbon".to_string()),
-    ));
+        assert_eq!(result, data.hour.unwrap());
+    }
+}
 
-    let result = hour(&array).unwrap();
-    let expected = UInt32Array::from(&[Some(18), None]);
-    assert_eq!(result, expected);
+#[cfg(feature = "chrono-tz")]
+#[test]
+fn temporal_tz_minute() {
+    let test_data = test_data_tz();
+
+    for data in test_data {
+        let result = minute(&*data.input).unwrap();
+
+        assert_eq!(result, data.minute.unwrap());
+    }
+}
+
+#[cfg(feature = "chrono-tz")]
+#[test]
+fn temporal_tz_second() {
+    let test_data = test_data_tz();
+
+    for data in test_data {
+        let result = second(&*data.input).unwrap();
+
+        assert_eq!(result, data.second.unwrap());
+    }
+}
+
+#[cfg(feature = "chrono-tz")]
+#[test]
+fn temporal_tz_nanosecond() {
+    let test_data = test_data_tz();
+
+    for data in test_data {
+        let result = nanosecond(&*data.input).unwrap();
+
+        assert_eq!(result, data.nanosecond.unwrap());
+    }
+}
+
+#[cfg(feature = "chrono-tz")]
+#[test]
+fn temporal_tz_year() {
+    let test_data = test_data_tz();
+
+    for data in test_data {
+        let result = year(&*data.input).unwrap();
+
+        assert_eq!(result, data.year.unwrap());
+    }
+}
+
+#[cfg(feature = "chrono-tz")]
+#[test]
+fn temporal_tz_month() {
+    let test_data = test_data_tz();
+
+    for data in test_data {
+        let result = month(&*data.input).unwrap();
+
+        assert_eq!(result, data.month.unwrap());
+    }
+}
+
+#[cfg(feature = "chrono-tz")]
+#[test]
+fn temporal_tz_day() {
+    let test_data = test_data_tz();
+
+    for data in test_data {
+        let result = day(&*data.input).unwrap();
+
+        assert_eq!(result, data.day.unwrap());
+    }
+}
+
+#[cfg(feature = "chrono-tz")]
+#[test]
+fn temporal_tz_weekday() {
+    let test_data = test_data_tz();
+
+    for data in test_data {
+        let result = weekday(&*data.input).unwrap();
+
+        assert_eq!(result, data.weekday.unwrap());
+    }
+}
+
+#[cfg(feature = "chrono-tz")]
+#[test]
+fn temporal_tz_iso_week() {
+    let test_data = test_data_tz();
+
+    for data in test_data {
+        let result = iso_week(&*data.input).unwrap();
+
+        assert_eq!(result, data.iso_week.unwrap());
+    }
+}
+
+fn test_data_tz() -> Vec<TestData> {
+    vec![
+        TestData {
+            input: Box::new(
+                // Mon May 24 2021 17:25:30 GMT+0000
+                Int64Array::from(&[Some(1621877130000000), None]).to(DataType::Timestamp(
+                    TimeUnit::Microsecond,
+                    Some("GMT".to_string()),
+                )),
+            ),
+            year: Some(Int32Array::from(&[Some(2021), None])),
+            month: Some(UInt32Array::from(&[Some(5), None])),
+            day: Some(UInt32Array::from(&[Some(24), None])),
+            weekday: Some(UInt32Array::from(&[Some(1), None])),
+            iso_week: Some(UInt32Array::from(&[Some(21), None])),
+            hour: Some(UInt32Array::from(&[Some(17), None])),
+            minute: Some(UInt32Array::from(&[Some(25), None])),
+            second: Some(UInt32Array::from(&[Some(30), None])),
+            nanosecond: Some(UInt32Array::from(&[Some(0), None])),
+        },
+        TestData {
+            input: Box::new(Int64Array::from(&[Some(1621877130000000), None]).to(
+                DataType::Timestamp(TimeUnit::Microsecond, Some("+01:00".to_string())),
+            )),
+            year: Some(Int32Array::from(&[Some(2021), None])),
+            month: Some(UInt32Array::from(&[Some(5), None])),
+            day: Some(UInt32Array::from(&[Some(24), None])),
+            weekday: Some(UInt32Array::from(&[Some(1), None])),
+            iso_week: Some(UInt32Array::from(&[Some(21), None])),
+            hour: Some(UInt32Array::from(&[Some(18), None])),
+            minute: Some(UInt32Array::from(&[Some(25), None])),
+            second: Some(UInt32Array::from(&[Some(30), None])),
+            nanosecond: Some(UInt32Array::from(&[Some(0), None])),
+        },
+        TestData {
+            input: Box::new(Int64Array::from(&[Some(1621877130000000), None]).to(
+                DataType::Timestamp(TimeUnit::Microsecond, Some("Europe/Lisbon".to_string())),
+            )),
+            year: Some(Int32Array::from(&[Some(2021), None])),
+            month: Some(UInt32Array::from(&[Some(5), None])),
+            day: Some(UInt32Array::from(&[Some(24), None])),
+            weekday: Some(UInt32Array::from(&[Some(1), None])),
+            iso_week: Some(UInt32Array::from(&[Some(21), None])),
+            hour: Some(UInt32Array::from(&[Some(18), None])),
+            minute: Some(UInt32Array::from(&[Some(25), None])),
+            second: Some(UInt32Array::from(&[Some(30), None])),
+            nanosecond: Some(UInt32Array::from(&[Some(0), None])),
+        },
+        TestData {
+            input: Box::new(
+                // Sun Mar 29 2020 00:00:00 GMT+0000 (Western European Standard Time)
+                Int64Array::from(&[Some(1585440000), None]).to(DataType::Timestamp(
+                    TimeUnit::Second,
+                    Some("Europe/Lisbon".to_string()),
+                )),
+            ),
+            year: Some(Int32Array::from(&[Some(2020), None])),
+            month: Some(UInt32Array::from(&[Some(3), None])),
+            day: Some(UInt32Array::from(&[Some(29), None])),
+            weekday: Some(UInt32Array::from(&[Some(7), None])),
+            iso_week: Some(UInt32Array::from(&[Some(13), None])),
+            hour: Some(UInt32Array::from(&[Some(0), None])),
+            minute: Some(UInt32Array::from(&[Some(0), None])),
+            second: Some(UInt32Array::from(&[Some(0), None])),
+            nanosecond: Some(UInt32Array::from(&[Some(0), None])),
+        },
+        TestData {
+            input: Box::new(
+                // Sun Mar 29 2020 02:00:00 GMT+0100 (Western European Summer Time)
+                Int64Array::from(&[Some(1585443600), None]).to(DataType::Timestamp(
+                    TimeUnit::Second,
+                    Some("Europe/Lisbon".to_string()),
+                )),
+            ),
+            year: Some(Int32Array::from(&[Some(2020), None])),
+            month: Some(UInt32Array::from(&[Some(3), None])),
+            day: Some(UInt32Array::from(&[Some(29), None])),
+            weekday: Some(UInt32Array::from(&[Some(7), None])),
+            iso_week: Some(UInt32Array::from(&[Some(13), None])),
+            hour: Some(UInt32Array::from(&[Some(2), None])),
+            minute: Some(UInt32Array::from(&[Some(0), None])),
+            second: Some(UInt32Array::from(&[Some(0), None])),
+            nanosecond: Some(UInt32Array::from(&[Some(0), None])),
+        },
+    ]
 }
 
 #[test]
