@@ -28,6 +28,8 @@ use crate::types::NaturalDataType;
 
 use super::arity::unary;
 
+// Create and implement a trait that converts chrono's `Weekday`
+// type into `u32`
 trait U32Weekday: Datelike {
     fn u32_weekday(&self) -> u32 {
         self.weekday().number_from_monday()
@@ -37,6 +39,8 @@ trait U32Weekday: Datelike {
 impl U32Weekday for chrono::NaiveDateTime {}
 impl<T: chrono::TimeZone> U32Weekday for chrono::DateTime<T> {}
 
+// Create and implement a trait that converts chrono's `IsoWeek`
+// type into `u32`
 trait U32IsoWeek: Datelike {
     fn u32_iso_week(&self) -> u32 {
         self.iso_week().week()
@@ -46,6 +50,8 @@ trait U32IsoWeek: Datelike {
 impl U32IsoWeek for chrono::NaiveDateTime {}
 impl<T: chrono::TimeZone> U32IsoWeek for chrono::DateTime<T> {}
 
+// Macro to avoid repetition in functions, that apply
+// `chrono::Datelike` methods on Arrays
 macro_rules! date_like {
     ($extract:ident, $array:ident, $data_type:path) => {
         match $array.data_type() {
@@ -102,6 +108,8 @@ pub fn iso_week(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
     date_like!(u32_iso_week, array, DataType::UInt32)
 }
 
+// Macro to avoid repetition in functions, that apply
+// `chrono::Timelike` methods on Arrays
 macro_rules! time_like {
     ($extract:ident, $array:ident, $data_type:path) => {
         match $array.data_type() {
@@ -330,35 +338,11 @@ pub fn can_year(data_type: &DataType) -> bool {
 }
 
 /// Checks if an array of type `datatype` can perform month operation
-///
-/// # Examples
-/// ```
-/// use arrow2::compute::temporal::can_month;
-/// use arrow2::datatypes::{DataType};
-///
-/// let data_type = DataType::Date32;
-/// assert_eq!(can_month(&data_type), true);
-
-/// let data_type = DataType::Int8;
-/// assert_eq!(can_month(&data_type), false);
-/// ```
 pub fn can_month(data_type: &DataType) -> bool {
     can_date(data_type)
 }
 
 /// Checks if an array of type `datatype` can perform day operation
-///
-/// # Examples
-/// ```
-/// use arrow2::compute::temporal::can_day;
-/// use arrow2::datatypes::{DataType};
-///
-/// let data_type = DataType::Date32;
-/// assert_eq!(can_day(&data_type), true);
-
-/// let data_type = DataType::Int8;
-/// assert_eq!(can_day(&data_type), false);
-/// ```
 pub fn can_day(data_type: &DataType) -> bool {
     can_date(data_type)
 }
@@ -398,35 +382,11 @@ pub fn can_hour(data_type: &DataType) -> bool {
 }
 
 /// Checks if an array of type `datatype` can perform minute operation
-///
-/// # Examples
-/// ```
-/// use arrow2::compute::temporal::can_minute;
-/// use arrow2::datatypes::{DataType, TimeUnit};
-///
-/// let data_type = DataType::Time32(TimeUnit::Second);
-/// assert_eq!(can_minute(&data_type), true);
-
-/// let data_type = DataType::Int8;
-/// assert_eq!(can_minute(&data_type), false);
-/// ```
 pub fn can_minute(data_type: &DataType) -> bool {
     can_time(data_type)
 }
 
 /// Checks if an array of type `datatype` can perform second operation
-///
-/// # Examples
-/// ```
-/// use arrow2::compute::temporal::can_second;
-/// use arrow2::datatypes::{DataType, TimeUnit};
-///
-/// let data_type = DataType::Time32(TimeUnit::Second);
-/// assert_eq!(can_second(&data_type), true);
-
-/// let data_type = DataType::Int8;
-/// assert_eq!(can_second(&data_type), false);
-/// ```
 pub fn can_second(data_type: &DataType) -> bool {
     can_time(data_type)
 }
