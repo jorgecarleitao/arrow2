@@ -54,7 +54,7 @@ impl<T: chrono::TimeZone> U32IsoWeek for chrono::DateTime<T> {}
 // `chrono::Datelike` methods on Arrays
 macro_rules! date_like {
     ($extract:ident, $array:ident, $data_type:path) => {
-        match $array.data_type() {
+        match $array.data_type().to_logical_type() {
             DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, None) => {
                 date_variants($array, $data_type, |x| x.$extract())
             }
@@ -112,7 +112,7 @@ pub fn iso_week(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
 // `chrono::Timelike` methods on Arrays
 macro_rules! time_like {
     ($extract:ident, $array:ident, $data_type:path) => {
-        match $array.data_type() {
+        match $array.data_type().to_logical_type() {
             DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, None) => {
                 date_variants($array, $data_type, |x| x.$extract())
             }
@@ -161,16 +161,12 @@ pub fn nanosecond(array: &dyn Array) -> Result<PrimitiveArray<u32>> {
     time_like!(nanosecond, array, DataType::UInt32)
 }
 
-pub fn date_variants<F, O>(
-    array: &dyn Array,
-    data_type: DataType,
-    op: F,
-) -> Result<PrimitiveArray<O>>
+fn date_variants<F, O>(array: &dyn Array, data_type: DataType, op: F) -> Result<PrimitiveArray<O>>
 where
     O: NativeType,
     F: Fn(chrono::NaiveDateTime) -> O,
 {
-    match array.data_type() {
+    match array.data_type().to_logical_type() {
         DataType::Date32 => {
             let array = array
                 .as_any()
@@ -207,7 +203,7 @@ where
     O: NativeType,
     F: Fn(chrono::NaiveTime) -> O,
 {
-    match array.data_type() {
+    match array.data_type().to_logical_type() {
         DataType::Time32(TimeUnit::Second) => {
             let array = array
                 .as_any()
@@ -241,7 +237,6 @@ where
 }
 
 #[cfg(feature = "chrono-tz")]
-#[cfg_attr(docsrs, doc(cfg(feature = "chrono-tz")))]
 fn chrono_tz<F, O>(
     array: &PrimitiveArray<i64>,
     time_unit: TimeUnit,
@@ -327,11 +322,8 @@ where
 /// use arrow2::compute::temporal::can_year;
 /// use arrow2::datatypes::{DataType};
 ///
-/// let data_type = DataType::Date32;
-/// assert_eq!(can_year(&data_type), true);
-
-/// let data_type = DataType::Int8;
-/// assert_eq!(can_year(&data_type), false);
+/// assert_eq!(can_year(&DataType::Date32), true);
+/// assert_eq!(can_year(&DataType::Int8), false);
 /// ```
 pub fn can_year(data_type: &DataType) -> bool {
     can_date(data_type)
@@ -371,11 +363,8 @@ fn can_date(data_type: &DataType) -> bool {
 /// use arrow2::compute::temporal::can_hour;
 /// use arrow2::datatypes::{DataType, TimeUnit};
 ///
-/// let data_type = DataType::Time32(TimeUnit::Second);
-/// assert_eq!(can_hour(&data_type), true);
-
-/// let data_type = DataType::Int8;
-/// assert_eq!(can_hour(&data_type), false);
+/// assert_eq!(can_hour(&DataType::Time32(TimeUnit::Second)), true);
+/// assert_eq!(can_hour(&DataType::Int8), false);
 /// ```
 pub fn can_hour(data_type: &DataType) -> bool {
     can_time(data_type)
