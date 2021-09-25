@@ -180,59 +180,54 @@ fn timestamp_micro_hour_tz() {
 
 #[test]
 fn consistency_hour() {
-    use arrow2::array::new_null_array;
-    use arrow2::datatypes::DataType::*;
-    use arrow2::datatypes::TimeUnit;
+    consistency_check(can_hour, hour);
+}
 
-    let datatypes = vec![
-        Null,
-        Boolean,
-        UInt8,
-        UInt16,
-        UInt32,
-        UInt64,
-        Int8,
-        Int16,
-        Int32,
-        Int64,
-        Float32,
-        Float64,
-        Timestamp(TimeUnit::Second, None),
-        Timestamp(TimeUnit::Millisecond, None),
-        Timestamp(TimeUnit::Microsecond, None),
-        Timestamp(TimeUnit::Nanosecond, None),
-        Timestamp(TimeUnit::Nanosecond, Some("+00:00".to_string())),
-        Time64(TimeUnit::Microsecond),
-        Time64(TimeUnit::Nanosecond),
-        Date32,
-        Time32(TimeUnit::Second),
-        Time32(TimeUnit::Millisecond),
-        Date64,
-        Utf8,
-        LargeUtf8,
-        Binary,
-        LargeBinary,
-        Duration(TimeUnit::Second),
-        Duration(TimeUnit::Millisecond),
-        Duration(TimeUnit::Microsecond),
-        Duration(TimeUnit::Nanosecond),
-    ];
+#[test]
+fn consistency_minute() {
+    consistency_check(can_minute, minute);
+}
 
-    datatypes.into_iter().for_each(|d1| {
-        let array = new_null_array(d1.clone(), 10);
-        if can_hour(&d1) {
-            assert!(hour(array.as_ref()).is_ok());
-        } else {
-            assert!(hour(array.as_ref()).is_err());
-        }
-    });
+#[test]
+fn consistency_second() {
+    consistency_check(can_second, second);
+}
+
+#[test]
+fn consistency_nanosecond() {
+    consistency_check(can_nanosecond, nanosecond);
 }
 
 #[test]
 fn consistency_year() {
-    use arrow2::array::new_null_array;
+    consistency_check(can_year, year);
+}
+
+#[test]
+fn consistency_month() {
+    consistency_check(can_month, month);
+}
+
+#[test]
+fn consistency_day() {
+    consistency_check(can_day, day);
+}
+
+#[test]
+fn consistency_weekday() {
+    consistency_check(can_weekday, weekday);
+}
+
+#[test]
+fn consistency_iso_week() {
+    consistency_check(can_iso_week, iso_week);
+}
+
+fn consistency_check<O: arrow2::types::NativeType>(
+    can_extract: fn(&DataType) -> bool,
+    extract: fn(&dyn Array) -> arrow2::error::Result<PrimitiveArray<O>>,
+) {
     use arrow2::datatypes::DataType::*;
-    use arrow2::datatypes::TimeUnit;
 
     let datatypes = vec![
         Null,
@@ -270,10 +265,10 @@ fn consistency_year() {
 
     datatypes.into_iter().for_each(|d1| {
         let array = new_null_array(d1.clone(), 10);
-        if can_year(&d1) {
-            assert!(year(array.as_ref()).is_ok());
+        if can_extract(&d1) {
+            assert!(extract(array.as_ref()).is_ok());
         } else {
-            assert!(year(array.as_ref()).is_err());
+            assert!(extract(array.as_ref()).is_err());
         }
     });
 }
