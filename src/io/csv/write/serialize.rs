@@ -150,7 +150,7 @@ pub fn new_serializer<'a>(
                 i64,
                 temporal_conversions::date64_to_datetime,
                 array,
-                &options.date_format
+                &options.timestamp_format
             )
         }
         DataType::Time64(TimeUnit::Microsecond) => {
