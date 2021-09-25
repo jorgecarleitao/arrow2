@@ -317,7 +317,7 @@ for item in array.iter() {
 an array <code>array: &amp;PrimitiveArray&lt;T&gt;</code>, the following applies:</p>
 <ol>
 <li>If you need to iterate over <code>Option&lt;&amp;T&gt;</code>, use <code>array.iter()</code></li>
-<li>If you can operate over the values and validity independently, use <code>array.values() -&gt; &amp;Buffer&lt;T&gt;</code> and <code>array.validity() -&gt; &amp;Option&lt;Bitmap&gt;</code></li>
+<li>If you can operate over the values and validity independently, use <code>array.values() -&gt; &amp;Buffer&lt;T&gt;</code> and <code>array.validity() -&gt; Option&lt;&amp;Bitmap&gt;</code></li>
 </ol>
 <p>Note that case 1 is useful when e.g. you want to perform an operation that depends on both validity and values, while the latter is suitable for SIMD and copies, as they return contiguous memory regions (buffers and bitmaps). We will see below how to leverage these APIs.</p>
 <p>This idea holds more generally in this crate's arrays: <code>values()</code> returns something that has a contiguous in-memory representation, while <code>iter()</code> returns items taking validity into account. To get an iterator over contiguous values, use <code>array.values().iter()</code>.</p>
@@ -346,7 +346,7 @@ where
     let values = array.values().iter().map(|v| op(*v));
     let values = Buffer::from_trusted_len_iter(values);
 
-    PrimitiveArray::&lt;O&gt;::from_data(data_type.clone(), values, array.validity().clone())
+    PrimitiveArray::&lt;O&gt;::from_data(data_type.clone(), values, array.validity().cloned())
 }
 <span class="boring">}
 </span></code></pre></pre>
