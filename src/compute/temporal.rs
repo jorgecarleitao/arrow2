@@ -286,7 +286,7 @@ where
                 let offset = timezone.offset_from_utc_datetime(&datetime);
                 extract(chrono::DateTime::<T>::from_utc(datetime, offset))
             };
-            unary(array, op, DataType::UInt32)
+            unary(array, op, A::DATA_TYPE)
         }
         TimeUnit::Millisecond => {
             let op = |x| {
