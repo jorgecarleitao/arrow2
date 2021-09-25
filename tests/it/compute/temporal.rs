@@ -2,140 +2,47 @@ use arrow2::array::*;
 use arrow2::compute::temporal::*;
 use arrow2::datatypes::*;
 
-#[test]
-fn temporal_hour() {
-    for data_type in TestData::available_time_like_types() {
-        let data = TestData::data(&data_type);
-        let result = hour(&*data.input).unwrap();
+macro_rules! temporal_test {
+    ($func:ident, $extract:ident, $data_types:path) => {
+        #[test]
+        fn $func() {
+            for data_type in $data_types() {
+                let data = TestData::data(&data_type);
+                let result = $extract(&*data.input).unwrap();
 
-        assert_eq!(
-            result,
-            data.hour.unwrap(),
-            "\"hour\" failed on type: {:?}",
-            data_type
-        );
-    }
+                assert_eq!(
+                    result,
+                    data.$extract.unwrap(),
+                    "\"{}\" failed on type: {:?}",
+                    stringify!($extract),
+                    data_type
+                );
+            }
+        }
+    };
 }
 
-#[test]
-fn temporal_minute() {
-    for data_type in TestData::available_time_like_types() {
-        let data = TestData::data(&data_type);
-        let result = minute(&*data.input).unwrap();
-
-        assert_eq!(
-            result,
-            data.minute.unwrap(),
-            "\"hour\" failed on type: {:?}",
-            data_type
-        );
-    }
-}
-
-#[test]
-fn temporal_second() {
-    for data_type in TestData::available_time_like_types() {
-        let data = TestData::data(&data_type);
-        let result = second(&*data.input).unwrap();
-
-        assert_eq!(
-            result,
-            data.second.unwrap(),
-            "\"second\" failed on type: {:?}",
-            data_type
-        );
-    }
-}
-
-#[test]
-fn temporal_nanosecond() {
-    for data_type in TestData::available_time_like_types() {
-        let data = TestData::data(&data_type);
-        let result = nanosecond(&*data.input).unwrap();
-
-        assert_eq!(
-            result,
-            data.nanosecond.unwrap(),
-            "\"nanosecond\" failed on type: {:?}",
-            data_type
-        );
-    }
-}
-
-#[test]
-fn temporal_year() {
-    for data_type in TestData::available_date_like_types() {
-        let data = TestData::data(&data_type);
-        let result = year(&*data.input).unwrap();
-
-        assert_eq!(
-            result,
-            data.year.unwrap(),
-            "\"year\" failed on type: {:?}",
-            data_type
-        );
-    }
-}
-
-#[test]
-fn temporal_month() {
-    for data_type in TestData::available_date_like_types() {
-        let data = TestData::data(&data_type);
-        let result = month(&*data.input).unwrap();
-
-        assert_eq!(
-            result,
-            data.month.unwrap(),
-            "\"month\" failed on type: {:?}",
-            data_type
-        );
-    }
-}
-
-#[test]
-fn temporal_day() {
-    for data_type in TestData::available_date_like_types() {
-        let data = TestData::data(&data_type);
-        let result = day(&*data.input).unwrap();
-
-        assert_eq!(
-            result,
-            data.day.unwrap(),
-            "\"day\" failed on type: {:?}",
-            data_type
-        );
-    }
-}
-
-#[test]
-fn temporal_weekday() {
-    for data_type in TestData::available_date_like_types() {
-        let data = TestData::data(&data_type);
-        let result = weekday(&*data.input).unwrap();
-
-        assert_eq!(
-            result,
-            data.weekday.unwrap(),
-            "\"weekday\" failed on type: {:?}",
-            data_type
-        );
-    }
-}
-
-#[test]
-fn temporal_iso_week() {
-    for data_type in TestData::available_date_like_types() {
-        let data = TestData::data(&data_type);
-        let result = iso_week(&*data.input).unwrap();
-
-        assert_eq!(
-            result,
-            data.iso_week.unwrap(),
-            "\"iso_week\" failed on type: {:?}",
-            data_type
-        );
-    }
-}
+temporal_test!(temporal_hour, hour, TestData::available_time_like_types);
+temporal_test!(temporal_minute, minute, TestData::available_time_like_types);
+temporal_test!(temporal_second, second, TestData::available_time_like_types);
+temporal_test!(
+    temporal_nanosecond,
+    nanosecond,
+    TestData::available_time_like_types
+);
+temporal_test!(temporal_year, year, TestData::available_date_like_types);
+temporal_test!(temporal_month, month, TestData::available_date_like_types);
+temporal_test!(temporal_day, day, TestData::available_date_like_types);
+temporal_test!(
+    temporal_weekday,
+    weekday,
+    TestData::available_date_like_types
+);
+temporal_test!(
+    temporal_iso_week,
+    iso_week,
+    TestData::available_date_like_types
+);
 
 struct TestData {
     input: Box<dyn Array>,
@@ -243,113 +150,31 @@ impl TestData {
     }
 }
 
-#[cfg(feature = "chrono-tz")]
-#[test]
-fn temporal_tz_hour() {
-    let test_data = test_data_tz();
+macro_rules! temporal_tz_test {
+    ($func:ident, $extract:ident) => {
+        #[cfg(feature = "chrono-tz")]
+        #[test]
+        fn $func() {
+            let test_data = test_data_tz();
 
-    for data in test_data {
-        let result = hour(&*data.input).unwrap();
+            for data in test_data {
+                let result = $extract(&*data.input).unwrap();
 
-        assert_eq!(result, data.hour.unwrap());
-    }
+                assert_eq!(result, data.$extract.unwrap());
+            }
+        }
+    };
 }
 
-#[cfg(feature = "chrono-tz")]
-#[test]
-fn temporal_tz_minute() {
-    let test_data = test_data_tz();
-
-    for data in test_data {
-        let result = minute(&*data.input).unwrap();
-
-        assert_eq!(result, data.minute.unwrap());
-    }
-}
-
-#[cfg(feature = "chrono-tz")]
-#[test]
-fn temporal_tz_second() {
-    let test_data = test_data_tz();
-
-    for data in test_data {
-        let result = second(&*data.input).unwrap();
-
-        assert_eq!(result, data.second.unwrap());
-    }
-}
-
-#[cfg(feature = "chrono-tz")]
-#[test]
-fn temporal_tz_nanosecond() {
-    let test_data = test_data_tz();
-
-    for data in test_data {
-        let result = nanosecond(&*data.input).unwrap();
-
-        assert_eq!(result, data.nanosecond.unwrap());
-    }
-}
-
-#[cfg(feature = "chrono-tz")]
-#[test]
-fn temporal_tz_year() {
-    let test_data = test_data_tz();
-
-    for data in test_data {
-        let result = year(&*data.input).unwrap();
-
-        assert_eq!(result, data.year.unwrap());
-    }
-}
-
-#[cfg(feature = "chrono-tz")]
-#[test]
-fn temporal_tz_month() {
-    let test_data = test_data_tz();
-
-    for data in test_data {
-        let result = month(&*data.input).unwrap();
-
-        assert_eq!(result, data.month.unwrap());
-    }
-}
-
-#[cfg(feature = "chrono-tz")]
-#[test]
-fn temporal_tz_day() {
-    let test_data = test_data_tz();
-
-    for data in test_data {
-        let result = day(&*data.input).unwrap();
-
-        assert_eq!(result, data.day.unwrap());
-    }
-}
-
-#[cfg(feature = "chrono-tz")]
-#[test]
-fn temporal_tz_weekday() {
-    let test_data = test_data_tz();
-
-    for data in test_data {
-        let result = weekday(&*data.input).unwrap();
-
-        assert_eq!(result, data.weekday.unwrap());
-    }
-}
-
-#[cfg(feature = "chrono-tz")]
-#[test]
-fn temporal_tz_iso_week() {
-    let test_data = test_data_tz();
-
-    for data in test_data {
-        let result = iso_week(&*data.input).unwrap();
-
-        assert_eq!(result, data.iso_week.unwrap());
-    }
-}
+temporal_tz_test!(temporal_tz_hour, hour);
+temporal_tz_test!(temporal_tz_minute, minute);
+temporal_tz_test!(temporal_tz_second, second);
+temporal_tz_test!(temporal_tz_nanosecond, nanosecond);
+temporal_tz_test!(temporal_tz_year, year);
+temporal_tz_test!(temporal_tz_month, month);
+temporal_tz_test!(temporal_tz_day, day);
+temporal_tz_test!(temporal_tz_weekday, weekday);
+temporal_tz_test!(temporal_tz_iso_week, iso_week);
 
 fn test_data_tz() -> Vec<TestData> {
     vec![
