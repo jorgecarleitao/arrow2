@@ -50,12 +50,30 @@ impl FixedSizeBinaryArray {
     /// Returns a slice of this [`FixedSizeBinaryArray`].
     /// # Implementation
     /// This operation is `O(1)` as it amounts to increase 3 ref counts.
+    /// # Panics
+    /// panics iff `offset + length > self.len()`
     pub fn slice(&self, offset: usize, length: usize) -> Self {
-        let validity = self.validity.clone().map(|x| x.slice(offset, length));
+        assert!(
+            offset + length <= self.len(),
+            "the offset of the new Buffer cannot exceed the existing length"
+        );
+        unsafe { self.slice_unchecked(offset, length) }
+    }
+
+    /// Returns a slice of this [`FixedSizeBinaryArray`].
+    /// # Implementation
+    /// This operation is `O(1)` as it amounts to increase 3 ref counts.
+    /// # Safety
+    /// The caller must ensure that `offset + length <= self.len()`.
+    pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
+        let validity = self
+            .validity
+            .clone()
+            .map(|x| x.slice_unchecked(offset, length));
         let values = self
             .values
             .clone()
-            .slice(offset * self.size as usize, length * self.size as usize);
+            .slice_unchecked(offset * self.size as usize, length * self.size as usize);
         Self {
             data_type: self.data_type.clone(),
             size: self.size,
@@ -138,6 +156,9 @@ impl Array for FixedSizeBinaryArray {
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+    unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
+        Box::new(self.slice_unchecked(offset, length))
     }
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.with_validity(validity))

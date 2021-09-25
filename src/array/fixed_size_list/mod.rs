@@ -63,12 +63,30 @@ impl FixedSizeListArray {
     /// Returns a slice of this [`FixedSizeListArray`].
     /// # Implementation
     /// This operation is `O(1)`.
+    /// # Panics
+    /// panics iff `offset + length > self.len()`
     pub fn slice(&self, offset: usize, length: usize) -> Self {
-        let validity = self.validity.clone().map(|x| x.slice(offset, length));
+        assert!(
+            offset + length <= self.len(),
+            "the offset of the new Buffer cannot exceed the existing length"
+        );
+        unsafe { self.slice_unchecked(offset, length) }
+    }
+
+    /// Returns a slice of this [`FixedSizeListArray`].
+    /// # Implementation
+    /// This operation is `O(1)`.
+    /// # Safety
+    /// The caller must ensure that `offset + length <= self.len()`.
+    pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
+        let validity = self
+            .validity
+            .clone()
+            .map(|x| x.slice_unchecked(offset, length));
         let values = self
             .values
             .clone()
-            .slice(offset * self.size as usize, length * self.size as usize)
+            .slice_unchecked(offset * self.size as usize, length * self.size as usize)
             .into();
         Self {
             data_type: self.data_type.clone(),
@@ -85,10 +103,21 @@ impl FixedSizeListArray {
     }
 
     /// Returns the `Vec<T>` at position `i`.
+    /// # Panic:
+    /// panics iff `i >= self.len()`
     #[inline]
     pub fn value(&self, i: usize) -> Box<dyn Array> {
         self.values
             .slice(i * self.size as usize, self.size as usize)
+    }
+
+    /// Returns the `Vec<T>` at position `i`.
+    /// # Safety:
+    /// Caller must ensure that `i < self.len()`
+    #[inline]
+    pub unsafe fn value_unchecked(&self, i: usize) -> Box<dyn Array> {
+        self.values
+            .slice_unchecked(i * self.size as usize, self.size as usize)
     }
 
     /// Sets the validity bitmap on this [`FixedSizeListArray`].
@@ -142,6 +171,9 @@ impl Array for FixedSizeListArray {
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+    unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
+        Box::new(self.slice_unchecked(offset, length))
     }
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.with_validity(validity))

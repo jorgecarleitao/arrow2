@@ -230,3 +230,7 @@ harness = false
 [[bench]]
 name = "iter_utf8"
 harness = false
+
+[[bench]]
+name = "iter_list"
+harness = false

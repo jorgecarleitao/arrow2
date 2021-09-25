@@ -90,8 +90,24 @@ impl<O: Offset> BinaryArray<O> {
     /// # Panics
     /// iff `offset + length > self.len()`.
     pub fn slice(&self, offset: usize, length: usize) -> Self {
-        let validity = self.validity.clone().map(|x| x.slice(offset, length));
-        let offsets = self.offsets.clone().slice(offset, length + 1);
+        assert!(
+            offset + length <= self.len(),
+            "the offset of the new Buffer cannot exceed the existing length"
+        );
+        unsafe { self.slice_unchecked(offset, length) }
+    }
+
+    /// Creates a new [`BinaryArray`] by slicing this [`BinaryArray`].
+    /// # Implementation
+    /// This function is `O(1)`: all data will be shared between both arrays.
+    /// # Safety
+    /// The caller must ensure that `offset + length <= self.len()`.
+    pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
+        let validity = self
+            .validity
+            .clone()
+            .map(|x| x.slice_unchecked(offset, length));
+        let offsets = self.offsets.clone().slice_unchecked(offset, length + 1);
         Self {
             data_type: self.data_type.clone(),
             offsets,
@@ -174,6 +190,9 @@ impl<O: Offset> Array for BinaryArray<O> {
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+    unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
+        Box::new(self.slice_unchecked(offset, length))
     }
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.with_validity(validity))

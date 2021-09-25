@@ -80,7 +80,10 @@ impl<O: Offset> ListArray<O> {
             let offset_1 = offsets[i + 1];
             let length = (offset_1 - offset).to_usize();
 
-            self.values.slice(offset.to_usize(), length)
+            // Safety:
+            // One of the invariants of the struct
+            // is that offsets are in bounds
+            unsafe { self.values.slice_unchecked(offset.to_usize(), length) }
         }
     }
 
@@ -93,12 +96,29 @@ impl<O: Offset> ListArray<O> {
         let offset_1 = *self.offsets.as_ptr().add(i + 1);
         let length = (offset_1 - offset).to_usize();
 
-        self.values.slice(offset.to_usize(), length)
+        self.values.slice_unchecked(offset.to_usize(), length)
     }
 
+    /// Returns a slice of this [`ListArray`].
+    /// # Panics
+    /// panics iff `offset + length >= self.len()`
     pub fn slice(&self, offset: usize, length: usize) -> Self {
-        let validity = self.validity.clone().map(|x| x.slice(offset, length));
-        let offsets = self.offsets.clone().slice(offset, length + 1);
+        assert!(
+            offset + length <= self.len(),
+            "the offset of the new Buffer cannot exceed the existing length"
+        );
+        unsafe { self.slice_unchecked(offset, length) }
+    }
+
+    /// Returns a slice of this [`ListArray`].
+    /// # Safety
+    /// The caller must ensure that `offset + length < self.len()`.
+    pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
+        let validity = self
+            .validity
+            .clone()
+            .map(|x| x.slice_unchecked(offset, length));
+        let offsets = self.offsets.clone().slice_unchecked(offset, length + 1);
         Self {
             data_type: self.data_type.clone(),
             offsets,
@@ -185,6 +205,9 @@ impl<O: Offset> Array for ListArray<O> {
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+    unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
+        Box::new(self.slice_unchecked(offset, length))
     }
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.with_validity(validity))

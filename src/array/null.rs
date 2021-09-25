@@ -63,6 +63,9 @@ impl Array for NullArray {
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
     }
+    unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
+        Box::new(self.slice(offset, length))
+    }
     fn with_validity(&self, _: Option<Bitmap>) -> Box<dyn Array> {
         panic!("cannot set validity of a null array")
     }

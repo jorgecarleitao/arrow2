@@ -74,10 +74,24 @@ impl<K: DictionaryKey> DictionaryArray<K> {
     }
 
     /// Creates a new [`DictionaryArray`] by slicing the existing [`DictionaryArray`].
+    /// # Panics
+    /// iff `offset + length > self.len()`.
     pub fn slice(&self, offset: usize, length: usize) -> Self {
         Self {
             data_type: self.data_type.clone(),
             keys: self.keys.clone().slice(offset, length),
+            values: self.values.clone(),
+            offset: self.offset + offset,
+        }
+    }
+
+    /// Creates a new [`DictionaryArray`] by slicing the existing [`DictionaryArray`].
+    /// # Safety
+    /// Safe iff `offset + length <= self.len()`.
+    pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
+        Self {
+            data_type: self.data_type.clone(),
+            keys: self.keys.clone().slice_unchecked(offset, length),
             values: self.values.clone(),
             offset: self.offset + offset,
         }
@@ -148,6 +162,9 @@ impl<K: DictionaryKey> Array for DictionaryArray<K> {
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+    unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
+        Box::new(self.slice_unchecked(offset, length))
     }
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.with_validity(validity))

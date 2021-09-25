@@ -86,10 +86,27 @@ impl<T: NativeType> PrimitiveArray<T> {
     /// This function panics iff `offset + length >= self.len()`.
     #[inline]
     pub fn slice(&self, offset: usize, length: usize) -> Self {
-        let validity = self.validity.clone().map(|x| x.slice(offset, length));
+        assert!(
+            offset + length <= self.len(),
+            "offset + length may not exceed length of array"
+        );
+        unsafe { self.slice_unchecked(offset, length) }
+    }
+
+    /// Returns a slice of this [`PrimitiveArray`].
+    /// # Implementation
+    /// This operation is `O(1)` as it amounts to increase two ref counts.
+    /// # Safety
+    /// The caller must ensure that `offset + length <= self.len()`.
+    #[inline]
+    pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
+        let validity = self
+            .validity
+            .clone()
+            .map(|x| x.slice_unchecked(offset, length));
         Self {
             data_type: self.data_type.clone(),
-            values: self.values.clone().slice(offset, length),
+            values: self.values.clone().slice_unchecked(offset, length),
             validity,
             offset: self.offset + offset,
         }
@@ -175,6 +192,9 @@ impl<T: NativeType> Array for PrimitiveArray<T> {
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+    unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
+        Box::new(self.slice_unchecked(offset, length))
     }
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.with_validity(validity))
