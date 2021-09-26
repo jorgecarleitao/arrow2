@@ -146,6 +146,15 @@ impl<O: Offset> MutableArray for MutableBinaryArray<O> {
         self.validity.as_ref()
     }
 
+    fn as_box(&mut self) -> Box<dyn Array> {
+        Box::new(BinaryArray::from_data(
+            self.data_type.clone(),
+            std::mem::take(&mut self.offsets).into(),
+            std::mem::take(&mut self.values).into(),
+            std::mem::take(&mut self.validity).map(|x| x.into()),
+        ))
+    }
+
     fn as_arc(&mut self) -> Arc<dyn Array> {
         Arc::new(BinaryArray::from_data(
             self.data_type.clone(),

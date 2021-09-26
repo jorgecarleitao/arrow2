@@ -121,8 +121,16 @@ pub trait MutableArray: std::fmt::Debug {
     /// The optional validity of the array.
     fn validity(&self) -> Option<&MutableBitmap>;
 
-    /// Convert itself to an (immutable) [`Array`].
-    fn as_arc(&mut self) -> Arc<dyn Array>;
+    /// Convert itself to an (immutable) ['Array'].
+    fn as_box(&mut self) -> Box<dyn Array>;
+
+    /// Convert itself to an (immutable) atomically reference counted [`Array`].
+    // This provided implementation has an extra allocation as it first
+    // boxes `self`, then converts the box into an `Arc`. Implementors may wish
+    // to avoid an allocation by skipping the box completely.
+    fn as_arc(&mut self) -> Arc<dyn Array> {
+        self.as_box().into()
+    }
 
     /// Convert to `Any`, to enable dynamic casting.
     fn as_any(&self) -> &dyn Any;
