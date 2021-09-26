@@ -121,9 +121,19 @@ impl Bitmap {
     /// The caller must ensure that `self.offset + offset + length <= self.len()`
     #[inline]
     pub unsafe fn slice_unchecked(mut self, offset: usize, length: usize) -> Self {
+        // count the smallest chunk
+        if length < self.length / 2 {
+            // count the null values in the slice
+            self.null_count = count_zeros(&self.bytes, offset, length);
+        } else {
+            // subtract the null count of the chunks we slice off
+            let start_end = self.offset + offset + length;
+            let head_count = count_zeros(&self.bytes, self.offset, offset);
+            let tail_count = count_zeros(&self.bytes, start_end, self.length - length - offset);
+            self.null_count -= head_count + tail_count;
+        }
         self.offset += offset;
         self.length = length;
-        self.null_count = count_zeros(&self.bytes, self.offset, self.length);
         self
     }
 
