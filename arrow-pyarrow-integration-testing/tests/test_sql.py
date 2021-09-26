@@ -33,18 +33,9 @@ class UuidType(pyarrow.PyExtensionType):
 
 class TestCase(unittest.TestCase):
     def setUp(self):
-        self.old_allocated_rust = (
-            arrow_pyarrow_integration_testing.total_allocated_bytes()
-        )
         self.old_allocated_cpp = pyarrow.total_allocated_bytes()
 
     def tearDown(self):
-        # No leak of Rust
-        self.assertEqual(
-            self.old_allocated_rust,
-            arrow_pyarrow_integration_testing.total_allocated_bytes(),
-        )
-
         # No leak of C++ memory
         self.assertEqual(self.old_allocated_cpp, pyarrow.total_allocated_bytes())
 

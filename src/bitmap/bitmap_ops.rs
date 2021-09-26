@@ -112,9 +112,9 @@ where
 
     let iterator = iter.map(|left| op(left)).chain(std::iter::once(rem));
 
-    let buffer = MutableBuffer::from_trusted_len_iter(iterator);
+    let buffer = MutableBuffer::from_chunk_iter(iterator);
 
-    Bitmap::from_u8_buffer(buffer.into(), length)
+    Bitmap::from_u8_buffer(buffer, length)
 }
 
 /// Apply a bitwise operation `op` to one input and return the result as a [`Bitmap`].

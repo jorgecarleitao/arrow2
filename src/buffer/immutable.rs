@@ -52,9 +52,18 @@ impl<T: NativeType> Buffer<T> {
         MutableBuffer::from_len_zeroed(length).into()
     }
 
-    /// Auxiliary method to create a new Buffer
+    /// Takes ownership of [`Vec`].
+    /// # Implementation
+    /// This function is `O(1)`
+    #[cfg(not(feature = "cache_aligned"))]
+    #[cfg_attr(docsrs, doc(cfg(not(feature = "cache_aligned"))))]
     #[inline]
-    pub fn from_bytes(bytes: Bytes<T>) -> Self {
+    pub fn from_vec(data: Vec<T>) -> Self {
+        MutableBuffer::from_vec(data).into()
+    }
+
+    /// Auxiliary method to create a new Buffer
+    pub(crate) fn from_bytes(bytes: Bytes<T>) -> Self {
         let length = bytes.len();
         Buffer {
             data: Arc::new(bytes),

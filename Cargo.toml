@@ -98,7 +98,7 @@ full = [
     "merge_sort",
     "compute",
     # parses timezones used in timestamp conversions
-    "chrono-tz",
+    "chrono-tz"
 ]
 merge_sort = ["itertools"]
 io_csv = ["io_csv_read", "io_csv_write"]
@@ -125,6 +125,9 @@ compute = ["strength_reduce", "multiversion", "lexical-core", "ahash"]
 io_parquet = ["parquet2", "io_ipc", "base64", "futures"]
 benchmarks = ["rand"]
 simd = ["packed_simd"]
+# uses a custom allocator whose pointers are aligned along cache lines.
+# Using this features makes `Buffer` and `MutableBuffer` incompatible with `Vec`.
+cache_aligned = []
 
 [package.metadata.cargo-all-features]
 skip_feature_sets = [

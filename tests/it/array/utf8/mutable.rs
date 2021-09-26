@@ -7,8 +7,8 @@ use arrow2::datatypes::DataType;
 fn capacities() {
     let b = MutableUtf8Array::<i32>::with_capacities(1, 10);
 
-    assert_eq!(b.values().capacity(), 64);
-    assert_eq!(b.offsets().capacity(), 16); // 64 bytes
+    assert!(b.values().capacity() >= 10);
+    assert!(b.offsets().capacity() >= 2);
 }
 
 #[test]
