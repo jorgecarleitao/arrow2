@@ -28,17 +28,12 @@ pub trait NativeSimd: Default {
     /// * iff `v.len()` != `T::LANES`
     fn from_chunk(v: &[Self::Native]) -> Self;
 
-    /// Convert itself from a slice.
-    /// # Safety:
-    /// Caller must ensure:
-    /// * `v.len() == T::LANES`
-    /// * slice is aligned to `Self`
-    unsafe fn from_chunk_aligned_unchecked(v: &[Self::Native]) -> Self;
-
     /// creates a new Self from `v` by populating items from `v` up to its length.
     /// Items from `v` at positions larger than the number of lanes are ignored;
     /// remaining items are populated with `remaining`.
     fn from_incomplete_chunk(v: &[Self::Native], remaining: Self::Native) -> Self;
+
+    fn clone(&self) -> Self;
 }
 
 /// Trait implemented by some [`NativeType`] that have a SIMD representation.

@@ -30,15 +30,14 @@ macro_rules! simd {
             }
 
             #[inline]
-            unsafe fn from_chunk_aligned_unchecked(v: &[$type]) -> Self {
-                ($name)(v.try_into().unwrap())
-            }
-
-            #[inline]
             fn from_incomplete_chunk(v: &[$type], remaining: $type) -> Self {
                 let mut a = [remaining; $lanes];
                 a.iter_mut().zip(v.iter()).for_each(|(a, b)| *a = *b);
                 Self(a)
+            }
+            #[inline]
+            fn clone(&self) -> Self {
+                self.clone()
             }
         }
 

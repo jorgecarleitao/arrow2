@@ -19,43 +19,24 @@ pub trait Sum<T> {
     fn simd_sum(self) -> T;
 }
 
-fn split_by_alignment<U, T>(values: &[T]) -> (&[T], &[T]) {
-    let alignment = std::mem::align_of::<U>();
-
-    let vals_ptr = values.as_ptr();
-    let bytes_offset = vals_ptr.align_offset(alignment);
-    let type_offset = if bytes_offset > 0 {
-        std::mem::align_of::<T>() / bytes_offset
-    } else {
-        0
-    };
-
-    let head = &values[..type_offset];
-    let aligned_values = &values[type_offset..];
-    (head, aligned_values)
-}
-
 #[multiversion]
 #[clone(target = "x86_64+avx")]
-fn nonnull_sum<T>(values: &[T]) -> T
+fn nonnull_sum<'a, T>(values: &'a [T]) -> T
 where
     T: NativeType + Simd + Add<Output = T> + std::iter::Sum<T>,
-    T::Simd: Add<Output = T::Simd> + Sum<T>,
+    T::Simd: Sum<T> + Add<Output = T::Simd>,
 {
-    let (head, aligned_values) = split_by_alignment::<T::Simd, _>(values);
-
-    let mut chunks = aligned_values.chunks_exact(T::Simd::LANES);
-
     // Safety:
-    // we just made sure that we work on a slice af data aligned to T::Simd
-    let sum = chunks.by_ref().fold(T::Simd::default(), |acc, chunk| {
-        acc + unsafe { T::Simd::from_chunk_aligned_unchecked(chunk) }
-    });
+    // T::Simd is the vector type T and the alignment is similar to aligning to [T; alignment]
+    // the alignment of T::Simd ensures that it fits T.
+    let (head, simd_vals, tail) = unsafe { values.align_to::<T::Simd>() };
 
-    let remainder = T::Simd::from_incomplete_chunk(chunks.remainder(), T::default());
-    let reduced = sum + remainder;
+    let mut reduced = T::Simd::from_incomplete_chunk(&[], T::default());
+    for chunk in simd_vals {
+        reduced = reduced + chunk.clone()
+    }
 
-    reduced.simd_sum() + head.iter().copied().sum()
+    reduced.simd_sum() + head.iter().copied().sum() + tail.iter().copied().sum()
 }
 
 /// # Panics
@@ -108,7 +89,7 @@ where
 /// Returns the sum of values in the array.
 ///
 /// Returns `None` if the array is empty or only contains null values.
-pub fn sum_primitive<T>(array: &PrimitiveArray<T>) -> Option<T>
+pub fn sum_primitive<'a, T>(array: &'a PrimitiveArray<T>) -> Option<T>
 where
     T: NativeType + Simd + Add<Output = T> + std::iter::Sum<T>,
     T::Simd: Add<Output = T::Simd> + Sum<T>,
