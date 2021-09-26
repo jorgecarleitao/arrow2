@@ -31,4 +31,3 @@ fn add_benchmark(c: &mut Criterion) {
 
 criterion_group!(benches, add_benchmark);
 criterion_main!(benches);
-    

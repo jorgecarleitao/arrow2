@@ -113,7 +113,15 @@ mod tests {
             .collect::<Vec<_>>();
         assert_eq!(
             names,
-            vec!["int64", "float64", "string", "bool", "date", "uint32", "string_large"]
+            vec![
+                "int64",
+                "float64",
+                "string",
+                "bool",
+                "date",
+                "uint32",
+                "string_large"
+            ]
         );
         Ok(())
     }
