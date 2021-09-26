@@ -109,5 +109,6 @@ pub fn estimated_bytes_size(array: &dyn Array) -> usize {
         Dictionary(key_type) => with_match_physical_dictionary_key_type!(key_type, |$T| {
             dyn_dict!(array, $T)
         }),
+        Map => todo!(),
     }
 }

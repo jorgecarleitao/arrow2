@@ -30,6 +30,7 @@ pub unsafe fn try_from<A: ArrowArrayRef>(array: A) -> Result<Box<dyn Array>> {
             })
         }
         Union => Box::new(UnionArray::try_from_ffi(array)?),
+        Map => Box::new(MapArray::try_from_ffi(array)?),
         data_type => {
             return Err(ArrowError::NotYetImplemented(format!(
                 "Importing PhysicalType \"{:?}\" is not yet supported.",

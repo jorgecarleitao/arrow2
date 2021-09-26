@@ -61,6 +61,7 @@ pub fn buffers_children_dictionary(array: &dyn Array) -> BuffersChildren {
         FixedSizeList => ffi_dyn!(array, FixedSizeListArray),
         Struct => ffi_dyn!(array, StructArray),
         Union => ffi_dyn!(array, UnionArray),
+        Map => ffi_dyn!(array, MapArray),
         Dictionary(key_type) => {
             with_match_physical_dictionary_key_type!(key_type, |$T| {
                 let array = array.as_any().downcast_ref::<DictionaryArray<$T>>().unwrap();

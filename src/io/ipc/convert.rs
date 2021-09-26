@@ -307,6 +307,14 @@ fn get_data_type(field: ipc::Field, extension: Extension, may_be_dictionary: boo
             };
             DataType::Union(fields, ids, is_sparse)
         }
+        ipc::Type::Map => {
+            let map = field.type_as_map().unwrap();
+            let children = field.children().unwrap();
+            if children.len() != 1 {
+                panic!("expect a map to have one child")
+            }
+            DataType::Map(Box::new(children.get(0).into()), map.keysSorted())
+        }
         t => unimplemented!("Type {:?} not supported", t),
     }
 }
@@ -440,6 +448,7 @@ fn type_to_field_type(data_type: &DataType) -> ipc::Type {
         LargeList(_) => ipc::Type::LargeList,
         FixedSizeList(_, _) => ipc::Type::FixedSizeList,
         Union(_, _, _) => ipc::Type::Union,
+        Map(_, _) => ipc::Type::Map,
         Struct(_) => ipc::Type::Struct_,
         Dictionary(_, v) => type_to_field_type(v),
         Extension(_, v, _) => type_to_field_type(v),
@@ -714,6 +723,16 @@ pub(crate) fn get_fb_field_type<'a>(
                 type_type,
                 type_: builder.finish().as_union_value(),
                 children: Some(fbb.create_vector(&children)),
+            }
+        }
+        Map(field, keys_sorted) => {
+            let child = build_field(fbb, field);
+            let mut field_type = ipc::MapBuilder::new(fbb);
+            field_type.add_keysSorted(*keys_sorted);
+            FbFieldType {
+                type_type: ipc::Type::Map,
+                type_: field_type.finish().as_union_value(),
+                children: Some(fbb.create_vector(&[child])),
             }
         }
     }

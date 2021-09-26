@@ -128,6 +128,23 @@ class TestCase(unittest.TestCase):
         assert a.to_pylist() == b.to_pylist()
         assert a.type == b.type
 
+    def test_map(self):
+        """
+        Python -> Rust -> Python
+        """
+        offsets = [0, None, 2, 6]
+        pykeys = [b"a", b"b", b"c", b"d", b"e", b"f"]
+        pyitems = [1, 2, 3, None, 4, 5]
+        keys = pyarrow.array(pykeys, type="binary")
+        items = pyarrow.array(pyitems, type="i4")
+
+        a = pyarrow.MapArray.from_arrays(offsets, keys, items)
+        b = arrow_pyarrow_integration_testing.round_trip_array(a)
+
+        b.validate(full=True)
+        assert a.to_pylist() == b.to_pylist()
+        assert a.type == b.type
+
     def test_sparse_union(self):
         """
         Python -> Rust -> Python

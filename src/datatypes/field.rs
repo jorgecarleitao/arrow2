@@ -256,6 +256,7 @@ impl Field {
             | DataType::Utf8
             | DataType::LargeUtf8
             | DataType::Extension(_, _, _)
+            | DataType::Map(_, _)
             | DataType::Decimal(_, _) => {
                 if self.data_type != from.data_type {
                     return Err(ArrowError::Schema(
