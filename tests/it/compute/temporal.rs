@@ -111,6 +111,20 @@ impl TestData {
                 second: Some(UInt32Array::from(&[Some(18), None])),
                 nanosecond: Some(UInt32Array::from(&[Some(0), None])),
             },
+            DataType::Time64(TimeUnit::Nanosecond) => TestData {
+                input: Box::new(
+                    Int64Array::from(&[Some(378000000100), None]).to(data_type.clone()),
+                ),
+                year: None,
+                month: None,
+                day: None,
+                weekday: None,
+                iso_week: None,
+                hour: Some(UInt32Array::from(&[Some(0), None])),
+                minute: Some(UInt32Array::from(&[Some(6), None])),
+                second: Some(UInt32Array::from(&[Some(18), None])),
+                nanosecond: Some(UInt32Array::from(&[Some(100), None])),
+            },
             DataType::Timestamp(TimeUnit::Microsecond, None) => TestData {
                 // 68216970000000 (Epoch Microsecond) has 29th Feb (leap year)
                 input: Box::new(
@@ -137,6 +151,7 @@ impl TestData {
             DataType::Date64,
             DataType::Time32(TimeUnit::Second),
             DataType::Time64(TimeUnit::Microsecond),
+            DataType::Time64(TimeUnit::Nanosecond),
             DataType::Timestamp(TimeUnit::Microsecond, None),
         ]
     }
