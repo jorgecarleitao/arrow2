@@ -442,7 +442,7 @@ fn display_fmt<T: std::fmt::Display, I: IntoIterator<Item = Option<T>>>(
 
 /// Trait that list arrays implement for the purposes of DRY.
 pub trait IterableListArray: Array {
-    /// # Safety:
+    /// # Safety
     /// The caller must ensure that `i < self.len()`
     unsafe fn value_unchecked(&self, i: usize) -> Box<dyn Array>;
 }

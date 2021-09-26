@@ -38,6 +38,10 @@ impl FixedSizeBinaryArray {
 
         assert_eq!(values.len() % size, 0);
 
+        if let Some(ref validity) = validity {
+            assert_eq!(values.len() / size, validity.len());
+        }
+
         Self {
             size,
             data_type,
@@ -126,9 +130,8 @@ impl FixedSizeBinaryArray {
 
 impl FixedSizeBinaryArray {
     pub(crate) fn get_size(data_type: &DataType) -> &i32 {
-        match data_type {
+        match data_type.to_logical_type() {
             DataType::FixedSizeBinary(size) => size,
-            DataType::Extension(_, child, _) => Self::get_size(child),
             _ => panic!("Wrong DataType"),
         }
     }

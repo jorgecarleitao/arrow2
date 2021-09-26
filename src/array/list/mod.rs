@@ -52,6 +52,10 @@ impl<O: Offset> ListArray<O> {
     ) -> Self {
         check_offsets(&offsets, values.len());
 
+        if let Some(ref validity) = validity {
+            assert_eq!(offsets.len() - 1, validity.len());
+        }
+
         // validate data_type
         let child_data_type = Self::get_child_type(&data_type);
         assert_eq!(
@@ -163,16 +167,14 @@ impl<O: Offset> ListArray<O> {
 
     pub fn get_child_field(data_type: &DataType) -> &Field {
         if O::is_large() {
-            match data_type {
+            match data_type.to_logical_type() {
                 DataType::LargeList(child) => child.as_ref(),
-                DataType::Extension(_, child, _) => Self::get_child_field(child),
-                _ => panic!("Wrong DataType"),
+                _ => panic!("ListArray<i64> expects DataType::List or DataType::LargeList"),
             }
         } else {
-            match data_type {
+            match data_type.to_logical_type() {
                 DataType::List(child) => child.as_ref(),
-                DataType::Extension(_, child, _) => Self::get_child_field(child),
-                _ => panic!("Wrong DataType"),
+                _ => panic!("ListArray<i32> expects DataType::List or DataType::List"),
             }
         }
     }
