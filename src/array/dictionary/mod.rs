@@ -109,6 +109,12 @@ impl<K: DictionaryKey> DictionaryArray<K> {
         arr
     }
 
+    /// The optional validity. Equivalent to `self.keys().validity()`.
+    #[inline]
+    pub fn validity(&self) -> Option<&Bitmap> {
+        self.keys.validity()
+    }
+
     /// Returns the keys of the [`DictionaryArray`]. These keys can be used to fetch values
     /// from `values`.
     #[inline]

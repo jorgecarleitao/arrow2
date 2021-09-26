@@ -83,6 +83,12 @@ impl FixedSizeBinaryArray {
         }
     }
 
+    /// The optional validity.
+    #[inline]
+    pub fn validity(&self) -> Option<&Bitmap> {
+        self.validity.as_ref()
+    }
+
     /// Returns the values allocated on this [`FixedSizeBinaryArray`].
     pub fn values(&self) -> &Buffer<u8> {
         &self.values

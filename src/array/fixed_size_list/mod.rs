@@ -97,6 +97,12 @@ impl FixedSizeListArray {
         }
     }
 
+    /// The optional validity.
+    #[inline]
+    pub fn validity(&self) -> Option<&Bitmap> {
+        self.validity.as_ref()
+    }
+
     /// Returns the inner array.
     pub fn values(&self) -> &Arc<dyn Array> {
         &self.values

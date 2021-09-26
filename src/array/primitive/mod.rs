@@ -124,7 +124,13 @@ impl<T: NativeType> PrimitiveArray<T> {
         arr
     }
 
-    /// The values.
+    /// The optional validity.
+    #[inline]
+    pub fn validity(&self) -> Option<&Bitmap> {
+        self.validity.as_ref()
+    }
+
+    /// The values [`Buffer`].
     /// Values on null slots are undetermined (they can be anything).
     #[inline]
     pub fn values(&self) -> &Buffer<T> {

@@ -144,6 +144,15 @@ impl StructArray {
         arr.validity = validity;
         arr
     }
+}
+
+// Accessors
+impl StructArray {
+    /// The optional validity.
+    #[inline]
+    pub fn validity(&self) -> Option<&Bitmap> {
+        self.validity.as_ref()
+    }
 
     /// Returns the values of this [`StructArray`].
     pub fn values(&self) -> &[Arc<dyn Array>] {

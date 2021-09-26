@@ -69,6 +69,50 @@ impl<O: Offset> ListArray<O> {
         }
     }
 
+    /// Returns a slice of this [`ListArray`].
+    /// # Panics
+    /// panics iff `offset + length >= self.len()`
+    pub fn slice(&self, offset: usize, length: usize) -> Self {
+        assert!(
+            offset + length <= self.len(),
+            "the offset of the new Buffer cannot exceed the existing length"
+        );
+        unsafe { self.slice_unchecked(offset, length) }
+    }
+
+    /// Returns a slice of this [`ListArray`].
+    /// # Safety
+    /// The caller must ensure that `offset + length < self.len()`.
+    pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
+        let validity = self
+            .validity
+            .clone()
+            .map(|x| x.slice_unchecked(offset, length));
+        let offsets = self.offsets.clone().slice_unchecked(offset, length + 1);
+        Self {
+            data_type: self.data_type.clone(),
+            offsets,
+            values: self.values.clone(),
+            validity,
+            offset: self.offset + offset,
+        }
+    }
+
+    /// Sets the validity bitmap on this [`ListArray`].
+    /// # Panic
+    /// This function panics iff `validity.len() != self.len()`.
+    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
+        if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
+            panic!("validity should be as least as large as the array")
+        }
+        let mut arr = self.clone();
+        arr.validity = validity;
+        arr
+    }
+}
+
+// Accessors
+impl<O: Offset> ListArray<O> {
     /// Returns the element at index `i`
     #[inline]
     pub fn value(&self, i: usize) -> Box<dyn Array> {
@@ -99,33 +143,10 @@ impl<O: Offset> ListArray<O> {
         self.values.slice_unchecked(offset.to_usize(), length)
     }
 
-    /// Returns a slice of this [`ListArray`].
-    /// # Panics
-    /// panics iff `offset + length >= self.len()`
-    pub fn slice(&self, offset: usize, length: usize) -> Self {
-        assert!(
-            offset + length <= self.len(),
-            "the offset of the new Buffer cannot exceed the existing length"
-        );
-        unsafe { self.slice_unchecked(offset, length) }
-    }
-
-    /// Returns a slice of this [`ListArray`].
-    /// # Safety
-    /// The caller must ensure that `offset + length < self.len()`.
-    pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
-        let validity = self
-            .validity
-            .clone()
-            .map(|x| x.slice_unchecked(offset, length));
-        let offsets = self.offsets.clone().slice_unchecked(offset, length + 1);
-        Self {
-            data_type: self.data_type.clone(),
-            offsets,
-            values: self.values.clone(),
-            validity,
-            offset: self.offset + offset,
-        }
+    /// The optional validity.
+    #[inline]
+    pub fn validity(&self) -> Option<&Bitmap> {
+        self.validity.as_ref()
     }
 
     #[inline]
@@ -136,18 +157,6 @@ impl<O: Offset> ListArray<O> {
     #[inline]
     pub fn values(&self) -> &Arc<dyn Array> {
         &self.values
-    }
-
-    /// Sets the validity bitmap on this [`ListArray`].
-    /// # Panic
-    /// This function panics iff `validity.len() != self.len()`.
-    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
-        if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
-            panic!("validity should be as least as large as the array")
-        }
-        let mut arr = self.clone();
-        arr.validity = validity;
-        arr
     }
 }
 
