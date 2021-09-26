@@ -16,7 +16,7 @@ pub use mutable::*;
 /// Cloning and slicing this struct is `O(1)`.
 #[derive(Debug, Clone)]
 pub struct FixedSizeListArray {
-    size: i32, // this is redundant with `data_type`, but useful to not have to deconstruct the data_type.
+    size: usize, // this is redundant with `data_type`, but useful to not have to deconstruct the data_type.
     data_type: DataType,
     values: Arc<dyn Array>,
     validity: Option<Bitmap>,
@@ -49,10 +49,14 @@ impl FixedSizeListArray {
     ) -> Self {
         let (_, size) = Self::get_child_and_size(&data_type);
 
-        assert_eq!(values.len() % (*size as usize), 0);
+        assert_eq!(values.len() % size, 0);
+
+        if let Some(ref validity) = validity {
+            assert_eq!(values.len() / size, validity.len());
+        }
 
         Self {
-            size: *size,
+            size,
             data_type,
             values,
             validity,
@@ -118,7 +122,7 @@ impl FixedSizeListArray {
     }
 
     /// Returns the `Vec<T>` at position `i`.
-    /// # Safety:
+    /// # Safety
     /// Caller must ensure that `i < self.len()`
     #[inline]
     pub unsafe fn value_unchecked(&self, i: usize) -> Box<dyn Array> {
@@ -140,15 +144,14 @@ impl FixedSizeListArray {
 }
 
 impl FixedSizeListArray {
-    pub(crate) fn get_child_and_size(data_type: &DataType) -> (&Field, &i32) {
-        match data_type {
-            DataType::FixedSizeList(child, size) => (child.as_ref(), size),
-            DataType::Extension(_, child, _) => Self::get_child_and_size(child),
-            _ => panic!("Wrong DataType"),
+    pub(crate) fn get_child_and_size(data_type: &DataType) -> (&Field, usize) {
+        match data_type.to_logical_type() {
+            DataType::FixedSizeList(child, size) => (child.as_ref(), *size as usize),
+            _ => panic!("FixedSizeListArray expects DataType::FixedSizeList"),
         }
     }
 
-    /// Returns a [`DataType`] consistent with this Array.
+    /// Returns a [`DataType`] consistent with [`FixedSizeListArray`].
     pub fn default_datatype(data_type: DataType, size: usize) -> DataType {
         let field = Box::new(Field::new("item", data_type, true));
         DataType::FixedSizeList(field, size as i32)
