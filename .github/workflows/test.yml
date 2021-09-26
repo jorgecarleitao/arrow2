@@ -54,6 +54,19 @@ jobs:
       - name: "clippy --all"
         run: cargo clippy --all --tests
 
+  fmt:
+    name: fmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust
+        run: rustup update stable
+      - uses: Swatinem/rust-cache@v1
+      - name: Install rustfmt
+        run: rustup component add rustfmt
+
+      - run: cargo fmt
+
   miri-checks:
     name: Miri
     runs-on: ubuntu-latest
