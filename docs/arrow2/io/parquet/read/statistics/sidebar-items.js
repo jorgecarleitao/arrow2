@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["deserialize_statistics",""]],"struct":[["BinaryStatistics",""],["BooleanStatistics",""],["PrimitiveStatistics",""],["Utf8Statistics",""]],"trait":[["Statistics","Trait denoting a deserialized parquet statistics (into arrow)."]]});
