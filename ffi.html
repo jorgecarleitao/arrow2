@@ -166,7 +166,7 @@ unsafe fn export(
     ffi::export_field_to_c(&amp;field, schema_ptr);
 }
 
-fn import(
+unsafe fn import(
     array: Box&lt;ffi::Ffi_ArrowArray&gt;,
     schema: &amp;ffi::Ffi_ArrowSchema,
 ) -&gt; Result&lt;Box&lt;dyn Array&gt;&gt; {
@@ -199,7 +199,8 @@ fn main() -&gt; Result&lt;()&gt; {
     let schema_ptr = unsafe { Box::from_raw(schema_ptr) };
 
     // and finally interpret the written memory into a new array.
-    let new_array = import(array_ptr, schema_ptr.as_ref())?;
+    // Safety: we used `export`, which is a valid exporter to the C data interface
+    let new_array = unsafe { import(array_ptr, schema_ptr.as_ref())? };
 
     // which is equal to the exported array
     assert_eq!(array.as_ref(), new_array.as_ref());
