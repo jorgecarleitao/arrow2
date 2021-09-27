@@ -37,7 +37,7 @@ macro_rules! simd {
             }
             #[inline]
             fn clone(&self) -> Self {
-                self.clone()
+                ($name)(self.0).into()
             }
         }
 

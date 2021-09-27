@@ -21,7 +21,7 @@ pub trait Sum<T> {
 
 #[multiversion]
 #[clone(target = "x86_64+avx")]
-fn nonnull_sum<'a, T>(values: &'a [T]) -> T
+fn nonnull_sum<T>(values: &[T]) -> T
 where
     T: NativeType + Simd + Add<Output = T> + std::iter::Sum<T>,
     T::Simd: Sum<T> + Add<Output = T::Simd>,
@@ -89,7 +89,7 @@ where
 /// Returns the sum of values in the array.
 ///
 /// Returns `None` if the array is empty or only contains null values.
-pub fn sum_primitive<'a, T>(array: &'a PrimitiveArray<T>) -> Option<T>
+pub fn sum_primitive<T>(array: &PrimitiveArray<T>) -> Option<T>
 where
     T: NativeType + Simd + Add<Output = T> + std::iter::Sum<T>,
     T::Simd: Add<Output = T::Simd> + Sum<T>,
