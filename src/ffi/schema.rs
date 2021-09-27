@@ -199,7 +199,7 @@ impl Drop for Ffi_ArrowSchema {
     }
 }
 
-pub fn to_field(schema: &Ffi_ArrowSchema) -> Result<Field> {
+pub(crate) unsafe fn to_field(schema: &Ffi_ArrowSchema) -> Result<Field> {
     let dictionary = schema.dictionary();
     let data_type = if let Some(dictionary) = dictionary {
         let indices_data_type = to_data_type(schema)?;
@@ -224,7 +224,7 @@ pub fn to_field(schema: &Ffi_ArrowSchema) -> Result<Field> {
     Ok(field)
 }
 
-fn to_data_type(schema: &Ffi_ArrowSchema) -> Result<DataType> {
+unsafe fn to_data_type(schema: &Ffi_ArrowSchema) -> Result<DataType> {
     Ok(match schema.format() {
         "n" => DataType::Null,
         "b" => DataType::Boolean,

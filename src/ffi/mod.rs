@@ -34,11 +34,20 @@ pub unsafe fn export_field_to_c(field: &Field, ptr: *mut Ffi_ArrowSchema) {
 }
 
 /// Imports a [`Field`] from the C data interface.
-pub fn import_field_from_c(field: &Ffi_ArrowSchema) -> Result<Field> {
+/// # Safety
+/// This function is intrinsically `unsafe` and relies on a [`Ffi_ArrowSchema`]
+/// valid according to the [C data interface](https://arrow.apache.org/docs/format/CDataInterface.html) (FFI).
+pub unsafe fn import_field_from_c(field: &Ffi_ArrowSchema) -> Result<Field> {
     to_field(field)
 }
 
-/// Imports a [`Field`] from the C data interface.
-pub fn import_array_from_c(array: Box<Ffi_ArrowArray>, field: &Field) -> Result<Box<dyn Array>> {
+/// Imports an [`Array`] from the C data interface.
+/// # Safety
+/// This function is intrinsically `unsafe` and relies on a [`Ffi_ArrowArray`]
+/// valid according to the [C data interface](https://arrow.apache.org/docs/format/CDataInterface.html) (FFI).
+pub unsafe fn import_array_from_c(
+    array: Box<Ffi_ArrowArray>,
+    field: &Field,
+) -> Result<Box<dyn Array>> {
     try_from(Arc::new(ArrowArray::new(array, field.clone())))
 }

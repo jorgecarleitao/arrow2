@@ -233,8 +233,8 @@ unsafe impl ToFfi for StructArray {
     }
 }
 
-unsafe impl<A: ffi::ArrowArrayRef> FromFfi<A> for StructArray {
-    fn try_from_ffi(array: A) -> Result<Self> {
+impl<A: ffi::ArrowArrayRef> FromFfi<A> for StructArray {
+    unsafe fn try_from_ffi(array: A) -> Result<Self> {
         let field = array.field();
         let fields = Self::get_fields(field.data_type()).to_vec();
 

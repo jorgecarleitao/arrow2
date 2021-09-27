@@ -22,9 +22,12 @@ pub unsafe trait ToFfi {
 
 /// Trait describing how a struct imports into itself from the
 /// [C data interface](https://arrow.apache.org/docs/format/CDataInterface.html) (FFI).
-pub unsafe trait FromFfi<T: ffi::ArrowArrayRef>: Sized {
+pub trait FromFfi<T: ffi::ArrowArrayRef>: Sized {
     /// Convert itself from FFI.
-    fn try_from_ffi(array: T) -> Result<Self>;
+    /// # Safety
+    /// This function is intrinsically `unsafe` as it requires the FFI to be made according
+    /// to the [C data interface](https://arrow.apache.org/docs/format/CDataInterface.html)
+    unsafe fn try_from_ffi(array: T) -> Result<Self>;
 }
 
 macro_rules! ffi_dyn {

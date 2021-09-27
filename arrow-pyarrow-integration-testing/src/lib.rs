@@ -65,8 +65,8 @@ fn to_rust_array(ob: PyObject, py: Python) -> PyResult<Arc<dyn Array>> {
         (array_ptr as Py_uintptr_t, schema_ptr as Py_uintptr_t),
     )?;
 
-    let field = ffi::import_field_from_c(schema.as_ref()).map_err(PyO3ArrowError::from)?;
-    let array = ffi::import_array_from_c(array, &field).map_err(PyO3ArrowError::from)?;
+    let field = unsafe { ffi::import_field_from_c(schema.as_ref()).map_err(PyO3ArrowError::from)? };
+    let array = unsafe { ffi::import_array_from_c(array, &field).map_err(PyO3ArrowError::from)? };
 
     Ok(array.into())
 }
@@ -108,7 +108,7 @@ fn to_rust_field(ob: PyObject, py: Python) -> PyResult<Field> {
     // this changes the pointer's memory and is thus unsafe. In particular, `_export_to_c` can go out of bounds
     ob.call_method1(py, "_export_to_c", (schema_ptr as Py_uintptr_t,))?;
 
-    let field = ffi::import_field_from_c(schema.as_ref()).map_err(PyO3ArrowError::from)?;
+    let field = unsafe { ffi::import_field_from_c(schema.as_ref()).map_err(PyO3ArrowError::from)? };
 
     Ok(field)
 }
