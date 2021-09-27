@@ -24,8 +24,8 @@ fn test_round_trip(expected: impl Array + Clone + 'static) -> Result<()> {
     let schema_ptr = unsafe { Box::from_raw(schema_ptr) };
 
     // import references
-    let result_field = ffi::import_field_from_c(schema_ptr.as_ref())?;
-    let result_array = ffi::import_array_from_c(array_ptr, &result_field)?;
+    let result_field = unsafe { ffi::import_field_from_c(schema_ptr.as_ref())? };
+    let result_array = unsafe { ffi::import_array_from_c(array_ptr, &result_field)? };
 
     assert_eq!(&result_array, &expected);
     assert_eq!(result_field, field);
@@ -42,7 +42,7 @@ fn test_round_trip_schema(field: Field) -> Result<()> {
 
     let schema_ptr = unsafe { Box::from_raw(schema_ptr) };
 
-    let result = ffi::import_field_from_c(schema_ptr.as_ref())?;
+    let result = unsafe { ffi::import_field_from_c(schema_ptr.as_ref())? };
 
     assert_eq!(result, field);
     Ok(())

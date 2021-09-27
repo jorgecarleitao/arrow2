@@ -22,8 +22,8 @@ unsafe impl<T: NativeType> ToFfi for PrimitiveArray<T> {
     }
 }
 
-unsafe impl<T: NativeType, A: ffi::ArrowArrayRef> FromFfi<A> for PrimitiveArray<T> {
-    fn try_from_ffi(array: A) -> Result<Self> {
+impl<T: NativeType, A: ffi::ArrowArrayRef> FromFfi<A> for PrimitiveArray<T> {
+    unsafe fn try_from_ffi(array: A) -> Result<Self> {
         let data_type = array.field().data_type().clone();
         let length = array.array().len();
         let offset = array.array().offset();

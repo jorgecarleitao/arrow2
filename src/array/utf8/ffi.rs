@@ -20,8 +20,8 @@ unsafe impl<O: Offset> ToFfi for Utf8Array<O> {
     }
 }
 
-unsafe impl<O: Offset, A: ffi::ArrowArrayRef> FromFfi<A> for Utf8Array<O> {
-    fn try_from_ffi(array: A) -> Result<Self> {
+impl<O: Offset, A: ffi::ArrowArrayRef> FromFfi<A> for Utf8Array<O> {
+    unsafe fn try_from_ffi(array: A) -> Result<Self> {
         let length = array.array().len();
         let offset = array.array().offset();
         let mut validity = unsafe { array.validity() }?;

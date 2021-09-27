@@ -1,5 +1,7 @@
 //! Doc provided by README
 
+// So that we have more control over what is `unsafe` inside an `unsafe` block
+#![allow(unused_unsafe)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[macro_use]
