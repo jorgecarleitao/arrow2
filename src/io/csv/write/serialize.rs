@@ -13,8 +13,13 @@ use super::iterator::{BufStreamingIterator, StreamingIterator};
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct SerializeOptions {
+    // used for date32
     pub date_format: String,
+    /// used for dat64
+    pub datetime_format: String,
+    // used for time32/64
     pub time_format: String,
+    // used for timestamp
     pub timestamp_format: String,
 }
 
@@ -22,6 +27,7 @@ impl Default for SerializeOptions {
     fn default() -> Self {
         Self {
             date_format: "%F".to_string(),
+            datetime_format: "%FT%H:%M:%S.%9f".to_string(),
             time_format: "%T".to_string(),
             timestamp_format: "%FT%H:%M:%S.%9f".to_string(),
         }
@@ -150,7 +156,7 @@ pub fn new_serializer<'a>(
                 i64,
                 temporal_conversions::date64_to_datetime,
                 array,
-                &options.timestamp_format
+                &options.datetime_format
             )
         }
         DataType::Time64(TimeUnit::Microsecond) => {
