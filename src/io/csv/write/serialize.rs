@@ -13,16 +13,25 @@ use super::iterator::{BufStreamingIterator, StreamingIterator};
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct SerializeOptions {
-    pub date_format: String,
-    pub time_format: String,
+    /// used for date32
+    pub date32_format: String,
+    /// used for date64
+    pub date64_format: String,
+    /// used for time32
+    pub time32_format: String,
+    /// used for time64
+    pub time64_format: String,
+    /// used for timestamp
     pub timestamp_format: String,
 }
 
 impl Default for SerializeOptions {
     fn default() -> Self {
         Self {
-            date_format: "%F".to_string(),
-            time_format: "%T".to_string(),
+            date32_format: "%F".to_string(),
+            date64_format: "%F".to_string(),
+            time32_format: "%T".to_string(),
+            time64_format: "%T".to_string(),
             timestamp_format: "%FT%H:%M:%S.%9f".to_string(),
         }
     }
@@ -123,7 +132,7 @@ pub fn new_serializer<'a>(
                 i32,
                 temporal_conversions::date32_to_datetime,
                 array,
-                &options.date_format
+                &options.date32_format
             )
         }
         DataType::Time32(TimeUnit::Second) => {
@@ -131,7 +140,7 @@ pub fn new_serializer<'a>(
                 i32,
                 temporal_conversions::time32s_to_time,
                 array,
-                &options.time_format
+                &options.time32_format
             )
         }
         DataType::Time32(TimeUnit::Millisecond) => {
@@ -139,7 +148,7 @@ pub fn new_serializer<'a>(
                 i32,
                 temporal_conversions::time32ms_to_time,
                 array,
-                &options.time_format
+                &options.time32_format
             )
         }
         DataType::Int64 => {
@@ -150,7 +159,7 @@ pub fn new_serializer<'a>(
                 i64,
                 temporal_conversions::date64_to_datetime,
                 array,
-                &options.date_format
+                &options.date64_format
             )
         }
         DataType::Time64(TimeUnit::Microsecond) => {
@@ -158,7 +167,7 @@ pub fn new_serializer<'a>(
                 i64,
                 temporal_conversions::time64us_to_time,
                 array,
-                &options.time_format
+                &options.time64_format
             )
         }
         DataType::Time64(TimeUnit::Nanosecond) => {
@@ -166,7 +175,7 @@ pub fn new_serializer<'a>(
                 i64,
                 temporal_conversions::time64ns_to_time,
                 array,
-                &options.time_format
+                &options.time64_format
             )
         }
         DataType::Timestamp(TimeUnit::Second, None) => {

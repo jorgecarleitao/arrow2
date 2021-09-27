@@ -83,7 +83,8 @@ fn write_csv_custom_options() -> Result<()> {
     let mut writer = WriterBuilder::new().delimiter(b'|').from_writer(write);
 
     let options = SerializeOptions {
-        time_format: "%r".to_string(),
+        time32_format: "%r".to_string(),
+        time64_format: "%r".to_string(),
         ..Default::default()
     };
     write_batch(&mut writer, &batch, &options)?;
