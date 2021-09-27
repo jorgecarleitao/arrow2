@@ -96,10 +96,16 @@ fn encode_keys<K: DictionaryKey>(
 
     let uncompressed_page_size = buffer.len();
 
-    let buffer = utils::compress(buffer, options, definition_levels_byte_length)?;
+    let mut compressed_buffer = vec![];
+    let _was_compressed = utils::compress(
+        &mut buffer,
+        &mut compressed_buffer,
+        options,
+        definition_levels_byte_length,
+    )?;
 
     utils::build_plain_page(
-        buffer,
+        compressed_buffer,
         array.len(),
         array.null_count(),
         uncompressed_page_size,

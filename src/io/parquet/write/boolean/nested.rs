@@ -34,8 +34,10 @@ where
 
     let uncompressed_page_size = buffer.len();
 
-    let buffer = utils::compress(
-        buffer,
+    let mut compressed_buffer = vec![];
+    let _was_compressed = utils::compress(
+        &mut buffer,
+        &mut compressed_buffer,
         options,
         definition_levels_byte_length + repetition_levels_byte_length,
     )?;
@@ -47,7 +49,7 @@ where
     };
 
     utils::build_plain_page(
-        buffer,
+        compressed_buffer,
         levels::num_values(nested.offsets()),
         array.null_count(),
         uncompressed_page_size,

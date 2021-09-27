@@ -59,7 +59,7 @@ pub fn write_def_levels(
 
 #[allow(clippy::too_many_arguments)]
 pub fn build_plain_page(
-    buffer: Vec<u8>,
+    compressed_buffer: Vec<u8>,
     len: usize,
     null_count: usize,
     uncompressed_page_size: usize,
@@ -82,7 +82,7 @@ pub fn build_plain_page(
 
             Ok(CompressedDataPage::new(
                 header,
-                buffer,
+                compressed_buffer,
                 options.compression,
                 uncompressed_page_size,
                 None,
@@ -103,7 +103,7 @@ pub fn build_plain_page(
 
             Ok(CompressedDataPage::new(
                 header,
-                buffer,
+                compressed_buffer,
                 options.compression,
                 uncompressed_page_size,
                 None,
@@ -113,33 +113,29 @@ pub fn build_plain_page(
     }
 }
 
+/// Compresses `buffer` into `compressed_buffer` according to the parquet specification.
+/// Returns whether the buffer was compressed or swapped.
 pub fn compress(
-    mut buffer: Vec<u8>,
+    buffer: &mut Vec<u8>,
+    compressed_buffer: &mut Vec<u8>,
     options: WriteOptions,
     levels_byte_length: usize,
-) -> Result<Vec<u8>> {
+) -> Result<bool> {
     let codec = create_codec(&options.compression)?;
     Ok(if let Some(mut codec) = codec {
         match options.version {
             Version::V1 => {
-                // todo: remove this allocation by extending `buffer` directly.
-                // needs refactoring `compress`'s API.
-                let mut tmp = vec![];
-                codec.compress(&buffer, &mut tmp)?;
-                tmp
+                codec.compress(buffer, compressed_buffer)?;
             }
             Version::V2 => {
-                // todo: remove this allocation by extending `buffer` directly.
-                // needs refactoring `compress`'s API.
-                let mut tmp = vec![];
-                codec.compress(&buffer[levels_byte_length..], &mut tmp)?;
-                buffer.truncate(levels_byte_length);
-                buffer.extend_from_slice(&tmp);
-                buffer
+                compressed_buffer.extend_from_slice(&buffer[..levels_byte_length]);
+                codec.compress(&buffer[levels_byte_length..], compressed_buffer)?;
             }
-        }
+        };
+        true
     } else {
-        buffer
+        std::mem::swap(buffer, compressed_buffer);
+        false
     })
 }
 
