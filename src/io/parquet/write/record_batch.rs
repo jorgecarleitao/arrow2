@@ -1,6 +1,9 @@
+use parquet2::write::Compressor;
+use parquet2::FallibleStreamingIterator;
+
 use super::{
-    array_to_pages, to_parquet_schema, DynIter, Encoding, RowGroupIter, SchemaDescriptor,
-    WriteOptions,
+    array_to_pages, to_parquet_schema, DynIter, DynStreamingIterator, Encoding, RowGroupIter,
+    SchemaDescriptor, WriteOptions,
 };
 use crate::{
     datatypes::Schema,
@@ -59,8 +62,14 @@ impl<I: Iterator<Item = Result<RecordBatch>>> Iterator for RowGroupIterator<I> {
                     .into_iter()
                     .zip(self.parquet_schema.columns().to_vec().into_iter())
                     .zip(encodings.into_iter())
-                    .map(move |((array, type_), encoding)| {
-                        array_to_pages(array, type_, options, encoding)
+                    .map(move |((array, descriptor), encoding)| {
+                        array_to_pages(array, descriptor, options, encoding).map(move |pages| {
+                            let encoded_pages = DynIter::new(pages.map(|x| Ok(x?)));
+                            let compressed_pages =
+                                Compressor::new(encoded_pages, options.compression, vec![])
+                                    .map_err(ArrowError::from);
+                            DynStreamingIterator::new(compressed_pages)
+                        })
                     }),
             ))
         })

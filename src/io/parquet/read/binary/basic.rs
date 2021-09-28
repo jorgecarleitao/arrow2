@@ -3,7 +3,7 @@ use parquet2::{
     encoding::{delta_length_byte_array, hybrid_rle, Encoding},
     metadata::{ColumnChunkMetaData, ColumnDescriptor},
     page::{BinaryPageDict, DataPage},
-    read::StreamingIterator,
+    FallibleStreamingIterator,
 };
 
 use crate::{
@@ -308,17 +308,16 @@ pub fn iter_to_array<O, I, E>(
 where
     ArrowError: From<E>,
     O: Offset,
-    E: Clone,
-    I: StreamingIterator<Item = std::result::Result<DataPage, E>>,
+    I: FallibleStreamingIterator<Item = DataPage, Error = E>,
 {
     let capacity = metadata.num_values() as usize;
     let mut values = MutableBuffer::<u8>::with_capacity(0);
     let mut offsets = MutableBuffer::<O>::with_capacity(1 + capacity);
     offsets.push(O::default());
     let mut validity = MutableBitmap::with_capacity(capacity);
-    while let Some(page) = iter.next() {
+    while let Some(page) = iter.next()? {
         extend_from_page(
-            page.as_ref().map_err(|x| x.clone())?,
+            page,
             metadata.descriptor(),
             &mut offsets,
             &mut values,

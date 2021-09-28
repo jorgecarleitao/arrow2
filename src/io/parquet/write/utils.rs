@@ -1,10 +1,10 @@
 use crate::bitmap::Bitmap;
 
 use parquet2::{
-    compression::{create_codec, Compression},
+    compression::Compression,
     encoding::{hybrid_rle::encode_bool, Encoding},
     metadata::ColumnDescriptor,
-    page::{CompressedDataPage, DataPageHeader, DataPageHeaderV1, DataPageHeaderV2},
+    page::{DataPage, DataPageHeader, DataPageHeaderV1, DataPageHeaderV2},
     statistics::ParquetStatistics,
     write::WriteOptions,
 };
@@ -59,17 +59,16 @@ pub fn write_def_levels(
 
 #[allow(clippy::too_many_arguments)]
 pub fn build_plain_page(
-    compressed_buffer: Vec<u8>,
+    buffer: Vec<u8>,
     len: usize,
     null_count: usize,
-    uncompressed_page_size: usize,
     repetition_levels_byte_length: usize,
     definition_levels_byte_length: usize,
     statistics: Option<ParquetStatistics>,
     descriptor: ColumnDescriptor,
     options: WriteOptions,
     encoding: Encoding,
-) -> Result<CompressedDataPage> {
+) -> Result<DataPage> {
     match options.version {
         Version::V1 => {
             let header = DataPageHeader::V1(DataPageHeaderV1 {
@@ -80,14 +79,7 @@ pub fn build_plain_page(
                 statistics,
             });
 
-            Ok(CompressedDataPage::new(
-                header,
-                compressed_buffer,
-                options.compression,
-                uncompressed_page_size,
-                None,
-                descriptor,
-            ))
+            Ok(DataPage::new(header, buffer, None, descriptor))
         }
         Version::V2 => {
             let header = DataPageHeader::V2(DataPageHeaderV2 {
@@ -101,42 +93,9 @@ pub fn build_plain_page(
                 statistics,
             });
 
-            Ok(CompressedDataPage::new(
-                header,
-                compressed_buffer,
-                options.compression,
-                uncompressed_page_size,
-                None,
-                descriptor,
-            ))
+            Ok(DataPage::new(header, buffer, None, descriptor))
         }
     }
-}
-
-/// Compresses `buffer` into `compressed_buffer` according to the parquet specification.
-/// Returns whether the buffer was compressed or swapped.
-pub fn compress(
-    buffer: &mut Vec<u8>,
-    compressed_buffer: &mut Vec<u8>,
-    options: WriteOptions,
-    levels_byte_length: usize,
-) -> Result<bool> {
-    let codec = create_codec(&options.compression)?;
-    Ok(if let Some(mut codec) = codec {
-        match options.version {
-            Version::V1 => {
-                codec.compress(buffer, compressed_buffer)?;
-            }
-            Version::V2 => {
-                compressed_buffer.extend_from_slice(&buffer[..levels_byte_length]);
-                codec.compress(&buffer[levels_byte_length..], compressed_buffer)?;
-            }
-        };
-        true
-    } else {
-        std::mem::swap(buffer, compressed_buffer);
-        false
-    })
 }
 
 /// Auxiliary iterator adapter to declare the size hint of an iterator.

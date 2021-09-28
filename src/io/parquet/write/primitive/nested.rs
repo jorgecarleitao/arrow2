@@ -1,5 +1,5 @@
 use parquet2::{
-    encoding::Encoding, metadata::ColumnDescriptor, page::CompressedDataPage, types::NativeType,
+    encoding::Encoding, metadata::ColumnDescriptor, page::DataPage, types::NativeType,
     write::WriteOptions,
 };
 
@@ -18,7 +18,7 @@ pub fn array_to_page<T, R, O>(
     options: WriteOptions,
     descriptor: ColumnDescriptor,
     nested: levels::NestedInfo<O>,
-) -> Result<CompressedDataPage>
+) -> Result<DataPage>
 where
     T: ArrowNativeType,
     R: NativeType,
@@ -38,16 +38,6 @@ where
 
     encode_plain(array, is_optional, &mut buffer);
 
-    let uncompressed_page_size = buffer.len();
-
-    let mut compressed_buffer = vec![];
-    let _was_compressed = utils::compress(
-        &mut buffer,
-        &mut compressed_buffer,
-        options,
-        definition_levels_byte_length + repetition_levels_byte_length,
-    )?;
-
     let statistics = if options.write_statistics {
         Some(build_statistics(array, descriptor.clone()))
     } else {
@@ -55,10 +45,9 @@ where
     };
 
     utils::build_plain_page(
-        compressed_buffer,
+        buffer,
         levels::num_values(nested.offsets()),
         array.null_count(),
-        uncompressed_page_size,
         repetition_levels_byte_length,
         definition_levels_byte_length,
         statistics,

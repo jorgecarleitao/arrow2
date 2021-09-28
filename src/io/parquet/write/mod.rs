@@ -24,13 +24,17 @@ use crate::io::parquet::write::levels::NestedInfo;
 use crate::types::days_ms;
 use crate::types::NativeType;
 
+use parquet2::page::DataPage;
 pub use parquet2::{
     compression::Compression,
     encoding::Encoding,
     metadata::{ColumnDescriptor, KeyValue, SchemaDescriptor},
-    page::{CompressedDataPage, CompressedPage},
+    page::{CompressedDataPage, CompressedPage, EncodedPage},
     schema::types::ParquetType,
-    write::{write_file as parquet_write_file, DynIter, RowGroupIter, Version, WriteOptions},
+    write::{
+        write_file as parquet_write_file, Compressor, DynIter, DynStreamingIterator, RowGroupIter,
+        Version, WriteOptions,
+    },
 };
 pub use record_batch::RowGroupIterator;
 use schema::schema_to_metadata_key;
@@ -104,13 +108,13 @@ pub fn can_encode(data_type: &DataType, encoding: Encoding) -> bool {
     )
 }
 
-/// Returns an iterator of compressed pages,
+/// Returns an iterator of [`EncodedPage`].
 pub fn array_to_pages(
     array: Arc<dyn Array>,
     descriptor: ColumnDescriptor,
     options: WriteOptions,
     encoding: Encoding,
-) -> Result<DynIter<'static, Result<CompressedPage>>> {
+) -> Result<DynIter<'static, Result<EncodedPage>>> {
     match array.data_type() {
         DataType::Dictionary(key_type, _) => {
             with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
@@ -133,7 +137,7 @@ pub fn array_to_page(
     descriptor: ColumnDescriptor,
     options: WriteOptions,
     encoding: Encoding,
-) -> Result<CompressedPage> {
+) -> Result<EncodedPage> {
     let data_type = array.data_type();
     if !can_encode(data_type, encoding) {
         return Err(ArrowError::InvalidArgumentError(format!(
@@ -319,7 +323,7 @@ pub fn array_to_page(
             other
         ))),
     }
-    .map(CompressedPage::Data)
+    .map(EncodedPage::Data)
 }
 
 macro_rules! dyn_nested_prim {
@@ -341,7 +345,7 @@ fn list_array_to_page<O: Offset>(
     values: &dyn Array,
     descriptor: ColumnDescriptor,
     options: WriteOptions,
-) -> Result<CompressedDataPage> {
+) -> Result<DataPage> {
     use DataType::*;
     let is_optional = is_type_nullable(descriptor.type_());
     let nested = NestedInfo::new(offsets, validity, is_optional);
@@ -420,7 +424,7 @@ fn nested_array_to_page(
     array: &dyn Array,
     descriptor: ColumnDescriptor,
     options: WriteOptions,
-) -> Result<CompressedDataPage> {
+) -> Result<DataPage> {
     match array.data_type() {
         DataType::List(_) => {
             let array = array.as_any().downcast_ref::<ListArray<i32>>().unwrap();
