@@ -1,27 +1,34 @@
-use rand::distributions::{Bernoulli, Uniform};
-use rand::prelude::StdRng;
-use rand::Rng;
-use rand::SeedableRng;
+use proptest::prelude::*;
 
 use arrow2::bitmap::utils::SlicesIterator;
 use arrow2::bitmap::Bitmap;
 
-#[test]
-fn check_invariant() {
-    let values = (0..8).map(|i| i % 2 != 0).collect::<Bitmap>();
-    let iter = SlicesIterator::new(&values);
+use crate::bitmap::bitmap_strategy;
 
-    let slots = iter.slots();
+proptest! {
+    /// Asserts that:
+    /// * `slots` is the number of set bits in the bitmap
+    /// * the sum of the lens of the slices equals `slots`
+    /// * each item on each slice is set
+    #[test]
+    #[cfg_attr(miri, ignore)] // miri and proptest do not work well :(
+    fn check_invariants(bitmap in bitmap_strategy()) {
+        let iter = SlicesIterator::new(&bitmap);
 
-    let slices = iter.collect::<Vec<_>>();
+        let slots = iter.slots();
 
-    assert_eq!(slices, vec![(1, 1), (3, 1), (5, 1), (7, 1)]);
+        assert_eq!(bitmap.len() - bitmap.null_count(), slots);
 
-    let mut sum = 0;
-    for (_, len) in slices {
-        sum += len;
+        let slices = iter.collect::<Vec<_>>();
+        let mut sum = 0;
+        for (start, len) in slices {
+            sum += len;
+            for i in start..(start+len) {
+                assert!(bitmap.get_bit(i));
+            }
+        }
+        assert_eq!(sum, slots);
     }
-    assert_eq!(sum, slots);
 }
 
 #[test]
@@ -141,29 +148,4 @@ fn remainder_1() {
     let iter = SlicesIterator::new(&values);
     let chunks = iter.collect::<Vec<_>>();
     assert_eq!(chunks, vec![(2, 1), (4, 1)]);
-}
-
-#[test]
-fn filter_slices() {
-    let mut rng = StdRng::seed_from_u64(42);
-    let length = 500;
-
-    let mask: Bitmap = (0..length)
-        .map(|_| {
-            let v: bool = (&mut rng).sample(Bernoulli::new(0.5).unwrap());
-            v
-        })
-        .collect();
-
-    for offset in 100usize..(length - 1) {
-        let len = (&mut rng).sample(Uniform::new(0, length - offset));
-        let mask_s = mask.clone().slice(offset, len);
-
-        let iter = SlicesIterator::new(&mask_s);
-        iter.for_each(|(start, slice_len)| {
-            if start + slice_len > len {
-                panic!("Fail")
-            }
-        });
-    }
 }

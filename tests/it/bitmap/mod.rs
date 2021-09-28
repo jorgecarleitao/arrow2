@@ -3,7 +3,27 @@ mod immutable;
 mod mutable;
 mod utils;
 
+use proptest::prelude::*;
+
 use arrow2::{bitmap::Bitmap, buffer::MutableBuffer};
+
+/// Returns a strategy of an arbitrary sliced [`Bitmap`] of size up to 1000
+pub(crate) fn bitmap_strategy() -> impl Strategy<Value = Bitmap> {
+    prop::collection::vec(any::<bool>(), 1..1000)
+        .prop_flat_map(|vec| {
+            let len = vec.len();
+            (Just(vec), 0..len)
+        })
+        .prop_flat_map(|(vec, index)| {
+            let len = vec.len();
+            (Just(vec), Just(index), 0..len - index)
+        })
+        .prop_flat_map(|(vec, index, len)| {
+            let bitmap = Bitmap::from(&vec);
+            let bitmap = bitmap.slice(index, len);
+            Just(bitmap)
+        })
+}
 
 fn create_bitmap<P: AsRef<[u8]>>(bytes: P, len: usize) -> Bitmap {
     let buffer = MutableBuffer::<u8>::from(bytes.as_ref());
