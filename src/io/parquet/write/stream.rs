@@ -23,7 +23,7 @@ pub async fn write_stream<'a, W, I>(
     key_value_metadata: Option<Vec<KeyValue>>,
 ) -> Result<u64>
 where
-    W: std::io::Write + std::io::Seek,
+    W: std::io::Write,
     I: Stream<Item = Result<RowGroupIter<'static, ArrowError>>>,
 {
     let key_value_metadata = key_value_metadata

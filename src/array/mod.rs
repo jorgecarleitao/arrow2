@@ -1,18 +1,21 @@
-//! fixed-length and immutable containers with optional values
+//! Contains the [`Array`] and [`MutableArray`] trait objects declaring arrays,
+//! as well as concrete arrays (such as [`Utf8Array`] and [`MutableUtf8Array`]).
+//!
+//! Fixed-length containers with optional values
 //! that are layed in memory according to the Arrow specification.
 //! Each array type has its own `struct`. The following are the main array types:
-//! * [`PrimitiveArray`], an array of values with a fixed length such as integers, floats, etc.
-//! * [`BooleanArray`], an array of boolean values (stored as a bitmap)
-//! * [`Utf8Array`], an array of utf8 values
-//! * [`BinaryArray`], an array of binary values
-//! * [`ListArray`], an array of arrays (e.g. `[[1, 2], None, [], [None]]`)
+//! * [`PrimitiveArray`] and [`MutablePrimitiveArray`], an array of values with a fixed length such as integers, floats, etc.
+//! * [`BooleanArray`] and [`MutableBooleanArray`], an array of boolean values (stored as a bitmap)
+//! * [`Utf8Array`] and [`MutableUtf8Array`], an array of variable length utf8 values
+//! * [`BinaryArray`] and [`MutableBinaryArray`], an array of opaque variable length values
+//! * [`ListArray`] and [`MutableListArray`], an array of arrays (e.g. `[[1, 2], None, [], [None]]`)
 //! * [`StructArray`], an array of arrays identified by a string (e.g. `{"a": [1, 2], "b": [true, false]}`)
-//! All arrays implement the trait [`Array`] and are often trait objects that can be downcasted
-//! to a concrete struct based on [`DataType`] available from [`Array::data_type`].
-//! Arrays share memory via [`crate::buffer::Buffer`] and thus cloning and slicing them `O(1)`.
+//! All immutable arrays implement the trait object [`Array`] and that can be downcasted
+//! to a concrete struct based on [`PhysicalType`](crate::datatypes::PhysicalType) available from [`Array::data_type`].
+//! All immutable arrays are backed by [`Buffer`](crate::buffer::Buffer) and thus cloning and slicing them is `O(1)`.
 //!
-//! This module also contains the mutable counterparts of arrays, that are neither clonable nor slicable, but that
-//! can be operated in-place, such as [`MutablePrimitiveArray`] and [`MutableUtf8Array`].
+//! Most arrays contain a [`MutableArray`] counterpart that is neither clonable nor slicable, but
+//! can be operated in-place.
 use std::any::Any;
 use std::fmt::Display;
 

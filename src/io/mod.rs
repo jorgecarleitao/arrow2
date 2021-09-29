@@ -1,4 +1,5 @@
-//! Interact with different formats such as Arrow, CSV, parquet, etc.
+//! Contains modules to interface with other formats such as [`csv`],
+//! [`parquet`], [`json`], [`ipc`], [`mod@print`] and [`avro`].
 #[cfg(any(feature = "io_csv_read", feature = "io_csv_write"))]
 #[cfg_attr(docsrs, doc(cfg(feature = "io_csv")))]
 pub mod csv;

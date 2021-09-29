@@ -1,7 +1,5 @@
 #![deny(missing_docs)]
-//! Contains efficient containers of booleans: [`Bitmap`] and [`MutableBitmap`].
-//! The memory backing these containers is cache-aligned and optimized for both vertical
-//! and horizontal operations over booleans.
+//! contains [`Bitmap`] and [`MutableBitmap`], containers of `bool`.
 mod immutable;
 pub use immutable::*;
 

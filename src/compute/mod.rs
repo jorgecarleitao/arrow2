@@ -1,7 +1,11 @@
-//! Contains operators over arrays. This module's general design is
+//! contains a wide range of compute operations (e.g.
+//! [`arithmetics`], [`aggregate`],
+//! [`filter`], [`comparison`], and [`sort`])
+//!
+//! This module's general design is
 //! that each operator has two interfaces, a statically-typed version and a dynamically-typed
 //! version.
-//! The statically-typed version expects concrete arrays (like `PrimitiveArray`);
+//! The statically-typed version expects concrete arrays (such as [`PrimitiveArray`](crate::array::PrimitiveArray));
 //! the dynamically-typed version expects `&dyn Array` and errors if the the type is not
 //! supported.
 //! Some dynamically-typed operators have an auxiliary function, `can_*`, that returns

@@ -1,4 +1,4 @@
-//! Metadata declarations such as [`DataType`], [`Field`] and [`Schema`].
+//! Contains all metadata, such as [`PhysicalType`], [`DataType`], [`Field`] and [`Schema`].
 mod field;
 mod physical_type;
 mod schema;
