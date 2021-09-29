@@ -33,7 +33,7 @@ where
 
     let mut reduced = T::Simd::from_incomplete_chunk(&[], T::default());
     for chunk in simd_vals {
-        reduced = reduced + chunk.clone()
+        reduced = reduced + *chunk;
     }
 
     reduced.simd_sum() + head.iter().copied().sum() + tail.iter().copied().sum()

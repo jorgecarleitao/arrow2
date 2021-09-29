@@ -6,6 +6,7 @@ use super::*;
 macro_rules! simd {
     ($name:tt, $type:ty, $lanes:expr, $mask:ty) => {
         #[allow(non_camel_case_types)]
+        #[derive(Copy, Clone)]
         pub struct $name(pub [$type; $lanes]);
 
         impl NativeSimd for $name {
@@ -34,10 +35,6 @@ macro_rules! simd {
                 let mut a = [remaining; $lanes];
                 a.iter_mut().zip(v.iter()).for_each(|(a, b)| *a = *b);
                 Self(a)
-            }
-            #[inline]
-            fn clone(&self) -> Self {
-                ($name)(self.0).into()
             }
         }
 

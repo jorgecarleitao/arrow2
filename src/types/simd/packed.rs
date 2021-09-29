@@ -29,11 +29,6 @@ macro_rules! simd {
                 a.iter_mut().zip(v.iter()).for_each(|(a, b)| *a = *b);
                 <$name>::from_chunk(a.as_ref())
             }
-
-            #[inline]
-            fn clone(&self) -> Self {
-                *self
-            }
         }
     };
 }

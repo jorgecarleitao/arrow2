@@ -10,7 +10,7 @@ pub trait FromMaskChunk<T> {
 }
 
 /// A struct that lends itself well to be compiled leveraging SIMD
-pub trait NativeSimd: Default {
+pub trait NativeSimd: Default + Copy {
     /// Number of lanes
     const LANES: usize;
     /// The [`NativeType`] of this struct. E.g. `f32` for a `NativeSimd = f32x16`.
@@ -32,8 +32,6 @@ pub trait NativeSimd: Default {
     /// Items from `v` at positions larger than the number of lanes are ignored;
     /// remaining items are populated with `remaining`.
     fn from_incomplete_chunk(v: &[Self::Native], remaining: Self::Native) -> Self;
-
-    fn clone(&self) -> Self;
 }
 
 /// Trait implemented by some [`NativeType`] that have a SIMD representation.
