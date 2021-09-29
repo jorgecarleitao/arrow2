@@ -26,10 +26,7 @@ where
     T: NativeType + Simd + Add<Output = T> + std::iter::Sum<T>,
     T::Simd: Sum<T> + Add<Output = T::Simd>,
 {
-    // Safety:
-    // T::Simd is the vector type T and the alignment is similar to aligning to [T; alignment]
-    // the alignment of T::Simd ensures that it fits T.
-    let (head, simd_vals, tail) = unsafe { values.align_to::<T::Simd>() };
+    let (head, simd_vals, tail) = T::Simd::align(values);
 
     let mut reduced = T::Simd::from_incomplete_chunk(&[], T::default());
     for chunk in simd_vals {
