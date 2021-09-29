@@ -329,3 +329,11 @@ fn extend_bitmap_other() {
         ])
     );
 }
+
+#[test]
+fn shrink_to_fit() {
+    let mut a = MutableBitmap::with_capacity(1025);
+    a.push(false);
+    a.shrink_to_fit();
+    assert!(a.capacity() < 1025);
+}
