@@ -67,7 +67,7 @@ pub fn write_file<'a, W, I>(
     key_value_metadata: Option<Vec<KeyValue>>,
 ) -> Result<u64>
 where
-    W: std::io::Write + std::io::Seek,
+    W: std::io::Write,
     I: Iterator<Item = Result<RowGroupIter<'a, ArrowError>>>,
 {
     let key_value_metadata = key_value_metadata

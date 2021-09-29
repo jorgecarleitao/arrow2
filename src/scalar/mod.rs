@@ -1,5 +1,5 @@
-//! Declares the [`Scalar`] API, an optional, trait object representing
-//! the zero-dimension of an [`crate::array::Array`].
+//! contains the [`Scalar`] trait object representing individual items of [`Array`](crate::array::Array)s,
+//! as well as concrete implementations such as [`BooleanScalar`].
 use std::any::Any;
 
 use crate::{array::*, datatypes::*};

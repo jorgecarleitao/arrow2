@@ -1,5 +1,4 @@
-//! Doc provided by README
-
+#![doc = include_str!("doc/lib.md")]
 // So that we have more control over what is `unsafe` inside an `unsafe` block
 #![allow(unused_unsafe)]
 #![cfg_attr(docsrs, feature(doc_cfg))]

@@ -1,4 +1,5 @@
-//! traits to handle _all native types_ used in this crate.
+//! Traits and implementations to handle _all types_ used in this crate.
+//!
 //! Most physical types used in this crate are native Rust types, like `i32`.
 //! The most important trait is [`NativeType`], the generic trait of [`crate::array::PrimitiveArray`].
 //!

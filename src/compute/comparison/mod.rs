@@ -23,7 +23,7 @@
 //! inputs the two items for comparison and an [`Operator`] which specifies the
 //! type of comparison that will be conducted, such as `<=` ([`Operator::LtEq`]).
 //!
-//! Much like the parent module [`crate::compute`](compute), the comparison functions
+//! Much like the parent module [`compute`](crate::compute), the comparison functions
 //! have two variants - a statically typed one ([`primitive_compare`])
 //! which expects concrete types such as [`Int8Array`] and a dynamically typed
 //! variant ([`compare`]) that compares values of type `&dyn Array` and errors

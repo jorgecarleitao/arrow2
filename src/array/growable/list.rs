@@ -65,7 +65,7 @@ pub struct GrowableList<'a, O: Offset> {
 }
 
 impl<'a, O: Offset> GrowableList<'a, O> {
-    /// Creates a new [`GrowableFixedSizeBinary`] bound to `arrays` with a pre-allocated `capacity`.
+    /// Creates a new [`GrowableList`] bound to `arrays` with a pre-allocated `capacity`.
     /// # Panics
     /// If `arrays` is empty.
     pub fn new(arrays: Vec<&'a ListArray<O>>, mut use_validity: bool, capacity: usize) -> Self {

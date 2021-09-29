@@ -1,58 +1,27 @@
-// Licensed to the Apache Software Foundation (ASF) under one
-// or more contributor license agreements.  See the NOTICE file
-// distributed with this work for additional information
-// regarding copyright ownership.  The ASF licenses this file
-// to you under the Apache License, Version 2.0 (the
-// "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
-
-//! A two-dimensional batch of column-oriented data with a defined
-//! [schema](crate::datatypes::Schema).
-
+//! Contains [`RecordBatch`].
 use std::sync::Arc;
 
 use crate::array::*;
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 
-type ArrayRef = Arc<dyn Array>;
-
-/// A two-dimensional batch of column-oriented data with a defined
-/// [schema](crate::datatypes::Schema).
-///
-/// A `RecordBatch` is a two-dimensional dataset of a number of
-/// contiguous arrays, each the same length.
-/// A record batch has a schema which must match its arrays'
-/// datatypes.
-///
-/// Record batches are a convenient unit of work for various
-/// serialization and computation functions, possibly incremental.
+/// A two-dimensional dataset with a number of
+/// columns ([`Array`]) and rows and defined [`Schema`](crate::datatypes::Schema).
+/// # Implementation
+/// Cloning is `O(C)` where `C` is the number of columns.
 #[derive(Clone, Debug, PartialEq)]
 pub struct RecordBatch {
     schema: Arc<Schema>,
-    columns: Vec<ArrayRef>,
+    columns: Vec<Arc<dyn Array>>,
 }
 
 impl RecordBatch {
-    /// Creates a `RecordBatch` from a schema and columns.
-    ///
-    /// Expects the following:
-    ///  * the vec of columns to not be empty
-    ///  * the schema and column data types to have equal lengths
-    ///    and match
-    ///  * each array in columns to have the same length
-    ///
-    /// If the conditions are not met, an error is returned.
-    ///
+    /// Creates a [`RecordBatch`] from a schema and columns.
+    /// # Errors
+    /// This function errors iff
+    /// * `columns` is empty
+    /// * the schema and column data types do not match
+    /// * `columns` have a different length
     /// # Example
     ///
     /// ```
@@ -73,22 +42,22 @@ impl RecordBatch {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn try_new(schema: Arc<Schema>, columns: Vec<ArrayRef>) -> Result<Self> {
+    pub fn try_new(schema: Arc<Schema>, columns: Vec<Arc<dyn Array>>) -> Result<Self> {
         let options = RecordBatchOptions::default();
         Self::validate_new_batch(&schema, columns.as_slice(), &options)?;
         Ok(RecordBatch { schema, columns })
     }
 
-    /// Creates a `RecordBatch` from a schema and columns, with additional options,
+    /// Creates a [`RecordBatch`] from a schema and columns, with additional options,
     /// such as whether to strictly validate field names.
     ///
-    /// See [`RecordBatch::try_new`] for the expected conditions.
+    /// See [`fn@try_new`] for the expected conditions.
     pub fn try_new_with_options(
         schema: Arc<Schema>,
-        columns: Vec<ArrayRef>,
+        columns: Vec<Arc<dyn Array>>,
         options: &RecordBatchOptions,
     ) -> Result<Self> {
-        Self::validate_new_batch(&schema, columns.as_slice(), options)?;
+        Self::validate_new_batch(&schema, &columns, options)?;
         Ok(RecordBatch { schema, columns })
     }
 
@@ -106,7 +75,7 @@ impl RecordBatch {
     /// if any validation check fails.
     fn validate_new_batch(
         schema: &Schema,
-        columns: &[ArrayRef],
+        columns: &[Arc<dyn Array>],
         options: &RecordBatchOptions,
     ) -> Result<()> {
         // check that there are some columns
@@ -229,12 +198,12 @@ impl RecordBatch {
     /// # Panics
     ///
     /// Panics if `index` is outside of `0..num_columns`.
-    pub fn column(&self, index: usize) -> &ArrayRef {
+    pub fn column(&self, index: usize) -> &Arc<dyn Array> {
         &self.columns[index]
     }
 
     /// Get a reference to all columns in the record batch.
-    pub fn columns(&self) -> &[ArrayRef] {
+    pub fn columns(&self) -> &[Arc<dyn Array>] {
         &self.columns[..]
     }
 
@@ -255,8 +224,8 @@ impl RecordBatch {
     /// use arrow2::datatypes::DataType;
     /// use arrow2::record_batch::RecordBatch;
     ///
-    /// let a: ArrayRef = Arc::new(Int32Array::from_slice(&[1, 2]));
-    /// let b: ArrayRef = Arc::new(Utf8Array::<i32>::from_slice(&["a", "b"]));
+    /// let a: Arc<dyn Array> = Arc::new(Int32Array::from_slice(&[1, 2]));
+    /// let b: Arc<dyn Array> = Arc::new(Utf8Array::<i32>::from_slice(&["a", "b"]));
     ///
     /// let record_batch = RecordBatch::try_from_iter(vec![
     ///   ("a", a),
@@ -265,7 +234,7 @@ impl RecordBatch {
     /// ```
     pub fn try_from_iter<I, F>(value: I) -> Result<Self>
     where
-        I: IntoIterator<Item = (F, ArrayRef)>,
+        I: IntoIterator<Item = (F, Arc<dyn Array>)>,
         F: AsRef<str>,
     {
         // TODO: implement `TryFrom` trait, once
@@ -292,8 +261,8 @@ impl RecordBatch {
     /// use arrow2::datatypes::DataType;
     /// use arrow2::record_batch::RecordBatch;
     ///
-    /// let a: ArrayRef = Arc::new(Int32Array::from_slice(&[1, 2]));
-    /// let b: ArrayRef = Arc::new(Utf8Array::<i32>::from_slice(&["a", "b"]));
+    /// let a: Arc<dyn Array> = Arc::new(Int32Array::from_slice(&[1, 2]));
+    /// let b: Arc<dyn Array> = Arc::new(Utf8Array::<i32>::from_slice(&["a", "b"]));
     ///
     /// // Note neither `a` nor `b` has any actual nulls, but we mark
     /// // b an nullable
@@ -304,7 +273,7 @@ impl RecordBatch {
     /// ```
     pub fn try_from_iter_with_nullable<I, F>(value: I) -> Result<Self>
     where
-        I: IntoIterator<Item = (F, ArrayRef, bool)>,
+        I: IntoIterator<Item = (F, Arc<dyn Array>, bool)>,
         F: AsRef<str>,
     {
         // TODO: implement `TryFrom` trait, once
