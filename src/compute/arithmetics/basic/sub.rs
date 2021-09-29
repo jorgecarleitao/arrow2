@@ -23,7 +23,7 @@ use crate::{
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::sub::sub;
+/// use arrow2::compute::arithmetics::basic::sub;
 /// use arrow2::array::Int32Array;
 ///
 /// let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
@@ -50,7 +50,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::sub::checked_sub;
+/// use arrow2::compute::arithmetics::basic::checked_sub;
 /// use arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[Some(100i8), Some(-100i8), Some(100i8)]);
@@ -80,7 +80,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::sub::saturating_sub;
+/// use arrow2::compute::arithmetics::basic::saturating_sub;
 /// use arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[Some(-100i8)]);
@@ -114,7 +114,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::sub::overflowing_sub;
+/// use arrow2::compute::arithmetics::basic::overflowing_sub;
 /// use arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[Some(1i8), Some(-100i8)]);
@@ -194,7 +194,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::sub::sub_scalar;
+/// use arrow2::compute::arithmetics::basic::sub_scalar;
 /// use arrow2::array::Int32Array;
 ///
 /// let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
@@ -216,7 +216,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::sub::checked_sub_scalar;
+/// use arrow2::compute::arithmetics::basic::checked_sub_scalar;
 /// use arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[None, Some(-100), None, Some(-100)]);
@@ -240,7 +240,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::sub::saturating_sub_scalar;
+/// use arrow2::compute::arithmetics::basic::saturating_sub_scalar;
 /// use arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[Some(-100i8)]);
@@ -265,7 +265,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::sub::overflowing_sub_scalar;
+/// use arrow2::compute::arithmetics::basic::overflowing_sub_scalar;
 /// use arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[Some(1i8), Some(-100i8)]);

@@ -12,7 +12,7 @@ use crate::{
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::pow::powf_scalar;
+/// use arrow2::compute::arithmetics::basic::powf_scalar;
 /// use arrow2::array::Float32Array;
 ///
 /// let a = Float32Array::from(&[Some(2f32), None]);
@@ -33,7 +33,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::pow::checked_powf_scalar;
+/// use arrow2::compute::arithmetics::basic::checked_powf_scalar;
 /// use arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[Some(1i8), None, Some(7i8)]);

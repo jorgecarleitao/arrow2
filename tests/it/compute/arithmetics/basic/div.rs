@@ -1,5 +1,5 @@
 use arrow2::array::*;
-use arrow2::compute::arithmetics::basic::div::*;
+use arrow2::compute::arithmetics::basic::*;
 use arrow2::compute::arithmetics::{ArrayCheckedDiv, ArrayDiv};
 
 #[test]
