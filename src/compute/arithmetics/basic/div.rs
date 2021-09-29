@@ -22,7 +22,7 @@ use strength_reduce::{
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::div::div;
+/// use arrow2::compute::arithmetics::basic::div;
 /// use arrow2::array::Int32Array;
 ///
 /// let a = Int32Array::from(&[Some(10), Some(1), Some(6)]);
@@ -64,7 +64,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::div::checked_div;
+/// use arrow2::compute::arithmetics::basic::checked_div;
 /// use arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[Some(-100i8), Some(10i8)]);
@@ -117,7 +117,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::div::div_scalar;
+/// use arrow2::compute::arithmetics::basic::div_scalar;
 /// use arrow2::array::Int32Array;
 ///
 /// let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
@@ -200,7 +200,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::div::checked_div_scalar;
+/// use arrow2::compute::arithmetics::basic::checked_div_scalar;
 /// use arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[Some(-100i8)]);

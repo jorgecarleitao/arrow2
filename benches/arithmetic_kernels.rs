@@ -5,8 +5,8 @@ use criterion::Criterion;
 use arrow2::array::*;
 use arrow2::util::bench_util::*;
 use arrow2::{
-    compute::arithmetics::basic::add::add, compute::arithmetics::basic::div::div_scalar,
-    datatypes::DataType, types::NativeType,
+    compute::arithmetics::basic::add, compute::arithmetics::basic::div_scalar, datatypes::DataType,
+    types::NativeType,
 };
 use num_traits::NumCast;
 use std::ops::{Add, Div};

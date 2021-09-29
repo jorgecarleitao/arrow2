@@ -1,5 +1,5 @@
 use arrow2::array::*;
-use arrow2::compute::arithmetics::basic::pow::*;
+use arrow2::compute::arithmetics::basic::*;
 
 #[test]
 fn test_raise_power_scalar() {

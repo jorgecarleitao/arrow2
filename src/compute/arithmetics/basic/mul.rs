@@ -23,7 +23,7 @@ use crate::{
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::mul::mul;
+/// use arrow2::compute::arithmetics::basic::mul;
 /// use arrow2::array::Int32Array;
 ///
 /// let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
@@ -51,7 +51,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::mul::checked_mul;
+/// use arrow2::compute::arithmetics::basic::checked_mul;
 /// use arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[Some(100i8), Some(100i8), Some(100i8)]);
@@ -81,7 +81,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::mul::saturating_mul;
+/// use arrow2::compute::arithmetics::basic::saturating_mul;
 /// use arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[Some(-100i8)]);
@@ -115,7 +115,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::mul::overflowing_mul;
+/// use arrow2::compute::arithmetics::basic::overflowing_mul;
 /// use arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[Some(1i8), Some(-100i8)]);
@@ -194,7 +194,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::mul::mul_scalar;
+/// use arrow2::compute::arithmetics::basic::mul_scalar;
 /// use arrow2::array::Int32Array;
 ///
 /// let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
@@ -216,7 +216,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::mul::checked_mul_scalar;
+/// use arrow2::compute::arithmetics::basic::checked_mul_scalar;
 /// use arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[None, Some(100), None, Some(100)]);
@@ -240,7 +240,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::mul::saturating_mul_scalar;
+/// use arrow2::compute::arithmetics::basic::saturating_mul_scalar;
 /// use arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[Some(-100i8)]);
@@ -265,7 +265,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::mul::overflowing_mul_scalar;
+/// use arrow2::compute::arithmetics::basic::overflowing_mul_scalar;
 /// use arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[Some(1i8), Some(100i8)]);

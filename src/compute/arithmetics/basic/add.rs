@@ -23,7 +23,7 @@ use crate::{
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::add::add;
+/// use arrow2::compute::arithmetics::basic::add;
 /// use arrow2::array::PrimitiveArray;
 ///
 /// let a = PrimitiveArray::from([None, Some(6), None, Some(6)]);
@@ -50,7 +50,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::add::checked_add;
+/// use arrow2::compute::arithmetics::basic::checked_add;
 /// use arrow2::array::PrimitiveArray;
 ///
 /// let a = PrimitiveArray::from([Some(100i8), Some(100i8), Some(100i8)]);
@@ -80,7 +80,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::add::saturating_add;
+/// use arrow2::compute::arithmetics::basic::saturating_add;
 /// use arrow2::array::PrimitiveArray;
 ///
 /// let a = PrimitiveArray::from([Some(100i8)]);
@@ -114,7 +114,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::add::overflowing_add;
+/// use arrow2::compute::arithmetics::basic::overflowing_add;
 /// use arrow2::array::PrimitiveArray;
 ///
 /// let a = PrimitiveArray::from([Some(1i8), Some(100i8)]);
@@ -194,7 +194,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::add::add_scalar;
+/// use arrow2::compute::arithmetics::basic::add_scalar;
 /// use arrow2::array::PrimitiveArray;
 ///
 /// let a = PrimitiveArray::from([None, Some(6), None, Some(6)]);
@@ -216,7 +216,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::add::checked_add_scalar;
+/// use arrow2::compute::arithmetics::basic::checked_add_scalar;
 /// use arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[None, Some(100), None, Some(100)]);
@@ -240,7 +240,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::add::saturating_add_scalar;
+/// use arrow2::compute::arithmetics::basic::saturating_add_scalar;
 /// use arrow2::array::PrimitiveArray;
 ///
 /// let a = PrimitiveArray::from([Some(100i8)]);
@@ -265,7 +265,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::add::overflowing_add_scalar;
+/// use arrow2::compute::arithmetics::basic::overflowing_add_scalar;
 /// use arrow2::array::PrimitiveArray;
 ///
 /// let a = PrimitiveArray::from([Some(1i8), Some(100i8)]);
