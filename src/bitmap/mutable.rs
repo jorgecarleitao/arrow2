@@ -208,6 +208,12 @@ impl MutableBitmap {
     pub fn set(&mut self, index: usize, value: bool) {
         set_bit(&mut self.buffer.as_mut_slice(), index, value)
     }
+
+    /// Shrinks the capacity of the [`MutableBitmap`] to fit its current length.
+    /// When the feature `cache_aligned`, the new capacity will be a multiple of 64 bytes.
+    pub fn shrink_to_fit(&mut self) {
+        self.buffer.shrink_to_fit();
+    }
 }
 
 impl MutableBitmap {
