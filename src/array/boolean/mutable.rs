@@ -461,6 +461,10 @@ impl MutableArray for MutableBooleanArray {
     fn push_null(&mut self) {
         self.push(None)
     }
+
+    fn shrink_to_fit(&mut self) {
+        // no-op still have to implement this for bitmaps
+    }
 }
 
 impl Extend<Option<bool>> for MutableBooleanArray {

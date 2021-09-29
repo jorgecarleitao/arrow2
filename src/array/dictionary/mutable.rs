@@ -104,6 +104,11 @@ impl<K: DictionaryKey, M: MutableArray> MutableDictionaryArray<K, M> {
         let a: DictionaryArray<K> = self.into();
         Arc::new(a)
     }
+
+    /// Shrinks the capacity of the [`MutableDictionaryArray`] to fit its current length.
+    pub fn shrink_to_fit(&mut self) {
+        self.values.shrink_to_fit();
+    }
 }
 
 impl<K: DictionaryKey, M: 'static + MutableArray> MutableArray for MutableDictionaryArray<K, M> {
@@ -143,6 +148,9 @@ impl<K: DictionaryKey, M: 'static + MutableArray> MutableArray for MutableDictio
 
     fn push_null(&mut self) {
         self.keys.push(None)
+    }
+    fn shrink_to_fit(&mut self) {
+        self.shrink_to_fit()
     }
 }
 

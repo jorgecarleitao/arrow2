@@ -237,6 +237,11 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
         let a: PrimitiveArray<T> = self.into();
         Arc::new(a)
     }
+
+    /// Shrinks the capacity of the [`MutablePrimitive`] to fit its current length.
+    pub fn shrink_to_fit(&mut self) {
+        self.values.shrink_to_fit();
+    }
 }
 
 /// Accessors
@@ -356,6 +361,10 @@ impl<T: NativeType> MutableArray for MutablePrimitiveArray<T> {
 
     fn push_null(&mut self) {
         self.push(None)
+    }
+
+    fn shrink_to_fit(&mut self) {
+        self.shrink_to_fit()
     }
 }
 

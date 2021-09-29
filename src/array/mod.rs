@@ -155,6 +155,9 @@ pub trait MutableArray: std::fmt::Debug {
             .map(|x| x.get(index))
             .unwrap_or(true)
     }
+
+    /// Shrink the array to fit its length.
+    fn shrink_to_fit(&mut self);
 }
 
 macro_rules! general_dyn {

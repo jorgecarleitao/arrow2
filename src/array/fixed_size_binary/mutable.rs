@@ -149,6 +149,11 @@ impl MutableFixedSizeBinaryArray {
     pub unsafe fn value_unchecked(&self, i: usize) -> &[u8] {
         std::slice::from_raw_parts(self.values.as_ptr().add(i * self.size), self.size)
     }
+
+    /// Shrinks the capacity of the [`MutablePrimitive`] to fit its current length.
+    pub fn shrink_to_fit(&mut self) {
+        self.values.shrink_to_fit();
+    }
 }
 
 /// Accessors
@@ -203,6 +208,10 @@ impl MutableArray for MutableFixedSizeBinaryArray {
 
     fn push_null(&mut self) {
         self.values.extend_constant(self.size, 0);
+    }
+
+    fn shrink_to_fit(&mut self) {
+        self.shrink_to_fit()
     }
 }
 

@@ -42,6 +42,12 @@ impl<O: Offset, M: MutableArray + Default> MutableListArray<O, M> {
             validity: None,
         }
     }
+
+    /// Shrinks the capacity of the [`MutableList`] to fit its current length.
+    pub fn shrink_to_fit(&mut self) {
+        self.values.shrink_to_fit();
+        self.offsets.shrink_to_fit();
+    }
 }
 
 impl<O: Offset, M: MutableArray + Default> Default for MutableListArray<O, M> {
@@ -221,5 +227,8 @@ impl<O: Offset, M: MutableArray + 'static> MutableArray for MutableListArray<O, 
     #[inline]
     fn push_null(&mut self) {
         self.push_null()
+    }
+    fn shrink_to_fit(&mut self) {
+        self.shrink_to_fit();
     }
 }
