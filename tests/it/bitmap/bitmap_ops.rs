@@ -1,12 +1,16 @@
+use proptest::prelude::*;
+
 use arrow2::bitmap::Bitmap;
 
-#[test]
-fn not_random() {
-    let iter = (0..100).map(|x| x % 7 == 0);
-    let iter_not = iter.clone().map(|x| !x);
+use crate::bitmap::bitmap_strategy;
 
-    let bitmap: Bitmap = iter.collect();
-    let expected: Bitmap = iter_not.collect();
+proptest! {
+    /// Asserts that !bitmap equals all bits flipped
+    #[test]
+    #[cfg_attr(miri, ignore)] // miri and proptest do not work well :(
+    fn not(bitmap in bitmap_strategy()) {
+        let not_bitmap: Bitmap = bitmap.iter().map(|x| !x).collect();
 
-    assert_eq!(!&bitmap, expected);
+        assert_eq!(!&bitmap, not_bitmap);
+    }
 }

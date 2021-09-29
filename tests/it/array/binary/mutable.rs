@@ -1,4 +1,4 @@
-use arrow2::array::{Array, BinaryArray, MutableBinaryArray};
+use arrow2::array::{BinaryArray, MutableBinaryArray};
 use arrow2::bitmap::Bitmap;
 
 #[test]

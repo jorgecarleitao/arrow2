@@ -1,4 +1,4 @@
-use arrow2::array::{Array, MutableUtf8Array, Utf8Array};
+use arrow2::array::{MutableUtf8Array, Utf8Array};
 use arrow2::bitmap::Bitmap;
 use arrow2::buffer::MutableBuffer;
 use arrow2::datatypes::DataType;
