@@ -1,5 +1,5 @@
 use arrow2::{
-    array::{FixedSizeListArray, MutableFixedSizeListArray, MutablePrimitiveArray},
+    array::{FixedSizeListArray, MutableFixedSizeListArray, MutablePrimitiveArray, TryExtend},
     datatypes::DataType,
 };
 
@@ -16,9 +16,9 @@ fn create_fixed_size_list_array<U: AsRef<[i32]>, T: AsRef<[Option<U>]>>(
         })
     });
 
-    MutableFixedSizeListArray::<MutablePrimitiveArray<i32>>::try_from_iter(data, 3, DataType::Int32)
-        .unwrap()
-        .into()
+    let mut list = MutableFixedSizeListArray::new(MutablePrimitiveArray::<i32>::new(), 3);
+    list.try_extend(data).unwrap();
+    list.into()
 }
 
 #[test]
