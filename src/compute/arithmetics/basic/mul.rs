@@ -3,6 +3,7 @@ use std::ops::Mul;
 
 use num_traits::{ops::overflowing::OverflowingMul, CheckedMul, SaturatingMul, Zero};
 
+use crate::compute::arithmetics::basic::check_same_type;
 use crate::{
     array::{Array, PrimitiveArray},
     bitmap::Bitmap,
@@ -14,7 +15,7 @@ use crate::{
             binary, binary_checked, binary_with_bitmap, unary, unary_checked, unary_with_bitmap,
         },
     },
-    error::{ArrowError, Result},
+    error::Result,
     types::NativeType,
 };
 
@@ -36,11 +37,7 @@ pub fn mul<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<Primit
 where
     T: NativeType + Mul<Output = T>,
 {
-    if lhs.data_type() != rhs.data_type() {
-        return Err(ArrowError::InvalidArgumentError(
-            "Arrays must have the same logical type".to_string(),
-        ));
-    }
+    check_same_type(lhs, rhs)?;
 
     binary(lhs, rhs, lhs.data_type().clone(), |a, b| a * b)
 }
@@ -64,11 +61,7 @@ pub fn checked_mul<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Resul
 where
     T: NativeType + CheckedMul<Output = T> + Zero,
 {
-    if lhs.data_type() != rhs.data_type() {
-        return Err(ArrowError::InvalidArgumentError(
-            "Arrays must have the same logical type".to_string(),
-        ));
-    }
+    check_same_type(lhs, rhs)?;
 
     let op = move |a: T, b: T| a.checked_mul(&b);
 
@@ -97,11 +90,7 @@ pub fn saturating_mul<T>(
 where
     T: NativeType + SaturatingMul<Output = T>,
 {
-    if lhs.data_type() != rhs.data_type() {
-        return Err(ArrowError::InvalidArgumentError(
-            "Arrays must have the same logical type".to_string(),
-        ));
-    }
+    check_same_type(lhs, rhs)?;
 
     let op = move |a: T, b: T| a.saturating_mul(&b);
 
@@ -131,11 +120,7 @@ pub fn overflowing_mul<T>(
 where
     T: NativeType + OverflowingMul<Output = T>,
 {
-    if lhs.data_type() != rhs.data_type() {
-        return Err(ArrowError::InvalidArgumentError(
-            "Arrays must have the same logical type".to_string(),
-        ));
-    }
+    check_same_type(lhs, rhs)?;
 
     let op = move |a: T, b: T| a.overflowing_mul(&b);
 
