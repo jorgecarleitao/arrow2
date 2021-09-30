@@ -127,6 +127,7 @@ pub fn array_to_pages(
     }
 }
 
+/// Converts an [`Array`] to a [`CompressedPage`] based on options, descriptor and `encoding`.
 pub fn array_to_page(
     array: &dyn Array,
     descriptor: ColumnDescriptor,

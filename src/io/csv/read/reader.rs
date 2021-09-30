@@ -10,6 +10,7 @@ use crate::{
     error::{ArrowError, Result},
 };
 
+/// Returns a new [`Schema`] whereby the fields are selected based on `projection`.
 pub fn projected_schema(schema: &Schema, projection: Option<&[usize]>) -> Schema {
     match &projection {
         Some(projection) => {

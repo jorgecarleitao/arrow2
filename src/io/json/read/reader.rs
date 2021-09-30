@@ -231,6 +231,7 @@ impl Default for ReaderBuilder {
 }
 
 impl ReaderBuilder {
+    ///! Returns a new [`ReaderBuilder`].
     pub fn new() -> Self {
         Self::default()
     }

@@ -63,6 +63,7 @@ fn deserialize_binary<O: Offset>(rows: &[ByteRecord], column: usize) -> Arc<dyn 
     Arc::new(BinaryArray::<O>::from_trusted_len_iter(iter))
 }
 
+/// Deserializes `column` of `rows` into an [`Array`] of [`DataType`] `datatype`.
 pub fn deserialize_column(
     rows: &[ByteRecord],
     column: usize,

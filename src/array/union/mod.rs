@@ -35,6 +35,7 @@ pub struct UnionArray {
 }
 
 impl UnionArray {
+    /// Creates a new null [`UnionArray`].
     pub fn new_null(data_type: DataType, length: usize) -> Self {
         if let DataType::Union(f, _, is_sparse) = &data_type {
             let fields = f
@@ -57,6 +58,7 @@ impl UnionArray {
         }
     }
 
+    /// Creates a new empty [`UnionArray`].
     pub fn new_empty(data_type: DataType) -> Self {
         if let DataType::Union(f, _, is_sparse) = &data_type {
             let fields = f
@@ -83,6 +85,7 @@ impl UnionArray {
         }
     }
 
+    /// Creates a new [`UnionArray`].
     pub fn from_data(
         data_type: DataType,
         types: Buffer<i8>,
@@ -126,14 +129,17 @@ impl UnionArray {
         }
     }
 
+    /// The optional offsets.
     pub fn offsets(&self) -> &Option<Buffer<i32>> {
         &self.offsets
     }
 
+    /// The fields.
     pub fn fields(&self) -> &Vec<Arc<dyn Array>> {
         &self.fields
     }
 
+    /// The types.
     pub fn types(&self) -> &Buffer<i8> {
         &self.types
     }
@@ -239,19 +245,24 @@ impl Array for UnionArray {
 
 impl UnionArray {
     fn get_all(data_type: &DataType) -> (&[Field], Option<&[i32]>, bool) {
-        match data_type {
+        match data_type.to_logical_type() {
             DataType::Union(fields, ids, is_sparse) => {
                 (fields, ids.as_ref().map(|x| x.as_ref()), *is_sparse)
             }
-            DataType::Extension(_, inner, _) => Self::get_all(inner),
             _ => panic!("Wrong datatype passed to UnionArray."),
         }
     }
 
+    /// Returns all fields from [`DataType::Union`].
+    /// # Panic
+    /// Panics iff `data_type`'s logical type is not [`DataType::Union`].
     pub fn get_fields(data_type: &DataType) -> &[Field] {
         Self::get_all(data_type).0
     }
 
+    /// Returns whether the [`DataType::Union`] is sparse or not.
+    /// # Panic
+    /// Panics iff `data_type`'s logical type is not [`DataType::Union`].
     pub fn is_sparse(data_type: &DataType) -> bool {
         Self::get_all(data_type).2
     }

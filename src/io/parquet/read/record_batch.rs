@@ -32,6 +32,8 @@ pub struct RecordReader<R: Read + Seek> {
 }
 
 impl<R: Read + Seek> RecordReader<R> {
+    /// Creates a new [`RecordReader`] by reading the metadata from `reader` and constructing
+    /// Arrow's schema from it.
     pub fn try_new(
         mut reader: R,
         projection: Option<Vec<usize>>,
@@ -86,14 +88,17 @@ impl<R: Read + Seek> RecordReader<R> {
         })
     }
 
+    /// Returns the [`Schema`]
     pub fn schema(&self) -> &Arc<Schema> {
         &self.schema
     }
 
+    /// Returns parquet's [`FileMetaData`].
     pub fn metadata(&self) -> &FileMetaData {
         self.metadata.as_ref()
     }
 
+    /// Sets the groups filter
     pub fn set_groups_filter(&mut self, groups_filter: GroupFilter) {
         self.groups_filter = Some(groups_filter);
     }
