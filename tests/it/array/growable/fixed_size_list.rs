@@ -38,7 +38,6 @@ fn null_offset() {
         Some(vec![Some(6i32), Some(7), Some(8)]),
     ];
     let array = create_list_array(data);
-    return;
     let array = array.slice(1, 2);
 
     let mut a = GrowableFixedSizeList::new(vec![&array], false, 0);

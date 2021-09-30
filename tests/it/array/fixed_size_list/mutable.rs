@@ -1,5 +1,4 @@
 use arrow2::array::*;
-use arrow2::datatypes::DataType;
 
 #[test]
 fn primitive() {

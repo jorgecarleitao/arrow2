@@ -1,6 +1,5 @@
-use arrow2::{
-    array::{FixedSizeListArray, MutableFixedSizeListArray, MutablePrimitiveArray, TryExtend},
-    datatypes::DataType,
+use arrow2::array::{
+    FixedSizeListArray, MutableFixedSizeListArray, MutablePrimitiveArray, TryExtend,
 };
 
 use super::test_equal;
