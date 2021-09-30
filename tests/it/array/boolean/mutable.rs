@@ -95,4 +95,5 @@ fn extend_trusted_len_values() {
         a.validity(),
         Some(&MutableBitmap::from([false, true, true]))
     );
+    assert_eq!(a.values(), &MutableBitmap::from([false, true, false]));
 }
