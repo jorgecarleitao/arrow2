@@ -260,6 +260,7 @@ fn utf8_to_timestamp_ns_impl<O: Offset, T: chrono::TimeZone>(
         .to(DataType::Timestamp(TimeUnit::Nanosecond, Some(timezone)))
 }
 
+/// Parses `value` to a [`chrono_tz::Tz`] with the Arrow's definition of timestamp with a timezone.
 #[cfg(feature = "chrono-tz")]
 #[cfg_attr(docsrs, doc(cfg(feature = "chrono-tz")))]
 pub fn parse_offset_tz(timezone: &str) -> Result<chrono_tz::Tz> {

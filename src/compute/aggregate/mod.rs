@@ -1,3 +1,4 @@
+//! Contains different aggregation functions
 mod sum;
 pub use sum::*;
 

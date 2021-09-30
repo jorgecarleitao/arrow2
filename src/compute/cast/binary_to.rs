@@ -3,6 +3,7 @@ use std::convert::TryFrom;
 use crate::error::{ArrowError, Result};
 use crate::{array::*, buffer::Buffer, datatypes::DataType, types::NativeType};
 
+/// Conversion of binary
 pub fn binary_to_large_binary(from: &BinaryArray<i32>, to_data_type: DataType) -> BinaryArray<i64> {
     let values = from.values().clone();
     let offsets = from.offsets().iter().map(|x| *x as i64);
@@ -10,6 +11,7 @@ pub fn binary_to_large_binary(from: &BinaryArray<i32>, to_data_type: DataType) -
     BinaryArray::<i64>::from_data(to_data_type, offsets, values, from.validity().cloned())
 }
 
+/// Conversion of binary
 pub fn binary_large_to_binary(
     from: &BinaryArray<i64>,
     to_data_type: DataType,

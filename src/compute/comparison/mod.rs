@@ -103,11 +103,17 @@ pub use utf8::compare_scalar as utf8_compare_scalar;
 /// Comparison operators, such as `>` ([`Operator::Gt`])
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Operator {
+    /// Less than
     Lt,
+    /// Less than or equal to
     LtEq,
+    /// Greater than
     Gt,
+    /// Greater than or equal to
     GtEq,
+    /// Equal
     Eq,
+    /// Not equal
     Neq,
 }
 

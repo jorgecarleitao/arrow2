@@ -36,6 +36,8 @@ pub unsafe trait NativeSimd: Default + Copy {
     /// remaining items are populated with `remaining`.
     fn from_incomplete_chunk(v: &[Self::Native], remaining: Self::Native) -> Self;
 
+    /// Returns a tuple of 3 items whose middle item is itself, and the remaining
+    /// are the head and tail of the un-aligned parts.
     fn align(values: &[Self::Native]) -> (&[Self::Native], &[Self], &[Self::Native]);
 }
 

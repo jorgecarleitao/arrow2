@@ -1,3 +1,4 @@
+//! Contains the operator [`nullif`].
 use crate::array::PrimitiveArray;
 use crate::bitmap::Bitmap;
 use crate::compute::arithmetics::basic::check_same_type;

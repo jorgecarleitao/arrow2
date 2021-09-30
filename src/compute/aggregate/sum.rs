@@ -16,6 +16,7 @@ use crate::{
 /// Object that can reduce itself to a number. This is used in the context of SIMD to reduce
 /// a MD (e.g. `[f32; 16]`) into a single number (`f32`).
 pub trait Sum<T> {
+    /// Reduces this element to a single value.
     fn simd_sum(self) -> T;
 }
 
@@ -116,6 +117,7 @@ macro_rules! dyn_sum {
     }};
 }
 
+/// Whether [`sum`] is valid for `data_type`
 pub fn can_sum(data_type: &DataType) -> bool {
     use DataType::*;
     matches!(

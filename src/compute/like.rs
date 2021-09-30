@@ -1,3 +1,4 @@
+//! Contains "like" operators such as [`like_utf8`] and [`like_utf8_scalar`].
 use std::collections::HashMap;
 
 use regex::bytes::Regex as BytesRegex;
@@ -83,6 +84,12 @@ pub fn like_utf8<O: Offset>(lhs: &Utf8Array<O>, rhs: &Utf8Array<O>) -> Result<Bo
     a_like_utf8(lhs, rhs, |x| x)
 }
 
+/// Returns `lhs NOT LIKE rhs` operation on two [`Utf8Array`].
+///
+/// There are two wildcards supported:
+///
+/// * `%` - The percent sign represents zero, one, or multiple characters
+/// * `_` - The underscore represents a single character
 pub fn nlike_utf8<O: Offset>(lhs: &Utf8Array<O>, rhs: &Utf8Array<O>) -> Result<BooleanArray> {
     a_like_utf8(lhs, rhs, |x| !x)
 }
@@ -146,6 +153,12 @@ pub fn like_utf8_scalar<O: Offset>(lhs: &Utf8Array<O>, rhs: &str) -> Result<Bool
     a_like_utf8_scalar(lhs, rhs, |x| x)
 }
 
+/// Returns `lhs NOT LIKE rhs` operation.
+///
+/// There are two wildcards supported:
+///
+/// * `%` - The percent sign represents zero, one, or multiple characters
+/// * `_` - The underscore represents a single character
 pub fn nlike_utf8_scalar<O: Offset>(lhs: &Utf8Array<O>, rhs: &str) -> Result<BooleanArray> {
     a_like_utf8_scalar(lhs, rhs, |x| !x)
 }
@@ -221,6 +234,13 @@ pub fn like_binary<O: Offset>(lhs: &BinaryArray<O>, rhs: &BinaryArray<O>) -> Res
     a_like_binary(lhs, rhs, |x| x)
 }
 
+/// Returns `lhs NOT LIKE rhs` operation on two [`BinaryArray`]s.
+///
+/// There are two wildcards supported:
+///
+/// * `%` - The percent sign represents zero, one, or multiple characters
+/// * `_` - The underscore represents a single character
+///
 pub fn nlike_binary<O: Offset>(lhs: &BinaryArray<O>, rhs: &BinaryArray<O>) -> Result<BooleanArray> {
     a_like_binary(lhs, rhs, |x| !x)
 }
@@ -290,6 +310,13 @@ pub fn like_binary_scalar<O: Offset>(lhs: &BinaryArray<O>, rhs: &[u8]) -> Result
     a_like_binary_scalar(lhs, rhs, |x| x)
 }
 
+/// Returns `lhs NOT LIKE rhs` operation on two [`BinaryArray`]s.
+///
+/// There are two wildcards supported:
+///
+/// * `%` - The percent sign represents zero, one, or multiple characters
+/// * `_` - The underscore represents a single character
+///
 pub fn nlike_binary_scalar<O: Offset>(lhs: &BinaryArray<O>, rhs: &[u8]) -> Result<BooleanArray> {
     a_like_binary_scalar(lhs, rhs, |x| !x)
 }

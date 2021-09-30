@@ -359,21 +359,25 @@ create_relation!(
 );
 
 impl months_days_ns {
+    /// A new [`months_days_ns`].
     #[inline]
     pub fn new(months: i32, days: i32, nanoseconds: i64) -> Self {
         Self(months, days, nanoseconds)
     }
 
+    /// The number of months
     #[inline]
     pub fn months(&self) -> i32 {
         self.0
     }
 
+    /// The number of days
     #[inline]
     pub fn days(&self) -> i32 {
         self.1
     }
 
+    /// The number of nanoseconds
     #[inline]
     pub fn ns(&self) -> i64 {
         self.2

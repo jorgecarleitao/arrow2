@@ -15,7 +15,9 @@ type IsValid<'a> = Box<dyn Fn(usize) -> bool + 'a>;
 /// One column to be used in lexicographical sort
 #[derive(Clone, Debug)]
 pub struct SortColumn<'a> {
+    /// The array to sort
     pub values: &'a dyn Array,
+    /// The options to apply to the sort
     pub options: Option<SortOptions>,
 }
 

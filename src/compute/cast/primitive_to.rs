@@ -181,30 +181,37 @@ const fn time_unit_multiple(unit: TimeUnit) -> i64 {
     }
 }
 
+/// Conversion of dates
 pub fn date32_to_date64(from: &PrimitiveArray<i32>) -> PrimitiveArray<i64> {
     unary(from, |x| x as i64 * MILLISECONDS_IN_DAY, DataType::Date64)
 }
 
+/// Conversion of dates
 pub fn date64_to_date32(from: &PrimitiveArray<i64>) -> PrimitiveArray<i32> {
     unary(from, |x| (x / MILLISECONDS_IN_DAY) as i32, DataType::Date32)
 }
 
+/// Conversion of times
 pub fn time32s_to_time32ms(from: &PrimitiveArray<i32>) -> PrimitiveArray<i32> {
     unary(from, |x| x * 1000, DataType::Time32(TimeUnit::Millisecond))
 }
 
+/// Conversion of times
 pub fn time32ms_to_time32s(from: &PrimitiveArray<i32>) -> PrimitiveArray<i32> {
     unary(from, |x| x / 1000, DataType::Time32(TimeUnit::Second))
 }
 
+/// Conversion of times
 pub fn time64us_to_time64ns(from: &PrimitiveArray<i64>) -> PrimitiveArray<i64> {
     unary(from, |x| x * 1000, DataType::Time64(TimeUnit::Nanosecond))
 }
 
+/// Conversion of times
 pub fn time64ns_to_time64us(from: &PrimitiveArray<i64>) -> PrimitiveArray<i64> {
     unary(from, |x| x / 1000, DataType::Time64(TimeUnit::Microsecond))
 }
 
+/// Conversion of timestamp
 pub fn timestamp_to_date64(from: &PrimitiveArray<i64>, from_unit: TimeUnit) -> PrimitiveArray<i64> {
     let from_size = time_unit_multiple(from_unit);
     let to_size = MILLISECONDS;
@@ -221,11 +228,13 @@ pub fn timestamp_to_date64(from: &PrimitiveArray<i64>, from_unit: TimeUnit) -> P
     }
 }
 
+/// Conversion of timestamp
 pub fn timestamp_to_date32(from: &PrimitiveArray<i64>, from_unit: TimeUnit) -> PrimitiveArray<i32> {
     let from_size = time_unit_multiple(from_unit) * SECONDS_IN_DAY;
     unary(from, |x| (x / from_size) as i32, DataType::Date32)
 }
 
+/// Conversion of time
 pub fn time32_to_time64(
     from: &PrimitiveArray<i32>,
     from_unit: TimeUnit,
@@ -237,6 +246,7 @@ pub fn time32_to_time64(
     unary(from, |x| (x as i64 * divisor), DataType::Time64(to_unit))
 }
 
+/// Conversion of time
 pub fn time64_to_time32(
     from: &PrimitiveArray<i64>,
     from_unit: TimeUnit,
@@ -252,6 +262,7 @@ pub fn time64_to_time32(
     )
 }
 
+/// Conversion of timestamp
 pub fn timestamp_to_timestamp(
     from: &PrimitiveArray<i64>,
     from_unit: TimeUnit,
