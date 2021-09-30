@@ -1,9 +1,10 @@
 //! Definition of basic sub operations with primitive arrays
 use std::ops::Sub;
 
-use num_traits::{ops::overflowing::OverflowingSub, CheckedSub, SaturatingSub, Zero};
+use num_traits::{ops::overflowing::OverflowingSub, CheckedSub, SaturatingSub, WrappingSub, Zero};
 
 use crate::compute::arithmetics::basic::check_same_type;
+use crate::compute::arithmetics::ArrayWrappingSub;
 use crate::{
     array::{Array, PrimitiveArray},
     bitmap::Bitmap,
@@ -40,6 +41,34 @@ where
     check_same_type(lhs, rhs)?;
 
     binary(lhs, rhs, lhs.data_type().clone(), |a, b| a - b)
+}
+
+/// Wrapping subtraction of two primitive arrays.
+/// It do nothing if the result overflows.
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::arithmetics::basic::wrapping_sub;
+/// use arrow2::array::PrimitiveArray;
+///
+/// let a = PrimitiveArray::from([Some(100i8), Some(100i8), Some(100i8)]);
+/// let b = PrimitiveArray::from([Some(0i8), Some(100i8), Some(0i8)]);
+/// let result = wrapping_sub(&a, &b).unwrap();
+/// let expected = PrimitiveArray::from([Some(100i8), None, Some(100i8)]);
+/// assert_eq!(result, expected);
+/// ```
+pub fn wrapping_sub<T>(
+    lhs: &PrimitiveArray<T>,
+    rhs: &PrimitiveArray<T>,
+) -> Result<PrimitiveArray<T>>
+where
+    T: NativeType + WrappingSub<Output = T>,
+{
+    check_same_type(lhs, rhs)?;
+
+    let op = move |a: T, b: T| a.wrapping_sub(&b);
+
+    binary(lhs, rhs, lhs.data_type().clone(), op)
 }
 
 /// Checked subtraction of two primitive arrays. If the result from the
@@ -138,6 +167,18 @@ where
     }
 }
 
+// Implementation of ArrayWrappingSub trait for PrimitiveArrays
+impl<T> ArrayWrappingSub<PrimitiveArray<T>> for PrimitiveArray<T>
+where
+    T: NativeType + WrappingSub<Output = T> + NotI128,
+{
+    type Output = Self;
+
+    fn wrapping_sub(&self, rhs: &PrimitiveArray<T>) -> Result<Self::Output> {
+        wrapping_sub(self, rhs)
+    }
+}
+
 // Implementation of ArrayCheckedSub trait for PrimitiveArrays
 impl<T> ArrayCheckedSub<PrimitiveArray<T>> for PrimitiveArray<T>
 where
@@ -193,6 +234,26 @@ where
 {
     let rhs = *rhs;
     unary(lhs, |a| a - rhs, lhs.data_type().clone())
+}
+
+/// Wrapping subtraction of a scalar T to a primitive array of type T.
+/// It do nothing if the result overflows.
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::arithmetics::basic::wrapping_sub_scalar;
+/// use arrow2::array::Int8Array;
+///
+/// let a = Int8Array::from(&[None, Some(-100)]);
+/// let result = wrapping_sub_scalar(&a, &100i8);
+/// let expected = Int8Array::from(&[None, Some(56)]);
+/// assert_eq!(result, expected);
+/// ```
+pub fn wrapping_sub_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
+where
+    T: NativeType + WrappingSub<Output = T>,
+{
+    unary(lhs, |a| a.wrapping_sub(rhs), lhs.data_type().clone())
 }
 
 /// Checked subtraction of a scalar T to a primitive array of type T. If the

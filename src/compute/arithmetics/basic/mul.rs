@@ -1,9 +1,10 @@
 //! Definition of basic mul operations with primitive arrays
 use std::ops::Mul;
 
-use num_traits::{ops::overflowing::OverflowingMul, CheckedMul, SaturatingMul, Zero};
+use num_traits::{ops::overflowing::OverflowingMul, CheckedMul, SaturatingMul, WrappingMul, Zero};
 
 use crate::compute::arithmetics::basic::check_same_type;
+use crate::compute::arithmetics::ArrayWrappingMul;
 use crate::{
     array::{Array, PrimitiveArray},
     bitmap::Bitmap,
@@ -40,6 +41,34 @@ where
     check_same_type(lhs, rhs)?;
 
     binary(lhs, rhs, lhs.data_type().clone(), |a, b| a * b)
+}
+
+/// Wrapping multiplication of two primitive arrays.
+/// It do nothing if the result overflows.
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::arithmetics::basic::wrapping_mul;
+/// use arrow2::array::PrimitiveArray;
+///
+/// let a = PrimitiveArray::from([Some(100i8), Some(100i8), Some(100i8)]);
+/// let b = PrimitiveArray::from([Some(0i8), Some(100i8), Some(0i8)]);
+/// let result = wrapping_mul(&a, &b).unwrap();
+/// let expected = PrimitiveArray::from([Some(100i8), None, Some(100i8)]);
+/// assert_eq!(result, expected);
+/// ```
+pub fn wrapping_mul<T>(
+    lhs: &PrimitiveArray<T>,
+    rhs: &PrimitiveArray<T>,
+) -> Result<PrimitiveArray<T>>
+where
+    T: NativeType + WrappingMul<Output = T>,
+{
+    check_same_type(lhs, rhs)?;
+
+    let op = move |a: T, b: T| a.wrapping_mul(&b);
+
+    binary(lhs, rhs, lhs.data_type().clone(), op)
 }
 
 /// Checked multiplication of two primitive arrays. If the result from the
@@ -139,6 +168,18 @@ where
     }
 }
 
+// Implementation of ArrayWrappingMul trait for PrimitiveArrays
+impl<T> ArrayWrappingMul<PrimitiveArray<T>> for PrimitiveArray<T>
+where
+    T: NativeType + WrappingMul<Output = T> + NotI128,
+{
+    type Output = Self;
+
+    fn wrapping_mul(&self, rhs: &PrimitiveArray<T>) -> Result<Self::Output> {
+        wrapping_mul(self, rhs)
+    }
+}
+
 // Implementation of ArrayCheckedMul trait for PrimitiveArrays
 impl<T> ArrayCheckedMul<PrimitiveArray<T>> for PrimitiveArray<T>
 where
@@ -193,6 +234,26 @@ where
 {
     let rhs = *rhs;
     unary(lhs, |a| a * rhs, lhs.data_type().clone())
+}
+
+/// Wrapping multiplication of a scalar T to a primitive array of type T.
+/// It do nothing if the result overflows.
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::arithmetics::basic::wrapping_mul_scalar;
+/// use arrow2::array::Int8Array;
+///
+/// let a = Int8Array::from(&[None, Some(0x10)]);
+/// let result = wrapping_mul_scalar(&a, &0x10);
+/// let expected = Int8Array::from(&[None, Some(0)]);
+/// assert_eq!(result, expected);
+/// ```
+pub fn wrapping_mul_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
+where
+    T: NativeType + WrappingMul<Output = T>,
+{
+    unary(lhs, |a| a.wrapping_mul(rhs), lhs.data_type().clone())
 }
 
 /// Checked multiplication of a scalar T to a primitive array of type T. If the
