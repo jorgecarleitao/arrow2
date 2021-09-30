@@ -1,3 +1,4 @@
+//! Contains the [`hash`] and typed (e.g. [`hash_primitive`]) operators.
 use ahash::{CallHasher, RandomState};
 use multiversion::multiversion;
 use std::hash::Hash;
@@ -18,18 +19,18 @@ use crate::{
 
 use super::arity::unary;
 
-/// Element-wise hash of a [`PrimitiveArray`]. Validity is preserved.
 #[multiversion]
 #[clone(target = "x86_64+aes+sse3+ssse3+avx+avx2")]
+/// Element-wise hash of a [`PrimitiveArray`]. Validity is preserved.
 pub fn hash_primitive<T: NativeType + Hash>(array: &PrimitiveArray<T>) -> PrimitiveArray<u64> {
     let state = new_state!();
 
     unary(array, |x| T::get_hash(&x, &state), DataType::UInt64)
 }
 
-/// Element-wise hash of a [`BooleanArray`]. Validity is preserved.
 #[multiversion]
 #[clone(target = "x86_64+aes+sse3+ssse3+avx+avx2")]
+/// Element-wise hash of a [`BooleanArray`]. Validity is preserved.
 pub fn hash_boolean(array: &BooleanArray) -> PrimitiveArray<u64> {
     let state = new_state!();
 

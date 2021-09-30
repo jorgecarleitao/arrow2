@@ -233,8 +233,8 @@ fn recursive_merge_sort(slices: &[&[MergeSlice]], comparator: &Comparator) -> Ve
     merge_sort_slices(lhs.iter(), rhs.iter(), comparator).collect::<Vec<_>>()
 }
 
-// An iterator adapter that merge-sorts two iterators of `MergeSlice` into a single `MergeSlice`
-// such that the resulting `MergeSlice`s are ordered according to `comparator`.
+/// An iterator adapter that merge-sorts two iterators of `MergeSlice` into a single `MergeSlice`
+/// such that the resulting `MergeSlice`s are ordered according to `comparator`.
 pub struct MergeSortSlices<'a, L, R>
 where
     L: Iterator<Item = &'a MergeSlice>,

@@ -5,6 +5,7 @@ use super::*;
 
 macro_rules! simd {
     ($name:tt, $type:ty, $lanes:expr, $mask:ty) => {
+        /// Multi-Data correspondence of the native type
         #[allow(non_camel_case_types)]
         #[derive(Copy, Clone)]
         pub struct $name(pub [$type; $lanes]);
