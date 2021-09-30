@@ -319,7 +319,8 @@ where
 /// Extends validity [`MutableBitmap`] and values [`MutableBitmap`] from an iterator of `Option`.
 /// # Safety
 /// The caller must ensure that `iterator` is `TrustedLen`.
-unsafe fn extend_trusted_len_unzip<I, P>(
+#[inline]
+pub(crate) unsafe fn extend_trusted_len_unzip<I, P>(
     iterator: I,
     validity: &mut MutableBitmap,
     values: &mut MutableBitmap,
