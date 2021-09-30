@@ -335,6 +335,10 @@ pub(crate) unsafe fn extend_trusted_len_unzip<I, P>(
     let (_, upper) = iterator.size_hint();
     let additional = upper.expect("extend_trusted_len_unzip requires an upper limit");
 
+    // Length of the array before new values are pushed,
+    // variable created for assertion post operation
+    let pre_length = values.len();
+
     validity.reserve(additional);
     values.reserve(additional);
 
@@ -348,6 +352,12 @@ pub(crate) unsafe fn extend_trusted_len_unzip<I, P>(
         };
         values.push_unchecked(item);
     }
+
+    debug_assert_eq!(
+        values.len(),
+        pre_length + additional,
+        "Trusted iterator length was not accurately reported"
+    );
 }
 
 /// # Safety
