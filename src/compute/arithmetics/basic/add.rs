@@ -3,6 +3,7 @@ use std::ops::Add;
 
 use num_traits::{ops::overflowing::OverflowingAdd, CheckedAdd, SaturatingAdd, Zero};
 
+use crate::compute::arithmetics::basic::check_same_type;
 use crate::{
     array::{Array, PrimitiveArray},
     bitmap::Bitmap,
@@ -14,7 +15,7 @@ use crate::{
             binary, binary_checked, binary_with_bitmap, unary, unary_checked, unary_with_bitmap,
         },
     },
-    error::{ArrowError, Result},
+    error::Result,
     types::NativeType,
 };
 
@@ -36,11 +37,7 @@ pub fn add<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<Primit
 where
     T: NativeType + Add<Output = T>,
 {
-    if lhs.data_type() != rhs.data_type() {
-        return Err(ArrowError::InvalidArgumentError(
-            "Arrays must have the same logical type".to_string(),
-        ));
-    }
+    check_same_type(lhs, rhs)?;
 
     binary(lhs, rhs, lhs.data_type().clone(), |a, b| a + b)
 }
@@ -63,11 +60,7 @@ pub fn checked_add<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Resul
 where
     T: NativeType + CheckedAdd<Output = T> + Zero,
 {
-    if lhs.data_type() != rhs.data_type() {
-        return Err(ArrowError::InvalidArgumentError(
-            "Arrays must have the same logical type".to_string(),
-        ));
-    }
+    check_same_type(lhs, rhs)?;
 
     let op = move |a: T, b: T| a.checked_add(&b);
 
@@ -96,11 +89,7 @@ pub fn saturating_add<T>(
 where
     T: NativeType + SaturatingAdd<Output = T>,
 {
-    if lhs.data_type() != rhs.data_type() {
-        return Err(ArrowError::InvalidArgumentError(
-            "Arrays must have the same logical type".to_string(),
-        ));
-    }
+    check_same_type(lhs, rhs)?;
 
     let op = move |a: T, b: T| a.saturating_add(&b);
 
@@ -130,11 +119,7 @@ pub fn overflowing_add<T>(
 where
     T: NativeType + OverflowingAdd<Output = T>,
 {
-    if lhs.data_type() != rhs.data_type() {
-        return Err(ArrowError::InvalidArgumentError(
-            "Arrays must have the same logical type".to_string(),
-        ));
-    }
+    check_same_type(lhs, rhs)?;
 
     let op = move |a: T, b: T| a.overflowing_add(&b);
 
