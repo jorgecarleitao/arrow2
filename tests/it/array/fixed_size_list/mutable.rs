@@ -9,14 +9,9 @@ fn primitive() {
         Some(vec![Some(4), None, Some(6)]),
     ];
 
-    let list: FixedSizeListArray =
-        MutableFixedSizeListArray::<MutablePrimitiveArray<i32>>::try_from_iter(
-            data,
-            3,
-            DataType::Int32,
-        )
-        .unwrap()
-        .into();
+    let mut list = MutableFixedSizeListArray::new(MutablePrimitiveArray::<i32>::new(), 3);
+    list.try_extend(data).unwrap();
+    let list: FixedSizeListArray = list.into();
 
     let a = list.value(0);
     let a = a.as_any().downcast_ref::<Int32Array>().unwrap();

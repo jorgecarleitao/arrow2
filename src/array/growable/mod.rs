@@ -18,6 +18,8 @@ mod list;
 pub use list::GrowableList;
 mod structure;
 pub use structure::GrowableStruct;
+mod fixed_size_list;
+pub use fixed_size_list::GrowableFixedSizeList;
 mod utf8;
 pub use utf8::GrowableUtf8;
 mod dictionary;
@@ -201,7 +203,17 @@ pub fn make_growable<'a>(
                 capacity,
             ))
         }
-        FixedSizeList => todo!(),
+        FixedSizeList => {
+            let arrays = arrays
+                .iter()
+                .map(|array| array.as_any().downcast_ref().unwrap())
+                .collect::<Vec<_>>();
+            Box::new(fixed_size_list::GrowableFixedSizeList::new(
+                arrays,
+                use_validity,
+                capacity,
+            ))
+        }
         Union => todo!(),
         Dictionary(key_type) => {
             with_match_physical_dictionary_key_type!(key_type, |$T| {
