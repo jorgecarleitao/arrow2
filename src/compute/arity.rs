@@ -1,6 +1,7 @@
 //! Defines kernels suitable to perform operations to primitive arrays.
 
 use super::utils::combine_validities;
+use crate::compute::arithmetics::basic::check_same_len;
 use crate::{
     array::{Array, PrimitiveArray},
     bitmap::{Bitmap, MutableBitmap},
@@ -145,11 +146,7 @@ where
     D: NativeType,
     F: Fn(T, D) -> T,
 {
-    if lhs.len() != rhs.len() {
-        return Err(ArrowError::InvalidArgumentError(
-            "Arrays must have the same length".to_string(),
-        ));
-    }
+    check_same_len(lhs, rhs)?;
 
     let validity = combine_validities(lhs.validity(), rhs.validity());
 
@@ -176,11 +173,7 @@ where
     D: NativeType,
     F: Fn(T, D) -> Result<T>,
 {
-    if lhs.len() != rhs.len() {
-        return Err(ArrowError::InvalidArgumentError(
-            "Arrays must have the same length".to_string(),
-        ));
-    }
+    check_same_len(lhs, rhs)?;
 
     let validity = combine_validities(lhs.validity(), rhs.validity());
 
@@ -208,11 +201,7 @@ where
     D: NativeType,
     F: Fn(T, D) -> (T, bool),
 {
-    if lhs.len() != rhs.len() {
-        return Err(ArrowError::InvalidArgumentError(
-            "Arrays must have the same length".to_string(),
-        ));
-    }
+    check_same_len(lhs, rhs)?;
 
     let validity = combine_validities(lhs.validity(), rhs.validity());
 
@@ -246,11 +235,7 @@ where
     D: NativeType,
     F: Fn(T, D) -> Option<T>,
 {
-    if lhs.len() != rhs.len() {
-        return Err(ArrowError::InvalidArgumentError(
-            "Arrays must have the same length".to_string(),
-        ));
-    }
+    check_same_len(lhs, rhs)?;
 
     let mut mut_bitmap = MutableBitmap::with_capacity(lhs.len());
 

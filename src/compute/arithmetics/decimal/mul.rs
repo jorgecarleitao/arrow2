@@ -277,12 +277,7 @@ pub fn adaptive_mul(
     lhs: &PrimitiveArray<i128>,
     rhs: &PrimitiveArray<i128>,
 ) -> Result<PrimitiveArray<i128>> {
-    // Checking if both arrays have the same length
-    if lhs.len() != rhs.len() {
-        return Err(ArrowError::InvalidArgumentError(
-            "Arrays must have the same length".to_string(),
-        ));
-    }
+    check_same_len(lhs, rhs)?;
 
     if let (DataType::Decimal(lhs_p, lhs_s), DataType::Decimal(rhs_p, rhs_s)) =
         (lhs.data_type(), rhs.data_type())

@@ -2,6 +2,7 @@ use std::ops::Rem;
 
 use num_traits::{CheckedRem, NumCast, Zero};
 
+use crate::compute::arithmetics::basic::check_same_type;
 use crate::datatypes::DataType;
 use crate::{
     array::{Array, PrimitiveArray},
@@ -34,11 +35,7 @@ pub fn rem<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<Primit
 where
     T: NativeType + Rem<Output = T>,
 {
-    if lhs.data_type() != rhs.data_type() {
-        return Err(ArrowError::InvalidArgumentError(
-            "Arrays must have the same logical type".to_string(),
-        ));
-    }
+    check_same_type(lhs, rhs)?;
 
     binary(lhs, rhs, lhs.data_type().clone(), |a, b| a % b)
 }
@@ -62,11 +59,7 @@ pub fn checked_rem<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Resul
 where
     T: NativeType + CheckedRem<Output = T> + Zero,
 {
-    if lhs.data_type() != rhs.data_type() {
-        return Err(ArrowError::InvalidArgumentError(
-            "Arrays must have the same logical type".to_string(),
-        ));
-    }
+    check_same_type(lhs, rhs)?;
 
     let op = move |a: T, b: T| a.checked_rem(&b);
 

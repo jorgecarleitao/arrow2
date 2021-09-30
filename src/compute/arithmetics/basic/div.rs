@@ -3,6 +3,7 @@ use std::ops::Div;
 
 use num_traits::{CheckedDiv, NumCast, Zero};
 
+use crate::compute::arithmetics::basic::{check_same_len, check_same_type};
 use crate::datatypes::DataType;
 use crate::{
     array::{Array, PrimitiveArray},
@@ -35,20 +36,12 @@ pub fn div<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<Primit
 where
     T: NativeType + Div<Output = T>,
 {
-    if lhs.data_type() != rhs.data_type() {
-        return Err(ArrowError::InvalidArgumentError(
-            "Arrays must have the same logical type".to_string(),
-        ));
-    }
+    check_same_type(lhs, rhs)?;
 
     if rhs.null_count() == 0 {
         binary(lhs, rhs, lhs.data_type().clone(), |a, b| a / b)
     } else {
-        if lhs.len() != rhs.len() {
-            return Err(ArrowError::InvalidArgumentError(
-                "Arrays must have the same length".to_string(),
-            ));
-        }
+        check_same_len(lhs, rhs)?;
         let values = lhs.iter().zip(rhs.iter()).map(|(l, r)| match (l, r) {
             (Some(l), Some(r)) => Some(*l / *r),
             _ => None,
@@ -77,11 +70,7 @@ pub fn checked_div<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Resul
 where
     T: NativeType + CheckedDiv<Output = T> + Zero,
 {
-    if lhs.data_type() != rhs.data_type() {
-        return Err(ArrowError::InvalidArgumentError(
-            "Arrays must have the same logical type".to_string(),
-        ));
-    }
+    check_same_type(lhs, rhs)?;
 
     let op = move |a: T, b: T| a.checked_div(&b);
 
