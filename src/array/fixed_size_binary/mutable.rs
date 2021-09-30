@@ -153,6 +153,9 @@ impl MutableFixedSizeBinaryArray {
     /// Shrinks the capacity of the [`MutablePrimitive`] to fit its current length.
     pub fn shrink_to_fit(&mut self) {
         self.values.shrink_to_fit();
+        if let Some(validity) = &mut self.validity {
+            validity.shrink_to_fit()
+        }
     }
 }
 

@@ -293,6 +293,14 @@ impl MutableBooleanArray {
         // Safety: `I` is `TrustedLen`
         unsafe { Self::try_from_trusted_len_iter_unchecked(iterator) }
     }
+
+    /// Shrinks the capacity of the [`MutableBooleanArray`] to fit its current length.
+    pub fn shrink_to_fit(&mut self) {
+        self.values.shrink_to_fit();
+        if let Some(validity) = &mut self.validity {
+            validity.shrink_to_fit()
+        }
+    }
 }
 
 /// Creates a Bitmap and an optional [`MutableBitmap`] from an iterator of `Option<bool>`.
@@ -463,7 +471,7 @@ impl MutableArray for MutableBooleanArray {
     }
 
     fn shrink_to_fit(&mut self) {
-        // no-op still have to implement this for bitmaps
+        self.shrink_to_fit()
     }
 }
 

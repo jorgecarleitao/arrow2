@@ -169,6 +169,9 @@ impl<O: Offset> MutableUtf8Array<O> {
     pub fn shrink_to_fit(&mut self) {
         self.values.shrink_to_fit();
         self.offsets.shrink_to_fit();
+        if let Some(validity) = &mut self.validity {
+            validity.shrink_to_fit()
+        }
     }
 }
 

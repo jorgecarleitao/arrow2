@@ -108,6 +108,7 @@ impl<K: DictionaryKey, M: MutableArray> MutableDictionaryArray<K, M> {
     /// Shrinks the capacity of the [`MutableDictionaryArray`] to fit its current length.
     pub fn shrink_to_fit(&mut self) {
         self.values.shrink_to_fit();
+        self.keys.shrink_to_fit();
     }
 }
 

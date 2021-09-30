@@ -47,6 +47,9 @@ impl<O: Offset, M: MutableArray + Default> MutableListArray<O, M> {
     pub fn shrink_to_fit(&mut self) {
         self.values.shrink_to_fit();
         self.offsets.shrink_to_fit();
+        if let Some(validity) = &mut self.validity {
+            validity.shrink_to_fit()
+        }
     }
 }
 
@@ -185,7 +188,7 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
     }
 }
 
-impl<O: Offset, M: MutableArray + 'static> MutableArray for MutableListArray<O, M> {
+impl<O: Offset, M: MutableArray + Default + 'static> MutableArray for MutableListArray<O, M> {
     fn len(&self) -> usize {
         self.offsets.len() - 1
     }
