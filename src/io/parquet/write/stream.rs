@@ -24,7 +24,7 @@ pub async fn write_stream<'a, W, I>(
 ) -> Result<u64>
 where
     W: std::io::Write,
-    I: Stream<Item = Result<RowGroupIter<'static, ArrowError>>>,
+    I: Stream<Item = Result<RowGroupIter<'a, ArrowError>>>,
 {
     let key_value_metadata = key_value_metadata
         .map(|mut x| {
@@ -56,7 +56,7 @@ pub async fn write_stream_stream<'a, W, I>(
 ) -> Result<u64>
 where
     W: futures::io::AsyncWrite + Unpin + Send,
-    I: Stream<Item = Result<RowGroupIter<'static, ArrowError>>>,
+    I: Stream<Item = Result<RowGroupIter<'a, ArrowError>>>,
 {
     let key_value_metadata = key_value_metadata
         .map(|mut x| {
