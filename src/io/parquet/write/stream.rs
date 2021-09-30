@@ -1,3 +1,4 @@
+//! Contains `async` APIs to write to parquet.
 use futures::stream::Stream;
 
 use parquet2::write::RowGroupIter;

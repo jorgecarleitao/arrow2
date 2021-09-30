@@ -141,7 +141,7 @@ impl Ffi_ArrowArray {
         }
     }
 
-    // create an empty `Ffi_ArrowArray`, which can be used to import data into
+    /// creates an empty [`Ffi_ArrowArray`], which can be used to import data into
     pub fn empty() -> Self {
         Self {
             length: 0,

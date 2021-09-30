@@ -1,3 +1,4 @@
+#![deny(missing_docs)]
 //! Contains the [`Array`] and [`MutableArray`] trait objects declaring arrays,
 //! as well as concrete arrays (such as [`Utf8Array`] and [`MutableUtf8Array`]).
 //!

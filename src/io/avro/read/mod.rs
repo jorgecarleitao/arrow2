@@ -1,3 +1,5 @@
+#![deny(missing_docs)]
+//! APIs to read from Avro format to arrow.
 use std::io::Read;
 use std::sync::Arc;
 
@@ -12,6 +14,7 @@ use crate::datatypes::Schema;
 use crate::error::{ArrowError, Result};
 use crate::record_batch::RecordBatch;
 
+/// Reads the avro metadata from `reader` into a [`Schema`], [`Codec`] and magic marker.
 pub fn read_metadata<R: std::io::Read>(reader: &mut R) -> Result<(Schema, Codec, [u8; 16])> {
     let (schema, codec, marker) = util::read_schema(reader)?;
     Ok((schema::convert_schema(&schema)?, codec, marker))
@@ -75,6 +78,7 @@ pub struct BlockStreamIterator<'a, R: Read> {
 }
 
 impl<'a, R: Read> BlockStreamIterator<'a, R> {
+    /// Creates a new [`BlockStreamIterator`].
     pub fn new(reader: &'a mut R, file_marker: [u8; 16]) -> Self {
         Self {
             reader,
@@ -83,6 +87,7 @@ impl<'a, R: Read> BlockStreamIterator<'a, R> {
         }
     }
 
+    /// The buffer of [`BlockStreamIterator`].
     pub fn buffer(&mut self) -> &mut Vec<u8> {
         &mut self.buf.0
     }
@@ -115,6 +120,7 @@ pub struct Decompressor<'a, R: Read> {
 }
 
 impl<'a, R: Read> Decompressor<'a, R> {
+    /// Creates a new [`Decompressor`].
     pub fn new(blocks: BlockStreamIterator<'a, R>, codec: Codec) -> Self {
         Self {
             blocks,
@@ -154,6 +160,7 @@ pub struct Reader<'a, R: Read> {
 }
 
 impl<'a, R: Read> Reader<'a, R> {
+    /// Creates a new [`Reader`].
     pub fn new(iter: Decompressor<'a, R>, schema: Arc<Schema>) -> Self {
         Self { iter, schema }
     }

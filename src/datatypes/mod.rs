@@ -1,3 +1,4 @@
+#![deny(missing_docs)]
 //! Contains all metadata, such as [`PhysicalType`], [`DataType`], [`Field`] and [`Schema`].
 mod field;
 mod physical_type;

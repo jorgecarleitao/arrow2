@@ -1,3 +1,4 @@
+//! APIs to read from CSV
 mod deserialize;
 mod reader;
 

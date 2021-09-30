@@ -38,7 +38,8 @@ pub mod statistics;
 mod utils;
 
 pub use record_batch::RecordReader;
-pub use schema::{get_schema, is_type_nullable, FileMetaData};
+pub(crate) use schema::is_type_nullable;
+pub use schema::{get_schema, FileMetaData};
 
 /// Creates a new iterator of compressed pages.
 pub fn get_page_iterator<'b, RR: Read + Seek>(
@@ -161,6 +162,7 @@ fn dict_read<
     }
 }
 
+/// Converts an iterator of [`DataPage`] into a single [`Array`].
 pub fn page_iter_to_array<
     I: StreamingIterator<Item = std::result::Result<DataPage, ParquetError>>,
 >(
@@ -271,7 +273,7 @@ pub fn page_iter_to_array<
     }
 }
 
-// Converts an async stream of compressed data pages into an [`Array`].
+/// Converts an async stream of [`DataPage`] into a single [`Array`].
 pub async fn page_stream_to_array<I: Stream<Item = std::result::Result<DataPage, ParquetError>>>(
     pages: I,
     metadata: &ColumnChunkMetaData,

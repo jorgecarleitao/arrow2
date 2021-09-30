@@ -38,6 +38,7 @@ impl<'a, I: Iterator<Item = Result<RecordBatch>>> RowGroupIterator<I> {
         })
     }
 
+    /// Returns the [`SchemaDescriptor`] of the [`RowGroupIterator`].
     pub fn parquet_schema(&self) -> &SchemaDescriptor {
         &self.parquet_schema
     }

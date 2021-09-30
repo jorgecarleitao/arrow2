@@ -37,6 +37,7 @@ pub fn schema_to_metadata_key(schema: &Schema) -> KeyValue {
     }
 }
 
+/// Creates a [`ParquetType`] from a [`Field`].
 pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
     let name = field.name().clone();
     let repetition = if field.is_nullable() {

@@ -1,3 +1,4 @@
+#![deny(missing_docs)]
 //! Transfer data between the Arrow memory format and CSV (comma-separated values).
 
 use crate::error::ArrowError;
