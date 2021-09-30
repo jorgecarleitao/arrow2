@@ -64,3 +64,36 @@ fn reserve() {
     assert!(a.validity().unwrap().capacity() > 0);
     assert!(a.values().capacity() > 0)
 }
+
+#[test]
+fn extend_trusted_len() {
+    let mut a = MutableBooleanArray::new();
+
+    a.extend_trusted_len(vec![Some(true), Some(false)].into_iter());
+    assert_eq!(a.validity(), None);
+
+    a.extend_trusted_len(vec![None, Some(true)].into_iter());
+    assert_eq!(
+        a.validity(),
+        Some(&MutableBitmap::from([true, true, false, true]))
+    );
+    assert_eq!(a.values(), &MutableBitmap::from([true, false, false, true]));
+}
+
+#[test]
+fn extend_trusted_len_values() {
+    let mut a = MutableBooleanArray::new();
+
+    a.extend_trusted_len_values(vec![true, true, false].into_iter());
+    assert_eq!(a.validity(), None);
+    assert_eq!(a.values(), &MutableBitmap::from([true, true, false]));
+
+    let mut a = MutableBooleanArray::new();
+    a.push(None);
+    a.extend_trusted_len_values(vec![true, false].into_iter());
+    assert_eq!(
+        a.validity(),
+        Some(&MutableBitmap::from([false, true, true]))
+    );
+    assert_eq!(a.values(), &MutableBitmap::from([false, true, false]));
+}
