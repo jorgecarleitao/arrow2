@@ -122,7 +122,7 @@ io_print = ["comfy-table"]
 # the compute kernels. Disabling this significantly reduces compile time.
 compute = ["strength_reduce", "multiversion", "lexical-core", "ahash"]
 # base64 + io_ipc because arrow schemas are stored as base64-encoded ipc format.
-io_parquet = ["parquet2", "io_ipc", "base64", "futures"]
+io_parquet = ["parquet2", "io_ipc", "base64", "futures", "itertools"]
 benchmarks = ["rand"]
 simd = ["packed_simd"]
 # uses a custom allocator whose pointers are aligned along cache lines.

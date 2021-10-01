@@ -14,6 +14,7 @@ use crate::{
     io::parquet::read::is_type_nullable,
     types::NativeType as ArrowNativeType,
 };
+use itertools::{Itertools, MinMaxResult};
 
 pub(crate) fn encode_plain<T, R>(array: &PrimitiveArray<T>, is_optional: bool, buffer: &mut Vec<u8>)
 where
@@ -98,26 +99,27 @@ where
     R: NativeType,
     T: num_traits::AsPrimitive<R>,
 {
+    let minmax = array
+        .iter()
+        .flatten()
+        .map(|x| {
+            let x: R = x.as_();
+            x
+        })
+        .minmax_by(|x, y| x.ord(y));
+
+    let (min_value, max_value) = match minmax {
+        MinMaxResult::NoElements => (None, None),
+        MinMaxResult::OneElement(x) => (Some(x), Some(x)),
+        MinMaxResult::MinMax(x, y) => (Some(x), Some(y)),
+    };
+
     let statistics = &PrimitiveStatistics::<R> {
         descriptor,
         null_count: Some(array.null_count() as i64),
         distinct_count: None,
-        max_value: array
-            .iter()
-            .flatten()
-            .map(|x| {
-                let x: R = x.as_();
-                x
-            })
-            .max_by(|x, y| x.ord(y)),
-        min_value: array
-            .iter()
-            .flatten()
-            .map(|x| {
-                let x: R = x.as_();
-                x
-            })
-            .min_by(|x, y| x.ord(y)),
+        max_value,
+        min_value,
     } as &dyn Statistics;
     serialize_statistics(statistics)
 }
