@@ -8,5 +8,5 @@ pub use csv::{ByteRecord, Reader, ReaderBuilder};
 mod infer_schema;
 
 pub use deserialize::{deserialize_batch, deserialize_column};
-pub use infer_schema::infer_schema;
+pub use infer_schema::{infer, infer_schema};
 pub use reader::*;
