@@ -138,6 +138,7 @@ impl<O: Offset> MutableBinaryArray<O> {
     /// Shrinks the capacity of the [`MutableBinaryArray`] to fit its current length.
     pub fn shrink_to_fit(&mut self) {
         self.values.shrink_to_fit();
+        self.offsets.shrink_to_fit();
         if let Some(validity) = &mut self.validity {
             validity.shrink_to_fit()
         }
