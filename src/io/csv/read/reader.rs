@@ -20,9 +20,9 @@ pub fn projected_schema(schema: &Schema, projection: Option<&[usize]>) -> Schema
     }
 }
 
-/// Reads `len` rows from the CSV into Bytes, skiping `skip`
+/// Reads `len` rows from `reader` into `row`, skiping `skip`.
 /// This operation has minimal CPU work and is thus the fastest way to read through a CSV
-/// without deserializing the contents to arrow.
+/// without deserializing the contents to Arrow.
 pub fn read_rows<R: Read>(
     reader: &mut Reader<R>,
     skip: usize,

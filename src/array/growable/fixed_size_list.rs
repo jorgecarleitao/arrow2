@@ -22,7 +22,7 @@ pub struct GrowableFixedSizeList<'a> {
 }
 
 impl<'a> GrowableFixedSizeList<'a> {
-    /// Creates a new [`GrowableList`] bound to `arrays` with a pre-allocated `capacity`.
+    /// Creates a new [`GrowableFixedSizeList`] bound to `arrays` with a pre-allocated `capacity`.
     /// # Panics
     /// If `arrays` is empty.
     pub fn new(

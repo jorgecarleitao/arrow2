@@ -50,6 +50,16 @@ fn is_datetime(string: &str) -> Option<String> {
 }
 
 /// Infers [`DataType`] from `bytes`
+/// # Implementation
+/// * case insensitive "true" or "false" are mapped to [`DataType::Boolean`]
+/// * parsable to integer is mapped to [`DataType::Int64`]
+/// * parsable to float is mapped to [`DataType::Float64`]
+/// * parsable to date is mapped to [`DataType::Date32`]
+/// * parsable to time is mapped to [`DataType::Time32(TimeUnit::Millisecond)`]
+/// * parsable to naive datetime is mapped to [`DataType::Timestamp(TimeUnit::Millisecond, None)`]
+/// * parsable to time-aware datetime is mapped to [`DataType::Timestamp`] of milliseconds and parsed offset.
+/// * other utf8 is mapped to [`DataType::Utf8`]
+/// * invalid utf8 is mapped to [`DataType::Binary`]
 pub fn infer(bytes: &[u8]) -> DataType {
     if is_boolean(bytes) {
         DataType::Boolean
@@ -75,9 +85,8 @@ pub fn infer(bytes: &[u8]) -> DataType {
     }
 }
 
-/// Infer the schema of a CSV file by reading through the first n records up to `max_rows`.
-///
-/// Return infered schema and number of records used for inference.
+/// Infers a [`Schema`] of a CSV file by reading through the first n records up to `max_rows`.
+/// Seeks back to the begining of the file _after_ the header
 pub fn infer_schema<R: Read + Seek, F: Fn(&[u8]) -> DataType>(
     reader: &mut Reader<R>,
     max_rows: Option<usize>,

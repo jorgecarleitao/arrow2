@@ -198,7 +198,7 @@ pub fn deserialize_column(
 
 /// Deserializes rows [`ByteRecord`] into a [`RecordBatch`].
 /// Note that this is a convenience function: column deserialization
-///is trivially parallelizable (e.g. rayon).
+/// is trivially parallelizable (e.g. rayon).
 pub fn deserialize_batch<F>(
     rows: &[ByteRecord],
     fields: &[Field],

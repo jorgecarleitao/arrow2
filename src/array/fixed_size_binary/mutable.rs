@@ -150,7 +150,7 @@ impl MutableFixedSizeBinaryArray {
         std::slice::from_raw_parts(self.values.as_ptr().add(i * self.size), self.size)
     }
 
-    /// Shrinks the capacity of the [`MutablePrimitive`] to fit its current length.
+    /// Shrinks the capacity of the [`MutableFixedSizeBinaryArray`] to fit its current length.
     pub fn shrink_to_fit(&mut self) {
         self.values.shrink_to_fit();
         if let Some(validity) = &mut self.validity {

@@ -2,9 +2,10 @@ use crate::{array::*, buffer::Buffer, datatypes::DataType};
 
 use super::Scalar;
 
+/// The implementation of [`Scalar`] for utf8, semantically equivalent to [`Option<&str>`].
 #[derive(Debug, Clone)]
 pub struct Utf8Scalar<O: Offset> {
-    value: Buffer<u8>,
+    value: Buffer<u8>, // safety: valid utf8
     is_valid: bool,
     phantom: std::marker::PhantomData<O>,
 }
@@ -16,6 +17,7 @@ impl<O: Offset> PartialEq for Utf8Scalar<O> {
 }
 
 impl<O: Offset> Utf8Scalar<O> {
+    /// Returns a new [`Utf8Scalar`]
     #[inline]
     pub fn new<P: AsRef<str>>(v: Option<P>) -> Self {
         let is_valid = v.is_some();
@@ -28,8 +30,10 @@ impl<O: Offset> Utf8Scalar<O> {
         }
     }
 
+    /// Returns the value irrespectively of the validity.
     #[inline]
     pub fn value(&self) -> &str {
+        // Safety: invariant of the struct
         unsafe { std::str::from_utf8_unchecked(self.value.as_slice()) }
     }
 }

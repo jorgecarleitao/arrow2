@@ -2,6 +2,7 @@ use crate::{array::*, buffer::Buffer, datatypes::DataType};
 
 use super::Scalar;
 
+/// The [`Scalar`] implementation of binary (`Vec<u8>`).
 #[derive(Debug, Clone)]
 pub struct BinaryScalar<O: Offset> {
     value: Buffer<u8>,
@@ -16,6 +17,7 @@ impl<O: Offset> PartialEq for BinaryScalar<O> {
 }
 
 impl<O: Offset> BinaryScalar<O> {
+    /// Returns a new [`BinaryScalar`].
     #[inline]
     pub fn new<P: AsRef<[u8]>>(v: Option<P>) -> Self {
         let is_valid = v.is_some();
@@ -28,6 +30,7 @@ impl<O: Offset> BinaryScalar<O> {
         }
     }
 
+    /// Its value
     #[inline]
     pub fn value(&self) -> &[u8] {
         self.value.as_slice()

@@ -1,10 +1,13 @@
 use crate::{
     datatypes::DataType,
     types::{NativeType, NaturalDataType},
+    error::ArrowError,
 };
 
 use super::Scalar;
 
+/// The implementation of [`Scalar`] for primitive, semantically equivalent to [`Option<T>`]
+/// with [`DataType`].
 #[derive(Debug, Clone)]
 pub struct PrimitiveScalar<T: NativeType> {
     // Not Option<T> because this offers a stabler pointer offset on the struct
@@ -22,8 +25,17 @@ impl<T: NativeType> PartialEq for PrimitiveScalar<T> {
 }
 
 impl<T: NativeType> PrimitiveScalar<T> {
+    /// Returns a new [`PrimitiveScalar`].
     #[inline]
     pub fn new(data_type: DataType, v: Option<T>) -> Self {
+        if !T::is_valid(&data_type) {
+            Err(ArrowError::InvalidArgumentError(format!(
+                "Type {} does not support logical type {}",
+                std::any::type_name::<T>(),
+                data_type
+            )))
+            .unwrap()
+        }
         let is_valid = v.is_some();
         Self {
             value: v.unwrap_or_default(),
@@ -32,6 +44,7 @@ impl<T: NativeType> PrimitiveScalar<T> {
         }
     }
 
+    /// Returns the value irrespectively of its validity.
     #[inline]
     pub fn value(&self) -> T {
         self.value
