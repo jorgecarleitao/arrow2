@@ -1,6 +1,6 @@
 # Introduction
 
-Welcome to the Arrow2 guide for the Rust programming language.  This guide was
+Welcome to the Arrow2 guide for the Rust programming language. This guide was
 created to help you become familiar with the Arrow2 crate and its
 functionalities.
 

@@ -1,4 +1,4 @@
-//! This module exposes functions to perform merge-sorts.
+//! Functions to perform merge-sorts.
 //!
 //! The goal of merge-sort is to merge two sorted arrays, `[a0, a1]`, `merge_sort(a0, a1)`,
 //! so that the resulting array is sorted, i.e. the following invariant upholds:

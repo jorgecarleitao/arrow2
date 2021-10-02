@@ -13,7 +13,7 @@ In Arrow2, logical types are declared as variants of the `enum` `arrow2::datatyp
 For example, `DataType::Int32` represents a signed integer of 32 bits.
 
 Each `DataType` has an associated `enum PhysicalType` (many-to-one) representing the
-particular in-memory representation, and is associated to specific semantics.
+particular in-memory representation, and is associated to a specific semantics.
 For example, both `DataType::Date32` and `DataType::Int32` have the same `PhysicalType`
 (`PhysicalType::Primitive(PrimitiveType::Int32)`) but `Date32` represents the number of
 days since UNIX epoch.
@@ -23,10 +23,9 @@ Logical types are metadata: they annotate physical types with extra information 
 ## `Field` (column metadata)
 
 Besides logical types, the arrow format supports other relevant metadata to the format.
-All this information is stored in `arrow2::datatypes::Field`.
-
-A `Field` is arrow's metadata associated to a column in the context of a columnar format. 
-It has a name, a logical type `DataType`, whether the column is nullable, etc.
+An important one is `Field` broadly corresponding to a column in traditional columnar formats.
+A `Field` is composed by a name (`String`), a logical type (`DataType`), whether it is
+nullable (`bool`), and optional metadata.
 
 ## `Schema` (table metadata)
 

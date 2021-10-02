@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-//! Defines partition kernel for `ArrayRef`
+//! Defines partition kernel for [`crate::array::Array`]
 
 use crate::compute::sort::{build_compare, Compare, SortColumn};
 use crate::error::{ArrowError, Result};
