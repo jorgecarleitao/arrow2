@@ -240,6 +240,30 @@ pub fn pyarrow_nullable(column: usize) -> Box<dyn Array> {
             let values = Arc::new(PrimitiveArray::<i32>::from_slice([10, 200]));
             Box::new(DictionaryArray::<i32>::from_data(keys, values))
         }
+        // decimal 9
+        7 => {
+            let values = i64_values
+                .iter()
+                .map(|x| x.map(|x| x as i128))
+                .collect::<Vec<_>>();
+            Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(9, 0)))
+        }
+        // decimal 18
+        8 => {
+            let values = i64_values
+                .iter()
+                .map(|x| x.map(|x| x as i128))
+                .collect::<Vec<_>>();
+            Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(18, 0)))
+        }
+        // decimal 26
+        9 => {
+            let values = i64_values
+                .iter()
+                .map(|x| x.map(|x| x as i128))
+                .collect::<Vec<_>>();
+            Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(26, 0)))
+        }
         _ => unreachable!(),
     }
 }
@@ -289,6 +313,28 @@ pub fn pyarrow_nullable_statistics(column: usize) -> Option<Box<dyn Statistics>>
             max_value: Some(9),
         }),
         6 => return None,
+        // Decimal statistics
+        7 => Box::new(PrimitiveStatistics::<i128> {
+            distinct_count: None,
+            null_count: Some(3),
+            min_value: Some(0i128),
+            max_value: Some(9i128),
+            data_type: DataType::Decimal(9, 0),
+        }),
+        8 => Box::new(PrimitiveStatistics::<i128> {
+            distinct_count: None,
+            null_count: Some(3),
+            min_value: Some(0i128),
+            max_value: Some(9i128),
+            data_type: DataType::Decimal(18, 0),
+        }),
+        9 => Box::new(PrimitiveStatistics::<i128> {
+            distinct_count: None,
+            null_count: Some(3),
+            min_value: Some(0i128),
+            max_value: Some(9i128),
+            data_type: DataType::Decimal(26, 0),
+        }),
         _ => unreachable!(),
     })
 }
@@ -316,6 +362,30 @@ pub fn pyarrow_required(column: usize) -> Box<dyn Array> {
         2 => Box::new(Utf8Array::<i32>::from_slice(&[
             "Hello", "bbb", "aa", "", "bbb", "abc", "bbb", "bbb", "def", "aaa",
         ])),
+        // decimal 9
+        6 => {
+            let values = i64_values
+                .iter()
+                .map(|x| x.map(|x| x as i128))
+                .collect::<Vec<_>>();
+            Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(9, 0)))
+        }
+        // decimal 18
+        7 => {
+            let values = i64_values
+                .iter()
+                .map(|x| x.map(|x| x as i128))
+                .collect::<Vec<_>>();
+            Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(18, 0)))
+        }
+        // decimal 26
+        8 => {
+            let values = i64_values
+                .iter()
+                .map(|x| x.map(|x| x as i128))
+                .collect::<Vec<_>>();
+            Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(26, 0)))
+        }
         _ => unreachable!(),
     }
 }
@@ -340,6 +410,30 @@ pub fn pyarrow_required_statistics(column: usize) -> Option<Box<dyn Statistics>>
             distinct_count: None,
             min_value: Some("".to_string()),
             max_value: Some("def".to_string()),
+        }),
+        // decimal_9
+        6 => Box::new(PrimitiveStatistics::<i128> {
+            distinct_count: None,
+            null_count: Some(0),
+            min_value: Some(0i128),
+            max_value: Some(9i128),
+            data_type: DataType::Decimal(9, 0),
+        }),
+        // decimal_18
+        7 => Box::new(PrimitiveStatistics::<i128> {
+            distinct_count: None,
+            null_count: Some(0),
+            min_value: Some(0i128),
+            max_value: Some(9i128),
+            data_type: DataType::Decimal(18, 0),
+        }),
+        // decimal_26
+        8 => Box::new(PrimitiveStatistics::<i128> {
+            distinct_count: None,
+            null_count: Some(0),
+            min_value: Some(0i128),
+            max_value: Some(9i128),
+            data_type: DataType::Decimal(26, 0),
         }),
         _ => unreachable!(),
     })

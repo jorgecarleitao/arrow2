@@ -1,6 +1,7 @@
 import pyarrow as pa
 import pyarrow.parquet
 import os
+from decimal import Decimal
 
 PYARROW_PATH = "fixtures/pyarrow3"
 
@@ -11,6 +12,7 @@ def case_basic_nullable(size=1):
     string = ["Hello", None, "aa", "", None, "abc", None, None, "def", "aaa"]
     boolean = [True, None, False, False, None, True, None, None, True, True]
     string_large = ["ABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCD😃🌚🕳👊"] * 10
+    decimal = [Decimal(e) if e is not None else None for e in int64]
 
     fields = [
         pa.field("int64", pa.int64()),
@@ -20,6 +22,10 @@ def case_basic_nullable(size=1):
         pa.field("date", pa.timestamp("ms")),
         pa.field("uint32", pa.uint32()),
         pa.field("string_large", pa.utf8()),
+        # decimal testing
+        pa.field("decimal_9", pa.decimal128(9,0)),
+        pa.field("decimal_18", pa.decimal128(18,0)),
+        pa.field("decimal_26", pa.decimal128(26,0)),
     ]
     schema = pa.schema(fields)
 
@@ -32,6 +38,9 @@ def case_basic_nullable(size=1):
             "date": int64 * size,
             "uint32": int64 * size,
             "string_large": string_large * size,
+            "decimal_9": decimal * size,
+            "decimal_18": decimal * size,
+            "decimal_26": decimal * size,
         },
         schema,
         f"basic_nullable_{size*10}.parquet",
@@ -43,6 +52,7 @@ def case_basic_required(size=1):
     float64 = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
     string = ["Hello", "bbb", "aa", "", "bbb", "abc", "bbb", "bbb", "def", "aaa"]
     boolean = [True, True, False, False, False, True, True, True, True, True]
+    decimal = [Decimal(e) for e in int64]
 
     fields = [
         pa.field("int64", pa.int64(), nullable=False),
@@ -57,6 +67,9 @@ def case_basic_required(size=1):
             nullable=False,
         ),
         pa.field("uint32", pa.uint32(), nullable=False),
+        pa.field("decimal_9", pa.decimal128(9,0), nullable=False),
+        pa.field("decimal_18", pa.decimal128(18,0), nullable=False),
+        pa.field("decimal_26", pa.decimal128(26,0), nullable=False),
     ]
     schema = pa.schema(fields)
 
@@ -68,6 +81,9 @@ def case_basic_required(size=1):
             "bool": boolean * size,
             "date": int64 * size,
             "uint32": int64 * size,
+            "decimal_9": decimal * size,
+            "decimal_18": decimal * size,
+            "decimal_26": decimal * size,
         },
         schema,
         f"basic_required_{size*10}.parquet",

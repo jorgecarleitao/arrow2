@@ -167,6 +167,9 @@ pub fn from_int64(
             ParquetTimeUnit::MICROS(_) => DataType::Time64(TimeUnit::Microsecond),
             ParquetTimeUnit::NANOS(_) => DataType::Time64(TimeUnit::Nanosecond),
         },
+        (Some(PrimitiveConvertedType::Decimal(precision,scale)), _) => {
+            DataType::Decimal(*precision as usize, *scale as usize)
+        }
         (c, l) => {
             return Err(ArrowError::NotYetImplemented(format!(
                 "The conversion of (Int64, {:?}, {:?}) to arrow still not implemented",

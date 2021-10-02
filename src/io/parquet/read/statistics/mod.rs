@@ -13,6 +13,8 @@ mod binary;
 pub use binary::*;
 mod boolean;
 pub use boolean::*;
+mod fixlen;
+pub use fixlen::*;
 
 /// Trait representing a deserialized parquet statistics into arrow.
 pub trait Statistics: std::fmt::Debug {
@@ -69,6 +71,10 @@ pub fn deserialize_statistics(stats: &dyn ParquetStatistics) -> Result<Box<dyn S
                 stats,
                 DataType::Float64,
             ))))
+        }
+        PhysicalType::FixedLenByteArray(_) =>{
+            let stats = stats.as_any().downcast_ref().unwrap();
+            fixlen::statistics_from_fix_len(stats, stats.descriptor.type_())
         }
         _ => Err(ArrowError::NotYetImplemented(
             "Reading Fixed-len array statistics is not yet supported".to_string(),
