@@ -71,7 +71,7 @@ impl MapArray {
 
         if let DataType::Struct(inner) = Self::get_field(&data_type).data_type() {
             if inner.len() != 2 {
-                panic!("MapArray its inner `Struct` to have 2 fields (keys and maps)")
+                panic!("MapArray expects its inner `Struct` to have 2 fields (keys and maps)")
             }
         } else {
             panic!("MapArray expects `DataType::Struct` as its inner logical type")
