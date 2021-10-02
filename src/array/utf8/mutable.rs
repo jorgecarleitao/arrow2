@@ -164,6 +164,15 @@ impl<O: Offset> MutableUtf8Array<O> {
         let a: Utf8Array<O> = self.into();
         Arc::new(a)
     }
+
+    /// Shrinks the capacity of the [`MutableUtf8`] to fit its current length.
+    pub fn shrink_to_fit(&mut self) {
+        self.values.shrink_to_fit();
+        self.offsets.shrink_to_fit();
+        if let Some(validity) = &mut self.validity {
+            validity.shrink_to_fit()
+        }
+    }
 }
 
 impl<O: Offset> MutableUtf8Array<O> {
@@ -223,6 +232,10 @@ impl<O: Offset> MutableArray for MutableUtf8Array<O> {
 
     fn push_null(&mut self) {
         self.push::<&str>(None)
+    }
+
+    fn shrink_to_fit(&mut self) {
+        self.shrink_to_fit()
     }
 }
 
