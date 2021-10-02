@@ -130,7 +130,7 @@ impl MapArray {
         &self.field
     }
 
-    /// Returns the element at index `i`
+    /// Returns the element at index `i`.
     #[inline]
     pub fn value(&self, i: usize) -> Box<dyn Array> {
         let offset = self.offsets[i];
@@ -143,7 +143,7 @@ impl MapArray {
         unsafe { self.field.slice_unchecked(offset.to_usize(), length) }
     }
 
-    /// Returns the element at index `i` as &str
+    /// Returns the element at index `i`.
     /// # Safety
     /// Assumes that the `i < self.len`.
     #[inline]

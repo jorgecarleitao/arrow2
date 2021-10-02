@@ -411,7 +411,7 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
             let sorted_keys = if let Some(Value::Bool(sorted_keys)) = item.get("keysSorted") {
                 *sorted_keys
             } else {
-                return Err(ArrowError::Schema("union requires mode".to_string()));
+                return Err(ArrowError::Schema("sorted keys not defined".to_string()));
             };
             DataType::Map(Box::new(children.pop().unwrap()), sorted_keys)
         }
