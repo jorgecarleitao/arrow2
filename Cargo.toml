@@ -102,7 +102,7 @@ full = [
 ]
 merge_sort = ["itertools"]
 io_csv = ["io_csv_read", "io_csv_write"]
-io_csv_read = ["csv", "lazy_static", "regex", "lexical-core"]
+io_csv_read = ["csv", "lexical-core"]
 io_csv_write = ["csv", "streaming-iterator", "lexical-core"]
 io_json = ["serde", "serde_json", "indexmap"]
 io_ipc = ["flatbuffers"]
