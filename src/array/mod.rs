@@ -255,6 +255,7 @@ impl Display for dyn Array {
                     fmt_dyn!(self, DictionaryArray::<$T>, f)
                 })
             }
+            Map => todo!(),
         }
     }
 }
@@ -278,6 +279,7 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
         FixedSizeList => Box::new(FixedSizeListArray::new_empty(data_type)),
         Struct => Box::new(StructArray::new_empty(data_type)),
         Union => Box::new(UnionArray::new_empty(data_type)),
+        Map => Box::new(MapArray::new_empty(data_type)),
         Dictionary(key_type) => {
             with_match_physical_dictionary_key_type!(key_type, |$T| {
                 Box::new(DictionaryArray::<$T>::new_empty(data_type))
@@ -307,6 +309,7 @@ pub fn new_null_array(data_type: DataType, length: usize) -> Box<dyn Array> {
         FixedSizeList => Box::new(FixedSizeListArray::new_null(data_type, length)),
         Struct => Box::new(StructArray::new_null(data_type, length)),
         Union => Box::new(UnionArray::new_null(data_type, length)),
+        Map => Box::new(MapArray::new_null(data_type, length)),
         Dictionary(key_type) => {
             with_match_physical_dictionary_key_type!(key_type, |$T| {
                 Box::new(DictionaryArray::<$T>::new_null(data_type, length))
@@ -344,6 +347,7 @@ pub fn clone(array: &dyn Array) -> Box<dyn Array> {
         FixedSizeList => clone_dyn!(array, FixedSizeListArray),
         Struct => clone_dyn!(array, StructArray),
         Union => clone_dyn!(array, UnionArray),
+        Map => clone_dyn!(array, MapArray),
         Dictionary(key_type) => {
             with_match_physical_dictionary_key_type!(key_type, |$T| {
                 clone_dyn!(array, DictionaryArray::<$T>)
@@ -359,6 +363,7 @@ mod display;
 mod fixed_size_binary;
 mod fixed_size_list;
 mod list;
+mod map;
 mod null;
 mod primitive;
 mod specification;
@@ -380,6 +385,7 @@ pub use dictionary::{DictionaryArray, DictionaryKey, MutableDictionaryArray};
 pub use fixed_size_binary::{FixedSizeBinaryArray, MutableFixedSizeBinaryArray};
 pub use fixed_size_list::{FixedSizeListArray, MutableFixedSizeListArray};
 pub use list::{ListArray, MutableListArray};
+pub use map::MapArray;
 pub use null::NullArray;
 pub use primitive::*;
 pub use specification::Offset;

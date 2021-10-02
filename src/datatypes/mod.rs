@@ -94,6 +94,32 @@ pub enum DataType {
     /// A nested datatype that can represent slots of differing types.
     /// Third argument represents sparsness
     Union(Vec<Field>, Option<Vec<i32>>, bool),
+    /// A nested type that is represented as
+    ///
+    /// List<entries: Struct<key: K, value: V>>
+    ///
+    /// In this layout, the keys and values are each respectively contiguous. We do
+    /// not constrain the key and value types, so the application is responsible
+    /// for ensuring that the keys are hashable and unique. Whether the keys are sorted
+    /// may be set in the metadata for this field.
+    ///
+    /// In a field with Map type, the field has a child Struct field, which then
+    /// has two children: key type and the second the value type. The names of the
+    /// child fields may be respectively "entries", "key", and "value", but this is
+    /// not enforced.
+    ///
+    /// Map
+    /// ```text
+    ///   - child[0] entries: Struct
+    ///     - child[0] key: K
+    ///     - child[1] value: V
+    /// ```
+    /// Neither the "entries" field nor the "key" field may be nullable.
+    ///
+    /// The metadata is structured so that Arrow systems without special handling
+    /// for Map can make Map an alias for List. The "layout" attribute for the Map
+    /// field must have the same contents as a List.
+    Map(Box<Field>, bool),
     /// A dictionary encoded array (`key_type`, `value_type`), where
     /// each array element is an index of `key_type` into an
     /// associated dictionary of `value_type`.
@@ -211,6 +237,7 @@ impl DataType {
             LargeList(_) => PhysicalType::LargeList,
             Struct(_) => PhysicalType::Struct,
             Union(_, _, _) => PhysicalType::Union,
+            Map(_, _) => PhysicalType::Map,
             Dictionary(key, _) => PhysicalType::Dictionary(to_dictionary_index_type(key.as_ref())),
             Extension(_, key, _) => key.to_physical_type(),
         }

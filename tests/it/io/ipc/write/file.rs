@@ -177,6 +177,18 @@ fn write_100_union() -> Result<()> {
 }
 
 #[test]
+fn write_100_map() -> Result<()> {
+    test_file("1.0.0-littleendian", "generated_map")?;
+    test_file("1.0.0-bigendian", "generated_map")
+}
+
+#[test]
+fn write_100_map_non_canonical() -> Result<()> {
+    test_file("1.0.0-littleendian", "generated_map_non_canonical")?;
+    test_file("1.0.0-bigendian", "generated_map_non_canonical")
+}
+
+#[test]
 fn write_generated_017_union() -> Result<()> {
     test_file("0.17.1", "generated_union")
 }

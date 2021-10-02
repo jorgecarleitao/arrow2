@@ -77,7 +77,6 @@ we also use the `0.x.y` versioning, since we are iterating over the API.
 ## Features in the original not available in this crate
 
 * Parquet read and write of struct and nested lists.
-* Map type
 
 ## Features in this crate not in pyarrow
 
@@ -86,7 +85,7 @@ we also use the `0.x.y` versioning, since we are iterating over the API.
 
 ## Features in pyarrow not in this crate
 
-Too many to enumerate; e.g. nested dictionary arrays, map, nested parquet.
+Too many to enumerate; e.g. nested dictionary arrays, nested parquet.
 
 ## FAQ
 

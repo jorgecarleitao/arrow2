@@ -42,7 +42,6 @@ fn read_dict_optional<K, T, A, F>(
     let bit_width = indices_buffer[0];
     let indices_buffer = &indices_buffer[1..];
 
-    println!("indices_buffer: {:?}", indices_buffer);
     let mut new_indices =
         hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional);
 

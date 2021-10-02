@@ -130,7 +130,7 @@ pub fn make_growable<'a>(
             use_validity,
             capacity
         ),
-        Union => todo!(),
+        Union | Map => todo!(),
         Dictionary(key_type) => {
             with_match_physical_dictionary_key_type!(key_type, |$T| {
                 dyn_dict_growable!($T, arrays, use_validity, capacity)

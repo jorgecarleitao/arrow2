@@ -12,11 +12,11 @@ fn test_file(version: &str, file_name: &str) -> Result<()> {
         testdata, version, file_name
     ))?;
 
-    let metadata = read_file_metadata(&mut file)?;
-    let reader = FileReader::new(&mut file, metadata, None);
-
     // read expected JSON output
     let (schema, batches) = read_gzip_json(version, file_name)?;
+
+    let metadata = read_file_metadata(&mut file)?;
+    let reader = FileReader::new(&mut file, metadata, None);
 
     assert_eq!(&schema, reader.schema().as_ref());
 
@@ -120,6 +120,18 @@ fn read_generated_100_union() -> Result<()> {
 #[test]
 fn read_generated_100_extension() -> Result<()> {
     test_file("1.0.0-littleendian", "generated_extension")
+}
+
+#[test]
+fn read_generated_100_map() -> Result<()> {
+    test_file("1.0.0-littleendian", "generated_map")?;
+    test_file("1.0.0-bigendian", "generated_map")
+}
+
+#[test]
+fn read_generated_100_non_canonical_map() -> Result<()> {
+    test_file("1.0.0-littleendian", "generated_map_non_canonical")?;
+    test_file("1.0.0-bigendian", "generated_map_non_canonical")
 }
 
 #[test]

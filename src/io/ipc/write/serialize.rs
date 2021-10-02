@@ -260,6 +260,47 @@ pub fn write_union(
     });
 }
 
+fn write_map(
+    array: &dyn Array,
+    buffers: &mut Vec<Schema::Buffer>,
+    arrow_data: &mut Vec<u8>,
+    nodes: &mut Vec<Message::FieldNode>,
+    offset: &mut i64,
+    is_little_endian: bool,
+) {
+    let array = array.as_any().downcast_ref::<MapArray>().unwrap();
+    let offsets = array.offsets();
+    let validity = array.validity();
+
+    write_bitmap(validity, offsets.len() - 1, buffers, arrow_data, offset);
+
+    let first = *offsets.first().unwrap();
+    let last = *offsets.last().unwrap();
+    if first == 0 {
+        write_buffer(offsets, buffers, arrow_data, offset, is_little_endian);
+    } else {
+        write_buffer_from_iter(
+            offsets.iter().map(|x| *x - first),
+            buffers,
+            arrow_data,
+            offset,
+            is_little_endian,
+        );
+    }
+
+    write(
+        array
+            .field()
+            .slice(first as usize, last as usize - first as usize)
+            .as_ref(),
+        buffers,
+        arrow_data,
+        nodes,
+        offset,
+        is_little_endian,
+    );
+}
+
 fn write_fixed_size_list(
     array: &dyn Array,
     buffers: &mut Vec<Schema::Buffer>,
@@ -379,6 +420,9 @@ pub fn write(
         }
         Union => {
             write_union(array, buffers, arrow_data, nodes, offset, is_little_endian);
+        }
+        Map => {
+            write_map(array, buffers, arrow_data, nodes, offset, is_little_endian);
         }
     }
 }

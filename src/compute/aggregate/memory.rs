@@ -109,5 +109,10 @@ pub fn estimated_bytes_size(array: &dyn Array) -> usize {
         Dictionary(key_type) => with_match_physical_dictionary_key_type!(key_type, |$T| {
             dyn_dict!(array, $T)
         }),
+        Map => {
+            let array = array.as_any().downcast_ref::<MapArray>().unwrap();
+            let offsets = array.offsets().len() * std::mem::size_of::<i32>();
+            offsets + estimated_bytes_size(array.field().as_ref()) + validity_size(array.validity())
+        }
     }
 }

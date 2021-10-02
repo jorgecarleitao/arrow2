@@ -56,12 +56,18 @@ impl Ffi_ArrowSchema {
         let format = to_format(field.data_type());
         let name = field.name().clone();
 
+        let mut flags = field.is_nullable() as i64 * 2;
+
         // allocate (and hold) the children
         let children_vec = match field.data_type() {
             DataType::List(field) => {
                 vec![Box::new(Ffi_ArrowSchema::new(field.as_ref()))]
             }
             DataType::LargeList(field) => {
+                vec![Box::new(Ffi_ArrowSchema::new(field.as_ref()))]
+            }
+            DataType::Map(field, is_sorted) => {
+                flags += (*is_sorted as i64) * 4;
                 vec![Box::new(Ffi_ArrowSchema::new(field.as_ref()))]
             }
             DataType::Struct(fields) => fields
@@ -81,9 +87,8 @@ impl Ffi_ArrowSchema {
             .collect::<Box<_>>();
         let n_children = children_ptr.len() as i64;
 
-        let flags = field.is_nullable() as i64 * 2;
-
         let dictionary = if let DataType::Dictionary(_, values) = field.data_type() {
+            flags += field.dict_is_ordered().unwrap_or_default() as i64;
             // we do not store field info in the dict values, so can't recover it all :(
             let field = Field::new("", values.as_ref().clone(), true);
             Some(Box::new(Ffi_ArrowSchema::new(&field)))
@@ -263,6 +268,12 @@ unsafe fn to_data_type(schema: &Ffi_ArrowSchema) -> Result<DataType> {
             let child = schema.child(0);
             DataType::LargeList(Box::new(to_field(child)?))
         }
+        "+m" => {
+            let child = schema.child(0);
+
+            let is_sorted = (schema.flags & 4) != 0;
+            DataType::Map(Box::new(to_field(child)?), is_sorted)
+        }
         "+s" => {
             let children = (0..schema.n_children as usize)
                 .map(|x| to_field(schema.child(x)))
@@ -399,6 +410,7 @@ fn to_format(data_type: &DataType) -> String {
             r.push_str(ids);
             r
         }
+        DataType::Map(_, _) => "+m".to_string(),
         DataType::Dictionary(index, _) => to_format(index.as_ref()),
         DataType::Extension(_, inner, _) => to_format(inner.as_ref()),
     }
@@ -408,6 +420,7 @@ pub(super) fn get_field_child(field: &Field, index: usize) -> Result<Field> {
     match (index, field.data_type()) {
         (0, DataType::List(field)) => Ok(field.as_ref().clone()),
         (0, DataType::LargeList(field)) => Ok(field.as_ref().clone()),
+        (0, DataType::Map(field, _)) => Ok(field.as_ref().clone()),
         (index, DataType::Struct(fields)) => Ok(fields[index].clone()),
         (index, DataType::Union(fields, _, _)) => Ok(fields[index].clone()),
         (child, data_type) => Err(ArrowError::Ffi(format!(
