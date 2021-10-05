@@ -12,9 +12,9 @@ macro_rules! new_state {
 use crate::{
     array::{Array, BinaryArray, BooleanArray, Offset, PrimitiveArray, Utf8Array},
     buffer::Buffer,
-    datatypes::{DataType, IntervalUnit},
+    datatypes::{DataType, PhysicalType, PrimitiveType},
     error::{ArrowError, Result},
-    types::{days_ms, NativeType},
+    types::NativeType,
 };
 
 use super::arity::unary;
@@ -60,11 +60,29 @@ pub fn hash_binary<O: Offset>(array: &BinaryArray<O>) -> PrimitiveArray<u64> {
     PrimitiveArray::<u64>::from_data(DataType::UInt64, values, array.validity().cloned())
 }
 
-macro_rules! hash_dyn {
-    ($ty:ty, $array:expr) => {{
-        hash_primitive::<$ty>($array.as_any().downcast_ref().unwrap())
-    }};
-}
+macro_rules! with_match_primitive_type {(
+    $key_type:expr, | $_:tt $T:ident | $($body:tt)*
+) => ({
+    macro_rules! __with_ty__ {( $_ $T:ident ) => ( $($body)* )}
+    use crate::datatypes::PrimitiveType::*;
+    use crate::types::days_ms;
+    match $key_type {
+        Int8 => __with_ty__! { i8 },
+        Int16 => __with_ty__! { i16 },
+        Int32 => __with_ty__! { i32 },
+        Int64 => __with_ty__! { i64 },
+        Int128 => __with_ty__! { i128 },
+        DaysMs => __with_ty__! { days_ms },
+        UInt8 => __with_ty__! { u8 },
+        UInt16 => __with_ty__! { u16 },
+        UInt32 => __with_ty__! { u32 },
+        UInt64 => __with_ty__! { u64 },
+        _ => return Err(ArrowError::NotYetImplemented(format!(
+            "Hash not implemented for type {:?}",
+            $key_type
+        )))
+    }
+})}
 
 /// Returns the element-wise hash of an [`Array`]. Validity is preserved.
 /// Supported DataTypes:
@@ -75,30 +93,16 @@ macro_rules! hash_dyn {
 /// # Errors
 /// This function errors whenever it does not support the specific `DataType`.
 pub fn hash(array: &dyn Array) -> Result<PrimitiveArray<u64>> {
-    Ok(match array.data_type() {
-        DataType::Boolean => hash_boolean(array.as_any().downcast_ref().unwrap()),
-        DataType::Int8 => hash_dyn!(i8, array),
-        DataType::Int16 => hash_dyn!(i16, array),
-        DataType::Int32
-        | DataType::Date32
-        | DataType::Time32(_)
-        | DataType::Interval(IntervalUnit::YearMonth) => hash_dyn!(i32, array),
-        DataType::Interval(IntervalUnit::DayTime) => hash_dyn!(days_ms, array),
-        DataType::Int64
-        | DataType::Date64
-        | DataType::Time64(_)
-        | DataType::Timestamp(_, _)
-        | DataType::Duration(_) => hash_dyn!(i64, array),
-        DataType::Decimal(_, _) => hash_dyn!(i128, array),
-        DataType::UInt8 => hash_dyn!(u8, array),
-        DataType::UInt16 => hash_dyn!(u16, array),
-        DataType::UInt32 => hash_dyn!(u32, array),
-        DataType::UInt64 => hash_dyn!(u64, array),
-        DataType::Float16 => unreachable!(),
-        DataType::Binary => hash_binary::<i32>(array.as_any().downcast_ref().unwrap()),
-        DataType::LargeBinary => hash_binary::<i64>(array.as_any().downcast_ref().unwrap()),
-        DataType::Utf8 => hash_utf8::<i32>(array.as_any().downcast_ref().unwrap()),
-        DataType::LargeUtf8 => hash_utf8::<i64>(array.as_any().downcast_ref().unwrap()),
+    use PhysicalType::*;
+    Ok(match array.data_type().to_physical_type() {
+        Boolean => hash_boolean(array.as_any().downcast_ref().unwrap()),
+        Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
+            hash_primitive::<$T>(array.as_any().downcast_ref().unwrap())
+        }),
+        Binary => hash_binary::<i32>(array.as_any().downcast_ref().unwrap()),
+        LargeBinary => hash_binary::<i64>(array.as_any().downcast_ref().unwrap()),
+        Utf8 => hash_utf8::<i32>(array.as_any().downcast_ref().unwrap()),
+        LargeUtf8 => hash_utf8::<i64>(array.as_any().downcast_ref().unwrap()),
         t => {
             return Err(ArrowError::NotYetImplemented(format!(
                 "Hash not implemented for type {:?}",
@@ -108,7 +112,7 @@ pub fn hash(array: &dyn Array) -> Result<PrimitiveArray<u64>> {
     })
 }
 
-/// Checks if an array of type `datatype` can perform hash operation
+/// Checks if an array of type `datatype` can be used in [`hash`].
 ///
 /// # Examples
 /// ```
@@ -123,28 +127,21 @@ pub fn hash(array: &dyn Array) -> Result<PrimitiveArray<u64>> {
 /// ```
 pub fn can_hash(data_type: &DataType) -> bool {
     matches!(
-        data_type,
-        DataType::Boolean
-            | DataType::Int8
-            | DataType::Int16
-            | DataType::Int32
-            | DataType::Date32
-            | DataType::Time32(_)
-            | DataType::Interval(_)
-            | DataType::Int64
-            | DataType::Date64
-            | DataType::Time64(_)
-            | DataType::Timestamp(_, _)
-            | DataType::Duration(_)
-            | DataType::Decimal(_, _)
-            | DataType::UInt8
-            | DataType::UInt16
-            | DataType::UInt32
-            | DataType::UInt64
-            | DataType::Float16
-            | DataType::Binary
-            | DataType::LargeBinary
-            | DataType::Utf8
-            | DataType::LargeUtf8
+        data_type.to_physical_type(),
+        PhysicalType::Boolean
+            | PhysicalType::Primitive(PrimitiveType::Int8)
+            | PhysicalType::Primitive(PrimitiveType::Int16)
+            | PhysicalType::Primitive(PrimitiveType::Int32)
+            | PhysicalType::Primitive(PrimitiveType::Int64)
+            | PhysicalType::Primitive(PrimitiveType::Int128)
+            | PhysicalType::Primitive(PrimitiveType::DaysMs)
+            | PhysicalType::Primitive(PrimitiveType::UInt8)
+            | PhysicalType::Primitive(PrimitiveType::UInt16)
+            | PhysicalType::Primitive(PrimitiveType::UInt32)
+            | PhysicalType::Primitive(PrimitiveType::UInt64)
+            | PhysicalType::Binary
+            | PhysicalType::LargeBinary
+            | PhysicalType::Utf8
+            | PhysicalType::LargeUtf8
     )
 }
