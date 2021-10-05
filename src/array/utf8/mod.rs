@@ -132,6 +132,54 @@ impl<O: Offset> Utf8Array<O> {
         }
     }
 
+    /// Returns a slice of this [`Utf8Array`].
+    /// # Implementation
+    /// This operation is `O(1)` as it amounts to essentially increase two ref counts.
+    /// # Panic
+    /// This function panics iff `offset + length >= self.len()`.
+    pub fn slice(&self, offset: usize, length: usize) -> Self {
+        assert!(
+            offset + length <= self.len(),
+            "the offset of the new Buffer cannot exceed the existing length"
+        );
+        unsafe { self.slice_unchecked(offset, length) }
+    }
+    /// Returns a slice of this [`Utf8Array`].
+    /// # Implementation
+    /// This operation is `O(1)` as it amounts to essentially increase two ref counts.
+    /// # Safety
+    /// The caller must ensure that `offset + length <= self.len()`.
+    pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
+        let validity = self
+            .validity
+            .clone()
+            .map(|x| x.slice_unchecked(offset, length));
+        // + 1: `length == 0` implies that we take the first offset.
+        let offsets = self.offsets.clone().slice_unchecked(offset, length + 1);
+        Self {
+            data_type: self.data_type.clone(),
+            offsets,
+            values: self.values.clone(),
+            validity,
+            offset: self.offset + offset,
+        }
+    }
+
+    /// Sets the validity bitmap on this [`Utf8Array`].
+    /// # Panic
+    /// This function panics iff `validity.len() != self.len()`.
+    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
+        if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
+            panic!("validity should be as least as large as the array")
+        }
+        let mut arr = self.clone();
+        arr.validity = validity;
+        arr
+    }
+}
+
+// Accessors
+impl<O: Offset> Utf8Array<O> {
     /// Returns the element at index `i` as &str
     /// # Safety
     /// This function is safe iff `i < self.len`.
@@ -159,34 +207,10 @@ impl<O: Offset> Utf8Array<O> {
         unsafe { std::str::from_utf8_unchecked(slice) }
     }
 
-    /// Returns a slice of this [`Utf8Array`].
-    /// # Implementation
-    /// This operation is `O(1)` as it amounts to essentially increase two ref counts.
-    /// # Panic
-    /// This function panics iff `offset + length >= self.len()`.
-    pub fn slice(&self, offset: usize, length: usize) -> Self {
-        let validity = self.validity.clone().map(|x| x.slice(offset, length));
-        // + 1: `length == 0` implies that we take the first offset.
-        let offsets = self.offsets.clone().slice(offset, length + 1);
-        Self {
-            data_type: self.data_type.clone(),
-            offsets,
-            values: self.values.clone(),
-            validity,
-            offset: self.offset + offset,
-        }
-    }
-
-    /// Sets the validity bitmap on this [`Utf8Array`].
-    /// # Panic
-    /// This function panics iff `validity.len() != self.len()`.
-    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
-        if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
-            panic!("validity should be as least as large as the array")
-        }
-        let mut arr = self.clone();
-        arr.validity = validity;
-        arr
+    /// The optional validity.
+    #[inline]
+    pub fn validity(&self) -> Option<&Bitmap> {
+        self.validity.as_ref()
     }
 
     /// Returns the offsets of this [`Utf8Array`].
@@ -218,12 +242,15 @@ impl<O: Offset> Array for Utf8Array<O> {
         &self.data_type
     }
 
-    fn validity(&self) -> &Option<Bitmap> {
-        &self.validity
+    fn validity(&self) -> Option<&Bitmap> {
+        self.validity.as_ref()
     }
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+    unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
+        Box::new(self.slice_unchecked(offset, length))
     }
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.with_validity(validity))

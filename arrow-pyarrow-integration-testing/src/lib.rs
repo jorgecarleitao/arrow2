@@ -65,8 +65,8 @@ fn to_rust_array(ob: PyObject, py: Python) -> PyResult<Arc<dyn Array>> {
         (array_ptr as Py_uintptr_t, schema_ptr as Py_uintptr_t),
     )?;
 
-    let field = ffi::import_field_from_c(schema.as_ref()).map_err(PyO3ArrowError::from)?;
-    let array = ffi::import_array_from_c(array, &field).map_err(PyO3ArrowError::from)?;
+    let field = unsafe { ffi::import_field_from_c(schema.as_ref()).map_err(PyO3ArrowError::from)? };
+    let array = unsafe { ffi::import_array_from_c(array, &field).map_err(PyO3ArrowError::from)? };
 
     Ok(array.into())
 }
@@ -108,7 +108,7 @@ fn to_rust_field(ob: PyObject, py: Python) -> PyResult<Field> {
     // this changes the pointer's memory and is thus unsafe. In particular, `_export_to_c` can go out of bounds
     ob.call_method1(py, "_export_to_c", (schema_ptr as Py_uintptr_t,))?;
 
-    let field = ffi::import_field_from_c(schema.as_ref()).map_err(PyO3ArrowError::from)?;
+    let field = unsafe { ffi::import_field_from_c(schema.as_ref()).map_err(PyO3ArrowError::from)? };
 
     Ok(field)
 }
@@ -152,14 +152,8 @@ fn round_trip_field(array: PyObject, py: Python) -> PyResult<PyObject> {
     to_py_field(&field, py)
 }
 
-#[pyfunction]
-fn total_allocated_bytes() -> PyResult<isize> {
-    Ok(arrow2::total_allocated_bytes())
-}
-
 #[pymodule]
 fn arrow_pyarrow_integration_testing(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(total_allocated_bytes, m)?)?;
     m.add_function(wrap_pyfunction!(round_trip_array, m)?)?;
     m.add_function(wrap_pyfunction!(round_trip_field, m)?)?;
     Ok(())

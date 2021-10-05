@@ -1,6 +1,6 @@
 use crate::{
     array::{Array, Offset},
-    bitmap::{Bitmap, MutableBitmap},
+    bitmap::MutableBitmap,
     buffer::MutableBuffer,
 };
 
@@ -18,6 +18,8 @@ pub(super) fn extend_offsets<T: Offset>(
     });
 }
 
+// function used to extend nulls from arrays. This function's lifetime is bound to the array
+// because it reads nulls from it.
 pub(super) type ExtendNullBits<'a> = Box<dyn Fn(&mut MutableBitmap, usize, usize) + 'a>;
 
 pub(super) fn build_extend_null_bits(array: &dyn Array, use_validity: bool) -> ExtendNullBits {
@@ -34,23 +36,6 @@ pub(super) fn build_extend_null_bits(array: &dyn Array, use_validity: bool) -> E
     } else {
         Box::new(|_, _, _| {})
     }
-}
-
-#[inline]
-pub(super) fn extend_validity(
-    mutable_validity: &mut MutableBitmap,
-    validity: &Option<Bitmap>,
-    start: usize,
-    len: usize,
-    use_validity: bool,
-) {
-    if let Some(bitmap) = validity {
-        assert!(start + len <= bitmap.len());
-        let (slice, offset, _) = bitmap.as_slice();
-        mutable_validity.extend_from_slice(slice, start + offset, len);
-    } else if use_validity {
-        mutable_validity.extend_constant(len, true);
-    };
 }
 
 #[inline]

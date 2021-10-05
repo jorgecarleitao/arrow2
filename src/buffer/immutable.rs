@@ -52,9 +52,18 @@ impl<T: NativeType> Buffer<T> {
         MutableBuffer::from_len_zeroed(length).into()
     }
 
-    /// Auxiliary method to create a new Buffer
+    /// Takes ownership of [`Vec`].
+    /// # Implementation
+    /// This function is `O(1)`
+    #[cfg(not(feature = "cache_aligned"))]
+    #[cfg_attr(docsrs, doc(cfg(not(feature = "cache_aligned"))))]
     #[inline]
-    pub fn from_bytes(bytes: Bytes<T>) -> Self {
+    pub fn from_vec(data: Vec<T>) -> Self {
+        MutableBuffer::from_vec(data).into()
+    }
+
+    /// Auxiliary method to create a new Buffer
+    pub(crate) fn from_bytes(bytes: Bytes<T>) -> Self {
         let length = bytes.len();
         Buffer {
             data: Arc::new(bytes),
@@ -86,11 +95,21 @@ impl<T: NativeType> Buffer<T> {
     /// # Panics
     /// Panics iff `offset` is larger than `len`.
     #[inline]
-    pub fn slice(mut self, offset: usize, length: usize) -> Self {
+    pub fn slice(self, offset: usize, length: usize) -> Self {
         assert!(
             offset + length <= self.len(),
             "the offset of the new Buffer cannot exceed the existing length"
         );
+        // Safety: we just checked bounds
+        unsafe { self.slice_unchecked(offset, length) }
+    }
+
+    /// Returns a new [Buffer] that is a slice of this buffer starting at `offset`.
+    /// Doing so allows the same memory region to be shared between buffers.
+    /// # Safety
+    /// The caller must ensure `offset + length <= self.len()`
+    #[inline]
+    pub unsafe fn slice_unchecked(mut self, offset: usize, length: usize) -> Self {
         self.offset += offset;
         self.length = length;
         self

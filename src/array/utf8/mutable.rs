@@ -164,6 +164,15 @@ impl<O: Offset> MutableUtf8Array<O> {
         let a: Utf8Array<O> = self.into();
         Arc::new(a)
     }
+
+    /// Shrinks the capacity of the [`MutableUtf8`] to fit its current length.
+    pub fn shrink_to_fit(&mut self) {
+        self.values.shrink_to_fit();
+        self.offsets.shrink_to_fit();
+        if let Some(validity) = &mut self.validity {
+            validity.shrink_to_fit()
+        }
+    }
 }
 
 impl<O: Offset> MutableUtf8Array<O> {
@@ -183,8 +192,17 @@ impl<O: Offset> MutableArray for MutableUtf8Array<O> {
         self.offsets.len() - 1
     }
 
-    fn validity(&self) -> &Option<MutableBitmap> {
-        &self.validity
+    fn validity(&self) -> Option<&MutableBitmap> {
+        self.validity.as_ref()
+    }
+
+    fn as_box(&mut self) -> Box<dyn Array> {
+        Box::new(Utf8Array::from_data(
+            Self::default_data_type(),
+            std::mem::take(&mut self.offsets).into(),
+            std::mem::take(&mut self.values).into(),
+            std::mem::take(&mut self.validity).map(|x| x.into()),
+        ))
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
@@ -214,6 +232,10 @@ impl<O: Offset> MutableArray for MutableUtf8Array<O> {
 
     fn push_null(&mut self) {
         self.push::<&str>(None)
+    }
+
+    fn shrink_to_fit(&mut self) {
+        self.shrink_to_fit()
     }
 }
 

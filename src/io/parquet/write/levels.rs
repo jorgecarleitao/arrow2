@@ -85,15 +85,14 @@ pub struct DefLevelsIter<'a, O: Offset> {
 impl<'a, O: Offset> DefLevelsIter<'a, O> {
     pub fn new(
         offsets: &'a [O],
-        validity: &'a Option<Bitmap>,
-        primitive_validity: &'a Option<Bitmap>,
+        validity: Option<&'a Bitmap>,
+        primitive_validity: Option<&'a Bitmap>,
     ) -> Self {
         let total_size = num_values(offsets);
 
-        let primitive_validity = primitive_validity.as_ref().map(|x| x.iter());
+        let primitive_validity = primitive_validity.map(|x| x.iter());
 
         let validity = validity
-            .as_ref()
             .map(|x| Box::new(x.iter()) as Box<dyn Iterator<Item = bool>>)
             .unwrap_or_else(|| {
                 Box::new(std::iter::repeat(true).take(offsets.len() - 1))
@@ -151,11 +150,11 @@ impl<O: Offset> Iterator for DefLevelsIter<'_, O> {
 pub struct NestedInfo<'a, O: Offset> {
     is_optional: bool,
     offsets: &'a [O],
-    validity: &'a Option<Bitmap>,
+    validity: Option<&'a Bitmap>,
 }
 
 impl<'a, O: Offset> NestedInfo<'a, O> {
-    pub fn new(offsets: &'a [O], validity: &'a Option<Bitmap>, is_optional: bool) -> Self {
+    pub fn new(offsets: &'a [O], validity: Option<&'a Bitmap>, is_optional: bool) -> Self {
         Self {
             is_optional,
             offsets,
@@ -216,7 +215,7 @@ pub fn write_rep_levels<O: Offset>(
 pub fn write_def_levels<O: Offset>(
     buffer: &mut Vec<u8>,
     nested: &NestedInfo<O>,
-    validity: &Option<Bitmap>,
+    validity: Option<&Bitmap>,
     version: Version,
 ) -> Result<()> {
     let num_bits = 2;
@@ -266,8 +265,8 @@ mod tests {
         ]));
         let expected = vec![3u32, 3, 0, 3, 2, 3, 3, 3, 3, 1, 3, 3, 3, 0, 3];
 
-        let result =
-            DefLevelsIter::new(offsets, &validity, &primitive_validity).collect::<Vec<_>>();
+        let result = DefLevelsIter::new(offsets, validity.as_ref(), primitive_validity.as_ref())
+            .collect::<Vec<_>>();
         assert_eq!(result, expected)
     }
 }

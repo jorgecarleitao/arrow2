@@ -9,16 +9,17 @@ use arrow2::record_batch::RecordBatch;
 use crate::io::ipc::common::read_gzip_json;
 
 fn round_trip(batch: RecordBatch) -> Result<()> {
-    let mut result = Vec::<u8>::new();
+    let result = Vec::<u8>::new();
 
     // write IPC version 5
-    {
+    let written_result = {
         let options = IpcWriteOptions::try_new(8, false, MetadataVersion::V5)?;
-        let mut writer = FileWriter::try_new_with_options(&mut result, batch.schema(), options)?;
+        let mut writer = FileWriter::try_new_with_options(result, batch.schema(), options)?;
         writer.write(&batch)?;
         writer.finish()?;
-    }
-    let mut reader = Cursor::new(result);
+        writer.into_inner()
+    };
+    let mut reader = Cursor::new(written_result);
     let metadata = read_file_metadata(&mut reader)?;
     let schema = metadata.schema().clone();
 
@@ -38,18 +39,19 @@ fn round_trip(batch: RecordBatch) -> Result<()> {
 fn test_file(version: &str, file_name: &str) -> Result<()> {
     let (schema, batches) = read_gzip_json(version, file_name)?;
 
-    let mut result = Vec::<u8>::new();
+    let result = Vec::<u8>::new();
 
     // write IPC version 5
-    {
+    let written_result = {
         let options = IpcWriteOptions::try_new(8, false, MetadataVersion::V5)?;
-        let mut writer = FileWriter::try_new_with_options(&mut result, &schema, options)?;
+        let mut writer = FileWriter::try_new_with_options(result, &schema, options)?;
         for batch in batches {
             writer.write(&batch)?;
         }
         writer.finish()?;
-    }
-    let mut reader = Cursor::new(result);
+        writer.into_inner()
+    };
+    let mut reader = Cursor::new(written_result);
     let metadata = read_file_metadata(&mut reader)?;
     let schema = metadata.schema().clone();
 
@@ -172,6 +174,18 @@ fn write_100_extension() -> Result<()> {
 fn write_100_union() -> Result<()> {
     test_file("1.0.0-littleendian", "generated_union")?;
     test_file("1.0.0-bigendian", "generated_union")
+}
+
+#[test]
+fn write_100_map() -> Result<()> {
+    test_file("1.0.0-littleendian", "generated_map")?;
+    test_file("1.0.0-bigendian", "generated_map")
+}
+
+#[test]
+fn write_100_map_non_canonical() -> Result<()> {
+    test_file("1.0.0-littleendian", "generated_map_non_canonical")?;
+    test_file("1.0.0-bigendian", "generated_map_non_canonical")
 }
 
 #[test]

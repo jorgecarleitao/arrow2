@@ -181,6 +181,7 @@ pub fn get_value_display<'a>(array: &'a dyn Array) -> Box<dyn Fn(usize) -> Strin
             DataType::UInt64 => dyn_dict!(array, u64),
             _ => unreachable!(),
         },
+        Map(_, _) => todo!(),
         Struct(_) => {
             let a = array.as_any().downcast_ref::<StructArray>().unwrap();
             let displays = a

@@ -16,7 +16,7 @@ pub use mutable::*;
 /// Cloning and slicing this struct is `O(1)`.
 #[derive(Debug, Clone)]
 pub struct FixedSizeListArray {
-    size: i32, // this is redundant with `data_type`, but useful to not have to deconstruct the data_type.
+    size: usize, // this is redundant with `data_type`, but useful to not have to deconstruct the data_type.
     data_type: DataType,
     values: Arc<dyn Array>,
     validity: Option<Bitmap>,
@@ -49,10 +49,14 @@ impl FixedSizeListArray {
     ) -> Self {
         let (_, size) = Self::get_child_and_size(&data_type);
 
-        assert_eq!(values.len() % (*size as usize), 0);
+        assert_eq!(values.len() % size, 0);
+
+        if let Some(ref validity) = validity {
+            assert_eq!(values.len() / size, validity.len());
+        }
 
         Self {
-            size: *size,
+            size,
             data_type,
             values,
             validity,
@@ -63,12 +67,30 @@ impl FixedSizeListArray {
     /// Returns a slice of this [`FixedSizeListArray`].
     /// # Implementation
     /// This operation is `O(1)`.
+    /// # Panics
+    /// panics iff `offset + length > self.len()`
     pub fn slice(&self, offset: usize, length: usize) -> Self {
-        let validity = self.validity.clone().map(|x| x.slice(offset, length));
+        assert!(
+            offset + length <= self.len(),
+            "the offset of the new Buffer cannot exceed the existing length"
+        );
+        unsafe { self.slice_unchecked(offset, length) }
+    }
+
+    /// Returns a slice of this [`FixedSizeListArray`].
+    /// # Implementation
+    /// This operation is `O(1)`.
+    /// # Safety
+    /// The caller must ensure that `offset + length <= self.len()`.
+    pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
+        let validity = self
+            .validity
+            .clone()
+            .map(|x| x.slice_unchecked(offset, length));
         let values = self
             .values
             .clone()
-            .slice(offset * self.size as usize, length * self.size as usize)
+            .slice_unchecked(offset * self.size as usize, length * self.size as usize)
             .into();
         Self {
             data_type: self.data_type.clone(),
@@ -79,16 +101,33 @@ impl FixedSizeListArray {
         }
     }
 
+    /// The optional validity.
+    #[inline]
+    pub fn validity(&self) -> Option<&Bitmap> {
+        self.validity.as_ref()
+    }
+
     /// Returns the inner array.
     pub fn values(&self) -> &Arc<dyn Array> {
         &self.values
     }
 
     /// Returns the `Vec<T>` at position `i`.
+    /// # Panic:
+    /// panics iff `i >= self.len()`
     #[inline]
     pub fn value(&self, i: usize) -> Box<dyn Array> {
         self.values
             .slice(i * self.size as usize, self.size as usize)
+    }
+
+    /// Returns the `Vec<T>` at position `i`.
+    /// # Safety
+    /// Caller must ensure that `i < self.len()`
+    #[inline]
+    pub unsafe fn value_unchecked(&self, i: usize) -> Box<dyn Array> {
+        self.values
+            .slice_unchecked(i * self.size as usize, self.size as usize)
     }
 
     /// Sets the validity bitmap on this [`FixedSizeListArray`].
@@ -105,15 +144,14 @@ impl FixedSizeListArray {
 }
 
 impl FixedSizeListArray {
-    pub(crate) fn get_child_and_size(data_type: &DataType) -> (&Field, &i32) {
-        match data_type {
-            DataType::FixedSizeList(child, size) => (child.as_ref(), size),
-            DataType::Extension(_, child, _) => Self::get_child_and_size(child),
-            _ => panic!("Wrong DataType"),
+    pub(crate) fn get_child_and_size(data_type: &DataType) -> (&Field, usize) {
+        match data_type.to_logical_type() {
+            DataType::FixedSizeList(child, size) => (child.as_ref(), *size as usize),
+            _ => panic!("FixedSizeListArray expects DataType::FixedSizeList"),
         }
     }
 
-    /// Returns a [`DataType`] consistent with this Array.
+    /// Returns a [`DataType`] consistent with [`FixedSizeListArray`].
     pub fn default_datatype(data_type: DataType, size: usize) -> DataType {
         let field = Box::new(Field::new("item", data_type, true));
         DataType::FixedSizeList(field, size as i32)
@@ -136,12 +174,15 @@ impl Array for FixedSizeListArray {
         &self.data_type
     }
 
-    fn validity(&self) -> &Option<Bitmap> {
-        &self.validity
+    fn validity(&self) -> Option<&Bitmap> {
+        self.validity.as_ref()
     }
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+    unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
+        Box::new(self.slice_unchecked(offset, length))
     }
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.with_validity(validity))

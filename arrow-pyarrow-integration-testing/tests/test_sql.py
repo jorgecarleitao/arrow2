@@ -33,18 +33,9 @@ class UuidType(pyarrow.PyExtensionType):
 
 class TestCase(unittest.TestCase):
     def setUp(self):
-        self.old_allocated_rust = (
-            arrow_pyarrow_integration_testing.total_allocated_bytes()
-        )
         self.old_allocated_cpp = pyarrow.total_allocated_bytes()
 
     def tearDown(self):
-        # No leak of Rust
-        self.assertEqual(
-            self.old_allocated_rust,
-            arrow_pyarrow_integration_testing.total_allocated_bytes(),
-        )
-
         # No leak of C++ memory
         self.assertEqual(self.old_allocated_cpp, pyarrow.total_allocated_bytes())
 
@@ -131,6 +122,23 @@ class TestCase(unittest.TestCase):
             ["a", "a", "b", None, "c"],
             pyarrow.dictionary(pyarrow.int64(), pyarrow.utf8()),
         )
+        b = arrow_pyarrow_integration_testing.round_trip_array(a)
+
+        b.validate(full=True)
+        assert a.to_pylist() == b.to_pylist()
+        assert a.type == b.type
+
+    def test_map(self):
+        """
+        Python -> Rust -> Python
+        """
+        offsets = [0, None, 2, 6]
+        pykeys = [b"a", b"b", b"c", b"d", b"e", b"f"]
+        pyitems = [1, 2, 3, None, 4, 5]
+        keys = pyarrow.array(pykeys, type="binary")
+        items = pyarrow.array(pyitems, type="i4")
+
+        a = pyarrow.MapArray.from_arrays(offsets, keys, items)
         b = arrow_pyarrow_integration_testing.round_trip_array(a)
 
         b.validate(full=True)

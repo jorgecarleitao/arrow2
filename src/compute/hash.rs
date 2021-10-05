@@ -1,3 +1,4 @@
+//! Contains the [`hash`] and typed (e.g. [`hash_primitive`]) operators.
 use ahash::{CallHasher, RandomState};
 use multiversion::multiversion;
 use std::hash::Hash;
@@ -18,24 +19,24 @@ use crate::{
 
 use super::arity::unary;
 
-/// Element-wise hash of a [`PrimitiveArray`]. Validity is preserved.
 #[multiversion]
 #[clone(target = "x86_64+aes+sse3+ssse3+avx+avx2")]
+/// Element-wise hash of a [`PrimitiveArray`]. Validity is preserved.
 pub fn hash_primitive<T: NativeType + Hash>(array: &PrimitiveArray<T>) -> PrimitiveArray<u64> {
     let state = new_state!();
 
     unary(array, |x| T::get_hash(&x, &state), DataType::UInt64)
 }
 
-/// Element-wise hash of a [`BooleanArray`]. Validity is preserved.
 #[multiversion]
 #[clone(target = "x86_64+aes+sse3+ssse3+avx+avx2")]
+/// Element-wise hash of a [`BooleanArray`]. Validity is preserved.
 pub fn hash_boolean(array: &BooleanArray) -> PrimitiveArray<u64> {
     let state = new_state!();
 
     let iter = array.values_iter().map(|x| u8::get_hash(&x, &state));
     let values = Buffer::from_trusted_len_iter(iter);
-    PrimitiveArray::<u64>::from_data(DataType::UInt64, values, array.validity().clone())
+    PrimitiveArray::<u64>::from_data(DataType::UInt64, values, array.validity().cloned())
 }
 
 #[multiversion]
@@ -48,7 +49,7 @@ pub fn hash_utf8<O: Offset>(array: &Utf8Array<O>) -> PrimitiveArray<u64> {
         .values_iter()
         .map(|x| <[u8]>::get_hash(&x.as_bytes(), &state));
     let values = Buffer::from_trusted_len_iter(iter);
-    PrimitiveArray::<u64>::from_data(DataType::UInt64, values, array.validity().clone())
+    PrimitiveArray::<u64>::from_data(DataType::UInt64, values, array.validity().cloned())
 }
 
 /// Element-wise hash of a [`BinaryArray`]. Validity is preserved.
@@ -56,7 +57,7 @@ pub fn hash_binary<O: Offset>(array: &BinaryArray<O>) -> PrimitiveArray<u64> {
     let state = new_state!();
     let iter = array.values_iter().map(|x| <[u8]>::get_hash(&x, &state));
     let values = Buffer::from_trusted_len_iter(iter);
-    PrimitiveArray::<u64>::from_data(DataType::UInt64, values, array.validity().clone())
+    PrimitiveArray::<u64>::from_data(DataType::UInt64, values, array.validity().cloned())
 }
 
 macro_rules! hash_dyn {

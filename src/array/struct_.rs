@@ -105,13 +105,29 @@ impl StructArray {
     /// # Implementation
     /// This operation is `O(F)` where `F` is the number of fields.
     pub fn slice(&self, offset: usize, length: usize) -> Self {
-        let validity = self.validity.clone().map(|x| x.slice(offset, length));
+        assert!(
+            offset + length <= self.len(),
+            "offset + length may not exceed length of array"
+        );
+        unsafe { self.slice_unchecked(offset, length) }
+    }
+
+    /// Creates a new [`StructArray`] that is a slice of `self`.
+    /// # Implementation
+    /// This operation is `O(F)` where `F` is the number of fields.
+    /// # Safety
+    /// The caller must ensure that `offset + length <= self.len()`.
+    pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
+        let validity = self
+            .validity
+            .clone()
+            .map(|x| x.slice_unchecked(offset, length));
         Self {
             data_type: self.data_type.clone(),
             values: self
                 .values
                 .iter()
-                .map(|x| x.slice(offset, length).into())
+                .map(|x| x.slice_unchecked(offset, length).into())
                 .collect(),
             validity,
         }
@@ -127,6 +143,15 @@ impl StructArray {
         let mut arr = self.clone();
         arr.validity = validity;
         arr
+    }
+}
+
+// Accessors
+impl StructArray {
+    /// The optional validity.
+    #[inline]
+    pub fn validity(&self) -> Option<&Bitmap> {
+        self.validity.as_ref()
     }
 
     /// Returns the values of this [`StructArray`].
@@ -168,12 +193,15 @@ impl Array for StructArray {
     }
 
     #[inline]
-    fn validity(&self) -> &Option<Bitmap> {
-        &self.validity
+    fn validity(&self) -> Option<&Bitmap> {
+        self.validity.as_ref()
     }
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+    unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
+        Box::new(self.slice_unchecked(offset, length))
     }
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.with_validity(validity))
@@ -205,8 +233,8 @@ unsafe impl ToFfi for StructArray {
     }
 }
 
-unsafe impl<A: ffi::ArrowArrayRef> FromFfi<A> for StructArray {
-    fn try_from_ffi(array: A) -> Result<Self> {
+impl<A: ffi::ArrowArrayRef> FromFfi<A> for StructArray {
+    unsafe fn try_from_ffi(array: A) -> Result<Self> {
         let field = array.field();
         let fields = Self::get_fields(field.data_type()).to_vec();
 

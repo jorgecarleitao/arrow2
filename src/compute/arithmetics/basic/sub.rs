@@ -3,6 +3,7 @@ use std::ops::Sub;
 
 use num_traits::{ops::overflowing::OverflowingSub, CheckedSub, SaturatingSub, Zero};
 
+use crate::compute::arithmetics::basic::check_same_type;
 use crate::{
     array::{Array, PrimitiveArray},
     bitmap::Bitmap,
@@ -14,7 +15,7 @@ use crate::{
             binary, binary_checked, binary_with_bitmap, unary, unary_checked, unary_with_bitmap,
         },
     },
-    error::{ArrowError, Result},
+    error::Result,
     types::NativeType,
 };
 
@@ -23,7 +24,7 @@ use crate::{
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::sub::sub;
+/// use arrow2::compute::arithmetics::basic::sub;
 /// use arrow2::array::Int32Array;
 ///
 /// let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
@@ -36,11 +37,7 @@ pub fn sub<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<Primit
 where
     T: NativeType + Sub<Output = T>,
 {
-    if lhs.data_type() != rhs.data_type() {
-        return Err(ArrowError::InvalidArgumentError(
-            "Arrays must have the same logical type".to_string(),
-        ));
-    }
+    check_same_type(lhs, rhs)?;
 
     binary(lhs, rhs, lhs.data_type().clone(), |a, b| a - b)
 }
@@ -50,7 +47,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::sub::checked_sub;
+/// use arrow2::compute::arithmetics::basic::checked_sub;
 /// use arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[Some(100i8), Some(-100i8), Some(100i8)]);
@@ -63,11 +60,7 @@ pub fn checked_sub<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Resul
 where
     T: NativeType + CheckedSub<Output = T> + Zero,
 {
-    if lhs.data_type() != rhs.data_type() {
-        return Err(ArrowError::InvalidArgumentError(
-            "Arrays must have the same logical type".to_string(),
-        ));
-    }
+    check_same_type(lhs, rhs)?;
 
     let op = move |a: T, b: T| a.checked_sub(&b);
 
@@ -80,7 +73,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::sub::saturating_sub;
+/// use arrow2::compute::arithmetics::basic::saturating_sub;
 /// use arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[Some(-100i8)]);
@@ -96,11 +89,7 @@ pub fn saturating_sub<T>(
 where
     T: NativeType + SaturatingSub<Output = T>,
 {
-    if lhs.data_type() != rhs.data_type() {
-        return Err(ArrowError::InvalidArgumentError(
-            "Arrays must have the same logical type".to_string(),
-        ));
-    }
+    check_same_type(lhs, rhs)?;
 
     let op = move |a: T, b: T| a.saturating_sub(&b);
 
@@ -114,7 +103,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::sub::overflowing_sub;
+/// use arrow2::compute::arithmetics::basic::overflowing_sub;
 /// use arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[Some(1i8), Some(-100i8)]);
@@ -130,11 +119,7 @@ pub fn overflowing_sub<T>(
 where
     T: NativeType + OverflowingSub<Output = T>,
 {
-    if lhs.data_type() != rhs.data_type() {
-        return Err(ArrowError::InvalidArgumentError(
-            "Arrays must have the same logical type".to_string(),
-        ));
-    }
+    check_same_type(lhs, rhs)?;
 
     let op = move |a: T, b: T| a.overflowing_sub(&b);
 
@@ -194,7 +179,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::sub::sub_scalar;
+/// use arrow2::compute::arithmetics::basic::sub_scalar;
 /// use arrow2::array::Int32Array;
 ///
 /// let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
@@ -216,7 +201,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::sub::checked_sub_scalar;
+/// use arrow2::compute::arithmetics::basic::checked_sub_scalar;
 /// use arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[None, Some(-100), None, Some(-100)]);
@@ -240,7 +225,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::sub::saturating_sub_scalar;
+/// use arrow2::compute::arithmetics::basic::saturating_sub_scalar;
 /// use arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[Some(-100i8)]);
@@ -265,7 +250,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::sub::overflowing_sub_scalar;
+/// use arrow2::compute::arithmetics::basic::overflowing_sub_scalar;
 /// use arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[Some(1i8), Some(-100i8)]);

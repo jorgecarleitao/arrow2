@@ -17,12 +17,13 @@ pub struct GrowableBoolean<'a> {
     data_type: DataType,
     validity: MutableBitmap,
     values: MutableBitmap,
-    // function used to extend nulls from arrays. This function's lifetime is bound to the array
-    // because it reads nulls from it.
     extend_null_bits: Vec<ExtendNullBits<'a>>,
 }
 
 impl<'a> GrowableBoolean<'a> {
+    /// Creates a new [`GrowableBoolean`] bound to `arrays` with a pre-allocated `capacity`.
+    /// # Panics
+    /// If `arrays` is empty.
     pub fn new(arrays: Vec<&'a BooleanArray>, mut use_validity: bool, capacity: usize) -> Self {
         let data_type = arrays[0].data_type().clone();
 

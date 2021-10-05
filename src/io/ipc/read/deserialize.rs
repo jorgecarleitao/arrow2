@@ -186,6 +186,17 @@ pub fn read<R: Read + Seek>(
             version,
         )
         .map(|x| Arc::new(x) as Arc<dyn Array>),
+        Map => read_map(
+            field_nodes,
+            data_type,
+            buffers,
+            reader,
+            block_offset,
+            is_little_endian,
+            compression,
+            version,
+        )
+        .map(|x| Arc::new(x) as Arc<dyn Array>),
     }
 }
 
@@ -208,5 +219,6 @@ pub fn skip(
         Struct => skip_struct(field_nodes, data_type, buffers),
         Dictionary(_) => skip_dictionary(field_nodes, buffers),
         Union => skip_union(field_nodes, data_type, buffers),
+        Map => skip_map(field_nodes, data_type, buffers),
     }
 }

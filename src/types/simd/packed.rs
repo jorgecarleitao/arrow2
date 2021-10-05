@@ -7,7 +7,7 @@ use super::*;
 
 macro_rules! simd {
     ($name:tt, $type:ty, $lanes:expr, $chunk:ty, $mask:tt) => {
-        impl NativeSimd for $name {
+        unsafe impl NativeSimd for $name {
             const LANES: usize = $lanes;
             type Native = $type;
             type Chunk = $chunk;
@@ -28,6 +28,11 @@ macro_rules! simd {
                 let mut a = [remaining; $lanes];
                 a.iter_mut().zip(v.iter()).for_each(|(a, b)| *a = *b);
                 <$name>::from_chunk(a.as_ref())
+            }
+
+            #[inline]
+            fn align(values: &[Self::Native]) -> (&[Self::Native], &[Self], &[Self::Native]) {
+                unsafe { values.align_to::<Self>() }
             }
         }
     };

@@ -8,9 +8,9 @@ use arrow2::io::ipc::write;
 use arrow2::record_batch::RecordBatch;
 
 fn write_batches(path: &str, schema: &Schema, batches: &[RecordBatch]) -> Result<()> {
-    let mut file = File::create(path)?;
+    let file = File::create(path)?;
 
-    let mut writer = write::FileWriter::try_new(&mut file, schema)?;
+    let mut writer = write::FileWriter::try_new(file, schema)?;
 
     for batch in batches {
         writer.write(batch)?

@@ -237,6 +237,14 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
         let a: PrimitiveArray<T> = self.into();
         Arc::new(a)
     }
+
+    /// Shrinks the capacity of the [`MutablePrimitive`] to fit its current length.
+    pub fn shrink_to_fit(&mut self) {
+        self.values.shrink_to_fit();
+        if let Some(validity) = &mut self.validity {
+            validity.shrink_to_fit()
+        }
+    }
 }
 
 /// Accessors
@@ -322,8 +330,16 @@ impl<T: NativeType> MutableArray for MutablePrimitiveArray<T> {
         self.values.len()
     }
 
-    fn validity(&self) -> &Option<MutableBitmap> {
-        &self.validity
+    fn validity(&self) -> Option<&MutableBitmap> {
+        self.validity.as_ref()
+    }
+
+    fn as_box(&mut self) -> Box<dyn Array> {
+        Box::new(PrimitiveArray::from_data(
+            self.data_type.clone(),
+            std::mem::take(&mut self.values).into(),
+            std::mem::take(&mut self.validity).map(|x| x.into()),
+        ))
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
@@ -348,6 +364,10 @@ impl<T: NativeType> MutableArray for MutablePrimitiveArray<T> {
 
     fn push_null(&mut self) {
         self.push(None)
+    }
+
+    fn shrink_to_fit(&mut self) {
+        self.shrink_to_fit()
     }
 }
 

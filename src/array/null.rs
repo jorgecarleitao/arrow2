@@ -56,11 +56,14 @@ impl Array for NullArray {
         &DataType::Null
     }
 
-    fn validity(&self) -> &Option<Bitmap> {
-        &None
+    fn validity(&self) -> Option<&Bitmap> {
+        None
     }
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
+        Box::new(self.slice(offset, length))
+    }
+    unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
     }
     fn with_validity(&self, _: Option<Bitmap>) -> Box<dyn Array> {

@@ -75,14 +75,7 @@ fn push_exact_ones() {
 #[test]
 fn capacity() {
     let b = MutableBitmap::with_capacity(10);
-    assert_eq!(b.capacity(), 512);
-
-    let b = MutableBitmap::with_capacity(512);
-    assert_eq!(b.capacity(), 512);
-
-    let mut b = MutableBitmap::with_capacity(512);
-    b.reserve(8);
-    assert_eq!(b.capacity(), 512);
+    assert!(b.capacity() >= 10);
 }
 
 #[test]
@@ -335,4 +328,12 @@ fn extend_bitmap_other() {
             true, true, true, false, true, true, true, false, true, true, true, false
         ])
     );
+}
+
+#[test]
+fn shrink_to_fit() {
+    let mut a = MutableBitmap::with_capacity(1025);
+    a.push(false);
+    a.shrink_to_fit();
+    assert!(a.capacity() < 1025);
 }

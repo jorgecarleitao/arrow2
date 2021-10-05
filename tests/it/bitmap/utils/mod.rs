@@ -1,4 +1,8 @@
+use proptest::prelude::*;
+
 use arrow2::bitmap::utils::*;
+
+use crate::bitmap::bitmap_strategy;
 
 mod bit_chunks_exact;
 mod chunk_iter;
@@ -66,4 +70,14 @@ fn count_zeros_1() {
     // offset = 10, len = 90 => remainder
     let input: &[u8] = &[73, 146, 36, 73, 146, 36, 73, 146, 36, 73, 146, 36, 9];
     assert_eq!(count_zeros(input, 10, 90), 60);
+}
+
+proptest! {
+    /// Asserts that `Bitmap::null_count` equals the number of unset bits
+    #[test]
+    #[cfg_attr(miri, ignore)] // miri and proptest do not work well :(
+    fn null_count(bitmap in bitmap_strategy()) {
+        let sum_of_sets: usize = (0..bitmap.len()).map(|x| (!bitmap.get_bit(x)) as usize).sum();
+        assert_eq!(bitmap.null_count(), sum_of_sets);
+    }
 }

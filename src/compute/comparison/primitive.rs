@@ -87,7 +87,7 @@ where
     T: NativeType + Simd8,
     F: Fn(T::Simd, T::Simd) -> u8,
 {
-    let validity = lhs.validity().clone();
+    let validity = lhs.validity().cloned();
     let rhs = T::Simd::from_chunk(&[rhs; 8]);
 
     let lhs_chunks_iter = lhs.values().chunks_exact(8);

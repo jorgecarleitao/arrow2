@@ -104,6 +104,12 @@ impl<K: DictionaryKey, M: MutableArray> MutableDictionaryArray<K, M> {
         let a: DictionaryArray<K> = self.into();
         Arc::new(a)
     }
+
+    /// Shrinks the capacity of the [`MutableDictionaryArray`] to fit its current length.
+    pub fn shrink_to_fit(&mut self) {
+        self.values.shrink_to_fit();
+        self.keys.shrink_to_fit();
+    }
 }
 
 impl<K: DictionaryKey, M: 'static + MutableArray> MutableArray for MutableDictionaryArray<K, M> {
@@ -111,8 +117,15 @@ impl<K: DictionaryKey, M: 'static + MutableArray> MutableArray for MutableDictio
         self.keys.len()
     }
 
-    fn validity(&self) -> &Option<MutableBitmap> {
+    fn validity(&self) -> Option<&MutableBitmap> {
         self.keys.validity()
+    }
+
+    fn as_box(&mut self) -> Box<dyn Array> {
+        Box::new(DictionaryArray::<K>::from_data(
+            std::mem::take(&mut self.keys).into(),
+            self.values.as_arc(),
+        ))
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
@@ -136,6 +149,9 @@ impl<K: DictionaryKey, M: 'static + MutableArray> MutableArray for MutableDictio
 
     fn push_null(&mut self) {
         self.keys.push(None)
+    }
+    fn shrink_to_fit(&mut self) {
+        self.shrink_to_fit()
     }
 }
 

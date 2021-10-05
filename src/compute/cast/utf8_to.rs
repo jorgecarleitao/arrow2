@@ -120,16 +120,18 @@ pub fn utf8_to_timestamp_ns<O: Offset>(
     utf8_to_timestamp_ns_(from, RFC3339, timezone)
 }
 
+/// Conversion of utf8
 pub fn utf8_to_large_utf8(from: &Utf8Array<i32>) -> Utf8Array<i64> {
     let data_type = Utf8Array::<i64>::default_data_type();
     let values = from.values().clone();
     let offsets = from.offsets().iter().map(|x| *x as i64);
     let offsets = Buffer::from_trusted_len_iter(offsets);
     unsafe {
-        Utf8Array::<i64>::from_data_unchecked(data_type, offsets, values, from.validity().clone())
+        Utf8Array::<i64>::from_data_unchecked(data_type, offsets, values, from.validity().cloned())
     }
 }
 
+/// Conversion of utf8
 pub fn utf8_large_to_utf8(from: &Utf8Array<i64>) -> Result<Utf8Array<i32>> {
     let data_type = Utf8Array::<i32>::default_data_type();
     let values = from.values().clone();
@@ -139,6 +141,6 @@ pub fn utf8_large_to_utf8(from: &Utf8Array<i64>) -> Result<Utf8Array<i32>> {
     let offsets = from.offsets().iter().map(|x| *x as i32);
     let offsets = Buffer::from_trusted_len_iter(offsets);
     Ok(unsafe {
-        Utf8Array::<i32>::from_data_unchecked(data_type, offsets, values, from.validity().clone())
+        Utf8Array::<i32>::from_data_unchecked(data_type, offsets, values, from.validity().cloned())
     })
 }

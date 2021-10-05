@@ -27,12 +27,12 @@ use super::Index;
 
 #[inline]
 fn take_validity<I: Index>(
-    validity: &Option<Bitmap>,
+    validity: Option<&Bitmap>,
     indices: &PrimitiveArray<I>,
 ) -> Result<Option<Bitmap>> {
     let indices_validity = indices.validity();
     match (validity, indices_validity) {
-        (None, _) => Ok(indices_validity.clone()),
+        (None, _) => Ok(indices_validity.cloned()),
         (Some(validity), None) => {
             let iter = indices.values().iter().map(|index| {
                 let index = index.to_usize();

@@ -1,4 +1,4 @@
-use arrow2::array::{Array, MutableUtf8Array, Utf8Array};
+use arrow2::array::{MutableUtf8Array, Utf8Array};
 use arrow2::bitmap::Bitmap;
 use arrow2::buffer::MutableBuffer;
 use arrow2::datatypes::DataType;
@@ -7,8 +7,8 @@ use arrow2::datatypes::DataType;
 fn capacities() {
     let b = MutableUtf8Array::<i32>::with_capacities(1, 10);
 
-    assert_eq!(b.values().capacity(), 64);
-    assert_eq!(b.offsets().capacity(), 16); // 64 bytes
+    assert!(b.values().capacity() >= 10);
+    assert!(b.offsets().capacity() >= 2);
 }
 
 #[test]
@@ -17,7 +17,7 @@ fn push_null() {
     array.push::<&str>(None);
 
     let array: Utf8Array<i32> = array.into();
-    assert_eq!(array.validity(), &Some(Bitmap::from([false])));
+    assert_eq!(array.validity(), Some(&Bitmap::from([false])));
 }
 
 /// Safety guarantee
@@ -60,7 +60,7 @@ fn test_extend_trusted_len_values() {
     assert_eq!(array.offsets().as_slice(), &[0, 2, 7, 12, 17, 17]);
     assert_eq!(
         array.validity(),
-        &Some(Bitmap::from_u8_slice(&[0b00001111], 5))
+        Some(&Bitmap::from_u8_slice(&[0b00001111], 5))
     );
 }
 
@@ -78,6 +78,6 @@ fn test_extend_trusted_len() {
     assert_eq!(array.offsets().as_slice(), &[0, 2, 7, 7, 12, 17]);
     assert_eq!(
         array.validity(),
-        &Some(Bitmap::from_u8_slice(&[0b00011011], 5))
+        Some(&Bitmap::from_u8_slice(&[0b00011011], 5))
     );
 }

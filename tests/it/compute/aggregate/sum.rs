@@ -46,7 +46,7 @@ fn test_primitive_array_sum_large_64() {
         .map(|i| if i % 3 == 0 { Some(0) } else { Some(i) })
         .collect();
     // create an array that actually has non-zero values at the invalid indices
-    let c = arithmetics::basic::add::add(&a, &b).unwrap();
+    let c = arithmetics::basic::add(&a, &b).unwrap();
     assert_eq!(
         Some((1..=100).filter(|i| i % 3 == 0).sum()),
         sum_primitive(&c)

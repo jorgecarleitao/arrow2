@@ -61,15 +61,47 @@ impl BooleanArray {
     /// This function panics iff `offset + length >= self.len()`.
     #[inline]
     pub fn slice(&self, offset: usize, length: usize) -> Self {
-        let validity = self.validity.clone().map(|x| x.slice(offset, length));
+        assert!(
+            offset + length <= self.len(),
+            "the offset of the new Buffer cannot exceed the existing length"
+        );
+        unsafe { self.slice_unchecked(offset, length) }
+    }
+
+    /// Returns a slice of this [`BooleanArray`].
+    /// # Implementation
+    /// This operation is `O(1)` as it amounts to increase two ref counts.
+    /// # Safety
+    /// The caller must ensure that `offset + length <= self.len()`.
+    #[inline]
+    pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
+        let validity = self
+            .validity
+            .clone()
+            .map(|x| x.slice_unchecked(offset, length));
         Self {
             data_type: self.data_type.clone(),
-            values: self.values.clone().slice(offset, length),
+            values: self.values.clone().slice_unchecked(offset, length),
             validity,
             offset: self.offset + offset,
         }
     }
 
+    /// Sets the validity bitmap on this [`BooleanArray`].
+    /// # Panic
+    /// This function panics iff `validity.len() != self.len()`.
+    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
+        if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
+            panic!("validity should be as least as large as the array")
+        }
+        let mut arr = self.clone();
+        arr.validity = validity;
+        arr
+    }
+}
+
+// accessors
+impl BooleanArray {
     /// Returns the value at index `i`
     /// # Panic
     /// This function panics iff `i >= self.len()`.
@@ -86,22 +118,16 @@ impl BooleanArray {
         self.values.get_bit_unchecked(i)
     }
 
+    /// The optional validity.
+    #[inline]
+    pub fn validity(&self) -> Option<&Bitmap> {
+        self.validity.as_ref()
+    }
+
     /// Returns the values of this [`BooleanArray`].
     #[inline]
     pub fn values(&self) -> &Bitmap {
         &self.values
-    }
-
-    /// Sets the validity bitmap on this [`BooleanArray`].
-    /// # Panic
-    /// This function panics iff `validity.len() != self.len()`.
-    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
-        if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
-            panic!("validity should be as least as large as the array")
-        }
-        let mut arr = self.clone();
-        arr.validity = validity;
-        arr
     }
 }
 
@@ -122,13 +148,17 @@ impl Array for BooleanArray {
     }
 
     #[inline]
-    fn validity(&self) -> &Option<Bitmap> {
-        &self.validity
+    fn validity(&self) -> Option<&Bitmap> {
+        self.validity.as_ref()
     }
 
     #[inline]
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+    #[inline]
+    unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
+        Box::new(self.slice_unchecked(offset, length))
     }
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.with_validity(validity))

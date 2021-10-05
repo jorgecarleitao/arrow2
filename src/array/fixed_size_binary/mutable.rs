@@ -149,6 +149,14 @@ impl MutableFixedSizeBinaryArray {
     pub unsafe fn value_unchecked(&self, i: usize) -> &[u8] {
         std::slice::from_raw_parts(self.values.as_ptr().add(i * self.size), self.size)
     }
+
+    /// Shrinks the capacity of the [`MutablePrimitive`] to fit its current length.
+    pub fn shrink_to_fit(&mut self) {
+        self.values.shrink_to_fit();
+        if let Some(validity) = &mut self.validity {
+            validity.shrink_to_fit()
+        }
+    }
 }
 
 /// Accessors
@@ -169,8 +177,16 @@ impl MutableArray for MutableFixedSizeBinaryArray {
         self.values.len() / self.size
     }
 
-    fn validity(&self) -> &Option<MutableBitmap> {
-        &self.validity
+    fn validity(&self) -> Option<&MutableBitmap> {
+        self.validity.as_ref()
+    }
+
+    fn as_box(&mut self) -> Box<dyn Array> {
+        Box::new(FixedSizeBinaryArray::from_data(
+            DataType::FixedSizeBinary(self.size as i32),
+            std::mem::take(&mut self.values).into(),
+            std::mem::take(&mut self.validity).map(|x| x.into()),
+        ))
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
@@ -195,6 +211,10 @@ impl MutableArray for MutableFixedSizeBinaryArray {
 
     fn push_null(&mut self) {
         self.values.extend_constant(self.size, 0);
+    }
+
+    fn shrink_to_fit(&mut self) {
+        self.shrink_to_fit()
     }
 }
 

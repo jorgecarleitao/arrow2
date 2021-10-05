@@ -34,11 +34,6 @@ pub use alignment::ALIGNMENT;
 // If this number is not zero after all objects have been `drop`, there is a memory leak
 static mut ALLOCATIONS: AtomicIsize = AtomicIsize::new(0);
 
-/// Returns the total number of bytes allocated to buffers by the allocator.
-pub fn total_allocated_bytes() -> isize {
-    unsafe { ALLOCATIONS.load(std::sync::atomic::Ordering::SeqCst) }
-}
-
 /// # Safety
 /// This pointer may only be used to check if memory is allocated.
 #[inline]

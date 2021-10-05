@@ -38,6 +38,10 @@ impl FixedSizeBinaryArray {
 
         assert_eq!(values.len() % size, 0);
 
+        if let Some(ref validity) = validity {
+            assert_eq!(values.len() / size, validity.len());
+        }
+
         Self {
             size,
             data_type,
@@ -50,12 +54,30 @@ impl FixedSizeBinaryArray {
     /// Returns a slice of this [`FixedSizeBinaryArray`].
     /// # Implementation
     /// This operation is `O(1)` as it amounts to increase 3 ref counts.
+    /// # Panics
+    /// panics iff `offset + length > self.len()`
     pub fn slice(&self, offset: usize, length: usize) -> Self {
-        let validity = self.validity.clone().map(|x| x.slice(offset, length));
+        assert!(
+            offset + length <= self.len(),
+            "the offset of the new Buffer cannot exceed the existing length"
+        );
+        unsafe { self.slice_unchecked(offset, length) }
+    }
+
+    /// Returns a slice of this [`FixedSizeBinaryArray`].
+    /// # Implementation
+    /// This operation is `O(1)` as it amounts to increase 3 ref counts.
+    /// # Safety
+    /// The caller must ensure that `offset + length <= self.len()`.
+    pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
+        let validity = self
+            .validity
+            .clone()
+            .map(|x| x.slice_unchecked(offset, length));
         let values = self
             .values
             .clone()
-            .slice(offset * self.size as usize, length * self.size as usize);
+            .slice_unchecked(offset * self.size as usize, length * self.size as usize);
         Self {
             data_type: self.data_type.clone(),
             size: self.size,
@@ -63,6 +85,12 @@ impl FixedSizeBinaryArray {
             validity,
             offset: self.offset + offset,
         }
+    }
+
+    /// The optional validity.
+    #[inline]
+    pub fn validity(&self) -> Option<&Bitmap> {
+        self.validity.as_ref()
     }
 
     /// Returns the values allocated on this [`FixedSizeBinaryArray`].
@@ -108,9 +136,8 @@ impl FixedSizeBinaryArray {
 
 impl FixedSizeBinaryArray {
     pub(crate) fn get_size(data_type: &DataType) -> &i32 {
-        match data_type {
+        match data_type.to_logical_type() {
             DataType::FixedSizeBinary(size) => size,
-            DataType::Extension(_, child, _) => Self::get_size(child),
             _ => panic!("Wrong DataType"),
         }
     }
@@ -132,12 +159,15 @@ impl Array for FixedSizeBinaryArray {
         &self.data_type
     }
 
-    fn validity(&self) -> &Option<Bitmap> {
-        &self.validity
+    fn validity(&self) -> Option<&Bitmap> {
+        self.validity.as_ref()
     }
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+    unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
+        Box::new(self.slice_unchecked(offset, length))
     }
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.with_validity(validity))

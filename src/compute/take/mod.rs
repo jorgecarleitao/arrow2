@@ -33,6 +33,8 @@ mod primitive;
 mod structure;
 mod utf8;
 
+/// Returns a new [`Array`] with only indices at `indices`. Null indices are taken as nulls.
+/// The returned array has a length equal to `indices.len()`.
 pub fn take<O: Index>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result<Box<dyn Array>> {
     if indices.len() == 0 {
         return Ok(new_empty_array(values.data_type().clone()));

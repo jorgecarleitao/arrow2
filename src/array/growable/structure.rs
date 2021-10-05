@@ -17,14 +17,13 @@ pub struct GrowableStruct<'a> {
     arrays: Vec<&'a StructArray>,
     validity: MutableBitmap,
     values: Vec<Box<dyn Growable<'a> + 'a>>,
-    // function used to extend nulls from arrays. This function's lifetime is bound to the array
-    // because it reads nulls from it.
     extend_null_bits: Vec<ExtendNullBits<'a>>,
 }
 
 impl<'a> GrowableStruct<'a> {
+    /// Creates a new [`GrowableStruct`] bound to `arrays` with a pre-allocated `capacity`.
     /// # Panics
-    /// This function panics if any of the `arrays` is not downcastable to `PrimitiveArray<T>`.
+    /// If `arrays` is empty.
     pub fn new(arrays: Vec<&'a StructArray>, mut use_validity: bool, capacity: usize) -> Self {
         // if any of the arrays has nulls, insertions from any array requires setting bits
         // as there is at least one array with nulls.

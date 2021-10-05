@@ -1,27 +1,20 @@
 use std::iter::FromIterator;
-use std::mem::size_of;
 use std::ptr::NonNull;
 use std::usize;
 
-use crate::types::NativeType;
-use crate::{alloc, trusted_len::TrustedLen};
+use crate::trusted_len::TrustedLen;
+use crate::types::{BitChunk, NativeType};
 
-use super::{
-    bytes::{Bytes, Deallocation},
-    util,
-};
+use super::bytes::{Bytes, Deallocation};
+#[cfg(feature = "cache_aligned")]
+use crate::vec::AlignedVec as Vec;
 
 use super::immutable::Buffer;
 
-#[inline]
-fn capacity_multiple_of_64<T: NativeType>(capacity: usize) -> usize {
-    util::round_upto_multiple_of_64(capacity * size_of::<T>()) / size_of::<T>()
-}
-
 /// A [`MutableBuffer`] is this crates' interface to store types that are byte-like such as `i32`.
-/// It behaves like a [`Vec`], with the following differences:
-/// * memory is allocated along cache lines and in multiple of 64 bytes.
-/// * it can only hold types supported by the arrow format (`u8-u64`, `i8-i128`, `f32,f64` and [`crate::types::days_ms`])
+/// It behaves like a [`Vec`] but can only hold types supported by the arrow format
+/// (`u8-u64`, `i8-i128`, `f32,f64`, [`crate::types::days_ms`] and [`crate::types::months_days_ns`]).
+/// When the feature `cache_aligned` is active, memory is allocated along cache lines and in multiple of 64 bytes.
 /// A [`MutableBuffer`] can be converted to a [`Buffer`] via `.into`.
 /// # Example
 /// ```
@@ -34,11 +27,15 @@ fn capacity_multiple_of_64<T: NativeType>(capacity: usize) -> usize {
 /// assert_eq!(buffer.as_slice(), &[256, 1])
 /// ```
 pub struct MutableBuffer<T: NativeType> {
-    // dangling iff capacity = 0
-    ptr: NonNull<T>,
-    // invariant: len <= capacity
-    len: usize,
-    capacity: usize,
+    data: Vec<T>,
+}
+
+#[cfg(not(feature = "cache_aligned"))]
+#[cfg_attr(docsrs, doc(cfg(not(feature = "cache_aligned"))))]
+impl<T: NativeType> From<MutableBuffer<T>> for Vec<T> {
+    fn from(data: MutableBuffer<T>) -> Self {
+        data.data
+    }
 }
 
 impl<T: NativeType> std::fmt::Debug for MutableBuffer<T> {
@@ -57,24 +54,23 @@ impl<T: NativeType> MutableBuffer<T> {
     /// Creates an empty [`MutableBuffer`]. This does not allocate in the heap.
     #[inline]
     pub fn new() -> Self {
-        let ptr = alloc::allocate_aligned(0);
-        Self {
-            ptr,
-            len: 0,
-            capacity: 0,
-        }
+        Self { data: Vec::new() }
     }
 
     /// Allocate a new [`MutableBuffer`] with initial capacity to be at least `capacity`.
     #[inline]
     pub fn with_capacity(capacity: usize) -> Self {
-        let capacity = capacity_multiple_of_64::<T>(capacity);
-        let ptr = alloc::allocate_aligned(capacity);
         Self {
-            ptr,
-            len: 0,
-            capacity,
+            data: Vec::with_capacity(capacity),
         }
+    }
+
+    /// Takes ownership of [`Vec`].
+    #[cfg(not(feature = "cache_aligned"))]
+    #[cfg_attr(docsrs, doc(cfg(not(feature = "cache_aligned"))))]
+    #[inline]
+    pub fn from_vec(data: Vec<T>) -> Self {
+        Self { data }
     }
 
     /// Allocates a new [MutableBuffer] with `len` and capacity to be at least `len`
@@ -90,13 +86,11 @@ impl<T: NativeType> MutableBuffer<T> {
     /// ```
     #[inline]
     pub fn from_len_zeroed(len: usize) -> Self {
-        let new_capacity = capacity_multiple_of_64::<T>(len);
-        let ptr = alloc::allocate_aligned_zeroed(new_capacity);
-        Self {
-            ptr,
-            len,
-            capacity: new_capacity,
-        }
+        #[cfg(not(feature = "cache_aligned"))]
+        let data = vec![T::default(); len];
+        #[cfg(feature = "cache_aligned")]
+        let data = Vec::from_len_zeroed(len);
+        Self { data }
     }
 
     /// Ensures that this buffer has at least `self.len + additional` bytes. This re-allocates iff
@@ -114,17 +108,7 @@ impl<T: NativeType> MutableBuffer<T> {
     // exits.
     #[inline(always)]
     pub fn reserve(&mut self, additional: usize) {
-        let required_cap = self.len + additional;
-        if required_cap > self.capacity {
-            // JUSTIFICATION
-            //  Benefit
-            //      necessity
-            //  Soundness
-            //      `self.data` is valid for `self.capacity`.
-            let (ptr, new_capacity) = unsafe { reallocate(self.ptr, self.capacity, required_cap) };
-            self.ptr = ptr;
-            self.capacity = new_capacity;
-        }
+        self.data.reserve(additional)
     }
 
     /// Resizes the buffer, either truncating its contents (with no change in capacity), or
@@ -140,91 +124,66 @@ impl<T: NativeType> MutableBuffer<T> {
     // exits.
     #[inline(always)]
     pub fn resize(&mut self, new_len: usize, value: T) {
-        if new_len > self.len {
-            if self.capacity == 0 && value == T::default() {
-                // edge case where the allocate
-                let required_cap = capacity_multiple_of_64::<T>(new_len);
-                let ptr = alloc::allocate_aligned_zeroed(required_cap);
-                self.ptr = ptr;
-                self.capacity = required_cap;
-                self.len = new_len;
-                return;
-            }
-
-            let diff = new_len - self.len;
-            self.reserve(diff);
-            unsafe {
-                // write the value
-                let mut ptr = self.ptr.as_ptr().add(self.len);
-                (0..diff).for_each(|_| {
-                    std::ptr::write(ptr, value);
-                    ptr = ptr.add(1);
-                })
-            }
-        }
-        // this truncates the buffer when new_len < self.len
-        self.len = new_len;
+        self.data.resize(new_len, value)
     }
 
     /// Returns whether this buffer is empty.
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.len == 0
+        self.data.is_empty()
     }
 
     /// Returns the length (the number of items) in this buffer.
     /// The invariant `buffer.len() <= buffer.capacity()` is always upheld.
     #[inline]
     pub fn len(&self) -> usize {
-        self.len
+        self.data.len()
     }
 
     /// Returns the total capacity in this buffer.
     /// The invariant `buffer.len() <= buffer.capacity()` is always upheld.
     #[inline]
     pub fn capacity(&self) -> usize {
-        self.capacity
+        self.data.capacity()
     }
 
     /// Clear all existing data from this buffer.
     #[inline]
     pub fn clear(&mut self) {
-        self.len = 0
+        self.data.clear()
     }
 
     /// Shortens the buffer.
     /// If `len` is greater or equal to the buffers' current length, this has no effect.
     #[inline]
     pub fn truncate(&mut self, len: usize) {
-        if len < self.len {
-            self.len = len;
-        }
+        self.data.truncate(len)
     }
 
     /// Returns the data stored in this buffer as a slice.
     #[inline]
     pub fn as_slice(&self) -> &[T] {
-        self
+        self.data.as_slice()
     }
 
     /// Returns the data stored in this buffer as a mutable slice.
     #[inline]
     pub fn as_mut_slice(&mut self) -> &mut [T] {
-        self
+        self.data.as_mut_slice()
     }
 
     /// Returns a raw pointer to this buffer's internal memory
     /// This pointer is guaranteed to be aligned along cache-lines.
     #[inline]
     pub fn as_ptr(&self) -> *const T {
-        self.ptr.as_ptr()
+        self.data.as_ptr()
     }
 
     /// Returns a mutable raw pointer to this buffer's internal memory
     /// This pointer is guaranteed to be aligned along cache-lines.
     #[inline]
     pub fn as_mut_ptr(&mut self) -> *mut T {
-        self.ptr.as_ptr()
+        self.data.as_mut_ptr()
     }
 
     /// Extends this buffer from a slice of items, increasing its capacity if needed.
@@ -237,14 +196,7 @@ impl<T: NativeType> MutableBuffer<T> {
     /// ```
     #[inline]
     pub fn extend_from_slice(&mut self, items: &[T]) {
-        let additional = items.len();
-        self.reserve(additional);
-        unsafe {
-            let dst = self.ptr.as_ptr().add(self.len);
-            let src = items.as_ptr();
-            std::ptr::copy_nonoverlapping(src, dst, additional)
-        }
-        self.len += additional;
+        self.data.extend_from_slice(items)
     }
 
     /// Pushes a new item to the buffer, increasing its capacity if needed.
@@ -257,12 +209,7 @@ impl<T: NativeType> MutableBuffer<T> {
     /// ```
     #[inline]
     pub fn push(&mut self, item: T) {
-        self.reserve(1);
-        unsafe {
-            let dst = self.ptr.as_ptr().add(self.len) as *mut T;
-            std::ptr::write(dst, item);
-        }
-        self.len += 1;
+        self.data.push(item)
     }
 
     /// Extends the buffer with a new item without checking for sufficient capacity
@@ -270,21 +217,21 @@ impl<T: NativeType> MutableBuffer<T> {
     /// Caller must ensure that `self.capacity() - self.len() >= 1`
     #[inline]
     pub(crate) unsafe fn push_unchecked(&mut self, item: T) {
-        let dst = self.ptr.as_ptr().add(self.len);
+        let dst = self.as_mut_ptr().add(self.len());
         std::ptr::write(dst, item);
-        self.len += 1;
+        self.data.set_len(self.data.len() + 1);
     }
 
     /// Sets the length of this buffer.
-    /// # Panic
-    /// Panics iff `len > capacity`.
     /// # Safety
-    /// The caller must ensure no reads are performed on any
-    /// item within `[len, capacity - len]`
+    /// The caller must uphold the following invariants:
+    /// * ensure no reads are performed on any
+    ///     item within `[len, capacity - len]`
+    /// * ensure `len <= self.capacity()`
     #[inline]
     pub unsafe fn set_len(&mut self, len: usize) {
-        assert!(len <= self.capacity());
-        self.len = len;
+        debug_assert!(len <= self.capacity());
+        self.data.set_len(len);
     }
 
     /// Extends this buffer by `additional` items of value `value`.
@@ -294,7 +241,7 @@ impl<T: NativeType> MutableBuffer<T> {
     }
 
     /// Shrinks the capacity of the [`MutableBuffer`] to fit its current length.
-    /// The new capacity will be a multiple of 64 bytes.
+    /// When the feature `cache_aligned`, the new capacity will be a multiple of 64 bytes.
     ///
     /// # Example
     /// ```
@@ -306,64 +253,16 @@ impl<T: NativeType> MutableBuffer<T> {
     /// buffer.push(2);
     ///
     /// buffer.shrink_to_fit();
-    /// assert!(buffer.capacity() == 8);
+    /// assert!(buffer.capacity() < 16);  // 2 or 8 depending on feature `cache_aligned`
     /// ```
     pub fn shrink_to_fit(&mut self) {
-        let new_capacity = capacity_multiple_of_64::<T>(self.len);
-        if new_capacity < self.capacity {
-            // JUSTIFICATION
-            //  Benefit
-            //      necessity
-            //  Soundness
-            //      `self.ptr` is valid for `self.capacity`.
-            let ptr = unsafe { alloc::reallocate(self.ptr, self.capacity, new_capacity) };
-
-            self.ptr = ptr;
-            self.capacity = new_capacity;
-        }
+        self.data.shrink_to_fit();
     }
-}
-
-/// # Safety
-/// `ptr` must be allocated for `old_capacity`.
-#[inline]
-unsafe fn reallocate<T: NativeType>(
-    ptr: NonNull<T>,
-    old_capacity: usize,
-    new_capacity: usize,
-) -> (NonNull<T>, usize) {
-    let new_capacity = capacity_multiple_of_64::<T>(new_capacity);
-    let new_capacity = std::cmp::max(new_capacity, old_capacity * 2);
-    let ptr = alloc::reallocate(ptr, old_capacity, new_capacity);
-    (ptr, new_capacity)
 }
 
 impl<A: NativeType> Extend<A> for MutableBuffer<A> {
     fn extend<T: IntoIterator<Item = A>>(&mut self, iter: T) {
-        let mut iterator = iter.into_iter();
-        let (lower, _) = iterator.size_hint();
-        let additional = lower;
-        self.reserve(additional);
-
-        // this is necessary because of https://github.com/rust-lang/rust/issues/32155
-        let mut len = SetLenOnDrop::new(&mut self.len);
-        let mut dst = unsafe { self.ptr.as_ptr().add(len.local_len) as *mut A };
-        let capacity = self.capacity;
-
-        while len.local_len < capacity {
-            if let Some(item) = iterator.next() {
-                unsafe {
-                    std::ptr::write(dst, item);
-                    dst = dst.add(1);
-                }
-                len.local_len += 1;
-            } else {
-                break;
-            }
-        }
-        drop(len);
-
-        iterator.for_each(|item| self.push(item));
+        self.data.extend(iter)
     }
 }
 
@@ -388,19 +287,21 @@ impl<T: NativeType> MutableBuffer<T> {
         let upper = upper.expect("trusted_len_iter requires an upper limit");
         let len = upper;
 
+        let self_len = self.len();
+
         self.reserve(len);
-        let mut dst = self.ptr.as_ptr().add(self.len);
+        let mut dst = self.as_mut_ptr().add(self_len);
         for item in iterator {
             // note how there is no reserve here (compared with `extend_from_iter`)
             std::ptr::write(dst, item);
             dst = dst.add(1);
         }
         assert_eq!(
-            dst.offset_from(self.ptr.as_ptr().add(self.len)) as usize,
+            dst.offset_from(self.as_ptr().add(self_len)) as usize,
             upper,
             "Trusted iterator length was not accurately reported"
         );
-        self.len += len;
+        self.set_len(self_len + len);
     }
 
     /// Creates a [`MutableBuffer`] from an [`Iterator`] with a trusted (upper) length.
@@ -474,41 +375,25 @@ impl<T: NativeType> MutableBuffer<T> {
 
         let mut buffer = MutableBuffer::with_capacity(len);
 
-        let mut dst = buffer.ptr.as_ptr();
+        let mut dst = buffer.as_mut_ptr();
         for item in iterator {
             std::ptr::write(dst, item?);
             dst = dst.add(1);
         }
         assert_eq!(
-            dst.offset_from(buffer.ptr.as_ptr()) as usize,
+            dst.offset_from(buffer.as_ptr()) as usize,
             upper,
             "Trusted iterator length was not accurately reported"
         );
-        buffer.len = len;
+        buffer.set_len(len);
         Ok(buffer)
     }
 }
 
 impl<T: NativeType> FromIterator<T> for MutableBuffer<T> {
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
-        let mut iterator = iter.into_iter();
-
-        // first iteration, which will likely reserve sufficient space for the buffer.
-        let mut buffer = match iterator.next() {
-            None => MutableBuffer::new(),
-            Some(element) => {
-                let (lower, _) = iterator.size_hint();
-                let mut buffer = MutableBuffer::with_capacity(lower.saturating_add(1));
-                unsafe {
-                    std::ptr::write(buffer.as_mut_ptr(), element);
-                    buffer.len = 1;
-                }
-                buffer
-            }
-        };
-
-        buffer.extend(iterator);
-        buffer
+        let data = Vec::from_iter(iter);
+        Self { data }
     }
 }
 
@@ -523,42 +408,14 @@ impl<T: NativeType> std::ops::Deref for MutableBuffer<T> {
 
     #[inline]
     fn deref(&self) -> &[T] {
-        unsafe { std::slice::from_raw_parts(self.as_ptr(), self.len) }
+        &self.data
     }
 }
 
 impl<T: NativeType> std::ops::DerefMut for MutableBuffer<T> {
     #[inline]
     fn deref_mut(&mut self) -> &mut [T] {
-        unsafe { std::slice::from_raw_parts_mut(self.as_mut_ptr(), self.len) }
-    }
-}
-
-impl<T: NativeType> Drop for MutableBuffer<T> {
-    fn drop(&mut self) {
-        unsafe { alloc::free_aligned(self.ptr, self.capacity) };
-    }
-}
-
-struct SetLenOnDrop<'a> {
-    len: &'a mut usize,
-    local_len: usize,
-}
-
-impl<'a> SetLenOnDrop<'a> {
-    #[inline]
-    fn new(len: &'a mut usize) -> Self {
-        SetLenOnDrop {
-            local_len: *len,
-            len,
-        }
-    }
-}
-
-impl Drop for SetLenOnDrop<'_> {
-    #[inline]
-    fn drop(&mut self) {
-        *self.len = self.local_len;
+        &mut self.data
     }
 }
 
@@ -574,53 +431,61 @@ impl<T: NativeType, P: AsRef<[T]>> From<P> for MutableBuffer<T> {
 impl<T: NativeType> From<MutableBuffer<T>> for Buffer<T> {
     #[inline]
     fn from(buffer: MutableBuffer<T>) -> Self {
-        Buffer::from_bytes(buffer.into())
+        Self::from_bytes(buffer.into())
     }
 }
 
 impl<T: NativeType> From<MutableBuffer<T>> for Bytes<T> {
     #[inline]
     fn from(buffer: MutableBuffer<T>) -> Self {
-        let result = unsafe {
-            Bytes::new(
-                buffer.ptr,
-                buffer.len,
-                Deallocation::Native(buffer.capacity),
-            )
-        };
+        let mut data = buffer.data;
+        let ptr = NonNull::new(data.as_mut_ptr()).unwrap();
+        let len = data.len();
+        let capacity = data.capacity();
+
+        let result = unsafe { Bytes::new(ptr, len, Deallocation::Native(capacity)) };
         // so that the memory region is not deallocated.
-        std::mem::forget(buffer);
+        std::mem::forget(data);
         result
-    }
-}
-
-impl From<MutableBuffer<u64>> for MutableBuffer<u8> {
-    #[inline]
-    fn from(buffer: MutableBuffer<u64>) -> Self {
-        let ratio = std::mem::size_of::<u64>() / std::mem::size_of::<u8>();
-
-        let capacity = buffer.capacity * ratio;
-        let len = buffer.len * ratio;
-        let ptr = unsafe { NonNull::new_unchecked(buffer.ptr.as_ptr() as *mut u8) };
-        // so that the memory region is not deallocated; ownership was transfered
-        std::mem::forget(buffer);
-        Self { ptr, len, capacity }
     }
 }
 
 impl MutableBuffer<u8> {
     /// Creates a [`MutableBuffer<u8>`] from an iterator of `u64`.
     #[inline]
-    pub fn from_chunk_iter<I: TrustedLen<Item = u64>>(iter: I) -> Self {
-        MutableBuffer::from_trusted_len_iter(iter).into()
+    pub fn from_chunk_iter<T: BitChunk, I: TrustedLen<Item = T>>(iter: I) -> Self {
+        // TrustedLen
+        unsafe { Self::from_chunk_iter_unchecked(iter) }
     }
 
     /// # Safety
     /// This method assumes that the iterator's size is correct and is undefined behavior
     /// to use it on an iterator that reports an incorrect length.
     #[inline]
-    pub unsafe fn from_chunk_iter_unchecked<I: Iterator<Item = u64>>(iter: I) -> Self {
-        MutableBuffer::from_trusted_len_iter_unchecked(iter).into()
+    pub unsafe fn from_chunk_iter_unchecked<T: BitChunk, I: Iterator<Item = T>>(
+        iterator: I,
+    ) -> Self {
+        let (_, upper) = iterator.size_hint();
+        let upper = upper.expect("try_from_trusted_len_iter requires an upper limit");
+        let len = upper * std::mem::size_of::<T>();
+
+        let mut buffer = MutableBuffer::with_capacity(len);
+
+        let mut dst = buffer.as_mut_ptr();
+        for item in iterator {
+            let bytes = item.to_ne_bytes();
+            for i in 0..std::mem::size_of::<T>() {
+                std::ptr::write(dst, bytes[i]);
+                dst = dst.add(1);
+            }
+        }
+        assert_eq!(
+            dst.offset_from(buffer.as_ptr()) as usize,
+            len,
+            "Trusted iterator length was not accurately reported"
+        );
+        buffer.set_len(len);
+        buffer
     }
 }
 

@@ -227,6 +227,27 @@ fn to_list<O: Offset>(
     )))
 }
 
+fn to_map(
+    json_col: &ArrowJsonColumn,
+    data_type: DataType,
+    dictionaries: &HashMap<i64, ArrowJsonDictionaryBatch>,
+) -> Result<Arc<dyn Array>> {
+    let validity = to_validity(&json_col.validity);
+
+    let child_field = MapArray::get_field(&data_type);
+    let children = &json_col.children.as_ref().unwrap()[0];
+    let field = to_array(
+        child_field.data_type().clone(),
+        child_field.dict_id(),
+        children,
+        dictionaries,
+    )?;
+    let offsets = to_offsets::<i32>(json_col.offset.as_ref());
+    Ok(Arc::new(MapArray::from_data(
+        data_type, offsets, field, validity,
+    )))
+}
+
 fn to_dictionary<K: DictionaryKey>(
     data_type: DataType,
     dict_id: i64,
@@ -400,6 +421,7 @@ pub fn to_array(
             let array = UnionArray::from_data(data_type, types, fields, offsets);
             Ok(Arc::new(array))
         }
+        Map => to_map(json_col, data_type, dictionaries),
     }
 }
 

@@ -5,10 +5,12 @@ use super::*;
 
 macro_rules! simd {
     ($name:tt, $type:ty, $lanes:expr, $mask:ty) => {
+        /// Multi-Data correspondence of the native type
         #[allow(non_camel_case_types)]
+        #[derive(Copy, Clone)]
         pub struct $name(pub [$type; $lanes]);
 
-        impl NativeSimd for $name {
+        unsafe impl NativeSimd for $name {
             const LANES: usize = $lanes;
             type Native = $type;
             type Chunk = $mask;
@@ -34,6 +36,11 @@ macro_rules! simd {
                 let mut a = [remaining; $lanes];
                 a.iter_mut().zip(v.iter()).for_each(|(a, b)| *a = *b);
                 Self(a)
+            }
+
+            #[inline]
+            fn align(values: &[Self::Native]) -> (&[Self::Native], &[Self], &[Self::Native]) {
+                unsafe { values.align_to::<Self>() }
             }
         }
 

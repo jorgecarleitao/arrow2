@@ -2,17 +2,27 @@ use crate::types::NativeType;
 
 /// [`NativeType`] that supports a representation of 8 lanes
 pub trait Simd8: NativeType {
+    /// The 8 lane representation of `Self`
     type Simd: Simd8Lanes<Self>;
 }
 
+/// Trait declaring an 8-lane multi-data.
 pub trait Simd8Lanes<T>: Copy {
+    /// loads a complete chunk
     fn from_chunk(v: &[T]) -> Self;
+    /// loads an incomplete chunk, filling the remaining items with `remaining`.
     fn from_incomplete_chunk(v: &[T], remaining: T) -> Self;
+    /// Equal
     fn eq(self, other: Self) -> u8;
+    /// Not equal
     fn neq(self, other: Self) -> u8;
+    /// Less than or equal to
     fn lt_eq(self, other: Self) -> u8;
+    /// Less than
     fn lt(self, other: Self) -> u8;
+    /// Greater than
     fn gt(self, other: Self) -> u8;
+    /// Greater than or equal to
     fn gt_eq(self, other: Self) -> u8;
 }
 

@@ -24,7 +24,7 @@ use crate::{
         bytes::{Bytes, Deallocation},
         Buffer,
     },
-    datatypes::{DataType, Field},
+    datatypes::{DataType, Field, PhysicalType},
     error::{ArrowError, Result},
     ffi::schema::get_field_child,
     types::NativeType,
@@ -141,7 +141,7 @@ impl Ffi_ArrowArray {
         }
     }
 
-    // create an empty `Ffi_ArrowArray`, which can be used to import data into
+    /// creates an empty [`Ffi_ArrowArray`], which can be used to import data into
     pub fn empty() -> Self {
         Self {
             length: 0,
@@ -241,17 +241,18 @@ unsafe fn create_bitmap(
 // for variable-sized buffers, such as the second buffer of a stringArray, we need
 // to fetch offset buffer's len to build the second buffer.
 fn buffer_len(array: &Ffi_ArrowArray, data_type: &DataType, i: usize) -> Result<usize> {
-    Ok(match (data_type, i) {
-        (DataType::Utf8, 1)
-        | (DataType::LargeUtf8, 1)
-        | (DataType::Binary, 1)
-        | (DataType::LargeBinary, 1)
-        | (DataType::List(_), 1)
-        | (DataType::LargeList(_), 1) => {
+    Ok(match (data_type.to_physical_type(), i) {
+        (PhysicalType::Utf8, 1)
+        | (PhysicalType::LargeUtf8, 1)
+        | (PhysicalType::Binary, 1)
+        | (PhysicalType::LargeBinary, 1)
+        | (PhysicalType::List, 1)
+        | (PhysicalType::LargeList, 1)
+        | (PhysicalType::Map, 1) => {
             // the len of the offset buffer (buffer 1) equals length + 1
             array.length as usize + 1
         }
-        (DataType::Utf8, 2) | (DataType::Binary, 2) => {
+        (PhysicalType::Utf8, 2) | (PhysicalType::Binary, 2) => {
             // the len of the data buffer (buffer 2) equals the last value of the offset buffer (buffer 1)
             let len = buffer_len(array, data_type, 1)?;
             // first buffer is the null buffer => add(1)
@@ -261,7 +262,7 @@ fn buffer_len(array: &Ffi_ArrowArray, data_type: &DataType, i: usize) -> Result<
             // get last offset
             (unsafe { *offset_buffer.add(len - 1) }) as usize
         }
-        (DataType::LargeUtf8, 2) | (DataType::LargeBinary, 2) => {
+        (PhysicalType::LargeUtf8, 2) | (PhysicalType::LargeBinary, 2) => {
             // the len of the data buffer (buffer 2) equals the last value of the offset buffer (buffer 1)
             let len = buffer_len(array, data_type, 1)?;
             // first buffer is the null buffer => add(1)

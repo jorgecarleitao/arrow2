@@ -64,7 +64,7 @@ fn utf8_substring<O: Offset>(array: &Utf8Array<O>, start: O, length: &Option<O>)
         array.data_type().clone(),
         new_offsets.into(),
         new_values.into(),
-        validity.clone(),
+        validity.cloned(),
     )
 }
 
@@ -113,7 +113,7 @@ fn binary_substring<O: Offset>(
         array.data_type().clone(),
         new_offsets.into(),
         new_values.into(),
-        validity.clone(),
+        validity.cloned(),
     )
 }
 

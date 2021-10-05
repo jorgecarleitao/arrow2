@@ -27,7 +27,7 @@ pub use mutable::*;
 /// # fn main() {
 /// let array = PrimitiveArray::from([Some(1), None, Some(10)]);
 /// assert_eq!(array.values().as_slice(), &[1, 0, 10]);
-/// assert_eq!(array.validity(), &Some(Bitmap::from([true, false, true])));
+/// assert_eq!(array.validity(), Some(&Bitmap::from([true, false, true])));
 /// # }
 /// ```
 #[derive(Debug, Clone)]
@@ -86,10 +86,27 @@ impl<T: NativeType> PrimitiveArray<T> {
     /// This function panics iff `offset + length >= self.len()`.
     #[inline]
     pub fn slice(&self, offset: usize, length: usize) -> Self {
-        let validity = self.validity.clone().map(|x| x.slice(offset, length));
+        assert!(
+            offset + length <= self.len(),
+            "offset + length may not exceed length of array"
+        );
+        unsafe { self.slice_unchecked(offset, length) }
+    }
+
+    /// Returns a slice of this [`PrimitiveArray`].
+    /// # Implementation
+    /// This operation is `O(1)` as it amounts to increase two ref counts.
+    /// # Safety
+    /// The caller must ensure that `offset + length <= self.len()`.
+    #[inline]
+    pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
+        let validity = self
+            .validity
+            .clone()
+            .map(|x| x.slice_unchecked(offset, length));
         Self {
             data_type: self.data_type.clone(),
-            values: self.values.clone().slice(offset, length),
+            values: self.values.clone().slice_unchecked(offset, length),
             validity,
             offset: self.offset + offset,
         }
@@ -107,7 +124,13 @@ impl<T: NativeType> PrimitiveArray<T> {
         arr
     }
 
-    /// The values.
+    /// The optional validity.
+    #[inline]
+    pub fn validity(&self) -> Option<&Bitmap> {
+        self.validity.as_ref()
+    }
+
+    /// The values [`Buffer`].
     /// Values on null slots are undetermined (they can be anything).
     #[inline]
     pub fn values(&self) -> &Buffer<T> {
@@ -169,12 +192,15 @@ impl<T: NativeType> Array for PrimitiveArray<T> {
         &self.data_type
     }
 
-    fn validity(&self) -> &Option<Bitmap> {
-        &self.validity
+    fn validity(&self) -> Option<&Bitmap> {
+        self.validity.as_ref()
     }
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+    unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
+        Box::new(self.slice_unchecked(offset, length))
     }
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.with_validity(validity))

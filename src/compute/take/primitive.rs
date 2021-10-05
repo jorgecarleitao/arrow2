@@ -41,7 +41,7 @@ fn take_values_validity<T: NativeType, I: Index>(
 ) -> (Buffer<T>, Option<Bitmap>) {
     let mut null = MutableBitmap::with_capacity(indices.len());
 
-    let null_values = values.validity().as_ref().unwrap();
+    let null_values = values.validity().unwrap();
 
     let values_values = values.values();
 
@@ -64,7 +64,7 @@ fn take_indices_validity<T: NativeType, I: Index>(
     values: &[T],
     indices: &PrimitiveArray<I>,
 ) -> (Buffer<T>, Option<Bitmap>) {
-    let validity = indices.validity().as_ref().unwrap();
+    let validity = indices.validity().unwrap();
     let values = indices.values().iter().enumerate().map(|(i, index)| {
         let index = index.to_usize();
         match values.get(index) {
@@ -81,7 +81,7 @@ fn take_indices_validity<T: NativeType, I: Index>(
 
     let buffer = MutableBuffer::from_trusted_len_iter(values);
 
-    (buffer.into(), indices.validity().clone())
+    (buffer.into(), indices.validity().cloned())
 }
 
 // take implementation when both values and indices contain nulls
@@ -91,7 +91,7 @@ fn take_values_indices_validity<T: NativeType, I: Index>(
 ) -> (Buffer<T>, Option<Bitmap>) {
     let mut bitmap = MutableBitmap::with_capacity(indices.len());
 
-    let values_validity = values.validity().as_ref().unwrap();
+    let values_validity = values.validity().unwrap();
 
     let values_values = values.values();
     let values = indices.iter().map(|index| match index {

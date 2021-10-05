@@ -1,4 +1,4 @@
-use std::ops::{BitAnd, BitOr, Not};
+use std::ops::{BitAnd, BitOr, BitXor, Not};
 
 use crate::buffer::MutableBuffer;
 
@@ -112,9 +112,9 @@ where
 
     let iterator = iter.map(|left| op(left)).chain(std::iter::once(rem));
 
-    let buffer = MutableBuffer::from_trusted_len_iter(iterator);
+    let buffer = MutableBuffer::from_chunk_iter(iterator);
 
-    Bitmap::from_u8_buffer(buffer.into(), length)
+    Bitmap::from_u8_buffer(buffer, length)
 }
 
 /// Apply a bitwise operation `op` to one input and return the result as a [`Bitmap`].
@@ -132,12 +132,19 @@ where
     }
 }
 
+#[inline]
 fn and(lhs: &Bitmap, rhs: &Bitmap) -> Bitmap {
     binary(lhs, rhs, |x, y| x & y)
 }
 
+#[inline]
 fn or(lhs: &Bitmap, rhs: &Bitmap) -> Bitmap {
     binary(lhs, rhs, |x, y| x | y)
+}
+
+#[inline]
+fn xor(lhs: &Bitmap, rhs: &Bitmap) -> Bitmap {
+    binary(lhs, rhs, |x, y| x ^ y)
 }
 
 fn eq(lhs: &Bitmap, rhs: &Bitmap) -> bool {
@@ -180,6 +187,14 @@ impl<'a, 'b> BitAnd<&'b Bitmap> for &'a Bitmap {
 
     fn bitand(self, rhs: &'b Bitmap) -> Bitmap {
         and(self, rhs)
+    }
+}
+
+impl<'a, 'b> BitXor<&'b Bitmap> for &'a Bitmap {
+    type Output = Bitmap;
+
+    fn bitxor(self, rhs: &'b Bitmap) -> Bitmap {
+        xor(self, rhs)
     }
 }
 

@@ -11,6 +11,8 @@ First, some notation:
 * `column chunk`: composed of multiple pages (similar of an `Array`)
 * `row group`: a group of columns with the same length (similar of a `RecordBatch` in Arrow)
 
+## Single threaded
+
 Here is an example of how to write a single column chunk into a single row group:
 
 ```rust
@@ -22,4 +24,18 @@ assumes that a `RecordBatch` is mapped to a single row group with a single page 
 
 ```rust
 {{#include ../../../examples/parquet_write_record.rs}}
+```
+
+## Multi-threaded writing
+
+As user of this crate, you will need to decide how you would like to parallelize,
+and whether order is important. Below you can find an example where we
+use [`rayon`](https://crates.io/crates/rayon) to perform the heavy lift of
+encoding and compression.
+This operation is [embarrassingly parallel](https://en.wikipedia.org/wiki/Embarrassingly_parallel)
+and results in a speed up equal to minimum between the number of cores
+and number of columns in the record.
+
+```rust
+{{#include ../../../examples/parquet_write_parallel/src/main.rs}}
 ```

@@ -8,9 +8,11 @@ use crate::{
     datatypes::*,
     error::{ArrowError, Result},
     record_batch::RecordBatch,
-    temporal_conversions::EPOCH_DAYS_FROM_CE,
+    temporal_conversions,
     types::{NativeType, NaturalDataType},
 };
+
+use super::infer_schema::RFC3339;
 
 fn deserialize_primitive<T, F>(
     rows: &[ByteRecord],
@@ -63,6 +65,23 @@ fn deserialize_binary<O: Offset>(rows: &[ByteRecord], column: usize) -> Arc<dyn 
     Arc::new(BinaryArray::<O>::from_trusted_len_iter(iter))
 }
 
+#[inline]
+fn deserialize_datetime<T: chrono::TimeZone>(string: &str, tz: &T) -> Option<i64> {
+    let mut parsed = chrono::format::Parsed::new();
+    let fmt = chrono::format::StrftimeItems::new(RFC3339);
+    if chrono::format::parse(&mut parsed, string, fmt).is_ok() {
+        parsed
+            .to_datetime()
+            .map(|x| x.naive_utc())
+            .map(|x| tz.from_utc_datetime(&x))
+            .map(|x| x.timestamp_nanos())
+            .ok()
+    } else {
+        None
+    }
+}
+
+/// Deserializes `column` of `rows` into an [`Array`] of [`DataType`] `datatype`.
 pub fn deserialize_column(
     rows: &[ByteRecord],
     column: usize,
@@ -114,7 +133,7 @@ pub fn deserialize_column(
             simdutf8::basic::from_utf8(bytes)
                 .ok()
                 .and_then(|x| x.parse::<chrono::NaiveDate>().ok())
-                .map(|x| x.num_days_from_ce() - EPOCH_DAYS_FROM_CE)
+                .map(|x| x.num_days_from_ce() - temporal_conversions::EPOCH_DAYS_FROM_CE)
         }),
         Date64 => deserialize_primitive(rows, column, datatype, |bytes| {
             simdutf8::basic::from_utf8(bytes)
@@ -138,20 +157,30 @@ pub fn deserialize_column(
                     .map(|x| x.timestamp_nanos() / 1000)
             })
         }
-        Timestamp(TimeUnit::Millisecond, None) => {
+        Timestamp(time_unit, None) => deserialize_primitive(rows, column, datatype, |bytes| {
+            simdutf8::basic::from_utf8(bytes)
+                .ok()
+                .and_then(|x| x.parse::<chrono::NaiveDateTime>().ok())
+                .map(|x| x.timestamp_nanos())
+                .map(|x| match time_unit {
+                    TimeUnit::Second => x / 1_000_000_000,
+                    TimeUnit::Millisecond => x / 1_000_000,
+                    TimeUnit::Microsecond => x / 1_000,
+                    TimeUnit::Nanosecond => x,
+                })
+        }),
+        Timestamp(time_unit, Some(ref tz)) => {
+            let tz = temporal_conversions::parse_offset(tz)?;
             deserialize_primitive(rows, column, datatype, |bytes| {
                 simdutf8::basic::from_utf8(bytes)
                     .ok()
-                    .and_then(|x| x.parse::<chrono::NaiveDateTime>().ok())
-                    .map(|x| x.timestamp_nanos() / 1_000_000)
-            })
-        }
-        Timestamp(TimeUnit::Second, None) => {
-            deserialize_primitive(rows, column, datatype, |bytes| {
-                simdutf8::basic::from_utf8(bytes)
-                    .ok()
-                    .and_then(|x| x.parse::<chrono::NaiveDateTime>().ok())
-                    .map(|x| x.timestamp_nanos() / 1_000_000_000)
+                    .and_then(|x| deserialize_datetime(x, &tz))
+                    .map(|x| match time_unit {
+                        TimeUnit::Second => x / 1_000_000_000,
+                        TimeUnit::Millisecond => x / 1_000_000,
+                        TimeUnit::Microsecond => x / 1_000,
+                        TimeUnit::Nanosecond => x,
+                    })
             })
         }
         Utf8 => deserialize_utf8::<i32>(rows, column),

@@ -18,7 +18,7 @@ fn basics() {
     assert_eq!(array.values(), &Bitmap::from_u8_slice(&[0b00000001], 3));
     assert_eq!(
         array.validity(),
-        &Some(Bitmap::from_u8_slice(&[0b00000101], 3))
+        Some(&Bitmap::from_u8_slice(&[0b00000101], 3))
     );
     assert!(array.is_valid(0));
     assert!(!array.is_valid(1));
@@ -27,7 +27,7 @@ fn basics() {
     let array2 = BooleanArray::from_data(
         DataType::Boolean,
         array.values().clone(),
-        array.validity().clone(),
+        array.validity().cloned(),
     );
     assert_eq!(array, array2);
 
@@ -40,7 +40,7 @@ fn basics() {
 fn empty() {
     let array = BooleanArray::new_empty(DataType::Boolean);
     assert_eq!(array.values().len(), 0);
-    assert_eq!(array.validity(), &None);
+    assert_eq!(array.validity(), None);
 }
 
 #[test]

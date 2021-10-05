@@ -23,6 +23,8 @@ lexical-core = { version = "0.8", optional = true }
 # We need to Hash values before sending them to an hasher. This
 # crate provides HashMap that assumes pre-hashed values.
 hash_hasher = "^2.0.3"
+# For SIMD utf8 validation
+simdutf8 = "0.1.3"
 
 csv = { version = "^1.1", optional = true }
 regex = { version = "^1.3", optional = true }
@@ -68,15 +70,13 @@ strength_reduce = { version = "0.2", optional = true }
 # For instruction multiversioning
 multiversion = { version = "0.6.1", optional = true }
 
-# For SIMD utf8 validation
-simdutf8 = "0.1.3"
-
 [dev-dependencies]
-rand = "0.8"
 criterion = "0.3"
 flate2 = "1"
 doc-comment = "0.3"
 crossbeam-channel = "0.5.1"
+# used to run formal property testing
+proptest = { version = "1", default_features = false, features = ["std"] }
 
 [package.metadata.docs.rs]
 features = ["full"]
@@ -98,11 +98,11 @@ full = [
     "merge_sort",
     "compute",
     # parses timezones used in timestamp conversions
-    "chrono-tz",
+    "chrono-tz"
 ]
 merge_sort = ["itertools"]
 io_csv = ["io_csv_read", "io_csv_write"]
-io_csv_read = ["csv", "lazy_static", "regex", "lexical-core"]
+io_csv_read = ["csv", "lexical-core"]
 io_csv_write = ["csv", "streaming-iterator", "lexical-core"]
 io_json = ["serde", "serde_json", "indexmap"]
 io_ipc = ["flatbuffers"]
@@ -125,6 +125,9 @@ compute = ["strength_reduce", "multiversion", "lexical-core", "ahash"]
 io_parquet = ["parquet2", "io_ipc", "base64", "futures"]
 benchmarks = ["rand"]
 simd = ["packed_simd"]
+# uses a custom allocator whose pointers are aligned along cache lines.
+# Using this features makes `Buffer` and `MutableBuffer` incompatible with `Vec`.
+cache_aligned = []
 
 [package.metadata.cargo-all-features]
 skip_feature_sets = [
@@ -229,4 +232,8 @@ harness = false
 
 [[bench]]
 name = "iter_utf8"
+harness = false
+
+[[bench]]
+name = "iter_list"
 harness = false

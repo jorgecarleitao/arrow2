@@ -18,6 +18,7 @@ pub use iterator::*;
 mod mutable;
 pub use mutable::*;
 
+/// An [`Array`] semantically equivalent to `Vec<Option<Vec<Option<T>>>>` with Arrow's in-memory.
 #[derive(Debug, Clone)]
 pub struct ListArray<O: Offset> {
     data_type: DataType,
@@ -28,11 +29,13 @@ pub struct ListArray<O: Offset> {
 }
 
 impl<O: Offset> ListArray<O> {
+    /// Returns a new empty [`ListArray`].
     pub fn new_empty(data_type: DataType) -> Self {
         let values = new_empty_array(Self::get_child_type(&data_type).clone()).into();
         Self::from_data(data_type, Buffer::from(&[O::zero()]), values, None)
     }
 
+    /// Returns a new null [`ListArray`].
     #[inline]
     pub fn new_null(data_type: DataType, length: usize) -> Self {
         let child = Self::get_child_type(&data_type).clone();
@@ -44,6 +47,12 @@ impl<O: Offset> ListArray<O> {
         )
     }
 
+    /// Returns a new [`ListArray`].
+    /// # Panic
+    /// This function panics iff:
+    /// * The `data_type`'s physical type is not consistent with the offset `O`.
+    /// * The `offsets` and `values` are inconsistent
+    /// * The validity is not `None` and its length is different from `offsets.len() - 1`.
     pub fn from_data(
         data_type: DataType,
         offsets: Buffer<O>,
@@ -51,6 +60,10 @@ impl<O: Offset> ListArray<O> {
         validity: Option<Bitmap>,
     ) -> Self {
         check_offsets(&offsets, values.len());
+
+        if let Some(ref validity) = validity {
+            assert_eq!(offsets.len() - 1, validity.len());
+        }
 
         // validate data_type
         let child_data_type = Self::get_child_type(&data_type);
@@ -69,36 +82,26 @@ impl<O: Offset> ListArray<O> {
         }
     }
 
-    /// Returns the element at index `i`
-    #[inline]
-    pub fn value(&self, i: usize) -> Box<dyn Array> {
-        if self.is_null(i) {
-            new_empty_array(self.values.data_type().clone())
-        } else {
-            let offsets = self.offsets.as_slice();
-            let offset = offsets[i];
-            let offset_1 = offsets[i + 1];
-            let length = (offset_1 - offset).to_usize();
-
-            self.values.slice(offset.to_usize(), length)
-        }
-    }
-
-    /// Returns the element at index `i` as &str
-    /// # Safety
-    /// Assumes that the `i < self.len`.
-    #[inline]
-    pub unsafe fn value_unchecked(&self, i: usize) -> Box<dyn Array> {
-        let offset = *self.offsets.as_ptr().add(i);
-        let offset_1 = *self.offsets.as_ptr().add(i + 1);
-        let length = (offset_1 - offset).to_usize();
-
-        self.values.slice(offset.to_usize(), length)
-    }
-
+    /// Returns a slice of this [`ListArray`].
+    /// # Panics
+    /// panics iff `offset + length >= self.len()`
     pub fn slice(&self, offset: usize, length: usize) -> Self {
-        let validity = self.validity.clone().map(|x| x.slice(offset, length));
-        let offsets = self.offsets.clone().slice(offset, length + 1);
+        assert!(
+            offset + length <= self.len(),
+            "the offset of the new Buffer cannot exceed the existing length"
+        );
+        unsafe { self.slice_unchecked(offset, length) }
+    }
+
+    /// Returns a slice of this [`ListArray`].
+    /// # Safety
+    /// The caller must ensure that `offset + length < self.len()`.
+    pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
+        let validity = self
+            .validity
+            .clone()
+            .map(|x| x.slice_unchecked(offset, length));
+        let offsets = self.offsets.clone().slice_unchecked(offset, length + 1);
         Self {
             data_type: self.data_type.clone(),
             offsets,
@@ -106,16 +109,6 @@ impl<O: Offset> ListArray<O> {
             validity,
             offset: self.offset + offset,
         }
-    }
-
-    #[inline]
-    pub fn offsets(&self) -> &Buffer<O> {
-        &self.offsets
-    }
-
-    #[inline]
-    pub fn values(&self) -> &Arc<dyn Array> {
-        &self.values
     }
 
     /// Sets the validity bitmap on this [`ListArray`].
@@ -131,7 +124,54 @@ impl<O: Offset> ListArray<O> {
     }
 }
 
+// Accessors
 impl<O: Offset> ListArray<O> {
+    /// Returns the element at index `i`
+    #[inline]
+    pub fn value(&self, i: usize) -> Box<dyn Array> {
+        let offset = self.offsets[i];
+        let offset_1 = self.offsets[i + 1];
+        let length = (offset_1 - offset).to_usize();
+
+        // Safety:
+        // One of the invariants of the struct
+        // is that offsets are in bounds
+        unsafe { self.values.slice_unchecked(offset.to_usize(), length) }
+    }
+
+    /// Returns the element at index `i` as &str
+    /// # Safety
+    /// Assumes that the `i < self.len`.
+    #[inline]
+    pub unsafe fn value_unchecked(&self, i: usize) -> Box<dyn Array> {
+        let offset = *self.offsets.as_ptr().add(i);
+        let offset_1 = *self.offsets.as_ptr().add(i + 1);
+        let length = (offset_1 - offset).to_usize();
+
+        self.values.slice_unchecked(offset.to_usize(), length)
+    }
+
+    /// The optional validity.
+    #[inline]
+    pub fn validity(&self) -> Option<&Bitmap> {
+        self.validity.as_ref()
+    }
+
+    /// The offsets [`Buffer`].
+    #[inline]
+    pub fn offsets(&self) -> &Buffer<O> {
+        &self.offsets
+    }
+
+    /// The values.
+    #[inline]
+    pub fn values(&self) -> &Arc<dyn Array> {
+        &self.values
+    }
+}
+
+impl<O: Offset> ListArray<O> {
+    /// Returns a default [`DataType`]: inner field is named "item" and is nullable
     pub fn default_datatype(data_type: DataType) -> DataType {
         let field = Box::new(Field::new("item", data_type, true));
         if O::is_large() {
@@ -141,22 +181,26 @@ impl<O: Offset> ListArray<O> {
         }
     }
 
+    /// Returns a the inner [`Field`]
+    /// # Panics
+    /// Panics iff the logical type is not consistent with this struct.
     pub fn get_child_field(data_type: &DataType) -> &Field {
         if O::is_large() {
-            match data_type {
+            match data_type.to_logical_type() {
                 DataType::LargeList(child) => child.as_ref(),
-                DataType::Extension(_, child, _) => Self::get_child_field(child),
-                _ => panic!("Wrong DataType"),
+                _ => panic!("ListArray<i64> expects DataType::List or DataType::LargeList"),
             }
         } else {
-            match data_type {
+            match data_type.to_logical_type() {
                 DataType::List(child) => child.as_ref(),
-                DataType::Extension(_, child, _) => Self::get_child_field(child),
-                _ => panic!("Wrong DataType"),
+                _ => panic!("ListArray<i32> expects DataType::List or DataType::List"),
             }
         }
     }
 
+    /// Returns a the inner [`DataType`]
+    /// # Panics
+    /// Panics iff the logical type is not consistent with this struct.
     pub fn get_child_type(data_type: &DataType) -> &DataType {
         Self::get_child_field(data_type).data_type()
     }
@@ -179,12 +223,15 @@ impl<O: Offset> Array for ListArray<O> {
     }
 
     #[inline]
-    fn validity(&self) -> &Option<Bitmap> {
-        &self.validity
+    fn validity(&self) -> Option<&Bitmap> {
+        self.validity.as_ref()
     }
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
+    }
+    unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
+        Box::new(self.slice_unchecked(offset, length))
     }
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.with_validity(validity))

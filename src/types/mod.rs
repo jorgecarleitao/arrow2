@@ -1,4 +1,5 @@
-//! traits to handle _all native types_ used in this crate.
+//! Traits and implementations to handle _all types_ used in this crate.
+//!
 //! Most physical types used in this crate are native Rust types, like `i32`.
 //! The most important trait is [`NativeType`], the generic trait of [`crate::array::PrimitiveArray`].
 //!
@@ -66,11 +67,19 @@ pub unsafe trait NativeType:
     + Sized
     + 'static
 {
-    /// Type denoting its representation as bytes
-    type Bytes: AsRef<[u8]> + for<'a> TryFrom<&'a [u8]>;
+    /// Type denoting its representation as bytes.
+    /// This must be `[u8; N]` where `N = size_of::<T>`.
+    type Bytes: AsRef<[u8]>
+        + std::ops::Index<usize, Output = u8>
+        + std::ops::IndexMut<usize, Output = u8>
+        + for<'a> TryFrom<&'a [u8]>
+        + std::fmt::Debug;
 
     /// To bytes in little endian
     fn to_le_bytes(&self) -> Self::Bytes;
+
+    /// To bytes in native endian
+    fn to_ne_bytes(&self) -> Self::Bytes;
 
     /// To bytes in big endian
     fn to_be_bytes(&self) -> Self::Bytes;
@@ -91,6 +100,11 @@ macro_rules! native {
             #[inline]
             fn to_be_bytes(&self) -> Self::Bytes {
                 Self::to_be_bytes(*self)
+            }
+
+            #[inline]
+            fn to_ne_bytes(&self) -> Self::Bytes {
+                Self::to_ne_bytes(*self)
             }
 
             #[inline]
@@ -159,6 +173,22 @@ unsafe impl NativeType for days_ms {
     fn to_le_bytes(&self) -> Self::Bytes {
         let days = self.0[0].to_le_bytes();
         let ms = self.0[1].to_le_bytes();
+        let mut result = [0; 8];
+        result[0] = days[0];
+        result[1] = days[1];
+        result[2] = days[2];
+        result[3] = days[3];
+        result[4] = ms[0];
+        result[5] = ms[1];
+        result[6] = ms[2];
+        result[7] = ms[3];
+        result
+    }
+
+    #[inline]
+    fn to_ne_bytes(&self) -> Self::Bytes {
+        let days = self.0[0].to_ne_bytes();
+        let ms = self.0[1].to_ne_bytes();
         let mut result = [0; 8];
         result[0] = days[0];
         result[1] = days[1];
@@ -260,6 +290,26 @@ unsafe impl NativeType for months_days_ns {
     }
 
     #[inline]
+    fn to_ne_bytes(&self) -> Self::Bytes {
+        let months = self.months().to_ne_bytes();
+        let days = self.days().to_ne_bytes();
+        let ns = self.ns().to_ne_bytes();
+        let mut result = [0; 16];
+        result[0] = months[0];
+        result[1] = months[1];
+        result[2] = months[2];
+        result[3] = months[3];
+        result[4] = days[0];
+        result[5] = days[1];
+        result[6] = days[2];
+        result[7] = days[3];
+        (0..8).for_each(|i| {
+            result[8 + i] = ns[i];
+        });
+        result
+    }
+
+    #[inline]
     fn to_be_bytes(&self) -> Self::Bytes {
         let months = self.months().to_be_bytes();
         let days = self.days().to_be_bytes();
@@ -309,21 +359,25 @@ create_relation!(
 );
 
 impl months_days_ns {
+    /// A new [`months_days_ns`].
     #[inline]
     pub fn new(months: i32, days: i32, nanoseconds: i64) -> Self {
         Self(months, days, nanoseconds)
     }
 
+    /// The number of months
     #[inline]
     pub fn months(&self) -> i32 {
         self.0
     }
 
+    /// The number of days
     #[inline]
     pub fn days(&self) -> i32 {
         self.1
     }
 
+    /// The number of nanoseconds
     #[inline]
     pub fn ns(&self) -> i64 {
         self.2

@@ -16,12 +16,12 @@
 // under the License.
 
 use crate::{
-    array::{Array, BooleanArray, Offset, Utf8Array},
+    array::{BooleanArray, Offset, Utf8Array},
     bitmap::Bitmap,
     datatypes::DataType,
 };
 
-pub fn combine_validities(lhs: &Option<Bitmap>, rhs: &Option<Bitmap>) -> Option<Bitmap> {
+pub fn combine_validities(lhs: Option<&Bitmap>, rhs: Option<&Bitmap>) -> Option<Bitmap> {
     match (lhs, rhs) {
         (Some(lhs), None) => Some(lhs.clone()),
         (None, Some(rhs)) => Some(rhs.clone()),
@@ -34,7 +34,7 @@ pub fn unary_utf8_boolean<O: Offset, F: Fn(&str) -> bool>(
     values: &Utf8Array<O>,
     op: F,
 ) -> BooleanArray {
-    let validity = values.validity().clone();
+    let validity = values.validity().cloned();
 
     let iterator = values.iter().map(|value| {
         if value.is_none() {

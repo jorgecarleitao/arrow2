@@ -1,3 +1,5 @@
+use proptest::prelude::*;
+
 use std::io::Cursor;
 use std::sync::Arc;
 
@@ -175,7 +177,7 @@ fn float32() -> Result<()> {
 }
 
 #[test]
-fn binary() -> Result<()> {
+fn deserialize_binary() -> Result<()> {
     let input = vec!["aa", "bb"];
     let input = input.join("\n");
 
@@ -184,4 +186,42 @@ fn binary() -> Result<()> {
     let result = test_deserialize(&input, DataType::Binary)?;
     assert_eq!(expected, result.as_ref());
     Ok(())
+}
+
+#[test]
+fn deserialize_timestamp() -> Result<()> {
+    let input = vec!["1996-12-19T16:34:57-02:00", "1996-12-19T16:34:58-02:00"];
+    let input = input.join("\n");
+
+    let data_type = DataType::Timestamp(TimeUnit::Millisecond, Some("-01:00".to_string()));
+
+    let expected = Int64Array::from([Some(851020497000), Some(851020498000)]).to(data_type.clone());
+
+    let result = test_deserialize(&input, data_type)?;
+    assert_eq!(expected, result.as_ref());
+    Ok(())
+}
+
+proptest! {
+    #[test]
+    #[cfg_attr(miri, ignore)] // miri and proptest do not work well :(
+    fn i64(v in any::<i64>()) {
+        assert_eq!(infer(v.to_string().as_bytes()), DataType::Int64);
+    }
+}
+
+proptest! {
+    #[test]
+    #[cfg_attr(miri, ignore)] // miri and proptest do not work well :(
+    fn utf8(v in "a.*") {
+        assert_eq!(infer(v.as_bytes()), DataType::Utf8);
+    }
+}
+
+proptest! {
+    #[test]
+    #[cfg_attr(miri, ignore)] // miri and proptest do not work well :(
+    fn dates(v in "1996-12-19T16:3[0-9]:57-02:00") {
+        assert_eq!(infer(v.as_bytes()), DataType::Timestamp(TimeUnit::Millisecond, Some("-02:00".to_string())));
+    }
 }

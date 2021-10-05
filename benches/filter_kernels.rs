@@ -22,8 +22,8 @@ use arrow2::array::*;
 use arrow2::compute::filter::{build_filter, filter, filter_record_batch, Filter};
 use arrow2::datatypes::{DataType, Field, Schema};
 use arrow2::record_batch::RecordBatch;
-use arrow2::util::
 
+use arrow2::util::bench_util::{create_boolean_array, create_primitive_array, create_string_array};
 use criterion::{criterion_group, criterion_main, Criterion};
 
 fn bench_filter(data_array: &dyn Array, filter_array: &BooleanArray) {

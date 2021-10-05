@@ -250,11 +250,11 @@ where
         + Rem<Output = T>,
 {
     match op {
-        Operator::Add => basic::add::add(lhs, rhs),
-        Operator::Subtract => basic::sub::sub(lhs, rhs),
-        Operator::Multiply => basic::mul::mul(lhs, rhs),
-        Operator::Divide => basic::div::div(lhs, rhs),
-        Operator::Remainder => basic::rem::rem(lhs, rhs),
+        Operator::Add => basic::add(lhs, rhs),
+        Operator::Subtract => basic::sub(lhs, rhs),
+        Operator::Multiply => basic::mul(lhs, rhs),
+        Operator::Divide => basic::div(lhs, rhs),
+        Operator::Remainder => basic::rem(lhs, rhs),
     }
 }
 
@@ -275,11 +275,11 @@ where
         + NumCast,
 {
     match op {
-        Operator::Add => Ok(basic::add::add_scalar(lhs, rhs)),
-        Operator::Subtract => Ok(basic::sub::sub_scalar(lhs, rhs)),
-        Operator::Multiply => Ok(basic::mul::mul_scalar(lhs, rhs)),
-        Operator::Divide => Ok(basic::div::div_scalar(lhs, rhs)),
-        Operator::Remainder => Ok(basic::rem::rem_scalar(lhs, rhs)),
+        Operator::Add => Ok(basic::add_scalar(lhs, rhs)),
+        Operator::Subtract => Ok(basic::sub_scalar(lhs, rhs)),
+        Operator::Multiply => Ok(basic::mul_scalar(lhs, rhs)),
+        Operator::Divide => Ok(basic::div_scalar(lhs, rhs)),
+        Operator::Remainder => Ok(basic::rem_scalar(lhs, rhs)),
     }
 }
 

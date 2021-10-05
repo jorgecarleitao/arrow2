@@ -1,8 +1,5 @@
 use std::io::Read;
 
-use lazy_static::lazy_static;
-use regex::{Regex, RegexBuilder};
-
 use super::{ByteRecord, Reader};
 
 use crate::{
@@ -10,6 +7,7 @@ use crate::{
     error::{ArrowError, Result},
 };
 
+/// Returns a new [`Schema`] whereby the fields are selected based on `projection`.
 pub fn projected_schema(schema: &Schema, projection: Option<&[usize]>) -> Schema {
     match &projection {
         Some(projection) => {
@@ -50,38 +48,4 @@ pub fn read_rows<R: Read>(
         row_number += 1;
     }
     Ok(row_number)
-}
-
-lazy_static! {
-    static ref DECIMAL_RE: Regex = Regex::new(r"^-?(\d+\.\d+)$").unwrap();
-    static ref INTEGER_RE: Regex = Regex::new(r"^-?(\d+)$").unwrap();
-    static ref BOOLEAN_RE: Regex = RegexBuilder::new(r"^(true)$|^(false)$")
-        .case_insensitive(true)
-        .build()
-        .unwrap();
-    static ref DATE_RE: Regex = Regex::new(r"^\d{4}-\d\d-\d\d$").unwrap();
-    static ref DATETIME_RE: Regex = Regex::new(r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d$").unwrap();
-}
-
-/// Infer the data type of a record
-pub fn infer(string: &str) -> DataType {
-    // when quoting is enabled in the reader, these quotes aren't escaped, we default to
-    // Utf8 for them
-    if string.starts_with('"') {
-        return DataType::Utf8;
-    }
-    // match regex in a particular order
-    if BOOLEAN_RE.is_match(string) {
-        DataType::Boolean
-    } else if DECIMAL_RE.is_match(string) {
-        DataType::Float64
-    } else if INTEGER_RE.is_match(string) {
-        DataType::Int64
-    } else if DATETIME_RE.is_match(string) {
-        DataType::Date64
-    } else if DATE_RE.is_match(string) {
-        DataType::Date32
-    } else {
-        DataType::Utf8
-    }
 }

@@ -20,12 +20,11 @@ pub struct GrowableBinary<'a, O: Offset> {
     values: MutableBuffer<u8>,
     offsets: MutableBuffer<O>,
     length: O, // always equal to the last offset at `offsets`.
-    // function used to extend nulls from arrays. This function's lifetime is bound to the array
-    // because it reads nulls from it.
     extend_null_bits: Vec<ExtendNullBits<'a>>,
 }
 
 impl<'a, O: Offset> GrowableBinary<'a, O> {
+    /// Creates a new [`GrowableBinary`] bound to `arrays` with a pre-allocated `capacity`.
     /// # Panics
     /// If `arrays` is empty.
     pub fn new(arrays: Vec<&'a BinaryArray<O>>, mut use_validity: bool, capacity: usize) -> Self {

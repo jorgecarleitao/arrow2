@@ -61,12 +61,13 @@ pub struct GrowableList<'a, O: Offset> {
     values: Box<dyn Growable<'a> + 'a>,
     offsets: MutableBuffer<O>,
     last_offset: O, // always equal to the last offset at `offsets`.
-    // function used to extend nulls from arrays. This function's lifetime is bound to the array
-    // because it reads nulls from it.
     extend_null_bits: Vec<ExtendNullBits<'a>>,
 }
 
 impl<'a, O: Offset> GrowableList<'a, O> {
+    /// Creates a new [`GrowableList`] bound to `arrays` with a pre-allocated `capacity`.
+    /// # Panics
+    /// If `arrays` is empty.
     pub fn new(arrays: Vec<&'a ListArray<O>>, mut use_validity: bool, capacity: usize) -> Self {
         // if any of the arrays has nulls, insertions from any array requires setting bits
         // as there is at least one array with nulls.
