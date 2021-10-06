@@ -1,10 +1,12 @@
 # High-level API
 
-The simplest way to think about an arrow `Array` is that it represents
-`Vec<Option<T>>` and has a logical type (see [metadata](../metadata.md))) associated with it.
+Arrow core trait the `Array`, which you can think of as representing `Arc<Vec<Option<T>>`
+with associated metadata (see [metadata](../metadata.md))).
+Contrarily to `Arc<Vec<Option<T>>`, arrays in this crate are represented in such a way
+that they can be zero-copied to any other Arrow implementation via foreign interfaces (FFI).
 
-Probably the simplest array in this crate is `PrimitiveArray<T>`. It can be constructed
-from a slice as follows:
+Probably the simplest `Array` in this crate is the `PrimitiveArray<T>`. It can be
+constructed as from a slice of option values,
 
 ```rust
 # use arrow2::array::{Array, PrimitiveArray};
@@ -72,7 +74,7 @@ let array = PrimitiveArray::<i32>::from_slice([1, 0, 123]);
 assert_eq!(array.data_type(), &DataType::Int32);
 # }
 ```
-they can be cheaply converted to via `.to(DataType)`.
+they can be cheaply (`O(1)`) converted to via `.to(DataType)`.
 
 The following arrays are supported:
 
@@ -88,11 +90,10 @@ The following arrays are supported:
 * `UnionArray` (every row has a different logical type)
 * `DictionaryArray<K>` (nested array with encoded values)
 
-## Dynamic Array
+## Array as a trait object
 
-There is a more powerful aspect of arrow arrays, and that is that they all
-implement the trait `Array` and can be cast to `&dyn Array`, i.e. they can be turned into
-a trait object. This enables arrays to have types that are dynamic in nature.
+`Array` is object safe, and all implementations of `Array` and can be casted
+to `&dyn Array`, which enables run-time nesting.
 
 ```rust
 # use arrow2::array::{Array, PrimitiveArray};
@@ -106,7 +107,7 @@ let a: &dyn Array = &a;
 
 Given a trait object `array: &dyn Array`, we know its physical type via
 `PhysicalType: array.data_type().to_physical_type()`, which we use to downcast the array
-to its concrete type:
+to its concrete physical type:
 
 ```rust
 # use arrow2::array::{Array, PrimitiveArray};
@@ -135,6 +136,7 @@ an each implementation of `Array` (a struct):
 | `FixedSizeList`   | `FixedSizeListArray`   |
 | `Struct`          | `StructArray`          |
 | `Union`           | `UnionArray`           |
+| `Map`             | `MapArray`             |
 | `Dictionary(_)`   | `DictionaryArray<_>`   |
 
 where `_` represents each of the variants (e.g. `PrimitiveType::Int32 <-> i32`).
@@ -174,13 +176,18 @@ and how to make them even more efficient.
 This crate's APIs are generally split into two patterns: whether an operation leverages
 contiguous memory regions or whether it does not.
 
-If yes, then use:
+What this means is that certain operations can be performed irrespectively of whether a value
+is "null" or not (e.g. `PrimitiveArray<i32> + i32` can be applied to _all_ values via SIMD and 
+only copy the validity bitmap independently).
+
+When an operation benefits from such arrangement, it is advantageous to use
 
 * `Buffer::from_iter`
 * `Buffer::from_trusted_len_iter`
 * `Buffer::try_from_trusted_len_iter`
 
-If not, then use the builder API, such as `MutablePrimitiveArray<T>`, `MutableUtf8Array<O>` or `MutableListArray`.
+If not, then use the `MutableArray` API, such as
+`MutablePrimitiveArray<T>`, `MutableUtf8Array<O>` or `MutableListArray`.
 
 We have seen examples where the latter API was used. In the last example of this page
 you will be introduced to an example of using the former for SIMD.
@@ -209,14 +216,23 @@ Like `FromIterator`, this crate contains two sets of APIs to iterate over data. 
 an array `array: &PrimitiveArray<T>`, the following applies:
 
 1. If you need to iterate over `Option<&T>`, use `array.iter()`
-2. If you can operate over the values and validity independently, use `array.values() -> &Buffer<T>` and `array.validity() -> Option<&Bitmap>`
+2. If you can operate over the values and validity independently,
+   use `array.values() -> &Buffer<T>` and `array.validity() -> Option<&Bitmap>`
 
-Note that case 1 is useful when e.g. you want to perform an operation that depends on both validity and values, while the latter is suitable for SIMD and copies, as they return contiguous memory regions (buffers and bitmaps). We will see below how to leverage these APIs.
+Note that case 1 is useful when e.g. you want to perform an operation that depends on both
+validity and values, while the latter is suitable for SIMD and copies, as they return
+contiguous memory regions (buffers and bitmaps). We will see below how to leverage these APIs.
 
-This idea holds more generally in this crate's arrays: `values()` returns something that has a contiguous in-memory representation, while `iter()` returns items taking validity into account. To get an iterator over contiguous values, use `array.values().iter()`.
+This idea holds more generally in this crate's arrays: `values()` returns something that has
+a contiguous in-memory representation, while `iter()` returns items taking validity into account. 
+To get an iterator over contiguous values, use `array.values().iter()`.
 
 There is one last API that is worth mentioning, and that is `Bitmap::chunks`. When performing
-bitwise operations, it is often more performant to operate on chunks of bits instead of single bits. `chunks` offers a `TrustedLen` of `u64` with the bits + an extra `u64` remainder. We expose two functions, `unary(Bitmap, Fn) -> Bitmap` and `binary(Bitmap, Bitmap, Fn) -> Bitmap` that use this API to efficiently perform bitmap operations.
+bitwise operations, it is often more performant to operate on chunks of bits
+instead of single bits. `chunks` offers a `TrustedLen` of `u64` with the bits
++ an extra `u64` remainder. We expose two functions, `unary(Bitmap, Fn) -> Bitmap`
+and `binary(Bitmap, Bitmap, Fn) -> Bitmap` that use this API to efficiently
+perform bitmap operations.
 
 ## Vectorized operations
 
@@ -238,18 +254,23 @@ where
     O: NativeType,
     F: Fn(I) -> O,
 {
+    // create the iterator over _all_ values
     let values = array.values().iter().map(|v| op(*v));
     let values = Buffer::from_trusted_len_iter(values);
 
+    // create the new array, cloning its validity
     PrimitiveArray::<O>::from_data(data_type.clone(), values, array.validity().cloned())
 }
 ```
 
 Some notes:
 
-1. We used `array.values()`, as described above: this operation leverages a contiguous memory region.
+1. We used `array.values()`, as described above: this operation leverages a
+   contiguous memory region.
 
 2. We leveraged normal rust iterators for the operation.
 
 3. We used `op` on the array's values irrespectively of their validity,
-and cloned its validity. This approach is suitable for operations whose branching off is more expensive than operating over all values. If the operation is expensive, then using `PrimitiveArray::<O>::from_trusted_len_iter` is likely faster.
+   and cloned its validity. This approach is suitable for operations whose branching off
+   is more expensive than operating over all values. If the operation is expensive,
+   then using `PrimitiveArray::<O>::from_trusted_len_iter` is likely faster.

@@ -1,3 +1,4 @@
+#![warn(missing_docs)]
 //! contains the [`Scalar`] trait object representing individual items of [`Array`](crate::array::Array)s,
 //! as well as concrete implementations such as [`BooleanScalar`].
 use std::any::Any;
@@ -20,12 +21,16 @@ pub use null::*;
 mod struct_;
 pub use struct_::*;
 
-/// Trait object declaring an optional value with a logical type.
+/// Trait object declaring an optional value with a [`DataType`].
+/// This strait is often used in APIs that accept multiple scalar types.
 pub trait Scalar: std::fmt::Debug {
+    /// convert itself to
     fn as_any(&self) -> &dyn Any;
 
+    /// whether it is valid
     fn is_valid(&self) -> bool;
 
+    /// the logical type.
     fn data_type(&self) -> &DataType;
 }
 

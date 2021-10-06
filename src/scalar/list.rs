@@ -24,6 +24,7 @@ impl<O: Offset> PartialEq for ListScalar<O> {
 }
 
 impl<O: Offset> ListScalar<O> {
+    /// returns a new [`ListScalar`]
     /// # Panics
     /// iff
     /// * the `data_type` is not `List` or `LargeList` (depending on this scalar's offset `O`)
@@ -46,6 +47,7 @@ impl<O: Offset> ListScalar<O> {
         }
     }
 
+    /// The values of the [`ListScalar`]
     pub fn values(&self) -> &Arc<dyn Array> {
         &self.values
     }

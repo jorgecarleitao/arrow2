@@ -165,7 +165,7 @@ impl<O: Offset> MutableUtf8Array<O> {
         Arc::new(a)
     }
 
-    /// Shrinks the capacity of the [`MutableUtf8`] to fit its current length.
+    /// Shrinks the capacity of the [`MutableUtf8Array`] to fit its current length.
     pub fn shrink_to_fit(&mut self) {
         self.values.shrink_to_fit();
         self.offsets.shrink_to_fit();

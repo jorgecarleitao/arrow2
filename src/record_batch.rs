@@ -51,7 +51,7 @@ impl RecordBatch {
     /// Creates a [`RecordBatch`] from a schema and columns, with additional options,
     /// such as whether to strictly validate field names.
     ///
-    /// See [`fn@try_new`] for the expected conditions.
+    /// See [`Self::try_new()`] for the expected conditions.
     pub fn try_new_with_options(
         schema: Arc<Schema>,
         columns: Vec<Arc<dyn Array>>,

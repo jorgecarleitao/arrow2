@@ -1,17 +1,24 @@
 # Low-level API
 
-The starting point of this crate is the idea that data must be stored in memory in a specific arrangement to be interoperable with Arrow's ecosystem. With this in mind, this crate does not use `Vec` but instead has its own containers to store data, including sharing and consuming it via FFI.
+The starting point of this crate is the idea that data is stored in memory in a specific arrangement to be interoperable with Arrow's ecosystem.
 
-The most important design decision of this crate is that contiguous regions are shared via an `Arc`. In this context, the operation of slicing a memory region is `O(1)` because it corresponds to changing an offset and length. The tradeoff is that once under an `Arc`, memory regions are immutable.
+The most important design aspect of this crate is that contiguous regions are shared via an
+`Arc`. In this context, the operation of slicing a memory region is `O(1)` because it
+corresponds to changing an offset and length. The tradeoff is that once under
+an `Arc`, memory regions are immutable.
 
-The second important aspect is that Arrow has two main types of data buffers: bitmaps, whose offsets are measured in bits, and byte types (such as `i32`), whose offsets are measured in bytes. With this in mind, this crate has 2 main types of containers of contiguous memory regions:
+The second most important aspect is that Arrow has two main types of data buffers: bitmaps,
+whose offsets are measured in bits, and byte types (such as `i32`), whose offsets are
+measured in bytes. With this in mind, this crate has 2 main types of containers of
+contiguous memory regions:
 
 * `Buffer<T>`: handle contiguous memory regions of type T whose offsets are measured in items
 * `Bitmap`: handle contiguous memory regions of bits whose offsets are measured in bits
 
 These hold _all_ data-related memory in this crate.
 
-Due to their intrinsic immutability, each container has a corresponding mutable (and non-shareable) variant:
+Due to their intrinsic immutability, each container has a corresponding mutable
+(and non-shareable) variant:
 
 * `MutableBuffer<T>`
 * `MutableBitmap`
@@ -44,7 +51,8 @@ assert_eq!(x.as_slice(), &[0, 5, 2, 10])
 ```
 
 The following demonstrates how to efficiently
-perform an operation from an iterator of [TrustedLen](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html):
+perform an operation from an iterator of
+[TrustedLen](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html):
 
 ```rust
 # use arrow2::buffer::MutableBuffer;
@@ -65,6 +73,7 @@ the following physical types:
 * `u8-u64`
 * `f32` and `f64`
 * `arrow2::types::days_ms`
+* `arrow2::types::months_days_ns`
 
 This is because the arrow specification only supports the above Rust types; all other complex
 types supported by arrow are built on top of these types, which enables Arrow to be a highly

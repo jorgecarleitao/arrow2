@@ -2,6 +2,7 @@ use crate::datatypes::DataType;
 
 use super::Scalar;
 
+/// The [`Scalar`] implementation of a boolean.
 #[derive(Debug, Clone)]
 pub struct BooleanScalar {
     value: bool,
@@ -15,6 +16,7 @@ impl PartialEq for BooleanScalar {
 }
 
 impl BooleanScalar {
+    /// Returns a new [`BooleanScalar`]
     #[inline]
     pub fn new(v: Option<bool>) -> Self {
         let is_valid = v.is_some();
@@ -24,6 +26,7 @@ impl BooleanScalar {
         }
     }
 
+    /// The value irrespectively of the validity
     #[inline]
     pub fn value(&self) -> bool {
         self.value

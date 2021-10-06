@@ -4,6 +4,7 @@ use crate::datatypes::DataType;
 
 use super::Scalar;
 
+/// A single entry of a [`crate::array::StructArray`].
 #[derive(Debug, Clone)]
 pub struct StructScalar {
     values: Vec<Arc<dyn Scalar>>,
@@ -20,6 +21,7 @@ impl PartialEq for StructScalar {
 }
 
 impl StructScalar {
+    /// Returns a new [`StructScalar`]
     #[inline]
     pub fn new(data_type: DataType, values: Option<Vec<Arc<dyn Scalar>>>) -> Self {
         let is_valid = values.is_some();
@@ -30,6 +32,7 @@ impl StructScalar {
         }
     }
 
+    /// Returns the values irrespectively of the validity.
     #[inline]
     pub fn values(&self) -> &[Arc<dyn Scalar>] {
         &self.values

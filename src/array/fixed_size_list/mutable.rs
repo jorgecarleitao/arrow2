@@ -74,7 +74,7 @@ impl<M: MutableArray> MutableFixedSizeListArray<M> {
             None => self.init_validity(),
         }
     }
-    /// Shrinks the capacity of the [`MutableFixedSizeList`] to fit its current length.
+    /// Shrinks the capacity of the [`MutableFixedSizeListArray`] to fit its current length.
     pub fn shrink_to_fit(&mut self) {
         self.values.shrink_to_fit();
         if let Some(validity) = &mut self.validity {
