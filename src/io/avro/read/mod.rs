@@ -3,10 +3,11 @@
 use std::io::Read;
 use std::sync::Arc;
 
-use avro_rs::Codec;
+use avro_rs::{Codec, Schema as AvroSchema};
 use streaming_iterator::StreamingIterator;
 
 mod deserialize;
+mod nested;
 mod schema;
 mod util;
 
@@ -15,9 +16,19 @@ use crate::error::{ArrowError, Result};
 use crate::record_batch::RecordBatch;
 
 /// Reads the avro metadata from `reader` into a [`Schema`], [`Codec`] and magic marker.
-pub fn read_metadata<R: std::io::Read>(reader: &mut R) -> Result<(Schema, Codec, [u8; 16])> {
-    let (schema, codec, marker) = util::read_schema(reader)?;
-    Ok((schema::convert_schema(&schema)?, codec, marker))
+pub fn read_metadata<R: std::io::Read>(
+    reader: &mut R,
+) -> Result<(Vec<AvroSchema>, Schema, Codec, [u8; 16])> {
+    let (avro_schema, codec, marker) = util::read_schema(reader)?;
+    let schema = schema::convert_schema(&avro_schema)?;
+
+    let avro_schema = if let AvroSchema::Record { fields, .. } = avro_schema {
+        fields.into_iter().map(|x| x.schema).collect()
+    } else {
+        panic!()
+    };
+
+    Ok((avro_schema, schema, codec, marker))
 }
 
 fn read_size<R: Read>(reader: &mut R) -> Result<(usize, usize)> {
@@ -157,12 +168,21 @@ impl<'a, R: Read> StreamingIterator for Decompressor<'a, R> {
 pub struct Reader<'a, R: Read> {
     iter: Decompressor<'a, R>,
     schema: Arc<Schema>,
+    avro_schemas: Vec<AvroSchema>,
 }
 
 impl<'a, R: Read> Reader<'a, R> {
     /// Creates a new [`Reader`].
-    pub fn new(iter: Decompressor<'a, R>, schema: Arc<Schema>) -> Self {
-        Self { iter, schema }
+    pub fn new(
+        iter: Decompressor<'a, R>,
+        avro_schemas: Vec<AvroSchema>,
+        schema: Arc<Schema>,
+    ) -> Self {
+        Self {
+            iter,
+            avro_schemas,
+            schema,
+        }
     }
 }
 
@@ -171,7 +191,12 @@ impl<'a, R: Read> Iterator for Reader<'a, R> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some((data, rows)) = self.iter.next() {
-            Some(deserialize::deserialize(data, *rows, self.schema.clone()))
+            Some(deserialize::deserialize(
+                data,
+                *rows,
+                self.schema.clone(),
+                &self.avro_schemas,
+            ))
         } else {
             None
         }

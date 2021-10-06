@@ -129,6 +129,12 @@ impl MutableFixedSizeBinaryArray {
         Ok(primitive)
     }
 
+    /// returns the (fixed) size of the [`MutableFixedSizeBinaryArray`].
+    #[inline]
+    pub fn size(&self) -> usize {
+        self.size
+    }
+
     fn init_validity(&mut self) {
         let mut validity = MutableBitmap::new();
         validity.extend_constant(self.len(), true);
