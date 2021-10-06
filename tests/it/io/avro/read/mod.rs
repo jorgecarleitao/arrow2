@@ -20,6 +20,11 @@ fn schema() -> (AvroSchema, Schema) {
             {"name": "a", "type": "long"},
             {"name": "b", "type": "string"},
             {"name": "c", "type": "int"},
+            {
+                "name": "date",
+                "type": "int",
+                "logicalType": "date"
+            },
             {"name": "d", "type": "bytes"},
             {"name": "e", "type": "double"},
             {"name": "f", "type": "boolean"},
@@ -52,6 +57,7 @@ fn schema() -> (AvroSchema, Schema) {
         Field::new("a", DataType::Int64, false),
         Field::new("b", DataType::Utf8, false),
         Field::new("c", DataType::Int32, false),
+        Field::new("date", DataType::Date32, false),
         Field::new("d", DataType::Binary, false),
         Field::new("e", DataType::Float64, false),
         Field::new("f", DataType::Boolean, false),
@@ -86,6 +92,7 @@ fn write() -> Result<(Vec<u8>, RecordBatch)> {
     record.put("a", 27i64);
     record.put("b", "foo");
     record.put("c", 1i32);
+    record.put("date", 1i32);
     record.put("d", b"foo".as_ref());
     record.put("e", 1.0f64);
     record.put("f", true);
@@ -109,6 +116,7 @@ fn write() -> Result<(Vec<u8>, RecordBatch)> {
     record.put("b", "bar");
     record.put("a", 47i64);
     record.put("c", 1i32);
+    record.put("date", 2i32);
     record.put("d", b"bar".as_ref());
     record.put("e", 2.0f64);
     record.put("f", false);
@@ -140,6 +148,7 @@ fn write() -> Result<(Vec<u8>, RecordBatch)> {
         Arc::new(Int64Array::from_slice([27, 47])) as Arc<dyn Array>,
         Arc::new(Utf8Array::<i32>::from_slice(["foo", "bar"])) as Arc<dyn Array>,
         Arc::new(Int32Array::from_slice([1, 1])) as Arc<dyn Array>,
+        Arc::new(Int32Array::from_slice([1, 2]).to(DataType::Date32)) as Arc<dyn Array>,
         Arc::new(BinaryArray::<i32>::from_slice([b"foo", b"bar"])) as Arc<dyn Array>,
         Arc::new(PrimitiveArray::<f64>::from_slice([1.0, 2.0])) as Arc<dyn Array>,
         Arc::new(BooleanArray::from_slice([true, false])) as Arc<dyn Array>,
