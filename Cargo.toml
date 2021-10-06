@@ -60,7 +60,7 @@ futures = { version = "0.3", optional = true }
 # for faster hashing
 ahash = { version = "0.7", optional = true }
 
-parquet2 = { git= "https://github.com/jorgecarleitao/parquet2.git", rev="e6bd6723c876c21667c74fb75db181d99d646bc2", optional = true, default_features = false, features = ["stream"] }
+parquet2 = { version = "0.5", optional = true, default_features = false, features = ["stream"] }
 
 avro-rs = { version = "0.13", optional = true, default_features = false }
 
