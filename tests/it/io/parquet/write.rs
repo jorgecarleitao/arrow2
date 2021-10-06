@@ -366,3 +366,148 @@ fn i32_optional_v2_dict() -> Result<()> {
         Encoding::RleDictionary,
     )
 }
+
+// Decimal Testing
+#[test]
+fn decimal_9_optional_v1() -> Result<()> {
+    round_trip(
+        7,
+        true,
+        false,
+        Version::V1,
+        Compression::Uncompressed,
+        Encoding::Plain,
+    )
+}
+
+#[test]
+fn decimal_9_required_v1() -> Result<()> {
+    round_trip(
+        6,
+        false,
+        false,
+        Version::V1,
+        Compression::Uncompressed,
+        Encoding::Plain,
+    )
+}
+
+#[test]
+fn decimal_18_optional_v1() -> Result<()> {
+    round_trip(
+        8,
+        true,
+        false,
+        Version::V1,
+        Compression::Uncompressed,
+        Encoding::Plain,
+    )
+}
+
+#[test]
+fn decimal_18_required_v1() -> Result<()> {
+    round_trip(
+        7,
+        false,
+        false,
+        Version::V1,
+        Compression::Uncompressed,
+        Encoding::Plain,
+    )
+}
+
+#[test]
+fn decimal_26_optional_v1() -> Result<()> {
+    round_trip(
+        9,
+        true,
+        false,
+        Version::V1,
+        Compression::Uncompressed,
+        Encoding::Plain,
+    )
+}
+
+#[test]
+fn decimal_26_required_v1() -> Result<()> {
+    round_trip(
+        8,
+        false,
+        false,
+        Version::V1,
+        Compression::Uncompressed,
+        Encoding::Plain,
+    )
+}
+
+#[test]
+fn decimal_9_optional_v2() -> Result<()> {
+    round_trip(
+        7,
+        true,
+        false,
+        Version::V2,
+        Compression::Uncompressed,
+        Encoding::Plain,
+    )
+}
+
+#[test]
+fn decimal_9_required_v2() -> Result<()> {
+    round_trip(
+        6,
+        false,
+        false,
+        Version::V2,
+        Compression::Uncompressed,
+        Encoding::Plain,
+    )
+}
+
+#[test]
+fn decimal_18_optional_v2() -> Result<()> {
+    round_trip(
+        8,
+        true,
+        false,
+        Version::V2,
+        Compression::Uncompressed,
+        Encoding::Plain,
+    )
+}
+
+#[test]
+fn decimal_18_required_v2() -> Result<()> {
+    round_trip(
+        7,
+        false,
+        false,
+        Version::V2,
+        Compression::Uncompressed,
+        Encoding::Plain,
+    )
+}
+
+#[test]
+fn decimal_26_optional_v2() -> Result<()> {
+    round_trip(
+        9,
+        true,
+        false,
+        Version::V2,
+        Compression::Uncompressed,
+        Encoding::Plain,
+    )
+}
+
+#[test]
+fn decimal_26_required_v2() -> Result<()> {
+    round_trip(
+        8,
+        false,
+        false,
+        Version::V2,
+        Compression::Uncompressed,
+        Encoding::Plain,
+    )
+}

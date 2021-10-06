@@ -54,6 +54,7 @@ pub(super) fn statistics_from_i32(
         UInt32 => Box::new(PrimitiveStatistics::<u32>::from((stats, data_type))),
         Int8 => Box::new(PrimitiveStatistics::<i8>::from((stats, data_type))),
         Int16 => Box::new(PrimitiveStatistics::<i16>::from((stats, data_type))),
+        Decimal(_, _) => Box::new(PrimitiveStatistics::<i128>::from((stats, data_type))),
         _ => Box::new(PrimitiveStatistics::<i32>::from((stats, data_type))),
     })
 }
@@ -69,6 +70,7 @@ pub(super) fn statistics_from_i64(
         UInt64 => {
             Box::new(PrimitiveStatistics::<u64>::from((stats, data_type))) as Box<dyn Statistics>
         }
+        Decimal(_, _) => Box::new(PrimitiveStatistics::<i128>::from((stats, data_type))),
         _ => Box::new(PrimitiveStatistics::<i64>::from((stats, data_type))),
     })
 }

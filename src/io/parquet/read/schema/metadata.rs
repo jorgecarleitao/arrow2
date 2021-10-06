@@ -120,7 +120,10 @@ mod tests {
                 "bool",
                 "date",
                 "uint32",
-                "string_large"
+                "string_large",
+                "decimal_9",
+                "decimal_18",
+                "decimal_26"
             ]
         );
         Ok(())
