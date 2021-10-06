@@ -144,23 +144,6 @@ interoperability with the arrow format.</p>
 <li>a <a href="./high_level.html">high-level API</a> to operate with arrow arrays;</li>
 <li>a <a href="./metadata.html">metadata API</a> to declare and operate with logical types and metadata.</li>
 </ul>
-<h2 id="cargo-features"><a class="header" href="#cargo-features">Cargo features</a></h2>
-<p>This crate has a significant number of cargo features to reduce compilation
-time and number of dependencies. The feature <code>&quot;full&quot;</code> activates most
-functionality, such as:</p>
-<ul>
-<li><code>io_ipc</code>: to interact with the IPC format</li>
-<li><code>io_ipc_compression</code>: to read and write compressed IPC (v2)</li>
-<li><code>io_csv</code> to read and write CSV</li>
-<li><code>io_json</code> to read and write JSON</li>
-<li><code>io_parquet</code> to read and write parquet</li>
-<li><code>io_parquet_compression</code> to read and write compressed parquet</li>
-<li><code>io_print</code> to write batches to formatted ASCII tables</li>
-<li><code>compute</code> to operate on arrays (addition, sum, sort, etc.)</li>
-</ul>
-<p>The feature <code>simd</code> (not part of <code>full</code>) produces more explicit SIMD instructions
-via <a href="https://github.com/rust-lang/packed_simd"><code>packed_simd</code></a>, but requires the 
-nightly channel.</p>
 
                     </main>
 

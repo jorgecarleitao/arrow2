@@ -139,8 +139,8 @@
 has a specification, which allows languages to share data
 structures via foreign interfaces at zero cost (i.e. via pointers).
 This is known as the <a href="https://arrow.apache.org/docs/format/CDataInterface.html">C Data interface</a>.</p>
-<p>This crate supports importing from and exporting to all <code>DataType</code>s. Follow the
-example below to learn how to import and export:</p>
+<p>This crate supports importing from and exporting to all its physical types. The
+example below demonstrates how to use the API:</p>
 <pre><pre class="playground"><code class="language-rust">use arrow2::array::{Array, PrimitiveArray};
 use arrow2::datatypes::Field;
 use arrow2::error::Result;

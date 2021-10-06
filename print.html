@@ -145,25 +145,8 @@ interoperability with the arrow format.</p>
 <li>a <a href="./high_level.html">high-level API</a> to operate with arrow arrays;</li>
 <li>a <a href="./metadata.html">metadata API</a> to declare and operate with logical types and metadata.</li>
 </ul>
-<h2 id="cargo-features"><a class="header" href="#cargo-features">Cargo features</a></h2>
-<p>This crate has a significant number of cargo features to reduce compilation
-time and number of dependencies. The feature <code>&quot;full&quot;</code> activates most
-functionality, such as:</p>
-<ul>
-<li><code>io_ipc</code>: to interact with the IPC format</li>
-<li><code>io_ipc_compression</code>: to read and write compressed IPC (v2)</li>
-<li><code>io_csv</code> to read and write CSV</li>
-<li><code>io_json</code> to read and write JSON</li>
-<li><code>io_parquet</code> to read and write parquet</li>
-<li><code>io_parquet_compression</code> to read and write compressed parquet</li>
-<li><code>io_print</code> to write batches to formatted ASCII tables</li>
-<li><code>compute</code> to operate on arrays (addition, sum, sort, etc.)</li>
-</ul>
-<p>The feature <code>simd</code> (not part of <code>full</code>) produces more explicit SIMD instructions
-via <a href="https://github.com/rust-lang/packed_simd"><code>packed_simd</code></a>, but requires the 
-nightly channel.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
-<p>Welcome to the Arrow2 guide for the Rust programming language.  This guide was
+<p>Welcome to the Arrow2 guide for the Rust programming language. This guide was
 created to help you become familiar with the Arrow2 crate and its
 functionalities.</p>
 <h2 id="what-is-apache-arrow"><a class="header" href="#what-is-apache-arrow">What is Apache Arrow?</a></h2>
@@ -255,15 +238,22 @@ specification. In the next sections the basic blocks for working with the
 crate will be discussed, providing enough examples to give you familiarity
 to construct, share and query Arrow arrays.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="low-level-api"><a class="header" href="#low-level-api">Low-level API</a></h1>
-<p>The starting point of this crate is the idea that data must be stored in memory in a specific arrangement to be interoperable with Arrow's ecosystem. With this in mind, this crate does not use <code>Vec</code> but instead has its own containers to store data, including sharing and consuming it via FFI.</p>
-<p>The most important design decision of this crate is that contiguous regions are shared via an <code>Arc</code>. In this context, the operation of slicing a memory region is <code>O(1)</code> because it corresponds to changing an offset and length. The tradeoff is that once under an <code>Arc</code>, memory regions are immutable.</p>
-<p>The second important aspect is that Arrow has two main types of data buffers: bitmaps, whose offsets are measured in bits, and byte types (such as <code>i32</code>), whose offsets are measured in bytes. With this in mind, this crate has 2 main types of containers of contiguous memory regions:</p>
+<p>The starting point of this crate is the idea that data is stored in memory in a specific arrangement to be interoperable with Arrow's ecosystem.</p>
+<p>The most important design aspect of this crate is that contiguous regions are shared via an
+<code>Arc</code>. In this context, the operation of slicing a memory region is <code>O(1)</code> because it
+corresponds to changing an offset and length. The tradeoff is that once under
+an <code>Arc</code>, memory regions are immutable.</p>
+<p>The second most important aspect is that Arrow has two main types of data buffers: bitmaps,
+whose offsets are measured in bits, and byte types (such as <code>i32</code>), whose offsets are
+measured in bytes. With this in mind, this crate has 2 main types of containers of
+contiguous memory regions:</p>
 <ul>
 <li><code>Buffer&lt;T&gt;</code>: handle contiguous memory regions of type T whose offsets are measured in items</li>
 <li><code>Bitmap</code>: handle contiguous memory regions of bits whose offsets are measured in bits</li>
 </ul>
 <p>These hold <em>all</em> data-related memory in this crate.</p>
-<p>Due to their intrinsic immutability, each container has a corresponding mutable (and non-shareable) variant:</p>
+<p>Due to their intrinsic immutability, each container has a corresponding mutable
+(and non-shareable) variant:</p>
 <ul>
 <li><code>MutableBuffer&lt;T&gt;</code></li>
 <li><code>MutableBitmap</code></li>
@@ -289,7 +279,8 @@ assert_eq!(x.as_slice(), &amp;[0, 5, 2, 10])
 <span class="boring">}
 </span></code></pre></pre>
 <p>The following demonstrates how to efficiently
-perform an operation from an iterator of <a href="https://doc.rust-lang.org/std/iter/trait.TrustedLen.html">TrustedLen</a>:</p>
+perform an operation from an iterator of
+<a href="https://doc.rust-lang.org/std/iter/trait.TrustedLen.html">TrustedLen</a>:</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::buffer::MutableBuffer;
 </span><span class="boring">fn main() {
 </span>let x = (0..1000).collect::&lt;Vec&lt;_&gt;&gt;();
@@ -306,6 +297,7 @@ the following physical types:</p>
 <li><code>u8-u64</code></li>
 <li><code>f32</code> and <code>f64</code></li>
 <li><code>arrow2::types::days_ms</code></li>
+<li><code>arrow2::types::months_days_ns</code></li>
 </ul>
 <p>This is because the arrow specification only supports the above Rust types; all other complex
 types supported by arrow are built on top of these types, which enables Arrow to be a highly
@@ -339,10 +331,12 @@ assert_eq!(x.get(1), true);
 <span class="boring">}
 </span></code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="high-level-api"><a class="header" href="#high-level-api">High-level API</a></h1>
-<p>The simplest way to think about an arrow <code>Array</code> is that it represents
-<code>Vec&lt;Option&lt;T&gt;&gt;</code> and has a logical type (see <a href="../metadata.html">metadata</a>)) associated with it.</p>
-<p>Probably the simplest array in this crate is <code>PrimitiveArray&lt;T&gt;</code>. It can be constructed
-from a slice as follows:</p>
+<p>Arrow core trait the <code>Array</code>, which you can think of as representing <code>Arc&lt;Vec&lt;Option&lt;T&gt;&gt;</code>
+with associated metadata (see <a href="../metadata.html">metadata</a>)).
+Contrarily to <code>Arc&lt;Vec&lt;Option&lt;T&gt;&gt;</code>, arrays in this crate are represented in such a way
+that they can be zero-copied to any other Arrow implementation via foreign interfaces (FFI).</p>
+<p>Probably the simplest <code>Array</code> in this crate is the <code>PrimitiveArray&lt;T&gt;</code>. It can be
+constructed as from a slice of option values,</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::array::{Array, PrimitiveArray};
 </span><span class="boring">fn main() {
 </span>let array = PrimitiveArray::&lt;i32&gt;::from([Some(1), None, Some(123)]);
@@ -395,7 +389,7 @@ which is assigned when allocating arrays from iterators, slices, etc.</p>
 assert_eq!(array.data_type(), &amp;DataType::Int32);
 <span class="boring">}
 </span></code></pre></pre>
-<p>they can be cheaply converted to via <code>.to(DataType)</code>.</p>
+<p>they can be cheaply (<code>O(1)</code>) converted to via <code>.to(DataType)</code>.</p>
 <p>The following arrays are supported:</p>
 <ul>
 <li><code>NullArray</code> (just holds nulls)</li>
@@ -410,10 +404,9 @@ assert_eq!(array.data_type(), &amp;DataType::Int32);
 <li><code>UnionArray</code> (every row has a different logical type)</li>
 <li><code>DictionaryArray&lt;K&gt;</code> (nested array with encoded values)</li>
 </ul>
-<h2 id="dynamic-array"><a class="header" href="#dynamic-array">Dynamic Array</a></h2>
-<p>There is a more powerful aspect of arrow arrays, and that is that they all
-implement the trait <code>Array</code> and can be cast to <code>&amp;dyn Array</code>, i.e. they can be turned into
-a trait object. This enables arrays to have types that are dynamic in nature.</p>
+<h2 id="array-as-a-trait-object"><a class="header" href="#array-as-a-trait-object">Array as a trait object</a></h2>
+<p><code>Array</code> is object safe, and all implementations of <code>Array</code> and can be casted
+to <code>&amp;dyn Array</code>, which enables run-time nesting.</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::array::{Array, PrimitiveArray};
 </span><span class="boring">fn main() {
 </span>let a = PrimitiveArray::&lt;i32&gt;::from(&amp;[Some(1), None]);
@@ -423,7 +416,7 @@ let a: &amp;dyn Array = &amp;a;
 <h3 id="downcast-and-as_any"><a class="header" href="#downcast-and-as_any">Downcast and <code>as_any</code></a></h3>
 <p>Given a trait object <code>array: &amp;dyn Array</code>, we know its physical type via
 <code>PhysicalType: array.data_type().to_physical_type()</code>, which we use to downcast the array
-to its concrete type:</p>
+to its concrete physical type:</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::array::{Array, PrimitiveArray};
 </span><span class="boring">use arrow2::datatypes::PhysicalType;
 </span><span class="boring">fn main() {
@@ -447,6 +440,7 @@ an each implementation of <code>Array</code> (a struct):</p>
 <tr><td><code>FixedSizeList</code></td><td><code>FixedSizeListArray</code></td></tr>
 <tr><td><code>Struct</code></td><td><code>StructArray</code></td></tr>
 <tr><td><code>Union</code></td><td><code>UnionArray</code></td></tr>
+<tr><td><code>Map</code></td><td><code>MapArray</code></td></tr>
 <tr><td><code>Dictionary(_)</code></td><td><code>DictionaryArray&lt;_&gt;</code></td></tr>
 </tbody></table>
 <p>where <code>_</code> represents each of the variants (e.g. <code>PrimitiveType::Int32 &lt;-&gt; i32</code>).</p>
@@ -483,13 +477,17 @@ create them. In this section we will go a bit more in detail about these operati
 and how to make them even more efficient.</p>
 <p>This crate's APIs are generally split into two patterns: whether an operation leverages
 contiguous memory regions or whether it does not.</p>
-<p>If yes, then use:</p>
+<p>What this means is that certain operations can be performed irrespectively of whether a value
+is &quot;null&quot; or not (e.g. <code>PrimitiveArray&lt;i32&gt; + i32</code> can be applied to <em>all</em> values via SIMD and 
+only copy the validity bitmap independently).</p>
+<p>When an operation benefits from such arrangement, it is advantageous to use</p>
 <ul>
 <li><code>Buffer::from_iter</code></li>
 <li><code>Buffer::from_trusted_len_iter</code></li>
 <li><code>Buffer::try_from_trusted_len_iter</code></li>
 </ul>
-<p>If not, then use the builder API, such as <code>MutablePrimitiveArray&lt;T&gt;</code>, <code>MutableUtf8Array&lt;O&gt;</code> or <code>MutableListArray</code>.</p>
+<p>If not, then use the <code>MutableArray</code> API, such as
+<code>MutablePrimitiveArray&lt;T&gt;</code>, <code>MutableUtf8Array&lt;O&gt;</code> or <code>MutableListArray</code>.</p>
 <p>We have seen examples where the latter API was used. In the last example of this page
 you will be introduced to an example of using the former for SIMD.</p>
 <h2 id="into-iterator"><a class="header" href="#into-iterator">Into Iterator</a></h2>
@@ -512,12 +510,21 @@ for item in array.iter() {
 an array <code>array: &amp;PrimitiveArray&lt;T&gt;</code>, the following applies:</p>
 <ol>
 <li>If you need to iterate over <code>Option&lt;&amp;T&gt;</code>, use <code>array.iter()</code></li>
-<li>If you can operate over the values and validity independently, use <code>array.values() -&gt; &amp;Buffer&lt;T&gt;</code> and <code>array.validity() -&gt; Option&lt;&amp;Bitmap&gt;</code></li>
+<li>If you can operate over the values and validity independently,
+use <code>array.values() -&gt; &amp;Buffer&lt;T&gt;</code> and <code>array.validity() -&gt; Option&lt;&amp;Bitmap&gt;</code></li>
 </ol>
-<p>Note that case 1 is useful when e.g. you want to perform an operation that depends on both validity and values, while the latter is suitable for SIMD and copies, as they return contiguous memory regions (buffers and bitmaps). We will see below how to leverage these APIs.</p>
-<p>This idea holds more generally in this crate's arrays: <code>values()</code> returns something that has a contiguous in-memory representation, while <code>iter()</code> returns items taking validity into account. To get an iterator over contiguous values, use <code>array.values().iter()</code>.</p>
+<p>Note that case 1 is useful when e.g. you want to perform an operation that depends on both
+validity and values, while the latter is suitable for SIMD and copies, as they return
+contiguous memory regions (buffers and bitmaps). We will see below how to leverage these APIs.</p>
+<p>This idea holds more generally in this crate's arrays: <code>values()</code> returns something that has
+a contiguous in-memory representation, while <code>iter()</code> returns items taking validity into account. 
+To get an iterator over contiguous values, use <code>array.values().iter()</code>.</p>
 <p>There is one last API that is worth mentioning, and that is <code>Bitmap::chunks</code>. When performing
-bitwise operations, it is often more performant to operate on chunks of bits instead of single bits. <code>chunks</code> offers a <code>TrustedLen</code> of <code>u64</code> with the bits + an extra <code>u64</code> remainder. We expose two functions, <code>unary(Bitmap, Fn) -&gt; Bitmap</code> and <code>binary(Bitmap, Bitmap, Fn) -&gt; Bitmap</code> that use this API to efficiently perform bitmap operations.</p>
+bitwise operations, it is often more performant to operate on chunks of bits
+instead of single bits. <code>chunks</code> offers a <code>TrustedLen</code> of <code>u64</code> with the bits
++ an extra <code>u64</code> remainder. We expose two functions, <code>unary(Bitmap, Fn) -&gt; Bitmap</code>
+and <code>binary(Bitmap, Bitmap, Fn) -&gt; Bitmap</code> that use this API to efficiently
+perform bitmap operations.</p>
 <h2 id="vectorized-operations"><a class="header" href="#vectorized-operations">Vectorized operations</a></h2>
 <p>One of the main advantages of the arrow format and its memory layout is that
 it often enables SIMD. For example, an unary operation <code>op</code> on a <code>PrimitiveArray</code>
@@ -538,9 +545,11 @@ where
     O: NativeType,
     F: Fn(I) -&gt; O,
 {
+    // create the iterator over _all_ values
     let values = array.values().iter().map(|v| op(*v));
     let values = Buffer::from_trusted_len_iter(values);
 
+    // create the new array, cloning its validity
     PrimitiveArray::&lt;O&gt;::from_data(data_type.clone(), values, array.validity().cloned())
 }
 <span class="boring">}
@@ -548,18 +557,47 @@ where
 <p>Some notes:</p>
 <ol>
 <li>
-<p>We used <code>array.values()</code>, as described above: this operation leverages a contiguous memory region.</p>
+<p>We used <code>array.values()</code>, as described above: this operation leverages a
+contiguous memory region.</p>
 </li>
 <li>
 <p>We leveraged normal rust iterators for the operation.</p>
 </li>
 <li>
 <p>We used <code>op</code> on the array's values irrespectively of their validity,
-and cloned its validity. This approach is suitable for operations whose branching off is more expensive than operating over all values. If the operation is expensive, then using <code>PrimitiveArray::&lt;O&gt;::from_trusted_len_iter</code> is likely faster.</p>
+and cloned its validity. This approach is suitable for operations whose branching off
+is more expensive than operating over all values. If the operation is expensive,
+then using <code>PrimitiveArray::&lt;O&gt;::from_trusted_len_iter</code> is likely faster.</p>
 </li>
 </ol>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="compute-api"><a class="header" href="#compute-api">Compute API</a></h1>
-<p>When compiled with the feature <code>compute</code>, this crate offers a wide range of functions to perform both vertical (e.g. add two arrays) and horizontal (compute the sum of an array) operations.</p>
+<p>When compiled with the feature <code>compute</code>, this crate offers a wide range of functions
+to perform both vertical (e.g. add two arrays) and horizontal
+(compute the sum of an array) operations.</p>
+<p>The overall design of the <code>compute</code> module is that it offers two APIs:</p>
+<ul>
+<li>statically typed, such as <code>sum_primitive&lt;T&gt;(&amp;PrimitiveArray&lt;T&gt;) -&gt; Option&lt;T&gt;</code></li>
+<li>dynamically typed, such as <code>sum(&amp;dyn Array) -&gt; Box&lt;dyn Scalar&gt;</code></li>
+</ul>
+<p>the dynamically typed API usually has a function <code>can_*(&amp;DataType) -&gt; bool</code> denoting whether
+the operation is defined for the particular logical type.</p>
+<p>Overview of the implemented functionality:</p>
+<ul>
+<li>arithmetics, checked, saturating, etc.</li>
+<li><code>sum</code>, <code>min</code> and <code>max</code></li>
+<li><code>unary</code>, <code>binary</code>, etc.</li>
+<li><code>comparison</code></li>
+<li><code>cast</code></li>
+<li><code>take</code>, <code>filter</code>, <code>concat</code></li>
+<li><code>sort</code>, <code>hash</code>, <code>merge-sort</code></li>
+<li><code>if-then-else</code></li>
+<li><code>nullif</code></li>
+<li><code>length</code> (of string)</li>
+<li><code>hour</code>, <code>year</code>, <code>month</code>, <code>iso_week</code> (of temporal logical types)</li>
+<li><code>regex</code></li>
+<li>(list) <code>contains</code></li>
+</ul>
+<p>and an example of how to use them:</p>
 <pre><pre class="playground"><code class="language-rust">use arrow2::array::{Array, PrimitiveArray};
 use arrow2::compute::arithmetics::*;
 use arrow2::compute::arity::{binary, unary};
@@ -645,22 +683,6 @@ fn main() -&gt; Result&lt;()&gt; {
     Ok(())
 }
 </code></pre></pre>
-<p>An overview of the implemented functionality.</p>
-<ul>
-<li>arithmetics, checked, saturating, etc.</li>
-<li><code>sum</code>, <code>min</code> and <code>max</code></li>
-<li><code>unary</code>, <code>binary</code>, etc.</li>
-<li><code>comparison</code></li>
-<li><code>cast</code></li>
-<li><code>take</code>, <code>filter</code>, <code>concat</code></li>
-<li><code>sort</code>, <code>hash</code>, <code>merge-sort</code></li>
-<li><code>if-then-else</code></li>
-<li><code>nullif</code></li>
-<li><code>lenght</code> (of string)</li>
-<li><code>hour</code>, <code>year</code> (of temporal logical types)</li>
-<li><code>regex</code></li>
-<li>(list) <code>contains</code></li>
-</ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="metadata"><a class="header" href="#metadata">Metadata</a></h1>
 <pre><pre class="playground"><code class="language-rust">use std::collections::{BTreeMap, HashMap};
 
@@ -705,16 +727,16 @@ semantical types defined in Arrow.</p>
 <p>In Arrow2, logical types are declared as variants of the <code>enum</code> <code>arrow2::datatypes::DataType</code>.
 For example, <code>DataType::Int32</code> represents a signed integer of 32 bits.</p>
 <p>Each <code>DataType</code> has an associated <code>enum PhysicalType</code> (many-to-one) representing the
-particular in-memory representation, and is associated to specific semantics.
+particular in-memory representation, and is associated to a specific semantics.
 For example, both <code>DataType::Date32</code> and <code>DataType::Int32</code> have the same <code>PhysicalType</code>
 (<code>PhysicalType::Primitive(PrimitiveType::Int32)</code>) but <code>Date32</code> represents the number of
 days since UNIX epoch.</p>
 <p>Logical types are metadata: they annotate physical types with extra information about data.</p>
 <h2 id="field-column-metadata"><a class="header" href="#field-column-metadata"><code>Field</code> (column metadata)</a></h2>
 <p>Besides logical types, the arrow format supports other relevant metadata to the format.
-All this information is stored in <code>arrow2::datatypes::Field</code>.</p>
-<p>A <code>Field</code> is arrow's metadata associated to a column in the context of a columnar format. 
-It has a name, a logical type <code>DataType</code>, whether the column is nullable, etc.</p>
+An important one is <code>Field</code> broadly corresponding to a column in traditional columnar formats.
+A <code>Field</code> is composed by a name (<code>String</code>), a logical type (<code>DataType</code>), whether it is
+nullable (<code>bool</code>), and optional metadata.</p>
 <h2 id="schema-table-metadata"><a class="header" href="#schema-table-metadata"><code>Schema</code> (table metadata)</a></h2>
 <p>The most common use of <code>Field</code> is to declare a <code>arrow2::datatypes::Schema</code>, a sequence of <code>Field</code>s
 with optional metadata.</p>
@@ -724,8 +746,8 @@ with optional metadata.</p>
 has a specification, which allows languages to share data
 structures via foreign interfaces at zero cost (i.e. via pointers).
 This is known as the <a href="https://arrow.apache.org/docs/format/CDataInterface.html">C Data interface</a>.</p>
-<p>This crate supports importing from and exporting to all <code>DataType</code>s. Follow the
-example below to learn how to import and export:</p>
+<p>This crate supports importing from and exporting to all its physical types. The
+example below demonstrates how to use the API:</p>
 <pre><pre class="playground"><code class="language-rust">use arrow2::array::{Array, PrimitiveArray};
 use arrow2::datatypes::Field;
 use arrow2::error::Result;
@@ -784,8 +806,11 @@ fn main() -&gt; Result&lt;()&gt; {
 }
 </code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="extension-types"><a class="header" href="#extension-types">Extension types</a></h1>
-<p>This crate supports Arrows' <a href="https://arrow.apache.org/docs/format/Columnar.html#extension-types">&quot;extension type&quot;</a>, to declare, use, and share custom logical types.
-The follow example shows how to declare one:</p>
+<p>This crate supports Arrows' <a href="https://arrow.apache.org/docs/format/Columnar.html#extension-types">&quot;extension type&quot;</a>, to declare, use, and share custom logical types.</p>
+<p>An extension type is just a <code>DataType</code> with a name and some metadata.
+In particular, its physical representation is equal to its inner <code>DataType</code>, which implies
+that all functionality in this crate works as if it was the inner <code>DataType</code>.</p>
+<p>The following example shows how to declare one:</p>
 <pre><pre class="playground"><code class="language-rust">use std::io::{Cursor, Seek, Write};
 use std::sync::Arc;
 

@@ -135,8 +135,11 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="extension-types"><a class="header" href="#extension-types">Extension types</a></h1>
-<p>This crate supports Arrows' <a href="https://arrow.apache.org/docs/format/Columnar.html#extension-types">&quot;extension type&quot;</a>, to declare, use, and share custom logical types.
-The follow example shows how to declare one:</p>
+<p>This crate supports Arrows' <a href="https://arrow.apache.org/docs/format/Columnar.html#extension-types">&quot;extension type&quot;</a>, to declare, use, and share custom logical types.</p>
+<p>An extension type is just a <code>DataType</code> with a name and some metadata.
+In particular, its physical representation is equal to its inner <code>DataType</code>, which implies
+that all functionality in this crate works as if it was the inner <code>DataType</code>.</p>
+<p>The following example shows how to declare one:</p>
 <pre><pre class="playground"><code class="language-rust">use std::io::{Cursor, Seek, Write};
 use std::sync::Arc;
 

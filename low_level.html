@@ -135,15 +135,22 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="low-level-api"><a class="header" href="#low-level-api">Low-level API</a></h1>
-<p>The starting point of this crate is the idea that data must be stored in memory in a specific arrangement to be interoperable with Arrow's ecosystem. With this in mind, this crate does not use <code>Vec</code> but instead has its own containers to store data, including sharing and consuming it via FFI.</p>
-<p>The most important design decision of this crate is that contiguous regions are shared via an <code>Arc</code>. In this context, the operation of slicing a memory region is <code>O(1)</code> because it corresponds to changing an offset and length. The tradeoff is that once under an <code>Arc</code>, memory regions are immutable.</p>
-<p>The second important aspect is that Arrow has two main types of data buffers: bitmaps, whose offsets are measured in bits, and byte types (such as <code>i32</code>), whose offsets are measured in bytes. With this in mind, this crate has 2 main types of containers of contiguous memory regions:</p>
+<p>The starting point of this crate is the idea that data is stored in memory in a specific arrangement to be interoperable with Arrow's ecosystem.</p>
+<p>The most important design aspect of this crate is that contiguous regions are shared via an
+<code>Arc</code>. In this context, the operation of slicing a memory region is <code>O(1)</code> because it
+corresponds to changing an offset and length. The tradeoff is that once under
+an <code>Arc</code>, memory regions are immutable.</p>
+<p>The second most important aspect is that Arrow has two main types of data buffers: bitmaps,
+whose offsets are measured in bits, and byte types (such as <code>i32</code>), whose offsets are
+measured in bytes. With this in mind, this crate has 2 main types of containers of
+contiguous memory regions:</p>
 <ul>
 <li><code>Buffer&lt;T&gt;</code>: handle contiguous memory regions of type T whose offsets are measured in items</li>
 <li><code>Bitmap</code>: handle contiguous memory regions of bits whose offsets are measured in bits</li>
 </ul>
 <p>These hold <em>all</em> data-related memory in this crate.</p>
-<p>Due to their intrinsic immutability, each container has a corresponding mutable (and non-shareable) variant:</p>
+<p>Due to their intrinsic immutability, each container has a corresponding mutable
+(and non-shareable) variant:</p>
 <ul>
 <li><code>MutableBuffer&lt;T&gt;</code></li>
 <li><code>MutableBitmap</code></li>
@@ -169,7 +176,8 @@ assert_eq!(x.as_slice(), &amp;[0, 5, 2, 10])
 <span class="boring">}
 </span></code></pre></pre>
 <p>The following demonstrates how to efficiently
-perform an operation from an iterator of <a href="https://doc.rust-lang.org/std/iter/trait.TrustedLen.html">TrustedLen</a>:</p>
+perform an operation from an iterator of
+<a href="https://doc.rust-lang.org/std/iter/trait.TrustedLen.html">TrustedLen</a>:</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::buffer::MutableBuffer;
 </span><span class="boring">fn main() {
 </span>let x = (0..1000).collect::&lt;Vec&lt;_&gt;&gt;();
@@ -186,6 +194,7 @@ the following physical types:</p>
 <li><code>u8-u64</code></li>
 <li><code>f32</code> and <code>f64</code></li>
 <li><code>arrow2::types::days_ms</code></li>
+<li><code>arrow2::types::months_days_ns</code></li>
 </ul>
 <p>This is because the arrow specification only supports the above Rust types; all other complex
 types supported by arrow are built on top of these types, which enables Arrow to be a highly
