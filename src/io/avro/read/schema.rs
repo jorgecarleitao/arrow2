@@ -111,16 +111,13 @@ fn schema_to_field(
         AvroSchema::Double => DataType::Float64,
         AvroSchema::Bytes => DataType::Binary,
         AvroSchema::String => DataType::Utf8,
-        AvroSchema::Array(item_schema) => {
-            DataType::List(Box::new(schema_to_field(item_schema, None, false, None)?))
-        }
-        AvroSchema::Map(value_schema) => {
-            let value_field = schema_to_field(value_schema, Some("value"), false, None)?;
-            DataType::Dictionary(
-                Box::new(DataType::Utf8),
-                Box::new(value_field.data_type().clone()),
-            )
-        }
+        AvroSchema::Array(item_schema) => DataType::List(Box::new(schema_to_field(
+            item_schema,
+            Some("item"), // default name for list items
+            false,
+            None,
+        )?)),
+        AvroSchema::Map(_) => todo!("Avro maps are mapped to MapArrays"),
         AvroSchema::Union(us) => {
             // If there are only two variants and one of them is null, set the other type as the field data type
             let has_nullable = us.find_schema(&Value::Null).is_some();
@@ -169,12 +166,10 @@ fn schema_to_field(
                 .collect();
             DataType::Struct(fields?)
         }
-        AvroSchema::Enum { name, .. } => {
-            return Ok(Field::new_dict(
-                &name.fullname(None),
-                DataType::Dictionary(Box::new(DataType::UInt64), Box::new(DataType::Utf8)),
-                false,
-                0,
+        AvroSchema::Enum { .. } => {
+            return Ok(Field::new(
+                name.unwrap_or_default(),
+                DataType::Dictionary(Box::new(DataType::Int32), Box::new(DataType::Utf8)),
                 false,
             ))
         }
@@ -188,7 +183,7 @@ fn schema_to_field(
         AvroSchema::TimeMicros => DataType::Time64(TimeUnit::Microsecond),
         AvroSchema::TimestampMillis => DataType::Timestamp(TimeUnit::Millisecond, None),
         AvroSchema::TimestampMicros => DataType::Timestamp(TimeUnit::Microsecond, None),
-        AvroSchema::Duration => DataType::Duration(TimeUnit::Millisecond),
+        AvroSchema::Duration => todo!("Avro duration corresponds to months_days_ns"),
     };
 
     let name = name.unwrap_or_default();
