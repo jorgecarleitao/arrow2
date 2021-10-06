@@ -183,7 +183,7 @@ fn schema_to_field(
         AvroSchema::TimeMicros => DataType::Time64(TimeUnit::Microsecond),
         AvroSchema::TimestampMillis => DataType::Timestamp(TimeUnit::Millisecond, None),
         AvroSchema::TimestampMicros => DataType::Timestamp(TimeUnit::Microsecond, None),
-        AvroSchema::Duration => todo!("Avro duration corresponds to months_days_ns"),
+        AvroSchema::Duration => DataType::Interval(IntervalUnit::MonthDayNano),
     };
 
     let name = name.unwrap_or_default();

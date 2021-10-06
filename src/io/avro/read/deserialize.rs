@@ -8,6 +8,7 @@ use crate::datatypes::*;
 use crate::error::ArrowError;
 use crate::error::Result;
 use crate::record_batch::RecordBatch;
+use crate::types::months_days_ns;
 
 use super::nested::*;
 use super::util;
@@ -96,6 +97,24 @@ fn deserialize_item<'a>(
                 }
                 array.try_push_valid()?;
             }
+        }
+        DataType::Interval(IntervalUnit::MonthDayNano) => {
+            // https://avro.apache.org/docs/current/spec.html#Duration
+            // 12 bytes, months, days, millis in LE
+            let data = &block[..12];
+            block = &block[12..];
+
+            let value = months_days_ns::new(
+                i32::from_le_bytes([data[0], data[1], data[2], data[3]]),
+                i32::from_le_bytes([data[4], data[5], data[6], data[7]]),
+                i32::from_le_bytes([data[8], data[9], data[10], data[11]]) as i64 * 1_000_000,
+            );
+
+            let array = array
+                .as_mut_any()
+                .downcast_mut::<MutablePrimitiveArray<months_days_ns>>()
+                .unwrap();
+            array.push(Some(value))
         }
         _ => match data_type.to_physical_type() {
             PhysicalType::Boolean => {

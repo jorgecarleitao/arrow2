@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
+use arrow2::types::months_days_ns;
 use avro_rs::types::{Record, Value};
-use avro_rs::Schema as AvroSchema;
 use avro_rs::Writer;
+use avro_rs::{Days, Duration, Millis, Months, Schema as AvroSchema};
 
 use arrow2::array::*;
 use arrow2::datatypes::*;
@@ -35,6 +36,13 @@ fn schema() -> (AvroSchema, Schema) {
                 "type": "enum",
                 "name": "",
                 "symbols" : ["SPADES", "HEARTS", "DIAMONDS", "CLUBS"]
+            }},
+            {"name": "duration",
+             "logicalType": "duration",
+             "type": {
+                "name": "duration",
+                "type": "fixed",
+                "size": 12
             }}
         ]
     }
@@ -56,6 +64,11 @@ fn schema() -> (AvroSchema, Schema) {
         Field::new(
             "enum",
             DataType::Dictionary(Box::new(DataType::Int32), Box::new(DataType::Utf8)),
+            false,
+        ),
+        Field::new(
+            "duration",
+            DataType::Interval(IntervalUnit::MonthDayNano),
             false,
         ),
     ]);
@@ -86,6 +99,10 @@ fn write() -> Result<(Vec<u8>, RecordBatch)> {
         ]),
     );
     record.put("enum", Value::Enum(1, "HEARTS".to_string()));
+    record.put(
+        "duration",
+        Value::Duration(Duration::new(Months::new(1), Days::new(1), Millis::new(1))),
+    );
     writer.append(record)?;
 
     let mut record = Record::new(writer.schema()).unwrap();
@@ -105,6 +122,10 @@ fn write() -> Result<(Vec<u8>, RecordBatch)> {
         ]),
     );
     record.put("enum", Value::Enum(0, "SPADES".to_string()));
+    record.put(
+        "duration",
+        Value::Duration(Duration::new(Months::new(1), Days::new(2), Millis::new(1))),
+    );
     writer.append(record)?;
 
     let data = vec![
@@ -128,6 +149,10 @@ fn write() -> Result<(Vec<u8>, RecordBatch)> {
             Int32Array::from_slice([1, 0]),
             Arc::new(Utf8Array::<i32>::from_slice(["SPADES", "HEARTS"])),
         )) as Arc<dyn Array>,
+        Arc::new(MonthsDaysNsArray::from_slice([
+            months_days_ns::new(1, 1, 1_000_000),
+            months_days_ns::new(1, 2, 1_000_000),
+        ])) as Arc<dyn Array>,
     ];
 
     let expected = RecordBatch::try_new(Arc::new(schema), columns).unwrap();
