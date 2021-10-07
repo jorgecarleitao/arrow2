@@ -72,7 +72,7 @@ pub fn deserialize_statistics(stats: &dyn ParquetStatistics) -> Result<Box<dyn S
                 DataType::Float64,
             ))))
         }
-        PhysicalType::FixedLenByteArray(_) =>{
+        PhysicalType::FixedLenByteArray(_) => {
             let stats = stats.as_any().downcast_ref().unwrap();
             fixlen::statistics_from_fix_len(stats, stats.descriptor.type_())
         }
