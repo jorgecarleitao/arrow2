@@ -257,7 +257,6 @@ fn v1_decimal_26_nullable() -> Result<()> {
     test_pyarrow_integration(9, 1, "basic", false, false)
 }
 
-
 #[test]
 fn v1_decimal_26_required() -> Result<()> {
     test_pyarrow_integration(8, 1, "basic", false, true)
@@ -287,7 +286,6 @@ fn v2_decimal_18_required() -> Result<()> {
 fn v2_decimal_26_nullable() -> Result<()> {
     test_pyarrow_integration(9, 2, "basic", false, false)
 }
-
 
 #[test]
 fn v2_decimal_26_required() -> Result<()> {
