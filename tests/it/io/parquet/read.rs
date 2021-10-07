@@ -35,6 +35,7 @@ fn test_pyarrow_integration(
         ("basic", true) => pyarrow_required(column),
         ("basic", false) => pyarrow_nullable(column),
         ("nested", false) => pyarrow_nested_nullable(column),
+        ("struct", false) => pyarrow_struct(column),
         _ => unreachable!(),
     };
 
@@ -42,6 +43,7 @@ fn test_pyarrow_integration(
         ("basic", true) => pyarrow_required_statistics(column),
         ("basic", false) => pyarrow_nullable_statistics(column),
         ("nested", false) => pyarrow_nested_nullable_statistics(column),
+        ("struct", false) => pyarrow_struct_statistics(column),
         _ => unreachable!(),
     };
 
@@ -310,6 +312,11 @@ fn v2_decimal_26_nullable() -> Result<()> {
 #[test]
 fn v2_decimal_26_required() -> Result<()> {
     test_pyarrow_integration(8, 2, "basic", false, true)
+}
+
+#[test]
+fn v1_struct_optional() -> Result<()> {
+    test_pyarrow_integration(0, 1, "struct", false, false)
 }
 
 #[test]

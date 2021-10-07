@@ -26,6 +26,40 @@ pub trait Nested: std::fmt::Debug {
 }
 
 #[derive(Debug, Default)]
+pub struct NestedPrimitive {
+    is_nullable: bool,
+}
+
+impl NestedPrimitive {
+    pub fn new(is_nullable: bool) -> Self {
+        Self { is_nullable }
+    }
+}
+
+impl Nested for NestedPrimitive {
+    fn inner(&mut self) -> (Buffer<i64>, Option<Bitmap>) {
+        (Default::default(), Default::default())
+    }
+
+    #[inline]
+    fn last_offset(&self) -> i64 {
+        0
+    }
+
+    fn is_nullable(&self) -> bool {
+        self.is_nullable
+    }
+
+    fn push(&mut self, _value: i64, _is_valid: bool) {}
+
+    fn offsets(&mut self) -> &[i64] {
+        &[]
+    }
+
+    fn close(&mut self, _length: i64) {}
+}
+
+#[derive(Debug, Default)]
 pub struct NestedOptional {
     pub validity: MutableBitmap,
     pub offsets: MutableBuffer<i64>,
@@ -180,43 +214,30 @@ pub fn extend_offsets<R, D>(
         });
 }
 
-pub fn is_nullable(type_: &ParquetType, container: &mut Vec<bool>) {
-    match type_ {
+pub fn init_nested(field: &ParquetType, capacity: usize, container: &mut Vec<Box<dyn Nested>>) {
+    match field {
         ParquetType::PrimitiveType { basic_info, .. } => {
-            container.push(super::schema::is_nullable(basic_info));
+            container.push(
+                Box::new(NestedPrimitive::new(super::schema::is_nullable(basic_info)))
+                    as Box<dyn Nested>,
+            );
         }
         ParquetType::GroupType {
             basic_info, fields, ..
         } => {
             if basic_info.repetition() != &Repetition::Repeated {
-                container.push(super::schema::is_nullable(basic_info));
-            }
-            for field in fields {
-                is_nullable(field, container)
-            }
-        }
-    }
-}
-
-pub fn init_nested(base_type: &ParquetType, capacity: usize) -> (Vec<Box<dyn Nested>>, bool) {
-    let mut nullable = Vec::new();
-    is_nullable(base_type, &mut nullable);
-    // the primitive's nullability is the last on the list
-    let is_nullable = nullable.pop().unwrap();
-
-    (
-        nullable
-            .iter()
-            .map(|is_nullable| {
-                if *is_nullable {
+                let item = if super::schema::is_nullable(basic_info) {
                     Box::new(NestedOptional::with_capacity(capacity)) as Box<dyn Nested>
                 } else {
                     Box::new(NestedValid::with_capacity(capacity)) as Box<dyn Nested>
-                }
-            })
-            .collect(),
-        is_nullable,
-    )
+                };
+                container.push(item);
+            }
+            for field in fields {
+                init_nested(field, capacity, container)
+            }
+        }
+    }
 }
 
 pub fn create_list(

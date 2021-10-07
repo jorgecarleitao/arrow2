@@ -184,6 +184,32 @@ def case_nested(size):
     )
 
 
+def case_struct(size):
+    string = ["Hello", None, "aa", "", None, "abc", None, None, "def", "aaa"]
+    boolean = [True, None, False, False, None, True, None, None, True, True]
+    struct_fields = [
+        ("f1", pa.utf8()),
+        ("f2", pa.bool_()),
+    ]
+    fields = [
+        pa.field(
+            "struct",
+            pa.struct(struct_fields),
+        )
+    ]
+    schema = pa.schema(fields)
+    return (
+        {
+            "struct": pa.StructArray.from_arrays(
+                [pa.array(string * size), pa.array(boolean * size)],
+                fields=struct_fields,
+            ),
+        },
+        schema,
+        f"struct_nullable_{size*10}.parquet",
+    )
+
+
 def write_pyarrow(
     case,
     size: int,
@@ -228,7 +254,7 @@ def write_pyarrow(
     )
 
 
-for case in [case_basic_nullable, case_basic_required, case_nested]:
+for case in [case_basic_nullable, case_basic_required, case_nested, case_struct]:
     for version in [1, 2]:
         for use_dict in [True, False]:
             write_pyarrow(case, 1, version, use_dict, False, False)

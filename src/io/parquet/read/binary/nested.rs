@@ -1,24 +1,15 @@
-use std::sync::Arc;
-
 use parquet2::{
     encoding::{hybrid_rle::HybridRleDecoder, Encoding},
-    metadata::{ColumnChunkMetaData, ColumnDescriptor},
+    metadata::ColumnDescriptor,
     page::DataPage,
     read::levels::get_bit_width,
-    FallibleStreamingIterator,
 };
 
 use super::super::nested_utils::*;
 use super::super::utils;
 use super::basic::read_plain_required;
-use super::utils::finish_array;
-use crate::{
-    array::{Array, Offset},
-    bitmap::MutableBitmap,
-    buffer::MutableBuffer,
-    datatypes::DataType,
-    error::{ArrowError, Result},
-};
+
+use crate::{array::Offset, bitmap::MutableBitmap, buffer::MutableBuffer, error::Result};
 
 fn read_values<'a, O, D, G>(
     def_levels: D,
@@ -101,7 +92,7 @@ fn read<O: Offset>(
     }
 }
 
-fn extend_from_page<O: Offset>(
+pub(super) fn extend_from_page<O: Offset>(
     page: &DataPage,
     descriptor: &ColumnDescriptor,
     is_nullable: bool,
@@ -145,39 +136,4 @@ fn extend_from_page<O: Offset>(
         }
     }
     Ok(())
-}
-
-pub fn iter_to_array<O, I, E>(
-    mut iter: I,
-    metadata: &ColumnChunkMetaData,
-    data_type: DataType,
-) -> Result<(Arc<dyn Array>, Vec<Box<dyn Nested>>)>
-where
-    O: Offset,
-    ArrowError: From<E>,
-    I: FallibleStreamingIterator<Item = DataPage, Error = E>,
-{
-    let capacity = metadata.num_values() as usize;
-    let mut values = MutableBuffer::<u8>::with_capacity(0);
-    let mut offsets = MutableBuffer::<O>::with_capacity(1 + capacity);
-    offsets.push(O::default());
-    let mut validity = MutableBitmap::with_capacity(capacity);
-
-    let (mut nested, is_nullable) = init_nested(metadata.descriptor().base_type(), capacity);
-
-    while let Some(page) = iter.next()? {
-        extend_from_page(
-            page,
-            metadata.descriptor(),
-            is_nullable,
-            &mut nested,
-            &mut offsets,
-            &mut values,
-            &mut validity,
-        )?
-    }
-
-    let values = finish_array(data_type, offsets, values, validity).into();
-
-    Ok((values, nested))
 }

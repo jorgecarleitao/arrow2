@@ -533,6 +533,63 @@ pub fn pyarrow_nested_nullable_statistics(column: usize) -> Option<Box<dyn Stati
     })
 }
 
+pub fn pyarrow_struct(column: usize) -> Box<dyn Array> {
+    match column {
+        0 => {
+            let string = [
+                Some("Hello"),
+                None,
+                Some("aa"),
+                Some(""),
+                None,
+                Some("abc"),
+                None,
+                None,
+                Some("def"),
+                Some("aaa"),
+            ];
+            let boolean = [
+                Some(true),
+                None,
+                Some(false),
+                Some(false),
+                None,
+                Some(true),
+                None,
+                None,
+                Some(true),
+                Some(true),
+            ];
+            let values = vec![
+                Arc::new(Utf8Array::<i32>::from(string)) as Arc<dyn Array>,
+                Arc::new(BooleanArray::from(boolean)) as Arc<dyn Array>,
+            ];
+            let fields = vec![
+                Field::new("f1", DataType::Utf8, true),
+                Field::new("f2", DataType::Boolean, true),
+            ];
+            Box::new(StructArray::from_data(
+                DataType::Struct(fields),
+                values,
+                None,
+            ))
+        }
+        _ => todo!(),
+    }
+}
+
+pub fn pyarrow_struct_statistics(column: usize) -> Option<Box<dyn Statistics>> {
+    match column {
+        0 => Some(Box::new(Utf8Statistics {
+            distinct_count: None,
+            null_count: Some(1),
+            min_value: Some("".to_string()),
+            max_value: Some("def".to_string()),
+        })),
+        _ => todo!(),
+    }
+}
+
 /// Round-trip with parquet using the same integration files used for IPC integration tests.
 fn integration_write(schema: &Schema, batches: &[RecordBatch]) -> Result<Vec<u8>> {
     let options = WriteOptions {
