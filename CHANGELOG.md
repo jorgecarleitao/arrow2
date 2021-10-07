@@ -1,5 +1,98 @@
 # Changelog
 
+## [v0.6.1](https://github.com/jorgecarleitao/arrow2/tree/v0.6.1) (2021-10-07)
+
+[Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.5.3...v0.6.1)
+
+**Breaking changes:**
+
+- Bring `MutableFixedSizeListArray` to the spec used by the rest of the Mutable API [\#475](https://github.com/jorgecarleitao/arrow2/issues/475)
+- Removed `ALIGNMENT` invariant from `[Mutable]Buffer` [\#449](https://github.com/jorgecarleitao/arrow2/issues/449)
+- Un-nested `compute::arithemtics::basic` [\#461](https://github.com/jorgecarleitao/arrow2/pull/461) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added more serialization options for csv writer. [\#453](https://github.com/jorgecarleitao/arrow2/pull/453) ([ritchie46](https://github.com/ritchie46))
+- Changed validity from `&Option<Bitmap>` to `Option<&Bitmap>`. [\#431](https://github.com/jorgecarleitao/arrow2/pull/431) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Bumped parquet2 [\#422](https://github.com/jorgecarleitao/arrow2/pull/422) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Changed IPC `FileWriter` to own the `writer`. [\#420](https://github.com/jorgecarleitao/arrow2/pull/420) ([yjshen](https://github.com/yjshen))
+- Made `DynComparator` `Send+Sync` [\#414](https://github.com/jorgecarleitao/arrow2/pull/414) ([yjshen](https://github.com/yjshen))
+
+**New features:**
+
+- Read Decimal from Parquet File [\#444](https://github.com/jorgecarleitao/arrow2/issues/444)
+- Add IO read for Avro [\#401](https://github.com/jorgecarleitao/arrow2/issues/401)
+- Added support to read Avro logical types, `List`,`Enum`, `Duration` and `Fixed`. [\#493](https://github.com/jorgecarleitao/arrow2/pull/493) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added read `Decimal` from parquet [\#489](https://github.com/jorgecarleitao/arrow2/pull/489) ([potter420](https://github.com/potter420))
+- Implement `BitXor` trait for `Bitmap` [\#485](https://github.com/jorgecarleitao/arrow2/pull/485) ([houqp](https://github.com/houqp))
+- Added `extend`/`extend_unchecked` for `MutableBooleanArray` [\#478](https://github.com/jorgecarleitao/arrow2/pull/478) ([VasanthakumarV](https://github.com/VasanthakumarV))
+- expose `shrink_to_fit` to mutable arrays [\#467](https://github.com/jorgecarleitao/arrow2/pull/467) ([ritchie46](https://github.com/ritchie46))
+- Added support for `DataType::Map` and `MapArray` [\#464](https://github.com/jorgecarleitao/arrow2/pull/464) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Extract parts of datetime [\#433](https://github.com/jorgecarleitao/arrow2/pull/433) ([VasanthakumarV](https://github.com/VasanthakumarV))
+- Added support to add an interval to a timestamp [\#417](https://github.com/jorgecarleitao/arrow2/pull/417) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support to read Avro. [\#406](https://github.com/jorgecarleitao/arrow2/pull/406) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Replaced own allocator by `std::Vec`. [\#385](https://github.com/jorgecarleitao/arrow2/pull/385) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Fixed bugs:**
+
+- crash in parquet read [\#459](https://github.com/jorgecarleitao/arrow2/issues/459)
+- Made writing stream to parquet require a non-static lifetime [\#471](https://github.com/jorgecarleitao/arrow2/pull/471) ([GrandChaman](https://github.com/GrandChaman))
+- Made importing from FFI `unsafe` [\#458](https://github.com/jorgecarleitao/arrow2/pull/458) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed panic in division using nulls. [\#438](https://github.com/jorgecarleitao/arrow2/pull/438) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed error writing dictionary extension to IPC [\#397](https://github.com/jorgecarleitao/arrow2/pull/397) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed error in extending `MutableBitmap` [\#393](https://github.com/jorgecarleitao/arrow2/pull/393) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+
+**Enhancements:**
+
+- Some `compare` function are not exported [\#349](https://github.com/jorgecarleitao/arrow2/issues/349)
+- Investigate how to add support for timezones in timestamp [\#23](https://github.com/jorgecarleitao/arrow2/issues/23)
+- Made `hash` work for extension type [\#487](https://github.com/jorgecarleitao/arrow2/pull/487) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added `extend`/`extend_unchecked` for `MutableBinaryArray` [\#486](https://github.com/jorgecarleitao/arrow2/pull/486) ([VasanthakumarV](https://github.com/VasanthakumarV))
+- Improved inference and deserialization of CSV [\#483](https://github.com/jorgecarleitao/arrow2/pull/483) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added `GrowableFixedSizeList` and improved `MutableFixedSizeListArray` [\#470](https://github.com/jorgecarleitao/arrow2/pull/470) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added `MutableBitmap::shrink_to_fit` [\#468](https://github.com/jorgecarleitao/arrow2/pull/468) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added `MutableArray::as_box` [\#450](https://github.com/jorgecarleitao/arrow2/pull/450) ([sd2k](https://github.com/sd2k))
+- Improved performance of sum aggregation via aligned loads \(-10%\) [\#445](https://github.com/jorgecarleitao/arrow2/pull/445) ([ritchie46](https://github.com/ritchie46))
+- Removed `assert` from `MutableBuffer::set_len` [\#443](https://github.com/jorgecarleitao/arrow2/pull/443) ([ritchie46](https://github.com/ritchie46))
+- Optimized `null_count` [\#442](https://github.com/jorgecarleitao/arrow2/pull/442) ([ritchie46](https://github.com/ritchie46))
+- Improved performance of list iterator \(- 10-20%\) [\#441](https://github.com/jorgecarleitao/arrow2/pull/441) ([ritchie46](https://github.com/ritchie46))
+- Improved performance of `PrimitiveGrowable` for nulls \(-10%\) [\#434](https://github.com/jorgecarleitao/arrow2/pull/434) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Allowed accessing validity without importing `Array` [\#432](https://github.com/jorgecarleitao/arrow2/pull/432) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Optimize hashing using `ahash` and `multiversion` \(-30%\) [\#428](https://github.com/jorgecarleitao/arrow2/pull/428) ([Dandandan](https://github.com/Dandandan))
+- Improved performance of iterator of `Utf8Array` and `BinaryArray` \(3-4x\) [\#427](https://github.com/jorgecarleitao/arrow2/pull/427) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Improved performance of utf8 validation of large strings via `simdutf8` \(-40%\) [\#426](https://github.com/jorgecarleitao/arrow2/pull/426) ([Dandandan](https://github.com/Dandandan))
+- Added reading of parquet required dictionary-encoded binary. [\#419](https://github.com/jorgecarleitao/arrow2/pull/419) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Add `extend`/`extend_unchecked` for `MutableUtf8Array` [\#413](https://github.com/jorgecarleitao/arrow2/pull/413) ([VasanthakumarV](https://github.com/VasanthakumarV))
+- Added support to extract hours and years from timestamps with timezone [\#412](https://github.com/jorgecarleitao/arrow2/pull/412) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added `io_csv_read` and `io_csv_write` feature [\#408](https://github.com/jorgecarleitao/arrow2/pull/408) ([ritchie46](https://github.com/ritchie46))
+- Improve `comparison` docs and re-export the array-comparing function [\#404](https://github.com/jorgecarleitao/arrow2/pull/404) ([HagaiHargil](https://github.com/HagaiHargil))
+- Added support to read dict-encoded required primitive types from parquet [\#402](https://github.com/jorgecarleitao/arrow2/pull/402) ([Dandandan](https://github.com/Dandandan))
+- Added `Array::with_validity` [\#399](https://github.com/jorgecarleitao/arrow2/pull/399) ([ritchie46](https://github.com/ritchie46))
+
+**Documentation updates:**
+
+- Improved documentation [\#491](https://github.com/jorgecarleitao/arrow2/pull/491) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added more API docs. [\#479](https://github.com/jorgecarleitao/arrow2/pull/479) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added more documentation [\#476](https://github.com/jorgecarleitao/arrow2/pull/476) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Improved documentation [\#462](https://github.com/jorgecarleitao/arrow2/pull/462) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added example showing parallel writes to parquet \(x num\_cores\) [\#436](https://github.com/jorgecarleitao/arrow2/pull/436) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Improved documentation [\#430](https://github.com/jorgecarleitao/arrow2/pull/430) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- \[0.5\] The docs `io` module has no submodules [\#390](https://github.com/jorgecarleitao/arrow2/issues/390)
+- Made docs be compiled with feature `full` [\#391](https://github.com/jorgecarleitao/arrow2/pull/391) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Testing updates:**
+
+- DRY via macro. [\#477](https://github.com/jorgecarleitao/arrow2/pull/477) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- DRY of type check and len check code in `compute` [\#474](https://github.com/jorgecarleitao/arrow2/pull/474) ([yjhmelody](https://github.com/yjhmelody))
+- Added property testing [\#460](https://github.com/jorgecarleitao/arrow2/pull/460) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added fmt to CI. [\#455](https://github.com/jorgecarleitao/arrow2/pull/455) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Simplified CI [\#452](https://github.com/jorgecarleitao/arrow2/pull/452) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- fix filter kernels bench [\#440](https://github.com/jorgecarleitao/arrow2/pull/440) ([ritchie46](https://github.com/ritchie46))
+- Reduced number of combinations in feature tests. [\#429](https://github.com/jorgecarleitao/arrow2/pull/429) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Move tests from `src/compute/` to `tests/` [\#423](https://github.com/jorgecarleitao/arrow2/pull/423) ([VasanthakumarV](https://github.com/VasanthakumarV))
+- Skipped some feature permutations. [\#411](https://github.com/jorgecarleitao/arrow2/pull/411) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added tests to some invariants of `unsafe` [\#403](https://github.com/jorgecarleitao/arrow2/pull/403) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support to read and write extension types to and from parquet [\#396](https://github.com/jorgecarleitao/arrow2/pull/396) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fix testing of SIMD [\#394](https://github.com/jorgecarleitao/arrow2/pull/394) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
 ## [v0.5.3](https://github.com/jorgecarleitao/arrow2/tree/v0.5.3) (2021-09-14)
 
 [Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.5.2...v0.5.3)
