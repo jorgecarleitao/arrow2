@@ -44,7 +44,7 @@ where
 }
 
 /// Wrapping addition of two primitive arrays.
-/// It do nothing if the result overflows.
+/// It wraps around at the boundary of the type if the result overflows.
 ///
 /// # Examples
 /// ```
