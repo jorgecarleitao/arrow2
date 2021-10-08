@@ -136,7 +136,9 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
     }
 
     #[inline]
-    fn try_push_valid(&mut self) -> Result<()> {
+    /// Needs to be called when a valid value was extended to this array.
+    /// This is a relatively low level function, prefer `try_push` when you can.
+    pub fn try_push_valid(&mut self) -> Result<()> {
         let size = self.values.len();
         let size = O::from_usize(size).ok_or(ArrowError::KeyOverflowError)?; // todo: make this error
         assert!(size >= *self.offsets.last().unwrap());
