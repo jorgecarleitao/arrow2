@@ -313,7 +313,7 @@ where
 /// let result = checked_negate(&a);
 /// let expected = PrimitiveArray::from([None, Some(-6), None, Some(-7)]);
 /// assert_eq!(result, expected);
-/// assert!(result.is_valid(2))
+/// assert!(!result.is_valid(2))
 /// ```
 pub fn checked_negate<T>(array: &PrimitiveArray<T>) -> PrimitiveArray<T>
 where
