@@ -231,12 +231,16 @@ fn set_column_by_primitive_type<T: NativeType + JsonSerializable>(
     rows: &mut [Map<String, Value>],
     row_count: usize,
     array: &dyn Array,
+    validity: Option<&Bitmap>,
     col_name: &str,
 ) {
     let primitive_arr = array.as_any().downcast_ref::<PrimitiveArray<T>>().unwrap();
 
     rows.iter_mut()
-        .zip(primitive_arr.iter())
+        .zip(zip_validity(
+            primitive_arr.values().iter(),
+            validity.map(|v| v.iter()),
+        ))
         .take(row_count)
         .for_each(|(row, value)| {
             let value = to_json::<T>(value);
@@ -270,16 +274,36 @@ fn set_column_for_json_rows(
                     );
                 });
         }
-        DataType::Int8 => set_column_by_primitive_type::<i8>(rows, row_count, array, col_name),
-        DataType::Int16 => set_column_by_primitive_type::<i16>(rows, row_count, array, col_name),
-        DataType::Int32 => set_column_by_primitive_type::<i32>(rows, row_count, array, col_name),
-        DataType::Int64 => set_column_by_primitive_type::<i64>(rows, row_count, array, col_name),
-        DataType::UInt8 => set_column_by_primitive_type::<u8>(rows, row_count, array, col_name),
-        DataType::UInt16 => set_column_by_primitive_type::<u16>(rows, row_count, array, col_name),
-        DataType::UInt32 => set_column_by_primitive_type::<u32>(rows, row_count, array, col_name),
-        DataType::UInt64 => set_column_by_primitive_type::<u64>(rows, row_count, array, col_name),
-        DataType::Float32 => set_column_by_primitive_type::<f32>(rows, row_count, array, col_name),
-        DataType::Float64 => set_column_by_primitive_type::<f64>(rows, row_count, array, col_name),
+        DataType::Int8 => {
+            set_column_by_primitive_type::<i8>(rows, row_count, array, validity, col_name)
+        }
+        DataType::Int16 => {
+            set_column_by_primitive_type::<i16>(rows, row_count, array, validity, col_name)
+        }
+        DataType::Int32 => {
+            set_column_by_primitive_type::<i32>(rows, row_count, array, validity, col_name)
+        }
+        DataType::Int64 => {
+            set_column_by_primitive_type::<i64>(rows, row_count, array, validity, col_name)
+        }
+        DataType::UInt8 => {
+            set_column_by_primitive_type::<u8>(rows, row_count, array, validity, col_name)
+        }
+        DataType::UInt16 => {
+            set_column_by_primitive_type::<u16>(rows, row_count, array, validity, col_name)
+        }
+        DataType::UInt32 => {
+            set_column_by_primitive_type::<u32>(rows, row_count, array, validity, col_name)
+        }
+        DataType::UInt64 => {
+            set_column_by_primitive_type::<u64>(rows, row_count, array, validity, col_name)
+        }
+        DataType::Float32 => {
+            set_column_by_primitive_type::<f32>(rows, row_count, array, validity, col_name)
+        }
+        DataType::Float64 => {
+            set_column_by_primitive_type::<f64>(rows, row_count, array, validity, col_name)
+        }
         DataType::Utf8 => {
             let array = array.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
             rows.iter_mut()
