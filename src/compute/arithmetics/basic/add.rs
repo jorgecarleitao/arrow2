@@ -167,7 +167,6 @@ where
     }
 }
 
-// Implementation of ArrayWrappingAdd trait for PrimitiveArrays
 impl<T> ArrayWrappingAdd<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeType + WrappingAdd<Output = T> + NotI128,
