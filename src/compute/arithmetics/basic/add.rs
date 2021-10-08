@@ -43,7 +43,7 @@ where
     binary(lhs, rhs, lhs.data_type().clone(), |a, b| a + b)
 }
 
-/// Checked addition of two primitive arrays.
+/// Wrapping addition of two primitive arrays.
 /// It do nothing if the result overflows.
 ///
 /// # Examples
@@ -51,10 +51,10 @@ where
 /// use arrow2::compute::arithmetics::basic::wrapping_add;
 /// use arrow2::array::PrimitiveArray;
 ///
-/// let a = PrimitiveArray::from([Some(100i8), Some(100i8), Some(100i8)]);
+/// let a = PrimitiveArray::from([Some(-100i8), Some(100i8), Some(100i8)]);
 /// let b = PrimitiveArray::from([Some(0i8), Some(100i8), Some(0i8)]);
 /// let result = wrapping_add(&a, &b).unwrap();
-/// let expected = PrimitiveArray::from([Some(100i8), None, Some(100i8)]);
+/// let expected = PrimitiveArray::from([Some(-100i8), Some(-56i8), Some(100i8)]);
 /// assert_eq!(result, expected);
 /// ```
 pub fn wrapping_add<T>(

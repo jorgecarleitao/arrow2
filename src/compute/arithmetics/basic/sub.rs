@@ -51,10 +51,10 @@ where
 /// use arrow2::compute::arithmetics::basic::wrapping_sub;
 /// use arrow2::array::PrimitiveArray;
 ///
-/// let a = PrimitiveArray::from([Some(100i8), Some(100i8), Some(100i8)]);
+/// let a = PrimitiveArray::from([Some(-100i8), Some(-100i8), Some(100i8)]);
 /// let b = PrimitiveArray::from([Some(0i8), Some(100i8), Some(0i8)]);
 /// let result = wrapping_sub(&a, &b).unwrap();
-/// let expected = PrimitiveArray::from([Some(100i8), None, Some(100i8)]);
+/// let expected = PrimitiveArray::from([Some(-100i8), Some(56i8), Some(100i8)]);
 /// assert_eq!(result, expected);
 /// ```
 pub fn wrapping_sub<T>(

@@ -54,7 +54,7 @@ where
 /// let a = PrimitiveArray::from([Some(100i8), Some(100i8), Some(100i8)]);
 /// let b = PrimitiveArray::from([Some(0i8), Some(100i8), Some(0i8)]);
 /// let result = wrapping_mul(&a, &b).unwrap();
-/// let expected = PrimitiveArray::from([Some(100i8), None, Some(100i8)]);
+/// let expected = PrimitiveArray::from([Some(0), Some(0), Some(0)]);
 /// assert_eq!(result, expected);
 /// ```
 pub fn wrapping_mul<T>(
