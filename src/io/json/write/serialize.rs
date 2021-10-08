@@ -399,7 +399,7 @@ pub fn write_record_batches(batches: &[RecordBatch]) -> Vec<Map<String, Value>> 
                     &mut rows[base..],
                     row_count,
                     col.as_ref(),
-                    None,
+                    col.validity(),
                     col_name,
                 );
             });
