@@ -51,8 +51,8 @@ where
 /// use arrow2::compute::arithmetics::basic::wrapping_mul;
 /// use arrow2::array::PrimitiveArray;
 ///
-/// let a = PrimitiveArray::from([Some(100i8), Some(100i8), Some(100i8)]);
-/// let b = PrimitiveArray::from([Some(0i8), Some(100i8), Some(0i8)]);
+/// let a = PrimitiveArray::from([Some(100i8), Some(0x10i8), Some(100i8)]);
+/// let b = PrimitiveArray::from([Some(0i8), Some(0x10i8), Some(0i8)]);
 /// let result = wrapping_mul(&a, &b).unwrap();
 /// let expected = PrimitiveArray::from([Some(0), Some(0), Some(0)]);
 /// assert_eq!(result, expected);
