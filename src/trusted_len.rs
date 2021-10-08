@@ -1,3 +1,12 @@
+pub fn and<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<PrimitiveArray<T>>
+    where
+        T: NativeType + BitXor<Output = T>,
+{
+    check_same_type(lhs, rhs)?;
+
+    binary(lhs, rhs, lhs.data_type().clone(), |a, b| a & b)
+}
+
 //! Declares [`TrustedLen`].
 use std::slice::Iter;
 
