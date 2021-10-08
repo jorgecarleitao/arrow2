@@ -309,6 +309,13 @@ pub trait ArrayAdd<Rhs> {
     fn add(&self, rhs: &Rhs) -> Result<Self::Output>;
 }
 
+/// Defines wrapping addition operation for primitive arrays
+pub trait ArrayWrappingAdd<Rhs> {
+    type Output;
+
+    fn wrapping_add(&self, rhs: &Rhs) -> Result<Self::Output>;
+}
+
 /// Defines checked addition operation for primitive arrays
 pub trait ArrayCheckedAdd<Rhs> {
     type Output;
@@ -337,6 +344,13 @@ pub trait ArraySub<Rhs> {
     fn sub(&self, rhs: &Rhs) -> Result<Self::Output>;
 }
 
+/// Defines wrapping subtraction operation for primitive arrays
+pub trait ArrayWrappingSub<Rhs> {
+    type Output;
+
+    fn wrapping_sub(&self, rhs: &Rhs) -> Result<Self::Output>;
+}
+
 /// Defines checked subtraction operation for primitive arrays
 pub trait ArrayCheckedSub<Rhs> {
     type Output;
@@ -363,6 +377,13 @@ pub trait ArrayMul<Rhs> {
     type Output;
 
     fn mul(&self, rhs: &Rhs) -> Result<Self::Output>;
+}
+
+/// Defines wrapping multiplication operation for primitive arrays
+pub trait ArrayWrappingMul<Rhs> {
+    type Output;
+
+    fn wrapping_mul(&self, rhs: &Rhs) -> Result<Self::Output>;
 }
 
 /// Defines checked multiplication operation for primitive arrays

@@ -1,9 +1,10 @@
 //! Definition of basic add operations with primitive arrays
 use std::ops::Add;
 
-use num_traits::{ops::overflowing::OverflowingAdd, CheckedAdd, SaturatingAdd, Zero};
+use num_traits::{ops::overflowing::OverflowingAdd, CheckedAdd, SaturatingAdd, WrappingAdd, Zero};
 
 use crate::compute::arithmetics::basic::check_same_type;
+use crate::compute::arithmetics::ArrayWrappingAdd;
 use crate::{
     array::{Array, PrimitiveArray},
     bitmap::Bitmap,
@@ -40,6 +41,34 @@ where
     check_same_type(lhs, rhs)?;
 
     binary(lhs, rhs, lhs.data_type().clone(), |a, b| a + b)
+}
+
+/// Wrapping addition of two [`PrimitiveArray`]s.
+/// It wraps around at the boundary of the type if the result overflows.
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::arithmetics::basic::wrapping_add;
+/// use arrow2::array::PrimitiveArray;
+///
+/// let a = PrimitiveArray::from([Some(-100i8), Some(100i8), Some(100i8)]);
+/// let b = PrimitiveArray::from([Some(0i8), Some(100i8), Some(0i8)]);
+/// let result = wrapping_add(&a, &b).unwrap();
+/// let expected = PrimitiveArray::from([Some(-100i8), Some(-56i8), Some(100i8)]);
+/// assert_eq!(result, expected);
+/// ```
+pub fn wrapping_add<T>(
+    lhs: &PrimitiveArray<T>,
+    rhs: &PrimitiveArray<T>,
+) -> Result<PrimitiveArray<T>>
+where
+    T: NativeType + WrappingAdd<Output = T>,
+{
+    check_same_type(lhs, rhs)?;
+
+    let op = move |a: T, b: T| a.wrapping_add(&b);
+
+    binary(lhs, rhs, lhs.data_type().clone(), op)
 }
 
 /// Checked addition of two primitive arrays. If the result from the sum
@@ -138,6 +167,17 @@ where
     }
 }
 
+impl<T> ArrayWrappingAdd<PrimitiveArray<T>> for PrimitiveArray<T>
+where
+    T: NativeType + WrappingAdd<Output = T> + NotI128,
+{
+    type Output = Self;
+
+    fn wrapping_add(&self, rhs: &PrimitiveArray<T>) -> Result<Self::Output> {
+        wrapping_add(self, rhs)
+    }
+}
+
 // Implementation of ArrayCheckedAdd trait for PrimitiveArrays
 impl<T> ArrayCheckedAdd<PrimitiveArray<T>> for PrimitiveArray<T>
 where
@@ -193,6 +233,26 @@ where
 {
     let rhs = *rhs;
     unary(lhs, |a| a + rhs, lhs.data_type().clone())
+}
+
+/// Wrapping addition of a scalar T to a [`PrimitiveArray`] of type T.
+/// It do nothing if the result overflows.
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::arithmetics::basic::wrapping_add_scalar;
+/// use arrow2::array::Int8Array;
+///
+/// let a = Int8Array::from(&[None, Some(100)]);
+/// let result = wrapping_add_scalar(&a, &100i8);
+/// let expected = Int8Array::from(&[None, Some(-56)]);
+/// assert_eq!(result, expected);
+/// ```
+pub fn wrapping_add_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
+where
+    T: NativeType + WrappingAdd<Output = T>,
+{
+    unary(lhs, |a| a.wrapping_add(rhs), lhs.data_type().clone())
 }
 
 /// Checked addition of a scalar T to a primitive array of type T. If the
