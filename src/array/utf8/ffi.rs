@@ -33,6 +33,6 @@ impl<O: Offset, A: ffi::ArrowArrayRef> FromFfi<A> for Utf8Array<O> {
             validity = validity.map(|x| x.slice(offset, length))
         }
         let data_type = Self::default_data_type();
-        Ok(Self::from_data(data_type, offsets, values, validity))
+        Ok(Self::from_data_unchecked(data_type, offsets, values, validity))
     }
 }

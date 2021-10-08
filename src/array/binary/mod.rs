@@ -1,8 +1,8 @@
 use crate::{bitmap::Bitmap, buffer::Buffer, datatypes::DataType};
 
 use super::{
-    display_fmt, display_helper, specification::check_offsets, specification::Offset, Array,
-    GenericBinaryArray,
+    display_fmt, display_helper, specification::check_offsets,
+    specification::check_offsets_minimal, specification::Offset, Array, GenericBinaryArray,
 };
 
 mod ffi;
@@ -81,6 +81,39 @@ impl<O: Offset> BinaryArray<O> {
             DataType::LargeBinary
         } else {
             DataType::Binary
+        }
+    }
+
+    /// The same as [`BinaryArray::from_data`] but does not check for offsets.
+    /// # Safety
+    /// * `offsets` MUST be monotonically increasing
+    /// # Panics
+    /// This function panics iff:
+    /// * The `data_type`'s physical type is not consistent with the offset `O`.
+    /// * The last element of `offsets` is different from `values.len()`.
+    /// * The validity is not `None` and its length is different from `offsets.len() - 1`.
+    pub fn from_data_unchecked(
+        data_type: DataType,
+        offsets: Buffer<O>,
+        values: Buffer<u8>,
+        validity: Option<Bitmap>,
+    ) -> Self {
+        check_offsets_minimal(&offsets, values.len());
+
+        if let Some(validity) = &validity {
+            assert_eq!(offsets.len() - 1, validity.len());
+        }
+
+        if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
+            panic!("BinaryArray can only be initialized with DataType::Binary or DataType::LargeBinary")
+        }
+
+        Self {
+            data_type,
+            offsets,
+            values,
+            validity,
+            offset: 0,
         }
     }
 

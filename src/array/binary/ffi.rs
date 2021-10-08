@@ -44,7 +44,7 @@ impl<O: Offset, A: ffi::ArrowArrayRef> FromFfi<A> for BinaryArray<O> {
             validity = validity.map(|x| x.slice(offset, length))
         }
 
-        Ok(Self::from_data(
+        Ok(Self::from_data_unchecked(
             Self::default_data_type(),
             offsets,
             values,
