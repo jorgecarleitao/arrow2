@@ -235,7 +235,7 @@ where
     unary(lhs, |a| a + rhs, lhs.data_type().clone())
 }
 
-/// Wrapping addition of a scalar T to a primitive array of type T.
+/// Wrapping addition of a scalar T to a [`PrimitiveArray`] of type T.
 /// It do nothing if the result overflows.
 ///
 /// # Examples
