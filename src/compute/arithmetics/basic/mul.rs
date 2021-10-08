@@ -43,8 +43,8 @@ where
     binary(lhs, rhs, lhs.data_type().clone(), |a, b| a * b)
 }
 
-/// Wrapping multiplication of two primitive arrays.
-/// It do nothing if the result overflows.
+/// Wrapping multiplication of two [`PrimitiveArray`]s.
+///  It wraps around at the boundary of the type if the result overflows.
 ///
 /// # Examples
 /// ```
@@ -168,7 +168,6 @@ where
     }
 }
 
-// Implementation of ArrayWrappingMul trait for PrimitiveArrays
 impl<T> ArrayWrappingMul<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeType + WrappingMul<Output = T> + NotI128,
@@ -236,7 +235,7 @@ where
     unary(lhs, |a| a * rhs, lhs.data_type().clone())
 }
 
-/// Wrapping multiplication of a scalar T to a primitive array of type T.
+/// Wrapping multiplication of a scalar T to a [`PrimitiveArray`] of type T.
 /// It do nothing if the result overflows.
 ///
 /// # Examples

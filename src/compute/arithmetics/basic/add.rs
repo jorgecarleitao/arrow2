@@ -43,7 +43,7 @@ where
     binary(lhs, rhs, lhs.data_type().clone(), |a, b| a + b)
 }
 
-/// Wrapping addition of two `PrimitiveArray`s.
+/// Wrapping addition of two [`PrimitiveArray`]s.
 /// It wraps around at the boundary of the type if the result overflows.
 ///
 /// # Examples

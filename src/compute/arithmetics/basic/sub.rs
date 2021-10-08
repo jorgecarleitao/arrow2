@@ -43,8 +43,8 @@ where
     binary(lhs, rhs, lhs.data_type().clone(), |a, b| a - b)
 }
 
-/// Wrapping subtraction of two primitive arrays.
-/// It do nothing if the result overflows.
+/// Wrapping subtraction of two [`PrimitiveArray`]s.
+///  It wraps around at the boundary of the type if the result overflows.
 ///
 /// # Examples
 /// ```
@@ -167,7 +167,6 @@ where
     }
 }
 
-// Implementation of ArrayWrappingSub trait for PrimitiveArrays
 impl<T> ArrayWrappingSub<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeType + WrappingSub<Output = T> + NotI128,
@@ -236,7 +235,7 @@ where
     unary(lhs, |a| a - rhs, lhs.data_type().clone())
 }
 
-/// Wrapping subtraction of a scalar T to a primitive array of type T.
+/// Wrapping subtraction of a scalar T to a [`PrimitiveArray`] of type T.
 /// It do nothing if the result overflows.
 ///
 /// # Examples
