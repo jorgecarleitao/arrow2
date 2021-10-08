@@ -308,7 +308,7 @@ fn set_column_for_json_rows(
             let array = array.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
             rows.iter_mut()
                 .zip(zip_validity(
-                    array.values().iter(),
+                    array.values_iter(),
                     validity.map(|v| v.iter()),
                 ))
                 .take(row_count)
