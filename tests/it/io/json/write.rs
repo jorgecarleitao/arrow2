@@ -39,6 +39,55 @@ fn write_simple_rows() {
 }
 
 #[test]
+fn write_nested_struct_with_validity() {
+    let inner = vec![
+        Field::new("c121", DataType::Utf8, false),
+        Field::new("c122", DataType::Int32, false),
+    ];
+    let fields = vec![
+        Field::new("c11", DataType::Int32, false),
+        Field::new("c12", DataType::Struct(inner.clone()), false),
+    ];
+    let schema = Schema::new(vec![
+        Field::new("c1", DataType::Struct(fields.clone()), false),
+        Field::new("c2", DataType::Utf8, false),
+    ]);
+
+    let c1 = StructArray::from_data(
+        DataType::Struct(fields),
+        vec![
+            Arc::new(Int32Array::from(&[Some(1), None, Some(5)])),
+            Arc::new(StructArray::from_data(
+                DataType::Struct(inner),
+                vec![
+                    Arc::new(Utf8Array::<i32>::from(&vec![None, Some("f"), Some("g")])),
+                    Arc::new(Int32Array::from(&[Some(20), None, Some(43)])),
+                ],
+                Some(Bitmap::from([false, true, true])),
+            )),
+        ],
+        Some(Bitmap::from([true, true, false])),
+    );
+    let c2 = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c")]);
+
+    let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(c1), Arc::new(c2)]).unwrap();
+
+    let mut buf = Vec::new();
+    {
+        let mut writer = LineDelimitedWriter::new(&mut buf);
+        writer.write_batches(&[batch]).unwrap();
+    }
+
+    assert_eq!(
+        String::from_utf8(buf).unwrap(),
+        r#"{"c1":{"c11":1,"c12":{"c121":null,"c122":null}},"c2":"a"}
+{"c1":{"c11":null,"c12":{"c121":"f","c122":null}},"c2":"b"}
+{"c1":{"c11":null,"c12":{"c121":null,"c122":null}},"c2":"c"}
+"#
+    );
+}
+
+#[test]
 fn write_nested_structs() {
     let c121 = Field::new("c121", DataType::Utf8, false);
     let fields = vec![
