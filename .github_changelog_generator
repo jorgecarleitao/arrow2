@@ -1,5 +1,5 @@
-since-tag=v0.5.0
-future-release=v0.6.0
+since-tag=v0.6.1
+future-release=v0.6.2
 pr-wo-labels=false
 exclude-labels=no-changelog,question
 add-sections={"features":{"prefix":"**Enhancements:**","labels":["enhancement"]}, "documentation":{"prefix":"**Documentation updates:**","labels":["documentation"]}, "testing":{"prefix":"**Testing updates:**","labels":["testing"]}}

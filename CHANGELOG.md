@@ -1,5 +1,22 @@
 # Changelog
 
+## [v0.6.2](https://github.com/jorgecarleitao/arrow2/tree/v0.6.2) (2021-10-09)
+
+[Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.6.1...v0.6.2)
+
+**New features:**
+
+- Added wrapping version arithmetics for `PrimitiveArray` [\#496](https://github.com/jorgecarleitao/arrow2/pull/496) ([yjhmelody](https://github.com/yjhmelody))
+
+**Fixed bugs:**
+
+- Do not check offsets or utf8 validity in ffi \(\#505\) [\#510](https://github.com/jorgecarleitao/arrow2/pull/510) ([NilsBarlaug](https://github.com/NilsBarlaug))
+- Made `try_push_valid` public again [\#509](https://github.com/jorgecarleitao/arrow2/pull/509) ([ritchie46](https://github.com/ritchie46))
+
+**Enhancements:**
+
+- Use static-typed equal functions directly [\#507](https://github.com/jorgecarleitao/arrow2/pull/507) ([yjhmelody](https://github.com/yjhmelody))
+
 ## [v0.6.1](https://github.com/jorgecarleitao/arrow2/tree/v0.6.1) (2021-10-07)
 
 [Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.5.3...v0.6.1)
