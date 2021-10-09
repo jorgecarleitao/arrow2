@@ -4,6 +4,7 @@ use std::io::Read;
 use std::sync::Arc;
 
 use avro_rs::{Codec, Schema as AvroSchema};
+use libflate::deflate::Decoder;
 use streaming_iterator::StreamingIterator;
 
 mod deserialize;
@@ -74,7 +75,10 @@ fn decompress_block(buf: &mut Vec<u8>, decompress: &mut Vec<u8>, codec: Codec) -
             Ok(false)
         }
         Codec::Deflate => {
-            todo!()
+            decompress.clear();
+            let mut decoder = Decoder::new(&buf[..]);
+            decoder.read_to_end(decompress)?;
+            Ok(true)
         }
     }
 }
