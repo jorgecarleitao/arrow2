@@ -104,7 +104,11 @@ where
     array.iter().map(to_json).collect()
 }
 
-fn struct_array_to_jsonmap_array(array: &StructArray, row_count: usize) -> Vec<Map<String, Value>> {
+fn struct_array_to_jsonmap_array(
+    array: &StructArray,
+    validity: Option<&Bitmap>,
+    row_count: usize,
+) -> Vec<Map<String, Value>> {
     // {"a": [1, 2, 3], "b": [a, b, c], "c": {"a": [1, 2, 3]}}
     // [
     //  {"a": 1, "b": a, "c": {"a": 1}},
@@ -119,17 +123,6 @@ fn struct_array_to_jsonmap_array(array: &StructArray, row_count: usize) -> Vec<M
         .take(row_count)
         .collect::<Vec<Map<String, Value>>>();
 
-    // Combine the two incoming validity `Bitmaps` using `and` logic
-    let combine_validity = |col_validity: Option<&Bitmap>, array_validity: Option<&Bitmap>| match (
-        col_validity,
-        array_validity,
-    ) {
-        (Some(cv), Some(av)) => Some(cv & av),
-        (Some(cv), None) => Some(cv.clone()),
-        (None, Some(av)) => Some(av.clone()),
-        (None, None) => None,
-    };
-
     array
         .values()
         .iter()
@@ -139,8 +132,7 @@ fn struct_array_to_jsonmap_array(array: &StructArray, row_count: usize) -> Vec<M
                 &mut inner_objs,
                 row_count,
                 struct_col.as_ref(),
-                // For each column we combine its validity with the `StructArray`'s validity
-                combine_validity(struct_col.validity(), array.validity()).as_ref(),
+                combine_validity(struct_col.validity(), validity).as_ref(),
                 fields[j].name(),
             );
         });
@@ -214,6 +206,7 @@ fn write_array(array: &dyn Array) -> Value {
         DataType::Struct(_) => {
             let jsonmaps = struct_array_to_jsonmap_array(
                 array.as_any().downcast_ref::<StructArray>().unwrap(),
+                array.validity(),
                 array.len(),
             );
             jsonmaps.into_iter().map(Value::Object).collect()
@@ -340,7 +333,11 @@ fn set_column_for_json_rows(
         }
         DataType::Struct(_) => {
             let array = array.as_any().downcast_ref::<StructArray>().unwrap();
-            let inner_objs = struct_array_to_jsonmap_array(array, row_count);
+            let inner_objs = struct_array_to_jsonmap_array(
+                array,
+                combine_validity(validity, array.validity()).as_ref(),
+                row_count,
+            );
             rows.iter_mut()
                 .take(row_count)
                 .zip(inner_objs.into_iter())
@@ -431,4 +428,14 @@ pub fn write_record_batches(batches: &[RecordBatch]) -> Vec<Map<String, Value>> 
         });
     }
     rows
+}
+
+// Combine the two incoming validity `Bitmaps` using `and` logic
+fn combine_validity(validity1: Option<&Bitmap>, validity2: Option<&Bitmap>) -> Option<Bitmap> {
+    match (validity1, validity2) {
+        (Some(v1), Some(v2)) => Some(v1 & v2),
+        (Some(v1), None) => Some(v1.clone()),
+        (None, Some(v2)) => Some(v2.clone()),
+        (None, None) => None,
+    }
 }
