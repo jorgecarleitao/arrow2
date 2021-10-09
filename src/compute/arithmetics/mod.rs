@@ -61,14 +61,14 @@ pub mod time;
 
 use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
-use num_traits::{NumCast, Zero};
+use num_traits::{CheckedNeg, NumCast, WrappingNeg, Zero};
 
 use crate::datatypes::{DataType, IntervalUnit, TimeUnit};
 use crate::error::{ArrowError, Result};
 use crate::types::NativeType;
 use crate::{array::*, bitmap::Bitmap};
 
-use super::arity::unary;
+use super::arity::{unary, unary_checked};
 
 // Macro to evaluate match branch in arithmetic function.
 // The macro is used to downcast both arrays to a primitive_array_type. If there
@@ -300,6 +300,45 @@ where
     T: NativeType + Neg<Output = T>,
 {
     unary(array, |a| -a, array.data_type().clone())
+}
+
+/// Checked negates values from array.
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::arithmetics::checked_negate;
+/// use arrow2::array::{Array, PrimitiveArray};
+///
+/// let a = PrimitiveArray::from([None, Some(6), Some(i8::MIN), Some(7)]);
+/// let result = checked_negate(&a);
+/// let expected = PrimitiveArray::from([None, Some(-6), None, Some(-7)]);
+/// assert_eq!(result, expected);
+/// assert!(!result.is_valid(2))
+/// ```
+pub fn checked_negate<T>(array: &PrimitiveArray<T>) -> PrimitiveArray<T>
+where
+    T: NativeType + CheckedNeg,
+{
+    unary_checked(array, |a| a.checked_neg(), array.data_type().clone())
+}
+
+/// Wrapping negates values from array.
+///
+/// # Examples
+/// ```
+/// use arrow2::compute::arithmetics::wrapping_negate;
+/// use arrow2::array::{Array, PrimitiveArray};
+///
+/// let a = PrimitiveArray::from([None, Some(6), Some(i8::MIN), Some(7)]);
+/// let result = wrapping_negate(&a);
+/// let expected = PrimitiveArray::from([None, Some(-6), Some(i8::MIN), Some(-7)]);
+/// assert_eq!(result, expected);
+/// ```
+pub fn wrapping_negate<T>(array: &PrimitiveArray<T>) -> PrimitiveArray<T>
+where
+    T: NativeType + WrappingNeg,
+{
+    unary(array, |a| a.wrapping_neg(), array.data_type().clone())
 }
 
 /// Defines basic addition operation for primitive arrays
