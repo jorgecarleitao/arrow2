@@ -1,5 +1,9 @@
 //! APIs to read from Parquet format.
-use std::{convert::TryInto, io::{Read, Seek}, sync::Arc};
+use std::{
+    convert::TryInto,
+    io::{Read, Seek},
+    sync::Arc,
+};
 
 use futures::{AsyncRead, AsyncSeek, Stream};
 pub use parquet2::{
@@ -18,7 +22,11 @@ pub use parquet2::{
     types::int96_to_i64_ns,
 };
 
-use crate::{array::{Array, DictionaryKey, PrimitiveArray}, datatypes::{DataType, IntervalUnit, TimeUnit}, error::{ArrowError, Result}};
+use crate::{
+    array::{Array, DictionaryKey, PrimitiveArray},
+    datatypes::{DataType, IntervalUnit, TimeUnit},
+    error::{ArrowError, Result},
+};
 
 mod binary;
 mod boolean;
@@ -205,19 +213,13 @@ pub fn page_iter_to_array<
             iter, data_type, metadata,
         )?)),
         Decimal(_, _) => match metadata.descriptor().type_() {
-            ParquetType::PrimitiveType { physical_type, ..} => match physical_type{
-                PhysicalType::Int32 => primitive::iter_to_array(
-                    iter,
-                    metadata,
-                    data_type,
-                    |x: i32| x as i128,
-                ),
-                PhysicalType::Int64 => primitive::iter_to_array(
-                    iter,
-                    metadata,
-                    data_type,
-                    |x: i64| x as i128,
-                ),
+            ParquetType::PrimitiveType { physical_type, .. } => match physical_type {
+                PhysicalType::Int32 => {
+                    primitive::iter_to_array(iter, metadata, data_type, |x: i32| x as i128)
+                }
+                PhysicalType::Int64 => {
+                    primitive::iter_to_array(iter, metadata, data_type, |x: i64| x as i128)
+                }
                 PhysicalType::FixedLenByteArray(n) => {
                     if *n > 16 {
                         Err(ArrowError::NotYetImplemented(format!(
@@ -225,25 +227,33 @@ pub fn page_iter_to_array<
                             n
                         )))
                     } else {
-                        let paddings = (0..(16-*n)).map(|_| 0u8).collect::<Vec<_>>();
-                        fixed_size_binary::iter_to_array(iter, DataType::FixedSizeBinary(*n), metadata)
-                        .map(|e|{
-                            let a = e.into_iter().map(|v| 
-                                    v.and_then(|v1| {
-                                        [&paddings, v1].concat().try_into().map(
-                                            |pad16| i128::from_be_bytes(pad16)
-                                        ).ok()   
-                                    }
-                                )
-                            ).collect::<Vec<_>>();
-                            Box::new(PrimitiveArray::<i128>::from(a).to(data_type)) as Box<dyn Array>
-                        }
+                        let paddings = (0..(16 - *n)).map(|_| 0u8).collect::<Vec<_>>();
+                        fixed_size_binary::iter_to_array(
+                            iter,
+                            DataType::FixedSizeBinary(*n),
+                            metadata,
                         )
+                        .map(|e| {
+                            let a = e
+                                .into_iter()
+                                .map(|v| {
+                                    v.and_then(|v1| {
+                                        [&paddings, v1]
+                                            .concat()
+                                            .try_into()
+                                            .map(|pad16| i128::from_be_bytes(pad16))
+                                            .ok()
+                                    })
+                                })
+                                .collect::<Vec<_>>();
+                            Box::new(PrimitiveArray::<i128>::from(a).to(data_type))
+                                as Box<dyn Array>
+                        })
                     }
-                },
-                _ => unreachable!()
+                }
+                _ => unreachable!(),
             },
-            _ => unreachable!()
+            _ => unreachable!(),
         },
         List(ref inner) => match inner.data_type() {
             UInt8 => primitive::iter_to_array_nested(iter, metadata, data_type, |x: i32| x as u8),

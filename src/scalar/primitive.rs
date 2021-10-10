@@ -1,7 +1,7 @@
 use crate::{
     datatypes::DataType,
-    types::{NativeType, NaturalDataType},
     error::ArrowError,
+    types::{NativeType, NaturalDataType},
 };
 
 use super::Scalar;

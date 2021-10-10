@@ -3,7 +3,7 @@ use parquet2::{
     encoding::Encoding,
     metadata::ColumnDescriptor,
     page::CompressedDataPage,
-    statistics::{serialize_statistics, deserialize_statistics, ParquetStatistics},
+    statistics::{deserialize_statistics, serialize_statistics, ParquetStatistics},
     write::WriteOptions,
 };
 
@@ -98,7 +98,7 @@ pub(super) fn build_statistics(
             .min_by(|x, y| ord_binary(x, y))
             .map(|x| x.to_vec()),
     };
-    deserialize_statistics(pq_statistics,descriptor).map(
-        |e| serialize_statistics(&*e)
-    ).ok()
+    deserialize_statistics(pq_statistics, descriptor)
+        .map(|e| serialize_statistics(&*e))
+        .ok()
 }
