@@ -202,7 +202,9 @@ fn write_array(array: &dyn Array) -> Value {
                 array.as_any().downcast_ref::<StructArray>().unwrap(),
                 array.len(),
             );
-            jsonmaps.into_iter().map(Value::Object).collect()
+            zip_validity(jsonmaps.into_iter(), array.validity().map(|v| v.iter()))
+                .map(|m| m.map(|o| Value::Object(o)).unwrap_or(Value::Null))
+                .collect()
         }
         _ => {
             panic!(
