@@ -1,7 +1,6 @@
 mod basic;
 mod decimal;
 mod time;
-mod bitwise;
 
 use arrow2::array::new_empty_array;
 use arrow2::compute::arithmetics::{arithmetic, can_arithmetic, Operator};
