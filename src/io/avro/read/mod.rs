@@ -63,9 +63,7 @@ fn read_block<R: Read>(reader: &mut R, buf: &mut Vec<u8>, file_marker: [u8; 16])
     let mut marker = [0u8; 16];
     reader.read_exact(&mut marker)?;
 
-    if marker != file_marker {
-        panic!();
-    }
+    assert!(!(marker != file_marker));
     Ok(rows)
 }
 

@@ -160,7 +160,7 @@ fn read_required<T, A, F>(
     assert_eq!(values_buffer.len(), additional * std::mem::size_of::<T>());
     let iterator = ExactChunksIter::<T>::new(values_buffer);
 
-    let iterator = iterator.map(|value| op(value));
+    let iterator = iterator.map(op);
 
     values.extend_from_trusted_len_iter(iterator);
 }

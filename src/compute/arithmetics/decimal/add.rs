@@ -65,9 +65,11 @@ pub fn add(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<Pri
                 let op = move |a, b| {
                     let res: i128 = a + b;
 
-                    if res.abs() > max_value(*lhs_p) {
-                        panic!("Overflow in addition presented for precision {}", lhs_p);
-                    }
+                    assert!(
+                        !(res.abs() > max_value(*lhs_p)),
+                        "Overflow in addition presented for precision {}",
+                        lhs_p
+                    );
 
                     res
                 };

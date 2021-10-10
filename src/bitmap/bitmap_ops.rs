@@ -110,7 +110,7 @@ where
 {
     let rem = op(iter.remainder());
 
-    let iterator = iter.map(|left| op(left)).chain(std::iter::once(rem));
+    let iterator = iter.map(op).chain(std::iter::once(rem));
 
     let buffer = MutableBuffer::from_chunk_iter(iterator);
 

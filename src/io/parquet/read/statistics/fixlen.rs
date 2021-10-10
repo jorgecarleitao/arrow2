@@ -63,7 +63,7 @@ impl TryFrom<(&ParquetFixedLenStatistics, DataType)> for PrimitiveStatistics<i12
                 [paddings.as_slice(), value]
                     .concat()
                     .try_into()
-                    .map(|v| i128::from_be_bytes(v))
+                    .map(i128::from_be_bytes)
                     .ok()
             });
 
@@ -71,7 +71,7 @@ impl TryFrom<(&ParquetFixedLenStatistics, DataType)> for PrimitiveStatistics<i12
                 [paddings.as_slice(), value]
                     .concat()
                     .try_into()
-                    .map(|v| i128::from_be_bytes(v))
+                    .map(i128::from_be_bytes)
                     .ok()
             });
             Ok(Self {

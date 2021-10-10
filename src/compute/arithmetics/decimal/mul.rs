@@ -78,12 +78,11 @@ pub fn mul(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<Pri
                     // 24691.308 <-- 24691308642
                     let res = res / 10i128.pow(*lhs_s as u32);
 
-                    if res.abs() > max_value(*lhs_p) {
-                        panic!(
-                            "Overflow in multiplication presented for precision {}",
-                            lhs_p
-                        );
-                    }
+                    assert!(
+                        !(res.abs() > max_value(*lhs_p)),
+                        "Overflow in multiplication presented for precision {}",
+                        lhs_p
+                    );
 
                     res
                 };

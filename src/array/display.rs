@@ -149,7 +149,7 @@ pub fn get_value_display<'a>(array: &'a dyn Array) -> Box<dyn Fn(usize) -> Strin
         List(_) => {
             let f = |x: Box<dyn Array>| {
                 let display = get_value_display(x.as_ref());
-                let string_values = (0..x.len()).map(|i| display(i)).collect::<Vec<String>>();
+                let string_values = (0..x.len()).map(display).collect::<Vec<String>>();
                 format!("[{}]", string_values.join(", "))
             };
             dyn_display!(array, ListArray<i32>, f)
@@ -157,7 +157,7 @@ pub fn get_value_display<'a>(array: &'a dyn Array) -> Box<dyn Fn(usize) -> Strin
         FixedSizeList(_, _) => {
             let f = |x: Box<dyn Array>| {
                 let display = get_value_display(x.as_ref());
-                let string_values = (0..x.len()).map(|i| display(i)).collect::<Vec<String>>();
+                let string_values = (0..x.len()).map(display).collect::<Vec<String>>();
                 format!("[{}]", string_values.join(", "))
             };
             dyn_display!(array, FixedSizeListArray, f)
@@ -165,7 +165,7 @@ pub fn get_value_display<'a>(array: &'a dyn Array) -> Box<dyn Fn(usize) -> Strin
         LargeList(_) => {
             let f = |x: Box<dyn Array>| {
                 let display = get_value_display(x.as_ref());
-                let string_values = (0..x.len()).map(|i| display(i)).collect::<Vec<String>>();
+                let string_values = (0..x.len()).map(display).collect::<Vec<String>>();
                 format!("[{}]", string_values.join(", "))
             };
             dyn_display!(array, ListArray<i64>, f)

@@ -112,7 +112,7 @@ where
 
         // sort all non-null values
         sort_values(
-            &mut buffer.as_mut_slice(),
+            buffer.as_mut_slice(),
             cmp,
             options.descending,
             limit - validity.null_count(),
@@ -153,7 +153,7 @@ where
         let mut buffer = MutableBuffer::<T>::new();
         buffer.extend_from_slice(values);
 
-        sort_values(&mut buffer.as_mut_slice(), cmp, options.descending, limit);
+        sort_values(buffer.as_mut_slice(), cmp, options.descending, limit);
         buffer.truncate(limit);
         buffer.shrink_to_fit();
 

@@ -306,7 +306,7 @@ impl<O: Offset> MutableUtf8Array<O> {
         extend_from_trusted_len_iter(
             &mut self.offsets,
             &mut self.values,
-            &mut self.validity.as_mut().unwrap(),
+            self.validity.as_mut().unwrap(),
             iterator,
         );
 

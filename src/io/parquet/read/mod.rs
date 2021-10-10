@@ -241,7 +241,7 @@ pub fn page_iter_to_array<
                                         [&paddings, v1]
                                             .concat()
                                             .try_into()
-                                            .map(|pad16| i128::from_be_bytes(pad16))
+                                            .map(i128::from_be_bytes)
                                             .ok()
                                     })
                                 })

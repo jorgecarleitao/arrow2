@@ -20,18 +20,12 @@ pub use primitive_to::*;
 pub use utf8_to::*;
 
 /// options defining how Cast kernels behave
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 struct CastOptions {
     /// default to false
     /// whether an overflowing cast should be converted to `None` (default), or be wrapped (i.e. `256i16 as u8 = 0` vectorized).
     /// Settings this to `true` is 5-6x faster for numeric types.
     wrapped: bool,
-}
-
-impl Default for CastOptions {
-    fn default() -> Self {
-        Self { wrapped: false }
-    }
 }
 
 impl CastOptions {
