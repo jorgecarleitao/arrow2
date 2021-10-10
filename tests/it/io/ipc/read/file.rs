@@ -16,7 +16,7 @@ fn test_file(version: &str, file_name: &str) -> Result<()> {
     let (schema, batches) = read_gzip_json(version, file_name)?;
 
     let metadata = read_file_metadata(&mut file)?;
-    let reader = FileReader::new(&mut file, metadata, None);
+    let reader = FileReader::new(file, metadata, None);
 
     assert_eq!(&schema, reader.schema().as_ref());
 

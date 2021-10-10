@@ -23,7 +23,7 @@ fn round_trip(batch: RecordBatch) -> Result<()> {
     let metadata = read_file_metadata(&mut reader)?;
     let schema = metadata.schema().clone();
 
-    let reader = FileReader::new(&mut reader, metadata, None);
+    let reader = FileReader::new(reader, metadata, None);
 
     // read expected JSON output
     let (expected_schema, expected_batches) = (batch.schema().clone(), vec![batch]);
@@ -55,7 +55,7 @@ fn test_file(version: &str, file_name: &str) -> Result<()> {
     let metadata = read_file_metadata(&mut reader)?;
     let schema = metadata.schema().clone();
 
-    let reader = FileReader::new(&mut reader, metadata, None);
+    let reader = FileReader::new(reader, metadata, None);
 
     // read expected JSON output
     let (expected_schema, expected_batches) = read_gzip_json(version, file_name)?;
