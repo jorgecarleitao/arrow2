@@ -46,9 +46,9 @@ fn write_ipc<W: Write + Seek>(writer: W, array: impl Array + 'static) -> Result<
     Ok(writer.into_inner())
 }
 
-fn read_ipc(reader: &[u8]) -> Result<RecordBatch> {
-    let mut reader = Cursor::new(reader);
-    let metadata = read::read_file_metadata(&mut reader)?;
-    let mut reader = read::FileReader::new(&mut reader, metadata, None);
+fn read_ipc(buf: &[u8]) -> Result<RecordBatch> {
+    let mut cursor = Cursor::new(buf);
+    let metadata = read::read_file_metadata(&mut cursor)?;
+    let mut reader = read::FileReader::new(cursor, metadata, None);
     reader.next().unwrap()
 }

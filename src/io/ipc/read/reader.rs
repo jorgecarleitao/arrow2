@@ -62,8 +62,8 @@ impl FileMetadata {
 }
 
 /// Arrow File reader
-pub struct FileReader<'a, R: Read + Seek> {
-    reader: &'a mut R,
+pub struct FileReader<R: Read + Seek> {
+    reader: R,
     metadata: FileMetadata,
     current_block: usize,
     projection: Option<(Vec<usize>, Arc<Schema>)>,
@@ -231,11 +231,11 @@ pub fn read_batch<R: Read + Seek>(
     }
 }
 
-impl<'a, R: Read + Seek> FileReader<'a, R> {
+impl<R: Read + Seek> FileReader<R> {
     /// Creates a new [`FileReader`]. Use `projection` to only take certain columns.
     /// # Panic
     /// Panics iff the projection is not in increasing order (e.g. `[1, 0]` nor `[0, 1, 1]` are valid)
-    pub fn new(reader: &'a mut R, metadata: FileMetadata, projection: Option<Vec<usize>>) -> Self {
+    pub fn new(reader: R, metadata: FileMetadata, projection: Option<Vec<usize>>) -> Self {
         if let Some(projection) = projection.as_ref() {
             let _ = projection.iter().fold(0, |mut acc, v| {
                 assert!(
@@ -270,9 +270,14 @@ impl<'a, R: Read + Seek> FileReader<'a, R> {
             .map(|x| &x.1)
             .unwrap_or(&self.metadata.schema)
     }
+
+    /// Consumes this FileReader, returning the underlying reader
+    pub fn into_inner(self) -> R {
+        self.reader
+    }
 }
 
-impl<'a, R: Read + Seek> Iterator for FileReader<'a, R> {
+impl<R: Read + Seek> Iterator for FileReader<R> {
     type Item = Result<RecordBatch>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -295,7 +300,7 @@ impl<'a, R: Read + Seek> Iterator for FileReader<'a, R> {
     }
 }
 
-impl<'a, R: Read + Seek> RecordBatchReader for FileReader<'a, R> {
+impl<R: Read + Seek> RecordBatchReader for FileReader<R> {
     fn schema(&self) -> &Schema {
         self.schema().as_ref()
     }
