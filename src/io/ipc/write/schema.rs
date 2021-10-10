@@ -1,8 +1,9 @@
-use flatbuffers::FlatBufferBuilder;
+use arrow_format::ipc;
+use arrow_format::ipc::flatbuffers::FlatBufferBuilder;
 
 use crate::datatypes::*;
 
-use super::super::{convert, gen};
+use super::super::convert;
 use super::MetadataVersion;
 
 /// Converts
@@ -13,9 +14,9 @@ pub fn schema_to_bytes(schema: &Schema, version: MetadataVersion) -> Vec<u8> {
         fb.as_union_value()
     };
 
-    let mut message = gen::Message::MessageBuilder::new(&mut fbb);
+    let mut message = ipc::Message::MessageBuilder::new(&mut fbb);
     message.add_version(version);
-    message.add_header_type(gen::Message::MessageHeader::Schema);
+    message.add_header_type(ipc::Message::MessageHeader::Schema);
     message.add_bodyLength(0);
     message.add_header(schema);
     // TODO: custom metadata

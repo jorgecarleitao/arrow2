@@ -1,14 +1,12 @@
 use std::collections::VecDeque;
 use std::io::{Read, Seek};
 
-use gen::Schema::MetadataVersion;
+use arrow_format::ipc;
 
 use crate::array::UnionArray;
 use crate::datatypes::DataType;
 use crate::error::Result;
-use crate::io::ipc::gen::Message::BodyCompression;
 
-use super::super::super::gen;
 use super::super::deserialize::{read, skip, Node};
 use super::super::read_basic::*;
 
@@ -16,16 +14,16 @@ use super::super::read_basic::*;
 pub fn read_union<R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
     data_type: DataType,
-    buffers: &mut VecDeque<&gen::Schema::Buffer>,
+    buffers: &mut VecDeque<&ipc::Schema::Buffer>,
     reader: &mut R,
     block_offset: u64,
     is_little_endian: bool,
-    compression: Option<BodyCompression>,
-    version: MetadataVersion,
+    compression: Option<ipc::Message::BodyCompression>,
+    version: ipc::Schema::MetadataVersion,
 ) -> Result<UnionArray> {
     let field_node = field_nodes.pop_front().unwrap().0;
 
-    if version != MetadataVersion::V5 {
+    if version != ipc::Schema::MetadataVersion::V5 {
         let _ = buffers.pop_front().unwrap();
     };
 
@@ -79,7 +77,7 @@ pub fn read_union<R: Read + Seek>(
 pub fn skip_union(
     field_nodes: &mut VecDeque<Node>,
     data_type: &DataType,
-    buffers: &mut VecDeque<&gen::Schema::Buffer>,
+    buffers: &mut VecDeque<&ipc::Schema::Buffer>,
 ) {
     let _ = field_nodes.pop_front().unwrap();
 

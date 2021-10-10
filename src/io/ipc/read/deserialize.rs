@@ -9,23 +9,22 @@ use std::{
     sync::Arc,
 };
 
-use gen::Schema::MetadataVersion;
+use arrow_format::ipc::{Schema::MetadataVersion, Message::BodyCompression};
+use arrow_format::ipc;
 
 use crate::array::*;
 use crate::datatypes::{DataType, PhysicalType};
 use crate::error::Result;
-use crate::io::ipc::gen::Message::BodyCompression;
 
-use super::super::gen;
 use super::array::*;
 
-pub type Node<'a> = (&'a gen::Message::FieldNode, &'a Option<Arc<dyn Array>>);
+pub type Node<'a> = (&'a ipc::Message::FieldNode, &'a Option<Arc<dyn Array>>);
 
 #[allow(clippy::too_many_arguments)]
 pub fn read<R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
     data_type: DataType,
-    buffers: &mut VecDeque<&gen::Schema::Buffer>,
+    buffers: &mut VecDeque<&ipc::Schema::Buffer>,
     reader: &mut R,
     block_offset: u64,
     is_little_endian: bool,
@@ -203,7 +202,7 @@ pub fn read<R: Read + Seek>(
 pub fn skip(
     field_nodes: &mut VecDeque<Node>,
     data_type: &DataType,
-    buffers: &mut VecDeque<&gen::Schema::Buffer>,
+    buffers: &mut VecDeque<&ipc::Schema::Buffer>,
 ) {
     use PhysicalType::*;
     match data_type.to_physical_type() {

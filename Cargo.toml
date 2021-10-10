@@ -39,7 +39,8 @@ indexmap = { version = "^1.6", optional = true }
 # used to print columns in a nice columnar format
 comfy-table = { version = "4.0", optional = true, default-features = false }
 
-flatbuffers = { version = "=2.0.0", optional = true }
+arrow-format = { version = "0.1.3", optional = true, features = ["ipc"] }
+
 hex = { version = "^0.4", optional = true }
 
 # for IPC compression
@@ -107,7 +108,7 @@ io_csv = ["io_csv_read", "io_csv_write"]
 io_csv_read = ["csv", "lexical-core"]
 io_csv_write = ["csv", "streaming-iterator", "lexical-core"]
 io_json = ["serde", "serde_json", "indexmap"]
-io_ipc = ["flatbuffers"]
+io_ipc = ["arrow-format"]
 io_ipc_compression = ["lz4", "zstd"]
 io_parquet_compression = [
     "parquet2/zstd",

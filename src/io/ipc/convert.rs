@@ -17,22 +17,20 @@
 
 //! Utilities for converting between IPC types and native Arrow types
 
+use arrow_format::ipc::flatbuffers::{
+    FlatBufferBuilder, ForwardsUOffset, UnionWIPOffset, Vector, WIPOffset,
+};
+use std::collections::{BTreeMap, HashMap};
+mod ipc {
+    pub use arrow_format::ipc::File::*;
+    pub use arrow_format::ipc::Message::*;
+    pub use arrow_format::ipc::Schema::*;
+}
+
 use crate::datatypes::{
     get_extension, DataType, Extension, Field, IntervalUnit, Metadata, Schema, TimeUnit,
 };
-use crate::io::ipc::convert::ipc::UnionMode;
 use crate::io::ipc::endianess::is_native_little_endian;
-
-mod ipc {
-    pub use super::super::gen::File::*;
-    pub use super::super::gen::Message::*;
-    pub use super::super::gen::Schema::*;
-}
-
-use flatbuffers::{FlatBufferBuilder, ForwardsUOffset, UnionWIPOffset, Vector, WIPOffset};
-use std::collections::{BTreeMap, HashMap};
-
-use DataType::*;
 
 pub fn schema_to_fb_offset<'a>(
     fbb: &mut FlatBufferBuilder<'a>,
@@ -294,7 +292,7 @@ fn get_data_type(field: ipc::Field, extension: Extension, may_be_dictionary: boo
         ipc::Type::Union => {
             let type_ = field.type_as_union().unwrap();
 
-            let is_sparse = type_.mode() == UnionMode::Sparse;
+            let is_sparse = type_.mode() == ipc::UnionMode::Sparse;
 
             let ids = type_.typeIds().map(|x| x.iter().collect());
 
@@ -378,7 +376,7 @@ pub(crate) fn build_field<'a>(
     let fb_field_name = fbb.create_string(field.name().as_str());
     let field_type = get_fb_field_type(field.data_type(), field.is_nullable(), fbb);
 
-    let fb_dictionary = if let Dictionary(index_type, inner) = field.data_type() {
+    let fb_dictionary = if let DataType::Dictionary(index_type, inner) = field.data_type() {
         if let DataType::Extension(name, _, metadata) = inner.as_ref() {
             write_extension(fbb, name, metadata, &mut kv_vec);
         }
@@ -428,6 +426,7 @@ pub(crate) fn build_field<'a>(
 }
 
 fn type_to_field_type(data_type: &DataType) -> ipc::Type {
+    use DataType::*;
     match data_type {
         Null => ipc::Type::Null,
         Boolean => ipc::Type::Bool,
@@ -461,6 +460,7 @@ pub(crate) fn get_fb_field_type<'a>(
     is_nullable: bool,
     fbb: &mut FlatBufferBuilder<'a>,
 ) -> FbFieldType<'a> {
+    use DataType::*;
     let type_type = type_to_field_type(data_type);
 
     // some IPC implementations expect an empty list for child data, instead of a null value.
@@ -711,9 +711,9 @@ pub(crate) fn get_fb_field_type<'a>(
 
             let mut builder = ipc::UnionBuilder::new(fbb);
             builder.add_mode(if *is_sparse {
-                UnionMode::Sparse
+                ipc::UnionMode::Sparse
             } else {
-                UnionMode::Dense
+                ipc::UnionMode::Dense
             });
 
             if let Some(ids) = ids {
@@ -745,6 +745,7 @@ pub(crate) fn get_fb_dictionary<'a>(
     dict_is_ordered: bool,
     fbb: &mut FlatBufferBuilder<'a>,
 ) -> WIPOffset<ipc::DictionaryEncoding<'a>> {
+    use DataType::*;
     // We assume that the dictionary index type (as an integer) has already been
     // validated elsewhere, and can safely assume we are dealing with integers
     let mut index_builder = ipc::IntBuilder::new(fbb);

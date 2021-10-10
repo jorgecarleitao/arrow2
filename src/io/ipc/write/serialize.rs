@@ -15,13 +15,22 @@
 // specific language governing permissions and limitations
 // under the License.
 
+<<<<<<< HEAD
 use crate::io::ipc::endianess::is_native_little_endian;
 use crate::io::ipc::gen::Schema;
+=======
+use arrow_format::ipc::{Message, Schema};
+
+>>>>>>> Migrated to arrow_format crate.
 use crate::{
     array::*,
     bitmap::Bitmap,
     datatypes::{DataType, PhysicalType},
+<<<<<<< HEAD
     io::ipc::gen::Message,
+=======
+    endianess::is_native_little_endian,
+>>>>>>> Migrated to arrow_format crate.
     trusted_len::TrustedLen,
     types::NativeType,
 };
