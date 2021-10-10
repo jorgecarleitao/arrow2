@@ -25,8 +25,8 @@ use super::{write, write_dictionary};
 use flatbuffers::FlatBufferBuilder;
 
 use crate::array::Array;
-use crate::endianess::is_native_little_endian;
 use crate::error::{ArrowError, Result};
+use crate::io::ipc::endianess::is_native_little_endian;
 use crate::record_batch::RecordBatch;
 use crate::{array::DictionaryArray, datatypes::*};
 

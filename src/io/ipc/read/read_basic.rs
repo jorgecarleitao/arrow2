@@ -2,8 +2,8 @@ use std::io::{Read, Seek, SeekFrom};
 use std::{collections::VecDeque, convert::TryInto};
 
 use crate::buffer::Buffer;
-use crate::endianess::is_native_little_endian;
 use crate::error::{ArrowError, Result};
+use crate::io::ipc::endianess::is_native_little_endian;
 use crate::io::ipc::gen::Message::{BodyCompression, CompressionType};
 use crate::{bitmap::Bitmap, buffer::MutableBuffer, types::NativeType};
 

@@ -11,9 +11,7 @@ use crate::{
 
 use super::iterator::{BufStreamingIterator, StreamingIterator};
 use crate::array::{DictionaryArray, DictionaryKey, Offset};
-use crate::bitmap::utils::ZipValidity;
 use std::any::Any;
-use std::slice::Iter;
 
 /// Options to serialize logical types to CSV
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]

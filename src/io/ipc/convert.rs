@@ -20,8 +20,8 @@
 use crate::datatypes::{
     get_extension, DataType, Extension, Field, IntervalUnit, Metadata, Schema, TimeUnit,
 };
-use crate::endianess::is_native_little_endian;
 use crate::io::ipc::convert::ipc::UnionMode;
+use crate::io::ipc::endianess::is_native_little_endian;
 
 mod ipc {
     pub use super::super::gen::File::*;

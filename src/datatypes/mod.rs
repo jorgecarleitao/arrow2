@@ -8,8 +8,6 @@ pub use field::Field;
 pub use physical_type::*;
 pub use schema::Schema;
 
-pub(crate) use field::{get_extension, Extension, Metadata};
-
 /// The set of supported logical types.
 /// Each variant uniquely identifies a logical type, which define specific semantics to the data (e.g. how it should be represented).
 /// Each variant has a corresponding [`PhysicalType`], obtained via [`DataType::to_physical_type`],
@@ -270,6 +268,27 @@ fn to_dictionary_index_type(data_type: &DataType) -> DictionaryIndexType {
 }
 
 // backward compatibility
+use std::collections::BTreeMap;
 use std::sync::Arc;
+
 /// typedef for [`Arc<Schema>`].
 pub type SchemaRef = Arc<Schema>;
+
+/// typedef for [Option<BTreeMap<String, String>>].
+pub type Metadata = Option<BTreeMap<String, String>>;
+/// typedef fpr [Option<(String, Option<String>)>].
+pub type Extension = Option<(String, Option<String>)>;
+
+/// support get extension for metadata
+pub fn get_extension(metadata: &Option<BTreeMap<String, String>>) -> Extension {
+    if let Some(metadata) = metadata {
+        if let Some(name) = metadata.get("ARROW:extension:name") {
+            let metadata = metadata.get("ARROW:extension:metadata").cloned();
+            Some((name.clone(), metadata))
+        } else {
+            None
+        }
+    } else {
+        None
+    }
+}
