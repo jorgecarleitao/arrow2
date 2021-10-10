@@ -203,7 +203,7 @@ fn write_array(array: &dyn Array) -> Value {
                 array.len(),
             );
             zip_validity(jsonmaps.into_iter(), array.validity().map(|v| v.iter()))
-                .map(|m| m.map(|o| Value::Object(o)).unwrap_or(Value::Null))
+                .map(|m| m.map(Value::Object).unwrap_or(Value::Null))
                 .collect()
         }
         _ => {
@@ -304,7 +304,7 @@ fn set_column_for_json_rows(
                 .for_each(|(row, obj)| {
                     row.insert(
                         col_name.to_string(),
-                        obj.map(|o| Value::Object(o)).unwrap_or(Value::Null),
+                        obj.map(Value::Object).unwrap_or(Value::Null),
                     );
                 });
         }
