@@ -117,7 +117,6 @@ fn struct_array_to_jsonmap_array(array: &StructArray, row_count: usize) -> Vec<M
         .take(row_count)
         .collect::<Vec<Map<String, Value>>>();
 
-    // todo: use validity...
     array
         .values()
         .iter()
@@ -299,6 +298,17 @@ fn set_column_for_json_rows(
                 .for_each(|(row, obj)| {
                     row.insert(col_name.to_string(), Value::Object(obj));
                 });
+
+            if let Some(validity) = array.validity() {
+                rows.iter_mut()
+                    .zip(validity)
+                    .filter(|(_, v)| !*v)
+                    .for_each(|(row, _)| {
+                        if let Some(value) = row.get_mut(col_name) {
+                            *value = Value::Null;
+                        }
+                    });
+            }
         }
         DataType::List(_) => {
             let array = array.as_any().downcast_ref::<ListArray<i32>>().unwrap();
