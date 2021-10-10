@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["can_hash","Checks if an array of type `datatype` can be used in [`hash`]."],["hash","Returns the element-wise hash of an [`Array`]. Validity is preserved. Supported DataTypes:"],["hash_binary","Element-wise hash of a [`BinaryArray`]. Validity is preserved."],["hash_boolean",""],["hash_primitive",""],["hash_utf8",""]]});
