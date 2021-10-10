@@ -114,11 +114,12 @@ fn encode_keys<K: DictionaryKey>(
 }
 
 macro_rules! dyn_prim {
-    ($from:ty, $to:ty, $array:expr) => {{
+    ($from:ty, $to:ty, $array:expr, $options:expr) => {{
         let values = $array.values().as_any().downcast_ref().unwrap();
 
         let mut buffer = vec![];
         primitive_encode_plain::<$from, $to>(values, false, &mut buffer);
+        let buffer = utils::compress(buffer, $options, 0)?;
 
         CompressedPage::Dict(CompressedDictPage::new(buffer, values.len()))
     }};
@@ -137,25 +138,26 @@ where
         Encoding::PlainDictionary | Encoding::RleDictionary => {
             // write DictPage
             let dict_page = match array.values().data_type().to_logical_type() {
-                DataType::Int8 => dyn_prim!(i8, i32, array),
-                DataType::Int16 => dyn_prim!(i16, i32, array),
+                DataType::Int8 => dyn_prim!(i8, i32, array, options),
+                DataType::Int16 => dyn_prim!(i16, i32, array, options),
                 DataType::Int32 | DataType::Date32 | DataType::Time32(_) => {
-                    dyn_prim!(i32, i32, array)
+                    dyn_prim!(i32, i32, array, options)
                 }
                 DataType::Int64
                 | DataType::Date64
                 | DataType::Time64(_)
                 | DataType::Timestamp(_, _)
-                | DataType::Duration(_) => dyn_prim!(i64, i64, array),
-                DataType::UInt8 => dyn_prim!(u8, i32, array),
-                DataType::UInt16 => dyn_prim!(u16, i32, array),
-                DataType::UInt32 => dyn_prim!(u32, i32, array),
-                DataType::UInt64 => dyn_prim!(i64, i64, array),
+                | DataType::Duration(_) => dyn_prim!(i64, i64, array, options),
+                DataType::UInt8 => dyn_prim!(u8, i32, array, options),
+                DataType::UInt16 => dyn_prim!(u16, i32, array, options),
+                DataType::UInt32 => dyn_prim!(u32, i32, array, options),
+                DataType::UInt64 => dyn_prim!(i64, i64, array, options),
                 DataType::Utf8 => {
                     let values = array.values().as_any().downcast_ref().unwrap();
 
                     let mut buffer = vec![];
                     utf8_encode_plain::<i32>(values, false, &mut buffer);
+                    let buffer = utils::compress(buffer, options, 0)?;
                     CompressedPage::Dict(CompressedDictPage::new(buffer, values.len()))
                 }
                 DataType::LargeUtf8 => {
@@ -163,6 +165,7 @@ where
 
                     let mut buffer = vec![];
                     utf8_encode_plain::<i64>(values, false, &mut buffer);
+                    let buffer = utils::compress(buffer, options, 0)?;
                     CompressedPage::Dict(CompressedDictPage::new(buffer, values.len()))
                 }
                 DataType::Binary => {
@@ -170,6 +173,7 @@ where
 
                     let mut buffer = vec![];
                     binary_encode_plain::<i32>(values, false, &mut buffer);
+                    let buffer = utils::compress(buffer, options, 0)?;
                     CompressedPage::Dict(CompressedDictPage::new(buffer, values.len()))
                 }
                 DataType::LargeBinary => {
@@ -177,6 +181,7 @@ where
 
                     let mut buffer = vec![];
                     binary_encode_plain::<i64>(values, false, &mut buffer);
+                    let buffer = utils::compress(buffer, options, 0)?;
                     CompressedPage::Dict(CompressedDictPage::new(buffer, values.len()))
                 }
                 other => {

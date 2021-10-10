@@ -367,6 +367,18 @@ fn i32_optional_v2_dict() -> Result<()> {
     )
 }
 
+#[test]
+fn i32_optional_v2_dict_compressed() -> Result<()> {
+    round_trip(
+        6,
+        true,
+        false,
+        Version::V2,
+        Compression::Snappy,
+        Encoding::RleDictionary,
+    )
+}
+
 // Decimal Testing
 #[test]
 fn decimal_9_optional_v1() -> Result<()> {
