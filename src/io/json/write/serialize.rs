@@ -18,8 +18,6 @@
 use serde_json::map::Map;
 use serde_json::{Number, Value};
 
-use crate::bitmap::utils::zip_validity;
-use crate::bitmap::Bitmap;
 use crate::{array::*, datatypes::*, record_batch::RecordBatch, types::NativeType};
 
 trait JsonSerializable {
@@ -104,11 +102,7 @@ where
     array.iter().map(to_json).collect()
 }
 
-fn struct_array_to_jsonmap_array(
-    array: &StructArray,
-    validity: Option<&Bitmap>,
-    row_count: usize,
-) -> Vec<Map<String, Value>> {
+fn struct_array_to_jsonmap_array(array: &StructArray, row_count: usize) -> Vec<Map<String, Value>> {
     // {"a": [1, 2, 3], "b": [a, b, c], "c": {"a": [1, 2, 3]}}
     // [
     //  {"a": 1, "b": a, "c": {"a": 1}},
@@ -123,6 +117,7 @@ fn struct_array_to_jsonmap_array(
         .take(row_count)
         .collect::<Vec<Map<String, Value>>>();
 
+    // todo: use validity...
     array
         .values()
         .iter()
@@ -132,7 +127,6 @@ fn struct_array_to_jsonmap_array(
                 &mut inner_objs,
                 row_count,
                 struct_col.as_ref(),
-                combine_validity(struct_col.validity(), validity).as_ref(),
                 fields[j].name(),
             );
         });
@@ -206,7 +200,6 @@ fn write_array(array: &dyn Array) -> Value {
         DataType::Struct(_) => {
             let jsonmaps = struct_array_to_jsonmap_array(
                 array.as_any().downcast_ref::<StructArray>().unwrap(),
-                array.validity(),
                 array.len(),
             );
             jsonmaps.into_iter().map(Value::Object).collect()
@@ -224,16 +217,12 @@ fn set_column_by_primitive_type<T: NativeType + JsonSerializable>(
     rows: &mut [Map<String, Value>],
     row_count: usize,
     array: &dyn Array,
-    validity: Option<&Bitmap>,
     col_name: &str,
 ) {
     let primitive_arr = array.as_any().downcast_ref::<PrimitiveArray<T>>().unwrap();
 
     rows.iter_mut()
-        .zip(zip_validity(
-            primitive_arr.values().iter(),
-            validity.map(|v| v.iter()),
-        ))
+        .zip(primitive_arr.iter())
         .take(row_count)
         .for_each(|(row, value)| {
             let value = to_json::<T>(value);
@@ -245,7 +234,6 @@ fn set_column_for_json_rows(
     rows: &mut [Map<String, Value>],
     row_count: usize,
     array: &dyn Array,
-    validity: Option<&Bitmap>,
     col_name: &str,
 ) {
     match array.data_type() {
@@ -255,10 +243,7 @@ fn set_column_for_json_rows(
         DataType::Boolean => {
             let array = array.as_any().downcast_ref::<BooleanArray>().unwrap();
             rows.iter_mut()
-                .zip(zip_validity(
-                    array.values().iter(),
-                    validity.map(|v| v.iter()),
-                ))
+                .zip(array.iter())
                 .take(row_count)
                 .for_each(|(row, value)| {
                     row.insert(
@@ -267,43 +252,20 @@ fn set_column_for_json_rows(
                     );
                 });
         }
-        DataType::Int8 => {
-            set_column_by_primitive_type::<i8>(rows, row_count, array, validity, col_name)
-        }
-        DataType::Int16 => {
-            set_column_by_primitive_type::<i16>(rows, row_count, array, validity, col_name)
-        }
-        DataType::Int32 => {
-            set_column_by_primitive_type::<i32>(rows, row_count, array, validity, col_name)
-        }
-        DataType::Int64 => {
-            set_column_by_primitive_type::<i64>(rows, row_count, array, validity, col_name)
-        }
-        DataType::UInt8 => {
-            set_column_by_primitive_type::<u8>(rows, row_count, array, validity, col_name)
-        }
-        DataType::UInt16 => {
-            set_column_by_primitive_type::<u16>(rows, row_count, array, validity, col_name)
-        }
-        DataType::UInt32 => {
-            set_column_by_primitive_type::<u32>(rows, row_count, array, validity, col_name)
-        }
-        DataType::UInt64 => {
-            set_column_by_primitive_type::<u64>(rows, row_count, array, validity, col_name)
-        }
-        DataType::Float32 => {
-            set_column_by_primitive_type::<f32>(rows, row_count, array, validity, col_name)
-        }
-        DataType::Float64 => {
-            set_column_by_primitive_type::<f64>(rows, row_count, array, validity, col_name)
-        }
+        DataType::Int8 => set_column_by_primitive_type::<i8>(rows, row_count, array, col_name),
+        DataType::Int16 => set_column_by_primitive_type::<i16>(rows, row_count, array, col_name),
+        DataType::Int32 => set_column_by_primitive_type::<i32>(rows, row_count, array, col_name),
+        DataType::Int64 => set_column_by_primitive_type::<i64>(rows, row_count, array, col_name),
+        DataType::UInt8 => set_column_by_primitive_type::<u8>(rows, row_count, array, col_name),
+        DataType::UInt16 => set_column_by_primitive_type::<u16>(rows, row_count, array, col_name),
+        DataType::UInt32 => set_column_by_primitive_type::<u32>(rows, row_count, array, col_name),
+        DataType::UInt64 => set_column_by_primitive_type::<u64>(rows, row_count, array, col_name),
+        DataType::Float32 => set_column_by_primitive_type::<f32>(rows, row_count, array, col_name),
+        DataType::Float64 => set_column_by_primitive_type::<f64>(rows, row_count, array, col_name),
         DataType::Utf8 => {
             let array = array.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
             rows.iter_mut()
-                .zip(zip_validity(
-                    array.values_iter(),
-                    validity.map(|v| v.iter()),
-                ))
+                .zip(array.iter())
                 .take(row_count)
                 .for_each(|(row, value)| {
                     row.insert(
@@ -317,10 +279,7 @@ fn set_column_for_json_rows(
         DataType::LargeUtf8 => {
             let array = array.as_any().downcast_ref::<Utf8Array<i64>>().unwrap();
             rows.iter_mut()
-                .zip(zip_validity(
-                    array.values().iter(),
-                    validity.map(|v| v.iter()),
-                ))
+                .zip(array.iter())
                 .take(row_count)
                 .for_each(|(row, value)| {
                     row.insert(
@@ -333,11 +292,7 @@ fn set_column_for_json_rows(
         }
         DataType::Struct(_) => {
             let array = array.as_any().downcast_ref::<StructArray>().unwrap();
-            let inner_objs = struct_array_to_jsonmap_array(
-                array,
-                combine_validity(validity, array.validity()).as_ref(),
-                row_count,
-            );
+            let inner_objs = struct_array_to_jsonmap_array(array, row_count);
             rows.iter_mut()
                 .take(row_count)
                 .zip(inner_objs.into_iter())
@@ -348,10 +303,7 @@ fn set_column_for_json_rows(
         DataType::List(_) => {
             let array = array.as_any().downcast_ref::<ListArray<i32>>().unwrap();
             rows.iter_mut()
-                .zip(zip_validity(
-                    array.values_iter(),
-                    validity.map(|x| x.iter()),
-                ))
+                .zip(array.iter())
                 .take(row_count)
                 .for_each(|(row, value)| {
                     row.insert(
@@ -365,10 +317,7 @@ fn set_column_for_json_rows(
         DataType::LargeList(_) => {
             let array = array.as_any().downcast_ref::<ListArray<i64>>().unwrap();
             rows.iter_mut()
-                .zip(zip_validity(
-                    array.values_iter(),
-                    validity.map(|x| x.iter()),
-                ))
+                .zip(array.iter())
                 .take(row_count)
                 .for_each(|(row, value)| {
                     row.insert(
@@ -416,26 +365,10 @@ pub fn write_record_batches(batches: &[RecordBatch]) -> Vec<Map<String, Value>> 
             let row_count = batch.num_rows();
             batch.columns().iter().enumerate().for_each(|(j, col)| {
                 let col_name = schema.field(j).name();
-                set_column_for_json_rows(
-                    &mut rows[base..],
-                    row_count,
-                    col.as_ref(),
-                    col.validity(),
-                    col_name,
-                );
+                set_column_for_json_rows(&mut rows[base..], row_count, col.as_ref(), col_name);
             });
             base += row_count;
         });
     }
     rows
-}
-
-// Combine the two incoming validity `Bitmaps` using `and` logic
-fn combine_validity(validity1: Option<&Bitmap>, validity2: Option<&Bitmap>) -> Option<Bitmap> {
-    match (validity1, validity2) {
-        (Some(v1), Some(v2)) => Some(v1 & v2),
-        (Some(v1), None) => Some(v1.clone()),
-        (None, Some(v2)) => Some(v2.clone()),
-        (None, None) => None,
-    }
 }
