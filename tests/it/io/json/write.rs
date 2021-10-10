@@ -251,10 +251,10 @@ fn write_list_of_struct() {
                     Some("f"),
                     Some("g"),
                 ]))],
-                None,
+                Some(Bitmap::from([false, true, true])),
             )),
         ],
-        None,
+        Some(Bitmap::from([true, true, false])),
     );
 
     // list column rows (c1):
@@ -280,9 +280,9 @@ fn write_list_of_struct() {
 
     assert_eq!(
         String::from_utf8(buf).unwrap(),
-        r#"{"c1":[{"c11":1,"c12":{"c121":"e"}},{"c11":null,"c12":{"c121":"f"}}],"c2":1}
+        r#"{"c1":[{"c11":1,"c12":null},{"c11":null,"c12":{"c121":"f"}}],"c2":1}
 {"c1":null,"c2":2}
-{"c1":[{"c11":5,"c12":{"c121":"g"}}],"c2":3}
+{"c1":[null],"c2":3}
 "#
     );
 }
