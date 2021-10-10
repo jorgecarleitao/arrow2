@@ -49,7 +49,7 @@ pub fn parquet_to_arrow_schema(
     schema
         .fields()
         .iter()
-        .map(|t| to_field(t))
+        .map(to_field)
         .filter_map(|x| x.transpose())
         .collect::<Result<Vec<_>>>()
         .map(|fields| Schema::new_from(fields, metadata))
@@ -167,7 +167,7 @@ pub fn from_int64(
             ParquetTimeUnit::MICROS(_) => DataType::Time64(TimeUnit::Microsecond),
             ParquetTimeUnit::NANOS(_) => DataType::Time64(TimeUnit::Nanosecond),
         },
-        (Some(PrimitiveConvertedType::Decimal(precision,scale)), _) => {
+        (Some(PrimitiveConvertedType::Decimal(precision, scale)), _) => {
             DataType::Decimal(*precision as usize, *scale as usize)
         }
         (c, l) => {
@@ -284,7 +284,7 @@ fn to_group_type_inner(
 fn to_struct(fields: &[ParquetType]) -> Result<Option<DataType>> {
     fields
         .iter()
-        .map(|field| to_field(field))
+        .map(to_field)
         .collect::<Result<Vec<Option<Field>>>>()
         .map(|result| result.into_iter().flatten().collect::<Vec<Field>>())
         .map(|fields| {

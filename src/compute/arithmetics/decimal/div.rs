@@ -80,12 +80,11 @@ pub fn div(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<Pri
                     // by zero.
                     let res: i128 = numeral.checked_div(b).expect("Found division by zero");
 
-                    if res.abs() > max_value(*lhs_p) {
-                        panic!(
-                            "Overflow in multiplication presented for precision {}",
-                            lhs_p
-                        );
-                    }
+                    assert!(
+                        !(res.abs() > max_value(*lhs_p)),
+                        "Overflow in multiplication presented for precision {}",
+                        lhs_p
+                    );
 
                     res
                 };

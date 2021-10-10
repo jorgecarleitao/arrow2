@@ -5,6 +5,10 @@ use std::slice::Iter;
 /// A trait denoting Rusts' unstable [TrustedLen](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
 /// This is re-defined here and implemented for some iterators until `std::iter::TrustedLen`
 /// is stabilized.
+///
+/// # Safety
+/// This trait must only be implemented when the contract is upheld.
+/// Consumers of this trait must inspect Iterator::size_hint()’s upper bound.
 pub unsafe trait TrustedLen: Iterator {}
 
 unsafe impl<T> TrustedLen for Iter<'_, T> {}

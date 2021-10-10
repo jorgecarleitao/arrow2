@@ -7,6 +7,8 @@ use crate::error::Result;
 
 /// Trait describing how a struct presents itself to the
 /// [C data interface](https://arrow.apache.org/docs/format/CDataInterface.html) (FFI).
+/// Safety:
+/// Implementing this trait incorrect will lead to UB
 pub unsafe trait ToFfi {
     /// The pointers to the buffers.
     fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>>;

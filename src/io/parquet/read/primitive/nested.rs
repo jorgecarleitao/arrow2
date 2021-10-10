@@ -45,7 +45,7 @@ where
     A: ArrowNativeType,
     F: Fn(T) -> A,
 {
-    let iterator = new_values.map(|v| op(v));
+    let iterator = new_values.map(op);
     values.extend_from_trusted_len_iter(iterator);
 }
 

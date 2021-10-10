@@ -271,7 +271,7 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             // recursively convert children to types/nodes
             let fields = fields
                 .iter()
-                .map(|f| to_parquet_type(f))
+                .map(to_parquet_type)
                 .collect::<Result<Vec<_>>>()?;
             Ok(ParquetType::try_from_group(
                 name, repetition, None, None, fields, None,

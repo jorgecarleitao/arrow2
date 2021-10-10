@@ -206,7 +206,7 @@ impl MutableBitmap {
     /// Panics iff `index >= self.len()`.
     #[inline]
     pub fn set(&mut self, index: usize, value: bool) {
-        set_bit(&mut self.buffer.as_mut_slice(), index, value)
+        set_bit(self.buffer.as_mut_slice(), index, value)
     }
 
     /// Shrinks the capacity of the [`MutableBitmap`] to fit its current length.
