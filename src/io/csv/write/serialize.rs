@@ -1,7 +1,7 @@
 use lexical_core::ToLexical;
 
 use crate::temporal_conversions;
-use crate::types::NativeType;
+use crate::types::{Index, NativeType};
 use crate::util::lexical_to_bytes_mut;
 use crate::{
     array::{Array, BinaryArray, BooleanArray, PrimitiveArray, Utf8Array},
@@ -10,6 +10,10 @@ use crate::{
 };
 
 use super::iterator::{BufStreamingIterator, StreamingIterator};
+use crate::array::{DictionaryArray, DictionaryKey, Offset};
+use crate::bitmap::utils::ZipValidity;
+use std::any::Any;
+use std::slice::Iter;
 
 /// Options to serialize logical types to CSV
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
@@ -265,6 +269,49 @@ pub fn new_serializer<'a>(
                 vec![],
             ))
         }
-        _ => todo!(),
+        DataType::Dictionary(keys_dt, values_dt) => match &**values_dt {
+            DataType::LargeUtf8 => match &**keys_dt {
+                DataType::UInt32 => serialize_utf8_dict::<u32, i64>(array.as_any()),
+                DataType::UInt64 => serialize_utf8_dict::<u64, i64>(array.as_any()),
+                _ => todo!(),
+            },
+            DataType::Utf8 => match &**keys_dt {
+                DataType::UInt32 => serialize_utf8_dict::<u32, i32>(array.as_any()),
+                DataType::UInt64 => serialize_utf8_dict::<u64, i32>(array.as_any()),
+                _ => todo!(),
+            },
+            _ => {
+                panic!("only dictionary with string values are supported by csv writer")
+            }
+        },
+        dt => panic!("data type: {} not supported by csv writer", dt),
     })
+}
+
+/// Helper for serializing a dictonary array. The generic parameters are:
+/// - `K` for the type of the keys of the dictionary
+/// - `O` for the type of the offsets in the Utf8Array: {i32, i64}
+fn serialize_utf8_dict<'a, K: DictionaryKey + Index, O: Offset>(
+    array: &'a dyn Any,
+) -> Box<dyn StreamingIterator<Item = [u8]> + 'a> {
+    let array = array.downcast_ref::<DictionaryArray<K>>().unwrap();
+    let keys = array.keys();
+    let values = array
+        .values()
+        .as_any()
+        .downcast_ref::<Utf8Array<O>>()
+        .unwrap();
+    Box::new(BufStreamingIterator::new(
+        keys.iter(),
+        move |x, buf| {
+            if let Some(x) = x {
+                let i = Index::to_usize(x);
+                if !values.is_null(i) {
+                    let val = values.value(i);
+                    buf.extend_from_slice(val.as_bytes());
+                }
+            }
+        },
+        vec![],
+    ))
 }

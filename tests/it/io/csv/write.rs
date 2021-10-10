@@ -15,6 +15,11 @@ fn data() -> RecordBatch {
         Field::new("c4", DataType::Boolean, true),
         Field::new("c5", DataType::Timestamp(TimeUnit::Millisecond, None), true),
         Field::new("c6", DataType::Time32(TimeUnit::Second), false),
+        Field::new(
+            "c7",
+            DataType::Dictionary(Box::new(DataType::UInt32), Box::new(DataType::Utf8)),
+            false,
+        ),
     ]);
 
     let c1 = Utf8Array::<i32>::from_slice([
@@ -29,6 +34,8 @@ fn data() -> RecordBatch {
         .to(DataType::Timestamp(TimeUnit::Millisecond, None));
     let c6 = PrimitiveArray::<i32>::from_slice(&[1234, 24680, 85563])
         .to(DataType::Time32(TimeUnit::Second));
+    let keys = UInt32Array::from_slice(&[2, 0, 1]);
+    let c7 = DictionaryArray::from_data(keys, Arc::new(c1.clone()));
 
     RecordBatch::try_new(
         Arc::new(schema),
@@ -39,6 +46,7 @@ fn data() -> RecordBatch {
             Arc::new(c4),
             Arc::new(c5),
             Arc::new(c6),
+            Arc::new(c7),
         ],
     )
     .unwrap()
@@ -61,13 +69,13 @@ fn write_csv() -> Result<()> {
     // check
     let buffer = writer.into_inner().unwrap().into_inner();
     assert_eq!(
-        r#"c1,c2,c3,c4,c5,c6
-Lorem ipsum dolor sit amet,123.564532,3,true,,00:20:34
-consectetur adipiscing elit,,2,false,2019-04-18T10:54:47.378000000,06:51:20
-sed do eiusmod tempor,-556132.25,1,,2019-04-18T02:45:55.555000000,23:46:03
-Lorem ipsum dolor sit amet,123.564532,3,true,,00:20:34
-consectetur adipiscing elit,,2,false,2019-04-18T10:54:47.378000000,06:51:20
-sed do eiusmod tempor,-556132.25,1,,2019-04-18T02:45:55.555000000,23:46:03
+        r#"c1,c2,c3,c4,c5,c6,c7
+Lorem ipsum dolor sit amet,123.564532,3,true,,00:20:34,sed do eiusmod tempor
+consectetur adipiscing elit,,2,false,2019-04-18T10:54:47.378000000,06:51:20,Lorem ipsum dolor sit amet
+sed do eiusmod tempor,-556132.25,1,,2019-04-18T02:45:55.555000000,23:46:03,consectetur adipiscing elit
+Lorem ipsum dolor sit amet,123.564532,3,true,,00:20:34,sed do eiusmod tempor
+consectetur adipiscing elit,,2,false,2019-04-18T10:54:47.378000000,06:51:20,Lorem ipsum dolor sit amet
+sed do eiusmod tempor,-556132.25,1,,2019-04-18T02:45:55.555000000,23:46:03,consectetur adipiscing elit
 "#
         .to_string(),
         String::from_utf8(buffer).unwrap(),
@@ -92,9 +100,9 @@ fn write_csv_custom_options() -> Result<()> {
     // check
     let buffer = writer.into_inner().unwrap().into_inner();
     assert_eq!(
-        r#"Lorem ipsum dolor sit amet|123.564532|3|true||12:20:34 AM
-consectetur adipiscing elit||2|false|2019-04-18T10:54:47.378000000|06:51:20 AM
-sed do eiusmod tempor|-556132.25|1||2019-04-18T02:45:55.555000000|11:46:03 PM
+        r#"Lorem ipsum dolor sit amet|123.564532|3|true||12:20:34 AM|sed do eiusmod tempor
+consectetur adipiscing elit||2|false|2019-04-18T10:54:47.378000000|06:51:20 AM|Lorem ipsum dolor sit amet
+sed do eiusmod tempor|-556132.25|1||2019-04-18T02:45:55.555000000|11:46:03 PM|consectetur adipiscing elit
 "#
         .to_string(),
         String::from_utf8(buffer).unwrap(),
