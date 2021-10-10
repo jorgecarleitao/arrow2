@@ -18,6 +18,7 @@
 use serde_json::map::Map;
 use serde_json::{Number, Value};
 
+use crate::bitmap::utils::zip_validity;
 use crate::{array::*, datatypes::*, record_batch::RecordBatch, types::NativeType};
 
 trait JsonSerializable {
@@ -294,21 +295,16 @@ fn set_column_for_json_rows(
             let inner_objs = struct_array_to_jsonmap_array(array, row_count);
             rows.iter_mut()
                 .take(row_count)
-                .zip(inner_objs.into_iter())
+                .zip(zip_validity(
+                    inner_objs.into_iter(),
+                    array.validity().map(|v| v.iter()),
+                ))
                 .for_each(|(row, obj)| {
-                    row.insert(col_name.to_string(), Value::Object(obj));
+                    row.insert(
+                        col_name.to_string(),
+                        obj.map(|o| Value::Object(o)).unwrap_or(Value::Null),
+                    );
                 });
-
-            if let Some(validity) = array.validity() {
-                rows.iter_mut()
-                    .zip(validity)
-                    .filter(|(_, v)| !*v)
-                    .for_each(|(row, _)| {
-                        if let Some(value) = row.get_mut(col_name) {
-                            *value = Value::Null;
-                        }
-                    });
-            }
         }
         DataType::List(_) => {
             let array = array.as_any().downcast_ref::<ListArray<i32>>().unwrap();
