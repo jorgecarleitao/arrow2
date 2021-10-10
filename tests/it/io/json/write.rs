@@ -80,9 +80,9 @@ fn write_nested_struct_with_validity() {
 
     assert_eq!(
         String::from_utf8(buf).unwrap(),
-        r#"{"c1":{"c11":1,"c12":{"c121":null,"c122":null}},"c2":"a"}
+        r#"{"c1":{"c11":1,"c12":null},"c2":"a"}
 {"c1":{"c11":null,"c12":{"c121":"f","c122":null}},"c2":"b"}
-{"c1":{"c11":null,"c12":{"c121":null,"c122":null}},"c2":"c"}
+{"c1":null,"c2":"c"}
 "#
     );
 }
