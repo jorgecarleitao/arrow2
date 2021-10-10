@@ -4,7 +4,6 @@ mod compression;
 mod convert;
 mod endianess;
 
-pub use arrow_format::ipc::Message::root_as_message;
 pub use convert::fb_to_schema;
 pub mod read;
 pub mod write;

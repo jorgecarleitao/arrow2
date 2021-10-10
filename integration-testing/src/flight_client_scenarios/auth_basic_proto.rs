@@ -17,7 +17,8 @@
 
 use crate::{AUTH_PASSWORD, AUTH_USERNAME};
 
-use arrow_flight::{
+use arrow_format::flight::{
+    Action,
     flight_service_client::FlightServiceClient, BasicAuth, HandshakeRequest,
 };
 use futures::{stream, StreamExt};
@@ -33,7 +34,7 @@ pub async fn run_scenario(host: &str, port: &str) -> Result {
     let url = format!("http://{}:{}", host, port);
     let mut client = FlightServiceClient::connect(url).await?;
 
-    let action = arrow_flight::Action::default();
+    let action = Action::default();
 
     let resp = client.do_action(Request::new(action.clone())).await;
     // This client is unauthenticated and should fail.

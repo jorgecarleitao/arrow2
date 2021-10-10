@@ -12,6 +12,10 @@ pub mod json;
 #[cfg_attr(docsrs, doc(cfg(feature = "io_ipc")))]
 pub mod ipc;
 
+#[cfg(feature = "io_flight")]
+#[cfg_attr(docsrs, doc(cfg(feature = "io_flight")))]
+pub mod flight;
+
 #[cfg(feature = "io_json_integration")]
 #[cfg_attr(docsrs, doc(cfg(feature = "io_json_integration")))]
 pub mod json_integration;

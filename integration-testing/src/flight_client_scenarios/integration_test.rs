@@ -17,16 +17,12 @@
 
 use crate::{read_json_file, ArrowFile};
 
-use arrow2::{
-    array::*,
-    datatypes::*,
-    io::ipc,
-    io::ipc::{gen::Message::MessageHeader, read, write},
-    record_batch::RecordBatch,
-};
-use arrow_flight::{
+use arrow2::{array::*, datatypes::*, io::flight::{self, deserialize_batch, serialize_batch}, io::ipc::{read, write}, record_batch::RecordBatch};
+use arrow_format::ipc;
+use arrow_format::ipc::Message::MessageHeader;
+use arrow_format::flight::{
     flight_descriptor::DescriptorType, flight_service_client::FlightServiceClient,
-    utils::flight_data_to_arrow_batch, FlightData, FlightDescriptor, Location, Ticket,
+    FlightData, FlightDescriptor, Location, Ticket,
 };
 use futures::{channel::mpsc, sink::SinkExt, stream, StreamExt};
 use tonic::{Request, Streaming};
@@ -77,10 +73,9 @@ async fn upload_data(
     let (mut upload_tx, upload_rx) = mpsc::channel(10);
 
     let options = write::IpcWriteOptions::default();
-    let mut schema_flight_data =
-        arrow_flight::utils::flight_data_from_arrow_schema(&schema, &options);
-    schema_flight_data.flight_descriptor = Some(descriptor.clone());
-    upload_tx.send(schema_flight_data).await?;
+    let mut schema = flight::serialize_schema(&schema, &options);
+    schema.flight_descriptor = Some(descriptor.clone());
+    upload_tx.send(schema).await?;
 
     let mut original_data_iter = original_data.iter().enumerate();
 
@@ -131,7 +126,7 @@ async fn send_batch(
     options: &write::IpcWriteOptions,
 ) -> Result {
     let (dictionary_flight_data, mut batch_flight_data) =
-        arrow_flight::utils::flight_data_from_arrow_batch(batch, options);
+        serialize_batch(batch, options);
 
     upload_tx
         .send_all(&mut stream::iter(dictionary_flight_data).map(Ok))
@@ -215,7 +210,7 @@ async fn consume_flight_location(
         assert_eq!(metadata, data.app_metadata);
 
         let actual_batch =
-            flight_data_to_arrow_batch(&data, schema.clone(), true, &dictionaries_by_field)
+            deserialize_batch(&data, schema.clone(), true, &dictionaries_by_field)
                 .expect("Unable to convert flight data to Arrow batch");
 
         assert_eq!(expected_batch.schema(), actual_batch.schema());
@@ -249,7 +244,7 @@ async fn receive_batch_flight_data(
 ) -> Option<FlightData> {
     let mut data = resp.next().await?.ok()?;
     let mut message =
-        ipc::root_as_message(&data.data_header[..]).expect("Error parsing first message");
+        ipc::Message::root_as_message(&data.data_header[..]).expect("Error parsing first message");
 
     while message.header_type() == MessageHeader::DictionaryBatch {
         let mut reader = std::io::Cursor::new(&data.data_body);
@@ -266,7 +261,7 @@ async fn receive_batch_flight_data(
         .expect("Error reading dictionary");
 
         data = resp.next().await?.ok()?;
-        message = ipc::root_as_message(&data.data_header[..]).expect("Error parsing message");
+        message = ipc::Message::root_as_message(&data.data_header[..]).expect("Error parsing message");
     }
 
     Some(data)

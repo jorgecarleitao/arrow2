@@ -91,6 +91,7 @@ full = [
     "io_csv",
     "io_json",
     "io_ipc",
+    "io_flight",
     "io_ipc_compression",
     "io_json_integration",
     "io_print",
@@ -110,6 +111,7 @@ io_csv_write = ["csv", "streaming-iterator", "lexical-core"]
 io_json = ["serde", "serde_json", "indexmap"]
 io_ipc = ["arrow-format"]
 io_ipc_compression = ["lz4", "zstd"]
+io_flight = ["io_ipc", "arrow-format/flight"]
 io_parquet_compression = [
     "parquet2/zstd",
     "parquet2/snappy",
@@ -146,6 +148,8 @@ skip_feature_sets = [
     ["io_csv_write"],
     ["io_avro"],
     ["io_json"],
+    ["io_flight"],
+    ["io_ipc"],
     ["io_parquet"],
     ["io_json_integration"],
     # this does not change the public API

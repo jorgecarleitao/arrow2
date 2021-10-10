@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use arrow_flight::{
+use arrow_format::flight::{
     flight_descriptor::DescriptorType, flight_service_client::FlightServiceClient,
     FlightDescriptor,
 };
