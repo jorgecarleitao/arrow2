@@ -20,10 +20,11 @@ use crate::{read_json_file, ArrowFile};
 use arrow2::{array::*, datatypes::*, io::flight::{self, deserialize_batch, serialize_batch}, io::ipc::{read, write}, record_batch::RecordBatch};
 use arrow_format::ipc;
 use arrow_format::ipc::Message::MessageHeader;
-use arrow_format::flight::{
-    flight_descriptor::DescriptorType, flight_service_client::FlightServiceClient,
+use arrow_format::flight::data::{
+    flight_descriptor::DescriptorType,
     FlightData, FlightDescriptor, Location, Ticket,
 };
+use arrow_format::flight::service::flight_service_client::FlightServiceClient;
 use futures::{channel::mpsc, sink::SinkExt, stream, StreamExt};
 use tonic::{Request, Streaming};
 

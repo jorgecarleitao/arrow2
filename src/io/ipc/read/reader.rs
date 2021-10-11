@@ -18,8 +18,8 @@
 use std::io::{Read, Seek, SeekFrom};
 use std::sync::Arc;
 
-use arrow_format::ipc::flatbuffers::VerifierOptions;
 use arrow_format::ipc;
+use arrow_format::ipc::flatbuffers::VerifierOptions;
 
 use crate::array::*;
 use crate::datatypes::Schema;

@@ -9,8 +9,8 @@ use std::{
     sync::Arc,
 };
 
-use arrow_format::ipc::{Schema::MetadataVersion, Message::BodyCompression};
 use arrow_format::ipc;
+use arrow_format::ipc::{Message::BodyCompression, Schema::MetadataVersion};
 
 use crate::array::*;
 use crate::datatypes::{DataType, PhysicalType};

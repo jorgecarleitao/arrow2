@@ -1,19 +1,15 @@
 use std::io::{Read, Seek, SeekFrom};
 use std::{collections::VecDeque, convert::TryInto};
 
-use arrow_format::ipc::Message::{BodyCompression, CompressionType};
 use arrow_format::ipc;
+use arrow_format::ipc::Message::{BodyCompression, CompressionType};
 
 use crate::buffer::Buffer;
 use crate::error::{ArrowError, Result};
-<<<<<<< HEAD
-use crate::io::ipc::endianess::is_native_little_endian;
-use crate::io::ipc::gen::Message::{BodyCompression, CompressionType};
-=======
->>>>>>> Migrated to arrow_format crate.
 use crate::{bitmap::Bitmap, buffer::MutableBuffer, types::NativeType};
 
 use super::super::compression;
+use super::super::endianess::is_native_little_endian;
 
 fn read_swapped<T: NativeType, R: Read + Seek>(
     reader: &mut R,

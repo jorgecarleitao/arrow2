@@ -18,16 +18,16 @@
 use std::io::Read;
 use std::sync::Arc;
 
-use arrow_format::ipc::Schema::MetadataVersion;
 use arrow_format::ipc;
+use arrow_format::ipc::Schema::MetadataVersion;
 
 use crate::array::*;
 use crate::datatypes::Schema;
 use crate::error::{ArrowError, Result};
 use crate::record_batch::RecordBatch;
 
-use super::super::CONTINUATION_MARKER;
 use super::super::convert;
+use super::super::CONTINUATION_MARKER;
 use super::common::*;
 
 type ArrayRef = Arc<dyn Array>;

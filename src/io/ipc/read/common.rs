@@ -19,8 +19,8 @@ use std::collections::{HashMap, VecDeque};
 use std::io::{Read, Seek};
 use std::sync::Arc;
 
-use arrow_format::ipc::Schema::MetadataVersion;
 use arrow_format::ipc;
+use arrow_format::ipc::Schema::MetadataVersion;
 
 use crate::array::*;
 use crate::datatypes::{DataType, Field, Schema};

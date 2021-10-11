@@ -17,9 +17,9 @@
 
 use crate::{AUTH_PASSWORD, AUTH_USERNAME};
 
-use arrow_format::flight::{
-    Action,
-    flight_service_client::FlightServiceClient, BasicAuth, HandshakeRequest,
+use arrow_format::flight::data::{Action, HandshakeRequest, BasicAuth};
+use arrow_format::flight::service::{
+    flight_service_client::FlightServiceClient,
 };
 use futures::{stream, StreamExt};
 use prost::Message;

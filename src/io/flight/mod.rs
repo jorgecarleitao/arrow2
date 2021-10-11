@@ -1,16 +1,16 @@
-use std::sync::Arc;
 use std::convert::TryFrom;
+use std::sync::Arc;
 
-use arrow_format::flight::{FlightData, SchemaResult};
+use arrow_format::flight::data::{FlightData, SchemaResult};
 use arrow_format::ipc;
 
 use crate::{
     array::*,
     datatypes::*,
     error::{ArrowError, Result},
+    io::ipc::fb_to_schema,
     io::ipc::read::read_record_batch,
     io::ipc::write,
-    io::ipc::fb_to_schema,
     io::ipc::write::common::{encoded_batch, DictionaryTracker, EncodedData, IpcWriteOptions},
     record_batch::RecordBatch,
 };
@@ -60,10 +60,7 @@ pub fn serialize_schema(schema: &Schema, options: &IpcWriteOptions) -> FlightDat
 }
 
 /// Convert a [`Schema`] to bytes in the format expected in [`arrow_format::flight::FlightInfo`].
-pub fn serialize_schema_to_info(
-    schema: &Schema,
-    options: &IpcWriteOptions,
-) -> Result<Vec<u8>> {
+pub fn serialize_schema_to_info(schema: &Schema, options: &IpcWriteOptions) -> Result<Vec<u8>> {
     let encoded_data = schema_as_encoded_data(schema, options);
 
     let mut schema = vec![];
