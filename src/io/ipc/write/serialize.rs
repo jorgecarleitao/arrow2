@@ -15,17 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
+use crate::io::ipc::endianess::is_native_little_endian;
+use crate::io::ipc::gen::Schema;
 use crate::{
     array::*,
     bitmap::Bitmap,
     datatypes::{DataType, PhysicalType},
-    endianess::is_native_little_endian,
     io::ipc::gen::Message,
     trusted_len::TrustedLen,
     types::NativeType,
 };
-
-use crate::io::ipc::gen::Schema;
 
 use super::common::pad_to_8;
 

@@ -9,7 +9,6 @@ pub mod array;
 mod alloc;
 pub mod bitmap;
 pub mod buffer;
-mod endianess;
 pub mod error;
 pub mod scalar;
 pub mod trusted_len;

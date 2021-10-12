@@ -52,7 +52,7 @@ jobs:
       - name: Install clippy
         run: rustup component add clippy
       - name: "clippy --all"
-        run: cargo clippy --all --tests
+        run: cargo clippy --all --features=full --tests -- -D warnings
 
   fmt:
     name: fmt
@@ -64,8 +64,8 @@ jobs:
       - uses: Swatinem/rust-cache@v1
       - name: Install rustfmt
         run: rustup component add rustfmt
-
-      - run: cargo fmt
+      - name: Run
+        run: cargo fmt --all -- --check
 
   miri-checks:
     name: Miri

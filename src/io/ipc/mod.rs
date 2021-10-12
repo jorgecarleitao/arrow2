@@ -2,6 +2,10 @@
 
 #![allow(missing_debug_implementations)]
 #![allow(non_camel_case_types)]
+
+pub use convert::fb_to_schema;
+pub use gen::Message::root_as_message;
+
 #[allow(clippy::redundant_closure)]
 #[allow(clippy::needless_lifetimes)]
 #[allow(clippy::extra_unused_lifetimes)]
@@ -12,8 +16,7 @@ pub mod gen;
 mod compression;
 mod convert;
 
-pub use convert::fb_to_schema;
-pub use gen::Message::root_as_message;
+mod endianess;
 pub mod read;
 pub mod write;
 
