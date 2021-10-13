@@ -379,7 +379,7 @@ pub mod ord;
 pub use display::get_display;
 pub use equal::equal;
 
-pub use binary::{BinaryArray, MutableBinaryArray, BinaryValueIter};
+pub use binary::{BinaryArray, BinaryValueIter, MutableBinaryArray};
 pub use boolean::{BooleanArray, MutableBooleanArray};
 pub use dictionary::{DictionaryArray, DictionaryKey, MutableDictionaryArray};
 pub use fixed_size_binary::{FixedSizeBinaryArray, MutableFixedSizeBinaryArray};
