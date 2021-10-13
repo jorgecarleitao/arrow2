@@ -14,6 +14,7 @@ pub struct BinaryValueIter<'a, O: Offset> {
 }
 
 impl<'a, O: Offset> BinaryValueIter<'a, O> {
+    /// Creates a new [`BinaryValueIter`]
     pub fn new(array: &'a BinaryArray<O>) -> Self {
         Self { array, index: 0 }
     }
