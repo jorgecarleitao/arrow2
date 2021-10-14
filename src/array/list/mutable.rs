@@ -177,7 +177,7 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
     fn init_validity(&mut self) {
         let len = self.offsets.len() - 1;
 
-        let mut validity = MutableBitmap::new();
+        let mut validity = MutableBitmap::with_capacity(self.offsets.capacity());
         validity.extend_constant(len, true);
         validity.set(len - 1, false);
         self.validity = Some(validity)

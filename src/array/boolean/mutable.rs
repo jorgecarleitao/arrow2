@@ -170,7 +170,7 @@ impl MutableBooleanArray {
     }
 
     fn init_validity(&mut self) {
-        let mut validity = MutableBitmap::new();
+        let mut validity = MutableBitmap::with_capacity(self.values.capacity());
         validity.extend_constant(self.len(), true);
         validity.set(self.len() - 1, false);
         self.validity = Some(validity)
