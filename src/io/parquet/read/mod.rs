@@ -13,8 +13,8 @@ pub use parquet2::{
     page::{CompressedDataPage, DataPage, DataPageHeader},
     read::{
         decompress, get_page_iterator as _get_page_iterator, get_page_stream as _get_page_stream,
-        read_metadata as _read_metadata, read_metadata_async as _read_metadata_async, Decompressor,
-        PageFilter, PageIterator,
+        read_metadata as _read_metadata, read_metadata_async as _read_metadata_async,
+        BasicDecompressor, Decompressor, PageFilter, PageIterator,
     },
     schema::types::{
         LogicalType, ParquetType, PhysicalType, PrimitiveConvertedType,

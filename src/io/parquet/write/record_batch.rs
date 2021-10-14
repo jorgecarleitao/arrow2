@@ -63,13 +63,15 @@ impl<I: Iterator<Item = Result<RecordBatch>>> Iterator for RowGroupIterator<I> {
                     .zip(self.parquet_schema.columns().to_vec().into_iter())
                     .zip(encodings.into_iter())
                     .map(move |((array, descriptor), encoding)| {
-                        array_to_pages(array, descriptor, options, encoding).map(move |pages| {
-                            let encoded_pages = DynIter::new(pages.map(|x| Ok(x?)));
-                            let compressed_pages =
-                                Compressor::new(encoded_pages, options.compression, vec![])
-                                    .map_err(ArrowError::from);
-                            DynStreamingIterator::new(compressed_pages)
-                        })
+                        array_to_pages(array.as_ref(), descriptor, options, encoding).map(
+                            move |pages| {
+                                let encoded_pages = DynIter::new(pages.map(|x| Ok(x?)));
+                                let compressed_pages =
+                                    Compressor::new(encoded_pages, options.compression, vec![])
+                                        .map_err(ArrowError::from);
+                                DynStreamingIterator::new(compressed_pages)
+                            },
+                        )
                     }),
             ))
         })

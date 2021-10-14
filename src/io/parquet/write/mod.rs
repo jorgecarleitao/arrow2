@@ -12,8 +12,6 @@ mod utils;
 
 pub mod stream;
 
-use std::sync::Arc;
-
 use crate::array::*;
 use crate::bitmap::Bitmap;
 use crate::buffer::{Buffer, MutableBuffer};
@@ -35,6 +33,7 @@ pub use parquet2::{
         write_file as parquet_write_file, Compressor, DynIter, DynStreamingIterator, RowGroupIter,
         Version, WriteOptions,
     },
+    FallibleStreamingIterator,
 };
 pub use record_batch::RowGroupIterator;
 use schema::schema_to_metadata_key;
@@ -110,7 +109,7 @@ pub fn can_encode(data_type: &DataType, encoding: Encoding) -> bool {
 
 /// Returns an iterator of [`EncodedPage`].
 pub fn array_to_pages(
-    array: Arc<dyn Array>,
+    array: &dyn Array,
     descriptor: ColumnDescriptor,
     options: WriteOptions,
     encoding: Encoding,
@@ -126,7 +125,7 @@ pub fn array_to_pages(
                 )
             })
         }
-        _ => array_to_page(array.as_ref(), descriptor, options, encoding)
+        _ => array_to_page(array, descriptor, options, encoding)
             .map(|page| DynIter::new(std::iter::once(Ok(page)))),
     }
 }

@@ -1,11 +1,12 @@
 use std::fs::File;
+use std::io::BufReader;
 
 use arrow2::io::parquet::read;
 use arrow2::{array::Array, error::Result};
 
 fn read_column_chunk(path: &str, row_group: usize, column: usize) -> Result<Box<dyn Array>> {
     // Open a file, a common operation in Rust
-    let mut file = File::open(path)?;
+    let mut file = BufReader::new(File::open(path)?);
 
     // Read the files' metadata. This has a small IO cost because it requires seeking to the end
     // of the file to read its footer.

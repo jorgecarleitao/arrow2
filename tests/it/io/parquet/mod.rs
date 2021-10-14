@@ -499,7 +499,7 @@ fn integration_write(schema: &Schema, batches: &[RecordBatch]) -> Result<Vec<u8>
                 } else {
                     Encoding::Plain
                 };
-                array_to_pages(array.clone(), descriptor, options, encoding).map(|pages| {
+                array_to_pages(array.as_ref(), descriptor, options, encoding).map(|pages| {
                     let encoded_pages = DynIter::new(pages.map(|x| Ok(x?)));
                     let compressed_pages =
                         Compressor::new(encoded_pages, options.compression, vec![])
