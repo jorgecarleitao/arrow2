@@ -11,7 +11,9 @@ def case_basic_nullable(size=1):
     float64 = [0.0, 1.0, None, 3.0, None, 5.0, 6.0, 7.0, None, 9.0]
     string = ["Hello", None, "aa", "", None, "abc", None, None, "def", "aaa"]
     boolean = [True, None, False, False, None, True, None, None, True, True]
-    string_large = ["ABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCD😃🌚🕳👊"] * 10
+    string_large = [
+        "ABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCD😃🌚🕳👊"
+    ] * 10
     decimal = [Decimal(e) if e is not None else None for e in int64]
 
     fields = [
@@ -23,9 +25,9 @@ def case_basic_nullable(size=1):
         pa.field("uint32", pa.uint32()),
         pa.field("string_large", pa.utf8()),
         # decimal testing
-        pa.field("decimal_9", pa.decimal128(9,0)),
-        pa.field("decimal_18", pa.decimal128(18,0)),
-        pa.field("decimal_26", pa.decimal128(26,0)),
+        pa.field("decimal_9", pa.decimal128(9, 0)),
+        pa.field("decimal_18", pa.decimal128(18, 0)),
+        pa.field("decimal_26", pa.decimal128(26, 0)),
     ]
     schema = pa.schema(fields)
 
@@ -67,9 +69,9 @@ def case_basic_required(size=1):
             nullable=False,
         ),
         pa.field("uint32", pa.uint32(), nullable=False),
-        pa.field("decimal_9", pa.decimal128(9,0), nullable=False),
-        pa.field("decimal_18", pa.decimal128(18,0), nullable=False),
-        pa.field("decimal_26", pa.decimal128(26,0), nullable=False),
+        pa.field("decimal_9", pa.decimal128(9, 0), nullable=False),
+        pa.field("decimal_18", pa.decimal128(18, 0), nullable=False),
+        pa.field("decimal_26", pa.decimal128(26, 0), nullable=False),
     ]
     schema = pa.schema(fields)
 
@@ -156,12 +158,35 @@ def case_nested(size):
     )
 
 
-def write_pyarrow(case, size=1, page_version=1, use_dictionary=False):
+def write_pyarrow(
+    case,
+    size: int,
+    page_version: int,
+    use_dictionary: bool,
+    multiple_pages: bool,
+    compression: bool,
+):
     data, schema, path = case(size)
 
     base_path = f"{PYARROW_PATH}/v{page_version}"
     if use_dictionary:
         base_path = f"{base_path}/dict"
+
+    if multiple_pages:
+        base_path = f"{base_path}/multi"
+
+    if compression:
+        base_path = f"{base_path}/snappy"
+
+    if compression:
+        compression = "snappy"
+    else:
+        compression = None
+
+    if multiple_pages:
+        data_page_size = 2 ** 10  # i.e. a small number to ensure multiple pages
+    else:
+        data_page_size = 2 ** 40  # i.e. a large number to ensure a single page
 
     t = pa.table(data, schema=schema)
     os.makedirs(base_path, exist_ok=True)
@@ -170,9 +195,9 @@ def write_pyarrow(case, size=1, page_version=1, use_dictionary=False):
         f"{base_path}/{path}",
         row_group_size=2 ** 40,
         use_dictionary=use_dictionary,
-        compression=None,
+        compression=compression,
         write_statistics=True,
-        data_page_size=2 ** 40,  # i.e. a large number to ensure a single page
+        data_page_size=data_page_size,
         data_page_version=f"{page_version}.0",
     )
 
@@ -180,7 +205,7 @@ def write_pyarrow(case, size=1, page_version=1, use_dictionary=False):
 for case in [case_basic_nullable, case_basic_required, case_nested]:
     for version in [1, 2]:
         for use_dict in [True, False]:
-            write_pyarrow(case, 1, version, use_dict)
+            write_pyarrow(case, 1, version, use_dict, False, False)
 
 
 def case_benches(size):
@@ -194,4 +219,13 @@ def case_benches(size):
 
 # for read benchmarks
 for i in range(3 + 10, 3 + 22, 2):
-    write_pyarrow(case_benches, 2 ** i, 1)  # V1
+    # two pages (dict)
+    write_pyarrow(case_benches, 2 ** i, 1, True, False, False)
+    # single page
+    write_pyarrow(case_benches, 2 ** i, 1, False, False, False)
+    # multiple pages
+    write_pyarrow(case_benches, 2 ** i, 1, False, True, False)
+    # multiple compressed pages
+    write_pyarrow(case_benches, 2 ** i, 1, False, True, True)
+    # single compressed page
+    write_pyarrow(case_benches, 2 ** i, 1, False, False, True)
