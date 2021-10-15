@@ -298,9 +298,7 @@ pub fn array_to_page(
                 primitive::array_to_page::<i64, i64>(&array, options, descriptor)
             } else {
                 let size = decimal_length_from_precision(precision);
-
-                let mut values = MutableBuffer::<u8>::new(); // todo: this can be estimated
-
+                let mut values = MutableBuffer::<u8>::with_capacity(size * array.len());
                 array.values().iter().for_each(|x| {
                     let bytes = &x.to_be_bytes()[16 - size..];
                     values.extend_from_slice(bytes)
