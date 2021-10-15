@@ -64,6 +64,8 @@ parquet2 = { version = "0.5.2", optional = true, default_features = false, featu
 
 avro-rs = { version = "0.13", optional = true, default_features = false }
 
+libflate = { version = "1.1.1", optional = true }
+
 # for division/remainder optimization at runtime
 strength_reduce = { version = "0.2", optional = true }
 
@@ -114,7 +116,7 @@ io_parquet_compression = [
     "parquet2/lz4",
     "parquet2/brotli",
 ]
-io_avro = ["avro-rs", "streaming-iterator", "serde_json"]
+io_avro = ["avro-rs", "streaming-iterator", "serde_json", "libflate"]
 # io_json: its dependencies + error handling
 # serde_derive: there is some derive around
 io_json_integration = ["io_json", "serde_derive", "hex"]
