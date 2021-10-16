@@ -32,6 +32,7 @@ use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 use crate::record_batch::RecordBatch;
 
+/// Arrow stream writer
 pub struct StreamWriter<W: Write> {
     /// The object to write to
     writer: BufWriter<W>,

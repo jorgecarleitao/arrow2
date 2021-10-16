@@ -76,12 +76,28 @@ pub fn read_stream_metadata<R: Read>(reader: &mut R) -> Result<StreamMetadata> {
     })
 }
 
+/// Encodes the stream's status after each read.
+///
+/// A stream is an iterator, and an iterator returns `Option<Item>`. The `Item`
+/// type in the [`StreamReader`] case is `StreamState`, which means that an Arrow
+/// stream may yield one of three values: (1) `None`, which signals that the stream
+/// is done; (2) `Some(StreamState::Some(RecordBatch))`, which signals that there was
+/// data waiting in the stream and we read it; and finally (3)
+/// `Some(StreamState::Waiting)`, which means that the stream is still "live", it
+/// just doesn't hold any data right now.
 pub enum StreamState {
+    /// A live stream without data
     Waiting,
+    /// Next item in the stream
     Some(RecordBatch),
 }
 
 impl StreamState {
+    /// Return the data inside this wrapper.
+    ///
+    /// # Panics
+    ///
+    /// If the `StreamState` was `Waiting`.
     pub fn unwrap(self) -> RecordBatch {
         if let StreamState::Some(batch) = self {
             batch
@@ -91,7 +107,8 @@ impl StreamState {
     }
 }
 
-/// Reads the next item
+/// Reads the next item, yielding `None` if the stream is done,
+/// and a `StreamState` otherwise.
 pub fn read_next<R: Read>(
     reader: &mut R,
     metadata: &StreamMetadata,
@@ -191,7 +208,15 @@ pub fn read_next<R: Read>(
     }
 }
 
-/// Arrow Stream reader
+/// Arrow Stream reader.
+///
+/// Once a stream is created the recommended way to interact with it is by
+/// iterating over its data. Each such iteration yields an [`Option<StreamState>`](StreamState),
+/// signaling that the stream might not currently have any data, even though it's still a "live"
+/// stream.
+///
+/// For a full usage examples consult [this](https://github.com/jorgecarleitao/arrow2/tree/main/examples/ipc_pyarrow)
+/// example in the main repository.
 pub struct StreamReader<R: Read> {
     reader: R,
     metadata: StreamMetadata,
