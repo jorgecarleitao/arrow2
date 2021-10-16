@@ -210,15 +210,14 @@ for case in [case_basic_nullable, case_basic_required, case_nested]:
 
 def case_benches(size):
     assert size % 8 == 0
-    size //= 8
-    data, schema, path = case_basic_nullable(1)
+    data, schema, _ = case_basic_nullable(1)
     for k in data:
-        data[k] = data[k][:8] * size
+        data[k] = data[k][:8] * (size // 8)
     return data, schema, f"benches_{size}.parquet"
 
 
 # for read benchmarks
-for i in range(3 + 10, 3 + 22, 2):
+for i in range(10, 22, 2):
     # two pages (dict)
     write_pyarrow(case_benches, 2 ** i, 1, True, False, False)
     # single page
