@@ -42,36 +42,36 @@ fn add_benchmark(c: &mut Criterion) {
         let size = 2usize.pow(i);
         let buffer = to_buffer(size, false, false, false);
         let a = format!("read i64 2^{}", i);
-        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size * 8, 0).unwrap()));
+        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size, 0).unwrap()));
 
         let a = format!("read utf8 2^{}", i);
-        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size * 8, 2).unwrap()));
+        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size, 2).unwrap()));
 
         let a = format!("read utf8 large 2^{}", i);
-        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size * 8, 6).unwrap()));
+        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size, 6).unwrap()));
 
         let a = format!("read bool 2^{}", i);
-        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size * 8, 3).unwrap()));
+        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size, 3).unwrap()));
 
         let buffer = to_buffer(size, true, false, false);
         let a = format!("read utf8 dict 2^{}", i);
-        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size * 8, 2).unwrap()));
+        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size, 2).unwrap()));
 
         let buffer = to_buffer(size, false, false, true);
         let a = format!("read i64 snappy 2^{}", i);
-        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size * 8, 0).unwrap()));
+        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size, 0).unwrap()));
 
         let buffer = to_buffer(size, false, true, false);
         let a = format!("read utf8 multi 2^{}", i);
-        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size * 8, 2).unwrap()));
+        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size, 2).unwrap()));
 
         let buffer = to_buffer(size, false, true, true);
         let a = format!("read utf8 multi snappy 2^{}", i);
-        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size * 8, 2).unwrap()));
+        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size, 2).unwrap()));
 
         let buffer = to_buffer(size, false, true, true);
         let a = format!("read i64 multi snappy 2^{}", i);
-        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size * 8, 0).unwrap()));
+        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size, 0).unwrap()));
     });
 }
 
