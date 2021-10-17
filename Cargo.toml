@@ -62,7 +62,7 @@ futures = { version = "0.3", optional = true }
 ahash = { version = "0.7", optional = true }
 
 #parquet2 = { version = "0.5.2", optional = true, default_features = false, features = ["stream"] }
-parquet2 = { git = "https://github.com/jorgecarleitao/parquet2", branch = "reuse_compress", optional = true, default_features = false, features = ["stream"] }
+parquet2 = { git = "https://github.com/jorgecarleitao/parquet2", branch = "simplify_codec", optional = true, default_features = false, features = ["stream"] }
 #parquet2 = { path = "../parquet2", optional = true, default_features = false, features = ["stream"] }
 
 avro-rs = { version = "0.13", optional = true, default_features = false }
