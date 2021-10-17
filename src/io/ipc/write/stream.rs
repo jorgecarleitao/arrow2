@@ -32,6 +32,12 @@ use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 use crate::record_batch::RecordBatch;
 
+/// Arrow stream writer
+///
+/// The data written by this writer must be read in order. To signal that no more
+/// data is arriving through the stream call [`self.finish()`](StreamWriter::finish);
+///
+/// For a usage walkthrough consult [this example](https://github.com/jorgecarleitao/arrow2/tree/main/examples/ipc_pyarrow).
 pub struct StreamWriter<W: Write> {
     /// The object to write to
     writer: BufWriter<W>,
