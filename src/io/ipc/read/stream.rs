@@ -210,10 +210,8 @@ pub fn read_next<R: Read>(
 
 /// Arrow Stream reader.
 ///
-/// Once a stream is created the recommended way to interact with it is by
-/// iterating over its data. Each such iteration yields an [`Option<StreamState>`](StreamState),
-/// signaling that the stream might not currently have any data, even though it's still a "live"
-/// stream.
+/// An [`Iterator`] over an Arrow stream that yields a result of [`StreamState`]s.
+/// This is the recommended way to read an arrow stream (by iterating over its data).
 ///
 /// For a full usage examples consult [this](https://github.com/jorgecarleitao/arrow2/tree/main/examples/ipc_pyarrow)
 /// example in the main repository.
