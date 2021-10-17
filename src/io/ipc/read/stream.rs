@@ -108,7 +108,7 @@ impl StreamState {
 }
 
 /// Reads the next item, yielding `None` if the stream is done,
-/// and a `StreamState` otherwise.
+/// and a [`StreamState`] otherwise.
 pub fn read_next<R: Read>(
     reader: &mut R,
     metadata: &StreamMetadata,
