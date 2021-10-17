@@ -37,7 +37,7 @@
 //! # use arrow2::array::Int32Array;
 //! # use arrow2::record_batch::RecordBatch;
 //! // Setup the writer
-//! let path = "example.dat".to_string();
+//! let path = "example.arrow".to_string();
 //! let mut file = File::create(&path).unwrap();
 //! let x_coord = Field::new("x", DataType::Int32, false);
 //! let y_coord = Field::new("y", DataType::Int32, false);
