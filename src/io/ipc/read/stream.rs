@@ -213,8 +213,7 @@ pub fn read_next<R: Read>(
 /// An [`Iterator`] over an Arrow stream that yields a result of [`StreamState`]s.
 /// This is the recommended way to read an arrow stream (by iterating over its data).
 ///
-/// For a full usage examples consult [this](https://github.com/jorgecarleitao/arrow2/tree/main/examples/ipc_pyarrow)
-/// example in the main repository.
+/// For a more thorough walkthrough consult [this example](https://github.com/jorgecarleitao/arrow2/tree/main/examples/ipc_pyarrow).
 pub struct StreamReader<R: Read> {
     reader: R,
     metadata: StreamMetadata,

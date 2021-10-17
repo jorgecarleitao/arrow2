@@ -36,13 +36,14 @@
 //! # use arrow2::datatypes::{Field, Schema, DataType};
 //! # use arrow2::array::Int32Array;
 //! # use arrow2::record_batch::RecordBatch;
+//! # use arrow2::error::ArrowError;
 //! // Setup the writer
 //! let path = "example.arrow".to_string();
-//! let mut file = File::create(&path).unwrap();
+//! let mut file = File::create(&path)?;
 //! let x_coord = Field::new("x", DataType::Int32, false);
 //! let y_coord = Field::new("y", DataType::Int32, false);
 //! let schema = Schema::new(vec![x_coord, y_coord]);
-//! let mut writer = FileWriter::try_new(file, &schema).unwrap();
+//! let mut writer = FileWriter::try_new(file, &schema)?;
 //!
 //! // Setup the data
 //! let x_data = Int32Array::from_slice([-1i32, 1]);
@@ -50,7 +51,7 @@
 //! let batch = RecordBatch::try_new(
 //!        Arc::new(schema),
 //!         vec![Arc::new(x_data), Arc::new(y_data)]
-//!    ).unwrap();
+//!    )?;
 //!
 //! // Write the messages and finalize the stream
 //! for _ in 0..5 {
@@ -59,14 +60,14 @@
 //! writer.finish();
 //!
 //! // Fetch some of the data and get the reader back
-//! let mut reader = File::open(&path).unwrap();
-//! let metadata = read_file_metadata(&mut reader).unwrap();
+//! let mut reader = File::open(&path)?;
+//! let metadata = read_file_metadata(&mut reader)?;
 //! let mut filereader = FileReader::new(reader, metadata, None);
 //! let row1 = filereader.next().unwrap();  // [[-1, 1], [1, -1]]
 //! let row2 = filereader.next().unwrap();  // [[-1, 1], [1, -1]]
 //! let mut reader = filereader.into_inner();
 //! // Do more stuff with the reader, like seeking ahead.
-//!
+//! # Ok::<(), ArrowError>(())
 //! ```
 //!
 //! For further information and examples please consult the
