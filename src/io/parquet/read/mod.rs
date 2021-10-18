@@ -8,18 +8,20 @@ use std::{
 use futures::{AsyncRead, AsyncSeek, Stream};
 pub use parquet2::{
     error::ParquetError,
+    fallible_streaming_iterator,
     metadata::{ColumnChunkMetaData, ColumnDescriptor, RowGroupMetaData},
     page::{CompressedDataPage, DataPage, DataPageHeader},
     read::{
         decompress, get_page_iterator as _get_page_iterator, get_page_stream as _get_page_stream,
         read_metadata as _read_metadata, read_metadata_async as _read_metadata_async,
-        streaming_iterator, Decompressor, PageFilter, PageIterator, StreamingIterator,
+        BasicDecompressor, Decompressor, PageFilter, PageIterator,
     },
     schema::types::{
         LogicalType, ParquetType, PhysicalType, PrimitiveConvertedType,
         TimeUnit as ParquetTimeUnit, TimestampType,
     },
     types::int96_to_i64_ns,
+    FallibleStreamingIterator,
 };
 
 use crate::{
@@ -82,7 +84,7 @@ pub async fn read_metadata_async<R: AsyncRead + AsyncSeek + Send + Unpin>(
 
 fn dict_read<
     K: DictionaryKey,
-    I: StreamingIterator<Item = std::result::Result<DataPage, ParquetError>>,
+    I: FallibleStreamingIterator<Item = DataPage, Error = ParquetError>,
 >(
     iter: &mut I,
     metadata: &ColumnChunkMetaData,
@@ -164,9 +166,7 @@ fn dict_read<
 }
 
 /// Converts an iterator of [`DataPage`] into a single [`Array`].
-pub fn page_iter_to_array<
-    I: StreamingIterator<Item = std::result::Result<DataPage, ParquetError>>,
->(
+pub fn page_iter_to_array<I: FallibleStreamingIterator<Item = DataPage, Error = ParquetError>>(
     iter: &mut I,
     metadata: &ColumnChunkMetaData,
     data_type: DataType,

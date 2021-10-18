@@ -1,6 +1,7 @@
 use std::io::{Cursor, Read, Seek};
 use std::sync::Arc;
 
+use arrow2::error::ArrowError;
 use arrow2::{
     array::*, bitmap::Bitmap, buffer::Buffer, datatypes::*, error::Result,
     io::parquet::read::statistics::*, io::parquet::read::*, io::parquet::write::*,
@@ -492,13 +493,19 @@ fn integration_write(schema: &Schema, batches: &[RecordBatch]) -> Result<Vec<u8>
             .columns()
             .iter()
             .zip(descritors.clone())
-            .map(|(array, type_)| {
+            .map(|(array, descriptor)| {
                 let encoding = if let DataType::Dictionary(_, _) = array.data_type() {
                     Encoding::RleDictionary
                 } else {
                     Encoding::Plain
                 };
-                array_to_pages(array.clone(), type_, options, encoding)
+                array_to_pages(array.as_ref(), descriptor, options, encoding).map(|pages| {
+                    let encoded_pages = DynIter::new(pages.map(|x| Ok(x?)));
+                    let compressed_pages =
+                        Compressor::new(encoded_pages, options.compression, vec![])
+                            .map_err(ArrowError::from);
+                    DynStreamingIterator::new(compressed_pages)
+                })
             });
         let iterator = DynIter::new(iterator);
         Ok(iterator)

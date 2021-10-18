@@ -47,16 +47,14 @@ fn parallel_read(path: &str) -> Result<Vec<Box<dyn Array>>> {
         let metadata_consumer = file_metadata.clone();
         let arrow_schema_consumer = arrow_schema.clone();
         let child = thread::spawn(move || {
-            let (column, row_group, iter) = rx_consumer.recv().unwrap();
+            let (column, row_group, pages) = rx_consumer.recv().unwrap();
             let start = SystemTime::now();
             println!("consumer start - {} {}", column, row_group);
             let metadata = metadata_consumer.row_groups[row_group].column(column);
             let data_type = arrow_schema_consumer.fields()[column].data_type().clone();
 
-            let pages = iter
-                .into_iter()
-                .map(|x| x.and_then(|x| read::decompress(x, &mut vec![])));
-            let mut pages = read::streaming_iterator::convert(pages);
+            let mut pages = read::BasicDecompressor::new(pages.into_iter(), vec![]);
+
             let array = read::page_iter_to_array(&mut pages, metadata, data_type);
             println!(
                 "consumer end - {:?}: {} {}",

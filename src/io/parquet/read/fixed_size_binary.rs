@@ -2,7 +2,7 @@ use futures::{pin_mut, Stream, StreamExt};
 use parquet2::{
     encoding::{hybrid_rle, Encoding},
     page::{DataPage, FixedLenByteArrayPageDict},
-    read::StreamingIterator,
+    FallibleStreamingIterator,
 };
 
 use super::{ColumnChunkMetaData, ColumnDescriptor};
@@ -134,17 +134,16 @@ pub fn iter_to_array<I, E>(
 ) -> Result<FixedSizeBinaryArray>
 where
     ArrowError: From<E>,
-    E: Clone,
-    I: StreamingIterator<Item = std::result::Result<DataPage, E>>,
+    I: FallibleStreamingIterator<Item = DataPage, Error = E>,
 {
     let size = *FixedSizeBinaryArray::get_size(&data_type) as usize;
 
     let capacity = metadata.num_values() as usize;
     let mut values = MutableBuffer::<u8>::with_capacity(capacity * size);
     let mut validity = MutableBitmap::with_capacity(capacity);
-    while let Some(page) = iter.next() {
+    while let Some(page) = iter.next()? {
         extend_from_page(
-            page.as_ref().map_err(|x| x.clone())?,
+            page,
             size,
             metadata.descriptor(),
             &mut values,

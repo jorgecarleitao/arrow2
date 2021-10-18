@@ -12,7 +12,7 @@ use parquet2::{
     encoding::{hybrid_rle, Encoding},
     metadata::{ColumnChunkMetaData, ColumnDescriptor},
     page::DataPage,
-    read::StreamingIterator,
+    FallibleStreamingIterator,
 };
 
 pub(super) fn read_required(buffer: &[u8], additional: usize, values: &mut MutableBitmap) {
@@ -71,19 +71,13 @@ fn read_optional(
 pub fn iter_to_array<I, E>(mut iter: I, metadata: &ColumnChunkMetaData) -> Result<BooleanArray>
 where
     ArrowError: From<E>,
-    E: Clone,
-    I: StreamingIterator<Item = std::result::Result<DataPage, E>>,
+    I: FallibleStreamingIterator<Item = DataPage, Error = E>,
 {
     let capacity = metadata.num_values() as usize;
     let mut values = MutableBitmap::with_capacity(capacity);
     let mut validity = MutableBitmap::with_capacity(capacity);
-    while let Some(page) = iter.next() {
-        extend_from_page(
-            page.as_ref().map_err(|x| x.clone())?,
-            metadata.descriptor(),
-            &mut values,
-            &mut validity,
-        )?
+    while let Some(page) = iter.next()? {
+        extend_from_page(page, metadata.descriptor(), &mut values, &mut validity)?
     }
 
     Ok(BooleanArray::from_data(

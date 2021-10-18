@@ -4,7 +4,7 @@ use parquet2::{
     encoding::{hybrid_rle, Encoding},
     metadata::{ColumnChunkMetaData, ColumnDescriptor},
     page::{BinaryPageDict, DataPage},
-    read::StreamingIterator,
+    FallibleStreamingIterator,
 };
 
 use super::super::utils as other_utils;
@@ -133,17 +133,16 @@ where
     ArrowError: From<E>,
     O: Offset,
     K: DictionaryKey,
-    E: Clone,
-    I: StreamingIterator<Item = std::result::Result<DataPage, E>>,
+    I: FallibleStreamingIterator<Item = DataPage, Error = E>,
 {
     let capacity = metadata.num_values() as usize;
     let mut indices = MutableBuffer::<K>::with_capacity(capacity);
     let mut values = MutableBuffer::<u8>::with_capacity(0);
     let mut offsets = MutableBuffer::<O>::with_capacity(1 + capacity);
     let mut validity = MutableBitmap::with_capacity(capacity);
-    while let Some(page) = iter.next() {
+    while let Some(page) = iter.next()? {
         extend_from_page(
-            page.as_ref().map_err(|x| x.clone())?,
+            page,
             metadata.descriptor(),
             &mut indices,
             &mut offsets,

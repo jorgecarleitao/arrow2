@@ -1,10 +1,10 @@
 use crate::bitmap::Bitmap;
 
 use parquet2::{
-    compression::{create_codec, Compression},
+    compression::Compression,
     encoding::{hybrid_rle::encode_bool, Encoding},
     metadata::ColumnDescriptor,
-    page::{CompressedDataPage, DataPageHeader, DataPageHeaderV1, DataPageHeaderV2},
+    page::{DataPage, DataPageHeader, DataPageHeaderV1, DataPageHeaderV2},
     statistics::ParquetStatistics,
     write::WriteOptions,
 };
@@ -62,14 +62,13 @@ pub fn build_plain_page(
     buffer: Vec<u8>,
     len: usize,
     null_count: usize,
-    uncompressed_page_size: usize,
     repetition_levels_byte_length: usize,
     definition_levels_byte_length: usize,
     statistics: Option<ParquetStatistics>,
     descriptor: ColumnDescriptor,
     options: WriteOptions,
     encoding: Encoding,
-) -> Result<CompressedDataPage> {
+) -> Result<DataPage> {
     match options.version {
         Version::V1 => {
             let header = DataPageHeader::V1(DataPageHeaderV1 {
@@ -80,14 +79,7 @@ pub fn build_plain_page(
                 statistics,
             });
 
-            Ok(CompressedDataPage::new(
-                header,
-                buffer,
-                options.compression,
-                uncompressed_page_size,
-                None,
-                descriptor,
-            ))
+            Ok(DataPage::new(header, buffer, None, descriptor))
         }
         Version::V2 => {
             let header = DataPageHeader::V2(DataPageHeaderV2 {
@@ -101,46 +93,9 @@ pub fn build_plain_page(
                 statistics,
             });
 
-            Ok(CompressedDataPage::new(
-                header,
-                buffer,
-                options.compression,
-                uncompressed_page_size,
-                None,
-                descriptor,
-            ))
+            Ok(DataPage::new(header, buffer, None, descriptor))
         }
     }
-}
-
-pub fn compress(
-    mut buffer: Vec<u8>,
-    options: WriteOptions,
-    levels_byte_length: usize,
-) -> Result<Vec<u8>> {
-    let codec = create_codec(&options.compression)?;
-    Ok(if let Some(mut codec) = codec {
-        match options.version {
-            Version::V1 => {
-                // todo: remove this allocation by extending `buffer` directly.
-                // needs refactoring `compress`'s API.
-                let mut tmp = vec![];
-                codec.compress(&buffer, &mut tmp)?;
-                tmp
-            }
-            Version::V2 => {
-                // todo: remove this allocation by extending `buffer` directly.
-                // needs refactoring `compress`'s API.
-                let mut tmp = vec![];
-                codec.compress(&buffer[levels_byte_length..], &mut tmp)?;
-                buffer.truncate(levels_byte_length);
-                buffer.extend_from_slice(&tmp);
-                buffer
-            }
-        }
-    } else {
-        buffer
-    })
 }
 
 /// Auxiliary iterator adapter to declare the size hint of an iterator.

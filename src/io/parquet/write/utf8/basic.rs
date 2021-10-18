@@ -1,7 +1,7 @@
 use parquet2::{
     encoding::Encoding,
     metadata::ColumnDescriptor,
-    page::CompressedDataPage,
+    page::DataPage,
     statistics::{serialize_statistics, BinaryStatistics, ParquetStatistics, Statistics},
     write::WriteOptions,
 };
@@ -43,7 +43,7 @@ pub fn array_to_page<O: Offset>(
     options: WriteOptions,
     descriptor: ColumnDescriptor,
     encoding: Encoding,
-) -> Result<CompressedDataPage> {
+) -> Result<DataPage> {
     let validity = array.validity();
     let is_optional = is_type_nullable(descriptor.type_());
 
@@ -76,10 +76,6 @@ pub fn array_to_page<O: Offset>(
         }
     }
 
-    let uncompressed_page_size = buffer.len();
-
-    let buffer = utils::compress(buffer, options, definition_levels_byte_length)?;
-
     let statistics = if options.write_statistics {
         Some(build_statistics(array, descriptor.clone()))
     } else {
@@ -90,7 +86,6 @@ pub fn array_to_page<O: Offset>(
         buffer,
         array.len(),
         array.null_count(),
-        uncompressed_page_size,
         0,
         definition_levels_byte_length,
         statistics,
