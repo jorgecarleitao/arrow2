@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 
+use arrow_format::ipc;
+
 pub use parquet2::metadata::KeyValue;
 
 use crate::datatypes::Schema;
 use crate::error::{ArrowError, Result};
-use crate::io::ipc;
+use crate::io::ipc::fb_to_schema;
 
 use super::super::super::ARROW_SCHEMA_META_KEY;
 
@@ -31,10 +33,10 @@ fn get_arrow_schema_from_metadata(encoded_meta: &str) -> Result<Schema> {
             } else {
                 bytes.as_slice()
             };
-            match ipc::root_as_message(slice) {
+            match ipc::Message::root_as_message(slice) {
                 Ok(message) => message
                     .header_as_schema()
-                    .map(ipc::fb_to_schema)
+                    .map(fb_to_schema)
                     .map(|x| x.0)
                     .ok_or_else(|| ArrowError::Ipc("the message is not Arrow Schema".to_string())),
                 Err(err) => {

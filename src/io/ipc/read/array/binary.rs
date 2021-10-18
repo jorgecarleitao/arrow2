@@ -2,25 +2,25 @@ use std::collections::VecDeque;
 use std::convert::TryInto;
 use std::io::{Read, Seek};
 
+use arrow_format::ipc;
+
 use crate::array::{BinaryArray, Offset};
 use crate::buffer::Buffer;
 use crate::datatypes::DataType;
 use crate::error::Result;
-use crate::io::ipc::gen::Message::BodyCompression;
 use crate::types::NativeType;
 
-use super::super::super::gen;
 use super::super::deserialize::Node;
 use super::super::read_basic::*;
 
 pub fn read_binary<O: Offset, R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
     data_type: DataType,
-    buffers: &mut VecDeque<&gen::Schema::Buffer>,
+    buffers: &mut VecDeque<&ipc::Schema::Buffer>,
     reader: &mut R,
     block_offset: u64,
     is_little_endian: bool,
-    compression: Option<BodyCompression>,
+    compression: Option<ipc::Message::BodyCompression>,
 ) -> Result<BinaryArray<O>>
 where
     Vec<u8>: TryInto<O::Bytes> + TryInto<<u8 as NativeType>::Bytes>,
@@ -62,7 +62,7 @@ where
     ))
 }
 
-pub fn skip_binary(field_nodes: &mut VecDeque<Node>, buffers: &mut VecDeque<&gen::Schema::Buffer>) {
+pub fn skip_binary(field_nodes: &mut VecDeque<Node>, buffers: &mut VecDeque<&ipc::Schema::Buffer>) {
     let _ = field_nodes.pop_front().unwrap();
 
     let _ = buffers.pop_front().unwrap();

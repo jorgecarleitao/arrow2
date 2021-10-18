@@ -17,12 +17,9 @@
 
 use std::pin::Pin;
 
-use arrow_flight::{
-    flight_descriptor::DescriptorType, flight_service_server::FlightService,
-    flight_service_server::FlightServiceServer, Action, ActionType, Criteria, Empty,
-    FlightData, FlightDescriptor, FlightInfo, HandshakeRequest, HandshakeResponse,
-    PutResult, SchemaResult, Ticket,
-};
+use arrow_format::flight::data::flight_descriptor::DescriptorType;
+use arrow_format::flight::service::flight_service_server::{FlightService, FlightServiceServer};
+use arrow_format::flight::data::*;
 use futures::Stream;
 use tonic::{transport::Server, Request, Response, Status, Streaming};
 
@@ -53,7 +50,7 @@ impl FlightService for MiddlewareScenarioImpl {
     type ListFlightsStream = TonicStream<Result<FlightInfo, Status>>;
     type DoGetStream = TonicStream<Result<FlightData, Status>>;
     type DoPutStream = TonicStream<Result<PutResult, Status>>;
-    type DoActionStream = TonicStream<Result<arrow_flight::Result, Status>>;
+    type DoActionStream = TonicStream<Result<arrow_format::flight::data::Result, Status>>;
     type ListActionsStream = TonicStream<Result<ActionType, Status>>;
     type DoExchangeStream = TonicStream<Result<FlightData, Status>>;
 

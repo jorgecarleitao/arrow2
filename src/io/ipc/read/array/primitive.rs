@@ -1,23 +1,23 @@
 use std::io::{Read, Seek};
 use std::{collections::VecDeque, convert::TryInto};
 
+use arrow_format::ipc;
+
 use crate::datatypes::DataType;
 use crate::error::Result;
-use crate::io::ipc::gen::Message::BodyCompression;
 use crate::{array::PrimitiveArray, types::NativeType};
 
-use super::super::super::gen;
 use super::super::deserialize::Node;
 use super::super::read_basic::*;
 
 pub fn read_primitive<T: NativeType, R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
     data_type: DataType,
-    buffers: &mut VecDeque<&gen::Schema::Buffer>,
+    buffers: &mut VecDeque<&ipc::Schema::Buffer>,
     reader: &mut R,
     block_offset: u64,
     is_little_endian: bool,
-    compression: Option<BodyCompression>,
+    compression: Option<ipc::Message::BodyCompression>,
 ) -> Result<PrimitiveArray<T>>
 where
     Vec<u8>: TryInto<T::Bytes>,
@@ -46,7 +46,7 @@ where
 
 pub fn skip_primitive(
     field_nodes: &mut VecDeque<Node>,
-    buffers: &mut VecDeque<&gen::Schema::Buffer>,
+    buffers: &mut VecDeque<&ipc::Schema::Buffer>,
 ) {
     let _ = field_nodes.pop_front().unwrap();
 

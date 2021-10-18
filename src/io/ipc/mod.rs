@@ -77,23 +77,11 @@
 //! [2](https://github.com/jorgecarleitao/arrow2/blob/main/examples/ipc_file_write.rs),
 //! [3](https://github.com/jorgecarleitao/arrow2/tree/main/examples/ipc_pyarrow)).
 
-#![allow(missing_debug_implementations)]
-#![allow(non_camel_case_types)]
-
-pub use convert::fb_to_schema;
-pub use gen::Message::root_as_message;
-
-#[allow(clippy::redundant_closure)]
-#[allow(clippy::needless_lifetimes)]
-#[allow(clippy::extra_unused_lifetimes)]
-#[allow(clippy::redundant_static_lifetimes)]
-#[allow(clippy::redundant_field_names)]
-pub mod gen;
-
 mod compression;
 mod convert;
-
 mod endianess;
+
+pub use convert::fb_to_schema;
 pub mod read;
 pub mod write;
 

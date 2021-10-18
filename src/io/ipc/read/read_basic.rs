@@ -1,14 +1,15 @@
 use std::io::{Read, Seek, SeekFrom};
 use std::{collections::VecDeque, convert::TryInto};
 
+use arrow_format::ipc;
+use arrow_format::ipc::Message::{BodyCompression, CompressionType};
+
 use crate::buffer::Buffer;
 use crate::error::{ArrowError, Result};
-use crate::io::ipc::endianess::is_native_little_endian;
-use crate::io::ipc::gen::Message::{BodyCompression, CompressionType};
 use crate::{bitmap::Bitmap, buffer::MutableBuffer, types::NativeType};
 
 use super::super::compression;
-use super::super::gen;
+use super::super::endianess::is_native_little_endian;
 
 fn read_swapped<T: NativeType, R: Read + Seek>(
     reader: &mut R,
@@ -138,7 +139,7 @@ fn read_compressed_buffer<T: NativeType, R: Read + Seek>(
 }
 
 pub fn read_buffer<T: NativeType, R: Read + Seek>(
-    buf: &mut VecDeque<&gen::Schema::Buffer>,
+    buf: &mut VecDeque<&ipc::Schema::Buffer>,
     length: usize, // in slots
     reader: &mut R,
     block_offset: u64,
@@ -211,7 +212,7 @@ fn read_compressed_bitmap<R: Read + Seek>(
 }
 
 pub fn read_bitmap<R: Read + Seek>(
-    buf: &mut VecDeque<&gen::Schema::Buffer>,
+    buf: &mut VecDeque<&ipc::Schema::Buffer>,
     length: usize,
     reader: &mut R,
     block_offset: u64,
@@ -234,8 +235,8 @@ pub fn read_bitmap<R: Read + Seek>(
 }
 
 pub fn read_validity<R: Read + Seek>(
-    buffers: &mut VecDeque<&gen::Schema::Buffer>,
-    field_node: &gen::Message::FieldNode,
+    buffers: &mut VecDeque<&ipc::Schema::Buffer>,
+    field_node: &ipc::Message::FieldNode,
     reader: &mut R,
     block_offset: u64,
     is_little_endian: bool,

@@ -15,10 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use arrow_flight::{
-    flight_descriptor::DescriptorType, flight_service_client::FlightServiceClient,
-    FlightDescriptor,
+use arrow_format::flight::service::{
+    flight_service_client::FlightServiceClient,
 };
+use arrow_format::flight::data::{flight_descriptor::DescriptorType, FlightDescriptor};
 use tonic::{Request, Status};
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;

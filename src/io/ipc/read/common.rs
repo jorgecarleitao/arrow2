@@ -19,14 +19,14 @@ use std::collections::{HashMap, VecDeque};
 use std::io::{Read, Seek};
 use std::sync::Arc;
 
-use gen::Schema::MetadataVersion;
+use arrow_format::ipc;
+use arrow_format::ipc::Schema::MetadataVersion;
 
 use crate::array::*;
 use crate::datatypes::{DataType, Field, Schema};
 use crate::error::{ArrowError, Result};
 use crate::record_batch::RecordBatch;
 
-use super::super::gen;
 use super::deserialize::{read, skip};
 
 type ArrayRef = Arc<dyn Array>;
@@ -94,7 +94,7 @@ impl<'a, A, I: Iterator<Item = A>> Iterator for ProjectionIter<'a, A, I> {
 /// Panics iff the projection is not in increasing order (e.g. `[1, 0]` nor `[0, 1, 1]` are valid)
 #[allow(clippy::too_many_arguments)]
 pub fn read_record_batch<R: Read + Seek>(
-    batch: gen::Message::RecordBatch,
+    batch: ipc::Message::RecordBatch,
     schema: Arc<Schema>,
     projection: Option<(&[usize], Arc<Schema>)>,
     is_little_endian: bool,
@@ -106,7 +106,7 @@ pub fn read_record_batch<R: Read + Seek>(
     let buffers = batch
         .buffers()
         .ok_or_else(|| ArrowError::Ipc("Unable to get buffers from IPC RecordBatch".to_string()))?;
-    let mut buffers: VecDeque<&gen::Schema::Buffer> = buffers.iter().collect();
+    let mut buffers: VecDeque<&ipc::Schema::Buffer> = buffers.iter().collect();
     let field_nodes = batch.nodes().ok_or_else(|| {
         ArrowError::Ipc("Unable to get field nodes from IPC RecordBatch".to_string())
     })?;
@@ -169,7 +169,7 @@ pub fn read_record_batch<R: Read + Seek>(
 /// Read the dictionary from the buffer and provided metadata,
 /// updating the `dictionaries_by_field` with the resulting dictionary
 pub fn read_dictionary<R: Read + Seek>(
-    batch: gen::Message::DictionaryBatch,
+    batch: ipc::Message::DictionaryBatch,
     schema: &Schema,
     is_little_endian: bool,
     dictionaries_by_field: &mut [Option<ArrayRef>],

@@ -15,17 +15,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::io::ipc::endianess::is_native_little_endian;
-use crate::io::ipc::gen::Schema;
+use arrow_format::ipc::{Message, Schema};
+
 use crate::{
     array::*,
     bitmap::Bitmap,
     datatypes::{DataType, PhysicalType},
-    io::ipc::gen::Message,
     trusted_len::TrustedLen,
     types::NativeType,
 };
 
+use super::super::endianess::is_native_little_endian;
 use super::common::pad_to_8;
 
 fn _write_primitive<T: NativeType>(

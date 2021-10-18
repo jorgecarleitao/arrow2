@@ -39,7 +39,8 @@ indexmap = { version = "^1.6", optional = true }
 # used to print columns in a nice columnar format
 comfy-table = { version = "4.0", optional = true, default-features = false }
 
-flatbuffers = { version = "=2.0.0", optional = true }
+arrow-format = { version = "*", optional = true, features = ["ipc"] }
+
 hex = { version = "^0.4", optional = true }
 
 # for IPC compression
@@ -90,6 +91,7 @@ full = [
     "io_csv",
     "io_json",
     "io_ipc",
+    "io_flight",
     "io_ipc_compression",
     "io_json_integration",
     "io_print",
@@ -107,8 +109,9 @@ io_csv = ["io_csv_read", "io_csv_write"]
 io_csv_read = ["csv", "lexical-core"]
 io_csv_write = ["csv", "streaming-iterator", "lexical-core"]
 io_json = ["serde", "serde_json", "indexmap"]
-io_ipc = ["flatbuffers"]
+io_ipc = ["arrow-format"]
 io_ipc_compression = ["lz4", "zstd"]
+io_flight = ["io_ipc", "arrow-format/flight-data"]
 io_parquet_compression = [
     "parquet2/zstd",
     "parquet2/snappy",
@@ -145,6 +148,8 @@ skip_feature_sets = [
     ["io_csv_write"],
     ["io_avro"],
     ["io_json"],
+    ["io_flight"],
+    ["io_ipc"],
     ["io_parquet"],
     ["io_json_integration"],
     # this does not change the public API

@@ -2,15 +2,13 @@ use std::collections::VecDeque;
 use std::convert::TryInto;
 use std::io::{Read, Seek};
 
-use gen::Schema::MetadataVersion;
+use arrow_format::ipc;
 
 use crate::array::{ListArray, Offset};
 use crate::buffer::Buffer;
 use crate::datatypes::DataType;
 use crate::error::Result;
-use crate::io::ipc::gen::Message::BodyCompression;
 
-use super::super::super::gen;
 use super::super::deserialize::{read, skip, Node};
 use super::super::read_basic::*;
 
@@ -18,12 +16,12 @@ use super::super::read_basic::*;
 pub fn read_list<O: Offset, R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
     data_type: DataType,
-    buffers: &mut VecDeque<&gen::Schema::Buffer>,
+    buffers: &mut VecDeque<&ipc::Schema::Buffer>,
     reader: &mut R,
     block_offset: u64,
     is_little_endian: bool,
-    compression: Option<BodyCompression>,
-    version: MetadataVersion,
+    compression: Option<ipc::Message::BodyCompression>,
+    version: ipc::Schema::MetadataVersion,
 ) -> Result<ListArray<O>>
 where
     Vec<u8>: TryInto<O::Bytes>,
@@ -68,7 +66,7 @@ where
 pub fn skip_list<O: Offset>(
     field_nodes: &mut VecDeque<Node>,
     data_type: &DataType,
-    buffers: &mut VecDeque<&gen::Schema::Buffer>,
+    buffers: &mut VecDeque<&ipc::Schema::Buffer>,
 ) {
     let _ = field_nodes.pop_front().unwrap();
 
