@@ -150,13 +150,15 @@ as an higher-level API to abstract away some of this work into an easy to use AP
 <pre><pre class="playground"><code class="language-rust">use std::fs::File;
 use std::iter::once;
 
+use arrow2::error::ArrowError;
 use arrow2::io::parquet::write::to_parquet_schema;
 use arrow2::{
     array::{Array, Int32Array},
     datatypes::{Field, Schema},
     error::Result,
     io::parquet::write::{
-        array_to_page, write_file, Compression, DynIter, Encoding, Version, WriteOptions,
+        array_to_pages, write_file, Compression, Compressor, DynIter, DynStreamingIterator,
+        Encoding, FallibleStreamingIterator, Version, WriteOptions,
     },
 };
 
@@ -173,17 +175,22 @@ fn write_single_array(path: &amp;str, array: &amp;dyn Array, field: Field) -&gt;
     // map arrow fields to parquet fields
     let parquet_schema = to_parquet_schema(&amp;schema)?;
 
-    // Declare the row group iterator. This must be an iterator of iterators of iterators:
-    // * first iterator of row groups
-    // * second iterator of column chunks
-    // * third iterator of pages
-    // an array can be divided in multiple pages via `.slice(offset, length)` (`O(1)`).
-    // All column chunks within a row group MUST have the same length.
-    let row_groups = once(Result::Ok(DynIter::new(once(Ok(DynIter::new(
-        once(array)
-            .zip(parquet_schema.columns().to_vec().into_iter())
-            .map(|(array, descriptor)| array_to_page(array, descriptor, options, encoding)),
-    ))))));
+    let descriptor = parquet_schema.columns()[0].clone();
+
+    // Declare the row group iterator. This must be an iterator of iterators of streaming iterators
+    // * first iterator over row groups
+    let row_groups = once(Result::Ok(DynIter::new(
+        // * second iterator over column chunks (we assume no struct arrays -&gt; `once` column)
+        once(
+            // * third iterator over (compressed) pages; dictionary encoding may lead to multiple pages per array.
+            array_to_pages(array, descriptor, options, encoding).map(move |pages| {
+                let encoded_pages = DynIter::new(pages.map(|x| Ok(x?)));
+                let compressed_pages = Compressor::new(encoded_pages, options.compression, vec![])
+                    .map_err(ArrowError::from);
+                DynStreamingIterator::new(compressed_pages)
+            }),
+        ),
+    )));
 
     // Create a new empty file
     let mut file = File::create(path)?;

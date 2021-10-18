@@ -146,13 +146,14 @@ It makes minimal assumptions on how you to decompose CPU and IO intensive tasks.
 </ul>
 <p>Here is how to read a single column chunk from a single row group:</p>
 <pre><pre class="playground"><code class="language-rust">use std::fs::File;
+use std::io::BufReader;
 
 use arrow2::io::parquet::read;
 use arrow2::{array::Array, error::Result};
 
 fn read_column_chunk(path: &amp;str, row_group: usize, column: usize) -&gt; Result&lt;Box&lt;dyn Array&gt;&gt; {
     // Open a file, a common operation in Rust
-    let mut file = File::open(path)?;
+    let mut file = BufReader::new(File::open(path)?);
 
     // Read the files' metadata. This has a small IO cost because it requires seeking to the end
     // of the file to read its footer.
@@ -279,16 +280,14 @@ fn parallel_read(path: &amp;str) -&gt; Result&lt;Vec&lt;Box&lt;dyn Array&gt;&gt;
         let metadata_consumer = file_metadata.clone();
         let arrow_schema_consumer = arrow_schema.clone();
         let child = thread::spawn(move || {
-            let (column, row_group, iter) = rx_consumer.recv().unwrap();
+            let (column, row_group, pages) = rx_consumer.recv().unwrap();
             let start = SystemTime::now();
             println!(&quot;consumer start - {} {}&quot;, column, row_group);
             let metadata = metadata_consumer.row_groups[row_group].column(column);
             let data_type = arrow_schema_consumer.fields()[column].data_type().clone();
 
-            let pages = iter
-                .into_iter()
-                .map(|x| x.and_then(|x| read::decompress(x, &amp;mut vec![])));
-            let mut pages = read::streaming_iterator::convert(pages);
+            let mut pages = read::BasicDecompressor::new(pages.into_iter(), vec![]);
+
             let array = read::page_iter_to_array(&amp;mut pages, metadata, data_type);
             println!(
                 &quot;consumer end - {:?}: {} {}&quot;,
