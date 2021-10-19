@@ -80,17 +80,7 @@ pub fn check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) {
     let all_ascii = values.is_ascii();
 
     if all_ascii {
-        if offsets.is_empty() {
-            return;
-        }
-        let mut last = offsets[0];
-        assert!(offsets.iter().skip(1).all(|&end| {
-            let monotone = last <= end;
-            last = end;
-            monotone
-        }));
-        // assert bounds
-        assert!(last.to_usize() <= values.len());
+        return check_offsets(offsets, values.len());
     } else {
         offsets.windows(2).for_each(|window| {
             let start = window[0].to_usize();
@@ -115,12 +105,17 @@ pub fn check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) {
 /// * the `offsets` is not monotonically increasing, or
 /// * any offset is larger or equal to `values_len`.
 pub fn check_offsets<O: Offset>(offsets: &[O], values_len: usize) {
-    offsets.windows(2).for_each(|window| {
-        let start = window[0].to_usize();
-        let end = window[1].to_usize();
-        // assert monotonicity
-        assert!(start <= end);
-        // assert bound
-        assert!(end <= values_len);
-    });
+    if offsets.is_empty() {
+        return;
+    }
+
+    let mut last = offsets[0];
+    // assert monotonicity
+    assert!(offsets.iter().skip(1).all(|&end| {
+        let monotone = last <= end;
+        last = end;
+        monotone
+    }));
+    // assert bounds
+    assert!(last.to_usize() <= values_len);
 }
