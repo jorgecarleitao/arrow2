@@ -75,6 +75,11 @@ pub fn check_offsets_minimal<O: Offset>(offsets: &[O], values_len: usize) -> usi
 /// * any slice of `values` between two consecutive pairs from `offsets` is invalid `utf8`, or
 /// * any offset is larger or equal to `values_len`.
 pub fn check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) {
+    if values.iter().all(|x| *x <= 127) {
+        // all values are ASCII => each element is valid utf8 (we only need to check offsets)
+        return check_offsets(offsets, values.len());
+    }
+
     offsets.windows(2).for_each(|window| {
         let start = window[0].to_usize();
         let end = window[1].to_usize();
