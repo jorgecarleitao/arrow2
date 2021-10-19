@@ -10,14 +10,17 @@ use super::BooleanArray;
 
 unsafe impl ToFfi for BooleanArray {
     fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>> {
+        let offset = self
+            .validity
+            .as_ref()
+            .map(|x| x.offset())
+            .unwrap_or_default();
+
+        assert!(self.values.offset() >= offset);
         vec![
             self.validity.as_ref().map(|x| x.as_ptr()),
             Some(self.values.as_ptr()),
         ]
-    }
-
-    fn offset(&self) -> usize {
-        self.offset
     }
 }
 

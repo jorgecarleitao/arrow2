@@ -10,11 +10,6 @@ unsafe impl<K: DictionaryKey> ToFfi for DictionaryArray<K> {
     fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>> {
         self.keys.buffers()
     }
-
-    #[inline]
-    fn offset(&self) -> usize {
-        self.offset
-    }
 }
 
 impl<K: DictionaryKey, A: ffi::ArrowArrayRef> FromFfi<A> for DictionaryArray<K> {

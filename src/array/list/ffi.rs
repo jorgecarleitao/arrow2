@@ -7,14 +7,20 @@ use super::ListArray;
 
 unsafe impl<O: Offset> ToFfi for ListArray<O> {
     fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>> {
+        let offset = self
+            .validity
+            .as_ref()
+            .map(|x| x.offset())
+            .unwrap_or_default();
+
+        assert!(self.offsets.offset() >= offset);
+
         vec![
             self.validity.as_ref().map(|x| x.as_ptr()),
-            std::ptr::NonNull::new(self.offsets.as_ptr() as *mut u8),
+            std::ptr::NonNull::new(
+                unsafe { self.offsets.as_ptr().offset(-(offset as isize)) } as *mut u8
+            ),
         ]
-    }
-
-    fn offset(&self) -> usize {
-        self.offset
     }
 
     fn children(&self) -> Vec<Arc<dyn Array>> {

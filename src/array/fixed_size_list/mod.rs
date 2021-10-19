@@ -20,7 +20,6 @@ pub struct FixedSizeListArray {
     data_type: DataType,
     values: Arc<dyn Array>,
     validity: Option<Bitmap>,
-    offset: usize,
 }
 
 impl FixedSizeListArray {
@@ -60,7 +59,6 @@ impl FixedSizeListArray {
             data_type,
             values,
             validity,
-            offset: 0,
         }
     }
 
@@ -97,7 +95,6 @@ impl FixedSizeListArray {
             size: self.size,
             values,
             validity,
-            offset: self.offset + offset,
         }
     }
 
@@ -198,10 +195,6 @@ impl std::fmt::Display for FixedSizeListArray {
 unsafe impl ToFfi for FixedSizeListArray {
     fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>> {
         vec![self.validity.as_ref().map(|x| x.as_ptr())]
-    }
-
-    fn offset(&self) -> usize {
-        self.offset
     }
 
     fn children(&self) -> Vec<Arc<dyn Array>> {

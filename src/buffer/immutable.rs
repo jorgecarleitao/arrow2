@@ -63,11 +63,11 @@ impl<T: NativeType> Buffer<T> {
     }
 
     /// Auxiliary method to create a new Buffer
-    pub(crate) fn from_bytes(bytes: Bytes<T>) -> Self {
-        let length = bytes.len();
+    pub(crate) fn from_bytes(bytes: Bytes<T>, offset: usize) -> Self {
+        let length = bytes.len() - offset;
         Buffer {
             data: Arc::new(bytes),
-            offset: 0,
+            offset,
             length,
         }
     }
@@ -119,6 +119,12 @@ impl<T: NativeType> Buffer<T> {
     #[inline]
     pub fn as_ptr(&self) -> *const T {
         unsafe { self.data.ptr().as_ptr().add(self.offset) }
+    }
+
+    /// Returns the offset
+    #[inline]
+    pub(crate) fn offset(&self) -> usize {
+        self.offset
     }
 }
 

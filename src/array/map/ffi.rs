@@ -13,10 +13,6 @@ unsafe impl ToFfi for MapArray {
         ]
     }
 
-    fn offset(&self) -> usize {
-        self.offset
-    }
-
     fn children(&self) -> Vec<Arc<dyn Array>> {
         vec![self.field.clone()]
     }

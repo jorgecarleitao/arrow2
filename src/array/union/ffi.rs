@@ -18,10 +18,6 @@ unsafe impl ToFfi for UnionArray {
         }
     }
 
-    fn offset(&self) -> usize {
-        self.offset
-    }
-
     fn children(&self) -> Vec<Arc<dyn Array>> {
         self.fields.clone()
     }

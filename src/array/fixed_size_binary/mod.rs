@@ -14,7 +14,6 @@ pub struct FixedSizeBinaryArray {
     data_type: DataType,
     values: Buffer<u8>,
     validity: Option<Bitmap>,
-    offset: usize,
 }
 
 impl FixedSizeBinaryArray {
@@ -47,7 +46,6 @@ impl FixedSizeBinaryArray {
             data_type,
             values,
             validity,
-            offset: 0,
         }
     }
 
@@ -83,7 +81,6 @@ impl FixedSizeBinaryArray {
             size: self.size,
             values,
             validity,
-            offset: self.offset + offset,
         }
     }
 
@@ -184,14 +181,21 @@ impl std::fmt::Display for FixedSizeBinaryArray {
 
 unsafe impl ToFfi for FixedSizeBinaryArray {
     fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>> {
+        let offset = self
+            .validity
+            .as_ref()
+            .map(|x| x.offset())
+            .unwrap_or_default();
+        let offset = offset * self.size();
+
+        assert!(self.values.offset() >= offset);
+
         vec![
             self.validity.as_ref().map(|x| x.as_ptr()),
-            std::ptr::NonNull::new(self.values.as_ptr() as *mut u8),
+            std::ptr::NonNull::new(
+                unsafe { self.values.as_ptr().offset(-(offset as isize)) } as *mut u8
+            ),
         ]
-    }
-
-    fn offset(&self) -> usize {
-        self.offset
     }
 }
 

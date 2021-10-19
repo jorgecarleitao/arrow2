@@ -190,12 +190,12 @@ unsafe fn create_buffer<T: NativeType>(
     assert!(index < array.n_buffers as usize);
     let ptr = *buffers.add(index);
 
-    let ptr = NonNull::new(ptr as *mut T).and_then(|x| NonNull::new(x.as_ptr().add(offset)));
+    let ptr = NonNull::new(ptr as *mut T);
     let bytes = ptr
-        .map(|ptr| Bytes::new(ptr, len, deallocation))
+        .map(|ptr| Bytes::new(ptr, offset + len, deallocation))
         .ok_or_else(|| ArrowError::Ffi(format!("The buffer at position {} is null", index)));
 
-    bytes.map(Buffer::from_bytes)
+    bytes.map(|x| Buffer::from_bytes(x, offset))
 }
 
 /// returns a new buffer corresponding to the index `i` of the FFI array. It may not exist (null pointer).
@@ -266,22 +266,24 @@ fn buffer_len(array: &Ffi_ArrowArray, data_type: &DataType, i: usize) -> Result<
         (PhysicalType::Utf8, 2) | (PhysicalType::Binary, 2) => {
             // the len of the data buffer (buffer 2) equals the last value of the offset buffer (buffer 1)
             let len = buffer_len(array, data_type, 1)?;
+            let offset = buffer_offset(array, data_type, 1);
             // first buffer is the null buffer => add(1)
             let offset_buffer = unsafe { *(array.buffers as *mut *const u8).add(1) };
             // interpret as i32
             let offset_buffer = offset_buffer as *const i32;
             // get last offset
-            (unsafe { *offset_buffer.add(len - 1) }) as usize
+            (unsafe { *offset_buffer.add(offset).add(len - 1) }) as usize
         }
         (PhysicalType::LargeUtf8, 2) | (PhysicalType::LargeBinary, 2) => {
             // the len of the data buffer (buffer 2) equals the last value of the offset buffer (buffer 1)
             let len = buffer_len(array, data_type, 1)?;
+            let offset = buffer_offset(array, data_type, 1);
             // first buffer is the null buffer => add(1)
             let offset_buffer = unsafe { *(array.buffers as *mut *const u8).add(1) };
             // interpret as i64
             let offset_buffer = offset_buffer as *const i64;
             // get last offset
-            (unsafe { *offset_buffer.add(len - 1) }) as usize
+            (unsafe { *offset_buffer.add(offset).add(len - 1) }) as usize
         }
         // buffer len of primitive types
         _ => array.length as usize,

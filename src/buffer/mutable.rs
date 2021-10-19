@@ -431,7 +431,7 @@ impl<T: NativeType, P: AsRef<[T]>> From<P> for MutableBuffer<T> {
 impl<T: NativeType> From<MutableBuffer<T>> for Buffer<T> {
     #[inline]
     fn from(buffer: MutableBuffer<T>) -> Self {
-        Self::from_bytes(buffer.into())
+        Self::from_bytes(buffer.into(), 0)
     }
 }
 
