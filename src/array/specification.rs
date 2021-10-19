@@ -80,12 +80,17 @@ pub fn check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) {
     let all_ascii = values.is_ascii();
 
     if all_ascii {
-        offsets.windows(2).for_each(|window| {
-            let start = window[0].to_usize();
-            let end = window[1].to_usize();
-            // assert monotonicity, bounds
-            assert!(start <= end && end <= values.len());
-        });
+        if offsets.len() == 0 {
+            return;
+        }
+        let mut last = offsets[0];
+        assert!(offsets.iter().skip(1).all(|&end| {
+            let monotone = last <= end;
+            last = end;
+            monotone
+        }));
+        // assert bounds
+        assert!(last.to_usize() <= values.len());
     } else {
         offsets.windows(2).for_each(|window| {
             let start = window[0].to_usize();
