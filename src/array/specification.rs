@@ -80,7 +80,7 @@ pub fn check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) {
     let all_ascii = values.is_ascii();
 
     if all_ascii {
-        if offsets.len() == 0 {
+        if offsets.is_empty() {
             return;
         }
         let mut last = offsets[0];
