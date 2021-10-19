@@ -78,7 +78,7 @@ pub fn check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) {
     const SIMD_CHUNK_SIZE: usize = 64;
 
     if values.is_ascii() {
-        return check_offsets(offsets, values.len());
+        check_offsets(offsets, values.len());
     } else {
         offsets.windows(2).for_each(|window| {
             let start = window[0].to_usize();
