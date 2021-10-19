@@ -77,22 +77,33 @@ pub fn check_offsets_minimal<O: Offset>(offsets: &[O], values_len: usize) -> usi
 pub fn check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) {
     const SIMD_CHUNK_SIZE: usize = 64;
 
-    offsets.windows(2).for_each(|window| {
-        let start = window[0].to_usize();
-        let end = window[1].to_usize();
-        // assert monotonicity
-        assert!(start <= end);
-        // assert bounds
-        let slice = &values[start..end];
+    let all_ascii = values.is_ascii();
 
-        // Fast ASCII check
-        if slice.len() < SIMD_CHUNK_SIZE && slice.is_ascii() {
-            return;
-        }
+    if all_ascii {
+        offsets.windows(2).for_each(|window| {
+            let start = window[0].to_usize();
+            let end = window[1].to_usize();
+            // assert monotonicity, bounds
+            assert!(start <= end && end <= values.len());
+        });
+    } else {
+        offsets.windows(2).for_each(|window| {
+            let start = window[0].to_usize();
+            let end = window[1].to_usize();
+            // assert monotonicity
+            assert!(start <= end);
+            // assert bounds
+            let slice = &values[start..end];
 
-        // assert utf8
-        simdutf8::basic::from_utf8(slice).expect("A non-utf8 string was passed.");
-    });
+            // Fast ASCII check per item
+            if slice.len() < SIMD_CHUNK_SIZE && slice.is_ascii() {
+                return;
+            }
+
+            // assert utf8
+            simdutf8::basic::from_utf8(slice).expect("A non-utf8 string was passed.");
+        });
+    }
 }
 
 /// # Panics iff:
