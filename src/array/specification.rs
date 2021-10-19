@@ -75,28 +75,45 @@ pub fn check_offsets_minimal<O: Offset>(offsets: &[O], values_len: usize) -> usi
 /// * any slice of `values` between two consecutive pairs from `offsets` is invalid `utf8`, or
 /// * any offset is larger or equal to `values_len`.
 pub fn check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) {
-    offsets.windows(2).for_each(|window| {
-        let start = window[0].to_usize();
-        let end = window[1].to_usize();
-        // assert monotonicity
-        assert!(start <= end);
-        // assert bounds
-        let slice = &values[start..end];
-        // assert utf8
-        simdutf8::basic::from_utf8(slice).expect("A non-utf8 string was passed.");
-    });
+    const SIMD_CHUNK_SIZE: usize = 64;
+
+    if values.is_ascii() {
+        check_offsets(offsets, values.len());
+    } else {
+        offsets.windows(2).for_each(|window| {
+            let start = window[0].to_usize();
+            let end = window[1].to_usize();
+            // assert monotonicity
+            assert!(start <= end);
+            // assert bounds
+            let slice = &values[start..end];
+
+            // Fast ASCII check per item
+            if slice.len() < SIMD_CHUNK_SIZE && slice.is_ascii() {
+                return;
+            }
+
+            // assert utf8
+            simdutf8::basic::from_utf8(slice).expect("A non-utf8 string was passed.");
+        });
+    }
 }
 
 /// # Panics iff:
 /// * the `offsets` is not monotonically increasing, or
 /// * any offset is larger or equal to `values_len`.
 pub fn check_offsets<O: Offset>(offsets: &[O], values_len: usize) {
-    offsets.windows(2).for_each(|window| {
-        let start = window[0].to_usize();
-        let end = window[1].to_usize();
-        // assert monotonicity
-        assert!(start <= end);
-        // assert bound
-        assert!(end <= values_len);
-    });
+    if offsets.is_empty() {
+        return;
+    }
+
+    let mut last = offsets[0];
+    // assert monotonicity
+    assert!(offsets.iter().skip(1).all(|&end| {
+        let monotone = last <= end;
+        last = end;
+        monotone
+    }));
+    // assert bounds
+    assert!(last.to_usize() <= values_len);
 }
