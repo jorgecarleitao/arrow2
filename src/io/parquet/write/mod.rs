@@ -26,12 +26,13 @@ use parquet2::page::DataPage;
 pub use parquet2::{
     compression::Compression,
     encoding::Encoding,
+    fallible_streaming_iterator,
     metadata::{ColumnDescriptor, KeyValue, SchemaDescriptor},
     page::{CompressedDataPage, CompressedPage, EncodedPage},
     schema::types::ParquetType,
     write::{
-        write_file as parquet_write_file, Compressor, DynIter, DynStreamingIterator, RowGroupIter,
-        Version, WriteOptions,
+        compress, write_file as parquet_write_file, Compressor, DynIter, DynStreamingIterator,
+        RowGroupIter, Version, WriteOptions,
     },
     FallibleStreamingIterator,
 };
