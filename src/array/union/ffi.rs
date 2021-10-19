@@ -33,25 +33,19 @@ impl<A: ffi::ArrowArrayRef> FromFfi<A> for UnionArray {
         let data_type = field.data_type().clone();
         let fields = Self::get_fields(field.data_type());
 
-        let mut types = unsafe { array.buffer::<i8>(0) }?;
+        let types = unsafe { array.buffer::<i8>(0) }?;
         let offsets = if Self::is_sparse(&data_type) {
             None
         } else {
             Some(unsafe { array.buffer::<i32>(1) }?)
         };
 
-        let length = array.array().len();
-        let offset = array.array().offset();
         let fields = (0..fields.len())
             .map(|index| {
                 let child = array.child(index)?;
                 Ok(ffi::try_from(child)?.into())
             })
             .collect::<Result<Vec<Arc<dyn Array>>>>()?;
-
-        if offset > 0 {
-            types = types.slice(offset, length);
-        };
 
         Ok(Self::from_data(data_type, types, fields, offsets))
     }

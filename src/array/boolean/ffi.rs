@@ -25,15 +25,10 @@ impl<A: ffi::ArrowArrayRef> FromFfi<A> for BooleanArray {
     unsafe fn try_from_ffi(array: A) -> Result<Self> {
         let data_type = array.field().data_type().clone();
         assert_eq!(data_type, DataType::Boolean);
-        let length = array.array().len();
-        let offset = array.array().offset();
-        let mut validity = unsafe { array.validity() }?;
-        let mut values = unsafe { array.bitmap(0) }?;
 
-        if offset > 0 {
-            values = values.slice(offset, length);
-            validity = validity.map(|x| x.slice(offset, length))
-        }
+        let validity = unsafe { array.validity() }?;
+        let values = unsafe { array.bitmap(0) }?;
+
         Ok(Self::from_data(data_type, values, validity))
     }
 }

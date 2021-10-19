@@ -25,17 +25,11 @@ unsafe impl<O: Offset> ToFfi for ListArray<O> {
 impl<O: Offset, A: ffi::ArrowArrayRef> FromFfi<A> for ListArray<O> {
     unsafe fn try_from_ffi(array: A) -> Result<Self> {
         let data_type = array.field().data_type().clone();
-        let length = array.array().len();
-        let offset = array.array().offset();
-        let mut validity = unsafe { array.validity() }?;
-        let mut offsets = unsafe { array.buffer::<O>(0) }?;
+        let validity = unsafe { array.validity() }?;
+        let offsets = unsafe { array.buffer::<O>(0) }?;
         let child = array.child(0)?;
         let values = ffi::try_from(child)?.into();
 
-        if offset > 0 {
-            offsets = offsets.slice(offset, length);
-            validity = validity.map(|x| x.slice(offset, length))
-        }
         Ok(Self::from_data(data_type, offsets, values, validity))
     }
 }

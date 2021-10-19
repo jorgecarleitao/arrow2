@@ -39,6 +39,16 @@ class TestCase(unittest.TestCase):
         # No leak of C++ memory
         self.assertEqual(self.old_allocated_cpp, pyarrow.total_allocated_bytes())
 
+    def test_primitive_sliced(self):
+        a = pyarrow.array([0, None, 2, 3, 4]).slice(1, 1)
+        b = arrow_pyarrow_integration_testing.round_trip_array(a)
+
+        b.validate(full=True)
+        print(a.to_pylist())
+        print(b.to_pylist())
+        assert a.to_pylist() == b.to_pylist()
+        assert a.type == b.type
+
     def test_string_roundtrip(self):
         """
         Python -> Rust -> Python
@@ -47,6 +57,14 @@ class TestCase(unittest.TestCase):
         b = arrow_pyarrow_integration_testing.round_trip_array(a)
         c = pyarrow.array(["a", None, "ccc"])
         self.assertEqual(b, c)
+
+    def test_string_sliced(self):
+        a = pyarrow.array(["a", None, "ccc"]).slice(1, 1)
+        b = arrow_pyarrow_integration_testing.round_trip_array(a)
+
+        b.validate(full=True)
+        assert a.to_pylist() == b.to_pylist()
+        assert a.type == b.type
 
     def test_decimal_roundtrip(self):
         """

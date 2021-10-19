@@ -96,6 +96,12 @@ impl Ffi_ArrowArray {
     /// This method releases `buffers`. Consumers of this struct *must* call `release` before
     /// releasing this struct, or contents in `buffers` leak.
     pub(crate) fn new(array: Arc<dyn Array>) -> Self {
+        let offset = array
+            .validity()
+            .as_ref()
+            .map(|x| x.offset())
+            .unwrap_or_default() as i64;
+
         let (buffers, children, dictionary) = buffers_children_dictionary(array.as_ref());
 
         let buffers_ptr = buffers
@@ -130,10 +136,10 @@ impl Ffi_ArrowArray {
         Self {
             length,
             null_count,
-            offset: 0i64,
+            offset,
             n_buffers,
             n_children,
-            buffers: private_data.buffers_ptr.as_mut_ptr(),
+            buffers: unsafe { private_data.buffers_ptr.as_mut_ptr() },
             children: private_data.children_ptr.as_mut_ptr(),
             dictionary: private_data.dictionary_ptr.unwrap_or(std::ptr::null_mut()),
             release: Some(c_release_array),
@@ -157,16 +163,6 @@ impl Ffi_ArrowArray {
         }
     }
 
-    /// the length of the array
-    pub(crate) fn len(&self) -> usize {
-        self.length as usize
-    }
-
-    /// the offset of the array
-    pub(crate) fn offset(&self) -> usize {
-        self.offset as usize
-    }
-
     /// the null count of the array
     pub(crate) fn null_count(&self) -> usize {
         self.null_count as usize
@@ -188,12 +184,13 @@ unsafe fn create_buffer<T: NativeType>(
     }
     let buffers = array.buffers as *mut *const u8;
 
+    let offset = buffer_offset(array, data_type, index);
     let len = buffer_len(array, data_type, index)?;
 
     assert!(index < array.n_buffers as usize);
     let ptr = *buffers.add(index);
 
-    let ptr = NonNull::new(ptr as *mut T);
+    let ptr = NonNull::new(ptr as *mut T).and_then(|x| NonNull::new(x.as_ptr().add(offset)));
     let bytes = ptr
         .map(|ptr| Bytes::new(ptr, len, deallocation))
         .ok_or_else(|| ArrowError::Ffi(format!("The buffer at position {} is null", index)));
@@ -217,6 +214,8 @@ unsafe fn create_bitmap(
         return Err(ArrowError::Ffi("The array buffers are null".to_string()));
     }
     let len = array.length as usize;
+    let offset = array.offset as usize;
+
     let buffers = array.buffers as *mut *const u8;
 
     assert!(index < array.n_buffers as usize);
@@ -233,7 +232,19 @@ unsafe fn create_bitmap(
             ))
         })?;
 
-    Ok(Bitmap::from_bytes(bytes, len))
+    Ok(Bitmap::from_bytes(bytes, offset, len))
+}
+
+/// Returns the offset, in slots, of the buffer `i` (indexed according to the C data interface)
+fn buffer_offset(array: &Ffi_ArrowArray, data_type: &DataType, i: usize) -> usize {
+    match (data_type.to_physical_type(), i) {
+        (PhysicalType::Utf8, 2)
+        | (PhysicalType::Binary, 2)
+        | (PhysicalType::LargeUtf8, 2)
+        | (PhysicalType::LargeBinary, 2) => 0,
+        // buffer len of primitive types
+        _ => array.offset as usize,
+    }
 }
 
 /// Returns the length, in slots, of the buffer `i` (indexed according to the C data interface)

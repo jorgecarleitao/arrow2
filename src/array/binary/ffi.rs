@@ -33,16 +33,9 @@ impl<O: Offset, A: ffi::ArrowArrayRef> FromFfi<A> for BinaryArray<O> {
         };
         assert_eq!(data_type, expected);
 
-        let length = array.array().len();
-        let offset = array.array().offset();
-        let mut validity = unsafe { array.validity() }?;
-        let mut offsets = unsafe { array.buffer::<O>(0) }?;
+        let validity = unsafe { array.validity() }?;
+        let offsets = unsafe { array.buffer::<O>(0) }?;
         let values = unsafe { array.buffer::<u8>(1) }?;
-
-        if offset > 0 {
-            offsets = offsets.slice(offset, length);
-            validity = validity.map(|x| x.slice(offset, length))
-        }
 
         Ok(Self::from_data_unchecked(
             Self::default_data_type(),

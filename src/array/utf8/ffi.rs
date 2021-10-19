@@ -22,16 +22,10 @@ unsafe impl<O: Offset> ToFfi for Utf8Array<O> {
 
 impl<O: Offset, A: ffi::ArrowArrayRef> FromFfi<A> for Utf8Array<O> {
     unsafe fn try_from_ffi(array: A) -> Result<Self> {
-        let length = array.array().len();
-        let offset = array.array().offset();
-        let mut validity = unsafe { array.validity() }?;
-        let mut offsets = unsafe { array.buffer::<O>(0) }?;
+        let validity = unsafe { array.validity() }?;
+        let offsets = unsafe { array.buffer::<O>(0) }?;
         let values = unsafe { array.buffer::<u8>(1)? };
 
-        if offset > 0 {
-            offsets = offsets.slice(offset, length);
-            validity = validity.map(|x| x.slice(offset, length))
-        }
         let data_type = Self::default_data_type();
         Ok(Self::from_data_unchecked(
             data_type, offsets, values, validity,
