@@ -16,12 +16,13 @@ unsafe impl<O: Offset> ToFfi for BinaryArray<O> {
             .map(|x| x.offset())
             .unwrap_or_default();
 
-        assert!(self.offsets.offset() >= offset);
+        let offsets = std::ptr::NonNull::new(unsafe {
+            self.offsets.as_ptr().offset(-(offset as isize)) as *mut u8
+        });
+
         vec![
             self.validity.as_ref().map(|x| x.as_ptr()),
-            std::ptr::NonNull::new(unsafe {
-                self.offsets.as_ptr().offset(-(offset as isize)) as *mut u8
-            }),
+            offsets,
             std::ptr::NonNull::new(self.values.as_ptr() as *mut u8),
         ]
     }

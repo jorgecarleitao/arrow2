@@ -13,14 +13,14 @@ unsafe impl<O: Offset> ToFfi for ListArray<O> {
             .map(|x| x.offset())
             .unwrap_or_default();
 
-        assert!(self.offsets.offset() >= offset);
-
-        vec![
-            self.validity.as_ref().map(|x| x.as_ptr()),
+        // note that this may point to _before_ the pointer. This is fine because the C data interface
+        // requires users to only access past the offset
+        let offsets =
             std::ptr::NonNull::new(
                 unsafe { self.offsets.as_ptr().offset(-(offset as isize)) } as *mut u8
-            ),
-        ]
+            );
+
+        vec![self.validity.as_ref().map(|x| x.as_ptr()), offsets]
     }
 
     fn children(&self) -> Vec<Arc<dyn Array>> {

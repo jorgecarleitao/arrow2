@@ -120,12 +120,6 @@ impl<T: NativeType> Buffer<T> {
     pub fn as_ptr(&self) -> *const T {
         unsafe { self.data.ptr().as_ptr().add(self.offset) }
     }
-
-    /// Returns the offset
-    #[inline]
-    pub(crate) fn offset(&self) -> usize {
-        self.offset
-    }
 }
 
 impl<T: NativeType> Buffer<T> {
