@@ -2,15 +2,15 @@
 
 use arrow2::array::*;
 use arrow2::compute::arithmetics::decimal::add::*;
-use arrow2::compute::binary::bitwise::*;
+use arrow2::compute::binary::*;
 use arrow2::datatypes::DataType;
 
 #[test]
 fn test_xor() {
     let a = Int32Array::from(&[Some(2), Some(4), Some(6), Some(7)]);
-    let b = Int32Array::from(&[Some(3), Some(6), Some(9), Some(7)]);
+    let b = Int32Array::from(&[None, Some(6), Some(9), Some(7)]);
     let result = xor(&a, &b).unwrap();
-    let expected = Int32Array::from(&[Some(1), Some(2), Some(15), Some(0)]);
+    let expected = Int32Array::from(&[None, Some(2), Some(15), Some(0)]);
 
     assert_eq!(result, expected);
 }
@@ -18,9 +18,9 @@ fn test_xor() {
 #[test]
 fn test_and() {
     let a = Int32Array::from(&[Some(1), Some(2), Some(15)]);
-    let b = Int32Array::from(&[Some(2), Some(2), Some(6)]);
+    let b = Int32Array::from(&[None, Some(2), Some(6)]);
     let result = and(               &a, &b).unwrap();
-    let expected = Int32Array::from(&[Some(0), Some(2), Some(6)]);
+    let expected = Int32Array::from(&[None, Some(2), Some(6)]);
 
     assert_eq!(result, expected);
 }
@@ -28,9 +28,9 @@ fn test_and() {
 #[test]
 fn test_or() {
     let a = Int32Array::from(&[Some(1), Some(2), Some(0)]);
-    let b = Int32Array::from(&[Some(2), Some(2), Some(0)]);
+    let b = Int32Array::from(&[None, Some(2), Some(0)]);
     let result = or(&a, &b).unwrap();
-    let expected = Int32Array::from(&[Some(3), Some(2), Some(0)]);
+    let expected = Int32Array::from(&[None, Some(2), Some(0)]);
 
     assert_eq!(result, expected);
 }
@@ -38,9 +38,9 @@ fn test_or() {
 
 #[test]
 fn test_not() {
-    let a = Int8Array::from(&[Some(1i8), Some(-100i8)]);
+    let a = Int8Array::from(&[None, Some(1i8), Some(-100i8)]);
     let result = not(&a);
-    let expected = Int8Array::from(&[Some(-2), Some(99)]);
+    let expected = Int8Array::from(&[None, Some(-2), Some(99)]);
 
     assert_eq!(result, expected);
 }
