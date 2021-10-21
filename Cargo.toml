@@ -237,3 +237,7 @@ harness = false
 [[bench]]
 name = "iter_list"
 harness = false
+
+[[bench]]
+name = "bitwise"
+harness = false
