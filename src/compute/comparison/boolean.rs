@@ -35,7 +35,7 @@ where
 /// comparison function.
 fn compare_op<F>(lhs: &BooleanArray, rhs: &BooleanArray, op: F) -> Result<BooleanArray>
 where
-    F: Fn(u64, u64) -> u8,
+    F: Fn(u8, u8) -> u8,
 {
     if lhs.len() != rhs.len() {
         return Err(ArrowError::InvalidArgumentError(
