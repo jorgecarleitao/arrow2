@@ -124,7 +124,7 @@ pub fn lt_eq_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
     if rhs {
         lhs.clone()
     } else {
-        compare_op_scalar(lhs, rhs, |a, b| !a)
+        compare_op_scalar(lhs, rhs, |a, _| !a)
     }
 }
 
