@@ -82,7 +82,11 @@ pub fn eq(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
 
 /// Perform `left == right` operation on an array and a scalar value.
 pub fn eq_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
-    compare_op_scalar(lhs, rhs, |a, b| !(a ^ b))
+    if rhs {
+        lhs.clone()
+    } else {
+        compare_op_scalar(lhs, rhs, |a, _| !a)
+    }
 }
 
 /// Perform `left != right` operation on two arrays.
@@ -92,7 +96,7 @@ pub fn neq(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
 
 /// Perform `left != right` operation on an array and a scalar value.
 pub fn neq_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
-    compare_op_scalar(lhs, rhs, |a, b| a ^ b)
+    eq_scalar(lhs, !rhs)
 }
 
 /// Perform `left < right` operation on two arrays.
@@ -102,7 +106,11 @@ pub fn lt(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
 
 /// Perform `left < right` operation on an array and a scalar value.
 pub fn lt_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
-    compare_op_scalar(lhs, rhs, |a, b| !a & b)
+    if rhs {
+        compare_op_scalar(lhs, rhs, |a, _| !a)
+    } else {
+        lhs.clone()
+    }
 }
 
 /// Perform `left <= right` operation on two arrays.
@@ -113,7 +121,11 @@ pub fn lt_eq(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
 /// Perform `left <= right` operation on an array and a scalar value.
 /// Null values are less than non-null values.
 pub fn lt_eq_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
-    compare_op_scalar(lhs, rhs, |a, b| !a | b)
+    if rhs {
+        lhs.clone()
+    } else {
+        compare_op_scalar(lhs, rhs, |a, b| !a)
+    }
 }
 
 /// Perform `left > right` operation on two arrays. Non-null values are greater than null
@@ -125,7 +137,15 @@ pub fn gt(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
 /// Perform `left > right` operation on an array and a scalar value.
 /// Non-null values are greater than null values.
 pub fn gt_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
-    compare_op_scalar(lhs, rhs, |a, b| a & !b)
+    if rhs {
+        BooleanArray::from_data(
+            DataType::Boolean,
+            Bitmap::new_zeroed(lhs.len()),
+            lhs.validity().cloned(),
+        )
+    } else {
+        compare_op_scalar(lhs, rhs, |_, _| 0b11111111)
+    }
 }
 
 /// Perform `left >= right` operation on two arrays. Non-null values are greater than null
@@ -137,7 +157,11 @@ pub fn gt_eq(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
 /// Perform `left >= right` operation on an array and a scalar value.
 /// Non-null values are greater than null values.
 pub fn gt_eq_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
-    compare_op_scalar(lhs, rhs, |a, b| a | !b)
+    if rhs {
+        compare_op_scalar(lhs, rhs, |a, _| a)
+    } else {
+        lhs.clone()
+    }
 }
 
 /// Compare two [`BooleanArray`]s using the given [`Operator`].
