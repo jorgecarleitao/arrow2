@@ -35,7 +35,7 @@ where
 /// comparison function.
 fn compare_op<F>(lhs: &BooleanArray, rhs: &BooleanArray, op: F) -> Result<BooleanArray>
 where
-    F: Fn(u8, u8) -> u8,
+    F: Fn(u64, u64) -> u8,
 {
     if lhs.len() != rhs.len() {
         return Err(ArrowError::InvalidArgumentError(
@@ -158,9 +158,9 @@ pub fn gt_eq(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
 /// Non-null values are greater than null values.
 pub fn gt_eq_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
     if rhs {
-        compare_op_scalar(lhs, rhs, |a, _| a)
-    } else {
         lhs.clone()
+    } else {
+        compare_op_scalar(lhs, rhs, |_, _| 0b11111111)
     }
 }
 
