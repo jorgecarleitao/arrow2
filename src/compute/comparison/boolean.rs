@@ -109,7 +109,11 @@ pub fn lt_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
     if rhs {
         compare_op_scalar(lhs, rhs, |a, _| !a)
     } else {
-        lhs.clone()
+        BooleanArray::from_data(
+            DataType::Boolean,
+            Bitmap::new_zeroed(lhs.len()),
+            lhs.validity().cloned(),
+        )
     }
 }
 
@@ -298,12 +302,12 @@ mod tests {
 
     #[test]
     fn test_lt_eq_scalar_true() {
-        cmp_bool_scalar!(lt_scalar, &[false, true], true, &[true, true]);
+        cmp_bool_scalar!(lt_eq_scalar, &[false, true], true, &[true, true]);
     }
 
     #[test]
     fn test_lt_eq_scalar_false() {
-        cmp_bool_scalar!(lt_scalar, &[false, true], false, &[true, false]);
+        cmp_bool_scalar!(lt_eq_scalar, &[false, true], false, &[true, false]);
     }
 
     #[test]
