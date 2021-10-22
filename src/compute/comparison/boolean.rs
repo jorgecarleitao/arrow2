@@ -126,7 +126,7 @@ pub fn lt_eq(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
 /// Null values are less than non-null values.
 pub fn lt_eq_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
     if rhs {
-        lhs.clone()
+        compare_op_scalar(lhs, rhs, |_, _| 0b11111111)
     } else {
         compare_op_scalar(lhs, rhs, |a, _| !a)
     }
