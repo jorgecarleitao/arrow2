@@ -144,7 +144,7 @@ pub fn gt_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
             lhs.validity().cloned(),
         )
     } else {
-        compare_op_scalar(lhs, rhs, |_, _| 0b11111111)
+        lhs.clone()
     }
 }
 
