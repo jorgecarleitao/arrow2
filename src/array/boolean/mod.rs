@@ -20,7 +20,6 @@ pub struct BooleanArray {
     data_type: DataType,
     values: Bitmap,
     validity: Option<Bitmap>,
-    offset: usize,
 }
 
 impl BooleanArray {
@@ -46,11 +45,13 @@ impl BooleanArray {
         if data_type.to_physical_type() != PhysicalType::Boolean {
             panic!("BooleanArray can only be initialized with DataType::Boolean")
         }
+        if matches!(&validity, Some(bitmap) if bitmap.offset() != values.offset()) {
+            panic!("validity's bitmap offset must equal values offset")
+        }
         Self {
             data_type,
             values,
             validity,
-            offset: 0,
         }
     }
 
@@ -83,7 +84,6 @@ impl BooleanArray {
             data_type: self.data_type.clone(),
             values: self.values.clone().slice_unchecked(offset, length),
             validity,
-            offset: self.offset + offset,
         }
     }
 
@@ -93,6 +93,9 @@ impl BooleanArray {
     pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
         if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
             panic!("validity should be as least as large as the array")
+        }
+        if matches!(&validity, Some(bitmap) if bitmap.offset() != self.values.offset()) {
+            panic!("validity's bitmap offset must equal values offset")
         }
         let mut arr = self.clone();
         arr.validity = validity;

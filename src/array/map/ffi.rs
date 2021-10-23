@@ -7,14 +7,17 @@ use super::MapArray;
 
 unsafe impl ToFfi for MapArray {
     fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>> {
-        vec![
-            self.validity.as_ref().map(|x| x.as_ptr()),
-            std::ptr::NonNull::new(self.offsets.as_ptr() as *mut u8),
-        ]
-    }
+        let offset = self
+            .validity
+            .as_ref()
+            .map(|x| x.offset())
+            .unwrap_or_default();
 
-    fn offset(&self) -> usize {
-        self.offset
+        let offsets = std::ptr::NonNull::new(unsafe {
+            self.offsets.as_ptr().offset(-(offset as isize)) as *mut u8
+        });
+
+        vec![self.validity.as_ref().map(|x| x.as_ptr()), offsets]
     }
 
     fn children(&self) -> Vec<Arc<dyn Array>> {
@@ -25,17 +28,11 @@ unsafe impl ToFfi for MapArray {
 impl<A: ffi::ArrowArrayRef> FromFfi<A> for MapArray {
     unsafe fn try_from_ffi(array: A) -> Result<Self> {
         let data_type = array.field().data_type().clone();
-        let length = array.array().len();
-        let offset = array.array().offset();
-        let mut validity = unsafe { array.validity() }?;
-        let mut offsets = unsafe { array.buffer::<i32>(0) }?;
+        let validity = unsafe { array.validity() }?;
+        let offsets = unsafe { array.buffer::<i32>(0) }?;
         let child = array.child(0)?;
         let values = ffi::try_from(child)?.into();
 
-        if offset > 0 {
-            offsets = offsets.slice(offset, length);
-            validity = validity.map(|x| x.slice(offset, length))
-        }
         Ok(Self::from_data(data_type, offsets, values, validity))
     }
 }

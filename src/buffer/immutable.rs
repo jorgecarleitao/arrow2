@@ -63,11 +63,11 @@ impl<T: NativeType> Buffer<T> {
     }
 
     /// Auxiliary method to create a new Buffer
-    pub(crate) fn from_bytes(bytes: Bytes<T>) -> Self {
-        let length = bytes.len();
+    pub(crate) fn from_bytes(bytes: Bytes<T>, offset: usize) -> Self {
+        let length = bytes.len() - offset;
         Buffer {
             data: Arc::new(bytes),
-            offset: 0,
+            offset,
             length,
         }
     }

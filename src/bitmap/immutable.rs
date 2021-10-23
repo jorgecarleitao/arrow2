@@ -66,15 +66,20 @@ impl Bitmap {
     /// # Panic
     /// Panics iff `length <= bytes.len() * 8`
     #[inline]
-    pub(crate) fn from_bytes(bytes: Bytes<u8>, length: usize) -> Self {
-        assert!(length <= bytes.len() * 8);
-        let null_count = count_zeros(&bytes, 0, length);
+    pub(crate) fn from_bytes(bytes: Bytes<u8>, offset: usize, length: usize) -> Self {
+        assert!(offset + length <= bytes.len() * 8);
+        let null_count = count_zeros(&bytes, offset, length);
         Self {
             length,
-            offset: 0,
+            offset,
             bytes: Arc::new(bytes),
             null_count,
         }
+    }
+
+    #[inline]
+    pub(crate) fn offset(&self) -> usize {
+        self.offset
     }
 
     /// Creates a new [`Bitmap`] from [`MutableBuffer`] and a length.
@@ -82,7 +87,7 @@ impl Bitmap {
     /// Panics iff `length <= buffer.len() * 8`
     #[inline]
     pub fn from_u8_buffer(buffer: MutableBuffer<u8>, length: usize) -> Self {
-        Bitmap::from_bytes(buffer.into(), length)
+        Bitmap::from_bytes(buffer.into(), 0, length)
     }
 
     /// Creates a new [`Bitmap`] from a slice and length.
