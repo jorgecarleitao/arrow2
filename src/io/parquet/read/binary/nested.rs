@@ -11,8 +11,9 @@ use parquet2::{
 use super::super::nested_utils::*;
 use super::super::utils;
 use super::basic::read_plain_required;
+use super::utils::finish_array;
 use crate::{
-    array::{Array, BinaryArray, Offset, Utf8Array},
+    array::{Array, Offset},
     bitmap::MutableBitmap,
     buffer::MutableBuffer,
     datatypes::DataType,
@@ -150,7 +151,7 @@ pub fn iter_to_array<O, I, E>(
     mut iter: I,
     metadata: &ColumnChunkMetaData,
     data_type: DataType,
-) -> Result<Box<dyn Array>>
+) -> Result<(Arc<dyn Array>, Vec<Box<dyn Nested>>)>
 where
     O: Offset,
     ArrowError: From<E>,
@@ -176,32 +177,7 @@ where
         )?
     }
 
-    let inner_data_type = match data_type {
-        DataType::List(ref inner) => inner.data_type(),
-        DataType::LargeList(ref inner) => inner.data_type(),
-        _ => {
-            return Err(ArrowError::NotYetImplemented(format!(
-                "Read nested datatype {:?}",
-                data_type
-            )))
-        }
-    };
+    let values = finish_array(data_type, offsets, values, validity).into();
 
-    let values = match inner_data_type {
-        DataType::LargeBinary | DataType::Binary => Arc::new(BinaryArray::from_data(
-            inner_data_type.clone(),
-            offsets.into(),
-            values.into(),
-            validity.into(),
-        )) as Arc<dyn Array>,
-        DataType::LargeUtf8 | DataType::Utf8 => Arc::new(Utf8Array::from_data(
-            inner_data_type.clone(),
-            offsets.into(),
-            values.into(),
-            validity.into(),
-        )) as Arc<dyn Array>,
-        _ => unreachable!(),
-    };
-
-    create_list(data_type, &mut nested, values)
+    Ok((values, nested))
 }

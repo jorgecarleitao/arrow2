@@ -10,6 +10,7 @@ use crate::{
     error::{ArrowError, Result},
 };
 
+/// trait describing deserialized repetition and definition levels
 pub trait Nested: std::fmt::Debug {
     fn inner(&mut self) -> (Buffer<i64>, Option<Bitmap>);
 

@@ -100,7 +100,7 @@ pub fn iter_to_array_nested<T, A, I, E, F>(
     metadata: &ColumnChunkMetaData,
     data_type: DataType,
     op: F,
-) -> Result<Box<dyn Array>>
+) -> Result<(Arc<dyn Array>, Vec<Box<dyn Nested>>)>
 where
     ArrowError: From<E>,
     T: NativeType,
@@ -127,24 +127,10 @@ where
         )?
     }
 
-    let values = match data_type {
-        DataType::List(ref inner) => Arc::new(PrimitiveArray::<A>::from_data(
-            inner.data_type().clone(),
-            values.into(),
-            validity.into(),
-        )),
-        DataType::LargeList(ref inner) => Arc::new(PrimitiveArray::<A>::from_data(
-            inner.data_type().clone(),
-            values.into(),
-            validity.into(),
-        )),
-        _ => {
-            return Err(ArrowError::NotYetImplemented(format!(
-                "Read nested datatype {:?}",
-                data_type
-            )))
-        }
-    };
-
-    create_list(data_type, &mut nested, values)
+    let values = Arc::new(PrimitiveArray::<A>::from_data(
+        data_type,
+        values.into(),
+        validity.into(),
+    ));
+    Ok((values, nested))
 }

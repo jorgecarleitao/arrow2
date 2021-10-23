@@ -7,7 +7,7 @@ use parquet2::{
 };
 
 use crate::{
-    array::{Array, BinaryArray, Offset, Utf8Array},
+    array::{Array, Offset},
     bitmap::{utils::BitmapIter, MutableBitmap},
     buffer::MutableBuffer,
     datatypes::DataType,
@@ -15,6 +15,7 @@ use crate::{
 };
 
 use super::super::utils;
+use super::utils::finish_array;
 
 /// Assumptions: No rep levels
 #[allow(clippy::too_many_arguments)]
@@ -325,21 +326,7 @@ where
         )?
     }
 
-    Ok(match data_type {
-        DataType::LargeBinary | DataType::Binary => Box::new(BinaryArray::from_data(
-            data_type.clone(),
-            offsets.into(),
-            values.into(),
-            validity.into(),
-        )),
-        DataType::LargeUtf8 | DataType::Utf8 => Box::new(Utf8Array::from_data(
-            data_type.clone(),
-            offsets.into(),
-            values.into(),
-            validity.into(),
-        )),
-        _ => unreachable!(),
-    })
+    Ok(finish_array(data_type.clone(), offsets, values, validity))
 }
 
 pub async fn stream_to_array<O, I, E>(
@@ -371,19 +358,5 @@ where
         )?
     }
 
-    Ok(match data_type {
-        DataType::LargeBinary | DataType::Binary => Box::new(BinaryArray::from_data(
-            data_type.clone(),
-            offsets.into(),
-            values.into(),
-            validity.into(),
-        )),
-        DataType::LargeUtf8 | DataType::Utf8 => Box::new(Utf8Array::from_data(
-            data_type.clone(),
-            offsets.into(),
-            values.into(),
-            validity.into(),
-        )),
-        _ => unreachable!(),
-    })
+    Ok(finish_array(data_type.clone(), offsets, values, validity))
 }

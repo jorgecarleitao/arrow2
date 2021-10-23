@@ -135,7 +135,7 @@ pub fn iter_to_array<I, E>(
     mut iter: I,
     metadata: &ColumnChunkMetaData,
     data_type: DataType,
-) -> Result<Box<dyn Array>>
+) -> Result<(Arc<dyn Array>, Vec<Box<dyn Nested>>)>
 where
     ArrowError: From<E>,
     I: FallibleStreamingIterator<Item = DataPage, Error = E>,
@@ -157,22 +157,11 @@ where
         )?
     }
 
-    let inner_data_type = match data_type {
-        DataType::List(ref inner) => inner.data_type(),
-        DataType::LargeList(ref inner) => inner.data_type(),
-        _ => {
-            return Err(ArrowError::NotYetImplemented(format!(
-                "Read nested datatype {:?}",
-                data_type
-            )))
-        }
-    };
-
     let values = Arc::new(BooleanArray::from_data(
-        inner_data_type.clone(),
+        data_type,
         values.into(),
         validity.into(),
     ));
 
-    create_list(data_type, &mut nested, values)
+    Ok((values, nested))
 }
