@@ -214,6 +214,11 @@ fn page_iter_to_array_nested<
         LargeBinary | LargeUtf8 => {
             binary::iter_to_array_nested::<i64, _, _>(iter, metadata, data_type)
         }
+        List(ref inner) => {
+            let (values, mut nested) =
+                page_iter_to_array_nested(iter, metadata, inner.data_type().clone())?;
+            Ok((create_list(data_type, &mut nested, values)?.into(), nested))
+        }
         other => Err(ArrowError::NotYetImplemented(format!(
             "Reading {:?} from parquet still not implemented",
             other
