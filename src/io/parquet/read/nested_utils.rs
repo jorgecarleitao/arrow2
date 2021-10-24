@@ -10,6 +10,7 @@ use crate::{
     error::{ArrowError, Result},
 };
 
+/// trait describing deserialized repetition and definition levels
 pub trait Nested: std::fmt::Debug {
     fn inner(&mut self) -> (Buffer<i64>, Option<Bitmap>);
 
@@ -20,6 +21,8 @@ pub trait Nested: std::fmt::Debug {
     fn offsets(&mut self) -> &[i64];
 
     fn close(&mut self, length: i64);
+
+    fn is_nullable(&self) -> bool;
 }
 
 #[derive(Debug, Default)]
@@ -38,6 +41,10 @@ impl Nested for NestedOptional {
     #[inline]
     fn last_offset(&self) -> i64 {
         *self.offsets.last().unwrap()
+    }
+
+    fn is_nullable(&self) -> bool {
+        true
     }
 
     fn push(&mut self, value: i64, is_valid: bool) {
@@ -71,6 +78,10 @@ impl Nested for NestedValid {
     fn inner(&mut self) -> (Buffer<i64>, Option<Bitmap>) {
         let offsets = std::mem::take(&mut self.offsets);
         (offsets.into(), None)
+    }
+
+    fn is_nullable(&self) -> bool {
+        false
     }
 
     #[inline]
@@ -109,17 +120,64 @@ pub fn extend_offsets<R, D>(
     R: Iterator<Item = u32>,
     D: Iterator<Item = u32>,
 {
-    assert_eq!(max_rep, 1);
-    let mut values_count = 0;
+    let mut values_count = vec![0; nested.len()];
+    let mut prev_def: u32 = 0;
+    let mut is_first = true;
+
     rep_levels.zip(def_levels).for_each(|(rep, def)| {
-        if rep == 0 {
-            nested[0].push(values_count, def != 0);
+        let mut closures = max_rep - rep;
+        if prev_def <= 1 {
+            closures = 1;
+        };
+        if is_first {
+            // close on first run to ensure offsets start with 0.
+            closures = max_rep;
+            is_first = false;
         }
-        if def == max_def || (is_nullable && def == max_def - 1) {
-            values_count += 1;
-        }
+
+        nested
+            .iter_mut()
+            .zip(values_count.iter())
+            .enumerate()
+            .skip(rep as usize)
+            .take((rep + closures) as usize)
+            .for_each(|(depth, (nested, length))| {
+                let is_null = (def - rep) as usize == depth && depth == rep as usize;
+                nested.push(*length, !is_null);
+            });
+
+        values_count
+            .iter_mut()
+            .enumerate()
+            .for_each(|(depth, values)| {
+                if depth == 1 {
+                    if def == max_def || (is_nullable && def == max_def - 1) {
+                        *values += 1
+                    }
+                } else if depth == 0 {
+                    let a = nested
+                        .get(depth + 1)
+                        .map(|x| x.is_nullable())
+                        .unwrap_or_default(); // todo: cumsum this
+                    let condition = rep == 1
+                        || rep == 0
+                            && def >= max_def.saturating_sub((a as u32) + (is_nullable as u32));
+
+                    if condition {
+                        *values += 1;
+                    }
+                }
+            });
+        prev_def = def;
     });
-    nested[0].close(values_count);
+
+    // close validities
+    nested
+        .iter_mut()
+        .zip(values_count.iter())
+        .for_each(|(nested, length)| {
+            nested.close(*length);
+        });
 }
 
 pub fn is_nullable(type_: &ParquetType, container: &mut Vec<bool>) {
@@ -163,12 +221,12 @@ pub fn init_nested(base_type: &ParquetType, capacity: usize) -> (Vec<Box<dyn Nes
 
 pub fn create_list(
     data_type: DataType,
-    nested: &mut [Box<dyn Nested>],
+    nested: &mut Vec<Box<dyn Nested>>,
     values: Arc<dyn Array>,
 ) -> Result<Box<dyn Array>> {
     Ok(match data_type {
         DataType::List(_) => {
-            let (offsets, validity) = nested[0].inner();
+            let (offsets, validity) = nested.pop().unwrap().inner();
 
             let offsets = Buffer::<i32>::from_trusted_len_iter(offsets.iter().map(|x| *x as i32));
             Box::new(ListArray::<i32>::from_data(
@@ -176,7 +234,7 @@ pub fn create_list(
             ))
         }
         DataType::LargeList(_) => {
-            let (offsets, validity) = nested[0].inner();
+            let (offsets, validity) = nested.pop().unwrap().inner();
 
             Box::new(ListArray::<i64>::from_data(
                 data_type, offsets, values, validity,

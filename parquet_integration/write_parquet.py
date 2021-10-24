@@ -114,6 +114,26 @@ def case_nested(size):
         [[4, 5], [6]],
         [],
         [[7], None, [9]],
+        [[], [None], None],
+        [[10]],
+    ]
+    items_required_nested = [
+        [[0, 1]],
+        None,
+        [[2, 3], [3]],
+        [[4, 5], [6]],
+        [],
+        [[7], None, [9]],
+        None,
+        [[10]],
+    ]
+    items_required_nested_2 = [
+        [[0, 1]],
+        None,
+        [[2, 3], [3]],
+        [[4, 5], [6]],
+        [],
+        [[7], [8], [9]],
         None,
         [[10]],
     ]
@@ -140,6 +160,10 @@ def case_nested(size):
         pa.field("list_utf8", pa.list_(pa.utf8())),
         pa.field("list_large_binary", pa.list_(pa.large_binary())),
         pa.field("list_nested_i64", pa.list_(pa.list_(pa.int64()))),
+        pa.field("list_nested_inner_required_i64", pa.list_(pa.list_(pa.int64()))),
+        pa.field(
+            "list_nested_inner_required_required_i64", pa.list_(pa.list_(pa.int64()))
+        ),
     ]
     schema = pa.schema(fields)
     return (
@@ -152,6 +176,8 @@ def case_nested(size):
             "list_utf8": string * size,
             "list_large_binary": string * size,
             "list_nested_i64": items_nested * size,
+            "list_nested_inner_required_i64": items_required_nested * size,
+            "list_nested_inner_required_required_i64": items_required_nested_2 * size,
         },
         schema,
         f"nested_nullable_{size*10}.parquet",
