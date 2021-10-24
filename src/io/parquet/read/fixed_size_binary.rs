@@ -27,7 +27,7 @@ pub(crate) fn read_dict_buffer(
     values: &mut MutableBuffer<u8>,
     validity: &mut MutableBitmap,
 ) {
-    let length = values.len() * size + additional;
+    let length = values.len() + additional * size;
     let dict_values = dict.values();
 
     // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
@@ -42,13 +42,13 @@ pub(crate) fn read_dict_buffer(
     for run in validity_iterator {
         match run {
             hybrid_rle::HybridEncoded::Bitpacked(packed) => {
-                let remaining = length - values.len() * size;
+                let remaining = (length - values.len()) / size;
                 let len = std::cmp::min(packed.len() * 8, remaining);
                 for is_valid in BitmapIter::new(packed, 0, len) {
                     validity.push(is_valid);
                     if is_valid {
                         let index = indices.next().unwrap() as usize;
-                        values.extend_from_slice(&dict_values[index..(index + 1) * size]);
+                        values.extend_from_slice(&dict_values[index * size..(index + 1) * size]);
                     } else {
                         values.extend_constant(size, 0);
                     }
@@ -60,7 +60,7 @@ pub(crate) fn read_dict_buffer(
                 if is_set {
                     (0..additional).for_each(|_| {
                         let index = indices.next().unwrap() as usize;
-                        values.extend_from_slice(&dict_values[index..(index + 1) * size]);
+                        values.extend_from_slice(&dict_values[index * size..(index + 1) * size]);
                     })
                 } else {
                     values.extend_constant(additional * size, 0)
@@ -78,7 +78,7 @@ pub(crate) fn read_optional(
     values: &mut MutableBuffer<u8>,
     validity: &mut MutableBitmap,
 ) {
-    let length = values.len() * size + additional;
+    let length = values.len() + additional * size;
 
     assert_eq!(values_buffer.len() % size, 0);
     let mut values_iterator = values_buffer.chunks_exact(size);
@@ -89,7 +89,7 @@ pub(crate) fn read_optional(
         match run {
             hybrid_rle::HybridEncoded::Bitpacked(packed) => {
                 // the pack may contain more items than needed.
-                let remaining = length - values.len() * size;
+                let remaining = (length - values.len()) / size;
                 let len = std::cmp::min(packed.len() * 8, remaining);
                 for is_valid in BitmapIter::new(packed, 0, len) {
                     validity.push(is_valid);

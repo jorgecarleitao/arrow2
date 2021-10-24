@@ -243,6 +243,11 @@ fn v1_decimal_9_required() -> Result<()> {
 }
 
 #[test]
+fn v1_decimal_9_nullable_dict() -> Result<()> {
+    test_pyarrow_integration(7, 1, "basic", true, false)
+}
+
+#[test]
 fn v1_decimal_18_nullable() -> Result<()> {
     test_pyarrow_integration(8, 1, "basic", false, false)
 }
