@@ -13,6 +13,9 @@ pub unsafe trait ToFfi {
     /// The pointers to the buffers.
     fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>>;
 
+    /// The offset
+    fn offset(&self) -> usize;
+
     /// The children
     fn children(&self) -> Vec<Arc<dyn Array>> {
         vec![]

@@ -37,6 +37,7 @@ pub struct DictionaryArray<K: DictionaryKey> {
     data_type: DataType,
     keys: PrimitiveArray<K>,
     values: Arc<dyn Array>,
+    offset: usize,
 }
 
 impl<K: DictionaryKey> DictionaryArray<K> {
@@ -68,6 +69,7 @@ impl<K: DictionaryKey> DictionaryArray<K> {
             data_type,
             keys,
             values,
+            offset: 0,
         }
     }
 
@@ -79,6 +81,7 @@ impl<K: DictionaryKey> DictionaryArray<K> {
             data_type: self.data_type.clone(),
             keys: self.keys.clone().slice(offset, length),
             values: self.values.clone(),
+            offset: self.offset + offset,
         }
     }
 
@@ -90,6 +93,7 @@ impl<K: DictionaryKey> DictionaryArray<K> {
             data_type: self.data_type.clone(),
             keys: self.keys.clone().slice_unchecked(offset, length),
             values: self.values.clone(),
+            offset: self.offset + offset,
         }
     }
 

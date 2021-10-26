@@ -39,51 +39,14 @@ class TestCase(unittest.TestCase):
         # No leak of C++ memory
         self.assertEqual(self.old_allocated_cpp, pyarrow.total_allocated_bytes())
 
-    def test_primitive(self):
-        a = pyarrow.array([0, None, 2, 3, 4])
-        b = arrow_pyarrow_integration_testing.round_trip_array(a)
-
-        b.validate(full=True)
-        assert a.to_pylist() == b.to_pylist()
-        assert a.type == b.type
-
-    def test_primitive_sliced(self):
-        a = pyarrow.array([0, None, 2, 3, 4]).slice(1, 2)
-        b = arrow_pyarrow_integration_testing.round_trip_array(a)
-
-        b.validate(full=True)
-        assert a.to_pylist() == b.to_pylist()
-        assert a.type == b.type
-
-    def test_boolean(self):
-        a = pyarrow.array([True, None, False, True, False])
-        b = arrow_pyarrow_integration_testing.round_trip_array(a)
-
-        b.validate(full=True)
-        assert a.to_pylist() == b.to_pylist()
-        assert a.type == b.type
-
-    def test_boolean_sliced(self):
-        a = pyarrow.array([True, None, False, True, False]).slice(1, 2)
-        b = arrow_pyarrow_integration_testing.round_trip_array(a)
-
-        b.validate(full=True)
-        assert a.to_pylist() == b.to_pylist()
-        assert a.type == b.type
-
-    def test_string(self):
+    def test_string_roundtrip(self):
+        """
+        Python -> Rust -> Python
+        """
         a = pyarrow.array(["a", None, "ccc"])
         b = arrow_pyarrow_integration_testing.round_trip_array(a)
         c = pyarrow.array(["a", None, "ccc"])
         self.assertEqual(b, c)
-
-    def test_string_sliced(self):
-        a = pyarrow.array(["a", None, "ccc"]).slice(1, 2)
-        b = arrow_pyarrow_integration_testing.round_trip_array(a)
-
-        b.validate(full=True)
-        assert a.to_pylist() == b.to_pylist()
-        assert a.type == b.type
 
     def test_decimal_roundtrip(self):
         """
@@ -112,17 +75,10 @@ class TestCase(unittest.TestCase):
             assert a.to_pylist() == b.to_pylist()
             assert a.type == b.type
 
-    def test_list_sliced(self):
-        a = pyarrow.array(
-            [[], None, [1, 2], [4, 5, 6]], pyarrow.list_(pyarrow.int64())
-        ).slice(1, 2)
-        b = arrow_pyarrow_integration_testing.round_trip_array(a)
-
-        b.validate(full=True)
-        assert a.to_pylist() == b.to_pylist()
-        assert a.type == b.type
-
-    def test_struct(self):
+    def test_struct_array(self):
+        """
+        Python -> Rust -> Python
+        """
         fields = [
             ("f1", pyarrow.int32()),
             ("f2", pyarrow.string()),
@@ -139,27 +95,6 @@ class TestCase(unittest.TestCase):
         )
         b = arrow_pyarrow_integration_testing.round_trip_array(a)
 
-        b.validate(full=True)
-        assert a.to_pylist() == b.to_pylist()
-        assert a.type == b.type
-
-    # see https://issues.apache.org/jira/browse/ARROW-14383
-    def _test_struct_sliced(self):
-        fields = [
-            ("f1", pyarrow.int32()),
-            ("f2", pyarrow.string()),
-        ]
-        a = pyarrow.array(
-            [
-                {"f1": 1, "f2": "a"},
-                None,
-                {"f1": 3, "f2": None},
-                {"f1": None, "f2": "d"},
-                {"f1": None, "f2": None},
-            ],
-            pyarrow.struct(fields),
-        ).slice(1, 2)
-        b = arrow_pyarrow_integration_testing.round_trip_array(a)
         b.validate(full=True)
         assert a.to_pylist() == b.to_pylist()
         assert a.type == b.type

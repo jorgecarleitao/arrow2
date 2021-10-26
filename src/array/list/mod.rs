@@ -25,6 +25,7 @@ pub struct ListArray<O: Offset> {
     offsets: Buffer<O>,
     values: Arc<dyn Array>,
     validity: Option<Bitmap>,
+    offset: usize,
 }
 
 impl<O: Offset> ListArray<O> {
@@ -77,6 +78,7 @@ impl<O: Offset> ListArray<O> {
             offsets,
             values,
             validity,
+            offset: 0,
         }
     }
 
@@ -105,6 +107,7 @@ impl<O: Offset> ListArray<O> {
             offsets,
             values: self.values.clone(),
             validity,
+            offset: self.offset + offset,
         }
     }
 

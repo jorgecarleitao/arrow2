@@ -41,6 +41,17 @@ This document describes the overall design of this module.
     * `from_trusted_len_values_iter` from an iterator of trusted len of values
     * `try_from_trusted_len_iter` from an fallible iterator of trusted len of optional values
 
+### Slot offsets
+
+* An array MUST have a `offset: usize` measuring the number of slots that the array is currently offsetted by if the specification requires.
+
+* An array MUST implement `fn slice(&self, offset: usize, length: usize) -> Self` that returns an offseted and/or truncated clone of the array. This function MUST increase the array's offset if it exists.
+
+* Conversely, `offset` MUST only be changed by `slice`.
+
+The rational of the above is that it enable us to be fully interoperable with the offset logic supported by the C data interface, while at the same time easily perform array slices
+within Rust's type safety mechanism.
+
 ### Mutable Arrays
 
 * An array MAY have a mutable counterpart. E.g. `MutablePrimitiveArray<T>` is the mutable counterpart of `PrimitiveArray<T>`.
