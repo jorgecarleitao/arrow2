@@ -20,7 +20,7 @@ use std::io::Write;
 use std::{collections::HashMap, sync::Arc};
 
 use arrow_format::ipc;
-use arrow_format::ipc::flatbuffers::FlatBufferBuilder;
+use flatbuffers::FlatBufferBuilder;
 
 use crate::array::Array;
 use crate::error::{ArrowError, Result};

@@ -23,7 +23,7 @@
 use std::io::Write;
 
 use arrow_format::ipc;
-use arrow_format::ipc::flatbuffers::FlatBufferBuilder;
+use flatbuffers::FlatBufferBuilder;
 
 use super::super::ARROW_MAGIC;
 use super::{

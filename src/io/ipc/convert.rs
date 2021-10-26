@@ -17,9 +17,7 @@
 
 //! Utilities for converting between IPC types and native Arrow types
 
-use arrow_format::ipc::flatbuffers::{
-    FlatBufferBuilder, ForwardsUOffset, UnionWIPOffset, Vector, WIPOffset,
-};
+use flatbuffers::{FlatBufferBuilder, ForwardsUOffset, UnionWIPOffset, Vector, WIPOffset};
 use std::collections::{BTreeMap, HashMap};
 mod ipc {
     pub use arrow_format::ipc::File::*;

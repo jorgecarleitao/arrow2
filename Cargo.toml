@@ -17,7 +17,7 @@ bench = false
 [dependencies]
 num-traits = "0.2"
 chrono = { version = "0.4", default_features = false, features = ["std"] }
-chrono-tz = { version = "0.5", optional = true }
+chrono-tz = { version = "0.6", optional = true }
 # To efficiently cast numbers to strings
 lexical-core = { version = "0.8", optional = true }
 # We need to Hash values before sending them to an hasher. This
@@ -39,7 +39,8 @@ indexmap = { version = "^1.6", optional = true }
 # used to print columns in a nice columnar format
 comfy-table = { version = "4.0", optional = true, default-features = false }
 
-arrow-format = { version = "*", optional = true, features = ["ipc"] }
+arrow-format = { git = "https://github.com/PsiACE/arrow-format.git",  optional = true, features = ["ipc"] }
+flatbuffers = { version = "=2.0.0", optional = true }
 
 hex = { version = "^0.4", optional = true }
 
@@ -109,9 +110,9 @@ io_csv = ["io_csv_read", "io_csv_write"]
 io_csv_read = ["csv", "lexical-core"]
 io_csv_write = ["csv", "streaming-iterator", "lexical-core"]
 io_json = ["serde", "serde_json", "indexmap"]
-io_ipc = ["arrow-format"]
+io_ipc = ["arrow-format", "flatbuffers"]
 io_ipc_compression = ["lz4", "zstd"]
-io_flight = ["io_ipc", "arrow-format/flight-data"]
+io_flight = ["io_ipc", "arrow-format/flight"]
 io_parquet_compression = [
     "parquet2/zstd",
     "parquet2/snappy",

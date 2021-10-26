@@ -1,5 +1,5 @@
 use arrow_format::ipc;
-use arrow_format::ipc::flatbuffers::FlatBufferBuilder;
+use flatbuffers::FlatBufferBuilder;
 
 use crate::datatypes::*;
 
