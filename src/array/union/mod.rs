@@ -31,6 +31,7 @@ pub struct UnionArray {
     fields: Vec<Arc<dyn Array>>,
     offsets: Option<Buffer<i32>>,
     data_type: DataType,
+    offset: usize,
 }
 
 impl UnionArray {
@@ -77,6 +78,7 @@ impl UnionArray {
                 fields,
                 offsets,
                 types: Buffer::new(),
+                offset: 0,
             }
         } else {
             panic!("Union struct must be created with the corresponding Union DataType")
@@ -123,6 +125,7 @@ impl UnionArray {
             fields,
             offsets,
             types,
+            offset: 0,
         }
     }
 
@@ -190,6 +193,7 @@ impl UnionArray {
             fields_hash: self.fields_hash.clone(),
             types: self.types.clone().slice(offset, length),
             offsets: self.offsets.clone(),
+            offset: self.offset + offset,
         }
     }
 
@@ -206,6 +210,7 @@ impl UnionArray {
             fields_hash: self.fields_hash.clone(),
             types: self.types.clone().slice_unchecked(offset, length),
             offsets: self.offsets.clone(),
+            offset: self.offset + offset,
         }
     }
 }

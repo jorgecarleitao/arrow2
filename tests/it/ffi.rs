@@ -1,12 +1,13 @@
 use arrow2::array::*;
-use arrow2::bitmap::Bitmap;
 use arrow2::datatypes::{DataType, Field, TimeUnit};
 use arrow2::{error::Result, ffi};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-fn _test_round_trip(array: Arc<dyn Array>, expected: Box<dyn Array>) -> Result<()> {
+fn test_round_trip(expected: impl Array + Clone + 'static) -> Result<()> {
+    let array: Arc<dyn Array> = Arc::new(expected.clone());
     let field = Field::new("a", array.data_type().clone(), true);
+    let expected = Box::new(expected) as Box<dyn Array>;
 
     let array_ptr = Box::new(ffi::Ffi_ArrowArray::empty());
     let schema_ptr = Box::new(ffi::Ffi_ArrowSchema::empty());
@@ -29,15 +30,6 @@ fn _test_round_trip(array: Arc<dyn Array>, expected: Box<dyn Array>) -> Result<(
     assert_eq!(&result_array, &expected);
     assert_eq!(result_field, field);
     Ok(())
-}
-
-fn test_round_trip(expected: impl Array + Clone + 'static) -> Result<()> {
-    let array: Arc<dyn Array> = Arc::new(expected.clone());
-    let expected = Box::new(expected) as Box<dyn Array>;
-    _test_round_trip(array.clone(), clone(expected.as_ref()))?;
-
-    // sliced
-    _test_round_trip(array.slice(1, 2).into(), expected.slice(1, 2))
 }
 
 fn test_round_trip_schema(field: Field) -> Result<()> {
@@ -142,17 +134,6 @@ fn list_list() -> Result<()> {
     array.try_extend(data)?;
 
     let array: ListArray<i32> = array.into();
-
-    test_round_trip(array)
-}
-
-#[test]
-fn struct_() -> Result<()> {
-    let data_type = DataType::Struct(vec![Field::new("a", DataType::Int32, true)]);
-    let values = vec![Arc::new(Int32Array::from([Some(1), None, Some(3)])) as Arc<dyn Array>];
-    let validity = Bitmap::from([true, false, true]);
-
-    let array = StructArray::from_data(data_type, values, validity.into());
 
     test_round_trip(array)
 }

@@ -223,6 +223,11 @@ unsafe impl ToFfi for StructArray {
         vec![self.validity.as_ref().map(|x| x.as_ptr())]
     }
 
+    fn offset(&self) -> usize {
+        // we do not support offsets in structs. Instead, if an FFI we slice the incoming arrays
+        0
+    }
+
     fn children(&self) -> Vec<Arc<dyn Array>> {
         self.values.clone()
     }
@@ -233,7 +238,9 @@ impl<A: ffi::ArrowArrayRef> FromFfi<A> for StructArray {
         let field = array.field();
         let fields = Self::get_fields(field.data_type()).to_vec();
 
-        let validity = unsafe { array.validity() }?;
+        let length = array.array().len();
+        let offset = array.array().offset();
+        let mut validity = unsafe { array.validity() }?;
         let values = (0..fields.len())
             .map(|index| {
                 let child = array.child(index)?;
@@ -241,6 +248,9 @@ impl<A: ffi::ArrowArrayRef> FromFfi<A> for StructArray {
             })
             .collect::<Result<Vec<Arc<dyn Array>>>>()?;
 
+        if offset > 0 {
+            validity = validity.map(|x| x.slice(offset, length))
+        }
         Ok(Self::from_data(DataType::Struct(fields), values, validity))
     }
 }

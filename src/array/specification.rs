@@ -100,11 +100,12 @@ pub fn check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) {
 }
 
 /// # Panics iff:
-/// * the `offsets` is empty, or
 /// * the `offsets` is not monotonically increasing, or
 /// * any offset is larger or equal to `values_len`.
 pub fn check_offsets<O: Offset>(offsets: &[O], values_len: usize) {
-    assert!(!offsets.is_empty());
+    if offsets.is_empty() {
+        return;
+    }
 
     let mut last = offsets[0];
     // assert monotonicity

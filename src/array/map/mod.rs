@@ -22,6 +22,7 @@ pub struct MapArray {
     field: Arc<dyn Array>,
     // invariant: offsets.len() - 1 == Bitmap::len()
     validity: Option<Bitmap>,
+    offset: usize,
 }
 
 impl MapArray {
@@ -80,6 +81,7 @@ impl MapArray {
             data_type,
             field,
             offsets,
+            offset: 0,
             validity,
         }
     }
@@ -109,6 +111,7 @@ impl MapArray {
             offsets,
             field: self.field.clone(),
             validity,
+            offset: self.offset + offset,
         }
     }
 }

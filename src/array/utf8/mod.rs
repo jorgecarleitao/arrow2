@@ -36,6 +36,7 @@ pub struct Utf8Array<O: Offset> {
     offsets: Buffer<O>,
     values: Buffer<u8>,
     validity: Option<Bitmap>,
+    offset: usize,
 }
 
 impl<O: Offset> Utf8Array<O> {
@@ -85,6 +86,7 @@ impl<O: Offset> Utf8Array<O> {
             offsets,
             values,
             validity,
+            offset: 0,
         }
     }
 
@@ -126,6 +128,7 @@ impl<O: Offset> Utf8Array<O> {
             offsets,
             values,
             validity,
+            offset: 0,
         }
     }
 
@@ -158,6 +161,7 @@ impl<O: Offset> Utf8Array<O> {
             offsets,
             values: self.values.clone(),
             validity,
+            offset: self.offset + offset,
         }
     }
 

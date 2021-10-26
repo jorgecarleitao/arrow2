@@ -1,8 +1,7 @@
 use crate::{bitmap::Bitmap, buffer::Buffer, datatypes::DataType, error::Result};
 
-use super::{display_fmt, display_helper, Array};
+use super::{display_fmt, display_helper, ffi::ToFfi, Array};
 
-mod ffi;
 mod iterator;
 mod mutable;
 pub use mutable::*;
@@ -15,6 +14,7 @@ pub struct FixedSizeBinaryArray {
     data_type: DataType,
     values: Buffer<u8>,
     validity: Option<Bitmap>,
+    offset: usize,
 }
 
 impl FixedSizeBinaryArray {
@@ -47,6 +47,7 @@ impl FixedSizeBinaryArray {
             data_type,
             values,
             validity,
+            offset: 0,
         }
     }
 
@@ -82,6 +83,7 @@ impl FixedSizeBinaryArray {
             size: self.size,
             values,
             validity,
+            offset: self.offset + offset,
         }
     }
 
@@ -177,6 +179,19 @@ impl std::fmt::Display for FixedSizeBinaryArray {
         let a = |x: &[u8]| display_helper(x.iter().map(|x| Some(format!("{:b}", x)))).join(" ");
         let iter = self.iter().map(|x| x.map(a));
         display_fmt(iter, "FixedSizeBinaryArray", f, false)
+    }
+}
+
+unsafe impl ToFfi for FixedSizeBinaryArray {
+    fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>> {
+        vec![
+            self.validity.as_ref().map(|x| x.as_ptr()),
+            std::ptr::NonNull::new(self.values.as_ptr() as *mut u8),
+        ]
+    }
+
+    fn offset(&self) -> usize {
+        self.offset
     }
 }
 
