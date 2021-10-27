@@ -17,7 +17,7 @@
 
 use std::net::SocketAddr;
 
-use arrow_format::flight::data::{FlightEndpoint, Location, Ticket};
+use arrow_format::flight::{FlightEndpoint, Location, Ticket};
 use tokio::net::TcpListener;
 
 pub mod auth_basic_proto;

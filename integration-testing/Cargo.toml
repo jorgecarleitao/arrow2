@@ -29,7 +29,7 @@ logging = ["tracing-subscriber"]
 
 [dependencies]
 arrow2 = { path = "../", features = ["io_ipc", "io_ipc_compression", "io_flight", "io_json_integration"] }
-arrow-format = { git = "https://github.com/PsiACE/arrow-format.git", features = ["ipc", "flight"] }
+arrow-format = { git = "https://github.com/DataEngineeringLabs/arrow-format.git", features = ["ipc", "flight"] }
 async-trait = "0.1.41"
 clap = "2.33"
 futures = "0.3"

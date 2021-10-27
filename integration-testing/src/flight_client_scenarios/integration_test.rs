@@ -17,14 +17,19 @@
 
 use crate::{read_json_file, ArrowFile};
 
-use arrow2::{array::*, datatypes::*, io::flight::{self, deserialize_batch, serialize_batch}, io::ipc::{read, write}, record_batch::RecordBatch};
+use arrow2::{
+    array::*,
+    datatypes::*,
+    io::flight::{self, deserialize_batch, serialize_batch},
+    io::ipc::{read, write},
+    record_batch::RecordBatch,
+};
+use arrow_format::flight::flight_service_client::FlightServiceClient;
+use arrow_format::flight::{
+    flight_descriptor::DescriptorType, FlightData, FlightDescriptor, Location, Ticket,
+};
 use arrow_format::ipc;
 use arrow_format::ipc::Message::MessageHeader;
-use arrow_format::flight::data::{
-    flight_descriptor::DescriptorType,
-    FlightData, FlightDescriptor, Location, Ticket,
-};
-use arrow_format::flight::service::flight_service_client::FlightServiceClient;
 use futures::{channel::mpsc, sink::SinkExt, stream, StreamExt};
 use tonic::{Request, Streaming};
 
@@ -126,8 +131,7 @@ async fn send_batch(
     batch: &RecordBatch,
     options: &write::IpcWriteOptions,
 ) -> Result {
-    let (dictionary_flight_data, mut batch_flight_data) =
-        serialize_batch(batch, options);
+    let (dictionary_flight_data, mut batch_flight_data) = serialize_batch(batch, options);
 
     upload_tx
         .send_all(&mut stream::iter(dictionary_flight_data).map(Ok))
@@ -210,9 +214,8 @@ async fn consume_flight_location(
         let metadata = counter.to_string().into_bytes();
         assert_eq!(metadata, data.app_metadata);
 
-        let actual_batch =
-            deserialize_batch(&data, schema.clone(), true, &dictionaries_by_field)
-                .expect("Unable to convert flight data to Arrow batch");
+        let actual_batch = deserialize_batch(&data, schema.clone(), true, &dictionaries_by_field)
+            .expect("Unable to convert flight data to Arrow batch");
 
         assert_eq!(expected_batch.schema(), actual_batch.schema());
         assert_eq!(expected_batch.num_columns(), actual_batch.num_columns());
@@ -262,7 +265,8 @@ async fn receive_batch_flight_data(
         .expect("Error reading dictionary");
 
         data = resp.next().await?.ok()?;
-        message = ipc::Message::root_as_message(&data.data_header[..]).expect("Error parsing message");
+        message =
+            ipc::Message::root_as_message(&data.data_header[..]).expect("Error parsing message");
     }
 
     Some(data)

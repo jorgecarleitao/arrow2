@@ -17,9 +17,9 @@
 
 use std::pin::Pin;
 
-use arrow_format::flight::data::flight_descriptor::DescriptorType;
-use arrow_format::flight::service::flight_service_server::{FlightService, FlightServiceServer};
-use arrow_format::flight::data::*;
+use arrow_format::flight::flight_descriptor::DescriptorType;
+use arrow_format::flight::flight_service_server::{FlightService, FlightServiceServer};
+use arrow_format::flight::*;
 use futures::Stream;
 use tonic::{transport::Server, Request, Response, Status, Streaming};
 
@@ -50,7 +50,7 @@ impl FlightService for MiddlewareScenarioImpl {
     type ListFlightsStream = TonicStream<Result<FlightInfo, Status>>;
     type DoGetStream = TonicStream<Result<FlightData, Status>>;
     type DoPutStream = TonicStream<Result<PutResult, Status>>;
-    type DoActionStream = TonicStream<Result<arrow_format::flight::data::Result, Status>>;
+    type DoActionStream = TonicStream<Result<arrow_format::flight::Result, Status>>;
     type ListActionsStream = TonicStream<Result<ActionType, Status>>;
     type DoExchangeStream = TonicStream<Result<FlightData, Status>>;
 
@@ -90,8 +90,7 @@ impl FlightService for MiddlewareScenarioImpl {
 
         let descriptor = request.into_inner();
 
-        if descriptor.r#type == DescriptorType::Cmd as i32 && descriptor.cmd == b"success"
-        {
+        if descriptor.r#type == DescriptorType::Cmd as i32 && descriptor.cmd == b"success" {
             // Return a fake location - the test doesn't read it
             let endpoint = super::endpoint("foo", "grpc+tcp://localhost:10010");
 
