@@ -265,3 +265,7 @@ harness = false
 [[bench]]
 name = "bitwise"
 harness = false
+
+[[bench]]
+name = "mutable"
+harness = false

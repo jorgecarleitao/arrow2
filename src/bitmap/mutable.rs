@@ -76,11 +76,23 @@ impl MutableBitmap {
     /// Pushes a new bit to the [`MutableBitmap`], re-sizing it if necessary.
     #[inline]
     pub fn push(&mut self, value: bool) {
-        if self.length % 8 == 0 {
-            self.buffer.push(0);
+        // loop unrolling is still cool
+        // 64 / 8 = 8
+        if self.length % 64 == 0 {
+            self.buffer.push(u8::MAX); // 1
+            self.buffer.push(u8::MAX); // 2
+            self.buffer.push(u8::MAX); // ..
+            self.buffer.push(u8::MAX);
+            self.buffer.push(u8::MAX);
+            self.buffer.push(u8::MAX);
+            self.buffer.push(u8::MAX); // 7
+            self.buffer.push(u8::MAX); // 8
         }
-        let byte = self.buffer.as_mut_slice().last_mut().unwrap();
-        *byte = set(*byte, self.length % 8, value);
+
+        if !value {
+            let bytes = self.buffer.as_mut_slice();
+            set_bit(bytes, self.length, false)
+        }
         self.length += 1;
     }
 
