@@ -26,7 +26,7 @@ use crate::{
 pub fn or(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
     if lhs.len() != rhs.len() {
         return Err(ArrowError::InvalidArgumentError(
-            "Cannot perfobitwise operation on arrays of different length".to_string(),
+            "Cannot perform bitwise operation on arrays of different length".to_string(),
         ));
     }
 

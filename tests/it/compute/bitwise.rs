@@ -1,9 +1,9 @@
 #![allow(clippy::zero_prefixed_literal, clippy::inconsistent_digit_grouping)]
 
 use arrow2::array::*;
-use arrow2::compute::arithmetics::decimal::add::*;
-use arrow2::compute::binary::*;
+use arrow2::compute::bitwise::*;
 use arrow2::datatypes::DataType;
+use itertools::assert_equal;
 
 #[test]
 fn test_xor() {

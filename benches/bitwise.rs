@@ -1,7 +1,7 @@
 extern crate arrow2;
 
 use arrow2::{
-    compute::binary, datatypes::DataType,
+    compute::bitwise::*, datatypes::DataType,
     types::NativeType,
     util::bench_util::{create_boolean_array, create_primitive_array},
 };
@@ -17,28 +17,28 @@ fn bench_or<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>)
     where
         T: NativeType + BitOr<Output = T> + NumCast,
 {
-    criterion::black_box(binary::or(lhs, rhs)).unwrap();
+    criterion::black_box(or(lhs, rhs)).unwrap();
 }
 
 fn bench_xor<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>)
     where
         T: NativeType + BitXor<Output = T> + NumCast,
 {
-    criterion::black_box(binary::xor(lhs, rhs)).unwrap();
+    criterion::black_box(xor(lhs, rhs)).unwrap();
 }
 
 fn bench_and<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>)
     where
         T: NativeType + BitAnd<Output = T> + NumCast,
 {
-    criterion::black_box(binary::and(lhs, rhs)).unwrap();
+    criterion::black_box(and(lhs, rhs)).unwrap();
 }
 
 fn bench_not<T>(arr: &PrimitiveArray<T>)
     where
         T: NativeType + Not<Output = T> + NumCast,
 {
-    criterion::black_box(binary::not(arr));
+    criterion::black_box(not(arr));
 }
 
 fn add_benchmark(c: &mut Criterion) {
@@ -47,7 +47,7 @@ fn add_benchmark(c: &mut Criterion) {
         let arr_a = create_primitive_array_with_seed::<u64>(size, DataType::UInt64, 0.0, 43);
         let arr_b = create_primitive_array_with_seed::<u64>(size, DataType::UInt64, 0.0, 42);
 
-        c.bench_function(&format!("add 2^{}", log2_size), |b| {
+        c.bench_function(&format!("or 2^{}", log2_size), |b| {
             b.iter(|| bench_or(&arr_a, &arr_b))
         });
 
