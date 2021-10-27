@@ -35,7 +35,7 @@ fn push() {
     let bitmap: Bitmap = bitmap.into();
     assert_eq!(bitmap.len(), 10);
 
-    assert_eq!(bitmap.as_slice().0, &[0b11111001, 0b00000011]);
+    assert_eq!(bitmap.as_slice().0, &[0b11111001, 0b11111111]);
 }
 
 #[test]
@@ -47,7 +47,7 @@ fn push_small() {
     let bitmap: Option<Bitmap> = bitmap.into();
     let bitmap = bitmap.unwrap();
     assert_eq!(bitmap.len(), 3);
-    assert_eq!(bitmap.as_slice().0[0], 0b00000011);
+    assert_eq!(bitmap.as_slice().0[0], 0b11111011);
 }
 
 #[test]

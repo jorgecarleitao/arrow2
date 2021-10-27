@@ -21,7 +21,7 @@ fn basics() {
     assert_eq!(array.offsets().as_slice(), &[0, 5, 5, 11]);
     assert_eq!(
         array.validity(),
-        Some(&Bitmap::from_u8_slice(&[0b00000101], 3))
+        Some(&Bitmap::from_u8_slice(&[0b11111101], 3))
     );
     assert!(array.is_valid(0));
     assert!(!array.is_valid(1));

@@ -88,15 +88,18 @@ impl MutableBitmap {
             self.buffer.push(u8::MAX); // 7
             self.buffer.push(u8::MAX); // 8
         }
+        // Its an invariant of the struct that
+        // length.saturating_add(7) / 8 == buffer.len();
+        // so we must keep that updated.
+        if self.length % 8 == 0 {
+            unsafe { self.buffer.set_len((self.length + 1).saturating_add(7) / 8) }
+        }
 
         if !value {
             let bytes = self.buffer.as_mut_slice();
             set_bit(bytes, self.length, false)
         }
-        // Soundness
-        // the buffer is guaranteed to be minimal this length of initialized data.
-        // there may be 64 bytes more initialized.
-        unsafe { self.set_len(self.length + 1) }
+        self.length += 1;
     }
 
     /// Returns the capacity of [`MutableBitmap`] in number of bits.
@@ -244,7 +247,7 @@ impl MutableBitmap {
 
 impl From<MutableBitmap> for Bitmap {
     #[inline]
-    fn from(buffer: MutableBitmap) -> Self {
+    fn from(mut buffer: MutableBitmap) -> Self {
         Bitmap::from_bytes(buffer.buffer.into(), buffer.length)
     }
 }
