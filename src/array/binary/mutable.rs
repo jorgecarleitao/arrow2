@@ -123,11 +123,10 @@ impl<O: Offset> MutableBinaryArray<O> {
     }
 
     fn init_validity(&mut self) {
-        self.validity = Some(MutableBitmap::from_trusted_len_iter(
-            std::iter::repeat(true)
-                .take(self.len() - 1)
-                .chain(std::iter::once(false)),
-        ))
+        let mut validity = MutableBitmap::with_capacity(self.values.capacity());
+        validity.extend_constant(self.len(), true);
+        validity.set(self.len() - 1, false);
+        self.validity = Some(validity);
     }
 
     /// Converts itself into an [`Array`].
