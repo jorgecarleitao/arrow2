@@ -93,7 +93,10 @@ impl MutableBitmap {
             let bytes = self.buffer.as_mut_slice();
             set_bit(bytes, self.length, false)
         }
-        self.length += 1;
+        // Soundness
+        // the buffer is guaranteed to be minimal this length of initialized data.
+        // there may be 64 bytes more initialized.
+        unsafe { self.set_len(self.length + 1) }
     }
 
     /// Returns the capacity of [`MutableBitmap`] in number of bits.
