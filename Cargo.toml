@@ -39,8 +39,7 @@ indexmap = { version = "^1.6", optional = true }
 # used to print columns in a nice columnar format
 comfy-table = { version = "4.0", optional = true, default-features = false }
 
-arrow-format = { git = "https://github.com/DataEngineeringLabs/arrow-format.git",  optional = true, features = ["ipc"] }
-flatbuffers = { version = "=2.0.0", optional = true }
+arrow-format = { version = "0.3.0",  optional = true, features = ["ipc"] }
 
 hex = { version = "^0.4", optional = true }
 
@@ -110,9 +109,9 @@ io_csv = ["io_csv_read", "io_csv_write"]
 io_csv_read = ["csv", "lexical-core"]
 io_csv_write = ["csv", "streaming-iterator", "lexical-core"]
 io_json = ["serde", "serde_json", "indexmap"]
-io_ipc = ["arrow-format", "flatbuffers"]
+io_ipc = ["arrow-format"]
 io_ipc_compression = ["lz4", "zstd"]
-io_flight = ["io_ipc", "arrow-format/flight"]
+io_flight = ["io_ipc", "arrow-format/flight-data"]
 io_parquet_compression = [
     "parquet2/zstd",
     "parquet2/snappy",

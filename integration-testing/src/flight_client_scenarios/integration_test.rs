@@ -24,10 +24,10 @@ use arrow2::{
     io::ipc::{read, write},
     record_batch::RecordBatch,
 };
-use arrow_format::flight::flight_service_client::FlightServiceClient;
-use arrow_format::flight::{
+use arrow_format::flight::data::{
     flight_descriptor::DescriptorType, FlightData, FlightDescriptor, Location, Ticket,
 };
+use arrow_format::flight::service::flight_service_client::FlightServiceClient;
 use arrow_format::ipc;
 use arrow_format::ipc::Message::MessageHeader;
 use futures::{channel::mpsc, sink::SinkExt, stream, StreamExt};

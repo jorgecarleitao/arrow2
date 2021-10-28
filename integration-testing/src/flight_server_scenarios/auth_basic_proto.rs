@@ -18,8 +18,8 @@
 use std::pin::Pin;
 use std::sync::Arc;
 
-use arrow_format::flight::flight_service_server::{FlightService, FlightServiceServer};
-use arrow_format::flight::*;
+use arrow_format::flight::data::*;
+use arrow_format::flight::service::flight_service_server::{FlightService, FlightServiceServer};
 use futures::{channel::mpsc, sink::SinkExt, Stream, StreamExt};
 use tokio::sync::Mutex;
 use tonic::{metadata::MetadataMap, transport::Server, Request, Response, Status, Streaming};
@@ -92,7 +92,7 @@ impl FlightService for AuthBasicProtoScenarioImpl {
     type ListFlightsStream = TonicStream<Result<FlightInfo, Status>>;
     type DoGetStream = TonicStream<Result<FlightData, Status>>;
     type DoPutStream = TonicStream<Result<PutResult, Status>>;
-    type DoActionStream = TonicStream<Result<arrow_format::flight::Result, Status>>;
+    type DoActionStream = TonicStream<Result<arrow_format::flight::data::Result, Status>>;
     type ListActionsStream = TonicStream<Result<ActionType, Status>>;
     type DoExchangeStream = TonicStream<Result<FlightData, Status>>;
 
@@ -191,7 +191,7 @@ impl FlightService for AuthBasicProtoScenarioImpl {
         let flight_context = self.check_auth(request.metadata()).await?;
         // Respond with the authenticated username.
         let buf = flight_context.peer_identity().as_bytes().to_vec();
-        let result = arrow_format::flight::Result { body: buf };
+        let result = arrow_format::flight::data::Result { body: buf };
         let output = futures::stream::once(async { Ok(result) });
         Ok(Response::new(Box::pin(output) as Self::DoActionStream))
     }

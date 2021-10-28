@@ -21,9 +21,9 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use arrow2::io::flight::{serialize_batch, serialize_schema};
-use arrow_format::flight::flight_descriptor::*;
-use arrow_format::flight::flight_service_server::*;
-use arrow_format::flight::*;
+use arrow_format::flight::data::*;
+use arrow_format::flight::data::flight_descriptor::*;
+use arrow_format::flight::service::flight_service_server::*;
 use arrow_format::ipc::Message::{root_as_message, Message, MessageHeader};
 use arrow_format::ipc::Schema as ArrowSchema;
 
@@ -82,7 +82,7 @@ impl FlightService for FlightServiceImpl {
     type ListFlightsStream = TonicStream<Result<FlightInfo, Status>>;
     type DoGetStream = TonicStream<Result<FlightData, Status>>;
     type DoPutStream = TonicStream<Result<PutResult, Status>>;
-    type DoActionStream = TonicStream<Result<arrow_format::flight::Result, Status>>;
+    type DoActionStream = TonicStream<Result<arrow_format::flight::data::Result, Status>>;
     type ListActionsStream = TonicStream<Result<ActionType, Status>>;
     type DoExchangeStream = TonicStream<Result<FlightData, Status>>;
 

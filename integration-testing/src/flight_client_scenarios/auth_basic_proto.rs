@@ -17,8 +17,8 @@
 
 use crate::{AUTH_PASSWORD, AUTH_USERNAME};
 
-use arrow_format::flight::flight_service_client::FlightServiceClient;
-use arrow_format::flight::{Action, BasicAuth, HandshakeRequest};
+use arrow_format::flight::data::{Action, BasicAuth, HandshakeRequest};
+use arrow_format::flight::service::flight_service_client::FlightServiceClient;
 use futures::{stream, StreamExt};
 use prost::Message;
 use tonic::{metadata::MetadataValue, Request, Status};
