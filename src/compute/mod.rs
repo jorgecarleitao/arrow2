@@ -45,4 +45,3 @@ pub mod regex_match;
 #[cfg(feature = "merge_sort")]
 #[cfg_attr(docsrs, doc(cfg(feature = "merge_sort")))]
 pub mod merge_sort;
-

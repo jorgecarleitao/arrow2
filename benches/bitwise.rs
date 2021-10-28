@@ -1,42 +1,43 @@
 extern crate arrow2;
 
 use arrow2::{
-    compute::bitwise::*, datatypes::DataType,
+    compute::bitwise::*,
+    datatypes::DataType,
     types::NativeType,
     util::bench_util::{create_boolean_array, create_primitive_array},
 };
 
-use criterion::{criterion_group, criterion_main, Criterion};
 use arrow2::array::PrimitiveArray;
-use std::ops::{BitXor, BitOr, Not};
-use num_traits::NumCast;
 use arrow2::util::bench_util::create_primitive_array_with_seed;
+use criterion::{criterion_group, criterion_main, Criterion};
 use flatbuffers::bitflags::_core::ops::BitAnd;
+use num_traits::NumCast;
+use std::ops::{BitOr, BitXor, Not};
 
 fn bench_or<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>)
-    where
-        T: NativeType + BitOr<Output = T> + NumCast,
+where
+    T: NativeType + BitOr<Output = T> + NumCast,
 {
     criterion::black_box(or(lhs, rhs)).unwrap();
 }
 
 fn bench_xor<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>)
-    where
-        T: NativeType + BitXor<Output = T> + NumCast,
+where
+    T: NativeType + BitXor<Output = T> + NumCast,
 {
     criterion::black_box(xor(lhs, rhs)).unwrap();
 }
 
 fn bench_and<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>)
-    where
-        T: NativeType + BitAnd<Output = T> + NumCast,
+where
+    T: NativeType + BitAnd<Output = T> + NumCast,
 {
     criterion::black_box(and(lhs, rhs)).unwrap();
 }
 
 fn bench_not<T>(arr: &PrimitiveArray<T>)
-    where
-        T: NativeType + Not<Output = T> + NumCast,
+where
+    T: NativeType + Not<Output = T> + NumCast,
 {
     criterion::black_box(not(arr));
 }
@@ -64,7 +65,6 @@ fn add_benchmark(c: &mut Criterion) {
         });
     });
 }
-
 
 criterion_group!(benches, add_benchmark);
 criterion_main!(benches);

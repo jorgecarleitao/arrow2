@@ -19,7 +19,7 @@ fn test_xor() {
 fn test_and() {
     let a = Int32Array::from(&[Some(1), Some(2), Some(15)]);
     let b = Int32Array::from(&[None, Some(2), Some(6)]);
-    let result = and(               &a, &b).unwrap();
+    let result = and(&a, &b).unwrap();
     let expected = Int32Array::from(&[None, Some(2), Some(6)]);
 
     assert_eq!(result, expected);
@@ -34,7 +34,6 @@ fn test_or() {
 
     assert_eq!(result, expected);
 }
-
 
 #[test]
 fn test_not() {
