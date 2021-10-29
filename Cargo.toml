@@ -17,7 +17,7 @@ bench = false
 [dependencies]
 num-traits = "0.2"
 chrono = { version = "0.4", default_features = false, features = ["std"] }
-chrono-tz = { version = "0.5", optional = true }
+chrono-tz = { version = "0.6", optional = true }
 # To efficiently cast numbers to strings
 lexical-core = { version = "0.8", optional = true }
 # We need to Hash values before sending them to an hasher. This
@@ -39,7 +39,7 @@ indexmap = { version = "^1.6", optional = true }
 # used to print columns in a nice columnar format
 comfy-table = { version = "4.0", optional = true, default-features = false }
 
-arrow-format = { version = "*", optional = true, features = ["ipc"] }
+arrow-format = { version = "0.3.0",  optional = true, features = ["ipc"] }
 
 hex = { version = "^0.4", optional = true }
 

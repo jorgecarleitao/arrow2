@@ -16,23 +16,20 @@
 // under the License.
 
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::pin::Pin;
 use std::sync::Arc;
-use std::convert::TryFrom;
 
 use arrow2::io::flight::{serialize_batch, serialize_schema};
+use arrow_format::flight::data::*;
 use arrow_format::flight::data::flight_descriptor::*;
 use arrow_format::flight::service::flight_service_server::*;
-use arrow_format::flight::data::*;
+use arrow_format::ipc::Message::{root_as_message, Message, MessageHeader};
 use arrow_format::ipc::Schema as ArrowSchema;
-use arrow_format::ipc::Message::{Message, MessageHeader, root_as_message};
 
 use arrow2::{
-    array::Array,
-    datatypes::*,
+    array::Array, datatypes::*, io::flight::serialize_schema_to_info, io::ipc,
     record_batch::RecordBatch,
-    io::ipc,
-    io::flight::serialize_schema_to_info
 };
 
 use futures::{channel::mpsc, sink::SinkExt, Stream, StreamExt};
@@ -113,12 +110,7 @@ impl FlightService for FlightServiceImpl {
 
         let options = ipc::write::IpcWriteOptions::default();
 
-        let schema = std::iter::once({
-            Ok(serialize_schema(
-                &flight.schema,
-                &options,
-            ))
-        });
+        let schema = std::iter::once(Ok(serialize_schema(&flight.schema, &options)));
 
         let batches = flight
             .chunks
@@ -180,12 +172,10 @@ impl FlightService for FlightServiceImpl {
                 let total_records: usize = flight.chunks.iter().map(|chunk| chunk.num_rows()).sum();
 
                 let options = ipc::write::IpcWriteOptions::default();
-                let schema =
-                    serialize_schema_to_info(&flight.schema, &options)
-                        .expect(
-                            "Could not generate schema bytes from schema stored by a DoPut; \
+                let schema = serialize_schema_to_info(&flight.schema, &options).expect(
+                    "Could not generate schema bytes from schema stored by a DoPut; \
                          this should be impossible",
-                        );
+                );
 
                 let info = FlightInfo {
                     schema,
