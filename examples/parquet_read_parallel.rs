@@ -1,4 +1,5 @@
 use crossbeam_channel::unbounded;
+use parquet2::metadata::ColumnChunkMetaData;
 
 use std::fs::File;
 use std::sync::Arc;
@@ -21,32 +22,35 @@ fn parallel_read(path: &str, row_group: usize) -> Result<RecordBatch> {
     let start = SystemTime::now();
     // spawn a thread to produce `Vec<CompressedPage>` (IO bounded)
     let producer = thread::spawn(move || {
-        for field in 0..file_metadata.schema().fields().len() {
+        for (field_i, field) in file_metadata.schema().fields().iter().enumerate() {
             let start = SystemTime::now();
 
             let mut columns = read::get_column_iterator(
                 &mut file,
                 &file_metadata,
                 row_group,
-                field,
+                field_i,
                 None,
                 vec![],
             );
 
-            println!("produce start - field: {}", field);
+            println!("produce start - field: {}", field_i);
 
+            let mut column_chunks = vec![];
             while let read::State::Some(mut new_iter) = columns.advance().unwrap() {
                 if let Some((pages, metadata)) = new_iter.get() {
                     let pages = pages.collect::<Vec<_>>();
 
-                    tx.send((field, metadata.clone(), pages)).unwrap();
+                    column_chunks.push((pages, metadata.clone()));
                 }
                 columns = new_iter;
             }
+            // todo: create API to allow sending each column (and not column chunks) to be processed in parallel
+            tx.send((field_i, field.clone(), column_chunks)).unwrap();
             println!(
                 "produce end - {:?}: {} {}",
                 start.elapsed().unwrap(),
-                field,
+                field_i,
                 row_group
             );
         }
@@ -60,22 +64,22 @@ fn parallel_read(path: &str, row_group: usize) -> Result<RecordBatch> {
             let arrow_schema_consumer = arrow_schema.clone();
             thread::spawn(move || {
                 let mut arrays = vec![];
-                while let Ok((field, metadata, pages)) = rx_consumer.recv() {
+                while let Ok((field_i, field, column_chunks)) = rx_consumer.recv() {
                     let start = SystemTime::now();
-                    let data_type = arrow_schema_consumer.fields()[field].data_type().clone();
-                    println!("consumer {} start - {}", i, field);
+                    let data_type = arrow_schema_consumer.fields()[field_i].data_type().clone();
+                    println!("consumer {} start - {}", i, field_i);
 
-                    let mut pages = read::BasicDecompressor::new(pages.into_iter(), vec![]);
+                    let columns = read::ReadColumnIterator::new(field, column_chunks);
 
-                    let array = read::page_iter_to_array(&mut pages, &metadata, data_type);
+                    let array = read::column_iter_to_array(columns, data_type, vec![]).map(|x| x.0);
                     println!(
                         "consumer {} end - {:?}: {}",
                         i,
                         start.elapsed().unwrap(),
-                        field
+                        field_i
                     );
 
-                    arrays.push((field, array))
+                    arrays.push((field_i, array))
                 }
                 arrays
             })

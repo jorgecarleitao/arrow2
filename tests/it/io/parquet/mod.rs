@@ -546,7 +546,7 @@ pub fn pyarrow_struct(column: usize) -> Box<dyn Array> {
         Some(true),
         Some(true),
     ];
-    let boolean = Arc::new(BooleanArray::from(boolean.clone())) as Arc<dyn Array>;
+    let boolean = Arc::new(BooleanArray::from(boolean)) as Arc<dyn Array>;
     let fields = vec![
         Field::new("f1", DataType::Utf8, true),
         Field::new("f2", DataType::Boolean, true),
