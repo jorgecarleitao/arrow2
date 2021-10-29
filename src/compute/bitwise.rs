@@ -1,9 +1,10 @@
+use std::ops::{BitAnd, BitOr, BitXor, Not};
+
 use crate::array::{Array, PrimitiveArray};
 use crate::compute::arithmetics::basic::check_same_type;
 use crate::compute::arity::{binary, unary};
 use crate::error::Result;
 use crate::types::NativeType;
-use std::ops::{BitAnd, BitOr, BitXor, Not};
 
 /// Performs `OR` operation on two arrays.
 /// # Error
