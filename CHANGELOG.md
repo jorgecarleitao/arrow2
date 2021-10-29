@@ -1,5 +1,50 @@
 # Changelog
 
+## [v0.7.0](https://github.com/jorgecarleitao/arrow2/tree/v0.7.0) (2021-10-29)
+
+[Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.6.2...v0.7.0)
+
+**Breaking changes:**
+
+- Simplified reading parquet [\#532](https://github.com/jorgecarleitao/arrow2/pull/532) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Change IPC `FileReader` to own the underlying reader [\#518](https://github.com/jorgecarleitao/arrow2/pull/518) ([blakesmith](https://github.com/blakesmith))
+- Migrate to `arrow_format` crate [\#517](https://github.com/jorgecarleitao/arrow2/pull/517) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**New features:**
+
+- Added read of 2-level nested lists from parquet [\#548](https://github.com/jorgecarleitao/arrow2/pull/548) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- add dictionary serialization for csv-writer [\#515](https://github.com/jorgecarleitao/arrow2/pull/515) ([ritchie46](https://github.com/ritchie46))
+- Added `checked_negate` and `wrapping_negate` for `PrimitiveArray` [\#506](https://github.com/jorgecarleitao/arrow2/pull/506) ([yjhmelody](https://github.com/yjhmelody))
+
+**Fixed bugs:**
+
+- Fixed error in reading fixed len binary from parquet [\#549](https://github.com/jorgecarleitao/arrow2/pull/549) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed ffi of sliced arrays [\#540](https://github.com/jorgecarleitao/arrow2/pull/540) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed s3 example [\#536](https://github.com/jorgecarleitao/arrow2/pull/536) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed error in writing compressed parquet dict pages [\#523](https://github.com/jorgecarleitao/arrow2/pull/523) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Validity taken into account when writing `StructArray` to json [\#511](https://github.com/jorgecarleitao/arrow2/pull/511) ([VasanthakumarV](https://github.com/VasanthakumarV))
+
+**Enhancements:**
+
+- Bumped Prost and Tonic [\#550](https://github.com/jorgecarleitao/arrow2/pull/550) ([PsiACE](https://github.com/PsiACE))
+- Speedup scalar boolean operations [\#546](https://github.com/jorgecarleitao/arrow2/pull/546) ([Dandandan](https://github.com/Dandandan))
+- Added fast path for validating ASCII text \(~1.12-1.89x improvement on reading ASCII parquet data\) [\#542](https://github.com/jorgecarleitao/arrow2/pull/542) ([Dandandan](https://github.com/Dandandan))
+- Exposed missing APIs to write parquet in parallel [\#539](https://github.com/jorgecarleitao/arrow2/pull/539) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- improve utf8 init validity [\#530](https://github.com/jorgecarleitao/arrow2/pull/530) ([ritchie46](https://github.com/ritchie46))
+- export missing `BinaryValueIter` [\#526](https://github.com/jorgecarleitao/arrow2/pull/526) ([yjhmelody](https://github.com/yjhmelody))
+
+**Documentation updates:**
+
+- Added more IPC documentation [\#534](https://github.com/jorgecarleitao/arrow2/pull/534) ([HagaiHargil](https://github.com/HagaiHargil))
+- Fixed clippy and fmt [\#521](https://github.com/jorgecarleitao/arrow2/pull/521) ([ritchie46](https://github.com/ritchie46))
+
+**Testing updates:**
+
+- Added more tests for `utf8` [\#543](https://github.com/jorgecarleitao/arrow2/pull/543) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Ignored RUSTSEC-2020-0071 and RUSTSEC-2020-0159 [\#537](https://github.com/jorgecarleitao/arrow2/pull/537) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Improved parquet read benches [\#533](https://github.com/jorgecarleitao/arrow2/pull/533) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added fmt and clippy checks to CI. [\#522](https://github.com/jorgecarleitao/arrow2/pull/522) ([xudong963](https://github.com/xudong963))
+
 ## [v0.6.2](https://github.com/jorgecarleitao/arrow2/tree/v0.6.2) (2021-10-09)
 
 [Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.6.1...v0.6.2)
