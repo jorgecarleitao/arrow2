@@ -3,7 +3,6 @@
 use arrow2::array::*;
 use arrow2::compute::bitwise::*;
 use arrow2::datatypes::DataType;
-use itertools::assert_equal;
 
 #[test]
 fn test_xor() {
