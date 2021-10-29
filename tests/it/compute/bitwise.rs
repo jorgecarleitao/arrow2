@@ -1,4 +1,3 @@
-#![allow(clippy::zero_prefixed_literal, clippy::inconsistent_digit_grouping)]
 
 use arrow2::array::*;
 use arrow2::compute::bitwise::*;
