@@ -2,6 +2,7 @@
 #![allow(clippy::type_complexity)]
 
 use std::{
+    collections::VecDeque,
     convert::TryInto,
     io::{Read, Seek},
     sync::Arc,
@@ -171,15 +172,43 @@ fn dict_read<
     }
 }
 
+fn column_offset(data_type: &DataType) -> usize {
+    use crate::datatypes::PhysicalType::*;
+    match data_type.to_physical_type() {
+        Null | Boolean | Primitive(_) | FixedSizeBinary | Binary | LargeBinary | Utf8
+        | LargeUtf8 | Dictionary(_) | List | LargeList | FixedSizeList => 0,
+        Struct => {
+            if let DataType::Struct(v) = data_type.to_logical_type() {
+                v.iter().map(|x| 1 + column_offset(x.data_type())).sum()
+            } else {
+                unreachable!()
+            }
+        }
+        Union => todo!(),
+        Map => todo!(),
+    }
+}
+
 fn column_datatype(data_type: &DataType, column: usize) -> DataType {
     use crate::datatypes::PhysicalType::*;
     match data_type.to_physical_type() {
         Null | Boolean | Primitive(_) | FixedSizeBinary | Binary | LargeBinary | Utf8
         | LargeUtf8 | Dictionary(_) | List | LargeList | FixedSizeList => data_type.clone(),
         Struct => {
-            // todo: this won't work for nested structs because we need to flatten the column ids
-            if let DataType::Struct(v) = data_type {
-                v[column].data_type().clone()
+            if let DataType::Struct(fields) = data_type.to_logical_type() {
+                let mut total_columns = 0;
+                let mut total_fields = 0;
+                for f in fields {
+                    let field_columns = column_offset(f.data_type());
+                    if column < total_columns + field_columns {
+                        return column_datatype(f.data_type(), column + total_columns);
+                    }
+                    total_fields += (field_columns > 0) as usize;
+                    total_columns += field_columns;
+                }
+                fields[column + total_fields - total_columns]
+                    .data_type()
+                    .clone()
             } else {
                 unreachable!()
             }
@@ -308,6 +337,30 @@ fn page_iter_to_array<I: FallibleStreamingIterator<Item = DataPage, Error = Parq
     }
 }
 
+fn finish_array(data_type: DataType, arrays: &mut VecDeque<Box<dyn Array>>) -> Box<dyn Array> {
+    use crate::datatypes::PhysicalType::*;
+    match data_type.to_physical_type() {
+        Null | Boolean | Primitive(_) | FixedSizeBinary | Binary | LargeBinary | Utf8
+        | LargeUtf8 | List | LargeList | FixedSizeList | Dictionary(_) => {
+            arrays.pop_front().unwrap()
+        }
+        Struct => {
+            if let DataType::Struct(fields) = data_type.to_logical_type() {
+                let values = fields
+                    .iter()
+                    .map(|f| finish_array(f.data_type().clone(), arrays))
+                    .map(|x| x.into())
+                    .collect();
+                Box::new(StructArray::from_data(data_type, values, None))
+            } else {
+                unreachable!()
+            }
+        }
+        Union => todo!(),
+        Map => todo!(),
+    }
+}
+
 /// Returns an [`Array`] built from an iterator of column chunks. It also returns
 /// the two buffers used to decompress and deserialize pages (to be re-used).
 #[allow(clippy::type_complexity)]
@@ -323,7 +376,7 @@ where
     let mut nested_info = vec![];
     init_nested(columns.field(), 0, &mut nested_info);
 
-    let mut arrays = vec![];
+    let mut arrays = VecDeque::new();
     let page_buffer;
     let mut column = 0;
     loop {
@@ -336,7 +389,7 @@ where
                     let array =
                         page_iter_to_array(&mut iterator, &mut nested_info, metadata, data_type)?;
                     buffer = iterator.into_inner();
-                    arrays.push(array)
+                    arrays.push_back(array)
                 }
                 column += 1;
                 columns = new_iter;
@@ -348,24 +401,9 @@ where
         }
     }
 
-    use crate::datatypes::PhysicalType::*;
-    Ok(match data_type.to_physical_type() {
-        Null | Boolean | Primitive(_) | FixedSizeBinary | Binary | LargeBinary | Utf8
-        | LargeUtf8 | List | LargeList | FixedSizeList | Dictionary(_) => {
-            (arrays.pop().unwrap(), page_buffer, buffer)
-        }
-        Struct => (
-            Box::new(StructArray::from_data(
-                data_type,
-                arrays.into_iter().map(|x| x.into()).collect(),
-                None,
-            )),
-            page_buffer,
-            buffer,
-        ),
-        Union => todo!(),
-        Map => todo!(),
-    })
+    let array = finish_array(data_type, &mut arrays);
+    assert!(arrays.is_empty());
+    Ok((array, page_buffer, buffer))
 }
 
 /// Converts an async stream of [`DataPage`] into a single [`Array`].

@@ -191,18 +191,34 @@ def case_struct(size):
         ("f1", pa.utf8()),
         ("f2", pa.bool_()),
     ]
-    fields = [
-        pa.field(
-            "struct",
-            pa.struct(struct_fields),
-        )
-    ]
-    schema = pa.schema(fields)
+    schema = pa.schema(
+        [
+            pa.field(
+                "struct",
+                pa.struct(struct_fields),
+            ),
+            pa.field(
+                "struct_struct",
+                pa.struct(
+                    [
+                        ("f1", pa.struct(struct_fields)),
+                        ("f2", pa.bool_()),
+                    ]
+                ),
+            ),
+        ]
+    )
+
+    struct = pa.StructArray.from_arrays(
+        [pa.array(string * size), pa.array(boolean * size)],
+        fields=struct_fields,
+    )
     return (
         {
-            "struct": pa.StructArray.from_arrays(
-                [pa.array(string * size), pa.array(boolean * size)],
-                fields=struct_fields,
+            "struct": struct,
+            "struct_struct": pa.StructArray.from_arrays(
+                [struct, pa.array(boolean * size)],
+                names=["f1", "f2"],
             ),
         },
         schema,

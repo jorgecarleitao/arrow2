@@ -320,6 +320,11 @@ fn v1_struct_optional() -> Result<()> {
 }
 
 #[test]
+fn v1_struct_struct_optional() -> Result<()> {
+    test_pyarrow_integration(1, 1, "struct", false, false)
+}
+
+#[test]
 fn all_types() -> Result<()> {
     let path = "testing/parquet-testing/data/alltypes_plain.parquet";
     let reader = std::fs::File::open(path)?;
