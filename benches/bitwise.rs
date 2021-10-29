@@ -1,18 +1,15 @@
-extern crate arrow2;
+use std::ops::{BitOr, BitXor, Not};
+
+use criterion::{criterion_group, criterion_main, Criterion};
+use num_traits::NumCast;
 
 use arrow2::{
+    array::PrimitiveArray,
     compute::bitwise::*,
     datatypes::DataType,
     types::NativeType,
-    util::bench_util::{create_boolean_array, create_primitive_array},
+    util::bench_util::{create_boolean_array, create_primitive_array, create_primitive_array_with_seed},
 };
-
-use arrow2::array::PrimitiveArray;
-use arrow2::util::bench_util::create_primitive_array_with_seed;
-use criterion::{criterion_group, criterion_main, Criterion};
-use flatbuffers::bitflags::_core::ops::BitAnd;
-use num_traits::NumCast;
-use std::ops::{BitOr, BitXor, Not};
 
 fn bench_or<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>)
 where
