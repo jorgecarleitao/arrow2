@@ -218,7 +218,7 @@ pub fn from_fixed_len_byte_array(
             // would be incorrect if all 12 bytes of the interval are populated
             DataType::Interval(IntervalUnit::DayTime)
         }
-        _ => DataType::FixedSizeBinary(*length),
+        _ => DataType::FixedSizeBinary(*length as usize),
     }
 }
 

@@ -30,8 +30,7 @@ pub fn read_fixed_size_binary<R: Read + Seek>(
         compression,
     )?;
 
-    let length =
-        field_node.length() as usize * (*FixedSizeBinaryArray::get_size(&data_type) as usize);
+    let length = field_node.length() as usize * FixedSizeBinaryArray::get_size(&data_type);
     let values = read_buffer(
         buffers,
         length,

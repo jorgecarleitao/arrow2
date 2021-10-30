@@ -283,7 +283,7 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
         }
         DataType::FixedSizeBinary(size) => Ok(ParquetType::try_from_primitive(
             name,
-            PhysicalType::FixedLenByteArray(*size),
+            PhysicalType::FixedLenByteArray(*size as i32),
             repetition,
             None,
             None,

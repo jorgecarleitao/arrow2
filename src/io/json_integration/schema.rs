@@ -256,7 +256,7 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
         "fixedsizebinary" => {
             // return a list with any type as its child isn't defined in the map
             if let Some(Value::Number(size)) = item.get("byteWidth") {
-                DataType::FixedSizeBinary(size.as_i64().unwrap() as i32)
+                DataType::FixedSizeBinary(size.as_i64().unwrap() as usize)
             } else {
                 return Err(ArrowError::Schema(
                     "Expecting a byteWidth for fixedsizebinary".to_string(),
@@ -385,7 +385,7 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
             if let Some(Value::Number(size)) = item.get("listSize") {
                 DataType::FixedSizeList(
                     Box::new(children.pop().unwrap()),
-                    size.as_i64().unwrap() as i32,
+                    size.as_i64().unwrap() as usize,
                 )
             } else {
                 return Err(ArrowError::Schema(

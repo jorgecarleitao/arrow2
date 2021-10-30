@@ -136,7 +136,7 @@ where
     ArrowError: From<E>,
     I: FallibleStreamingIterator<Item = DataPage, Error = E>,
 {
-    let size = *FixedSizeBinaryArray::get_size(&data_type) as usize;
+    let size = FixedSizeBinaryArray::get_size(&data_type);
 
     let capacity = metadata.num_values() as usize;
     let mut values = MutableBuffer::<u8>::with_capacity(capacity * size);
@@ -168,7 +168,7 @@ where
     E: Clone,
     I: Stream<Item = std::result::Result<DataPage, E>>,
 {
-    let size = *FixedSizeBinaryArray::get_size(&data_type) as usize;
+    let size = FixedSizeBinaryArray::get_size(&data_type);
 
     let capacity = metadata.num_values() as usize;
     let mut values = MutableBuffer::<u8>::with_capacity(capacity * size);

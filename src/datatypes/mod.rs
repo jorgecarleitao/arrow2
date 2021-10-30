@@ -74,7 +74,7 @@ pub enum DataType {
     Binary,
     /// Opaque binary data of fixed size.
     /// Enum parameter specifies the number of bytes per value.
-    FixedSizeBinary(i32),
+    FixedSizeBinary(usize),
     /// Opaque binary data of variable length and 64-bit offsets.
     LargeBinary,
     /// A variable-length string in Unicode with UTF-8 encoding.
@@ -84,7 +84,7 @@ pub enum DataType {
     /// A list of some logical data type with variable length.
     List(Box<Field>),
     /// A list of some logical data type with fixed length.
-    FixedSizeList(Box<Field>, i32),
+    FixedSizeList(Box<Field>, usize),
     /// A list of some logical data type with variable length and 64-bit offsets.
     LargeList(Box<Field>),
     /// A nested datatype that contains a number of sub-fields.

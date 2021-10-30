@@ -34,7 +34,7 @@ impl FixedSizeBinaryArray {
 
     /// Returns a new [`FixedSizeBinaryArray`].
     pub fn from_data(data_type: DataType, values: Buffer<u8>, validity: Option<Bitmap>) -> Self {
-        let size = *Self::get_size(&data_type) as usize;
+        let size = Self::get_size(&data_type);
 
         assert_eq!(values.len() % size, 0);
 
@@ -135,9 +135,9 @@ impl FixedSizeBinaryArray {
 }
 
 impl FixedSizeBinaryArray {
-    pub(crate) fn get_size(data_type: &DataType) -> &i32 {
+    pub(crate) fn get_size(data_type: &DataType) -> usize {
         match data_type.to_logical_type() {
-            DataType::FixedSizeBinary(size) => size,
+            DataType::FixedSizeBinary(size) => *size,
             _ => panic!("Wrong DataType"),
         }
     }
