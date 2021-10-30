@@ -391,7 +391,7 @@ fn write_union() -> Result<()> {
         Field::new("a", DataType::Int32, true),
         Field::new("b", DataType::Utf8, true),
     ];
-    let data_type = DataType::Union(fields, None, true);
+    let data_type = DataType::Union(fields, None, UnionMode::Sparse);
     let types = Buffer::from(&[0, 0, 1]);
     let fields = vec![
         Arc::new(Int32Array::from(&[Some(1), None, Some(2)])) as Arc<dyn Array>,
