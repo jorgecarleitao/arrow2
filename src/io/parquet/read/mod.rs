@@ -30,7 +30,7 @@ pub use parquet2::{
 
 use crate::{
     array::{Array, DictionaryKey, NullArray, PrimitiveArray, StructArray},
-    datatypes::{DataType, IntervalUnit, TimeUnit},
+    datatypes::{DataType, Field, IntervalUnit, TimeUnit},
     error::{ArrowError, Result},
     io::parquet::read::nested_utils::{create_list, init_nested},
 };
@@ -366,7 +366,7 @@ fn finish_array(data_type: DataType, arrays: &mut VecDeque<Box<dyn Array>>) -> B
 #[allow(clippy::type_complexity)]
 pub fn column_iter_to_array<II, I>(
     mut columns: I,
-    data_type: DataType,
+    field: &Field,
     mut buffer: Vec<u8>,
 ) -> Result<(Box<dyn Array>, Vec<u8>, Vec<u8>)>
 where
@@ -374,7 +374,9 @@ where
     I: ColumnChunkIter<II>,
 {
     let mut nested_info = vec![];
-    init_nested(columns.field(), 0, &mut nested_info);
+    init_nested(field, 0, &mut nested_info);
+
+    let data_type = field.data_type().clone();
 
     let mut arrays = VecDeque::new();
     let page_buffer;

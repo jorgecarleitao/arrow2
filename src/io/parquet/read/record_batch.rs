@@ -150,8 +150,7 @@ impl<R: Read + Seek> Iterator for RecordReader<R> {
                     b1,
                 );
 
-                let (array, b1, b2) =
-                    column_iter_to_array(column_iter, field.data_type().clone(), b2)?;
+                let (array, b1, b2) = column_iter_to_array(column_iter, field, b2)?;
 
                 let array = if array.len() > remaining_rows {
                     array.slice(0, remaining_rows)

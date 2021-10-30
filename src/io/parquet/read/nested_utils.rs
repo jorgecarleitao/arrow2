@@ -1,12 +1,10 @@
 use std::sync::Arc;
 
-use parquet2::schema::{types::ParquetType, Repetition};
-
 use crate::{
     array::{Array, ListArray},
     bitmap::{Bitmap, MutableBitmap},
     buffer::{Buffer, MutableBuffer},
-    datatypes::DataType,
+    datatypes::{DataType, Field},
     error::{ArrowError, Result},
 };
 
@@ -214,29 +212,41 @@ pub fn extend_offsets<R, D>(
         });
 }
 
-pub fn init_nested(field: &ParquetType, capacity: usize, container: &mut Vec<Box<dyn Nested>>) {
-    match field {
-        ParquetType::PrimitiveType { basic_info, .. } => {
-            container.push(
-                Box::new(NestedPrimitive::new(super::schema::is_nullable(basic_info)))
-                    as Box<dyn Nested>,
-            );
+pub fn init_nested(field: &Field, capacity: usize, container: &mut Vec<Box<dyn Nested>>) {
+    let is_nullable = field.is_nullable();
+
+    use crate::datatypes::PhysicalType::*;
+    match field.data_type().to_physical_type() {
+        Null | Boolean | Primitive(_) | FixedSizeBinary | Binary | LargeBinary | Utf8
+        | LargeUtf8 | Dictionary(_) => {
+            container.push(Box::new(NestedPrimitive::new(is_nullable)) as Box<dyn Nested>)
         }
-        ParquetType::GroupType {
-            basic_info, fields, ..
-        } => {
-            if basic_info.repetition() != &Repetition::Repeated {
-                let item = if super::schema::is_nullable(basic_info) {
-                    Box::new(NestedOptional::with_capacity(capacity)) as Box<dyn Nested>
-                } else {
-                    Box::new(NestedValid::with_capacity(capacity)) as Box<dyn Nested>
-                };
-                container.push(item);
+        List | LargeList | FixedSizeList => {
+            if is_nullable {
+                container.push(Box::new(NestedOptional::with_capacity(capacity)) as Box<dyn Nested>)
+            } else {
+                container.push(Box::new(NestedValid::with_capacity(capacity)) as Box<dyn Nested>)
             }
-            for field in fields {
-                init_nested(field, capacity, container)
+            match field.data_type().to_logical_type() {
+                DataType::List(ref inner)
+                | DataType::List(ref inner)
+                | DataType::FixedSizeList(ref inner, _) => {
+                    init_nested(inner.as_ref(), capacity, container)
+                }
+                _ => unreachable!(),
+            };
+        }
+        Struct => {
+            container.push(Box::new(NestedPrimitive::new(is_nullable)) as Box<dyn Nested>);
+            if let DataType::Struct(fields) = field.data_type().to_logical_type() {
+                fields
+                    .iter()
+                    .for_each(|field| init_nested(field, capacity, container));
+            } else {
+                unreachable!()
             }
         }
+        _ => todo!(),
     }
 }
 
