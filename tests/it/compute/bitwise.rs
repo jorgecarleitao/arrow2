@@ -1,7 +1,5 @@
-
 use arrow2::array::*;
 use arrow2::compute::bitwise::*;
-use arrow2::datatypes::DataType;
 
 #[test]
 fn test_xor() {

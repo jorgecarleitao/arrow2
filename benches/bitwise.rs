@@ -8,7 +8,9 @@ use arrow2::{
     compute::bitwise::*,
     datatypes::DataType,
     types::NativeType,
-    util::bench_util::{create_boolean_array, create_primitive_array, create_primitive_array_with_seed},
+    util::bench_util::{
+        create_boolean_array, create_primitive_array, create_primitive_array_with_seed,
+    },
 };
 
 fn bench_or<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>)
