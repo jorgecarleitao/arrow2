@@ -308,7 +308,7 @@ pub fn array_to_page(
                     values.extend_from_slice(bytes)
                 });
                 let array = FixedSizeBinaryArray::from_data(
-                    DataType::FixedSizeBinary(size as i32),
+                    DataType::FixedSizeBinary(size),
                     values.into(),
                     array.validity().cloned(),
                 );
@@ -449,7 +449,7 @@ fn nested_array_to_page(
         DataType::FixedSizeList(_, size) => {
             let array = array.as_any().downcast_ref::<FixedSizeListArray>().unwrap();
             let offsets = (0..array.len())
-                .map(|x| size * x as i32)
+                .map(|x| (*size * x) as i32)
                 .collect::<Vec<_>>();
             list_array_to_page(
                 &offsets,

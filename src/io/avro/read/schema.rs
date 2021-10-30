@@ -173,7 +173,7 @@ fn schema_to_field(
                 false,
             ))
         }
-        AvroSchema::Fixed { size, .. } => DataType::FixedSizeBinary(*size as i32),
+        AvroSchema::Fixed { size, .. } => DataType::FixedSizeBinary(*size),
         AvroSchema::Decimal {
             precision, scale, ..
         } => DataType::Decimal(*precision, *scale),

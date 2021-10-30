@@ -39,7 +39,7 @@ impl MutableFixedSizeBinaryArray {
         values: MutableBuffer<u8>,
         validity: Option<MutableBitmap>,
     ) -> Self {
-        let size = *FixedSizeBinaryArray::get_size(&data_type) as usize;
+        let size = FixedSizeBinaryArray::get_size(&data_type);
         assert_eq!(
             values.len() % size,
             0,
@@ -68,7 +68,7 @@ impl MutableFixedSizeBinaryArray {
     /// Creates a new [`MutableFixedSizeBinaryArray`] with capacity for `capacity` entries.
     pub fn with_capacity(size: usize, capacity: usize) -> Self {
         Self::from_data(
-            DataType::FixedSizeBinary(size as i32),
+            DataType::FixedSizeBinary(size),
             MutableBuffer::<u8>::with_capacity(capacity * size),
             None,
         )
@@ -189,7 +189,7 @@ impl MutableArray for MutableFixedSizeBinaryArray {
 
     fn as_box(&mut self) -> Box<dyn Array> {
         Box::new(FixedSizeBinaryArray::from_data(
-            DataType::FixedSizeBinary(self.size as i32),
+            DataType::FixedSizeBinary(self.size),
             std::mem::take(&mut self.values).into(),
             std::mem::take(&mut self.validity).map(|x| x.into()),
         ))
@@ -197,7 +197,7 @@ impl MutableArray for MutableFixedSizeBinaryArray {
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
         Arc::new(FixedSizeBinaryArray::from_data(
-            DataType::FixedSizeBinary(self.size as i32),
+            DataType::FixedSizeBinary(self.size),
             std::mem::take(&mut self.values).into(),
             std::mem::take(&mut self.validity).map(|x| x.into()),
         ))

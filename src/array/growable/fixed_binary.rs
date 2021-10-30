@@ -40,7 +40,7 @@ impl<'a> GrowableFixedSizeBinary<'a> {
             .map(|array| build_extend_null_bits(*array, use_validity))
             .collect();
 
-        let size = *FixedSizeBinaryArray::get_size(arrays[0].data_type()) as usize;
+        let size = FixedSizeBinaryArray::get_size(arrays[0].data_type());
         Self {
             arrays,
             values: MutableBuffer::with_capacity(0),

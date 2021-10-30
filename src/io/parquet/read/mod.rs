@@ -291,7 +291,7 @@ pub fn page_iter_to_array<I: FallibleStreamingIterator<Item = DataPage, Error = 
                         let paddings = (0..(16 - *n)).map(|_| 0u8).collect::<Vec<_>>();
                         fixed_size_binary::iter_to_array(
                             iter,
-                            DataType::FixedSizeBinary(*n),
+                            DataType::FixedSizeBinary(*n as usize),
                             metadata,
                         )
                         .map(|e| {
