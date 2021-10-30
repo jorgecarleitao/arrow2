@@ -30,6 +30,7 @@ csv = { version = "^1.1", optional = true }
 regex = { version = "^1.3", optional = true }
 lazy_static = { version = "^1.4", optional = true }
 streaming-iterator = { version = "0.1", optional = true }
+fallible-streaming-iterator = { version = "0.1", optional = true }
 
 serde = { version = "^1.0", features = ["rc"], optional = true }
 serde_derive = { version = "^1.0", optional = true }
@@ -119,7 +120,7 @@ io_parquet_compression = [
     "parquet2/lz4",
     "parquet2/brotli",
 ]
-io_avro = ["avro-rs", "streaming-iterator", "serde_json", "libflate"]
+io_avro = ["avro-rs", "fallible-streaming-iterator", "serde_json", "libflate"]
 # io_json: its dependencies + error handling
 # serde_derive: there is some derive around
 io_json_integration = ["io_json", "serde_derive", "hex"]
@@ -243,4 +244,8 @@ harness = false
 
 [[bench]]
 name = "iter_list"
+harness = false
+
+[[bench]]
+name = "avro_read"
 harness = false
