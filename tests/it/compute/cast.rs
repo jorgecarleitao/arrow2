@@ -1,5 +1,5 @@
 use arrow2::array::*;
-use arrow2::compute::cast::{can_cast_types, cast, wrapping_cast};
+use arrow2::compute::cast::{can_cast_types, cast, partial_cast, wrapping_cast};
 use arrow2::datatypes::*;
 use arrow2::types::NativeType;
 
@@ -169,6 +169,17 @@ fn binary_to_i32() {
     let c = b.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
 
     let expected = &[Some(5), Some(6), None, Some(8), None];
+    let expected = Int32Array::from(expected);
+    assert_eq!(c, &expected);
+}
+
+#[test]
+fn binary_to_i32_partial() {
+    let array = BinaryArray::<i32>::from_slice(&["5", "6", "123 abseven", "aaa", "9.1"]);
+    let b = partial_cast(&array, &DataType::Int32).unwrap();
+    let c = b.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
+
+    let expected = &[Some(5), Some(6), Some(123), Some(0), None];
     let expected = Int32Array::from(expected);
     assert_eq!(c, &expected);
 }

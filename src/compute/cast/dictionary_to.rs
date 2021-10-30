@@ -44,8 +44,15 @@ pub fn wrapping_dictionary_to_dictionary_values<K: DictionaryKey>(
     let keys = from.keys();
     let values = from.values();
 
-    let values =
-        cast_with_options(values.as_ref(), values_type, CastOptions { wrapped: true })?.into();
+    let values = cast_with_options(
+        values.as_ref(),
+        values_type,
+        CastOptions {
+            wrapped: true,
+            partial: false,
+        },
+    )?
+    .into();
     Ok(DictionaryArray::from_data(keys.clone(), values))
 }
 

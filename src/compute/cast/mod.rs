@@ -21,11 +21,14 @@ pub use utf8_to::*;
 
 /// options defining how Cast kernels behave
 #[derive(Clone, Copy, Debug, Default)]
-struct CastOptions {
+pub struct CastOptions {
     /// default to false
     /// whether an overflowing cast should be converted to `None` (default), or be wrapped (i.e. `256i16 as u8 = 0` vectorized).
     /// Settings this to `true` is 5-6x faster for numeric types.
     wrapped: bool,
+    /// default to false
+    /// whether to cast to an integer at the best-effort
+    partial: bool,
 }
 
 impl CastOptions {
@@ -324,14 +327,35 @@ fn cast_large_to_list(array: &ListArray<i64>, to_type: &DataType) -> ListArray<i
 /// * Utf8 to boolean
 /// * Interval and duration
 pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
-    cast_with_options(array, to_type, CastOptions { wrapped: false })
+    cast_with_options(array, to_type, CastOptions::default())
 }
 
 /// Similar to [`cast`], but overflowing cast is wrapped
 /// Behavior:
 /// * PrimitiveArray to PrimitiveArray: overflowing cast will be wrapped (i.e. `256i16 as u8 = 0` vectorized).
 pub fn wrapping_cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
-    cast_with_options(array, to_type, CastOptions { wrapped: true })
+    cast_with_options(
+        array,
+        to_type,
+        CastOptions {
+            wrapped: true,
+            partial: false,
+        },
+    )
+}
+
+/// Similar to [`cast`], but parse the utf8/binary into integer at the best-effort.
+/// Behavior:
+/// * PrimitiveArray to PrimitiveArray: overflowing cast will be wrapped (i.e. `256i16 as u8 = 0` vectorized).
+pub fn partial_cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
+    cast_with_options(
+        array,
+        to_type,
+        CastOptions {
+            wrapped: false,
+            partial: true,
+        },
+    )
 }
 
 #[inline]
@@ -451,16 +475,16 @@ fn cast_with_options(
         },
 
         (Utf8, _) => match to_type {
-            UInt8 => utf8_to_primitive_dyn::<i32, u8>(array, to_type),
-            UInt16 => utf8_to_primitive_dyn::<i32, u16>(array, to_type),
-            UInt32 => utf8_to_primitive_dyn::<i32, u32>(array, to_type),
-            UInt64 => utf8_to_primitive_dyn::<i32, u64>(array, to_type),
-            Int8 => utf8_to_primitive_dyn::<i32, i8>(array, to_type),
-            Int16 => utf8_to_primitive_dyn::<i32, i16>(array, to_type),
-            Int32 => utf8_to_primitive_dyn::<i32, i32>(array, to_type),
-            Int64 => utf8_to_primitive_dyn::<i32, i64>(array, to_type),
-            Float32 => utf8_to_primitive_dyn::<i32, f32>(array, to_type),
-            Float64 => utf8_to_primitive_dyn::<i32, f64>(array, to_type),
+            UInt8 => utf8_to_primitive_dyn::<i32, u8>(array, to_type, options),
+            UInt16 => utf8_to_primitive_dyn::<i32, u16>(array, to_type, options),
+            UInt32 => utf8_to_primitive_dyn::<i32, u32>(array, to_type, options),
+            UInt64 => utf8_to_primitive_dyn::<i32, u64>(array, to_type, options),
+            Int8 => utf8_to_primitive_dyn::<i32, i8>(array, to_type, options),
+            Int16 => utf8_to_primitive_dyn::<i32, i16>(array, to_type, options),
+            Int32 => utf8_to_primitive_dyn::<i32, i32>(array, to_type, options),
+            Int64 => utf8_to_primitive_dyn::<i32, i64>(array, to_type, options),
+            Float32 => utf8_to_primitive_dyn::<i32, f32>(array, to_type, options),
+            Float64 => utf8_to_primitive_dyn::<i32, f64>(array, to_type, options),
             Date32 => utf8_to_date32_dyn::<i32>(array),
             Date64 => utf8_to_date64_dyn::<i32>(array),
             LargeUtf8 => Ok(Box::new(utf8_to_large_utf8(
@@ -476,16 +500,16 @@ fn cast_with_options(
             ))),
         },
         (LargeUtf8, _) => match to_type {
-            UInt8 => utf8_to_primitive_dyn::<i64, u8>(array, to_type),
-            UInt16 => utf8_to_primitive_dyn::<i64, u16>(array, to_type),
-            UInt32 => utf8_to_primitive_dyn::<i64, u32>(array, to_type),
-            UInt64 => utf8_to_primitive_dyn::<i64, u64>(array, to_type),
-            Int8 => utf8_to_primitive_dyn::<i64, i8>(array, to_type),
-            Int16 => utf8_to_primitive_dyn::<i64, i16>(array, to_type),
-            Int32 => utf8_to_primitive_dyn::<i64, i32>(array, to_type),
-            Int64 => utf8_to_primitive_dyn::<i64, i64>(array, to_type),
-            Float32 => utf8_to_primitive_dyn::<i64, f32>(array, to_type),
-            Float64 => utf8_to_primitive_dyn::<i64, f64>(array, to_type),
+            UInt8 => utf8_to_primitive_dyn::<i64, u8>(array, to_type, options),
+            UInt16 => utf8_to_primitive_dyn::<i64, u16>(array, to_type, options),
+            UInt32 => utf8_to_primitive_dyn::<i64, u32>(array, to_type, options),
+            UInt64 => utf8_to_primitive_dyn::<i64, u64>(array, to_type, options),
+            Int8 => utf8_to_primitive_dyn::<i64, i8>(array, to_type, options),
+            Int16 => utf8_to_primitive_dyn::<i64, i16>(array, to_type, options),
+            Int32 => utf8_to_primitive_dyn::<i64, i32>(array, to_type, options),
+            Int64 => utf8_to_primitive_dyn::<i64, i64>(array, to_type, options),
+            Float32 => utf8_to_primitive_dyn::<i64, f32>(array, to_type, options),
+            Float64 => utf8_to_primitive_dyn::<i64, f64>(array, to_type, options),
             Date32 => utf8_to_date32_dyn::<i64>(array),
             Date64 => utf8_to_date64_dyn::<i64>(array),
             Utf8 => utf8_large_to_utf8(array.as_any().downcast_ref().unwrap())
@@ -573,16 +597,16 @@ fn cast_with_options(
         },
 
         (Binary, _) => match to_type {
-            UInt8 => binary_to_primitive_dyn::<i32, u8>(array, to_type),
-            UInt16 => binary_to_primitive_dyn::<i32, u16>(array, to_type),
-            UInt32 => binary_to_primitive_dyn::<i32, u32>(array, to_type),
-            UInt64 => binary_to_primitive_dyn::<i32, u64>(array, to_type),
-            Int8 => binary_to_primitive_dyn::<i32, i8>(array, to_type),
-            Int16 => binary_to_primitive_dyn::<i32, i16>(array, to_type),
-            Int32 => binary_to_primitive_dyn::<i32, i32>(array, to_type),
-            Int64 => binary_to_primitive_dyn::<i32, i64>(array, to_type),
-            Float32 => binary_to_primitive_dyn::<i32, f32>(array, to_type),
-            Float64 => binary_to_primitive_dyn::<i32, f64>(array, to_type),
+            UInt8 => binary_to_primitive_dyn::<i32, u8>(array, to_type, options),
+            UInt16 => binary_to_primitive_dyn::<i32, u16>(array, to_type, options),
+            UInt32 => binary_to_primitive_dyn::<i32, u32>(array, to_type, options),
+            UInt64 => binary_to_primitive_dyn::<i32, u64>(array, to_type, options),
+            Int8 => binary_to_primitive_dyn::<i32, i8>(array, to_type, options),
+            Int16 => binary_to_primitive_dyn::<i32, i16>(array, to_type, options),
+            Int32 => binary_to_primitive_dyn::<i32, i32>(array, to_type, options),
+            Int64 => binary_to_primitive_dyn::<i32, i64>(array, to_type, options),
+            Float32 => binary_to_primitive_dyn::<i32, f32>(array, to_type, options),
+            Float64 => binary_to_primitive_dyn::<i32, f64>(array, to_type, options),
             LargeBinary => Ok(Box::new(binary_to_large_binary(
                 array.as_any().downcast_ref().unwrap(),
                 to_type.clone(),
@@ -594,16 +618,16 @@ fn cast_with_options(
         },
 
         (LargeBinary, _) => match to_type {
-            UInt8 => binary_to_primitive_dyn::<i64, u8>(array, to_type),
-            UInt16 => binary_to_primitive_dyn::<i64, u16>(array, to_type),
-            UInt32 => binary_to_primitive_dyn::<i64, u32>(array, to_type),
-            UInt64 => binary_to_primitive_dyn::<i64, u64>(array, to_type),
-            Int8 => binary_to_primitive_dyn::<i64, i8>(array, to_type),
-            Int16 => binary_to_primitive_dyn::<i64, i16>(array, to_type),
-            Int32 => binary_to_primitive_dyn::<i64, i32>(array, to_type),
-            Int64 => binary_to_primitive_dyn::<i64, i64>(array, to_type),
-            Float32 => binary_to_primitive_dyn::<i64, f32>(array, to_type),
-            Float64 => binary_to_primitive_dyn::<i64, f64>(array, to_type),
+            UInt8 => binary_to_primitive_dyn::<i64, u8>(array, to_type, options),
+            UInt16 => binary_to_primitive_dyn::<i64, u16>(array, to_type, options),
+            UInt32 => binary_to_primitive_dyn::<i64, u32>(array, to_type, options),
+            UInt64 => binary_to_primitive_dyn::<i64, u64>(array, to_type, options),
+            Int8 => binary_to_primitive_dyn::<i64, i8>(array, to_type, options),
+            Int16 => binary_to_primitive_dyn::<i64, i16>(array, to_type, options),
+            Int32 => binary_to_primitive_dyn::<i64, i32>(array, to_type, options),
+            Int64 => binary_to_primitive_dyn::<i64, i64>(array, to_type, options),
+            Float32 => binary_to_primitive_dyn::<i64, f32>(array, to_type, options),
+            Float64 => binary_to_primitive_dyn::<i64, f64>(array, to_type, options),
             Binary => {
                 binary_large_to_binary(array.as_any().downcast_ref().unwrap(), to_type.clone())
                     .map(|x| Box::new(x) as Box<dyn Array>)
