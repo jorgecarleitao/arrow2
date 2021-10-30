@@ -380,10 +380,10 @@ fn to_format(data_type: &DataType) -> String {
         }
         DataType::Timestamp(unit, tz) => {
             let unit = match unit {
-                TimeUnit::Second => "s".to_string(),
-                TimeUnit::Millisecond => "m".to_string(),
-                TimeUnit::Microsecond => "u".to_string(),
-                TimeUnit::Nanosecond => "n".to_string(),
+                TimeUnit::Second => "s",
+                TimeUnit::Millisecond => "m",
+                TimeUnit::Microsecond => "u",
+                TimeUnit::Nanosecond => "n",
             };
             format!(
                 "ts{}:{}",
