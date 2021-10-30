@@ -18,7 +18,7 @@
 use std::{ptr::NonNull, sync::Arc};
 
 use crate::{
-    array::{buffers_children_dictionary, Array},
+    array::{offset_buffers_children_dictionary, Array},
     bitmap::{utils::bytes_for, Bitmap},
     buffer::{
         bytes::{Bytes, Deallocation},
@@ -96,7 +96,8 @@ impl Ffi_ArrowArray {
     /// This method releases `buffers`. Consumers of this struct *must* call `release` before
     /// releasing this struct, or contents in `buffers` leak.
     pub(crate) fn new(array: Arc<dyn Array>) -> Self {
-        let (buffers, children, dictionary) = buffers_children_dictionary(array.as_ref());
+        let (offset, buffers, children, dictionary) =
+            offset_buffers_children_dictionary(array.as_ref());
 
         let buffers_ptr = buffers
             .iter()

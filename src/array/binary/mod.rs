@@ -23,7 +23,6 @@ pub struct BinaryArray<O: Offset> {
     offsets: Buffer<O>,
     values: Buffer<u8>,
     validity: Option<Bitmap>,
-    offset: usize,
 }
 
 // constructors
@@ -71,7 +70,6 @@ impl<O: Offset> BinaryArray<O> {
             offsets,
             values,
             validity,
-            offset: 0,
         }
     }
 
@@ -113,7 +111,6 @@ impl<O: Offset> BinaryArray<O> {
             offsets,
             values,
             validity,
-            offset: 0,
         }
     }
 
@@ -146,7 +143,6 @@ impl<O: Offset> BinaryArray<O> {
             offsets,
             values: self.values.clone(),
             validity,
-            offset: self.offset + offset,
         }
     }
 

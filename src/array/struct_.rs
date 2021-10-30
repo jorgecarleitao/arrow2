@@ -223,11 +223,6 @@ unsafe impl ToFfi for StructArray {
         vec![self.validity.as_ref().map(|x| x.as_ptr())]
     }
 
-    fn offset(&self) -> usize {
-        // we do not support offsets in structs. Instead, if an FFI we slice the incoming arrays
-        0
-    }
-
     fn children(&self) -> Vec<Arc<dyn Array>> {
         self.values.clone()
     }

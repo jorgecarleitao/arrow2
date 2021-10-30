@@ -11,9 +11,16 @@ unsafe impl<K: DictionaryKey> ToFfi for DictionaryArray<K> {
         self.keys.buffers()
     }
 
-    #[inline]
-    fn offset(&self) -> usize {
-        self.offset
+    fn offset(&self) -> Option<usize> {
+        self.keys.offset()
+    }
+
+    fn to_ffi_aligned(&self) -> Self {
+        Self {
+            data_type: self.data_type.clone(),
+            keys: self.keys.to_ffi_aligned(),
+            values: self.values,
+        }
     }
 }
 

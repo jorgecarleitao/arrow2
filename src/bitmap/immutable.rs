@@ -168,6 +168,12 @@ impl Bitmap {
     pub(crate) fn as_ptr(&self) -> std::ptr::NonNull<u8> {
         self.bytes.ptr()
     }
+
+    /// Returns a pointer to the start of this [`Bitmap`] (ignores `offsets`)
+    /// This pointer is allocated iff `self.len() > 0`.
+    pub(crate) fn offset(&self) -> usize {
+        self.offset
+    }
 }
 
 impl<P: AsRef<[bool]>> From<P> for Bitmap {

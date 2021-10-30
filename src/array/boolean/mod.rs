@@ -20,7 +20,6 @@ pub struct BooleanArray {
     data_type: DataType,
     values: Bitmap,
     validity: Option<Bitmap>,
-    offset: usize,
 }
 
 impl BooleanArray {
@@ -50,7 +49,6 @@ impl BooleanArray {
             data_type,
             values,
             validity,
-            offset: 0,
         }
     }
 
@@ -83,7 +81,6 @@ impl BooleanArray {
             data_type: self.data_type.clone(),
             values: self.values.clone().slice_unchecked(offset, length),
             validity,
-            offset: self.offset + offset,
         }
     }
 

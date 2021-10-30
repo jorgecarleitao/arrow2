@@ -9,17 +9,20 @@ use crate::error::Result;
 /// [C data interface](https://arrow.apache.org/docs/format/CDataInterface.html) (FFI).
 /// Safety:
 /// Implementing this trait incorrect will lead to UB
-pub unsafe trait ToFfi {
+pub(crate) unsafe trait ToFfi {
     /// The pointers to the buffers.
     fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>>;
-
-    /// The offset
-    fn offset(&self) -> usize;
 
     /// The children
     fn children(&self) -> Vec<Arc<dyn Array>> {
         vec![]
     }
+
+    /// The offset
+    fn offset(&self) -> Option<usize>;
+
+    /// return a partial clone of self with an offset.
+    fn to_ffi_aligned(&self) -> Self;
 }
 
 /// Trait describing how a struct imports into itself from the
@@ -35,17 +38,23 @@ pub trait FromFfi<T: ffi::ArrowArrayRef>: Sized {
 macro_rules! ffi_dyn {
     ($array:expr, $ty:ty) => {{
         let array = $array.as_any().downcast_ref::<$ty>().unwrap();
-        (array.buffers(), array.children(), None)
+        (
+            array.offset().unwrap(),
+            array.buffers(),
+            array.children(),
+            None,
+        )
     }};
 }
 
 type BuffersChildren = (
+    usize,
     Vec<Option<std::ptr::NonNull<u8>>>,
     Vec<Arc<dyn Array>>,
     Option<Arc<dyn Array>>,
 );
 
-pub fn buffers_children_dictionary(array: &dyn Array) -> BuffersChildren {
+pub fn offset_buffers_children_dictionary(array: &dyn Array) -> BuffersChildren {
     use PhysicalType::*;
     match array.data_type().to_physical_type() {
         Null => ffi_dyn!(array, NullArray),
@@ -68,6 +77,7 @@ pub fn buffers_children_dictionary(array: &dyn Array) -> BuffersChildren {
             with_match_physical_dictionary_key_type!(key_type, |$T| {
                 let array = array.as_any().downcast_ref::<DictionaryArray<$T>>().unwrap();
                 (
+                    array.offset().unwrap(),
                     array.buffers(),
                     array.children(),
                     Some(array.values().clone()),

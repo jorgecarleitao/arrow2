@@ -7,7 +7,6 @@ use super::{ffi::ToFfi, Array};
 pub struct NullArray {
     data_type: DataType,
     length: usize,
-    offset: usize,
 }
 
 impl NullArray {
@@ -23,19 +22,14 @@ impl NullArray {
 
     /// Returns a new [`NullArray`].
     pub fn from_data(data_type: DataType, length: usize) -> Self {
-        Self {
-            data_type,
-            length,
-            offset: 0,
-        }
+        Self { data_type, length }
     }
 
     /// Returns a slice of the [`NullArray`].
-    pub fn slice(&self, offset: usize, length: usize) -> Self {
+    pub fn slice(&self, _offset: usize, length: usize) -> Self {
         Self {
             data_type: self.data_type.clone(),
             length,
-            offset: self.offset + offset,
         }
     }
 }
@@ -82,8 +76,11 @@ unsafe impl ToFfi for NullArray {
         vec![]
     }
 
-    #[inline]
-    fn offset(&self) -> usize {
-        self.offset
+    fn offset(&self) -> Option<usize> {
+        Some(0)
+    }
+
+    fn to_ffi_aligned(&self) -> Self {
+        self.clone()
     }
 }

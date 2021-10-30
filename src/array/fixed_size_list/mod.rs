@@ -5,8 +5,9 @@ use crate::{
     datatypes::{DataType, Field},
 };
 
-use super::{display_fmt, ffi::ToFfi, new_empty_array, new_null_array, Array};
+use super::{display_fmt, new_empty_array, new_null_array, Array};
 
+mod ffi;
 mod iterator;
 pub use iterator::*;
 mod mutable;
@@ -20,7 +21,6 @@ pub struct FixedSizeListArray {
     data_type: DataType,
     values: Arc<dyn Array>,
     validity: Option<Bitmap>,
-    offset: usize,
 }
 
 impl FixedSizeListArray {
@@ -60,7 +60,6 @@ impl FixedSizeListArray {
             data_type,
             values,
             validity,
-            offset: 0,
         }
     }
 
@@ -97,7 +96,6 @@ impl FixedSizeListArray {
             size: self.size,
             values,
             validity,
-            offset: self.offset + offset,
         }
     }
 
@@ -192,19 +190,5 @@ impl Array for FixedSizeListArray {
 impl std::fmt::Display for FixedSizeListArray {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         display_fmt(self.iter(), "FixedSizeListArray", f, true)
-    }
-}
-
-unsafe impl ToFfi for FixedSizeListArray {
-    fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>> {
-        vec![self.validity.as_ref().map(|x| x.as_ptr())]
-    }
-
-    fn offset(&self) -> usize {
-        self.offset
-    }
-
-    fn children(&self) -> Vec<Arc<dyn Array>> {
-        vec![self.values().clone()]
     }
 }

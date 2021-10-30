@@ -1,5 +1,6 @@
 use crate::{
     array::{FromFfi, ToFfi},
+    bitmap::align,
     datatypes::DataType,
     ffi,
 };
@@ -16,8 +17,35 @@ unsafe impl ToFfi for BooleanArray {
         ]
     }
 
-    fn offset(&self) -> usize {
-        self.offset
+    fn offset(&self) -> Option<usize> {
+        let offset = self.values.offset();
+        if let Some(bitmap) = self.validity.as_ref() {
+            if bitmap.offset() == offset {
+                Some(offset)
+            } else {
+                None
+            }
+        } else {
+            Some(offset)
+        }
+    }
+
+    fn to_ffi_aligned(&self) -> Self {
+        let offset = self.values.offset();
+
+        let validity = self.validity.as_ref().map(|bitmap| {
+            if bitmap.offset() == offset {
+                bitmap.clone()
+            } else {
+                align(bitmap, offset)
+            }
+        });
+
+        Self {
+            data_type: self.data_type.clone(),
+            validity,
+            values: self.values.clone(),
+        }
     }
 }
 

@@ -22,7 +22,6 @@ pub struct MapArray {
     field: Arc<dyn Array>,
     // invariant: offsets.len() - 1 == Bitmap::len()
     validity: Option<Bitmap>,
-    offset: usize,
 }
 
 impl MapArray {
@@ -81,7 +80,6 @@ impl MapArray {
             data_type,
             field,
             offsets,
-            offset: 0,
             validity,
         }
     }
@@ -111,7 +109,6 @@ impl MapArray {
             offsets,
             field: self.field.clone(),
             validity,
-            offset: self.offset + offset,
         }
     }
 }
@@ -148,8 +145,8 @@ impl MapArray {
     /// Assumes that the `i < self.len`.
     #[inline]
     pub unsafe fn value_unchecked(&self, i: usize) -> Box<dyn Array> {
-        let offset = *self.offsets.as_ptr().add(i);
-        let offset_1 = *self.offsets.as_ptr().add(i + 1);
+        let offset = *self.offsets.get_unchecked(i);
+        let offset_1 = *self.offsets.get_unchecked(i + 1);
         let length = (offset_1 - offset).to_usize();
 
         self.field.slice_unchecked(offset.to_usize(), length)
