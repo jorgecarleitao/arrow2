@@ -90,8 +90,8 @@ pub enum DataType {
     /// A nested datatype that contains a number of sub-fields.
     Struct(Vec<Field>),
     /// A nested datatype that can represent slots of differing types.
-    /// Third argument represents sparsness
-    Union(Vec<Field>, Option<Vec<i32>>, bool),
+    /// Third argument represents mode
+    Union(Vec<Field>, Option<Vec<i32>>, UnionMode),
     /// A nested type that is represented as
     ///
     /// List<entries: Struct<key: K, value: V>>
@@ -141,6 +141,37 @@ pub enum DataType {
 impl std::fmt::Display for DataType {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{:?}", self)
+    }
+}
+
+/// Mode of [`DataType::Union`]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum UnionMode {
+    /// Dense union
+    Dense,
+    /// Sparse union
+    Sparse,
+}
+
+impl UnionMode {
+    /// Constructs a [`UnionMode::Sparse`] if the input bool is true,
+    /// or otherwise constructs a [`UnionMode::Dense`]
+    pub fn sparse(is_sparse: bool) -> Self {
+        if is_sparse {
+            Self::Sparse
+        } else {
+            Self::Dense
+        }
+    }
+
+    /// Returns whether the mode is sparse
+    pub fn is_sparse(&self) -> bool {
+        matches!(self, Self::Sparse)
+    }
+
+    /// Returns whether the mode is dense
+    pub fn is_dense(&self) -> bool {
+        matches!(self, Self::Dense)
     }
 }
 

@@ -5,6 +5,7 @@ use arrow_format::ipc;
 
 use crate::array::UnionArray;
 use crate::datatypes::DataType;
+use crate::datatypes::UnionMode::Dense;
 use crate::error::Result;
 
 use super::super::deserialize::{read, skip, Node};
@@ -36,8 +37,8 @@ pub fn read_union<R: Read + Seek>(
         compression,
     )?;
 
-    let offsets = if let DataType::Union(_, _, is_sparse) = data_type {
-        if !is_sparse {
+    let offsets = if let DataType::Union(_, _, mode) = data_type {
+        if !mode.is_sparse() {
             Some(read_buffer(
                 buffers,
                 field_node.length() as usize,
@@ -82,10 +83,8 @@ pub fn skip_union(
     let _ = field_nodes.pop_front().unwrap();
 
     let _ = buffers.pop_front().unwrap();
-    if let DataType::Union(_, _, is_sparse) = data_type {
-        if !*is_sparse {
-            let _ = buffers.pop_front().unwrap();
-        }
+    if let DataType::Union(_, _, Dense) = data_type {
+        let _ = buffers.pop_front().unwrap();
     } else {
         panic!()
     };
