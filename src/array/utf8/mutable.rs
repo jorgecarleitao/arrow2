@@ -25,12 +25,17 @@ pub struct MutableUtf8Array<O: Offset> {
 
 impl<O: Offset> From<MutableUtf8Array<O>> for Utf8Array<O> {
     fn from(other: MutableUtf8Array<O>) -> Self {
-        Utf8Array::<O>::from_data(
-            other.data_type,
-            other.offsets.into(),
-            other.values.into(),
-            other.validity.map(|x| x.into()),
-        )
+        // Safety:
+        // `MutableUtf8Array` has the same invariants as `Utf8Array` and thus
+        // `Utf8Array` can be safely created from `MutableUtf8Array` without checks.
+        unsafe {
+            Utf8Array::<O>::from_data_unchecked(
+                other.data_type,
+                other.offsets.into(),
+                other.values.into(),
+                other.validity.map(|x| x.into()),
+            )
+        }
     }
 }
 
