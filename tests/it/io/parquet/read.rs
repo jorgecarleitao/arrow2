@@ -233,6 +233,21 @@ fn v1_nested_large_binary() -> Result<()> {
 }
 
 #[test]
+fn v2_nested_nested() -> Result<()> {
+    test_pyarrow_integration(7, 2, "nested", false, false)
+}
+
+#[test]
+fn v2_nested_nested_required() -> Result<()> {
+    test_pyarrow_integration(8, 2, "nested", false, false)
+}
+
+#[test]
+fn v2_nested_nested_required_required() -> Result<()> {
+    test_pyarrow_integration(9, 2, "nested", false, false)
+}
+
+#[test]
 fn v1_decimal_9_nullable() -> Result<()> {
     test_pyarrow_integration(7, 1, "basic", false, false)
 }
@@ -240,6 +255,11 @@ fn v1_decimal_9_nullable() -> Result<()> {
 #[test]
 fn v1_decimal_9_required() -> Result<()> {
     test_pyarrow_integration(6, 1, "basic", false, true)
+}
+
+#[test]
+fn v1_decimal_9_nullable_dict() -> Result<()> {
+    test_pyarrow_integration(7, 1, "basic", true, false)
 }
 
 #[test]
@@ -291,10 +311,6 @@ fn v2_decimal_26_nullable() -> Result<()> {
 fn v2_decimal_26_required() -> Result<()> {
     test_pyarrow_integration(8, 2, "basic", false, true)
 }
-/*#[test]
-fn v2_nested_nested() {
-    let _ = test_pyarrow_integration(7, 1, "nested",false, false);
-}*/
 
 #[test]
 fn all_types() -> Result<()> {

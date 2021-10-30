@@ -4,7 +4,7 @@ use crate::{
     array::{display::get_value_display, display_fmt, new_empty_array, new_null_array, Array},
     bitmap::Bitmap,
     buffer::Buffer,
-    datatypes::{DataType, Field},
+    datatypes::{DataType, Field, UnionMode},
     scalar::{new_scalar, Scalar},
 };
 
@@ -37,13 +37,13 @@ pub struct UnionArray {
 impl UnionArray {
     /// Creates a new null [`UnionArray`].
     pub fn new_null(data_type: DataType, length: usize) -> Self {
-        if let DataType::Union(f, _, is_sparse) = &data_type {
+        if let DataType::Union(f, _, mode) = &data_type {
             let fields = f
                 .iter()
                 .map(|x| new_null_array(x.data_type().clone(), length).into())
                 .collect();
 
-            let offsets = if *is_sparse {
+            let offsets = if mode.is_sparse() {
                 None
             } else {
                 Some((0..length as i32).collect::<Buffer<i32>>())
@@ -60,13 +60,13 @@ impl UnionArray {
 
     /// Creates a new empty [`UnionArray`].
     pub fn new_empty(data_type: DataType) -> Self {
-        if let DataType::Union(f, _, is_sparse) = &data_type {
+        if let DataType::Union(f, _, mode) = &data_type {
             let fields = f
                 .iter()
                 .map(|x| new_empty_array(x.data_type().clone()).into())
                 .collect();
 
-            let offsets = if *is_sparse {
+            let offsets = if mode.is_sparse() {
                 None
             } else {
                 Some(Buffer::new())
@@ -92,7 +92,7 @@ impl UnionArray {
         fields: Vec<Arc<dyn Array>>,
         offsets: Option<Buffer<i32>>,
     ) -> Self {
-        let (f, ids, is_sparse) = Self::get_all(&data_type);
+        let (f, ids, mode) = Self::get_all(&data_type);
 
         if f.len() != fields.len() {
             panic!("The number of `fields` must equal the number of fields in the Union DataType")
@@ -104,7 +104,7 @@ impl UnionArray {
         if !same_data_types {
             panic!("All fields' datatype in the union must equal the datatypes on the fields.")
         }
-        if offsets.is_none() != is_sparse {
+        if offsets.is_none() != mode.is_sparse() {
             panic!("Sparsness flag must equal to noness of offsets in UnionArray")
         }
         let fields_hash = ids.as_ref().map(|ids| {
@@ -244,11 +244,9 @@ impl Array for UnionArray {
 }
 
 impl UnionArray {
-    fn get_all(data_type: &DataType) -> (&[Field], Option<&[i32]>, bool) {
+    fn get_all(data_type: &DataType) -> (&[Field], Option<&[i32]>, UnionMode) {
         match data_type.to_logical_type() {
-            DataType::Union(fields, ids, is_sparse) => {
-                (fields, ids.as_ref().map(|x| x.as_ref()), *is_sparse)
-            }
+            DataType::Union(fields, ids, mode) => (fields, ids.as_ref().map(|x| x.as_ref()), *mode),
             _ => panic!("Wrong datatype passed to UnionArray."),
         }
     }
@@ -264,7 +262,7 @@ impl UnionArray {
     /// # Panic
     /// Panics iff `data_type`'s logical type is not [`DataType::Union`].
     pub fn is_sparse(data_type: &DataType) -> bool {
-        Self::get_all(data_type).2
+        Self::get_all(data_type).2.is_sparse()
     }
 }
 

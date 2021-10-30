@@ -142,7 +142,7 @@ fn schema_to_field(
                     .iter()
                     .map(|s| schema_to_field(s, None, has_nullable, None))
                     .collect::<Result<Vec<Field>>>()?;
-                DataType::Union(fields, None, false)
+                DataType::Union(fields, None, UnionMode::Dense)
             }
         }
         AvroSchema::Record { name, fields, .. } => {
@@ -173,7 +173,7 @@ fn schema_to_field(
                 false,
             ))
         }
-        AvroSchema::Fixed { size, .. } => DataType::FixedSizeBinary(*size as i32),
+        AvroSchema::Fixed { size, .. } => DataType::FixedSizeBinary(*size),
         AvroSchema::Decimal {
             precision, scale, ..
         } => DataType::Decimal(*precision, *scale),

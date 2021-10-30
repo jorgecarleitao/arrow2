@@ -1,6 +1,7 @@
 mod basic;
 mod dictionary;
 mod nested;
+mod utils;
 
 pub use basic::iter_to_array;
 pub use basic::stream_to_array;

@@ -6,7 +6,7 @@ mod utils;
 use std::sync::Arc;
 
 use futures::{pin_mut, Stream, StreamExt};
-use parquet2::{page::DataPage, read::StreamingIterator, types::NativeType};
+use parquet2::{page::DataPage, types::NativeType, FallibleStreamingIterator};
 
 use super::nested_utils::*;
 use super::{ColumnChunkMetaData, ColumnDescriptor};
@@ -30,22 +30,15 @@ pub fn iter_to_array<T, A, I, E, F>(
 where
     ArrowError: From<E>,
     T: NativeType,
-    E: Clone,
     A: ArrowNativeType,
     F: Copy + Fn(T) -> A,
-    I: StreamingIterator<Item = std::result::Result<DataPage, E>>,
+    I: FallibleStreamingIterator<Item = DataPage, Error = E>,
 {
     let capacity = metadata.num_values() as usize;
     let mut values = MutableBuffer::<A>::with_capacity(capacity);
     let mut validity = MutableBitmap::with_capacity(capacity);
-    while let Some(page) = iter.next() {
-        basic::extend_from_page(
-            page.as_ref().map_err(|x| x.clone())?,
-            metadata.descriptor(),
-            &mut values,
-            &mut validity,
-            op,
-        )?
+    while let Some(page) = iter.next()? {
+        basic::extend_from_page(page, metadata.descriptor(), &mut values, &mut validity, op)?
     }
 
     let data_type = match data_type {
@@ -107,14 +100,14 @@ pub fn iter_to_array_nested<T, A, I, E, F>(
     metadata: &ColumnChunkMetaData,
     data_type: DataType,
     op: F,
-) -> Result<Box<dyn Array>>
+) -> Result<(Arc<dyn Array>, Vec<Box<dyn Nested>>)>
 where
     ArrowError: From<E>,
     T: NativeType,
     E: Clone,
     A: ArrowNativeType,
     F: Copy + Fn(T) -> A,
-    I: StreamingIterator<Item = std::result::Result<DataPage, E>>,
+    I: FallibleStreamingIterator<Item = DataPage, Error = E>,
 {
     let capacity = metadata.num_values() as usize;
     let mut values = MutableBuffer::<A>::with_capacity(capacity);
@@ -122,9 +115,9 @@ where
 
     let (mut nested, is_nullable) = init_nested(metadata.descriptor().base_type(), capacity);
 
-    while let Some(page) = iter.next() {
+    while let Some(page) = iter.next()? {
         nested::extend_from_page(
-            page.as_ref().map_err(|x| x.clone())?,
+            page,
             metadata.descriptor(),
             is_nullable,
             &mut nested,
@@ -134,24 +127,10 @@ where
         )?
     }
 
-    let values = match data_type {
-        DataType::List(ref inner) => Arc::new(PrimitiveArray::<A>::from_data(
-            inner.data_type().clone(),
-            values.into(),
-            validity.into(),
-        )),
-        DataType::LargeList(ref inner) => Arc::new(PrimitiveArray::<A>::from_data(
-            inner.data_type().clone(),
-            values.into(),
-            validity.into(),
-        )),
-        _ => {
-            return Err(ArrowError::NotYetImplemented(format!(
-                "Read nested datatype {:?}",
-                data_type
-            )))
-        }
-    };
-
-    create_list(data_type, &mut nested, values)
+    let values = Arc::new(PrimitiveArray::<A>::from_data(
+        data_type,
+        values.into(),
+        validity.into(),
+    ));
+    Ok((values, nested))
 }

@@ -1,8 +1,7 @@
 use parquet2::{
-    compression::create_codec,
     encoding::Encoding,
     metadata::ColumnDescriptor,
-    page::CompressedDataPage,
+    page::DataPage,
     statistics::{deserialize_statistics, serialize_statistics, ParquetStatistics},
     write::WriteOptions,
 };
@@ -18,7 +17,7 @@ pub fn array_to_page(
     array: &FixedSizeBinaryArray,
     options: WriteOptions,
     descriptor: ColumnDescriptor,
-) -> Result<CompressedDataPage> {
+) -> Result<DataPage> {
     let is_optional = is_type_nullable(descriptor.type_());
     let validity = array.validity();
 
@@ -45,19 +44,6 @@ pub fn array_to_page(
         buffer.extend_from_slice(array.values());
     }
 
-    let uncompressed_page_size = buffer.len();
-
-    let codec = create_codec(&options.compression)?;
-    let buffer = if let Some(mut codec) = codec {
-        // todo: remove this allocation by extending `buffer` directly.
-        // needs refactoring `compress`'s API.
-        let mut tmp = vec![];
-        codec.compress(&buffer, &mut tmp)?;
-        tmp
-    } else {
-        buffer
-    };
-
     let statistics = if options.write_statistics {
         build_statistics(array, descriptor.clone())
     } else {
@@ -68,7 +54,6 @@ pub fn array_to_page(
         buffer,
         array.len(),
         array.null_count(),
-        uncompressed_page_size,
         0,
         definition_levels_byte_length,
         statistics,

@@ -4,14 +4,16 @@ use parquet2::{
     encoding::{hybrid_rle::HybridRleDecoder, Encoding},
     metadata::{ColumnChunkMetaData, ColumnDescriptor},
     page::DataPage,
-    read::{levels::get_bit_width, StreamingIterator},
+    read::levels::get_bit_width,
+    FallibleStreamingIterator,
 };
 
 use super::super::nested_utils::*;
 use super::super::utils;
 use super::basic::read_plain_required;
+use super::utils::finish_array;
 use crate::{
-    array::{Array, BinaryArray, Offset, Utf8Array},
+    array::{Array, Offset},
     bitmap::MutableBitmap,
     buffer::MutableBuffer,
     datatypes::DataType,
@@ -149,12 +151,11 @@ pub fn iter_to_array<O, I, E>(
     mut iter: I,
     metadata: &ColumnChunkMetaData,
     data_type: DataType,
-) -> Result<Box<dyn Array>>
+) -> Result<(Arc<dyn Array>, Vec<Box<dyn Nested>>)>
 where
     O: Offset,
     ArrowError: From<E>,
-    E: Clone,
-    I: StreamingIterator<Item = std::result::Result<DataPage, E>>,
+    I: FallibleStreamingIterator<Item = DataPage, Error = E>,
 {
     let capacity = metadata.num_values() as usize;
     let mut values = MutableBuffer::<u8>::with_capacity(0);
@@ -164,9 +165,9 @@ where
 
     let (mut nested, is_nullable) = init_nested(metadata.descriptor().base_type(), capacity);
 
-    while let Some(page) = iter.next() {
+    while let Some(page) = iter.next()? {
         extend_from_page(
-            page.as_ref().map_err(|x| x.clone())?,
+            page,
             metadata.descriptor(),
             is_nullable,
             &mut nested,
@@ -176,32 +177,7 @@ where
         )?
     }
 
-    let inner_data_type = match data_type {
-        DataType::List(ref inner) => inner.data_type(),
-        DataType::LargeList(ref inner) => inner.data_type(),
-        _ => {
-            return Err(ArrowError::NotYetImplemented(format!(
-                "Read nested datatype {:?}",
-                data_type
-            )))
-        }
-    };
+    let values = finish_array(data_type, offsets, values, validity).into();
 
-    let values = match inner_data_type {
-        DataType::LargeBinary | DataType::Binary => Arc::new(BinaryArray::from_data(
-            inner_data_type.clone(),
-            offsets.into(),
-            values.into(),
-            validity.into(),
-        )) as Arc<dyn Array>,
-        DataType::LargeUtf8 | DataType::Utf8 => Arc::new(Utf8Array::from_data(
-            inner_data_type.clone(),
-            offsets.into(),
-            values.into(),
-            validity.into(),
-        )) as Arc<dyn Array>,
-        _ => unreachable!(),
-    };
-
-    create_list(data_type, &mut nested, values)
+    Ok((values, nested))
 }

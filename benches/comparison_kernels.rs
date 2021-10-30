@@ -40,7 +40,7 @@ fn add_benchmark(c: &mut Criterion) {
             b.iter(|| bench_op(&arr_a, &arr_b, Operator::Eq))
         });
         c.bench_function(&format!("bool scalar 2^{}", log2_size), |b| {
-            b.iter(|| bench_op_scalar(&arr_a, &BooleanScalar::from(Some(true)), Operator::Eq))
+            b.iter(|| bench_op_scalar(&arr_a, &BooleanScalar::from(Some(false)), Operator::Eq))
         });
 
         let arr_a = create_string_array::<i32>(size, 4, 0.1, 42);

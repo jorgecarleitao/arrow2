@@ -22,21 +22,24 @@
 
 use std::io::Write;
 
+use arrow_format::ipc;
+use arrow_format::ipc::flatbuffers::FlatBufferBuilder;
+
 use super::super::ARROW_MAGIC;
 use super::{
-    super::{convert, gen},
+    super::convert,
     common::{
         encoded_batch, write_continuation, write_message, DictionaryTracker, EncodedData,
         IpcWriteOptions,
     },
     schema_to_bytes,
 };
-use flatbuffers::FlatBufferBuilder;
 
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 use crate::record_batch::RecordBatch;
 
+/// Arrow file writer
 pub struct FileWriter<W: Write> {
     /// The object to write to
     writer: W,
@@ -47,9 +50,9 @@ pub struct FileWriter<W: Write> {
     /// The number of bytes between each block of bytes, as an offset for random access
     block_offsets: usize,
     /// Dictionary blocks that will be written as part of the IPC footer
-    dictionary_blocks: Vec<gen::File::Block>,
+    dictionary_blocks: Vec<ipc::File::Block>,
     /// Record blocks that will be written as part of the IPC footer
-    record_blocks: Vec<gen::File::Block>,
+    record_blocks: Vec<ipc::File::Block>,
     /// Whether the writer footer has been written, and the writer is finished
     finished: bool,
     /// Keeps track of dictionaries that have been written
@@ -110,14 +113,14 @@ impl<W: Write> FileWriter<W> {
             let (meta, data) =
                 write_message(&mut self.writer, encoded_dictionary, &self.write_options)?;
 
-            let block = gen::File::Block::new(self.block_offsets as i64, meta as i32, data as i64);
+            let block = ipc::File::Block::new(self.block_offsets as i64, meta as i32, data as i64);
             self.dictionary_blocks.push(block);
             self.block_offsets += meta + data;
         }
 
         let (meta, data) = write_message(&mut self.writer, encoded_message, &self.write_options)?;
         // add a record block for the footer
-        let block = gen::File::Block::new(
+        let block = ipc::File::Block::new(
             self.block_offsets as i64,
             meta as i32, // TODO: is this still applicable?
             data as i64,
@@ -138,7 +141,7 @@ impl<W: Write> FileWriter<W> {
         let schema = convert::schema_to_fb_offset(&mut fbb, &self.schema);
 
         let root = {
-            let mut footer_builder = gen::File::FooterBuilder::new(&mut fbb);
+            let mut footer_builder = ipc::File::FooterBuilder::new(&mut fbb);
             footer_builder.add_version(*self.write_options.metadata_version());
             footer_builder.add_schema(schema);
             footer_builder.add_dictionaries(dictionaries);

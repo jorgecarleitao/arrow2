@@ -40,9 +40,7 @@ async fn main() -> Result {
     let port = matches.value_of("port").unwrap_or("0");
 
     match matches.value_of("scenario") {
-        Some("middleware") => {
-            flight_server_scenarios::middleware::scenario_setup(port).await?
-        }
+        Some("middleware") => flight_server_scenarios::middleware::scenario_setup(port).await?,
         Some("auth:basic_proto") => {
             flight_server_scenarios::auth_basic_proto::scenario_setup(port).await?
         }

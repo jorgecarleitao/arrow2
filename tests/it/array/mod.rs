@@ -13,7 +13,7 @@ mod utf8;
 
 use arrow2::array::{clone, new_empty_array, new_null_array, Array, PrimitiveArray};
 use arrow2::bitmap::Bitmap;
-use arrow2::datatypes::{DataType, Field};
+use arrow2::datatypes::{DataType, Field, UnionMode};
 
 #[test]
 fn nulls() {
@@ -31,8 +31,16 @@ fn nulls() {
 
     // unions' null count is always 0
     let datatypes = vec![
-        DataType::Union(vec![Field::new("a", DataType::Binary, true)], None, false),
-        DataType::Union(vec![Field::new("a", DataType::Binary, true)], None, true),
+        DataType::Union(
+            vec![Field::new("a", DataType::Binary, true)],
+            None,
+            UnionMode::Dense,
+        ),
+        DataType::Union(
+            vec![Field::new("a", DataType::Binary, true)],
+            None,
+            UnionMode::Sparse,
+        ),
     ];
     let a = datatypes
         .into_iter()
@@ -48,8 +56,16 @@ fn empty() {
         DataType::Utf8,
         DataType::Binary,
         DataType::List(Box::new(Field::new("a", DataType::Binary, true))),
-        DataType::Union(vec![Field::new("a", DataType::Binary, true)], None, true),
-        DataType::Union(vec![Field::new("a", DataType::Binary, true)], None, false),
+        DataType::Union(
+            vec![Field::new("a", DataType::Binary, true)],
+            None,
+            UnionMode::Sparse,
+        ),
+        DataType::Union(
+            vec![Field::new("a", DataType::Binary, true)],
+            None,
+            UnionMode::Dense,
+        ),
     ];
     let a = datatypes.into_iter().all(|x| new_empty_array(x).len() == 0);
     assert!(a);

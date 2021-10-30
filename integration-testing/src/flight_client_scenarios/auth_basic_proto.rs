@@ -17,9 +17,8 @@
 
 use crate::{AUTH_PASSWORD, AUTH_USERNAME};
 
-use arrow_flight::{
-    flight_service_client::FlightServiceClient, BasicAuth, HandshakeRequest,
-};
+use arrow_format::flight::data::{Action, BasicAuth, HandshakeRequest};
+use arrow_format::flight::service::flight_service_client::FlightServiceClient;
 use futures::{stream, StreamExt};
 use prost::Message;
 use tonic::{metadata::MetadataValue, Request, Status};
@@ -33,7 +32,7 @@ pub async fn run_scenario(host: &str, port: &str) -> Result {
     let url = format!("http://{}:{}", host, port);
     let mut client = FlightServiceClient::connect(url).await?;
 
-    let action = arrow_flight::Action::default();
+    let action = Action::default();
 
     let resp = client.do_action(Request::new(action.clone())).await;
     // This client is unauthenticated and should fail.
@@ -80,11 +79,7 @@ pub async fn run_scenario(host: &str, port: &str) -> Result {
     Ok(())
 }
 
-async fn authenticate(
-    client: &mut Client,
-    username: &str,
-    password: &str,
-) -> Result<String> {
+async fn authenticate(client: &mut Client, username: &str, password: &str) -> Result<String> {
     let auth = BasicAuth {
         username: username.into(),
         password: password.into(),

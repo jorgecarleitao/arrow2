@@ -1,6 +1,7 @@
 use std::io::{Cursor, Read, Seek};
 use std::sync::Arc;
 
+use arrow2::error::ArrowError;
 use arrow2::{
     array::*, bitmap::Bitmap, buffer::Buffer, datatypes::*, error::Result,
     io::parquet::read::statistics::*, io::parquet::read::*, io::parquet::write::*,
@@ -138,6 +139,7 @@ pub fn pyarrow_nested_nullable(column: usize) -> Box<dyn Array> {
             Some(b"bbb".to_vec()),
             Some(b"".to_vec()),
         ])),
+        7 | 8 | 9 => Arc::new(NullArray::from_data(DataType::Null, 1)),
         _ => unreachable!(),
     };
 
@@ -167,6 +169,61 @@ pub fn pyarrow_nested_nullable(column: usize) -> Box<dyn Array> {
             Box::new(ListArray::<i32>::from_data(
                 data_type, offsets, values, None,
             ))
+        }
+        7 => {
+            let data = [
+                Some(vec![Some(vec![Some(0), Some(1)])]),
+                None,
+                Some(vec![Some(vec![Some(2), None]), Some(vec![Some(3)])]),
+                Some(vec![Some(vec![Some(4), Some(5)]), Some(vec![Some(6)])]),
+                Some(vec![]),
+                Some(vec![Some(vec![Some(7)]), None, Some(vec![Some(9)])]),
+                Some(vec![Some(vec![]), Some(vec![None]), None]),
+                Some(vec![Some(vec![Some(10)])]),
+            ];
+            let mut a =
+                MutableListArray::<i32, MutableListArray<i32, MutablePrimitiveArray<i64>>>::new();
+            a.try_extend(data).unwrap();
+            let array: ListArray<i32> = a.into();
+            Box::new(array)
+        }
+        8 => {
+            let data = [
+                Some(vec![Some(vec![Some(0), Some(1)])]),
+                None,
+                Some(vec![Some(vec![Some(2), Some(3)]), Some(vec![Some(3)])]),
+                Some(vec![Some(vec![Some(4), Some(5)]), Some(vec![Some(6)])]),
+                Some(vec![]),
+                Some(vec![Some(vec![Some(7)]), None, Some(vec![Some(9)])]),
+                None,
+                Some(vec![Some(vec![Some(10)])]),
+            ];
+            let mut a =
+                MutableListArray::<i32, MutableListArray<i32, MutablePrimitiveArray<i64>>>::new();
+            a.try_extend(data).unwrap();
+            let array: ListArray<i32> = a.into();
+            Box::new(array)
+        }
+        9 => {
+            let data = [
+                Some(vec![Some(vec![Some(0), Some(1)])]),
+                None,
+                Some(vec![Some(vec![Some(2), Some(3)]), Some(vec![Some(3)])]),
+                Some(vec![Some(vec![Some(4), Some(5)]), Some(vec![Some(6)])]),
+                Some(vec![]),
+                Some(vec![
+                    Some(vec![Some(7)]),
+                    Some(vec![Some(8)]),
+                    Some(vec![Some(9)]),
+                ]),
+                None,
+                Some(vec![Some(vec![Some(10)])]),
+            ];
+            let mut a =
+                MutableListArray::<i32, MutableListArray<i32, MutablePrimitiveArray<i64>>>::new();
+            a.try_extend(data).unwrap();
+            let array: ListArray<i32> = a.into();
+            Box::new(array)
         }
         _ => unreachable!(),
     }
@@ -492,13 +549,19 @@ fn integration_write(schema: &Schema, batches: &[RecordBatch]) -> Result<Vec<u8>
             .columns()
             .iter()
             .zip(descritors.clone())
-            .map(|(array, type_)| {
+            .map(|(array, descriptor)| {
                 let encoding = if let DataType::Dictionary(_, _) = array.data_type() {
                     Encoding::RleDictionary
                 } else {
                     Encoding::Plain
                 };
-                array_to_pages(array.clone(), type_, options, encoding)
+                array_to_pages(array.as_ref(), descriptor, options, encoding).map(|pages| {
+                    let encoded_pages = DynIter::new(pages.map(|x| Ok(x?)));
+                    let compressed_pages =
+                        Compressor::new(encoded_pages, options.compression, vec![])
+                            .map_err(ArrowError::from);
+                    DynStreamingIterator::new(compressed_pages)
+                })
             });
         let iterator = DynIter::new(iterator);
         Ok(iterator)

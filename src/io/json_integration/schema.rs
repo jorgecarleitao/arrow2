@@ -23,7 +23,10 @@ use std::{
 use serde_derive::Deserialize;
 use serde_json::{json, Value};
 
-use crate::error::{ArrowError, Result};
+use crate::{
+    datatypes::UnionMode,
+    error::{ArrowError, Result},
+};
 
 use crate::datatypes::{get_extension, DataType, Field, IntervalUnit, Schema, TimeUnit};
 
@@ -256,7 +259,7 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
         "fixedsizebinary" => {
             // return a list with any type as its child isn't defined in the map
             if let Some(Value::Number(size)) = item.get("byteWidth") {
-                DataType::FixedSizeBinary(size.as_i64().unwrap() as i32)
+                DataType::FixedSizeBinary(size.as_i64().unwrap() as usize)
             } else {
                 return Err(ArrowError::Schema(
                     "Expecting a byteWidth for fixedsizebinary".to_string(),
@@ -385,7 +388,7 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
             if let Some(Value::Number(size)) = item.get("listSize") {
                 DataType::FixedSizeList(
                     Box::new(children.pop().unwrap()),
-                    size.as_i64().unwrap() as i32,
+                    size.as_i64().unwrap() as usize,
                 )
             } else {
                 return Err(ArrowError::Schema(
@@ -395,8 +398,8 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
         }
         "struct" => DataType::Struct(children),
         "union" => {
-            let is_sparse = if let Some(Value::String(mode)) = item.get("mode") {
-                mode == "SPARSE"
+            let mode = if let Some(Value::String(mode)) = item.get("mode") {
+                UnionMode::sparse(mode == "SPARSE")
             } else {
                 return Err(ArrowError::Schema("union requires mode".to_string()));
             };
@@ -405,7 +408,7 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
             } else {
                 return Err(ArrowError::Schema("union requires ids".to_string()));
             };
-            DataType::Union(children, ids, is_sparse)
+            DataType::Union(children, ids, mode)
         }
         "map" => {
             let sorted_keys = if let Some(Value::Bool(sorted_keys)) = item.get("keysSorted") {

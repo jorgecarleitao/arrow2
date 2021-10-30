@@ -11,3 +11,9 @@ impl From<parquet2::error::ParquetError> for ArrowError {
         ArrowError::External("".to_string(), Box::new(error))
     }
 }
+
+impl From<ArrowError> for parquet2::error::ParquetError {
+    fn from(error: ArrowError) -> Self {
+        parquet2::error::ParquetError::General(error.to_string())
+    }
+}

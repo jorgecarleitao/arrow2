@@ -1,7 +1,7 @@
 use parquet2::{
     encoding::{hybrid_rle::encode_u32, Encoding},
     metadata::ColumnDescriptor,
-    page::{CompressedDictPage, CompressedPage},
+    page::{EncodedDictPage, EncodedPage},
     write::{DynIter, WriteOptions},
 };
 
@@ -21,7 +21,7 @@ fn encode_keys<K: DictionaryKey>(
     validity: Option<&Bitmap>,
     descriptor: ColumnDescriptor,
     options: WriteOptions,
-) -> Result<CompressedPage> {
+) -> Result<EncodedPage> {
     let is_optional = is_type_nullable(descriptor.type_());
 
     let mut buffer = vec![];
@@ -94,15 +94,10 @@ fn encode_keys<K: DictionaryKey>(
         encode_u32(&mut buffer, keys, num_bits)?;
     }
 
-    let uncompressed_page_size = buffer.len();
-
-    let buffer = utils::compress(buffer, options, definition_levels_byte_length)?;
-
     utils::build_plain_page(
         buffer,
         array.len(),
         array.null_count(),
-        uncompressed_page_size,
         0,
         definition_levels_byte_length,
         None,
@@ -110,7 +105,7 @@ fn encode_keys<K: DictionaryKey>(
         options,
         Encoding::RleDictionary,
     )
-    .map(CompressedPage::Data)
+    .map(EncodedPage::Data)
 }
 
 macro_rules! dyn_prim {
@@ -119,9 +114,7 @@ macro_rules! dyn_prim {
 
         let mut buffer = vec![];
         primitive_encode_plain::<$from, $to>(values, false, &mut buffer);
-        let buffer = utils::compress(buffer, $options, 0)?;
-
-        CompressedPage::Dict(CompressedDictPage::new(buffer, values.len()))
+        EncodedDictPage::new(buffer, values.len())
     }};
 }
 
@@ -130,7 +123,7 @@ pub fn array_to_pages<K: DictionaryKey>(
     descriptor: ColumnDescriptor,
     options: WriteOptions,
     encoding: Encoding,
-) -> Result<DynIter<'static, Result<CompressedPage>>>
+) -> Result<DynIter<'static, Result<EncodedPage>>>
 where
     PrimitiveArray<K>: std::fmt::Display,
 {
@@ -157,32 +150,28 @@ where
 
                     let mut buffer = vec![];
                     utf8_encode_plain::<i32>(values, false, &mut buffer);
-                    let buffer = utils::compress(buffer, options, 0)?;
-                    CompressedPage::Dict(CompressedDictPage::new(buffer, values.len()))
+                    EncodedDictPage::new(buffer, values.len())
                 }
                 DataType::LargeUtf8 => {
                     let values = array.values().as_any().downcast_ref().unwrap();
 
                     let mut buffer = vec![];
                     utf8_encode_plain::<i64>(values, false, &mut buffer);
-                    let buffer = utils::compress(buffer, options, 0)?;
-                    CompressedPage::Dict(CompressedDictPage::new(buffer, values.len()))
+                    EncodedDictPage::new(buffer, values.len())
                 }
                 DataType::Binary => {
                     let values = array.values().as_any().downcast_ref().unwrap();
 
                     let mut buffer = vec![];
                     binary_encode_plain::<i32>(values, false, &mut buffer);
-                    let buffer = utils::compress(buffer, options, 0)?;
-                    CompressedPage::Dict(CompressedDictPage::new(buffer, values.len()))
+                    EncodedDictPage::new(buffer, values.len())
                 }
                 DataType::LargeBinary => {
                     let values = array.values().as_any().downcast_ref().unwrap();
 
                     let mut buffer = vec![];
                     binary_encode_plain::<i64>(values, false, &mut buffer);
-                    let buffer = utils::compress(buffer, options, 0)?;
-                    CompressedPage::Dict(CompressedDictPage::new(buffer, values.len()))
+                    EncodedDictPage::new(buffer, values.len())
                 }
                 other => {
                     return Err(ArrowError::NotYetImplemented(format!(
@@ -191,6 +180,7 @@ where
                     )))
                 }
             };
+            let dict_page = EncodedPage::Dict(dict_page);
 
             // write DataPage pointing to DictPage
             let data_page =

@@ -18,16 +18,12 @@
 use std::pin::Pin;
 use std::sync::Arc;
 
-use arrow_flight::{
-    flight_service_server::FlightService, flight_service_server::FlightServiceServer,
-    Action, ActionType, BasicAuth, Criteria, Empty, FlightData, FlightDescriptor,
-    FlightInfo, HandshakeRequest, HandshakeResponse, PutResult, SchemaResult, Ticket,
-};
+use arrow_format::flight::data::*;
+use arrow_format::flight::service::flight_service_server::{FlightService, FlightServiceServer};
 use futures::{channel::mpsc, sink::SinkExt, Stream, StreamExt};
 use tokio::sync::Mutex;
-use tonic::{
-    metadata::MetadataMap, transport::Server, Request, Response, Status, Streaming,
-};
+use tonic::{metadata::MetadataMap, transport::Server, Request, Response, Status, Streaming};
+
 type TonicStream<T> = Pin<Box<dyn Stream<Item = T> + Send + Sync + 'static>>;
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
@@ -62,10 +58,7 @@ pub struct AuthBasicProtoScenarioImpl {
 }
 
 impl AuthBasicProtoScenarioImpl {
-    async fn check_auth(
-        &self,
-        metadata: &MetadataMap,
-    ) -> Result<GrpcServerCallContext, Status> {
+    async fn check_auth(&self, metadata: &MetadataMap) -> Result<GrpcServerCallContext, Status> {
         let token = metadata
             .get_bin("auth-token-bin")
             .and_then(|v| v.to_bytes().ok())
@@ -73,10 +66,7 @@ impl AuthBasicProtoScenarioImpl {
         self.is_valid(token).await
     }
 
-    async fn is_valid(
-        &self,
-        token: Option<String>,
-    ) -> Result<GrpcServerCallContext, Status> {
+    async fn is_valid(&self, token: Option<String>) -> Result<GrpcServerCallContext, Status> {
         match token {
             Some(t) if t == *self.username => Ok(GrpcServerCallContext {
                 peer_identity: self.username.to_string(),
@@ -102,7 +92,7 @@ impl FlightService for AuthBasicProtoScenarioImpl {
     type ListFlightsStream = TonicStream<Result<FlightInfo, Status>>;
     type DoGetStream = TonicStream<Result<FlightData, Status>>;
     type DoPutStream = TonicStream<Result<PutResult, Status>>;
-    type DoActionStream = TonicStream<Result<arrow_flight::Result, Status>>;
+    type DoActionStream = TonicStream<Result<arrow_format::flight::data::Result, Status>>;
     type ListActionsStream = TonicStream<Result<ActionType, Status>>;
     type DoExchangeStream = TonicStream<Result<FlightData, Status>>;
 
@@ -141,12 +131,10 @@ impl FlightService for AuthBasicProtoScenarioImpl {
                         let req = req.expect("Error reading handshake request");
                         let HandshakeRequest { payload, .. } = req;
 
-                        let auth = BasicAuth::decode(&*payload)
-                            .expect("Error parsing handshake request");
+                        let auth =
+                            BasicAuth::decode(&*payload).expect("Error parsing handshake request");
 
-                        let resp = if *auth.username == *username
-                            && *auth.password == *password
-                        {
+                        let resp = if *auth.username == *username && *auth.password == *password {
                             Ok(HandshakeResponse {
                                 payload: username.as_bytes().to_vec(),
                                 ..HandshakeResponse::default()
@@ -191,7 +179,8 @@ impl FlightService for AuthBasicProtoScenarioImpl {
         &self,
         request: Request<Streaming<FlightData>>,
     ) -> Result<Response<Self::DoPutStream>, Status> {
-        self.check_auth(request.metadata()).await?;
+        let metadata = request.metadata();
+        self.check_auth(metadata).await?;
         Err(Status::unimplemented("Not yet implemented"))
     }
 
@@ -202,7 +191,7 @@ impl FlightService for AuthBasicProtoScenarioImpl {
         let flight_context = self.check_auth(request.metadata()).await?;
         // Respond with the authenticated username.
         let buf = flight_context.peer_identity().as_bytes().to_vec();
-        let result = arrow_flight::Result { body: buf };
+        let result = arrow_format::flight::data::Result { body: buf };
         let output = futures::stream::once(async { Ok(result) });
         Ok(Response::new(Box::pin(output) as Self::DoActionStream))
     }
@@ -219,7 +208,8 @@ impl FlightService for AuthBasicProtoScenarioImpl {
         &self,
         request: Request<Streaming<FlightData>>,
     ) -> Result<Response<Self::DoExchangeStream>, Status> {
-        self.check_auth(request.metadata()).await?;
+        let metadata = request.metadata();
+        self.check_auth(metadata).await?;
         Err(Status::unimplemented("Not yet implemented"))
     }
 }

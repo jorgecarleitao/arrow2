@@ -3,8 +3,8 @@ use std::sync::Arc;
 use parquet2::{
     encoding::{hybrid_rle, Encoding},
     page::{DataPage, PrimitivePageDict},
-    read::StreamingIterator,
     types::NativeType,
+    FallibleStreamingIterator,
 };
 
 use super::super::utils;
@@ -135,18 +135,17 @@ where
     ArrowError: From<E>,
     T: NativeType,
     K: DictionaryKey,
-    E: Clone,
     A: ArrowNativeType,
     F: Copy + Fn(T) -> A,
-    I: StreamingIterator<Item = std::result::Result<DataPage, E>>,
+    I: FallibleStreamingIterator<Item = DataPage, Error = E>,
 {
     let capacity = metadata.num_values() as usize;
     let mut indices = MutableBuffer::<K>::with_capacity(capacity);
     let mut values = MutableBuffer::<A>::with_capacity(capacity);
     let mut validity = MutableBitmap::with_capacity(capacity);
-    while let Some(page) = iter.next() {
+    while let Some(page) = iter.next()? {
         extend_from_page(
-            page.as_ref().map_err(|x| x.clone())?,
+            page,
             metadata.descriptor(),
             &mut indices,
             &mut values,

@@ -42,9 +42,7 @@ async fn main() -> Result {
     let port = matches.value_of("port").expect("Port is required");
 
     match matches.value_of("scenario") {
-        Some("middleware") => {
-            flight_client_scenarios::middleware::run_scenario(host, port).await?
-        }
+        Some("middleware") => flight_client_scenarios::middleware::run_scenario(host, port).await?,
         Some("auth:basic_proto") => {
             flight_client_scenarios::auth_basic_proto::run_scenario(host, port).await?
         }
@@ -53,8 +51,7 @@ async fn main() -> Result {
             let path = matches
                 .value_of("path")
                 .expect("Path is required if scenario is not specified");
-            flight_client_scenarios::integration_test::run_scenario(host, port, path)
-                .await?;
+            flight_client_scenarios::integration_test::run_scenario(host, port, path).await?;
         }
     }
 

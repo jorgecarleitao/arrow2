@@ -18,15 +18,17 @@
 use std::io::{Read, Seek, SeekFrom};
 use std::sync::Arc;
 
+use arrow_format::ipc;
+use arrow_format::ipc::flatbuffers::VerifierOptions;
+
 use crate::array::*;
 use crate::datatypes::Schema;
 use crate::error::{ArrowError, Result};
 use crate::record_batch::{RecordBatch, RecordBatchReader};
 
-use super::super::{convert, gen};
+use super::super::convert;
 use super::super::{ARROW_MAGIC, CONTINUATION_MARKER};
 use super::common::*;
-use flatbuffers::VerifierOptions;
 
 type ArrayRef = Arc<dyn Array>;
 
@@ -38,7 +40,7 @@ pub struct FileMetadata {
     /// The blocks in the file
     ///
     /// A block indicates the regions in the file to read to get data
-    blocks: Vec<gen::File::Block>,
+    blocks: Vec<ipc::File::Block>,
 
     /// The total number of blocks, which may contain record batches and other types
     total_blocks: usize,
@@ -49,7 +51,7 @@ pub struct FileMetadata {
     dictionaries_by_field: Vec<Option<ArrayRef>>,
 
     /// FileMetadata version
-    version: gen::Schema::MetadataVersion,
+    version: ipc::Schema::MetadataVersion,
 
     is_little_endian: bool,
 }
@@ -107,7 +109,7 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
         max_tables: footer_len as usize * 8,
         ..Default::default()
     };
-    let footer = gen::File::root_as_footer_with_opts(&verifier_options, &footer_data[..])
+    let footer = ipc::File::root_as_footer_with_opts(&verifier_options, &footer_data[..])
         .map_err(|err| ArrowError::Ipc(format!("Unable to get root as footer: {:?}", err)))?;
 
     let blocks = footer.recordBatches().ok_or_else(|| {
@@ -136,11 +138,11 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
 
         reader.read_exact(&mut block_data)?;
 
-        let message = gen::Message::root_as_message(&block_data[..])
+        let message = ipc::Message::root_as_message(&block_data[..])
             .map_err(|err| ArrowError::Ipc(format!("Unable to get root as message: {:?}", err)))?;
 
         match message.header_type() {
-            gen::Message::MessageHeader::DictionaryBatch => {
+            ipc::Message::MessageHeader::DictionaryBatch => {
                 let block_offset = block.offset() as u64 + block.metaDataLength() as u64;
                 let batch = message.header_as_dictionary_batch().unwrap();
                 read_dictionary(
@@ -192,11 +194,11 @@ pub fn read_batch<R: Read + Seek>(
     let mut block_data = vec![0; meta_len as usize];
     reader.read_exact(&mut block_data)?;
 
-    let message = gen::Message::root_as_message(&block_data[..])
+    let message = ipc::Message::root_as_message(&block_data[..])
         .map_err(|err| ArrowError::Ipc(format!("Unable to get root as footer: {:?}", err)))?;
 
     // some old test data's footer metadata is not set, so we account for that
-    if metadata.version != gen::Schema::MetadataVersion::V1 && message.version() != metadata.version
+    if metadata.version != ipc::Schema::MetadataVersion::V1 && message.version() != metadata.version
     {
         return Err(ArrowError::Ipc(
             "Could not read IPC message as metadata versions mismatch".to_string(),
@@ -204,10 +206,10 @@ pub fn read_batch<R: Read + Seek>(
     }
 
     match message.header_type() {
-        gen::Message::MessageHeader::Schema => Err(ArrowError::Ipc(
+        ipc::Message::MessageHeader::Schema => Err(ArrowError::Ipc(
             "Not expecting a schema when messages are read".to_string(),
         )),
-        gen::Message::MessageHeader::RecordBatch => {
+        ipc::Message::MessageHeader::RecordBatch => {
             let batch = message.header_as_record_batch().ok_or_else(|| {
                 ArrowError::Ipc("Unable to read IPC message as record batch".to_string())
             })?;
@@ -223,7 +225,7 @@ pub fn read_batch<R: Read + Seek>(
             )
             .map(Some)
         }
-        gen::Message::MessageHeader::NONE => Ok(None),
+        ipc::Message::MessageHeader::NONE => Ok(None),
         t => Err(ArrowError::Ipc(format!(
             "Reading types other than record batches not yet supported, unable to read {:?}",
             t

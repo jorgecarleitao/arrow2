@@ -35,20 +35,21 @@ fn parallel_write(path: &str, batch: &RecordBatch) -> Result<()> {
         .zip(parquet_schema.columns().to_vec().into_par_iter())
         .zip(encodings)
         .map(|((array, descriptor), encoding)| {
-            let array = array.clone();
-
             // create encoded and compressed pages this column
-            Ok(array_to_pages(array, descriptor, options, encoding)?.collect::<Vec<_>>())
+            let encoded_pages = array_to_pages(array.as_ref(), descriptor, options, encoding)?;
+            encoded_pages
+                .map(|page| compress(page?, vec![], options.compression).map_err(|x| x.into()))
+                .collect::<Result<Vec<_>>>()
         })
-        .collect::<Result<Vec<_>>>()?;
+        .collect::<Result<Vec<Vec<CompressedPage>>>>()?;
 
     // create the iterator over groups (one in this case)
     // (for more batches, create the iterator from them here)
-    let row_groups = std::iter::once(Result::Ok(DynIter::new(
-        columns
-            .into_iter()
-            .map(|column| Ok(DynIter::new(column.into_iter()))),
-    )));
+    let row_groups = std::iter::once(Result::Ok(DynIter::new(columns.iter().map(|column| {
+        Ok(DynStreamingIterator::new(
+            fallible_streaming_iterator::convert(column.iter().map(Ok)),
+        ))
+    }))));
 
     // Create a new empty file
     let mut file = std::fs::File::create(path)?;

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use arrow2::types::months_days_ns;
 use avro_rs::types::{Record, Value};
-use avro_rs::Writer;
+use avro_rs::{Codec, Writer};
 use avro_rs::{Days, Duration, Millis, Months, Schema as AvroSchema};
 
 use arrow2::array::*;
@@ -82,10 +82,15 @@ fn schema() -> (AvroSchema, Schema) {
     (AvroSchema::parse_str(raw_schema).unwrap(), schema)
 }
 
-fn write() -> Result<(Vec<u8>, RecordBatch)> {
+fn write(has_codec: bool) -> Result<(Vec<u8>, RecordBatch)> {
     let (avro, schema) = schema();
     // a writer needs a schema and something to write to
-    let mut writer = Writer::new(&avro, Vec::new());
+    let mut writer: Writer<Vec<u8>>;
+    if has_codec {
+        writer = Writer::with_codec(&avro, Vec::new(), Codec::Deflate);
+    } else {
+        writer = Writer::new(&avro, Vec::new());
+    }
 
     // the Record type models our Record schema
     let mut record = Record::new(writer.schema()).unwrap();
@@ -170,8 +175,26 @@ fn write() -> Result<(Vec<u8>, RecordBatch)> {
 }
 
 #[test]
-fn read() -> Result<()> {
-    let (data, expected) = write().unwrap();
+fn read_without_codec() -> Result<()> {
+    let (data, expected) = write(false).unwrap();
+
+    let file = &mut &data[..];
+
+    let (avro_schema, schema, codec, file_marker) = read::read_metadata(file)?;
+
+    let mut reader = read::Reader::new(
+        read::Decompressor::new(read::BlockStreamIterator::new(file, file_marker), codec),
+        avro_schema,
+        Arc::new(schema),
+    );
+
+    assert_eq!(reader.next().unwrap().unwrap(), expected);
+    Ok(())
+}
+
+#[test]
+fn read_with_codec() -> Result<()> {
+    let (data, expected) = write(true).unwrap();
 
     let file = &mut &data[..];
 

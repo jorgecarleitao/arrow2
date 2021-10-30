@@ -74,7 +74,7 @@ pub enum DataType {
     Binary,
     /// Opaque binary data of fixed size.
     /// Enum parameter specifies the number of bytes per value.
-    FixedSizeBinary(i32),
+    FixedSizeBinary(usize),
     /// Opaque binary data of variable length and 64-bit offsets.
     LargeBinary,
     /// A variable-length string in Unicode with UTF-8 encoding.
@@ -84,14 +84,14 @@ pub enum DataType {
     /// A list of some logical data type with variable length.
     List(Box<Field>),
     /// A list of some logical data type with fixed length.
-    FixedSizeList(Box<Field>, i32),
+    FixedSizeList(Box<Field>, usize),
     /// A list of some logical data type with variable length and 64-bit offsets.
     LargeList(Box<Field>),
     /// A nested datatype that contains a number of sub-fields.
     Struct(Vec<Field>),
     /// A nested datatype that can represent slots of differing types.
-    /// Third argument represents sparsness
-    Union(Vec<Field>, Option<Vec<i32>>, bool),
+    /// Third argument represents mode
+    Union(Vec<Field>, Option<Vec<i32>>, UnionMode),
     /// A nested type that is represented as
     ///
     /// List<entries: Struct<key: K, value: V>>
@@ -141,6 +141,37 @@ pub enum DataType {
 impl std::fmt::Display for DataType {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{:?}", self)
+    }
+}
+
+/// Mode of [`DataType::Union`]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum UnionMode {
+    /// Dense union
+    Dense,
+    /// Sparse union
+    Sparse,
+}
+
+impl UnionMode {
+    /// Constructs a [`UnionMode::Sparse`] if the input bool is true,
+    /// or otherwise constructs a [`UnionMode::Dense`]
+    pub fn sparse(is_sparse: bool) -> Self {
+        if is_sparse {
+            Self::Sparse
+        } else {
+            Self::Dense
+        }
+    }
+
+    /// Returns whether the mode is sparse
+    pub fn is_sparse(&self) -> bool {
+        matches!(self, Self::Sparse)
+    }
+
+    /// Returns whether the mode is dense
+    pub fn is_dense(&self) -> bool {
+        matches!(self, Self::Dense)
     }
 }
 

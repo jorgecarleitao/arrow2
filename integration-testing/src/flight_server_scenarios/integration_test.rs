@@ -20,17 +20,18 @@ use std::convert::TryFrom;
 use std::pin::Pin;
 use std::sync::Arc;
 
+use arrow2::io::flight::{serialize_batch, serialize_schema};
+use arrow_format::flight::data::*;
+use arrow_format::flight::data::flight_descriptor::*;
+use arrow_format::flight::service::flight_service_server::*;
+use arrow_format::ipc::Message::{root_as_message, Message, MessageHeader};
+use arrow_format::ipc::Schema as ArrowSchema;
+
 use arrow2::{
-    array::Array,
-    datatypes::*,
-    io::ipc,
-    io::ipc::gen::Message::{Message, MessageHeader},
-    io::ipc::gen::Schema::MetadataVersion,
+    array::Array, datatypes::*, io::flight::serialize_schema_to_info, io::ipc,
     record_batch::RecordBatch,
 };
-use arrow_flight::flight_descriptor::*;
-use arrow_flight::flight_service_server::*;
-use arrow_flight::*;
+
 use futures::{channel::mpsc, sink::SinkExt, Stream, StreamExt};
 use tokio::sync::Mutex;
 use tonic::{transport::Server, Request, Response, Status, Streaming};
@@ -81,7 +82,7 @@ impl FlightService for FlightServiceImpl {
     type ListFlightsStream = TonicStream<Result<FlightInfo, Status>>;
     type DoGetStream = TonicStream<Result<FlightData, Status>>;
     type DoPutStream = TonicStream<Result<PutResult, Status>>;
-    type DoActionStream = TonicStream<Result<arrow_flight::Result, Status>>;
+    type DoActionStream = TonicStream<Result<arrow_format::flight::data::Result, Status>>;
     type ListActionsStream = TonicStream<Result<ActionType, Status>>;
     type DoExchangeStream = TonicStream<Result<FlightData, Status>>;
 
@@ -109,12 +110,7 @@ impl FlightService for FlightServiceImpl {
 
         let options = ipc::write::IpcWriteOptions::default();
 
-        let schema = std::iter::once({
-            Ok(arrow_flight::utils::flight_data_from_arrow_schema(
-                &flight.schema,
-                &options,
-            ))
-        });
+        let schema = std::iter::once(Ok(serialize_schema(&flight.schema, &options)));
 
         let batches = flight
             .chunks
@@ -122,7 +118,7 @@ impl FlightService for FlightServiceImpl {
             .enumerate()
             .flat_map(|(counter, batch)| {
                 let (dictionary_flight_data, mut batch_flight_data) =
-                    arrow_flight::utils::flight_data_from_arrow_batch(batch, &options);
+                    serialize_batch(batch, &options);
 
                 // Only the record batch's FlightData gets app_metadata
                 let metadata = counter.to_string().into_bytes();
@@ -176,12 +172,10 @@ impl FlightService for FlightServiceImpl {
                 let total_records: usize = flight.chunks.iter().map(|chunk| chunk.num_rows()).sum();
 
                 let options = ipc::write::IpcWriteOptions::default();
-                let schema =
-                    arrow_flight::utils::ipc_message_from_arrow_schema(&flight.schema, &options)
-                        .expect(
-                            "Could not generate schema bytes from schema stored by a DoPut; \
+                let schema = serialize_schema_to_info(&flight.schema, &options).expect(
+                    "Could not generate schema bytes from schema stored by a DoPut; \
                          this should be impossible",
-                        );
+                );
 
                 let info = FlightInfo {
                     schema,
@@ -296,7 +290,7 @@ async fn record_batch_from_message(
         None,
         true,
         dictionaries_by_field,
-        MetadataVersion::V5,
+        ArrowSchema::MetadataVersion::V5,
         &mut reader,
         0,
     );
@@ -343,7 +337,7 @@ async fn save_uploaded_chunks(
     let mut dictionaries_by_field = vec![None; schema_ref.fields().len()];
 
     while let Some(Ok(data)) = input_stream.next().await {
-        let message = ipc::root_as_message(&data.data_header[..])
+        let message = root_as_message(&data.data_header[..])
             .map_err(|e| Status::internal(format!("Could not parse message: {:?}", e)))?;
 
         match message.header_type() {

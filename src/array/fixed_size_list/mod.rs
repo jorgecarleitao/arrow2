@@ -154,7 +154,7 @@ impl FixedSizeListArray {
     /// Returns a [`DataType`] consistent with [`FixedSizeListArray`].
     pub fn default_datatype(data_type: DataType, size: usize) -> DataType {
         let field = Box::new(Field::new("item", data_type, true));
-        DataType::FixedSizeList(field, size as i32)
+        DataType::FixedSizeList(field, size)
     }
 }
 

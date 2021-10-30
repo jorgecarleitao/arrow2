@@ -40,7 +40,7 @@ impl From<&ParquetFixedLenStatistics> for FixedLenStatistics {
             distinct_count: stats.distinct_count,
             min_value: stats.min_value.clone(),
             max_value: stats.max_value.clone(),
-            data_type: DataType::FixedSizeBinary(byte_lens),
+            data_type: DataType::FixedSizeBinary(byte_lens as usize),
         }
     }
 }

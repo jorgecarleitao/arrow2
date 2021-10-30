@@ -3,11 +3,11 @@ use parquet2::{
     encoding::{delta_length_byte_array, hybrid_rle, Encoding},
     metadata::{ColumnChunkMetaData, ColumnDescriptor},
     page::{BinaryPageDict, DataPage},
-    read::StreamingIterator,
+    FallibleStreamingIterator,
 };
 
 use crate::{
-    array::{Array, BinaryArray, Offset, Utf8Array},
+    array::{Array, Offset},
     bitmap::{utils::BitmapIter, MutableBitmap},
     buffer::MutableBuffer,
     datatypes::DataType,
@@ -15,6 +15,7 @@ use crate::{
 };
 
 use super::super::utils;
+use super::utils::finish_array;
 
 /// Assumptions: No rep levels
 #[allow(clippy::too_many_arguments)]
@@ -308,17 +309,16 @@ pub fn iter_to_array<O, I, E>(
 where
     ArrowError: From<E>,
     O: Offset,
-    E: Clone,
-    I: StreamingIterator<Item = std::result::Result<DataPage, E>>,
+    I: FallibleStreamingIterator<Item = DataPage, Error = E>,
 {
     let capacity = metadata.num_values() as usize;
     let mut values = MutableBuffer::<u8>::with_capacity(0);
     let mut offsets = MutableBuffer::<O>::with_capacity(1 + capacity);
     offsets.push(O::default());
     let mut validity = MutableBitmap::with_capacity(capacity);
-    while let Some(page) = iter.next() {
+    while let Some(page) = iter.next()? {
         extend_from_page(
-            page.as_ref().map_err(|x| x.clone())?,
+            page,
             metadata.descriptor(),
             &mut offsets,
             &mut values,
@@ -326,21 +326,7 @@ where
         )?
     }
 
-    Ok(match data_type {
-        DataType::LargeBinary | DataType::Binary => Box::new(BinaryArray::from_data(
-            data_type.clone(),
-            offsets.into(),
-            values.into(),
-            validity.into(),
-        )),
-        DataType::LargeUtf8 | DataType::Utf8 => Box::new(Utf8Array::from_data(
-            data_type.clone(),
-            offsets.into(),
-            values.into(),
-            validity.into(),
-        )),
-        _ => unreachable!(),
-    })
+    Ok(finish_array(data_type.clone(), offsets, values, validity))
 }
 
 pub async fn stream_to_array<O, I, E>(
@@ -372,19 +358,5 @@ where
         )?
     }
 
-    Ok(match data_type {
-        DataType::LargeBinary | DataType::Binary => Box::new(BinaryArray::from_data(
-            data_type.clone(),
-            offsets.into(),
-            values.into(),
-            validity.into(),
-        )),
-        DataType::LargeUtf8 | DataType::Utf8 => Box::new(Utf8Array::from_data(
-            data_type.clone(),
-            offsets.into(),
-            values.into(),
-            validity.into(),
-        )),
-        _ => unreachable!(),
-    })
+    Ok(finish_array(data_type.clone(), offsets, values, validity))
 }

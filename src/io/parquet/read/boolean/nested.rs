@@ -4,7 +4,8 @@ use parquet2::{
     encoding::{hybrid_rle::HybridRleDecoder, Encoding},
     metadata::{ColumnChunkMetaData, ColumnDescriptor},
     page::DataPage,
-    read::{levels::get_bit_width, StreamingIterator},
+    read::levels::get_bit_width,
+    FallibleStreamingIterator,
 };
 
 use super::super::nested_utils::*;
@@ -134,11 +135,10 @@ pub fn iter_to_array<I, E>(
     mut iter: I,
     metadata: &ColumnChunkMetaData,
     data_type: DataType,
-) -> Result<Box<dyn Array>>
+) -> Result<(Arc<dyn Array>, Vec<Box<dyn Nested>>)>
 where
     ArrowError: From<E>,
-    E: Clone,
-    I: StreamingIterator<Item = std::result::Result<DataPage, E>>,
+    I: FallibleStreamingIterator<Item = DataPage, Error = E>,
 {
     let capacity = metadata.num_values() as usize;
     let mut values = MutableBitmap::with_capacity(capacity);
@@ -146,9 +146,9 @@ where
 
     let (mut nested, is_nullable) = init_nested(metadata.descriptor().base_type(), capacity);
 
-    while let Some(page) = iter.next() {
+    while let Some(page) = iter.next()? {
         extend_from_page(
-            page.as_ref().map_err(|x| x.clone())?,
+            page,
             metadata.descriptor(),
             is_nullable,
             &mut nested,
@@ -157,22 +157,11 @@ where
         )?
     }
 
-    let inner_data_type = match data_type {
-        DataType::List(ref inner) => inner.data_type(),
-        DataType::LargeList(ref inner) => inner.data_type(),
-        _ => {
-            return Err(ArrowError::NotYetImplemented(format!(
-                "Read nested datatype {:?}",
-                data_type
-            )))
-        }
-    };
-
     let values = Arc::new(BooleanArray::from_data(
-        inner_data_type.clone(),
+        data_type,
         values.into(),
         validity.into(),
     ));
 
-    create_list(data_type, &mut nested, values)
+    Ok((values, nested))
 }

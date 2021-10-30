@@ -18,10 +18,8 @@
 [package]
 name = "arrow-integration-testing"
 description = "Binaries used in the Arrow integration tests"
-version = "4.0.0-SNAPSHOT"
-homepage = "https://github.com/apache/arrow"
-repository = "https://github.com/apache/arrow"
-authors = ["Apache Arrow <dev@arrow.apache.org>"]
+version = "0.1.0"
+authors = ["Jorge C Leitao", "Apache Arrow <dev@arrow.apache.org>"]
 license = "Apache-2.0"
 edition = "2018"
 publish = false
@@ -30,16 +28,16 @@ publish = false
 logging = ["tracing-subscriber"]
 
 [dependencies]
-arrow2 = { path = "../", features = ["io_ipc", "io_ipc_compression", "io_json_integration"], default-features = false }
-arrow-flight = { path = "../arrow-flight" }
+arrow2 = { path = "../", features = ["io_ipc", "io_ipc_compression", "io_flight", "io_json_integration"] }
+arrow-format = { version = "0.3.0", features = ["full"] }
 async-trait = "0.1.41"
 clap = "2.33"
 futures = "0.3"
 hex = "0.4"
-prost = "0.8"
+prost = "0.9"
 serde = { version = "1.0", features = ["rc"] }
 serde_derive = "1.0"
 serde_json = { version = "1.0", features = ["preserve_order"] }
 tokio = { version = "1.0", features = ["macros", "rt", "rt-multi-thread"] }
-tonic = "0.5.2"
-tracing-subscriber = { version = "0.2.15", optional = true }
+tonic = "0.6.0"
+tracing-subscriber = { version = "0.3.1", optional = true }

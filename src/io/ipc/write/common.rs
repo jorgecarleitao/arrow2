@@ -19,16 +19,17 @@
 use std::io::Write;
 use std::{collections::HashMap, sync::Arc};
 
-use super::super::gen;
-use super::super::CONTINUATION_MARKER;
-use super::{write, write_dictionary};
-use flatbuffers::FlatBufferBuilder;
+use arrow_format::ipc;
+use arrow_format::ipc::flatbuffers::FlatBufferBuilder;
 
 use crate::array::Array;
 use crate::error::{ArrowError, Result};
 use crate::io::ipc::endianess::is_native_little_endian;
 use crate::record_batch::RecordBatch;
 use crate::{array::DictionaryArray, datatypes::*};
+
+use super::super::CONTINUATION_MARKER;
+use super::{write, write_dictionary};
 
 /// IPC write options used to control the behaviour of the writer
 #[derive(Debug)]
@@ -46,7 +47,7 @@ pub struct IpcWriteOptions {
     ///
     /// version 2.0.0: V4, with legacy format enabled
     /// version 4.0.0: V5
-    metadata_version: gen::Schema::MetadataVersion,
+    metadata_version: ipc::Schema::MetadataVersion,
 }
 
 impl IpcWriteOptions {
@@ -54,7 +55,7 @@ impl IpcWriteOptions {
     pub fn try_new(
         alignment: usize,
         write_legacy_ipc_format: bool,
-        metadata_version: gen::Schema::MetadataVersion,
+        metadata_version: ipc::Schema::MetadataVersion,
     ) -> Result<Self> {
         if alignment == 0 || alignment % 8 != 0 {
             return Err(ArrowError::InvalidArgumentError(
@@ -62,17 +63,17 @@ impl IpcWriteOptions {
             ));
         }
         match metadata_version {
-            gen::Schema::MetadataVersion::V1
-            | gen::Schema::MetadataVersion::V2
-            | gen::Schema::MetadataVersion::V3 => Err(ArrowError::InvalidArgumentError(
+            ipc::Schema::MetadataVersion::V1
+            | ipc::Schema::MetadataVersion::V2
+            | ipc::Schema::MetadataVersion::V3 => Err(ArrowError::InvalidArgumentError(
                 "Writing IPC metadata version 3 and lower not supported".to_string(),
             )),
-            gen::Schema::MetadataVersion::V4 => Ok(Self {
+            ipc::Schema::MetadataVersion::V4 => Ok(Self {
                 alignment,
                 write_legacy_ipc_format,
                 metadata_version,
             }),
-            gen::Schema::MetadataVersion::V5 => {
+            ipc::Schema::MetadataVersion::V5 => {
                 if write_legacy_ipc_format {
                     Err(ArrowError::InvalidArgumentError(
                         "Legacy IPC format only supported on metadata version 4".to_string(),
@@ -85,11 +86,11 @@ impl IpcWriteOptions {
                     })
                 }
             }
-            z => panic!("Unsupported gen::Schema::MetadataVersion {:?}", z),
+            z => panic!("Unsupported ipc::Schema::MetadataVersion {:?}", z),
         }
     }
 
-    pub fn metadata_version(&self) -> &gen::Schema::MetadataVersion {
+    pub fn metadata_version(&self) -> &ipc::Schema::MetadataVersion {
         &self.metadata_version
     }
 }
@@ -99,7 +100,7 @@ impl Default for IpcWriteOptions {
         Self {
             alignment: 8,
             write_legacy_ipc_format: false,
-            metadata_version: gen::Schema::MetadataVersion::V5,
+            metadata_version: ipc::Schema::MetadataVersion::V5,
         }
     }
 }
@@ -139,13 +140,13 @@ pub fn encoded_batch(
     Ok((encoded_dictionaries, encoded_message))
 }
 
-/// Write a `RecordBatch` into two sets of bytes, one for the header (gen::Schema::Message) and the
+/// Write a `RecordBatch` into two sets of bytes, one for the header (ipc::Schema::Message) and the
 /// other for the batch's data
 fn record_batch_to_bytes(batch: &RecordBatch, write_options: &IpcWriteOptions) -> EncodedData {
     let mut fbb = FlatBufferBuilder::new();
 
-    let mut nodes: Vec<gen::Message::FieldNode> = vec![];
-    let mut buffers: Vec<gen::Schema::Buffer> = vec![];
+    let mut nodes: Vec<ipc::Message::FieldNode> = vec![];
+    let mut buffers: Vec<ipc::Schema::Buffer> = vec![];
     let mut arrow_data: Vec<u8> = vec![];
     let mut offset = 0;
     for array in batch.columns() {
@@ -164,17 +165,17 @@ fn record_batch_to_bytes(batch: &RecordBatch, write_options: &IpcWriteOptions) -
     let nodes = fbb.create_vector(&nodes);
 
     let root = {
-        let mut batch_builder = gen::Message::RecordBatchBuilder::new(&mut fbb);
+        let mut batch_builder = ipc::Message::RecordBatchBuilder::new(&mut fbb);
         batch_builder.add_length(batch.num_rows() as i64);
         batch_builder.add_nodes(nodes);
         batch_builder.add_buffers(buffers);
         let b = batch_builder.finish();
         b.as_union_value()
     };
-    // create an gen::Schema::Message
-    let mut message = gen::Message::MessageBuilder::new(&mut fbb);
+    // create an ipc::Schema::Message
+    let mut message = ipc::Message::MessageBuilder::new(&mut fbb);
     message.add_version(write_options.metadata_version);
-    message.add_header_type(gen::Message::MessageHeader::RecordBatch);
+    message.add_header_type(ipc::Message::MessageHeader::RecordBatch);
     message.add_bodyLength(arrow_data.len() as i64);
     message.add_header(root);
     let root = message.finish();
@@ -187,7 +188,7 @@ fn record_batch_to_bytes(batch: &RecordBatch, write_options: &IpcWriteOptions) -
     }
 }
 
-/// Write dictionary values into two sets of bytes, one for the header (gen::Schema::Message) and the
+/// Write dictionary values into two sets of bytes, one for the header (ipc::Schema::Message) and the
 /// other for the data
 fn dictionary_batch_to_bytes(
     dict_id: i64,
@@ -197,8 +198,8 @@ fn dictionary_batch_to_bytes(
 ) -> EncodedData {
     let mut fbb = FlatBufferBuilder::new();
 
-    let mut nodes: Vec<gen::Message::FieldNode> = vec![];
-    let mut buffers: Vec<gen::Schema::Buffer> = vec![];
+    let mut nodes: Vec<ipc::Message::FieldNode> = vec![];
+    let mut buffers: Vec<ipc::Schema::Buffer> = vec![];
     let mut arrow_data: Vec<u8> = vec![];
 
     let length = write_dictionary(
@@ -216,7 +217,7 @@ fn dictionary_batch_to_bytes(
     let nodes = fbb.create_vector(&nodes);
 
     let root = {
-        let mut batch_builder = gen::Message::RecordBatchBuilder::new(&mut fbb);
+        let mut batch_builder = ipc::Message::RecordBatchBuilder::new(&mut fbb);
         batch_builder.add_length(length as i64);
         batch_builder.add_nodes(nodes);
         batch_builder.add_buffers(buffers);
@@ -224,16 +225,16 @@ fn dictionary_batch_to_bytes(
     };
 
     let root = {
-        let mut batch_builder = gen::Message::DictionaryBatchBuilder::new(&mut fbb);
+        let mut batch_builder = ipc::Message::DictionaryBatchBuilder::new(&mut fbb);
         batch_builder.add_id(dict_id);
         batch_builder.add_data(root);
         batch_builder.finish().as_union_value()
     };
 
     let root = {
-        let mut message_builder = gen::Message::MessageBuilder::new(&mut fbb);
+        let mut message_builder = ipc::Message::MessageBuilder::new(&mut fbb);
         message_builder.add_version(write_options.metadata_version);
-        message_builder.add_header_type(gen::Message::MessageHeader::DictionaryBatch);
+        message_builder.add_header_type(ipc::Message::MessageHeader::DictionaryBatch);
         message_builder.add_bodyLength(arrow_data.len() as i64);
         message_builder.add_header(root);
         message_builder.finish()
@@ -307,9 +308,9 @@ impl DictionaryTracker {
     }
 }
 
-/// Stores the encoded data, which is an gen::Schema::Message, and optional Arrow data
+/// Stores the encoded data, which is an ipc::Schema::Message, and optional Arrow data
 pub struct EncodedData {
-    /// An encoded gen::Schema::Message
+    /// An encoded ipc::Schema::Message
     pub ipc_message: Vec<u8>,
     /// Arrow buffers to be written, should be an empty vec for schema messages
     pub arrow_data: Vec<u8>,
@@ -382,12 +383,12 @@ pub fn write_continuation<W: Write>(
 
     // the version of the writer determines whether continuation markers should be added
     match write_options.metadata_version {
-        gen::Schema::MetadataVersion::V1
-        | gen::Schema::MetadataVersion::V2
-        | gen::Schema::MetadataVersion::V3 => {
+        ipc::Schema::MetadataVersion::V1
+        | ipc::Schema::MetadataVersion::V2
+        | ipc::Schema::MetadataVersion::V3 => {
             unreachable!("Options with the metadata version cannot be created")
         }
-        gen::Schema::MetadataVersion::V4 => {
+        ipc::Schema::MetadataVersion::V4 => {
             if !write_options.write_legacy_ipc_format {
                 // v0.15.0 format
                 writer.write_all(&CONTINUATION_MARKER)?;
@@ -395,12 +396,12 @@ pub fn write_continuation<W: Write>(
             }
             writer.write_all(&total_len.to_le_bytes()[..])?;
         }
-        gen::Schema::MetadataVersion::V5 => {
+        ipc::Schema::MetadataVersion::V5 => {
             // write continuation marker and message length
             writer.write_all(&CONTINUATION_MARKER)?;
             writer.write_all(&total_len.to_le_bytes()[..])?;
         }
-        z => panic!("Unsupported gen::Schema::MetadataVersion {:?}", z),
+        z => panic!("Unsupported ipc::Schema::MetadataVersion {:?}", z),
     };
 
     writer.flush()?;

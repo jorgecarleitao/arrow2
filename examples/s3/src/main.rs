@@ -50,7 +50,8 @@ async fn main() -> Result<()> {
 
     // pages of the first row group and first column
     // This is IO bounded and SHOULD be done in a shared thread pool (e.g. Tokio)
-    let pages = get_page_stream(&metadata, 0, 0, &mut reader, vec![]).await?;
+    let column_metadata = &metadata.row_groups[0].columns()[0];
+    let pages = get_page_stream(column_metadata, &mut reader, None, vec![]).await?;
 
     // decompress the pages. This is CPU bounded and SHOULD be done in a dedicated thread pool (e.g. Rayon)
     let pages = pages.map(|compressed_page| decompress(compressed_page?, &mut vec![]));

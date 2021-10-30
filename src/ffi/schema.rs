@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, convert::TryInto, ffi::CStr, ffi::CString, ptr};
 
 use crate::{
-    datatypes::{DataType, Extension, Field, IntervalUnit, Metadata, TimeUnit},
+    datatypes::{DataType, Extension, Field, IntervalUnit, Metadata, TimeUnit, UnionMode},
     error::{ArrowError, Result},
 };
 
@@ -314,7 +314,7 @@ unsafe fn to_data_type(schema: &Ffi_ArrowSchema) -> Result<DataType> {
                 DataType::Decimal(precision, scale)
             } else if !parts.is_empty() && ((parts[0] == "+us") || (parts[0] == "+ud")) {
                 // union
-                let is_sparse = parts[0] == "+us";
+                let mode = UnionMode::sparse(parts[0] == "+us");
                 let type_ids = parts[1]
                     .split(',')
                     .map(|x| {
@@ -326,7 +326,7 @@ unsafe fn to_data_type(schema: &Ffi_ArrowSchema) -> Result<DataType> {
                 let fields = (0..schema.n_children as usize)
                     .map(|x| to_field(schema.child(x)))
                     .collect::<Result<Vec<_>>>()?;
-                DataType::Union(fields, Some(type_ids), is_sparse)
+                DataType::Union(fields, Some(type_ids), mode)
             } else {
                 return Err(ArrowError::Ffi(format!(
                     "The datatype \"{}\" is still not supported in Rust implementation",
@@ -380,10 +380,10 @@ fn to_format(data_type: &DataType) -> String {
         }
         DataType::Timestamp(unit, tz) => {
             let unit = match unit {
-                TimeUnit::Second => "s".to_string(),
-                TimeUnit::Millisecond => "m".to_string(),
-                TimeUnit::Microsecond => "u".to_string(),
-                TimeUnit::Nanosecond => "n".to_string(),
+                TimeUnit::Second => "s",
+                TimeUnit::Millisecond => "m",
+                TimeUnit::Microsecond => "u",
+                TimeUnit::Nanosecond => "n",
             };
             format!(
                 "ts{}:{}",
@@ -397,8 +397,8 @@ fn to_format(data_type: &DataType) -> String {
         DataType::Struct(_) => "+s".to_string(),
         DataType::FixedSizeBinary(size) => format!("w{}", size),
         DataType::FixedSizeList(_, size) => format!("+w:{}", size),
-        DataType::Union(f, ids, is_sparse) => {
-            let sparsness = if *is_sparse { 's' } else { 'd' };
+        DataType::Union(f, ids, mode) => {
+            let sparsness = if mode.is_sparse() { 's' } else { 'd' };
             let mut r = format!("+u{}:", sparsness);
             let ids = if let Some(ids) = ids {
                 ids.iter()
