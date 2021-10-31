@@ -1,5 +1,6 @@
 mod aggregate;
 mod arithmetics;
+mod bitwise;
 mod boolean;
 mod boolean_kleene;
 mod cast;

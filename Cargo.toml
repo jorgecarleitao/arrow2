@@ -249,3 +249,7 @@ harness = false
 [[bench]]
 name = "avro_read"
 harness = false
+
+[[bench]]
+name = "bitwise"
+harness = false
