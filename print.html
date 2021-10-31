@@ -1021,6 +1021,49 @@ fn main() -&gt; Result&lt;()&gt; {
     Ok(())
 }
 </code></pre></pre>
+<h2 id="async"><a class="header" href="#async">Async</a></h2>
+<p>This crate also supports reading from a CSV asyncronously through the <code>csv-async</code> crate.
+The example below demonstrates this:</p>
+<pre><pre class="playground"><code class="language-rust">use std::sync::Arc;
+
+use futures::io::Cursor;
+use tokio::fs::File;
+use tokio_util::compat::*;
+
+use arrow2::array::*;
+use arrow2::error::Result;
+use arrow2::io::csv::read_async::*;
+
+#[tokio::main(flavor = &quot;current_thread&quot;)]
+async fn main() -&gt; Result&lt;()&gt; {
+    use std::env;
+    let args: Vec&lt;String&gt; = env::args().collect();
+
+    let file_path = &amp;args[1];
+
+    let file = File::open(file_path).await?.compat();
+
+    let mut reader = AsyncReaderBuilder::new().create_reader(file);
+
+    let schema = Arc::new(infer_schema(&amp;mut reader, None, true, &amp;infer).await?);
+
+    let mut rows = vec![ByteRecord::default(); 100];
+    let rows_read = read_rows(&amp;mut reader, 0, &amp;mut rows).await?;
+
+    let batch = deserialize_batch(
+        &amp;rows[..rows_read],
+        schema.fields(),
+        None,
+        0,
+        deserialize_column,
+    )?;
+    println!(&quot;{}&quot;, batch.column(0));
+    Ok(())
+}
+</code></pre></pre>
+<p>Note that the deserialization <em>should</em> be performed on a separate thread to not
+block (see also <a href="https://ryhl.io/blog/async-what-is-blocking/">here</a>), which this
+example does not show.</p>
 <h2 id="customization"><a class="header" href="#customization">Customization</a></h2>
 <p>In the code above, <code>parser</code> and <code>infer</code> allow for customization: they declare
 how rows of bytes should be inferred (into a logical type), and processed (into a value of said type).
