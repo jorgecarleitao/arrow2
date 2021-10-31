@@ -82,6 +82,8 @@ criterion = "0.3"
 flate2 = "1"
 doc-comment = "0.3"
 crossbeam-channel = "0.5.1"
+# used to test async readers
+tokio = { version = "1", features = ["macros", "rt"] }
 # used to run formal property testing
 proptest = { version = "1", default_features = false, features = ["std"] }
 
@@ -93,7 +95,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 default = []
 full = [
     "io_csv",
-    "io_csv_read_async",
+    "io_csv_async",
     "io_json",
     "io_ipc",
     "io_flight",
@@ -111,6 +113,7 @@ full = [
 ]
 merge_sort = ["itertools"]
 io_csv = ["io_csv_read", "io_csv_write"]
+io_csv_async = ["io_csv_read_async"]
 io_csv_read = ["csv", "lexical-core"]
 io_csv_read_async = ["csv-async", "lexical-core", "futures"]
 io_csv_write = ["csv", "streaming-iterator", "lexical-core"]
@@ -151,8 +154,9 @@ skip_feature_sets = [
     # io are additive APIs and do not interact
     ["io_csv"],
     ["io_csv_read"],
-    ["io_csv_read_async"],
     ["io_csv_write"],
+    ["io_csv_async"],
+    ["io_csv_read_async"],
     ["io_avro"],
     ["io_json"],
     ["io_flight"],

@@ -4,6 +4,10 @@
 use crate::error::ArrowError;
 
 pub use csv::Error as CSVError;
+
+#[cfg(any(feature = "io_csv_read_async", feature = "io_csv_read"))]
+mod read_utils;
+#[cfg(any(feature = "io_csv_read_async", feature = "io_csv_read"))]
 mod utils;
 
 impl From<CSVError> for ArrowError {

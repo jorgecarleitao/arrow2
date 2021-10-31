@@ -3,12 +3,14 @@
 // Re-export for usage by consumers.
 pub use csv_async::{AsyncReader, AsyncReaderBuilder, ByteRecord};
 
+mod deserialize;
 mod infer_schema;
+mod reader;
 
-//pub use deserialize::{deserialize_batch, deserialize_column};
 pub use super::utils::infer;
+pub use deserialize::{deserialize_batch, deserialize_column};
 pub use infer_schema::infer_schema;
-//pub use reader::*;
+pub use reader::*;
 
 pub use csv_async::Error as CSVError;
 

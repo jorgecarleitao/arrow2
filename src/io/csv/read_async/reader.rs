@@ -1,21 +1,24 @@
-use std::io::Read;
+use futures::AsyncRead;
 
-use super::{ByteRecord, Reader};
+use super::{AsyncReader, ByteRecord};
 
 use crate::error::{ArrowError, Result};
 
-/// Reads `len` rows from `reader` into `row`, skiping the first `skip`.
+/// Asynchronosly read `len` rows from `reader` into `row`, skiping the first `skip`.
 /// This operation has minimal CPU work and is thus the fastest way to read through a CSV
 /// without deserializing the contents to Arrow.
-pub fn read_rows<R: Read>(
-    reader: &mut Reader<R>,
+pub async fn read_rows<R>(
+    reader: &mut AsyncReader<R>,
     skip: usize,
     rows: &mut [ByteRecord],
-) -> Result<usize> {
+) -> Result<usize>
+where
+    R: AsyncRead + Unpin + Send + Sync,
+{
     // skip first `start` rows.
     let mut row = ByteRecord::new();
     for _ in 0..skip {
-        let res = reader.read_byte_record(&mut row);
+        let res = reader.read_byte_record(&mut row).await;
         if !res.unwrap_or(false) {
             break;
         }
@@ -23,7 +26,7 @@ pub fn read_rows<R: Read>(
 
     let mut row_number = 0;
     for row in rows.iter_mut() {
-        let has_more = reader.read_byte_record(row).map_err(|e| {
+        let has_more = reader.read_byte_record(row).await.map_err(|e| {
             ArrowError::External(format!(" at line {}", skip + row_number), Box::new(e))
         })?;
         if !has_more {

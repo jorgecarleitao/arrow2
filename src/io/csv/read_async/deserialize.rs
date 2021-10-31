@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use csv::ByteRecord;
+use csv_async::ByteRecord;
 
 use crate::{
     array::Array,
