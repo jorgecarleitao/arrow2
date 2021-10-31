@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["schema_to_bytes","Converts"],["write",""],["write_dictionary",""]],"mod":[["common","Common utilities used to write to Arrow’s IPC format."]],"struct":[["FileWriter","Arrow file writer"],["MetadataVersion",""],["StreamWriter","Arrow stream writer"]]});
