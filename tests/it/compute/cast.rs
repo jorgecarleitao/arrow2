@@ -179,7 +179,7 @@ fn binary_to_i32_partial() {
     let b = partial_cast(&array, &DataType::Int32).unwrap();
     let c = b.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
 
-    let expected = &[Some(5), Some(6), Some(123), Some(0), None];
+    let expected = &[Some(5), Some(6), Some(123), Some(0), Some(9)];
     let expected = Int32Array::from(expected);
     assert_eq!(c, &expected);
 }
