@@ -41,7 +41,7 @@ pub fn binary_to_primitive<O: Offset, T>(
 where
     T: NativeType + lexical_core::FromLexical,
 {
-    let parse_fn = if options.partial {
+    let parse_fn = if !options.partial {
         |x| lexical_core::parse(x).ok()
     } else {
         |x| lexical_core::parse_partial(x).ok().map(|x| x.0)
