@@ -30,6 +30,19 @@ thereby maximizing IO throughput. The example below shows how to do just that:
 {{#include ../../../examples/csv_read_parallel.rs}}
 ```
 
+## Async
+
+This crate also supports reading from a CSV asyncronously through the `csv-async` crate.
+The example below demonstrates this:
+
+```rust
+{{#include ../../../examples/csv_read_async.rs}}
+```
+
+Note that the deserialization _should_ be performed on a separate thread to not
+block (see also [here](https://ryhl.io/blog/async-what-is-blocking/)), which this
+example does not show.
+
 ## Customization
 
 In the code above, `parser` and `infer` allow for customization: they declare
