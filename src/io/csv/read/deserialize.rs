@@ -12,7 +12,7 @@ use crate::{
     types::{NativeType, NaturalDataType},
 };
 
-use super::infer_schema::RFC3339;
+use super::super::utils::RFC3339;
 
 fn deserialize_primitive<T, F>(
     rows: &[ByteRecord],

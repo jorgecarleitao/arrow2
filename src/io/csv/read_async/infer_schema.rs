@@ -1,28 +1,36 @@
-use std::{
-    collections::HashSet,
-    io::{Read, Seek},
-};
+use std::collections::HashSet;
+
+use super::{AsyncReader, ByteRecord};
 
 use crate::datatypes::{DataType, Schema};
 use crate::error::Result;
+use crate::io::csv::utils::merge_schema;
 
-use super::super::utils::merge_schema;
-use super::{ByteRecord, Reader};
+use futures::{AsyncRead, AsyncSeek};
 
 /// Infers a [`Schema`] of a CSV file by reading through the first n records up to `max_rows`.
-/// Seeks back to the begining of the file _after_ the header
-pub fn infer_schema<R: Read + Seek, F: Fn(&[u8]) -> DataType>(
-    reader: &mut Reader<R>,
+/// Seeks back to the begining of the file _after_ the header.
+pub async fn infer_schema<R, F>(
+    reader: &mut AsyncReader<R>,
     max_rows: Option<usize>,
     has_header: bool,
     infer: &F,
-) -> Result<Schema> {
+) -> Result<Schema>
+where
+    R: AsyncRead + AsyncSeek + Unpin + Send + Sync,
+    F: Fn(&[u8]) -> DataType,
+{
     // get or create header names
     // when has_header is false, creates default column names with column_ prefix
     let headers: Vec<String> = if has_header {
-        reader.headers()?.iter().map(|s| s.to_string()).collect()
+        reader
+            .headers()
+            .await?
+            .iter()
+            .map(|s| s.to_string())
+            .collect()
     } else {
-        let first_record_count = &reader.headers()?.len();
+        let first_record_count = &reader.headers().await?.len();
         (0..*first_record_count)
             .map(|i| format!("column_{}", i + 1))
             .collect()
@@ -40,7 +48,7 @@ pub fn infer_schema<R: Read + Seek, F: Fn(&[u8]) -> DataType>(
     let mut record = ByteRecord::new();
     let max_records = max_rows.unwrap_or(usize::MAX);
     while records_count < max_records {
-        if !reader.read_byte_record(&mut record)? {
+        if !reader.read_byte_record(&mut record).await? {
             break;
         }
         records_count += 1;
@@ -55,7 +63,7 @@ pub fn infer_schema<R: Read + Seek, F: Fn(&[u8]) -> DataType>(
     let fields = merge_schema(&headers, &mut column_types);
 
     // return the reader seek back to the start
-    reader.seek(position)?;
+    reader.seek(position).await?;
 
     Ok(Schema::new(fields))
 }

@@ -4,6 +4,7 @@
 use crate::error::ArrowError;
 
 pub use csv::Error as CSVError;
+mod utils;
 
 impl From<CSVError> for ArrowError {
     fn from(error: CSVError) -> Self {
@@ -23,3 +24,7 @@ pub mod read;
 #[cfg(feature = "io_csv_write")]
 #[cfg_attr(docsrs, doc(cfg(feature = "io_csv_write")))]
 pub mod write;
+
+#[cfg(feature = "io_csv_read_async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "io_csv_read_async")))]
+pub mod read_async;

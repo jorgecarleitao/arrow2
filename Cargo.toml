@@ -26,9 +26,13 @@ hash_hasher = "^2.0.3"
 # For SIMD utf8 validation
 simdutf8 = "0.1.3"
 
+# for csv io
 csv = { version = "^1.1", optional = true }
+
+# for csv async io
+csv-async = { version = "^1.1", optional = true }
+
 regex = { version = "^1.3", optional = true }
-lazy_static = { version = "^1.4", optional = true }
 streaming-iterator = { version = "0.1", optional = true }
 
 serde = { version = "^1.0", features = ["rc"], optional = true }
@@ -89,6 +93,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 default = []
 full = [
     "io_csv",
+    "io_csv_read_async",
     "io_json",
     "io_ipc",
     "io_flight",
@@ -107,6 +112,7 @@ full = [
 merge_sort = ["itertools"]
 io_csv = ["io_csv_read", "io_csv_write"]
 io_csv_read = ["csv", "lexical-core"]
+io_csv_read_async = ["csv-async", "lexical-core", "futures"]
 io_csv_write = ["csv", "streaming-iterator", "lexical-core"]
 io_json = ["serde", "serde_json", "indexmap"]
 io_ipc = ["arrow-format"]
@@ -145,6 +151,7 @@ skip_feature_sets = [
     # io are additive APIs and do not interact
     ["io_csv"],
     ["io_csv_read"],
+    ["io_csv_read_async"],
     ["io_csv_write"],
     ["io_avro"],
     ["io_json"],
