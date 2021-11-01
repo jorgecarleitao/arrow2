@@ -117,8 +117,13 @@ impl<T: NativeType> Buffer<T> {
 
     /// Returns a pointer to the start of this buffer.
     #[inline]
-    pub fn as_ptr(&self) -> *const T {
-        unsafe { self.data.ptr().as_ptr().add(self.offset) }
+    pub(crate) fn as_ptr(&self) -> std::ptr::NonNull<T> {
+        self.data.ptr()
+    }
+
+    /// Returns a offset of this buffer
+    pub(crate) fn offset(&self) -> usize {
+        self.offset
     }
 }
 

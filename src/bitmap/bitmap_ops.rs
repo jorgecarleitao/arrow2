@@ -132,6 +132,18 @@ where
     }
 }
 
+// create a new [`Bitmap`] semantically equal to ``bitmap`` but with an offset equal to ``offset``
+pub(crate) fn align(bitmap: &Bitmap, new_offset: usize) -> Bitmap {
+    let length = bitmap.len();
+
+    let bitmap: Bitmap = std::iter::repeat(false)
+        .take(new_offset)
+        .chain(bitmap.iter())
+        .collect();
+
+    bitmap.slice(new_offset, length)
+}
+
 #[inline]
 fn and(lhs: &Bitmap, rhs: &Bitmap) -> Bitmap {
     binary(lhs, rhs, |x, y| x & y)

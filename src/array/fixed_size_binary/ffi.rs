@@ -1,15 +1,8 @@
-use crate::{
-    array::{FromFfi, ToFfi},
-    bitmap::align,
-    ffi,
-    types::NativeType,
-};
+use crate::{array::ToFfi, bitmap::align};
 
-use crate::error::Result;
+use super::FixedSizeBinaryArray;
 
-use super::PrimitiveArray;
-
-unsafe impl<T: NativeType> ToFfi for PrimitiveArray<T> {
+unsafe impl ToFfi for FixedSizeBinaryArray {
     fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>> {
         vec![
             self.validity.as_ref().map(|x| x.as_ptr()),
@@ -18,7 +11,7 @@ unsafe impl<T: NativeType> ToFfi for PrimitiveArray<T> {
     }
 
     fn offset(&self) -> Option<usize> {
-        let offset = self.values.offset();
+        let offset = self.values.offset() / self.size as usize;
         if let Some(bitmap) = self.validity.as_ref() {
             if bitmap.offset() == offset {
                 Some(offset)
@@ -31,7 +24,7 @@ unsafe impl<T: NativeType> ToFfi for PrimitiveArray<T> {
     }
 
     fn to_ffi_aligned(&self) -> Self {
-        let offset = self.values.offset();
+        let offset = self.values.offset() / self.size;
 
         let validity = self.validity.as_ref().map(|bitmap| {
             if bitmap.offset() == offset {
@@ -42,19 +35,10 @@ unsafe impl<T: NativeType> ToFfi for PrimitiveArray<T> {
         });
 
         Self {
+            size: self.size,
             data_type: self.data_type.clone(),
             validity,
             values: self.values.clone(),
         }
-    }
-}
-
-impl<T: NativeType, A: ffi::ArrowArrayRef> FromFfi<A> for PrimitiveArray<T> {
-    unsafe fn try_from_ffi(array: A) -> Result<Self> {
-        let data_type = array.field().data_type().clone();
-        let validity = unsafe { array.validity() }?;
-        let values = unsafe { array.buffer::<T>(0) }?;
-
-        Ok(Self::from_data(data_type, values, validity))
     }
 }

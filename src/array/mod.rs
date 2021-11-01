@@ -393,9 +393,9 @@ pub use struct_::StructArray;
 pub use union::UnionArray;
 pub use utf8::{MutableUtf8Array, Utf8Array, Utf8ValuesIter};
 
-pub(crate) use self::ffi::buffers_children_dictionary;
-pub use self::ffi::FromFfi;
-pub use self::ffi::ToFfi;
+pub(crate) use self::ffi::offset_buffers_children_dictionary;
+pub(crate) use self::ffi::FromFfi;
+pub(crate) use self::ffi::ToFfi;
 
 /// A trait describing the ability of a struct to create itself from a iterator.
 /// This is similar to [`Extend`], but accepted the creation to error.

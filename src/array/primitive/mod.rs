@@ -35,7 +35,6 @@ pub struct PrimitiveArray<T: NativeType> {
     data_type: DataType,
     values: Buffer<T>,
     validity: Option<Bitmap>,
-    offset: usize,
 }
 
 impl<T: NativeType> PrimitiveArray<T> {
@@ -75,7 +74,6 @@ impl<T: NativeType> PrimitiveArray<T> {
             data_type,
             values,
             validity,
-            offset: 0,
         }
     }
 
@@ -108,7 +106,6 @@ impl<T: NativeType> PrimitiveArray<T> {
             data_type: self.data_type.clone(),
             values: self.values.clone().slice_unchecked(offset, length),
             validity,
-            offset: self.offset + offset,
         }
     }
 
@@ -150,7 +147,7 @@ impl<T: NativeType> PrimitiveArray<T> {
     /// Caller must be sure that `i < self.len()`
     #[inline]
     pub unsafe fn value_unchecked(&self, i: usize) -> T {
-        *self.values().as_ptr().add(i)
+        *self.values.get_unchecked(i)
     }
 
     /// Returns a new [`PrimitiveArray`] with a different logical type.
@@ -171,7 +168,6 @@ impl<T: NativeType> PrimitiveArray<T> {
             data_type,
             values: self.values,
             validity: self.validity,
-            offset: self.offset,
         }
     }
 }

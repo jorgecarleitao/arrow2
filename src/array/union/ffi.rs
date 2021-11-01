@@ -10,20 +10,24 @@ unsafe impl ToFfi for UnionArray {
         if let Some(offsets) = &self.offsets {
             vec![
                 None,
-                std::ptr::NonNull::new(self.types.as_ptr() as *mut u8),
-                std::ptr::NonNull::new(offsets.as_ptr() as *mut u8),
+                Some(self.types.as_ptr().cast::<u8>()),
+                Some(offsets.as_ptr().cast::<u8>()),
             ]
         } else {
-            vec![None, std::ptr::NonNull::new(self.types.as_ptr() as *mut u8)]
+            vec![None, Some(self.types.as_ptr().cast::<u8>())]
         }
-    }
-
-    fn offset(&self) -> usize {
-        self.offset
     }
 
     fn children(&self) -> Vec<Arc<dyn Array>> {
         self.fields.clone()
+    }
+
+    fn offset(&self) -> Option<usize> {
+        Some(self.types.offset())
+    }
+
+    fn to_ffi_aligned(&self) -> Self {
+        self.clone()
     }
 }
 

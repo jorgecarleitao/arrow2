@@ -2,6 +2,7 @@
 //! contains FFI bindings to import and export [`Array`](crate::array::Array) via
 //! Arrow's [C Data Interface](https://arrow.apache.org/docs/format/CDataInterface.html)
 mod array;
+mod bridge;
 #[allow(clippy::module_inception)]
 mod ffi;
 mod schema;
@@ -24,6 +25,8 @@ use self::schema::to_field;
 /// # Safety
 /// The pointer `ptr` must be allocated and valid
 pub unsafe fn export_array_to_c(array: Arc<dyn Array>, ptr: *mut Ffi_ArrowArray) {
+    let array = bridge::align_to_c_data_interface(array);
+
     *ptr = Ffi_ArrowArray::new(array);
 }
 
