@@ -183,22 +183,23 @@ unsafe fn create_buffer<T: NativeType>(
     deallocation: Deallocation,
     index: usize,
 ) -> Result<Buffer<T>> {
+    println!("{:#?}", array);
     if array.buffers.is_null() {
         return Err(ArrowError::Ffi("The array buffers are null".to_string()));
     }
-    let buffers = array.buffers as *mut *const u8;
 
-    let len = buffer_len(array, data_type, index)?;
-    let offset = array.offset as usize;
+    let buffers = array.buffers as *mut *const u8;
 
     assert!(index < array.n_buffers as usize);
     let ptr = *buffers.add(index);
-
     let ptr = NonNull::new(ptr as *mut T);
+
+    let len = buffer_len(array, data_type, index)?;
     let bytes = ptr
-        .map(|ptr| Bytes::new(ptr, offset + len, deallocation))
+        .map(|ptr| Bytes::new(ptr, len, deallocation))
         .ok_or_else(|| ArrowError::Ffi(format!("The buffer at position {} is null", index)));
 
+    println!("{:?}", bytes);
     bytes.map(Buffer::from_bytes)
 }
 
@@ -241,13 +242,6 @@ unsafe fn create_bitmap(
 fn buffer_offset(array: &Ffi_ArrowArray, data_type: &DataType, i: usize) -> usize {
     use PhysicalType::*;
     match (data_type.to_physical_type(), i) {
-        (Utf8, 1)
-        | (LargeUtf8, 1)
-        | (Binary, 1)
-        | (LargeBinary, 1)
-        | (List, 1)
-        | (LargeList, 1)
-        | (Map, 1) => array.offset as usize,
         (LargeUtf8, 2) | (LargeBinary, 2) | (Utf8, 2) | (Binary, 2) => 0,
         _ => array.offset as usize,
     }
@@ -267,30 +261,32 @@ fn buffer_len(array: &Ffi_ArrowArray, data_type: &DataType, i: usize) -> Result<
         | (PhysicalType::LargeList, 1)
         | (PhysicalType::Map, 1) => {
             // the len of the offset buffer (buffer 1) equals length + 1
-            array.length as usize + 1
+            array.offset as usize + array.length as usize + 1
         }
         (PhysicalType::Utf8, 2) | (PhysicalType::Binary, 2) => {
             // the len of the data buffer (buffer 2) equals the last value of the offset buffer (buffer 1)
             let len = buffer_len(array, data_type, 1)?;
+            let offset = buffer_offset(array, data_type, 1);
             // first buffer is the null buffer => add(1)
             let offset_buffer = unsafe { *(array.buffers as *mut *const u8).add(1) };
             // interpret as i32
             let offset_buffer = offset_buffer as *const i32;
             // get last offset
-            (unsafe { *offset_buffer.add(len - 1) }) as usize
+            (unsafe { *offset_buffer.add(offset + len - 1) }) as usize
         }
         (PhysicalType::LargeUtf8, 2) | (PhysicalType::LargeBinary, 2) => {
             // the len of the data buffer (buffer 2) equals the last value of the offset buffer (buffer 1)
             let len = buffer_len(array, data_type, 1)?;
+            let offset = buffer_offset(array, data_type, 1);
             // first buffer is the null buffer => add(1)
             let offset_buffer = unsafe { *(array.buffers as *mut *const u8).add(1) };
             // interpret as i64
             let offset_buffer = offset_buffer as *const i64;
             // get last offset
-            (unsafe { *offset_buffer.add(len - 1) }) as usize
+            (unsafe { *offset_buffer.add(offset + len - 1) }) as usize
         }
         // buffer len of primitive types
-        _ => array.length as usize,
+        _ => array.offset as usize + array.length as usize,
     })
 }
 
