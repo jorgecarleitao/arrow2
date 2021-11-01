@@ -23,11 +23,11 @@ unsafe impl ToFfi for UnionArray {
     }
 
     fn offset(&self) -> Option<usize> {
-        todo!()
+        Some(self.types.offset())
     }
 
     fn to_ffi_aligned(&self) -> Self {
-        todo!()
+        self.clone()
     }
 }
 

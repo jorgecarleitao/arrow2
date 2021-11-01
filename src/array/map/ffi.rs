@@ -18,7 +18,16 @@ unsafe impl ToFfi for MapArray {
     }
 
     fn offset(&self) -> Option<usize> {
-        todo!()
+        let offset = self.offsets.offset();
+        if let Some(bitmap) = self.validity.as_ref() {
+            if bitmap.offset() == offset {
+                Some(offset)
+            } else {
+                None
+            }
+        } else {
+            Some(offset)
+        }
     }
 
     fn to_ffi_aligned(&self) -> Self {
@@ -44,17 +53,11 @@ unsafe impl ToFfi for MapArray {
 impl<A: ffi::ArrowArrayRef> FromFfi<A> for MapArray {
     unsafe fn try_from_ffi(array: A) -> Result<Self> {
         let data_type = array.field().data_type().clone();
-        let length = array.array().len();
-        let offset = array.array().offset();
-        let mut validity = unsafe { array.validity() }?;
-        let mut offsets = unsafe { array.buffer::<i32>(0) }?;
+        let validity = unsafe { array.validity() }?;
+        let offsets = unsafe { array.buffer::<i32>(0) }?;
         let child = array.child(0)?;
         let values = ffi::try_from(child)?.into();
 
-        if offset > 0 {
-            offsets = offsets.slice(offset, length);
-            validity = validity.map(|x| x.slice(offset, length))
-        }
         Ok(Self::from_data(data_type, offsets, values, validity))
     }
 }

@@ -183,7 +183,6 @@ unsafe fn create_buffer<T: NativeType>(
     deallocation: Deallocation,
     index: usize,
 ) -> Result<Buffer<T>> {
-    println!("{:#?}", array);
     if array.buffers.is_null() {
         return Err(ArrowError::Ffi("The array buffers are null".to_string()));
     }
@@ -195,12 +194,12 @@ unsafe fn create_buffer<T: NativeType>(
     let ptr = NonNull::new(ptr as *mut T);
 
     let len = buffer_len(array, data_type, index)?;
+    let offset = buffer_offset(array, data_type, index);
     let bytes = ptr
         .map(|ptr| Bytes::new(ptr, len, deallocation))
-        .ok_or_else(|| ArrowError::Ffi(format!("The buffer at position {} is null", index)));
+        .ok_or_else(|| ArrowError::Ffi(format!("The buffer at position {} is null", index)))?;
 
-    println!("{:?}", bytes);
-    bytes.map(Buffer::from_bytes)
+    Ok(Buffer::from_bytes(bytes).slice(offset, len - offset))
 }
 
 /// returns a new buffer corresponding to the index `i` of the FFI array. It may not exist (null pointer).
@@ -236,7 +235,7 @@ unsafe fn create_bitmap(
             ))
         })?;
 
-    Ok(Bitmap::from_bytes(bytes, offset + len))
+    Ok(Bitmap::from_bytes(bytes, offset + len).slice(offset, len))
 }
 
 fn buffer_offset(array: &Ffi_ArrowArray, data_type: &DataType, i: usize) -> usize {
@@ -266,24 +265,23 @@ fn buffer_len(array: &Ffi_ArrowArray, data_type: &DataType, i: usize) -> Result<
         (PhysicalType::Utf8, 2) | (PhysicalType::Binary, 2) => {
             // the len of the data buffer (buffer 2) equals the last value of the offset buffer (buffer 1)
             let len = buffer_len(array, data_type, 1)?;
-            let offset = buffer_offset(array, data_type, 1);
             // first buffer is the null buffer => add(1)
             let offset_buffer = unsafe { *(array.buffers as *mut *const u8).add(1) };
             // interpret as i32
             let offset_buffer = offset_buffer as *const i32;
             // get last offset
-            (unsafe { *offset_buffer.add(offset + len - 1) }) as usize
+
+            (unsafe { *offset_buffer.add(len - 1) }) as usize
         }
         (PhysicalType::LargeUtf8, 2) | (PhysicalType::LargeBinary, 2) => {
             // the len of the data buffer (buffer 2) equals the last value of the offset buffer (buffer 1)
             let len = buffer_len(array, data_type, 1)?;
-            let offset = buffer_offset(array, data_type, 1);
             // first buffer is the null buffer => add(1)
             let offset_buffer = unsafe { *(array.buffers as *mut *const u8).add(1) };
             // interpret as i64
             let offset_buffer = offset_buffer as *const i64;
             // get last offset
-            (unsafe { *offset_buffer.add(offset + len - 1) }) as usize
+            (unsafe { *offset_buffer.add(len - 1) }) as usize
         }
         // buffer len of primitive types
         _ => array.offset as usize + array.length as usize,
@@ -363,7 +361,9 @@ pub trait ArrowArrayRef {
         create_bitmap(self.array(), self.deallocation(), index + 1)
     }
 
-    fn child(&self, index: usize) -> Result<ArrowArrayChild> {
+    /// # Safety
+    /// The caller must guarantee that the child `index` is valid per c data interface.
+    unsafe fn child(&self, index: usize) -> Result<ArrowArrayChild> {
         create_child(self.array(), self.field(), self.parent().clone(), index)
     }
 
