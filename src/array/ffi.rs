@@ -7,7 +7,7 @@ use crate::error::Result;
 
 /// Trait describing how a struct presents itself to the
 /// [C data interface](https://arrow.apache.org/docs/format/CDataInterface.html) (FFI).
-/// Safety:
+/// # Safety
 /// Implementing this trait incorrect will lead to UB
 pub(crate) unsafe trait ToFfi {
     /// The pointers to the buffers.

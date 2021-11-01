@@ -132,9 +132,9 @@ where
     }
 }
 
-// create a new bitmap semantically equal to ``bitmap`` but with an offset equal to ``offset``
+// create a new [`Bitmap`] semantically equal to ``bitmap`` but with an offset equal to ``offset``
 pub(crate) fn align(bitmap: &Bitmap, new_offset: usize) -> Bitmap {
-    let (slice, offset, length) = bitmap.as_slice();
+    let length = bitmap.len();
 
     let bitmap: Bitmap = std::iter::repeat(false)
         .take(new_offset)

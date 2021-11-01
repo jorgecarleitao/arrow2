@@ -102,7 +102,6 @@ impl Ffi_ArrowArray {
         let buffers_ptr = buffers
             .iter()
             .map(|maybe_buffer| match maybe_buffer {
-                // note that `raw_data` takes into account the buffer's offset
                 Some(b) => b.as_ptr() as *const std::os::raw::c_void,
                 None => std::ptr::null(),
             })
@@ -131,7 +130,7 @@ impl Ffi_ArrowArray {
         Self {
             length,
             null_count,
-            offset: 0i64,
+            offset: offset as i64,
             n_buffers,
             n_children,
             buffers: private_data.buffers_ptr.as_mut_ptr(),
@@ -190,13 +189,14 @@ unsafe fn create_buffer<T: NativeType>(
     let buffers = array.buffers as *mut *const u8;
 
     let len = buffer_len(array, data_type, index)?;
+    let offset = array.offset as usize;
 
     assert!(index < array.n_buffers as usize);
     let ptr = *buffers.add(index);
 
     let ptr = NonNull::new(ptr as *mut T);
     let bytes = ptr
-        .map(|ptr| Bytes::new(ptr, len, deallocation))
+        .map(|ptr| Bytes::new(ptr, offset + len, deallocation))
         .ok_or_else(|| ArrowError::Ffi(format!("The buffer at position {} is null", index)));
 
     bytes.map(Buffer::from_bytes)
@@ -218,12 +218,13 @@ unsafe fn create_bitmap(
         return Err(ArrowError::Ffi("The array buffers are null".to_string()));
     }
     let len = array.length as usize;
+    let offset = array.offset as usize;
     let buffers = array.buffers as *mut *const u8;
 
     assert!(index < array.n_buffers as usize);
     let ptr = *buffers.add(index);
 
-    let bytes_len = bytes_for(len);
+    let bytes_len = bytes_for(offset + len);
     let ptr = NonNull::new(ptr as *mut u8);
     let bytes = ptr
         .map(|ptr| Bytes::new(ptr, bytes_len, deallocation))
@@ -234,7 +235,22 @@ unsafe fn create_bitmap(
             ))
         })?;
 
-    Ok(Bitmap::from_bytes(bytes, len))
+    Ok(Bitmap::from_bytes(bytes, offset + len))
+}
+
+fn buffer_offset(array: &Ffi_ArrowArray, data_type: &DataType, i: usize) -> usize {
+    use PhysicalType::*;
+    match (data_type.to_physical_type(), i) {
+        (Utf8, 1)
+        | (LargeUtf8, 1)
+        | (Binary, 1)
+        | (LargeBinary, 1)
+        | (List, 1)
+        | (LargeList, 1)
+        | (Map, 1) => array.offset as usize,
+        (LargeUtf8, 2) | (LargeBinary, 2) | (Utf8, 2) | (Binary, 2) => 0,
+        _ => array.offset as usize,
+    }
 }
 
 /// Returns the length, in slots, of the buffer `i` (indexed according to the C data interface)

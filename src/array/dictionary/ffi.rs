@@ -19,7 +19,7 @@ unsafe impl<K: DictionaryKey> ToFfi for DictionaryArray<K> {
         Self {
             data_type: self.data_type.clone(),
             keys: self.keys.to_ffi_aligned(),
-            values: self.values,
+            values: self.values.clone(),
         }
     }
 }

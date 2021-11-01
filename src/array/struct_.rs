@@ -226,6 +226,19 @@ unsafe impl ToFfi for StructArray {
     fn children(&self) -> Vec<Arc<dyn Array>> {
         self.values.clone()
     }
+
+    fn offset(&self) -> Option<usize> {
+        Some(
+            self.validity
+                .as_ref()
+                .map(|bitmap| bitmap.offset())
+                .unwrap_or_default(),
+        )
+    }
+
+    fn to_ffi_aligned(&self) -> Self {
+        self.clone()
+    }
 }
 
 impl<A: ffi::ArrowArrayRef> FromFfi<A> for StructArray {
