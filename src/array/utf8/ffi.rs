@@ -53,8 +53,8 @@ impl<O: Offset, A: ffi::ArrowArrayRef> FromFfi<A> for Utf8Array<O> {
     unsafe fn try_from_ffi(array: A) -> Result<Self> {
         let data_type = array.field().data_type().clone();
         let validity = unsafe { array.validity() }?;
-        let offsets = unsafe { array.buffer::<O>(0) }?;
-        let values = unsafe { array.buffer::<u8>(1)? };
+        let offsets = unsafe { array.buffer::<O>(1) }?;
+        let values = unsafe { array.buffer::<u8>(2)? };
 
         Ok(Self::from_data_unchecked(
             data_type, offsets, values, validity,

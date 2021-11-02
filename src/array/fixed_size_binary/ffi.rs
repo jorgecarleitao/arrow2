@@ -1,4 +1,9 @@
-use crate::{array::ToFfi, bitmap::align};
+use crate::{
+    array::{FromFfi, ToFfi},
+    bitmap::align,
+    error::Result,
+    ffi,
+};
 
 use super::FixedSizeBinaryArray;
 
@@ -40,5 +45,15 @@ unsafe impl ToFfi for FixedSizeBinaryArray {
             validity,
             values: self.values.clone(),
         }
+    }
+}
+
+impl<A: ffi::ArrowArrayRef> FromFfi<A> for FixedSizeBinaryArray {
+    unsafe fn try_from_ffi(array: A) -> Result<Self> {
+        let data_type = array.field().data_type().clone();
+        let validity = unsafe { array.validity() }?;
+        let values = unsafe { array.buffer::<u8>(1) }?;
+
+        Ok(Self::from_data(data_type, values, validity))
     }
 }

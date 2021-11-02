@@ -37,11 +37,11 @@ impl<A: ffi::ArrowArrayRef> FromFfi<A> for UnionArray {
         let data_type = field.data_type().clone();
         let fields = Self::get_fields(field.data_type());
 
-        let mut types = unsafe { array.buffer::<i8>(0) }?;
+        let mut types = unsafe { array.buffer::<i8>(1) }?;
         let offsets = if Self::is_sparse(&data_type) {
             None
         } else {
-            Some(unsafe { array.buffer::<i32>(1) }?)
+            Some(unsafe { array.buffer::<i32>(2) }?)
         };
 
         let length = array.array().len();

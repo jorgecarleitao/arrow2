@@ -126,6 +126,22 @@ fn list() -> Result<()> {
 }
 
 #[test]
+fn fixed_list() -> Result<()> {
+    let data = vec![
+        Some(vec![Some(1i32), Some(2), Some(3)]),
+        None,
+        Some(vec![Some(4), None, Some(6)]),
+    ];
+
+    let mut array = MutableFixedSizeListArray::new(MutablePrimitiveArray::<i32>::new(), 3);
+    array.try_extend(data)?;
+
+    let array: FixedSizeListArray = array.into();
+
+    test_round_trip(array)
+}
+
+#[test]
 fn list_list() -> Result<()> {
     let data = vec![
         Some(vec![

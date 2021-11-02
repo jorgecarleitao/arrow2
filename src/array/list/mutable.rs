@@ -42,15 +42,6 @@ impl<O: Offset, M: MutableArray + Default> MutableListArray<O, M> {
             validity: None,
         }
     }
-
-    /// Shrinks the capacity of the [`MutableListArray`] to fit its current length.
-    pub fn shrink_to_fit(&mut self) {
-        self.values.shrink_to_fit();
-        self.offsets.shrink_to_fit();
-        if let Some(validity) = &mut self.validity {
-            validity.shrink_to_fit()
-        }
-    }
 }
 
 impl<O: Offset, M: MutableArray + Default> Default for MutableListArray<O, M> {
@@ -187,6 +178,15 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
     pub fn into_arc(self) -> Arc<dyn Array> {
         let a: ListArray<O> = self.into();
         Arc::new(a)
+    }
+
+    /// Shrinks the capacity of the [`MutableListArray`] to fit its current length.
+    pub fn shrink_to_fit(&mut self) {
+        self.values.shrink_to_fit();
+        self.offsets.shrink_to_fit();
+        if let Some(validity) = &mut self.validity {
+            validity.shrink_to_fit()
+        }
     }
 }
 

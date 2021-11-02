@@ -85,6 +85,14 @@ class TestCase(unittest.TestCase):
         assert a.to_pylist() == b.to_pylist()
         assert a.type == b.type
 
+    def test_fixed_binary(self):
+        a = pyarrow.array([b"aa", None, b"cc"], pyarrow.binary(2))
+        b = arrow_pyarrow_integration_testing.round_trip_array(a)
+
+        b.validate(full=True)
+        assert a.to_pylist() == b.to_pylist()
+        assert a.type == b.type
+
     def test_decimal_roundtrip(self):
         """
         Python -> Rust -> Python
@@ -178,6 +186,35 @@ class TestCase(unittest.TestCase):
             b.validate(full=True)
             assert a.to_pylist() == b.to_pylist()
             assert a.type == b.type
+
+    def test_fixed_list(self):
+        """
+        Python -> Rust -> Python
+        """
+        a = pyarrow.array(
+            [None, [1, 2], [4, 5]],
+            pyarrow.list_(pyarrow.int64(), 2),
+        )
+        b = arrow_pyarrow_integration_testing.round_trip_array(a)
+
+        b.validate(full=True)
+        assert a.to_pylist() == b.to_pylist()
+        assert a.type == b.type
+
+    # same as https://issues.apache.org/jira/browse/ARROW-14383
+    def _test_fixed_list_sliced(self):
+        """
+        Python -> Rust -> Python
+        """
+        a = pyarrow.array(
+            [None, [1, 2], [4, 5]],
+            pyarrow.list_(pyarrow.int64(), 2),
+        ).slice(1, 2)
+        b = arrow_pyarrow_integration_testing.round_trip_array(a)
+
+        b.validate(full=True)
+        assert a.to_pylist() == b.to_pylist()
+        assert a.type == b.type
 
     def test_dict(self):
         """

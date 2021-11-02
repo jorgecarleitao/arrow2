@@ -63,6 +63,9 @@ impl Ffi_ArrowSchema {
             DataType::List(field) => {
                 vec![Box::new(Ffi_ArrowSchema::new(field.as_ref()))]
             }
+            DataType::FixedSizeList(field, _) => {
+                vec![Box::new(Ffi_ArrowSchema::new(field.as_ref()))]
+            }
             DataType::LargeList(field) => {
                 vec![Box::new(Ffi_ArrowSchema::new(field.as_ref()))]
             }
@@ -290,6 +293,17 @@ unsafe fn to_data_type(schema: &Ffi_ArrowSchema) -> Result<DataType> {
                 DataType::Timestamp(TimeUnit::Microsecond, Some(parts[1].to_string()))
             } else if parts.len() == 2 && parts[0] == "tsn" {
                 DataType::Timestamp(TimeUnit::Nanosecond, Some(parts[1].to_string()))
+            } else if parts.len() == 2 && parts[0] == "w" {
+                let size = parts[1]
+                    .parse::<usize>()
+                    .map_err(|_| ArrowError::Ffi("size is not a valid integer".to_string()))?;
+                DataType::FixedSizeBinary(size)
+            } else if parts.len() == 2 && parts[0] == "+w" {
+                let size = parts[1]
+                    .parse::<usize>()
+                    .map_err(|_| ArrowError::Ffi("size is not a valid integer".to_string()))?;
+                let child = to_field(schema.child(0))?;
+                DataType::FixedSizeList(Box::new(child), size)
             } else if parts.len() == 2 && parts[0] == "d" {
                 let parts = parts[1].split(',').collect::<Vec<_>>();
                 if parts.len() < 2 || parts.len() > 3 {
@@ -395,7 +409,7 @@ fn to_format(data_type: &DataType) -> String {
         DataType::List(_) => "+l".to_string(),
         DataType::LargeList(_) => "+L".to_string(),
         DataType::Struct(_) => "+s".to_string(),
-        DataType::FixedSizeBinary(size) => format!("w{}", size),
+        DataType::FixedSizeBinary(size) => format!("w:{}", size),
         DataType::FixedSizeList(_, size) => format!("+w:{}", size),
         DataType::Union(f, ids, mode) => {
             let sparsness = if mode.is_sparse() { 's' } else { 'd' };
@@ -419,6 +433,7 @@ fn to_format(data_type: &DataType) -> String {
 pub(super) fn get_field_child(field: &Field, index: usize) -> Result<Field> {
     match (index, field.data_type()) {
         (0, DataType::List(field)) => Ok(field.as_ref().clone()),
+        (0, DataType::FixedSizeList(field, _)) => Ok(field.as_ref().clone()),
         (0, DataType::LargeList(field)) => Ok(field.as_ref().clone()),
         (0, DataType::Map(field, _)) => Ok(field.as_ref().clone()),
         (index, DataType::Struct(fields)) => Ok(fields[index].clone()),
