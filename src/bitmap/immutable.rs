@@ -20,8 +20,6 @@ pub struct Bitmap {
     // both are measured in bits. They are used to bound the bitmap to a region of Bytes.
     offset: usize,
     length: usize,
-    // this is a cache: it must be computed on initialization
-    null_count: usize,
 }
 
 impl std::fmt::Debug for Bitmap {
@@ -68,12 +66,10 @@ impl Bitmap {
     #[inline]
     pub(crate) fn from_bytes(bytes: Bytes<u8>, length: usize) -> Self {
         assert!(length <= bytes.len() * 8);
-        let null_count = count_zeros(&bytes, 0, length);
         Self {
             length,
             offset: 0,
             bytes: Arc::new(bytes),
-            null_count,
         }
     }
 
@@ -103,7 +99,7 @@ impl Bitmap {
     /// Returns the number of unset bits on this [`Bitmap`].
     #[inline]
     pub fn null_count(&self) -> usize {
-        self.null_count
+        count_zeros(&self.bytes, self.offset, self.length)
     }
 
     /// Slices `self`, offseting by `offset` and truncating up to `length` bits.
@@ -121,17 +117,6 @@ impl Bitmap {
     /// The caller must ensure that `self.offset + offset + length <= self.len()`
     #[inline]
     pub unsafe fn slice_unchecked(mut self, offset: usize, length: usize) -> Self {
-        // count the smallest chunk
-        if length < self.length / 2 {
-            // count the null values in the slice
-            self.null_count = count_zeros(&self.bytes, offset, length);
-        } else {
-            // subtract the null count of the chunks we slice off
-            let start_end = self.offset + offset + length;
-            let head_count = count_zeros(&self.bytes, self.offset, offset);
-            let tail_count = count_zeros(&self.bytes, start_end, self.length - length - offset);
-            self.null_count -= head_count + tail_count;
-        }
         self.offset += offset;
         self.length = length;
         self
