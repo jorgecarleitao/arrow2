@@ -252,6 +252,20 @@ fn buffer_offset(array: &Ffi_ArrowArray, data_type: &DataType, i: usize) -> usiz
 // to fetch offset buffer's len to build the second buffer.
 fn buffer_len(array: &Ffi_ArrowArray, data_type: &DataType, i: usize) -> Result<usize> {
     Ok(match (data_type.to_physical_type(), i) {
+        (PhysicalType::FixedSizeBinary, 1) => {
+            if let DataType::FixedSizeBinary(size) = data_type.to_logical_type() {
+                *size * (array.offset as usize + array.length as usize)
+            } else {
+                unreachable!()
+            }
+        }
+        (PhysicalType::FixedSizeList, 1) => {
+            if let DataType::FixedSizeList(_, size) = data_type.to_logical_type() {
+                *size * (array.offset as usize + array.length as usize)
+            } else {
+                unreachable!()
+            }
+        }
         (PhysicalType::Utf8, 1)
         | (PhysicalType::LargeUtf8, 1)
         | (PhysicalType::Binary, 1)
@@ -321,7 +335,7 @@ fn create_dictionary(
     }
 }
 
-pub trait ArrowArrayRef {
+pub trait ArrowArrayRef: std::fmt::Debug {
     fn deallocation(&self) -> Deallocation {
         Deallocation::Foreign(self.parent().clone())
     }
@@ -344,12 +358,11 @@ pub trait ArrowArrayRef {
     /// The caller must guarantee that the buffer `index` corresponds to a bitmap.
     /// This function assumes that the bitmap created from FFI is valid; this is impossible to prove.
     unsafe fn buffer<T: NativeType>(&self, index: usize) -> Result<Buffer<T>> {
-        // +1 to ignore null bitmap
         create_buffer::<T>(
             self.array(),
             self.field().data_type(),
             self.deallocation(),
-            index + 1,
+            index,
         )
     }
 
@@ -358,7 +371,7 @@ pub trait ArrowArrayRef {
     /// This function assumes that the bitmap created from FFI is valid; this is impossible to prove.
     unsafe fn bitmap(&self, index: usize) -> Result<Bitmap> {
         // +1 to ignore null bitmap
-        create_bitmap(self.array(), self.deallocation(), index + 1)
+        create_bitmap(self.array(), self.deallocation(), index)
     }
 
     /// # Safety
@@ -370,6 +383,8 @@ pub trait ArrowArrayRef {
     fn dictionary(&self) -> Result<Option<ArrowArrayChild>> {
         create_dictionary(self.array(), self.field(), self.parent().clone())
     }
+
+    fn n_buffers(&self) -> usize;
 
     fn parent(&self) -> &Arc<ArrowArray>;
     fn array(&self) -> &Ffi_ArrowArray;
@@ -420,6 +435,10 @@ impl ArrowArrayRef for Arc<ArrowArray> {
     fn array(&self) -> &Ffi_ArrowArray {
         self.array.as_ref()
     }
+
+    fn n_buffers(&self) -> usize {
+        self.array.n_buffers as usize
+    }
 }
 
 #[derive(Debug)]
@@ -441,6 +460,10 @@ impl<'a> ArrowArrayRef for ArrowArrayChild<'a> {
 
     fn array(&self) -> &Ffi_ArrowArray {
         self.array
+    }
+
+    fn n_buffers(&self) -> usize {
+        self.array.n_buffers as usize
     }
 }
 

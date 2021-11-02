@@ -28,7 +28,7 @@ impl<K: DictionaryKey, A: ffi::ArrowArrayRef> FromFfi<A> for DictionaryArray<K> 
     unsafe fn try_from_ffi(array: A) -> Result<Self> {
         // keys: similar to PrimitiveArray, but the datatype is the inner one
         let validity = unsafe { array.validity() }?;
-        let values = unsafe { array.buffer::<K>(0) }?;
+        let values = unsafe { array.buffer::<K>(1) }?;
 
         let keys = PrimitiveArray::<K>::from_data(K::DATA_TYPE, values, validity);
         let values = array.dictionary()?.unwrap();

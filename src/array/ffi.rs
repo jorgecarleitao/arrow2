@@ -27,7 +27,7 @@ pub(crate) unsafe trait ToFfi {
 
 /// Trait describing how a struct imports into itself from the
 /// [C data interface](https://arrow.apache.org/docs/format/CDataInterface.html) (FFI).
-pub trait FromFfi<T: ffi::ArrowArrayRef>: Sized {
+pub(crate) trait FromFfi<T: ffi::ArrowArrayRef>: Sized {
     /// Convert itself from FFI.
     /// # Safety
     /// This function is intrinsically `unsafe` as it requires the FFI to be made according
