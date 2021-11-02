@@ -44,6 +44,7 @@ pub fn read<R: Read + Seek>(
             reader,
             block_offset,
             is_little_endian,
+            compression,
         )
         .map(|x| Arc::new(x) as Arc<dyn Array>),
         Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
@@ -169,6 +170,7 @@ pub fn read<R: Read + Seek>(
                     buffers,
                     reader,
                     block_offset,
+                    compression,
                     is_little_endian,
                 )
                 .map(|x| Arc::new(x) as Arc<dyn Array>)
