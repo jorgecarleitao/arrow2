@@ -27,7 +27,7 @@ where
     PrimitiveArray::<T>::from_trusted_len_iter(iter).to(to.clone())
 }
 
-/// Casts a [`Utf8Array`] to a [`PrimitiveArray`] as best-effort using `lexical_core::parse_partial`, making any uncastable value as zero.
+/// Casts a [`Utf8Array`] to a [`PrimitiveArray`] at best-effort using `lexical_core::parse_partial`, making any uncastable value as zero.
 pub fn partial_utf8_to_primitive<O: Offset, T>(
     from: &Utf8Array<O>,
     to: &DataType,

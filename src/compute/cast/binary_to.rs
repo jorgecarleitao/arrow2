@@ -32,7 +32,7 @@ pub fn binary_large_to_binary(
     ))
 }
 
-/// Casts a [`BinaryArray`] to a [`PrimitiveArray`], as best-effort using `lexical_core::parse_partial`, making any uncastable value as zero.
+/// Casts a [`BinaryArray`] to a [`PrimitiveArray`] at best-effort using `lexical_core::parse_partial`, making any uncastable value as zero.
 pub fn partial_binary_to_primitive<O: Offset, T>(
     from: &BinaryArray<O>,
     to: &DataType,
