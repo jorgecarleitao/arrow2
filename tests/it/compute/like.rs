@@ -4,24 +4,26 @@ use arrow2::error::Result;
 
 #[test]
 fn test_like_binary() -> Result<()> {
-    let strings = BinaryArray::<i32>::from_slice(&["Arrow", "Arrow", "Arrow", "Arrow", "Ar"]);
-    let patterns = BinaryArray::<i32>::from_slice(&["A%", "B%", "%r_ow", "A_", "A_"]);
+    let strings =
+        BinaryArray::<i32>::from_slice(&["Arrow", "Arrow", "Arrow", "Arrow", "Ar", "Arrow"]);
+    let patterns = BinaryArray::<i32>::from_slice(&["A%", "B%", "%r_ow", "A_", "A_", "A\\%"]);
     let result = like_binary(&strings, &patterns).unwrap();
     assert_eq!(
         result,
-        BooleanArray::from_slice(&[true, false, true, false, true])
+        BooleanArray::from_slice(&[true, false, true, false, true, false])
     );
     Ok(())
 }
 
 #[test]
 fn test_nlike_binary() -> Result<()> {
-    let strings = BinaryArray::<i32>::from_slice(&["Arrow", "Arrow", "Arrow", "Arrow", "Ar"]);
-    let patterns = BinaryArray::<i32>::from_slice(&["A%", "B%", "%r_ow", "A_", "A_"]);
+    let strings =
+        BinaryArray::<i32>::from_slice(&["Arrow", "Arrow", "Arrow", "Arrow", "Ar", "Arrow"]);
+    let patterns = BinaryArray::<i32>::from_slice(&["A%", "B%", "%r_ow", "A_", "A_", "A\\%"]);
     let result = nlike_binary(&strings, &patterns).unwrap();
     assert_eq!(
         result,
-        BooleanArray::from_slice(&[false, true, false, true, false])
+        BooleanArray::from_slice(&[false, true, false, true, false, true])
     );
     Ok(())
 }

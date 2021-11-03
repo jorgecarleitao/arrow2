@@ -12,8 +12,8 @@ use crate::{
 };
 
 #[inline]
-fn is_like_pattern(c: char) -> bool {
-    c == '%' || c == '_'
+fn is_like_pattern_escape(c: char) -> bool {
+    c == '%' || c == '_' || c == '\\'
 }
 
 #[inline]
@@ -39,8 +39,8 @@ fn a_like_utf8<O: Offset, F: Fn(bool) -> bool>(
                     let pattern = if let Some(pattern) = map.get(pattern) {
                         pattern
                     } else {
-                        let re_pattern = pattern.replace("%", ".*").replace("_", ".");
-                        let re = Regex::new(&format!("^{}$", re_pattern)).map_err(|e| {
+                        let re_pattern = like_pattern_to_regex(pattern);
+                        let re = Regex::new(&re_pattern).map_err(|e| {
                             ArrowError::InvalidArgumentError(format!(
                                 "Unable to build regex from LIKE pattern: {}",
                                 e
@@ -101,25 +101,30 @@ fn a_like_utf8_scalar<O: Offset, F: Fn(bool) -> bool>(
 ) -> Result<BooleanArray> {
     let validity = lhs.validity();
 
-    let values = if !rhs.contains(is_like_pattern) {
-        Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| x == rhs))
-    } else if rhs.ends_with('%') && !rhs[..rhs.len() - 1].contains(is_like_pattern) {
-        // fast path, can use starts_with
-        let starts_with = &rhs[..rhs.len() - 1];
-        Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x.starts_with(starts_with))))
-    } else if rhs.starts_with('%') && !rhs[1..].contains(is_like_pattern) {
-        // fast path, can use ends_with
-        let ends_with = &rhs[1..];
-        Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x.ends_with(ends_with))))
-    } else {
-        let re_pattern = rhs.replace("%", ".*").replace("_", ".");
-        let re = Regex::new(&format!("^{}$", re_pattern)).map_err(|e| {
-            ArrowError::InvalidArgumentError(format!(
-                "Unable to build regex from LIKE pattern: {}",
-                e
-            ))
-        })?;
-        Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(re.is_match(x))))
+    let values = match check_pattern_type(rhs) {
+        PatternType::OrdinalStr => {
+            Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| x == rhs))
+        }
+        PatternType::EndOfPercent => {
+            // fast path, can use starts_with
+            let starts_with = &rhs[..rhs.len() - 1];
+            Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x.starts_with(starts_with))))
+        }
+        PatternType::StartOfPercent => {
+            // fast path, can use ends_with
+            let ends_with = &rhs[1..];
+            Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x.ends_with(ends_with))))
+        }
+        PatternType::PatternStr => {
+            let re_pattern = like_pattern_to_regex(rhs);
+            let re = Regex::new(&re_pattern).map_err(|e| {
+                ArrowError::InvalidArgumentError(format!(
+                    "Unable to build regex from LIKE pattern: {}",
+                    e
+                ))
+            })?;
+            Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(re.is_match(x))))
+        }
     };
     Ok(BooleanArray::from_data(
         DataType::Boolean,
@@ -186,11 +191,14 @@ fn a_like_binary<O: Offset, F: Fn(bool) -> bool>(
                     let pattern = if let Some(pattern) = map.get(pattern) {
                         pattern
                     } else {
-                        let re_pattern = simdutf8::basic::from_utf8(pattern)
-                            .unwrap()
-                            .replace("%", ".*")
-                            .replace("_", ".");
-                        let re = BytesRegex::new(&format!("^{}$", re_pattern)).map_err(|e| {
+                        let pattern_str = simdutf8::basic::from_utf8(pattern).map_err(|e| {
+                            ArrowError::InvalidArgumentError(format!(
+                                "Unable to convert the LIKE pattern to string: {}",
+                                e
+                            ))
+                        })?;
+                        let re_pattern = like_pattern_to_regex(pattern_str);
+                        let re = BytesRegex::new(&re_pattern).map_err(|e| {
                             ArrowError::InvalidArgumentError(format!(
                                 "Unable to build regex from LIKE pattern: {}",
                                 e
@@ -258,25 +266,30 @@ fn a_like_binary_scalar<O: Offset, F: Fn(bool) -> bool>(
         ))
     })?;
 
-    let values = if !pattern.contains(is_like_pattern) {
-        Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| x == rhs))
-    } else if pattern.ends_with('%') && !pattern[..pattern.len() - 1].contains(is_like_pattern) {
-        // fast path, can use starts_with
-        let starts_with = &rhs[..rhs.len() - 1];
-        Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x.starts_with(starts_with))))
-    } else if pattern.starts_with('%') && !pattern[1..].contains(is_like_pattern) {
-        // fast path, can use ends_with
-        let ends_with = &rhs[1..];
-        Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x.ends_with(ends_with))))
-    } else {
-        let re_pattern = pattern.replace("%", ".*").replace("_", ".");
-        let re = BytesRegex::new(&format!("^{}$", re_pattern)).map_err(|e| {
-            ArrowError::InvalidArgumentError(format!(
-                "Unable to build regex from LIKE pattern: {}",
-                e
-            ))
-        })?;
-        Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(re.is_match(x))))
+    let values = match check_pattern_type(pattern) {
+        PatternType::OrdinalStr => {
+            Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| x == rhs))
+        }
+        PatternType::EndOfPercent => {
+            // fast path, can use starts_with
+            let starts_with = &rhs[..rhs.len() - 1];
+            Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x.starts_with(starts_with))))
+        }
+        PatternType::StartOfPercent => {
+            // fast path, can use ends_with
+            let ends_with = &rhs[1..];
+            Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x.ends_with(ends_with))))
+        }
+        PatternType::PatternStr => {
+            let re_pattern = like_pattern_to_regex(pattern);
+            let re = BytesRegex::new(&re_pattern).map_err(|e| {
+                ArrowError::InvalidArgumentError(format!(
+                    "Unable to build regex from LIKE pattern: {}",
+                    e
+                ))
+            })?;
+            Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(re.is_match(x))))
+        }
     };
     Ok(BooleanArray::from_data(
         DataType::Boolean,
@@ -319,4 +332,91 @@ pub fn like_binary_scalar<O: Offset>(lhs: &BinaryArray<O>, rhs: &[u8]) -> Result
 ///
 pub fn nlike_binary_scalar<O: Offset>(lhs: &BinaryArray<O>, rhs: &[u8]) -> Result<BooleanArray> {
     a_like_binary_scalar(lhs, rhs, |x| !x)
+}
+
+enum PatternType {
+    // e.g. 'Arrow'
+    OrdinalStr,
+    // e.g. 'A%row'
+    PatternStr,
+    // e.g. '%rrow'
+    StartOfPercent,
+    // e.g. 'Arro%'
+    EndOfPercent,
+}
+
+fn check_pattern_type(pattern: &str) -> PatternType {
+    let start_percent = pattern.starts_with('%');
+    let end_percent = pattern.ends_with('%') && !pattern.ends_with("\\%");
+
+    let mut chars = if start_percent {
+        pattern[1..].chars()
+    } else if end_percent {
+        pattern[..pattern.len() - 1].chars()
+    } else {
+        pattern.chars()
+    };
+
+    while let Some(c) = chars.next() {
+        match c {
+            '_' | '%' => return PatternType::PatternStr,
+            '\\' => {
+                if let Some(v) = chars.next() {
+                    if is_like_pattern_escape(v) {
+                        return PatternType::PatternStr;
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    if start_percent {
+        PatternType::StartOfPercent
+    } else if end_percent {
+        PatternType::EndOfPercent
+    } else {
+        PatternType::OrdinalStr
+    }
+}
+
+/// Transform the like pattern to regex pattern.
+/// e.g. 'Hello\._World%\%' tranform to '^Hello\\\..World.*%$'.
+pub(crate) fn like_pattern_to_regex(pattern: &str) -> String {
+    let mut regex = String::with_capacity(pattern.len() * 2);
+    regex.push('^');
+
+    let mut chars = pattern.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            // Use double backslash to escape special character.
+            '^' | '$' | '(' | ')' | '*' | '+' | '.' | '[' | '?' | '{' | '|' => {
+                regex.push('\\');
+                regex.push(c);
+            }
+            '%' => regex.push_str(".*"),
+            '_' => regex.push('.'),
+            '\\' => {
+                if let Some(v) = chars.peek().cloned() {
+                    match v {
+                        '%' | '_' => {
+                            regex.push(v);
+                            chars.next();
+                        }
+                        '\\' => {
+                            regex.push_str("\\\\");
+                            chars.next();
+                        }
+                        _ => regex.push_str("\\\\"),
+                    };
+                } else {
+                    regex.push_str("\\\\");
+                }
+            }
+            _ => regex.push(c),
+        }
+    }
+
+    regex.push('$');
+    regex
 }
