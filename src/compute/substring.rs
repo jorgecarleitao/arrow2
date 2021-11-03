@@ -26,46 +26,69 @@ use crate::{
 fn utf8_substring<O: Offset>(array: &Utf8Array<O>, start: O, length: &Option<O>) -> Utf8Array<O> {
     let validity = array.validity();
     let offsets = array.offsets();
-    let values = array.values();
+    let values = array.values().as_slice();
 
     let mut new_offsets = MutableBuffer::<O>::with_capacity(array.len() + 1);
     let mut new_values = MutableBuffer::<u8>::new(); // we have no way to estimate how much this will be.
 
-    let mut length_so_far = O::zero();
-    new_offsets.push(length_so_far);
+    new_offsets.push(O::zero());
 
     offsets.windows(2).for_each(|windows| {
-        let length_i: O = windows[1] - windows[0];
+        // Safety:
+        // invariant of the struct that these values are utf8
+        let str_val = unsafe {
+            std::str::from_utf8_unchecked(&values[windows[0].to_usize()..windows[1].to_usize()])
+        };
 
         // compute where we should start slicing this entry
-        let start = windows[0]
-            + if start >= O::zero() {
-                start
-            } else {
-                length_i + start
-            };
-        let start = start.max(windows[0]).min(windows[1]);
+        let start = if start >= O::zero() {
+            start.to_usize()
+        } else {
+            let start = (O::zero() - start).to_usize();
+            str_val
+                .char_indices()
+                .rev()
+                .nth(start)
+                .map(|(idx, _)| idx + 1)
+                .unwrap_or(0)
+        };
 
-        let length: O = length
-            .unwrap_or(length_i)
-            // .max(0) is not needed as it is guaranteed
-            .min(windows[1] - start); // so we do not go beyond this entry
-        length_so_far += length;
-        new_offsets.push(length_so_far);
+        let mut iter_chars = str_val.char_indices();
+        if let Some((start_idx, _char)) = iter_chars.nth(start) {
+            // length till end of str
+            let len_end = str_val.len() - start_idx;
 
-        // we need usize for ranges
-        let start = start.to_usize();
-        let length = length.to_usize();
+            // length to slice
+            let length = length.map(|v| v.to_usize()).unwrap_or(len_end);
 
-        new_values.extend_from_slice(&values[start..start + length]);
+            // index of the char with offset `start`, and length: `length`
+            let end_idx = iter_chars
+                .nth(length.saturating_sub(1))
+                .map(|(idx, _)| idx)
+                .unwrap_or(str_val.len());
+            if length != 0 {
+                debug_assert!(std::str::from_utf8(
+                    &values[windows[0].to_usize() + start_idx..windows[0].to_usize() + end_idx]
+                )
+                .is_ok());
+                new_values.extend_from_slice(
+                    &values[windows[0].to_usize() + start_idx..windows[0].to_usize() + end_idx],
+                );
+            }
+        }
+        new_offsets.push(O::from_usize(new_values.len()).unwrap());
     });
 
-    Utf8Array::<O>::from_data(
-        array.data_type().clone(),
-        new_offsets.into(),
-        new_values.into(),
-        validity.cloned(),
-    )
+    // Safety:
+    // we deal with valid utf8
+    unsafe {
+        Utf8Array::<O>::from_data_unchecked(
+            array.data_type().clone(),
+            new_offsets.into(),
+            new_values.into(),
+            validity.cloned(),
+        )
+    }
 }
 
 fn binary_substring<O: Offset>(

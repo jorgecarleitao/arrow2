@@ -48,6 +48,7 @@ fn with_nulls_utf8<O: Offset>() -> Result<()> {
 
             let result = result.as_any().downcast_ref::<Utf8Array<O>>().unwrap();
             let expected = Utf8Array::<O>::from(&expected);
+
             assert_eq!(&expected, result);
             Ok(())
         })?;
@@ -117,6 +118,13 @@ fn without_nulls_utf8<O: Offset>() -> Result<()> {
             Some(4),
             vec!["llo", "", "ord"],
         ),
+        (
+            vec!["😇🔥🥺", "", "😇🔥🗺️"],
+            0,
+            Some(2),
+            vec!["😇🔥", "", "😇🔥"],
+        ),
+        (vec!["π1π", "", "α1απ"], 1, Some(4), vec!["1π", "", "1απ"]),
     ];
 
     cases
