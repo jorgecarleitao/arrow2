@@ -16,23 +16,28 @@ use super::CastOptions;
 const RFC3339: &str = "%Y-%m-%dT%H:%M:%S%.f%:z";
 
 /// Casts a [`Utf8Array`] to a [`PrimitiveArray`], making any uncastable value a Null.
-pub fn utf8_to_primitive<O: Offset, T>(
+pub fn utf8_to_primitive<O: Offset, T>(from: &Utf8Array<O>, to: &DataType) -> PrimitiveArray<T>
+where
+    T: NativeType + lexical_core::FromLexical,
+{
+    let iter = from
+        .iter()
+        .map(|x| x.and_then::<T, _>(|x| lexical_core::parse(x.as_bytes()).ok()));
+
+    PrimitiveArray::<T>::from_trusted_len_iter(iter).to(to.clone())
+}
+
+/// Casts a [`Utf8Array`] to a [`PrimitiveArray`] as best-effort using `lexical_core::parse_partial`, making any uncastable value as zero.
+pub fn partial_utf8_to_primitive<O: Offset, T>(
     from: &Utf8Array<O>,
     to: &DataType,
-    options: CastOptions,
 ) -> PrimitiveArray<T>
 where
     T: NativeType + lexical_core::FromLexical,
 {
-    let parse_fn = if !options.partial {
-        |x| lexical_core::parse(x).ok()
-    } else {
-        |x| lexical_core::parse_partial(x).ok().map(|x| x.0)
-    };
-
-    let iter = from
-        .iter()
-        .map(|x| x.and_then::<T, _>(|x| parse_fn(x.as_bytes())));
+    let iter = from.iter().map(|x| {
+        x.and_then::<T, _>(|x| lexical_core::parse_partial(x.as_bytes()).ok().map(|x| x.0))
+    });
 
     PrimitiveArray::<T>::from_trusted_len_iter(iter).to(to.clone())
 }
@@ -46,7 +51,11 @@ where
     T: NativeType + lexical_core::FromLexical,
 {
     let from = from.as_any().downcast_ref().unwrap();
-    Ok(Box::new(utf8_to_primitive::<O, T>(from, to, options)))
+    if options.partial {
+        Ok(Box::new(partial_utf8_to_primitive::<O, T>(from, to)))
+    } else {
+        Ok(Box::new(utf8_to_primitive::<O, T>(from, to)))
+    }
 }
 
 /// Casts a [`Utf8Array`] to a Date32 primitive, making any uncastable value a Null.

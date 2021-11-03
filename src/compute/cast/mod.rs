@@ -25,10 +25,10 @@ pub struct CastOptions {
     /// default to false
     /// whether an overflowing cast should be converted to `None` (default), or be wrapped (i.e. `256i16 as u8 = 0` vectorized).
     /// Settings this to `true` is 5-6x faster for numeric types.
-    wrapped: bool,
+    pub wrapped: bool,
     /// default to false
     /// whether to cast to an integer at the best-effort
-    partial: bool,
+    pub partial: bool,
 }
 
 impl CastOptions {
@@ -265,7 +265,7 @@ fn cast_list<O: Offset>(
     options: CastOptions,
 ) -> Result<ListArray<O>> {
     let values = array.values();
-    let new_values = cast_with_options(
+    let new_values = cast(
         values.as_ref(),
         ListArray::<O>::get_child_type(to_type),
         options,
@@ -326,44 +326,7 @@ fn cast_large_to_list(array: &ListArray<i64>, to_type: &DataType) -> ListArray<i
 /// * List to primitive
 /// * Utf8 to boolean
 /// * Interval and duration
-pub fn cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
-    cast_with_options(array, to_type, CastOptions::default())
-}
-
-/// Similar to [`cast`], but overflowing cast is wrapped
-/// Behavior:
-/// * PrimitiveArray to PrimitiveArray: overflowing cast will be wrapped (i.e. `256i16 as u8 = 0` vectorized).
-pub fn wrapping_cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
-    cast_with_options(
-        array,
-        to_type,
-        CastOptions {
-            wrapped: true,
-            partial: false,
-        },
-    )
-}
-
-/// Similar to [`cast`], but parse the utf8/binary into integer at the best-effort.
-/// Behavior:
-/// * PrimitiveArray to PrimitiveArray: overflowing cast will be wrapped (i.e. `256i16 as u8 = 0` vectorized).
-pub fn partial_cast(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
-    cast_with_options(
-        array,
-        to_type,
-        CastOptions {
-            wrapped: false,
-            partial: true,
-        },
-    )
-}
-
-#[inline]
-fn cast_with_options(
-    array: &dyn Array,
-    to_type: &DataType,
-    options: CastOptions,
-) -> Result<Box<dyn Array>> {
+pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Result<Box<dyn Array>> {
     use DataType::*;
     let from_type = array.data_type();
 
@@ -402,7 +365,7 @@ fn cast_with_options(
 
         (_, List(to)) => {
             // cast primitive to list's primitive
-            let values = cast_with_options(array, to.data_type(), options)?.into();
+            let values = cast(array, to.data_type(), options)?.into();
             // create offsets, where if array.len() = 2, we have [0,1,2]
             let offsets =
                 unsafe { Buffer::from_trusted_len_iter_unchecked(0..=array.len() as i32) };
@@ -845,7 +808,7 @@ fn cast_to_dictionary<K: DictionaryKey>(
     dict_value_type: &DataType,
     options: CastOptions,
 ) -> Result<Box<dyn Array>> {
-    let array = cast_with_options(array, dict_value_type, options)?;
+    let array = cast(array, dict_value_type, options)?;
     let array = array.as_ref();
     match *dict_value_type {
         DataType::Int8 => primitive_to_dictionary_dyn::<i8, K>(array),

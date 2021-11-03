@@ -32,22 +32,29 @@ pub fn binary_large_to_binary(
     ))
 }
 
-/// Casts a [`BinaryArray`] to a [`PrimitiveArray`], making any uncastable value a Null.
-pub fn binary_to_primitive<O: Offset, T>(
+/// Casts a [`BinaryArray`] to a [`PrimitiveArray`], as best-effort using `lexical_core::parse_partial`, making any uncastable value as zero.
+pub fn partial_binary_to_primitive<O: Offset, T>(
     from: &BinaryArray<O>,
     to: &DataType,
-    options: CastOptions,
 ) -> PrimitiveArray<T>
 where
     T: NativeType + lexical_core::FromLexical,
 {
-    let parse_fn = if !options.partial {
-        |x| lexical_core::parse(x).ok()
-    } else {
-        |x| lexical_core::parse_partial(x).ok().map(|x| x.0)
-    };
+    let iter = from
+        .iter()
+        .map(|x| x.and_then::<T, _>(|x| lexical_core::parse_partial(x).ok().map(|x| x.0)));
 
-    let iter = from.iter().map(|x| x.and_then::<T, _>(parse_fn));
+    PrimitiveArray::<T>::from_trusted_len_iter(iter).to(to.clone())
+}
+
+/// Casts a [`BinaryArray`] to a [`PrimitiveArray`], making any uncastable value a Null.
+pub fn binary_to_primitive<O: Offset, T>(from: &BinaryArray<O>, to: &DataType) -> PrimitiveArray<T>
+where
+    T: NativeType + lexical_core::FromLexical,
+{
+    let iter = from
+        .iter()
+        .map(|x| x.and_then::<T, _>(|x| lexical_core::parse(x).ok()));
 
     PrimitiveArray::<T>::from_trusted_len_iter(iter).to(to.clone())
 }
@@ -61,7 +68,11 @@ where
     T: NativeType + lexical_core::FromLexical,
 {
     let from = from.as_any().downcast_ref().unwrap();
-    Ok(Box::new(binary_to_primitive::<O, T>(from, to, options)))
+    if options.partial {
+        Ok(Box::new(partial_binary_to_primitive::<O, T>(from, to)))
+    } else {
+        Ok(Box::new(binary_to_primitive::<O, T>(from, to)))
+    }
 }
 
 /// Cast [`BinaryArray`] to [`DictionaryArray`], also known as packing.
