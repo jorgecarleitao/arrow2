@@ -24,23 +24,10 @@ use crate::{
 };
 
 fn utf8_substring<O: Offset>(array: &Utf8Array<O>, start: O, length: &Option<O>) -> Utf8Array<O> {
-    let validity = array.validity();
-    let offsets = array.offsets();
-    let values = array.values().as_slice();
+    let length = length.map(|v| v.to_usize());
 
-    let mut new_offsets = MutableBuffer::<O>::with_capacity(array.len() + 1);
-    let mut new_values = MutableBuffer::<u8>::new(); // we have no way to estimate how much this will be.
-
-    new_offsets.push(O::zero());
-
-    offsets.windows(2).for_each(|windows| {
-        // Safety:
-        // invariant of the struct that these values are utf8
-        let str_val = unsafe {
-            std::str::from_utf8_unchecked(&values[windows[0].to_usize()..windows[1].to_usize()])
-        };
-
-        // compute where we should start slicing this entry
+    let iter = array.values_iter().map(|str_val| {
+        // compute where we should start slicing this entry.
         let start = if start >= O::zero() {
             start.to_usize()
         } else {
@@ -54,41 +41,30 @@ fn utf8_substring<O: Offset>(array: &Utf8Array<O>, start: O, length: &Option<O>)
         };
 
         let mut iter_chars = str_val.char_indices();
-        if let Some((start_idx, _char)) = iter_chars.nth(start) {
-            // length till end of str
+        if let Some((start_idx, _)) = iter_chars.nth(start) {
+            // length of the str
             let len_end = str_val.len() - start_idx;
 
             // length to slice
-            let length = length.map(|v| v.to_usize()).unwrap_or(len_end);
+            let length = length.unwrap_or(len_end);
 
-            // index of the char with offset `start`, and length: `length`
+            if length == 0 {
+                return "";
+            }
+            // compute
             let end_idx = iter_chars
                 .nth(length.saturating_sub(1))
                 .map(|(idx, _)| idx)
                 .unwrap_or(str_val.len());
-            if length != 0 {
-                debug_assert!(std::str::from_utf8(
-                    &values[windows[0].to_usize() + start_idx..windows[0].to_usize() + end_idx]
-                )
-                .is_ok());
-                new_values.extend_from_slice(
-                    &values[windows[0].to_usize() + start_idx..windows[0].to_usize() + end_idx],
-                );
-            }
+
+            &str_val[start_idx..end_idx]
+        } else {
+            ""
         }
-        new_offsets.push(O::from_usize(new_values.len()).unwrap());
     });
 
-    // Safety:
-    // we deal with valid utf8
-    unsafe {
-        Utf8Array::<O>::from_data_unchecked(
-            array.data_type().clone(),
-            new_offsets.into(),
-            new_values.into(),
-            validity.cloned(),
-        )
-    }
+    let new = Utf8Array::<O>::from_trusted_len_values_iter(iter);
+    new.with_validity(array.validity().map(|x| x.clone()))
 }
 
 fn binary_substring<O: Offset>(
