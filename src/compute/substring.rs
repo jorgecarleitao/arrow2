@@ -64,7 +64,7 @@ fn utf8_substring<O: Offset>(array: &Utf8Array<O>, start: O, length: &Option<O>)
     });
 
     let new = Utf8Array::<O>::from_trusted_len_values_iter(iter);
-    new.with_validity(array.validity().map(|x| x.clone()))
+    new.with_validity(array.validity().cloned())
 }
 
 fn binary_substring<O: Offset>(
