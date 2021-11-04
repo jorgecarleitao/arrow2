@@ -20,7 +20,7 @@
 //! The `FileWriter` and `StreamWriter` have similar interfaces,
 //! however the `FileWriter` expects a reader that supports `Seek`ing
 
-use std::io::{BufWriter, Write};
+use std::io::Write;
 
 use super::common::{
     encoded_batch, write_continuation, write_message, DictionaryTracker, EncodedData,
@@ -40,7 +40,7 @@ use crate::record_batch::RecordBatch;
 /// For a usage walkthrough consult [this example](https://github.com/jorgecarleitao/arrow2/tree/main/examples/ipc_pyarrow).
 pub struct StreamWriter<W: Write> {
     /// The object to write to
-    writer: BufWriter<W>,
+    writer: W,
     /// IPC write options
     write_options: IpcWriteOptions,
     /// Whether the writer footer has been written, and the writer is finished
@@ -57,11 +57,10 @@ impl<W: Write> StreamWriter<W> {
     }
 
     pub fn try_new_with_options(
-        writer: W,
+        mut writer: W,
         schema: &Schema,
         write_options: IpcWriteOptions,
     ) -> Result<Self> {
-        let mut writer = BufWriter::new(writer);
         // write the schema, set the written bytes to the schema
         let encoded_message = EncodedData {
             ipc_message: schema_to_bytes(schema, *write_options.metadata_version()),
@@ -104,13 +103,9 @@ impl<W: Write> StreamWriter<W> {
 
         Ok(())
     }
-}
 
-/// Finish the stream if it is not 'finished' when it goes out of scope
-impl<W: Write> Drop for StreamWriter<W> {
-    fn drop(&mut self) {
-        if !self.finished {
-            self.finish().unwrap();
-        }
+    /// Consumes itself, returning the inner writer.
+    pub fn into_inner(self) -> W {
+        self.writer
     }
 }
