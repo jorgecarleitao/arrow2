@@ -41,90 +41,18 @@ pub enum Compression {
     ZSTD,
 }
 
-/// IPC write options used to control the behaviour of the writer
+/// Options declaring the behaviour of writing to IPC
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct IpcWriteOptions {
-    /// Write padding after memory buffers to this multiple of bytes.
-    /// Generally 8 or 64, defaults to 8
-    alignment: usize,
-    /// The legacy format is for releases before 0.15.0, and uses metadata V4
-    write_legacy_ipc_format: bool,
-    /// The metadata version to write. The Rust IPC writer supports V4+
-    ///
-    /// *Default versions per crate*
-    ///
-    /// When creating the default IpcWriteOptions, the following metadata versions are used:
-    ///
-    /// version 2.0.0: V4, with legacy format enabled
-    /// version 4.0.0: V5
-    metadata_version: ipc::Schema::MetadataVersion,
-    /// Whether the buffers should be compressed
-    compression: Option<Compression>,
-}
-
-impl IpcWriteOptions {
-    /// Try create IpcWriteOptions, checking for incompatible settings
-    pub fn try_new(
-        alignment: usize,
-        write_legacy_ipc_format: bool,
-        metadata_version: ipc::Schema::MetadataVersion,
-        compression: Option<Compression>,
-    ) -> Result<Self> {
-        if alignment == 0 || alignment % 8 != 0 {
-            return Err(ArrowError::InvalidArgumentError(
-                "Alignment should be greater than 0 and be a multiple of 8".to_string(),
-            ));
-        }
-        match metadata_version {
-            ipc::Schema::MetadataVersion::V1
-            | ipc::Schema::MetadataVersion::V2
-            | ipc::Schema::MetadataVersion::V3 => Err(ArrowError::InvalidArgumentError(
-                "Writing IPC metadata version 3 and lower not supported".to_string(),
-            )),
-            ipc::Schema::MetadataVersion::V4 => Ok(Self {
-                alignment,
-                write_legacy_ipc_format,
-                metadata_version,
-                compression,
-            }),
-            ipc::Schema::MetadataVersion::V5 => {
-                if write_legacy_ipc_format {
-                    Err(ArrowError::InvalidArgumentError(
-                        "Legacy IPC format only supported on metadata version 4".to_string(),
-                    ))
-                } else {
-                    Ok(Self {
-                        alignment,
-                        write_legacy_ipc_format,
-                        metadata_version,
-                        compression,
-                    })
-                }
-            }
-            z => panic!("Unsupported ipc::Schema::MetadataVersion {:?}", z),
-        }
-    }
-
-    pub fn metadata_version(&self) -> &ipc::Schema::MetadataVersion {
-        &self.metadata_version
-    }
-}
-
-impl Default for IpcWriteOptions {
-    fn default() -> Self {
-        Self {
-            alignment: 8,
-            write_legacy_ipc_format: false,
-            metadata_version: ipc::Schema::MetadataVersion::V5,
-            compression: None,
-        }
-    }
+pub struct WriteOptions {
+    /// Whether the buffers should be compressed and which codec to use.
+    /// Note: to use compression the crate must be compiled with feature `io_ipc_compression`.
+    pub compression: Option<Compression>,
 }
 
 pub fn encoded_batch(
     batch: &RecordBatch,
     dictionary_tracker: &mut DictionaryTracker,
-    write_options: &IpcWriteOptions,
+    options: &WriteOptions,
 ) -> Result<(Vec<EncodedData>, EncodedData)> {
     // TODO: handle nested dictionaries
     let schema = batch.schema();
@@ -144,21 +72,21 @@ pub fn encoded_batch(
                 encoded_dictionaries.push(dictionary_batch_to_bytes(
                     dict_id,
                     column.as_ref(),
-                    write_options,
+                    options,
                     is_native_little_endian(),
                 ));
             }
         }
     }
 
-    let encoded_message = record_batch_to_bytes(batch, write_options);
+    let encoded_message = record_batch_to_bytes(batch, options);
 
     Ok((encoded_dictionaries, encoded_message))
 }
 
 /// Write a `RecordBatch` into two sets of bytes, one for the header (ipc::Schema::Message) and the
 /// other for the batch's data
-fn record_batch_to_bytes(batch: &RecordBatch, write_options: &IpcWriteOptions) -> EncodedData {
+fn record_batch_to_bytes(batch: &RecordBatch, options: &WriteOptions) -> EncodedData {
     let mut fbb = FlatBufferBuilder::new();
 
     let mut nodes: Vec<ipc::Message::FieldNode> = vec![];
@@ -173,7 +101,7 @@ fn record_batch_to_bytes(batch: &RecordBatch, write_options: &IpcWriteOptions) -
             &mut nodes,
             &mut offset,
             is_native_little_endian(),
-            write_options.compression,
+            options.compression,
         )
     }
 
@@ -181,7 +109,7 @@ fn record_batch_to_bytes(batch: &RecordBatch, write_options: &IpcWriteOptions) -
     let buffers = fbb.create_vector(&buffers);
     let nodes = fbb.create_vector(&nodes);
 
-    let compression = if let Some(compression) = write_options.compression {
+    let compression = if let Some(compression) = options.compression {
         let compression = match compression {
             Compression::LZ4 => CompressionType::LZ4_FRAME,
             Compression::ZSTD => CompressionType::ZSTD,
@@ -206,7 +134,7 @@ fn record_batch_to_bytes(batch: &RecordBatch, write_options: &IpcWriteOptions) -
     };
     // create an ipc::Schema::Message
     let mut message = ipc::Message::MessageBuilder::new(&mut fbb);
-    message.add_version(write_options.metadata_version);
+    message.add_version(ipc::Schema::MetadataVersion::V5);
     message.add_header_type(ipc::Message::MessageHeader::RecordBatch);
     message.add_bodyLength(arrow_data.len() as i64);
     message.add_header(root);
@@ -225,7 +153,7 @@ fn record_batch_to_bytes(batch: &RecordBatch, write_options: &IpcWriteOptions) -
 fn dictionary_batch_to_bytes(
     dict_id: i64,
     array: &dyn Array,
-    write_options: &IpcWriteOptions,
+    options: &WriteOptions,
     is_little_endian: bool,
 ) -> EncodedData {
     let mut fbb = FlatBufferBuilder::new();
@@ -241,7 +169,7 @@ fn dictionary_batch_to_bytes(
         &mut nodes,
         &mut 0,
         is_little_endian,
-        write_options.compression,
+        options.compression,
         false,
     );
 
@@ -249,7 +177,7 @@ fn dictionary_batch_to_bytes(
     let buffers = fbb.create_vector(&buffers);
     let nodes = fbb.create_vector(&nodes);
 
-    let compression = if let Some(compression) = write_options.compression {
+    let compression = if let Some(compression) = options.compression {
         let compression = match compression {
             Compression::LZ4 => CompressionType::LZ4_FRAME,
             Compression::ZSTD => CompressionType::ZSTD,
@@ -281,7 +209,7 @@ fn dictionary_batch_to_bytes(
 
     let root = {
         let mut message_builder = ipc::Message::MessageBuilder::new(&mut fbb);
-        message_builder.add_version(write_options.metadata_version);
+        message_builder.add_version(ipc::Schema::MetadataVersion::V5);
         message_builder.add_header_type(ipc::Message::MessageHeader::DictionaryBatch);
         message_builder.add_bodyLength(arrow_data.len() as i64);
         message_builder.add_header(root);
@@ -365,28 +293,20 @@ pub struct EncodedData {
 }
 
 /// Write a message's IPC data and buffers, returning metadata and buffer data lengths written
-pub fn write_message<W: Write>(
-    writer: &mut W,
-    encoded: EncodedData,
-    write_options: &IpcWriteOptions,
-) -> Result<(usize, usize)> {
+pub fn write_message<W: Write>(writer: &mut W, encoded: EncodedData) -> Result<(usize, usize)> {
     let arrow_data_len = encoded.arrow_data.len();
     if arrow_data_len % 8 != 0 {
         return Err(ArrowError::Ipc("Arrow data not aligned".to_string()));
     }
 
-    let a = write_options.alignment - 1;
+    let a = 8 - 1;
     let buffer = encoded.ipc_message;
     let flatbuf_size = buffer.len();
-    let prefix_size = if write_options.write_legacy_ipc_format {
-        4
-    } else {
-        8
-    };
+    let prefix_size = 8;
     let aligned_size = (flatbuf_size + prefix_size + a) & !a;
     let padding_bytes = aligned_size - flatbuf_size - prefix_size;
 
-    write_continuation(writer, write_options, (aligned_size - prefix_size) as i32)?;
+    write_continuation(writer, (aligned_size - prefix_size) as i32)?;
 
     // write the flatbuf
     if flatbuf_size > 0 {
@@ -422,39 +342,11 @@ fn write_body_buffers<W: Write>(mut writer: W, data: &[u8]) -> Result<usize> {
 
 /// Write a record batch to the writer, writing the message size before the message
 /// if the record batch is being written to a stream
-pub fn write_continuation<W: Write>(
-    writer: &mut W,
-    write_options: &IpcWriteOptions,
-    total_len: i32,
-) -> Result<usize> {
-    let mut written = 8;
-
-    // the version of the writer determines whether continuation markers should be added
-    match write_options.metadata_version {
-        ipc::Schema::MetadataVersion::V1
-        | ipc::Schema::MetadataVersion::V2
-        | ipc::Schema::MetadataVersion::V3 => {
-            unreachable!("Options with the metadata version cannot be created")
-        }
-        ipc::Schema::MetadataVersion::V4 => {
-            if !write_options.write_legacy_ipc_format {
-                // v0.15.0 format
-                writer.write_all(&CONTINUATION_MARKER)?;
-                written = 4;
-            }
-            writer.write_all(&total_len.to_le_bytes()[..])?;
-        }
-        ipc::Schema::MetadataVersion::V5 => {
-            // write continuation marker and message length
-            writer.write_all(&CONTINUATION_MARKER)?;
-            writer.write_all(&total_len.to_le_bytes()[..])?;
-        }
-        z => panic!("Unsupported ipc::Schema::MetadataVersion {:?}", z),
-    };
-
+pub fn write_continuation<W: Write>(writer: &mut W, total_len: i32) -> Result<usize> {
+    writer.write_all(&CONTINUATION_MARKER)?;
+    writer.write_all(&total_len.to_le_bytes()[..])?;
     writer.flush()?;
-
-    Ok(written)
+    Ok(8)
 }
 
 /// Calculate an 8-byte boundary and return the number of bytes needed to pad to 8 bytes

@@ -19,7 +19,7 @@ use std::io;
 
 use arrow2::error::Result;
 use arrow2::io::ipc::read;
-use arrow2::io::ipc::write::FileWriter;
+use arrow2::io::ipc::write;
 
 fn main() -> Result<()> {
     let mut reader = io::stdin();
@@ -29,7 +29,8 @@ fn main() -> Result<()> {
 
     let writer = io::stdout();
 
-    let mut writer = FileWriter::try_new(writer, schema)?;
+    let options = write::WriteOptions { compression: None };
+    let mut writer = write::FileWriter::try_new(writer, schema, options)?;
 
     arrow_stream_reader.try_for_each(|batch| writer.write(&batch?.unwrap()))?;
     writer.finish()?;

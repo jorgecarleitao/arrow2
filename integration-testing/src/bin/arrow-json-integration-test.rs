@@ -20,7 +20,7 @@ use std::fs::File;
 use clap::{App, Arg};
 
 use arrow2::io::ipc::read;
-use arrow2::io::ipc::write::FileWriter;
+use arrow2::io::ipc::write;
 use arrow2::{
     error::{ArrowError, Result},
     io::json_integration::*,
@@ -81,7 +81,8 @@ fn json_to_arrow(json_name: &str, arrow_name: &str, verbose: bool) -> Result<()>
     let json_file = read_json_file(json_name)?;
 
     let arrow_file = File::create(arrow_name)?;
-    let mut writer = FileWriter::try_new(arrow_file, &json_file.schema)?;
+    let options = write::WriteOptions { compression: None };
+    let mut writer = write::FileWriter::try_new(arrow_file, &json_file.schema, options)?;
 
     for b in json_file.batches {
         writer.write(&b)?;

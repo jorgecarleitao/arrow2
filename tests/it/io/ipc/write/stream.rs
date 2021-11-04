@@ -3,7 +3,7 @@ use std::io::Cursor;
 use arrow2::error::Result;
 use arrow2::io::ipc::read::read_stream_metadata;
 use arrow2::io::ipc::read::StreamReader;
-use arrow2::io::ipc::write::{IpcWriteOptions, MetadataVersion, StreamWriter};
+use arrow2::io::ipc::write::{StreamWriter, WriteOptions};
 
 use crate::io::ipc::common::read_arrow_stream;
 use crate::io::ipc::common::read_gzip_json;
@@ -15,8 +15,8 @@ fn test_file(version: &str, file_name: &str) {
 
     // write IPC version 5
     {
-        let options = IpcWriteOptions::try_new(8, false, MetadataVersion::V5, None).unwrap();
-        let mut writer = StreamWriter::try_new_with_options(&mut result, &schema, options).unwrap();
+        let options = WriteOptions { compression: None };
+        let mut writer = StreamWriter::try_new(&mut result, &schema, options).unwrap();
         for batch in batches {
             writer.write(&batch).unwrap();
         }

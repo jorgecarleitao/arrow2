@@ -11,7 +11,7 @@ use crate::{
     io::ipc::fb_to_schema,
     io::ipc::read::read_record_batch,
     io::ipc::write,
-    io::ipc::write::common::{encoded_batch, DictionaryTracker, EncodedData, IpcWriteOptions},
+    io::ipc::write::common::{encoded_batch, DictionaryTracker, EncodedData, WriteOptions},
     record_batch::RecordBatch,
 };
 
@@ -19,7 +19,7 @@ use crate::{
 /// and a [`FlightData`] representing the batch.
 pub fn serialize_batch(
     batch: &RecordBatch,
-    options: &IpcWriteOptions,
+    options: &WriteOptions,
 ) -> (Vec<FlightData>, FlightData) {
     let mut dictionary_tracker = DictionaryTracker::new(false);
 
@@ -44,15 +44,15 @@ impl From<EncodedData> for FlightData {
 }
 
 /// Serializes a [`Schema`] to [`SchemaResult`].
-pub fn serialize_schema_to_result(schema: &Schema, options: &IpcWriteOptions) -> SchemaResult {
+pub fn serialize_schema_to_result(schema: &Schema) -> SchemaResult {
     SchemaResult {
-        schema: schema_as_flatbuffer(schema, options),
+        schema: schema_as_flatbuffer(schema),
     }
 }
 
 /// Serializes a [`Schema`] to [`FlightData`].
-pub fn serialize_schema(schema: &Schema, options: &IpcWriteOptions) -> FlightData {
-    let data_header = schema_as_flatbuffer(schema, options);
+pub fn serialize_schema(schema: &Schema) -> FlightData {
+    let data_header = schema_as_flatbuffer(schema);
     FlightData {
         data_header,
         ..Default::default()
@@ -60,22 +60,22 @@ pub fn serialize_schema(schema: &Schema, options: &IpcWriteOptions) -> FlightDat
 }
 
 /// Convert a [`Schema`] to bytes in the format expected in [`arrow_format::flight::FlightInfo`].
-pub fn serialize_schema_to_info(schema: &Schema, options: &IpcWriteOptions) -> Result<Vec<u8>> {
-    let encoded_data = schema_as_encoded_data(schema, options);
+pub fn serialize_schema_to_info(schema: &Schema) -> Result<Vec<u8>> {
+    let encoded_data = schema_as_encoded_data(schema);
 
     let mut schema = vec![];
-    write::common::write_message(&mut schema, encoded_data, options)?;
+    write::common::write_message(&mut schema, encoded_data)?;
     Ok(schema)
 }
 
-fn schema_as_flatbuffer(schema: &Schema, options: &IpcWriteOptions) -> Vec<u8> {
-    let encoded_data = schema_as_encoded_data(schema, options);
+fn schema_as_flatbuffer(schema: &Schema) -> Vec<u8> {
+    let encoded_data = schema_as_encoded_data(schema);
     encoded_data.ipc_message
 }
 
-fn schema_as_encoded_data(arrow_schema: &Schema, options: &IpcWriteOptions) -> EncodedData {
+fn schema_as_encoded_data(schema: &Schema) -> EncodedData {
     EncodedData {
-        ipc_message: write::schema_to_bytes(arrow_schema, *options.metadata_version()),
+        ipc_message: write::schema_to_bytes(schema),
         arrow_data: vec![],
     }
 }
