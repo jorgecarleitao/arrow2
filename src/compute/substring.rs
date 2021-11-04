@@ -24,48 +24,47 @@ use crate::{
 };
 
 fn utf8_substring<O: Offset>(array: &Utf8Array<O>, start: O, length: &Option<O>) -> Utf8Array<O> {
-    let validity = array.validity();
-    let offsets = array.offsets();
-    let values = array.values();
+    let length = length.map(|v| v.to_usize());
 
-    let mut new_offsets = MutableBuffer::<O>::with_capacity(array.len() + 1);
-    let mut new_values = MutableBuffer::<u8>::new(); // we have no way to estimate how much this will be.
+    let iter = array.values_iter().map(|str_val| {
+        // compute where we should start slicing this entry.
+        let start = if start >= O::zero() {
+            start.to_usize()
+        } else {
+            let start = (O::zero() - start).to_usize();
+            str_val
+                .char_indices()
+                .rev()
+                .nth(start)
+                .map(|(idx, _)| idx + 1)
+                .unwrap_or(0)
+        };
 
-    let mut length_so_far = O::zero();
-    new_offsets.push(length_so_far);
+        let mut iter_chars = str_val.char_indices();
+        if let Some((start_idx, _)) = iter_chars.nth(start) {
+            // length of the str
+            let len_end = str_val.len() - start_idx;
 
-    offsets.windows(2).for_each(|windows| {
-        let length_i: O = windows[1] - windows[0];
+            // length to slice
+            let length = length.unwrap_or(len_end);
 
-        // compute where we should start slicing this entry
-        let start = windows[0]
-            + if start >= O::zero() {
-                start
-            } else {
-                length_i + start
-            };
-        let start = start.max(windows[0]).min(windows[1]);
+            if length == 0 {
+                return "";
+            }
+            // compute
+            let end_idx = iter_chars
+                .nth(length.saturating_sub(1))
+                .map(|(idx, _)| idx)
+                .unwrap_or(str_val.len());
 
-        let length: O = length
-            .unwrap_or(length_i)
-            // .max(0) is not needed as it is guaranteed
-            .min(windows[1] - start); // so we do not go beyond this entry
-        length_so_far += length;
-        new_offsets.push(length_so_far);
-
-        // we need usize for ranges
-        let start = start.to_usize();
-        let length = length.to_usize();
-
-        new_values.extend_from_slice(&values[start..start + length]);
+            &str_val[start_idx..end_idx]
+        } else {
+            ""
+        }
     });
 
-    Utf8Array::<O>::from_data(
-        array.data_type().clone(),
-        new_offsets.into(),
-        new_values.into(),
-        validity.cloned(),
-    )
+    let new = Utf8Array::<O>::from_trusted_len_values_iter(iter);
+    new.with_validity(array.validity().cloned())
 }
 
 fn binary_substring<O: Offset>(
