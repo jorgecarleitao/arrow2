@@ -28,10 +28,8 @@ use arrow_format::ipc::flatbuffers::FlatBufferBuilder;
 use super::super::ARROW_MAGIC;
 use super::{
     super::convert,
-    common::{
-        encoded_batch, write_continuation, write_message, DictionaryTracker, EncodedData,
-        WriteOptions,
-    },
+    common::{encoded_batch, DictionaryTracker, EncodedData, WriteOptions},
+    common_sync::{write_continuation, write_message},
     schema_to_bytes,
 };
 
