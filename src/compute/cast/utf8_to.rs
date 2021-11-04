@@ -11,6 +11,8 @@ use crate::{
     },
 };
 
+use super::CastOptions;
+
 const RFC3339: &str = "%Y-%m-%dT%H:%M:%S%.f%:z";
 
 /// Casts a [`Utf8Array`] to a [`PrimitiveArray`], making any uncastable value a Null.
@@ -25,15 +27,35 @@ where
     PrimitiveArray::<T>::from_trusted_len_iter(iter).to(to.clone())
 }
 
+/// Casts a [`Utf8Array`] to a [`PrimitiveArray`] at best-effort using `lexical_core::parse_partial`, making any uncastable value as zero.
+pub fn partial_utf8_to_primitive<O: Offset, T>(
+    from: &Utf8Array<O>,
+    to: &DataType,
+) -> PrimitiveArray<T>
+where
+    T: NativeType + lexical_core::FromLexical,
+{
+    let iter = from.iter().map(|x| {
+        x.and_then::<T, _>(|x| lexical_core::parse_partial(x.as_bytes()).ok().map(|x| x.0))
+    });
+
+    PrimitiveArray::<T>::from_trusted_len_iter(iter).to(to.clone())
+}
+
 pub(super) fn utf8_to_primitive_dyn<O: Offset, T>(
     from: &dyn Array,
     to: &DataType,
+    options: CastOptions,
 ) -> Result<Box<dyn Array>>
 where
     T: NativeType + lexical_core::FromLexical,
 {
     let from = from.as_any().downcast_ref().unwrap();
-    Ok(Box::new(utf8_to_primitive::<O, T>(from, to)))
+    if options.partial {
+        Ok(Box::new(partial_utf8_to_primitive::<O, T>(from, to)))
+    } else {
+        Ok(Box::new(utf8_to_primitive::<O, T>(from, to)))
+    }
 }
 
 /// Casts a [`Utf8Array`] to a Date32 primitive, making any uncastable value a Null.

@@ -1,7 +1,7 @@
 use super::{primitive_as_primitive, primitive_to_primitive, CastOptions};
 use crate::{
     array::{Array, DictionaryArray, DictionaryKey, PrimitiveArray},
-    compute::{cast::cast_with_options, take::take},
+    compute::{cast::cast, take::take},
     datatypes::DataType,
     error::{ArrowError, Result},
 };
@@ -32,7 +32,7 @@ pub fn dictionary_to_dictionary_values<K: DictionaryKey>(
     let keys = from.keys();
     let values = from.values();
 
-    let values = cast_with_options(values.as_ref(), values_type, CastOptions::default())?.into();
+    let values = cast(values.as_ref(), values_type, CastOptions::default())?.into();
     Ok(DictionaryArray::from_data(keys.clone(), values))
 }
 
@@ -44,8 +44,15 @@ pub fn wrapping_dictionary_to_dictionary_values<K: DictionaryKey>(
     let keys = from.keys();
     let values = from.values();
 
-    let values =
-        cast_with_options(values.as_ref(), values_type, CastOptions { wrapped: true })?.into();
+    let values = cast(
+        values.as_ref(),
+        values_type,
+        CastOptions {
+            wrapped: true,
+            partial: false,
+        },
+    )?
+    .into();
     Ok(DictionaryArray::from_data(keys.clone(), values))
 }
 
@@ -104,7 +111,7 @@ pub(super) fn dictionary_cast_dyn<K: DictionaryKey>(
 
     match to_type {
         DataType::Dictionary(to_keys_type, to_values_type) => {
-            let values = cast_with_options(values.as_ref(), to_values_type, options)?.into();
+            let values = cast(values.as_ref(), to_values_type, options)?.into();
 
             // create the appropriate array type
             with_match_dictionary_key_type!(to_keys_type.as_ref(), |$T| {
@@ -127,7 +134,7 @@ where
 {
     // attempt to cast the dict values to the target type
     // use the take kernel to expand out the dictionary
-    let values = cast_with_options(values, to_type, options)?;
+    let values = cast(values, to_type, options)?;
 
     // take requires first casting i32
     let indices = primitive_to_primitive::<_, i32>(keys, &DataType::Int32);

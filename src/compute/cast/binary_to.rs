@@ -3,6 +3,8 @@ use std::convert::TryFrom;
 use crate::error::{ArrowError, Result};
 use crate::{array::*, buffer::Buffer, datatypes::DataType, types::NativeType};
 
+use super::CastOptions;
+
 /// Conversion of binary
 pub fn binary_to_large_binary(from: &BinaryArray<i32>, to_data_type: DataType) -> BinaryArray<i64> {
     let values = from.values().clone();
@@ -30,6 +32,21 @@ pub fn binary_large_to_binary(
     ))
 }
 
+/// Casts a [`BinaryArray`] to a [`PrimitiveArray`] at best-effort using `lexical_core::parse_partial`, making any uncastable value as zero.
+pub fn partial_binary_to_primitive<O: Offset, T>(
+    from: &BinaryArray<O>,
+    to: &DataType,
+) -> PrimitiveArray<T>
+where
+    T: NativeType + lexical_core::FromLexical,
+{
+    let iter = from
+        .iter()
+        .map(|x| x.and_then::<T, _>(|x| lexical_core::parse_partial(x).ok().map(|x| x.0)));
+
+    PrimitiveArray::<T>::from_trusted_len_iter(iter).to(to.clone())
+}
+
 /// Casts a [`BinaryArray`] to a [`PrimitiveArray`], making any uncastable value a Null.
 pub fn binary_to_primitive<O: Offset, T>(from: &BinaryArray<O>, to: &DataType) -> PrimitiveArray<T>
 where
@@ -45,12 +62,17 @@ where
 pub(super) fn binary_to_primitive_dyn<O: Offset, T>(
     from: &dyn Array,
     to: &DataType,
+    options: CastOptions,
 ) -> Result<Box<dyn Array>>
 where
     T: NativeType + lexical_core::FromLexical,
 {
     let from = from.as_any().downcast_ref().unwrap();
-    Ok(Box::new(binary_to_primitive::<O, T>(from, to)))
+    if options.partial {
+        Ok(Box::new(partial_binary_to_primitive::<O, T>(from, to)))
+    } else {
+        Ok(Box::new(binary_to_primitive::<O, T>(from, to)))
+    }
 }
 
 /// Cast [`BinaryArray`] to [`DictionaryArray`], also known as packing.
