@@ -1,7 +1,7 @@
 //! Definition of basic sub operations with primitive arrays
 use std::ops::Sub;
 
-use num_traits::{ops::overflowing::OverflowingSub, CheckedSub, SaturatingSub, WrappingSub, Zero};
+use num_traits::{ops::overflowing::OverflowingSub, CheckedSub, SaturatingSub, WrappingSub};
 
 use crate::compute::arithmetics::basic::check_same_type;
 use crate::compute::arithmetics::ArrayWrappingSub;
@@ -10,7 +10,7 @@ use crate::{
     bitmap::Bitmap,
     compute::{
         arithmetics::{
-            ArrayCheckedSub, ArrayOverflowingSub, ArraySaturatingSub, ArraySub, NotI128,
+            ArrayCheckedSub, ArrayOverflowingSub, ArraySaturatingSub, ArraySub, NativeArithmetics,
         },
         arity::{
             binary, binary_checked, binary_with_bitmap, unary, unary_checked, unary_with_bitmap,
@@ -87,7 +87,7 @@ where
 /// ```
 pub fn checked_sub<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<PrimitiveArray<T>>
 where
-    T: NativeType + CheckedSub<Output = T> + Zero,
+    T: NativeType + CheckedSub<Output = T>,
 {
     check_same_type(lhs, rhs)?;
 
@@ -158,7 +158,7 @@ where
 // Implementation of ArraySub trait for PrimitiveArrays
 impl<T> ArraySub<PrimitiveArray<T>> for PrimitiveArray<T>
 where
-    T: NativeType + Sub<Output = T> + NotI128,
+    T: NativeArithmetics + Sub<Output = T>,
 {
     type Output = Self;
 
@@ -169,7 +169,7 @@ where
 
 impl<T> ArrayWrappingSub<PrimitiveArray<T>> for PrimitiveArray<T>
 where
-    T: NativeType + WrappingSub<Output = T> + NotI128,
+    T: NativeArithmetics + WrappingSub<Output = T>,
 {
     type Output = Self;
 
@@ -181,7 +181,7 @@ where
 // Implementation of ArrayCheckedSub trait for PrimitiveArrays
 impl<T> ArrayCheckedSub<PrimitiveArray<T>> for PrimitiveArray<T>
 where
-    T: NativeType + CheckedSub<Output = T> + Zero + NotI128,
+    T: NativeArithmetics + CheckedSub<Output = T>,
 {
     type Output = Self;
 
@@ -193,7 +193,7 @@ where
 // Implementation of ArraySaturatingSub trait for PrimitiveArrays
 impl<T> ArraySaturatingSub<PrimitiveArray<T>> for PrimitiveArray<T>
 where
-    T: NativeType + SaturatingSub<Output = T> + NotI128,
+    T: NativeArithmetics + SaturatingSub<Output = T>,
 {
     type Output = Self;
 
@@ -205,7 +205,7 @@ where
 // Implementation of ArraySaturatingSub trait for PrimitiveArrays
 impl<T> ArrayOverflowingSub<PrimitiveArray<T>> for PrimitiveArray<T>
 where
-    T: NativeType + OverflowingSub<Output = T>,
+    T: NativeArithmetics + OverflowingSub<Output = T>,
 {
     type Output = Self;
 
@@ -271,7 +271,7 @@ where
 /// ```
 pub fn checked_sub_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
 where
-    T: NativeType + CheckedSub<Output = T> + Zero,
+    T: NativeType + CheckedSub<Output = T>,
 {
     let rhs = *rhs;
     let op = move |a: T| a.checked_sub(&rhs);
@@ -331,7 +331,7 @@ where
 // Implementation of ArraySub trait for PrimitiveArrays with a scalar
 impl<T> ArraySub<T> for PrimitiveArray<T>
 where
-    T: NativeType + Sub<Output = T> + NotI128,
+    T: NativeArithmetics + Sub<Output = T>,
 {
     type Output = Self;
 
@@ -343,7 +343,7 @@ where
 // Implementation of ArrayCheckedSub trait for PrimitiveArrays with a scalar
 impl<T> ArrayCheckedSub<T> for PrimitiveArray<T>
 where
-    T: NativeType + CheckedSub<Output = T> + Zero + NotI128,
+    T: NativeArithmetics + CheckedSub<Output = T>,
 {
     type Output = Self;
 
@@ -355,7 +355,7 @@ where
 // Implementation of ArraySaturatingSub trait for PrimitiveArrays with a scalar
 impl<T> ArraySaturatingSub<T> for PrimitiveArray<T>
 where
-    T: NativeType + SaturatingSub<Output = T> + NotI128,
+    T: NativeArithmetics + SaturatingSub<Output = T>,
 {
     type Output = Self;
 
@@ -367,7 +367,7 @@ where
 // Implementation of ArraySaturatingSub trait for PrimitiveArrays with a scalar
 impl<T> ArrayOverflowingSub<T> for PrimitiveArray<T>
 where
-    T: NativeType + OverflowingSub<Output = T> + NotI128,
+    T: NativeArithmetics + OverflowingSub<Output = T>,
 {
     type Output = Self;
 

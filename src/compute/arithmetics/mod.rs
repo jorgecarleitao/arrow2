@@ -474,16 +474,18 @@ pub trait ArrayCheckedRem<Rhs> {
     fn checked_rem(&self, rhs: &Rhs) -> Result<Self::Output>;
 }
 
-// The decimal primitive array defines different arithmetic functions and
-// it requires specialization
-pub unsafe trait NotI128 {}
-unsafe impl NotI128 for u8 {}
-unsafe impl NotI128 for u16 {}
-unsafe impl NotI128 for u32 {}
-unsafe impl NotI128 for u64 {}
-unsafe impl NotI128 for i8 {}
-unsafe impl NotI128 for i16 {}
-unsafe impl NotI128 for i32 {}
-unsafe impl NotI128 for i64 {}
-unsafe impl NotI128 for f32 {}
-unsafe impl NotI128 for f64 {}
+/// Trait describing a [`NativeType`] whose semantics of arithmetic in Arrow equals
+/// the semantics in Rust.
+/// A counter example is `i128`, that in arrow represents a decimal while in rust represents
+/// a signed integer.
+pub trait NativeArithmetics: NativeType {}
+impl NativeArithmetics for u8 {}
+impl NativeArithmetics for u16 {}
+impl NativeArithmetics for u32 {}
+impl NativeArithmetics for u64 {}
+impl NativeArithmetics for i8 {}
+impl NativeArithmetics for i16 {}
+impl NativeArithmetics for i32 {}
+impl NativeArithmetics for i64 {}
+impl NativeArithmetics for f32 {}
+impl NativeArithmetics for f64 {}
