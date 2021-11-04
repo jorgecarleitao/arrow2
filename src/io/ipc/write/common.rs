@@ -21,6 +21,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use arrow_format::ipc;
 use arrow_format::ipc::flatbuffers::FlatBufferBuilder;
+use arrow_format::ipc::Message::CompressionType;
 
 use crate::array::Array;
 use crate::error::{ArrowError, Result};
@@ -31,8 +32,17 @@ use crate::{array::DictionaryArray, datatypes::*};
 use super::super::CONTINUATION_MARKER;
 use super::{write, write_dictionary};
 
+/// Compression codec
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Compression {
+    /// LZ4 (framed)
+    LZ4,
+    /// ZSTD
+    ZSTD,
+}
+
 /// IPC write options used to control the behaviour of the writer
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct IpcWriteOptions {
     /// Write padding after memory buffers to this multiple of bytes.
     /// Generally 8 or 64, defaults to 8
@@ -48,6 +58,8 @@ pub struct IpcWriteOptions {
     /// version 2.0.0: V4, with legacy format enabled
     /// version 4.0.0: V5
     metadata_version: ipc::Schema::MetadataVersion,
+    /// Whether the buffers should be compressed
+    compression: Option<Compression>,
 }
 
 impl IpcWriteOptions {
@@ -56,6 +68,7 @@ impl IpcWriteOptions {
         alignment: usize,
         write_legacy_ipc_format: bool,
         metadata_version: ipc::Schema::MetadataVersion,
+        compression: Option<Compression>,
     ) -> Result<Self> {
         if alignment == 0 || alignment % 8 != 0 {
             return Err(ArrowError::InvalidArgumentError(
@@ -72,6 +85,7 @@ impl IpcWriteOptions {
                 alignment,
                 write_legacy_ipc_format,
                 metadata_version,
+                compression,
             }),
             ipc::Schema::MetadataVersion::V5 => {
                 if write_legacy_ipc_format {
@@ -83,6 +97,7 @@ impl IpcWriteOptions {
                         alignment,
                         write_legacy_ipc_format,
                         metadata_version,
+                        compression,
                     })
                 }
             }
@@ -101,6 +116,7 @@ impl Default for IpcWriteOptions {
             alignment: 8,
             write_legacy_ipc_format: false,
             metadata_version: ipc::Schema::MetadataVersion::V5,
+            compression: None,
         }
     }
 }
@@ -157,6 +173,7 @@ fn record_batch_to_bytes(batch: &RecordBatch, write_options: &IpcWriteOptions) -
             &mut nodes,
             &mut offset,
             is_native_little_endian(),
+            write_options.compression,
         )
     }
 
@@ -164,11 +181,26 @@ fn record_batch_to_bytes(batch: &RecordBatch, write_options: &IpcWriteOptions) -
     let buffers = fbb.create_vector(&buffers);
     let nodes = fbb.create_vector(&nodes);
 
+    let compression = if let Some(compression) = write_options.compression {
+        let compression = match compression {
+            Compression::LZ4 => CompressionType::LZ4_FRAME,
+            Compression::ZSTD => CompressionType::ZSTD,
+        };
+        let mut compression_builder = ipc::Message::BodyCompressionBuilder::new(&mut fbb);
+        compression_builder.add_codec(compression);
+        Some(compression_builder.finish())
+    } else {
+        None
+    };
+
     let root = {
         let mut batch_builder = ipc::Message::RecordBatchBuilder::new(&mut fbb);
         batch_builder.add_length(batch.num_rows() as i64);
         batch_builder.add_nodes(nodes);
         batch_builder.add_buffers(buffers);
+        if let Some(compression) = compression {
+            batch_builder.add_compression(compression)
+        }
         let b = batch_builder.finish();
         b.as_union_value()
     };
@@ -209,6 +241,7 @@ fn dictionary_batch_to_bytes(
         &mut nodes,
         &mut 0,
         is_little_endian,
+        write_options.compression,
         false,
     );
 
@@ -216,11 +249,26 @@ fn dictionary_batch_to_bytes(
     let buffers = fbb.create_vector(&buffers);
     let nodes = fbb.create_vector(&nodes);
 
+    let compression = if let Some(compression) = write_options.compression {
+        let compression = match compression {
+            Compression::LZ4 => CompressionType::LZ4_FRAME,
+            Compression::ZSTD => CompressionType::ZSTD,
+        };
+        let mut compression_builder = ipc::Message::BodyCompressionBuilder::new(&mut fbb);
+        compression_builder.add_codec(compression);
+        Some(compression_builder.finish())
+    } else {
+        None
+    };
+
     let root = {
         let mut batch_builder = ipc::Message::RecordBatchBuilder::new(&mut fbb);
         batch_builder.add_length(length as i64);
         batch_builder.add_nodes(nodes);
         batch_builder.add_buffers(buffers);
+        if let Some(compression) = compression {
+            batch_builder.add_compression(compression)
+        }
         batch_builder.finish()
     };
 
@@ -358,18 +406,18 @@ pub fn write_message<W: Write>(
 }
 
 fn write_body_buffers<W: Write>(mut writer: W, data: &[u8]) -> Result<usize> {
-    let len = data.len() as u32;
-    let pad_len = pad_to_8(len) as u32;
+    let len = data.len();
+    let pad_len = pad_to_8(data.len());
     let total_len = len + pad_len;
 
     // write body buffer
     writer.write_all(data)?;
     if pad_len > 0 {
-        writer.write_all(&vec![0u8; pad_len as usize][..])?;
+        writer.write_all(&vec![0u8; pad_len][..])?;
     }
 
     writer.flush()?;
-    Ok(total_len as usize)
+    Ok(total_len)
 }
 
 /// Write a record batch to the writer, writing the message size before the message
@@ -411,6 +459,6 @@ pub fn write_continuation<W: Write>(
 
 /// Calculate an 8-byte boundary and return the number of bytes needed to pad to 8 bytes
 #[inline]
-pub(crate) fn pad_to_8(len: u32) -> usize {
+pub(crate) fn pad_to_8(len: usize) -> usize {
     (((len + 7) & !7) - len) as usize
 }

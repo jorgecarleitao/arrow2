@@ -6,7 +6,7 @@ mod stream;
 mod writer;
 
 pub use arrow_format::ipc::Schema::MetadataVersion;
-pub use common::IpcWriteOptions;
+pub use common::{Compression, IpcWriteOptions};
 pub use schema::schema_to_bytes;
 pub use serialize::{write, write_dictionary};
 pub use stream::StreamWriter;

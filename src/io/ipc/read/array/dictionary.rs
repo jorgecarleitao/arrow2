@@ -15,6 +15,7 @@ pub fn read_dictionary<T: DictionaryKey, R: Read + Seek>(
     buffers: &mut VecDeque<&ipc::Schema::Buffer>,
     reader: &mut R,
     block_offset: u64,
+    compression: Option<ipc::Message::BodyCompression>,
     is_little_endian: bool,
 ) -> Result<DictionaryArray<T>>
 where
@@ -29,7 +30,7 @@ where
         reader,
         block_offset,
         is_little_endian,
-        None,
+        compression,
     )?;
 
     Ok(DictionaryArray::<T>::from_data(keys, values.clone()))

@@ -107,33 +107,26 @@ fn read_compressed_buffer<T: NativeType, R: Read + Seek>(
     let mut slice = vec![0u8; buffer_length];
     reader.read_exact(&mut slice)?;
 
+    // Safety:
+    // This is safe because T is NativeType, which by definition can be transmuted to u8
+    let out_slice = unsafe {
+        std::slice::from_raw_parts_mut(
+            buffer.as_mut_ptr() as *mut u8,
+            length * std::mem::size_of::<T>(),
+        )
+    };
+
     match compression.codec() {
         CompressionType::LZ4_FRAME => {
-            // fast case where we can just copy the contents as is
-            unsafe {
-                // transmute T to bytes.
-                let out_slice = std::slice::from_raw_parts_mut(
-                    buffer.as_mut_ptr() as *mut u8,
-                    length * std::mem::size_of::<T>(),
-                );
-                compression::decompress_lz4(&slice[8..], out_slice)?
-            }
+            compression::decompress_lz4(&slice[8..], out_slice)?;
             Ok(buffer)
         }
         CompressionType::ZSTD => {
-            // fast case where we can just copy the contents as is
-            unsafe {
-                // transmute T to bytes.
-                let out_slice = std::slice::from_raw_parts_mut(
-                    buffer.as_mut_ptr() as *mut u8,
-                    length * std::mem::size_of::<T>(),
-                );
-                compression::decompress_zstd(&slice[8..], out_slice)?
-            }
+            compression::decompress_zstd(&slice[8..], out_slice)?;
             Ok(buffer)
         }
         _ => Err(ArrowError::NotYetImplemented(
-            "Non LZ4 compressed IPC".to_string(),
+            "Compression format".to_string(),
         )),
     }
 }
@@ -184,25 +177,19 @@ fn read_compressed_bitmap<R: Read + Seek>(
     reader: &mut R,
 ) -> Result<MutableBuffer<u8>> {
     let mut buffer = MutableBuffer::<u8>::from_len_zeroed((length + 7) / 8);
+
+    // read all first
+    // todo: move this allocation to an external buffer for re-use
+    let mut slice = vec![0u8; bytes];
+    reader.read_exact(&mut slice)?;
+
     match compression.codec() {
         CompressionType::LZ4_FRAME => {
-            // decompress first
-            // todo: move this allocation to an external buffer for re-use
-            let mut slice = vec![0u8; bytes];
-            reader.read_exact(&mut slice)?;
-
             compression::decompress_lz4(&slice[8..], &mut buffer)?;
-
             Ok(buffer)
         }
         CompressionType::ZSTD => {
-            // decompress first
-            // todo: move this allocation to an external buffer for re-use
-            let mut slice = vec![0u8; bytes];
-            reader.read_exact(&mut slice)?;
-
             compression::decompress_zstd(&slice[8..], &mut buffer)?;
-
             Ok(buffer)
         }
         _ => Err(ArrowError::NotYetImplemented(

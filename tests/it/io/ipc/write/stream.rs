@@ -15,7 +15,7 @@ fn test_file(version: &str, file_name: &str) {
 
     // write IPC version 5
     {
-        let options = IpcWriteOptions::try_new(8, false, MetadataVersion::V5).unwrap();
+        let options = IpcWriteOptions::try_new(8, false, MetadataVersion::V5, None).unwrap();
         let mut writer = StreamWriter::try_new_with_options(&mut result, &schema, options).unwrap();
         for batch in batches {
             writer.write(&batch).unwrap();

@@ -17,6 +17,7 @@ pub fn read_boolean<R: Read + Seek>(
     reader: &mut R,
     block_offset: u64,
     is_little_endian: bool,
+    compression: Option<ipc::Message::BodyCompression>,
 ) -> Result<BooleanArray> {
     let field_node = field_nodes.pop_front().unwrap().0;
 
@@ -27,7 +28,7 @@ pub fn read_boolean<R: Read + Seek>(
         reader,
         block_offset,
         is_little_endian,
-        None,
+        compression,
     )?;
 
     let values = read_bitmap(
@@ -36,7 +37,7 @@ pub fn read_boolean<R: Read + Seek>(
         reader,
         block_offset,
         is_little_endian,
-        None,
+        compression,
     )?;
     Ok(BooleanArray::from_data(data_type, values, validity))
 }
