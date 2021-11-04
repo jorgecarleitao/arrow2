@@ -291,23 +291,55 @@ encoding and compression.
 This operation is <a href="https://en.wikipedia.org/wiki/Embarrassingly_parallel">embarrassingly parallel</a>
 and results in a speed up equal to minimum between the number of cores
 and number of columns in the record.</p>
-<pre><pre class="playground"><code class="language-rust">/// Example demonstrating how to write to parquet in parallel.
+<pre><pre class="playground"><code class="language-rust">//! Example demonstrating how to write to parquet in parallel.
+use std::collections::VecDeque;
 use std::sync::Arc;
 
 use rayon::prelude::*;
 
 use arrow2::{
-    array::*, datatypes::PhysicalType, error::Result, io::parquet::write::*,
+    array::*,
+    datatypes::PhysicalType,
+    error::{ArrowError, Result},
+    io::parquet::write::*,
     record_batch::RecordBatch,
 };
 
-fn parallel_write(path: &amp;str, batch: &amp;RecordBatch) -&gt; Result&lt;()&gt; {
+struct Bla {
+    columns: VecDeque&lt;CompressedPage&gt;,
+    current: Option&lt;CompressedPage&gt;,
+}
+
+impl Bla {
+    pub fn new(columns: VecDeque&lt;CompressedPage&gt;) -&gt; Self {
+        Self {
+            columns,
+            current: None,
+        }
+    }
+}
+
+impl FallibleStreamingIterator for Bla {
+    type Item = CompressedPage;
+    type Error = ArrowError;
+
+    fn advance(&amp;mut self) -&gt; Result&lt;()&gt; {
+        self.current = self.columns.pop_front();
+        Ok(())
+    }
+
+    fn get(&amp;self) -&gt; Option&lt;&amp;Self::Item&gt; {
+        self.current.as_ref()
+    }
+}
+
+fn parallel_write(path: &amp;str, batches: &amp;[RecordBatch]) -&gt; Result&lt;()&gt; {
     let options = WriteOptions {
         write_statistics: true,
         compression: Compression::Snappy,
         version: Version::V2,
     };
-    let encodings = batch.schema().fields().par_iter().map(|field| {
+    let encodings = batches[0].schema().fields().par_iter().map(|field| {
         match field.data_type().to_physical_type() {
             // let's be fancy and use delta-encoding for binary fields
             PhysicalType::Binary
@@ -319,30 +351,32 @@ fn parallel_write(path: &amp;str, batch: &amp;RecordBatch) -&gt; Result&lt;()&gt
         }
     });
 
-    let parquet_schema = to_parquet_schema(batch.schema())?;
+    let parquet_schema = to_parquet_schema(batches[0].schema())?;
 
-    // write batch to pages; parallelized by rayon
-    let columns = batch
-        .columns()
-        .par_iter()
-        .zip(parquet_schema.columns().to_vec().into_par_iter())
-        .zip(encodings)
-        .map(|((array, descriptor), encoding)| {
-            // create encoded and compressed pages this column
-            let encoded_pages = array_to_pages(array.as_ref(), descriptor, options, encoding)?;
-            encoded_pages
-                .map(|page| compress(page?, vec![], options.compression).map_err(|x| x.into()))
-                .collect::&lt;Result&lt;Vec&lt;_&gt;&gt;&gt;()
-        })
-        .collect::&lt;Result&lt;Vec&lt;Vec&lt;CompressedPage&gt;&gt;&gt;&gt;()?;
+    let a = parquet_schema.clone();
+    let row_groups = batches.iter().map(|batch| {
+        // write batch to pages; parallelized by rayon
+        let columns = batch
+            .columns()
+            .par_iter()
+            .zip(a.columns().to_vec().into_par_iter())
+            .zip(encodings.clone())
+            .map(|((array, descriptor), encoding)| {
+                // create encoded and compressed pages this column
+                let encoded_pages = array_to_pages(array.as_ref(), descriptor, options, encoding)?;
+                encoded_pages
+                    .map(|page| compress(page?, vec![], options.compression).map_err(|x| x.into()))
+                    .collect::&lt;Result&lt;VecDeque&lt;_&gt;&gt;&gt;()
+            })
+            .collect::&lt;Result&lt;Vec&lt;VecDeque&lt;CompressedPage&gt;&gt;&gt;&gt;()?;
 
-    // create the iterator over groups (one in this case)
-    // (for more batches, create the iterator from them here)
-    let row_groups = std::iter::once(Result::Ok(DynIter::new(columns.iter().map(|column| {
-        Ok(DynStreamingIterator::new(
-            fallible_streaming_iterator::convert(column.iter().map(Ok)),
-        ))
-    }))));
+        let row_group = DynIter::new(
+            columns
+                .into_iter()
+                .map(|column| Ok(DynStreamingIterator::new(Bla::new(column)))),
+        );
+        Ok(row_group)
+    });
 
     // Create a new empty file
     let mut file = std::fs::File::create(path)?;
@@ -351,7 +385,7 @@ fn parallel_write(path: &amp;str, batch: &amp;RecordBatch) -&gt; Result&lt;()&gt
     let _file_size = write_file(
         &amp;mut file,
         row_groups,
-        batch.schema(),
+        batches[0].schema(),
         parquet_schema,
         options,
         None,
@@ -381,9 +415,9 @@ fn create_batch(size: usize) -&gt; Result&lt;RecordBatch&gt; {
 }
 
 fn main() -&gt; Result&lt;()&gt; {
-    let batch = create_batch(10_000_000)?;
+    let batch = create_batch(5_000_000)?;
 
-    parallel_write(&quot;example.parquet&quot;, &amp;batch)
+    parallel_write(&quot;example.parquet&quot;, &amp;[batch.clone(), batch])
 }
 </code></pre></pre>
 
