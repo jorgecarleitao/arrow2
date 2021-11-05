@@ -310,6 +310,32 @@ impl FromIterator<bool> for MutableBitmap {
     }
 }
 
+// [7, 6, 5, 4, 3, 2, 1, 0], [15, 14, 13, 12, 11, 10, 9, 8]
+// [00000001_00000000_00000000_00000000_...] // u64
+/// # Safety
+/// The iterator must be trustedLen and its len must be least `len`.
+#[inline]
+unsafe fn get_chunk_unchecked(iterator: &mut impl Iterator<Item = bool>) -> u64 {
+    let mut byte = 0u64;
+    let mut mask;
+    for i in 0..8 {
+        mask = 1u64 << (8 * i);
+        for _ in 0..8 {
+            let value = match iterator.next() {
+                Some(value) => value,
+                None => unsafe { unreachable_unchecked() },
+            };
+
+            byte |= match value {
+                true => mask,
+                false => 0,
+            };
+            mask <<= 1;
+        }
+    }
+    byte
+}
+
 /// # Safety
 /// The iterator must be trustedLen and its len must be least `len`.
 #[inline]
@@ -340,26 +366,34 @@ unsafe fn extend_aligned_trusted_iter_unchecked(
     mut iterator: impl Iterator<Item = bool>,
 ) -> usize {
     let additional_bits = iterator.size_hint().1.unwrap();
-    let chunks = additional_bits / 8;
-    let remainder = additional_bits % 8;
+    let chunks = additional_bits / 64;
+    let remainder = additional_bits % 64;
 
-    let additional = chunks + (remainder > 0) as usize;
+    let additional = (additional_bits + 7) / 8;
+    assert_eq!(
+        additional,
+        // a hint of how the following calculation will be done
+        chunks * 8 + remainder / 8 + (remainder % 8 > 0) as usize
+    );
     buffer.reserve(additional);
 
-    if chunks > 0 {
-        for _ in 0..chunks {
-            // Soundness: iterator lenght is at least chunks * 8
-            let byte = unsafe { get_byte_unchecked(8, &mut iterator) };
-            // Soundness: capacity was allocated above
-            unsafe { buffer.push_unchecked(byte) };
-        }
+    // chunks of 64 bits
+    for _ in 0..chunks {
+        let chunk = get_chunk_unchecked(&mut iterator);
+        buffer.extend_from_slice(&chunk.to_le_bytes());
     }
 
+    // remaining complete bytes
+    for _ in 0..(remainder / 8) {
+        let byte = unsafe { get_byte_unchecked(8, &mut iterator) };
+        buffer.push_unchecked(byte)
+    }
+
+    // remaining bits
+    let remainder = remainder % 8;
     if remainder > 0 {
-        // Soundness: iterator has exactly remainder items.
         let byte = unsafe { get_byte_unchecked(remainder, &mut iterator) };
-        // Soundness: reserve above took remainder into account
-        unsafe { buffer.push_unchecked(byte) };
+        buffer.push_unchecked(byte)
     }
     additional_bits
 }
