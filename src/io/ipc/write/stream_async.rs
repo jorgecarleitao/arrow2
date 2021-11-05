@@ -1,7 +1,8 @@
 //! `async` writing of arrow streams
 use futures::AsyncWrite;
 
-use super::common::{encoded_batch, DictionaryTracker, EncodedData, WriteOptions};
+pub use super::common::WriteOptions;
+use super::common::{encoded_batch, DictionaryTracker, EncodedData};
 use super::common_async::{write_continuation, write_message};
 use super::schema_to_bytes;
 
