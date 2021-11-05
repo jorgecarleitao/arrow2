@@ -150,7 +150,8 @@ use arrow2::record_batch::RecordBatch;
 fn write_batches(path: &amp;str, schema: &amp;Schema, batches: &amp;[RecordBatch]) -&gt; Result&lt;()&gt; {
     let file = File::create(path)?;
 
-    let mut writer = write::FileWriter::try_new(file, schema)?;
+    let options = write::WriteOptions { compression: None };
+    let mut writer = write::FileWriter::try_new(file, schema, options)?;
 
     for batch in batches {
         writer.write(batch)?
