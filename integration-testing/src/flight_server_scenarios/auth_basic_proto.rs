@@ -21,7 +21,6 @@ use std::sync::Arc;
 use arrow_format::flight::data::*;
 use arrow_format::flight::service::flight_service_server::{FlightService, FlightServiceServer};
 use futures::{channel::mpsc, sink::SinkExt, Stream, StreamExt};
-use tokio::sync::Mutex;
 use tonic::{metadata::MetadataMap, transport::Server, Request, Response, Status, Streaming};
 
 type TonicStream<T> = Pin<Box<dyn Stream<Item = T> + Send + Sync + 'static>>;
@@ -37,7 +36,6 @@ pub async fn scenario_setup(port: &str) -> Result {
     let service = AuthBasicProtoScenarioImpl {
         username: AUTH_USERNAME.into(),
         password: AUTH_PASSWORD.into(),
-        peer_identity: Arc::new(Mutex::new(None)),
     };
     let addr = super::listen_on(port).await?;
     let svc = FlightServiceServer::new(service);
@@ -54,7 +52,6 @@ pub async fn scenario_setup(port: &str) -> Result {
 pub struct AuthBasicProtoScenarioImpl {
     username: Arc<str>,
     password: Arc<str>,
-    peer_identity: Arc<Mutex<Option<String>>>,
 }
 
 impl AuthBasicProtoScenarioImpl {

@@ -30,7 +30,7 @@ use super::{
     super::convert,
     common::{
         encoded_batch, write_continuation, write_message, DictionaryTracker, EncodedData,
-        IpcWriteOptions,
+        WriteOptions,
     },
     schema_to_bytes,
 };
@@ -44,7 +44,7 @@ pub struct FileWriter<W: Write> {
     /// The object to write to
     writer: W,
     /// IPC write options
-    write_options: IpcWriteOptions,
+    options: WriteOptions,
     /// A reference to the schema, used in validating record batches
     schema: Schema,
     /// The number of bytes between each block of bytes, as an offset for random access
@@ -61,30 +61,20 @@ pub struct FileWriter<W: Write> {
 
 impl<W: Write> FileWriter<W> {
     /// Try create a new writer, with the schema written as part of the header
-    pub fn try_new(writer: W, schema: &Schema) -> Result<Self> {
-        let write_options = IpcWriteOptions::default();
-        Self::try_new_with_options(writer, schema, write_options)
-    }
-
-    /// Try create a new writer with IpcWriteOptions
-    pub fn try_new_with_options(
-        mut writer: W,
-        schema: &Schema,
-        write_options: IpcWriteOptions,
-    ) -> Result<Self> {
+    pub fn try_new(mut writer: W, schema: &Schema, options: WriteOptions) -> Result<Self> {
         // write magic to header
         writer.write_all(&ARROW_MAGIC[..])?;
         // create an 8-byte boundary after the header
         writer.write_all(&[0, 0])?;
         // write the schema, set the written bytes to the schema
         let encoded_message = EncodedData {
-            ipc_message: schema_to_bytes(schema, *write_options.metadata_version()),
+            ipc_message: schema_to_bytes(schema),
             arrow_data: vec![],
         };
-        let (meta, data) = write_message(&mut writer, encoded_message, &write_options)?;
+        let (meta, data) = write_message(&mut writer, encoded_message)?;
         Ok(Self {
             writer,
-            write_options,
+            options,
             schema: schema.clone(),
             block_offsets: meta + data + 8,
             dictionary_blocks: vec![],
@@ -107,18 +97,17 @@ impl<W: Write> FileWriter<W> {
         }
 
         let (encoded_dictionaries, encoded_message) =
-            encoded_batch(batch, &mut self.dictionary_tracker, &self.write_options)?;
+            encoded_batch(batch, &mut self.dictionary_tracker, &self.options)?;
 
         for encoded_dictionary in encoded_dictionaries {
-            let (meta, data) =
-                write_message(&mut self.writer, encoded_dictionary, &self.write_options)?;
+            let (meta, data) = write_message(&mut self.writer, encoded_dictionary)?;
 
             let block = ipc::File::Block::new(self.block_offsets as i64, meta as i32, data as i64);
             self.dictionary_blocks.push(block);
             self.block_offsets += meta + data;
         }
 
-        let (meta, data) = write_message(&mut self.writer, encoded_message, &self.write_options)?;
+        let (meta, data) = write_message(&mut self.writer, encoded_message)?;
         // add a record block for the footer
         let block = ipc::File::Block::new(
             self.block_offsets as i64,
@@ -133,7 +122,7 @@ impl<W: Write> FileWriter<W> {
     /// Write footer and closing tag, then mark the writer as done
     pub fn finish(&mut self) -> Result<()> {
         // write EOS
-        write_continuation(&mut self.writer, &self.write_options, 0)?;
+        write_continuation(&mut self.writer, 0)?;
 
         let mut fbb = FlatBufferBuilder::new();
         let dictionaries = fbb.create_vector(&self.dictionary_blocks);
@@ -142,7 +131,7 @@ impl<W: Write> FileWriter<W> {
 
         let root = {
             let mut footer_builder = ipc::File::FooterBuilder::new(&mut fbb);
-            footer_builder.add_version(*self.write_options.metadata_version());
+            footer_builder.add_version(ipc::Schema::MetadataVersion::V5);
             footer_builder.add_schema(schema);
             footer_builder.add_dictionaries(dictionaries);
             footer_builder.add_recordBatches(record_batches);

@@ -20,7 +20,7 @@ use std::fs::File;
 
 use arrow2::error::Result;
 use arrow2::io::ipc::read;
-use arrow2::io::ipc::write::StreamWriter;
+use arrow2::io::ipc::write;
 
 fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
@@ -30,7 +30,8 @@ fn main() -> Result<()> {
     let mut reader = read::FileReader::new(f, metadata, None);
     let schema = reader.schema();
 
-    let mut writer = StreamWriter::try_new(std::io::stdout(), schema)?;
+    let options = write::WriteOptions { compression: None };
+    let mut writer = write::StreamWriter::try_new(std::io::stdout(), schema, options)?;
 
     reader.try_for_each(|batch| {
         let batch = batch?;

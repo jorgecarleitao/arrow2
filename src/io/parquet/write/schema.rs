@@ -12,14 +12,14 @@ use parquet2::{
 use crate::{
     datatypes::{DataType, Field, Schema, TimeUnit},
     error::{ArrowError, Result},
-    io::ipc::write::{schema_to_bytes, MetadataVersion},
+    io::ipc::write::schema_to_bytes,
     io::parquet::write::decimal_length_from_precision,
 };
 
 use super::super::ARROW_SCHEMA_META_KEY;
 
 pub fn schema_to_metadata_key(schema: &Schema) -> KeyValue {
-    let serialized_schema = schema_to_bytes(schema, MetadataVersion::V5);
+    let serialized_schema = schema_to_bytes(schema);
 
     // manually prepending the length to the schema as arrow uses the legacy IPC format
     // TODO: change after addressing ARROW-9777

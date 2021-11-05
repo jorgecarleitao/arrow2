@@ -30,7 +30,7 @@
 //! # Examples
 //! Read and write to a file:
 //! ```
-//! use arrow2::io::ipc::{{read::{FileReader, read_file_metadata}}, {write::FileWriter}};
+//! use arrow2::io::ipc::{{read::{FileReader, read_file_metadata}}, {write::{FileWriter, WriteOptions}}};
 //! # use std::fs::File;
 //! # use std::sync::Arc;
 //! # use arrow2::datatypes::{Field, Schema, DataType};
@@ -43,7 +43,8 @@
 //! let x_coord = Field::new("x", DataType::Int32, false);
 //! let y_coord = Field::new("y", DataType::Int32, false);
 //! let schema = Schema::new(vec![x_coord, y_coord]);
-//! let mut writer = FileWriter::try_new(file, &schema)?;
+//! let options = WriteOptions {compression: None};
+//! let mut writer = FileWriter::try_new(file, &schema, options)?;
 //!
 //! // Setup the data
 //! let x_data = Int32Array::from_slice([-1i32, 1]);

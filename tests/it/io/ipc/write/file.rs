@@ -13,9 +13,10 @@ fn round_trip(batch: RecordBatch) -> Result<()> {
 
     // write IPC version 5
     let written_result = {
-        let options =
-            IpcWriteOptions::try_new(8, false, MetadataVersion::V5, Some(Compression::ZSTD))?;
-        let mut writer = FileWriter::try_new_with_options(result, batch.schema(), options)?;
+        let options = WriteOptions {
+            compression: Some(Compression::ZSTD),
+        };
+        let mut writer = FileWriter::try_new(result, batch.schema(), options)?;
         writer.write(&batch)?;
         writer.finish()?;
         writer.into_inner()
@@ -50,8 +51,8 @@ fn test_file(version: &str, file_name: &str, compressed: bool) -> Result<()> {
 
     // write IPC version 5
     let written_result = {
-        let options = IpcWriteOptions::try_new(8, false, MetadataVersion::V5, compression)?;
-        let mut writer = FileWriter::try_new_with_options(result, &schema, options)?;
+        let options = WriteOptions { compression };
+        let mut writer = FileWriter::try_new(result, &schema, options)?;
         for batch in batches {
             writer.write(&batch)?;
         }
