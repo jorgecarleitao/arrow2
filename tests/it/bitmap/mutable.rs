@@ -4,6 +4,13 @@ use arrow2::{
 };
 
 #[test]
+fn from_slice() {
+    let slice = &[true, false, true];
+    let a = MutableBitmap::from(slice);
+    assert_eq!(a.iter().collect::<Vec<_>>(), slice);
+}
+
+#[test]
 fn trusted_len() {
     let data = vec![true; 65];
     let bitmap = MutableBitmap::from_trusted_len_iter(data.into_iter());
