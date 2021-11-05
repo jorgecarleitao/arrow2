@@ -53,6 +53,26 @@ fn add_benchmark(c: &mut Criterion) {
                 })
             },
         );
+
+        let iter = (0..size)
+            .into_iter()
+            .map(|x| x % 3 == 0)
+            .collect::<Vec<_>>();
+        c.bench_function(&format!("bitmap from_trusted_len 2^{}", log2_size), |b| {
+            b.iter(|| {
+                MutableBitmap::from_trusted_len_iter(iter.iter().copied());
+            })
+        });
+
+        c.bench_function(
+            &format!("bitmap extend_from_trusted_len_iter 2^{}", log2_size),
+            |b| {
+                b.iter(|| {
+                    let mut a = MutableBitmap::from(&[true]);
+                    a.extend_from_trusted_len_iter(iter.iter().copied());
+                })
+            },
+        );
     });
 }
 
