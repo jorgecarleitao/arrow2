@@ -83,25 +83,26 @@ impl MutableBitmap {
         // loop unrolling is still cool
         // 64 / 8 = 8
         if self.length % 64 == 0 {
-            self.buffer.push(u8::MAX); // 1
-            self.buffer.push(u8::MAX); // 2
-            self.buffer.push(u8::MAX); // ..
-            self.buffer.push(u8::MAX);
-            self.buffer.push(u8::MAX);
-            self.buffer.push(u8::MAX);
-            self.buffer.push(u8::MAX); // 7
-            self.buffer.push(u8::MAX); // 8
+            self.extend_set(64);
+            // self.buffer.push(u8::MAX); // 1
+            // self.buffer.push(u8::MAX); // 2
+            // self.buffer.push(u8::MAX); // ..
+            // self.buffer.push(u8::MAX);
+            // self.buffer.push(u8::MAX);
+            // self.buffer.push(u8::MAX);
+            // self.buffer.push(u8::MAX); // 7
+            // self.buffer.push(u8::MAX); // 8
         }
 
         // Its an invariant of the struct that
         // length.saturating_add(7) / 8 == buffer.len();
         // so we must keep that updated.
-        // if (self.length + 1) % 8 == 0 {
-        unsafe { self.buffer.set_len((self.length + 1).saturating_add(7) / 8) }
+        if (self.length) % 8 == 0 {
+            unsafe { self.buffer.set_len((self.length + 1).saturating_add(7) / 8) }
+        }
 
         if !value {
             let bytes = self.buffer.as_mut_slice();
-            // println!("{:#8b}", bytes[bytes.len() - 1]);
             set_bit(bytes, self.length, false)
         }
 
@@ -119,12 +120,8 @@ impl MutableBitmap {
     /// The caller must ensure that the [`MutableBitmap`] has sufficient capacity.
     #[inline]
     pub unsafe fn push_unchecked(&mut self, value: bool) {
-        if self.length % 8 == 0 {
-            self.buffer.push_unchecked(0);
-        }
-        let byte = self.buffer.as_mut_slice().last_mut().unwrap();
-        *byte = set(*byte, self.length % 8, value);
-        self.length += 1;
+        // todo! faster implementation, that does not check cap?
+        self.push(value)
     }
 
     /// Returns the number of unset bits on this [`MutableBitmap`].
@@ -261,7 +258,7 @@ impl MutableBitmap {
 
 impl From<MutableBitmap> for Bitmap {
     #[inline]
-    fn from(mut buffer: MutableBitmap) -> Self {
+    fn from(buffer: MutableBitmap) -> Self {
         Bitmap::from_bytes(buffer.buffer.into(), buffer.length)
     }
 }
