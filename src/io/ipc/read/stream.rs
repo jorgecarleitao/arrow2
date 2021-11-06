@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+use std::collections::HashMap;
 use std::io::Read;
 use std::sync::Arc;
 
@@ -29,8 +30,6 @@ use crate::record_batch::RecordBatch;
 use super::super::convert;
 use super::super::CONTINUATION_MARKER;
 use super::common::*;
-
-type ArrayRef = Arc<dyn Array>;
 
 #[derive(Debug)]
 pub struct StreamMetadata {
@@ -113,7 +112,7 @@ impl StreamState {
 pub fn read_next<R: Read>(
     reader: &mut R,
     metadata: &StreamMetadata,
-    dictionaries_by_field: &mut Vec<Option<ArrayRef>>,
+    dictionaries: &mut HashMap<usize, Arc<dyn Array>>,
 ) -> Result<Option<StreamState>> {
     // determine metadata length
     let mut meta_size: [u8; 4] = [0; 4];
@@ -172,7 +171,7 @@ pub fn read_next<R: Read>(
                 metadata.schema.clone(),
                 None,
                 metadata.is_little_endian,
-                dictionaries_by_field,
+                dictionaries,
                 metadata.version,
                 &mut reader,
                 0,
@@ -193,13 +192,13 @@ pub fn read_next<R: Read>(
                 batch,
                 &metadata.schema,
                 metadata.is_little_endian,
-                dictionaries_by_field,
+                dictionaries,
                 &mut dict_reader,
                 0,
             )?;
 
             // read the next message until we encounter a RecordBatch
-            read_next(reader, metadata, dictionaries_by_field)
+            read_next(reader, metadata, dictionaries)
         }
         ipc::Message::MessageHeader::NONE => Ok(Some(StreamState::Waiting)),
         t => Err(ArrowError::Ipc(format!(
@@ -218,7 +217,7 @@ pub fn read_next<R: Read>(
 pub struct StreamReader<R: Read> {
     reader: R,
     metadata: StreamMetadata,
-    dictionaries_by_field: Vec<Option<ArrayRef>>,
+    dictionaries: HashMap<usize, Arc<dyn Array>>,
     finished: bool,
 }
 
@@ -229,11 +228,10 @@ impl<R: Read> StreamReader<R> {
     /// encounter a schema.
     /// To check if the reader is done, use `is_finished(self)`
     pub fn new(reader: R, metadata: StreamMetadata) -> Self {
-        let fields = metadata.schema.fields().len();
         Self {
             reader,
             metadata,
-            dictionaries_by_field: vec![None; fields],
+            dictionaries: Default::default(),
             finished: false,
         }
     }
@@ -252,11 +250,7 @@ impl<R: Read> StreamReader<R> {
         if self.finished {
             return Ok(None);
         }
-        let batch = read_next(
-            &mut self.reader,
-            &self.metadata,
-            &mut self.dictionaries_by_field,
-        )?;
+        let batch = read_next(&mut self.reader, &self.metadata, &mut self.dictionaries)?;
         if batch.is_none() {
             self.finished = true;
         }

@@ -1,9 +1,10 @@
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::io::{Read, Seek};
+use std::sync::Arc;
 
 use arrow_format::ipc;
 
-use crate::array::MapArray;
+use crate::array::{Array, MapArray};
 use crate::buffer::Buffer;
 use crate::datatypes::DataType;
 use crate::error::Result;
@@ -17,12 +18,13 @@ pub fn read_map<R: Read + Seek>(
     data_type: DataType,
     buffers: &mut VecDeque<&ipc::Schema::Buffer>,
     reader: &mut R,
+    dictionaries: &HashMap<usize, Arc<dyn Array>>,
     block_offset: u64,
     is_little_endian: bool,
     compression: Option<ipc::Message::BodyCompression>,
     version: ipc::Schema::MetadataVersion,
 ) -> Result<MapArray> {
-    let field_node = field_nodes.pop_front().unwrap().0;
+    let field_node = field_nodes.pop_front().unwrap();
 
     let validity = read_validity(
         buffers,
@@ -44,13 +46,14 @@ pub fn read_map<R: Read + Seek>(
     // Older versions of the IPC format sometimes do not report an offset
     .or_else(|_| Result::Ok(Buffer::<i32>::from(&[0i32])))?;
 
-    let value_data_type = MapArray::get_field(&data_type).data_type().clone();
+    let field = MapArray::get_field(&data_type);
 
     let field = read(
         field_nodes,
-        value_data_type,
+        field,
         buffers,
         reader,
+        dictionaries,
         block_offset,
         is_little_endian,
         compression,

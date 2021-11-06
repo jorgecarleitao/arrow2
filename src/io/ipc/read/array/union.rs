@@ -1,9 +1,10 @@
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::io::{Read, Seek};
+use std::sync::Arc;
 
 use arrow_format::ipc;
 
-use crate::array::UnionArray;
+use crate::array::{Array, UnionArray};
 use crate::datatypes::DataType;
 use crate::datatypes::UnionMode::Dense;
 use crate::error::Result;
@@ -17,12 +18,13 @@ pub fn read_union<R: Read + Seek>(
     data_type: DataType,
     buffers: &mut VecDeque<&ipc::Schema::Buffer>,
     reader: &mut R,
+    dictionaries: &HashMap<usize, Arc<dyn Array>>,
     block_offset: u64,
     is_little_endian: bool,
     compression: Option<ipc::Message::BodyCompression>,
     version: ipc::Schema::MetadataVersion,
 ) -> Result<UnionArray> {
-    let field_node = field_nodes.pop_front().unwrap().0;
+    let field_node = field_nodes.pop_front().unwrap();
 
     if version != ipc::Schema::MetadataVersion::V5 {
         let _ = buffers.pop_front().unwrap();
@@ -61,9 +63,10 @@ pub fn read_union<R: Read + Seek>(
         .map(|field| {
             read(
                 field_nodes,
-                field.data_type().clone(),
+                field,
                 buffers,
                 reader,
+                dictionaries,
                 block_offset,
                 is_little_endian,
                 compression,

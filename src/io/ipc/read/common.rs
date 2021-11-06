@@ -98,7 +98,7 @@ pub fn read_record_batch<R: Read + Seek>(
     schema: Arc<Schema>,
     projection: Option<(&[usize], Arc<Schema>)>,
     is_little_endian: bool,
-    dictionaries: &[Option<ArrayRef>],
+    dictionaries: &HashMap<usize, Arc<dyn Array>>,
     version: MetadataVersion,
     reader: &mut R,
     block_offset: u64,
@@ -111,13 +111,7 @@ pub fn read_record_batch<R: Read + Seek>(
         ArrowError::Ipc("Unable to get field nodes from IPC RecordBatch".to_string())
     })?;
 
-    // This is a bug fix: we should have one dictionary per node, not schema field
-    let dictionaries = dictionaries.iter().chain(std::iter::repeat(&None));
-
-    let mut field_nodes = field_nodes
-        .iter()
-        .zip(dictionaries)
-        .collect::<VecDeque<_>>();
+    let mut field_nodes = field_nodes.iter().collect::<VecDeque<_>>();
 
     let (schema, columns) = if let Some(projection) = projection {
         let projected_schema = projection.1.clone();
@@ -128,9 +122,10 @@ pub fn read_record_batch<R: Read + Seek>(
             .map(|maybe_field| match maybe_field {
                 ProjectionResult::Selected(field) => Some(read(
                     &mut field_nodes,
-                    field.data_type().clone(),
+                    field,
                     &mut buffers,
                     reader,
+                    dictionaries,
                     block_offset,
                     is_little_endian,
                     batch.compression(),
@@ -151,9 +146,10 @@ pub fn read_record_batch<R: Read + Seek>(
             .map(|field| {
                 read(
                     &mut field_nodes,
-                    field.data_type().clone(),
+                    field,
                     &mut buffers,
                     reader,
+                    dictionaries,
                     block_offset,
                     is_little_endian,
                     batch.compression(),
@@ -167,12 +163,12 @@ pub fn read_record_batch<R: Read + Seek>(
 }
 
 /// Read the dictionary from the buffer and provided metadata,
-/// updating the `dictionaries_by_field` with the resulting dictionary
+/// updating the `dictionaries` with the resulting dictionary
 pub fn read_dictionary<R: Read + Seek>(
     batch: ipc::Message::DictionaryBatch,
     schema: &Schema,
     is_little_endian: bool,
-    dictionaries_by_field: &mut [Option<ArrayRef>],
+    dictionaries: &mut HashMap<usize, Arc<dyn Array>>,
     reader: &mut R,
     block_offset: u64,
 ) -> Result<()> {
@@ -204,7 +200,7 @@ pub fn read_dictionary<R: Read + Seek>(
                 schema,
                 None,
                 is_little_endian,
-                dictionaries_by_field,
+                dictionaries,
                 MetadataVersion::V5,
                 reader,
                 block_offset,
@@ -217,16 +213,7 @@ pub fn read_dictionary<R: Read + Seek>(
         ArrowError::InvalidArgumentError("dictionary id not found in schema".to_string())
     })?;
 
-    // for all fields with this dictionary id, update the dictionaries vector
-    // in the reader. Note that a dictionary batch may be shared between many fields.
-    // We don't currently record the isOrdered field. This could be general
-    // attributes of arrays.
-    for (i, field) in schema.fields().iter().enumerate() {
-        if field.dict_id() == Some(id) {
-            // Add (possibly multiple) array refs to the dictionaries array.
-            dictionaries_by_field[i] = Some(dictionary_values.clone());
-        }
-    }
+    dictionaries.insert(id as usize, dictionary_values);
 
     Ok(())
 }
