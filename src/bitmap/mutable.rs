@@ -192,6 +192,17 @@ impl MutableBitmap {
         }
     }
 
+    fn set_padding(&mut self) {
+        let keep_length = self.length;
+        let extra_padded = PADDED_LEN - (additional % PADDED_LEN);
+        self.extend_set(extra_padded);
+        // Safety:
+        // we truncate from written bytes.
+        // we increment the bits written in blocks of PADDED_LEN bits (set to 1)
+        // and update the length to the bits written by this `extend_constant` function
+        unsafe { self.set_len(keep_length) };
+    }
+
     /// Extends [`MutableBitmap`] by `additional` values of constant `value`.
     #[inline]
     pub fn extend_constant(&mut self, additional: usize, value: bool) {
@@ -204,14 +215,7 @@ impl MutableBitmap {
         } else {
             self.extend_unset(additional)
         }
-        let keep_length = self.length;
-        let extra_padded = PADDED_LEN - (additional % PADDED_LEN);
-        self.extend_set(extra_padded);
-        // Safety:
-        // we truncate from written bytes.
-        // we increment the bits written in blocks of PADDED_LEN bits (set to 1)
-        // and update the length to the bits written by this `extend_constant` function
-        unsafe { self.set_len(keep_length) };
+        self.set_padding()
     }
 
     /// Returns whether the position `index` is set.
@@ -244,7 +248,9 @@ impl MutableBitmap {
     #[inline]
     pub fn from_buffer(buffer: MutableBuffer<u8>, length: usize) -> Self {
         assert!(length <= buffer.len() * 8);
-        Self { buffer, length }
+        let mut buf = Self { buffer, length };
+        buf.set_padding();
+        buf
     }
 }
 
@@ -326,7 +332,9 @@ impl FromIterator<bool> for MutableBitmap {
                 break;
             }
         }
-        Self { buffer, length }
+        let mut buf = Self { buffer, length };
+        buf.set_padding();
+        buf
     }
 }
 
@@ -419,7 +427,8 @@ impl MutableBitmap {
 
         extend(&mut buffer, length, iterator);
 
-        Self { buffer, length }
+        let mut buf = Self { buffer, length };
+        buf
     }
 
     /// Creates a new [`MutableBitmap`] from an iterator of booleans.
@@ -433,7 +442,9 @@ impl MutableBitmap {
 
         extend(&mut buffer, length, iterator);
 
-        Self { buffer, length }
+        let mut buf = Self { buffer, length };
+        buf.set_padding();
+        buf
     }
 
     /// Creates a new [`MutableBitmap`] from an iterator of booleans.
@@ -475,8 +486,9 @@ impl MutableBitmap {
                 Ok(())
             })?;
         }
-
-        Ok(Self { buffer, length })
+        let mut buf = Self { buffer, length };
+        buf.set_padding();
+        Ok(buf)
     }
 
     fn extend_unaligned(&mut self, slice: &[u8], offset: usize, length: usize) {
