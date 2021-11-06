@@ -20,13 +20,10 @@
 //! These utilities define structs that read the integration JSON format for integration testing purposes.
 
 use serde_derive::{Deserialize, Serialize};
-use serde_json::{Map, Value};
+use serde_json::Value;
 
-use crate::datatypes::*;
-
-mod schema;
-use schema::ToJson;
 mod read;
+mod schema;
 mod write;
 pub use read::to_record_batch;
 pub use write::from_record_batch;
@@ -62,36 +59,6 @@ pub struct ArrowJsonField {
     pub dictionary: Option<ArrowJsonFieldDictionary>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<Value>,
-}
-
-impl From<&Field> for ArrowJsonField {
-    fn from(field: &Field) -> Self {
-        let metadata_value = match field.metadata() {
-            Some(kv_list) => {
-                let mut array = Vec::new();
-                for (k, v) in kv_list {
-                    let mut kv_map = Map::new();
-                    kv_map.insert(k.clone(), Value::String(v.clone()));
-                    array.push(Value::Object(kv_map));
-                }
-                if !array.is_empty() {
-                    Some(Value::Array(array))
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        };
-
-        Self {
-            name: field.name().to_string(),
-            field_type: field.data_type().to_json(),
-            nullable: field.is_nullable(),
-            children: vec![],
-            dictionary: None, // TODO: not enough info
-            metadata: metadata_value,
-        }
-    }
 }
 
 #[derive(Deserialize, Serialize, Debug)]
