@@ -22,9 +22,8 @@
 
 use std::io::Write;
 
-use super::common::{
-    encoded_batch, write_continuation, write_message, DictionaryTracker, EncodedData, WriteOptions,
-};
+use super::common::{encoded_batch, DictionaryTracker, EncodedData, WriteOptions};
+use super::common_sync::{write_continuation, write_message};
 use super::schema_to_bytes;
 
 use crate::datatypes::*;

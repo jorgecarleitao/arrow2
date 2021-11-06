@@ -64,7 +64,7 @@ pub fn serialize_schema_to_info(schema: &Schema) -> Result<Vec<u8>> {
     let encoded_data = schema_as_encoded_data(schema);
 
     let mut schema = vec![];
-    write::common::write_message(&mut schema, encoded_data)?;
+    write::common_sync::write_message(&mut schema, encoded_data)?;
     Ok(schema)
 }
 

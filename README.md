@@ -82,6 +82,7 @@ we also use the `0.x.y` versioning, since we are iterating over the API.
 
 * Read and write of delta-encoded utf8 to and from parquet
 * parquet roundtrip of all supported arrow types.
+* Async writer of the Arrow stream format
 
 ## Features in pyarrow not in this crate
 
