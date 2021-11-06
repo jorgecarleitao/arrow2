@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["and","Performs `AND` operation on two arrays."],["not","Performs `OR` operation on one array."],["or","Performs `OR` operation on two arrays."],["xor","Performs `XOR` operation on two arrays."]]});
