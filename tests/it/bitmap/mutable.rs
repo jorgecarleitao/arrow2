@@ -204,7 +204,7 @@ fn extend_set() {
 
     let mut b = MutableBitmap::from(&[false]);
     b.extend_constant(6, true);
-    assert_eq!(b.as_slice(), &[0b01111110]);
+    assert_eq!(b.as_slice(), &[0b11111110]);
     assert_eq!(b.len(), 1 + 6);
 
     let mut b = MutableBitmap::from(&[false]);
@@ -214,7 +214,7 @@ fn extend_set() {
 
     let mut b = MutableBitmap::from(&[false, false, false, false]);
     b.extend_constant(2, true);
-    assert_eq!(b.as_slice(), &[0b00110000]);
+    assert_eq!(b.as_slice(), &[0b11110000]);
     assert_eq!(b.len(), 4 + 2);
 
     let mut b = MutableBitmap::from(&[false, false, false, false]);
@@ -224,7 +224,7 @@ fn extend_set() {
 
     let mut b = MutableBitmap::from(&[true, true]);
     b.extend_constant(3, true);
-    assert_eq!(b.as_slice(), &[0b00011111]);
+    assert_eq!(b.as_slice(), &[0b11111111]);
     assert_eq!(b.len(), 2 + 3);
 }
 
@@ -232,22 +232,22 @@ fn extend_set() {
 fn extend_unset() {
     let mut b = MutableBitmap::new();
     b.extend_constant(6, false);
-    assert_eq!(b.as_slice(), &[0b0000000]);
+    assert_eq!(b.as_slice(), &[0b11000000]);
     assert_eq!(b.len(), 6);
 
     let mut b = MutableBitmap::from(&[true]);
     b.extend_constant(6, false);
-    assert_eq!(b.as_slice(), &[0b00000001]);
+    assert_eq!(b.as_slice(), &[0b10000001]);
     assert_eq!(b.len(), 1 + 6);
 
     let mut b = MutableBitmap::from(&[true]);
     b.extend_constant(9, false);
-    assert_eq!(b.as_slice(), &[0b0000001, 0b00000000]);
+    assert_eq!(b.as_slice(), &[0b0000001, 0b11111100]);
     assert_eq!(b.len(), 1 + 9);
 
     let mut b = MutableBitmap::from(&[true, true, true, true]);
     b.extend_constant(2, false);
-    assert_eq!(b.as_slice(), &[0b00001111]);
+    assert_eq!(b.as_slice(), &[0b11001111]);
     assert_eq!(b.len(), 4 + 2);
 }
 

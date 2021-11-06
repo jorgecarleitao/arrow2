@@ -13,6 +13,10 @@ use super::Bitmap;
 /// The main difference against [`Vec<bool>`] is that a bitmap cannot be represented as `&[bool]`.
 /// # Implementation
 /// This container is backed by [`MutableBuffer<u8>`].
+///
+/// # Safety
+/// This struct has the invariant that bits after the current lenght up to an alignment of 64 bytes
+/// must be padded with bits set to 1.
 pub struct MutableBitmap {
     buffer: MutableBuffer<u8>,
     // invariant: length.saturating_add(7) / 8 == buffer.len();
@@ -88,17 +92,19 @@ impl MutableBitmap {
             self.buffer.push(u8::MAX); // 7
             self.buffer.push(u8::MAX); // 8
         }
+
         // Its an invariant of the struct that
         // length.saturating_add(7) / 8 == buffer.len();
         // so we must keep that updated.
-        if self.length % 8 == 0 {
-            unsafe { self.buffer.set_len((self.length + 1).saturating_add(7) / 8) }
-        }
+        // if (self.length + 1) % 8 == 0 {
+        unsafe { self.buffer.set_len((self.length + 1).saturating_add(7) / 8) }
 
         if !value {
             let bytes = self.buffer.as_mut_slice();
+            // println!("{:#8b}", bytes[bytes.len() - 1]);
             set_bit(bytes, self.length, false)
         }
+
         self.length += 1;
     }
 
@@ -209,6 +215,14 @@ impl MutableBitmap {
         } else {
             self.extend_unset(additional)
         }
+        let keep_length = self.length;
+        let extra_padded = 64 - (additional % 64);
+        self.extend_set(extra_padded);
+        // Safety:
+        // we truncate from written bytes.
+        // we increment the bits written in blocks of 64 bits (set to 1)
+        // and update the length to the bits written by this `extend_constant` function
+        unsafe { self.set_len(keep_length) };
     }
 
     /// Returns whether the position `index` is set.
@@ -543,6 +557,11 @@ impl MutableBitmap {
             // todo: further optimize the other branches.
             _ => self.extend_from_trusted_len_iter(BitmapIter::new(slice, offset, length)),
         }
+        // let length = self.buffer.len();
+        // for _ in 0..self.length % 64 {
+        //     self.buffer.push(u8::MAX)
+        // }
+        // unsafe { self.buffer.set_len(length) }
         // internal invariant:
         debug_assert_eq!(self.length.saturating_add(7) / 8, self.buffer.len());
     }
