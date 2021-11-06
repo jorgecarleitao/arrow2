@@ -6,6 +6,8 @@ use crate::{buffer::MutableBuffer, trusted_len::TrustedLen};
 use super::utils::{count_zeros, fmt, get_bit, set, set_bit, BitmapIter};
 use super::Bitmap;
 
+const PADDED_LEN: usize = 64;
+
 /// A container to store booleans. [`MutableBitmap`] is semantically equivalent
 /// to [`Vec<bool>`], but each value is stored as a single bit, thereby achieving a compression of 8x.
 /// This container is the counterpart of [`MutableBuffer`] for boolean values.
@@ -15,7 +17,7 @@ use super::Bitmap;
 /// This container is backed by [`MutableBuffer<u8>`].
 ///
 /// # Safety
-/// This struct has the invariant that bits after the current lenght up to an alignment of 64 bytes
+/// This struct has the invariant that bits after the current lenght up to an alignment of `[PADDED_LEN]` bytes
 /// must be padded with bits set to 1.
 pub struct MutableBitmap {
     buffer: MutableBuffer<u8>,
@@ -80,18 +82,8 @@ impl MutableBitmap {
     /// Pushes a new bit to the [`MutableBitmap`], re-sizing it if necessary.
     #[inline]
     pub fn push(&mut self, value: bool) {
-        // loop unrolling is still cool
-        // 64 / 8 = 8
-        if self.length % 64 == 0 {
-            self.extend_set(64);
-            // self.buffer.push(u8::MAX); // 1
-            // self.buffer.push(u8::MAX); // 2
-            // self.buffer.push(u8::MAX); // ..
-            // self.buffer.push(u8::MAX);
-            // self.buffer.push(u8::MAX);
-            // self.buffer.push(u8::MAX);
-            // self.buffer.push(u8::MAX); // 7
-            // self.buffer.push(u8::MAX); // 8
+        if self.length % PADDED_LEN == 0 {
+            self.buffer.extend_constant(PADDED_LEN / 8, u8::MAX);
         }
 
         // Its an invariant of the struct that
@@ -213,11 +205,11 @@ impl MutableBitmap {
             self.extend_unset(additional)
         }
         let keep_length = self.length;
-        let extra_padded = 64 - (additional % 64);
+        let extra_padded = PADDED_LEN - (additional % PADDED_LEN);
         self.extend_set(extra_padded);
         // Safety:
         // we truncate from written bytes.
-        // we increment the bits written in blocks of 64 bits (set to 1)
+        // we increment the bits written in blocks of PADDED_LEN bits (set to 1)
         // and update the length to the bits written by this `extend_constant` function
         unsafe { self.set_len(keep_length) };
     }
