@@ -1,3 +1,4 @@
+use std::hint::unreachable_unchecked;
 use std::iter::FromIterator;
 
 use crate::bitmap::utils::merge_reversed;
@@ -309,23 +310,92 @@ impl FromIterator<bool> for MutableBitmap {
     }
 }
 
+// [7, 6, 5, 4, 3, 2, 1, 0], [15, 14, 13, 12, 11, 10, 9, 8]
+// [00000001_00000000_00000000_00000000_...] // u64
+/// # Safety
+/// The iterator must be trustedLen and its len must be least `len`.
 #[inline]
-fn extend<I: Iterator<Item = bool>>(buffer: &mut [u8], length: usize, mut iterator: I) {
-    let chunks = length / 8;
-    let reminder = length % 8;
+unsafe fn get_chunk_unchecked(iterator: &mut impl Iterator<Item = bool>) -> u64 {
+    let mut byte = 0u64;
+    let mut mask;
+    for i in 0..8 {
+        mask = 1u64 << (8 * i);
+        for _ in 0..8 {
+            let value = match iterator.next() {
+                Some(value) => value,
+                None => unsafe { unreachable_unchecked() },
+            };
 
-    buffer[..chunks].iter_mut().for_each(|byte| {
-        (0..8).for_each(|i| {
-            *byte = set(*byte, i, iterator.next().unwrap());
-        })
-    });
-
-    if reminder != 0 {
-        let last = &mut buffer[chunks];
-        iterator.enumerate().for_each(|(i, value)| {
-            *last = set(*last, i, value);
-        });
+            byte |= match value {
+                true => mask,
+                false => 0,
+            };
+            mask <<= 1;
+        }
     }
+    byte
+}
+
+/// # Safety
+/// The iterator must be trustedLen and its len must be least `len`.
+#[inline]
+unsafe fn get_byte_unchecked(len: usize, iterator: &mut impl Iterator<Item = bool>) -> u8 {
+    let mut byte_accum: u8 = 0;
+    let mut mask: u8 = 1;
+    for _ in 0..len {
+        let value = match iterator.next() {
+            Some(value) => value,
+            None => unsafe { unreachable_unchecked() },
+        };
+
+        byte_accum |= match value {
+            true => mask,
+            false => 0,
+        };
+        mask <<= 1;
+    }
+    byte_accum
+}
+
+/// Extends the [`MutableBuffer`] from `iterator`
+/// # Safety
+/// The iterator MUST be [`TrustedLen`].
+#[inline]
+unsafe fn extend_aligned_trusted_iter_unchecked(
+    buffer: &mut MutableBuffer<u8>,
+    mut iterator: impl Iterator<Item = bool>,
+) -> usize {
+    let additional_bits = iterator.size_hint().1.unwrap();
+    let chunks = additional_bits / 64;
+    let remainder = additional_bits % 64;
+
+    let additional = (additional_bits + 7) / 8;
+    assert_eq!(
+        additional,
+        // a hint of how the following calculation will be done
+        chunks * 8 + remainder / 8 + (remainder % 8 > 0) as usize
+    );
+    buffer.reserve(additional);
+
+    // chunks of 64 bits
+    for _ in 0..chunks {
+        let chunk = get_chunk_unchecked(&mut iterator);
+        buffer.extend_from_slice(&chunk.to_le_bytes());
+    }
+
+    // remaining complete bytes
+    for _ in 0..(remainder / 8) {
+        let byte = unsafe { get_byte_unchecked(8, &mut iterator) };
+        buffer.push_unchecked(byte)
+    }
+
+    // remaining bits
+    let remainder = remainder % 8;
+    if remainder > 0 {
+        let byte = unsafe { get_byte_unchecked(remainder, &mut iterator) };
+        buffer.push_unchecked(byte)
+    }
+    additional_bits
 }
 
 impl MutableBitmap {
@@ -339,6 +409,7 @@ impl MutableBitmap {
     /// Extends `self` from an iterator of trusted len.
     /// # Safety
     /// The caller must guarantee that the iterator has a trusted len.
+    #[inline]
     pub unsafe fn extend_from_trusted_len_iter_unchecked<I: Iterator<Item = bool>>(
         &mut self,
         mut iterator: I,
@@ -379,40 +450,33 @@ impl MutableBitmap {
         // everything is aligned; proceed with the bulk operation
         debug_assert_eq!(self.length % 8, 0);
 
-        self.buffer.extend_constant((length + 7) / 8, 0);
-
-        extend(&mut self.buffer[self.length / 8..], length, iterator);
+        unsafe { extend_aligned_trusted_iter_unchecked(&mut self.buffer, iterator) };
         self.length += length;
     }
 
     /// Creates a new [`MutableBitmap`] from an iterator of booleans.
     /// # Safety
     /// The iterator must report an accurate length.
+    #[inline]
     pub unsafe fn from_trusted_len_iter_unchecked<I>(iterator: I) -> Self
     where
         I: Iterator<Item = bool>,
     {
-        let length = iterator.size_hint().1.unwrap();
+        let mut buffer = MutableBuffer::<u8>::new();
 
-        let mut buffer = MutableBuffer::<u8>::from_len_zeroed((length + 7) / 8);
-
-        extend(&mut buffer, length, iterator);
+        let length = extend_aligned_trusted_iter_unchecked(&mut buffer, iterator);
 
         Self { buffer, length }
     }
 
     /// Creates a new [`MutableBitmap`] from an iterator of booleans.
+    #[inline]
     pub fn from_trusted_len_iter<I>(iterator: I) -> Self
     where
         I: TrustedLen<Item = bool>,
     {
-        let length = iterator.size_hint().1.unwrap();
-
-        let mut buffer = MutableBuffer::<u8>::from_len_zeroed((length + 7) / 8);
-
-        extend(&mut buffer, length, iterator);
-
-        Self { buffer, length }
+        // Safety: Iterator is `TrustedLen`
+        unsafe { Self::from_trusted_len_iter_unchecked(iterator) }
     }
 
     /// Creates a new [`MutableBitmap`] from an iterator of booleans.
