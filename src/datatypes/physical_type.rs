@@ -31,8 +31,8 @@ pub enum PhysicalType {
     Union,
     /// A nested type.
     Map,
-    /// A dictionary encoded array by `DictionaryIndexType`.
-    Dictionary(DictionaryIndexType),
+    /// A dictionary encoded array by `IntegerType`.
+    Dictionary(IntegerType),
 }
 
 /// The set of all (physical) primitive types.
@@ -70,7 +70,7 @@ pub enum PrimitiveType {
 /// the set of valid indices types of a dictionary-encoded Array.
 /// Each type corresponds to a variant of [`crate::array::DictionaryArray`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum DictionaryIndexType {
+pub enum IntegerType {
     /// A signed 8-bit integer.
     Int8,
     /// A signed 16-bit integer.

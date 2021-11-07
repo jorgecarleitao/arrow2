@@ -117,7 +117,7 @@ fn case_dict() -> (String, Schema, Vec<Box<dyn Array>>) {
 
     let data_type = DataType::List(Box::new(Field::new(
         "item",
-        DataType::Dictionary(Box::new(DataType::UInt64), Box::new(DataType::Utf8)),
+        DataType::Dictionary(u64::KEY_TYPE, Box::new(DataType::Utf8)),
         true,
     )));
 

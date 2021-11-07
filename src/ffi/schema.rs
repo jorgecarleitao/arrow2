@@ -1,7 +1,9 @@
 use std::{collections::BTreeMap, convert::TryInto, ffi::CStr, ffi::CString, ptr};
 
 use crate::{
-    datatypes::{DataType, Extension, Field, IntervalUnit, Metadata, TimeUnit, UnionMode},
+    datatypes::{
+        DataType, Extension, Field, IntegerType, IntervalUnit, Metadata, TimeUnit, UnionMode,
+    },
     error::{ArrowError, Result},
 };
 
@@ -210,12 +212,9 @@ impl Drop for Ffi_ArrowSchema {
 pub(crate) unsafe fn to_field(schema: &Ffi_ArrowSchema) -> Result<Field> {
     let dictionary = schema.dictionary();
     let data_type = if let Some(dictionary) = dictionary {
-        let indices_data_type = to_data_type(schema)?;
+        let indices = to_integer_type(schema.format())?;
         let values = to_field(dictionary)?;
-        DataType::Dictionary(
-            Box::new(indices_data_type),
-            Box::new(values.data_type().clone()),
-        )
+        DataType::Dictionary(indices, Box::new(values.data_type().clone()))
     } else {
         to_data_type(schema)?
     };
@@ -230,6 +229,25 @@ pub(crate) unsafe fn to_field(schema: &Ffi_ArrowSchema) -> Result<Field> {
     let mut field = Field::new(schema.name(), data_type, schema.nullable());
     field.set_metadata(metadata);
     Ok(field)
+}
+
+fn to_integer_type(format: &str) -> Result<IntegerType> {
+    use IntegerType::*;
+    Ok(match format {
+        "c" => Int8,
+        "C" => UInt8,
+        "s" => Int16,
+        "S" => UInt16,
+        "i" => Int32,
+        "I" => UInt32,
+        "l" => Int64,
+        "L" => UInt64,
+        _ => {
+            return Err(ArrowError::Ffi(
+                "Dictionary indices can only be integers".to_string(),
+            ))
+        }
+    })
 }
 
 unsafe fn to_data_type(schema: &Ffi_ArrowSchema) -> Result<DataType> {
@@ -425,7 +443,7 @@ fn to_format(data_type: &DataType) -> String {
             r
         }
         DataType::Map(_, _) => "+m".to_string(),
-        DataType::Dictionary(index, _) => to_format(index.as_ref()),
+        DataType::Dictionary(index, _) => to_format(&(*index).into()),
         DataType::Extension(_, inner, _) => to_format(inner.as_ref()),
     }
 }

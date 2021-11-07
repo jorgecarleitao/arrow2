@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use crate::{
     bitmap::Bitmap,
-    datatypes::DataType,
+    datatypes::{DataType, IntegerType},
     scalar::{new_scalar, Scalar},
-    types::{NativeType, NaturalDataType},
+    types::NativeType,
 };
 
 mod ffi;
@@ -16,19 +16,35 @@ pub use mutable::*;
 use super::{new_empty_array, primitive::PrimitiveArray, Array};
 
 /// Trait denoting [`NativeType`]s that can be used as keys of a dictionary.
-pub trait DictionaryKey:
-    NativeType + NaturalDataType + num_traits::NumCast + num_traits::FromPrimitive
-{
+pub trait DictionaryKey: NativeType + num_traits::NumCast + num_traits::FromPrimitive {
+    /// The corresponding [`IntegerType`] of this key
+    const KEY_TYPE: IntegerType;
 }
 
-impl DictionaryKey for i8 {}
-impl DictionaryKey for i16 {}
-impl DictionaryKey for i32 {}
-impl DictionaryKey for i64 {}
-impl DictionaryKey for u8 {}
-impl DictionaryKey for u16 {}
-impl DictionaryKey for u32 {}
-impl DictionaryKey for u64 {}
+impl DictionaryKey for i8 {
+    const KEY_TYPE: IntegerType = IntegerType::Int8;
+}
+impl DictionaryKey for i16 {
+    const KEY_TYPE: IntegerType = IntegerType::Int16;
+}
+impl DictionaryKey for i32 {
+    const KEY_TYPE: IntegerType = IntegerType::Int32;
+}
+impl DictionaryKey for i64 {
+    const KEY_TYPE: IntegerType = IntegerType::Int64;
+}
+impl DictionaryKey for u8 {
+    const KEY_TYPE: IntegerType = IntegerType::UInt8;
+}
+impl DictionaryKey for u16 {
+    const KEY_TYPE: IntegerType = IntegerType::UInt16;
+}
+impl DictionaryKey for u32 {
+    const KEY_TYPE: IntegerType = IntegerType::UInt32;
+}
+impl DictionaryKey for u64 {
+    const KEY_TYPE: IntegerType = IntegerType::UInt64;
+}
 
 /// An [`Array`] whose values are encoded by keys. This [`Array`] is useful when the cardinality of
 /// values is low compared to the length of the [`Array`].
@@ -59,10 +75,7 @@ impl<K: DictionaryKey> DictionaryArray<K> {
 
     /// The canonical method to create a new [`DictionaryArray`].
     pub fn from_data(keys: PrimitiveArray<K>, values: Arc<dyn Array>) -> Self {
-        let data_type = DataType::Dictionary(
-            Box::new(keys.data_type().clone()),
-            Box::new(values.data_type().clone()),
-        );
+        let data_type = DataType::Dictionary(K::KEY_TYPE, Box::new(values.data_type().clone()));
 
         Self {
             data_type,

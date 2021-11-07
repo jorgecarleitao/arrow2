@@ -17,18 +17,6 @@ macro_rules! dyn_primitive {
     }};
 }
 
-macro_rules! dyn_dict {
-    ($array:expr, $ty:ty) => {{
-        let a = $array
-            .as_any()
-            .downcast_ref::<DictionaryArray<$ty>>()
-            .unwrap();
-        let keys = a.keys();
-        let display = get_display(a.values().as_ref());
-        Box::new(move |row: usize| display(keys.value(row) as usize))
-    }};
-}
-
 /// Returns a function of index returning the string representation of the _value_ of `array`.
 /// This does not take nulls into account.
 pub fn get_value_display<'a>(array: &'a dyn Array) -> Box<dyn Fn(usize) -> String + 'a> {
@@ -170,17 +158,15 @@ pub fn get_value_display<'a>(array: &'a dyn Array) -> Box<dyn Fn(usize) -> Strin
             };
             dyn_display!(array, ListArray<i64>, f)
         }
-        Dictionary(key_type, _) => match key_type.as_ref() {
-            DataType::Int8 => dyn_dict!(array, i8),
-            DataType::Int16 => dyn_dict!(array, i16),
-            DataType::Int32 => dyn_dict!(array, i32),
-            DataType::Int64 => dyn_dict!(array, i64),
-            DataType::UInt8 => dyn_dict!(array, u8),
-            DataType::UInt16 => dyn_dict!(array, u16),
-            DataType::UInt32 => dyn_dict!(array, u32),
-            DataType::UInt64 => dyn_dict!(array, u64),
-            _ => unreachable!(),
-        },
+        Dictionary(key_type, _) => match_integer_type!(key_type, |$T| {
+            let a = array
+                .as_any()
+                .downcast_ref::<DictionaryArray<$T>>()
+                .unwrap();
+            let keys = a.keys();
+            let display = get_display(a.values().as_ref());
+            Box::new(move |row: usize| display(keys.value(row) as usize))
+        }),
         Map(_, _) => todo!(),
         Struct(_) => {
             let a = array.as_any().downcast_ref::<StructArray>().unwrap();

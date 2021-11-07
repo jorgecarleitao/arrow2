@@ -255,7 +255,7 @@ pub fn read(rows: &[&Value], data_type: DataType) -> Arc<dyn Array> {
         DataType::LargeBinary => Arc::new(read_binary::<i64>(rows)),
         DataType::Struct(_) => Arc::new(read_struct(rows, data_type)),
         DataType::Dictionary(key_type, _) => {
-            with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
+            match_integer_type!(key_type, |$T| {
                 Arc::new(read_dictionary::<$T>(rows, data_type))
             })
         }

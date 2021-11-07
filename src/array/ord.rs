@@ -216,15 +216,15 @@ pub fn build_compare(left: &dyn Array, right: &dyn Array) -> Result<DynComparato
         (Binary, Binary) => compare_binary::<i32>(left, right),
         (LargeBinary, LargeBinary) => compare_binary::<i64>(left, right),
         (Dictionary(key_type_lhs, _), Dictionary(key_type_rhs, _)) => {
-            match (key_type_lhs.as_ref(), key_type_rhs.as_ref()) {
-                (UInt8, UInt8) => dyn_dict!(u8, left, right),
-                (UInt16, UInt16) => dyn_dict!(u16, left, right),
-                (UInt32, UInt32) => dyn_dict!(u32, left, right),
-                (UInt64, UInt64) => dyn_dict!(u64, left, right),
-                (Int8, Int8) => dyn_dict!(i8, left, right),
-                (Int16, Int16) => dyn_dict!(i16, left, right),
-                (Int32, Int32) => dyn_dict!(i32, left, right),
-                (Int64, Int64) => dyn_dict!(i64, left, right),
+            match (key_type_lhs, key_type_rhs) {
+                (IntegerType::UInt8, IntegerType::UInt8) => dyn_dict!(u8, left, right),
+                (IntegerType::UInt16, IntegerType::UInt16) => dyn_dict!(u16, left, right),
+                (IntegerType::UInt32, IntegerType::UInt32) => dyn_dict!(u32, left, right),
+                (IntegerType::UInt64, IntegerType::UInt64) => dyn_dict!(u64, left, right),
+                (IntegerType::Int8, IntegerType::Int8) => dyn_dict!(i8, left, right),
+                (IntegerType::Int16, IntegerType::Int16) => dyn_dict!(i16, left, right),
+                (IntegerType::Int32, IntegerType::Int32) => dyn_dict!(i32, left, right),
+                (IntegerType::Int64, IntegerType::Int64) => dyn_dict!(i64, left, right),
                 (lhs, _) => {
                     return Err(ArrowError::InvalidArgumentError(format!(
                         "Dictionaries do not support keys of type {:?}",

@@ -364,7 +364,7 @@ pub fn to_array(
             Ok(Arc::new(array))
         }
         Dictionary(key_type) => {
-            with_match_physical_dictionary_key_type!(key_type, |$T| {
+            match_integer_type!(key_type, |$T| {
                 to_dictionary::<$T>(data_type, dict_id.unwrap(), json_col, dictionaries)
             })
         }

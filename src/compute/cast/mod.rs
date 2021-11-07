@@ -375,31 +375,12 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
             Ok(Box::new(list_array))
         }
 
-        (Dictionary(index_type, _), _) => match **index_type {
-            DataType::Int8 => dictionary_cast_dyn::<i8>(array, to_type, options),
-            DataType::Int16 => dictionary_cast_dyn::<i16>(array, to_type, options),
-            DataType::Int32 => dictionary_cast_dyn::<i32>(array, to_type, options),
-            DataType::Int64 => dictionary_cast_dyn::<i64>(array, to_type, options),
-            DataType::UInt8 => dictionary_cast_dyn::<u8>(array, to_type, options),
-            DataType::UInt16 => dictionary_cast_dyn::<u16>(array, to_type, options),
-            DataType::UInt32 => dictionary_cast_dyn::<u32>(array, to_type, options),
-            DataType::UInt64 => dictionary_cast_dyn::<u64>(array, to_type, options),
-            _ => unreachable!(),
-        },
-        (_, Dictionary(index_type, value_type)) => match **index_type {
-            DataType::Int8 => cast_to_dictionary::<i8>(array, value_type, options),
-            DataType::Int16 => cast_to_dictionary::<i16>(array, value_type, options),
-            DataType::Int32 => cast_to_dictionary::<i32>(array, value_type, options),
-            DataType::Int64 => cast_to_dictionary::<i64>(array, value_type, options),
-            DataType::UInt8 => cast_to_dictionary::<u8>(array, value_type, options),
-            DataType::UInt16 => cast_to_dictionary::<u16>(array, value_type, options),
-            DataType::UInt32 => cast_to_dictionary::<u32>(array, value_type, options),
-            DataType::UInt64 => cast_to_dictionary::<u64>(array, value_type, options),
-            _ => Err(ArrowError::NotYetImplemented(format!(
-                "Casting from type {:?} to dictionary type {:?} not supported",
-                from_type, to_type,
-            ))),
-        },
+        (Dictionary(index_type, _), _) => match_integer_type!(index_type, |$T| {
+            dictionary_cast_dyn::<$T>(array, to_type, options)
+        }),
+        (_, Dictionary(index_type, value_type)) => match_integer_type!(index_type, |$T| {
+            cast_to_dictionary::<$T>(array, value_type, options)
+        }),
         (_, Boolean) => match from_type {
             UInt8 => primitive_to_boolean_dyn::<u8>(array, to_type.clone()),
             UInt16 => primitive_to_boolean_dyn::<u16>(array, to_type.clone()),

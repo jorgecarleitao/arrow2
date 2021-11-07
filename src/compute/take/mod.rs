@@ -71,7 +71,7 @@ pub fn take<O: Index>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result
             Ok(Box::new(binary::take::<i64, _>(values, indices)))
         }
         Dictionary(key_type) => {
-            with_match_physical_dictionary_key_type!(key_type, |$T| {
+            match_integer_type!(key_type, |$T| {
                 let values = values.as_any().downcast_ref().unwrap();
                 Ok(Box::new(dict::take::<$T, _>(&values, indices)))
             })
@@ -103,46 +103,36 @@ pub fn take<O: Index>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result
 /// assert_eq!(can_take(&data_type), true);
 /// ```
 pub fn can_take(data_type: &DataType) -> bool {
-    match data_type {
+    matches!(
+        data_type,
         DataType::Null
-        | DataType::Boolean
-        | DataType::Int8
-        | DataType::Int16
-        | DataType::Int32
-        | DataType::Date32
-        | DataType::Time32(_)
-        | DataType::Interval(_)
-        | DataType::Int64
-        | DataType::Date64
-        | DataType::Time64(_)
-        | DataType::Duration(_)
-        | DataType::Timestamp(_, _)
-        | DataType::UInt8
-        | DataType::UInt16
-        | DataType::UInt32
-        | DataType::UInt64
-        | DataType::Float16
-        | DataType::Float32
-        | DataType::Float64
-        | DataType::Decimal(_, _)
-        | DataType::Utf8
-        | DataType::LargeUtf8
-        | DataType::Binary
-        | DataType::LargeBinary
-        | DataType::Struct(_)
-        | DataType::List(_)
-        | DataType::LargeList(_) => true,
-        DataType::Dictionary(key_type, _) => matches!(
-            key_type.as_ref(),
-            DataType::Int8
-                | DataType::Int16
-                | DataType::Int32
-                | DataType::Int64
-                | DataType::UInt8
-                | DataType::UInt16
-                | DataType::UInt32
-                | DataType::UInt64
-        ),
-        _ => false,
-    }
+            | DataType::Boolean
+            | DataType::Int8
+            | DataType::Int16
+            | DataType::Int32
+            | DataType::Date32
+            | DataType::Time32(_)
+            | DataType::Interval(_)
+            | DataType::Int64
+            | DataType::Date64
+            | DataType::Time64(_)
+            | DataType::Duration(_)
+            | DataType::Timestamp(_, _)
+            | DataType::UInt8
+            | DataType::UInt16
+            | DataType::UInt32
+            | DataType::UInt64
+            | DataType::Float16
+            | DataType::Float32
+            | DataType::Float64
+            | DataType::Decimal(_, _)
+            | DataType::Utf8
+            | DataType::LargeUtf8
+            | DataType::Binary
+            | DataType::LargeBinary
+            | DataType::Struct(_)
+            | DataType::List(_)
+            | DataType::LargeList(_)
+            | DataType::Dictionary(_, _)
+    )
 }

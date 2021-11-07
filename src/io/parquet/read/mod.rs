@@ -327,17 +327,9 @@ pub fn page_iter_to_array<I: FallibleStreamingIterator<Item = DataPage, Error = 
             create_list(data_type, &mut nested, values)
         }
 
-        Dictionary(ref key, _) => match key.as_ref() {
-            Int8 => dict_read::<i8, _>(iter, metadata, data_type),
-            Int16 => dict_read::<i16, _>(iter, metadata, data_type),
-            Int32 => dict_read::<i32, _>(iter, metadata, data_type),
-            Int64 => dict_read::<i64, _>(iter, metadata, data_type),
-            UInt8 => dict_read::<u8, _>(iter, metadata, data_type),
-            UInt16 => dict_read::<u16, _>(iter, metadata, data_type),
-            UInt32 => dict_read::<u32, _>(iter, metadata, data_type),
-            UInt64 => dict_read::<u64, _>(iter, metadata, data_type),
-            _ => unreachable!(),
-        },
+        Dictionary(key_type, _) => match_integer_type!(key_type, |$T| {
+            dict_read::<$T, _>(iter, metadata, data_type)
+        }),
 
         other => Err(ArrowError::NotYetImplemented(format!(
             "Reading {:?} from parquet still not implemented",
