@@ -1,6 +1,6 @@
 use std::ops::{BitAnd, BitOr, BitXor, Not};
 
-use crate::buffer::MutableBuffer;
+use crate::{bitmap::utils::BitChunk, buffer::MutableBuffer};
 
 use super::{
     utils::{BitChunkIterExact, BitChunksExact},
@@ -85,18 +85,22 @@ where
     assert_eq!(lhs.len(), rhs.len());
     let mut lhs_chunks = lhs.chunks();
     let mut rhs_chunks = rhs.chunks();
+    let rem_lhs = lhs_chunks.remainder();
+    let rem_rhs = rhs_chunks.remainder();
 
     let chunks = lhs_chunks
         .by_ref()
         .zip(rhs_chunks.by_ref())
         .map(|(left, right)| op(left, right));
-    // Soundness: `BitChunks` is a trusted len iterator
-    let mut buffer = unsafe { MutableBuffer::from_chunk_iter_unchecked(chunks) };
 
-    let remainder_bytes = lhs_chunks.remainder_len().saturating_add(7) / 8;
-    let rem = op(lhs_chunks.remainder(), rhs_chunks.remainder());
-    let rem = &rem.to_ne_bytes()[..remainder_bytes];
-    buffer.extend_from_slice(rem);
+    // Soundness: `BitChunks` is a trusted len iterator
+    let buffer = unsafe {
+        MutableBuffer::from_chunk_iter_unchecked(chunks.chain(std::iter::once(
+            BitChunk::from_ne_bytes(
+                op(rem_lhs, rem_rhs).to_ne_bytes(),
+            ),
+        )))
+    };
 
     let length = lhs.len();
 

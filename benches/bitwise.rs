@@ -1,4 +1,4 @@
-use std::ops::{BitOr, BitXor, Not};
+use std::ops::{BitAnd, BitOr, BitXor, Not};
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use num_traits::NumCast;
