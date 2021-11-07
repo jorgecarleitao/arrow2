@@ -14,6 +14,7 @@ pub use iterator::*;
 pub use mutable::*;
 
 use super::{new_empty_array, primitive::PrimitiveArray, Array};
+use crate::scalar::NullScalar;
 
 /// Trait denoting [`NativeType`]s that can be used as keys of a dictionary.
 pub trait DictionaryKey:
@@ -127,8 +128,12 @@ impl<K: DictionaryKey> DictionaryArray<K> {
     /// Returns the value of the [`DictionaryArray`] at position `i`.
     #[inline]
     pub fn value(&self, index: usize) -> Box<dyn Scalar> {
-        let index = self.keys.value(index).to_usize().unwrap();
-        new_scalar(self.values.as_ref(), index)
+        if self.keys.is_null(index) {
+            Box::new(NullScalar::new())
+        } else {
+            let index = self.keys.value(index).to_usize().unwrap();
+            new_scalar(self.values.as_ref(), index)
+        }
     }
 }
 

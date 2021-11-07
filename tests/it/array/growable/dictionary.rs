@@ -43,7 +43,9 @@ fn test_negative_keys() {
 
     let arr = DictionaryArray::from_data(keys, Arc::new(Utf8Array::<i32>::from(vals)));
     // check that we don't panic with negative keys to usize conversion
-    arrow2::compute::concat::concatenate(&[&arr]).unwrap();
+    let out = arrow2::compute::concat::concatenate(&[&arr]).unwrap();
+    let out = out.as_any().downcast_ref::<DictionaryArray<i32>>().unwrap();
+    assert_eq!(out, &arr);
 }
 
 #[test]
