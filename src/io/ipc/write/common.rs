@@ -40,7 +40,7 @@ pub enum Compression {
 }
 
 /// Options declaring the behaviour of writing to IPC
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct WriteOptions {
     /// Whether the buffers should be compressed and which codec to use.
     /// Note: to use compression the crate must be compiled with feature `io_ipc_compression`.
