@@ -15,10 +15,10 @@ where
     assert_eq!(a1.len(), a2.len());
     assert_eq!(a1.len(), a3.len());
     assert_eq!(a1.len(), a4.len());
-    let mut a1_chunks = a1.chunks();
-    let mut a2_chunks = a2.chunks();
-    let mut a3_chunks = a3.chunks();
-    let mut a4_chunks = a4.chunks();
+    let a1_chunks = a1.chunks();
+    let a2_chunks = a2.chunks();
+    let a3_chunks = a3.chunks();
+    let a4_chunks = a4.chunks();
 
     let rem_a1 = a1_chunks.remainder();
     let rem_a2 = a2_chunks.remainder();
@@ -26,17 +26,13 @@ where
     let rem_a4 = a4_chunks.remainder();
 
     let chunks = a1_chunks
-        .by_ref()
-        .zip(a2_chunks.by_ref())
-        .zip(a3_chunks.by_ref())
-        .zip(a4_chunks.by_ref())
+        .zip(a2_chunks)
+        .zip(a3_chunks)
+        .zip(a4_chunks)
         .map(|(((a1, a2), a3), a4)| op(a1, a2, a3, a4));
-    // Soundness: `BitChunks` is a trusted len iterator
-    let buffer = unsafe {
-        MutableBuffer::from_chunk_iter_unchecked(
-            chunks.chain(std::iter::once(op(rem_a1, rem_a2, rem_a3, rem_a4))),
-        )
-    };
+    let buffer = MutableBuffer::from_chunk_iter(
+        chunks.chain(std::iter::once(op(rem_a1, rem_a2, rem_a3, rem_a4))),
+    );
 
     let length = a1.len();
 
@@ -50,25 +46,21 @@ where
 {
     assert_eq!(a1.len(), a2.len());
     assert_eq!(a1.len(), a3.len());
-    let mut a1_chunks = a1.chunks();
-    let mut a2_chunks = a2.chunks();
-    let mut a3_chunks = a3.chunks();
+    let a1_chunks = a1.chunks();
+    let a2_chunks = a2.chunks();
+    let a3_chunks = a3.chunks();
 
     let rem_a1 = a1_chunks.remainder();
     let rem_a2 = a2_chunks.remainder();
     let rem_a3 = a3_chunks.remainder();
 
     let chunks = a1_chunks
-        .by_ref()
-        .zip(a2_chunks.by_ref())
-        .zip(a3_chunks.by_ref())
+        .zip(a2_chunks)
+        .zip(a3_chunks)
         .map(|((a1, a2), a3)| op(a1, a2, a3));
-    // Soundness: `BitChunks` is a trusted len iterator
-    let buffer = unsafe {
-        MutableBuffer::from_chunk_iter_unchecked(
-            chunks.chain(std::iter::once(op(rem_a1, rem_a2, rem_a3))),
-        )
-    };
+
+    let buffer =
+        MutableBuffer::from_chunk_iter(chunks.chain(std::iter::once(op(rem_a1, rem_a2, rem_a3))));
 
     let length = a1.len();
 
@@ -81,22 +73,18 @@ where
     F: Fn(u64, u64) -> u64,
 {
     assert_eq!(lhs.len(), rhs.len());
-    let mut lhs_chunks = lhs.chunks();
-    let mut rhs_chunks = rhs.chunks();
+    let lhs_chunks = lhs.chunks();
+    let rhs_chunks = rhs.chunks();
     let rem_lhs = lhs_chunks.remainder();
     let rem_rhs = rhs_chunks.remainder();
 
     let chunks = lhs_chunks
-        .by_ref()
-        .zip(rhs_chunks.by_ref())
+        .zip(rhs_chunks)
         .map(|(left, right)| op(left, right));
 
     // Soundness: `BitChunks` is a trusted len iterator
-    let buffer = unsafe {
-        MutableBuffer::from_chunk_iter_unchecked(
-            chunks.chain(std::iter::once(op(rem_lhs, rem_rhs))),
-        )
-    };
+    let buffer =
+        MutableBuffer::from_chunk_iter(chunks.chain(std::iter::once(op(rem_lhs, rem_rhs))));
 
     let length = lhs.len();
 
