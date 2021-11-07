@@ -100,7 +100,8 @@ impl<'a, T: DictionaryKey> Growable<'a> for GrowableDictionary<'a, T> {
         self.key_values.extend(
             values
                 .iter()
-                .map(|x| T::from_usize(offset + x.to_usize().unwrap()).unwrap()),
+                // `.unwrap_or(0)` because this operation does not check for null values, which may contain any key.
+                .map(|x| T::from_usize(offset + x.to_usize().unwrap_or(0)).unwrap()),
         );
     }
 

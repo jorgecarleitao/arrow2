@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use arrow2::array::growable::{Growable, GrowableDictionary};
 use arrow2::array::*;
+use arrow2::datatypes::DataType;
 use arrow2::error::Result;
 
 #[test]
@@ -27,6 +28,25 @@ fn test_single() -> Result<()> {
 
     assert_eq!(result, expected);
     Ok(())
+}
+
+#[test]
+fn test_negative_keys() {
+    let vals = vec![Some("a"), Some("b"), Some("c")];
+    let keys = vec![0, 1, 2, -1];
+
+    let keys = PrimitiveArray::from_data(
+        DataType::Int32,
+        keys.into(),
+        Some(vec![true, true, true, false].into()),
+    );
+
+    let arr = DictionaryArray::from_data(keys, Arc::new(Utf8Array::<i32>::from(vals)));
+    // check that we don't panic with negative keys to usize conversion
+    let mut growable = GrowableDictionary::new(&[&arr], false, 0);
+    growable.extend(0, 0, 4);
+    let out: DictionaryArray<i32> = growable.into();
+    assert_eq!(out, arr);
 }
 
 #[test]
