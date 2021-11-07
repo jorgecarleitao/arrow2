@@ -82,7 +82,6 @@ where
         .zip(rhs_chunks)
         .map(|(left, right)| op(left, right));
 
-    // Soundness: `BitChunks` is a trusted len iterator
     let buffer =
         MutableBuffer::from_chunk_iter(chunks.chain(std::iter::once(op(rem_lhs, rem_rhs))));
 
