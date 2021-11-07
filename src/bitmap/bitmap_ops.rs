@@ -20,6 +20,11 @@ where
     let mut a3_chunks = a3.chunks();
     let mut a4_chunks = a4.chunks();
 
+    let rem_a1 = a1_chunks.remainder();
+    let rem_a2 = a2_chunks.remainder();
+    let rem_a3 = a3_chunks.remainder();
+    let rem_a4 = a4_chunks.remainder();
+
     let chunks = a1_chunks
         .by_ref()
         .zip(a2_chunks.by_ref())
@@ -27,17 +32,11 @@ where
         .zip(a4_chunks.by_ref())
         .map(|(((a1, a2), a3), a4)| op(a1, a2, a3, a4));
     // Soundness: `BitChunks` is a trusted len iterator
-    let mut buffer = unsafe { MutableBuffer::from_chunk_iter_unchecked(chunks) };
-
-    let remainder_bytes = a1_chunks.remainder_len().saturating_add(7) / 8;
-    let rem = op(
-        a1_chunks.remainder(),
-        a2_chunks.remainder(),
-        a3_chunks.remainder(),
-        a4_chunks.remainder(),
-    );
-    let rem = &rem.to_ne_bytes()[..remainder_bytes];
-    buffer.extend_from_slice(rem);
+    let buffer = unsafe {
+        MutableBuffer::from_chunk_iter_unchecked(
+            chunks.chain(std::iter::once(op(rem_a1, rem_a2, rem_a3, rem_a4))),
+        )
+    };
 
     let length = a1.len();
 
@@ -55,22 +54,21 @@ where
     let mut a2_chunks = a2.chunks();
     let mut a3_chunks = a3.chunks();
 
+    let rem_a1 = a1_chunks.remainder();
+    let rem_a2 = a2_chunks.remainder();
+    let rem_a3 = a3_chunks.remainder();
+
     let chunks = a1_chunks
         .by_ref()
         .zip(a2_chunks.by_ref())
         .zip(a3_chunks.by_ref())
         .map(|((a1, a2), a3)| op(a1, a2, a3));
     // Soundness: `BitChunks` is a trusted len iterator
-    let mut buffer = unsafe { MutableBuffer::from_chunk_iter_unchecked(chunks) };
-
-    let remainder_bytes = a1_chunks.remainder_len().saturating_add(7) / 8;
-    let rem = op(
-        a1_chunks.remainder(),
-        a2_chunks.remainder(),
-        a3_chunks.remainder(),
-    );
-    let rem = &rem.to_ne_bytes()[..remainder_bytes];
-    buffer.extend_from_slice(rem);
+    let buffer = unsafe {
+        MutableBuffer::from_chunk_iter_unchecked(
+            chunks.chain(std::iter::once(op(rem_a1, rem_a2, rem_a3))),
+        )
+    };
 
     let length = a1.len();
 
