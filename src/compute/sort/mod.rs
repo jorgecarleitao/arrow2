@@ -204,18 +204,8 @@ pub fn sort_to_indices<I: Index>(
             }
         }
         DataType::Dictionary(key_type, value_type) => match value_type.as_ref() {
-            DataType::Utf8 => Ok(sort_dict::<I, i32>(
-                values,
-                key_type.as_ref(),
-                options,
-                limit,
-            )),
-            DataType::LargeUtf8 => Ok(sort_dict::<I, i64>(
-                values,
-                key_type.as_ref(),
-                options,
-                limit,
-            )),
+            DataType::Utf8 => Ok(sort_dict::<I, i32>(values, key_type, options, limit)),
+            DataType::LargeUtf8 => Ok(sort_dict::<I, i64>(values, key_type, options, limit)),
             t => Err(ArrowError::NotYetImplemented(format!(
                 "Sort not supported for dictionary type with keys {:?}",
                 t
@@ -230,11 +220,11 @@ pub fn sort_to_indices<I: Index>(
 
 fn sort_dict<I: Index, O: Offset>(
     values: &dyn Array,
-    key_type: &DataType,
+    key_type: &IntegerType,
     options: &SortOptions,
     limit: Option<usize>,
 ) -> PrimitiveArray<I> {
-    with_match_dictionary_key_type!(key_type, |$T| {
+    match_integer_type!(key_type, |$T| {
         utf8::indices_sorted_unstable_by_dictionary::<I, $T, O>(
             values.as_any().downcast_ref().unwrap(),
             options,
@@ -293,18 +283,8 @@ pub fn can_sort(data_type: &DataType) -> bool {
                     | DataType::UInt64
             )
         }
-        DataType::Dictionary(key_type, value_type) if *value_type.as_ref() == DataType::Utf8 => {
-            matches!(
-                key_type.as_ref(),
-                DataType::Int8
-                    | DataType::Int16
-                    | DataType::Int32
-                    | DataType::Int64
-                    | DataType::UInt8
-                    | DataType::UInt16
-                    | DataType::UInt32
-                    | DataType::UInt64
-            )
+        DataType::Dictionary(_, value_type) => {
+            matches!(*value_type.as_ref(), DataType::Utf8 | DataType::LargeUtf8)
         }
         _ => false,
     }

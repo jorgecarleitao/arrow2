@@ -98,13 +98,13 @@ impl From<&Field> for ArrowJsonField {
 pub struct ArrowJsonFieldDictionary {
     pub id: i64,
     #[serde(rename = "indexType")]
-    pub index_type: DictionaryIndexType,
+    pub index_type: IntegerType,
     #[serde(rename = "isOrdered")]
     pub is_ordered: bool,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-pub struct DictionaryIndexType {
+pub struct IntegerType {
     pub name: String,
     #[serde(rename = "isSigned")]
     pub is_signed: bool,

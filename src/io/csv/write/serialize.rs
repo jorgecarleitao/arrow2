@@ -1,5 +1,6 @@
 use lexical_core::ToLexical;
 
+use crate::datatypes::IntegerType;
 use crate::temporal_conversions;
 use crate::types::{Index, NativeType};
 use crate::util::lexical_to_bytes_mut;
@@ -268,14 +269,14 @@ pub fn new_serializer<'a>(
             ))
         }
         DataType::Dictionary(keys_dt, values_dt) => match &**values_dt {
-            DataType::LargeUtf8 => match &**keys_dt {
-                DataType::UInt32 => serialize_utf8_dict::<u32, i64>(array.as_any()),
-                DataType::UInt64 => serialize_utf8_dict::<u64, i64>(array.as_any()),
+            DataType::LargeUtf8 => match *keys_dt {
+                IntegerType::UInt32 => serialize_utf8_dict::<u32, i64>(array.as_any()),
+                IntegerType::UInt64 => serialize_utf8_dict::<u64, i64>(array.as_any()),
                 _ => todo!(),
             },
-            DataType::Utf8 => match &**keys_dt {
-                DataType::UInt32 => serialize_utf8_dict::<u32, i32>(array.as_any()),
-                DataType::UInt64 => serialize_utf8_dict::<u64, i32>(array.as_any()),
+            DataType::Utf8 => match *keys_dt {
+                IntegerType::UInt32 => serialize_utf8_dict::<u32, i32>(array.as_any()),
+                IntegerType::UInt64 => serialize_utf8_dict::<u64, i32>(array.as_any()),
                 _ => todo!(),
             },
             _ => {

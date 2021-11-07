@@ -128,7 +128,7 @@ pub enum DataType {
     ///
     /// This type mostly used to represent low cardinality string
     /// arrays or a limited set of primitive types as integers.
-    Dictionary(Box<DataType>, Box<DataType>),
+    Dictionary(IntegerType, Box<DataType>),
     /// Decimal value with precision and scale
     /// precision is the number of digits in the number and
     /// scale is the number of decimal places.
@@ -267,7 +267,7 @@ impl DataType {
             Struct(_) => PhysicalType::Struct,
             Union(_, _, _) => PhysicalType::Union,
             Map(_, _) => PhysicalType::Map,
-            Dictionary(key, _) => PhysicalType::Dictionary(to_dictionary_index_type(key.as_ref())),
+            Dictionary(key, _) => PhysicalType::Dictionary(*key),
             Extension(_, key, _) => key.to_physical_type(),
         }
     }
@@ -284,17 +284,18 @@ impl DataType {
     }
 }
 
-fn to_dictionary_index_type(data_type: &DataType) -> DictionaryIndexType {
-    match data_type {
-        DataType::Int8 => DictionaryIndexType::Int8,
-        DataType::Int16 => DictionaryIndexType::Int16,
-        DataType::Int32 => DictionaryIndexType::Int32,
-        DataType::Int64 => DictionaryIndexType::Int64,
-        DataType::UInt8 => DictionaryIndexType::UInt8,
-        DataType::UInt16 => DictionaryIndexType::UInt16,
-        DataType::UInt32 => DictionaryIndexType::UInt32,
-        DataType::UInt64 => DictionaryIndexType::UInt64,
-        _ => ::core::unreachable!("A dictionary key type can only be of integer types"),
+impl From<IntegerType> for DataType {
+    fn from(item: IntegerType) -> Self {
+        match item {
+            IntegerType::Int8 => DataType::Int8,
+            IntegerType::Int16 => DataType::Int16,
+            IntegerType::Int32 => DataType::Int32,
+            IntegerType::Int64 => DataType::Int64,
+            IntegerType::UInt8 => DataType::UInt8,
+            IntegerType::UInt16 => DataType::UInt16,
+            IntegerType::UInt32 => DataType::UInt32,
+            IntegerType::UInt64 => DataType::UInt64,
+        }
     }
 }
 

@@ -164,7 +164,7 @@ pub fn read<R: Read + Seek>(
         )
         .map(|x| Arc::new(x) as Arc<dyn Array>),
         Dictionary(key_type) => {
-            with_match_physical_dictionary_key_type!(key_type, |$T| {
+            match_integer_type!(key_type, |$T| {
                 read_dictionary::<$T, _>(
                     field_nodes,
                     buffers,

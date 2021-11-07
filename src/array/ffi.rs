@@ -74,7 +74,7 @@ pub fn offset_buffers_children_dictionary(array: &dyn Array) -> BuffersChildren 
         Union => ffi_dyn!(array, UnionArray),
         Map => ffi_dyn!(array, MapArray),
         Dictionary(key_type) => {
-            with_match_physical_dictionary_key_type!(key_type, |$T| {
+            match_integer_type!(key_type, |$T| {
                 let array = array.as_any().downcast_ref::<DictionaryArray<$T>>().unwrap();
                 (
                     array.offset().unwrap(),

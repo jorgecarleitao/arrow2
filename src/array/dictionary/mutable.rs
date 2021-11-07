@@ -31,10 +31,7 @@ impl<K: DictionaryKey, M: MutableArray> From<MutableDictionaryArray<K, M>> for D
 impl<K: DictionaryKey, M: MutableArray> From<M> for MutableDictionaryArray<K, M> {
     fn from(values: M) -> Self {
         Self {
-            data_type: DataType::Dictionary(
-                Box::new(K::DATA_TYPE),
-                Box::new(values.data_type().clone()),
-            ),
+            data_type: DataType::Dictionary(K::KEY_TYPE, Box::new(values.data_type().clone())),
             keys: MutablePrimitiveArray::<K>::new(),
             map: HashedMap::default(),
             values,
@@ -47,10 +44,7 @@ impl<K: DictionaryKey, M: MutableArray + Default> MutableDictionaryArray<K, M> {
     pub fn new() -> Self {
         let values = M::default();
         Self {
-            data_type: DataType::Dictionary(
-                Box::new(K::DATA_TYPE),
-                Box::new(values.data_type().clone()),
-            ),
+            data_type: DataType::Dictionary(K::KEY_TYPE, Box::new(values.data_type().clone())),
             keys: MutablePrimitiveArray::<K>::new(),
             map: HashedMap::default(),
             values,

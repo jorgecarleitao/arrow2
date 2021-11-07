@@ -17,7 +17,7 @@ fn data() -> RecordBatch {
         Field::new("c6", DataType::Time32(TimeUnit::Second), false),
         Field::new(
             "c7",
-            DataType::Dictionary(Box::new(DataType::UInt32), Box::new(DataType::Utf8)),
+            DataType::Dictionary(u32::KEY_TYPE, Box::new(DataType::Utf8)),
             false,
         ),
     ]);

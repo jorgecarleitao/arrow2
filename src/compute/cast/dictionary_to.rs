@@ -114,8 +114,9 @@ pub(super) fn dictionary_cast_dyn<K: DictionaryKey>(
             let values = cast(values.as_ref(), to_values_type, options)?.into();
 
             // create the appropriate array type
-            with_match_dictionary_key_type!(to_keys_type.as_ref(), |$T| {
-                key_cast!(keys, values, array, to_keys_type, $T)
+            let data_type = (*to_keys_type).into();
+            match_integer_type!(to_keys_type, |$T| {
+                key_cast!(keys, values, array, &data_type, $T)
             })
         }
         _ => unpack_dictionary::<K>(keys, values.as_ref(), to_type, options),

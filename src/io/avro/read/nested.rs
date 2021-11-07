@@ -137,7 +137,7 @@ impl FixedItemsUtf8Dictionary {
     pub fn with_capacity(values: Utf8Array<i32>, capacity: usize) -> Self {
         Self {
             data_type: DataType::Dictionary(
-                Box::new(DataType::Int32),
+                IntegerType::Int32,
                 Box::new(values.data_type().clone()),
             ),
             keys: MutablePrimitiveArray::<i32>::with_capacity(capacity),

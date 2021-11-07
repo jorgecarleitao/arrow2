@@ -483,7 +483,7 @@ fn utf8_to_dict() {
     let array = Utf8Array::<i32>::from(&[Some("one"), None, Some("three"), Some("one")]);
 
     // Cast to a dictionary (same value type, Utf8)
-    let cast_type = DataType::Dictionary(Box::new(DataType::UInt8), Box::new(DataType::Utf8));
+    let cast_type = DataType::Dictionary(u8::KEY_TYPE, Box::new(DataType::Utf8));
     let result = cast(&array, &cast_type, CastOptions::default()).expect("cast failed");
 
     let mut expected = MutableDictionaryArray::<u8, MutableUtf8Array<i32>>::new();
@@ -514,7 +514,7 @@ fn i32_to_dict() {
     let array = Int32Array::from(&[Some(1), None, Some(3), Some(1)]);
 
     // Cast to a dictionary (same value type, Utf8)
-    let cast_type = DataType::Dictionary(Box::new(DataType::UInt8), Box::new(DataType::Int32));
+    let cast_type = DataType::Dictionary(u8::KEY_TYPE, Box::new(DataType::Int32));
     let result = cast(&array, &cast_type, CastOptions::default()).expect("cast failed");
 
     let mut expected = MutableDictionaryArray::<u8, MutablePrimitiveArray<i32>>::new();
@@ -617,7 +617,7 @@ fn dict_to_dict_bad_index_value_primitive() {
     }
     let array: ArrayRef = Arc::new(builder.finish());
 
-    let cast_type = Dictionary(Box::new(Int8), Box::new(Utf8));
+    let cast_type = Dictionary(i8::KEY_TYPE, Box::new(Utf8));
     let res = cast(&array, &cast_type, CastOptions::default());
     assert, CastOptions::default())!(res.is_err());
     let actual_error = format!("{:?}", res);
@@ -649,7 +649,7 @@ fn dict_to_dict_bad_index_value_utf8() {
     }
     let array: ArrayRef = Arc::new(builder.finish());
 
-    let cast_type = Dictionary(Box::new(Int8), Box::new(Utf8));
+    let cast_type = Dictionary(i8::KEY_TYPE, Box::new(Utf8));
     let res = cast(&array, &cast_type, CastOptions::default());
     assert, CastOptions::default())!(res.is_err());
     let actual_error = format!("{:?}", res);

@@ -28,7 +28,9 @@ use crate::{
     error::{ArrowError, Result},
 };
 
-use crate::datatypes::{get_extension, DataType, Field, IntervalUnit, Schema, TimeUnit};
+use crate::datatypes::{
+    get_extension, DataType, Field, IntegerType, IntervalUnit, Schema, TimeUnit,
+};
 
 pub trait ToJson {
     /// Generate a JSON representation
@@ -134,17 +136,20 @@ impl ToJson for Field {
             _ => vec![],
         };
         match self.data_type() {
-            DataType::Dictionary(ref index_type, ref value_type) => json!({
-                "name": self.name(),
-                "nullable": self.is_nullable(),
-                "type": value_type.to_json(),
-                "children": children,
-                "dictionary": {
-                    "id": self.dict_id(),
-                    "indexType": index_type.to_json(),
-                    "isOrdered": self.dict_is_ordered()
-                }
-            }),
+            DataType::Dictionary(ref index_type, ref value_type) => {
+                let index_type: DataType = (*index_type).into();
+                json!({
+                    "name": self.name(),
+                    "nullable": self.is_nullable(),
+                    "type": value_type.to_json(),
+                    "children": children,
+                    "dictionary": {
+                        "id": self.dict_id(),
+                        "indexType": index_type.to_json(),
+                        "isOrdered": self.dict_is_ordered()
+                    }
+                })
+            }
             _ => json!({
                 "name": self.name(),
                 "nullable": self.is_nullable(),
@@ -165,6 +170,52 @@ fn to_time_unit(item: Option<&Value>) -> Result<TimeUnit> {
             "time unit missing or invalid".to_string(),
         )),
     }
+}
+
+fn to_int(item: &Value) -> Result<IntegerType> {
+    Ok(match item.get("isSigned") {
+        Some(&Value::Bool(true)) => match item.get("bitWidth") {
+            Some(&Value::Number(ref n)) => match n.as_u64() {
+                Some(8) => IntegerType::Int8,
+                Some(16) => IntegerType::Int16,
+                Some(32) => IntegerType::Int32,
+                Some(64) => IntegerType::Int64,
+                _ => {
+                    return Err(ArrowError::Schema(
+                        "int bitWidth missing or invalid".to_string(),
+                    ))
+                }
+            },
+            _ => {
+                return Err(ArrowError::Schema(
+                    "int bitWidth missing or invalid".to_string(),
+                ))
+            }
+        },
+        Some(&Value::Bool(false)) => match item.get("bitWidth") {
+            Some(&Value::Number(ref n)) => match n.as_u64() {
+                Some(8) => IntegerType::UInt8,
+                Some(16) => IntegerType::UInt16,
+                Some(32) => IntegerType::UInt32,
+                Some(64) => IntegerType::UInt64,
+                _ => {
+                    return Err(ArrowError::Schema(
+                        "int bitWidth missing or invalid".to_string(),
+                    ))
+                }
+            },
+            _ => {
+                return Err(ArrowError::Schema(
+                    "int bitWidth missing or invalid".to_string(),
+                ))
+            }
+        },
+        _ => {
+            return Err(ArrowError::Schema(
+                "int signed missing or invalid".to_string(),
+            ))
+        }
+    })
 }
 
 fn children(children: Option<&Value>) -> Result<Vec<Field>> {
@@ -339,49 +390,7 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
                 ))
             }
         },
-        "int" => match item.get("isSigned") {
-            Some(&Value::Bool(true)) => match item.get("bitWidth") {
-                Some(&Value::Number(ref n)) => match n.as_u64() {
-                    Some(8) => DataType::Int8,
-                    Some(16) => DataType::Int16,
-                    Some(32) => DataType::Int32,
-                    Some(64) => DataType::Int64,
-                    _ => {
-                        return Err(ArrowError::Schema(
-                            "int bitWidth missing or invalid".to_string(),
-                        ))
-                    }
-                },
-                _ => {
-                    return Err(ArrowError::Schema(
-                        "int bitWidth missing or invalid".to_string(),
-                    ))
-                }
-            },
-            Some(&Value::Bool(false)) => match item.get("bitWidth") {
-                Some(&Value::Number(ref n)) => match n.as_u64() {
-                    Some(8) => DataType::UInt8,
-                    Some(16) => DataType::UInt16,
-                    Some(32) => DataType::UInt32,
-                    Some(64) => DataType::UInt64,
-                    _ => {
-                        return Err(ArrowError::Schema(
-                            "int bitWidth missing or invalid".to_string(),
-                        ))
-                    }
-                },
-                _ => {
-                    return Err(ArrowError::Schema(
-                        "int bitWidth missing or invalid".to_string(),
-                    ))
-                }
-            },
-            _ => {
-                return Err(ArrowError::Schema(
-                    "int signed missing or invalid".to_string(),
-                ))
-            }
-        },
+        "int" => to_int(item).map(|x| x.into())?,
         "list" => DataType::List(Box::new(children.pop().unwrap())),
         "largelist" => DataType::LargeList(Box::new(children.pop().unwrap())),
         "fixedsizelist" => {
@@ -474,14 +483,14 @@ impl TryFrom<&Value> for Field {
 
                 let data_type = if let Some(dictionary) = map.get("dictionary") {
                     let index_type = match dictionary.get("indexType") {
-                        Some(t) => to_data_type(t, vec![])?,
+                        Some(t) => to_int(t)?,
                         _ => {
                             return Err(ArrowError::Schema(
                                 "Field missing 'indexType' attribute".to_string(),
                             ));
                         }
                     };
-                    DataType::Dictionary(Box::new(index_type), Box::new(data_type))
+                    DataType::Dictionary(index_type, Box::new(data_type))
                 } else {
                     data_type
                 };

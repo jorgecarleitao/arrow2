@@ -61,25 +61,6 @@ macro_rules! dyn_growable {
     }};
 }
 
-macro_rules! dyn_dict_growable {
-    ($ty:ty, $arrays:expr, $use_validity:expr, $capacity:expr) => {{
-        let arrays = $arrays
-            .iter()
-            .map(|array| {
-                array
-                    .as_any()
-                    .downcast_ref::<DictionaryArray<$ty>>()
-                    .unwrap()
-            })
-            .collect::<Vec<_>>();
-        Box::new(dictionary::GrowableDictionary::<$ty>::new(
-            &arrays,
-            $use_validity,
-            $capacity,
-        ))
-    }};
-}
-
 /// Creates a new [`Growable`] from an arbitrary number of [`Array`]s.
 /// # Panics
 /// This function panics iff
@@ -132,8 +113,21 @@ pub fn make_growable<'a>(
         ),
         Union | Map => todo!(),
         Dictionary(key_type) => {
-            with_match_physical_dictionary_key_type!(key_type, |$T| {
-                dyn_dict_growable!($T, arrays, use_validity, capacity)
+            match_integer_type!(key_type, |$T| {
+                let arrays = arrays
+                    .iter()
+                    .map(|array| {
+                        array
+                            .as_any()
+                            .downcast_ref::<DictionaryArray<$T>>()
+                            .unwrap()
+                    })
+                    .collect::<Vec<_>>();
+                Box::new(dictionary::GrowableDictionary::<$T>::new(
+                    &arrays,
+                    use_validity,
+                    capacity,
+                ))
             })
         }
     }

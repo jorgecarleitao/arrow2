@@ -174,28 +174,11 @@ macro_rules! fmt_dyn {
     }};
 }
 
-macro_rules! with_match_dictionary_key_type {(
+macro_rules! match_integer_type {(
     $key_type:expr, | $_:tt $T:ident | $($body:tt)*
 ) => ({
     macro_rules! __with_ty__ {( $_ $T:ident ) => ( $($body)* )}
-    match $key_type {
-        DataType::Int8 => __with_ty__! { i8 },
-        DataType::Int16 => __with_ty__! { i16 },
-        DataType::Int32 => __with_ty__! { i32 },
-        DataType::Int64 => __with_ty__! { i64 },
-        DataType::UInt8 => __with_ty__! { u8 },
-        DataType::UInt16 => __with_ty__! { u16 },
-        DataType::UInt32 => __with_ty__! { u32 },
-        DataType::UInt64 => __with_ty__! { u64 },
-        _ => ::core::unreachable!("A dictionary key type can only be of integer types"),
-    }
-})}
-
-macro_rules! with_match_physical_dictionary_key_type {(
-    $key_type:expr, | $_:tt $T:ident | $($body:tt)*
-) => ({
-    macro_rules! __with_ty__ {( $_ $T:ident ) => ( $($body)* )}
-    use crate::datatypes::DictionaryIndexType::*;
+    use crate::datatypes::IntegerType::*;
     match $key_type {
         Int8 => __with_ty__! { i8 },
         Int16 => __with_ty__! { i16 },
@@ -251,7 +234,7 @@ impl Display for dyn Array {
             Struct => fmt_dyn!(self, StructArray, f),
             Union => fmt_dyn!(self, UnionArray, f),
             Dictionary(key_type) => {
-                with_match_physical_dictionary_key_type!(key_type, |$T| {
+                match_integer_type!(key_type, |$T| {
                     fmt_dyn!(self, DictionaryArray::<$T>, f)
                 })
             }
@@ -281,7 +264,7 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
         Union => Box::new(UnionArray::new_empty(data_type)),
         Map => Box::new(MapArray::new_empty(data_type)),
         Dictionary(key_type) => {
-            with_match_physical_dictionary_key_type!(key_type, |$T| {
+            match_integer_type!(key_type, |$T| {
                 Box::new(DictionaryArray::<$T>::new_empty(data_type))
             })
         }
@@ -311,7 +294,7 @@ pub fn new_null_array(data_type: DataType, length: usize) -> Box<dyn Array> {
         Union => Box::new(UnionArray::new_null(data_type, length)),
         Map => Box::new(MapArray::new_null(data_type, length)),
         Dictionary(key_type) => {
-            with_match_physical_dictionary_key_type!(key_type, |$T| {
+            match_integer_type!(key_type, |$T| {
                 Box::new(DictionaryArray::<$T>::new_null(data_type, length))
             })
         }
@@ -349,7 +332,7 @@ pub fn clone(array: &dyn Array) -> Box<dyn Array> {
         Union => clone_dyn!(array, UnionArray),
         Map => clone_dyn!(array, MapArray),
         Dictionary(key_type) => {
-            with_match_physical_dictionary_key_type!(key_type, |$T| {
+            match_integer_type!(key_type, |$T| {
                 clone_dyn!(array, DictionaryArray::<$T>)
             })
         }

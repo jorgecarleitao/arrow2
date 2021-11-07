@@ -69,7 +69,7 @@ fn schema() -> (AvroSchema, Schema) {
         ),
         Field::new(
             "enum",
-            DataType::Dictionary(Box::new(DataType::Int32), Box::new(DataType::Utf8)),
+            DataType::Dictionary(i32::KEY_TYPE, Box::new(DataType::Utf8)),
             false,
         ),
         Field::new(

@@ -64,7 +64,6 @@ pub unsafe trait NativeType:
     + std::fmt::Display
     + PartialEq
     + Default
-    + Sized
     + 'static
 {
     /// Type denoting its representation as bytes.

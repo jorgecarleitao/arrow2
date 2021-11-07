@@ -169,7 +169,7 @@ fn schema_to_field(
         AvroSchema::Enum { .. } => {
             return Ok(Field::new(
                 name.unwrap_or_default(),
-                DataType::Dictionary(Box::new(DataType::Int32), Box::new(DataType::Utf8)),
+                DataType::Dictionary(IntegerType::Int32, Box::new(DataType::Utf8)),
                 false,
             ))
         }

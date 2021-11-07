@@ -27,7 +27,7 @@ pub unsafe fn try_from<A: ArrowArrayRef>(array: A) -> Result<Box<dyn Array>> {
         FixedSizeList => Box::new(FixedSizeListArray::try_from_ffi(array)?),
         Struct => Box::new(StructArray::try_from_ffi(array)?),
         Dictionary(key_type) => {
-            with_match_physical_dictionary_key_type!(key_type, |$T| {
+            match_integer_type!(key_type, |$T| {
                 Box::new(DictionaryArray::<$T>::try_from_ffi(array)?)
             })
         }

@@ -16,16 +16,6 @@ macro_rules! dyn_binary {
     }};
 }
 
-macro_rules! dyn_dict {
-    ($array:expr, $ty:ty) => {{
-        let array = $array
-            .as_any()
-            .downcast_ref::<DictionaryArray<$ty>>()
-            .unwrap();
-        estimated_bytes_size(array.keys()) + estimated_bytes_size(array.values().as_ref())
-    }};
-}
-
 /// Returns the total (heap) allocated size of the array in bytes.
 /// # Implementation
 /// This estimation is the sum of the size of its buffers, validity, including nested arrays.
@@ -106,8 +96,12 @@ pub fn estimated_bytes_size(array: &dyn Array) -> usize {
                 .sum::<usize>();
             types + offsets + fields
         }
-        Dictionary(key_type) => with_match_physical_dictionary_key_type!(key_type, |$T| {
-            dyn_dict!(array, $T)
+        Dictionary(key_type) => match_integer_type!(key_type, |$T| {
+            let array = array
+                .as_any()
+                .downcast_ref::<DictionaryArray<$T>>()
+                .unwrap();
+            estimated_bytes_size(array.keys()) + estimated_bytes_size(array.values().as_ref())
         }),
         Map => {
             let array = array.as_any().downcast_ref::<MapArray>().unwrap();

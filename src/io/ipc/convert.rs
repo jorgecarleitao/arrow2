@@ -28,7 +28,8 @@ mod ipc {
 }
 
 use crate::datatypes::{
-    get_extension, DataType, Extension, Field, IntervalUnit, Metadata, Schema, TimeUnit, UnionMode,
+    get_extension, DataType, Extension, Field, IntegerType, IntervalUnit, Metadata, Schema,
+    TimeUnit, UnionMode,
 };
 use crate::io::ipc::endianess::is_native_little_endian;
 
@@ -142,18 +143,18 @@ fn get_data_type(field: ipc::Field, extension: Extension, may_be_dictionary: boo
         if may_be_dictionary {
             let int = dictionary.indexType().unwrap();
             let index_type = match (int.bitWidth(), int.is_signed()) {
-                (8, true) => DataType::Int8,
-                (8, false) => DataType::UInt8,
-                (16, true) => DataType::Int16,
-                (16, false) => DataType::UInt16,
-                (32, true) => DataType::Int32,
-                (32, false) => DataType::UInt32,
-                (64, true) => DataType::Int64,
-                (64, false) => DataType::UInt64,
+                (8, true) => IntegerType::Int8,
+                (8, false) => IntegerType::UInt8,
+                (16, true) => IntegerType::Int16,
+                (16, false) => IntegerType::UInt16,
+                (32, true) => IntegerType::Int32,
+                (32, false) => IntegerType::UInt32,
+                (64, true) => IntegerType::Int64,
+                (64, false) => IntegerType::UInt64,
                 _ => panic!("Unexpected bitwidth and signed"),
             };
             return DataType::Dictionary(
-                Box::new(index_type),
+                index_type,
                 Box::new(get_data_type(field, extension, false)),
             );
         }
@@ -740,28 +741,26 @@ pub(crate) fn get_fb_field_type<'a>(
 
 /// Create an IPC dictionary encoding
 pub(crate) fn get_fb_dictionary<'a>(
-    index_type: &DataType,
+    index_type: &IntegerType,
     dict_id: i64,
     dict_is_ordered: bool,
     fbb: &mut FlatBufferBuilder<'a>,
 ) -> WIPOffset<ipc::DictionaryEncoding<'a>> {
-    use DataType::*;
+    use IntegerType::*;
     // We assume that the dictionary index type (as an integer) has already been
     // validated elsewhere, and can safely assume we are dealing with integers
     let mut index_builder = ipc::IntBuilder::new(fbb);
 
-    match *index_type {
+    match index_type {
         Int8 | Int16 | Int32 | Int64 => index_builder.add_is_signed(true),
         UInt8 | UInt16 | UInt32 | UInt64 => index_builder.add_is_signed(false),
-        _ => {}
     }
 
-    match *index_type {
+    match index_type {
         Int8 | UInt8 => index_builder.add_bitWidth(8),
         Int16 | UInt16 => index_builder.add_bitWidth(16),
         Int32 | UInt32 => index_builder.add_bitWidth(32),
         Int64 | UInt64 => index_builder.add_bitWidth(64),
-        _ => {}
     }
 
     let index_builder = index_builder.finish();
@@ -908,14 +907,14 @@ mod tests {
                 Field::new("struct<>", DataType::Struct(vec![]), true),
                 Field::new_dict(
                     "dictionary<int32, utf8>",
-                    DataType::Dictionary(Box::new(DataType::Int32), Box::new(DataType::Utf8)),
+                    DataType::Dictionary(IntegerType::Int32, Box::new(DataType::Utf8)),
                     true,
                     123,
                     true,
                 ),
                 Field::new_dict(
                     "dictionary<uint8, uint32>",
-                    DataType::Dictionary(Box::new(DataType::UInt8), Box::new(DataType::UInt32)),
+                    DataType::Dictionary(IntegerType::UInt8, Box::new(DataType::UInt32)),
                     true,
                     123,
                     true,

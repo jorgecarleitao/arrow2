@@ -33,7 +33,7 @@ pub fn align_to_c_data_interface(array: Arc<dyn Array>) -> Arc<dyn Array> {
         Union => ffi_dyn!(array, UnionArray),
         Map => ffi_dyn!(array, MapArray),
         Dictionary(key_type) => {
-            with_match_physical_dictionary_key_type!(key_type, |$T| {
+            match_integer_type!(key_type, |$T| {
                 ffi_dyn!(array, DictionaryArray<$T>)
             })
         }

@@ -215,7 +215,7 @@ pub fn equal(lhs: &dyn Array, rhs: &dyn Array) -> bool {
             struct_::equal(lhs, rhs)
         }
         Dictionary(key_type) => {
-            with_match_physical_dictionary_key_type!(key_type, |$T| {
+            match_integer_type!(key_type, |$T| {
                 let lhs = lhs.as_any().downcast_ref().unwrap();
                 let rhs = rhs.as_any().downcast_ref().unwrap();
                 dictionary::equal::<$T>(lhs, rhs)

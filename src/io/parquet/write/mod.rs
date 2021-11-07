@@ -117,7 +117,7 @@ pub fn array_to_pages(
 ) -> Result<DynIter<'static, Result<EncodedPage>>> {
     match array.data_type() {
         DataType::Dictionary(key_type, _) => {
-            with_match_dictionary_key_type!(key_type.as_ref(), |$T| {
+            match_integer_type!(key_type, |$T| {
                 dictionary::array_to_pages::<$T>(
                     array.as_any().downcast_ref().unwrap(),
                     descriptor,
