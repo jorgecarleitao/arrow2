@@ -1,6 +1,6 @@
 use std::ops::{BitAnd, BitOr, BitXor, Not};
 
-use crate::{bitmap::utils::BitChunk, buffer::MutableBuffer};
+use crate::buffer::MutableBuffer;
 
 use super::{
     utils::{BitChunkIterExact, BitChunksExact},
@@ -95,11 +95,9 @@ where
 
     // Soundness: `BitChunks` is a trusted len iterator
     let buffer = unsafe {
-        MutableBuffer::from_chunk_iter_unchecked(chunks.chain(std::iter::once(
-            BitChunk::from_ne_bytes(
-                op(rem_lhs, rem_rhs).to_ne_bytes(),
-            ),
-        )))
+        MutableBuffer::from_chunk_iter_unchecked(
+            chunks.chain(std::iter::once(op(rem_lhs, rem_rhs))),
+        )
     };
 
     let length = lhs.len();
