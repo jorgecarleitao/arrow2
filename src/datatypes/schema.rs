@@ -164,14 +164,6 @@ impl Schema {
         Ok(&self.fields[self.index_of(name)?])
     }
 
-    /// Returns all [`Field`]s with dictionary id `dict_id`.
-    pub fn fields_with_dict_id(&self, dict_id: i64) -> Vec<&Field> {
-        self.fields
-            .iter()
-            .filter(|f| f.dict_id() == Some(dict_id))
-            .collect()
-    }
-
     /// Find the index of the column with the given name.
     pub fn index_of(&self, name: &str) -> Result<usize> {
         for i in 0..self.fields.len() {

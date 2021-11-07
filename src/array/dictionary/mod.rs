@@ -13,7 +13,8 @@ mod mutable;
 pub use iterator::*;
 pub use mutable::*;
 
-use super::{new_empty_array, primitive::PrimitiveArray, Array};
+use super::display::get_value_display;
+use super::{display_fmt, new_empty_array, primitive::PrimitiveArray, Array};
 use crate::scalar::NullScalar;
 
 /// Trait denoting [`NativeType`]s that can be used as keys of a dictionary.
@@ -196,9 +197,10 @@ where
     PrimitiveArray<K>: std::fmt::Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "{:?}{{", self.data_type())?;
-        writeln!(f, "keys: {},", self.keys())?;
-        writeln!(f, "values: {},", self.values())?;
-        write!(f, "}}")
+        let display = get_value_display(self);
+        let new_lines = false;
+        let head = &format!("{}", self.data_type());
+        let iter = self.iter().enumerate().map(|(i, x)| x.map(|_| display(i)));
+        display_fmt(iter, head, f, new_lines)
     }
 }

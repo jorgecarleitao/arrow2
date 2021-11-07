@@ -29,18 +29,6 @@ pub struct WriteOptions {
     pub compression: Option<Compression>,
 }
 
-fn get_dict_values(array: &dyn Array) -> &Arc<dyn Array> {
-    match array.data_type().to_physical_type() {
-        PhysicalType::Dictionary(key_type) => {
-            with_match_physical_dictionary_key_type!(key_type, |$T| {
-                let array = array.as_any().downcast_ref::<DictionaryArray<$T>>().unwrap();
-                array.values()
-            })
-        }
-        _ => unreachable!(),
-    }
-}
-
 fn encode_dictionary(
     field: &Field,
     array: &Arc<dyn Array>,
@@ -67,10 +55,7 @@ fn encode_dictionary(
                     is_native_little_endian(),
                 ));
             };
-
-            // todo: support nested dictionaries. Requires DataType::Dictionary to contain Field in values
-            let _ = get_dict_values(array.as_ref());
-            todo!()
+            Ok(())
         }
         Struct => {
             let values = array

@@ -23,7 +23,7 @@ use super::DataType;
 
 /// A logical [`DataType`] and its associated metadata per
 /// [Arrow specification](https://arrow.apache.org/docs/cpp/api/datatype.html)
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Eq)]
 pub struct Field {
     /// Its name
     pub name: String,
@@ -37,6 +37,26 @@ pub struct Field {
     pub dict_is_ordered: bool,
     /// A map of key-value pairs containing additional custom meta data.
     pub metadata: Option<BTreeMap<String, String>>,
+}
+
+impl std::hash::Hash for Field {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+        self.data_type.hash(state);
+        self.nullable.hash(state);
+        self.dict_is_ordered.hash(state);
+        self.metadata.hash(state);
+    }
+}
+
+impl PartialEq for Field {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+            && self.data_type == other.data_type
+            && self.nullable == other.nullable
+            && self.dict_is_ordered == other.dict_is_ordered
+            && self.metadata == other.metadata
+    }
 }
 
 impl Field {

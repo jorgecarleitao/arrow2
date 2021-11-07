@@ -162,6 +162,55 @@ pub fn read_record_batch<R: Read + Seek>(
     RecordBatch::try_new(schema, columns)
 }
 
+fn find_first_dict_field_d(id: usize, data_type: &DataType) -> Option<&Field> {
+    use DataType::*;
+    match data_type {
+        Dictionary(_, inner) => find_first_dict_field_d(id, inner.as_ref()),
+        Map(field, _) => find_first_dict_field(id, field.as_ref()),
+        List(field) => find_first_dict_field(id, field.as_ref()),
+        LargeList(field) => find_first_dict_field(id, field.as_ref()),
+        FixedSizeList(field, _) => find_first_dict_field(id, field.as_ref()),
+        Union(fields, _, _) => {
+            for field in fields {
+                if let Some(f) = find_first_dict_field(id, field) {
+                    return Some(f);
+                }
+            }
+            None
+        }
+        Struct(fields) => {
+            for field in fields {
+                if let Some(f) = find_first_dict_field(id, field) {
+                    return Some(f);
+                }
+            }
+            None
+        }
+        _ => None,
+    }
+}
+
+fn find_first_dict_field(id: usize, field: &Field) -> Option<&Field> {
+    if let DataType::Dictionary(_, _) = &field.data_type {
+        if field.dict_id as usize == id {
+            return Some(field);
+        }
+    }
+    find_first_dict_field_d(id, &field.data_type)
+}
+
+fn first_dict_field(id: usize, fields: &[Field]) -> Result<&Field> {
+    for field in fields {
+        if let Some(field) = find_first_dict_field(id, field) {
+            return Ok(field);
+        }
+    }
+    Err(ArrowError::Schema(format!(
+        "dictionary id {} not found in schema",
+        id
+    )))
+}
+
 /// Read the dictionary from the buffer and provided metadata,
 /// updating the `dictionaries` with the resulting dictionary
 pub fn read_dictionary<R: Read + Seek>(
@@ -179,10 +228,7 @@ pub fn read_dictionary<R: Read + Seek>(
     }
 
     let id = batch.id();
-    let fields_using_this_dictionary = schema.fields_with_dict_id(id);
-    let first_field = fields_using_this_dictionary.first().ok_or_else(|| {
-        ArrowError::InvalidArgumentError("dictionary id not found in schema".to_string())
-    })?;
+    let first_field = first_dict_field(id as usize, &schema.fields)?;
 
     // As the dictionary batch does not contain the type of the
     // values array, we need to retrieve this from the schema.
