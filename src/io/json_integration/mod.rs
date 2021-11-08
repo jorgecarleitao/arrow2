@@ -20,10 +20,13 @@
 //! These utilities define structs that read the integration JSON format for integration testing purposes.
 
 use serde_derive::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Map, Value};
 
-mod read;
+use crate::datatypes::*;
+
 mod schema;
+use schema::ToJson;
+mod read;
 mod write;
 pub use read::to_record_batch;
 pub use write::from_record_batch;
@@ -59,6 +62,59 @@ pub struct ArrowJsonField {
     pub dictionary: Option<ArrowJsonFieldDictionary>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<Value>,
+}
+
+impl From<&Field> for ArrowJsonField {
+    fn from(field: &Field) -> Self {
+        let metadata_value = match field.metadata() {
+            Some(kv_list) => {
+                let mut array = Vec::new();
+                for (k, v) in kv_list {
+                    let mut kv_map = Map::new();
+                    kv_map.insert(k.clone(), Value::String(v.clone()));
+                    array.push(Value::Object(kv_map));
+                }
+                if !array.is_empty() {
+                    Some(Value::Array(array))
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        };
+
+        let dictionary = if let DataType::Dictionary(key_type, _) = &field.data_type {
+            use crate::datatypes::IntegerType::*;
+            Some(ArrowJsonFieldDictionary {
+                id: field.dict_id,
+                index_type: IntegerType {
+                    name: "".to_string(),
+                    bit_width: match key_type {
+                        Int8 | UInt8 => 8,
+                        Int16 | UInt16 => 16,
+                        Int32 | UInt32 => 32,
+                        Int64 | UInt64 => 64,
+                    },
+                    is_signed: match key_type {
+                        Int8 | Int16 | Int32 | Int64 => true,
+                        UInt8 | UInt16 | UInt32 | UInt64 => false,
+                    },
+                },
+                is_ordered: field.dict_is_ordered,
+            })
+        } else {
+            None
+        };
+
+        Self {
+            name: field.name().to_string(),
+            field_type: field.data_type().to_json(),
+            nullable: field.is_nullable(),
+            children: vec![],
+            dictionary,
+            metadata: metadata_value,
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug)]
