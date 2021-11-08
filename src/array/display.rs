@@ -165,7 +165,13 @@ pub fn get_value_display<'a>(array: &'a dyn Array) -> Box<dyn Fn(usize) -> Strin
                 .unwrap();
             let keys = a.keys();
             let display = get_display(a.values().as_ref());
-            Box::new(move |row: usize| display(keys.value(row) as usize))
+            Box::new(move |row: usize| {
+                if keys.is_null(row) {
+                    "".to_string()
+                }else {
+                    display(keys.value(row) as usize)
+                }
+            })
         }),
         Map(_, _) => todo!(),
         Struct(_) => {

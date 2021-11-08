@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::sync::Arc;
 
@@ -122,7 +123,7 @@ pub fn deserialize_batch(
     data: &FlightData,
     schema: Arc<Schema>,
     is_little_endian: bool,
-    dictionaries_by_field: &[Option<Arc<dyn Array>>],
+    dictionaries: &HashMap<usize, Arc<dyn Array>>,
 ) -> Result<RecordBatch> {
     // check that the data_header is a record batch message
     let message = ipc::Message::root_as_message(&data.data_header[..])
@@ -141,7 +142,7 @@ pub fn deserialize_batch(
                 schema.clone(),
                 None,
                 is_little_endian,
-                dictionaries_by_field,
+                dictionaries,
                 ipc::Schema::MetadataVersion::V5,
                 &mut reader,
                 0,

@@ -5,6 +5,8 @@ use std::any::Any;
 
 use crate::{array::*, datatypes::*};
 
+mod dictionary;
+pub use dictionary::*;
 mod equal;
 mod primitive;
 pub use primitive::*;
@@ -121,6 +123,20 @@ pub fn new_scalar(array: &dyn Array, index: usize) -> Box<dyn Scalar> {
         FixedSizeBinary => todo!(),
         FixedSizeList => todo!(),
         Union | Map => todo!(),
-        Dictionary(_) => todo!(),
+        Dictionary(key_type) => match_integer_type!(key_type, |$T| {
+            let array = array
+                .as_any()
+                .downcast_ref::<DictionaryArray<$T>>()
+                .unwrap();
+            let value = if array.is_valid(index) {
+                Some(array.value(index).into())
+            } else {
+                None
+            };
+            Box::new(DictionaryScalar::<$T>::new(
+                array.data_type().clone(),
+                value,
+            ))
+        }),
     }
 }

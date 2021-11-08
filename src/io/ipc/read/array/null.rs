@@ -7,7 +7,7 @@ use super::super::deserialize::Node;
 pub fn read_null(field_nodes: &mut VecDeque<Node>, data_type: DataType) -> NullArray {
     NullArray::from_data(
         data_type,
-        field_nodes.pop_front().unwrap().0.length() as usize,
+        field_nodes.pop_front().unwrap().length() as usize,
     )
 }
 

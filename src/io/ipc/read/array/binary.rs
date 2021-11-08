@@ -25,7 +25,7 @@ pub fn read_binary<O: Offset, R: Read + Seek>(
 where
     Vec<u8>: TryInto<O::Bytes> + TryInto<<u8 as NativeType>::Bytes>,
 {
-    let field_node = field_nodes.pop_front().unwrap().0;
+    let field_node = field_nodes.pop_front().unwrap();
 
     let validity = read_validity(
         buffers,

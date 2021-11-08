@@ -1,32 +1,14 @@
-// Licensed to the Apache Software Foundation (ASF) under one
-// or more contributor license agreements.  See the NOTICE file
-// distributed with this work for additional information
-// regarding copyright ownership.  The ASF licenses this file
-// to you under the Apache License, Version 2.0 (the
-// "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
-//! Common utilities used to write to Arrow's IPC format.
-
 use std::{collections::HashMap, sync::Arc};
 
 use arrow_format::ipc;
 use arrow_format::ipc::flatbuffers::FlatBufferBuilder;
 use arrow_format::ipc::Message::CompressionType;
 
-use crate::array::Array;
+use crate::array::*;
+use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 use crate::io::ipc::endianess::is_native_little_endian;
 use crate::record_batch::RecordBatch;
-use crate::{array::DictionaryArray, datatypes::*};
 
 use super::{write, write_dictionary};
 
@@ -47,34 +29,183 @@ pub struct WriteOptions {
     pub compression: Option<Compression>,
 }
 
+fn encode_dictionary(
+    field: &Field,
+    array: &Arc<dyn Array>,
+    options: &WriteOptions,
+    dictionary_tracker: &mut DictionaryTracker,
+    encoded_dictionaries: &mut Vec<EncodedData>,
+) -> Result<()> {
+    use PhysicalType::*;
+    match array.data_type().to_physical_type() {
+        Utf8 | LargeUtf8 | Binary | LargeBinary | Primitive(_) | Boolean | Null
+        | FixedSizeBinary => Ok(()),
+        Dictionary(key_type) => match_integer_type!(key_type, |$T| {
+            let dict_id = field
+                .dict_id()
+                .expect("All Dictionary types have `dict_id`");
+
+            let values = array.as_any().downcast_ref::<DictionaryArray<$T>>().unwrap().values();
+            // todo: this is won't work for Dict<Dict<...>>;
+            let field = Field::new("item", values.data_type().clone(), true);
+            encode_dictionary(&field,
+                values,
+                options,
+                dictionary_tracker,
+                encoded_dictionaries
+            )?;
+
+            let emit = dictionary_tracker.insert(dict_id, array)?;
+
+            if emit {
+                encoded_dictionaries.push(dictionary_batch_to_bytes(
+                    dict_id,
+                    array.as_ref(),
+                    options,
+                    is_native_little_endian(),
+                ));
+            };
+            Ok(())
+        }),
+        Struct => {
+            let values = array
+                .as_any()
+                .downcast_ref::<StructArray>()
+                .unwrap()
+                .values();
+            let fields = if let DataType::Struct(fields) = array.data_type() {
+                fields
+            } else {
+                unreachable!()
+            };
+            fields
+                .iter()
+                .zip(values.iter())
+                .try_for_each(|(field, values)| {
+                    encode_dictionary(
+                        field,
+                        values,
+                        options,
+                        dictionary_tracker,
+                        encoded_dictionaries,
+                    )
+                })
+        }
+        List => {
+            let values = array
+                .as_any()
+                .downcast_ref::<ListArray<i32>>()
+                .unwrap()
+                .values();
+            let field = if let DataType::List(field) = field.data_type() {
+                field.as_ref()
+            } else {
+                unreachable!()
+            };
+            encode_dictionary(
+                field,
+                values,
+                options,
+                dictionary_tracker,
+                encoded_dictionaries,
+            )
+        }
+        LargeList => {
+            let values = array
+                .as_any()
+                .downcast_ref::<ListArray<i64>>()
+                .unwrap()
+                .values();
+            let field = if let DataType::LargeList(field) = field.data_type() {
+                field.as_ref()
+            } else {
+                unreachable!()
+            };
+            encode_dictionary(
+                field,
+                values,
+                options,
+                dictionary_tracker,
+                encoded_dictionaries,
+            )
+        }
+        FixedSizeList => {
+            let values = array
+                .as_any()
+                .downcast_ref::<FixedSizeListArray>()
+                .unwrap()
+                .values();
+            let field = if let DataType::FixedSizeList(field, _) = field.data_type() {
+                field.as_ref()
+            } else {
+                unreachable!()
+            };
+            encode_dictionary(
+                field,
+                values,
+                options,
+                dictionary_tracker,
+                encoded_dictionaries,
+            )
+        }
+        Union => {
+            let values = array
+                .as_any()
+                .downcast_ref::<UnionArray>()
+                .unwrap()
+                .fields();
+            let fields = if let DataType::Union(fields, _, _) = field.data_type() {
+                fields
+            } else {
+                unreachable!()
+            };
+            fields
+                .iter()
+                .zip(values.iter())
+                .try_for_each(|(field, values)| {
+                    encode_dictionary(
+                        field,
+                        values,
+                        options,
+                        dictionary_tracker,
+                        encoded_dictionaries,
+                    )
+                })
+        }
+        Map => {
+            let values = array.as_any().downcast_ref::<MapArray>().unwrap().field();
+            let field = if let DataType::Map(field, _) = field.data_type() {
+                field.as_ref()
+            } else {
+                unreachable!()
+            };
+            encode_dictionary(
+                field,
+                values,
+                options,
+                dictionary_tracker,
+                encoded_dictionaries,
+            )
+        }
+    }
+}
+
 pub fn encoded_batch(
     batch: &RecordBatch,
     dictionary_tracker: &mut DictionaryTracker,
     options: &WriteOptions,
 ) -> Result<(Vec<EncodedData>, EncodedData)> {
-    // TODO: handle nested dictionaries
     let schema = batch.schema();
     let mut encoded_dictionaries = Vec::with_capacity(schema.fields().len());
 
-    for (i, field) in schema.fields().iter().enumerate() {
-        let column = batch.column(i);
-
-        if let DataType::Dictionary(_key_type, _value_type) = column.data_type() {
-            let dict_id = field
-                .dict_id()
-                .expect("All Dictionary types have `dict_id`");
-
-            let emit = dictionary_tracker.insert(dict_id, column)?;
-
-            if emit {
-                encoded_dictionaries.push(dictionary_batch_to_bytes(
-                    dict_id,
-                    column.as_ref(),
-                    options,
-                    is_native_little_endian(),
-                ));
-            }
-        }
+    for (field, column) in schema.fields().iter().zip(batch.columns()) {
+        encode_dictionary(
+            field,
+            column,
+            options,
+            dictionary_tracker,
+            &mut encoded_dictionaries,
+        )?;
     }
 
     let encoded_message = record_batch_to_bytes(batch, options);

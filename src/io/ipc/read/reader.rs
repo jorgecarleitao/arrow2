@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+use std::collections::HashMap;
 use std::io::{Read, Seek, SeekFrom};
 use std::sync::Arc;
 
@@ -30,8 +31,6 @@ use super::super::convert;
 use super::super::{ARROW_MAGIC, CONTINUATION_MARKER};
 use super::common::*;
 
-type ArrayRef = Arc<dyn Array>;
-
 #[derive(Debug, Clone)]
 pub struct FileMetadata {
     /// The schema that is read from the file header
@@ -45,10 +44,8 @@ pub struct FileMetadata {
     /// The total number of blocks, which may contain record batches and other types
     total_blocks: usize,
 
-    /// Optional dictionaries for each schema field.
-    ///
-    /// Dictionaries may be appended to in the streaming format.
-    dictionaries_by_field: Vec<Option<ArrayRef>>,
+    /// Dictionaries associated to each dict_id
+    dictionaries: HashMap<usize, Arc<dyn Array>>,
 
     /// FileMetadata version
     version: ipc::Schema::MetadataVersion,
@@ -122,8 +119,8 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
     let (schema, is_little_endian) = convert::fb_to_schema(ipc_schema);
     let schema = Arc::new(schema);
 
-    // Create an array of optional dictionary value arrays, one per field.
-    let mut dictionaries_by_field = vec![None; schema.fields().len()];
+    let mut dictionaries = Default::default();
+
     for block in footer.dictionaries().unwrap() {
         // read length from end of offset
         let mut message_size: [u8; 4] = [0; 4];
@@ -149,7 +146,7 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
                     batch,
                     &schema,
                     is_little_endian,
-                    &mut dictionaries_by_field,
+                    &mut dictionaries,
                     reader,
                     block_offset,
                 )?;
@@ -167,7 +164,7 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
         is_little_endian,
         blocks: blocks.to_vec(),
         total_blocks,
-        dictionaries_by_field,
+        dictionaries,
         version: footer.version(),
     })
 }
@@ -218,7 +215,7 @@ pub fn read_batch<R: Read + Seek>(
                 metadata.schema.clone(),
                 projection,
                 metadata.is_little_endian,
-                &metadata.dictionaries_by_field,
+                &metadata.dictionaries,
                 metadata.version,
                 reader,
                 block.offset() as u64 + block.metaDataLength() as u64,

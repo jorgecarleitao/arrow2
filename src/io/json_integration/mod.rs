@@ -83,12 +83,35 @@ impl From<&Field> for ArrowJsonField {
             _ => None,
         };
 
+        let dictionary = if let DataType::Dictionary(key_type, _) = &field.data_type {
+            use crate::datatypes::IntegerType::*;
+            Some(ArrowJsonFieldDictionary {
+                id: field.dict_id,
+                index_type: IntegerType {
+                    name: "".to_string(),
+                    bit_width: match key_type {
+                        Int8 | UInt8 => 8,
+                        Int16 | UInt16 => 16,
+                        Int32 | UInt32 => 32,
+                        Int64 | UInt64 => 64,
+                    },
+                    is_signed: match key_type {
+                        Int8 | Int16 | Int32 | Int64 => true,
+                        UInt8 | UInt16 | UInt32 | UInt64 => false,
+                    },
+                },
+                is_ordered: field.dict_is_ordered,
+            })
+        } else {
+            None
+        };
+
         Self {
             name: field.name().to_string(),
             field_type: field.data_type().to_json(),
             nullable: field.is_nullable(),
             children: vec![],
-            dictionary: None, // TODO: not enough info
+            dictionary,
             metadata: metadata_value,
         }
     }

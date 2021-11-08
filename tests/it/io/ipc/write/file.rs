@@ -251,6 +251,12 @@ fn write_100_map_non_canonical() -> Result<()> {
 }
 
 #[test]
+fn write_100_nested_dictionary() -> Result<()> {
+    test_file("1.0.0-littleendian", "generated_nested_dictionary", false)?;
+    test_file("1.0.0-bigendian", "generated_nested_dictionary", false)
+}
+
+#[test]
 fn write_generated_017_union() -> Result<()> {
     test_file("0.17.1", "generated_union", false)
 }

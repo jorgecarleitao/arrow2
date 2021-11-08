@@ -19,7 +19,7 @@ pub fn read_boolean<R: Read + Seek>(
     is_little_endian: bool,
     compression: Option<ipc::Message::BodyCompression>,
 ) -> Result<BooleanArray> {
-    let field_node = field_nodes.pop_front().unwrap().0;
+    let field_node = field_nodes.pop_front().unwrap();
 
     let length = field_node.length() as usize;
     let validity = read_validity(

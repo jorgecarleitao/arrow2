@@ -19,7 +19,7 @@ pub fn read_fixed_size_binary<R: Read + Seek>(
     is_little_endian: bool,
     compression: Option<ipc::Message::BodyCompression>,
 ) -> Result<FixedSizeBinaryArray> {
-    let field_node = field_nodes.pop_front().unwrap().0;
+    let field_node = field_nodes.pop_front().unwrap();
 
     let validity = read_validity(
         buffers,
