@@ -40,10 +40,20 @@ fn encode_dictionary(
     match array.data_type().to_physical_type() {
         Utf8 | LargeUtf8 | Binary | LargeBinary | Primitive(_) | Boolean | Null
         | FixedSizeBinary => Ok(()),
-        Dictionary(_) => {
+        Dictionary(key_type) => match_integer_type!(key_type, |$T| {
             let dict_id = field
                 .dict_id()
                 .expect("All Dictionary types have `dict_id`");
+
+            let values = array.as_any().downcast_ref::<DictionaryArray<$T>>().unwrap().values();
+            // todo: this is won't work for Dict<Dict<...>>;
+            let field = Field::new("item", values.data_type().clone(), true);
+            encode_dictionary(&field,
+                values,
+                options,
+                dictionary_tracker,
+                encoded_dictionaries
+            )?;
 
             let emit = dictionary_tracker.insert(dict_id, array)?;
 
@@ -56,14 +66,14 @@ fn encode_dictionary(
                 ));
             };
             Ok(())
-        }
+        }),
         Struct => {
             let values = array
                 .as_any()
                 .downcast_ref::<StructArray>()
                 .unwrap()
                 .values();
-            let fields = if let DataType::Struct(fields) = field.data_type() {
+            let fields = if let DataType::Struct(fields) = array.data_type() {
                 fields
             } else {
                 unreachable!()

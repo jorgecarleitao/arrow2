@@ -1,4 +1,4 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::convert::TryInto;
 use std::io::{Read, Seek};
 use std::sync::Arc;
@@ -7,7 +7,7 @@ use arrow_format::ipc;
 
 use crate::array::{Array, DictionaryArray, DictionaryKey};
 use crate::datatypes::Field;
-use crate::error::Result;
+use crate::error::{ArrowError, Result};
 
 use super::super::deserialize::Node;
 use super::{read_primitive, skip_primitive};
@@ -26,9 +26,16 @@ pub fn read_dictionary<T: DictionaryKey, R: Read + Seek>(
 where
     Vec<u8>: TryInto<T::Bytes>,
 {
+    let id = field.dict_id().unwrap() as usize;
     let values = dictionaries
-        .get(&(field.dict_id().unwrap() as usize))
-        .unwrap()
+        .get(&id)
+        .ok_or_else(|| {
+            let valid_ids = dictionaries.keys().collect::<HashSet<_>>();
+            ArrowError::Ipc(format!(
+                "Dictionary id {} not found. Valid ids: {:?}",
+                id, valid_ids
+            ))
+        })?
         .clone();
 
     let keys = read_primitive(

@@ -663,24 +663,8 @@ pub(crate) fn get_fb_field_type<'a>(
             }
         }
         Struct(fields) => {
-            // struct's fields are children
-            let mut children = vec![];
-            for field in fields {
-                let inner_types = get_fb_field_type(field.data_type(), field.is_nullable(), fbb);
-                let field_name = fbb.create_string(field.name());
-                children.push(ipc::Field::create(
-                    fbb,
-                    &ipc::FieldArgs {
-                        name: Some(field_name),
-                        nullable: field.is_nullable(),
-                        type_type: inner_types.type_type,
-                        type_: Some(inner_types.type_),
-                        dictionary: None,
-                        children: inner_types.children,
-                        custom_metadata: None,
-                    },
-                ));
-            }
+            let children: Vec<_> = fields.iter().map(|field| build_field(fbb, field)).collect();
+
             FbFieldType {
                 type_type,
                 type_: ipc::Struct_Builder::new(fbb).finish().as_union_value(),

@@ -13,9 +13,7 @@ fn test_file(version: &str, file_name: &str) -> Result<()> {
     ))?;
 
     // read expected JSON output
-    println!("reading json");
     let (schema, batches) = read_gzip_json(version, file_name)?;
-    println!("reading metadata");
 
     let metadata = read_file_metadata(&mut file)?;
     let reader = FileReader::new(file, metadata, None);
@@ -23,12 +21,7 @@ fn test_file(version: &str, file_name: &str) -> Result<()> {
     assert_eq!(&schema, reader.schema().as_ref());
 
     batches.iter().zip(reader).try_for_each(|(lhs, rhs)| {
-        for (c1, c2) in lhs.columns().iter().zip(rhs?.columns().iter()) {
-            println!("{}", c1);
-            println!("{}", c2);
-            assert_eq!(c1, c2);
-        }
-        //assert_eq!(lhs, &rhs?);
+        assert_eq!(lhs, &rhs?);
         Result::Ok(())
     })?;
     Ok(())
