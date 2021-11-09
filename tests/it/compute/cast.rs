@@ -597,6 +597,44 @@ fn naive_timestamp_to_utf8() {
     assert_eq!(expected, result.as_ref());
 }
 
+#[test]
+fn null_array_from_and_to_others() {
+    macro_rules! typed_test {
+        ($ARR_TYPE:ident, $DATATYPE:ident) => {{
+            {
+                let array = new_null_array(DataType::Null, 6);
+                let expected = $ARR_TYPE::from(vec![None; 6]);
+                let cast_type = DataType::$DATATYPE;
+                let result =
+                    cast(array.as_ref(), &cast_type, CastOptions::default()).expect("cast failed");
+                let result = result.as_any().downcast_ref::<$ARR_TYPE>().unwrap();
+                assert_eq!(result.data_type(), &cast_type);
+                assert_eq!(result, &expected);
+            }
+            {
+                let array = $ARR_TYPE::from(vec![None; 4]);
+                let expected = NullArray::new_null(DataType::Null, 4);
+                let result =
+                    cast(&array, &DataType::Null, CastOptions::default()).expect("cast failed");
+                let result = result.as_any().downcast_ref::<NullArray>().unwrap();
+                assert_eq!(result.data_type(), &DataType::Null);
+                assert_eq!(result, &expected);
+            }
+        }};
+    }
+
+    typed_test!(Int16Array, Int16);
+    typed_test!(Int32Array, Int32);
+    typed_test!(Int64Array, Int64);
+
+    typed_test!(UInt16Array, UInt16);
+    typed_test!(UInt32Array, UInt32);
+    typed_test!(UInt64Array, UInt64);
+
+    typed_test!(Float32Array, Float32);
+    typed_test!(Float64Array, Float64);
+}
+
 /*
 #[test]
 fn dict_to_dict_bad_index_value_primitive() {

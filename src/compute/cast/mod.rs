@@ -78,6 +78,44 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
     }
 
     match (from_type, to_type) {
+        (
+            Null,
+            Boolean
+            | Int8
+            | UInt8
+            | Int16
+            | UInt16
+            | Int32
+            | UInt32
+            | Float32
+            | Date32
+            | Time32(_)
+            | Int64
+            | UInt64
+            | Float64
+            | Date64
+            | List(_)
+            | Dictionary(_, _),
+        )
+        | (
+            Boolean
+            | Int8
+            | UInt8
+            | Int16
+            | UInt16
+            | Int32
+            | UInt32
+            | Float32
+            | Date32
+            | Time32(_)
+            | Int64
+            | UInt64
+            | Float64
+            | Date64
+            | List(_)
+            | Dictionary(_, _),
+            Null,
+        ) => true,
         (Struct(_), _) => false,
         (_, Struct(_)) => false,
         (List(list_from), List(list_to)) => {
@@ -254,7 +292,6 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (Timestamp(_, _), Date64) => true,
         (Int64, Duration(_)) => true,
         (Duration(_), Int64) => true,
-        (Null, Int32) => true,
         (_, _) => false,
     }
 }
@@ -337,7 +374,44 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
 
     let as_options = options.with_wrapped(true);
     match (from_type, to_type) {
-        (Null, Int32) => Ok(new_null_array(to_type.clone(), array.len())),
+        (
+            Null,
+            Boolean
+            | Int8
+            | UInt8
+            | Int16
+            | UInt16
+            | Int32
+            | UInt32
+            | Float32
+            | Date32
+            | Time32(_)
+            | Int64
+            | UInt64
+            | Float64
+            | Date64
+            | List(_)
+            | Dictionary(_, _),
+        )
+        | (
+            Boolean
+            | Int8
+            | UInt8
+            | Int16
+            | UInt16
+            | Int32
+            | UInt32
+            | Float32
+            | Date32
+            | Time32(_)
+            | Int64
+            | UInt64
+            | Float64
+            | Date64
+            | List(_)
+            | Dictionary(_, _),
+            Null,
+        ) => Ok(new_null_array(to_type.clone(), array.len())),
         (Struct(_), _) => Err(ArrowError::NotYetImplemented(
             "Cannot cast from struct to other types".to_string(),
         )),
@@ -790,8 +864,6 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
         (Int64, Duration(_)) => primitive_to_same_primitive_dyn::<i64>(array, to_type),
         (Duration(_), Int64) => primitive_to_same_primitive_dyn::<i64>(array, to_type),
 
-        // null to primitive/flat types
-        //(Null, Int32) => Ok(Box::new(Int32Array::from(vec![None; array.len()]))),
         (_, _) => Err(ArrowError::NotYetImplemented(format!(
             "Casting from {:?} to {:?} not supported",
             from_type, to_type,
