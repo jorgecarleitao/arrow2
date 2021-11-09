@@ -1,5 +1,68 @@
-use arrow2::array::{BinaryArray, MutableBinaryArray};
+use std::ops::Deref;
+
+use arrow2::array::{BinaryArray, MutableArray, MutableBinaryArray};
 use arrow2::bitmap::Bitmap;
+use arrow2::error::ArrowError;
+
+#[test]
+fn new() {
+    assert_eq!(MutableBinaryArray::<i32>::new().len(), 0);
+
+    let a = MutableBinaryArray::<i32>::with_capacity(2);
+    assert_eq!(a.len(), 0);
+    assert!(a.offsets().capacity() >= 3);
+    assert_eq!(a.values().capacity(), 0);
+
+    let a = MutableBinaryArray::<i32>::with_capacities(2, 60);
+    assert_eq!(a.len(), 0);
+    assert!(a.offsets().capacity() >= 3);
+    assert!(a.values().capacity() >= 60);
+}
+
+#[test]
+fn from_iter() {
+    let iter = (0..3u8).map(|x| Some(vec![x; x as usize]));
+    let a: MutableBinaryArray<i32> = iter.clone().collect();
+    assert_eq!(a.values().deref(), &[1u8, 2, 2]);
+    assert_eq!(a.offsets().deref(), &[0, 0, 1, 3]);
+    assert_eq!(a.validity(), None);
+
+    let a = unsafe { MutableBinaryArray::<i32>::from_trusted_len_iter_unchecked(iter) };
+    assert_eq!(a.values().deref(), &[1u8, 2, 2]);
+    assert_eq!(a.offsets().deref(), &[0, 0, 1, 3]);
+    assert_eq!(a.validity(), None);
+}
+
+#[test]
+fn from_trusted_len_iter() {
+    let iter = (0..3u8).map(|x| vec![x; x as usize]);
+    let a: MutableBinaryArray<i32> = iter.clone().map(Some).collect();
+    assert_eq!(a.values().deref(), &[1u8, 2, 2]);
+    assert_eq!(a.offsets().deref(), &[0, 0, 1, 3]);
+    assert_eq!(a.validity(), None);
+
+    let a = unsafe {
+        MutableBinaryArray::<i32>::from_trusted_len_iter_unchecked(iter.clone().map(Some))
+    };
+    assert_eq!(a.values().deref(), &[1u8, 2, 2]);
+    assert_eq!(a.offsets().deref(), &[0, 0, 1, 3]);
+    assert_eq!(a.validity(), None);
+
+    let a = unsafe {
+        MutableBinaryArray::<i32>::try_from_trusted_len_iter_unchecked::<ArrowError, _, _>(
+            iter.clone().map(Some).map(Ok),
+        )
+    }
+    .unwrap();
+    assert_eq!(a.values().deref(), &[1u8, 2, 2]);
+    assert_eq!(a.offsets().deref(), &[0, 0, 1, 3]);
+    assert_eq!(a.validity(), None);
+
+    let a = unsafe { MutableBinaryArray::<i32>::from_trusted_len_values_iter_unchecked(iter) };
+    assert_eq!(a.values().deref(), &[1u8, 2, 2]);
+    assert_eq!(a.offsets().deref(), &[0, 0, 1, 3]);
+    assert_eq!(a.validity(), None);
+}
 
 #[test]
 fn push_null() {
