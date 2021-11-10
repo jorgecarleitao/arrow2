@@ -92,6 +92,19 @@ impl<O: Offset> MutableBinaryArray<O> {
         }
     }
 
+    /// Initializes a new [`MutableBinaryArray`] with a pre-allocated capacity of slots and values.
+    pub fn with_capacities(capacity: usize, values: usize) -> Self {
+        let mut offsets = MutableBuffer::<O>::with_capacity(capacity + 1);
+        offsets.push(O::default());
+
+        Self {
+            data_type: Self::default_data_type(),
+            offsets,
+            values: MutableBuffer::<u8>::with_capacity(values),
+            validity: None,
+        }
+    }
+
     /// Reserves `additional` slots.
     pub fn reserve(&mut self, additional: usize) {
         self.offsets.reserve(additional);
@@ -142,6 +155,18 @@ impl<O: Offset> MutableBinaryArray<O> {
         if let Some(validity) = &mut self.validity {
             validity.shrink_to_fit()
         }
+    }
+}
+
+impl<O: Offset> MutableBinaryArray<O> {
+    /// returns its values.
+    pub fn values(&self) -> &MutableBuffer<u8> {
+        &self.values
+    }
+
+    /// returns its offsets.
+    pub fn offsets(&self) -> &MutableBuffer<O> {
+        &self.offsets
     }
 }
 
@@ -228,13 +253,24 @@ impl<O: Offset> MutableBinaryArray<O> {
     }
 
     /// Creates a new [`BinaryArray`] from a [`TrustedLen`] of `&[u8]`.
+    /// # Safety
+    /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
+    /// I.e. that `size_hint().1` correctly reports its length.
+    #[inline]
+    pub unsafe fn from_trusted_len_values_iter_unchecked<T: AsRef<[u8]>, I: Iterator<Item = T>>(
+        iterator: I,
+    ) -> Self {
+        let (offsets, values) = unsafe { trusted_len_values_iter(iterator) };
+        Self::from_data(Self::default_data_type(), offsets, values, None)
+    }
+
+    /// Creates a new [`BinaryArray`] from a [`TrustedLen`] of `&[u8]`.
     #[inline]
     pub fn from_trusted_len_values_iter<T: AsRef<[u8]>, I: TrustedLen<Item = T>>(
         iterator: I,
     ) -> Self {
         // soundness: I is `TrustedLen`
-        let (offsets, values) = unsafe { trusted_len_values_iter(iterator) };
-        Self::from_data(Self::default_data_type(), offsets, values, None)
+        unsafe { Self::from_trusted_len_values_iter_unchecked(iterator) }
     }
 
     /// Creates a [`MutableBinaryArray`] from an falible iterator of trusted length.
@@ -252,7 +288,11 @@ impl<O: Offset> MutableBinaryArray<O> {
         let iterator = iterator.into_iter();
 
         // soundness: assumed trusted len
-        let (validity, offsets, values) = try_trusted_len_unzip(iterator)?;
+        let (mut validity, offsets, values) = try_trusted_len_unzip(iterator)?;
+
+        if validity.as_mut().unwrap().null_count() == 0 {
+            validity = None;
+        }
 
         Ok(Self::from_data(
             Self::default_data_type(),
