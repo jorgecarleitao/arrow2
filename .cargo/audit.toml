@@ -10,4 +10,8 @@ ignore = [
     # Therefore, this advisory does not affect us.
     "RUSTSEC-2020-0071",
     "RUSTSEC-2020-0159", # same as previous
+
+    # this cannot be addressed, only mitigated.
+    # See [.github/workflows/security.yml] for details on how we mitigate this.
+    "RUSTSEC-2021-0122",
 ]

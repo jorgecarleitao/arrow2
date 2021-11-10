@@ -14,7 +14,7 @@ fn round_trip(batch: RecordBatch) -> Result<()> {
     // write IPC version 5
     let written_result = {
         let options = WriteOptions {
-            compression: Some(Compression::ZSTD),
+            compression: Some(Compression::LZ4),
         };
         let mut writer = FileWriter::try_new(result, batch.schema(), options)?;
         writer.write(&batch)?;
@@ -85,7 +85,12 @@ fn test_file(version: &str, file_name: &str, compressed: bool) -> Result<()> {
 #[test]
 fn write_100_primitive() -> Result<()> {
     test_file("1.0.0-littleendian", "generated_primitive", false)?;
-    test_file("1.0.0-bigendian", "generated_primitive", false)?;
+    test_file("1.0.0-bigendian", "generated_primitive", false)
+}
+
+#[test]
+#[cfg_attr(miri, ignore)] // compression uses FFI, which miri does not support
+fn write_100_compressed_primitive() -> Result<()> {
     test_file("1.0.0-littleendian", "generated_primitive", true)?;
     test_file("1.0.0-bigendian", "generated_primitive", true)
 }
@@ -93,7 +98,12 @@ fn write_100_primitive() -> Result<()> {
 #[test]
 fn write_100_datetime() -> Result<()> {
     test_file("1.0.0-littleendian", "generated_datetime", false)?;
-    test_file("1.0.0-bigendian", "generated_datetime", false)?;
+    test_file("1.0.0-bigendian", "generated_datetime", false)
+}
+
+#[test]
+#[cfg_attr(miri, ignore)] // compression uses FFI, which miri does not support
+fn write_100_compressed_datetime() -> Result<()> {
     test_file("1.0.0-littleendian", "generated_datetime", true)?;
     test_file("1.0.0-bigendian", "generated_datetime", true)
 }
@@ -101,7 +111,12 @@ fn write_100_datetime() -> Result<()> {
 #[test]
 fn write_100_dictionary_unsigned() -> Result<()> {
     test_file("1.0.0-littleendian", "generated_dictionary_unsigned", false)?;
-    test_file("1.0.0-bigendian", "generated_dictionary_unsigned", false)?;
+    test_file("1.0.0-bigendian", "generated_dictionary_unsigned", false)
+}
+
+#[test]
+#[cfg_attr(miri, ignore)] // compression uses FFI, which miri does not support
+fn write_100_compressed_dictionary_unsigned() -> Result<()> {
     test_file("1.0.0-littleendian", "generated_dictionary_unsigned", true)?;
     test_file("1.0.0-bigendian", "generated_dictionary_unsigned", true)
 }
@@ -109,7 +124,12 @@ fn write_100_dictionary_unsigned() -> Result<()> {
 #[test]
 fn write_100_dictionary() -> Result<()> {
     test_file("1.0.0-littleendian", "generated_dictionary", false)?;
-    test_file("1.0.0-bigendian", "generated_dictionary", false)?;
+    test_file("1.0.0-bigendian", "generated_dictionary", false)
+}
+
+#[test]
+#[cfg_attr(miri, ignore)] // compression uses FFI, which miri does not support
+fn write_100_compressed_dictionary() -> Result<()> {
     test_file("1.0.0-littleendian", "generated_dictionary", true)?;
     test_file("1.0.0-bigendian", "generated_dictionary", true)
 }
@@ -117,7 +137,12 @@ fn write_100_dictionary() -> Result<()> {
 #[test]
 fn write_100_interval() -> Result<()> {
     test_file("1.0.0-littleendian", "generated_interval", false)?;
-    test_file("1.0.0-bigendian", "generated_interval", false)?;
+    test_file("1.0.0-bigendian", "generated_interval", false)
+}
+
+#[test]
+#[cfg_attr(miri, ignore)] // compression uses FFI, which miri does not support
+fn write_100_compressed_interval() -> Result<()> {
     test_file("1.0.0-littleendian", "generated_interval", true)?;
     test_file("1.0.0-bigendian", "generated_interval", true)
 }
@@ -132,7 +157,12 @@ fn write_100_large_batch() -> Result<()> {
 #[test]
 fn write_100_nested() -> Result<()> {
     test_file("1.0.0-littleendian", "generated_nested", false)?;
-    test_file("1.0.0-bigendian", "generated_nested", false)?;
+    test_file("1.0.0-bigendian", "generated_nested", false)
+}
+
+#[test]
+#[cfg_attr(miri, ignore)] // compression uses FFI, which miri does not support
+fn write_100_compressed_nested() -> Result<()> {
     test_file("1.0.0-littleendian", "generated_nested", true)?;
     test_file("1.0.0-bigendian", "generated_nested", true)
 }
@@ -144,7 +174,12 @@ fn write_100_nested_large_offsets() -> Result<()> {
         "generated_nested_large_offsets",
         false,
     )?;
-    test_file("1.0.0-bigendian", "generated_nested_large_offsets", false)?;
+    test_file("1.0.0-bigendian", "generated_nested_large_offsets", false)
+}
+
+#[test]
+#[cfg_attr(miri, ignore)] // compression uses FFI, which miri does not support
+fn write_100_compressed_nested_large_offsets() -> Result<()> {
     test_file("1.0.0-littleendian", "generated_nested_large_offsets", true)?;
     test_file("1.0.0-bigendian", "generated_nested_large_offsets", true)
 }
@@ -152,7 +187,12 @@ fn write_100_nested_large_offsets() -> Result<()> {
 #[test]
 fn write_100_null_trivial() -> Result<()> {
     test_file("1.0.0-littleendian", "generated_null_trivial", false)?;
-    test_file("1.0.0-bigendian", "generated_null_trivial", false)?;
+    test_file("1.0.0-bigendian", "generated_null_trivial", false)
+}
+
+#[test]
+#[cfg_attr(miri, ignore)] // compression uses FFI, which miri does not support
+fn write_100_compressed_null_trivial() -> Result<()> {
     test_file("1.0.0-littleendian", "generated_null_trivial", true)?;
     test_file("1.0.0-bigendian", "generated_null_trivial", true)
 }
@@ -160,7 +200,12 @@ fn write_100_null_trivial() -> Result<()> {
 #[test]
 fn write_100_null() -> Result<()> {
     test_file("1.0.0-littleendian", "generated_null", false)?;
-    test_file("1.0.0-bigendian", "generated_null", false)?;
+    test_file("1.0.0-bigendian", "generated_null", false)
+}
+
+#[test]
+#[cfg_attr(miri, ignore)] // compression uses FFI, which miri does not support
+fn write_100_compressed_null() -> Result<()> {
     test_file("1.0.0-littleendian", "generated_null", true)?;
     test_file("1.0.0-bigendian", "generated_null", true)
 }
@@ -176,7 +221,12 @@ fn write_100_primitive_large_offsets() -> Result<()> {
         "1.0.0-bigendian",
         "generated_primitive_large_offsets",
         false,
-    )?;
+    )
+}
+
+#[test]
+#[cfg_attr(miri, ignore)] // compression uses FFI, which miri does not support
+fn write_100_compressed_primitive_large_offsets() -> Result<()> {
     test_file(
         "1.0.0-littleendian",
         "generated_primitive_large_offsets",
@@ -192,7 +242,12 @@ fn write_100_primitive_no_batches() -> Result<()> {
         "generated_primitive_no_batches",
         false,
     )?;
-    test_file("1.0.0-bigendian", "generated_primitive_no_batches", false)?;
+    test_file("1.0.0-bigendian", "generated_primitive_no_batches", false)
+}
+
+#[test]
+#[cfg_attr(miri, ignore)] // compression uses FFI, which miri does not support
+fn write_100_compressed_primitive_no_batches() -> Result<()> {
     test_file("1.0.0-littleendian", "generated_primitive_no_batches", true)?;
     test_file("1.0.0-bigendian", "generated_primitive_no_batches", true)
 }
@@ -204,7 +259,12 @@ fn write_100_primitive_zerolength() -> Result<()> {
         "generated_primitive_zerolength",
         false,
     )?;
-    test_file("1.0.0-bigendian", "generated_primitive_zerolength", false)?;
+    test_file("1.0.0-bigendian", "generated_primitive_zerolength", false)
+}
+
+#[test]
+#[cfg_attr(miri, ignore)] // compression uses FFI, which miri does not support
+fn write_100_compressed_primitive_zerolength() -> Result<()> {
     test_file("1.0.0-littleendian", "generated_primitive_zerolength", true)?;
     test_file("1.0.0-bigendian", "generated_primitive_zerolength", true)
 }
@@ -262,6 +322,7 @@ fn write_generated_017_union() -> Result<()> {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)] // compression uses FFI, which miri does not support
 fn write_boolean() -> Result<()> {
     use std::sync::Arc;
     let array = Arc::new(BooleanArray::from([
@@ -275,6 +336,7 @@ fn write_boolean() -> Result<()> {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)] // compression uses FFI, which miri does not support
 fn write_sliced_utf8() -> Result<()> {
     use std::sync::Arc;
     let array = Arc::new(Utf8Array::<i32>::from_slice(["aa", "bb"]).slice(1, 1)) as Arc<dyn Array>;
@@ -283,6 +345,7 @@ fn write_sliced_utf8() -> Result<()> {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)] // compression uses FFI, which miri does not support
 fn write_sliced_list() -> Result<()> {
     let data = vec![
         Some(vec![Some(1i32), Some(2), Some(3)]),
