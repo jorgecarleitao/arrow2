@@ -8,3 +8,27 @@ jobs:
       - uses: actions-rs/audit-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+
+  # mitigation for RUSTSEC-2021-0122
+  # flatbuffers' usage of `unsafe` is problematic and a risk.
+  # This performs a round-trip over IPC (that uses flatbuffers) for some arrow types
+  # using miri, which hits much of `flatbuffers` usage in this crate.
+  miri-checks:
+    name: RUSTSEC-2021-0122 mitigation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true # needed to test IPC, which are located in a submodule
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly-2021-10-24
+          override: true
+      - uses: Swatinem/rust-cache@v1
+      - name: Install Miri
+        run: |
+          rustup component add miri
+          cargo miri setup
+
+      - name: Run
+        run: MIRIFLAGS="-Zmiri-disable-stacked-borrows -Zmiri-disable-isolation" cargo miri test --tests --features io_ipc,io_ipc_compression,io_json_integration io::ipc::write::file::write_100_nested
