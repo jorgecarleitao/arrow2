@@ -178,5 +178,5 @@ fn test_projection(version: &str, file_name: &str, column: usize) -> Result<()> 
 fn read_projected() -> Result<()> {
     test_projection("1.0.0-littleendian", "generated_primitive", 1)?;
     test_projection("1.0.0-littleendian", "generated_dictionary", 2)?;
-    test_projection("1.0.0-littleendian", "generated_nested", 1)
+    test_projection("1.0.0-littleendian", "generated_nested", 0)
 }
