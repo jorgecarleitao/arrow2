@@ -236,7 +236,7 @@ impl<R: Read + Seek> FileReader<R> {
     /// Panics iff the projection is not in increasing order (e.g. `[1, 0]` nor `[0, 1, 1]` are valid)
     pub fn new(reader: R, metadata: FileMetadata, projection: Option<Vec<usize>>) -> Self {
         if let Some(projection) = projection.as_ref() {
-            let _ = projection.windows(2).for_each(|x| {
+            projection.windows(2).for_each(|x| {
                 assert!(
                     x[0] < x[1],
                     "The projection on IPC must be ordered and non-overlapping"
