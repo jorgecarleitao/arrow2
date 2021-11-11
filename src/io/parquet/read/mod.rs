@@ -27,7 +27,7 @@ pub use parquet2::{
 };
 
 use crate::{
-    array::{Array, DictionaryKey, PrimitiveArray},
+    array::{Array, DictionaryKey, NullArray, PrimitiveArray},
     datatypes::{DataType, IntervalUnit, TimeUnit},
     error::{ArrowError, Result},
     io::parquet::read::nested_utils::create_list,
@@ -234,6 +234,10 @@ pub fn page_iter_to_array<I: FallibleStreamingIterator<Item = DataPage, Error = 
 ) -> Result<Box<dyn Array>> {
     use DataType::*;
     match data_type.to_logical_type() {
+        Null => Ok(Box::new(NullArray::from_data(
+            data_type,
+            metadata.num_values() as usize,
+        ))),
         // INT32
         UInt8 => primitive::iter_to_array(iter, metadata, data_type, |x: i32| x as u8),
         UInt16 => primitive::iter_to_array(iter, metadata, data_type, |x: i32| x as u16),
@@ -346,6 +350,10 @@ pub async fn page_stream_to_array<I: Stream<Item = std::result::Result<DataPage,
 ) -> Result<Box<dyn Array>> {
     use DataType::*;
     match data_type.to_logical_type() {
+        Null => Ok(Box::new(NullArray::from_data(
+            data_type,
+            metadata.num_values() as usize,
+        ))),
         // INT32
         UInt8 => primitive::stream_to_array(pages, metadata, data_type, |x: i32| x as u8).await,
         UInt16 => primitive::stream_to_array(pages, metadata, data_type, |x: i32| x as u16).await,
