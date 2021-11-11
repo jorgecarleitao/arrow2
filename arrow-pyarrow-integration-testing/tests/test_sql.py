@@ -39,6 +39,17 @@ class TestCase(unittest.TestCase):
         # No leak of C++ memory
         self.assertEqual(self.old_allocated_cpp, pyarrow.total_allocated_bytes())
 
+    # see https://issues.apache.org/jira/browse/ARROW-14680
+    def _test_null(self):
+        """
+        Python -> Rust -> Python
+        """
+        a = pyarrow.array([None], type=pyarrow.null())
+        b = arrow_pyarrow_integration_testing.round_trip_array(a)
+        b.validate(full=True)
+        assert a.to_pylist() == b.to_pylist()
+        assert a.type == b.type
+
     def test_primitive(self):
         a = pyarrow.array([0, None, 2, 3, 4])
         b = arrow_pyarrow_integration_testing.round_trip_array(a)
