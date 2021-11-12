@@ -148,6 +148,11 @@ impl StructArray {
 
 // Accessors
 impl StructArray {
+    #[inline]
+    fn len(&self) -> usize {
+        self.values[0].len()
+    }
+
     /// The optional validity.
     #[inline]
     pub fn validity(&self) -> Option<&Bitmap> {
@@ -184,7 +189,7 @@ impl Array for StructArray {
 
     #[inline]
     fn len(&self) -> usize {
-        self.values[0].len()
+        self.len()
     }
 
     #[inline]

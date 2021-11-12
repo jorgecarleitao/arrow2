@@ -120,6 +120,14 @@ impl<T: NativeType> PrimitiveArray<T> {
         arr.validity = validity;
         arr
     }
+}
+
+impl<T: NativeType> PrimitiveArray<T> {
+    /// Returns the length of this array
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.values.len()
+    }
 
     /// The optional validity.
     #[inline]

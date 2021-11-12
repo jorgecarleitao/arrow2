@@ -176,6 +176,12 @@ impl<O: Offset> Utf8Array<O> {
 
 // Accessors
 impl<O: Offset> Utf8Array<O> {
+    /// Returns the length of this array
+    #[inline]
+    fn len(&self) -> usize {
+        self.offsets.len() - 1
+    }
+
     /// Returns the element at index `i` as &str
     /// # Safety
     /// This function is safe iff `i < self.len`.
@@ -230,7 +236,7 @@ impl<O: Offset> Array for Utf8Array<O> {
 
     #[inline]
     fn len(&self) -> usize {
-        self.offsets.len() - 1
+        self.len()
     }
 
     #[inline]

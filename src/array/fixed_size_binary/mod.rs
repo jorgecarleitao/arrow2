@@ -85,6 +85,27 @@ impl FixedSizeBinaryArray {
         }
     }
 
+    /// Sets the validity bitmap on this [`FixedSizeBinaryArray`].
+    /// # Panic
+    /// This function panics iff `validity.len() != self.len()`.
+    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
+        if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
+            panic!("validity should be as least as large as the array")
+        }
+        let mut arr = self.clone();
+        arr.validity = validity;
+        arr
+    }
+}
+
+// accessors
+impl FixedSizeBinaryArray {
+    /// Returns the length of this array
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.values.len() / self.size as usize
+    }
+
     /// The optional validity.
     #[inline]
     pub fn validity(&self) -> Option<&Bitmap> {
@@ -118,18 +139,6 @@ impl FixedSizeBinaryArray {
     pub fn size(&self) -> usize {
         self.size
     }
-
-    /// Sets the validity bitmap on this [`FixedSizeBinaryArray`].
-    /// # Panic
-    /// This function panics iff `validity.len() != self.len()`.
-    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
-        if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
-            panic!("validity should be as least as large as the array")
-        }
-        let mut arr = self.clone();
-        arr.validity = validity;
-        arr
-    }
 }
 
 impl FixedSizeBinaryArray {
@@ -149,7 +158,7 @@ impl Array for FixedSizeBinaryArray {
 
     #[inline]
     fn len(&self) -> usize {
-        self.values.len() / self.size as usize
+        self.len()
     }
 
     #[inline]

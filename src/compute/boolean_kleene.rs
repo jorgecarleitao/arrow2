@@ -2,7 +2,7 @@
 use crate::datatypes::DataType;
 use crate::error::{ArrowError, Result};
 use crate::{
-    array::{Array, BooleanArray},
+    array::BooleanArray,
     bitmap::{quaternary, ternary},
 };
 

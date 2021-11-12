@@ -3,7 +3,7 @@
 use super::utils::combine_validities;
 use crate::compute::arithmetics::basic::check_same_len;
 use crate::{
-    array::{Array, PrimitiveArray},
+    array::PrimitiveArray,
     bitmap::{Bitmap, MutableBitmap},
     buffer::Buffer,
     datatypes::DataType,

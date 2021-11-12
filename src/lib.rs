@@ -1,6 +1,8 @@
 #![doc = include_str!("doc/lib.md")]
 // So that we have more control over what is `unsafe` inside an `unsafe` block
 #![allow(unused_unsafe)]
+//
+#![allow(clippy::len_without_is_empty)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[macro_use]
