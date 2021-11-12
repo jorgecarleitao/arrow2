@@ -1,6 +1,10 @@
 use crate::{bitmap::Bitmap, datatypes::DataType};
 
-use super::{ffi::ToFfi, Array};
+use crate::{
+    array::{Array, FromFfi, ToFfi},
+    error::Result,
+    ffi,
+};
 
 /// The concrete [`Array`] of [`DataType::Null`].
 #[derive(Debug, Clone)]
@@ -87,5 +91,12 @@ unsafe impl ToFfi for NullArray {
 
     fn to_ffi_aligned(&self) -> Self {
         self.clone()
+    }
+}
+
+impl<A: ffi::ArrowArrayRef> FromFfi<A> for NullArray {
+    unsafe fn try_from_ffi(array: A) -> Result<Self> {
+        let data_type = array.field().data_type().clone();
+        Ok(Self::from_data(data_type, array.array().len()))
     }
 }

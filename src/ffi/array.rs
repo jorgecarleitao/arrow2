@@ -2,17 +2,17 @@
 
 use super::ffi::ArrowArrayRef;
 use crate::array::{BooleanArray, FromFfi};
-use crate::error::{ArrowError, Result};
+use crate::error::Result;
 use crate::{array::*, datatypes::PhysicalType};
 
 /// Reads a valid `ffi` interface into a `Box<dyn Array>`
 /// # Errors
 /// If and only if:
-/// * the data type is not supported
 /// * the interface is not valid (e.g. a null pointer)
 pub unsafe fn try_from<A: ArrowArrayRef>(array: A) -> Result<Box<dyn Array>> {
     use PhysicalType::*;
     Ok(match array.field().data_type().to_physical_type() {
+        Null => Box::new(NullArray::try_from_ffi(array)?),
         Boolean => Box::new(BooleanArray::try_from_ffi(array)?),
         Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
             Box::new(PrimitiveArray::<$T>::try_from_ffi(array)?)
@@ -33,11 +33,5 @@ pub unsafe fn try_from<A: ArrowArrayRef>(array: A) -> Result<Box<dyn Array>> {
         }
         Union => Box::new(UnionArray::try_from_ffi(array)?),
         Map => Box::new(MapArray::try_from_ffi(array)?),
-        data_type => {
-            return Err(ArrowError::NotYetImplemented(format!(
-                "Importing PhysicalType \"{:?}\" is not yet supported.",
-                data_type
-            )))
-        }
     })
 }
