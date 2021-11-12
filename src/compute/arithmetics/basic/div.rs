@@ -82,9 +82,7 @@ impl<T> ArrayDiv<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + Div<Output = T>,
 {
-    type Output = Self;
-
-    fn div(&self, rhs: &PrimitiveArray<T>) -> Result<Self::Output> {
+    fn div(&self, rhs: &PrimitiveArray<T>) -> Result<Self> {
         div(self, rhs)
     }
 }
@@ -94,9 +92,7 @@ impl<T> ArrayCheckedDiv<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + CheckedDiv<Output = T>,
 {
-    type Output = Self;
-
-    fn checked_div(&self, rhs: &PrimitiveArray<T>) -> Result<Self::Output> {
+    fn checked_div(&self, rhs: &PrimitiveArray<T>) -> Result<Self> {
         checked_div(self, rhs)
     }
 }
@@ -212,9 +208,7 @@ impl<T> ArrayDiv<T> for PrimitiveArray<T>
 where
     T: NativeType + Div<Output = T> + NativeArithmetics + NumCast,
 {
-    type Output = Self;
-
-    fn div(&self, rhs: &T) -> Result<Self::Output> {
+    fn div(&self, rhs: &T) -> Result<Self> {
         Ok(div_scalar(self, rhs))
     }
 }
@@ -224,9 +218,7 @@ impl<T> ArrayCheckedDiv<T> for PrimitiveArray<T>
 where
     T: NativeType + CheckedDiv<Output = T> + Zero + NativeArithmetics,
 {
-    type Output = Self;
-
-    fn checked_div(&self, rhs: &T) -> Result<Self::Output> {
+    fn checked_div(&self, rhs: &T) -> Result<Self> {
         Ok(checked_div_scalar(self, rhs))
     }
 }

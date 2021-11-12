@@ -9,14 +9,24 @@ use crate::{
     bitmap::Bitmap,
 };
 
+/// Trait describing a type describing multiple lanes with an order relationship
+/// consistent with the same order of `T`.
 pub trait SimdOrd<T> {
+    /// The minimum value
     const MIN: T;
+    /// The maximum value
     const MAX: T;
+    /// reduce itself to the minimum
     fn max_element(self) -> T;
+    /// reduce itself to the maximum
     fn min_element(self) -> T;
+    /// lane-wise maximum between two instances
     fn max(self, x: Self) -> Self;
+    /// lane-wise minimum between two instances
     fn min(self, x: Self) -> Self;
+    /// returns a new instance with all lanes equal to `MIN`
     fn new_min() -> Self;
+    /// returns a new instance with all lanes equal to `MAX`
     fn new_max() -> Self;
 }
 
@@ -350,6 +360,9 @@ macro_rules! dyn_generic {
     }};
 }
 
+/// Returns the maximum of [`Array`]. The scalar is null when all elements are null.
+/// # Error
+/// Errors iff the type does not support this operation.
 pub fn max(array: &dyn Array) -> Result<Box<dyn Scalar>> {
     Ok(match array.data_type() {
         DataType::Boolean => dyn_generic!(BooleanArray, BooleanScalar, array, max_boolean),
@@ -388,6 +401,9 @@ pub fn max(array: &dyn Array) -> Result<Box<dyn Scalar>> {
     })
 }
 
+/// Returns the minimum of [`Array`]. The scalar is null when all elements are null.
+/// # Error
+/// Errors iff the type does not support this operation.
 pub fn min(array: &dyn Array) -> Result<Box<dyn Scalar>> {
     Ok(match array.data_type() {
         DataType::Boolean => dyn_generic!(BooleanArray, BooleanScalar, array, min_boolean),

@@ -160,9 +160,7 @@ impl<T> ArrayAdd<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + Add<Output = T>,
 {
-    type Output = Self;
-
-    fn add(&self, rhs: &PrimitiveArray<T>) -> Result<Self::Output> {
+    fn add(&self, rhs: &PrimitiveArray<T>) -> Result<Self> {
         add(self, rhs)
     }
 }
@@ -171,9 +169,7 @@ impl<T> ArrayWrappingAdd<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + WrappingAdd<Output = T>,
 {
-    type Output = Self;
-
-    fn wrapping_add(&self, rhs: &PrimitiveArray<T>) -> Result<Self::Output> {
+    fn wrapping_add(&self, rhs: &PrimitiveArray<T>) -> Result<Self> {
         wrapping_add(self, rhs)
     }
 }
@@ -183,9 +179,7 @@ impl<T> ArrayCheckedAdd<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + CheckedAdd<Output = T>,
 {
-    type Output = Self;
-
-    fn checked_add(&self, rhs: &PrimitiveArray<T>) -> Result<Self::Output> {
+    fn checked_add(&self, rhs: &PrimitiveArray<T>) -> Result<Self> {
         checked_add(self, rhs)
     }
 }
@@ -195,9 +189,7 @@ impl<T> ArraySaturatingAdd<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + SaturatingAdd<Output = T>,
 {
-    type Output = Self;
-
-    fn saturating_add(&self, rhs: &PrimitiveArray<T>) -> Result<Self::Output> {
+    fn saturating_add(&self, rhs: &PrimitiveArray<T>) -> Result<Self> {
         saturating_add(self, rhs)
     }
 }
@@ -207,9 +199,7 @@ impl<T> ArrayOverflowingAdd<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + OverflowingAdd<Output = T>,
 {
-    type Output = Self;
-
-    fn overflowing_add(&self, rhs: &PrimitiveArray<T>) -> Result<(Self::Output, Bitmap)> {
+    fn overflowing_add(&self, rhs: &PrimitiveArray<T>) -> Result<(Self, Bitmap)> {
         overflowing_add(self, rhs)
     }
 }
@@ -333,9 +323,7 @@ impl<T> ArrayAdd<T> for PrimitiveArray<T>
 where
     T: NativeArithmetics + Add<Output = T>,
 {
-    type Output = Self;
-
-    fn add(&self, rhs: &T) -> Result<Self::Output> {
+    fn add(&self, rhs: &T) -> Result<Self> {
         Ok(add_scalar(self, rhs))
     }
 }
@@ -345,9 +333,7 @@ impl<T> ArrayCheckedAdd<T> for PrimitiveArray<T>
 where
     T: NativeArithmetics + CheckedAdd<Output = T> + Zero,
 {
-    type Output = Self;
-
-    fn checked_add(&self, rhs: &T) -> Result<Self::Output> {
+    fn checked_add(&self, rhs: &T) -> Result<Self> {
         Ok(checked_add_scalar(self, rhs))
     }
 }
@@ -357,9 +343,7 @@ impl<T> ArraySaturatingAdd<T> for PrimitiveArray<T>
 where
     T: NativeArithmetics + SaturatingAdd<Output = T>,
 {
-    type Output = Self;
-
-    fn saturating_add(&self, rhs: &T) -> Result<Self::Output> {
+    fn saturating_add(&self, rhs: &T) -> Result<Self> {
         Ok(saturating_add_scalar(self, rhs))
     }
 }
@@ -369,9 +353,7 @@ impl<T> ArrayOverflowingAdd<T> for PrimitiveArray<T>
 where
     T: NativeArithmetics + OverflowingAdd<Output = T>,
 {
-    type Output = Self;
-
-    fn overflowing_add(&self, rhs: &T) -> Result<(Self::Output, Bitmap)> {
+    fn overflowing_add(&self, rhs: &T) -> Result<(Self, Bitmap)> {
         Ok(overflowing_add_scalar(self, rhs))
     }
 }

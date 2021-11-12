@@ -224,12 +224,18 @@ pub fn can_arithmetic(lhs: &DataType, op: Operator, rhs: &DataType) -> bool {
     )
 }
 
+/// Arithmetic operator
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Operator {
+    /// Add
     Add,
+    /// Subtract
     Subtract,
+    /// Multiply
     Multiply,
+    /// Divide
     Divide,
+    /// Remainder
     Remainder,
 }
 
@@ -342,136 +348,117 @@ where
 }
 
 /// Defines basic addition operation for primitive arrays
-pub trait ArrayAdd<Rhs> {
-    type Output;
-
-    fn add(&self, rhs: &Rhs) -> Result<Self::Output>;
+pub trait ArrayAdd<Rhs>: Sized {
+    /// Adds itself to `rhs`
+    fn add(&self, rhs: &Rhs) -> Result<Self>;
 }
 
 /// Defines wrapping addition operation for primitive arrays
-pub trait ArrayWrappingAdd<Rhs> {
-    type Output;
-
-    fn wrapping_add(&self, rhs: &Rhs) -> Result<Self::Output>;
+pub trait ArrayWrappingAdd<Rhs>: Sized {
+    /// Adds itself to `rhs` using wrapping addition
+    fn wrapping_add(&self, rhs: &Rhs) -> Result<Self>;
 }
 
 /// Defines checked addition operation for primitive arrays
-pub trait ArrayCheckedAdd<Rhs> {
-    type Output;
-
-    fn checked_add(&self, rhs: &Rhs) -> Result<Self::Output>;
+pub trait ArrayCheckedAdd<Rhs>: Sized {
+    /// Checked add
+    fn checked_add(&self, rhs: &Rhs) -> Result<Self>;
 }
 
 /// Defines saturating addition operation for primitive arrays
-pub trait ArraySaturatingAdd<Rhs> {
-    type Output;
-
-    fn saturating_add(&self, rhs: &Rhs) -> Result<Self::Output>;
+pub trait ArraySaturatingAdd<Rhs>: Sized {
+    /// Saturating add
+    fn saturating_add(&self, rhs: &Rhs) -> Result<Self>;
 }
 
 /// Defines Overflowing addition operation for primitive arrays
-pub trait ArrayOverflowingAdd<Rhs> {
-    type Output;
-
-    fn overflowing_add(&self, rhs: &Rhs) -> Result<(Self::Output, Bitmap)>;
+pub trait ArrayOverflowingAdd<Rhs>: Sized {
+    /// Overflowing add
+    fn overflowing_add(&self, rhs: &Rhs) -> Result<(Self, Bitmap)>;
 }
 
 /// Defines basic subtraction operation for primitive arrays
-pub trait ArraySub<Rhs> {
-    type Output;
-
-    fn sub(&self, rhs: &Rhs) -> Result<Self::Output>;
+pub trait ArraySub<Rhs>: Sized {
+    /// subtraction
+    fn sub(&self, rhs: &Rhs) -> Result<Self>;
 }
 
 /// Defines wrapping subtraction operation for primitive arrays
-pub trait ArrayWrappingSub<Rhs> {
-    type Output;
-
-    fn wrapping_sub(&self, rhs: &Rhs) -> Result<Self::Output>;
+pub trait ArrayWrappingSub<Rhs>: Sized {
+    /// wrapping subtraction
+    fn wrapping_sub(&self, rhs: &Rhs) -> Result<Self>;
 }
 
 /// Defines checked subtraction operation for primitive arrays
-pub trait ArrayCheckedSub<Rhs> {
-    type Output;
-
-    fn checked_sub(&self, rhs: &Rhs) -> Result<Self::Output>;
+pub trait ArrayCheckedSub<Rhs>: Sized {
+    /// checked subtraction
+    fn checked_sub(&self, rhs: &Rhs) -> Result<Self>;
 }
 
 /// Defines saturating subtraction operation for primitive arrays
-pub trait ArraySaturatingSub<Rhs> {
-    type Output;
-
-    fn saturating_sub(&self, rhs: &Rhs) -> Result<Self::Output>;
+pub trait ArraySaturatingSub<Rhs>: Sized {
+    /// saturarting subtraction
+    fn saturating_sub(&self, rhs: &Rhs) -> Result<Self>;
 }
 
 /// Defines Overflowing subtraction operation for primitive arrays
-pub trait ArrayOverflowingSub<Rhs> {
-    type Output;
-
-    fn overflowing_sub(&self, rhs: &Rhs) -> Result<(Self::Output, Bitmap)>;
+pub trait ArrayOverflowingSub<Rhs>: Sized {
+    /// overflowing subtraction
+    fn overflowing_sub(&self, rhs: &Rhs) -> Result<(Self, Bitmap)>;
 }
 
 /// Defines basic multiplication operation for primitive arrays
-pub trait ArrayMul<Rhs> {
-    type Output;
-
-    fn mul(&self, rhs: &Rhs) -> Result<Self::Output>;
+pub trait ArrayMul<Rhs>: Sized {
+    /// multiplication
+    fn mul(&self, rhs: &Rhs) -> Result<Self>;
 }
 
 /// Defines wrapping multiplication operation for primitive arrays
-pub trait ArrayWrappingMul<Rhs> {
-    type Output;
-
-    fn wrapping_mul(&self, rhs: &Rhs) -> Result<Self::Output>;
+pub trait ArrayWrappingMul<Rhs>: Sized {
+    /// wrapping multiplication
+    fn wrapping_mul(&self, rhs: &Rhs) -> Result<Self>;
 }
 
 /// Defines checked multiplication operation for primitive arrays
-pub trait ArrayCheckedMul<Rhs> {
-    type Output;
-
-    fn checked_mul(&self, rhs: &Rhs) -> Result<Self::Output>;
+pub trait ArrayCheckedMul<Rhs>: Sized {
+    /// checked multiplication
+    fn checked_mul(&self, rhs: &Rhs) -> Result<Self>;
 }
 
 /// Defines saturating multiplication operation for primitive arrays
-pub trait ArraySaturatingMul<Rhs> {
-    type Output;
-
-    fn saturating_mul(&self, rhs: &Rhs) -> Result<Self::Output>;
+pub trait ArraySaturatingMul<Rhs>: Sized {
+    /// saturating multiplication
+    fn saturating_mul(&self, rhs: &Rhs) -> Result<Self>;
 }
 
 /// Defines Overflowing multiplication operation for primitive arrays
-pub trait ArrayOverflowingMul<Rhs> {
-    type Output;
-
-    fn overflowing_mul(&self, rhs: &Rhs) -> Result<(Self::Output, Bitmap)>;
+pub trait ArrayOverflowingMul<Rhs>: Sized {
+    /// overflowing multiplication
+    fn overflowing_mul(&self, rhs: &Rhs) -> Result<(Self, Bitmap)>;
 }
 
 /// Defines basic division operation for primitive arrays
-pub trait ArrayDiv<Rhs> {
-    type Output;
-
-    fn div(&self, rhs: &Rhs) -> Result<Self::Output>;
+pub trait ArrayDiv<Rhs>: Sized {
+    /// division
+    fn div(&self, rhs: &Rhs) -> Result<Self>;
 }
 
 /// Defines checked division operation for primitive arrays
-pub trait ArrayCheckedDiv<Rhs> {
-    type Output;
-
-    fn checked_div(&self, rhs: &Rhs) -> Result<Self::Output>;
+pub trait ArrayCheckedDiv<Rhs>: Sized {
+    /// checked division
+    fn checked_div(&self, rhs: &Rhs) -> Result<Self>;
 }
 
 /// Defines basic reminder operation for primitive arrays
-pub trait ArrayRem<Rhs> {
-    type Output;
-
-    fn rem(&self, rhs: &Rhs) -> Result<Self::Output>;
+pub trait ArrayRem<Rhs>: Sized {
+    /// remainder
+    fn rem(&self, rhs: &Rhs) -> Result<Self>;
 }
 
 /// Defines checked reminder operation for primitive arrays
-pub trait ArrayCheckedRem<Rhs> {
-    type Output;
-
-    fn checked_rem(&self, rhs: &Rhs) -> Result<Self::Output>;
+pub trait ArrayCheckedRem<Rhs>: Sized {
+    /// checked remainder
+    fn checked_rem(&self, rhs: &Rhs) -> Result<Self>;
 }
 
 /// Trait describing a [`NativeType`] whose semantics of arithmetic in Arrow equals

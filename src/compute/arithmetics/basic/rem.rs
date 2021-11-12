@@ -70,9 +70,7 @@ impl<T> ArrayRem<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + Rem<Output = T>,
 {
-    type Output = Self;
-
-    fn rem(&self, rhs: &PrimitiveArray<T>) -> Result<Self::Output> {
+    fn rem(&self, rhs: &PrimitiveArray<T>) -> Result<Self> {
         rem(self, rhs)
     }
 }
@@ -81,9 +79,7 @@ impl<T> ArrayCheckedRem<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + CheckedRem<Output = T>,
 {
-    type Output = Self;
-
-    fn checked_rem(&self, rhs: &PrimitiveArray<T>) -> Result<Self::Output> {
+    fn checked_rem(&self, rhs: &PrimitiveArray<T>) -> Result<Self> {
         checked_rem(self, rhs)
     }
 }
@@ -199,9 +195,7 @@ impl<T> ArrayRem<T> for PrimitiveArray<T>
 where
     T: NativeArithmetics + Rem<Output = T> + NumCast,
 {
-    type Output = Self;
-
-    fn rem(&self, rhs: &T) -> Result<Self::Output> {
+    fn rem(&self, rhs: &T) -> Result<Self> {
         Ok(rem_scalar(self, rhs))
     }
 }
@@ -210,9 +204,7 @@ impl<T> ArrayCheckedRem<T> for PrimitiveArray<T>
 where
     T: NativeArithmetics + CheckedRem<Output = T>,
 {
-    type Output = Self;
-
-    fn checked_rem(&self, rhs: &T) -> Result<Self::Output> {
+    fn checked_rem(&self, rhs: &T) -> Result<Self> {
         Ok(checked_rem_scalar(self, rhs))
     }
 }
