@@ -42,6 +42,50 @@ where
     Arc::new(PrimitiveArray::<T>::from_trusted_len_iter(iter).to(datatype))
 }
 
+#[inline]
+fn significant_bytes(bytes: &[u8]) -> usize {
+    bytes.iter().map(|byte| (*byte != b'0') as usize).sum()
+}
+
+/// Deserializes bytes to a single i128 representing a decimal
+/// The decimal precision and scale are not checked.
+#[inline]
+fn deserialize_decimal(bytes: &[u8], precision: usize, scale: usize) -> Option<i128> {
+    let mut a = bytes.split(|x| *x == b'.');
+    let lhs = a.next();
+    let rhs = a.next();
+    match (lhs, rhs) {
+        (Some(lhs), Some(rhs)) => lexical_core::parse::<i128>(lhs).ok().and_then(|x| {
+            lexical_core::parse::<i128>(rhs)
+                .ok()
+                .map(|y| (x, lhs, y, rhs))
+                .and_then(|(lhs, lhs_b, rhs, rhs_b)| {
+                    let lhs_s = significant_bytes(lhs_b);
+                    let rhs_s = significant_bytes(rhs_b);
+                    if lhs_s + rhs_s > precision || rhs_s > scale {
+                        None
+                    } else {
+                        Some((lhs, rhs, rhs_s))
+                    }
+                })
+                .map(|(lhs, rhs, rhs_s)| lhs * 10i128.pow(rhs_s as u32) + rhs)
+        }),
+        (None, Some(rhs)) => {
+            if rhs.len() != precision || rhs.len() != scale {
+                return None;
+            }
+            lexical_core::parse::<i128>(rhs).ok()
+        }
+        (Some(lhs), None) => {
+            if lhs.len() != precision || scale != 0 {
+                return None;
+            }
+            lexical_core::parse::<i128>(lhs).ok()
+        }
+        (None, None) => None,
+    }
+}
+
 fn deserialize_boolean<B, F>(rows: &[B], column: usize, op: F) -> Arc<dyn Array>
 where
     B: ByteRecordGeneric,
@@ -193,6 +237,9 @@ pub(crate) fn deserialize_column<B: ByteRecordGeneric>(
                     })
             })
         }
+        Decimal(precision, scale) => deserialize_primitive(rows, column, datatype, |x| {
+            deserialize_decimal(x, precision, scale)
+        }),
         Utf8 => deserialize_utf8::<i32, _>(rows, column),
         LargeUtf8 => deserialize_utf8::<i64, _>(rows, column),
         Binary => deserialize_binary::<i32, _>(rows, column),
