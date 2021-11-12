@@ -161,6 +161,12 @@ impl<O: Offset> BinaryArray<O> {
 
 // accessors
 impl<O: Offset> BinaryArray<O> {
+    /// Returns the length of this array
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.offsets.len() - 1
+    }
+
     /// Returns the element at index `i`
     /// # Panics
     /// iff `i >= self.len()`
@@ -211,7 +217,7 @@ impl<O: Offset> Array for BinaryArray<O> {
 
     #[inline]
     fn len(&self) -> usize {
-        self.offsets.len() - 1
+        self.len()
     }
 
     #[inline]

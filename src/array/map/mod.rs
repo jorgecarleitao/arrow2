@@ -115,6 +115,12 @@ impl MapArray {
 
 // Accessors
 impl MapArray {
+    /// Returns the length of this array
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.offsets.len() - 1
+    }
+
     /// returns the offsets
     #[inline]
     pub fn offsets(&self) -> &Buffer<i32> {
@@ -161,7 +167,7 @@ impl Array for MapArray {
 
     #[inline]
     fn len(&self) -> usize {
-        self.offsets.len() - 1
+        self.len()
     }
 
     #[inline]

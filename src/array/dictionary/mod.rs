@@ -119,6 +119,15 @@ impl<K: DictionaryKey> DictionaryArray<K> {
         arr.values = Arc::from(arr.values.with_validity(validity));
         arr
     }
+}
+
+// accessors
+impl<K: DictionaryKey> DictionaryArray<K> {
+    /// Returns the length of this array
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.keys.len()
+    }
 
     /// The optional validity. Equivalent to `self.keys().validity()`.
     #[inline]
@@ -169,7 +178,7 @@ impl<K: DictionaryKey> Array for DictionaryArray<K> {
 
     #[inline]
     fn len(&self) -> usize {
-        self.keys.len()
+        self.len()
     }
 
     #[inline]

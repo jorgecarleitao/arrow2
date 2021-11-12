@@ -1,5 +1,5 @@
 use crate::{
-    array::{Array, BooleanArray, PrimitiveArray},
+    array::{BooleanArray, PrimitiveArray},
     buffer::MutableBuffer,
     types::Index,
 };

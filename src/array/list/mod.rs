@@ -123,6 +123,12 @@ impl<O: Offset> ListArray<O> {
 
 // Accessors
 impl<O: Offset> ListArray<O> {
+    /// Returns the length of this array
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.offsets.len() - 1
+    }
+
     /// Returns the element at index `i`
     #[inline]
     pub fn value(&self, i: usize) -> Box<dyn Array> {
@@ -211,7 +217,7 @@ impl<O: Offset> Array for ListArray<O> {
 
     #[inline]
     fn len(&self) -> usize {
-        self.offsets.len() - 1
+        self.len()
     }
 
     #[inline]

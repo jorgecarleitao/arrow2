@@ -1,4 +1,4 @@
-use crate::array::{Array, BinaryArray, Offset, PrimitiveArray};
+use crate::array::{BinaryArray, Offset, PrimitiveArray};
 use crate::types::Index;
 
 use super::common;

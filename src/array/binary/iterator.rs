@@ -1,5 +1,5 @@
 use crate::{
-    array::{Array, Offset},
+    array::Offset,
     bitmap::utils::{zip_validity, ZipValidity},
     trusted_len::TrustedLen,
 };

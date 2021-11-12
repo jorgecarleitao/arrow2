@@ -99,6 +99,12 @@ impl BooleanArray {
 
 // accessors
 impl BooleanArray {
+    /// Returns the length of this array
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.values.len()
+    }
+
     /// Returns the value at index `i`
     /// # Panic
     /// This function panics iff `i >= self.len()`.
@@ -136,7 +142,7 @@ impl Array for BooleanArray {
 
     #[inline]
     fn len(&self) -> usize {
-        self.values.len()
+        self.len()
     }
 
     #[inline]

@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 use crate::{
-    array::{Array, GenericBinaryArray, Offset, PrimitiveArray},
+    array::{GenericBinaryArray, Offset, PrimitiveArray},
     bitmap::{Bitmap, MutableBitmap},
     buffer::{Buffer, MutableBuffer},
 };

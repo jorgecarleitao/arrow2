@@ -99,6 +99,27 @@ impl FixedSizeListArray {
         }
     }
 
+    /// Sets the validity bitmap on this [`FixedSizeListArray`].
+    /// # Panic
+    /// This function panics iff `validity.len() != self.len()`.
+    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
+        if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
+            panic!("validity should be as least as large as the array")
+        }
+        let mut arr = self.clone();
+        arr.validity = validity;
+        arr
+    }
+}
+
+// accessors
+impl FixedSizeListArray {
+    /// Returns the length of this array
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.values.len() / self.size as usize
+    }
+
     /// The optional validity.
     #[inline]
     pub fn validity(&self) -> Option<&Bitmap> {
@@ -127,18 +148,6 @@ impl FixedSizeListArray {
         self.values
             .slice_unchecked(i * self.size as usize, self.size as usize)
     }
-
-    /// Sets the validity bitmap on this [`FixedSizeListArray`].
-    /// # Panic
-    /// This function panics iff `validity.len() != self.len()`.
-    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
-        if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
-            panic!("validity should be as least as large as the array")
-        }
-        let mut arr = self.clone();
-        arr.validity = validity;
-        arr
-    }
 }
 
 impl FixedSizeListArray {
@@ -164,7 +173,7 @@ impl Array for FixedSizeListArray {
 
     #[inline]
     fn len(&self) -> usize {
-        self.values.len() / self.size as usize
+        self.len()
     }
 
     #[inline]

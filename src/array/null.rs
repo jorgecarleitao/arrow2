@@ -32,6 +32,11 @@ impl NullArray {
             length,
         }
     }
+
+    #[inline]
+    fn len(&self) -> usize {
+        self.length
+    }
 }
 
 impl Array for NullArray {
@@ -42,7 +47,7 @@ impl Array for NullArray {
 
     #[inline]
     fn len(&self) -> usize {
-        self.length
+        self.len()
     }
 
     #[inline]

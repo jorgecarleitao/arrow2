@@ -1,5 +1,5 @@
 use crate::{
-    array::{Array, PrimitiveArray},
+    array::PrimitiveArray,
     types::{Index, NativeType},
 };
 

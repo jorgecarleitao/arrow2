@@ -1,8 +1,5 @@
 use crate::bitmap::utils::{zip_validity, ZipValidity};
-use crate::{
-    array::{Array, Offset},
-    trusted_len::TrustedLen,
-};
+use crate::{array::Offset, trusted_len::TrustedLen};
 
 use super::Utf8Array;
 

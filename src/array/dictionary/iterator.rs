@@ -1,4 +1,3 @@
-use crate::array::Array;
 use crate::bitmap::utils::{zip_validity, ZipValidity};
 use crate::scalar::Scalar;
 use crate::trusted_len::TrustedLen;

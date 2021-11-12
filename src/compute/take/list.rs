@@ -17,7 +17,7 @@
 
 use crate::array::{
     growable::{Growable, GrowableList},
-    Array, ListArray, Offset, PrimitiveArray,
+    ListArray, Offset, PrimitiveArray,
 };
 
 use super::Index;
@@ -67,7 +67,7 @@ pub fn take<I: Offset, O: Index>(
 mod tests {
     use super::*;
     use crate::{
-        array::{MutableListArray, MutablePrimitiveArray, PrimitiveArray, TryExtend},
+        array::{Array, MutableListArray, MutablePrimitiveArray, PrimitiveArray, TryExtend},
         bitmap::Bitmap,
         buffer::Buffer,
         datatypes::DataType,
