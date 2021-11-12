@@ -34,7 +34,6 @@ impl<O: Offset, M: MutableArray + Default> MutableListArray<O, M> {
 
         let mut offsets = MutableBuffer::<O>::with_capacity(capacity + 1);
         offsets.push(O::default());
-        assert_eq!(values.len(), 0);
         Self {
             data_type,
             offsets,
@@ -153,6 +152,11 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
     /// The values
     pub fn mut_values(&mut self) -> &mut M {
         &mut self.values
+    }
+
+    /// The offseta
+    pub fn offsets(&self) -> &MutableBuffer<O> {
+        &self.offsets
     }
 
     /// The values
