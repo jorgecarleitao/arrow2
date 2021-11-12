@@ -1,6 +1,6 @@
 use crate::{bitmap::Bitmap, buffer::Buffer, datatypes::DataType, error::Result};
 
-use super::{display_fmt, display_helper, Array};
+use super::{display_fmt, Array};
 
 mod ffi;
 mod iterator;
@@ -122,7 +122,8 @@ impl FixedSizeBinaryArray {
     /// Panics iff `i >= self.len()`.
     #[inline]
     pub fn value(&self, i: usize) -> &[u8] {
-        &self.values()[i * self.size as usize..(i + 1) * self.size as usize]
+        assert!(i < self.len());
+        unsafe { self.value_unchecked(i) }
     }
 
     /// Returns the element at index `i` as &str
@@ -183,8 +184,7 @@ impl Array for FixedSizeBinaryArray {
 
 impl std::fmt::Display for FixedSizeBinaryArray {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let a = |x: &[u8]| display_helper(x.iter().map(|x| Some(format!("{:b}", x)))).join(" ");
-        let iter = self.iter().map(|x| x.map(a));
+        let iter = self.iter().map(|x| x.map(|x| format!("{:?}", x)));
         display_fmt(iter, "FixedSizeBinaryArray", f, false)
     }
 }

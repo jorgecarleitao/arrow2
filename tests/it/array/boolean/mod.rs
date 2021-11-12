@@ -37,6 +37,20 @@ fn basics() {
 }
 
 #[test]
+fn with_validity() {
+    let bitmap = Bitmap::from([true, false, true]);
+    let a = BooleanArray::from_data(DataType::Boolean, bitmap, None);
+    let a = a.with_validity(Some(Bitmap::from([true, false, true])));
+    assert!(a.validity().is_some());
+}
+
+#[test]
+fn display() {
+    let array = BooleanArray::from([Some(true), None, Some(false)]);
+    assert_eq!(format!("{}", array), "BooleanArray[true, , false]");
+}
+
+#[test]
 fn empty() {
     let array = BooleanArray::new_empty(DataType::Boolean);
     assert_eq!(array.values().len(), 0);

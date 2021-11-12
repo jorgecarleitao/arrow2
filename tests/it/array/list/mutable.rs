@@ -31,9 +31,22 @@ fn basics() {
 }
 
 #[test]
+fn with_capacity() {
+    let array = MutableListArray::<i32, MutablePrimitiveArray<i32>>::with_capacity(10);
+    assert!(array.offsets().capacity() >= 10);
+    assert_eq!(array.offsets().len(), 1);
+    assert_eq!(array.values().values().capacity(), 0);
+    assert_eq!(array.validity(), None);
+}
+
+#[test]
 fn push() {
     let mut array = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new();
     array
         .try_push(Some(vec![Some(1i32), Some(2), Some(3)]))
         .unwrap();
+    assert_eq!(array.len(), 1);
+    assert_eq!(array.values().values().as_ref(), [1, 2, 3]);
+    assert_eq!(array.offsets().as_ref(), [0, 3]);
+    assert_eq!(array.validity(), None);
 }
