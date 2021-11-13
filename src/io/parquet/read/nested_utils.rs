@@ -229,7 +229,7 @@ pub fn init_nested(field: &Field, capacity: usize, container: &mut Vec<Box<dyn N
             }
             match field.data_type().to_logical_type() {
                 DataType::List(ref inner)
-                | DataType::List(ref inner)
+                | DataType::LargeList(ref inner)
                 | DataType::FixedSizeList(ref inner, _) => {
                     init_nested(inner.as_ref(), capacity, container)
                 }
