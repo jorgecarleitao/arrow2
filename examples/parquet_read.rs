@@ -21,13 +21,13 @@ fn read_field(path: &str, row_group: usize, field: usize) -> Result<Box<dyn Arra
     // yields an iterator of compressed pages. There is almost no CPU work in iterating.
     let columns = read::get_column_iterator(&mut file, &metadata, row_group, field, None, vec![]);
 
-    // get the columns' logical type
-    let data_type = arrow_schema.fields()[field].data_type().clone();
+    // get the columns' field
+    let field = &arrow_schema.fields()[field];
 
     // This is the actual work. In this case, pages are read and
     // decompressed, decoded and deserialized to arrow.
     // Because `columns` is an iterator, it uses a combination of IO and CPU.
-    let (array, _, _) = read::column_iter_to_array(columns, data_type, vec![])?;
+    let (array, _, _) = read::column_iter_to_array(columns, field, vec![])?;
 
     Ok(array)
 }

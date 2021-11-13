@@ -64,14 +64,14 @@ fn parallel_read(path: &str, row_group: usize) -> Result<RecordBatch> {
             let arrow_schema_consumer = arrow_schema.clone();
             thread::spawn(move || {
                 let mut arrays = vec![];
-                while let Ok((field_i, field, column_chunks)) = rx_consumer.recv() {
+                while let Ok((field_i, parquet_field, column_chunks)) = rx_consumer.recv() {
                     let start = SystemTime::now();
-                    let data_type = arrow_schema_consumer.fields()[field_i].data_type().clone();
+                    let field = &arrow_schema_consumer.fields()[field_i];
                     println!("consumer {} start - {}", i, field_i);
 
-                    let columns = read::ReadColumnIterator::new(field, column_chunks);
+                    let columns = read::ReadColumnIterator::new(parquet_field, column_chunks);
 
-                    let array = read::column_iter_to_array(columns, data_type, vec![]).map(|x| x.0);
+                    let array = read::column_iter_to_array(columns, field, vec![]).map(|x| x.0);
                     println!(
                         "consumer {} end - {:?}: {}",
                         i,
