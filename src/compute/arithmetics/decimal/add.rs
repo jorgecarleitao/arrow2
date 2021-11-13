@@ -202,27 +202,21 @@ pub fn checked_add(
 
 // Implementation of ArrayAdd trait for PrimitiveArrays
 impl ArrayAdd<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    type Output = Self;
-
-    fn add(&self, rhs: &PrimitiveArray<i128>) -> Result<Self::Output> {
+    fn add(&self, rhs: &PrimitiveArray<i128>) -> Result<Self> {
         add(self, rhs)
     }
 }
 
 // Implementation of ArrayCheckedAdd trait for PrimitiveArrays
 impl ArrayCheckedAdd<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    type Output = Self;
-
-    fn checked_add(&self, rhs: &PrimitiveArray<i128>) -> Result<Self::Output> {
+    fn checked_add(&self, rhs: &PrimitiveArray<i128>) -> Result<Self> {
         checked_add(self, rhs)
     }
 }
 
 // Implementation of ArraySaturatingAdd trait for PrimitiveArrays
 impl ArraySaturatingAdd<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    type Output = Self;
-
-    fn saturating_add(&self, rhs: &PrimitiveArray<i128>) -> Result<Self::Output> {
+    fn saturating_add(&self, rhs: &PrimitiveArray<i128>) -> Result<Self> {
         saturating_add(self, rhs)
     }
 }

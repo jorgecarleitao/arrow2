@@ -226,18 +226,14 @@ pub fn checked_div(
 
 // Implementation of ArrayDiv trait for PrimitiveArrays
 impl ArrayDiv<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    type Output = Self;
-
-    fn div(&self, rhs: &PrimitiveArray<i128>) -> Result<Self::Output> {
+    fn div(&self, rhs: &PrimitiveArray<i128>) -> Result<Self> {
         div(self, rhs)
     }
 }
 
 // Implementation of ArrayCheckedDiv trait for PrimitiveArrays
 impl ArrayCheckedDiv<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    type Output = Self;
-
-    fn checked_div(&self, rhs: &PrimitiveArray<i128>) -> Result<Self::Output> {
+    fn checked_div(&self, rhs: &PrimitiveArray<i128>) -> Result<Self> {
         checked_div(self, rhs)
     }
 }

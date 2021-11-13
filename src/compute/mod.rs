@@ -1,3 +1,4 @@
+#![deny(missing_docs)]
 //! contains a wide range of compute operations (e.g.
 //! [`arithmetics`], [`aggregate`],
 //! [`filter`], [`comparison`], and [`sort`])

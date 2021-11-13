@@ -148,27 +148,21 @@ pub fn saturating_sub(
 
 // Implementation of ArraySub trait for PrimitiveArrays
 impl ArraySub<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    type Output = Self;
-
-    fn sub(&self, rhs: &PrimitiveArray<i128>) -> Result<Self::Output> {
+    fn sub(&self, rhs: &PrimitiveArray<i128>) -> Result<Self> {
         sub(self, rhs)
     }
 }
 
 // Implementation of ArrayCheckedSub trait for PrimitiveArrays
 impl ArrayCheckedSub<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    type Output = Self;
-
-    fn checked_sub(&self, rhs: &PrimitiveArray<i128>) -> Result<Self::Output> {
+    fn checked_sub(&self, rhs: &PrimitiveArray<i128>) -> Result<Self> {
         checked_sub(self, rhs)
     }
 }
 
 // Implementation of ArraySaturatingSub trait for PrimitiveArrays
 impl ArraySaturatingSub<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    type Output = Self;
-
-    fn saturating_sub(&self, rhs: &PrimitiveArray<i128>) -> Result<Self::Output> {
+    fn saturating_sub(&self, rhs: &PrimitiveArray<i128>) -> Result<Self> {
         saturating_sub(self, rhs)
     }
 }

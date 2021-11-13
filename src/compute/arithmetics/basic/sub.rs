@@ -160,9 +160,7 @@ impl<T> ArraySub<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + Sub<Output = T>,
 {
-    type Output = Self;
-
-    fn sub(&self, rhs: &PrimitiveArray<T>) -> Result<Self::Output> {
+    fn sub(&self, rhs: &PrimitiveArray<T>) -> Result<Self> {
         sub(self, rhs)
     }
 }
@@ -171,9 +169,7 @@ impl<T> ArrayWrappingSub<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + WrappingSub<Output = T>,
 {
-    type Output = Self;
-
-    fn wrapping_sub(&self, rhs: &PrimitiveArray<T>) -> Result<Self::Output> {
+    fn wrapping_sub(&self, rhs: &PrimitiveArray<T>) -> Result<Self> {
         wrapping_sub(self, rhs)
     }
 }
@@ -183,9 +179,7 @@ impl<T> ArrayCheckedSub<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + CheckedSub<Output = T>,
 {
-    type Output = Self;
-
-    fn checked_sub(&self, rhs: &PrimitiveArray<T>) -> Result<Self::Output> {
+    fn checked_sub(&self, rhs: &PrimitiveArray<T>) -> Result<Self> {
         checked_sub(self, rhs)
     }
 }
@@ -195,9 +189,7 @@ impl<T> ArraySaturatingSub<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + SaturatingSub<Output = T>,
 {
-    type Output = Self;
-
-    fn saturating_sub(&self, rhs: &PrimitiveArray<T>) -> Result<Self::Output> {
+    fn saturating_sub(&self, rhs: &PrimitiveArray<T>) -> Result<Self> {
         saturating_sub(self, rhs)
     }
 }
@@ -207,9 +199,7 @@ impl<T> ArrayOverflowingSub<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + OverflowingSub<Output = T>,
 {
-    type Output = Self;
-
-    fn overflowing_sub(&self, rhs: &PrimitiveArray<T>) -> Result<(Self::Output, Bitmap)> {
+    fn overflowing_sub(&self, rhs: &PrimitiveArray<T>) -> Result<(Self, Bitmap)> {
         overflowing_sub(self, rhs)
     }
 }
@@ -333,9 +323,7 @@ impl<T> ArraySub<T> for PrimitiveArray<T>
 where
     T: NativeArithmetics + Sub<Output = T>,
 {
-    type Output = Self;
-
-    fn sub(&self, rhs: &T) -> Result<Self::Output> {
+    fn sub(&self, rhs: &T) -> Result<Self> {
         Ok(sub_scalar(self, rhs))
     }
 }
@@ -345,9 +333,7 @@ impl<T> ArrayCheckedSub<T> for PrimitiveArray<T>
 where
     T: NativeArithmetics + CheckedSub<Output = T>,
 {
-    type Output = Self;
-
-    fn checked_sub(&self, rhs: &T) -> Result<Self::Output> {
+    fn checked_sub(&self, rhs: &T) -> Result<Self> {
         Ok(checked_sub_scalar(self, rhs))
     }
 }
@@ -357,9 +343,7 @@ impl<T> ArraySaturatingSub<T> for PrimitiveArray<T>
 where
     T: NativeArithmetics + SaturatingSub<Output = T>,
 {
-    type Output = Self;
-
-    fn saturating_sub(&self, rhs: &T) -> Result<Self::Output> {
+    fn saturating_sub(&self, rhs: &T) -> Result<Self> {
         Ok(saturating_sub_scalar(self, rhs))
     }
 }
@@ -369,9 +353,7 @@ impl<T> ArrayOverflowingSub<T> for PrimitiveArray<T>
 where
     T: NativeArithmetics + OverflowingSub<Output = T>,
 {
-    type Output = Self;
-
-    fn overflowing_sub(&self, rhs: &T) -> Result<(Self::Output, Bitmap)> {
+    fn overflowing_sub(&self, rhs: &T) -> Result<(Self, Bitmap)> {
         Ok(overflowing_sub_scalar(self, rhs))
     }
 }

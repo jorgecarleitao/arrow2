@@ -1,4 +1,6 @@
 //! Contains the [`hash`] and typed (e.g. [`hash_primitive`]) operators.
+//! // multiversion does not copy documentation, causing a false positive
+#![allow(missing_docs)]
 use ahash::{CallHasher, RandomState};
 use multiversion::multiversion;
 use std::hash::Hash;

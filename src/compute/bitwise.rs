@@ -1,3 +1,4 @@
+//! Contains bitwise operators: [`or`], [`and`], [`xor`] and [`not`].
 use std::ops::{BitAnd, BitOr, BitXor, Not};
 
 use crate::array::{Array, PrimitiveArray};
@@ -17,7 +18,7 @@ where
     binary(lhs, rhs, lhs.data_type().clone(), |a, b| a | b)
 }
 
-/// Performs `XOR` operation on two arrays.
+/// Performs `XOR` operation between two arrays.
 /// # Error
 /// This function errors when the arrays have different lengths or are different types.
 pub fn xor<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<PrimitiveArray<T>>
@@ -39,11 +40,11 @@ where
     binary(lhs, rhs, lhs.data_type().clone(), |a, b| a & b)
 }
 
-/// Performs `OR` operation on one array.
-pub fn not<T>(arr: &PrimitiveArray<T>) -> PrimitiveArray<T>
+/// Returns a new [`PrimitiveArray`] with the bitwise `not`.
+pub fn not<T>(array: &PrimitiveArray<T>) -> PrimitiveArray<T>
 where
     T: NativeType + Not<Output = T>,
 {
     let op = move |a: T| !a;
-    unary(arr, op, arr.data_type().clone())
+    unary(array, op, array.data_type().clone())
 }
