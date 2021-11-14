@@ -224,20 +224,23 @@ pub fn adaptive_mul(
         // looping through the iterator
         let (mut res_p, res_s, diff) = adjusted_precision_scale(*lhs_p, *lhs_s, *rhs_p, *rhs_s);
 
-        let mut result = Vec::new();
-        for (l, r) in lhs.values().iter().zip(rhs.values().iter()) {
+        let shift = 10i128.pow(diff as u32);
+        let shift_1 = 10i128.pow(res_s as u32);
+        let mut max = max_value(res_p);
+
+        let iter = lhs.values().iter().zip(rhs.values().iter()).map(|(l, r)| {
             // Based on the array's scales one of the arguments in the sum has to be shifted
             // to the left to match the final scale
             let res = if lhs_s > rhs_s {
-                l.checked_mul(r * 10i128.pow(diff as u32))
+                l.checked_mul(r * shift)
                     .expect("Mayor overflow for multiplication")
             } else {
-                (l * 10i128.pow(diff as u32))
+                (l * shift)
                     .checked_mul(*r)
                     .expect("Mayor overflow for multiplication")
             };
 
-            let res = res / 10i128.pow(res_s as u32);
+            let res = res / shift_1;
 
             // The precision of the resulting array will change if one of the
             // multiplications during the iteration produces a value bigger
@@ -247,15 +250,16 @@ pub fn adaptive_mul(
             //  10.0000 -> 6, 4
             // -----------------
             // 100.0000 -> 7, 4
-            if res.abs() > max_value(res_p) {
+            if res.abs() > max {
                 res_p = number_digits(res);
+                max = max_value(res_p);
             }
 
-            result.push(res);
-        }
+            res
+        });
+        let values = Buffer::from_trusted_len_iter(iter);
 
         let validity = combine_validities(lhs.validity(), rhs.validity());
-        let values = Buffer::from(result);
 
         Ok(PrimitiveArray::<i128>::from_data(
             DataType::Decimal(res_p, res_s),
