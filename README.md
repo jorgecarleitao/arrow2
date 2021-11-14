@@ -7,7 +7,7 @@
 [![](https://docs.rs/arrow2/badge.svg)](https://docs.rs/arrow2/)
 
 A Rust crate to work with the [Arrow format](https://arrow.apache.org/).
-The most feture-complete implementation of the Arrow format after the official C++
+The most feature-complete implementation of the Arrow format after the official C++
 implementation.
 
 Check out [the guide](https://jorgecarleitao.github.io/arrow2/) for a general introduction
