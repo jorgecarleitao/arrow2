@@ -8,6 +8,9 @@ pub mod div;
 pub mod mul;
 pub mod sub;
 
+use crate::datatypes::DataType;
+use crate::error::{ArrowError, Result};
+
 /// Maximum value that can exist with a selected precision
 #[inline]
 fn max_value(precision: usize) -> i128 {
@@ -26,6 +29,22 @@ fn number_digits(num: i128) -> usize {
     }
 
     digit as usize
+}
+
+fn get_parameters(lhs: &DataType, rhs: &DataType) -> Result<(usize, usize)> {
+    if let (DataType::Decimal(lhs_p, lhs_s), DataType::Decimal(rhs_p, rhs_s)) =
+        (lhs.to_logical_type(), rhs.to_logical_type())
+    {
+        if lhs_p == rhs_p && lhs_s == rhs_s {
+            Ok((*lhs_p, *lhs_s))
+        } else {
+            Err(ArrowError::InvalidArgumentError(
+                "Arrays must have the same precision and scale".to_string(),
+            ))
+        }
+    } else {
+        unreachable!()
+    }
 }
 
 /// Returns the adjusted precision and scale for the lhs and rhs precision and

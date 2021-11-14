@@ -1,21 +1,4 @@
-// Licensed to the Apache Software Foundation (ASF) under one
-// or more contributor license agreements.  See the NOTICE file
-// distributed with this work for additional information
-// regarding copyright ownership.  The ASF licenses this file
-// to you under the Apache License, Version 2.0 (the
-// "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
-
-//! Defines the addition arithmetic kernels for Decimal `PrimitiveArrays`.
+//! Defines the addition arithmetic kernels for [`PrimitiveArray`] representing decimals.
 use crate::compute::arithmetics::basic::check_same_len;
 use crate::{
     array::{Array, PrimitiveArray},
@@ -31,12 +14,14 @@ use crate::{
     error::{ArrowError, Result},
 };
 
-use super::{adjusted_precision_scale, max_value, number_digits};
+use super::{adjusted_precision_scale, get_parameters, max_value, number_digits};
 
-/// Adds two decimal primitive arrays with the same precision and scale. If the
-/// precision and scale is different, then an InvalidArgumentError is returned.
-/// This function panics if the added numbers result in a number larger than
-/// the possible number for the selected precision.
+/// Adds two decimal [`PrimitiveArray`] with the same precision and scale.
+/// # Error
+/// Errors if the precision and scale are different.
+/// # Panic
+/// This function panics iff the added numbers result in a number larger than
+/// the possible number for the precision.
 ///
 /// # Examples
 /// ```
@@ -53,39 +38,22 @@ use super::{adjusted_precision_scale, max_value, number_digits};
 /// assert_eq!(result, expected);
 /// ```
 pub fn add(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<PrimitiveArray<i128>> {
-    // Matching on both data types from both arrays
-    // This match will be true only when precision and scale from both
-    // arrays are the same, otherwise it will return and ArrowError
-    match (lhs.data_type(), rhs.data_type()) {
-        (DataType::Decimal(lhs_p, lhs_s), DataType::Decimal(rhs_p, rhs_s)) => {
-            if lhs_p == rhs_p && lhs_s == rhs_s {
-                let max = max_value(*lhs_p);
-                // Closure for the binary operation. This closure will panic if
-                // the sum of the values is larger than the max value possible
-                // for the decimal precision
-                let op = move |a, b| {
-                    let res: i128 = a + b;
+    let (precision, _) = get_parameters(lhs.data_type(), rhs.data_type())?;
 
-                    assert!(
-                        res.abs() <= max,
-                        "Overflow in addition presented for precision {}",
-                        lhs_p
-                    );
+    let max = max_value(precision);
+    let op = move |a, b| {
+        let res: i128 = a + b;
 
-                    res
-                };
+        assert!(
+            res.abs() <= max,
+            "Overflow in addition presented for precision {}",
+            precision
+        );
 
-                binary(lhs, rhs, lhs.data_type().clone(), op)
-            } else {
-                Err(ArrowError::InvalidArgumentError(
-                    "Arrays must have the same precision and scale".to_string(),
-                ))
-            }
-        }
-        _ => Err(ArrowError::InvalidArgumentError(
-            "Incorrect data type for the array".to_string(),
-        )),
-    }
+        res
+    };
+
+    binary(lhs, rhs, lhs.data_type().clone(), op)
 }
 
 /// Saturated addition of two decimal primitive arrays with the same precision
@@ -112,40 +80,24 @@ pub fn saturating_add(
     lhs: &PrimitiveArray<i128>,
     rhs: &PrimitiveArray<i128>,
 ) -> Result<PrimitiveArray<i128>> {
-    // Matching on both data types from both arrays. This match will be true
-    // only when precision and scale from both arrays are the same, otherwise
-    // it will return and ArrowError
-    match (lhs.data_type(), rhs.data_type()) {
-        (DataType::Decimal(lhs_p, lhs_s), DataType::Decimal(rhs_p, rhs_s)) => {
-            if lhs_p == rhs_p && lhs_s == rhs_s {
-                // Closure for the binary operation.
-                let max = max_value(*lhs_p);
-                let op = move |a, b| {
-                    let res: i128 = a + b;
+    let (precision, _) = get_parameters(lhs.data_type(), rhs.data_type())?;
 
-                    match res {
-                        res if res.abs() > max => {
-                            if res > 0 {
-                                max
-                            } else {
-                                -max
-                            }
-                        }
-                        _ => res,
-                    }
-                };
+    let max = max_value(precision);
+    let op = move |a, b| {
+        let res: i128 = a + b;
 
-                binary(lhs, rhs, lhs.data_type().clone(), op)
+        if res.abs() > max {
+            if res > 0 {
+                max
             } else {
-                Err(ArrowError::InvalidArgumentError(
-                    "Arrays must have the same precision and scale".to_string(),
-                ))
+                -max
             }
+        } else {
+            res
         }
-        _ => Err(ArrowError::InvalidArgumentError(
-            "Incorrect data type for the array".to_string(),
-        )),
-    }
+    };
+
+    binary(lhs, rhs, lhs.data_type().clone(), op)
 }
 
 /// Checked addition of two decimal primitive arrays with the same precision
@@ -172,35 +124,20 @@ pub fn checked_add(
     lhs: &PrimitiveArray<i128>,
     rhs: &PrimitiveArray<i128>,
 ) -> Result<PrimitiveArray<i128>> {
-    // Matching on both data types from both arrays. This match will be true
-    // only when precision and scale from both arrays are the same, otherwise
-    // it will return and ArrowError
-    match (lhs.data_type(), rhs.data_type()) {
-        (DataType::Decimal(lhs_p, lhs_s), DataType::Decimal(rhs_p, rhs_s)) => {
-            if lhs_p == rhs_p && lhs_s == rhs_s {
-                let max = max_value(*lhs_p);
-                // Closure for the binary operation.
-                let op = move |a, b| {
-                    let result: i128 = a + b;
+    let (precision, _) = get_parameters(lhs.data_type(), rhs.data_type())?;
 
-                    if result.abs() > max {
-                        None
-                    } else {
-                        Some(result)
-                    }
-                };
+    let max = max_value(precision);
+    let op = move |a, b| {
+        let result: i128 = a + b;
 
-                binary_checked(lhs, rhs, lhs.data_type().clone(), op)
-            } else {
-                Err(ArrowError::InvalidArgumentError(
-                    "Arrays must have the same precision and scale".to_string(),
-                ))
-            }
+        if result.abs() > max {
+            None
+        } else {
+            Some(result)
         }
-        _ => Err(ArrowError::InvalidArgumentError(
-            "Incorrect data type for the array".to_string(),
-        )),
-    }
+    };
+
+    binary_checked(lhs, rhs, lhs.data_type().clone(), op)
 }
 
 // Implementation of ArrayAdd trait for PrimitiveArrays

@@ -1,20 +1,3 @@
-// Licensed to the Apache Software Foundation (ASF) under one
-// or more contributor license agreements.  See the NOTICE file
-// distributed with this work for additional information
-// regarding copyright ownership.  The ASF licenses this file
-// to you under the Apache License, Version 2.0 (the
-// "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
-
 //! Defines the division arithmetic kernels for Decimal
 //! `PrimitiveArrays`.
 
@@ -27,13 +10,11 @@ use crate::{
         arity::{binary, binary_checked},
         utils::combine_validities,
     },
-};
-use crate::{
     datatypes::DataType,
     error::{ArrowError, Result},
 };
 
-use super::{adjusted_precision_scale, max_value, number_digits};
+use super::{adjusted_precision_scale, get_parameters, max_value, number_digits};
 
 /// Divide two decimal primitive arrays with the same precision and scale. If
 /// the precision and scale is different, then an InvalidArgumentError is
@@ -56,50 +37,35 @@ use super::{adjusted_precision_scale, max_value, number_digits};
 /// assert_eq!(result, expected);
 /// ```
 pub fn div(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<PrimitiveArray<i128>> {
-    // Matching on both data types from both arrays
-    // This match will be true only when precision and scale from both
-    // arrays are the same, otherwise it will return and ArrowError
-    match (lhs.data_type(), rhs.data_type()) {
-        (DataType::Decimal(lhs_p, lhs_s), DataType::Decimal(rhs_p, rhs_s)) => {
-            if lhs_p == rhs_p && lhs_s == rhs_s {
-                // Closure for the binary operation. This closure will panic if
-                // the sum of the values is larger than the max value possible
-                // for the decimal precision
-                let op = move |a: i128, b: i128| {
-                    // The division is done using the numbers without scale.
-                    // The dividend is scaled up to maintain precision after the
-                    // division
+    let (precision, scale) = get_parameters(lhs.data_type(), rhs.data_type())?;
 
-                    //   222.222 -->  222222000
-                    //   123.456 -->     123456
-                    // --------       ---------
-                    //     1.800 <--       1800
-                    let numeral: i128 = a * 10i128.pow(*lhs_s as u32);
+    let scale = 10i128.pow(scale as u32);
+    let max = max_value(precision);
+    let op = move |a: i128, b: i128| {
+        // The division is done using the numbers without scale.
+        // The dividend is scaled up to maintain precision after the
+        // division
 
-                    // The division can overflow if the dividend is divided
-                    // by zero.
-                    let res: i128 = numeral.checked_div(b).expect("Found division by zero");
+        //   222.222 -->  222222000
+        //   123.456 -->     123456
+        // --------       ---------
+        //     1.800 <--       1800
+        let numeral: i128 = a * scale;
 
-                    assert!(
-                        !(res.abs() > max_value(*lhs_p)),
-                        "Overflow in multiplication presented for precision {}",
-                        lhs_p
-                    );
+        // The division can overflow if the dividend is divided
+        // by zero.
+        let res: i128 = numeral.checked_div(b).expect("Found division by zero");
 
-                    res
-                };
+        assert!(
+            res.abs() <= max,
+            "Overflow in multiplication presented for precision {}",
+            precision
+        );
 
-                binary(lhs, rhs, lhs.data_type().clone(), op)
-            } else {
-                Err(ArrowError::InvalidArgumentError(
-                    "Arrays must have the same precision and scale".to_string(),
-                ))
-            }
-        }
-        _ => Err(ArrowError::InvalidArgumentError(
-            "Incorrect data type for the array".to_string(),
-        )),
-    }
+        res
+    };
+
+    binary(lhs, rhs, lhs.data_type().clone(), op)
 }
 
 /// Saturated division of two decimal primitive arrays with the same
@@ -127,46 +93,30 @@ pub fn saturating_div(
     lhs: &PrimitiveArray<i128>,
     rhs: &PrimitiveArray<i128>,
 ) -> Result<PrimitiveArray<i128>> {
-    // Matching on both data types from both arrays. This match will be true
-    // only when precision and scale from both arrays are the same, otherwise
-    // it will return and ArrowError
-    match (lhs.data_type(), rhs.data_type()) {
-        (DataType::Decimal(lhs_p, lhs_s), DataType::Decimal(rhs_p, rhs_s)) => {
-            if lhs_p == rhs_p && lhs_s == rhs_s {
-                // Closure for the binary operation.
-                let op = move |a: i128, b: i128| {
-                    let numeral: i128 = a * 10i128.pow(*lhs_s as u32);
+    let (precision, scale) = get_parameters(lhs.data_type(), rhs.data_type())?;
 
-                    match numeral.checked_div(b) {
-                        Some(res) => {
-                            let max = max_value(*lhs_p);
+    let scale = 10i128.pow(scale as u32);
+    let max = max_value(precision);
 
-                            match res {
-                                res if res.abs() > max => {
-                                    if res > 0 {
-                                        max
-                                    } else {
-                                        -max
-                                    }
-                                }
-                                _ => res,
-                            }
-                        }
-                        None => 0,
+    let op = move |a: i128, b: i128| {
+        let numeral: i128 = a * scale;
+
+        match numeral.checked_div(b) {
+            Some(res) => match res {
+                res if res.abs() > max => {
+                    if res > 0 {
+                        max
+                    } else {
+                        -max
                     }
-                };
-
-                binary(lhs, rhs, lhs.data_type().clone(), op)
-            } else {
-                Err(ArrowError::InvalidArgumentError(
-                    "Arrays must have the same precision and scale".to_string(),
-                ))
-            }
+                }
+                _ => res,
+            },
+            None => 0,
         }
-        _ => Err(ArrowError::InvalidArgumentError(
-            "Incorrect data type for the array".to_string(),
-        )),
-    }
+    };
+
+    binary(lhs, rhs, lhs.data_type().clone(), op)
 }
 
 /// Checked division of two decimal primitive arrays with the same precision
@@ -192,36 +142,24 @@ pub fn checked_div(
     lhs: &PrimitiveArray<i128>,
     rhs: &PrimitiveArray<i128>,
 ) -> Result<PrimitiveArray<i128>> {
-    // Matching on both data types from both arrays. This match will be true
-    // only when precision and scale from both arrays are the same, otherwise
-    // it will return and ArrowError
-    match (lhs.data_type(), rhs.data_type()) {
-        (DataType::Decimal(lhs_p, lhs_s), DataType::Decimal(rhs_p, rhs_s)) => {
-            if lhs_p == rhs_p && lhs_s == rhs_s {
-                // Closure for the binary operation.
-                let op = move |a: i128, b: i128| {
-                    let numeral: i128 = a * 10i128.pow(*lhs_s as u32);
+    let (precision, scale) = get_parameters(lhs.data_type(), rhs.data_type())?;
 
-                    match numeral.checked_div(b) {
-                        Some(res) => match res {
-                            res if res.abs() > max_value(*lhs_p) => None,
-                            _ => Some(res),
-                        },
-                        None => None,
-                    }
-                };
+    let scale = 10i128.pow(scale as u32);
+    let max = max_value(precision);
 
-                binary_checked(lhs, rhs, lhs.data_type().clone(), op)
-            } else {
-                Err(ArrowError::InvalidArgumentError(
-                    "Arrays must have the same precision and scale".to_string(),
-                ))
-            }
+    let op = move |a: i128, b: i128| {
+        let numeral: i128 = a * scale;
+
+        match numeral.checked_div(b) {
+            Some(res) => match res {
+                res if res.abs() > max => None,
+                _ => Some(res),
+            },
+            None => None,
         }
-        _ => Err(ArrowError::InvalidArgumentError(
-            "Incorrect data type for the array".to_string(),
-        )),
-    }
+    };
+
+    binary_checked(lhs, rhs, lhs.data_type().clone(), op)
 }
 
 // Implementation of ArrayDiv trait for PrimitiveArrays
@@ -277,21 +215,21 @@ pub fn adaptive_div(
         // looping through the iterator
         let (mut res_p, res_s, diff) = adjusted_precision_scale(*lhs_p, *lhs_s, *rhs_p, *rhs_s);
 
-        let mut result = Vec::new();
-        for (l, r) in lhs.values().iter().zip(rhs.values().iter()) {
-            let numeral: i128 = l * 10i128.pow(res_s as u32);
+        let shift = 10i128.pow(diff as u32);
+        let shift_1 = 10i128.pow(res_s as u32);
+        let mut max = max_value(res_p);
+
+        let iter = lhs.values().iter().zip(rhs.values().iter()).map(|(l, r)| {
+            let numeral: i128 = l * shift_1;
 
             // Based on the array's scales one of the arguments in the sum has to be shifted
             // to the left to match the final scale
             let res = if lhs_s > rhs_s {
-                numeral
-                    .checked_div(r * 10i128.pow(diff as u32))
-                    .expect("Found division by zero")
+                numeral.checked_div(r * shift)
             } else {
-                (numeral * 10i128.pow(diff as u32))
-                    .checked_div(*r)
-                    .expect("Found division by zero")
-            };
+                (numeral * shift).checked_div(*r)
+            }
+            .expect("Found division by zero");
 
             // The precision of the resulting array will change if one of the
             // multiplications during the iteration produces a value bigger
@@ -301,15 +239,16 @@ pub fn adaptive_div(
             //  00.1000 -> 6, 4
             // -----------------
             // 100.0000 -> 7, 4
-            if res.abs() > max_value(res_p) {
+            if res.abs() > max {
                 res_p = number_digits(res);
+                max = max_value(res_p);
             }
 
-            result.push(res);
-        }
+            res
+        });
+        let values = Buffer::from_trusted_len_iter(iter);
 
         let validity = combine_validities(lhs.validity(), rhs.validity());
-        let values = Buffer::from(result);
 
         Ok(PrimitiveArray::<i128>::from_data(
             DataType::Decimal(res_p, res_s),

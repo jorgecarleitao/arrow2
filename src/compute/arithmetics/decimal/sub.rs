@@ -1,20 +1,3 @@
-// Licensed to the Apache Software Foundation (ASF) under one
-// or more contributor license agreements.  See the NOTICE file
-// distributed with this work for additional information
-// regarding copyright ownership.  The ASF licenses this file
-// to you under the Apache License, Version 2.0 (the
-// "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
-
 //! Defines the subtract arithmetic kernels for Decimal `PrimitiveArrays`.
 
 use crate::compute::arithmetics::basic::check_same_len;
@@ -30,7 +13,7 @@ use crate::{
     error::{ArrowError, Result},
 };
 
-use super::{adjusted_precision_scale, max_value, number_digits};
+use super::{adjusted_precision_scale, get_parameters, max_value, number_digits};
 
 /// Subtract two decimal primitive arrays with the same precision and scale. If
 /// the precision and scale is different, then an InvalidArgumentError is
@@ -52,38 +35,23 @@ use super::{adjusted_precision_scale, max_value, number_digits};
 /// assert_eq!(result, expected);
 /// ```
 pub fn sub(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<PrimitiveArray<i128>> {
-    // Matching on both data types from both arrays This match will be true
-    // only when precision and scale from both arrays are the same, otherwise
-    // it will return and ArrowError
-    match (lhs.data_type(), rhs.data_type()) {
-        (DataType::Decimal(lhs_p, lhs_s), DataType::Decimal(rhs_p, rhs_s)) => {
-            if lhs_p == rhs_p && lhs_s == rhs_s {
-                // Closure for the binary operation. This closure will panic if
-                // the sum of the values is larger than the max value possible
-                // for the decimal precision
-                let op = move |a, b| {
-                    let res: i128 = a - b;
+    let (precision, _) = get_parameters(lhs.data_type(), rhs.data_type())?;
 
-                    assert!(
-                        !(res.abs() > max_value(*lhs_p)),
-                        "Overflow in subtract presented for precision {}",
-                        lhs_p
-                    );
+    let max = max_value(precision);
 
-                    res
-                };
+    let op = move |a, b| {
+        let res: i128 = a - b;
 
-                binary(lhs, rhs, lhs.data_type().clone(), op)
-            } else {
-                Err(ArrowError::InvalidArgumentError(
-                    "Arrays must have the same precision and scale".to_string(),
-                ))
-            }
-        }
-        _ => Err(ArrowError::InvalidArgumentError(
-            "Incorrect data type for the array".to_string(),
-        )),
-    }
+        assert!(
+            res.abs() <= max,
+            "Overflow in subtract presented for precision {}",
+            precision
+        );
+
+        res
+    };
+
+    binary(lhs, rhs, lhs.data_type().clone(), op)
 }
 
 /// Saturated subtraction of two decimal primitive arrays with the same
@@ -110,40 +78,26 @@ pub fn saturating_sub(
     lhs: &PrimitiveArray<i128>,
     rhs: &PrimitiveArray<i128>,
 ) -> Result<PrimitiveArray<i128>> {
-    // Matching on both data types from both arrays. This match will be true
-    // only when precision and scale from both arrays are the same, otherwise
-    // it will return and ArrowError
-    match (lhs.data_type(), rhs.data_type()) {
-        (DataType::Decimal(lhs_p, lhs_s), DataType::Decimal(rhs_p, rhs_s)) => {
-            if lhs_p == rhs_p && lhs_s == rhs_s {
-                // Closure for the binary operation.
-                let op = move |a, b| {
-                    let res: i128 = a - b;
-                    let max: i128 = max_value(*lhs_p);
+    let (precision, _) = get_parameters(lhs.data_type(), rhs.data_type())?;
 
-                    match res {
-                        res if res.abs() > max => {
-                            if res > 0 {
-                                max
-                            } else {
-                                -max
-                            }
-                        }
-                        _ => res,
-                    }
-                };
+    let max = max_value(precision);
 
-                binary(lhs, rhs, lhs.data_type().clone(), op)
-            } else {
-                Err(ArrowError::InvalidArgumentError(
-                    "Arrays must have the same precision and scale".to_string(),
-                ))
+    let op = move |a, b| {
+        let res: i128 = a - b;
+
+        match res {
+            res if res.abs() > max => {
+                if res > 0 {
+                    max
+                } else {
+                    -max
+                }
             }
+            _ => res,
         }
-        _ => Err(ArrowError::InvalidArgumentError(
-            "Incorrect data type for the array".to_string(),
-        )),
-    }
+    };
+
+    binary(lhs, rhs, lhs.data_type().clone(), op)
 }
 
 // Implementation of ArraySub trait for PrimitiveArrays
@@ -190,33 +144,20 @@ pub fn checked_sub(
     lhs: &PrimitiveArray<i128>,
     rhs: &PrimitiveArray<i128>,
 ) -> Result<PrimitiveArray<i128>> {
-    // Matching on both data types from both arrays. This match will be true
-    // only when precision and scale from both arrays are the same, otherwise
-    // it will return and ArrowError
-    match (lhs.data_type(), rhs.data_type()) {
-        (DataType::Decimal(lhs_p, lhs_s), DataType::Decimal(rhs_p, rhs_s)) => {
-            if lhs_p == rhs_p && lhs_s == rhs_s {
-                // Closure for the binary operation.
-                let op = move |a, b| {
-                    let res: i128 = a - b;
+    let (precision, _) = get_parameters(lhs.data_type(), rhs.data_type())?;
 
-                    match res {
-                        res if res.abs() > max_value(*lhs_p) => None,
-                        _ => Some(res),
-                    }
-                };
+    let max = max_value(precision);
 
-                binary_checked(lhs, rhs, lhs.data_type().clone(), op)
-            } else {
-                Err(ArrowError::InvalidArgumentError(
-                    "Arrays must have the same precision and scale".to_string(),
-                ))
-            }
+    let op = move |a, b| {
+        let res: i128 = a - b;
+
+        match res {
+            res if res.abs() > max => None,
+            _ => Some(res),
         }
-        _ => Err(ArrowError::InvalidArgumentError(
-            "Incorrect data type for the array".to_string(),
-        )),
-    }
+    };
+
+    binary_checked(lhs, rhs, lhs.data_type().clone(), op)
 }
 
 /// Adaptive subtract of two decimal primitive arrays with different precision
