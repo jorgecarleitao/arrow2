@@ -145,6 +145,33 @@ fn date64() -> Result<()> {
 }
 
 #[test]
+fn decimal() -> Result<()> {
+    let result = test_deserialize("1.1,\n1.2,\n1.22,\n1.3,\n", DataType::Decimal(2, 1))?;
+    let expected =
+        Int128Array::from(&[Some(11), Some(12), None, Some(13)]).to(DataType::Decimal(2, 1));
+    assert_eq!(expected, result.as_ref());
+    Ok(())
+}
+
+#[test]
+fn decimal_only_scale() -> Result<()> {
+    let result = test_deserialize("0.01,\n0.12,\n0.222,\n0.13,\n", DataType::Decimal(2, 2))?;
+    let expected =
+        Int128Array::from(&[Some(1), Some(12), None, Some(13)]).to(DataType::Decimal(2, 2));
+    assert_eq!(expected, result.as_ref());
+    Ok(())
+}
+
+#[test]
+fn decimal_only_integer() -> Result<()> {
+    let result = test_deserialize("1,\n1.0,\n1.1,\n10.0,\n", DataType::Decimal(1, 0))?;
+    let expected =
+        Int128Array::from(&[Some(1), Some(1), None, Some(10)]).to(DataType::Decimal(1, 0));
+    assert_eq!(expected, result.as_ref());
+    Ok(())
+}
+
+#[test]
 fn boolean() -> Result<()> {
     let input = vec!["true", "True", "False", "F", "t"];
     let input = input.join("\n");
