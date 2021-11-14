@@ -178,7 +178,7 @@ impl<O: Offset> Utf8Array<O> {
 impl<O: Offset> Utf8Array<O> {
     /// Returns the length of this array
     #[inline]
-    fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.offsets.len() - 1
     }
 

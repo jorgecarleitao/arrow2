@@ -1,16 +1,14 @@
-use crate::array::*;
-use crate::bitmap::Bitmap;
-use crate::buffer::MutableBuffer;
-use crate::datatypes::DataType;
-use crate::scalar::{BooleanScalar, Scalar};
+//! Comparison functions for [`BooleanArray`]
 use crate::{
-    bitmap::MutableBitmap,
-    error::{ArrowError, Result},
+    array::BooleanArray,
+    bitmap::{Bitmap, MutableBitmap},
+    buffer::MutableBuffer,
+    datatypes::DataType,
 };
 
-use super::{super::utils::combine_validities, Operator};
+use super::super::utils::combine_validities;
 
-pub fn compare_values_op<F>(lhs: &Bitmap, rhs: &Bitmap, op: F) -> MutableBitmap
+fn compare_values_op<F>(lhs: &Bitmap, rhs: &Bitmap, op: F) -> MutableBitmap
 where
     F: Fn(u8, u8) -> u8,
 {
@@ -33,25 +31,16 @@ where
 
 /// Evaluate `op(lhs, rhs)` for [`BooleanArray`]s using a specified
 /// comparison function.
-fn compare_op<F>(lhs: &BooleanArray, rhs: &BooleanArray, op: F) -> Result<BooleanArray>
+fn compare_op<F>(lhs: &BooleanArray, rhs: &BooleanArray, op: F) -> BooleanArray
 where
     F: Fn(u8, u8) -> u8,
 {
-    if lhs.len() != rhs.len() {
-        return Err(ArrowError::InvalidArgumentError(
-            "Cannot perform comparison operation on arrays of different length".to_string(),
-        ));
-    }
-
+    assert_eq!(lhs.len(), rhs.len());
     let validity = combine_validities(lhs.validity(), rhs.validity());
 
     let values = compare_values_op(lhs.values(), rhs.values(), op);
 
-    Ok(BooleanArray::from_data(
-        DataType::Boolean,
-        values.into(),
-        validity,
-    ))
+    BooleanArray::from_data(DataType::Boolean, values.into(), validity)
 }
 
 /// Evaluate `op(left, right)` for [`BooleanArray`] and scalar using
@@ -75,12 +64,12 @@ where
     BooleanArray::from_data(DataType::Boolean, values, lhs.validity().cloned())
 }
 
-/// Perform `lhs == rhs` operation on two arrays.
-pub fn eq(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
+/// Perform `lhs == rhs` operation on two [`BooleanArray`]s.
+pub fn eq(lhs: &BooleanArray, rhs: &BooleanArray) -> BooleanArray {
     compare_op(lhs, rhs, |a, b| !(a ^ b))
 }
 
-/// Perform `left == right` operation on an array and a scalar value.
+/// Perform `lhs == rhs` operation on a [`BooleanArray`] and a scalar value.
 pub fn eq_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
     if rhs {
         lhs.clone()
@@ -89,8 +78,8 @@ pub fn eq_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
     }
 }
 
-/// Perform `left != right` operation on two arrays.
-pub fn neq(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
+/// `lhs != rhs` for [`BooleanArray`]
+pub fn neq(lhs: &BooleanArray, rhs: &BooleanArray) -> BooleanArray {
     compare_op(lhs, rhs, |a, b| a ^ b)
 }
 
@@ -100,7 +89,7 @@ pub fn neq_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
 }
 
 /// Perform `left < right` operation on two arrays.
-pub fn lt(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
+pub fn lt(lhs: &BooleanArray, rhs: &BooleanArray) -> BooleanArray {
     compare_op(lhs, rhs, |a, b| !a & b)
 }
 
@@ -118,7 +107,7 @@ pub fn lt_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
 }
 
 /// Perform `left <= right` operation on two arrays.
-pub fn lt_eq(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
+pub fn lt_eq(lhs: &BooleanArray, rhs: &BooleanArray) -> BooleanArray {
     compare_op(lhs, rhs, |a, b| !a | b)
 }
 
@@ -134,7 +123,7 @@ pub fn lt_eq_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
 
 /// Perform `left > right` operation on two arrays. Non-null values are greater than null
 /// values.
-pub fn gt(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
+pub fn gt(lhs: &BooleanArray, rhs: &BooleanArray) -> BooleanArray {
     compare_op(lhs, rhs, |a, b| a & !b)
 }
 
@@ -154,7 +143,7 @@ pub fn gt_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
 
 /// Perform `left >= right` operation on two arrays. Non-null values are greater than null
 /// values.
-pub fn gt_eq(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
+pub fn gt_eq(lhs: &BooleanArray, rhs: &BooleanArray) -> BooleanArray {
     compare_op(lhs, rhs, |a, b| a | !b)
 }
 
@@ -168,47 +157,6 @@ pub fn gt_eq_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
     }
 }
 
-/// Compare two [`BooleanArray`]s using the given [`Operator`].
-///
-/// # Errors
-/// When the two arrays have different lengths.
-///
-/// Check the [crate::compute::comparison](module documentation) for usage
-/// examples.
-pub fn compare(lhs: &BooleanArray, rhs: &BooleanArray, op: Operator) -> Result<BooleanArray> {
-    match op {
-        Operator::Eq => eq(lhs, rhs),
-        Operator::Neq => neq(lhs, rhs),
-        Operator::Gt => gt(lhs, rhs),
-        Operator::GtEq => gt_eq(lhs, rhs),
-        Operator::Lt => lt(lhs, rhs),
-        Operator::LtEq => lt_eq(lhs, rhs),
-    }
-}
-
-/// Compare a [`BooleanArray`] and a scalar value using the given
-/// [`Operator`].
-///
-/// Check the [crate::compute::comparison](module documentation) for usage
-/// examples.
-pub fn compare_scalar(lhs: &BooleanArray, rhs: &BooleanScalar, op: Operator) -> BooleanArray {
-    if !rhs.is_valid() {
-        return BooleanArray::new_null(DataType::Boolean, lhs.len());
-    }
-    compare_scalar_non_null(lhs, rhs.value(), op)
-}
-
-pub fn compare_scalar_non_null(lhs: &BooleanArray, rhs: bool, op: Operator) -> BooleanArray {
-    match op {
-        Operator::Eq => eq_scalar(lhs, rhs),
-        Operator::Neq => neq_scalar(lhs, rhs),
-        Operator::Gt => gt_scalar(lhs, rhs),
-        Operator::GtEq => gt_eq_scalar(lhs, rhs),
-        Operator::Lt => lt_scalar(lhs, rhs),
-        Operator::LtEq => lt_eq_scalar(lhs, rhs),
-    }
-}
-
 // disable wrapping inside literal vectors used for test data and assertions
 #[rustfmt::skip::macros(vec)]
 #[cfg(test)]
@@ -219,7 +167,7 @@ mod tests {
         ($KERNEL:ident, $A_VEC:expr, $B_VEC:expr, $EXPECTED:expr) => {
             let a = BooleanArray::from_slice($A_VEC);
             let b = BooleanArray::from_slice($B_VEC);
-            let c = $KERNEL(&a, &b).unwrap();
+            let c = $KERNEL(&a, &b);
             assert_eq!(BooleanArray::from_slice($EXPECTED), c);
         };
     }
@@ -228,7 +176,7 @@ mod tests {
         ($KERNEL:ident, $A_VEC:expr, $B_VEC:expr, $EXPECTED:expr) => {
             let a = BooleanArray::from($A_VEC);
             let b = BooleanArray::from($B_VEC);
-            let c = $KERNEL(&a, &b).unwrap();
+            let c = $KERNEL(&a, &b);
             assert_eq!(BooleanArray::from($EXPECTED), c);
         };
     }
@@ -261,7 +209,7 @@ mod tests {
         let a = BooleanArray::from_slice(&[true, true, false]);
         let b = BooleanArray::from_slice(&[true, true, true, true, false]);
         let c = b.slice(2, 3);
-        let d = eq(&c, &a).unwrap();
+        let d = eq(&c, &a);
         assert_eq!(d, BooleanArray::from_slice(&[true, true, true]));
     }
 

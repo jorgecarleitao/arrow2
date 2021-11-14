@@ -1,32 +1,14 @@
-// Licensed to the Apache Software Foundation (ASF) under one
-// or more contributor license agreements.  See the NOTICE file
-// distributed with this work for additional information
-// regarding copyright ownership.  The ASF licenses this file
-// to you under the Apache License, Version 2.0 (the
-// "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
-
-use crate::bitmap::Bitmap;
-use crate::datatypes::DataType;
-use crate::scalar::{PrimitiveScalar, Scalar};
-use crate::{array::*, types::NativeType};
+//! Comparison functions for [`PrimitiveArray`]
 use crate::{
-    bitmap::MutableBitmap,
+    array::{BooleanArray, PrimitiveArray},
+    bitmap::{Bitmap, MutableBitmap},
     buffer::MutableBuffer,
-    error::{ArrowError, Result},
+    datatypes::DataType,
+    types::NativeType,
 };
 
+use super::super::utils::combine_validities;
 use super::simd::{Simd8, Simd8Lanes};
-use super::{super::utils::combine_validities, Operator};
 
 pub(crate) fn compare_values_op<T, F>(lhs: &[T], rhs: &[T], op: F) -> MutableBitmap
 where
@@ -58,26 +40,16 @@ where
 
 /// Evaluate `op(lhs, rhs)` for [`PrimitiveArray`]s using a specified
 /// comparison function.
-fn compare_op<T, F>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>, op: F) -> Result<BooleanArray>
+fn compare_op<T, F>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>, op: F) -> BooleanArray
 where
     T: NativeType + Simd8,
     F: Fn(T::Simd, T::Simd) -> u8,
 {
-    if lhs.len() != rhs.len() {
-        return Err(ArrowError::InvalidArgumentError(
-            "Cannot perform comparison operation on arrays of different length".to_string(),
-        ));
-    }
-
     let validity = combine_validities(lhs.validity(), rhs.validity());
 
     let values = compare_values_op(lhs.values(), rhs.values(), op);
 
-    Ok(BooleanArray::from_data(
-        DataType::Boolean,
-        values.into(),
-        validity,
-    ))
+    BooleanArray::from_data(DataType::Boolean, values.into(), validity)
 }
 
 /// Evaluate `op(left, right)` for [`PrimitiveArray`] and scalar using
@@ -113,7 +85,7 @@ where
 }
 
 /// Perform `lhs == rhs` operation on two arrays.
-pub fn eq<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<BooleanArray>
+pub fn eq<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> BooleanArray
 where
     T: NativeType + Simd8,
 {
@@ -129,7 +101,7 @@ where
 }
 
 /// Perform `left != right` operation on two arrays.
-pub fn neq<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<BooleanArray>
+pub fn neq<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> BooleanArray
 where
     T: NativeType + Simd8,
 {
@@ -145,7 +117,7 @@ where
 }
 
 /// Perform `left < right` operation on two arrays.
-pub fn lt<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<BooleanArray>
+pub fn lt<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> BooleanArray
 where
     T: NativeType + Simd8,
 {
@@ -161,7 +133,7 @@ where
 }
 
 /// Perform `left <= right` operation on two arrays.
-pub fn lt_eq<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<BooleanArray>
+pub fn lt_eq<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> BooleanArray
 where
     T: NativeType + Simd8,
 {
@@ -179,7 +151,7 @@ where
 
 /// Perform `left > right` operation on two arrays. Non-null values are greater than null
 /// values.
-pub fn gt<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<BooleanArray>
+pub fn gt<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> BooleanArray
 where
     T: NativeType + Simd8,
 {
@@ -197,7 +169,7 @@ where
 
 /// Perform `left >= right` operation on two arrays. Non-null values are greater than null
 /// values.
-pub fn gt_eq<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<BooleanArray>
+pub fn gt_eq<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> BooleanArray
 where
     T: NativeType + Simd8,
 {
@@ -213,64 +185,12 @@ where
     compare_op_scalar(lhs, rhs, |a, b| a.gt_eq(b))
 }
 
-/// Compare two [`PrimitiveArray`]s using the given [`Operator`].
-///
-/// # Errors
-/// When the two arrays have different lengths.
-///
-/// Check the [crate::compute::comparison](module documentation) for usage
-/// examples.
-pub fn compare<T: NativeType + Simd8>(
-    lhs: &PrimitiveArray<T>,
-    rhs: &PrimitiveArray<T>,
-    op: Operator,
-) -> Result<BooleanArray> {
-    match op {
-        Operator::Eq => eq(lhs, rhs),
-        Operator::Neq => neq(lhs, rhs),
-        Operator::Gt => gt(lhs, rhs),
-        Operator::GtEq => gt_eq(lhs, rhs),
-        Operator::Lt => lt(lhs, rhs),
-        Operator::LtEq => lt_eq(lhs, rhs),
-    }
-}
-
-/// Compare a [`PrimitiveArray`] and a scalar value using the given
-/// [`Operator`].
-///
-/// Check the [crate::compute::comparison](module documentation) for usage
-/// examples.
-pub fn compare_scalar<T: NativeType + Simd8>(
-    lhs: &PrimitiveArray<T>,
-    rhs: &PrimitiveScalar<T>,
-    op: Operator,
-) -> BooleanArray {
-    if !rhs.is_valid() {
-        return BooleanArray::new_null(DataType::Boolean, lhs.len());
-    }
-    compare_scalar_non_null(lhs, rhs.value(), op)
-}
-
-pub fn compare_scalar_non_null<T: NativeType + Simd8>(
-    lhs: &PrimitiveArray<T>,
-    rhs: T,
-    op: Operator,
-) -> BooleanArray {
-    match op {
-        Operator::Eq => eq_scalar(lhs, rhs),
-        Operator::Neq => neq_scalar(lhs, rhs),
-        Operator::Gt => gt_scalar(lhs, rhs),
-        Operator::GtEq => gt_eq_scalar(lhs, rhs),
-        Operator::Lt => lt_scalar(lhs, rhs),
-        Operator::LtEq => lt_eq_scalar(lhs, rhs),
-    }
-}
-
 // disable wrapping inside literal vectors used for test data and assertions
 #[rustfmt::skip::macros(vec)]
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::array::{Int64Array, Int8Array};
 
     /// Evaluate `KERNEL` with two vectors as inputs and assert against the expected output.
     /// `A_VEC` and `B_VEC` can be of type `Vec<i64>` or `Vec<Option<i64>>`.
@@ -280,7 +200,7 @@ mod tests {
         ($KERNEL:ident, $A_VEC:expr, $B_VEC:expr, $EXPECTED:expr) => {
             let a = Int64Array::from_slice($A_VEC);
             let b = Int64Array::from_slice($B_VEC);
-            let c = $KERNEL(&a, &b).unwrap();
+            let c = $KERNEL(&a, &b);
             assert_eq!(BooleanArray::from_slice($EXPECTED), c);
         };
     }
@@ -289,7 +209,7 @@ mod tests {
         ($KERNEL:ident, $A_VEC:expr, $B_VEC:expr, $EXPECTED:expr) => {
             let a = Int64Array::from($A_VEC);
             let b = Int64Array::from($B_VEC);
-            let c = $KERNEL(&a, &b).unwrap();
+            let c = $KERNEL(&a, &b);
             assert_eq!(BooleanArray::from($EXPECTED), c);
         };
     }
@@ -339,7 +259,7 @@ mod tests {
         let a = Int64Array::from_slice(&[6, 7, 8, 8, 10]);
         let b = Int64Array::from_slice(&[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
         let c = b.slice(5, 5);
-        let d = eq(&c, &a).unwrap();
+        let d = eq(&c, &a);
         assert_eq!(
             d,
             BooleanArray::from_slice(&vec![true, true, true, false, true])
@@ -572,7 +492,7 @@ mod tests {
         let a = a.slice(50, 50);
         let b = (100..200).map(Some).collect::<PrimitiveArray<i32>>();
         let b = b.slice(50, 50);
-        let actual = lt(&a, &b).unwrap();
+        let actual = lt(&a, &b);
         let expected: BooleanArray = (0..50).map(|_| Some(true)).collect();
         assert_eq!(expected, actual);
     }
@@ -594,7 +514,7 @@ mod tests {
         let array_a = Int8Array::from_slice(&vec![1; item_count]);
         let array_b = Int8Array::from_slice(&vec![2; item_count]);
         let expected = BooleanArray::from_slice(&vec![false; item_count]);
-        let result = gt_eq(&array_a, &array_b).unwrap();
+        let result = gt_eq(&array_a, &array_b);
 
         assert_eq!(result, expected)
     }
