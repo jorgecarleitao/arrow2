@@ -1,20 +1,3 @@
-// Licensed to the Apache Software Foundation (ASF) under one
-// or more contributor license agreements.  See the NOTICE file
-// distributed with this work for additional information
-// regarding copyright ownership.  The ASF licenses this file
-// to you under the Apache License, Version 2.0 (the
-// "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
-
 //! Defines the multiplication arithmetic kernels for Decimal
 //! `PrimitiveArrays`.
 
@@ -31,7 +14,7 @@ use crate::{
     error::{ArrowError, Result},
 };
 
-use super::{adjusted_precision_scale, max_value, number_digits};
+use super::{adjusted_precision_scale, get_parameters, max_value, number_digits};
 
 /// Multiply two decimal primitive arrays with the same precision and scale. If
 /// the precision and scale is different, then an InvalidArgumentError is
@@ -53,51 +36,37 @@ use super::{adjusted_precision_scale, max_value, number_digits};
 /// assert_eq!(result, expected);
 /// ```
 pub fn mul(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<PrimitiveArray<i128>> {
-    // Matching on both data types from both arrays
-    // This match will be true only when precision and scale from both
-    // arrays are the same, otherwise it will return and ArrowError
-    match (lhs.data_type(), rhs.data_type()) {
-        (DataType::Decimal(lhs_p, lhs_s), DataType::Decimal(rhs_p, rhs_s)) => {
-            if lhs_p == rhs_p && lhs_s == rhs_s {
-                // Closure for the binary operation. This closure will panic if
-                // the sum of the values is larger than the max value possible
-                // for the decimal precision
-                let op = move |a: i128, b: i128| {
-                    // The multiplication between i128 can overflow if they are
-                    // very large numbers. For that reason a checked
-                    // multiplication is used.
-                    let res: i128 = a.checked_mul(b).expect("Mayor overflow for multiplication");
+    let (precision, scale) = get_parameters(lhs.data_type(), rhs.data_type())?;
 
-                    // The multiplication is done using the numbers without scale.
-                    // The resulting scale of the value has to be corrected by
-                    // dividing by (10^scale)
+    let scale = 10i128.pow(scale as u32);
+    let max = max_value(precision);
 
-                    //   111.111 -->      111111
-                    //   222.222 -->      222222
-                    // --------          -------
-                    // 24691.308 <-- 24691308642
-                    let res = res / 10i128.pow(*lhs_s as u32);
+    let op = move |a: i128, b: i128| {
+        // The multiplication between i128 can overflow if they are
+        // very large numbers. For that reason a checked
+        // multiplication is used.
+        let res: i128 = a.checked_mul(b).expect("Mayor overflow for multiplication");
 
-                    assert!(
-                        !(res.abs() > max_value(*lhs_p)),
-                        "Overflow in multiplication presented for precision {}",
-                        lhs_p
-                    );
+        // The multiplication is done using the numbers without scale.
+        // The resulting scale of the value has to be corrected by
+        // dividing by (10^scale)
 
-                    res
-                };
+        //   111.111 -->      111111
+        //   222.222 -->      222222
+        // --------          -------
+        // 24691.308 <-- 24691308642
+        let res = res / scale;
 
-                binary(lhs, rhs, lhs.data_type().clone(), op)
-            } else {
-                Err(ArrowError::InvalidArgumentError(
-                    "Arrays must have the same precision and scale".to_string(),
-                ))
-            }
-        }
-        _ => Err(ArrowError::InvalidArgumentError(
-            "Incorrect data type for the array".to_string(),
-        )),
-    }
+        assert!(
+            res.abs() <= max,
+            "Overflow in multiplication presented for precision {}",
+            precision
+        );
+
+        res
+    };
+
+    binary(lhs, rhs, lhs.data_type().clone(), op)
 }
 
 /// Saturated multiplication of two decimal primitive arrays with the same
@@ -125,43 +94,30 @@ pub fn saturating_mul(
     lhs: &PrimitiveArray<i128>,
     rhs: &PrimitiveArray<i128>,
 ) -> Result<PrimitiveArray<i128>> {
-    // Matching on both data types from both arrays. This match will be true
-    // only when precision and scale from both arrays are the same, otherwise
-    // it will return and ArrowError
-    match (lhs.data_type(), rhs.data_type()) {
-        (DataType::Decimal(lhs_p, lhs_s), DataType::Decimal(rhs_p, rhs_s)) => {
-            if lhs_p == rhs_p && lhs_s == rhs_s {
-                // Closure for the binary operation.
-                let op = move |a: i128, b: i128| match a.checked_mul(b) {
-                    Some(res) => {
-                        let res = res / 10i128.pow(*lhs_s as u32);
-                        let max = max_value(*lhs_p);
+    let (precision, scale) = get_parameters(lhs.data_type(), rhs.data_type())?;
 
-                        match res {
-                            res if res.abs() > max => {
-                                if res > 0 {
-                                    max
-                                } else {
-                                    -max
-                                }
-                            }
-                            _ => res,
-                        }
+    let scale = 10i128.pow(scale as u32);
+    let max = max_value(precision);
+
+    let op = move |a: i128, b: i128| match a.checked_mul(b) {
+        Some(res) => {
+            let res = res / scale;
+
+            match res {
+                res if res.abs() > max => {
+                    if res > 0 {
+                        max
+                    } else {
+                        -max
                     }
-                    None => max_value(*lhs_p),
-                };
-
-                binary(lhs, rhs, lhs.data_type().clone(), op)
-            } else {
-                Err(ArrowError::InvalidArgumentError(
-                    "Arrays must have the same precision and scale".to_string(),
-                ))
+                }
+                _ => res,
             }
         }
-        _ => Err(ArrowError::InvalidArgumentError(
-            "Incorrect data type for the array".to_string(),
-        )),
-    }
+        None => max,
+    };
+
+    binary(lhs, rhs, lhs.data_type().clone(), op)
 }
 
 /// Checked multiplication of two decimal primitive arrays with the same
@@ -188,36 +144,24 @@ pub fn checked_mul(
     lhs: &PrimitiveArray<i128>,
     rhs: &PrimitiveArray<i128>,
 ) -> Result<PrimitiveArray<i128>> {
-    // Matching on both data types from both arrays. This match will be true
-    // only when precision and scale from both arrays are the same, otherwise
-    // it will return and ArrowError
-    match (lhs.data_type(), rhs.data_type()) {
-        (DataType::Decimal(lhs_p, lhs_s), DataType::Decimal(rhs_p, rhs_s)) => {
-            if lhs_p == rhs_p && lhs_s == rhs_s {
-                // Closure for the binary operation.
-                let op = move |a: i128, b: i128| match a.checked_mul(b) {
-                    Some(res) => {
-                        let res = res / 10i128.pow(*lhs_s as u32);
+    let (precision, scale) = get_parameters(lhs.data_type(), rhs.data_type())?;
 
-                        match res {
-                            res if res.abs() > max_value(*lhs_p) => None,
-                            _ => Some(res),
-                        }
-                    }
-                    None => None,
-                };
+    let scale = 10i128.pow(scale as u32);
+    let max = max_value(precision);
 
-                binary_checked(lhs, rhs, lhs.data_type().clone(), op)
-            } else {
-                Err(ArrowError::InvalidArgumentError(
-                    "Arrays must have the same precision and scale".to_string(),
-                ))
+    let op = move |a: i128, b: i128| match a.checked_mul(b) {
+        Some(res) => {
+            let res = res / scale;
+
+            match res {
+                res if res.abs() > max => None,
+                _ => Some(res),
             }
         }
-        _ => Err(ArrowError::InvalidArgumentError(
-            "Incorrect data type for the array".to_string(),
-        )),
-    }
+        None => None,
+    };
+
+    binary_checked(lhs, rhs, lhs.data_type().clone(), op)
 }
 
 // Implementation of ArrayMul trait for PrimitiveArrays
@@ -280,20 +224,23 @@ pub fn adaptive_mul(
         // looping through the iterator
         let (mut res_p, res_s, diff) = adjusted_precision_scale(*lhs_p, *lhs_s, *rhs_p, *rhs_s);
 
-        let mut result = Vec::new();
-        for (l, r) in lhs.values().iter().zip(rhs.values().iter()) {
+        let shift = 10i128.pow(diff as u32);
+        let shift_1 = 10i128.pow(res_s as u32);
+        let mut max = max_value(res_p);
+
+        let iter = lhs.values().iter().zip(rhs.values().iter()).map(|(l, r)| {
             // Based on the array's scales one of the arguments in the sum has to be shifted
             // to the left to match the final scale
             let res = if lhs_s > rhs_s {
-                l.checked_mul(r * 10i128.pow(diff as u32))
+                l.checked_mul(r * shift)
                     .expect("Mayor overflow for multiplication")
             } else {
-                (l * 10i128.pow(diff as u32))
+                (l * shift)
                     .checked_mul(*r)
                     .expect("Mayor overflow for multiplication")
             };
 
-            let res = res / 10i128.pow(res_s as u32);
+            let res = res / shift_1;
 
             // The precision of the resulting array will change if one of the
             // multiplications during the iteration produces a value bigger
@@ -303,15 +250,16 @@ pub fn adaptive_mul(
             //  10.0000 -> 6, 4
             // -----------------
             // 100.0000 -> 7, 4
-            if res.abs() > max_value(res_p) {
+            if res.abs() > max {
                 res_p = number_digits(res);
+                max = max_value(res_p);
             }
 
-            result.push(res);
-        }
+            res
+        });
+        let values = Buffer::from_trusted_len_iter(iter);
 
         let validity = combine_validities(lhs.validity(), rhs.validity());
-        let values = Buffer::from(result);
 
         Ok(PrimitiveArray::<i128>::from_data(
             DataType::Decimal(res_p, res_s),
