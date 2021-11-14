@@ -3,20 +3,18 @@ use std::ops::Add;
 
 use num_traits::{ops::overflowing::OverflowingAdd, CheckedAdd, SaturatingAdd, WrappingAdd, Zero};
 
-use crate::compute::arithmetics::basic::check_same_type;
-use crate::compute::arithmetics::ArrayWrappingAdd;
 use crate::{
     array::{Array, PrimitiveArray},
     bitmap::Bitmap,
     compute::{
         arithmetics::{
-            ArrayAdd, ArrayCheckedAdd, ArrayOverflowingAdd, ArraySaturatingAdd, NativeArithmetics,
+            basic::check_same_type, ArrayAdd, ArrayCheckedAdd, ArrayOverflowingAdd,
+            ArraySaturatingAdd, ArrayWrappingAdd, NativeArithmetics,
         },
         arity::{
             binary, binary_checked, binary_with_bitmap, unary, unary_checked, unary_with_bitmap,
         },
     },
-    error::Result,
     types::NativeType,
 };
 
@@ -34,12 +32,10 @@ use crate::{
 /// let expected = PrimitiveArray::from([None, None, None, Some(12)]);
 /// assert_eq!(result, expected)
 /// ```
-pub fn add<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<PrimitiveArray<T>>
+pub fn add<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> PrimitiveArray<T>
 where
     T: NativeType + Add<Output = T>,
 {
-    check_same_type(lhs, rhs)?;
-
     binary(lhs, rhs, lhs.data_type().clone(), |a, b| a + b)
 }
 
@@ -57,15 +53,10 @@ where
 /// let expected = PrimitiveArray::from([Some(-100i8), Some(-56i8), Some(100i8)]);
 /// assert_eq!(result, expected);
 /// ```
-pub fn wrapping_add<T>(
-    lhs: &PrimitiveArray<T>,
-    rhs: &PrimitiveArray<T>,
-) -> Result<PrimitiveArray<T>>
+pub fn wrapping_add<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> PrimitiveArray<T>
 where
     T: NativeType + WrappingAdd<Output = T>,
 {
-    check_same_type(lhs, rhs)?;
-
     let op = move |a: T, b: T| a.wrapping_add(&b);
 
     binary(lhs, rhs, lhs.data_type().clone(), op)
@@ -85,11 +76,11 @@ where
 /// let expected = PrimitiveArray::from([Some(100i8), None, Some(100i8)]);
 /// assert_eq!(result, expected);
 /// ```
-pub fn checked_add<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<PrimitiveArray<T>>
+pub fn checked_add<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> PrimitiveArray<T>
 where
     T: NativeType + CheckedAdd<Output = T>,
 {
-    check_same_type(lhs, rhs)?;
+    check_same_type(lhs, rhs).unwrap();
 
     let op = move |a: T, b: T| a.checked_add(&b);
 
@@ -111,15 +102,10 @@ where
 /// let expected = PrimitiveArray::from([Some(127)]);
 /// assert_eq!(result, expected);
 /// ```
-pub fn saturating_add<T>(
-    lhs: &PrimitiveArray<T>,
-    rhs: &PrimitiveArray<T>,
-) -> Result<PrimitiveArray<T>>
+pub fn saturating_add<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> PrimitiveArray<T>
 where
     T: NativeType + SaturatingAdd<Output = T>,
 {
-    check_same_type(lhs, rhs)?;
-
     let op = move |a: T, b: T| a.saturating_add(&b);
 
     binary(lhs, rhs, lhs.data_type().clone(), op)
@@ -144,12 +130,10 @@ where
 pub fn overflowing_add<T>(
     lhs: &PrimitiveArray<T>,
     rhs: &PrimitiveArray<T>,
-) -> Result<(PrimitiveArray<T>, Bitmap)>
+) -> (PrimitiveArray<T>, Bitmap)
 where
     T: NativeType + OverflowingAdd<Output = T>,
 {
-    check_same_type(lhs, rhs)?;
-
     let op = move |a: T, b: T| a.overflowing_add(&b);
 
     binary_with_bitmap(lhs, rhs, lhs.data_type().clone(), op)
@@ -160,7 +144,7 @@ impl<T> ArrayAdd<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + Add<Output = T>,
 {
-    fn add(&self, rhs: &PrimitiveArray<T>) -> Result<Self> {
+    fn add(&self, rhs: &PrimitiveArray<T>) -> Self {
         add(self, rhs)
     }
 }
@@ -169,7 +153,7 @@ impl<T> ArrayWrappingAdd<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + WrappingAdd<Output = T>,
 {
-    fn wrapping_add(&self, rhs: &PrimitiveArray<T>) -> Result<Self> {
+    fn wrapping_add(&self, rhs: &PrimitiveArray<T>) -> Self {
         wrapping_add(self, rhs)
     }
 }
@@ -179,7 +163,7 @@ impl<T> ArrayCheckedAdd<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + CheckedAdd<Output = T>,
 {
-    fn checked_add(&self, rhs: &PrimitiveArray<T>) -> Result<Self> {
+    fn checked_add(&self, rhs: &PrimitiveArray<T>) -> Self {
         checked_add(self, rhs)
     }
 }
@@ -189,7 +173,7 @@ impl<T> ArraySaturatingAdd<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + SaturatingAdd<Output = T>,
 {
-    fn saturating_add(&self, rhs: &PrimitiveArray<T>) -> Result<Self> {
+    fn saturating_add(&self, rhs: &PrimitiveArray<T>) -> Self {
         saturating_add(self, rhs)
     }
 }
@@ -199,7 +183,7 @@ impl<T> ArrayOverflowingAdd<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + OverflowingAdd<Output = T>,
 {
-    fn overflowing_add(&self, rhs: &PrimitiveArray<T>) -> Result<(Self, Bitmap)> {
+    fn overflowing_add(&self, rhs: &PrimitiveArray<T>) -> (Self, Bitmap) {
         overflowing_add(self, rhs)
     }
 }
@@ -323,8 +307,8 @@ impl<T> ArrayAdd<T> for PrimitiveArray<T>
 where
     T: NativeArithmetics + Add<Output = T>,
 {
-    fn add(&self, rhs: &T) -> Result<Self> {
-        Ok(add_scalar(self, rhs))
+    fn add(&self, rhs: &T) -> Self {
+        add_scalar(self, rhs)
     }
 }
 
@@ -333,8 +317,8 @@ impl<T> ArrayCheckedAdd<T> for PrimitiveArray<T>
 where
     T: NativeArithmetics + CheckedAdd<Output = T> + Zero,
 {
-    fn checked_add(&self, rhs: &T) -> Result<Self> {
-        Ok(checked_add_scalar(self, rhs))
+    fn checked_add(&self, rhs: &T) -> Self {
+        checked_add_scalar(self, rhs)
     }
 }
 
@@ -343,8 +327,8 @@ impl<T> ArraySaturatingAdd<T> for PrimitiveArray<T>
 where
     T: NativeArithmetics + SaturatingAdd<Output = T>,
 {
-    fn saturating_add(&self, rhs: &T) -> Result<Self> {
-        Ok(saturating_add_scalar(self, rhs))
+    fn saturating_add(&self, rhs: &T) -> Self {
+        saturating_add_scalar(self, rhs)
     }
 }
 
@@ -353,7 +337,7 @@ impl<T> ArrayOverflowingAdd<T> for PrimitiveArray<T>
 where
     T: NativeArithmetics + OverflowingAdd<Output = T>,
 {
-    fn overflowing_add(&self, rhs: &T) -> Result<(Self, Bitmap)> {
-        Ok(overflowing_add_scalar(self, rhs))
+    fn overflowing_add(&self, rhs: &T) -> (Self, Bitmap) {
+        overflowing_add_scalar(self, rhs)
     }
 }

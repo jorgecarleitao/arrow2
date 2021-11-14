@@ -32,13 +32,13 @@ use super::{adjusted_precision_scale, get_parameters, max_value, number_digits};
 /// let a = PrimitiveArray::from([Some(1i128), Some(1i128), None, Some(2i128)]).to(DataType::Decimal(5, 2));
 /// let b = PrimitiveArray::from([Some(1i128), Some(2i128), None, Some(2i128)]).to(DataType::Decimal(5, 2));
 ///
-/// let result = add(&a, &b).unwrap();
+/// let result = add(&a, &b);
 /// let expected = PrimitiveArray::from([Some(2i128), Some(3i128), None, Some(4i128)]).to(DataType::Decimal(5, 2));
 ///
 /// assert_eq!(result, expected);
 /// ```
-pub fn add(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<PrimitiveArray<i128>> {
-    let (precision, _) = get_parameters(lhs.data_type(), rhs.data_type())?;
+pub fn add(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> PrimitiveArray<i128> {
+    let (precision, _) = get_parameters(lhs.data_type(), rhs.data_type()).unwrap();
 
     let max = max_value(precision);
     let op = move |a, b| {
@@ -79,8 +79,8 @@ pub fn add(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<Pri
 pub fn saturating_add(
     lhs: &PrimitiveArray<i128>,
     rhs: &PrimitiveArray<i128>,
-) -> Result<PrimitiveArray<i128>> {
-    let (precision, _) = get_parameters(lhs.data_type(), rhs.data_type())?;
+) -> PrimitiveArray<i128> {
+    let (precision, _) = get_parameters(lhs.data_type(), rhs.data_type()).unwrap();
 
     let max = max_value(precision);
     let op = move |a, b| {
@@ -115,16 +115,13 @@ pub fn saturating_add(
 /// let a = PrimitiveArray::from([Some(99000i128), Some(11100i128), None, Some(22200i128)]).to(DataType::Decimal(5, 2));
 /// let b = PrimitiveArray::from([Some(01000i128), Some(22200i128), None, Some(11100i128)]).to(DataType::Decimal(5, 2));
 ///
-/// let result = checked_add(&a, &b).unwrap();
+/// let result = checked_add(&a, &b);
 /// let expected = PrimitiveArray::from([None, Some(33300i128), None, Some(33300i128)]).to(DataType::Decimal(5, 2));
 ///
 /// assert_eq!(result, expected);
 /// ```
-pub fn checked_add(
-    lhs: &PrimitiveArray<i128>,
-    rhs: &PrimitiveArray<i128>,
-) -> Result<PrimitiveArray<i128>> {
-    let (precision, _) = get_parameters(lhs.data_type(), rhs.data_type())?;
+pub fn checked_add(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> PrimitiveArray<i128> {
+    let (precision, _) = get_parameters(lhs.data_type(), rhs.data_type()).unwrap();
 
     let max = max_value(precision);
     let op = move |a, b| {
@@ -142,21 +139,21 @@ pub fn checked_add(
 
 // Implementation of ArrayAdd trait for PrimitiveArrays
 impl ArrayAdd<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    fn add(&self, rhs: &PrimitiveArray<i128>) -> Result<Self> {
+    fn add(&self, rhs: &PrimitiveArray<i128>) -> Self {
         add(self, rhs)
     }
 }
 
 // Implementation of ArrayCheckedAdd trait for PrimitiveArrays
 impl ArrayCheckedAdd<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    fn checked_add(&self, rhs: &PrimitiveArray<i128>) -> Result<Self> {
+    fn checked_add(&self, rhs: &PrimitiveArray<i128>) -> Self {
         checked_add(self, rhs)
     }
 }
 
 // Implementation of ArraySaturatingAdd trait for PrimitiveArrays
 impl ArraySaturatingAdd<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    fn saturating_add(&self, rhs: &PrimitiveArray<i128>) -> Result<Self> {
+    fn saturating_add(&self, rhs: &PrimitiveArray<i128>) -> Self {
         saturating_add(self, rhs)
     }
 }
@@ -181,7 +178,7 @@ impl ArraySaturatingAdd<PrimitiveArray<i128>> for PrimitiveArray<i128> {
 ///
 /// let a = PrimitiveArray::from([Some(11111_11i128)]).to(DataType::Decimal(7, 2));
 /// let b = PrimitiveArray::from([Some(11111_111i128)]).to(DataType::Decimal(8, 3));
-/// let result = adaptive_add(&a, &b).unwrap();
+/// let result = adaptive_add(&a, &b);
 /// let expected = PrimitiveArray::from([Some(22222_221i128)]).to(DataType::Decimal(8, 3));
 ///
 /// assert_eq!(result, expected);

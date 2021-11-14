@@ -34,8 +34,8 @@ use super::{adjusted_precision_scale, get_parameters, max_value, number_digits};
 ///
 /// assert_eq!(result, expected);
 /// ```
-pub fn sub(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<PrimitiveArray<i128>> {
-    let (precision, _) = get_parameters(lhs.data_type(), rhs.data_type())?;
+pub fn sub(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> PrimitiveArray<i128> {
+    let (precision, _) = get_parameters(lhs.data_type(), rhs.data_type()).unwrap();
 
     let max = max_value(precision);
 
@@ -77,8 +77,8 @@ pub fn sub(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<Pri
 pub fn saturating_sub(
     lhs: &PrimitiveArray<i128>,
     rhs: &PrimitiveArray<i128>,
-) -> Result<PrimitiveArray<i128>> {
-    let (precision, _) = get_parameters(lhs.data_type(), rhs.data_type())?;
+) -> PrimitiveArray<i128> {
+    let (precision, _) = get_parameters(lhs.data_type(), rhs.data_type()).unwrap();
 
     let max = max_value(precision);
 
@@ -102,21 +102,21 @@ pub fn saturating_sub(
 
 // Implementation of ArraySub trait for PrimitiveArrays
 impl ArraySub<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    fn sub(&self, rhs: &PrimitiveArray<i128>) -> Result<Self> {
+    fn sub(&self, rhs: &PrimitiveArray<i128>) -> Self {
         sub(self, rhs)
     }
 }
 
 // Implementation of ArrayCheckedSub trait for PrimitiveArrays
 impl ArrayCheckedSub<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    fn checked_sub(&self, rhs: &PrimitiveArray<i128>) -> Result<Self> {
+    fn checked_sub(&self, rhs: &PrimitiveArray<i128>) -> Self {
         checked_sub(self, rhs)
     }
 }
 
 // Implementation of ArraySaturatingSub trait for PrimitiveArrays
 impl ArraySaturatingSub<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    fn saturating_sub(&self, rhs: &PrimitiveArray<i128>) -> Result<Self> {
+    fn saturating_sub(&self, rhs: &PrimitiveArray<i128>) -> Self {
         saturating_sub(self, rhs)
     }
 }
@@ -140,11 +140,8 @@ impl ArraySaturatingSub<PrimitiveArray<i128>> for PrimitiveArray<i128> {
 ///
 /// assert_eq!(result, expected);
 /// ```
-pub fn checked_sub(
-    lhs: &PrimitiveArray<i128>,
-    rhs: &PrimitiveArray<i128>,
-) -> Result<PrimitiveArray<i128>> {
-    let (precision, _) = get_parameters(lhs.data_type(), rhs.data_type())?;
+pub fn checked_sub(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> PrimitiveArray<i128> {
+    let (precision, _) = get_parameters(lhs.data_type(), rhs.data_type()).unwrap();
 
     let max = max_value(precision);
 

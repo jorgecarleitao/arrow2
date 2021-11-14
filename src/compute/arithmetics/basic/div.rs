@@ -3,7 +3,7 @@ use std::ops::Div;
 
 use num_traits::{CheckedDiv, NumCast, Zero};
 
-use crate::compute::arithmetics::basic::{check_same_len, check_same_type};
+use crate::compute::arithmetics::basic::check_same_len;
 use crate::datatypes::DataType;
 use crate::{
     array::{Array, PrimitiveArray},
@@ -11,7 +11,6 @@ use crate::{
         arithmetics::{ArrayCheckedDiv, ArrayDiv, NativeArithmetics},
         arity::{binary, binary_checked, unary, unary_checked},
     },
-    error::Result,
     types::NativeType,
 };
 use strength_reduce::{
@@ -28,26 +27,24 @@ use strength_reduce::{
 ///
 /// let a = Int32Array::from(&[Some(10), Some(1), Some(6)]);
 /// let b = Int32Array::from(&[Some(5), None, Some(6)]);
-/// let result = div(&a, &b).unwrap();
+/// let result = div(&a, &b);
 /// let expected = Int32Array::from(&[Some(2), None, Some(1)]);
 /// assert_eq!(result, expected)
 /// ```
-pub fn div<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<PrimitiveArray<T>>
+pub fn div<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> PrimitiveArray<T>
 where
     T: NativeType + Div<Output = T>,
 {
-    check_same_type(lhs, rhs)?;
-
     if rhs.null_count() == 0 {
         binary(lhs, rhs, lhs.data_type().clone(), |a, b| a / b)
     } else {
-        check_same_len(lhs, rhs)?;
+        check_same_len(lhs, rhs).unwrap();
         let values = lhs.iter().zip(rhs.iter()).map(|(l, r)| match (l, r) {
             (Some(l), Some(r)) => Some(*l / *r),
             _ => None,
         });
 
-        Ok(PrimitiveArray::from_trusted_len_iter(values).to(lhs.data_type().clone()))
+        PrimitiveArray::from_trusted_len_iter(values).to(lhs.data_type().clone())
     }
 }
 
@@ -62,16 +59,14 @@ where
 ///
 /// let a = Int8Array::from(&[Some(-100i8), Some(10i8)]);
 /// let b = Int8Array::from(&[Some(100i8), Some(0i8)]);
-/// let result = checked_div(&a, &b).unwrap();
+/// let result = checked_div(&a, &b);
 /// let expected = Int8Array::from(&[Some(-1i8), None]);
 /// assert_eq!(result, expected);
 /// ```
-pub fn checked_div<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<PrimitiveArray<T>>
+pub fn checked_div<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> PrimitiveArray<T>
 where
     T: NativeArithmetics + CheckedDiv<Output = T>,
 {
-    check_same_type(lhs, rhs)?;
-
     let op = move |a: T, b: T| a.checked_div(&b);
 
     binary_checked(lhs, rhs, lhs.data_type().clone(), op)
@@ -82,7 +77,7 @@ impl<T> ArrayDiv<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + Div<Output = T>,
 {
-    fn div(&self, rhs: &PrimitiveArray<T>) -> Result<Self> {
+    fn div(&self, rhs: &PrimitiveArray<T>) -> Self {
         div(self, rhs)
     }
 }
@@ -92,7 +87,7 @@ impl<T> ArrayCheckedDiv<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + CheckedDiv<Output = T>,
 {
-    fn checked_div(&self, rhs: &PrimitiveArray<T>) -> Result<Self> {
+    fn checked_div(&self, rhs: &PrimitiveArray<T>) -> Self {
         checked_div(self, rhs)
     }
 }
@@ -208,8 +203,8 @@ impl<T> ArrayDiv<T> for PrimitiveArray<T>
 where
     T: NativeType + Div<Output = T> + NativeArithmetics + NumCast,
 {
-    fn div(&self, rhs: &T) -> Result<Self> {
-        Ok(div_scalar(self, rhs))
+    fn div(&self, rhs: &T) -> Self {
+        div_scalar(self, rhs)
     }
 }
 
@@ -218,7 +213,7 @@ impl<T> ArrayCheckedDiv<T> for PrimitiveArray<T>
 where
     T: NativeType + CheckedDiv<Output = T> + Zero + NativeArithmetics,
 {
-    fn checked_div(&self, rhs: &T) -> Result<Self> {
-        Ok(checked_div_scalar(self, rhs))
+    fn checked_div(&self, rhs: &T) -> Self {
+        checked_div_scalar(self, rhs)
     }
 }

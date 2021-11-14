@@ -79,9 +79,9 @@ macro_rules! primitive {
     ($lhs: expr, $rhs: expr, $op: expr, $array_type: ty) => {{
         let res_lhs = $lhs.as_any().downcast_ref().unwrap();
         let res_rhs = $rhs.as_any().downcast_ref().unwrap();
-        arithmetic_primitive::<$array_type>(res_lhs, $op, res_rhs)
-            .map(Box::new)
-            .map(|x| x as Box<dyn Array>)
+
+        let res = arithmetic_primitive::<$array_type>(res_lhs, $op, res_rhs);
+        Ok(Box::new(res) as Box<dyn Array>)
     }};
 }
 
@@ -121,7 +121,7 @@ pub fn arithmetic(lhs: &dyn Array, op: Operator, rhs: &dyn Array) -> Result<Box<
                 }
             };
 
-            res.map(|x| Box::new(x) as Box<dyn Array>)
+            Ok(Box::new(res) as Box<dyn Array>)
         }
         (Time32(TimeUnit::Second), Add, Duration(_))
         | (Time32(TimeUnit::Millisecond), Add, Duration(_))
@@ -245,7 +245,7 @@ pub fn arithmetic_primitive<T>(
     lhs: &PrimitiveArray<T>,
     op: Operator,
     rhs: &PrimitiveArray<T>,
-) -> Result<PrimitiveArray<T>>
+) -> PrimitiveArray<T>
 where
     T: NativeType
         + Div<Output = T>
@@ -350,115 +350,115 @@ where
 /// Defines basic addition operation for primitive arrays
 pub trait ArrayAdd<Rhs>: Sized {
     /// Adds itself to `rhs`
-    fn add(&self, rhs: &Rhs) -> Result<Self>;
+    fn add(&self, rhs: &Rhs) -> Self;
 }
 
 /// Defines wrapping addition operation for primitive arrays
 pub trait ArrayWrappingAdd<Rhs>: Sized {
     /// Adds itself to `rhs` using wrapping addition
-    fn wrapping_add(&self, rhs: &Rhs) -> Result<Self>;
+    fn wrapping_add(&self, rhs: &Rhs) -> Self;
 }
 
 /// Defines checked addition operation for primitive arrays
 pub trait ArrayCheckedAdd<Rhs>: Sized {
     /// Checked add
-    fn checked_add(&self, rhs: &Rhs) -> Result<Self>;
+    fn checked_add(&self, rhs: &Rhs) -> Self;
 }
 
 /// Defines saturating addition operation for primitive arrays
 pub trait ArraySaturatingAdd<Rhs>: Sized {
     /// Saturating add
-    fn saturating_add(&self, rhs: &Rhs) -> Result<Self>;
+    fn saturating_add(&self, rhs: &Rhs) -> Self;
 }
 
 /// Defines Overflowing addition operation for primitive arrays
 pub trait ArrayOverflowingAdd<Rhs>: Sized {
     /// Overflowing add
-    fn overflowing_add(&self, rhs: &Rhs) -> Result<(Self, Bitmap)>;
+    fn overflowing_add(&self, rhs: &Rhs) -> (Self, Bitmap);
 }
 
 /// Defines basic subtraction operation for primitive arrays
 pub trait ArraySub<Rhs>: Sized {
     /// subtraction
-    fn sub(&self, rhs: &Rhs) -> Result<Self>;
+    fn sub(&self, rhs: &Rhs) -> Self;
 }
 
 /// Defines wrapping subtraction operation for primitive arrays
 pub trait ArrayWrappingSub<Rhs>: Sized {
     /// wrapping subtraction
-    fn wrapping_sub(&self, rhs: &Rhs) -> Result<Self>;
+    fn wrapping_sub(&self, rhs: &Rhs) -> Self;
 }
 
 /// Defines checked subtraction operation for primitive arrays
 pub trait ArrayCheckedSub<Rhs>: Sized {
     /// checked subtraction
-    fn checked_sub(&self, rhs: &Rhs) -> Result<Self>;
+    fn checked_sub(&self, rhs: &Rhs) -> Self;
 }
 
 /// Defines saturating subtraction operation for primitive arrays
 pub trait ArraySaturatingSub<Rhs>: Sized {
     /// saturarting subtraction
-    fn saturating_sub(&self, rhs: &Rhs) -> Result<Self>;
+    fn saturating_sub(&self, rhs: &Rhs) -> Self;
 }
 
 /// Defines Overflowing subtraction operation for primitive arrays
 pub trait ArrayOverflowingSub<Rhs>: Sized {
     /// overflowing subtraction
-    fn overflowing_sub(&self, rhs: &Rhs) -> Result<(Self, Bitmap)>;
+    fn overflowing_sub(&self, rhs: &Rhs) -> (Self, Bitmap);
 }
 
 /// Defines basic multiplication operation for primitive arrays
 pub trait ArrayMul<Rhs>: Sized {
     /// multiplication
-    fn mul(&self, rhs: &Rhs) -> Result<Self>;
+    fn mul(&self, rhs: &Rhs) -> Self;
 }
 
 /// Defines wrapping multiplication operation for primitive arrays
 pub trait ArrayWrappingMul<Rhs>: Sized {
     /// wrapping multiplication
-    fn wrapping_mul(&self, rhs: &Rhs) -> Result<Self>;
+    fn wrapping_mul(&self, rhs: &Rhs) -> Self;
 }
 
 /// Defines checked multiplication operation for primitive arrays
 pub trait ArrayCheckedMul<Rhs>: Sized {
     /// checked multiplication
-    fn checked_mul(&self, rhs: &Rhs) -> Result<Self>;
+    fn checked_mul(&self, rhs: &Rhs) -> Self;
 }
 
 /// Defines saturating multiplication operation for primitive arrays
 pub trait ArraySaturatingMul<Rhs>: Sized {
     /// saturating multiplication
-    fn saturating_mul(&self, rhs: &Rhs) -> Result<Self>;
+    fn saturating_mul(&self, rhs: &Rhs) -> Self;
 }
 
 /// Defines Overflowing multiplication operation for primitive arrays
 pub trait ArrayOverflowingMul<Rhs>: Sized {
     /// overflowing multiplication
-    fn overflowing_mul(&self, rhs: &Rhs) -> Result<(Self, Bitmap)>;
+    fn overflowing_mul(&self, rhs: &Rhs) -> (Self, Bitmap);
 }
 
 /// Defines basic division operation for primitive arrays
 pub trait ArrayDiv<Rhs>: Sized {
     /// division
-    fn div(&self, rhs: &Rhs) -> Result<Self>;
+    fn div(&self, rhs: &Rhs) -> Self;
 }
 
 /// Defines checked division operation for primitive arrays
 pub trait ArrayCheckedDiv<Rhs>: Sized {
     /// checked division
-    fn checked_div(&self, rhs: &Rhs) -> Result<Self>;
+    fn checked_div(&self, rhs: &Rhs) -> Self;
 }
 
 /// Defines basic reminder operation for primitive arrays
 pub trait ArrayRem<Rhs>: Sized {
     /// remainder
-    fn rem(&self, rhs: &Rhs) -> Result<Self>;
+    fn rem(&self, rhs: &Rhs) -> Self;
 }
 
 /// Defines checked reminder operation for primitive arrays
 pub trait ArrayCheckedRem<Rhs>: Sized {
     /// checked remainder
-    fn checked_rem(&self, rhs: &Rhs) -> Result<Self>;
+    fn checked_rem(&self, rhs: &Rhs) -> Self;
 }
 
 /// Trait describing a [`NativeType`] whose semantics of arithmetic in Arrow equals

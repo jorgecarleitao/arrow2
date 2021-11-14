@@ -114,7 +114,7 @@ where
     // required to add a duration to the timestamp array.
     let op = move |a: T, b: i64| a + (b as f64 * scale).as_();
 
-    binary(time, duration, time.data_type().clone(), op)
+    Ok(binary(time, duration, time.data_type().clone(), op))
 }
 
 /// Subtract a duration to a time array (Timestamp, Time and Date). The timeunit
@@ -170,7 +170,7 @@ where
     // required to add a duration to the timestamp array.
     let op = move |a: T, b: i64| a - (b as f64 * scale).as_();
 
-    binary(time, duration, time.data_type().clone(), op)
+    Ok(binary(time, duration, time.data_type().clone(), op))
 }
 
 /// Calculates the difference between two timestamps returning an array of type
@@ -220,7 +220,7 @@ pub fn subtract_timestamps(
             let scale = temporal_conversions::timeunit_scale(*timeunit_a, *timeunit_b);
             let op = move |a, b| a - (b as f64 * scale) as i64;
 
-            binary(lhs, rhs, DataType::Duration(*timeunit_a), op)
+            Ok(binary(lhs, rhs, DataType::Duration(*timeunit_a), op))
         }
         _ => Err(ArrowError::InvalidArgumentError(
             "Incorrect data type for the arguments".to_string(),
@@ -238,7 +238,7 @@ pub fn add_interval(
             let time_unit = *time_unit;
             let timezone = temporal_conversions::parse_offset(timezone_str);
             match timezone {
-                Ok(timezone) => binary(
+                Ok(timezone) => Ok(binary(
                     timestamp,
                     interval,
                     timestamp.data_type().clone(),
@@ -247,11 +247,11 @@ pub fn add_interval(
                             timestamp, time_unit, interval, &timezone,
                         )
                     },
-                ),
+                )),
                 #[cfg(feature = "chrono-tz")]
                 Err(_) => {
                     let timezone = temporal_conversions::parse_offset_tz(timezone_str)?;
-                    binary(
+                    Ok(binary(
                         timestamp,
                         interval,
                         timestamp.data_type().clone(),
@@ -260,7 +260,7 @@ pub fn add_interval(
                                 timestamp, time_unit, interval, &timezone,
                             )
                         },
-                    )
+                    ))
                 }
                 #[cfg(not(feature = "chrono-tz"))]
                 _ => Err(ArrowError::InvalidArgumentError(format!(
@@ -271,14 +271,14 @@ pub fn add_interval(
         }
         DataType::Timestamp(time_unit, None) => {
             let time_unit = *time_unit;
-            binary(
+            Ok(binary(
                 timestamp,
                 interval,
                 timestamp.data_type().clone(),
                 |timestamp, interval| {
                     temporal_conversions::add_naive_interval(timestamp, time_unit, interval)
                 },
-            )
+            ))
         }
         _ => Err(ArrowError::InvalidArgumentError(
             "Adding an interval is only supported for `DataType::Timestamp`".to_string(),
