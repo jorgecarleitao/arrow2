@@ -59,6 +59,7 @@ pub fn add(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<Pri
     match (lhs.data_type(), rhs.data_type()) {
         (DataType::Decimal(lhs_p, lhs_s), DataType::Decimal(rhs_p, rhs_s)) => {
             if lhs_p == rhs_p && lhs_s == rhs_s {
+                let max = max_value(*lhs_p);
                 // Closure for the binary operation. This closure will panic if
                 // the sum of the values is larger than the max value possible
                 // for the decimal precision
@@ -66,7 +67,7 @@ pub fn add(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<Pri
                     let res: i128 = a + b;
 
                     assert!(
-                        !(res.abs() > max_value(*lhs_p)),
+                        res.abs() <= max,
                         "Overflow in addition presented for precision {}",
                         lhs_p
                     );
@@ -118,9 +119,9 @@ pub fn saturating_add(
         (DataType::Decimal(lhs_p, lhs_s), DataType::Decimal(rhs_p, rhs_s)) => {
             if lhs_p == rhs_p && lhs_s == rhs_s {
                 // Closure for the binary operation.
+                let max = max_value(*lhs_p);
                 let op = move |a, b| {
                     let res: i128 = a + b;
-                    let max = max_value(*lhs_p);
 
                     match res {
                         res if res.abs() > max => {
@@ -177,13 +178,15 @@ pub fn checked_add(
     match (lhs.data_type(), rhs.data_type()) {
         (DataType::Decimal(lhs_p, lhs_s), DataType::Decimal(rhs_p, rhs_s)) => {
             if lhs_p == rhs_p && lhs_s == rhs_s {
+                let max = max_value(*lhs_p);
                 // Closure for the binary operation.
                 let op = move |a, b| {
-                    let res: i128 = a + b;
+                    let result: i128 = a + b;
 
-                    match res {
-                        res if res.abs() > max_value(*lhs_p) => None,
-                        _ => Some(res),
+                    if result.abs() > max {
+                        None
+                    } else {
+                        Some(result)
                     }
                 };
 
@@ -259,14 +262,16 @@ pub fn adaptive_add(
         // looping through the iterator
         let (mut res_p, res_s, diff) = adjusted_precision_scale(*lhs_p, *lhs_s, *rhs_p, *rhs_s);
 
-        let mut result = Vec::new();
-        for (l, r) in lhs.values().iter().zip(rhs.values().iter()) {
+        let shift = 10i128.pow(diff as u32);
+        let mut max = max_value(res_p);
+
+        let iter = lhs.values().iter().zip(rhs.values().iter()).map(|(l, r)| {
             // Based on the array's scales one of the arguments in the sum has to be shifted
             // to the left to match the final scale
             let res = if lhs_s > rhs_s {
-                l + r * 10i128.pow(diff as u32)
+                l + r * shift
             } else {
-                l * 10i128.pow(diff as u32) + r
+                l * shift + r
             };
 
             // The precision of the resulting array will change if one of the
@@ -277,15 +282,15 @@ pub fn adaptive_add(
             //  00.0001 -> 6, 4
             // -----------------
             // 100.0000 -> 7, 4
-            if res.abs() > max_value(res_p) {
+            if res.abs() > max {
                 res_p = number_digits(res);
+                max = max_value(res_p);
             }
-
-            result.push(res);
-        }
+            res
+        });
+        let values = Buffer::from_trusted_len_iter(iter);
 
         let validity = combine_validities(lhs.validity(), rhs.validity());
-        let values = Buffer::from(result);
 
         Ok(PrimitiveArray::<i128>::from_data(
             DataType::Decimal(res_p, res_s),
