@@ -3,7 +3,7 @@ mod decimal;
 mod time;
 
 use arrow2::array::new_empty_array;
-use arrow2::compute::arithmetics::{arithmetic, can_arithmetic, Operator};
+use arrow2::compute::arithmetics::*;
 use arrow2::datatypes::DataType::*;
 use arrow2::datatypes::{IntervalUnit, TimeUnit};
 
@@ -42,27 +42,26 @@ fn consistency() {
         Duration(TimeUnit::Nanosecond),
         Interval(IntervalUnit::MonthDayNano),
     ];
-    let operators = vec![
-        Operator::Add,
-        Operator::Divide,
-        Operator::Subtract,
-        Operator::Multiply,
-        Operator::Remainder,
-    ];
 
-    let cases = datatypes
-        .clone()
-        .into_iter()
-        .zip(operators.into_iter())
-        .zip(datatypes.into_iter());
+    let cases = datatypes.clone().into_iter().zip(datatypes.into_iter());
 
-    cases.for_each(|((lhs, op), rhs)| {
+    cases.for_each(|(lhs, rhs)| {
         let lhs_a = new_empty_array(lhs.clone());
         let rhs_a = new_empty_array(rhs.clone());
-        if can_arithmetic(&lhs, op, &rhs) {
-            assert!(arithmetic(lhs_a.as_ref(), op, rhs_a.as_ref()).is_ok());
-        } else {
-            assert!(arithmetic(lhs_a.as_ref(), op, rhs_a.as_ref()).is_err());
+        if can_add(&lhs, &rhs) {
+            add(lhs_a.as_ref(), rhs_a.as_ref());
+        }
+        if can_sub(&lhs, &rhs) {
+            sub(lhs_a.as_ref(), rhs_a.as_ref());
+        }
+        if can_mul(&lhs, &rhs) {
+            mul(lhs_a.as_ref(), rhs_a.as_ref());
+        }
+        if can_div(&lhs, &rhs) {
+            div(lhs_a.as_ref(), rhs_a.as_ref());
+        }
+        if can_rem(&lhs, &rhs) {
+            rem(lhs_a.as_ref(), rhs_a.as_ref());
         }
     });
 }

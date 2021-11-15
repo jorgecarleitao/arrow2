@@ -36,7 +36,7 @@ use super::super::arity::{unary, unary_checked};
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::negate;
+/// use arrow2::compute::arithmetics::basic::negate;
 /// use arrow2::array::PrimitiveArray;
 ///
 /// let a = PrimitiveArray::from([None, Some(6), None, Some(7)]);
@@ -55,7 +55,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::checked_negate;
+/// use arrow2::compute::arithmetics::basic::checked_negate;
 /// use arrow2::array::{Array, PrimitiveArray};
 ///
 /// let a = PrimitiveArray::from([None, Some(6), Some(i8::MIN), Some(7)]);
@@ -75,7 +75,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::wrapping_negate;
+/// use arrow2::compute::arithmetics::basic::wrapping_negate;
 /// use arrow2::array::{Array, PrimitiveArray};
 ///
 /// let a = PrimitiveArray::from([None, Some(6), Some(i8::MIN), Some(7)]);

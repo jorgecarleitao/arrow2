@@ -16,7 +16,7 @@ fn write(array: &dyn Array) -> Result<()> {
     let batch = RecordBatch::try_new(Arc::new(schema.clone()), vec![clone(array).into()])?;
 
     let writer = Cursor::new(vec![]);
-    let mut writer = FileWriter::try_new(writer, &schema)?;
+    let mut writer = FileWriter::try_new(writer, &schema, Default::default())?;
 
     writer.write(&batch)
 }

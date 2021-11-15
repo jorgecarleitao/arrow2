@@ -8,8 +8,8 @@ use crate::{
     bitmap::Bitmap,
     compute::{
         arithmetics::{
-            basic::check_same_type, ArrayAdd, ArrayCheckedAdd, ArrayOverflowingAdd,
-            ArraySaturatingAdd, ArrayWrappingAdd, NativeArithmetics,
+            ArrayAdd, ArrayCheckedAdd, ArrayOverflowingAdd, ArraySaturatingAdd, ArrayWrappingAdd,
+            NativeArithmetics,
         },
         arity::{
             binary, binary_checked, binary_with_bitmap, unary, unary_checked, unary_with_bitmap,
@@ -28,7 +28,7 @@ use crate::{
 ///
 /// let a = PrimitiveArray::from([None, Some(6), None, Some(6)]);
 /// let b = PrimitiveArray::from([Some(5), None, None, Some(6)]);
-/// let result = add(&a, &b).unwrap();
+/// let result = add(&a, &b);
 /// let expected = PrimitiveArray::from([None, None, None, Some(12)]);
 /// assert_eq!(result, expected)
 /// ```
@@ -49,7 +49,7 @@ where
 ///
 /// let a = PrimitiveArray::from([Some(-100i8), Some(100i8), Some(100i8)]);
 /// let b = PrimitiveArray::from([Some(0i8), Some(100i8), Some(0i8)]);
-/// let result = wrapping_add(&a, &b).unwrap();
+/// let result = wrapping_add(&a, &b);
 /// let expected = PrimitiveArray::from([Some(-100i8), Some(-56i8), Some(100i8)]);
 /// assert_eq!(result, expected);
 /// ```
@@ -72,7 +72,7 @@ where
 ///
 /// let a = PrimitiveArray::from([Some(100i8), Some(100i8), Some(100i8)]);
 /// let b = PrimitiveArray::from([Some(0i8), Some(100i8), Some(0i8)]);
-/// let result = checked_add(&a, &b).unwrap();
+/// let result = checked_add(&a, &b);
 /// let expected = PrimitiveArray::from([Some(100i8), None, Some(100i8)]);
 /// assert_eq!(result, expected);
 /// ```
@@ -80,8 +80,6 @@ pub fn checked_add<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Primi
 where
     T: NativeType + CheckedAdd<Output = T>,
 {
-    check_same_type(lhs, rhs).unwrap();
-
     let op = move |a: T, b: T| a.checked_add(&b);
 
     binary_checked(lhs, rhs, lhs.data_type().clone(), op)
@@ -98,7 +96,7 @@ where
 ///
 /// let a = PrimitiveArray::from([Some(100i8)]);
 /// let b = PrimitiveArray::from([Some(100i8)]);
-/// let result = saturating_add(&a, &b).unwrap();
+/// let result = saturating_add(&a, &b);
 /// let expected = PrimitiveArray::from([Some(127)]);
 /// assert_eq!(result, expected);
 /// ```
@@ -123,7 +121,7 @@ where
 ///
 /// let a = PrimitiveArray::from([Some(1i8), Some(100i8)]);
 /// let b = PrimitiveArray::from([Some(1i8), Some(100i8)]);
-/// let (result, overflow) = overflowing_add(&a, &b).unwrap();
+/// let (result, overflow) = overflowing_add(&a, &b);
 /// let expected = PrimitiveArray::from([Some(2i8), Some(-56i8)]);
 /// assert_eq!(result, expected);
 /// ```

@@ -1,7 +1,7 @@
 #![allow(clippy::zero_prefixed_literal, clippy::inconsistent_digit_grouping)]
 
 use arrow2::array::*;
-use arrow2::compute::arithmetics::decimal::add::*;
+use arrow2::compute::arithmetics::decimal::{adaptive_add, add, checked_add, saturating_add};
 use arrow2::compute::arithmetics::{ArrayAdd, ArrayCheckedAdd, ArraySaturatingAdd};
 use arrow2::datatypes::DataType;
 
@@ -13,26 +13,23 @@ fn test_add_normal() {
     let b = PrimitiveArray::from([Some(22222i128), Some(22200i128), None, Some(11100i128)])
         .to(DataType::Decimal(5, 2));
 
-    let result = add(&a, &b).unwrap();
+    let result = add(&a, &b);
     let expected = PrimitiveArray::from([Some(33333i128), Some(33300i128), None, Some(33300i128)])
         .to(DataType::Decimal(5, 2));
 
     assert_eq!(result, expected);
 
     // Testing trait
-    let result = a.add(&b).unwrap();
+    let result = a.add(&b);
     assert_eq!(result, expected);
 }
 
 #[test]
+#[should_panic]
 fn test_add_decimal_wrong_precision() {
     let a = PrimitiveArray::from([None]).to(DataType::Decimal(5, 2));
     let b = PrimitiveArray::from([None]).to(DataType::Decimal(6, 2));
-    let result = add(&a, &b);
-
-    if result.is_ok() {
-        panic!("Should panic for different precision");
-    }
+    add(&a, &b);
 }
 
 #[test]
@@ -51,14 +48,14 @@ fn test_add_saturating() {
     let b = PrimitiveArray::from([Some(22222i128), Some(22200i128), None, Some(11100i128)])
         .to(DataType::Decimal(5, 2));
 
-    let result = saturating_add(&a, &b).unwrap();
+    let result = saturating_add(&a, &b);
     let expected = PrimitiveArray::from([Some(33333i128), Some(33300i128), None, Some(33300i128)])
         .to(DataType::Decimal(5, 2));
 
     assert_eq!(result, expected);
 
     // Testing trait
-    let result = a.saturating_add(&b).unwrap();
+    let result = a.saturating_add(&b);
     assert_eq!(result, expected);
 }
 
@@ -79,7 +76,7 @@ fn test_add_saturating_overflow() {
     ])
     .to(DataType::Decimal(5, 2));
 
-    let result = saturating_add(&a, &b).unwrap();
+    let result = saturating_add(&a, &b);
 
     let expected = PrimitiveArray::from([
         Some(99999i128),
@@ -92,7 +89,7 @@ fn test_add_saturating_overflow() {
     assert_eq!(result, expected);
 
     // Testing trait
-    let result = a.saturating_add(&b).unwrap();
+    let result = a.saturating_add(&b);
     assert_eq!(result, expected);
 }
 
@@ -104,14 +101,14 @@ fn test_add_checked() {
     let b = PrimitiveArray::from([Some(22222i128), Some(22200i128), None, Some(11100i128)])
         .to(DataType::Decimal(5, 2));
 
-    let result = checked_add(&a, &b).unwrap();
+    let result = checked_add(&a, &b);
     let expected = PrimitiveArray::from([Some(33333i128), Some(33300i128), None, Some(33300i128)])
         .to(DataType::Decimal(5, 2));
 
     assert_eq!(result, expected);
 
     // Testing trait
-    let result = a.checked_add(&b).unwrap();
+    let result = a.checked_add(&b);
     assert_eq!(result, expected);
 }
 
@@ -119,12 +116,12 @@ fn test_add_checked() {
 fn test_add_checked_overflow() {
     let a = PrimitiveArray::from([Some(1i128), Some(99999i128)]).to(DataType::Decimal(5, 2));
     let b = PrimitiveArray::from([Some(1i128), Some(1i128)]).to(DataType::Decimal(5, 2));
-    let result = checked_add(&a, &b).unwrap();
+    let result = checked_add(&a, &b);
     let expected = PrimitiveArray::from([Some(2i128), None]).to(DataType::Decimal(5, 2));
     assert_eq!(result, expected);
 
     // Testing trait
-    let result = a.checked_add(&b).unwrap();
+    let result = a.checked_add(&b);
     assert_eq!(result, expected);
 }
 

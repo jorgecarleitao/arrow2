@@ -23,7 +23,7 @@ use super::{adjusted_precision_scale, get_parameters, max_value, number_digits};
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::mul::mul;
+/// use arrow2::compute::arithmetics::decimal::mul;
 /// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
@@ -78,7 +78,7 @@ pub fn mul(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> PrimitiveA
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::mul::saturating_mul;
+/// use arrow2::compute::arithmetics::decimal::saturating_mul;
 /// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
@@ -128,7 +128,7 @@ pub fn saturating_mul(
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::mul::checked_mul;
+/// use arrow2::compute::arithmetics::decimal::checked_mul;
 /// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
@@ -197,7 +197,7 @@ impl ArraySaturatingMul<PrimitiveArray<i128>> for PrimitiveArray<i128> {
 /// ```
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::mul::adaptive_mul;
+/// use arrow2::compute::arithmetics::decimal::adaptive_mul;
 /// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///

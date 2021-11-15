@@ -24,7 +24,7 @@ use super::{adjusted_precision_scale, get_parameters, max_value, number_digits};
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::div::div;
+/// use arrow2::compute::arithmetics::decimal::div;
 /// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
@@ -77,7 +77,7 @@ pub fn div(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> PrimitiveA
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::div::saturating_div;
+/// use arrow2::compute::arithmetics::decimal::saturating_div;
 /// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
@@ -126,7 +126,7 @@ pub fn saturating_div(
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::div::checked_div;
+/// use arrow2::compute::arithmetics::decimal::checked_div;
 /// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
@@ -188,13 +188,13 @@ impl ArrayCheckedDiv<PrimitiveArray<i128>> for PrimitiveArray<i128> {
 /// ```
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::div::adaptive_div;
+/// use arrow2::compute::arithmetics::decimal::adaptive_div;
 /// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
 /// let a = PrimitiveArray::from([Some(1000_00i128)]).to(DataType::Decimal(7, 2));
 /// let b = PrimitiveArray::from([Some(10_0000i128)]).to(DataType::Decimal(6, 4));
-/// let result = adaptive_div(&a, &b);
+/// let result = adaptive_div(&a, &b).unwrap();
 /// let expected = PrimitiveArray::from([Some(100_0000i128)]).to(DataType::Decimal(9, 4));
 ///
 /// assert_eq!(result, expected);

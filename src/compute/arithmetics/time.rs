@@ -86,7 +86,7 @@ fn create_scale(lhs: &DataType, rhs: &DataType) -> Result<f64> {
 /// let duration = PrimitiveArray::from([Some(10i64), Some(20i64), None, Some(30i64)])
 ///     .to(DataType::Duration(TimeUnit::Second));
 ///
-/// let result = add_duration(&timestamp, &duration).unwrap();
+/// let result = add_duration(&timestamp, &duration);
 /// let expected = PrimitiveArray::from([
 ///     Some(100010i64),
 ///     Some(200020i64),
@@ -141,7 +141,7 @@ where
 /// let duration = PrimitiveArray::from([Some(10i64), Some(20i64), None, Some(30i64)])
 ///     .to(DataType::Duration(TimeUnit::Second));
 ///
-/// let result = subtract_duration(&timestamp, &duration).unwrap();
+/// let result = subtract_duration(&timestamp, &duration);
 /// let expected = PrimitiveArray::from([
 ///     Some(99990i64),
 ///     Some(199980i64),

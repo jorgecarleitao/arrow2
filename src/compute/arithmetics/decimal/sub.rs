@@ -22,14 +22,14 @@ use super::{adjusted_precision_scale, get_parameters, max_value, number_digits};
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::sub::sub;
+/// use arrow2::compute::arithmetics::decimal::sub;
 /// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
 /// let a = PrimitiveArray::from([Some(1i128), Some(1i128), None, Some(2i128)]).to(DataType::Decimal(5, 2));
 /// let b = PrimitiveArray::from([Some(1i128), Some(2i128), None, Some(2i128)]).to(DataType::Decimal(5, 2));
 ///
-/// let result = sub(&a, &b).unwrap();
+/// let result = sub(&a, &b);
 /// let expected = PrimitiveArray::from([Some(0i128), Some(-1i128), None, Some(0i128)]).to(DataType::Decimal(5, 2));
 ///
 /// assert_eq!(result, expected);
@@ -62,14 +62,14 @@ pub fn sub(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> PrimitiveA
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::sub::saturating_sub;
+/// use arrow2::compute::arithmetics::decimal::saturating_sub;
 /// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
 /// let a = PrimitiveArray::from([Some(-99000i128), Some(11100i128), None, Some(22200i128)]).to(DataType::Decimal(5, 2));
 /// let b = PrimitiveArray::from([Some(01000i128), Some(22200i128), None, Some(11100i128)]).to(DataType::Decimal(5, 2));
 ///
-/// let result = saturating_sub(&a, &b).unwrap();
+/// let result = saturating_sub(&a, &b);
 /// let expected = PrimitiveArray::from([Some(-99999i128), Some(-11100i128), None, Some(11100i128)]).to(DataType::Decimal(5, 2));
 ///
 /// assert_eq!(result, expected);
@@ -128,14 +128,14 @@ impl ArraySaturatingSub<PrimitiveArray<i128>> for PrimitiveArray<i128> {
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::sub::checked_sub;
+/// use arrow2::compute::arithmetics::decimal::checked_sub;
 /// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
 /// let a = PrimitiveArray::from([Some(-99000i128), Some(11100i128), None, Some(22200i128)]).to(DataType::Decimal(5, 2));
 /// let b = PrimitiveArray::from([Some(01000i128), Some(22200i128), None, Some(11100i128)]).to(DataType::Decimal(5, 2));
 ///
-/// let result = checked_sub(&a, &b).unwrap();
+/// let result = checked_sub(&a, &b);
 /// let expected = PrimitiveArray::from([None, Some(-11100i128), None, Some(11100i128)]).to(DataType::Decimal(5, 2));
 ///
 /// assert_eq!(result, expected);
@@ -171,7 +171,7 @@ pub fn checked_sub(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Pr
 /// ```
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::sub::adaptive_sub;
+/// use arrow2::compute::arithmetics::decimal::adaptive_sub;
 /// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///

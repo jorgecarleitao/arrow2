@@ -1,48 +1,44 @@
 use arrow2::array::{Array, PrimitiveArray};
-use arrow2::compute::arithmetics::*;
+use arrow2::compute::arithmetics::basic::*;
+use arrow2::compute::arithmetics::{add as dyn_add, can_add};
 use arrow2::compute::arity::{binary, unary};
 use arrow2::datatypes::DataType;
-use arrow2::error::Result;
 
-fn main() -> Result<()> {
+fn main() {
     // say we have two arrays
     let array0 = PrimitiveArray::<i64>::from(&[Some(1), Some(2), Some(3)]);
     let array1 = PrimitiveArray::<i64>::from(&[Some(4), None, Some(6)]);
 
     // we can add them as follows:
-    let added = arithmetic_primitive(&array0, Operator::Add, &array1)?;
+    let added = add(&array0, &array1);
     assert_eq!(
         added,
         PrimitiveArray::<i64>::from(&[Some(5), None, Some(9)])
     );
 
     // subtract:
-    let subtracted = arithmetic_primitive(&array0, Operator::Subtract, &array1)?;
+    let subtracted = sub(&array0, &array1);
     assert_eq!(
         subtracted,
         PrimitiveArray::<i64>::from(&[Some(-3), None, Some(-3)])
     );
 
     // add a scalar:
-    let plus10 = arithmetic_primitive_scalar(&array0, Operator::Add, &10)?;
+    let plus10 = add_scalar(&array0, &10);
     assert_eq!(
         plus10,
         PrimitiveArray::<i64>::from(&[Some(11), Some(12), Some(13)])
     );
 
-    // when the array is a trait object, there is a similar API
+    // a similar API for trait objects:
     let array0 = &array0 as &dyn Array;
     let array1 = &array1 as &dyn Array;
 
-    // check whether the logical types support addition (they could be any `Array`).
-    assert!(can_arithmetic(
-        array0.data_type(),
-        Operator::Add,
-        array1.data_type()
-    ));
+    // check whether the logical types support addition.
+    assert!(can_add(array0.data_type(), array1.data_type()));
 
     // add them
-    let added = arithmetic(array0, Operator::Add, array1).unwrap();
+    let added = dyn_add(array0, array1);
     assert_eq!(
         PrimitiveArray::<i64>::from(&[Some(5), None, Some(9)]),
         added.as_ref(),
@@ -54,7 +50,7 @@ fn main() -> Result<()> {
     let array1 = PrimitiveArray::<i64>::from(&[Some(4), None, Some(6)]);
 
     let op = |x: i64, y: i64| x.pow(2) + y.pow(2);
-    let r = binary(&array0, &array1, DataType::Int64, op)?;
+    let r = binary(&array0, &array1, DataType::Int64, op);
     assert_eq!(
         r,
         PrimitiveArray::<i64>::from(&[Some(1 + 16), None, Some(9 + 36)])
@@ -79,6 +75,4 @@ fn main() -> Result<()> {
         rounded,
         PrimitiveArray::<i64>::from(&[Some(4), None, Some(5)])
     );
-
-    Ok(())
 }

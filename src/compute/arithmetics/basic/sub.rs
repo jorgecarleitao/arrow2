@@ -72,7 +72,7 @@ where
 ///
 /// let a = Int8Array::from(&[Some(100i8), Some(-100i8), Some(100i8)]);
 /// let b = Int8Array::from(&[Some(1i8), Some(100i8), Some(0i8)]);
-/// let result = checked_sub(&a, &b).unwrap();
+/// let result = checked_sub(&a, &b);
 /// let expected = Int8Array::from(&[Some(99i8), None, Some(100i8)]);
 /// assert_eq!(result, expected);
 /// ```

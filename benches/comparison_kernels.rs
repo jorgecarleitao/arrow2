@@ -2,7 +2,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 
 use arrow2::scalar::*;
 use arrow2::util::bench_util::*;
-use arrow2::{compute::comparison::*, datatypes::DataType};
+use arrow2::{compute::comparison::eq, datatypes::DataType};
 
 fn add_benchmark(c: &mut Criterion) {
     (10..=20).step_by(2).for_each(|log2_size| {

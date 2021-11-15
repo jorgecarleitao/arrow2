@@ -25,7 +25,7 @@ use super::{adjusted_precision_scale, get_parameters, max_value, number_digits};
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::add::add;
+/// use arrow2::compute::arithmetics::decimal::add;
 /// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
@@ -64,14 +64,14 @@ pub fn add(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> PrimitiveA
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::add::saturating_add;
+/// use arrow2::compute::arithmetics::decimal::saturating_add;
 /// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
 /// let a = PrimitiveArray::from([Some(99000i128), Some(11100i128), None, Some(22200i128)]).to(DataType::Decimal(5, 2));
 /// let b = PrimitiveArray::from([Some(01000i128), Some(22200i128), None, Some(11100i128)]).to(DataType::Decimal(5, 2));
 ///
-/// let result = saturating_add(&a, &b).unwrap();
+/// let result = saturating_add(&a, &b);
 /// let expected = PrimitiveArray::from([Some(99999i128), Some(33300i128), None, Some(33300i128)]).to(DataType::Decimal(5, 2));
 ///
 /// assert_eq!(result, expected);
@@ -108,7 +108,7 @@ pub fn saturating_add(
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::add::checked_add;
+/// use arrow2::compute::arithmetics::decimal::checked_add;
 /// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
@@ -172,13 +172,13 @@ impl ArraySaturatingAdd<PrimitiveArray<i128>> for PrimitiveArray<i128> {
 /// ```
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::add::adaptive_add;
+/// use arrow2::compute::arithmetics::decimal::adaptive_add;
 /// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
 /// let a = PrimitiveArray::from([Some(11111_11i128)]).to(DataType::Decimal(7, 2));
 /// let b = PrimitiveArray::from([Some(11111_111i128)]).to(DataType::Decimal(8, 3));
-/// let result = adaptive_add(&a, &b);
+/// let result = adaptive_add(&a, &b).unwrap();
 /// let expected = PrimitiveArray::from([Some(22222_221i128)]).to(DataType::Decimal(8, 3));
 ///
 /// assert_eq!(result, expected);

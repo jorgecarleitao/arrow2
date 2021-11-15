@@ -1,7 +1,7 @@
 #![allow(clippy::zero_prefixed_literal, clippy::inconsistent_digit_grouping)]
 
 use arrow2::array::*;
-use arrow2::compute::arithmetics::decimal::div::*;
+use arrow2::compute::arithmetics::decimal::{adaptive_div, checked_div, div, saturating_div};
 use arrow2::compute::arithmetics::{ArrayCheckedDiv, ArrayDiv};
 use arrow2::datatypes::DataType;
 
@@ -31,7 +31,7 @@ fn test_divide_normal() {
     ])
     .to(DataType::Decimal(7, 3));
 
-    let result = div(&a, &b).unwrap();
+    let result = div(&a, &b);
     let expected = PrimitiveArray::from([
         Some(1_800i128),
         Some(5_000i128),
@@ -45,19 +45,16 @@ fn test_divide_normal() {
     assert_eq!(result, expected);
 
     // Testing trait
-    let result = a.div(&b).unwrap();
+    let result = a.div(&b);
     assert_eq!(result, expected);
 }
 
 #[test]
+#[should_panic]
 fn test_divide_decimal_wrong_precision() {
     let a = PrimitiveArray::from([None]).to(DataType::Decimal(5, 2));
     let b = PrimitiveArray::from([None]).to(DataType::Decimal(6, 2));
-    let result = div(&a, &b);
-
-    if result.is_ok() {
-        panic!("Should panic for different precision");
-    }
+    div(&a, &b);
 }
 
 #[test]
@@ -65,7 +62,7 @@ fn test_divide_decimal_wrong_precision() {
 fn test_divide_panic() {
     let a = PrimitiveArray::from([Some(99999i128)]).to(DataType::Decimal(5, 2));
     let b = PrimitiveArray::from([Some(000_01i128)]).to(DataType::Decimal(5, 2));
-    let _ = div(&a, &b);
+    div(&a, &b);
 }
 
 #[test]
@@ -90,7 +87,7 @@ fn test_divide_saturating() {
     ])
     .to(DataType::Decimal(7, 3));
 
-    let result = saturating_div(&a, &b).unwrap();
+    let result = saturating_div(&a, &b);
     let expected = PrimitiveArray::from([
         Some(1_800i128),
         Some(5_000i128),
@@ -123,7 +120,7 @@ fn test_divide_saturating_overflow() {
     ])
     .to(DataType::Decimal(5, 2));
 
-    let result = saturating_div(&a, &b).unwrap();
+    let result = saturating_div(&a, &b);
 
     let expected = PrimitiveArray::from([
         Some(-99999i128),
@@ -159,7 +156,7 @@ fn test_divide_checked() {
     ])
     .to(DataType::Decimal(7, 3));
 
-    let result = div(&a, &b).unwrap();
+    let result = div(&a, &b);
     let expected = PrimitiveArray::from([
         Some(1_800i128),
         Some(5_000i128),
@@ -180,13 +177,13 @@ fn test_divide_checked_overflow() {
     let b =
         PrimitiveArray::from([Some(000_00i128), None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
 
-    let result = checked_div(&a, &b).unwrap();
+    let result = checked_div(&a, &b);
     let expected = PrimitiveArray::from([None, None, Some(3_00i128)]).to(DataType::Decimal(5, 2));
 
     assert_eq!(result, expected);
 
     // Testing trait
-    let result = a.checked_div(&b).unwrap();
+    let result = a.checked_div(&b);
     assert_eq!(result, expected);
 }
 

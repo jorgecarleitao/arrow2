@@ -22,7 +22,7 @@ fn bench_add<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>)
 where
     T: NativeType + Add<Output = T> + NumCast,
 {
-    criterion::black_box(add(lhs, rhs)).unwrap();
+    criterion::black_box(add(lhs, rhs));
 }
 
 fn add_benchmark(c: &mut Criterion) {
