@@ -3,10 +3,14 @@
 //! precision and scale parameters. These affect the arithmetic operations and
 //! need to be considered while doing operations with Decimal numbers.
 
-pub mod add;
-pub mod div;
-pub mod mul;
-pub mod sub;
+mod add;
+pub use add::*;
+mod div;
+pub use div::*;
+mod mul;
+pub use mul::*;
+mod sub;
+pub use sub::*;
 
 use crate::datatypes::DataType;
 use crate::error::{ArrowError, Result};

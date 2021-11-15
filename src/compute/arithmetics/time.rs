@@ -103,18 +103,18 @@ fn create_scale(lhs: &DataType, rhs: &DataType) -> Result<f64> {
 pub fn add_duration<T>(
     time: &PrimitiveArray<T>,
     duration: &PrimitiveArray<i64>,
-) -> Result<PrimitiveArray<T>>
+) -> PrimitiveArray<T>
 where
     f64: AsPrimitive<T>,
     T: NativeType + Add<T, Output = T>,
 {
-    let scale = create_scale(time.data_type(), duration.data_type())?;
+    let scale = create_scale(time.data_type(), duration.data_type()).unwrap();
 
     // Closure for the binary operation. The closure contains the scale
     // required to add a duration to the timestamp array.
     let op = move |a: T, b: i64| a + (b as f64 * scale).as_();
 
-    Ok(binary(time, duration, time.data_type().clone(), op))
+    binary(time, duration, time.data_type().clone(), op)
 }
 
 /// Subtract a duration to a time array (Timestamp, Time and Date). The timeunit
@@ -159,18 +159,18 @@ where
 pub fn subtract_duration<T>(
     time: &PrimitiveArray<T>,
     duration: &PrimitiveArray<i64>,
-) -> Result<PrimitiveArray<T>>
+) -> PrimitiveArray<T>
 where
     f64: AsPrimitive<T>,
     T: NativeType + Sub<T, Output = T>,
 {
-    let scale = create_scale(time.data_type(), duration.data_type())?;
+    let scale = create_scale(time.data_type(), duration.data_type()).unwrap();
 
     // Closure for the binary operation. The closure contains the scale
     // required to add a duration to the timestamp array.
     let op = move |a: T, b: i64| a - (b as f64 * scale).as_();
 
-    Ok(binary(time, duration, time.data_type().clone(), op))
+    binary(time, duration, time.data_type().clone(), op)
 }
 
 /// Calculates the difference between two timestamps returning an array of type
