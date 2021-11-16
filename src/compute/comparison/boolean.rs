@@ -1,66 +1,35 @@
 //! Comparison functions for [`BooleanArray`]
 use crate::{
     array::BooleanArray,
-    bitmap::{Bitmap, MutableBitmap},
-    buffer::MutableBuffer,
+    bitmap::{binary, unary, Bitmap},
     datatypes::DataType,
 };
 
 use super::super::utils::combine_validities;
 
-fn compare_values_op<F>(lhs: &Bitmap, rhs: &Bitmap, op: F) -> MutableBitmap
-where
-    F: Fn(u8, u8) -> u8,
-{
-    assert_eq!(lhs.len(), rhs.len());
-    let lhs_iter = lhs.chunks();
-    let rhs_iter = rhs.chunks();
-    let lhs_remainder = lhs_iter.remainder();
-    let rhs_remainder = rhs_iter.remainder();
-
-    let mut values = MutableBuffer::with_capacity((lhs.len() + 7) / 8);
-    let iter = lhs_iter.zip(rhs_iter).map(|(x, y)| op(x, y));
-    values.extend_from_trusted_len_iter(iter);
-
-    if lhs.len() % 8 != 0 {
-        values.push(op(lhs_remainder, rhs_remainder))
-    };
-
-    MutableBitmap::from_buffer(values, lhs.len())
-}
-
 /// Evaluate `op(lhs, rhs)` for [`BooleanArray`]s using a specified
 /// comparison function.
 fn compare_op<F>(lhs: &BooleanArray, rhs: &BooleanArray, op: F) -> BooleanArray
 where
-    F: Fn(u8, u8) -> u8,
+    F: Fn(u64, u64) -> u64,
 {
     assert_eq!(lhs.len(), rhs.len());
     let validity = combine_validities(lhs.validity(), rhs.validity());
 
-    let values = compare_values_op(lhs.values(), rhs.values(), op);
+    let values = binary(lhs.values(), rhs.values(), op);
 
-    BooleanArray::from_data(DataType::Boolean, values.into(), validity)
+    BooleanArray::from_data(DataType::Boolean, values, validity)
 }
 
 /// Evaluate `op(left, right)` for [`BooleanArray`] and scalar using
 /// a specified comparison function.
 pub fn compare_op_scalar<F>(lhs: &BooleanArray, rhs: bool, op: F) -> BooleanArray
 where
-    F: Fn(u8, u8) -> u8,
+    F: Fn(u64, u64) -> u64,
 {
-    let lhs_iter = lhs.values().chunks();
-    let lhs_remainder = lhs_iter.remainder();
     let rhs = if rhs { 0b11111111 } else { 0 };
 
-    let mut values = MutableBuffer::with_capacity((lhs.len() + 7) / 8);
-    let iter = lhs_iter.map(|x| op(x, rhs));
-    values.extend_from_trusted_len_iter(iter);
-
-    if lhs.len() % 8 != 0 {
-        values.push(op(lhs_remainder, rhs))
-    };
-    let values = MutableBitmap::from_buffer(values, lhs.len()).into();
+    let values = unary(lhs.values(), |x| op(x, rhs));
     BooleanArray::from_data(DataType::Boolean, values, lhs.validity().cloned())
 }
 
