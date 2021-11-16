@@ -18,7 +18,7 @@ where
 
     let values = binary(lhs.values(), rhs.values(), op);
 
-    BooleanArray::from_data(DataType::Boolean, values.into(), validity)
+    BooleanArray::from_data(DataType::Boolean, values, validity)
 }
 
 /// Evaluate `op(left, right)` for [`BooleanArray`] and scalar using
