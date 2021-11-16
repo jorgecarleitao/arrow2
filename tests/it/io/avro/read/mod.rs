@@ -82,15 +82,10 @@ fn schema() -> (AvroSchema, Schema) {
     (AvroSchema::parse_str(raw_schema).unwrap(), schema)
 }
 
-fn write(has_codec: bool) -> Result<(Vec<u8>, RecordBatch)> {
+fn write(codec: Codec) -> Result<(Vec<u8>, RecordBatch)> {
     let (avro, schema) = schema();
     // a writer needs a schema and something to write to
-    let mut writer: Writer<Vec<u8>>;
-    if has_codec {
-        writer = Writer::with_codec(&avro, Vec::new(), Codec::Deflate);
-    } else {
-        writer = Writer::new(&avro, Vec::new());
-    }
+    let mut writer = Writer::with_codec(&avro, Vec::new(), codec);
 
     // the Record type models our Record schema
     let mut record = Record::new(writer.schema()).unwrap();
@@ -174,9 +169,8 @@ fn write(has_codec: bool) -> Result<(Vec<u8>, RecordBatch)> {
     Ok((writer.into_inner().unwrap(), expected))
 }
 
-#[test]
-fn read_without_codec() -> Result<()> {
-    let (data, expected) = write(false).unwrap();
+fn test(codec: Codec) -> Result<()> {
+    let (data, expected) = write(codec).unwrap();
 
     let file = &mut &data[..];
 
@@ -193,19 +187,16 @@ fn read_without_codec() -> Result<()> {
 }
 
 #[test]
-fn read_with_codec() -> Result<()> {
-    let (data, expected) = write(true).unwrap();
+fn read_without_codec() -> Result<()> {
+    test(Codec::Null)
+}
 
-    let file = &mut &data[..];
+#[test]
+fn read_deflate() -> Result<()> {
+    test(Codec::Deflate)
+}
 
-    let (avro_schema, schema, codec, file_marker) = read::read_metadata(file)?;
-
-    let mut reader = read::Reader::new(
-        read::Decompressor::new(read::BlockStreamIterator::new(file, file_marker), codec),
-        avro_schema,
-        Arc::new(schema),
-    );
-
-    assert_eq!(reader.next().unwrap().unwrap(), expected);
-    Ok(())
+#[test]
+fn read_snappy() -> Result<()> {
+    test(Codec::Snappy)
 }

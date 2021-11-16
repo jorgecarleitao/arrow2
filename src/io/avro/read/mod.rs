@@ -3,9 +3,8 @@
 use std::io::Read;
 use std::sync::Arc;
 
-use avro_rs::{Codec, Schema as AvroSchema};
+use avro_rs::Schema as AvroSchema;
 use fallible_streaming_iterator::FallibleStreamingIterator;
-use libflate::deflate::Decoder;
 
 mod deserialize;
 mod nested;
@@ -16,10 +15,20 @@ use crate::datatypes::Schema;
 use crate::error::{ArrowError, Result};
 use crate::record_batch::RecordBatch;
 
-/// Reads the avro metadata from `reader` into a [`Schema`], [`Codec`] and magic marker.
+/// Valid compressions
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub enum Compression {
+    /// Deflate
+    Deflate,
+    /// Snappy
+    Snappy,
+}
+
+/// Reads the avro metadata from `reader` into a [`Schema`], [`Compression`] and magic marker.
+#[allow(clippy::type_complexity)]
 pub fn read_metadata<R: std::io::Read>(
     reader: &mut R,
-) -> Result<(Vec<AvroSchema>, Schema, Codec, [u8; 16])> {
+) -> Result<(Vec<AvroSchema>, Schema, Option<Compression>, [u8; 16])> {
     let (avro_schema, codec, marker) = util::read_schema(reader)?;
     let schema = schema::convert_schema(&avro_schema)?;
 
@@ -70,18 +79,44 @@ fn read_block<R: Read>(reader: &mut R, buf: &mut Vec<u8>, file_marker: [u8; 16])
 
 /// Decompresses an avro block.
 /// Returns whether the buffers where swapped.
-fn decompress_block(block: &mut Vec<u8>, decompress: &mut Vec<u8>, codec: Codec) -> Result<bool> {
+fn decompress_block(
+    block: &mut Vec<u8>,
+    decompress: &mut Vec<u8>,
+    codec: Option<Compression>,
+) -> Result<bool> {
     match codec {
-        Codec::Null => {
+        None => {
             std::mem::swap(block, decompress);
             Ok(true)
         }
-        Codec::Deflate => {
+        #[cfg(feature = "io_avro_compression")]
+        Some(Compression::Deflate) => {
             decompress.clear();
-            let mut decoder = Decoder::new(&block[..]);
+            let mut decoder = libflate::deflate::Decoder::new(&block[..]);
             decoder.read_to_end(decompress)?;
             Ok(false)
         }
+        #[cfg(feature = "io_avro_compression")]
+        Some(Compression::Snappy) => {
+            let len = snap::raw::decompress_len(&block[..block.len() - 4])
+                .map_err(|_| ArrowError::Other("Failed to decompress snap".to_string()))?;
+            decompress.clear();
+            decompress.resize(len, 0);
+            snap::raw::Decoder::new()
+                .decompress(&block[..block.len() - 4], decompress)
+                .map_err(|_| ArrowError::Other("Failed to decompress snap".to_string()))?;
+            Ok(false)
+        }
+        #[cfg(not(feature = "io_avro_compression"))]
+        Some(Compression::Deflate) => Err(ArrowError::Other(
+            "The avro file is deflate-encoded but feature 'io_avro_compression' is not active."
+                .to_string(),
+        )),
+        #[cfg(not(feature = "io_avro_compression"))]
+        Some(Compression::Snappy) => Err(ArrowError::Other(
+            "The avro file is snappy-encoded but feature 'io_avro_compression' is not active."
+                .to_string(),
+        )),
     }
 }
 
@@ -130,14 +165,14 @@ impl<'a, R: Read> FallibleStreamingIterator for BlockStreamIterator<'a, R> {
 /// [`StreamingIterator`] of blocks of decompressed avro data
 pub struct Decompressor<'a, R: Read> {
     blocks: BlockStreamIterator<'a, R>,
-    codec: Codec,
+    codec: Option<Compression>,
     buf: (Vec<u8>, usize),
     was_swapped: bool,
 }
 
 impl<'a, R: Read> Decompressor<'a, R> {
     /// Creates a new [`Decompressor`].
-    pub fn new(blocks: BlockStreamIterator<'a, R>, codec: Codec) -> Self {
+    pub fn new(blocks: BlockStreamIterator<'a, R>, codec: Option<Compression>) -> Self {
         Self {
             blocks,
             codec,

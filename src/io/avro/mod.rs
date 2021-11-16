@@ -5,8 +5,8 @@ pub mod read;
 
 use crate::error::ArrowError;
 
-impl From<avro_rs::SerError> for ArrowError {
-    fn from(error: avro_rs::SerError) -> Self {
+impl From<avro_rs::Error> for ArrowError {
+    fn from(error: avro_rs::Error) -> Self {
         ArrowError::External("".to_string(), Box::new(error))
     }
 }
