@@ -11,8 +11,8 @@ use crate::error::{ArrowError, Result};
 /// Cloning is `O(C)` where `C` is the number of columns.
 #[derive(Clone, Debug, PartialEq)]
 pub struct RecordBatch {
-    schema: Arc<Schema>,
-    columns: Vec<Arc<dyn Array>>,
+    pub(crate) schema: Arc<Schema>,
+    pub(crate) columns: Vec<Arc<dyn Array>>,
 }
 
 impl RecordBatch {
