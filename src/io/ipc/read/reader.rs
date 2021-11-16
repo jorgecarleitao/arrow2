@@ -175,7 +175,7 @@ pub fn read_batch<R: Read + Seek>(
     metadata: &FileMetadata,
     projection: Option<(&[usize], Arc<Schema>)>,
     block: usize,
-) -> Result<Option<RecordBatch>> {
+) -> Result<RecordBatch> {
     let block = metadata.blocks[block];
 
     // read length
@@ -220,9 +220,7 @@ pub fn read_batch<R: Read + Seek>(
                 reader,
                 block.offset() as u64 + block.metaDataLength() as u64,
             )
-            .map(Some)
         }
-        ipc::Message::MessageHeader::NONE => Ok(None),
         t => Err(ArrowError::Ipc(format!(
             "Reading types other than record batches not yet supported, unable to read {:?}",
             t
@@ -282,15 +280,14 @@ impl<R: Read + Seek> Iterator for FileReader<R> {
         if self.current_block < self.metadata.total_blocks {
             let block = self.current_block;
             self.current_block += 1;
-            read_batch(
+            Some(read_batch(
                 &mut self.reader,
                 &self.metadata,
                 self.projection
                     .as_ref()
                     .map(|x| (x.0.as_ref(), x.1.clone())),
                 block,
-            )
-            .transpose()
+            ))
         } else {
             None
         }
