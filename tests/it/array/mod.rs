@@ -8,6 +8,7 @@ mod growable;
 mod list;
 mod ord;
 mod primitive;
+mod struct_;
 mod union;
 mod utf8;
 
