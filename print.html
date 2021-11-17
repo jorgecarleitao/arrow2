@@ -1205,38 +1205,32 @@ use std::io::BufReader;
 use arrow2::io::parquet::read;
 use arrow2::{array::Array, error::Result};
 
-fn read_column_chunk(path: &amp;str, row_group: usize, column: usize) -&gt; Result&lt;Box&lt;dyn Array&gt;&gt; {
+fn read_field(path: &amp;str, row_group: usize, field: usize) -&gt; Result&lt;Box&lt;dyn Array&gt;&gt; {
     // Open a file, a common operation in Rust
     let mut file = BufReader::new(File::open(path)?);
 
     // Read the files' metadata. This has a small IO cost because it requires seeking to the end
     // of the file to read its footer.
-    let file_metadata = read::read_metadata(&amp;mut file)?;
+    let metadata = read::read_metadata(&amp;mut file)?;
 
     // Convert the files' metadata into an arrow schema. This is CPU-only and amounts to
     // parse thrift if the arrow format is available on a key, or infering the arrow schema from
     // the parquet's physical, converted and logical types.
-    let arrow_schema = read::get_schema(&amp;file_metadata)?;
+    let arrow_schema = read::get_schema(&amp;metadata)?;
 
-    // get the columns' metadata
-    let metadata = file_metadata.row_groups[row_group].column(column);
+    // Created an iterator of column chunks. Each iteration
+    // yields an iterator of compressed pages. There is almost no CPU work in iterating.
+    let columns = read::get_column_iterator(&amp;mut file, &amp;metadata, row_group, field, None, vec![]);
 
-    // Construct an iterator over pages. This binds `file` to this iterator, and each iteration
-    // is IO intensive as it will read a compressed page into memory. There is almost no CPU work
-    // on this operation
-    let pages = read::get_page_iterator(metadata, &amp;mut file, None, vec![])?;
+    // get the columns' field
+    let field = &amp;arrow_schema.fields()[field];
 
-    // get the columns' logical type
-    let data_type = arrow_schema.fields()[column].data_type().clone();
+    // This is the actual work. In this case, pages are read and
+    // decompressed, decoded and deserialized to arrow.
+    // Because `columns` is an iterator, it uses a combination of IO and CPU.
+    let (array, _, _) = read::column_iter_to_array(columns, field, vec![])?;
 
-    // This is the actual work. In this case, pages are read (by calling `iter.next()`) and are
-    // immediately decompressed, decoded, deserialized to arrow and deallocated.
-    // This uses a combination of IO and CPU. At this point, `array` is the arrow-corresponding
-    // array of the parquets' physical type.
-    // `Decompressor` re-uses an internal buffer for de-compression, thereby maximizing memory re-use.
-    let mut pages = read::Decompressor::new(pages, vec![]);
-
-    read::page_iter_to_array(&amp;mut pages, metadata, data_type)
+    Ok(array)
 }
 
 fn main() -&gt; Result&lt;()&gt; {
@@ -1244,10 +1238,10 @@ fn main() -&gt; Result&lt;()&gt; {
     let args: Vec&lt;String&gt; = env::args().collect();
 
     let file_path = &amp;args[1];
-    let column = args[2].parse::&lt;usize&gt;().unwrap();
+    let field = args[2].parse::&lt;usize&gt;().unwrap();
     let row_group = args[3].parse::&lt;usize&gt;().unwrap();
 
-    let array = read_column_chunk(file_path, row_group, column)?;
+    let array = read_field(file_path, row_group, field)?;
     println!(&quot;{}&quot;, array);
     Ok(())
 }
@@ -1286,83 +1280,108 @@ decoding, etc.).</p>
 and that it is advantageous to have a single thread performing all IO-intensive work,
 by delegating all CPU-intensive tasks to separate threads.</p>
 <pre><pre class="playground"><code class="language-rust">use crossbeam_channel::unbounded;
+use parquet2::metadata::ColumnChunkMetaData;
 
 use std::fs::File;
 use std::sync::Arc;
 use std::thread;
 use std::time::SystemTime;
 
-use arrow2::{array::Array, error::Result, io::parquet::read};
+use arrow2::{
+    array::Array, error::Result, io::parquet::read, io::parquet::read::MutStreamingIterator,
+    record_batch::RecordBatch,
+};
 
-fn parallel_read(path: &amp;str) -&gt; Result&lt;Vec&lt;Box&lt;dyn Array&gt;&gt;&gt; {
-    // prepare a channel to send serialized records from threads
+fn parallel_read(path: &amp;str, row_group: usize) -&gt; Result&lt;RecordBatch&gt; {
+    // prepare a channel to send compressed pages across threads.
     let (tx, rx) = unbounded();
 
     let mut file = File::open(path)?;
     let file_metadata = read::read_metadata(&amp;mut file)?;
     let arrow_schema = Arc::new(read::get_schema(&amp;file_metadata)?);
 
-    let file_metadata = Arc::new(file_metadata);
-
     let start = SystemTime::now();
     // spawn a thread to produce `Vec&lt;CompressedPage&gt;` (IO bounded)
-    let producer_metadata = file_metadata.clone();
-    let child = thread::spawn(move || {
-        for column in 0..producer_metadata.schema().num_columns() {
-            for row_group in 0..producer_metadata.row_groups.len() {
-                let start = SystemTime::now();
-                let column_metadata = producer_metadata.row_groups[row_group].column(column);
-                println!(&quot;produce start: {} {}&quot;, column, row_group);
-                let pages = read::get_page_iterator(column_metadata, &amp;mut file, None, vec![])
-                    .unwrap()
-                    .collect::&lt;Vec&lt;_&gt;&gt;();
-                println!(
-                    &quot;produce end - {:?}: {} {}&quot;,
-                    start.elapsed().unwrap(),
-                    column,
-                    row_group
-                );
-                tx.send((column, row_group, pages)).unwrap();
+    let producer = thread::spawn(move || {
+        for (field_i, field) in file_metadata.schema().fields().iter().enumerate() {
+            let start = SystemTime::now();
+
+            let mut columns = read::get_column_iterator(
+                &amp;mut file,
+                &amp;file_metadata,
+                row_group,
+                field_i,
+                None,
+                vec![],
+            );
+
+            println!(&quot;produce start - field: {}&quot;, field_i);
+
+            let mut column_chunks = vec![];
+            while let read::State::Some(mut new_iter) = columns.advance().unwrap() {
+                if let Some((pages, metadata)) = new_iter.get() {
+                    let pages = pages.collect::&lt;Vec&lt;_&gt;&gt;();
+
+                    column_chunks.push((pages, metadata.clone()));
+                }
+                columns = new_iter;
             }
+            // todo: create API to allow sending each column (and not column chunks) to be processed in parallel
+            tx.send((field_i, field.clone(), column_chunks)).unwrap();
+            println!(
+                &quot;produce end - {:?}: {} {}&quot;,
+                start.elapsed().unwrap(),
+                field_i,
+                row_group
+            );
         }
     });
 
-    let mut children = Vec::new();
-    // use 3 consumers of to decompress, decode and deserialize.
-    for _ in 0..3 {
-        let rx_consumer = rx.clone();
-        let metadata_consumer = file_metadata.clone();
-        let arrow_schema_consumer = arrow_schema.clone();
-        let child = thread::spawn(move || {
-            let (column, row_group, pages) = rx_consumer.recv().unwrap();
-            let start = SystemTime::now();
-            println!(&quot;consumer start - {} {}&quot;, column, row_group);
-            let metadata = metadata_consumer.row_groups[row_group].column(column);
-            let data_type = arrow_schema_consumer.fields()[column].data_type().clone();
+    // use 2 consumers for CPU-intensive to decompress, decode and deserialize.
+    #[allow(clippy::needless_collect)] // we need to collect to parallelize
+    let consumers = (0..2)
+        .map(|i| {
+            let rx_consumer = rx.clone();
+            let arrow_schema_consumer = arrow_schema.clone();
+            thread::spawn(move || {
+                let mut arrays = vec![];
+                while let Ok((field_i, parquet_field, column_chunks)) = rx_consumer.recv() {
+                    let start = SystemTime::now();
+                    let field = &amp;arrow_schema_consumer.fields()[field_i];
+                    println!(&quot;consumer {} start - {}&quot;, i, field_i);
 
-            let mut pages = read::BasicDecompressor::new(pages.into_iter(), vec![]);
+                    let columns = read::ReadColumnIterator::new(parquet_field, column_chunks);
 
-            let array = read::page_iter_to_array(&amp;mut pages, metadata, data_type);
-            println!(
-                &quot;consumer end - {:?}: {} {}&quot;,
-                start.elapsed().unwrap(),
-                column,
-                row_group
-            );
-            array
-        });
-        children.push(child);
-    }
+                    let array = read::column_iter_to_array(columns, field, vec![]).map(|x| x.0);
+                    println!(
+                        &quot;consumer {} end - {:?}: {}&quot;,
+                        i,
+                        start.elapsed().unwrap(),
+                        field_i
+                    );
 
-    child.join().expect(&quot;child thread panicked&quot;);
+                    arrays.push((field_i, array))
+                }
+                arrays
+            })
+        })
+        .collect::&lt;Vec&lt;_&gt;&gt;();
 
-    let arrays = children
+    producer.join().expect(&quot;producer thread panicked&quot;);
+
+    // collect all columns (join threads)
+    let mut columns = consumers
         .into_iter()
         .map(|x| x.join().unwrap())
-        .collect::&lt;Result&lt;Vec&lt;_&gt;&gt;&gt;()?;
+        .flatten()
+        .map(|x| Ok((x.0, x.1?)))
+        .collect::&lt;Result&lt;Vec&lt;(usize, Box&lt;dyn Array&gt;)&gt;&gt;&gt;()?;
+    // order may not be the same
+    columns.sort_unstable_by_key(|x| x.0);
+    let columns = columns.into_iter().map(|x| x.1.into()).collect();
     println!(&quot;Finished - {:?}&quot;, start.elapsed().unwrap());
 
-    Ok(arrays)
+    RecordBatch::try_new(arrow_schema, columns)
 }
 
 fn main() -&gt; Result&lt;()&gt; {
@@ -1370,8 +1389,8 @@ fn main() -&gt; Result&lt;()&gt; {
     let args: Vec&lt;String&gt; = env::args().collect();
     let file_path = &amp;args[1];
 
-    let arrays = parallel_read(file_path)?;
-    for array in arrays {
+    let batch = parallel_read(file_path, 0)?;
+    for array in batch.columns() {
         println!(&quot;{}&quot;, array)
     }
     Ok(())
