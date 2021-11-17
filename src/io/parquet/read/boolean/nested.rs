@@ -1,21 +1,16 @@
-use std::sync::Arc;
-
 use parquet2::{
     encoding::{hybrid_rle::HybridRleDecoder, Encoding},
-    metadata::{ColumnChunkMetaData, ColumnDescriptor},
+    metadata::ColumnDescriptor,
     page::DataPage,
     read::levels::get_bit_width,
-    FallibleStreamingIterator,
 };
 
 use super::super::nested_utils::*;
 use super::super::utils;
 use super::basic::read_required;
 use crate::{
-    array::{Array, BooleanArray},
     bitmap::{utils::BitmapIter, MutableBitmap},
-    datatypes::DataType,
-    error::{ArrowError, Result},
+    error::Result,
 };
 
 fn read_values<D, G>(
@@ -65,7 +60,11 @@ fn read(
                     get_bit_width(def_level_encoding.1),
                     additional,
                 );
-                let new_values = BitmapIter::new(values_buffer, 0, additional);
+
+                // don't know how many values there is: using the max possible
+                let num_valid_values = additional.min(values_buffer.len() * 8);
+
+                let new_values = BitmapIter::new(values_buffer, 0, num_valid_values);
                 read_values(def_levels, max_def_level, new_values, values, validity)
             } else {
                 read_required(values_buffer, additional, values)
@@ -87,7 +86,7 @@ fn read(
     }
 }
 
-fn extend_from_page(
+pub(super) fn extend_from_page(
     page: &DataPage,
     descriptor: &ColumnDescriptor,
     is_nullable: bool,
@@ -129,39 +128,4 @@ fn extend_from_page(
         }
     }
     Ok(())
-}
-
-pub fn iter_to_array<I, E>(
-    mut iter: I,
-    metadata: &ColumnChunkMetaData,
-    data_type: DataType,
-) -> Result<(Arc<dyn Array>, Vec<Box<dyn Nested>>)>
-where
-    ArrowError: From<E>,
-    I: FallibleStreamingIterator<Item = DataPage, Error = E>,
-{
-    let capacity = metadata.num_values() as usize;
-    let mut values = MutableBitmap::with_capacity(capacity);
-    let mut validity = MutableBitmap::with_capacity(capacity);
-
-    let (mut nested, is_nullable) = init_nested(metadata.descriptor().base_type(), capacity);
-
-    while let Some(page) = iter.next()? {
-        extend_from_page(
-            page,
-            metadata.descriptor(),
-            is_nullable,
-            &mut nested,
-            &mut values,
-            &mut validity,
-        )?
-    }
-
-    let values = Arc::new(BooleanArray::from_data(
-        data_type,
-        values.into(),
-        validity.into(),
-    ));
-
-    Ok((values, nested))
 }

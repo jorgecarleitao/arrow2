@@ -66,10 +66,12 @@ futures = { version = "0.3", optional = true }
 # for faster hashing
 ahash = { version = "0.7", optional = true }
 
-parquet2 = { version = "0.6", optional = true, default_features = false, features = ["stream"] }
+# parquet support
+parquet2 = { version = "0.7", optional = true, default_features = false, features = ["stream"] }
 
+# avro
 avro-rs = { version = "0.13", optional = true, default_features = false }
-
+# compression of avro
 libflate = { version = "1.1.1", optional = true }
 snap = { version = "1", optional = true }
 
