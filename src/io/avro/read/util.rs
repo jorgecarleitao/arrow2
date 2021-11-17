@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 use std::io::Read;
 
-use avro_rs::{from_avro_datum, types::Value, AvroResult, Error, Schema};
-use serde_json::from_slice;
+use avro_rs::{Error, Schema};
+use serde_json;
 
-use crate::error::Result;
+use crate::error::{ArrowError, Result};
 
 use super::Compression;
 
@@ -39,61 +39,74 @@ fn decode_variable<R: Read>(reader: &mut R) -> Result<u64> {
     Ok(i)
 }
 
-fn deserialize_schema(meta: HashMap<String, Value>) -> AvroResult<(Schema, Option<Compression>)> {
-    let json = meta
+fn deserialize_header(header: HashMap<String, Vec<u8>>) -> Result<(Schema, Option<Compression>)> {
+    let json = header
         .get("avro.schema")
-        .and_then(|bytes| {
-            if let Value::Bytes(ref bytes) = *bytes {
-                from_slice(bytes.as_ref()).ok()
-            } else {
-                None
-            }
-        })
+        .and_then(|bytes| serde_json::from_slice(bytes.as_ref()).ok())
         .ok_or(Error::GetAvroSchemaFromMap)?;
     let schema = Schema::parse(&json)?;
 
-    let compression = meta.get("avro.codec").and_then(|codec| {
-        if let Value::Bytes(bytes) = codec {
-            let bytes: &[u8] = bytes.as_ref();
-            match bytes {
-                b"snappy" => Some(Compression::Snappy),
-                b"deflate" => Some(Compression::Deflate),
-                _ => None,
-            }
-        } else {
-            None
+    let compression = header.get("avro.codec").and_then(|bytes| {
+        let bytes: &[u8] = bytes.as_ref();
+        match bytes {
+            b"snappy" => Some(Compression::Snappy),
+            b"deflate" => Some(Compression::Deflate),
+            _ => None,
         }
     });
     Ok((schema, compression))
 }
 
-fn read_file_marker<R: Read>(reader: &mut R) -> AvroResult<[u8; 16]> {
+fn _read_binary<R: Read>(reader: &mut R) -> Result<Vec<u8>> {
+    let len: usize = zigzag_i64(reader)? as usize;
+    let mut buf = vec![0u8; len];
+    reader.read_exact(&mut buf)?;
+    Ok(buf)
+}
+
+fn read_header<R: Read>(reader: &mut R) -> Result<HashMap<String, Vec<u8>>> {
+    let mut items = HashMap::new();
+
+    loop {
+        let len = zigzag_i64(reader)? as usize;
+        if len == 0 {
+            break Ok(items);
+        }
+
+        items.reserve(len);
+        for _ in 0..len {
+            let key = _read_binary(reader)?;
+            let key = String::from_utf8(key)
+                .map_err(|_| ArrowError::ExternalFormat("Invalid Avro header".to_string()))?;
+            let value = _read_binary(reader)?;
+            items.insert(key, value);
+        }
+    }
+}
+
+fn read_file_marker<R: Read>(reader: &mut R) -> Result<[u8; 16]> {
     let mut marker = [0u8; 16];
-    reader.read_exact(&mut marker).map_err(Error::ReadMarker)?;
+    reader.read_exact(&mut marker)?;
     Ok(marker)
 }
 
 /// Reads the schema from `reader`, returning the file's [`Schema`] and [`Compression`].
 /// # Error
 /// This function errors iff the header is not a valid avro file header.
-pub fn read_schema<R: Read>(reader: &mut R) -> AvroResult<(Schema, Option<Compression>, [u8; 16])> {
-    let meta_schema = Schema::Map(Box::new(Schema::Bytes));
-
-    let mut buf = [0u8; 4];
-    reader.read_exact(&mut buf).map_err(Error::ReadHeader)?;
+pub fn read_schema<R: Read>(reader: &mut R) -> Result<(Schema, Option<Compression>, [u8; 16])> {
+    let mut magic_number = [0u8; 4];
+    reader.read_exact(&mut magic_number)?;
 
     // see https://avro.apache.org/docs/current/spec.html#Object+Container+Files
-    if buf != [b'O', b'b', b'j', 1u8] {
-        return Err(Error::HeaderMagic);
+    if magic_number != [b'O', b'b', b'j', 1u8] {
+        return Err(ArrowError::ExternalFormat(
+            "Avro header does not contain a valid magic number".to_string(),
+        ));
     }
 
-    let meta = if let Value::Map(meta) = from_avro_datum(&meta_schema, reader, None)? {
-        Ok(meta)
-    } else {
-        Err(Error::GetHeaderMetadata)
-    }?;
+    let header = read_header(reader)?;
 
-    let (schema, compression) = deserialize_schema(meta)?;
+    let (schema, compression) = deserialize_header(header)?;
 
     let marker = read_file_marker(reader)?;
 
