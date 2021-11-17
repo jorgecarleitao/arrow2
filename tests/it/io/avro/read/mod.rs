@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use arrow2::types::months_days_ns;
 use avro_rs::types::{Record, Value};
 use avro_rs::{Codec, Writer};
 use avro_rs::{Days, Duration, Millis, Months, Schema as AvroSchema};
@@ -10,6 +9,7 @@ use arrow2::datatypes::*;
 use arrow2::error::Result;
 use arrow2::io::avro::read;
 use arrow2::record_batch::RecordBatch;
+use arrow2::types::months_days_ns;
 
 fn schema() -> (AvroSchema, Schema) {
     let raw_schema = r#"

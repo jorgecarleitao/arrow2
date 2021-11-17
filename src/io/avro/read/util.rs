@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io::Read;
 
 use avro_rs::{from_avro_datum, types::Value, AvroResult, Error, Schema};
@@ -38,7 +39,35 @@ fn decode_variable<R: Read>(reader: &mut R) -> Result<u64> {
     Ok(i)
 }
 
-fn read_file_marker<R: std::io::Read>(reader: &mut R) -> AvroResult<[u8; 16]> {
+fn deserialize_schema(meta: HashMap<String, Value>) -> AvroResult<(Schema, Option<Compression>)> {
+    let json = meta
+        .get("avro.schema")
+        .and_then(|bytes| {
+            if let Value::Bytes(ref bytes) = *bytes {
+                from_slice(bytes.as_ref()).ok()
+            } else {
+                None
+            }
+        })
+        .ok_or(Error::GetAvroSchemaFromMap)?;
+    let schema = Schema::parse(&json)?;
+
+    let compression = meta.get("avro.codec").and_then(|codec| {
+        if let Value::Bytes(bytes) = codec {
+            let bytes: &[u8] = bytes.as_ref();
+            match bytes {
+                b"snappy" => Some(Compression::Snappy),
+                b"deflate" => Some(Compression::Deflate),
+                _ => None,
+            }
+        } else {
+            None
+        }
+    });
+    Ok((schema, compression))
+}
+
+fn read_file_marker<R: Read>(reader: &mut R) -> AvroResult<[u8; 16]> {
     let mut marker = [0u8; 16];
     reader.read_exact(&mut marker).map_err(Error::ReadMarker)?;
     Ok(marker)
@@ -53,41 +82,20 @@ pub fn read_schema<R: Read>(reader: &mut R) -> AvroResult<(Schema, Option<Compre
     let mut buf = [0u8; 4];
     reader.read_exact(&mut buf).map_err(Error::ReadHeader)?;
 
+    // see https://avro.apache.org/docs/current/spec.html#Object+Container+Files
     if buf != [b'O', b'b', b'j', 1u8] {
         return Err(Error::HeaderMagic);
     }
 
-    if let Value::Map(meta) = from_avro_datum(&meta_schema, reader, None)? {
-        // TODO: surface original parse schema errors instead of coalescing them here
-        let json = meta
-            .get("avro.schema")
-            .and_then(|bytes| {
-                if let Value::Bytes(ref bytes) = *bytes {
-                    from_slice(bytes.as_ref()).ok()
-                } else {
-                    None
-                }
-            })
-            .ok_or(Error::GetAvroSchemaFromMap)?;
-        let schema = Schema::parse(&json)?;
-
-        let codec = meta.get("avro.codec").and_then(|codec| {
-            if let Value::Bytes(bytes) = codec {
-                let bytes: &[u8] = bytes.as_ref();
-                match bytes {
-                    b"snappy" => Some(Compression::Snappy),
-                    b"deflate" => Some(Compression::Deflate),
-                    _ => None,
-                }
-            } else {
-                None
-            }
-        });
-
-        let marker = read_file_marker(reader)?;
-
-        Ok((schema, codec, marker))
+    let meta = if let Value::Map(meta) = from_avro_datum(&meta_schema, reader, None)? {
+        Ok(meta)
     } else {
         Err(Error::GetHeaderMetadata)
-    }
+    }?;
+
+    let (schema, compression) = deserialize_schema(meta)?;
+
+    let marker = read_file_marker(reader)?;
+
+    Ok((schema, compression, marker))
 }
