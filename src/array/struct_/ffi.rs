@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use crate::{ffi, error::Result,};
 use super::super::{ffi::ToFfi, Array, FromFfi};
 use super::StructArray;
+use crate::{error::Result, ffi};
 
 unsafe impl ToFfi for StructArray {
     fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>> {
