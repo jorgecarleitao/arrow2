@@ -1,10 +1,11 @@
 use std::io::Read;
-use std::str::FromStr;
+
+use avro_rs::{from_avro_datum, types::Value, AvroResult, Error, Schema};
+use serde_json::from_slice;
 
 use crate::error::Result;
 
-use avro_rs::{from_avro_datum, types::Value, AvroResult, Codec, Error, Schema};
-use serde_json::from_slice;
+use super::Compression;
 
 pub fn zigzag_i64<R: Read>(reader: &mut R) -> Result<i64> {
     let z = decode_variable(reader)?;
@@ -43,10 +44,10 @@ fn read_file_marker<R: std::io::Read>(reader: &mut R) -> AvroResult<[u8; 16]> {
     Ok(marker)
 }
 
-/// Reads the schema from `reader`, returning the file's [`Schema`] and [`Codec`].
+/// Reads the schema from `reader`, returning the file's [`Schema`] and [`Compression`].
 /// # Error
 /// This function errors iff the header is not a valid avro file header.
-pub fn read_schema<R: Read>(reader: &mut R) -> AvroResult<(Schema, Codec, [u8; 16])> {
+pub fn read_schema<R: Read>(reader: &mut R) -> AvroResult<(Schema, Option<Compression>, [u8; 16])> {
     let meta_schema = Schema::Map(Box::new(Schema::Bytes));
 
     let mut buf = [0u8; 4];
@@ -70,21 +71,19 @@ pub fn read_schema<R: Read>(reader: &mut R) -> AvroResult<(Schema, Codec, [u8; 1
             .ok_or(Error::GetAvroSchemaFromMap)?;
         let schema = Schema::parse(&json)?;
 
-        let codec = if let Some(codec) = meta
-            .get("avro.codec")
-            .and_then(|codec| {
-                if let Value::Bytes(ref bytes) = *codec {
-                    simdutf8::basic::from_utf8(bytes.as_ref()).ok()
-                } else {
-                    None
+        let codec = meta.get("avro.codec").and_then(|codec| {
+            if let Value::Bytes(bytes) = codec {
+                let bytes: &[u8] = bytes.as_ref();
+                match bytes {
+                    b"snappy" => Some(Compression::Snappy),
+                    b"deflate" => Some(Compression::Deflate),
+                    _ => None,
                 }
-            })
-            .and_then(|codec| Codec::from_str(codec).ok())
-        {
-            codec
-        } else {
-            Codec::Null
-        };
+            } else {
+                None
+            }
+        });
+
         let marker = read_file_marker(reader)?;
 
         Ok((schema, codec, marker))

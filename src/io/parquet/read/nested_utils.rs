@@ -1,12 +1,10 @@
 use std::sync::Arc;
 
-use parquet2::schema::{types::ParquetType, Repetition};
-
 use crate::{
     array::{Array, ListArray},
     bitmap::{Bitmap, MutableBitmap},
     buffer::{Buffer, MutableBuffer},
-    datatypes::DataType,
+    datatypes::{DataType, Field},
     error::{ArrowError, Result},
 };
 
@@ -23,6 +21,40 @@ pub trait Nested: std::fmt::Debug {
     fn close(&mut self, length: i64);
 
     fn is_nullable(&self) -> bool;
+}
+
+#[derive(Debug, Default)]
+pub struct NestedPrimitive {
+    is_nullable: bool,
+}
+
+impl NestedPrimitive {
+    pub fn new(is_nullable: bool) -> Self {
+        Self { is_nullable }
+    }
+}
+
+impl Nested for NestedPrimitive {
+    fn inner(&mut self) -> (Buffer<i64>, Option<Bitmap>) {
+        (Default::default(), Default::default())
+    }
+
+    #[inline]
+    fn last_offset(&self) -> i64 {
+        0
+    }
+
+    fn is_nullable(&self) -> bool {
+        self.is_nullable
+    }
+
+    fn push(&mut self, _value: i64, _is_valid: bool) {}
+
+    fn offsets(&mut self) -> &[i64] {
+        &[]
+    }
+
+    fn close(&mut self, _length: i64) {}
 }
 
 #[derive(Debug, Default)]
@@ -180,43 +212,42 @@ pub fn extend_offsets<R, D>(
         });
 }
 
-pub fn is_nullable(type_: &ParquetType, container: &mut Vec<bool>) {
-    match type_ {
-        ParquetType::PrimitiveType { basic_info, .. } => {
-            container.push(super::schema::is_nullable(basic_info));
-        }
-        ParquetType::GroupType {
-            basic_info, fields, ..
-        } => {
-            if basic_info.repetition() != &Repetition::Repeated {
-                container.push(super::schema::is_nullable(basic_info));
-            }
-            for field in fields {
-                is_nullable(field, container)
-            }
-        }
-    }
-}
+pub fn init_nested(field: &Field, capacity: usize, container: &mut Vec<Box<dyn Nested>>) {
+    let is_nullable = field.is_nullable();
 
-pub fn init_nested(base_type: &ParquetType, capacity: usize) -> (Vec<Box<dyn Nested>>, bool) {
-    let mut nullable = Vec::new();
-    is_nullable(base_type, &mut nullable);
-    // the primitive's nullability is the last on the list
-    let is_nullable = nullable.pop().unwrap();
-
-    (
-        nullable
-            .iter()
-            .map(|is_nullable| {
-                if *is_nullable {
-                    Box::new(NestedOptional::with_capacity(capacity)) as Box<dyn Nested>
-                } else {
-                    Box::new(NestedValid::with_capacity(capacity)) as Box<dyn Nested>
+    use crate::datatypes::PhysicalType::*;
+    match field.data_type().to_physical_type() {
+        Null | Boolean | Primitive(_) | FixedSizeBinary | Binary | LargeBinary | Utf8
+        | LargeUtf8 | Dictionary(_) => {
+            container.push(Box::new(NestedPrimitive::new(is_nullable)) as Box<dyn Nested>)
+        }
+        List | LargeList | FixedSizeList => {
+            if is_nullable {
+                container.push(Box::new(NestedOptional::with_capacity(capacity)) as Box<dyn Nested>)
+            } else {
+                container.push(Box::new(NestedValid::with_capacity(capacity)) as Box<dyn Nested>)
+            }
+            match field.data_type().to_logical_type() {
+                DataType::List(ref inner)
+                | DataType::LargeList(ref inner)
+                | DataType::FixedSizeList(ref inner, _) => {
+                    init_nested(inner.as_ref(), capacity, container)
                 }
-            })
-            .collect(),
-        is_nullable,
-    )
+                _ => unreachable!(),
+            };
+        }
+        Struct => {
+            container.push(Box::new(NestedPrimitive::new(is_nullable)) as Box<dyn Nested>);
+            if let DataType::Struct(fields) = field.data_type().to_logical_type() {
+                fields
+                    .iter()
+                    .for_each(|field| init_nested(field, capacity, container));
+            } else {
+                unreachable!()
+            }
+        }
+        _ => todo!(),
+    }
 }
 
 pub fn create_list(

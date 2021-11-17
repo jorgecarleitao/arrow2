@@ -1,81 +1,106 @@
 use crossbeam_channel::unbounded;
+use parquet2::metadata::ColumnChunkMetaData;
 
 use std::fs::File;
 use std::sync::Arc;
 use std::thread;
 use std::time::SystemTime;
 
-use arrow2::{array::Array, error::Result, io::parquet::read};
+use arrow2::{
+    array::Array, error::Result, io::parquet::read, io::parquet::read::MutStreamingIterator,
+    record_batch::RecordBatch,
+};
 
-fn parallel_read(path: &str) -> Result<Vec<Box<dyn Array>>> {
-    // prepare a channel to send serialized records from threads
+fn parallel_read(path: &str, row_group: usize) -> Result<RecordBatch> {
+    // prepare a channel to send compressed pages across threads.
     let (tx, rx) = unbounded();
 
     let mut file = File::open(path)?;
     let file_metadata = read::read_metadata(&mut file)?;
     let arrow_schema = Arc::new(read::get_schema(&file_metadata)?);
 
-    let file_metadata = Arc::new(file_metadata);
-
     let start = SystemTime::now();
     // spawn a thread to produce `Vec<CompressedPage>` (IO bounded)
-    let producer_metadata = file_metadata.clone();
-    let child = thread::spawn(move || {
-        for column in 0..producer_metadata.schema().num_columns() {
-            for row_group in 0..producer_metadata.row_groups.len() {
-                let start = SystemTime::now();
-                let column_metadata = producer_metadata.row_groups[row_group].column(column);
-                println!("produce start: {} {}", column, row_group);
-                let pages = read::get_page_iterator(column_metadata, &mut file, None, vec![])
-                    .unwrap()
-                    .collect::<Vec<_>>();
-                println!(
-                    "produce end - {:?}: {} {}",
-                    start.elapsed().unwrap(),
-                    column,
-                    row_group
-                );
-                tx.send((column, row_group, pages)).unwrap();
+    let producer = thread::spawn(move || {
+        for (field_i, field) in file_metadata.schema().fields().iter().enumerate() {
+            let start = SystemTime::now();
+
+            let mut columns = read::get_column_iterator(
+                &mut file,
+                &file_metadata,
+                row_group,
+                field_i,
+                None,
+                vec![],
+            );
+
+            println!("produce start - field: {}", field_i);
+
+            let mut column_chunks = vec![];
+            while let read::State::Some(mut new_iter) = columns.advance().unwrap() {
+                if let Some((pages, metadata)) = new_iter.get() {
+                    let pages = pages.collect::<Vec<_>>();
+
+                    column_chunks.push((pages, metadata.clone()));
+                }
+                columns = new_iter;
             }
+            // todo: create API to allow sending each column (and not column chunks) to be processed in parallel
+            tx.send((field_i, field.clone(), column_chunks)).unwrap();
+            println!(
+                "produce end - {:?}: {} {}",
+                start.elapsed().unwrap(),
+                field_i,
+                row_group
+            );
         }
     });
 
-    let mut children = Vec::new();
-    // use 3 consumers of to decompress, decode and deserialize.
-    for _ in 0..3 {
-        let rx_consumer = rx.clone();
-        let metadata_consumer = file_metadata.clone();
-        let arrow_schema_consumer = arrow_schema.clone();
-        let child = thread::spawn(move || {
-            let (column, row_group, pages) = rx_consumer.recv().unwrap();
-            let start = SystemTime::now();
-            println!("consumer start - {} {}", column, row_group);
-            let metadata = metadata_consumer.row_groups[row_group].column(column);
-            let data_type = arrow_schema_consumer.fields()[column].data_type().clone();
+    // use 2 consumers for CPU-intensive to decompress, decode and deserialize.
+    #[allow(clippy::needless_collect)] // we need to collect to parallelize
+    let consumers = (0..2)
+        .map(|i| {
+            let rx_consumer = rx.clone();
+            let arrow_schema_consumer = arrow_schema.clone();
+            thread::spawn(move || {
+                let mut arrays = vec![];
+                while let Ok((field_i, parquet_field, column_chunks)) = rx_consumer.recv() {
+                    let start = SystemTime::now();
+                    let field = &arrow_schema_consumer.fields()[field_i];
+                    println!("consumer {} start - {}", i, field_i);
 
-            let mut pages = read::BasicDecompressor::new(pages.into_iter(), vec![]);
+                    let columns = read::ReadColumnIterator::new(parquet_field, column_chunks);
 
-            let array = read::page_iter_to_array(&mut pages, metadata, data_type);
-            println!(
-                "consumer end - {:?}: {} {}",
-                start.elapsed().unwrap(),
-                column,
-                row_group
-            );
-            array
-        });
-        children.push(child);
-    }
+                    let array = read::column_iter_to_array(columns, field, vec![]).map(|x| x.0);
+                    println!(
+                        "consumer {} end - {:?}: {}",
+                        i,
+                        start.elapsed().unwrap(),
+                        field_i
+                    );
 
-    child.join().expect("child thread panicked");
+                    arrays.push((field_i, array))
+                }
+                arrays
+            })
+        })
+        .collect::<Vec<_>>();
 
-    let arrays = children
+    producer.join().expect("producer thread panicked");
+
+    // collect all columns (join threads)
+    let mut columns = consumers
         .into_iter()
         .map(|x| x.join().unwrap())
-        .collect::<Result<Vec<_>>>()?;
+        .flatten()
+        .map(|x| Ok((x.0, x.1?)))
+        .collect::<Result<Vec<(usize, Box<dyn Array>)>>>()?;
+    // order may not be the same
+    columns.sort_unstable_by_key(|x| x.0);
+    let columns = columns.into_iter().map(|x| x.1.into()).collect();
     println!("Finished - {:?}", start.elapsed().unwrap());
 
-    Ok(arrays)
+    RecordBatch::try_new(arrow_schema, columns)
 }
 
 fn main() -> Result<()> {
@@ -83,8 +108,8 @@ fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
     let file_path = &args[1];
 
-    let arrays = parallel_read(file_path)?;
-    for array in arrays {
+    let batch = parallel_read(file_path, 0)?;
+    for array in batch.columns() {
         println!("{}", array)
     }
     Ok(())

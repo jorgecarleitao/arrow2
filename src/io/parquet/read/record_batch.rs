@@ -1,6 +1,5 @@
 use std::{
     io::{Read, Seek},
-    rc::Rc,
     sync::Arc,
 };
 
@@ -11,8 +10,8 @@ use crate::{
 };
 
 use super::{
-    get_page_iterator, get_schema, page_iter_to_array, read_metadata, Decompressor, FileMetaData,
-    PageFilter, RowGroupMetaData,
+    column_iter_to_array, get_column_iterator, get_schema, read_metadata, FileMetaData, PageFilter,
+    RowGroupMetaData,
 };
 
 type GroupFilter = Arc<dyn Fn(usize, &RowGroupMetaData) -> bool>;
@@ -21,12 +20,12 @@ type GroupFilter = Arc<dyn Fn(usize, &RowGroupMetaData) -> bool>;
 pub struct RecordReader<R: Read + Seek> {
     reader: R,
     schema: Arc<Schema>,
-    indices: Rc<Vec<usize>>,
+    indices: Vec<usize>,
     buffer: Vec<u8>,
     decompress_buffer: Vec<u8>,
     groups_filter: Option<GroupFilter>,
     pages_filter: Option<PageFilter>,
-    metadata: Rc<FileMetaData>,
+    metadata: FileMetaData,
     current_group: usize,
     remaining_rows: usize,
 }
@@ -65,7 +64,10 @@ impl<R: Read + Seek> RecordReader<R> {
 
         if let Some(projection) = &projection {
             if indices.len() != projection.len() {
-                return Err(ArrowError::InvalidArgumentError("While reading parquet, some columns in the projection do not exist in the file".to_string()));
+                return Err(ArrowError::InvalidArgumentError(
+                    "While reading parquet, some columns in the projection do not exist in the file"
+                        .to_string(),
+                ));
             }
         }
 
@@ -77,10 +79,10 @@ impl<R: Read + Seek> RecordReader<R> {
         Ok(Self {
             reader,
             schema,
-            indices: Rc::new(indices),
+            indices,
             groups_filter,
             pages_filter,
-            metadata: Rc::new(metadata),
+            metadata,
             current_group: 0,
             buffer: vec![],
             decompress_buffer: vec![],
@@ -95,7 +97,7 @@ impl<R: Read + Seek> RecordReader<R> {
 
     /// Returns parquet's [`FileMetaData`].
     pub fn metadata(&self) -> &FileMetaData {
-        self.metadata.as_ref()
+        &self.metadata
     }
 
     /// Sets the groups filter
@@ -120,7 +122,7 @@ impl<R: Read + Seek> Iterator for RecordReader<R> {
         }
 
         let row_group = self.current_group;
-        let metadata = self.metadata.clone();
+        let metadata = &self.metadata;
         let group = &metadata.row_groups[row_group];
         if let Some(groups_filter) = self.groups_filter.as_ref() {
             if !(groups_filter)(row_group, group) {
@@ -128,7 +130,6 @@ impl<R: Read + Seek> Iterator for RecordReader<R> {
                 return self.next();
             }
         }
-        let columns_meta = group.columns();
 
         // todo: avoid these clones.
         let schema = self.schema().clone();
@@ -138,21 +139,18 @@ impl<R: Read + Seek> Iterator for RecordReader<R> {
 
         let a = schema.fields().iter().enumerate().try_fold(
             (b1, b2, Vec::with_capacity(schema.fields().len())),
-            |(b1, b2, mut columns), (column, field)| {
-                // column according to the file's indexing
-                let column = self.indices[column];
-                let column_metadata = &columns_meta[column];
-                let pages = get_page_iterator(
-                    column_metadata,
+            |(b1, b2, mut columns), (field_index, field)| {
+                let field_index = self.indices[field_index]; // project into the original schema
+                let column_iter = get_column_iterator(
                     &mut self.reader,
+                    &self.metadata,
+                    row_group,
+                    field_index,
                     self.pages_filter.clone(),
                     b1,
-                )?;
+                );
 
-                let mut pages = Decompressor::new(pages, b2);
-
-                let array =
-                    page_iter_to_array(&mut pages, column_metadata, field.data_type().clone())?;
+                let (array, b1, b2) = column_iter_to_array(column_iter, field, b2)?;
 
                 let array = if array.len() > remaining_rows {
                     array.slice(0, remaining_rows)
@@ -161,7 +159,6 @@ impl<R: Read + Seek> Iterator for RecordReader<R> {
                 };
 
                 columns.push(array.into());
-                let (b1, b2) = pages.into_buffers();
                 Result::Ok((b1, b2, columns))
             },
         );
