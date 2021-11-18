@@ -1,4 +1,4 @@
-use std::{ops::Index, sync::Arc};
+use std::sync::Arc;
 
 use crate::{
     bitmap::Bitmap,
@@ -168,11 +168,6 @@ impl StructArray {
     /// Returns the fields of this [`StructArray`].
     pub fn fields(&self) -> &[Field] {
         Self::get_fields(&self.data_type)
-    }
-
-    /// Returns the element at index `i`
-    pub fn value(&self, index: usize) -> &Arc<dyn Array> {
-        self.values().index(index)
     }
 }
 

@@ -34,14 +34,15 @@ impl<'a> Iterator for StructValueIter<'a> {
         let old = self.index;
         self.index += 1;
 
-        let mut item = vec![];
-        for i in 0..self.array.fields().len() {
-            let arr = self.array.value(i);
-            item.push(new_scalar(arr.as_ref(), old))
-        }
         // Safety:
         // self.end is maximized by the length of the array
-        Some(item)
+        Some(
+            self.array
+                .values()
+                .iter()
+                .map(|v| new_scalar(v.as_ref(), old))
+                .collect(),
+        )
     }
 
     #[inline]
@@ -60,14 +61,15 @@ impl<'a> DoubleEndedIterator for StructValueIter<'a> {
         } else {
             self.end -= 1;
 
-            let mut item = vec![];
-            for i in 0..self.array.fields().len() {
-                let arr = self.array.value(i);
-                item.push(new_scalar(arr.as_ref(), self.end))
-            }
             // Safety:
             // self.end is maximized by the length of the array
-            Some(item)
+            Some(
+                self.array
+                    .values()
+                    .iter()
+                    .map(|v| new_scalar(v.as_ref(), self.end))
+                    .collect(),
+            )
         }
     }
 }
