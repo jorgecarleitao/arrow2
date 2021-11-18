@@ -11,9 +11,12 @@ mod decompress;
 pub use block::BlockStreamIterator;
 pub use decompress::Decompressor;
 mod deserialize;
+mod header;
 mod nested;
 mod schema;
 mod util;
+
+pub(super) use header::deserialize_header;
 
 use crate::datatypes::Schema;
 use crate::error::Result;

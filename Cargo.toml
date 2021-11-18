@@ -113,6 +113,7 @@ full = [
     "io_parquet_compression",
     "io_avro",
     "io_avro_compression",
+    "io_avro_async",
     "regex",
     "merge_sort",
     "compute",
@@ -142,6 +143,7 @@ io_avro_compression = [
     "libflate",
     "snap",
 ]
+io_avro_async = ["io_avro", "futures"]
 # io_json: its dependencies + error handling
 # serde_derive: there is some derive around
 io_json_integration = ["io_json", "serde_derive", "hex"]
@@ -171,6 +173,7 @@ skip_feature_sets = [
     ["io_csv_async"],
     ["io_csv_read_async"],
     ["io_avro"],
+    ["io_avro_async"],
     ["io_avro_compression"],
     ["io_json"],
     ["io_flight"],

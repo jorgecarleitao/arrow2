@@ -1,12 +1,11 @@
 use std::collections::HashMap;
 use std::io::Read;
 
-use avro_rs::{Error, Schema};
-use serde_json;
+use avro_rs::Schema;
 
 use crate::error::{ArrowError, Result};
 
-use super::Compression;
+use super::{deserialize_header, Compression};
 
 pub fn zigzag_i64<R: Read>(reader: &mut R) -> Result<i64> {
     let z = decode_variable(reader)?;
@@ -37,24 +36,6 @@ fn decode_variable<R: Read>(reader: &mut R) -> Result<u64> {
     }
 
     Ok(i)
-}
-
-fn deserialize_header(header: HashMap<String, Vec<u8>>) -> Result<(Schema, Option<Compression>)> {
-    let json = header
-        .get("avro.schema")
-        .and_then(|bytes| serde_json::from_slice(bytes.as_ref()).ok())
-        .ok_or(Error::GetAvroSchemaFromMap)?;
-    let schema = Schema::parse(&json)?;
-
-    let compression = header.get("avro.codec").and_then(|bytes| {
-        let bytes: &[u8] = bytes.as_ref();
-        match bytes {
-            b"snappy" => Some(Compression::Snappy),
-            b"deflate" => Some(Compression::Deflate),
-            _ => None,
-        }
-    });
-    Ok((schema, compression))
 }
 
 fn _read_binary<R: Read>(reader: &mut R) -> Result<Vec<u8>> {
