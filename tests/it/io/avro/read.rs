@@ -82,7 +82,7 @@ fn schema() -> (AvroSchema, Schema) {
     (AvroSchema::parse_str(raw_schema).unwrap(), schema)
 }
 
-fn write(codec: Codec) -> Result<(Vec<u8>, RecordBatch)> {
+pub(super) fn write(codec: Codec) -> Result<(Vec<u8>, RecordBatch)> {
     let (avro, schema) = schema();
     // a writer needs a schema and something to write to
     let mut writer = Writer::with_codec(&avro, Vec::new(), codec);
