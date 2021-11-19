@@ -1,11 +1,12 @@
+use std::collections::HashMap;
 use std::io::Read;
 
-use avro_rs::{from_avro_datum, types::Value, AvroResult, Error, Schema};
-use serde_json::from_slice;
+use avro_rs::Schema;
 
-use crate::error::Result;
+use crate::error::{ArrowError, Result};
 
-use super::Compression;
+use super::super::{avro_decode, read_header, read_metadata};
+use super::{deserialize_header, Compression};
 
 pub fn zigzag_i64<R: Read>(reader: &mut R) -> Result<i64> {
     let z = decode_variable(reader)?;
@@ -17,77 +18,29 @@ pub fn zigzag_i64<R: Read>(reader: &mut R) -> Result<i64> {
 }
 
 fn decode_variable<R: Read>(reader: &mut R) -> Result<u64> {
-    let mut i = 0u64;
-    let mut buf = [0u8; 1];
-
-    let mut j = 0;
-    loop {
-        if j > 9 {
-            // if j * 7 > 64
-            panic!()
-        }
-        reader.read_exact(&mut buf[..])?;
-        i |= (u64::from(buf[0] & 0x7F)) << (j * 7);
-        if (buf[0] >> 7) == 0 {
-            break;
-        } else {
-            j += 1;
-        }
-    }
-
-    Ok(i)
+    avro_decode!(reader)
 }
 
-fn read_file_marker<R: std::io::Read>(reader: &mut R) -> AvroResult<[u8; 16]> {
+fn _read_binary<R: Read>(reader: &mut R) -> Result<Vec<u8>> {
+    let len: usize = zigzag_i64(reader)? as usize;
+    let mut buf = vec![0u8; len];
+    reader.read_exact(&mut buf)?;
+    Ok(buf)
+}
+
+fn read_header<R: Read>(reader: &mut R) -> Result<HashMap<String, Vec<u8>>> {
+    read_header!(reader)
+}
+
+fn read_file_marker<R: Read>(reader: &mut R) -> Result<[u8; 16]> {
     let mut marker = [0u8; 16];
-    reader.read_exact(&mut marker).map_err(Error::ReadMarker)?;
+    reader.read_exact(&mut marker)?;
     Ok(marker)
 }
 
 /// Reads the schema from `reader`, returning the file's [`Schema`] and [`Compression`].
 /// # Error
 /// This function errors iff the header is not a valid avro file header.
-pub fn read_schema<R: Read>(reader: &mut R) -> AvroResult<(Schema, Option<Compression>, [u8; 16])> {
-    let meta_schema = Schema::Map(Box::new(Schema::Bytes));
-
-    let mut buf = [0u8; 4];
-    reader.read_exact(&mut buf).map_err(Error::ReadHeader)?;
-
-    if buf != [b'O', b'b', b'j', 1u8] {
-        return Err(Error::HeaderMagic);
-    }
-
-    if let Value::Map(meta) = from_avro_datum(&meta_schema, reader, None)? {
-        // TODO: surface original parse schema errors instead of coalescing them here
-        let json = meta
-            .get("avro.schema")
-            .and_then(|bytes| {
-                if let Value::Bytes(ref bytes) = *bytes {
-                    from_slice(bytes.as_ref()).ok()
-                } else {
-                    None
-                }
-            })
-            .ok_or(Error::GetAvroSchemaFromMap)?;
-        let schema = Schema::parse(&json)?;
-
-        let codec = meta.get("avro.codec").and_then(|codec| {
-            if let Value::Bytes(bytes) = codec {
-                let bytes: &[u8] = bytes.as_ref();
-                match bytes {
-                    b"snappy" => Some(Compression::Snappy),
-                    b"deflate" => Some(Compression::Deflate),
-                    _ => None,
-                }
-            } else {
-                None
-            }
-        });
-
-        let marker = read_file_marker(reader)?;
-
-        Ok((schema, codec, marker))
-    } else {
-        Err(Error::GetHeaderMetadata)
-    }
+pub fn read_schema<R: Read>(reader: &mut R) -> Result<(Schema, Option<Compression>, [u8; 16])> {
+    read_metadata!(reader)
 }
