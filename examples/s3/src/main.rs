@@ -5,10 +5,8 @@ use arrow2::io::parquet::read::{
     decompress, get_page_stream, page_stream_to_array, read_metadata_async,
 };
 use futures::{future::BoxFuture, StreamExt};
+use range_reader::{RangeOutput, RangedAsyncReader};
 use s3::Bucket;
-
-mod stream;
-use stream::{RangedStreamer, SeekOutput};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -36,12 +34,12 @@ async fn main() -> Result<()> {
                 .map_err(|x| std::io::Error::new(std::io::ErrorKind::Other, x.to_string()))?;
             println!("got {}/{} bytes starting at {}", data.len(), length, start);
             data.truncate(length);
-            Ok(SeekOutput { start, data })
-        }) as BoxFuture<'static, std::io::Result<SeekOutput>>
+            Ok(RangeOutput { start, data })
+        }) as BoxFuture<'static, std::io::Result<RangeOutput>>
     });
 
-    // at least 4kb per s3 request. Adjust as you like.
-    let mut reader = RangedStreamer::new(length, 4 * 1024, range_get);
+    // at least 4kb per s3 request. Adjust to your liking.
+    let mut reader = RangedAsyncReader::new(length, 4 * 1024, range_get);
 
     let metadata = read_metadata_async(&mut reader).await?;
 
