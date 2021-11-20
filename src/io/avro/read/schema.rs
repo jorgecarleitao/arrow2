@@ -8,7 +8,7 @@ use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 
 /// Returns the fully qualified name for a field
-pub fn aliased(name: &str, namespace: Option<&str>, default_namespace: Option<&str>) -> String {
+fn aliased(name: &str, namespace: Option<&str>, default_namespace: Option<&str>) -> String {
     if name.contains('.') {
         name.to_string()
     } else {

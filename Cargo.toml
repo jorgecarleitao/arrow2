@@ -74,6 +74,8 @@ avro-rs = { version = "0.13", optional = true, default_features = false }
 # compression of avro
 libflate = { version = "1.1.1", optional = true }
 snap = { version = "1", optional = true }
+# async avro
+async-stream = { version = "0.3.2", optional = true }
 
 # for division/remainder optimization at runtime
 strength_reduce = { version = "0.2", optional = true }
@@ -141,7 +143,7 @@ io_avro_compression = [
     "libflate",
     "snap",
 ]
-io_avro_async = ["io_avro", "futures"]
+io_avro_async = ["io_avro", "futures", "async-stream"]
 # io_json: its dependencies + error handling
 # serde_derive: there is some derive around
 io_json_integration = ["io_json", "serde_derive", "hex"]

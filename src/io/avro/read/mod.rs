@@ -9,14 +9,16 @@ use fallible_streaming_iterator::FallibleStreamingIterator;
 mod block;
 mod decompress;
 pub use block::BlockStreamIterator;
-pub use decompress::Decompressor;
+pub use decompress::{decompress_block, Decompressor};
 mod deserialize;
+pub use deserialize::deserialize;
 mod header;
 mod nested;
 mod schema;
 mod util;
 
 pub(super) use header::deserialize_header;
+pub(super) use schema::convert_schema;
 
 use crate::datatypes::Schema;
 use crate::error::Result;
@@ -80,7 +82,7 @@ impl<R: Read> Iterator for Reader<R> {
 
         self.iter.next().transpose().map(|x| {
             let (data, rows) = x?;
-            deserialize::deserialize(data, *rows, schema, avro_schemas)
+            deserialize(data, *rows, schema, avro_schemas)
         })
     }
 }
