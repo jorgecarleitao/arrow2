@@ -107,10 +107,10 @@ pub trait Array: std::fmt::Debug + Send + Sync {
 }
 
 /// A trait describing a mutable array; i.e. an array whose values can be changed.
-/// Mutable arrays are not `Send + Sync` and cannot be cloned but can be mutated in place,
+/// Mutable arrays cannot be cloned but can be mutated in place,
 /// thereby making them useful to perform numeric operations without allocations.
 /// As in [`Array`], concrete arrays (such as [`MutablePrimitiveArray`]) implement how they are mutated.
-pub trait MutableArray: std::fmt::Debug {
+pub trait MutableArray: std::fmt::Debug + Send + Sync {
     /// The [`DataType`] of the array.
     fn data_type(&self) -> &DataType;
 
