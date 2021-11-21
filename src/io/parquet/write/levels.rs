@@ -148,7 +148,7 @@ impl<O: Offset> Iterator for DefLevelsIter<'_, O> {
 
 #[derive(Debug)]
 pub struct NestedInfo<'a, O: Offset> {
-    is_optional: bool,
+    _is_optional: bool,
     offsets: &'a [O],
     validity: Option<&'a Bitmap>,
 }
@@ -156,7 +156,7 @@ pub struct NestedInfo<'a, O: Offset> {
 impl<'a, O: Offset> NestedInfo<'a, O> {
     pub fn new(offsets: &'a [O], validity: Option<&'a Bitmap>, is_optional: bool) -> Self {
         Self {
-            is_optional,
+            _is_optional: is_optional,
             offsets,
             validity,
         }

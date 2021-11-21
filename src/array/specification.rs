@@ -4,11 +4,15 @@ use num_traits::Num;
 
 use crate::types::Index;
 
-/// Trait describing types that can be used as offsets as per Arrow specification.
-/// This trait is only implemented for `i32` and `i64`, the two sizes part of the specification.
-/// # Safety
-/// Do not implement.
-pub unsafe trait Offset: Index + Num + Ord + num_traits::CheckedAdd {
+mod private {
+    pub trait Sealed {}
+
+    impl Sealed for i32 {}
+    impl Sealed for i64 {}
+}
+
+/// Sealed trait describing types that can be used as offsets in Arrow (`i32` and `i64`).
+pub trait Offset: private::Sealed + Index + Num + Ord + num_traits::CheckedAdd {
     /// Whether it is `i32` or `i64`
     fn is_large() -> bool;
 
@@ -19,7 +23,7 @@ pub unsafe trait Offset: Index + Num + Ord + num_traits::CheckedAdd {
     fn from_isize(value: isize) -> Option<Self>;
 }
 
-unsafe impl Offset for i32 {
+impl Offset for i32 {
     #[inline]
     fn is_large() -> bool {
         false
@@ -36,7 +40,7 @@ unsafe impl Offset for i32 {
     }
 }
 
-unsafe impl Offset for i64 {
+impl Offset for i64 {
     #[inline]
     fn is_large() -> bool {
         true

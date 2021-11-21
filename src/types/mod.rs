@@ -24,15 +24,33 @@ pub trait NaturalDataType {
     const DATA_TYPE: DataType;
 }
 
+mod private {
+    pub trait Sealed {}
+
+    impl Sealed for u8 {}
+    impl Sealed for u16 {}
+    impl Sealed for u32 {}
+    impl Sealed for u64 {}
+    impl Sealed for i8 {}
+    impl Sealed for i16 {}
+    impl Sealed for i32 {}
+    impl Sealed for i64 {}
+    impl Sealed for i128 {}
+    impl Sealed for f32 {}
+    impl Sealed for f64 {}
+    impl Sealed for super::days_ms {}
+    impl Sealed for super::months_days_ns {}
+}
+
 /// describes whether a [`DataType`] is valid.
-pub unsafe trait Relation {
+pub trait Relation: private::Sealed {
     /// Whether `data_type` is a valid [`DataType`].
     fn is_valid(data_type: &DataType) -> bool;
 }
 
 macro_rules! create_relation {
     ($native_ty:ty, $physical_ty:expr) => {
-        unsafe impl Relation for $native_ty {
+        impl Relation for $native_ty {
             #[inline]
             fn is_valid(data_type: &DataType) -> bool {
                 data_type.to_physical_type() == $physical_ty
@@ -49,11 +67,10 @@ macro_rules! natural_type {
     };
 }
 
-/// Declares any type that can be allocated, serialized and deserialized by this crate.
-/// All data-heavy memory operations are implemented for this trait alone.
-/// # Safety
-/// Do not implement.
-pub unsafe trait NativeType:
+/// Sealed trait that implemented by all types that can be allocated,
+/// serialized and deserialized by this crate.
+/// All O(N) in-memory allocations are implemented for this trait alone.
+pub trait NativeType:
     Relation
     + NaturalDataType
     + Send
@@ -89,7 +106,7 @@ pub unsafe trait NativeType:
 
 macro_rules! native {
     ($type:ty) => {
-        unsafe impl NativeType for $type {
+        impl NativeType for $type {
             type Bytes = [u8; std::mem::size_of::<Self>()];
             #[inline]
             fn to_le_bytes(&self) -> Self::Bytes {
@@ -166,7 +183,7 @@ impl std::fmt::Display for days_ms {
     }
 }
 
-unsafe impl NativeType for days_ms {
+impl NativeType for days_ms {
     type Bytes = [u8; 8];
     #[inline]
     fn to_le_bytes(&self) -> Self::Bytes {
@@ -266,7 +283,7 @@ impl std::fmt::Display for months_days_ns {
     }
 }
 
-unsafe impl NativeType for months_days_ns {
+impl NativeType for months_days_ns {
     type Bytes = [u8; 16];
     #[inline]
     fn to_le_bytes(&self) -> Self::Bytes {
