@@ -51,6 +51,22 @@ fn min_max_f64_large() {
         None,
         Some(5.0),
         Some(2.0),
+        None,
+        None,
+        Some(8.0),
+        Some(2.0),
+        None,
+        None,
+        Some(5.0),
+        Some(2.0),
+        None,
+        None,
+        Some(8.0),
+        Some(2.0),
+        None,
+        None,
+        Some(5.0),
+        Some(2.0),
     ]);
     assert_eq!(Some(2.0), min_primitive(&a));
     assert_eq!(Some(8.0), max_primitive(&a));

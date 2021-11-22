@@ -21,9 +21,9 @@ pub trait SimdOrd<T> {
     /// reduce itself to the maximum
     fn min_element(self) -> T;
     /// lane-wise maximum between two instances
-    fn max(self, x: Self) -> Self;
+    fn max_lane(self, x: Self) -> Self;
     /// lane-wise minimum between two instances
-    fn min(self, x: Self) -> Self;
+    fn min_lane(self, x: Self) -> Self;
     /// returns a new instance with all lanes equal to `MIN`
     fn new_min() -> Self;
     /// returns a new instance with all lanes equal to `MAX`
@@ -120,11 +120,11 @@ where
 
     let chunk_reduced = chunks.fold(T::Simd::new_min(), |acc, chunk| {
         let chunk = T::Simd::from_chunk(chunk);
-        acc.min(chunk)
+        acc.min_lane(chunk)
     });
 
     let remainder = T::Simd::from_incomplete_chunk(remainder, T::Simd::MAX);
-    let reduced = chunk_reduced.min(remainder);
+    let reduced = chunk_reduced.min_lane(remainder);
 
     reduced.min_element()
 }
@@ -143,14 +143,14 @@ where
             let chunk = T::Simd::from_chunk(chunk);
             let mask = <T::Simd as NativeSimd>::Mask::from_chunk(validity_chunk);
             let chunk = chunk.select(mask, T::Simd::new_min());
-            acc.min(chunk)
+            acc.min_lane(chunk)
         },
     );
 
     let remainder = T::Simd::from_incomplete_chunk(chunks.remainder(), T::Simd::MAX);
     let mask = <T::Simd as NativeSimd>::Mask::from_chunk(validity_masks.remainder());
     let remainder = remainder.select(mask, T::Simd::new_min());
-    let reduced = chunk_reduced.min(remainder);
+    let reduced = chunk_reduced.min_lane(remainder);
 
     reduced.min_element()
 }
@@ -199,11 +199,11 @@ where
 
     let chunk_reduced = chunks.fold(T::Simd::new_max(), |acc, chunk| {
         let chunk = T::Simd::from_chunk(chunk);
-        acc.max(chunk)
+        acc.max_lane(chunk)
     });
 
     let remainder = T::Simd::from_incomplete_chunk(remainder, T::Simd::MIN);
-    let reduced = chunk_reduced.max(remainder);
+    let reduced = chunk_reduced.max_lane(remainder);
 
     reduced.max_element()
 }
@@ -222,14 +222,14 @@ where
             let chunk = T::Simd::from_chunk(chunk);
             let mask = <T::Simd as NativeSimd>::Mask::from_chunk(validity_chunk);
             let chunk = chunk.select(mask, T::Simd::new_max());
-            acc.max(chunk)
+            acc.max_lane(chunk)
         },
     );
 
     let remainder = T::Simd::from_incomplete_chunk(chunks.remainder(), T::Simd::MIN);
     let mask = <T::Simd as NativeSimd>::Mask::from_chunk(validity_masks.remainder());
     let remainder = remainder.select(mask, T::Simd::new_max());
-    let reduced = chunk_reduced.max(remainder);
+    let reduced = chunk_reduced.max_lane(remainder);
 
     reduced.max_element()
 }

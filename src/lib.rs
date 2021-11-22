@@ -5,6 +5,7 @@
 //
 #![allow(clippy::len_without_is_empty)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
+#![cfg_attr(feature = "simd", feature(portable_simd))]
 
 #[macro_use]
 pub mod array;

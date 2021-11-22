@@ -61,8 +61,6 @@ itertools = { version = "^0.10", optional = true }
 
 base64 = { version = "0.13.0", optional = true }
 
-packed_simd = { version = "0.3", optional = true, package = "packed_simd_2" }
-
 # to write to parquet as a stream
 futures = { version = "0.3", optional = true }
 
@@ -211,8 +209,8 @@ compute = [
     "compute_window"
 ]
 benchmarks = ["rand"]
-simd = ["packed_simd"]
 serde_types = ["serde", "serde_derive"]
+simd = []
 
 [package.metadata.cargo-all-features]
 allowlist = ["compute", "compute_sort", "compute_hash", "compute_nullif"]
