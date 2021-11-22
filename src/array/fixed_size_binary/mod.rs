@@ -136,6 +136,18 @@ impl FixedSizeBinaryArray {
             .get_unchecked(i * self.size..(i + 1) * self.size)
     }
 
+    /// Returns a new [`FixedSizeBinary`] with a different logical type.
+    /// This is `O(1)`.
+    #[inline]
+    pub fn to(self, data_type: DataType) -> Self {
+        Self {
+            size: self.size,
+            data_type,
+            values: self.values,
+            validity: self.validity,
+        }
+    }
+
     /// Returns the size
     pub fn size(&self) -> usize {
         self.size
