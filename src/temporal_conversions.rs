@@ -63,17 +63,15 @@ pub fn time32s_to_time(v: i32) -> NaiveTime {
     NaiveTime::from_num_seconds_from_midnight(v as u32, 0)
 }
 
-/// converts a `i32` representing a `time32(ms)` to [`NaiveDateTime`]
+/// converts a `i32` representing a `time32(ms)` to [`NaiveTime`]
 #[inline]
 pub fn time32ms_to_time(v: i32) -> NaiveTime {
     let v = v as i64;
-    NaiveTime::from_num_seconds_from_midnight(
-        // extract seconds from milliseconds
-        (v / MILLISECONDS) as u32,
-        // discard extracted seconds and convert milliseconds to
-        // nanoseconds
-        (v % MILLISECONDS * MICROSECONDS) as u32,
-    )
+    let seconds = v / MILLISECONDS;
+
+    let milli_to_nano = 1_000_000;
+    let nano = (v - seconds * MILLISECONDS) * milli_to_nano;
+    NaiveTime::from_num_seconds_from_midnight(seconds as u32, nano as u32)
 }
 
 /// converts a `i64` representing a `time64(us)` to [`NaiveDateTime`]
