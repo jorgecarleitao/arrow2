@@ -9,12 +9,11 @@ unsafe impl ToFfi for UnionArray {
     fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>> {
         if let Some(offsets) = &self.offsets {
             vec![
-                None,
                 Some(self.types.as_ptr().cast::<u8>()),
                 Some(offsets.as_ptr().cast::<u8>()),
             ]
         } else {
-            vec![None, Some(self.types.as_ptr().cast::<u8>())]
+            vec![Some(self.types.as_ptr().cast::<u8>())]
         }
     }
 
@@ -37,11 +36,11 @@ impl<A: ffi::ArrowArrayRef> FromFfi<A> for UnionArray {
         let data_type = field.data_type().clone();
         let fields = Self::get_fields(field.data_type());
 
-        let mut types = unsafe { array.buffer::<i8>(1) }?;
+        let mut types = unsafe { array.buffer::<i8>(0) }?;
         let offsets = if Self::is_sparse(&data_type) {
             None
         } else {
-            Some(unsafe { array.buffer::<i32>(2) }?)
+            Some(unsafe { array.buffer::<i32>(1) }?)
         };
 
         let length = array.array().len();

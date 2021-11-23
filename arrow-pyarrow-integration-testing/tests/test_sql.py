@@ -39,8 +39,7 @@ class TestCase(unittest.TestCase):
         # No leak of C++ memory
         self.assertEqual(self.old_allocated_cpp, pyarrow.total_allocated_bytes())
 
-    # see https://issues.apache.org/jira/browse/ARROW-14680
-    def _test_null(self):
+    def test_null(self):
         """
         Python -> Rust -> Python
         """
