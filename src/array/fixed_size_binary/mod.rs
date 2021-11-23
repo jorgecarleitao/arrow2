@@ -138,8 +138,19 @@ impl FixedSizeBinaryArray {
 
     /// Returns a new [`FixedSizeBinary`] with a different logical type.
     /// This is `O(1)`.
+    /// # Panics
+    /// Panics iff the data_type is not supported for the physical type.
     #[inline]
     pub fn to(self, data_type: DataType) -> Self {
+        match (
+            data_type.to_logical_type(),
+            self.data_type().to_logical_type(),
+        ) {
+            (DataType::FixedSizeBinary(size_a), DataType::FixedSizeBinary(size_b))
+                if size_a == size_b => {}
+            _ => panic!("Wrong DataType"),
+        }
+
         Self {
             size: self.size,
             data_type,
