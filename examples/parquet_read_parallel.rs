@@ -1,10 +1,9 @@
-use crossbeam_channel::unbounded;
-use parquet2::metadata::ColumnChunkMetaData;
-
 use std::fs::File;
 use std::sync::Arc;
 use std::thread;
 use std::time::SystemTime;
+
+use crossbeam_channel::unbounded;
 
 use arrow2::{
     array::Array, error::Result, io::parquet::read, io::parquet::read::MutStreamingIterator,
