@@ -2,7 +2,6 @@ use std::ops::Rem;
 
 use num_traits::{CheckedRem, NumCast};
 
-use crate::compute::arithmetics::basic::check_same_type;
 use crate::datatypes::DataType;
 use crate::{
     array::{Array, PrimitiveArray},
@@ -10,7 +9,6 @@ use crate::{
         arithmetics::{ArrayCheckedRem, ArrayRem, NativeArithmetics},
         arity::{binary, binary_checked, unary, unary_checked},
     },
-    error::Result,
     types::NativeType,
 };
 use strength_reduce::{
@@ -27,16 +25,14 @@ use strength_reduce::{
 ///
 /// let a = Int32Array::from(&[Some(10), Some(7)]);
 /// let b = Int32Array::from(&[Some(5), Some(6)]);
-/// let result = rem(&a, &b).unwrap();
+/// let result = rem(&a, &b);
 /// let expected = Int32Array::from(&[Some(0), Some(1)]);
 /// assert_eq!(result, expected)
 /// ```
-pub fn rem<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<PrimitiveArray<T>>
+pub fn rem<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> PrimitiveArray<T>
 where
     T: NativeType + Rem<Output = T>,
 {
-    check_same_type(lhs, rhs)?;
-
     binary(lhs, rhs, lhs.data_type().clone(), |a, b| a % b)
 }
 
@@ -51,16 +47,14 @@ where
 ///
 /// let a = Int8Array::from(&[Some(-100i8), Some(10i8)]);
 /// let b = Int8Array::from(&[Some(100i8), Some(0i8)]);
-/// let result = checked_rem(&a, &b).unwrap();
+/// let result = checked_rem(&a, &b);
 /// let expected = Int8Array::from(&[Some(-0i8), None]);
 /// assert_eq!(result, expected);
 /// ```
-pub fn checked_rem<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<PrimitiveArray<T>>
+pub fn checked_rem<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> PrimitiveArray<T>
 where
     T: NativeType + CheckedRem<Output = T>,
 {
-    check_same_type(lhs, rhs)?;
-
     let op = move |a: T, b: T| a.checked_rem(&b);
 
     binary_checked(lhs, rhs, lhs.data_type().clone(), op)
@@ -70,7 +64,7 @@ impl<T> ArrayRem<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + Rem<Output = T>,
 {
-    fn rem(&self, rhs: &PrimitiveArray<T>) -> Result<Self> {
+    fn rem(&self, rhs: &PrimitiveArray<T>) -> Self {
         rem(self, rhs)
     }
 }
@@ -79,7 +73,7 @@ impl<T> ArrayCheckedRem<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + CheckedRem<Output = T>,
 {
-    fn checked_rem(&self, rhs: &PrimitiveArray<T>) -> Result<Self> {
+    fn checked_rem(&self, rhs: &PrimitiveArray<T>) -> Self {
         checked_rem(self, rhs)
     }
 }
@@ -195,8 +189,8 @@ impl<T> ArrayRem<T> for PrimitiveArray<T>
 where
     T: NativeArithmetics + Rem<Output = T> + NumCast,
 {
-    fn rem(&self, rhs: &T) -> Result<Self> {
-        Ok(rem_scalar(self, rhs))
+    fn rem(&self, rhs: &T) -> Self {
+        rem_scalar(self, rhs)
     }
 }
 
@@ -204,7 +198,7 @@ impl<T> ArrayCheckedRem<T> for PrimitiveArray<T>
 where
     T: NativeArithmetics + CheckedRem<Output = T>,
 {
-    fn checked_rem(&self, rhs: &T) -> Result<Self> {
-        Ok(checked_rem_scalar(self, rhs))
+    fn checked_rem(&self, rhs: &T) -> Self {
+        checked_rem_scalar(self, rhs)
     }
 }

@@ -22,20 +22,20 @@ use super::{adjusted_precision_scale, get_parameters, max_value, number_digits};
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::sub::sub;
+/// use arrow2::compute::arithmetics::decimal::sub;
 /// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
 /// let a = PrimitiveArray::from([Some(1i128), Some(1i128), None, Some(2i128)]).to(DataType::Decimal(5, 2));
 /// let b = PrimitiveArray::from([Some(1i128), Some(2i128), None, Some(2i128)]).to(DataType::Decimal(5, 2));
 ///
-/// let result = sub(&a, &b).unwrap();
+/// let result = sub(&a, &b);
 /// let expected = PrimitiveArray::from([Some(0i128), Some(-1i128), None, Some(0i128)]).to(DataType::Decimal(5, 2));
 ///
 /// assert_eq!(result, expected);
 /// ```
-pub fn sub(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<PrimitiveArray<i128>> {
-    let (precision, _) = get_parameters(lhs.data_type(), rhs.data_type())?;
+pub fn sub(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> PrimitiveArray<i128> {
+    let (precision, _) = get_parameters(lhs.data_type(), rhs.data_type()).unwrap();
 
     let max = max_value(precision);
 
@@ -62,14 +62,14 @@ pub fn sub(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<Pri
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::sub::saturating_sub;
+/// use arrow2::compute::arithmetics::decimal::saturating_sub;
 /// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
 /// let a = PrimitiveArray::from([Some(-99000i128), Some(11100i128), None, Some(22200i128)]).to(DataType::Decimal(5, 2));
 /// let b = PrimitiveArray::from([Some(01000i128), Some(22200i128), None, Some(11100i128)]).to(DataType::Decimal(5, 2));
 ///
-/// let result = saturating_sub(&a, &b).unwrap();
+/// let result = saturating_sub(&a, &b);
 /// let expected = PrimitiveArray::from([Some(-99999i128), Some(-11100i128), None, Some(11100i128)]).to(DataType::Decimal(5, 2));
 ///
 /// assert_eq!(result, expected);
@@ -77,8 +77,8 @@ pub fn sub(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<Pri
 pub fn saturating_sub(
     lhs: &PrimitiveArray<i128>,
     rhs: &PrimitiveArray<i128>,
-) -> Result<PrimitiveArray<i128>> {
-    let (precision, _) = get_parameters(lhs.data_type(), rhs.data_type())?;
+) -> PrimitiveArray<i128> {
+    let (precision, _) = get_parameters(lhs.data_type(), rhs.data_type()).unwrap();
 
     let max = max_value(precision);
 
@@ -102,21 +102,21 @@ pub fn saturating_sub(
 
 // Implementation of ArraySub trait for PrimitiveArrays
 impl ArraySub<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    fn sub(&self, rhs: &PrimitiveArray<i128>) -> Result<Self> {
+    fn sub(&self, rhs: &PrimitiveArray<i128>) -> Self {
         sub(self, rhs)
     }
 }
 
 // Implementation of ArrayCheckedSub trait for PrimitiveArrays
 impl ArrayCheckedSub<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    fn checked_sub(&self, rhs: &PrimitiveArray<i128>) -> Result<Self> {
+    fn checked_sub(&self, rhs: &PrimitiveArray<i128>) -> Self {
         checked_sub(self, rhs)
     }
 }
 
 // Implementation of ArraySaturatingSub trait for PrimitiveArrays
 impl ArraySaturatingSub<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    fn saturating_sub(&self, rhs: &PrimitiveArray<i128>) -> Result<Self> {
+    fn saturating_sub(&self, rhs: &PrimitiveArray<i128>) -> Self {
         saturating_sub(self, rhs)
     }
 }
@@ -128,23 +128,20 @@ impl ArraySaturatingSub<PrimitiveArray<i128>> for PrimitiveArray<i128> {
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::sub::checked_sub;
+/// use arrow2::compute::arithmetics::decimal::checked_sub;
 /// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
 /// let a = PrimitiveArray::from([Some(-99000i128), Some(11100i128), None, Some(22200i128)]).to(DataType::Decimal(5, 2));
 /// let b = PrimitiveArray::from([Some(01000i128), Some(22200i128), None, Some(11100i128)]).to(DataType::Decimal(5, 2));
 ///
-/// let result = checked_sub(&a, &b).unwrap();
+/// let result = checked_sub(&a, &b);
 /// let expected = PrimitiveArray::from([None, Some(-11100i128), None, Some(11100i128)]).to(DataType::Decimal(5, 2));
 ///
 /// assert_eq!(result, expected);
 /// ```
-pub fn checked_sub(
-    lhs: &PrimitiveArray<i128>,
-    rhs: &PrimitiveArray<i128>,
-) -> Result<PrimitiveArray<i128>> {
-    let (precision, _) = get_parameters(lhs.data_type(), rhs.data_type())?;
+pub fn checked_sub(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> PrimitiveArray<i128> {
+    let (precision, _) = get_parameters(lhs.data_type(), rhs.data_type()).unwrap();
 
     let max = max_value(precision);
 
@@ -174,7 +171,7 @@ pub fn checked_sub(
 /// ```
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::sub::adaptive_sub;
+/// use arrow2::compute::arithmetics::decimal::adaptive_sub;
 /// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///

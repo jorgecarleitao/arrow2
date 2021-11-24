@@ -86,7 +86,7 @@ fn create_scale(lhs: &DataType, rhs: &DataType) -> Result<f64> {
 /// let duration = PrimitiveArray::from([Some(10i64), Some(20i64), None, Some(30i64)])
 ///     .to(DataType::Duration(TimeUnit::Second));
 ///
-/// let result = add_duration(&timestamp, &duration).unwrap();
+/// let result = add_duration(&timestamp, &duration);
 /// let expected = PrimitiveArray::from([
 ///     Some(100010i64),
 ///     Some(200020i64),
@@ -103,12 +103,12 @@ fn create_scale(lhs: &DataType, rhs: &DataType) -> Result<f64> {
 pub fn add_duration<T>(
     time: &PrimitiveArray<T>,
     duration: &PrimitiveArray<i64>,
-) -> Result<PrimitiveArray<T>>
+) -> PrimitiveArray<T>
 where
     f64: AsPrimitive<T>,
     T: NativeType + Add<T, Output = T>,
 {
-    let scale = create_scale(time.data_type(), duration.data_type())?;
+    let scale = create_scale(time.data_type(), duration.data_type()).unwrap();
 
     // Closure for the binary operation. The closure contains the scale
     // required to add a duration to the timestamp array.
@@ -141,7 +141,7 @@ where
 /// let duration = PrimitiveArray::from([Some(10i64), Some(20i64), None, Some(30i64)])
 ///     .to(DataType::Duration(TimeUnit::Second));
 ///
-/// let result = subtract_duration(&timestamp, &duration).unwrap();
+/// let result = subtract_duration(&timestamp, &duration);
 /// let expected = PrimitiveArray::from([
 ///     Some(99990i64),
 ///     Some(199980i64),
@@ -159,12 +159,12 @@ where
 pub fn subtract_duration<T>(
     time: &PrimitiveArray<T>,
     duration: &PrimitiveArray<i64>,
-) -> Result<PrimitiveArray<T>>
+) -> PrimitiveArray<T>
 where
     f64: AsPrimitive<T>,
     T: NativeType + Sub<T, Output = T>,
 {
-    let scale = create_scale(time.data_type(), duration.data_type())?;
+    let scale = create_scale(time.data_type(), duration.data_type()).unwrap();
 
     // Closure for the binary operation. The closure contains the scale
     // required to add a duration to the timestamp array.
@@ -220,7 +220,7 @@ pub fn subtract_timestamps(
             let scale = temporal_conversions::timeunit_scale(*timeunit_a, *timeunit_b);
             let op = move |a, b| a - (b as f64 * scale) as i64;
 
-            binary(lhs, rhs, DataType::Duration(*timeunit_a), op)
+            Ok(binary(lhs, rhs, DataType::Duration(*timeunit_a), op))
         }
         _ => Err(ArrowError::InvalidArgumentError(
             "Incorrect data type for the arguments".to_string(),
@@ -238,7 +238,7 @@ pub fn add_interval(
             let time_unit = *time_unit;
             let timezone = temporal_conversions::parse_offset(timezone_str);
             match timezone {
-                Ok(timezone) => binary(
+                Ok(timezone) => Ok(binary(
                     timestamp,
                     interval,
                     timestamp.data_type().clone(),
@@ -247,11 +247,11 @@ pub fn add_interval(
                             timestamp, time_unit, interval, &timezone,
                         )
                     },
-                ),
+                )),
                 #[cfg(feature = "chrono-tz")]
                 Err(_) => {
                     let timezone = temporal_conversions::parse_offset_tz(timezone_str)?;
-                    binary(
+                    Ok(binary(
                         timestamp,
                         interval,
                         timestamp.data_type().clone(),
@@ -260,7 +260,7 @@ pub fn add_interval(
                                 timestamp, time_unit, interval, &timezone,
                             )
                         },
-                    )
+                    ))
                 }
                 #[cfg(not(feature = "chrono-tz"))]
                 _ => Err(ArrowError::InvalidArgumentError(format!(
@@ -271,14 +271,14 @@ pub fn add_interval(
         }
         DataType::Timestamp(time_unit, None) => {
             let time_unit = *time_unit;
-            binary(
+            Ok(binary(
                 timestamp,
                 interval,
                 timestamp.data_type().clone(),
                 |timestamp, interval| {
                     temporal_conversions::add_naive_interval(timestamp, time_unit, interval)
                 },
-            )
+            ))
         }
         _ => Err(ArrowError::InvalidArgumentError(
             "Adding an interval is only supported for `DataType::Timestamp`".to_string(),

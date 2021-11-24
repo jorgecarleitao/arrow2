@@ -23,20 +23,20 @@ use super::{adjusted_precision_scale, get_parameters, max_value, number_digits};
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::mul::mul;
+/// use arrow2::compute::arithmetics::decimal::mul;
 /// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
 /// let a = PrimitiveArray::from([Some(1_00i128), Some(1_00i128), None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
 /// let b = PrimitiveArray::from([Some(1_00i128), Some(2_00i128), None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
 ///
-/// let result = mul(&a, &b).unwrap();
+/// let result = mul(&a, &b);
 /// let expected = PrimitiveArray::from([Some(1_00i128), Some(2_00i128), None, Some(4_00i128)]).to(DataType::Decimal(5, 2));
 ///
 /// assert_eq!(result, expected);
 /// ```
-pub fn mul(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<PrimitiveArray<i128>> {
-    let (precision, scale) = get_parameters(lhs.data_type(), rhs.data_type())?;
+pub fn mul(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> PrimitiveArray<i128> {
+    let (precision, scale) = get_parameters(lhs.data_type(), rhs.data_type()).unwrap();
 
     let scale = 10i128.pow(scale as u32);
     let max = max_value(precision);
@@ -78,14 +78,14 @@ pub fn mul(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<Pri
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::mul::saturating_mul;
+/// use arrow2::compute::arithmetics::decimal::saturating_mul;
 /// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
 /// let a = PrimitiveArray::from([Some(999_99i128), Some(1_00i128), None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
 /// let b = PrimitiveArray::from([Some(10_00i128), Some(2_00i128), None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
 ///
-/// let result = saturating_mul(&a, &b).unwrap();
+/// let result = saturating_mul(&a, &b);
 /// let expected = PrimitiveArray::from([Some(999_99i128), Some(2_00i128), None, Some(4_00i128)]).to(DataType::Decimal(5, 2));
 ///
 /// assert_eq!(result, expected);
@@ -93,8 +93,8 @@ pub fn mul(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Result<Pri
 pub fn saturating_mul(
     lhs: &PrimitiveArray<i128>,
     rhs: &PrimitiveArray<i128>,
-) -> Result<PrimitiveArray<i128>> {
-    let (precision, scale) = get_parameters(lhs.data_type(), rhs.data_type())?;
+) -> PrimitiveArray<i128> {
+    let (precision, scale) = get_parameters(lhs.data_type(), rhs.data_type()).unwrap();
 
     let scale = 10i128.pow(scale as u32);
     let max = max_value(precision);
@@ -128,23 +128,20 @@ pub fn saturating_mul(
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::mul::checked_mul;
+/// use arrow2::compute::arithmetics::decimal::checked_mul;
 /// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
 /// let a = PrimitiveArray::from([Some(999_99i128), Some(1_00i128), None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
 /// let b = PrimitiveArray::from([Some(10_00i128), Some(2_00i128), None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
 ///
-/// let result = checked_mul(&a, &b).unwrap();
+/// let result = checked_mul(&a, &b);
 /// let expected = PrimitiveArray::from([None, Some(2_00i128), None, Some(4_00i128)]).to(DataType::Decimal(5, 2));
 ///
 /// assert_eq!(result, expected);
 /// ```
-pub fn checked_mul(
-    lhs: &PrimitiveArray<i128>,
-    rhs: &PrimitiveArray<i128>,
-) -> Result<PrimitiveArray<i128>> {
-    let (precision, scale) = get_parameters(lhs.data_type(), rhs.data_type())?;
+pub fn checked_mul(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> PrimitiveArray<i128> {
+    let (precision, scale) = get_parameters(lhs.data_type(), rhs.data_type()).unwrap();
 
     let scale = 10i128.pow(scale as u32);
     let max = max_value(precision);
@@ -166,21 +163,21 @@ pub fn checked_mul(
 
 // Implementation of ArrayMul trait for PrimitiveArrays
 impl ArrayMul<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    fn mul(&self, rhs: &PrimitiveArray<i128>) -> Result<Self> {
+    fn mul(&self, rhs: &PrimitiveArray<i128>) -> Self {
         mul(self, rhs)
     }
 }
 
 // Implementation of ArrayCheckedMul trait for PrimitiveArrays
 impl ArrayCheckedMul<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    fn checked_mul(&self, rhs: &PrimitiveArray<i128>) -> Result<Self> {
+    fn checked_mul(&self, rhs: &PrimitiveArray<i128>) -> Self {
         checked_mul(self, rhs)
     }
 }
 
 // Implementation of ArraySaturatingMul trait for PrimitiveArrays
 impl ArraySaturatingMul<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    fn saturating_mul(&self, rhs: &PrimitiveArray<i128>) -> Result<Self> {
+    fn saturating_mul(&self, rhs: &PrimitiveArray<i128>) -> Self {
         saturating_mul(self, rhs)
     }
 }
@@ -200,7 +197,7 @@ impl ArraySaturatingMul<PrimitiveArray<i128>> for PrimitiveArray<i128> {
 /// ```
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::mul::adaptive_mul;
+/// use arrow2::compute::arithmetics::decimal::adaptive_mul;
 /// use arrow2::array::PrimitiveArray;
 /// use arrow2::datatypes::DataType;
 ///
@@ -233,12 +230,10 @@ pub fn adaptive_mul(
             // to the left to match the final scale
             let res = if lhs_s > rhs_s {
                 l.checked_mul(r * shift)
-                    .expect("Mayor overflow for multiplication")
             } else {
-                (l * shift)
-                    .checked_mul(*r)
-                    .expect("Mayor overflow for multiplication")
-            };
+                (l * shift).checked_mul(*r)
+            }
+            .expect("Mayor overflow for multiplication");
 
             let res = res / shift_1;
 

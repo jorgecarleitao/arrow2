@@ -3,20 +3,18 @@ use std::ops::Sub;
 
 use num_traits::{ops::overflowing::OverflowingSub, CheckedSub, SaturatingSub, WrappingSub};
 
-use crate::compute::arithmetics::basic::check_same_type;
-use crate::compute::arithmetics::ArrayWrappingSub;
 use crate::{
     array::{Array, PrimitiveArray},
     bitmap::Bitmap,
     compute::{
         arithmetics::{
-            ArrayCheckedSub, ArrayOverflowingSub, ArraySaturatingSub, ArraySub, NativeArithmetics,
+            ArrayCheckedSub, ArrayOverflowingSub, ArraySaturatingSub, ArraySub, ArrayWrappingSub,
+            NativeArithmetics,
         },
         arity::{
             binary, binary_checked, binary_with_bitmap, unary, unary_checked, unary_with_bitmap,
         },
     },
-    error::Result,
     types::NativeType,
 };
 
@@ -30,16 +28,14 @@ use crate::{
 ///
 /// let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
 /// let b = Int32Array::from(&[Some(5), None, None, Some(6)]);
-/// let result = sub(&a, &b).unwrap();
+/// let result = sub(&a, &b);
 /// let expected = Int32Array::from(&[None, None, None, Some(0)]);
 /// assert_eq!(result, expected)
 /// ```
-pub fn sub<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<PrimitiveArray<T>>
+pub fn sub<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> PrimitiveArray<T>
 where
     T: NativeType + Sub<Output = T>,
 {
-    check_same_type(lhs, rhs)?;
-
     binary(lhs, rhs, lhs.data_type().clone(), |a, b| a - b)
 }
 
@@ -53,19 +49,14 @@ where
 ///
 /// let a = PrimitiveArray::from([Some(-100i8), Some(-100i8), Some(100i8)]);
 /// let b = PrimitiveArray::from([Some(0i8), Some(100i8), Some(0i8)]);
-/// let result = wrapping_sub(&a, &b).unwrap();
+/// let result = wrapping_sub(&a, &b);
 /// let expected = PrimitiveArray::from([Some(-100i8), Some(56i8), Some(100i8)]);
 /// assert_eq!(result, expected);
 /// ```
-pub fn wrapping_sub<T>(
-    lhs: &PrimitiveArray<T>,
-    rhs: &PrimitiveArray<T>,
-) -> Result<PrimitiveArray<T>>
+pub fn wrapping_sub<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> PrimitiveArray<T>
 where
     T: NativeType + WrappingSub<Output = T>,
 {
-    check_same_type(lhs, rhs)?;
-
     let op = move |a: T, b: T| a.wrapping_sub(&b);
 
     binary(lhs, rhs, lhs.data_type().clone(), op)
@@ -81,16 +72,14 @@ where
 ///
 /// let a = Int8Array::from(&[Some(100i8), Some(-100i8), Some(100i8)]);
 /// let b = Int8Array::from(&[Some(1i8), Some(100i8), Some(0i8)]);
-/// let result = checked_sub(&a, &b).unwrap();
+/// let result = checked_sub(&a, &b);
 /// let expected = Int8Array::from(&[Some(99i8), None, Some(100i8)]);
 /// assert_eq!(result, expected);
 /// ```
-pub fn checked_sub<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> Result<PrimitiveArray<T>>
+pub fn checked_sub<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> PrimitiveArray<T>
 where
     T: NativeType + CheckedSub<Output = T>,
 {
-    check_same_type(lhs, rhs)?;
-
     let op = move |a: T, b: T| a.checked_sub(&b);
 
     binary_checked(lhs, rhs, lhs.data_type().clone(), op)
@@ -107,19 +96,14 @@ where
 ///
 /// let a = Int8Array::from(&[Some(-100i8)]);
 /// let b = Int8Array::from(&[Some(100i8)]);
-/// let result = saturating_sub(&a, &b).unwrap();
+/// let result = saturating_sub(&a, &b);
 /// let expected = Int8Array::from(&[Some(-128)]);
 /// assert_eq!(result, expected);
 /// ```
-pub fn saturating_sub<T>(
-    lhs: &PrimitiveArray<T>,
-    rhs: &PrimitiveArray<T>,
-) -> Result<PrimitiveArray<T>>
+pub fn saturating_sub<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> PrimitiveArray<T>
 where
     T: NativeType + SaturatingSub<Output = T>,
 {
-    check_same_type(lhs, rhs)?;
-
     let op = move |a: T, b: T| a.saturating_sub(&b);
 
     binary(lhs, rhs, lhs.data_type().clone(), op)
@@ -137,19 +121,17 @@ where
 ///
 /// let a = Int8Array::from(&[Some(1i8), Some(-100i8)]);
 /// let b = Int8Array::from(&[Some(1i8), Some(100i8)]);
-/// let (result, overflow) = overflowing_sub(&a, &b).unwrap();
+/// let (result, overflow) = overflowing_sub(&a, &b);
 /// let expected = Int8Array::from(&[Some(0i8), Some(56i8)]);
 /// assert_eq!(result, expected);
 /// ```
 pub fn overflowing_sub<T>(
     lhs: &PrimitiveArray<T>,
     rhs: &PrimitiveArray<T>,
-) -> Result<(PrimitiveArray<T>, Bitmap)>
+) -> (PrimitiveArray<T>, Bitmap)
 where
     T: NativeType + OverflowingSub<Output = T>,
 {
-    check_same_type(lhs, rhs)?;
-
     let op = move |a: T, b: T| a.overflowing_sub(&b);
 
     binary_with_bitmap(lhs, rhs, lhs.data_type().clone(), op)
@@ -160,7 +142,7 @@ impl<T> ArraySub<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + Sub<Output = T>,
 {
-    fn sub(&self, rhs: &PrimitiveArray<T>) -> Result<Self> {
+    fn sub(&self, rhs: &PrimitiveArray<T>) -> Self {
         sub(self, rhs)
     }
 }
@@ -169,7 +151,7 @@ impl<T> ArrayWrappingSub<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + WrappingSub<Output = T>,
 {
-    fn wrapping_sub(&self, rhs: &PrimitiveArray<T>) -> Result<Self> {
+    fn wrapping_sub(&self, rhs: &PrimitiveArray<T>) -> Self {
         wrapping_sub(self, rhs)
     }
 }
@@ -179,7 +161,7 @@ impl<T> ArrayCheckedSub<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + CheckedSub<Output = T>,
 {
-    fn checked_sub(&self, rhs: &PrimitiveArray<T>) -> Result<Self> {
+    fn checked_sub(&self, rhs: &PrimitiveArray<T>) -> Self {
         checked_sub(self, rhs)
     }
 }
@@ -189,7 +171,7 @@ impl<T> ArraySaturatingSub<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + SaturatingSub<Output = T>,
 {
-    fn saturating_sub(&self, rhs: &PrimitiveArray<T>) -> Result<Self> {
+    fn saturating_sub(&self, rhs: &PrimitiveArray<T>) -> Self {
         saturating_sub(self, rhs)
     }
 }
@@ -199,7 +181,7 @@ impl<T> ArrayOverflowingSub<PrimitiveArray<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + OverflowingSub<Output = T>,
 {
-    fn overflowing_sub(&self, rhs: &PrimitiveArray<T>) -> Result<(Self, Bitmap)> {
+    fn overflowing_sub(&self, rhs: &PrimitiveArray<T>) -> (Self, Bitmap) {
         overflowing_sub(self, rhs)
     }
 }
@@ -323,8 +305,8 @@ impl<T> ArraySub<T> for PrimitiveArray<T>
 where
     T: NativeArithmetics + Sub<Output = T>,
 {
-    fn sub(&self, rhs: &T) -> Result<Self> {
-        Ok(sub_scalar(self, rhs))
+    fn sub(&self, rhs: &T) -> Self {
+        sub_scalar(self, rhs)
     }
 }
 
@@ -333,8 +315,8 @@ impl<T> ArrayCheckedSub<T> for PrimitiveArray<T>
 where
     T: NativeArithmetics + CheckedSub<Output = T>,
 {
-    fn checked_sub(&self, rhs: &T) -> Result<Self> {
-        Ok(checked_sub_scalar(self, rhs))
+    fn checked_sub(&self, rhs: &T) -> Self {
+        checked_sub_scalar(self, rhs)
     }
 }
 
@@ -343,8 +325,8 @@ impl<T> ArraySaturatingSub<T> for PrimitiveArray<T>
 where
     T: NativeArithmetics + SaturatingSub<Output = T>,
 {
-    fn saturating_sub(&self, rhs: &T) -> Result<Self> {
-        Ok(saturating_sub_scalar(self, rhs))
+    fn saturating_sub(&self, rhs: &T) -> Self {
+        saturating_sub_scalar(self, rhs)
     }
 }
 
@@ -353,7 +335,7 @@ impl<T> ArrayOverflowingSub<T> for PrimitiveArray<T>
 where
     T: NativeArithmetics + OverflowingSub<Output = T>,
 {
-    fn overflowing_sub(&self, rhs: &T) -> Result<(Self, Bitmap)> {
-        Ok(overflowing_sub_scalar(self, rhs))
+    fn overflowing_sub(&self, rhs: &T) -> (Self, Bitmap) {
+        overflowing_sub_scalar(self, rhs)
     }
 }

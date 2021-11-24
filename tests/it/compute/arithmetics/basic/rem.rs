@@ -3,24 +3,23 @@ use arrow2::compute::arithmetics::basic::*;
 use arrow2::compute::arithmetics::{ArrayCheckedRem, ArrayRem};
 
 #[test]
+#[should_panic]
 fn test_rem_mismatched_length() {
     let a = Int32Array::from_slice(&[5, 6]);
     let b = Int32Array::from_slice(&[5]);
-    rem(&a, &b)
-        .err()
-        .expect("should have failed due to different lengths");
+    rem(&a, &b);
 }
 
 #[test]
 fn test_rem() {
     let a = Int32Array::from(&[Some(5), Some(6)]);
     let b = Int32Array::from(&[Some(4), Some(4)]);
-    let result = rem(&a, &b).unwrap();
+    let result = rem(&a, &b);
     let expected = Int32Array::from(&[Some(1), Some(2)]);
     assert_eq!(result, expected);
 
     // Trait testing
-    let result = a.rem(&b).unwrap();
+    let result = a.rem(&b);
     assert_eq!(result, expected);
 }
 
@@ -36,18 +35,18 @@ fn test_rem_panic() {
 fn test_rem_checked() {
     let a = Int32Array::from(&[Some(5), None, Some(3), Some(6)]);
     let b = Int32Array::from(&[Some(5), Some(3), None, Some(5)]);
-    let result = checked_rem(&a, &b).unwrap();
+    let result = checked_rem(&a, &b);
     let expected = Int32Array::from(&[Some(0), None, None, Some(1)]);
     assert_eq!(result, expected);
 
     let a = Int32Array::from(&[Some(5), None, Some(3), Some(6)]);
     let b = Int32Array::from(&[Some(5), Some(0), Some(0), Some(5)]);
-    let result = checked_rem(&a, &b).unwrap();
+    let result = checked_rem(&a, &b);
     let expected = Int32Array::from(&[Some(0), None, None, Some(1)]);
     assert_eq!(result, expected);
 
     // Trait testing
-    let result = a.checked_rem(&b).unwrap();
+    let result = a.checked_rem(&b);
     assert_eq!(result, expected);
 }
 
@@ -59,7 +58,7 @@ fn test_rem_scalar() {
     assert_eq!(result, expected);
 
     // Trait testing
-    let result = a.rem(&2i32).unwrap();
+    let result = a.rem(&2i32);
     assert_eq!(result, expected);
 
     // check the strength reduced branches
@@ -97,6 +96,6 @@ fn test_rem_scalar_checked() {
     assert_eq!(result, expected);
 
     // Trait testing
-    let result = a.checked_rem(&0).unwrap();
+    let result = a.checked_rem(&0);
     assert_eq!(result, expected);
 }

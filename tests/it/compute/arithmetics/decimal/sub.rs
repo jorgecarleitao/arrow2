@@ -1,7 +1,7 @@
 #![allow(clippy::zero_prefixed_literal, clippy::inconsistent_digit_grouping)]
 
 use arrow2::array::*;
-use arrow2::compute::arithmetics::decimal::sub::*;
+use arrow2::compute::arithmetics::decimal::{adaptive_sub, checked_sub, saturating_sub, sub};
 use arrow2::compute::arithmetics::{ArrayCheckedSub, ArraySaturatingSub, ArraySub};
 use arrow2::datatypes::DataType;
 
@@ -13,26 +13,23 @@ fn test_subtract_normal() {
     let b = PrimitiveArray::from([Some(22222i128), Some(11100i128), None, Some(11100i128)])
         .to(DataType::Decimal(5, 2));
 
-    let result = sub(&a, &b).unwrap();
+    let result = sub(&a, &b);
     let expected = PrimitiveArray::from([Some(-11111i128), Some(11100i128), None, Some(28900i128)])
         .to(DataType::Decimal(5, 2));
 
     assert_eq!(result, expected);
 
     // Testing trait
-    let result = a.sub(&b).unwrap();
+    let result = a.sub(&b);
     assert_eq!(result, expected);
 }
 
 #[test]
+#[should_panic]
 fn test_subtract_decimal_wrong_precision() {
     let a = PrimitiveArray::from([None]).to(DataType::Decimal(5, 2));
     let b = PrimitiveArray::from([None]).to(DataType::Decimal(6, 2));
-    let result = sub(&a, &b);
-
-    if result.is_ok() {
-        panic!("Should panic for different precision");
-    }
+    sub(&a, &b);
 }
 
 #[test]
@@ -51,14 +48,14 @@ fn test_subtract_saturating() {
     let b = PrimitiveArray::from([Some(22222i128), Some(11100i128), None, Some(11100i128)])
         .to(DataType::Decimal(5, 2));
 
-    let result = saturating_sub(&a, &b).unwrap();
+    let result = saturating_sub(&a, &b);
     let expected = PrimitiveArray::from([Some(-11111i128), Some(11100i128), None, Some(28900i128)])
         .to(DataType::Decimal(5, 2));
 
     assert_eq!(result, expected);
 
     // Testing trait
-    let result = a.saturating_sub(&b).unwrap();
+    let result = a.saturating_sub(&b);
     assert_eq!(result, expected);
 }
 
@@ -79,7 +76,7 @@ fn test_subtract_saturating_overflow() {
     ])
     .to(DataType::Decimal(5, 2));
 
-    let result = saturating_sub(&a, &b).unwrap();
+    let result = saturating_sub(&a, &b);
 
     let expected = PrimitiveArray::from([
         Some(-99999i128),
@@ -92,7 +89,7 @@ fn test_subtract_saturating_overflow() {
     assert_eq!(result, expected);
 
     // Testing trait
-    let result = a.saturating_sub(&b).unwrap();
+    let result = a.saturating_sub(&b);
     assert_eq!(result, expected);
 }
 
@@ -104,14 +101,14 @@ fn test_subtract_checked() {
     let b = PrimitiveArray::from([Some(22222i128), Some(11100i128), None, Some(11100i128)])
         .to(DataType::Decimal(5, 2));
 
-    let result = checked_sub(&a, &b).unwrap();
+    let result = checked_sub(&a, &b);
     let expected = PrimitiveArray::from([Some(-11111i128), Some(11100i128), None, Some(28900i128)])
         .to(DataType::Decimal(5, 2));
 
     assert_eq!(result, expected);
 
     // Testing trait
-    let result = a.checked_sub(&b).unwrap();
+    let result = a.checked_sub(&b);
     assert_eq!(result, expected);
 }
 
@@ -119,7 +116,7 @@ fn test_subtract_checked() {
 fn test_subtract_checked_overflow() {
     let a = PrimitiveArray::from([Some(4i128), Some(-99999i128)]).to(DataType::Decimal(5, 2));
     let b = PrimitiveArray::from([Some(2i128), Some(1i128)]).to(DataType::Decimal(5, 2));
-    let result = checked_sub(&a, &b).unwrap();
+    let result = checked_sub(&a, &b);
     let expected = PrimitiveArray::from([Some(2i128), None]).to(DataType::Decimal(5, 2));
     assert_eq!(result, expected);
 }

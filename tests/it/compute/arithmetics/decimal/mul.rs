@@ -1,7 +1,7 @@
 #![allow(clippy::zero_prefixed_literal, clippy::inconsistent_digit_grouping)]
 
 use arrow2::array::*;
-use arrow2::compute::arithmetics::decimal::mul::*;
+use arrow2::compute::arithmetics::decimal::{adaptive_mul, checked_mul, mul, saturating_mul};
 use arrow2::compute::arithmetics::{ArrayCheckedMul, ArrayMul, ArraySaturatingMul};
 use arrow2::datatypes::DataType;
 
@@ -31,7 +31,7 @@ fn test_multiply_normal() {
     ])
     .to(DataType::Decimal(7, 2));
 
-    let result = mul(&a, &b).unwrap();
+    let result = mul(&a, &b);
     let expected = PrimitiveArray::from([
         Some(24690_86i128),
         Some(20_00i128),
@@ -45,19 +45,16 @@ fn test_multiply_normal() {
     assert_eq!(result, expected);
 
     // Testing trait
-    let result = a.mul(&b).unwrap();
+    let result = a.mul(&b);
     assert_eq!(result, expected);
 }
 
 #[test]
+#[should_panic]
 fn test_multiply_decimal_wrong_precision() {
     let a = PrimitiveArray::from([None]).to(DataType::Decimal(5, 2));
     let b = PrimitiveArray::from([None]).to(DataType::Decimal(6, 2));
-    let result = mul(&a, &b);
-
-    if result.is_ok() {
-        panic!("Should panic for different precision");
-    }
+    mul(&a, &b);
 }
 
 #[test]
@@ -90,7 +87,7 @@ fn test_multiply_saturating() {
     ])
     .to(DataType::Decimal(7, 2));
 
-    let result = saturating_mul(&a, &b).unwrap();
+    let result = saturating_mul(&a, &b);
     let expected = PrimitiveArray::from([
         Some(24690_86i128),
         Some(20_00i128),
@@ -104,7 +101,7 @@ fn test_multiply_saturating() {
     assert_eq!(result, expected);
 
     // Testing trait
-    let result = a.saturating_mul(&b).unwrap();
+    let result = a.saturating_mul(&b);
     assert_eq!(result, expected);
 }
 
@@ -125,7 +122,7 @@ fn test_multiply_saturating_overflow() {
     ])
     .to(DataType::Decimal(5, 2));
 
-    let result = saturating_mul(&a, &b).unwrap();
+    let result = saturating_mul(&a, &b);
 
     let expected = PrimitiveArray::from([
         Some(-99999i128),
@@ -138,7 +135,7 @@ fn test_multiply_saturating_overflow() {
     assert_eq!(result, expected);
 
     // Testing trait
-    let result = a.saturating_mul(&b).unwrap();
+    let result = a.saturating_mul(&b);
     assert_eq!(result, expected);
 }
 
@@ -164,7 +161,7 @@ fn test_multiply_checked() {
     ])
     .to(DataType::Decimal(7, 2));
 
-    let result = checked_mul(&a, &b).unwrap();
+    let result = checked_mul(&a, &b);
     let expected = PrimitiveArray::from([
         Some(24690_86i128),
         Some(20_00i128),
@@ -178,7 +175,7 @@ fn test_multiply_checked() {
     assert_eq!(result, expected);
 
     // Testing trait
-    let result = a.checked_mul(&b).unwrap();
+    let result = a.checked_mul(&b);
     assert_eq!(result, expected);
 }
 
@@ -186,7 +183,7 @@ fn test_multiply_checked() {
 fn test_multiply_checked_overflow() {
     let a = PrimitiveArray::from([Some(99999i128), Some(1_00i128)]).to(DataType::Decimal(5, 2));
     let b = PrimitiveArray::from([Some(10000i128), Some(2_00i128)]).to(DataType::Decimal(5, 2));
-    let result = checked_mul(&a, &b).unwrap();
+    let result = checked_mul(&a, &b);
     let expected = PrimitiveArray::from([None, Some(2_00i128)]).to(DataType::Decimal(5, 2));
 
     assert_eq!(result, expected);
