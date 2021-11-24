@@ -136,6 +136,29 @@ impl FixedSizeBinaryArray {
             .get_unchecked(i * self.size..(i + 1) * self.size)
     }
 
+    /// Returns a new [`FixedSizeBinary`] with a different logical type.
+    /// This is `O(1)`.
+    /// # Panics
+    /// Panics iff the data_type is not supported for the physical type.
+    #[inline]
+    pub fn to(self, data_type: DataType) -> Self {
+        match (
+            data_type.to_logical_type(),
+            self.data_type().to_logical_type(),
+        ) {
+            (DataType::FixedSizeBinary(size_a), DataType::FixedSizeBinary(size_b))
+                if size_a == size_b => {}
+            _ => panic!("Wrong DataType"),
+        }
+
+        Self {
+            size: self.size,
+            data_type,
+            values: self.values,
+            validity: self.validity,
+        }
+    }
+
     /// Returns the size
     pub fn size(&self) -> usize {
         self.size
