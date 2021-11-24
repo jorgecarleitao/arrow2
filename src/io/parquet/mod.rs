@@ -8,7 +8,15 @@ const ARROW_SCHEMA_META_KEY: &str = "ARROW:schema";
 
 impl From<parquet2::error::ParquetError> for ArrowError {
     fn from(error: parquet2::error::ParquetError) -> Self {
-        ArrowError::External("".to_string(), Box::new(error))
+        match error {
+            parquet2::error::ParquetError::FeatureNotActive(_, _) => {
+                let message = "Failed to read a compressed parquet file. \
+                    Use the cargo feature \"io_parquet_compression\" to read compressed parquet files."
+                    .to_string();
+                ArrowError::ExternalFormat(message)
+            }
+            _ => ArrowError::ExternalFormat(error.to_string()),
+        }
     }
 }
 
