@@ -25,7 +25,7 @@ use arrow_format::ipc::flatbuffers::VerifierOptions;
 use crate::array::*;
 use crate::datatypes::Schema;
 use crate::error::{ArrowError, Result};
-use crate::record_batch::{RecordBatch, RecordBatchReader};
+use crate::record_batch::RecordBatch;
 
 use super::super::convert;
 use super::super::{ARROW_MAGIC, CONTINUATION_MARKER};
@@ -316,11 +316,5 @@ impl<R: Read + Seek> Iterator for FileReader<R> {
         } else {
             None
         }
-    }
-}
-
-impl<R: Read + Seek> RecordBatchReader for FileReader<R> {
-    fn schema(&self) -> &Schema {
-        self.schema().as_ref()
     }
 }
