@@ -225,13 +225,12 @@ decoding, etc.).</p>
 <p>The example below assumes that CPU starves the consumption of pages,
 and that it is advantageous to have a single thread performing all IO-intensive work,
 by delegating all CPU-intensive tasks to separate threads.</p>
-<pre><pre class="playground"><code class="language-rust">use crossbeam_channel::unbounded;
-use parquet2::metadata::ColumnChunkMetaData;
-
-use std::fs::File;
+<pre><pre class="playground"><code class="language-rust">use std::fs::File;
 use std::sync::Arc;
 use std::thread;
 use std::time::SystemTime;
+
+use crossbeam_channel::unbounded;
 
 use arrow2::{
     array::Array, error::Result, io::parquet::read, io::parquet::read::MutStreamingIterator,
