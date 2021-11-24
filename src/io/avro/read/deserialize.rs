@@ -62,23 +62,45 @@ fn make_mutable(
     })
 }
 
-#[inline]
+fn is_union_null_first(avro_field: &AvroSchema) -> bool {
+    if let AvroSchema::Union(schemas) = avro_field {
+        schemas.variants()[0] == AvroSchema::Null
+    } else {
+        unreachable!()
+    }
+}
+
 fn deserialize_item<'a>(
     array: &mut dyn MutableArray,
     is_nullable: bool,
+    avro_field: &AvroSchema,
     mut block: &'a [u8],
 ) -> Result<&'a [u8]> {
     if is_nullable {
-        // variant 0 is always the null in a union array
-        if util::zigzag_i64(&mut block)? == 0 {
+        let variant = util::zigzag_i64(&mut block)?;
+        let is_null_first = is_union_null_first(avro_field);
+        if is_null_first && variant == 0 || !is_null_first && variant != 0 {
             array.push_null();
             return Ok(block);
         }
     }
+    deserialize_value(array, avro_field, block)
+}
 
+fn deserialize_value<'a>(
+    array: &mut dyn MutableArray,
+    avro_field: &AvroSchema,
+    mut block: &'a [u8],
+) -> Result<&'a [u8]> {
     let data_type = array.data_type();
     match data_type {
         DataType::List(inner) => {
+            let avro_inner = if let AvroSchema::Array(inner) = avro_field {
+                inner.as_ref()
+            } else {
+                unreachable!()
+            };
+
             let is_nullable = inner.is_nullable();
             let array = array
                 .as_mut_any()
@@ -93,7 +115,7 @@ fn deserialize_item<'a>(
 
                 let values = array.mut_values();
                 for _ in 0..len {
-                    block = deserialize_item(values, is_nullable, block)?;
+                    block = deserialize_item(values, is_nullable, avro_inner, block)?;
                 }
                 array.try_push_valid()?;
             }
@@ -238,8 +260,12 @@ pub fn deserialize(
 
     // this is _the_ expensive transpose (rows -> columns)
     for _ in 0..rows {
-        for (array, field) in arrays.iter_mut().zip(schema.fields().iter()) {
-            block = deserialize_item(array.as_mut(), field.is_nullable(), block)?
+        for ((array, field), avro_field) in arrays
+            .iter_mut()
+            .zip(schema.fields().iter())
+            .zip(avro_schemas.iter())
+        {
+            block = deserialize_item(array.as_mut(), field.is_nullable(), avro_field, block)?
         }
     }
     let columns = arrays.iter_mut().map(|array| array.as_arc()).collect();
