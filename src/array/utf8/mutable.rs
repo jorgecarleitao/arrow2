@@ -346,15 +346,26 @@ impl<O: Offset> MutableUtf8Array<O> {
         unsafe { Self::from_trusted_len_iter_unchecked(iterator) }
     }
 
+    /// Creates a [`MutableUtf8Array`] from an iterator of trusted length of `&str`.
+    /// # Safety
+    /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
+    /// I.e. that `size_hint().1` correctly reports its length.
+    #[inline]
+    pub unsafe fn from_trusted_len_values_iter_unchecked<T: AsRef<str>, I: Iterator<Item = T>>(
+        iterator: I,
+    ) -> Self {
+        let (offsets, values) = unsafe { trusted_len_values_iter(iterator) };
+        // soundness: T is AsRef<str>
+        Self::from_data_unchecked(Self::default_data_type(), offsets, values, None)
+    }
+
     /// Creates a new [`Utf8Array`] from a [`TrustedLen`] of `&str`.
     #[inline]
     pub fn from_trusted_len_values_iter<T: AsRef<str>, I: TrustedLen<Item = T>>(
         iterator: I,
     ) -> Self {
         // soundness: I is `TrustedLen`
-        let (offsets, values) = unsafe { trusted_len_values_iter(iterator) };
-        // soundness: T is AsRef<str>
-        unsafe { Self::from_data_unchecked(Self::default_data_type(), offsets, values, None) }
+        unsafe { Self::from_trusted_len_values_iter_unchecked(iterator) }
     }
 
     /// Creates a new [`MutableUtf8Array`] from an iterator.
