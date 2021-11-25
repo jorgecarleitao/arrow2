@@ -8,5 +8,4 @@ mod temporal_conversions;
 mod io;
 mod test_util;
 
-#[cfg(feature = "compute")]
 mod compute;

@@ -171,7 +171,7 @@ jobs:
         with:
           use-cross: true
           command: check
-          args: --features=merge_sort,io_ipc,io_csv,io_print,io_json,io_parquet --target ${{ matrix.target }}
+          args: --features=compute_merge_sort,io_ipc,io_csv,io_print,io_json,io_parquet --target ${{ matrix.target }}
 
   linux-simd-test:
     name: SIMD

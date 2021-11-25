@@ -1,5 +1,5 @@
 use arrow2::array::*;
-use arrow2::compute::concat::concatenate;
+use arrow2::compute::concatenate::concatenate;
 use arrow2::error::Result;
 
 #[test]

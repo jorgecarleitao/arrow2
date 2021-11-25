@@ -17,7 +17,7 @@
 
 //! Defines windowing functions, like `shift`ing
 
-use crate::compute::concat;
+use crate::compute::concatenate::concatenate;
 use num_traits::{abs, clamp};
 
 use crate::{
@@ -58,8 +58,8 @@ pub fn shift(array: &dyn Array, offset: i64) -> Result<Box<dyn Array>> {
 
     // Concatenate both arrays, add nulls after if shift > 0 else before
     if offset > 0 {
-        concat::concatenate(&[null_array.as_ref(), slice.as_ref()])
+        concatenate(&[null_array.as_ref(), slice.as_ref()])
     } else {
-        concat::concatenate(&[slice.as_ref(), null_array.as_ref()])
+        concatenate(&[slice.as_ref(), null_array.as_ref()])
     }
 }

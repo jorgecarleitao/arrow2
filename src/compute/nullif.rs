@@ -1,8 +1,8 @@
 //! Contains the operator [`nullif`].
 use crate::array::PrimitiveArray;
 use crate::bitmap::Bitmap;
-use crate::compute::arithmetics::basic::check_same_type;
 use crate::compute::comparison::{primitive_compare_values_op, Simd8, Simd8Lanes};
+use crate::compute::utils::check_same_type;
 use crate::datatypes::DataType;
 use crate::error::{ArrowError, Result};
 use crate::{array::Array, types::NativeType};

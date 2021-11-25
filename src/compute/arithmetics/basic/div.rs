@@ -3,13 +3,13 @@ use std::ops::Div;
 
 use num_traits::{CheckedDiv, NumCast, Zero};
 
-use crate::compute::arithmetics::basic::check_same_len;
 use crate::datatypes::DataType;
 use crate::{
     array::{Array, PrimitiveArray},
     compute::{
         arithmetics::{ArrayCheckedDiv, ArrayDiv, NativeArithmetics},
         arity::{binary, binary_checked, unary, unary_checked},
+        utils::check_same_len,
     },
     types::NativeType,
 };
