@@ -54,6 +54,11 @@ fn add_benchmark(c: &mut Criterion) {
             b.iter(|| bench_take(&values, &indices))
         });
 
+        let values_nulls = create_boolean_array(size, 0.2, 0.5);
+        c.bench_function(&format!("take bool values nulls 2^{}", log2_size), |b| {
+            b.iter(|| bench_take(&values_nulls, &indices))
+        });
+
         c.bench_function(&format!("take bool nulls 2^{}", log2_size), |b| {
             b.iter(|| bench_take(&values, &indices_nulls))
         });
@@ -63,9 +68,13 @@ fn add_benchmark(c: &mut Criterion) {
             b.iter(|| bench_take(&values, &indices))
         });
 
-        let values = create_string_array::<i32>(512, 4, 0.0, 42);
         c.bench_function(&format!("take str nulls 2^{}", log2_size), |b| {
             b.iter(|| bench_take(&values, &indices_nulls))
+        });
+
+        let values_nulls = create_string_array::<i32>(size, 4, 0.2, 42);
+        c.bench_function(&format!("take str values nulls 2^{}", log2_size), |b| {
+            b.iter(|| bench_take(&values_nulls, &indices))
         });
     });
 
