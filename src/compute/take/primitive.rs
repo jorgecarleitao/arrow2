@@ -25,17 +25,13 @@ fn take_values_validity<T: NativeType, I: Index>(
 ) -> (Buffer<T>, Option<Bitmap>) {
     let values_validity = values.validity().unwrap();
 
-    let validity = indices.iter().map(|index| {
-        let index = index.to_usize();
-        values_validity.get_bit(index)
-    });
+    let validity = indices
+        .iter()
+        .map(|index| values_validity.get_bit(index.to_usize()));
     let validity = MutableBitmap::from_trusted_len_iter(validity);
 
     let values_values = values.values();
-    let values = indices.iter().map(|index| {
-        let index = index.to_usize();
-        values_values[index]
-    });
+    let values = indices.iter().map(|index| values_values[index.to_usize()]);
     let buffer = MutableBuffer::from_trusted_len_iter(values);
 
     (buffer.into(), validity.into())
