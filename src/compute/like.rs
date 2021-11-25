@@ -4,10 +4,11 @@ use std::collections::HashMap;
 use regex::bytes::Regex as BytesRegex;
 use regex::Regex;
 
-use crate::datatypes::DataType;
-use crate::{array::*, bitmap::Bitmap};
 use crate::{
+    array::{BinaryArray, BooleanArray, Offset, Utf8Array},
+    bitmap::Bitmap,
     compute::utils::combine_validities,
+    datatypes::DataType,
     error::{ArrowError, Result},
 };
 

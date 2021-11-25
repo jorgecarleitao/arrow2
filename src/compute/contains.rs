@@ -1,13 +1,11 @@
 //! Declares the [`contains`] operator
 
-use crate::types::NativeType;
 use crate::{
     array::{Array, BinaryArray, BooleanArray, ListArray, Offset, PrimitiveArray, Utf8Array},
     bitmap::Bitmap,
-};
-use crate::{
     datatypes::DataType,
     error::{ArrowError, Result},
+    types::NativeType,
 };
 
 use super::utils::combine_validities;

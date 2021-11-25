@@ -1,7 +1,7 @@
 extern crate arrow2;
 
 use arrow2::{
-    compute::concat,
+    compute::concatenate::concatenate,
     datatypes::DataType,
     util::bench_util::{create_boolean_array, create_primitive_array},
 };
@@ -17,7 +17,7 @@ fn add_benchmark(c: &mut Criterion) {
 
         c.bench_function(&format!("int32 concat aligned 2^{}", log2_size), |b| {
             b.iter(|| {
-                let _ = concat::concatenate(&[&array1, &array2]);
+                let _ = concatenate(&[&array1, &array2]);
             })
         });
 
@@ -25,7 +25,7 @@ fn add_benchmark(c: &mut Criterion) {
 
         c.bench_function(&format!("int32 concat unaligned 2^{}", log2_size), |b| {
             b.iter(|| {
-                let _ = concat::concatenate(&[&array1, &array2]);
+                let _ = concatenate(&[&array1, &array2]);
             })
         });
 
@@ -34,7 +34,7 @@ fn add_benchmark(c: &mut Criterion) {
 
         c.bench_function(&format!("boolean concat aligned 2^{}", log2_size), |b| {
             b.iter(|| {
-                let _ = concat::concatenate(&[&array1, &array2]);
+                let _ = concatenate(&[&array1, &array2]);
             })
         });
 
@@ -42,7 +42,7 @@ fn add_benchmark(c: &mut Criterion) {
 
         c.bench_function(&format!("boolean concat unaligned 2^{}", log2_size), |b| {
             b.iter(|| {
-                let _ = concat::concatenate(&[&array1, &array2]);
+                let _ = concatenate(&[&array1, &array2]);
             })
         });
     });

@@ -18,8 +18,6 @@ pub mod types;
 #[cfg(feature = "cache_aligned")]
 mod vec;
 
-#[cfg(feature = "compute")]
-#[cfg_attr(docsrs, doc(cfg(feature = "compute")))]
 pub mod compute;
 pub mod io;
 pub mod record_batch;

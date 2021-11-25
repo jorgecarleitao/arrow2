@@ -1,14 +1,13 @@
 //! Defines the multiplication arithmetic kernels for Decimal
 //! `PrimitiveArrays`.
 
-use crate::compute::arithmetics::basic::check_same_len;
 use crate::{
     array::{Array, PrimitiveArray},
     buffer::Buffer,
     compute::{
         arithmetics::{ArrayCheckedMul, ArrayMul, ArraySaturatingMul},
         arity::{binary, binary_checked},
-        utils::combine_validities,
+        utils::{check_same_len, combine_validities},
     },
     datatypes::DataType,
     error::{ArrowError, Result},
