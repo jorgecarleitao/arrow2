@@ -9,8 +9,9 @@ use crate::{
 };
 
 use super::{sort_to_indices, SortOptions};
+use crate::array::ord::DynComparator;
 
-type IsValid<'a> = Box<dyn Fn(usize) -> bool + 'a>;
+type IsValid = Box<dyn Fn(usize) -> bool + Send + Sync>;
 
 /// One column to be used in lexicographical sort
 #[derive(Clone, Debug)]
@@ -71,15 +72,14 @@ pub fn lexsort<I: Index>(
 #[inline]
 fn build_is_valid(array: &dyn Array) -> IsValid {
     if let Some(validity) = array.validity() {
+        let validity = validity.clone();
         Box::new(move |x| unsafe { validity.get_bit_unchecked(x) })
     } else {
         Box::new(move |_| true)
     }
 }
 
-pub(crate) type Compare<'a> = Box<dyn Fn(usize, usize) -> Ordering + 'a>;
-
-pub(crate) fn build_compare(array: &dyn Array, sort_option: SortOptions) -> Result<Compare> {
+pub(crate) fn build_compare(array: &dyn Array, sort_option: SortOptions) -> Result<DynComparator> {
     let is_valid = build_is_valid(array);
     let comparator = ord::build_compare(array, array)?;
 
@@ -150,10 +150,10 @@ pub fn lexsort_to_indices<I: Index>(
     // map arrays to comparators
     let comparators = columns
         .iter()
-        .map(|column| -> Result<Compare> {
+        .map(|column| -> Result<DynComparator> {
             build_compare(column.values, column.options.unwrap_or_default())
         })
-        .collect::<Result<Vec<Compare>>>()?;
+        .collect::<Result<Vec<DynComparator>>>()?;
 
     let lex_comparator = |a_idx: &I, b_idx: &I| -> Ordering {
         let a_idx = a_idx.to_usize();

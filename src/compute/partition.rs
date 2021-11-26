@@ -17,7 +17,8 @@
 
 //! Defines partition kernel for [`crate::array::Array`]
 
-use crate::compute::sort::{build_compare, Compare, SortColumn};
+use crate::array::ord::DynComparator;
+use crate::compute::sort::{build_compare, SortColumn};
 use crate::error::{ArrowError, Result};
 use std::cmp::Ordering;
 use std::iter::Iterator;
@@ -32,22 +33,22 @@ use std::ops::Range;
 /// The returned vec would be of size k where k is cardinality of the sorted values; Consecutive
 /// values will be connected: (a, b) and (b, c), where start = 0 and end = n for the first and last
 /// range.
-pub fn lexicographical_partition_ranges<'a>(
-    columns: &'a [SortColumn],
-) -> Result<impl Iterator<Item = Range<usize>> + 'a> {
+pub fn lexicographical_partition_ranges(
+    columns: &[SortColumn],
+) -> Result<impl Iterator<Item = Range<usize>>> {
     LexicographicalPartitionIterator::try_new(columns)
 }
 
-struct LexicographicalPartitionIterator<'a> {
-    comparator: Compare<'a>,
+struct LexicographicalPartitionIterator {
+    comparator: DynComparator,
     num_rows: usize,
     previous_partition_point: usize,
     partition_point: usize,
     value_indices: Vec<usize>,
 }
 
-impl<'a> LexicographicalPartitionIterator<'a> {
-    fn try_new(columns: &'a [SortColumn]) -> Result<Self> {
+impl LexicographicalPartitionIterator {
+    fn try_new(columns: &[SortColumn]) -> Result<Self> {
         if columns.is_empty() {
             return Err(ArrowError::InvalidArgumentError(
                 "Sort requires at least one column".to_string(),
@@ -87,7 +88,7 @@ impl<'a> LexicographicalPartitionIterator<'a> {
     }
 }
 
-impl<'a> Iterator for LexicographicalPartitionIterator<'a> {
+impl Iterator for LexicographicalPartitionIterator {
     type Item = Range<usize>;
 
     fn next(&mut self) -> Option<Self::Item> {
