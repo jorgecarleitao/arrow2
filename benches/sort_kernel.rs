@@ -15,13 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#[macro_use]
-extern crate criterion;
-use criterion::Criterion;
+use criterion::{criterion_group, criterion_main, Criterion};
 
+use arrow2::array::*;
 use arrow2::compute::sort::{lexsort, sort, sort_to_indices, SortColumn, SortOptions};
 use arrow2::util::bench_util::*;
-use arrow2::{array::*, datatypes::*};
 
 fn bench_lexsort(arr_a: &dyn Array, array_b: &dyn Array) {
     let columns = vec![
@@ -54,7 +52,7 @@ fn bench_sort_limit(arr_a: &dyn Array) {
 fn add_benchmark(c: &mut Criterion) {
     (10..=20).step_by(2).for_each(|log2_size| {
         let size = 2usize.pow(log2_size);
-        let arr_a = create_primitive_array::<f32>(size, DataType::Float32, 0.0);
+        let arr_a = create_primitive_array::<f32>(size, 0.0);
 
         c.bench_function(&format!("sort 2^{} f32", log2_size), |b| {
             b.iter(|| bench_sort(&arr_a))
@@ -64,18 +62,18 @@ fn add_benchmark(c: &mut Criterion) {
             b.iter(|| bench_sort_limit(&arr_a))
         });
 
-        let arr_b = create_primitive_array_with_seed::<f32>(size, DataType::Float32, 0.0, 43);
+        let arr_b = create_primitive_array_with_seed::<f32>(size, 0.0, 43);
         c.bench_function(&format!("lexsort 2^{} f32", log2_size), |b| {
             b.iter(|| bench_lexsort(&arr_a, &arr_b))
         });
 
-        let arr_a = create_primitive_array::<f32>(size, DataType::Float32, 0.5);
+        let arr_a = create_primitive_array::<f32>(size, 0.5);
 
         c.bench_function(&format!("sort null 2^{} f32", log2_size), |b| {
             b.iter(|| bench_sort(&arr_a))
         });
 
-        let arr_b = create_primitive_array_with_seed::<f32>(size, DataType::Float32, 0.5, 43);
+        let arr_b = create_primitive_array_with_seed::<f32>(size, 0.5, 43);
         c.bench_function(&format!("lexsort null 2^{} f32", log2_size), |b| {
             b.iter(|| bench_lexsort(&arr_a, &arr_b))
         });

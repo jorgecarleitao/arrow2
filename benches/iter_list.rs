@@ -1,14 +1,14 @@
-use arrow2::{
-    array::{ListArray, PrimitiveArray},
-    buffer::Buffer,
-    datatypes::DataType,
-};
-
-use arrow2::bitmap::Bitmap;
-use arrow2::buffer::MutableBuffer;
-use criterion::{criterion_group, criterion_main, Criterion};
 use std::iter::FromIterator;
 use std::sync::Arc;
+
+use criterion::{criterion_group, criterion_main, Criterion};
+
+use arrow2::{
+    array::{ListArray, PrimitiveArray},
+    bitmap::Bitmap,
+    buffer::{Buffer, MutableBuffer},
+    datatypes::DataType,
+};
 
 fn add_benchmark(c: &mut Criterion) {
     (10..=20).step_by(2).for_each(|log2_size| {

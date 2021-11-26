@@ -117,7 +117,7 @@ full = [
     "regex",
     "compute",
     # parses timezones used in timestamp conversions
-    "chrono-tz"
+    "chrono-tz",
 ]
 io_csv = ["io_csv_read", "io_csv_write"]
 io_csv_async = ["io_csv_read_async"]
