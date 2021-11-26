@@ -236,7 +236,7 @@ where
                 }
             }
             value => {
-                return Err(ArrowError::Other(format!(
+                return Err(ArrowError::ExternalFormat(format!(
                     "Expected JSON record to be an object, found {:?}",
                     value
                 )));

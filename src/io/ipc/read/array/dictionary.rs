@@ -31,7 +31,7 @@ where
         .get(&id)
         .ok_or_else(|| {
             let valid_ids = dictionaries.keys().collect::<HashSet<_>>();
-            ArrowError::Ipc(format!(
+            ArrowError::OutOfSpec(format!(
                 "Dictionary id {} not found. Valid ids: {:?}",
                 id, valid_ids
             ))

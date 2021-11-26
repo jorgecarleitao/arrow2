@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use crate::error::{ArrowError, Result};
+use crate::error::Result;
 
 use super::super::CONTINUATION_MARKER;
 use super::common::pad_to_8;
@@ -9,9 +9,7 @@ use super::common::EncodedData;
 /// Write a message's IPC data and buffers, returning metadata and buffer data lengths written
 pub fn write_message<W: Write>(writer: &mut W, encoded: EncodedData) -> Result<(usize, usize)> {
     let arrow_data_len = encoded.arrow_data.len();
-    if arrow_data_len % 8 != 0 {
-        return Err(ArrowError::Ipc("Arrow data not aligned".to_string()));
-    }
+    assert_eq!(arrow_data_len % 8, 0, "Arrow data not aligned");
 
     let a = 8 - 1;
     let buffer = encoded.ipc_message;

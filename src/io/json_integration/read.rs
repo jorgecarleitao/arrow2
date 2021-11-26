@@ -255,9 +255,9 @@ fn to_dictionary<K: DictionaryKey>(
     dictionaries: &HashMap<i64, ArrowJsonDictionaryBatch>,
 ) -> Result<Arc<dyn Array>> {
     // find dictionary
-    let dictionary = dictionaries
-        .get(&dict_id)
-        .ok_or_else(|| ArrowError::Ipc(format!("Unable to find any dictionary id {}", dict_id)))?;
+    let dictionary = dictionaries.get(&dict_id).ok_or_else(|| {
+        ArrowError::OutOfSpec(format!("Unable to find any dictionary id {}", dict_id))
+    })?;
 
     let keys = to_primitive(json_col, K::DATA_TYPE);
 

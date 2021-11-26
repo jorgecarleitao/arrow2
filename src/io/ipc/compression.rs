@@ -19,13 +19,13 @@ pub fn decompress_zstd(input_buf: &[u8], output_buf: &mut [u8]) -> Result<()> {
 #[cfg(not(feature = "io_ipc_compression"))]
 pub fn decompress_lz4(_input_buf: &[u8], _output_buf: &mut [u8]) -> Result<()> {
     use crate::error::ArrowError;
-    Err(ArrowError::Ipc("The crate was compiled without IPC compression. Use `io_ipc_compression` to read compressed IPC.".to_string()))
+    Err(ArrowError::OutOfSpec("The crate was compiled without IPC compression. Use `io_ipc_compression` to read compressed IPC.".to_string()))
 }
 
 #[cfg(not(feature = "io_ipc_compression"))]
 pub fn decompress_zstd(_input_buf: &[u8], _output_buf: &mut [u8]) -> Result<()> {
     use crate::error::ArrowError;
-    Err(ArrowError::Ipc("The crate was compiled without IPC compression. Use `io_ipc_compression` to read compressed IPC.".to_string()))
+    Err(ArrowError::OutOfSpec("The crate was compiled without IPC compression. Use `io_ipc_compression` to read compressed IPC.".to_string()))
 }
 
 #[cfg(feature = "io_ipc_compression")]
@@ -48,13 +48,13 @@ pub fn compress_zstd(input_buf: &[u8], output_buf: &mut Vec<u8>) -> Result<()> {
 #[cfg(not(feature = "io_ipc_compression"))]
 pub fn compress_lz4(_input_buf: &[u8], _output_buf: &mut Vec<u8>) -> Result<()> {
     use crate::error::ArrowError;
-    Err(ArrowError::Ipc("The crate was compiled without IPC compression. Use `io_ipc_compression` to write compressed IPC.".to_string()))
+    Err(ArrowError::OutOfSpec("The crate was compiled without IPC compression. Use `io_ipc_compression` to write compressed IPC.".to_string()))
 }
 
 #[cfg(not(feature = "io_ipc_compression"))]
 pub fn compress_zstd(_input_buf: &[u8], _output_buf: &mut Vec<u8>) -> Result<()> {
     use crate::error::ArrowError;
-    Err(ArrowError::Ipc("The crate was compiled without IPC compression. Use `io_ipc_compression` to write compressed IPC.".to_string()))
+    Err(ArrowError::OutOfSpec("The crate was compiled without IPC compression. Use `io_ipc_compression` to write compressed IPC.".to_string()))
 }
 
 #[cfg(test)]

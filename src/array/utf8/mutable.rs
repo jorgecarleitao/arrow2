@@ -448,7 +448,7 @@ impl<O: Offset, T: AsRef<str>> TryPush<Option<T>> for MutableUtf8Array<O> {
                 let bytes = value.as_ref().as_bytes();
                 self.values.extend_from_slice(bytes);
 
-                let size = O::from_usize(self.values.len()).ok_or(ArrowError::KeyOverflowError)?;
+                let size = O::from_usize(self.values.len()).ok_or(ArrowError::Overflow)?;
 
                 self.offsets.push(size);
 

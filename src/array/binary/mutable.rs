@@ -410,8 +410,8 @@ impl<O: Offset, T: AsRef<[u8]>> TryPush<Option<T>> for MutableBinaryArray<O> {
             Some(value) => {
                 let bytes = value.as_ref();
 
-                let size = O::from_usize(self.values.len() + bytes.len())
-                    .ok_or(ArrowError::KeyOverflowError)?;
+                let size =
+                    O::from_usize(self.values.len() + bytes.len()).ok_or(ArrowError::Overflow)?;
 
                 self.values.extend_from_slice(bytes);
 

@@ -120,7 +120,7 @@ impl Schema {
                     // merge metadata
                     if let Some(old_val) = merged.metadata.get(&key) {
                         if old_val != &value {
-                            return Err(ArrowError::Schema(
+                            return Err(ArrowError::InvalidArgumentError(
                                 "Fail to merge schema due to conflicting metadata.".to_string(),
                             ));
                         }

@@ -53,8 +53,8 @@ impl TryFrom<(&ParquetFixedLenStatistics, DataType)> for PrimitiveStatistics<i12
             _ => unreachable!(),
         };
         if byte_lens > 16 {
-            Err(ArrowError::Other(format!(
-                "Can't deserialize i128 from Fixed Len Byte array with lengtg {:?}",
+            Err(ArrowError::ExternalFormat(format!(
+                "Can't deserialize i128 from Fixed Len Byte array with length {:?}",
                 byte_lens
             )))
         } else {

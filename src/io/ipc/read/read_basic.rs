@@ -52,7 +52,7 @@ fn read_uncompressed_buffer<T: NativeType, R: Read + Seek>(
 ) -> Result<MutableBuffer<T>> {
     let bytes = length * std::mem::size_of::<T>();
     if bytes > buffer_length {
-        return Err(ArrowError::Ipc(
+        return Err(ArrowError::OutOfSpec(
             format!("The slots of the array times the physical size must \
             be smaller or equal to the length of the IPC buffer. \
             However, this array reports {} slots, which, for physical type \"{}\", corresponds to {} bytes, \

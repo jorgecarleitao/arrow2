@@ -93,14 +93,14 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
     let mut magic_buffer: [u8; 6] = [0; 6];
     reader.read_exact(&mut magic_buffer)?;
     if magic_buffer != ARROW_MAGIC {
-        return Err(ArrowError::Ipc(
+        return Err(ArrowError::OutOfSpec(
             "Arrow file does not contain correct header".to_string(),
         ));
     }
     reader.seek(SeekFrom::End(-6))?;
     reader.read_exact(&mut magic_buffer)?;
     if magic_buffer != ARROW_MAGIC {
-        return Err(ArrowError::Ipc(
+        return Err(ArrowError::OutOfSpec(
             "Arrow file does not contain correct footer".to_string(),
         ));
     }
@@ -126,23 +126,23 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
         ..Default::default()
     };
     let footer = ipc::File::root_as_footer_with_opts(&verifier_options, &footer_data[..])
-        .map_err(|err| ArrowError::Ipc(format!("Unable to get root as footer: {:?}", err)))?;
+        .map_err(|err| ArrowError::OutOfSpec(format!("Unable to get root as footer: {:?}", err)))?;
 
-    let blocks = footer
-        .recordBatches()
-        .ok_or_else(|| ArrowError::Ipc("Unable to get record batches from footer".to_string()))?;
+    let blocks = footer.recordBatches().ok_or_else(|| {
+        ArrowError::OutOfSpec("Unable to get record batches from footer".to_string())
+    })?;
 
     let ipc_schema = footer
         .schema()
-        .ok_or_else(|| ArrowError::Ipc("Unable to get the schema from footer".to_string()))?;
+        .ok_or_else(|| ArrowError::OutOfSpec("Unable to get the schema from footer".to_string()))?;
     let (schema, is_little_endian) = convert::fb_to_schema(ipc_schema);
     let schema = Arc::new(schema);
 
     let mut dictionaries = Default::default();
 
-    let dictionary_blocks = footer
-        .dictionaries()
-        .ok_or_else(|| ArrowError::Ipc("Unable to get dictionaries from footer".to_string()))?;
+    let dictionary_blocks = footer.dictionaries().ok_or_else(|| {
+        ArrowError::OutOfSpec("Unable to get dictionaries from footer".to_string())
+    })?;
 
     let mut data = vec![];
     for block in dictionary_blocks {
@@ -150,8 +150,9 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
         let length = block.metaDataLength() as u64;
         read_dictionary_message(reader, offset, &mut data)?;
 
-        let message = ipc::Message::root_as_message(&data)
-            .map_err(|err| ArrowError::Ipc(format!("Unable to get root as message: {:?}", err)))?;
+        let message = ipc::Message::root_as_message(&data).map_err(|err| {
+            ArrowError::OutOfSpec(format!("Unable to get root as message: {:?}", err))
+        })?;
 
         match message.header_type() {
             ipc::Message::MessageHeader::DictionaryBatch => {
@@ -167,7 +168,7 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
                 )?;
             }
             t => {
-                return Err(ArrowError::Ipc(format!(
+                return Err(ArrowError::OutOfSpec(format!(
                     "Expecting DictionaryBatch in dictionary blocks, found {:?}.",
                     t
                 )));
@@ -187,15 +188,15 @@ fn get_serialized_batch<'a>(
     message: &'a ipc::Message::Message,
 ) -> Result<ipc::Message::RecordBatch<'a>> {
     match message.header_type() {
-        ipc::Message::MessageHeader::Schema => Err(ArrowError::Ipc(
+        ipc::Message::MessageHeader::Schema => Err(ArrowError::OutOfSpec(
             "Not expecting a schema when messages are read".to_string(),
         )),
         ipc::Message::MessageHeader::RecordBatch => {
             message.header_as_record_batch().ok_or_else(|| {
-                ArrowError::Ipc("Unable to read IPC message as record batch".to_string())
+                ArrowError::OutOfSpec("Unable to read IPC message as record batch".to_string())
             })
         }
-        t => Err(ArrowError::Ipc(format!(
+        t => Err(ArrowError::OutOfSpec(format!(
             "Reading types other than record batches not yet supported, unable to read {:?}",
             t
         ))),
@@ -227,12 +228,12 @@ pub fn read_batch<R: Read + Seek>(
     reader.read_exact(block_data)?;
 
     let message = ipc::Message::root_as_message(&block_data[..])
-        .map_err(|err| ArrowError::Ipc(format!("Unable to get root as footer: {:?}", err)))?;
+        .map_err(|err| ArrowError::OutOfSpec(format!("Unable to get root as footer: {:?}", err)))?;
 
     // some old test data's footer metadata is not set, so we account for that
     if metadata.version != ipc::Schema::MetadataVersion::V1 && message.version() != metadata.version
     {
-        return Err(ArrowError::Ipc(
+        return Err(ArrowError::OutOfSpec(
             "Could not read IPC message as metadata versions mismatch".to_string(),
         ));
     }

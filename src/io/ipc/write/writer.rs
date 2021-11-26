@@ -89,9 +89,10 @@ impl<W: Write> FileWriter<W> {
     /// Write a record batch to the file
     pub fn write(&mut self, batch: &RecordBatch) -> Result<()> {
         if self.finished {
-            return Err(ArrowError::Ipc(
-                "Cannot write record batch to file writer as it is closed".to_string(),
-            ));
+            return Err(ArrowError::Io(std::io::Error::new(
+                std::io::ErrorKind::UnexpectedEof,
+                "Cannot write to a finished file".to_string(),
+            )));
         }
 
         let (encoded_dictionaries, encoded_message) =

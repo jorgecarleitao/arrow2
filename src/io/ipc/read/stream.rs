@@ -59,13 +59,14 @@ pub fn read_stream_metadata<R: Read>(reader: &mut R) -> Result<StreamMetadata> {
     let mut meta_buffer = vec![0; meta_len as usize];
     reader.read_exact(&mut meta_buffer)?;
 
-    let message = ipc::Message::root_as_message(meta_buffer.as_slice())
-        .map_err(|err| ArrowError::Ipc(format!("Unable to get root as message: {:?}", err)))?;
+    let message = ipc::Message::root_as_message(meta_buffer.as_slice()).map_err(|err| {
+        ArrowError::OutOfSpec(format!("Unable to get root as message: {:?}", err))
+    })?;
     let version = message.version();
     // message header is a Schema, so read it
     let ipc_schema: ipc::Schema::Schema = message
         .header_as_schema()
-        .ok_or_else(|| ArrowError::Ipc("Unable to read IPC message as schema".to_string()))?;
+        .ok_or_else(|| ArrowError::OutOfSpec("Unable to read IPC message as schema".to_string()))?;
     let (schema, is_little_endian) = convert::fb_to_schema(ipc_schema);
     let schema = Arc::new(schema);
 
@@ -151,16 +152,17 @@ fn read_next<R: Read>(
     message_buffer.resize(meta_length, 0);
     reader.read_exact(message_buffer)?;
 
-    let message = ipc::Message::root_as_message(message_buffer)
-        .map_err(|err| ArrowError::Ipc(format!("Unable to get root as message: {:?}", err)))?;
+    let message = ipc::Message::root_as_message(message_buffer).map_err(|err| {
+        ArrowError::OutOfSpec(format!("Unable to get root as message: {:?}", err))
+    })?;
 
     match message.header_type() {
-        ipc::Message::MessageHeader::Schema => Err(ArrowError::Ipc(
+        ipc::Message::MessageHeader::Schema => Err(ArrowError::OutOfSpec(
             "Not expecting a schema when messages are read".to_string(),
         )),
         ipc::Message::MessageHeader::RecordBatch => {
             let batch = message.header_as_record_batch().ok_or_else(|| {
-                ArrowError::Ipc("Unable to read IPC message as record batch".to_string())
+                ArrowError::OutOfSpec("Unable to read IPC message as record batch".to_string())
             })?;
             // read the block that makes up the record batch into a buffer
             data_buffer.clear();
@@ -183,7 +185,7 @@ fn read_next<R: Read>(
         }
         ipc::Message::MessageHeader::DictionaryBatch => {
             let batch = message.header_as_dictionary_batch().ok_or_else(|| {
-                ArrowError::Ipc("Unable to read IPC message as dictionary batch".to_string())
+                ArrowError::OutOfSpec("Unable to read IPC message as dictionary batch".to_string())
             })?;
             // read the block that makes up the dictionary batch into a buffer
             let mut buf = vec![0; message.bodyLength() as usize];
@@ -204,7 +206,7 @@ fn read_next<R: Read>(
             read_next(reader, metadata, dictionaries, message_buffer, data_buffer)
         }
         ipc::Message::MessageHeader::NONE => Ok(Some(StreamState::Waiting)),
-        t => Err(ArrowError::Ipc(format!(
+        t => Err(ArrowError::OutOfSpec(format!(
             "Reading types other than record batches not yet supported, unable to read {:?} ",
             t
         ))),

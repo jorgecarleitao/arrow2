@@ -211,7 +211,7 @@ fn row_type_validation() {
     let re = builder.build(Cursor::new(content));
     assert_eq!(
         re.err().unwrap().to_string(),
-        r#"Expected JSON record to be an object, found Array([Number(1), String("hello")])"#,
+        r#"External format error: Expected JSON record to be an object, found Array([Number(1), String("hello")])"#,
     );
 }
 
