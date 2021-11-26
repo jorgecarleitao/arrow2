@@ -2,17 +2,12 @@ use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
+use arrow2::array::*;
 use arrow2::compute::take;
 use arrow2::util::bench_util::*;
-use arrow2::{array::*, datatypes::DataType};
-
-/// Returns fixed seedable RNG
-pub fn seedable_rng() -> StdRng {
-    StdRng::seed_from_u64(42)
-}
 
 fn create_random_index(size: usize, null_density: f32) -> PrimitiveArray<i32> {
-    let mut rng = seedable_rng();
+    let mut rng = StdRng::seed_from_u64(42);
     (0..size)
         .map(|_| {
             if rng.gen::<f32>() > null_density {
@@ -33,8 +28,8 @@ fn add_benchmark(c: &mut Criterion) {
     (10..=20).step_by(2).for_each(|log2_size| {
         let size = 2usize.pow(log2_size);
 
-        let values = create_primitive_array::<i32>(size, DataType::Int32, 0.0);
-        let values_nulls = create_primitive_array::<i32>(size, DataType::Int32, 0.2);
+        let values = create_primitive_array::<i32>(size, 0.0);
+        let values_nulls = create_primitive_array::<i32>(size, 0.2);
         let indices = create_random_index(size, 0.0);
         let indices_nulls = create_random_index(size, 0.5);
         c.bench_function(&format!("take i32 2^{}", log2_size), |b| {

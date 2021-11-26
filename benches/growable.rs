@@ -1,17 +1,14 @@
-extern crate arrow2;
+use criterion::{criterion_group, criterion_main, Criterion};
 
 use arrow2::{
     array::growable::{Growable, GrowablePrimitive},
-    datatypes::DataType,
     util::bench_util::create_primitive_array,
 };
-
-use criterion::{criterion_group, criterion_main, Criterion};
 
 fn add_benchmark(c: &mut Criterion) {
     let values = (0..1026).rev();
 
-    let i32_array = create_primitive_array::<i32>(1026 * 10, DataType::Int32, 0.0);
+    let i32_array = create_primitive_array::<i32>(1026 * 10, 0.0);
     c.bench_function("growable::primitive::non_null::non_null", |b| {
         b.iter(|| {
             let mut a = GrowablePrimitive::new(vec![&i32_array], false, 1026 * 10);
@@ -22,7 +19,7 @@ fn add_benchmark(c: &mut Criterion) {
         })
     });
 
-    let i32_array = create_primitive_array::<i32>(1026 * 10, DataType::Int32, 0.0);
+    let i32_array = create_primitive_array::<i32>(1026 * 10, 0.0);
     c.bench_function("growable::primitive::non_null::null", |b| {
         b.iter(|| {
             let mut a = GrowablePrimitive::new(vec![&i32_array], true, 1026 * 10);
@@ -36,7 +33,7 @@ fn add_benchmark(c: &mut Criterion) {
         })
     });
 
-    let i32_array = create_primitive_array::<i32>(1026 * 10, DataType::Int32, 0.1);
+    let i32_array = create_primitive_array::<i32>(1026 * 10, 0.1);
 
     let values = values.collect::<Vec<_>>();
     c.bench_function("growable::primitive::null::non_null", |b| {

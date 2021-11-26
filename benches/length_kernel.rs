@@ -15,9 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#[macro_use]
-extern crate criterion;
-use criterion::Criterion;
+use criterion::{criterion_group, criterion_main, Criterion};
 
 use arrow2::array::*;
 use arrow2::compute::length::length;

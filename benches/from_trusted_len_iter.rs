@@ -1,8 +1,6 @@
-extern crate arrow2;
+use criterion::{criterion_group, criterion_main, Criterion};
 
 use arrow2::{array::PrimitiveArray, bitmap::*, buffer::*};
-
-use criterion::{criterion_group, criterion_main, Criterion};
 
 fn add_benchmark(c: &mut Criterion) {
     let values = 0..1026;

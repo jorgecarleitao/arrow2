@@ -14,17 +14,15 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-extern crate arrow2;
-
 use std::sync::Arc;
+
+use criterion::{criterion_group, criterion_main, Criterion};
 
 use arrow2::array::*;
 use arrow2::compute::filter::{build_filter, filter, filter_record_batch, Filter};
 use arrow2::datatypes::{DataType, Field, Schema};
 use arrow2::record_batch::RecordBatch;
-
 use arrow2::util::bench_util::{create_boolean_array, create_primitive_array, create_string_array};
-use criterion::{criterion_group, criterion_main, Criterion};
 
 fn bench_filter(data_array: &dyn Array, filter_array: &BooleanArray) {
     criterion::black_box(filter(data_array, filter_array).unwrap());
@@ -43,12 +41,12 @@ fn add_benchmark(c: &mut Criterion) {
         let filter_array =
             BooleanArray::from_data(DataType::Boolean, filter_array.values().clone(), None);
 
-        let arr_a = create_primitive_array::<f32>(size, DataType::Float32, 0.0);
+        let arr_a = create_primitive_array::<f32>(size, 0.0);
         c.bench_function(&format!("filter 2^{} f32", log2_size), |b| {
             b.iter(|| bench_filter(&arr_a, &filter_array))
         });
 
-        let arr_a = create_primitive_array::<f32>(size, DataType::Float32, 0.1);
+        let arr_a = create_primitive_array::<f32>(size, 0.1);
 
         c.bench_function(&format!("filter null 2^{} f32", log2_size), |b| {
             b.iter(|| bench_filter(&arr_a, &filter_array))
@@ -64,7 +62,7 @@ fn add_benchmark(c: &mut Criterion) {
     let dense_filter = build_filter(&dense_filter_array).unwrap();
     let sparse_filter = build_filter(&sparse_filter_array).unwrap();
 
-    let data_array = create_primitive_array::<u8>(size, DataType::UInt8, 0.0);
+    let data_array = create_primitive_array::<u8>(size, 0.0);
 
     c.bench_function("filter u8", |b| {
         b.iter(|| bench_filter(&data_array, &filter_array))
@@ -86,7 +84,7 @@ fn add_benchmark(c: &mut Criterion) {
         b.iter(|| bench_built_filter(&sparse_filter, &data_array))
     });
 
-    let data_array = create_primitive_array::<u8>(size, DataType::UInt8, 0.5);
+    let data_array = create_primitive_array::<u8>(size, 0.5);
     c.bench_function("filter context u8 w NULLs", |b| {
         b.iter(|| bench_built_filter(&filter, &data_array))
     });
@@ -97,7 +95,7 @@ fn add_benchmark(c: &mut Criterion) {
         b.iter(|| bench_built_filter(&sparse_filter, &data_array))
     });
 
-    let data_array = create_primitive_array::<f32>(size, DataType::Float32, 0.5);
+    let data_array = create_primitive_array::<f32>(size, 0.5);
     c.bench_function("filter f32", |b| {
         b.iter(|| bench_filter(&data_array, &filter_array))
     });
@@ -125,7 +123,7 @@ fn add_benchmark(c: &mut Criterion) {
         b.iter(|| bench_built_filter(&sparse_filter, &data_array))
     });
 
-    let data_array = create_primitive_array::<f32>(size, DataType::Float32, 0.0);
+    let data_array = create_primitive_array::<f32>(size, 0.0);
 
     let field = Field::new("c1", data_array.data_type().clone(), true);
     let schema = Schema::new(vec![field]);

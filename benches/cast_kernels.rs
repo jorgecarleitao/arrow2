@@ -15,9 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#[macro_use]
-extern crate criterion;
-use criterion::Criterion;
+use criterion::{criterion_group, criterion_main, Criterion};
 use rand::distributions::Uniform;
 use rand::Rng;
 
@@ -72,27 +70,27 @@ fn build_utf8_date_time_array(size: usize, with_nulls: bool) -> Utf8Array<i32> {
 
 // cast array from specified primitive array type to desired data type
 fn cast_array(array: &dyn Array, to_type: DataType) {
-    criterion::black_box(cast::cast(array, &to_type).unwrap());
+    criterion::black_box(cast::cast(array, &to_type, Default::default()).unwrap());
 }
 
 fn add_benchmark(c: &mut Criterion) {
     let size = 512;
-    let i32_array = create_primitive_array::<i32>(size, DataType::Int32, 0.1);
-    let i64_array = create_primitive_array::<i64>(size, DataType::Int64, 0.1);
-    let f32_array = create_primitive_array::<f32>(size, DataType::Float32, 0.1);
-    let f32_utf8_array = cast::cast(&f32_array, &DataType::Utf8).unwrap();
+    let i32_array = create_primitive_array::<i32>(size, 0.1);
+    let i64_array = create_primitive_array::<i64>(size, 0.1);
+    let f32_array = create_primitive_array::<f32>(size, 0.1);
+    let f32_utf8_array = cast::cast(&f32_array, &DataType::Utf8, Default::default()).unwrap();
 
-    let f64_array = create_primitive_array::<f64>(size, DataType::Float64, 0.1);
-    let date64_array = create_primitive_array::<i64>(size, DataType::Date64, 0.1);
-    let date32_array = create_primitive_array::<i32>(size, DataType::Date32, 0.1);
+    let f64_array = create_primitive_array::<f64>(size, 0.1);
+    let date64_array = create_primitive_array::<i64>(size, 0.1).to(DataType::Date64);
+    let date32_array = create_primitive_array::<i32>(size, 0.1).to(DataType::Date32);
     let time32s_array =
-        create_primitive_array::<i32>(size, DataType::Time32(TimeUnit::Second), 0.1);
+        create_primitive_array::<i32>(size, 0.1).to(DataType::Time32(TimeUnit::Second));
     let time64ns_array =
-        create_primitive_array::<i64>(size, DataType::Time64(TimeUnit::Nanosecond), 0.1);
-    let time_ns_array =
-        create_primitive_array::<i64>(size, DataType::Timestamp(TimeUnit::Nanosecond, None), 0.1);
-    let time_ms_array =
-        create_primitive_array::<i64>(size, DataType::Timestamp(TimeUnit::Millisecond, None), 0.1);
+        create_primitive_array::<i64>(size, 0.1).to(DataType::Time64(TimeUnit::Nanosecond));
+    let time_ns_array = create_primitive_array::<i64>(size, 0.1)
+        .to(DataType::Timestamp(TimeUnit::Nanosecond, None));
+    let time_ms_array = create_primitive_array::<i64>(size, 0.1)
+        .to(DataType::Timestamp(TimeUnit::Millisecond, None));
     let utf8_date_array = build_utf8_date_array(512, true);
     let utf8_date_time_array = build_utf8_date_time_array(512, true);
 

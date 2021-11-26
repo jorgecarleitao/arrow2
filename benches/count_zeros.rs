@@ -1,6 +1,6 @@
-use arrow2::bitmap::utils::count_zeros;
-
 use criterion::{criterion_group, criterion_main, Criterion};
+
+use arrow2::bitmap::utils::count_zeros;
 
 fn add_benchmark(c: &mut Criterion) {
     (10..=20).step_by(2).for_each(|log2_size| {
