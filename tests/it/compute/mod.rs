@@ -44,3 +44,5 @@ mod take;
 mod temporal;
 #[cfg(feature = "compute_window")]
 mod window;
+#[cfg(feature = "compute_lower")]
+mod lower;

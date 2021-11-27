@@ -86,3 +86,6 @@ mod utils;
 #[cfg(feature = "compute_window")]
 #[cfg_attr(docsrs, doc(cfg(feature = "compute_window")))]
 pub mod window;
+#[cfg(feature = "compute_lower")]
+#[cfg_attr(docsrs, doc(cfg(feature = "compute_lower")))]
+pub mod lower;
