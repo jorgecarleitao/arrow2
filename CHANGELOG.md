@@ -1,5 +1,90 @@
 # Changelog
 
+## [v0.8.0](https://github.com/jorgecarleitao/arrow2/tree/v0.8.0) (2021-11-27)
+
+[Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.7.0...v0.8.0)
+
+**Breaking changes:**
+
+- Made CSV write options use chrono formatting by default [\#624](https://github.com/jorgecarleitao/arrow2/issues/624)
+- Add `compression` to `IpcWriteOptions` [\#570](https://github.com/jorgecarleitao/arrow2/issues/570)
+- Made `cast` accept `CastOptions` parameter [\#569](https://github.com/jorgecarleitao/arrow2/issues/569)
+- Simplified `ArrowError` [\#640](https://github.com/jorgecarleitao/arrow2/pull/640) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Use `DynComparator` for `lexsort` and `partition` [\#637](https://github.com/jorgecarleitao/arrow2/pull/637) ([yjshen](https://github.com/yjshen))
+- Split "compute" feature [\#634](https://github.com/jorgecarleitao/arrow2/pull/634) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Removed unneeded trait. [\#628](https://github.com/jorgecarleitao/arrow2/pull/628) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Sealed 2 traits to forbid downstream implementations [\#621](https://github.com/jorgecarleitao/arrow2/pull/621) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Simplified arithmetics compute [\#607](https://github.com/jorgecarleitao/arrow2/pull/607) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Refactored comparison `Operator` [\#604](https://github.com/jorgecarleitao/arrow2/pull/604) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Simplified dictionary indexes [\#584](https://github.com/jorgecarleitao/arrow2/pull/584) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Simplified IPC APIs [\#576](https://github.com/jorgecarleitao/arrow2/pull/576) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Simplified IPC stream writer / remove finish on drop from stream writer [\#575](https://github.com/jorgecarleitao/arrow2/pull/575) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Simplified trait in compute. [\#572](https://github.com/jorgecarleitao/arrow2/pull/572) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Compute: add partial option into CastOptions [\#561](https://github.com/jorgecarleitao/arrow2/pull/561) ([sundy-li](https://github.com/sundy-li))
+- Introduced `UnionMode` enum [\#557](https://github.com/jorgecarleitao/arrow2/pull/557) ([simonvandel](https://github.com/simonvandel))
+- Changed DataType::FixedSize\*\(i32\) to DataType::FixedSize\*\(usize\) [\#556](https://github.com/jorgecarleitao/arrow2/pull/556) ([simonvandel](https://github.com/simonvandel))
+
+**New features:**
+
+- Added support to write timestamps with timezones for CSV [\#623](https://github.com/jorgecarleitao/arrow2/pull/623) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support to read Avro files' metadata asynchronously [\#614](https://github.com/jorgecarleitao/arrow2/pull/614) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added iterator for `StructArray` [\#613](https://github.com/jorgecarleitao/arrow2/pull/613) ([illumination-k](https://github.com/illumination-k))
+- Added support to read snappy-compressed Avro [\#612](https://github.com/jorgecarleitao/arrow2/pull/612) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support to read decimal from csv [\#602](https://github.com/jorgecarleitao/arrow2/pull/602) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support to cast `NullArray` to all other types [\#589](https://github.com/jorgecarleitao/arrow2/pull/589) ([flaneur2020](https://github.com/flaneur2020))
+- Added support dictionaries in nested types over IPC [\#587](https://github.com/jorgecarleitao/arrow2/pull/587) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support to write Arrow IPC streams asynchronously [\#577](https://github.com/jorgecarleitao/arrow2/pull/577) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support to write compressed Arrow IPC \(feather v2\) [\#566](https://github.com/jorgecarleitao/arrow2/pull/566) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support for ffi for `FixedSizeList` and `FixedSizeBinary` [\#565](https://github.com/jorgecarleitao/arrow2/pull/565) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support for `async` csv reading. [\#562](https://github.com/jorgecarleitao/arrow2/pull/562) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support for `bitwise` operations [\#553](https://github.com/jorgecarleitao/arrow2/pull/553) ([1aguna](https://github.com/1aguna))
+- Added support to read `StructArray` from parquet [\#547](https://github.com/jorgecarleitao/arrow2/pull/547) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Fixed bugs:**
+
+- Fixed error in reading nullable from Avro. [\#631](https://github.com/jorgecarleitao/arrow2/pull/631) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed error in union FFI [\#625](https://github.com/jorgecarleitao/arrow2/pull/625) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed error in computing projection in `io::ipc::read::reader::FileReader` [\#596](https://github.com/jorgecarleitao/arrow2/pull/596) ([illumination-k](https://github.com/illumination-k))
+- Fixed error in compressing IPC LZ4 [\#593](https://github.com/jorgecarleitao/arrow2/pull/593) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed growable of dictionaries negative keys [\#582](https://github.com/jorgecarleitao/arrow2/pull/582) ([ritchie46](https://github.com/ritchie46))
+- Made substring kernel on utf8 take chars into account. [\#568](https://github.com/jorgecarleitao/arrow2/pull/568) ([ritchie46](https://github.com/ritchie46))
+- Fixed error in passing sliced arrays via FFI [\#564](https://github.com/jorgecarleitao/arrow2/pull/564) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Enhancements:**
+
+- Faster `take` with null values \(2-3x\) [\#633](https://github.com/jorgecarleitao/arrow2/pull/633) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Improved error message for missing feature in compressed parquet [\#632](https://github.com/jorgecarleitao/arrow2/pull/632) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added `to` conversion to `FixedSizeBinary` [\#622](https://github.com/jorgecarleitao/arrow2/pull/622) ([ritchie46](https://github.com/ritchie46))
+- Bumped `confy-table` [\#618](https://github.com/jorgecarleitao/arrow2/pull/618) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Made `MutableArray` `Send + Sync` [\#617](https://github.com/jorgecarleitao/arrow2/pull/617) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Removed most of allocations in IPC reading [\#611](https://github.com/jorgecarleitao/arrow2/pull/611) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Speed up boolean comparison kernels \(~3x\) [\#610](https://github.com/jorgecarleitao/arrow2/pull/610) ([Dandandan](https://github.com/Dandandan))
+- Improved performance of decimal arithmetics [\#605](https://github.com/jorgecarleitao/arrow2/pull/605) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Simplified traits and added documentation [\#603](https://github.com/jorgecarleitao/arrow2/pull/603) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Improved performance of `is_not_null`. [\#600](https://github.com/jorgecarleitao/arrow2/pull/600) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added `len` to every array [\#599](https://github.com/jorgecarleitao/arrow2/pull/599) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support for `NullArray` at FFI. [\#598](https://github.com/jorgecarleitao/arrow2/pull/598) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Optimized `MutableBinaryArray` [\#597](https://github.com/jorgecarleitao/arrow2/pull/597) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Speedup/simplify bitwise operations \(avoid extra allocation\) [\#586](https://github.com/jorgecarleitao/arrow2/pull/586) ([Dandandan](https://github.com/Dandandan))
+- Improved performance of `bitmap::from_trusted` \(3x\) [\#578](https://github.com/jorgecarleitao/arrow2/pull/578) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Made bitmap not cache null count [\#563](https://github.com/jorgecarleitao/arrow2/pull/563) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Avoided redundant checks in creating an `Utf8Array` from `MutableUtf8Array` [\#560](https://github.com/jorgecarleitao/arrow2/pull/560) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Avoid unnecessary allocations [\#559](https://github.com/jorgecarleitao/arrow2/pull/559) ([simonvandel](https://github.com/simonvandel))
+- Surfaced errors in reading from avro [\#558](https://github.com/jorgecarleitao/arrow2/pull/558) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Documentation updates:**
+
+- Simplified example [\#619](https://github.com/jorgecarleitao/arrow2/pull/619) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Made example of parallel parquet write be over multiple batches [\#544](https://github.com/jorgecarleitao/arrow2/pull/544) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Testing updates:**
+
+- Cleaned up benches [\#636](https://github.com/jorgecarleitao/arrow2/pull/636) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Ignored tests code in coverage report [\#615](https://github.com/jorgecarleitao/arrow2/pull/615) ([yjhmelody](https://github.com/yjhmelody))
+- Added more tests [\#601](https://github.com/jorgecarleitao/arrow2/pull/601) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Mitigated `RUSTSEC-2020-0159` [\#595](https://github.com/jorgecarleitao/arrow2/pull/595) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added more tests [\#591](https://github.com/jorgecarleitao/arrow2/pull/591) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
 ## [v0.7.0](https://github.com/jorgecarleitao/arrow2/tree/v0.7.0) (2021-10-29)
 
 [Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.6.2...v0.7.0)
