@@ -28,6 +28,8 @@ mod length;
 mod like;
 #[cfg(feature = "compute_limit")]
 mod limit;
+#[cfg(feature = "compute_lower")]
+mod lower;
 #[cfg(feature = "compute_merge_sort")]
 mod merge_sort;
 #[cfg(feature = "compute_partition")]
@@ -44,5 +46,3 @@ mod take;
 mod temporal;
 #[cfg(feature = "compute_window")]
 mod window;
-#[cfg(feature = "compute_lower")]
-mod lower;
