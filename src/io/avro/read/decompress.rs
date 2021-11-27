@@ -39,12 +39,12 @@ fn decompress_block(
             Ok(false)
         }
         #[cfg(not(feature = "io_avro_compression"))]
-        Some(Compression::Deflate) => Err(ArrowError::Other(
+        Some(Compression::Deflate) => Err(ArrowError::InvalidArgumentError(
             "The avro file is deflate-encoded but feature 'io_avro_compression' is not active."
                 .to_string(),
         )),
         #[cfg(not(feature = "io_avro_compression"))]
-        Some(Compression::Snappy) => Err(ArrowError::Other(
+        Some(Compression::Snappy) => Err(ArrowError::InvalidArgumentError(
             "The avro file is snappy-encoded but feature 'io_avro_compression' is not active."
                 .to_string(),
         )),

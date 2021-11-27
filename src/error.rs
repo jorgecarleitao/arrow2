@@ -22,8 +22,6 @@ pub enum ArrowError {
     Overflow,
     /// Whenever incoming data from the C data interface, IPC or Flight does not fulfil the Arrow specification.
     OutOfSpec(String),
-    /// Various error sources.
-    Other(String),
 }
 
 impl ArrowError {
@@ -71,9 +69,6 @@ impl Display for ArrowError {
                 write!(f, "Operation overflew the backing container.")
             }
             ArrowError::OutOfSpec(message) => {
-                write!(f, "{}", message)
-            }
-            ArrowError::Other(message) => {
                 write!(f, "{}", message)
             }
         }
