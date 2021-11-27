@@ -5,31 +5,23 @@ use std::error::Error;
 
 /// Enum with all errors in this crate.
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum ArrowError {
     /// Returned when functionality is not yet available.
     NotYetImplemented(String),
-    /// Triggered by an external error, such as CSV, serde, chrono.
+    /// Wrapper for an error triggered by a dependency
     External(String, Box<dyn Error + Send + Sync>),
-    /// Error associated with incompatible schemas.
-    Schema(String),
-    /// Errors associated with IO
+    /// Wrapper for IO errors
     Io(std::io::Error),
     /// When an invalid argument is passed to a function.
     InvalidArgumentError(String),
-    /// Error during import or export to/from C Data Interface
-    Ffi(String),
-    /// Error during import or export to/from IPC
-    Ipc(String),
     /// Error during import or export to/from a format
     ExternalFormat(String),
     /// Whenever pushing to a container fails because it does not support more entries.
-    /// (e.g. maximum size of the keys of a dictionary overflowed)
-    KeyOverflowError,
-    /// Error during arithmetic operation. Normally returned
-    /// during checked operations
-    ArithmeticError(String),
-    /// Any other error.
-    Other(String),
+    /// The solution is usually to use a higher-capacity container-backing type.
+    Overflow,
+    /// Whenever incoming data from the C data interface, IPC or Flight does not fulfil the Arrow specification.
+    OutOfSpec(String),
 }
 
 impl ArrowError {
@@ -66,27 +58,17 @@ impl Display for ArrowError {
             ArrowError::External(message, source) => {
                 write!(f, "External error{}: {}", message, &source)
             }
-            ArrowError::Schema(desc) => write!(f, "Schema error: {}", desc),
             ArrowError::Io(desc) => write!(f, "Io error: {}", desc),
             ArrowError::InvalidArgumentError(desc) => {
                 write!(f, "Invalid argument error: {}", desc)
             }
-            ArrowError::Ffi(desc) => {
-                write!(f, "FFI error: {}", desc)
-            }
-            ArrowError::Ipc(desc) => {
-                write!(f, "IPC error: {}", desc)
-            }
             ArrowError::ExternalFormat(desc) => {
                 write!(f, "External format error: {}", desc)
             }
-            ArrowError::KeyOverflowError => {
-                write!(f, "Dictionary key bigger than the key type")
+            ArrowError::Overflow => {
+                write!(f, "Operation overflew the backing container.")
             }
-            ArrowError::ArithmeticError(desc) => {
-                write!(f, "Arithmetic error: {}", desc)
-            }
-            ArrowError::Other(message) => {
+            ArrowError::OutOfSpec(message) => {
                 write!(f, "{}", message)
             }
         }

@@ -166,7 +166,7 @@ fn to_time_unit(item: Option<&Value>) -> Result<TimeUnit> {
         Some(p) if p == "MILLISECOND" => Ok(TimeUnit::Millisecond),
         Some(p) if p == "MICROSECOND" => Ok(TimeUnit::Microsecond),
         Some(p) if p == "NANOSECOND" => Ok(TimeUnit::Nanosecond),
-        _ => Err(ArrowError::Schema(
+        _ => Err(ArrowError::OutOfSpec(
             "time unit missing or invalid".to_string(),
         )),
     }
@@ -181,13 +181,13 @@ fn to_int(item: &Value) -> Result<IntegerType> {
                 Some(32) => IntegerType::Int32,
                 Some(64) => IntegerType::Int64,
                 _ => {
-                    return Err(ArrowError::Schema(
+                    return Err(ArrowError::OutOfSpec(
                         "int bitWidth missing or invalid".to_string(),
                     ))
                 }
             },
             _ => {
-                return Err(ArrowError::Schema(
+                return Err(ArrowError::OutOfSpec(
                     "int bitWidth missing or invalid".to_string(),
                 ))
             }
@@ -199,19 +199,19 @@ fn to_int(item: &Value) -> Result<IntegerType> {
                 Some(32) => IntegerType::UInt32,
                 Some(64) => IntegerType::UInt64,
                 _ => {
-                    return Err(ArrowError::Schema(
+                    return Err(ArrowError::OutOfSpec(
                         "int bitWidth missing or invalid".to_string(),
                     ))
                 }
             },
             _ => {
-                return Err(ArrowError::Schema(
+                return Err(ArrowError::OutOfSpec(
                     "int bitWidth missing or invalid".to_string(),
                 ))
             }
         },
         _ => {
-            return Err(ArrowError::Schema(
+            return Err(ArrowError::OutOfSpec(
                 "int signed missing or invalid".to_string(),
             ))
         }
@@ -227,7 +227,9 @@ fn children(children: Option<&Value>) -> Result<Vec<Field>> {
                     .map(Field::try_from)
                     .collect::<Result<Vec<_>>>()
             } else {
-                Err(ArrowError::Schema("children must be an array".to_string()))
+                Err(ArrowError::OutOfSpec(
+                    "children must be an array".to_string(),
+                ))
             }
         })
         .unwrap_or_else(|| Ok(vec![]))
@@ -241,7 +243,7 @@ fn read_metadata(metadata: &Value) -> Result<BTreeMap<String, String>> {
                 match value.as_object() {
                     Some(map) => {
                         if map.len() != 2 {
-                            return Err(ArrowError::Schema(
+                            return Err(ArrowError::OutOfSpec(
                                 "Field 'metadata' must have exact two entries for each key-value map".to_string(),
                             ));
                         }
@@ -249,20 +251,20 @@ fn read_metadata(metadata: &Value) -> Result<BTreeMap<String, String>> {
                             if let (Some(k_str), Some(v_str)) = (k.as_str(), v.as_str()) {
                                 res.insert(k_str.to_string().clone(), v_str.to_string().clone());
                             } else {
-                                return Err(ArrowError::Schema(
+                                return Err(ArrowError::OutOfSpec(
                                     "Field 'metadata' must have map value of string type"
                                         .to_string(),
                                 ));
                             }
                         } else {
-                            return Err(ArrowError::Schema(
+                            return Err(ArrowError::OutOfSpec(
                                 "Field 'metadata' lacks map keys named \"key\" or \"value\""
                                     .to_string(),
                             ));
                         }
                     }
                     _ => {
-                        return Err(ArrowError::Schema(
+                        return Err(ArrowError::OutOfSpec(
                             "Field 'metadata' contains non-object key-value pair".to_string(),
                         ));
                     }
@@ -276,7 +278,7 @@ fn read_metadata(metadata: &Value) -> Result<BTreeMap<String, String>> {
                 if let Some(str_value) = v.as_str() {
                     res.insert(k.clone(), str_value.to_string().clone());
                 } else {
-                    return Err(ArrowError::Schema(format!(
+                    return Err(ArrowError::OutOfSpec(format!(
                         "Field 'metadata' contains non-string value for key {}",
                         k
                     )));
@@ -284,7 +286,7 @@ fn read_metadata(metadata: &Value) -> Result<BTreeMap<String, String>> {
             }
             Ok(res)
         }
-        _ => Err(ArrowError::Schema(
+        _ => Err(ArrowError::OutOfSpec(
             "Invalid json value type for field".to_string(),
         )),
     }
@@ -293,12 +295,12 @@ fn read_metadata(metadata: &Value) -> Result<BTreeMap<String, String>> {
 fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
     let type_ = item
         .get("name")
-        .ok_or_else(|| ArrowError::Schema("type missing".to_string()))?;
+        .ok_or_else(|| ArrowError::OutOfSpec("type missing".to_string()))?;
 
     let type_ = if let Value::String(name) = type_ {
         name.as_str()
     } else {
-        return Err(ArrowError::Schema("type is not a string".to_string()));
+        return Err(ArrowError::OutOfSpec("type is not a string".to_string()));
     };
 
     use DataType::*;
@@ -312,7 +314,7 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
             if let Some(Value::Number(size)) = item.get("byteWidth") {
                 DataType::FixedSizeBinary(size.as_i64().unwrap() as usize)
             } else {
-                return Err(ArrowError::Schema(
+                return Err(ArrowError::OutOfSpec(
                     "Expecting a byteWidth for fixedsizebinary".to_string(),
                 ));
             }
@@ -323,13 +325,13 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
             // return a list with any type as its child isn't defined in the map
             let precision = match item.get("precision") {
                 Some(p) => Ok(p.as_u64().unwrap() as usize),
-                None => Err(ArrowError::Schema(
+                None => Err(ArrowError::OutOfSpec(
                     "Expecting a precision for decimal".to_string(),
                 )),
             };
             let scale = match item.get("scale") {
                 Some(s) => Ok(s.as_u64().unwrap() as usize),
-                _ => Err(ArrowError::Schema(
+                _ => Err(ArrowError::OutOfSpec(
                     "Expecting a scale for decimal".to_string(),
                 )),
             };
@@ -341,7 +343,7 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
             Some(p) if p == "SINGLE" => DataType::Float32,
             Some(p) if p == "DOUBLE" => DataType::Float64,
             _ => {
-                return Err(ArrowError::Schema(
+                return Err(ArrowError::OutOfSpec(
                     "floatingpoint precision missing or invalid".to_string(),
                 ))
             }
@@ -351,7 +353,9 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
             let tz = match item.get("timezone") {
                 None => Ok(None),
                 Some(Value::String(tz)) => Ok(Some(tz.clone())),
-                _ => Err(ArrowError::Schema("timezone must be a string".to_string())),
+                _ => Err(ArrowError::OutOfSpec(
+                    "timezone must be a string".to_string(),
+                )),
             }?;
             DataType::Timestamp(unit, tz)
         }
@@ -359,7 +363,7 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
             Some(p) if p == "DAY" => DataType::Date32,
             Some(p) if p == "MILLISECOND" => DataType::Date64,
             _ => {
-                return Err(ArrowError::Schema(
+                return Err(ArrowError::OutOfSpec(
                     "date unit missing or invalid".to_string(),
                 ))
             }
@@ -370,7 +374,7 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
                 Some(p) if p == 32 => DataType::Time32(unit),
                 Some(p) if p == 64 => DataType::Time64(unit),
                 _ => {
-                    return Err(ArrowError::Schema(
+                    return Err(ArrowError::OutOfSpec(
                         "time bitWidth missing or invalid".to_string(),
                     ))
                 }
@@ -385,7 +389,7 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
             Some(p) if p == "YEAR_MONTH" => DataType::Interval(IntervalUnit::YearMonth),
             Some(p) if p == "MONTH_DAY_NANO" => DataType::Interval(IntervalUnit::MonthDayNano),
             _ => {
-                return Err(ArrowError::Schema(
+                return Err(ArrowError::OutOfSpec(
                     "interval unit missing or invalid".to_string(),
                 ))
             }
@@ -400,7 +404,7 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
                     size.as_i64().unwrap() as usize,
                 )
             } else {
-                return Err(ArrowError::Schema(
+                return Err(ArrowError::OutOfSpec(
                     "Expecting a listSize for fixedsizelist".to_string(),
                 ));
             }
@@ -410,12 +414,12 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
             let mode = if let Some(Value::String(mode)) = item.get("mode") {
                 UnionMode::sparse(mode == "SPARSE")
             } else {
-                return Err(ArrowError::Schema("union requires mode".to_string()));
+                return Err(ArrowError::OutOfSpec("union requires mode".to_string()));
             };
             let ids = if let Some(Value::Array(ids)) = item.get("typeIds") {
                 Some(ids.iter().map(|x| x.as_i64().unwrap() as i32).collect())
             } else {
-                return Err(ArrowError::Schema("union requires ids".to_string()));
+                return Err(ArrowError::OutOfSpec("union requires ids".to_string()));
             };
             DataType::Union(children, ids, mode)
         }
@@ -423,7 +427,7 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
             let sorted_keys = if let Some(Value::Bool(sorted_keys)) = item.get("keysSorted") {
                 *sorted_keys
             } else {
-                return Err(ArrowError::Schema("sorted keys not defined".to_string()));
+                return Err(ArrowError::OutOfSpec("sorted keys not defined".to_string()));
             };
             DataType::Map(Box::new(children.pop().unwrap()), sorted_keys)
         }
@@ -445,7 +449,7 @@ impl TryFrom<&Value> for Field {
                 let name = match map.get("name") {
                     Some(&Value::String(ref name)) => name.to_string(),
                     _ => {
-                        return Err(ArrowError::Schema(
+                        return Err(ArrowError::OutOfSpec(
                             "Field missing 'name' attribute".to_string(),
                         ));
                     }
@@ -453,7 +457,7 @@ impl TryFrom<&Value> for Field {
                 let nullable = match map.get("nullable") {
                     Some(&Value::Bool(b)) => b,
                     _ => {
-                        return Err(ArrowError::Schema(
+                        return Err(ArrowError::OutOfSpec(
                             "Field missing 'nullable' attribute".to_string(),
                         ));
                     }
@@ -471,7 +475,7 @@ impl TryFrom<&Value> for Field {
 
                 let type_ = map
                     .get("type")
-                    .ok_or_else(|| ArrowError::Schema("type missing".to_string()))?;
+                    .ok_or_else(|| ArrowError::OutOfSpec("type missing".to_string()))?;
 
                 let data_type = to_data_type(type_, children)?;
 
@@ -485,7 +489,7 @@ impl TryFrom<&Value> for Field {
                     let index_type = match dictionary.get("indexType") {
                         Some(t) => to_int(t)?,
                         _ => {
-                            return Err(ArrowError::Schema(
+                            return Err(ArrowError::OutOfSpec(
                                 "Field missing 'indexType' attribute".to_string(),
                             ));
                         }
@@ -499,7 +503,7 @@ impl TryFrom<&Value> for Field {
                     let dict_id = match dictionary.get("id") {
                         Some(Value::Number(n)) => n.as_i64().unwrap(),
                         _ => {
-                            return Err(ArrowError::Schema(
+                            return Err(ArrowError::OutOfSpec(
                                 "Field missing 'id' attribute".to_string(),
                             ));
                         }
@@ -507,7 +511,7 @@ impl TryFrom<&Value> for Field {
                     let dict_is_ordered = match dictionary.get("isOrdered") {
                         Some(&Value::Bool(n)) => n,
                         _ => {
-                            return Err(ArrowError::Schema(
+                            return Err(ArrowError::OutOfSpec(
                                 "Field missing 'isOrdered' attribute".to_string(),
                             ));
                         }
@@ -520,7 +524,7 @@ impl TryFrom<&Value> for Field {
                 f.set_metadata(metadata);
                 Ok(f)
             }
-            _ => Err(ArrowError::Schema(
+            _ => Err(ArrowError::OutOfSpec(
                 "Invalid json value type for field".to_string(),
             )),
         }
@@ -560,13 +564,13 @@ fn from_metadata(json: &Value) -> Result<HashMap<String, String>> {
                 if let Value::String(v) = v {
                     Ok((k.to_string(), v.to_string()))
                 } else {
-                    Err(ArrowError::Schema(
+                    Err(ArrowError::OutOfSpec(
                         "metadata `value` field must be a string".to_string(),
                     ))
                 }
             })
             .collect::<Result<_>>(),
-        _ => Err(ArrowError::Schema(
+        _ => Err(ArrowError::OutOfSpec(
             "`metadata` field must be an object".to_string(),
         )),
     }
@@ -581,7 +585,7 @@ impl TryFrom<&Value> for Schema {
                 let fields = if let Some(Value::Array(fields)) = schema.get("fields") {
                     fields.iter().map(Field::try_from).collect::<Result<_>>()?
                 } else {
-                    return Err(ArrowError::Schema(
+                    return Err(ArrowError::OutOfSpec(
                         "Schema fields should be an array".to_string(),
                     ));
                 };
@@ -594,7 +598,7 @@ impl TryFrom<&Value> for Schema {
 
                 Ok(Self { fields, metadata })
             }
-            _ => Err(ArrowError::Schema(
+            _ => Err(ArrowError::OutOfSpec(
                 "Invalid json value type for schema".to_string(),
             )),
         }

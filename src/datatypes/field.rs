@@ -177,7 +177,7 @@ impl Field {
                 for (key, from_value) in from_metadata {
                     if let Some(self_value) = self_metadata.get(key) {
                         if self_value != from_value {
-                            return Err(ArrowError::Schema(format!(
+                            return Err(ArrowError::InvalidArgumentError(format!(
                                 "Fail to merge field due to conflicting metadata data value for key {}", key),
                             ));
                         }
@@ -193,12 +193,12 @@ impl Field {
             _ => {}
         }
         if from.dict_id != self.dict_id {
-            return Err(ArrowError::Schema(
+            return Err(ArrowError::InvalidArgumentError(
                 "Fail to merge schema Field due to conflicting dict_id".to_string(),
             ));
         }
         if from.dict_is_ordered != self.dict_is_ordered {
-            return Err(ArrowError::Schema(
+            return Err(ArrowError::InvalidArgumentError(
                 "Fail to merge schema Field due to conflicting dict_is_ordered".to_string(),
             ));
         }
@@ -220,7 +220,7 @@ impl Field {
                     }
                 }
                 _ => {
-                    return Err(ArrowError::Schema(
+                    return Err(ArrowError::InvalidArgumentError(
                         "Fail to merge schema Field due to conflicting datatype".to_string(),
                     ));
                 }
@@ -241,7 +241,7 @@ impl Field {
                     }
                 }
                 _ => {
-                    return Err(ArrowError::Schema(
+                    return Err(ArrowError::InvalidArgumentError(
                         "Fail to merge schema Field due to conflicting datatype".to_string(),
                     ));
                 }
@@ -279,7 +279,7 @@ impl Field {
             | DataType::Map(_, _)
             | DataType::Decimal(_, _) => {
                 if self.data_type != from.data_type {
-                    return Err(ArrowError::Schema(
+                    return Err(ArrowError::InvalidArgumentError(
                         "Fail to merge schema Field due to conflicting datatype".to_string(),
                     ));
                 }

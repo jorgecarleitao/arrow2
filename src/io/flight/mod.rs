@@ -87,10 +87,14 @@ fn schema_from_bytes(bytes: &[u8]) -> Result<Schema> {
         if let Some((schema, _)) = ipc.header_as_schema().map(fb_to_schema) {
             Ok(schema)
         } else {
-            Err(ArrowError::Ipc("Unable to get head as schema".to_string()))
+            Err(ArrowError::OutOfSpec(
+                "Unable to get head as schema".to_string(),
+            ))
         }
     } else {
-        Err(ArrowError::Ipc("Unable to get root as message".to_string()))
+        Err(ArrowError::OutOfSpec(
+            "Unable to get root as message".to_string(),
+        ))
     }
 }
 
@@ -98,7 +102,7 @@ impl TryFrom<&FlightData> for Schema {
     type Error = ArrowError;
     fn try_from(data: &FlightData) -> Result<Self> {
         schema_from_bytes(&data.data_header[..]).map_err(|err| {
-            ArrowError::Ipc(format!(
+            ArrowError::OutOfSpec(format!(
                 "Unable to convert flight data to Arrow schema: {}",
                 err
             ))
@@ -110,7 +114,7 @@ impl TryFrom<&SchemaResult> for Schema {
     type Error = ArrowError;
     fn try_from(data: &SchemaResult) -> Result<Self> {
         schema_from_bytes(&data.schema[..]).map_err(|err| {
-            ArrowError::Ipc(format!(
+            ArrowError::OutOfSpec(format!(
                 "Unable to convert schema result to Arrow schema: {}",
                 err
             ))
@@ -126,15 +130,18 @@ pub fn deserialize_batch(
     dictionaries: &HashMap<usize, Arc<dyn Array>>,
 ) -> Result<RecordBatch> {
     // check that the data_header is a record batch message
-    let message = ipc::Message::root_as_message(&data.data_header[..])
-        .map_err(|err| ArrowError::Ipc(format!("Unable to get root as message: {:?}", err)))?;
+    let message = ipc::Message::root_as_message(&data.data_header[..]).map_err(|err| {
+        ArrowError::OutOfSpec(format!("Unable to get root as message: {:?}", err))
+    })?;
 
     let mut reader = std::io::Cursor::new(&data.data_body);
 
     message
         .header_as_record_batch()
         .ok_or_else(|| {
-            ArrowError::Ipc("Unable to convert flight data header to a record batch".to_string())
+            ArrowError::OutOfSpec(
+                "Unable to convert flight data header to a record batch".to_string(),
+            )
         })
         .map(|batch| {
             read_record_batch(

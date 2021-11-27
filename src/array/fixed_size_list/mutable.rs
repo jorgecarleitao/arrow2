@@ -58,7 +58,7 @@ impl<M: MutableArray> MutableFixedSizeListArray<M> {
     #[inline]
     fn try_push_valid(&mut self) -> Result<()> {
         if self.values.len() % self.size != 0 {
-            return Err(ArrowError::KeyOverflowError);
+            return Err(ArrowError::Overflow);
         };
         if let Some(validity) = &mut self.validity {
             validity.push(true)

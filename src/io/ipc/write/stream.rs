@@ -41,7 +41,7 @@ pub struct StreamWriter<W: Write> {
     writer: W,
     /// IPC write options
     write_options: WriteOptions,
-    /// Whether the writer footer has been written, and the writer is finished
+    /// Whether the stream has been finished
     finished: bool,
     /// Keeps track of dictionaries that have been written
     dictionary_tracker: DictionaryTracker,
@@ -67,9 +67,10 @@ impl<W: Write> StreamWriter<W> {
     /// Write a record batch to the stream
     pub fn write(&mut self, batch: &RecordBatch) -> Result<()> {
         if self.finished {
-            return Err(ArrowError::Ipc(
-                "Cannot write record batch to stream writer as it is closed".to_string(),
-            ));
+            return Err(ArrowError::Io(std::io::Error::new(
+                std::io::ErrorKind::UnexpectedEof,
+                "Cannot write to a finished stream".to_string(),
+            )));
         }
 
         let (encoded_dictionaries, encoded_message) =

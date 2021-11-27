@@ -103,12 +103,12 @@ pub fn read_record_batch<R: Read + Seek>(
     reader: &mut R,
     block_offset: u64,
 ) -> Result<RecordBatch> {
-    let buffers = batch
-        .buffers()
-        .ok_or_else(|| ArrowError::Ipc("Unable to get buffers from IPC RecordBatch".to_string()))?;
+    let buffers = batch.buffers().ok_or_else(|| {
+        ArrowError::OutOfSpec("Unable to get buffers from IPC RecordBatch".to_string())
+    })?;
     let mut buffers: VecDeque<&ipc::Schema::Buffer> = buffers.iter().collect();
     let field_nodes = batch.nodes().ok_or_else(|| {
-        ArrowError::Ipc("Unable to get field nodes from IPC RecordBatch".to_string())
+        ArrowError::OutOfSpec("Unable to get field nodes from IPC RecordBatch".to_string())
     })?;
 
     let mut field_nodes = field_nodes.iter().collect::<VecDeque<_>>();
@@ -205,7 +205,7 @@ fn first_dict_field(id: usize, fields: &[Field]) -> Result<&Field> {
             return Ok(field);
         }
     }
-    Err(ArrowError::Schema(format!(
+    Err(ArrowError::OutOfSpec(format!(
         "dictionary id {} not found in schema",
         id
     )))

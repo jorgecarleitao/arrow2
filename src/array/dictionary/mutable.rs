@@ -70,7 +70,7 @@ impl<K: DictionaryKey, M: MutableArray> MutableDictionaryArray<K, M> {
                 Ok(false)
             }
             None => {
-                let key = K::from_usize(self.map.len()).ok_or(ArrowError::KeyOverflowError)?;
+                let key = K::from_usize(self.map.len()).ok_or(ArrowError::Overflow)?;
                 self.map.insert(hash, key);
                 self.keys.push(Some(key));
                 Ok(true)

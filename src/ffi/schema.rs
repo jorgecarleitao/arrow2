@@ -243,7 +243,7 @@ fn to_integer_type(format: &str) -> Result<IntegerType> {
         "l" => Int64,
         "L" => UInt64,
         _ => {
-            return Err(ArrowError::Ffi(
+            return Err(ArrowError::OutOfSpec(
                 "Dictionary indices can only be integers".to_string(),
             ))
         }
@@ -312,36 +312,40 @@ unsafe fn to_data_type(schema: &Ffi_ArrowSchema) -> Result<DataType> {
             } else if parts.len() == 2 && parts[0] == "tsn" {
                 DataType::Timestamp(TimeUnit::Nanosecond, Some(parts[1].to_string()))
             } else if parts.len() == 2 && parts[0] == "w" {
-                let size = parts[1]
-                    .parse::<usize>()
-                    .map_err(|_| ArrowError::Ffi("size is not a valid integer".to_string()))?;
+                let size = parts[1].parse::<usize>().map_err(|_| {
+                    ArrowError::OutOfSpec("size is not a valid integer".to_string())
+                })?;
                 DataType::FixedSizeBinary(size)
             } else if parts.len() == 2 && parts[0] == "+w" {
-                let size = parts[1]
-                    .parse::<usize>()
-                    .map_err(|_| ArrowError::Ffi("size is not a valid integer".to_string()))?;
+                let size = parts[1].parse::<usize>().map_err(|_| {
+                    ArrowError::OutOfSpec("size is not a valid integer".to_string())
+                })?;
                 let child = to_field(schema.child(0))?;
                 DataType::FixedSizeList(Box::new(child), size)
             } else if parts.len() == 2 && parts[0] == "d" {
                 let parts = parts[1].split(',').collect::<Vec<_>>();
                 if parts.len() < 2 || parts.len() > 3 {
-                    return Err(ArrowError::Ffi(
+                    return Err(ArrowError::OutOfSpec(
                         "Decimal must contain 2 or 3 comma-separated values".to_string(),
                     ));
                 };
                 if parts.len() == 3 {
                     let bit_width = parts[0].parse::<usize>().map_err(|_| {
-                        ArrowError::Ffi("Decimal bit width is not a valid integer".to_string())
+                        ArrowError::OutOfSpec(
+                            "Decimal bit width is not a valid integer".to_string(),
+                        )
                     })?;
                     if bit_width != 128 {
-                        return Err(ArrowError::Ffi("Decimal256 is not supported".to_string()));
+                        return Err(ArrowError::OutOfSpec(
+                            "Decimal256 is not supported".to_string(),
+                        ));
                     }
                 }
                 let precision = parts[0].parse::<usize>().map_err(|_| {
-                    ArrowError::Ffi("Decimal precision is not a valid integer".to_string())
+                    ArrowError::OutOfSpec("Decimal precision is not a valid integer".to_string())
                 })?;
                 let scale = parts[1].parse::<usize>().map_err(|_| {
-                    ArrowError::Ffi("Decimal scale is not a valid integer".to_string())
+                    ArrowError::OutOfSpec("Decimal scale is not a valid integer".to_string())
                 })?;
                 DataType::Decimal(precision, scale)
             } else if !parts.is_empty() && ((parts[0] == "+us") || (parts[0] == "+ud")) {
@@ -351,7 +355,9 @@ unsafe fn to_data_type(schema: &Ffi_ArrowSchema) -> Result<DataType> {
                     .split(',')
                     .map(|x| {
                         x.parse::<i32>().map_err(|_| {
-                            ArrowError::Ffi("Union type id is not a valid integer".to_string())
+                            ArrowError::OutOfSpec(
+                                "Union type id is not a valid integer".to_string(),
+                            )
                         })
                     })
                     .collect::<Result<Vec<_>>>()?;
@@ -360,7 +366,7 @@ unsafe fn to_data_type(schema: &Ffi_ArrowSchema) -> Result<DataType> {
                     .collect::<Result<Vec<_>>>()?;
                 DataType::Union(fields, Some(type_ids), mode)
             } else {
-                return Err(ArrowError::Ffi(format!(
+                return Err(ArrowError::OutOfSpec(format!(
                     "The datatype \"{}\" is still not supported in Rust implementation",
                     other
                 )));
@@ -456,7 +462,7 @@ pub(super) fn get_field_child(field: &Field, index: usize) -> Result<Field> {
         (0, DataType::Map(field, _)) => Ok(field.as_ref().clone()),
         (index, DataType::Struct(fields)) => Ok(fields[index].clone()),
         (index, DataType::Union(fields, _, _)) => Ok(fields[index].clone()),
-        (child, data_type) => Err(ArrowError::Ffi(format!(
+        (child, data_type) => Err(ArrowError::OutOfSpec(format!(
             "Requested child {} to type {:?} that has no such child",
             child, data_type
         ))),

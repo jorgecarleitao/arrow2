@@ -84,7 +84,7 @@ impl Decoder {
                 let v = value?;
                 match v {
                     Value::Object(_) => Ok(v),
-                    _ => Err(ArrowError::Other(format!(
+                    _ => Err(ArrowError::ExternalFormat(format!(
                         "Row needs to be of type object, got: {:?}",
                         v
                     ))),
