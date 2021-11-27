@@ -1,5 +1,13 @@
 # Changelog
 
+## [v0.8.1](https://github.com/jorgecarleitao/arrow2/tree/v0.8.1) (2021-11-27)
+
+[Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.8.0...v0.8.1)
+
+**Fixed bugs:**
+
+- Fixed compilation with individual features activated [\#642](https://github.com/jorgecarleitao/arrow2/pull/642) ([ritchie46](https://github.com/ritchie46))
+
 ## [v0.8.0](https://github.com/jorgecarleitao/arrow2/tree/v0.8.0) (2021-11-27)
 
 [Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.7.0...v0.8.0)
