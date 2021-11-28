@@ -30,7 +30,7 @@ fn utf8_lower<O: Offset>(array: &Utf8Array<O>) -> Utf8Array<O> {
     new.with_validity(array.validity().cloned())
 }
 
-/// Returns an ArrayRef with lowercase of each of the elements in `array`.
+/// Returns a new `Array` where each of each of the elements is lower-cased.
 /// this function errors when the passed array is not a \[Large\]String array.
 pub fn lower(array: &dyn Array) -> Result<Box<dyn Array>> {
     match array.data_type() {
