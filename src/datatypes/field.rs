@@ -60,10 +60,10 @@ impl PartialEq for Field {
 }
 
 impl Field {
-    /// Creates a new field
-    pub fn new(name: &str, data_type: DataType, nullable: bool) -> Self {
+    /// Creates a new [`Field`].
+    pub fn new<T: Into<String>>(name: T, data_type: DataType, nullable: bool) -> Self {
         Field {
-            name: name.to_string(),
+            name: name.into(),
             data_type,
             nullable,
             dict_id: 0,
@@ -73,15 +73,15 @@ impl Field {
     }
 
     /// Creates a new field
-    pub fn new_dict(
-        name: &str,
+    pub fn new_dict<T: Into<String>>(
+        name: T,
         data_type: DataType,
         nullable: bool,
         dict_id: i64,
         dict_is_ordered: bool,
     ) -> Self {
         Field {
-            name: name.to_string(),
+            name: name.into(),
             data_type,
             nullable,
             dict_id,
