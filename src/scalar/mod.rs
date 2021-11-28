@@ -25,7 +25,7 @@ pub use struct_::*;
 
 /// Trait object declaring an optional value with a [`DataType`].
 /// This strait is often used in APIs that accept multiple scalar types.
-pub trait Scalar: std::fmt::Debug {
+pub trait Scalar: std::fmt::Debug + Send + Sync {
     /// convert itself to
     fn as_any(&self) -> &dyn Any;
 
