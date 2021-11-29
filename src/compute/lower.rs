@@ -49,7 +49,7 @@ pub fn lower(array: &dyn Array) -> Result<Box<dyn Array>> {
             array
                 .as_any()
                 .downcast_ref::<Utf8Array<i32>>()
-                .expect("A large string is expected"),
+                .expect("A string is expected"),
         ))),
         _ => Err(ArrowError::InvalidArgumentError(format!(
             "lower does not support type {:?}",
