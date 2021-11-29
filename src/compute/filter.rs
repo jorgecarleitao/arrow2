@@ -6,7 +6,7 @@ use crate::{array::*, types::NativeType};
 use crate::{buffer::MutableBuffer, error::Result};
 
 /// Function that can filter arbitrary arrays
-pub type Filter<'a> = Box<dyn Fn(&dyn Array) -> Box<dyn Array> + 'a>;
+pub type Filter<'a> = Box<dyn Fn(&dyn Array) -> Box<dyn Array> + 'a + Send + Sync>;
 
 fn filter_nonnull_primitive<T: NativeType>(
     array: &PrimitiveArray<T>,
