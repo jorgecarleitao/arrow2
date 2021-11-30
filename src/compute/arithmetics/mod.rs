@@ -20,6 +20,7 @@ use crate::{
     array::Array,
     bitmap::Bitmap,
     datatypes::{DataType, IntervalUnit, TimeUnit},
+    scalar::Scalar,
     types::NativeType,
 };
 
@@ -113,6 +114,22 @@ pub fn add(lhs: &dyn Array, rhs: &dyn Array) -> Box<dyn Array> {
         rhs,
         add,
         duration = add_duration,
+        interval = add_interval
+    )
+}
+
+/// Adds an [`Array`] and a [`Scalar`].
+/// # Panic
+/// This function panics iff
+/// * the opertion is not supported for the logical types (use [`can_add`] to check)
+/// * the arrays have a different length
+/// * one of the arrays is a timestamp with timezone and the timezone is not valid.
+pub fn add_scalar(lhs: &dyn Array, rhs: &dyn Scalar) -> Box<dyn Array> {
+    arith!(
+        lhs,
+        rhs,
+        add_scalar,
+        duration = add_duration_scalar,
         interval = add_interval
     )
 }

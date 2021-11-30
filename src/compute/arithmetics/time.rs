@@ -15,9 +15,10 @@ use num_traits::AsPrimitive;
 
 use crate::{
     array::{Array, PrimitiveArray},
-    compute::arity::binary,
+    compute::arity::{binary, unary},
     datatypes::{DataType, TimeUnit},
     error::{ArrowError, Result},
+    scalar::{PrimitiveScalar, Scalar},
     temporal_conversions,
     types::{months_days_ns, NativeType},
 };
@@ -115,6 +116,31 @@ where
     let op = move |a: T, b: i64| a + (b as f64 * scale).as_();
 
     binary(time, duration, time.data_type().clone(), op)
+}
+
+/// Adds a duration to a time array (Timestamp, Time and Date). The timeunit
+/// enum is used to scale correctly both arrays; adding seconds with seconds,
+/// or milliseconds with milliseconds.
+pub fn add_duration_scalar<T>(
+    time: &PrimitiveArray<T>,
+    duration: &PrimitiveScalar<i64>,
+) -> PrimitiveArray<T>
+where
+    f64: AsPrimitive<T>,
+    T: NativeType + Add<T, Output = T>,
+{
+    let scale = create_scale(time.data_type(), duration.data_type()).unwrap();
+    let duration = if let Some(duration) = duration.value() {
+        duration
+    } else {
+        return PrimitiveArray::<T>::new_null(time.data_type().clone(), time.len());
+    };
+
+    // Closure for the binary operation. The closure contains the scale
+    // required to add a duration to the timestamp array.
+    let op = move |a: T| a + (duration as f64 * scale).as_();
+
+    unary(time, op, time.data_type().clone())
 }
 
 /// Subtract a duration to a time array (Timestamp, Time and Date). The timeunit
@@ -278,6 +304,70 @@ pub fn add_interval(
                 |timestamp, interval| {
                     temporal_conversions::add_naive_interval(timestamp, time_unit, interval)
                 },
+            ))
+        }
+        _ => Err(ArrowError::InvalidArgumentError(
+            "Adding an interval is only supported for `DataType::Timestamp`".to_string(),
+        )),
+    }
+}
+
+/// Adds an interval to a [`DataType::Timestamp`].
+pub fn add_interval_scalar(
+    timestamp: &PrimitiveArray<i64>,
+    interval: &PrimitiveScalar<months_days_ns>,
+) -> Result<PrimitiveArray<i64>> {
+    let interval = if let Some(interval) = interval.value() {
+        interval
+    } else {
+        return Ok(PrimitiveArray::<i64>::new_null(
+            timestamp.data_type().clone(),
+            timestamp.len(),
+        ));
+    };
+
+    match timestamp.data_type().to_logical_type() {
+        DataType::Timestamp(time_unit, Some(timezone_str)) => {
+            let time_unit = *time_unit;
+            let timezone = temporal_conversions::parse_offset(timezone_str);
+            match timezone {
+                Ok(timezone) => Ok(unary(
+                    timestamp,
+                    |timestamp| {
+                        temporal_conversions::add_interval(
+                            timestamp, time_unit, interval, &timezone,
+                        )
+                    },
+                    timestamp.data_type().clone(),
+                )),
+                #[cfg(feature = "chrono-tz")]
+                Err(_) => {
+                    let timezone = temporal_conversions::parse_offset_tz(timezone_str)?;
+                    Ok(unary(
+                        timestamp,
+                        |timestamp| {
+                            temporal_conversions::add_interval(
+                                timestamp, time_unit, interval, &timezone,
+                            )
+                        },
+                        timestamp.data_type().clone(),
+                    ))
+                }
+                #[cfg(not(feature = "chrono-tz"))]
+                _ => Err(ArrowError::InvalidArgumentError(format!(
+                    "timezone \"{}\" cannot be parsed (feature chrono-tz is not active)",
+                    timezone_str
+                ))),
+            }
+        }
+        DataType::Timestamp(time_unit, None) => {
+            let time_unit = *time_unit;
+            Ok(unary(
+                timestamp,
+                |timestamp| {
+                    temporal_conversions::add_naive_interval(timestamp, time_unit, interval)
+                },
+                timestamp.data_type().clone(),
             ))
         }
         _ => Err(ArrowError::InvalidArgumentError(
