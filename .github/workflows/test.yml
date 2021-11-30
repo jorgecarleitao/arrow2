@@ -77,6 +77,8 @@ jobs:
           toolchain: nightly-2021-10-24
           override: true
       - uses: Swatinem/rust-cache@v1
+        with:
+          key: key1
       - name: Install Miri
         run: |
           rustup component add miri

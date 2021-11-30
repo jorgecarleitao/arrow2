@@ -20,7 +20,7 @@ fn equal() {
 fn basics() {
     let a = BooleanScalar::new(Some(true));
 
-    assert!(a.value());
+    assert_eq!(a.value(), Some(true));
     assert_eq!(a.data_type(), &DataType::Boolean);
     assert!(a.is_valid());
 
