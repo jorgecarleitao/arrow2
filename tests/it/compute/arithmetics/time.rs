@@ -1,6 +1,7 @@
 use arrow2::array::*;
-use arrow2::compute::arithmetics::time::{add_duration, subtract_duration, subtract_timestamps};
+use arrow2::compute::arithmetics::time::*;
 use arrow2::datatypes::{DataType, TimeUnit};
+use arrow2::scalar::*;
 
 #[test]
 fn test_adding_timestamp() {
@@ -18,6 +19,15 @@ fn test_adding_timestamp() {
             DataType::Timestamp(TimeUnit::Second, Some("America/New_York".to_string())),
         );
 
+    assert_eq!(result, expected);
+
+    let duration = PrimitiveScalar::from(Some(10i64)).to(DataType::Duration(TimeUnit::Second));
+
+    let result = add_duration_scalar(&timestamp, &duration);
+    let expected =
+        PrimitiveArray::from([Some(100010i64), Some(200010i64), None, Some(300010i64)]).to(
+            DataType::Timestamp(TimeUnit::Second, Some("America/New_York".to_string())),
+        );
     assert_eq!(result, expected);
 }
 

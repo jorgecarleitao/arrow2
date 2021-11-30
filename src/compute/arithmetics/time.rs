@@ -199,6 +199,29 @@ where
     binary(time, duration, time.data_type().clone(), op)
 }
 
+/// Subtract a duration to a time array (Timestamp, Time and Date). The timeunit
+/// enum is used to scale correctly both arrays; adding seconds with seconds,
+/// or milliseconds with milliseconds.
+pub fn sub_duration_scalar<T>(
+    time: &PrimitiveArray<T>,
+    duration: &PrimitiveScalar<i64>,
+) -> PrimitiveArray<T>
+where
+    f64: AsPrimitive<T>,
+    T: NativeType + Sub<T, Output = T>,
+{
+    let scale = create_scale(time.data_type(), duration.data_type()).unwrap();
+    let duration = if let Some(duration) = duration.value() {
+        duration
+    } else {
+        return PrimitiveArray::<T>::new_null(time.data_type().clone(), time.len());
+    };
+
+    let op = move |a: T| a - (duration as f64 * scale).as_();
+
+    unary(time, op, time.data_type().clone())
+}
+
 /// Calculates the difference between two timestamps returning an array of type
 /// Duration. The timeunit enum is used to scale correctly both arrays;
 /// subtracting seconds with seconds, or milliseconds with milliseconds.
@@ -252,6 +275,40 @@ pub fn subtract_timestamps(
             "Incorrect data type for the arguments".to_string(),
         )),
     }
+}
+
+/// Calculates the difference between two timestamps as [`DataType::Duration`] with the same time scale.
+pub fn sub_timestamps_scalar(
+    lhs: &PrimitiveArray<i64>,
+    rhs: &PrimitiveScalar<i64>,
+) -> Result<PrimitiveArray<i64>> {
+    let (scale, timeunit_a) =
+        if let (DataType::Timestamp(timeunit_a, None), DataType::Timestamp(timeunit_b, None)) =
+            (lhs.data_type(), rhs.data_type())
+        {
+            (
+                temporal_conversions::timeunit_scale(*timeunit_a, *timeunit_b),
+                timeunit_a,
+            )
+        } else {
+            return Err(ArrowError::InvalidArgumentError(
+                "sub_timestamps_scalar requires both arguments to be timestamps without timezone"
+                    .to_string(),
+            ));
+        };
+
+    let rhs = if let Some(value) = rhs.value() {
+        value
+    } else {
+        return Ok(PrimitiveArray::<i64>::new_null(
+            lhs.data_type().clone(),
+            lhs.len(),
+        ));
+    };
+
+    let op = move |a| a - (rhs as f64 * scale) as i64;
+
+    Ok(unary(lhs, op, DataType::Duration(*timeunit_a)))
 }
 
 /// Adds an interval to a [`DataType::Timestamp`].
