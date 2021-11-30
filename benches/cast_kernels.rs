@@ -171,6 +171,10 @@ fn add_benchmark(c: &mut Criterion) {
     c.bench_function("cast utf8 to date64 512", |b| {
         b.iter(|| cast_array(&utf8_date_time_array, DataType::Date64))
     });
+
+    c.bench_function("cast int32 to binary 512", |b| {
+        b.iter(|| cast_array(&i32_array, DataType::Binary))
+    });
 }
 
 criterion_group!(benches, add_benchmark);

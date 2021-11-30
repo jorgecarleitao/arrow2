@@ -7,6 +7,7 @@ use crate::{
     datatypes::{DataType, TimeUnit},
     temporal_conversions::*,
     types::NativeType,
+    util::lexical_to_bytes_mut,
 };
 use crate::{
     error::Result,
@@ -19,9 +20,21 @@ use super::CastOptions;
 pub fn primitive_to_binary<T: NativeType + lexical_core::ToLexical, O: Offset>(
     from: &PrimitiveArray<T>,
 ) -> BinaryArray<O> {
-    let iter = from.iter().map(|x| x.map(|x| lexical_to_bytes(*x)));
-
-    BinaryArray::from_trusted_len_iter(iter)
+    let mut buffer = vec![];
+    let builder = from.iter().fold(
+        MutableBinaryArray::<O>::with_capacity(from.len()),
+        |mut builder, x| {
+            match x {
+                Some(x) => {
+                    lexical_to_bytes_mut(*x, &mut buffer);
+                    builder.push(Some(buffer.as_slice()));
+                }
+                None => builder.push_null(),
+            }
+            builder
+        },
+    );
+    builder.into()
 }
 
 pub(super) fn primitive_to_binary_dyn<T, O>(from: &dyn Array) -> Result<Box<dyn Array>>
@@ -60,9 +73,23 @@ where
 pub fn primitive_to_utf8<T: NativeType + lexical_core::ToLexical, O: Offset>(
     from: &PrimitiveArray<T>,
 ) -> Utf8Array<O> {
-    let iter = from.iter().map(|x| x.map(|x| lexical_to_string(*x)));
-
-    Utf8Array::from_trusted_len_iter(iter)
+    let mut buffer = vec![];
+    let builder = from.iter().fold(
+        MutableUtf8Array::<O>::with_capacity(from.len()),
+        |mut builder, x| {
+            match x {
+                Some(x) => {
+                    lexical_to_bytes_mut(*x, &mut buffer);
+                    builder.push(Some(unsafe {
+                        std::str::from_utf8_unchecked(buffer.as_slice())
+                    }));
+                }
+                None => builder.push_null(),
+            }
+            builder
+        },
+    );
+    builder.into()
 }
 
 pub(super) fn primitive_to_utf8_dyn<T, O>(from: &dyn Array) -> Result<Box<dyn Array>>
