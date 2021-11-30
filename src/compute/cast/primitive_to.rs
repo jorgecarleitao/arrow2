@@ -1,5 +1,6 @@
 use std::hash::Hash;
 
+use crate::error::Result;
 use crate::{
     array::*,
     bitmap::Bitmap,
@@ -8,10 +9,6 @@ use crate::{
     temporal_conversions::*,
     types::NativeType,
     util::lexical_to_bytes_mut,
-};
-use crate::{
-    error::Result,
-    util::{lexical_to_bytes, lexical_to_string},
 };
 
 use super::CastOptions;
