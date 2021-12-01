@@ -121,8 +121,9 @@ impl<T: NativeType> Buffer<T> {
         self.data.ptr()
     }
 
-    /// Returns a offset of this buffer
-    pub(crate) fn offset(&self) -> usize {
+    /// Returns the offset of this buffer.
+    #[inline]
+    pub fn offset(&self) -> usize {
         self.offset
     }
 }
