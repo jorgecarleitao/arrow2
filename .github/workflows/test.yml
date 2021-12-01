@@ -77,6 +77,8 @@ jobs:
           toolchain: nightly-2021-10-24
           override: true
       - uses: Swatinem/rust-cache@v1
+        with:
+          key: random_string
       - name: Install Miri
         run: |
           rustup component add miri
@@ -96,6 +98,8 @@ jobs:
           toolchain: nightly-2021-10-24
           override: true
       - uses: Swatinem/rust-cache@v1
+        with:
+          key: random_string
       - name: Install Miri
         run: |
           rustup component add miri
