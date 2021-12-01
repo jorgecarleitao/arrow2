@@ -3,32 +3,21 @@ use crate::datatypes::DataType;
 use super::Scalar;
 
 /// The [`Scalar`] implementation of a boolean.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BooleanScalar {
-    value: bool,
-    is_valid: bool,
-}
-
-impl PartialEq for BooleanScalar {
-    fn eq(&self, other: &Self) -> bool {
-        self.is_valid == other.is_valid && ((!self.is_valid) | (self.value == other.value))
-    }
+    value: Option<bool>,
 }
 
 impl BooleanScalar {
     /// Returns a new [`BooleanScalar`]
     #[inline]
-    pub fn new(v: Option<bool>) -> Self {
-        let is_valid = v.is_some();
-        Self {
-            value: v.unwrap_or_default(),
-            is_valid,
-        }
+    pub fn new(value: Option<bool>) -> Self {
+        Self { value }
     }
 
-    /// The value irrespectively of the validity
+    /// The value
     #[inline]
-    pub fn value(&self) -> bool {
+    pub fn value(&self) -> Option<bool> {
         self.value
     }
 }
@@ -41,7 +30,7 @@ impl Scalar for BooleanScalar {
 
     #[inline]
     fn is_valid(&self) -> bool {
-        self.is_valid
+        self.value.is_some()
     }
 
     #[inline]
