@@ -105,12 +105,13 @@ impl<O: Offset> MutableBinaryArray<O> {
         }
     }
 
-    /// Reserves `additional` slots.
-    pub fn reserve(&mut self, additional: usize) {
+    /// Reserves `additional` elements and `additional_values` on the values buffer.
+    pub fn reserve(&mut self, additional: usize, additional_values: usize) {
         self.offsets.reserve(additional);
         if let Some(x) = self.validity.as_mut() {
             x.reserve(additional)
         }
+        self.values.reserve(additional_values);
     }
 
     #[inline]
@@ -388,6 +389,29 @@ impl<O: Offset> MutableBinaryArray<O> {
         let (offsets, values) = values_iter(iterator);
         Self::from_data(Self::default_data_type(), offsets, values, None)
     }
+
+    /// Write values directly into the underlying data.
+    /// # Safety
+    /// Caller must ensure that `len <= self.capacity()`
+    #[inline]
+    pub unsafe fn write_values<F>(&mut self, mut f: F)
+    where
+        F: FnMut(&mut [u8]) -> usize,
+    {
+        // ensure values has enough capacity and size to write
+        self.values.set_len(self.values.capacity());
+        let buffer = &mut self.values.as_mut_slice()[self.offsets.last().unwrap().to_usize()..];
+        let len = f(buffer);
+        let new_len = self.offsets.last().unwrap().to_usize() + len;
+        self.values.set_len(new_len);
+
+        let size = O::from_usize(new_len).ok_or(ArrowError::Overflow).unwrap();
+        self.offsets.push(size);
+        match &mut self.validity {
+            Some(validity) => validity.push(true),
+            None => {}
+        }
+    }
 }
 
 impl<O: Offset, T: AsRef<[u8]>> Extend<Option<T>> for MutableBinaryArray<O> {
@@ -399,7 +423,7 @@ impl<O: Offset, T: AsRef<[u8]>> Extend<Option<T>> for MutableBinaryArray<O> {
 impl<O: Offset, T: AsRef<[u8]>> TryExtend<Option<T>> for MutableBinaryArray<O> {
     fn try_extend<I: IntoIterator<Item = Option<T>>>(&mut self, iter: I) -> Result<()> {
         let mut iter = iter.into_iter();
-        self.reserve(iter.size_hint().0);
+        self.reserve(iter.size_hint().0, 0);
         iter.try_for_each(|x| self.try_push(x))
     }
 }
