@@ -78,7 +78,7 @@ jobs:
           override: true
       - uses: Swatinem/rust-cache@v1
         with:
-          key: random_string
+          key: key1
       - name: Install Miri
         run: |
           rustup component add miri
@@ -99,7 +99,7 @@ jobs:
           override: true
       - uses: Swatinem/rust-cache@v1
         with:
-          key: random_string
+          key: key1
       - name: Install Miri
         run: |
           rustup component add miri

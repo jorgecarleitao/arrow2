@@ -8,26 +8,16 @@ use super::Scalar;
 
 /// The implementation of [`Scalar`] for primitive, semantically equivalent to [`Option<T>`]
 /// with [`DataType`].
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PrimitiveScalar<T: NativeType> {
-    // Not Option<T> because this offers a stabler pointer offset on the struct
-    value: T,
-    is_valid: bool,
+    value: Option<T>,
     data_type: DataType,
-}
-
-impl<T: NativeType> PartialEq for PrimitiveScalar<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.data_type == other.data_type
-            && self.is_valid == other.is_valid
-            && ((!self.is_valid) | (self.value == other.value))
-    }
 }
 
 impl<T: NativeType> PrimitiveScalar<T> {
     /// Returns a new [`PrimitiveScalar`].
     #[inline]
-    pub fn new(data_type: DataType, v: Option<T>) -> Self {
+    pub fn new(data_type: DataType, value: Option<T>) -> Self {
         if !T::is_valid(&data_type) {
             Err(ArrowError::InvalidArgumentError(format!(
                 "Type {} does not support logical type {}",
@@ -36,17 +26,12 @@ impl<T: NativeType> PrimitiveScalar<T> {
             )))
             .unwrap()
         }
-        let is_valid = v.is_some();
-        Self {
-            value: v.unwrap_or_default(),
-            is_valid,
-            data_type,
-        }
+        Self { value, data_type }
     }
 
-    /// Returns the value irrespectively of its validity.
+    /// Returns the optional value.
     #[inline]
-    pub fn value(&self) -> T {
+    pub fn value(&self) -> Option<T> {
         self.value
     }
 
@@ -54,12 +39,7 @@ impl<T: NativeType> PrimitiveScalar<T> {
     /// # Panic
     /// This function panics if the `data_type` is not valid for self's physical type `T`.
     pub fn to(self, data_type: DataType) -> Self {
-        let v = if self.is_valid {
-            Some(self.value)
-        } else {
-            None
-        };
-        Self::new(data_type, v)
+        Self::new(data_type, self.value)
     }
 }
 
@@ -78,7 +58,7 @@ impl<T: NativeType> Scalar for PrimitiveScalar<T> {
 
     #[inline]
     fn is_valid(&self) -> bool {
-        self.is_valid
+        self.value.is_some()
     }
 
     #[inline]
