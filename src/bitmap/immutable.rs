@@ -238,6 +238,12 @@ impl Bitmap {
 
 impl Bitmap {
     /// Returns the byte slice of this Bitmap.
+    ///
+    /// The returned tuple contains:
+    /// .1 -> The byte slice, truncated to the start of the first bit. So the start of the slice
+    ///       is within the first 8 bits.
+    /// .2 -> The start offset in bits, given what described above `0 <= offsets < 8`.
+    /// .3 -> The length in bits.
     #[inline]
     pub fn as_slice(&self) -> (&[u8], usize, usize) {
         let start = self.offset / 8;
