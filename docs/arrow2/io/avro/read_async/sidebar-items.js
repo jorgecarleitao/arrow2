@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["read_metadata_async","Reads Avro’s metadata from `reader` into a [`Schema`], [`Compression`] and magic marker."]]});
