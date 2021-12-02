@@ -111,8 +111,10 @@ pub fn build_filter(filter: &BooleanArray) -> Result<Filter> {
 }
 
 /// Filters an [Array], returning elements matching the filter (i.e. where the values are true).
-/// WARNING: the nulls of `filter` are ignored and the value on its slot is considered.
-/// Therefore, it is considered undefined behavior to pass `filter` with null values.
+///
+/// Note that the nulls of `filter` are interpreted as `false` will lead to these elements being
+/// masked out.
+///
 /// # Example
 /// ```rust
 /// # use arrow2::array::{Int32Array, PrimitiveArray, BooleanArray};
