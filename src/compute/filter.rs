@@ -1,6 +1,7 @@
 //! Contains operators to filter arrays such as [`filter`].
 use crate::array::growable::{make_growable, Growable};
 use crate::bitmap::{utils::SlicesIterator, Bitmap, MutableBitmap};
+use crate::datatypes::DataType;
 use crate::record_batch::RecordBatch;
 use crate::{array::*, types::NativeType};
 use crate::{buffer::MutableBuffer, error::Result};
@@ -127,6 +128,15 @@ pub fn build_filter(filter: &BooleanArray) -> Result<Filter> {
 /// # }
 /// ```
 pub fn filter(array: &dyn Array, filter: &BooleanArray) -> Result<Box<dyn Array>> {
+    // The validities may be masking out `true` bits, making the filter operation
+    // based on the values incorrect
+    if let Some(validities) = filter.validity() {
+        let values = filter.values();
+        let new_values = values & validities;
+        let filter = BooleanArray::from_data(DataType::Boolean, new_values, None);
+        return crate::compute::filter::filter(array, &filter);
+    }
+
     use crate::datatypes::PhysicalType::*;
     match array.data_type().to_physical_type() {
         Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {

@@ -1,4 +1,5 @@
 use arrow2::array::*;
+use arrow2::bitmap::Bitmap;
 use arrow2::compute::filter::*;
 
 #[test]
@@ -110,6 +111,21 @@ fn binary_array_with_null() {
     assert_eq!(b"hello", d.value(0));
     assert!(!d.is_null(0));
     assert!(d.is_null(1));
+}
+
+#[test]
+fn masked_true_values() {
+    let a = Int32Array::from_slice(&[1, 2, 3]);
+    let b = BooleanArray::from_slice(&[true, false, true]);
+    let validity = Bitmap::from(&[true, false, false]);
+
+    let b = b.with_validity(Some(validity));
+
+    let c = filter(&a, &b).unwrap();
+
+    let expected = Int32Array::from_slice(&[1]);
+
+    assert_eq!(expected, c.as_ref());
 }
 
 /*
