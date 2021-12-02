@@ -6,11 +6,12 @@ use crate::{
     buffer::Buffer,
     compute::{
         arithmetics::{ArrayCheckedMul, ArrayMul, ArraySaturatingMul},
-        arity::{binary, binary_checked},
+        arity::{binary, binary_checked, unary},
         utils::{check_same_len, combine_validities},
     },
     datatypes::DataType,
     error::{ArrowError, Result},
+    scalar::{PrimitiveScalar, Scalar},
 };
 
 use super::{adjusted_precision_scale, get_parameters, max_value, number_digits};
@@ -66,6 +67,52 @@ pub fn mul(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> PrimitiveA
     };
 
     binary(lhs, rhs, lhs.data_type().clone(), op)
+}
+
+/// Multiply a decimal [`PrimitiveArray`] with a [`PrimitiveScalar`] with the same precision and scale. If
+/// the precision and scale is different, then an InvalidArgumentError is
+/// returned. This function panics if the multiplied numbers result in a number
+/// larger than the possible number for the selected precision.
+pub fn mul_scalar(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveScalar<i128>) -> PrimitiveArray<i128> {
+    let (precision, scale) = get_parameters(lhs.data_type(), rhs.data_type()).unwrap();
+
+    let rhs = if let Some(rhs) = rhs.value() {
+        rhs
+    } else {
+        return PrimitiveArray::<i128>::new_null(lhs.data_type().clone(), lhs.len());
+    };
+
+    let scale = 10i128.pow(scale as u32);
+    let max = max_value(precision);
+
+    let op = move |a: i128| {
+        // The multiplication between i128 can overflow if they are
+        // very large numbers. For that reason a checked
+        // multiplication is used.
+        let res: i128 = a
+            .checked_mul(rhs)
+            .expect("Mayor overflow for multiplication");
+
+        // The multiplication is done using the numbers without scale.
+        // The resulting scale of the value has to be corrected by
+        // dividing by (10^scale)
+
+        //   111.111 -->      111111
+        //   222.222 -->      222222
+        // --------          -------
+        // 24691.308 <-- 24691308642
+        let res = res / scale;
+
+        assert!(
+            res.abs() <= max,
+            "Overflow in multiplication presented for precision {}",
+            precision
+        );
+
+        res
+    };
+
+    unary(lhs, op, lhs.data_type().clone())
 }
 
 /// Saturated multiplication of two decimal primitive arrays with the same

@@ -20,6 +20,7 @@ use crate::{
     array::Array,
     bitmap::Bitmap,
     datatypes::{DataType, IntervalUnit, TimeUnit},
+    scalar::Scalar,
     types::NativeType,
 };
 
@@ -117,6 +118,22 @@ pub fn add(lhs: &dyn Array, rhs: &dyn Array) -> Box<dyn Array> {
     )
 }
 
+/// Adds an [`Array`] and a [`Scalar`].
+/// # Panic
+/// This function panics iff
+/// * the opertion is not supported for the logical types (use [`can_add`] to check)
+/// * the arrays have a different length
+/// * one of the arrays is a timestamp with timezone and the timezone is not valid.
+pub fn add_scalar(lhs: &dyn Array, rhs: &dyn Scalar) -> Box<dyn Array> {
+    arith!(
+        lhs,
+        rhs,
+        add_scalar,
+        duration = add_duration_scalar,
+        interval = add_interval_scalar
+    )
+}
+
 /// Returns whether two [`DataType`]s can be added by [`add`].
 pub fn can_add(lhs: &DataType, rhs: &DataType) -> bool {
     use DataType::*;
@@ -162,6 +179,22 @@ pub fn sub(lhs: &dyn Array, rhs: &dyn Array) -> Box<dyn Array> {
     )
 }
 
+/// Adds an [`Array`] and a [`Scalar`].
+/// # Panic
+/// This function panics iff
+/// * the opertion is not supported for the logical types (use [`can_sub`] to check)
+/// * the arrays have a different length
+/// * one of the arrays is a timestamp with timezone and the timezone is not valid.
+pub fn sub_scalar(lhs: &dyn Array, rhs: &dyn Scalar) -> Box<dyn Array> {
+    arith!(
+        lhs,
+        rhs,
+        sub_scalar,
+        duration = sub_duration_scalar,
+        timestamp = sub_timestamps_scalar
+    )
+}
+
 /// Returns whether two [`DataType`]s can be subtracted by [`sub`].
 pub fn can_sub(lhs: &DataType, rhs: &DataType) -> bool {
     use DataType::*;
@@ -199,6 +232,14 @@ pub fn mul(lhs: &dyn Array, rhs: &dyn Array) -> Box<dyn Array> {
     arith!(lhs, rhs, mul, decimal = mul)
 }
 
+/// Multiply an [`Array`] with a [`Scalar`].
+/// # Panic
+/// This function panics iff
+/// * the opertion is not supported for the logical types (use [`can_mul`] to check)
+pub fn mul_scalar(lhs: &dyn Array, rhs: &dyn Scalar) -> Box<dyn Array> {
+    arith!(lhs, rhs, mul_scalar, decimal = mul_scalar)
+}
+
 /// Returns whether two [`DataType`]s can be multiplied by [`mul`].
 pub fn can_mul(lhs: &DataType, rhs: &DataType) -> bool {
     use DataType::*;
@@ -225,6 +266,14 @@ pub fn can_mul(lhs: &DataType, rhs: &DataType) -> bool {
 /// * the arrays have a different length
 pub fn div(lhs: &dyn Array, rhs: &dyn Array) -> Box<dyn Array> {
     arith!(lhs, rhs, div, decimal = div)
+}
+
+/// Divide an [`Array`] with a [`Scalar`].
+/// # Panic
+/// This function panics iff
+/// * the opertion is not supported for the logical types (use [`can_div`] to check)
+pub fn div_scalar(lhs: &dyn Array, rhs: &dyn Scalar) -> Box<dyn Array> {
+    arith!(lhs, rhs, div_scalar, decimal = div_scalar)
 }
 
 /// Returns whether two [`DataType`]s can be divided by [`div`].

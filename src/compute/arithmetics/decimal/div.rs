@@ -6,11 +6,12 @@ use crate::{
     buffer::Buffer,
     compute::{
         arithmetics::{ArrayCheckedDiv, ArrayDiv},
-        arity::{binary, binary_checked},
+        arity::{binary, binary_checked, unary},
         utils::{check_same_len, combine_validities},
     },
     datatypes::DataType,
     error::{ArrowError, Result},
+    scalar::{PrimitiveScalar, Scalar},
 };
 
 use super::{adjusted_precision_scale, get_parameters, max_value, number_digits};
@@ -65,6 +66,49 @@ pub fn div(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> PrimitiveA
     };
 
     binary(lhs, rhs, lhs.data_type().clone(), op)
+}
+
+/// Multiply a decimal [`PrimitiveArray`] with a [`PrimitiveScalar`] with the same precision and scale. If
+/// the precision and scale is different, then an InvalidArgumentError is
+/// returned. This function panics if the multiplied numbers result in a number
+/// larger than the possible number for the selected precision.
+pub fn div_scalar(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveScalar<i128>) -> PrimitiveArray<i128> {
+    let (precision, scale) = get_parameters(lhs.data_type(), rhs.data_type()).unwrap();
+
+    let rhs = if let Some(rhs) = rhs.value() {
+        rhs
+    } else {
+        return PrimitiveArray::<i128>::new_null(lhs.data_type().clone(), lhs.len());
+    };
+
+    let scale = 10i128.pow(scale as u32);
+    let max = max_value(precision);
+
+    let op = move |a: i128| {
+        // The division is done using the numbers without scale.
+        // The dividend is scaled up to maintain precision after the
+        // division
+
+        //   222.222 -->  222222000
+        //   123.456 -->     123456
+        // --------       ---------
+        //     1.800 <--       1800
+        let numeral: i128 = a * scale;
+
+        // The division can overflow if the dividend is divided
+        // by zero.
+        let res: i128 = numeral.checked_div(rhs).expect("Found division by zero");
+
+        assert!(
+            res.abs() <= max,
+            "Overflow in multiplication presented for precision {}",
+            precision
+        );
+
+        res
+    };
+
+    unary(lhs, op, lhs.data_type().clone())
 }
 
 /// Saturated division of two decimal primitive arrays with the same
