@@ -201,21 +201,31 @@ impl<O: Offset> MutableArray for MutableUtf8Array<O> {
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        Box::new(Utf8Array::from_data(
-            Self::default_data_type(),
-            std::mem::take(&mut self.offsets).into(),
-            std::mem::take(&mut self.values).into(),
-            std::mem::take(&mut self.validity).map(|x| x.into()),
-        ))
+        // Safety:
+        // `MutableUtf8Array` has the same invariants as `Utf8Array` and thus
+        // `Utf8Array` can be safely created from `MutableUtf8Array` without checks.
+        Box::new(unsafe {
+            Utf8Array::from_data_unchecked(
+                self.data_type.clone(),
+                std::mem::take(&mut self.offsets).into(),
+                std::mem::take(&mut self.values).into(),
+                std::mem::take(&mut self.validity).map(|x| x.into()),
+            )
+        })
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
-        Arc::new(Utf8Array::from_data(
-            Self::default_data_type(),
-            std::mem::take(&mut self.offsets).into(),
-            std::mem::take(&mut self.values).into(),
-            std::mem::take(&mut self.validity).map(|x| x.into()),
-        ))
+        // Safety:
+        // `MutableUtf8Array` has the same invariants as `Utf8Array` and thus
+        // `Utf8Array` can be safely created from `MutableUtf8Array` without checks.
+        Arc::new(unsafe {
+            Utf8Array::from_data_unchecked(
+                self.data_type.clone(),
+                std::mem::take(&mut self.offsets).into(),
+                std::mem::take(&mut self.values).into(),
+                std::mem::take(&mut self.validity).map(|x| x.into()),
+            )
+        })
     }
 
     fn data_type(&self) -> &DataType {
@@ -359,7 +369,7 @@ impl<O: Offset> MutableUtf8Array<O> {
         Self::from_data_unchecked(Self::default_data_type(), offsets, values, None)
     }
 
-    /// Creates a new [`Utf8Array`] from a [`TrustedLen`] of `&str`.
+    /// Creates a new [`MutableUtf8Array`] from a [`TrustedLen`] of `&str`.
     #[inline]
     pub fn from_trusted_len_values_iter<T: AsRef<str>, I: TrustedLen<Item = T>>(
         iterator: I,
