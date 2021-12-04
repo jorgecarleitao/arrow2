@@ -20,6 +20,12 @@ use crate::{
 
 use super::utils::RFC3339;
 
+#[inline]
+fn to_utf8(bytes: &[u8]) -> Option<&str> {
+    simdutf8::basic::from_utf8(bytes).ok()
+}
+
+#[inline]
 fn deserialize_primitive<T, B: ByteRecordGeneric, F>(
     rows: &[B],
     column: usize,
@@ -86,6 +92,7 @@ fn deserialize_decimal(bytes: &[u8], precision: usize, scale: usize) -> Option<i
     }
 }
 
+#[inline]
 fn deserialize_boolean<B, F>(rows: &[B], column: usize, op: F) -> Arc<dyn Array>
 where
     B: ByteRecordGeneric,
@@ -103,14 +110,16 @@ where
     Arc::new(BooleanArray::from_trusted_len_iter(iter))
 }
 
+#[inline]
 fn deserialize_utf8<O: Offset, B: ByteRecordGeneric>(rows: &[B], column: usize) -> Arc<dyn Array> {
     let iter = rows.iter().map(|row| match row.get(column) {
-        Some(bytes) => simdutf8::basic::from_utf8(bytes).ok(),
+        Some(bytes) => to_utf8(bytes),
         None => None,
     });
     Arc::new(Utf8Array::<O>::from_trusted_len_iter(iter))
 }
 
+#[inline]
 fn deserialize_binary<O: Offset, B: ByteRecordGeneric>(
     rows: &[B],
     column: usize,
@@ -136,6 +145,7 @@ fn deserialize_datetime<T: chrono::TimeZone>(string: &str, tz: &T) -> Option<i64
 }
 
 /// Deserializes `column` of `rows` into an [`Array`] of [`DataType`] `datatype`.
+#[inline]
 pub(crate) fn deserialize_column<B: ByteRecordGeneric>(
     rows: &[B],
     column: usize,
@@ -184,36 +194,31 @@ pub(crate) fn deserialize_column<B: ByteRecordGeneric>(
             lexical_core::parse::<f64>(bytes).ok()
         }),
         Date32 => deserialize_primitive(rows, column, datatype, |bytes| {
-            simdutf8::basic::from_utf8(bytes)
-                .ok()
+            to_utf8(bytes)
                 .and_then(|x| x.parse::<chrono::NaiveDate>().ok())
                 .map(|x| x.num_days_from_ce() - temporal_conversions::EPOCH_DAYS_FROM_CE)
         }),
         Date64 => deserialize_primitive(rows, column, datatype, |bytes| {
-            simdutf8::basic::from_utf8(bytes)
-                .ok()
+            to_utf8(bytes)
                 .and_then(|x| x.parse::<chrono::NaiveDateTime>().ok())
                 .map(|x| x.timestamp_millis())
         }),
         Timestamp(TimeUnit::Nanosecond, None) => {
             deserialize_primitive(rows, column, datatype, |bytes| {
-                simdutf8::basic::from_utf8(bytes)
-                    .ok()
+                to_utf8(bytes)
                     .and_then(|x| x.parse::<chrono::NaiveDateTime>().ok())
                     .map(|x| x.timestamp_nanos())
             })
         }
         Timestamp(TimeUnit::Microsecond, None) => {
             deserialize_primitive(rows, column, datatype, |bytes| {
-                simdutf8::basic::from_utf8(bytes)
-                    .ok()
+                to_utf8(bytes)
                     .and_then(|x| x.parse::<chrono::NaiveDateTime>().ok())
                     .map(|x| x.timestamp_nanos() / 1000)
             })
         }
         Timestamp(time_unit, None) => deserialize_primitive(rows, column, datatype, |bytes| {
-            simdutf8::basic::from_utf8(bytes)
-                .ok()
+            to_utf8(bytes)
                 .and_then(|x| x.parse::<chrono::NaiveDateTime>().ok())
                 .map(|x| x.timestamp_nanos())
                 .map(|x| match time_unit {
@@ -226,8 +231,7 @@ pub(crate) fn deserialize_column<B: ByteRecordGeneric>(
         Timestamp(time_unit, Some(ref tz)) => {
             let tz = temporal_conversions::parse_offset(tz)?;
             deserialize_primitive(rows, column, datatype, |bytes| {
-                simdutf8::basic::from_utf8(bytes)
-                    .ok()
+                to_utf8(bytes)
                     .and_then(|x| deserialize_datetime(x, &tz))
                     .map(|x| match time_unit {
                         TimeUnit::Second => x / 1_000_000_000,

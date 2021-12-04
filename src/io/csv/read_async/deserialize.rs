@@ -15,6 +15,7 @@ use super::super::read_utils::{
 };
 
 impl ByteRecordGeneric for ByteRecord {
+    #[inline]
     fn get(&self, index: usize) -> Option<&[u8]> {
         self.get(index)
     }
