@@ -107,9 +107,9 @@ fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
     let file_path = &args[1];
 
+    let start = SystemTime::now();
     let batch = parallel_read(file_path, 0)?;
-    for array in batch.columns() {
-        println!("{}", array)
-    }
+    assert!(batch.num_rows() > 0);
+    println!("took: {} ms", start.elapsed().unwrap().as_millis());
     Ok(())
 }
