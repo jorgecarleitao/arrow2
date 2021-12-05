@@ -1,43 +1,32 @@
-use crate::{array::*, buffer::Buffer, datatypes::DataType};
+use crate::{array::*, datatypes::DataType};
 
 use super::Scalar;
 
-/// The [`Scalar`] implementation of binary (`Vec<u8>`).
-#[derive(Debug, Clone)]
+/// The [`Scalar`] implementation of binary ([`Option<Vec<u8>>`]).
+#[derive(Debug, Clone, PartialEq)]
 pub struct BinaryScalar<O: Offset> {
-    value: Buffer<u8>,
-    is_valid: bool,
+    value: Option<Vec<u8>>,
     phantom: std::marker::PhantomData<O>,
-}
-
-impl<O: Offset> PartialEq for BinaryScalar<O> {
-    fn eq(&self, other: &Self) -> bool {
-        self.is_valid == other.is_valid && ((!self.is_valid) | (self.value == other.value))
-    }
 }
 
 impl<O: Offset> BinaryScalar<O> {
     /// Returns a new [`BinaryScalar`].
     #[inline]
-    pub fn new<P: AsRef<[u8]>>(v: Option<P>) -> Self {
-        let is_valid = v.is_some();
-        O::from_usize(v.as_ref().map(|x| x.as_ref().len()).unwrap_or_default()).expect("Too large");
-        let value = Buffer::from(v.as_ref().map(|x| x.as_ref()).unwrap_or(&[]));
+    pub fn new<P: Into<Vec<u8>>>(value: Option<P>) -> Self {
         Self {
-            value,
-            is_valid,
+            value: value.map(|x| x.into()),
             phantom: std::marker::PhantomData,
         }
     }
 
     /// Its value
     #[inline]
-    pub fn value(&self) -> &[u8] {
-        self.value.as_slice()
+    pub fn value(&self) -> Option<&[u8]> {
+        self.value.as_ref().map(|x| x.as_ref())
     }
 }
 
-impl<O: Offset, P: AsRef<[u8]>> From<Option<P>> for BinaryScalar<O> {
+impl<O: Offset, P: Into<Vec<u8>>> From<Option<P>> for BinaryScalar<O> {
     #[inline]
     fn from(v: Option<P>) -> Self {
         Self::new(v)
@@ -52,7 +41,7 @@ impl<O: Offset> Scalar for BinaryScalar<O> {
 
     #[inline]
     fn is_valid(&self) -> bool {
-        self.is_valid
+        self.value.is_some()
     }
 
     #[inline]

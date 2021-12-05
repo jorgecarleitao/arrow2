@@ -1,44 +1,32 @@
-use crate::{array::*, buffer::Buffer, datatypes::DataType};
+use crate::{array::*, datatypes::DataType};
 
 use super::Scalar;
 
-/// The implementation of [`Scalar`] for utf8, semantically equivalent to [`Option<&str>`].
-#[derive(Debug, Clone)]
+/// The implementation of [`Scalar`] for utf8, semantically equivalent to [`Option<String>`].
+#[derive(Debug, Clone, PartialEq)]
 pub struct Utf8Scalar<O: Offset> {
-    value: Buffer<u8>, // safety: valid utf8
-    is_valid: bool,
+    value: Option<String>,
     phantom: std::marker::PhantomData<O>,
-}
-
-impl<O: Offset> PartialEq for Utf8Scalar<O> {
-    fn eq(&self, other: &Self) -> bool {
-        self.is_valid == other.is_valid && ((!self.is_valid) | (self.value == other.value))
-    }
 }
 
 impl<O: Offset> Utf8Scalar<O> {
     /// Returns a new [`Utf8Scalar`]
     #[inline]
-    pub fn new<P: AsRef<str>>(v: Option<P>) -> Self {
-        let is_valid = v.is_some();
-        O::from_usize(v.as_ref().map(|x| x.as_ref().len()).unwrap_or_default()).expect("Too large");
-        let value = Buffer::from(v.as_ref().map(|x| x.as_ref().as_bytes()).unwrap_or(&[]));
+    pub fn new<P: Into<String>>(value: Option<P>) -> Self {
         Self {
-            value,
-            is_valid,
+            value: value.map(|x| x.into()),
             phantom: std::marker::PhantomData,
         }
     }
 
     /// Returns the value irrespectively of the validity.
     #[inline]
-    pub fn value(&self) -> &str {
-        // Safety: invariant of the struct
-        unsafe { std::str::from_utf8_unchecked(self.value.as_slice()) }
+    pub fn value(&self) -> Option<&str> {
+        self.value.as_ref().map(|x| x.as_ref())
     }
 }
 
-impl<O: Offset, P: AsRef<str>> From<Option<P>> for Utf8Scalar<O> {
+impl<O: Offset, P: Into<String>> From<Option<P>> for Utf8Scalar<O> {
     #[inline]
     fn from(v: Option<P>) -> Self {
         Self::new(v)
@@ -53,7 +41,7 @@ impl<O: Offset> Scalar for Utf8Scalar<O> {
 
     #[inline]
     fn is_valid(&self) -> bool {
-        self.is_valid
+        self.value.is_some()
     }
 
     #[inline]

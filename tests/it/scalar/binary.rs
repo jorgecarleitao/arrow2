@@ -20,7 +20,7 @@ fn equal() {
 fn basics() {
     let a = BinaryScalar::<i32>::from(Some("a"));
 
-    assert_eq!(a.value(), b"a");
+    assert_eq!(a.value(), Some(b"a".as_ref()));
     assert_eq!(a.data_type(), &DataType::Binary);
     assert!(a.is_valid());
 

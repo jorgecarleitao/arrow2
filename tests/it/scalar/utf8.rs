@@ -20,7 +20,7 @@ fn equal() {
 fn basics() {
     let a = Utf8Scalar::<i32>::from(Some("a"));
 
-    assert_eq!(a.value(), "a");
+    assert_eq!(a.value(), Some("a"));
     assert_eq!(a.data_type(), &DataType::Utf8);
     assert!(a.is_valid());
 

@@ -297,12 +297,12 @@ macro_rules! compare_scalar {
             Utf8 => {
                 let lhs = lhs.as_any().downcast_ref().unwrap();
                 let rhs = rhs.as_any().downcast_ref::<Utf8Scalar<i32>>().unwrap();
-                utf8::$op::<i32>(lhs, rhs.value())
+                utf8::$op::<i32>(lhs, rhs.value().unwrap())
             }
             LargeUtf8 => {
                 let lhs = lhs.as_any().downcast_ref().unwrap();
                 let rhs = rhs.as_any().downcast_ref::<Utf8Scalar<i64>>().unwrap();
-                utf8::$op::<i64>(lhs, rhs.value())
+                utf8::$op::<i64>(lhs, rhs.value().unwrap())
             }
             Decimal(_, _) => {
                 let lhs = lhs.as_any().downcast_ref().unwrap();
@@ -315,12 +315,12 @@ macro_rules! compare_scalar {
             Binary => {
                 let lhs = lhs.as_any().downcast_ref().unwrap();
                 let rhs = rhs.as_any().downcast_ref::<BinaryScalar<i32>>().unwrap();
-                binary::$op::<i32>(lhs, rhs.value())
+                binary::$op::<i32>(lhs, rhs.value().unwrap())
             }
             LargeBinary => {
                 let lhs = lhs.as_any().downcast_ref().unwrap();
                 let rhs = rhs.as_any().downcast_ref::<BinaryScalar<i64>>().unwrap();
-                binary::$op::<i64>(lhs, rhs.value())
+                binary::$op::<i64>(lhs, rhs.value().unwrap())
             }
             _ => todo!("Comparisons of {:?} are not yet supported", data_type),
         }
