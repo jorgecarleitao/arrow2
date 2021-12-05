@@ -425,29 +425,6 @@ impl<O: Offset> MutableUtf8Array<O> {
         // soundness: T: AsRef<str>
         unsafe { Self::from_data_unchecked(Self::default_data_type(), offsets, values, None) }
     }
-
-    /// Write values directly into the underlying data.
-    /// # Safety
-    /// Caller must ensure that `len <= self.capacity()`
-    #[inline]
-    pub unsafe fn write_values<F>(&mut self, mut f: F)
-    where
-        F: FnMut(&mut [u8]) -> usize,
-    {
-        // ensure values has enough capacity and size to write
-        self.values.set_len(self.values.capacity());
-        let buffer = &mut self.values.as_mut_slice()[self.offsets.last().unwrap().to_usize()..];
-        let len = f(buffer);
-        let new_len = self.offsets.last().unwrap().to_usize() + len;
-        self.values.set_len(new_len);
-
-        let size = O::from_usize(new_len).ok_or(ArrowError::Overflow).unwrap();
-        self.offsets.push(size);
-        match &mut self.validity {
-            Some(validity) => validity.push(true),
-            None => {}
-        }
-    }
 }
 
 impl<O: Offset, T: AsRef<str>> Extend<Option<T>> for MutableUtf8Array<O> {

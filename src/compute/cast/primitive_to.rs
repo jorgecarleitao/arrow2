@@ -1,5 +1,6 @@
 use std::hash::Hash;
 
+use crate::buffer::MutableBuffer;
 use crate::error::Result;
 use crate::{
     array::*,
@@ -16,20 +17,35 @@ use super::CastOptions;
 pub fn primitive_to_binary<T: NativeType + lexical_core::ToLexical, O: Offset>(
     from: &PrimitiveArray<T>,
 ) -> BinaryArray<O> {
-    let builder = from.iter().fold(
-        MutableBinaryArray::<O>::with_capacity(from.len()),
-        |mut builder, x| {
-            match x {
-                Some(x) => unsafe {
-                    builder.reserve(1, T::FORMATTED_SIZE_DECIMAL);
-                    builder.write_values(|bytes| lexical_core::write(*x, bytes).len());
-                },
-                None => builder.push_null(),
-            }
-            builder
-        },
-    );
-    builder.into()
+    let mut values: MutableBuffer<u8> = MutableBuffer::with_capacity(from.len());
+    let mut offsets: MutableBuffer<O> = MutableBuffer::with_capacity(from.len() + 1);
+    offsets.push(O::default());
+
+    let mut offset: usize = 0;
+
+    unsafe {
+        for x in from.values().iter() {
+            values.reserve(offset + T::FORMATTED_SIZE_DECIMAL);
+
+            let bytes = std::slice::from_raw_parts_mut(
+                values.as_mut_ptr().add(offset),
+                values.capacity() - offset,
+            );
+            let len = lexical_core::write_unchecked(*x, bytes).len();
+
+            offset += len;
+            offsets.push(O::from_isize(offset as isize).unwrap());
+        }
+        values.set_len(offset);
+        values.shrink_to_fit();
+    }
+
+    BinaryArray::<O>::from_data(
+        BinaryArray::<O>::default_data_type(),
+        offsets.into(),
+        values.into(),
+        from.validity().cloned(),
+    )
 }
 
 pub(super) fn primitive_to_binary_dyn<T, O>(from: &dyn Array) -> Result<Box<dyn Array>>
@@ -68,20 +84,35 @@ where
 pub fn primitive_to_utf8<T: NativeType + lexical_core::ToLexical, O: Offset>(
     from: &PrimitiveArray<T>,
 ) -> Utf8Array<O> {
-    let builder = from.iter().fold(
-        MutableUtf8Array::<O>::with_capacity(from.len()),
-        |mut builder, x| {
-            match x {
-                Some(x) => unsafe {
-                    builder.reserve(1, T::FORMATTED_SIZE_DECIMAL);
-                    builder.write_values(|bytes| lexical_core::write(*x, bytes).len());
-                },
-                None => builder.push_null(),
-            }
-            builder
-        },
-    );
-    builder.into()
+    let mut values: MutableBuffer<u8> = MutableBuffer::with_capacity(from.len());
+    let mut offsets: MutableBuffer<O> = MutableBuffer::with_capacity(from.len() + 1);
+    offsets.push(O::default());
+
+    let mut offset: usize = 0;
+
+    unsafe {
+        for x in from.values().iter() {
+            values.reserve(offset + T::FORMATTED_SIZE_DECIMAL);
+
+            let bytes = std::slice::from_raw_parts_mut(
+                values.as_mut_ptr().add(offset),
+                values.capacity() - offset,
+            );
+            let len = lexical_core::write_unchecked(*x, bytes).len();
+
+            offset += len;
+            offsets.push(O::from_isize(offset as isize).unwrap());
+        }
+        values.set_len(offset);
+        values.shrink_to_fit();
+    }
+
+    Utf8Array::<O>::from_data(
+        Utf8Array::<O>::default_data_type(),
+        offsets.into(),
+        values.into(),
+        from.validity().cloned(),
+    )
 }
 
 pub(super) fn primitive_to_utf8_dyn<T, O>(from: &dyn Array) -> Result<Box<dyn Array>>
