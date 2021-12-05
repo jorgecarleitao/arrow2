@@ -1243,6 +1243,7 @@ on the same thread, which may hurt performance if one of them is a bottleneck.</
 <p>For single-threaded reading, buffers used to read and decompress pages can be re-used.
 This create offers an API that encapsulates the above logic:</p>
 <pre><pre class="playground"><code class="language-rust">use std::fs::File;
+use std::time::SystemTime;
 
 use arrow2::error::Result;
 use arrow2::io::parquet::read;
@@ -1256,10 +1257,12 @@ fn main() -&gt; Result&lt;()&gt; {
     let reader = File::open(file_path)?;
     let reader = read::RecordReader::try_new(reader, None, None, None, None)?;
 
+    let start = SystemTime::now();
     for maybe_batch in reader {
         let batch = maybe_batch?;
-        println!(&quot;{:?}&quot;, batch);
+        assert!(batch.num_rows() &gt; 0);
     }
+    println!(&quot;took: {} ms&quot;, start.elapsed().unwrap().as_millis());
     Ok(())
 }
 </code></pre></pre>
@@ -1380,10 +1383,10 @@ fn main() -&gt; Result&lt;()&gt; {
     let args: Vec&lt;String&gt; = env::args().collect();
     let file_path = &amp;args[1];
 
+    let start = SystemTime::now();
     let batch = parallel_read(file_path, 0)?;
-    for array in batch.columns() {
-        println!(&quot;{}&quot;, array)
-    }
+    assert!(batch.num_rows() &gt; 0);
+    println!(&quot;took: {} ms&quot;, start.elapsed().unwrap().as_millis());
     Ok(())
 }
 </code></pre></pre>
