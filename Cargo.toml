@@ -83,8 +83,6 @@ multiversion = { version = "0.6.1", optional = true }
 
 [dev-dependencies]
 criterion = "0.3"
-criterion-macro = "0.3"
-pprof = { version = "0.6.1", features = ["flamegraph", "criterion"] }
 flate2 = "1"
 doc-comment = "0.3"
 crossbeam-channel = "0.5.1"
