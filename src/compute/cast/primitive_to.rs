@@ -38,14 +38,13 @@ pub fn primitive_to_binary<T: NativeType + lexical_core::ToLexical, O: Offset>(
         }
         values.set_len(offset);
         values.shrink_to_fit();
+        BinaryArray::<O>::from_data_unchecked(
+            BinaryArray::<O>::default_data_type(),
+            offsets.into(),
+            values.into(),
+            from.validity().cloned(),
+        )
     }
-
-    BinaryArray::<O>::from_data(
-        BinaryArray::<O>::default_data_type(),
-        offsets.into(),
-        values.into(),
-        from.validity().cloned(),
-    )
 }
 
 pub(super) fn primitive_to_binary_dyn<T, O>(from: &dyn Array) -> Result<Box<dyn Array>>
@@ -105,14 +104,13 @@ pub fn primitive_to_utf8<T: NativeType + lexical_core::ToLexical, O: Offset>(
         }
         values.set_len(offset);
         values.shrink_to_fit();
+        Utf8Array::<O>::from_data_unchecked(
+            Utf8Array::<O>::default_data_type(),
+            offsets.into(),
+            values.into(),
+            from.validity().cloned(),
+        )
     }
-
-    Utf8Array::<O>::from_data(
-        Utf8Array::<O>::default_data_type(),
-        offsets.into(),
-        values.into(),
-        from.validity().cloned(),
-    )
 }
 
 pub(super) fn primitive_to_utf8_dyn<T, O>(from: &dyn Array) -> Result<Box<dyn Array>>

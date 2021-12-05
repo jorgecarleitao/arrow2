@@ -90,7 +90,7 @@ impl<O: Offset> BinaryArray<O> {
     /// * The `data_type`'s physical type is not consistent with the offset `O`.
     /// * The last element of `offsets` is different from `values.len()`.
     /// * The validity is not `None` and its length is different from `offsets.len() - 1`.
-    pub fn from_data_unchecked(
+    pub unsafe fn from_data_unchecked(
         data_type: DataType,
         offsets: Buffer<O>,
         values: Buffer<u8>,

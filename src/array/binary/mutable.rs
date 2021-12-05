@@ -105,13 +105,12 @@ impl<O: Offset> MutableBinaryArray<O> {
         }
     }
 
-    /// Reserves `additional` elements and `additional_values` on the values buffer.
-    pub fn reserve(&mut self, additional: usize, additional_values: usize) {
+    /// Reserves `additional` slots.
+    pub fn reserve(&mut self, additional: usize) {
         self.offsets.reserve(additional);
         if let Some(x) = self.validity.as_mut() {
             x.reserve(additional)
         }
-        self.values.reserve(additional_values);
     }
 
     #[inline]
@@ -400,7 +399,7 @@ impl<O: Offset, T: AsRef<[u8]>> Extend<Option<T>> for MutableBinaryArray<O> {
 impl<O: Offset, T: AsRef<[u8]>> TryExtend<Option<T>> for MutableBinaryArray<O> {
     fn try_extend<I: IntoIterator<Item = Option<T>>>(&mut self, iter: I) -> Result<()> {
         let mut iter = iter.into_iter();
-        self.reserve(iter.size_hint().0, 0);
+        self.reserve(iter.size_hint().0);
         iter.try_for_each(|x| self.try_push(x))
     }
 }
