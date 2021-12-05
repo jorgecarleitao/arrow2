@@ -10,12 +10,12 @@ use crate::{
         arithmetics::{
             ArrayAdd, ArrayCheckedAdd, ArrayOverflowingAdd, ArraySaturatingAdd, ArrayWrappingAdd,
         },
-        arity::{
-            binary, binary_checked, binary_with_bitmap, unary, unary_checked, unary_with_bitmap,
-        },
+        arity::{binary, binary_checked, binary_with_bitmap, unary_checked, unary_with_bitmap},
     },
+    scalar::PrimitiveScalar,
 };
 
+use super::binary_scalar;
 use super::NativeArithmetics;
 
 /// Adds two primitive arrays with the same type.
@@ -186,67 +186,78 @@ where
     }
 }
 
-/// Adds a scalar T to a primitive array of type T.
+/// [`PrimitiveArray`] + [`PrimitiveScalar`]
 /// Panics if the sum of the values overflows.
 ///
 /// # Examples
 /// ```
 /// use arrow2::compute::arithmetics::basic::add_scalar;
 /// use arrow2::array::PrimitiveArray;
+/// use arrow2::array::PrimitiveScalar;
 ///
 /// let a = PrimitiveArray::from([None, Some(6), None, Some(6)]);
-/// let result = add_scalar(&a, &1i32);
+/// let b = PrimitiveScalar::from(Some(6));
+/// let result = add_scalar(&a, &b);
 /// let expected = PrimitiveArray::from([None, Some(7), None, Some(7)]);
 /// assert_eq!(result, expected)
 /// ```
-pub fn add_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
+pub fn add_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveScalar<T>) -> PrimitiveArray<T>
 where
     T: NativeArithmetics + Add<Output = T>,
 {
-    let rhs = *rhs;
-    unary(lhs, |a| a + rhs, lhs.data_type().clone())
+    binary_scalar(lhs, rhs, |a, b| a + b)
 }
 
-/// Wrapping addition of a scalar T to a [`PrimitiveArray`] of type T.
-/// It do nothing if the result overflows.
+/// Wrapping [`PrimitiveArray`] + [`PrimitiveScalar`]
+/// It does nothing if the result overflows.
 ///
 /// # Examples
 /// ```
 /// use arrow2::compute::arithmetics::basic::wrapping_add_scalar;
 /// use arrow2::array::Int8Array;
+/// use arrow2::scalar::PrimitiveScalar;
 ///
 /// let a = Int8Array::from(&[None, Some(100)]);
-/// let result = wrapping_add_scalar(&a, &100i8);
+/// let b = PrimitiveScalar::from(Some(100i8));
+/// let result = wrapping_add_scalar(&a, &b);
 /// let expected = Int8Array::from(&[None, Some(-56)]);
 /// assert_eq!(result, expected);
 /// ```
-pub fn wrapping_add_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
+pub fn wrapping_add_scalar<T>(
+    lhs: &PrimitiveArray<T>,
+    rhs: &PrimitiveScalar<T>,
+) -> PrimitiveArray<T>
 where
     T: NativeArithmetics + WrappingAdd<Output = T>,
 {
-    unary(lhs, |a| a.wrapping_add(rhs), lhs.data_type().clone())
+    binary_scalar(lhs, rhs, |a, b| a.wrapping_add(&b))
 }
 
-/// Checked addition of a scalar T to a primitive array of type T. If the
-/// result from the sum overflows then the validity index for that value is
-/// changed to None
+/// Checked [`PrimitiveArray`] + [`PrimitiveScalar`]
 ///
 /// # Examples
 /// ```
 /// use arrow2::compute::arithmetics::basic::checked_add_scalar;
 /// use arrow2::array::Int8Array;
+/// use arrow2::scalar::PrimitiveScalar;
 ///
-/// let a = Int8Array::from(&[None, Some(100), None, Some(100)]);
-/// let result = checked_add_scalar(&a, &100i8);
-/// let expected = Int8Array::from(&[None, None, None, None]);
+/// let a = Int8Array::from(&[None, Some(1), Some(100)]);
+/// let b = PrimitiveScalar::from(Some(100i8));
+/// let result = checked_add_scalar(&a, &b);
+/// let expected = Int8Array::from(&[None, Some(101), None]);
 /// assert_eq!(result, expected);
 /// ```
-pub fn checked_add_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
+pub fn checked_add_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveScalar<T>) -> PrimitiveArray<T>
 where
     T: NativeArithmetics + CheckedAdd<Output = T>,
 {
-    let rhs = *rhs;
-    let op = move |a: T| a.checked_add(&rhs);
+    let rhs = if let Some(rhs) = rhs.value() {
+        rhs
+    } else {
+        return PrimitiveArray::<T>::new_null(lhs.data_type().clone(), lhs.len());
+    };
+
+    let op = |a: T| a.checked_add(&rhs);
 
     unary_checked(lhs, op, lhs.data_type().clone())
 }
@@ -265,14 +276,14 @@ where
 /// let expected = PrimitiveArray::from([Some(127)]);
 /// assert_eq!(result, expected);
 /// ```
-pub fn saturating_add_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
+pub fn saturating_add_scalar<T>(
+    lhs: &PrimitiveArray<T>,
+    rhs: &PrimitiveScalar<T>,
+) -> PrimitiveArray<T>
 where
     T: NativeArithmetics + SaturatingAdd<Output = T>,
 {
-    let rhs = *rhs;
-    let op = move |a: T| a.saturating_add(&rhs);
-
-    unary(lhs, op, lhs.data_type().clone())
+    binary_scalar(lhs, rhs, |a, b| a.saturating_add(&b))
 }
 
 /// Overflowing addition of a scalar T to a primitive array of type T. If the
@@ -290,52 +301,63 @@ where
 /// let expected = PrimitiveArray::from([Some(101i8), Some(-56i8)]);
 /// assert_eq!(result, expected);
 /// ```
-pub fn overflowing_add_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> (PrimitiveArray<T>, Bitmap)
+pub fn overflowing_add_scalar<T>(
+    lhs: &PrimitiveArray<T>,
+    rhs: &PrimitiveScalar<T>,
+) -> (PrimitiveArray<T>, Bitmap)
 where
     T: NativeArithmetics + OverflowingAdd<Output = T>,
 {
-    let rhs = *rhs;
-    let op = move |a: T| a.overflowing_add(&rhs);
+    let rhs = if let Some(rhs) = rhs.value() {
+        rhs
+    } else {
+        return (
+            PrimitiveArray::<T>::new_null(lhs.data_type().clone(), lhs.len()),
+            Bitmap::new_zeroed(lhs.len()),
+        );
+    };
+
+    let op = |a: T| a.overflowing_add(&rhs);
 
     unary_with_bitmap(lhs, op, lhs.data_type().clone())
 }
 
 // Implementation of ArrayAdd trait for PrimitiveArrays with a scalar
-impl<T> ArrayAdd<T> for PrimitiveArray<T>
+impl<T> ArrayAdd<PrimitiveScalar<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + Add<Output = T>,
 {
-    fn add(&self, rhs: &T) -> Self {
+    fn add(&self, rhs: &PrimitiveScalar<T>) -> Self {
         add_scalar(self, rhs)
     }
 }
 
 // Implementation of ArrayCheckedAdd trait for PrimitiveArrays with a scalar
-impl<T> ArrayCheckedAdd<T> for PrimitiveArray<T>
+impl<T> ArrayCheckedAdd<PrimitiveScalar<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + CheckedAdd<Output = T> + Zero,
 {
-    fn checked_add(&self, rhs: &T) -> Self {
+    fn checked_add(&self, rhs: &PrimitiveScalar<T>) -> Self {
         checked_add_scalar(self, rhs)
     }
 }
 
 // Implementation of ArraySaturatingAdd trait for PrimitiveArrays with a scalar
-impl<T> ArraySaturatingAdd<T> for PrimitiveArray<T>
+impl<T> ArraySaturatingAdd<PrimitiveScalar<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + SaturatingAdd<Output = T>,
 {
-    fn saturating_add(&self, rhs: &T) -> Self {
+    fn saturating_add(&self, rhs: &PrimitiveScalar<T>) -> Self {
         saturating_add_scalar(self, rhs)
     }
 }
 
 // Implementation of ArraySaturatingAdd trait for PrimitiveArrays with a scalar
-impl<T> ArrayOverflowingAdd<T> for PrimitiveArray<T>
+impl<T> ArrayOverflowingAdd<PrimitiveScalar<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + OverflowingAdd<Output = T>,
 {
-    fn overflowing_add(&self, rhs: &T) -> (Self, Bitmap) {
+    fn overflowing_add(&self, rhs: &PrimitiveScalar<T>) -> (Self, Bitmap) {
         overflowing_add_scalar(self, rhs)
     }
 }

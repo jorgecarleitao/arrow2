@@ -9,6 +9,7 @@ use crate::{
         arithmetics::{ArrayCheckedRem, ArrayRem},
         arity::{binary, binary_checked, unary, unary_checked},
     },
+    scalar::PrimitiveScalar,
 };
 use strength_reduce::{
     StrengthReducedU16, StrengthReducedU32, StrengthReducedU64, StrengthReducedU8,
@@ -92,11 +93,15 @@ where
 /// let expected = Int32Array::from(&[None, Some(0), None, Some(1)]);
 /// assert_eq!(result, expected)
 /// ```
-pub fn rem_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
+pub fn rem_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveScalar<T>) -> PrimitiveArray<T>
 where
     T: NativeArithmetics + Rem<Output = T> + NumCast,
 {
-    let rhs = *rhs;
+    let rhs = if let Some(rhs) = rhs.value() {
+        rhs
+    } else {
+        return PrimitiveArray::<T>::new_null(lhs.data_type().clone(), lhs.len());
+    };
 
     match T::DATA_TYPE {
         DataType::UInt64 => {
@@ -176,30 +181,35 @@ where
 /// let expected = Int8Array::from(&[Some(0i8)]);
 /// assert_eq!(result, expected);
 /// ```
-pub fn checked_rem_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
+pub fn checked_rem_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveScalar<T>) -> PrimitiveArray<T>
 where
     T: NativeArithmetics + CheckedRem<Output = T>,
 {
-    let rhs = *rhs;
+    let rhs = if let Some(rhs) = rhs.value() {
+        rhs
+    } else {
+        return PrimitiveArray::<T>::new_null(lhs.data_type().clone(), lhs.len());
+    };
+
     let op = move |a: T| a.checked_rem(&rhs);
 
     unary_checked(lhs, op, lhs.data_type().clone())
 }
 
-impl<T> ArrayRem<T> for PrimitiveArray<T>
+impl<T> ArrayRem<PrimitiveScalar<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + Rem<Output = T> + NumCast,
 {
-    fn rem(&self, rhs: &T) -> Self {
+    fn rem(&self, rhs: &PrimitiveScalar<T>) -> Self {
         rem_scalar(self, rhs)
     }
 }
 
-impl<T> ArrayCheckedRem<T> for PrimitiveArray<T>
+impl<T> ArrayCheckedRem<PrimitiveScalar<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + CheckedRem<Output = T>,
 {
-    fn checked_rem(&self, rhs: &T) -> Self {
+    fn checked_rem(&self, rhs: &PrimitiveScalar<T>) -> Self {
         checked_rem_scalar(self, rhs)
     }
 }

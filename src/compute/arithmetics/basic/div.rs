@@ -1,7 +1,7 @@
 //! Definition of basic div operations with primitive arrays
 use std::ops::Div;
 
-use num_traits::{CheckedDiv, NumCast, Zero};
+use num_traits::{CheckedDiv, NumCast};
 
 use crate::datatypes::DataType;
 use crate::{
@@ -11,6 +11,7 @@ use crate::{
         arity::{binary, binary_checked, unary, unary_checked},
         utils::check_same_len,
     },
+    scalar::PrimitiveScalar,
 };
 use strength_reduce::{
     StrengthReducedU16, StrengthReducedU32, StrengthReducedU64, StrengthReducedU8,
@@ -106,11 +107,16 @@ where
 /// let expected = Int32Array::from(&[None, Some(3), None, Some(3)]);
 /// assert_eq!(result, expected)
 /// ```
-pub fn div_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
+pub fn div_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveScalar<T>) -> PrimitiveArray<T>
 where
     T: NativeArithmetics + Div<Output = T> + NumCast,
 {
-    let rhs = *rhs;
+    let rhs = if let Some(rhs) = rhs.value() {
+        rhs
+    } else {
+        return PrimitiveArray::<T>::new_null(lhs.data_type().clone(), lhs.len());
+    };
+
     match T::DATA_TYPE {
         DataType::UInt64 => {
             let lhs = lhs.as_any().downcast_ref::<PrimitiveArray<u64>>().unwrap();
@@ -189,32 +195,37 @@ where
 /// let expected = Int8Array::from(&[Some(-1i8)]);
 /// assert_eq!(result, expected);
 /// ```
-pub fn checked_div_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
+pub fn checked_div_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveScalar<T>) -> PrimitiveArray<T>
 where
-    T: NativeArithmetics + CheckedDiv<Output = T> + Zero,
+    T: NativeArithmetics + CheckedDiv<Output = T>,
 {
-    let rhs = *rhs;
-    let op = move |a: T| a.checked_div(&rhs);
+    let rhs = if let Some(rhs) = rhs.value() {
+        rhs
+    } else {
+        return PrimitiveArray::<T>::new_null(lhs.data_type().clone(), lhs.len());
+    };
+
+    let op = |a: T| a.checked_div(&rhs);
 
     unary_checked(lhs, op, lhs.data_type().clone())
 }
 
 // Implementation of ArrayDiv trait for PrimitiveArrays with a scalar
-impl<T> ArrayDiv<T> for PrimitiveArray<T>
+impl<T> ArrayDiv<PrimitiveScalar<T>> for PrimitiveArray<T>
 where
-    T: NativeArithmetics + Div<Output = T> + NativeArithmetics + NumCast,
+    T: NativeArithmetics + Div<Output = T> + NumCast,
 {
-    fn div(&self, rhs: &T) -> Self {
+    fn div(&self, rhs: &PrimitiveScalar<T>) -> Self {
         div_scalar(self, rhs)
     }
 }
 
 // Implementation of ArrayCheckedDiv trait for PrimitiveArrays with a scalar
-impl<T> ArrayCheckedDiv<T> for PrimitiveArray<T>
+impl<T> ArrayCheckedDiv<PrimitiveScalar<T>> for PrimitiveArray<T>
 where
-    T: NativeArithmetics + CheckedDiv<Output = T> + Zero + NativeArithmetics,
+    T: NativeArithmetics + CheckedDiv<Output = T>,
 {
-    fn checked_div(&self, rhs: &T) -> Self {
+    fn checked_div(&self, rhs: &PrimitiveScalar<T>) -> Self {
         checked_div_scalar(self, rhs)
     }
 }

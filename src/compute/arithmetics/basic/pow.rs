@@ -3,9 +3,11 @@ use num_traits::{checked_pow, CheckedMul, One, Pow, Zero};
 
 use crate::{
     array::{Array, PrimitiveArray},
-    compute::arity::{unary, unary_checked},
+    compute::arity::unary_checked,
+    scalar::PrimitiveScalar,
 };
 
+use super::binary_scalar;
 use super::NativeArithmetics;
 
 /// Raises an array of primitives to the power of exponent. Panics if one of
@@ -14,18 +16,20 @@ use super::NativeArithmetics;
 /// # Examples
 /// ```
 /// use arrow2::compute::arithmetics::basic::powf_scalar;
-/// use arrow2::array::Float32Array;
+/// use arrow2::array::PrimitiveArray;
+/// use arrow2::array::PrimitiveScalar;
 ///
-/// let a = Float32Array::from(&[Some(2f32), None]);
-/// let actual = powf_scalar(&a, 2.0);
+/// let a = PrimitiveArray::<f32>::from(&[Some(2f32), None]);
+/// let b = PrimitiveScalar::<f32>::from(Some(2.0f32));
+/// let actual = powf_scalar(&a, &b);
 /// let expected = Float32Array::from(&[Some(4f32), None]);
 /// assert_eq!(expected, actual);
 /// ```
-pub fn powf_scalar<T>(array: &PrimitiveArray<T>, exponent: T) -> PrimitiveArray<T>
+pub fn powf_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveScalar<T>) -> PrimitiveArray<T>
 where
     T: NativeArithmetics + Pow<T, Output = T>,
 {
-    unary(array, |x| x.pow(exponent), array.data_type().clone())
+    binary_scalar(lhs, rhs, |a, b| a.pow(b))
 }
 
 /// Checked operation of raising an array of primitives to the power of

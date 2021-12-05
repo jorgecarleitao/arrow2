@@ -14,6 +14,7 @@ use crate::{
             binary, binary_checked, binary_with_bitmap, unary, unary_checked, unary_with_bitmap,
         },
     },
+    scalar::PrimitiveScalar,
 };
 
 use super::NativeArithmetics;
@@ -199,11 +200,16 @@ where
 /// let expected = Int32Array::from(&[None, Some(5), None, Some(5)]);
 /// assert_eq!(result, expected)
 /// ```
-pub fn sub_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
+pub fn sub_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveScalar<T>) -> PrimitiveArray<T>
 where
     T: NativeArithmetics + Sub<Output = T>,
 {
-    let rhs = *rhs;
+    let rhs = if let Some(rhs) = rhs.value() {
+        rhs
+    } else {
+        return PrimitiveArray::<T>::new_null(lhs.data_type().clone(), lhs.len());
+    };
+
     unary(lhs, |a| a - rhs, lhs.data_type().clone())
 }
 
@@ -220,11 +226,20 @@ where
 /// let expected = Int8Array::from(&[None, Some(56)]);
 /// assert_eq!(result, expected);
 /// ```
-pub fn wrapping_sub_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
+pub fn wrapping_sub_scalar<T>(
+    lhs: &PrimitiveArray<T>,
+    rhs: &PrimitiveScalar<T>,
+) -> PrimitiveArray<T>
 where
     T: NativeArithmetics + WrappingSub<Output = T>,
 {
-    unary(lhs, |a| a.wrapping_sub(rhs), lhs.data_type().clone())
+    let rhs = if let Some(rhs) = rhs.value() {
+        rhs
+    } else {
+        return PrimitiveArray::<T>::new_null(lhs.data_type().clone(), lhs.len());
+    };
+
+    unary(lhs, |a| a.wrapping_sub(&rhs), lhs.data_type().clone())
 }
 
 /// Checked subtraction of a scalar T to a primitive array of type T. If the
@@ -241,11 +256,16 @@ where
 /// let expected = Int8Array::from(&[None, None, None, None]);
 /// assert_eq!(result, expected);
 /// ```
-pub fn checked_sub_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
+pub fn checked_sub_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveScalar<T>) -> PrimitiveArray<T>
 where
     T: NativeArithmetics + CheckedSub<Output = T>,
 {
-    let rhs = *rhs;
+    let rhs = if let Some(rhs) = rhs.value() {
+        rhs
+    } else {
+        return PrimitiveArray::<T>::new_null(lhs.data_type().clone(), lhs.len());
+    };
+
     let op = move |a: T| a.checked_sub(&rhs);
 
     unary_checked(lhs, op, lhs.data_type().clone())
@@ -265,11 +285,19 @@ where
 /// let expected = Int8Array::from(&[Some(-128i8)]);
 /// assert_eq!(result, expected);
 /// ```
-pub fn saturating_sub_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
+pub fn saturating_sub_scalar<T>(
+    lhs: &PrimitiveArray<T>,
+    rhs: &PrimitiveScalar<T>,
+) -> PrimitiveArray<T>
 where
     T: NativeArithmetics + SaturatingSub<Output = T>,
 {
-    let rhs = *rhs;
+    let rhs = if let Some(rhs) = rhs.value() {
+        rhs
+    } else {
+        return PrimitiveArray::<T>::new_null(lhs.data_type().clone(), lhs.len());
+    };
+
     let op = move |a: T| a.saturating_sub(&rhs);
 
     unary(lhs, op, lhs.data_type().clone())
@@ -290,52 +318,62 @@ where
 /// let expected = Int8Array::from(&[Some(-99i8), Some(56i8)]);
 /// assert_eq!(result, expected);
 /// ```
-pub fn overflowing_sub_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> (PrimitiveArray<T>, Bitmap)
+pub fn overflowing_sub_scalar<T>(
+    lhs: &PrimitiveArray<T>,
+    rhs: &PrimitiveScalar<T>,
+) -> (PrimitiveArray<T>, Bitmap)
 where
     T: NativeArithmetics + OverflowingSub<Output = T>,
 {
-    let rhs = *rhs;
+    let rhs = if let Some(rhs) = rhs.value() {
+        rhs
+    } else {
+        return (
+            PrimitiveArray::<T>::new_null(lhs.data_type().clone(), lhs.len()),
+            Bitmap::new_zeroed(lhs.len()),
+        );
+    };
     let op = move |a: T| a.overflowing_sub(&rhs);
 
     unary_with_bitmap(lhs, op, lhs.data_type().clone())
 }
 
 // Implementation of ArraySub trait for PrimitiveArrays with a scalar
-impl<T> ArraySub<T> for PrimitiveArray<T>
+impl<T> ArraySub<PrimitiveScalar<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + Sub<Output = T>,
 {
-    fn sub(&self, rhs: &T) -> Self {
+    fn sub(&self, rhs: &PrimitiveScalar<T>) -> Self {
         sub_scalar(self, rhs)
     }
 }
 
 // Implementation of ArrayCheckedSub trait for PrimitiveArrays with a scalar
-impl<T> ArrayCheckedSub<T> for PrimitiveArray<T>
+impl<T> ArrayCheckedSub<PrimitiveScalar<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + CheckedSub<Output = T>,
 {
-    fn checked_sub(&self, rhs: &T) -> Self {
+    fn checked_sub(&self, rhs: &PrimitiveScalar<T>) -> Self {
         checked_sub_scalar(self, rhs)
     }
 }
 
 // Implementation of ArraySaturatingSub trait for PrimitiveArrays with a scalar
-impl<T> ArraySaturatingSub<T> for PrimitiveArray<T>
+impl<T> ArraySaturatingSub<PrimitiveScalar<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + SaturatingSub<Output = T>,
 {
-    fn saturating_sub(&self, rhs: &T) -> Self {
+    fn saturating_sub(&self, rhs: &PrimitiveScalar<T>) -> Self {
         saturating_sub_scalar(self, rhs)
     }
 }
 
 // Implementation of ArraySaturatingSub trait for PrimitiveArrays with a scalar
-impl<T> ArrayOverflowingSub<T> for PrimitiveArray<T>
+impl<T> ArrayOverflowingSub<PrimitiveScalar<T>> for PrimitiveArray<T>
 where
     T: NativeArithmetics + OverflowingSub<Output = T>,
 {
-    fn overflowing_sub(&self, rhs: &T) -> (Self, Bitmap) {
+    fn overflowing_sub(&self, rhs: &PrimitiveScalar<T>) -> (Self, Bitmap) {
         overflowing_sub_scalar(self, rhs)
     }
 }
