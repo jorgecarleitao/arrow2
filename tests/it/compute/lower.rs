@@ -17,6 +17,35 @@ fn with_nulls_utf8<O: Offset>() -> Result<()> {
             vec![Some("HELLO"), None, Some("WORLD")],
             vec![Some("hello"), None, Some("world")],
         ),
+        // UTF8 characters
+        (
+            vec![
+                None,
+                Some("السلام عليكم"),
+                Some("Dobrý den"),
+                Some("שָׁלוֹם"),
+                Some("नमस्ते"),
+                Some("こんにちは"),
+                Some("안녕하세요"),
+                Some("你好"),
+                Some("Olá"),
+                Some("Здравствуйте"),
+                Some("Hola"),
+            ],
+            vec![
+                None,
+                Some("السلام عليكم"),
+                Some("dobrý den"),
+                Some("שָׁלוֹם"),
+                Some("नमस्ते"),
+                Some("こんにちは"),
+                Some("안녕하세요"),
+                Some("你好"),
+                Some("olá"),
+                Some("здравствуйте"),
+                Some("hola"),
+            ],
+        ),
     ];
 
     cases
@@ -54,6 +83,33 @@ fn without_nulls_utf8<O: Offset>() -> Result<()> {
         (vec!["Hello", "wOrld"], vec!["hello", "world"]),
         // all input
         (vec!["HELLO", "WORLD"], vec!["hello", "world"]),
+        // UTF8 characters
+        (
+            vec![
+                "السلام عليكم",
+                "Dobrý den",
+                "שָׁלוֹם",
+                "नमस्ते",
+                "こんにちは",
+                "안녕하세요",
+                "你好",
+                "Olá",
+                "Здравствуйте",
+                "Hola",
+            ],
+            vec![
+                "السلام عليكم",
+                "dobrý den",
+                "שָׁלוֹם",
+                "नमस्ते",
+                "こんにちは",
+                "안녕하세요",
+                "你好",
+                "olá",
+                "здравствуйте",
+                "hola",
+            ],
+        ),
     ];
 
     cases
