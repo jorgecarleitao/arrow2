@@ -34,11 +34,6 @@ fn utf8_lower<O: Offset>(array: &Utf8Array<O>) -> Utf8Array<O> {
 /// this function errors when the passed array is not a \[Large\]String array.
 pub fn lower(array: &dyn Array) -> Result<Box<dyn Array>> {
     match array.data_type() {
-        // For binary and large binary, lower is no-op.
-        DataType::Binary | DataType::LargeBinary => unsafe {
-            // Safety: we will use the whole slice directly, so we don't need to check it.
-            Ok(array.slice_unchecked(0, array.len()))
-        },
         DataType::LargeUtf8 => Ok(Box::new(utf8_lower(
             array
                 .as_any()
@@ -72,8 +67,5 @@ pub fn lower(array: &dyn Array) -> Result<Box<dyn Array>> {
 /// assert_eq!(can_lower(&data_type), false);
 /// ```
 pub fn can_lower(data_type: &DataType) -> bool {
-    matches!(
-        data_type,
-        DataType::LargeUtf8 | DataType::Utf8 | DataType::LargeBinary | DataType::Binary
-    )
+    matches!(data_type, DataType::LargeUtf8 | DataType::Utf8)
 }
