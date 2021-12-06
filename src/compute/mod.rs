@@ -58,6 +58,9 @@ pub mod like;
 #[cfg(feature = "compute_limit")]
 #[cfg_attr(docsrs, doc(cfg(feature = "compute_limit")))]
 pub mod limit;
+#[cfg(feature = "compute_lower")]
+#[cfg_attr(docsrs, doc(cfg(feature = "compute_lower")))]
+pub mod lower;
 #[cfg(feature = "compute_merge_sort")]
 #[cfg_attr(docsrs, doc(cfg(feature = "compute_merge_sort")))]
 pub mod merge_sort;

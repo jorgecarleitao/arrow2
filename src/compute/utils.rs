@@ -30,6 +30,14 @@ pub fn unary_utf8_boolean<O: Offset, F: Fn(&str) -> bool>(
     BooleanArray::from_data(DataType::Boolean, values, validity)
 }
 
+/// utf8_apply will apply `Fn(&str) -> String` to every value in Utf8Array.
+pub fn utf8_apply<O: Offset, F: Fn(&str) -> String>(f: F, array: &Utf8Array<O>) -> Utf8Array<O> {
+    let iter = array.values_iter().map(f);
+
+    let new = Utf8Array::<O>::from_trusted_len_values_iter(iter);
+    new.with_validity(array.validity().cloned())
+}
+
 // Errors iff the two arrays have a different length.
 #[inline]
 pub fn check_same_len(lhs: &dyn Array, rhs: &dyn Array) -> Result<()> {
