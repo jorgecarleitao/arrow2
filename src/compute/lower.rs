@@ -17,30 +17,26 @@
 
 //! Defines kernel to extract a lower case of a \[Large\]StringArray
 
+use super::utils::utf8_apply;
 use crate::array::*;
 use crate::{
     datatypes::DataType,
     error::{ArrowError, Result},
 };
 
-fn utf8_lower<O: Offset>(array: &Utf8Array<O>) -> Utf8Array<O> {
-    let iter = array.values_iter().map(str::to_lowercase);
-
-    let new = Utf8Array::<O>::from_trusted_len_values_iter(iter);
-    new.with_validity(array.validity().cloned())
-}
-
 /// Returns a new `Array` where each of each of the elements is lower-cased.
 /// this function errors when the passed array is not a \[Large\]String array.
 pub fn lower(array: &dyn Array) -> Result<Box<dyn Array>> {
     match array.data_type() {
-        DataType::LargeUtf8 => Ok(Box::new(utf8_lower(
+        DataType::LargeUtf8 => Ok(Box::new(utf8_apply(
+            str::to_lowercase,
             array
                 .as_any()
                 .downcast_ref::<Utf8Array<i64>>()
                 .expect("A large string is expected"),
         ))),
-        DataType::Utf8 => Ok(Box::new(utf8_lower(
+        DataType::Utf8 => Ok(Box::new(utf8_apply(
+            str::to_lowercase,
             array
                 .as_any()
                 .downcast_ref::<Utf8Array<i32>>()
