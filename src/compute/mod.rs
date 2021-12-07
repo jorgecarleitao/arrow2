@@ -85,6 +85,9 @@ pub mod take;
 #[cfg(feature = "compute_temporal")]
 #[cfg_attr(docsrs, doc(cfg(feature = "compute_temporal")))]
 pub mod temporal;
+#[cfg(feature = "compute_upper")]
+#[cfg_attr(docsrs, doc(cfg(feature = "compute_upper")))]
+pub mod upper;
 mod utils;
 #[cfg(feature = "compute_window")]
 #[cfg_attr(docsrs, doc(cfg(feature = "compute_window")))]

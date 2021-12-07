@@ -44,5 +44,7 @@ mod substring;
 mod take;
 #[cfg(feature = "compute_temporal")]
 mod temporal;
+#[cfg(feature = "compute_upper")]
+mod upper;
 #[cfg(feature = "compute_window")]
 mod window;

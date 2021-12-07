@@ -172,6 +172,7 @@ compute_take = []
 compute_temporal = []
 compute_window = ["compute_concatenate"]
 compute_lower = []
+compute_upper = []
 compute = [
     "compute_aggregate",
     "compute_arithmetics",
@@ -198,6 +199,7 @@ compute = [
     "compute_temporal",
     "compute_window",
     "compute_lower",
+    "compute_upper"
 ]
 # base64 + io_ipc because arrow schemas are stored as base64-encoded ipc format.
 io_parquet = ["parquet2", "io_ipc", "base64", "futures"]
