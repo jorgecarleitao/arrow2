@@ -4,8 +4,9 @@ use num_traits::{checked_pow, CheckedMul, One, Pow, Zero};
 use crate::{
     array::{Array, PrimitiveArray},
     compute::arity::{unary, unary_checked},
-    types::NativeType,
 };
+
+use super::NativeArithmetics;
 
 /// Raises an array of primitives to the power of exponent. Panics if one of
 /// the values values overflows.
@@ -22,7 +23,7 @@ use crate::{
 /// ```
 pub fn powf_scalar<T>(array: &PrimitiveArray<T>, exponent: T) -> PrimitiveArray<T>
 where
-    T: NativeType + Pow<T, Output = T>,
+    T: NativeArithmetics + Pow<T, Output = T>,
 {
     unary(array, |x| x.pow(exponent), array.data_type().clone())
 }
@@ -43,7 +44,7 @@ where
 /// ```
 pub fn checked_powf_scalar<T>(array: &PrimitiveArray<T>, exponent: usize) -> PrimitiveArray<T>
 where
-    T: NativeType + Zero + One + CheckedMul,
+    T: NativeArithmetics + Zero + One + CheckedMul,
 {
     let op = move |a: T| checked_pow(a, exponent);
 

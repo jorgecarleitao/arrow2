@@ -7,15 +7,16 @@ use crate::datatypes::DataType;
 use crate::{
     array::{Array, PrimitiveArray},
     compute::{
-        arithmetics::{ArrayCheckedDiv, ArrayDiv, NativeArithmetics},
+        arithmetics::{ArrayCheckedDiv, ArrayDiv},
         arity::{binary, binary_checked, unary, unary_checked},
         utils::check_same_len,
     },
-    types::NativeType,
 };
 use strength_reduce::{
     StrengthReducedU16, StrengthReducedU32, StrengthReducedU64, StrengthReducedU8,
 };
+
+use super::NativeArithmetics;
 
 /// Divides two primitive arrays with the same type.
 /// Panics if the divisor is zero of one pair of values overflows.
@@ -33,7 +34,7 @@ use strength_reduce::{
 /// ```
 pub fn div<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> PrimitiveArray<T>
 where
-    T: NativeType + Div<Output = T>,
+    T: NativeArithmetics + Div<Output = T>,
 {
     if rhs.null_count() == 0 {
         binary(lhs, rhs, lhs.data_type().clone(), |a, b| a / b)
@@ -107,7 +108,7 @@ where
 /// ```
 pub fn div_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
 where
-    T: NativeType + Div<Output = T> + NumCast,
+    T: NativeArithmetics + Div<Output = T> + NumCast,
 {
     let rhs = *rhs;
     match T::DATA_TYPE {
@@ -190,7 +191,7 @@ where
 /// ```
 pub fn checked_div_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
 where
-    T: NativeType + CheckedDiv<Output = T> + Zero,
+    T: NativeArithmetics + CheckedDiv<Output = T> + Zero,
 {
     let rhs = *rhs;
     let op = move |a: T| a.checked_div(&rhs);
@@ -201,7 +202,7 @@ where
 // Implementation of ArrayDiv trait for PrimitiveArrays with a scalar
 impl<T> ArrayDiv<T> for PrimitiveArray<T>
 where
-    T: NativeType + Div<Output = T> + NativeArithmetics + NumCast,
+    T: NativeArithmetics + Div<Output = T> + NativeArithmetics + NumCast,
 {
     fn div(&self, rhs: &T) -> Self {
         div_scalar(self, rhs)
@@ -211,7 +212,7 @@ where
 // Implementation of ArrayCheckedDiv trait for PrimitiveArrays with a scalar
 impl<T> ArrayCheckedDiv<T> for PrimitiveArray<T>
 where
-    T: NativeType + CheckedDiv<Output = T> + Zero + NativeArithmetics,
+    T: NativeArithmetics + CheckedDiv<Output = T> + Zero + NativeArithmetics,
 {
     fn checked_div(&self, rhs: &T) -> Self {
         checked_div_scalar(self, rhs)
