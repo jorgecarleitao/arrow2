@@ -214,7 +214,7 @@ fn read_plain_optional<O: Offset>(
 
 pub(super) fn read_plain_required<O: Offset>(
     buffer: &[u8],
-    _length: usize,
+    additional: usize,
     offsets: &mut MutableBuffer<O>,
     values: &mut MutableBuffer<u8>,
 ) {
@@ -222,11 +222,15 @@ pub(super) fn read_plain_required<O: Offset>(
 
     let values_iterator = utils::BinaryIter::new(buffer);
 
+    // each value occupies 4 bytes + len declared in 4 bytes => reserve accordingly.
+    values.reserve(buffer.len() - 4 * additional);
+    let a = values.capacity();
     for value in values_iterator {
         last_offset += O::from_usize(value.len()).unwrap();
         values.extend_from_slice(value);
         offsets.push(last_offset);
     }
+    debug_assert_eq!(a, values.capacity());
 }
 
 pub(super) fn extend_from_page<O: Offset>(

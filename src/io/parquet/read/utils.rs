@@ -1,4 +1,6 @@
-use parquet2::encoding::{get_length, Encoding};
+use std::convert::TryInto;
+
+use parquet2::encoding::Encoding;
 use parquet2::metadata::ColumnDescriptor;
 use parquet2::page::{split_buffer as _split_buffer, DataPage, DataPageHeader};
 
@@ -22,7 +24,7 @@ impl<'a> Iterator for BinaryIter<'a> {
         if self.values.is_empty() {
             return None;
         }
-        let length = get_length(self.values) as usize;
+        let length = u32::from_le_bytes(self.values[0..4].try_into().unwrap()) as usize;
         self.values = &self.values[4..];
         let result = &self.values[..length];
         self.values = &self.values[length..];

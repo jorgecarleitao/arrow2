@@ -284,12 +284,22 @@ def case_benches(size):
     return data, schema, f"benches_{size}.parquet"
 
 
+def case_benches_required(size):
+    assert size % 8 == 0
+    data, schema, _ = case_basic_required(1)
+    for k in data:
+        data[k] = data[k][:8] * (size // 8)
+    return data, schema, f"benches_required_{size}.parquet"
+
+
 # for read benchmarks
 for i in range(10, 22, 2):
     # two pages (dict)
     write_pyarrow(case_benches, 2 ** i, 1, True, False, False)
     # single page
     write_pyarrow(case_benches, 2 ** i, 1, False, False, False)
+    # single page required
+    write_pyarrow(case_benches_required, 2 ** i, 1, False, False, False)
     # multiple pages
     write_pyarrow(case_benches, 2 ** i, 1, False, True, False)
     # multiple compressed pages
