@@ -21,7 +21,6 @@ use crate::{
     bitmap::Bitmap,
     datatypes::{DataType, IntervalUnit, TimeUnit},
     scalar::Scalar,
-    types::NativeType,
 };
 
 // Macro to evaluate match branch in arithmetic function.
@@ -421,19 +420,3 @@ pub trait ArrayCheckedRem<Rhs>: Sized {
     /// checked remainder
     fn checked_rem(&self, rhs: &Rhs) -> Self;
 }
-
-/// Trait describing a [`NativeType`] whose semantics of arithmetic in Arrow equals
-/// the semantics in Rust.
-/// A counter example is `i128`, that in arrow represents a decimal while in rust represents
-/// a signed integer.
-pub trait NativeArithmetics: NativeType {}
-impl NativeArithmetics for u8 {}
-impl NativeArithmetics for u16 {}
-impl NativeArithmetics for u32 {}
-impl NativeArithmetics for u64 {}
-impl NativeArithmetics for i8 {}
-impl NativeArithmetics for i16 {}
-impl NativeArithmetics for i32 {}
-impl NativeArithmetics for i64 {}
-impl NativeArithmetics for f32 {}
-impl NativeArithmetics for f64 {}

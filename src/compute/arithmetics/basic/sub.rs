@@ -9,14 +9,14 @@ use crate::{
     compute::{
         arithmetics::{
             ArrayCheckedSub, ArrayOverflowingSub, ArraySaturatingSub, ArraySub, ArrayWrappingSub,
-            NativeArithmetics,
         },
         arity::{
             binary, binary_checked, binary_with_bitmap, unary, unary_checked, unary_with_bitmap,
         },
     },
-    types::NativeType,
 };
+
+use super::NativeArithmetics;
 
 /// Subtracts two primitive arrays with the same type.
 /// Panics if the subtraction of one pair of values overflows.
@@ -34,7 +34,7 @@ use crate::{
 /// ```
 pub fn sub<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> PrimitiveArray<T>
 where
-    T: NativeType + Sub<Output = T>,
+    T: NativeArithmetics + Sub<Output = T>,
 {
     binary(lhs, rhs, lhs.data_type().clone(), |a, b| a - b)
 }
@@ -55,7 +55,7 @@ where
 /// ```
 pub fn wrapping_sub<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> PrimitiveArray<T>
 where
-    T: NativeType + WrappingSub<Output = T>,
+    T: NativeArithmetics + WrappingSub<Output = T>,
 {
     let op = move |a: T, b: T| a.wrapping_sub(&b);
 
@@ -78,7 +78,7 @@ where
 /// ```
 pub fn checked_sub<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> PrimitiveArray<T>
 where
-    T: NativeType + CheckedSub<Output = T>,
+    T: NativeArithmetics + CheckedSub<Output = T>,
 {
     let op = move |a: T, b: T| a.checked_sub(&b);
 
@@ -102,7 +102,7 @@ where
 /// ```
 pub fn saturating_sub<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> PrimitiveArray<T>
 where
-    T: NativeType + SaturatingSub<Output = T>,
+    T: NativeArithmetics + SaturatingSub<Output = T>,
 {
     let op = move |a: T, b: T| a.saturating_sub(&b);
 
@@ -130,7 +130,7 @@ pub fn overflowing_sub<T>(
     rhs: &PrimitiveArray<T>,
 ) -> (PrimitiveArray<T>, Bitmap)
 where
-    T: NativeType + OverflowingSub<Output = T>,
+    T: NativeArithmetics + OverflowingSub<Output = T>,
 {
     let op = move |a: T, b: T| a.overflowing_sub(&b);
 
@@ -201,7 +201,7 @@ where
 /// ```
 pub fn sub_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
 where
-    T: NativeType + Sub<Output = T>,
+    T: NativeArithmetics + Sub<Output = T>,
 {
     let rhs = *rhs;
     unary(lhs, |a| a - rhs, lhs.data_type().clone())
@@ -222,7 +222,7 @@ where
 /// ```
 pub fn wrapping_sub_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
 where
-    T: NativeType + WrappingSub<Output = T>,
+    T: NativeArithmetics + WrappingSub<Output = T>,
 {
     unary(lhs, |a| a.wrapping_sub(rhs), lhs.data_type().clone())
 }
@@ -243,7 +243,7 @@ where
 /// ```
 pub fn checked_sub_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
 where
-    T: NativeType + CheckedSub<Output = T>,
+    T: NativeArithmetics + CheckedSub<Output = T>,
 {
     let rhs = *rhs;
     let op = move |a: T| a.checked_sub(&rhs);
@@ -267,7 +267,7 @@ where
 /// ```
 pub fn saturating_sub_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
 where
-    T: NativeType + SaturatingSub<Output = T>,
+    T: NativeArithmetics + SaturatingSub<Output = T>,
 {
     let rhs = *rhs;
     let op = move |a: T| a.saturating_sub(&rhs);
@@ -292,7 +292,7 @@ where
 /// ```
 pub fn overflowing_sub_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> (PrimitiveArray<T>, Bitmap)
 where
-    T: NativeType + OverflowingSub<Output = T>,
+    T: NativeArithmetics + OverflowingSub<Output = T>,
 {
     let rhs = *rhs;
     let op = move |a: T| a.overflowing_sub(&rhs);

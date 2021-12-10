@@ -9,14 +9,14 @@ use crate::{
     compute::{
         arithmetics::{
             ArrayAdd, ArrayCheckedAdd, ArrayOverflowingAdd, ArraySaturatingAdd, ArrayWrappingAdd,
-            NativeArithmetics,
         },
         arity::{
             binary, binary_checked, binary_with_bitmap, unary, unary_checked, unary_with_bitmap,
         },
     },
-    types::NativeType,
 };
+
+use super::NativeArithmetics;
 
 /// Adds two primitive arrays with the same type.
 /// Panics if the sum of one pair of values overflows.
@@ -34,7 +34,7 @@ use crate::{
 /// ```
 pub fn add<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> PrimitiveArray<T>
 where
-    T: NativeType + Add<Output = T>,
+    T: NativeArithmetics + Add<Output = T>,
 {
     binary(lhs, rhs, lhs.data_type().clone(), |a, b| a + b)
 }
@@ -55,7 +55,7 @@ where
 /// ```
 pub fn wrapping_add<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> PrimitiveArray<T>
 where
-    T: NativeType + WrappingAdd<Output = T>,
+    T: NativeArithmetics + WrappingAdd<Output = T>,
 {
     let op = move |a: T, b: T| a.wrapping_add(&b);
 
@@ -78,7 +78,7 @@ where
 /// ```
 pub fn checked_add<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> PrimitiveArray<T>
 where
-    T: NativeType + CheckedAdd<Output = T>,
+    T: NativeArithmetics + CheckedAdd<Output = T>,
 {
     let op = move |a: T, b: T| a.checked_add(&b);
 
@@ -102,7 +102,7 @@ where
 /// ```
 pub fn saturating_add<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> PrimitiveArray<T>
 where
-    T: NativeType + SaturatingAdd<Output = T>,
+    T: NativeArithmetics + SaturatingAdd<Output = T>,
 {
     let op = move |a: T, b: T| a.saturating_add(&b);
 
@@ -130,7 +130,7 @@ pub fn overflowing_add<T>(
     rhs: &PrimitiveArray<T>,
 ) -> (PrimitiveArray<T>, Bitmap)
 where
-    T: NativeType + OverflowingAdd<Output = T>,
+    T: NativeArithmetics + OverflowingAdd<Output = T>,
 {
     let op = move |a: T, b: T| a.overflowing_add(&b);
 
@@ -201,7 +201,7 @@ where
 /// ```
 pub fn add_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
 where
-    T: NativeType + Add<Output = T>,
+    T: NativeArithmetics + Add<Output = T>,
 {
     let rhs = *rhs;
     unary(lhs, |a| a + rhs, lhs.data_type().clone())
@@ -222,7 +222,7 @@ where
 /// ```
 pub fn wrapping_add_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
 where
-    T: NativeType + WrappingAdd<Output = T>,
+    T: NativeArithmetics + WrappingAdd<Output = T>,
 {
     unary(lhs, |a| a.wrapping_add(rhs), lhs.data_type().clone())
 }
@@ -243,7 +243,7 @@ where
 /// ```
 pub fn checked_add_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
 where
-    T: NativeType + CheckedAdd<Output = T>,
+    T: NativeArithmetics + CheckedAdd<Output = T>,
 {
     let rhs = *rhs;
     let op = move |a: T| a.checked_add(&rhs);
@@ -267,7 +267,7 @@ where
 /// ```
 pub fn saturating_add_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
 where
-    T: NativeType + SaturatingAdd<Output = T>,
+    T: NativeArithmetics + SaturatingAdd<Output = T>,
 {
     let rhs = *rhs;
     let op = move |a: T| a.saturating_add(&rhs);
@@ -292,7 +292,7 @@ where
 /// ```
 pub fn overflowing_add_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> (PrimitiveArray<T>, Bitmap)
 where
-    T: NativeType + OverflowingAdd<Output = T>,
+    T: NativeArithmetics + OverflowingAdd<Output = T>,
 {
     let rhs = *rhs;
     let op = move |a: T| a.overflowing_add(&rhs);

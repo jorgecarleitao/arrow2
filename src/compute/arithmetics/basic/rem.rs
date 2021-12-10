@@ -6,14 +6,15 @@ use crate::datatypes::DataType;
 use crate::{
     array::{Array, PrimitiveArray},
     compute::{
-        arithmetics::{ArrayCheckedRem, ArrayRem, NativeArithmetics},
+        arithmetics::{ArrayCheckedRem, ArrayRem},
         arity::{binary, binary_checked, unary, unary_checked},
     },
-    types::NativeType,
 };
 use strength_reduce::{
     StrengthReducedU16, StrengthReducedU32, StrengthReducedU64, StrengthReducedU8,
 };
+
+use super::NativeArithmetics;
 
 /// Remainder of two primitive arrays with the same type.
 /// Panics if the divisor is zero of one pair of values overflows.
@@ -31,7 +32,7 @@ use strength_reduce::{
 /// ```
 pub fn rem<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> PrimitiveArray<T>
 where
-    T: NativeType + Rem<Output = T>,
+    T: NativeArithmetics + Rem<Output = T>,
 {
     binary(lhs, rhs, lhs.data_type().clone(), |a, b| a % b)
 }
@@ -53,7 +54,7 @@ where
 /// ```
 pub fn checked_rem<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> PrimitiveArray<T>
 where
-    T: NativeType + CheckedRem<Output = T>,
+    T: NativeArithmetics + CheckedRem<Output = T>,
 {
     let op = move |a: T, b: T| a.checked_rem(&b);
 
@@ -93,7 +94,7 @@ where
 /// ```
 pub fn rem_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
 where
-    T: NativeType + Rem<Output = T> + NumCast,
+    T: NativeArithmetics + Rem<Output = T> + NumCast,
 {
     let rhs = *rhs;
 
@@ -177,7 +178,7 @@ where
 /// ```
 pub fn checked_rem_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
 where
-    T: NativeType + CheckedRem<Output = T>,
+    T: NativeArithmetics + CheckedRem<Output = T>,
 {
     let rhs = *rhs;
     let op = move |a: T| a.checked_rem(&rhs);
