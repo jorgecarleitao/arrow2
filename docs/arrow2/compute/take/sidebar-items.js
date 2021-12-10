@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["can_take","Checks if an array of type `datatype` can perform take operation"],["take","Returns a new [`Array`] with only indices at `indices`. Null indices are taken as nulls. The returned array has a length equal to `indices.len()`."]]});
