@@ -1,7 +1,7 @@
 //! Definition of basic div operations with primitive arrays
 use std::ops::Div;
 
-use num_traits::{CheckedDiv, NumCast, Zero};
+use num_traits::{CheckedDiv, NumCast};
 
 use crate::datatypes::DataType;
 use crate::{
@@ -191,7 +191,7 @@ where
 /// ```
 pub fn checked_div_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T) -> PrimitiveArray<T>
 where
-    T: NativeArithmetics + CheckedDiv<Output = T> + Zero,
+    T: NativeArithmetics + CheckedDiv<Output = T>,
 {
     let rhs = *rhs;
     let op = move |a: T| a.checked_div(&rhs);
@@ -202,7 +202,7 @@ where
 // Implementation of ArrayDiv trait for PrimitiveArrays with a scalar
 impl<T> ArrayDiv<T> for PrimitiveArray<T>
 where
-    T: NativeArithmetics + Div<Output = T> + NativeArithmetics + NumCast,
+    T: NativeArithmetics + Div<Output = T> + NumCast,
 {
     fn div(&self, rhs: &T) -> Self {
         div_scalar(self, rhs)
@@ -212,7 +212,7 @@ where
 // Implementation of ArrayCheckedDiv trait for PrimitiveArrays with a scalar
 impl<T> ArrayCheckedDiv<T> for PrimitiveArray<T>
 where
-    T: NativeArithmetics + CheckedDiv<Output = T> + Zero + NativeArithmetics,
+    T: NativeArithmetics + CheckedDiv<Output = T>,
 {
     fn checked_div(&self, rhs: &T) -> Self {
         checked_div_scalar(self, rhs)
