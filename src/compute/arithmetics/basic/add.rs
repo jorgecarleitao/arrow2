@@ -1,7 +1,7 @@
 //! Definition of basic add operations with primitive arrays
 use std::ops::Add;
 
-use num_traits::{ops::overflowing::OverflowingAdd, CheckedAdd, SaturatingAdd, WrappingAdd, Zero};
+use num_traits::{ops::overflowing::OverflowingAdd, CheckedAdd, SaturatingAdd, WrappingAdd};
 
 use crate::{
     array::{Array, PrimitiveArray},
@@ -313,7 +313,7 @@ where
 // Implementation of ArrayCheckedAdd trait for PrimitiveArrays with a scalar
 impl<T> ArrayCheckedAdd<T> for PrimitiveArray<T>
 where
-    T: NativeArithmetics + CheckedAdd<Output = T> + Zero,
+    T: NativeArithmetics + CheckedAdd<Output = T>,
 {
     fn checked_add(&self, rhs: &T) -> Self {
         checked_add_scalar(self, rhs)

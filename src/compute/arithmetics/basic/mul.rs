@@ -304,7 +304,7 @@ where
 // Implementation of ArrayMul trait for PrimitiveArrays with a scalar
 impl<T> ArrayMul<T> for PrimitiveArray<T>
 where
-    T: NativeArithmetics + Mul<Output = T> + NativeArithmetics,
+    T: NativeArithmetics + Mul<Output = T>,
 {
     fn mul(&self, rhs: &T) -> Self {
         mul_scalar(self, rhs)

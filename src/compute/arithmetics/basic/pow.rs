@@ -1,5 +1,5 @@
 //! Definition of basic pow operations with primitive arrays
-use num_traits::{checked_pow, CheckedMul, One, Pow, Zero};
+use num_traits::{checked_pow, CheckedMul, One, Pow};
 
 use crate::{
     array::{Array, PrimitiveArray},
@@ -44,7 +44,7 @@ where
 /// ```
 pub fn checked_powf_scalar<T>(array: &PrimitiveArray<T>, exponent: usize) -> PrimitiveArray<T>
 where
-    T: NativeArithmetics + Zero + One + CheckedMul,
+    T: NativeArithmetics + CheckedMul + One,
 {
     let op = move |a: T| checked_pow(a, exponent);
 
