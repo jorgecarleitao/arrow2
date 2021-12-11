@@ -48,7 +48,7 @@ impl<A: AsRef<dyn Array> + 'static, I: Iterator<Item = Result<Chunk<A>>>> RowGro
     }
 }
 
-impl<A: AsRef<dyn Array> + 'static, I: Iterator<Item = Result<Chunk<A>>>> Iterator
+impl<A: AsRef<dyn Array> + 'static + Send + Sync, I: Iterator<Item = Result<Chunk<A>>>> Iterator
     for RowGroupIterator<A, I>
 {
     type Item = Result<RowGroupIter<'static, ArrowError>>;

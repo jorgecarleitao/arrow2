@@ -1,5 +1,6 @@
 //! Contains `async` APIs to write to parquet.
 use futures::stream::Stream;
+use futures::Future;
 
 use parquet2::write::RowGroupIter;
 use parquet2::{
@@ -15,28 +16,29 @@ use super::schema::schema_to_metadata_key;
 use super::WriteOptions;
 
 /// Writes
-pub async fn write_stream<'a, W, I>(
-    writer: &mut W,
-    row_groups: I,
-    schema: &Schema,
+pub async fn write_stream<'a, 'b, W, S, F>(
+    mut writer: W,
+    row_groups: S,
+    schema: Schema,
     parquet_schema: SchemaDescriptor,
     options: WriteOptions,
     key_value_metadata: Option<Vec<KeyValue>>,
 ) -> Result<u64>
 where
     W: std::io::Write,
-    I: Stream<Item = Result<RowGroupIter<'a, ArrowError>>>,
+    F: Future<Output = std::result::Result<RowGroupIter<'a, ArrowError>, ArrowError>>,
+    S: Stream<Item = F>,
 {
     let key_value_metadata = key_value_metadata
         .map(|mut x| {
-            x.push(schema_to_metadata_key(schema));
+            x.push(schema_to_metadata_key(&schema));
             x
         })
-        .or_else(|| Some(vec![schema_to_metadata_key(schema)]));
+        .or_else(|| Some(vec![schema_to_metadata_key(&schema)]));
 
     let created_by = Some("Arrow2 - Native Rust implementation of Arrow".to_string());
     Ok(parquet_write_stream(
-        writer,
+        &mut writer,
         row_groups,
         parquet_schema,
         options,
@@ -47,9 +49,9 @@ where
 }
 
 /// Async writes
-pub async fn write_stream_stream<'a, W, I>(
+pub async fn write_stream_stream<'a, W, S, F>(
     writer: &mut W,
-    row_groups: I,
+    row_groups: S,
     schema: &Schema,
     parquet_schema: SchemaDescriptor,
     options: WriteOptions,
@@ -57,7 +59,8 @@ pub async fn write_stream_stream<'a, W, I>(
 ) -> Result<u64>
 where
     W: futures::io::AsyncWrite + Unpin + Send,
-    I: Stream<Item = Result<RowGroupIter<'a, ArrowError>>>,
+    F: Future<Output = std::result::Result<RowGroupIter<'a, ArrowError>, ArrowError>>,
+    S: Stream<Item = F>,
 {
     let key_value_metadata = key_value_metadata
         .map(|mut x| {
