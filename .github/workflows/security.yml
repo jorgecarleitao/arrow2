@@ -22,7 +22,7 @@ jobs:
           submodules: true # needed to test IPC, which are located in a submodule
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly-2021-10-24
+          toolchain: nightly-2021-12-10
           override: true
       - uses: Swatinem/rust-cache@v1
         with:
