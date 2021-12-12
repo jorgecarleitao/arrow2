@@ -12,22 +12,23 @@ fn test_pyarrow_integration(
     type_: &str,
     use_dict: bool,
     required: bool,
+    compression: Option<&str>,
 ) -> Result<()> {
     if std::env::var("ARROW2_IGNORE_PARQUET").is_ok() {
         return Ok(());
     }
     let use_dict = if use_dict { "dict/" } else { "" };
-    let path = if required {
-        format!(
-            "fixtures/pyarrow3/v{}/{}{}_{}_10.parquet",
-            version, use_dict, type_, "required"
-        )
+    let compression = if let Some(compression) = compression {
+        format!("{}/", compression)
     } else {
-        format!(
-            "fixtures/pyarrow3/v{}/{}{}_{}_10.parquet",
-            version, use_dict, type_, "nullable"
-        )
+        "".to_string()
     };
+    let required_str = if required { "required" } else { "nullable" };
+    let path = format!(
+        "fixtures/pyarrow3/v{}/{}{}{}_{}_10.parquet",
+        version, use_dict, compression, type_, required_str
+    );
+
     let mut file = File::open(path).unwrap();
     let (array, statistics) = read_column(&mut file, 0, column)?;
 
@@ -55,273 +56,291 @@ fn test_pyarrow_integration(
 
 #[test]
 fn v1_int64_nullable() -> Result<()> {
-    test_pyarrow_integration(0, 1, "basic", false, false)
+    test_pyarrow_integration(0, 1, "basic", false, false, None)
+}
+
+#[test]
+#[ignore] // see https://issues.apache.org/jira/browse/ARROW-15073
+fn v1_int64_lz4_nullable() -> Result<()> {
+    test_pyarrow_integration(0, 1, "basic", false, false, Some("lz4"))
+}
+
+#[test]
+#[ignore] // see https://issues.apache.org/jira/browse/ARROW-15073
+fn v1_int64_lz4_required() -> Result<()> {
+    test_pyarrow_integration(0, 1, "basic", false, true, Some("lz4"))
 }
 
 #[test]
 fn v1_int64_required() -> Result<()> {
-    test_pyarrow_integration(0, 1, "basic", false, true)
+    test_pyarrow_integration(0, 1, "basic", false, true, None)
 }
 
 #[test]
 fn v1_float64_nullable() -> Result<()> {
-    test_pyarrow_integration(1, 1, "basic", false, false)
+    test_pyarrow_integration(1, 1, "basic", false, false, None)
 }
 
 #[test]
 fn v1_utf8_nullable() -> Result<()> {
-    test_pyarrow_integration(2, 1, "basic", false, false)
+    test_pyarrow_integration(2, 1, "basic", false, false, None)
 }
 
 #[test]
 fn v1_utf8_required() -> Result<()> {
-    test_pyarrow_integration(2, 1, "basic", false, true)
+    test_pyarrow_integration(2, 1, "basic", false, true, None)
 }
 
 #[test]
 fn v1_boolean_nullable() -> Result<()> {
-    test_pyarrow_integration(3, 1, "basic", false, false)
+    test_pyarrow_integration(3, 1, "basic", false, false, None)
 }
 
 #[test]
 fn v1_boolean_required() -> Result<()> {
-    test_pyarrow_integration(3, 1, "basic", false, true)
+    test_pyarrow_integration(3, 1, "basic", false, true, None)
 }
 
 #[test]
 fn v1_timestamp_nullable() -> Result<()> {
-    test_pyarrow_integration(4, 1, "basic", false, false)
+    test_pyarrow_integration(4, 1, "basic", false, false, None)
 }
 
 #[test]
 #[ignore] // pyarrow issue; see https://issues.apache.org/jira/browse/ARROW-12201
 fn v1_u32_nullable() -> Result<()> {
-    test_pyarrow_integration(5, 1, "basic", false, false)
+    test_pyarrow_integration(5, 1, "basic", false, false, None)
 }
 
 #[test]
 fn v2_int64_nullable() -> Result<()> {
-    test_pyarrow_integration(0, 2, "basic", false, false)
+    test_pyarrow_integration(0, 2, "basic", false, false, None)
 }
 
 #[test]
 fn v2_int64_nullable_dict() -> Result<()> {
-    test_pyarrow_integration(0, 2, "basic", true, false)
+    test_pyarrow_integration(0, 2, "basic", true, false, None)
+}
+
+#[test]
+#[ignore] // see https://issues.apache.org/jira/browse/ARROW-15073
+fn v2_int64_nullable_dict_lz4() -> Result<()> {
+    test_pyarrow_integration(0, 2, "basic", true, false, Some("lz4"))
 }
 
 #[test]
 fn v1_int64_nullable_dict() -> Result<()> {
-    test_pyarrow_integration(0, 1, "basic", true, false)
+    test_pyarrow_integration(0, 1, "basic", true, false, None)
 }
 
 #[test]
 fn v2_int64_required_dict() -> Result<()> {
-    test_pyarrow_integration(0, 2, "basic", true, true)
+    test_pyarrow_integration(0, 2, "basic", true, true, None)
 }
 
 #[test]
 fn v1_int64_required_dict() -> Result<()> {
-    test_pyarrow_integration(0, 1, "basic", true, true)
+    test_pyarrow_integration(0, 1, "basic", true, true, None)
 }
 
 #[test]
 fn v2_utf8_nullable() -> Result<()> {
-    test_pyarrow_integration(2, 2, "basic", false, false)
+    test_pyarrow_integration(2, 2, "basic", false, false, None)
 }
 
 #[test]
 fn v2_utf8_required() -> Result<()> {
-    test_pyarrow_integration(2, 2, "basic", false, true)
+    test_pyarrow_integration(2, 2, "basic", false, true, None)
 }
 
 #[test]
 fn v2_utf8_nullable_dict() -> Result<()> {
-    test_pyarrow_integration(2, 2, "basic", true, false)
+    test_pyarrow_integration(2, 2, "basic", true, false, None)
 }
 
 #[test]
 fn v1_utf8_nullable_dict() -> Result<()> {
-    test_pyarrow_integration(2, 1, "basic", true, false)
+    test_pyarrow_integration(2, 1, "basic", true, false, None)
 }
 
 #[test]
 fn v2_utf8_required_dict() -> Result<()> {
-    test_pyarrow_integration(2, 2, "basic", true, true)
+    test_pyarrow_integration(2, 2, "basic", true, true, None)
 }
 
 #[test]
 fn v1_utf8_required_dict() -> Result<()> {
-    test_pyarrow_integration(2, 1, "basic", true, true)
+    test_pyarrow_integration(2, 1, "basic", true, true, None)
 }
 
 #[test]
 fn v2_boolean_nullable() -> Result<()> {
-    test_pyarrow_integration(3, 2, "basic", false, false)
+    test_pyarrow_integration(3, 2, "basic", false, false, None)
 }
 
 #[test]
 fn v2_boolean_required() -> Result<()> {
-    test_pyarrow_integration(3, 2, "basic", false, true)
+    test_pyarrow_integration(3, 2, "basic", false, true, None)
 }
 
 #[test]
 fn v2_nested_int64_nullable() -> Result<()> {
-    test_pyarrow_integration(0, 2, "nested", false, false)
+    test_pyarrow_integration(0, 2, "nested", false, false, None)
 }
 
 #[test]
 fn v1_nested_int64_nullable() -> Result<()> {
-    test_pyarrow_integration(0, 1, "nested", false, false)
+    test_pyarrow_integration(0, 1, "nested", false, false, None)
 }
 
 #[test]
 fn v2_nested_int64_nullable_required() -> Result<()> {
-    test_pyarrow_integration(1, 2, "nested", false, false)
+    test_pyarrow_integration(1, 2, "nested", false, false, None)
 }
 
 #[test]
 fn v1_nested_int64_nullable_required() -> Result<()> {
-    test_pyarrow_integration(1, 1, "nested", false, false)
+    test_pyarrow_integration(1, 1, "nested", false, false, None)
 }
 
 #[test]
 fn v2_nested_int64_required_required() -> Result<()> {
-    test_pyarrow_integration(2, 2, "nested", false, false)
+    test_pyarrow_integration(2, 2, "nested", false, false, None)
 }
 
 #[test]
 fn v1_nested_int64_required_required() -> Result<()> {
-    test_pyarrow_integration(2, 1, "nested", false, false)
+    test_pyarrow_integration(2, 1, "nested", false, false, None)
 }
 
 #[test]
 fn v2_nested_i16() -> Result<()> {
-    test_pyarrow_integration(3, 2, "nested", false, false)
+    test_pyarrow_integration(3, 2, "nested", false, false, None)
 }
 
 #[test]
 fn v1_nested_i16() -> Result<()> {
-    test_pyarrow_integration(3, 1, "nested", false, false)
+    test_pyarrow_integration(3, 1, "nested", false, false, None)
 }
 
 #[test]
 fn v2_nested_bool() -> Result<()> {
-    test_pyarrow_integration(4, 2, "nested", false, false)
+    test_pyarrow_integration(4, 2, "nested", false, false, None)
 }
 
 #[test]
 fn v1_nested_bool() -> Result<()> {
-    test_pyarrow_integration(4, 1, "nested", false, false)
+    test_pyarrow_integration(4, 1, "nested", false, false, None)
 }
 
 #[test]
 fn v2_nested_utf8() -> Result<()> {
-    test_pyarrow_integration(5, 2, "nested", false, false)
+    test_pyarrow_integration(5, 2, "nested", false, false, None)
 }
 
 #[test]
 fn v1_nested_utf8() -> Result<()> {
-    test_pyarrow_integration(5, 1, "nested", false, false)
+    test_pyarrow_integration(5, 1, "nested", false, false, None)
 }
 
 #[test]
 fn v2_nested_large_binary() -> Result<()> {
-    test_pyarrow_integration(6, 2, "nested", false, false)
+    test_pyarrow_integration(6, 2, "nested", false, false, None)
 }
 
 #[test]
 fn v1_nested_large_binary() -> Result<()> {
-    test_pyarrow_integration(6, 1, "nested", false, false)
+    test_pyarrow_integration(6, 1, "nested", false, false, None)
 }
 
 #[test]
 fn v2_nested_nested() -> Result<()> {
-    test_pyarrow_integration(7, 2, "nested", false, false)
+    test_pyarrow_integration(7, 2, "nested", false, false, None)
 }
 
 #[test]
 fn v2_nested_nested_required() -> Result<()> {
-    test_pyarrow_integration(8, 2, "nested", false, false)
+    test_pyarrow_integration(8, 2, "nested", false, false, None)
 }
 
 #[test]
 fn v2_nested_nested_required_required() -> Result<()> {
-    test_pyarrow_integration(9, 2, "nested", false, false)
+    test_pyarrow_integration(9, 2, "nested", false, false, None)
 }
 
 #[test]
 fn v1_decimal_9_nullable() -> Result<()> {
-    test_pyarrow_integration(7, 1, "basic", false, false)
+    test_pyarrow_integration(7, 1, "basic", false, false, None)
 }
 
 #[test]
 fn v1_decimal_9_required() -> Result<()> {
-    test_pyarrow_integration(6, 1, "basic", false, true)
+    test_pyarrow_integration(6, 1, "basic", false, true, None)
 }
 
 #[test]
 fn v1_decimal_9_nullable_dict() -> Result<()> {
-    test_pyarrow_integration(7, 1, "basic", true, false)
+    test_pyarrow_integration(7, 1, "basic", true, false, None)
 }
 
 #[test]
 fn v1_decimal_18_nullable() -> Result<()> {
-    test_pyarrow_integration(8, 1, "basic", false, false)
+    test_pyarrow_integration(8, 1, "basic", false, false, None)
 }
 
 #[test]
 fn v1_decimal_18_required() -> Result<()> {
-    test_pyarrow_integration(7, 1, "basic", false, true)
+    test_pyarrow_integration(7, 1, "basic", false, true, None)
 }
 
 #[test]
 fn v1_decimal_26_nullable() -> Result<()> {
-    test_pyarrow_integration(9, 1, "basic", false, false)
+    test_pyarrow_integration(9, 1, "basic", false, false, None)
 }
 
 #[test]
 fn v1_decimal_26_required() -> Result<()> {
-    test_pyarrow_integration(8, 1, "basic", false, true)
+    test_pyarrow_integration(8, 1, "basic", false, true, None)
 }
 
 #[test]
 fn v2_decimal_9_nullable() -> Result<()> {
-    test_pyarrow_integration(7, 2, "basic", false, false)
+    test_pyarrow_integration(7, 2, "basic", false, false, None)
 }
 
 #[test]
 fn v2_decimal_9_required() -> Result<()> {
-    test_pyarrow_integration(6, 2, "basic", false, true)
+    test_pyarrow_integration(6, 2, "basic", false, true, None)
 }
 
 #[test]
 fn v2_decimal_18_nullable() -> Result<()> {
-    test_pyarrow_integration(8, 2, "basic", false, false)
+    test_pyarrow_integration(8, 2, "basic", false, false, None)
 }
 
 #[test]
 fn v2_decimal_18_required() -> Result<()> {
-    test_pyarrow_integration(7, 2, "basic", false, true)
+    test_pyarrow_integration(7, 2, "basic", false, true, None)
 }
 
 #[test]
 fn v2_decimal_26_nullable() -> Result<()> {
-    test_pyarrow_integration(9, 2, "basic", false, false)
+    test_pyarrow_integration(9, 2, "basic", false, false, None)
 }
 
 #[test]
 fn v2_decimal_26_required() -> Result<()> {
-    test_pyarrow_integration(8, 2, "basic", false, true)
+    test_pyarrow_integration(8, 2, "basic", false, true, None)
 }
 
 #[test]
 fn v1_struct_optional() -> Result<()> {
-    test_pyarrow_integration(0, 1, "struct", false, false)
+    test_pyarrow_integration(0, 1, "struct", false, false, None)
 }
 
 #[test]
 fn v1_struct_struct_optional() -> Result<()> {
-    test_pyarrow_integration(1, 1, "struct", false, false)
+    test_pyarrow_integration(1, 1, "struct", false, false, None)
 }
 
 #[test]
