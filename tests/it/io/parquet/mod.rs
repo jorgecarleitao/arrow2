@@ -399,6 +399,7 @@ pub fn pyarrow_nullable_statistics(column: usize) -> Option<Box<dyn Statistics>>
 // these values match the values in `integration`
 pub fn pyarrow_required(column: usize) -> Box<dyn Array> {
     let i64_values = &[
+        Some(-1),
         Some(0),
         Some(1),
         Some(2),
@@ -408,7 +409,6 @@ pub fn pyarrow_required(column: usize) -> Box<dyn Array> {
         Some(6),
         Some(7),
         Some(8),
-        Some(9),
     ];
 
     match column {
