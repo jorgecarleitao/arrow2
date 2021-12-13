@@ -241,6 +241,7 @@ fn deserialize_value<'a>(
     Ok(block)
 }
 
+/// Deserializes an Avro block into a [`RecordBatch`].
 pub fn deserialize(
     mut block: &[u8],
     rows: usize,

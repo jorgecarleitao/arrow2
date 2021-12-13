@@ -33,6 +33,7 @@ fn read_block<R: Read>(reader: &mut R, buf: &mut Vec<u8>, file_marker: [u8; 16])
         return Ok(0);
     };
 
+    buf.clear();
     buf.resize(bytes, 0);
     reader.read_exact(buf)?;
 

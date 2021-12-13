@@ -8,33 +8,33 @@ use crate::error::{ArrowError, Result};
 use super::BlockStreamIterator;
 use super::Compression;
 
-/// Decompresses an avro block.
+/// Decompresses an Avro block.
 /// Returns whether the buffers where swapped.
-fn decompress_block(
+pub fn decompress_block(
     block: &mut Vec<u8>,
-    decompress: &mut Vec<u8>,
+    decompressed: &mut Vec<u8>,
     compression: Option<Compression>,
 ) -> Result<bool> {
     match compression {
         None => {
-            std::mem::swap(block, decompress);
+            std::mem::swap(block, decompressed);
             Ok(true)
         }
         #[cfg(feature = "io_avro_compression")]
         Some(Compression::Deflate) => {
-            decompress.clear();
+            decompressed.clear();
             let mut decoder = libflate::deflate::Decoder::new(&block[..]);
-            decoder.read_to_end(decompress)?;
+            decoder.read_to_end(decompressed)?;
             Ok(false)
         }
         #[cfg(feature = "io_avro_compression")]
         Some(Compression::Snappy) => {
             let len = snap::raw::decompress_len(&block[..block.len() - 4])
                 .map_err(|_| ArrowError::ExternalFormat("Failed to decompress snap".to_string()))?;
-            decompress.clear();
-            decompress.resize(len, 0);
+            decompressed.clear();
+            decompressed.resize(len, 0);
             snap::raw::Decoder::new()
-                .decompress(&block[..block.len() - 4], decompress)
+                .decompress(&block[..block.len() - 4], decompressed)
                 .map_err(|_| ArrowError::ExternalFormat("Failed to decompress snap".to_string()))?;
             Ok(false)
         }
