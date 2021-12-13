@@ -244,14 +244,6 @@ pub fn read_batch<R: Read + Seek>(
     let message = ipc::Message::root_as_message(&block_data[..])
         .map_err(|err| ArrowError::OutOfSpec(format!("Unable to get root as footer: {:?}", err)))?;
 
-    // some old test data's footer metadata is not set, so we account for that
-    if metadata.version != ipc::Schema::MetadataVersion::V1 && message.version() != metadata.version
-    {
-        return Err(ArrowError::OutOfSpec(
-            format!("Could not read IPC message as metadata versions mismatch: metadata version {:?}, message version {:?}", metadata.version, message.version())
-        ));
-    }
-
     let batch = get_serialized_batch(&message)?;
 
     read_record_batch(
