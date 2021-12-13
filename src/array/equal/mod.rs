@@ -15,9 +15,21 @@ mod struct_;
 mod union;
 mod utf8;
 
-impl PartialEq for dyn Array {
-    fn eq(&self, other: &Self) -> bool {
-        equal(self, other)
+impl PartialEq for dyn Array + '_ {
+    fn eq(&self, that: &dyn Array) -> bool {
+        equal(self, that)
+    }
+}
+
+impl PartialEq<dyn Array> for Arc<dyn Array + '_> {
+    fn eq(&self, that: &dyn Array) -> bool {
+        equal(&**self, that)
+    }
+}
+
+impl PartialEq<dyn Array> for Box<dyn Array + '_> {
+    fn eq(&self, that: &dyn Array) -> bool {
+        equal(&**self, that)
     }
 }
 

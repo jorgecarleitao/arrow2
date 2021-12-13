@@ -1,9 +1,23 @@
+use std::sync::Arc;
+
 use super::*;
 use crate::types::days_ms;
 
-impl PartialEq for dyn Scalar {
-    fn eq(&self, other: &Self) -> bool {
-        equal(self, other)
+impl PartialEq for dyn Scalar + '_ {
+    fn eq(&self, that: &dyn Scalar) -> bool {
+        equal(self, that)
+    }
+}
+
+impl PartialEq<dyn Scalar> for Arc<dyn Scalar + '_> {
+    fn eq(&self, that: &dyn Scalar) -> bool {
+        equal(&**self, that)
+    }
+}
+
+impl PartialEq<dyn Scalar> for Box<dyn Scalar + '_> {
+    fn eq(&self, that: &dyn Scalar) -> bool {
+        equal(&**self, that)
     }
 }
 
