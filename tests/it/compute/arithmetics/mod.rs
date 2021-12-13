@@ -2,10 +2,29 @@ mod basic;
 mod decimal;
 mod time;
 
-use arrow2::array::new_empty_array;
+use arrow2::array::{new_empty_array, Int32Array};
 use arrow2::compute::arithmetics::*;
 use arrow2::datatypes::DataType::*;
 use arrow2::datatypes::{IntervalUnit, TimeUnit};
+use arrow2::scalar::PrimitiveScalar;
+
+#[test]
+fn test_add() {
+    let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
+    let b = Int32Array::from(&[Some(5), None, None, Some(6)]);
+    let result = add(&a, &b);
+    let expected = Int32Array::from(&[None, None, None, Some(12)]);
+    assert_eq!(expected, result.as_ref());
+}
+
+#[test]
+fn test_add_scalar() {
+    let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
+    let b: PrimitiveScalar<i32> = Some(1i32).into();
+    let result = add_scalar(&a, &b);
+    let expected = Int32Array::from(&[None, Some(7), None, Some(7)]);
+    assert_eq!(expected, result.as_ref());
+}
 
 #[test]
 fn consistency() {
