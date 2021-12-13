@@ -76,7 +76,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="index.html"><strong aria-hidden="true">1.</strong> Arrow2</a></li><li class="chapter-item expanded "><a href="arrow.html"><strong aria-hidden="true">2.</strong> The arrow format</a></li><li class="chapter-item expanded "><a href="low_level.html"><strong aria-hidden="true">3.</strong> Low-level API</a></li><li class="chapter-item expanded "><a href="high_level.html"><strong aria-hidden="true">4.</strong> High-level API</a></li><li class="chapter-item expanded "><a href="compute.html"><strong aria-hidden="true">5.</strong> Compute</a></li><li class="chapter-item expanded "><a href="metadata.html"><strong aria-hidden="true">6.</strong> Metadata</a></li><li class="chapter-item expanded "><a href="ffi.html"><strong aria-hidden="true">7.</strong> Foreign interfaces</a></li><li class="chapter-item expanded "><a href="extension.html"><strong aria-hidden="true">8.</strong> Extension</a></li><li class="chapter-item expanded "><a href="io/index.html"><strong aria-hidden="true">9.</strong> IO</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="io/csv_reader.html"><strong aria-hidden="true">9.1.</strong> Read CSV</a></li><li class="chapter-item expanded "><a href="io/csv_write.html"><strong aria-hidden="true">9.2.</strong> Write CSV</a></li><li class="chapter-item expanded "><a href="io/parquet_read.html"><strong aria-hidden="true">9.3.</strong> Read Parquet</a></li><li class="chapter-item expanded "><a href="io/parquet_write.html"><strong aria-hidden="true">9.4.</strong> Write Parquet</a></li><li class="chapter-item expanded "><a href="io/ipc_read.html"><strong aria-hidden="true">9.5.</strong> Read Arrow</a></li><li class="chapter-item expanded "><a href="io/ipc_stream_read.html"><strong aria-hidden="true">9.6.</strong> Read Arrow stream</a></li><li class="chapter-item expanded "><a href="io/ipc_write.html"><strong aria-hidden="true">9.7.</strong> Write Arrow</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="index.html"><strong aria-hidden="true">1.</strong> Arrow2</a></li><li class="chapter-item expanded "><a href="arrow.html"><strong aria-hidden="true">2.</strong> The arrow format</a></li><li class="chapter-item expanded "><a href="low_level.html"><strong aria-hidden="true">3.</strong> Low-level API</a></li><li class="chapter-item expanded "><a href="high_level.html"><strong aria-hidden="true">4.</strong> High-level API</a></li><li class="chapter-item expanded "><a href="compute.html"><strong aria-hidden="true">5.</strong> Compute</a></li><li class="chapter-item expanded "><a href="metadata.html"><strong aria-hidden="true">6.</strong> Metadata</a></li><li class="chapter-item expanded "><a href="ffi.html"><strong aria-hidden="true">7.</strong> Foreign interfaces</a></li><li class="chapter-item expanded "><a href="extension.html"><strong aria-hidden="true">8.</strong> Extension</a></li><li class="chapter-item expanded "><a href="io/index.html"><strong aria-hidden="true">9.</strong> IO</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="io/csv_reader.html"><strong aria-hidden="true">9.1.</strong> Read CSV</a></li><li class="chapter-item expanded "><a href="io/csv_write.html"><strong aria-hidden="true">9.2.</strong> Write CSV</a></li><li class="chapter-item expanded "><a href="io/parquet_read.html"><strong aria-hidden="true">9.3.</strong> Read Parquet</a></li><li class="chapter-item expanded "><a href="io/parquet_write.html"><strong aria-hidden="true">9.4.</strong> Write Parquet</a></li><li class="chapter-item expanded "><a href="io/ipc_read.html"><strong aria-hidden="true">9.5.</strong> Read Arrow</a></li><li class="chapter-item expanded "><a href="io/ipc_stream_read.html"><strong aria-hidden="true">9.6.</strong> Read Arrow stream</a></li><li class="chapter-item expanded "><a href="io/ipc_write.html"><strong aria-hidden="true">9.7.</strong> Write Arrow</a></li><li class="chapter-item expanded "><a href="io/avro_read.html"><strong aria-hidden="true">9.8.</strong> Read Avro</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -868,6 +868,7 @@ fn read_ipc(buf: &amp;[u8]) -&gt; Result&lt;RecordBatch&gt; {
 <li>CSV (<code>io_csv</code>)</li>
 <li>Parquet (<code>io_parquet</code>)</li>
 <li>Json (<code>io_json</code>)</li>
+<li>Avro (<code>io_avro</code> and <code>io_avro_async</code>)</li>
 </ul>
 <p>In this section you can find a guide and examples for each one of them.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="csv-reader"><a class="header" href="#csv-reader">CSV reader</a></h1>
@@ -1837,6 +1838,54 @@ fn main() -&gt; Result&lt;()&gt; {
     Ok(())
 }
 </code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="avro-read"><a class="header" href="#avro-read">Avro read</a></h1>
+<p>When compiled with feature <code>io_avro_async</code>, you can use this crate to read Avro files
+asynchronously.</p>
+<pre><pre class="playground"><code class="language-rust">use std::sync::Arc;
+
+use futures::pin_mut;
+use futures::StreamExt;
+use tokio::fs::File;
+use tokio_util::compat::*;
+
+use arrow2::error::Result;
+use arrow2::io::avro::read::{decompress_block, deserialize};
+use arrow2::io::avro::read_async::*;
+
+#[tokio::main(flavor = &quot;current_thread&quot;)]
+async fn main() -&gt; Result&lt;()&gt; {
+    use std::env;
+    let args: Vec&lt;String&gt; = env::args().collect();
+
+    let file_path = &amp;args[1];
+
+    let mut reader = File::open(file_path).await?.compat();
+
+    let (avro_schemas, schema, compression, marker) = read_metadata(&amp;mut reader).await?;
+    let schema = Arc::new(schema);
+    let avro_schemas = Arc::new(avro_schemas);
+
+    let blocks = block_stream(&amp;mut reader, marker).await;
+
+    pin_mut!(blocks);
+    while let Some((mut block, rows)) = blocks.next().await.transpose()? {
+        // the content here is blocking. In general this should run on spawn_blocking
+        let schema = schema.clone();
+        let avro_schemas = avro_schemas.clone();
+        let handle = tokio::task::spawn_blocking(move || {
+            let mut decompressed = vec![];
+            decompress_block(&amp;mut block, &amp;mut decompressed, compression)?;
+            deserialize(&amp;decompressed, rows, schema, &amp;avro_schemas)
+        });
+        let batch = handle.await.unwrap()?;
+        assert!(batch.num_rows() &gt; 0);
+    }
+
+    Ok(())
+}
+</code></pre></pre>
+<p>Note how both decompression and deserialization is performed on a separate thread pool to not
+block (see also <a href="https://ryhl.io/blog/async-what-is-blocking/">here</a>).</p>
 
                     </main>
 
