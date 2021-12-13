@@ -274,7 +274,8 @@ fn page_iter_to_array<I: FallibleStreamingIterator<Item = DataPage, Error = Parq
                             n
                         )))
                     } else {
-                        let paddings = (0..(16 - *n)).map(|_| 0u8).collect::<Vec<_>>();
+                        let zeros_padding = (0..(16 - *n)).map(|_| 0u8).collect::<Vec<_>>();
+                        let ones_padding = (0..(16 - *n)).map(|_| !0u8).collect::<Vec<_>>();
                         fixed_size_binary::iter_to_array(
                             iter,
                             DataType::FixedSizeBinary(*n as usize),
@@ -285,7 +286,14 @@ fn page_iter_to_array<I: FallibleStreamingIterator<Item = DataPage, Error = Parq
                                 .into_iter()
                                 .map(|v| {
                                     v.and_then(|v1| {
-                                        [&paddings, v1]
+                                        // Pad with the value of the MSB to correctly handle (two's complement) negative integers.
+                                        let msb_set = v1.last().unwrap_or(&0) >> 7 == 1;
+                                        let padding = if msb_set {
+                                            &ones_padding
+                                        } else {
+                                            &zeros_padding
+                                        };
+                                        [padding, v1]
                                             .concat()
                                             .try_into()
                                             .map(i128::from_be_bytes)

@@ -50,7 +50,8 @@ def case_basic_nullable(size=1):
 
 
 def case_basic_required(size=1):
-    int64 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    int64 = [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8]
+    uint32 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
     float64 = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
     string = ["Hello", "bbb", "aa", "", "bbb", "abc", "bbb", "bbb", "def", "aaa"]
     boolean = [True, True, False, False, False, True, True, True, True, True]
@@ -82,7 +83,7 @@ def case_basic_required(size=1):
             "string": string * size,
             "bool": boolean * size,
             "date": int64 * size,
-            "uint32": int64 * size,
+            "uint32": uint32 * size,
             "decimal_9": decimal * size,
             "decimal_18": decimal * size,
             "decimal_26": decimal * size,
