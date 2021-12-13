@@ -97,3 +97,9 @@ fn test_with_validity() {
     let expected = PrimitiveArray::from(&[Some(1i32), None, Some(3)]);
     assert_eq!(arr_ref, &expected);
 }
+
+// check that `PartialEq` can be derived
+#[derive(PartialEq)]
+struct A {
+    array: std::sync::Arc<dyn Array>,
+}
