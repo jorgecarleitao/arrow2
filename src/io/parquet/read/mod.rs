@@ -287,7 +287,7 @@ fn page_iter_to_array<I: FallibleStreamingIterator<Item = DataPage, Error = Parq
                                 .map(|v| {
                                     v.and_then(|v1| {
                                         // Pad with the value of the MSB to correctly handle (two's complement) negative integers.
-                                        let msb_set = v1.last().unwrap_or(&0) >> 7 == 1;
+                                        let msb_set = v1.first().unwrap_or(&0) >> 7 == 1;
                                         let padding = if msb_set {
                                             &ones_padding
                                         } else {
