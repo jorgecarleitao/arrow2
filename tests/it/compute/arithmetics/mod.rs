@@ -2,7 +2,7 @@ mod basic;
 mod decimal;
 mod time;
 
-use arrow2::array::{new_empty_array, Int32Array};
+use arrow2::array::*;
 use arrow2::compute::arithmetics::*;
 use arrow2::datatypes::DataType::*;
 use arrow2::datatypes::{IntervalUnit, TimeUnit};
@@ -83,4 +83,26 @@ fn consistency() {
             rem(lhs_a.as_ref(), rhs_a.as_ref());
         }
     });
+}
+
+#[test]
+fn test_neg() {
+    let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
+    let result = neg(&a);
+    let expected = Int32Array::from(&[None, Some(-6), None, Some(-6)]);
+    assert_eq!(expected, result.as_ref());
+}
+
+#[test]
+fn test_neg_dict() {
+    let a = DictionaryArray::<u8>::from_data(
+        UInt8Array::from_slice(&[0, 0, 1]),
+        std::sync::Arc::new(Int8Array::from_slice(&[1, 2])),
+    );
+    let result = neg(&a);
+    let expected = DictionaryArray::<u8>::from_data(
+        UInt8Array::from_slice(&[0, 0, 1]),
+        std::sync::Arc::new(Int8Array::from_slice(&[-1, -2])),
+    );
+    assert_eq!(expected, result.as_ref());
 }

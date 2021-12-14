@@ -17,7 +17,7 @@ pub mod decimal;
 pub mod time;
 
 use crate::{
-    array::{Array, PrimitiveArray},
+    array::{Array, DictionaryArray, PrimitiveArray},
     bitmap::Bitmap,
     datatypes::{DataType, IntervalUnit, TimeUnit},
     scalar::{PrimitiveScalar, Scalar},
@@ -397,6 +397,72 @@ pub fn can_rem(lhs: &DataType, rhs: &DataType) -> bool {
             | (UInt64, UInt64)
             | (Float64, Float64)
             | (Float32, Float32)
+    )
+}
+
+macro_rules! with_match_negatable {(
+    $key_type:expr, | $_:tt $T:ident | $($body:tt)*
+) => ({
+    macro_rules! __with_ty__ {( $_ $T:ident ) => ( $($body)* )}
+    use crate::datatypes::PrimitiveType::*;
+    use crate::types::{days_ms, months_days_ns};
+    match $key_type {
+        Int8 => __with_ty__! { i8 },
+        Int16 => __with_ty__! { i16 },
+        Int32 => __with_ty__! { i32 },
+        Int64 => __with_ty__! { i64 },
+        Int128 => __with_ty__! { i128 },
+        DaysMs => __with_ty__! { days_ms },
+        MonthDayNano => __with_ty__! { months_days_ns },
+        UInt8 | UInt16 | UInt32 | UInt64=> todo!(),
+        Float32 => __with_ty__! { f32 },
+        Float64 => __with_ty__! { f64 },
+    }
+})}
+
+/// Negates an [`Array`].
+/// # Panic
+/// This function panics iff either
+/// * the opertion is not supported for the logical type (use [`can_neg`] to check)
+/// * the operation overflows
+pub fn neg(array: &dyn Array) -> Box<dyn Array> {
+    use crate::datatypes::PhysicalType::*;
+    match array.data_type().to_physical_type() {
+        Primitive(primitive) => with_match_negatable!(primitive, |$T| {
+            let array = array.as_any().downcast_ref().unwrap();
+
+            let result = basic::negate::<$T>(array);
+            Box::new(result) as Box<dyn Array>
+        }),
+        Dictionary(key) => match_integer_type!(key, |$T| {
+            let array = array.as_any().downcast_ref::<DictionaryArray<$T>>().unwrap();
+
+            let values = neg(array.values().as_ref()).into();
+
+            Box::new(DictionaryArray::<$T>::from_data(array.keys().clone(), values)) as Box<dyn Array>
+        }),
+        _ => todo!(),
+    }
+}
+
+/// Whether [`neg`] is supported for a given [`DataType`]
+pub fn can_neg(data_type: &DataType) -> bool {
+    if let DataType::Dictionary(_, values) = data_type.to_logical_type() {
+        return can_neg(values.as_ref());
+    }
+
+    use crate::datatypes::PhysicalType::*;
+    use crate::datatypes::PrimitiveType::*;
+    matches!(
+        data_type.to_physical_type(),
+        Primitive(Int8)
+            | Primitive(Int16)
+            | Primitive(Int32)
+            | Primitive(Int64)
+            | Primitive(Float64)
+            | Primitive(Float32)
+            | Primitive(DaysMs)
+            | Primitive(MonthDayNano)
     )
 }
 
