@@ -70,6 +70,31 @@ pub(crate) fn read_dict_buffer(
     }
 }
 
+/// Assumptions: No rep levels
+pub(crate) fn read_dict_required(
+    indices_buffer: &[u8],
+    additional: usize,
+    size: usize,
+    dict: &FixedLenByteArrayPageDict,
+    values: &mut MutableBuffer<u8>,
+    validity: &mut MutableBitmap,
+) {
+    let dict_values = dict.values();
+
+    // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
+    // SPEC: followed by the values encoded using RLE/Bit packed described above (with the given bit width).
+    let bit_width = indices_buffer[0];
+    let indices_buffer = &indices_buffer[1..];
+
+    let indices = hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional);
+
+    for index in indices {
+        let index = index as usize;
+        values.extend_from_slice(&dict_values[index * size..(index + 1) * size]);
+    }
+    validity.extend_constant(additional * size, true);
+}
+
 pub(crate) fn read_optional(
     validity_buffer: &[u8],
     values_buffer: &[u8],
@@ -210,6 +235,14 @@ pub(crate) fn extend_from_page(
     match (page.encoding(), page.dictionary_page(), is_optional) {
         (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer(
             validity_buffer,
+            values_buffer,
+            additional,
+            size,
+            dict.as_any().downcast_ref().unwrap(),
+            values,
+            validity,
+        ),
+        (Encoding::PlainDictionary, Some(dict), false) => read_dict_required(
             values_buffer,
             additional,
             size,
