@@ -142,6 +142,27 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
         }
     }
 
+    /// Extends the [`MutablePrimitiveArray`] with a constant
+    #[inline]
+    pub fn extend_constant(&mut self, additional: usize, value: Option<T>) {
+        if let Some(value) = value {
+            self.values.extend_constant(additional, value);
+            if let Some(validity) = &mut self.validity {
+                validity.extend_constant(additional, true)
+            }
+        } else {
+            if let Some(validity) = &mut self.validity {
+                validity.extend_constant(additional, false)
+            } else {
+                let mut validity = MutableBitmap::with_capacity(self.values.capacity());
+                validity.extend_constant(self.len(), true);
+                validity.extend_constant(additional, false);
+                self.validity = Some(validity)
+            }
+            self.values.extend_constant(additional, T::default());
+        }
+    }
+
     /// Extends the [`MutablePrimitiveArray`] from an iterator of trusted len.
     #[inline]
     pub fn extend_trusted_len<P, I>(&mut self, iterator: I)

@@ -127,6 +127,51 @@ fn extend_trusted_len() {
 }
 
 #[test]
+fn extend_constant_no_validity() {
+    let mut a = MutablePrimitiveArray::<i32>::new();
+    a.push(Some(1));
+    a.extend_constant(2, Some(3));
+    assert_eq!(a.validity(), None);
+    assert_eq!(a.values(), &MutableBuffer::<i32>::from([1, 3, 3]));
+}
+
+#[test]
+fn extend_constant_validity() {
+    let mut a = MutablePrimitiveArray::<i32>::new();
+    a.push(Some(1));
+    a.extend_constant(2, None);
+    assert_eq!(
+        a.validity(),
+        Some(&MutableBitmap::from([true, false, false]))
+    );
+    assert_eq!(a.values(), &MutableBuffer::<i32>::from([1, 0, 0]));
+}
+
+#[test]
+fn extend_constant_validity_inverse() {
+    let mut a = MutablePrimitiveArray::<i32>::new();
+    a.push(None);
+    a.extend_constant(2, Some(1));
+    assert_eq!(
+        a.validity(),
+        Some(&MutableBitmap::from([false, true, true]))
+    );
+    assert_eq!(a.values(), &MutableBuffer::<i32>::from([0, 1, 1]));
+}
+
+#[test]
+fn extend_constant_validity_none() {
+    let mut a = MutablePrimitiveArray::<i32>::new();
+    a.push(None);
+    a.extend_constant(2, None);
+    assert_eq!(
+        a.validity(),
+        Some(&MutableBitmap::from([false, false, false]))
+    );
+    assert_eq!(a.values(), &MutableBuffer::<i32>::from([0, 0, 0]));
+}
+
+#[test]
 fn extend_trusted_len_values() {
     let mut a = MutablePrimitiveArray::<i32>::new();
     a.extend_trusted_len_values(vec![1, 2, 3].into_iter());
