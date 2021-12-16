@@ -11,10 +11,10 @@ pub trait Index:
     + std::ops::AddAssign
     + std::ops::Sub<Output = Self>
     + num_traits::One
-    + PartialOrd
     + num_traits::Num
-    + Ord
     + num_traits::CheckedAdd
+    + PartialOrd
+    + Ord
 {
     /// Convert itself to [`usize`].
     fn to_usize(&self) -> usize;
@@ -32,53 +32,30 @@ pub trait Index:
     }
 }
 
-impl Index for i32 {
-    #[inline]
-    fn to_usize(&self) -> usize {
-        *self as usize
-    }
+macro_rules! index {
+    ($t:ty) => {
+        impl Index for $t {
+            #[inline]
+            fn to_usize(&self) -> usize {
+                *self as usize
+            }
 
-    #[inline]
-    fn from_usize(value: usize) -> Option<Self> {
-        Self::try_from(value).ok()
-    }
+            #[inline]
+            fn from_usize(value: usize) -> Option<Self> {
+                Self::try_from(value).ok()
+            }
+        }
+    };
 }
 
-impl Index for i64 {
-    #[inline]
-    fn to_usize(&self) -> usize {
-        *self as usize
-    }
-
-    #[inline]
-    fn from_usize(value: usize) -> Option<Self> {
-        Self::try_from(value).ok()
-    }
-}
-
-impl Index for u32 {
-    #[inline]
-    fn to_usize(&self) -> usize {
-        *self as usize
-    }
-
-    #[inline]
-    fn from_usize(value: usize) -> Option<Self> {
-        Self::try_from(value).ok()
-    }
-}
-
-impl Index for u64 {
-    #[inline]
-    fn to_usize(&self) -> usize {
-        *self as usize
-    }
-
-    #[inline]
-    fn from_usize(value: usize) -> Option<Self> {
-        Self::try_from(value).ok()
-    }
-}
+index!(i8);
+index!(i16);
+index!(i32);
+index!(i64);
+index!(u8);
+index!(u16);
+index!(u32);
+index!(u64);
 
 /// Range of [`Index`], equivalent to `(a..b)`.
 /// `Step` is unstable in Rust, which does not allow us to implement (a..b) for [`Index`].

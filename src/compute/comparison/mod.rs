@@ -56,6 +56,7 @@ pub mod utf8;
 mod simd;
 pub use simd::{Simd8, Simd8Lanes, Simd8PartialEq, Simd8PartialOrd};
 
+use super::take::take_boolean;
 pub(crate) use primitive::{
     compare_values_op as primitive_compare_values_op,
     compare_values_op_scalar as primitive_compare_values_op_scalar,
@@ -166,6 +167,11 @@ pub fn eq(lhs: &dyn Array, rhs: &dyn Array) -> BooleanArray {
     compare!(lhs, rhs, eq, match_eq)
 }
 
+/// Returns whether a [`DataType`] is comparable is supported by [`eq`].
+pub fn can_eq(data_type: &DataType) -> bool {
+    can_partial_eq(data_type)
+}
+
 /// `!=` between two [`Array`]s.
 /// Use [`can_neq`] to check whether the operation is valid
 /// # Panic
@@ -175,6 +181,11 @@ pub fn eq(lhs: &dyn Array, rhs: &dyn Array) -> BooleanArray {
 /// * the operation is not supported for the logical type
 pub fn neq(lhs: &dyn Array, rhs: &dyn Array) -> BooleanArray {
     compare!(lhs, rhs, neq, match_eq)
+}
+
+/// Returns whether a [`DataType`] is comparable is supported by [`neq`].
+pub fn can_neq(data_type: &DataType) -> bool {
+    can_partial_eq(data_type)
 }
 
 /// `<` between two [`Array`]s.
@@ -188,6 +199,11 @@ pub fn lt(lhs: &dyn Array, rhs: &dyn Array) -> BooleanArray {
     compare!(lhs, rhs, lt, match_eq_ord)
 }
 
+/// Returns whether a [`DataType`] is comparable is supported by [`lt`].
+pub fn can_lt(data_type: &DataType) -> bool {
+    can_partial_eq_and_ord(data_type)
+}
+
 /// `<=` between two [`Array`]s.
 /// Use [`can_lt_eq`] to check whether the operation is valid
 /// # Panic
@@ -197,6 +213,11 @@ pub fn lt(lhs: &dyn Array, rhs: &dyn Array) -> BooleanArray {
 /// * the operation is not supported for the logical type
 pub fn lt_eq(lhs: &dyn Array, rhs: &dyn Array) -> BooleanArray {
     compare!(lhs, rhs, lt_eq, match_eq_ord)
+}
+
+/// Returns whether a [`DataType`] is comparable is supported by [`lt`].
+pub fn can_lt_eq(data_type: &DataType) -> bool {
+    can_partial_eq_and_ord(data_type)
 }
 
 /// `>` between two [`Array`]s.
@@ -210,6 +231,11 @@ pub fn gt(lhs: &dyn Array, rhs: &dyn Array) -> BooleanArray {
     compare!(lhs, rhs, gt, match_eq_ord)
 }
 
+/// Returns whether a [`DataType`] is comparable is supported by [`gt`].
+pub fn can_gt(data_type: &DataType) -> bool {
+    can_partial_eq_and_ord(data_type)
+}
+
 /// `>=` between two [`Array`]s.
 /// Use [`can_gt_eq`] to check whether the operation is valid
 /// # Panic
@@ -219,6 +245,11 @@ pub fn gt(lhs: &dyn Array, rhs: &dyn Array) -> BooleanArray {
 /// * the operation is not supported for the logical type
 pub fn gt_eq(lhs: &dyn Array, rhs: &dyn Array) -> BooleanArray {
     compare!(lhs, rhs, gt_eq, match_eq_ord)
+}
+
+/// Returns whether a [`DataType`] is comparable is supported by [`gt_eq`].
+pub fn can_gt_eq(data_type: &DataType) -> bool {
+    can_partial_eq_and_ord(data_type)
 }
 
 macro_rules! compare_scalar {
@@ -266,13 +297,21 @@ macro_rules! compare_scalar {
                 let rhs = rhs.as_any().downcast_ref::<BinaryScalar<i64>>().unwrap();
                 binary::$op::<i64>(lhs, rhs.value().unwrap())
             }
+            Dictionary(key_type) => {
+                match_integer_type!(key_type, |$T| {
+                    let lhs = lhs.as_any().downcast_ref::<DictionaryArray<$T>>().unwrap();
+                    let values = $op(lhs.values().as_ref(), rhs);
+
+                    take_boolean(&values, lhs.keys())
+                })
+            }
             _ => todo!("Comparisons of {:?} are not yet supported", lhs.data_type()),
         }
     }};
 }
 
 /// `==` between an [`Array`] and a [`Scalar`].
-/// Use [`can_eq`] to check whether the operation is valid
+/// Use [`can_eq_scalar`] to check whether the operation is valid
 /// # Panic
 /// Panics iff either:
 /// * they do not have have the same logical type
@@ -281,8 +320,13 @@ pub fn eq_scalar(lhs: &dyn Array, rhs: &dyn Scalar) -> BooleanArray {
     compare_scalar!(lhs, rhs, eq_scalar, match_eq)
 }
 
+/// Returns whether a [`DataType`] is supported by [`eq_scalar`].
+pub fn can_eq_scalar(data_type: &DataType) -> bool {
+    can_partial_eq_scalar(data_type)
+}
+
 /// `!=` between an [`Array`] and a [`Scalar`].
-/// Use [`can_neq`] to check whether the operation is valid
+/// Use [`can_neq_scalar`] to check whether the operation is valid
 /// # Panic
 /// Panics iff either:
 /// * they do not have have the same logical type
@@ -291,8 +335,13 @@ pub fn neq_scalar(lhs: &dyn Array, rhs: &dyn Scalar) -> BooleanArray {
     compare_scalar!(lhs, rhs, neq_scalar, match_eq)
 }
 
+/// Returns whether a [`DataType`] is supported by [`neq_scalar`].
+pub fn can_neq_scalar(data_type: &DataType) -> bool {
+    can_partial_eq_scalar(data_type)
+}
+
 /// `<` between an [`Array`] and a [`Scalar`].
-/// Use [`can_lt`] to check whether the operation is valid
+/// Use [`can_lt_scalar`] to check whether the operation is valid
 /// # Panic
 /// Panics iff either:
 /// * they do not have have the same logical type
@@ -301,8 +350,13 @@ pub fn lt_scalar(lhs: &dyn Array, rhs: &dyn Scalar) -> BooleanArray {
     compare_scalar!(lhs, rhs, lt_scalar, match_eq_ord)
 }
 
+/// Returns whether a [`DataType`] is supported by [`lt_scalar`].
+pub fn can_lt_scalar(data_type: &DataType) -> bool {
+    can_partial_eq_and_ord_scalar(data_type)
+}
+
 /// `<=` between an [`Array`] and a [`Scalar`].
-/// Use [`can_lt_eq`] to check whether the operation is valid
+/// Use [`can_lt_eq_scalar`] to check whether the operation is valid
 /// # Panic
 /// Panics iff either:
 /// * they do not have have the same logical type
@@ -311,8 +365,13 @@ pub fn lt_eq_scalar(lhs: &dyn Array, rhs: &dyn Scalar) -> BooleanArray {
     compare_scalar!(lhs, rhs, lt_eq_scalar, match_eq_ord)
 }
 
+/// Returns whether a [`DataType`] is supported by [`lt_eq_scalar`].
+pub fn can_lt_eq_scalar(data_type: &DataType) -> bool {
+    can_partial_eq_and_ord_scalar(data_type)
+}
+
 /// `>` between an [`Array`] and a [`Scalar`].
-/// Use [`can_gt`] to check whether the operation is valid
+/// Use [`can_gt_scalar`] to check whether the operation is valid
 /// # Panic
 /// Panics iff either:
 /// * they do not have have the same logical type
@@ -321,8 +380,13 @@ pub fn gt_scalar(lhs: &dyn Array, rhs: &dyn Scalar) -> BooleanArray {
     compare_scalar!(lhs, rhs, gt_scalar, match_eq_ord)
 }
 
+/// Returns whether a [`DataType`] is supported by [`gt_scalar`].
+pub fn can_gt_scalar(data_type: &DataType) -> bool {
+    can_partial_eq_and_ord_scalar(data_type)
+}
+
 /// `>=` between an [`Array`] and a [`Scalar`].
-/// Use [`can_gt_eq`] to check whether the operation is valid
+/// Use [`can_gt_eq_scalar`] to check whether the operation is valid
 /// # Panic
 /// Panics iff either:
 /// * they do not have have the same logical type
@@ -331,33 +395,16 @@ pub fn gt_eq_scalar(lhs: &dyn Array, rhs: &dyn Scalar) -> BooleanArray {
     compare_scalar!(lhs, rhs, gt_eq_scalar, match_eq_ord)
 }
 
-/// Returns whether a [`DataType`] is comparable (either array or scalar).
-pub fn can_eq(data_type: &DataType) -> bool {
-    can_partial_eq(data_type)
+/// Returns whether a [`DataType`] is supported by [`gt_eq_scalar`].
+pub fn can_gt_eq_scalar(data_type: &DataType) -> bool {
+    can_partial_eq_and_ord_scalar(data_type)
 }
 
-/// Returns whether a [`DataType`] is comparable (either array or scalar).
-pub fn can_neq(data_type: &DataType) -> bool {
-    can_partial_eq(data_type)
-}
-
-/// Returns whether a [`DataType`] is comparable (either array or scalar).
-pub fn can_lt(data_type: &DataType) -> bool {
-    can_partial_eq_and_ord(data_type)
-}
-
-/// Returns whether a [`DataType`] is comparable (either array or scalar).
-pub fn can_lt_eq(data_type: &DataType) -> bool {
-    can_partial_eq_and_ord(data_type)
-}
-
-/// Returns whether a [`DataType`] is comparable (either array or scalar).
-pub fn can_gt(data_type: &DataType) -> bool {
-    can_partial_eq_and_ord(data_type)
-}
-
-/// Returns whether a [`DataType`] is comparable (either array or scalar).
-pub fn can_gt_eq(data_type: &DataType) -> bool {
+// The list of operations currently supported.
+fn can_partial_eq_and_ord_scalar(data_type: &DataType) -> bool {
+    if let DataType::Dictionary(_, values, _) = data_type.to_logical_type() {
+        return can_partial_eq_and_ord_scalar(values.as_ref());
+    }
     can_partial_eq_and_ord(data_type)
 }
 
@@ -394,6 +441,16 @@ fn can_partial_eq_and_ord(data_type: &DataType) -> bool {
 // The list of operations currently supported.
 fn can_partial_eq(data_type: &DataType) -> bool {
     can_partial_eq_and_ord(data_type)
+        || matches!(
+            data_type.to_logical_type(),
+            DataType::Interval(IntervalUnit::DayTime)
+                | DataType::Interval(IntervalUnit::MonthDayNano)
+        )
+}
+
+// The list of operations currently supported.
+fn can_partial_eq_scalar(data_type: &DataType) -> bool {
+    can_partial_eq_and_ord_scalar(data_type)
         || matches!(
             data_type.to_logical_type(),
             DataType::Interval(IntervalUnit::DayTime)
