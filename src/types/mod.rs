@@ -7,7 +7,7 @@
 //! represent chunks of bits (e.g. `u8`, `u16`), and [`BitChunkIter`], that can be used to
 //! iterate over bitmaps in [`BitChunk`]s.
 //! Finally, this module also contains traits used to compile code optimized for SIMD instructions at [`mod@simd`].
-use std::convert::TryFrom;
+use std::{convert::TryFrom, ops::Neg};
 
 mod bit_chunk;
 pub use bit_chunk::{BitChunk, BitChunkIter};
@@ -397,5 +397,23 @@ impl months_days_ns {
     #[inline]
     pub fn ns(&self) -> i64 {
         self.2
+    }
+}
+
+impl Neg for days_ms {
+    type Output = Self;
+
+    #[inline(always)]
+    fn neg(self) -> Self::Output {
+        Self([-self.0[0], -self.0[0]])
+    }
+}
+
+impl Neg for months_days_ns {
+    type Output = Self;
+
+    #[inline(always)]
+    fn neg(self) -> Self::Output {
+        Self(-self.0, -self.1, -self.2)
     }
 }
