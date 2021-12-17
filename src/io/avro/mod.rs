@@ -6,6 +6,16 @@ pub mod read;
 #[cfg(feature = "io_avro_async")]
 #[cfg_attr(docsrs, doc(cfg(feature = "io_avro_async")))]
 pub mod read_async;
+pub mod write;
+
+/// Valid compressions
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub enum Compression {
+    /// Deflate
+    Deflate,
+    /// Snappy
+    Snappy,
+}
 
 // macros that can operate in sync and async code.
 macro_rules! avro_decode {
@@ -13,7 +23,6 @@ macro_rules! avro_decode {
         {
             let mut i = 0u64;
             let mut buf = [0u8; 1];
-
             let mut j = 0;
             loop {
                 if j > 9 {

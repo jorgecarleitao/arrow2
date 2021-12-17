@@ -24,14 +24,7 @@ use crate::datatypes::Schema;
 use crate::error::Result;
 use crate::record_batch::RecordBatch;
 
-/// Valid compressions
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
-pub enum Compression {
-    /// Deflate
-    Deflate,
-    /// Snappy
-    Snappy,
-}
+use super::Compression;
 
 /// Reads the avro metadata from `reader` into a [`Schema`], [`Compression`] and magic marker.
 #[allow(clippy::type_complexity)]

@@ -10,7 +10,7 @@ use crate::error::{ArrowError, Result};
 
 use super::super::read::convert_schema;
 use super::super::read::deserialize_header;
-use super::super::read::Compression;
+use super::super::Compression;
 use super::super::{read_header, read_metadata};
 use super::utils::zigzag_i64;
 

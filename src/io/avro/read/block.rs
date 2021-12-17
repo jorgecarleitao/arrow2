@@ -24,7 +24,7 @@ fn read_size<R: Read>(reader: &mut R) -> Result<(usize, usize)> {
     Ok((rows as usize, bytes as usize))
 }
 
-/// Reads a block from the file into `buf`.
+/// Reads a block from the `reader` into `buf`.
 /// # Panic
 /// Panics iff the block marker does not equal to the file's marker
 fn read_block<R: Read>(reader: &mut R, buf: &mut Vec<u8>, file_marker: [u8; 16]) -> Result<usize> {
