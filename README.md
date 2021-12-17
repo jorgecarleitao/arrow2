@@ -17,7 +17,7 @@ documentation of each of its APIs.
 
 ## Tests
 
-The test suite includs roundtrip tests against:
+The test suite includes roundtrip tests against:
 * Arrow IPC (both little and big endian)
 * parquet format (in its different configurations)
 
