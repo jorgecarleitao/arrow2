@@ -686,9 +686,7 @@ fn write_bitmap(
             }
         }
         None => {
-            // in IPC, the null bitmap is always be present
-            let slice = vec![0u8; length.saturating_add(7) / 8];
-            write_bytes(&slice, buffers, arrow_data, offset, compression)
+            buffers.push(Schema::Buffer::new(*offset, 0));
         }
     }
 }
