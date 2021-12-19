@@ -6,14 +6,6 @@ pub mod read;
 #[cfg_attr(docsrs, doc(cfg(feature = "io_avro_async")))]
 pub mod read_async;
 
-use crate::error::ArrowError;
-
-impl From<avro_rs::Error> for ArrowError {
-    fn from(error: avro_rs::Error) -> Self {
-        ArrowError::External("".to_string(), Box::new(error))
-    }
-}
-
 // macros that can operate in sync and async code.
 macro_rules! avro_decode {
     ($reader:ident $($_await:tt)*) => {

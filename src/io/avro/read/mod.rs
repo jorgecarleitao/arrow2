@@ -3,7 +3,7 @@
 use std::io::Read;
 use std::sync::Arc;
 
-use avro_rs::Schema as AvroSchema;
+use avro_schema::{Record, Schema as AvroSchema};
 use fallible_streaming_iterator::FallibleStreamingIterator;
 
 mod block;
@@ -41,7 +41,7 @@ pub fn read_metadata<R: std::io::Read>(
     let (avro_schema, codec, marker) = util::read_schema(reader)?;
     let schema = schema::convert_schema(&avro_schema)?;
 
-    let avro_schema = if let AvroSchema::Record { fields, .. } = avro_schema {
+    let avro_schema = if let AvroSchema::Record(Record { fields, .. }) = avro_schema {
         fields.into_iter().map(|x| x.schema).collect()
     } else {
         panic!()

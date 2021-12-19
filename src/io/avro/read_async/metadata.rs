@@ -1,7 +1,7 @@
 //! Async Avro
 use std::collections::HashMap;
 
-use avro_rs::Schema as AvroSchema;
+use avro_schema::{Record, Schema as AvroSchema};
 use futures::AsyncRead;
 use futures::AsyncReadExt;
 
@@ -30,7 +30,7 @@ pub async fn read_metadata<R: AsyncRead + Unpin + Send>(
     let (avro_schema, codec, marker) = read_metadata_async(reader).await?;
     let schema = convert_schema(&avro_schema)?;
 
-    let avro_schema = if let AvroSchema::Record { fields, .. } = avro_schema {
+    let avro_schema = if let AvroSchema::Record(Record { fields, .. }) = avro_schema {
         fields.into_iter().map(|x| x.schema).collect()
     } else {
         panic!()
