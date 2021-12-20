@@ -1,7 +1,7 @@
 use std::iter::FromIterator;
 use std::sync::Arc;
 
-use crate::{buffer::bytes::Bytes, buffer::MutableBuffer, trusted_len::TrustedLen};
+use crate::{buffer::bytes::Bytes, trusted_len::TrustedLen};
 
 use super::{
     utils::{count_zeros, fmt, get_bit, get_bit_unchecked, BitChunk, BitChunks, BitmapIter},
@@ -77,12 +77,13 @@ impl Bitmap {
         }
     }
 
-    /// Creates a new [`Bitmap`] from [`MutableBuffer`] and a length.
+    /// Creates a new [`Bitmap`] from [`Vec`] and a length.
+    /// This function is `O(1)`
     /// # Panic
     /// Panics iff `length <= buffer.len() * 8`
     #[inline]
-    pub fn from_u8_buffer(buffer: MutableBuffer<u8>, length: usize) -> Self {
-        Bitmap::from_bytes(buffer.into(), length)
+    pub fn from_u8_vec(vec: Vec<u8>, length: usize) -> Self {
+        Bitmap::from_bytes(vec.into(), length)
     }
 
     /// Creates a new [`Bitmap`] from a slice and length.
@@ -90,8 +91,8 @@ impl Bitmap {
     /// Panics iff `length <= bytes.len() * 8`
     #[inline]
     pub fn from_u8_slice<T: AsRef<[u8]>>(buffer: T, length: usize) -> Self {
-        let buffer = MutableBuffer::<u8>::from(buffer.as_ref());
-        Bitmap::from_u8_buffer(buffer, length)
+        let buffer = Vec::<u8>::from(buffer.as_ref());
+        Bitmap::from_u8_vec(buffer, length)
     }
 
     /// Counts the nulls (unset bits) starting from `offset` bits and for `length` bits.

@@ -9,7 +9,6 @@ use super::utils::ExactChunksIter;
 use super::ColumnDescriptor;
 use crate::{
     bitmap::{utils::BitmapIter, MutableBitmap},
-    buffer::MutableBuffer,
     error::Result,
     types::NativeType as ArrowNativeType,
 };
@@ -19,7 +18,7 @@ fn read_dict_buffer_optional<T, A, F>(
     indices_buffer: &[u8],
     additional: usize,
     dict: &PrimitivePageDict<T>,
-    values: &mut MutableBuffer<A>,
+    values: &mut Vec<A>,
     validity: &mut MutableBitmap,
     op: F,
 ) where
@@ -65,7 +64,7 @@ fn read_dict_buffer_optional<T, A, F>(
                         values.push(value)
                     })
                 } else {
-                    values.extend_constant(additional, A::default())
+                    values.resize(values.len() + additional, A::default());
                 }
             }
         }
@@ -76,7 +75,7 @@ fn read_dict_buffer_required<T, A, F>(
     indices_buffer: &[u8],
     additional: usize,
     dict: &PrimitivePageDict<T>,
-    values: &mut MutableBuffer<A>,
+    values: &mut Vec<A>,
     validity: &mut MutableBitmap,
     op: F,
 ) where
@@ -102,7 +101,7 @@ fn read_nullable<T, A, F>(
     validity_buffer: &[u8],
     values_buffer: &[u8],
     additional: usize,
-    values: &mut MutableBuffer<A>,
+    values: &mut Vec<A>,
     validity: &mut MutableBitmap,
     op: F,
 ) where
@@ -140,19 +139,15 @@ fn read_nullable<T, A, F>(
                         values.push(value)
                     })
                 } else {
-                    values.extend_constant(additional, A::default())
+                    values.resize(values.len() + additional, A::default());
                 }
             }
         }
     }
 }
 
-fn read_required<T, A, F>(
-    values_buffer: &[u8],
-    additional: usize,
-    values: &mut MutableBuffer<A>,
-    op: F,
-) where
+fn read_required<T, A, F>(values_buffer: &[u8], additional: usize, values: &mut Vec<A>, op: F)
+where
     T: NativeType,
     A: ArrowNativeType,
     F: Fn(T) -> A,
@@ -162,13 +157,13 @@ fn read_required<T, A, F>(
 
     let iterator = iterator.map(op);
 
-    values.extend_from_trusted_len_iter(iterator);
+    values.extend(iterator);
 }
 
 pub fn extend_from_page<T, A, F>(
     page: &DataPage,
     descriptor: &ColumnDescriptor,
-    values: &mut MutableBuffer<A>,
+    values: &mut Vec<A>,
     validity: &mut MutableBitmap,
     op: F,
 ) -> Result<()>

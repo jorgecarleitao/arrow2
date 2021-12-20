@@ -1,7 +1,6 @@
 use std::iter::FromIterator;
 
 use crate::{
-    buffer::{Buffer, MutableBuffer},
     trusted_len::TrustedLen,
     types::{NativeType, NaturalDataType},
 };
@@ -27,18 +26,14 @@ impl<T: NativeType + NaturalDataType> PrimitiveArray<T> {
     /// # Implementation
     /// This does not assume that the iterator has a known length.
     pub fn from_values<I: IntoIterator<Item = T>>(iter: I) -> Self {
-        Self::from_data(
-            T::DATA_TYPE,
-            MutableBuffer::<T>::from_iter(iter).into(),
-            None,
-        )
+        Self::from_data(T::DATA_TYPE, Vec::<T>::from_iter(iter).into(), None)
     }
 
     /// Creates a (non-null) [`PrimitiveArray`] from a slice of values.
     /// # Implementation
     /// This is essentially a memcopy and is the fastest way to create a [`PrimitiveArray`].
     pub fn from_slice<P: AsRef<[T]>>(slice: P) -> Self {
-        Self::from_data(T::DATA_TYPE, Buffer::<T>::from(slice), None)
+        Self::from_data(T::DATA_TYPE, Vec::<T>::from(slice.as_ref()).into(), None)
     }
 }
 

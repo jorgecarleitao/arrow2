@@ -1,7 +1,6 @@
 use arrow2::{
     array::*,
     bitmap::{Bitmap, MutableBitmap},
-    buffer::MutableBuffer,
     datatypes::DataType,
     error::Result,
 };
@@ -11,13 +10,13 @@ use std::iter::FromIterator;
 fn from_and_into_data() {
     let a = MutablePrimitiveArray::from_data(
         DataType::Int32,
-        MutableBuffer::from([1i32, 0]),
+        Vec::from([1i32, 0]),
         Some(MutableBitmap::from([true, false])),
     );
     assert_eq!(a.len(), 2);
     let (a, b, c) = a.into_data();
     assert_eq!(a, DataType::Int32);
-    assert_eq!(b, MutableBuffer::from([1i32, 0]));
+    assert_eq!(b, Vec::from([1i32, 0]));
     assert_eq!(c, Some(MutableBitmap::from([true, false])));
 }
 
@@ -25,7 +24,7 @@ fn from_and_into_data() {
 fn to() {
     let a = MutablePrimitiveArray::from_data(
         DataType::Int32,
-        MutableBuffer::from([1i32, 0]),
+        Vec::from([1i32, 0]),
         Some(MutableBitmap::from([true, false])),
     );
     let a = a.to(DataType::Date32);
@@ -36,7 +35,7 @@ fn to() {
 fn values_mut_slice() {
     let mut a = MutablePrimitiveArray::from_data(
         DataType::Int32,
-        MutableBuffer::from([1i32, 0]),
+        Vec::from([1i32, 0]),
         Some(MutableBitmap::from([true, false])),
     );
     let values = a.values_mut_slice();
@@ -56,7 +55,7 @@ fn push() {
     assert!(!a.is_valid(1));
     assert!(!a.is_valid(2));
 
-    assert_eq!(a.values(), &MutableBuffer::from([1, 0, 0]));
+    assert_eq!(a.values(), &Vec::from([1, 0, 0]));
 }
 
 #[test]
@@ -70,7 +69,7 @@ fn set() {
     assert!(a.is_valid(0));
     assert!(a.is_valid(1));
 
-    assert_eq!(a.values(), &MutableBuffer::from([2, 1]));
+    assert_eq!(a.values(), &Vec::from([2, 1]));
 
     let mut a = MutablePrimitiveArray::<i32>::from_slice([1, 2]);
 
@@ -81,7 +80,7 @@ fn set() {
     assert!(a.is_valid(0));
     assert!(!a.is_valid(1));
 
-    assert_eq!(a.values(), &MutableBuffer::from([2, 0]));
+    assert_eq!(a.values(), &Vec::from([2, 0]));
 }
 
 #[test]
@@ -123,7 +122,7 @@ fn extend_trusted_len() {
         a.validity(),
         Some(&MutableBitmap::from([true, true, false, true]))
     );
-    assert_eq!(a.values(), &MutableBuffer::<i32>::from([1, 2, 0, 4]));
+    assert_eq!(a.values(), &Vec::<i32>::from([1, 2, 0, 4]));
 }
 
 #[test]
@@ -132,7 +131,7 @@ fn extend_constant_no_validity() {
     a.push(Some(1));
     a.extend_constant(2, Some(3));
     assert_eq!(a.validity(), None);
-    assert_eq!(a.values(), &MutableBuffer::<i32>::from([1, 3, 3]));
+    assert_eq!(a.values(), &Vec::<i32>::from([1, 3, 3]));
 }
 
 #[test]
@@ -144,7 +143,7 @@ fn extend_constant_validity() {
         a.validity(),
         Some(&MutableBitmap::from([true, false, false]))
     );
-    assert_eq!(a.values(), &MutableBuffer::<i32>::from([1, 0, 0]));
+    assert_eq!(a.values(), &Vec::<i32>::from([1, 0, 0]));
 }
 
 #[test]
@@ -156,7 +155,7 @@ fn extend_constant_validity_inverse() {
         a.validity(),
         Some(&MutableBitmap::from([false, true, true]))
     );
-    assert_eq!(a.values(), &MutableBuffer::<i32>::from([0, 1, 1]));
+    assert_eq!(a.values(), &Vec::<i32>::from([0, 1, 1]));
 }
 
 #[test]
@@ -168,7 +167,7 @@ fn extend_constant_validity_none() {
         a.validity(),
         Some(&MutableBitmap::from([false, false, false]))
     );
-    assert_eq!(a.values(), &MutableBuffer::<i32>::from([0, 0, 0]));
+    assert_eq!(a.values(), &Vec::<i32>::from([0, 0, 0]));
 }
 
 #[test]
@@ -176,7 +175,7 @@ fn extend_trusted_len_values() {
     let mut a = MutablePrimitiveArray::<i32>::new();
     a.extend_trusted_len_values(vec![1, 2, 3].into_iter());
     assert_eq!(a.validity(), None);
-    assert_eq!(a.values(), &MutableBuffer::<i32>::from([1, 2, 3]));
+    assert_eq!(a.values(), &Vec::<i32>::from([1, 2, 3]));
 
     let mut a = MutablePrimitiveArray::<i32>::new();
     a.push(None);
@@ -192,7 +191,7 @@ fn extend_from_slice() {
     let mut a = MutablePrimitiveArray::<i32>::new();
     a.extend_from_slice(&[1, 2, 3]);
     assert_eq!(a.validity(), None);
-    assert_eq!(a.values(), &MutableBuffer::<i32>::from([1, 2, 3]));
+    assert_eq!(a.values(), &Vec::<i32>::from([1, 2, 3]));
 
     let mut a = MutablePrimitiveArray::<i32>::new();
     a.push(None);
@@ -215,7 +214,7 @@ fn set_validity() {
 #[test]
 fn set_values() {
     let mut a = MutablePrimitiveArray::<i32>::from_slice([1, 2]);
-    a.set_values(MutableBuffer::from([1, 3]));
+    a.set_values(Vec::from([1, 3]));
     assert_eq!(a.values().as_slice(), [1, 3]);
 }
 
@@ -229,6 +228,6 @@ fn try_from_trusted_len_iter() {
 #[test]
 #[should_panic]
 fn wrong_data_type() {
-    let values = MutableBuffer::from(b"abbb");
+    let values = vec![1u8];
     MutablePrimitiveArray::from_data(DataType::Utf8, values, None);
 }

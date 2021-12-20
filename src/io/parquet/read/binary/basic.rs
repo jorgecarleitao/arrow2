@@ -7,7 +7,6 @@ use parquet2::{
 use crate::{
     array::Offset,
     bitmap::{utils::BitmapIter, MutableBitmap},
-    buffer::MutableBuffer,
     error::Result,
 };
 
@@ -20,8 +19,8 @@ fn read_dict_buffer<O: Offset>(
     indices_buffer: &[u8],
     additional: usize,
     dict: &BinaryPageDict,
-    offsets: &mut MutableBuffer<O>,
-    values: &mut MutableBuffer<u8>,
+    offsets: &mut Vec<O>,
+    values: &mut Vec<u8>,
     validity: &mut MutableBitmap,
 ) {
     let length = (offsets.len() - 1) + additional;
@@ -70,7 +69,7 @@ fn read_dict_buffer<O: Offset>(
                         values.extend_from_slice(&dict_values[dict_offset_i..dict_offset_ip1]);
                     })
                 } else {
-                    offsets.extend_constant(additional, last_offset)
+                    offsets.resize(values.len() + additional, last_offset);
                 }
             }
         }
@@ -82,8 +81,8 @@ fn read_dict_required<O: Offset>(
     indices_buffer: &[u8],
     additional: usize,
     dict: &BinaryPageDict,
-    offsets: &mut MutableBuffer<O>,
-    values: &mut MutableBuffer<u8>,
+    offsets: &mut Vec<O>,
+    values: &mut Vec<u8>,
     validity: &mut MutableBitmap,
 ) {
     let dict_values = dict.values();
@@ -113,8 +112,8 @@ fn read_delta_optional<O: Offset>(
     validity_buffer: &[u8],
     values_buffer: &[u8],
     additional: usize,
-    offsets: &mut MutableBuffer<O>,
-    values: &mut MutableBuffer<u8>,
+    offsets: &mut Vec<O>,
+    values: &mut Vec<u8>,
     validity: &mut MutableBitmap,
 ) {
     let length = (offsets.len() - 1) + additional;
@@ -151,7 +150,7 @@ fn read_delta_optional<O: Offset>(
                         offsets.push(last_offset);
                     })
                 } else {
-                    offsets.extend_constant(additional, last_offset)
+                    offsets.resize(values.len() + additional, last_offset);
                 }
             }
         }
@@ -166,8 +165,8 @@ fn read_plain_optional<O: Offset>(
     validity_buffer: &[u8],
     values_buffer: &[u8],
     additional: usize,
-    offsets: &mut MutableBuffer<O>,
-    values: &mut MutableBuffer<u8>,
+    offsets: &mut Vec<O>,
+    values: &mut Vec<u8>,
     validity: &mut MutableBitmap,
 ) {
     let length = (offsets.len() - 1) + additional;
@@ -205,7 +204,7 @@ fn read_plain_optional<O: Offset>(
                         values.extend_from_slice(value)
                     })
                 } else {
-                    offsets.extend_constant(additional, last_offset)
+                    offsets.resize(values.len() + additional, last_offset);
                 }
             }
         }
@@ -215,8 +214,8 @@ fn read_plain_optional<O: Offset>(
 pub(super) fn read_plain_required<O: Offset>(
     buffer: &[u8],
     additional: usize,
-    offsets: &mut MutableBuffer<O>,
-    values: &mut MutableBuffer<u8>,
+    offsets: &mut Vec<O>,
+    values: &mut Vec<u8>,
 ) {
     let mut last_offset = *offsets.as_mut_slice().last().unwrap();
 
@@ -236,8 +235,8 @@ pub(super) fn read_plain_required<O: Offset>(
 pub(super) fn extend_from_page<O: Offset>(
     page: &DataPage,
     descriptor: &ColumnDescriptor,
-    offsets: &mut MutableBuffer<O>,
-    values: &mut MutableBuffer<u8>,
+    offsets: &mut Vec<O>,
+    values: &mut Vec<u8>,
     validity: &mut MutableBitmap,
 ) -> Result<()> {
     let additional = page.num_values();

@@ -12,7 +12,6 @@ use super::{ColumnChunkMetaData, ColumnDescriptor};
 use crate::{
     array::{Array, DictionaryArray, DictionaryKey, PrimitiveArray},
     bitmap::{utils::BitmapIter, MutableBitmap},
-    buffer::MutableBuffer,
     datatypes::DataType,
     error::{ArrowError, Result},
     types::NativeType as ArrowNativeType,
@@ -24,8 +23,8 @@ fn read_dict_optional<K, T, A, F>(
     indices_buffer: &[u8],
     additional: usize,
     dict: &PrimitivePageDict<T>,
-    indices: &mut MutableBuffer<K>,
-    values: &mut MutableBuffer<A>,
+    indices: &mut Vec<K>,
+    values: &mut Vec<A>,
     validity: &mut MutableBitmap,
     op: F,
 ) where
@@ -35,7 +34,7 @@ fn read_dict_optional<K, T, A, F>(
     F: Fn(T) -> A,
 {
     let dict_values = dict.values();
-    values.extend_from_trusted_len_iter(dict_values.iter().map(|x| op(*x)));
+    values.extend(dict_values.iter().map(|x| op(*x)));
 
     // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
     // SPEC: followed by the values encoded using RLE/Bit packed described above (with the given bit width).
@@ -71,7 +70,7 @@ fn read_dict_optional<K, T, A, F>(
                         indices.push(index)
                     })
                 } else {
-                    values.extend_constant(additional, A::default())
+                    values.resize(values.len() + additional, A::default());
                 }
             }
         }
@@ -81,8 +80,8 @@ fn read_dict_optional<K, T, A, F>(
 fn extend_from_page<K, T, A, F>(
     page: &DataPage,
     descriptor: &ColumnDescriptor,
-    indices: &mut MutableBuffer<K>,
-    values: &mut MutableBuffer<A>,
+    indices: &mut Vec<K>,
+    values: &mut Vec<A>,
     validity: &mut MutableBitmap,
     op: F,
 ) -> Result<()>
@@ -140,8 +139,8 @@ where
     I: FallibleStreamingIterator<Item = DataPage, Error = E>,
 {
     let capacity = metadata.num_values() as usize;
-    let mut indices = MutableBuffer::<K>::with_capacity(capacity);
-    let mut values = MutableBuffer::<A>::with_capacity(capacity);
+    let mut indices = Vec::<K>::with_capacity(capacity);
+    let mut values = Vec::<A>::with_capacity(capacity);
     let mut validity = MutableBitmap::with_capacity(capacity);
     while let Some(page) = iter.next()? {
         extend_from_page(

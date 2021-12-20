@@ -14,7 +14,7 @@ pub mod stream;
 
 use crate::array::*;
 use crate::bitmap::Bitmap;
-use crate::buffer::{Buffer, MutableBuffer};
+use crate::buffer::Buffer;
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 use crate::io::parquet::read::is_type_nullable;
@@ -240,11 +240,11 @@ pub fn array_to_page(
                 .as_any()
                 .downcast_ref::<PrimitiveArray<i32>>()
                 .unwrap();
-            let mut values = MutableBuffer::<u8>::with_capacity(12 * array.len());
+            let mut values = Vec::<u8>::with_capacity(12 * array.len());
             array.values().iter().for_each(|x| {
                 let bytes = &x.to_le_bytes();
                 values.extend_from_slice(bytes);
-                values.extend_constant(8, 0);
+                values.resize(values.len() + 8, 0);
             });
             let array = FixedSizeBinaryArray::from_data(
                 DataType::FixedSizeBinary(12),
@@ -258,10 +258,10 @@ pub fn array_to_page(
                 .as_any()
                 .downcast_ref::<PrimitiveArray<days_ms>>()
                 .unwrap();
-            let mut values = MutableBuffer::<u8>::with_capacity(12 * array.len());
+            let mut values = Vec::<u8>::with_capacity(12 * array.len());
             array.values().iter().for_each(|x| {
                 let bytes = &x.to_le_bytes();
-                values.extend_constant(4, 0); // months
+                values.resize(values.len() + 4, 0); // months
                 values.extend_from_slice(bytes); // days and seconds
             });
             let array = FixedSizeBinaryArray::from_data(
@@ -302,7 +302,7 @@ pub fn array_to_page(
                 primitive::array_to_page::<i64, i64>(&array, options, descriptor)
             } else {
                 let size = decimal_length_from_precision(precision);
-                let mut values = MutableBuffer::<u8>::with_capacity(size * array.len());
+                let mut values = Vec::<u8>::with_capacity(size * array.len());
                 array.values().iter().for_each(|x| {
                     let bytes = &x.to_be_bytes()[16 - size..];
                     values.extend_from_slice(bytes)

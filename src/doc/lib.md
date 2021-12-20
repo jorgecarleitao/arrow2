@@ -86,6 +86,3 @@ functionality, such as:
 The feature `simd` (not part of `full`) produces more explicit SIMD instructions
 via [`packed_simd`](https://github.com/rust-lang/packed_simd), but requires the 
 nightly channel.
-
-The feature `cache_aligned` uses a custom allocator instead of `Vec`, which may be
-more performant but is not interoperable with `Vec`.

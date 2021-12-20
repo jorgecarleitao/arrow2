@@ -1,6 +1,5 @@
 use crate::{
     array::{BooleanArray, PrimitiveArray},
-    buffer::MutableBuffer,
     types::Index,
 };
 
@@ -32,14 +31,14 @@ pub fn sort_boolean<I: Index>(
         nulls.reverse();
     }
 
-    let mut values = MutableBuffer::<I>::with_capacity(values.len());
+    let mut values = Vec::<I>::with_capacity(values.len());
 
     if options.nulls_first {
         values.extend_from_slice(nulls.as_slice());
-        valids.iter().for_each(|x| values.push(x.0));
+        values.extend(valids.iter().map(|x| x.0));
     } else {
         // nulls last
-        valids.iter().for_each(|x| values.push(x.0));
+        values.extend(valids.iter().map(|x| x.0));
         values.extend_from_slice(nulls.as_slice());
     }
 

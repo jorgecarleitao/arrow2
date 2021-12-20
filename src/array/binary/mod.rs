@@ -29,7 +29,12 @@ pub struct BinaryArray<O: Offset> {
 impl<O: Offset> BinaryArray<O> {
     /// Creates an empty [`BinaryArray`], i.e. whose `.len` is zero.
     pub fn new_empty(data_type: DataType) -> Self {
-        Self::from_data(data_type, Buffer::from(&[O::zero()]), Buffer::new(), None)
+        Self::from_data(
+            data_type,
+            Buffer::from(vec![O::zero()]),
+            Buffer::new(),
+            None,
+        )
     }
 
     /// Creates an null [`BinaryArray`], i.e. whose `.null_count() == .len()`.

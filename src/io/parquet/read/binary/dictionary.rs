@@ -11,7 +11,6 @@ use super::super::utils as other_utils;
 use crate::{
     array::{Array, DictionaryArray, DictionaryKey, Offset, PrimitiveArray, Utf8Array},
     bitmap::{utils::BitmapIter, MutableBitmap},
-    buffer::MutableBuffer,
     datatypes::DataType,
     error::{ArrowError, Result},
 };
@@ -22,9 +21,9 @@ fn read_dict_optional<K, O>(
     indices_buffer: &[u8],
     additional: usize,
     dict: &BinaryPageDict,
-    indices: &mut MutableBuffer<K>,
-    offsets: &mut MutableBuffer<O>,
-    values: &mut MutableBuffer<u8>,
+    indices: &mut Vec<K>,
+    offsets: &mut Vec<O>,
+    values: &mut Vec<u8>,
     validity: &mut MutableBitmap,
 ) where
     K: DictionaryKey,
@@ -32,7 +31,7 @@ fn read_dict_optional<K, O>(
 {
     let length = indices.len() + additional;
     values.extend_from_slice(dict.values());
-    offsets.extend_from_trusted_len_iter(
+    offsets.extend(
         dict.offsets()
             .iter()
             .map(|x| O::from_usize(*x as usize).unwrap()),
@@ -72,7 +71,7 @@ fn read_dict_optional<K, O>(
                         indices.push(index)
                     })
                 } else {
-                    indices.extend_constant(additional, *indices.last().unwrap())
+                    indices.resize(indices.len() + additional, *indices.last().unwrap());
                 }
             }
         }
@@ -82,9 +81,9 @@ fn read_dict_optional<K, O>(
 fn extend_from_page<K, O>(
     page: &DataPage,
     descriptor: &ColumnDescriptor,
-    indices: &mut MutableBuffer<K>,
-    offsets: &mut MutableBuffer<O>,
-    values: &mut MutableBuffer<u8>,
+    indices: &mut Vec<K>,
+    offsets: &mut Vec<O>,
+    values: &mut Vec<u8>,
     validity: &mut MutableBitmap,
 ) -> Result<()>
 where
@@ -136,9 +135,9 @@ where
     I: FallibleStreamingIterator<Item = DataPage, Error = E>,
 {
     let capacity = metadata.num_values() as usize;
-    let mut indices = MutableBuffer::<K>::with_capacity(capacity);
-    let mut values = MutableBuffer::<u8>::with_capacity(0);
-    let mut offsets = MutableBuffer::<O>::with_capacity(1 + capacity);
+    let mut indices = Vec::<K>::with_capacity(capacity);
+    let mut values = Vec::<u8>::with_capacity(0);
+    let mut offsets = Vec::<O>::with_capacity(1 + capacity);
     let mut validity = MutableBitmap::with_capacity(capacity);
     while let Some(page) = iter.next()? {
         extend_from_page(

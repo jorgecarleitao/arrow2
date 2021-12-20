@@ -171,7 +171,7 @@ fn nested_list_arrays() {
     );
     let expected = ListArray::from_data(
         a_list_data_type,
-        Buffer::from([0i32, 2, 3, 6, 6, 6]),
+        Buffer::from_slice([0i32, 2, 3, 6, 6, 6]),
         Arc::new(a_struct) as Arc<dyn Array>,
         Some(Bitmap::from_u8_slice([0b00010111], 5)),
     );

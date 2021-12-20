@@ -1,7 +1,4 @@
-use arrow2::{
-    bitmap::{Bitmap, MutableBitmap},
-    buffer::MutableBuffer,
-};
+use arrow2::bitmap::{Bitmap, MutableBitmap};
 
 #[test]
 fn from_slice() {
@@ -162,7 +159,7 @@ fn extend_from_bitmap() {
 #[test]
 fn extend_from_bitmap_offset() {
     let other = Bitmap::from_u8_slice(&[0b00111111], 8);
-    let mut bitmap = MutableBitmap::from_buffer(MutableBuffer::from(&[1, 0, 0b00101010]), 22);
+    let mut bitmap = MutableBitmap::from_vec(vec![1, 0, 0b00101010], 22);
 
     // call is optimized to perform a memcopy
     bitmap.extend_from_bitmap(&other);
@@ -172,7 +169,7 @@ fn extend_from_bitmap_offset() {
 
     // more than one byte
     let other = Bitmap::from_u8_slice(&[0b00111111, 0b00001111, 0b0001100], 20);
-    let mut bitmap = MutableBitmap::from_buffer(MutableBuffer::from(&[1, 0, 0b00101010]), 22);
+    let mut bitmap = MutableBitmap::from_vec(vec![1, 0, 0b00101010], 22);
 
     // call is optimized to perform a memcopy
     bitmap.extend_from_bitmap(&other);

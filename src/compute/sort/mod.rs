@@ -2,7 +2,6 @@
 use std::cmp::Ordering;
 
 use crate::array::ord;
-use crate::buffer::MutableBuffer;
 use crate::compute::take;
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
@@ -351,13 +350,9 @@ where
     let values = valids.iter().map(|tuple| tuple.0);
 
     let mut values = if options.nulls_first {
-        let mut buffer = MutableBuffer::<I>::from_trusted_len_iter(null_indices.into_iter());
-        buffer.extend(values);
-        buffer
+        null_indices.into_iter().chain(values).collect::<Vec<I>>()
     } else {
-        let mut buffer = MutableBuffer::<I>::from_trusted_len_iter(values);
-        buffer.extend(null_indices);
-        buffer
+        values.chain(null_indices.into_iter()).collect::<Vec<I>>()
     };
 
     values.truncate(limit.unwrap_or_else(|| values.len()));

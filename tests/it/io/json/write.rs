@@ -263,7 +263,7 @@ fn write_list_of_struct() {
     // [{"c11": 5, "c12": {"c121": "g"}}]
     let c1 = ListArray::<i32>::from_data(
         c1_datatype,
-        Buffer::from(&[0, 2, 2, 3]),
+        Buffer::from_slice([0, 2, 2, 3]),
         Arc::new(s),
         Some(Bitmap::from_u8_slice([0b00000101], 3)),
     );

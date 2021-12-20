@@ -1,6 +1,5 @@
 use arrow2::array::{MutableUtf8Array, Utf8Array};
 use arrow2::bitmap::Bitmap;
-use arrow2::buffer::MutableBuffer;
 use arrow2::datatypes::DataType;
 
 #[test]
@@ -24,8 +23,8 @@ fn push_null() {
 #[test]
 #[should_panic]
 fn not_utf8() {
-    let offsets = MutableBuffer::from(&[0, 4]);
-    let values = MutableBuffer::from([0, 159, 146, 150]); // invalid utf8
+    let offsets = vec![0, 4];
+    let values = vec![0, 159, 146, 150]; // invalid utf8
     MutableUtf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
 }
 
@@ -33,16 +32,16 @@ fn not_utf8() {
 #[test]
 #[should_panic]
 fn wrong_offsets() {
-    let offsets = MutableBuffer::from(&[0, 5, 4]); // invalid offsets
-    let values = MutableBuffer::from(b"abbbbb");
+    let offsets = vec![0, 5, 4]; // invalid offsets
+    let values = vec![0, 1, 2, 3, 4, 5];
     MutableUtf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
 }
 
 #[test]
 #[should_panic]
 fn wrong_data_type() {
-    let offsets = MutableBuffer::from(&[0, 4]); // invalid offsets
-    let values = MutableBuffer::from(b"abbb");
+    let offsets = vec![0, 4]; // invalid offsets
+    let values = vec![1, 2, 3, 4];
     MutableUtf8Array::<i32>::from_data(DataType::Int8, offsets, values, None);
 }
 

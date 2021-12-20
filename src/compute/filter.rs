@@ -2,9 +2,9 @@
 use crate::array::growable::{make_growable, Growable};
 use crate::bitmap::{utils::SlicesIterator, Bitmap, MutableBitmap};
 use crate::datatypes::DataType;
+use crate::error::Result;
 use crate::record_batch::RecordBatch;
 use crate::{array::*, types::NativeType};
-use crate::{buffer::MutableBuffer, error::Result};
 
 /// Function that can filter arbitrary arrays
 pub type Filter<'a> = Box<dyn Fn(&dyn Array) -> Box<dyn Array> + 'a + Send + Sync>;
@@ -16,7 +16,7 @@ fn filter_nonnull_primitive<T: NativeType>(
     assert_eq!(array.len(), mask.len());
     let filter_count = mask.len() - mask.null_count();
 
-    let mut buffer = MutableBuffer::<T>::with_capacity(filter_count);
+    let mut buffer = Vec::<T>::with_capacity(filter_count);
     if let Some(validity) = array.validity() {
         let mut new_validity = MutableBitmap::with_capacity(filter_count);
 
@@ -28,7 +28,7 @@ fn filter_nonnull_primitive<T: NativeType>(
             .filter(|x| x.1)
             .map(|x| x.0)
             .for_each(|(item, is_valid)| unsafe {
-                buffer.push_unchecked(*item);
+                buffer.push(*item);
                 new_validity.push_unchecked(is_valid);
             });
 
@@ -44,7 +44,7 @@ fn filter_nonnull_primitive<T: NativeType>(
             .zip(mask.iter())
             .filter(|x| x.1)
             .map(|x| x.0)
-            .for_each(|item| unsafe { buffer.push_unchecked(*item) });
+            .for_each(|item| buffer.push(*item));
 
         PrimitiveArray::<T>::from_data(array.data_type().clone(), buffer.into(), None)
     }

@@ -9,14 +9,14 @@ use super::super::nested_utils::*;
 use super::super::utils;
 use super::basic::read_plain_required;
 
-use crate::{array::Offset, bitmap::MutableBitmap, buffer::MutableBuffer, error::Result};
+use crate::{array::Offset, bitmap::MutableBitmap, error::Result};
 
 fn read_values<'a, O, D, G>(
     def_levels: D,
     max_def: u32,
     mut new_values: G,
-    offsets: &mut MutableBuffer<O>,
-    values: &mut MutableBuffer<u8>,
+    offsets: &mut Vec<O>,
+    values: &mut Vec<u8>,
     validity: &mut MutableBitmap,
 ) where
     O: Offset,
@@ -46,8 +46,8 @@ fn read<O: Offset>(
     def_level_encoding: (&Encoding, i16),
     is_nullable: bool,
     nested: &mut Vec<Box<dyn Nested>>,
-    offsets: &mut MutableBuffer<O>,
-    values: &mut MutableBuffer<u8>,
+    offsets: &mut Vec<O>,
+    values: &mut Vec<u8>,
     validity: &mut MutableBitmap,
 ) {
     let max_rep_level = rep_level_encoding.1 as u32;
@@ -97,8 +97,8 @@ pub(super) fn extend_from_page<O: Offset>(
     descriptor: &ColumnDescriptor,
     is_nullable: bool,
     nested: &mut Vec<Box<dyn Nested>>,
-    offsets: &mut MutableBuffer<O>,
-    values: &mut MutableBuffer<u8>,
+    offsets: &mut Vec<O>,
+    values: &mut Vec<u8>,
     validity: &mut MutableBitmap,
 ) -> Result<()> {
     let additional = page.num_values();

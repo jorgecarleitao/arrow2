@@ -86,6 +86,6 @@ impl<O: Offset> Utf8Array<O> {
 impl<O: Offset, P: AsRef<str>> FromIterator<Option<P>> for Utf8Array<O> {
     #[inline]
     fn from_iter<I: IntoIterator<Item = Option<P>>>(iter: I) -> Self {
-        MutableUtf8Array::from_iter(iter).into()
+        MutableUtf8Array::<O>::from_iter(iter).into()
     }
 }

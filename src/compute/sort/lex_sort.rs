@@ -4,7 +4,6 @@ use crate::compute::take;
 use crate::error::{ArrowError, Result};
 use crate::{
     array::{ord, Array, PrimitiveArray},
-    buffer::MutableBuffer,
     types::Index,
 };
 
@@ -168,12 +167,7 @@ pub fn lexsort_to_indices<I: Index>(
         Ordering::Equal
     };
 
-    // Safety: `0..row_count` is TrustedLen
-    let mut values = unsafe {
-        MutableBuffer::from_trusted_len_iter_unchecked(
-            (0..row_count).map(|x| I::from_usize(x).unwrap()),
-        )
-    };
+    let mut values = I::range(0, row_count).unwrap().collect::<Vec<_>>();
 
     if let Some(limit) = limit {
         let limit = limit.min(row_count);

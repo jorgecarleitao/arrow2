@@ -47,7 +47,7 @@ impl MapArray {
     /// Returns a new empty [`MapArray`].
     pub fn new_empty(data_type: DataType) -> Self {
         let field = new_empty_array(Self::get_field(&data_type).data_type().clone()).into();
-        Self::from_data(data_type, Buffer::from(&[0i32]), field, None)
+        Self::from_data(data_type, Buffer::from(vec![0i32]), field, None)
     }
 
     /// Returns a new [`MapArray`].

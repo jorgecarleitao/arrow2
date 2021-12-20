@@ -16,7 +16,7 @@
 // under the License.
 
 use crate::bitmap::Bitmap;
-use crate::buffer::{Buffer, MutableBuffer};
+use crate::buffer::Buffer;
 use crate::{
     array::{Array, PrimitiveArray},
     bitmap::{utils::SlicesIterator, MutableBitmap},
@@ -71,8 +71,7 @@ where
 {
     assert!(limit <= values.len());
     if options.nulls_first && limit < validity.null_count() {
-        let mut buffer = MutableBuffer::<T>::with_capacity(limit);
-        buffer.extend_constant(limit, T::default());
+        let buffer = vec![T::default(); limit];
         let bitmap = MutableBitmap::from_trusted_len_iter(std::iter::repeat(false).take(limit));
         return (buffer.into(), bitmap.into());
     }
@@ -80,7 +79,7 @@ where
     let nulls = std::iter::repeat(false).take(validity.null_count());
     let valids = std::iter::repeat(true).take(values.len() - validity.null_count());
 
-    let mut buffer = MutableBuffer::<T>::with_capacity(values.len());
+    let mut buffer = Vec::<T>::with_capacity(values.len());
     let mut new_validity = MutableBitmap::with_capacity(values.len());
     let slices = SlicesIterator::new(validity);
 
@@ -89,7 +88,7 @@ where
         new_validity.extend_from_trusted_len_iter(nulls.chain(valids).take(limit));
 
         // extend buffer with constants followed by non-null values
-        buffer.extend_constant(validity.null_count(), T::default());
+        buffer.resize(validity.null_count(), T::default());
         for (start, len) in slices {
             buffer.extend_from_slice(&values[start..start + len])
         }
@@ -120,7 +119,7 @@ where
 
         if limit > values.len() - validity.null_count() {
             // extend remaining with nulls
-            buffer.extend_constant(validity.null_count(), T::default());
+            buffer.resize(buffer.len() + validity.null_count(), T::default());
         }
     };
     // values are sorted, we can now truncate the remaining.
@@ -150,7 +149,7 @@ where
     let (buffer, validity) = if let Some(validity) = validity {
         sort_nullable(values, validity, cmp, options, limit)
     } else {
-        let mut buffer = MutableBuffer::<T>::new();
+        let mut buffer = Vec::<T>::new();
         buffer.extend_from_slice(values);
 
         sort_values(buffer.as_mut_slice(), cmp, options.descending, limit);

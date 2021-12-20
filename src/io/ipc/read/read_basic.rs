@@ -6,7 +6,7 @@ use arrow_format::ipc::Message::{BodyCompression, CompressionType};
 
 use crate::buffer::Buffer;
 use crate::error::{ArrowError, Result};
-use crate::{bitmap::Bitmap, buffer::MutableBuffer, types::NativeType};
+use crate::{bitmap::Bitmap, types::NativeType};
 
 use super::super::compression;
 use super::super::endianess::is_native_little_endian;
@@ -14,7 +14,7 @@ use super::super::endianess::is_native_little_endian;
 fn read_swapped<T: NativeType, R: Read + Seek>(
     reader: &mut R,
     length: usize,
-    buffer: &mut MutableBuffer<T>,
+    buffer: &mut Vec<T>,
     is_little_endian: bool,
 ) -> Result<()> {
     // slow case where we must reverse bits
@@ -49,7 +49,7 @@ fn read_uncompressed_buffer<T: NativeType, R: Read + Seek>(
     buffer_length: usize,
     length: usize,
     is_little_endian: bool,
-) -> Result<MutableBuffer<T>> {
+) -> Result<Vec<T>> {
     let bytes = length * std::mem::size_of::<T>();
     if bytes > buffer_length {
         return Err(ArrowError::OutOfSpec(
@@ -67,7 +67,7 @@ fn read_uncompressed_buffer<T: NativeType, R: Read + Seek>(
 
     // it is undefined behavior to call read_exact on un-initialized, https://doc.rust-lang.org/std/io/trait.Read.html#tymethod.read
     // see also https://github.com/MaikKlein/ash/issues/354#issue-781730580
-    let mut buffer = MutableBuffer::<T>::from_len_zeroed(length);
+    let mut buffer = vec![T::default(); length];
 
     if is_native_little_endian() == is_little_endian {
         // fast case where we can just copy the contents as is
@@ -91,7 +91,7 @@ fn read_compressed_buffer<T: NativeType, R: Read + Seek>(
     length: usize,
     is_little_endian: bool,
     compression: BodyCompression,
-) -> Result<MutableBuffer<T>> {
+) -> Result<Vec<T>> {
     if is_little_endian != is_native_little_endian() {
         return Err(ArrowError::NotYetImplemented(
             "Reading compressed and big endian IPC".to_string(),
@@ -100,7 +100,7 @@ fn read_compressed_buffer<T: NativeType, R: Read + Seek>(
 
     // it is undefined behavior to call read_exact on un-initialized, https://doc.rust-lang.org/std/io/trait.Read.html#tymethod.read
     // see also https://github.com/MaikKlein/ash/issues/354#issue-781730580
-    let mut buffer = MutableBuffer::<T>::from_len_zeroed(length);
+    let mut buffer = vec![T::default(); length];
 
     // decompress first
     // todo: move this allocation to an external buffer for re-use
@@ -159,12 +159,12 @@ fn read_uncompressed_bitmap<R: Read + Seek>(
     length: usize,
     bytes: usize,
     reader: &mut R,
-) -> Result<MutableBuffer<u8>> {
+) -> Result<Vec<u8>> {
     // something is wrong if we can't `length`
     assert!(length <= bytes * 8);
     // it is undefined behavior to call read_exact on un-initialized, https://doc.rust-lang.org/std/io/trait.Read.html#tymethod.read
     // see also https://github.com/MaikKlein/ash/issues/354#issue-781730580
-    let mut buffer = MutableBuffer::<u8>::from_len_zeroed(bytes);
+    let mut buffer = vec![0; bytes];
     reader.read_exact(buffer.as_mut_slice())?;
 
     Ok(buffer)
@@ -175,8 +175,8 @@ fn read_compressed_bitmap<R: Read + Seek>(
     bytes: usize,
     compression: BodyCompression,
     reader: &mut R,
-) -> Result<MutableBuffer<u8>> {
-    let mut buffer = MutableBuffer::<u8>::from_len_zeroed((length + 7) / 8);
+) -> Result<Vec<u8>> {
+    let mut buffer = vec![0; (length + 7) / 8];
 
     // read all first
     // todo: move this allocation to an external buffer for re-use

@@ -4,6 +4,7 @@ use arrow2::compute::take::{can_take, take};
 use arrow2::datatypes::{DataType, Field, IntervalUnit};
 use arrow2::error::Result;
 use arrow2::{array::*, bitmap::MutableBitmap, types::NativeType};
+use arrow2::{bitmap::Bitmap, buffer::Buffer};
 
 fn test_take_primitive<T>(
     data: &[Option<T>],
@@ -173,4 +174,142 @@ fn unsigned_take() {
     let values = BooleanArray::from(vec![Some(true), Some(false)]);
     let a = take(&values, &indices).unwrap();
     assert_eq!(a.len(), 0)
+}
+
+#[test]
+fn list_with_no_none() {
+    let values = Buffer::from_slice([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    let values = PrimitiveArray::<i32>::from_data(DataType::Int32, values, None);
+
+    let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
+    let array = ListArray::<i32>::from_data(
+        data_type,
+        Buffer::from_slice([0, 2, 2, 6, 9, 10]),
+        Arc::new(values),
+        None,
+    );
+
+    let indices = PrimitiveArray::from([Some(4i32), Some(1), Some(3)]);
+    let result = take(&array, &indices).unwrap();
+
+    let expected_values = Buffer::from_slice([9, 6, 7, 8]);
+    let expected_values = PrimitiveArray::<i32>::from_data(DataType::Int32, expected_values, None);
+    let expected_type = ListArray::<i32>::default_datatype(DataType::Int32);
+    let expected = ListArray::<i32>::from_data(
+        expected_type,
+        Buffer::from_slice([0, 1, 1, 4]),
+        Arc::new(expected_values),
+        None,
+    );
+
+    assert_eq!(expected, result.as_ref());
+}
+
+#[test]
+fn list_with_none() {
+    let values = Buffer::from_slice([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    let values = PrimitiveArray::<i32>::from_data(DataType::Int32, values, None);
+
+    let validity_values = vec![true, false, true, true, true];
+    let validity = Bitmap::from_trusted_len_iter(validity_values.into_iter());
+
+    let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
+    let array = ListArray::<i32>::from_data(
+        data_type,
+        Buffer::from_slice([0, 2, 2, 6, 9, 10]),
+        Arc::new(values),
+        Some(validity),
+    );
+
+    let indices = PrimitiveArray::from([Some(4i32), None, Some(2), Some(3)]);
+    let result = take(&array, &indices).unwrap();
+
+    let data_expected = vec![
+        Some(vec![Some(9i32)]),
+        None,
+        Some(vec![Some(2i32), Some(3), Some(4), Some(5)]),
+        Some(vec![Some(6i32), Some(7), Some(8)]),
+    ];
+
+    let mut expected = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new();
+    expected.try_extend(data_expected).unwrap();
+    let expected: ListArray<i32> = expected.into();
+
+    assert_eq!(expected, result.as_ref());
+}
+
+#[test]
+fn list_both_validity() {
+    let values = vec![
+        Some(vec![Some(2i32), Some(3), Some(4), Some(5)]),
+        None,
+        Some(vec![Some(9i32)]),
+        Some(vec![Some(6i32), Some(7), Some(8)]),
+    ];
+
+    let mut array = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new();
+    array.try_extend(values).unwrap();
+    let array: ListArray<i32> = array.into();
+
+    let indices = PrimitiveArray::from([Some(3i32), None, Some(1), Some(0)]);
+    let result = take(&array, &indices).unwrap();
+
+    let data_expected = vec![
+        Some(vec![Some(6i32), Some(7), Some(8)]),
+        None,
+        None,
+        Some(vec![Some(2i32), Some(3), Some(4), Some(5)]),
+    ];
+    let mut expected = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new();
+    expected.try_extend(data_expected).unwrap();
+    let expected: ListArray<i32> = expected.into();
+
+    assert_eq!(expected, result.as_ref());
+}
+
+#[test]
+fn test_nested() {
+    let values = Buffer::from_slice([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    let values = PrimitiveArray::<i32>::from_data(DataType::Int32, values, None);
+
+    let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
+    let array = ListArray::<i32>::from_data(
+        data_type,
+        Buffer::from_slice([0, 2, 4, 7, 7, 8, 10]),
+        Arc::new(values),
+        None,
+    );
+
+    let data_type = ListArray::<i32>::default_datatype(array.data_type().clone());
+    let nested = ListArray::<i32>::from_data(
+        data_type,
+        Buffer::from_slice([0, 2, 5, 6]),
+        Arc::new(array),
+        None,
+    );
+
+    let indices = PrimitiveArray::from([Some(0i32), Some(1)]);
+    let result = take(&nested, &indices).unwrap();
+
+    // expected data
+    let expected_values = Buffer::from_slice([1, 2, 3, 4, 5, 6, 7, 8]);
+    let expected_values = PrimitiveArray::<i32>::from_data(DataType::Int32, expected_values, None);
+
+    let expected_data_type = ListArray::<i32>::default_datatype(DataType::Int32);
+    let expected_array = ListArray::<i32>::from_data(
+        expected_data_type,
+        Buffer::from_slice([0, 2, 4, 7, 7, 8]),
+        Arc::new(expected_values),
+        None,
+    );
+
+    let expected_data_type = ListArray::<i32>::default_datatype(expected_array.data_type().clone());
+    let expected = ListArray::<i32>::from_data(
+        expected_data_type,
+        Buffer::from_slice([0, 2, 5]),
+        Arc::new(expected_array),
+        None,
+    );
+
+    assert_eq!(expected, result.as_ref());
 }

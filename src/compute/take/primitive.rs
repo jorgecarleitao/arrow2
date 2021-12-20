@@ -1,7 +1,7 @@
 use crate::{
     array::{Array, PrimitiveArray},
     bitmap::{Bitmap, MutableBitmap},
-    buffer::{Buffer, MutableBuffer},
+    buffer::Buffer,
     types::NativeType,
 };
 
@@ -12,10 +12,12 @@ fn take_no_validity<T: NativeType, I: Index>(
     values: &[T],
     indices: &[I],
 ) -> (Buffer<T>, Option<Bitmap>) {
-    let values = indices.iter().map(|index| values[index.to_usize()]);
-    let buffer = MutableBuffer::from_trusted_len_iter(values);
+    let values = indices
+        .iter()
+        .map(|index| values[index.to_usize()])
+        .collect::<Vec<_>>();
 
-    (buffer.into(), None)
+    (values.into(), None)
 }
 
 // take implementation when only values contain nulls
@@ -31,10 +33,13 @@ fn take_values_validity<T: NativeType, I: Index>(
     let validity = MutableBitmap::from_trusted_len_iter(validity);
 
     let values_values = values.values();
-    let values = indices.iter().map(|index| values_values[index.to_usize()]);
-    let buffer = MutableBuffer::from_trusted_len_iter(values);
 
-    (buffer.into(), validity.into())
+    let values = indices
+        .iter()
+        .map(|index| values_values[index.to_usize()])
+        .collect::<Vec<_>>();
+
+    (values.into(), validity.into())
 }
 
 // take implementation when only indices contain nulls
@@ -43,23 +48,26 @@ fn take_indices_validity<T: NativeType, I: Index>(
     indices: &PrimitiveArray<I>,
 ) -> (Buffer<T>, Option<Bitmap>) {
     let validity = indices.validity().unwrap();
-    let values = indices.values().iter().enumerate().map(|(i, index)| {
-        let index = index.to_usize();
-        match values.get(index) {
-            Some(value) => *value,
-            None => {
-                if !validity.get_bit(i) {
-                    T::default()
-                } else {
-                    panic!("Out-of-bounds index {}", index)
+    let values = indices
+        .values()
+        .iter()
+        .enumerate()
+        .map(|(i, index)| {
+            let index = index.to_usize();
+            match values.get(index) {
+                Some(value) => *value,
+                None => {
+                    if !validity.get_bit(i) {
+                        T::default()
+                    } else {
+                        panic!("Out-of-bounds index {}", index)
+                    }
                 }
             }
-        }
-    });
+        })
+        .collect::<Vec<_>>();
 
-    let buffer = MutableBuffer::from_trusted_len_iter(values);
-
-    (buffer.into(), indices.validity().cloned())
+    (values.into(), indices.validity().cloned())
 }
 
 // take implementation when both values and indices contain nulls
@@ -72,19 +80,21 @@ fn take_values_indices_validity<T: NativeType, I: Index>(
     let values_validity = values.validity().unwrap();
 
     let values_values = values.values();
-    let values = indices.iter().map(|index| match index {
-        Some(index) => {
-            let index = index.to_usize();
-            bitmap.push(values_validity.get_bit(index));
-            values_values[index]
-        }
-        None => {
-            bitmap.push(false);
-            T::default()
-        }
-    });
-    let buffer = MutableBuffer::from_trusted_len_iter(values);
-    (buffer.into(), bitmap.into())
+    let values = indices
+        .iter()
+        .map(|index| match index {
+            Some(index) => {
+                let index = index.to_usize();
+                bitmap.push(values_validity.get_bit(index));
+                values_values[index]
+            }
+            None => {
+                bitmap.push(false);
+                T::default()
+            }
+        })
+        .collect::<Vec<_>>();
+    (values.into(), bitmap.into())
 }
 
 /// `take` implementation for primitive arrays

@@ -3,7 +3,6 @@ use std::sync::Arc;
 use crate::{
     array::{Array, ListArray, Offset},
     bitmap::MutableBitmap,
-    buffer::MutableBuffer,
 };
 
 use super::{
@@ -59,7 +58,7 @@ pub struct GrowableList<'a, O: Offset> {
     arrays: Vec<&'a ListArray<O>>,
     validity: MutableBitmap,
     values: Box<dyn Growable<'a> + 'a>,
-    offsets: MutableBuffer<O>,
+    offsets: Vec<O>,
     last_offset: O, // always equal to the last offset at `offsets`.
     extend_null_bits: Vec<ExtendNullBits<'a>>,
 }
@@ -86,9 +85,9 @@ impl<'a, O: Offset> GrowableList<'a, O> {
             .collect::<Vec<_>>();
         let values = make_growable(&inner, use_validity, 0);
 
-        let mut offsets = MutableBuffer::with_capacity(capacity + 1);
+        let mut offsets = Vec::with_capacity(capacity + 1);
         let length = O::default();
-        unsafe { offsets.push_unchecked(length) };
+        offsets.push(length);
 
         Self {
             arrays,
@@ -121,7 +120,8 @@ impl<'a, O: Offset> Growable<'a> for GrowableList<'a, O> {
     }
 
     fn extend_validity(&mut self, additional: usize) {
-        self.offsets.extend_constant(additional, self.last_offset);
+        self.offsets
+            .resize(self.offsets.len() + additional, self.last_offset);
         self.validity.extend_constant(additional, false);
     }
 

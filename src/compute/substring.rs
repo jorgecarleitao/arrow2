@@ -17,8 +17,8 @@
 
 //! Defines kernel to extract a substring of a \[Large\]StringArray
 
-use crate::{array::*, buffer::MutableBuffer};
 use crate::{
+    array::*,
     datatypes::DataType,
     error::{ArrowError, Result},
 };
@@ -76,8 +76,8 @@ fn binary_substring<O: Offset>(
     let offsets = array.offsets();
     let values = array.values();
 
-    let mut new_offsets = MutableBuffer::<O>::with_capacity(array.len() + 1);
-    let mut new_values = MutableBuffer::<u8>::new(); // we have no way to estimate how much this will be.
+    let mut new_offsets = Vec::<O>::with_capacity(array.len() + 1);
+    let mut new_values = Vec::<u8>::new(); // we have no way to estimate how much this will be.
 
     let mut length_so_far = O::zero();
     new_offsets.push(length_so_far);

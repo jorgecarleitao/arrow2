@@ -27,7 +27,6 @@ use crate::types::NaturalDataType;
 use crate::{
     array::*,
     bitmap::MutableBitmap,
-    buffer::MutableBuffer,
     datatypes::{DataType, IntervalUnit},
     types::NativeType,
 };
@@ -130,7 +129,7 @@ fn read_list<O: Offset>(rows: &[&Value], data_type: DataType) -> ListArray<O> {
 
     let mut validity = MutableBitmap::with_capacity(rows.len());
     let mut inner = Vec::<&Value>::with_capacity(rows.len());
-    let mut offsets = MutableBuffer::<O>::with_capacity(rows.len() + 1);
+    let mut offsets = Vec::<O>::with_capacity(rows.len() + 1);
     offsets.push(O::zero());
     rows.iter().fold(O::zero(), |mut length, row| {
         match row {

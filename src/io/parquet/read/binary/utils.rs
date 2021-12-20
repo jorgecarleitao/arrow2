@@ -1,14 +1,13 @@
 use crate::{
     array::{Array, BinaryArray, Offset, Utf8Array},
     bitmap::MutableBitmap,
-    buffer::MutableBuffer,
     datatypes::DataType,
 };
 
 pub(super) fn finish_array<O: Offset>(
     data_type: DataType,
-    offsets: MutableBuffer<O>,
-    values: MutableBuffer<u8>,
+    offsets: Vec<O>,
+    values: Vec<u8>,
     validity: MutableBitmap,
 ) -> Box<dyn Array> {
     match data_type {

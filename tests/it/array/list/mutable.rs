@@ -16,14 +16,14 @@ fn basics() {
 
     let values = PrimitiveArray::<i32>::from_data(
         DataType::Int32,
-        Buffer::from([1, 2, 3, 4, 0, 6]),
+        Buffer::from_slice([1, 2, 3, 4, 0, 6]),
         Some(Bitmap::from([true, true, true, true, false, true])),
     );
 
     let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
     let expected = ListArray::<i32>::from_data(
         data_type,
-        Buffer::from([0, 3, 3, 6]),
+        Buffer::from_slice([0, 3, 3, 6]),
         Arc::new(values),
         Some(Bitmap::from([true, false, true])),
     );

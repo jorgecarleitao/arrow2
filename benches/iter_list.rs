@@ -6,7 +6,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 use arrow2::{
     array::{ListArray, PrimitiveArray},
     bitmap::Bitmap,
-    buffer::{Buffer, MutableBuffer},
+    buffer::Buffer,
     datatypes::DataType,
 };
 
@@ -17,7 +17,7 @@ fn add_benchmark(c: &mut Criterion) {
         let values = Buffer::from_iter(0..size as i32);
         let values = PrimitiveArray::<i32>::from_data(DataType::Int32, values, None);
 
-        let mut offsets = MutableBuffer::from_iter((0..size as i32).step_by(2));
+        let mut offsets = (0..size as i32).step_by(2).collect::<Vec<_>>();
         offsets.push(size as i32);
 
         let validity = (0..(offsets.len() - 1))

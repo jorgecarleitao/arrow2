@@ -6,7 +6,7 @@ mod mutable;
 fn basics() {
     let array = FixedSizeBinaryArray::from_data(
         DataType::FixedSizeBinary(2),
-        Buffer::from([1, 2, 3, 4, 5, 6]),
+        Buffer::from_slice([1, 2, 3, 4, 5, 6]),
         Some(Bitmap::from([true, false, true])),
     );
     assert_eq!(array.size(), 2);
@@ -23,7 +23,7 @@ fn basics() {
 
 #[test]
 fn with_validity() {
-    let values = Buffer::from([1, 2, 3, 4, 5, 6]);
+    let values = Buffer::from_slice([1, 2, 3, 4, 5, 6]);
     let a = FixedSizeBinaryArray::from_data(DataType::FixedSizeBinary(2), values, None);
     let a = a.with_validity(Some(Bitmap::from([true, false, true])));
     assert!(a.validity().is_some());
@@ -31,7 +31,7 @@ fn with_validity() {
 
 #[test]
 fn display() {
-    let values = Buffer::from([1, 2, 3, 4, 5, 6]);
+    let values = Buffer::from_slice([1, 2, 3, 4, 5, 6]);
     let a = FixedSizeBinaryArray::from_data(
         DataType::FixedSizeBinary(2),
         values,

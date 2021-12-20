@@ -11,7 +11,6 @@ use super::{ColumnChunkMetaData, ColumnDescriptor};
 use crate::{
     array::{Array, PrimitiveArray},
     bitmap::MutableBitmap,
-    buffer::MutableBuffer,
     datatypes::DataType,
     error::{ArrowError, Result},
     types::NativeType as ArrowNativeType,
@@ -34,7 +33,7 @@ where
     I: Stream<Item = std::result::Result<DataPage, E>>,
 {
     let capacity = metadata.num_values() as usize;
-    let mut values = MutableBuffer::<A>::with_capacity(capacity);
+    let mut values = Vec::<A>::with_capacity(capacity);
     let mut validity = MutableBitmap::with_capacity(capacity);
 
     pin_mut!(pages); // needed for iteration
@@ -77,7 +76,7 @@ where
     I: FallibleStreamingIterator<Item = DataPage, Error = E>,
 {
     let capacity = metadata.num_values() as usize;
-    let mut values = MutableBuffer::<A>::with_capacity(capacity);
+    let mut values = Vec::<A>::with_capacity(capacity);
     let mut validity = MutableBitmap::with_capacity(capacity);
 
     let is_nullable = nested.pop().unwrap().is_nullable();

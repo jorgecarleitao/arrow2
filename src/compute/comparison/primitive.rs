@@ -2,7 +2,6 @@
 use crate::{
     array::{BooleanArray, PrimitiveArray},
     bitmap::{Bitmap, MutableBitmap},
-    buffer::MutableBuffer,
     datatypes::DataType,
     types::NativeType,
 };
@@ -22,20 +21,20 @@ where
     let rhs_chunks_iter = rhs.chunks_exact(8);
     let rhs_remainder = rhs_chunks_iter.remainder();
 
-    let mut values = MutableBuffer::with_capacity((lhs.len() + 7) / 8);
+    let mut values = Vec::with_capacity((lhs.len() + 7) / 8);
     let iterator = lhs_chunks_iter.zip(rhs_chunks_iter).map(|(lhs, rhs)| {
         let lhs = T::Simd::from_chunk(lhs);
         let rhs = T::Simd::from_chunk(rhs);
         op(lhs, rhs)
     });
-    values.extend_from_trusted_len_iter(iterator);
+    values.extend(iterator);
 
     if !lhs_remainder.is_empty() {
         let lhs = T::Simd::from_incomplete_chunk(lhs_remainder, T::default());
         let rhs = T::Simd::from_incomplete_chunk(rhs_remainder, T::default());
         values.push(op(lhs, rhs))
     };
-    MutableBitmap::from_buffer(values, lhs.len())
+    MutableBitmap::from_vec(values, lhs.len())
 }
 
 /// Evaluate `op(lhs, rhs)` for [`PrimitiveArray`]s using a specified
@@ -65,12 +64,12 @@ where
     let lhs_chunks_iter = lhs.values().chunks_exact(8);
     let lhs_remainder = lhs_chunks_iter.remainder();
 
-    let mut values = MutableBuffer::with_capacity((lhs.len() + 7) / 8);
+    let mut values = Vec::with_capacity((lhs.len() + 7) / 8);
     let iterator = lhs_chunks_iter.map(|lhs| {
         let lhs = T::Simd::from_chunk(lhs);
         op(lhs, rhs)
     });
-    values.extend_from_trusted_len_iter(iterator);
+    values.extend(iterator);
 
     if !lhs_remainder.is_empty() {
         let lhs = T::Simd::from_incomplete_chunk(lhs_remainder, T::default());
@@ -79,7 +78,7 @@ where
 
     BooleanArray::from_data(
         DataType::Boolean,
-        Bitmap::from_u8_buffer(values, lhs.len()),
+        Bitmap::from_u8_vec(values, lhs.len()),
         validity,
     )
 }

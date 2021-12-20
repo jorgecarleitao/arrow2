@@ -3,7 +3,6 @@ use std::sync::Arc;
 use crate::{
     array::{Array, DictionaryArray, DictionaryKey, PrimitiveArray},
     bitmap::MutableBitmap,
-    buffer::MutableBuffer,
 };
 
 use super::{
@@ -18,7 +17,7 @@ use super::{
 /// the values of each [`DictionaryArray`] one after the other.
 pub struct GrowableDictionary<'a, K: DictionaryKey> {
     keys_values: Vec<&'a [K]>,
-    key_values: MutableBuffer<K>,
+    key_values: Vec<K>,
     key_validity: MutableBitmap,
     offsets: Vec<usize>,
     values: Arc<dyn Array>,
@@ -73,7 +72,7 @@ impl<'a, T: DictionaryKey> GrowableDictionary<'a, T> {
             offsets,
             values,
             keys_values,
-            key_values: MutableBuffer::with_capacity(capacity),
+            key_values: Vec::with_capacity(capacity),
             key_validity: MutableBitmap::with_capacity(capacity),
             extend_null_bits,
         }
@@ -107,7 +106,8 @@ impl<'a, T: DictionaryKey> Growable<'a> for GrowableDictionary<'a, T> {
 
     #[inline]
     fn extend_validity(&mut self, additional: usize) {
-        self.key_values.extend_constant(additional, T::default());
+        self.key_values
+            .resize(self.key_values.len() + additional, T::default());
         self.key_validity.extend_constant(additional, false);
     }
 

@@ -1,14 +1,14 @@
 use crate::{
     array::{GenericBinaryArray, Offset, PrimitiveArray},
     bitmap::{Bitmap, MutableBitmap},
-    buffer::{Buffer, MutableBuffer},
+    buffer::Buffer,
 };
 
 use super::Index;
 
 pub fn take_values<O: Offset>(length: O, starts: &[O], offsets: &[O], values: &[u8]) -> Buffer<u8> {
     let new_len = length.to_usize();
-    let mut buffer = MutableBuffer::with_capacity(new_len);
+    let mut buffer = Vec::with_capacity(new_len);
     starts
         .iter()
         .zip(offsets.windows(2))
@@ -27,7 +27,7 @@ pub fn take_no_validity<O: Offset, I: Index>(
     indices: &[I],
 ) -> (Buffer<O>, Buffer<u8>, Option<Bitmap>) {
     let mut length = O::default();
-    let mut buffer = MutableBuffer::<u8>::new();
+    let mut buffer = Vec::<u8>::new();
     let offsets = indices.iter().map(|index| {
         let index = index.to_usize();
         let start = offsets[index];
@@ -61,7 +61,7 @@ pub fn take_values_validity<O: Offset, I: Index, A: GenericBinaryArray<O>>(
     let offsets = values.offsets();
     let values_values = values.values();
 
-    let mut starts = MutableBuffer::<O>::with_capacity(indices.len());
+    let mut starts = Vec::<O>::with_capacity(indices.len());
     let offsets = indices.iter().map(|index| {
         let index = index.to_usize();
         let start = offsets[index];
@@ -85,7 +85,7 @@ pub fn take_indices_validity<O: Offset, I: Index>(
 ) -> (Buffer<O>, Buffer<u8>, Option<Bitmap>) {
     let mut length = O::default();
 
-    let mut starts = MutableBuffer::<O>::with_capacity(indices.len());
+    let mut starts = Vec::<O>::with_capacity(indices.len());
     let offsets = indices.values().iter().map(|index| {
         let index = index.to_usize();
         match offsets.get(index + 1) {
@@ -119,7 +119,7 @@ pub fn take_values_indices_validity<O: Offset, I: Index, A: GenericBinaryArray<O
     let offsets = values.offsets();
     let values_values = values.values();
 
-    let mut starts = MutableBuffer::<O>::with_capacity(indices.len());
+    let mut starts = Vec::<O>::with_capacity(indices.len());
     let offsets = indices.iter().map(|index| {
         match index {
             Some(index) => {

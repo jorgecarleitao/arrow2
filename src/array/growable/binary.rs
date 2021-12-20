@@ -3,7 +3,6 @@ use std::sync::Arc;
 use crate::{
     array::{Array, BinaryArray, Offset},
     bitmap::MutableBitmap,
-    buffer::MutableBuffer,
     datatypes::DataType,
 };
 
@@ -17,8 +16,8 @@ pub struct GrowableBinary<'a, O: Offset> {
     arrays: Vec<&'a BinaryArray<O>>,
     data_type: DataType,
     validity: MutableBitmap,
-    values: MutableBuffer<u8>,
-    offsets: MutableBuffer<O>,
+    values: Vec<u8>,
+    offsets: Vec<O>,
     length: O, // always equal to the last offset at `offsets`.
     extend_null_bits: Vec<ExtendNullBits<'a>>,
 }
@@ -41,14 +40,14 @@ impl<'a, O: Offset> GrowableBinary<'a, O> {
             .map(|array| build_extend_null_bits(*array, use_validity))
             .collect();
 
-        let mut offsets = MutableBuffer::with_capacity(capacity + 1);
+        let mut offsets = Vec::with_capacity(capacity + 1);
         let length = O::default();
-        unsafe { offsets.push_unchecked(length) };
+        offsets.push(length);
 
         Self {
             arrays,
             data_type,
-            values: MutableBuffer::with_capacity(0),
+            values: Vec::with_capacity(0),
             offsets,
             length,
             validity: MutableBitmap::with_capacity(capacity),
@@ -84,7 +83,8 @@ impl<'a, O: Offset> Growable<'a> for GrowableBinary<'a, O> {
     }
 
     fn extend_validity(&mut self, additional: usize) {
-        self.offsets.extend_constant(additional, self.length);
+        self.offsets
+            .resize(self.offsets.len() + additional, self.length);
         self.validity.extend_constant(additional, false);
     }
 
