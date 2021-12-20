@@ -37,7 +37,10 @@ fn display() {
         values,
         Some(Bitmap::from([true, false, true])),
     );
-    assert_eq!(format!("{}", a), "FixedSizeBinaryArray[[1, 2], , [5, 6]]");
+    assert_eq!(
+        format!("{:?}", a),
+        "FixedSizeBinaryArray[[1, 2], None, [5, 6]]"
+    );
 }
 
 #[test]

@@ -135,6 +135,6 @@ fn equal(lhs: &dyn Scalar, rhs: &dyn Scalar) -> bool {
             let rhs = rhs.as_any().downcast_ref::<StructScalar>().unwrap();
             lhs == rhs
         }
-        other => unimplemented!("{}", other),
+        other => unimplemented!("{:?}", other),
     }
 }

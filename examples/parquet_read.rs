@@ -41,6 +41,6 @@ fn main() -> Result<()> {
     let row_group = args[3].parse::<usize>().unwrap();
 
     let array = read_field(file_path, row_group, field)?;
-    println!("{}", array);
+    println!("{:?}", array);
     Ok(())
 }

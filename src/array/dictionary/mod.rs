@@ -208,7 +208,7 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let display = get_value_display(self);
         let new_lines = false;
-        let head = &format!("{}", self.data_type());
+        let head = &format!("{:?}", self.data_type());
         let iter = self.iter().enumerate().map(|(i, x)| x.map(|_| display(i)));
         display_fmt(iter, head, f, new_lines)
     }

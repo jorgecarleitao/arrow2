@@ -62,7 +62,7 @@ impl<T: NativeType + NaturalDataType> MutablePrimitiveArray<T> {
     ) -> Self {
         if !T::is_valid(&data_type) {
             Err(ArrowError::InvalidArgumentError(format!(
-                "Type {} does not support logical type {}",
+                "Type {} does not support logical type {:?}",
                 std::any::type_name::<T>(),
                 data_type
             )))

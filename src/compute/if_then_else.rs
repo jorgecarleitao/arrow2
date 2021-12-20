@@ -30,7 +30,7 @@ pub fn if_then_else(
 ) -> Result<Box<dyn Array>> {
     if lhs.data_type() != rhs.data_type() {
         return Err(ArrowError::InvalidArgumentError(format!(
-            "If then else requires the arguments to have the same datatypes ({} != {})",
+            "If then else requires the arguments to have the same datatypes ({:?} != {:?})",
             lhs.data_type(),
             rhs.data_type()
         )));

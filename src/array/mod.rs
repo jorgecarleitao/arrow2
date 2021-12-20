@@ -18,7 +18,6 @@
 //! Most arrays contain a [`MutableArray`] counterpart that is neither clonable nor slicable, but
 //! can be operated in-place.
 use std::any::Any;
-use std::fmt::Display;
 
 use crate::error::Result;
 use crate::types::{days_ms, months_days_ns};
@@ -29,7 +28,7 @@ use crate::{
 
 /// A trait representing an immutable Arrow array. Arrow arrays are trait objects
 /// that are infalibly downcasted to concrete types according to the [`Array::data_type`].
-pub trait Array: std::fmt::Debug + Send + Sync {
+pub trait Array: Send + Sync {
     /// Convert to trait object.
     fn as_any(&self) -> &dyn Any;
 
@@ -214,7 +213,7 @@ macro_rules! with_match_primitive_type {(
     }
 })}
 
-impl Display for dyn Array {
+impl std::fmt::Debug for dyn Array + '_ {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use crate::datatypes::PhysicalType::*;
         match self.data_type().to_physical_type() {
@@ -394,31 +393,34 @@ pub trait TryPush<A> {
 }
 
 fn display_helper<T: std::fmt::Display, I: IntoIterator<Item = Option<T>>>(iter: I) -> Vec<String> {
-    let iterator = iter.into_iter();
-    let len = iterator.size_hint().0;
-    if len <= 100 {
-        iterator
-            .map(|x| match x {
-                Some(x) => x.to_string(),
-                None => "".to_string(),
-            })
-            .collect::<Vec<_>>()
+    iter.into_iter()
+        .map(|x| match x {
+            Some(x) => x.to_string(),
+            None => "None".to_string(),
+        })
+        .collect::<Vec<_>>()
+}
+
+fn debug_helper<T: std::fmt::Debug, I: IntoIterator<Item = Option<T>>>(iter: I) -> Vec<String> {
+    iter.into_iter()
+        .map(|x| match x {
+            Some(x) => format!("{:?}", x),
+            None => "None".to_string(),
+        })
+        .collect::<Vec<_>>()
+}
+
+fn debug_fmt<T: std::fmt::Debug, I: IntoIterator<Item = Option<T>>>(
+    iter: I,
+    head: &str,
+    f: &mut std::fmt::Formatter<'_>,
+    new_lines: bool,
+) -> std::fmt::Result {
+    let result = debug_helper(iter);
+    if new_lines {
+        write!(f, "{}[\n{}\n]", head, result.join(",\n"))
     } else {
-        iterator
-            .enumerate()
-            .filter_map(|(i, x)| {
-                if i == 5 {
-                    Some(format!("...({})...", len - 10))
-                } else if i < 5 || i > (len - 5) {
-                    Some(match x {
-                        Some(x) => x.to_string(),
-                        None => "".to_string(),
-                    })
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<_>>()
+        write!(f, "{}[{}]", head, result.join(", "))
     }
 }
 

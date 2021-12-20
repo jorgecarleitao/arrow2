@@ -123,10 +123,7 @@ pub fn array_to_pages<K: DictionaryKey>(
     descriptor: ColumnDescriptor,
     options: WriteOptions,
     encoding: Encoding,
-) -> Result<DynIter<'static, Result<EncodedPage>>>
-where
-    PrimitiveArray<K>: std::fmt::Display,
-{
+) -> Result<DynIter<'static, Result<EncodedPage>>> {
     match encoding {
         Encoding::PlainDictionary | Encoding::RleDictionary => {
             // write DictPage

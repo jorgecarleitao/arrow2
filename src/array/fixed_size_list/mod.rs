@@ -5,7 +5,7 @@ use crate::{
     datatypes::{DataType, Field},
 };
 
-use super::{display_fmt, new_empty_array, new_null_array, Array};
+use super::{debug_fmt, new_empty_array, new_null_array, Array};
 
 mod ffi;
 mod iterator;
@@ -15,7 +15,7 @@ pub use mutable::*;
 
 /// The Arrow's equivalent to an immutable `Vec<Option<[T; size]>>` where `T` is an Arrow type.
 /// Cloning and slicing this struct is `O(1)`.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct FixedSizeListArray {
     size: usize, // this is redundant with `data_type`, but useful to not have to deconstruct the data_type.
     data_type: DataType,
@@ -196,8 +196,8 @@ impl Array for FixedSizeListArray {
     }
 }
 
-impl std::fmt::Display for FixedSizeListArray {
+impl std::fmt::Debug for FixedSizeListArray {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        display_fmt(self.iter(), "FixedSizeListArray", f, true)
+        debug_fmt(self.iter(), "FixedSizeListArray", f, true)
     }
 }

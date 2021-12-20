@@ -23,7 +23,7 @@ type FieldEntry = (usize, Arc<dyn Array>);
 // let field = field.as_any().downcast to correct type;
 // let value = field.value(offset);
 // ```
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct UnionArray {
     types: Buffer<i8>,
     // None represents when there is no typeid
@@ -274,7 +274,7 @@ impl UnionArray {
     }
 }
 
-impl std::fmt::Display for UnionArray {
+impl std::fmt::Debug for UnionArray {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let display = get_value_display(self);
         let new_lines = false;

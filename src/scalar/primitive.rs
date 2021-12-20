@@ -20,7 +20,7 @@ impl<T: NativeType> PrimitiveScalar<T> {
     pub fn new(data_type: DataType, value: Option<T>) -> Self {
         if !T::is_valid(&data_type) {
             Err(ArrowError::InvalidArgumentError(format!(
-                "Type {} does not support logical type {}",
+                "Type {} does not support logical type {:?}",
                 std::any::type_name::<T>(),
                 data_type
             )))

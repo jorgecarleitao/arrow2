@@ -15,7 +15,7 @@ pub use mutable::*;
 
 /// The Arrow's equivalent to an immutable `Vec<Option<bool>>`, but with `1/16` of its size.
 /// Cloning and slicing this struct is `O(1)`.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct BooleanArray {
     data_type: DataType,
     values: Bitmap,
@@ -168,7 +168,7 @@ impl Array for BooleanArray {
     }
 }
 
-impl std::fmt::Display for BooleanArray {
+impl std::fmt::Debug for BooleanArray {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         display_fmt(self.iter(), "BooleanArray", f, false)
     }

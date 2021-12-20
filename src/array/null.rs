@@ -7,7 +7,7 @@ use crate::{
 };
 
 /// The concrete [`Array`] of [`DataType::Null`].
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct NullArray {
     data_type: DataType,
     length: usize,
@@ -74,7 +74,7 @@ impl Array for NullArray {
     }
 }
 
-impl std::fmt::Display for NullArray {
+impl std::fmt::Debug for NullArray {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "NullArray({})", self.len())
     }
