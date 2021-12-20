@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["and","Performs `AND` operation on two arrays."],["not","Returns a new [`PrimitiveArray`] with the bitwise `not`."],["or","Performs `OR` operation on two arrays."],["xor","Performs `XOR` operation between two arrays."]]});
