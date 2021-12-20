@@ -61,10 +61,9 @@ pub fn compress(
     compressed_block: &mut CompressedBlock,
     compression: Compression,
 ) -> Result<()> {
+    compressed_block.number_of_rows = block.number_of_rows;
     match compression {
         Compression::Deflate => todo!(),
         Compression::Snappy => todo!(),
     }
-    compressed_block.number_of_rows = block.number_of_rows;
-    Ok(())
 }

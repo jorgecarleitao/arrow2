@@ -98,7 +98,7 @@ pub(super) fn data() -> RecordBatch {
 }
 
 pub(super) fn write_avro(codec: Codec) -> std::result::Result<Vec<u8>, avro_rs::Error> {
-    let (avro, schema) = schema();
+    let (avro, _) = schema();
     // a writer needs a schema and something to write to
     let mut writer = Writer::with_codec(&avro, Vec::new(), codec);
 

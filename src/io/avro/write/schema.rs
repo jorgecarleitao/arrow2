@@ -5,13 +5,9 @@ use avro_schema::{
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 
-/// Converts a [`Schema`] to an avro [`AvroSchema::Record`] with it.
+/// Converts a [`Schema`] to a vector of [`AvroField`] with it.
 pub fn to_avro_schema(schema: &Schema) -> Result<Vec<AvroField>> {
-    schema
-        .fields
-        .iter()
-        .map(|field| field_to_field(field))
-        .collect()
+    schema.fields.iter().map(field_to_field).collect()
 }
 
 fn field_to_field(field: &Field) -> Result<AvroField> {
