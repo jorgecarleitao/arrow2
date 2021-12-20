@@ -1,11 +1,11 @@
 //! APIs to write to Avro format.
 use std::io::Write;
 
-use avro_schema::Schema as AvroSchema;
+use avro_schema::{Field as AvroField, Record, Schema as AvroSchema};
 
 use crate::error::Result;
 
-use super::Compression;
+pub use super::Compression;
 
 mod header;
 use header::serialize_header;
@@ -22,7 +22,7 @@ const SYNC_NUMBER: [u8; 16] = [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4];
 /// Writes Avro's metadata to `writer`.
 pub fn write_metadata<W: std::io::Write>(
     writer: &mut W,
-    schema: &AvroSchema,
+    fields: Vec<AvroField>,
     compression: Option<Compression>,
 ) -> Result<()> {
     // * Four bytes, ASCII 'O', 'b', 'j', followed by 1.
@@ -30,7 +30,8 @@ pub fn write_metadata<W: std::io::Write>(
     writer.write_all(&avro_magic)?;
 
     // * file metadata, including the schema.
-    let header = serialize_header(schema, compression)?;
+    let schema = AvroSchema::Record(Record::new("", fields));
+    let header = serialize_header(&schema, compression)?;
 
     util::zigzag_encode(header.len() as i64, writer)?;
     for (name, item) in header {

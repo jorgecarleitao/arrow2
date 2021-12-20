@@ -10,7 +10,7 @@ use arrow2::error::Result;
 use arrow2::io::avro::read;
 use arrow2::record_batch::RecordBatch;
 
-fn schema() -> (AvroSchema, Schema) {
+pub(super) fn schema() -> (AvroSchema, Schema) {
     let raw_schema = r#"
     {
         "type": "record",
@@ -69,7 +69,35 @@ fn schema() -> (AvroSchema, Schema) {
     (AvroSchema::parse_str(raw_schema).unwrap(), schema)
 }
 
-pub(super) fn write(codec: Codec) -> std::result::Result<(Vec<u8>, RecordBatch), avro_rs::Error> {
+pub(super) fn data() -> RecordBatch {
+    let data = vec![
+        Some(vec![Some(1i32), None, Some(3)]),
+        Some(vec![Some(1i32), None, Some(3)]),
+    ];
+
+    let mut array = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new();
+    array.try_extend(data).unwrap();
+
+    let columns = vec![
+        Arc::new(Int64Array::from_slice([27, 47])) as Arc<dyn Array>,
+        Arc::new(Utf8Array::<i32>::from_slice(["foo", "bar"])) as Arc<dyn Array>,
+        Arc::new(Int32Array::from_slice([1, 1])) as Arc<dyn Array>,
+        Arc::new(Int32Array::from_slice([1, 2]).to(DataType::Date32)) as Arc<dyn Array>,
+        Arc::new(BinaryArray::<i32>::from_slice([b"foo", b"bar"])) as Arc<dyn Array>,
+        Arc::new(PrimitiveArray::<f64>::from_slice([1.0, 2.0])) as Arc<dyn Array>,
+        Arc::new(BooleanArray::from_slice([true, false])) as Arc<dyn Array>,
+        Arc::new(Utf8Array::<i32>::from([Some("foo"), None])) as Arc<dyn Array>,
+        array.into_arc(),
+        Arc::new(DictionaryArray::<i32>::from_data(
+            Int32Array::from_slice([1, 0]),
+            Arc::new(Utf8Array::<i32>::from_slice(["SPADES", "HEARTS"])),
+        )) as Arc<dyn Array>,
+    ];
+
+    RecordBatch::try_new(Arc::new(schema().1), columns).unwrap()
+}
+
+pub(super) fn write_avro(codec: Codec) -> std::result::Result<Vec<u8>, avro_rs::Error> {
     let (avro, schema) = schema();
     // a writer needs a schema and something to write to
     let mut writer = Writer::with_codec(&avro, Vec::new(), codec);
@@ -118,40 +146,11 @@ pub(super) fn write(codec: Codec) -> std::result::Result<(Vec<u8>, RecordBatch),
     );
     record.put("enum", Value::Enum(0, "SPADES".to_string()));
     writer.append(record)?;
-
-    let data = vec![
-        Some(vec![Some(1i32), None, Some(3)]),
-        Some(vec![Some(1i32), None, Some(3)]),
-    ];
-
-    let mut array = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new();
-    array.try_extend(data).unwrap();
-
-    let columns = vec![
-        Arc::new(Int64Array::from_slice([27, 47])) as Arc<dyn Array>,
-        Arc::new(Utf8Array::<i32>::from_slice(["foo", "bar"])) as Arc<dyn Array>,
-        Arc::new(Int32Array::from_slice([1, 1])) as Arc<dyn Array>,
-        Arc::new(Int32Array::from_slice([1, 2]).to(DataType::Date32)) as Arc<dyn Array>,
-        Arc::new(BinaryArray::<i32>::from_slice([b"foo", b"bar"])) as Arc<dyn Array>,
-        Arc::new(PrimitiveArray::<f64>::from_slice([1.0, 2.0])) as Arc<dyn Array>,
-        Arc::new(BooleanArray::from_slice([true, false])) as Arc<dyn Array>,
-        Arc::new(Utf8Array::<i32>::from([Some("foo"), None])) as Arc<dyn Array>,
-        array.into_arc(),
-        Arc::new(DictionaryArray::<i32>::from_data(
-            Int32Array::from_slice([1, 0]),
-            Arc::new(Utf8Array::<i32>::from_slice(["SPADES", "HEARTS"])),
-        )) as Arc<dyn Array>,
-    ];
-
-    let expected = RecordBatch::try_new(Arc::new(schema), columns).unwrap();
-
-    Ok((writer.into_inner().unwrap(), expected))
+    Ok(writer.into_inner().unwrap())
 }
 
-fn test(codec: Codec) -> Result<()> {
-    let (data, expected) = write(codec).unwrap();
-
-    let file = &mut &data[..];
+pub(super) fn read_avro(mut avro: &[u8]) -> Result<RecordBatch> {
+    let file = &mut avro;
 
     let (avro_schema, schema, codec, file_marker) = read::read_metadata(file)?;
 
@@ -161,7 +160,16 @@ fn test(codec: Codec) -> Result<()> {
         Arc::new(schema),
     );
 
-    assert_eq!(reader.next().unwrap().unwrap(), expected);
+    reader.next().unwrap()
+}
+
+fn test(codec: Codec) -> Result<()> {
+    let avro = write_avro(codec).unwrap();
+    let expected = data();
+
+    let result = read_avro(&avro)?;
+
+    assert_eq!(result, expected);
     Ok(())
 }
 

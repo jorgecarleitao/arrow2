@@ -32,7 +32,7 @@ pub fn read_metadata<R: std::io::Read>(
     reader: &mut R,
 ) -> Result<(Vec<AvroSchema>, Schema, Option<Compression>, [u8; 16])> {
     let (avro_schema, codec, marker) = util::read_schema(reader)?;
-    let schema = schema::convert_schema(&avro_schema)?;
+    let schema = convert_schema(&avro_schema)?;
 
     let avro_schema = if let AvroSchema::Record(Record { fields, .. }) = avro_schema {
         fields.into_iter().map(|x| x.schema).collect()

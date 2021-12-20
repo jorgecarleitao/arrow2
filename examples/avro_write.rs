@@ -5,7 +5,6 @@ use arrow2::{
     datatypes::{Field, Schema},
     error::Result,
     io::avro::write,
-    record_batch::RecordBatch,
 };
 
 fn main() -> Result<()> {
@@ -26,18 +25,18 @@ fn main() -> Result<()> {
     let field = Field::new("c1", array.data_type().clone(), true);
     let schema = Schema::new(vec![field]);
 
-    let avro_schema = write::to_avro_schema(&schema)?;
+    let avro_fields = write::to_avro_schema(&schema)?;
 
     let mut file = File::create(path)?;
 
     let compression = None;
 
-    write::write_metadata(&mut file, &avro_schema, compression)?;
+    write::write_metadata(&mut file, avro_fields.clone(), compression)?;
 
-    let serializer = write::new_serializer(&array, avro_schema.fields()[0]);
+    let serializer = write::new_serializer(&array, &avro_fields[0].schema);
     let mut block = write::Block::new(array.len(), vec![]);
 
-    write::serialize(&mut vec![serializer], &mut block)?;
+    write::serialize(&mut [serializer], &mut block)?;
 
     let mut compressed_block = write::CompressedBlock::default();
 

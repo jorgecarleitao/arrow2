@@ -1,5 +1,6 @@
 use avro_schema::Schema as AvroSchema;
 
+use crate::datatypes::{PhysicalType, PrimitiveType};
 use crate::{array::*, datatypes::DataType};
 
 use super::super::super::iterator::*;
@@ -17,10 +18,10 @@ pub type BoxSerializer<'a> = Box<dyn StreamingIterator<Item = [u8]> + 'a + Send 
 /// This function performs minimal CPU work: it dynamically dispatches based on the schema
 /// and arrow type.
 pub fn new_serializer<'a>(array: &'a dyn Array, schema: &AvroSchema) -> BoxSerializer<'a> {
-    let data_type = array.data_type().to_logical_type();
+    let data_type = array.data_type().to_physical_type();
 
     match (data_type, schema) {
-        (DataType::Boolean, AvroSchema::Boolean) => {
+        (PhysicalType::Boolean, AvroSchema::Boolean) => {
             let values = array.as_any().downcast_ref::<BooleanArray>().unwrap();
             Box::new(BufStreamingIterator::new(
                 values.values_iter(),
@@ -30,7 +31,7 @@ pub fn new_serializer<'a>(array: &'a dyn Array, schema: &AvroSchema) -> BoxSeria
                 vec![],
             ))
         }
-        (DataType::Boolean, AvroSchema::Union(_)) => {
+        (PhysicalType::Boolean, AvroSchema::Union(_)) => {
             let values = array.as_any().downcast_ref::<BooleanArray>().unwrap();
             Box::new(BufStreamingIterator::new(
                 values.iter(),
@@ -43,7 +44,7 @@ pub fn new_serializer<'a>(array: &'a dyn Array, schema: &AvroSchema) -> BoxSeria
                 vec![],
             ))
         }
-        (DataType::Utf8, AvroSchema::Union(_)) => {
+        (PhysicalType::Utf8, AvroSchema::Union(_)) => {
             let values = array.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
             Box::new(BufStreamingIterator::new(
                 values.iter(),
@@ -57,7 +58,7 @@ pub fn new_serializer<'a>(array: &'a dyn Array, schema: &AvroSchema) -> BoxSeria
                 vec![],
             ))
         }
-        (DataType::Utf8, AvroSchema::String(_)) => {
+        (PhysicalType::Utf8, AvroSchema::String(_)) => {
             let values = array.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
             Box::new(BufStreamingIterator::new(
                 values.values_iter(),
@@ -68,7 +69,7 @@ pub fn new_serializer<'a>(array: &'a dyn Array, schema: &AvroSchema) -> BoxSeria
                 vec![],
             ))
         }
-        (DataType::Binary, AvroSchema::Union(_)) => {
+        (PhysicalType::Binary, AvroSchema::Union(_)) => {
             let values = array.as_any().downcast_ref::<BinaryArray<i32>>().unwrap();
             Box::new(BufStreamingIterator::new(
                 values.iter(),
@@ -82,7 +83,7 @@ pub fn new_serializer<'a>(array: &'a dyn Array, schema: &AvroSchema) -> BoxSeria
                 vec![],
             ))
         }
-        (DataType::Binary, AvroSchema::Bytes(_)) => {
+        (PhysicalType::Binary, AvroSchema::Bytes(_)) => {
             let values = array.as_any().downcast_ref::<BinaryArray<i32>>().unwrap();
             Box::new(BufStreamingIterator::new(
                 values.values_iter(),
@@ -94,7 +95,7 @@ pub fn new_serializer<'a>(array: &'a dyn Array, schema: &AvroSchema) -> BoxSeria
             ))
         }
 
-        (DataType::Int32, AvroSchema::Union(_)) => {
+        (PhysicalType::Primitive(PrimitiveType::Int32), AvroSchema::Union(_)) => {
             let values = array
                 .as_any()
                 .downcast_ref::<PrimitiveArray<i32>>()
@@ -110,7 +111,7 @@ pub fn new_serializer<'a>(array: &'a dyn Array, schema: &AvroSchema) -> BoxSeria
                 vec![],
             ))
         }
-        (DataType::Int32, AvroSchema::Int(_)) => {
+        (PhysicalType::Primitive(PrimitiveType::Int32), AvroSchema::Int(_)) => {
             let values = array
                 .as_any()
                 .downcast_ref::<PrimitiveArray<i32>>()
@@ -123,7 +124,7 @@ pub fn new_serializer<'a>(array: &'a dyn Array, schema: &AvroSchema) -> BoxSeria
                 vec![],
             ))
         }
-        (DataType::Int64, AvroSchema::Union(_)) => {
+        (PhysicalType::Primitive(PrimitiveType::Int64), AvroSchema::Union(_)) => {
             let values = array
                 .as_any()
                 .downcast_ref::<PrimitiveArray<i64>>()
@@ -139,7 +140,7 @@ pub fn new_serializer<'a>(array: &'a dyn Array, schema: &AvroSchema) -> BoxSeria
                 vec![],
             ))
         }
-        (DataType::Int64, AvroSchema::Long(_)) => {
+        (PhysicalType::Primitive(PrimitiveType::Int64), AvroSchema::Long(_)) => {
             let values = array
                 .as_any()
                 .downcast_ref::<PrimitiveArray<i64>>()
@@ -148,6 +149,32 @@ pub fn new_serializer<'a>(array: &'a dyn Array, schema: &AvroSchema) -> BoxSeria
                 values.values().iter(),
                 |x, buf| {
                     util::zigzag_encode(*x, buf).unwrap();
+                },
+                vec![],
+            ))
+        }
+        (PhysicalType::Primitive(PrimitiveType::Float32), AvroSchema::Float) => {
+            let values = array
+                .as_any()
+                .downcast_ref::<PrimitiveArray<f32>>()
+                .unwrap();
+            Box::new(BufStreamingIterator::new(
+                values.values().iter(),
+                |x, buf| {
+                    buf.extend_from_slice(&x.to_le_bytes());
+                },
+                vec![],
+            ))
+        }
+        (PhysicalType::Primitive(PrimitiveType::Float64), AvroSchema::Double) => {
+            let values = array
+                .as_any()
+                .downcast_ref::<PrimitiveArray<f64>>()
+                .unwrap();
+            Box::new(BufStreamingIterator::new(
+                values.values().iter(),
+                |x, buf| {
+                    buf.extend_from_slice(&x.to_le_bytes());
                 },
                 vec![],
             ))

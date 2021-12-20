@@ -3,3 +3,4 @@
 mod read;
 #[cfg(feature = "io_avro_async")]
 mod read_async;
+mod write;
