@@ -9,7 +9,6 @@ use arrow2::datatypes::*;
 use arrow2::error::Result;
 use arrow2::io::avro::read;
 use arrow2::record_batch::RecordBatch;
-use arrow2::types::months_days_ns;
 
 fn schema() -> (AvroSchema, Schema) {
     let raw_schema = r#"
@@ -41,13 +40,6 @@ fn schema() -> (AvroSchema, Schema) {
                 "type": "enum",
                 "name": "",
                 "symbols" : ["SPADES", "HEARTS", "DIAMONDS", "CLUBS"]
-            }},
-            {"name": "duration",
-             "logicalType": "duration",
-             "type": {
-                "name": "duration",
-                "type": "fixed",
-                "size": 12
             }}
         ]
     }
@@ -72,17 +64,12 @@ fn schema() -> (AvroSchema, Schema) {
             DataType::Dictionary(i32::KEY_TYPE, Box::new(DataType::Utf8)),
             false,
         ),
-        Field::new(
-            "duration",
-            DataType::Interval(IntervalUnit::MonthDayNano),
-            false,
-        ),
     ]);
 
     (AvroSchema::parse_str(raw_schema).unwrap(), schema)
 }
 
-pub(super) fn write(codec: Codec) -> Result<(Vec<u8>, RecordBatch)> {
+pub(super) fn write(codec: Codec) -> std::result::Result<(Vec<u8>, RecordBatch), avro_rs::Error> {
     let (avro, schema) = schema();
     // a writer needs a schema and something to write to
     let mut writer = Writer::with_codec(&avro, Vec::new(), codec);
@@ -130,10 +117,6 @@ pub(super) fn write(codec: Codec) -> Result<(Vec<u8>, RecordBatch)> {
         ]),
     );
     record.put("enum", Value::Enum(0, "SPADES".to_string()));
-    record.put(
-        "duration",
-        Value::Duration(Duration::new(Months::new(1), Days::new(2), Millis::new(1))),
-    );
     writer.append(record)?;
 
     let data = vec![
@@ -158,10 +141,6 @@ pub(super) fn write(codec: Codec) -> Result<(Vec<u8>, RecordBatch)> {
             Int32Array::from_slice([1, 0]),
             Arc::new(Utf8Array::<i32>::from_slice(["SPADES", "HEARTS"])),
         )) as Arc<dyn Array>,
-        Arc::new(MonthsDaysNsArray::from_slice([
-            months_days_ns::new(1, 1, 1_000_000),
-            months_days_ns::new(1, 2, 1_000_000),
-        ])) as Arc<dyn Array>,
     ];
 
     let expected = RecordBatch::try_new(Arc::new(schema), columns).unwrap();

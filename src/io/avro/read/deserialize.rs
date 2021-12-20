@@ -1,7 +1,7 @@
 use std::convert::TryInto;
 use std::sync::Arc;
 
-use avro_rs::Schema as AvroSchema;
+use avro_schema::{Enum, Schema as AvroSchema};
 
 use crate::array::*;
 use crate::datatypes::*;
@@ -33,7 +33,7 @@ fn make_mutable(
             Box::new(MutableUtf8Array::<i32>::with_capacity(capacity)) as Box<dyn MutableArray>
         }
         PhysicalType::Dictionary(_) => {
-            if let Some(AvroSchema::Enum { symbols, .. }) = avro_schema {
+            if let Some(AvroSchema::Enum(Enum { symbols, .. })) = avro_schema {
                 let values = Utf8Array::<i32>::from_slice(symbols);
                 Box::new(FixedItemsUtf8Dictionary::with_capacity(values, capacity))
                     as Box<dyn MutableArray>
@@ -64,7 +64,7 @@ fn make_mutable(
 
 fn is_union_null_first(avro_field: &AvroSchema) -> bool {
     if let AvroSchema::Union(schemas) = avro_field {
-        schemas.variants()[0] == AvroSchema::Null
+        schemas[0] == AvroSchema::Null
     } else {
         unreachable!()
     }

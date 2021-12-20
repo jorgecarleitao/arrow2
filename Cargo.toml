@@ -69,8 +69,8 @@ ahash = { version = "0.7", optional = true }
 # parquet support
 parquet2 = { version = "0.8", optional = true, default_features = false, features = ["stream"] }
 
-# avro
-avro-rs = { version = "0.13", optional = true, default_features = false }
+# avro support
+avro-schema = { version = "0.2", optional = true }
 # compression of avro
 libflate = { version = "1.1.1", optional = true }
 snap = { version = "1", optional = true }
@@ -138,7 +138,7 @@ io_parquet_compression = [
     "parquet2/lz4",
     "parquet2/brotli",
 ]
-io_avro = ["avro-rs", "fallible-streaming-iterator", "serde_json"]
+io_avro = ["avro-schema", "fallible-streaming-iterator", "serde_json"]
 io_avro_compression = [
     "libflate",
     "snap",

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::io::Read;
 
-use avro_rs::Schema;
+use avro_schema::Schema;
 
 use crate::error::{ArrowError, Result};
 

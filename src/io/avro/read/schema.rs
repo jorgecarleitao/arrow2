@@ -1,8 +1,6 @@
 use std::collections::BTreeMap;
 
-use avro_rs::schema::Name;
-use avro_rs::types::Value;
-use avro_rs::Schema as AvroSchema;
+use avro_schema::{Enum, Fixed, Record, Schema as AvroSchema};
 
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
@@ -24,44 +22,26 @@ fn aliased(name: &str, namespace: Option<&str>, default_namespace: Option<&str>)
 fn external_props(schema: &AvroSchema) -> BTreeMap<String, String> {
     let mut props = BTreeMap::new();
     match &schema {
-        AvroSchema::Record {
+        AvroSchema::Record(Record {
             doc: Some(ref doc), ..
-        }
-        | AvroSchema::Enum {
+        })
+        | AvroSchema::Enum(Enum {
             doc: Some(ref doc), ..
-        } => {
+        }) => {
             props.insert("avro::doc".to_string(), doc.clone());
         }
         _ => {}
     }
     match &schema {
-        AvroSchema::Record {
-            name:
-                Name {
-                    aliases: Some(aliases),
-                    namespace,
-                    ..
-                },
-            ..
-        }
-        | AvroSchema::Enum {
-            name:
-                Name {
-                    aliases: Some(aliases),
-                    namespace,
-                    ..
-                },
-            ..
-        }
-        | AvroSchema::Fixed {
-            name:
-                Name {
-                    aliases: Some(aliases),
-                    namespace,
-                    ..
-                },
-            ..
-        } => {
+        AvroSchema::Record(Record {
+            aliases, namespace, ..
+        })
+        | AvroSchema::Enum(Enum {
+            aliases, namespace, ..
+        })
+        | AvroSchema::Fixed(Fixed {
+            aliases, namespace, ..
+        }) => {
             let aliases: Vec<String> = aliases
                 .iter()
                 .map(|alias| aliased(alias, namespace.as_deref(), None))
@@ -79,7 +59,7 @@ fn external_props(schema: &AvroSchema) -> BTreeMap<String, String> {
 pub fn convert_schema(schema: &AvroSchema) -> Result<Schema> {
     let mut schema_fields = vec![];
     match schema {
-        AvroSchema::Record { fields, .. } => {
+        AvroSchema::Record(Record { fields, .. }) => {
             for field in fields {
                 schema_fields.push(schema_to_field(
                     &field.schema,
@@ -105,12 +85,42 @@ fn schema_to_field(
     let data_type = match schema {
         AvroSchema::Null => DataType::Null,
         AvroSchema::Boolean => DataType::Boolean,
-        AvroSchema::Int => DataType::Int32,
-        AvroSchema::Long => DataType::Int64,
+        AvroSchema::Int(logical) => match logical {
+            Some(logical) => match logical {
+                avro_schema::IntLogical::Date => DataType::Date32,
+                avro_schema::IntLogical::Time => DataType::Time32(TimeUnit::Millisecond),
+            },
+            None => DataType::Int32,
+        },
+        AvroSchema::Long(logical) => match logical {
+            Some(logical) => match logical {
+                avro_schema::LongLogical::Time => DataType::Time64(TimeUnit::Microsecond),
+                avro_schema::LongLogical::TimestampMillis => {
+                    DataType::Timestamp(TimeUnit::Millisecond, Some("00:00".to_string()))
+                }
+                avro_schema::LongLogical::TimestampMicros => {
+                    DataType::Timestamp(TimeUnit::Microsecond, Some("00:00".to_string()))
+                }
+                avro_schema::LongLogical::LocalTimestampMillis => {
+                    DataType::Timestamp(TimeUnit::Millisecond, None)
+                }
+                avro_schema::LongLogical::LocalTimestampMicros => {
+                    DataType::Timestamp(TimeUnit::Microsecond, None)
+                }
+            },
+            None => DataType::Int64,
+        },
         AvroSchema::Float => DataType::Float32,
         AvroSchema::Double => DataType::Float64,
-        AvroSchema::Bytes => DataType::Binary,
-        AvroSchema::String => DataType::Utf8,
+        AvroSchema::Bytes(logical) => match logical {
+            Some(logical) => match logical {
+                avro_schema::BytesLogical::Decimal(precision, scale) => {
+                    DataType::Decimal(*precision, *scale)
+                }
+            },
+            None => DataType::Binary,
+        },
+        AvroSchema::String(_) => DataType::Utf8,
         AvroSchema::Array(item_schema) => DataType::List(Box::new(schema_to_field(
             item_schema,
             Some("item"), // default name for list items
@@ -118,13 +128,12 @@ fn schema_to_field(
             None,
         )?)),
         AvroSchema::Map(_) => todo!("Avro maps are mapped to MapArrays"),
-        AvroSchema::Union(us) => {
+        AvroSchema::Union(schemas) => {
             // If there are only two variants and one of them is null, set the other type as the field data type
-            let has_nullable = us.find_schema(&Value::Null).is_some();
-            let sub_schemas = us.variants();
-            if has_nullable && sub_schemas.len() == 2 {
+            let has_nullable = schemas.iter().any(|x| x == &AvroSchema::Null);
+            if has_nullable && schemas.len() == 2 {
                 nullable = true;
-                if let Some(schema) = sub_schemas
+                if let Some(schema) = schemas
                     .iter()
                     .find(|&schema| !matches!(schema, AvroSchema::Null))
                 {
@@ -134,18 +143,18 @@ fn schema_to_field(
                 } else {
                     return Err(ArrowError::NotYetImplemented(format!(
                         "Can't read avro union {:?}",
-                        us
+                        schema
                     )));
                 }
             } else {
-                let fields = sub_schemas
+                let fields = schemas
                     .iter()
                     .map(|s| schema_to_field(s, None, has_nullable, None))
                     .collect::<Result<Vec<Field>>>()?;
                 DataType::Union(fields, None, UnionMode::Dense)
             }
         }
-        AvroSchema::Record { name, fields, .. } => {
+        AvroSchema::Record(Record { name, fields, .. }) => {
             let fields: Result<Vec<Field>> = fields
                 .iter()
                 .map(|field| {
@@ -158,7 +167,7 @@ fn schema_to_field(
                     }*/
                     schema_to_field(
                         &field.schema,
-                        Some(&format!("{}.{}", name.fullname(None), field.name)),
+                        Some(&format!("{}.{}", name, field.name)),
                         false,
                         Some(&props),
                     )
@@ -173,17 +182,17 @@ fn schema_to_field(
                 false,
             ))
         }
-        AvroSchema::Fixed { size, .. } => DataType::FixedSizeBinary(*size),
-        AvroSchema::Decimal {
-            precision, scale, ..
-        } => DataType::Decimal(*precision, *scale),
-        AvroSchema::Uuid => DataType::Utf8,
-        AvroSchema::Date => DataType::Date32,
-        AvroSchema::TimeMillis => DataType::Time32(TimeUnit::Millisecond),
-        AvroSchema::TimeMicros => DataType::Time64(TimeUnit::Microsecond),
-        AvroSchema::TimestampMillis => DataType::Timestamp(TimeUnit::Millisecond, None),
-        AvroSchema::TimestampMicros => DataType::Timestamp(TimeUnit::Microsecond, None),
-        AvroSchema::Duration => DataType::Interval(IntervalUnit::MonthDayNano),
+        AvroSchema::Fixed(Fixed { size, logical, .. }) => match logical {
+            Some(logical) => match logical {
+                avro_schema::FixedLogical::Decimal(precision, scale) => {
+                    DataType::Decimal(*precision, *scale)
+                }
+                avro_schema::FixedLogical::Duration => {
+                    DataType::Interval(IntervalUnit::MonthDayNano)
+                }
+            },
+            None => DataType::FixedSizeBinary(*size),
+        },
     };
 
     let name = name.unwrap_or_default();
