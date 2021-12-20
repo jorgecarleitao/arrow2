@@ -1,4 +1,4 @@
-use std::{fs::File, sync::Arc};
+use std::fs::File;
 
 use arrow2::{
     array::{Array, Int32Array},
@@ -6,6 +6,39 @@ use arrow2::{
     error::Result,
     io::avro::write,
 };
+
+fn write_avro<W: std::io::Write>(
+    file: &mut W,
+    arrays: &[&dyn Array],
+    schema: &Schema,
+    compression: Option<write::Compression>,
+) -> Result<()> {
+    let avro_fields = write::to_avro_schema(schema)?;
+
+    let mut serializers = arrays
+        .iter()
+        .zip(avro_fields.iter())
+        .map(|(array, field)| write::new_serializer(*array, &field.schema))
+        .collect::<Vec<_>>();
+    let mut block = write::Block::new(arrays[0].len(), vec![]);
+
+    write::serialize(&mut serializers, &mut block)?;
+
+    let mut compressed_block = write::CompressedBlock::default();
+
+    if let Some(compression) = compression {
+        write::compress(&block, &mut compressed_block, compression)?;
+    } else {
+        compressed_block.number_of_rows = block.number_of_rows;
+        std::mem::swap(&mut compressed_block.data, &mut block.data);
+    }
+
+    write::write_metadata(file, avro_fields.clone(), compression)?;
+
+    write::write_block(file, &compressed_block)?;
+
+    Ok(())
+}
 
 fn main() -> Result<()> {
     use std::env;
@@ -25,29 +58,8 @@ fn main() -> Result<()> {
     let field = Field::new("c1", array.data_type().clone(), true);
     let schema = Schema::new(vec![field]);
 
-    let avro_fields = write::to_avro_schema(&schema)?;
-
     let mut file = File::create(path)?;
-
-    let compression = None;
-
-    write::write_metadata(&mut file, avro_fields.clone(), compression)?;
-
-    let serializer = write::new_serializer(&array, &avro_fields[0].schema);
-    let mut block = write::Block::new(array.len(), vec![]);
-
-    write::serialize(&mut [serializer], &mut block)?;
-
-    let mut compressed_block = write::CompressedBlock::default();
-
-    if let Some(compression) = compression {
-        write::compress(&block, &mut compressed_block, compression)?;
-    } else {
-        compressed_block.number_of_rows = block.number_of_rows;
-        std::mem::swap(&mut compressed_block.data, &mut block.data);
-    }
-
-    write::write_block(&mut file, &compressed_block)?;
+    write_avro(&mut file, &[(&array) as &dyn Array], &schema, None)?;
 
     Ok(())
 }
