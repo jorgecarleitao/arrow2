@@ -1,7 +1,7 @@
 //! Contains bitwise operators: [`or`], [`and`], [`xor`] and [`not`].
 use std::ops::{BitAnd, BitOr, BitXor, Not};
 
-use crate::array::{Array, PrimitiveArray};
+use crate::array::PrimitiveArray;
 use crate::compute::arity::{binary, unary};
 use crate::types::NativeType;
 

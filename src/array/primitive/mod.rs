@@ -135,8 +135,9 @@ impl<T: NativeType> PrimitiveArray<T> {
         self.validity.as_ref()
     }
 
+    /// The arrays' logical type
     #[inline]
-    fn data_type(&self) -> &DataType {
+    pub fn data_type(&self) -> &DataType {
         &self.data_type
     }
 

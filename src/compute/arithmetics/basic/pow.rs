@@ -2,7 +2,7 @@
 use num_traits::{checked_pow, CheckedMul, One, Pow};
 
 use crate::{
-    array::{Array, PrimitiveArray},
+    array::PrimitiveArray,
     compute::arity::{unary, unary_checked},
 };
 

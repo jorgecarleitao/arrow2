@@ -1,6 +1,6 @@
 //! Defines the addition arithmetic kernels for [`PrimitiveArray`] representing decimals.
 use crate::{
-    array::{Array, PrimitiveArray},
+    array::PrimitiveArray,
     buffer::Buffer,
     compute::{
         arithmetics::{ArrayAdd, ArrayCheckedAdd, ArraySaturatingAdd},

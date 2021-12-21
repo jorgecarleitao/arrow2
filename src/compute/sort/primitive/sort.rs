@@ -18,7 +18,7 @@
 use crate::bitmap::Bitmap;
 use crate::buffer::{Buffer, MutableBuffer};
 use crate::{
-    array::{Array, PrimitiveArray},
+    array::PrimitiveArray,
     bitmap::{utils::SlicesIterator, MutableBitmap},
     types::NativeType,
 };
