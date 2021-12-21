@@ -255,42 +255,22 @@ contiguous memory regions:</p>
 <p>Due to their intrinsic immutability, each container has a corresponding mutable
 (and non-shareable) variant:</p>
 <ul>
-<li><code>MutableBuffer&lt;T&gt;</code></li>
+<li><code>Vec&lt;T&gt;</code></li>
 <li><code>MutableBitmap</code></li>
 </ul>
 <p>Let's see how these structures are used.</p>
 <p>Create a new <code>Buffer&lt;u32&gt;</code>:</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::buffer::Buffer;
 </span><span class="boring">fn main() {
-</span>let x = Buffer::from(&amp;[1u32, 2, 3]);
+</span>let x = vec![1u32, 2, 3];
+let x: Buffer&lt;u32&gt; = x.into();
 assert_eq!(x.as_slice(), &amp;[1u32, 2, 3]);
 
-let x = x.slice(1, 2);
+let x = x.slice(1, 2); // O(1)
 assert_eq!(x.as_slice(), &amp;[2, 3]);
 <span class="boring">}
 </span></code></pre></pre>
-<p>Using a <code>MutableBuffer&lt;i64&gt;</code>:</p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::buffer::MutableBuffer;
-</span><span class="boring">fn main() {
-</span>let mut x: MutableBuffer&lt;i64&gt; = (0..3).collect();
-x[1] = 5;
-x.push(10);
-assert_eq!(x.as_slice(), &amp;[0, 5, 2, 10])
-<span class="boring">}
-</span></code></pre></pre>
-<p>The following demonstrates how to efficiently
-perform an operation from an iterator of
-<a href="https://doc.rust-lang.org/std/iter/trait.TrustedLen.html">TrustedLen</a>:</p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::buffer::MutableBuffer;
-</span><span class="boring">fn main() {
-</span>let x = (0..1000).collect::&lt;Vec&lt;_&gt;&gt;();
-let y = MutableBuffer::from_trusted_len_iter(x.iter().map(|x| x * 2));
-assert_eq!(y[50], 100);
-<span class="boring">}
-</span></code></pre></pre>
-<p>Using <code>from_trusted_len_iter</code> often causes the compiler to auto-vectorize.</p>
-<p>In this context, <code>MutableBuffer</code> has an almost identical API to Rust's <code>Vec</code>.
-However, contrarily to <code>Vec</code>, <code>Buffer</code> and <code>MutableBuffer</code> only supports
+<p>Contrarily to <code>Vec</code>, <code>Buffer</code> (and all structs in this crate) only supports
 the following physical types:</p>
 <ul>
 <li><code>i8-i128</code></li>
