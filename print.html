@@ -1117,7 +1117,7 @@ use std::sync::Arc;
 use std::thread;
 
 use arrow2::{
-    array::{Array, Int32Array},
+    array::Int32Array,
     datatypes::{Field, Schema},
     error::Result,
     io::csv::write,
@@ -1487,7 +1487,7 @@ assumes that a <code>RecordBatch</code> is mapped to a single row group with a s
 use std::sync::Arc;
 
 use arrow2::{
-    array::{Array, Int32Array},
+    array::Int32Array,
     datatypes::{Field, Schema},
     error::Result,
     io::parquet::write::{
