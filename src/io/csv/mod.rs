@@ -1,4 +1,5 @@
 #![deny(missing_docs)]
+#![forbid(unsafe_code)]
 //! Convert data between the Arrow and CSV (comma-separated values).
 
 use crate::error::ArrowError;

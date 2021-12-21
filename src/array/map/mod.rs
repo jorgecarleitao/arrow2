@@ -4,7 +4,6 @@ use crate::{
     bitmap::Bitmap,
     buffer::Buffer,
     datatypes::{DataType, Field},
-    types::Index,
 };
 
 use super::{new_empty_array, specification::check_offsets, Array};
@@ -138,12 +137,12 @@ impl MapArray {
     pub fn value(&self, i: usize) -> Box<dyn Array> {
         let offset = self.offsets[i];
         let offset_1 = self.offsets[i + 1];
-        let length = (offset_1 - offset).to_usize();
+        let length = (offset_1 - offset) as usize;
 
         // Safety:
         // One of the invariants of the struct
         // is that offsets are in bounds
-        unsafe { self.field.slice_unchecked(offset.to_usize(), length) }
+        unsafe { self.field.slice_unchecked(offset as usize, length) }
     }
 
     /// Returns the element at index `i`.
@@ -153,9 +152,9 @@ impl MapArray {
     pub unsafe fn value_unchecked(&self, i: usize) -> Box<dyn Array> {
         let offset = *self.offsets.get_unchecked(i);
         let offset_1 = *self.offsets.get_unchecked(i + 1);
-        let length = (offset_1 - offset).to_usize();
+        let length = (offset_1 - offset) as usize;
 
-        self.field.slice_unchecked(offset.to_usize(), length)
+        self.field.slice_unchecked(offset as usize, length)
     }
 }
 

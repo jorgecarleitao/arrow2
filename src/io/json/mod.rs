@@ -1,4 +1,5 @@
 #![deny(missing_docs)]
+#![forbid(unsafe_code)]
 //! Convert data between the Arrow memory format and JSON line-delimited records.
 
 mod read;
