@@ -22,10 +22,7 @@ use std::ops::Neg;
 
 use num_traits::{CheckedNeg, WrappingNeg};
 
-use crate::{
-    array::{Array, PrimitiveArray},
-    types::NativeType,
-};
+use crate::{array::PrimitiveArray, types::NativeType};
 
 use super::super::arity::{unary, unary_checked};
 

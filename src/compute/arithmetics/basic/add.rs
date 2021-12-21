@@ -4,7 +4,7 @@ use std::ops::Add;
 use num_traits::{ops::overflowing::OverflowingAdd, CheckedAdd, SaturatingAdd, WrappingAdd};
 
 use crate::{
-    array::{Array, PrimitiveArray},
+    array::PrimitiveArray,
     bitmap::Bitmap,
     compute::{
         arithmetics::{

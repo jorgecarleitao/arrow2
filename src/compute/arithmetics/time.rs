@@ -14,7 +14,7 @@ use std::ops::{Add, Sub};
 use num_traits::AsPrimitive;
 
 use crate::{
-    array::{Array, PrimitiveArray},
+    array::PrimitiveArray,
     compute::arity::{binary, unary},
     datatypes::{DataType, TimeUnit},
     error::{ArrowError, Result},

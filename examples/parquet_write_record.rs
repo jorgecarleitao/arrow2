@@ -2,7 +2,7 @@ use std::fs::File;
 use std::sync::Arc;
 
 use arrow2::{
-    array::{Array, Int32Array},
+    array::Int32Array,
     datatypes::{Field, Schema},
     error::Result,
     io::parquet::write::{

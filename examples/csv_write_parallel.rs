@@ -4,7 +4,7 @@ use std::sync::Arc;
 use std::thread;
 
 use arrow2::{
-    array::{Array, Int32Array},
+    array::Int32Array,
     datatypes::{Field, Schema},
     error::Result,
     io::csv::write,
