@@ -2,7 +2,7 @@ use lexical_core::ToLexical;
 
 use crate::datatypes::IntegerType;
 use crate::temporal_conversions;
-use crate::types::{Index, NativeType};
+use crate::types::NativeType;
 use crate::util::lexical_to_bytes_mut;
 use crate::{
     array::{Array, BinaryArray, BooleanArray, PrimitiveArray, Utf8Array},
@@ -405,7 +405,7 @@ pub fn new_serializer<'a>(
 /// Helper for serializing a dictonary array. The generic parameters are:
 /// - `K` for the type of the keys of the dictionary
 /// - `O` for the type of the offsets in the Utf8Array: {i32, i64}
-fn serialize_utf8_dict<'a, K: DictionaryKey + Index, O: Offset>(
+fn serialize_utf8_dict<'a, K: DictionaryKey, O: Offset>(
     array: &'a dyn Any,
 ) -> Box<dyn StreamingIterator<Item = [u8]> + 'a> {
     let array = array.downcast_ref::<DictionaryArray<K>>().unwrap();
@@ -419,7 +419,7 @@ fn serialize_utf8_dict<'a, K: DictionaryKey + Index, O: Offset>(
         keys.iter(),
         move |x, buf| {
             if let Some(x) = x {
-                let i = Index::to_usize(x);
+                let i = x.to_usize().unwrap();
                 if !values.is_null(i) {
                     let val = values.value(i);
                     buf.extend_from_slice(val.as_bytes());

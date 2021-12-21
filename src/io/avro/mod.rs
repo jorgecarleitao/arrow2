@@ -1,4 +1,5 @@
 #![deny(missing_docs)]
+#![forbid(unsafe_code)]
 //! Read and write from and to Apache Avro
 
 pub mod read;

@@ -1,5 +1,4 @@
 use std::collections::VecDeque;
-use std::convert::TryInto;
 use std::io::{Read, Seek};
 
 use arrow_format::ipc;
@@ -8,7 +7,6 @@ use crate::array::{Offset, Utf8Array};
 use crate::buffer::Buffer;
 use crate::datatypes::DataType;
 use crate::error::Result;
-use crate::types::NativeType;
 
 use super::super::deserialize::Node;
 use super::super::read_basic::*;
@@ -21,10 +19,7 @@ pub fn read_utf8<O: Offset, R: Read + Seek>(
     block_offset: u64,
     is_little_endian: bool,
     compression: Option<ipc::Message::BodyCompression>,
-) -> Result<Utf8Array<O>>
-where
-    Vec<u8>: TryInto<O::Bytes> + TryInto<<u8 as NativeType>::Bytes>,
-{
+) -> Result<Utf8Array<O>> {
     let field_node = field_nodes.pop_front().unwrap();
 
     let validity = read_validity(
