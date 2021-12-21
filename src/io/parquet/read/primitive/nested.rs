@@ -9,7 +9,7 @@ use super::super::nested_utils::extend_offsets;
 use super::ColumnDescriptor;
 use super::{super::utils, utils::ExactChunksIter, Nested};
 use crate::{
-    bitmap::MutableBitmap, buffer::MutableBuffer, error::Result, trusted_len::TrustedLen,
+    bitmap::MutableBitmap, error::Result, trusted_len::TrustedLen,
     types::NativeType as ArrowNativeType,
 };
 
@@ -18,7 +18,7 @@ fn read_values<T, D, G, F, A>(
     max_def: u32,
     mut new_values: G,
     op: F,
-    values: &mut MutableBuffer<A>,
+    values: &mut Vec<A>,
     validity: &mut MutableBitmap,
 ) where
     T: NativeType,
@@ -38,15 +38,14 @@ fn read_values<T, D, G, F, A>(
     });
 }
 
-fn read_values_required<T, G, F, A>(new_values: G, op: F, values: &mut MutableBuffer<A>)
+fn read_values_required<T, G, F, A>(new_values: G, op: F, values: &mut Vec<A>)
 where
     T: NativeType,
     G: TrustedLen<Item = T>,
     A: ArrowNativeType,
     F: Fn(T) -> A,
 {
-    let iterator = new_values.map(op);
-    values.extend_from_trusted_len_iter(iterator);
+    values.extend(new_values.map(op));
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -59,7 +58,7 @@ fn read<T, A, F>(
     def_level_encoding: (&Encoding, i16),
     is_nullable: bool,
     nested: &mut Vec<Box<dyn Nested>>,
-    values: &mut MutableBuffer<A>,
+    values: &mut Vec<A>,
     validity: &mut MutableBitmap,
     op: F,
 ) where
@@ -108,7 +107,7 @@ pub fn extend_from_page<T, A, F>(
     descriptor: &ColumnDescriptor,
     is_nullable: bool,
     nested: &mut Vec<Box<dyn Nested>>,
-    values: &mut MutableBuffer<A>,
+    values: &mut Vec<A>,
     validity: &mut MutableBitmap,
     op: F,
 ) -> Result<()>

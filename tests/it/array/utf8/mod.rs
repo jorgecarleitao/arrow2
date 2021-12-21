@@ -56,10 +56,10 @@ fn from() {
 
 #[test]
 fn from_slice() {
-    let b = Utf8Array::<i32>::from_slice(&["a", "b", "cc"]);
+    let b = Utf8Array::<i32>::from_slice(["a", "b", "cc"]);
 
-    let offsets = Buffer::from(&[0, 1, 2, 4]);
-    let values = Buffer::from("abcc".as_bytes());
+    let offsets = Buffer::from_slice([0, 1, 2, 4]);
+    let values = Buffer::from_slice("abcc".as_bytes());
     assert_eq!(
         b,
         Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None)
@@ -70,8 +70,8 @@ fn from_slice() {
 fn from_iter_values() {
     let b = Utf8Array::<i32>::from_iter_values(["a", "b", "cc"].iter());
 
-    let offsets = Buffer::from(&[0, 1, 2, 4]);
-    let values = Buffer::from("abcc".as_bytes());
+    let offsets = Buffer::from_slice([0, 1, 2, 4]);
+    let values = Buffer::from_slice(b"abcc");
     assert_eq!(
         b,
         Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None)
@@ -83,8 +83,8 @@ fn from_trusted_len_iter() {
     let b =
         Utf8Array::<i32>::from_trusted_len_iter(vec![Some("a"), Some("b"), Some("cc")].into_iter());
 
-    let offsets = Buffer::from(&[0, 1, 2, 4]);
-    let values = Buffer::from("abcc".as_bytes());
+    let offsets = Buffer::from_slice([0, 1, 2, 4]);
+    let values = Buffer::from_slice(b"abcc");
     assert_eq!(
         b,
         Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None)
@@ -100,8 +100,8 @@ fn try_from_trusted_len_iter() {
     )
     .unwrap();
 
-    let offsets = Buffer::from(&[0, 1, 2, 4]);
-    let values = Buffer::from("abcc".as_bytes());
+    let offsets = Buffer::from_slice([0, 1, 2, 4]);
+    let values = Buffer::from_slice("abcc".as_bytes());
     assert_eq!(
         b,
         Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None)
@@ -111,32 +111,32 @@ fn try_from_trusted_len_iter() {
 #[test]
 #[should_panic]
 fn not_utf8() {
-    let offsets = Buffer::from(&[0, 4]);
-    let values = Buffer::from([0, 159, 146, 150]); // invalid utf8
+    let offsets = Buffer::from_slice([0, 4]);
+    let values = Buffer::from_slice([0, 159, 146, 150]); // invalid utf8
     Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
 }
 
 #[test]
 #[should_panic]
 fn not_utf8_individually() {
-    let offsets = Buffer::from(&[0, 1, 2]);
-    let values = Buffer::from([207, 128]); // each is invalid utf8, but together is valid
+    let offsets = Buffer::from_slice([0, 1, 2]);
+    let values = Buffer::from_slice([207, 128]); // each is invalid utf8, but together is valid
     Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
 }
 
 #[test]
 #[should_panic]
 fn wrong_offsets() {
-    let offsets = Buffer::from(&[0, 5, 4]); // invalid offsets
-    let values = Buffer::from(b"abbbbb");
+    let offsets = Buffer::from_slice([0, 5, 4]); // invalid offsets
+    let values = Buffer::from_slice(b"abbbbb");
     Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
 }
 
 #[test]
 #[should_panic]
 fn wrong_data_type() {
-    let offsets = Buffer::from(&[0, 4]);
-    let values = Buffer::from(b"abbb");
+    let offsets = Buffer::from_slice([0, 4]);
+    let values = Buffer::from_slice(b"abbb");
     Utf8Array::<i32>::from_data(DataType::Int8, offsets, values, None);
 }
 
@@ -144,32 +144,32 @@ fn wrong_data_type() {
 #[should_panic]
 fn out_of_bounds_offsets_panics() {
     // the 10 is out of bounds
-    let offsets = Buffer::from(&[0, 10, 11]);
-    let values = Buffer::from(b"abbb");
+    let offsets = Buffer::from_slice([0, 10, 11]);
+    let values = Buffer::from_slice(b"abbb");
     let _ = Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
 }
 
 #[test]
 #[should_panic]
 fn decreasing_offset_and_ascii_panics() {
-    let offsets = Buffer::from(&[0, 2, 1]);
-    let values = Buffer::from(b"abbb");
+    let offsets = Buffer::from_slice([0, 2, 1]);
+    let values = Buffer::from_slice(b"abbb");
     let _ = Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
 }
 
 #[test]
 #[should_panic]
 fn decreasing_offset_and_utf8_panics() {
-    let offsets = Buffer::from(&[0, 2, 4, 2]); // not increasing
-    let values = Buffer::from([207, 128, 207, 128, 207, 128]); // valid utf8
+    let offsets = Buffer::from_slice([0, 2, 4, 2]); // not increasing
+    let values = Buffer::from_slice([207, 128, 207, 128, 207, 128]); // valid utf8
     let _ = Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
 }
 
 #[test]
 #[should_panic]
 fn index_out_of_bounds_panics() {
-    let offsets = Buffer::from(&[0, 1, 2, 4]);
-    let values = Buffer::from(b"abbb");
+    let offsets = Buffer::from_slice([0, 1, 2, 4]);
+    let values = Buffer::from_slice(b"abbb");
     let array = Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
 
     array.value(3);

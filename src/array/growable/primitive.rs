@@ -3,7 +3,6 @@ use std::sync::Arc;
 use crate::{
     array::{Array, PrimitiveArray},
     bitmap::MutableBitmap,
-    buffer::MutableBuffer,
     datatypes::DataType,
     types::NativeType,
 };
@@ -18,7 +17,7 @@ pub struct GrowablePrimitive<'a, T: NativeType> {
     data_type: DataType,
     arrays: Vec<&'a [T]>,
     validity: MutableBitmap,
-    values: MutableBuffer<T>,
+    values: Vec<T>,
     extend_null_bits: Vec<ExtendNullBits<'a>>,
 }
 
@@ -52,7 +51,7 @@ impl<'a, T: NativeType> GrowablePrimitive<'a, T> {
         Self {
             data_type,
             arrays,
-            values: MutableBuffer::with_capacity(capacity),
+            values: Vec::with_capacity(capacity),
             validity: MutableBitmap::with_capacity(capacity),
             extend_null_bits,
         }

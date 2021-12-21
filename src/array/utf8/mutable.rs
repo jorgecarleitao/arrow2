@@ -6,7 +6,6 @@ use crate::{
         Array, MutableArray, Offset, TryExtend, TryPush,
     },
     bitmap::MutableBitmap,
-    buffer::MutableBuffer,
     datatypes::DataType,
     error::{ArrowError, Result},
     trusted_len::TrustedLen,
@@ -18,8 +17,8 @@ use super::Utf8Array;
 #[derive(Debug)]
 pub struct MutableUtf8Array<O: Offset> {
     data_type: DataType,
-    offsets: MutableBuffer<O>,
-    values: MutableBuffer<u8>,
+    offsets: Vec<O>,
+    values: Vec<u8>,
     validity: Option<MutableBitmap>,
 }
 
@@ -48,12 +47,11 @@ impl<O: Offset> Default for MutableUtf8Array<O> {
 impl<O: Offset> MutableUtf8Array<O> {
     /// Initializes a new empty [`MutableUtf8Array`].
     pub fn new() -> Self {
-        let mut offsets = MutableBuffer::<O>::new();
-        offsets.push(O::default());
+        let offsets = vec![O::default()];
         Self {
             data_type: Self::default_data_type(),
             offsets,
-            values: MutableBuffer::<u8>::new(),
+            values: Vec::<u8>::new(),
             validity: None,
         }
     }
@@ -66,8 +64,8 @@ impl<O: Offset> MutableUtf8Array<O> {
     /// * The validity is not `None` and its length is different from `offsets`'s length minus one.
     pub fn from_data(
         data_type: DataType,
-        offsets: MutableBuffer<O>,
-        values: MutableBuffer<u8>,
+        offsets: Vec<O>,
+        values: Vec<u8>,
         validity: Option<MutableBitmap>,
     ) -> Self {
         check_offsets_and_utf8(&offsets, &values);
@@ -94,8 +92,8 @@ impl<O: Offset> MutableUtf8Array<O> {
     /// * The validity is not `None` and its length is different from `offsets`'s length minus one.
     pub unsafe fn from_data_unchecked(
         data_type: DataType,
-        offsets: MutableBuffer<O>,
-        values: MutableBuffer<u8>,
+        offsets: Vec<O>,
+        values: Vec<u8>,
         validity: Option<MutableBitmap>,
     ) -> Self {
         check_offsets_minimal(&offsets, values.len());
@@ -124,13 +122,13 @@ impl<O: Offset> MutableUtf8Array<O> {
 
     /// Initializes a new [`MutableUtf8Array`] with a pre-allocated capacity of slots and values.
     pub fn with_capacities(capacity: usize, values: usize) -> Self {
-        let mut offsets = MutableBuffer::<O>::with_capacity(capacity + 1);
+        let mut offsets = Vec::<O>::with_capacity(capacity + 1);
         offsets.push(O::default());
 
         Self {
             data_type: Self::default_data_type(),
             offsets,
-            values: MutableBuffer::<u8>::with_capacity(values),
+            values: Vec::<u8>::with_capacity(values),
             validity: None,
         }
     }
@@ -181,12 +179,12 @@ impl<O: Offset> MutableUtf8Array<O> {
 
 impl<O: Offset> MutableUtf8Array<O> {
     /// returns its values.
-    pub fn values(&self) -> &MutableBuffer<u8> {
+    pub fn values(&self) -> &Vec<u8> {
         &self.values
     }
 
     /// returns its offsets.
-    pub fn offsets(&self) -> &MutableBuffer<O> {
+    pub fn offsets(&self) -> &Vec<O> {
         &self.offsets
     }
 }
@@ -479,25 +477,23 @@ impl<O: Offset, T: AsRef<str>> TryPush<Option<T>> for MutableUtf8Array<O> {
     }
 }
 
-/// Creates [`MutableBitmap`] and two [`MutableBuffer`]s from an iterator of `Option`.
+/// Creates [`MutableBitmap`] and two [`Vec`]s from an iterator of `Option`.
 /// The first buffer corresponds to a offset buffer, the second one
 /// corresponds to a values buffer.
 /// # Safety
 /// The caller must ensure that `iterator` is `TrustedLen`.
 #[inline]
-unsafe fn trusted_len_unzip<O, I, P>(
-    iterator: I,
-) -> (Option<MutableBitmap>, MutableBuffer<O>, MutableBuffer<u8>)
+unsafe fn trusted_len_unzip<O, I, P>(iterator: I) -> (Option<MutableBitmap>, Vec<O>, Vec<u8>)
 where
     O: Offset,
     P: AsRef<str>,
     I: Iterator<Item = Option<P>>,
 {
-    let mut offsets = MutableBuffer::<O>::with_capacity(1);
-    let mut values = MutableBuffer::<u8>::new();
+    let mut offsets = Vec::<O>::with_capacity(1);
+    let mut values = Vec::<u8>::new();
     let mut validity = MutableBitmap::new();
 
-    offsets.push_unchecked(O::default());
+    offsets.push(O::default());
 
     extend_from_trusted_len_iter(&mut offsets, &mut values, &mut validity, iterator);
 
@@ -516,7 +512,7 @@ where
 #[allow(clippy::type_complexity)]
 pub(crate) unsafe fn try_trusted_len_unzip<E, I, P, O>(
     iterator: I,
-) -> std::result::Result<(Option<MutableBitmap>, MutableBuffer<O>, MutableBuffer<u8>), E>
+) -> std::result::Result<(Option<MutableBitmap>, Vec<O>, Vec<u8>), E>
 where
     O: Offset,
     P: AsRef<str>,
@@ -526,8 +522,8 @@ where
     let len = upper.expect("trusted_len_unzip requires an upper limit");
 
     let mut validity = MutableBitmap::with_capacity(len);
-    let mut offsets = MutableBuffer::<O>::with_capacity(len + 1);
-    let mut values = MutableBuffer::<u8>::new();
+    let mut offsets = Vec::<O>::with_capacity(len + 1);
+    let mut values = Vec::<u8>::new();
 
     let mut length = O::default();
     let mut dst = offsets.as_mut_ptr();
@@ -566,18 +562,16 @@ where
 /// # Safety
 /// The caller must ensure that `iterator` is [`TrustedLen`].
 #[inline]
-pub(crate) unsafe fn trusted_len_values_iter<O, I, P>(
-    iterator: I,
-) -> (MutableBuffer<O>, MutableBuffer<u8>)
+pub(crate) unsafe fn trusted_len_values_iter<O, I, P>(iterator: I) -> (Vec<O>, Vec<u8>)
 where
     O: Offset,
     P: AsRef<str>,
     I: Iterator<Item = P>,
 {
-    let mut offsets = MutableBuffer::<O>::with_capacity(1 + iterator.size_hint().1.unwrap());
-    let mut values = MutableBuffer::<u8>::new();
+    let mut offsets = Vec::<O>::with_capacity(1 + iterator.size_hint().1.unwrap());
+    let mut values = Vec::<u8>::new();
 
-    offsets.push_unchecked(O::default());
+    offsets.push(O::default());
 
     extend_from_trusted_len_values_iter(&mut offsets, &mut values, iterator);
 
@@ -590,8 +584,8 @@ where
 /// The caller must ensure that `iterator` is [`TrustedLen`]
 #[inline]
 unsafe fn extend_from_trusted_len_values_iter<I, P, O>(
-    offsets: &mut MutableBuffer<O>,
-    values: &mut MutableBuffer<u8>,
+    offsets: &mut Vec<O>,
+    values: &mut Vec<u8>,
     iterator: I,
 ) where
     O: Offset,
@@ -634,8 +628,8 @@ unsafe fn extend_from_trusted_len_values_iter<I, P, O>(
 /// The caller must ensure that `iterator` is [`TrustedLen`]
 #[inline]
 unsafe fn extend_from_trusted_len_iter<O, I, P>(
-    offsets: &mut MutableBuffer<O>,
-    values: &mut MutableBuffer<u8>,
+    offsets: &mut Vec<O>,
+    values: &mut Vec<u8>,
     validity: &mut MutableBitmap,
     iterator: I,
 ) where
@@ -680,10 +674,10 @@ unsafe fn extend_from_trusted_len_iter<O, I, P>(
     offsets.set_len(offsets.len() + additional);
 }
 
-/// Creates two [`MutableBuffer`]s from an iterator of `&str`.
+/// Creates two [`Vec`]s from an iterator of `&str`.
 /// The first buffer corresponds to a offset buffer, the second to a values buffer.
 #[inline]
-fn values_iter<O, I, P>(iterator: I) -> (MutableBuffer<O>, MutableBuffer<u8>)
+fn values_iter<O, I, P>(iterator: I) -> (Vec<O>, Vec<u8>)
 where
     O: Offset,
     P: AsRef<str>,
@@ -691,8 +685,8 @@ where
 {
     let (lower, _) = iterator.size_hint();
 
-    let mut offsets = MutableBuffer::<O>::with_capacity(lower + 1);
-    let mut values = MutableBuffer::<u8>::new();
+    let mut offsets = Vec::<O>::with_capacity(lower + 1);
+    let mut values = Vec::<u8>::new();
 
     let mut length = O::default();
     offsets.push(length);

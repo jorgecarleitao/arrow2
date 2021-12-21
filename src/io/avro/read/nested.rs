@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use crate::array::*;
 use crate::bitmap::*;
-use crate::buffer::*;
 use crate::datatypes::*;
 use crate::error::*;
 
@@ -10,14 +9,14 @@ use crate::error::*;
 #[derive(Debug)]
 pub struct DynMutableListArray<O: Offset> {
     data_type: DataType,
-    offsets: MutableBuffer<O>,
+    offsets: Vec<O>,
     values: Box<dyn MutableArray>,
     validity: Option<MutableBitmap>,
 }
 
 impl<O: Offset> DynMutableListArray<O> {
     pub fn new_from(values: Box<dyn MutableArray>, data_type: DataType, capacity: usize) -> Self {
-        let mut offsets = MutableBuffer::<O>::with_capacity(capacity + 1);
+        let mut offsets = Vec::<O>::with_capacity(capacity + 1);
         offsets.push(O::default());
         assert_eq!(values.len(), 0);
         ListArray::<O>::get_child_field(&data_type);

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{
     array::{Array, ListArray},
     bitmap::{Bitmap, MutableBitmap},
-    buffer::{Buffer, MutableBuffer},
+    buffer::Buffer,
     datatypes::{DataType, Field},
     error::{ArrowError, Result},
 };
@@ -60,7 +60,7 @@ impl Nested for NestedPrimitive {
 #[derive(Debug, Default)]
 pub struct NestedOptional {
     pub validity: MutableBitmap,
-    pub offsets: MutableBuffer<i64>,
+    pub offsets: Vec<i64>,
 }
 
 impl Nested for NestedOptional {
@@ -95,7 +95,7 @@ impl Nested for NestedOptional {
 
 impl NestedOptional {
     pub fn with_capacity(capacity: usize) -> Self {
-        let offsets = MutableBuffer::<i64>::with_capacity(capacity + 1);
+        let offsets = Vec::<i64>::with_capacity(capacity + 1);
         let validity = MutableBitmap::with_capacity(capacity);
         Self { validity, offsets }
     }
@@ -103,7 +103,7 @@ impl NestedOptional {
 
 #[derive(Debug, Default)]
 pub struct NestedValid {
-    pub offsets: MutableBuffer<i64>,
+    pub offsets: Vec<i64>,
 }
 
 impl Nested for NestedValid {
@@ -136,7 +136,7 @@ impl Nested for NestedValid {
 
 impl NestedValid {
     pub fn with_capacity(capacity: usize) -> Self {
-        let offsets = MutableBuffer::<i64>::with_capacity(capacity + 1);
+        let offsets = Vec::<i64>::with_capacity(capacity + 1);
         Self { offsets }
     }
 }

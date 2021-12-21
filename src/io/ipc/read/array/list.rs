@@ -48,7 +48,7 @@ where
         compression,
     )
     // Older versions of the IPC format sometimes do not report an offset
-    .or_else(|_| Result::Ok(Buffer::<O>::from(&[O::default()])))?;
+    .or_else(|_| Result::Ok(Buffer::<O>::from(vec![O::default()])))?;
 
     let field = ListArray::<O>::get_child_field(&data_type);
 

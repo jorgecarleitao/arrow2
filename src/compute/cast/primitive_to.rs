@@ -1,6 +1,5 @@
 use std::hash::Hash;
 
-use crate::buffer::MutableBuffer;
 use crate::error::Result;
 use crate::{
     array::*,
@@ -17,8 +16,8 @@ use super::CastOptions;
 pub fn primitive_to_binary<T: NativeType + lexical_core::ToLexical, O: Offset>(
     from: &PrimitiveArray<T>,
 ) -> BinaryArray<O> {
-    let mut values: MutableBuffer<u8> = MutableBuffer::with_capacity(from.len());
-    let mut offsets: MutableBuffer<O> = MutableBuffer::with_capacity(from.len() + 1);
+    let mut values: Vec<u8> = Vec::with_capacity(from.len());
+    let mut offsets: Vec<O> = Vec::with_capacity(from.len() + 1);
     offsets.push(O::default());
 
     let mut offset: usize = 0;
@@ -83,8 +82,8 @@ where
 pub fn primitive_to_utf8<T: NativeType + lexical_core::ToLexical, O: Offset>(
     from: &PrimitiveArray<T>,
 ) -> Utf8Array<O> {
-    let mut values: MutableBuffer<u8> = MutableBuffer::with_capacity(from.len());
-    let mut offsets: MutableBuffer<O> = MutableBuffer::with_capacity(from.len() + 1);
+    let mut values: Vec<u8> = Vec::with_capacity(from.len());
+    let mut offsets: Vec<O> = Vec::with_capacity(from.len() + 1);
     offsets.push(O::default());
 
     let mut offset: usize = 0;

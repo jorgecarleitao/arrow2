@@ -88,27 +88,6 @@ jobs:
         # --skip io: miri can't handle opening of files, so we skip those
         run: cargo miri test --features full -- --skip io::parquet --skip io::ipc
 
-  miri-checks-custom-allocator:
-    name: MIRI with custom allocator
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly-2021-12-10
-          override: true
-      - uses: Swatinem/rust-cache@v1
-        with:
-          key: key1
-      - name: Install Miri
-        run: |
-          rustup component add miri
-          cargo miri setup
-
-      - name: Run
-        # --skip io: miri can't handle opening of files, so we skip those
-        run: cargo miri test --features full,cache_aligned -- --skip io::parquet --skip io::ipc
-
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
@@ -130,7 +109,6 @@ jobs:
         run: cargo install cargo-tarpaulin
       - name: Run coverage
         run: |
-          cargo tarpaulin --features cache_aligned --ignore-tests --out Xml
           cargo tarpaulin --features full --ignore-tests --out Xml
       - name: Report coverage
         continue-on-error: true

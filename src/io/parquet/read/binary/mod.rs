@@ -4,7 +4,6 @@ use parquet2::{metadata::ColumnChunkMetaData, page::DataPage, FallibleStreamingI
 use crate::{
     array::{Array, Offset},
     bitmap::MutableBitmap,
-    buffer::MutableBuffer,
     datatypes::DataType,
     error::{ArrowError, Result},
     io::parquet::read::binary::utils::finish_array,
@@ -31,8 +30,8 @@ where
     I: FallibleStreamingIterator<Item = DataPage, Error = E>,
 {
     let capacity = metadata.num_values() as usize;
-    let mut values = MutableBuffer::<u8>::with_capacity(0);
-    let mut offsets = MutableBuffer::<O>::with_capacity(1 + capacity);
+    let mut values = Vec::<u8>::with_capacity(0);
+    let mut offsets = Vec::<O>::with_capacity(1 + capacity);
     offsets.push(O::default());
     let mut validity = MutableBitmap::with_capacity(capacity);
 
@@ -76,8 +75,8 @@ where
     I: Stream<Item = std::result::Result<DataPage, E>>,
 {
     let capacity = metadata.num_values() as usize;
-    let mut values = MutableBuffer::<u8>::with_capacity(0);
-    let mut offsets = MutableBuffer::<O>::with_capacity(1 + capacity);
+    let mut values = Vec::<u8>::with_capacity(0);
+    let mut offsets = Vec::<O>::with_capacity(1 + capacity);
     offsets.push(O::default());
     let mut validity = MutableBitmap::with_capacity(capacity);
 

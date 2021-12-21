@@ -3,7 +3,6 @@ use std::{iter::FromIterator, sync::Arc};
 use crate::{
     array::{Array, MutableArray, TryExtend, TryPush},
     bitmap::MutableBitmap,
-    buffer::MutableBuffer,
     datatypes::DataType,
     error::{ArrowError, Result},
     trusted_len::TrustedLen,
@@ -17,7 +16,7 @@ use super::PrimitiveArray;
 #[derive(Debug)]
 pub struct MutablePrimitiveArray<T: NativeType> {
     data_type: DataType,
-    values: MutableBuffer<T>,
+    values: Vec<T>,
     validity: Option<MutableBitmap>,
 }
 
@@ -55,11 +54,7 @@ impl<T: NativeType + NaturalDataType> MutablePrimitiveArray<T> {
     /// This function panics iff:
     /// * `data_type` is not supported by the physical type
     /// * The validity is not `None` and its length is different from the `values`'s length
-    pub fn from_data(
-        data_type: DataType,
-        values: MutableBuffer<T>,
-        validity: Option<MutableBitmap>,
-    ) -> Self {
+    pub fn from_data(data_type: DataType, values: Vec<T>, validity: Option<MutableBitmap>) -> Self {
         if !T::is_valid(&data_type) {
             Err(ArrowError::InvalidArgumentError(format!(
                 "Type {} does not support logical type {:?}",
@@ -79,7 +74,7 @@ impl<T: NativeType + NaturalDataType> MutablePrimitiveArray<T> {
     }
 
     /// Extract the low-end APIs from the [`MutablePrimitiveArray`].
-    pub fn into_data(self) -> (DataType, MutableBuffer<T>, Option<MutableBitmap>) {
+    pub fn into_data(self) -> (DataType, Vec<T>, Option<MutableBitmap>) {
         (self.data_type, self.values, self.validity)
     }
 }
@@ -95,7 +90,7 @@ impl<T: NativeType> From<DataType> for MutablePrimitiveArray<T> {
         assert!(T::is_valid(&data_type));
         Self {
             data_type,
-            values: MutableBuffer::<T>::new(),
+            values: Vec::<T>::new(),
             validity: None,
         }
     }
@@ -107,7 +102,7 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
         assert!(T::is_valid(&data_type));
         Self {
             data_type,
-            values: MutableBuffer::<T>::with_capacity(capacity),
+            values: Vec::<T>::with_capacity(capacity),
             validity: None,
         }
     }
@@ -146,7 +141,7 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
     #[inline]
     pub fn extend_constant(&mut self, additional: usize, value: Option<T>) {
         if let Some(value) = value {
-            self.values.extend_constant(additional, value);
+            self.values.resize(self.values.len() + additional, value);
             if let Some(validity) = &mut self.validity {
                 validity.extend_constant(additional, true)
             }
@@ -159,7 +154,8 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
                 validity.extend_constant(additional, false);
                 self.validity = Some(validity)
             }
-            self.values.extend_constant(additional, T::default());
+            self.values
+                .resize(self.values.len() + additional, T::default());
         }
     }
 
@@ -212,7 +208,7 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
     where
         I: Iterator<Item = T>,
     {
-        self.values.extend_from_trusted_len_iter_unchecked(iterator);
+        self.values.extend(iterator);
         self.update_all_valid();
     }
 
@@ -271,7 +267,7 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
 /// Accessors
 impl<T: NativeType> MutablePrimitiveArray<T> {
     /// Returns its values.
-    pub fn values(&self) -> &MutableBuffer<T> {
+    pub fn values(&self) -> &Vec<T> {
         &self.values
     }
 
@@ -316,7 +312,7 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
     /// Sets values.
     /// # Panic
     /// Panics iff the values' length is not equal to the existing validity's len.
-    pub fn set_values(&mut self, values: MutableBuffer<T>) {
+    pub fn set_values(&mut self, values: Vec<T>) {
         assert_eq!(values.len(), self.values.len());
         self.values = values;
     }
@@ -464,7 +460,7 @@ impl<T: NativeType + NaturalDataType> MutablePrimitiveArray<T> {
     pub fn from_trusted_len_values_iter<I: TrustedLen<Item = T>>(iter: I) -> Self {
         Self {
             data_type: T::DATA_TYPE,
-            values: MutableBuffer::<T>::from_trusted_len_iter(iter),
+            values: iter.collect(),
             validity: None,
         }
     }
@@ -476,7 +472,7 @@ impl<T: NativeType + NaturalDataType> MutablePrimitiveArray<T> {
     pub unsafe fn from_trusted_len_values_iter_unchecked<I: Iterator<Item = T>>(iter: I) -> Self {
         Self {
             data_type: T::DATA_TYPE,
-            values: MutableBuffer::<T>::from_trusted_len_iter_unchecked(iter),
+            values: iter.collect(),
             validity: None,
         }
     }
@@ -491,7 +487,7 @@ impl<T: NativeType + NaturalDataType, Ptr: std::borrow::Borrow<Option<T>>> FromI
 
         let mut validity = MutableBitmap::with_capacity(lower);
 
-        let values: MutableBuffer<T> = iter
+        let values: Vec<T> = iter
             .map(|item| {
                 if let Some(a) = item.borrow() {
                     validity.push(true);
@@ -517,7 +513,7 @@ impl<T: NativeType + NaturalDataType, Ptr: std::borrow::Borrow<Option<T>>> FromI
     }
 }
 
-/// Extends a [`MutableBitmap`] and a [`MutableBuffer`] from an iterator of `Option`.
+/// Extends a [`MutableBitmap`] and a [`Vec`] from an iterator of `Option`.
 /// The first buffer corresponds to a bitmap buffer, the second one
 /// corresponds to a values buffer.
 /// # Safety
@@ -526,7 +522,7 @@ impl<T: NativeType + NaturalDataType, Ptr: std::borrow::Borrow<Option<T>>> FromI
 pub(crate) unsafe fn extend_trusted_len_unzip<I, P, T>(
     iterator: I,
     validity: &mut MutableBitmap,
-    buffer: &mut MutableBuffer<T>,
+    buffer: &mut Vec<T>,
 ) where
     T: NativeType,
     P: std::borrow::Borrow<T>,
@@ -536,36 +532,32 @@ pub(crate) unsafe fn extend_trusted_len_unzip<I, P, T>(
     let additional = upper.expect("trusted_len_unzip requires an upper limit");
 
     validity.reserve(additional);
-    buffer.reserve(additional);
-
-    for item in iterator {
-        let item = if let Some(item) = item {
+    let values = iterator.map(|item| {
+        if let Some(item) = item {
             validity.push_unchecked(true);
             *item.borrow()
         } else {
             validity.push_unchecked(false);
             T::default()
-        };
-        buffer.push_unchecked(item);
-    }
+        }
+    });
+    buffer.extend(values);
 }
 
-/// Creates a [`MutableBitmap`] and a [`MutableBuffer`] from an iterator of `Option`.
+/// Creates a [`MutableBitmap`] and a [`Vec`] from an iterator of `Option`.
 /// The first buffer corresponds to a bitmap buffer, the second one
 /// corresponds to a values buffer.
 /// # Safety
 /// The caller must ensure that `iterator` is `TrustedLen`.
 #[inline]
-pub(crate) unsafe fn trusted_len_unzip<I, P, T>(
-    iterator: I,
-) -> (Option<MutableBitmap>, MutableBuffer<T>)
+pub(crate) unsafe fn trusted_len_unzip<I, P, T>(iterator: I) -> (Option<MutableBitmap>, Vec<T>)
 where
     T: NativeType,
     P: std::borrow::Borrow<T>,
     I: Iterator<Item = Option<P>>,
 {
     let mut validity = MutableBitmap::new();
-    let mut buffer = MutableBuffer::<T>::new();
+    let mut buffer = Vec::<T>::new();
 
     extend_trusted_len_unzip(iterator, &mut validity, &mut buffer);
 
@@ -583,7 +575,7 @@ where
 #[inline]
 pub(crate) unsafe fn try_trusted_len_unzip<E, I, P, T>(
     iterator: I,
-) -> std::result::Result<(Option<MutableBitmap>, MutableBuffer<T>), E>
+) -> std::result::Result<(Option<MutableBitmap>, Vec<T>), E>
 where
     T: NativeType,
     P: std::borrow::Borrow<T>,
@@ -593,7 +585,7 @@ where
     let len = upper.expect("trusted_len_unzip requires an upper limit");
 
     let mut null = MutableBitmap::with_capacity(len);
-    let mut buffer = MutableBuffer::<T>::with_capacity(len);
+    let mut buffer = Vec::<T>::with_capacity(len);
 
     let mut dst = buffer.as_mut_ptr();
     for item in iterator {

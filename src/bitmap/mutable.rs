@@ -2,20 +2,20 @@ use std::hint::unreachable_unchecked;
 use std::iter::FromIterator;
 
 use crate::bitmap::utils::merge_reversed;
-use crate::{buffer::MutableBuffer, trusted_len::TrustedLen};
+use crate::trusted_len::TrustedLen;
 
 use super::utils::{count_zeros, fmt, get_bit, set, set_bit, BitmapIter};
 use super::Bitmap;
 
 /// A container to store booleans. [`MutableBitmap`] is semantically equivalent
 /// to [`Vec<bool>`], but each value is stored as a single bit, thereby achieving a compression of 8x.
-/// This container is the counterpart of [`MutableBuffer`] for boolean values.
+/// This container is the counterpart of [`Vec`] for boolean values.
 /// [`MutableBitmap`] can be converted to a [`Bitmap`] at `O(1)`.
 /// The main difference against [`Vec<bool>`] is that a bitmap cannot be represented as `&[bool]`.
 /// # Implementation
-/// This container is backed by [`MutableBuffer<u8>`].
+/// This container is backed by [`Vec<u8>`].
 pub struct MutableBitmap {
-    buffer: MutableBuffer<u8>,
+    buffer: Vec<u8>,
     // invariant: length.saturating_add(7) / 8 == buffer.len();
     length: usize,
 }
@@ -37,7 +37,7 @@ impl MutableBitmap {
     #[inline]
     pub fn new() -> Self {
         Self {
-            buffer: MutableBuffer::new(),
+            buffer: Vec::new(),
             length: 0,
         }
     }
@@ -53,7 +53,7 @@ impl MutableBitmap {
     #[inline]
     pub fn from_len_zeroed(length: usize) -> Self {
         Self {
-            buffer: MutableBuffer::from_len_zeroed(length.saturating_add(7) / 8),
+            buffer: vec![0; length.saturating_add(7) / 8],
             length,
         }
     }
@@ -62,7 +62,7 @@ impl MutableBitmap {
     #[inline]
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
-            buffer: MutableBuffer::with_capacity(capacity.saturating_add(7) / 8),
+            buffer: Vec::with_capacity(capacity.saturating_add(7) / 8),
             length: 0,
         }
     }
@@ -97,7 +97,7 @@ impl MutableBitmap {
     #[inline]
     pub unsafe fn push_unchecked(&mut self, value: bool) {
         if self.length % 8 == 0 {
-            self.buffer.push_unchecked(0);
+            self.buffer.push(0);
         }
         let byte = self.buffer.as_mut_slice().last_mut().unwrap();
         *byte = set(*byte, self.length % 8, value);
@@ -152,9 +152,8 @@ impl MutableBitmap {
             let existing = self.length.saturating_add(7) / 8;
             let required = (self.length + additional).saturating_add(7) / 8;
             // add remaining as full bytes
-            self.buffer.extend_from_trusted_len_iter(
-                std::iter::repeat(0b11111111u8).take(required - existing),
-            );
+            self.buffer
+                .extend(std::iter::repeat(0b11111111u8).take(required - existing));
             self.length += additional;
         }
     }
@@ -211,18 +210,18 @@ impl MutableBitmap {
     }
 
     /// Shrinks the capacity of the [`MutableBitmap`] to fit its current length.
-    /// When the feature `cache_aligned`, the new capacity will be a multiple of 64 bytes.
     pub fn shrink_to_fit(&mut self) {
         self.buffer.shrink_to_fit();
     }
 }
 
 impl MutableBitmap {
-    /// Initializes a [`MutableBitmap`] from a [`MutableBuffer<u8>`] and a length.
+    /// Initializes a [`MutableBitmap`] from a [`Vec<u8>`] and a length.
+    /// This function is `O(1)`.
     /// # Panic
     /// Panics iff the length is larger than the length of the buffer times 8.
     #[inline]
-    pub fn from_buffer(buffer: MutableBuffer<u8>, length: usize) -> Self {
+    pub fn from_vec(buffer: Vec<u8>, length: usize) -> Self {
         assert!(length <= buffer.len() * 8);
         Self { buffer, length }
     }
@@ -261,7 +260,7 @@ impl FromIterator<bool> for MutableBitmap {
         let mut iterator = iter.into_iter();
         let mut buffer = {
             let byte_capacity: usize = iterator.size_hint().0.saturating_add(7) / 8;
-            MutableBuffer::with_capacity(byte_capacity)
+            Vec::with_capacity(byte_capacity)
         };
 
         let mut length = 0;
@@ -301,7 +300,7 @@ impl FromIterator<bool> for MutableBitmap {
             }
 
             // Soundness: capacity was allocated above
-            unsafe { buffer.push_unchecked(byte_accum) };
+            buffer.push(byte_accum);
             if exhausted {
                 break;
             }
@@ -357,12 +356,12 @@ unsafe fn get_byte_unchecked(len: usize, iterator: &mut impl Iterator<Item = boo
     byte_accum
 }
 
-/// Extends the [`MutableBuffer`] from `iterator`
+/// Extends the [`Vec<u8>`] from `iterator`
 /// # Safety
 /// The iterator MUST be [`TrustedLen`].
 #[inline]
 unsafe fn extend_aligned_trusted_iter_unchecked(
-    buffer: &mut MutableBuffer<u8>,
+    buffer: &mut Vec<u8>,
     mut iterator: impl Iterator<Item = bool>,
 ) -> usize {
     let additional_bits = iterator.size_hint().1.unwrap();
@@ -386,14 +385,14 @@ unsafe fn extend_aligned_trusted_iter_unchecked(
     // remaining complete bytes
     for _ in 0..(remainder / 8) {
         let byte = unsafe { get_byte_unchecked(8, &mut iterator) };
-        buffer.push_unchecked(byte)
+        buffer.push(byte)
     }
 
     // remaining bits
     let remainder = remainder % 8;
     if remainder > 0 {
         let byte = unsafe { get_byte_unchecked(remainder, &mut iterator) };
-        buffer.push_unchecked(byte)
+        buffer.push(byte)
     }
     additional_bits
 }
@@ -462,7 +461,7 @@ impl MutableBitmap {
     where
         I: Iterator<Item = bool>,
     {
-        let mut buffer = MutableBuffer::<u8>::new();
+        let mut buffer = Vec::<u8>::new();
 
         let length = extend_aligned_trusted_iter_unchecked(&mut buffer, iterator);
 
@@ -498,7 +497,7 @@ impl MutableBitmap {
     {
         let length = iterator.size_hint().1.unwrap();
 
-        let mut buffer = MutableBuffer::<u8>::from_len_zeroed((length + 7) / 8);
+        let mut buffer = vec![0u8; (length + 7) / 8];
 
         let chunks = length / 8;
         let reminder = length % 8;
@@ -557,7 +556,7 @@ impl MutableBitmap {
             .chain(std::iter::once(remaining.as_ref()))
             .map(|w| merge_reversed(w[0], w[1], 8 - own_offset))
             .take(additional.saturating_add(7) / 8);
-        self.buffer.extend_from_trusted_len_iter(bytes);
+        self.buffer.extend(bytes);
 
         self.length += length;
     }

@@ -300,6 +300,6 @@ fn months_days_ns() {
 #[test]
 #[should_panic]
 fn wrong_data_type() {
-    let values = Buffer::from(b"abbb");
+    let values = Buffer::from_slice(b"abbb");
     PrimitiveArray::from_data(DataType::Utf8, values, None);
 }

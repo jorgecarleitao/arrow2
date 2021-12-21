@@ -3,7 +3,6 @@ use std::sync::Arc;
 use crate::{
     array::{Array, MutableArray, Offset, TryExtend, TryPush},
     bitmap::MutableBitmap,
-    buffer::MutableBuffer,
     datatypes::{DataType, Field},
     error::{ArrowError, Result},
 };
@@ -14,7 +13,7 @@ use super::ListArray;
 #[derive(Debug)]
 pub struct MutableListArray<O: Offset, M: MutableArray> {
     data_type: DataType,
-    offsets: MutableBuffer<O>,
+    offsets: Vec<O>,
     values: M,
     validity: Option<MutableBitmap>,
 }
@@ -32,7 +31,7 @@ impl<O: Offset, M: MutableArray + Default> MutableListArray<O, M> {
         let values = M::default();
         let data_type = ListArray::<O>::default_datatype(values.data_type().clone());
 
-        let mut offsets = MutableBuffer::<O>::with_capacity(capacity + 1);
+        let mut offsets = Vec::<O>::with_capacity(capacity + 1);
         offsets.push(O::default());
         Self {
             data_type,
@@ -96,7 +95,7 @@ where
 impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
     /// Creates a new [`MutableListArray`] from a [`MutableArray`] and capacity.
     pub fn new_from(values: M, data_type: DataType, capacity: usize) -> Self {
-        let mut offsets = MutableBuffer::<O>::with_capacity(capacity + 1);
+        let mut offsets = Vec::<O>::with_capacity(capacity + 1);
         offsets.push(O::default());
         assert_eq!(values.len(), 0);
         ListArray::<O>::get_child_field(&data_type);
@@ -155,7 +154,7 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
     }
 
     /// The offseta
-    pub fn offsets(&self) -> &MutableBuffer<O> {
+    pub fn offsets(&self) -> &Vec<O> {
         &self.offsets
     }
 

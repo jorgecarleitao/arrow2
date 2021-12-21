@@ -3,7 +3,6 @@ use std::sync::Arc;
 use crate::{
     array::{Array, FixedSizeBinaryArray},
     bitmap::MutableBitmap,
-    buffer::MutableBuffer,
 };
 
 use super::{
@@ -15,7 +14,7 @@ use super::{
 pub struct GrowableFixedSizeBinary<'a> {
     arrays: Vec<&'a FixedSizeBinaryArray>,
     validity: MutableBitmap,
-    values: MutableBuffer<u8>,
+    values: Vec<u8>,
     extend_null_bits: Vec<ExtendNullBits<'a>>,
     size: usize, // just a cache
 }
@@ -43,7 +42,7 @@ impl<'a> GrowableFixedSizeBinary<'a> {
         let size = FixedSizeBinaryArray::get_size(arrays[0].data_type());
         Self {
             arrays,
-            values: MutableBuffer::with_capacity(0),
+            values: Vec::with_capacity(0),
             validity: MutableBitmap::with_capacity(capacity),
             extend_null_bits,
             size,

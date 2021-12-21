@@ -1,14 +1,9 @@
 use crate::{
     array::{Array, Offset},
     bitmap::MutableBitmap,
-    buffer::MutableBuffer,
 };
 
-pub(super) fn extend_offsets<T: Offset>(
-    buffer: &mut MutableBuffer<T>,
-    last_offset: &mut T,
-    offsets: &[T],
-) {
+pub(super) fn extend_offsets<T: Offset>(buffer: &mut Vec<T>, last_offset: &mut T, offsets: &[T]) {
     buffer.reserve(offsets.len() - 1);
     offsets.windows(2).for_each(|offsets| {
         // compute the new offset
@@ -40,7 +35,7 @@ pub(super) fn build_extend_null_bits(array: &dyn Array, use_validity: bool) -> E
 
 #[inline]
 pub(super) fn extend_offset_values<O: Offset>(
-    buffer: &mut MutableBuffer<u8>,
+    buffer: &mut Vec<u8>,
     offsets: &[O],
     values: &[u8],
     start: usize,

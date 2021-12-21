@@ -17,14 +17,14 @@ fn new_zeroed() {
 
 #[test]
 fn from_slice() {
-    let buffer = Buffer::<i32>::from(&[0, 1, 2]);
+    let buffer = Buffer::<i32>::from_slice([0, 1, 2]);
     assert_eq!(buffer.len(), 3);
     assert_eq!(buffer.as_slice(), &[0, 1, 2]);
 }
 
 #[test]
 fn slice() {
-    let buffer = Buffer::<i32>::from(&[0, 1, 2, 3]);
+    let buffer = Buffer::<i32>::from_slice([0, 1, 2, 3]);
     let buffer = buffer.slice(1, 2);
     assert_eq!(buffer.len(), 2);
     assert_eq!(buffer.as_slice(), &[1, 2]);
@@ -54,7 +54,7 @@ fn try_from_trusted_len_iter() {
 
 #[test]
 fn as_ptr() {
-    let buffer = Buffer::<i32>::from(&[0, 1, 2, 3]);
+    let buffer = Buffer::<i32>::from_slice([0, 1, 2, 3]);
     let buffer = buffer.slice(1, 2);
     let ptr = buffer.as_ptr();
     assert_eq!(unsafe { *ptr }, 1);
@@ -62,16 +62,15 @@ fn as_ptr() {
 
 #[test]
 fn debug() {
-    let buffer = Buffer::<i32>::from(&[0, 1, 2, 3]);
+    let buffer = Buffer::<i32>::from_slice([0, 1, 2, 3]);
     let buffer = buffer.slice(1, 2);
     let a = format!("{:?}", buffer);
     assert_eq!(a, "[1, 2]")
 }
 
-#[cfg(not(feature = "cache_aligned"))]
 #[test]
 fn from_vec() {
-    let buffer = Buffer::<i32>::from_vec(vec![0, 1, 2]);
+    let buffer = Buffer::<i32>::from(vec![0, 1, 2]);
     assert_eq!(buffer.len(), 3);
     assert_eq!(buffer.as_slice(), &[0, 1, 2]);
 }

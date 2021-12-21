@@ -1,4 +1,4 @@
-use crate::{array::PrimitiveArray, bitmap::Bitmap, buffer::MutableBuffer, types::Index};
+use crate::{array::PrimitiveArray, bitmap::Bitmap, types::Index};
 
 use super::SortOptions;
 
@@ -96,7 +96,7 @@ where
     let limit = limit.min(length);
 
     let indices = if let Some(validity) = validity {
-        let mut indices = MutableBuffer::<I>::from_len_zeroed(length);
+        let mut indices = vec![I::default(); length];
         if options.nulls_first {
             let mut nulls = 0;
             let mut valids = 0;
@@ -153,11 +153,8 @@ where
 
         indices
     } else {
-        let mut indices = MutableBuffer::from_trusted_len_iter(I::range(0, length).unwrap());
+        let mut indices = I::range(0, length).unwrap().collect::<Vec<_>>();
 
-        // Soundness:
-        // indices are by construction `< values.len()`
-        // limit is by construction `< values.len()`
         sort_unstable_by(&mut indices, get, cmp, descending, limit);
         indices.truncate(limit);
         indices.shrink_to_fit();

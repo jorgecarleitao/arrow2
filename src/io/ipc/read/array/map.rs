@@ -44,7 +44,7 @@ pub fn read_map<R: Read + Seek>(
         compression,
     )
     // Older versions of the IPC format sometimes do not report an offset
-    .or_else(|_| Result::Ok(Buffer::<i32>::from(&[0i32])))?;
+    .or_else(|_| Result::Ok(Buffer::<i32>::from(vec![0i32])))?;
 
     let field = MapArray::get_field(&data_type);
 

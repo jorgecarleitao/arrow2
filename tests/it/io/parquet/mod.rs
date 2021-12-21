@@ -34,7 +34,7 @@ pub fn read_column<R: Read + Seek>(
 }
 
 pub fn pyarrow_nested_nullable(column: usize) -> Box<dyn Array> {
-    let offsets = Buffer::<i32>::from([0, 2, 2, 5, 8, 8, 11, 11, 12]);
+    let offsets = Buffer::from_slice([0, 2, 2, 5, 8, 8, 11, 11, 12]);
 
     let values = match column {
         0 => {

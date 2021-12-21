@@ -7,16 +7,12 @@
 
 #[macro_use]
 pub mod array;
-#[cfg(feature = "cache_aligned")]
-mod alloc;
 pub mod bitmap;
 pub mod buffer;
 pub mod error;
 pub mod scalar;
 pub mod trusted_len;
 pub mod types;
-#[cfg(feature = "cache_aligned")]
-mod vec;
 
 pub mod compute;
 pub mod io;

@@ -1,9 +1,8 @@
-use std::{convert::AsRef, iter::FromIterator, sync::Arc, usize};
+use std::{iter::FromIterator, sync::Arc, usize};
 
 use crate::{trusted_len::TrustedLen, types::NativeType};
 
 use super::bytes::Bytes;
-use super::mutable::MutableBuffer;
 
 /// [`Buffer`] is a contiguous memory region that can
 /// be shared across thread boundaries.
@@ -35,7 +34,7 @@ impl<T: NativeType> std::fmt::Debug for Buffer<T> {
 impl<T: NativeType> Default for Buffer<T> {
     #[inline]
     fn default() -> Self {
-        MutableBuffer::new().into()
+        Vec::new().into()
     }
 }
 
@@ -49,17 +48,15 @@ impl<T: NativeType> Buffer<T> {
     /// Creates a new [`Buffer`] filled with zeros.
     #[inline]
     pub fn new_zeroed(length: usize) -> Self {
-        MutableBuffer::from_len_zeroed(length).into()
+        vec![T::default(); length].into()
     }
 
     /// Takes ownership of [`Vec`].
     /// # Implementation
     /// This function is `O(1)`
-    #[cfg(not(feature = "cache_aligned"))]
-    #[cfg_attr(docsrs, doc(cfg(not(feature = "cache_aligned"))))]
     #[inline]
-    pub fn from_vec(data: Vec<T>) -> Self {
-        MutableBuffer::from_vec(data).into()
+    pub fn from_slice<R: AsRef<[T]>>(data: R) -> Self {
+        data.as_ref().to_vec().into()
     }
 
     /// Auxiliary method to create a new Buffer
@@ -141,7 +138,7 @@ impl<T: NativeType> Buffer<T> {
     /// ```
     #[inline]
     pub fn from_trusted_len_iter<I: TrustedLen<Item = T>>(iterator: I) -> Self {
-        MutableBuffer::from_trusted_len_iter(iterator).into()
+        iterator.collect::<Vec<_>>().into()
     }
 
     /// # Safety
@@ -151,7 +148,7 @@ impl<T: NativeType> Buffer<T> {
     pub fn try_from_trusted_len_iter<E, I: TrustedLen<Item = std::result::Result<T, E>>>(
         iterator: I,
     ) -> std::result::Result<Self, E> {
-        Ok(MutableBuffer::try_from_trusted_len_iter(iterator)?.into())
+        Ok(iterator.collect::<std::result::Result<Vec<_>, E>>()?.into())
     }
 
     /// Creates a [`Buffer`] from an [`Iterator`] with a trusted (upper) length.
@@ -160,7 +157,7 @@ impl<T: NativeType> Buffer<T> {
     /// to use it on an iterator that reports an incorrect length.
     #[inline]
     pub unsafe fn from_trusted_len_iter_unchecked<I: Iterator<Item = T>>(iterator: I) -> Self {
-        MutableBuffer::from_trusted_len_iter_unchecked(iterator).into()
+        iterator.collect::<Vec<_>>().into()
     }
 
     /// # Safety
@@ -173,14 +170,19 @@ impl<T: NativeType> Buffer<T> {
     >(
         iterator: I,
     ) -> std::result::Result<Self, E> {
-        Ok(MutableBuffer::try_from_trusted_len_iter_unchecked(iterator)?.into())
+        Ok(iterator.collect::<std::result::Result<Vec<_>, E>>()?.into())
     }
 }
 
-impl<T: NativeType, U: AsRef<[T]>> From<U> for Buffer<T> {
+impl<T: NativeType> From<Vec<T>> for Buffer<T> {
     #[inline]
-    fn from(p: U) -> Self {
-        MutableBuffer::from(p).into()
+    fn from(p: Vec<T>) -> Self {
+        let bytes: Bytes<T> = p.into();
+        Self {
+            offset: 0,
+            length: bytes.len(),
+            data: Arc::new(bytes),
+        }
     }
 }
 
@@ -196,6 +198,6 @@ impl<T: NativeType> std::ops::Deref for Buffer<T> {
 impl<T: NativeType> FromIterator<T> for Buffer<T> {
     #[inline]
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
-        MutableBuffer::from_iter(iter).into()
+        Vec::from_iter(iter).into()
     }
 }

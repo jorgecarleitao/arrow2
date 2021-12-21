@@ -31,7 +31,7 @@ impl<O: Offset> ListArray<O> {
     /// Returns a new empty [`ListArray`].
     pub fn new_empty(data_type: DataType) -> Self {
         let values = new_empty_array(Self::get_child_type(&data_type).clone()).into();
-        Self::from_data(data_type, Buffer::from(&[O::zero()]), values, None)
+        Self::from_data(data_type, Buffer::from(vec![O::zero()]), values, None)
     }
 
     /// Returns a new null [`ListArray`].

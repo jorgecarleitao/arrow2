@@ -5,7 +5,7 @@ mod utils;
 
 use proptest::prelude::*;
 
-use arrow2::{bitmap::Bitmap, buffer::MutableBuffer};
+use arrow2::bitmap::Bitmap;
 
 /// Returns a strategy of an arbitrary sliced [`Bitmap`] of size up to 1000
 pub(crate) fn bitmap_strategy() -> impl Strategy<Value = Bitmap> {
@@ -26,8 +26,8 @@ pub(crate) fn bitmap_strategy() -> impl Strategy<Value = Bitmap> {
 }
 
 fn create_bitmap<P: AsRef<[u8]>>(bytes: P, len: usize) -> Bitmap {
-    let buffer = MutableBuffer::<u8>::from(bytes.as_ref());
-    Bitmap::from_u8_buffer(buffer, len)
+    let buffer = Vec::<u8>::from(bytes.as_ref());
+    Bitmap::from_u8_vec(buffer, len)
 }
 
 #[test]

@@ -3,7 +3,6 @@ use std::sync::Arc;
 use crate::{
     array::{Array, MutableArray},
     bitmap::MutableBitmap,
-    buffer::MutableBuffer,
     datatypes::DataType,
     error::{ArrowError, Result},
 };
@@ -18,7 +17,7 @@ use super::{FixedSizeBinaryArray, FixedSizeBinaryValues};
 pub struct MutableFixedSizeBinaryArray {
     data_type: DataType,
     size: usize,
-    values: MutableBuffer<u8>,
+    values: Vec<u8>,
     validity: Option<MutableBitmap>,
 }
 
@@ -36,7 +35,7 @@ impl MutableFixedSizeBinaryArray {
     /// Canonical method to create a new [`MutableFixedSizeBinaryArray`].
     pub fn from_data(
         data_type: DataType,
-        values: MutableBuffer<u8>,
+        values: Vec<u8>,
         validity: Option<MutableBitmap>,
     ) -> Self {
         let size = FixedSizeBinaryArray::get_size(&data_type);
@@ -69,7 +68,7 @@ impl MutableFixedSizeBinaryArray {
     pub fn with_capacity(size: usize, capacity: usize) -> Self {
         Self::from_data(
             DataType::FixedSizeBinary(size),
-            MutableBuffer::<u8>::with_capacity(capacity * size),
+            Vec::<u8>::with_capacity(capacity * size),
             None,
         )
     }
@@ -95,7 +94,7 @@ impl MutableFixedSizeBinaryArray {
                 }
             }
             None => {
-                self.values.extend_constant(self.size, 0);
+                self.values.resize(self.values.len() + self.size, 0);
                 match &mut self.validity {
                     Some(validity) => validity.push(false),
                     None => self.init_validity(),
@@ -168,7 +167,7 @@ impl MutableFixedSizeBinaryArray {
 /// Accessors
 impl MutableFixedSizeBinaryArray {
     /// Returns its values.
-    pub fn values(&self) -> &MutableBuffer<u8> {
+    pub fn values(&self) -> &Vec<u8> {
         &self.values
     }
 
@@ -216,7 +215,7 @@ impl MutableArray for MutableFixedSizeBinaryArray {
     }
 
     fn push_null(&mut self) {
-        self.values.extend_constant(self.size, 0);
+        self.values.resize(self.values.len() + self.size, 0);
     }
 
     fn shrink_to_fit(&mut self) {

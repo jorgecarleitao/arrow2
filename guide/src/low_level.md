@@ -20,7 +20,7 @@ These hold _all_ data-related memory in this crate.
 Due to their intrinsic immutability, each container has a corresponding mutable
 (and non-shareable) variant:
 
-* `MutableBuffer<T>`
+* `Vec<T>`
 * `MutableBitmap`
 
 Let's see how these structures are used.
@@ -30,43 +30,16 @@ Create a new `Buffer<u32>`:
 ```rust
 # use arrow2::buffer::Buffer;
 # fn main() {
-let x = Buffer::from(&[1u32, 2, 3]);
+let x = vec![1u32, 2, 3];
+let x: Buffer<u32> = x.into();
 assert_eq!(x.as_slice(), &[1u32, 2, 3]);
 
-let x = x.slice(1, 2);
+let x = x.slice(1, 2); // O(1)
 assert_eq!(x.as_slice(), &[2, 3]);
 # }
 ```
 
-Using a `MutableBuffer<i64>`:
-
-```rust
-# use arrow2::buffer::MutableBuffer;
-# fn main() {
-let mut x: MutableBuffer<i64> = (0..3).collect();
-x[1] = 5;
-x.push(10);
-assert_eq!(x.as_slice(), &[0, 5, 2, 10])
-# }
-```
-
-The following demonstrates how to efficiently
-perform an operation from an iterator of
-[TrustedLen](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html):
-
-```rust
-# use arrow2::buffer::MutableBuffer;
-# fn main() {
-let x = (0..1000).collect::<Vec<_>>();
-let y = MutableBuffer::from_trusted_len_iter(x.iter().map(|x| x * 2));
-assert_eq!(y[50], 100);
-# }
-```
-
-Using `from_trusted_len_iter` often causes the compiler to auto-vectorize.
-
-In this context, `MutableBuffer` has an almost identical API to Rust's `Vec`.
-However, contrarily to `Vec`, `Buffer` and `MutableBuffer` only supports
+Contrarily to `Vec`, `Buffer` (and all structs in this crate) only supports
 the following physical types:
 
 * `i8-i128`

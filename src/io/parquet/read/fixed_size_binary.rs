@@ -9,7 +9,6 @@ use super::{ColumnChunkMetaData, ColumnDescriptor};
 use crate::{
     array::FixedSizeBinaryArray,
     bitmap::{utils::BitmapIter, MutableBitmap},
-    buffer::MutableBuffer,
     datatypes::DataType,
     error::{ArrowError, Result},
 };
@@ -24,7 +23,7 @@ pub(crate) fn read_dict_buffer(
     additional: usize,
     size: usize,
     dict: &FixedLenByteArrayPageDict,
-    values: &mut MutableBuffer<u8>,
+    values: &mut Vec<u8>,
     validity: &mut MutableBitmap,
 ) {
     let length = values.len() + additional * size;
@@ -50,7 +49,7 @@ pub(crate) fn read_dict_buffer(
                         let index = indices.next().unwrap() as usize;
                         values.extend_from_slice(&dict_values[index * size..(index + 1) * size]);
                     } else {
-                        values.extend_constant(size, 0);
+                        values.resize(values.len() + size, 0);
                     }
                 }
             }
@@ -63,7 +62,7 @@ pub(crate) fn read_dict_buffer(
                         values.extend_from_slice(&dict_values[index * size..(index + 1) * size]);
                     })
                 } else {
-                    values.extend_constant(additional * size, 0)
+                    values.resize(values.len() + additional * size, 0);
                 }
             }
         }
@@ -76,7 +75,7 @@ pub(crate) fn read_dict_required(
     additional: usize,
     size: usize,
     dict: &FixedLenByteArrayPageDict,
-    values: &mut MutableBuffer<u8>,
+    values: &mut Vec<u8>,
     validity: &mut MutableBitmap,
 ) {
     let dict_values = dict.values();
@@ -100,7 +99,7 @@ pub(crate) fn read_optional(
     values_buffer: &[u8],
     additional: usize,
     size: usize,
-    values: &mut MutableBuffer<u8>,
+    values: &mut Vec<u8>,
     validity: &mut MutableBitmap,
 ) {
     let length = values.len() + additional * size;
@@ -122,7 +121,7 @@ pub(crate) fn read_optional(
                         let value = values_iterator.next().unwrap();
                         values.extend_from_slice(value);
                     } else {
-                        values.extend_constant(size, 0)
+                        values.resize(values.len() + size, 0);
                     }
                 }
             }
@@ -135,19 +134,14 @@ pub(crate) fn read_optional(
                         values.extend_from_slice(value)
                     })
                 } else {
-                    values.extend_constant(additional * size, 0)
+                    values.resize(values.len() + additional * size, 0);
                 }
             }
         }
     }
 }
 
-pub(crate) fn read_required(
-    buffer: &[u8],
-    additional: usize,
-    size: usize,
-    values: &mut MutableBuffer<u8>,
-) {
+pub(crate) fn read_required(buffer: &[u8], additional: usize, size: usize, values: &mut Vec<u8>) {
     assert_eq!(buffer.len(), additional * size);
     values.extend_from_slice(buffer);
 }
@@ -164,7 +158,7 @@ where
     let size = FixedSizeBinaryArray::get_size(&data_type);
 
     let capacity = metadata.num_values() as usize;
-    let mut values = MutableBuffer::<u8>::with_capacity(capacity * size);
+    let mut values = Vec::<u8>::with_capacity(capacity * size);
     let mut validity = MutableBitmap::with_capacity(capacity);
     while let Some(page) = iter.next()? {
         extend_from_page(
@@ -196,7 +190,7 @@ where
     let size = FixedSizeBinaryArray::get_size(&data_type);
 
     let capacity = metadata.num_values() as usize;
-    let mut values = MutableBuffer::<u8>::with_capacity(capacity * size);
+    let mut values = Vec::<u8>::with_capacity(capacity * size);
     let mut validity = MutableBitmap::with_capacity(capacity);
 
     pin_mut!(pages); // needed for iteration
@@ -222,7 +216,7 @@ pub(crate) fn extend_from_page(
     page: &DataPage,
     size: usize,
     descriptor: &ColumnDescriptor,
-    values: &mut MutableBuffer<u8>,
+    values: &mut Vec<u8>,
     validity: &mut MutableBitmap,
 ) -> Result<()> {
     let additional = page.num_values();

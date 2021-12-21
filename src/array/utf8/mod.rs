@@ -43,7 +43,12 @@ impl<O: Offset> Utf8Array<O> {
     #[inline]
     pub fn new_empty(data_type: DataType) -> Self {
         unsafe {
-            Self::from_data_unchecked(data_type, Buffer::from(&[O::zero()]), Buffer::new(), None)
+            Self::from_data_unchecked(
+                data_type,
+                Buffer::from(vec![O::zero()]),
+                Buffer::new(),
+                None,
+            )
         }
     }
 

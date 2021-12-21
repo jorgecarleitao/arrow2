@@ -40,7 +40,7 @@ pub fn read_binary<O: Offset, R: Read + Seek>(
         compression,
     )
     // Older versions of the IPC format sometimes do not report an offset
-    .or_else(|_| Result::Ok(Buffer::<O>::from(&[O::default()])))?;
+    .or_else(|_| Result::Ok(Buffer::<O>::from(vec![O::default()])))?;
 
     let last_offset = offsets.as_slice()[offsets.len() - 1].to_usize();
     let values = read_buffer(

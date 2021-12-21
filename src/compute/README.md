@@ -19,7 +19,7 @@ This module is composed by independent operations common in analytics. Below are
 * Kernels SHOULD use the arrays' logical type to decide whether kernels
 can be applied on an array. For example, `Date32 + Date32` is meaningless and SHOULD NOT be implemented.
 
-* Kernels SHOULD be implemented via `clone`, `slice` or the `iterator` API provided by `Buffer`, `Bitmap`, `MutableBuffer` or `MutableBitmap`.
+* Kernels SHOULD be implemented via `clone`, `slice` or the `iterator` API provided by `Buffer`, `Bitmap`, `Vec` or `MutableBitmap`.
 
 * Kernels MUST NOT use any API to read bits other than the ones provided by `Bitmap`.
 
