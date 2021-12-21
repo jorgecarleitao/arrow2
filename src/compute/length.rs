@@ -22,11 +22,12 @@ use crate::{
     buffer::Buffer,
     datatypes::DataType,
     error::{ArrowError, Result},
+    types::NativeType,
 };
 
 fn unary_offsets_string<O, F>(array: &Utf8Array<O>, op: F) -> PrimitiveArray<O>
 where
-    O: Offset,
+    O: Offset + NativeType,
     F: Fn(O) -> O,
 {
     let values = array

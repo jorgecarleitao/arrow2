@@ -48,5 +48,6 @@ pub fn sort_boolean<I: Index>(
         values.shrink_to_fit();
     }
 
-    PrimitiveArray::<I>::from_data(I::DATA_TYPE, values.into(), None)
+    let data_type = I::PRIMITIVE.into();
+    PrimitiveArray::<I>::from_data(data_type, values.into(), None)
 }

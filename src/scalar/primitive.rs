@@ -1,8 +1,4 @@
-use crate::{
-    datatypes::DataType,
-    error::ArrowError,
-    types::{NativeType, NaturalDataType},
-};
+use crate::{datatypes::DataType, error::ArrowError, types::NativeType};
 
 use super::Scalar;
 
@@ -18,7 +14,7 @@ impl<T: NativeType> PrimitiveScalar<T> {
     /// Returns a new [`PrimitiveScalar`].
     #[inline]
     pub fn new(data_type: DataType, value: Option<T>) -> Self {
-        if !T::is_valid(&data_type) {
+        if !data_type.to_physical_type().eq_primitive(T::PRIMITIVE) {
             Err(ArrowError::InvalidArgumentError(format!(
                 "Type {} does not support logical type {:?}",
                 std::any::type_name::<T>(),
@@ -43,10 +39,10 @@ impl<T: NativeType> PrimitiveScalar<T> {
     }
 }
 
-impl<T: NativeType + NaturalDataType> From<Option<T>> for PrimitiveScalar<T> {
+impl<T: NativeType> From<Option<T>> for PrimitiveScalar<T> {
     #[inline]
     fn from(v: Option<T>) -> Self {
-        Self::new(T::DATA_TYPE, v)
+        Self::new(T::PRIMITIVE.into(), v)
     }
 }
 

@@ -6,7 +6,7 @@ use crate::{
     datatypes::DataType,
     error::{ArrowError, Result},
     trusted_len::TrustedLen,
-    types::{NativeType, NaturalDataType},
+    types::NativeType,
 };
 
 use super::PrimitiveArray;
@@ -32,13 +32,13 @@ impl<T: NativeType> From<MutablePrimitiveArray<T>> for PrimitiveArray<T> {
     }
 }
 
-impl<T: NativeType + NaturalDataType, P: AsRef<[Option<T>]>> From<P> for MutablePrimitiveArray<T> {
+impl<T: NativeType, P: AsRef<[Option<T>]>> From<P> for MutablePrimitiveArray<T> {
     fn from(slice: P) -> Self {
         Self::from_trusted_len_iter(slice.as_ref().iter().map(|x| x.as_ref()))
     }
 }
 
-impl<T: NativeType + NaturalDataType> MutablePrimitiveArray<T> {
+impl<T: NativeType> MutablePrimitiveArray<T> {
     /// Creates a new empty [`MutablePrimitiveArray`].
     pub fn new() -> Self {
         Self::with_capacity(0)
@@ -46,7 +46,7 @@ impl<T: NativeType + NaturalDataType> MutablePrimitiveArray<T> {
 
     /// Creates a new [`MutablePrimitiveArray`] with a capacity.
     pub fn with_capacity(capacity: usize) -> Self {
-        Self::with_capacity_from(capacity, T::DATA_TYPE)
+        Self::with_capacity_from(capacity, T::PRIMITIVE.into())
     }
 
     /// Create a [`MutablePrimitiveArray`] out of low-end APIs.
@@ -55,7 +55,7 @@ impl<T: NativeType + NaturalDataType> MutablePrimitiveArray<T> {
     /// * `data_type` is not supported by the physical type
     /// * The validity is not `None` and its length is different from the `values`'s length
     pub fn from_data(data_type: DataType, values: Vec<T>, validity: Option<MutableBitmap>) -> Self {
-        if !T::is_valid(&data_type) {
+        if !data_type.to_physical_type().eq_primitive(T::PRIMITIVE) {
             Err(ArrowError::InvalidArgumentError(format!(
                 "Type {} does not support logical type {:?}",
                 std::any::type_name::<T>(),
@@ -79,7 +79,7 @@ impl<T: NativeType + NaturalDataType> MutablePrimitiveArray<T> {
     }
 }
 
-impl<T: NativeType + NaturalDataType> Default for MutablePrimitiveArray<T> {
+impl<T: NativeType> Default for MutablePrimitiveArray<T> {
     fn default() -> Self {
         Self::new()
     }
@@ -87,7 +87,7 @@ impl<T: NativeType + NaturalDataType> Default for MutablePrimitiveArray<T> {
 
 impl<T: NativeType> From<DataType> for MutablePrimitiveArray<T> {
     fn from(data_type: DataType) -> Self {
-        assert!(T::is_valid(&data_type));
+        assert!(data_type.to_physical_type().eq_primitive(T::PRIMITIVE));
         Self {
             data_type,
             values: Vec::<T>::new(),
@@ -99,7 +99,7 @@ impl<T: NativeType> From<DataType> for MutablePrimitiveArray<T> {
 impl<T: NativeType> MutablePrimitiveArray<T> {
     /// Creates a new [`MutablePrimitiveArray`] from a capacity and [`DataType`].
     pub fn with_capacity_from(capacity: usize, data_type: DataType) -> Self {
-        assert!(T::is_valid(&data_type));
+        assert!(data_type.to_physical_type().eq_primitive(T::PRIMITIVE));
         Self {
             data_type,
             values: Vec::<T>::with_capacity(capacity),
@@ -388,7 +388,7 @@ impl<T: NativeType> MutableArray for MutablePrimitiveArray<T> {
     }
 }
 
-impl<T: NativeType + NaturalDataType> MutablePrimitiveArray<T> {
+impl<T: NativeType> MutablePrimitiveArray<T> {
     /// Creates a [`MutablePrimitiveArray`] from a slice of values.
     pub fn from_slice<P: AsRef<[T]>>(slice: P) -> Self {
         Self::from_trusted_len_values_iter(slice.as_ref().iter().copied())
@@ -407,7 +407,7 @@ impl<T: NativeType + NaturalDataType> MutablePrimitiveArray<T> {
         let (validity, values) = trusted_len_unzip(iterator);
 
         Self {
-            data_type: T::DATA_TYPE,
+            data_type: T::PRIMITIVE.into(),
             values,
             validity,
         }
@@ -440,7 +440,7 @@ impl<T: NativeType + NaturalDataType> MutablePrimitiveArray<T> {
         let (validity, values) = try_trusted_len_unzip(iterator)?;
 
         Ok(Self {
-            data_type: T::DATA_TYPE,
+            data_type: T::PRIMITIVE.into(),
             values,
             validity,
         })
@@ -459,7 +459,7 @@ impl<T: NativeType + NaturalDataType> MutablePrimitiveArray<T> {
     /// Creates a new [`MutablePrimitiveArray`] out an iterator over values
     pub fn from_trusted_len_values_iter<I: TrustedLen<Item = T>>(iter: I) -> Self {
         Self {
-            data_type: T::DATA_TYPE,
+            data_type: T::PRIMITIVE.into(),
             values: iter.collect(),
             validity: None,
         }
@@ -471,14 +471,14 @@ impl<T: NativeType + NaturalDataType> MutablePrimitiveArray<T> {
     /// I.e. that `size_hint().1` correctly reports its length.
     pub unsafe fn from_trusted_len_values_iter_unchecked<I: Iterator<Item = T>>(iter: I) -> Self {
         Self {
-            data_type: T::DATA_TYPE,
+            data_type: T::PRIMITIVE.into(),
             values: iter.collect(),
             validity: None,
         }
     }
 }
 
-impl<T: NativeType + NaturalDataType, Ptr: std::borrow::Borrow<Option<T>>> FromIterator<Ptr>
+impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> FromIterator<Ptr>
     for MutablePrimitiveArray<T>
 {
     fn from_iter<I: IntoIterator<Item = Ptr>>(iter: I) -> Self {
@@ -506,7 +506,7 @@ impl<T: NativeType + NaturalDataType, Ptr: std::borrow::Borrow<Option<T>>> FromI
         };
 
         Self {
-            data_type: T::DATA_TYPE,
+            data_type: T::PRIMITIVE.into(),
             values,
             validity,
         }

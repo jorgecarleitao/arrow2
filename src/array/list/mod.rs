@@ -6,11 +6,7 @@ use crate::{
     datatypes::{DataType, Field},
 };
 
-use super::{
-    debug_fmt, new_empty_array,
-    specification::{check_offsets, Offset},
-    Array,
-};
+use super::{debug_fmt, new_empty_array, specification::check_offsets, Array, Offset};
 
 mod ffi;
 mod iterator;

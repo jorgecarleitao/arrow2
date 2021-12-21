@@ -24,7 +24,6 @@ use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 use crate::temporal_conversions::*;
 use crate::types::NativeType;
-use crate::types::NaturalDataType;
 
 use super::arity::unary;
 
@@ -281,7 +280,7 @@ fn extract_impl<T, A, F>(
 ) -> PrimitiveArray<A>
 where
     T: chrono::TimeZone,
-    A: NativeType + NaturalDataType,
+    A: NativeType,
     F: Fn(chrono::DateTime<T>) -> A,
 {
     match time_unit {
@@ -291,7 +290,7 @@ where
                 let offset = timezone.offset_from_utc_datetime(&datetime);
                 extract(chrono::DateTime::<T>::from_utc(datetime, offset))
             };
-            unary(array, op, A::DATA_TYPE)
+            unary(array, op, A::PRIMITIVE.into())
         }
         TimeUnit::Millisecond => {
             let op = |x| {
@@ -299,7 +298,7 @@ where
                 let offset = timezone.offset_from_utc_datetime(&datetime);
                 extract(chrono::DateTime::<T>::from_utc(datetime, offset))
             };
-            unary(array, op, A::DATA_TYPE)
+            unary(array, op, A::PRIMITIVE.into())
         }
         TimeUnit::Microsecond => {
             let op = |x| {
@@ -307,7 +306,7 @@ where
                 let offset = timezone.offset_from_utc_datetime(&datetime);
                 extract(chrono::DateTime::<T>::from_utc(datetime, offset))
             };
-            unary(array, op, A::DATA_TYPE)
+            unary(array, op, A::PRIMITIVE.into())
         }
         TimeUnit::Nanosecond => {
             let op = |x| {
@@ -315,7 +314,7 @@ where
                 let offset = timezone.offset_from_utc_datetime(&datetime);
                 extract(chrono::DateTime::<T>::from_utc(datetime, offset))
             };
-            unary(array, op, A::DATA_TYPE)
+            unary(array, op, A::PRIMITIVE.into())
         }
     }
 }

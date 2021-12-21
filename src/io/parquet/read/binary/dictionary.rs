@@ -154,7 +154,7 @@ where
         // the array is empty and thus we need to push the first offset ourselves.
         offsets.push(O::zero());
     };
-    let keys = PrimitiveArray::from_data(K::DATA_TYPE, indices.into(), validity.into());
+    let keys = PrimitiveArray::from_data(K::PRIMITIVE.into(), indices.into(), validity.into());
     let data_type = DictionaryArray::<K>::get_child(&data_type).clone();
     let values = Arc::new(Utf8Array::from_data(
         data_type,

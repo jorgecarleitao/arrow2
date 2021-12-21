@@ -361,6 +361,7 @@ pub mod ord;
 pub use display::get_display;
 pub use equal::equal;
 
+pub use crate::types::Offset;
 pub use binary::{BinaryArray, BinaryValueIter, MutableBinaryArray};
 pub use boolean::{BooleanArray, MutableBooleanArray};
 pub use dictionary::{DictionaryArray, DictionaryKey, MutableDictionaryArray};
@@ -370,7 +371,6 @@ pub use list::{ListArray, MutableListArray};
 pub use map::MapArray;
 pub use null::NullArray;
 pub use primitive::*;
-pub use specification::Offset;
 pub use struct_::StructArray;
 pub use union::UnionArray;
 pub use utf8::{MutableUtf8Array, Utf8Array, Utf8ValuesIter};

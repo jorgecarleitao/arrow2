@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::{array::FromFfi, bitmap::align, error::Result, ffi};
 
-use super::super::{ffi::ToFfi, specification::Offset, Array};
+use super::super::{ffi::ToFfi, Array, Offset};
 use super::ListArray;
 
 unsafe impl<O: Offset> ToFfi for ListArray<O> {

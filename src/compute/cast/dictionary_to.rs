@@ -71,7 +71,7 @@ where
     let keys = from.keys();
     let values = from.values();
 
-    let casted_keys = primitive_to_primitive::<K1, K2>(keys, &K2::DATA_TYPE);
+    let casted_keys = primitive_to_primitive::<K1, K2>(keys, &K2::PRIMITIVE.into());
 
     if casted_keys.null_count() > keys.null_count() {
         Err(ArrowError::Overflow)
@@ -91,7 +91,7 @@ where
     let keys = from.keys();
     let values = from.values();
 
-    let casted_keys = primitive_as_primitive::<K1, K2>(keys, &K2::DATA_TYPE);
+    let casted_keys = primitive_as_primitive::<K1, K2>(keys, &K2::PRIMITIVE.into());
 
     if casted_keys.null_count() > keys.null_count() {
         Err(ArrowError::Overflow)

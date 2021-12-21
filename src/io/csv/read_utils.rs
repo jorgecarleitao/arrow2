@@ -15,7 +15,7 @@ use crate::{
     error::{ArrowError, Result},
     record_batch::RecordBatch,
     temporal_conversions,
-    types::{NativeType, NaturalDataType},
+    types::NativeType,
 };
 
 use super::utils::RFC3339;
@@ -33,7 +33,7 @@ fn deserialize_primitive<T, B: ByteRecordGeneric, F>(
     op: F,
 ) -> Arc<dyn Array>
 where
-    T: NativeType + NaturalDataType + lexical_core::FromLexical,
+    T: NativeType + lexical_core::FromLexical,
     F: Fn(&[u8]) -> Option<T>,
 {
     let iter = rows.iter().map(|row| match row.get(column) {

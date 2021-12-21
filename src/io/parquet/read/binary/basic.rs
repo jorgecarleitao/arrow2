@@ -133,8 +133,8 @@ fn read_delta_optional<O: Offset>(
                 let len = std::cmp::min(packed.len() * 8, remaining);
                 for is_valid in BitmapIter::new(packed, 0, len) {
                     if is_valid {
-                        let value = values_iterator.next().unwrap() as isize;
-                        last_offset += O::from_isize(value).unwrap();
+                        let value = values_iterator.next().unwrap() as usize;
+                        last_offset += O::from_usize(value).unwrap();
                     }
                     offsets.push(last_offset);
                 }
@@ -145,8 +145,8 @@ fn read_delta_optional<O: Offset>(
                 validity.extend_constant(additional, is_set);
                 if is_set {
                     (0..additional).for_each(|_| {
-                        let value = values_iterator.next().unwrap() as isize;
-                        last_offset += O::from_isize(value).unwrap();
+                        let value = values_iterator.next().unwrap() as usize;
+                        last_offset += O::from_usize(value).unwrap();
                         offsets.push(last_offset);
                     })
                 } else {

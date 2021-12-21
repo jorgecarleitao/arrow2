@@ -1,3 +1,5 @@
+pub use crate::types::PrimitiveType;
+
 /// The set of physical types: unique in-memory representations of an Arrow array.
 /// A physical type has a one-to-many relationship with a [`crate::datatypes::DataType`] and
 /// a one-to-one mapping to each struct in this crate that implements [`crate::array::Array`].
@@ -35,36 +37,15 @@ pub enum PhysicalType {
     Dictionary(IntegerType),
 }
 
-/// The set of all (physical) primitive types.
-/// Each type corresponds to a variant of [`crate::array::PrimitiveArray`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum PrimitiveType {
-    /// A signed 8-bit integer.
-    Int8,
-    /// A signed 16-bit integer.
-    Int16,
-    /// A signed 32-bit integer.
-    Int32,
-    /// A signed 64-bit integer.
-    Int64,
-    /// A signed 128-bit integer.
-    Int128,
-    /// An unsigned 8-bit integer.
-    UInt8,
-    /// An unsigned 16-bit integer.
-    UInt16,
-    /// An unsigned 32-bit integer.
-    UInt32,
-    /// An unsigned 64-bit integer.
-    UInt64,
-    /// A 32-bit floating point number.
-    Float32,
-    /// A 64-bit floating point number.
-    Float64,
-    /// Two i32 representing days and ms
-    DaysMs,
-    /// months_days_ns(i32, i32, i64)
-    MonthDayNano,
+impl PhysicalType {
+    /// Whether this physical type equals [`PhysicalType::Primitive`] of type `primitive`.
+    pub fn eq_primitive(&self, primitive: PrimitiveType) -> bool {
+        if let Self::Primitive(o) = self {
+            o == &primitive
+        } else {
+            false
+        }
+    }
 }
 
 /// the set of valid indices types of a dictionary-encoded Array.

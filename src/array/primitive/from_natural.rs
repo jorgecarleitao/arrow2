@@ -1,43 +1,42 @@
 use std::iter::FromIterator;
 
-use crate::{
-    trusted_len::TrustedLen,
-    types::{NativeType, NaturalDataType},
-};
+use crate::{trusted_len::TrustedLen, types::NativeType};
 
 use super::{MutablePrimitiveArray, PrimitiveArray};
 
-impl<T: NativeType + NaturalDataType, P: AsRef<[Option<T>]>> From<P> for PrimitiveArray<T> {
+impl<T: NativeType, P: AsRef<[Option<T>]>> From<P> for PrimitiveArray<T> {
     fn from(slice: P) -> Self {
         MutablePrimitiveArray::<T>::from(slice).into()
     }
 }
 
-impl<T: NativeType + NaturalDataType, Ptr: std::borrow::Borrow<Option<T>>> FromIterator<Ptr>
-    for PrimitiveArray<T>
-{
+impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> FromIterator<Ptr> for PrimitiveArray<T> {
     fn from_iter<I: IntoIterator<Item = Ptr>>(iter: I) -> Self {
         MutablePrimitiveArray::<T>::from_iter(iter).into()
     }
 }
 
-impl<T: NativeType + NaturalDataType> PrimitiveArray<T> {
+impl<T: NativeType> PrimitiveArray<T> {
     /// Creates a (non-null) [`PrimitiveArray`] from an iterator of values.
     /// # Implementation
     /// This does not assume that the iterator has a known length.
     pub fn from_values<I: IntoIterator<Item = T>>(iter: I) -> Self {
-        Self::from_data(T::DATA_TYPE, Vec::<T>::from_iter(iter).into(), None)
+        Self::from_data(T::PRIMITIVE.into(), Vec::<T>::from_iter(iter).into(), None)
     }
 
     /// Creates a (non-null) [`PrimitiveArray`] from a slice of values.
     /// # Implementation
     /// This is essentially a memcopy and is the fastest way to create a [`PrimitiveArray`].
     pub fn from_slice<P: AsRef<[T]>>(slice: P) -> Self {
-        Self::from_data(T::DATA_TYPE, Vec::<T>::from(slice.as_ref()).into(), None)
+        Self::from_data(
+            T::PRIMITIVE.into(),
+            Vec::<T>::from(slice.as_ref()).into(),
+            None,
+        )
     }
 }
 
-impl<T: NativeType + NaturalDataType> PrimitiveArray<T> {
+impl<T: NativeType> PrimitiveArray<T> {
     /// Creates a (non-null) [`PrimitiveArray`] from a [`TrustedLen`] of values.
     /// # Implementation
     /// This does not assume that the iterator has a known length.

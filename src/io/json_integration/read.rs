@@ -259,7 +259,7 @@ fn to_dictionary<K: DictionaryKey>(
         ArrowError::OutOfSpec(format!("Unable to find any dictionary id {}", dict_id))
     })?;
 
-    let keys = to_primitive(json_col, K::DATA_TYPE);
+    let keys = to_primitive(json_col, K::PRIMITIVE.into());
 
     // todo: make DataType::Dictionary hold a Field so that it can hold dictionary_id
     let inner_data_type = DictionaryArray::<K>::get_child(&data_type);
