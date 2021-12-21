@@ -188,7 +188,7 @@ fn main() -&gt; Result&lt;()&gt; {
     let row_group = args[3].parse::&lt;usize&gt;().unwrap();
 
     let array = read_field(file_path, row_group, field)?;
-    println!(&quot;{}&quot;, array);
+    println!(&quot;{:?}&quot;, array);
     Ok(())
 }
 </code></pre></pre>

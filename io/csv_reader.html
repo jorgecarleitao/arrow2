@@ -314,7 +314,7 @@ async fn main() -&gt; Result&lt;()&gt; {
         0,
         deserialize_column,
     )?;
-    println!(&quot;{}&quot;, batch.column(0));
+    println!(&quot;{:?}&quot;, batch.column(0));
     Ok(())
 }
 </code></pre></pre>
