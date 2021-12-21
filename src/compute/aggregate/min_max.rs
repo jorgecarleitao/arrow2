@@ -394,7 +394,7 @@ pub fn max(array: &dyn Array) -> Result<Box<dyn Scalar>> {
         }
         _ => {
             return Err(ArrowError::InvalidArgumentError(format!(
-                "The `max` operator does not support type `{}`",
+                "The `max` operator does not support type `{:?}`",
                 array.data_type(),
             )))
         }
@@ -435,7 +435,7 @@ pub fn min(array: &dyn Array) -> Result<Box<dyn Scalar>> {
         }
         _ => {
             return Err(ArrowError::InvalidArgumentError(format!(
-                "The `max` operator does not support type `{}`",
+                "The `max` operator does not support type `{:?}`",
                 array.data_type(),
             )))
         }

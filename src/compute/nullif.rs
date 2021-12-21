@@ -165,7 +165,7 @@ pub fn nullif(lhs: &dyn Array, rhs: &dyn Array) -> Result<Box<dyn Array>> {
         )
         .map(|x| Box::new(x) as Box<dyn Array>),
         other => Err(ArrowError::NotYetImplemented(format!(
-            "Nullif is not implemented for logical datatype {}",
+            "Nullif is not implemented for logical datatype {:?}",
             other
         ))),
     }

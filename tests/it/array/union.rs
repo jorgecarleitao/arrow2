@@ -3,7 +3,7 @@ use std::sync::Arc;
 use arrow2::{array::*, buffer::Buffer, datatypes::*, error::Result};
 
 #[test]
-fn display() -> Result<()> {
+fn debug() -> Result<()> {
     let fields = vec![
         Field::new("a", DataType::Int32, true),
         Field::new("b", DataType::Utf8, true),
@@ -17,7 +17,7 @@ fn display() -> Result<()> {
 
     let array = UnionArray::from_data(data_type, types, fields, None);
 
-    assert_eq!(format!("{}", array), "UnionArray[1, , c]");
+    assert_eq!(format!("{:?}", array), "UnionArray[1, None, c]");
 
     Ok(())
 }

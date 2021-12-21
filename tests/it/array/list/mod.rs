@@ -20,7 +20,7 @@ fn display() {
     );
 
     assert_eq!(
-        format!("{}", array),
+        format!("{:?}", array),
         "ListArray[\nInt32[1, 2],\nInt32[],\nInt32[3],\nInt32[4, 5]\n]"
     );
 }
@@ -62,5 +62,5 @@ fn test_nested_display() {
         ListArray::<i32>::from_data(data_type, Buffer::from([0, 2, 5, 6]), Arc::new(array), None);
 
     let expected = "ListArray[\nListArray[\nInt32[1, 2],\nInt32[3, 4]\n],\nListArray[\nInt32[5, 6, 7],\nInt32[],\nInt32[8]\n],\nListArray[\nInt32[9, 10]\n]\n]";
-    assert_eq!(format!("{}", nested), expected);
+    assert_eq!(format!("{:?}", nested), expected);
 }

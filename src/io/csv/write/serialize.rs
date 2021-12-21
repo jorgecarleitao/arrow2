@@ -398,7 +398,7 @@ pub fn new_serializer<'a>(
                 panic!("only dictionary with string values are supported by csv writer")
             }
         },
-        dt => panic!("data type: {} not supported by csv writer", dt),
+        dt => panic!("data type: {:?} not supported by csv writer", dt),
     })
 }
 

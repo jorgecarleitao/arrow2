@@ -138,12 +138,6 @@ pub enum DataType {
     Extension(String, Box<DataType>, Option<String>),
 }
 
-impl std::fmt::Display for DataType {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
 /// Mode of [`DataType::Union`]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum UnionMode {

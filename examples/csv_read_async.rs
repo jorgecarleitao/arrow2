@@ -29,6 +29,6 @@ async fn main() -> Result<()> {
         0,
         deserialize_column,
     )?;
-    println!("{}", batch.column(0));
+    println!("{:?}", batch.column(0));
     Ok(())
 }

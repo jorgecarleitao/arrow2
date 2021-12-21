@@ -27,7 +27,7 @@ mod iterator;
 ///
 /// let array = StructArray::from_data(DataType::Struct(fields), vec![boolean, int], None);
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct StructArray {
     data_type: DataType,
     values: Vec<Arc<dyn Array>>,
@@ -214,11 +214,11 @@ impl Array for StructArray {
     }
 }
 
-impl std::fmt::Display for StructArray {
+impl std::fmt::Debug for StructArray {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "StructArray{{")?;
         for (field, column) in self.fields().iter().zip(self.values()) {
-            writeln!(f, "{}: {},", field.name(), column)?;
+            writeln!(f, "{}: {:?},", field.name(), column)?;
         }
         write!(f, "}}")
     }

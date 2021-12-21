@@ -9,7 +9,7 @@ pub use mutable::*;
 
 /// The Arrow's equivalent to an immutable `Vec<Option<[u8; size]>>`.
 /// Cloning and slicing this struct is `O(1)`.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct FixedSizeBinaryArray {
     size: usize, // this is redundant with `data_type`, but useful to not have to deconstruct the data_type.
     data_type: DataType,
@@ -205,7 +205,7 @@ impl Array for FixedSizeBinaryArray {
     }
 }
 
-impl std::fmt::Display for FixedSizeBinaryArray {
+impl std::fmt::Debug for FixedSizeBinaryArray {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let iter = self.iter().map(|x| x.map(|x| format!("{:?}", x)));
         display_fmt(iter, "FixedSizeBinaryArray", f, false)

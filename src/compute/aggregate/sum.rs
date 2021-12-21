@@ -168,7 +168,7 @@ pub fn sum(array: &dyn Array) -> Result<Box<dyn Scalar>> {
         DataType::Float64 => dyn_sum!(f64, array),
         _ => {
             return Err(ArrowError::InvalidArgumentError(format!(
-                "The `sum` operator does not support type `{}`",
+                "The `sum` operator does not support type `{:?}`",
                 array.data_type(),
             )))
         }

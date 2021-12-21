@@ -7,7 +7,7 @@ use crate::{
 };
 
 use super::{
-    display_fmt, new_empty_array,
+    debug_fmt, new_empty_array,
     specification::{check_offsets, Offset},
     Array,
 };
@@ -19,7 +19,7 @@ mod mutable;
 pub use mutable::*;
 
 /// An [`Array`] semantically equivalent to `Vec<Option<Vec<Option<T>>>>` with Arrow's in-memory.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ListArray<O: Offset> {
     data_type: DataType,
     offsets: Buffer<O>,
@@ -241,13 +241,13 @@ impl<O: Offset> Array for ListArray<O> {
     }
 }
 
-impl<O: Offset> std::fmt::Display for ListArray<O> {
+impl<O: Offset> std::fmt::Debug for ListArray<O> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let head = if O::is_large() {
             "LargeListArray"
         } else {
             "ListArray"
         };
-        display_fmt(self.iter(), head, f, true)
+        debug_fmt(self.iter(), head, f, true)
     }
 }

@@ -194,16 +194,3 @@ impl Schema {
             .find(|&(_, c)| c.name() == name)
     }
 }
-
-impl std::fmt::Display for Schema {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        f.write_str(
-            &self
-                .fields
-                .iter()
-                .map(|c| c.to_string())
-                .collect::<Vec<String>>()
-                .join(", "),
-        )
-    }
-}

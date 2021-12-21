@@ -30,7 +30,7 @@ pub use mutable::*;
 /// assert_eq!(array.validity(), Some(&Bitmap::from([true, false, true])));
 /// # }
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct PrimitiveArray<T: NativeType> {
     data_type: DataType,
     values: Buffer<T>,
@@ -61,7 +61,7 @@ impl<T: NativeType> PrimitiveArray<T> {
     pub fn from_data(data_type: DataType, values: Buffer<T>, validity: Option<Bitmap>) -> Self {
         if !T::is_valid(&data_type) {
             Err(ArrowError::InvalidArgumentError(format!(
-                "Type {} does not support logical type {}",
+                "Type {} does not support logical type {:?}",
                 std::any::type_name::<T>(),
                 data_type
             )))
@@ -135,6 +135,11 @@ impl<T: NativeType> PrimitiveArray<T> {
         self.validity.as_ref()
     }
 
+    #[inline]
+    fn data_type(&self) -> &DataType {
+        &self.data_type
+    }
+
     /// The values [`Buffer`].
     /// Values on null slots are undetermined (they can be anything).
     #[inline]
@@ -166,7 +171,7 @@ impl<T: NativeType> PrimitiveArray<T> {
     pub fn to(self, data_type: DataType) -> Self {
         if !T::is_valid(&data_type) {
             Err(ArrowError::InvalidArgumentError(format!(
-                "Type {} does not support logical type {}",
+                "Type {} does not support logical type {:?}",
                 std::any::type_name::<T>(),
                 data_type
             )))
@@ -193,7 +198,7 @@ impl<T: NativeType> Array for PrimitiveArray<T> {
 
     #[inline]
     fn data_type(&self) -> &DataType {
-        &self.data_type
+        self.data_type()
     }
 
     fn validity(&self) -> Option<&Bitmap> {
