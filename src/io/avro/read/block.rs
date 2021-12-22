@@ -5,6 +5,7 @@ use fallible_streaming_iterator::FallibleStreamingIterator;
 
 use crate::error::{ArrowError, Result};
 
+use super::super::CompressedBlock;
 use super::util;
 
 fn read_size<R: Read>(reader: &mut R) -> Result<(usize, usize)> {
@@ -24,29 +25,38 @@ fn read_size<R: Read>(reader: &mut R) -> Result<(usize, usize)> {
     Ok((rows as usize, bytes as usize))
 }
 
-/// Reads a block from the `reader` into `buf`.
-/// # Panic
-/// Panics iff the block marker does not equal to the file's marker
-fn read_block<R: Read>(reader: &mut R, buf: &mut Vec<u8>, file_marker: [u8; 16]) -> Result<usize> {
+/// Reads a [`CompressedBlock`] from the `reader`.
+/// # Error
+/// This function errors iff either the block cannot be read or the sync marker does not match
+fn read_block<R: Read>(
+    reader: &mut R,
+    block: &mut CompressedBlock,
+    file_marker: [u8; 16],
+) -> Result<()> {
     let (rows, bytes) = read_size(reader)?;
+    block.number_of_rows = rows;
     if rows == 0 {
-        return Ok(0);
+        return Ok(());
     };
 
-    buf.clear();
-    buf.resize(bytes, 0);
-    reader.read_exact(buf)?;
+    block.data.clear();
+    block.data.resize(bytes, 0);
+    reader.read_exact(&mut block.data)?;
 
     let mut marker = [0u8; 16];
     reader.read_exact(&mut marker)?;
 
-    assert!(!(marker != file_marker));
-    Ok(rows)
+    if marker != file_marker {
+        return Err(ArrowError::ExternalFormat(
+            "Avro: the sync marker in the block does not correspond to the file marker".to_string(),
+        ));
+    }
+    Ok(())
 }
 
 /// [`FallibleStreamingIterator`] of compressed avro blocks
 pub struct BlockStreamIterator<R: Read> {
-    buf: (Vec<u8>, usize),
+    buf: CompressedBlock,
     reader: R,
     file_marker: [u8; 16],
 }
@@ -57,33 +67,32 @@ impl<R: Read> BlockStreamIterator<R> {
         Self {
             reader,
             file_marker,
-            buf: (vec![], 0),
+            buf: CompressedBlock::new(0, vec![]),
         }
     }
 
     /// The buffer of [`BlockStreamIterator`].
-    pub fn buffer(&mut self) -> &mut Vec<u8> {
-        &mut self.buf.0
+    pub fn buffer(&mut self) -> &mut CompressedBlock {
+        &mut self.buf
     }
 
     /// Deconstructs itself
     pub fn into_inner(self) -> (R, Vec<u8>) {
-        (self.reader, self.buf.0)
+        (self.reader, self.buf.data)
     }
 }
 
 impl<R: Read> FallibleStreamingIterator for BlockStreamIterator<R> {
     type Error = ArrowError;
-    type Item = (Vec<u8>, usize);
+    type Item = CompressedBlock;
 
     fn advance(&mut self) -> Result<()> {
-        let (buf, rows) = &mut self.buf;
-        *rows = read_block(&mut self.reader, buf, self.file_marker)?;
+        read_block(&mut self.reader, &mut self.buf, self.file_marker)?;
         Ok(())
     }
 
     fn get(&self) -> Option<&Self::Item> {
-        if self.buf.1 > 0 {
+        if self.buf.number_of_rows > 0 {
             Some(&self.buf)
         } else {
             None

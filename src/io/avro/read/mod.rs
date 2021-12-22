@@ -1,4 +1,3 @@
-#![deny(missing_docs)]
 //! APIs to read from Avro format to arrow.
 use std::io::Read;
 use std::sync::Arc;
@@ -73,9 +72,9 @@ impl<R: Read> Iterator for Reader<R> {
         let schema = self.schema.clone();
         let avro_schemas = &self.avro_schemas;
 
-        self.iter.next().transpose().map(|x| {
-            let (data, rows) = x?;
-            deserialize(data, *rows, schema, avro_schemas)
-        })
+        self.iter
+            .next()
+            .transpose()
+            .map(|maybe_block| deserialize(maybe_block?, schema, avro_schemas))
     }
 }

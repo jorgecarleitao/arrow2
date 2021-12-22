@@ -5,16 +5,21 @@ use fallible_streaming_iterator::FallibleStreamingIterator;
 
 use crate::error::{ArrowError, Result};
 
+use super::super::{Block, CompressedBlock};
 use super::BlockStreamIterator;
 use super::Compression;
 
 /// Decompresses an Avro block.
 /// Returns whether the buffers where swapped.
 pub fn decompress_block(
-    block: &mut Vec<u8>,
-    decompressed: &mut Vec<u8>,
+    block: &mut CompressedBlock,
+    decompressed: &mut Block,
     compression: Option<Compression>,
 ) -> Result<bool> {
+    decompressed.number_of_rows = block.number_of_rows;
+    let block = &mut block.data;
+    let decompressed = &mut decompressed.data;
+
     match compression {
         None => {
             std::mem::swap(block, decompressed);
@@ -55,7 +60,7 @@ pub fn decompress_block(
 pub struct Decompressor<R: Read> {
     blocks: BlockStreamIterator<R>,
     codec: Option<Compression>,
-    buf: (Vec<u8>, usize),
+    buf: Block,
     was_swapped: bool,
 }
 
@@ -65,7 +70,7 @@ impl<R: Read> Decompressor<R> {
         Self {
             blocks,
             codec,
-            buf: (vec![], 0),
+            buf: Block::new(0, vec![]),
             was_swapped: false,
         }
     }
@@ -78,20 +83,19 @@ impl<R: Read> Decompressor<R> {
 
 impl<'a, R: Read> FallibleStreamingIterator for Decompressor<R> {
     type Error = ArrowError;
-    type Item = (Vec<u8>, usize);
+    type Item = Block;
 
     fn advance(&mut self) -> Result<()> {
         if self.was_swapped {
-            std::mem::swap(self.blocks.buffer(), &mut self.buf.0);
+            std::mem::swap(&mut self.blocks.buffer().data, &mut self.buf.data);
         }
         self.blocks.advance()?;
-        self.was_swapped = decompress_block(self.blocks.buffer(), &mut self.buf.0, self.codec)?;
-        self.buf.1 = self.blocks.get().map(|(_, rows)| *rows).unwrap_or_default();
+        self.was_swapped = decompress_block(self.blocks.buffer(), &mut self.buf, self.codec)?;
         Ok(())
     }
 
     fn get(&self) -> Option<&Self::Item> {
-        if self.buf.1 > 0 {
+        if self.buf.number_of_rows > 0 {
             Some(&self.buf)
         } else {
             None
