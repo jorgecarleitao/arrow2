@@ -42,3 +42,6 @@ pub mod avro;
 #[cfg(feature = "io_print")]
 #[cfg_attr(docsrs, doc(cfg(feature = "io_print")))]
 pub mod print;
+
+#[cfg(any(feature = "io_csv_write", feature = "io_avro"))]
+mod iterator;

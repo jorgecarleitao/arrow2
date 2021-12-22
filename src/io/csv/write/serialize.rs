@@ -10,7 +10,7 @@ use crate::{
     error::Result,
 };
 
-use super::iterator::{BufStreamingIterator, StreamingIterator};
+use super::super::super::iterator::{BufStreamingIterator, StreamingIterator};
 use crate::array::{DictionaryArray, DictionaryKey, Offset};
 use std::any::Any;
 

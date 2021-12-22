@@ -8,12 +8,13 @@ use futures::StreamExt;
 use arrow2::error::Result;
 use arrow2::io::avro::read_async::*;
 
-use super::read::write;
+use super::read::{data, write_avro};
 
 async fn test(codec: Codec) -> Result<()> {
-    let (data, expected) = write(codec).unwrap();
+    let avro_data = write_avro(codec).unwrap();
+    let expected = data();
 
-    let mut reader = &mut &data[..];
+    let mut reader = &mut &avro_data[..];
 
     let (_, schema, _, marker) = read_metadata(&mut reader).await?;
     let schema = Arc::new(schema);

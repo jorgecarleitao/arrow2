@@ -1,8 +1,7 @@
 //! APIs to write to CSV
-mod iterator;
 mod serialize;
 
-use iterator::StreamingIterator;
+use super::super::iterator::StreamingIterator;
 
 use std::io::Write;
 

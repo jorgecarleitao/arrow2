@@ -17,3 +17,4 @@
     - [Read Arrow stream](./io/ipc_stream_read.md)
     - [Write Arrow](./io/ipc_write.md)
     - [Read Avro](./io/avro_read.md)
+    - [Write Avro](./io/avro_write.md)

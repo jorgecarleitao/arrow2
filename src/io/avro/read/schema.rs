@@ -56,6 +56,7 @@ fn external_props(schema: &AvroSchema) -> BTreeMap<String, String> {
     props
 }
 
+/// Maps an Avro Schema into a [`Schema`].
 pub fn convert_schema(schema: &AvroSchema) -> Result<Schema> {
     let mut schema_fields = vec![];
     match schema {
@@ -65,22 +66,25 @@ pub fn convert_schema(schema: &AvroSchema) -> Result<Schema> {
                     &field.schema,
                     Some(&field.name),
                     false,
-                    Some(&external_props(&field.schema)),
+                    Some(external_props(&field.schema)),
                 )?)
             }
         }
-        schema => schema_fields.push(schema_to_field(schema, Some(""), false, None)?),
-    }
-
-    let schema = Schema::new(schema_fields);
-    Ok(schema)
+        other => {
+            return Err(ArrowError::OutOfSpec(format!(
+                "An avro Schema must be of type Record - it is of type {:?}",
+                other
+            )))
+        }
+    };
+    Ok(Schema::new(schema_fields))
 }
 
 fn schema_to_field(
     schema: &AvroSchema,
     name: Option<&str>,
     mut nullable: bool,
-    props: Option<&BTreeMap<String, String>>,
+    props: Option<BTreeMap<String, String>>,
 ) -> Result<Field> {
     let data_type = match schema {
         AvroSchema::Null => DataType::Null,
@@ -169,7 +173,7 @@ fn schema_to_field(
                         &field.schema,
                         Some(&format!("{}.{}", name, field.name)),
                         false,
-                        Some(&props),
+                        Some(props),
                     )
                 })
                 .collect();
@@ -198,6 +202,6 @@ fn schema_to_field(
     let name = name.unwrap_or_default();
 
     let mut field = Field::new(name, data_type, nullable);
-    field.set_metadata(props.cloned());
+    field.set_metadata(props);
     Ok(field)
 }
