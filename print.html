@@ -76,7 +76,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="index.html"><strong aria-hidden="true">1.</strong> Arrow2</a></li><li class="chapter-item expanded "><a href="arrow.html"><strong aria-hidden="true">2.</strong> The arrow format</a></li><li class="chapter-item expanded "><a href="low_level.html"><strong aria-hidden="true">3.</strong> Low-level API</a></li><li class="chapter-item expanded "><a href="high_level.html"><strong aria-hidden="true">4.</strong> High-level API</a></li><li class="chapter-item expanded "><a href="compute.html"><strong aria-hidden="true">5.</strong> Compute</a></li><li class="chapter-item expanded "><a href="metadata.html"><strong aria-hidden="true">6.</strong> Metadata</a></li><li class="chapter-item expanded "><a href="ffi.html"><strong aria-hidden="true">7.</strong> Foreign interfaces</a></li><li class="chapter-item expanded "><a href="extension.html"><strong aria-hidden="true">8.</strong> Extension</a></li><li class="chapter-item expanded "><a href="io/index.html"><strong aria-hidden="true">9.</strong> IO</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="io/csv_reader.html"><strong aria-hidden="true">9.1.</strong> Read CSV</a></li><li class="chapter-item expanded "><a href="io/csv_write.html"><strong aria-hidden="true">9.2.</strong> Write CSV</a></li><li class="chapter-item expanded "><a href="io/parquet_read.html"><strong aria-hidden="true">9.3.</strong> Read Parquet</a></li><li class="chapter-item expanded "><a href="io/parquet_write.html"><strong aria-hidden="true">9.4.</strong> Write Parquet</a></li><li class="chapter-item expanded "><a href="io/ipc_read.html"><strong aria-hidden="true">9.5.</strong> Read Arrow</a></li><li class="chapter-item expanded "><a href="io/ipc_stream_read.html"><strong aria-hidden="true">9.6.</strong> Read Arrow stream</a></li><li class="chapter-item expanded "><a href="io/ipc_write.html"><strong aria-hidden="true">9.7.</strong> Write Arrow</a></li><li class="chapter-item expanded "><a href="io/avro_read.html"><strong aria-hidden="true">9.8.</strong> Read Avro</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="index.html"><strong aria-hidden="true">1.</strong> Arrow2</a></li><li class="chapter-item expanded "><a href="arrow.html"><strong aria-hidden="true">2.</strong> The arrow format</a></li><li class="chapter-item expanded "><a href="low_level.html"><strong aria-hidden="true">3.</strong> Low-level API</a></li><li class="chapter-item expanded "><a href="high_level.html"><strong aria-hidden="true">4.</strong> High-level API</a></li><li class="chapter-item expanded "><a href="compute.html"><strong aria-hidden="true">5.</strong> Compute</a></li><li class="chapter-item expanded "><a href="metadata.html"><strong aria-hidden="true">6.</strong> Metadata</a></li><li class="chapter-item expanded "><a href="ffi.html"><strong aria-hidden="true">7.</strong> Foreign interfaces</a></li><li class="chapter-item expanded "><a href="extension.html"><strong aria-hidden="true">8.</strong> Extension</a></li><li class="chapter-item expanded "><a href="io/index.html"><strong aria-hidden="true">9.</strong> IO</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="io/csv_reader.html"><strong aria-hidden="true">9.1.</strong> Read CSV</a></li><li class="chapter-item expanded "><a href="io/csv_write.html"><strong aria-hidden="true">9.2.</strong> Write CSV</a></li><li class="chapter-item expanded "><a href="io/parquet_read.html"><strong aria-hidden="true">9.3.</strong> Read Parquet</a></li><li class="chapter-item expanded "><a href="io/parquet_write.html"><strong aria-hidden="true">9.4.</strong> Write Parquet</a></li><li class="chapter-item expanded "><a href="io/ipc_read.html"><strong aria-hidden="true">9.5.</strong> Read Arrow</a></li><li class="chapter-item expanded "><a href="io/ipc_stream_read.html"><strong aria-hidden="true">9.6.</strong> Read Arrow stream</a></li><li class="chapter-item expanded "><a href="io/ipc_write.html"><strong aria-hidden="true">9.7.</strong> Write Arrow</a></li><li class="chapter-item expanded "><a href="io/avro_read.html"><strong aria-hidden="true">9.8.</strong> Read Avro</a></li><li class="chapter-item expanded "><a href="io/avro_write.html"><strong aria-hidden="true">9.9.</strong> Write Avro</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -1866,6 +1866,75 @@ async fn main() -&gt; Result&lt;()&gt; {
 </code></pre></pre>
 <p>Note how both decompression and deserialization is performed on a separate thread pool to not
 block (see also <a href="https://ryhl.io/blog/async-what-is-blocking/">here</a>).</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="avro-write"><a class="header" href="#avro-write">Avro write</a></h1>
+<p>You can use this crate to write to Apache Avro.
+Below is an example, which you can run when this crate is compiled with feature <code>io_avro</code>.</p>
+<pre><pre class="playground"><code class="language-rust">use std::fs::File;
+
+use arrow2::{
+    array::{Array, Int32Array},
+    datatypes::{Field, Schema},
+    error::Result,
+    io::avro::write,
+};
+
+fn write_avro&lt;W: std::io::Write&gt;(
+    file: &amp;mut W,
+    arrays: &amp;[&amp;dyn Array],
+    schema: &amp;Schema,
+    compression: Option&lt;write::Compression&gt;,
+) -&gt; Result&lt;()&gt; {
+    let avro_fields = write::to_avro_schema(schema)?;
+
+    let mut serializers = arrays
+        .iter()
+        .zip(avro_fields.iter())
+        .map(|(array, field)| write::new_serializer(*array, &amp;field.schema))
+        .collect::&lt;Vec&lt;_&gt;&gt;();
+    let mut block = write::Block::new(arrays[0].len(), vec![]);
+
+    write::serialize(&amp;mut serializers, &amp;mut block)?;
+
+    let mut compressed_block = write::CompressedBlock::default();
+
+    if let Some(compression) = compression {
+        write::compress(&amp;block, &amp;mut compressed_block, compression)?;
+    } else {
+        compressed_block.number_of_rows = block.number_of_rows;
+        std::mem::swap(&amp;mut compressed_block.data, &amp;mut block.data);
+    }
+
+    write::write_metadata(file, avro_fields.clone(), compression)?;
+
+    write::write_block(file, &amp;compressed_block)?;
+
+    Ok(())
+}
+
+fn main() -&gt; Result&lt;()&gt; {
+    use std::env;
+    let args: Vec&lt;String&gt; = env::args().collect();
+
+    let path = &amp;args[1];
+
+    let array = Int32Array::from(&amp;[
+        Some(0),
+        Some(1),
+        Some(2),
+        Some(3),
+        Some(4),
+        Some(5),
+        Some(6),
+    ]);
+    let field = Field::new(&quot;c1&quot;, array.data_type().clone(), true);
+    let schema = Schema::new(vec![field]);
+
+    let mut file = File::create(path)?;
+    write_avro(&amp;mut file, &amp;[(&amp;array) as &amp;dyn Array], &amp;schema, None)?;
+
+    Ok(())
+}
+</code></pre></pre>
 
                     </main>
 
