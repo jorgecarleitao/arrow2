@@ -127,7 +127,8 @@ mod tests {
                 "string_large",
                 "decimal_9",
                 "decimal_18",
-                "decimal_26"
+                "decimal_26",
+                "timestamp_us"
             ]
         );
         Ok(())

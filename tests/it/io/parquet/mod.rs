@@ -321,6 +321,10 @@ pub fn pyarrow_nullable(column: usize) -> Box<dyn Array> {
                 .collect::<Vec<_>>();
             Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(26, 0)))
         }
+        10 => Box::new(
+            PrimitiveArray::<i64>::from(i64_values)
+                .to(DataType::Timestamp(TimeUnit::Microsecond, None)),
+        ),
         _ => unreachable!(),
     }
 }
@@ -391,6 +395,13 @@ pub fn pyarrow_nullable_statistics(column: usize) -> Option<Box<dyn Statistics>>
             min_value: Some(0i128),
             max_value: Some(9i128),
             data_type: DataType::Decimal(26, 0),
+        }),
+        10 => Box::new(PrimitiveStatistics::<i64> {
+            data_type: DataType::Timestamp(TimeUnit::Microsecond, None),
+            distinct_count: None,
+            null_count: Some(3),
+            min_value: Some(0),
+            max_value: Some(9),
         }),
         _ => unreachable!(),
     })
