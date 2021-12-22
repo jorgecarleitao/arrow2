@@ -144,13 +144,41 @@ fn dict_read<
             )
         }
         Timestamp(TimeUnit::Nanosecond, None) => match metadata.descriptor().type_() {
-            ParquetType::PrimitiveType { physical_type, .. } => match physical_type {
-                PhysicalType::Int96 => primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+            ParquetType::PrimitiveType {
+                physical_type,
+                logical_type,
+                ..
+            } => match (physical_type, logical_type) {
+                (PhysicalType::Int96, _) => primitive::iter_to_dict_array::<K, _, _, _, _, _>(
                     iter,
                     metadata,
                     DataType::Timestamp(TimeUnit::Nanosecond, None),
                     int96_to_i64_ns,
                 ),
+                (_, Some(LogicalType::TIMESTAMP(TimestampType { unit, .. }))) => match unit {
+                    ParquetTimeUnit::MILLIS(_) => {
+                        primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+                            iter,
+                            metadata,
+                            data_type,
+                            |x: i64| x * 1_000_000,
+                        )
+                    }
+                    ParquetTimeUnit::MICROS(_) => {
+                        primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+                            iter,
+                            metadata,
+                            data_type,
+                            |x: i64| x * 1_000,
+                        )
+                    }
+                    ParquetTimeUnit::NANOS(_) => primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+                        iter,
+                        metadata,
+                        data_type,
+                        |x: i64| x,
+                    ),
+                },
                 _ => primitive::iter_to_dict_array::<K, _, _, _, _, _>(
                     iter,
                     metadata,
@@ -243,14 +271,33 @@ fn page_iter_to_array<I: FallibleStreamingIterator<Item = DataPage, Error = Parq
         }
 
         Timestamp(TimeUnit::Nanosecond, None) => match metadata.descriptor().type_() {
-            ParquetType::PrimitiveType { physical_type, .. } => match physical_type {
-                PhysicalType::Int96 => primitive::iter_to_array(
+            ParquetType::PrimitiveType {
+                physical_type,
+                logical_type,
+                ..
+            } => match (physical_type, logical_type) {
+                (PhysicalType::Int96, _) => primitive::iter_to_array(
                     iter,
                     metadata,
                     DataType::Timestamp(TimeUnit::Nanosecond, None),
                     nested,
                     int96_to_i64_ns,
                 ),
+                (_, Some(LogicalType::TIMESTAMP(TimestampType { unit, .. }))) => match unit {
+                    ParquetTimeUnit::MILLIS(_) => {
+                        primitive::iter_to_array(iter, metadata, data_type, nested, |x: i64| {
+                            x * 1_000_000
+                        })
+                    }
+                    ParquetTimeUnit::MICROS(_) => {
+                        primitive::iter_to_array(iter, metadata, data_type, nested, |x: i64| {
+                            x * 1_000
+                        })
+                    }
+                    ParquetTimeUnit::NANOS(_) => {
+                        primitive::iter_to_array(iter, metadata, data_type, nested, |x: i64| x)
+                    }
+                },
                 _ => primitive::iter_to_array(iter, metadata, data_type, nested, |x: i64| x),
             },
             _ => unreachable!(),
