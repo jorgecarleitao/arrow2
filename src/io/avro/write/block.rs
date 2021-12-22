@@ -1,8 +1,8 @@
 use std::io::Write;
 
-use crate::{error::Result, io::avro::Compression};
+use crate::error::Result;
 
-use super::super::{Block, CompressedBlock};
+use super::super::CompressedBlock;
 use super::{util::zigzag_encode, SYNC_NUMBER};
 
 /// Writes a [`CompressedBlock`] to `writer`
@@ -16,17 +16,4 @@ pub fn write_block<W: Write>(writer: &mut W, compressed_block: &CompressedBlock)
     writer.write_all(&SYNC_NUMBER)?;
 
     Ok(())
-}
-
-/// Compresses an [`Block`] to a [`CompressedBlock`].
-pub fn compress(
-    block: &Block,
-    compressed_block: &mut CompressedBlock,
-    compression: Compression,
-) -> Result<()> {
-    compressed_block.number_of_rows = block.number_of_rows;
-    match compression {
-        Compression::Deflate => todo!(),
-        Compression::Snappy => todo!(),
-    }
 }

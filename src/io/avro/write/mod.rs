@@ -1,6 +1,4 @@
 //! APIs to write to Avro format.
-use std::io::Write;
-
 use avro_schema::{Field as AvroField, Record, Schema as AvroSchema};
 
 use crate::error::Result;
@@ -15,7 +13,9 @@ mod serialize;
 pub use serialize::{can_serialize, new_serializer, BoxSerializer};
 mod block;
 pub use block::*;
+mod compress;
 mod util;
+pub use compress::compress;
 
 pub use super::{Block, CompressedBlock};
 
@@ -52,7 +52,7 @@ pub fn write_metadata<W: std::io::Write>(
 /// # Panics
 /// Panics iff the number of items in any of the serializers is not equal to the number of rows
 /// declared in the `block`.
-pub fn serialize<'a>(serializers: &mut [BoxSerializer<'a>], block: &mut Block) -> Result<()> {
+pub fn serialize<'a>(serializers: &mut [BoxSerializer<'a>], block: &mut Block) {
     let Block {
         data,
         number_of_rows,
@@ -64,8 +64,7 @@ pub fn serialize<'a>(serializers: &mut [BoxSerializer<'a>], block: &mut Block) -
     for _ in 0..*number_of_rows {
         for serializer in &mut *serializers {
             let item_data = serializer.next().unwrap();
-            data.write_all(item_data)?;
+            data.extend(item_data);
         }
     }
-    Ok(())
 }

@@ -34,13 +34,24 @@ pub fn decompress_block(
         }
         #[cfg(feature = "io_avro_compression")]
         Some(Compression::Snappy) => {
-            let len = snap::raw::decompress_len(&block[..block.len() - 4])
-                .map_err(|_| ArrowError::ExternalFormat("Failed to decompress snap".to_string()))?;
+            let crc = &block[block.len() - 4..];
+            let block = &block[..block.len() - 4];
+
+            let len = snap::raw::decompress_len(block)
+                .map_err(|e| ArrowError::ExternalFormat(e.to_string()))?;
             decompressed.clear();
             decompressed.resize(len, 0);
             snap::raw::Decoder::new()
-                .decompress(&block[..block.len() - 4], decompressed)
-                .map_err(|_| ArrowError::ExternalFormat("Failed to decompress snap".to_string()))?;
+                .decompress(block, decompressed)
+                .map_err(|e| ArrowError::ExternalFormat(e.to_string()))?;
+
+            let expected_crc = u32::from_be_bytes([crc[0], crc[1], crc[2], crc[3]]);
+            let actual_crc = crc::crc32::checksum_ieee(decompressed);
+            if expected_crc != actual_crc {
+                return Err(ArrowError::ExternalFormat(
+                    "The crc of snap-compressed block does not match".to_string(),
+                ));
+            }
             Ok(false)
         }
         #[cfg(not(feature = "io_avro_compression"))]
