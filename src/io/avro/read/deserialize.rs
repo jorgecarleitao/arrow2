@@ -10,6 +10,7 @@ use crate::error::Result;
 use crate::record_batch::RecordBatch;
 use crate::types::months_days_ns;
 
+use super::super::Block;
 use super::nested::*;
 use super::util;
 
@@ -241,13 +242,15 @@ fn deserialize_value<'a>(
     Ok(block)
 }
 
-/// Deserializes an Avro block into a [`RecordBatch`].
+/// Deserializes a [`Block`] into a [`RecordBatch`].
 pub fn deserialize(
-    mut block: &[u8],
-    rows: usize,
+    block: &Block,
     schema: Arc<Schema>,
     avro_schemas: &[AvroSchema],
 ) -> Result<RecordBatch> {
+    let rows = block.number_of_rows;
+    let mut block = block.data.as_ref();
+
     // create mutables, one per field
     let mut arrays: Vec<Box<dyn MutableArray>> = schema
         .fields()

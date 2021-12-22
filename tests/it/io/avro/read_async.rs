@@ -24,8 +24,8 @@ async fn test(codec: Codec) -> Result<()> {
     let blocks = block_stream(&mut reader, marker).await;
 
     pin_mut!(blocks);
-    while let Some((block, rows)) = blocks.next().await.transpose()? {
-        assert!(rows > 0 || block.is_empty())
+    while let Some(block) = blocks.next().await.transpose()? {
+        assert!(block.number_of_rows > 0 || block.data.is_empty())
     }
     Ok(())
 }

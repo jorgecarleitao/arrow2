@@ -17,6 +17,8 @@ mod block;
 pub use block::*;
 mod util;
 
+pub use super::{Block, CompressedBlock};
+
 const SYNC_NUMBER: [u8; 16] = [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4];
 
 /// Writes Avro's metadata to `writer`.

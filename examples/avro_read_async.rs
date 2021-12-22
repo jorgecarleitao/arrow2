@@ -25,14 +25,14 @@ async fn main() -> Result<()> {
     let blocks = block_stream(&mut reader, marker).await;
 
     pin_mut!(blocks);
-    while let Some((mut block, rows)) = blocks.next().await.transpose()? {
-        // the content here is blocking. In general this should run on spawn_blocking
+    while let Some(mut block) = blocks.next().await.transpose()? {
         let schema = schema.clone();
         let avro_schemas = avro_schemas.clone();
+        // the content here is CPU-bounded. It should run on a dedicated thread pool
         let handle = tokio::task::spawn_blocking(move || {
-            let mut decompressed = vec![];
+            let mut decompressed = Block::new(0, vec![]);
             decompress_block(&mut block, &mut decompressed, compression)?;
-            deserialize(&decompressed, rows, schema, &avro_schemas)
+            deserialize(&decompressed, schema, &avro_schemas)
         });
         let batch = handle.await.unwrap()?;
         assert!(batch.num_rows() > 0);

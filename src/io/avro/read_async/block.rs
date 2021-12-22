@@ -6,6 +6,8 @@ use futures::Stream;
 
 use crate::error::{ArrowError, Result};
 
+use super::CompressedBlock;
+
 use super::utils::zigzag_i64;
 
 async fn read_size<R: AsyncRead + Unpin + Send>(reader: &mut R) -> Result<(usize, usize)> {
@@ -25,43 +27,48 @@ async fn read_size<R: AsyncRead + Unpin + Send>(reader: &mut R) -> Result<(usize
     Ok((rows as usize, bytes as usize))
 }
 
-/// Reads a block from the file into `buf`.
-/// # Panic
-/// Panics iff the block marker does not equal to the file's marker
+/// Reads a [`CompressedBlock`] from the `reader`.
+/// # Error
+/// This function errors iff either the block cannot be read or the sync marker does not match
 async fn read_block<R: AsyncRead + Unpin + Send>(
     reader: &mut R,
-    buf: &mut Vec<u8>,
+    block: &mut CompressedBlock,
     file_marker: [u8; 16],
-) -> Result<usize> {
+) -> Result<()> {
     let (rows, bytes) = read_size(reader).await?;
+    block.number_of_rows = rows;
     if rows == 0 {
-        return Ok(0);
+        return Ok(());
     };
 
-    buf.clear();
-    buf.resize(bytes, 0);
-    reader.read_exact(buf).await?;
+    block.data.clear();
+    block.data.resize(bytes, 0);
+    reader.read_exact(&mut block.data).await?;
 
     let mut marker = [0u8; 16];
     reader.read_exact(&mut marker).await?;
 
-    assert!(!(marker != file_marker));
-    Ok(rows)
+    if marker != file_marker {
+        return Err(ArrowError::ExternalFormat(
+            "Avro: the sync marker in the block does not correspond to the file marker".to_string(),
+        ));
+    }
+    Ok(())
 }
 
 /// Returns a fallible [`Stream`] of Avro blocks bound to `reader`
 pub async fn block_stream<R: AsyncRead + Unpin + Send>(
     reader: &mut R,
     file_marker: [u8; 16],
-) -> impl Stream<Item = Result<(Vec<u8>, usize)>> + '_ {
+) -> impl Stream<Item = Result<CompressedBlock>> + '_ {
     try_stream! {
         loop {
-            let mut buffer = vec![];
-            let rows = read_block(reader, &mut buffer, file_marker).await?;
-            if rows == 0 {
+            let mut block = CompressedBlock::new(0, vec![]);
+            read_block(reader, &mut block, file_marker).await?;
+            if block.number_of_rows == 0 {
                 break
             }
-            yield (buffer, rows)
+            yield block
         }
     }
 }
