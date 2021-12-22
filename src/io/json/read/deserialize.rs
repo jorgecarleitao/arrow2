@@ -23,7 +23,6 @@ use indexmap::map::IndexMap as HashMap;
 use num_traits::NumCast;
 use serde_json::Value;
 
-use crate::types::NaturalDataType;
 use crate::{
     array::*,
     bitmap::MutableBitmap,
@@ -74,10 +73,7 @@ fn build_extract(data_type: &DataType) -> Extract {
     }
 }
 
-fn read_int<T: NativeType + NaturalDataType + NumCast>(
-    rows: &[&Value],
-    data_type: DataType,
-) -> PrimitiveArray<T> {
+fn read_int<T: NativeType + NumCast>(rows: &[&Value], data_type: DataType) -> PrimitiveArray<T> {
     let iter = rows.iter().map(|row| match row {
         Value::Number(number) => number.as_i64().and_then(num_traits::cast::<i64, T>),
         Value::Bool(number) => num_traits::cast::<i32, T>(*number as i32),
@@ -86,10 +82,7 @@ fn read_int<T: NativeType + NaturalDataType + NumCast>(
     PrimitiveArray::from_trusted_len_iter(iter).to(data_type)
 }
 
-fn read_float<T: NativeType + NaturalDataType + NumCast>(
-    rows: &[&Value],
-    data_type: DataType,
-) -> PrimitiveArray<T> {
+fn read_float<T: NativeType + NumCast>(rows: &[&Value], data_type: DataType) -> PrimitiveArray<T> {
     let iter = rows.iter().map(|row| match row {
         Value::Number(number) => number.as_f64().and_then(num_traits::cast::<f64, T>),
         Value::Bool(number) => num_traits::cast::<i32, T>(*number as i32),
@@ -214,8 +207,7 @@ fn read_dictionary<K: DictionaryKey>(rows: &[&Value], data_type: DataType) -> Di
             },
             None => None,
         })
-        .collect::<PrimitiveArray<K>>()
-        .to(K::DATA_TYPE);
+        .collect::<PrimitiveArray<K>>();
 
     let values = read(&inner, child.clone());
     DictionaryArray::<K>::from_data(keys, values)

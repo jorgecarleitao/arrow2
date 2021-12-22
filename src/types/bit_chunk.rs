@@ -5,15 +5,11 @@ use std::{
 
 use super::NativeType;
 
-/// Something that can be use as a chunk of bits. This is used to create masks ofa given number
-/// of length, whose width is `1`. In `simd_packed` notation, this corresponds to `m1xY`.
-/// # Safety
-/// Do not implement.
-pub unsafe trait BitChunk:
-    Sized
+/// A chunk of bits. This is used to create masks of a given length
+/// whose width is `1` bit. In `simd_packed` notation, this corresponds to `m1xY`.
+pub trait BitChunk:
+    super::private::Sealed
     + NativeType
-    + Copy
-    + std::fmt::Debug
     + Binary
     + BitAnd<Output = Self>
     + ShlAssign
@@ -35,7 +31,7 @@ pub unsafe trait BitChunk:
     fn from_ne_bytes(v: Self::Bytes) -> Self;
 }
 
-unsafe impl BitChunk for u8 {
+impl BitChunk for u8 {
     #[inline(always)]
     fn zero() -> Self {
         0
@@ -57,7 +53,7 @@ unsafe impl BitChunk for u8 {
     }
 }
 
-unsafe impl BitChunk for u16 {
+impl BitChunk for u16 {
     #[inline(always)]
     fn zero() -> Self {
         0
@@ -79,7 +75,7 @@ unsafe impl BitChunk for u16 {
     }
 }
 
-unsafe impl BitChunk for u32 {
+impl BitChunk for u32 {
     #[inline(always)]
     fn zero() -> Self {
         0
@@ -101,7 +97,7 @@ unsafe impl BitChunk for u32 {
     }
 }
 
-unsafe impl BitChunk for u64 {
+impl BitChunk for u64 {
     #[inline(always)]
     fn zero() -> Self {
         0
@@ -123,13 +119,13 @@ unsafe impl BitChunk for u64 {
     }
 }
 
-/// An iterator of `bool` over a [`BitChunk`]. This iterator is often
-/// compiled to SIMD instructions.
+/// An [`Iterator<Item=bool>`] over a [`BitChunk`]. This iterator is often
+/// compiled to SIMD.
 /// The [LSB](https://en.wikipedia.org/wiki/Bit_numbering#Least_significant_bit) corresponds
 /// to the first slot, as defined by the arrow specification.
 /// # Example
 /// ```
-/// # use arrow2::types::BitChunkIter;
+/// use arrow2::types::BitChunkIter;
 /// let a = 0b00010000u8;
 /// let iter = BitChunkIter::new(a, 7);
 /// let r = iter.collect::<Vec<_>>();

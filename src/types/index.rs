@@ -1,56 +1,20 @@
 use std::convert::TryFrom;
 
-use crate::{
-    trusted_len::TrustedLen,
-    types::{NativeType, NaturalDataType},
-};
+use crate::trusted_len::TrustedLen;
 
-/// iterator of [`Index`] equivalent to `(a..b)`.
-// `Step` is unstable in Rust which does not allow (a..b) for generic `Index`.
-pub struct IndexRange<I: Index> {
-    start: I,
-    end: I,
-}
+use super::NativeType;
 
-impl<I: Index> IndexRange<I> {
-    /// Returns a new [`IndexRange`].
-    pub fn new(start: I, end: I) -> Self {
-        assert!(end >= start);
-        Self { start, end }
-    }
-}
-
-impl<I: Index> Iterator for IndexRange<I> {
-    type Item = I;
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.start == self.end {
-            return None;
-        }
-        let old = self.start;
-        self.start += I::one();
-        Some(old)
-    }
-
-    #[inline]
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let len = (self.end - self.start).to_usize();
-        (len, Some(len))
-    }
-}
-
-/// Safety: a range is always of known length
-unsafe impl<I: Index> TrustedLen for IndexRange<I> {}
-
-/// Types that can be used to index a slot of an array.
+/// Sealed trait describing the subset of [`NativeType`] (`i32`, `i64`, `u32` and `u64`)
+/// that can be used to index a slot of an array.
 pub trait Index:
     NativeType
-    + NaturalDataType
     + std::ops::AddAssign
     + std::ops::Sub<Output = Self>
     + num_traits::One
     + PartialOrd
+    + num_traits::Num
+    + Ord
+    + num_traits::CheckedAdd
 {
     /// Convert itself to [`usize`].
     fn to_usize(&self) -> usize;
@@ -115,3 +79,41 @@ impl Index for u64 {
         Self::try_from(value).ok()
     }
 }
+
+/// Range of [`Index`], equivalent to `(a..b)`.
+/// `Step` is unstable in Rust, which does not allow us to implement (a..b) for [`Index`].
+pub struct IndexRange<I: Index> {
+    start: I,
+    end: I,
+}
+
+impl<I: Index> IndexRange<I> {
+    /// Returns a new [`IndexRange`].
+    pub fn new(start: I, end: I) -> Self {
+        assert!(end >= start);
+        Self { start, end }
+    }
+}
+
+impl<I: Index> Iterator for IndexRange<I> {
+    type Item = I;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.start == self.end {
+            return None;
+        }
+        let old = self.start;
+        self.start += I::one();
+        Some(old)
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = (self.end - self.start).to_usize();
+        (len, Some(len))
+    }
+}
+
+/// Safety: a range is always of known length
+unsafe impl<I: Index> TrustedLen for IndexRange<I> {}

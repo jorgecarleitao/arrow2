@@ -40,7 +40,7 @@ where
 
     let keys = read_primitive(
         field_nodes,
-        T::DATA_TYPE,
+        T::PRIMITIVE.into(),
         buffers,
         reader,
         block_offset,

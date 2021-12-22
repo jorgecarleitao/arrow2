@@ -59,7 +59,7 @@ impl<T: NativeType> PrimitiveArray<T> {
     /// * `data_type` is not supported by the physical type
     /// * The validity is not `None` and its length is different from the `values`'s length
     pub fn from_data(data_type: DataType, values: Buffer<T>, validity: Option<Bitmap>) -> Self {
-        if !T::is_valid(&data_type) {
+        if !data_type.to_physical_type().eq_primitive(T::PRIMITIVE) {
             Err(ArrowError::InvalidArgumentError(format!(
                 "Type {} does not support logical type {:?}",
                 std::any::type_name::<T>(),
@@ -170,7 +170,7 @@ impl<T: NativeType> PrimitiveArray<T> {
     /// Panics iff the data_type is not supported for the physical type.
     #[inline]
     pub fn to(self, data_type: DataType) -> Self {
-        if !T::is_valid(&data_type) {
+        if !data_type.to_physical_type().eq_primitive(T::PRIMITIVE) {
             Err(ArrowError::InvalidArgumentError(format!(
                 "Type {} does not support logical type {:?}",
                 std::any::type_name::<T>(),

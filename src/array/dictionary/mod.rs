@@ -62,15 +62,17 @@ impl<K: DictionaryKey> DictionaryArray<K> {
     pub fn new_empty(data_type: DataType) -> Self {
         let values = Self::get_child(&data_type);
         let values = new_empty_array(values.clone()).into();
-        Self::from_data(PrimitiveArray::<K>::new_empty(K::DATA_TYPE), values)
+        let data_type = K::PRIMITIVE.into();
+        Self::from_data(PrimitiveArray::<K>::new_empty(data_type), values)
     }
 
     /// Returns an [`DictionaryArray`] whose all elements are null
     #[inline]
     pub fn new_null(data_type: DataType, length: usize) -> Self {
         let values = Self::get_child(&data_type);
+        let data_type = K::PRIMITIVE.into();
         Self::from_data(
-            PrimitiveArray::<K>::new_null(K::DATA_TYPE, length),
+            PrimitiveArray::<K>::new_null(data_type, length),
             new_empty_array(values.clone()).into(),
         )
     }

@@ -83,7 +83,8 @@ impl<'a, T: DictionaryKey> GrowableDictionary<'a, T> {
         let validity = std::mem::take(&mut self.key_validity);
         let values = std::mem::take(&mut self.key_values);
 
-        let keys = PrimitiveArray::<T>::from_data(T::DATA_TYPE, values.into(), validity.into());
+        let data_type = T::PRIMITIVE.into();
+        let keys = PrimitiveArray::<T>::from_data(data_type, values.into(), validity.into());
 
         DictionaryArray::<T>::from_data(keys, self.values.clone())
     }
@@ -125,8 +126,9 @@ impl<'a, T: DictionaryKey> Growable<'a> for GrowableDictionary<'a, T> {
 impl<'a, T: DictionaryKey> From<GrowableDictionary<'a, T>> for DictionaryArray<T> {
     #[inline]
     fn from(val: GrowableDictionary<'a, T>) -> Self {
+        let data_type = T::PRIMITIVE.into();
         let keys = PrimitiveArray::<T>::from_data(
-            T::DATA_TYPE,
+            data_type,
             val.key_values.into(),
             val.key_validity.into(),
         );

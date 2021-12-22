@@ -1,8 +1,9 @@
 use crate::{bitmap::Bitmap, buffer::Buffer, datatypes::DataType};
 
 use super::{
-    display_fmt, display_helper, specification::check_offsets,
-    specification::check_offsets_minimal, specification::Offset, Array, GenericBinaryArray,
+    display_fmt, display_helper,
+    specification::{check_offsets, check_offsets_minimal},
+    Array, GenericBinaryArray, Offset,
 };
 
 mod ffi;

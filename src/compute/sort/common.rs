@@ -161,5 +161,6 @@ where
         indices
     };
 
-    PrimitiveArray::<I>::from_data(I::DATA_TYPE, indices.into(), None)
+    let data_type = I::PRIMITIVE.into();
+    PrimitiveArray::<I>::from_data(data_type, indices.into(), None)
 }

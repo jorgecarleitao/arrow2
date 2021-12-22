@@ -293,6 +293,26 @@ impl From<IntegerType> for DataType {
     }
 }
 
+impl From<PrimitiveType> for DataType {
+    fn from(item: PrimitiveType) -> Self {
+        match item {
+            PrimitiveType::Int8 => DataType::Int8,
+            PrimitiveType::Int16 => DataType::Int16,
+            PrimitiveType::Int32 => DataType::Int32,
+            PrimitiveType::Int64 => DataType::Int64,
+            PrimitiveType::UInt8 => DataType::UInt8,
+            PrimitiveType::UInt16 => DataType::UInt16,
+            PrimitiveType::UInt32 => DataType::UInt32,
+            PrimitiveType::UInt64 => DataType::UInt64,
+            PrimitiveType::Int128 => DataType::Decimal(32, 32),
+            PrimitiveType::Float32 => DataType::Float32,
+            PrimitiveType::Float64 => DataType::Float64,
+            PrimitiveType::DaysMs => DataType::Interval(IntervalUnit::DayTime),
+            PrimitiveType::MonthDayNano => DataType::Interval(IntervalUnit::MonthDayNano),
+        }
+    }
+}
+
 // backward compatibility
 use std::collections::BTreeMap;
 use std::sync::Arc;

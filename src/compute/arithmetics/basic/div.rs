@@ -3,7 +3,7 @@ use std::ops::Div;
 
 use num_traits::{CheckedDiv, NumCast};
 
-use crate::datatypes::DataType;
+use crate::datatypes::PrimitiveType;
 use crate::{
     array::{Array, PrimitiveArray},
     compute::{
@@ -111,8 +111,8 @@ where
     T: NativeArithmetics + Div<Output = T> + NumCast,
 {
     let rhs = *rhs;
-    match T::DATA_TYPE {
-        DataType::UInt64 => {
+    match T::PRIMITIVE {
+        PrimitiveType::UInt64 => {
             let lhs = lhs.as_any().downcast_ref::<PrimitiveArray<u64>>().unwrap();
             let rhs = rhs.to_u64().unwrap();
 
@@ -127,7 +127,7 @@ where
                 ))
             }
         }
-        DataType::UInt32 => {
+        PrimitiveType::UInt32 => {
             let lhs = lhs.as_any().downcast_ref::<PrimitiveArray<u32>>().unwrap();
             let rhs = rhs.to_u32().unwrap();
 
@@ -142,7 +142,7 @@ where
                 ))
             }
         }
-        DataType::UInt16 => {
+        PrimitiveType::UInt16 => {
             let lhs = lhs.as_any().downcast_ref::<PrimitiveArray<u16>>().unwrap();
             let rhs = rhs.to_u16().unwrap();
 
@@ -157,7 +157,7 @@ where
                 ))
             }
         }
-        DataType::UInt8 => {
+        PrimitiveType::UInt8 => {
             let lhs = lhs.as_any().downcast_ref::<PrimitiveArray<u8>>().unwrap();
             let rhs = rhs.to_u8().unwrap();
 
