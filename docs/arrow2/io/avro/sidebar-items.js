@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["Compression","Valid compressions"]],"mod":[["read","APIs to read from Avro format to arrow."],["read_async","Async Avro"],["write","APIs to write to Avro format."]]});
