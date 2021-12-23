@@ -1893,16 +1893,11 @@ fn write_avro&lt;W: std::io::Write&gt;(
         .collect::&lt;Vec&lt;_&gt;&gt;();
     let mut block = write::Block::new(arrays[0].len(), vec![]);
 
-    write::serialize(&amp;mut serializers, &amp;mut block)?;
+    write::serialize(&amp;mut serializers, &amp;mut block);
 
     let mut compressed_block = write::CompressedBlock::default();
 
-    if let Some(compression) = compression {
-        write::compress(&amp;block, &amp;mut compressed_block, compression)?;
-    } else {
-        compressed_block.number_of_rows = block.number_of_rows;
-        std::mem::swap(&amp;mut compressed_block.data, &amp;mut block.data);
-    }
+    let _was_compressed = write::compress(&amp;mut block, &amp;mut compressed_block, compression)?;
 
     write::write_metadata(file, avro_fields.clone(), compression)?;
 
