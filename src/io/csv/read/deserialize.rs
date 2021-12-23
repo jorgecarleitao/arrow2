@@ -6,7 +6,6 @@ use crate::{
     array::Array,
     datatypes::{DataType, Field},
     error::Result,
-    record_batch::RecordBatch,
 };
 
 use super::super::read_utils::{
@@ -40,7 +39,7 @@ pub fn deserialize_batch<F>(
     projection: Option<&[usize]>,
     line_number: usize,
     deserialize_column: F,
-) -> Result<RecordBatch>
+) -> Result<Vec<Arc<dyn Array>>>
 where
     F: Fn(&[ByteRecord], usize, DataType, usize) -> Result<Arc<dyn Array>>,
 {

@@ -10,29 +10,32 @@ pub use csv::{ByteRecord, Writer, WriterBuilder};
 
 pub use serialize::*;
 
-use crate::record_batch::RecordBatch;
+use crate::array::Array;
 use crate::{datatypes::Schema, error::Result};
 
 /// Creates serializers that iterate over each column of `batch` and serialize each item according
 /// to `options`.
-fn new_serializers<'a>(
-    batch: &'a RecordBatch,
+fn new_serializers<'a, A: AsRef<dyn Array>>(
+    batch: &'a [A],
     options: &'a SerializeOptions,
 ) -> Result<Vec<Box<dyn StreamingIterator<Item = [u8]> + 'a>>> {
     batch
-        .columns()
         .iter()
         .map(|column| new_serializer(column.as_ref(), options))
         .collect()
 }
 
-/// Serializes a [`RecordBatch`] as vector of `ByteRecord`.
+/// Serializes a [`Array`]s as vector of `ByteRecord`.
 /// The vector is guaranteed to have `batch.num_rows()` entries.
 /// Each `ByteRecord` is guaranteed to have `batch.num_columns()` fields.
-pub fn serialize(batch: &RecordBatch, options: &SerializeOptions) -> Result<Vec<ByteRecord>> {
+pub fn serialize<A: AsRef<dyn Array>>(
+    batch: &[A],
+    options: &SerializeOptions,
+) -> Result<Vec<ByteRecord>> {
     let mut serializers = new_serializers(batch, options)?;
 
-    let mut records = vec![ByteRecord::with_capacity(0, batch.num_columns()); batch.num_rows()];
+    let rows = batch[0].as_ref().len();
+    let mut records = vec![ByteRecord::with_capacity(0, batch.len()); rows];
     records.iter_mut().for_each(|record| {
         serializers
             .iter_mut()
@@ -43,17 +46,18 @@ pub fn serialize(batch: &RecordBatch, options: &SerializeOptions) -> Result<Vec<
 }
 
 /// Writes the data in a `RecordBatch` to `writer` according to the serialization options `options`.
-pub fn write_batch<W: Write>(
+pub fn write_batch<W: Write, A: AsRef<dyn Array>>(
     writer: &mut Writer<W>,
-    batch: &RecordBatch,
+    batch: &[A],
     options: &SerializeOptions,
 ) -> Result<()> {
     let mut serializers = new_serializers(batch, options)?;
 
-    let mut record = ByteRecord::with_capacity(0, batch.num_columns());
+    let rows = batch[0].as_ref().len();
+    let mut record = ByteRecord::with_capacity(0, batch.len());
 
     // this is where the (expensive) transposition happens: the outer loop is on rows, the inner on columns
-    (0..batch.num_rows()).try_for_each(|_| {
+    (0..rows).try_for_each(|_| {
         serializers
             .iter_mut()
             // `unwrap` is infalible because `array.len()` equals `num_rows` on a `RecordBatch`

@@ -13,7 +13,6 @@ use crate::{
     array::*,
     datatypes::*,
     error::{ArrowError, Result},
-    record_batch::RecordBatch,
     temporal_conversions,
     types::NativeType,
 };
@@ -266,7 +265,7 @@ pub(crate) fn deserialize_batch<F, B: ByteRecordGeneric>(
     projection: Option<&[usize]>,
     line_number: usize,
     deserialize_column: F,
-) -> Result<RecordBatch>
+) -> Result<Vec<Arc<dyn Array>>>
 where
     F: Fn(&[B], usize, DataType, usize) -> Result<Arc<dyn Array>>,
 {
@@ -274,15 +273,12 @@ where
         Some(v) => v.to_vec(),
         None => fields.iter().enumerate().map(|(i, _)| i).collect(),
     };
-    let projected_fields: Vec<Field> = projection.iter().map(|i| fields[*i].clone()).collect();
-
-    let schema = Arc::new(Schema::new(projected_fields));
 
     if rows.is_empty() {
-        return Ok(RecordBatch::new_empty(schema));
+        return Ok(vec![]);
     }
 
-    let columns = projection
+    projection
         .iter()
         .map(|column| {
             let column = *column;
@@ -290,7 +286,5 @@ where
             let data_type = field.data_type();
             deserialize_column(rows, column, data_type.clone(), line_number)
         })
-        .collect::<Result<Vec<_>>>()?;
-
-    RecordBatch::try_new(schema, columns)
+        .collect::<Result<Vec<_>>>()
 }
