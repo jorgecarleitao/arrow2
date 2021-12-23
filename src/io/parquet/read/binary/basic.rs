@@ -69,7 +69,7 @@ fn read_dict_buffer<O: Offset>(
                         values.extend_from_slice(&dict_values[dict_offset_i..dict_offset_ip1]);
                     })
                 } else {
-                    offsets.resize(values.len() + additional, last_offset);
+                    offsets.resize(offsets.len() + additional, last_offset);
                 }
             }
         }
@@ -150,7 +150,7 @@ fn read_delta_optional<O: Offset>(
                         offsets.push(last_offset);
                     })
                 } else {
-                    offsets.resize(values.len() + additional, last_offset);
+                    offsets.resize(offsets.len() + additional, last_offset);
                 }
             }
         }
@@ -204,7 +204,7 @@ fn read_plain_optional<O: Offset>(
                         values.extend_from_slice(value)
                     })
                 } else {
-                    offsets.resize(values.len() + additional, last_offset);
+                    offsets.resize(offsets.len() + additional, last_offset);
                 }
             }
         }
