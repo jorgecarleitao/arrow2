@@ -30,7 +30,7 @@ pub use mutable::*;
 /// * Two consecutives `offsets` casted (`as`) to `usize` are valid slices of `values`.
 /// * A slice of `values` taken from two consecutives `offsets` is valid `utf8`.
 /// * `len` is equal to `validity.len()`, when defined.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Utf8Array<O: Offset> {
     data_type: DataType,
     offsets: Buffer<O>,
@@ -264,7 +264,7 @@ impl<O: Offset> Array for Utf8Array<O> {
     }
 }
 
-impl<O: Offset> std::fmt::Display for Utf8Array<O> {
+impl<O: Offset> std::fmt::Debug for Utf8Array<O> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         display_fmt(self.iter(), &format!("{:?}", self.data_type()), f, false)
     }
