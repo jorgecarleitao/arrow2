@@ -22,16 +22,11 @@ fn write_avro<W: std::io::Write>(
         .collect::<Vec<_>>();
     let mut block = write::Block::new(arrays[0].len(), vec![]);
 
-    write::serialize(&mut serializers, &mut block)?;
+    write::serialize(&mut serializers, &mut block);
 
     let mut compressed_block = write::CompressedBlock::default();
 
-    if let Some(compression) = compression {
-        write::compress(&block, &mut compressed_block, compression)?;
-    } else {
-        compressed_block.number_of_rows = block.number_of_rows;
-        std::mem::swap(&mut compressed_block.data, &mut block.data);
-    }
+    let _was_compressed = write::compress(&mut block, &mut compressed_block, compression)?;
 
     write::write_metadata(file, avro_fields.clone(), compression)?;
 

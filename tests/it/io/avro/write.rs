@@ -51,16 +51,11 @@ fn write_avro<R: AsRef<dyn Array>>(
         .collect::<Vec<_>>();
     let mut block = write::Block::new(arrays[0].as_ref().len(), vec![]);
 
-    write::serialize(&mut serializers, &mut block)?;
+    write::serialize(&mut serializers, &mut block);
 
     let mut compressed_block = write::CompressedBlock::default();
 
-    if let Some(compression) = compression {
-        write::compress(&block, &mut compressed_block, compression)?;
-    } else {
-        compressed_block.number_of_rows = block.number_of_rows;
-        std::mem::swap(&mut compressed_block.data, &mut block.data);
-    }
+    write::compress(&mut block, &mut compressed_block, compression)?;
 
     let mut file = vec![];
 
@@ -92,4 +87,14 @@ fn roundtrip(compression: Option<write::Compression>) -> Result<()> {
 #[test]
 fn no_compression() -> Result<()> {
     roundtrip(None)
+}
+
+#[test]
+fn snappy() -> Result<()> {
+    roundtrip(Some(write::Compression::Snappy))
+}
+
+#[test]
+fn deflate() -> Result<()> {
+    roundtrip(Some(write::Compression::Deflate))
 }
