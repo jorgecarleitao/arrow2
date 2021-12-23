@@ -1,5 +1,4 @@
 use std::convert::TryInto;
-use std::sync::Arc;
 
 use avro_schema::{Enum, Schema as AvroSchema};
 
@@ -7,7 +6,6 @@ use crate::array::*;
 use crate::datatypes::*;
 use crate::error::ArrowError;
 use crate::error::Result;
-use crate::record_batch::RecordBatch;
 use crate::types::months_days_ns;
 
 use super::super::Block;
@@ -245,9 +243,9 @@ fn deserialize_value<'a>(
 /// Deserializes a [`Block`] into a [`RecordBatch`].
 pub fn deserialize(
     block: &Block,
-    schema: Arc<Schema>,
+    schema: &Schema,
     avro_schemas: &[AvroSchema],
-) -> Result<RecordBatch> {
+) -> Result<Vec<Box<dyn Array>>> {
     let rows = block.number_of_rows;
     let mut block = block.data.as_ref();
 
@@ -272,7 +270,5 @@ pub fn deserialize(
             block = deserialize_item(array.as_mut(), field.is_nullable(), avro_field, block)?
         }
     }
-    let columns = arrays.iter_mut().map(|array| array.as_arc()).collect();
-
-    RecordBatch::try_new(schema, columns)
+    Ok(arrays.iter_mut().map(|array| array.as_box()).collect())
 }

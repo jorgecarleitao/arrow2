@@ -1,6 +1,5 @@
 //! APIs to read from Avro format to arrow.
 use std::io::Read;
-use std::sync::Arc;
 
 use avro_schema::{Record, Schema as AvroSchema};
 use fallible_streaming_iterator::FallibleStreamingIterator;
@@ -19,9 +18,9 @@ mod util;
 pub(super) use header::deserialize_header;
 pub(super) use schema::convert_schema;
 
+use crate::array::Array;
 use crate::datatypes::Schema;
 use crate::error::Result;
-use crate::record_batch::RecordBatch;
 
 use super::Compression;
 
@@ -45,13 +44,13 @@ pub fn read_metadata<R: std::io::Read>(
 /// Single threaded, blocking reader of Avro; [`Iterator`] of [`RecordBatch`]es.
 pub struct Reader<R: Read> {
     iter: Decompressor<R>,
-    schema: Arc<Schema>,
+    schema: Schema,
     avro_schemas: Vec<AvroSchema>,
 }
 
 impl<R: Read> Reader<R> {
     /// Creates a new [`Reader`].
-    pub fn new(iter: Decompressor<R>, avro_schemas: Vec<AvroSchema>, schema: Arc<Schema>) -> Self {
+    pub fn new(iter: Decompressor<R>, avro_schemas: Vec<AvroSchema>, schema: Schema) -> Self {
         Self {
             iter,
             avro_schemas,
@@ -66,10 +65,10 @@ impl<R: Read> Reader<R> {
 }
 
 impl<R: Read> Iterator for Reader<R> {
-    type Item = Result<RecordBatch>;
+    type Item = Result<Vec<Box<dyn Array>>>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let schema = self.schema.clone();
+        let schema = &self.schema;
         let avro_schemas = &self.avro_schemas;
 
         self.iter
