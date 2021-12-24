@@ -18,3 +18,4 @@
     - [Write Arrow](./io/ipc_write.md)
     - [Read Avro](./io/avro_read.md)
     - [Write Avro](./io/avro_write.md)
+    - [Read JSON](./io/json_read.md)
