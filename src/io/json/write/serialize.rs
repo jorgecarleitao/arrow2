@@ -46,16 +46,7 @@ fn utf8_serializer<'a, O: Offset>(
         array.iter(),
         |x, buf| {
             if let Some(x) = x {
-                if x.as_bytes().is_ascii() {
-                    buf.reserve(x.len() + 2);
-                    buf.push(b'"');
-                    buf.extend_from_slice(x.as_bytes());
-                    buf.push(b'"');
-                } else {
-                    // proper escaping requires this atm;
-                    // todo: avoid this roundtrip over serde_json
-                    serde_json::to_writer(buf, &Value::String(x.to_string())).unwrap();
-                }
+                utf8_serialize(x, buf)
             } else {
                 buf.extend_from_slice(b"null")
             }
@@ -145,6 +136,20 @@ fn list_serializer<'a, O: Offset>(
     ))
 }
 
+#[inline]
+fn utf8_serialize(value: &str, buf: &mut Vec<u8>) {
+    if value.as_bytes().is_ascii() {
+        buf.reserve(value.len() + 2);
+        buf.push(b'"');
+        buf.extend_from_slice(value.as_bytes());
+        buf.push(b'"');
+    } else {
+        // it may contain reserved keywords: perform roundtrip for
+        // todo: avoid this roundtrip over serde_json
+        serde_json::to_writer(buf, &Value::String(value.to_string())).unwrap();
+    }
+}
+
 fn new_serializer<'a>(
     array: &'a dyn Array,
 ) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync> {
@@ -183,9 +188,7 @@ fn serialize_item<F: JsonFormat>(
             buffer.push(b',');
         }
         first_item = false;
-        buffer.push(b'"');
-        buffer.extend(key.as_bytes());
-        buffer.push(b'"');
+        utf8_serialize(key, buffer);
         buffer.push(b':');
         buffer.extend(*value);
     }

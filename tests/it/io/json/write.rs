@@ -270,3 +270,19 @@ fn write_list_of_struct() -> Result<()> {
     );
     Ok(())
 }
+
+#[test]
+fn write_escaped_utf8() -> Result<()> {
+    let schema = Schema::new(vec![Field::new("c1", DataType::Utf8, false)]);
+    let a = Utf8Array::<i32>::from(&vec![Some("a\na"), None]);
+
+    let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(a)]).unwrap();
+
+    let buf = write_batch(batch)?;
+
+    assert_eq!(
+        String::from_utf8(buf).unwrap().as_bytes(),
+        b"{\"c1\":\"a\na\"}\n{\"c1\":null}\n"
+    );
+    Ok(())
+}
