@@ -300,3 +300,7 @@ harness = false
 [[bench]]
 name = "bitwise"
 harness = false
+
+[[bench]]
+name = "write_json"
+harness = false
