@@ -4,16 +4,21 @@ use criterion::{criterion_group, criterion_main, Criterion};
 
 use arrow2::array::*;
 use arrow2::error::Result;
-use arrow2::io::json::*;
+use arrow2::io::json::write;
 use arrow2::record_batch::RecordBatch;
 use arrow2::util::bench_util::*;
 
 fn write_batch(batch: &RecordBatch) -> Result<()> {
-    let mut buf = Vec::new();
-    {
-        let mut writer = LineDelimitedWriter::new(&mut buf);
-        writer.write_batches(&[batch.clone()])?;
-    }
+    let mut writer = vec![];
+    let format = write::JsonArray::default();
+
+    let batches = vec![Ok(batch.clone())].into_iter();
+
+    // Advancing this iterator serializes the next batch to its internal buffer (i.e. CPU-bounded)
+    let blocks = write::Serializer::new(batches, vec![], format);
+
+    // the operation of writing is IO-bounded.
+    write::write(&mut writer, format, blocks)?;
 
     Ok(())
 }
