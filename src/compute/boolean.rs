@@ -42,7 +42,7 @@ where
     F: Fn(bool, bool) -> bool,
 {
     let (rhs, validity) = match scalar.value() {
-        Some(val) => (val, array.validity().map(|x| x.clone())),
+        Some(val) => (val, array.validity().cloned()),
         None => (bool::default(), Some(Bitmap::new_zeroed(array.len()))),
     };
 
@@ -164,6 +164,7 @@ pub fn is_not_null(input: &dyn Array) -> BooleanArray {
 /// ```rust
 /// use arrow2::array::BooleanArray;
 /// use arrow2::compute::boolean::and_scalar;
+/// use arrows::scalar::BooleanScalar;
 /// # fn main() {
 /// let array = BooleanArray::from_slice(vec![false, false, true, true]);
 /// let scalar = BooleanScalar::new(Some(true));
@@ -181,6 +182,7 @@ pub fn and_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray 
 /// ```rust
 /// use arrow2::array::BooleanArray;
 /// use arrow2::compute::boolean::or_scalar;
+/// use arrows::scalar::BooleanScalar;
 /// # fn main() {
 /// let array = BooleanArray::from_slice(vec![false, false, true, true]);
 /// let scalar = BooleanScalar::new(Some(true));
