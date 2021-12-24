@@ -5,12 +5,14 @@ use arrow2::{
     bitmap::Bitmap,
     buffer::Buffer,
     datatypes::{DataType, Field, Schema},
-    io::json::LineDelimitedWriter,
+    error::Result,
     record_batch::RecordBatch,
 };
 
+use super::*;
+
 #[test]
-fn write_simple_rows() {
+fn write_simple_rows() -> Result<()> {
     let schema = Schema::new(vec![
         Field::new("c1", DataType::Int32, false),
         Field::new("c2", DataType::Utf8, false),
@@ -21,11 +23,7 @@ fn write_simple_rows() {
 
     let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(a), Arc::new(b)]).unwrap();
 
-    let mut buf = Vec::new();
-    {
-        let mut writer = LineDelimitedWriter::new(&mut buf);
-        writer.write_batches(&[batch]).unwrap();
-    }
+    let buf = write_batch(batch)?;
 
     assert_eq!(
         String::from_utf8(buf).unwrap(),
@@ -36,10 +34,11 @@ fn write_simple_rows() {
 {"c1":5,"c2":null}
 "#
     );
+    Ok(())
 }
 
 #[test]
-fn write_nested_struct_with_validity() {
+fn write_nested_struct_with_validity() -> Result<()> {
     let inner = vec![
         Field::new("c121", DataType::Utf8, false),
         Field::new("c122", DataType::Int32, false),
@@ -72,11 +71,7 @@ fn write_nested_struct_with_validity() {
 
     let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(c1), Arc::new(c2)]).unwrap();
 
-    let mut buf = Vec::new();
-    {
-        let mut writer = LineDelimitedWriter::new(&mut buf);
-        writer.write_batches(&[batch]).unwrap();
-    }
+    let buf = write_batch(batch)?;
 
     assert_eq!(
         String::from_utf8(buf).unwrap(),
@@ -85,10 +80,11 @@ fn write_nested_struct_with_validity() {
 {"c1":null,"c2":"c"}
 "#
     );
+    Ok(())
 }
 
 #[test]
-fn write_nested_structs() {
+fn write_nested_structs() -> Result<()> {
     let c121 = Field::new("c121", DataType::Utf8, false);
     let fields = vec![
         Field::new("c11", DataType::Int32, false),
@@ -120,11 +116,7 @@ fn write_nested_structs() {
 
     let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(c1), Arc::new(c2)]).unwrap();
 
-    let mut buf = Vec::new();
-    {
-        let mut writer = LineDelimitedWriter::new(&mut buf);
-        writer.write_batches(&[batch]).unwrap();
-    }
+    let buf = write_batch(batch)?;
 
     assert_eq!(
         String::from_utf8(buf).unwrap(),
@@ -133,10 +125,11 @@ fn write_nested_structs() {
 {"c1":{"c11":5,"c12":{"c121":"g"}},"c2":"c"}
 "#
     );
+    Ok(())
 }
 
 #[test]
-fn write_struct_with_list_field() {
+fn write_struct_with_list_field() -> Result<()> {
     let list_datatype = DataType::List(Box::new(Field::new("c_list", DataType::Utf8, false)));
     let field_c1 = Field::new("c1", list_datatype, false);
     let field_c2 = Field::new("c2", DataType::Int32, false);
@@ -160,11 +153,7 @@ fn write_struct_with_list_field() {
 
     let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(a), Arc::new(b)]).unwrap();
 
-    let mut buf = Vec::new();
-    {
-        let mut writer = LineDelimitedWriter::new(&mut buf);
-        writer.write_batches(&[batch]).unwrap();
-    }
+    let buf = write_batch(batch)?;
 
     assert_eq!(
         String::from_utf8(buf).unwrap(),
@@ -175,10 +164,11 @@ fn write_struct_with_list_field() {
 {"c1":["e"],"c2":5}
 "#
     );
+    Ok(())
 }
 
 #[test]
-fn write_nested_list() {
+fn write_nested_list() -> Result<()> {
     let list_inner = DataType::List(Box::new(Field::new("b", DataType::Int32, false)));
     let list_datatype = DataType::List(Box::new(Field::new("a", list_inner, false)));
     let field_c1 = Field::new("c1", list_datatype, true);
@@ -209,11 +199,7 @@ fn write_nested_list() {
 
     let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(c1), Arc::new(c2)]).unwrap();
 
-    let mut buf = Vec::new();
-    {
-        let mut writer = LineDelimitedWriter::new(&mut buf);
-        writer.write_batches(&[batch]).unwrap();
-    }
+    let buf = write_batch(batch)?;
 
     assert_eq!(
         String::from_utf8(buf).unwrap(),
@@ -222,10 +208,11 @@ fn write_nested_list() {
 {"c1":[[4,5,6]],"c2":null}
 "#
     );
+    Ok(())
 }
 
 #[test]
-fn write_list_of_struct() {
+fn write_list_of_struct() -> Result<()> {
     let inner = vec![Field::new("c121", DataType::Utf8, false)];
     let fields = vec![
         Field::new("c11", DataType::Int32, false),
@@ -272,11 +259,7 @@ fn write_list_of_struct() {
 
     let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(c1), Arc::new(c2)]).unwrap();
 
-    let mut buf = Vec::new();
-    {
-        let mut writer = LineDelimitedWriter::new(&mut buf);
-        writer.write_batches(&[batch]).unwrap();
-    }
+    let buf = write_batch(batch)?;
 
     assert_eq!(
         String::from_utf8(buf).unwrap(),
@@ -285,4 +268,5 @@ fn write_list_of_struct() {
 {"c1":[null],"c2":3}
 "#
     );
+    Ok(())
 }
