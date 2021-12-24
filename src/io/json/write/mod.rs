@@ -6,8 +6,8 @@ pub use format::*;
 pub use serialize::serialize;
 
 use crate::{
+    array::Array,
     error::{ArrowError, Result},
-    record_batch::RecordBatch,
 };
 
 /// Writes blocks of JSON-encoded data into `writer`, ensuring that the written
@@ -31,25 +31,40 @@ where
 
 /// [`FallibleStreamingIterator`] that serializes a [`RecordBatch`] to bytes.
 /// Advancing it is CPU-bounded
-pub struct Serializer<F: JsonFormat, I: Iterator<Item = Result<RecordBatch>>> {
+pub struct Serializer<F, A, I>
+where
+    F: JsonFormat,
+    A: AsRef<dyn Array>,
+    I: Iterator<Item = Result<Vec<A>>>,
+{
     iter: I,
+    names: Vec<String>,
     buffer: Vec<u8>,
     format: F,
 }
 
-impl<F: JsonFormat, I: Iterator<Item = Result<RecordBatch>>> Serializer<F, I> {
+impl<F, A, I> Serializer<F, A, I>
+where
+    F: JsonFormat,
+    A: AsRef<dyn Array>,
+    I: Iterator<Item = Result<Vec<A>>>,
+{
     /// Creates a new [`Serializer`].
-    pub fn new(iter: I, buffer: Vec<u8>, format: F) -> Self {
+    pub fn new(iter: I, names: Vec<String>, buffer: Vec<u8>, format: F) -> Self {
         Self {
             iter,
+            names,
             buffer,
             format,
         }
     }
 }
 
-impl<F: JsonFormat, I: Iterator<Item = Result<RecordBatch>>> FallibleStreamingIterator
-    for Serializer<F, I>
+impl<F, A, I> FallibleStreamingIterator for Serializer<F, A, I>
+where
+    F: JsonFormat,
+    A: AsRef<dyn Array>,
+    I: Iterator<Item = Result<Vec<A>>>,
 {
     type Item = [u8];
 
@@ -59,16 +74,9 @@ impl<F: JsonFormat, I: Iterator<Item = Result<RecordBatch>>> FallibleStreamingIt
         self.buffer.clear();
         self.iter
             .next()
-            .map(|maybe_batch| {
-                maybe_batch.map(|batch| {
-                    let names = batch
-                        .schema()
-                        .fields()
-                        .iter()
-                        .map(|f| f.name().as_str())
-                        .collect::<Vec<_>>();
-                    serialize(&names, batch.columns(), self.format, &mut self.buffer)
-                })
+            .map(|maybe_arrays| {
+                maybe_arrays
+                    .map(|arrays| serialize(&self.names, &arrays, self.format, &mut self.buffer))
             })
             .transpose()?;
         Ok(())
