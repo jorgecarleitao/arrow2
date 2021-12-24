@@ -1,5 +1,6 @@
 use arrow2::array::*;
 use arrow2::compute::boolean::*;
+use arrow2::scalar::BooleanScalar;
 
 #[test]
 fn array_and() {
@@ -335,4 +336,85 @@ fn test_nullable_array_with_offset_is_not_null() {
     let expected = BooleanArray::from_slice(vec![true, false, true, false]);
 
     assert_eq!(expected, res);
+}
+
+#[test]
+fn array_and_scalar() {
+    let array = BooleanArray::from_slice(vec![false, false, true, true]);
+
+    let scalar = BooleanScalar::new(Some(true));
+    let real = and_scalar(&array, &scalar);
+
+    let expected = BooleanArray::from_slice(vec![false, false, true, true]);
+    assert_eq!(real, expected);
+
+    let scalar = BooleanScalar::new(Some(false));
+    let real = and_scalar(&array, &scalar);
+
+    let expected = BooleanArray::from_slice(vec![false, false, false, false]);
+
+    assert_eq!(real, expected);
+}
+
+#[test]
+fn array_and_scalar_validity() {
+    let array = BooleanArray::from(vec![None, Some(false), Some(true)]);
+
+    let scalar = BooleanScalar::new(Some(true));
+    let real = and_scalar(&array, &scalar);
+
+    let expected = BooleanArray::from(vec![None, Some(false), Some(true)]);
+    assert_eq!(real, expected);
+
+    let scalar = BooleanScalar::new(None);
+    let real = and_scalar(&array, &scalar);
+
+    let expected = BooleanArray::from(vec![None; 3]);
+    assert_eq!(real, expected);
+
+    let array = BooleanArray::from_slice(vec![true, false, true]);
+    let real = and_scalar(&array, &scalar);
+
+    let expected = BooleanArray::from(vec![None; 3]);
+    assert_eq!(real, expected);
+}
+
+#[test]
+fn array_or_scalar() {
+    let array = BooleanArray::from_slice(vec![false, false, true, true]);
+
+    let scalar = BooleanScalar::new(Some(true));
+    let real = or_scalar(&array, &scalar);
+
+    let expected = BooleanArray::from_slice(vec![true, true, true, true]);
+    assert_eq!(real, expected);
+
+    let scalar = BooleanScalar::new(Some(false));
+    let real = or_scalar(&array, &scalar);
+
+    let expected = BooleanArray::from_slice(vec![false, false, true, true]);
+    assert_eq!(real, expected);
+}
+
+#[test]
+fn array_or_scalar_validity() {
+    let array = BooleanArray::from(vec![None, Some(false), Some(true)]);
+
+    let scalar = BooleanScalar::new(Some(true));
+    let real = or_scalar(&array, &scalar);
+
+    let expected = BooleanArray::from(vec![None, Some(true), Some(true)]);
+    assert_eq!(real, expected);
+
+    let scalar = BooleanScalar::new(None);
+    let real = or_scalar(&array, &scalar);
+
+    let expected = BooleanArray::from(vec![None; 3]);
+    assert_eq!(real, expected);
+
+    let array = BooleanArray::from_slice(vec![true, false, true]);
+    let real = and_scalar(&array, &scalar);
+
+    let expected = BooleanArray::from(vec![None; 3]);
+    assert_eq!(real, expected);
 }
