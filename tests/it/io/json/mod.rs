@@ -8,14 +8,26 @@ use serde_json::Value;
 
 use arrow2::array::*;
 use arrow2::datatypes::*;
-use arrow2::io::json::{LineDelimitedWriter, ReaderBuilder};
+use arrow2::error::Result;
+use arrow2::io::json::read as json_read;
+use arrow2::io::json::LineDelimitedWriter;
+use arrow2::record_batch::RecordBatch;
 
-fn round_trip(data: String) {
-    let builder = ReaderBuilder::new()
-        .infer_schema(None)
-        .with_batch_size(1024);
-    let mut reader = builder.build(Cursor::new(data.clone())).unwrap();
-    let batch = reader.next().unwrap().unwrap();
+fn read_batch(data: String, fields: Vec<Field>) -> Result<RecordBatch> {
+    let mut reader = Cursor::new(data);
+
+    let mut rows = vec![String::default(); 1024];
+    let read = json_read::read_rows(&mut reader, &mut rows)?;
+    let rows = &rows[..read];
+    json_read::deserialize(rows, fields)
+}
+
+fn round_trip(data: String) -> Result<()> {
+    let mut reader = Cursor::new(data);
+    let fields = json_read::infer(&mut reader, None)?;
+    let data = reader.into_inner();
+
+    let batch = read_batch(data.clone(), fields)?;
 
     let mut buf = Vec::new();
     {
@@ -39,18 +51,19 @@ fn round_trip(data: String) {
             assert_eq!(result_json, expected_json);
         }
     }
+    Ok(())
 }
 
 #[test]
-fn round_trip_basics() {
+fn round_trip_basics() -> Result<()> {
     let (data, _, _) = case_basics();
-    round_trip(data);
+    round_trip(data)
 }
 
 #[test]
-fn round_trip_list() {
+fn round_trip_list() -> Result<()> {
     let (data, _, _) = case_list();
-    round_trip(data);
+    round_trip(data)
 }
 
 fn case_list() -> (String, Schema, Vec<Box<dyn Array>>) {

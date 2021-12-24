@@ -2,10 +2,9 @@
 #![forbid(unsafe_code)]
 //! Convert data between the Arrow memory format and JSON line-delimited records.
 
-mod read;
+pub mod read;
 mod write;
 
-pub use read::*;
 pub use write::*;
 
 use crate::error::ArrowError;
