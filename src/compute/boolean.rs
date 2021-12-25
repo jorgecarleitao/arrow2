@@ -177,8 +177,9 @@ pub fn and_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray 
 pub fn or_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray {
     match scalar.value() {
         Some(true) => {
-            let values = Bitmap::from_trusted_len_iter(std::iter::repeat(true).take(array.len()));
-            BooleanArray::from_data(DataType::Boolean, values, array.validity().cloned())
+            let mut values = MutableBitmap::new();
+            values.extend_constant(array.len(), true);
+            BooleanArray::from_data(DataType::Boolean, values.into(), array.validity().cloned())
         }
         Some(false) => array.clone(),
         None => BooleanArray::new_null(DataType::Boolean, array.len()),
