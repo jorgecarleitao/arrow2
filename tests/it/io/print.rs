@@ -87,7 +87,7 @@ fn write_null() -> Result<()> {
 #[test]
 fn write_dictionary() -> Result<()> {
     // define a schema.
-    let field_type = DataType::Dictionary(i32::KEY_TYPE, Box::new(DataType::Utf8));
+    let field_type = DataType::Dictionary(i32::KEY_TYPE, Box::new(DataType::Utf8), false);
     let schema = Arc::new(Schema::new(vec![Field::new("d1", field_type, true)]));
 
     let mut array = MutableDictionaryArray::<i32, MutableUtf8Array<i32>>::new();
@@ -119,7 +119,7 @@ fn write_dictionary() -> Result<()> {
 #[test]
 fn dictionary_validities() -> Result<()> {
     // define a schema.
-    let field_type = DataType::Dictionary(i32::KEY_TYPE, Box::new(DataType::Int32));
+    let field_type = DataType::Dictionary(i32::KEY_TYPE, Box::new(DataType::Int32), false);
     let schema = Arc::new(Schema::new(vec![Field::new("d1", field_type, true)]));
 
     let keys = PrimitiveArray::<i32>::from([Some(1), None, Some(0)]);

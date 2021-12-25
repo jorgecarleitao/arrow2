@@ -331,7 +331,7 @@ fn create_dictionary(
     field: &Field,
     parent: Arc<ArrowArray>,
 ) -> Result<Option<ArrowArrayChild<'static>>> {
-    if let DataType::Dictionary(_, values) = field.data_type() {
+    if let DataType::Dictionary(_, values, _) = field.data_type() {
         let field = Field::new("", values.as_ref().clone(), true);
         assert!(!array.dictionary.is_null());
         let array = unsafe { &*array.dictionary };

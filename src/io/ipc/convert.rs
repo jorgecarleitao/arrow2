@@ -97,7 +97,6 @@ impl<'a> From<ipc::Field<'a>> for Field {
                 data_type,
                 field.nullable(),
                 dictionary.id(),
-                dictionary.isOrdered(),
             )
         } else {
             Field::new(field.name().unwrap(), data_type, field.nullable())
@@ -156,6 +155,7 @@ fn get_data_type(field: ipc::Field, extension: Extension, may_be_dictionary: boo
             return DataType::Dictionary(
                 index_type,
                 Box::new(get_data_type(field, extension, false)),
+                dictionary.isOrdered(),
             );
         }
     }
@@ -377,23 +377,22 @@ pub(crate) fn build_field<'a>(
     let fb_field_name = fbb.create_string(field.name().as_str());
     let field_type = get_fb_field_type(field.data_type(), field.is_nullable(), fbb);
 
-    let fb_dictionary = if let DataType::Dictionary(index_type, inner) = field.data_type() {
-        if let DataType::Extension(name, _, metadata) = inner.as_ref() {
-            write_extension(fbb, name, metadata, &mut kv_vec);
-        }
-        Some(get_fb_dictionary(
-            index_type,
-            field
-                .dict_id()
-                .expect("All Dictionary types have `dict_id`"),
-            field
-                .dict_is_ordered()
-                .expect("All Dictionary types have `dict_is_ordered`"),
-            fbb,
-        ))
-    } else {
-        None
-    };
+    let fb_dictionary =
+        if let DataType::Dictionary(index_type, inner, is_ordered) = field.data_type() {
+            if let DataType::Extension(name, _, metadata) = inner.as_ref() {
+                write_extension(fbb, name, metadata, &mut kv_vec);
+            }
+            Some(get_fb_dictionary(
+                index_type,
+                field
+                    .dict_id()
+                    .expect("All Dictionary types have `dict_id`"),
+                *is_ordered,
+                fbb,
+            ))
+        } else {
+            None
+        };
 
     if let Some(metadata) = field.metadata() {
         if !metadata.is_empty() {
@@ -450,7 +449,7 @@ fn type_to_field_type(data_type: &DataType) -> ipc::Type {
         Union(_, _, _) => ipc::Type::Union,
         Map(_, _) => ipc::Type::Map,
         Struct(_) => ipc::Type::Struct_,
-        Dictionary(_, v) => type_to_field_type(v),
+        Dictionary(_, v, _) => type_to_field_type(v),
         Extension(_, v, _) => type_to_field_type(v),
     }
 }
@@ -671,7 +670,7 @@ pub(crate) fn get_fb_field_type<'a>(
                 children: Some(fbb.create_vector(&children[..])),
             }
         }
-        Dictionary(_, value_type) => {
+        Dictionary(_, value_type, _) => {
             // In this library, the dictionary "type" is a logical construct. Here we
             // pass through to the value type, as we've already captured the index
             // type in the DictionaryEncoding metadata in the parent field
@@ -891,17 +890,15 @@ mod tests {
                 Field::new("struct<>", DataType::Struct(vec![]), true),
                 Field::new_dict(
                     "dictionary<int32, utf8>",
-                    DataType::Dictionary(IntegerType::Int32, Box::new(DataType::Utf8)),
+                    DataType::Dictionary(IntegerType::Int32, Box::new(DataType::Utf8), true),
                     true,
                     123,
-                    true,
                 ),
                 Field::new_dict(
                     "dictionary<uint8, uint32>",
-                    DataType::Dictionary(IntegerType::UInt8, Box::new(DataType::UInt32)),
+                    DataType::Dictionary(IntegerType::UInt8, Box::new(DataType::UInt32), true),
                     true,
                     123,
-                    true,
                 ),
                 Field::new("decimal<usize, usize>", DataType::Decimal(10, 6), false),
             ],

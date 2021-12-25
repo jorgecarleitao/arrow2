@@ -196,7 +196,7 @@ fn schema() -> Result<()> {
 
     let field = Field::new(
         "a",
-        DataType::Dictionary(u32::KEY_TYPE, Box::new(DataType::Utf8)),
+        DataType::Dictionary(u32::KEY_TYPE, Box::new(DataType::Utf8), false),
         true,
     );
     test_round_trip_schema(field)?;

@@ -125,7 +125,7 @@ fn equal(lhs: &dyn Scalar, rhs: &dyn Scalar) -> bool {
             let rhs = rhs.as_any().downcast_ref::<ListScalar<i64>>().unwrap();
             lhs == rhs
         }
-        DataType::Dictionary(key_type, _) => match_integer_type!(key_type, |$T| {
+        DataType::Dictionary(key_type, _, _) => match_integer_type!(key_type, |$T| {
             let lhs = lhs.as_any().downcast_ref::<DictionaryScalar<$T>>().unwrap();
             let rhs = rhs.as_any().downcast_ref::<DictionaryScalar<$T>>().unwrap();
             lhs == rhs

@@ -483,7 +483,7 @@ fn utf8_to_dict() {
     let array = Utf8Array::<i32>::from(&[Some("one"), None, Some("three"), Some("one")]);
 
     // Cast to a dictionary (same value type, Utf8)
-    let cast_type = DataType::Dictionary(u8::KEY_TYPE, Box::new(DataType::Utf8));
+    let cast_type = DataType::Dictionary(u8::KEY_TYPE, Box::new(DataType::Utf8), false);
     let result = cast(&array, &cast_type, CastOptions::default()).expect("cast failed");
 
     let mut expected = MutableDictionaryArray::<u8, MutableUtf8Array<i32>>::new();
@@ -514,7 +514,7 @@ fn i32_to_dict() {
     let array = Int32Array::from(&[Some(1), None, Some(3), Some(1)]);
 
     // Cast to a dictionary (same value type, Utf8)
-    let cast_type = DataType::Dictionary(u8::KEY_TYPE, Box::new(DataType::Int32));
+    let cast_type = DataType::Dictionary(u8::KEY_TYPE, Box::new(DataType::Int32), false);
     let result = cast(&array, &cast_type, CastOptions::default()).expect("cast failed");
 
     let mut expected = MutableDictionaryArray::<u8, MutablePrimitiveArray<i32>>::new();

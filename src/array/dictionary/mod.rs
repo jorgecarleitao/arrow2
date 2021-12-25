@@ -79,7 +79,8 @@ impl<K: DictionaryKey> DictionaryArray<K> {
 
     /// The canonical method to create a new [`DictionaryArray`].
     pub fn from_data(keys: PrimitiveArray<K>, values: Arc<dyn Array>) -> Self {
-        let data_type = DataType::Dictionary(K::KEY_TYPE, Box::new(values.data_type().clone()));
+        let data_type =
+            DataType::Dictionary(K::KEY_TYPE, Box::new(values.data_type().clone()), false);
 
         Self {
             data_type,
@@ -165,7 +166,7 @@ impl<K: DictionaryKey> DictionaryArray<K> {
 impl<K: DictionaryKey> DictionaryArray<K> {
     pub(crate) fn get_child(data_type: &DataType) -> &DataType {
         match data_type {
-            DataType::Dictionary(_, values) => values.as_ref(),
+            DataType::Dictionary(_, values, _) => values.as_ref(),
             DataType::Extension(_, inner, _) => Self::get_child(inner),
             _ => panic!("DictionaryArray must be initialized with DataType::Dictionary"),
         }

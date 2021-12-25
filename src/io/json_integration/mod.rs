@@ -83,7 +83,7 @@ impl From<&Field> for ArrowJsonField {
             _ => None,
         };
 
-        let dictionary = if let DataType::Dictionary(key_type, _) = &field.data_type {
+        let dictionary = if let DataType::Dictionary(key_type, _, is_ordered) = &field.data_type {
             use crate::datatypes::IntegerType::*;
             Some(ArrowJsonFieldDictionary {
                 id: field.dict_id,
@@ -100,7 +100,7 @@ impl From<&Field> for ArrowJsonField {
                         UInt8 | UInt16 | UInt32 | UInt64 => false,
                     },
                 },
-                is_ordered: field.dict_is_ordered,
+                is_ordered: *is_ordered,
             })
         } else {
             None

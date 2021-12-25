@@ -80,40 +80,12 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
     match (from_type, to_type) {
         (
             Null,
-            Boolean
-            | Int8
-            | UInt8
-            | Int16
-            | UInt16
-            | Int32
-            | UInt32
-            | Float32
-            | Date32
-            | Time32(_)
-            | Int64
-            | UInt64
-            | Float64
-            | Date64
-            | List(_)
-            | Dictionary(_, _),
+            Boolean | Int8 | UInt8 | Int16 | UInt16 | Int32 | UInt32 | Float32 | Date32 | Time32(_)
+            | Int64 | UInt64 | Float64 | Date64 | List(_) | Dictionary(..),
         )
         | (
-            Boolean
-            | Int8
-            | UInt8
-            | Int16
-            | UInt16
-            | Int32
-            | UInt32
-            | Float32
-            | Date32
-            | Time32(_)
-            | Int64
-            | UInt64
-            | Float64
-            | Date64
-            | List(_)
-            | Dictionary(_, _),
+            Boolean | Int8 | UInt8 | Int16 | UInt16 | Int32 | UInt32 | Float32 | Date32 | Time32(_)
+            | Int64 | UInt64 | Float64 | Date64 | List(_) | Dictionary(..),
             Null,
         ) => true,
         (Struct(_), _) => false,
@@ -127,11 +99,11 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (List(list_from), LargeList(list_to)) if list_from == list_to => true,
         (LargeList(list_from), List(list_to)) if list_from == list_to => true,
         (_, List(list_to)) => can_cast_types(from_type, list_to.data_type()),
-        (Dictionary(_, from_value_type), Dictionary(_, to_value_type)) => {
+        (Dictionary(_, from_value_type, _), Dictionary(_, to_value_type, _)) => {
             can_cast_types(from_value_type, to_value_type)
         }
-        (Dictionary(_, value_type), _) => can_cast_types(value_type, to_type),
-        (_, Dictionary(_, value_type)) => can_cast_types(from_type, value_type),
+        (Dictionary(_, value_type, _), _) => can_cast_types(value_type, to_type),
+        (_, Dictionary(_, value_type, _)) => can_cast_types(from_type, value_type),
 
         (_, Boolean) => is_numeric(from_type),
         (Boolean, _) => {
@@ -376,40 +348,12 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
     match (from_type, to_type) {
         (
             Null,
-            Boolean
-            | Int8
-            | UInt8
-            | Int16
-            | UInt16
-            | Int32
-            | UInt32
-            | Float32
-            | Date32
-            | Time32(_)
-            | Int64
-            | UInt64
-            | Float64
-            | Date64
-            | List(_)
-            | Dictionary(_, _),
+            Boolean | Int8 | UInt8 | Int16 | UInt16 | Int32 | UInt32 | Float32 | Date32 | Time32(_)
+            | Int64 | UInt64 | Float64 | Date64 | List(_) | Dictionary(..),
         )
         | (
-            Boolean
-            | Int8
-            | UInt8
-            | Int16
-            | UInt16
-            | Int32
-            | UInt32
-            | Float32
-            | Date32
-            | Time32(_)
-            | Int64
-            | UInt64
-            | Float64
-            | Date64
-            | List(_)
-            | Dictionary(_, _),
+            Boolean | Int8 | UInt8 | Int16 | UInt16 | Int32 | UInt32 | Float32 | Date32 | Time32(_)
+            | Int64 | UInt64 | Float64 | Date64 | List(_) | Dictionary(..),
             Null,
         ) => Ok(new_null_array(to_type.clone(), array.len())),
         (Struct(_), _) => Err(ArrowError::NotYetImplemented(
@@ -449,10 +393,10 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
             Ok(Box::new(list_array))
         }
 
-        (Dictionary(index_type, _), _) => match_integer_type!(index_type, |$T| {
+        (Dictionary(index_type, ..), _) => match_integer_type!(index_type, |$T| {
             dictionary_cast_dyn::<$T>(array, to_type, options)
         }),
-        (_, Dictionary(index_type, value_type)) => match_integer_type!(index_type, |$T| {
+        (_, Dictionary(index_type, value_type, _)) => match_integer_type!(index_type, |$T| {
             cast_to_dictionary::<$T>(array, value_type, options)
         }),
         (_, Boolean) => match from_type {

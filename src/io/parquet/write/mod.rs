@@ -103,8 +103,8 @@ pub fn can_encode(data_type: &DataType, encoding: Encoding) -> bool {
                 Encoding::DeltaLengthByteArray,
                 DataType::Binary | DataType::LargeBinary | DataType::Utf8 | DataType::LargeUtf8,
             )
-            | (Encoding::RleDictionary, DataType::Dictionary(_, _))
-            | (Encoding::PlainDictionary, DataType::Dictionary(_, _))
+            | (Encoding::RleDictionary, DataType::Dictionary(_, _, _))
+            | (Encoding::PlainDictionary, DataType::Dictionary(_, _, _))
     )
 }
 
@@ -116,7 +116,7 @@ pub fn array_to_pages(
     encoding: Encoding,
 ) -> Result<DynIter<'static, Result<EncodedPage>>> {
     match array.data_type() {
-        DataType::Dictionary(key_type, _) => {
+        DataType::Dictionary(key_type, _, _) => {
             match_integer_type!(key_type, |$T| {
                 dictionary::array_to_pages::<$T>(
                     array.as_any().downcast_ref().unwrap(),

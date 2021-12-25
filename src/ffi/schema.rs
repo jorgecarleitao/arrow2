@@ -92,8 +92,8 @@ impl Ffi_ArrowSchema {
             .collect::<Box<_>>();
         let n_children = children_ptr.len() as i64;
 
-        let dictionary = if let DataType::Dictionary(_, values) = field.data_type() {
-            flags += field.dict_is_ordered().unwrap_or_default() as i64;
+        let dictionary = if let DataType::Dictionary(_, values, is_ordered) = field.data_type() {
+            flags += *is_ordered as i64;
             // we do not store field info in the dict values, so can't recover it all :(
             let field = Field::new("", values.as_ref().clone(), true);
             Some(Box::new(Ffi_ArrowSchema::new(&field)))
@@ -214,7 +214,8 @@ pub(crate) unsafe fn to_field(schema: &Ffi_ArrowSchema) -> Result<Field> {
     let data_type = if let Some(dictionary) = dictionary {
         let indices = to_integer_type(schema.format())?;
         let values = to_field(dictionary)?;
-        DataType::Dictionary(indices, Box::new(values.data_type().clone()))
+        let is_ordered = schema.flags & 1 == 1;
+        DataType::Dictionary(indices, Box::new(values.data_type().clone()), is_ordered)
     } else {
         to_data_type(schema)?
     };
@@ -449,7 +450,7 @@ fn to_format(data_type: &DataType) -> String {
             r
         }
         DataType::Map(_, _) => "+m".to_string(),
-        DataType::Dictionary(index, _) => to_format(&(*index).into()),
+        DataType::Dictionary(index, _, _) => to_format(&(*index).into()),
         DataType::Extension(_, inner, _) => to_format(inner.as_ref()),
     }
 }

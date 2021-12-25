@@ -133,6 +133,6 @@ pub fn can_take(data_type: &DataType) -> bool {
             | DataType::Struct(_)
             | DataType::List(_)
             | DataType::LargeList(_)
-            | DataType::Dictionary(_, _)
+            | DataType::Dictionary(..)
     )
 }

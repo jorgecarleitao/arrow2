@@ -637,7 +637,7 @@ fn integration_write(schema: &Schema, batches: &[RecordBatch]) -> Result<Vec<u8>
             .iter()
             .zip(descritors.clone())
             .map(|(array, descriptor)| {
-                let encoding = if let DataType::Dictionary(_, _) = array.data_type() {
+                let encoding = if let DataType::Dictionary(..) = array.data_type() {
                     Encoding::RleDictionary
                 } else {
                     Encoding::Plain

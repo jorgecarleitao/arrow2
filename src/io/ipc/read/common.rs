@@ -165,7 +165,7 @@ pub fn read_record_batch<R: Read + Seek>(
 fn find_first_dict_field_d(id: usize, data_type: &DataType) -> Option<&Field> {
     use DataType::*;
     match data_type {
-        Dictionary(_, inner) => find_first_dict_field_d(id, inner.as_ref()),
+        Dictionary(_, inner, _) => find_first_dict_field_d(id, inner.as_ref()),
         Map(field, _) => find_first_dict_field(id, field.as_ref()),
         List(field) => find_first_dict_field(id, field.as_ref()),
         LargeList(field) => find_first_dict_field(id, field.as_ref()),
@@ -191,7 +191,7 @@ fn find_first_dict_field_d(id: usize, data_type: &DataType) -> Option<&Field> {
 }
 
 fn find_first_dict_field(id: usize, field: &Field) -> Option<&Field> {
-    if let DataType::Dictionary(_, _) = &field.data_type {
+    if let DataType::Dictionary(_, _, _) = &field.data_type {
         if field.dict_id as usize == id {
             return Some(field);
         }
@@ -234,7 +234,7 @@ pub fn read_dictionary<R: Read + Seek>(
     // values array, we need to retrieve this from the schema.
     // Get an array representing this dictionary's values.
     let dictionary_values: ArrayRef = match first_field.data_type() {
-        DataType::Dictionary(_, ref value_type) => {
+        DataType::Dictionary(_, ref value_type, _) => {
             // Make a fake schema for the dictionary batch.
             let schema = Arc::new(Schema {
                 fields: vec![Field::new("", value_type.as_ref().clone(), false)],
