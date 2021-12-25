@@ -26,13 +26,19 @@ impl<T: NativeType> PrimitiveArray<T> {
 
     /// Creates a (non-null) [`PrimitiveArray`] from a slice of values.
     /// # Implementation
-    /// This is essentially a memcopy and is the fastest way to create a [`PrimitiveArray`].
+    /// This is essentially a memcopy
     pub fn from_slice<P: AsRef<[T]>>(slice: P) -> Self {
         Self::from_data(
             T::PRIMITIVE.into(),
             Vec::<T>::from(slice.as_ref()).into(),
             None,
         )
+    }
+
+    /// Creates a (non-null) [`PrimitiveArray`] from a vector of values.
+    /// This does not have memcopy and is the fastest way to create a [`PrimitiveArray`].
+    pub fn from_vec(array: Vec<T>) -> Self {
+        Self::from_data(T::PRIMITIVE.into(), array.into(), None)
     }
 }
 

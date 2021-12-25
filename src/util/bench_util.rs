@@ -3,7 +3,6 @@
 use rand::distributions::{Alphanumeric, Distribution, Standard};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
-use crate::types::NaturalDataType;
 use crate::{array::*, types::NativeType};
 
 /// Returns fixed seedable RNG
@@ -14,7 +13,7 @@ pub fn seedable_rng() -> StdRng {
 /// Creates an random (but fixed-seeded) array of a given size and null density
 pub fn create_primitive_array<T>(size: usize, null_density: f32) -> PrimitiveArray<T>
 where
-    T: NativeType + NaturalDataType,
+    T: NativeType,
     Standard: Distribution<T>,
 {
     let mut rng = seedable_rng();
@@ -37,7 +36,7 @@ pub fn create_primitive_array_with_seed<T>(
     seed: u64,
 ) -> PrimitiveArray<T>
 where
-    T: NativeType + NaturalDataType,
+    T: NativeType,
     Standard: Distribution<T>,
 {
     let mut rng = StdRng::seed_from_u64(seed);
