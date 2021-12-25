@@ -7,12 +7,8 @@ use crate::scalar::BooleanScalar;
 
 use super::utils::combine_validities;
 
-/// Helper function to implement binary kernels for two boolean arrays
-fn binary_boolean_arrays_kernel<F>(
-    lhs: &BooleanArray,
-    rhs: &BooleanArray,
-    op: F,
-) -> Result<BooleanArray>
+/// Helper function to implement binary kernels
+fn binary_boolean_kernel<F>(lhs: &BooleanArray, rhs: &BooleanArray, op: F) -> Result<BooleanArray>
 where
     F: Fn(&Bitmap, &Bitmap) -> Bitmap,
 {
@@ -30,25 +26,6 @@ where
     let values = op(left_buffer, right_buffer);
 
     Ok(BooleanArray::from_data(DataType::Boolean, values, validity))
-}
-
-/// Helper function to implement binary kernels for a boolean array and a boolean scalar
-fn binary_boolean_array_and_scalar_kernel<F>(
-    array: &BooleanArray,
-    scalar: &BooleanScalar,
-    op: F,
-) -> BooleanArray
-where
-    F: Fn(bool, bool) -> bool,
-{
-    let (rhs, validity) = match scalar.value() {
-        Some(val) => (val, array.validity().cloned()),
-        None => (bool::default(), Some(Bitmap::new_zeroed(array.len()))),
-    };
-
-    let values = Bitmap::from_trusted_len_iter(array.values_iter().map(|x| op(x, rhs)));
-
-    BooleanArray::from_data(DataType::Boolean, values, validity)
 }
 
 /// Performs `AND` operation on two arrays. If either left or right value is null then the
@@ -69,7 +46,7 @@ where
 /// # }
 /// ```
 pub fn and(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
-    binary_boolean_arrays_kernel(lhs, rhs, |lhs, rhs| lhs & rhs)
+    binary_boolean_kernel(lhs, rhs, |lhs, rhs| lhs & rhs)
 }
 
 /// Performs `OR` operation on two arrays. If either left or right value is null then the
@@ -90,7 +67,7 @@ pub fn and(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
 /// # }
 /// ```
 pub fn or(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
-    binary_boolean_arrays_kernel(lhs, rhs, |lhs, rhs| lhs | rhs)
+    binary_boolean_kernel(lhs, rhs, |lhs, rhs| lhs | rhs)
 }
 
 /// Performs unary `NOT` operation on an arrays. If value is null then the result is also
@@ -164,16 +141,23 @@ pub fn is_not_null(input: &dyn Array) -> BooleanArray {
 /// ```rust
 /// use arrow2::array::BooleanArray;
 /// use arrow2::compute::boolean::and_scalar;
-/// use arrows::scalar::BooleanScalar;
+/// use arrow2::scalar::BooleanScalar;
 /// # fn main() {
-/// let array = BooleanArray::from_slice(vec![false, false, true, true]);
+/// let array = BooleanArray::from_slice(&[false, false, true, true]);
 /// let scalar = BooleanScalar::new(Some(true));
 /// let result = and_scalar(&array, &scalar);
-/// assert_eq!(result, BooleanArray::from(vec![false, false, true, true]));
+/// assert_eq!(result, BooleanArray::from_slice(&[false, false, true, true]));
 /// # }
 /// ```
 pub fn and_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray {
-    binary_boolean_array_and_scalar_kernel(array, scalar, |lhs, rhs| lhs && rhs)
+    match scalar.value() {
+        Some(true) => array.clone(),
+        Some(false) => {
+            let values = Bitmap::from_trusted_len_iter(std::iter::repeat(false).take(array.len()));
+            BooleanArray::from_data(DataType::Boolean, values, array.validity().cloned())
+        }
+        None => BooleanArray::new_null(DataType::Boolean, array.len()),
+    }
 }
 
 /// Performs `OR` operation on an array and a scalar value. If either left or right value
@@ -182,14 +166,21 @@ pub fn and_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray 
 /// ```rust
 /// use arrow2::array::BooleanArray;
 /// use arrow2::compute::boolean::or_scalar;
-/// use arrows::scalar::BooleanScalar;
+/// use arrow2::scalar::BooleanScalar;
 /// # fn main() {
-/// let array = BooleanArray::from_slice(vec![false, false, true, true]);
+/// let array = BooleanArray::from_slice(&[false, false, true, true]);
 /// let scalar = BooleanScalar::new(Some(true));
 /// let result = or_scalar(&array, &scalar);
-/// assert_eq!(result, BooleanArray::from(vec![true, true, true, true]));
+/// assert_eq!(result, BooleanArray::from_slice(&[true, true, true, true]));
 /// # }
 /// ```
 pub fn or_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray {
-    binary_boolean_array_and_scalar_kernel(array, scalar, |lhs, rhs| lhs || rhs)
+    match scalar.value() {
+        Some(true) => {
+            let values = Bitmap::from_trusted_len_iter(std::iter::repeat(true).take(array.len()));
+            BooleanArray::from_data(DataType::Boolean, values, array.validity().cloned())
+        }
+        Some(false) => array.clone(),
+        None => BooleanArray::new_null(DataType::Boolean, array.len()),
+    }
 }
