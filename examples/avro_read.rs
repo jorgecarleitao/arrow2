@@ -25,7 +25,7 @@ fn main() -> Result<()> {
 
     for batch in reader {
         let batch = batch?;
-        assert!(batch.num_rows() > 0);
+        assert!(batch.len() > 0);
     }
     Ok(())
 }

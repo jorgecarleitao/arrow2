@@ -2,7 +2,7 @@
 
 When compiled with feature `io_ipc`, this crate can be used to read Arrow files.
 
-An Arrow file is composed by a header, a footer, and blocks of `RecordBatch`es.
+An Arrow file is composed by a header, a footer, and blocks of `Array`s.
 Reading it generally consists of:
 
 1. read metadata, containing the block positions in the file

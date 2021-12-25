@@ -16,7 +16,7 @@ fn main() -> Result<()> {
     let start = SystemTime::now();
     for maybe_batch in reader {
         let batch = maybe_batch?;
-        assert!(batch.num_rows() > 0);
+        assert!(batch.len() > 0);
     }
     println!("took: {} ms", start.elapsed().unwrap().as_millis());
     Ok(())

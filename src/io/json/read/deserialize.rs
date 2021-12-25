@@ -7,12 +7,12 @@ use indexmap::map::IndexMap as HashMap;
 use num_traits::NumCast;
 use serde_json::Value;
 
-use crate::datatypes::Field;
-use crate::error::ArrowError;
 use crate::{
     array::*,
     bitmap::MutableBitmap,
-    datatypes::{DataType, IntervalUnit},
+    columns::Columns,
+    datatypes::{DataType, Field, IntervalUnit},
+    error::ArrowError,
     types::NativeType,
 };
 
@@ -251,13 +251,13 @@ fn _deserialize<A: Borrow<Value>>(rows: &[A], data_type: DataType) -> Arc<dyn Ar
     }
 }
 
-/// Deserializes `rows` into a [`Vec<Arc<dyn Array>>`] according to `fields`.
+/// Deserializes `rows` into a [`Columns`] according to `fields`.
 /// This is CPU-bounded.
 pub fn deserialize<A: AsRef<str>>(
     rows: &[A],
-    fields: Vec<Field>,
-) -> Result<Vec<Arc<dyn Array>>, ArrowError> {
-    let data_type = DataType::Struct(fields);
+    fields: &[Field],
+) -> Result<Columns<Arc<dyn Array>>, ArrowError> {
+    let data_type = DataType::Struct(fields.to_vec());
 
     // convert rows to `Value`
     let rows = rows
@@ -269,5 +269,5 @@ pub fn deserialize<A: AsRef<str>>(
         .collect::<Result<Vec<_>, ArrowError>>()?;
 
     let (_, columns, _) = deserialize_struct(&rows, data_type).into_data();
-    Ok(columns)
+    Ok(Columns::new(columns))
 }

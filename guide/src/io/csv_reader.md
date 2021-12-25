@@ -7,7 +7,7 @@ This crate makes minimal assumptions on how you want to read a CSV, and offers a
 
 There are two CPU-intensive tasks in reading a CSV file:
 * split the CSV file into rows, which includes parsing quotes and delimiters, and is necessary to `seek` to a given row.
-* parse a set of CSV rows (bytes) into a `RecordBatch`.
+* parse a set of CSV rows (bytes) into a `Array`s.
 
 Parsing bytes into values is more expensive than interpreting lines. As such, it is generally advantageous to have multiple readers of a single file that scan different parts of the file (within IO constraints).
 

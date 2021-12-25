@@ -19,7 +19,6 @@ async fn main() -> Result<()> {
     let mut reader = File::open(file_path).await?.compat();
 
     let (avro_schemas, schema, compression, marker) = read_metadata(&mut reader).await?;
-    let schema = Arc::new(schema);
     let avro_schemas = Arc::new(avro_schemas);
 
     let blocks = block_stream(&mut reader, marker).await;
@@ -32,10 +31,10 @@ async fn main() -> Result<()> {
         let handle = tokio::task::spawn_blocking(move || {
             let mut decompressed = Block::new(0, vec![]);
             decompress_block(&mut block, &mut decompressed, compression)?;
-            deserialize(&decompressed, schema, &avro_schemas)
+            deserialize(&decompressed, schema.fields(), &avro_schemas)
         });
         let batch = handle.await.unwrap()?;
-        assert!(batch.num_rows() > 0);
+        assert!(batch.len() > 0);
     }
 
     Ok(())

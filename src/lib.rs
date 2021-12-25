@@ -9,7 +9,7 @@
 pub mod array;
 pub mod bitmap;
 pub mod buffer;
-pub(crate) mod columns;
+pub mod columns;
 pub mod error;
 pub mod scalar;
 pub mod trusted_len;

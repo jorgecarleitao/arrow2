@@ -19,7 +19,8 @@ pub(super) use header::deserialize_header;
 pub(super) use schema::convert_schema;
 
 use crate::array::Array;
-use crate::datatypes::Schema;
+use crate::columns::Columns;
+use crate::datatypes::{Field, Schema};
 use crate::error::Result;
 
 use super::Compression;
@@ -41,20 +42,20 @@ pub fn read_metadata<R: std::io::Read>(
     Ok((avro_schema, schema, codec, marker))
 }
 
-/// Single threaded, blocking reader of Avro; [`Iterator`] of [`RecordBatch`]es.
+/// Single threaded, blocking reader of Avro; [`Iterator`] of [`Columns`].
 pub struct Reader<R: Read> {
     iter: Decompressor<R>,
-    schema: Schema,
     avro_schemas: Vec<AvroSchema>,
+    fields: Vec<Field>,
 }
 
 impl<R: Read> Reader<R> {
     /// Creates a new [`Reader`].
-    pub fn new(iter: Decompressor<R>, avro_schemas: Vec<AvroSchema>, schema: Schema) -> Self {
+    pub fn new(iter: Decompressor<R>, avro_schemas: Vec<AvroSchema>, fields: Vec<Field>) -> Self {
         Self {
             iter,
             avro_schemas,
-            schema,
+            fields,
         }
     }
 
@@ -65,15 +66,15 @@ impl<R: Read> Reader<R> {
 }
 
 impl<R: Read> Iterator for Reader<R> {
-    type Item = Result<Vec<Box<dyn Array>>>;
+    type Item = Result<Columns<Box<dyn Array>>>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let schema = &self.schema;
+        let fields = &self.fields[..];
         let avro_schemas = &self.avro_schemas;
 
         self.iter
             .next()
             .transpose()
-            .map(|maybe_block| deserialize(maybe_block?, schema, avro_schemas))
+            .map(|maybe_block| deserialize(maybe_block?, fields, avro_schemas))
     }
 }

@@ -7,6 +7,7 @@ pub use serialize::serialize;
 
 use crate::{
     array::Array,
+    columns::Columns,
     error::{ArrowError, Result},
 };
 
@@ -35,9 +36,9 @@ pub struct Serializer<F, A, I>
 where
     F: JsonFormat,
     A: AsRef<dyn Array>,
-    I: Iterator<Item = Result<Vec<A>>>,
+    I: Iterator<Item = Result<Columns<A>>>,
 {
-    iter: I,
+    batches: I,
     names: Vec<String>,
     buffer: Vec<u8>,
     format: F,
@@ -47,12 +48,12 @@ impl<F, A, I> Serializer<F, A, I>
 where
     F: JsonFormat,
     A: AsRef<dyn Array>,
-    I: Iterator<Item = Result<Vec<A>>>,
+    I: Iterator<Item = Result<Columns<A>>>,
 {
     /// Creates a new [`Serializer`].
-    pub fn new(iter: I, names: Vec<String>, buffer: Vec<u8>, format: F) -> Self {
+    pub fn new(batches: I, names: Vec<String>, buffer: Vec<u8>, format: F) -> Self {
         Self {
-            iter,
+            batches,
             names,
             buffer,
             format,
@@ -64,7 +65,7 @@ impl<F, A, I> FallibleStreamingIterator for Serializer<F, A, I>
 where
     F: JsonFormat,
     A: AsRef<dyn Array>,
-    I: Iterator<Item = Result<Vec<A>>>,
+    I: Iterator<Item = Result<Columns<A>>>,
 {
     type Item = [u8];
 
@@ -72,11 +73,11 @@ where
 
     fn advance(&mut self) -> Result<()> {
         self.buffer.clear();
-        self.iter
+        self.batches
             .next()
-            .map(|maybe_arrays| {
-                maybe_arrays
-                    .map(|arrays| serialize(&self.names, &arrays, self.format, &mut self.buffer))
+            .map(|maybe_columns| {
+                maybe_columns
+                    .map(|columns| serialize(&self.names, &columns, self.format, &mut self.buffer))
             })
             .transpose()?;
         Ok(())

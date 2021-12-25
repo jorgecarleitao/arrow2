@@ -3,6 +3,7 @@ use serde_json::Value;
 use streaming_iterator::StreamingIterator;
 
 use crate::bitmap::utils::zip_validity;
+use crate::columns::Columns;
 use crate::io::iterator::BufStreamingIterator;
 use crate::util::lexical_to_bytes_mut;
 use crate::{array::*, datatypes::DataType, types::NativeType};
@@ -198,15 +199,16 @@ fn serialize_item<F: JsonFormat>(
 
 /// Serializes a (name, array) to a valid JSON to `buffer`
 /// This is CPU-bounded
-pub fn serialize<N, A, F>(names: &[N], arrays: &[A], format: F, buffer: &mut Vec<u8>)
+pub fn serialize<N, A, F>(names: &[N], columns: &Columns<A>, format: F, buffer: &mut Vec<u8>)
 where
     N: AsRef<str>,
     A: AsRef<dyn Array>,
     F: JsonFormat,
 {
-    let num_rows = arrays[0].as_ref().len();
+    let num_rows = columns.len();
 
-    let mut serializers: Vec<_> = arrays
+    let mut serializers: Vec<_> = columns
+        .arrays()
         .iter()
         .map(|array| new_serializer(array.as_ref()))
         .collect();

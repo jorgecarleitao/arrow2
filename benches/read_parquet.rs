@@ -37,9 +37,9 @@ fn read_batch(buffer: &[u8], size: usize, column: usize) -> Result<()> {
 
     let reader = read::RecordReader::try_new(file, Some(vec![column]), None, None, None)?;
 
-    for maybe_batch in reader {
-        let batch = maybe_batch?;
-        assert_eq!(batch.num_rows(), size);
+    for maybe_columns in reader {
+        let columns = maybe_columns?;
+        assert_eq!(columns.len(), size);
     }
     Ok(())
 }

@@ -3,6 +3,7 @@ use std::convert::TryInto;
 use avro_schema::{Enum, Schema as AvroSchema};
 
 use crate::array::*;
+use crate::columns::Columns;
 use crate::datatypes::*;
 use crate::error::ArrowError;
 use crate::error::Result;
@@ -240,18 +241,17 @@ fn deserialize_value<'a>(
     Ok(block)
 }
 
-/// Deserializes a [`Block`] into a [`RecordBatch`].
+/// Deserializes a [`Block`] into [`Columns`].
 pub fn deserialize(
     block: &Block,
-    schema: &Schema,
+    fields: &[Field],
     avro_schemas: &[AvroSchema],
-) -> Result<Vec<Box<dyn Array>>> {
+) -> Result<Columns<Box<dyn Array>>> {
     let rows = block.number_of_rows;
     let mut block = block.data.as_ref();
 
     // create mutables, one per field
-    let mut arrays: Vec<Box<dyn MutableArray>> = schema
-        .fields()
+    let mut arrays: Vec<Box<dyn MutableArray>> = fields
         .iter()
         .zip(avro_schemas.iter())
         .map(|(field, avro_schema)| {
@@ -264,11 +264,11 @@ pub fn deserialize(
     for _ in 0..rows {
         for ((array, field), avro_field) in arrays
             .iter_mut()
-            .zip(schema.fields().iter())
+            .zip(fields.iter())
             .zip(avro_schemas.iter())
         {
             block = deserialize_item(array.as_mut(), field.is_nullable(), avro_field, block)?
         }
     }
-    Ok(arrays.iter_mut().map(|array| array.as_box()).collect())
+    Columns::try_new(arrays.iter_mut().map(|array| array.as_box()).collect())
 }

@@ -1,4 +1,4 @@
-//! Contains [`Columns`], a container [`Array`] where all arrays have the
+//! Contains [`Columns`], a container of [`Array`] where every array has the
 //! same length.
 use std::sync::Arc;
 
