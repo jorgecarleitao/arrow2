@@ -14,7 +14,7 @@ fn data() -> RecordBatch {
     let c4 = BooleanArray::from(&[Some(true), Some(false), None]);
     let c5 = PrimitiveArray::<i64>::from([None, Some(1555584887378), Some(1555555555555)])
         .to(DataType::Timestamp(TimeUnit::Millisecond, None));
-    let c6 = PrimitiveArray::<i32>::from_slice(&[1234, 24680, 85563])
+    let c6 = PrimitiveArray::<i32>::from_vec(vec![1234, 24680, 85563])
         .to(DataType::Time32(TimeUnit::Second));
     let keys = UInt32Array::from_slice(&[2, 0, 1]);
     let c7 = DictionaryArray::from_data(keys, Arc::new(c1.clone()));
@@ -122,7 +122,7 @@ fn data_array(column: usize) -> (RecordBatch, Vec<&'static str>) {
             vec!["3", "2", "1"],
         ),
         9 => {
-            let array = PrimitiveArray::<i32>::from_slice(&[1_234_001, 24_680_001, 85_563_001])
+            let array = PrimitiveArray::<i32>::from_vec(vec![1_234_001, 24_680_001, 85_563_001])
                 .to(DataType::Time32(TimeUnit::Millisecond));
             (
                 Arc::new(array) as Arc<dyn Array>,
@@ -130,16 +130,19 @@ fn data_array(column: usize) -> (RecordBatch, Vec<&'static str>) {
             )
         }
         10 => {
-            let array =
-                PrimitiveArray::<i64>::from_slice(&[1_234_000_001, 24_680_000_001, 85_563_000_001])
-                    .to(DataType::Time64(TimeUnit::Microsecond));
+            let array = PrimitiveArray::<i64>::from_vec(vec![
+                1_234_000_001,
+                24_680_000_001,
+                85_563_000_001,
+            ])
+            .to(DataType::Time64(TimeUnit::Microsecond));
             (
                 Arc::new(array) as Arc<dyn Array>,
                 vec!["00:20:34.000001", "06:51:20.000001", "23:46:03.000001"],
             )
         }
         11 => {
-            let array = PrimitiveArray::<i64>::from_slice(&[
+            let array = PrimitiveArray::<i64>::from_vec(vec![
                 1_234_000_000_001,
                 24_680_000_000_001,
                 85_563_000_000_001,

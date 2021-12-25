@@ -3,8 +3,8 @@ use arrow2::array::PrimitiveArray;
 
 fn main() {
     // say we have two sorted arrays
-    let array0 = PrimitiveArray::<i64>::from_slice(&[1, 2, 5]);
-    let array1 = PrimitiveArray::<i64>::from_slice(&[3, 4, 6]);
+    let array0 = PrimitiveArray::<i64>::from_vec(vec![1, 2, 5]);
+    let array1 = PrimitiveArray::<i64>::from_vec(vec![3, 4, 6]);
 
     // and we found a way to compute the slices that sort them:
     // (array_index, start of the slice, length of the slice)
@@ -33,6 +33,6 @@ fn main() {
     // finally, convert it to the array (this is `O(1)`)
     let result: PrimitiveArray<i64> = growable.into();
 
-    let expected = PrimitiveArray::<i64>::from_slice(&[1, 2, 3, 4, 5, 6]);
+    let expected = PrimitiveArray::<i64>::from_vec(vec![1, 2, 3, 4, 5, 6]);
     assert_eq!(result, expected);
 }
