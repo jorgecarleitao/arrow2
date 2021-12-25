@@ -153,7 +153,7 @@ pub fn and_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray 
     match scalar.value() {
         Some(true) => array.clone(),
         Some(false) => {
-            let values = Bitmap::from_trusted_len_iter(std::iter::repeat(false).take(array.len()));
+            let values = Bitmap::new_zeroed(array.len());
             BooleanArray::from_data(DataType::Boolean, values, array.validity().cloned())
         }
         None => BooleanArray::new_null(DataType::Boolean, array.len()),
