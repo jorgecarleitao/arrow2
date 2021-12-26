@@ -1,4 +1,4 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::VecDeque;
 use std::{
     io::{Read, Seek},
     sync::Arc,
@@ -10,8 +10,9 @@ use arrow_format::ipc::{Message::BodyCompression, Schema::MetadataVersion};
 use crate::array::*;
 use crate::datatypes::{DataType, Field, PhysicalType};
 use crate::error::Result;
+use crate::io::ipc::IpcField;
 
-use super::array::*;
+use super::{array::*, Dictionaries};
 
 pub type Node<'a> = &'a ipc::Message::FieldNode;
 
@@ -19,9 +20,10 @@ pub type Node<'a> = &'a ipc::Message::FieldNode;
 pub fn read<R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
     field: &Field,
+    ipc_field: &IpcField,
     buffers: &mut VecDeque<&ipc::Schema::Buffer>,
     reader: &mut R,
-    dictionaries: &HashMap<usize, Arc<dyn Array>>,
+    dictionaries: &Dictionaries,
     block_offset: u64,
     is_little_endian: bool,
     compression: Option<BodyCompression>,
@@ -120,6 +122,7 @@ pub fn read<R: Read + Seek>(
         List => read_list::<i32, _>(
             field_nodes,
             data_type,
+            ipc_field,
             buffers,
             reader,
             dictionaries,
@@ -132,6 +135,7 @@ pub fn read<R: Read + Seek>(
         LargeList => read_list::<i64, _>(
             field_nodes,
             data_type,
+            ipc_field,
             buffers,
             reader,
             dictionaries,
@@ -144,6 +148,7 @@ pub fn read<R: Read + Seek>(
         FixedSizeList => read_fixed_size_list(
             field_nodes,
             data_type,
+            ipc_field,
             buffers,
             reader,
             dictionaries,
@@ -156,6 +161,7 @@ pub fn read<R: Read + Seek>(
         Struct => read_struct(
             field_nodes,
             data_type,
+            ipc_field,
             buffers,
             reader,
             dictionaries,
@@ -169,7 +175,7 @@ pub fn read<R: Read + Seek>(
             match_integer_type!(key_type, |$T| {
                 read_dictionary::<$T, _>(
                     field_nodes,
-                    field,
+                    ipc_field.dictionary_id,
                     buffers,
                     reader,
                     dictionaries,
@@ -183,6 +189,7 @@ pub fn read<R: Read + Seek>(
         Union => read_union(
             field_nodes,
             data_type,
+            ipc_field,
             buffers,
             reader,
             dictionaries,
@@ -195,6 +202,7 @@ pub fn read<R: Read + Seek>(
         Map => read_map(
             field_nodes,
             data_type,
+            ipc_field,
             buffers,
             reader,
             dictionaries,

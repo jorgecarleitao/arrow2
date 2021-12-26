@@ -6,7 +6,7 @@ pub use parquet2::metadata::KeyValue;
 
 use crate::datatypes::Schema;
 use crate::error::{ArrowError, Result};
-use crate::io::ipc::fb_to_schema;
+use crate::io::ipc::read::fb_to_schema;
 
 use super::super::super::ARROW_SCHEMA_META_KEY;
 

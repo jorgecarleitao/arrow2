@@ -79,12 +79,26 @@
 //! [3](https://github.com/jorgecarleitao/arrow2/tree/main/examples/ipc_pyarrow)).
 
 mod compression;
-mod convert;
 mod endianess;
 
-pub use convert::fb_to_schema;
 pub mod read;
 pub mod write;
 
 const ARROW_MAGIC: [u8; 6] = [b'A', b'R', b'R', b'O', b'W', b'1'];
 const CONTINUATION_MARKER: [u8; 4] = [0xff; 4];
+
+/// Struct containing `dictionary_id` and nested `IpcField`, allowing users
+/// to specify the dictionary ids of the IPC fields when writing to IPC.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct IpcField {
+    // optional children
+    pub fields: Vec<IpcField>,
+    // dictionary id
+    pub dictionary_id: Option<i64>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct IpcSchema {
+    pub fields: Vec<IpcField>,
+    pub is_little_endian: bool,
+}

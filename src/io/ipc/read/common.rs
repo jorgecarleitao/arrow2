@@ -1,20 +1,3 @@
-// Licensed to the Apache Software Foundation (ASF) under one
-// or more contributor license agreements.  See the NOTICE file
-// distributed with this work for additional information
-// regarding copyright ownership.  The ASF licenses this file
-// to you under the Apache License, Version 2.0 (the
-// "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
-
 use std::collections::{HashMap, VecDeque};
 use std::io::{Read, Seek};
 use std::sync::Arc;
@@ -25,9 +8,11 @@ use arrow_format::ipc::Schema::MetadataVersion;
 use crate::array::*;
 use crate::datatypes::{DataType, Field, Schema};
 use crate::error::{ArrowError, Result};
+use crate::io::ipc::{IpcField, IpcSchema};
 use crate::record_batch::RecordBatch;
 
 use super::deserialize::{read, skip};
+use super::Dictionaries;
 
 type ArrayRef = Arc<dyn Array>;
 
@@ -96,13 +81,14 @@ impl<'a, A, I: Iterator<Item = A>> Iterator for ProjectionIter<'a, A, I> {
 pub fn read_record_batch<R: Read + Seek>(
     batch: ipc::Message::RecordBatch,
     schema: Arc<Schema>,
+    ipc_schema: &IpcSchema,
     projection: Option<(&[usize], Arc<Schema>)>,
-    is_little_endian: bool,
-    dictionaries: &HashMap<usize, Arc<dyn Array>>,
+    dictionaries: &Dictionaries,
     version: MetadataVersion,
     reader: &mut R,
     block_offset: u64,
 ) -> Result<RecordBatch> {
+    assert_eq!(schema.fields().len(), ipc_schema.fields.len());
     let buffers = batch.buffers().ok_or_else(|| {
         ArrowError::OutOfSpec("Unable to get buffers from IPC RecordBatch".to_string())
     })?;
@@ -116,22 +102,26 @@ pub fn read_record_batch<R: Read + Seek>(
     let (schema, columns) = if let Some(projection) = projection {
         let projected_schema = projection.1.clone();
 
-        let projection = ProjectionIter::new(projection.0, schema.fields().iter());
+        let projection = ProjectionIter::new(
+            projection.0,
+            schema.fields().iter().zip(ipc_schema.fields.iter()),
+        );
 
         let arrays = projection
             .map(|maybe_field| match maybe_field {
-                ProjectionResult::Selected(field) => Some(read(
+                ProjectionResult::Selected((field, ipc_field)) => Some(read(
                     &mut field_nodes,
                     field,
+                    ipc_field,
                     &mut buffers,
                     reader,
                     dictionaries,
                     block_offset,
-                    is_little_endian,
+                    ipc_schema.is_little_endian,
                     batch.compression(),
                     version,
                 )),
-                ProjectionResult::NotSelected(field) => {
+                ProjectionResult::NotSelected((field, _)) => {
                     skip(&mut field_nodes, field.data_type(), &mut buffers);
                     None
                 }
@@ -143,15 +133,17 @@ pub fn read_record_batch<R: Read + Seek>(
         let arrays = schema
             .fields()
             .iter()
-            .map(|field| {
+            .zip(ipc_schema.fields.iter())
+            .map(|(field, ipc_field)| {
                 read(
                     &mut field_nodes,
                     field,
+                    ipc_field,
                     &mut buffers,
                     reader,
                     dictionaries,
                     block_offset,
-                    is_little_endian,
+                    ipc_schema.is_little_endian,
                     batch.compression(),
                     version,
                 )
@@ -162,25 +154,20 @@ pub fn read_record_batch<R: Read + Seek>(
     RecordBatch::try_new(schema, columns)
 }
 
-fn find_first_dict_field_d(id: usize, data_type: &DataType) -> Option<&Field> {
+fn find_first_dict_field_d<'a>(
+    id: i64,
+    data_type: &'a DataType,
+    ipc_field: &'a IpcField,
+) -> Option<(&'a Field, &'a IpcField)> {
     use DataType::*;
     match data_type {
-        Dictionary(_, inner, _) => find_first_dict_field_d(id, inner.as_ref()),
-        Map(field, _) => find_first_dict_field(id, field.as_ref()),
-        List(field) => find_first_dict_field(id, field.as_ref()),
-        LargeList(field) => find_first_dict_field(id, field.as_ref()),
-        FixedSizeList(field, _) => find_first_dict_field(id, field.as_ref()),
-        Union(fields, _, _) => {
-            for field in fields {
-                if let Some(f) = find_first_dict_field(id, field) {
-                    return Some(f);
-                }
-            }
-            None
+        Dictionary(_, inner, _) => find_first_dict_field_d(id, inner.as_ref(), ipc_field),
+        List(field) | LargeList(field) | FixedSizeList(field, ..) | Map(field, ..) => {
+            find_first_dict_field(id, field.as_ref(), &ipc_field.fields[0])
         }
-        Struct(fields) => {
-            for field in fields {
-                if let Some(f) = find_first_dict_field(id, field) {
+        Union(fields, ..) | Struct(fields) => {
+            for (field, ipc_field) in fields.iter().zip(ipc_field.fields.iter()) {
+                if let Some(f) = find_first_dict_field(id, field, ipc_field) {
                     return Some(f);
                 }
             }
@@ -190,18 +177,27 @@ fn find_first_dict_field_d(id: usize, data_type: &DataType) -> Option<&Field> {
     }
 }
 
-fn find_first_dict_field(id: usize, field: &Field) -> Option<&Field> {
-    if let DataType::Dictionary(_, _, _) = &field.data_type {
-        if field.dict_id as usize == id {
-            return Some(field);
+fn find_first_dict_field<'a>(
+    id: i64,
+    field: &'a Field,
+    ipc_field: &'a IpcField,
+) -> Option<(&'a Field, &'a IpcField)> {
+    if let Some(field_id) = ipc_field.dictionary_id {
+        if id == field_id {
+            return Some((field, ipc_field));
         }
     }
-    find_first_dict_field_d(id, &field.data_type)
+    find_first_dict_field_d(id, &field.data_type, ipc_field)
 }
 
-fn first_dict_field(id: usize, fields: &[Field]) -> Result<&Field> {
-    for field in fields {
-        if let Some(field) = find_first_dict_field(id, field) {
+fn first_dict_field<'a>(
+    id: i64,
+    fields: &'a [Field],
+    ipc_fields: &'a [IpcField],
+) -> Result<(&'a Field, &'a IpcField)> {
+    assert_eq!(fields.len(), ipc_fields.len());
+    for (field, ipc_field) in fields.iter().zip(ipc_fields.iter()) {
+        if let Some(field) = find_first_dict_field(id, field, ipc_field) {
             return Ok(field);
         }
     }
@@ -215,9 +211,9 @@ fn first_dict_field(id: usize, fields: &[Field]) -> Result<&Field> {
 /// updating the `dictionaries` with the resulting dictionary
 pub fn read_dictionary<R: Read + Seek>(
     batch: ipc::Message::DictionaryBatch,
-    schema: &Schema,
-    is_little_endian: bool,
-    dictionaries: &mut HashMap<usize, Arc<dyn Array>>,
+    fields: &[Field],
+    ipc_schema: &IpcSchema,
+    dictionaries: &mut Dictionaries,
     reader: &mut R,
     block_offset: u64,
 ) -> Result<()> {
@@ -228,7 +224,7 @@ pub fn read_dictionary<R: Read + Seek>(
     }
 
     let id = batch.id();
-    let first_field = first_dict_field(id as usize, &schema.fields)?;
+    let (first_field, first_ipc_field) = first_dict_field(id, fields, &ipc_schema.fields)?;
 
     // As the dictionary batch does not contain the type of the
     // values array, we need to retrieve this from the schema.
@@ -240,12 +236,17 @@ pub fn read_dictionary<R: Read + Seek>(
                 fields: vec![Field::new("", value_type.as_ref().clone(), false)],
                 metadata: HashMap::new(),
             });
+            let ipc_schema = IpcSchema {
+                fields: vec![first_ipc_field.clone()],
+                is_little_endian: ipc_schema.is_little_endian,
+            };
+            assert_eq!(ipc_schema.fields.len(), schema.fields().len());
             // Read a single column
             let record_batch = read_record_batch(
                 batch.data().unwrap(),
                 schema,
+                &ipc_schema,
                 None,
-                is_little_endian,
                 dictionaries,
                 MetadataVersion::V5,
                 reader,
@@ -259,7 +260,7 @@ pub fn read_dictionary<R: Read + Seek>(
         ArrowError::InvalidArgumentError("dictionary id not found in schema".to_string())
     })?;
 
-    dictionaries.insert(id as usize, dictionary_values);
+    dictionaries.insert(id, dictionary_values);
 
     Ok(())
 }

@@ -1,164 +1,17 @@
-// Licensed to the Apache Software Foundation (ASF) under one
-// or more contributor license agreements.  See the NOTICE file
-// distributed with this work for additional information
-// regarding copyright ownership.  The ASF licenses this file
-// to you under the Apache License, Version 2.0 (the
-// "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
-
-use std::{
-    collections::{BTreeMap, HashMap},
-    convert::TryFrom,
-};
+use std::collections::{BTreeMap, HashMap};
 
 use serde_derive::Deserialize;
-use serde_json::{json, Value};
+use serde_json::Value;
 
 use crate::{
     datatypes::UnionMode,
     error::{ArrowError, Result},
+    io::ipc::IpcField,
 };
 
 use crate::datatypes::{
     get_extension, DataType, Field, IntegerType, IntervalUnit, Schema, TimeUnit,
 };
-
-pub trait ToJson {
-    /// Generate a JSON representation
-    fn to_json(&self) -> Value;
-}
-
-impl ToJson for DataType {
-    fn to_json(&self) -> Value {
-        match self {
-            DataType::Null => json!({"name": "null"}),
-            DataType::Boolean => json!({"name": "bool"}),
-            DataType::Int8 => json!({"name": "int", "bitWidth": 8, "isSigned": true}),
-            DataType::Int16 => json!({"name": "int", "bitWidth": 16, "isSigned": true}),
-            DataType::Int32 => json!({"name": "int", "bitWidth": 32, "isSigned": true}),
-            DataType::Int64 => json!({"name": "int", "bitWidth": 64, "isSigned": true}),
-            DataType::UInt8 => json!({"name": "int", "bitWidth": 8, "isSigned": false}),
-            DataType::UInt16 => json!({"name": "int", "bitWidth": 16, "isSigned": false}),
-            DataType::UInt32 => json!({"name": "int", "bitWidth": 32, "isSigned": false}),
-            DataType::UInt64 => json!({"name": "int", "bitWidth": 64, "isSigned": false}),
-            DataType::Float16 => json!({"name": "floatingpoint", "precision": "HALF"}),
-            DataType::Float32 => json!({"name": "floatingpoint", "precision": "SINGLE"}),
-            DataType::Float64 => json!({"name": "floatingpoint", "precision": "DOUBLE"}),
-            DataType::Utf8 => json!({"name": "utf8"}),
-            DataType::LargeUtf8 => json!({"name": "largeutf8"}),
-            DataType::Binary => json!({"name": "binary"}),
-            DataType::LargeBinary => json!({"name": "largebinary"}),
-            DataType::FixedSizeBinary(byte_width) => {
-                json!({"name": "fixedsizebinary", "byteWidth": byte_width})
-            }
-            DataType::Struct(_) => json!({"name": "struct"}),
-            DataType::Union(_, _, _) => json!({"name": "union"}),
-            DataType::Map(_, _) => json!({"name": "map"}),
-            DataType::List(_) => json!({ "name": "list"}),
-            DataType::LargeList(_) => json!({ "name": "largelist"}),
-            DataType::FixedSizeList(_, length) => {
-                json!({"name":"fixedsizelist", "listSize": length})
-            }
-            DataType::Time32(unit) => {
-                json!({"name": "time", "bitWidth": 32, "unit": match unit {
-                    TimeUnit::Second => "SECOND",
-                    TimeUnit::Millisecond => "MILLISECOND",
-                    TimeUnit::Microsecond => "MICROSECOND",
-                    TimeUnit::Nanosecond => "NANOSECOND",
-                }})
-            }
-            DataType::Time64(unit) => {
-                json!({"name": "time", "bitWidth": 64, "unit": match unit {
-                    TimeUnit::Second => "SECOND",
-                    TimeUnit::Millisecond => "MILLISECOND",
-                    TimeUnit::Microsecond => "MICROSECOND",
-                    TimeUnit::Nanosecond => "NANOSECOND",
-                }})
-            }
-            DataType::Date32 => {
-                json!({"name": "date", "unit": "DAY"})
-            }
-            DataType::Date64 => {
-                json!({"name": "date", "unit": "MILLISECOND"})
-            }
-            DataType::Timestamp(unit, None) => {
-                json!({"name": "timestamp", "unit": match unit {
-                    TimeUnit::Second => "SECOND",
-                    TimeUnit::Millisecond => "MILLISECOND",
-                    TimeUnit::Microsecond => "MICROSECOND",
-                    TimeUnit::Nanosecond => "NANOSECOND",
-                }})
-            }
-            DataType::Timestamp(unit, Some(tz)) => {
-                json!({"name": "timestamp", "unit": match unit {
-                    TimeUnit::Second => "SECOND",
-                    TimeUnit::Millisecond => "MILLISECOND",
-                    TimeUnit::Microsecond => "MICROSECOND",
-                    TimeUnit::Nanosecond => "NANOSECOND",
-                }, "timezone": tz})
-            }
-            DataType::Interval(unit) => json!({"name": "interval", "unit": match unit {
-                IntervalUnit::YearMonth => "YEAR_MONTH",
-                IntervalUnit::DayTime => "DAY_TIME",
-                IntervalUnit::MonthDayNano => "MONTH_DAY_NANO",
-            }}),
-            DataType::Duration(unit) => json!({"name": "duration", "unit": match unit {
-                TimeUnit::Second => "SECOND",
-                TimeUnit::Millisecond => "MILLISECOND",
-                TimeUnit::Microsecond => "MICROSECOND",
-                TimeUnit::Nanosecond => "NANOSECOND",
-            }}),
-            DataType::Dictionary(_, _, _) => json!({ "name": "dictionary"}),
-            DataType::Decimal(precision, scale) => {
-                json!({"name": "decimal", "precision": precision, "scale": scale})
-            }
-            DataType::Extension(_, inner_data_type, _) => inner_data_type.to_json(),
-        }
-    }
-}
-
-impl ToJson for Field {
-    fn to_json(&self) -> Value {
-        let children: Vec<Value> = match self.data_type() {
-            DataType::Struct(fields) => fields.iter().map(|f| f.to_json()).collect(),
-            DataType::List(field) => vec![field.to_json()],
-            DataType::LargeList(field) => vec![field.to_json()],
-            DataType::FixedSizeList(field, _) => vec![field.to_json()],
-            _ => vec![],
-        };
-        match self.data_type() {
-            DataType::Dictionary(ref index_type, ref value_type, is_ordered) => {
-                let index_type: DataType = (*index_type).into();
-                json!({
-                    "name": self.name(),
-                    "nullable": self.is_nullable(),
-                    "type": value_type.to_json(),
-                    "children": children,
-                    "dictionary": {
-                        "id": self.dict_id(),
-                        "indexType": index_type.to_json(),
-                        "isOrdered": is_ordered
-                    }
-                })
-            }
-            _ => json!({
-                "name": self.name(),
-                "nullable": self.is_nullable(),
-                "type": self.data_type().to_json(),
-                "children": children
-            }),
-        }
-    }
-}
 
 fn to_time_unit(item: Option<&Value>) -> Result<TimeUnit> {
     match item {
@@ -218,13 +71,13 @@ fn to_int(item: &Value) -> Result<IntegerType> {
     })
 }
 
-fn children(children: Option<&Value>) -> Result<Vec<Field>> {
+fn deserialize_fields(children: Option<&Value>) -> Result<Vec<Field>> {
     children
         .map(|x| {
             if let Value::Array(values) = x {
                 values
                     .iter()
-                    .map(Field::try_from)
+                    .map(deserialize_field)
                     .collect::<Result<Vec<_>>>()
             } else {
                 Err(ArrowError::OutOfSpec(
@@ -440,103 +293,124 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
     })
 }
 
-impl TryFrom<&Value> for Field {
-    type Error = ArrowError;
+fn deserialize_ipc_field(value: &Value) -> Result<IpcField> {
+    let map = if let Value::Object(map) = value {
+        map
+    } else {
+        return Err(ArrowError::OutOfSpec(
+            "Invalid json value type for field".to_string(),
+        ));
+    };
 
-    fn try_from(value: &Value) -> Result<Self> {
-        match *value {
-            Value::Object(ref map) => {
-                let name = match map.get("name") {
-                    Some(&Value::String(ref name)) => name.to_string(),
-                    _ => {
-                        return Err(ArrowError::OutOfSpec(
-                            "Field missing 'name' attribute".to_string(),
-                        ));
-                    }
-                };
-                let nullable = match map.get("nullable") {
-                    Some(&Value::Bool(b)) => b,
-                    _ => {
-                        return Err(ArrowError::OutOfSpec(
-                            "Field missing 'nullable' attribute".to_string(),
-                        ));
-                    }
-                };
-
-                let children = children(map.get("children"))?;
-
-                let metadata = if let Some(metadata) = map.get("metadata") {
-                    Some(read_metadata(metadata)?)
-                } else {
-                    None
-                };
-
-                let extension = get_extension(&metadata);
-
-                let type_ = map
-                    .get("type")
-                    .ok_or_else(|| ArrowError::OutOfSpec("type missing".to_string()))?;
-
-                let data_type = to_data_type(type_, children)?;
-
-                let data_type = if let Some((name, metadata)) = extension {
-                    DataType::Extension(name, Box::new(data_type), metadata)
-                } else {
-                    data_type
-                };
-
-                let data_type = if let Some(dictionary) = map.get("dictionary") {
-                    let index_type = match dictionary.get("indexType") {
-                        Some(t) => to_int(t)?,
-                        _ => {
-                            return Err(ArrowError::OutOfSpec(
-                                "Field missing 'indexType' attribute".to_string(),
-                            ));
-                        }
-                    };
-                    let is_ordered = match dictionary.get("isOrdered") {
-                        Some(&Value::Bool(n)) => n,
-                        _ => {
-                            return Err(ArrowError::OutOfSpec(
-                                "Field missing 'isOrdered' attribute".to_string(),
-                            ));
-                        }
-                    };
-                    DataType::Dictionary(index_type, Box::new(data_type), is_ordered)
-                } else {
-                    data_type
-                };
-
-                let dict_id = if let Some(dictionary) = map.get("dictionary") {
-                    match dictionary.get("id") {
-                        Some(Value::Number(n)) => n.as_i64().unwrap(),
-                        _ => {
-                            return Err(ArrowError::OutOfSpec(
-                                "Field missing 'id' attribute".to_string(),
-                            ));
-                        }
-                    }
-                } else {
-                    0
-                };
-                let mut f = Field::new_dict(&name, data_type, nullable, dict_id);
-                f.set_metadata(metadata);
-                Ok(f)
+    let fields = map
+        .get("children")
+        .map(|x| {
+            if let Value::Array(values) = x {
+                values
+                    .iter()
+                    .map(deserialize_ipc_field)
+                    .collect::<Result<Vec<_>>>()
+            } else {
+                Err(ArrowError::OutOfSpec(
+                    "children must be an array".to_string(),
+                ))
             }
-            _ => Err(ArrowError::OutOfSpec(
-                "Invalid json value type for field".to_string(),
-            )),
+        })
+        .unwrap_or_else(|| Ok(vec![]))?;
+
+    let dictionary_id = if let Some(dictionary) = map.get("dictionary") {
+        match dictionary.get("id") {
+            Some(Value::Number(n)) => Some(n.as_i64().unwrap()),
+            _ => {
+                return Err(ArrowError::OutOfSpec(
+                    "Field missing 'id' attribute".to_string(),
+                ));
+            }
         }
-    }
+    } else {
+        None
+    };
+    Ok(IpcField {
+        fields,
+        dictionary_id,
+    })
 }
 
-impl ToJson for Schema {
-    fn to_json(&self) -> Value {
-        json!({
-            "fields": self.fields.iter().map(|field| field.to_json()).collect::<Vec<Value>>(),
-            "metadata": serde_json::to_value(&self.metadata).unwrap(),
-        })
-    }
+fn deserialize_field(value: &Value) -> Result<Field> {
+    let map = if let Value::Object(map) = value {
+        map
+    } else {
+        return Err(ArrowError::OutOfSpec(
+            "Invalid json value type for field".to_string(),
+        ));
+    };
+
+    let name = match map.get("name") {
+        Some(&Value::String(ref name)) => name.to_string(),
+        _ => {
+            return Err(ArrowError::OutOfSpec(
+                "Field missing 'name' attribute".to_string(),
+            ));
+        }
+    };
+    let nullable = match map.get("nullable") {
+        Some(&Value::Bool(b)) => b,
+        _ => {
+            return Err(ArrowError::OutOfSpec(
+                "Field missing 'nullable' attribute".to_string(),
+            ));
+        }
+    };
+
+    let metadata = if let Some(metadata) = map.get("metadata") {
+        Some(read_metadata(metadata)?)
+    } else {
+        None
+    };
+
+    let extension = get_extension(&metadata);
+
+    let type_ = map
+        .get("type")
+        .ok_or_else(|| ArrowError::OutOfSpec("type missing".to_string()))?;
+
+    let children = deserialize_fields(map.get("children"))?;
+    let data_type = to_data_type(type_, children)?;
+
+    let data_type = if let Some((name, metadata)) = extension {
+        DataType::Extension(name, Box::new(data_type), metadata)
+    } else {
+        data_type
+    };
+
+    let data_type = if let Some(dictionary) = map.get("dictionary") {
+        let index_type = match dictionary.get("indexType") {
+            Some(t) => to_int(t)?,
+            _ => {
+                return Err(ArrowError::OutOfSpec(
+                    "Field missing 'indexType' attribute".to_string(),
+                ));
+            }
+        };
+        let is_ordered = match dictionary.get("isOrdered") {
+            Some(&Value::Bool(n)) => n,
+            _ => {
+                return Err(ArrowError::OutOfSpec(
+                    "Field missing 'isOrdered' attribute".to_string(),
+                ));
+            }
+        };
+        DataType::Dictionary(index_type, Box::new(data_type), is_ordered)
+    } else {
+        data_type
+    };
+
+    Ok(Field {
+        name,
+        data_type,
+        nullable,
+        metadata,
+    })
 }
 
 #[derive(Deserialize)]
@@ -575,31 +449,43 @@ fn from_metadata(json: &Value) -> Result<HashMap<String, String>> {
     }
 }
 
-impl TryFrom<&Value> for Schema {
-    type Error = ArrowError;
+/// Deserializes a [`Value`]
+pub fn deserialize_schema(value: &Value) -> Result<(Schema, Vec<IpcField>)> {
+    let schema = if let Value::Object(schema) = value {
+        schema
+    } else {
+        return Err(ArrowError::OutOfSpec(
+            "Invalid json value type for schema".to_string(),
+        ));
+    };
 
-    fn try_from(json: &Value) -> Result<Self> {
-        match *json {
-            Value::Object(ref schema) => {
-                let fields = if let Some(Value::Array(fields)) = schema.get("fields") {
-                    fields.iter().map(Field::try_from).collect::<Result<_>>()?
-                } else {
-                    return Err(ArrowError::OutOfSpec(
-                        "Schema fields should be an array".to_string(),
-                    ));
-                };
+    let fields = if let Some(Value::Array(fields)) = schema.get("fields") {
+        fields
+            .iter()
+            .map(deserialize_field)
+            .collect::<Result<_>>()?
+    } else {
+        return Err(ArrowError::OutOfSpec(
+            "Schema fields should be an array".to_string(),
+        ));
+    };
 
-                let metadata = if let Some(value) = schema.get("metadata") {
-                    from_metadata(value)?
-                } else {
-                    HashMap::default()
-                };
+    let ipc_fields = if let Some(Value::Array(fields)) = schema.get("fields") {
+        fields
+            .iter()
+            .map(deserialize_ipc_field)
+            .collect::<Result<_>>()?
+    } else {
+        return Err(ArrowError::OutOfSpec(
+            "Schema fields should be an array".to_string(),
+        ));
+    };
 
-                Ok(Self { fields, metadata })
-            }
-            _ => Err(ArrowError::OutOfSpec(
-                "Invalid json value type for schema".to_string(),
-            )),
-        }
-    }
+    let metadata = if let Some(value) = schema.get("metadata") {
+        from_metadata(value)?
+    } else {
+        HashMap::default()
+    };
+
+    Ok((Schema { fields, metadata }, ipc_fields))
 }

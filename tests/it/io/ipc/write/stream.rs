@@ -1,38 +1,47 @@
 use std::io::Cursor;
 
+use arrow2::datatypes::Schema;
 use arrow2::error::Result;
 use arrow2::io::ipc::read::read_stream_metadata;
 use arrow2::io::ipc::read::StreamReader;
 use arrow2::io::ipc::write::{StreamWriter, WriteOptions};
+use arrow2::io::ipc::IpcField;
+use arrow2::record_batch::RecordBatch;
 
 use crate::io::ipc::common::read_arrow_stream;
 use crate::io::ipc::common::read_gzip_json;
 
-fn test_file(version: &str, file_name: &str) {
-    let (schema, batches) = read_arrow_stream(version, file_name);
+fn write_(schema: &Schema, ipc_fields: &[IpcField], batches: &[RecordBatch]) -> Vec<u8> {
+    let mut result = vec![];
 
-    let mut result = Vec::<u8>::new();
-
-    // write IPC version 5
-    {
-        let options = WriteOptions { compression: None };
-        let mut writer = StreamWriter::try_new(&mut result, &schema, options).unwrap();
-        for batch in batches {
-            writer.write(&batch).unwrap();
-        }
-        writer.finish().unwrap();
+    let options = WriteOptions { compression: None };
+    let mut writer = StreamWriter::new(&mut result, options);
+    writer.start(&schema, ipc_fields).unwrap();
+    for batch in batches {
+        writer.write(batch, ipc_fields).unwrap();
     }
+    writer.finish().unwrap();
+    result
+}
+
+fn test_file(version: &str, file_name: &str) {
+    let (schema, ipc_fields, batches) = read_arrow_stream(version, file_name);
+
+    let result = write_(&schema, &ipc_fields, &batches);
 
     let mut reader = Cursor::new(result);
     let metadata = read_stream_metadata(&mut reader).unwrap();
     let reader = StreamReader::new(reader, metadata);
 
-    let schema = reader.schema().clone();
+    let schema = reader.metadata().schema.clone();
+    let ipc_fields = reader.metadata().ipc_schema.fields.clone();
 
     // read expected JSON output
-    let (expected_schema, expected_batches) = read_gzip_json(version, file_name).unwrap();
+    let (expected_schema, expected_ipc_fields, expected_batches) =
+        read_gzip_json(version, file_name).unwrap();
 
     assert_eq!(schema.as_ref(), &expected_schema);
+    assert_eq!(ipc_fields, expected_ipc_fields);
 
     let batches = reader
         .map(|x| x.map(|x| x.unwrap()))

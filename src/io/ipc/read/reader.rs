@@ -1,21 +1,3 @@
-// Licensed to the Apache Software Foundation (ASF) under one
-// or more contributor license agreements.  See the NOTICE file
-// distributed with this work for additional information
-// regarding copyright ownership.  The ASF licenses this file
-// to you under the Apache License, Version 2.0 (the
-// "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
-
-use std::collections::HashMap;
 use std::io::{Read, Seek, SeekFrom};
 use std::sync::Arc;
 
@@ -23,19 +5,23 @@ use arrow_format::ipc;
 use arrow_format::ipc::flatbuffers::VerifierOptions;
 use arrow_format::ipc::File::Block;
 
-use crate::array::*;
 use crate::datatypes::Schema;
 use crate::error::{ArrowError, Result};
+use crate::io::ipc::IpcSchema;
 use crate::record_batch::RecordBatch;
 
-use super::super::convert;
 use super::super::{ARROW_MAGIC, CONTINUATION_MARKER};
 use super::common::*;
+use super::schema::fb_to_schema;
+use super::Dictionaries;
 
 #[derive(Debug, Clone)]
 pub struct FileMetadata {
-    /// The schema that is read from the file header
-    schema: Arc<Schema>,
+    /// The schema that is read from the file footer
+    pub schema: Arc<Schema>,
+
+    /// The files' [`IpcSchema`]
+    pub ipc_schema: IpcSchema,
 
     /// The blocks in the file
     ///
@@ -43,12 +29,10 @@ pub struct FileMetadata {
     blocks: Vec<ipc::File::Block>,
 
     /// Dictionaries associated to each dict_id
-    dictionaries: HashMap<usize, Arc<dyn Array>>,
+    dictionaries: Dictionaries,
 
     /// FileMetadata version
     version: ipc::Schema::MetadataVersion,
-
-    is_little_endian: bool,
 }
 
 impl FileMetadata {
@@ -91,9 +75,9 @@ fn read_dictionary_message<R: Read + Seek>(
 fn read_dictionaries<R: Read + Seek>(
     reader: &mut R,
     schema: &Schema,
-    is_little_endian: bool,
+    ipc_schema: &IpcSchema,
     blocks: &[Block],
-) -> Result<HashMap<usize, Arc<dyn Array>>> {
+) -> Result<Dictionaries> {
     let mut dictionaries = Default::default();
     let mut data = vec![];
 
@@ -112,8 +96,8 @@ fn read_dictionaries<R: Read + Seek>(
                 let batch = message.header_as_dictionary_batch().unwrap();
                 read_dictionary(
                     batch,
-                    schema,
-                    is_little_endian,
+                    schema.fields(),
+                    ipc_schema,
                     &mut dictionaries,
                     reader,
                     block_offset,
@@ -178,20 +162,20 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
     let ipc_schema = footer
         .schema()
         .ok_or_else(|| ArrowError::OutOfSpec("Unable to get the schema from footer".to_string()))?;
-    let (schema, is_little_endian) = convert::fb_to_schema(ipc_schema);
+    let (schema, ipc_schema) = fb_to_schema(ipc_schema);
     let schema = Arc::new(schema);
 
     let dictionary_blocks = footer.dictionaries();
 
     let dictionaries = if let Some(blocks) = dictionary_blocks {
-        read_dictionaries(reader, &schema, is_little_endian, blocks)?
+        read_dictionaries(reader, &schema, &ipc_schema, blocks)?
     } else {
         Default::default()
     };
 
     Ok(FileMetadata {
         schema,
-        is_little_endian,
+        ipc_schema,
         blocks: blocks.to_vec(),
         dictionaries,
         version: footer.version(),
@@ -249,8 +233,8 @@ pub fn read_batch<R: Read + Seek>(
     read_record_batch(
         batch,
         metadata.schema.clone(),
+        &metadata.ipc_schema,
         projection,
-        metadata.is_little_endian,
         &metadata.dictionaries,
         metadata.version,
         reader,
@@ -295,6 +279,11 @@ impl<R: Read + Seek> FileReader<R> {
             .as_ref()
             .map(|x| &x.1)
             .unwrap_or(&self.metadata.schema)
+    }
+
+    /// Returns the [`FileMetadata`]
+    pub fn metadata(&self) -> &FileMetadata {
+        &self.metadata
     }
 
     /// Consumes this FileReader, returning the underlying reader

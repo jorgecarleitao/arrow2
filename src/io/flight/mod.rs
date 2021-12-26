@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::sync::Arc;
 
@@ -6,26 +5,28 @@ use arrow_format::flight::data::{FlightData, SchemaResult};
 use arrow_format::ipc;
 
 use crate::{
-    array::*,
     datatypes::*,
     error::{ArrowError, Result},
-    io::ipc::fb_to_schema,
-    io::ipc::read::read_record_batch,
+    io::ipc::read,
     io::ipc::write,
-    io::ipc::write::common::{encoded_batch, DictionaryTracker, EncodedData, WriteOptions},
+    io::ipc::write::common::{encode_columns, DictionaryTracker, EncodedData, WriteOptions},
     record_batch::RecordBatch,
 };
+
+use super::ipc::{IpcField, IpcSchema};
 
 /// Serializes a [`RecordBatch`] to a vector of [`FlightData`] representing the serialized dictionaries
 /// and a [`FlightData`] representing the batch.
 pub fn serialize_batch(
     batch: &RecordBatch,
+    fields: &[IpcField],
     options: &WriteOptions,
 ) -> (Vec<FlightData>, FlightData) {
     let mut dictionary_tracker = DictionaryTracker::new(false);
 
+    let columns = batch.clone().into();
     let (encoded_dictionaries, encoded_batch) =
-        encoded_batch(batch, &mut dictionary_tracker, options)
+        encode_columns(&columns, fields, &mut dictionary_tracker, options)
             .expect("DictionaryTracker configured above to not error on replacement");
 
     let flight_dictionaries = encoded_dictionaries.into_iter().map(Into::into).collect();
@@ -45,38 +46,38 @@ impl From<EncodedData> for FlightData {
 }
 
 /// Serializes a [`Schema`] to [`SchemaResult`].
-pub fn serialize_schema_to_result(schema: &Schema) -> SchemaResult {
+pub fn serialize_schema_to_result(schema: &Schema, ipc_fields: &[IpcField]) -> SchemaResult {
     SchemaResult {
-        schema: schema_as_flatbuffer(schema),
+        schema: schema_as_flatbuffer(schema, ipc_fields),
     }
 }
 
 /// Serializes a [`Schema`] to [`FlightData`].
-pub fn serialize_schema(schema: &Schema) -> FlightData {
-    let data_header = schema_as_flatbuffer(schema);
+pub fn serialize_schema(schema: &Schema, ipc_fields: &[IpcField]) -> FlightData {
+    let data_header = schema_as_flatbuffer(schema, ipc_fields);
     FlightData {
         data_header,
         ..Default::default()
     }
 }
 
-/// Convert a [`Schema`] to bytes in the format expected in [`arrow_format::flight::FlightInfo`].
-pub fn serialize_schema_to_info(schema: &Schema) -> Result<Vec<u8>> {
-    let encoded_data = schema_as_encoded_data(schema);
+/// Convert a [`Schema`] to bytes in the format expected in [`arrow_format::flight::data::FlightInfo`].
+pub fn serialize_schema_to_info(schema: &Schema, ipc_fields: &[IpcField]) -> Result<Vec<u8>> {
+    let encoded_data = schema_as_encoded_data(schema, ipc_fields);
 
     let mut schema = vec![];
     write::common_sync::write_message(&mut schema, encoded_data)?;
     Ok(schema)
 }
 
-fn schema_as_flatbuffer(schema: &Schema) -> Vec<u8> {
-    let encoded_data = schema_as_encoded_data(schema);
+fn schema_as_flatbuffer(schema: &Schema, ipc_fields: &[IpcField]) -> Vec<u8> {
+    let encoded_data = schema_as_encoded_data(schema, ipc_fields);
     encoded_data.ipc_message
 }
 
-fn schema_as_encoded_data(schema: &Schema) -> EncodedData {
+fn schema_as_encoded_data(schema: &Schema, ipc_fields: &[IpcField]) -> EncodedData {
     EncodedData {
-        ipc_message: write::schema_to_bytes(schema),
+        ipc_message: write::schema_to_bytes(schema, ipc_fields),
         arrow_data: vec![],
     }
 }
@@ -84,7 +85,7 @@ fn schema_as_encoded_data(schema: &Schema) -> EncodedData {
 /// Deserialize an IPC message into a schema
 fn schema_from_bytes(bytes: &[u8]) -> Result<Schema> {
     if let Ok(ipc) = ipc::Message::root_as_message(bytes) {
-        if let Some((schema, _)) = ipc.header_as_schema().map(fb_to_schema) {
+        if let Some((schema, _)) = ipc.header_as_schema().map(read::fb_to_schema) {
             Ok(schema)
         } else {
             Err(ArrowError::OutOfSpec(
@@ -126,8 +127,8 @@ impl TryFrom<&SchemaResult> for Schema {
 pub fn deserialize_batch(
     data: &FlightData,
     schema: Arc<Schema>,
-    is_little_endian: bool,
-    dictionaries: &HashMap<usize, Arc<dyn Array>>,
+    ipc_schema: &IpcSchema,
+    dictionaries: &read::Dictionaries,
 ) -> Result<RecordBatch> {
     // check that the data_header is a record batch message
     let message = ipc::Message::root_as_message(&data.data_header[..]).map_err(|err| {
@@ -144,11 +145,11 @@ pub fn deserialize_batch(
             )
         })
         .map(|batch| {
-            read_record_batch(
+            read::read_record_batch(
                 batch,
                 schema.clone(),
+                ipc_schema,
                 None,
-                is_little_endian,
                 dictionaries,
                 ipc::Schema::MetadataVersion::V5,
                 &mut reader,

@@ -1,8 +1,9 @@
 use crate::record_batch::RecordBatch;
 use crate::{array::PrimitiveArray, datatypes::DataType};
 
-use super::{ArrowJsonBatch, ArrowJsonColumn};
+use super::super::{ArrowJsonBatch, ArrowJsonColumn};
 
+/// Serializes a [`RecordBatch`] to [`ArrowJsonBatch`].
 pub fn from_record_batch(batch: &RecordBatch) -> ArrowJsonBatch {
     let mut json_batch = ArrowJsonBatch {
         count: batch.num_rows(),

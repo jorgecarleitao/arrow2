@@ -11,10 +11,10 @@ fn write_batches(path: &str, schema: &Schema, batches: &[RecordBatch]) -> Result
     let file = File::create(path)?;
 
     let options = write::WriteOptions { compression: None };
-    let mut writer = write::FileWriter::try_new(file, schema, options)?;
+    let mut writer = write::FileWriter::try_new(file, schema, None, options)?;
 
     for batch in batches {
-        writer.write(batch)?
+        writer.write(batch, None)?
     }
     writer.finish()
 }

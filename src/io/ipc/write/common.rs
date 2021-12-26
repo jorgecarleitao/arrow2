@@ -1,15 +1,17 @@
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 use arrow_format::ipc;
 use arrow_format::ipc::flatbuffers::FlatBufferBuilder;
 use arrow_format::ipc::Message::CompressionType;
 
 use crate::array::*;
+use crate::columns::Columns;
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 use crate::io::ipc::endianess::is_native_little_endian;
-use crate::record_batch::RecordBatch;
+use crate::io::ipc::read::Dictionaries;
 
+use super::super::IpcField;
 use super::{write, write_dictionary};
 
 /// Compression codec
@@ -30,7 +32,7 @@ pub struct WriteOptions {
 }
 
 fn encode_dictionary(
-    field: &Field,
+    field: &IpcField,
     array: &Arc<dyn Array>,
     options: &WriteOptions,
     dictionary_tracker: &mut DictionaryTracker,
@@ -41,14 +43,11 @@ fn encode_dictionary(
         Utf8 | LargeUtf8 | Binary | LargeBinary | Primitive(_) | Boolean | Null
         | FixedSizeBinary => Ok(()),
         Dictionary(key_type) => match_integer_type!(key_type, |$T| {
-            let dict_id = field
-                .dict_id()
-                .expect("All Dictionary types have `dict_id`");
+            let dict_id = field.dictionary_id
+                .ok_or_else(|| ArrowError::InvalidArgumentError("Dictionaries must have an associated id".to_string()))?;
 
             let values = array.as_any().downcast_ref::<DictionaryArray<$T>>().unwrap().values();
-            // todo: this is won't work for Dict<Dict<...>>;
-            let field = Field::new("item", values.data_type().clone(), true);
-            encode_dictionary(&field,
+            encode_dictionary(field,
                 values,
                 options,
                 dictionary_tracker,
@@ -68,19 +67,16 @@ fn encode_dictionary(
             Ok(())
         }),
         Struct => {
-            let values = array
-                .as_any()
-                .downcast_ref::<StructArray>()
-                .unwrap()
-                .values();
-            let fields = if let DataType::Struct(fields) = array.data_type() {
-                fields
-            } else {
-                unreachable!()
-            };
+            let array = array.as_any().downcast_ref::<StructArray>().unwrap();
+            let fields = field.fields.as_slice();
+            if array.fields().len() != fields.len() {
+                return Err(ArrowError::InvalidArgumentError(
+                    "The number of fields in a struct must equal the number of children in IpcField".to_string(),
+                ));
+            }
             fields
                 .iter()
-                .zip(values.iter())
+                .zip(array.values().iter())
                 .try_for_each(|(field, values)| {
                     encode_dictionary(
                         field,
@@ -97,11 +93,7 @@ fn encode_dictionary(
                 .downcast_ref::<ListArray<i32>>()
                 .unwrap()
                 .values();
-            let field = if let DataType::List(field) = field.data_type() {
-                field.as_ref()
-            } else {
-                unreachable!()
-            };
+            let field = &field.fields[0]; // todo: error instead
             encode_dictionary(
                 field,
                 values,
@@ -116,11 +108,7 @@ fn encode_dictionary(
                 .downcast_ref::<ListArray<i64>>()
                 .unwrap()
                 .values();
-            let field = if let DataType::LargeList(field) = field.data_type() {
-                field.as_ref()
-            } else {
-                unreachable!()
-            };
+            let field = &field.fields[0]; // todo: error instead
             encode_dictionary(
                 field,
                 values,
@@ -135,11 +123,7 @@ fn encode_dictionary(
                 .downcast_ref::<FixedSizeListArray>()
                 .unwrap()
                 .values();
-            let field = if let DataType::FixedSizeList(field, _) = field.data_type() {
-                field.as_ref()
-            } else {
-                unreachable!()
-            };
+            let field = &field.fields[0]; // todo: error instead
             encode_dictionary(
                 field,
                 values,
@@ -154,11 +138,13 @@ fn encode_dictionary(
                 .downcast_ref::<UnionArray>()
                 .unwrap()
                 .fields();
-            let fields = if let DataType::Union(fields, _, _) = field.data_type() {
-                fields
-            } else {
-                unreachable!()
-            };
+            let fields = &field.fields[..]; // todo: error instead
+            if values.len() != fields.len() {
+                return Err(ArrowError::InvalidArgumentError(
+                    "The number of fields in a union must equal the number of children in IpcField"
+                        .to_string(),
+                ));
+            }
             fields
                 .iter()
                 .zip(values.iter())
@@ -174,11 +160,7 @@ fn encode_dictionary(
         }
         Map => {
             let values = array.as_any().downcast_ref::<MapArray>().unwrap().field();
-            let field = if let DataType::Map(field, _) = field.data_type() {
-                field.as_ref()
-            } else {
-                unreachable!()
-            };
+            let field = &field.fields[0]; // todo: error instead
             encode_dictionary(
                 field,
                 values,
@@ -190,39 +172,39 @@ fn encode_dictionary(
     }
 }
 
-pub fn encoded_batch(
-    batch: &RecordBatch,
+pub fn encode_columns(
+    columns: &Columns<Arc<dyn Array>>,
+    fields: &[IpcField],
     dictionary_tracker: &mut DictionaryTracker,
     options: &WriteOptions,
 ) -> Result<(Vec<EncodedData>, EncodedData)> {
-    let schema = batch.schema();
-    let mut encoded_dictionaries = Vec::with_capacity(schema.fields().len());
+    let mut encoded_dictionaries = vec![];
 
-    for (field, column) in schema.fields().iter().zip(batch.columns()) {
+    for (field, array) in fields.iter().zip(columns.as_ref()) {
         encode_dictionary(
             field,
-            column,
+            array,
             options,
             dictionary_tracker,
             &mut encoded_dictionaries,
         )?;
     }
 
-    let encoded_message = record_batch_to_bytes(batch, options);
+    let encoded_message = columns_to_bytes(columns, options);
 
     Ok((encoded_dictionaries, encoded_message))
 }
 
 /// Write a `RecordBatch` into two sets of bytes, one for the header (ipc::Schema::Message) and the
 /// other for the batch's data
-fn record_batch_to_bytes(batch: &RecordBatch, options: &WriteOptions) -> EncodedData {
+fn columns_to_bytes(columns: &Columns<Arc<dyn Array>>, options: &WriteOptions) -> EncodedData {
     let mut fbb = FlatBufferBuilder::new();
 
     let mut nodes: Vec<ipc::Message::FieldNode> = vec![];
     let mut buffers: Vec<ipc::Schema::Buffer> = vec![];
     let mut arrow_data: Vec<u8> = vec![];
     let mut offset = 0;
-    for array in batch.columns() {
+    for array in columns.arrays() {
         write(
             array.as_ref(),
             &mut buffers,
@@ -252,7 +234,7 @@ fn record_batch_to_bytes(batch: &RecordBatch, options: &WriteOptions) -> Encoded
 
     let root = {
         let mut batch_builder = ipc::Message::RecordBatchBuilder::new(&mut fbb);
-        batch_builder.add_length(batch.num_rows() as i64);
+        batch_builder.add_length(columns.len() as i64);
         batch_builder.add_nodes(nodes);
         batch_builder.add_buffers(buffers);
         if let Some(compression) = compression {
@@ -358,14 +340,14 @@ fn dictionary_batch_to_bytes(
 /// multiple times. Can optionally error if an update to an existing dictionary is attempted, which
 /// isn't allowed in the `FileWriter`.
 pub struct DictionaryTracker {
-    written: HashMap<i64, Arc<dyn Array>>,
+    written: Dictionaries,
     error_on_replacement: bool,
 }
 
 impl DictionaryTracker {
     pub fn new(error_on_replacement: bool) -> Self {
         Self {
-            written: HashMap::new(),
+            written: Dictionaries::new(),
             error_on_replacement,
         }
     }

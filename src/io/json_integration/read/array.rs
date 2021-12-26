@@ -1,20 +1,3 @@
-// Licensed to the Apache Software Foundation (ASF) under one
-// or more contributor license agreements.  See the NOTICE file
-// distributed with this work for additional information
-// regarding copyright ownership.  The ASF licenses this file
-// to you under the Apache License, Version 2.0 (the
-// "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
-
 use std::{collections::HashMap, sync::Arc};
 
 use num_traits::NumCast;
@@ -26,11 +9,12 @@ use crate::{
     buffer::Buffer,
     datatypes::{DataType, PhysicalType, PrimitiveType, Schema},
     error::{ArrowError, Result},
+    io::ipc::IpcField,
     record_batch::RecordBatch,
     types::{days_ms, months_days_ns, NativeType},
 };
 
-use super::{ArrowJsonBatch, ArrowJsonColumn, ArrowJsonDictionaryBatch};
+use super::super::{ArrowJsonBatch, ArrowJsonColumn, ArrowJsonDictionaryBatch};
 
 fn to_validity(validity: &Option<Vec<u8>>) -> Option<Bitmap> {
     validity.as_ref().and_then(|x| {
@@ -209,6 +193,7 @@ fn to_utf8<O: Offset>(json_col: &ArrowJsonColumn, data_type: DataType) -> Arc<dy
 fn to_list<O: Offset>(
     json_col: &ArrowJsonColumn,
     data_type: DataType,
+    field: &IpcField,
     dictionaries: &HashMap<i64, ArrowJsonDictionaryBatch>,
 ) -> Result<Arc<dyn Array>> {
     let validity = to_validity(&json_col.validity);
@@ -217,7 +202,7 @@ fn to_list<O: Offset>(
     let children = &json_col.children.as_ref().unwrap()[0];
     let values = to_array(
         child_field.data_type().clone(),
-        child_field.dict_id(),
+        &field.fields[0],
         children,
         dictionaries,
     )?;
@@ -230,6 +215,7 @@ fn to_list<O: Offset>(
 fn to_map(
     json_col: &ArrowJsonColumn,
     data_type: DataType,
+    field: &IpcField,
     dictionaries: &HashMap<i64, ArrowJsonDictionaryBatch>,
 ) -> Result<Arc<dyn Array>> {
     let validity = to_validity(&json_col.validity);
@@ -238,7 +224,7 @@ fn to_map(
     let children = &json_col.children.as_ref().unwrap()[0];
     let field = to_array(
         child_field.data_type().clone(),
-        child_field.dict_id(),
+        &field.fields[0],
         children,
         dictionaries,
     )?;
@@ -250,22 +236,22 @@ fn to_map(
 
 fn to_dictionary<K: DictionaryKey>(
     data_type: DataType,
-    dict_id: i64,
+    field: &IpcField,
     json_col: &ArrowJsonColumn,
     dictionaries: &HashMap<i64, ArrowJsonDictionaryBatch>,
 ) -> Result<Arc<dyn Array>> {
     // find dictionary
+    let dict_id = field.dictionary_id.unwrap();
     let dictionary = dictionaries.get(&dict_id).ok_or_else(|| {
         ArrowError::OutOfSpec(format!("Unable to find any dictionary id {}", dict_id))
     })?;
 
     let keys = to_primitive(json_col, K::PRIMITIVE.into());
 
-    // todo: make DataType::Dictionary hold a Field so that it can hold dictionary_id
     let inner_data_type = DictionaryArray::<K>::get_child(&data_type);
     let values = to_array(
         inner_data_type.clone(),
-        None, // this should not be None: we need to propagate the id as dicts can be nested.
+        field,
         &dictionary.data.columns[0],
         dictionaries,
     )?;
@@ -276,7 +262,7 @@ fn to_dictionary<K: DictionaryKey>(
 /// Construct an [`Array`] from the JSON integration format
 pub fn to_array(
     data_type: DataType,
-    dict_id: Option<i64>,
+    field: &IpcField,
     json_col: &ArrowJsonColumn,
     dictionaries: &HashMap<i64, ArrowJsonDictionaryBatch>,
 ) -> Result<Arc<dyn Array>> {
@@ -330,8 +316,8 @@ pub fn to_array(
                 data_type, values, validity,
             )))
         }
-        List => to_list::<i32>(json_col, data_type, dictionaries),
-        LargeList => to_list::<i64>(json_col, data_type, dictionaries),
+        List => to_list::<i32>(json_col, data_type, field, dictionaries),
+        LargeList => to_list::<i64>(json_col, data_type, field, dictionaries),
         FixedSizeList => {
             let validity = to_validity(&json_col.validity);
 
@@ -340,7 +326,7 @@ pub fn to_array(
             let children = &json_col.children.as_ref().unwrap()[0];
             let values = to_array(
                 child_field.data_type().clone(),
-                child_field.dict_id(),
+                &field.fields[0],
                 children,
                 dictionaries,
             )?;
@@ -357,13 +343,9 @@ pub fn to_array(
             let values = fields
                 .iter()
                 .zip(json_col.children.as_ref().unwrap())
-                .map(|(field, col)| {
-                    to_array(
-                        field.data_type().clone(),
-                        field.dict_id(),
-                        col,
-                        dictionaries,
-                    )
+                .zip(field.fields.iter())
+                .map(|((field, col), ipc_field)| {
+                    to_array(field.data_type().clone(), ipc_field, col, dictionaries)
                 })
                 .collect::<Result<Vec<_>>>()?;
 
@@ -372,7 +354,7 @@ pub fn to_array(
         }
         Dictionary(key_type) => {
             match_integer_type!(key_type, |$T| {
-                to_dictionary::<$T>(data_type, dict_id.unwrap(), json_col, dictionaries)
+                to_dictionary::<$T>(data_type, field, json_col, dictionaries)
             })
         }
         Union => {
@@ -380,13 +362,9 @@ pub fn to_array(
             let fields = fields
                 .iter()
                 .zip(json_col.children.as_ref().unwrap())
-                .map(|(field, col)| {
-                    to_array(
-                        field.data_type().clone(),
-                        field.dict_id(),
-                        col,
-                        dictionaries,
-                    )
+                .zip(field.fields.iter())
+                .map(|((field, col), ipc_field)| {
+                    to_array(field.data_type().clone(), ipc_field, col, dictionaries)
                 })
                 .collect::<Result<Vec<_>>>()?;
 
@@ -428,12 +406,13 @@ pub fn to_array(
             let array = UnionArray::from_data(data_type, types, fields, offsets);
             Ok(Arc::new(array))
         }
-        Map => to_map(json_col, data_type, dictionaries),
+        Map => to_map(json_col, data_type, field, dictionaries),
     }
 }
 
 pub fn to_record_batch(
     schema: &Schema,
+    ipc_fields: &[IpcField],
     json_batch: &ArrowJsonBatch,
     json_dictionaries: &HashMap<i64, ArrowJsonDictionaryBatch>,
 ) -> Result<RecordBatch> {
@@ -441,10 +420,11 @@ pub fn to_record_batch(
         .fields()
         .iter()
         .zip(&json_batch.columns)
-        .map(|(field, json_col)| {
+        .zip(ipc_fields.iter())
+        .map(|((field, json_col), ipc_field)| {
             to_array(
                 field.data_type().clone(),
-                field.dict_id(),
+                ipc_field,
                 json_col,
                 json_dictionaries,
             )
