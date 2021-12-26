@@ -20,9 +20,9 @@ async fn write_(
 
     let options = stream_async::WriteOptions { compression: None };
     let mut writer = stream_async::StreamWriter::new(&mut result, options);
-    writer.start(&schema, Some(&ipc_fields)).await?;
+    writer.start(schema, Some(ipc_fields)).await?;
     for batch in batches {
-        writer.write(batch, Some(&ipc_fields)).await?;
+        writer.write(batch, Some(ipc_fields)).await?;
     }
     writer.finish().await?;
     Ok(result.into_inner())

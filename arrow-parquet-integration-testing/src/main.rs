@@ -1,12 +1,14 @@
 use std::fs::File;
 use std::sync::Arc;
-use std::{collections::HashMap, convert::TryFrom, io::Read};
+use std::{collections::HashMap, io::Read};
 
+use arrow2::io::ipc::IpcField;
 use arrow2::{
     datatypes::{DataType, Schema},
     error::Result,
     io::{
-        json_integration::{to_record_batch, ArrowJson},
+        json_integration::read,
+        json_integration::ArrowJson,
         parquet::write::{
             write_file, Compression, Encoding, RowGroupIterator, Version, WriteOptions,
         },
@@ -19,7 +21,7 @@ use clap::{App, Arg};
 use flate2::read::GzDecoder;
 
 /// Read gzipped JSON file
-fn read_gzip_json(version: &str, file_name: &str) -> (Schema, Vec<RecordBatch>) {
+fn read_gzip_json(version: &str, file_name: &str) -> (Schema, Vec<IpcField>, Vec<RecordBatch>) {
     let path = format!(
         "../testing/arrow-testing/data/arrow-ipc-stream/integration/{}/{}.json.gz",
         version, file_name
@@ -32,7 +34,7 @@ fn read_gzip_json(version: &str, file_name: &str) -> (Schema, Vec<RecordBatch>) 
     let arrow_json: ArrowJson = serde_json::from_str(&s).unwrap();
 
     let schema = serde_json::to_value(arrow_json.schema).unwrap();
-    let schema = Schema::try_from(&schema).unwrap();
+    let (schema, ipc_fields) = read::deserialize_schema(&schema).unwrap();
 
     // read dictionaries
     let mut dictionaries = HashMap::new();
@@ -46,11 +48,11 @@ fn read_gzip_json(version: &str, file_name: &str) -> (Schema, Vec<RecordBatch>) 
     let batches = arrow_json
         .batches
         .iter()
-        .map(|batch| to_record_batch(&schema, batch, &dictionaries))
+        .map(|batch| read::to_record_batch(&schema, &ipc_fields, batch, &dictionaries))
         .collect::<Result<Vec<_>>>()
         .unwrap();
 
-    (schema, batches)
+    (schema, ipc_fields, batches)
 }
 
 fn main() -> Result<()> {
@@ -106,7 +108,7 @@ fn main() -> Result<()> {
             .collect::<Vec<_>>()
     });
 
-    let (schema, batches) = read_gzip_json("1.0.0-littleendian", json_file);
+    let (schema, _, batches) = read_gzip_json("1.0.0-littleendian", json_file);
 
     let schema = if let Some(projection) = &projection {
         let fields = schema
