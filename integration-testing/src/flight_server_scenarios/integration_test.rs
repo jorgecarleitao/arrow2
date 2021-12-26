@@ -16,11 +16,12 @@
 // under the License.
 
 use std::collections::HashMap;
-use std::convert::TryFrom;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use arrow2::io::flight::{serialize_batch, serialize_schema};
+use arrow2::io::flight::{deserialize_schemas, serialize_batch, serialize_schema};
+use arrow2::io::ipc::read::Dictionaries;
+use arrow2::io::ipc::IpcSchema;
 use arrow_format::flight::data::flight_descriptor::*;
 use arrow_format::flight::data::*;
 use arrow_format::flight::service::flight_service_server::*;
@@ -28,8 +29,7 @@ use arrow_format::ipc::Message::{root_as_message, Message, MessageHeader};
 use arrow_format::ipc::Schema as ArrowSchema;
 
 use arrow2::{
-    array::Array, datatypes::*, io::flight::serialize_schema_to_info, io::ipc,
-    record_batch::RecordBatch,
+    datatypes::*, io::flight::serialize_schema_to_info, io::ipc, record_batch::RecordBatch,
 };
 
 use futures::{channel::mpsc, sink::SinkExt, Stream, StreamExt};
@@ -61,6 +61,7 @@ pub async fn scenario_setup(port: &str) -> Result {
 #[derive(Debug, Clone)]
 struct IntegrationDataset {
     schema: Schema,
+    ipc_schema: IpcSchema,
     chunks: Vec<RecordBatch>,
 }
 
@@ -110,7 +111,10 @@ impl FlightService for FlightServiceImpl {
 
         let options = ipc::write::WriteOptions { compression: None };
 
-        let schema = std::iter::once(Ok(serialize_schema(&flight.schema)));
+        let schema = std::iter::once(Ok(serialize_schema(
+            &flight.schema,
+            &flight.ipc_schema.fields,
+        )));
 
         let batches = flight
             .chunks
@@ -118,7 +122,7 @@ impl FlightService for FlightServiceImpl {
             .enumerate()
             .flat_map(|(counter, batch)| {
                 let (dictionary_flight_data, mut batch_flight_data) =
-                    serialize_batch(batch, &options);
+                    serialize_batch(batch, &flight.ipc_schema.fields, &options);
 
                 // Only the record batch's FlightData gets app_metadata
                 let metadata = counter.to_string().into_bytes();
@@ -171,10 +175,11 @@ impl FlightService for FlightServiceImpl {
 
                 let total_records: usize = flight.chunks.iter().map(|chunk| chunk.num_rows()).sum();
 
-                let schema = serialize_schema_to_info(&flight.schema).expect(
-                    "Could not generate schema bytes from schema stored by a DoPut; \
+                let schema = serialize_schema_to_info(&flight.schema, &flight.ipc_schema.fields)
+                    .expect(
+                        "Could not generate schema bytes from schema stored by a DoPut; \
                          this should be impossible",
-                );
+                    );
 
                 let info = FlightInfo {
                     schema,
@@ -211,7 +216,7 @@ impl FlightService for FlightServiceImpl {
 
         let key = descriptor.path[0].clone();
 
-        let schema = Schema::try_from(&flight_data)
+        let (schema, ipc_schema) = deserialize_schemas(&flight_data.data_header)
             .map_err(|e| Status::invalid_argument(format!("Invalid schema: {:?}", e)))?;
         let schema_ref = Arc::new(schema.clone());
 
@@ -224,6 +229,7 @@ impl FlightService for FlightServiceImpl {
             if let Err(e) = save_uploaded_chunks(
                 uploaded_chunks,
                 schema_ref,
+                ipc_schema,
                 input_stream,
                 response_tx,
                 schema,
@@ -275,7 +281,8 @@ async fn record_batch_from_message(
     message: Message<'_>,
     data_body: &[u8],
     schema_ref: Arc<Schema>,
-    dictionaries: &mut HashMap<usize, Arc<dyn Array>>,
+    ipc_schema: &IpcSchema,
+    dictionaries: &mut Dictionaries,
 ) -> Result<RecordBatch, Status> {
     let ipc_batch = message
         .header_as_record_batch()
@@ -286,8 +293,8 @@ async fn record_batch_from_message(
     let arrow_batch_result = ipc::read::read_record_batch(
         ipc_batch,
         schema_ref,
+        ipc_schema,
         None,
-        true,
         dictionaries,
         ArrowSchema::MetadataVersion::V5,
         &mut reader,
@@ -301,8 +308,9 @@ async fn record_batch_from_message(
 async fn dictionary_from_message(
     message: Message<'_>,
     data_body: &[u8],
-    schema_ref: Arc<Schema>,
-    dictionaries: &mut HashMap<usize, Arc<dyn Array>>,
+    fields: &[Field],
+    ipc_schema: &IpcSchema,
+    dictionaries: &mut Dictionaries,
 ) -> Result<(), Status> {
     let ipc_batch = message
         .header_as_dictionary_batch()
@@ -311,7 +319,7 @@ async fn dictionary_from_message(
     let mut reader = std::io::Cursor::new(data_body);
 
     let dictionary_batch_result =
-        ipc::read::read_dictionary(ipc_batch, &schema_ref, true, dictionaries, &mut reader, 0);
+        ipc::read::read_dictionary(ipc_batch, fields, ipc_schema, dictionaries, &mut reader, 0);
     dictionary_batch_result
         .map_err(|e| Status::internal(format!("Could not convert to Dictionary: {:?}", e)))
 }
@@ -319,6 +327,7 @@ async fn dictionary_from_message(
 async fn save_uploaded_chunks(
     uploaded_chunks: Arc<Mutex<HashMap<String, IntegrationDataset>>>,
     schema_ref: Arc<Schema>,
+    ipc_schema: IpcSchema,
     mut input_stream: Streaming<FlightData>,
     mut response_tx: mpsc::Sender<Result<PutResult, Status>>,
     schema: Schema,
@@ -346,6 +355,7 @@ async fn save_uploaded_chunks(
                     message,
                     &data.data_body,
                     schema_ref.clone(),
+                    &ipc_schema,
                     &mut dictionaries,
                 )
                 .await?;
@@ -356,7 +366,8 @@ async fn save_uploaded_chunks(
                 dictionary_from_message(
                     message,
                     &data.data_body,
-                    schema_ref.clone(),
+                    schema_ref.fields(),
+                    &ipc_schema,
                     &mut dictionaries,
                 )
                 .await?;
@@ -371,7 +382,11 @@ async fn save_uploaded_chunks(
         }
     }
 
-    let dataset = IntegrationDataset { schema, chunks };
+    let dataset = IntegrationDataset {
+        schema,
+        chunks,
+        ipc_schema,
+    };
     uploaded_chunks.insert(key, dataset);
 
     Ok(())

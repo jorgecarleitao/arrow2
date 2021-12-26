@@ -1,29 +1,13 @@
-// Licensed to the Apache Software Foundation (ASF) under one
-// or more contributor license agreements.  See the NOTICE file
-// distributed with this work for additional information
-// regarding copyright ownership.  The ASF licenses this file
-// to you under the Apache License, Version 2.0 (the
-// "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
-
 use std::fs::File;
 
+use arrow2::io::json_integration::ArrowJson;
 use clap::{App, Arg};
 
 use arrow2::io::ipc::read;
 use arrow2::io::ipc::write;
 use arrow2::{
     error::{ArrowError, Result},
-    io::json_integration::*,
+    io::json_integration::write as json_write,
 };
 use arrow_integration_testing::read_json_file;
 
@@ -82,10 +66,15 @@ fn json_to_arrow(json_name: &str, arrow_name: &str, verbose: bool) -> Result<()>
 
     let arrow_file = File::create(arrow_name)?;
     let options = write::WriteOptions { compression: None };
-    let mut writer = write::FileWriter::try_new(arrow_file, &json_file.schema, options)?;
+    let mut writer = write::FileWriter::try_new(
+        arrow_file,
+        &json_file.schema,
+        Some(json_file.fields),
+        options,
+    )?;
 
     for b in json_file.batches {
-        writer.write(&b)?;
+        writer.write(&b, None)?;
     }
 
     writer.finish()?;
@@ -100,19 +89,12 @@ fn arrow_to_json(arrow_name: &str, json_name: &str, verbose: bool) -> Result<()>
 
     let mut arrow_file = File::open(arrow_name)?;
     let metadata = read::read_file_metadata(&mut arrow_file)?;
-    let reader = read::FileReader::new(arrow_file, metadata, None);
+    let reader = read::FileReader::new(arrow_file, metadata.clone(), None);
 
-    let mut fields: Vec<ArrowJsonField> = vec![];
-    for f in reader.schema().fields() {
-        fields.push(ArrowJsonField::from(f));
-    }
-    let schema = ArrowJsonSchema {
-        fields,
-        metadata: None,
-    };
+    let schema = json_write::serialize_schema(&metadata.schema, &metadata.ipc_schema.fields);
 
     let batches = reader
-        .map(|batch| Ok(from_record_batch(&batch?)))
+        .map(|batch| Ok(json_write::from_record_batch(&batch?)))
         .collect::<Result<Vec<_>>>()?;
 
     let arrow_json = ArrowJson {

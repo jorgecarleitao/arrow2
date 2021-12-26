@@ -1,4 +1,3 @@
-use std::convert::TryFrom;
 use std::sync::Arc;
 
 use arrow_format::flight::data::{FlightData, SchemaResult};
@@ -82,11 +81,12 @@ fn schema_as_encoded_data(schema: &Schema, ipc_fields: &[IpcField]) -> EncodedDa
     }
 }
 
-/// Deserialize an IPC message into a schema
-fn schema_from_bytes(bytes: &[u8]) -> Result<Schema> {
+/// Deserialize an IPC message into [`Schema`], [`IpcSchema`].
+/// Use to deserialize [`FlightData::data_header`] and [`SchemaResult::schema`].
+pub fn deserialize_schemas(bytes: &[u8]) -> Result<(Schema, IpcSchema)> {
     if let Ok(ipc) = ipc::Message::root_as_message(bytes) {
-        if let Some((schema, _)) = ipc.header_as_schema().map(read::fb_to_schema) {
-            Ok(schema)
+        if let Some(schemas) = ipc.header_as_schema().map(read::fb_to_schema) {
+            Ok(schemas)
         } else {
             Err(ArrowError::OutOfSpec(
                 "Unable to get head as schema".to_string(),
@@ -96,30 +96,6 @@ fn schema_from_bytes(bytes: &[u8]) -> Result<Schema> {
         Err(ArrowError::OutOfSpec(
             "Unable to get root as message".to_string(),
         ))
-    }
-}
-
-impl TryFrom<&FlightData> for Schema {
-    type Error = ArrowError;
-    fn try_from(data: &FlightData) -> Result<Self> {
-        schema_from_bytes(&data.data_header[..]).map_err(|err| {
-            ArrowError::OutOfSpec(format!(
-                "Unable to convert flight data to Arrow schema: {}",
-                err
-            ))
-        })
-    }
-}
-
-impl TryFrom<&SchemaResult> for Schema {
-    type Error = ArrowError;
-    fn try_from(data: &SchemaResult) -> Result<Self> {
-        schema_from_bytes(&data.schema[..]).map_err(|err| {
-            ArrowError::OutOfSpec(format!(
-                "Unable to convert schema result to Arrow schema: {}",
-                err
-            ))
-        })
     }
 }
 
