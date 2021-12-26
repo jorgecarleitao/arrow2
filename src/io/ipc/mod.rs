@@ -44,7 +44,7 @@
 //! let y_coord = Field::new("y", DataType::Int32, false);
 //! let schema = Schema::new(vec![x_coord, y_coord]);
 //! let options = WriteOptions {compression: None};
-//! let mut writer = FileWriter::try_new(file, &schema, options)?;
+//! let mut writer = FileWriter::try_new(file, &schema, None, options)?;
 //!
 //! // Setup the data
 //! let x_data = Int32Array::from_slice([-1i32, 1]);
@@ -56,7 +56,7 @@
 //!
 //! // Write the messages and finalize the stream
 //! for _ in 0..5 {
-//!     writer.write(&batch);
+//!     writer.write(&batch, None);
 //! }
 //! writer.finish();
 //!
