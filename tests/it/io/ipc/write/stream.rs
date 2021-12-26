@@ -16,7 +16,7 @@ fn write_(schema: &Schema, ipc_fields: &[IpcField], batches: &[RecordBatch]) -> 
 
     let options = WriteOptions { compression: None };
     let mut writer = StreamWriter::new(&mut result, options);
-    writer.start(&schema, ipc_fields).unwrap();
+    writer.start(schema, ipc_fields).unwrap();
     for batch in batches {
         writer.write(batch, ipc_fields).unwrap();
     }
