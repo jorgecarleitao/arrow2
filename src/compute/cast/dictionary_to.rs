@@ -110,7 +110,7 @@ pub(super) fn dictionary_cast_dyn<K: DictionaryKey>(
     let values = array.values();
 
     match to_type {
-        DataType::Dictionary(to_keys_type, to_values_type) => {
+        DataType::Dictionary(to_keys_type, to_values_type, _) => {
             let values = cast(values.as_ref(), to_values_type, options)?.into();
 
             // create the appropriate array type

@@ -98,7 +98,7 @@ fn dict_read<
     data_type: DataType,
 ) -> Result<Box<dyn Array>> {
     use DataType::*;
-    let values_data_type = if let Dictionary(_, v) = &data_type {
+    let values_data_type = if let Dictionary(_, v, _) = &data_type {
         v.as_ref()
     } else {
         panic!()
@@ -372,7 +372,7 @@ fn page_iter_to_array<I: FallibleStreamingIterator<Item = DataPage, Error = Parq
             binary::iter_to_array::<i64, _, _>(iter, metadata, data_type, nested)
         }
 
-        Dictionary(key_type, _) => match_integer_type!(key_type, |$T| {
+        Dictionary(key_type, _, _) => match_integer_type!(key_type, |$T| {
             dict_read::<$T, _>(iter, metadata, data_type)
         }),
 

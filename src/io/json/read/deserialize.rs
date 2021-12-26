@@ -238,7 +238,7 @@ fn _deserialize<A: Borrow<Value>>(rows: &[A], data_type: DataType) -> Arc<dyn Ar
         DataType::Binary => Arc::new(deserialize_binary::<i32, _>(rows)),
         DataType::LargeBinary => Arc::new(deserialize_binary::<i64, _>(rows)),
         DataType::Struct(_) => Arc::new(deserialize_struct(rows, data_type)),
-        DataType::Dictionary(key_type, _) => {
+        DataType::Dictionary(key_type, _, _) => {
             match_integer_type!(key_type, |$T| {
                 Arc::new(deserialize_dictionary::<$T, _>(rows, data_type))
             })

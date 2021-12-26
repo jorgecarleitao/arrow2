@@ -447,7 +447,7 @@ pub fn neg(array: &dyn Array) -> Box<dyn Array> {
 
 /// Whether [`neg`] is supported for a given [`DataType`]
 pub fn can_neg(data_type: &DataType) -> bool {
-    if let DataType::Dictionary(_, values) = data_type.to_logical_type() {
+    if let DataType::Dictionary(_, values, _) = data_type.to_logical_type() {
         return can_neg(values.as_ref());
     }
 

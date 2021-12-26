@@ -470,7 +470,7 @@ pub fn write_dictionary(
     write_keys: bool,
 ) -> usize {
     match array.data_type() {
-        DataType::Dictionary(key_type, _) => {
+        DataType::Dictionary(key_type, _, _) => {
             match_integer_type!(key_type, |$T| {
                 _write_dictionary::<$T>(
                     array,

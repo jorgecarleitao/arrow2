@@ -128,7 +128,7 @@ pub enum DataType {
     ///
     /// This type mostly used to represent low cardinality string
     /// arrays or a limited set of primitive types as integers.
-    Dictionary(IntegerType, Box<DataType>),
+    Dictionary(IntegerType, Box<DataType>, bool),
     /// Decimal value with precision and scale
     /// precision is the number of digits in the number and
     /// scale is the number of decimal places.
@@ -261,7 +261,7 @@ impl DataType {
             Struct(_) => PhysicalType::Struct,
             Union(_, _, _) => PhysicalType::Union,
             Map(_, _) => PhysicalType::Map,
-            Dictionary(key, _) => PhysicalType::Dictionary(*key),
+            Dictionary(key, _, _) => PhysicalType::Dictionary(*key),
             Extension(_, key, _) => key.to_physical_type(),
         }
     }

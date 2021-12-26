@@ -215,7 +215,7 @@ pub fn build_compare(left: &dyn Array, right: &dyn Array) -> Result<DynComparato
         (LargeUtf8, LargeUtf8) => compare_string::<i64>(left, right),
         (Binary, Binary) => compare_binary::<i32>(left, right),
         (LargeBinary, LargeBinary) => compare_binary::<i64>(left, right),
-        (Dictionary(key_type_lhs, _), Dictionary(key_type_rhs, _)) => {
+        (Dictionary(key_type_lhs, ..), Dictionary(key_type_rhs, ..)) => {
             match (key_type_lhs, key_type_rhs) {
                 (IntegerType::UInt8, IntegerType::UInt8) => dyn_dict!(u8, left, right),
                 (IntegerType::UInt16, IntegerType::UInt16) => dyn_dict!(u16, left, right),

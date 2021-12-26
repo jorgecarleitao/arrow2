@@ -202,7 +202,7 @@ pub fn sort_to_indices<I: Index>(
                 ))),
             }
         }
-        DataType::Dictionary(key_type, value_type) => match value_type.as_ref() {
+        DataType::Dictionary(key_type, value_type, _) => match value_type.as_ref() {
             DataType::Utf8 => Ok(sort_dict::<I, i32>(values, key_type, options, limit)),
             DataType::LargeUtf8 => Ok(sort_dict::<I, i64>(values, key_type, options, limit)),
             t => Err(ArrowError::NotYetImplemented(format!(
@@ -282,7 +282,7 @@ pub fn can_sort(data_type: &DataType) -> bool {
                     | DataType::UInt64
             )
         }
-        DataType::Dictionary(_, value_type) => {
+        DataType::Dictionary(_, value_type, _) => {
             matches!(*value_type.as_ref(), DataType::Utf8 | DataType::LargeUtf8)
         }
         _ => false,

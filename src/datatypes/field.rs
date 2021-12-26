@@ -33,8 +33,6 @@ pub struct Field {
     pub nullable: bool,
     /// The dictionary id of this field (currently un-used)
     pub dict_id: i64,
-    /// Whether the dictionary's values are ordered
-    pub dict_is_ordered: bool,
     /// A map of key-value pairs containing additional custom meta data.
     pub metadata: Option<BTreeMap<String, String>>,
 }
@@ -44,7 +42,6 @@ impl std::hash::Hash for Field {
         self.name.hash(state);
         self.data_type.hash(state);
         self.nullable.hash(state);
-        self.dict_is_ordered.hash(state);
         self.metadata.hash(state);
     }
 }
@@ -54,7 +51,6 @@ impl PartialEq for Field {
         self.name == other.name
             && self.data_type == other.data_type
             && self.nullable == other.nullable
-            && self.dict_is_ordered == other.dict_is_ordered
             && self.metadata == other.metadata
     }
 }
@@ -67,7 +63,6 @@ impl Field {
             data_type,
             nullable,
             dict_id: 0,
-            dict_is_ordered: false,
             metadata: None,
         }
     }
@@ -78,14 +73,12 @@ impl Field {
         data_type: DataType,
         nullable: bool,
         dict_id: i64,
-        dict_is_ordered: bool,
     ) -> Self {
         Field {
             name: name.into(),
             data_type,
             nullable,
             dict_id,
-            dict_is_ordered,
             metadata: None,
         }
     }
@@ -98,7 +91,6 @@ impl Field {
             data_type: self.data_type,
             nullable: self.nullable,
             dict_id: self.dict_id,
-            dict_is_ordered: self.dict_is_ordered,
             metadata: Some(metadata),
         }
     }
@@ -143,16 +135,7 @@ impl Field {
     #[inline]
     pub const fn dict_id(&self) -> Option<i64> {
         match self.data_type {
-            DataType::Dictionary(_, _) => Some(self.dict_id),
-            _ => None,
-        }
-    }
-
-    /// Returns whether this [`Field`]'s dictionary is ordered, if this is a dictionary type.
-    #[inline]
-    pub const fn dict_is_ordered(&self) -> Option<bool> {
-        match self.data_type {
-            DataType::Dictionary(_, _) => Some(self.dict_is_ordered),
+            DataType::Dictionary(_, _, _) => Some(self.dict_id),
             _ => None,
         }
     }
@@ -195,11 +178,6 @@ impl Field {
         if from.dict_id != self.dict_id {
             return Err(ArrowError::InvalidArgumentError(
                 "Fail to merge schema Field due to conflicting dict_id".to_string(),
-            ));
-        }
-        if from.dict_is_ordered != self.dict_is_ordered {
-            return Err(ArrowError::InvalidArgumentError(
-                "Fail to merge schema Field due to conflicting dict_is_ordered".to_string(),
             ));
         }
         match &mut self.data_type {
@@ -270,7 +248,7 @@ impl Field {
             | DataType::Interval(_)
             | DataType::LargeList(_)
             | DataType::List(_)
-            | DataType::Dictionary(_, _)
+            | DataType::Dictionary(_, _, _)
             | DataType::FixedSizeList(_, _)
             | DataType::FixedSizeBinary(_)
             | DataType::Utf8

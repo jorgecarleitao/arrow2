@@ -117,7 +117,7 @@ impl ToJson for DataType {
                 TimeUnit::Microsecond => "MICROSECOND",
                 TimeUnit::Nanosecond => "NANOSECOND",
             }}),
-            DataType::Dictionary(_, _) => json!({ "name": "dictionary"}),
+            DataType::Dictionary(_, _, _) => json!({ "name": "dictionary"}),
             DataType::Decimal(precision, scale) => {
                 json!({"name": "decimal", "precision": precision, "scale": scale})
             }
@@ -136,7 +136,7 @@ impl ToJson for Field {
             _ => vec![],
         };
         match self.data_type() {
-            DataType::Dictionary(ref index_type, ref value_type) => {
+            DataType::Dictionary(ref index_type, ref value_type, is_ordered) => {
                 let index_type: DataType = (*index_type).into();
                 json!({
                     "name": self.name(),
@@ -146,7 +146,7 @@ impl ToJson for Field {
                     "dictionary": {
                         "id": self.dict_id(),
                         "indexType": index_type.to_json(),
-                        "isOrdered": self.dict_is_ordered()
+                        "isOrdered": is_ordered
                     }
                 })
             }
@@ -494,21 +494,7 @@ impl TryFrom<&Value> for Field {
                             ));
                         }
                     };
-                    DataType::Dictionary(index_type, Box::new(data_type))
-                } else {
-                    data_type
-                };
-
-                let (dict_id, dict_is_ordered) = if let Some(dictionary) = map.get("dictionary") {
-                    let dict_id = match dictionary.get("id") {
-                        Some(Value::Number(n)) => n.as_i64().unwrap(),
-                        _ => {
-                            return Err(ArrowError::OutOfSpec(
-                                "Field missing 'id' attribute".to_string(),
-                            ));
-                        }
-                    };
-                    let dict_is_ordered = match dictionary.get("isOrdered") {
+                    let is_ordered = match dictionary.get("isOrdered") {
                         Some(&Value::Bool(n)) => n,
                         _ => {
                             return Err(ArrowError::OutOfSpec(
@@ -516,11 +502,24 @@ impl TryFrom<&Value> for Field {
                             ));
                         }
                     };
-                    (dict_id, dict_is_ordered)
+                    DataType::Dictionary(index_type, Box::new(data_type), is_ordered)
                 } else {
-                    (0, false)
+                    data_type
                 };
-                let mut f = Field::new_dict(&name, data_type, nullable, dict_id, dict_is_ordered);
+
+                let dict_id = if let Some(dictionary) = map.get("dictionary") {
+                    match dictionary.get("id") {
+                        Some(Value::Number(n)) => n.as_i64().unwrap(),
+                        _ => {
+                            return Err(ArrowError::OutOfSpec(
+                                "Field missing 'id' attribute".to_string(),
+                            ));
+                        }
+                    }
+                } else {
+                    0
+                };
+                let mut f = Field::new_dict(&name, data_type, nullable, dict_id);
                 f.set_metadata(metadata);
                 Ok(f)
             }

@@ -49,7 +49,7 @@ where
     }
 
     let data_type = match data_type {
-        DataType::Dictionary(_, values) => values.as_ref().clone(),
+        DataType::Dictionary(_, values, _) => values.as_ref().clone(),
         _ => data_type,
     };
 
@@ -100,7 +100,7 @@ where
     }
 
     let data_type = match data_type {
-        DataType::Dictionary(_, values) => values.as_ref().clone(),
+        DataType::Dictionary(_, values, _) => values.as_ref().clone(),
         _ => data_type,
     };
 

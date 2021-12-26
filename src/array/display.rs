@@ -158,7 +158,7 @@ pub fn get_value_display<'a>(array: &'a dyn Array) -> Box<dyn Fn(usize) -> Strin
             };
             dyn_display!(array, ListArray<i64>, f)
         }
-        Dictionary(key_type, _) => match_integer_type!(key_type, |$T| {
+        Dictionary(key_type, ..) => match_integer_type!(key_type, |$T| {
             let a = array
                 .as_any()
                 .downcast_ref::<DictionaryArray<$T>>()

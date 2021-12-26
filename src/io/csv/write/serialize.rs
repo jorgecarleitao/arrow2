@@ -383,7 +383,7 @@ pub fn new_serializer<'a>(
                 vec![],
             ))
         }
-        DataType::Dictionary(keys_dt, values_dt) => match &**values_dt {
+        DataType::Dictionary(keys_dt, values_dt, _) => match &**values_dt {
             DataType::LargeUtf8 => match *keys_dt {
                 IntegerType::UInt32 => serialize_utf8_dict::<u32, i64>(array.as_any()),
                 IntegerType::UInt64 => serialize_utf8_dict::<u64, i64>(array.as_any()),

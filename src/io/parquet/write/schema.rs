@@ -277,7 +277,7 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
                 name, repetition, None, None, fields, None,
             )?)
         }
-        DataType::Dictionary(_, value) => {
+        DataType::Dictionary(_, value, _) => {
             let dict_field = Field::new(name.as_str(), value.as_ref().clone(), field.is_nullable());
             to_parquet_type(&dict_field)
         }
