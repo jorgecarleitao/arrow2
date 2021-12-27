@@ -6,7 +6,7 @@ pub use streaming_iterator::StreamingIterator;
 pub struct BufStreamingIterator<I, F, T>
 where
     I: Iterator<Item = T>,
-    F: Fn(T, &mut Vec<u8>),
+    F: FnMut(T, &mut Vec<u8>),
 {
     iterator: I,
     f: F,
@@ -17,7 +17,7 @@ where
 impl<I, F, T> BufStreamingIterator<I, F, T>
 where
     I: Iterator<Item = T>,
-    F: Fn(T, &mut Vec<u8>),
+    F: FnMut(T, &mut Vec<u8>),
 {
     #[inline]
     pub fn new(iterator: I, f: F, buffer: Vec<u8>) -> Self {
@@ -33,7 +33,7 @@ where
 impl<I, F, T> StreamingIterator for BufStreamingIterator<I, F, T>
 where
     I: Iterator<Item = T>,
-    F: Fn(T, &mut Vec<u8>),
+    F: FnMut(T, &mut Vec<u8>),
 {
     type Item = [u8];
 

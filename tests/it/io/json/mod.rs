@@ -10,7 +10,7 @@ use arrow2::array::*;
 use arrow2::datatypes::*;
 use arrow2::error::Result;
 use arrow2::io::json::read as json_read;
-use arrow2::io::json::LineDelimitedWriter;
+use arrow2::io::json::write as json_write;
 use arrow2::record_batch::RecordBatch;
 
 fn read_batch(data: String, fields: Vec<Field>) -> Result<RecordBatch> {
@@ -22,6 +22,18 @@ fn read_batch(data: String, fields: Vec<Field>) -> Result<RecordBatch> {
     json_read::deserialize(rows, fields)
 }
 
+fn write_batch(batch: RecordBatch) -> Result<Vec<u8>> {
+    let format = json_write::LineDelimited::default();
+
+    let batches = vec![Ok(batch)].into_iter();
+
+    let blocks = json_write::Serializer::new(batches, vec![], format);
+
+    let mut buf = Vec::new();
+    json_write::write(&mut buf, format, blocks)?;
+    Ok(buf)
+}
+
 fn round_trip(data: String) -> Result<()> {
     let mut reader = Cursor::new(data);
     let fields = json_read::infer(&mut reader, None)?;
@@ -29,13 +41,10 @@ fn round_trip(data: String) -> Result<()> {
 
     let batch = read_batch(data.clone(), fields)?;
 
-    let mut buf = Vec::new();
-    {
-        let mut writer = LineDelimitedWriter::new(&mut buf);
-        writer.write_batches(&[batch]).unwrap();
-    }
+    let buf = write_batch(batch)?;
 
     let result = String::from_utf8(buf).unwrap();
+    println!("{}", result);
     for (r, e) in result.lines().zip(data.lines()) {
         let mut result_json = serde_json::from_str::<Value>(r).unwrap();
         let expected_json = serde_json::from_str::<Value>(e).unwrap();

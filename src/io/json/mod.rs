@@ -3,9 +3,7 @@
 //! Convert data between the Arrow memory format and JSON line-delimited records.
 
 pub mod read;
-mod write;
-
-pub use write::*;
+pub mod write;
 
 use crate::error::ArrowError;
 
