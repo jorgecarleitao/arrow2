@@ -32,13 +32,17 @@ fn deserialize_field(ipc_field: ipc::Field) -> (Field, IpcField) {
 
 fn read_metadata(field: &ipc::Field) -> Metadata {
     if let Some(list) = field.custom_metadata() {
-        let mut metadata_map = BTreeMap::default();
-        for kv in list {
-            if let (Some(k), Some(v)) = (kv.key(), kv.value()) {
-                metadata_map.insert(k.to_string(), v.to_string());
+        if !list.is_empty() {
+            let mut metadata_map = BTreeMap::default();
+            for kv in list {
+                if let (Some(k), Some(v)) = (kv.key(), kv.value()) {
+                    metadata_map.insert(k.to_string(), v.to_string());
+                }
             }
+            Some(metadata_map)
+        } else {
+            None
         }
-        Some(metadata_map)
     } else {
         None
     }
