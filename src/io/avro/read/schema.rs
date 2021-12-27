@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use avro_schema::{Enum, Fixed, Record, Schema as AvroSchema};
 
 use crate::datatypes::*;
@@ -19,8 +17,8 @@ fn aliased(name: &str, namespace: Option<&str>, default_namespace: Option<&str>)
     }
 }
 
-fn external_props(schema: &AvroSchema) -> BTreeMap<String, String> {
-    let mut props = BTreeMap::new();
+fn external_props(schema: &AvroSchema) -> Metadata {
+    let mut props = Metadata::new();
     match &schema {
         AvroSchema::Record(Record {
             doc: Some(ref doc), ..
@@ -66,7 +64,7 @@ pub fn convert_schema(schema: &AvroSchema) -> Result<Schema> {
                     &field.schema,
                     Some(&field.name),
                     false,
-                    Some(external_props(&field.schema)),
+                    external_props(&field.schema),
                 )?)
             }
         }
@@ -84,7 +82,7 @@ fn schema_to_field(
     schema: &AvroSchema,
     name: Option<&str>,
     mut nullable: bool,
-    props: Option<BTreeMap<String, String>>,
+    props: Metadata,
 ) -> Result<Field> {
     let data_type = match schema {
         AvroSchema::Null => DataType::Null,
@@ -129,7 +127,7 @@ fn schema_to_field(
             item_schema,
             Some("item"), // default name for list items
             false,
-            None,
+            Metadata::default(),
         )?)),
         AvroSchema::Map(_) => todo!("Avro maps are mapped to MapArrays"),
         AvroSchema::Union(schemas) => {
@@ -141,7 +139,7 @@ fn schema_to_field(
                     .iter()
                     .find(|&schema| !matches!(schema, AvroSchema::Null))
                 {
-                    schema_to_field(schema, None, has_nullable, None)?
+                    schema_to_field(schema, None, has_nullable, Metadata::default())?
                         .data_type()
                         .clone()
                 } else {
@@ -153,7 +151,7 @@ fn schema_to_field(
             } else {
                 let fields = schemas
                     .iter()
-                    .map(|s| schema_to_field(s, None, has_nullable, None))
+                    .map(|s| schema_to_field(s, None, has_nullable, Metadata::default()))
                     .collect::<Result<Vec<Field>>>()?;
                 DataType::Union(fields, None, UnionMode::Dense)
             }
@@ -162,7 +160,7 @@ fn schema_to_field(
             let fields: Result<Vec<Field>> = fields
                 .iter()
                 .map(|field| {
-                    let mut props = BTreeMap::new();
+                    let mut props = Metadata::new();
                     if let Some(doc) = &field.doc {
                         props.insert("avro::doc".to_string(), doc.clone());
                     }
@@ -173,7 +171,7 @@ fn schema_to_field(
                         &field.schema,
                         Some(&format!("{}.{}", name, field.name)),
                         false,
-                        Some(props),
+                        props,
                     )
                 })
                 .collect();
@@ -201,7 +199,5 @@ fn schema_to_field(
 
     let name = name.unwrap_or_default();
 
-    let mut field = Field::new(name, data_type, nullable);
-    field.set_metadata(props);
-    Ok(field)
+    Ok(Field::new(name, data_type, nullable).with_metadata(props))
 }

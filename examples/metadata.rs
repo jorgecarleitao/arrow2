@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, HashMap};
 
-use arrow2::datatypes::{DataType, Field, Schema};
+use arrow2::datatypes::{DataType, Field, Metadata, Schema};
 
 fn main() {
     // two data types (logical types)
@@ -12,7 +12,7 @@ fn main() {
     let field2 = Field::new("c2", type2_, true);
 
     // which can contain extra metadata:
-    let mut metadata = BTreeMap::new();
+    let mut metadata = Metadata::new();
     metadata.insert(
         "Office Space".to_string(),
         "Deals with real issues in the workplace.".to_string(),
