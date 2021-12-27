@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Read Arrow stream - arrow2 documentation</title>
+        <title>Write JSON - arrow2 documentation</title>
         <!-- Custom HTML head -->
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
@@ -75,7 +75,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="../index.html"><strong aria-hidden="true">1.</strong> Arrow2</a></li><li class="chapter-item expanded "><a href="../arrow.html"><strong aria-hidden="true">2.</strong> The arrow format</a></li><li class="chapter-item expanded "><a href="../low_level.html"><strong aria-hidden="true">3.</strong> Low-level API</a></li><li class="chapter-item expanded "><a href="../high_level.html"><strong aria-hidden="true">4.</strong> High-level API</a></li><li class="chapter-item expanded "><a href="../compute.html"><strong aria-hidden="true">5.</strong> Compute</a></li><li class="chapter-item expanded "><a href="../metadata.html"><strong aria-hidden="true">6.</strong> Metadata</a></li><li class="chapter-item expanded "><a href="../ffi.html"><strong aria-hidden="true">7.</strong> Foreign interfaces</a></li><li class="chapter-item expanded "><a href="../extension.html"><strong aria-hidden="true">8.</strong> Extension</a></li><li class="chapter-item expanded "><a href="../io/index.html"><strong aria-hidden="true">9.</strong> IO</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../io/csv_reader.html"><strong aria-hidden="true">9.1.</strong> Read CSV</a></li><li class="chapter-item expanded "><a href="../io/csv_write.html"><strong aria-hidden="true">9.2.</strong> Write CSV</a></li><li class="chapter-item expanded "><a href="../io/parquet_read.html"><strong aria-hidden="true">9.3.</strong> Read Parquet</a></li><li class="chapter-item expanded "><a href="../io/parquet_write.html"><strong aria-hidden="true">9.4.</strong> Write Parquet</a></li><li class="chapter-item expanded "><a href="../io/ipc_read.html"><strong aria-hidden="true">9.5.</strong> Read Arrow</a></li><li class="chapter-item expanded "><a href="../io/ipc_stream_read.html" class="active"><strong aria-hidden="true">9.6.</strong> Read Arrow stream</a></li><li class="chapter-item expanded "><a href="../io/ipc_write.html"><strong aria-hidden="true">9.7.</strong> Write Arrow</a></li><li class="chapter-item expanded "><a href="../io/avro_read.html"><strong aria-hidden="true">9.8.</strong> Read Avro</a></li><li class="chapter-item expanded "><a href="../io/avro_write.html"><strong aria-hidden="true">9.9.</strong> Write Avro</a></li><li class="chapter-item expanded "><a href="../io/json_read.html"><strong aria-hidden="true">9.10.</strong> Read JSON</a></li><li class="chapter-item expanded "><a href="../io/json_write.html"><strong aria-hidden="true">9.11.</strong> Write JSON</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../index.html"><strong aria-hidden="true">1.</strong> Arrow2</a></li><li class="chapter-item expanded "><a href="../arrow.html"><strong aria-hidden="true">2.</strong> The arrow format</a></li><li class="chapter-item expanded "><a href="../low_level.html"><strong aria-hidden="true">3.</strong> Low-level API</a></li><li class="chapter-item expanded "><a href="../high_level.html"><strong aria-hidden="true">4.</strong> High-level API</a></li><li class="chapter-item expanded "><a href="../compute.html"><strong aria-hidden="true">5.</strong> Compute</a></li><li class="chapter-item expanded "><a href="../metadata.html"><strong aria-hidden="true">6.</strong> Metadata</a></li><li class="chapter-item expanded "><a href="../ffi.html"><strong aria-hidden="true">7.</strong> Foreign interfaces</a></li><li class="chapter-item expanded "><a href="../extension.html"><strong aria-hidden="true">8.</strong> Extension</a></li><li class="chapter-item expanded "><a href="../io/index.html"><strong aria-hidden="true">9.</strong> IO</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../io/csv_reader.html"><strong aria-hidden="true">9.1.</strong> Read CSV</a></li><li class="chapter-item expanded "><a href="../io/csv_write.html"><strong aria-hidden="true">9.2.</strong> Write CSV</a></li><li class="chapter-item expanded "><a href="../io/parquet_read.html"><strong aria-hidden="true">9.3.</strong> Read Parquet</a></li><li class="chapter-item expanded "><a href="../io/parquet_write.html"><strong aria-hidden="true">9.4.</strong> Write Parquet</a></li><li class="chapter-item expanded "><a href="../io/ipc_read.html"><strong aria-hidden="true">9.5.</strong> Read Arrow</a></li><li class="chapter-item expanded "><a href="../io/ipc_stream_read.html"><strong aria-hidden="true">9.6.</strong> Read Arrow stream</a></li><li class="chapter-item expanded "><a href="../io/ipc_write.html"><strong aria-hidden="true">9.7.</strong> Write Arrow</a></li><li class="chapter-item expanded "><a href="../io/avro_read.html"><strong aria-hidden="true">9.8.</strong> Read Avro</a></li><li class="chapter-item expanded "><a href="../io/avro_write.html"><strong aria-hidden="true">9.9.</strong> Write Avro</a></li><li class="chapter-item expanded "><a href="../io/json_read.html"><strong aria-hidden="true">9.10.</strong> Read JSON</a></li><li class="chapter-item expanded "><a href="../io/json_write.html" class="active"><strong aria-hidden="true">9.11.</strong> Write JSON</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -134,88 +134,51 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="read-arrow-streams"><a class="header" href="#read-arrow-streams">Read Arrow streams</a></h1>
-<p>When compiled with feature <code>io_ipc</code>, this crate can be used to read Arrow streams.</p>
-<p>The example below shows how to read from a stream:</p>
-<pre><pre class="playground"><code class="language-rust">use std::net::TcpStream;
-use std::thread;
-use std::time::Duration;
+                        <h1 id="write-json"><a class="header" href="#write-json">Write JSON</a></h1>
+<p>When compiled with feature <code>io_json</code>, you can use this crate to write JSON files.
+The following example writes a batch as a JSON file:</p>
+<pre><pre class="playground"><code class="language-rust">use std::fs::File;
+use std::sync::Arc;
 
-use arrow2::array::{Array, Int64Array};
-use arrow2::datatypes::DataType;
-use arrow2::error::Result;
-use arrow2::io::ipc::read;
+use arrow2::{
+    array::Int32Array,
+    datatypes::{Field, Schema},
+    error::Result,
+    io::json::write,
+    record_batch::RecordBatch,
+};
 
-fn main() -&gt; Result&lt;()&gt; {
-    const ADDRESS: &amp;str = &quot;127.0.0.1:12989&quot;;
+fn write_batches(path: &amp;str, batches: &amp;[RecordBatch]) -&gt; Result&lt;()&gt; {
+    let mut writer = File::create(path)?;
+    let format = write::JsonArray::default();
 
-    let mut reader = TcpStream::connect(ADDRESS)?;
-    let metadata = read::read_stream_metadata(&amp;mut reader)?;
-    let mut stream = read::StreamReader::new(&amp;mut reader, metadata);
+    let batches = batches.iter().cloned().map(Ok);
 
-    let mut idx = 0;
-    loop {
-        match stream.next() {
-            Some(x) =&gt; match x {
-                Ok(read::StreamState::Some(b)) =&gt; {
-                    idx += 1;
-                    println!(&quot;batch: {:?}&quot;, idx)
-                }
-                Ok(read::StreamState::Waiting) =&gt; thread::sleep(Duration::from_millis(2000)),
-                Err(l) =&gt; println!(&quot;{:?} ({})&quot;, l, idx),
-            },
-            None =&gt; break,
-        };
-    }
+    // Advancing this iterator serializes the next batch to its internal buffer (i.e. CPU-bounded)
+    let blocks = write::Serializer::new(batches, vec![], format);
+
+    // the operation of writing is IO-bounded.
+    write::write(&amp;mut writer, format, blocks)?;
 
     Ok(())
 }
+
+fn main() -&gt; Result&lt;()&gt; {
+    let array = Int32Array::from(&amp;[Some(0), None, Some(2), Some(3), Some(4), Some(5), Some(6)]);
+    let field = Field::new(&quot;c1&quot;, array.data_type().clone(), true);
+    let schema = Schema::new(vec![field]);
+    let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(array)])?;
+
+    write_batches(&quot;example.json&quot;, &amp;[batch.clone(), batch])
+}
 </code></pre></pre>
-<p>e.g. written by pyarrow:</p>
-<pre><code class="language-python ignore">import pyarrow as pa
-from time import sleep
-import socket
-
-# Set up the data exchange socket
-sk = socket.socket()
-sk.bind((&quot;127.0.0.1&quot;, 12989))
-sk.listen()
-
-data = [
-    pa.array([1, 2, 3, 4]),
-    pa.array([&quot;foo&quot;, &quot;bar&quot;, &quot;baz&quot;, None]),
-    pa.array([True, None, False, True]),
-]
-
-batch = pa.record_batch(data, names=[&quot;f0&quot;, &quot;f1&quot;, &quot;f2&quot;])
-
-# Accept incoming connection and stream the data away
-connection, address = sk.accept()
-dummy_socket_file = connection.makefile(&quot;wb&quot;)
-with pa.RecordBatchStreamWriter(dummy_socket_file, batch.schema) as writer:
-    for i in range(50):
-        writer.write_batch(batch)
-        sleep(1)
-</code></pre>
-<p>via</p>
-<pre><code class="language-bash ignore">python main.py &amp;
-PRODUCER_PID=$!
-
-sleep 1 # wait for metadata to be available.
-cargo run
-
-kill $PRODUCER_PID
-</code></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../io/ipc_read.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../io/json_read.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
-                            </a>
-                            <a rel="next" href="../io/ipc_write.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                <i class="fa fa-angle-right"></i>
                             </a>
                         <div style="clear: both"></div>
                     </nav>
@@ -223,11 +186,8 @@ kill $PRODUCER_PID
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../io/ipc_read.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../io/json_read.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
-                    </a>
-                    <a rel="next" href="../io/ipc_write.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
 
