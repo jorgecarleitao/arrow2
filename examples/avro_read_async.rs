@@ -34,7 +34,7 @@ async fn main() -> Result<()> {
             deserialize(&decompressed, schema.fields(), &avro_schemas)
         });
         let batch = handle.await.unwrap()?;
-        assert!(batch.len() > 0);
+        assert!(!batch.is_empty());
     }
 
     Ok(())

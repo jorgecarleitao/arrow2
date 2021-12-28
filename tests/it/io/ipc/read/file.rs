@@ -168,7 +168,7 @@ fn test_projection(version: &str, file_name: &str, column: usize) -> Result<()> 
     assert_eq!(reader.schema().fields().len(), 1);
 
     reader.try_for_each(|rhs| {
-        assert_eq!(rhs?.num_columns(), 1);
+        assert_eq!(rhs?.arrays().len(), 1);
         Result::Ok(())
     })?;
     Ok(())

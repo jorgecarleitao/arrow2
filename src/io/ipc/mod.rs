@@ -10,9 +10,8 @@
 //! using the more integrated approach that is exposed in this module.
 //!
 //! [Arrow's IPC protocol](https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc)
-//! allows only [`RecordBatch`](crate::record_batch::RecordBatch)es or
-//! [`DictionaryBatch`](gen::Message::DictionaryBatch) to be passed
-//! around due to its reliance on a pre-defined data scheme. This limitation
+//! allows only batch or dictionary columns to be passed
+//! around due to its reliance on a pre-defined data scheme. This constraint
 //! provides a large performance gain because serialized data will always have a
 //! known structutre, i.e. the same fields and datatypes, with the only variance
 //! being the number of rows and the actual data inside the Batch. This dramatically

@@ -17,7 +17,7 @@ pub mod types;
 
 pub mod compute;
 pub mod io;
-pub mod record_batch;
+//pub mod record_batch;
 pub mod temporal_conversions;
 
 pub mod datatypes;

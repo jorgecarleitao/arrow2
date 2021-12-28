@@ -1,4 +1,5 @@
 use std::convert::TryInto;
+use std::sync::Arc;
 
 use avro_schema::{Enum, Schema as AvroSchema};
 
@@ -246,7 +247,7 @@ pub fn deserialize(
     block: &Block,
     fields: &[Field],
     avro_schemas: &[AvroSchema],
-) -> Result<Columns<Box<dyn Array>>> {
+) -> Result<Columns<Arc<dyn Array>>> {
     let rows = block.number_of_rows;
     let mut block = block.data.as_ref();
 
@@ -270,5 +271,5 @@ pub fn deserialize(
             block = deserialize_item(array.as_mut(), field.is_nullable(), avro_field, block)?
         }
     }
-    Columns::try_new(arrays.iter_mut().map(|array| array.as_box()).collect())
+    Columns::try_new(arrays.iter_mut().map(|array| array.as_arc()).collect())
 }

@@ -373,15 +373,13 @@ fn all_types() -> Result<()> {
     let batches = reader.collect::<Result<Vec<_>>>()?;
     assert_eq!(batches.len(), 1);
 
-    let result = batches[0]
-        .column(0)
+    let result = batches[0].columns()[0]
         .as_any()
         .downcast_ref::<Int32Array>()
         .unwrap();
     assert_eq!(result, &Int32Array::from_slice([4, 5, 6, 7, 2, 3, 0, 1]));
 
-    let result = batches[0]
-        .column(6)
+    let result = batches[0].columns()[6]
         .as_any()
         .downcast_ref::<Float32Array>()
         .unwrap();
@@ -390,8 +388,7 @@ fn all_types() -> Result<()> {
         &Float32Array::from_slice([0.0, 1.1, 0.0, 1.1, 0.0, 1.1, 0.0, 1.1])
     );
 
-    let result = batches[0]
-        .column(9)
+    let result = batches[0].columns()[9]
         .as_any()
         .downcast_ref::<BinaryArray<i32>>()
         .unwrap();

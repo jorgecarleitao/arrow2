@@ -6,11 +6,11 @@ use std::time::SystemTime;
 use crossbeam_channel::unbounded;
 
 use arrow2::{
-    array::Array, error::Result, io::parquet::read, io::parquet::read::MutStreamingIterator,
-    record_batch::RecordBatch,
+    array::Array, columns::Columns, error::Result, io::parquet::read,
+    io::parquet::read::MutStreamingIterator,
 };
 
-fn parallel_read(path: &str, row_group: usize) -> Result<RecordBatch> {
+fn parallel_read(path: &str, row_group: usize) -> Result<Columns<Arc<dyn Array>>> {
     // prepare a channel to send compressed pages across threads.
     let (tx, rx) = unbounded();
 
@@ -99,7 +99,7 @@ fn parallel_read(path: &str, row_group: usize) -> Result<RecordBatch> {
     let columns = columns.into_iter().map(|x| x.1.into()).collect();
     println!("Finished - {:?}", start.elapsed().unwrap());
 
-    RecordBatch::try_new(arrow_schema, columns)
+    Columns::try_new(columns)
 }
 
 fn main() -> Result<()> {
@@ -109,7 +109,7 @@ fn main() -> Result<()> {
 
     let start = SystemTime::now();
     let batch = parallel_read(file_path, 0)?;
-    assert!(batch.num_rows() > 0);
+    assert!(!batch.is_empty());
     println!("took: {} ms", start.elapsed().unwrap().as_millis());
     Ok(())
 }

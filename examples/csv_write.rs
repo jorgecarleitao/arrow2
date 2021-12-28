@@ -1,22 +1,22 @@
-use std::sync::Arc;
-
 use arrow2::{
-    array::Int32Array,
-    datatypes::{Field, Schema},
+    array::{Array, Int32Array},
+    columns::Columns,
     error::Result,
     io::csv::write,
-    record_batch::RecordBatch,
 };
 
-fn write_batch(path: &str, batches: &[RecordBatch]) -> Result<()> {
+fn write_batch<A: std::borrow::Borrow<dyn Array>>(
+    path: &str,
+    columns: &[Columns<A>],
+) -> Result<()> {
     let writer = &mut write::WriterBuilder::new().from_path(path)?;
 
-    write::write_header(writer, batches[0].schema())?;
+    write::write_header(writer, &["c1"])?;
 
     let options = write::SerializeOptions::default();
-    batches
+    columns
         .iter()
-        .try_for_each(|batch| write::write_batch(writer, batch, &options))
+        .try_for_each(|batch| write::write_columns(writer, batch, &options))
 }
 
 fn main() -> Result<()> {
@@ -29,9 +29,7 @@ fn main() -> Result<()> {
         Some(5),
         Some(6),
     ]);
-    let field = Field::new("c1", array.data_type().clone(), true);
-    let schema = Schema::new(vec![field]);
-    let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(array)])?;
+    let batch = Columns::try_new(vec![&array as &dyn Array])?;
 
     write_batch("example.csv", &[batch])
 }

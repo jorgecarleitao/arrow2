@@ -5,10 +5,11 @@ use arrow_format::ipc;
 use arrow_format::ipc::flatbuffers::VerifierOptions;
 use arrow_format::ipc::File::Block;
 
+use crate::array::Array;
+use crate::columns::Columns;
 use crate::datatypes::Schema;
 use crate::error::{ArrowError, Result};
 use crate::io::ipc::IpcSchema;
-use crate::record_batch::RecordBatch;
 
 use super::super::{ARROW_MAGIC, CONTINUATION_MARKER};
 use super::common::*;
@@ -209,10 +210,10 @@ fn get_serialized_batch<'a>(
 pub fn read_batch<R: Read + Seek>(
     reader: &mut R,
     metadata: &FileMetadata,
-    projection: Option<(&[usize], Arc<Schema>)>,
+    projection: Option<&[usize]>,
     block: usize,
     block_data: &mut Vec<u8>,
-) -> Result<RecordBatch> {
+) -> Result<Columns<Arc<dyn Array>>> {
     let block = metadata.blocks[block];
 
     // read length
@@ -297,7 +298,7 @@ impl<R: Read + Seek> FileReader<R> {
 }
 
 impl<R: Read + Seek> Iterator for FileReader<R> {
-    type Item = Result<RecordBatch>;
+    type Item = Result<Columns<Arc<dyn Array>>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         // get current block
@@ -307,9 +308,7 @@ impl<R: Read + Seek> Iterator for FileReader<R> {
             Some(read_batch(
                 &mut self.reader,
                 &self.metadata,
-                self.projection
-                    .as_ref()
-                    .map(|x| (x.0.as_ref(), x.1.clone())),
+                self.projection.as_ref().map(|x| x.0.as_ref()),
                 block,
                 &mut self.buffer,
             ))

@@ -1,17 +1,23 @@
 use std::io::Cursor;
+use std::sync::Arc;
 
+use arrow2::array::Array;
+use arrow2::columns::Columns;
 use arrow2::datatypes::Schema;
 use arrow2::error::Result;
 use arrow2::io::ipc::read::read_stream_metadata;
 use arrow2::io::ipc::read::StreamReader;
 use arrow2::io::ipc::write::{StreamWriter, WriteOptions};
 use arrow2::io::ipc::IpcField;
-use arrow2::record_batch::RecordBatch;
 
 use crate::io::ipc::common::read_arrow_stream;
 use crate::io::ipc::common::read_gzip_json;
 
-fn write_(schema: &Schema, ipc_fields: &[IpcField], batches: &[RecordBatch]) -> Vec<u8> {
+fn write_(
+    schema: &Schema,
+    ipc_fields: &[IpcField],
+    batches: &[Columns<Arc<dyn Array>>],
+) -> Vec<u8> {
     let mut result = vec![];
 
     let options = WriteOptions { compression: None };

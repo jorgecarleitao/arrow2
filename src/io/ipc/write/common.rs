@@ -195,7 +195,7 @@ pub fn encode_columns(
     Ok((encoded_dictionaries, encoded_message))
 }
 
-/// Write a `RecordBatch` into two sets of bytes, one for the header (ipc::Schema::Message) and the
+/// Write [`Columns`] into two sets of bytes, one for the header (ipc::Schema::Message) and the
 /// other for the batch's data
 fn columns_to_bytes(columns: &Columns<Arc<dyn Array>>, options: &WriteOptions) -> EncodedData {
     let mut fbb = FlatBufferBuilder::new();

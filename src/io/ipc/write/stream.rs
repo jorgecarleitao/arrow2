@@ -4,15 +4,17 @@
 //! however the `FileWriter` expects a reader that supports `Seek`ing
 
 use std::io::Write;
+use std::sync::Arc;
 
 use super::super::IpcField;
 use super::common::{encode_columns, DictionaryTracker, EncodedData, WriteOptions};
 use super::common_sync::{write_continuation, write_message};
 use super::schema_to_bytes;
 
+use crate::array::Array;
+use crate::columns::Columns;
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
-use crate::record_batch::RecordBatch;
 
 /// Arrow stream writer
 ///
@@ -52,8 +54,8 @@ impl<W: Write> StreamWriter<W> {
         Ok(())
     }
 
-    /// Writes [`RecordBatch`] to the stream
-    pub fn write(&mut self, batch: &RecordBatch, fields: &[IpcField]) -> Result<()> {
+    /// Writes [`Columns`] to the stream
+    pub fn write(&mut self, columns: &Columns<Arc<dyn Array>>, fields: &[IpcField]) -> Result<()> {
         if self.finished {
             return Err(ArrowError::Io(std::io::Error::new(
                 std::io::ErrorKind::UnexpectedEof,
@@ -61,9 +63,8 @@ impl<W: Write> StreamWriter<W> {
             )));
         }
 
-        let columns = batch.clone().into();
         let (encoded_dictionaries, encoded_message) = encode_columns(
-            &columns,
+            columns,
             fields,
             &mut self.dictionary_tracker,
             &self.write_options,

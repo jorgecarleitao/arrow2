@@ -2,7 +2,7 @@ use std::fs::File;
 use std::sync::Arc;
 
 use arrow2::{
-    array::Int32Array,
+    array::{Array, Int32Array},
     columns::Columns,
     datatypes::{Field, Schema},
     error::Result,
@@ -51,7 +51,7 @@ fn main() -> Result<()> {
     ]);
     let field = Field::new("c1", array.data_type().clone(), true);
     let schema = Schema::new(vec![field]);
-    let columns = Columns::new(vec![Arc::new(array)]);
+    let columns = Columns::new(vec![Arc::new(array) as Arc<dyn Array>]);
 
     write_batch("test.parquet", schema, columns)
 }

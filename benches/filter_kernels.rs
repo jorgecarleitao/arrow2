@@ -19,9 +19,9 @@ use std::sync::Arc;
 use criterion::{criterion_group, criterion_main, Criterion};
 
 use arrow2::array::*;
-use arrow2::compute::filter::{build_filter, filter, filter_record_batch, Filter};
+use arrow2::columns::Columns;
+use arrow2::compute::filter::{build_filter, filter, filter_columns, Filter};
 use arrow2::datatypes::{DataType, Field, Schema};
-use arrow2::record_batch::RecordBatch;
 use arrow2::util::bench_util::{create_boolean_array, create_primitive_array, create_string_array};
 
 fn bench_filter(data_array: &dyn Array, filter_array: &BooleanArray) {
@@ -125,13 +125,10 @@ fn add_benchmark(c: &mut Criterion) {
 
     let data_array = create_primitive_array::<f32>(size, 0.0);
 
-    let field = Field::new("c1", data_array.data_type().clone(), true);
-    let schema = Schema::new(vec![field]);
-
-    let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(data_array)]).unwrap();
+    let columns = Columns::try_new(vec![Arc::new(data_array)]).unwrap();
 
     c.bench_function("filter single record batch", |b| {
-        b.iter(|| filter_record_batch(&batch, &filter_array))
+        b.iter(|| filter_record_batch(&columns, &filter_array))
     });
 }
 

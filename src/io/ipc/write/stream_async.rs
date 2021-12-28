@@ -1,4 +1,5 @@
 //! `async` writing of arrow streams
+use std::sync::Arc;
 
 use futures::AsyncWrite;
 
@@ -8,9 +9,10 @@ use super::common::{encode_columns, DictionaryTracker, EncodedData};
 use super::common_async::{write_continuation, write_message};
 use super::{default_ipc_fields, schema_to_bytes};
 
+use crate::array::Array;
+use crate::columns::Columns;
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
-use crate::record_batch::RecordBatch;
 
 /// An `async` writer to the Apache Arrow stream format.
 pub struct StreamWriter<W: AsyncWrite + Unpin + Send> {
@@ -53,10 +55,11 @@ impl<W: AsyncWrite + Unpin + Send> StreamWriter<W> {
         Ok(())
     }
 
-    /// Writes [`RecordBatch`] to the stream
+    /// Writes [`Columns`] to the stream
     pub async fn write(
         &mut self,
-        batch: &RecordBatch,
+        columns: &Columns<Arc<dyn Array>>,
+        schema: &Schema,
         ipc_fields: Option<&[IpcField]>,
     ) -> Result<()> {
         if self.finished {
@@ -67,18 +70,16 @@ impl<W: AsyncWrite + Unpin + Send> StreamWriter<W> {
         }
 
         let (encoded_dictionaries, encoded_message) = if let Some(ipc_fields) = ipc_fields {
-            let columns = batch.clone().into();
             encode_columns(
-                &columns,
+                columns,
                 ipc_fields,
                 &mut self.dictionary_tracker,
                 &self.write_options,
             )?
         } else {
-            let ipc_fields = default_ipc_fields(batch.schema().fields());
-            let columns = batch.clone().into();
+            let ipc_fields = default_ipc_fields(schema.fields());
             encode_columns(
-                &columns,
+                columns,
                 &ipc_fields,
                 &mut self.dictionary_tracker,
                 &self.write_options,

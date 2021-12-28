@@ -4,16 +4,14 @@ mod write;
 use std::io::Cursor;
 use std::sync::Arc;
 
-use serde_json::Value;
-
 use arrow2::array::*;
+use arrow2::columns::Columns;
 use arrow2::datatypes::*;
 use arrow2::error::Result;
 use arrow2::io::json::read as json_read;
 use arrow2::io::json::write as json_write;
-use arrow2::record_batch::RecordBatch;
 
-fn read_batch(data: String, fields: Vec<Field>) -> Result<RecordBatch> {
+fn read_batch(data: String, fields: &[Field]) -> Result<Columns<Arc<dyn Array>>> {
     let mut reader = Cursor::new(data);
 
     let mut rows = vec![String::default(); 1024];
@@ -22,10 +20,14 @@ fn read_batch(data: String, fields: Vec<Field>) -> Result<RecordBatch> {
     json_read::deserialize(rows, fields)
 }
 
-fn write_batch<F: json_write::JsonFormat>(batch: RecordBatch, format: F) -> Result<Vec<u8>> {
+fn write_batch<F: json_write::JsonFormat, A: std::borrow::Borrow<dyn Array>>(
+    batch: Columns<A>,
+    names: Vec<String>,
+    format: F,
+) -> Result<Vec<u8>> {
     let batches = vec![Ok(batch)].into_iter();
 
-    let blocks = json_write::Serializer::new(batches, vec![], format);
+    let blocks = json_write::Serializer::new(batches, names, vec![], format);
 
     let mut buf = Vec::new();
     json_write::write(&mut buf, format, blocks)?;
@@ -37,27 +39,17 @@ fn round_trip(data: String) -> Result<()> {
     let fields = json_read::infer(&mut reader, None)?;
     let data = reader.into_inner();
 
-    let batch = read_batch(data.clone(), fields)?;
+    let columns = read_batch(data, &fields)?;
 
-    let buf = write_batch(batch, json_write::LineDelimited::default())?;
+    let buf = write_batch(
+        columns.clone(),
+        fields.iter().map(|x| x.name().to_string()).collect(),
+        json_write::LineDelimited::default(),
+    )?;
 
-    let result = String::from_utf8(buf).unwrap();
-    println!("{}", result);
-    for (r, e) in result.lines().zip(data.lines()) {
-        let mut result_json = serde_json::from_str::<Value>(r).unwrap();
-        let expected_json = serde_json::from_str::<Value>(e).unwrap();
-        if let Value::Object(e) = &expected_json {
-            // remove null value from object to make comparison consistent:
-            if let Value::Object(r) = result_json {
-                result_json = Value::Object(
-                    r.into_iter()
-                        .filter(|(k, v)| e.contains_key(k) || *v != Value::Null)
-                        .collect(),
-                );
-            }
-            assert_eq!(result_json, expected_json);
-        }
-    }
+    let new_columns = read_batch(String::from_utf8(buf).unwrap(), &fields)?;
+
+    assert_eq!(columns, new_columns);
     Ok(())
 }
 

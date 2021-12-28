@@ -1,18 +1,17 @@
 //! Contains [`Columns`], a container of [`Array`] where every array has the
 //! same length.
-use std::sync::Arc;
 
 use crate::array::Array;
 use crate::error::{ArrowError, Result};
-use crate::record_batch::RecordBatch;
 
-/// A vector of [`Array`] where every array has the same length.
+/// A vector of trait objects of [`Array`] where every item has
+/// the same length, [`Columns::len`].
 #[derive(Debug, Clone, PartialEq)]
-pub struct Columns<A: AsRef<dyn Array>> {
+pub struct Columns<A: std::borrow::Borrow<dyn Array>> {
     arrays: Vec<A>,
 }
 
-impl<A: AsRef<dyn Array>> Columns<A> {
+impl<A: std::borrow::Borrow<dyn Array>> Columns<A> {
     /// Creates a new [`Columns`].
     /// # Panic
     /// Iff the arrays do not have the same length
@@ -25,10 +24,10 @@ impl<A: AsRef<dyn Array>> Columns<A> {
     /// Iff the arrays do not have the same length
     pub fn try_new(arrays: Vec<A>) -> Result<Self> {
         if !arrays.is_empty() {
-            let len = arrays.first().unwrap().as_ref().len();
+            let len = arrays.first().unwrap().borrow().len();
             if arrays
                 .iter()
-                .map(|array| array.as_ref())
+                .map(|array| array.borrow())
                 .any(|array| array.len() != len)
             {
                 return Err(ArrowError::InvalidArgumentError(
@@ -39,17 +38,27 @@ impl<A: AsRef<dyn Array>> Columns<A> {
         Ok(Self { arrays })
     }
 
-    /// returns the [`Array`]s in [`Columns`].
+    /// returns the [`Array`]s in [`Columns`]
     pub fn arrays(&self) -> &[A] {
         &self.arrays
     }
 
-    /// returns the length (number of rows)
+    /// returns the [`Array`]s in [`Columns`]
+    pub fn columns(&self) -> &[A] {
+        &self.arrays
+    }
+
+    /// returns the number of rows of every array
     pub fn len(&self) -> usize {
         self.arrays
             .first()
-            .map(|x| x.as_ref().len())
+            .map(|x| x.borrow().len())
             .unwrap_or_default()
+    }
+
+    /// returns whether the columns have any rows
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     /// Consumes [`Columns`] into its underlying arrays.
@@ -59,25 +68,17 @@ impl<A: AsRef<dyn Array>> Columns<A> {
     }
 }
 
-impl<A: AsRef<dyn Array>> From<Columns<A>> for Vec<A> {
+impl<A: std::borrow::Borrow<dyn Array>> From<Columns<A>> for Vec<A> {
     fn from(c: Columns<A>) -> Self {
         c.into_arrays()
     }
 }
 
-impl<A: AsRef<dyn Array>> std::ops::Deref for Columns<A> {
+impl<A: std::borrow::Borrow<dyn Array>> std::ops::Deref for Columns<A> {
     type Target = [A];
 
     #[inline]
     fn deref(&self) -> &[A] {
         self.arrays()
-    }
-}
-
-impl From<RecordBatch> for Columns<Arc<dyn Array>> {
-    fn from(batch: RecordBatch) -> Self {
-        Self {
-            arrays: batch.into_inner().0,
-        }
     }
 }

@@ -1,9 +1,9 @@
-use std::{collections::HashMap, fs::File, io::Read};
+use std::{collections::HashMap, fs::File, io::Read, sync::Arc};
 
 use arrow2::{
-    datatypes::Schema, error::Result, io::ipc::read::read_stream_metadata,
-    io::ipc::read::StreamReader, io::ipc::IpcField, io::json_integration::read,
-    io::json_integration::ArrowJson, record_batch::RecordBatch,
+    array::Array, columns::Columns, datatypes::Schema, error::Result,
+    io::ipc::read::read_stream_metadata, io::ipc::read::StreamReader, io::ipc::IpcField,
+    io::json_integration::read, io::json_integration::ArrowJson,
 };
 
 use flate2::read::GzDecoder;
@@ -12,7 +12,7 @@ use flate2::read::GzDecoder;
 pub fn read_gzip_json(
     version: &str,
     file_name: &str,
-) -> Result<(Schema, Vec<IpcField>, Vec<RecordBatch>)> {
+) -> Result<(Schema, Vec<IpcField>, Vec<Columns<Arc<dyn Array>>>)> {
     let testdata = crate::test_util::arrow_test_data();
     let file = File::open(format!(
         "{}/arrow-ipc-stream/integration/{}/{}.json.gz",
@@ -41,7 +41,7 @@ pub fn read_gzip_json(
     let batches = arrow_json
         .batches
         .iter()
-        .map(|batch| read::to_record_batch(&schema, &ipc_fields, batch, &dictionaries))
+        .map(|batch| read::deserialize_columns(&schema, &ipc_fields, batch, &dictionaries))
         .collect::<Result<Vec<_>>>()?;
 
     Ok((schema, ipc_fields, batches))
@@ -50,7 +50,7 @@ pub fn read_gzip_json(
 pub fn read_arrow_stream(
     version: &str,
     file_name: &str,
-) -> (Schema, Vec<IpcField>, Vec<RecordBatch>) {
+) -> (Schema, Vec<IpcField>, Vec<Columns<Arc<dyn Array>>>) {
     let testdata = crate::test_util::arrow_test_data();
     let mut file = File::open(format!(
         "{}/arrow-ipc-stream/integration/{}/{}.stream",

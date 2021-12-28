@@ -2,12 +2,12 @@ use std::io::Cursor;
 use std::sync::Arc;
 
 use arrow2::array::*;
+use arrow2::columns::Columns;
 use arrow2::datatypes::*;
 use arrow2::error::Result;
 use arrow2::io::csv::write::*;
-use arrow2::record_batch::RecordBatch;
 
-fn data() -> RecordBatch {
+fn data() -> Columns<Box<dyn Array>> {
     let c1 = Utf8Array::<i32>::from_slice(["a b", "c", "d"]);
     let c2 = Float64Array::from([Some(123.564532), None, Some(-556132.25)]);
     let c3 = UInt32Array::from_slice(&[3, 2, 1]);
@@ -19,28 +19,27 @@ fn data() -> RecordBatch {
     let keys = UInt32Array::from_slice(&[2, 0, 1]);
     let c7 = DictionaryArray::from_data(keys, Arc::new(c1.clone()));
 
-    RecordBatch::try_from_iter(vec![
-        ("c1", Arc::new(c1) as Arc<dyn Array>),
-        ("c2", Arc::new(c2) as Arc<dyn Array>),
-        ("c3", Arc::new(c3) as Arc<dyn Array>),
-        ("c4", Arc::new(c4) as Arc<dyn Array>),
-        ("c5", Arc::new(c5) as Arc<dyn Array>),
-        ("c6", Arc::new(c6) as Arc<dyn Array>),
-        ("c7", Arc::new(c7) as Arc<dyn Array>),
+    Columns::new(vec![
+        Box::new(c1) as Box<dyn Array>,
+        Box::new(c2),
+        Box::new(c3),
+        Box::new(c4),
+        Box::new(c5),
+        Box::new(c6),
+        Box::new(c7),
     ])
-    .unwrap()
 }
 
 #[test]
 fn write_csv() -> Result<()> {
-    let batch = data();
+    let columns = data();
 
     let write = Cursor::new(Vec::<u8>::new());
     let mut writer = WriterBuilder::new().from_writer(write);
 
-    write_header(&mut writer, batch.schema())?;
+    write_header(&mut writer, &["c1", "c2", "c3", "c4", "c5", "c6", "c7"])?;
     let options = SerializeOptions::default();
-    write_batch(&mut writer, &batch, &options)?;
+    write_columns(&mut writer, &columns, &options)?;
 
     // check
     let buffer = writer.into_inner().unwrap().into_inner();
@@ -68,7 +67,7 @@ fn write_csv_custom_options() -> Result<()> {
         time64_format: Some("%r".to_string()),
         ..Default::default()
     };
-    write_batch(&mut writer, &batch, &options)?;
+    write_columns(&mut writer, &batch, &options)?;
 
     // check
     let buffer = writer.into_inner().unwrap().into_inner();
@@ -83,7 +82,7 @@ d|-556132.25|1||2019-04-18 02:45:55.555|11:46:03 PM|c
     Ok(())
 }
 
-fn data_array(column: usize) -> (RecordBatch, Vec<&'static str>) {
+fn data_array(column: usize) -> (Columns<Arc<dyn Array>>, Vec<&'static str>) {
     let (array, expected) = match column {
         0 => (
             Arc::new(Utf8Array::<i64>::from_slice(["a b", "c", "d"])) as Arc<dyn Array>,
@@ -208,21 +207,18 @@ fn data_array(column: usize) -> (RecordBatch, Vec<&'static str>) {
         _ => todo!(),
     };
 
-    (
-        RecordBatch::try_from_iter(vec![("c1", array)]).unwrap(),
-        expected,
-    )
+    (Columns::new(vec![array]), expected)
 }
 
 fn write_single(column: usize) -> Result<()> {
-    let (batch, data) = data_array(column);
+    let (columns, data) = data_array(column);
 
     let write = Cursor::new(Vec::<u8>::new());
     let mut writer = WriterBuilder::new().delimiter(b'|').from_writer(write);
 
-    write_header(&mut writer, batch.schema())?;
+    write_header(&mut writer, &["c1"])?;
     let options = SerializeOptions::default();
-    write_batch(&mut writer, &batch, &options)?;
+    write_columns(&mut writer, &columns, &options)?;
 
     // check
     let buffer = writer.into_inner().unwrap().into_inner();
@@ -230,7 +226,7 @@ fn write_single(column: usize) -> Result<()> {
     let mut expected = "c1\n".to_owned();
     expected.push_str(&data.join("\n"));
     expected.push('\n');
-    assert_eq!(expected, String::from_utf8(buffer).unwrap(),);
+    assert_eq!(expected, String::from_utf8(buffer).unwrap());
     Ok(())
 }
 

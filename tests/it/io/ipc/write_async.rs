@@ -1,11 +1,13 @@
 use std::io::Cursor;
+use std::sync::Arc;
 
+use arrow2::array::Array;
+use arrow2::columns::Columns;
 use arrow2::datatypes::Schema;
 use arrow2::error::Result;
 use arrow2::io::ipc::read;
 use arrow2::io::ipc::write::stream_async;
 use arrow2::io::ipc::IpcField;
-use arrow2::record_batch::RecordBatch;
 use futures::io::Cursor as AsyncCursor;
 
 use crate::io::ipc::common::read_arrow_stream;
@@ -14,7 +16,7 @@ use crate::io::ipc::common::read_gzip_json;
 async fn write_(
     schema: &Schema,
     ipc_fields: &[IpcField],
-    batches: &[RecordBatch],
+    batches: &[Columns<Arc<dyn Array>>],
 ) -> Result<Vec<u8>> {
     let mut result = AsyncCursor::new(vec![]);
 
@@ -22,7 +24,7 @@ async fn write_(
     let mut writer = stream_async::StreamWriter::new(&mut result, options);
     writer.start(schema, Some(ipc_fields)).await?;
     for batch in batches {
-        writer.write(batch, Some(ipc_fields)).await?;
+        writer.write(batch, schema, Some(ipc_fields)).await?;
     }
     writer.finish().await?;
     Ok(result.into_inner())

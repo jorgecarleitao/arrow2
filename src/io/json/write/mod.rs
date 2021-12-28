@@ -30,12 +30,12 @@ where
     Ok(())
 }
 
-/// [`FallibleStreamingIterator`] that serializes a [`RecordBatch`] to bytes.
+/// [`FallibleStreamingIterator`] that serializes a [`Columns`] to bytes.
 /// Advancing it is CPU-bounded
 pub struct Serializer<F, A, I>
 where
     F: JsonFormat,
-    A: AsRef<dyn Array>,
+    A: std::borrow::Borrow<dyn Array>,
     I: Iterator<Item = Result<Columns<A>>>,
 {
     batches: I,
@@ -47,7 +47,7 @@ where
 impl<F, A, I> Serializer<F, A, I>
 where
     F: JsonFormat,
-    A: AsRef<dyn Array>,
+    A: std::borrow::Borrow<dyn Array>,
     I: Iterator<Item = Result<Columns<A>>>,
 {
     /// Creates a new [`Serializer`].
@@ -64,7 +64,7 @@ where
 impl<F, A, I> FallibleStreamingIterator for Serializer<F, A, I>
 where
     F: JsonFormat,
-    A: AsRef<dyn Array>,
+    A: std::borrow::Borrow<dyn Array>,
     I: Iterator<Item = Result<Columns<A>>>,
 {
     type Item = [u8];

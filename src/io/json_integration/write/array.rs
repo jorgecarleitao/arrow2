@@ -1,19 +1,24 @@
-use crate::record_batch::RecordBatch;
-use crate::{array::PrimitiveArray, datatypes::DataType};
+use std::sync::Arc;
+
+use crate::{
+    array::{Array, PrimitiveArray},
+    columns::Columns,
+    datatypes::DataType,
+};
 
 use super::super::{ArrowJsonBatch, ArrowJsonColumn};
 
-/// Serializes a [`RecordBatch`] to [`ArrowJsonBatch`].
-pub fn from_record_batch(batch: &RecordBatch) -> ArrowJsonBatch {
-    let mut json_batch = ArrowJsonBatch {
-        count: batch.num_rows(),
-        columns: Vec::with_capacity(batch.num_columns()),
-    };
+/// Serializes a [`Columns`] to [`ArrowJsonBatch`].
+pub fn serialize_columns(columns: &Columns<Arc<dyn Array>>, names: &[&str]) -> ArrowJsonBatch {
+    let count = columns.len();
 
-    for (col, field) in batch.columns().iter().zip(batch.schema().fields.iter()) {
-        let json_col = match field.data_type() {
+    let columns = columns
+        .arrays()
+        .iter()
+        .zip(names.iter())
+        .map(|(array, name)| match array.data_type() {
             DataType::Int8 => {
-                let array = col.as_any().downcast_ref::<PrimitiveArray<i8>>().unwrap();
+                let array = array.as_any().downcast_ref::<PrimitiveArray<i8>>().unwrap();
 
                 let (validity, data) = array
                     .iter()
@@ -21,8 +26,8 @@ pub fn from_record_batch(batch: &RecordBatch) -> ArrowJsonBatch {
                     .unzip();
 
                 ArrowJsonColumn {
-                    name: field.name().clone(),
-                    count: col.len(),
+                    name: name.to_string(),
+                    count: array.len(),
                     validity: Some(validity),
                     data: Some(data),
                     offset: None,
@@ -31,18 +36,16 @@ pub fn from_record_batch(batch: &RecordBatch) -> ArrowJsonBatch {
                 }
             }
             _ => ArrowJsonColumn {
-                name: field.name().clone(),
-                count: col.len(),
+                name: name.to_string(),
+                count: array.len(),
                 validity: None,
                 data: None,
                 offset: None,
                 type_id: None,
                 children: None,
             },
-        };
+        })
+        .collect();
 
-        json_batch.columns.push(json_col);
-    }
-
-    json_batch
+    ArrowJsonBatch { count, columns }
 }

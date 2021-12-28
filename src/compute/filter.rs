@@ -154,7 +154,7 @@ pub fn filter(array: &dyn Array, filter: &BooleanArray) -> Result<Box<dyn Array>
 
 /// Returns a new [Columns] with arrays containing only values matching the filter.
 /// This is a convenience function: filter multiple columns is embarassingly parallel.
-pub fn filter_columns<A: AsRef<dyn Array>>(
+pub fn filter_columns<A: std::borrow::Borrow<dyn Array>>(
     columns: &Columns<A>,
     filter_values: &BooleanArray,
 ) -> Result<Columns<Box<dyn Array>>> {
@@ -164,11 +164,11 @@ pub fn filter_columns<A: AsRef<dyn Array>>(
 
     let filtered_arrays = match num_colums {
         1 => {
-            vec![filter(columns.arrays()[0].as_ref(), filter_values)?]
+            vec![filter(columns.arrays()[0].borrow(), filter_values)?]
         }
         _ => {
             let filter = build_filter(filter_values)?;
-            arrays.iter().map(|a| filter(a.as_ref())).collect()
+            arrays.iter().map(|a| filter(a.borrow())).collect()
         }
     };
     Columns::try_new(filtered_arrays)

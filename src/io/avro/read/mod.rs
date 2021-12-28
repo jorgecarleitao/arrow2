@@ -1,5 +1,6 @@
 //! APIs to read from Avro format to arrow.
 use std::io::Read;
+use std::sync::Arc;
 
 use avro_schema::{Record, Schema as AvroSchema};
 use fallible_streaming_iterator::FallibleStreamingIterator;
@@ -66,7 +67,7 @@ impl<R: Read> Reader<R> {
 }
 
 impl<R: Read> Iterator for Reader<R> {
-    type Item = Result<Columns<Box<dyn Array>>>;
+    type Item = Result<Columns<Arc<dyn Array>>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let fields = &self.fields[..];

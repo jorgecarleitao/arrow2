@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use arrow2::columns::Columns;
 use avro_rs::types::{Record, Value};
 use avro_rs::{Codec, Writer};
 use avro_rs::{Days, Duration, Millis, Months, Schema as AvroSchema};
@@ -8,7 +9,6 @@ use arrow2::array::*;
 use arrow2::datatypes::*;
 use arrow2::error::Result;
 use arrow2::io::avro::read;
-use arrow2::record_batch::RecordBatch;
 
 pub(super) fn schema() -> (AvroSchema, Schema) {
     let raw_schema = r#"
@@ -69,7 +69,7 @@ pub(super) fn schema() -> (AvroSchema, Schema) {
     (AvroSchema::parse_str(raw_schema).unwrap(), schema)
 }
 
-pub(super) fn data() -> RecordBatch {
+pub(super) fn data() -> Columns<Arc<dyn Array>> {
     let data = vec![
         Some(vec![Some(1i32), None, Some(3)]),
         Some(vec![Some(1i32), None, Some(3)]),
@@ -80,21 +80,21 @@ pub(super) fn data() -> RecordBatch {
 
     let columns = vec![
         Arc::new(Int64Array::from_slice([27, 47])) as Arc<dyn Array>,
-        Arc::new(Utf8Array::<i32>::from_slice(["foo", "bar"])) as Arc<dyn Array>,
-        Arc::new(Int32Array::from_slice([1, 1])) as Arc<dyn Array>,
-        Arc::new(Int32Array::from_slice([1, 2]).to(DataType::Date32)) as Arc<dyn Array>,
-        Arc::new(BinaryArray::<i32>::from_slice([b"foo", b"bar"])) as Arc<dyn Array>,
-        Arc::new(PrimitiveArray::<f64>::from_slice([1.0, 2.0])) as Arc<dyn Array>,
-        Arc::new(BooleanArray::from_slice([true, false])) as Arc<dyn Array>,
-        Arc::new(Utf8Array::<i32>::from([Some("foo"), None])) as Arc<dyn Array>,
+        Arc::new(Utf8Array::<i32>::from_slice(["foo", "bar"])),
+        Arc::new(Int32Array::from_slice([1, 1])),
+        Arc::new(Int32Array::from_slice([1, 2]).to(DataType::Date32)),
+        Arc::new(BinaryArray::<i32>::from_slice([b"foo", b"bar"])),
+        Arc::new(PrimitiveArray::<f64>::from_slice([1.0, 2.0])),
+        Arc::new(BooleanArray::from_slice([true, false])),
+        Arc::new(Utf8Array::<i32>::from([Some("foo"), None])),
         array.into_arc(),
         Arc::new(DictionaryArray::<i32>::from_data(
             Int32Array::from_slice([1, 0]),
             Arc::new(Utf8Array::<i32>::from_slice(["SPADES", "HEARTS"])),
-        )) as Arc<dyn Array>,
+        )),
     ];
 
-    RecordBatch::try_new(Arc::new(schema().1), columns).unwrap()
+    Columns::try_new(columns).unwrap()
 }
 
 pub(super) fn write_avro(codec: Codec) -> std::result::Result<Vec<u8>, avro_rs::Error> {
@@ -149,7 +149,7 @@ pub(super) fn write_avro(codec: Codec) -> std::result::Result<Vec<u8>, avro_rs::
     Ok(writer.into_inner().unwrap())
 }
 
-pub(super) fn read_avro(mut avro: &[u8]) -> Result<RecordBatch> {
+pub(super) fn read_avro(mut avro: &[u8]) -> Result<(Columns<Arc<dyn Array>>, Schema)> {
     let file = &mut avro;
 
     let (avro_schema, schema, codec, file_marker) = read::read_metadata(file)?;
@@ -157,18 +157,20 @@ pub(super) fn read_avro(mut avro: &[u8]) -> Result<RecordBatch> {
     let mut reader = read::Reader::new(
         read::Decompressor::new(read::BlockStreamIterator::new(file, file_marker), codec),
         avro_schema,
-        Arc::new(schema),
+        schema.fields.clone(),
     );
 
-    reader.next().unwrap()
+    reader.next().unwrap().map(|x| (x, schema))
 }
 
 fn test(codec: Codec) -> Result<()> {
     let avro = write_avro(codec).unwrap();
     let expected = data();
+    let (_, expected_schema) = schema();
 
-    let result = read_avro(&avro)?;
+    let (result, schema) = read_avro(&avro)?;
 
+    assert_eq!(schema, expected_schema);
     assert_eq!(result, expected);
     Ok(())
 }

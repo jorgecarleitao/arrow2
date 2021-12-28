@@ -83,7 +83,7 @@ fn struct_serializer<'a>(
                 serializers
                     .iter_mut()
                     .zip(names)
-                    // `unwrap` is infalible because `array.len()` equals `num_rows` on a `RecordBatch`
+                    // `unwrap` is infalible because `array.len()` equals `len` on `Columns`
                     .for_each(|(iter, name)| {
                         let item = iter.next().unwrap();
                         record.push((name, item));
@@ -202,7 +202,7 @@ fn serialize_item<F: JsonFormat>(
 pub fn serialize<N, A, F>(names: &[N], columns: &Columns<A>, format: F, buffer: &mut Vec<u8>)
 where
     N: AsRef<str>,
-    A: AsRef<dyn Array>,
+    A: std::borrow::Borrow<dyn Array>,
     F: JsonFormat,
 {
     let num_rows = columns.len();
@@ -210,7 +210,7 @@ where
     let mut serializers: Vec<_> = columns
         .arrays()
         .iter()
-        .map(|array| new_serializer(array.as_ref()))
+        .map(|array| new_serializer(array.borrow()))
         .collect();
 
     let mut is_first_row = true;
@@ -219,7 +219,7 @@ where
         serializers
             .iter_mut()
             .zip(names.iter())
-            // `unwrap` is infalible because `array.len()` equals `num_rows` on a `RecordBatch`
+            // `unwrap` is infalible because `array.len()` equals `len` on `Columns`
             .for_each(|(iter, name)| {
                 let item = iter.next().unwrap();
                 record.push((name.as_ref(), item));

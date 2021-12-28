@@ -11,9 +11,7 @@ use super::*;
 fn basic() -> Result<()> {
     let (data, schema, columns) = case_basics();
 
-    let batch = read_batch(data, schema.fields.clone())?;
-
-    assert_eq!(&schema, batch.schema().as_ref());
+    let batch = read_batch(data, &schema.fields)?;
 
     columns
         .iter()
@@ -26,9 +24,7 @@ fn basic() -> Result<()> {
 fn basic_projection() -> Result<()> {
     let (data, schema, columns) = case_basics_schema();
 
-    let batch = read_batch(data, schema.fields.clone())?;
-
-    assert_eq!(&schema, batch.schema().as_ref());
+    let batch = read_batch(data, &schema.fields)?;
 
     columns
         .iter()
@@ -41,9 +37,7 @@ fn basic_projection() -> Result<()> {
 fn lists() -> Result<()> {
     let (data, schema, columns) = case_list();
 
-    let batch = read_batch(data, schema.fields.clone())?;
-
-    assert_eq!(&schema, batch.schema().as_ref());
+    let batch = read_batch(data, &schema.fields)?;
 
     columns
         .iter()
@@ -60,10 +54,7 @@ fn line_break_in_values() -> Result<()> {
     {"a":null}
     "#;
 
-    let batch = read_batch(
-        data.to_string(),
-        vec![Field::new("a", DataType::Utf8, true)],
-    )?;
+    let batch = read_batch(data.to_string(), &[Field::new("a", DataType::Utf8, true)])?;
 
     let expected = Utf8Array::<i32>::from(&[Some("aa\n\n"), Some("aa\n"), None]);
 
@@ -88,7 +79,7 @@ fn invalid_read_record() -> Result<()> {
         DataType::Struct(vec![Field::new("a", DataType::Utf8, true)]),
         true,
     )];
-    let batch = read_batch("city,lat,lng".to_string(), fields);
+    let batch = read_batch("city,lat,lng".to_string(), &fields);
 
     assert_eq!(
         batch.err().unwrap().to_string(),
@@ -101,9 +92,7 @@ fn invalid_read_record() -> Result<()> {
 fn nested_struct_arrays() -> Result<()> {
     let (data, schema, columns) = case_struct();
 
-    let batch = read_batch(data, schema.fields.clone())?;
-
-    assert_eq!(&schema, batch.schema().as_ref());
+    let batch = read_batch(data, &schema.fields)?;
 
     columns
         .iter()
@@ -124,7 +113,6 @@ fn nested_list_arrays() -> Result<()> {
     );
     let a_list_data_type = DataType::List(Box::new(a_struct_field));
     let a_field = Field::new("a", a_list_data_type.clone(), true);
-    let fields = vec![a_field];
 
     let data = r#"
     {"a": [{"b": true, "c": {"d": "a_text"}}, {"b": false, "c": {"d": "b_text"}}]}
@@ -134,7 +122,7 @@ fn nested_list_arrays() -> Result<()> {
     {"a": []}
     "#;
 
-    let batch = read_batch(data.to_string(), fields)?;
+    let batch = read_batch(data.to_string(), &[a_field])?;
 
     // build expected output
     let d = Utf8Array::<i32>::from(&vec![
@@ -168,7 +156,7 @@ fn nested_list_arrays() -> Result<()> {
         Some(Bitmap::from_u8_slice([0b00010111], 5)),
     );
 
-    assert_eq!(expected, batch.column(0).as_ref());
+    assert_eq!(expected, batch.columns()[0].as_ref());
     Ok(())
 }
 
@@ -181,14 +169,10 @@ fn skip_empty_lines() {
 
     {\"a\": 3}";
 
-    let batch = read_batch(
-        data.to_string(),
-        vec![Field::new("a", DataType::Int64, true)],
-    )
-    .unwrap();
+    let batch = read_batch(data.to_string(), &[Field::new("a", DataType::Int64, true)]).unwrap();
 
-    assert_eq!(1, batch.num_columns());
-    assert_eq!(3, batch.num_rows());
+    assert_eq!(1, batch.arrays().len());
+    assert_eq!(3, batch.len());
 }
 
 #[test]
@@ -208,9 +192,7 @@ fn row_type_validation() {
 fn list_of_string_dictionary_from_with_nulls() -> Result<()> {
     let (data, schema, columns) = case_dict();
 
-    let batch = read_batch(data, schema.fields.clone())?;
-
-    assert_eq!(&schema, batch.schema().as_ref());
+    let batch = read_batch(data, &schema.fields)?;
 
     assert_eq!(columns[0].as_ref(), batch.columns()[0].as_ref());
     Ok(())
