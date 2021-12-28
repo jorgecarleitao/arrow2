@@ -137,7 +137,7 @@
                         <h1 id="metadata"><a class="header" href="#metadata">Metadata</a></h1>
 <pre><pre class="playground"><code class="language-rust">use std::collections::{BTreeMap, HashMap};
 
-use arrow2::datatypes::{DataType, Field, Schema};
+use arrow2::datatypes::{DataType, Field, Metadata, Schema};
 
 fn main() {
     // two data types (logical types)
@@ -149,7 +149,7 @@ fn main() {
     let field2 = Field::new(&quot;c2&quot;, type2_, true);
 
     // which can contain extra metadata:
-    let mut metadata = BTreeMap::new();
+    let mut metadata = Metadata::new();
     metadata.insert(
         &quot;Office Space&quot;.to_string(),
         &quot;Deals with real issues in the workplace.&quot;.to_string(),
