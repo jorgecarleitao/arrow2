@@ -8,11 +8,10 @@ use arrow2::{
 
 use flate2::read::GzDecoder;
 
+type IpcRead = (Schema, Vec<IpcField>, Vec<Columns<Arc<dyn Array>>>);
+
 /// Read gzipped JSON file
-pub fn read_gzip_json(
-    version: &str,
-    file_name: &str,
-) -> Result<(Schema, Vec<IpcField>, Vec<Columns<Arc<dyn Array>>>)> {
+pub fn read_gzip_json(version: &str, file_name: &str) -> Result<IpcRead> {
     let testdata = crate::test_util::arrow_test_data();
     let file = File::open(format!(
         "{}/arrow-ipc-stream/integration/{}/{}.json.gz",
@@ -47,10 +46,7 @@ pub fn read_gzip_json(
     Ok((schema, ipc_fields, batches))
 }
 
-pub fn read_arrow_stream(
-    version: &str,
-    file_name: &str,
-) -> (Schema, Vec<IpcField>, Vec<Columns<Arc<dyn Array>>>) {
+pub fn read_arrow_stream(version: &str, file_name: &str) -> IpcRead {
     let testdata = crate::test_util::arrow_test_data();
     let mut file = File::open(format!(
         "{}/arrow-ipc-stream/integration/{}/{}.stream",

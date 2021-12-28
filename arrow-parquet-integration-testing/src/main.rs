@@ -2,8 +2,10 @@ use std::fs::File;
 use std::sync::Arc;
 use std::{collections::HashMap, io::Read};
 
+use arrow2::array::Array;
 use arrow2::io::ipc::IpcField;
 use arrow2::{
+    columns::Columns,
     datatypes::{DataType, Schema},
     error::Result,
     io::{
@@ -13,7 +15,6 @@ use arrow2::{
             write_file, Compression, Encoding, RowGroupIterator, Version, WriteOptions,
         },
     },
-    record_batch::RecordBatch,
 };
 
 use clap::{App, Arg};
@@ -21,7 +22,10 @@ use clap::{App, Arg};
 use flate2::read::GzDecoder;
 
 /// Read gzipped JSON file
-fn read_gzip_json(version: &str, file_name: &str) -> (Schema, Vec<IpcField>, Vec<RecordBatch>) {
+pub fn read_gzip_json(
+    version: &str,
+    file_name: &str,
+) -> Result<(Schema, Vec<IpcField>, Vec<Columns<Arc<dyn Array>>>)> {
     let path = format!(
         "../testing/arrow-testing/data/arrow-ipc-stream/integration/{}/{}.json.gz",
         version, file_name
@@ -31,10 +35,11 @@ fn read_gzip_json(version: &str, file_name: &str) -> (Schema, Vec<IpcField>, Vec
     let mut s = String::new();
     gz.read_to_string(&mut s).unwrap();
     // convert to Arrow JSON
-    let arrow_json: ArrowJson = serde_json::from_str(&s).unwrap();
+    let arrow_json: ArrowJson = serde_json::from_str(&s)?;
 
     let schema = serde_json::to_value(arrow_json.schema).unwrap();
-    let (schema, ipc_fields) = read::deserialize_schema(&schema).unwrap();
+
+    let (schema, ipc_fields) = read::deserialize_schema(&schema)?;
 
     // read dictionaries
     let mut dictionaries = HashMap::new();
@@ -48,11 +53,10 @@ fn read_gzip_json(version: &str, file_name: &str) -> (Schema, Vec<IpcField>, Vec
     let batches = arrow_json
         .batches
         .iter()
-        .map(|batch| read::to_record_batch(&schema, &ipc_fields, batch, &dictionaries))
-        .collect::<Result<Vec<_>>>()
-        .unwrap();
+        .map(|batch| read::deserialize_columns(&schema, &ipc_fields, batch, &dictionaries))
+        .collect::<Result<Vec<_>>>()?;
 
-    (schema, ipc_fields, batches)
+    Ok((schema, ipc_fields, batches))
 }
 
 fn main() -> Result<()> {
@@ -108,7 +112,7 @@ fn main() -> Result<()> {
             .collect::<Vec<_>>()
     });
 
-    let (schema, _, batches) = read_gzip_json("1.0.0-littleendian", json_file);
+    let (schema, _, batches) = read_gzip_json("1.0.0-littleendian", json_file)?;
 
     let schema = if let Some(projection) = &projection {
         let fields = schema
@@ -144,7 +148,7 @@ fn main() -> Result<()> {
                         }
                     })
                     .collect();
-                RecordBatch::try_new(Arc::new(schema.clone()), columns).unwrap()
+                Columns::try_new(columns).unwrap()
             })
             .collect::<Vec<_>>()
     } else {

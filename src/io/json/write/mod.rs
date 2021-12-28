@@ -35,7 +35,7 @@ where
 pub struct Serializer<F, A, I>
 where
     F: JsonFormat,
-    A: std::borrow::Borrow<dyn Array>,
+    A: AsRef<dyn Array>,
     I: Iterator<Item = Result<Columns<A>>>,
 {
     batches: I,
@@ -47,7 +47,7 @@ where
 impl<F, A, I> Serializer<F, A, I>
 where
     F: JsonFormat,
-    A: std::borrow::Borrow<dyn Array>,
+    A: AsRef<dyn Array>,
     I: Iterator<Item = Result<Columns<A>>>,
 {
     /// Creates a new [`Serializer`].
@@ -64,7 +64,7 @@ where
 impl<F, A, I> FallibleStreamingIterator for Serializer<F, A, I>
 where
     F: JsonFormat,
-    A: std::borrow::Borrow<dyn Array>,
+    A: AsRef<dyn Array>,
     I: Iterator<Item = Result<Columns<A>>>,
 {
     type Item = [u8];

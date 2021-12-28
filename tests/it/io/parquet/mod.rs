@@ -667,7 +667,9 @@ fn integration_write(schema: &Schema, batches: &[Columns<Arc<dyn Array>>]) -> Re
     Ok(writer.into_inner())
 }
 
-fn integration_read(data: &[u8]) -> Result<(Arc<Schema>, Vec<Columns<Arc<dyn Array>>>)> {
+type IntegrationRead = (Arc<Schema>, Vec<Columns<Arc<dyn Array>>>);
+
+fn integration_read(data: &[u8]) -> Result<IntegrationRead> {
     let reader = Cursor::new(data);
     let reader = RecordReader::try_new(reader, None, None, None, None)?;
     let schema = reader.schema().clone();

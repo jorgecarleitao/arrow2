@@ -36,7 +36,7 @@ fn data() -> Columns<Arc<dyn Array>> {
 
 use super::read::read_avro;
 
-fn write_avro<R: std::borrow::Borrow<dyn Array>>(
+fn write_avro<R: AsRef<dyn Array>>(
     columns: &Columns<R>,
     schema: &Schema,
     compression: Option<write::Compression>,
@@ -46,7 +46,7 @@ fn write_avro<R: std::borrow::Borrow<dyn Array>>(
     let mut serializers = columns
         .arrays()
         .iter()
-        .map(|x| x.borrow())
+        .map(|x| x.as_ref())
         .zip(avro_fields.iter())
         .map(|(array, field)| write::new_serializer(array, &field.schema))
         .collect::<Vec<_>>();

@@ -7,11 +7,11 @@ use crate::error::{ArrowError, Result};
 /// A vector of trait objects of [`Array`] where every item has
 /// the same length, [`Columns::len`].
 #[derive(Debug, Clone, PartialEq)]
-pub struct Columns<A: std::borrow::Borrow<dyn Array>> {
+pub struct Columns<A: AsRef<dyn Array>> {
     arrays: Vec<A>,
 }
 
-impl<A: std::borrow::Borrow<dyn Array>> Columns<A> {
+impl<A: AsRef<dyn Array>> Columns<A> {
     /// Creates a new [`Columns`].
     /// # Panic
     /// Iff the arrays do not have the same length
@@ -24,10 +24,10 @@ impl<A: std::borrow::Borrow<dyn Array>> Columns<A> {
     /// Iff the arrays do not have the same length
     pub fn try_new(arrays: Vec<A>) -> Result<Self> {
         if !arrays.is_empty() {
-            let len = arrays.first().unwrap().borrow().len();
+            let len = arrays.first().unwrap().as_ref().len();
             if arrays
                 .iter()
-                .map(|array| array.borrow())
+                .map(|array| array.as_ref())
                 .any(|array| array.len() != len)
             {
                 return Err(ArrowError::InvalidArgumentError(
@@ -52,7 +52,7 @@ impl<A: std::borrow::Borrow<dyn Array>> Columns<A> {
     pub fn len(&self) -> usize {
         self.arrays
             .first()
-            .map(|x| x.borrow().len())
+            .map(|x| x.as_ref().len())
             .unwrap_or_default()
     }
 
@@ -68,13 +68,13 @@ impl<A: std::borrow::Borrow<dyn Array>> Columns<A> {
     }
 }
 
-impl<A: std::borrow::Borrow<dyn Array>> From<Columns<A>> for Vec<A> {
+impl<A: AsRef<dyn Array>> From<Columns<A>> for Vec<A> {
     fn from(c: Columns<A>) -> Self {
         c.into_arrays()
     }
 }
 
-impl<A: std::borrow::Borrow<dyn Array>> std::ops::Deref for Columns<A> {
+impl<A: AsRef<dyn Array>> std::ops::Deref for Columns<A> {
     type Target = [A];
 
     #[inline]

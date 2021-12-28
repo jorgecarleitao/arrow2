@@ -16,20 +16,20 @@ use crate::error::Result;
 
 /// Creates serializers that iterate over each column that serializes each item according
 /// to `options`.
-fn new_serializers<'a, A: std::borrow::Borrow<dyn Array>>(
+fn new_serializers<'a, A: AsRef<dyn Array>>(
     columns: &'a [A],
     options: &'a SerializeOptions,
 ) -> Result<Vec<Box<dyn StreamingIterator<Item = [u8]> + 'a>>> {
     columns
         .iter()
-        .map(|column| new_serializer(column.borrow(), options))
+        .map(|column| new_serializer(column.as_ref(), options))
         .collect()
 }
 
 /// Serializes [`Columns`] to a vector of `ByteRecord`.
 /// The vector is guaranteed to have `columns.len()` entries.
 /// Each `ByteRecord` is guaranteed to have `columns.array().len()` fields.
-pub fn serialize<A: std::borrow::Borrow<dyn Array>>(
+pub fn serialize<A: AsRef<dyn Array>>(
     columns: &Columns<A>,
     options: &SerializeOptions,
 ) -> Result<Vec<ByteRecord>> {
@@ -47,7 +47,7 @@ pub fn serialize<A: std::borrow::Borrow<dyn Array>>(
 }
 
 /// Writes [`Columns`] to `writer` according to the serialization options `options`.
-pub fn write_columns<W: Write, A: std::borrow::Borrow<dyn Array>>(
+pub fn write_columns<W: Write, A: AsRef<dyn Array>>(
     writer: &mut Writer<W>,
     columns: &Columns<A>,
     options: &SerializeOptions,

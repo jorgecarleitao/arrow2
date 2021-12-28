@@ -8,10 +8,7 @@ use crate::{
 use comfy_table::{Cell, Table};
 
 /// Returns a visual representation of [`Columns`]
-pub fn write<A: std::borrow::Borrow<dyn Array>, N: AsRef<str>>(
-    batches: &[Columns<A>],
-    names: &[N],
-) -> String {
+pub fn write<A: AsRef<dyn Array>, N: AsRef<str>>(batches: &[Columns<A>], names: &[N]) -> String {
     let mut table = Table::new();
     table.load_preset("||--+-++|    ++++++");
 
@@ -26,7 +23,7 @@ pub fn write<A: std::borrow::Borrow<dyn Array>, N: AsRef<str>>(
         let displayes = batch
             .arrays()
             .iter()
-            .map(|array| get_display(array.borrow()))
+            .map(|array| get_display(array.as_ref()))
             .collect::<Vec<_>>();
 
         for row in 0..batch.len() {

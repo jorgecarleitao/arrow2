@@ -5,10 +5,7 @@ use arrow2::{
     io::csv::write,
 };
 
-fn write_batch<A: std::borrow::Borrow<dyn Array>>(
-    path: &str,
-    columns: &[Columns<A>],
-) -> Result<()> {
+fn write_batch<A: AsRef<dyn Array>>(path: &str, columns: &[Columns<A>]) -> Result<()> {
     let writer = &mut write::WriterBuilder::new().from_path(path)?;
 
     write::write_header(writer, &["c1"])?;

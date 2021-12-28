@@ -15,19 +15,14 @@ use crate::{
 /// An iterator adapter that converts an iterator over [`Columns`] into an iterator
 /// of row groups.
 /// Use it to create an iterator consumable by the parquet's API.
-pub struct RowGroupIterator<
-    A: std::borrow::Borrow<dyn Array> + 'static,
-    I: Iterator<Item = Result<Columns<A>>>,
-> {
+pub struct RowGroupIterator<A: AsRef<dyn Array> + 'static, I: Iterator<Item = Result<Columns<A>>>> {
     iter: I,
     options: WriteOptions,
     parquet_schema: SchemaDescriptor,
     encodings: Vec<Encoding>,
 }
 
-impl<A: std::borrow::Borrow<dyn Array> + 'static, I: Iterator<Item = Result<Columns<A>>>>
-    RowGroupIterator<A, I>
-{
+impl<A: AsRef<dyn Array> + 'static, I: Iterator<Item = Result<Columns<A>>>> RowGroupIterator<A, I> {
     /// Creates a new [`RowGroupIterator`] from an iterator over [`Columns`].
     pub fn try_new(
         iter: I,
@@ -53,7 +48,7 @@ impl<A: std::borrow::Borrow<dyn Array> + 'static, I: Iterator<Item = Result<Colu
     }
 }
 
-impl<A: std::borrow::Borrow<dyn Array> + 'static, I: Iterator<Item = Result<Columns<A>>>> Iterator
+impl<A: AsRef<dyn Array> + 'static, I: Iterator<Item = Result<Columns<A>>>> Iterator
     for RowGroupIterator<A, I>
 {
     type Item = Result<RowGroupIter<'static, ArrowError>>;
@@ -71,7 +66,7 @@ impl<A: std::borrow::Borrow<dyn Array> + 'static, I: Iterator<Item = Result<Colu
                     .zip(self.parquet_schema.columns().to_vec().into_iter())
                     .zip(encodings.into_iter())
                     .map(move |((array, descriptor), encoding)| {
-                        array_to_pages(array.borrow(), descriptor, options, encoding).map(
+                        array_to_pages(array.as_ref(), descriptor, options, encoding).map(
                             move |pages| {
                                 let encoded_pages = DynIter::new(pages.map(|x| Ok(x?)));
                                 let compressed_pages =

@@ -202,7 +202,7 @@ fn serialize_item<F: JsonFormat>(
 pub fn serialize<N, A, F>(names: &[N], columns: &Columns<A>, format: F, buffer: &mut Vec<u8>)
 where
     N: AsRef<str>,
-    A: std::borrow::Borrow<dyn Array>,
+    A: AsRef<dyn Array>,
     F: JsonFormat,
 {
     let num_rows = columns.len();
@@ -210,7 +210,7 @@ where
     let mut serializers: Vec<_> = columns
         .arrays()
         .iter()
-        .map(|array| new_serializer(array.borrow()))
+        .map(|array| new_serializer(array.as_ref()))
         .collect();
 
     let mut is_first_row = true;

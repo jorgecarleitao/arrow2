@@ -20,7 +20,7 @@ fn read_batch(data: String, fields: &[Field]) -> Result<Columns<Arc<dyn Array>>>
     json_read::deserialize(rows, fields)
 }
 
-fn write_batch<F: json_write::JsonFormat, A: std::borrow::Borrow<dyn Array>>(
+fn write_batch<F: json_write::JsonFormat, A: AsRef<dyn Array>>(
     batch: Columns<A>,
     names: Vec<String>,
     format: F,
