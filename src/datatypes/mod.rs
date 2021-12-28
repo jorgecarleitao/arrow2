@@ -1,5 +1,7 @@
 #![deny(missing_docs)]
+#![forbid(unsafe_code)]
 //! Contains all metadata, such as [`PhysicalType`], [`DataType`], [`Field`] and [`Schema`].
+
 mod field;
 mod physical_type;
 mod schema;
@@ -7,6 +9,14 @@ mod schema;
 pub use field::Field;
 pub use physical_type::*;
 pub use schema::Schema;
+
+use std::collections::BTreeMap;
+use std::sync::Arc;
+
+/// typedef for [BTreeMap<String, String>] denoting a [`Field`]'s metadata.
+pub type Metadata = BTreeMap<String, String>;
+/// typedef fpr [Option<(String, Option<String>)>] descr
+pub(crate) type Extension = Option<(String, Option<String>)>;
 
 /// The set of supported logical types.
 /// Each variant uniquely identifies a logical type, which define specific semantics to the data (e.g. how it should be represented).
@@ -187,17 +197,12 @@ pub enum TimeUnit {
 /// Interval units defined in Arrow
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum IntervalUnit {
-    /// Indicates the number of elapsed whole months, stored as 4-byte integers.
+    /// The number of elapsed whole months.
     YearMonth,
-    /// Indicates the number of elapsed days and milliseconds,
-    /// stored as 2 contiguous 32-bit integers (8-bytes in total).
+    /// The number of elapsed days and milliseconds,
+    /// stored as 2 contiguous `i32`
     DayTime,
-    /// The values are stored contiguously in 16 byte blocks. Months and
-    /// days are encoded as 32 bit integers and nanoseconds is encoded as a
-    /// 64 bit integer. All integers are signed. Each field is independent
-    /// (e.g. there is no constraint that nanoseconds have the same sign
-    /// as days or that the quantitiy of nanoseconds represents less
-    /// then a day's worth of time).
+    /// The number of elapsed months (i32), days (i32) and nanoseconds (i64).
     MonthDayNano,
 }
 
@@ -315,27 +320,14 @@ impl From<PrimitiveType> for DataType {
     }
 }
 
-// backward compatibility
-use std::collections::BTreeMap;
-use std::sync::Arc;
-
 /// typedef for [`Arc<Schema>`].
 pub type SchemaRef = Arc<Schema>;
 
-/// typedef for [Option<BTreeMap<String, String>>].
-pub type Metadata = Option<BTreeMap<String, String>>;
-/// typedef fpr [Option<(String, Option<String>)>].
-pub type Extension = Option<(String, Option<String>)>;
-
 /// support get extension for metadata
-pub fn get_extension(metadata: &Option<BTreeMap<String, String>>) -> Extension {
-    if let Some(metadata) = metadata {
-        if let Some(name) = metadata.get("ARROW:extension:name") {
-            let metadata = metadata.get("ARROW:extension:metadata").cloned();
-            Some((name.clone(), metadata))
-        } else {
-            None
-        }
+pub fn get_extension(metadata: &Metadata) -> Extension {
+    if let Some(name) = metadata.get("ARROW:extension:name") {
+        let metadata = metadata.get("ARROW:extension:metadata").cloned();
+        Some((name.clone(), metadata))
     } else {
         None
     }

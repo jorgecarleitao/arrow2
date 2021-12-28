@@ -1,16 +1,16 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
 use serde_derive::Deserialize;
 use serde_json::Value;
 
 use crate::{
-    datatypes::UnionMode,
     error::{ArrowError, Result},
     io::ipc::IpcField,
 };
 
 use crate::datatypes::{
-    get_extension, DataType, Field, IntegerType, IntervalUnit, Schema, TimeUnit,
+    get_extension, DataType, Field, IntegerType, IntervalUnit, Metadata, Schema, TimeUnit,
+    UnionMode,
 };
 
 fn to_time_unit(item: Option<&Value>) -> Result<TimeUnit> {
@@ -88,10 +88,10 @@ fn deserialize_fields(children: Option<&Value>) -> Result<Vec<Field>> {
         .unwrap_or_else(|| Ok(vec![]))
 }
 
-fn read_metadata(metadata: &Value) -> Result<BTreeMap<String, String>> {
+fn read_metadata(metadata: &Value) -> Result<Metadata> {
     match metadata {
         Value::Array(ref values) => {
-            let mut res: BTreeMap<String, String> = BTreeMap::new();
+            let mut res = Metadata::new();
             for value in values {
                 match value.as_object() {
                     Some(map) => {
@@ -126,7 +126,7 @@ fn read_metadata(metadata: &Value) -> Result<BTreeMap<String, String>> {
             Ok(res)
         }
         Value::Object(ref values) => {
-            let mut res: BTreeMap<String, String> = BTreeMap::new();
+            let mut res = Metadata::new();
             for (k, v) in values {
                 if let Some(str_value) = v.as_str() {
                     res.insert(k.clone(), str_value.to_string().clone());
@@ -363,9 +363,9 @@ fn deserialize_field(value: &Value) -> Result<Field> {
     };
 
     let metadata = if let Some(metadata) = map.get("metadata") {
-        Some(read_metadata(metadata)?)
+        read_metadata(metadata)?
     } else {
-        None
+        Metadata::default()
     };
 
     let extension = get_extension(&metadata);

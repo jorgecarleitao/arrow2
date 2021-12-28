@@ -1,6 +1,6 @@
 use serde_json::{json, Map, Value};
 
-use crate::datatypes::{DataType, Field, IntervalUnit, Schema, TimeUnit};
+use crate::datatypes::{DataType, Field, IntervalUnit, Metadata, Schema, TimeUnit};
 use crate::io::ipc::IpcField;
 use crate::io::json_integration::ArrowJsonSchema;
 
@@ -108,7 +108,7 @@ fn serialize_field(field: &Field, ipc_field: &IpcField) -> ArrowJsonField {
         }
         _ => vec![],
     };
-    let metadata = serialize_metadata(field);
+    let metadata = serialize_metadata(field.metadata());
 
     let dictionary = if let DataType::Dictionary(key_type, _, is_ordered) = field.data_type() {
         use crate::datatypes::IntegerType::*;
@@ -156,18 +156,19 @@ pub fn serialize_schema(schema: &Schema, ipc_fields: &[IpcField]) -> ArrowJsonSc
     }
 }
 
-fn serialize_metadata(field: &Field) -> Option<Value> {
-    field.metadata().as_ref().and_then(|kv_list| {
-        let mut array = Vec::new();
-        for (k, v) in kv_list {
+fn serialize_metadata(metadata: &Metadata) -> Option<Value> {
+    let array = metadata
+        .iter()
+        .map(|(k, v)| {
             let mut kv_map = Map::new();
             kv_map.insert(k.clone(), Value::String(v.clone()));
-            array.push(Value::Object(kv_map));
-        }
-        if !array.is_empty() {
-            Some(Value::Array(array))
-        } else {
-            None
-        }
-    })
+            Value::Object(kv_map)
+        })
+        .collect::<Vec<_>>();
+
+    if !array.is_empty() {
+        Some(Value::Array(array))
+    } else {
+        None
+    }
 }

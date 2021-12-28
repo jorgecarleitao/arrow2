@@ -105,7 +105,7 @@ impl Ffi_ArrowSchema {
 
         let metadata = if let DataType::Extension(name, _, extension_metadata) = field.data_type() {
             // append extension information.
-            let mut metadata = metadata.clone().unwrap_or_default();
+            let mut metadata = metadata.clone();
 
             // metadata
             if let Some(extension_metadata) = extension_metadata {
@@ -118,8 +118,10 @@ impl Ffi_ArrowSchema {
             metadata.insert("ARROW:extension:name".to_string(), name.clone());
 
             Some(metadata_to_bytes(&metadata))
+        } else if !metadata.is_empty() {
+            Some(metadata_to_bytes(metadata))
         } else {
-            metadata.as_ref().map(metadata_to_bytes)
+            None
         };
 
         let name = CString::new(name).unwrap();
@@ -227,9 +229,7 @@ pub(crate) unsafe fn to_field(schema: &Ffi_ArrowSchema) -> Result<Field> {
         data_type
     };
 
-    let mut field = Field::new(schema.name(), data_type, schema.nullable());
-    field.set_metadata(metadata);
-    Ok(field)
+    Ok(Field::new(schema.name(), data_type, schema.nullable()).with_metadata(metadata))
 }
 
 fn to_integer_type(format: &str) -> Result<IntegerType> {
@@ -494,7 +494,7 @@ unsafe fn read_bytes(ptr: *const u8, len: usize) -> &'static str {
 unsafe fn metadata_from_bytes(data: *const ::std::os::raw::c_char) -> (Metadata, Extension) {
     let mut data = data as *const u8; // u8 = i8
     if data.is_null() {
-        return (None, None);
+        return (Metadata::default(), None);
     };
     let len = read_ne_i32(data);
     data = data.add(4);
@@ -524,5 +524,5 @@ unsafe fn metadata_from_bytes(data: *const ::std::os::raw::c_char) -> (Metadata,
         };
     }
     let extension = extension_name.map(|name| (name, extension_metadata));
-    (Some(result), extension)
+    (result, extension)
 }

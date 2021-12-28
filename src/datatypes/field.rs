@@ -1,56 +1,18 @@
-// Licensed to the Apache Software Foundation (ASF) under one
-// or more contributor license agreements.  See the NOTICE file
-// distributed with this work for additional information
-// regarding copyright ownership.  The ASF licenses this file
-// to you under the Apache License, Version 2.0 (the
-// "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
-
-use std::collections::BTreeMap;
-
 use crate::error::{ArrowError, Result};
 
-use super::DataType;
+use super::{DataType, Metadata};
 
-/// A logical [`DataType`] and its associated metadata per
-/// [Arrow specification](https://arrow.apache.org/docs/cpp/api/datatype.html)
-#[derive(Debug, Clone, Eq)]
+/// Represents the metadata of a "column".
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Field {
     /// Its name
     pub name: String,
     /// Its logical [`DataType`]
     pub data_type: DataType,
-    /// Whether its values can be null or not
+    /// Its nullability
     pub nullable: bool,
-    /// A map of key-value pairs containing additional custom meta data.
-    pub metadata: Option<BTreeMap<String, String>>,
-}
-
-impl std::hash::Hash for Field {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.name.hash(state);
-        self.data_type.hash(state);
-        self.nullable.hash(state);
-        self.metadata.hash(state);
-    }
-}
-
-impl PartialEq for Field {
-    fn eq(&self, other: &Self) -> bool {
-        self.name == other.name
-            && self.data_type == other.data_type
-            && self.nullable == other.nullable
-            && self.metadata == other.metadata
-    }
+    /// Additional custom (opaque) metadata.
+    pub metadata: Metadata,
 }
 
 impl Field {
@@ -60,36 +22,24 @@ impl Field {
             name: name.into(),
             data_type,
             nullable,
-            metadata: None,
+            metadata: Default::default(),
         }
     }
 
     /// Creates a new [`Field`] with metadata.
     #[inline]
-    pub fn with_metadata(self, metadata: BTreeMap<String, String>) -> Self {
+    pub fn with_metadata(self, metadata: Metadata) -> Self {
         Self {
             name: self.name,
             data_type: self.data_type,
             nullable: self.nullable,
-            metadata: Some(metadata),
+            metadata,
         }
     }
 
-    /// Sets the [`Field`]'s optional metadata.
-    /// The metadata is set as `None` for empty map.
+    /// Returns the [`Field`]'s metadata.
     #[inline]
-    pub fn set_metadata(&mut self, metadata: Option<BTreeMap<String, String>>) {
-        self.metadata = None;
-        if let Some(v) = metadata {
-            if !v.is_empty() {
-                self.metadata = Some(v);
-            }
-        }
-    }
-
-    /// Returns the [`Field`]'s optional custom metadata.
-    #[inline]
-    pub const fn metadata(&self) -> &Option<BTreeMap<String, String>> {
+    pub const fn metadata(&self) -> &Metadata {
         &self.metadata
     }
 
@@ -105,7 +55,7 @@ impl Field {
         &self.data_type
     }
 
-    /// Returns the [`Field`] nullability.
+    /// Returns whether the [`Field`] should contain null values.
     #[inline]
     pub const fn is_nullable(&self) -> bool {
         self.nullable
@@ -125,27 +75,19 @@ impl Field {
     /// ```
     pub fn try_merge(&mut self, from: &Field) -> Result<()> {
         // merge metadata
-        match (self.metadata(), from.metadata()) {
-            (Some(self_metadata), Some(from_metadata)) => {
-                let mut merged = self_metadata.clone();
-                for (key, from_value) in from_metadata {
-                    if let Some(self_value) = self_metadata.get(key) {
-                        if self_value != from_value {
-                            return Err(ArrowError::InvalidArgumentError(format!(
-                                "Fail to merge field due to conflicting metadata data value for key {}", key),
-                            ));
-                        }
-                    } else {
-                        merged.insert(key.clone(), from_value.clone());
-                    }
+        for (key, from_value) in from.metadata() {
+            if let Some(self_value) = self.metadata.get(key) {
+                if self_value != from_value {
+                    return Err(ArrowError::InvalidArgumentError(format!(
+                        "Fail to merge field due to conflicting metadata data value for key {}",
+                        key
+                    )));
                 }
-                self.set_metadata(Some(merged));
+            } else {
+                self.metadata.insert(key.clone(), from_value.clone());
             }
-            (None, Some(from_metadata)) => {
-                self.set_metadata(Some(from_metadata.clone()));
-            }
-            _ => {}
         }
+
         match &mut self.data_type {
             DataType::Struct(nested_fields) => match &from.data_type {
                 DataType::Struct(from_nested_fields) => {

@@ -1,14 +1,13 @@
 use arrow_format::ipc::flatbuffers::{
     FlatBufferBuilder, ForwardsUOffset, UnionWIPOffset, Vector, WIPOffset,
 };
-use std::collections::BTreeMap;
 mod ipc {
     pub use arrow_format::ipc::File::*;
     pub use arrow_format::ipc::Message::*;
     pub use arrow_format::ipc::Schema::*;
 }
 
-use crate::datatypes::{DataType, Field, IntegerType, IntervalUnit, Schema, TimeUnit};
+use crate::datatypes::{DataType, Field, IntegerType, IntervalUnit, Metadata, Schema, TimeUnit};
 use crate::io::ipc::endianess::is_native_little_endian;
 
 use super::super::IpcField;
@@ -78,7 +77,7 @@ pub(crate) struct FbFieldType<'b> {
 
 fn write_metadata<'a>(
     fbb: &mut FlatBufferBuilder<'a>,
-    metadata: &BTreeMap<String, String>,
+    metadata: &Metadata,
     kv_vec: &mut Vec<WIPOffset<ipc::KeyValue<'a>>>,
 ) {
     for (k, v) in metadata {
@@ -147,11 +146,8 @@ pub(crate) fn build_field<'a>(
             None
         };
 
-    if let Some(metadata) = field.metadata() {
-        if !metadata.is_empty() {
-            write_metadata(fbb, metadata, &mut kv_vec);
-        }
-    };
+    write_metadata(fbb, field.metadata(), &mut kv_vec);
+
     let fb_metadata = if !kv_vec.is_empty() {
         Some(fbb.create_vector(&kv_vec))
     } else {
