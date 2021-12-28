@@ -222,7 +222,7 @@ where
                 let item = iter.next().unwrap();
                 record.push((name.as_ref(), item));
             });
-        serialize_item(buffer, &record, format, false);
+        serialize_item(buffer, &record, format, is_first_row);
         is_first_row = false;
     })
 }

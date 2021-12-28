@@ -23,7 +23,7 @@ fn write_simple_rows() -> Result<()> {
 
     let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(a), Arc::new(b)]).unwrap();
 
-    let buf = write_batch(batch)?;
+    let buf = write_batch(batch, json_write::LineDelimited::default())?;
 
     assert_eq!(
         String::from_utf8(buf).unwrap(),
@@ -33,6 +33,27 @@ fn write_simple_rows() -> Result<()> {
 {"c1":null,"c2":"d"}
 {"c1":5,"c2":null}
 "#
+    );
+    Ok(())
+}
+
+#[test]
+fn write_simple_rows_array() -> Result<()> {
+    let schema = Schema::new(vec![
+        Field::new("c1", DataType::Int32, false),
+        Field::new("c2", DataType::Utf8, false),
+    ]);
+
+    let a = Int32Array::from([Some(1), Some(2), Some(3), None, Some(5)]);
+    let b = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c"), Some("d"), None]);
+
+    let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(a), Arc::new(b)]).unwrap();
+
+    let buf = write_batch(batch, json_write::JsonArray::default())?;
+
+    assert_eq!(
+        String::from_utf8(buf).unwrap(),
+        r#"[{"c1":1,"c2":"a"},{"c1":2,"c2":"b"},{"c1":3,"c2":"c"},{"c1":null,"c2":"d"},{"c1":5,"c2":null}]"#
     );
     Ok(())
 }
@@ -71,7 +92,7 @@ fn write_nested_struct_with_validity() -> Result<()> {
 
     let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(c1), Arc::new(c2)]).unwrap();
 
-    let buf = write_batch(batch)?;
+    let buf = write_batch(batch, json_write::LineDelimited::default())?;
 
     assert_eq!(
         String::from_utf8(buf).unwrap(),
@@ -116,7 +137,7 @@ fn write_nested_structs() -> Result<()> {
 
     let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(c1), Arc::new(c2)]).unwrap();
 
-    let buf = write_batch(batch)?;
+    let buf = write_batch(batch, json_write::LineDelimited::default())?;
 
     assert_eq!(
         String::from_utf8(buf).unwrap(),
@@ -153,7 +174,7 @@ fn write_struct_with_list_field() -> Result<()> {
 
     let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(a), Arc::new(b)]).unwrap();
 
-    let buf = write_batch(batch)?;
+    let buf = write_batch(batch, json_write::LineDelimited::default())?;
 
     assert_eq!(
         String::from_utf8(buf).unwrap(),
@@ -199,7 +220,7 @@ fn write_nested_list() -> Result<()> {
 
     let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(c1), Arc::new(c2)]).unwrap();
 
-    let buf = write_batch(batch)?;
+    let buf = write_batch(batch, json_write::LineDelimited::default())?;
 
     assert_eq!(
         String::from_utf8(buf).unwrap(),
@@ -259,7 +280,7 @@ fn write_list_of_struct() -> Result<()> {
 
     let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(c1), Arc::new(c2)]).unwrap();
 
-    let buf = write_batch(batch)?;
+    let buf = write_batch(batch, json_write::LineDelimited::default())?;
 
     assert_eq!(
         String::from_utf8(buf).unwrap(),
@@ -278,7 +299,7 @@ fn write_escaped_utf8() -> Result<()> {
 
     let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(a)]).unwrap();
 
-    let buf = write_batch(batch)?;
+    let buf = write_batch(batch, json_write::LineDelimited::default())?;
 
     assert_eq!(
         String::from_utf8(buf).unwrap().as_bytes(),
