@@ -128,6 +128,8 @@ pub enum DataType {
     ///
     /// This type mostly used to represent low cardinality string
     /// arrays or a limited set of primitive types as integers.
+    ///
+    /// The `bool` value indicates the `Dictionary` is sorted if set to `true`.
     Dictionary(IntegerType, Box<DataType>, bool),
     /// Decimal value with precision and scale
     /// precision is the number of digits in the number and
