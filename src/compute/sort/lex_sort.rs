@@ -39,7 +39,7 @@ pub struct SortColumn<'a> {
 /// let int64 = Int64Array::from(&[None, Some(-2), Some(89), Some(-64), Some(101)]);
 /// let utf8 = Utf8Array::<i32>::from(&vec![Some("hello"), Some("world"), Some(","), Some("foobar"), Some("!")]);
 ///
-/// let sorted_columns = lexsort::<i32>(&vec![
+/// let sorted_chunk = lexsort::<i32>(&vec![
 ///     SortColumn {
 ///         values: &int64,
 ///         options: None,
@@ -53,7 +53,7 @@ pub struct SortColumn<'a> {
 ///     },
 /// ], None).unwrap();
 ///
-/// let sorted = sorted_columns[0].as_any().downcast_ref::<Int64Array>().unwrap();
+/// let sorted = sorted_chunk[0].as_any().downcast_ref::<Int64Array>().unwrap();
 /// assert_eq!(sorted.value(1), -64);
 /// assert!(sorted.is_null(0));
 /// ```

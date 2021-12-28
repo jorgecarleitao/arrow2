@@ -4,7 +4,7 @@ use std::sync::Arc;
 use criterion::{criterion_group, criterion_main, Criterion};
 
 use arrow2::array::*;
-use arrow2::columns::Columns;
+use arrow2::chunk::Chunk;
 use arrow2::datatypes::{Field, Schema};
 use arrow2::error::Result;
 use arrow2::io::ipc::write::*;
@@ -13,7 +13,7 @@ use arrow2::util::bench_util::{create_boolean_array, create_primitive_array, cre
 fn write(array: &dyn Array) -> Result<()> {
     let field = Field::new("c1", array.data_type().clone(), true);
     let schema = Schema::new(vec![field]);
-    let columns = Columns::try_new(vec![clone(array).into()])?;
+    let columns = Chunk::try_new(vec![clone(array).into()])?;
 
     let writer = Cursor::new(vec![]);
     let mut writer = FileWriter::try_new(writer, &schema, None, Default::default())?;

@@ -7,23 +7,23 @@ use super::{
 };
 use crate::{
     array::Array,
-    columns::Columns,
+    chunk::Chunk,
     datatypes::Schema,
     error::{ArrowError, Result},
 };
 
-/// An iterator adapter that converts an iterator over [`Columns`] into an iterator
+/// An iterator adapter that converts an iterator over [`Chunk`] into an iterator
 /// of row groups.
 /// Use it to create an iterator consumable by the parquet's API.
-pub struct RowGroupIterator<A: AsRef<dyn Array> + 'static, I: Iterator<Item = Result<Columns<A>>>> {
+pub struct RowGroupIterator<A: AsRef<dyn Array> + 'static, I: Iterator<Item = Result<Chunk<A>>>> {
     iter: I,
     options: WriteOptions,
     parquet_schema: SchemaDescriptor,
     encodings: Vec<Encoding>,
 }
 
-impl<A: AsRef<dyn Array> + 'static, I: Iterator<Item = Result<Columns<A>>>> RowGroupIterator<A, I> {
-    /// Creates a new [`RowGroupIterator`] from an iterator over [`Columns`].
+impl<A: AsRef<dyn Array> + 'static, I: Iterator<Item = Result<Chunk<A>>>> RowGroupIterator<A, I> {
+    /// Creates a new [`RowGroupIterator`] from an iterator over [`Chunk`].
     pub fn try_new(
         iter: I,
         schema: &Schema,
@@ -48,7 +48,7 @@ impl<A: AsRef<dyn Array> + 'static, I: Iterator<Item = Result<Columns<A>>>> RowG
     }
 }
 
-impl<A: AsRef<dyn Array> + 'static, I: Iterator<Item = Result<Columns<A>>>> Iterator
+impl<A: AsRef<dyn Array> + 'static, I: Iterator<Item = Result<Chunk<A>>>> Iterator
     for RowGroupIterator<A, I>
 {
     type Item = Result<RowGroupIter<'static, ArrowError>>;
@@ -56,8 +56,8 @@ impl<A: AsRef<dyn Array> + 'static, I: Iterator<Item = Result<Columns<A>>>> Iter
     fn next(&mut self) -> Option<Self::Item> {
         let options = self.options;
 
-        self.iter.next().map(|maybe_columns| {
-            let columns = maybe_columns?;
+        self.iter.next().map(|maybe_chunk| {
+            let columns = maybe_chunk?;
             let encodings = self.encodings.clone();
             Ok(DynIter::new(
                 columns

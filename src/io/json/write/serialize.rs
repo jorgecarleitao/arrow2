@@ -3,7 +3,7 @@ use serde_json::Value;
 use streaming_iterator::StreamingIterator;
 
 use crate::bitmap::utils::zip_validity;
-use crate::columns::Columns;
+use crate::chunk::Chunk;
 use crate::io::iterator::BufStreamingIterator;
 use crate::util::lexical_to_bytes_mut;
 use crate::{array::*, datatypes::DataType, types::NativeType};
@@ -83,7 +83,7 @@ fn struct_serializer<'a>(
                 serializers
                     .iter_mut()
                     .zip(names)
-                    // `unwrap` is infalible because `array.len()` equals `len` on `Columns`
+                    // `unwrap` is infalible because `array.len()` equals `len` on `Chunk`
                     .for_each(|(iter, name)| {
                         let item = iter.next().unwrap();
                         record.push((name, item));
@@ -199,7 +199,7 @@ fn serialize_item<F: JsonFormat>(
 
 /// Serializes a (name, array) to a valid JSON to `buffer`
 /// This is CPU-bounded
-pub fn serialize<N, A, F>(names: &[N], columns: &Columns<A>, format: F, buffer: &mut Vec<u8>)
+pub fn serialize<N, A, F>(names: &[N], columns: &Chunk<A>, format: F, buffer: &mut Vec<u8>)
 where
     N: AsRef<str>,
     A: AsRef<dyn Array>,
@@ -219,7 +219,7 @@ where
         serializers
             .iter_mut()
             .zip(names.iter())
-            // `unwrap` is infalible because `array.len()` equals `len` on `Columns`
+            // `unwrap` is infalible because `array.len()` equals `len` on `Chunk`
             .for_each(|(iter, name)| {
                 let item = iter.next().unwrap();
                 record.push((name.as_ref(), item));

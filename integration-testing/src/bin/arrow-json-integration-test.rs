@@ -101,7 +101,7 @@ fn arrow_to_json(arrow_name: &str, json_name: &str, verbose: bool) -> Result<()>
     let schema = json_write::serialize_schema(&metadata.schema, &metadata.ipc_schema.fields);
 
     let batches = reader
-        .map(|batch| Ok(json_write::serialize_columns(&batch?, &names)))
+        .map(|batch| Ok(json_write::serialize_chunk(&batch?, &names)))
         .collect::<Result<Vec<_>>>()?;
 
     let arrow_json = ArrowJson {

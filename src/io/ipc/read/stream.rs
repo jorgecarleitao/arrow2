@@ -5,7 +5,7 @@ use arrow_format::ipc;
 use arrow_format::ipc::Schema::MetadataVersion;
 
 use crate::array::Array;
-use crate::columns::Columns;
+use crate::chunk::Chunk;
 use crate::datatypes::Schema;
 use crate::error::{ArrowError, Result};
 use crate::io::ipc::IpcSchema;
@@ -72,7 +72,7 @@ pub enum StreamState {
     /// A live stream without data
     Waiting,
     /// Next item in the stream
-    Some(Columns<Arc<dyn Array>>),
+    Some(Chunk<Arc<dyn Array>>),
 }
 
 impl StreamState {
@@ -81,7 +81,7 @@ impl StreamState {
     /// # Panics
     ///
     /// If the `StreamState` was `Waiting`.
-    pub fn unwrap(self) -> Columns<Arc<dyn Array>> {
+    pub fn unwrap(self) -> Chunk<Arc<dyn Array>> {
         if let StreamState::Some(batch) = self {
             batch
         } else {

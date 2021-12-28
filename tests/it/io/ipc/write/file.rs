@@ -2,7 +2,7 @@ use std::io::Cursor;
 use std::sync::Arc;
 
 use arrow2::array::*;
-use arrow2::columns::Columns;
+use arrow2::chunk::Chunk;
 use arrow2::datatypes::{Field, Schema};
 use arrow2::error::Result;
 use arrow2::io::ipc::read::{read_file_metadata, FileReader};
@@ -11,7 +11,7 @@ use arrow2::io::ipc::{write::*, IpcField};
 use crate::io::ipc::common::read_gzip_json;
 
 fn write_(
-    batches: &[Columns<Arc<dyn Array>>],
+    batches: &[Chunk<Arc<dyn Array>>],
     schema: &Schema,
     ipc_fields: Option<Vec<IpcField>>,
     compression: Option<Compression>,
@@ -27,7 +27,7 @@ fn write_(
 }
 
 fn round_trip(
-    columns: Columns<Arc<dyn Array>>,
+    columns: Chunk<Arc<dyn Array>>,
     schema: Schema,
     ipc_fields: Option<Vec<IpcField>>,
 ) -> Result<()> {
@@ -41,11 +41,11 @@ fn round_trip(
     )?;
     let mut reader = Cursor::new(result);
     let metadata = read_file_metadata(&mut reader)?;
-    let schema = metadata.schema().clone();
+    let schema = metadata.schema.clone();
 
     let reader = FileReader::new(reader, metadata, None);
 
-    assert_eq!(schema.as_ref(), &expected_schema);
+    assert_eq!(schema, expected_schema);
 
     let batches = reader.collect::<Result<Vec<_>>>()?;
 
@@ -65,7 +65,7 @@ fn test_file(version: &str, file_name: &str, compressed: bool) -> Result<()> {
     let result = write_(&batches, &schema, Some(ipc_fields), compression)?;
     let mut reader = Cursor::new(result);
     let metadata = read_file_metadata(&mut reader)?;
-    let schema = metadata.schema().clone();
+    let schema = metadata.schema.clone();
     let ipc_fields = metadata.ipc_schema.fields.clone();
 
     let reader = FileReader::new(reader, metadata, None);
@@ -74,7 +74,7 @@ fn test_file(version: &str, file_name: &str, compressed: bool) -> Result<()> {
     let (expected_schema, expected_ipc_fields, expected_batches) =
         read_gzip_json(version, file_name)?;
 
-    assert_eq!(schema.as_ref(), &expected_schema);
+    assert_eq!(schema, expected_schema);
     assert_eq!(ipc_fields, expected_ipc_fields);
 
     let batches = reader.collect::<Result<Vec<_>>>()?;
@@ -339,7 +339,7 @@ fn write_boolean() -> Result<()> {
         Some(true),
     ])) as Arc<dyn Array>;
     let schema = Schema::new(vec![Field::new("a", array.data_type().clone(), true)]);
-    let columns = Columns::try_new(vec![array])?;
+    let columns = Chunk::try_new(vec![array])?;
     round_trip(columns, schema, None)
 }
 
@@ -349,7 +349,7 @@ fn write_sliced_utf8() -> Result<()> {
     use std::sync::Arc;
     let array = Arc::new(Utf8Array::<i32>::from_slice(["aa", "bb"]).slice(1, 1)) as Arc<dyn Array>;
     let schema = Schema::new(vec![Field::new("a", array.data_type().clone(), true)]);
-    let columns = Columns::try_new(vec![array])?;
+    let columns = Chunk::try_new(vec![array])?;
     round_trip(columns, schema, None)
 }
 
@@ -367,6 +367,6 @@ fn write_sliced_list() -> Result<()> {
     let array: Arc<dyn Array> = array.into_arc().slice(1, 2).into();
 
     let schema = Schema::new(vec![Field::new("a", array.data_type().clone(), true)]);
-    let columns = Columns::try_new(vec![array])?;
+    let columns = Chunk::try_new(vec![array])?;
     round_trip(columns, schema, None)
 }

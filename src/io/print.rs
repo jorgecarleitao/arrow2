@@ -1,14 +1,14 @@
-//! APIs to represent [`Columns`] as a formatted table.
+//! APIs to represent [`Chunk`] as a formatted table.
 
 use crate::{
     array::{get_display, Array},
-    columns::Columns,
+    chunk::Chunk,
 };
 
 use comfy_table::{Cell, Table};
 
-/// Returns a visual representation of [`Columns`]
-pub fn write<A: AsRef<dyn Array>, N: AsRef<str>>(batches: &[Columns<A>], names: &[N]) -> String {
+/// Returns a visual representation of [`Chunk`]
+pub fn write<A: AsRef<dyn Array>, N: AsRef<str>>(batches: &[Chunk<A>], names: &[N]) -> String {
     let mut table = Table::new();
     table.load_preset("||--+-++|    ++++++");
 

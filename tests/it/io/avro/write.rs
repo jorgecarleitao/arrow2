@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use arrow2::array::*;
-use arrow2::columns::Columns;
+use arrow2::chunk::Chunk;
 use arrow2::datatypes::*;
 use arrow2::error::Result;
 use arrow2::io::avro::write;
@@ -19,7 +19,7 @@ fn schema() -> Schema {
     ])
 }
 
-fn data() -> Columns<Arc<dyn Array>> {
+fn data() -> Chunk<Arc<dyn Array>> {
     let columns = vec![
         Arc::new(Int64Array::from_slice([27, 47])) as Arc<dyn Array>,
         Arc::new(Utf8Array::<i32>::from_slice(["foo", "bar"])) as Arc<dyn Array>,
@@ -31,13 +31,13 @@ fn data() -> Columns<Arc<dyn Array>> {
         Arc::new(Utf8Array::<i32>::from([Some("foo"), None])) as Arc<dyn Array>,
     ];
 
-    Columns::try_new(columns).unwrap()
+    Chunk::try_new(columns).unwrap()
 }
 
 use super::read::read_avro;
 
 fn write_avro<R: AsRef<dyn Array>>(
-    columns: &Columns<R>,
+    columns: &Chunk<R>,
     schema: &Schema,
     compression: Option<write::Compression>,
 ) -> Result<Vec<u8>> {

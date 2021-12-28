@@ -5,13 +5,13 @@ use std::io::Cursor;
 use std::sync::Arc;
 
 use arrow2::array::*;
-use arrow2::columns::Columns;
+use arrow2::chunk::Chunk;
 use arrow2::datatypes::*;
 use arrow2::error::Result;
 use arrow2::io::json::read as json_read;
 use arrow2::io::json::write as json_write;
 
-fn read_batch(data: String, fields: &[Field]) -> Result<Columns<Arc<dyn Array>>> {
+fn read_batch(data: String, fields: &[Field]) -> Result<Chunk<Arc<dyn Array>>> {
     let mut reader = Cursor::new(data);
 
     let mut rows = vec![String::default(); 1024];
@@ -21,7 +21,7 @@ fn read_batch(data: String, fields: &[Field]) -> Result<Columns<Arc<dyn Array>>>
 }
 
 fn write_batch<F: json_write::JsonFormat, A: AsRef<dyn Array>>(
-    batch: Columns<A>,
+    batch: Chunk<A>,
     names: Vec<String>,
     format: F,
 ) -> Result<Vec<u8>> {
@@ -47,9 +47,9 @@ fn round_trip(data: String) -> Result<()> {
         json_write::LineDelimited::default(),
     )?;
 
-    let new_columns = read_batch(String::from_utf8(buf).unwrap(), &fields)?;
+    let new_chunk = read_batch(String::from_utf8(buf).unwrap(), &fields)?;
 
-    assert_eq!(columns, new_columns);
+    assert_eq!(columns, new_chunk);
     Ok(())
 }
 

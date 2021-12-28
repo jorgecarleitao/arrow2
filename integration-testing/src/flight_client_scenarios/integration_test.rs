@@ -19,7 +19,7 @@ use crate::{read_json_file, ArrowFile};
 
 use arrow2::{
     array::Array,
-    columns::Columns,
+    chunk::Chunk,
     datatypes::*,
     io::ipc::{
         read::{self, Dictionaries},
@@ -46,7 +46,7 @@ type Result<T = (), E = Error> = std::result::Result<T, E>;
 
 type Client = FlightServiceClient<tonic::transport::Channel>;
 
-type Chunk = Columns<Arc<dyn Array>>;
+type ChunkArc = Chunk<Arc<dyn Array>>;
 
 pub async fn run_scenario(host: &str, port: &str, path: &str) -> Result {
     let url = format!("http://{}:{}", host, port);
@@ -88,7 +88,7 @@ async fn upload_data(
     schema: &Schema,
     fields: &[IpcField],
     descriptor: FlightDescriptor,
-    original_data: Vec<Chunk>,
+    original_data: Vec<ChunkArc>,
 ) -> Result {
     let (mut upload_tx, upload_rx) = mpsc::channel(10);
 
@@ -143,7 +143,7 @@ async fn upload_data(
 async fn send_batch(
     upload_tx: &mut mpsc::Sender<FlightData>,
     metadata: &[u8],
-    batch: &Chunk,
+    batch: &ChunkArc,
     fields: &[IpcField],
     options: &write::WriteOptions,
 ) -> Result {
@@ -164,7 +164,7 @@ async fn verify_data(
     descriptor: FlightDescriptor,
     expected_schema: &Schema,
     ipc_schema: &IpcSchema,
-    expected_data: &[Chunk],
+    expected_data: &[ChunkArc],
 ) -> Result {
     let resp = client.get_flight_info(Request::new(descriptor)).await?;
     let info = resp.into_inner();
@@ -200,7 +200,7 @@ async fn verify_data(
 async fn consume_flight_location(
     location: Location,
     ticket: Ticket,
-    expected_data: &[Chunk],
+    expected_data: &[ChunkArc],
     schema: &Schema,
     ipc_schema: &IpcSchema,
 ) -> Result {

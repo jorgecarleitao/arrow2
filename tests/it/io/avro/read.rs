@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use arrow2::columns::Columns;
+use arrow2::chunk::Chunk;
 use avro_rs::types::{Record, Value};
 use avro_rs::{Codec, Writer};
 use avro_rs::{Days, Duration, Millis, Months, Schema as AvroSchema};
@@ -69,7 +69,7 @@ pub(super) fn schema() -> (AvroSchema, Schema) {
     (AvroSchema::parse_str(raw_schema).unwrap(), schema)
 }
 
-pub(super) fn data() -> Columns<Arc<dyn Array>> {
+pub(super) fn data() -> Chunk<Arc<dyn Array>> {
     let data = vec![
         Some(vec![Some(1i32), None, Some(3)]),
         Some(vec![Some(1i32), None, Some(3)]),
@@ -94,7 +94,7 @@ pub(super) fn data() -> Columns<Arc<dyn Array>> {
         )),
     ];
 
-    Columns::try_new(columns).unwrap()
+    Chunk::try_new(columns).unwrap()
 }
 
 pub(super) fn write_avro(codec: Codec) -> std::result::Result<Vec<u8>, avro_rs::Error> {
@@ -149,7 +149,7 @@ pub(super) fn write_avro(codec: Codec) -> std::result::Result<Vec<u8>, avro_rs::
     Ok(writer.into_inner().unwrap())
 }
 
-pub(super) fn read_avro(mut avro: &[u8]) -> Result<(Columns<Arc<dyn Array>>, Schema)> {
+pub(super) fn read_avro(mut avro: &[u8]) -> Result<(Chunk<Arc<dyn Array>>, Schema)> {
     let file = &mut avro;
 
     let (avro_schema, schema, codec, file_marker) = read::read_metadata(file)?;

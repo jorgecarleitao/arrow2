@@ -15,7 +15,7 @@ fn write_simple_rows() -> Result<()> {
     let a = Int32Array::from([Some(1), Some(2), Some(3), None, Some(5)]);
     let b = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c"), Some("d"), None]);
 
-    let batch = Columns::try_new(vec![&a as &dyn Array, &b]).unwrap();
+    let batch = Chunk::try_new(vec![&a as &dyn Array, &b]).unwrap();
 
     let buf = write_batch(
         batch,
@@ -37,15 +37,10 @@ fn write_simple_rows() -> Result<()> {
 
 #[test]
 fn write_simple_rows_array() -> Result<()> {
-    let schema = Schema::new(vec![
-        Field::new("c1", DataType::Int32, false),
-        Field::new("c2", DataType::Utf8, false),
-    ]);
-
     let a = Int32Array::from([Some(1), Some(2), Some(3), None, Some(5)]);
     let b = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c"), Some("d"), None]);
 
-    let batch = Columns::try_new(vec![&a as &dyn Array, &b]).unwrap();
+    let batch = Chunk::try_new(vec![&a as &dyn Array, &b]).unwrap();
 
     let buf = write_batch(
         batch,
@@ -88,7 +83,7 @@ fn write_nested_struct_with_validity() -> Result<()> {
     );
     let c2 = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c")]);
 
-    let batch = Columns::try_new(vec![&c1 as &dyn Array, &c2]).unwrap();
+    let batch = Chunk::try_new(vec![&c1 as &dyn Array, &c2]).unwrap();
 
     let buf = write_batch(
         batch,
@@ -133,7 +128,7 @@ fn write_nested_structs() -> Result<()> {
 
     let c2 = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c")]);
 
-    let batch = Columns::try_new(vec![&c1 as &dyn Array, &c2]).unwrap();
+    let batch = Chunk::try_new(vec![&c1 as &dyn Array, &c2]).unwrap();
 
     let buf = write_batch(
         batch,
@@ -169,7 +164,7 @@ fn write_struct_with_list_field() -> Result<()> {
 
     let b = PrimitiveArray::from_slice([1, 2, 3, 4, 5]);
 
-    let batch = Columns::try_new(vec![&a as &dyn Array, &b]).unwrap();
+    let batch = Chunk::try_new(vec![&a as &dyn Array, &b]).unwrap();
 
     let buf = write_batch(
         batch,
@@ -213,7 +208,7 @@ fn write_nested_list() -> Result<()> {
 
     let c2 = Utf8Array::<i32>::from(&vec![Some("foo"), Some("bar"), None]);
 
-    let batch = Columns::try_new(vec![&c1 as &dyn Array, &c2]).unwrap();
+    let batch = Chunk::try_new(vec![&c1 as &dyn Array, &c2]).unwrap();
 
     let buf = write_batch(
         batch,
@@ -274,7 +269,7 @@ fn write_list_of_struct() -> Result<()> {
 
     let c2 = Int32Array::from_slice(&[1, 2, 3]);
 
-    let batch = Columns::try_new(vec![&c1 as &dyn Array, &c2]).unwrap();
+    let batch = Chunk::try_new(vec![&c1 as &dyn Array, &c2]).unwrap();
 
     let buf = write_batch(
         batch,
@@ -296,7 +291,7 @@ fn write_list_of_struct() -> Result<()> {
 fn write_escaped_utf8() -> Result<()> {
     let a = Utf8Array::<i32>::from(&vec![Some("a\na"), None]);
 
-    let batch = Columns::try_new(vec![&a as &dyn Array]).unwrap();
+    let batch = Chunk::try_new(vec![&a as &dyn Array]).unwrap();
 
     let buf = write_batch(
         batch,

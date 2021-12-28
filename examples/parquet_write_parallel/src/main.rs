@@ -6,11 +6,13 @@ use rayon::prelude::*;
 
 use arrow2::{
     array::*,
-    datatypes::PhysicalType,
+    chunk::Chunk as AChunk,
+    datatypes::*,
     error::{ArrowError, Result},
     io::parquet::write::*,
-    record_batch::RecordBatch,
 };
+
+type Chunk = AChunk<Arc<dyn Array>>;
 
 struct Bla {
     columns: VecDeque<CompressedPage>,
@@ -40,13 +42,16 @@ impl FallibleStreamingIterator for Bla {
     }
 }
 
-fn parallel_write(path: &str, batches: &[RecordBatch]) -> Result<()> {
+fn parallel_write(path: &str, schema: &Schema, batches: &[Chunk]) -> Result<()> {
+    // declare the options
     let options = WriteOptions {
         write_statistics: true,
         compression: Compression::Snappy,
         version: Version::V2,
     };
-    let encodings = batches[0].schema().fields().par_iter().map(|field| {
+
+    // declare encodings
+    let encodings = schema.fields().par_iter().map(|field| {
         match field.data_type().to_physical_type() {
             // let's be fancy and use delta-encoding for binary fields
             PhysicalType::Binary
@@ -58,7 +63,8 @@ fn parallel_write(path: &str, batches: &[RecordBatch]) -> Result<()> {
         }
     });
 
-    let parquet_schema = to_parquet_schema(batches[0].schema())?;
+    // derive the parquet schema (physical types) from arrow's schema.
+    let parquet_schema = to_parquet_schema(schema)?;
 
     let a = parquet_schema.clone();
     let row_groups = batches.iter().map(|batch| {
@@ -89,19 +95,12 @@ fn parallel_write(path: &str, batches: &[RecordBatch]) -> Result<()> {
     let mut file = std::fs::File::create(path)?;
 
     // Write the file.
-    let _file_size = write_file(
-        &mut file,
-        row_groups,
-        batches[0].schema(),
-        parquet_schema,
-        options,
-        None,
-    )?;
+    let _file_size = write_file(&mut file, row_groups, schema, parquet_schema, options, None)?;
 
     Ok(())
 }
 
-fn create_batch(size: usize) -> Result<RecordBatch> {
+fn create_batch(size: usize) -> Result<Chunk> {
     let c1: Int32Array = (0..size)
         .map(|x| if x % 9 == 0 { None } else { Some(x as i32) })
         .collect();
@@ -115,14 +114,21 @@ fn create_batch(size: usize) -> Result<RecordBatch> {
         })
         .collect();
 
-    RecordBatch::try_from_iter([
-        ("c1", Arc::new(c1) as Arc<dyn Array>),
-        ("c2", Arc::new(c2) as Arc<dyn Array>),
+    Chunk::try_new(vec![
+        Arc::new(c1) as Arc<dyn Array>,
+        Arc::new(c2) as Arc<dyn Array>,
     ])
 }
 
 fn main() -> Result<()> {
+    let schema = Schema {
+        fields: vec![
+            Field::new("c1", DataType::Int32, true),
+            Field::new("c1", DataType::Utf8, true),
+        ],
+        metadata: Default::default(),
+    };
     let batch = create_batch(5_000_000)?;
 
-    parallel_write("example.parquet", &[batch.clone(), batch])
+    parallel_write("example.parquet", &schema, &[batch.clone(), batch])
 }

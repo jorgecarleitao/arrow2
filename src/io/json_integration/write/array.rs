@@ -2,15 +2,15 @@ use std::sync::Arc;
 
 use crate::{
     array::{Array, PrimitiveArray},
-    columns::Columns,
+    chunk::Chunk,
     datatypes::DataType,
 };
 
 use super::super::{ArrowJsonBatch, ArrowJsonColumn};
 
-/// Serializes a [`Columns`] to [`ArrowJsonBatch`].
-pub fn serialize_columns<A: ToString>(
-    columns: &Columns<Arc<dyn Array>>,
+/// Serializes a [`Chunk`] to [`ArrowJsonBatch`].
+pub fn serialize_chunk<A: ToString>(
+    columns: &Chunk<Arc<dyn Array>>,
     names: &[A],
 ) -> ArrowJsonBatch {
     let count = columns.len();

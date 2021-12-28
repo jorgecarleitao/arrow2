@@ -10,7 +10,7 @@ use serde_json::Value;
 use crate::{
     array::*,
     bitmap::MutableBitmap,
-    columns::Columns,
+    chunk::Chunk,
     datatypes::{DataType, Field, IntervalUnit},
     error::ArrowError,
     types::NativeType,
@@ -251,12 +251,12 @@ fn _deserialize<A: Borrow<Value>>(rows: &[A], data_type: DataType) -> Arc<dyn Ar
     }
 }
 
-/// Deserializes `rows` into a [`Columns`] according to `fields`.
+/// Deserializes `rows` into a [`Chunk`] according to `fields`.
 /// This is CPU-bounded.
 pub fn deserialize<A: AsRef<str>>(
     rows: &[A],
     fields: &[Field],
-) -> Result<Columns<Arc<dyn Array>>, ArrowError> {
+) -> Result<Chunk<Arc<dyn Array>>, ArrowError> {
     let data_type = DataType::Struct(fields.to_vec());
 
     // convert rows to `Value`
@@ -269,5 +269,5 @@ pub fn deserialize<A: AsRef<str>>(
         .collect::<Result<Vec<_>, ArrowError>>()?;
 
     let (_, columns, _) = deserialize_struct(&rows, data_type).into_data();
-    Ok(Columns::new(columns))
+    Ok(Chunk::new(columns))
 }

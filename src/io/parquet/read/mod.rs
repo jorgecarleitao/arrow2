@@ -224,17 +224,17 @@ fn column_datatype(data_type: &DataType, column: usize) -> DataType {
         | LargeUtf8 | Dictionary(_) | List | LargeList | FixedSizeList => data_type.clone(),
         Struct => {
             if let DataType::Struct(fields) = data_type.to_logical_type() {
-                let mut total_columns = 0;
+                let mut total_chunk = 0;
                 let mut total_fields = 0;
                 for f in fields {
-                    let field_columns = column_offset(f.data_type());
-                    if column < total_columns + field_columns {
-                        return column_datatype(f.data_type(), column + total_columns);
+                    let field_chunk = column_offset(f.data_type());
+                    if column < total_chunk + field_chunk {
+                        return column_datatype(f.data_type(), column + total_chunk);
                     }
-                    total_fields += (field_columns > 0) as usize;
-                    total_columns += field_columns;
+                    total_fields += (field_chunk > 0) as usize;
+                    total_chunk += field_chunk;
                 }
-                fields[column + total_fields - total_columns]
+                fields[column + total_fields - total_chunk]
                     .data_type()
                     .clone()
             } else {

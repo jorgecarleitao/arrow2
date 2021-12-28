@@ -8,7 +8,7 @@ Reading it generally consists of:
 1. read metadata, containing the block positions in the file
 2. seek to each block and read it
 
-The example below shows how to read them into `RecordBatch`es:
+The example below shows how to read them into `Chunk`es:
 
 ```rust
 {{#include ../../../examples/ipc_file_read.rs}}

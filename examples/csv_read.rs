@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
 use arrow2::array::Array;
-use arrow2::columns::Columns;
+use arrow2::chunk::Chunk;
 use arrow2::error::Result;
 use arrow2::io::csv::read;
 
-fn read_path(path: &str, projection: Option<&[usize]>) -> Result<Columns<Arc<dyn Array>>> {
+fn read_path(path: &str, projection: Option<&[usize]>) -> Result<Chunk<Arc<dyn Array>>> {
     // Create a CSV reader. This is typically created on the thread that reads the file and
     // thus owns the read head.
     let mut reader = read::ReaderBuilder::new().from_path(path)?;

@@ -5,12 +5,12 @@ use futures::AsyncWrite;
 
 use super::super::IpcField;
 pub use super::common::WriteOptions;
-use super::common::{encode_columns, DictionaryTracker, EncodedData};
+use super::common::{encode_chunk, DictionaryTracker, EncodedData};
 use super::common_async::{write_continuation, write_message};
 use super::{default_ipc_fields, schema_to_bytes};
 
 use crate::array::Array;
-use crate::columns::Columns;
+use crate::chunk::Chunk;
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 
@@ -55,10 +55,10 @@ impl<W: AsyncWrite + Unpin + Send> StreamWriter<W> {
         Ok(())
     }
 
-    /// Writes [`Columns`] to the stream
+    /// Writes [`Chunk`] to the stream
     pub async fn write(
         &mut self,
-        columns: &Columns<Arc<dyn Array>>,
+        columns: &Chunk<Arc<dyn Array>>,
         schema: &Schema,
         ipc_fields: Option<&[IpcField]>,
     ) -> Result<()> {
@@ -70,7 +70,7 @@ impl<W: AsyncWrite + Unpin + Send> StreamWriter<W> {
         }
 
         let (encoded_dictionaries, encoded_message) = if let Some(ipc_fields) = ipc_fields {
-            encode_columns(
+            encode_chunk(
                 columns,
                 ipc_fields,
                 &mut self.dictionary_tracker,
@@ -78,7 +78,7 @@ impl<W: AsyncWrite + Unpin + Send> StreamWriter<W> {
             )?
         } else {
             let ipc_fields = default_ipc_fields(schema.fields());
-            encode_columns(
+            encode_chunk(
                 columns,
                 &ipc_fields,
                 &mut self.dictionary_tracker,

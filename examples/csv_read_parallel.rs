@@ -5,10 +5,10 @@ use std::thread;
 use std::time::SystemTime;
 
 use arrow2::array::Array;
-use arrow2::columns::Columns;
+use arrow2::chunk::Chunk;
 use arrow2::{error::Result, io::csv::read};
 
-fn parallel_read(path: &str) -> Result<Vec<Columns<Arc<dyn Array>>>> {
+fn parallel_read(path: &str) -> Result<Vec<Chunk<Arc<dyn Array>>>> {
     let batch_size = 100;
     let has_header = true;
     let projection = None;

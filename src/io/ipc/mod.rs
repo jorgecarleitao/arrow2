@@ -33,8 +33,8 @@
 //! # use std::fs::File;
 //! # use std::sync::Arc;
 //! # use arrow2::datatypes::{Field, Schema, DataType};
-//! # use arrow2::array::Int32Array;
-//! # use arrow2::record_batch::RecordBatch;
+//! # use arrow2::array::{Int32Array, Array};
+//! # use arrow2::chunk::Chunk;
 //! # use arrow2::error::ArrowError;
 //! // Setup the writer
 //! let path = "example.arrow".to_string();
@@ -48,14 +48,13 @@
 //! // Setup the data
 //! let x_data = Int32Array::from_slice([-1i32, 1]);
 //! let y_data = Int32Array::from_slice([1i32, -1]);
-//! let batch = RecordBatch::try_new(
-//!        Arc::new(schema),
-//!         vec![Arc::new(x_data), Arc::new(y_data)]
-//!    )?;
+//! let chunk = Chunk::try_new(
+//!     vec![Arc::new(x_data) as Arc<dyn Array>, Arc::new(y_data)]
+//! )?;
 //!
 //! // Write the messages and finalize the stream
 //! for _ in 0..5 {
-//!     writer.write(&batch, None);
+//!     writer.write(&chunk, None);
 //! }
 //! writer.finish();
 //!

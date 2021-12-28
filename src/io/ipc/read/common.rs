@@ -6,7 +6,7 @@ use arrow_format::ipc;
 use arrow_format::ipc::Schema::MetadataVersion;
 
 use crate::array::*;
-use crate::columns::Columns;
+use crate::chunk::Chunk;
 use crate::datatypes::{DataType, Field};
 use crate::error::{ArrowError, Result};
 use crate::io::ipc::{IpcField, IpcSchema};
@@ -87,11 +87,11 @@ pub fn read_record_batch<R: Read + Seek>(
     version: MetadataVersion,
     reader: &mut R,
     block_offset: u64,
-) -> Result<Columns<Arc<dyn Array>>> {
+) -> Result<Chunk<Arc<dyn Array>>> {
     assert_eq!(fields.len(), ipc_schema.fields.len());
-    let buffers = batch.buffers().ok_or_else(|| {
-        ArrowError::oos("Unable to get buffers from IPC RecordBatch")
-    })?;
+    let buffers = batch
+        .buffers()
+        .ok_or_else(|| ArrowError::oos("Unable to get buffers from IPC RecordBatch"))?;
     let mut buffers: VecDeque<&ipc::Schema::Buffer> = buffers.iter().collect();
 
     let field_nodes = batch
@@ -145,7 +145,7 @@ pub fn read_record_batch<R: Read + Seek>(
             })
             .collect::<Result<Vec<_>>>()?
     };
-    Columns::try_new(columns)
+    Chunk::try_new(columns)
 }
 
 fn find_first_dict_field_d<'a>(

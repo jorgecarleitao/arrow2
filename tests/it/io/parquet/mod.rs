@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use arrow2::error::ArrowError;
 use arrow2::{
-    array::*, bitmap::Bitmap, buffer::Buffer, columns::Columns, datatypes::*, error::Result,
+    array::*, bitmap::Bitmap, buffer::Buffer, chunk::Chunk, datatypes::*, error::Result,
     io::parquet::read::statistics::*, io::parquet::read::*, io::parquet::write::*,
 };
 
@@ -620,7 +620,7 @@ pub fn pyarrow_struct_statistics(column: usize) -> Option<Box<dyn Statistics>> {
 }
 
 /// Round-trip with parquet using the same integration files used for IPC integration tests.
-fn integration_write(schema: &Schema, batches: &[Columns<Arc<dyn Array>>]) -> Result<Vec<u8>> {
+fn integration_write(schema: &Schema, batches: &[Chunk<Arc<dyn Array>>]) -> Result<Vec<u8>> {
     let options = WriteOptions {
         write_statistics: true,
         compression: Compression::Uncompressed,
@@ -667,7 +667,7 @@ fn integration_write(schema: &Schema, batches: &[Columns<Arc<dyn Array>>]) -> Re
     Ok(writer.into_inner())
 }
 
-type IntegrationRead = (Arc<Schema>, Vec<Columns<Arc<dyn Array>>>);
+type IntegrationRead = (Arc<Schema>, Vec<Chunk<Arc<dyn Array>>>);
 
 fn integration_read(data: &[u8]) -> Result<IntegrationRead> {
     let reader = Cursor::new(data);
@@ -720,7 +720,7 @@ fn arrow_type() -> Result<()> {
         Field::new("a1", dt1, true),
         Field::new("a2", array2.data_type().clone(), true),
     ]);
-    let batch = Columns::try_new(vec![Arc::new(array) as Arc<dyn Array>, Arc::new(array2)])?;
+    let batch = Chunk::try_new(vec![Arc::new(array) as Arc<dyn Array>, Arc::new(array2)])?;
 
     let r = integration_write(&schema, &[batch.clone()])?;
 

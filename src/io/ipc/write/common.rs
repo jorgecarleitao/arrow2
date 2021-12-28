@@ -5,7 +5,7 @@ use arrow_format::ipc::flatbuffers::FlatBufferBuilder;
 use arrow_format::ipc::Message::CompressionType;
 
 use crate::array::*;
-use crate::columns::Columns;
+use crate::chunk::Chunk;
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 use crate::io::ipc::endianess::is_native_little_endian;
@@ -172,8 +172,8 @@ fn encode_dictionary(
     }
 }
 
-pub fn encode_columns(
-    columns: &Columns<Arc<dyn Array>>,
+pub fn encode_chunk(
+    columns: &Chunk<Arc<dyn Array>>,
     fields: &[IpcField],
     dictionary_tracker: &mut DictionaryTracker,
     options: &WriteOptions,
@@ -195,9 +195,9 @@ pub fn encode_columns(
     Ok((encoded_dictionaries, encoded_message))
 }
 
-/// Write [`Columns`] into two sets of bytes, one for the header (ipc::Schema::Message) and the
+/// Write [`Chunk`] into two sets of bytes, one for the header (ipc::Schema::Message) and the
 /// other for the batch's data
-fn columns_to_bytes(columns: &Columns<Arc<dyn Array>>, options: &WriteOptions) -> EncodedData {
+fn columns_to_bytes(columns: &Chunk<Arc<dyn Array>>, options: &WriteOptions) -> EncodedData {
     let mut fbb = FlatBufferBuilder::new();
 
     let mut nodes: Vec<ipc::Message::FieldNode> = vec![];

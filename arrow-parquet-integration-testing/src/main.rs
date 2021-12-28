@@ -5,7 +5,7 @@ use std::{collections::HashMap, io::Read};
 use arrow2::array::Array;
 use arrow2::io::ipc::IpcField;
 use arrow2::{
-    columns::Columns,
+    chunk::Chunk,
     datatypes::{DataType, Schema},
     error::Result,
     io::{
@@ -25,7 +25,7 @@ use flate2::read::GzDecoder;
 pub fn read_gzip_json(
     version: &str,
     file_name: &str,
-) -> Result<(Schema, Vec<IpcField>, Vec<Columns<Arc<dyn Array>>>)> {
+) -> Result<(Schema, Vec<IpcField>, Vec<Chunk<Arc<dyn Array>>>)> {
     let path = format!(
         "../testing/arrow-testing/data/arrow-ipc-stream/integration/{}/{}.json.gz",
         version, file_name
@@ -53,7 +53,7 @@ pub fn read_gzip_json(
     let batches = arrow_json
         .batches
         .iter()
-        .map(|batch| read::deserialize_columns(&schema, &ipc_fields, batch, &dictionaries))
+        .map(|batch| read::deserialize_chunk(&schema, &ipc_fields, batch, &dictionaries))
         .collect::<Result<Vec<_>>>()?;
 
     Ok((schema, ipc_fields, batches))
@@ -148,7 +148,7 @@ fn main() -> Result<()> {
                         }
                     })
                     .collect();
-                Columns::try_new(columns).unwrap()
+                Chunk::try_new(columns).unwrap()
             })
             .collect::<Vec<_>>()
     } else {

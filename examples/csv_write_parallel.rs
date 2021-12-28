@@ -5,12 +5,12 @@ use std::thread;
 
 use arrow2::{
     array::{Array, Int32Array},
-    columns::Columns,
+    chunk::Chunk,
     error::Result,
     io::csv::write,
 };
 
-fn parallel_write(path: &str, batches: [Columns<Arc<dyn Array>>; 2]) -> Result<()> {
+fn parallel_write(path: &str, batches: [Chunk<Arc<dyn Array>>; 2]) -> Result<()> {
     let options = write::SerializeOptions::default();
 
     // write a header
@@ -60,7 +60,7 @@ fn main() -> Result<()> {
         Some(5),
         Some(6),
     ]);
-    let columns = Columns::new(vec![Arc::new(array) as Arc<dyn Array>]);
+    let columns = Chunk::new(vec![Arc::new(array) as Arc<dyn Array>]);
 
     parallel_write("example.csv", [columns.clone(), columns])
 }

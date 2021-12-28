@@ -7,12 +7,12 @@ use std::io::Write;
 use std::sync::Arc;
 
 use super::super::IpcField;
-use super::common::{encode_columns, DictionaryTracker, EncodedData, WriteOptions};
+use super::common::{encode_chunk, DictionaryTracker, EncodedData, WriteOptions};
 use super::common_sync::{write_continuation, write_message};
 use super::schema_to_bytes;
 
 use crate::array::Array;
-use crate::columns::Columns;
+use crate::chunk::Chunk;
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 
@@ -54,8 +54,8 @@ impl<W: Write> StreamWriter<W> {
         Ok(())
     }
 
-    /// Writes [`Columns`] to the stream
-    pub fn write(&mut self, columns: &Columns<Arc<dyn Array>>, fields: &[IpcField]) -> Result<()> {
+    /// Writes [`Chunk`] to the stream
+    pub fn write(&mut self, columns: &Chunk<Arc<dyn Array>>, fields: &[IpcField]) -> Result<()> {
         if self.finished {
             return Err(ArrowError::Io(std::io::Error::new(
                 std::io::ErrorKind::UnexpectedEof,
@@ -63,7 +63,7 @@ impl<W: Write> StreamWriter<W> {
             )));
         }
 
-        let (encoded_dictionaries, encoded_message) = encode_columns(
+        let (encoded_dictionaries, encoded_message) = encode_chunk(
             columns,
             fields,
             &mut self.dictionary_tracker,

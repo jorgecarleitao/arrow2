@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     array::Array,
-    columns::Columns,
+    chunk::Chunk,
     datatypes::{Field, Schema},
     error::{ArrowError, Result},
 };
@@ -108,7 +108,7 @@ impl<R: Read + Seek> RecordReader<R> {
 }
 
 impl<R: Read + Seek> Iterator for RecordReader<R> {
-    type Item = Result<Columns<Arc<dyn Array>>>;
+    type Item = Result<Chunk<Arc<dyn Array>>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.schema.fields().is_empty() {
@@ -170,7 +170,7 @@ impl<R: Read + Seek> Iterator for RecordReader<R> {
             self.buffer = b1;
             self.decompress_buffer = b2;
             self.remaining_rows -= columns[0].len();
-            Columns::new(columns)
+            Chunk::new(columns)
         }))
     }
 }

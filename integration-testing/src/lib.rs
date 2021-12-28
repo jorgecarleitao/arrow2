@@ -21,7 +21,7 @@ use arrow2::array::Array;
 use arrow2::io::ipc::IpcField;
 use serde_json::Value;
 
-use arrow2::columns::Columns;
+use arrow2::chunk::Chunk;
 use arrow2::datatypes::*;
 use arrow2::error::Result;
 use arrow2::io::json_integration::{read, ArrowJsonBatch, ArrowJsonDictionaryBatch};
@@ -45,7 +45,7 @@ pub struct ArrowFile {
     // we can evolve this into a concrete Arrow type
     // this is temporarily not being read from
     pub _dictionaries: HashMap<i64, ArrowJsonDictionaryBatch>,
-    pub batches: Vec<Columns<Arc<dyn Array>>>,
+    pub batches: Vec<Chunk<Arc<dyn Array>>>,
 }
 
 pub fn read_json_file(json_name: &str) -> Result<ArrowFile> {
@@ -74,7 +74,7 @@ pub fn read_json_file(json_name: &str) -> Result<ArrowFile> {
         .iter()
         .map(|b| {
             let json_batch: ArrowJsonBatch = serde_json::from_value(b.clone()).unwrap();
-            read::deserialize_columns(&schema, &fields, &json_batch, &dictionaries)
+            read::deserialize_chunk(&schema, &fields, &json_batch, &dictionaries)
         })
         .collect::<Result<_>>()?;
     Ok(ArrowFile {

@@ -1,14 +1,14 @@
 use std::{collections::HashMap, fs::File, io::Read, sync::Arc};
 
 use arrow2::{
-    array::Array, columns::Columns, datatypes::Schema, error::Result,
+    array::Array, chunk::Chunk, datatypes::Schema, error::Result,
     io::ipc::read::read_stream_metadata, io::ipc::read::StreamReader, io::ipc::IpcField,
     io::json_integration::read, io::json_integration::ArrowJson,
 };
 
 use flate2::read::GzDecoder;
 
-type IpcRead = (Schema, Vec<IpcField>, Vec<Columns<Arc<dyn Array>>>);
+type IpcRead = (Schema, Vec<IpcField>, Vec<Chunk<Arc<dyn Array>>>);
 
 /// Read gzipped JSON file
 pub fn read_gzip_json(version: &str, file_name: &str) -> Result<IpcRead> {
@@ -40,7 +40,7 @@ pub fn read_gzip_json(version: &str, file_name: &str) -> Result<IpcRead> {
     let batches = arrow_json
         .batches
         .iter()
-        .map(|batch| read::deserialize_columns(&schema, &ipc_fields, batch, &dictionaries))
+        .map(|batch| read::deserialize_chunk(&schema, &ipc_fields, batch, &dictionaries))
         .collect::<Result<Vec<_>>>()?;
 
     Ok((schema, ipc_fields, batches))
@@ -57,7 +57,7 @@ pub fn read_arrow_stream(version: &str, file_name: &str) -> IpcRead {
     let metadata = read_stream_metadata(&mut file).unwrap();
     let reader = StreamReader::new(file, metadata);
 
-    let schema = reader.metadata().schema.as_ref().clone();
+    let schema = reader.metadata().schema.clone();
     let ipc_fields = reader.metadata().ipc_schema.fields.clone();
 
     (

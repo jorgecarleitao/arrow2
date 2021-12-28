@@ -12,10 +12,11 @@ Below is an example of some of the things you can do with it:
 use std::sync::Arc;
 
 use arrow2::array::*;
+use arrow2::datatypes::{Field, DataType, Schema};
 use arrow2::compute::arithmetics;
 use arrow2::error::Result;
 use arrow2::io::parquet::write::*;
-use arrow2::record_batch::RecordBatch;
+use arrow2::chunk::Chunk;
 
 fn main() -> Result<()> {
     // declare arrays
@@ -26,16 +27,19 @@ fn main() -> Result<()> {
     let c = arithmetics::basic::mul_scalar(&a, &2);
     assert_eq!(c, b);
 
-    // declare records
-    let batch = RecordBatch::try_from_iter([
-        ("c1", Arc::new(a) as Arc<dyn Array>),
-        ("c2", Arc::new(b) as Arc<dyn Array>),
-    ])?;
-    // with metadata
-    println!("{:?}", batch.schema());
+    // declare a schema with fields
+    let schema = Schema::new(vec![
+        Field::new("c1", DataType::Int32, true),
+        Field::new("c2", DataType::Int32, true),
+    ]);
+
+    // declare chunk
+    let chunk = Chunk::new(vec![
+        Arc::new(a) as Arc<dyn Array>,
+        Arc::new(b) as Arc<dyn Array>,
+    ]);
 
     // write to parquet (probably the fastest implementation of writing to parquet out there)
-    let schema = batch.schema().clone();
 
     let options = WriteOptions {
         write_statistics: true,
@@ -44,7 +48,7 @@ fn main() -> Result<()> {
     };
 
     let row_groups = RowGroupIterator::try_new(
-        vec![Ok(batch)].into_iter(),
+        vec![Ok(chunk)].into_iter(),
         &schema,
         options,
         vec![Encoding::Plain, Encoding::Plain],

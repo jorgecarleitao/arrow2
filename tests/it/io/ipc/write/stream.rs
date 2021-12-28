@@ -2,7 +2,7 @@ use std::io::Cursor;
 use std::sync::Arc;
 
 use arrow2::array::Array;
-use arrow2::columns::Columns;
+use arrow2::chunk::Chunk;
 use arrow2::datatypes::Schema;
 use arrow2::error::Result;
 use arrow2::io::ipc::read::read_stream_metadata;
@@ -13,11 +13,7 @@ use arrow2::io::ipc::IpcField;
 use crate::io::ipc::common::read_arrow_stream;
 use crate::io::ipc::common::read_gzip_json;
 
-fn write_(
-    schema: &Schema,
-    ipc_fields: &[IpcField],
-    batches: &[Columns<Arc<dyn Array>>],
-) -> Vec<u8> {
+fn write_(schema: &Schema, ipc_fields: &[IpcField], batches: &[Chunk<Arc<dyn Array>>]) -> Vec<u8> {
     let mut result = vec![];
 
     let options = WriteOptions { compression: None };
@@ -46,7 +42,7 @@ fn test_file(version: &str, file_name: &str) {
     let (expected_schema, expected_ipc_fields, expected_batches) =
         read_gzip_json(version, file_name).unwrap();
 
-    assert_eq!(schema.as_ref(), &expected_schema);
+    assert_eq!(schema, expected_schema);
     assert_eq!(ipc_fields, expected_ipc_fields);
 
     let batches = reader

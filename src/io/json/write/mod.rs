@@ -7,7 +7,7 @@ pub use serialize::serialize;
 
 use crate::{
     array::Array,
-    columns::Columns,
+    chunk::Chunk,
     error::{ArrowError, Result},
 };
 
@@ -30,13 +30,13 @@ where
     Ok(())
 }
 
-/// [`FallibleStreamingIterator`] that serializes a [`Columns`] to bytes.
+/// [`FallibleStreamingIterator`] that serializes a [`Chunk`] to bytes.
 /// Advancing it is CPU-bounded
 pub struct Serializer<F, A, I>
 where
     F: JsonFormat,
     A: AsRef<dyn Array>,
-    I: Iterator<Item = Result<Columns<A>>>,
+    I: Iterator<Item = Result<Chunk<A>>>,
 {
     batches: I,
     names: Vec<String>,
@@ -48,7 +48,7 @@ impl<F, A, I> Serializer<F, A, I>
 where
     F: JsonFormat,
     A: AsRef<dyn Array>,
-    I: Iterator<Item = Result<Columns<A>>>,
+    I: Iterator<Item = Result<Chunk<A>>>,
 {
     /// Creates a new [`Serializer`].
     pub fn new(batches: I, names: Vec<String>, buffer: Vec<u8>, format: F) -> Self {
@@ -65,7 +65,7 @@ impl<F, A, I> FallibleStreamingIterator for Serializer<F, A, I>
 where
     F: JsonFormat,
     A: AsRef<dyn Array>,
-    I: Iterator<Item = Result<Columns<A>>>,
+    I: Iterator<Item = Result<Chunk<A>>>,
 {
     type Item = [u8];
 
@@ -75,8 +75,8 @@ where
         self.buffer.clear();
         self.batches
             .next()
-            .map(|maybe_columns| {
-                maybe_columns
+            .map(|maybe_chunk| {
+                maybe_chunk
                     .map(|columns| serialize(&self.names, &columns, self.format, &mut self.buffer))
             })
             .transpose()?;

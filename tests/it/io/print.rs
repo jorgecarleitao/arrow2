@@ -4,7 +4,7 @@ use arrow2::{
     array::*,
     bitmap::Bitmap,
     buffer::Buffer,
-    columns::Columns,
+    chunk::Chunk,
     datatypes::{DataType, Field, TimeUnit, UnionMode},
     error::Result,
     io::print::*,
@@ -15,7 +15,7 @@ fn write_basics() -> Result<()> {
     let a = Utf8Array::<i32>::from(vec![Some("a"), Some("b"), None, Some("d")]);
     let b = Int32Array::from(vec![Some(1), None, Some(10), Some(100)]);
 
-    let batch = Columns::try_new(vec![&a as &dyn Array, &b])?;
+    let batch = Chunk::try_new(vec![&a as &dyn Array, &b])?;
 
     let table = write(&[batch], &["a".to_string(), "b".to_string()]);
 
@@ -46,7 +46,7 @@ fn write_null() -> Result<()> {
         .collect();
 
     // define data (null)
-    let columns = Columns::try_new(arrays)?;
+    let columns = Chunk::try_new(arrays)?;
 
     let table = write(&[columns], &["a", "b", "c"]);
 
@@ -74,7 +74,7 @@ fn write_dictionary() -> Result<()> {
     array.try_extend(vec![Some("one"), None, Some("three")])?;
     let array = array.into_box();
 
-    let batch = Columns::new(vec![array]);
+    let batch = Chunk::new(vec![array]);
 
     let table = write(&[batch], &["d1"]);
 
@@ -101,7 +101,7 @@ fn dictionary_validities() -> Result<()> {
     let values = PrimitiveArray::<i32>::from([None, Some(10)]);
     let array = DictionaryArray::<i32>::from_data(keys, Arc::new(values));
 
-    let columns = Columns::new(vec![&array as &dyn Array]);
+    let columns = Chunk::new(vec![&array as &dyn Array]);
 
     let table = write(&[columns], &["d1"]);
 
@@ -122,7 +122,7 @@ fn dictionary_validities() -> Result<()> {
 macro_rules! check_datetime {
     ($ty:ty, $datatype:expr, $value:expr, $EXPECTED_RESULT:expr) => {
         let array = PrimitiveArray::<$ty>::from(&[Some($value), None]).to($datatype);
-        let batch = Columns::new(vec![&array as &dyn Array]);
+        let batch = Chunk::new(vec![&array as &dyn Array]);
 
         let table = write(&[batch], &["f"]);
 
@@ -331,7 +331,7 @@ fn write_struct() -> Result<()> {
 
     let array = StructArray::from_data(DataType::Struct(fields), values, validity);
 
-    let columns = Columns::new(vec![&array as &dyn Array]);
+    let columns = Chunk::new(vec![&array as &dyn Array]);
 
     let table = write(&[columns], &["a"]);
 
@@ -367,7 +367,7 @@ fn write_union() -> Result<()> {
 
     let array = UnionArray::from_data(data_type, types, fields, None);
 
-    let batch = Columns::new(vec![&array as &dyn Array]);
+    let batch = Chunk::new(vec![&array as &dyn Array]);
 
     let table = write(&[batch], &["a"]);
 

@@ -3,16 +3,12 @@ use std::sync::Arc;
 
 use arrow2::{
     array::{Array, Int32Array},
-    columns::Columns,
+    chunk::Chunk,
     error::Result,
     io::json::write,
 };
 
-fn write_batches(
-    path: &str,
-    names: Vec<String>,
-    batches: &[Columns<Arc<dyn Array>>],
-) -> Result<()> {
+fn write_batches(path: &str, names: Vec<String>, batches: &[Chunk<Arc<dyn Array>>]) -> Result<()> {
     let mut writer = File::create(path)?;
     let format = write::JsonArray::default();
 
@@ -41,6 +37,6 @@ fn main() -> Result<()> {
     write_batches(
         "example.json",
         vec!["c1".to_string()],
-        &[Columns::new(vec![array.clone()]), Columns::new(vec![array])],
+        &[Chunk::new(vec![array.clone()]), Chunk::new(vec![array])],
     )
 }

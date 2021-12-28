@@ -2,7 +2,7 @@ use std::io::{Cursor, Seek, Write};
 use std::sync::Arc;
 
 use arrow2::array::*;
-use arrow2::columns::Columns;
+use arrow2::chunk::Chunk;
 use arrow2::datatypes::*;
 use arrow2::error::Result;
 use arrow2::io::ipc::read;
@@ -40,14 +40,14 @@ fn write_ipc<W: Write + Seek>(writer: W, array: impl Array + 'static) -> Result<
     let options = write::WriteOptions { compression: None };
     let mut writer = write::FileWriter::try_new(writer, &schema, None, options)?;
 
-    let batch = Columns::try_new(vec![Arc::new(array) as Arc<dyn Array>])?;
+    let batch = Chunk::try_new(vec![Arc::new(array) as Arc<dyn Array>])?;
 
     writer.write(&batch, None)?;
 
     Ok(writer.into_inner())
 }
 
-fn read_ipc(buf: &[u8]) -> Result<Columns<Arc<dyn Array>>> {
+fn read_ipc(buf: &[u8]) -> Result<Chunk<Arc<dyn Array>>> {
     let mut cursor = Cursor::new(buf);
     let metadata = read::read_file_metadata(&mut cursor)?;
     let mut reader = read::FileReader::new(cursor, metadata, None);

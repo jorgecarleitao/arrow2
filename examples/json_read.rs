@@ -3,11 +3,11 @@ use std::io::BufReader;
 use std::sync::Arc;
 
 use arrow2::array::Array;
-use arrow2::columns::Columns;
+use arrow2::chunk::Chunk;
 use arrow2::error::Result;
 use arrow2::io::json::read;
 
-fn read_path(path: &str, projection: Option<Vec<&str>>) -> Result<Columns<Arc<dyn Array>>> {
+fn read_path(path: &str, projection: Option<Vec<&str>>) -> Result<Chunk<Arc<dyn Array>>> {
     // Example of reading a JSON file.
     let mut reader = BufReader::new(File::open(path)?);
 
@@ -31,7 +31,7 @@ fn read_path(path: &str, projection: Option<Vec<&str>>) -> Result<Columns<Arc<dy
     let read = read::read_rows(&mut reader, &mut rows)?;
     let rows = &rows[..read];
 
-    // deserialize `rows` into `Columns`. This is CPU-intensive, has no IO,
+    // deserialize `rows` into `Chunk`. This is CPU-intensive, has no IO,
     // and can be performed on a different thread pool via a channel.
     read::deserialize(rows, &fields)
 }

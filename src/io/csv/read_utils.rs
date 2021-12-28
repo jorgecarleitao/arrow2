@@ -11,7 +11,7 @@ pub(crate) trait ByteRecordGeneric {
 
 use crate::{
     array::*,
-    columns::Columns,
+    chunk::Chunk,
     datatypes::*,
     error::{ArrowError, Result},
     temporal_conversions,
@@ -257,7 +257,7 @@ pub(crate) fn deserialize_column<B: ByteRecordGeneric>(
     })
 }
 
-/// Deserializes rows [`ByteRecord`] into [`Columns`].
+/// Deserializes rows [`ByteRecord`] into [`Chunk`].
 /// Note that this is a convenience function: column deserialization
 /// is embarassingly parallel (e.g. rayon).
 pub(crate) fn deserialize_batch<F, B: ByteRecordGeneric>(
@@ -266,7 +266,7 @@ pub(crate) fn deserialize_batch<F, B: ByteRecordGeneric>(
     projection: Option<&[usize]>,
     line_number: usize,
     deserialize_column: F,
-) -> Result<Columns<Arc<dyn Array>>>
+) -> Result<Chunk<Arc<dyn Array>>>
 where
     F: Fn(&[B], usize, DataType, usize) -> Result<Arc<dyn Array>>,
 {
@@ -276,7 +276,7 @@ where
     };
 
     if rows.is_empty() {
-        return Ok(Columns::new(vec![]));
+        return Ok(Chunk::new(vec![]));
     }
 
     projection
@@ -288,5 +288,5 @@ where
             deserialize_column(rows, column, data_type.clone(), line_number)
         })
         .collect::<Result<Vec<_>>>()
-        .and_then(Columns::try_new)
+        .and_then(Chunk::try_new)
 }

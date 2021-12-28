@@ -6,7 +6,7 @@ use arrow_format::ipc::flatbuffers::VerifierOptions;
 use arrow_format::ipc::File::Block;
 
 use crate::array::Array;
-use crate::columns::Columns;
+use crate::chunk::Chunk;
 use crate::datatypes::Schema;
 use crate::error::{ArrowError, Result};
 use crate::io::ipc::IpcSchema;
@@ -205,7 +205,7 @@ pub fn read_batch<R: Read + Seek>(
     projection: Option<&[usize]>,
     block: usize,
     block_data: &mut Vec<u8>,
-) -> Result<Columns<Arc<dyn Array>>> {
+) -> Result<Chunk<Arc<dyn Array>>> {
     let block = metadata.blocks[block];
 
     // read length
@@ -290,7 +290,7 @@ impl<R: Read + Seek> FileReader<R> {
 }
 
 impl<R: Read + Seek> Iterator for FileReader<R> {
-    type Item = Result<Columns<Arc<dyn Array>>>;
+    type Item = Result<Chunk<Arc<dyn Array>>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         // get current block

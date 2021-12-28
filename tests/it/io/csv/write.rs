@@ -2,12 +2,12 @@ use std::io::Cursor;
 use std::sync::Arc;
 
 use arrow2::array::*;
-use arrow2::columns::Columns;
+use arrow2::chunk::Chunk;
 use arrow2::datatypes::*;
 use arrow2::error::Result;
 use arrow2::io::csv::write::*;
 
-fn data() -> Columns<Box<dyn Array>> {
+fn data() -> Chunk<Box<dyn Array>> {
     let c1 = Utf8Array::<i32>::from_slice(["a b", "c", "d"]);
     let c2 = Float64Array::from([Some(123.564532), None, Some(-556132.25)]);
     let c3 = UInt32Array::from_slice(&[3, 2, 1]);
@@ -19,7 +19,7 @@ fn data() -> Columns<Box<dyn Array>> {
     let keys = UInt32Array::from_slice(&[2, 0, 1]);
     let c7 = DictionaryArray::from_data(keys, Arc::new(c1.clone()));
 
-    Columns::new(vec![
+    Chunk::new(vec![
         Box::new(c1) as Box<dyn Array>,
         Box::new(c2),
         Box::new(c3),
@@ -39,7 +39,7 @@ fn write_csv() -> Result<()> {
 
     write_header(&mut writer, &["c1", "c2", "c3", "c4", "c5", "c6", "c7"])?;
     let options = SerializeOptions::default();
-    write_columns(&mut writer, &columns, &options)?;
+    write_chunk(&mut writer, &columns, &options)?;
 
     // check
     let buffer = writer.into_inner().unwrap().into_inner();
@@ -67,7 +67,7 @@ fn write_csv_custom_options() -> Result<()> {
         time64_format: Some("%r".to_string()),
         ..Default::default()
     };
-    write_columns(&mut writer, &batch, &options)?;
+    write_chunk(&mut writer, &batch, &options)?;
 
     // check
     let buffer = writer.into_inner().unwrap().into_inner();
@@ -82,7 +82,7 @@ d|-556132.25|1||2019-04-18 02:45:55.555|11:46:03 PM|c
     Ok(())
 }
 
-fn data_array(column: usize) -> (Columns<Arc<dyn Array>>, Vec<&'static str>) {
+fn data_array(column: usize) -> (Chunk<Arc<dyn Array>>, Vec<&'static str>) {
     let (array, expected) = match column {
         0 => (
             Arc::new(Utf8Array::<i64>::from_slice(["a b", "c", "d"])) as Arc<dyn Array>,
@@ -207,7 +207,7 @@ fn data_array(column: usize) -> (Columns<Arc<dyn Array>>, Vec<&'static str>) {
         _ => todo!(),
     };
 
-    (Columns::new(vec![array]), expected)
+    (Chunk::new(vec![array]), expected)
 }
 
 fn write_single(column: usize) -> Result<()> {
@@ -218,7 +218,7 @@ fn write_single(column: usize) -> Result<()> {
 
     write_header(&mut writer, &["c1"])?;
     let options = SerializeOptions::default();
-    write_columns(&mut writer, &columns, &options)?;
+    write_chunk(&mut writer, &columns, &options)?;
 
     // check
     let buffer = writer.into_inner().unwrap().into_inner();

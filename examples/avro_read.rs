@@ -22,8 +22,8 @@ fn main() -> Result<()> {
         schema.fields,
     );
 
-    for maybe_columns in reader {
-        let columns = maybe_columns?;
+    for maybe_chunk in reader {
+        let columns = maybe_chunk?;
         assert!(!columns.is_empty());
     }
     Ok(())

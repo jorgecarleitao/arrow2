@@ -6,13 +6,13 @@ use arrow_format::ipc::flatbuffers::FlatBufferBuilder;
 use super::{
     super::IpcField,
     super::ARROW_MAGIC,
-    common::{encode_columns, DictionaryTracker, EncodedData, WriteOptions},
+    common::{encode_chunk, DictionaryTracker, EncodedData, WriteOptions},
     common_sync::{write_continuation, write_message},
     default_ipc_fields, schema, schema_to_bytes,
 };
 
 use crate::array::Array;
-use crate::columns::Columns;
+use crate::chunk::Chunk;
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 
@@ -79,10 +79,10 @@ impl<W: Write> FileWriter<W> {
         self.writer
     }
 
-    /// Writes [`Columns`] to the file
+    /// Writes [`Chunk`] to the file
     pub fn write(
         &mut self,
-        columns: &Columns<Arc<dyn Array>>,
+        columns: &Chunk<Arc<dyn Array>>,
         ipc_fields: Option<&[IpcField]>,
     ) -> Result<()> {
         if self.finished {
@@ -98,7 +98,7 @@ impl<W: Write> FileWriter<W> {
             self.ipc_fields.as_ref()
         };
 
-        let (encoded_dictionaries, encoded_message) = encode_columns(
+        let (encoded_dictionaries, encoded_message) = encode_chunk(
             columns,
             ipc_fields,
             &mut self.dictionary_tracker,

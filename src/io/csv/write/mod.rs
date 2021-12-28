@@ -11,7 +11,7 @@ pub use csv::{ByteRecord, Writer, WriterBuilder};
 pub use serialize::*;
 
 use crate::array::Array;
-use crate::columns::Columns;
+use crate::chunk::Chunk;
 use crate::error::Result;
 
 /// Creates serializers that iterate over each column that serializes each item according
@@ -26,11 +26,11 @@ fn new_serializers<'a, A: AsRef<dyn Array>>(
         .collect()
 }
 
-/// Serializes [`Columns`] to a vector of `ByteRecord`.
+/// Serializes [`Chunk`] to a vector of `ByteRecord`.
 /// The vector is guaranteed to have `columns.len()` entries.
 /// Each `ByteRecord` is guaranteed to have `columns.array().len()` fields.
 pub fn serialize<A: AsRef<dyn Array>>(
-    columns: &Columns<A>,
+    columns: &Chunk<A>,
     options: &SerializeOptions,
 ) -> Result<Vec<ByteRecord>> {
     let mut serializers = new_serializers(columns, options)?;
@@ -40,16 +40,16 @@ pub fn serialize<A: AsRef<dyn Array>>(
     records.iter_mut().for_each(|record| {
         serializers
             .iter_mut()
-            // `unwrap` is infalible because `array.len()` equals `len` in `Columns::len`
+            // `unwrap` is infalible because `array.len()` equals `len` in `Chunk::len`
             .for_each(|iter| record.push_field(iter.next().unwrap()));
     });
     Ok(records)
 }
 
-/// Writes [`Columns`] to `writer` according to the serialization options `options`.
-pub fn write_columns<W: Write, A: AsRef<dyn Array>>(
+/// Writes [`Chunk`] to `writer` according to the serialization options `options`.
+pub fn write_chunk<W: Write, A: AsRef<dyn Array>>(
     writer: &mut Writer<W>,
-    columns: &Columns<A>,
+    columns: &Chunk<A>,
     options: &SerializeOptions,
 ) -> Result<()> {
     let mut serializers = new_serializers(columns.arrays(), options)?;
@@ -61,7 +61,7 @@ pub fn write_columns<W: Write, A: AsRef<dyn Array>>(
     (0..rows).try_for_each(|_| {
         serializers
             .iter_mut()
-            // `unwrap` is infalible because `array.len()` equals `Columns::len`
+            // `unwrap` is infalible because `array.len()` equals `Chunk::len`
             .for_each(|iter| record.push_field(iter.next().unwrap()));
         writer.write_byte_record(&record)?;
         record.clear();

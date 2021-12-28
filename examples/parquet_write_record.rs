@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use arrow2::{
     array::{Array, Int32Array},
-    columns::Columns,
+    chunk::Chunk,
     datatypes::{Field, Schema},
     error::Result,
     io::parquet::write::{
@@ -11,7 +11,7 @@ use arrow2::{
     },
 };
 
-fn write_batch(path: &str, schema: Schema, columns: Columns<Arc<dyn Array>>) -> Result<()> {
+fn write_batch(path: &str, schema: Schema, columns: Chunk<Arc<dyn Array>>) -> Result<()> {
     let options = WriteOptions {
         write_statistics: true,
         compression: Compression::Uncompressed,
@@ -51,7 +51,7 @@ fn main() -> Result<()> {
     ]);
     let field = Field::new("c1", array.data_type().clone(), true);
     let schema = Schema::new(vec![field]);
-    let columns = Columns::new(vec![Arc::new(array) as Arc<dyn Array>]);
+    let columns = Chunk::new(vec![Arc::new(array) as Arc<dyn Array>]);
 
     write_batch("test.parquet", schema, columns)
 }

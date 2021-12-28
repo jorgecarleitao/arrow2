@@ -1,25 +1,25 @@
-//! Contains [`Columns`], a container of [`Array`] where every array has the
+//! Contains [`Chunk`], a container of [`Array`] where every array has the
 //! same length.
 
 use crate::array::Array;
 use crate::error::{ArrowError, Result};
 
 /// A vector of trait objects of [`Array`] where every item has
-/// the same length, [`Columns::len`].
+/// the same length, [`Chunk::len`].
 #[derive(Debug, Clone, PartialEq)]
-pub struct Columns<A: AsRef<dyn Array>> {
+pub struct Chunk<A: AsRef<dyn Array>> {
     arrays: Vec<A>,
 }
 
-impl<A: AsRef<dyn Array>> Columns<A> {
-    /// Creates a new [`Columns`].
+impl<A: AsRef<dyn Array>> Chunk<A> {
+    /// Creates a new [`Chunk`].
     /// # Panic
     /// Iff the arrays do not have the same length
     pub fn new(arrays: Vec<A>) -> Self {
         Self::try_new(arrays).unwrap()
     }
 
-    /// Creates a new [`Columns`].
+    /// Creates a new [`Chunk`].
     /// # Error
     /// Iff the arrays do not have the same length
     pub fn try_new(arrays: Vec<A>) -> Result<Self> {
@@ -31,19 +31,19 @@ impl<A: AsRef<dyn Array>> Columns<A> {
                 .any(|array| array.len() != len)
             {
                 return Err(ArrowError::InvalidArgumentError(
-                    "Columns require all its arrays to have an equal number of rows".to_string(),
+                    "Chunk require all its arrays to have an equal number of rows".to_string(),
                 ));
             }
         }
         Ok(Self { arrays })
     }
 
-    /// returns the [`Array`]s in [`Columns`]
+    /// returns the [`Array`]s in [`Chunk`]
     pub fn arrays(&self) -> &[A] {
         &self.arrays
     }
 
-    /// returns the [`Array`]s in [`Columns`]
+    /// returns the [`Array`]s in [`Chunk`]
     pub fn columns(&self) -> &[A] {
         &self.arrays
     }
@@ -61,20 +61,20 @@ impl<A: AsRef<dyn Array>> Columns<A> {
         self.len() == 0
     }
 
-    /// Consumes [`Columns`] into its underlying arrays.
+    /// Consumes [`Chunk`] into its underlying arrays.
     /// The arrays are guaranteed to have the same length
     pub fn into_arrays(self) -> Vec<A> {
         self.arrays
     }
 }
 
-impl<A: AsRef<dyn Array>> From<Columns<A>> for Vec<A> {
-    fn from(c: Columns<A>) -> Self {
+impl<A: AsRef<dyn Array>> From<Chunk<A>> for Vec<A> {
+    fn from(c: Chunk<A>) -> Self {
         c.into_arrays()
     }
 }
 
-impl<A: AsRef<dyn Array>> std::ops::Deref for Columns<A> {
+impl<A: AsRef<dyn Array>> std::ops::Deref for Chunk<A> {
     type Target = [A];
 
     #[inline]

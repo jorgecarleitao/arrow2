@@ -7,7 +7,7 @@ use crate::{
     array::*,
     bitmap::{Bitmap, MutableBitmap},
     buffer::Buffer,
-    columns::Columns,
+    chunk::Chunk,
     datatypes::{DataType, PhysicalType, PrimitiveType, Schema},
     error::{ArrowError, Result},
     io::ipc::IpcField,
@@ -410,12 +410,12 @@ pub fn to_array(
     }
 }
 
-pub fn deserialize_columns(
+pub fn deserialize_chunk(
     schema: &Schema,
     ipc_fields: &[IpcField],
     json_batch: &ArrowJsonBatch,
     json_dictionaries: &HashMap<i64, ArrowJsonDictionaryBatch>,
-) -> Result<Columns<Arc<dyn Array>>> {
+) -> Result<Chunk<Arc<dyn Array>>> {
     let arrays = schema
         .fields()
         .iter()
@@ -431,5 +431,5 @@ pub fn deserialize_columns(
         })
         .collect::<Result<_>>()?;
 
-    Columns::try_new(arrays)
+    Chunk::try_new(arrays)
 }

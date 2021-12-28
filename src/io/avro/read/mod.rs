@@ -20,7 +20,7 @@ pub(super) use header::deserialize_header;
 pub(super) use schema::convert_schema;
 
 use crate::array::Array;
-use crate::columns::Columns;
+use crate::chunk::Chunk;
 use crate::datatypes::{Field, Schema};
 use crate::error::Result;
 
@@ -43,7 +43,7 @@ pub fn read_metadata<R: std::io::Read>(
     Ok((avro_schema, schema, codec, marker))
 }
 
-/// Single threaded, blocking reader of Avro; [`Iterator`] of [`Columns`].
+/// Single threaded, blocking reader of Avro; [`Iterator`] of [`Chunk`].
 pub struct Reader<R: Read> {
     iter: Decompressor<R>,
     avro_schemas: Vec<AvroSchema>,
@@ -67,7 +67,7 @@ impl<R: Read> Reader<R> {
 }
 
 impl<R: Read> Iterator for Reader<R> {
-    type Item = Result<Columns<Arc<dyn Array>>>;
+    type Item = Result<Chunk<Arc<dyn Array>>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let fields = &self.fields[..];

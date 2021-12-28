@@ -5,27 +5,27 @@ use arrow_format::ipc;
 
 use crate::{
     array::Array,
-    columns::Columns,
+    chunk::Chunk,
     datatypes::*,
     error::{ArrowError, Result},
     io::ipc::read,
     io::ipc::write,
-    io::ipc::write::common::{encode_columns, DictionaryTracker, EncodedData, WriteOptions},
+    io::ipc::write::common::{encode_chunk, DictionaryTracker, EncodedData, WriteOptions},
 };
 
 use super::ipc::{IpcField, IpcSchema};
 
-/// Serializes [`Columns`] to a vector of [`FlightData`] representing the serialized dictionaries
+/// Serializes [`Chunk`] to a vector of [`FlightData`] representing the serialized dictionaries
 /// and a [`FlightData`] representing the batch.
 pub fn serialize_batch(
-    columns: &Columns<Arc<dyn Array>>,
+    columns: &Chunk<Arc<dyn Array>>,
     fields: &[IpcField],
     options: &WriteOptions,
 ) -> (Vec<FlightData>, FlightData) {
     let mut dictionary_tracker = DictionaryTracker::new(false);
 
     let (encoded_dictionaries, encoded_batch) =
-        encode_columns(columns, fields, &mut dictionary_tracker, options)
+        encode_chunk(columns, fields, &mut dictionary_tracker, options)
             .expect("DictionaryTracker configured above to not error on replacement");
 
     let flight_dictionaries = encoded_dictionaries.into_iter().map(Into::into).collect();
@@ -99,13 +99,13 @@ pub fn deserialize_schemas(bytes: &[u8]) -> Result<(Schema, IpcSchema)> {
     }
 }
 
-/// Deserializes [`FlightData`] to [`Columns`].
+/// Deserializes [`FlightData`] to [`Chunk`].
 pub fn deserialize_batch(
     data: &FlightData,
     fields: &[Field],
     ipc_schema: &IpcSchema,
     dictionaries: &read::Dictionaries,
-) -> Result<Columns<Arc<dyn Array>>> {
+) -> Result<Chunk<Arc<dyn Array>>> {
     // check that the data_header is a record batch message
     let message = ipc::Message::root_as_message(&data.data_header[..]).map_err(|err| {
         ArrowError::OutOfSpec(format!("Unable to get root as message: {:?}", err))

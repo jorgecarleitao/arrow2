@@ -20,7 +20,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use arrow2::array::Array;
-use arrow2::columns::Columns;
+use arrow2::chunk::Chunk;
 use arrow2::io::flight::{deserialize_schemas, serialize_batch, serialize_schema};
 use arrow2::io::ipc::read::Dictionaries;
 use arrow2::io::ipc::IpcSchema;
@@ -62,7 +62,7 @@ pub async fn scenario_setup(port: &str) -> Result {
 struct IntegrationDataset {
     schema: Schema,
     ipc_schema: IpcSchema,
-    chunks: Vec<Columns<Arc<dyn Array>>>,
+    chunks: Vec<Chunk<Arc<dyn Array>>>,
 }
 
 #[derive(Clone, Default)]
@@ -281,7 +281,7 @@ async fn record_batch_from_message(
     fields: &[Field],
     ipc_schema: &IpcSchema,
     dictionaries: &mut Dictionaries,
-) -> Result<Columns<Arc<dyn Array>>, Status> {
+) -> Result<Chunk<Arc<dyn Array>>, Status> {
     let ipc_batch = message
         .header_as_record_batch()
         .ok_or_else(|| Status::internal("Could not parse message header as record batch"))?;
@@ -300,7 +300,7 @@ async fn record_batch_from_message(
     );
 
     arrow_batch_result
-        .map_err(|e| Status::internal(format!("Could not convert to RecordBatch: {:?}", e)))
+        .map_err(|e| Status::internal(format!("Could not convert to Chunk: {:?}", e)))
 }
 
 async fn dictionary_from_message(

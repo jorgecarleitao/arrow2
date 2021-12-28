@@ -1,7 +1,7 @@
 //! Contains operators to filter arrays such as [`filter`].
 use crate::array::growable::{make_growable, Growable};
 use crate::bitmap::{utils::SlicesIterator, Bitmap, MutableBitmap};
-use crate::columns::Columns;
+use crate::chunk::Chunk;
 use crate::datatypes::DataType;
 use crate::error::Result;
 use crate::{array::*, types::NativeType};
@@ -152,12 +152,12 @@ pub fn filter(array: &dyn Array, filter: &BooleanArray) -> Result<Box<dyn Array>
     }
 }
 
-/// Returns a new [Columns] with arrays containing only values matching the filter.
+/// Returns a new [Chunk] with arrays containing only values matching the filter.
 /// This is a convenience function: filter multiple columns is embarassingly parallel.
-pub fn filter_columns<A: AsRef<dyn Array>>(
-    columns: &Columns<A>,
+pub fn filter_chunk<A: AsRef<dyn Array>>(
+    columns: &Chunk<A>,
     filter_values: &BooleanArray,
-) -> Result<Columns<Box<dyn Array>>> {
+) -> Result<Chunk<Box<dyn Array>>> {
     let arrays = columns.arrays();
 
     let num_colums = arrays.len();
@@ -171,5 +171,5 @@ pub fn filter_columns<A: AsRef<dyn Array>>(
             arrays.iter().map(|a| filter(a.as_ref())).collect()
         }
     };
-    Columns::try_new(filtered_arrays)
+    Chunk::try_new(filtered_arrays)
 }

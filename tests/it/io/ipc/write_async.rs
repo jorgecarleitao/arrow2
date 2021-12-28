@@ -2,7 +2,7 @@ use std::io::Cursor;
 use std::sync::Arc;
 
 use arrow2::array::Array;
-use arrow2::columns::Columns;
+use arrow2::chunk::Chunk;
 use arrow2::datatypes::Schema;
 use arrow2::error::Result;
 use arrow2::io::ipc::read;
@@ -16,7 +16,7 @@ use crate::io::ipc::common::read_gzip_json;
 async fn write_(
     schema: &Schema,
     ipc_fields: &[IpcField],
-    batches: &[Columns<Arc<dyn Array>>],
+    batches: &[Chunk<Arc<dyn Array>>],
 ) -> Result<Vec<u8>> {
     let mut result = AsyncCursor::new(vec![]);
 
@@ -39,7 +39,7 @@ async fn test_file(version: &str, file_name: &str) -> Result<()> {
     let metadata = read::read_stream_metadata(&mut reader)?;
     let reader = read::StreamReader::new(reader, metadata);
 
-    let schema = reader.metadata().schema.as_ref();
+    let schema = &reader.metadata().schema;
     let ipc_fields = reader.metadata().ipc_schema.fields.clone();
 
     // read expected JSON output
