@@ -19,6 +19,8 @@ use std::collections::HashMap;
 use std::pin::Pin;
 use std::sync::Arc;
 
+use arrow2::array::Array;
+use arrow2::columns::Columns;
 use arrow2::io::flight::{deserialize_schemas, serialize_batch, serialize_schema};
 use arrow2::io::ipc::read::Dictionaries;
 use arrow2::io::ipc::IpcSchema;
@@ -28,9 +30,7 @@ use arrow_format::flight::service::flight_service_server::*;
 use arrow_format::ipc::Message::{root_as_message, Message, MessageHeader};
 use arrow_format::ipc::Schema as ArrowSchema;
 
-use arrow2::{
-    datatypes::*, io::flight::serialize_schema_to_info, io::ipc, record_batch::RecordBatch,
-};
+use arrow2::{datatypes::*, io::flight::serialize_schema_to_info, io::ipc};
 
 use futures::{channel::mpsc, sink::SinkExt, Stream, StreamExt};
 use tokio::sync::Mutex;
@@ -62,7 +62,7 @@ pub async fn scenario_setup(port: &str) -> Result {
 struct IntegrationDataset {
     schema: Schema,
     ipc_schema: IpcSchema,
-    chunks: Vec<RecordBatch>,
+    chunks: Vec<Columns<Arc<dyn Array>>>,
 }
 
 #[derive(Clone, Default)]
@@ -173,7 +173,7 @@ impl FlightService for FlightServiceImpl {
 
                 let endpoint = self.endpoint_from_path(&path[0]);
 
-                let total_records: usize = flight.chunks.iter().map(|chunk| chunk.num_rows()).sum();
+                let total_records: usize = flight.chunks.iter().map(|chunk| chunk.len()).sum();
 
                 let schema = serialize_schema_to_info(&flight.schema, &flight.ipc_schema.fields)
                     .expect(
@@ -218,7 +218,6 @@ impl FlightService for FlightServiceImpl {
 
         let (schema, ipc_schema) = deserialize_schemas(&flight_data.data_header)
             .map_err(|e| Status::invalid_argument(format!("Invalid schema: {:?}", e)))?;
-        let schema_ref = Arc::new(schema.clone());
 
         let (response_tx, response_rx) = mpsc::channel(10);
 
@@ -228,11 +227,10 @@ impl FlightService for FlightServiceImpl {
             let mut error_tx = response_tx.clone();
             if let Err(e) = save_uploaded_chunks(
                 uploaded_chunks,
-                schema_ref,
+                schema,
                 ipc_schema,
                 input_stream,
                 response_tx,
-                schema,
                 key,
             )
             .await
@@ -280,10 +278,10 @@ async fn send_app_metadata(
 async fn record_batch_from_message(
     message: Message<'_>,
     data_body: &[u8],
-    schema_ref: Arc<Schema>,
+    fields: &[Field],
     ipc_schema: &IpcSchema,
     dictionaries: &mut Dictionaries,
-) -> Result<RecordBatch, Status> {
+) -> Result<Columns<Arc<dyn Array>>, Status> {
     let ipc_batch = message
         .header_as_record_batch()
         .ok_or_else(|| Status::internal("Could not parse message header as record batch"))?;
@@ -292,7 +290,7 @@ async fn record_batch_from_message(
 
     let arrow_batch_result = ipc::read::read_record_batch(
         ipc_batch,
-        schema_ref,
+        fields,
         ipc_schema,
         None,
         dictionaries,
@@ -326,11 +324,10 @@ async fn dictionary_from_message(
 
 async fn save_uploaded_chunks(
     uploaded_chunks: Arc<Mutex<HashMap<String, IntegrationDataset>>>,
-    schema_ref: Arc<Schema>,
+    schema: Schema,
     ipc_schema: IpcSchema,
     mut input_stream: Streaming<FlightData>,
     mut response_tx: mpsc::Sender<Result<PutResult, Status>>,
-    schema: Schema,
     key: String,
 ) -> Result<(), Status> {
     let mut chunks = vec![];
@@ -354,7 +351,7 @@ async fn save_uploaded_chunks(
                 let batch = record_batch_from_message(
                     message,
                     &data.data_body,
-                    schema_ref.clone(),
+                    schema.fields(),
                     &ipc_schema,
                     &mut dictionaries,
                 )
@@ -366,7 +363,7 @@ async fn save_uploaded_chunks(
                 dictionary_from_message(
                     message,
                     &data.data_body,
-                    schema_ref.fields(),
+                    schema.fields(),
                     &ipc_schema,
                     &mut dictionaries,
                 )

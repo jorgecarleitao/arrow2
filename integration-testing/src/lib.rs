@@ -17,17 +17,19 @@
 
 //! Common code used in the integration test binaries
 
+use arrow2::array::Array;
 use arrow2::io::ipc::IpcField;
 use serde_json::Value;
 
+use arrow2::columns::Columns;
 use arrow2::datatypes::*;
 use arrow2::error::Result;
 use arrow2::io::json_integration::{read, ArrowJsonBatch, ArrowJsonDictionaryBatch};
-use arrow2::record_batch::RecordBatch;
 
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
+use std::sync::Arc;
 
 /// The expected username for the basic auth integration test.
 pub const AUTH_USERNAME: &str = "arrow";
@@ -43,7 +45,7 @@ pub struct ArrowFile {
     // we can evolve this into a concrete Arrow type
     // this is temporarily not being read from
     pub _dictionaries: HashMap<i64, ArrowJsonDictionaryBatch>,
-    pub batches: Vec<RecordBatch>,
+    pub batches: Vec<Columns<Arc<dyn Array>>>,
 }
 
 pub fn read_json_file(json_name: &str) -> Result<ArrowFile> {
@@ -66,12 +68,15 @@ pub fn read_json_file(json_name: &str) -> Result<ArrowFile> {
         }
     }
 
-    let mut batches = vec![];
-    for b in arrow_json["batches"].as_array().unwrap() {
-        let json_batch: ArrowJsonBatch = serde_json::from_value(b.clone()).unwrap();
-        let batch = read::to_record_batch(&schema, &fields, &json_batch, &dictionaries)?;
-        batches.push(batch);
-    }
+    let batches = arrow_json["batches"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|b| {
+            let json_batch: ArrowJsonBatch = serde_json::from_value(b.clone()).unwrap();
+            read::deserialize_columns(&schema, &fields, &json_batch, &dictionaries)
+        })
+        .collect::<Result<_>>()?;
     Ok(ArrowFile {
         schema,
         fields,

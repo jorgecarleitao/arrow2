@@ -15,7 +15,7 @@ use crate::{
 
 use super::ipc::{IpcField, IpcSchema};
 
-/// Serializes a [`Columns`] to a vector of [`FlightData`] representing the serialized dictionaries
+/// Serializes [`Columns`] to a vector of [`FlightData`] representing the serialized dictionaries
 /// and a [`FlightData`] representing the batch.
 pub fn serialize_batch(
     columns: &Columns<Arc<dyn Array>>,
@@ -102,7 +102,7 @@ pub fn deserialize_schemas(bytes: &[u8]) -> Result<(Schema, IpcSchema)> {
 /// Deserializes [`FlightData`] to [`Columns`].
 pub fn deserialize_batch(
     data: &FlightData,
-    schema: Arc<Schema>,
+    fields: &[Field],
     ipc_schema: &IpcSchema,
     dictionaries: &read::Dictionaries,
 ) -> Result<Columns<Arc<dyn Array>>> {
@@ -123,7 +123,7 @@ pub fn deserialize_batch(
         .map(|batch| {
             read::read_record_batch(
                 batch,
-                schema.clone(),
+                fields,
                 ipc_schema,
                 None,
                 dictionaries,

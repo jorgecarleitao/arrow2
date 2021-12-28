@@ -9,7 +9,10 @@ use crate::{
 use super::super::{ArrowJsonBatch, ArrowJsonColumn};
 
 /// Serializes a [`Columns`] to [`ArrowJsonBatch`].
-pub fn serialize_columns(columns: &Columns<Arc<dyn Array>>, names: &[&str]) -> ArrowJsonBatch {
+pub fn serialize_columns<A: ToString>(
+    columns: &Columns<Arc<dyn Array>>,
+    names: &[A],
+) -> ArrowJsonBatch {
     let count = columns.len();
 
     let columns = columns
