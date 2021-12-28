@@ -169,7 +169,7 @@ fn read_path(path: &amp;str, projection: Option&lt;Vec&lt;&amp;str&gt;&gt;) -&gt
 
     // deserialize `rows` into a `RecordBatch`. This is CPU-intensive, has no IO,
     // and can be performed on a different thread pool via a channel.
-    read::deserialize(&amp;rows, fields)
+    read::deserialize(rows, fields)
 }
 
 fn main() -&gt; Result&lt;()&gt; {
