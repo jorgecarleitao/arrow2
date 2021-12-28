@@ -1,36 +1,14 @@
-// Licensed to the Apache Software Foundation (ASF) under one
-// or more contributor license agreements.  See the NOTICE file
-// distributed with this work for additional information
-// regarding copyright ownership.  The ASF licenses this file
-// to you under the Apache License, Version 2.0 (the
-// "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
-
-//! Arrow IPC File and Stream Writers
-//!
-//! The `FileWriter` and `StreamWriter` have similar interfaces,
-//! however the `FileWriter` expects a reader that supports `Seek`ing
-
 use std::io::Write;
 
 use arrow_format::ipc;
 use arrow_format::ipc::flatbuffers::FlatBufferBuilder;
 
-use super::super::ARROW_MAGIC;
 use super::{
-    super::convert,
-    common::{encoded_batch, DictionaryTracker, EncodedData, WriteOptions},
+    super::IpcField,
+    super::ARROW_MAGIC,
+    common::{encode_columns, DictionaryTracker, EncodedData, WriteOptions},
     common_sync::{write_continuation, write_message},
-    schema_to_bytes,
+    default_ipc_fields, schema, schema_to_bytes,
 };
 
 use crate::datatypes::*;
@@ -45,6 +23,7 @@ pub struct FileWriter<W: Write> {
     options: WriteOptions,
     /// A reference to the schema, used in validating record batches
     schema: Schema,
+    ipc_fields: Vec<IpcField>,
     /// The number of bytes between each block of bytes, as an offset for random access
     block_offsets: usize,
     /// Dictionary blocks that will be written as part of the IPC footer
@@ -59,21 +38,34 @@ pub struct FileWriter<W: Write> {
 
 impl<W: Write> FileWriter<W> {
     /// Try create a new writer, with the schema written as part of the header
-    pub fn try_new(mut writer: W, schema: &Schema, options: WriteOptions) -> Result<Self> {
+    pub fn try_new(
+        mut writer: W,
+        schema: &Schema,
+        ipc_fields: Option<Vec<IpcField>>,
+        options: WriteOptions,
+    ) -> Result<Self> {
         // write magic to header
         writer.write_all(&ARROW_MAGIC[..])?;
         // create an 8-byte boundary after the header
         writer.write_all(&[0, 0])?;
         // write the schema, set the written bytes to the schema
+
+        let ipc_fields = if let Some(ipc_fields) = ipc_fields {
+            ipc_fields
+        } else {
+            default_ipc_fields(schema.fields())
+        };
         let encoded_message = EncodedData {
-            ipc_message: schema_to_bytes(schema),
+            ipc_message: schema_to_bytes(schema, &ipc_fields),
             arrow_data: vec![],
         };
+
         let (meta, data) = write_message(&mut writer, encoded_message)?;
         Ok(Self {
             writer,
             options,
             schema: schema.clone(),
+            ipc_fields,
             block_offsets: meta + data + 8,
             dictionary_blocks: vec![],
             record_blocks: vec![],
@@ -86,8 +78,8 @@ impl<W: Write> FileWriter<W> {
         self.writer
     }
 
-    /// Write a record batch to the file
-    pub fn write(&mut self, batch: &RecordBatch) -> Result<()> {
+    /// Writes [`RecordBatch`] to the file
+    pub fn write(&mut self, batch: &RecordBatch, ipc_fields: Option<&[IpcField]>) -> Result<()> {
         if self.finished {
             return Err(ArrowError::Io(std::io::Error::new(
                 std::io::ErrorKind::UnexpectedEof,
@@ -95,8 +87,19 @@ impl<W: Write> FileWriter<W> {
             )));
         }
 
-        let (encoded_dictionaries, encoded_message) =
-            encoded_batch(batch, &mut self.dictionary_tracker, &self.options)?;
+        let ipc_fields = if let Some(ipc_fields) = ipc_fields {
+            ipc_fields
+        } else {
+            self.ipc_fields.as_ref()
+        };
+
+        let columns = batch.clone().into();
+        let (encoded_dictionaries, encoded_message) = encode_columns(
+            &columns,
+            ipc_fields,
+            &mut self.dictionary_tracker,
+            &self.options,
+        )?;
 
         for encoded_dictionary in encoded_dictionaries {
             let (meta, data) = write_message(&mut self.writer, encoded_dictionary)?;
@@ -126,7 +129,7 @@ impl<W: Write> FileWriter<W> {
         let mut fbb = FlatBufferBuilder::new();
         let dictionaries = fbb.create_vector(&self.dictionary_blocks);
         let record_batches = fbb.create_vector(&self.record_blocks);
-        let schema = convert::schema_to_fb_offset(&mut fbb, &self.schema);
+        let schema = schema::schema_to_fb_offset(&mut fbb, &self.schema, &self.ipc_fields);
 
         let root = {
             let mut footer_builder = ipc::File::FooterBuilder::new(&mut fbb);

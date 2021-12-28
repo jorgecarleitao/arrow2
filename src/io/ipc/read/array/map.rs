@@ -1,24 +1,26 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::VecDeque;
 use std::io::{Read, Seek};
-use std::sync::Arc;
 
 use arrow_format::ipc;
 
-use crate::array::{Array, MapArray};
+use crate::array::MapArray;
 use crate::buffer::Buffer;
 use crate::datatypes::DataType;
 use crate::error::Result;
 
+use super::super::super::IpcField;
 use super::super::deserialize::{read, skip, Node};
 use super::super::read_basic::*;
+use super::super::Dictionaries;
 
 #[allow(clippy::too_many_arguments)]
 pub fn read_map<R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
     data_type: DataType,
+    ipc_field: &IpcField,
     buffers: &mut VecDeque<&ipc::Schema::Buffer>,
     reader: &mut R,
-    dictionaries: &HashMap<usize, Arc<dyn Array>>,
+    dictionaries: &Dictionaries,
     block_offset: u64,
     is_little_endian: bool,
     compression: Option<ipc::Message::BodyCompression>,
@@ -51,6 +53,7 @@ pub fn read_map<R: Read + Seek>(
     let field = read(
         field_nodes,
         field,
+        &ipc_field.fields[0],
         buffers,
         reader,
         dictionaries,

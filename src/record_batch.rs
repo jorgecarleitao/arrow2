@@ -291,6 +291,12 @@ impl RecordBatch {
         let schema = Arc::new(Schema::new(fields));
         RecordBatch::try_new(schema, columns)
     }
+
+    /// Deconstructs itself into its internal components
+    pub fn into_inner(self) -> (Vec<Arc<dyn Array>>, Arc<Schema>) {
+        let Self { columns, schema } = self;
+        (columns, schema)
+    }
 }
 
 /// Options that control the behaviour used when creating a [`RecordBatch`].

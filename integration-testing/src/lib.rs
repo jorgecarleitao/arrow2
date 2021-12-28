@@ -17,13 +17,12 @@
 
 //! Common code used in the integration test binaries
 
-use std::convert::TryFrom;
-
+use arrow2::io::ipc::IpcField;
 use serde_json::Value;
 
 use arrow2::datatypes::*;
 use arrow2::error::Result;
-use arrow2::io::json_integration::*;
+use arrow2::io::json_integration::{read, ArrowJsonBatch, ArrowJsonDictionaryBatch};
 use arrow2::record_batch::RecordBatch;
 
 use std::collections::HashMap;
@@ -40,6 +39,7 @@ pub mod flight_server_scenarios;
 
 pub struct ArrowFile {
     pub schema: Schema,
+    pub fields: Vec<IpcField>,
     // we can evolve this into a concrete Arrow type
     // this is temporarily not being read from
     pub _dictionaries: HashMap<i64, ArrowJsonDictionaryBatch>,
@@ -51,7 +51,7 @@ pub fn read_json_file(json_name: &str) -> Result<ArrowFile> {
     let reader = BufReader::new(json_file);
     let arrow_json: Value = serde_json::from_reader(reader).unwrap();
 
-    let schema = Schema::try_from(&arrow_json["schema"])?;
+    let (schema, fields) = read::deserialize_schema(&arrow_json["schema"])?;
     // read dictionaries
     let mut dictionaries = HashMap::new();
     if let Some(dicts) = arrow_json.get("dictionaries") {
@@ -69,11 +69,12 @@ pub fn read_json_file(json_name: &str) -> Result<ArrowFile> {
     let mut batches = vec![];
     for b in arrow_json["batches"].as_array().unwrap() {
         let json_batch: ArrowJsonBatch = serde_json::from_value(b.clone()).unwrap();
-        let batch = to_record_batch(&schema, &json_batch, &dictionaries)?;
+        let batch = read::to_record_batch(&schema, &fields, &json_batch, &dictionaries)?;
         batches.push(batch);
     }
     Ok(ArrowFile {
         schema,
+        fields,
         _dictionaries: dictionaries,
         batches,
     })

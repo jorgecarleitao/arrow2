@@ -1,10 +1,12 @@
 //! `async` writing of arrow streams
+
 use futures::AsyncWrite;
 
+use super::super::IpcField;
 pub use super::common::WriteOptions;
-use super::common::{encoded_batch, DictionaryTracker, EncodedData};
+use super::common::{encode_columns, DictionaryTracker, EncodedData};
 use super::common_async::{write_continuation, write_message};
-use super::schema_to_bytes;
+use super::{default_ipc_fields, schema_to_bytes};
 
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
@@ -34,17 +36,29 @@ impl<W: AsyncWrite + Unpin + Send> StreamWriter<W> {
     }
 
     /// Starts the stream
-    pub async fn start(&mut self, schema: &Schema) -> Result<()> {
-        let encoded_message = EncodedData {
-            ipc_message: schema_to_bytes(schema),
-            arrow_data: vec![],
+    pub async fn start(&mut self, schema: &Schema, ipc_fields: Option<&[IpcField]>) -> Result<()> {
+        let encoded_message = if let Some(ipc_fields) = ipc_fields {
+            EncodedData {
+                ipc_message: schema_to_bytes(schema, ipc_fields),
+                arrow_data: vec![],
+            }
+        } else {
+            let ipc_fields = default_ipc_fields(schema.fields());
+            EncodedData {
+                ipc_message: schema_to_bytes(schema, &ipc_fields),
+                arrow_data: vec![],
+            }
         };
         write_message(&mut self.writer, encoded_message).await?;
         Ok(())
     }
 
-    /// Writes a [`RecordBatch`] to the stream
-    pub async fn write(&mut self, batch: &RecordBatch) -> Result<()> {
+    /// Writes [`RecordBatch`] to the stream
+    pub async fn write(
+        &mut self,
+        batch: &RecordBatch,
+        ipc_fields: Option<&[IpcField]>,
+    ) -> Result<()> {
         if self.finished {
             return Err(ArrowError::Io(std::io::Error::new(
                 std::io::ErrorKind::UnexpectedEof,
@@ -52,9 +66,24 @@ impl<W: AsyncWrite + Unpin + Send> StreamWriter<W> {
             )));
         }
 
-        // todo: move this out of the `async` since this is blocking.
-        let (encoded_dictionaries, encoded_message) =
-            encoded_batch(batch, &mut self.dictionary_tracker, &self.write_options)?;
+        let (encoded_dictionaries, encoded_message) = if let Some(ipc_fields) = ipc_fields {
+            let columns = batch.clone().into();
+            encode_columns(
+                &columns,
+                ipc_fields,
+                &mut self.dictionary_tracker,
+                &self.write_options,
+            )?
+        } else {
+            let ipc_fields = default_ipc_fields(batch.schema().fields());
+            let columns = batch.clone().into();
+            encode_columns(
+                &columns,
+                &ipc_fields,
+                &mut self.dictionary_tracker,
+                &self.write_options,
+            )?
+        };
 
         for encoded_dictionary in encoded_dictionaries {
             write_message(&mut self.writer, encoded_dictionary).await?;

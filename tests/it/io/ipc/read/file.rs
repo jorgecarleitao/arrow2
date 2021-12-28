@@ -13,7 +13,7 @@ fn test_file(version: &str, file_name: &str) -> Result<()> {
     ))?;
 
     // read expected JSON output
-    let (schema, batches) = read_gzip_json(version, file_name)?;
+    let (schema, _, batches) = read_gzip_json(version, file_name)?;
 
     let metadata = read_file_metadata(&mut file)?;
     let reader = FileReader::new(file, metadata, None);

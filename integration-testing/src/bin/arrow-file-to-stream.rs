@@ -27,15 +27,16 @@ fn main() -> Result<()> {
     let filename = &args[1];
     let mut f = File::open(filename)?;
     let metadata = read::read_file_metadata(&mut f)?;
-    let mut reader = read::FileReader::new(f, metadata, None);
-    let schema = reader.schema();
+    let mut reader = read::FileReader::new(f, metadata.clone(), None);
 
     let options = write::WriteOptions { compression: None };
-    let mut writer = write::StreamWriter::try_new(std::io::stdout(), schema, options)?;
+    let mut writer = write::StreamWriter::new(std::io::stdout(), options);
+
+    writer.start(&metadata.schema, &metadata.ipc_schema.fields)?;
 
     reader.try_for_each(|batch| {
         let batch = batch?;
-        writer.write(&batch)
+        writer.write(&batch, &metadata.ipc_schema.fields)
     })?;
     writer.finish()?;
 

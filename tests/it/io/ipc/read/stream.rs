@@ -16,9 +16,10 @@ fn test_file(version: &str, file_name: &str) -> Result<()> {
     let reader = StreamReader::new(file, metadata);
 
     // read expected JSON output
-    let (schema, batches) = read_gzip_json(version, file_name)?;
+    let (schema, ipc_fields, batches) = read_gzip_json(version, file_name)?;
 
-    assert_eq!(&schema, reader.schema().as_ref());
+    assert_eq!(&schema, reader.metadata().schema.as_ref());
+    assert_eq!(&ipc_fields, &reader.metadata().ipc_schema.fields);
 
     batches
         .iter()

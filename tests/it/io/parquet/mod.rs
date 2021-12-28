@@ -678,7 +678,7 @@ fn integration_read(data: &[u8]) -> Result<(Arc<Schema>, Vec<RecordBatch>)> {
 }
 
 fn test_file(version: &str, file_name: &str) -> Result<()> {
-    let (schema, batches) = read_gzip_json(version, file_name)?;
+    let (schema, _, batches) = read_gzip_json(version, file_name)?;
 
     let data = integration_write(&schema, &batches)?;
 

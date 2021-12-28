@@ -1,41 +1,51 @@
 use std::io::Cursor;
 
+use arrow2::datatypes::Schema;
 use arrow2::error::Result;
-use arrow2::io::ipc::read::read_stream_metadata;
-use arrow2::io::ipc::read::StreamReader;
-use arrow2::io::ipc::write::stream_async::{StreamWriter, WriteOptions};
+use arrow2::io::ipc::read;
+use arrow2::io::ipc::write::stream_async;
+use arrow2::io::ipc::IpcField;
+use arrow2::record_batch::RecordBatch;
 use futures::io::Cursor as AsyncCursor;
 
 use crate::io::ipc::common::read_arrow_stream;
 use crate::io::ipc::common::read_gzip_json;
 
-async fn test_file(version: &str, file_name: &str) -> Result<()> {
-    let (schema, batches) = read_arrow_stream(version, file_name);
+async fn write_(
+    schema: &Schema,
+    ipc_fields: &[IpcField],
+    batches: &[RecordBatch],
+) -> Result<Vec<u8>> {
+    let mut result = AsyncCursor::new(vec![]);
 
-    let mut result = AsyncCursor::new(Vec::<u8>::new());
-
-    // write IPC version 5
-    {
-        let options = WriteOptions { compression: None };
-        let mut writer = StreamWriter::new(&mut result, options);
-        writer.start(&schema).await?;
-        for batch in batches {
-            writer.write(&batch).await?;
-        }
-        writer.finish().await?;
+    let options = stream_async::WriteOptions { compression: None };
+    let mut writer = stream_async::StreamWriter::new(&mut result, options);
+    writer.start(schema, Some(ipc_fields)).await?;
+    for batch in batches {
+        writer.write(batch, Some(ipc_fields)).await?;
     }
-    let result = result.into_inner();
+    writer.finish().await?;
+    Ok(result.into_inner())
+}
+
+async fn test_file(version: &str, file_name: &str) -> Result<()> {
+    let (schema, ipc_fields, batches) = read_arrow_stream(version, file_name);
+
+    let result = write_(&schema, &ipc_fields, &batches).await?;
 
     let mut reader = Cursor::new(result);
-    let metadata = read_stream_metadata(&mut reader)?;
-    let reader = StreamReader::new(reader, metadata);
+    let metadata = read::read_stream_metadata(&mut reader)?;
+    let reader = read::StreamReader::new(reader, metadata);
 
-    let schema = reader.schema().clone();
+    let schema = reader.metadata().schema.as_ref();
+    let ipc_fields = reader.metadata().ipc_schema.fields.clone();
 
     // read expected JSON output
-    let (expected_schema, expected_batches) = read_gzip_json(version, file_name).unwrap();
+    let (expected_schema, expected_ipc_fields, expected_batches) =
+        read_gzip_json(version, file_name).unwrap();
 
-    assert_eq!(schema.as_ref(), &expected_schema);
+    assert_eq!(schema, &expected_schema);
+    assert_eq!(ipc_fields, expected_ipc_fields);
 
     let batches = reader
         .map(|x| x.map(|x| x.unwrap()))

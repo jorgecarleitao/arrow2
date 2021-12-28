@@ -24,15 +24,19 @@ use arrow2::io::ipc::write;
 fn main() -> Result<()> {
     let mut reader = io::stdin();
     let metadata = read::read_stream_metadata(&mut reader)?;
-    let mut arrow_stream_reader = read::StreamReader::new(reader, metadata);
-    let schema = arrow_stream_reader.schema();
+    let mut arrow_stream_reader = read::StreamReader::new(reader, metadata.clone());
 
     let writer = io::stdout();
 
     let options = write::WriteOptions { compression: None };
-    let mut writer = write::FileWriter::try_new(writer, schema, options)?;
+    let mut writer = write::FileWriter::try_new(
+        writer,
+        &metadata.schema,
+        Some(metadata.ipc_schema.fields),
+        options,
+    )?;
 
-    arrow_stream_reader.try_for_each(|batch| writer.write(&batch?.unwrap()))?;
+    arrow_stream_reader.try_for_each(|batch| writer.write(&batch?.unwrap(), None))?;
     writer.finish()?;
 
     Ok(())

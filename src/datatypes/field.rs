@@ -31,8 +31,6 @@ pub struct Field {
     pub data_type: DataType,
     /// Whether its values can be null or not
     pub nullable: bool,
-    /// The dictionary id of this field (currently un-used)
-    pub dict_id: i64,
     /// A map of key-value pairs containing additional custom meta data.
     pub metadata: Option<BTreeMap<String, String>>,
 }
@@ -62,23 +60,6 @@ impl Field {
             name: name.into(),
             data_type,
             nullable,
-            dict_id: 0,
-            metadata: None,
-        }
-    }
-
-    /// Creates a new field
-    pub fn new_dict<T: Into<String>>(
-        name: T,
-        data_type: DataType,
-        nullable: bool,
-        dict_id: i64,
-    ) -> Self {
-        Field {
-            name: name.into(),
-            data_type,
-            nullable,
-            dict_id,
             metadata: None,
         }
     }
@@ -90,7 +71,6 @@ impl Field {
             name: self.name,
             data_type: self.data_type,
             nullable: self.nullable,
-            dict_id: self.dict_id,
             metadata: Some(metadata),
         }
     }
@@ -131,15 +111,6 @@ impl Field {
         self.nullable
     }
 
-    /// Returns the dictionary ID, if this is a dictionary type.
-    #[inline]
-    pub const fn dict_id(&self) -> Option<i64> {
-        match self.data_type {
-            DataType::Dictionary(_, _, _) => Some(self.dict_id),
-            _ => None,
-        }
-    }
-
     /// Merge field into self if it is compatible. Struct will be merged recursively.
     /// NOTE: `self` may be updated to unexpected state in case of merge failure.
     ///
@@ -174,11 +145,6 @@ impl Field {
                 self.set_metadata(Some(from_metadata.clone()));
             }
             _ => {}
-        }
-        if from.dict_id != self.dict_id {
-            return Err(ArrowError::InvalidArgumentError(
-                "Fail to merge schema Field due to conflicting dict_id".to_string(),
-            ));
         }
         match &mut self.data_type {
             DataType::Struct(nested_fields) => match &from.data_type {

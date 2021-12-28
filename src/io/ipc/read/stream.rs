@@ -1,45 +1,27 @@
-// Licensed to the Apache Software Foundation (ASF) under one
-// or more contributor license agreements.  See the NOTICE file
-// distributed with this work for additional information
-// regarding copyright ownership.  The ASF licenses this file
-// to you under the Apache License, Version 2.0 (the
-// "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
-
-use std::collections::HashMap;
 use std::io::Read;
 use std::sync::Arc;
 
 use arrow_format::ipc;
 use arrow_format::ipc::Schema::MetadataVersion;
 
-use crate::array::*;
 use crate::datatypes::Schema;
 use crate::error::{ArrowError, Result};
+use crate::io::ipc::IpcSchema;
 use crate::record_batch::RecordBatch;
 
-use super::super::convert;
 use super::super::CONTINUATION_MARKER;
 use super::common::*;
+use super::schema::fb_to_schema;
+use super::Dictionaries;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct StreamMetadata {
     /// The schema that is read from the stream's first message
-    schema: Arc<Schema>,
+    pub schema: Arc<Schema>,
 
-    version: MetadataVersion,
+    pub version: MetadataVersion,
 
-    /// Whether the incoming stream is little-endian
-    is_little_endian: bool,
+    pub ipc_schema: IpcSchema,
 }
 
 /// Reads the metadata of the stream
@@ -67,13 +49,13 @@ pub fn read_stream_metadata<R: Read>(reader: &mut R) -> Result<StreamMetadata> {
     let ipc_schema: ipc::Schema::Schema = message
         .header_as_schema()
         .ok_or_else(|| ArrowError::OutOfSpec("Unable to read IPC message as schema".to_string()))?;
-    let (schema, is_little_endian) = convert::fb_to_schema(ipc_schema);
+    let (schema, ipc_schema) = fb_to_schema(ipc_schema);
     let schema = Arc::new(schema);
 
     Ok(StreamMetadata {
         schema,
         version,
-        is_little_endian,
+        ipc_schema,
     })
 }
 
@@ -113,7 +95,7 @@ impl StreamState {
 fn read_next<R: Read>(
     reader: &mut R,
     metadata: &StreamMetadata,
-    dictionaries: &mut HashMap<usize, Arc<dyn Array>>,
+    dictionaries: &mut Dictionaries,
     message_buffer: &mut Vec<u8>,
     data_buffer: &mut Vec<u8>,
 ) -> Result<Option<StreamState>> {
@@ -174,8 +156,8 @@ fn read_next<R: Read>(
             read_record_batch(
                 batch,
                 metadata.schema.clone(),
+                &metadata.ipc_schema,
                 None,
-                metadata.is_little_endian,
                 dictionaries,
                 metadata.version,
                 &mut reader,
@@ -195,8 +177,8 @@ fn read_next<R: Read>(
 
             read_dictionary(
                 batch,
-                &metadata.schema,
-                metadata.is_little_endian,
+                metadata.schema.fields(),
+                &metadata.ipc_schema,
                 dictionaries,
                 &mut dict_reader,
                 0,
@@ -222,7 +204,7 @@ fn read_next<R: Read>(
 pub struct StreamReader<R: Read> {
     reader: R,
     metadata: StreamMetadata,
-    dictionaries: HashMap<usize, Arc<dyn Array>>,
+    dictionaries: Dictionaries,
     finished: bool,
     data_buffer: Vec<u8>,
     message_buffer: Vec<u8>,
@@ -246,8 +228,8 @@ impl<R: Read> StreamReader<R> {
     }
 
     /// Return the schema of the stream
-    pub fn schema(&self) -> &Arc<Schema> {
-        &self.metadata.schema
+    pub fn metadata(&self) -> &StreamMetadata {
+        &self.metadata
     }
 
     /// Check if the stream is finished

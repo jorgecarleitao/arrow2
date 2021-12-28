@@ -1,24 +1,23 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashSet, VecDeque};
 use std::convert::TryInto;
 use std::io::{Read, Seek};
-use std::sync::Arc;
 
 use arrow_format::ipc;
 
-use crate::array::{Array, DictionaryArray, DictionaryKey};
-use crate::datatypes::Field;
+use crate::array::{DictionaryArray, DictionaryKey};
 use crate::error::{ArrowError, Result};
 
 use super::super::deserialize::Node;
+use super::super::Dictionaries;
 use super::{read_primitive, skip_primitive};
 
 #[allow(clippy::too_many_arguments)]
 pub fn read_dictionary<T: DictionaryKey, R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
-    field: &Field,
+    id: Option<i64>,
     buffers: &mut VecDeque<&ipc::Schema::Buffer>,
     reader: &mut R,
-    dictionaries: &HashMap<usize, Arc<dyn Array>>,
+    dictionaries: &Dictionaries,
     block_offset: u64,
     compression: Option<ipc::Message::BodyCompression>,
     is_little_endian: bool,
@@ -26,7 +25,11 @@ pub fn read_dictionary<T: DictionaryKey, R: Read + Seek>(
 where
     Vec<u8>: TryInto<T::Bytes>,
 {
-    let id = field.dict_id().unwrap() as usize;
+    let id = if let Some(id) = id {
+        id
+    } else {
+        return Err(ArrowError::OutOfSpec("Dictionary has no id.".to_string()));
+    };
     let values = dictionaries
         .get(&id)
         .ok_or_else(|| {
