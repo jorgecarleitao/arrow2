@@ -22,9 +22,7 @@ fn read_batch(data: String, fields: Vec<Field>) -> Result<RecordBatch> {
     json_read::deserialize(rows, fields)
 }
 
-fn write_batch(batch: RecordBatch) -> Result<Vec<u8>> {
-    let format = json_write::LineDelimited::default();
-
+fn write_batch<F: json_write::JsonFormat>(batch: RecordBatch, format: F) -> Result<Vec<u8>> {
     let batches = vec![Ok(batch)].into_iter();
 
     let blocks = json_write::Serializer::new(batches, vec![], format);
@@ -41,7 +39,7 @@ fn round_trip(data: String) -> Result<()> {
 
     let batch = read_batch(data.clone(), fields)?;
 
-    let buf = write_batch(batch)?;
+    let buf = write_batch(batch, json_write::LineDelimited::default())?;
 
     let result = String::from_utf8(buf).unwrap();
     println!("{}", result);
