@@ -27,7 +27,7 @@ pub fn compare_op_scalar<F>(lhs: &BooleanArray, rhs: bool, op: F) -> BooleanArra
 where
     F: Fn(u64, u64) -> u64,
 {
-    let rhs = if rhs { 0b11111111 } else { 0 };
+    let rhs = if rhs { !0 } else { 0 };
 
     let values = unary(lhs.values(), |x| op(x, rhs));
     BooleanArray::from_data(DataType::Boolean, values, lhs.validity().cloned())
@@ -84,7 +84,8 @@ pub fn lt_eq(lhs: &BooleanArray, rhs: &BooleanArray) -> BooleanArray {
 /// Null values are less than non-null values.
 pub fn lt_eq_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
     if rhs {
-        compare_op_scalar(lhs, rhs, |_, _| 0b11111111)
+        let all_ones = !0;
+        compare_op_scalar(lhs, rhs, |_, _| all_ones)
     } else {
         compare_op_scalar(lhs, rhs, |a, _| !a)
     }
@@ -122,168 +123,7 @@ pub fn gt_eq_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
     if rhs {
         lhs.clone()
     } else {
-        compare_op_scalar(lhs, rhs, |_, _| 0b11111111)
-    }
-}
-
-// disable wrapping inside literal vectors used for test data and assertions
-#[rustfmt::skip::macros(vec)]
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    macro_rules! cmp_bool {
-        ($KERNEL:ident, $A_VEC:expr, $B_VEC:expr, $EXPECTED:expr) => {
-            let a = BooleanArray::from_slice($A_VEC);
-            let b = BooleanArray::from_slice($B_VEC);
-            let c = $KERNEL(&a, &b);
-            assert_eq!(BooleanArray::from_slice($EXPECTED), c);
-        };
-    }
-
-    macro_rules! cmp_bool_options {
-        ($KERNEL:ident, $A_VEC:expr, $B_VEC:expr, $EXPECTED:expr) => {
-            let a = BooleanArray::from($A_VEC);
-            let b = BooleanArray::from($B_VEC);
-            let c = $KERNEL(&a, &b);
-            assert_eq!(BooleanArray::from($EXPECTED), c);
-        };
-    }
-
-    macro_rules! cmp_bool_scalar {
-        ($KERNEL:ident, $A_VEC:expr, $B:literal, $EXPECTED:expr) => {
-            let a = BooleanArray::from_slice($A_VEC);
-            let c = $KERNEL(&a, $B);
-            assert_eq!(BooleanArray::from_slice($EXPECTED), c);
-        };
-    }
-
-    #[test]
-    fn test_eq() {
-        cmp_bool!(
-            eq,
-            &[true, false, true, false],
-            &[true, true, false, false],
-            &[true, false, false, true]
-        );
-    }
-
-    #[test]
-    fn test_eq_scalar() {
-        cmp_bool_scalar!(eq_scalar, &[false, true], true, &[false, true]);
-    }
-
-    #[test]
-    fn test_eq_with_slice() {
-        let a = BooleanArray::from_slice(&[true, true, false]);
-        let b = BooleanArray::from_slice(&[true, true, true, true, false]);
-        let c = b.slice(2, 3);
-        let d = eq(&c, &a);
-        assert_eq!(d, BooleanArray::from_slice(&[true, true, true]));
-    }
-
-    #[test]
-    fn test_neq() {
-        cmp_bool!(
-            neq,
-            &[true, false, true, false],
-            &[true, true, false, false],
-            &[false, true, true, false]
-        );
-    }
-
-    #[test]
-    fn test_neq_scalar() {
-        cmp_bool_scalar!(neq_scalar, &[false, true], true, &[true, false]);
-    }
-
-    #[test]
-    fn test_lt() {
-        cmp_bool!(
-            lt,
-            &[true, false, true, false],
-            &[true, true, false, false],
-            &[false, true, false, false]
-        );
-    }
-
-    #[test]
-    fn test_lt_scalar_true() {
-        cmp_bool_scalar!(lt_scalar, &[false, true], true, &[true, false]);
-    }
-
-    #[test]
-    fn test_lt_scalar_false() {
-        cmp_bool_scalar!(lt_scalar, &[false, true], false, &[false, false]);
-    }
-
-    #[test]
-    fn test_lt_eq_scalar_true() {
-        cmp_bool_scalar!(lt_eq_scalar, &[false, true], true, &[true, true]);
-    }
-
-    #[test]
-    fn test_lt_eq_scalar_false() {
-        cmp_bool_scalar!(lt_eq_scalar, &[false, true], false, &[true, false]);
-    }
-
-    #[test]
-    fn test_gt_scalar_true() {
-        cmp_bool_scalar!(gt_scalar, &[false, true], true, &[false, false]);
-    }
-
-    #[test]
-    fn test_gt_scalar_false() {
-        cmp_bool_scalar!(gt_scalar, &[false, true], false, &[false, true]);
-    }
-
-    #[test]
-    fn test_gt_eq_scalar_true() {
-        cmp_bool_scalar!(gt_eq_scalar, &[false, true], true, &[false, true]);
-    }
-
-    #[test]
-    fn test_gt_eq_scalar_false() {
-        cmp_bool_scalar!(gt_eq_scalar, &[false, true], false, &[true, true]);
-    }
-
-    #[test]
-    fn eq_nulls() {
-        cmp_bool_options!(
-            eq,
-            &[
-                None,
-                None,
-                None,
-                Some(false),
-                Some(false),
-                Some(false),
-                Some(true),
-                Some(true),
-                Some(true)
-            ],
-            &[
-                None,
-                Some(false),
-                Some(true),
-                None,
-                Some(false),
-                Some(true),
-                None,
-                Some(false),
-                Some(true)
-            ],
-            &[
-                None,
-                None,
-                None,
-                None,
-                Some(true),
-                Some(false),
-                None,
-                Some(false),
-                Some(true)
-            ]
-        );
+        let all_ones = !0;
+        compare_op_scalar(lhs, rhs, |_, _| all_ones)
     }
 }
