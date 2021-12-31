@@ -218,7 +218,7 @@ impl std::fmt::Debug for StructArray {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "StructArray{{")?;
         for (field, column) in self.fields().iter().zip(self.values()) {
-            writeln!(f, "{}: {:?},", field.name(), column)?;
+            writeln!(f, "{}: {:?},", field.name, column)?;
         }
         write!(f, "}}")
     }

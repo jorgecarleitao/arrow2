@@ -2,20 +2,20 @@ use std::collections::HashSet;
 
 use super::{AsyncReader, ByteRecord};
 
-use crate::datatypes::{DataType, Schema};
+use crate::datatypes::{DataType, Field};
 use crate::error::Result;
 use crate::io::csv::utils::merge_schema;
 
 use futures::{AsyncRead, AsyncSeek};
 
-/// Infers a [`Schema`] of a CSV file by reading through the first n records up to `max_rows`.
-/// Seeks back to the begining of the file _after_ the header.
+/// Infers the [`Field`]s of a CSV file by reading through the first n records up to `max_rows`.
+/// Seeks back to the begining of the file _after_ the header
 pub async fn infer_schema<R, F>(
     reader: &mut AsyncReader<R>,
     max_rows: Option<usize>,
     has_header: bool,
     infer: &F,
-) -> Result<Schema>
+) -> Result<Vec<Field>>
 where
     R: AsyncRead + AsyncSeek + Unpin + Send + Sync,
     F: Fn(&[u8]) -> DataType,
@@ -65,5 +65,5 @@ where
     // return the reader seek back to the start
     reader.seek(position).await?;
 
-    Ok(Schema::new(fields))
+    Ok(fields)
 }

@@ -221,7 +221,7 @@ async fn consume_flight_location(
 
     for (counter, expected_batch) in expected_data.iter().enumerate() {
         let data =
-            receive_batch_flight_data(&mut resp, schema.fields(), ipc_schema, &mut dictionaries)
+            receive_batch_flight_data(&mut resp, &schema.fields, ipc_schema, &mut dictionaries)
                 .await
                 .unwrap_or_else(|| {
                     panic!(
@@ -234,7 +234,7 @@ async fn consume_flight_location(
         let metadata = counter.to_string().into_bytes();
         assert_eq!(metadata, data.app_metadata);
 
-        let actual_batch = deserialize_batch(&data, schema.fields(), ipc_schema, &dictionaries)
+        let actual_batch = deserialize_batch(&data, &schema.fields, ipc_schema, &dictionaries)
             .expect("Unable to convert flight data to Arrow batch");
 
         assert_eq!(expected_batch.columns().len(), actual_batch.columns().len());
@@ -245,8 +245,7 @@ async fn consume_flight_location(
             .zip(actual_batch.columns().iter())
             .enumerate()
         {
-            let field = schema.field(i);
-            let field_name = field.name();
+            let field_name = &schema.fields[i].name;
             assert_eq!(expected, actual, "Data for field {}", field_name);
         }
     }

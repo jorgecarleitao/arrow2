@@ -3,20 +3,20 @@ use std::{
     io::{Read, Seek},
 };
 
-use crate::datatypes::{DataType, Schema};
+use crate::datatypes::{DataType, Field};
 use crate::error::Result;
 
 use super::super::utils::merge_schema;
 use super::{ByteRecord, Reader};
 
-/// Infers a [`Schema`] of a CSV file by reading through the first n records up to `max_rows`.
+/// Infers the [`Field`]s of a CSV file by reading through the first n records up to `max_rows`.
 /// Seeks back to the begining of the file _after_ the header
 pub fn infer_schema<R: Read + Seek, F: Fn(&[u8]) -> DataType>(
     reader: &mut Reader<R>,
     max_rows: Option<usize>,
     has_header: bool,
     infer: &F,
-) -> Result<Schema> {
+) -> Result<Vec<Field>> {
     // get or create header names
     // when has_header is false, creates default column names with column_ prefix
     let headers: Vec<String> = if has_header {
@@ -57,5 +57,5 @@ pub fn infer_schema<R: Read + Seek, F: Fn(&[u8]) -> DataType>(
     // return the reader seek back to the start
     reader.seek(position)?;
 
-    Ok(Schema::new(fields))
+    Ok(fields)
 }

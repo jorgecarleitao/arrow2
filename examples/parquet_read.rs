@@ -22,7 +22,7 @@ fn read_field(path: &str, row_group: usize, field: usize) -> Result<Box<dyn Arra
     let columns = read::get_column_iterator(&mut file, &metadata, row_group, field, None, vec![]);
 
     // get the columns' field
-    let field = &arrow_schema.fields()[field];
+    let field = &arrow_schema.fields[field];
 
     // This is the actual work. In this case, pages are read and
     // decompressed, decoded and deserialized to arrow.

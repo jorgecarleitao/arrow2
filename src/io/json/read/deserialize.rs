@@ -144,7 +144,7 @@ fn deserialize_struct<A: Borrow<Value>>(rows: &[A], data_type: DataType) -> Stru
 
     let mut values = fields
         .iter()
-        .map(|f| (f.name(), (f.data_type(), vec![])))
+        .map(|f| (&f.name, (f.data_type(), vec![])))
         .collect::<HashMap<_, _>>();
 
     rows.iter().for_each(|row| {

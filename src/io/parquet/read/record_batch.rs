@@ -111,7 +111,7 @@ impl<R: Read + Seek> Iterator for RecordReader<R> {
     type Item = Result<Chunk<Arc<dyn Array>>>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.schema.fields().is_empty() {
+        if self.schema.fields.is_empty() {
             return None;
         }
         if self.current_group == self.metadata.row_groups.len() {
@@ -138,8 +138,8 @@ impl<R: Read + Seek> Iterator for RecordReader<R> {
         let b1 = std::mem::take(&mut self.buffer);
         let b2 = std::mem::take(&mut self.decompress_buffer);
 
-        let a = schema.fields().iter().enumerate().try_fold(
-            (b1, b2, Vec::with_capacity(schema.fields().len())),
+        let a = schema.fields.iter().enumerate().try_fold(
+            (b1, b2, Vec::with_capacity(schema.fields.len())),
             |(b1, b2, mut columns), (field_index, field)| {
                 let field_index = self.indices[field_index]; // project into the original schema
                 let column_iter = get_column_iterator(

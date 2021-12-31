@@ -111,9 +111,9 @@ mod tests {
         let schema = read_schema("fixtures/pyarrow3/v1/basic_nullable_10.parquet")?;
         let names = schema
             .unwrap()
-            .fields()
+            .fields
             .iter()
-            .map(|x| x.name().clone())
+            .map(|x| x.name.clone())
             .collect::<Vec<_>>();
         assert_eq!(
             names,

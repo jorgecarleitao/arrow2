@@ -417,7 +417,7 @@ pub fn deserialize_chunk(
     json_dictionaries: &HashMap<i64, ArrowJsonDictionaryBatch>,
 ) -> Result<Chunk<Arc<dyn Array>>> {
     let arrays = schema
-        .fields()
+        .fields
         .iter()
         .zip(&json_batch.columns)
         .zip(ipc_fields.iter())

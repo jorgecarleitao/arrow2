@@ -165,7 +165,7 @@ fn test_projection(version: &str, file_name: &str, column: usize) -> Result<()> 
     let metadata = read_file_metadata(&mut file)?;
     let mut reader = FileReader::new(&mut file, metadata, Some(vec![column]));
 
-    assert_eq!(reader.schema().fields().len(), 1);
+    assert_eq!(reader.schema().fields.len(), 1);
 
     reader.try_for_each(|rhs| {
         assert_eq!(rhs?.arrays().len(), 1);

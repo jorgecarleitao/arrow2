@@ -184,7 +184,7 @@ pub fn get_value_display<'a>(array: &'a dyn Array) -> Box<dyn Fn(usize) -> Strin
             Box::new(move |row: usize| {
                 let mut string = displays
                     .iter()
-                    .zip(a.fields().iter().map(|f| f.name()))
+                    .zip(a.fields().iter().map(|f| &f.name))
                     .map(|(f, name)| (f(row), name))
                     .fold("{".to_string(), |mut acc, (v, name)| {
                         acc.push_str(&format!("{}: {}, ", name, v));

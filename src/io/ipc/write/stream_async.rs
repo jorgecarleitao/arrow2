@@ -45,7 +45,7 @@ impl<W: AsyncWrite + Unpin + Send> StreamWriter<W> {
                 arrow_data: vec![],
             }
         } else {
-            let ipc_fields = default_ipc_fields(schema.fields());
+            let ipc_fields = default_ipc_fields(&schema.fields);
             EncodedData {
                 ipc_message: schema_to_bytes(schema, &ipc_fields),
                 arrow_data: vec![],
@@ -77,7 +77,7 @@ impl<W: AsyncWrite + Unpin + Send> StreamWriter<W> {
                 &self.write_options,
             )?
         } else {
-            let ipc_fields = default_ipc_fields(schema.fields());
+            let ipc_fields = default_ipc_fields(&schema.fields);
             encode_chunk(
                 columns,
                 &ipc_fields,

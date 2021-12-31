@@ -38,14 +38,14 @@ pub fn schema_to_fb_offset<'a>(
     ipc_fields: &[IpcField],
 ) -> WIPOffset<ipc::Schema<'a>> {
     let fields = schema
-        .fields()
+        .fields
         .iter()
         .zip(ipc_fields.iter())
         .map(|(field, ipc_field)| build_field(fbb, field, ipc_field))
         .collect::<Vec<_>>();
 
     let mut custom_metadata = vec![];
-    for (k, v) in schema.metadata() {
+    for (k, v) in &schema.metadata {
         let fb_key_name = fbb.create_string(k.as_str());
         let fb_val_name = fbb.create_string(v.as_str());
 
@@ -126,8 +126,8 @@ pub(crate) fn build_field<'a>(
         write_extension(fbb, name, metadata, &mut kv_vec);
     }
 
-    let fb_field_name = fbb.create_string(field.name().as_str());
-    let field_type = get_fb_field_type(field.data_type(), ipc_field, field.is_nullable(), fbb);
+    let fb_field_name = fbb.create_string(field.name.as_str());
+    let field_type = get_fb_field_type(field.data_type(), ipc_field, field.is_nullable, fbb);
 
     let fb_dictionary =
         if let DataType::Dictionary(index_type, inner, is_ordered) = field.data_type() {
@@ -146,7 +146,7 @@ pub(crate) fn build_field<'a>(
             None
         };
 
-    write_metadata(fbb, field.metadata(), &mut kv_vec);
+    write_metadata(fbb, &field.metadata, &mut kv_vec);
 
     let fb_metadata = if !kv_vec.is_empty() {
         Some(fbb.create_vector(&kv_vec))
@@ -160,7 +160,7 @@ pub(crate) fn build_field<'a>(
         field_builder.add_dictionary(dictionary)
     }
     field_builder.add_type_type(field_type.type_type);
-    field_builder.add_nullable(field.is_nullable());
+    field_builder.add_nullable(field.is_nullable);
     match field_type.children {
         None => {}
         Some(children) => field_builder.add_children(children),

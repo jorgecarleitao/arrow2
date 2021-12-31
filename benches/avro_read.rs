@@ -51,7 +51,7 @@ fn read_batch(buffer: &[u8], size: usize) -> Result<()> {
             codec,
         ),
         avro_schema,
-        schema.fields().clone(),
+        schema.fields,
     );
 
     let mut rows = 0;

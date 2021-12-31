@@ -95,7 +95,7 @@ fn arrow_to_json(arrow_name: &str, json_name: &str, verbose: bool) -> Result<()>
         .schema
         .fields
         .iter()
-        .map(|f| f.name())
+        .map(|f| &f.name)
         .collect::<Vec<_>>();
 
     let schema = json_write::serialize_schema(&metadata.schema, &metadata.ipc_schema.fields);

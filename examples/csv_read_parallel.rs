@@ -17,8 +17,8 @@ fn parallel_read(path: &str) -> Result<Vec<Chunk<Arc<dyn Array>>>> {
     let (tx, rx) = unbounded();
 
     let mut reader = read::ReaderBuilder::new().from_path(path)?;
-    let schema = read::infer_schema(&mut reader, Some(batch_size * 10), has_header, &read::infer)?;
-    let schema = Arc::new(schema);
+    let fields = read::infer_schema(&mut reader, Some(batch_size * 10), has_header, &read::infer)?;
+    let fields = Arc::new(fields);
 
     let start = SystemTime::now();
     // spawn a thread to produce `Vec<ByteRecords>` (IO bounded)
@@ -39,14 +39,14 @@ fn parallel_read(path: &str) -> Result<Vec<Chunk<Arc<dyn Array>>>> {
     // use 3 consumers of to decompress, decode and deserialize.
     for _ in 0..3 {
         let rx_consumer = rx.clone();
-        let consumer_schema = schema.clone();
+        let consumer_fields = fields.clone();
         let child = thread::spawn(move || {
             let (rows, line_number) = rx_consumer.recv().unwrap();
             let start = SystemTime::now();
             println!("consumer start - {}", line_number);
             let batch = read::deserialize_batch(
                 &rows,
-                consumer_schema.fields(),
+                &consumer_fields,
                 projection,
                 0,
                 read::deserialize_column,

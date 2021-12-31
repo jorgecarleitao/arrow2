@@ -32,7 +32,7 @@ fn round_trip(
     let array: Arc<dyn Array> = array.into();
 
     let field = Field::new("a1", array.data_type().clone(), nullable);
-    let schema = Schema::new(vec![field]);
+    let schema = Schema::from(vec![field]);
 
     let options = WriteOptions {
         write_statistics: true,

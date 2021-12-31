@@ -23,18 +23,12 @@ async fn read() -> Result<()> {
 "Aberdeen, Aberdeen City, UK",57.149651,-2.099075"#;
     let mut reader = AsyncReaderBuilder::new().create_reader(Cursor::new(data.as_bytes()));
 
-    let schema = infer_schema(&mut reader, None, true, &infer).await?;
+    let fields = infer_schema(&mut reader, None, true, &infer).await?;
 
     let mut rows = vec![ByteRecord::default(); 100];
     let rows_read = read_rows(&mut reader, 0, &mut rows).await?;
 
-    let columns = deserialize_batch(
-        &rows[..rows_read],
-        schema.fields(),
-        None,
-        0,
-        deserialize_column,
-    )?;
+    let columns = deserialize_batch(&rows[..rows_read], &fields, None, 0, deserialize_column)?;
 
     assert_eq!(14, columns.len());
     assert_eq!(3, columns.arrays().len());

@@ -30,7 +30,7 @@ fn main() -> Result<()> {
     let file_path = &args[1];
 
     let (schema, batches) = read_batches(file_path)?;
-    let names = schema.fields().iter().map(|f| f.name()).collect::<Vec<_>>();
+    let names = schema.fields.iter().map(|f| &f.name).collect::<Vec<_>>();
     println!("{}", print::write(&batches, &names));
     Ok(())
 }

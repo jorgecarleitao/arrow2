@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use tokio::fs::File;
 use tokio_util::compat::*;
 
@@ -17,18 +15,12 @@ async fn main() -> Result<()> {
 
     let mut reader = AsyncReaderBuilder::new().create_reader(file);
 
-    let schema = Arc::new(infer_schema(&mut reader, None, true, &infer).await?);
+    let fields = infer_schema(&mut reader, None, true, &infer).await?;
 
     let mut rows = vec![ByteRecord::default(); 100];
     let rows_read = read_rows(&mut reader, 0, &mut rows).await?;
 
-    let columns = deserialize_batch(
-        &rows[..rows_read],
-        schema.fields(),
-        None,
-        0,
-        deserialize_column,
-    )?;
+    let columns = deserialize_batch(&rows[..rows_read], &fields, None, 0, deserialize_column)?;
     println!("{:?}", columns.arrays()[0]);
     Ok(())
 }

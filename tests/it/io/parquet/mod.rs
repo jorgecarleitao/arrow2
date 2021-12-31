@@ -716,7 +716,7 @@ fn arrow_type() -> Result<()> {
     let dt1 = DataType::Duration(TimeUnit::Second);
     let array = PrimitiveArray::<i64>::from([Some(1), None, Some(2)]).to(dt1.clone());
     let array2 = Utf8Array::<i64>::from([Some("a"), None, Some("bb")]);
-    let schema = Schema::new(vec![
+    let schema = Schema::from(vec![
         Field::new("a1", dt1, true),
         Field::new("a2", array2.data_type().clone(), true),
     ]);

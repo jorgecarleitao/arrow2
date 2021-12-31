@@ -72,7 +72,7 @@ fn struct_serializer<'a>(
         .map(|x| x.as_ref())
         .map(new_serializer)
         .collect::<Vec<_>>();
-    let names = array.fields().iter().map(|f| f.name().as_str());
+    let names = array.fields().iter().map(|f| f.name.as_str());
 
     Box::new(BufStreamingIterator::new(
         zip_validity(0..array.len(), array.validity().map(|x| x.iter())),

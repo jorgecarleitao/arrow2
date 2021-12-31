@@ -155,7 +155,7 @@ fn read_next<R: Read>(
 
             read_record_batch(
                 batch,
-                metadata.schema.fields(),
+                &metadata.schema.fields,
                 &metadata.ipc_schema,
                 None,
                 dictionaries,
@@ -177,7 +177,7 @@ fn read_next<R: Read>(
 
             read_dictionary(
                 batch,
-                metadata.schema.fields(),
+                &metadata.schema.fields,
                 &metadata.ipc_schema,
                 dictionaries,
                 &mut dict_reader,

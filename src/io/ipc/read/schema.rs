@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 mod ipc {
     pub use arrow_format::ipc::File::*;
     pub use arrow_format::ipc::Message::*;
@@ -41,7 +39,7 @@ fn deserialize_field(ipc_field: ipc::Field) -> Result<(Field, IpcField)> {
             .ok_or_else(|| ArrowError::oos("Every field in IPC must have a name"))?
             .to_string(),
         data_type,
-        nullable: ipc_field.nullable(),
+        is_nullable: ipc_field.nullable(),
         metadata,
     };
 
@@ -384,20 +382,18 @@ pub fn fb_to_schema(fb: ipc::Schema) -> Result<(Schema, IpcSchema)> {
 
     let is_little_endian = fb.endianness().variant_name().unwrap_or("Little") == "Little";
 
-    let mut metadata: HashMap<String, String> = HashMap::default();
-    if let Some(md_fields) = fb.custom_metadata() {
-        let len = md_fields.len();
-        for i in 0..len {
-            let kv = md_fields.get(i);
-            let k_str = kv.key();
-            let v_str = kv.value();
-            if let Some(k) = k_str {
-                if let Some(v) = v_str {
-                    metadata.insert(k.to_string(), v.to_string());
-                }
-            }
-        }
-    }
+    let metadata = if let Some(md_fields) = fb.custom_metadata() {
+        md_fields
+            .iter()
+            .filter_map(|f| {
+                let k = f.key();
+                let v = f.value();
+                k.and_then(|k| v.map(|v| (k.to_string(), v.to_string())))
+            })
+            .collect()
+    } else {
+        Default::default()
+    };
 
     Ok((
         Schema { fields, metadata },

@@ -7,7 +7,7 @@ use arrow_format::ipc::File::Block;
 
 use crate::array::Array;
 use crate::chunk::Chunk;
-use crate::datatypes::Schema;
+use crate::datatypes::{Field, Schema};
 use crate::error::{ArrowError, Result};
 use crate::io::ipc::IpcSchema;
 
@@ -68,7 +68,7 @@ fn read_dictionary_message<R: Read + Seek>(
 
 fn read_dictionaries<R: Read + Seek>(
     reader: &mut R,
-    schema: &Schema,
+    fields: &[Field],
     ipc_schema: &IpcSchema,
     blocks: &[Block],
 ) -> Result<Dictionaries> {
@@ -94,7 +94,7 @@ fn read_dictionaries<R: Read + Seek>(
                 })?;
                 read_dictionary(
                     batch,
-                    schema.fields(),
+                    fields,
                     ipc_schema,
                     &mut dictionaries,
                     reader,
@@ -165,7 +165,7 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
     let dictionary_blocks = footer.dictionaries();
 
     let dictionaries = if let Some(blocks) = dictionary_blocks {
-        read_dictionaries(reader, &schema, &ipc_schema, blocks)?
+        read_dictionaries(reader, &schema.fields, &ipc_schema, blocks)?
     } else {
         Default::default()
     };
@@ -229,7 +229,7 @@ pub fn read_batch<R: Read + Seek>(
 
     read_record_batch(
         batch,
-        metadata.schema.fields(),
+        &metadata.schema.fields,
         &metadata.ipc_schema,
         projection,
         &metadata.dictionaries,
@@ -253,11 +253,13 @@ impl<R: Read + Seek> FileReader<R> {
             });
         }
         let projection = projection.map(|projection| {
-            let fields = metadata.schema.fields();
-            let fields = projection.iter().map(|x| fields[*x].clone()).collect();
+            let fields = projection
+                .iter()
+                .map(|x| metadata.schema.fields[*x].clone())
+                .collect();
             let schema = Schema {
                 fields,
-                metadata: metadata.schema.metadata().clone(),
+                metadata: metadata.schema.metadata.clone(),
             };
             (projection, schema)
         });

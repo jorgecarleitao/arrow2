@@ -213,7 +213,7 @@ pub fn extend_offsets<R, D>(
 }
 
 pub fn init_nested(field: &Field, capacity: usize, container: &mut Vec<Box<dyn Nested>>) {
-    let is_nullable = field.is_nullable();
+    let is_nullable = field.is_nullable;
 
     use crate::datatypes::PhysicalType::*;
     match field.data_type().to_physical_type() {

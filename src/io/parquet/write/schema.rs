@@ -20,7 +20,7 @@ use crate::{
 use super::super::ARROW_SCHEMA_META_KEY;
 
 pub fn schema_to_metadata_key(schema: &Schema) -> KeyValue {
-    let serialized_schema = schema_to_bytes(schema, &default_ipc_fields(schema.fields()));
+    let serialized_schema = schema_to_bytes(schema, &default_ipc_fields(&schema.fields));
 
     // manually prepending the length to the schema as arrow uses the legacy IPC format
     // TODO: change after addressing ARROW-9777
@@ -40,8 +40,8 @@ pub fn schema_to_metadata_key(schema: &Schema) -> KeyValue {
 
 /// Creates a [`ParquetType`] from a [`Field`].
 pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
-    let name = field.name().clone();
-    let repetition = if field.is_nullable() {
+    let name = field.name.clone();
+    let repetition = if field.is_nullable {
         Repetition::Optional
     } else {
         Repetition::Required
@@ -279,7 +279,7 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             )?)
         }
         DataType::Dictionary(_, value, _) => {
-            let dict_field = Field::new(name.as_str(), value.as_ref().clone(), field.is_nullable());
+            let dict_field = Field::new(name.as_str(), value.as_ref().clone(), field.is_nullable);
             to_parquet_type(&dict_field)
         }
         DataType::FixedSizeBinary(size) => Ok(ParquetType::try_from_primitive(

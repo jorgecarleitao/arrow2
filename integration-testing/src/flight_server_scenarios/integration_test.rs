@@ -299,8 +299,7 @@ async fn record_batch_from_message(
         0,
     );
 
-    arrow_batch_result
-        .map_err(|e| Status::internal(format!("Could not convert to Chunk: {:?}", e)))
+    arrow_batch_result.map_err(|e| Status::internal(format!("Could not convert to Chunk: {:?}", e)))
 }
 
 async fn dictionary_from_message(
@@ -351,7 +350,7 @@ async fn save_uploaded_chunks(
                 let batch = record_batch_from_message(
                     message,
                     &data.data_body,
-                    schema.fields(),
+                    &schema.fields,
                     &ipc_schema,
                     &mut dictionaries,
                 )
@@ -363,7 +362,7 @@ async fn save_uploaded_chunks(
                 dictionary_from_message(
                     message,
                     &data.data_body,
-                    schema.fields(),
+                    &schema.fields,
                     &ipc_schema,
                     &mut dictionaries,
                 )

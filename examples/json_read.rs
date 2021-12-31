@@ -16,7 +16,7 @@ fn read_path(path: &str, projection: Option<Vec<&str>>) -> Result<Chunk<Arc<dyn 
     let fields = if let Some(projection) = projection {
         fields
             .into_iter()
-            .filter(|field| projection.contains(&field.name().as_ref()))
+            .filter(|field| projection.contains(&field.name.as_ref()))
             .collect()
     } else {
         fields

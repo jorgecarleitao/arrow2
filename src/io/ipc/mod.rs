@@ -41,7 +41,7 @@
 //! let mut file = File::create(&path)?;
 //! let x_coord = Field::new("x", DataType::Int32, false);
 //! let y_coord = Field::new("y", DataType::Int32, false);
-//! let schema = Schema::new(vec![x_coord, y_coord]);
+//! let schema = Schema::from(vec![x_coord, y_coord]);
 //! let options = WriteOptions {compression: None};
 //! let mut writer = FileWriter::try_new(file, &schema, None, options)?;
 //!

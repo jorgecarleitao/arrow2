@@ -13,13 +13,15 @@ pub use schema::Schema;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-/// typedef for [BTreeMap<String, String>] denoting a [`Field`]'s metadata.
+/// typedef for [BTreeMap<String, String>] denoting [`Field`]'s and [`Schema`]'s metadata.
 pub type Metadata = BTreeMap<String, String>;
 /// typedef fpr [Option<(String, Option<String>)>] descr
 pub(crate) type Extension = Option<(String, Option<String>)>;
 
-/// The set of supported logical types.
-/// Each variant uniquely identifies a logical type, which define specific semantics to the data (e.g. how it should be represented).
+/// The set of supported logical types in this crate.
+///
+/// Each variant uniquely identifies a logical type, which define specific semantics to the data
+/// (e.g. how it should be represented).
 /// Each variant has a corresponding [`PhysicalType`], obtained via [`DataType::to_physical_type`],
 /// which declares the in-memory representation of data.
 /// The [`DataType::Extension`] is special in that it augments a [`DataType`] with metadata to support custom types.
@@ -30,74 +32,77 @@ pub enum DataType {
     Null,
     /// `true` and `false`.
     Boolean,
-    /// A signed 8-bit integer.
+    /// An [`i8`]
     Int8,
-    /// A signed 16-bit integer.
+    /// An [`i16`]
     Int16,
-    /// A signed 32-bit integer.
+    /// An [`i32`]
     Int32,
-    /// A signed 64-bit integer.
+    /// An [`i64`]
     Int64,
-    /// An unsigned 8-bit integer.
+    /// An [`u8`]
     UInt8,
-    /// An unsigned 16-bit integer.
+    /// An [`u16`]
     UInt16,
-    /// An unsigned 32-bit integer.
+    /// An [`u32`]
     UInt32,
-    /// An unsigned 64-bit integer.
+    /// An [`u64`]
     UInt64,
-    /// A 16-bit floating point number.
+    /// An 16-bit float
     Float16,
-    /// A 32-bit floating point number.
+    /// A [`f32`]
     Float32,
-    /// A 64-bit floating point number.
+    /// A [`f64`]
     Float64,
-    /// A timestamp with an optional timezone.
+    /// A [`i64`] representing a timestamp measured in [`TimeUnit`] with an optional timezone.
     ///
     /// Time is measured as a Unix epoch, counting the seconds from
     /// 00:00:00.000 on 1 January 1970, excluding leap seconds,
-    /// as a 64-bit integer.
+    /// as a 64-bit signed integer.
     ///
     /// The time zone is a string indicating the name of a time zone, one of:
     ///
     /// * As used in the Olson time zone database (the "tz database" or
     ///   "tzdata"), such as "America/New_York"
     /// * An absolute time zone offset of the form +XX:XX or -XX:XX, such as +07:30
+    /// When the timezone is not specified, the timestamp is considered to have no timezone
+    /// and is represented _as is_
     Timestamp(TimeUnit, Option<String>),
-    /// A 32-bit date representing the elapsed time since UNIX epoch (1970-01-01)
-    /// in days (32 bits).
+    /// An [`i32`] representing the elapsed time since UNIX epoch (1970-01-01)
+    /// in days.
     Date32,
-    /// A 64-bit date representing the elapsed time since UNIX epoch (1970-01-01)
-    /// in milliseconds (64 bits). Values are evenly divisible by 86400000.
+    /// An [`i64`] representing the elapsed time since UNIX epoch (1970-01-01)
+    /// in milliseconds. Values are evenly divisible by 86400000.
     Date64,
     /// A 32-bit time representing the elapsed time since midnight in the unit of `TimeUnit`.
+    /// Only [`TimeUnit::Second`] and [`TimeUnit::Millisecond`] are supported on this variant.
     Time32(TimeUnit),
     /// A 64-bit time representing the elapsed time since midnight in the unit of `TimeUnit`.
+    /// Only [`TimeUnit::Microsecond`] and [`TimeUnit::Nanosecond`] are supported on this variant.
     Time64(TimeUnit),
-    /// Measure of elapsed time in either seconds, milliseconds, microseconds or nanoseconds.
+    /// Measure of elapsed time. This elapsed time is a physical duration (i.e. 1s as defined in S.I.)
     Duration(TimeUnit),
-    /// A "calendar" interval which models types that don't necessarily
-    /// have a precise duration without the context of a base timestamp (e.g.
-    /// days can differ in length during day light savings time transitions).
+    /// A "calendar" interval modeling elapsed time that takes into account calendar shifts.
+    /// For example an interval of 1 day may represent more than 24 hours.
     Interval(IntervalUnit),
-    /// Opaque binary data of variable length.
+    /// Opaque binary data of variable length whose offsets are represented as [`i32`].
     Binary,
     /// Opaque binary data of fixed size.
     /// Enum parameter specifies the number of bytes per value.
     FixedSizeBinary(usize),
-    /// Opaque binary data of variable length and 64-bit offsets.
+    /// Opaque binary data of variable length whose offsets are represented as [`i64`].
     LargeBinary,
-    /// A variable-length string in Unicode with UTF-8 encoding.
+    /// A variable-length UTF-8 encoded string whose offsets are represented as [`i32`].
     Utf8,
-    /// A variable-length string in Unicode with UFT-8 encoding and 64-bit offsets.
+    /// A variable-length UTF-8 encoded string whose offsets are represented as [`i64`].
     LargeUtf8,
-    /// A list of some logical data type with variable length.
+    /// A list of some logical data type whose offsets are represented as [`i32`].
     List(Box<Field>),
-    /// A list of some logical data type with fixed length.
+    /// A list of some logical data type with a fixed number of elements.
     FixedSizeList(Box<Field>, usize),
-    /// A list of some logical data type with variable length and 64-bit offsets.
+    /// A list of some logical data type whose offsets are represented as [`i64`].
     LargeList(Box<Field>),
-    /// A nested datatype that contains a number of sub-fields.
+    /// A nested [`DataType`] with a given number of [`Field`]s.
     Struct(Vec<Field>),
     /// A nested datatype that can represent slots of differing types.
     /// Third argument represents mode

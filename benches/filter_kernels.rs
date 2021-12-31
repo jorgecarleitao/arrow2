@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 // Licensed to the Apache Software Foundation (ASF) under one
 // or more contributor license agreements.  See the NOTICE file
 // distributed with this work for additional information
@@ -125,8 +123,9 @@ fn add_benchmark(c: &mut Criterion) {
 
     let data_array = create_primitive_array::<f32>(size, 0.0);
 
-    let columns = Chunk::try_new(vec![Arc::new(data_array) as ArrayRef]).unwrap();
-    c.bench_function("filter single record batch", |b| {
+    let columns = Chunk::try_new(vec![&data_array as &dyn Array]).unwrap();
+
+    c.bench_function("filter single chunk", |b| {
         b.iter(|| filter_chunk(&columns, &filter_array))
     });
 }

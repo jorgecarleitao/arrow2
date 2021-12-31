@@ -10,9 +10,9 @@ fn read_path(path: &str, projection: Option<&[usize]>) -> Result<Chunk<Arc<dyn A
     // thus owns the read head.
     let mut reader = read::ReaderBuilder::new().from_path(path)?;
 
-    // Infers the schema using the default inferer. The inferer is just a function that maps a string
+    // Infers the fields using the default inferer. The inferer is just a function that maps bytes
     // to a `DataType`.
-    let schema = read::infer_schema(&mut reader, None, true, &read::infer)?;
+    let fields = read::infer_schema(&mut reader, None, true, &read::infer)?;
 
     // allocate space to read from CSV to. The size of this vec denotes how many rows are read.
     let mut rows = vec![read::ByteRecord::default(); 100];
@@ -23,15 +23,10 @@ fn read_path(path: &str, projection: Option<&[usize]>) -> Result<Chunk<Arc<dyn A
     let rows_read = read::read_rows(&mut reader, 0, &mut rows)?;
     let rows = &rows[..rows_read];
 
-    // parse the batches into a `RecordBatch`. This is CPU-intensive, has no IO,
+    // parse the rows into a `Chunk`. This is CPU-intensive, has no IO,
     // and can be performed on a different thread by passing `rows` through a channel.
-    read::deserialize_batch(
-        rows,
-        schema.fields(),
-        projection,
-        0,
-        read::deserialize_column,
-    )
+    // `deserialize_column` is a function that maps rows and a column index to an Array
+    read::deserialize_batch(rows, &fields, projection, 0, read::deserialize_column)
 }
 
 fn main() -> Result<()> {
