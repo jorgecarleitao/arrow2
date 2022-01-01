@@ -29,6 +29,14 @@ impl ArrowError {
     pub fn from_external_error(error: impl std::error::Error + Send + Sync + 'static) -> Self {
         Self::External("".to_string(), Box::new(error))
     }
+
+    pub(crate) fn oos<A: Into<String>>(msg: A) -> Self {
+        Self::OutOfSpec(msg.into())
+    }
+
+    pub(crate) fn nyi<A: Into<String>>(msg: A) -> Self {
+        Self::NotYetImplemented(msg.into())
+    }
 }
 
 impl From<::std::io::Error> for ArrowError {

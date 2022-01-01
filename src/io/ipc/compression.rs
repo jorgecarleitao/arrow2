@@ -32,7 +32,11 @@ pub fn decompress_zstd(_input_buf: &[u8], _output_buf: &mut [u8]) -> Result<()> 
 #[cfg_attr(docsrs, doc(cfg(feature = "io_ipc_compression")))]
 pub fn compress_lz4(input_buf: &[u8], output_buf: &mut Vec<u8>) -> Result<()> {
     use std::io::Write;
-    let mut encoder = lz4::EncoderBuilder::new().build(output_buf).unwrap();
+
+    use crate::error::ArrowError;
+    let mut encoder = lz4::EncoderBuilder::new()
+        .build(output_buf)
+        .map_err(ArrowError::from)?;
     encoder.write_all(input_buf)?;
     encoder.finish().1.map_err(|e| e.into())
 }

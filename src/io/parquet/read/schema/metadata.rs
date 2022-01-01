@@ -36,11 +36,11 @@ fn get_arrow_schema_from_metadata(encoded_meta: &str) -> Result<Schema> {
             match ipc::Message::root_as_message(slice) {
                 Ok(message) => message
                     .header_as_schema()
-                    .map(fb_to_schema)
-                    .map(|x| x.0)
                     .ok_or_else(|| {
                         ArrowError::OutOfSpec("the message is not Arrow Schema".to_string())
-                    }),
+                    })
+                    .and_then(fb_to_schema)
+                    .map(|x| x.0),
                 Err(err) => {
                     // The flatbuffers implementation returns an error on verification error.
                     Err(ArrowError::OutOfSpec(format!(
