@@ -35,11 +35,12 @@ fn read_swapped<T: NativeType, R: Read + Seek>(
                 };
                 *slot = T::from_be_bytes(a);
                 Result::Ok(())
-            })
-            .unwrap();
+            })?;
     } else {
         // machine is big endian, file is little endian
-        todo!("reading little endian files from big endian machines not yet implemented.")
+        return Err(ArrowError::NotYetImplemented(
+            "Reading little endian files from big endian machines".to_string(),
+        ));
     }
     Ok(())
 }
@@ -139,7 +140,9 @@ pub fn read_buffer<T: NativeType, R: Read + Seek>(
     is_little_endian: bool,
     compression: Option<BodyCompression>,
 ) -> Result<Buffer<T>> {
-    let buf = buf.pop_front().unwrap();
+    let buf = buf
+        .pop_front()
+        .ok_or_else(|| ArrowError::oos("IPC: unable to fetch a buffer. The file is corrupted."))?;
 
     reader.seek(SeekFrom::Start(block_offset + buf.offset() as u64))?;
 
@@ -206,7 +209,9 @@ pub fn read_bitmap<R: Read + Seek>(
     _: bool,
     compression: Option<BodyCompression>,
 ) -> Result<Bitmap> {
-    let buf = buf.pop_front().unwrap();
+    let buf = buf
+        .pop_front()
+        .ok_or_else(|| ArrowError::oos("IPC: unable to fetch a buffer. The file is corrupted."))?;
 
     reader.seek(SeekFrom::Start(block_offset + buf.offset() as u64))?;
 
@@ -239,7 +244,9 @@ pub fn read_validity<R: Read + Seek>(
             compression,
         )?)
     } else {
-        let _ = buffers.pop_front().unwrap();
+        let _ = buffers.pop_front().ok_or_else(|| {
+            ArrowError::oos("IPC: unable to fetch a buffer. The file is corrupted.")
+        })?;
         None
     })
 }

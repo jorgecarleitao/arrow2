@@ -33,10 +33,7 @@ pub fn read<R: Read + Seek>(
     let data_type = field.data_type().clone();
 
     match data_type.to_physical_type() {
-        Null => {
-            let array = read_null(field_nodes, data_type);
-            Ok(Arc::new(array))
-        }
+        Null => read_null(field_nodes, data_type).map(|x| Arc::new(x) as Arc<dyn Array>),
         Boolean => read_boolean(
             field_nodes,
             data_type,
@@ -219,7 +216,7 @@ pub fn skip(
     field_nodes: &mut VecDeque<Node>,
     data_type: &DataType,
     buffers: &mut VecDeque<&ipc::Schema::Buffer>,
-) {
+) -> Result<()> {
     use PhysicalType::*;
     match data_type.to_physical_type() {
         Null => skip_null(field_nodes),

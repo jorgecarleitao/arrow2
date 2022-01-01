@@ -49,7 +49,7 @@ pub fn read_stream_metadata<R: Read>(reader: &mut R) -> Result<StreamMetadata> {
     let ipc_schema: ipc::Schema::Schema = message
         .header_as_schema()
         .ok_or_else(|| ArrowError::OutOfSpec("Unable to read IPC message as schema".to_string()))?;
-    let (schema, ipc_schema) = fb_to_schema(ipc_schema);
+    let (schema, ipc_schema) = fb_to_schema(ipc_schema)?;
     let schema = Arc::new(schema);
 
     Ok(StreamMetadata {

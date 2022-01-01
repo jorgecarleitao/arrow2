@@ -89,14 +89,14 @@ pub fn read_record_batch<R: Read + Seek>(
     block_offset: u64,
 ) -> Result<RecordBatch> {
     assert_eq!(schema.fields().len(), ipc_schema.fields.len());
-    let buffers = batch.buffers().ok_or_else(|| {
-        ArrowError::OutOfSpec("Unable to get buffers from IPC RecordBatch".to_string())
-    })?;
+    let buffers = batch
+        .buffers()
+        .ok_or_else(|| ArrowError::oos("IPC RecordBatch must contain buffers"))?;
     let mut buffers: VecDeque<&ipc::Schema::Buffer> = buffers.iter().collect();
-    let field_nodes = batch.nodes().ok_or_else(|| {
-        ArrowError::OutOfSpec("Unable to get field nodes from IPC RecordBatch".to_string())
-    })?;
 
+    let field_nodes = batch
+        .nodes()
+        .ok_or_else(|| ArrowError::oos("IPC RecordBatch must contain field nodes"))?;
     let mut field_nodes = field_nodes.iter().collect::<VecDeque<_>>();
 
     let (schema, columns) = if let Some(projection) = projection {
@@ -109,7 +109,7 @@ pub fn read_record_batch<R: Read + Seek>(
 
         let arrays = projection
             .map(|maybe_field| match maybe_field {
-                ProjectionResult::Selected((field, ipc_field)) => Some(read(
+                ProjectionResult::Selected((field, ipc_field)) => Ok(Some(read(
                     &mut field_nodes,
                     field,
                     ipc_field,
@@ -120,12 +120,13 @@ pub fn read_record_batch<R: Read + Seek>(
                     ipc_schema.is_little_endian,
                     batch.compression(),
                     version,
-                )),
+                )?)),
                 ProjectionResult::NotSelected((field, _)) => {
-                    skip(&mut field_nodes, field.data_type(), &mut buffers);
-                    None
+                    skip(&mut field_nodes, field.data_type(), &mut buffers)?;
+                    Ok(None)
                 }
             })
+            .map(|x| x.transpose())
             .flatten()
             .collect::<Result<Vec<_>>>()?;
         (projected_schema, arrays)
@@ -243,7 +244,9 @@ pub fn read_dictionary<R: Read + Seek>(
             assert_eq!(ipc_schema.fields.len(), schema.fields().len());
             // Read a single column
             let record_batch = read_record_batch(
-                batch.data().unwrap(),
+                batch
+                    .data()
+                    .ok_or_else(|| ArrowError::oos("The dictionary batch must have data."))?,
                 schema,
                 &ipc_schema,
                 None,

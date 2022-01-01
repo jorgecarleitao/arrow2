@@ -6,7 +6,7 @@ use arrow_format::ipc;
 use crate::array::MapArray;
 use crate::buffer::Buffer;
 use crate::datatypes::DataType;
-use crate::error::Result;
+use crate::error::{ArrowError, Result};
 
 use super::super::super::IpcField;
 use super::super::deserialize::{read, skip, Node};
@@ -26,7 +26,12 @@ pub fn read_map<R: Read + Seek>(
     compression: Option<ipc::Message::BodyCompression>,
     version: ipc::Schema::MetadataVersion,
 ) -> Result<MapArray> {
-    let field_node = field_nodes.pop_front().unwrap();
+    let field_node = field_nodes.pop_front().ok_or_else(|| {
+        ArrowError::oos(format!(
+            "IPC: unable to fetch the field for {:?}. The file or stream is corrupted.",
+            data_type
+        ))
+    })?;
 
     let validity = read_validity(
         buffers,
@@ -69,11 +74,17 @@ pub fn skip_map(
     field_nodes: &mut VecDeque<Node>,
     data_type: &DataType,
     buffers: &mut VecDeque<&ipc::Schema::Buffer>,
-) {
-    let _ = field_nodes.pop_front().unwrap();
+) -> Result<()> {
+    let _ = field_nodes.pop_front().ok_or_else(|| {
+        ArrowError::oos("IPC: unable to fetch the field for map. The file or stream is corrupted.")
+    })?;
 
-    let _ = buffers.pop_front().unwrap();
-    let _ = buffers.pop_front().unwrap();
+    let _ = buffers
+        .pop_front()
+        .ok_or_else(|| ArrowError::oos("IPC: missing validity buffer."))?;
+    let _ = buffers
+        .pop_front()
+        .ok_or_else(|| ArrowError::oos("IPC: missing offsets buffer."))?;
 
     let data_type = MapArray::get_field(data_type).data_type();
 

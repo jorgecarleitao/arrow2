@@ -57,6 +57,6 @@ where
 pub fn skip_dictionary(
     field_nodes: &mut VecDeque<Node>,
     buffers: &mut VecDeque<&ipc::Schema::Buffer>,
-) {
+) -> Result<()> {
     skip_primitive(field_nodes, buffers)
 }

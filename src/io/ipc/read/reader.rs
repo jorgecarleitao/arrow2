@@ -93,7 +93,11 @@ fn read_dictionaries<R: Read + Seek>(
         match message.header_type() {
             ipc::Message::MessageHeader::DictionaryBatch => {
                 let block_offset = offset + length;
-                let batch = message.header_as_dictionary_batch().unwrap();
+                let batch = message.header_as_dictionary_batch().ok_or_else(|| {
+                    ArrowError::OutOfSpec(
+                        "The dictionary message does not have a dictionary header. The file is corrupted.".to_string(),
+                    )
+                })?;
                 read_dictionary(
                     batch,
                     schema.fields(),
@@ -162,7 +166,7 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
     let ipc_schema = footer
         .schema()
         .ok_or_else(|| ArrowError::OutOfSpec("Unable to get the schema from footer".to_string()))?;
-    let (schema, ipc_schema) = fb_to_schema(ipc_schema);
+    let (schema, ipc_schema) = fb_to_schema(ipc_schema)?;
     let schema = Arc::new(schema);
 
     let dictionary_blocks = footer.dictionaries();

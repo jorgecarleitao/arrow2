@@ -5,7 +5,7 @@ use arrow_format::ipc;
 
 use crate::array::StructArray;
 use crate::datatypes::DataType;
-use crate::error::Result;
+use crate::error::{ArrowError, Result};
 
 use super::super::super::IpcField;
 use super::super::deserialize::{read, skip, Node};
@@ -25,7 +25,12 @@ pub fn read_struct<R: Read + Seek>(
     compression: Option<ipc::Message::BodyCompression>,
     version: ipc::Schema::MetadataVersion,
 ) -> Result<StructArray> {
-    let field_node = field_nodes.pop_front().unwrap();
+    let field_node = field_nodes.pop_front().ok_or_else(|| {
+        ArrowError::oos(format!(
+            "IPC: unable to fetch the field for {:?}. The file or stream is corrupted.",
+            data_type
+        ))
+    })?;
 
     let validity = read_validity(
         buffers,
@@ -64,14 +69,20 @@ pub fn skip_struct(
     field_nodes: &mut VecDeque<Node>,
     data_type: &DataType,
     buffers: &mut VecDeque<&ipc::Schema::Buffer>,
-) {
-    let _ = field_nodes.pop_front().unwrap();
+) -> Result<()> {
+    let _ = field_nodes.pop_front().ok_or_else(|| {
+        ArrowError::oos(
+            "IPC: unable to fetch the field for struct. The file or stream is corrupted.",
+        )
+    })?;
 
-    let _ = buffers.pop_front().unwrap();
+    let _ = buffers
+        .pop_front()
+        .ok_or_else(|| ArrowError::oos("IPC: missing validity buffer."))?;
 
     let fields = StructArray::get_fields(data_type);
 
     fields
         .iter()
-        .for_each(|field| skip(field_nodes, field.data_type(), buffers))
+        .try_for_each(|field| skip(field_nodes, field.data_type(), buffers))
 }

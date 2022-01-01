@@ -5,7 +5,7 @@ use arrow_format::ipc;
 
 use crate::array::BooleanArray;
 use crate::datatypes::DataType;
-use crate::error::Result;
+use crate::error::{ArrowError, Result};
 
 use super::super::deserialize::Node;
 use super::super::read_basic::*;
@@ -19,7 +19,12 @@ pub fn read_boolean<R: Read + Seek>(
     is_little_endian: bool,
     compression: Option<ipc::Message::BodyCompression>,
 ) -> Result<BooleanArray> {
-    let field_node = field_nodes.pop_front().unwrap();
+    let field_node = field_nodes.pop_front().ok_or_else(|| {
+        ArrowError::oos(format!(
+            "IPC: unable to fetch the field for {:?}. The file or stream is corrupted.",
+            data_type
+        ))
+    })?;
 
     let length = field_node.length() as usize;
     let validity = read_validity(
@@ -45,9 +50,18 @@ pub fn read_boolean<R: Read + Seek>(
 pub fn skip_boolean(
     field_nodes: &mut VecDeque<Node>,
     buffers: &mut VecDeque<&ipc::Schema::Buffer>,
-) {
-    let _ = field_nodes.pop_front().unwrap();
+) -> Result<()> {
+    let _ = field_nodes.pop_front().ok_or_else(|| {
+        ArrowError::oos(
+            "IPC: unable to fetch the field for boolean. The file or stream is corrupted.",
+        )
+    })?;
 
-    let _ = buffers.pop_front().unwrap();
-    let _ = buffers.pop_front().unwrap();
+    let _ = buffers
+        .pop_front()
+        .ok_or_else(|| ArrowError::oos("IPC: missing validity buffer."))?;
+    let _ = buffers
+        .pop_front()
+        .ok_or_else(|| ArrowError::oos("IPC: missing values buffer."))?;
+    Ok(())
 }
