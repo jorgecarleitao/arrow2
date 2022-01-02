@@ -1,12 +1,10 @@
 use std::collections::HashMap;
 
-use arrow_format::ipc;
-
 pub use parquet2::metadata::KeyValue;
 
 use crate::datatypes::Schema;
 use crate::error::{ArrowError, Result};
-use crate::io::ipc::read::fb_to_schema;
+use crate::io::ipc::read::deserialize_schema;
 
 use super::super::super::ARROW_SCHEMA_META_KEY;
 
@@ -33,22 +31,7 @@ fn get_arrow_schema_from_metadata(encoded_meta: &str) -> Result<Schema> {
             } else {
                 bytes.as_slice()
             };
-            match ipc::Message::root_as_message(slice) {
-                Ok(message) => message
-                    .header_as_schema()
-                    .ok_or_else(|| {
-                        ArrowError::OutOfSpec("the message is not Arrow Schema".to_string())
-                    })
-                    .and_then(fb_to_schema)
-                    .map(|x| x.0),
-                Err(err) => {
-                    // The flatbuffers implementation returns an error on verification error.
-                    Err(ArrowError::OutOfSpec(format!(
-                        "Unable to get root as message stored in {}: {:?}",
-                        ARROW_SCHEMA_META_KEY, err
-                    )))
-                }
-            }
+            deserialize_schema(slice).map(|x| x.0)
         }
         Err(err) => {
             // The C++ implementation returns an error if the schema can't be parsed.

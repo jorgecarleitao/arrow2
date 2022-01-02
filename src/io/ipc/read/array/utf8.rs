@@ -1,24 +1,22 @@
 use std::collections::VecDeque;
 use std::io::{Read, Seek};
 
-use arrow_format::ipc;
-
 use crate::array::{Offset, Utf8Array};
 use crate::buffer::Buffer;
 use crate::datatypes::DataType;
 use crate::error::{ArrowError, Result};
 
-use super::super::deserialize::Node;
 use super::super::read_basic::*;
+use super::super::{Compression, IpcBuffer, Node};
 
 pub fn read_utf8<O: Offset, R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
     data_type: DataType,
-    buffers: &mut VecDeque<&ipc::Schema::Buffer>,
+    buffers: &mut VecDeque<IpcBuffer>,
     reader: &mut R,
     block_offset: u64,
     is_little_endian: bool,
-    compression: Option<ipc::Message::BodyCompression>,
+    compression: Option<Compression>,
 ) -> Result<Utf8Array<O>> {
     let field_node = field_nodes.pop_front().ok_or_else(|| {
         ArrowError::oos(format!(
@@ -64,7 +62,7 @@ pub fn read_utf8<O: Offset, R: Read + Seek>(
 
 pub fn skip_utf8(
     field_nodes: &mut VecDeque<Node>,
-    buffers: &mut VecDeque<&ipc::Schema::Buffer>,
+    buffers: &mut VecDeque<IpcBuffer>,
 ) -> Result<()> {
     let _ = field_nodes.pop_front().ok_or_else(|| {
         ArrowError::oos("IPC: unable to fetch the field for utf8. The file or stream is corrupted.")

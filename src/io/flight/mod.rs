@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use arrow_format::flight::data::{FlightData, SchemaResult};
 use arrow_format::ipc;
+use arrow_format::ipc::planus::ReadAsRoot;
 
 use crate::{
     array::Array,
@@ -84,19 +85,7 @@ fn schema_as_encoded_data(schema: &Schema, ipc_fields: &[IpcField]) -> EncodedDa
 /// Deserialize an IPC message into [`Schema`], [`IpcSchema`].
 /// Use to deserialize [`FlightData::data_header`] and [`SchemaResult::schema`].
 pub fn deserialize_schemas(bytes: &[u8]) -> Result<(Schema, IpcSchema)> {
-    if let Ok(ipc) = ipc::Message::root_as_message(bytes) {
-        if let Some(schemas) = ipc.header_as_schema().map(read::fb_to_schema) {
-            schemas
-        } else {
-            Err(ArrowError::OutOfSpec(
-                "Unable to get head as schema".to_string(),
-            ))
-        }
-    } else {
-        Err(ArrowError::OutOfSpec(
-            "Unable to get root as message".to_string(),
-        ))
-    }
+    read::deserialize_schema(bytes)
 }
 
 /// Deserializes [`FlightData`] to [`Chunk`].
@@ -107,29 +96,30 @@ pub fn deserialize_batch(
     dictionaries: &read::Dictionaries,
 ) -> Result<Chunk<Arc<dyn Array>>> {
     // check that the data_header is a record batch message
-    let message = ipc::Message::root_as_message(&data.data_header[..]).map_err(|err| {
-        ArrowError::OutOfSpec(format!("Unable to get root as message: {:?}", err))
-    })?;
+    let message =
+        arrow_format::ipc::MessageRef::read_as_root(&data.data_header).map_err(|err| {
+            ArrowError::OutOfSpec(format!("Unable to get root as message: {:?}", err))
+        })?;
 
     let mut reader = std::io::Cursor::new(&data.data_body);
 
-    message
-        .header_as_record_batch()
-        .ok_or_else(|| {
-            ArrowError::OutOfSpec(
-                "Unable to convert flight data header to a record batch".to_string(),
-            )
-        })
-        .map(|batch| {
-            read::read_record_batch(
-                batch,
-                fields,
-                ipc_schema,
-                None,
-                dictionaries,
-                ipc::Schema::MetadataVersion::V5,
-                &mut reader,
-                0,
-            )
-        })?
+    let version = message.version()?;
+
+    match message.header()?.ok_or_else(|| {
+        ArrowError::oos("Unable to convert flight data header to a record batch".to_string())
+    })? {
+        ipc::MessageHeaderRef::RecordBatch(batch) => read::read_record_batch(
+            batch,
+            fields,
+            ipc_schema,
+            None,
+            dictionaries,
+            version,
+            &mut reader,
+            0,
+        ),
+        _ => Err(ArrowError::nyi(
+            "flight currently only supports reading RecordBatch messages",
+        )),
+    }
 }

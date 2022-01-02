@@ -1,15 +1,13 @@
 use std::io::{Read, Seek, SeekFrom};
 use std::{collections::VecDeque, convert::TryInto};
 
-use arrow_format::ipc;
-use arrow_format::ipc::Message::{BodyCompression, CompressionType};
-
 use crate::buffer::Buffer;
 use crate::error::{ArrowError, Result};
 use crate::{bitmap::Bitmap, types::NativeType};
 
 use super::super::compression;
 use super::super::endianess::is_native_little_endian;
+use super::{Compression, IpcBuffer, Node};
 
 fn read_swapped<T: NativeType, R: Read + Seek>(
     reader: &mut R,
@@ -85,7 +83,7 @@ fn read_compressed_buffer<T: NativeType, R: Read + Seek>(
     buffer_length: usize,
     length: usize,
     is_little_endian: bool,
-    compression: BodyCompression,
+    compression: Compression,
 ) -> Result<Vec<T>> {
     if is_little_endian != is_native_little_endian() {
         return Err(ArrowError::NotYetImplemented(
@@ -104,28 +102,25 @@ fn read_compressed_buffer<T: NativeType, R: Read + Seek>(
 
     let out_slice = bytemuck::cast_slice_mut(&mut buffer);
 
-    match compression.codec() {
-        CompressionType::LZ4_FRAME => {
+    match compression.codec()? {
+        arrow_format::ipc::CompressionType::Lz4Frame => {
             compression::decompress_lz4(&slice[8..], out_slice)?;
             Ok(buffer)
         }
-        CompressionType::ZSTD => {
+        arrow_format::ipc::CompressionType::Zstd => {
             compression::decompress_zstd(&slice[8..], out_slice)?;
             Ok(buffer)
         }
-        _ => Err(ArrowError::NotYetImplemented(
-            "Compression format".to_string(),
-        )),
     }
 }
 
 pub fn read_buffer<T: NativeType, R: Read + Seek>(
-    buf: &mut VecDeque<&ipc::Schema::Buffer>,
+    buf: &mut VecDeque<IpcBuffer>,
     length: usize, // in slots
     reader: &mut R,
     block_offset: u64,
     is_little_endian: bool,
-    compression: Option<BodyCompression>,
+    compression: Option<Compression>,
 ) -> Result<Buffer<T>> {
     let buf = buf
         .pop_front()
@@ -170,7 +165,7 @@ fn read_uncompressed_bitmap<R: Read + Seek>(
 fn read_compressed_bitmap<R: Read + Seek>(
     length: usize,
     bytes: usize,
-    compression: BodyCompression,
+    compression: Compression,
     reader: &mut R,
 ) -> Result<Vec<u8>> {
     let mut buffer = vec![0; (length + 7) / 8];
@@ -180,28 +175,25 @@ fn read_compressed_bitmap<R: Read + Seek>(
     let mut slice = vec![0u8; bytes];
     reader.read_exact(&mut slice)?;
 
-    match compression.codec() {
-        CompressionType::LZ4_FRAME => {
+    match compression.codec()? {
+        arrow_format::ipc::CompressionType::Lz4Frame => {
             compression::decompress_lz4(&slice[8..], &mut buffer)?;
             Ok(buffer)
         }
-        CompressionType::ZSTD => {
+        arrow_format::ipc::CompressionType::Zstd => {
             compression::decompress_zstd(&slice[8..], &mut buffer)?;
             Ok(buffer)
         }
-        _ => Err(ArrowError::NotYetImplemented(
-            "Non LZ4 compressed IPC".to_string(),
-        )),
     }
 }
 
 pub fn read_bitmap<R: Read + Seek>(
-    buf: &mut VecDeque<&ipc::Schema::Buffer>,
+    buf: &mut VecDeque<IpcBuffer>,
     length: usize,
     reader: &mut R,
     block_offset: u64,
     _: bool,
-    compression: Option<BodyCompression>,
+    compression: Option<Compression>,
 ) -> Result<Bitmap> {
     let buf = buf
         .pop_front()
@@ -221,12 +213,12 @@ pub fn read_bitmap<R: Read + Seek>(
 }
 
 pub fn read_validity<R: Read + Seek>(
-    buffers: &mut VecDeque<&ipc::Schema::Buffer>,
-    field_node: &ipc::Message::FieldNode,
+    buffers: &mut VecDeque<IpcBuffer>,
+    field_node: Node,
     reader: &mut R,
     block_offset: u64,
     is_little_endian: bool,
-    compression: Option<BodyCompression>,
+    compression: Option<Compression>,
 ) -> Result<Option<Bitmap>> {
     Ok(if field_node.null_count() > 0 {
         Some(read_bitmap(

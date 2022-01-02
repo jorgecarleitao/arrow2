@@ -1,10 +1,6 @@
 use std::io::{Read, Seek, SeekFrom};
 use std::sync::Arc;
 
-use arrow_format::ipc;
-use arrow_format::ipc::flatbuffers::VerifierOptions;
-use arrow_format::ipc::File::Block;
-
 use crate::array::Array;
 use crate::chunk::Chunk;
 use crate::datatypes::{Field, Schema};
@@ -15,6 +11,7 @@ use super::super::{ARROW_MAGIC, CONTINUATION_MARKER};
 use super::common::*;
 use super::schema::fb_to_schema;
 use super::Dictionaries;
+use arrow_format::ipc::planus::{ReadAsRoot, ToOwned, Vector};
 
 #[derive(Debug, Clone)]
 pub struct FileMetadata {
@@ -27,13 +24,10 @@ pub struct FileMetadata {
     /// The blocks in the file
     ///
     /// A block indicates the regions in the file to read to get data
-    blocks: Vec<ipc::File::Block>,
+    blocks: Vec<arrow_format::ipc::Block>,
 
     /// Dictionaries associated to each dict_id
     dictionaries: Dictionaries,
-
-    /// FileMetadata version
-    version: ipc::Schema::MetadataVersion,
 }
 
 /// Arrow File reader
@@ -70,28 +64,27 @@ fn read_dictionaries<R: Read + Seek>(
     reader: &mut R,
     fields: &[Field],
     ipc_schema: &IpcSchema,
-    blocks: &[Block],
+    blocks: Vector<arrow_format::ipc::Block>,
 ) -> Result<Dictionaries> {
     let mut dictionaries = Default::default();
     let mut data = vec![];
 
     for block in blocks {
         let offset = block.offset() as u64;
-        let length = block.metaDataLength() as u64;
+        let length = block.meta_data_length() as u64;
         read_dictionary_message(reader, offset, &mut data)?;
 
-        let message = ipc::Message::root_as_message(&data).map_err(|err| {
+        let message = arrow_format::ipc::MessageRef::read_as_root(&data).map_err(|err| {
             ArrowError::OutOfSpec(format!("Unable to get root as message: {:?}", err))
         })?;
 
-        match message.header_type() {
-            ipc::Message::MessageHeader::DictionaryBatch => {
+        let header = message
+            .header()?
+            .ok_or_else(|| ArrowError::oos("Message must have an header"))?;
+
+        match header {
+            arrow_format::ipc::MessageHeaderRef::DictionaryBatch(batch) => {
                 let block_offset = offset + length;
-                let batch = message.header_as_dictionary_batch().ok_or_else(|| {
-                    ArrowError::OutOfSpec(
-                        "The dictionary message does not have a dictionary header. The file is corrupted.".to_string(),
-                    )
-                })?;
                 read_dictionary(
                     batch,
                     fields,
@@ -140,29 +133,19 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
     reader.seek(SeekFrom::End(-10 - footer_len as i64))?;
     reader.read_exact(&mut footer_data)?;
 
-    // set flatbuffer verification options to the same settings as the C++ arrow implementation.
-    // Heuristic: tables in a Arrow flatbuffers buffer must take at least 1 bit
-    // each in average (ARROW-11559).
-    // Especially, the only recursive table (the `Field` table in Schema.fbs)
-    // must have a non-empty `type` member.
-    let verifier_options = VerifierOptions {
-        max_depth: 128,
-        max_tables: footer_len as usize * 8,
-        ..Default::default()
-    };
-    let footer = ipc::File::root_as_footer_with_opts(&verifier_options, &footer_data[..])
+    let footer = arrow_format::ipc::FooterRef::read_as_root(&footer_data)
         .map_err(|err| ArrowError::OutOfSpec(format!("Unable to get root as footer: {:?}", err)))?;
 
-    let blocks = footer.recordBatches().ok_or_else(|| {
+    let blocks = footer.record_batches()?.ok_or_else(|| {
         ArrowError::OutOfSpec("Unable to get record batches from footer".to_string())
     })?;
 
     let ipc_schema = footer
-        .schema()
+        .schema()?
         .ok_or_else(|| ArrowError::OutOfSpec("Unable to get the schema from footer".to_string()))?;
     let (schema, ipc_schema) = fb_to_schema(ipc_schema)?;
 
-    let dictionary_blocks = footer.dictionaries();
+    let dictionary_blocks = footer.dictionaries()?;
 
     let dictionaries = if let Some(blocks) = dictionary_blocks {
         read_dictionaries(reader, &schema.fields, &ipc_schema, blocks)?
@@ -173,24 +156,25 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
     Ok(FileMetadata {
         schema,
         ipc_schema,
-        blocks: blocks.to_vec(),
+        blocks: blocks
+            .iter()
+            .map(|block| Ok(ToOwned::to_owned(block)?))
+            .collect::<Result<Vec<_>>>()?,
         dictionaries,
-        version: footer.version(),
     })
 }
 
 fn get_serialized_batch<'a>(
-    message: &'a ipc::Message::Message,
-) -> Result<ipc::Message::RecordBatch<'a>> {
-    match message.header_type() {
-        ipc::Message::MessageHeader::Schema => Err(ArrowError::OutOfSpec(
+    message: &'a arrow_format::ipc::MessageRef,
+) -> Result<arrow_format::ipc::RecordBatchRef<'a>> {
+    let header = message.header()?.ok_or_else(|| {
+        ArrowError::oos("IPC: unable to fetch the message header. The file or stream is corrupted.")
+    })?;
+    match header {
+        arrow_format::ipc::MessageHeaderRef::Schema(_) => Err(ArrowError::OutOfSpec(
             "Not expecting a schema when messages are read".to_string(),
         )),
-        ipc::Message::MessageHeader::RecordBatch => {
-            message.header_as_record_batch().ok_or_else(|| {
-                ArrowError::OutOfSpec("Unable to read IPC message as record batch".to_string())
-            })
-        }
+        arrow_format::ipc::MessageHeaderRef::RecordBatch(batch) => Ok(batch),
         t => Err(ArrowError::OutOfSpec(format!(
             "Reading types other than record batches not yet supported, unable to read {:?}",
             t
@@ -209,7 +193,7 @@ pub fn read_batch<R: Read + Seek>(
     let block = metadata.blocks[block];
 
     // read length
-    reader.seek(SeekFrom::Start(block.offset() as u64))?;
+    reader.seek(SeekFrom::Start(block.offset as u64))?;
     let mut meta_buf = [0; 4];
     reader.read_exact(&mut meta_buf)?;
     if meta_buf == CONTINUATION_MARKER {
@@ -222,8 +206,8 @@ pub fn read_batch<R: Read + Seek>(
     block_data.resize(meta_len, 0);
     reader.read_exact(block_data)?;
 
-    let message = ipc::Message::root_as_message(&block_data[..])
-        .map_err(|err| ArrowError::OutOfSpec(format!("Unable to get root as footer: {:?}", err)))?;
+    let message = arrow_format::ipc::MessageRef::read_as_root(&block_data[..])
+        .map_err(|err| ArrowError::oos(format!("Unable parse message: {:?}", err)))?;
 
     let batch = get_serialized_batch(&message)?;
 
@@ -233,9 +217,9 @@ pub fn read_batch<R: Read + Seek>(
         &metadata.ipc_schema,
         projection,
         &metadata.dictionaries,
-        metadata.version,
+        message.version()?,
         reader,
-        block.offset() as u64 + block.metaDataLength() as u64,
+        block.offset as u64 + block.meta_data_length as u64,
     )
 }
 

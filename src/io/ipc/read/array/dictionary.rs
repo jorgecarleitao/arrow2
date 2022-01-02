@@ -2,24 +2,22 @@ use std::collections::{HashSet, VecDeque};
 use std::convert::TryInto;
 use std::io::{Read, Seek};
 
-use arrow_format::ipc;
-
 use crate::array::{DictionaryArray, DictionaryKey};
 use crate::error::{ArrowError, Result};
 
-use super::super::deserialize::Node;
 use super::super::Dictionaries;
+use super::super::{Compression, IpcBuffer, Node};
 use super::{read_primitive, skip_primitive};
 
 #[allow(clippy::too_many_arguments)]
 pub fn read_dictionary<T: DictionaryKey, R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
     id: Option<i64>,
-    buffers: &mut VecDeque<&ipc::Schema::Buffer>,
+    buffers: &mut VecDeque<IpcBuffer>,
     reader: &mut R,
     dictionaries: &Dictionaries,
     block_offset: u64,
-    compression: Option<ipc::Message::BodyCompression>,
+    compression: Option<Compression>,
     is_little_endian: bool,
 ) -> Result<DictionaryArray<T>>
 where
@@ -56,7 +54,7 @@ where
 
 pub fn skip_dictionary(
     field_nodes: &mut VecDeque<Node>,
-    buffers: &mut VecDeque<&ipc::Schema::Buffer>,
+    buffers: &mut VecDeque<IpcBuffer>,
 ) -> Result<()> {
     skip_primitive(field_nodes, buffers)
 }

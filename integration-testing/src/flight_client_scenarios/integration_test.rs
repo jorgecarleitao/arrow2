@@ -30,12 +30,14 @@ use arrow2::{
         ipc::IpcField,
     },
 };
-use arrow_format::flight::data::{
-    flight_descriptor::DescriptorType, FlightData, FlightDescriptor, Location, Ticket,
-};
 use arrow_format::flight::service::flight_service_client::FlightServiceClient;
 use arrow_format::ipc;
-use arrow_format::ipc::Message::MessageHeader;
+use arrow_format::{
+    flight::data::{
+        flight_descriptor::DescriptorType, FlightData, FlightDescriptor, Location, Ticket,
+    },
+    ipc::planus::ReadAsRoot,
+};
 use futures::{channel::mpsc, sink::SinkExt, stream, StreamExt};
 use tonic::{Request, Streaming};
 
@@ -267,25 +269,19 @@ async fn receive_batch_flight_data(
 ) -> Option<FlightData> {
     let mut data = resp.next().await?.ok()?;
     let mut message =
-        ipc::Message::root_as_message(&data.data_header[..]).expect("Error parsing first message");
+        ipc::MessageRef::read_as_root(&data.data_header).expect("Error parsing first message");
 
-    while message.header_type() == MessageHeader::DictionaryBatch {
+    while let ipc::MessageHeaderRef::DictionaryBatch(batch) = message
+        .header()
+        .expect("Header to be valid flatbuffers")
+        .expect("Header to be present")
+    {
         let mut reader = std::io::Cursor::new(&data.data_body);
-        read::read_dictionary(
-            message
-                .header_as_dictionary_batch()
-                .expect("Error parsing dictionary"),
-            fields,
-            ipc_schema,
-            dictionaries,
-            &mut reader,
-            0,
-        )
-        .expect("Error reading dictionary");
+        read::read_dictionary(batch, fields, ipc_schema, dictionaries, &mut reader, 0)
+            .expect("Error reading dictionary");
 
         data = resp.next().await?.ok()?;
-        message =
-            ipc::Message::root_as_message(&data.data_header[..]).expect("Error parsing message");
+        message = ipc::MessageRef::read_as_root(&data.data_header).expect("Error parsing message");
     }
 
     Some(data)

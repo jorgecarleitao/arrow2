@@ -1,8 +1,6 @@
 use std::sync::Arc;
 
-use arrow_format::ipc;
-use arrow_format::ipc::flatbuffers::FlatBufferBuilder;
-use arrow_format::ipc::Message::CompressionType;
+use arrow_format::ipc::planus::Builder;
 
 use crate::array::*;
 use crate::chunk::Chunk;
@@ -195,13 +193,28 @@ pub fn encode_chunk(
     Ok((encoded_dictionaries, encoded_message))
 }
 
+fn serialize_compression(
+    compression: Option<Compression>,
+) -> Option<Box<arrow_format::ipc::BodyCompression>> {
+    if let Some(compression) = compression {
+        let codec = match compression {
+            Compression::LZ4 => arrow_format::ipc::CompressionType::Lz4Frame,
+            Compression::ZSTD => arrow_format::ipc::CompressionType::Zstd,
+        };
+        Some(Box::new(arrow_format::ipc::BodyCompression {
+            codec,
+            method: arrow_format::ipc::BodyCompressionMethod::Buffer,
+        }))
+    } else {
+        None
+    }
+}
+
 /// Write [`Chunk`] into two sets of bytes, one for the header (ipc::Schema::Message) and the
 /// other for the batch's data
 fn columns_to_bytes(columns: &Chunk<Arc<dyn Array>>, options: &WriteOptions) -> EncodedData {
-    let mut fbb = FlatBufferBuilder::new();
-
-    let mut nodes: Vec<ipc::Message::FieldNode> = vec![];
-    let mut buffers: Vec<ipc::Schema::Buffer> = vec![];
+    let mut nodes: Vec<arrow_format::ipc::FieldNode> = vec![];
+    let mut buffers: Vec<arrow_format::ipc::Buffer> = vec![];
     let mut arrow_data: Vec<u8> = vec![];
     let mut offset = 0;
     for array in columns.arrays() {
@@ -216,45 +229,27 @@ fn columns_to_bytes(columns: &Chunk<Arc<dyn Array>>, options: &WriteOptions) -> 
         )
     }
 
-    // write data
-    let buffers = fbb.create_vector(&buffers);
-    let nodes = fbb.create_vector(&nodes);
+    let compression = serialize_compression(options.compression);
 
-    let compression = if let Some(compression) = options.compression {
-        let compression = match compression {
-            Compression::LZ4 => CompressionType::LZ4_FRAME,
-            Compression::ZSTD => CompressionType::ZSTD,
-        };
-        let mut compression_builder = ipc::Message::BodyCompressionBuilder::new(&mut fbb);
-        compression_builder.add_codec(compression);
-        Some(compression_builder.finish())
-    } else {
-        None
+    let message = arrow_format::ipc::Message {
+        version: arrow_format::ipc::MetadataVersion::V5,
+        header: Some(arrow_format::ipc::MessageHeader::RecordBatch(Box::new(
+            arrow_format::ipc::RecordBatch {
+                length: columns.len() as i64,
+                nodes: Some(nodes),
+                buffers: Some(buffers),
+                compression,
+            },
+        ))),
+        body_length: arrow_data.len() as i64,
+        custom_metadata: None,
     };
 
-    let root = {
-        let mut batch_builder = ipc::Message::RecordBatchBuilder::new(&mut fbb);
-        batch_builder.add_length(columns.len() as i64);
-        batch_builder.add_nodes(nodes);
-        batch_builder.add_buffers(buffers);
-        if let Some(compression) = compression {
-            batch_builder.add_compression(compression)
-        }
-        let b = batch_builder.finish();
-        b.as_union_value()
-    };
-    // create an ipc::Schema::Message
-    let mut message = ipc::Message::MessageBuilder::new(&mut fbb);
-    message.add_version(ipc::Schema::MetadataVersion::V5);
-    message.add_header_type(ipc::Message::MessageHeader::RecordBatch);
-    message.add_bodyLength(arrow_data.len() as i64);
-    message.add_header(root);
-    let root = message.finish();
-    fbb.finish(root, None);
-    let finished_data = fbb.finished_data();
+    let mut builder = Builder::new();
+    let ipc_message = builder.finish(&message, None);
 
     EncodedData {
-        ipc_message: finished_data.to_vec(),
+        ipc_message: ipc_message.to_vec(),
         arrow_data,
     }
 }
@@ -267,10 +262,8 @@ fn dictionary_batch_to_bytes(
     options: &WriteOptions,
     is_little_endian: bool,
 ) -> EncodedData {
-    let mut fbb = FlatBufferBuilder::new();
-
-    let mut nodes: Vec<ipc::Message::FieldNode> = vec![];
-    let mut buffers: Vec<ipc::Schema::Buffer> = vec![];
+    let mut nodes: Vec<arrow_format::ipc::FieldNode> = vec![];
+    let mut buffers: Vec<arrow_format::ipc::Buffer> = vec![];
     let mut arrow_data: Vec<u8> = vec![];
 
     let length = write_dictionary(
@@ -284,54 +277,31 @@ fn dictionary_batch_to_bytes(
         false,
     );
 
-    // write data
-    let buffers = fbb.create_vector(&buffers);
-    let nodes = fbb.create_vector(&nodes);
+    let compression = serialize_compression(options.compression);
 
-    let compression = if let Some(compression) = options.compression {
-        let compression = match compression {
-            Compression::LZ4 => CompressionType::LZ4_FRAME,
-            Compression::ZSTD => CompressionType::ZSTD,
-        };
-        let mut compression_builder = ipc::Message::BodyCompressionBuilder::new(&mut fbb);
-        compression_builder.add_codec(compression);
-        Some(compression_builder.finish())
-    } else {
-        None
+    let message = arrow_format::ipc::Message {
+        version: arrow_format::ipc::MetadataVersion::V5,
+        header: Some(arrow_format::ipc::MessageHeader::DictionaryBatch(Box::new(
+            arrow_format::ipc::DictionaryBatch {
+                id: dict_id,
+                data: Some(Box::new(arrow_format::ipc::RecordBatch {
+                    length: length as i64,
+                    nodes: Some(nodes),
+                    buffers: Some(buffers),
+                    compression,
+                })),
+                is_delta: false,
+            },
+        ))),
+        body_length: arrow_data.len() as i64,
+        custom_metadata: None,
     };
 
-    let root = {
-        let mut batch_builder = ipc::Message::RecordBatchBuilder::new(&mut fbb);
-        batch_builder.add_length(length as i64);
-        batch_builder.add_nodes(nodes);
-        batch_builder.add_buffers(buffers);
-        if let Some(compression) = compression {
-            batch_builder.add_compression(compression)
-        }
-        batch_builder.finish()
-    };
-
-    let root = {
-        let mut batch_builder = ipc::Message::DictionaryBatchBuilder::new(&mut fbb);
-        batch_builder.add_id(dict_id);
-        batch_builder.add_data(root);
-        batch_builder.finish().as_union_value()
-    };
-
-    let root = {
-        let mut message_builder = ipc::Message::MessageBuilder::new(&mut fbb);
-        message_builder.add_version(ipc::Schema::MetadataVersion::V5);
-        message_builder.add_header_type(ipc::Message::MessageHeader::DictionaryBatch);
-        message_builder.add_bodyLength(arrow_data.len() as i64);
-        message_builder.add_header(root);
-        message_builder.finish()
-    };
-
-    fbb.finish(root, None);
-    let finished_data = fbb.finished_data();
+    let mut builder = Builder::new();
+    let ipc_message = builder.finish(&message, None);
 
     EncodedData {
-        ipc_message: finished_data.to_vec(),
+        ipc_message: ipc_message.to_vec(),
         arrow_data,
     }
 }
@@ -396,6 +366,7 @@ impl DictionaryTracker {
 }
 
 /// Stores the encoded data, which is an ipc::Schema::Message, and optional Arrow data
+#[derive(Debug)]
 pub struct EncodedData {
     /// An encoded ipc::Schema::Message
     pub ipc_message: Vec<u8>,
