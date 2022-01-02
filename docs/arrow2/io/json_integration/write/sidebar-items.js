@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["from_record_batch","Serializes a [`RecordBatch`] to [`ArrowJsonBatch`]."],["serialize_schema","Serializes a [`Schema`] and associated [`IpcField`] to [`ArrowJsonSchema`]."]]});
