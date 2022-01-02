@@ -113,14 +113,22 @@ fn data_array(column: usize) -> (Chunk<Arc<dyn Array>>, Vec<&'static str>) {
             vec!["3", "2", "1"],
         ),
         7 => (
-            Arc::new(UInt64Array::from_slice(&[3, 2, 1])) as Arc<dyn Array>,
+            Arc::new(UInt8Array::from_slice(&[3, 2, 1])) as Arc<dyn Array>,
             vec!["3", "2", "1"],
         ),
         8 => (
+            Arc::new(UInt16Array::from_slice(&[3, 2, 1])) as Arc<dyn Array>,
+            vec!["3", "2", "1"],
+        ),
+        9 => (
+            Arc::new(UInt32Array::from_slice(&[3, 2, 1])) as Arc<dyn Array>,
+            vec!["3", "2", "1"],
+        ),
+        10 => (
             Arc::new(UInt64Array::from_slice(&[3, 2, 1])) as Arc<dyn Array>,
             vec!["3", "2", "1"],
         ),
-        9 => {
+        11 => {
             let array = PrimitiveArray::<i32>::from_vec(vec![1_234_001, 24_680_001, 85_563_001])
                 .to(DataType::Time32(TimeUnit::Millisecond));
             (
@@ -128,7 +136,7 @@ fn data_array(column: usize) -> (Chunk<Arc<dyn Array>>, Vec<&'static str>) {
                 vec!["00:20:34.001", "06:51:20.001", "23:46:03.001"],
             )
         }
-        10 => {
+        12 => {
             let array = PrimitiveArray::<i64>::from_vec(vec![
                 1_234_000_001,
                 24_680_000_001,
@@ -140,7 +148,7 @@ fn data_array(column: usize) -> (Chunk<Arc<dyn Array>>, Vec<&'static str>) {
                 vec!["00:20:34.000001", "06:51:20.000001", "23:46:03.000001"],
             )
         }
-        11 => {
+        13 => {
             let array = PrimitiveArray::<i64>::from_vec(vec![
                 1_234_000_000_001,
                 24_680_000_000_001,
@@ -156,7 +164,7 @@ fn data_array(column: usize) -> (Chunk<Arc<dyn Array>>, Vec<&'static str>) {
                 ],
             )
         }
-        12 => {
+        14 => {
             let array = PrimitiveArray::<i64>::from_slice([
                 1_555_584_887_378_000_001,
                 1_555_555_555_555_000_001,
@@ -170,7 +178,7 @@ fn data_array(column: usize) -> (Chunk<Arc<dyn Array>>, Vec<&'static str>) {
                 ],
             )
         }
-        13 => {
+        15 => {
             let array = PrimitiveArray::<i64>::from_slice([
                 1_555_584_887_378_000_001,
                 1_555_555_555_555_000_001,
@@ -187,7 +195,14 @@ fn data_array(column: usize) -> (Chunk<Arc<dyn Array>>, Vec<&'static str>) {
                 ],
             )
         }
-        14 => {
+        16 => {
+            let keys = UInt32Array::from_slice(&[2, 1, 0]);
+            let values =
+                Arc::new(Utf8Array::<i64>::from_slice(["a b", "c", "d"])) as Arc<dyn Array>;
+            let array = DictionaryArray::from_data(keys, values);
+            (Arc::new(array) as Arc<dyn Array>, vec!["d", "c", "a b"])
+        }
+        17 => {
             let array = PrimitiveArray::<i64>::from_slice([
                 1_555_584_887_378_000_001,
                 1_555_555_555_555_000_001,
@@ -210,14 +225,15 @@ fn data_array(column: usize) -> (Chunk<Arc<dyn Array>>, Vec<&'static str>) {
     (Chunk::new(vec![array]), expected)
 }
 
-fn write_single(column: usize) -> Result<()> {
-    let (columns, data) = data_array(column);
-
+fn test_array(
+    columns: Chunk<Arc<dyn Array>>,
+    data: Vec<&'static str>,
+    options: SerializeOptions,
+) -> Result<()> {
     let write = Cursor::new(Vec::<u8>::new());
     let mut writer = WriterBuilder::new().delimiter(b'|').from_writer(write);
 
     write_header(&mut writer, &["c1"])?;
-    let options = SerializeOptions::default();
     write_chunk(&mut writer, &columns, &options)?;
 
     // check
@@ -230,9 +246,15 @@ fn write_single(column: usize) -> Result<()> {
     Ok(())
 }
 
+fn write_single(column: usize) -> Result<()> {
+    let (columns, data) = data_array(column);
+
+    test_array(columns, data, SerializeOptions::default())
+}
+
 #[test]
 fn write_each() -> Result<()> {
-    for i in 0..=13 {
+    for i in 0..=16 {
         write_single(i)?;
     }
     Ok(())
@@ -241,5 +263,54 @@ fn write_each() -> Result<()> {
 #[test]
 #[cfg(feature = "chrono-tz")]
 fn write_tz_timezone() -> Result<()> {
-    write_single(14)
+    write_single(17)
+}
+
+#[test]
+fn write_tz_timezone_formatted_offset() -> Result<()> {
+    let array =
+        PrimitiveArray::<i64>::from_slice([1_555_584_887_378_000_001, 1_555_555_555_555_000_001])
+            .to(DataType::Timestamp(
+                TimeUnit::Nanosecond,
+                Some("+01:00".to_string()),
+            ));
+
+    let columns = Chunk::new(vec![Arc::new(array) as Arc<dyn Array>]);
+    let expected = vec![
+        "2019-04-18T11:54:47.378000001+01:00",
+        "2019-04-18T03:45:55.555000001+01:00",
+    ];
+    test_array(
+        columns,
+        expected,
+        SerializeOptions {
+            timestamp_format: Some("%Y-%m-%dT%H:%M:%S%.f%:z".to_string()),
+            ..Default::default()
+        },
+    )
+}
+
+#[test]
+#[cfg(feature = "chrono-tz")]
+fn write_tz_timezone_formatted_tz() -> Result<()> {
+    let array =
+        PrimitiveArray::<i64>::from_slice([1_555_584_887_378_000_001, 1_555_555_555_555_000_001])
+            .to(DataType::Timestamp(
+                TimeUnit::Nanosecond,
+                Some("Europe/Lisbon".to_string()),
+            ));
+
+    let columns = Chunk::new(vec![Arc::new(array) as Arc<dyn Array>]);
+    let expected = vec![
+        "2019-04-18T11:54:47.378000001+01:00",
+        "2019-04-18T03:45:55.555000001+01:00",
+    ];
+    test_array(
+        columns,
+        expected,
+        SerializeOptions {
+            timestamp_format: Some("%Y-%m-%dT%H:%M:%S%.f%:z".to_string()),
+            ..Default::default()
+        },
+    )
 }
