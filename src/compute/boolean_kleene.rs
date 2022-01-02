@@ -1,12 +1,13 @@
 //! Boolean operators of [Kleene logic](https://en.wikipedia.org/wiki/Three-valued_logic#Kleene_and_Priest_logics).
 use crate::datatypes::DataType;
 use crate::error::{ArrowError, Result};
+use crate::scalar::BooleanScalar;
 use crate::{
     array::BooleanArray,
-    bitmap::{quaternary, ternary},
+    bitmap::{binary, quaternary, ternary, unary, Bitmap, MutableBitmap},
 };
 
-/// Logical 'or' with [Kleene logic](https://en.wikipedia.org/wiki/Three-valued_logic#Kleene_and_Priest_logics)
+/// Logical 'or' operation on two arrays with [Kleene logic](https://en.wikipedia.org/wiki/Three-valued_logic#Kleene_and_Priest_logics)
 /// # Errors
 /// This function errors if the operands have different lengths.
 /// # Example
@@ -96,7 +97,7 @@ pub fn or(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
     ))
 }
 
-/// Logical 'and' with [Kleene logic](https://en.wikipedia.org/wiki/Three-valued_logic#Kleene_and_Priest_logics)
+/// Logical 'and' operation on two arrays with [Kleene logic](https://en.wikipedia.org/wiki/Three-valued_logic#Kleene_and_Priest_logics)
 /// # Errors
 /// This function errors if the operands have different lengths.
 /// # Example
@@ -183,4 +184,69 @@ pub fn and(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
         lhs_values & rhs_values,
         validity,
     ))
+}
+
+/// Logical 'or' operation on an array and a scalar value with [Kleene logic](https://en.wikipedia.org/wiki/Three-valued_logic#Kleene_and_Priest_logics)
+/// # Example
+///
+/// ```rust
+/// use arrow2::array::BooleanArray;
+/// use arrow2::scalar::BooleanScalar;
+/// use arrow2::compute::boolean_kleene::or_scalar;
+/// # fn main() {
+/// let array = BooleanArray::from(&[Some(true), Some(false), None]);
+/// let scalar = BooleanScalar::new(Some(false));
+/// let result = or_scalar(&array, &scalar);
+/// assert_eq!(result, BooleanArray::from(&[Some(true), Some(false), None]));
+/// # }
+/// ```
+pub fn or_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray {
+    match scalar.value() {
+        Some(true) => {
+            let mut values = MutableBitmap::new();
+            values.extend_constant(array.len(), true);
+            BooleanArray::from_data(DataType::Boolean, values.into(), None)
+        }
+        Some(false) => array.clone(),
+        None => {
+            let values = array.values();
+            let validity = match array.validity() {
+                Some(validity) => binary(values, validity, |value, validity| validity & value),
+                None => unary(values, |value| value),
+            };
+            BooleanArray::from_data(DataType::Boolean, values.clone(), Some(validity))
+        }
+    }
+}
+
+/// Logical 'and' operation on an array and a scalar value with [Kleene logic](https://en.wikipedia.org/wiki/Three-valued_logic#Kleene_and_Priest_logics)
+/// # Example
+///
+/// ```rust
+/// use arrow2::array::BooleanArray;
+/// use arrow2::scalar::BooleanScalar;
+/// use arrow2::compute::boolean_kleene::and_scalar;
+/// # fn main() {
+/// let array = BooleanArray::from(&[Some(true), Some(false), None]);
+/// let scalar = BooleanScalar::new(None);
+/// let result = and_scalar(&array, &scalar);
+/// assert_eq!(result, BooleanArray::from(&[None, Some(false), None]));
+/// # }
+/// ```
+pub fn and_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray {
+    match scalar.value() {
+        Some(true) => array.clone(),
+        Some(false) => {
+            let values = Bitmap::new_zeroed(array.len());
+            BooleanArray::from_data(DataType::Boolean, values, None)
+        }
+        None => {
+            let values = array.values();
+            let validity = match array.validity() {
+                Some(validity) => binary(values, validity, |value, validity| validity & !value),
+                None => unary(values, |value| !value),
+            };
+            BooleanArray::from_data(DataType::Boolean, array.values().clone(), Some(validity))
+        }
+    }
 }
