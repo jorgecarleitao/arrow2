@@ -1,5 +1,6 @@
 use arrow2::array::BooleanArray;
 use arrow2::compute::boolean_kleene::*;
+use arrow2::scalar::BooleanScalar;
 
 #[test]
 fn and_generic() {
@@ -128,4 +129,88 @@ fn or_left_nulls() {
     ]);
 
     assert_eq!(c, expected);
+}
+
+#[test]
+fn array_and_true() {
+    let array = BooleanArray::from(&[Some(true), Some(false), None, Some(true), Some(false), None]);
+
+    let scalar = BooleanScalar::new(Some(true));
+    let result = and_scalar(&array, &scalar);
+
+    // Should be same as argument array if scalar is true.
+    assert_eq!(result, array);
+}
+
+#[test]
+fn array_and_false() {
+    let array = BooleanArray::from(&[Some(true), Some(false), None, Some(true), Some(false), None]);
+
+    let scalar = BooleanScalar::new(Some(false));
+    let result = and_scalar(&array, &scalar);
+
+    let expected = BooleanArray::from(&[
+        Some(false),
+        Some(false),
+        Some(false),
+        Some(false),
+        Some(false),
+        Some(false),
+    ]);
+
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn array_and_none() {
+    let array = BooleanArray::from(&[Some(true), Some(false), None, Some(true), Some(false), None]);
+
+    let scalar = BooleanScalar::new(None);
+    let result = and_scalar(&array, &scalar);
+
+    let expected = BooleanArray::from(&[None, Some(false), None, None, Some(false), None]);
+
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn array_or_true() {
+    let array = BooleanArray::from(&[Some(true), Some(false), None, Some(true), Some(false), None]);
+
+    let scalar = BooleanScalar::new(Some(true));
+    let result = or_scalar(&array, &scalar);
+
+    let expected = BooleanArray::from(&[
+        Some(true),
+        Some(true),
+        Some(true),
+        Some(true),
+        Some(true),
+        Some(true),
+    ]);
+
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn array_or_false() {
+    let array = BooleanArray::from(&[Some(true), Some(false), None, Some(true), Some(false), None]);
+
+    let scalar = BooleanScalar::new(Some(false));
+    let result = or_scalar(&array, &scalar);
+
+    // Should be same as argument array if scalar is false.
+    assert_eq!(result, array);
+}
+
+#[test]
+fn array_or_none() {
+    let array = BooleanArray::from(&[Some(true), Some(false), None, Some(true), Some(false), None]);
+
+    let scalar = BooleanScalar::new(None);
+    let result = or_scalar(&array, &scalar);
+
+    let expected = BooleanArray::from(&[Some(true), None, None, Some(true), None, None]);
+
+    assert_eq!(result, expected);
 }
