@@ -141,9 +141,9 @@ It makes minimal assumptions on how you to decompose CPU and IO intensive tasks,
 as an higher-level API to abstract away some of this work into an easy to use API.</p>
 <p>First, some notation:</p>
 <ul>
-<li><code>page</code>: part of a column (e.g. similar of a slice of an <code>Array</code>)</li>
-<li><code>column chunk</code>: composed of multiple pages (similar of an <code>Array</code>)</li>
-<li><code>row group</code>: a group of columns with the same length (similar of a <code>RecordBatch</code> in Arrow)</li>
+<li><code>page</code>: part of a column (e.g. similar to a slice of an <code>Array</code>)</li>
+<li><code>column chunk</code>: composed of multiple pages (similar to an <code>Array</code>)</li>
+<li><code>row group</code>: a group of columns with the same length (similar to a <code>Chunk</code> in Arrow)</li>
 </ul>
 <h2 id="single-threaded"><a class="header" href="#single-threaded">Single threaded</a></h2>
 <p>Here is an example of how to write a single column chunk into a single row group:</p>
@@ -222,30 +222,28 @@ fn main() -&gt; Result&lt;()&gt; {
 }
 </code></pre></pre>
 <p>For single-threaded writing, this crate offers an API that encapsulates the above logic. It 
-assumes that a <code>RecordBatch</code> is mapped to a single row group with a single page per column.</p>
+assumes that a <code>Chunk</code> is mapped to a single row group with a single page per column.</p>
 <pre><pre class="playground"><code class="language-rust">use std::fs::File;
 use std::sync::Arc;
 
 use arrow2::{
-    array::Int32Array,
+    array::{Array, Int32Array},
+    chunk::Chunk,
     datatypes::{Field, Schema},
     error::Result,
     io::parquet::write::{
         write_file, Compression, Encoding, RowGroupIterator, Version, WriteOptions,
     },
-    record_batch::RecordBatch,
 };
 
-fn write_batch(path: &amp;str, batch: RecordBatch) -&gt; Result&lt;()&gt; {
-    let schema = batch.schema().clone();
-
+fn write_batch(path: &amp;str, schema: Schema, columns: Chunk&lt;Arc&lt;dyn Array&gt;&gt;) -&gt; Result&lt;()&gt; {
     let options = WriteOptions {
         write_statistics: true,
         compression: Compression::Uncompressed,
         version: Version::V2,
     };
 
-    let iter = vec![Ok(batch)];
+    let iter = vec![Ok(columns)];
 
     let row_groups =
         RowGroupIterator::try_new(iter.into_iter(), &amp;schema, options, vec![Encoding::Plain])?;
@@ -278,9 +276,9 @@ fn main() -&gt; Result&lt;()&gt; {
     ]);
     let field = Field::new(&quot;c1&quot;, array.data_type().clone(), true);
     let schema = Schema::new(vec![field]);
-    let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(array)])?;
+    let columns = Chunk::new(vec![Arc::new(array) as Arc&lt;dyn Array&gt;]);
 
-    write_batch(&quot;test.parquet&quot;, batch)
+    write_batch(&quot;test.parquet&quot;, schema, columns)
 }
 </code></pre></pre>
 <h2 id="multi-threaded-writing"><a class="header" href="#multi-threaded-writing">Multi-threaded writing</a></h2>
@@ -299,11 +297,13 @@ use rayon::prelude::*;
 
 use arrow2::{
     array::*,
-    datatypes::PhysicalType,
+    chunk::Chunk as AChunk,
+    datatypes::*,
     error::{ArrowError, Result},
     io::parquet::write::*,
-    record_batch::RecordBatch,
 };
+
+type Chunk = AChunk&lt;Arc&lt;dyn Array&gt;&gt;;
 
 struct Bla {
     columns: VecDeque&lt;CompressedPage&gt;,
@@ -333,13 +333,16 @@ impl FallibleStreamingIterator for Bla {
     }
 }
 
-fn parallel_write(path: &amp;str, batches: &amp;[RecordBatch]) -&gt; Result&lt;()&gt; {
+fn parallel_write(path: &amp;str, schema: &amp;Schema, batches: &amp;[Chunk]) -&gt; Result&lt;()&gt; {
+    // declare the options
     let options = WriteOptions {
         write_statistics: true,
         compression: Compression::Snappy,
         version: Version::V2,
     };
-    let encodings = batches[0].schema().fields().par_iter().map(|field| {
+
+    // declare encodings
+    let encodings = schema.fields().par_iter().map(|field| {
         match field.data_type().to_physical_type() {
             // let's be fancy and use delta-encoding for binary fields
             PhysicalType::Binary
@@ -351,7 +354,8 @@ fn parallel_write(path: &amp;str, batches: &amp;[RecordBatch]) -&gt; Result&lt;(
         }
     });
 
-    let parquet_schema = to_parquet_schema(batches[0].schema())?;
+    // derive the parquet schema (physical types) from arrow's schema.
+    let parquet_schema = to_parquet_schema(schema)?;
 
     let a = parquet_schema.clone();
     let row_groups = batches.iter().map(|batch| {
@@ -382,19 +386,12 @@ fn parallel_write(path: &amp;str, batches: &amp;[RecordBatch]) -&gt; Result&lt;(
     let mut file = std::fs::File::create(path)?;
 
     // Write the file.
-    let _file_size = write_file(
-        &amp;mut file,
-        row_groups,
-        batches[0].schema(),
-        parquet_schema,
-        options,
-        None,
-    )?;
+    let _file_size = write_file(&amp;mut file, row_groups, schema, parquet_schema, options, None)?;
 
     Ok(())
 }
 
-fn create_batch(size: usize) -&gt; Result&lt;RecordBatch&gt; {
+fn create_batch(size: usize) -&gt; Result&lt;Chunk&gt; {
     let c1: Int32Array = (0..size)
         .map(|x| if x % 9 == 0 { None } else { Some(x as i32) })
         .collect();
@@ -408,16 +405,23 @@ fn create_batch(size: usize) -&gt; Result&lt;RecordBatch&gt; {
         })
         .collect();
 
-    RecordBatch::try_from_iter([
-        (&quot;c1&quot;, Arc::new(c1) as Arc&lt;dyn Array&gt;),
-        (&quot;c2&quot;, Arc::new(c2) as Arc&lt;dyn Array&gt;),
+    Chunk::try_new(vec![
+        Arc::new(c1) as Arc&lt;dyn Array&gt;,
+        Arc::new(c2) as Arc&lt;dyn Array&gt;,
     ])
 }
 
 fn main() -&gt; Result&lt;()&gt; {
+    let schema = Schema {
+        fields: vec![
+            Field::new(&quot;c1&quot;, DataType::Int32, true),
+            Field::new(&quot;c1&quot;, DataType::Utf8, true),
+        ],
+        metadata: Default::default(),
+    };
     let batch = create_batch(5_000_000)?;
 
-    parallel_write(&quot;example.parquet&quot;, &amp;[batch.clone(), batch])
+    parallel_write(&quot;example.parquet&quot;, &amp;schema, &amp;[batch.clone(), batch])
 }
 </code></pre></pre>
 

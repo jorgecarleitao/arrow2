@@ -136,30 +136,36 @@
                     <main>
                         <h1 id="read-arrow"><a class="header" href="#read-arrow">Read Arrow</a></h1>
 <p>When compiled with feature <code>io_ipc</code>, this crate can be used to read Arrow files.</p>
-<p>An Arrow file is composed by a header, a footer, and blocks of <code>RecordBatch</code>es.
+<p>An Arrow file is composed by a header, a footer, and blocks of <code>Array</code>s.
 Reading it generally consists of:</p>
 <ol>
 <li>read metadata, containing the block positions in the file</li>
 <li>seek to each block and read it</li>
 </ol>
-<p>The example below shows how to read them into <code>RecordBatch</code>es:</p>
+<p>The example below shows how to read them into <code>Chunk</code>es:</p>
 <pre><pre class="playground"><code class="language-rust">use std::fs::File;
+use std::sync::Arc;
 
+use arrow2::array::Array;
+use arrow2::chunk::Chunk;
+use arrow2::datatypes::Schema;
 use arrow2::error::Result;
 use arrow2::io::ipc::read::{read_file_metadata, FileReader};
 use arrow2::io::print;
-use arrow2::record_batch::RecordBatch;
 
-fn read_batches(path: &amp;str) -&gt; Result&lt;Vec&lt;RecordBatch&gt;&gt; {
+fn read_batches(path: &amp;str) -&gt; Result&lt;(Schema, Vec&lt;Chunk&lt;Arc&lt;dyn Array&gt;&gt;&gt;)&gt; {
     let mut file = File::open(path)?;
 
     // read the files' metadata. At this point, we can distribute the read whatever we like.
     let metadata = read_file_metadata(&amp;mut file)?;
 
+    let schema = metadata.schema.clone();
+
     // Simplest way: use the reader, an iterator over batches.
     let reader = FileReader::new(file, metadata, None);
 
-    reader.collect()
+    let columns = reader.collect::&lt;Result&lt;Vec&lt;_&gt;&gt;&gt;()?;
+    Ok((schema, columns))
 }
 
 fn main() -&gt; Result&lt;()&gt; {
@@ -168,8 +174,9 @@ fn main() -&gt; Result&lt;()&gt; {
 
     let file_path = &amp;args[1];
 
-    let batches = read_batches(file_path)?;
-    print::print(&amp;batches);
+    let (schema, batches) = read_batches(file_path)?;
+    let names = schema.fields().iter().map(|f| f.name()).collect::&lt;Vec&lt;_&gt;&gt;();
+    println!(&quot;{}&quot;, print::write(&amp;batches, &amp;names));
     Ok(())
 }
 </code></pre></pre>

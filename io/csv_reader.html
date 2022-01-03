@@ -141,16 +141,19 @@ This crate makes minimal assumptions on how you want to read a CSV, and offers a
 <p>There are two CPU-intensive tasks in reading a CSV file:</p>
 <ul>
 <li>split the CSV file into rows, which includes parsing quotes and delimiters, and is necessary to <code>seek</code> to a given row.</li>
-<li>parse a set of CSV rows (bytes) into a <code>RecordBatch</code>.</li>
+<li>parse a set of CSV rows (bytes) into a <code>Array</code>s.</li>
 </ul>
 <p>Parsing bytes into values is more expensive than interpreting lines. As such, it is generally advantageous to have multiple readers of a single file that scan different parts of the file (within IO constraints).</p>
 <p>This crate relies on <a href="https://crates.io/crates/csv">the crate <code>csv</code></a> to scan and seek CSV files, and your code also needs such a dependency. With that said, <code>arrow2</code> makes no assumptions as to how to efficiently read the CSV: as a single reader per file or multiple readers.</p>
 <p>As an example, the following infers the schema and reads a CSV by re-using the same reader:</p>
-<pre><pre class="playground"><code class="language-rust">use arrow2::error::Result;
-use arrow2::io::csv::read;
-use arrow2::record_batch::RecordBatch;
+<pre><pre class="playground"><code class="language-rust">use std::sync::Arc;
 
-fn read_path(path: &amp;str, projection: Option&lt;&amp;[usize]&gt;) -&gt; Result&lt;RecordBatch&gt; {
+use arrow2::array::Array;
+use arrow2::chunk::Chunk;
+use arrow2::error::Result;
+use arrow2::io::csv::read;
+
+fn read_path(path: &amp;str, projection: Option&lt;&amp;[usize]&gt;) -&gt; Result&lt;Chunk&lt;Arc&lt;dyn Array&gt;&gt;&gt; {
     // Create a CSV reader. This is typically created on the thread that reads the file and
     // thus owns the read head.
     let mut reader = read::ReaderBuilder::new().from_path(path)?;
@@ -201,9 +204,11 @@ use std::sync::Arc;
 use std::thread;
 use std::time::SystemTime;
 
-use arrow2::{error::Result, io::csv::read, record_batch::RecordBatch};
+use arrow2::array::Array;
+use arrow2::chunk::Chunk;
+use arrow2::{error::Result, io::csv::read};
 
-fn parallel_read(path: &amp;str) -&gt; Result&lt;Vec&lt;RecordBatch&gt;&gt; {
+fn parallel_read(path: &amp;str) -&gt; Result&lt;Vec&lt;Chunk&lt;Arc&lt;dyn Array&gt;&gt;&gt;&gt; {
     let batch_size = 100;
     let has_header = true;
     let projection = None;
@@ -275,7 +280,7 @@ fn main() -&gt; Result&lt;()&gt; {
 
     let batches = parallel_read(file_path)?;
     for batch in batches {
-        println!(&quot;{}&quot;, batch.num_rows())
+        println!(&quot;{}&quot;, batch.len())
     }
     Ok(())
 }
@@ -307,14 +312,14 @@ async fn main() -&gt; Result&lt;()&gt; {
     let mut rows = vec![ByteRecord::default(); 100];
     let rows_read = read_rows(&amp;mut reader, 0, &amp;mut rows).await?;
 
-    let batch = deserialize_batch(
+    let columns = deserialize_batch(
         &amp;rows[..rows_read],
         schema.fields(),
         None,
         0,
         deserialize_column,
     )?;
-    println!(&quot;{:?}&quot;, batch.column(0));
+    println!(&quot;{:?}&quot;, columns.arrays()[0]);
     Ok(())
 }
 </code></pre></pre>

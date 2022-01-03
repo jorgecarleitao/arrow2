@@ -138,12 +138,14 @@
 <p>When compiled with feature <code>io_json</code>, you can use this crate to read JSON files.</p>
 <pre><pre class="playground"><code class="language-rust">use std::fs::File;
 use std::io::BufReader;
+use std::sync::Arc;
 
+use arrow2::array::Array;
+use arrow2::chunk::Chunk;
 use arrow2::error::Result;
 use arrow2::io::json::read;
-use arrow2::record_batch::RecordBatch;
 
-fn read_path(path: &amp;str, projection: Option&lt;Vec&lt;&amp;str&gt;&gt;) -&gt; Result&lt;RecordBatch&gt; {
+fn read_path(path: &amp;str, projection: Option&lt;Vec&lt;&amp;str&gt;&gt;) -&gt; Result&lt;Chunk&lt;Arc&lt;dyn Array&gt;&gt;&gt; {
     // Example of reading a JSON file.
     let mut reader = BufReader::new(File::open(path)?);
 
@@ -167,9 +169,9 @@ fn read_path(path: &amp;str, projection: Option&lt;Vec&lt;&amp;str&gt;&gt;) -&gt
     let read = read::read_rows(&amp;mut reader, &amp;mut rows)?;
     let rows = &amp;rows[..read];
 
-    // deserialize `rows` into a `RecordBatch`. This is CPU-intensive, has no IO,
+    // deserialize `rows` into `Chunk`. This is CPU-intensive, has no IO,
     // and can be performed on a different thread pool via a channel.
-    read::deserialize(rows, fields)
+    read::deserialize(rows, &amp;fields)
 }
 
 fn main() -&gt; Result&lt;()&gt; {

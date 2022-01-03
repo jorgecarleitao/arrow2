@@ -221,7 +221,7 @@ sharing can be done regarding the language that is used.</p>
 </p>
 <p>And thanks to this standardization the data can also be shared with processes
 that don't share the same memory. By creating a data server, packets of data
-with known structure (RecordBatch) can be sent across computers (or pods) and
+with known structure (Chunk) can be sent across computers (or pods) and
 the receiving process doesn't need to spend time coding and decoding the data
 to a known format. The data is ready to be used once its being received.</p>
 <p align="center">
@@ -658,7 +658,7 @@ fn main() {
 }
 </code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="metadata"><a class="header" href="#metadata">Metadata</a></h1>
-<pre><pre class="playground"><code class="language-rust">use std::collections::{BTreeMap, HashMap};
+<pre><pre class="playground"><code class="language-rust">use std::collections::HashMap;
 
 use arrow2::datatypes::{DataType, Field, Metadata, Schema};
 
@@ -789,11 +789,11 @@ that all functionality in this crate works as if it was the inner <code>DataType
 use std::sync::Arc;
 
 use arrow2::array::*;
+use arrow2::chunk::Chunk;
 use arrow2::datatypes::*;
 use arrow2::error::Result;
 use arrow2::io::ipc::read;
 use arrow2::io::ipc::write;
-use arrow2::record_batch::RecordBatch;
 
 fn main() -&gt; Result&lt;()&gt; {
     // declare an extension.
@@ -827,14 +827,14 @@ fn write_ipc&lt;W: Write + Seek&gt;(writer: W, array: impl Array + 'static) -&gt
     let options = write::WriteOptions { compression: None };
     let mut writer = write::FileWriter::try_new(writer, &amp;schema, None, options)?;
 
-    let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(array)])?;
+    let batch = Chunk::try_new(vec![Arc::new(array) as Arc&lt;dyn Array&gt;])?;
 
     writer.write(&amp;batch, None)?;
 
     Ok(writer.into_inner())
 }
 
-fn read_ipc(buf: &amp;[u8]) -&gt; Result&lt;RecordBatch&gt; {
+fn read_ipc(buf: &amp;[u8]) -&gt; Result&lt;Chunk&lt;Arc&lt;dyn Array&gt;&gt;&gt; {
     let mut cursor = Cursor::new(buf);
     let metadata = read::read_file_metadata(&amp;mut cursor)?;
     let mut reader = read::FileReader::new(cursor, metadata, None);
@@ -858,16 +858,19 @@ This crate makes minimal assumptions on how you want to read a CSV, and offers a
 <p>There are two CPU-intensive tasks in reading a CSV file:</p>
 <ul>
 <li>split the CSV file into rows, which includes parsing quotes and delimiters, and is necessary to <code>seek</code> to a given row.</li>
-<li>parse a set of CSV rows (bytes) into a <code>RecordBatch</code>.</li>
+<li>parse a set of CSV rows (bytes) into a <code>Array</code>s.</li>
 </ul>
 <p>Parsing bytes into values is more expensive than interpreting lines. As such, it is generally advantageous to have multiple readers of a single file that scan different parts of the file (within IO constraints).</p>
 <p>This crate relies on <a href="https://crates.io/crates/csv">the crate <code>csv</code></a> to scan and seek CSV files, and your code also needs such a dependency. With that said, <code>arrow2</code> makes no assumptions as to how to efficiently read the CSV: as a single reader per file or multiple readers.</p>
 <p>As an example, the following infers the schema and reads a CSV by re-using the same reader:</p>
-<pre><pre class="playground"><code class="language-rust">use arrow2::error::Result;
-use arrow2::io::csv::read;
-use arrow2::record_batch::RecordBatch;
+<pre><pre class="playground"><code class="language-rust">use std::sync::Arc;
 
-fn read_path(path: &amp;str, projection: Option&lt;&amp;[usize]&gt;) -&gt; Result&lt;RecordBatch&gt; {
+use arrow2::array::Array;
+use arrow2::chunk::Chunk;
+use arrow2::error::Result;
+use arrow2::io::csv::read;
+
+fn read_path(path: &amp;str, projection: Option&lt;&amp;[usize]&gt;) -&gt; Result&lt;Chunk&lt;Arc&lt;dyn Array&gt;&gt;&gt; {
     // Create a CSV reader. This is typically created on the thread that reads the file and
     // thus owns the read head.
     let mut reader = read::ReaderBuilder::new().from_path(path)?;
@@ -918,9 +921,11 @@ use std::sync::Arc;
 use std::thread;
 use std::time::SystemTime;
 
-use arrow2::{error::Result, io::csv::read, record_batch::RecordBatch};
+use arrow2::array::Array;
+use arrow2::chunk::Chunk;
+use arrow2::{error::Result, io::csv::read};
 
-fn parallel_read(path: &amp;str) -&gt; Result&lt;Vec&lt;RecordBatch&gt;&gt; {
+fn parallel_read(path: &amp;str) -&gt; Result&lt;Vec&lt;Chunk&lt;Arc&lt;dyn Array&gt;&gt;&gt;&gt; {
     let batch_size = 100;
     let has_header = true;
     let projection = None;
@@ -992,7 +997,7 @@ fn main() -&gt; Result&lt;()&gt; {
 
     let batches = parallel_read(file_path)?;
     for batch in batches {
-        println!(&quot;{}&quot;, batch.num_rows())
+        println!(&quot;{}&quot;, batch.len())
     }
     Ok(())
 }
@@ -1024,14 +1029,14 @@ async fn main() -&gt; Result&lt;()&gt; {
     let mut rows = vec![ByteRecord::default(); 100];
     let rows_read = read_rows(&amp;mut reader, 0, &amp;mut rows).await?;
 
-    let batch = deserialize_batch(
+    let columns = deserialize_batch(
         &amp;rows[..rows_read],
         schema.fields(),
         None,
         0,
         deserialize_column,
     )?;
-    println!(&quot;{:?}&quot;, batch.column(0));
+    println!(&quot;{:?}&quot;, columns.arrays()[0]);
     Ok(())
 }
 </code></pre></pre>
@@ -1048,25 +1053,22 @@ delay any data transformation.</p>
 <p>When compiled with feature <code>io_csv</code>, you can use this crate to write CSV files.</p>
 <p>This crate relies on <a href="https://crates.io/crates/csv">the crate csv</a> to write well-formed CSV files, which your code should also depend on.</p>
 <p>The following example writes a batch as a CSV file with the default configuration:</p>
-<pre><pre class="playground"><code class="language-rust">use std::sync::Arc;
-
-use arrow2::{
+<pre><pre class="playground"><code class="language-rust">use arrow2::{
     array::{Array, Int32Array},
-    datatypes::{Field, Schema},
+    chunk::Chunk,
     error::Result,
     io::csv::write,
-    record_batch::RecordBatch,
 };
 
-fn write_batch(path: &amp;str, batches: &amp;[RecordBatch]) -&gt; Result&lt;()&gt; {
+fn write_batch&lt;A: AsRef&lt;dyn Array&gt;&gt;(path: &amp;str, columns: &amp;[Chunk&lt;A&gt;]) -&gt; Result&lt;()&gt; {
     let writer = &amp;mut write::WriterBuilder::new().from_path(path)?;
 
-    write::write_header(writer, batches[0].schema())?;
+    write::write_header(writer, &amp;[&quot;c1&quot;])?;
 
     let options = write::SerializeOptions::default();
-    batches
+    columns
         .iter()
-        .try_for_each(|batch| write::write_batch(writer, batch, &amp;options))
+        .try_for_each(|batch| write::write_chunk(writer, batch, &amp;options))
 }
 
 fn main() -&gt; Result&lt;()&gt; {
@@ -1079,9 +1081,7 @@ fn main() -&gt; Result&lt;()&gt; {
         Some(5),
         Some(6),
     ]);
-    let field = Field::new(&quot;c1&quot;, array.data_type().clone(), true);
-    let schema = Schema::new(vec![field]);
-    let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(array)])?;
+    let batch = Chunk::try_new(vec![&amp;array as &amp;dyn Array])?;
 
     write_batch(&quot;example.csv&quot;, &amp;[batch])
 }
@@ -1097,19 +1097,18 @@ use std::sync::Arc;
 use std::thread;
 
 use arrow2::{
-    array::Int32Array,
-    datatypes::{Field, Schema},
+    array::{Array, Int32Array},
+    chunk::Chunk,
     error::Result,
     io::csv::write,
-    record_batch::RecordBatch,
 };
 
-fn parallel_write(path: &amp;str, batches: [RecordBatch; 2]) -&gt; Result&lt;()&gt; {
+fn parallel_write(path: &amp;str, batches: [Chunk&lt;Arc&lt;dyn Array&gt;&gt;; 2]) -&gt; Result&lt;()&gt; {
     let options = write::SerializeOptions::default();
 
     // write a header
     let writer = &amp;mut write::WriterBuilder::new().from_path(path)?;
-    write::write_header(writer, batches[0].schema())?;
+    write::write_header(writer, &amp;[&quot;c1&quot;])?;
 
     // prepare a channel to send serialized records from threads
     let (tx, rx): (Sender&lt;_&gt;, Receiver&lt;_&gt;) = mpsc::channel();
@@ -1154,11 +1153,9 @@ fn main() -&gt; Result&lt;()&gt; {
         Some(5),
         Some(6),
     ]);
-    let field = Field::new(&quot;c1&quot;, array.data_type().clone(), true);
-    let schema = Schema::new(vec![field]);
-    let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(array)])?;
+    let columns = Chunk::new(vec![Arc::new(array) as Arc&lt;dyn Array&gt;]);
 
-    parallel_write(&quot;example.csv&quot;, [batch.clone(), batch])
+    parallel_write(&quot;example.csv&quot;, [columns.clone(), columns])
 }
 </code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="read-parquet"><a class="header" href="#read-parquet">Read parquet</a></h1>
@@ -1167,9 +1164,9 @@ to arrow.
 It makes minimal assumptions on how you to decompose CPU and IO intensive tasks.</p>
 <p>First, some notation:</p>
 <ul>
-<li><code>page</code>: part of a column (e.g. similar of a slice of an <code>Array</code>)</li>
-<li><code>column chunk</code>: composed of multiple pages (similar of an <code>Array</code>)</li>
-<li><code>row group</code>: a group of columns with the same length (similar of a <code>RecordBatch</code> in Arrow)</li>
+<li><code>page</code>: part of a column (e.g. similar to a slice of an <code>Array</code>)</li>
+<li><code>column chunk</code>: composed of multiple pages (similar to an <code>Array</code>)</li>
+<li><code>row group</code>: a group of columns with the same length (similar to a <code>Chunk</code>)</li>
 </ul>
 <p>Here is how to read a single column chunk from a single row group:</p>
 <pre><pre class="playground"><code class="language-rust">use std::fs::File;
@@ -1239,9 +1236,9 @@ fn main() -&gt; Result&lt;()&gt; {
     let reader = read::RecordReader::try_new(reader, None, None, None, None)?;
 
     let start = SystemTime::now();
-    for maybe_batch in reader {
-        let batch = maybe_batch?;
-        assert!(batch.num_rows() &gt; 0);
+    for maybe_chunk in reader {
+        let columns = maybe_chunk?;
+        assert!(!columns.is_empty());
     }
     println!(&quot;took: {} ms&quot;, start.elapsed().unwrap().as_millis());
     Ok(())
@@ -1263,11 +1260,11 @@ use std::time::SystemTime;
 use crossbeam_channel::unbounded;
 
 use arrow2::{
-    array::Array, error::Result, io::parquet::read, io::parquet::read::MutStreamingIterator,
-    record_batch::RecordBatch,
+    array::Array, chunk::Chunk, error::Result, io::parquet::read,
+    io::parquet::read::MutStreamingIterator,
 };
 
-fn parallel_read(path: &amp;str, row_group: usize) -&gt; Result&lt;RecordBatch&gt; {
+fn parallel_read(path: &amp;str, row_group: usize) -&gt; Result&lt;Chunk&lt;Arc&lt;dyn Array&gt;&gt;&gt; {
     // prepare a channel to send compressed pages across threads.
     let (tx, rx) = unbounded();
 
@@ -1356,7 +1353,7 @@ fn parallel_read(path: &amp;str, row_group: usize) -&gt; Result&lt;RecordBatch&g
     let columns = columns.into_iter().map(|x| x.1.into()).collect();
     println!(&quot;Finished - {:?}&quot;, start.elapsed().unwrap());
 
-    RecordBatch::try_new(arrow_schema, columns)
+    Chunk::try_new(columns)
 }
 
 fn main() -&gt; Result&lt;()&gt; {
@@ -1366,7 +1363,7 @@ fn main() -&gt; Result&lt;()&gt; {
 
     let start = SystemTime::now();
     let batch = parallel_read(file_path, 0)?;
-    assert!(batch.num_rows() &gt; 0);
+    assert!(!batch.is_empty());
     println!(&quot;took: {} ms&quot;, start.elapsed().unwrap().as_millis());
     Ok(())
 }
@@ -1381,9 +1378,9 @@ It makes minimal assumptions on how you to decompose CPU and IO intensive tasks,
 as an higher-level API to abstract away some of this work into an easy to use API.</p>
 <p>First, some notation:</p>
 <ul>
-<li><code>page</code>: part of a column (e.g. similar of a slice of an <code>Array</code>)</li>
-<li><code>column chunk</code>: composed of multiple pages (similar of an <code>Array</code>)</li>
-<li><code>row group</code>: a group of columns with the same length (similar of a <code>RecordBatch</code> in Arrow)</li>
+<li><code>page</code>: part of a column (e.g. similar to a slice of an <code>Array</code>)</li>
+<li><code>column chunk</code>: composed of multiple pages (similar to an <code>Array</code>)</li>
+<li><code>row group</code>: a group of columns with the same length (similar to a <code>Chunk</code> in Arrow)</li>
 </ul>
 <h2 id="single-threaded"><a class="header" href="#single-threaded">Single threaded</a></h2>
 <p>Here is an example of how to write a single column chunk into a single row group:</p>
@@ -1462,30 +1459,28 @@ fn main() -&gt; Result&lt;()&gt; {
 }
 </code></pre></pre>
 <p>For single-threaded writing, this crate offers an API that encapsulates the above logic. It 
-assumes that a <code>RecordBatch</code> is mapped to a single row group with a single page per column.</p>
+assumes that a <code>Chunk</code> is mapped to a single row group with a single page per column.</p>
 <pre><pre class="playground"><code class="language-rust">use std::fs::File;
 use std::sync::Arc;
 
 use arrow2::{
-    array::Int32Array,
+    array::{Array, Int32Array},
+    chunk::Chunk,
     datatypes::{Field, Schema},
     error::Result,
     io::parquet::write::{
         write_file, Compression, Encoding, RowGroupIterator, Version, WriteOptions,
     },
-    record_batch::RecordBatch,
 };
 
-fn write_batch(path: &amp;str, batch: RecordBatch) -&gt; Result&lt;()&gt; {
-    let schema = batch.schema().clone();
-
+fn write_batch(path: &amp;str, schema: Schema, columns: Chunk&lt;Arc&lt;dyn Array&gt;&gt;) -&gt; Result&lt;()&gt; {
     let options = WriteOptions {
         write_statistics: true,
         compression: Compression::Uncompressed,
         version: Version::V2,
     };
 
-    let iter = vec![Ok(batch)];
+    let iter = vec![Ok(columns)];
 
     let row_groups =
         RowGroupIterator::try_new(iter.into_iter(), &amp;schema, options, vec![Encoding::Plain])?;
@@ -1518,9 +1513,9 @@ fn main() -&gt; Result&lt;()&gt; {
     ]);
     let field = Field::new(&quot;c1&quot;, array.data_type().clone(), true);
     let schema = Schema::new(vec![field]);
-    let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(array)])?;
+    let columns = Chunk::new(vec![Arc::new(array) as Arc&lt;dyn Array&gt;]);
 
-    write_batch(&quot;test.parquet&quot;, batch)
+    write_batch(&quot;test.parquet&quot;, schema, columns)
 }
 </code></pre></pre>
 <h2 id="multi-threaded-writing"><a class="header" href="#multi-threaded-writing">Multi-threaded writing</a></h2>
@@ -1539,11 +1534,13 @@ use rayon::prelude::*;
 
 use arrow2::{
     array::*,
-    datatypes::PhysicalType,
+    chunk::Chunk as AChunk,
+    datatypes::*,
     error::{ArrowError, Result},
     io::parquet::write::*,
-    record_batch::RecordBatch,
 };
+
+type Chunk = AChunk&lt;Arc&lt;dyn Array&gt;&gt;;
 
 struct Bla {
     columns: VecDeque&lt;CompressedPage&gt;,
@@ -1573,13 +1570,16 @@ impl FallibleStreamingIterator for Bla {
     }
 }
 
-fn parallel_write(path: &amp;str, batches: &amp;[RecordBatch]) -&gt; Result&lt;()&gt; {
+fn parallel_write(path: &amp;str, schema: &amp;Schema, batches: &amp;[Chunk]) -&gt; Result&lt;()&gt; {
+    // declare the options
     let options = WriteOptions {
         write_statistics: true,
         compression: Compression::Snappy,
         version: Version::V2,
     };
-    let encodings = batches[0].schema().fields().par_iter().map(|field| {
+
+    // declare encodings
+    let encodings = schema.fields().par_iter().map(|field| {
         match field.data_type().to_physical_type() {
             // let's be fancy and use delta-encoding for binary fields
             PhysicalType::Binary
@@ -1591,7 +1591,8 @@ fn parallel_write(path: &amp;str, batches: &amp;[RecordBatch]) -&gt; Result&lt;(
         }
     });
 
-    let parquet_schema = to_parquet_schema(batches[0].schema())?;
+    // derive the parquet schema (physical types) from arrow's schema.
+    let parquet_schema = to_parquet_schema(schema)?;
 
     let a = parquet_schema.clone();
     let row_groups = batches.iter().map(|batch| {
@@ -1622,19 +1623,12 @@ fn parallel_write(path: &amp;str, batches: &amp;[RecordBatch]) -&gt; Result&lt;(
     let mut file = std::fs::File::create(path)?;
 
     // Write the file.
-    let _file_size = write_file(
-        &amp;mut file,
-        row_groups,
-        batches[0].schema(),
-        parquet_schema,
-        options,
-        None,
-    )?;
+    let _file_size = write_file(&amp;mut file, row_groups, schema, parquet_schema, options, None)?;
 
     Ok(())
 }
 
-fn create_batch(size: usize) -&gt; Result&lt;RecordBatch&gt; {
+fn create_batch(size: usize) -&gt; Result&lt;Chunk&gt; {
     let c1: Int32Array = (0..size)
         .map(|x| if x % 9 == 0 { None } else { Some(x as i32) })
         .collect();
@@ -1648,44 +1642,57 @@ fn create_batch(size: usize) -&gt; Result&lt;RecordBatch&gt; {
         })
         .collect();
 
-    RecordBatch::try_from_iter([
-        (&quot;c1&quot;, Arc::new(c1) as Arc&lt;dyn Array&gt;),
-        (&quot;c2&quot;, Arc::new(c2) as Arc&lt;dyn Array&gt;),
+    Chunk::try_new(vec![
+        Arc::new(c1) as Arc&lt;dyn Array&gt;,
+        Arc::new(c2) as Arc&lt;dyn Array&gt;,
     ])
 }
 
 fn main() -&gt; Result&lt;()&gt; {
+    let schema = Schema {
+        fields: vec![
+            Field::new(&quot;c1&quot;, DataType::Int32, true),
+            Field::new(&quot;c1&quot;, DataType::Utf8, true),
+        ],
+        metadata: Default::default(),
+    };
     let batch = create_batch(5_000_000)?;
 
-    parallel_write(&quot;example.parquet&quot;, &amp;[batch.clone(), batch])
+    parallel_write(&quot;example.parquet&quot;, &amp;schema, &amp;[batch.clone(), batch])
 }
 </code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="read-arrow"><a class="header" href="#read-arrow">Read Arrow</a></h1>
 <p>When compiled with feature <code>io_ipc</code>, this crate can be used to read Arrow files.</p>
-<p>An Arrow file is composed by a header, a footer, and blocks of <code>RecordBatch</code>es.
+<p>An Arrow file is composed by a header, a footer, and blocks of <code>Array</code>s.
 Reading it generally consists of:</p>
 <ol>
 <li>read metadata, containing the block positions in the file</li>
 <li>seek to each block and read it</li>
 </ol>
-<p>The example below shows how to read them into <code>RecordBatch</code>es:</p>
+<p>The example below shows how to read them into <code>Chunk</code>es:</p>
 <pre><pre class="playground"><code class="language-rust">use std::fs::File;
+use std::sync::Arc;
 
+use arrow2::array::Array;
+use arrow2::chunk::Chunk;
+use arrow2::datatypes::Schema;
 use arrow2::error::Result;
 use arrow2::io::ipc::read::{read_file_metadata, FileReader};
 use arrow2::io::print;
-use arrow2::record_batch::RecordBatch;
 
-fn read_batches(path: &amp;str) -&gt; Result&lt;Vec&lt;RecordBatch&gt;&gt; {
+fn read_batches(path: &amp;str) -&gt; Result&lt;(Schema, Vec&lt;Chunk&lt;Arc&lt;dyn Array&gt;&gt;&gt;)&gt; {
     let mut file = File::open(path)?;
 
     // read the files' metadata. At this point, we can distribute the read whatever we like.
     let metadata = read_file_metadata(&amp;mut file)?;
 
+    let schema = metadata.schema.clone();
+
     // Simplest way: use the reader, an iterator over batches.
     let reader = FileReader::new(file, metadata, None);
 
-    reader.collect()
+    let columns = reader.collect::&lt;Result&lt;Vec&lt;_&gt;&gt;&gt;()?;
+    Ok((schema, columns))
 }
 
 fn main() -&gt; Result&lt;()&gt; {
@@ -1694,8 +1701,9 @@ fn main() -&gt; Result&lt;()&gt; {
 
     let file_path = &amp;args[1];
 
-    let batches = read_batches(file_path)?;
-    print::print(&amp;batches);
+    let (schema, batches) = read_batches(file_path)?;
+    let names = schema.fields().iter().map(|f| f.name()).collect::&lt;Vec&lt;_&gt;&gt;();
+    println!(&quot;{}&quot;, print::write(&amp;batches, &amp;names));
     Ok(())
 }
 </code></pre></pre>
@@ -1778,20 +1786,20 @@ kill $PRODUCER_PID
 <pre><pre class="playground"><code class="language-rust">use std::fs::File;
 use std::sync::Arc;
 
-use arrow2::array::{Int32Array, Utf8Array};
+use arrow2::array::{Array, Int32Array, Utf8Array};
+use arrow2::chunk::Chunk;
 use arrow2::datatypes::{DataType, Field, Schema};
 use arrow2::error::Result;
 use arrow2::io::ipc::write;
-use arrow2::record_batch::RecordBatch;
 
-fn write_batches(path: &amp;str, schema: &amp;Schema, batches: &amp;[RecordBatch]) -&gt; Result&lt;()&gt; {
+fn write_batches(path: &amp;str, schema: &amp;Schema, columns: &amp;[Chunk&lt;Arc&lt;dyn Array&gt;&gt;]) -&gt; Result&lt;()&gt; {
     let file = File::create(path)?;
 
     let options = write::WriteOptions { compression: None };
     let mut writer = write::FileWriter::try_new(file, schema, None, options)?;
 
-    for batch in batches {
-        writer.write(batch, None)?
+    for columns in columns {
+        writer.write(columns, None)?
     }
     writer.finish()
 }
@@ -1811,7 +1819,7 @@ fn main() -&gt; Result&lt;()&gt; {
     let a = Int32Array::from_slice(&amp;[1, 2, 3, 4, 5]);
     let b = Utf8Array::&lt;i32&gt;::from_slice(&amp;[&quot;a&quot;, &quot;b&quot;, &quot;c&quot;, &quot;d&quot;, &quot;e&quot;]);
 
-    let batch = RecordBatch::try_new(Arc::new(schema.clone()), vec![Arc::new(a), Arc::new(b)])?;
+    let batch = Chunk::try_new(vec![Arc::new(a) as Arc&lt;dyn Array&gt;, Arc::new(b)])?;
 
     // write it
     write_batches(file_path, &amp;schema, &amp;[batch])?;
@@ -1842,7 +1850,6 @@ async fn main() -&gt; Result&lt;()&gt; {
     let mut reader = File::open(file_path).await?.compat();
 
     let (avro_schemas, schema, compression, marker) = read_metadata(&amp;mut reader).await?;
-    let schema = Arc::new(schema);
     let avro_schemas = Arc::new(avro_schemas);
 
     let blocks = block_stream(&amp;mut reader, marker).await;
@@ -1855,10 +1862,10 @@ async fn main() -&gt; Result&lt;()&gt; {
         let handle = tokio::task::spawn_blocking(move || {
             let mut decompressed = Block::new(0, vec![]);
             decompress_block(&amp;mut block, &amp;mut decompressed, compression)?;
-            deserialize(&amp;decompressed, schema, &amp;avro_schemas)
+            deserialize(&amp;decompressed, schema.fields(), &amp;avro_schemas)
         });
         let batch = handle.await.unwrap()?;
-        assert!(batch.num_rows() &gt; 0);
+        assert!(!batch.is_empty());
     }
 
     Ok(())
@@ -1934,12 +1941,14 @@ fn main() -&gt; Result&lt;()&gt; {
 <p>When compiled with feature <code>io_json</code>, you can use this crate to read JSON files.</p>
 <pre><pre class="playground"><code class="language-rust">use std::fs::File;
 use std::io::BufReader;
+use std::sync::Arc;
 
+use arrow2::array::Array;
+use arrow2::chunk::Chunk;
 use arrow2::error::Result;
 use arrow2::io::json::read;
-use arrow2::record_batch::RecordBatch;
 
-fn read_path(path: &amp;str, projection: Option&lt;Vec&lt;&amp;str&gt;&gt;) -&gt; Result&lt;RecordBatch&gt; {
+fn read_path(path: &amp;str, projection: Option&lt;Vec&lt;&amp;str&gt;&gt;) -&gt; Result&lt;Chunk&lt;Arc&lt;dyn Array&gt;&gt;&gt; {
     // Example of reading a JSON file.
     let mut reader = BufReader::new(File::open(path)?);
 
@@ -1963,9 +1972,9 @@ fn read_path(path: &amp;str, projection: Option&lt;Vec&lt;&amp;str&gt;&gt;) -&gt
     let read = read::read_rows(&amp;mut reader, &amp;mut rows)?;
     let rows = &amp;rows[..read];
 
-    // deserialize `rows` into a `RecordBatch`. This is CPU-intensive, has no IO,
+    // deserialize `rows` into `Chunk`. This is CPU-intensive, has no IO,
     // and can be performed on a different thread pool via a channel.
-    read::deserialize(rows, fields)
+    read::deserialize(rows, &amp;fields)
 }
 
 fn main() -&gt; Result&lt;()&gt; {
@@ -1988,21 +1997,20 @@ The following example writes a batch as a JSON file:</p>
 use std::sync::Arc;
 
 use arrow2::{
-    array::Int32Array,
-    datatypes::{Field, Schema},
+    array::{Array, Int32Array},
+    chunk::Chunk,
     error::Result,
     io::json::write,
-    record_batch::RecordBatch,
 };
 
-fn write_batches(path: &amp;str, batches: &amp;[RecordBatch]) -&gt; Result&lt;()&gt; {
+fn write_batches(path: &amp;str, names: Vec&lt;String&gt;, batches: &amp;[Chunk&lt;Arc&lt;dyn Array&gt;&gt;]) -&gt; Result&lt;()&gt; {
     let mut writer = File::create(path)?;
     let format = write::JsonArray::default();
 
     let batches = batches.iter().cloned().map(Ok);
 
     // Advancing this iterator serializes the next batch to its internal buffer (i.e. CPU-bounded)
-    let blocks = write::Serializer::new(batches, vec![], format);
+    let blocks = write::Serializer::new(batches, names, vec![], format);
 
     // the operation of writing is IO-bounded.
     write::write(&amp;mut writer, format, blocks)?;
@@ -2011,12 +2019,21 @@ fn write_batches(path: &amp;str, batches: &amp;[RecordBatch]) -&gt; Result&lt;()
 }
 
 fn main() -&gt; Result&lt;()&gt; {
-    let array = Int32Array::from(&amp;[Some(0), None, Some(2), Some(3), Some(4), Some(5), Some(6)]);
-    let field = Field::new(&quot;c1&quot;, array.data_type().clone(), true);
-    let schema = Schema::new(vec![field]);
-    let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(array)])?;
+    let array = Arc::new(Int32Array::from(&amp;[
+        Some(0),
+        None,
+        Some(2),
+        Some(3),
+        Some(4),
+        Some(5),
+        Some(6),
+    ])) as Arc&lt;dyn Array&gt;;
 
-    write_batches(&quot;example.json&quot;, &amp;[batch.clone(), batch])
+    write_batches(
+        &quot;example.json&quot;,
+        vec![&quot;c1&quot;.to_string()],
+        &amp;[Chunk::new(vec![array.clone()]), Chunk::new(vec![array])],
+    )
 }
 </code></pre></pre>
 

@@ -140,9 +140,9 @@ to arrow.
 It makes minimal assumptions on how you to decompose CPU and IO intensive tasks.</p>
 <p>First, some notation:</p>
 <ul>
-<li><code>page</code>: part of a column (e.g. similar of a slice of an <code>Array</code>)</li>
-<li><code>column chunk</code>: composed of multiple pages (similar of an <code>Array</code>)</li>
-<li><code>row group</code>: a group of columns with the same length (similar of a <code>RecordBatch</code> in Arrow)</li>
+<li><code>page</code>: part of a column (e.g. similar to a slice of an <code>Array</code>)</li>
+<li><code>column chunk</code>: composed of multiple pages (similar to an <code>Array</code>)</li>
+<li><code>row group</code>: a group of columns with the same length (similar to a <code>Chunk</code>)</li>
 </ul>
 <p>Here is how to read a single column chunk from a single row group:</p>
 <pre><pre class="playground"><code class="language-rust">use std::fs::File;
@@ -212,9 +212,9 @@ fn main() -&gt; Result&lt;()&gt; {
     let reader = read::RecordReader::try_new(reader, None, None, None, None)?;
 
     let start = SystemTime::now();
-    for maybe_batch in reader {
-        let batch = maybe_batch?;
-        assert!(batch.num_rows() &gt; 0);
+    for maybe_chunk in reader {
+        let columns = maybe_chunk?;
+        assert!(!columns.is_empty());
     }
     println!(&quot;took: {} ms&quot;, start.elapsed().unwrap().as_millis());
     Ok(())
@@ -236,11 +236,11 @@ use std::time::SystemTime;
 use crossbeam_channel::unbounded;
 
 use arrow2::{
-    array::Array, error::Result, io::parquet::read, io::parquet::read::MutStreamingIterator,
-    record_batch::RecordBatch,
+    array::Array, chunk::Chunk, error::Result, io::parquet::read,
+    io::parquet::read::MutStreamingIterator,
 };
 
-fn parallel_read(path: &amp;str, row_group: usize) -&gt; Result&lt;RecordBatch&gt; {
+fn parallel_read(path: &amp;str, row_group: usize) -&gt; Result&lt;Chunk&lt;Arc&lt;dyn Array&gt;&gt;&gt; {
     // prepare a channel to send compressed pages across threads.
     let (tx, rx) = unbounded();
 
@@ -329,7 +329,7 @@ fn parallel_read(path: &amp;str, row_group: usize) -&gt; Result&lt;RecordBatch&g
     let columns = columns.into_iter().map(|x| x.1.into()).collect();
     println!(&quot;Finished - {:?}&quot;, start.elapsed().unwrap());
 
-    RecordBatch::try_new(arrow_schema, columns)
+    Chunk::try_new(columns)
 }
 
 fn main() -&gt; Result&lt;()&gt; {
@@ -339,7 +339,7 @@ fn main() -&gt; Result&lt;()&gt; {
 
     let start = SystemTime::now();
     let batch = parallel_read(file_path, 0)?;
-    assert!(batch.num_rows() &gt; 0);
+    assert!(!batch.is_empty());
     println!(&quot;took: {} ms&quot;, start.elapsed().unwrap().as_millis());
     Ok(())
 }

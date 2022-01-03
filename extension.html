@@ -144,11 +144,11 @@ that all functionality in this crate works as if it was the inner <code>DataType
 use std::sync::Arc;
 
 use arrow2::array::*;
+use arrow2::chunk::Chunk;
 use arrow2::datatypes::*;
 use arrow2::error::Result;
 use arrow2::io::ipc::read;
 use arrow2::io::ipc::write;
-use arrow2::record_batch::RecordBatch;
 
 fn main() -&gt; Result&lt;()&gt; {
     // declare an extension.
@@ -182,14 +182,14 @@ fn write_ipc&lt;W: Write + Seek&gt;(writer: W, array: impl Array + 'static) -&gt
     let options = write::WriteOptions { compression: None };
     let mut writer = write::FileWriter::try_new(writer, &amp;schema, None, options)?;
 
-    let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(array)])?;
+    let batch = Chunk::try_new(vec![Arc::new(array) as Arc&lt;dyn Array&gt;])?;
 
     writer.write(&amp;batch, None)?;
 
     Ok(writer.into_inner())
 }
 
-fn read_ipc(buf: &amp;[u8]) -&gt; Result&lt;RecordBatch&gt; {
+fn read_ipc(buf: &amp;[u8]) -&gt; Result&lt;Chunk&lt;Arc&lt;dyn Array&gt;&gt;&gt; {
     let mut cursor = Cursor::new(buf);
     let metadata = read::read_file_metadata(&amp;mut cursor)?;
     let mut reader = read::FileReader::new(cursor, metadata, None);
