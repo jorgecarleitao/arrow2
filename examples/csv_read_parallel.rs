@@ -4,9 +4,11 @@ use std::sync::Arc;
 use std::thread;
 use std::time::SystemTime;
 
-use arrow2::{error::Result, io::csv::read, record_batch::RecordBatch};
+use arrow2::array::Array;
+use arrow2::chunk::Chunk;
+use arrow2::{error::Result, io::csv::read};
 
-fn parallel_read(path: &str) -> Result<Vec<RecordBatch>> {
+fn parallel_read(path: &str) -> Result<Vec<Chunk<Arc<dyn Array>>>> {
     let batch_size = 100;
     let has_header = true;
     let projection = None;
@@ -78,7 +80,7 @@ fn main() -> Result<()> {
 
     let batches = parallel_read(file_path)?;
     for batch in batches {
-        println!("{}", batch.num_rows())
+        println!("{}", batch.len())
     }
     Ok(())
 }

@@ -19,9 +19,10 @@ mod util;
 pub(super) use header::deserialize_header;
 pub(super) use schema::convert_schema;
 
-use crate::datatypes::Schema;
+use crate::array::Array;
+use crate::chunk::Chunk;
+use crate::datatypes::{Field, Schema};
 use crate::error::Result;
-use crate::record_batch::RecordBatch;
 
 use super::Compression;
 
@@ -42,20 +43,20 @@ pub fn read_metadata<R: std::io::Read>(
     Ok((avro_schema, schema, codec, marker))
 }
 
-/// Single threaded, blocking reader of Avro; [`Iterator`] of [`RecordBatch`]es.
+/// Single threaded, blocking reader of Avro; [`Iterator`] of [`Chunk`].
 pub struct Reader<R: Read> {
     iter: Decompressor<R>,
-    schema: Arc<Schema>,
     avro_schemas: Vec<AvroSchema>,
+    fields: Vec<Field>,
 }
 
 impl<R: Read> Reader<R> {
     /// Creates a new [`Reader`].
-    pub fn new(iter: Decompressor<R>, avro_schemas: Vec<AvroSchema>, schema: Arc<Schema>) -> Self {
+    pub fn new(iter: Decompressor<R>, avro_schemas: Vec<AvroSchema>, fields: Vec<Field>) -> Self {
         Self {
             iter,
             avro_schemas,
-            schema,
+            fields,
         }
     }
 
@@ -66,15 +67,15 @@ impl<R: Read> Reader<R> {
 }
 
 impl<R: Read> Iterator for Reader<R> {
-    type Item = Result<RecordBatch>;
+    type Item = Result<Chunk<Arc<dyn Array>>>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let schema = self.schema.clone();
+        let fields = &self.fields[..];
         let avro_schemas = &self.avro_schemas;
 
         self.iter
             .next()
             .transpose()
-            .map(|maybe_block| deserialize(maybe_block?, schema, avro_schemas))
+            .map(|maybe_block| deserialize(maybe_block?, fields, avro_schemas))
     }
 }

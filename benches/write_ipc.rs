@@ -4,21 +4,21 @@ use std::sync::Arc;
 use criterion::{criterion_group, criterion_main, Criterion};
 
 use arrow2::array::*;
+use arrow2::chunk::Chunk;
 use arrow2::datatypes::{Field, Schema};
 use arrow2::error::Result;
 use arrow2::io::ipc::write::*;
-use arrow2::record_batch::RecordBatch;
 use arrow2::util::bench_util::{create_boolean_array, create_primitive_array, create_string_array};
 
 fn write(array: &dyn Array) -> Result<()> {
     let field = Field::new("c1", array.data_type().clone(), true);
     let schema = Schema::new(vec![field]);
-    let batch = RecordBatch::try_new(Arc::new(schema.clone()), vec![clone(array).into()])?;
+    let columns = Chunk::try_new(vec![clone(array).into()])?;
 
     let writer = Cursor::new(vec![]);
-    let mut writer = FileWriter::try_new(writer, &schema, Default::default())?;
+    let mut writer = FileWriter::try_new(writer, &schema, None, Default::default())?;
 
-    writer.write(&batch)
+    writer.write(&columns, None)
 }
 
 fn add_benchmark(c: &mut Criterion) {

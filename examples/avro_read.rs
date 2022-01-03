@@ -1,6 +1,5 @@
 use std::fs::File;
 use std::io::BufReader;
-use std::sync::Arc;
 
 use arrow2::error::Result;
 use arrow2::io::avro::read;
@@ -20,12 +19,12 @@ fn main() -> Result<()> {
     let reader = read::Reader::new(
         read::Decompressor::new(read::BlockStreamIterator::new(file, file_marker), codec),
         avro_schema,
-        Arc::new(schema),
+        schema.fields,
     );
 
-    for batch in reader {
-        let batch = batch?;
-        assert!(batch.num_rows() > 0);
+    for maybe_chunk in reader {
+        let columns = maybe_chunk?;
+        assert!(!columns.is_empty());
     }
     Ok(())
 }

@@ -4,10 +4,10 @@ use std::sync::Arc;
 use avro_schema::{Enum, Schema as AvroSchema};
 
 use crate::array::*;
+use crate::chunk::Chunk;
 use crate::datatypes::*;
 use crate::error::ArrowError;
 use crate::error::Result;
-use crate::record_batch::RecordBatch;
 use crate::types::months_days_ns;
 
 use super::super::Block;
@@ -242,18 +242,17 @@ fn deserialize_value<'a>(
     Ok(block)
 }
 
-/// Deserializes a [`Block`] into a [`RecordBatch`].
+/// Deserializes a [`Block`] into [`Chunk`].
 pub fn deserialize(
     block: &Block,
-    schema: Arc<Schema>,
+    fields: &[Field],
     avro_schemas: &[AvroSchema],
-) -> Result<RecordBatch> {
+) -> Result<Chunk<Arc<dyn Array>>> {
     let rows = block.number_of_rows;
     let mut block = block.data.as_ref();
 
     // create mutables, one per field
-    let mut arrays: Vec<Box<dyn MutableArray>> = schema
-        .fields()
+    let mut arrays: Vec<Box<dyn MutableArray>> = fields
         .iter()
         .zip(avro_schemas.iter())
         .map(|(field, avro_schema)| {
@@ -266,13 +265,11 @@ pub fn deserialize(
     for _ in 0..rows {
         for ((array, field), avro_field) in arrays
             .iter_mut()
-            .zip(schema.fields().iter())
+            .zip(fields.iter())
             .zip(avro_schemas.iter())
         {
             block = deserialize_item(array.as_mut(), field.is_nullable(), avro_field, block)?
         }
     }
-    let columns = arrays.iter_mut().map(|array| array.as_arc()).collect();
-
-    RecordBatch::try_new(schema, columns)
+    Chunk::try_new(arrays.iter_mut().map(|array| array.as_arc()).collect())
 }

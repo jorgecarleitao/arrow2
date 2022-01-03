@@ -6,9 +6,9 @@ It makes minimal assumptions on how you to decompose CPU and IO intensive tasks.
 
 First, some notation:
 
-* `page`: part of a column (e.g. similar of a slice of an `Array`)
-* `column chunk`: composed of multiple pages (similar of an `Array`)
-* `row group`: a group of columns with the same length (similar of a `RecordBatch` in Arrow)
+* `page`: part of a column (e.g. similar to a slice of an `Array`)
+* `column chunk`: composed of multiple pages (similar to an `Array`)
+* `row group`: a group of columns with the same length (similar to a `Chunk`)
 
 Here is how to read a single column chunk from a single row group:
 

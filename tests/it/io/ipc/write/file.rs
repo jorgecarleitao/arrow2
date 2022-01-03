@@ -1,16 +1,17 @@
 use std::io::Cursor;
+use std::sync::Arc;
 
 use arrow2::array::*;
-use arrow2::datatypes::Schema;
+use arrow2::chunk::Chunk;
+use arrow2::datatypes::{Field, Schema};
 use arrow2::error::Result;
 use arrow2::io::ipc::read::{read_file_metadata, FileReader};
 use arrow2::io::ipc::{write::*, IpcField};
-use arrow2::record_batch::RecordBatch;
 
 use crate::io::ipc::common::read_gzip_json;
 
 fn write_(
-    batches: &[RecordBatch],
+    batches: &[Chunk<Arc<dyn Array>>],
     schema: &Schema,
     ipc_fields: Option<Vec<IpcField>>,
     compression: Option<Compression>,
@@ -25,18 +26,26 @@ fn write_(
     Ok(writer.into_inner())
 }
 
-fn round_trip(batch: RecordBatch, ipc_fields: Option<Vec<IpcField>>) -> Result<()> {
-    let (expected_schema, expected_batches) = (batch.schema().clone(), vec![batch.clone()]);
+fn round_trip(
+    columns: Chunk<Arc<dyn Array>>,
+    schema: Schema,
+    ipc_fields: Option<Vec<IpcField>>,
+) -> Result<()> {
+    let (expected_schema, expected_batches) = (schema.clone(), vec![columns]);
 
-    let schema = batch.schema().clone();
-    let result = write_(&[batch], &schema, ipc_fields, Some(Compression::ZSTD))?;
+    let result = write_(
+        &expected_batches,
+        &schema,
+        ipc_fields,
+        Some(Compression::ZSTD),
+    )?;
     let mut reader = Cursor::new(result);
     let metadata = read_file_metadata(&mut reader)?;
-    let schema = metadata.schema().clone();
+    let schema = metadata.schema.clone();
 
     let reader = FileReader::new(reader, metadata, None);
 
-    assert_eq!(schema.as_ref(), expected_schema.as_ref());
+    assert_eq!(schema, expected_schema);
 
     let batches = reader.collect::<Result<Vec<_>>>()?;
 
@@ -56,7 +65,7 @@ fn test_file(version: &str, file_name: &str, compressed: bool) -> Result<()> {
     let result = write_(&batches, &schema, Some(ipc_fields), compression)?;
     let mut reader = Cursor::new(result);
     let metadata = read_file_metadata(&mut reader)?;
-    let schema = metadata.schema().clone();
+    let schema = metadata.schema.clone();
     let ipc_fields = metadata.ipc_schema.fields.clone();
 
     let reader = FileReader::new(reader, metadata, None);
@@ -65,7 +74,7 @@ fn test_file(version: &str, file_name: &str, compressed: bool) -> Result<()> {
     let (expected_schema, expected_ipc_fields, expected_batches) =
         read_gzip_json(version, file_name)?;
 
-    assert_eq!(schema.as_ref(), &expected_schema);
+    assert_eq!(schema, expected_schema);
     assert_eq!(ipc_fields, expected_ipc_fields);
 
     let batches = reader.collect::<Result<Vec<_>>>()?;
@@ -329,8 +338,9 @@ fn write_boolean() -> Result<()> {
         None,
         Some(true),
     ])) as Arc<dyn Array>;
-    let batch = RecordBatch::try_from_iter(vec![("a", array)])?;
-    round_trip(batch, None)
+    let schema = Schema::new(vec![Field::new("a", array.data_type().clone(), true)]);
+    let columns = Chunk::try_new(vec![array])?;
+    round_trip(columns, schema, None)
 }
 
 #[test]
@@ -338,8 +348,9 @@ fn write_boolean() -> Result<()> {
 fn write_sliced_utf8() -> Result<()> {
     use std::sync::Arc;
     let array = Arc::new(Utf8Array::<i32>::from_slice(["aa", "bb"]).slice(1, 1)) as Arc<dyn Array>;
-    let batch = RecordBatch::try_from_iter(vec![("a", array)])?;
-    round_trip(batch, None)
+    let schema = Schema::new(vec![Field::new("a", array.data_type().clone(), true)]);
+    let columns = Chunk::try_new(vec![array])?;
+    round_trip(columns, schema, None)
 }
 
 #[test]
@@ -353,7 +364,9 @@ fn write_sliced_list() -> Result<()> {
 
     let mut array = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new();
     array.try_extend(data).unwrap();
-    let array = array.into_arc().slice(1, 2).into();
-    let batch = RecordBatch::try_from_iter(vec![("a", array)]).unwrap();
-    round_trip(batch, None)
+    let array: Arc<dyn Array> = array.into_arc().slice(1, 2).into();
+
+    let schema = Schema::new(vec![Field::new("a", array.data_type().clone(), true)]);
+    let columns = Chunk::try_new(vec![array])?;
+    round_trip(columns, schema, None)
 }

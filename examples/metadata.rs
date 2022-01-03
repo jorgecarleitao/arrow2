@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
 use arrow2::datatypes::{DataType, Field, Metadata, Schema};
 

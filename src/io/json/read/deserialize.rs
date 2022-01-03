@@ -7,13 +7,12 @@ use indexmap::map::IndexMap as HashMap;
 use num_traits::NumCast;
 use serde_json::Value;
 
-use crate::datatypes::{Field, Schema};
-use crate::error::ArrowError;
-use crate::record_batch::RecordBatch;
 use crate::{
     array::*,
     bitmap::MutableBitmap,
-    datatypes::{DataType, IntervalUnit},
+    chunk::Chunk,
+    datatypes::{DataType, Field, IntervalUnit},
+    error::ArrowError,
     types::NativeType,
 };
 
@@ -252,13 +251,13 @@ fn _deserialize<A: Borrow<Value>>(rows: &[A], data_type: DataType) -> Arc<dyn Ar
     }
 }
 
-/// Deserializes `rows` into a [`RecordBatch`] according to `fields`.
+/// Deserializes `rows` into a [`Chunk`] according to `fields`.
 /// This is CPU-bounded.
 pub fn deserialize<A: AsRef<str>>(
     rows: &[A],
-    fields: Vec<Field>,
-) -> Result<RecordBatch, ArrowError> {
-    let data_type = DataType::Struct(fields);
+    fields: &[Field],
+) -> Result<Chunk<Arc<dyn Array>>, ArrowError> {
+    let data_type = DataType::Struct(fields.to_vec());
 
     // convert rows to `Value`
     let rows = rows
@@ -269,6 +268,6 @@ pub fn deserialize<A: AsRef<str>>(
         })
         .collect::<Result<Vec<_>, ArrowError>>()?;
 
-    let (fields, columns, _) = deserialize_struct(&rows, data_type).into_data();
-    RecordBatch::try_new(Arc::new(Schema::new(fields)), columns)
+    let (_, columns, _) = deserialize_struct(&rows, data_type).into_data();
+    Ok(Chunk::new(columns))
 }

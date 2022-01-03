@@ -18,7 +18,7 @@ fn test_file(version: &str, file_name: &str) -> Result<()> {
     // read expected JSON output
     let (schema, ipc_fields, batches) = read_gzip_json(version, file_name)?;
 
-    assert_eq!(&schema, reader.metadata().schema.as_ref());
+    assert_eq!(&schema, &reader.metadata().schema);
     assert_eq!(&ipc_fields, &reader.metadata().ipc_schema.fields);
 
     batches

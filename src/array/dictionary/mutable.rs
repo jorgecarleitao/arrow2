@@ -101,10 +101,16 @@ impl<K: DictionaryKey, M: MutableArray> MutableDictionaryArray<K, M> {
         &self.values
     }
 
-    /// converts itself into `Arc<dyn Array>`
+    /// converts itself into [`Arc<dyn Array>`]
     pub fn into_arc(self) -> Arc<dyn Array> {
         let a: DictionaryArray<K> = self.into();
         Arc::new(a)
+    }
+
+    /// converts itself into [`Box<dyn Array>`]
+    pub fn into_box(self) -> Box<dyn Array> {
+        let a: DictionaryArray<K> = self.into();
+        Box::new(a)
     }
 
     /// Shrinks the capacity of the [`MutableDictionaryArray`] to fit its current length.

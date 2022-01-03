@@ -6,8 +6,9 @@ pub use format::*;
 pub use serialize::serialize;
 
 use crate::{
+    array::Array,
+    chunk::Chunk,
     error::{ArrowError, Result},
-    record_batch::RecordBatch,
 };
 
 /// Writes blocks of JSON-encoded data into `writer`, ensuring that the written
@@ -29,27 +30,42 @@ where
     Ok(())
 }
 
-/// [`FallibleStreamingIterator`] that serializes a [`RecordBatch`] to bytes.
+/// [`FallibleStreamingIterator`] that serializes a [`Chunk`] to bytes.
 /// Advancing it is CPU-bounded
-pub struct Serializer<F: JsonFormat, I: Iterator<Item = Result<RecordBatch>>> {
-    iter: I,
+pub struct Serializer<F, A, I>
+where
+    F: JsonFormat,
+    A: AsRef<dyn Array>,
+    I: Iterator<Item = Result<Chunk<A>>>,
+{
+    batches: I,
+    names: Vec<String>,
     buffer: Vec<u8>,
     format: F,
 }
 
-impl<F: JsonFormat, I: Iterator<Item = Result<RecordBatch>>> Serializer<F, I> {
+impl<F, A, I> Serializer<F, A, I>
+where
+    F: JsonFormat,
+    A: AsRef<dyn Array>,
+    I: Iterator<Item = Result<Chunk<A>>>,
+{
     /// Creates a new [`Serializer`].
-    pub fn new(iter: I, buffer: Vec<u8>, format: F) -> Self {
+    pub fn new(batches: I, names: Vec<String>, buffer: Vec<u8>, format: F) -> Self {
         Self {
-            iter,
+            batches,
+            names,
             buffer,
             format,
         }
     }
 }
 
-impl<F: JsonFormat, I: Iterator<Item = Result<RecordBatch>>> FallibleStreamingIterator
-    for Serializer<F, I>
+impl<F, A, I> FallibleStreamingIterator for Serializer<F, A, I>
+where
+    F: JsonFormat,
+    A: AsRef<dyn Array>,
+    I: Iterator<Item = Result<Chunk<A>>>,
 {
     type Item = [u8];
 
@@ -57,18 +73,11 @@ impl<F: JsonFormat, I: Iterator<Item = Result<RecordBatch>>> FallibleStreamingIt
 
     fn advance(&mut self) -> Result<()> {
         self.buffer.clear();
-        self.iter
+        self.batches
             .next()
-            .map(|maybe_batch| {
-                maybe_batch.map(|batch| {
-                    let names = batch
-                        .schema()
-                        .fields()
-                        .iter()
-                        .map(|f| f.name().as_str())
-                        .collect::<Vec<_>>();
-                    serialize(&names, batch.columns(), self.format, &mut self.buffer)
-                })
+            .map(|maybe_chunk| {
+                maybe_chunk
+                    .map(|columns| serialize(&self.names, &columns, self.format, &mut self.buffer))
             })
             .transpose()?;
         Ok(())

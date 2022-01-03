@@ -1,5 +1,4 @@
 use futures::io::Cursor;
-use std::sync::Arc;
 
 use arrow2::array::*;
 use arrow2::error::Result;
@@ -24,12 +23,12 @@ async fn read() -> Result<()> {
 "Aberdeen, Aberdeen City, UK",57.149651,-2.099075"#;
     let mut reader = AsyncReaderBuilder::new().create_reader(Cursor::new(data.as_bytes()));
 
-    let schema = Arc::new(infer_schema(&mut reader, None, true, &infer).await?);
+    let schema = infer_schema(&mut reader, None, true, &infer).await?;
 
     let mut rows = vec![ByteRecord::default(); 100];
     let rows_read = read_rows(&mut reader, 0, &mut rows).await?;
 
-    let batch = deserialize_batch(
+    let columns = deserialize_batch(
         &rows[..rows_read],
         schema.fields(),
         None,
@@ -37,21 +36,16 @@ async fn read() -> Result<()> {
         deserialize_column,
     )?;
 
-    let batch_schema = batch.schema();
+    assert_eq!(14, columns.len());
+    assert_eq!(3, columns.arrays().len());
 
-    assert_eq!(&schema, batch_schema);
-    assert_eq!(14, batch.num_rows());
-    assert_eq!(3, batch.num_columns());
-
-    let lat = batch
-        .column(1)
+    let lat = columns.arrays()[1]
         .as_any()
         .downcast_ref::<Float64Array>()
         .unwrap();
     assert!((57.653484 - lat.value(0)).abs() < f64::EPSILON);
 
-    let city = batch
-        .column(0)
+    let city = columns.arrays()[0]
         .as_any()
         .downcast_ref::<Utf8Array<i32>>()
         .unwrap();

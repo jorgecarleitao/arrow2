@@ -7,9 +7,9 @@ as an higher-level API to abstract away some of this work into an easy to use AP
 
 First, some notation:
 
-* `page`: part of a column (e.g. similar of a slice of an `Array`)
-* `column chunk`: composed of multiple pages (similar of an `Array`)
-* `row group`: a group of columns with the same length (similar of a `RecordBatch` in Arrow)
+* `page`: part of a column (e.g. similar to a slice of an `Array`)
+* `column chunk`: composed of multiple pages (similar to an `Array`)
+* `row group`: a group of columns with the same length (similar to a `Chunk` in Arrow)
 
 ## Single threaded
 
@@ -20,7 +20,7 @@ Here is an example of how to write a single column chunk into a single row group
 ```
 
 For single-threaded writing, this crate offers an API that encapsulates the above logic. It 
-assumes that a `RecordBatch` is mapped to a single row group with a single page per column.
+assumes that a `Chunk` is mapped to a single row group with a single page per column.
 
 ```rust
 {{#include ../../../examples/parquet_write_record.rs}}

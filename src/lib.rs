@@ -9,7 +9,7 @@
 pub mod array;
 pub mod bitmap;
 pub mod buffer;
-pub(crate) mod columns;
+pub mod chunk;
 pub mod error;
 pub mod scalar;
 pub mod trusted_len;
@@ -17,7 +17,7 @@ pub mod types;
 
 pub mod compute;
 pub mod io;
-pub mod record_batch;
+//pub mod record_batch;
 pub mod temporal_conversions;
 
 pub mod datatypes;

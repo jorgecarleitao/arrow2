@@ -24,7 +24,7 @@
 //!
 //! The main advantage of merge-sort over `sort` is that it can be parallelized.
 //! For example, given a set of arrays `[a0, a1, a2, a3]` representing the same field,
-//! e.g. over 4 `RecordBatch`es, they can be sorted in parallel as follows (pseudo-code):
+//! e.g. over 4 batches of arrays, they can be sorted in parallel as follows (pseudo-code):
 //!
 //! ```rust,ignore
 //! // in parallel
@@ -42,7 +42,7 @@
 //! ```
 //!
 //! A common operation in query engines is to merge multiple fields based on the
-//! same sorting field (e.g. merge-sort multiple `RecordBatch`es).
+//! same sorting field (e.g. merge-sort multiple batches of arrays).
 //! To perform this, use the same idea as above, but use `take_arrays` over
 //! each independent field (which can again be parallelized):
 //!
@@ -209,7 +209,7 @@ pub fn slices(pairs: &[(&[&dyn Array], &SortOptions)]) -> Result<Vec<MergeSlice>
 /// recursively sort-merges multiple `slices` representing slices of sorted arrays according
 /// to a comparison function between those arrays.
 /// Note that `slices` is an array of arrays, `slices[i][j]`. The index `i` represents
-/// the set of arrays `i` (schema-unaware version of a [`RecordBatch`]), while the index `j` represents
+/// the set of arrays `i`, while the index `j` represents
 /// the array `j` within that set.
 /// Note that this does not split to the smallest element as arrays: the smallest unit is a `slice`
 fn recursive_merge_sort(slices: &[&[MergeSlice]], comparator: &Comparator) -> Vec<MergeSlice> {

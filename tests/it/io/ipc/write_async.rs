@@ -1,11 +1,13 @@
 use std::io::Cursor;
+use std::sync::Arc;
 
+use arrow2::array::Array;
+use arrow2::chunk::Chunk;
 use arrow2::datatypes::Schema;
 use arrow2::error::Result;
 use arrow2::io::ipc::read;
 use arrow2::io::ipc::write::stream_async;
 use arrow2::io::ipc::IpcField;
-use arrow2::record_batch::RecordBatch;
 use futures::io::Cursor as AsyncCursor;
 
 use crate::io::ipc::common::read_arrow_stream;
@@ -14,7 +16,7 @@ use crate::io::ipc::common::read_gzip_json;
 async fn write_(
     schema: &Schema,
     ipc_fields: &[IpcField],
-    batches: &[RecordBatch],
+    batches: &[Chunk<Arc<dyn Array>>],
 ) -> Result<Vec<u8>> {
     let mut result = AsyncCursor::new(vec![]);
 
@@ -22,7 +24,7 @@ async fn write_(
     let mut writer = stream_async::StreamWriter::new(&mut result, options);
     writer.start(schema, Some(ipc_fields)).await?;
     for batch in batches {
-        writer.write(batch, Some(ipc_fields)).await?;
+        writer.write(batch, schema, Some(ipc_fields)).await?;
     }
     writer.finish().await?;
     Ok(result.into_inner())
@@ -37,7 +39,7 @@ async fn test_file(version: &str, file_name: &str) -> Result<()> {
     let metadata = read::read_stream_metadata(&mut reader)?;
     let reader = read::StreamReader::new(reader, metadata);
 
-    let schema = reader.metadata().schema.as_ref();
+    let schema = &reader.metadata().schema;
     let ipc_fields = reader.metadata().ipc_schema.fields.clone();
 
     // read expected JSON output

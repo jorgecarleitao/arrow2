@@ -1,7 +1,7 @@
 use std::io::Cursor;
 
+use arrow2::error::Result;
 use arrow2::io::parquet::write::*;
-use arrow2::{error::Result, record_batch::RecordBatch};
 
 use super::*;
 
@@ -42,10 +42,7 @@ fn round_trip(
 
     let parquet_schema = to_parquet_schema(&schema)?;
 
-    let iter = vec![RecordBatch::try_new(
-        Arc::new(schema.clone()),
-        vec![array.clone()],
-    )];
+    let iter = vec![Chunk::try_new(vec![array.clone()])];
 
     let row_groups = RowGroupIterator::try_new(iter.into_iter(), &schema, options, vec![encoding])?;
 

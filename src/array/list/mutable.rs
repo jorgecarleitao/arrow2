@@ -183,6 +183,12 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
         Arc::new(a)
     }
 
+    /// converts itself into [`Box<dyn Array>`]
+    pub fn into_box(self) -> Box<dyn Array> {
+        let a: ListArray<O> = self.into();
+        Box::new(a)
+    }
+
     /// Shrinks the capacity of the [`MutableListArray`] to fit its current length.
     pub fn shrink_to_fit(&mut self) {
         self.values.shrink_to_fit();

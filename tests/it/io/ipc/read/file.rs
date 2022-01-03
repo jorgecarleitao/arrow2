@@ -18,7 +18,7 @@ fn test_file(version: &str, file_name: &str) -> Result<()> {
     let metadata = read_file_metadata(&mut file)?;
     let reader = FileReader::new(file, metadata, None);
 
-    assert_eq!(&schema, reader.schema().as_ref());
+    assert_eq!(&schema, reader.schema());
 
     batches.iter().zip(reader).try_for_each(|(lhs, rhs)| {
         assert_eq!(lhs, &rhs?);
@@ -168,7 +168,7 @@ fn test_projection(version: &str, file_name: &str, column: usize) -> Result<()> 
     assert_eq!(reader.schema().fields().len(), 1);
 
     reader.try_for_each(|rhs| {
-        assert_eq!(rhs?.num_columns(), 1);
+        assert_eq!(rhs?.arrays().len(), 1);
         Result::Ok(())
     })?;
     Ok(())

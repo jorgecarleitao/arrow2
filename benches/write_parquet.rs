@@ -3,13 +3,13 @@ use std::io::Cursor;
 use criterion::{criterion_group, criterion_main, Criterion};
 
 use arrow2::array::{clone, Array};
+use arrow2::chunk::Chunk;
 use arrow2::error::Result;
 use arrow2::io::parquet::write::*;
-use arrow2::record_batch::RecordBatch;
 use arrow2::util::bench_util::{create_boolean_array, create_primitive_array, create_string_array};
 
 fn write(array: &dyn Array, encoding: Encoding) -> Result<()> {
-    let batch = RecordBatch::try_from_iter([("c1", clone(array).into())])?;
+    let columns = Chunk::new(vec![clone(array).into()]);
     let schema = batch.schema().clone();
 
     let options = WriteOptions {
@@ -19,7 +19,7 @@ fn write(array: &dyn Array, encoding: Encoding) -> Result<()> {
     };
 
     let row_groups = RowGroupIterator::try_new(
-        vec![Ok(batch)].into_iter(),
+        vec![Ok(columns)].into_iter(),
         &schema,
         options,
         vec![encoding],

@@ -1,20 +1,20 @@
 use std::fs::File;
 use std::sync::Arc;
 
-use arrow2::array::{Int32Array, Utf8Array};
+use arrow2::array::{Array, Int32Array, Utf8Array};
+use arrow2::chunk::Chunk;
 use arrow2::datatypes::{DataType, Field, Schema};
 use arrow2::error::Result;
 use arrow2::io::ipc::write;
-use arrow2::record_batch::RecordBatch;
 
-fn write_batches(path: &str, schema: &Schema, batches: &[RecordBatch]) -> Result<()> {
+fn write_batches(path: &str, schema: &Schema, columns: &[Chunk<Arc<dyn Array>>]) -> Result<()> {
     let file = File::create(path)?;
 
     let options = write::WriteOptions { compression: None };
     let mut writer = write::FileWriter::try_new(file, schema, None, options)?;
 
-    for batch in batches {
-        writer.write(batch, None)?
+    for columns in columns {
+        writer.write(columns, None)?
     }
     writer.finish()
 }
@@ -34,7 +34,7 @@ fn main() -> Result<()> {
     let a = Int32Array::from_slice(&[1, 2, 3, 4, 5]);
     let b = Utf8Array::<i32>::from_slice(&["a", "b", "c", "d", "e"]);
 
-    let batch = RecordBatch::try_new(Arc::new(schema.clone()), vec![Arc::new(a), Arc::new(b)])?;
+    let batch = Chunk::try_new(vec![Arc::new(a) as Arc<dyn Array>, Arc::new(b)])?;
 
     // write it
     write_batches(file_path, &schema, &[batch])?;

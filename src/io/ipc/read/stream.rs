@@ -4,10 +4,11 @@ use std::sync::Arc;
 use arrow_format::ipc;
 use arrow_format::ipc::Schema::MetadataVersion;
 
+use crate::array::Array;
+use crate::chunk::Chunk;
 use crate::datatypes::Schema;
 use crate::error::{ArrowError, Result};
 use crate::io::ipc::IpcSchema;
-use crate::record_batch::RecordBatch;
 
 use super::super::CONTINUATION_MARKER;
 use super::common::*;
@@ -17,7 +18,7 @@ use super::Dictionaries;
 #[derive(Debug, Clone)]
 pub struct StreamMetadata {
     /// The schema that is read from the stream's first message
-    pub schema: Arc<Schema>,
+    pub schema: Schema,
 
     pub version: MetadataVersion,
 
@@ -50,7 +51,6 @@ pub fn read_stream_metadata<R: Read>(reader: &mut R) -> Result<StreamMetadata> {
         .header_as_schema()
         .ok_or_else(|| ArrowError::OutOfSpec("Unable to read IPC message as schema".to_string()))?;
     let (schema, ipc_schema) = fb_to_schema(ipc_schema)?;
-    let schema = Arc::new(schema);
 
     Ok(StreamMetadata {
         schema,
@@ -64,15 +64,15 @@ pub fn read_stream_metadata<R: Read>(reader: &mut R) -> Result<StreamMetadata> {
 /// A stream is an iterator, and an iterator returns `Option<Item>`. The `Item`
 /// type in the [`StreamReader`] case is `StreamState`, which means that an Arrow
 /// stream may yield one of three values: (1) `None`, which signals that the stream
-/// is done; (2) `Some(StreamState::Some(RecordBatch))`, which signals that there was
+/// is done; (2) [`StreamState::Some`], which signals that there was
 /// data waiting in the stream and we read it; and finally (3)
-/// `Some(StreamState::Waiting)`, which means that the stream is still "live", it
+/// [`Some(StreamState::Waiting)`], which means that the stream is still "live", it
 /// just doesn't hold any data right now.
 pub enum StreamState {
     /// A live stream without data
     Waiting,
     /// Next item in the stream
-    Some(RecordBatch),
+    Some(Chunk<Arc<dyn Array>>),
 }
 
 impl StreamState {
@@ -81,7 +81,7 @@ impl StreamState {
     /// # Panics
     ///
     /// If the `StreamState` was `Waiting`.
-    pub fn unwrap(self) -> RecordBatch {
+    pub fn unwrap(self) -> Chunk<Arc<dyn Array>> {
         if let StreamState::Some(batch) = self {
             batch
         } else {
@@ -155,7 +155,7 @@ fn read_next<R: Read>(
 
             read_record_batch(
                 batch,
-                metadata.schema.clone(),
+                metadata.schema.fields(),
                 &metadata.ipc_schema,
                 None,
                 dictionaries,
@@ -184,7 +184,7 @@ fn read_next<R: Read>(
                 0,
             )?;
 
-            // read the next message until we encounter a RecordBatch
+            // read the next message until we encounter a RecordBatch message
             read_next(reader, metadata, dictionaries, message_buffer, data_buffer)
         }
         ipc::Message::MessageHeader::NONE => Ok(Some(StreamState::Waiting)),

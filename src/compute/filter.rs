@@ -1,9 +1,9 @@
 //! Contains operators to filter arrays such as [`filter`].
 use crate::array::growable::{make_growable, Growable};
 use crate::bitmap::{utils::SlicesIterator, Bitmap, MutableBitmap};
+use crate::chunk::Chunk;
 use crate::datatypes::DataType;
 use crate::error::Result;
-use crate::record_batch::RecordBatch;
 use crate::{array::*, types::NativeType};
 
 /// Function that can filter arbitrary arrays
@@ -66,9 +66,7 @@ fn filter_growable<'a>(growable: &mut impl Growable<'a>, chunks: &[(usize, usize
 
 /// Returns a prepared function optimized to filter multiple arrays.
 /// Creating this function requires time, but using it is faster than [filter] when the
-/// same filter needs to be applied to multiple arrays (e.g. a multi-column `RecordBatch`).
-/// WARNING: the nulls of `filter` are ignored and the value on its slot is considered.
-/// Therefore, it is considered undefined behavior to pass `filter` with null values.
+/// same filter needs to be applied to multiple arrays (e.g. a multiple columns).
 pub fn build_filter(filter: &BooleanArray) -> Result<Filter> {
     let iter = SlicesIterator::new(filter.values());
     let filter_count = iter.slots();
@@ -154,27 +152,24 @@ pub fn filter(array: &dyn Array, filter: &BooleanArray) -> Result<Box<dyn Array>
     }
 }
 
-/// Returns a new [RecordBatch] with arrays containing only values matching the filter.
-/// WARNING: the nulls of `filter` are ignored and the value on its slot is considered.
-/// Therefore, it is considered undefined behavior to pass `filter` with null values.
-pub fn filter_record_batch(
-    record_batch: &RecordBatch,
+/// Returns a new [Chunk] with arrays containing only values matching the filter.
+/// This is a convenience function: filter multiple columns is embarassingly parallel.
+pub fn filter_chunk<A: AsRef<dyn Array>>(
+    columns: &Chunk<A>,
     filter_values: &BooleanArray,
-) -> Result<RecordBatch> {
-    let num_colums = record_batch.columns().len();
+) -> Result<Chunk<Box<dyn Array>>> {
+    let arrays = columns.arrays();
+
+    let num_colums = arrays.len();
 
     let filtered_arrays = match num_colums {
         1 => {
-            vec![filter(record_batch.columns()[0].as_ref(), filter_values)?.into()]
+            vec![filter(columns.arrays()[0].as_ref(), filter_values)?]
         }
         _ => {
             let filter = build_filter(filter_values)?;
-            record_batch
-                .columns()
-                .iter()
-                .map(|a| filter(a.as_ref()).into())
-                .collect()
+            arrays.iter().map(|a| filter(a.as_ref())).collect()
         }
     };
-    RecordBatch::try_new(record_batch.schema().clone(), filtered_arrays)
+    Chunk::try_new(filtered_arrays)
 }

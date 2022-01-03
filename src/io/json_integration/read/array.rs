@@ -7,10 +7,10 @@ use crate::{
     array::*,
     bitmap::{Bitmap, MutableBitmap},
     buffer::Buffer,
+    chunk::Chunk,
     datatypes::{DataType, PhysicalType, PrimitiveType, Schema},
     error::{ArrowError, Result},
     io::ipc::IpcField,
-    record_batch::RecordBatch,
     types::{days_ms, months_days_ns, NativeType},
 };
 
@@ -410,13 +410,13 @@ pub fn to_array(
     }
 }
 
-pub fn to_record_batch(
+pub fn deserialize_chunk(
     schema: &Schema,
     ipc_fields: &[IpcField],
     json_batch: &ArrowJsonBatch,
     json_dictionaries: &HashMap<i64, ArrowJsonDictionaryBatch>,
-) -> Result<RecordBatch> {
-    let columns = schema
+) -> Result<Chunk<Arc<dyn Array>>> {
+    let arrays = schema
         .fields()
         .iter()
         .zip(&json_batch.columns)
@@ -429,7 +429,7 @@ pub fn to_record_batch(
                 json_dictionaries,
             )
         })
-        .collect::<Result<Vec<_>>>()?;
+        .collect::<Result<_>>()?;
 
-    RecordBatch::try_new(Arc::new(schema.clone()), columns)
+    Chunk::try_new(arrays)
 }

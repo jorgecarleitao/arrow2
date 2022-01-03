@@ -1,4 +1,4 @@
-use std::io::Write;
+use std::{io::Write, sync::Arc};
 
 use arrow_format::ipc;
 use arrow_format::ipc::flatbuffers::FlatBufferBuilder;
@@ -6,14 +6,15 @@ use arrow_format::ipc::flatbuffers::FlatBufferBuilder;
 use super::{
     super::IpcField,
     super::ARROW_MAGIC,
-    common::{encode_columns, DictionaryTracker, EncodedData, WriteOptions},
+    common::{encode_chunk, DictionaryTracker, EncodedData, WriteOptions},
     common_sync::{write_continuation, write_message},
     default_ipc_fields, schema, schema_to_bytes,
 };
 
+use crate::array::Array;
+use crate::chunk::Chunk;
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
-use crate::record_batch::RecordBatch;
 
 /// Arrow file writer
 pub struct FileWriter<W: Write> {
@@ -78,8 +79,12 @@ impl<W: Write> FileWriter<W> {
         self.writer
     }
 
-    /// Writes [`RecordBatch`] to the file
-    pub fn write(&mut self, batch: &RecordBatch, ipc_fields: Option<&[IpcField]>) -> Result<()> {
+    /// Writes [`Chunk`] to the file
+    pub fn write(
+        &mut self,
+        columns: &Chunk<Arc<dyn Array>>,
+        ipc_fields: Option<&[IpcField]>,
+    ) -> Result<()> {
         if self.finished {
             return Err(ArrowError::Io(std::io::Error::new(
                 std::io::ErrorKind::UnexpectedEof,
@@ -93,9 +98,8 @@ impl<W: Write> FileWriter<W> {
             self.ipc_fields.as_ref()
         };
 
-        let columns = batch.clone().into();
-        let (encoded_dictionaries, encoded_message) = encode_columns(
-            &columns,
+        let (encoded_dictionaries, encoded_message) = encode_chunk(
+            columns,
             ipc_fields,
             &mut self.dictionary_tracker,
             &self.options,

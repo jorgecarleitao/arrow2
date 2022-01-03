@@ -4,26 +4,24 @@ use arrow2::{
     array::*,
     bitmap::Bitmap,
     buffer::Buffer,
-    datatypes::{DataType, Field, Schema},
+    datatypes::{DataType, Field},
     error::Result,
-    record_batch::RecordBatch,
 };
 
 use super::*;
 
 #[test]
 fn write_simple_rows() -> Result<()> {
-    let schema = Schema::new(vec![
-        Field::new("c1", DataType::Int32, false),
-        Field::new("c2", DataType::Utf8, false),
-    ]);
-
     let a = Int32Array::from([Some(1), Some(2), Some(3), None, Some(5)]);
     let b = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c"), Some("d"), None]);
 
-    let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(a), Arc::new(b)]).unwrap();
+    let batch = Chunk::try_new(vec![&a as &dyn Array, &b]).unwrap();
 
-    let buf = write_batch(batch, json_write::LineDelimited::default())?;
+    let buf = write_batch(
+        batch,
+        vec!["c1".to_string(), "c2".to_string()],
+        json_write::LineDelimited::default(),
+    )?;
 
     assert_eq!(
         String::from_utf8(buf).unwrap(),
@@ -39,17 +37,16 @@ fn write_simple_rows() -> Result<()> {
 
 #[test]
 fn write_simple_rows_array() -> Result<()> {
-    let schema = Schema::new(vec![
-        Field::new("c1", DataType::Int32, false),
-        Field::new("c2", DataType::Utf8, false),
-    ]);
-
     let a = Int32Array::from([Some(1), Some(2), Some(3), None, Some(5)]);
     let b = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c"), Some("d"), None]);
 
-    let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(a), Arc::new(b)]).unwrap();
+    let batch = Chunk::try_new(vec![&a as &dyn Array, &b]).unwrap();
 
-    let buf = write_batch(batch, json_write::JsonArray::default())?;
+    let buf = write_batch(
+        batch,
+        vec!["c1".to_string(), "c2".to_string()],
+        json_write::JsonArray::default(),
+    )?;
 
     assert_eq!(
         String::from_utf8(buf).unwrap(),
@@ -68,10 +65,6 @@ fn write_nested_struct_with_validity() -> Result<()> {
         Field::new("c11", DataType::Int32, false),
         Field::new("c12", DataType::Struct(inner.clone()), false),
     ];
-    let schema = Schema::new(vec![
-        Field::new("c1", DataType::Struct(fields.clone()), false),
-        Field::new("c2", DataType::Utf8, false),
-    ]);
 
     let c1 = StructArray::from_data(
         DataType::Struct(fields),
@@ -90,9 +83,13 @@ fn write_nested_struct_with_validity() -> Result<()> {
     );
     let c2 = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c")]);
 
-    let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(c1), Arc::new(c2)]).unwrap();
+    let batch = Chunk::try_new(vec![&c1 as &dyn Array, &c2]).unwrap();
 
-    let buf = write_batch(batch, json_write::LineDelimited::default())?;
+    let buf = write_batch(
+        batch,
+        vec!["c1".to_string(), "c2".to_string()],
+        json_write::LineDelimited::default(),
+    )?;
 
     assert_eq!(
         String::from_utf8(buf).unwrap(),
@@ -111,10 +108,6 @@ fn write_nested_structs() -> Result<()> {
         Field::new("c11", DataType::Int32, false),
         Field::new("c12", DataType::Struct(vec![c121.clone()]), false),
     ];
-    let schema = Schema::new(vec![
-        Field::new("c1", DataType::Struct(fields.clone()), false),
-        Field::new("c2", DataType::Utf8, false),
-    ]);
 
     let c1 = StructArray::from_data(
         DataType::Struct(fields),
@@ -135,9 +128,13 @@ fn write_nested_structs() -> Result<()> {
 
     let c2 = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c")]);
 
-    let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(c1), Arc::new(c2)]).unwrap();
+    let batch = Chunk::try_new(vec![&c1 as &dyn Array, &c2]).unwrap();
 
-    let buf = write_batch(batch, json_write::LineDelimited::default())?;
+    let buf = write_batch(
+        batch,
+        vec!["c1".to_string(), "c2".to_string()],
+        json_write::LineDelimited::default(),
+    )?;
 
     assert_eq!(
         String::from_utf8(buf).unwrap(),
@@ -151,11 +148,6 @@ fn write_nested_structs() -> Result<()> {
 
 #[test]
 fn write_struct_with_list_field() -> Result<()> {
-    let list_datatype = DataType::List(Box::new(Field::new("c_list", DataType::Utf8, false)));
-    let field_c1 = Field::new("c1", list_datatype, false);
-    let field_c2 = Field::new("c2", DataType::Int32, false);
-    let schema = Schema::new(vec![field_c1, field_c2]);
-
     let iter = vec![vec!["a", "a1"], vec!["b"], vec!["c"], vec!["d"], vec!["e"]];
 
     let iter = iter
@@ -172,9 +164,13 @@ fn write_struct_with_list_field() -> Result<()> {
 
     let b = PrimitiveArray::from_slice([1, 2, 3, 4, 5]);
 
-    let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(a), Arc::new(b)]).unwrap();
+    let batch = Chunk::try_new(vec![&a as &dyn Array, &b]).unwrap();
 
-    let buf = write_batch(batch, json_write::LineDelimited::default())?;
+    let buf = write_batch(
+        batch,
+        vec!["c1".to_string(), "c2".to_string()],
+        json_write::LineDelimited::default(),
+    )?;
 
     assert_eq!(
         String::from_utf8(buf).unwrap(),
@@ -190,12 +186,6 @@ fn write_struct_with_list_field() -> Result<()> {
 
 #[test]
 fn write_nested_list() -> Result<()> {
-    let list_inner = DataType::List(Box::new(Field::new("b", DataType::Int32, false)));
-    let list_datatype = DataType::List(Box::new(Field::new("a", list_inner, false)));
-    let field_c1 = Field::new("c1", list_datatype, true);
-    let field_c2 = Field::new("c2", DataType::Utf8, true);
-    let schema = Schema::new(vec![field_c1, field_c2]);
-
     let iter = vec![
         vec![Some(vec![Some(1), Some(2)]), Some(vec![Some(3)])],
         vec![],
@@ -218,9 +208,13 @@ fn write_nested_list() -> Result<()> {
 
     let c2 = Utf8Array::<i32>::from(&vec![Some("foo"), Some("bar"), None]);
 
-    let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(c1), Arc::new(c2)]).unwrap();
+    let batch = Chunk::try_new(vec![&c1 as &dyn Array, &c2]).unwrap();
 
-    let buf = write_batch(batch, json_write::LineDelimited::default())?;
+    let buf = write_batch(
+        batch,
+        vec!["c1".to_string(), "c2".to_string()],
+        json_write::LineDelimited::default(),
+    )?;
 
     assert_eq!(
         String::from_utf8(buf).unwrap(),
@@ -244,9 +238,6 @@ fn write_list_of_struct() -> Result<()> {
         DataType::Struct(fields.clone()),
         false,
     )));
-    let field_c1 = Field::new("c1", c1_datatype.clone(), true);
-    let field_c2 = Field::new("c2", DataType::Int32, false);
-    let schema = Schema::new(vec![field_c1, field_c2]);
 
     let s = StructArray::from_data(
         DataType::Struct(fields),
@@ -278,9 +269,13 @@ fn write_list_of_struct() -> Result<()> {
 
     let c2 = Int32Array::from_slice(&[1, 2, 3]);
 
-    let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(c1), Arc::new(c2)]).unwrap();
+    let batch = Chunk::try_new(vec![&c1 as &dyn Array, &c2]).unwrap();
 
-    let buf = write_batch(batch, json_write::LineDelimited::default())?;
+    let buf = write_batch(
+        batch,
+        vec!["c1".to_string(), "c2".to_string()],
+        json_write::LineDelimited::default(),
+    )?;
 
     assert_eq!(
         String::from_utf8(buf).unwrap(),
@@ -294,12 +289,15 @@ fn write_list_of_struct() -> Result<()> {
 
 #[test]
 fn write_escaped_utf8() -> Result<()> {
-    let schema = Schema::new(vec![Field::new("c1", DataType::Utf8, false)]);
     let a = Utf8Array::<i32>::from(&vec![Some("a\na"), None]);
 
-    let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(a)]).unwrap();
+    let batch = Chunk::try_new(vec![&a as &dyn Array]).unwrap();
 
-    let buf = write_batch(batch, json_write::LineDelimited::default())?;
+    let buf = write_batch(
+        batch,
+        vec!["c1".to_string()],
+        json_write::LineDelimited::default(),
+    )?;
 
     assert_eq!(
         String::from_utf8(buf).unwrap().as_bytes(),

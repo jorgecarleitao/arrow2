@@ -1,51 +1,39 @@
-//! APIs to represent [`RecordBatch`] as a formatted table.
+//! APIs to represent [`Chunk`] as a formatted table.
 
-use crate::{array::get_display, record_batch::RecordBatch};
+use crate::{
+    array::{get_display, Array},
+    chunk::Chunk,
+};
 
 use comfy_table::{Cell, Table};
 
-/// Returns a visual representation of multiple [`RecordBatch`]es.
-pub fn write(batches: &[RecordBatch]) -> String {
-    create_table(batches).to_string()
-}
-
-/// Prints a visual representation of record batches to stdout
-pub fn print(results: &[RecordBatch]) {
-    println!("{}", create_table(results))
-}
-
-/// Convert a series of record batches into a table
-fn create_table(results: &[RecordBatch]) -> Table {
+/// Returns a visual representation of [`Chunk`]
+pub fn write<A: AsRef<dyn Array>, N: AsRef<str>>(batches: &[Chunk<A>], names: &[N]) -> String {
     let mut table = Table::new();
     table.load_preset("||--+-++|    ++++++");
 
-    if results.is_empty() {
-        return table;
+    if batches.is_empty() {
+        return table.to_string();
     }
 
-    let schema = results[0].schema();
-
-    let mut header = Vec::new();
-    for field in schema.fields() {
-        header.push(Cell::new(field.name()));
-    }
+    let header = names.iter().map(|name| Cell::new(name.as_ref()));
     table.set_header(header);
 
-    for batch in results {
+    for batch in batches {
         let displayes = batch
-            .columns()
+            .arrays()
             .iter()
             .map(|array| get_display(array.as_ref()))
             .collect::<Vec<_>>();
 
-        for row in 0..batch.num_rows() {
+        for row in 0..batch.len() {
             let mut cells = Vec::new();
-            (0..batch.num_columns()).for_each(|col| {
+            (0..batch.arrays().len()).for_each(|col| {
                 let string = displayes[col](row);
                 cells.push(Cell::new(&string));
             });
             table.add_row(cells);
         }
     }
-    table
+    table.to_string()
 }

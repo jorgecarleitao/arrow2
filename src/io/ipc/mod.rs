@@ -10,9 +10,8 @@
 //! using the more integrated approach that is exposed in this module.
 //!
 //! [Arrow's IPC protocol](https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc)
-//! allows only [`RecordBatch`](crate::record_batch::RecordBatch)es or
-//! [`DictionaryBatch`](gen::Message::DictionaryBatch) to be passed
-//! around due to its reliance on a pre-defined data scheme. This limitation
+//! allows only batch or dictionary columns to be passed
+//! around due to its reliance on a pre-defined data scheme. This constraint
 //! provides a large performance gain because serialized data will always have a
 //! known structutre, i.e. the same fields and datatypes, with the only variance
 //! being the number of rows and the actual data inside the Batch. This dramatically
@@ -34,8 +33,8 @@
 //! # use std::fs::File;
 //! # use std::sync::Arc;
 //! # use arrow2::datatypes::{Field, Schema, DataType};
-//! # use arrow2::array::Int32Array;
-//! # use arrow2::record_batch::RecordBatch;
+//! # use arrow2::array::{Int32Array, Array};
+//! # use arrow2::chunk::Chunk;
 //! # use arrow2::error::ArrowError;
 //! // Setup the writer
 //! let path = "example.arrow".to_string();
@@ -49,14 +48,13 @@
 //! // Setup the data
 //! let x_data = Int32Array::from_slice([-1i32, 1]);
 //! let y_data = Int32Array::from_slice([1i32, -1]);
-//! let batch = RecordBatch::try_new(
-//!        Arc::new(schema),
-//!         vec![Arc::new(x_data), Arc::new(y_data)]
-//!    )?;
+//! let chunk = Chunk::try_new(
+//!     vec![Arc::new(x_data) as Arc<dyn Array>, Arc::new(y_data)]
+//! )?;
 //!
 //! // Write the messages and finalize the stream
 //! for _ in 0..5 {
-//!     writer.write(&batch, None);
+//!     writer.write(&chunk, None);
 //! }
 //! writer.finish();
 //!

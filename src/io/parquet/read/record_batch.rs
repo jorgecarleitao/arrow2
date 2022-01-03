@@ -4,9 +4,10 @@ use std::{
 };
 
 use crate::{
+    array::Array,
+    chunk::Chunk,
     datatypes::{Field, Schema},
     error::{ArrowError, Result},
-    record_batch::RecordBatch,
 };
 
 use super::{
@@ -16,7 +17,7 @@ use super::{
 
 type GroupFilter = Arc<dyn Fn(usize, &RowGroupMetaData) -> bool>;
 
-/// Single threaded iterator of [`RecordBatch`] from a parquet file.
+/// Single threaded iterator of a paquet file.
 pub struct RecordReader<R: Read + Seek> {
     reader: R,
     schema: Arc<Schema>,
@@ -107,7 +108,7 @@ impl<R: Read + Seek> RecordReader<R> {
 }
 
 impl<R: Read + Seek> Iterator for RecordReader<R> {
-    type Item = Result<RecordBatch>;
+    type Item = Result<Chunk<Arc<dyn Array>>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.schema.fields().is_empty() {
@@ -158,19 +159,18 @@ impl<R: Read + Seek> Iterator for RecordReader<R> {
                     array
                 };
 
-                columns.push(array.into());
+                let column: Arc<dyn Array> = array.into();
+                columns.push(column);
                 Result::Ok((b1, b2, columns))
             },
         );
 
         self.current_group += 1;
-        Some(a.and_then(|(b1, b2, columns)| {
+        Some(a.map(|(b1, b2, columns)| {
             self.buffer = b1;
             self.decompress_buffer = b2;
-            RecordBatch::try_new(self.schema.clone(), columns).map(|batch| {
-                self.remaining_rows -= batch.num_rows();
-                batch
-            })
+            self.remaining_rows -= columns[0].len();
+            Chunk::new(columns)
         }))
     }
 }

@@ -4,19 +4,18 @@ use std::sync::Arc;
 use std::thread;
 
 use arrow2::{
-    array::Int32Array,
-    datatypes::{Field, Schema},
+    array::{Array, Int32Array},
+    chunk::Chunk,
     error::Result,
     io::csv::write,
-    record_batch::RecordBatch,
 };
 
-fn parallel_write(path: &str, batches: [RecordBatch; 2]) -> Result<()> {
+fn parallel_write(path: &str, batches: [Chunk<Arc<dyn Array>>; 2]) -> Result<()> {
     let options = write::SerializeOptions::default();
 
     // write a header
     let writer = &mut write::WriterBuilder::new().from_path(path)?;
-    write::write_header(writer, batches[0].schema())?;
+    write::write_header(writer, &["c1"])?;
 
     // prepare a channel to send serialized records from threads
     let (tx, rx): (Sender<_>, Receiver<_>) = mpsc::channel();
@@ -61,9 +60,7 @@ fn main() -> Result<()> {
         Some(5),
         Some(6),
     ]);
-    let field = Field::new("c1", array.data_type().clone(), true);
-    let schema = Schema::new(vec![field]);
-    let batch = RecordBatch::try_new(Arc::new(schema), vec![Arc::new(array)])?;
+    let columns = Chunk::new(vec![Arc::new(array) as Arc<dyn Array>]);
 
-    parallel_write("example.csv", [batch.clone(), batch])
+    parallel_write("example.csv", [columns.clone(), columns])
 }

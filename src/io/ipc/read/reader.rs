@@ -5,10 +5,11 @@ use arrow_format::ipc;
 use arrow_format::ipc::flatbuffers::VerifierOptions;
 use arrow_format::ipc::File::Block;
 
+use crate::array::Array;
+use crate::chunk::Chunk;
 use crate::datatypes::Schema;
 use crate::error::{ArrowError, Result};
 use crate::io::ipc::IpcSchema;
-use crate::record_batch::RecordBatch;
 
 use super::super::{ARROW_MAGIC, CONTINUATION_MARKER};
 use super::common::*;
@@ -18,7 +19,7 @@ use super::Dictionaries;
 #[derive(Debug, Clone)]
 pub struct FileMetadata {
     /// The schema that is read from the file footer
-    pub schema: Arc<Schema>,
+    pub schema: Schema,
 
     /// The files' [`IpcSchema`]
     pub ipc_schema: IpcSchema,
@@ -35,19 +36,12 @@ pub struct FileMetadata {
     version: ipc::Schema::MetadataVersion,
 }
 
-impl FileMetadata {
-    /// Returns the schema.
-    pub fn schema(&self) -> &Arc<Schema> {
-        &self.schema
-    }
-}
-
 /// Arrow File reader
 pub struct FileReader<R: Read + Seek> {
     reader: R,
     metadata: FileMetadata,
     current_block: usize,
-    projection: Option<(Vec<usize>, Arc<Schema>)>,
+    projection: Option<(Vec<usize>, Schema)>,
     buffer: Vec<u8>,
 }
 
@@ -167,7 +161,6 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
         .schema()
         .ok_or_else(|| ArrowError::OutOfSpec("Unable to get the schema from footer".to_string()))?;
     let (schema, ipc_schema) = fb_to_schema(ipc_schema)?;
-    let schema = Arc::new(schema);
 
     let dictionary_blocks = footer.dictionaries();
 
@@ -209,10 +202,10 @@ fn get_serialized_batch<'a>(
 pub fn read_batch<R: Read + Seek>(
     reader: &mut R,
     metadata: &FileMetadata,
-    projection: Option<(&[usize], Arc<Schema>)>,
+    projection: Option<&[usize]>,
     block: usize,
     block_data: &mut Vec<u8>,
-) -> Result<RecordBatch> {
+) -> Result<Chunk<Arc<dyn Array>>> {
     let block = metadata.blocks[block];
 
     // read length
@@ -236,7 +229,7 @@ pub fn read_batch<R: Read + Seek>(
 
     read_record_batch(
         batch,
-        metadata.schema.clone(),
+        metadata.schema.fields(),
         &metadata.ipc_schema,
         projection,
         &metadata.dictionaries,
@@ -260,12 +253,12 @@ impl<R: Read + Seek> FileReader<R> {
             });
         }
         let projection = projection.map(|projection| {
-            let fields = metadata.schema().fields();
+            let fields = metadata.schema.fields();
             let fields = projection.iter().map(|x| fields[*x].clone()).collect();
-            let schema = Arc::new(Schema {
+            let schema = Schema {
                 fields,
-                metadata: metadata.schema().metadata().clone(),
-            });
+                metadata: metadata.schema.metadata().clone(),
+            };
             (projection, schema)
         });
         Self {
@@ -278,7 +271,7 @@ impl<R: Read + Seek> FileReader<R> {
     }
 
     /// Return the schema of the file
-    pub fn schema(&self) -> &Arc<Schema> {
+    pub fn schema(&self) -> &Schema {
         self.projection
             .as_ref()
             .map(|x| &x.1)
@@ -297,7 +290,7 @@ impl<R: Read + Seek> FileReader<R> {
 }
 
 impl<R: Read + Seek> Iterator for FileReader<R> {
-    type Item = Result<RecordBatch>;
+    type Item = Result<Chunk<Arc<dyn Array>>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         // get current block
@@ -307,9 +300,7 @@ impl<R: Read + Seek> Iterator for FileReader<R> {
             Some(read_batch(
                 &mut self.reader,
                 &self.metadata,
-                self.projection
-                    .as_ref()
-                    .map(|x| (x.0.as_ref(), x.1.clone())),
+                self.projection.as_ref().map(|x| x.0.as_ref()),
                 block,
                 &mut self.buffer,
             ))

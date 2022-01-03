@@ -10,53 +10,58 @@ pub use csv::{ByteRecord, Writer, WriterBuilder};
 
 pub use serialize::*;
 
-use crate::record_batch::RecordBatch;
-use crate::{datatypes::Schema, error::Result};
+use crate::array::Array;
+use crate::chunk::Chunk;
+use crate::error::Result;
 
-/// Creates serializers that iterate over each column of `batch` and serialize each item according
+/// Creates serializers that iterate over each column that serializes each item according
 /// to `options`.
-fn new_serializers<'a>(
-    batch: &'a RecordBatch,
+fn new_serializers<'a, A: AsRef<dyn Array>>(
+    columns: &'a [A],
     options: &'a SerializeOptions,
 ) -> Result<Vec<Box<dyn StreamingIterator<Item = [u8]> + 'a>>> {
-    batch
-        .columns()
+    columns
         .iter()
         .map(|column| new_serializer(column.as_ref(), options))
         .collect()
 }
 
-/// Serializes a [`RecordBatch`] as vector of `ByteRecord`.
-/// The vector is guaranteed to have `batch.num_rows()` entries.
-/// Each `ByteRecord` is guaranteed to have `batch.num_columns()` fields.
-pub fn serialize(batch: &RecordBatch, options: &SerializeOptions) -> Result<Vec<ByteRecord>> {
-    let mut serializers = new_serializers(batch, options)?;
+/// Serializes [`Chunk`] to a vector of `ByteRecord`.
+/// The vector is guaranteed to have `columns.len()` entries.
+/// Each `ByteRecord` is guaranteed to have `columns.array().len()` fields.
+pub fn serialize<A: AsRef<dyn Array>>(
+    columns: &Chunk<A>,
+    options: &SerializeOptions,
+) -> Result<Vec<ByteRecord>> {
+    let mut serializers = new_serializers(columns, options)?;
 
-    let mut records = vec![ByteRecord::with_capacity(0, batch.num_columns()); batch.num_rows()];
+    let rows = columns.len();
+    let mut records = vec![ByteRecord::with_capacity(0, columns.arrays().len()); rows];
     records.iter_mut().for_each(|record| {
         serializers
             .iter_mut()
-            // `unwrap` is infalible because `array.len()` equals `num_rows` on a `RecordBatch`
+            // `unwrap` is infalible because `array.len()` equals `len` in `Chunk::len`
             .for_each(|iter| record.push_field(iter.next().unwrap()));
     });
     Ok(records)
 }
 
-/// Writes the data in a `RecordBatch` to `writer` according to the serialization options `options`.
-pub fn write_batch<W: Write>(
+/// Writes [`Chunk`] to `writer` according to the serialization options `options`.
+pub fn write_chunk<W: Write, A: AsRef<dyn Array>>(
     writer: &mut Writer<W>,
-    batch: &RecordBatch,
+    columns: &Chunk<A>,
     options: &SerializeOptions,
 ) -> Result<()> {
-    let mut serializers = new_serializers(batch, options)?;
+    let mut serializers = new_serializers(columns.arrays(), options)?;
 
-    let mut record = ByteRecord::with_capacity(0, batch.num_columns());
+    let rows = columns.len();
+    let mut record = ByteRecord::with_capacity(0, columns.arrays().len());
 
     // this is where the (expensive) transposition happens: the outer loop is on rows, the inner on columns
-    (0..batch.num_rows()).try_for_each(|_| {
+    (0..rows).try_for_each(|_| {
         serializers
             .iter_mut()
-            // `unwrap` is infalible because `array.len()` equals `num_rows` on a `RecordBatch`
+            // `unwrap` is infalible because `array.len()` equals `Chunk::len`
             .for_each(|iter| record.push_field(iter.next().unwrap()));
         writer.write_byte_record(&record)?;
         record.clear();
@@ -65,13 +70,11 @@ pub fn write_batch<W: Write>(
     Ok(())
 }
 
-/// Writes a header to `writer` according to `schema`
-pub fn write_header<W: Write>(writer: &mut Writer<W>, schema: &Schema) -> Result<()> {
-    let fields = schema
-        .fields()
-        .iter()
-        .map(|field| field.name().to_string())
-        .collect::<Vec<_>>();
-    writer.write_record(&fields)?;
+/// Writes a CSV header to `writer`
+pub fn write_header<W: Write, T>(writer: &mut Writer<W>, names: &[T]) -> Result<()>
+where
+    T: AsRef<str>,
+{
+    writer.write_record(names.iter().map(|x| x.as_ref().as_bytes()))?;
     Ok(())
 }

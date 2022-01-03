@@ -14,9 +14,9 @@ fn main() -> Result<()> {
     let reader = read::RecordReader::try_new(reader, None, None, None, None)?;
 
     let start = SystemTime::now();
-    for maybe_batch in reader {
-        let batch = maybe_batch?;
-        assert!(batch.num_rows() > 0);
+    for maybe_chunk in reader {
+        let columns = maybe_chunk?;
+        assert!(!columns.is_empty());
     }
     println!("took: {} ms", start.elapsed().unwrap().as_millis());
     Ok(())

@@ -22,13 +22,13 @@ async fn main() -> Result<()> {
     let mut rows = vec![ByteRecord::default(); 100];
     let rows_read = read_rows(&mut reader, 0, &mut rows).await?;
 
-    let batch = deserialize_batch(
+    let columns = deserialize_batch(
         &rows[..rows_read],
         schema.fields(),
         None,
         0,
         deserialize_column,
     )?;
-    println!("{:?}", batch.column(0));
+    println!("{:?}", columns.arrays()[0]);
     Ok(())
 }

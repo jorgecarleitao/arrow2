@@ -7,14 +7,14 @@ use std::time::SystemTime;
 use rayon::prelude::*;
 
 use arrow2::{
-    error::Result, io::parquet::read, io::parquet::read::MutStreamingIterator,
-    record_batch::RecordBatch,
+    array::Array, chunk::Chunk, error::Result, io::parquet::read,
+    io::parquet::read::MutStreamingIterator,
 };
 
-fn parallel_read(path: &str, row_group: usize) -> Result<RecordBatch> {
+fn parallel_read(path: &str, row_group: usize) -> Result<Chunk<Arc<dyn Array>>> {
     let mut file = BufReader::new(File::open(path)?);
     let file_metadata = read::read_metadata(&mut file)?;
-    let arrow_schema = Arc::new(read::get_schema(&file_metadata)?);
+    let schema = read::get_schema(&file_metadata)?;
 
     // IO-bounded
     let columns = file_metadata
@@ -58,13 +58,13 @@ fn parallel_read(path: &str, row_group: usize) -> Result<RecordBatch> {
         .into_par_iter()
         .map(|(field_i, parquet_field, column_chunks)| {
             let columns = read::ReadColumnIterator::new(parquet_field, column_chunks);
-            let field = &arrow_schema.fields()[field_i];
+            let field = &schema.fields()[field_i];
 
             read::column_iter_to_array(columns, field, vec![]).map(|x| x.0.into())
         })
         .collect::<Result<Vec<_>>>()?;
 
-    RecordBatch::try_new(arrow_schema, columns)
+    Chunk::try_new(columns)
 }
 
 fn main() -> Result<()> {
@@ -75,7 +75,7 @@ fn main() -> Result<()> {
 
     let start = SystemTime::now();
     let batch = parallel_read(file_path, row_group)?;
-    assert!(batch.num_rows() > 0);
+    assert!(!batch.is_empty());
     println!("took: {} ms", start.elapsed().unwrap().as_millis());
 
     Ok(())

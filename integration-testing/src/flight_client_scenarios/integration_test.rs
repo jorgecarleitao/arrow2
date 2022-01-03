@@ -18,6 +18,8 @@
 use crate::{read_json_file, ArrowFile};
 
 use arrow2::{
+    array::Array,
+    chunk::Chunk,
     datatypes::*,
     io::ipc::{
         read::{self, Dictionaries},
@@ -27,7 +29,6 @@ use arrow2::{
         flight::{self, deserialize_batch, serialize_batch},
         ipc::IpcField,
     },
-    record_batch::RecordBatch,
 };
 use arrow_format::flight::data::{
     flight_descriptor::DescriptorType, FlightData, FlightDescriptor, Location, Ticket,
@@ -44,6 +45,8 @@ type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 type Result<T = (), E = Error> = std::result::Result<T, E>;
 
 type Client = FlightServiceClient<tonic::transport::Channel>;
+
+type ChunkArc = Chunk<Arc<dyn Array>>;
 
 pub async fn run_scenario(host: &str, port: &str, path: &str) -> Result {
     let url = format!("http://{}:{}", host, port);
@@ -75,7 +78,7 @@ pub async fn run_scenario(host: &str, port: &str, path: &str) -> Result {
         batches.clone(),
     )
     .await?;
-    verify_data(client, descriptor, schema, &ipc_schema, &batches).await?;
+    verify_data(client, descriptor, &schema, &ipc_schema, &batches).await?;
 
     Ok(())
 }
@@ -85,7 +88,7 @@ async fn upload_data(
     schema: &Schema,
     fields: &[IpcField],
     descriptor: FlightDescriptor,
-    original_data: Vec<RecordBatch>,
+    original_data: Vec<ChunkArc>,
 ) -> Result {
     let (mut upload_tx, upload_rx) = mpsc::channel(10);
 
@@ -140,7 +143,7 @@ async fn upload_data(
 async fn send_batch(
     upload_tx: &mut mpsc::Sender<FlightData>,
     metadata: &[u8],
-    batch: &RecordBatch,
+    batch: &ChunkArc,
     fields: &[IpcField],
     options: &write::WriteOptions,
 ) -> Result {
@@ -159,9 +162,9 @@ async fn send_batch(
 async fn verify_data(
     mut client: Client,
     descriptor: FlightDescriptor,
-    expected_schema: SchemaRef,
+    expected_schema: &Schema,
     ipc_schema: &IpcSchema,
-    expected_data: &[RecordBatch],
+    expected_data: &[ChunkArc],
 ) -> Result {
     let resp = client.get_flight_info(Request::new(descriptor)).await?;
     let info = resp.into_inner();
@@ -184,7 +187,7 @@ async fn verify_data(
                 location,
                 ticket.clone(),
                 expected_data,
-                expected_schema.clone(),
+                expected_schema,
                 ipc_schema,
             )
             .await?;
@@ -197,8 +200,8 @@ async fn verify_data(
 async fn consume_flight_location(
     location: Location,
     ticket: Ticket,
-    expected_data: &[RecordBatch],
-    schema: SchemaRef,
+    expected_data: &[ChunkArc],
+    schema: &Schema,
     ipc_schema: &IpcSchema,
 ) -> Result {
     let mut location = location;
@@ -231,21 +234,20 @@ async fn consume_flight_location(
         let metadata = counter.to_string().into_bytes();
         assert_eq!(metadata, data.app_metadata);
 
-        let actual_batch = deserialize_batch(&data, schema.clone(), ipc_schema, &dictionaries)
+        let actual_batch = deserialize_batch(&data, schema.fields(), ipc_schema, &dictionaries)
             .expect("Unable to convert flight data to Arrow batch");
 
-        assert_eq!(expected_batch.schema(), actual_batch.schema());
-        assert_eq!(expected_batch.num_columns(), actual_batch.num_columns());
-        assert_eq!(expected_batch.num_rows(), actual_batch.num_rows());
-        let schema = expected_batch.schema();
-        for i in 0..expected_batch.num_columns() {
+        assert_eq!(expected_batch.columns().len(), actual_batch.columns().len());
+        assert_eq!(expected_batch.len(), actual_batch.len());
+        for (i, (expected, actual)) in expected_batch
+            .columns()
+            .iter()
+            .zip(actual_batch.columns().iter())
+            .enumerate()
+        {
             let field = schema.field(i);
             let field_name = field.name();
-
-            let expected_data = expected_batch.column(i);
-            let actual_data = actual_batch.column(i);
-
-            assert_eq!(expected_data, actual_data, "Data for field {}", field_name);
+            assert_eq!(expected, actual, "Data for field {}", field_name);
         }
     }
 

@@ -91,10 +91,17 @@ fn arrow_to_json(arrow_name: &str, json_name: &str, verbose: bool) -> Result<()>
     let metadata = read::read_file_metadata(&mut arrow_file)?;
     let reader = read::FileReader::new(arrow_file, metadata.clone(), None);
 
+    let names = metadata
+        .schema
+        .fields
+        .iter()
+        .map(|f| f.name())
+        .collect::<Vec<_>>();
+
     let schema = json_write::serialize_schema(&metadata.schema, &metadata.ipc_schema.fields);
 
     let batches = reader
-        .map(|batch| Ok(json_write::from_record_batch(&batch?)))
+        .map(|batch| Ok(json_write::serialize_chunk(&batch?, &names)))
         .collect::<Result<Vec<_>>>()?;
 
     let arrow_json = ArrowJson {
@@ -121,10 +128,10 @@ fn validate(arrow_name: &str, json_name: &str, verbose: bool) -> Result<()> {
     let mut arrow_file = File::open(arrow_name)?;
     let metadata = read::read_file_metadata(&mut arrow_file)?;
     let reader = read::FileReader::new(arrow_file, metadata, None);
-    let arrow_schema = reader.schema().as_ref().to_owned();
+    let arrow_schema = reader.schema();
 
     // compare schemas
-    if json_file.schema != arrow_schema {
+    if &json_file.schema != arrow_schema {
         return Err(ArrowError::InvalidArgumentError(format!(
             "Schemas do not match. JSON: {:?}. Arrow: {:?}",
             json_file.schema, arrow_schema
