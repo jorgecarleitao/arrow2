@@ -3,7 +3,7 @@ use crate::error::{ArrowError, Result};
 use super::{DataType, Metadata};
 
 /// Represents the metadata of a "column".
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub struct Field {
     /// Its name
     pub name: String,

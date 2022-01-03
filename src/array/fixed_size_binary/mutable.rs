@@ -162,6 +162,15 @@ impl MutableFixedSizeBinaryArray {
             validity.shrink_to_fit()
         }
     }
+
+    /// Creates an owned [`FixedSizeBinaryArray`] from current data
+    pub fn as_fixed_size_array(&mut self) -> FixedSizeBinaryArray {
+        FixedSizeBinaryArray::from_data(
+            DataType::FixedSizeBinary(self.size),
+            std::mem::take(&mut self.values).into(),
+            std::mem::take(&mut self.validity).map(|x| x.into()),
+        )
+    }
 }
 
 /// Accessors
@@ -187,19 +196,11 @@ impl MutableArray for MutableFixedSizeBinaryArray {
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        Box::new(FixedSizeBinaryArray::from_data(
-            DataType::FixedSizeBinary(self.size),
-            std::mem::take(&mut self.values).into(),
-            std::mem::take(&mut self.validity).map(|x| x.into()),
-        ))
+        Box::new(self.as_fixed_size_array())
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
-        Arc::new(FixedSizeBinaryArray::from_data(
-            DataType::FixedSizeBinary(self.size),
-            std::mem::take(&mut self.values).into(),
-            std::mem::take(&mut self.validity).map(|x| x.into()),
-        ))
+        Arc::new(self.as_fixed_size_array())
     }
 
     fn data_type(&self) -> &DataType {

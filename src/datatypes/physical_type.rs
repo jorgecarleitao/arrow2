@@ -50,7 +50,7 @@ impl PhysicalType {
 
 /// the set of valid indices types of a dictionary-encoded Array.
 /// Each type corresponds to a variant of [`crate::array::DictionaryArray`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum IntegerType {
     /// A signed 8-bit integer.
     Int8,
