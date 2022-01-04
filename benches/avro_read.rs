@@ -1,5 +1,4 @@
 use std::io::Cursor;
-use std::sync::Arc;
 
 use avro_rs::types::Record;
 use criterion::*;
@@ -52,13 +51,13 @@ fn read_batch(buffer: &[u8], size: usize) -> Result<()> {
             codec,
         ),
         avro_schema,
-        Arc::new(schema),
+        schema.fields().clone(),
     );
 
     let mut rows = 0;
     for maybe_batch in reader {
         let batch = maybe_batch?;
-        rows += batch.num_rows();
+        rows += batch.len();
     }
     assert_eq!(rows, size);
     Ok(())

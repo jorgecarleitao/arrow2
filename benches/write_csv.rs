@@ -8,14 +8,16 @@ use arrow2::error::Result;
 use arrow2::io::csv::write;
 use arrow2::util::bench_util::*;
 
-fn write_batch(columns: &Chunk) -> Result<()> {
+type ChunkArc = Chunk<Arc<dyn Array>>;
+
+fn write_batch(columns: &ChunkArc) -> Result<()> {
     let writer = &mut write::WriterBuilder::new().from_writer(vec![]);
 
     assert_eq!(columns.arrays().len(), 1);
     write::write_header(writer, &["a"])?;
 
     let options = write::SerializeOptions::default();
-    write::write_batch(writer, batch, &options)
+    write::write_chunk(writer, columns, &options)
 }
 
 fn make_chunk(array: impl Array + 'static) -> Chunk<Arc<dyn Array>> {

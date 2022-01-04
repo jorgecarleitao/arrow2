@@ -1,23 +1,22 @@
+use arrow2::compute::arithmetics::basic::NativeArithmetics;
 use criterion::{criterion_group, criterion_main, Criterion};
 
 use arrow2::array::*;
 use arrow2::util::bench_util::*;
-use arrow2::{
-    compute::arithmetics::basic::add, compute::arithmetics::basic::div_scalar, types::NativeType,
-};
+use arrow2::{compute::arithmetics::basic::add, compute::arithmetics::basic::div_scalar};
 use num_traits::NumCast;
 use std::ops::{Add, Div};
 
 fn bench_div_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T)
 where
-    T: NativeType + Div<Output = T> + NumCast,
+    T: NativeArithmetics + Div<Output = T> + NumCast,
 {
     criterion::black_box(div_scalar(lhs, rhs));
 }
 
 fn bench_add<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>)
 where
-    T: NativeType + Add<Output = T> + NumCast,
+    T: NativeArithmetics + Add<Output = T> + NumCast,
 {
     criterion::black_box(add(lhs, rhs));
 }

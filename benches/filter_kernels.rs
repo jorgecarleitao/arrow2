@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 // Licensed to the Apache Software Foundation (ASF) under one
 // or more contributor license agreements.  See the NOTICE file
 // distributed with this work for additional information
@@ -14,21 +16,19 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-use std::sync::Arc;
-
 use criterion::{criterion_group, criterion_main, Criterion};
 
 use arrow2::array::*;
 use arrow2::chunk::Chunk;
 use arrow2::compute::filter::{build_filter, filter, filter_chunk, Filter};
-use arrow2::datatypes::{DataType, Field, Schema};
+use arrow2::datatypes::DataType;
 use arrow2::util::bench_util::{create_boolean_array, create_primitive_array, create_string_array};
 
 fn bench_filter(data_array: &dyn Array, filter_array: &BooleanArray) {
     criterion::black_box(filter(data_array, filter_array).unwrap());
 }
 
-fn bench_built_filter<'a>(filter: &Filter<'a>, array: &impl Array) {
+fn bench_built_filter<'a>(filter: &Filter<'a>, array: &dyn Array) {
     criterion::black_box(filter(array));
 }
 
@@ -125,10 +125,9 @@ fn add_benchmark(c: &mut Criterion) {
 
     let data_array = create_primitive_array::<f32>(size, 0.0);
 
-    let columns = Chunk::try_new(vec![Arc::new(data_array)]).unwrap();
-
+    let columns = Chunk::try_new(vec![Arc::new(data_array) as ArrayRef]).unwrap();
     c.bench_function("filter single record batch", |b| {
-        b.iter(|| filter_record_batch(&columns, &filter_array))
+        b.iter(|| filter_chunk(&columns, &filter_array))
     });
 }
 
