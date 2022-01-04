@@ -213,6 +213,11 @@ simd = ["packed_simd"]
 [package.metadata.cargo-all-features]
 allowlist = ["compute", "compute_sort", "compute_hash", "compute_nullif"]
 
+
+[[bench]]
+name = "dummy"
+harness = false
+
 [[bench]]
 name = "take_kernels"
 harness = false

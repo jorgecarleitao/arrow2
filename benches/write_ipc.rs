@@ -1,7 +1,5 @@
-use std::io::Cursor;
-use std::sync::Arc;
-
 use criterion::{criterion_group, criterion_main, Criterion};
+use std::io::Cursor;
 
 use arrow2::array::*;
 use arrow2::chunk::Chunk;
