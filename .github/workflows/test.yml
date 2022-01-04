@@ -127,7 +127,7 @@ jobs:
       - name: Run
         run: cargo check-all-features
       - name: Bench Check
-        run: cargo bench --no-run --features full
+        run: cargo bench --no-run --features full,benchmarks
 
   cross:
     name: cross
