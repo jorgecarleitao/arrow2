@@ -96,10 +96,15 @@ fn deserialize_value<'a>(
     let data_type = array.data_type();
     match data_type {
         DataType::List(inner) => {
-            let avro_inner = if let AvroSchema::Array(inner) = avro_field {
-                inner.as_ref()
-            } else {
-                unreachable!()
+            let avro_inner = match avro_field {
+                AvroSchema::Array(inner) => inner.as_ref(),
+                AvroSchema::Union(u) => match &u.as_slice() {
+                    &[AvroSchema::Array(inner), _] | &[_, AvroSchema::Array(inner)] => {
+                        inner.as_ref()
+                    }
+                    _ => unreachable!(),
+                },
+                _ => unreachable!(),
             };
 
             let is_nullable = inner.is_nullable();
