@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use arrow2::datatypes::{DataType, Field, Metadata, Schema};
 
 fn main() {
@@ -20,17 +18,17 @@ fn main() {
     let field1 = field1.with_metadata(metadata);
 
     // a schema (a table)
-    let schema = Schema::new(vec![field1, field2]);
+    let schema = Schema::from(vec![field1, field2]);
 
-    assert_eq!(schema.fields().len(), 2);
+    assert_eq!(schema.fields.len(), 2);
 
     // which can also contain extra metadata:
-    let mut metadata = HashMap::new();
+    let mut metadata = Metadata::new();
     metadata.insert(
         "Office Space".to_string(),
         "Deals with real issues in the workplace.".to_string(),
     );
     let schema = schema.with_metadata(metadata);
 
-    assert_eq!(schema.fields().len(), 2);
+    assert_eq!(schema.fields.len(), 2);
 }

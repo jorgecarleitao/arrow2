@@ -153,7 +153,7 @@ pub fn sort_to_indices<I: Index>(
         )),
         DataType::List(field) => {
             let (v, n) = partition_validity(values);
-            match field.data_type() {
+            match &field.data_type {
                 DataType::Int8 => Ok(sort_list::<I, i32, i8>(values, v, n, options, limit)),
                 DataType::Int16 => Ok(sort_list::<I, i32, i16>(values, v, n, options, limit)),
                 DataType::Int32 => Ok(sort_list::<I, i32, i32>(values, v, n, options, limit)),

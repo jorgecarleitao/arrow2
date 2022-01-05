@@ -116,7 +116,7 @@ fn main() -> Result<()> {
 
     let schema = if let Some(projection) = &projection {
         let fields = schema
-            .fields()
+            .fields
             .iter()
             .enumerate()
             .filter_map(|(i, f)| {
@@ -127,7 +127,7 @@ fn main() -> Result<()> {
                 }
             })
             .collect::<Vec<_>>();
-        Schema::new(fields)
+        Schema::from(fields)
     } else {
         schema
     };
@@ -168,7 +168,7 @@ fn main() -> Result<()> {
     };
 
     let encodings = schema
-        .fields()
+        .fields
         .iter()
         .map(|x| match x.data_type() {
             DataType::Dictionary(..) => Encoding::RleDictionary,

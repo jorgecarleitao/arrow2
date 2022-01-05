@@ -118,7 +118,7 @@ pub fn read_record_batch<R: Read + Seek>(
                     version,
                 )?)),
                 ProjectionResult::NotSelected((field, _)) => {
-                    skip(&mut field_nodes, field.data_type(), &mut buffers)?;
+                    skip(&mut field_nodes, &field.data_type, &mut buffers)?;
                     Ok(None)
                 }
             })
@@ -223,7 +223,7 @@ pub fn read_dictionary<R: Read + Seek>(
     // As the dictionary batch does not contain the type of the
     // values array, we need to retrieve this from the schema.
     // Get an array representing this dictionary's values.
-    let dictionary_values: ArrayRef = match first_field.data_type() {
+    let dictionary_values: ArrayRef = match &first_field.data_type {
         DataType::Dictionary(_, ref value_type, _) => {
             // Make a fake schema for the dictionary batch.
             let fields = vec![Field::new("", value_type.as_ref().clone(), false)];

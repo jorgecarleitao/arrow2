@@ -5,7 +5,7 @@ use arrow2::error::ArrowError;
 use arrow2::io::parquet::write::to_parquet_schema;
 use arrow2::{
     array::{Array, Int32Array},
-    datatypes::{Field, Schema},
+    datatypes::Field,
     error::Result,
     io::parquet::write::{
         array_to_pages, write_file, Compression, Compressor, DynIter, DynStreamingIterator,
@@ -14,7 +14,7 @@ use arrow2::{
 };
 
 fn write_single_array(path: &str, array: &dyn Array, field: Field) -> Result<()> {
-    let schema = Schema::new(vec![field]);
+    let schema = vec![field].into();
 
     let options = WriteOptions {
         write_statistics: true,

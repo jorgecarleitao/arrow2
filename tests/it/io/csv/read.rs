@@ -27,18 +27,12 @@ fn read() -> Result<()> {
 "Aberdeen, Aberdeen City, UK",57.149651,-2.099075"#;
     let mut reader = ReaderBuilder::new().from_reader(Cursor::new(data));
 
-    let schema = Arc::new(infer_schema(&mut reader, None, true, &infer)?);
+    let fields = infer_schema(&mut reader, None, true, &infer)?;
 
     let mut rows = vec![ByteRecord::default(); 100];
     let rows_read = read_rows(&mut reader, 0, &mut rows)?;
 
-    let columns = deserialize_batch(
-        &rows[..rows_read],
-        schema.fields(),
-        None,
-        0,
-        deserialize_column,
-    )?;
+    let columns = deserialize_batch(&rows[..rows_read], &fields, None, 0, deserialize_column)?;
 
     assert_eq!(14, columns.len());
     assert_eq!(3, columns.arrays().len());
@@ -64,15 +58,15 @@ fn infer_basics() -> Result<()> {
     let file = Cursor::new("1,2,3\na,b,c\na,,c");
     let mut reader = ReaderBuilder::new().from_reader(file);
 
-    let schema = infer_schema(&mut reader, Some(10), false, &infer)?;
+    let fields = infer_schema(&mut reader, Some(10), false, &infer)?;
 
     assert_eq!(
-        schema,
-        Schema::new(vec![
+        fields,
+        vec![
             Field::new("column_1", DataType::Utf8, true),
             Field::new("column_2", DataType::Utf8, true),
             Field::new("column_3", DataType::Utf8, true),
-        ])
+        ]
     );
     Ok(())
 }
@@ -82,15 +76,15 @@ fn infer_ints() -> Result<()> {
     let file = Cursor::new("1,2,3\n1,a,5\n2,,4");
     let mut reader = ReaderBuilder::new().from_reader(file);
 
-    let schema = infer_schema(&mut reader, Some(10), false, &infer)?;
+    let fields = infer_schema(&mut reader, Some(10), false, &infer)?;
 
     assert_eq!(
-        schema,
-        Schema::new(vec![
+        fields,
+        vec![
             Field::new("column_1", DataType::Int64, true),
             Field::new("column_2", DataType::Utf8, true),
             Field::new("column_3", DataType::Int64, true),
-        ])
+        ]
     );
     Ok(())
 }

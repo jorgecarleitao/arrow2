@@ -75,7 +75,7 @@ pub fn convert_schema(schema: &AvroSchema) -> Result<Schema> {
             )))
         }
     };
-    Ok(Schema::new(schema_fields))
+    Ok(schema_fields.into())
 }
 
 fn schema_to_field(

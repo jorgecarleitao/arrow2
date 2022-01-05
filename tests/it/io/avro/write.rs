@@ -7,7 +7,7 @@ use arrow2::error::Result;
 use arrow2::io::avro::write;
 
 fn schema() -> Schema {
-    Schema::new(vec![
+    Schema::from(vec![
         Field::new("a", DataType::Int64, false),
         Field::new("b", DataType::Utf8, false),
         Field::new("c", DataType::Int32, false),

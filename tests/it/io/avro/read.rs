@@ -45,7 +45,7 @@ pub(super) fn schema() -> (AvroSchema, Schema) {
     }
 "#;
 
-    let schema = Schema::new(vec![
+    let schema = Schema::from(vec![
         Field::new("a", DataType::Int64, false),
         Field::new("b", DataType::Utf8, false),
         Field::new("c", DataType::Int32, false),

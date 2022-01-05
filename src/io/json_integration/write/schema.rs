@@ -108,7 +108,7 @@ fn serialize_field(field: &Field, ipc_field: &IpcField) -> ArrowJsonField {
         }
         _ => vec![],
     };
-    let metadata = serialize_metadata(field.metadata());
+    let metadata = serialize_metadata(&field.metadata);
 
     let dictionary = if let DataType::Dictionary(key_type, _, is_ordered) = field.data_type() {
         use crate::datatypes::IntegerType::*;
@@ -134,9 +134,9 @@ fn serialize_field(field: &Field, ipc_field: &IpcField) -> ArrowJsonField {
     };
 
     ArrowJsonField {
-        name: field.name().to_string(),
+        name: field.name.clone(),
         field_type: serialize_data_type(field.data_type()),
-        nullable: field.is_nullable(),
+        nullable: field.is_nullable,
         children,
         dictionary,
         metadata,

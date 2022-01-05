@@ -30,7 +30,7 @@ impl<A: AsRef<dyn Array> + 'static, I: Iterator<Item = Result<Chunk<A>>>> RowGro
         options: WriteOptions,
         encodings: Vec<Encoding>,
     ) -> Result<Self> {
-        assert_eq!(schema.fields().len(), encodings.len());
+        assert_eq!(schema.fields.len(), encodings.len());
 
         let parquet_schema = to_parquet_schema(schema)?;
 

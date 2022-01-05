@@ -28,7 +28,7 @@ fn main() -> Result<()> {
     assert_eq!(c, b);
 
     // declare a schema with fields
-    let schema = Schema::new(vec![
+    let schema = Schema::from(vec![
         Field::new("c1", DataType::Int32, true),
         Field::new("c2", DataType::Int32, true),
     ]);

@@ -56,9 +56,9 @@ impl Ffi_ArrowSchema {
     /// creates a new [Ffi_ArrowSchema]
     pub(crate) fn new(field: &Field) -> Self {
         let format = to_format(field.data_type());
-        let name = field.name().clone();
+        let name = field.name.clone();
 
-        let mut flags = field.is_nullable() as i64 * 2;
+        let mut flags = field.is_nullable as i64 * 2;
 
         // allocate (and hold) the children
         let children_vec = match field.data_type() {
@@ -101,7 +101,7 @@ impl Ffi_ArrowSchema {
             None
         };
 
-        let metadata = field.metadata();
+        let metadata = &field.metadata;
 
         let metadata = if let DataType::Extension(name, _, extension_metadata) = field.data_type() {
             // append extension information.

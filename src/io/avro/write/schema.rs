@@ -11,8 +11,8 @@ pub fn to_avro_schema(schema: &Schema) -> Result<Vec<AvroField>> {
 }
 
 fn field_to_field(field: &Field) -> Result<AvroField> {
-    let schema = type_to_schema(field.data_type(), field.is_nullable())?;
-    Ok(AvroField::new(field.name(), schema))
+    let schema = type_to_schema(field.data_type(), field.is_nullable)?;
+    Ok(AvroField::new(&field.name, schema))
 }
 
 fn type_to_schema(data_type: &DataType, is_nullable: bool) -> Result<AvroSchema> {
@@ -34,8 +34,8 @@ fn _type_to_schema(data_type: &DataType) -> Result<AvroSchema> {
         DataType::Binary => AvroSchema::Bytes(None),
         DataType::Utf8 => AvroSchema::String(None),
         DataType::List(inner) => AvroSchema::Array(Box::new(type_to_schema(
-            inner.data_type(),
-            inner.is_nullable(),
+            &inner.data_type,
+            inner.is_nullable,
         )?)),
         DataType::Date32 => AvroSchema::Int(Some(IntLogical::Date)),
         DataType::Time32(TimeUnit::Millisecond) => AvroSchema::Int(Some(IntLogical::Time)),

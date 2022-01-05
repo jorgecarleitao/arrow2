@@ -51,7 +51,7 @@ fn main() -> Result<()> {
         Some(6),
     ]);
     let field = Field::new("c1", array.data_type().clone(), true);
-    let schema = Schema::new(vec![field]);
+    let schema = vec![field].into();
 
     let mut file = File::create(path)?;
     write_avro(&mut file, &[(&array) as &dyn Array], &schema, None)?;

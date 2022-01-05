@@ -26,7 +26,7 @@ fn main() -> Result<()> {
     let file_path = &args[1];
 
     // create a batch
-    let schema = Schema::new(vec![
+    let schema = Schema::from(vec![
         Field::new("a", DataType::Int32, false),
         Field::new("b", DataType::Utf8, false),
     ]);

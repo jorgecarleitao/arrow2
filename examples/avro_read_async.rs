@@ -31,7 +31,7 @@ async fn main() -> Result<()> {
         let handle = tokio::task::spawn_blocking(move || {
             let mut decompressed = Block::new(0, vec![]);
             decompress_block(&mut block, &mut decompressed, compression)?;
-            deserialize(&decompressed, schema.fields(), &avro_schemas)
+            deserialize(&decompressed, &schema.fields, &avro_schemas)
         });
         let batch = handle.await.unwrap()?;
         assert!(!batch.is_empty());

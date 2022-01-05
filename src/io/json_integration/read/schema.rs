@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use serde_derive::Deserialize;
 use serde_json::Value;
 
@@ -353,7 +351,7 @@ fn deserialize_field(value: &Value) -> Result<Field> {
             ));
         }
     };
-    let nullable = match map.get("nullable") {
+    let is_nullable = match map.get("nullable") {
         Some(&Value::Bool(b)) => b,
         _ => {
             return Err(ArrowError::OutOfSpec(
@@ -408,7 +406,7 @@ fn deserialize_field(value: &Value) -> Result<Field> {
     Ok(Field {
         name,
         data_type,
-        nullable,
+        is_nullable,
         metadata,
     })
 }
@@ -421,15 +419,14 @@ struct MetadataKeyValue {
 
 /// Parse a `metadata` definition from a JSON representation.
 /// The JSON can either be an Object or an Array of Objects.
-fn from_metadata(json: &Value) -> Result<HashMap<String, String>> {
+fn from_metadata(json: &Value) -> Result<Metadata> {
     match json {
         Value::Array(_) => {
-            let mut hashmap = HashMap::new();
             let values: Vec<MetadataKeyValue> = serde_json::from_value(json.clone())?;
-            for meta in values {
-                hashmap.insert(meta.key.clone(), meta.value);
-            }
-            Ok(hashmap)
+            Ok(values
+                .into_iter()
+                .map(|key_value| (key_value.key, key_value.value))
+                .collect())
         }
         Value::Object(md) => md
             .iter()
@@ -484,7 +481,7 @@ pub fn deserialize_schema(value: &Value) -> Result<(Schema, Vec<IpcField>)> {
     let metadata = if let Some(value) = schema.get("metadata") {
         from_metadata(value)?
     } else {
-        HashMap::default()
+        Metadata::default()
     };
 
     Ok((Schema { fields, metadata }, ipc_fields))

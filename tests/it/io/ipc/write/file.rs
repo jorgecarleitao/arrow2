@@ -338,7 +338,7 @@ fn write_boolean() -> Result<()> {
         None,
         Some(true),
     ])) as Arc<dyn Array>;
-    let schema = Schema::new(vec![Field::new("a", array.data_type().clone(), true)]);
+    let schema = Schema::from(vec![Field::new("a", array.data_type().clone(), true)]);
     let columns = Chunk::try_new(vec![array])?;
     round_trip(columns, schema, None)
 }
@@ -348,7 +348,7 @@ fn write_boolean() -> Result<()> {
 fn write_sliced_utf8() -> Result<()> {
     use std::sync::Arc;
     let array = Arc::new(Utf8Array::<i32>::from_slice(["aa", "bb"]).slice(1, 1)) as Arc<dyn Array>;
-    let schema = Schema::new(vec![Field::new("a", array.data_type().clone(), true)]);
+    let schema = Schema::from(vec![Field::new("a", array.data_type().clone(), true)]);
     let columns = Chunk::try_new(vec![array])?;
     round_trip(columns, schema, None)
 }
@@ -366,7 +366,7 @@ fn write_sliced_list() -> Result<()> {
     array.try_extend(data).unwrap();
     let array: Arc<dyn Array> = array.into_arc().slice(1, 2).into();
 
-    let schema = Schema::new(vec![Field::new("a", array.data_type().clone(), true)]);
+    let schema = Schema::from(vec![Field::new("a", array.data_type().clone(), true)]);
     let columns = Chunk::try_new(vec![array])?;
     round_trip(columns, schema, None)
 }

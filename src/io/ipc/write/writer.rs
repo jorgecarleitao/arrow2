@@ -54,7 +54,7 @@ impl<W: Write> FileWriter<W> {
         let ipc_fields = if let Some(ipc_fields) = ipc_fields {
             ipc_fields
         } else {
-            default_ipc_fields(schema.fields())
+            default_ipc_fields(&schema.fields)
         };
         let encoded_message = EncodedData {
             ipc_message: schema_to_bytes(schema, &ipc_fields),

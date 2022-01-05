@@ -43,7 +43,7 @@ fn round_trip(data: String) -> Result<()> {
 
     let buf = write_batch(
         columns.clone(),
-        fields.iter().map(|x| x.name().to_string()).collect(),
+        fields.iter().map(|x| x.name.clone()).collect(),
         json_write::LineDelimited::default(),
     )?;
 
@@ -72,7 +72,7 @@ fn case_list() -> (String, Schema, Vec<Box<dyn Array>>) {
             "#
     .to_string();
 
-    let schema = Schema::new(vec![
+    let schema = Schema::from(vec![
         Field::new("a", DataType::Int64, true),
         Field::new(
             "b",
@@ -133,7 +133,7 @@ fn case_dict() -> (String, Schema, Vec<Box<dyn Array>>) {
         true,
     )));
 
-    let schema = Schema::new(vec![Field::new("events", data_type, true)]);
+    let schema = Schema::from(vec![Field::new("events", data_type, true)]);
 
     type A = MutableDictionaryArray<u64, MutableUtf8Array<i32>>;
 
@@ -163,7 +163,7 @@ fn case_basics() -> (String, Schema, Vec<Box<dyn Array>>) {
     {"a":-10, "b":-3.5, "c":true, "d":null}
     {"a":100000000, "b":0.6, "d":"text"}"#
         .to_string();
-    let schema = Schema::new(vec![
+    let schema = Schema::from(vec![
         Field::new("a", DataType::Int64, true),
         Field::new("b", DataType::Float64, true),
         Field::new("c", DataType::Boolean, true),
@@ -183,7 +183,7 @@ fn case_basics_schema() -> (String, Schema, Vec<Box<dyn Array>>) {
     {"a":10, "b":-3.5, "c":true, "d":null, "e":"text"}
     {"a":100000000, "b":0.6, "d":"text"}"#
         .to_string();
-    let schema = Schema::new(vec![
+    let schema = Schema::from(vec![
         Field::new("a", DataType::UInt32, true),
         Field::new("b", DataType::Float32, true),
         Field::new("c", DataType::Boolean, true),
@@ -220,7 +220,7 @@ fn case_struct() -> (String, Schema, Vec<Box<dyn Array>>) {
         ]),
         true,
     );
-    let schema = Schema::new(vec![a_field]);
+    let schema = Schema::from(vec![a_field]);
 
     // build expected output
     let d = Utf8Array::<i32>::from(&vec![Some("text"), None, Some("text"), None]);

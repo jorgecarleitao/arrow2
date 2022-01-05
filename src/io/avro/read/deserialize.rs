@@ -107,7 +107,7 @@ fn deserialize_value<'a>(
                 _ => unreachable!(),
             };
 
-            let is_nullable = inner.is_nullable();
+            let is_nullable = inner.is_nullable;
             let array = array
                 .as_mut_any()
                 .downcast_mut::<DynMutableListArray<i32>>()
@@ -273,7 +273,7 @@ pub fn deserialize(
             .zip(fields.iter())
             .zip(avro_schemas.iter())
         {
-            block = deserialize_item(array.as_mut(), field.is_nullable(), avro_field, block)?
+            block = deserialize_item(array.as_mut(), field.is_nullable, avro_field, block)?
         }
     }
     Chunk::try_new(arrays.iter_mut().map(|array| array.as_arc()).collect())

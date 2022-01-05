@@ -65,7 +65,7 @@ fn parallel_read(path: &str, row_group: usize) -> Result<Chunk<Arc<dyn Array>>> 
                 let mut arrays = vec![];
                 while let Ok((field_i, parquet_field, column_chunks)) = rx_consumer.recv() {
                     let start = SystemTime::now();
-                    let field = &arrow_schema_consumer.fields()[field_i];
+                    let field = &arrow_schema_consumer.fields[field_i];
                     println!("consumer {} start - {}", i, field_i);
 
                     let columns = read::ReadColumnIterator::new(parquet_field, column_chunks);
