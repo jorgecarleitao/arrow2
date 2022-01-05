@@ -154,7 +154,7 @@ fn read_path(path: &amp;str, projection: Option&lt;Vec&lt;&amp;str&gt;&gt;) -&gt
     let fields = if let Some(projection) = projection {
         fields
             .into_iter()
-            .filter(|field| projection.contains(&amp;field.name().as_ref()))
+            .filter(|field| projection.contains(&amp;field.name.as_ref()))
             .collect()
     } else {
         fields

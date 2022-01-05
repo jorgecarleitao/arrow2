@@ -135,9 +135,7 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="metadata"><a class="header" href="#metadata">Metadata</a></h1>
-<pre><pre class="playground"><code class="language-rust">use std::collections::HashMap;
-
-use arrow2::datatypes::{DataType, Field, Metadata, Schema};
+<pre><pre class="playground"><code class="language-rust">use arrow2::datatypes::{DataType, Field, Metadata, Schema};
 
 fn main() {
     // two data types (logical types)
@@ -157,19 +155,19 @@ fn main() {
     let field1 = field1.with_metadata(metadata);
 
     // a schema (a table)
-    let schema = Schema::new(vec![field1, field2]);
+    let schema = Schema::from(vec![field1, field2]);
 
-    assert_eq!(schema.fields().len(), 2);
+    assert_eq!(schema.fields.len(), 2);
 
     // which can also contain extra metadata:
-    let mut metadata = HashMap::new();
+    let mut metadata = Metadata::new();
     metadata.insert(
         &quot;Office Space&quot;.to_string(),
         &quot;Deals with real issues in the workplace.&quot;.to_string(),
     );
     let schema = schema.with_metadata(metadata);
 
-    assert_eq!(schema.fields().len(), 2);
+    assert_eq!(schema.fields.len(), 2);
 }
 </code></pre></pre>
 <h2 id="datatype-logical-types"><a class="header" href="#datatype-logical-types"><code>DataType</code> (Logical types)</a></h2>

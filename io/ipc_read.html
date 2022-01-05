@@ -175,7 +175,7 @@ fn main() -&gt; Result&lt;()&gt; {
     let file_path = &amp;args[1];
 
     let (schema, batches) = read_batches(file_path)?;
-    let names = schema.fields().iter().map(|f| f.name()).collect::&lt;Vec&lt;_&gt;&gt;();
+    let names = schema.fields.iter().map(|f| &amp;f.name).collect::&lt;Vec&lt;_&gt;&gt;();
     println!(&quot;{}&quot;, print::write(&amp;batches, &amp;names));
     Ok(())
 }

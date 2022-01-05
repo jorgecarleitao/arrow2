@@ -158,9 +158,9 @@ fn read_path(path: &amp;str, projection: Option&lt;&amp;[usize]&gt;) -&gt; Resul
     // thus owns the read head.
     let mut reader = read::ReaderBuilder::new().from_path(path)?;
 
-    // Infers the schema using the default inferer. The inferer is just a function that maps a string
+    // Infers the fields using the default inferer. The inferer is just a function that maps bytes
     // to a `DataType`.
-    let schema = read::infer_schema(&amp;mut reader, None, true, &amp;read::infer)?;
+    let fields = read::infer_schema(&amp;mut reader, None, true, &amp;read::infer)?;
 
     // allocate space to read from CSV to. The size of this vec denotes how many rows are read.
     let mut rows = vec![read::ByteRecord::default(); 100];
@@ -171,15 +171,10 @@ fn read_path(path: &amp;str, projection: Option&lt;&amp;[usize]&gt;) -&gt; Resul
     let rows_read = read::read_rows(&amp;mut reader, 0, &amp;mut rows)?;
     let rows = &amp;rows[..rows_read];
 
-    // parse the batches into a `RecordBatch`. This is CPU-intensive, has no IO,
+    // parse the rows into a `Chunk`. This is CPU-intensive, has no IO,
     // and can be performed on a different thread by passing `rows` through a channel.
-    read::deserialize_batch(
-        rows,
-        schema.fields(),
-        projection,
-        0,
-        read::deserialize_column,
-    )
+    // `deserialize_column` is a function that maps rows and a column index to an Array
+    read::deserialize_batch(rows, &amp;fields, projection, 0, read::deserialize_column)
 }
 
 fn main() -&gt; Result&lt;()&gt; {
@@ -217,8 +212,8 @@ fn parallel_read(path: &amp;str) -&gt; Result&lt;Vec&lt;Chunk&lt;Arc&lt;dyn Arra
     let (tx, rx) = unbounded();
 
     let mut reader = read::ReaderBuilder::new().from_path(path)?;
-    let schema = read::infer_schema(&amp;mut reader, Some(batch_size * 10), has_header, &amp;read::infer)?;
-    let schema = Arc::new(schema);
+    let fields = read::infer_schema(&amp;mut reader, Some(batch_size * 10), has_header, &amp;read::infer)?;
+    let fields = Arc::new(fields);
 
     let start = SystemTime::now();
     // spawn a thread to produce `Vec&lt;ByteRecords&gt;` (IO bounded)
@@ -239,14 +234,14 @@ fn parallel_read(path: &amp;str) -&gt; Result&lt;Vec&lt;Chunk&lt;Arc&lt;dyn Arra
     // use 3 consumers of to decompress, decode and deserialize.
     for _ in 0..3 {
         let rx_consumer = rx.clone();
-        let consumer_schema = schema.clone();
+        let consumer_fields = fields.clone();
         let child = thread::spawn(move || {
             let (rows, line_number) = rx_consumer.recv().unwrap();
             let start = SystemTime::now();
             println!(&quot;consumer start - {}&quot;, line_number);
             let batch = read::deserialize_batch(
                 &amp;rows,
-                consumer_schema.fields(),
+                &amp;consumer_fields,
                 projection,
                 0,
                 read::deserialize_column,
@@ -288,9 +283,7 @@ fn main() -&gt; Result&lt;()&gt; {
 <h2 id="async"><a class="header" href="#async">Async</a></h2>
 <p>This crate also supports reading from a CSV asyncronously through the <code>csv-async</code> crate.
 The example below demonstrates this:</p>
-<pre><pre class="playground"><code class="language-rust">use std::sync::Arc;
-
-use tokio::fs::File;
+<pre><pre class="playground"><code class="language-rust">use tokio::fs::File;
 use tokio_util::compat::*;
 
 use arrow2::error::Result;
@@ -307,18 +300,12 @@ async fn main() -&gt; Result&lt;()&gt; {
 
     let mut reader = AsyncReaderBuilder::new().create_reader(file);
 
-    let schema = Arc::new(infer_schema(&amp;mut reader, None, true, &amp;infer).await?);
+    let fields = infer_schema(&amp;mut reader, None, true, &amp;infer).await?;
 
     let mut rows = vec![ByteRecord::default(); 100];
     let rows_read = read_rows(&amp;mut reader, 0, &amp;mut rows).await?;
 
-    let columns = deserialize_batch(
-        &amp;rows[..rows_read],
-        schema.fields(),
-        None,
-        0,
-        deserialize_column,
-    )?;
+    let columns = deserialize_batch(&amp;rows[..rows_read], &amp;fields, None, 0, deserialize_column)?;
     println!(&quot;{:?}&quot;, columns.arrays()[0]);
     Ok(())
 }

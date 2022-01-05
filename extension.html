@@ -177,7 +177,7 @@ fn main() -&gt; Result&lt;()&gt; {
 }
 
 fn write_ipc&lt;W: Write + Seek&gt;(writer: W, array: impl Array + 'static) -&gt; Result&lt;W&gt; {
-    let schema = Schema::new(vec![Field::new(&quot;a&quot;, array.data_type().clone(), false)]);
+    let schema = vec![Field::new(&quot;a&quot;, array.data_type().clone(), false)].into();
 
     let options = write::WriteOptions { compression: None };
     let mut writer = write::FileWriter::try_new(writer, &amp;schema, None, options)?;

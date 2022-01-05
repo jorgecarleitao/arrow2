@@ -658,9 +658,7 @@ fn main() {
 }
 </code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="metadata"><a class="header" href="#metadata">Metadata</a></h1>
-<pre><pre class="playground"><code class="language-rust">use std::collections::HashMap;
-
-use arrow2::datatypes::{DataType, Field, Metadata, Schema};
+<pre><pre class="playground"><code class="language-rust">use arrow2::datatypes::{DataType, Field, Metadata, Schema};
 
 fn main() {
     // two data types (logical types)
@@ -680,19 +678,19 @@ fn main() {
     let field1 = field1.with_metadata(metadata);
 
     // a schema (a table)
-    let schema = Schema::new(vec![field1, field2]);
+    let schema = Schema::from(vec![field1, field2]);
 
-    assert_eq!(schema.fields().len(), 2);
+    assert_eq!(schema.fields.len(), 2);
 
     // which can also contain extra metadata:
-    let mut metadata = HashMap::new();
+    let mut metadata = Metadata::new();
     metadata.insert(
         &quot;Office Space&quot;.to_string(),
         &quot;Deals with real issues in the workplace.&quot;.to_string(),
     );
     let schema = schema.with_metadata(metadata);
 
-    assert_eq!(schema.fields().len(), 2);
+    assert_eq!(schema.fields.len(), 2);
 }
 </code></pre></pre>
 <h2 id="datatype-logical-types"><a class="header" href="#datatype-logical-types"><code>DataType</code> (Logical types)</a></h2>
@@ -822,7 +820,7 @@ fn main() -&gt; Result&lt;()&gt; {
 }
 
 fn write_ipc&lt;W: Write + Seek&gt;(writer: W, array: impl Array + 'static) -&gt; Result&lt;W&gt; {
-    let schema = Schema::new(vec![Field::new(&quot;a&quot;, array.data_type().clone(), false)]);
+    let schema = vec![Field::new(&quot;a&quot;, array.data_type().clone(), false)].into();
 
     let options = write::WriteOptions { compression: None };
     let mut writer = write::FileWriter::try_new(writer, &amp;schema, None, options)?;
@@ -875,9 +873,9 @@ fn read_path(path: &amp;str, projection: Option&lt;&amp;[usize]&gt;) -&gt; Resul
     // thus owns the read head.
     let mut reader = read::ReaderBuilder::new().from_path(path)?;
 
-    // Infers the schema using the default inferer. The inferer is just a function that maps a string
+    // Infers the fields using the default inferer. The inferer is just a function that maps bytes
     // to a `DataType`.
-    let schema = read::infer_schema(&amp;mut reader, None, true, &amp;read::infer)?;
+    let fields = read::infer_schema(&amp;mut reader, None, true, &amp;read::infer)?;
 
     // allocate space to read from CSV to. The size of this vec denotes how many rows are read.
     let mut rows = vec![read::ByteRecord::default(); 100];
@@ -888,15 +886,10 @@ fn read_path(path: &amp;str, projection: Option&lt;&amp;[usize]&gt;) -&gt; Resul
     let rows_read = read::read_rows(&amp;mut reader, 0, &amp;mut rows)?;
     let rows = &amp;rows[..rows_read];
 
-    // parse the batches into a `RecordBatch`. This is CPU-intensive, has no IO,
+    // parse the rows into a `Chunk`. This is CPU-intensive, has no IO,
     // and can be performed on a different thread by passing `rows` through a channel.
-    read::deserialize_batch(
-        rows,
-        schema.fields(),
-        projection,
-        0,
-        read::deserialize_column,
-    )
+    // `deserialize_column` is a function that maps rows and a column index to an Array
+    read::deserialize_batch(rows, &amp;fields, projection, 0, read::deserialize_column)
 }
 
 fn main() -&gt; Result&lt;()&gt; {
@@ -934,8 +927,8 @@ fn parallel_read(path: &amp;str) -&gt; Result&lt;Vec&lt;Chunk&lt;Arc&lt;dyn Arra
     let (tx, rx) = unbounded();
 
     let mut reader = read::ReaderBuilder::new().from_path(path)?;
-    let schema = read::infer_schema(&amp;mut reader, Some(batch_size * 10), has_header, &amp;read::infer)?;
-    let schema = Arc::new(schema);
+    let fields = read::infer_schema(&amp;mut reader, Some(batch_size * 10), has_header, &amp;read::infer)?;
+    let fields = Arc::new(fields);
 
     let start = SystemTime::now();
     // spawn a thread to produce `Vec&lt;ByteRecords&gt;` (IO bounded)
@@ -956,14 +949,14 @@ fn parallel_read(path: &amp;str) -&gt; Result&lt;Vec&lt;Chunk&lt;Arc&lt;dyn Arra
     // use 3 consumers of to decompress, decode and deserialize.
     for _ in 0..3 {
         let rx_consumer = rx.clone();
-        let consumer_schema = schema.clone();
+        let consumer_fields = fields.clone();
         let child = thread::spawn(move || {
             let (rows, line_number) = rx_consumer.recv().unwrap();
             let start = SystemTime::now();
             println!(&quot;consumer start - {}&quot;, line_number);
             let batch = read::deserialize_batch(
                 &amp;rows,
-                consumer_schema.fields(),
+                &amp;consumer_fields,
                 projection,
                 0,
                 read::deserialize_column,
@@ -1005,9 +998,7 @@ fn main() -&gt; Result&lt;()&gt; {
 <h2 id="async"><a class="header" href="#async">Async</a></h2>
 <p>This crate also supports reading from a CSV asyncronously through the <code>csv-async</code> crate.
 The example below demonstrates this:</p>
-<pre><pre class="playground"><code class="language-rust">use std::sync::Arc;
-
-use tokio::fs::File;
+<pre><pre class="playground"><code class="language-rust">use tokio::fs::File;
 use tokio_util::compat::*;
 
 use arrow2::error::Result;
@@ -1024,18 +1015,12 @@ async fn main() -&gt; Result&lt;()&gt; {
 
     let mut reader = AsyncReaderBuilder::new().create_reader(file);
 
-    let schema = Arc::new(infer_schema(&amp;mut reader, None, true, &amp;infer).await?);
+    let fields = infer_schema(&amp;mut reader, None, true, &amp;infer).await?;
 
     let mut rows = vec![ByteRecord::default(); 100];
     let rows_read = read_rows(&amp;mut reader, 0, &amp;mut rows).await?;
 
-    let columns = deserialize_batch(
-        &amp;rows[..rows_read],
-        schema.fields(),
-        None,
-        0,
-        deserialize_column,
-    )?;
+    let columns = deserialize_batch(&amp;rows[..rows_read], &amp;fields, None, 0, deserialize_column)?;
     println!(&quot;{:?}&quot;, columns.arrays()[0]);
     Ok(())
 }
@@ -1193,7 +1178,7 @@ fn read_field(path: &amp;str, row_group: usize, field: usize) -&gt; Result&lt;Bo
     let columns = read::get_column_iterator(&amp;mut file, &amp;metadata, row_group, field, None, vec![]);
 
     // get the columns' field
-    let field = &amp;arrow_schema.fields()[field];
+    let field = &amp;arrow_schema.fields[field];
 
     // This is the actual work. In this case, pages are read and
     // decompressed, decoded and deserialized to arrow.
@@ -1319,7 +1304,7 @@ fn parallel_read(path: &amp;str, row_group: usize) -&gt; Result&lt;Chunk&lt;Arc&
                 let mut arrays = vec![];
                 while let Ok((field_i, parquet_field, column_chunks)) = rx_consumer.recv() {
                     let start = SystemTime::now();
-                    let field = &amp;arrow_schema_consumer.fields()[field_i];
+                    let field = &amp;arrow_schema_consumer.fields[field_i];
                     println!(&quot;consumer {} start - {}&quot;, i, field_i);
 
                     let columns = read::ReadColumnIterator::new(parquet_field, column_chunks);
@@ -1391,7 +1376,7 @@ use arrow2::error::ArrowError;
 use arrow2::io::parquet::write::to_parquet_schema;
 use arrow2::{
     array::{Array, Int32Array},
-    datatypes::{Field, Schema},
+    datatypes::Field,
     error::Result,
     io::parquet::write::{
         array_to_pages, write_file, Compression, Compressor, DynIter, DynStreamingIterator,
@@ -1400,7 +1385,7 @@ use arrow2::{
 };
 
 fn write_single_array(path: &amp;str, array: &amp;dyn Array, field: Field) -&gt; Result&lt;()&gt; {
-    let schema = Schema::new(vec![field]);
+    let schema = vec![field].into();
 
     let options = WriteOptions {
         write_statistics: true,
@@ -1512,7 +1497,7 @@ fn main() -&gt; Result&lt;()&gt; {
         Some(6),
     ]);
     let field = Field::new(&quot;c1&quot;, array.data_type().clone(), true);
-    let schema = Schema::new(vec![field]);
+    let schema = Schema::from(vec![field]);
     let columns = Chunk::new(vec![Arc::new(array) as Arc&lt;dyn Array&gt;]);
 
     write_batch(&quot;test.parquet&quot;, schema, columns)
@@ -1702,7 +1687,7 @@ fn main() -&gt; Result&lt;()&gt; {
     let file_path = &amp;args[1];
 
     let (schema, batches) = read_batches(file_path)?;
-    let names = schema.fields().iter().map(|f| f.name()).collect::&lt;Vec&lt;_&gt;&gt;();
+    let names = schema.fields.iter().map(|f| &amp;f.name).collect::&lt;Vec&lt;_&gt;&gt;();
     println!(&quot;{}&quot;, print::write(&amp;batches, &amp;names));
     Ok(())
 }
@@ -1811,7 +1796,7 @@ fn main() -&gt; Result&lt;()&gt; {
     let file_path = &amp;args[1];
 
     // create a batch
-    let schema = Schema::new(vec![
+    let schema = Schema::from(vec![
         Field::new(&quot;a&quot;, DataType::Int32, false),
         Field::new(&quot;b&quot;, DataType::Utf8, false),
     ]);
@@ -1862,7 +1847,7 @@ async fn main() -&gt; Result&lt;()&gt; {
         let handle = tokio::task::spawn_blocking(move || {
             let mut decompressed = Block::new(0, vec![]);
             decompress_block(&amp;mut block, &amp;mut decompressed, compression)?;
-            deserialize(&amp;decompressed, schema.fields(), &amp;avro_schemas)
+            deserialize(&amp;decompressed, &amp;schema.fields, &amp;avro_schemas)
         });
         let batch = handle.await.unwrap()?;
         assert!(!batch.is_empty());
@@ -1929,7 +1914,7 @@ fn main() -&gt; Result&lt;()&gt; {
         Some(6),
     ]);
     let field = Field::new(&quot;c1&quot;, array.data_type().clone(), true);
-    let schema = Schema::new(vec![field]);
+    let schema = vec![field].into();
 
     let mut file = File::create(path)?;
     write_avro(&amp;mut file, &amp;[(&amp;array) as &amp;dyn Array], &amp;schema, None)?;
@@ -1957,7 +1942,7 @@ fn read_path(path: &amp;str, projection: Option&lt;Vec&lt;&amp;str&gt;&gt;) -&gt
     let fields = if let Some(projection) = projection {
         fields
             .into_iter()
-            .filter(|field| projection.contains(&amp;field.name().as_ref()))
+            .filter(|field| projection.contains(&amp;field.name.as_ref()))
             .collect()
     } else {
         fields

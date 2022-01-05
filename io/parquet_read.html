@@ -169,7 +169,7 @@ fn read_field(path: &amp;str, row_group: usize, field: usize) -&gt; Result&lt;Bo
     let columns = read::get_column_iterator(&amp;mut file, &amp;metadata, row_group, field, None, vec![]);
 
     // get the columns' field
-    let field = &amp;arrow_schema.fields()[field];
+    let field = &amp;arrow_schema.fields[field];
 
     // This is the actual work. In this case, pages are read and
     // decompressed, decoded and deserialized to arrow.
@@ -295,7 +295,7 @@ fn parallel_read(path: &amp;str, row_group: usize) -&gt; Result&lt;Chunk&lt;Arc&
                 let mut arrays = vec![];
                 while let Ok((field_i, parquet_field, column_chunks)) = rx_consumer.recv() {
                     let start = SystemTime::now();
-                    let field = &amp;arrow_schema_consumer.fields()[field_i];
+                    let field = &amp;arrow_schema_consumer.fields[field_i];
                     println!(&quot;consumer {} start - {}&quot;, i, field_i);
 
                     let columns = read::ReadColumnIterator::new(parquet_field, column_chunks);
