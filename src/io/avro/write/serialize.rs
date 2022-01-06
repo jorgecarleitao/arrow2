@@ -1,6 +1,7 @@
 use avro_schema::Schema as AvroSchema;
 
-use crate::datatypes::{PhysicalType, PrimitiveType};
+use crate::datatypes::{IntervalUnit, PhysicalType, PrimitiveType};
+use crate::types::months_days_ns;
 use crate::{array::*, datatypes::DataType};
 
 use super::super::super::iterator::*;
@@ -179,12 +180,52 @@ pub fn new_serializer<'a>(array: &'a dyn Array, schema: &AvroSchema) -> BoxSeria
                 vec![],
             ))
         }
-        _ => todo!(),
+        (PhysicalType::Primitive(PrimitiveType::MonthDayNano), AvroSchema::Fixed(_)) => {
+            let values = array
+                .as_any()
+                .downcast_ref::<PrimitiveArray<months_days_ns>>()
+                .unwrap();
+            Box::new(BufStreamingIterator::new(
+                values.values().iter(),
+                interval_write,
+                vec![],
+            ))
+        }
+        (PhysicalType::Primitive(PrimitiveType::MonthDayNano), AvroSchema::Union(_)) => {
+            let values = array
+                .as_any()
+                .downcast_ref::<PrimitiveArray<months_days_ns>>()
+                .unwrap();
+            Box::new(BufStreamingIterator::new(
+                values.iter(),
+                |x, buf| {
+                    util::zigzag_encode(x.is_some() as i64, buf).unwrap();
+                    if let Some(x) = x {
+                        interval_write(x, buf)
+                    }
+                },
+                vec![],
+            ))
+        }
+        (a, b) => todo!("{:?} -> {:?} not supported", a, b),
     }
 }
 
 /// Whether [`new_serializer`] supports `data_type`.
 pub fn can_serialize(data_type: &DataType) -> bool {
     use DataType::*;
-    matches!(data_type, Boolean | Int32 | Int64 | Utf8 | Binary)
+    matches!(
+        data_type,
+        Boolean | Int32 | Int64 | Utf8 | Binary | Interval(IntervalUnit::MonthDayNano)
+    )
+}
+
+#[inline]
+fn interval_write(x: &months_days_ns, buf: &mut Vec<u8>) {
+    // https://avro.apache.org/docs/current/spec.html#Duration
+    // 12 bytes, months, days, millis in LE
+    buf.reserve(12);
+    buf.extend(x.months().to_le_bytes());
+    buf.extend(x.days().to_le_bytes());
+    buf.extend(((x.ns() / 1_000_000) as i32).to_le_bytes());
 }

@@ -5,6 +5,7 @@ use arrow2::chunk::Chunk;
 use arrow2::datatypes::*;
 use arrow2::error::Result;
 use arrow2::io::avro::write;
+use arrow2::types::months_days_ns;
 
 fn schema() -> Schema {
     Schema::from(vec![
@@ -16,6 +17,7 @@ fn schema() -> Schema {
         Field::new("e", DataType::Float64, false),
         Field::new("f", DataType::Boolean, false),
         Field::new("g", DataType::Utf8, true),
+        Field::new("h", DataType::Interval(IntervalUnit::MonthDayNano), true),
     ])
 }
 
@@ -29,6 +31,10 @@ fn data() -> Chunk<Arc<dyn Array>> {
         Arc::new(PrimitiveArray::<f64>::from_slice([1.0, 2.0])) as Arc<dyn Array>,
         Arc::new(BooleanArray::from_slice([true, false])) as Arc<dyn Array>,
         Arc::new(Utf8Array::<i32>::from([Some("foo"), None])) as Arc<dyn Array>,
+        Arc::new(PrimitiveArray::<months_days_ns>::from([
+            Some(months_days_ns::new(1, 1, 10 * 1_000_000)), // 10 millis
+            None,
+        ])) as Arc<dyn Array>,
     ];
 
     Chunk::try_new(columns).unwrap()
