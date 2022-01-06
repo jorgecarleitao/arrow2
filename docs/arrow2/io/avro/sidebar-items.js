@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Compression","Valid compressions"]],"mod":[["read","APIs to read from Avro format to arrow."],["read_async","Async read Avro"],["write","APIs to write to Avro format."]],"struct":[["Block","An uncompressed Avro block."],["CompressedBlock","A compressed Avro block."]]});
