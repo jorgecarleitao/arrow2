@@ -154,6 +154,22 @@ pub fn new_serializer<'a>(array: &'a dyn Array, schema: &AvroSchema) -> BoxSeria
                 vec![],
             ))
         }
+        (PhysicalType::Primitive(PrimitiveType::Float32), AvroSchema::Union(_)) => {
+            let values = array
+                .as_any()
+                .downcast_ref::<PrimitiveArray<f32>>()
+                .unwrap();
+            Box::new(BufStreamingIterator::new(
+                values.iter(),
+                |x, buf| {
+                    util::zigzag_encode(x.is_some() as i64, buf).unwrap();
+                    if let Some(x) = x {
+                        buf.extend(x.to_le_bytes())
+                    }
+                },
+                vec![],
+            ))
+        }
         (PhysicalType::Primitive(PrimitiveType::Float32), AvroSchema::Float) => {
             let values = array
                 .as_any()
@@ -163,6 +179,22 @@ pub fn new_serializer<'a>(array: &'a dyn Array, schema: &AvroSchema) -> BoxSeria
                 values.values().iter(),
                 |x, buf| {
                     buf.extend_from_slice(&x.to_le_bytes());
+                },
+                vec![],
+            ))
+        }
+        (PhysicalType::Primitive(PrimitiveType::Float64), AvroSchema::Union(_)) => {
+            let values = array
+                .as_any()
+                .downcast_ref::<PrimitiveArray<f64>>()
+                .unwrap();
+            Box::new(BufStreamingIterator::new(
+                values.iter(),
+                |x, buf| {
+                    util::zigzag_encode(x.is_some() as i64, buf).unwrap();
+                    if let Some(x) = x {
+                        buf.extend(x.to_le_bytes())
+                    }
                 },
                 vec![],
             ))

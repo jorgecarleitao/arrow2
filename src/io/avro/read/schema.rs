@@ -3,20 +3,6 @@ use avro_schema::{Enum, Fixed, Record, Schema as AvroSchema};
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 
-/// Returns the fully qualified name for a field
-fn aliased(name: &str, namespace: Option<&str>, default_namespace: Option<&str>) -> String {
-    if name.contains('.') {
-        name.to_string()
-    } else {
-        let namespace = namespace.as_ref().copied().or(default_namespace);
-
-        match namespace {
-            Some(ref namespace) => format!("{}.{}", namespace, name),
-            None => name.to_string(),
-        }
-    }
-}
-
 fn external_props(schema: &AvroSchema) -> Metadata {
     let mut props = Metadata::new();
     match &schema {
@@ -27,27 +13,6 @@ fn external_props(schema: &AvroSchema) -> Metadata {
             doc: Some(ref doc), ..
         }) => {
             props.insert("avro::doc".to_string(), doc.clone());
-        }
-        _ => {}
-    }
-    match &schema {
-        AvroSchema::Record(Record {
-            aliases, namespace, ..
-        })
-        | AvroSchema::Enum(Enum {
-            aliases, namespace, ..
-        })
-        | AvroSchema::Fixed(Fixed {
-            aliases, namespace, ..
-        }) => {
-            let aliases: Vec<String> = aliases
-                .iter()
-                .map(|alias| aliased(alias, namespace.as_deref(), None))
-                .collect();
-            props.insert(
-                "avro::aliases".to_string(),
-                format!("[{}]", aliases.join(",")),
-            );
         }
         _ => {}
     }
