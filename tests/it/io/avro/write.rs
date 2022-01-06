@@ -4,10 +4,12 @@ use arrow2::array::*;
 use arrow2::chunk::Chunk;
 use arrow2::datatypes::*;
 use arrow2::error::Result;
-use arrow2::io::avro::write;
+use arrow2::io::avro::{write, CompressedBlock};
 use arrow2::types::months_days_ns;
 
-fn schema() -> Schema {
+use super::read::read_avro;
+
+pub(super) fn schema() -> Schema {
     Schema::from(vec![
         Field::new("a", DataType::Int64, false),
         Field::new("b", DataType::Utf8, false),
@@ -21,7 +23,7 @@ fn schema() -> Schema {
     ])
 }
 
-fn data() -> Chunk<Arc<dyn Array>> {
+pub(super) fn data() -> Chunk<Arc<dyn Array>> {
     let columns = vec![
         Arc::new(Int64Array::from_slice([27, 47])) as Arc<dyn Array>,
         Arc::new(Utf8Array::<i32>::from_slice(["foo", "bar"])) as Arc<dyn Array>,
@@ -40,13 +42,11 @@ fn data() -> Chunk<Arc<dyn Array>> {
     Chunk::try_new(columns).unwrap()
 }
 
-use super::read::read_avro;
-
-fn write_avro<R: AsRef<dyn Array>>(
+pub(super) fn serialize_to_block<R: AsRef<dyn Array>>(
     columns: &Chunk<R>,
     schema: &Schema,
     compression: Option<write::Compression>,
-) -> Result<Vec<u8>> {
+) -> Result<CompressedBlock> {
     let avro_fields = write::to_avro_schema(schema)?;
 
     let mut serializers = columns
@@ -64,9 +64,20 @@ fn write_avro<R: AsRef<dyn Array>>(
 
     write::compress(&mut block, &mut compressed_block, compression)?;
 
+    Ok(compressed_block)
+}
+
+fn write_avro<R: AsRef<dyn Array>>(
+    columns: &Chunk<R>,
+    schema: &Schema,
+    compression: Option<write::Compression>,
+) -> Result<Vec<u8>> {
+    let compressed_block = serialize_to_block(columns, schema, compression)?;
+
+    let avro_fields = write::to_avro_schema(schema)?;
     let mut file = vec![];
 
-    write::write_metadata(&mut file, avro_fields.clone(), compression)?;
+    write::write_metadata(&mut file, avro_fields, compression)?;
 
     write::write_block(&mut file, &compressed_block)?;
 

@@ -7,6 +7,9 @@ pub mod read;
 #[cfg_attr(docsrs, doc(cfg(feature = "io_avro_async")))]
 pub mod read_async;
 pub mod write;
+#[cfg(feature = "io_avro_async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "io_avro_async")))]
+pub mod write_async;
 
 /// Valid compressions
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
