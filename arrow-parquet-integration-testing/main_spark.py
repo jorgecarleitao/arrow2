@@ -7,7 +7,7 @@ import pyspark.sql
 from main import _prepare, _expected
 
 
-def test(file: str, version: str, column, encoding: str):
+def test(file: str, version: str, column, compression: str, encoding: str):
     """
     Tests that pyspark can read a parquet file written by arrow2.
 
@@ -17,7 +17,7 @@ def test(file: str, version: str, column, encoding: str):
     assert that they are equal
     """
     # write parquet
-    path = _prepare(file, version, encoding, [column[1]])
+    path = _prepare(file, version, compression, encoding, [column[1]])
 
     # read IPC to Python
     expected = _expected(file)
@@ -39,13 +39,20 @@ def test(file: str, version: str, column, encoding: str):
     assert expected == result
 
 
-test("generated_primitive", "2", ("utf8_nullable", 24), "delta")
+test("generated_primitive", "2", ("utf8_nullable", 24), "uncompressed", "delta")
+test("generated_primitive", "2", ("utf8_nullable", 24), "snappy", "delta")
 
-test("generated_dictionary", "1", ("dict0", 0), "")
-test("generated_dictionary", "2", ("dict0", 0), "")
+test("generated_dictionary", "1", ("dict0", 0), "uncompressed", "")
+test("generated_dictionary", "1", ("dict0", 0), "snappy", "")
+test("generated_dictionary", "2", ("dict0", 0), "uncompressed", "")
+test("generated_dictionary", "2", ("dict0", 0), "snappy", "")
 
-test("generated_dictionary", "1", ("dict1", 1), "")
-test("generated_dictionary", "2", ("dict1", 1), "")
+test("generated_dictionary", "1", ("dict1", 1), "uncompressed", "")
+test("generated_dictionary", "1", ("dict1", 1), "snappy", "")
+test("generated_dictionary", "2", ("dict1", 1), "uncompressed", "")
+test("generated_dictionary", "2", ("dict1", 1), "snappy", "")
 
-test("generated_dictionary", "1", ("dict2", 2), "")
-test("generated_dictionary", "2", ("dict2", 2), "")
+test("generated_dictionary", "1", ("dict2", 2), "uncompressed", "")
+test("generated_dictionary", "1", ("dict2", 2), "snappy", "")
+test("generated_dictionary", "2", ("dict2", 2), "uncompressed", "")
+test("generated_dictionary", "2", ("dict2", 2), "snappy", "")
