@@ -91,6 +91,12 @@ fn main() -> Result<()> {
                 .required(true)
                 .takes_value(true),
         )
+        .arg(
+            Arg::with_name("compression")
+                .long("compression")
+                .required(true)
+                .takes_value(true),
+        )
         .get_matches();
     let json_file = matches
         .value_of("json")
@@ -105,6 +111,9 @@ fn main() -> Result<()> {
     let utf8_encoding = matches
         .value_of("encoding-utf8")
         .expect("must provide utf8 type encoding");
+    let compression = matches
+        .value_of("compression")
+        .expect("must provide compression");
 
     let projection = projection.map(|x| {
         x.split(',')
@@ -161,9 +170,16 @@ fn main() -> Result<()> {
         Version::V2
     };
 
+    let compression = match compression {
+        "uncompressed" => Compression::Uncompressed,
+        "zstd" => Compression::Zstd,
+        "snappy" => Compression::Snappy,
+        other => todo!("{}", other),
+    };
+
     let options = WriteOptions {
         write_statistics: true,
-        compression: Compression::Uncompressed,
+        compression,
         version,
     };
 

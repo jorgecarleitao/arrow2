@@ -9,7 +9,9 @@ def get_file_path(file: str):
     return f"../testing/arrow-testing/data/arrow-ipc-stream/integration/1.0.0-littleendian/{file}.arrow_file"
 
 
-def _prepare(file: str, version: str, encoding_utf8: str, projection=None):
+def _prepare(
+    file: str, version: str, compression: str, encoding_utf8: str, projection=None
+):
     write = f"{file}.parquet"
 
     args = [
@@ -24,6 +26,8 @@ def _prepare(file: str, version: str, encoding_utf8: str, projection=None):
         version,
         "--encoding-utf8",
         encoding_utf8,
+        "--compression",
+        compression,
     ]
 
     if projection:
@@ -76,13 +80,14 @@ def variations():
             # pyarrow does not support decoding "delta"-encoded values.
             # for encoding in ["plain", "delta"]:
             for encoding in ["plain"]:
-                yield (version, file, encoding)
+                for compression in ["uncompressed", "zstd", "snappy"]:
+                    yield (version, file, compression, encoding)
 
 
 if __name__ == "__main__":
-    for (version, file, encoding_utf8) in variations():
+    for (version, file, compression, encoding_utf8) in variations():
         expected = _expected(file)
-        path = _prepare(file, version, encoding_utf8)
+        path = _prepare(file, version, compression, encoding_utf8)
 
         table = pq.read_table(path)
         os.remove(path)
