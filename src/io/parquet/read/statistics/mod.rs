@@ -4,6 +4,7 @@ use crate::error::ArrowError;
 use parquet2::schema::types::PhysicalType;
 use parquet2::statistics::PrimitiveStatistics as ParquetPrimitiveStatistics;
 use parquet2::statistics::Statistics as ParquetStatistics;
+use std::any::Any;
 
 use crate::error::Result;
 
@@ -20,6 +21,12 @@ pub use fixlen::*;
 pub trait Statistics: std::fmt::Debug {
     /// returns the [`DataType`] of the statistics.
     fn data_type(&self) -> &DataType;
+
+    /// Returns `dyn Any` can used to downcast to a physical type.
+    fn as_any(&self) -> &dyn Any;
+
+    /// Return the null count statistic
+    fn null_count(&self) -> Option<i64>;
 }
 
 impl PartialEq for &dyn Statistics {
