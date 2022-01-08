@@ -421,43 +421,23 @@ fn array_or_scalar_validity() {
 }
 
 #[test]
-fn test_any() {
+fn test_any_all() {
     let array = BooleanArray::from(&[None, Some(false), Some(true)]);
     assert!(any(&array));
+    assert!(!all(&array));
     let array = BooleanArray::from(&[None, Some(false), Some(false)]);
     assert!(!any(&array));
-
-    // create some slices and offset to make test more interesting
-    let mut slices = Vec::with_capacity(8 * 10 + 1);
-    for offset in 0..8 {
-        for len in 20..30 {
-            slices.push((offset, len))
-        }
-    }
-
-    let all_true = BooleanArray::from_trusted_len_values_iter(std::iter::repeat(true).take(50));
-    let all_false = BooleanArray::from_trusted_len_values_iter(std::iter::repeat(false).take(50));
-    let various = BooleanArray::from_iter((0..50).map(|v| Some(v % 2 == 0)));
-
-    for (offset, len) in slices {
-        let arr = all_true.slice(offset, len);
-        assert!(any(&arr));
-
-        let arr = all_false.slice(offset, len);
-        assert!(!any(&arr));
-
-        let arr = various.slice(offset, len);
-        assert!(any(&arr));
-    }
-    let last_value = BooleanArray::from_iter((0..50).map(|v| Some(v == 49)));
-    assert!(any(&last_value));
-    // slice of the true value
-    let arr = last_value.slice(0, 49);
-    assert!(!any(&arr));
-
-    let first_value = BooleanArray::from_iter((0..50).map(|v| Some(v == 0)));
-    assert!(any(&first_value));
-    // slice of the true value
-    let arr = first_value.slice(1, 49);
-    assert!(!any(&arr));
+    assert!(!all(&array));
+    let array = BooleanArray::from(&[None, Some(true), Some(true)]);
+    assert!(!all(&array));
+    assert!(any(&array));
+    let array = BooleanArray::from_iter(std::iter::repeat(false).take(10).map(Some));
+    assert!(!any(&array));
+    assert!(!all(&array));
+    let array = BooleanArray::from_iter(std::iter::repeat(true).take(10).map(Some));
+    assert!(all(&array));
+    assert!(any(&array));
+    let array = BooleanArray::from_iter([true, false, true, true].map(Some));
+    assert!(!all(&array));
+    assert!(any(&array));
 }

@@ -194,30 +194,16 @@ pub fn any(array: &BooleanArray) -> bool {
         array.into_iter().any(|v| v == Some(true))
     } else {
         let vals = array.values();
-        let (mut bytes, start, mut len) = vals.as_slice();
-        if start != 0 {
-            if array.values_iter().take(8 - start).any(|v| v) {
-                return true;
-            }
-            bytes = &bytes[1..];
-            len -= start;
-        }
-        // remaining part of last byte
-        let remainder = len % 8;
-        if remainder != 0 {
-            let last = bytes[bytes.len() - 1];
-            for i in 0..remainder {
-                if last & 1 << i != 0 {
-                    return true;
-                }
-            }
-            // exclude last byte
-            bytes = &bytes[..bytes.len() - 1];
-        }
-        // Safety:
-        // we transmute from integer types and the align_to function deals with correct alignment.
-        let (head, mid, tail) = unsafe { bytes.align_to::<u64>() };
+        vals.null_count() != 0
+    }
+}
 
-        head.iter().any(|&v| v != 0) || mid.iter().any(|&v| v != 0) || tail.iter().any(|&v| v != 0)
+/// Check if all of the values in the array are `true`
+pub fn all(array: &BooleanArray) -> bool {
+    if array.is_empty() || array.null_count() > 0 {
+        false
+    } else {
+        let vals = array.values();
+        vals.null_count() == 0
     }
 }
