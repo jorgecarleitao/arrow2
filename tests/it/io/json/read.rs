@@ -1,49 +1,52 @@
-use std::{io::Cursor, sync::Arc};
+use std::io::Cursor;
 
 use arrow2::array::*;
 use arrow2::datatypes::*;
+use arrow2::error::Result;
 use arrow2::io::json::read;
-use arrow2::{bitmap::Bitmap, buffer::Buffer, error::Result};
 
 use super::*;
 
+fn test_case(case_: &str) -> Result<()> {
+    let (data, fields, columns) = case(case_);
+
+    let batch = read_batch(data, &fields)?;
+
+    columns
+        .iter()
+        .zip(batch.columns())
+        .for_each(|(expected, result)| assert_eq!(expected.as_ref(), result.as_ref()));
+    Ok(())
+}
+
 #[test]
 fn basic() -> Result<()> {
-    let (data, schema, columns) = case_basics();
-
-    let batch = read_batch(data, &schema.fields)?;
-
-    columns
-        .iter()
-        .zip(batch.columns())
-        .for_each(|(expected, result)| assert_eq!(expected.as_ref(), result.as_ref()));
-    Ok(())
+    test_case("basics")
 }
 
 #[test]
-fn basic_projection() -> Result<()> {
-    let (data, schema, columns) = case_basics_schema();
-
-    let batch = read_batch(data, &schema.fields)?;
-
-    columns
-        .iter()
-        .zip(batch.columns())
-        .for_each(|(expected, result)| assert_eq!(expected.as_ref(), result.as_ref()));
-    Ok(())
+fn projection() -> Result<()> {
+    test_case("projection")
 }
 
 #[test]
-fn lists() -> Result<()> {
-    let (data, schema, columns) = case_list();
+fn dictionary() -> Result<()> {
+    test_case("dict")
+}
 
-    let batch = read_batch(data, &schema.fields)?;
+#[test]
+fn list() -> Result<()> {
+    test_case("list")
+}
 
-    columns
-        .iter()
-        .zip(batch.columns())
-        .for_each(|(expected, result)| assert_eq!(expected.as_ref(), result.as_ref()));
-    Ok(())
+#[test]
+fn nested_struct() -> Result<()> {
+    test_case("struct")
+}
+
+#[test]
+fn nested_list() -> Result<()> {
+    test_case("nested_list")
 }
 
 #[test]
@@ -89,78 +92,6 @@ fn invalid_read_record() -> Result<()> {
 }
 
 #[test]
-fn nested_struct_arrays() -> Result<()> {
-    let (data, schema, columns) = case_struct();
-
-    let batch = read_batch(data, &schema.fields)?;
-
-    columns
-        .iter()
-        .zip(batch.columns())
-        .for_each(|(expected, result)| assert_eq!(expected.as_ref(), result.as_ref()));
-    Ok(())
-}
-
-#[test]
-fn nested_list_arrays() -> Result<()> {
-    let d_field = Field::new("d", DataType::Utf8, true);
-    let c_field = Field::new("c", DataType::Struct(vec![d_field.clone()]), true);
-    let b_field = Field::new("b", DataType::Boolean, true);
-    let a_struct_field = Field::new(
-        "a",
-        DataType::Struct(vec![b_field.clone(), c_field.clone()]),
-        true,
-    );
-    let a_list_data_type = DataType::List(Box::new(a_struct_field));
-    let a_field = Field::new("a", a_list_data_type.clone(), true);
-
-    let data = r#"
-    {"a": [{"b": true, "c": {"d": "a_text"}}, {"b": false, "c": {"d": "b_text"}}]}
-    {"a": [{"b": false, "c": null}]}
-    {"a": [{"b": true, "c": {"d": "c_text"}}, {"b": null, "c": {"d": "d_text"}}, {"b": true, "c": {"d": null}}]}
-    {"a": null}
-    {"a": []}
-    "#;
-
-    let batch = read_batch(data.to_string(), &[a_field])?;
-
-    // build expected output
-    let d = Utf8Array::<i32>::from(&vec![
-        Some("a_text"),
-        Some("b_text"),
-        None,
-        Some("c_text"),
-        Some("d_text"),
-        None,
-    ]);
-
-    let c = StructArray::from_data(DataType::Struct(vec![d_field]), vec![Arc::new(d)], None);
-
-    let b = BooleanArray::from(vec![
-        Some(true),
-        Some(false),
-        Some(false),
-        Some(true),
-        None,
-        Some(true),
-    ]);
-    let a_struct = StructArray::from_data(
-        DataType::Struct(vec![b_field, c_field]),
-        vec![Arc::new(b) as Arc<dyn Array>, Arc::new(c) as Arc<dyn Array>],
-        None,
-    );
-    let expected = ListArray::from_data(
-        a_list_data_type,
-        Buffer::from_slice([0i32, 2, 3, 6, 6, 6]),
-        Arc::new(a_struct) as Arc<dyn Array>,
-        Some(Bitmap::from_u8_slice([0b00010111], 5)),
-    );
-
-    assert_eq!(expected, batch.columns()[0].as_ref());
-    Ok(())
-}
-
-#[test]
 fn skip_empty_lines() {
     let data = "
     {\"a\": 1}
@@ -186,16 +117,6 @@ fn row_type_validation() {
         batch.err().unwrap().to_string(),
         r#"External format error: Expected JSON record to be an object, found Array([Number(1), String("hello")])"#,
     );
-}
-
-#[test]
-fn list_of_string_dictionary_from_with_nulls() -> Result<()> {
-    let (data, schema, columns) = case_dict();
-
-    let batch = read_batch(data, &schema.fields)?;
-
-    assert_eq!(columns[0].as_ref(), batch.columns()[0].as_ref());
-    Ok(())
 }
 
 #[test]
