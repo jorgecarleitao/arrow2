@@ -185,3 +185,25 @@ pub fn or_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray {
         None => BooleanArray::new_null(DataType::Boolean, array.len()),
     }
 }
+
+/// Check if any of the values in the array is `true`
+pub fn any(array: &BooleanArray) -> bool {
+    if array.is_empty() {
+        false
+    } else if array.validity().is_some() {
+        array.into_iter().any(|v| v == Some(true))
+    } else {
+        let vals = array.values();
+        vals.null_count() != 0
+    }
+}
+
+/// Check if all of the values in the array are `true`
+pub fn all(array: &BooleanArray) -> bool {
+    if array.is_empty() || array.null_count() > 0 {
+        false
+    } else {
+        let vals = array.values();
+        vals.null_count() == 0
+    }
+}

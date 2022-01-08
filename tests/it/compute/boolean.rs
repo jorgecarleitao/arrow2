@@ -1,6 +1,7 @@
 use arrow2::array::*;
 use arrow2::compute::boolean::*;
 use arrow2::scalar::BooleanScalar;
+use std::iter::FromIterator;
 
 #[test]
 fn array_and() {
@@ -417,4 +418,26 @@ fn array_or_scalar_validity() {
 
     let expected = BooleanArray::from(&[None; 3]);
     assert_eq!(real, expected);
+}
+
+#[test]
+fn test_any_all() {
+    let array = BooleanArray::from(&[None, Some(false), Some(true)]);
+    assert!(any(&array));
+    assert!(!all(&array));
+    let array = BooleanArray::from(&[None, Some(false), Some(false)]);
+    assert!(!any(&array));
+    assert!(!all(&array));
+    let array = BooleanArray::from(&[None, Some(true), Some(true)]);
+    assert!(!all(&array));
+    assert!(any(&array));
+    let array = BooleanArray::from_iter(std::iter::repeat(false).take(10).map(Some));
+    assert!(!any(&array));
+    assert!(!all(&array));
+    let array = BooleanArray::from_iter(std::iter::repeat(true).take(10).map(Some));
+    assert!(all(&array));
+    assert!(any(&array));
+    let array = BooleanArray::from_iter([true, false, true, true].map(Some));
+    assert!(!all(&array));
+    assert!(any(&array));
 }
