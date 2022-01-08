@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::convert::{TryFrom, TryInto};
 
 use super::super::schema;
@@ -26,6 +27,14 @@ pub struct FixedLenStatistics {
 impl Statistics for FixedLenStatistics {
     fn data_type(&self) -> &DataType {
         &self.data_type
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn null_count(&self) -> Option<i64> {
+        self.null_count
     }
 }
 

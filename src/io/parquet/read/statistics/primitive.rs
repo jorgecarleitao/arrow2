@@ -2,6 +2,7 @@ use crate::{datatypes::DataType, types::NativeType};
 use parquet2::schema::types::ParquetType;
 use parquet2::statistics::PrimitiveStatistics as ParquetPrimitiveStatistics;
 use parquet2::types::NativeType as ParquetNativeType;
+use std::any::Any;
 
 use super::super::schema;
 use super::Statistics;
@@ -19,6 +20,14 @@ pub struct PrimitiveStatistics<T: NativeType> {
 impl<T: NativeType> Statistics for PrimitiveStatistics<T> {
     fn data_type(&self) -> &DataType {
         &self.data_type
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn null_count(&self) -> Option<i64> {
+        self.null_count
     }
 }
 

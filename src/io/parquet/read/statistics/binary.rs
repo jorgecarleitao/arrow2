@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::convert::TryFrom;
 
 use crate::datatypes::DataType;
@@ -19,6 +20,14 @@ pub struct BinaryStatistics {
 impl Statistics for BinaryStatistics {
     fn data_type(&self) -> &DataType {
         &DataType::Binary
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn null_count(&self) -> Option<i64> {
+        self.null_count
     }
 }
 
@@ -44,6 +53,14 @@ pub struct Utf8Statistics {
 impl Statistics for Utf8Statistics {
     fn data_type(&self) -> &DataType {
         &DataType::Utf8
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn null_count(&self) -> Option<i64> {
+        self.null_count
     }
 }
 
