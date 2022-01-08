@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["write","Returns a visual representation of [`Chunk`]"]]});
