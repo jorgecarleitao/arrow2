@@ -5,6 +5,8 @@ use std::io::Cursor;
 use std::sync::Arc;
 
 use arrow2::array::*;
+use arrow2::bitmap::Bitmap;
+use arrow2::buffer::Buffer;
 use arrow2::chunk::Chunk;
 use arrow2::datatypes::*;
 use arrow2::error::Result;
@@ -65,14 +67,14 @@ fn round_trip_list() -> Result<()> {
     round_trip(data)
 }
 
-fn case_list() -> (String, Schema, Vec<Box<dyn Array>>) {
+fn case_list() -> (String, Vec<Field>, Vec<Box<dyn Array>>) {
     let data = r#"{"a":1, "b":[2.0, 1.3, -6.1], "c":[false, true], "d":"4"}
             {"a":-10, "b":null, "c":[true, true]}
             {"a":null, "b":[2.1, null, -6.2], "c":[false, null], "d":"text"}
             "#
     .to_string();
 
-    let schema = Schema::from(vec![
+    let fields = vec![
         Field::new("a", DataType::Int64, true),
         Field::new(
             "b",
@@ -85,9 +87,9 @@ fn case_list() -> (String, Schema, Vec<Box<dyn Array>>) {
             true,
         ),
         Field::new("d", DataType::Utf8, true),
-    ]);
-    let a = Int64Array::from(&[Some(1), Some(-10), None]);
+    ];
 
+    let a = Int64Array::from(&[Some(1), Some(-10), None]);
     let mut b = MutableListArray::<i32, MutablePrimitiveArray<f64>>::new();
     b.try_extend(vec![
         Some(vec![Some(2.0), Some(1.3), Some(-6.1)]),
@@ -115,10 +117,10 @@ fn case_list() -> (String, Schema, Vec<Box<dyn Array>>) {
         Box::new(d),
     ];
 
-    (data, schema, columns)
+    (data, fields, columns)
 }
 
-fn case_dict() -> (String, Schema, Vec<Box<dyn Array>>) {
+fn case_dict() -> (String, Vec<Field>, Vec<Box<dyn Array>>) {
     let data = r#"{"machine": "a", "events": [null, "Elect Leader", "Do Ballot"]}
     {"machine": "b", "events": ["Do Ballot", null, "Send Data", "Elect Leader"]}
     {"machine": "c", "events": ["Send Data"]}
@@ -133,7 +135,7 @@ fn case_dict() -> (String, Schema, Vec<Box<dyn Array>>) {
         true,
     )));
 
-    let schema = Schema::from(vec![Field::new("events", data_type, true)]);
+    let fields = vec![Field::new("events", data_type, true)];
 
     type A = MutableDictionaryArray<u64, MutableUtf8Array<i32>>;
 
@@ -155,41 +157,41 @@ fn case_dict() -> (String, Schema, Vec<Box<dyn Array>>) {
 
     let array: ListArray<i32> = array.into();
 
-    (data, schema, vec![Box::new(array) as Box<dyn Array>])
+    (data, fields, vec![Box::new(array) as Box<dyn Array>])
 }
 
-fn case_basics() -> (String, Schema, Vec<Box<dyn Array>>) {
+fn case_basics() -> (String, Vec<Field>, Vec<Box<dyn Array>>) {
     let data = r#"{"a":1, "b":2.0, "c":false, "d":"4"}
     {"a":-10, "b":-3.5, "c":true, "d":null}
     {"a":100000000, "b":0.6, "d":"text"}"#
         .to_string();
-    let schema = Schema::from(vec![
+    let fields = vec![
         Field::new("a", DataType::Int64, true),
         Field::new("b", DataType::Float64, true),
         Field::new("c", DataType::Boolean, true),
         Field::new("d", DataType::Utf8, true),
-    ]);
+    ];
     let columns = vec![
         Box::new(Int64Array::from_slice(&[1, -10, 100000000])) as Box<dyn Array>,
         Box::new(Float64Array::from_slice(&[2.0, -3.5, 0.6])),
         Box::new(BooleanArray::from(&[Some(false), Some(true), None])),
         Box::new(Utf8Array::<i32>::from(&[Some("4"), None, Some("text")])),
     ];
-    (data, schema, columns)
+    (data, fields, columns)
 }
 
-fn case_basics_schema() -> (String, Schema, Vec<Box<dyn Array>>) {
+fn case_projection() -> (String, Vec<Field>, Vec<Box<dyn Array>>) {
     let data = r#"{"a":1, "b":2.0, "c":false, "d":"4", "e":"4"}
     {"a":10, "b":-3.5, "c":true, "d":null, "e":"text"}
     {"a":100000000, "b":0.6, "d":"text"}"#
         .to_string();
-    let schema = Schema::from(vec![
+    let fields = vec![
         Field::new("a", DataType::UInt32, true),
         Field::new("b", DataType::Float32, true),
         Field::new("c", DataType::Boolean, true),
         // note how "d" is not here
         Field::new("e", DataType::Binary, true),
-    ]);
+    ];
     let columns = vec![
         Box::new(UInt32Array::from_slice(&[1, 10, 100000000])) as Box<dyn Array>,
         Box::new(Float32Array::from_slice(&[2.0, -3.5, 0.6])),
@@ -200,10 +202,10 @@ fn case_basics_schema() -> (String, Schema, Vec<Box<dyn Array>>) {
             None,
         ])),
     ];
-    (data, schema, columns)
+    (data, fields, columns)
 }
 
-fn case_struct() -> (String, Schema, Vec<Box<dyn Array>>) {
+fn case_struct() -> (String, Vec<Field>, Vec<Box<dyn Array>>) {
     let data = r#"{"a": {"b": true, "c": {"d": "text"}}}
     {"a": {"b": false, "c": null}}
     {"a": {"b": true, "c": {"d": "text"}}}
@@ -220,7 +222,7 @@ fn case_struct() -> (String, Schema, Vec<Box<dyn Array>>) {
         ]),
         true,
     );
-    let schema = Schema::from(vec![a_field]);
+    let fields = vec![a_field];
 
     // build expected output
     let d = Utf8Array::<i32>::from(&vec![Some("text"), None, Some("text"), None]);
@@ -233,5 +235,76 @@ fn case_struct() -> (String, Schema, Vec<Box<dyn Array>>) {
         None,
     );
 
-    (data, schema, vec![Box::new(expected) as Box<dyn Array>])
+    (data, fields, vec![Box::new(expected) as Box<dyn Array>])
+}
+
+fn case_nested_list() -> (String, Vec<Field>, Vec<Box<dyn Array>>) {
+    let d_field = Field::new("d", DataType::Utf8, true);
+    let c_field = Field::new("c", DataType::Struct(vec![d_field.clone()]), true);
+    let b_field = Field::new("b", DataType::Boolean, true);
+    let a_struct_field = Field::new(
+        "a",
+        DataType::Struct(vec![b_field.clone(), c_field.clone()]),
+        true,
+    );
+    let a_list_data_type = DataType::List(Box::new(a_struct_field));
+    let a_field = Field::new("a", a_list_data_type.clone(), true);
+
+    let data = r#"
+    {"a": [{"b": true, "c": {"d": "a_text"}}, {"b": false, "c": {"d": "b_text"}}]}
+    {"a": [{"b": false, "c": null}]}
+    {"a": [{"b": true, "c": {"d": "c_text"}}, {"b": null, "c": {"d": "d_text"}}, {"b": true, "c": {"d": null}}]}
+    {"a": null}
+    {"a": []}
+    "#.to_string();
+
+    // build expected output
+    let d = Utf8Array::<i32>::from(&vec![
+        Some("a_text"),
+        Some("b_text"),
+        None,
+        Some("c_text"),
+        Some("d_text"),
+        None,
+    ]);
+
+    let c = StructArray::from_data(DataType::Struct(vec![d_field]), vec![Arc::new(d)], None);
+
+    let b = BooleanArray::from(vec![
+        Some(true),
+        Some(false),
+        Some(false),
+        Some(true),
+        None,
+        Some(true),
+    ]);
+    let a_struct = StructArray::from_data(
+        DataType::Struct(vec![b_field, c_field]),
+        vec![Arc::new(b) as Arc<dyn Array>, Arc::new(c) as Arc<dyn Array>],
+        None,
+    );
+    let expected = ListArray::from_data(
+        a_list_data_type,
+        Buffer::from_slice([0i32, 2, 3, 6, 6, 6]),
+        Arc::new(a_struct) as Arc<dyn Array>,
+        Some(Bitmap::from_u8_slice([0b00010111], 5)),
+    );
+
+    (
+        data,
+        vec![a_field],
+        vec![Box::new(expected) as Box<dyn Array>],
+    )
+}
+
+fn case(case: &str) -> (String, Vec<Field>, Vec<Box<dyn Array>>) {
+    match case {
+        "basics" => case_basics(),
+        "projection" => case_projection(),
+        "list" => case_list(),
+        "dict" => case_dict(),
+        "struct" => case_struct(),
+        "nested_list" => case_nested_list(),
+        _ => todo!(),
+    }
 }
