@@ -30,15 +30,11 @@ fn round_trip(
     columns: Chunk<Arc<dyn Array>>,
     schema: Schema,
     ipc_fields: Option<Vec<IpcField>>,
+    compression: Option<Compression>,
 ) -> Result<()> {
     let (expected_schema, expected_batches) = (schema.clone(), vec![columns]);
 
-    let result = write_(
-        &expected_batches,
-        &schema,
-        ipc_fields,
-        Some(Compression::ZSTD),
-    )?;
+    let result = write_(&expected_batches, &schema, ipc_fields, compression)?;
     let mut reader = Cursor::new(result);
     let metadata = read_file_metadata(&mut reader)?;
     let schema = metadata.schema.clone();
@@ -340,7 +336,7 @@ fn write_boolean() -> Result<()> {
     ])) as Arc<dyn Array>;
     let schema = Schema::from(vec![Field::new("a", array.data_type().clone(), true)]);
     let columns = Chunk::try_new(vec![array])?;
-    round_trip(columns, schema, None)
+    round_trip(columns, schema, None, Some(Compression::ZSTD))
 }
 
 #[test]
@@ -350,11 +346,10 @@ fn write_sliced_utf8() -> Result<()> {
     let array = Arc::new(Utf8Array::<i32>::from_slice(["aa", "bb"]).slice(1, 1)) as Arc<dyn Array>;
     let schema = Schema::from(vec![Field::new("a", array.data_type().clone(), true)]);
     let columns = Chunk::try_new(vec![array])?;
-    round_trip(columns, schema, None)
+    round_trip(columns, schema, None, Some(Compression::ZSTD))
 }
 
 #[test]
-#[cfg_attr(miri, ignore)] // compression uses FFI, which miri does not support
 fn write_sliced_list() -> Result<()> {
     let data = vec![
         Some(vec![Some(1i32), Some(2), Some(3)]),
@@ -368,5 +363,5 @@ fn write_sliced_list() -> Result<()> {
 
     let schema = Schema::from(vec![Field::new("a", array.data_type().clone(), true)]);
     let columns = Chunk::try_new(vec![array])?;
-    round_trip(columns, schema, None)
+    round_trip(columns, schema, None, None)
 }

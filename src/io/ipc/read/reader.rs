@@ -1,3 +1,4 @@
+use std::convert::TryInto;
 use std::io::{Read, Seek, SeekFrom};
 use std::sync::Arc;
 
@@ -11,7 +12,7 @@ use super::super::{ARROW_MAGIC, CONTINUATION_MARKER};
 use super::common::*;
 use super::schema::fb_to_schema;
 use super::Dictionaries;
-use arrow_format::ipc::planus::{ReadAsRoot, ToOwned, Vector};
+use arrow_format::ipc::planus::{ReadAsRoot, Vector};
 
 #[derive(Debug, Clone)]
 pub struct FileMetadata {
@@ -64,7 +65,7 @@ fn read_dictionaries<R: Read + Seek>(
     reader: &mut R,
     fields: &[Field],
     ipc_schema: &IpcSchema,
-    blocks: Vector<arrow_format::ipc::Block>,
+    blocks: Vector<arrow_format::ipc::BlockRef>,
 ) -> Result<Dictionaries> {
     let mut dictionaries = Default::default();
     let mut data = vec![];
@@ -158,7 +159,7 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
         ipc_schema,
         blocks: blocks
             .iter()
-            .map(|block| Ok(ToOwned::to_owned(block)?))
+            .map(|block| Ok(block.try_into()?))
             .collect::<Result<Vec<_>>>()?,
         dictionaries,
     })
