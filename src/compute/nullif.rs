@@ -1,7 +1,7 @@
 //! Contains the operator [`nullif`].
 use crate::array::PrimitiveArray;
 use crate::bitmap::Bitmap;
-use crate::compute::comparison::{primitive_compare_values_op, Simd8, Simd8Lanes};
+use crate::compute::comparison::{primitive_compare_values_op, Simd8, Simd8PartialEq};
 use crate::compute::utils::check_same_type;
 use crate::datatypes::DataType;
 use crate::error::{ArrowError, Result};
@@ -32,10 +32,14 @@ use super::utils::combine_validities;
 /// This function errors iff
 /// * The arguments do not have the same logical type
 /// * The arguments do not have the same length
-pub fn nullif_primitive<T: NativeType + Simd8>(
+pub fn nullif_primitive<T>(
     lhs: &PrimitiveArray<T>,
     rhs: &PrimitiveArray<T>,
-) -> Result<PrimitiveArray<T>> {
+) -> Result<PrimitiveArray<T>>
+where
+    T: NativeType + Simd8,
+    T::Simd: Simd8PartialEq,
+{
     check_same_type(lhs, rhs)?;
 
     let equal = primitive_compare_values_op(lhs.values(), rhs.values(), |lhs, rhs| lhs.neq(rhs));

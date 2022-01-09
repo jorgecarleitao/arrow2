@@ -7,7 +7,7 @@ use crate::{
 };
 
 use super::super::utils::combine_validities;
-use super::simd::{Simd8, Simd8Lanes};
+use super::simd::{Simd8, Simd8Lanes, Simd8PartialEq, Simd8PartialOrd};
 
 pub(crate) fn compare_values_op<T, F>(lhs: &[T], rhs: &[T], op: F) -> MutableBitmap
 where
@@ -87,6 +87,7 @@ where
 pub fn eq<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> BooleanArray
 where
     T: NativeType + Simd8,
+    T::Simd: Simd8PartialEq,
 {
     compare_op(lhs, rhs, |a, b| a.eq(b))
 }
@@ -95,6 +96,7 @@ where
 pub fn eq_scalar<T>(lhs: &PrimitiveArray<T>, rhs: T) -> BooleanArray
 where
     T: NativeType + Simd8,
+    T::Simd: Simd8PartialEq,
 {
     compare_op_scalar(lhs, rhs, |a, b| a.eq(b))
 }
@@ -103,6 +105,7 @@ where
 pub fn neq<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> BooleanArray
 where
     T: NativeType + Simd8,
+    T::Simd: Simd8PartialEq,
 {
     compare_op(lhs, rhs, |a, b| a.neq(b))
 }
@@ -111,6 +114,7 @@ where
 pub fn neq_scalar<T>(lhs: &PrimitiveArray<T>, rhs: T) -> BooleanArray
 where
     T: NativeType + Simd8,
+    T::Simd: Simd8PartialEq,
 {
     compare_op_scalar(lhs, rhs, |a, b| a.neq(b))
 }
@@ -119,6 +123,7 @@ where
 pub fn lt<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> BooleanArray
 where
     T: NativeType + Simd8,
+    T::Simd: Simd8PartialOrd,
 {
     compare_op(lhs, rhs, |a, b| a.lt(b))
 }
@@ -127,6 +132,7 @@ where
 pub fn lt_scalar<T>(lhs: &PrimitiveArray<T>, rhs: T) -> BooleanArray
 where
     T: NativeType + Simd8,
+    T::Simd: Simd8PartialOrd,
 {
     compare_op_scalar(lhs, rhs, |a, b| a.lt(b))
 }
@@ -135,6 +141,7 @@ where
 pub fn lt_eq<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> BooleanArray
 where
     T: NativeType + Simd8,
+    T::Simd: Simd8PartialOrd,
 {
     compare_op(lhs, rhs, |a, b| a.lt_eq(b))
 }
@@ -144,6 +151,7 @@ where
 pub fn lt_eq_scalar<T>(lhs: &PrimitiveArray<T>, rhs: T) -> BooleanArray
 where
     T: NativeType + Simd8,
+    T::Simd: Simd8PartialOrd,
 {
     compare_op_scalar(lhs, rhs, |a, b| a.lt_eq(b))
 }
@@ -153,6 +161,7 @@ where
 pub fn gt<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> BooleanArray
 where
     T: NativeType + Simd8,
+    T::Simd: Simd8PartialOrd,
 {
     compare_op(lhs, rhs, |a, b| a.gt(b))
 }
@@ -162,6 +171,7 @@ where
 pub fn gt_scalar<T>(lhs: &PrimitiveArray<T>, rhs: T) -> BooleanArray
 where
     T: NativeType + Simd8,
+    T::Simd: Simd8PartialOrd,
 {
     compare_op_scalar(lhs, rhs, |a, b| a.gt(b))
 }
@@ -171,6 +181,7 @@ where
 pub fn gt_eq<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> BooleanArray
 where
     T: NativeType + Simd8,
+    T::Simd: Simd8PartialOrd,
 {
     compare_op(lhs, rhs, |a, b| a.gt_eq(b))
 }
@@ -180,6 +191,7 @@ where
 pub fn gt_eq_scalar<T>(lhs: &PrimitiveArray<T>, rhs: T) -> BooleanArray
 where
     T: NativeType + Simd8,
+    T::Simd: Simd8PartialOrd,
 {
     compare_op_scalar(lhs, rhs, |a, b| a.gt_eq(b))
 }
