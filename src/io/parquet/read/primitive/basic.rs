@@ -5,7 +5,7 @@ use parquet2::{
 };
 
 use super::super::utils as other_utils;
-use super::utils::ExactChunksIter;
+use super::utils::chunks;
 use super::ColumnDescriptor;
 use crate::{
     bitmap::{utils::BitmapIter, MutableBitmap},
@@ -110,7 +110,7 @@ fn read_nullable<T, A, F>(
     F: Fn(T) -> A,
 {
     let length = additional + values.len();
-    let mut chunks = ExactChunksIter::<T>::new(values_buffer);
+    let mut chunks = chunks(values_buffer);
 
     let validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
 
@@ -153,7 +153,7 @@ where
     F: Fn(T) -> A,
 {
     assert_eq!(values_buffer.len(), additional * std::mem::size_of::<T>());
-    let iterator = ExactChunksIter::<T>::new(values_buffer);
+    let iterator = chunks(values_buffer);
 
     let iterator = iterator.map(op);
 

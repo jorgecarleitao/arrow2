@@ -16,6 +16,7 @@ bench = false
 
 [dependencies]
 num-traits = "0.2"
+bytemuck = { version = "1", features = ["derive"] }
 chrono = { version = "0.4", default_features = false, features = ["std"] }
 chrono-tz = { version = "0.6", optional = true }
 # To efficiently cast numbers to strings

@@ -1,6 +1,8 @@
 use std::convert::TryFrom;
 use std::ops::Neg;
 
+use bytemuck::{Pod, Zeroable};
+
 use super::PrimitiveType;
 
 /// Sealed trait implemented by all physical types that can be allocated,
@@ -8,15 +10,14 @@ use super::PrimitiveType;
 /// All O(N) allocations in this crate are done for this trait alone.
 pub trait NativeType:
     super::private::Sealed
+    + Pod
     + Send
     + Sync
     + Sized
-    + Copy
     + std::fmt::Debug
     + std::fmt::Display
     + PartialEq
     + Default
-    + 'static
 {
     /// The corresponding variant of [`PrimitiveType`].
     const PRIMITIVE: PrimitiveType;
@@ -84,8 +85,9 @@ native_type!(f64, PrimitiveType::Float64);
 native_type!(i128, PrimitiveType::Int128);
 
 /// The in-memory representation of the DayMillisecond variant of arrow's "Interval" logical type.
-#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, Zeroable, Pod)]
 #[allow(non_camel_case_types)]
+#[repr(C)]
 pub struct days_ms([i32; 2]);
 
 impl days_ms {
@@ -176,7 +178,7 @@ impl NativeType for days_ms {
 }
 
 /// The in-memory representation of the MonthDayNano variant of the "Interval" logical type.
-#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, Zeroable, Pod)]
 #[allow(non_camel_case_types)]
 #[repr(C)]
 pub struct months_days_ns(i32, i32, i64);
