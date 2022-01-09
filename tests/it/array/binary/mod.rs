@@ -27,12 +27,13 @@ fn basics() {
     assert!(!array.is_valid(1));
     assert!(array.is_valid(2));
 
-    let array2 = BinaryArray::<i32>::from_data(
+    let array2 = BinaryArray::<i32>::try_new(
         DataType::Binary,
         array.offsets().clone(),
         array.values().clone(),
         array.validity().cloned(),
-    );
+    )
+    .unwrap();
     assert_eq!(array, array2);
 
     let array = array.slice(1, 2);
@@ -84,32 +85,25 @@ fn with_validity() {
 }
 
 #[test]
-#[should_panic]
 fn wrong_offsets() {
     let offsets = Buffer::from_slice([0, 5, 4]); // invalid offsets
     let values = Buffer::from_slice(b"abbbbb");
-    BinaryArray::<i32>::from_data(DataType::Binary, offsets, values, None);
+    assert!(BinaryArray::<i32>::try_new(DataType::Binary, offsets, values, None).is_err());
 }
 
 #[test]
-#[should_panic]
 fn wrong_data_type() {
     let offsets = Buffer::from_slice([0, 4]);
     let values = Buffer::from_slice(b"abbb");
-    BinaryArray::<i32>::from_data(DataType::Int8, offsets, values, None);
+    assert!(BinaryArray::<i32>::try_new(DataType::Int8, offsets, values, None).is_err());
 }
 
 #[test]
-#[should_panic]
-fn value_with_wrong_offsets_panics() {
+fn wrong_offsets() {
     let offsets = Buffer::from_slice([0, 10, 11, 4]);
     let values = Buffer::from_slice(b"abbb");
     // the 10-11 is not checked
-    let array = BinaryArray::<i32>::from_data(DataType::Binary, offsets, values, None);
-
-    // but access is still checked (and panics)
-    // without checks, this would result in reading beyond bounds
-    array.value(0);
+    assert!(BinaryArray::<i32>::try_new(DataType::Int8, offsets, values, None).is_err());
 }
 
 #[test]
@@ -120,18 +114,4 @@ fn index_out_of_bounds_panics() {
     let array = BinaryArray::<i32>::from_data(DataType::Utf8, offsets, values, None);
 
     array.value(3);
-}
-
-#[test]
-#[should_panic]
-fn value_unchecked_with_wrong_offsets_panics() {
-    let offsets = Buffer::from_slice([0, 10, 11, 4]);
-    let values = Buffer::from_slice(b"abbb");
-    // the 10-11 is not checked
-    let array = BinaryArray::<i32>::from_data(DataType::Binary, offsets, values, None);
-
-    // but access is still checked (and panics)
-    // without checks, this would result in reading beyond bounds,
-    // even if `0` is in bounds
-    unsafe { array.value_unchecked(0) };
 }

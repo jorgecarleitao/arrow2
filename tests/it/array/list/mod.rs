@@ -8,8 +8,7 @@ mod mutable;
 
 #[test]
 fn display() {
-    let values = Buffer::from_slice([1, 2, 3, 4, 5]);
-    let values = PrimitiveArray::<i32>::from_data(DataType::Int32, values, None);
+    let values = PrimitiveArray::<i32>::from_vec(vec![1, 2, 3, 4, 5]);
 
     let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
     let array = ListArray::<i32>::from_data(
@@ -28,8 +27,7 @@ fn display() {
 #[test]
 #[should_panic(expected = "The child's datatype must match the inner type of the \'data_type\'")]
 fn test_nested_panic() {
-    let values = Buffer::from_slice([1, 2, 3, 4, 5]);
-    let values = PrimitiveArray::<i32>::from_data(DataType::Int32, values, None);
+    let values = PrimitiveArray::<i32>::from_vec(vec![1, 2, 3, 4, 5]);
 
     let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
     let array = ListArray::<i32>::from_data(
@@ -51,8 +49,7 @@ fn test_nested_panic() {
 
 #[test]
 fn test_nested_display() {
-    let values = Buffer::from_slice([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-    let values = PrimitiveArray::<i32>::from_data(DataType::Int32, values, None);
+    let values = PrimitiveArray::<i32>::from_vec(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 
     let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
     let array = ListArray::<i32>::from_data(

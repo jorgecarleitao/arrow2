@@ -14,8 +14,8 @@ fn add_benchmark(c: &mut Criterion) {
     (10..=20).step_by(2).for_each(|log2_size| {
         let size = 2usize.pow(log2_size);
 
-        let values = Buffer::from_iter(0..size as i32);
-        let values = PrimitiveArray::<i32>::from_data(DataType::Int32, values, None);
+        let values = (0..size as i32).collect();
+        let values = PrimitiveArray::<i32>::from_vec(values);
 
         let mut offsets = (0..size as i32).step_by(2).collect::<Vec<_>>();
         offsets.push(size as i32);

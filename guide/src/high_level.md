@@ -259,7 +259,7 @@ where
     let values = Buffer::from_trusted_len_iter(values);
 
     // create the new array, cloning its validity
-    PrimitiveArray::<O>::from_data(data_type.clone(), values, array.validity().cloned())
+    PrimitiveArray::<O>::new(data_type.clone(), values, array.validity().cloned())
 }
 ```
 

@@ -178,8 +178,7 @@ fn unsigned_take() {
 
 #[test]
 fn list_with_no_none() {
-    let values = Buffer::from_slice([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
-    let values = PrimitiveArray::<i32>::from_data(DataType::Int32, values, None);
+    let values = PrimitiveArray::<i32>::from_vec(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
     let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
     let array = ListArray::<i32>::from_data(
@@ -192,8 +191,7 @@ fn list_with_no_none() {
     let indices = PrimitiveArray::from([Some(4i32), Some(1), Some(3)]);
     let result = take(&array, &indices).unwrap();
 
-    let expected_values = Buffer::from_slice([9, 6, 7, 8]);
-    let expected_values = PrimitiveArray::<i32>::from_data(DataType::Int32, expected_values, None);
+    let expected_values = PrimitiveArray::<i32>::from_vec(vec![9, 6, 7, 8]);
     let expected_type = ListArray::<i32>::default_datatype(DataType::Int32);
     let expected = ListArray::<i32>::from_data(
         expected_type,
@@ -207,8 +205,7 @@ fn list_with_no_none() {
 
 #[test]
 fn list_with_none() {
-    let values = Buffer::from_slice([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
-    let values = PrimitiveArray::<i32>::from_data(DataType::Int32, values, None);
+    let values = PrimitiveArray::<i32>::from_vec(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
     let validity_values = vec![true, false, true, true, true];
     let validity = Bitmap::from_trusted_len_iter(validity_values.into_iter());
@@ -269,8 +266,7 @@ fn list_both_validity() {
 
 #[test]
 fn test_nested() {
-    let values = Buffer::from_slice([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-    let values = PrimitiveArray::<i32>::from_data(DataType::Int32, values, None);
+    let values = PrimitiveArray::<i32>::from_vec(vec![1, 1, 2, 3, 4, 5, 6, 7, 8, 10]);
 
     let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
     let array = ListArray::<i32>::from_data(
@@ -292,8 +288,7 @@ fn test_nested() {
     let result = take(&nested, &indices).unwrap();
 
     // expected data
-    let expected_values = Buffer::from_slice([1, 2, 3, 4, 5, 6, 7, 8]);
-    let expected_values = PrimitiveArray::<i32>::from_data(DataType::Int32, expected_values, None);
+    let expected_values = PrimitiveArray::<i32>::from_vec(vec![1, 2, 3, 4, 5, 6, 7, 8]);
 
     let expected_data_type = ListArray::<i32>::default_datatype(DataType::Int32);
     let expected_array = ListArray::<i32>::from_data(

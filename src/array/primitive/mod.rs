@@ -91,9 +91,14 @@ impl<T: NativeType> PrimitiveArray<T> {
         })
     }
 
+    /// Returns a new [`PrimitiveArray`]
+    /// # Panic
+    /// This function panics iff:
+    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * The `data_type`'s physical type is not valid for the generic
     #[inline]
-    pub(crate) fn new(data_type: DataType, values: Buffer<T>, validity: Option<Bitmap>) -> Self {
-        Self::try_new(data_type, values, validity).expect("Reached an internal error of arrow2.")
+    pub fn new(data_type: DataType, values: Buffer<T>, validity: Option<Bitmap>) -> Self {
+        Self::try_new(data_type, values, validity).expect("Invariants of PrimitiveArray violated")
     }
 
     /// Returns a slice of this [`PrimitiveArray`].

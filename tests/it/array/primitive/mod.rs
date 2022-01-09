@@ -28,7 +28,7 @@ fn basics() {
     assert!(!array.is_valid(1));
     assert!(array.is_valid(2));
 
-    let array2 = Int32Array::from_data(
+    let array2 = Int32Array::new(
         DataType::Int32,
         array.values().clone(),
         array.validity().cloned(),
@@ -298,8 +298,7 @@ fn months_days_ns() {
 }
 
 #[test]
-#[should_panic]
 fn wrong_data_type() {
     let values = Buffer::from_slice(b"abbb");
-    PrimitiveArray::from_data(DataType::Utf8, values, None);
+    assert!(PrimitiveArray::try_new(DataType::Utf8, values, None).is_err());
 }
