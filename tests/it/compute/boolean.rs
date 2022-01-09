@@ -440,4 +440,10 @@ fn test_any_all() {
     let array = BooleanArray::from_iter([true, false, true, true].map(Some));
     assert!(!all(&array));
     assert!(any(&array));
+    let array = BooleanArray::from(&[Some(true)]);
+    assert!(any(&array));
+    assert!(all(&array));
+    let array = BooleanArray::from(&[Some(false)]);
+    assert!(!any(&array));
+    assert!(!all(&array));
 }
