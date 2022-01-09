@@ -148,9 +148,11 @@ pub fn utf8_to_large_utf8(from: &Utf8Array<i32>) -> Utf8Array<i64> {
     let values = from.values().clone();
     let offsets = from.offsets().iter().map(|x| *x as i64);
     let offsets = Buffer::from_trusted_len_iter(offsets);
+    // Safety: the invariants are upheld by construction
     unsafe {
-        Utf8Array::<i64>::from_data_unchecked(data_type, offsets, values, from.validity().cloned())
+        Utf8Array::<i64>::try_new_unchecked(data_type, offsets, values, from.validity().cloned())
     }
+    .expect("All invariants to be uphold by construction")
 }
 
 /// Conversion of utf8
@@ -162,7 +164,9 @@ pub fn utf8_large_to_utf8(from: &Utf8Array<i64>) -> Result<Utf8Array<i32>> {
 
     let offsets = from.offsets().iter().map(|x| *x as i32);
     let offsets = Buffer::from_trusted_len_iter(offsets);
+    // Safety: the invariants are upheld by construction
     Ok(unsafe {
-        Utf8Array::<i32>::from_data_unchecked(data_type, offsets, values, from.validity().cloned())
-    })
+        Utf8Array::<i32>::try_new_unchecked(data_type, offsets, values, from.validity().cloned())
+    }
+    .expect("All invariants to be uphold by construction"))
 }

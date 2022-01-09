@@ -55,13 +55,16 @@ impl<'a, O: Offset> GrowableUtf8<'a, O> {
         let offsets = std::mem::take(&mut self.offsets);
         let values = std::mem::take(&mut self.values);
 
+        // Safety
+        // [`GrowableUtf8`] fulfills all invariants of [`Utf8Array`]
         unsafe {
-            Utf8Array::<O>::from_data_unchecked(
+            Utf8Array::<O>::try_new_unchecked(
                 self.arrays[0].data_type().clone(),
                 offsets.into(),
                 values.into(),
                 validity.into(),
             )
+            .expect("All invariants to be uphold by construction")
         }
     }
 }
@@ -100,13 +103,16 @@ impl<'a, O: Offset> Growable<'a> for GrowableUtf8<'a, O> {
 
 impl<'a, O: Offset> From<GrowableUtf8<'a, O>> for Utf8Array<O> {
     fn from(val: GrowableUtf8<'a, O>) -> Self {
+        // Safety
+        // [`GrowableUtf8`] fulfills all invariants of [`Utf8Array`]
         unsafe {
-            Utf8Array::<O>::from_data_unchecked(
+            Utf8Array::<O>::try_new_unchecked(
                 val.arrays[0].data_type().clone(),
                 val.offsets.into(),
                 val.values.into(),
                 val.validity.into(),
             )
         }
+        .expect("All invariants to be uphold by construction")
     }
 }

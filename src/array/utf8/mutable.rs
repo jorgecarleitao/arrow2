@@ -28,13 +28,14 @@ impl<O: Offset> From<MutableUtf8Array<O>> for Utf8Array<O> {
         // `MutableUtf8Array` has the same invariants as `Utf8Array` and thus
         // `Utf8Array` can be safely created from `MutableUtf8Array` without checks.
         unsafe {
-            Utf8Array::<O>::from_data_unchecked(
+            Utf8Array::<O>::try_new_unchecked(
                 other.data_type,
                 other.offsets.into(),
                 other.values.into(),
                 other.validity.map(|x| x.into()),
             )
         }
+        .expect("All invariants to be uphold by construction")
     }
 }
 
@@ -56,59 +57,84 @@ impl<O: Offset> MutableUtf8Array<O> {
         }
     }
 
-    /// The canonical method to create a [`MutableUtf8Array`] out of low-end APIs.
-    /// # Panics
-    /// This function panics iff:
-    /// * The `offsets` and `values` are inconsistent
-    /// * The `values` between `offsets` are not utf8 encoded
-    /// * The validity is not `None` and its length is different from `offsets`'s length minus one.
-    pub fn from_data(
+    /// Initializes a [`MutableUtf8Array`] from low-end APIs.
+    /// # Errors
+    /// Iff any of the following:
+    /// * `offsets` is not monotonically increasing
+    /// * the last offset is not equal to the values' length
+    /// * the validity's length is not equal to `offsets.len() - 1`
+    /// * `data_type`'s physical type is not equal to `Utf8` or `LargeUtf8`
+    /// * any value between two consecutive offsets is not valid utf8
+    /// # Implementantion
+    /// This function in `O(N)` as it iterates over every offset and values to check for
+    /// the above
+    pub fn try_new(
         data_type: DataType,
         offsets: Vec<O>,
         values: Vec<u8>,
         validity: Option<MutableBitmap>,
-    ) -> Self {
-        check_offsets_and_utf8(&offsets, &values);
-        if let Some(ref validity) = validity {
-            assert_eq!(offsets.len() - 1, validity.len());
+    ) -> Result<Self> {
+        check_offsets_and_utf8(&offsets, &values)?;
+
+        if let Some(validity) = &validity {
+            if validity.len() != offsets.len() - 1 {
+                return Err(ArrowError::InvalidArgumentError(format!("The length of the validity ({}) must be equal to the length of offsets - 1 ({})", validity.len(), offsets.len() - 1)));
+            }
         }
+
         if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
-            panic!("MutableUtf8Array can only be initialized with DataType::Utf8 or DataType::LargeUtf8")
+            return Err(ArrowError::InvalidArgumentError(format!(
+                "A Utf8Array can only be initialized with a datatype whose physical type is {:?}",
+                Self::default_data_type().to_physical_type()
+            )));
         }
-        Self {
+
+        Ok(Self {
             data_type,
             offsets,
             values,
             validity,
-        }
+        })
     }
 
-    /// Create a [`MutableUtf8Array`] out of low-end APIs.
+    /// The same as [`Utf8Array::try_new`] but does not check for offsets monoticity nor utf8 validity
+    /// # Error
+    /// Iff any of the following:
+    /// * the last offset is not equal to the values' length
+    /// * the validity's length is not equal to `offsets.len() - 1`
+    /// * `data_type`'s physical type is not equal to `Utf8` or `LargeUtf8`
     /// # Safety
-    /// The caller must ensure that every value between offsets is a valid utf8.
-    /// # Panics
-    /// This function panics iff:
-    /// * The `offsets` and `values` are inconsistent
-    /// * The validity is not `None` and its length is different from `offsets`'s length minus one.
-    pub unsafe fn from_data_unchecked(
+    /// * `offsets` MUST be monotonically increasing
+    /// * every value between two consecutive offsets MUST be valid utf8
+    /// # Implementantion
+    /// This function in `O(1)`
+    pub unsafe fn try_new_unchecked(
         data_type: DataType,
         offsets: Vec<O>,
         values: Vec<u8>,
         validity: Option<MutableBitmap>,
-    ) -> Self {
-        check_offsets_minimal(&offsets, values.len());
-        if let Some(ref validity) = validity {
-            assert_eq!(offsets.len() - 1, validity.len());
+    ) -> Result<Self> {
+        check_offsets_minimal(&offsets, values.len())?;
+
+        if let Some(validity) = &validity {
+            if validity.len() != offsets.len() - 1 {
+                return Err(ArrowError::InvalidArgumentError(format!("The length of the validity ({}) must be equal to the length of offsets - 1 ({})", validity.len(), offsets.len() - 1)));
+            }
         }
+
         if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
-            panic!("MutableUtf8Array can only be initialized with DataType::Utf8 or DataType::LargeUtf8")
+            return Err(ArrowError::InvalidArgumentError(format!(
+                "A Utf8Array can only be initialized with a datatype whose physical type is {:?}",
+                Self::default_data_type().to_physical_type()
+            )));
         }
-        Self {
+
+        Ok(Self {
             data_type,
             offsets,
             values,
             validity,
-        }
+        })
     }
 
     fn default_data_type() -> DataType {
@@ -202,28 +228,34 @@ impl<O: Offset> MutableArray for MutableUtf8Array<O> {
         // Safety:
         // `MutableUtf8Array` has the same invariants as `Utf8Array` and thus
         // `Utf8Array` can be safely created from `MutableUtf8Array` without checks.
-        Box::new(unsafe {
-            Utf8Array::from_data_unchecked(
-                self.data_type.clone(),
-                std::mem::take(&mut self.offsets).into(),
-                std::mem::take(&mut self.values).into(),
-                std::mem::take(&mut self.validity).map(|x| x.into()),
-            )
-        })
+        Box::new(
+            unsafe {
+                Utf8Array::try_new_unchecked(
+                    self.data_type.clone(),
+                    std::mem::take(&mut self.offsets).into(),
+                    std::mem::take(&mut self.values).into(),
+                    std::mem::take(&mut self.validity).map(|x| x.into()),
+                )
+            }
+            .expect("All invariants to be uphold by construction"),
+        )
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
         // Safety:
         // `MutableUtf8Array` has the same invariants as `Utf8Array` and thus
         // `Utf8Array` can be safely created from `MutableUtf8Array` without checks.
-        Arc::new(unsafe {
-            Utf8Array::from_data_unchecked(
-                self.data_type.clone(),
-                std::mem::take(&mut self.offsets).into(),
-                std::mem::take(&mut self.values).into(),
-                std::mem::take(&mut self.validity).map(|x| x.into()),
-            )
-        })
+        Arc::new(
+            unsafe {
+                Utf8Array::try_new_unchecked(
+                    self.data_type.clone(),
+                    std::mem::take(&mut self.offsets).into(),
+                    std::mem::take(&mut self.values).into(),
+                    std::mem::take(&mut self.validity).map(|x| x.into()),
+                )
+            }
+            .expect("All invariants to be uphold by construction"),
+        )
     }
 
     fn data_type(&self) -> &DataType {
@@ -339,8 +371,9 @@ impl<O: Offset> MutableUtf8Array<O> {
     {
         let (validity, offsets, values) = trusted_len_unzip(iterator);
 
-        // soundness: P is `str`
-        Self::from_data_unchecked(Self::default_data_type(), offsets, values, validity)
+        // Safety: `trusted_len_unzip` upholds all invariants of this struct
+        Self::try_new_unchecked(Self::default_data_type(), offsets, values, validity)
+            .expect("All invariants to be uphold by construction")
     }
 
     /// Creates a [`MutableUtf8Array`] from an iterator of trusted length.
@@ -363,8 +396,9 @@ impl<O: Offset> MutableUtf8Array<O> {
         iterator: I,
     ) -> Self {
         let (offsets, values) = unsafe { trusted_len_values_iter(iterator) };
-        // soundness: T is AsRef<str>
-        Self::from_data_unchecked(Self::default_data_type(), offsets, values, None)
+        // Safety: `trusted_len_values_iter` upholds all invariants of this struct (except the one documented in this function)
+        Self::try_new_unchecked(Self::default_data_type(), offsets, values, None)
+            .expect("All invariants to be uphold by construction")
     }
 
     /// Creates a new [`MutableUtf8Array`] from a [`TrustedLen`] of `&str`.
@@ -407,13 +441,11 @@ impl<O: Offset> MutableUtf8Array<O> {
         // soundness: assumed trusted len
         let (validity, offsets, values) = try_trusted_len_unzip(iterator)?;
 
-        // soundness: P is `str`
-        Ok(Self::from_data_unchecked(
-            Self::default_data_type(),
-            offsets,
-            values,
-            validity,
-        ))
+        // Safety: `try_trusted_len_unzip` upholds all invariants of this struct
+        Ok(
+            Self::try_new_unchecked(Self::default_data_type(), offsets, values, validity)
+                .expect("All invariants to be uphold by construction"),
+        )
     }
 
     /// Creates a [`MutableUtf8Array`] from an falible iterator of trusted length.
@@ -430,8 +462,9 @@ impl<O: Offset> MutableUtf8Array<O> {
     /// Creates a new [`MutableUtf8Array`] from a [`Iterator`] of `&str`.
     pub fn from_iter_values<T: AsRef<str>, I: Iterator<Item = T>>(iterator: I) -> Self {
         let (offsets, values) = values_iter(iterator);
-        // soundness: T: AsRef<str>
-        unsafe { Self::from_data_unchecked(Self::default_data_type(), offsets, values, None) }
+        // Safety: `values_iter` upholds all invariants of this struct
+        unsafe { Self::try_new_unchecked(Self::default_data_type(), offsets, values, None) }
+            .expect("All invariants to be uphold by construction")
     }
 }
 

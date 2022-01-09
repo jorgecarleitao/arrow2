@@ -60,7 +60,7 @@ where
             )?
         }
     }
-    Ok(utils::finish_array(data_type, offsets, values, validity))
+    utils::finish_array(data_type, offsets, values, Some(validity))
 }
 
 pub async fn stream_to_array<O, I, E>(
@@ -92,5 +92,5 @@ where
         )?
     }
 
-    Ok(finish_array(data_type.clone(), offsets, values, validity))
+    finish_array(data_type.clone(), offsets, values, Some(validity))
 }

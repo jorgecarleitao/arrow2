@@ -173,7 +173,10 @@ fn to_binary<O: Offset>(json_col: &ArrowJsonColumn, data_type: DataType) -> Arc<
         .map(|value| value.as_str().map(|x| hex::decode(x).unwrap()).unwrap())
         .flatten()
         .collect();
-    Arc::new(BinaryArray::from_data(data_type, offsets, values, validity))
+    Arc::new(
+        BinaryArray::try_new(data_type, offsets, values, validity)
+            .expect("JSON file to contain valid data"),
+    )
 }
 
 fn to_utf8<O: Offset>(json_col: &ArrowJsonColumn, data_type: DataType) -> Arc<dyn Array> {
@@ -187,7 +190,10 @@ fn to_utf8<O: Offset>(json_col: &ArrowJsonColumn, data_type: DataType) -> Arc<dy
         .map(|value| value.as_str().unwrap().as_bytes().to_vec())
         .flatten()
         .collect();
-    Arc::new(Utf8Array::from_data(data_type, offsets, values, validity))
+    Arc::new(
+        Utf8Array::try_new(data_type, offsets, values, validity)
+            .expect("JSON file to contain valid data"),
+    )
 }
 
 fn to_list<O: Offset>(

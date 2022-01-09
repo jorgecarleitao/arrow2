@@ -37,12 +37,13 @@ pub fn primitive_to_binary<T: NativeType + lexical_core::ToLexical, O: Offset>(
         }
         values.set_len(offset);
         values.shrink_to_fit();
-        BinaryArray::<O>::from_data_unchecked(
+        BinaryArray::<O>::try_new_unchecked(
             BinaryArray::<O>::default_data_type(),
             offsets.into(),
             values.into(),
             from.validity().cloned(),
         )
+        .expect("Loop above to uphold all invariants")
     }
 }
 
@@ -103,12 +104,13 @@ pub fn primitive_to_utf8<T: NativeType + lexical_core::ToLexical, O: Offset>(
         }
         values.set_len(offset);
         values.shrink_to_fit();
-        Utf8Array::<O>::from_data_unchecked(
+        Utf8Array::<O>::try_new_unchecked(
             Utf8Array::<O>::default_data_type(),
             offsets.into(),
             values.into(),
             from.validity().cloned(),
         )
+        .expect("All invariants to be uphold by construction")
     }
 }
 

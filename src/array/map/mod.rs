@@ -61,7 +61,7 @@ impl MapArray {
         field: Arc<dyn Array>,
         validity: Option<Bitmap>,
     ) -> Self {
-        check_offsets(&offsets, field.len());
+        check_offsets(&offsets, field.len()).unwrap();
 
         if let Some(ref validity) = validity {
             assert_eq!(offsets.len() - 1, validity.len());

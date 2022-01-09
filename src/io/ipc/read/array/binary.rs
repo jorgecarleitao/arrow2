@@ -57,9 +57,7 @@ pub fn read_binary<O: Offset, R: Read + Seek>(
         compression,
     )?;
 
-    Ok(BinaryArray::<O>::from_data(
-        data_type, offsets, values, validity,
-    ))
+    BinaryArray::<O>::try_new(data_type, offsets, values, validity)
 }
 
 pub fn skip_binary(

@@ -58,8 +58,6 @@ impl<O: Offset, A: ffi::ArrowArrayRef> FromFfi<A> for BinaryArray<O> {
         let offsets = unsafe { array.buffer::<O>(1) }?;
         let values = unsafe { array.buffer::<u8>(2) }?;
 
-        Ok(Self::from_data_unchecked(
-            data_type, offsets, values, validity,
-        ))
+        Self::try_new_unchecked(data_type, offsets, values, validity)
     }
 }

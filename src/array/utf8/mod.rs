@@ -1,4 +1,4 @@
-use crate::{bitmap::Bitmap, buffer::Buffer, datatypes::DataType};
+use crate::{bitmap::Bitmap, buffer::Buffer, datatypes::DataType, error::ArrowError};
 
 use super::{
     display_fmt,
@@ -42,55 +42,105 @@ impl<O: Offset> Utf8Array<O> {
     /// Returns a new empty [`Utf8Array`].
     #[inline]
     pub fn new_empty(data_type: DataType) -> Self {
-        unsafe {
-            Self::from_data_unchecked(
-                data_type,
-                Buffer::from(vec![O::zero()]),
-                Buffer::new(),
-                None,
-            )
-        }
+        Self::try_new(
+            data_type,
+            Buffer::from(vec![O::zero()]),
+            Buffer::new(),
+            None,
+        )
+        .expect("All invariants to be uphold")
     }
 
     /// Returns a new [`Utf8Array`] whose all slots are null / `None`.
     #[inline]
     pub fn new_null(data_type: DataType, length: usize) -> Self {
-        Self::from_data(
+        Self::try_new(
             data_type,
             Buffer::new_zeroed(length + 1),
             Buffer::new(),
             Some(Bitmap::new_zeroed(length)),
         )
+        .expect("All invariants to be uphold")
     }
 
-    /// The canonical method to create a [`Utf8Array`] out of low-end APIs.
-    /// # Panics
-    /// This function panics iff:
-    /// * The `data_type`'s physical type is not consistent with the offset `O`.
-    /// * The `offsets` and `values` are inconsistent
-    /// * The `values` between `offsets` are utf8 encoded
-    /// * The validity is not `None` and its length is different from `offsets.len() - 1`.
-    pub fn from_data(
+    /// Returns a new [`Utf8Array`]
+    /// # Errors
+    /// Iff any of the following:
+    /// * `offsets` is not monotonically increasing
+    /// * the last offset is not equal to the values' length
+    /// * the validity's length is not equal to `offsets.len() - 1`
+    /// * `data_type`'s physical type is not equal to `Utf8` or `LargeUtf8`
+    /// * any value between two consecutive offsets is not valid utf8
+    /// # Implementantion
+    /// This function in `O(N)` as it iterates over every offset and values to check for
+    /// the above
+    pub fn try_new(
         data_type: DataType,
         offsets: Buffer<O>,
         values: Buffer<u8>,
         validity: Option<Bitmap>,
-    ) -> Self {
-        check_offsets_and_utf8(&offsets, &values);
-        if let Some(ref validity) = validity {
-            assert_eq!(offsets.len() - 1, validity.len());
+    ) -> Result<Self, ArrowError> {
+        check_offsets_and_utf8(&offsets, &values)?;
+
+        if let Some(validity) = &validity {
+            if validity.len() != offsets.len() - 1 {
+                return Err(ArrowError::InvalidArgumentError(format!("The length of the validity ({}) must be equal to the length of offsets - 1 ({})", validity.len(), offsets.len() - 1)));
+            }
         }
 
         if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
-            panic!("Utf8Array can only be initialized with DataType::Utf8 or DataType::LargeUtf8")
+            return Err(ArrowError::InvalidArgumentError(format!(
+                "A Utf8Array can only be initialized with a datatype whose physical type is {:?}",
+                Self::default_data_type().to_physical_type()
+            )));
         }
 
-        Self {
+        Ok(Self {
             data_type,
             offsets,
             values,
             validity,
+        })
+    }
+
+    /// The same as [`Utf8Array::try_new`] but does not check for offsets monoticity nor utf8 validity
+    /// # Error
+    /// Iff any of the following:
+    /// * the last offset is not equal to the values' length
+    /// * the validity's length is not equal to `offsets.len() - 1`
+    /// * `data_type`'s physical type is not equal to `Utf8` or `LargeUtf8`
+    /// # Safety
+    /// * `offsets` MUST be monotonically increasing
+    /// * every value between two consecutive offsets MUST be valid utf8
+    /// # Implementantion
+    /// This function in `O(1)`
+    pub unsafe fn try_new_unchecked(
+        data_type: DataType,
+        offsets: Buffer<O>,
+        values: Buffer<u8>,
+        validity: Option<Bitmap>,
+    ) -> Result<Self, ArrowError> {
+        check_offsets_minimal(&offsets, values.len())?;
+
+        if let Some(validity) = &validity {
+            if validity.len() != offsets.len() - 1 {
+                return Err(ArrowError::InvalidArgumentError(format!("The length of the validity ({}) must be equal to the length of offsets - 1 ({})", validity.len(), offsets.len() - 1)));
+            }
         }
+
+        if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
+            return Err(ArrowError::InvalidArgumentError(format!(
+                "A Utf8Array can only be initialized with a datatype whose physical type is {:?}",
+                Self::default_data_type().to_physical_type()
+            )));
+        }
+
+        Ok(Self {
+            data_type,
+            offsets,
+            values,
+            validity,
+        })
     }
 
     /// Returns the default [`DataType`], `DataType::Utf8` or `DataType::LargeUtf8`
@@ -99,38 +149,6 @@ impl<O: Offset> Utf8Array<O> {
             DataType::LargeUtf8
         } else {
             DataType::Utf8
-        }
-    }
-
-    /// The same as [`Utf8Array::from_data`] but does not check for offsets nor utf8 validity.
-    /// # Safety
-    /// * `offsets` MUST be monotonically increasing; and
-    /// * every slice of `values` constructed from `offsets` MUST be valid utf8
-    /// # Panics
-    /// This function panics iff:
-    /// * The `data_type`'s physical type is not consistent with the offset `O`.
-    /// * The last element of `offsets` is different from `values.len()`.
-    /// * The validity is not `None` and its length is different from `offsets.len() - 1`.
-    pub unsafe fn from_data_unchecked(
-        data_type: DataType,
-        offsets: Buffer<O>,
-        values: Buffer<u8>,
-        validity: Option<Bitmap>,
-    ) -> Self {
-        check_offsets_minimal(&offsets, values.len());
-        if let Some(ref validity) = validity {
-            assert_eq!(offsets.len() - 1, validity.len());
-        }
-
-        if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
-            panic!("Utf8Array can only be initialized with DataType::Utf8 or DataType::LargeUtf8")
-        }
-
-        Self {
-            data_type,
-            offsets,
-            values,
-            validity,
         }
     }
 

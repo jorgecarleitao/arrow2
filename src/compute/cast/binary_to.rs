@@ -10,7 +10,9 @@ pub fn binary_to_large_binary(from: &BinaryArray<i32>, to_data_type: DataType) -
     let values = from.values().clone();
     let offsets = from.offsets().iter().map(|x| *x as i64);
     let offsets = Buffer::from_trusted_len_iter(offsets);
-    BinaryArray::<i64>::from_data(to_data_type, offsets, values, from.validity().cloned())
+    // todo: using the `_unchecked` variant here.
+    BinaryArray::<i64>::try_new(to_data_type, offsets, values, from.validity().cloned())
+        .expect("All invariants to be uphold")
 }
 
 /// Conversion of binary
@@ -24,12 +26,7 @@ pub fn binary_large_to_binary(
 
     let offsets = from.offsets().iter().map(|x| *x as i32);
     let offsets = Buffer::from_trusted_len_iter(offsets);
-    Ok(BinaryArray::<i32>::from_data(
-        to_data_type,
-        offsets,
-        values,
-        from.validity().cloned(),
-    ))
+    BinaryArray::<i32>::try_new(to_data_type, offsets, values, from.validity().cloned())
 }
 
 /// Casts a [`BinaryArray`] to a [`PrimitiveArray`] at best-effort using `lexical_core::parse_partial`, making any uncastable value as zero.

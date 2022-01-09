@@ -54,7 +54,7 @@ impl<O: Offset> ListArray<O> {
         values: Arc<dyn Array>,
         validity: Option<Bitmap>,
     ) -> Self {
-        check_offsets(&offsets, values.len());
+        check_offsets(&offsets, values.len()).unwrap();
 
         if let Some(ref validity) = validity {
             assert_eq!(offsets.len() - 1, validity.len());

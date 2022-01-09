@@ -108,12 +108,14 @@ fn binary_substring<O: Offset>(
         new_values.extend_from_slice(&values[start..start + length]);
     });
 
-    BinaryArray::<O>::from_data(
+    // todo: consider using the `_unchecked` variant here.
+    BinaryArray::<O>::try_new(
         array.data_type().clone(),
         new_offsets.into(),
         new_values.into(),
         validity.cloned(),
     )
+    .expect("Invariants to be upheld by above implementation")
 }
 
 /// Returns an ArrayRef with a substring starting from `start` and with optional length `length` of each of the elements in `array`.

@@ -61,7 +61,9 @@ impl<'a, O: Offset> GrowableBinary<'a, O> {
         let offsets = std::mem::take(&mut self.offsets);
         let values = std::mem::take(&mut self.values);
 
-        BinaryArray::<O>::from_data(data_type, offsets.into(), values.into(), validity.into())
+        // todo: consider using the `_unchecked` variant here.
+        BinaryArray::<O>::try_new(data_type, offsets.into(), values.into(), validity.into())
+            .expect("All invariants to be uphold by construction")
     }
 }
 
@@ -99,11 +101,13 @@ impl<'a, O: Offset> Growable<'a> for GrowableBinary<'a, O> {
 
 impl<'a, O: Offset> From<GrowableBinary<'a, O>> for BinaryArray<O> {
     fn from(val: GrowableBinary<'a, O>) -> Self {
-        BinaryArray::<O>::from_data(
+        // todo: consider using the `_unchecked` variant here.
+        BinaryArray::<O>::try_new(
             val.data_type,
             val.offsets.into(),
             val.values.into(),
             val.validity.into(),
         )
+        .expect("All invariants to be uphold by construction")
     }
 }

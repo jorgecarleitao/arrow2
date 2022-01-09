@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use parquet2::{
     encoding::{hybrid_rle, Encoding},
     metadata::{ColumnChunkMetaData, ColumnDescriptor},
@@ -7,9 +5,9 @@ use parquet2::{
     FallibleStreamingIterator,
 };
 
-use super::super::utils as other_utils;
+use super::{super::utils as other_utils, utils};
 use crate::{
-    array::{Array, DictionaryArray, DictionaryKey, Offset, PrimitiveArray, Utf8Array},
+    array::{Array, DictionaryArray, DictionaryKey, Offset, PrimitiveArray},
     bitmap::{utils::BitmapIter, MutableBitmap},
     datatypes::DataType,
     error::{ArrowError, Result},
@@ -156,11 +154,6 @@ where
     };
     let keys = PrimitiveArray::from_data(K::PRIMITIVE.into(), indices.into(), validity.into());
     let data_type = DictionaryArray::<K>::get_child(&data_type).clone();
-    let values = Arc::new(Utf8Array::from_data(
-        data_type,
-        offsets.into(),
-        values.into(),
-        None,
-    ));
+    let values = utils::finish_array(data_type, offsets, values, None)?.into();
     Ok(Box::new(DictionaryArray::<K>::from_data(keys, values)))
 }
