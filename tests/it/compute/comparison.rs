@@ -1,7 +1,7 @@
 use arrow2::array::*;
 use arrow2::compute::comparison::boolean::*;
-use arrow2::datatypes::DataType::*;
 use arrow2::datatypes::TimeUnit;
+use arrow2::datatypes::{DataType::*, IntervalUnit};
 use arrow2::scalar::new_scalar;
 
 #[test]
@@ -20,6 +20,9 @@ fn consistency() {
         Int64,
         Float32,
         Float64,
+        Interval(IntervalUnit::YearMonth),
+        Interval(IntervalUnit::MonthDayNano),
+        Interval(IntervalUnit::DayTime),
         Timestamp(TimeUnit::Second, None),
         Timestamp(TimeUnit::Millisecond, None),
         Timestamp(TimeUnit::Microsecond, None),
@@ -46,6 +49,9 @@ fn consistency() {
         if can_eq(&d1) {
             eq(array.as_ref(), array.as_ref());
         }
+        if can_lt_eq(&d1) {
+            lt_eq(array.as_ref(), array.as_ref());
+        }
     });
 
     // array <> scalar
@@ -54,6 +60,9 @@ fn consistency() {
         let scalar = new_scalar(array.as_ref(), 0);
         if can_eq(&d1) {
             eq_scalar(array.as_ref(), scalar.as_ref());
+        }
+        if can_lt_eq(&d1) {
+            lt_eq(array.as_ref(), array.as_ref());
         }
     });
 }

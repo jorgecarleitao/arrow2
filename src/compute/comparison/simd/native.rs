@@ -1,15 +1,20 @@
 use std::convert::TryInto;
 
-use super::{set, Simd8, Simd8Lanes};
+use super::{set, Simd8, Simd8Lanes, Simd8PartialEq, Simd8PartialOrd};
+use crate::types::{days_ms, months_days_ns};
 
-simd8_native!(u8);
-simd8_native!(u16);
-simd8_native!(u32);
-simd8_native!(u64);
-simd8_native!(i8);
-simd8_native!(i16);
-simd8_native!(i32);
-simd8_native!(i128);
-simd8_native!(i64);
-simd8_native!(f32);
-simd8_native!(f64);
+simd8_native_all!(u8);
+simd8_native_all!(u16);
+simd8_native_all!(u32);
+simd8_native_all!(u64);
+simd8_native_all!(i8);
+simd8_native_all!(i16);
+simd8_native_all!(i32);
+simd8_native_all!(i128);
+simd8_native_all!(i64);
+simd8_native_all!(f32);
+simd8_native_all!(f64);
+simd8_native!(days_ms);
+simd8_native_partial_eq!(days_ms);
+simd8_native!(months_days_ns);
+simd8_native_partial_eq!(months_days_ns);
