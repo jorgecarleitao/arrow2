@@ -152,7 +152,7 @@ where
         // the array is empty and thus we need to push the first offset ourselves.
         offsets.push(O::zero());
     };
-    let keys = PrimitiveArray::from_data(K::PRIMITIVE.into(), indices.into(), validity.into());
+    let keys = PrimitiveArray::try_new(K::PRIMITIVE.into(), indices.into(), validity.into())?;
     let data_type = DictionaryArray::<K>::get_child(&data_type).clone();
     let values = utils::finish_array(data_type, offsets, values, None)?.into();
     Ok(Box::new(DictionaryArray::<K>::from_data(keys, values)))

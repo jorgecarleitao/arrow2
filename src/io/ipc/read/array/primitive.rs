@@ -46,7 +46,7 @@ where
         is_little_endian,
         compression,
     )?;
-    Ok(PrimitiveArray::<T>::from_data(data_type, values, validity))
+    PrimitiveArray::<T>::try_new(data_type, values, validity)
 }
 
 pub fn skip_primitive(

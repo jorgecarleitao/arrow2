@@ -53,11 +53,8 @@ where
         _ => data_type,
     };
 
-    Ok(Box::new(PrimitiveArray::from_data(
-        data_type,
-        values.into(),
-        validity.into(),
-    )))
+    PrimitiveArray::try_new(data_type, values.into(), validity.into())
+        .map(|x| Box::new(x) as Box<dyn Array>)
 }
 
 pub fn iter_to_array<T, A, I, E, F>(
@@ -104,9 +101,6 @@ where
         _ => data_type,
     };
 
-    Ok(Box::new(PrimitiveArray::from_data(
-        data_type,
-        values.into(),
-        validity.into(),
-    )))
+    PrimitiveArray::try_new(data_type, values.into(), validity.into())
+        .map(|x| Box::new(x) as Box<dyn Array>)
 }

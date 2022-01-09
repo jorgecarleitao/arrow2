@@ -153,8 +153,8 @@ where
         )?
     }
 
-    let keys = PrimitiveArray::from_data(K::PRIMITIVE.into(), indices.into(), validity.into());
+    let keys = PrimitiveArray::new(K::PRIMITIVE.into(), indices.into(), validity.into());
     let data_type = DictionaryArray::<K>::get_child(&data_type).clone();
-    let values = Arc::new(PrimitiveArray::from_data(data_type, values.into(), None));
+    let values = Arc::new(PrimitiveArray::new(data_type, values.into(), None));
     Ok(Box::new(DictionaryArray::<K>::from_data(keys, values)))
 }

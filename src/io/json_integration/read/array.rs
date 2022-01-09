@@ -90,7 +90,7 @@ fn to_primitive_days_ms(
         .iter()
         .map(to_days_ms)
         .collect();
-    PrimitiveArray::<days_ms>::from_data(data_type, values, validity)
+    PrimitiveArray::<days_ms>::new(data_type, values, validity)
 }
 
 fn to_primitive_months_days_ns(
@@ -105,7 +105,7 @@ fn to_primitive_months_days_ns(
         .iter()
         .map(to_months_days_ns)
         .collect();
-    PrimitiveArray::<months_days_ns>::from_data(data_type, values, validity)
+    PrimitiveArray::<months_days_ns>::new(data_type, values, validity)
 }
 
 fn to_decimal(json_col: &ArrowJsonColumn, data_type: DataType) -> PrimitiveArray<i128> {
@@ -123,7 +123,7 @@ fn to_decimal(json_col: &ArrowJsonColumn, data_type: DataType) -> PrimitiveArray
         })
         .collect();
 
-    PrimitiveArray::<i128>::from_data(data_type, values, validity)
+    PrimitiveArray::<i128>::new(data_type, values, validity)
 }
 
 fn to_primitive<T: NativeType + NumCast>(
@@ -159,7 +159,7 @@ fn to_primitive<T: NativeType + NumCast>(
             .collect()
     };
 
-    PrimitiveArray::<T>::from_data(data_type, values, validity)
+    PrimitiveArray::<T>::new(data_type, values, validity)
 }
 
 fn to_binary<O: Offset>(json_col: &ArrowJsonColumn, data_type: DataType) -> Arc<dyn Array> {

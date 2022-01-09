@@ -43,7 +43,7 @@ pub fn nullif_primitive<T: NativeType + Simd8>(
 
     let validity = combine_validities(lhs.validity(), equal.as_ref());
 
-    Ok(PrimitiveArray::<T>::from_data(
+    Ok(PrimitiveArray::<T>::new(
         lhs.data_type().clone(),
         lhs.values().clone(),
         validity,

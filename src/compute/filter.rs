@@ -32,7 +32,7 @@ fn filter_nonnull_primitive<T: NativeType>(
                 new_validity.push_unchecked(is_valid);
             });
 
-        PrimitiveArray::<T>::from_data(
+        PrimitiveArray::<T>::new(
             array.data_type().clone(),
             buffer.into(),
             new_validity.into(),
@@ -46,7 +46,7 @@ fn filter_nonnull_primitive<T: NativeType>(
             .map(|x| x.0)
             .for_each(|item| buffer.push(*item));
 
-        PrimitiveArray::<T>::from_data(array.data_type().clone(), buffer.into(), None)
+        PrimitiveArray::<T>::new(array.data_type().clone(), buffer.into(), None)
     }
 }
 

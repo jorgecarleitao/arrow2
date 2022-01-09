@@ -357,8 +357,7 @@ where
 
     values.truncate(limit.unwrap_or_else(|| values.len()));
 
-    let data_type = I::PRIMITIVE.into();
-    PrimitiveArray::<I>::from_data(data_type, values.into(), None)
+    PrimitiveArray::<I>::from_vec(values)
 }
 
 /// Compare two `Array`s based on the ordering defined in [ord](crate::array::ord).

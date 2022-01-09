@@ -28,7 +28,7 @@ impl<T: NativeType> From<MutablePrimitiveArray<T>> for PrimitiveArray<T> {
             None
         };
 
-        PrimitiveArray::<T>::from_data(other.data_type, other.values.into(), validity)
+        PrimitiveArray::<T>::new(other.data_type, other.values.into(), validity)
     }
 }
 
@@ -352,7 +352,7 @@ impl<T: NativeType> MutableArray for MutablePrimitiveArray<T> {
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        Box::new(PrimitiveArray::from_data(
+        Box::new(PrimitiveArray::new(
             self.data_type.clone(),
             std::mem::take(&mut self.values).into(),
             std::mem::take(&mut self.validity).map(|x| x.into()),
@@ -360,7 +360,7 @@ impl<T: NativeType> MutableArray for MutablePrimitiveArray<T> {
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
-        Arc::new(PrimitiveArray::from_data(
+        Arc::new(PrimitiveArray::new(
             self.data_type.clone(),
             std::mem::take(&mut self.values).into(),
             std::mem::take(&mut self.validity).map(|x| x.into()),

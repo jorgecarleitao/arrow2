@@ -177,7 +177,7 @@ pub fn primitive_to_same_primitive<T>(
 where
     T: NativeType,
 {
-    PrimitiveArray::<T>::from_data(
+    PrimitiveArray::<T>::new(
         to_type.clone(),
         from.values().clone(),
         from.validity().cloned(),

@@ -146,7 +146,7 @@ where
     let values = array.values();
     let validity = array.validity();
 
-    let (buffer, validity) = if let Some(validity) = validity {
+    let (values, validity) = if let Some(validity) = validity {
         sort_nullable(values, validity, cmp, options, limit)
     } else {
         let mut buffer = Vec::<T>::new();
@@ -158,7 +158,7 @@ where
 
         (buffer.into(), None)
     };
-    PrimitiveArray::<T>::from_data(array.data_type().clone(), buffer, validity)
+    PrimitiveArray::<T>::new(array.data_type().clone(), values, validity)
 }
 
 #[cfg(test)]

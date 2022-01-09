@@ -179,10 +179,5 @@ pub fn lexsort_to_indices<I: Index>(
         values.sort_unstable_by(lex_comparator);
     }
 
-    let data_type = I::PRIMITIVE.into();
-    Ok(PrimitiveArray::<I>::from_data(
-        data_type,
-        values.into(),
-        None,
-    ))
+    Ok(PrimitiveArray::<I>::from_vec(values))
 }

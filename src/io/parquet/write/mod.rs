@@ -285,20 +285,14 @@ pub fn array_to_page(
             if precision <= 9 {
                 let values = array.values().iter().map(|x| *x as i32);
                 let values = Buffer::from_trusted_len_iter(values);
-                let array = PrimitiveArray::<i32>::from_data(
-                    DataType::Int32,
-                    values,
-                    array.validity().cloned(),
-                );
+                let array =
+                    PrimitiveArray::<i32>::new(DataType::Int32, values, array.validity().cloned());
                 primitive::array_to_page::<i32, i32>(&array, options, descriptor)
             } else if precision <= 18 {
                 let values = array.values().iter().map(|x| *x as i64);
                 let values = Buffer::from_trusted_len_iter(values);
-                let array = PrimitiveArray::<i64>::from_data(
-                    DataType::Int64,
-                    values,
-                    array.validity().cloned(),
-                );
+                let array =
+                    PrimitiveArray::<i64>::new(DataType::Int64, values, array.validity().cloned());
                 primitive::array_to_page::<i64, i64>(&array, options, descriptor)
             } else {
                 let size = decimal_length_from_precision(precision);

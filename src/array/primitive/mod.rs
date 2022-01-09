@@ -40,41 +40,60 @@ pub struct PrimitiveArray<T: NativeType> {
 impl<T: NativeType> PrimitiveArray<T> {
     /// Returns a new empty [`PrimitiveArray`].
     pub fn new_empty(data_type: DataType) -> Self {
-        Self::from_data(data_type, Buffer::new(), None)
+        Self::try_new(data_type, Buffer::new(), None).expect("All invariants to be uphold")
     }
 
     /// Returns a new [`PrimitiveArray`] whose all slots are null / `None`.
     #[inline]
     pub fn new_null(data_type: DataType, length: usize) -> Self {
-        Self::from_data(
+        Self::try_new(
             data_type,
             Buffer::new_zeroed(length),
             Some(Bitmap::new_zeroed(length)),
         )
+        .expect("All invariants to be uphold")
     }
 
-    /// The canonical method to create a [`PrimitiveArray`] out of low-end APIs.
-    /// # Panics
-    /// This function panics iff:
-    /// * `data_type` is not supported by the physical type
-    /// * The validity is not `None` and its length is different from the `values`'s length
-    pub fn from_data(data_type: DataType, values: Buffer<T>, validity: Option<Bitmap>) -> Self {
+    /// Returns a new [`PrimitiveArray`]
+    /// # Errors
+    /// This function errors iff:
+    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * The `data_type`'s physical type is not valid for the generic
+    /// # Implementantion
+    /// This function in `O(1)`
+    pub fn try_new(
+        data_type: DataType,
+        values: Buffer<T>,
+        validity: Option<Bitmap>,
+    ) -> Result<Self, ArrowError> {
+        if let Some(validity) = &validity {
+            if validity.len() != values.len() {
+                return Err(ArrowError::InvalidArgumentError(format!(
+                    "The length of the validity ({}) must be equal to the length of values ({})",
+                    validity.len(),
+                    values.len()
+                )));
+            }
+        }
+
         if !data_type.to_physical_type().eq_primitive(T::PRIMITIVE) {
-            Err(ArrowError::InvalidArgumentError(format!(
+            return Err(ArrowError::InvalidArgumentError(format!(
                 "Type {} does not support logical type {:?}",
                 std::any::type_name::<T>(),
                 data_type
-            )))
-            .unwrap()
+            )));
         }
-        if let Some(ref validity) = validity {
-            assert_eq!(values.len(), validity.len());
-        }
-        Self {
+
+        Ok(Self {
             data_type,
             values,
             validity,
-        }
+        })
+    }
+
+    #[inline]
+    pub(crate) fn new(data_type: DataType, values: Buffer<T>, validity: Option<Bitmap>) -> Self {
+        Self::try_new(data_type, values, validity).expect("Reached an internal error of arrow2.")
     }
 
     /// Returns a slice of this [`PrimitiveArray`].
