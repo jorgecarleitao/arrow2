@@ -163,8 +163,15 @@ fn read_uncompressed_bitmap<R: Read + Seek>(
     bytes: usize,
     reader: &mut R,
 ) -> Result<Vec<u8>> {
-    // something is wrong if we can't `length`
-    assert!(length <= bytes * 8);
+    if length > bytes * 8 {
+        return Err(ArrowError::OutOfSpec(format!(
+            "An array requires a bitmap with at least the same number of bits as slots. \
+            However, this array reports {} slots but the the bitmap in IPC only contains \
+            {} bits",
+            length,
+            bytes * 8,
+        )));
+    }
     // it is undefined behavior to call read_exact on un-initialized, https://doc.rust-lang.org/std/io/trait.Read.html#tymethod.read
     // see also https://github.com/MaikKlein/ash/issues/354#issue-781730580
     let mut buffer = vec![0; bytes];
