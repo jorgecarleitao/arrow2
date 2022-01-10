@@ -72,14 +72,8 @@ fn read_uncompressed_buffer<T: NativeType, R: Read + Seek>(
 
     if is_native_little_endian() == is_little_endian {
         // fast case where we can just copy the contents as is
-        unsafe {
-            // transmute T to bytes.
-            let slice = std::slice::from_raw_parts_mut(
-                buffer.as_mut_ptr() as *mut u8,
-                length * std::mem::size_of::<T>(),
-            );
-            reader.read_exact(slice)?;
-        }
+        let slice = bytemuck::cast_slice_mut(&mut buffer);
+        reader.read_exact(slice)?;
     } else {
         read_swapped(reader, length, &mut buffer, is_little_endian)?;
     }
@@ -108,14 +102,7 @@ fn read_compressed_buffer<T: NativeType, R: Read + Seek>(
     let mut slice = vec![0u8; buffer_length];
     reader.read_exact(&mut slice)?;
 
-    // Safety:
-    // This is safe because T is NativeType, which by definition can be transmuted to u8
-    let out_slice = unsafe {
-        std::slice::from_raw_parts_mut(
-            buffer.as_mut_ptr() as *mut u8,
-            length * std::mem::size_of::<T>(),
-        )
-    };
+    let out_slice = bytemuck::cast_slice_mut(&mut buffer);
 
     match compression.codec() {
         CompressionType::LZ4_FRAME => {

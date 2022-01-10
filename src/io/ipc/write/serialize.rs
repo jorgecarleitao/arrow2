@@ -765,12 +765,7 @@ fn _write_compressed_buffer_from_iter<T: NativeType, I: TrustedLen<Item = T>>(
 fn _write_buffer<T: NativeType>(buffer: &[T], arrow_data: &mut Vec<u8>, is_little_endian: bool) {
     if is_little_endian == is_native_little_endian() {
         // in native endianess we can use the bytes directly.
-        let buffer = unsafe {
-            std::slice::from_raw_parts(
-                buffer.as_ptr() as *const u8,
-                buffer.len() * std::mem::size_of::<T>(),
-            )
-        };
+        let buffer = bytemuck::cast_slice(buffer);
         arrow_data.extend_from_slice(buffer);
     } else {
         _write_buffer_from_iter(buffer.iter().copied(), arrow_data, is_little_endian)
@@ -784,12 +779,7 @@ fn _write_compressed_buffer<T: NativeType>(
     compression: Compression,
 ) {
     if is_little_endian == is_native_little_endian() {
-        let bytes = unsafe {
-            std::slice::from_raw_parts(
-                buffer.as_ptr() as *const u8,
-                buffer.len() * std::mem::size_of::<T>(),
-            )
-        };
+        let bytes = bytemuck::cast_slice(buffer);
         arrow_data.extend_from_slice(&(bytes.len() as i64).to_le_bytes());
         match compression {
             Compression::LZ4 => {

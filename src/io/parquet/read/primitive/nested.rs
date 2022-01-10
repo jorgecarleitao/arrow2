@@ -7,7 +7,7 @@ use parquet2::{
 
 use super::super::nested_utils::extend_offsets;
 use super::ColumnDescriptor;
-use super::{super::utils, utils::ExactChunksIter, Nested};
+use super::{super::utils, utils::chunks, Nested};
 use crate::{
     bitmap::MutableBitmap, error::Result, trusted_len::TrustedLen,
     types::NativeType as ArrowNativeType,
@@ -66,7 +66,7 @@ fn read<T, A, F>(
     A: ArrowNativeType,
     F: Fn(T) -> A,
 {
-    let new_values = ExactChunksIter::<T>::new(values_buffer);
+    let new_values = chunks(values_buffer);
 
     let max_rep_level = rep_level_encoding.1 as u32;
     let max_def_level = def_level_encoding.1 as u32;
