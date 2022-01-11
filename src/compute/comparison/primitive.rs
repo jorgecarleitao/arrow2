@@ -1,7 +1,7 @@
 //! Comparison functions for [`PrimitiveArray`]
 use crate::{
     array::{BooleanArray, PrimitiveArray},
-    bitmap::{Bitmap, MutableBitmap},
+    bitmap::MutableBitmap,
     datatypes::DataType,
     types::NativeType,
 };
@@ -37,6 +37,31 @@ where
     MutableBitmap::from_vec(values, lhs.len())
 }
 
+pub(crate) fn compare_values_op_scalar<T, F>(lhs: &[T], rhs: T, op: F) -> MutableBitmap
+where
+    T: NativeType + Simd8,
+    F: Fn(T::Simd, T::Simd) -> u8,
+{
+    let rhs = T::Simd::from_chunk(&[rhs; 8]);
+
+    let lhs_chunks_iter = lhs.chunks_exact(8);
+    let lhs_remainder = lhs_chunks_iter.remainder();
+
+    let mut values = Vec::with_capacity((lhs.len() + 7) / 8);
+    let iterator = lhs_chunks_iter.map(|lhs| {
+        let lhs = T::Simd::from_chunk(lhs);
+        op(lhs, rhs)
+    });
+    values.extend(iterator);
+
+    if !lhs_remainder.is_empty() {
+        let lhs = T::Simd::from_incomplete_chunk(lhs_remainder, T::default());
+        values.push(op(lhs, rhs))
+    };
+
+    MutableBitmap::from_vec(values, lhs.len())
+}
+
 /// Evaluate `op(lhs, rhs)` for [`PrimitiveArray`]s using a specified
 /// comparison function.
 fn compare_op<T, F>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>, op: F) -> BooleanArray
@@ -59,28 +84,10 @@ where
     F: Fn(T::Simd, T::Simd) -> u8,
 {
     let validity = lhs.validity().cloned();
-    let rhs = T::Simd::from_chunk(&[rhs; 8]);
 
-    let lhs_chunks_iter = lhs.values().chunks_exact(8);
-    let lhs_remainder = lhs_chunks_iter.remainder();
+    let values = compare_values_op_scalar(lhs.values(), rhs, op);
 
-    let mut values = Vec::with_capacity((lhs.len() + 7) / 8);
-    let iterator = lhs_chunks_iter.map(|lhs| {
-        let lhs = T::Simd::from_chunk(lhs);
-        op(lhs, rhs)
-    });
-    values.extend(iterator);
-
-    if !lhs_remainder.is_empty() {
-        let lhs = T::Simd::from_incomplete_chunk(lhs_remainder, T::default());
-        values.push(op(lhs, rhs))
-    };
-
-    BooleanArray::from_data(
-        DataType::Boolean,
-        Bitmap::from_u8_vec(values, lhs.len()),
-        validity,
-    )
+    BooleanArray::from_data(DataType::Boolean, values.into(), validity)
 }
 
 /// Perform `lhs == rhs` operation on two arrays.

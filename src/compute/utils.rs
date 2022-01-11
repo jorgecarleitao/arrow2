@@ -48,14 +48,3 @@ pub fn check_same_len(lhs: &dyn Array, rhs: &dyn Array) -> Result<()> {
     }
     Ok(())
 }
-
-// Errors iff the two arrays have a different data_type.
-#[inline]
-pub fn check_same_type(lhs: &dyn Array, rhs: &dyn Array) -> Result<()> {
-    if lhs.data_type() != rhs.data_type() {
-        return Err(ArrowError::InvalidArgumentError(
-            "Arrays must have the same logical type".to_string(),
-        ));
-    }
-    Ok(())
-}
