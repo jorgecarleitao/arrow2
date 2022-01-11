@@ -2,13 +2,15 @@ use std::convert::TryFrom;
 
 use chrono::Datelike;
 
-use crate::{array::*, buffer::Buffer, datatypes::DataType, types::NativeType};
 use crate::{
+    array::*,
+    datatypes::DataType,
     error::{ArrowError, Result},
     temporal_conversions::{
         utf8_to_naive_timestamp_ns as utf8_to_naive_timestamp_ns_,
         utf8_to_timestamp_ns as utf8_to_timestamp_ns_, EPOCH_DAYS_FROM_CE,
     },
+    types::NativeType,
 };
 
 use super::CastOptions;
@@ -145,24 +147,32 @@ pub fn utf8_to_timestamp_ns<O: Offset>(
 /// Conversion of utf8
 pub fn utf8_to_large_utf8(from: &Utf8Array<i32>) -> Utf8Array<i64> {
     let data_type = Utf8Array::<i64>::default_data_type();
+    let validity = from.validity().cloned();
     let values = from.values().clone();
-    let offsets = from.offsets().iter().map(|x| *x as i64);
-    let offsets = Buffer::from_trusted_len_iter(offsets);
-    unsafe {
-        Utf8Array::<i64>::from_data_unchecked(data_type, offsets, values, from.validity().cloned())
-    }
+    let offsets = from
+        .offsets()
+        .iter()
+        .map(|x| *x as i64)
+        .collect::<Vec<_>>()
+        .into();
+    // Safety: sound because `offsets` fulfills the same invariants as `from.offsets()`
+    unsafe { Utf8Array::<i64>::from_data_unchecked(data_type, offsets, values, validity) }
 }
 
 /// Conversion of utf8
 pub fn utf8_large_to_utf8(from: &Utf8Array<i64>) -> Result<Utf8Array<i32>> {
     let data_type = Utf8Array::<i32>::default_data_type();
+    let validity = from.validity().cloned();
     let values = from.values().clone();
     let _ =
         i32::try_from(*from.offsets().last().unwrap()).map_err(ArrowError::from_external_error)?;
 
-    let offsets = from.offsets().iter().map(|x| *x as i32);
-    let offsets = Buffer::from_trusted_len_iter(offsets);
-    Ok(unsafe {
-        Utf8Array::<i32>::from_data_unchecked(data_type, offsets, values, from.validity().cloned())
-    })
+    let offsets = from
+        .offsets()
+        .iter()
+        .map(|x| *x as i32)
+        .collect::<Vec<_>>()
+        .into();
+    // Safety: sound because `offsets` fulfills the same invariants as `from.offsets()`
+    Ok(unsafe { Utf8Array::<i32>::from_data_unchecked(data_type, offsets, values, validity) })
 }
