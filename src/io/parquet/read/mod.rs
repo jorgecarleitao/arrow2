@@ -4,7 +4,6 @@
 use std::{
     collections::VecDeque,
     io::{Read, Seek},
-    iter::FromIterator,
     sync::Arc,
 };
 
@@ -327,22 +326,22 @@ fn page_iter_to_array<I: FallibleStreamingIterator<Item = DataPage, Error = Parq
                         DataType::FixedSizeBinary(n),
                         metadata,
                     )?;
-                    let values =
-                        fixed_size_binary_array
-                            .values()
-                            .iter()
-                            .map(|value: &[u8]| {
-                                // Copy the fixed-size byte value to the start of a 16 byte stack
-                                // allocated buffer, then use an arithmetic right shift to fill in
-                                // MSBs, which accounts for leading 1's in negative (two's complement)
-                                // values.
-                                let mut bytes = [0u8; 16];
-                                bytes[..n].copy_from_slice(value);
-                                i128::from_be_bytes(bytes) >> 8 * (16 - n)
-                            })
-                            .collect::<Vec<_>>();
+                    let values = fixed_size_binary_array
+                        .values()
+                        .chunks_exact(n)
+                        .map(|value: &[u8]| {
+                            // Copy the fixed-size byte value to the start of a 16 byte stack
+                            // allocated buffer, then use an arithmetic right shift to fill in
+                            // MSBs, which accounts for leading 1's in negative (two's complement)
+                            // values.
+                            let mut bytes = [0u8; 16];
+                            bytes[..n].copy_from_slice(value);
+                            i128::from_be_bytes(bytes) >> (8 * (16 - n))
+                        })
+                        .collect::<Vec<_>>();
                     let validity = fixed_size_binary_array.validity().cloned();
-                    let i128_array = PrimitiveArray::<i128>::from_data(data_type, values.into(), validity);
+                    let i128_array =
+                        PrimitiveArray::<i128>::from_data(data_type, values.into(), validity);
                     Ok(Box::new(i128_array) as _)
                 }
                 _ => unreachable!(),
