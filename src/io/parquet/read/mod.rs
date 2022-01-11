@@ -327,20 +327,23 @@ fn page_iter_to_array<I: FallibleStreamingIterator<Item = DataPage, Error = Parq
                         DataType::FixedSizeBinary(n),
                         metadata,
                     )?;
-                    let i128_values =
+                    let values =
                         fixed_size_binary_array
-                            .into_iter()
-                            .map(|value: Option<&[u8]>| {
+                            .values()
+                            .iter()
+                            .map(|value: &[u8]| {
                                 // Copy the fixed-size byte value to the start of a 16 byte stack
                                 // allocated buffer, then use an arithmetic right shift to fill in
                                 // MSBs, which accounts for leading 1's in negative (two's complement)
                                 // values.
                                 let mut bytes = [0u8; 16];
-                                bytes[..n].copy_from_slice(value?);
-                                Some(i128::from_be_bytes(bytes) >> 8 * (16 - n))
-                            });
-                    let i128_array = PrimitiveArray::<i128>::from_iter(i128_values);
-                    Ok(Box::new(i128_array.to(data_type)) as _)
+                                bytes[..n].copy_from_slice(value);
+                                i128::from_be_bytes(bytes) >> 8 * (16 - n)
+                            })
+                            .collect::<Vec<_>>();
+                    let validity = fixed_size_binary_array.validity().cloned();
+                    let i128_array = PrimitiveArray::<i128>::from_data(data_type, values.into(), validity);
+                    Ok(Box::new(i128_array) as _)
                 }
                 _ => unreachable!(),
             },
