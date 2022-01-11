@@ -139,12 +139,32 @@ fn infer_schema_mixed_list() -> Result<()> {
             DataType::List(Box::new(Field::new("item", DataType::Boolean, true))),
             true,
         ),
-        Field::new(
-            "d",
-            DataType::List(Box::new(Field::new("item", DataType::Utf8, true))),
-            true,
-        ),
+        Field::new("d", DataType::Utf8, true),
     ];
+
+    let result = read::infer(&mut Cursor::new(data), None)?;
+
+    assert_eq!(result, fields);
+    Ok(())
+}
+
+#[test]
+fn infer_nested_struct() -> Result<()> {
+    let data = r#"{"a": {"a": 2.0, "b": 2}}
+    {"a": {"b": 2}}
+    {"a": {"a": 2.0, "b": 2, "c": true}}
+    {"a": {"a": 2.0, "b": 2}}
+    "#;
+
+    let fields = vec![Field::new(
+        "a",
+        DataType::Struct(vec![
+            Field::new("a", DataType::Float64, true),
+            Field::new("b", DataType::Int64, true),
+            Field::new("c", DataType::Boolean, true),
+        ]),
+        true,
+    )];
 
     let result = read::infer(&mut Cursor::new(data), None)?;
 
