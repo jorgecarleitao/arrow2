@@ -65,6 +65,11 @@ impl<'a> FixedSizeBinaryArray {
             self.validity.as_ref().map(|x| x.iter()),
         )
     }
+
+    /// Returns iterator over the values of [`FixedSizeBinaryArray`]
+    pub fn iter_values(&'a self) -> FixedSizeBinaryValuesIter<'a, FixedSizeBinaryArray> {
+        FixedSizeBinaryValuesIter::new(self)
+    }
 }
 
 impl<'a> IntoIterator for &'a MutableFixedSizeBinaryArray {
@@ -86,5 +91,10 @@ impl<'a> MutableFixedSizeBinaryArray {
             FixedSizeBinaryValuesIter::new(self),
             self.validity().as_ref().map(|x| x.iter()),
         )
+    }
+
+    /// Returns iterator over the values of [`MutableFixedSizeBinaryArray`]
+    pub fn iter_values(&'a self) -> FixedSizeBinaryValuesIter<'a, MutableFixedSizeBinaryArray> {
+        FixedSizeBinaryValuesIter::new(self)
     }
 }
