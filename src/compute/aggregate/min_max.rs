@@ -30,7 +30,7 @@ pub trait SimdOrd<T> {
     fn new_max() -> Self;
 }
 
-/// Helper macro to perform min/max of binarys.
+/// Helper to compute min/max of [`BinaryArray`]
 fn min_max_binary<O: Offset, F: Fn(&[u8], &[u8]) -> bool>(
     array: &BinaryArray<O>,
     cmp: F,
@@ -40,33 +40,37 @@ fn min_max_binary<O: Offset, F: Fn(&[u8], &[u8]) -> bool>(
     if null_count == array.len() || array.len() == 0 {
         return None;
     }
-    let mut n;
-    if let Some(validity) = array.validity() {
-        n = "".as_bytes();
-        let mut has_value = false;
-
-        for i in 0..array.len() {
-            let item = array.value(i);
-            if validity.get_bit(i) && (!has_value || cmp(n, item)) {
-                has_value = true;
-                n = item;
+    let value = if array.validity().is_some() {
+        array.iter().fold(None, |mut acc: Option<&[u8]>, v| {
+            if let Some(item) = v {
+                if let Some(acc) = acc.as_mut() {
+                    if cmp(acc, item) {
+                        *acc = item
+                    }
+                } else {
+                    acc = Some(item)
+                }
             }
-        }
+            acc
+        })
     } else {
-        // array.len() == 0 checked above
-        n = unsafe { array.value_unchecked(0) };
-        for i in 1..array.len() {
-            // loop is up to `len`.
-            let item = unsafe { array.value_unchecked(i) };
-            if cmp(n, item) {
-                n = item;
-            }
-        }
-    }
-    Some(n)
+        array
+            .values_iter()
+            .fold(None, |mut acc: Option<&[u8]>, item| {
+                if let Some(acc) = acc.as_mut() {
+                    if cmp(acc, item) {
+                        *acc = item
+                    }
+                } else {
+                    acc = Some(item)
+                }
+                acc
+            })
+    };
+    value
 }
 
-/// Helper macro to perform min/max of strings
+/// Helper to compute min/max of [`Utf8Array`]
 fn min_max_string<O: Offset, F: Fn(&str, &str) -> bool>(
     array: &Utf8Array<O>,
     cmp: F,
@@ -76,30 +80,34 @@ fn min_max_string<O: Offset, F: Fn(&str, &str) -> bool>(
     if null_count == array.len() || array.len() == 0 {
         return None;
     }
-    let mut n;
-    if let Some(validity) = array.validity() {
-        n = "";
-        let mut has_value = false;
-
-        for i in 0..array.len() {
-            let item = array.value(i);
-            if validity.get_bit(i) && (!has_value || cmp(n, item)) {
-                has_value = true;
-                n = item;
+    let value = if array.validity().is_some() {
+        array.iter().fold(None, |mut acc: Option<&str>, v| {
+            if let Some(item) = v {
+                if let Some(acc) = acc.as_mut() {
+                    if cmp(acc, item) {
+                        *acc = item
+                    }
+                } else {
+                    acc = Some(item)
+                }
             }
-        }
+            acc
+        })
     } else {
-        // array.len() == 0 checked above
-        n = unsafe { array.value_unchecked(0) };
-        for i in 1..array.len() {
-            // loop is up to `len`.
-            let item = unsafe { array.value_unchecked(i) };
-            if cmp(n, item) {
-                n = item;
-            }
-        }
-    }
-    Some(n)
+        array
+            .values_iter()
+            .fold(None, |mut acc: Option<&str>, item| {
+                if let Some(acc) = acc.as_mut() {
+                    if cmp(acc, item) {
+                        *acc = item
+                    }
+                } else {
+                    acc = Some(item)
+                }
+                acc
+            })
+    };
+    value
 }
 
 fn nonnull_min_primitive<T>(values: &[T]) -> T
