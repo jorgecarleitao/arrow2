@@ -2,7 +2,6 @@
 
 use crate::{
     array::*,
-    buffer::Buffer,
     datatypes::*,
     error::{ArrowError, Result},
 };
@@ -290,9 +289,12 @@ fn cast_list<O: Offset>(
 }
 
 fn cast_list_to_large_list(array: &ListArray<i32>, to_type: &DataType) -> ListArray<i64> {
-    let offsets = array.offsets();
-    let offsets = offsets.iter().map(|x| *x as i64);
-    let offets = Buffer::from_trusted_len_iter(offsets);
+    let offets = array
+        .offsets()
+        .iter()
+        .map(|x| *x as i64)
+        .collect::<Vec<_>>()
+        .into();
 
     ListArray::<i64>::from_data(
         to_type.clone(),
@@ -303,13 +305,16 @@ fn cast_list_to_large_list(array: &ListArray<i32>, to_type: &DataType) -> ListAr
 }
 
 fn cast_large_to_list(array: &ListArray<i64>, to_type: &DataType) -> ListArray<i32> {
-    let offsets = array.offsets();
-    let offsets = offsets.iter().map(|x| *x as i32);
-    let offets = Buffer::from_trusted_len_iter(offsets);
+    let offsets = array
+        .offsets()
+        .iter()
+        .map(|x| *x as i32)
+        .collect::<Vec<_>>()
+        .into();
 
     ListArray::<i32>::from_data(
         to_type.clone(),
-        offets,
+        offsets,
         array.values().clone(),
         array.validity().cloned(),
     )
@@ -385,10 +390,10 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
             // cast primitive to list's primitive
             let values = cast(array, &to.data_type, options)?.into();
             // create offsets, where if array.len() = 2, we have [0,1,2]
-            let offsets =
-                unsafe { Buffer::from_trusted_len_iter_unchecked(0..=array.len() as i32) };
+            let offsets = (0..=array.len() as i32).collect::<Vec<_>>();
 
-            let list_array = ListArray::<i32>::from_data(to_type.clone(), offsets, values, None);
+            let list_array =
+                ListArray::<i32>::from_data(to_type.clone(), offsets.into(), values, None);
 
             Ok(Box::new(list_array))
         }
