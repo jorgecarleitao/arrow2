@@ -1,176 +1,168 @@
 //! Contains the operator [`nullif`].
 use crate::array::PrimitiveArray;
 use crate::bitmap::Bitmap;
-use crate::compute::comparison::{primitive_compare_values_op, Simd8, Simd8PartialEq};
-use crate::compute::utils::check_same_type;
+use crate::compute::comparison::{
+    primitive_compare_values_op, primitive_compare_values_op_scalar, Simd8, Simd8PartialEq,
+};
 use crate::datatypes::DataType;
-use crate::error::{ArrowError, Result};
+use crate::scalar::PrimitiveScalar;
+use crate::scalar::Scalar;
 use crate::{array::Array, types::NativeType};
 
 use super::utils::combine_validities;
 
 /// Returns an array whose validity is null iff `lhs == rhs` or `lhs` is null.
-/// This has the same semantics as postgres.
+/// This has the same semantics as postgres - the validity of the rhs is ignored.
+/// # Panic
+/// This function panics iff
+/// * The arguments do not have the same logical type
+/// * The arguments do not have the same length
 /// # Example
 /// ```rust
 /// # use arrow2::array::Int32Array;
 /// # use arrow2::datatypes::DataType;
-/// # use arrow2::error::Result;
-/// # use arrow2::compute::nullif::nullif_primitive;
-/// # fn main() -> Result<()> {
+/// # use arrow2::compute::nullif::primitive_nullif;
+/// # fn main() {
 /// let lhs = Int32Array::from(&[None, None, Some(1), Some(1), Some(1)]);
 /// let rhs = Int32Array::from(&[None, Some(1), None, Some(1), Some(0)]);
-/// let result = nullif_primitive(&lhs, &rhs)?;
+/// let result = primitive_nullif(&lhs, &rhs);
 ///
 /// let expected = Int32Array::from(&[None, None, Some(1), None, Some(1)]);
 ///
 /// assert_eq!(expected, result);
-/// Ok(())
 /// # }
 /// ```
-/// # Errors
-/// This function errors iff
-/// * The arguments do not have the same logical type
-/// * The arguments do not have the same length
-pub fn nullif_primitive<T>(
-    lhs: &PrimitiveArray<T>,
-    rhs: &PrimitiveArray<T>,
-) -> Result<PrimitiveArray<T>>
+pub fn primitive_nullif<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> PrimitiveArray<T>
 where
     T: NativeType + Simd8,
     T::Simd: Simd8PartialEq,
 {
-    check_same_type(lhs, rhs)?;
-
     let equal = primitive_compare_values_op(lhs.values(), rhs.values(), |lhs, rhs| lhs.neq(rhs));
     let equal: Option<Bitmap> = equal.into();
 
     let validity = combine_validities(lhs.validity(), equal.as_ref());
 
-    Ok(PrimitiveArray::<T>::from_data(
-        lhs.data_type().clone(),
-        lhs.values().clone(),
-        validity,
-    ))
+    PrimitiveArray::<T>::from_data(lhs.data_type().clone(), lhs.values().clone(), validity)
 }
 
-/// Returns whether [`nullif`] is implemented for the datatypes.
-pub fn can_nullif(lhs: &DataType, rhs: &DataType) -> bool {
-    if lhs != rhs {
-        return false;
-    };
-    use DataType::*;
-    matches!(
-        lhs,
-        UInt8
-            | UInt16
-            | UInt32
-            | UInt64
-            | Int8
-            | Int16
-            | Int32
-            | Int64
-            | Float32
-            | Float64
-            | Time32(_)
-            | Time64(_)
-            | Date32
-            | Date64
-            | Timestamp(_, _)
-            | Duration(_)
-    )
-}
-
-/// Returns an array whose validity is null iff `lhs == rhs` or `lhs` is null.
+/// Returns a [`PrimitiveArray`] whose validity is null iff `lhs == rhs` or `lhs` is null.
+///
 /// This has the same semantics as postgres.
+/// # Panic
+/// This function panics iff
+/// * The arguments do not have the same logical type
 /// # Example
 /// ```rust
 /// # use arrow2::array::Int32Array;
 /// # use arrow2::datatypes::DataType;
-/// # use arrow2::error::Result;
+/// # use arrow2::compute::nullif::primitive_nullif_scalar;
+/// # fn main() {
+/// let lhs = Int32Array::from(&[None, None, Some(1), Some(0), Some(1)]);
+/// let result = primitive_nullif_scalar(&lhs, 0);
+///
+/// let expected = Int32Array::from(&[None, None, Some(1), None, Some(1)]);
+///
+/// assert_eq!(expected, result);
+/// # }
+/// ```
+pub fn primitive_nullif_scalar<T>(lhs: &PrimitiveArray<T>, rhs: T) -> PrimitiveArray<T>
+where
+    T: NativeType + Simd8,
+    T::Simd: Simd8PartialEq,
+{
+    let equal = primitive_compare_values_op_scalar(lhs.values(), rhs, |lhs, rhs| lhs.neq(rhs));
+    let equal: Option<Bitmap> = equal.into();
+
+    let validity = combine_validities(lhs.validity(), equal.as_ref());
+
+    PrimitiveArray::<T>::from_data(lhs.data_type().clone(), lhs.values().clone(), validity)
+}
+
+/// Returns an [`Array`] with the same type as `lhs` and whose validity
+/// is null iff either `lhs == rhs` or `lhs` is null.
+///
+/// This has the same semantics as postgres - the validity of the rhs is ignored.
+/// # Panics
+/// This function panics iff
+/// * The arguments do not have the same logical type
+/// * The arguments do not have the same length
+/// * The physical type is not supported for this operation (use [`can_nullif`] to check)
+/// # Example
+/// ```rust
+/// # use arrow2::array::Int32Array;
+/// # use arrow2::datatypes::DataType;
 /// # use arrow2::compute::nullif::nullif;
-/// # fn main() -> Result<()> {
+/// # fn main() {
 /// let lhs = Int32Array::from(&[None, None, Some(1), Some(1), Some(1)]);
 /// let rhs = Int32Array::from(&[None, Some(1), None, Some(1), Some(0)]);
-/// let result = nullif(&lhs, &rhs)?;
+/// let result = nullif(&lhs, &rhs);
 ///
 /// let expected = Int32Array::from(&[None, None, Some(1), None, Some(1)]);
 ///
 /// assert_eq!(expected, result.as_ref());
-/// Ok(())
 /// # }
 /// ```
-/// # Errors
-/// This function errors iff
-/// * The arguments do not have the same logical type
-/// * The arguments do not have the same length
-/// * The logical type is not supported
-pub fn nullif(lhs: &dyn Array, rhs: &dyn Array) -> Result<Box<dyn Array>> {
-    if lhs.data_type() != rhs.data_type() {
-        return Err(ArrowError::InvalidArgumentError(
-            "Nullif expects arrays of the the same logical type".to_string(),
-        ));
+pub fn nullif(lhs: &dyn Array, rhs: &dyn Array) -> Box<dyn Array> {
+    assert_eq!(lhs.data_type(), rhs.data_type());
+    assert_eq!(lhs.len(), rhs.len());
+
+    use crate::datatypes::PhysicalType::*;
+    match lhs.data_type().to_physical_type() {
+        Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
+            Box::new(primitive_nullif::<$T>(
+                lhs.as_any().downcast_ref().unwrap(),
+                rhs.as_any().downcast_ref().unwrap(),
+            ))
+        }),
+        other => unimplemented!("Nullif is not implemented for physical type {:?}", other),
     }
-    if lhs.len() != rhs.len() {
-        return Err(ArrowError::InvalidArgumentError(
-            "Nullif expects arrays of the the same length".to_string(),
-        ));
+}
+
+/// Returns an [`Array`] with the same type as `lhs` and whose validity
+/// is null iff either `lhs == rhs` or `lhs` is null.
+/// # Panics
+/// iff
+/// * Scalar is null
+/// * lhs and rhs do not have the same type
+/// * The physical type is not supported for this operation (use [`can_nullif`] to check)
+/// # Example
+/// ```rust
+/// # use arrow2::array::Int32Array;
+/// # use arrow2::scalar::PrimitiveScalar;
+/// # use arrow2::datatypes::DataType;
+/// # use arrow2::compute::nullif::nullif_scalar;
+/// # fn main() {
+/// let lhs = Int32Array::from(&[None, None, Some(1), Some(0), Some(1)]);
+/// let rhs = PrimitiveScalar::<i32>::from(Some(0));
+/// let result = nullif_scalar(&lhs, &rhs);
+///
+/// let expected = Int32Array::from(&[None, None, Some(1), None, Some(1)]);
+///
+/// assert_eq!(expected, result.as_ref());
+/// # }
+/// ```
+pub fn nullif_scalar(lhs: &dyn Array, rhs: &dyn Scalar) -> Box<dyn Array> {
+    assert_eq!(lhs.data_type(), rhs.data_type());
+    use crate::datatypes::PhysicalType::*;
+    match lhs.data_type().to_physical_type() {
+        Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
+            let scalar = rhs.as_any().downcast_ref::<PrimitiveScalar<$T>>().unwrap();
+            let scalar = scalar.value().expect("Scalar to be non-null");
+
+            Box::new(primitive_nullif_scalar::<$T>(
+                lhs.as_any().downcast_ref().unwrap(),
+                scalar,
+            ))
+        }),
+        other => unimplemented!("Nullif is not implemented for physical type {:?}", other),
     }
-    use crate::datatypes::DataType::*;
-    match lhs.data_type() {
-        UInt8 => nullif_primitive::<u8>(
-            lhs.as_any().downcast_ref().unwrap(),
-            rhs.as_any().downcast_ref().unwrap(),
-        )
-        .map(|x| Box::new(x) as Box<dyn Array>),
-        UInt16 => nullif_primitive::<u16>(
-            lhs.as_any().downcast_ref().unwrap(),
-            rhs.as_any().downcast_ref().unwrap(),
-        )
-        .map(|x| Box::new(x) as Box<dyn Array>),
-        UInt32 => nullif_primitive::<u32>(
-            lhs.as_any().downcast_ref().unwrap(),
-            rhs.as_any().downcast_ref().unwrap(),
-        )
-        .map(|x| Box::new(x) as Box<dyn Array>),
-        UInt64 => nullif_primitive::<u64>(
-            lhs.as_any().downcast_ref().unwrap(),
-            rhs.as_any().downcast_ref().unwrap(),
-        )
-        .map(|x| Box::new(x) as Box<dyn Array>),
-        Int8 => nullif_primitive::<i8>(
-            lhs.as_any().downcast_ref().unwrap(),
-            rhs.as_any().downcast_ref().unwrap(),
-        )
-        .map(|x| Box::new(x) as Box<dyn Array>),
-        Int16 => nullif_primitive::<i16>(
-            lhs.as_any().downcast_ref().unwrap(),
-            rhs.as_any().downcast_ref().unwrap(),
-        )
-        .map(|x| Box::new(x) as Box<dyn Array>),
-        Int32 | Time32(_) | Date32 => nullif_primitive::<i32>(
-            lhs.as_any().downcast_ref().unwrap(),
-            rhs.as_any().downcast_ref().unwrap(),
-        )
-        .map(|x| Box::new(x) as Box<dyn Array>),
-        Int64 | Time64(_) | Date64 | Timestamp(_, _) | Duration(_) => nullif_primitive::<i64>(
-            lhs.as_any().downcast_ref().unwrap(),
-            rhs.as_any().downcast_ref().unwrap(),
-        )
-        .map(|x| Box::new(x) as Box<dyn Array>),
-        Float32 => nullif_primitive::<f32>(
-            lhs.as_any().downcast_ref().unwrap(),
-            rhs.as_any().downcast_ref().unwrap(),
-        )
-        .map(|x| Box::new(x) as Box<dyn Array>),
-        Float64 => nullif_primitive::<f64>(
-            lhs.as_any().downcast_ref().unwrap(),
-            rhs.as_any().downcast_ref().unwrap(),
-        )
-        .map(|x| Box::new(x) as Box<dyn Array>),
-        other => Err(ArrowError::NotYetImplemented(format!(
-            "Nullif is not implemented for logical datatype {:?}",
-            other
-        ))),
-    }
+}
+
+/// Returns whether [`nullif`] and [`nullif_scalar`] is implemented for the datatypes.
+pub fn can_nullif(lhs: &DataType, rhs: &DataType) -> bool {
+    if lhs != rhs {
+        return false;
+    };
+    use crate::datatypes::PhysicalType;
+    matches!(lhs.to_physical_type(), PhysicalType::Primitive(_))
 }

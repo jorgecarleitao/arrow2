@@ -56,7 +56,10 @@ pub mod utf8;
 mod simd;
 pub use simd::{Simd8, Simd8Lanes, Simd8PartialEq, Simd8PartialOrd};
 
-pub(crate) use primitive::compare_values_op as primitive_compare_values_op;
+pub(crate) use primitive::{
+    compare_values_op as primitive_compare_values_op,
+    compare_values_op_scalar as primitive_compare_values_op_scalar,
+};
 
 macro_rules! match_eq_ord {(
     $key_type:expr, | $_:tt $T:ident | $($body:tt)*
