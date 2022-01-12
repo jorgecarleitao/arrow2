@@ -135,7 +135,7 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="json-read"><a class="header" href="#json-read">JSON read</a></h1>
-<p>When compiled with feature <code>io_json</code>, you can use this crate to read JSON files.</p>
+<p>When compiled with feature <code>io_json</code>, you can use this crate to read NDJSON files:</p>
 <pre><pre class="playground"><code class="language-rust">use std::fs::File;
 use std::io::BufReader;
 use std::sync::Arc;
@@ -146,7 +146,7 @@ use arrow2::error::Result;
 use arrow2::io::json::read;
 
 fn read_path(path: &amp;str, projection: Option&lt;Vec&lt;&amp;str&gt;&gt;) -&gt; Result&lt;Chunk&lt;Arc&lt;dyn Array&gt;&gt;&gt; {
-    // Example of reading a JSON file.
+    // Example of reading a NDJSON file.
     let mut reader = BufReader::new(File::open(path)?);
 
     let fields = read::infer_and_reset(&amp;mut reader, None)?;
@@ -187,6 +187,42 @@ fn main() -&gt; Result&lt;()&gt; {
 </code></pre></pre>
 <p>Note how deserialization can be performed on a separate thread pool to avoid
 blocking the runtime (see also <a href="https://ryhl.io/blog/async-what-is-blocking/">here</a>).</p>
+<p>This crate also supports reading JSON, at the expense of being unable to read the file in chunks.</p>
+<pre><pre class="playground"><code class="language-rust">use std::fs::File;
+use std::io::BufReader;
+use std::sync::Arc;
+
+use arrow2::array::Array;
+use arrow2::error::{ArrowError, Result};
+use arrow2::io::json::read;
+
+fn read_path(path: &amp;str) -&gt; Result&lt;Arc&lt;dyn Array&gt;&gt; {
+    // Example of reading a JSON file.
+    let reader = BufReader::new(File::open(path)?);
+    let data = serde_json::from_reader(reader)?;
+
+    let values = if let serde_json::Value::Array(values) = data {
+        Ok(values)
+    } else {
+        Err(ArrowError::InvalidArgumentError(&quot;&quot;.to_string()))
+    }?;
+
+    let data_type = read::infer_rows(&amp;values)?;
+
+    Ok(read::deserialize_json(&amp;values, data_type))
+}
+
+fn main() -&gt; Result&lt;()&gt; {
+    use std::env;
+    let args: Vec&lt;String&gt; = env::args().collect();
+
+    let file_path = &amp;args[1];
+
+    let batch = read_path(file_path)?;
+    println!(&quot;{:#?}&quot;, batch);
+    Ok(())
+}
+</code></pre></pre>
 
                     </main>
 
