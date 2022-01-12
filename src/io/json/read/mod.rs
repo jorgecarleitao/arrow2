@@ -5,7 +5,7 @@ mod iterator;
 
 use crate::error::{ArrowError, Result};
 
-pub use deserialize::deserialize;
+pub use deserialize::{deserialize, deserialize_json};
 pub use infer_schema::*;
 
 /// Reads rows from `reader` into `rows`. Returns the number of read items.

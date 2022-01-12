@@ -2,6 +2,7 @@ use std::io::Cursor;
 
 use arrow2::array::*;
 use arrow2::datatypes::*;
+use arrow2::error::ArrowError;
 use arrow2::error::Result;
 use arrow2::io::json::read;
 
@@ -169,5 +170,42 @@ fn infer_nested_struct() -> Result<()> {
     let result = read::infer(&mut Cursor::new(data), None)?;
 
     assert_eq!(result, fields);
+    Ok(())
+}
+
+#[test]
+fn read_json() -> Result<()> {
+    let data = r#"[
+        {
+            "a": 1
+        },
+        {
+            "a": 2
+        },
+        {
+            "a": 3
+        }
+    ]"#;
+
+    let data = serde_json::from_slice(data.as_bytes())?;
+
+    let values = if let serde_json::Value::Array(values) = data {
+        Ok(values)
+    } else {
+        Err(ArrowError::InvalidArgumentError("".to_string()))
+    }?;
+
+    let data_type = read::infer_rows(&values)?;
+
+    let result = read::deserialize_json(&values, data_type);
+
+    let expected = StructArray::from_data(
+        DataType::Struct(vec![Field::new("a", DataType::Int64, true)]),
+        vec![Arc::new(Int64Array::from_slice([1, 2, 3])) as _],
+        None,
+    );
+
+    assert_eq!(expected, result.as_ref());
+
     Ok(())
 }

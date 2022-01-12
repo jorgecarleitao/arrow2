@@ -271,3 +271,10 @@ pub fn deserialize<A: AsRef<str>>(
     let (_, columns, _) = deserialize_struct(&rows, data_type).into_data();
     Ok(Chunk::new(columns))
 }
+
+/// Deserializes a slice of [`Value`] to an Array of logical type [`DataType`].
+///
+/// This function allows consuming deserialized JSON to Arrow.
+pub fn deserialize_json(rows: &[Value], data_type: DataType) -> Arc<dyn Array> {
+    _deserialize(rows, data_type)
+}

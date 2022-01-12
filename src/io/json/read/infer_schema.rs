@@ -104,18 +104,21 @@ fn infer_value(value: &Value) -> Result<DataType> {
     })
 }
 
-fn infer_array(array: &[Value]) -> Result<DataType> {
-    let types = array.iter().map(|a| {
+/// Infers a [`DataType`] from a list of JSON values
+pub fn infer_rows(rows: &[Value]) -> Result<DataType> {
+    let types = rows.iter().map(|a| {
         Ok(match a {
             Value::Null => None,
             Value::Number(n) => Some(infer_number(n)),
             Value::Bool(_) => Some(DataType::Boolean),
             Value::String(_) => Some(DataType::Utf8),
             Value::Array(array) => Some(infer_array(array)?),
-            Value::Object(_) => {
-                return Err(ArrowError::NotYetImplemented(
-                    "Nested structs not yet supported".to_string(),
-                ))
+            Value::Object(inner) => {
+                let fields = inner
+                    .iter()
+                    .map(|(key, value)| infer_value(value).map(|dt| Field::new(key, dt, true)))
+                    .collect::<Result<Vec<_>>>()?;
+                Some(DataType::Struct(fields))
             }
         })
     });
@@ -126,14 +129,23 @@ fn infer_array(array: &[Value]) -> Result<DataType> {
         .flatten()
         .collect::<Result<HashSet<_>>>()?;
 
-    // if a record contains only nulls, it is not
-    // added to values
     Ok(if !types.is_empty() {
         let types = types.into_iter().collect::<Vec<_>>();
-        let dt = coerce_data_type(&types);
-        DataType::List(Box::new(Field::new(ITEM_NAME, dt, true)))
+        coerce_data_type(&types)
     } else {
         DataType::Null
+    })
+}
+
+fn infer_array(values: &[Value]) -> Result<DataType> {
+    let dt = infer_rows(values)?;
+
+    // if a record contains only nulls, it is not
+    // added to values
+    Ok(if dt == DataType::Null {
+        dt
+    } else {
+        DataType::List(Box::new(Field::new(ITEM_NAME, dt, true)))
     })
 }
 
