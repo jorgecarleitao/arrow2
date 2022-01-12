@@ -26,6 +26,8 @@ use crate::{
     datatypes::DataType,
 };
 
+pub(self) mod physical_binary;
+
 /// A trait representing an immutable Arrow array. Arrow arrays are trait objects
 /// that are infalibly downcasted to concrete types according to the [`Array::data_type`].
 pub trait Array: Send + Sync {
