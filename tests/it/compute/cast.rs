@@ -313,6 +313,21 @@ fn decimal_to_decimal_scaled() {
 }
 
 #[test]
+fn decimal_to_decimal_fast() {
+    // increase precision
+    // 10 and -10 can't be represented with precision 1 and scale 1
+    let array = Int128Array::from(&[Some(2), Some(10), Some(-2), Some(-10), None])
+        .to(DataType::Decimal(1, 1));
+
+    let b = cast(&array, &DataType::Decimal(2, 1), CastOptions::default()).unwrap();
+    let c = b.as_any().downcast_ref::<PrimitiveArray<i128>>().unwrap();
+
+    let expected = Int128Array::from(&[Some(2), Some(10), Some(-2), Some(-10), None])
+        .to(DataType::Decimal(2, 1));
+    assert_eq!(c, &expected)
+}
+
+#[test]
 fn decimal_to_float() {
     let array = Int128Array::from(&[Some(2), Some(10), Some(-2), Some(-10), None])
         .to(DataType::Decimal(2, 1));
