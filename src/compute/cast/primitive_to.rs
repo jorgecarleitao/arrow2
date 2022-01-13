@@ -1,5 +1,7 @@
 use std::hash::Hash;
 
+use num_traits::{AsPrimitive, Float};
+
 use crate::error::Result;
 use crate::{
     array::*,
@@ -151,6 +153,94 @@ where
         .iter()
         .map(|v| v.and_then(|x| num_traits::cast::cast::<I, O>(*x)));
     PrimitiveArray::<O>::from_trusted_len_iter(iter).to(to_type.clone())
+}
+
+/// Returns a [`PrimitiveArray<i128>`] with the casted values. Values are `None` on overflow
+pub fn integer_to_decimal<T: NativeType + AsPrimitive<i128>>(
+    from: &PrimitiveArray<T>,
+    to_precision: usize,
+    to_scale: usize,
+) -> PrimitiveArray<i128> {
+    let multiplier = 10_i128.pow(to_scale as u32);
+
+    let min_for_precision = 9_i128
+        .saturating_pow(1 + to_precision as u32)
+        .saturating_neg();
+    let max_for_precision = 9_i128.saturating_pow(1 + to_precision as u32);
+
+    let values = from.iter().map(|x| {
+        x.and_then(|x| {
+            x.as_().checked_mul(multiplier).and_then(|x| {
+                if x > max_for_precision || x < min_for_precision {
+                    None
+                } else {
+                    Some(x)
+                }
+            })
+        })
+    });
+
+    PrimitiveArray::<i128>::from_trusted_len_iter(values)
+        .to(DataType::Decimal(to_precision, to_scale))
+}
+
+pub(super) fn integer_to_decimal_dyn<T>(
+    from: &dyn Array,
+    precision: usize,
+    scale: usize,
+) -> Result<Box<dyn Array>>
+where
+    T: NativeType + AsPrimitive<i128>,
+{
+    let from = from.as_any().downcast_ref().unwrap();
+    Ok(Box::new(integer_to_decimal::<T>(from, precision, scale)))
+}
+
+/// Returns a [`PrimitiveArray<i128>`] with the casted values. Values are `None` on overflow
+pub fn float_to_decimal<T>(
+    from: &PrimitiveArray<T>,
+    to_precision: usize,
+    to_scale: usize,
+) -> PrimitiveArray<i128>
+where
+    T: NativeType + Float,
+    f64: AsPrimitive<T>,
+    i128: From<T>,
+    T: AsPrimitive<f64>,
+{
+    // 1.2 => 12
+    let multiplier: T = (10_f64).powi(to_scale as i32).as_();
+
+    let min_for_precision = 9_i128
+        .saturating_pow(1 + to_precision as u32)
+        .saturating_neg();
+    let max_for_precision = 9_i128.saturating_pow(1 + to_precision as u32);
+
+    let values = from.iter().map(|x| {
+        x.and_then(|x| {
+            let x = i128::from(*x * multiplier);
+            if x > max_for_precision || x < min_for_precision {
+                None
+            } else {
+                Some(x)
+            }
+        })
+    });
+
+    PrimitiveArray::<i128>::from_trusted_len_iter(values)
+        .to(DataType::Decimal(to_precision, to_scale))
+}
+
+pub(super) fn float_to_decimal_dyn<T>(
+    from: &dyn Array,
+    precision: usize,
+    scale: usize,
+) -> Result<Box<dyn Array>>
+where
+    T: NativeType + AsPrimitive<i128>,
+{
+    let from = from.as_any().downcast_ref().unwrap();
+    Ok(Box::new(integer_to_decimal::<T>(from, precision, scale)))
 }
 
 /// Cast [`PrimitiveArray`] as a [`PrimitiveArray`]

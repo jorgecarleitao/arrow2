@@ -1,22 +1,24 @@
 //! Defines different casting operators such as [`cast`] or [`primitive_to_binary`].
 
-use crate::{
-    array::*,
-    datatypes::*,
-    error::{ArrowError, Result},
-};
-
 mod binary_to;
 mod boolean_to;
+mod decimal_to;
 mod dictionary_to;
 mod primitive_to;
 mod utf8_to;
 
 pub use binary_to::*;
 pub use boolean_to::*;
+pub use decimal_to::*;
 pub use dictionary_to::*;
 pub use primitive_to::*;
 pub use utf8_to::*;
+
+use crate::{
+    array::*,
+    datatypes::*,
+    error::{ArrowError, Result},
+};
 
 /// options defining how Cast kernels behave
 #[derive(Clone, Copy, Debug, Default)]
@@ -143,6 +145,7 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (UInt8, Int64) => true,
         (UInt8, Float32) => true,
         (UInt8, Float64) => true,
+        (UInt8, Decimal(_, _)) => true,
 
         (UInt16, UInt8) => true,
         (UInt16, UInt32) => true,
@@ -153,6 +156,7 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (UInt16, Int64) => true,
         (UInt16, Float32) => true,
         (UInt16, Float64) => true,
+        (UInt16, Decimal(_, _)) => true,
 
         (UInt32, UInt8) => true,
         (UInt32, UInt16) => true,
@@ -163,6 +167,7 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (UInt32, Int64) => true,
         (UInt32, Float32) => true,
         (UInt32, Float64) => true,
+        (UInt32, Decimal(_, _)) => true,
 
         (UInt64, UInt8) => true,
         (UInt64, UInt16) => true,
@@ -173,6 +178,7 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (UInt64, Int64) => true,
         (UInt64, Float32) => true,
         (UInt64, Float64) => true,
+        (UInt64, Decimal(_, _)) => true,
 
         (Int8, UInt8) => true,
         (Int8, UInt16) => true,
@@ -183,6 +189,7 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (Int8, Int64) => true,
         (Int8, Float32) => true,
         (Int8, Float64) => true,
+        (Int8, Decimal(_, _)) => true,
 
         (Int16, UInt8) => true,
         (Int16, UInt16) => true,
@@ -193,6 +200,7 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (Int16, Int64) => true,
         (Int16, Float32) => true,
         (Int16, Float64) => true,
+        (Int16, Decimal(_, _)) => true,
 
         (Int32, UInt8) => true,
         (Int32, UInt16) => true,
@@ -203,6 +211,7 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (Int32, Int64) => true,
         (Int32, Float32) => true,
         (Int32, Float64) => true,
+        (Int32, Decimal(_, _)) => true,
 
         (Int64, UInt8) => true,
         (Int64, UInt16) => true,
@@ -213,6 +222,7 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (Int64, Int32) => true,
         (Int64, Float32) => true,
         (Int64, Float64) => true,
+        (Int64, Decimal(_, _)) => true,
 
         (Float32, UInt8) => true,
         (Float32, UInt16) => true,
@@ -223,6 +233,7 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (Float32, Int32) => true,
         (Float32, Int64) => true,
         (Float32, Float64) => true,
+        (Float32, Decimal(_, _)) => true,
 
         (Float64, UInt8) => true,
         (Float64, UInt16) => true,
@@ -233,6 +244,22 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (Float64, Int32) => true,
         (Float64, Int64) => true,
         (Float64, Float32) => true,
+        (Float64, Decimal(_, _)) => true,
+
+        (
+            Decimal(_, _),
+            UInt8
+            | UInt16
+            | UInt32
+            | UInt64
+            | Int8
+            | Int16
+            | Int32
+            | Int64
+            | Float32
+            | Float64
+            | Decimal(_, _),
+        ) => true,
         // end numeric casts
 
         // temporal casts
@@ -649,6 +676,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
         (UInt8, Int64) => primitive_to_primitive_dyn::<u8, i64>(array, to_type, options),
         (UInt8, Float32) => primitive_to_primitive_dyn::<u8, f32>(array, to_type, as_options),
         (UInt8, Float64) => primitive_to_primitive_dyn::<u8, f64>(array, to_type, as_options),
+        (UInt8, Decimal(p, s)) => integer_to_decimal_dyn::<u8>(array, *p, *s),
 
         (UInt16, UInt8) => primitive_to_primitive_dyn::<u16, u8>(array, to_type, options),
         (UInt16, UInt32) => primitive_to_primitive_dyn::<u16, u32>(array, to_type, as_options),
@@ -659,6 +687,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
         (UInt16, Int64) => primitive_to_primitive_dyn::<u16, i64>(array, to_type, options),
         (UInt16, Float32) => primitive_to_primitive_dyn::<u16, f32>(array, to_type, as_options),
         (UInt16, Float64) => primitive_to_primitive_dyn::<u16, f64>(array, to_type, as_options),
+        (UInt16, Decimal(p, s)) => integer_to_decimal_dyn::<u16>(array, *p, *s),
 
         (UInt32, UInt8) => primitive_to_primitive_dyn::<u32, u8>(array, to_type, options),
         (UInt32, UInt16) => primitive_to_primitive_dyn::<u32, u16>(array, to_type, options),
@@ -669,6 +698,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
         (UInt32, Int64) => primitive_to_primitive_dyn::<u32, i64>(array, to_type, options),
         (UInt32, Float32) => primitive_to_primitive_dyn::<u32, f32>(array, to_type, as_options),
         (UInt32, Float64) => primitive_to_primitive_dyn::<u32, f64>(array, to_type, as_options),
+        (UInt32, Decimal(p, s)) => integer_to_decimal_dyn::<u32>(array, *p, *s),
 
         (UInt64, UInt8) => primitive_to_primitive_dyn::<u64, u8>(array, to_type, options),
         (UInt64, UInt16) => primitive_to_primitive_dyn::<u64, u16>(array, to_type, options),
@@ -679,6 +709,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
         (UInt64, Int64) => primitive_to_primitive_dyn::<u64, i64>(array, to_type, options),
         (UInt64, Float32) => primitive_to_primitive_dyn::<u64, f32>(array, to_type, as_options),
         (UInt64, Float64) => primitive_to_primitive_dyn::<u64, f64>(array, to_type, as_options),
+        (UInt64, Decimal(p, s)) => integer_to_decimal_dyn::<u64>(array, *p, *s),
 
         (Int8, UInt8) => primitive_to_primitive_dyn::<i8, u8>(array, to_type, options),
         (Int8, UInt16) => primitive_to_primitive_dyn::<i8, u16>(array, to_type, options),
@@ -689,6 +720,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
         (Int8, Int64) => primitive_to_primitive_dyn::<i8, i64>(array, to_type, as_options),
         (Int8, Float32) => primitive_to_primitive_dyn::<i8, f32>(array, to_type, as_options),
         (Int8, Float64) => primitive_to_primitive_dyn::<i8, f64>(array, to_type, as_options),
+        (Int8, Decimal(p, s)) => integer_to_decimal_dyn::<i8>(array, *p, *s),
 
         (Int16, UInt8) => primitive_to_primitive_dyn::<i16, u8>(array, to_type, options),
         (Int16, UInt16) => primitive_to_primitive_dyn::<i16, u16>(array, to_type, options),
@@ -699,6 +731,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
         (Int16, Int64) => primitive_to_primitive_dyn::<i16, i64>(array, to_type, as_options),
         (Int16, Float32) => primitive_to_primitive_dyn::<i16, f32>(array, to_type, as_options),
         (Int16, Float64) => primitive_to_primitive_dyn::<i16, f64>(array, to_type, as_options),
+        (Int16, Decimal(p, s)) => integer_to_decimal_dyn::<i16>(array, *p, *s),
 
         (Int32, UInt8) => primitive_to_primitive_dyn::<i32, u8>(array, to_type, options),
         (Int32, UInt16) => primitive_to_primitive_dyn::<i32, u16>(array, to_type, options),
@@ -709,6 +742,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
         (Int32, Int64) => primitive_to_primitive_dyn::<i32, i64>(array, to_type, as_options),
         (Int32, Float32) => primitive_to_primitive_dyn::<i32, f32>(array, to_type, as_options),
         (Int32, Float64) => primitive_to_primitive_dyn::<i32, f64>(array, to_type, as_options),
+        (Int32, Decimal(p, s)) => integer_to_decimal_dyn::<i32>(array, *p, *s),
 
         (Int64, UInt8) => primitive_to_primitive_dyn::<i64, u8>(array, to_type, options),
         (Int64, UInt16) => primitive_to_primitive_dyn::<i64, u16>(array, to_type, options),
@@ -719,6 +753,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
         (Int64, Int32) => primitive_to_primitive_dyn::<i64, i32>(array, to_type, options),
         (Int64, Float32) => primitive_to_primitive_dyn::<i64, f32>(array, to_type, options),
         (Int64, Float64) => primitive_to_primitive_dyn::<i64, f64>(array, to_type, as_options),
+        (Int64, Decimal(p, s)) => integer_to_decimal_dyn::<i64>(array, *p, *s),
 
         (Float32, UInt8) => primitive_to_primitive_dyn::<f32, u8>(array, to_type, options),
         (Float32, UInt16) => primitive_to_primitive_dyn::<f32, u16>(array, to_type, options),
@@ -729,6 +764,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
         (Float32, Int32) => primitive_to_primitive_dyn::<f32, i32>(array, to_type, options),
         (Float32, Int64) => primitive_to_primitive_dyn::<f32, i64>(array, to_type, options),
         (Float32, Float64) => primitive_to_primitive_dyn::<f32, f64>(array, to_type, as_options),
+        (Float32, Decimal(p, s)) => float_to_decimal_dyn::<f32>(array, *p, *s),
 
         (Float64, UInt8) => primitive_to_primitive_dyn::<f64, u8>(array, to_type, options),
         (Float64, UInt16) => primitive_to_primitive_dyn::<f64, u16>(array, to_type, options),
@@ -739,6 +775,19 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
         (Float64, Int32) => primitive_to_primitive_dyn::<f64, i32>(array, to_type, options),
         (Float64, Int64) => primitive_to_primitive_dyn::<f64, i64>(array, to_type, options),
         (Float64, Float32) => primitive_to_primitive_dyn::<f64, f32>(array, to_type, options),
+        (Float64, Decimal(p, s)) => float_to_decimal_dyn::<f64>(array, *p, *s),
+
+        (Decimal(_, _), UInt8) => decimal_to_integer_dyn::<u8>(array),
+        (Decimal(_, _), UInt16) => decimal_to_integer_dyn::<u16>(array),
+        (Decimal(_, _), UInt32) => decimal_to_integer_dyn::<u32>(array),
+        (Decimal(_, _), UInt64) => decimal_to_integer_dyn::<u64>(array),
+        (Decimal(_, _), Int8) => decimal_to_integer_dyn::<i8>(array),
+        (Decimal(_, _), Int16) => decimal_to_integer_dyn::<i16>(array),
+        (Decimal(_, _), Int32) => decimal_to_integer_dyn::<i32>(array),
+        (Decimal(_, _), Int64) => decimal_to_integer_dyn::<i64>(array),
+        (Decimal(_, _), Float32) => decimal_to_float_dyn::<f32>(array),
+        (Decimal(_, _), Float64) => decimal_to_float_dyn::<f64>(array),
+        (Decimal(_, _), Decimal(to_p, to_s)) => decimal_to_decimal_dyn(array, *to_p, *to_s),
         // end numeric casts
 
         // temporal casts
