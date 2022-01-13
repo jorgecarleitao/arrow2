@@ -4,6 +4,28 @@ This crate follows the standard for developing a Rust library via `cargo`.
 The CI is our "ground truth" over the state of the library. Check out the different parts of
 the CI to understand how to test the different parts of this library locally.
 
+## Testing
+
+The simplest way to test the crate is to run 
+
+```bash
+cargo test
+```
+
+This runs the tests of the crate without features. To run all features, use
+
+```bash
+cargo test --features full
+```
+
+during development of particular parts of the crate, it is usually faster
+to reduce the feature set - the tests are gated to only the relevant tests
+of that feature set. For example, if improving JSON, you can use
+
+```bash
+cargo test --features io_json
+```
+
 ## Merging
 
 We currently do not have maintaince versions and thus only PR and merge to `main`.
