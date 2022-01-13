@@ -53,6 +53,13 @@ pub struct Ffi_ArrowArray {
     private_data: *mut ::std::os::raw::c_void,
 }
 
+// Sound because the arrow specification does not allow multiple implementations
+// to change this struct
+// This is intrinsically impossible to prove because the implementations agree
+// on this as part of the Arrow specification
+unsafe impl Send for Ffi_ArrowArray {}
+unsafe impl Sync for Ffi_ArrowArray {}
+
 impl Drop for Ffi_ArrowArray {
     fn drop(&mut self) {
         match self.release {
