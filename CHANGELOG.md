@@ -1,5 +1,113 @@
 # Changelog
 
+## [v0.9.0](https://github.com/jorgecarleitao/arrow2/tree/v0.9.0) (2022-01-14)
+
+[Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.8.1...v0.9.0)
+
+**Breaking changes:**
+
+- Added number of rows read in CSV inference [\#765](https://github.com/jorgecarleitao/arrow2/pull/765) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Refactored `nullif` [\#753](https://github.com/jorgecarleitao/arrow2/pull/753) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Migrated to latest parquet2 [\#752](https://github.com/jorgecarleitao/arrow2/pull/752) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Replace flatbuffers dependency by Planus [\#732](https://github.com/jorgecarleitao/arrow2/pull/732) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Simplified `Schema` and `Field` [\#728](https://github.com/jorgecarleitao/arrow2/pull/728) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Replaced `RecordBatch` by `Chunk` [\#717](https://github.com/jorgecarleitao/arrow2/pull/717) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Removed `Option` from fields' metadata [\#715](https://github.com/jorgecarleitao/arrow2/pull/715) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Moved dict\_id to IPC-specific IO [\#713](https://github.com/jorgecarleitao/arrow2/pull/713) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Moved is\_ordered from `Field` to `DataType::Dictionary` [\#711](https://github.com/jorgecarleitao/arrow2/pull/711) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Refactored JSON writing \(5-10x\) [\#709](https://github.com/jorgecarleitao/arrow2/pull/709) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Made Avro read API use `Block` and `CompressedBlock` [\#698](https://github.com/jorgecarleitao/arrow2/pull/698) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Simplified most traits [\#696](https://github.com/jorgecarleitao/arrow2/pull/696) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Replaced `Display` by `Debug` for `Array` [\#694](https://github.com/jorgecarleitao/arrow2/pull/694) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Replaced `MutableBuffer` by `std::Vec` [\#693](https://github.com/jorgecarleitao/arrow2/pull/693) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Simplified `Utf8Scalar` and `BinaryScalar` [\#660](https://github.com/jorgecarleitao/arrow2/pull/660) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Simplified Primitive and Boolean scalar [\#648](https://github.com/jorgecarleitao/arrow2/pull/648) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**New features:**
+
+- Add `and_scalar` and `or_scalar` for boolean\_kleene [\#662](https://github.com/jorgecarleitao/arrow2/issues/662)
+- Add `lower` and `upper` support for string [\#635](https://github.com/jorgecarleitao/arrow2/issues/635)
+- Added support to cast decimal [\#761](https://github.com/jorgecarleitao/arrow2/pull/761) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support to deserialize JSON \(!= NDJSON\) [\#758](https://github.com/jorgecarleitao/arrow2/pull/758) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support to infer nested json structs [\#750](https://github.com/jorgecarleitao/arrow2/pull/750) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support to compare intervals [\#746](https://github.com/jorgecarleitao/arrow2/pull/746) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added `any` and `all` kernel [\#739](https://github.com/jorgecarleitao/arrow2/pull/739) ([ritchie46](https://github.com/ritchie46))
+- Added support to write Avro async [\#736](https://github.com/jorgecarleitao/arrow2/pull/736) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support to write interval to Avro [\#734](https://github.com/jorgecarleitao/arrow2/pull/734) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added `and_scalar` and `or_scalar` for boolean kleene [\#723](https://github.com/jorgecarleitao/arrow2/pull/723) ([silathdiir](https://github.com/silathdiir))
+- Added `and_scalar` and `or_scalar` for boolean [\#707](https://github.com/jorgecarleitao/arrow2/pull/707) ([silathdiir](https://github.com/silathdiir))
+- Refactored JSON read to split IO-bounded from CPU-bounded tasks [\#706](https://github.com/jorgecarleitao/arrow2/pull/706) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added more conversions from parquet [\#701](https://github.com/jorgecarleitao/arrow2/pull/701) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support for compressed Avro write [\#699](https://github.com/jorgecarleitao/arrow2/pull/699) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support to write to Avro [\#690](https://github.com/jorgecarleitao/arrow2/pull/690) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added dynamic version of negation [\#685](https://github.com/jorgecarleitao/arrow2/pull/685) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support to read dictionary-encoded required parquet pages [\#683](https://github.com/jorgecarleitao/arrow2/pull/683) ([mdrach](https://github.com/mdrach))
+- Added `upper` [\#664](https://github.com/jorgecarleitao/arrow2/pull/664) ([Xuanwo](https://github.com/Xuanwo))
+- Added `lower` [\#641](https://github.com/jorgecarleitao/arrow2/pull/641) ([Xuanwo](https://github.com/Xuanwo))
+- Added support for `async` read of Avro [\#620](https://github.com/jorgecarleitao/arrow2/pull/620) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Fixed bugs:**
+
+- Pyarrow and Arrow2 don't agree on Timestamp resolution [\#700](https://github.com/jorgecarleitao/arrow2/issues/700)
+- Writing compressed dictionary in parquet corrupts the files [\#667](https://github.com/jorgecarleitao/arrow2/issues/667)
+- Replaced assert by error in IPC read [\#748](https://github.com/jorgecarleitao/arrow2/pull/748) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Made all panics in IPC read errors [\#722](https://github.com/jorgecarleitao/arrow2/pull/722) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed error in compare booleans [\#721](https://github.com/jorgecarleitao/arrow2/pull/721) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed error in dispatching scalar arithmetics [\#682](https://github.com/jorgecarleitao/arrow2/pull/682) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed error in reading negative decimals from parquet [\#679](https://github.com/jorgecarleitao/arrow2/pull/679) ([mdrach](https://github.com/mdrach))
+- Made IPC reader less restrictive [\#678](https://github.com/jorgecarleitao/arrow2/pull/678) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed error in trait constraint in compute [\#665](https://github.com/jorgecarleitao/arrow2/pull/665) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed performance regression of CSV reading [\#657](https://github.com/jorgecarleitao/arrow2/pull/657) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed filter of predicate with validity [\#653](https://github.com/jorgecarleitao/arrow2/pull/653) ([ritchie46](https://github.com/ritchie46))
+- Made `Scalar: Send+Sync` [\#644](https://github.com/jorgecarleitao/arrow2/pull/644) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Enhancements:**
+
+- Feature: JSON IO? [\#712](https://github.com/jorgecarleitao/arrow2/issues/712)
+- Simplified code [\#760](https://github.com/jorgecarleitao/arrow2/pull/760) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added iterator of values of `FixedBinaryArray` [\#757](https://github.com/jorgecarleitao/arrow2/pull/757) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Remove un-needed `unsafe` [\#756](https://github.com/jorgecarleitao/arrow2/pull/756) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Replaced un-needed `unsafe` [\#755](https://github.com/jorgecarleitao/arrow2/pull/755) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Made IO `#[forbid(unsafe)]` [\#749](https://github.com/jorgecarleitao/arrow2/pull/749) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Improved reading nullable Avro arrays [\#727](https://github.com/jorgecarleitao/arrow2/pull/727) ([Igosuki](https://github.com/Igosuki))
+- Allow to create primitive array by vec without extra memcopy [\#710](https://github.com/jorgecarleitao/arrow2/pull/710) ([sundy-li](https://github.com/sundy-li))
+- Removed requirement of `use Array` to access primitives' `data_type` [\#697](https://github.com/jorgecarleitao/arrow2/pull/697) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Cleaned up trait usage and added forbid\_unsafe to parts [\#695](https://github.com/jorgecarleitao/arrow2/pull/695) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Migrated from `avro-rs` to `avro-schema` [\#692](https://github.com/jorgecarleitao/arrow2/pull/692) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added `MutablePrimitiveArray::extend_constant` [\#689](https://github.com/jorgecarleitao/arrow2/pull/689) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Do not write validity without nulls in IPC [\#688](https://github.com/jorgecarleitao/arrow2/pull/688) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- DRY code via macro [\#681](https://github.com/jorgecarleitao/arrow2/pull/681) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Made `dyn Array` and `Scalar` usable in `#[derive(PartialEq)]` [\#680](https://github.com/jorgecarleitao/arrow2/pull/680) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Made IPC ZSTD-compressed consumable by pyarrow [\#675](https://github.com/jorgecarleitao/arrow2/pull/675) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Simplified trait bounds in arithmetics [\#671](https://github.com/jorgecarleitao/arrow2/pull/671) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Improved performance of reading utf8 required from parquet \(-15%\) [\#670](https://github.com/jorgecarleitao/arrow2/pull/670) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Avoid double utf8 checks on MutableUtf8 -\> Utf8 [\#655](https://github.com/jorgecarleitao/arrow2/pull/655) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Made `Buffer::offset` public [\#652](https://github.com/jorgecarleitao/arrow2/pull/652) ([ritchie46](https://github.com/ritchie46))
+- Improved performance in cast Primitive to Binary/String \(2x\) [\#646](https://github.com/jorgecarleitao/arrow2/pull/646) ([sundy-li](https://github.com/sundy-li))
+- Made `Filter: Send+Sync` [\#645](https://github.com/jorgecarleitao/arrow2/pull/645) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Made API to create field accept `String` [\#643](https://github.com/jorgecarleitao/arrow2/pull/643) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Documentation updates:**
+
+- Fixed clippy \(coming from 1.58\) [\#763](https://github.com/jorgecarleitao/arrow2/pull/763) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Described how to run part of the tests [\#762](https://github.com/jorgecarleitao/arrow2/pull/762) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Improved README [\#735](https://github.com/jorgecarleitao/arrow2/pull/735) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- clarify boolean value in DataType::Dictionary [\#718](https://github.com/jorgecarleitao/arrow2/pull/718) ([ritchie46](https://github.com/ritchie46))
+- readme typo [\#687](https://github.com/jorgecarleitao/arrow2/pull/687) ([max-sixty](https://github.com/max-sixty))
+- Added example to read parquet in parallel with rayon [\#658](https://github.com/jorgecarleitao/arrow2/pull/658) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added documentation to `Bitmap::as_slice` [\#654](https://github.com/jorgecarleitao/arrow2/pull/654) ([ritchie46](https://github.com/ritchie46))
+
+**Testing updates:**
+
+- Improved json tests [\#742](https://github.com/jorgecarleitao/arrow2/pull/742) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added integration tests for writing compressed parquet [\#740](https://github.com/jorgecarleitao/arrow2/pull/740) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Updated patch for integration test [\#731](https://github.com/jorgecarleitao/arrow2/pull/731) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added cargo check to benchmarks [\#730](https://github.com/jorgecarleitao/arrow2/pull/730) ([sundy-li](https://github.com/sundy-li))
+- More tests to CSV writing [\#724](https://github.com/jorgecarleitao/arrow2/pull/724) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added integration tests for other compressions with parquet from pyarrow [\#674](https://github.com/jorgecarleitao/arrow2/pull/674) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Bumped nightly in CI [\#672](https://github.com/jorgecarleitao/arrow2/pull/672) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Invalidate caches from CI. [\#656](https://github.com/jorgecarleitao/arrow2/pull/656) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
 ## [v0.8.1](https://github.com/jorgecarleitao/arrow2/tree/v0.8.1) (2021-11-27)
 
 [Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.8.0...v0.8.1)
