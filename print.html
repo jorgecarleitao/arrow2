@@ -875,7 +875,7 @@ fn read_path(path: &amp;str, projection: Option&lt;&amp;[usize]&gt;) -&gt; Resul
 
     // Infers the fields using the default inferer. The inferer is just a function that maps bytes
     // to a `DataType`.
-    let fields = read::infer_schema(&amp;mut reader, None, true, &amp;read::infer)?;
+    let (fields, _) = read::infer_schema(&amp;mut reader, None, true, &amp;read::infer)?;
 
     // allocate space to read from CSV to. The size of this vec denotes how many rows are read.
     let mut rows = vec![read::ByteRecord::default(); 100];
@@ -927,7 +927,8 @@ fn parallel_read(path: &amp;str) -&gt; Result&lt;Vec&lt;Chunk&lt;Arc&lt;dyn Arra
     let (tx, rx) = unbounded();
 
     let mut reader = read::ReaderBuilder::new().from_path(path)?;
-    let fields = read::infer_schema(&amp;mut reader, Some(batch_size * 10), has_header, &amp;read::infer)?;
+    let (fields, _) =
+        read::infer_schema(&amp;mut reader, Some(batch_size * 10), has_header, &amp;read::infer)?;
     let fields = Arc::new(fields);
 
     let start = SystemTime::now();
@@ -1015,7 +1016,7 @@ async fn main() -&gt; Result&lt;()&gt; {
 
     let mut reader = AsyncReaderBuilder::new().create_reader(file);
 
-    let fields = infer_schema(&amp;mut reader, None, true, &amp;infer).await?;
+    let (fields, _) = infer_schema(&amp;mut reader, None, true, &amp;infer).await?;
 
     let mut rows = vec![ByteRecord::default(); 100];
     let rows_read = read_rows(&amp;mut reader, 0, &amp;mut rows).await?;
