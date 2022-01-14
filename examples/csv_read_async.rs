@@ -15,7 +15,7 @@ async fn main() -> Result<()> {
 
     let mut reader = AsyncReaderBuilder::new().create_reader(file);
 
-    let fields = infer_schema(&mut reader, None, true, &infer).await?;
+    let (fields, _) = infer_schema(&mut reader, None, true, &infer).await?;
 
     let mut rows = vec![ByteRecord::default(); 100];
     let rows_read = read_rows(&mut reader, 0, &mut rows).await?;

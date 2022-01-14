@@ -12,7 +12,7 @@ fn read_path(path: &str, projection: Option<&[usize]>) -> Result<Chunk<Arc<dyn A
 
     // Infers the fields using the default inferer. The inferer is just a function that maps bytes
     // to a `DataType`.
-    let fields = read::infer_schema(&mut reader, None, true, &read::infer)?;
+    let (fields, _) = read::infer_schema(&mut reader, None, true, &read::infer)?;
 
     // allocate space to read from CSV to. The size of this vec denotes how many rows are read.
     let mut rows = vec![read::ByteRecord::default(); 100];

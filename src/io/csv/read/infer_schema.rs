@@ -10,13 +10,14 @@ use super::super::utils::merge_schema;
 use super::{ByteRecord, Reader};
 
 /// Infers the [`Field`]s of a CSV file by reading through the first n records up to `max_rows`.
+/// Also returns the number of rows used to infer.
 /// Seeks back to the begining of the file _after_ the header
 pub fn infer_schema<R: Read + Seek, F: Fn(&[u8]) -> DataType>(
     reader: &mut Reader<R>,
     max_rows: Option<usize>,
     has_header: bool,
     infer: &F,
-) -> Result<Vec<Field>> {
+) -> Result<(Vec<Field>, usize)> {
     // get or create header names
     // when has_header is false, creates default column names with column_ prefix
     let headers: Vec<String> = if has_header {
@@ -57,5 +58,5 @@ pub fn infer_schema<R: Read + Seek, F: Fn(&[u8]) -> DataType>(
     // return the reader seek back to the start
     reader.seek(position)?;
 
-    Ok(fields)
+    Ok((fields, records_count))
 }
