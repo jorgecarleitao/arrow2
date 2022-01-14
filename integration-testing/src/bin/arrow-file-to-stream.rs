@@ -32,11 +32,13 @@ fn main() -> Result<()> {
     let options = write::WriteOptions { compression: None };
     let mut writer = write::StreamWriter::new(std::io::stdout(), options);
 
-    writer.start(&metadata.schema, &metadata.ipc_schema.fields)?;
+    let fields = metadata.ipc_schema.fields.clone();
+
+    writer.start(&metadata.schema, Some(fields))?;
 
     reader.try_for_each(|batch| {
         let batch = batch?;
-        writer.write(&batch, &metadata.ipc_schema.fields)
+        writer.write(&batch, None)
     })?;
     writer.finish()?;
 

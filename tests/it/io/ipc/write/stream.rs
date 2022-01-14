@@ -13,14 +13,18 @@ use arrow2::io::ipc::IpcField;
 use crate::io::ipc::common::read_arrow_stream;
 use crate::io::ipc::common::read_gzip_json;
 
-fn write_(schema: &Schema, ipc_fields: &[IpcField], batches: &[Chunk<Arc<dyn Array>>]) -> Vec<u8> {
+fn write_(
+    schema: &Schema,
+    ipc_fields: Option<Vec<IpcField>>,
+    batches: &[Chunk<Arc<dyn Array>>],
+) -> Vec<u8> {
     let mut result = vec![];
 
     let options = WriteOptions { compression: None };
     let mut writer = StreamWriter::new(&mut result, options);
     writer.start(schema, ipc_fields).unwrap();
     for batch in batches {
-        writer.write(batch, ipc_fields).unwrap();
+        writer.write(batch, None).unwrap();
     }
     writer.finish().unwrap();
     result
@@ -29,7 +33,7 @@ fn write_(schema: &Schema, ipc_fields: &[IpcField], batches: &[Chunk<Arc<dyn Arr
 fn test_file(version: &str, file_name: &str) {
     let (schema, ipc_fields, batches) = read_arrow_stream(version, file_name);
 
-    let result = write_(&schema, &ipc_fields, &batches);
+    let result = write_(&schema, Some(ipc_fields), &batches);
 
     let mut reader = Cursor::new(result);
     let metadata = read_stream_metadata(&mut reader).unwrap();

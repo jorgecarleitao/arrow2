@@ -9,7 +9,7 @@ use std::sync::Arc;
 use super::super::IpcField;
 use super::common::{encode_chunk, DictionaryTracker, EncodedData, WriteOptions};
 use super::common_sync::{write_continuation, write_message};
-use super::schema_to_bytes;
+use super::{default_ipc_fields, schema_to_bytes};
 
 use crate::array::Array;
 use crate::chunk::Chunk;
@@ -31,6 +31,8 @@ pub struct StreamWriter<W: Write> {
     finished: bool,
     /// Keeps track of dictionaries that have been written
     dictionary_tracker: DictionaryTracker,
+
+    ipc_fields: Option<Vec<IpcField>>,
 }
 
 impl<W: Write> StreamWriter<W> {
@@ -41,13 +43,21 @@ impl<W: Write> StreamWriter<W> {
             write_options,
             finished: false,
             dictionary_tracker: DictionaryTracker::new(false),
+            ipc_fields: None,
         }
     }
 
-    /// Starts the stream
-    pub fn start(&mut self, schema: &Schema, ipc_fields: &[IpcField]) -> Result<()> {
+    /// Starts the stream by writing a Schema message to it.
+    /// Use `ipc_fields` to declare dictionary ids in the schema, for dictionary-reuse
+    pub fn start(&mut self, schema: &Schema, ipc_fields: Option<Vec<IpcField>>) -> Result<()> {
+        self.ipc_fields = Some(if let Some(ipc_fields) = ipc_fields {
+            ipc_fields
+        } else {
+            default_ipc_fields(&schema.fields)
+        });
+
         let encoded_message = EncodedData {
-            ipc_message: schema_to_bytes(schema, ipc_fields),
+            ipc_message: schema_to_bytes(schema, self.ipc_fields.as_ref().unwrap()),
             arrow_data: vec![],
         };
         write_message(&mut self.writer, encoded_message)?;
@@ -55,13 +65,21 @@ impl<W: Write> StreamWriter<W> {
     }
 
     /// Writes [`Chunk`] to the stream
-    pub fn write(&mut self, columns: &Chunk<Arc<dyn Array>>, fields: &[IpcField]) -> Result<()> {
+    pub fn write(
+        &mut self,
+        columns: &Chunk<Arc<dyn Array>>,
+        ipc_fields: Option<&[IpcField]>,
+    ) -> Result<()> {
         if self.finished {
             return Err(ArrowError::Io(std::io::Error::new(
                 std::io::ErrorKind::UnexpectedEof,
                 "Cannot write to a finished stream".to_string(),
             )));
         }
+
+        // we can't make it a closure because it borrows (and it can't borrow mut and non-mut below)
+        #[allow(clippy::or_fun_call)]
+        let fields = ipc_fields.unwrap_or(self.ipc_fields.as_ref().unwrap());
 
         let (encoded_dictionaries, encoded_message) = encode_chunk(
             columns,
