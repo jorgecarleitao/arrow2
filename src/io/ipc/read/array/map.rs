@@ -1,30 +1,29 @@
 use std::collections::VecDeque;
 use std::io::{Read, Seek};
 
-use arrow_format::ipc;
-
 use crate::array::MapArray;
 use crate::buffer::Buffer;
 use crate::datatypes::DataType;
 use crate::error::{ArrowError, Result};
 
 use super::super::super::IpcField;
-use super::super::deserialize::{read, skip, Node};
+use super::super::deserialize::{read, skip};
 use super::super::read_basic::*;
 use super::super::Dictionaries;
+use super::super::{Compression, IpcBuffer, Node, Version};
 
 #[allow(clippy::too_many_arguments)]
 pub fn read_map<R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
     data_type: DataType,
     ipc_field: &IpcField,
-    buffers: &mut VecDeque<&ipc::Schema::Buffer>,
+    buffers: &mut VecDeque<IpcBuffer>,
     reader: &mut R,
     dictionaries: &Dictionaries,
     block_offset: u64,
     is_little_endian: bool,
-    compression: Option<ipc::Message::BodyCompression>,
-    version: ipc::Schema::MetadataVersion,
+    compression: Option<Compression>,
+    version: Version,
 ) -> Result<MapArray> {
     let field_node = field_nodes.pop_front().ok_or_else(|| {
         ArrowError::oos(format!(
@@ -73,7 +72,7 @@ pub fn read_map<R: Read + Seek>(
 pub fn skip_map(
     field_nodes: &mut VecDeque<Node>,
     data_type: &DataType,
-    buffers: &mut VecDeque<&ipc::Schema::Buffer>,
+    buffers: &mut VecDeque<IpcBuffer>,
 ) -> Result<()> {
     let _ = field_nodes.pop_front().ok_or_else(|| {
         ArrowError::oos("IPC: unable to fetch the field for map. The file or stream is corrupted.")

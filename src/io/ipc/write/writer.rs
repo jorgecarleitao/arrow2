@@ -1,7 +1,6 @@
 use std::{io::Write, sync::Arc};
 
-use arrow_format::ipc;
-use arrow_format::ipc::flatbuffers::FlatBufferBuilder;
+use arrow_format::ipc::planus::Builder;
 
 use super::{
     super::IpcField,
@@ -28,9 +27,9 @@ pub struct FileWriter<W: Write> {
     /// The number of bytes between each block of bytes, as an offset for random access
     block_offsets: usize,
     /// Dictionary blocks that will be written as part of the IPC footer
-    dictionary_blocks: Vec<ipc::File::Block>,
+    dictionary_blocks: Vec<arrow_format::ipc::Block>,
     /// Record blocks that will be written as part of the IPC footer
-    record_blocks: Vec<ipc::File::Block>,
+    record_blocks: Vec<arrow_format::ipc::Block>,
     /// Whether the writer footer has been written, and the writer is finished
     finished: bool,
     /// Keeps track of dictionaries that have been written
@@ -105,21 +104,26 @@ impl<W: Write> FileWriter<W> {
             &self.options,
         )?;
 
+        // add all dictionaries
         for encoded_dictionary in encoded_dictionaries {
             let (meta, data) = write_message(&mut self.writer, encoded_dictionary)?;
 
-            let block = ipc::File::Block::new(self.block_offsets as i64, meta as i32, data as i64);
+            let block = arrow_format::ipc::Block {
+                offset: self.block_offsets as i64,
+                meta_data_length: meta as i32,
+                body_length: data as i64,
+            };
             self.dictionary_blocks.push(block);
             self.block_offsets += meta + data;
         }
 
         let (meta, data) = write_message(&mut self.writer, encoded_message)?;
         // add a record block for the footer
-        let block = ipc::File::Block::new(
-            self.block_offsets as i64,
-            meta as i32, // TODO: is this still applicable?
-            data as i64,
-        );
+        let block = arrow_format::ipc::Block {
+            offset: self.block_offsets as i64,
+            meta_data_length: meta as i32, // TODO: is this still applicable?
+            body_length: data as i64,
+        };
         self.record_blocks.push(block);
         self.block_offsets += meta + data;
         Ok(())
@@ -130,21 +134,17 @@ impl<W: Write> FileWriter<W> {
         // write EOS
         write_continuation(&mut self.writer, 0)?;
 
-        let mut fbb = FlatBufferBuilder::new();
-        let dictionaries = fbb.create_vector(&self.dictionary_blocks);
-        let record_batches = fbb.create_vector(&self.record_blocks);
-        let schema = schema::schema_to_fb_offset(&mut fbb, &self.schema, &self.ipc_fields);
+        let schema = schema::serialize_schema(&self.schema, &self.ipc_fields);
 
-        let root = {
-            let mut footer_builder = ipc::File::FooterBuilder::new(&mut fbb);
-            footer_builder.add_version(ipc::Schema::MetadataVersion::V5);
-            footer_builder.add_schema(schema);
-            footer_builder.add_dictionaries(dictionaries);
-            footer_builder.add_recordBatches(record_batches);
-            footer_builder.finish()
+        let root = arrow_format::ipc::Footer {
+            version: arrow_format::ipc::MetadataVersion::V5,
+            schema: Some(Box::new(schema)),
+            dictionaries: Some(std::mem::take(&mut self.dictionary_blocks)),
+            record_batches: Some(std::mem::take(&mut self.record_blocks)),
+            custom_metadata: None,
         };
-        fbb.finish(root, None);
-        let footer_data = fbb.finished_data();
+        let mut builder = Builder::new();
+        let footer_data = builder.finish(&root, None);
         self.writer.write_all(footer_data)?;
         self.writer
             .write_all(&(footer_data.len() as i32).to_le_bytes())?;

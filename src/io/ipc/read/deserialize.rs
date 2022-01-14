@@ -4,8 +4,8 @@ use std::{
     sync::Arc,
 };
 
-use arrow_format::ipc;
-use arrow_format::ipc::{Message::BodyCompression, Schema::MetadataVersion};
+use arrow_format::ipc::BodyCompressionRef;
+use arrow_format::ipc::MetadataVersion;
 
 use crate::array::*;
 use crate::datatypes::{DataType, Field, PhysicalType};
@@ -13,20 +13,19 @@ use crate::error::Result;
 use crate::io::ipc::IpcField;
 
 use super::{array::*, Dictionaries};
-
-pub type Node<'a> = &'a ipc::Message::FieldNode;
+use super::{IpcBuffer, Node};
 
 #[allow(clippy::too_many_arguments)]
 pub fn read<R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
     field: &Field,
     ipc_field: &IpcField,
-    buffers: &mut VecDeque<&ipc::Schema::Buffer>,
+    buffers: &mut VecDeque<IpcBuffer>,
     reader: &mut R,
     dictionaries: &Dictionaries,
     block_offset: u64,
     is_little_endian: bool,
-    compression: Option<BodyCompression>,
+    compression: Option<BodyCompressionRef>,
     version: MetadataVersion,
 ) -> Result<Arc<dyn Array>> {
     use PhysicalType::*;
@@ -215,7 +214,7 @@ pub fn read<R: Read + Seek>(
 pub fn skip(
     field_nodes: &mut VecDeque<Node>,
     data_type: &DataType,
-    buffers: &mut VecDeque<&ipc::Schema::Buffer>,
+    buffers: &mut VecDeque<IpcBuffer>,
 ) -> Result<()> {
     use PhysicalType::*;
     match data_type.to_physical_type() {

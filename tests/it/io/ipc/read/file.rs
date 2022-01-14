@@ -146,11 +146,13 @@ fn read_generated_017_union() -> Result<()> {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)] // LZ4 uses foreign calls that miri does not support
 fn read_generated_200_compression_lz4() -> Result<()> {
     test_file("2.0.0-compression", "generated_lz4")
 }
 
 #[test]
+#[cfg_attr(miri, ignore)] // ZSTD uses foreign calls that miri does not support
 fn read_generated_200_compression_zstd() -> Result<()> {
     test_file("2.0.0-compression", "generated_zstd")
 }

@@ -45,7 +45,7 @@ indexmap = { version = "^1.6", optional = true }
 # used to print columns in a nice columnar format
 comfy-table = { version = "5.0", optional = true, default-features = false }
 
-arrow-format = { version = "0.3.0",  optional = true, features = ["ipc"] }
+arrow-format = { version = "0.4", optional = true, features = ["ipc"] }
 
 hex = { version = "^0.4", optional = true }
 

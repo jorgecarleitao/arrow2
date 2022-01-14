@@ -27,8 +27,8 @@ use arrow2::io::ipc::IpcSchema;
 use arrow_format::flight::data::flight_descriptor::*;
 use arrow_format::flight::data::*;
 use arrow_format::flight::service::flight_service_server::*;
-use arrow_format::ipc::Message::{root_as_message, Message, MessageHeader};
-use arrow_format::ipc::Schema as ArrowSchema;
+use arrow_format::ipc::planus::ReadAsRoot;
+use arrow_format::ipc::MessageHeaderRef;
 
 use arrow2::{datatypes::*, io::flight::serialize_schema_to_info, io::ipc};
 
@@ -276,25 +276,21 @@ async fn send_app_metadata(
 }
 
 async fn record_batch_from_message(
-    message: Message<'_>,
+    batch: arrow_format::ipc::RecordBatchRef<'_>,
     data_body: &[u8],
     fields: &[Field],
     ipc_schema: &IpcSchema,
     dictionaries: &mut Dictionaries,
 ) -> Result<Chunk<Arc<dyn Array>>, Status> {
-    let ipc_batch = message
-        .header_as_record_batch()
-        .ok_or_else(|| Status::internal("Could not parse message header as record batch"))?;
-
     let mut reader = std::io::Cursor::new(data_body);
 
     let arrow_batch_result = ipc::read::read_record_batch(
-        ipc_batch,
+        batch,
         fields,
         ipc_schema,
         None,
         dictionaries,
-        ArrowSchema::MetadataVersion::V5,
+        arrow_format::ipc::MetadataVersion::V5,
         &mut reader,
         0,
     );
@@ -303,20 +299,16 @@ async fn record_batch_from_message(
 }
 
 async fn dictionary_from_message(
-    message: Message<'_>,
+    dict_batch: arrow_format::ipc::DictionaryBatchRef<'_>,
     data_body: &[u8],
     fields: &[Field],
     ipc_schema: &IpcSchema,
     dictionaries: &mut Dictionaries,
 ) -> Result<(), Status> {
-    let ipc_batch = message
-        .header_as_dictionary_batch()
-        .ok_or_else(|| Status::internal("Could not parse message header as dictionary batch"))?;
-
     let mut reader = std::io::Cursor::new(data_body);
 
     let dictionary_batch_result =
-        ipc::read::read_dictionary(ipc_batch, fields, ipc_schema, dictionaries, &mut reader, 0);
+        ipc::read::read_dictionary(dict_batch, fields, ipc_schema, dictionaries, &mut reader, 0);
     dictionary_batch_result
         .map_err(|e| Status::internal(format!("Could not convert to Dictionary: {:?}", e)))
 }
@@ -335,20 +327,28 @@ async fn save_uploaded_chunks(
     let mut dictionaries = Default::default();
 
     while let Some(Ok(data)) = input_stream.next().await {
-        let message = root_as_message(&data.data_header[..])
+        let message = arrow_format::ipc::MessageRef::read_as_root(&data.data_header)
             .map_err(|e| Status::internal(format!("Could not parse message: {:?}", e)))?;
+        let header = message
+            .header()
+            .map_err(|x| Status::internal(x.to_string()))?
+            .ok_or_else(|| {
+                Status::internal(
+                    "Unable to convert flight data header to a record batch".to_string(),
+                )
+            })?;
 
-        match message.header_type() {
-            MessageHeader::Schema => {
+        match header {
+            MessageHeaderRef::Schema(_) => {
                 return Err(Status::internal(
                     "Not expecting a schema when messages are read",
                 ))
             }
-            MessageHeader::RecordBatch => {
+            MessageHeaderRef::RecordBatch(batch) => {
                 send_app_metadata(&mut response_tx, &data.app_metadata).await?;
 
                 let batch = record_batch_from_message(
-                    message,
+                    batch,
                     &data.data_body,
                     &schema.fields,
                     &ipc_schema,
@@ -358,9 +358,9 @@ async fn save_uploaded_chunks(
 
                 chunks.push(batch);
             }
-            MessageHeader::DictionaryBatch => {
+            MessageHeaderRef::DictionaryBatch(dict_batch) => {
                 dictionary_from_message(
-                    message,
+                    dict_batch,
                     &data.data_body,
                     &schema.fields,
                     &ipc_schema,

@@ -1,4 +1,4 @@
-use arrow_format::ipc::{Message, Schema};
+use arrow_format::ipc;
 
 use crate::{
     array::*,
@@ -14,7 +14,7 @@ use super::common::{pad_to_8, Compression};
 
 fn _write_primitive<T: NativeType>(
     array: &PrimitiveArray<T>,
-    buffers: &mut Vec<Schema::Buffer>,
+    buffers: &mut Vec<ipc::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
     is_little_endian: bool,
@@ -41,7 +41,7 @@ fn _write_primitive<T: NativeType>(
 
 fn write_primitive<T: NativeType>(
     array: &dyn Array,
-    buffers: &mut Vec<Schema::Buffer>,
+    buffers: &mut Vec<ipc::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
     is_little_endian: bool,
@@ -60,7 +60,7 @@ fn write_primitive<T: NativeType>(
 
 fn write_boolean(
     array: &dyn Array,
-    buffers: &mut Vec<Schema::Buffer>,
+    buffers: &mut Vec<ipc::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
     _: bool,
@@ -91,7 +91,7 @@ fn write_generic_binary<O: Offset>(
     validity: Option<&Bitmap>,
     offsets: &[O],
     values: &[u8],
-    buffers: &mut Vec<Schema::Buffer>,
+    buffers: &mut Vec<ipc::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
     is_little_endian: bool,
@@ -139,7 +139,7 @@ fn write_generic_binary<O: Offset>(
 
 fn write_binary<O: Offset>(
     array: &dyn Array,
-    buffers: &mut Vec<Schema::Buffer>,
+    buffers: &mut Vec<ipc::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
     is_little_endian: bool,
@@ -160,7 +160,7 @@ fn write_binary<O: Offset>(
 
 fn write_utf8<O: Offset>(
     array: &dyn Array,
-    buffers: &mut Vec<Schema::Buffer>,
+    buffers: &mut Vec<ipc::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
     is_little_endian: bool,
@@ -181,7 +181,7 @@ fn write_utf8<O: Offset>(
 
 fn write_fixed_size_binary(
     array: &dyn Array,
-    buffers: &mut Vec<Schema::Buffer>,
+    buffers: &mut Vec<ipc::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
     _is_little_endian: bool,
@@ -204,9 +204,9 @@ fn write_fixed_size_binary(
 
 fn write_list<O: Offset>(
     array: &dyn Array,
-    buffers: &mut Vec<Schema::Buffer>,
+    buffers: &mut Vec<ipc::Buffer>,
     arrow_data: &mut Vec<u8>,
-    nodes: &mut Vec<Message::FieldNode>,
+    nodes: &mut Vec<ipc::FieldNode>,
     offset: &mut i64,
     is_little_endian: bool,
     compression: Option<Compression>,
@@ -262,9 +262,9 @@ fn write_list<O: Offset>(
 
 pub fn write_struct(
     array: &dyn Array,
-    buffers: &mut Vec<Schema::Buffer>,
+    buffers: &mut Vec<ipc::Buffer>,
     arrow_data: &mut Vec<u8>,
-    nodes: &mut Vec<Message::FieldNode>,
+    nodes: &mut Vec<ipc::FieldNode>,
     offset: &mut i64,
     is_little_endian: bool,
     compression: Option<Compression>,
@@ -293,9 +293,9 @@ pub fn write_struct(
 
 pub fn write_union(
     array: &dyn Array,
-    buffers: &mut Vec<Schema::Buffer>,
+    buffers: &mut Vec<ipc::Buffer>,
     arrow_data: &mut Vec<u8>,
-    nodes: &mut Vec<Message::FieldNode>,
+    nodes: &mut Vec<ipc::FieldNode>,
     offset: &mut i64,
     is_little_endian: bool,
     compression: Option<Compression>,
@@ -336,9 +336,9 @@ pub fn write_union(
 
 fn write_map(
     array: &dyn Array,
-    buffers: &mut Vec<Schema::Buffer>,
+    buffers: &mut Vec<ipc::Buffer>,
     arrow_data: &mut Vec<u8>,
-    nodes: &mut Vec<Message::FieldNode>,
+    nodes: &mut Vec<ipc::FieldNode>,
     offset: &mut i64,
     is_little_endian: bool,
     compression: Option<Compression>,
@@ -394,9 +394,9 @@ fn write_map(
 
 fn write_fixed_size_list(
     array: &dyn Array,
-    buffers: &mut Vec<Schema::Buffer>,
+    buffers: &mut Vec<ipc::Buffer>,
     arrow_data: &mut Vec<u8>,
-    nodes: &mut Vec<Message::FieldNode>,
+    nodes: &mut Vec<ipc::FieldNode>,
     offset: &mut i64,
     is_little_endian: bool,
     compression: Option<Compression>,
@@ -425,9 +425,9 @@ fn write_fixed_size_list(
 #[allow(clippy::too_many_arguments)]
 pub fn _write_dictionary<K: DictionaryKey>(
     array: &dyn Array,
-    buffers: &mut Vec<Schema::Buffer>,
+    buffers: &mut Vec<ipc::Buffer>,
     arrow_data: &mut Vec<u8>,
-    nodes: &mut Vec<Message::FieldNode>,
+    nodes: &mut Vec<ipc::FieldNode>,
     offset: &mut i64,
     is_little_endian: bool,
     compression: Option<Compression>,
@@ -461,9 +461,9 @@ pub fn _write_dictionary<K: DictionaryKey>(
 #[allow(clippy::too_many_arguments)]
 pub fn write_dictionary(
     array: &dyn Array,
-    buffers: &mut Vec<Schema::Buffer>,
+    buffers: &mut Vec<ipc::Buffer>,
     arrow_data: &mut Vec<u8>,
-    nodes: &mut Vec<Message::FieldNode>,
+    nodes: &mut Vec<ipc::FieldNode>,
     offset: &mut i64,
     is_little_endian: bool,
     compression: Option<Compression>,
@@ -490,17 +490,17 @@ pub fn write_dictionary(
 
 pub fn write(
     array: &dyn Array,
-    buffers: &mut Vec<Schema::Buffer>,
+    buffers: &mut Vec<ipc::Buffer>,
     arrow_data: &mut Vec<u8>,
-    nodes: &mut Vec<Message::FieldNode>,
+    nodes: &mut Vec<ipc::FieldNode>,
     offset: &mut i64,
     is_little_endian: bool,
     compression: Option<Compression>,
 ) {
-    nodes.push(Message::FieldNode::new(
-        array.len() as i64,
-        array.null_count() as i64,
-    ));
+    nodes.push(ipc::FieldNode {
+        length: array.len() as i64,
+        null_count: array.null_count() as i64,
+    });
     use PhysicalType::*;
     match array.data_type().to_physical_type() {
         Null => (),
@@ -637,7 +637,7 @@ fn pad_buffer_to_8(buffer: &mut Vec<u8>, length: usize) {
 /// writes `bytes` to `arrow_data` updating `buffers` and `offset` and guaranteeing a 8 byte boundary.
 fn write_bytes(
     bytes: &[u8],
-    buffers: &mut Vec<Schema::Buffer>,
+    buffers: &mut Vec<ipc::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
     compression: Option<Compression>,
@@ -660,14 +660,17 @@ fn write_bytes(
     pad_buffer_to_8(arrow_data, arrow_data.len() - start);
 
     let total_len = (arrow_data.len() - start) as i64;
-    buffers.push(Schema::Buffer::new(*offset, total_len));
+    buffers.push(ipc::Buffer {
+        offset: *offset,
+        length: total_len,
+    });
     *offset += total_len;
 }
 
 fn write_bitmap(
     bitmap: Option<&Bitmap>,
     length: usize,
-    buffers: &mut Vec<Schema::Buffer>,
+    buffers: &mut Vec<ipc::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
     compression: Option<Compression>,
@@ -686,7 +689,10 @@ fn write_bitmap(
             }
         }
         None => {
-            buffers.push(Schema::Buffer::new(*offset, 0));
+            buffers.push(ipc::Buffer {
+                offset: *offset,
+                length: 0,
+            });
         }
     }
 }
@@ -694,7 +700,7 @@ fn write_bitmap(
 /// writes `bytes` to `arrow_data` updating `buffers` and `offset` and guaranteeing a 8 byte boundary.
 fn write_buffer<T: NativeType>(
     buffer: &[T],
-    buffers: &mut Vec<Schema::Buffer>,
+    buffers: &mut Vec<ipc::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
     is_little_endian: bool,
@@ -710,7 +716,10 @@ fn write_buffer<T: NativeType>(
     pad_buffer_to_8(arrow_data, arrow_data.len() - start);
 
     let total_len = (arrow_data.len() - start) as i64;
-    buffers.push(Schema::Buffer::new(*offset, total_len));
+    buffers.push(ipc::Buffer {
+        offset: *offset,
+        length: total_len,
+    });
     *offset += total_len;
 }
 
@@ -798,7 +807,7 @@ fn _write_compressed_buffer<T: NativeType>(
 #[inline]
 fn write_buffer_from_iter<T: NativeType, I: TrustedLen<Item = T>>(
     buffer: I,
-    buffers: &mut Vec<Schema::Buffer>,
+    buffers: &mut Vec<ipc::Buffer>,
     arrow_data: &mut Vec<u8>,
     offset: &mut i64,
     is_little_endian: bool,
@@ -815,6 +824,9 @@ fn write_buffer_from_iter<T: NativeType, I: TrustedLen<Item = T>>(
     pad_buffer_to_8(arrow_data, arrow_data.len() - start);
 
     let total_len = (arrow_data.len() - start) as i64;
-    buffers.push(Schema::Buffer::new(*offset, total_len));
+    buffers.push(ipc::Buffer {
+        offset: *offset,
+        length: total_len,
+    });
     *offset += total_len;
 }

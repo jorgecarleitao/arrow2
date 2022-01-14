@@ -67,6 +67,7 @@ mod tests {
 
     #[cfg(feature = "io_ipc_compression")]
     #[test]
+    #[cfg_attr(miri, ignore)] // ZSTD uses foreign calls that miri does not support
     fn round_trip_zstd() {
         let data: Vec<u8> = (0..200u8).map(|x| x % 10).collect();
         let mut buffer = vec![];
@@ -79,6 +80,7 @@ mod tests {
 
     #[cfg(feature = "io_ipc_compression")]
     #[test]
+    #[cfg_attr(miri, ignore)] // LZ4 uses foreign calls that miri does not support
     fn round_trip_lz4() {
         let data: Vec<u8> = (0..200u8).map(|x| x % 10).collect();
         let mut buffer = vec![];

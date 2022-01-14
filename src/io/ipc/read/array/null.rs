@@ -6,7 +6,7 @@ use crate::{
     error::{ArrowError, Result},
 };
 
-use super::super::deserialize::Node;
+use super::super::Node;
 
 pub fn read_null(field_nodes: &mut VecDeque<Node>, data_type: DataType) -> Result<NullArray> {
     let field_node = field_nodes.pop_front().ok_or_else(|| {

@@ -88,6 +88,27 @@ jobs:
         # --skip io: miri can't handle opening of files, so we skip those
         run: cargo miri test --features full -- --skip io::parquet --skip io::ipc
 
+  miri-checks-io:
+    name: MIRI on IO IPC
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true # needed to test IPC, which are located in a submodule
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly-2021-12-10
+          override: true
+      - uses: Swatinem/rust-cache@v1
+        with:
+          key: key1
+      - name: Install Miri
+        run: |
+          rustup component add miri
+          cargo miri setup
+      - name: Run
+        run: MIRIFLAGS="-Zmiri-disable-isolation" cargo miri test --tests --features io_ipc,io_json_integration io::ipc::write::write_sliced_list
+
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
