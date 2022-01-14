@@ -17,7 +17,8 @@ fn parallel_read(path: &str) -> Result<Vec<Chunk<Arc<dyn Array>>>> {
     let (tx, rx) = unbounded();
 
     let mut reader = read::ReaderBuilder::new().from_path(path)?;
-    let fields = read::infer_schema(&mut reader, Some(batch_size * 10), has_header, &read::infer)?;
+    let (fields, _) =
+        read::infer_schema(&mut reader, Some(batch_size * 10), has_header, &read::infer)?;
     let fields = Arc::new(fields);
 
     let start = SystemTime::now();

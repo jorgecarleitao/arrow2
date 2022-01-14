@@ -27,7 +27,7 @@ fn read() -> Result<()> {
 "Aberdeen, Aberdeen City, UK",57.149651,-2.099075"#;
     let mut reader = ReaderBuilder::new().from_reader(Cursor::new(data));
 
-    let fields = infer_schema(&mut reader, None, true, &infer)?;
+    let (fields, _) = infer_schema(&mut reader, None, true, &infer)?;
 
     let mut rows = vec![ByteRecord::default(); 100];
     let rows_read = read_rows(&mut reader, 0, &mut rows)?;
@@ -58,7 +58,7 @@ fn infer_basics() -> Result<()> {
     let file = Cursor::new("1,2,3\na,b,c\na,,c");
     let mut reader = ReaderBuilder::new().from_reader(file);
 
-    let fields = infer_schema(&mut reader, Some(10), false, &infer)?;
+    let (fields, _) = infer_schema(&mut reader, Some(10), false, &infer)?;
 
     assert_eq!(
         fields,
@@ -76,7 +76,7 @@ fn infer_ints() -> Result<()> {
     let file = Cursor::new("1,2,3\n1,a,5\n2,,4");
     let mut reader = ReaderBuilder::new().from_reader(file);
 
-    let fields = infer_schema(&mut reader, Some(10), false, &infer)?;
+    let (fields, _) = infer_schema(&mut reader, Some(10), false, &infer)?;
 
     assert_eq!(
         fields,

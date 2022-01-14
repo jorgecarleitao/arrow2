@@ -15,7 +15,7 @@ pub async fn infer_schema<R, F>(
     max_rows: Option<usize>,
     has_header: bool,
     infer: &F,
-) -> Result<Vec<Field>>
+) -> Result<(Vec<Field>, usize)>
 where
     R: AsyncRead + AsyncSeek + Unpin + Send + Sync,
     F: Fn(&[u8]) -> DataType,
@@ -65,5 +65,5 @@ where
     // return the reader seek back to the start
     reader.seek(position).await?;
 
-    Ok(fields)
+    Ok((fields, records_count))
 }
