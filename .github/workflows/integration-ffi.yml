@@ -25,7 +25,7 @@ jobs:
           key: ${{ runner.os }}-amd64-target-maturin-cache
       - uses: actions/setup-python@v2
         with:
-          python-version: "3.7"
+          python-version: "3.10"
       - name: Install Python dependencies
         run: python -m pip install --upgrade pip setuptools wheel
       - name: Run tests
@@ -38,6 +38,6 @@ jobs:
           python -m venv venv
           source venv/bin/activate
 
-          pip install maturin==0.10.2 toml==0.10.1 pyarrow==6.0.0
+          pip install maturin==0.12.6 toml==0.10.2 pyarrow==6.0.1
           maturin develop
           python -m unittest discover tests

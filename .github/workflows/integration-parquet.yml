@@ -27,7 +27,7 @@ jobs:
           key: ${{ runner.os }}-amd64-target-parquet-cache
       - uses: actions/setup-python@v2
         with:
-          python-version: '3.7'
+          python-version: "3.10"
       - name: Build
         run: |
           export CARGO_HOME="/home/runner/.cargo"
@@ -46,7 +46,7 @@ jobs:
           python -m venv venv
           source venv/bin/activate
           pip install --upgrade pip
-          pip install pyarrow pyspark
+          pip install pyarrow==6.0.1 pyspark==3.2.0
           python main.py
           # test against spark
           python main_spark.py

@@ -22,9 +22,10 @@
 This is a Rust crate that tests compatibility between Rust's Arrow implementation and PyArrow.
 
 Note that this crate uses two languages and an external ABI:
-* `Rust`
-* `Python`
-* C ABI privately exposed by `Pyarrow`.
+
+- `Rust`
+- `Python`
+- C ABI privately exposed by `Pyarrow`.
 
 ## Basic idea
 
@@ -35,17 +36,19 @@ we can use pyarrow's interface to move pointers from and to Rust.
 
 ## Relevant literature
 
-* [Arrow's CDataInterface](https://arrow.apache.org/docs/format/CDataInterface.html)
-* [Rust's FFI](https://doc.rust-lang.org/nomicon/ffi.html)
-* [Pyarrow private binds](https://github.com/apache/arrow/blob/ae1d24efcc3f1ac2a876d8d9f544a34eb04ae874/python/pyarrow/array.pxi#L1226)
-* [PyO3](https://docs.rs/pyo3/0.12.1/pyo3/index.html)
+- [Arrow's CDataInterface](https://arrow.apache.org/docs/format/CDataInterface.html)
+- [Rust's FFI](https://doc.rust-lang.org/nomicon/ffi.html)
+- [Pyarrow private binds](https://github.com/apache/arrow/blob/ae1d24efcc3f1ac2a876d8d9f544a34eb04ae874/python/pyarrow/array.pxi#L1226)
+- [PyO3](https://docs.rs/pyo3/0.12.1/pyo3/index.html)
 
 ## How to develop
 
 ```bash
 # prepare development environment (used to build wheel / install in development)
 python -m venv venv
-venv/bin/pip install maturin==0.8.2 toml==0.10.1 pyarrow==1.0.0
+source venv/bin/activate
+pip install maturin==0.12.6 toml==0.10.2 pyarrow==6.0.1
+deactivate
 ```
 
 Whenever rust code changes (your changes or via git pull):
