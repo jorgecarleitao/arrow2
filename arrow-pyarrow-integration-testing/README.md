@@ -47,7 +47,7 @@ we can use pyarrow's interface to move pointers from and to Rust.
 # prepare development environment (used to build wheel / install in development)
 python -m venv venv
 source venv/bin/activate
-pip install maturin==0.12.6 toml==0.10.2 pyarrow==6.0.1
+pip install maturin==0.12.6 toml==0.10.2 pyarrow==6
 deactivate
 ```
 
