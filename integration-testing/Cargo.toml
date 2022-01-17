@@ -21,7 +21,7 @@ description = "Binaries used in the Arrow integration tests"
 version = "0.1.0"
 authors = ["Jorge C Leitao", "Apache Arrow <dev@arrow.apache.org>"]
 license = "Apache-2.0"
-edition = "2018"
+edition = "2021"
 publish = false
 
 [features]
