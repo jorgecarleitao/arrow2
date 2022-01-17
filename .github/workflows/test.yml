@@ -18,9 +18,11 @@ jobs:
         run: |
           apt update && apt install python3-pip python3-venv -y -q
           python3 -m venv venv
-          venv/bin/pip install pip --upgrade
-          venv/bin/pip install pyarrow==3
-          venv/bin/python parquet_integration/write_parquet.py
+          source venv/bin/activate
+          pip install pip --upgrade
+          pip install pyarrow==6
+          python parquet_integration/write_parquet.py
+          deactivate
       - name: Run
         run: cargo test --features full
 
@@ -122,9 +124,11 @@ jobs:
         run: |
           apt update && apt install python3-pip python3-venv -y -q
           python3 -m venv venv
-          venv/bin/pip install pip --upgrade
-          venv/bin/pip install pyarrow==3
-          venv/bin/python parquet_integration/write_parquet.py
+          source venv/bin/activate
+          pip install pip --upgrade
+          pip install pyarrow==6
+          python parquet_integration/write_parquet.py
+          deactivate
       - uses: Swatinem/rust-cache@v1
       - name: Install tarpaulin
         run: cargo install cargo-tarpaulin
