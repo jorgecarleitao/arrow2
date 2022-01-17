@@ -2,7 +2,7 @@
 name = "arrow-parquet-integration-testing"
 version = "0.1.0"
 authors = ["Jorge C. Leitao <jorgecarleitao@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 clap = "^2.33"
