@@ -96,7 +96,7 @@ async fn upload_data(
 
     let options = write::WriteOptions { compression: None };
 
-    let mut schema = flight::serialize_schema(schema, fields);
+    let mut schema = flight::serialize_schema(schema, Some(fields));
     schema.flight_descriptor = Some(descriptor.clone());
     upload_tx.send(schema).await?;
 
