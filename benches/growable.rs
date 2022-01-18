@@ -19,6 +19,16 @@ fn add_benchmark(c: &mut Criterion) {
         })
     });
 
+    c.bench_function("growable::dyn_primitive::non_null::non_null", |b| {
+        b.iter(|| {
+            let mut a: Box<dyn Growable> =
+                Box::new(GrowablePrimitive::new(vec![&i32_array], false, 1026 * 10));
+
+            let iter = values.clone().into_iter().map(|start| (0, start, 10));
+            a.extend_from_iter(Box::new(iter));
+        })
+    });
+
     let i32_array = create_primitive_array::<i32>(1026 * 10, 0.0);
     c.bench_function("growable::primitive::non_null::null", |b| {
         b.iter(|| {

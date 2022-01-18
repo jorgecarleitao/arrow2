@@ -40,6 +40,13 @@ pub trait Growable<'a> {
     /// Extends this [`Growable`] with null elements, disregarding the bound arrays
     fn extend_validity(&mut self, additional: usize);
 
+    /// Extends this [`Growable`] by iterator.
+    fn extend_from_iter(&mut self, iter: Box<dyn Iterator<Item = (usize, usize, usize)>>) {
+        for (index, start, len) in iter {
+            self.extend(index, start, len);
+        }
+    }
+
     /// Converts this [`Growable`] to an [`Arc<dyn Array>`], thereby finishing the mutation.
     /// Self will be empty after such operation.
     fn as_arc(&mut self) -> std::sync::Arc<dyn Array> {
