@@ -196,8 +196,10 @@ fn dict_read<
         Float64 => {
             primitive::iter_to_dict_array::<K, _, _, _, _, _>(iter, metadata, data_type, |x: f64| x)
         }
-        Utf8 => binary::iter_to_dict_array::<K, i32, _, _>(iter, metadata, data_type),
-        LargeUtf8 => binary::iter_to_dict_array::<K, i64, _, _>(iter, metadata, data_type),
+        Utf8 | Binary => binary::iter_to_dict_array::<K, i32, _, _>(iter, metadata, data_type),
+        LargeUtf8 | LargeBinary => {
+            binary::iter_to_dict_array::<K, i64, _, _>(iter, metadata, data_type)
+        }
         other => Err(ArrowError::NotYetImplemented(format!(
             "Reading dictionaries of type {:?}",
             other

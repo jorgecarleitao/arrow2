@@ -9,7 +9,9 @@ use parquet2::{
 
 use super::super::utils as other_utils;
 use crate::{
-    array::{Array, DictionaryArray, DictionaryKey, Offset, PrimitiveArray, Utf8Array},
+    array::{
+        Array, BinaryArray, DictionaryArray, DictionaryKey, Offset, PrimitiveArray, Utf8Array,
+    },
     bitmap::{utils::BitmapIter, MutableBitmap},
     datatypes::DataType,
     error::{ArrowError, Result},
@@ -156,11 +158,21 @@ where
     };
     let keys = PrimitiveArray::from_data(K::PRIMITIVE.into(), indices.into(), validity.into());
     let data_type = DictionaryArray::<K>::get_child(&data_type).clone();
-    let values = Arc::new(Utf8Array::from_data(
-        data_type,
-        offsets.into(),
-        values.into(),
-        None,
-    ));
+    use crate::datatypes::PhysicalType::*;
+    let values = match data_type.to_physical_type() {
+        Binary | LargeBinary => Arc::new(BinaryArray::from_data(
+            data_type,
+            offsets.into(),
+            values.into(),
+            None,
+        )) as Arc<dyn Array>,
+        Utf8 | LargeUtf8 => Arc::new(Utf8Array::from_data(
+            data_type,
+            offsets.into(),
+            values.into(),
+            None,
+        )),
+        _ => unreachable!(),
+    };
     Ok(Box::new(DictionaryArray::<K>::from_data(keys, values)))
 }
