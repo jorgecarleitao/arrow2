@@ -16,6 +16,17 @@ macro_rules! dyn_binary {
     }};
 }
 
+macro_rules! dyn_sequence {
+    ($array:expr, $ty:ty, $o:ty) => {{
+        let array = $array.as_any().downcast_ref::<$ty>().unwrap();
+
+        array.values().len()
+            + array.offsets().len() * std::mem::size_of::<$o>()
+            + array.lengths().len() * std::mem::size_of::<$o>()
+            + validity_size(array.validity())
+    }};
+}
+
 /// Returns the total (heap) allocated size of the array in bytes.
 /// # Implementation
 /// This estimation is the sum of the size of its buffers, validity, including nested arrays.
@@ -54,6 +65,8 @@ pub fn estimated_bytes_size(array: &dyn Array) -> usize {
         LargeBinary => dyn_binary!(array, BinaryArray<i64>, i64),
         Utf8 => dyn_binary!(array, Utf8Array<i32>, i32),
         LargeUtf8 => dyn_binary!(array, Utf8Array<i64>, i64),
+        Utf8Sequence => dyn_sequence!(array, StringSequenceArray<i32>, i32),
+        LargeUtf8Sequence => dyn_sequence!(array, StringSequenceArray<i64>, i64),
         List => {
             let array = array.as_any().downcast_ref::<ListArray<i32>>().unwrap();
             estimated_bytes_size(array.values().as_ref())

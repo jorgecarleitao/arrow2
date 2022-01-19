@@ -14,6 +14,7 @@ mod primitive;
 mod struct_;
 mod union;
 mod utf8;
+mod utf8_sequence;
 
 impl PartialEq for dyn Array + '_ {
     fn eq(&self, that: &dyn Array) -> bool {
@@ -200,6 +201,16 @@ pub fn equal(lhs: &dyn Array, rhs: &dyn Array) -> bool {
             let lhs = lhs.as_any().downcast_ref().unwrap();
             let rhs = rhs.as_any().downcast_ref().unwrap();
             utf8::equal::<i64>(lhs, rhs)
+        }
+        Utf8Sequence => {
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            utf8_sequence::equal::<i32>(lhs, rhs)
+        }
+        LargeUtf8Sequence => {
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            utf8_sequence::equal::<i64>(lhs, rhs)
         }
         Binary => {
             let lhs = lhs.as_any().downcast_ref().unwrap();

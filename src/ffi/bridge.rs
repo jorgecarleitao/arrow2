@@ -26,6 +26,8 @@ pub fn align_to_c_data_interface(array: Arc<dyn Array>) -> Arc<dyn Array> {
         FixedSizeBinary => ffi_dyn!(array, FixedSizeBinaryArray),
         Utf8 => ffi_dyn!(array, Utf8Array::<i32>),
         LargeUtf8 => ffi_dyn!(array, Utf8Array::<i64>),
+        Utf8Sequence => todo!("Arrow does not yet support exporting sequence views via FFI"),
+        LargeUtf8Sequence => todo!("Arrow does not yet support exporting sequence views via FFI"),
         List => ffi_dyn!(array, ListArray::<i32>),
         LargeList => ffi_dyn!(array, ListArray::<i64>),
         FixedSizeList => ffi_dyn!(array, FixedSizeListArray),

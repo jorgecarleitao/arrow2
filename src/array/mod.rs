@@ -227,6 +227,8 @@ impl std::fmt::Debug for dyn Array + '_ {
             FixedSizeBinary => fmt_dyn!(self, FixedSizeBinaryArray, f),
             Utf8 => fmt_dyn!(self, Utf8Array::<i32>, f),
             LargeUtf8 => fmt_dyn!(self, Utf8Array::<i64>, f),
+            Utf8Sequence => fmt_dyn!(self, StringSequenceArray::<i32>, f),
+            LargeUtf8Sequence => fmt_dyn!(self, StringSequenceArray::<i64>, f),
             List => fmt_dyn!(self, ListArray::<i32>, f),
             LargeList => fmt_dyn!(self, ListArray::<i64>, f),
             FixedSizeList => fmt_dyn!(self, FixedSizeListArray, f),
@@ -256,6 +258,8 @@ pub fn new_empty_array(data_type: DataType) -> Box<dyn Array> {
         FixedSizeBinary => Box::new(FixedSizeBinaryArray::new_empty(data_type)),
         Utf8 => Box::new(Utf8Array::<i32>::new_empty(data_type)),
         LargeUtf8 => Box::new(Utf8Array::<i64>::new_empty(data_type)),
+        Utf8Sequence => Box::new(StringSequenceArray::<i32>::new_empty(data_type)),
+        LargeUtf8Sequence => Box::new(StringSequenceArray::<i64>::new_empty(data_type)),
         List => Box::new(ListArray::<i32>::new_empty(data_type)),
         LargeList => Box::new(ListArray::<i64>::new_empty(data_type)),
         FixedSizeList => Box::new(FixedSizeListArray::new_empty(data_type)),
@@ -286,6 +290,8 @@ pub fn new_null_array(data_type: DataType, length: usize) -> Box<dyn Array> {
         FixedSizeBinary => Box::new(FixedSizeBinaryArray::new_null(data_type, length)),
         Utf8 => Box::new(Utf8Array::<i32>::new_null(data_type, length)),
         LargeUtf8 => Box::new(Utf8Array::<i64>::new_null(data_type, length)),
+        Utf8Sequence => Box::new(StringSequenceArray::<i32>::new_null(data_type, length)),
+        LargeUtf8Sequence => Box::new(StringSequenceArray::<i64>::new_null(data_type, length)),
         List => Box::new(ListArray::<i32>::new_null(data_type, length)),
         LargeList => Box::new(ListArray::<i64>::new_null(data_type, length)),
         FixedSizeList => Box::new(FixedSizeListArray::new_null(data_type, length)),
@@ -324,6 +330,8 @@ pub fn clone(array: &dyn Array) -> Box<dyn Array> {
         FixedSizeBinary => clone_dyn!(array, FixedSizeBinaryArray),
         Utf8 => clone_dyn!(array, Utf8Array::<i32>),
         LargeUtf8 => clone_dyn!(array, Utf8Array::<i64>),
+        Utf8Sequence => clone_dyn!(array, StringSequenceArray::<i32>),
+        LargeUtf8Sequence => clone_dyn!(array, StringSequenceArray::<i64>),
         List => clone_dyn!(array, ListArray::<i32>),
         LargeList => clone_dyn!(array, ListArray::<i64>),
         FixedSizeList => clone_dyn!(array, FixedSizeListArray),
@@ -356,6 +364,7 @@ mod map;
 mod null;
 mod primitive;
 mod specification;
+mod string_sequence;
 mod struct_;
 mod union;
 mod utf8;
@@ -379,6 +388,7 @@ pub use list::{ListArray, ListValuesIter, MutableListArray};
 pub use map::MapArray;
 pub use null::NullArray;
 pub use primitive::*;
+pub use string_sequence::StringSequenceArray;
 pub use struct_::StructArray;
 pub use union::UnionArray;
 pub use utf8::{MutableUtf8Array, Utf8Array, Utf8ValuesIter};

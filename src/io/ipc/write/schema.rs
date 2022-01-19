@@ -201,6 +201,9 @@ fn serialize_type(data_type: &DataType) -> arrow_format::ipc::Type {
         LargeBinary => ipc::Type::LargeBinary(Box::new(ipc::LargeBinary {})),
         Utf8 => ipc::Type::Utf8(Box::new(ipc::Utf8 {})),
         LargeUtf8 => ipc::Type::LargeUtf8(Box::new(ipc::LargeUtf8 {})),
+        Utf8Sequence | LargeUtf8Sequence => {
+            todo!("Arrow does not yet support exporting sequence views via IPC")
+        }
         FixedSizeBinary(size) => ipc::Type::FixedSizeBinary(Box::new(ipc::FixedSizeBinary {
             byte_width: *size as i32,
         })),
@@ -281,6 +284,8 @@ fn serialize_children(data_type: &DataType, ipc_field: &IpcField) -> Vec<arrow_f
         | LargeBinary
         | Utf8
         | LargeUtf8
+        | Utf8Sequence
+        | LargeUtf8Sequence
         | Decimal(_, _) => vec![],
         FixedSizeList(inner, _) | LargeList(inner) | List(inner) | Map(inner, _) => {
             vec![serialize_field(inner, &ipc_field.fields[0])]
