@@ -1,5 +1,26 @@
 # Changelog
 
+## [v0.9.1](https://github.com/jorgecarleitao/arrow2/tree/v0.9.1) (2022-01-19)
+
+[Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.9.0...v0.9.1)
+
+**New features:**
+
+- Added support for compare dictionary-encoded with scalar [\#686](https://github.com/jorgecarleitao/arrow2/pull/686) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Fixed bugs:**
+
+- Allowed passing `None` as ipc\_fields in flight API [\#780](https://github.com/jorgecarleitao/arrow2/pull/780) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Enhancements:**
+
+- Read dict binary from parquet [\#781](https://github.com/jorgecarleitao/arrow2/pull/781) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support to read and write float dict from parquet [\#778](https://github.com/jorgecarleitao/arrow2/pull/778) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Testing updates:**
+
+- Fixed CI for SIMD [\#779](https://github.com/jorgecarleitao/arrow2/pull/779) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
 ## [v0.9.0](https://github.com/jorgecarleitao/arrow2/tree/v0.9.0) (2022-01-14)
 
 [Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.8.1...v0.9.0)
