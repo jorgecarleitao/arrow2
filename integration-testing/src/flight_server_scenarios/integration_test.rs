@@ -113,7 +113,7 @@ impl FlightService for FlightServiceImpl {
 
         let schema = std::iter::once(Ok(serialize_schema(
             &flight.schema,
-            &flight.ipc_schema.fields,
+            Some(&flight.ipc_schema.fields),
         )));
 
         let batches = flight
@@ -175,7 +175,7 @@ impl FlightService for FlightServiceImpl {
 
                 let total_records: usize = flight.chunks.iter().map(|chunk| chunk.len()).sum();
 
-                let schema = serialize_schema_to_info(&flight.schema, &flight.ipc_schema.fields)
+                let schema = serialize_schema_to_info(&flight.schema, Some(&flight.ipc_schema.fields))
                     .expect(
                         "Could not generate schema bytes from schema stored by a DoPut; \
                          this should be impossible",
