@@ -142,6 +142,8 @@ pub fn array_to_pages<K: DictionaryKey>(
                 DataType::UInt16 => dyn_prim!(u16, i32, array, options),
                 DataType::UInt32 => dyn_prim!(u32, i32, array, options),
                 DataType::UInt64 => dyn_prim!(i64, i64, array, options),
+                DataType::Float32 => dyn_prim!(f32, f32, array, options),
+                DataType::Float64 => dyn_prim!(f64, f64, array, options),
                 DataType::Utf8 => {
                     let values = array.values().as_any().downcast_ref().unwrap();
 
