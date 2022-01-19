@@ -719,17 +719,22 @@ fn arrow_type() -> Result<()> {
 
     let indices = PrimitiveArray::from_values((0..3u64).map(|x| x % 2));
     let values = PrimitiveArray::from_slice([1.0f32, 3.0]);
-    let array3 = DictionaryArray::from_data(indices, std::sync::Arc::new(values));
+    let array3 = DictionaryArray::from_data(indices.clone(), std::sync::Arc::new(values));
+
+    let values = BinaryArray::<i32>::from_slice([b"ab", b"ac"]);
+    let array4 = DictionaryArray::from_data(indices, std::sync::Arc::new(values));
 
     let schema = Schema::from(vec![
         Field::new("a1", dt1, true),
         Field::new("a2", array2.data_type().clone(), true),
         Field::new("a3", array3.data_type().clone(), true),
+        Field::new("a4", array4.data_type().clone(), true),
     ]);
     let batch = Chunk::try_new(vec![
         Arc::new(array) as Arc<dyn Array>,
         Arc::new(array2),
         Arc::new(array3),
+        Arc::new(array4),
     ])?;
 
     let r = integration_write(&schema, &[batch.clone()])?;
