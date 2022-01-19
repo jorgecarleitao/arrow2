@@ -1,7 +1,7 @@
 use arrow2::array::*;
 use arrow2::compute::comparison::boolean::*;
-use arrow2::datatypes::TimeUnit;
 use arrow2::datatypes::{DataType::*, IntervalUnit};
+use arrow2::datatypes::{IntegerType, TimeUnit};
 use arrow2::scalar::new_scalar;
 
 #[test]
@@ -41,6 +41,7 @@ fn consistency() {
         Duration(TimeUnit::Millisecond),
         Duration(TimeUnit::Microsecond),
         Duration(TimeUnit::Nanosecond),
+        Dictionary(IntegerType::Int32, Box::new(LargeBinary), false),
     ];
 
     // array <> array
@@ -58,11 +59,11 @@ fn consistency() {
     datatypes.into_iter().for_each(|d1| {
         let array = new_null_array(d1.clone(), 10);
         let scalar = new_scalar(array.as_ref(), 0);
-        if can_eq(&d1) {
+        if can_eq_scalar(&d1) {
             eq_scalar(array.as_ref(), scalar.as_ref());
         }
-        if can_lt_eq(&d1) {
-            lt_eq(array.as_ref(), array.as_ref());
+        if can_lt_eq_scalar(&d1) {
+            lt_eq_scalar(array.as_ref(), scalar.as_ref());
         }
     });
 }
