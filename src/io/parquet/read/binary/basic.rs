@@ -13,6 +13,29 @@ use crate::{
 
 use super::{super::utils, utils::Binary};
 
+#[inline]
+fn values_iter<'a>(
+    indices_buffer: &'a [u8],
+    dict: &'a BinaryPageDict,
+    additional: usize,
+) -> impl Iterator<Item = &'a [u8]> + 'a {
+    let dict_values = dict.values();
+    let dict_offsets = dict.offsets();
+
+    // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
+    // SPEC: followed by the values encoded using RLE/Bit packed described above (with the given bit width).
+    let bit_width = indices_buffer[0];
+    let indices_buffer = &indices_buffer[1..];
+
+    let indices = hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional);
+    indices.map(move |index| {
+        let index = index as usize;
+        let dict_offset_i = dict_offsets[index] as usize;
+        let dict_offset_ip1 = dict_offsets[index + 1] as usize;
+        &dict_values[dict_offset_i..dict_offset_ip1]
+    })
+}
+
 /// Assumptions: No rep levels
 #[allow(clippy::too_many_arguments)]
 fn read_dict_buffer<O: Offset>(
@@ -24,21 +47,8 @@ fn read_dict_buffer<O: Offset>(
     validity: &mut MutableBitmap,
 ) {
     let length = values.len() + additional;
-    let dict_values = dict.values();
-    let dict_offsets = dict.offsets();
 
-    // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
-    // SPEC: followed by the values encoded using RLE/Bit packed described above (with the given bit width).
-    let bit_width = indices_buffer[0];
-    let indices_buffer = &indices_buffer[1..];
-
-    let indices = hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, length);
-    let values_iterator = indices.map(|index| {
-        let index = index as usize;
-        let dict_offset_i = dict_offsets[index] as usize;
-        let dict_offset_ip1 = dict_offsets[index + 1] as usize;
-        &dict_values[dict_offset_i..dict_offset_ip1]
-    });
+    let values_iterator = values_iter(indices_buffer, dict, additional);
 
     let mut validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
 
@@ -59,21 +69,10 @@ fn read_dict_required<O: Offset>(
     values: &mut Binary<O>,
     validity: &mut MutableBitmap,
 ) {
-    let dict_values = dict.values();
-    let dict_offsets = dict.offsets();
+    let values_iterator = values_iter(indices_buffer, dict, additional);
 
-    // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
-    // SPEC: followed by the values encoded using RLE/Bit packed described above (with the given bit width).
-    let bit_width = indices_buffer[0];
-    let indices_buffer = &indices_buffer[1..];
-
-    let indices = hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional);
-
-    for index in indices {
-        let index = index as usize;
-        let dict_offset_i = dict_offsets[index] as usize;
-        let dict_offset_ip1 = dict_offsets[index + 1] as usize;
-        values.push(&dict_values[dict_offset_i..dict_offset_ip1]);
+    for value in values_iterator {
+        values.push(value);
     }
     validity.extend_constant(additional, true);
 }
@@ -109,13 +108,13 @@ fn read_delta_optional<O: Offset>(
     values: &mut Binary<O>,
     validity: &mut MutableBitmap,
 ) {
+    let length = values.len() + additional;
+
     let Binary {
         offsets,
         values,
         last_offset,
     } = values;
-
-    let length = (offsets.len() - 1) + additional;
 
     // values_buffer: first 4 bytes are len, remaining is values
     let mut values_iterator = delta_length_byte_array::Decoder::new(values_buffer);

@@ -19,6 +19,25 @@ use crate::{
 
 use super::utils as a_utils;
 
+#[inline]
+fn values_iter<'a>(
+    indices_buffer: &'a [u8],
+    dict_values: &'a [u8],
+    size: usize,
+    additional: usize,
+) -> impl Iterator<Item = &'a [u8]> + 'a {
+    // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
+    // SPEC: followed by the values encoded using RLE/Bit packed described above (with the given bit width).
+    let bit_width = indices_buffer[0];
+    let indices_buffer = &indices_buffer[1..];
+
+    let indices = hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional);
+    indices.map(move |index| {
+        let index = index as usize;
+        &dict_values[index * size..(index + 1) * size]
+    })
+}
+
 /// Assumptions: No rep levels
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn read_dict_buffer(
@@ -29,20 +48,7 @@ pub(crate) fn read_dict_buffer(
     values: &mut FixedSizeBinary,
     validity: &mut MutableBitmap,
 ) {
-    let length = values.len() + additional;
-    let size = values.size;
-    let dict_values = dict.values();
-
-    // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
-    // SPEC: followed by the values encoded using RLE/Bit packed described above (with the given bit width).
-    let bit_width = indices_buffer[0];
-    let indices_buffer = &indices_buffer[1..];
-
-    let indices = hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, length);
-    let values_iterator = indices.map(|index| {
-        let index = index as usize;
-        &dict_values[index * size..(index + 1) * size]
-    });
+    let values_iterator = values_iter(indices_buffer, dict.values(), values.size, additional);
 
     let mut validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
 
@@ -64,18 +70,8 @@ pub(crate) fn read_dict_required(
     validity: &mut MutableBitmap,
 ) {
     let size = values.size;
-    let dict_values = dict.values();
 
-    // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
-    // SPEC: followed by the values encoded using RLE/Bit packed described above (with the given bit width).
-    let bit_width = indices_buffer[0];
-    let indices_buffer = &indices_buffer[1..];
-
-    let indices = hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional);
-    let values_iter = indices.map(|index| {
-        let index = index as usize;
-        &dict_values[index * size..(index + 1) * size]
-    });
+    let values_iter = values_iter(indices_buffer, dict.values(), values.size, additional);
 
     for value in values_iter {
         values.push(value);
