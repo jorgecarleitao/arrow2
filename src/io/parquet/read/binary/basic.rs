@@ -10,7 +10,7 @@ use crate::{
     error::Result,
 };
 
-use super::super::utils;
+use super::{super::utils, utils::Binary};
 
 /// Assumptions: No rep levels
 #[allow(clippy::too_many_arguments)]
@@ -19,14 +19,12 @@ fn read_dict_buffer<O: Offset>(
     indices_buffer: &[u8],
     additional: usize,
     dict: &BinaryPageDict,
-    offsets: &mut Vec<O>,
-    values: &mut Vec<u8>,
+    values: &mut Binary<O>,
     validity: &mut MutableBitmap,
 ) {
-    let length = (offsets.len() - 1) + additional;
+    let length = values.len() + additional;
     let dict_values = dict.values();
     let dict_offsets = dict.offsets();
-    let mut last_offset = *offsets.as_mut_slice().last().unwrap();
 
     // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
     // SPEC: followed by the values encoded using RLE/Bit packed described above (with the given bit width).
@@ -40,18 +38,17 @@ fn read_dict_buffer<O: Offset>(
     for run in validity_iterator {
         match run {
             hybrid_rle::HybridEncoded::Bitpacked(packed) => {
-                let remaining = length - (offsets.len() - 1);
+                let remaining = length - values.len();
                 let len = std::cmp::min(packed.len() * 8, remaining);
                 for is_valid in BitmapIter::new(packed, 0, len) {
                     if is_valid {
                         let index = indices.next().unwrap() as usize;
                         let dict_offset_i = dict_offsets[index] as usize;
                         let dict_offset_ip1 = dict_offsets[index + 1] as usize;
-                        let length = dict_offset_ip1 - dict_offset_i;
-                        last_offset += O::from_usize(length).unwrap();
-                        values.extend_from_slice(&dict_values[dict_offset_i..dict_offset_ip1]);
-                    };
-                    offsets.push(last_offset);
+                        values.push(&dict_values[dict_offset_i..dict_offset_ip1]);
+                    } else {
+                        values.push(&[])
+                    }
                 }
                 validity.extend_from_slice(packed, 0, len);
             }
@@ -63,13 +60,10 @@ fn read_dict_buffer<O: Offset>(
                         let index = indices.next().unwrap() as usize;
                         let dict_offset_i = dict_offsets[index] as usize;
                         let dict_offset_ip1 = dict_offsets[index + 1] as usize;
-                        let length = dict_offset_ip1 - dict_offset_i;
-                        last_offset += O::from_usize(length).unwrap();
-                        offsets.push(last_offset);
-                        values.extend_from_slice(&dict_values[dict_offset_i..dict_offset_ip1]);
+                        values.push(&dict_values[dict_offset_i..dict_offset_ip1]);
                     })
                 } else {
-                    offsets.resize(offsets.len() + additional, last_offset);
+                    values.extend_constant(additional)
                 }
             }
         }
@@ -81,13 +75,11 @@ fn read_dict_required<O: Offset>(
     indices_buffer: &[u8],
     additional: usize,
     dict: &BinaryPageDict,
-    offsets: &mut Vec<O>,
-    values: &mut Vec<u8>,
+    values: &mut Binary<O>,
     validity: &mut MutableBitmap,
 ) {
     let dict_values = dict.values();
     let dict_offsets = dict.offsets();
-    let mut last_offset = *offsets.as_mut_slice().last().unwrap();
 
     // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
     // SPEC: followed by the values encoded using RLE/Bit packed described above (with the given bit width).
@@ -100,10 +92,7 @@ fn read_dict_required<O: Offset>(
         let index = index as usize;
         let dict_offset_i = dict_offsets[index] as usize;
         let dict_offset_ip1 = dict_offsets[index + 1] as usize;
-        let length = dict_offset_ip1 - dict_offset_i;
-        last_offset += O::from_usize(length).unwrap();
-        offsets.push(last_offset);
-        values.extend_from_slice(&dict_values[dict_offset_i..dict_offset_ip1]);
+        values.push(&dict_values[dict_offset_i..dict_offset_ip1]);
     }
     validity.extend_constant(additional, true);
 }
@@ -112,12 +101,16 @@ fn read_delta_optional<O: Offset>(
     validity_buffer: &[u8],
     values_buffer: &[u8],
     additional: usize,
-    offsets: &mut Vec<O>,
-    values: &mut Vec<u8>,
+    values: &mut Binary<O>,
     validity: &mut MutableBitmap,
 ) {
+    let Binary {
+        offsets,
+        values,
+        last_offset,
+    } = values;
+
     let length = (offsets.len() - 1) + additional;
-    let mut last_offset = *offsets.as_mut_slice().last().unwrap();
 
     // values_buffer: first 4 bytes are len, remaining is values
     let mut values_iterator = delta_length_byte_array::Decoder::new(values_buffer);
@@ -134,9 +127,9 @@ fn read_delta_optional<O: Offset>(
                 for is_valid in BitmapIter::new(packed, 0, len) {
                     if is_valid {
                         let value = values_iterator.next().unwrap() as usize;
-                        last_offset += O::from_usize(value).unwrap();
+                        *last_offset += O::from_usize(value).unwrap();
                     }
-                    offsets.push(last_offset);
+                    offsets.push(*last_offset);
                 }
                 validity.extend_from_slice(packed, 0, len);
             }
@@ -146,11 +139,11 @@ fn read_delta_optional<O: Offset>(
                 if is_set {
                     (0..additional).for_each(|_| {
                         let value = values_iterator.next().unwrap() as usize;
-                        last_offset += O::from_usize(value).unwrap();
-                        offsets.push(last_offset);
+                        *last_offset += O::from_usize(value).unwrap();
+                        offsets.push(*last_offset);
                     })
                 } else {
-                    offsets.resize(offsets.len() + additional, last_offset);
+                    offsets.resize(offsets.len() + additional, *last_offset);
                 }
             }
         }
@@ -165,12 +158,10 @@ fn read_plain_optional<O: Offset>(
     validity_buffer: &[u8],
     values_buffer: &[u8],
     additional: usize,
-    offsets: &mut Vec<O>,
-    values: &mut Vec<u8>,
+    values: &mut Binary<O>,
     validity: &mut MutableBitmap,
 ) {
-    let length = (offsets.len() - 1) + additional;
-    let mut last_offset = *offsets.as_mut_slice().last().unwrap();
+    let length = values.len() + additional;
 
     // values_buffer: first 4 bytes are len, remaining is values
     let mut values_iterator = utils::BinaryIter::new(values_buffer);
@@ -181,15 +172,14 @@ fn read_plain_optional<O: Offset>(
         match run {
             hybrid_rle::HybridEncoded::Bitpacked(packed) => {
                 // the pack may contain more items than needed.
-                let remaining = length - (offsets.len() - 1);
+                let remaining = length - values.len();
                 let len = std::cmp::min(packed.len() * 8, remaining);
                 for is_valid in BitmapIter::new(packed, 0, len) {
                     if is_valid {
-                        let value = values_iterator.next().unwrap();
-                        last_offset += O::from_usize(value.len()).unwrap();
-                        values.extend_from_slice(value);
+                        values.push(values_iterator.next().unwrap());
+                    } else {
+                        values.push(&[]);
                     }
-                    offsets.push(last_offset);
                 }
                 validity.extend_from_slice(packed, 0, len);
             }
@@ -199,12 +189,10 @@ fn read_plain_optional<O: Offset>(
                 if is_set {
                     (0..additional).for_each(|_| {
                         let value = values_iterator.next().unwrap();
-                        last_offset += O::from_usize(value.len()).unwrap();
-                        offsets.push(last_offset);
-                        values.extend_from_slice(value)
+                        values.push(value);
                     })
                 } else {
-                    offsets.resize(offsets.len() + additional, last_offset);
+                    values.extend_constant(additional);
                 }
             }
         }
@@ -214,29 +202,24 @@ fn read_plain_optional<O: Offset>(
 pub(super) fn read_plain_required<O: Offset>(
     buffer: &[u8],
     additional: usize,
-    offsets: &mut Vec<O>,
-    values: &mut Vec<u8>,
+    values: &mut Binary<O>,
 ) {
-    let mut last_offset = *offsets.as_mut_slice().last().unwrap();
-
     let values_iterator = utils::BinaryIter::new(buffer);
 
     // each value occupies 4 bytes + len declared in 4 bytes => reserve accordingly.
-    values.reserve(buffer.len() - 4 * additional);
-    let a = values.capacity();
+    values.offsets.reserve(additional);
+    values.values.reserve(buffer.len() - 4 * additional);
+    let a = values.values.capacity();
     for value in values_iterator {
-        last_offset += O::from_usize(value.len()).unwrap();
-        values.extend_from_slice(value);
-        offsets.push(last_offset);
+        values.push(value);
     }
-    debug_assert_eq!(a, values.capacity());
+    debug_assert_eq!(a, values.values.capacity());
 }
 
 pub(super) fn extend_from_page<O: Offset>(
     page: &DataPage,
     descriptor: &ColumnDescriptor,
-    offsets: &mut Vec<O>,
-    values: &mut Vec<u8>,
+    values: &mut Binary<O>,
     validity: &mut MutableBitmap,
 ) -> Result<()> {
     let additional = page.num_values();
@@ -253,7 +236,6 @@ pub(super) fn extend_from_page<O: Offset>(
                 values_buffer,
                 additional,
                 dict.as_any().downcast_ref().unwrap(),
-                offsets,
                 values,
                 validity,
             )
@@ -263,29 +245,18 @@ pub(super) fn extend_from_page<O: Offset>(
                 values_buffer,
                 additional,
                 dict.as_any().downcast_ref().unwrap(),
-                offsets,
                 values,
                 validity,
             )
         }
-        (Encoding::DeltaLengthByteArray, None, true) => read_delta_optional::<O>(
-            validity_buffer,
-            values_buffer,
-            additional,
-            offsets,
-            values,
-            validity,
-        ),
-        (Encoding::Plain, _, true) => read_plain_optional::<O>(
-            validity_buffer,
-            values_buffer,
-            additional,
-            offsets,
-            values,
-            validity,
-        ),
+        (Encoding::DeltaLengthByteArray, None, true) => {
+            read_delta_optional::<O>(validity_buffer, values_buffer, additional, values, validity)
+        }
+        (Encoding::Plain, _, true) => {
+            read_plain_optional::<O>(validity_buffer, values_buffer, additional, values, validity)
+        }
         (Encoding::Plain, _, false) => {
-            read_plain_required::<O>(page.buffer(), page.num_values(), offsets, values)
+            read_plain_required::<O>(page.buffer(), page.num_values(), values)
         }
         _ => {
             return Err(utils::not_implemented(
