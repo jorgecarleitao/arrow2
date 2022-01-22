@@ -2,6 +2,7 @@ use crate::{
     array::{Array, BinaryArray, Offset, Utf8Array},
     bitmap::MutableBitmap,
     datatypes::DataType,
+    io::parquet::read::utils::Pushable,
 };
 
 pub(super) fn finish_array<O: Offset>(
@@ -26,6 +27,7 @@ pub(super) fn finish_array<O: Offset>(
     }
 }
 
+/// [`Pushable`] for variable length binary data.
 #[derive(Debug)]
 pub struct Binary<O: Offset> {
     pub offsets: Vec<O>,
@@ -61,5 +63,23 @@ impl<O: Offset> Binary<O> {
     #[inline]
     pub fn len(&self) -> usize {
         self.offsets.len() - 1
+    }
+}
+
+impl<O: Offset> Pushable<&[u8]> for Binary<O> {
+    #[inline]
+    fn reserve(&mut self, additional: usize) {
+        self.offsets.reserve(additional)
+    }
+
+    #[inline]
+    fn push(&mut self, value: &[u8]) {
+        self.push(value)
+    }
+
+    #[inline]
+    fn extend_constant(&mut self, additional: usize, value: &[u8]) {
+        assert_eq!(value.len(), 0);
+        self.extend_constant(additional)
     }
 }

@@ -10,6 +10,7 @@ use super::ColumnDescriptor;
 use crate::{
     bitmap::{utils::BitmapIter, MutableBitmap},
     error::Result,
+    io::parquet::read::utils::extend_from_decoder,
     types::NativeType as ArrowNativeType,
 };
 
@@ -109,41 +110,17 @@ fn read_nullable<T, A, F>(
     A: ArrowNativeType,
     F: Fn(T) -> A,
 {
-    let length = additional + values.len();
-    let mut chunks = chunks(values_buffer);
+    let values_iterator = chunks(values_buffer).map(op);
 
-    let validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
+    let mut validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
 
-    for run in validity_iterator {
-        match run {
-            hybrid_rle::HybridEncoded::Bitpacked(packed) => {
-                // the pack may contain more items than needed.
-                let remaining = length - values.len();
-                let len = std::cmp::min(packed.len() * 8, remaining);
-                for is_valid in BitmapIter::new(packed, 0, len) {
-                    let value = if is_valid {
-                        op(chunks.next().unwrap())
-                    } else {
-                        A::default()
-                    };
-                    values.push(value);
-                }
-                validity.extend_from_slice(packed, 0, len);
-            }
-            hybrid_rle::HybridEncoded::Rle(value, additional) => {
-                let is_set = value[0] == 1;
-                validity.extend_constant(additional, is_set);
-                if is_set {
-                    (0..additional).for_each(|_| {
-                        let value = op(chunks.next().unwrap());
-                        values.push(value)
-                    })
-                } else {
-                    values.resize(values.len() + additional, A::default());
-                }
-            }
-        }
-    }
+    extend_from_decoder(
+        validity,
+        &mut validity_iterator,
+        additional,
+        values,
+        values_iterator,
+    )
 }
 
 fn read_required<T, A, F>(values_buffer: &[u8], additional: usize, values: &mut Vec<A>, op: F)

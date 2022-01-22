@@ -7,14 +7,15 @@ use parquet2::{
     FallibleStreamingIterator,
 };
 
-use super::super::utils as other_utils;
+use super::{super::utils as other_utils, utils::Binary};
 use crate::{
     array::{
         Array, BinaryArray, DictionaryArray, DictionaryKey, Offset, PrimitiveArray, Utf8Array,
     },
-    bitmap::{utils::BitmapIter, MutableBitmap},
+    bitmap::MutableBitmap,
     datatypes::DataType,
     error::{ArrowError, Result},
+    io::parquet::read::utils::extend_from_decoder,
 };
 
 #[allow(clippy::too_many_arguments)]
@@ -24,16 +25,15 @@ fn read_dict_optional<K, O>(
     additional: usize,
     dict: &BinaryPageDict,
     indices: &mut Vec<K>,
-    offsets: &mut Vec<O>,
-    values: &mut Vec<u8>,
+    values: &mut Binary<O>,
     validity: &mut MutableBitmap,
 ) where
     K: DictionaryKey,
     O: Offset,
 {
     let length = indices.len() + additional;
-    values.extend_from_slice(dict.values());
-    offsets.extend(
+    values.values.extend_from_slice(dict.values());
+    values.offsets.extend(
         dict.offsets()
             .iter()
             .map(|x| O::from_usize(*x as usize).unwrap()),
@@ -44,48 +44,26 @@ fn read_dict_optional<K, O>(
     let bit_width = indices_buffer[0];
     let indices_buffer = &indices_buffer[1..];
 
-    let mut new_indices =
+    let new_indices =
         hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional);
+    let indices_iter = new_indices.map(|x| K::from_u32(x).unwrap());
 
-    let validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
+    let mut validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
 
-    for run in validity_iterator {
-        match run {
-            hybrid_rle::HybridEncoded::Bitpacked(packed) => {
-                let remaining = length - indices.len();
-                let len = std::cmp::min(packed.len() * 8, remaining);
-                for is_valid in BitmapIter::new(packed, 0, len) {
-                    let value = if is_valid {
-                        K::from_u32(new_indices.next().unwrap()).unwrap()
-                    } else {
-                        K::default()
-                    };
-                    indices.push(value);
-                }
-                validity.extend_from_slice(packed, 0, len);
-            }
-            hybrid_rle::HybridEncoded::Rle(value, additional) => {
-                let is_set = value[0] == 1;
-                validity.extend_constant(additional, is_set);
-                if is_set {
-                    (0..additional).for_each(|_| {
-                        let index = K::from_u32(new_indices.next().unwrap()).unwrap();
-                        indices.push(index)
-                    })
-                } else {
-                    indices.resize(indices.len() + additional, *indices.last().unwrap());
-                }
-            }
-        }
-    }
+    extend_from_decoder(
+        validity,
+        &mut validity_iterator,
+        length,
+        indices,
+        indices_iter,
+    )
 }
 
 fn extend_from_page<K, O>(
     page: &DataPage,
     descriptor: &ColumnDescriptor,
     indices: &mut Vec<K>,
-    offsets: &mut Vec<O>,
-    values: &mut Vec<u8>,
+    values: &mut Binary<O>,
     validity: &mut MutableBitmap,
 ) -> Result<()>
 where
@@ -107,7 +85,6 @@ where
                 additional,
                 dict.as_any().downcast_ref().unwrap(),
                 indices,
-                offsets,
                 values,
                 validity,
             )
@@ -138,38 +115,37 @@ where
 {
     let capacity = metadata.num_values() as usize;
     let mut indices = Vec::<K>::with_capacity(capacity);
-    let mut values = Vec::<u8>::with_capacity(0);
-    let mut offsets = Vec::<O>::with_capacity(1 + capacity);
+    let mut values = Binary::<O>::with_capacity(capacity);
+    values.offsets.clear();
     let mut validity = MutableBitmap::with_capacity(capacity);
     while let Some(page) = iter.next()? {
         extend_from_page(
             page,
             metadata.descriptor(),
             &mut indices,
-            &mut offsets,
             &mut values,
             &mut validity,
         )?
     }
 
-    if offsets.is_empty() {
+    if values.offsets.is_empty() {
         // the array is empty and thus we need to push the first offset ourselves.
-        offsets.push(O::zero());
+        values.offsets.push(O::zero());
     };
     let keys = PrimitiveArray::from_data(K::PRIMITIVE.into(), indices.into(), validity.into());
     let data_type = DictionaryArray::<K>::get_child(&data_type).clone();
-    use crate::datatypes::PhysicalType::*;
+    use crate::datatypes::PhysicalType;
     let values = match data_type.to_physical_type() {
-        Binary | LargeBinary => Arc::new(BinaryArray::from_data(
+        PhysicalType::Binary | PhysicalType::LargeBinary => Arc::new(BinaryArray::from_data(
             data_type,
-            offsets.into(),
-            values.into(),
+            values.offsets.into(),
+            values.values.into(),
             None,
         )) as Arc<dyn Array>,
-        Utf8 | LargeUtf8 => Arc::new(Utf8Array::from_data(
+        PhysicalType::Utf8 | PhysicalType::LargeUtf8 => Arc::new(Utf8Array::from_data(
             data_type,
-            offsets.into(),
-            values.into(),
+            values.offsets.into(),
+            values.values.into(),
             None,
         )),
         _ => unreachable!(),

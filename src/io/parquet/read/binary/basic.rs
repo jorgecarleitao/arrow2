@@ -6,8 +6,9 @@ use parquet2::{
 
 use crate::{
     array::Offset,
-    bitmap::{utils::BitmapIter, MutableBitmap},
+    bitmap::MutableBitmap,
     error::Result,
+    io::parquet::read::utils::{extend_from_decoder, Pushable},
 };
 
 use super::{super::utils, utils::Binary};
@@ -31,43 +32,23 @@ fn read_dict_buffer<O: Offset>(
     let bit_width = indices_buffer[0];
     let indices_buffer = &indices_buffer[1..];
 
-    let mut indices = hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, length);
+    let indices = hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, length);
+    let values_iterator = indices.map(|index| {
+        let index = index as usize;
+        let dict_offset_i = dict_offsets[index] as usize;
+        let dict_offset_ip1 = dict_offsets[index + 1] as usize;
+        &dict_values[dict_offset_i..dict_offset_ip1]
+    });
 
-    let validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
+    let mut validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
 
-    for run in validity_iterator {
-        match run {
-            hybrid_rle::HybridEncoded::Bitpacked(packed) => {
-                let remaining = length - values.len();
-                let len = std::cmp::min(packed.len() * 8, remaining);
-                for is_valid in BitmapIter::new(packed, 0, len) {
-                    if is_valid {
-                        let index = indices.next().unwrap() as usize;
-                        let dict_offset_i = dict_offsets[index] as usize;
-                        let dict_offset_ip1 = dict_offsets[index + 1] as usize;
-                        values.push(&dict_values[dict_offset_i..dict_offset_ip1]);
-                    } else {
-                        values.push(&[])
-                    }
-                }
-                validity.extend_from_slice(packed, 0, len);
-            }
-            hybrid_rle::HybridEncoded::Rle(value, additional) => {
-                let is_set = value[0] == 1;
-                validity.extend_constant(additional, is_set);
-                if is_set {
-                    (0..additional).for_each(|_| {
-                        let index = indices.next().unwrap() as usize;
-                        let dict_offset_i = dict_offsets[index] as usize;
-                        let dict_offset_ip1 = dict_offsets[index + 1] as usize;
-                        values.push(&dict_values[dict_offset_i..dict_offset_ip1]);
-                    })
-                } else {
-                    values.extend_constant(additional)
-                }
-            }
-        }
-    }
+    extend_from_decoder(
+        validity,
+        &mut validity_iterator,
+        length,
+        values,
+        values_iterator,
+    );
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -97,6 +78,30 @@ fn read_dict_required<O: Offset>(
     validity.extend_constant(additional, true);
 }
 
+struct Offsets<'a, O: Offset>(pub &'a mut Vec<O>);
+
+impl<'a, O: Offset> Pushable<O> for Offsets<'a, O> {
+    #[inline]
+    fn reserve(&mut self, additional: usize) {
+        self.0.reserve(additional)
+    }
+
+    #[inline]
+    fn push(&mut self, value: O) {
+        self.0.push(value)
+    }
+
+    #[inline]
+    fn push_null(&mut self) {
+        self.0.push(*self.0.last().unwrap())
+    }
+
+    #[inline]
+    fn extend_constant(&mut self, additional: usize, value: O) {
+        self.0.extend_constant(additional, value)
+    }
+}
+
 fn read_delta_optional<O: Offset>(
     validity_buffer: &[u8],
     values_buffer: &[u8],
@@ -114,40 +119,21 @@ fn read_delta_optional<O: Offset>(
 
     // values_buffer: first 4 bytes are len, remaining is values
     let mut values_iterator = delta_length_byte_array::Decoder::new(values_buffer);
+    let offsets_iterator = values_iterator.by_ref().map(|x| {
+        *last_offset += O::from_usize(x as usize).unwrap();
+        *last_offset
+    });
 
-    let validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
+    let mut validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
 
     // offsets:
-    for run in validity_iterator {
-        match run {
-            hybrid_rle::HybridEncoded::Bitpacked(packed) => {
-                // the pack may contain more items than needed.
-                let remaining = length - (offsets.len() - 1);
-                let len = std::cmp::min(packed.len() * 8, remaining);
-                for is_valid in BitmapIter::new(packed, 0, len) {
-                    if is_valid {
-                        let value = values_iterator.next().unwrap() as usize;
-                        *last_offset += O::from_usize(value).unwrap();
-                    }
-                    offsets.push(*last_offset);
-                }
-                validity.extend_from_slice(packed, 0, len);
-            }
-            hybrid_rle::HybridEncoded::Rle(value, additional) => {
-                let is_set = value[0] == 1;
-                validity.extend_constant(additional, is_set);
-                if is_set {
-                    (0..additional).for_each(|_| {
-                        let value = values_iterator.next().unwrap() as usize;
-                        *last_offset += O::from_usize(value).unwrap();
-                        offsets.push(*last_offset);
-                    })
-                } else {
-                    offsets.resize(offsets.len() + additional, *last_offset);
-                }
-            }
-        }
-    }
+    extend_from_decoder(
+        validity,
+        &mut validity_iterator,
+        length,
+        &mut Offsets::<O>(offsets),
+        offsets_iterator,
+    );
 
     // values:
     let new_values = values_iterator.into_values();
@@ -164,39 +150,17 @@ fn read_plain_optional<O: Offset>(
     let length = values.len() + additional;
 
     // values_buffer: first 4 bytes are len, remaining is values
-    let mut values_iterator = utils::BinaryIter::new(values_buffer);
+    let values_iterator = utils::BinaryIter::new(values_buffer);
 
-    let validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
+    let mut validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
 
-    for run in validity_iterator {
-        match run {
-            hybrid_rle::HybridEncoded::Bitpacked(packed) => {
-                // the pack may contain more items than needed.
-                let remaining = length - values.len();
-                let len = std::cmp::min(packed.len() * 8, remaining);
-                for is_valid in BitmapIter::new(packed, 0, len) {
-                    if is_valid {
-                        values.push(values_iterator.next().unwrap());
-                    } else {
-                        values.push(&[]);
-                    }
-                }
-                validity.extend_from_slice(packed, 0, len);
-            }
-            hybrid_rle::HybridEncoded::Rle(value, additional) => {
-                let is_set = value[0] == 1;
-                validity.extend_constant(additional, is_set);
-                if is_set {
-                    (0..additional).for_each(|_| {
-                        let value = values_iterator.next().unwrap();
-                        values.push(value);
-                    })
-                } else {
-                    values.extend_constant(additional);
-                }
-            }
-        }
-    }
+    extend_from_decoder(
+        validity,
+        &mut validity_iterator,
+        length,
+        values,
+        values_iterator,
+    )
 }
 
 pub(super) fn read_plain_required<O: Offset>(

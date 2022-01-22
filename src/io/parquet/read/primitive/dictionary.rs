@@ -11,9 +11,10 @@ use super::super::utils;
 use super::{ColumnChunkMetaData, ColumnDescriptor};
 use crate::{
     array::{Array, DictionaryArray, DictionaryKey, PrimitiveArray},
-    bitmap::{utils::BitmapIter, MutableBitmap},
+    bitmap::MutableBitmap,
     datatypes::DataType,
     error::{ArrowError, Result},
+    io::parquet::read::utils::extend_from_decoder,
     types::NativeType as ArrowNativeType,
 };
 
@@ -41,40 +42,19 @@ fn read_dict_optional<K, T, A, F>(
     let bit_width = indices_buffer[0];
     let indices_buffer = &indices_buffer[1..];
 
-    let mut new_indices =
+    let new_indices =
         hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional);
+    let indices_iter = new_indices.map(|x| K::from_u32(x).unwrap());
 
-    let validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
+    let mut validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
 
-    for run in validity_iterator {
-        match run {
-            hybrid_rle::HybridEncoded::Bitpacked(packed) => {
-                let remaining = additional - indices.len();
-                let len = std::cmp::min(packed.len() * 8, remaining);
-                for is_valid in BitmapIter::new(packed, 0, len) {
-                    let value = if is_valid {
-                        K::from_u32(new_indices.next().unwrap()).unwrap()
-                    } else {
-                        K::default()
-                    };
-                    indices.push(value);
-                }
-                validity.extend_from_slice(packed, 0, len);
-            }
-            hybrid_rle::HybridEncoded::Rle(value, additional) => {
-                let is_set = value[0] == 1;
-                validity.extend_constant(additional, is_set);
-                if is_set {
-                    (0..additional).for_each(|_| {
-                        let index = K::from_u32(new_indices.next().unwrap()).unwrap();
-                        indices.push(index)
-                    })
-                } else {
-                    values.resize(values.len() + additional, A::default());
-                }
-            }
-        }
-    }
+    extend_from_decoder(
+        validity,
+        &mut validity_iterator,
+        additional,
+        indices,
+        indices_iter,
+    )
 }
 
 fn extend_from_page<K, T, A, F>(

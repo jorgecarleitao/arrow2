@@ -1,3 +1,5 @@
+mod utils;
+
 use futures::{pin_mut, Stream, StreamExt};
 use parquet2::{
     encoding::{hybrid_rle, Encoding},
@@ -5,15 +7,17 @@ use parquet2::{
     FallibleStreamingIterator,
 };
 
-use super::{ColumnChunkMetaData, ColumnDescriptor};
+use self::utils::FixedSizeBinary;
+
+use super::{utils::extend_from_decoder, ColumnChunkMetaData, ColumnDescriptor};
 use crate::{
     array::FixedSizeBinaryArray,
-    bitmap::{utils::BitmapIter, MutableBitmap},
+    bitmap::MutableBitmap,
     datatypes::DataType,
     error::{ArrowError, Result},
 };
 
-use super::utils;
+use super::utils as a_utils;
 
 /// Assumptions: No rep levels
 #[allow(clippy::too_many_arguments)]
@@ -21,12 +25,12 @@ pub(crate) fn read_dict_buffer(
     validity_buffer: &[u8],
     indices_buffer: &[u8],
     additional: usize,
-    size: usize,
     dict: &FixedLenByteArrayPageDict,
-    values: &mut Vec<u8>,
+    values: &mut FixedSizeBinary,
     validity: &mut MutableBitmap,
 ) {
-    let length = values.len() + additional * size;
+    let length = values.len() + additional;
+    let size = values.size;
     let dict_values = dict.values();
 
     // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
@@ -34,50 +38,32 @@ pub(crate) fn read_dict_buffer(
     let bit_width = indices_buffer[0];
     let indices_buffer = &indices_buffer[1..];
 
-    let mut indices = hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, length);
+    let indices = hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, length);
+    let values_iterator = indices.map(|index| {
+        let index = index as usize;
+        &dict_values[index * size..(index + 1) * size]
+    });
 
-    let validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
+    let mut validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
 
-    for run in validity_iterator {
-        match run {
-            hybrid_rle::HybridEncoded::Bitpacked(packed) => {
-                let remaining = (length - values.len()) / size;
-                let len = std::cmp::min(packed.len() * 8, remaining);
-                for is_valid in BitmapIter::new(packed, 0, len) {
-                    validity.push(is_valid);
-                    if is_valid {
-                        let index = indices.next().unwrap() as usize;
-                        values.extend_from_slice(&dict_values[index * size..(index + 1) * size]);
-                    } else {
-                        values.resize(values.len() + size, 0);
-                    }
-                }
-            }
-            hybrid_rle::HybridEncoded::Rle(value, additional) => {
-                let is_set = value[0] == 1;
-                validity.extend_constant(additional, is_set);
-                if is_set {
-                    (0..additional).for_each(|_| {
-                        let index = indices.next().unwrap() as usize;
-                        values.extend_from_slice(&dict_values[index * size..(index + 1) * size]);
-                    })
-                } else {
-                    values.resize(values.len() + additional * size, 0);
-                }
-            }
-        }
-    }
+    extend_from_decoder(
+        validity,
+        &mut validity_iterator,
+        additional,
+        values,
+        values_iterator,
+    )
 }
 
 /// Assumptions: No rep levels
 pub(crate) fn read_dict_required(
     indices_buffer: &[u8],
     additional: usize,
-    size: usize,
     dict: &FixedLenByteArrayPageDict,
-    values: &mut Vec<u8>,
+    values: &mut FixedSizeBinary,
     validity: &mut MutableBitmap,
 ) {
+    let size = values.size;
     let dict_values = dict.values();
 
     // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
@@ -86,10 +72,13 @@ pub(crate) fn read_dict_required(
     let indices_buffer = &indices_buffer[1..];
 
     let indices = hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional);
-
-    for index in indices {
+    let values_iter = indices.map(|index| {
         let index = index as usize;
-        values.extend_from_slice(&dict_values[index * size..(index + 1) * size]);
+        &dict_values[index * size..(index + 1) * size]
+    });
+
+    for value in values_iter {
+        values.push(value);
     }
     validity.extend_constant(additional * size, true);
 }
@@ -98,52 +87,26 @@ pub(crate) fn read_optional(
     validity_buffer: &[u8],
     values_buffer: &[u8],
     additional: usize,
-    size: usize,
-    values: &mut Vec<u8>,
+    values: &mut FixedSizeBinary,
     validity: &mut MutableBitmap,
 ) {
-    let length = values.len() + additional * size;
+    assert_eq!(values_buffer.len() % values.size, 0);
+    let values_iterator = values_buffer.chunks_exact(values.size);
 
-    assert_eq!(values_buffer.len() % size, 0);
-    let mut values_iterator = values_buffer.chunks_exact(size);
+    let mut validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
 
-    let validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
-
-    for run in validity_iterator {
-        match run {
-            hybrid_rle::HybridEncoded::Bitpacked(packed) => {
-                // the pack may contain more items than needed.
-                let remaining = (length - values.len()) / size;
-                let len = std::cmp::min(packed.len() * 8, remaining);
-                for is_valid in BitmapIter::new(packed, 0, len) {
-                    validity.push(is_valid);
-                    if is_valid {
-                        let value = values_iterator.next().unwrap();
-                        values.extend_from_slice(value);
-                    } else {
-                        values.resize(values.len() + size, 0);
-                    }
-                }
-            }
-            hybrid_rle::HybridEncoded::Rle(value, additional) => {
-                let is_set = value[0] == 1;
-                validity.extend_constant(additional, is_set);
-                if is_set {
-                    (0..additional).for_each(|_| {
-                        let value = values_iterator.next().unwrap();
-                        values.extend_from_slice(value)
-                    })
-                } else {
-                    values.resize(values.len() + additional * size, 0);
-                }
-            }
-        }
-    }
+    extend_from_decoder(
+        validity,
+        &mut validity_iterator,
+        additional,
+        values,
+        values_iterator,
+    )
 }
 
-pub(crate) fn read_required(buffer: &[u8], additional: usize, size: usize, values: &mut Vec<u8>) {
-    assert_eq!(buffer.len(), additional * size);
-    values.extend_from_slice(buffer);
+pub(crate) fn read_required(buffer: &[u8], additional: usize, values: &mut FixedSizeBinary) {
+    assert_eq!(buffer.len(), additional * values.size);
+    values.values.extend_from_slice(buffer);
 }
 
 pub fn iter_to_array<I, E>(
@@ -158,21 +121,15 @@ where
     let size = FixedSizeBinaryArray::get_size(&data_type);
 
     let capacity = metadata.num_values() as usize;
-    let mut values = Vec::<u8>::with_capacity(capacity * size);
+    let mut values = FixedSizeBinary::with_capacity(capacity, size);
     let mut validity = MutableBitmap::with_capacity(capacity);
     while let Some(page) = iter.next()? {
-        extend_from_page(
-            page,
-            size,
-            metadata.descriptor(),
-            &mut values,
-            &mut validity,
-        )?
+        extend_from_page(page, metadata.descriptor(), &mut values, &mut validity)?
     }
 
     Ok(FixedSizeBinaryArray::from_data(
         data_type,
-        values.into(),
+        values.values.into(),
         validity.into(),
     ))
 }
@@ -190,7 +147,7 @@ where
     let size = FixedSizeBinaryArray::get_size(&data_type);
 
     let capacity = metadata.num_values() as usize;
-    let mut values = Vec::<u8>::with_capacity(capacity * size);
+    let mut values = FixedSizeBinary::with_capacity(capacity, size);
     let mut validity = MutableBitmap::with_capacity(capacity);
 
     pin_mut!(pages); // needed for iteration
@@ -198,7 +155,6 @@ where
     while let Some(page) = pages.next().await {
         extend_from_page(
             page.as_ref().map_err(|x| x.clone())?,
-            size,
             metadata.descriptor(),
             &mut values,
             &mut validity,
@@ -207,16 +163,15 @@ where
 
     Ok(FixedSizeBinaryArray::from_data(
         data_type,
-        values.into(),
+        values.values.into(),
         validity.into(),
     ))
 }
 
 pub(crate) fn extend_from_page(
     page: &DataPage,
-    size: usize,
     descriptor: &ColumnDescriptor,
-    values: &mut Vec<u8>,
+    values: &mut FixedSizeBinary,
     validity: &mut MutableBitmap,
 ) -> Result<()> {
     let additional = page.num_values();
@@ -224,14 +179,13 @@ pub(crate) fn extend_from_page(
     assert!(descriptor.max_def_level() <= 1);
     let is_optional = descriptor.max_def_level() == 1;
 
-    let (_, validity_buffer, values_buffer, version) = utils::split_buffer(page, descriptor);
+    let (_, validity_buffer, values_buffer, version) = a_utils::split_buffer(page, descriptor);
 
     match (page.encoding(), page.dictionary_page(), is_optional) {
         (Encoding::PlainDictionary, Some(dict), true) => read_dict_buffer(
             validity_buffer,
             values_buffer,
             additional,
-            size,
             dict.as_any().downcast_ref().unwrap(),
             values,
             validity,
@@ -239,24 +193,18 @@ pub(crate) fn extend_from_page(
         (Encoding::PlainDictionary, Some(dict), false) => read_dict_required(
             values_buffer,
             additional,
-            size,
             dict.as_any().downcast_ref().unwrap(),
             values,
             validity,
         ),
-        (Encoding::Plain, _, true) => read_optional(
-            validity_buffer,
-            values_buffer,
-            additional,
-            size,
-            values,
-            validity,
-        ),
+        (Encoding::Plain, _, true) => {
+            read_optional(validity_buffer, values_buffer, additional, values, validity)
+        }
         // it can happen that there is a dictionary but the encoding is plain because
         // it falled back.
-        (Encoding::Plain, _, false) => read_required(page.buffer(), additional, size, values),
+        (Encoding::Plain, _, false) => read_required(page.buffer(), additional, values),
         _ => {
-            return Err(utils::not_implemented(
+            return Err(a_utils::not_implemented(
                 &page.encoding(),
                 is_optional,
                 page.dictionary_page().is_some(),

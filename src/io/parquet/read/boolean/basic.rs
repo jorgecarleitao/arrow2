@@ -3,6 +3,7 @@ use crate::{
     bitmap::{utils::BitmapIter, MutableBitmap},
     datatypes::DataType,
     error::{ArrowError, Result},
+    io::parquet::read::utils::extend_from_decoder,
 };
 
 use super::super::utils;
@@ -26,45 +27,22 @@ fn read_optional(
     values: &mut MutableBitmap,
     validity: &mut MutableBitmap,
 ) {
-    let validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
-
     // in PLAIN, booleans are LSB bitpacked and thus we can read them as if they were a bitmap.
     // note that `values_buffer` contains only non-null values.
     // thus, at this point, it is not known how many values this buffer contains
     // values_len is the upper bound. The actual number depends on how many nulls there is.
     let values_len = values_buffer.len() * 8;
-    let mut values_iterator = BitmapIter::new(values_buffer, 0, values_len);
+    let values_iterator = BitmapIter::new(values_buffer, 0, values_len);
 
-    for run in validity_iterator {
-        match run {
-            hybrid_rle::HybridEncoded::Bitpacked(packed_validity) => {
-                // the pack may contain more items than needed.
-                let remaining = length - values.len();
-                let len = std::cmp::min(packed_validity.len() * 8, remaining);
-                for is_valid in BitmapIter::new(packed_validity, 0, len) {
-                    let value = if is_valid {
-                        values_iterator.next().unwrap()
-                    } else {
-                        false
-                    };
-                    values.push(value);
-                }
-                validity.extend_from_slice(packed_validity, 0, len);
-            }
-            hybrid_rle::HybridEncoded::Rle(value, additional) => {
-                let is_set = value[0] == 1;
-                validity.extend_constant(additional, is_set);
-                if is_set {
-                    (0..additional).for_each(|_| {
-                        let value = values_iterator.next().unwrap();
-                        values.push(value)
-                    })
-                } else {
-                    values.extend_constant(additional, false)
-                }
-            }
-        }
-    }
+    let mut validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
+
+    extend_from_decoder(
+        validity,
+        &mut validity_iterator,
+        length,
+        values,
+        values_iterator,
+    )
 }
 
 pub async fn stream_to_array<I, E>(pages: I, metadata: &ColumnChunkMetaData) -> Result<BooleanArray>
