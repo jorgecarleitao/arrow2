@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use parquet2::{
-    encoding::{hybrid_rle, Encoding},
+    encoding::Encoding,
     page::{DataPage, PrimitivePageDict},
     types::NativeType,
     FallibleStreamingIterator,
@@ -11,71 +11,12 @@ use super::super::utils;
 use super::{ColumnChunkMetaData, ColumnDescriptor};
 use crate::{
     array::{Array, DictionaryArray, DictionaryKey, PrimitiveArray},
-    bitmap::{utils::BitmapIter, MutableBitmap},
+    bitmap::MutableBitmap,
     datatypes::DataType,
     error::{ArrowError, Result},
+    io::parquet::read::utils::read_dict_optional,
     types::NativeType as ArrowNativeType,
 };
-
-#[allow(clippy::too_many_arguments)]
-fn read_dict_optional<K, T, A, F>(
-    validity_buffer: &[u8],
-    indices_buffer: &[u8],
-    additional: usize,
-    dict: &PrimitivePageDict<T>,
-    indices: &mut Vec<K>,
-    values: &mut Vec<A>,
-    validity: &mut MutableBitmap,
-    op: F,
-) where
-    K: DictionaryKey,
-    T: NativeType,
-    A: ArrowNativeType,
-    F: Fn(T) -> A,
-{
-    let dict_values = dict.values();
-    values.extend(dict_values.iter().map(|x| op(*x)));
-
-    // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
-    // SPEC: followed by the values encoded using RLE/Bit packed described above (with the given bit width).
-    let bit_width = indices_buffer[0];
-    let indices_buffer = &indices_buffer[1..];
-
-    let mut new_indices =
-        hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional);
-
-    let validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
-
-    for run in validity_iterator {
-        match run {
-            hybrid_rle::HybridEncoded::Bitpacked(packed) => {
-                let remaining = additional - indices.len();
-                let len = std::cmp::min(packed.len() * 8, remaining);
-                for is_valid in BitmapIter::new(packed, 0, len) {
-                    let value = if is_valid {
-                        K::from_u32(new_indices.next().unwrap()).unwrap()
-                    } else {
-                        K::default()
-                    };
-                    indices.push(value);
-                }
-                validity.extend_from_slice(packed, 0, len);
-            }
-            hybrid_rle::HybridEncoded::Rle(value, additional) => {
-                let is_set = value[0] == 1;
-                validity.extend_constant(additional, is_set);
-                if is_set {
-                    (0..additional).for_each(|_| {
-                        let index = K::from_u32(new_indices.next().unwrap()).unwrap();
-                        indices.push(index)
-                    })
-                } else {
-                    values.resize(values.len() + additional, A::default());
-                }
-            }
-        }
-    }
-}
 
 fn extend_from_page<K, T, A, F>(
     page: &DataPage,
@@ -100,15 +41,17 @@ where
 
     match (&page.encoding(), page.dictionary_page(), is_optional) {
         (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
+            let dict = dict
+                .as_any()
+                .downcast_ref::<PrimitivePageDict<T>>()
+                .unwrap();
+            values.extend(dict.values().iter().map(|x| op(*x)));
             read_dict_optional(
                 validity_buffer,
                 values_buffer,
                 additional,
-                dict.as_any().downcast_ref().unwrap(),
                 indices,
-                values,
                 validity,
-                op,
             )
         }
         _ => {
