@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use parquet2::{
-    encoding::{hybrid_rle, Encoding},
+    encoding::Encoding,
     page::{DataPage, PrimitivePageDict},
     types::NativeType,
     FallibleStreamingIterator,
@@ -14,48 +14,9 @@ use crate::{
     bitmap::MutableBitmap,
     datatypes::DataType,
     error::{ArrowError, Result},
-    io::parquet::read::utils::extend_from_decoder,
+    io::parquet::read::utils::read_dict_optional,
     types::NativeType as ArrowNativeType,
 };
-
-#[allow(clippy::too_many_arguments)]
-fn read_dict_optional<K, T, A, F>(
-    validity_buffer: &[u8],
-    indices_buffer: &[u8],
-    additional: usize,
-    dict: &PrimitivePageDict<T>,
-    indices: &mut Vec<K>,
-    values: &mut Vec<A>,
-    validity: &mut MutableBitmap,
-    op: F,
-) where
-    K: DictionaryKey,
-    T: NativeType,
-    A: ArrowNativeType,
-    F: Fn(T) -> A,
-{
-    let dict_values = dict.values();
-    values.extend(dict_values.iter().map(|x| op(*x)));
-
-    // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
-    // SPEC: followed by the values encoded using RLE/Bit packed described above (with the given bit width).
-    let bit_width = indices_buffer[0];
-    let indices_buffer = &indices_buffer[1..];
-
-    let new_indices =
-        hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional);
-    let indices_iter = new_indices.map(|x| K::from_u32(x).unwrap());
-
-    let mut validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
-
-    extend_from_decoder(
-        validity,
-        &mut validity_iterator,
-        additional,
-        indices,
-        indices_iter,
-    )
-}
 
 fn extend_from_page<K, T, A, F>(
     page: &DataPage,
@@ -80,15 +41,17 @@ where
 
     match (&page.encoding(), page.dictionary_page(), is_optional) {
         (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
+            let dict = dict
+                .as_any()
+                .downcast_ref::<PrimitivePageDict<T>>()
+                .unwrap();
+            values.extend(dict.values().iter().map(|x| op(*x)));
             read_dict_optional(
                 validity_buffer,
                 values_buffer,
                 additional,
-                dict.as_any().downcast_ref().unwrap(),
                 indices,
-                values,
                 validity,
-                op,
             )
         }
         _ => {

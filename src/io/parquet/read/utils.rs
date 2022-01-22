@@ -4,6 +4,7 @@ use parquet2::encoding::{hybrid_rle, Encoding};
 use parquet2::metadata::ColumnDescriptor;
 use parquet2::page::{split_buffer as _split_buffer, DataPage, DataPageHeader};
 
+use crate::array::DictionaryKey;
 use crate::bitmap::utils::BitmapIter;
 use crate::bitmap::MutableBitmap;
 use crate::error::ArrowError;
@@ -157,4 +158,33 @@ pub(super) fn extend_from_decoder<'a, T: Default, C: Pushable<T>, I: Iterator<It
             }
         }
     }
+}
+
+pub(super) fn read_dict_optional<K>(
+    validity_buffer: &[u8],
+    indices_buffer: &[u8],
+    additional: usize,
+    indices: &mut Vec<K>,
+    validity: &mut MutableBitmap,
+) where
+    K: DictionaryKey,
+{
+    // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
+    // SPEC: followed by the values encoded using RLE/Bit packed described above (with the given bit width).
+    let bit_width = indices_buffer[0];
+    let indices_buffer = &indices_buffer[1..];
+
+    let new_indices =
+        hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional);
+    let indices_iter = new_indices.map(|x| K::from_u32(x).unwrap());
+
+    let mut validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
+
+    extend_from_decoder(
+        validity,
+        &mut validity_iterator,
+        additional,
+        indices,
+        indices_iter,
+    )
 }
