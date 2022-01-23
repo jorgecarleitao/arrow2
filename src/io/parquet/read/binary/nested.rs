@@ -5,9 +5,9 @@ use parquet2::{
     read::levels::get_bit_width,
 };
 
-use super::super::nested_utils::*;
 use super::super::utils;
 use super::basic::read_plain_required;
+use super::{super::nested_utils::*, utils::Binary};
 
 use crate::{array::Offset, bitmap::MutableBitmap, error::Result};
 
@@ -15,8 +15,7 @@ fn read_values<'a, O, D, G>(
     def_levels: D,
     max_def: u32,
     mut new_values: G,
-    offsets: &mut Vec<O>,
-    values: &mut Vec<u8>,
+    values: &mut Binary<O>,
     validity: &mut MutableBitmap,
 ) where
     O: Offset,
@@ -26,11 +25,10 @@ fn read_values<'a, O, D, G>(
     def_levels.for_each(|def| {
         if def == max_def {
             let v = new_values.next().unwrap();
-            values.extend_from_slice(v);
-            offsets.push(*offsets.last().unwrap() + O::from_usize(v.len()).unwrap());
+            values.push(v);
             validity.push(true);
         } else if def == max_def - 1 {
-            offsets.push(*offsets.last().unwrap());
+            values.push(&[]);
             validity.push(false);
         }
     });
@@ -46,8 +44,7 @@ fn read<O: Offset>(
     def_level_encoding: (&Encoding, i16),
     is_nullable: bool,
     nested: &mut Vec<Box<dyn Nested>>,
-    offsets: &mut Vec<O>,
-    values: &mut Vec<u8>,
+    values: &mut Binary<O>,
     validity: &mut MutableBitmap,
 ) {
     let max_rep_level = rep_level_encoding.1 as u32;
@@ -64,16 +61,9 @@ fn read<O: Offset>(
                     additional,
                 );
                 let new_values = utils::BinaryIter::new(values_buffer);
-                read_values(
-                    def_levels,
-                    max_def_level,
-                    new_values,
-                    offsets,
-                    values,
-                    validity,
-                )
+                read_values(def_levels, max_def_level, new_values, values, validity)
             } else {
-                read_plain_required(values_buffer, additional, offsets, values)
+                read_plain_required(values_buffer, additional, values)
             }
 
             let def_levels =
@@ -97,8 +87,7 @@ pub(super) fn extend_from_page<O: Offset>(
     descriptor: &ColumnDescriptor,
     is_nullable: bool,
     nested: &mut Vec<Box<dyn Nested>>,
-    offsets: &mut Vec<O>,
-    values: &mut Vec<u8>,
+    values: &mut Binary<O>,
     validity: &mut MutableBitmap,
 ) -> Result<()> {
     let additional = page.num_values();
@@ -121,7 +110,6 @@ pub(super) fn extend_from_page<O: Offset>(
             ),
             is_nullable,
             nested,
-            offsets,
             values,
             validity,
         ),
