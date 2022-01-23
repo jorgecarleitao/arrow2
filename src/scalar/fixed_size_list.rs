@@ -38,12 +38,9 @@ impl FixedSizeListScalar {
                 assert_eq!(size, values.len());
                 Some(values)
             }
-            None => None
+            None => None,
         };
-        Self {
-            values,
-            data_type,
-        }
+        Self { values, data_type }
     }
 
     /// The values of the [`FixedSizeListScalar`]
