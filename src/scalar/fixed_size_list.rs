@@ -9,16 +9,15 @@ use super::Scalar;
 /// [`Array`]. The only difference is that this has only one element.
 #[derive(Debug, Clone)]
 pub struct FixedSizeListScalar {
-    values: Arc<dyn Array>,
-    is_valid: bool,
+    values: Option<Arc<dyn Array>>,
     data_type: DataType,
 }
 
 impl PartialEq for FixedSizeListScalar {
     fn eq(&self, other: &Self) -> bool {
         (self.data_type == other.data_type)
-            && (self.is_valid == other.is_valid)
-            && ((!self.is_valid) | (self.values.as_ref() == other.values.as_ref()))
+            && (self.values.is_some() == other.values.is_some())
+            && ((!self.values.is_some()) | (self.values.as_ref() == other.values.as_ref()))
     }
 }
 
@@ -33,24 +32,23 @@ impl FixedSizeListScalar {
     pub fn new(data_type: DataType, values: Option<Arc<dyn Array>>) -> Self {
         let (field, size) = FixedSizeListArray::get_child_and_size(&data_type);
         let inner_data_type = field.data_type();
-        let (is_valid, values) = match values {
+        let values = match values {
             Some(values) => {
                 assert_eq!(inner_data_type, values.data_type());
                 assert_eq!(size, values.len());
-                (true, values)
+                Some(values)
             }
-            None => (false, new_empty_array(inner_data_type.clone()).into()),
+            None => None
         };
         Self {
             values,
-            is_valid,
             data_type,
         }
     }
 
     /// The values of the [`FixedSizeListScalar`]
-    pub fn values(&self) -> &Arc<dyn Array> {
-        &self.values
+    pub fn values(&self) -> Option<&Arc<dyn Array>> {
+        self.values.as_ref()
     }
 }
 
@@ -60,7 +58,7 @@ impl Scalar for FixedSizeListScalar {
     }
 
     fn is_valid(&self) -> bool {
-        self.is_valid
+        self.values.is_some()
     }
 
     fn data_type(&self) -> &DataType {
