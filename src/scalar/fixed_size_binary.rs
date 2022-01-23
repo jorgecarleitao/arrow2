@@ -3,9 +3,9 @@ use crate::datatypes::DataType;
 use super::Scalar;
 
 #[derive(Debug, Clone, PartialEq)]
-/// The [`Scalar`] implementation of fixed size binary ([`Option<Vec<u8>>`]).
+/// The [`Scalar`] implementation of fixed size binary ([`Option<Box<[u8]>>`]).
 pub struct FixedSizeBinaryScalar {
-    value: Option<Vec<u8>>,
+    value: Option<Box<[u8]>>,
     data_type: DataType,
 }
 
@@ -19,9 +19,9 @@ impl FixedSizeBinaryScalar {
     pub fn new<P: Into<Vec<u8>>>(data_type: DataType, value: Option<P>) -> Self {
         Self {
             value: value.map(|x| {
-                let x = x.into();
+                let x: Vec<u8> = x.into();
                 assert_eq!(data_type, DataType::FixedSizeBinary(x.len()));
-                x
+                x.into_boxed_slice()
             }),
             data_type,
         }
