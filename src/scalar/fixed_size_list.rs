@@ -17,7 +17,7 @@ impl PartialEq for FixedSizeListScalar {
     fn eq(&self, other: &Self) -> bool {
         (self.data_type == other.data_type)
             && (self.values.is_some() == other.values.is_some())
-            && ((!self.values.is_some()) | (self.values.as_ref() == other.values.as_ref()))
+            && ((self.values.is_none()) | (self.values.as_ref() == other.values.as_ref()))
     }
 }
 
