@@ -11,7 +11,7 @@ fn equal() {
     assert_eq!(a, a);
     assert_eq!(b, b);
     assert!(a != b);
-    let b = FixedSizeBinaryScalar::new(DataType::FixedSizeBinary(1),Some("b"));
+    let b = FixedSizeBinaryScalar::new(DataType::FixedSizeBinary(1), Some("b"));
     assert!(a != b);
     assert_eq!(b, b);
 }
@@ -26,5 +26,3 @@ fn basics() {
 
     let _: &dyn std::any::Any = a.as_any();
 }
-
-

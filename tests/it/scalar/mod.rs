@@ -1,6 +1,6 @@
 mod binary;
-mod fixed_size_binary;
 mod boolean;
+mod fixed_size_binary;
 mod fixed_size_list;
 mod list;
 mod null;
