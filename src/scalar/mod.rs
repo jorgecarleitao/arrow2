@@ -22,6 +22,10 @@ mod null;
 pub use null::*;
 mod struct_;
 pub use struct_::*;
+mod fixed_size_list;
+pub use fixed_size_list::*;
+mod fixed_size_binary;
+pub use fixed_size_binary::*;
 
 /// Trait object declaring an optional value with a [`DataType`].
 /// This strait is often used in APIs that accept multiple scalar types.
@@ -120,8 +124,27 @@ pub fn new_scalar(array: &dyn Array, index: usize) -> Box<dyn Scalar> {
                 Box::new(StructScalar::new(array.data_type().clone(), None))
             }
         }
-        FixedSizeBinary => todo!(),
-        FixedSizeList => todo!(),
+        FixedSizeBinary => {
+            let array = array
+                .as_any()
+                .downcast_ref::<FixedSizeBinaryArray>()
+                .unwrap();
+            let value = if array.is_valid(index) {
+                Some(array.value(index))
+            } else {
+                None
+            };
+            Box::new(FixedSizeBinaryScalar::new(array.data_type().clone(), value))
+        }
+        FixedSizeList => {
+            let array = array.as_any().downcast_ref::<FixedSizeListArray>().unwrap();
+            let value = if array.is_valid(index) {
+                Some(array.value(index).into())
+            } else {
+                None
+            };
+            Box::new(FixedSizeListScalar::new(array.data_type().clone(), value))
+        }
         Union | Map => todo!(),
         Dictionary(key_type) => match_integer_type!(key_type, |$T| {
             let array = array
