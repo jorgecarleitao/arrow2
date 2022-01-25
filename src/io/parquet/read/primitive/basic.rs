@@ -452,6 +452,24 @@ where
     phantom_f: std::marker::PhantomData<F>,
 }
 
+impl<'a, T, P, G, F> Default for PrimitiveDecoder<T, P, G, F>
+where
+    T: NativeType,
+    P: ParquetNativeType,
+    G: for<'b> Fn(&'b [u8]) -> P,
+    F: Fn(P) -> T,
+{
+    #[inline]
+    fn default() -> Self {
+        Self {
+            phantom: std::marker::PhantomData,
+            phantom_p: std::marker::PhantomData,
+            phantom_g: std::marker::PhantomData,
+            phantom_f: std::marker::PhantomData,
+        }
+    }
+}
+
 impl<'a, T, P, G, F> other_utils::Decoder<'a, T, Vec<T>> for PrimitiveDecoder<T, P, G, F>
 where
     T: NativeType,
@@ -461,6 +479,10 @@ where
 {
     type State = PrimitivePageState<'a, T, P, G, F>;
     type Array = PrimitiveArray<T>;
+
+    fn with_capacity(&self, capacity: usize) -> Vec<T> {
+        Vec::<T>::with_capacity(capacity)
+    }
 
     fn extend_from_state(
         state: &mut Self::State,
@@ -594,6 +616,7 @@ where
                         &self.data_type,
                         self.chunk_size,
                         &mut self.items,
+                        &PrimitiveDecoder::default(),
                     )
                 };
                 match maybe_array {

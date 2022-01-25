@@ -89,10 +89,11 @@ pub(super) fn get_iterators<R: Read + Seek>(
 impl RowGroupReader {
     pub fn new(
         column_chunks: Vec<Box<dyn Iterator<Item = Result<Arc<dyn Array>>>>>,
+        num_rows: usize,
         limit: Option<usize>,
     ) -> Self {
         Self {
-            remaining_rows: limit.unwrap_or(usize::MAX),
+            remaining_rows: limit.unwrap_or(usize::MAX).min(num_rows),
             column_chunks,
         }
     }
@@ -118,7 +119,10 @@ impl Iterator for RowGroupReader {
             })
             .collect::<Result<Vec<_>>>()
             .map(Chunk::new);
-        self.remaining_rows -= chunk.as_ref().map(|x| x.len()).unwrap_or(0);
+        self.remaining_rows -= chunk
+            .as_ref()
+            .map(|x| x.len())
+            .unwrap_or(self.remaining_rows);
 
         Some(chunk)
     }

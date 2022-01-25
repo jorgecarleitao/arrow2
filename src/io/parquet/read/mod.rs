@@ -387,54 +387,78 @@ fn page_iter_to_arrays<
             _ => unreachable!(),
         },
 
-        /*
-        FixedSizeBinary(_) => Ok(Box::new(fixed_size_binary::iter_to_array(
-            iter, data_type, metadata,
-        )?)),
+        FixedSizeBinary(_) => Ok(Box::new(
+            fixed_size_binary::BinaryArrayIterator::new(iter, data_type, chunk_size, is_optional)
+                .map(|x| x.map(|x| Arc::new(x) as _)),
+        )),
+
         Decimal(_, _) => match metadata.descriptor().type_() {
-            ParquetType::PrimitiveType { physical_type, .. } => match physical_type {
-                PhysicalType::Int32 => {
-                    primitive::iter_to_array(iter, metadata, data_type, nested, |x: i32| x as i128)
-                }
-                PhysicalType::Int64 => {
-                    primitive::iter_to_array(iter, metadata, data_type, nested, |x: i64| x as i128)
-                }
+            ParquetType::PrimitiveType { physical_type, .. } => Ok(match physical_type {
+                PhysicalType::Int32 => primitive::iter_to_arrays(
+                    iter,
+                    is_optional,
+                    data_type,
+                    chunk_size,
+                    read_item,
+                    |x: i32| x as i128,
+                ),
+                PhysicalType::Int64 => primitive::iter_to_arrays(
+                    iter,
+                    is_optional,
+                    data_type,
+                    chunk_size,
+                    read_item,
+                    |x: i64| x as i128,
+                ),
                 &PhysicalType::FixedLenByteArray(n) if n > 16 => {
-                    Err(ArrowError::NotYetImplemented(format!(
+                    return Err(ArrowError::NotYetImplemented(format!(
                         "Can't decode Decimal128 type from Fixed Size Byte Array of len {:?}",
                         n
                     )))
                 }
                 &PhysicalType::FixedLenByteArray(n) => {
                     let n = n as usize;
-                    let fixed_size_binary_array = fixed_size_binary::iter_to_array(
+
+                    let iter = fixed_size_binary::BinaryArrayIterator::new(
                         iter,
                         DataType::FixedSizeBinary(n),
-                        metadata,
-                    )?;
-                    let values = fixed_size_binary_array
-                        .values()
-                        .chunks_exact(n)
-                        .map(|value: &[u8]| {
-                            // Copy the fixed-size byte value to the start of a 16 byte stack
-                            // allocated buffer, then use an arithmetic right shift to fill in
-                            // MSBs, which accounts for leading 1's in negative (two's complement)
-                            // values.
-                            let mut bytes = [0u8; 16];
-                            bytes[..n].copy_from_slice(value);
-                            i128::from_be_bytes(bytes) >> (8 * (16 - n))
-                        })
-                        .collect::<Vec<_>>();
-                    let validity = fixed_size_binary_array.validity().cloned();
-                    let i128_array =
-                        PrimitiveArray::<i128>::from_data(data_type, values.into(), validity);
-                    Ok(Box::new(i128_array) as _)
+                        chunk_size,
+                        is_optional,
+                    );
+
+                    let iter = iter.map(move |maybe_array| {
+                        let array = maybe_array?;
+                        let values = array
+                            .values()
+                            .chunks_exact(n)
+                            .map(|value: &[u8]| {
+                                // Copy the fixed-size byte value to the start of a 16 byte stack
+                                // allocated buffer, then use an arithmetic right shift to fill in
+                                // MSBs, which accounts for leading 1's in negative (two's complement)
+                                // values.
+                                let mut bytes = [0u8; 16];
+                                bytes[..n].copy_from_slice(value);
+                                i128::from_be_bytes(bytes) >> (8 * (16 - n))
+                            })
+                            .collect::<Vec<_>>();
+                        let validity = array.validity().cloned();
+
+                        Ok(PrimitiveArray::<i128>::from_data(
+                            data_type.clone(),
+                            values.into(),
+                            validity,
+                        ))
+                    });
+
+                    let iter = iter.map(|x| x.map(|x| Arc::new(x) as Arc<dyn Array>));
+
+                    Box::new(iter) as _
                 }
                 _ => unreachable!(),
-            },
+            }),
             _ => unreachable!(),
         },
-        */
+
         // INT64
         Int64 | Date64 | Time64(_) | Duration(_) | Timestamp(_, _) => {
             Ok(primitive::iter_to_arrays(

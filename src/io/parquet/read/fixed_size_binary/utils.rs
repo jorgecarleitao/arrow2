@@ -18,6 +18,7 @@ impl FixedSizeBinary {
 
     #[inline]
     pub fn push(&mut self, value: &[u8]) {
+        debug_assert_eq!(value.len(), self.size);
         self.values.extend(value);
     }
 
@@ -33,7 +34,7 @@ impl FixedSizeBinary {
     }
 }
 
-impl Pushable<&[u8]> for FixedSizeBinary {
+impl<'a> Pushable<&'a [u8]> for FixedSizeBinary {
     #[inline]
     fn reserve(&mut self, additional: usize) {
         self.values.reserve(additional * self.size)
@@ -41,7 +42,8 @@ impl Pushable<&[u8]> for FixedSizeBinary {
 
     #[inline]
     fn push(&mut self, value: &[u8]) {
-        self.values.extend(value);
+        debug_assert_eq!(value.len(), self.size);
+        self.push(value);
     }
 
     #[inline]
@@ -55,11 +57,7 @@ impl Pushable<&[u8]> for FixedSizeBinary {
         self.extend_constant(additional)
     }
 
-    fn with_capacity(capacity: usize) -> Self {
-        todo!()
-    }
-
     fn len(&self) -> usize {
-        self.len()
+        self.values.len() / self.size
     }
 }

@@ -130,6 +130,7 @@ impl<R: Read + Seek> FileReader<R> {
                 return self.next_row_group();
             }
         }
+        self.current_group += 1;
 
         let column_chunks = get_iterators(
             &mut self.reader,
@@ -139,7 +140,11 @@ impl<R: Read + Seek> FileReader<R> {
             self.chunk_size,
         )?;
 
-        let result = RowGroupReader::new(column_chunks, Some(self.remaining_rows));
+        let result = RowGroupReader::new(
+            column_chunks,
+            row_group.num_rows() as usize,
+            Some(self.remaining_rows),
+        );
         self.remaining_rows = self
             .remaining_rows
             .saturating_sub(row_group.num_rows() as usize);
@@ -154,10 +159,6 @@ impl<R: Read + Seek> Iterator for FileReader<R> {
         if self.schema.fields.is_empty() {
             return None;
         }
-        if self.current_group == self.metadata.row_groups.len() {
-            // reached the last row group
-            return None;
-        };
         if self.remaining_rows == 0 {
             // reached the limit
             return None;

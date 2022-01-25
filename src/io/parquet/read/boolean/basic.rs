@@ -203,10 +203,16 @@ fn build_state(page: &DataPage, is_optional: bool) -> Result<BooleanPageState> {
     }
 }
 
+#[derive(Default)]
 struct BooleanDecoder {}
+
 impl<'a> utils::Decoder<'a, bool, MutableBitmap> for BooleanDecoder {
     type State = BooleanPageState<'a>;
     type Array = BooleanArray;
+
+    fn with_capacity(&self, capacity: usize) -> MutableBitmap {
+        MutableBitmap::with_capacity(capacity)
+    }
 
     fn extend_from_state(
         state: &mut Self::State,
@@ -290,6 +296,7 @@ impl<I: DataPages> Iterator for BooleanArrayIterator<I> {
                     &self.data_type,
                     self.chunk_size,
                     &mut self.items,
+                    &BooleanDecoder::default(),
                 );
                 match maybe_array {
                     Ok(Some(array)) => Some(Ok(array)),

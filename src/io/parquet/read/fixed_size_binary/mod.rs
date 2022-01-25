@@ -1,3 +1,4 @@
+mod basic;
 mod utils;
 
 use futures::{pin_mut, Stream, StreamExt};
@@ -17,6 +18,7 @@ use crate::{
     datatypes::DataType,
     error::{ArrowError, Result},
 };
+pub use basic::BinaryArrayIterator;
 
 use super::utils as a_utils;
 

@@ -1,4 +1,5 @@
 use std::collections::VecDeque;
+use std::default::Default;
 
 use parquet2::{
     encoding::{delta_length_byte_array, hybrid_rle, Encoding},
@@ -351,7 +352,7 @@ fn build_state<O>(page: &DataPage, is_optional: bool) -> Result<State> {
             is_optional,
             false,
             "any",
-            "Boolean",
+            "Binary",
         )),
     }
 }
@@ -398,9 +399,20 @@ impl<O: Offset> TraitBinaryArray<O> for Utf8Array<O> {
     }
 }
 
+#[derive(Debug)]
 struct BinaryDecoder<O: Offset, A: TraitBinaryArray<O>> {
     phantom_o: std::marker::PhantomData<O>,
     phantom_a: std::marker::PhantomData<A>,
+}
+
+impl<O: Offset, A: TraitBinaryArray<O>> Default for BinaryDecoder<O, A> {
+    #[inline]
+    fn default() -> Self {
+        Self {
+            phantom_o: std::marker::PhantomData,
+            phantom_a: std::marker::PhantomData,
+        }
+    }
 }
 
 impl<'a, O: Offset, A: TraitBinaryArray<O>> utils::Decoder<'a, &'a [u8], Binary<O>>
@@ -408,6 +420,10 @@ impl<'a, O: Offset, A: TraitBinaryArray<O>> utils::Decoder<'a, &'a [u8], Binary<
 {
     type State = State<'a>;
     type Array = A;
+
+    fn with_capacity(&self, capacity: usize) -> Binary<O> {
+        Binary::<O>::with_capacity(capacity)
+    }
 
     fn extend_from_state(
         state: &mut Self::State,
@@ -513,6 +529,7 @@ impl<O: Offset, A: TraitBinaryArray<O>, I: DataPages> Iterator for BinaryArrayIt
                         &self.data_type,
                         self.chunk_size,
                         &mut self.items,
+                        &BinaryDecoder::<O, A>::default(),
                     )
                 };
                 match maybe_array {

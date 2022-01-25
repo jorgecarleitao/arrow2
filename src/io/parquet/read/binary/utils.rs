@@ -45,13 +45,6 @@ impl<O: Offset> Pushable<O> for Offsets<O> {
     }
 
     #[inline]
-    fn with_capacity(capacity: usize) -> Self {
-        let mut v = Vec::with_capacity(capacity + 1);
-        v.push(O::default());
-        Self(v)
-    }
-
-    #[inline]
     fn reserve(&mut self, additional: usize) {
         self.0.reserve(additional)
     }
@@ -104,7 +97,7 @@ impl<O: Offset> Binary<O> {
     }
 }
 
-impl<O: Offset> Pushable<&[u8]> for Binary<O> {
+impl<'a, O: Offset> Pushable<&'a [u8]> for Binary<O> {
     #[inline]
     fn len(&self) -> usize {
         self.len()
@@ -116,6 +109,11 @@ impl<O: Offset> Pushable<&[u8]> for Binary<O> {
     }
 
     #[inline]
+    fn push_null(&mut self) {
+        self.push(&[])
+    }
+
+    #[inline]
     fn push(&mut self, value: &[u8]) {
         self.push(value)
     }
@@ -124,9 +122,5 @@ impl<O: Offset> Pushable<&[u8]> for Binary<O> {
     fn extend_constant(&mut self, additional: usize, value: &[u8]) {
         assert_eq!(value.len(), 0);
         self.extend_constant(additional)
-    }
-
-    fn with_capacity(capacity: usize) -> Self {
-        Self::with_capacity(capacity)
     }
 }

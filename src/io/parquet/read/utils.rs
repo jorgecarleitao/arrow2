@@ -67,15 +67,11 @@ pub fn split_buffer<'a>(
 }
 
 /// A private trait representing structs that can receive elements.
-pub(super) trait Pushable<T: Default> {
-    fn with_capacity(capacity: usize) -> Self;
+pub(super) trait Pushable<T>: Sized {
     fn reserve(&mut self, additional: usize);
     fn push(&mut self, value: T);
     fn len(&self) -> usize;
-    #[inline]
-    fn push_null(&mut self) {
-        self.push(T::default())
-    }
+    fn push_null(&mut self);
     fn extend_constant(&mut self, additional: usize, value: T);
 }
 
@@ -86,11 +82,6 @@ impl Pushable<bool> for MutableBitmap {
     }
 
     #[inline]
-    fn with_capacity(capacity: usize) -> Self {
-        Self::with_capacity(capacity)
-    }
-
-    #[inline]
     fn reserve(&mut self, additional: usize) {
         self.reserve(additional)
     }
@@ -98,6 +89,11 @@ impl Pushable<bool> for MutableBitmap {
     #[inline]
     fn push(&mut self, value: bool) {
         self.push(value)
+    }
+
+    #[inline]
+    fn push_null(&mut self) {
+        self.push(false)
     }
 
     #[inline]
@@ -113,13 +109,13 @@ impl<A: Copy + Default> Pushable<A> for Vec<A> {
     }
 
     #[inline]
-    fn with_capacity(capacity: usize) -> Self {
-        Self::with_capacity(capacity)
+    fn reserve(&mut self, additional: usize) {
+        self.reserve(additional)
     }
 
     #[inline]
-    fn reserve(&mut self, additional: usize) {
-        self.reserve(additional)
+    fn push_null(&mut self) {
+        self.push(A::default())
     }
 
     #[inline]
@@ -164,11 +160,11 @@ pub(super) fn extend_from_decoder<'a, T: Default, C: Pushable<T>, I: Iterator<It
                     // consume `additional` items
                     let iter = BitmapIter::new(pack, *offset, additional);
                     for is_valid in iter {
-                        values.push(if is_valid {
-                            values_iter.next().unwrap()
+                        if is_valid {
+                            values.push(values_iter.next().unwrap())
                         } else {
-                            T::default()
-                        });
+                            values.push_null()
+                        };
                     }
                     validity.extend_from_slice(pack, *offset, additional);
                     length
@@ -231,16 +227,18 @@ pub(super) fn read_dict_optional<K>(
     )
 }
 
+/// The state of a partially deserialized page
 pub(super) trait PageState<'a> {
     fn len(&self) -> usize;
 }
 
+/// A decoder that knows how to map `State` -> Array
 pub(super) trait Decoder<'a, C: Default, P: Pushable<C>> {
     type State: PageState<'a>;
     type Array: Array;
 
-    /// Initializes a page state from a [`DataPage`]
-    //fn build_state(page: &'a DataPage, is_optional: bool) -> Result<Self::State, ArrowError>;
+    /// Initializes a new pushable
+    fn with_capacity(&self, capacity: usize) -> P;
 
     /// extends (values, validity) by deserializing items in `State`.
     /// It guarantees that the length of `values` is at most `values.len() + remaining`.
@@ -259,6 +257,7 @@ pub(super) fn extend_from_new_page<'a, T: Decoder<'a, C, P>, C: Default, P: Push
     data_type: &DataType,
     chunk_size: usize,
     items: &mut VecDeque<(P, MutableBitmap)>,
+    decoder: &T,
 ) -> Result<Option<T::Array>, ArrowError> {
     let (mut values, mut validity) = if let Some((values, validity)) = state {
         // there is a already a state => it must be incomplete...
@@ -270,7 +269,7 @@ pub(super) fn extend_from_new_page<'a, T: Decoder<'a, C, P>, C: Default, P: Push
     } else {
         // there is no state => initialize it
         (
-            P::with_capacity(chunk_size),
+            decoder.with_capacity(chunk_size),
             MutableBitmap::with_capacity(chunk_size),
         )
     };
@@ -286,7 +285,7 @@ pub(super) fn extend_from_new_page<'a, T: Decoder<'a, C, P>, C: Default, P: Push
             // the page contains more items than chunk_size => deserialize the
             // remaining to the ring
             while page.len() > 0 {
-                let mut values = P::with_capacity(chunk_size);
+                let mut values = decoder.with_capacity(chunk_size);
                 let mut validity = MutableBitmap::with_capacity(chunk_size);
                 T::extend_from_state(&mut page, &mut values, &mut validity, chunk_size);
                 items.push_back((values, validity))
