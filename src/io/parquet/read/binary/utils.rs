@@ -100,7 +100,7 @@ impl<O: Offset> Binary<O> {
 
     #[inline]
     pub fn len(&self) -> usize {
-        self.offsets.len() - 1
+        self.offsets.len()
     }
 }
 

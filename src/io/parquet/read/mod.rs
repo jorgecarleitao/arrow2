@@ -28,7 +28,7 @@ pub use parquet2::{
 };
 
 use crate::{
-    array::{Array, DictionaryKey, NullArray, PrimitiveArray, StructArray},
+    array::{Array, BinaryArray, DictionaryKey, NullArray, PrimitiveArray, StructArray, Utf8Array},
     datatypes::{DataType, Field, IntervalUnit, TimeUnit},
     error::{ArrowError, Result},
     io::parquet::read::{
@@ -472,12 +472,32 @@ fn page_iter_to_arrays<
             |x: f64| x,
         )),
 
-        /*
-        Binary | Utf8 => binary::iter_to_array::<i32, _, _>(iter, metadata, data_type, nested),
-        LargeBinary | LargeUtf8 => {
-            binary::iter_to_array::<i64, _, _>(iter, metadata, data_type, nested)
-        }
+        Binary => Ok(binary::iter_to_arrays::<i32, BinaryArray<i32>, _>(
+            iter,
+            is_optional,
+            data_type,
+            chunk_size,
+        )),
+        LargeBinary => Ok(binary::iter_to_arrays::<i64, BinaryArray<i64>, _>(
+            iter,
+            is_optional,
+            data_type,
+            chunk_size,
+        )),
+        Utf8 => Ok(binary::iter_to_arrays::<i32, Utf8Array<i32>, _>(
+            iter,
+            is_optional,
+            data_type,
+            chunk_size,
+        )),
+        LargeUtf8 => Ok(binary::iter_to_arrays::<i64, Utf8Array<i64>, _>(
+            iter,
+            is_optional,
+            data_type,
+            chunk_size,
+        )),
 
+        /*
         Dictionary(key_type, _, _) => match_integer_type!(key_type, |$T| {
             dict_read::<$T, _>(iter, metadata, data_type)
         }),

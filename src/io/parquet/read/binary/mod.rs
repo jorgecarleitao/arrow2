@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use futures::{pin_mut, Stream, StreamExt};
 use parquet2::{metadata::ColumnChunkMetaData, page::DataPage, FallibleStreamingIterator};
 
@@ -16,9 +18,10 @@ mod utils;
 
 pub use dictionary::iter_to_array as iter_to_dict_array;
 
-use self::utils::Binary;
+use self::{basic::TraitBinaryArray, utils::Binary};
 
-use super::nested_utils::Nested;
+use super::{nested_utils::Nested, DataPages};
+use basic::BinaryArrayIterator;
 
 pub fn iter_to_array<O, I, E>(
     mut iter: I,
@@ -84,4 +87,22 @@ where
     }
 
     Ok(finish_array(data_type.clone(), values, validity))
+}
+
+/// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
+pub fn iter_to_arrays<'a, O, A, I>(
+    iter: I,
+    is_optional: bool,
+    data_type: DataType,
+    chunk_size: usize,
+) -> Box<dyn Iterator<Item = Result<Arc<dyn Array>>> + 'a>
+where
+    I: 'a + DataPages,
+    A: TraitBinaryArray<O>,
+    O: Offset,
+{
+    Box::new(
+        BinaryArrayIterator::<O, A, I>::new(iter, data_type, chunk_size, is_optional)
+            .map(|x| x.map(|x| Arc::new(x) as Arc<dyn Array>)),
+    )
 }

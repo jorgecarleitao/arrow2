@@ -351,10 +351,9 @@ where
 
         let values = dict.values();
         let op1 = Box::new(move |index: u32| values[index as usize]) as Box<dyn Fn(u32) -> P>;
+        let values = values_iter1(values_buffer, page.num_values(), op1, op2);
 
         let validity = convert(hybrid_rle::Decoder::new(validity_buffer, 1));
-
-        let values = values_iter1(values_buffer, page.num_values(), op1, op2);
 
         Self {
             phantom: Default::default(),
