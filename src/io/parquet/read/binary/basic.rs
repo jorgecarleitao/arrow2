@@ -46,8 +46,6 @@ fn read_dict_buffer<O: Offset>(
     values: &mut Binary<O>,
     validity: &mut MutableBitmap,
 ) {
-    let length = values.len() + additional;
-
     let values_iterator = values_iter(indices_buffer, dict, additional);
 
     let mut validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
@@ -55,7 +53,7 @@ fn read_dict_buffer<O: Offset>(
     extend_from_decoder(
         validity,
         &mut validity_iterator,
-        length,
+        additional,
         values,
         values_iterator,
     );

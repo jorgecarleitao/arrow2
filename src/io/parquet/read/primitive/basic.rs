@@ -46,8 +46,6 @@ fn read_dict_buffer_optional<T, A, F>(
     A: ArrowNativeType,
     F: Fn(T) -> A,
 {
-    let length = additional + values.len();
-
     let values_iterator = values_iter(indices_buffer, dict.values(), additional, op);
 
     let mut validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
@@ -55,10 +53,10 @@ fn read_dict_buffer_optional<T, A, F>(
     extend_from_decoder(
         validity,
         &mut validity_iterator,
-        length,
+        additional,
         values,
         values_iterator,
-    )
+    );
 }
 
 fn read_dict_buffer_required<T, A, F>(

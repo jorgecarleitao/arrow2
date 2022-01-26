@@ -53,6 +53,8 @@ where
             )?
         }
     }
+    debug_assert_eq!(validity.len(), capacity);
+    debug_assert_eq!(values.len(), capacity);
     Ok(utils::finish_array(data_type, values, validity))
 }
 
