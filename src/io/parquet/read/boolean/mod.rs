@@ -24,11 +24,10 @@ where
     ArrowError: From<E>,
     I: FallibleStreamingIterator<Item = DataPage, Error = E>,
 {
+    let is_nullable = nested.pop().unwrap().is_nullable();
     let capacity = metadata.num_values() as usize;
     let mut values = MutableBitmap::with_capacity(capacity);
-    let mut validity = MutableBitmap::with_capacity(capacity);
-
-    let is_nullable = nested.pop().unwrap().is_nullable();
+    let mut validity = MutableBitmap::with_capacity(capacity * usize::from(is_nullable));
 
     if nested.is_empty() {
         while let Some(page) = iter.next()? {
@@ -46,6 +45,8 @@ where
             )?
         }
     }
+    debug_assert_eq!(values.len(), capacity);
+    debug_assert_eq!(validity.len(), capacity * usize::from(is_nullable));
 
     Ok(Box::new(BooleanArray::from_data(
         data_type,

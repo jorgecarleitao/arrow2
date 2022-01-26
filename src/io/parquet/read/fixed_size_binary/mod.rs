@@ -69,14 +69,12 @@ pub(crate) fn read_dict_required(
     values: &mut FixedSizeBinary,
     validity: &mut MutableBitmap,
 ) {
-    let size = values.size;
+    debug_assert!(validity.is_empty());
 
     let values_iter = values_iter(indices_buffer, dict.values(), values.size, additional);
-
     for value in values_iter {
         values.push(value);
     }
-    validity.extend_constant(additional * size, true);
 }
 
 pub(crate) fn read_optional(
@@ -114,14 +112,17 @@ where
     ArrowError: From<E>,
     I: FallibleStreamingIterator<Item = DataPage, Error = E>,
 {
+    let is_nullable = metadata.descriptor().max_def_level() == 1;
     let size = FixedSizeBinaryArray::get_size(&data_type);
-
     let capacity = metadata.num_values() as usize;
     let mut values = FixedSizeBinary::with_capacity(capacity, size);
-    let mut validity = MutableBitmap::with_capacity(capacity);
+    let mut validity = MutableBitmap::with_capacity(capacity * usize::from(is_nullable));
+
     while let Some(page) = iter.next()? {
         extend_from_page(page, metadata.descriptor(), &mut values, &mut validity)?
     }
+    debug_assert_eq!(values.len(), capacity);
+    debug_assert_eq!(validity.len(), capacity * usize::from(is_nullable));
 
     Ok(FixedSizeBinaryArray::from_data(
         data_type,

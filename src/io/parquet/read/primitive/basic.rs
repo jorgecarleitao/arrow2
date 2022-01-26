@@ -71,11 +71,9 @@ fn read_dict_buffer_required<T, A, F>(
     A: ArrowNativeType,
     F: Fn(T) -> A,
 {
+    debug_assert_eq!(0, validity.len());
     let values_iterator = values_iter(indices_buffer, dict.values(), additional, op);
-
     values.extend(values_iterator);
-
-    validity.extend_constant(additional, true);
 }
 
 fn read_nullable<T, A, F>(

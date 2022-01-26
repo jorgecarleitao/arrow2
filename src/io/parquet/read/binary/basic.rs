@@ -67,12 +67,11 @@ fn read_dict_required<O: Offset>(
     values: &mut Binary<O>,
     validity: &mut MutableBitmap,
 ) {
+    debug_assert_eq!(0, validity.len());
     let values_iterator = values_iter(indices_buffer, dict, additional);
-
     for value in values_iterator {
         values.push(value);
     }
-    validity.extend_constant(additional, true);
 }
 
 struct Offsets<'a, O: Offset>(pub &'a mut Vec<O>);
@@ -190,7 +189,7 @@ pub(super) fn extend_from_page<O: Offset>(
 
     let (_, validity_buffer, values_buffer, version) = utils::split_buffer(page, descriptor);
 
-    match (&page.encoding(), page.dictionary_page(), is_optional) {
+    match dbg!((&page.encoding(), page.dictionary_page(), is_optional)) {
         (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
             read_dict_buffer::<O>(
                 validity_buffer,
