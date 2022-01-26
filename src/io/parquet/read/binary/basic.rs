@@ -189,7 +189,7 @@ pub(super) fn extend_from_page<O: Offset>(
 
     let (_, validity_buffer, values_buffer, version) = utils::split_buffer(page, descriptor);
 
-    match dbg!((&page.encoding(), page.dictionary_page(), is_optional)) {
+    match (&page.encoding(), page.dictionary_page(), is_optional) {
         (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
             read_dict_buffer::<O>(
                 validity_buffer,
