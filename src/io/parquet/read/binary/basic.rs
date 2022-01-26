@@ -6,7 +6,6 @@ use parquet2::{
     metadata::ColumnDescriptor,
     page::{BinaryPageDict, DataPage},
 };
-use streaming_iterator::{convert, Convert};
 
 use crate::{
     array::{Array, BinaryArray, Offset, Utf8Array},
@@ -15,7 +14,7 @@ use crate::{
     datatypes::DataType,
     error::Result,
     io::parquet::read::{
-        utils::{extend_from_decoder, Decoder, Pushable},
+        utils::{extend_from_decoder, Decoder, OptionalPageValidity, Pushable},
         DataPages,
     },
 };
@@ -59,17 +58,9 @@ fn read_dict_buffer<O: Offset>(
 
     let values_iter = values_iter(indices_buffer, dict, additional);
 
-    let mut validity_iterator = convert(hybrid_rle::Decoder::new(validity_buffer, 1));
+    let mut page_validity = OptionalPageValidity::new(validity_buffer, additional);
 
-    extend_from_decoder(
-        validity,
-        &mut validity_iterator,
-        length,
-        &mut 0,
-        None,
-        values,
-        values_iter,
-    );
+    extend_from_decoder(validity, &mut page_validity, None, values, values_iter);
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -107,14 +98,12 @@ fn read_delta_optional<O: Offset>(
         *last_offset
     });
 
-    let mut validity_iterator = convert(hybrid_rle::Decoder::new(validity_buffer, 1));
+    let mut page_validity = OptionalPageValidity::new(validity_buffer, additional);
 
     // offsets:
     extend_from_decoder(
         validity,
-        &mut validity_iterator,
-        length,
-        &mut 0,
+        &mut page_validity,
         None,
         offsets,
         offsets_iterator,
@@ -135,17 +124,9 @@ fn read_plain_optional<O: Offset>(
     // values_buffer: first 4 bytes are len, remaining is values
     let values_iter = utils::BinaryIter::new(values_buffer);
 
-    let mut validity_iterator = convert(hybrid_rle::Decoder::new(validity_buffer, 1));
+    let mut page_validity = OptionalPageValidity::new(validity_buffer, additional);
 
-    extend_from_decoder(
-        validity,
-        &mut validity_iterator,
-        length,
-        &mut 0,
-        None,
-        values,
-        values_iter,
-    )
+    extend_from_decoder(validity, &mut page_validity, None, values, values_iter)
 }
 
 pub(super) fn read_plain_required<O: Offset>(
@@ -221,11 +202,8 @@ pub(super) fn extend_from_page<O: Offset>(
 }
 
 struct Optional<'a> {
-    pub values: utils::BinaryIter<'a>,
-    pub validity: Convert<hybrid_rle::Decoder<'a>>,
-    // invariant: offset <= length;
-    pub offset: usize,
-    pub length: usize,
+    values: utils::BinaryIter<'a>,
+    validity: OptionalPageValidity<'a>,
 }
 
 impl<'a> Optional<'a> {
@@ -234,12 +212,9 @@ impl<'a> Optional<'a> {
 
         let values = utils::BinaryIter::new(values_buffer);
 
-        let validity = convert(hybrid_rle::Decoder::new(validity_buffer, 1));
         Self {
             values,
-            validity,
-            offset: 0,
-            length: page.num_values(),
+            validity: OptionalPageValidity::new(validity_buffer, page.num_values()),
         }
     }
 }
@@ -300,11 +275,8 @@ impl<'a> RequiredDictionary<'a> {
 }
 
 struct OptionalDictionary<'a> {
-    pub values: std::iter::Map<hybrid_rle::HybridRleDecoder<'a>, Box<dyn Fn(u32) -> &'a [u8] + 'a>>,
-    pub validity: Convert<hybrid_rle::Decoder<'a>>,
-    // invariant: offset <= length;
-    pub offset: usize,
-    pub length: usize,
+    values: std::iter::Map<hybrid_rle::HybridRleDecoder<'a>, Box<dyn Fn(u32) -> &'a [u8] + 'a>>,
+    validity: OptionalPageValidity<'a>,
 }
 
 impl<'a> OptionalDictionary<'a> {
@@ -313,13 +285,9 @@ impl<'a> OptionalDictionary<'a> {
 
         let values = values_iter1(values_buffer, dict, page.num_values());
 
-        let validity = convert(hybrid_rle::Decoder::new(validity_buffer, 1));
-
         Self {
             values,
-            validity,
-            offset: 0,
-            length: page.num_values(),
+            validity: OptionalPageValidity::new(validity_buffer, page.num_values()),
         }
     }
 }
@@ -360,10 +328,10 @@ fn build_state<O>(page: &DataPage, is_optional: bool) -> Result<State> {
 impl<'a> utils::PageState<'a> for State<'a> {
     fn len(&self) -> usize {
         match self {
-            State::Optional(state) => state.length - state.offset,
+            State::Optional(state) => state.validity.len(),
             State::Required(state) => state.remaining,
             State::RequiredDictionary(state) => state.remaining,
-            State::OptionalDictionary(state) => state.length - state.offset,
+            State::OptionalDictionary(state) => state.validity.len(),
         }
     }
 }
@@ -429,36 +397,32 @@ impl<'a, O: Offset, A: TraitBinaryArray<O>> utils::Decoder<'a, &'a [u8], Binary<
         state: &mut Self::State,
         values: &mut Binary<O>,
         validity: &mut MutableBitmap,
-        remaining: usize,
+        additional: usize,
     ) {
         match state {
             State::Optional(page) => extend_from_decoder(
                 validity,
                 &mut page.validity,
-                page.length,
-                &mut page.offset,
-                Some(remaining),
+                Some(additional),
                 values,
                 &mut page.values,
             ),
             State::Required(page) => {
-                page.remaining -= remaining;
-                for x in page.values.by_ref().take(remaining) {
+                page.remaining -= additional;
+                for x in page.values.by_ref().take(additional) {
                     values.push(x)
                 }
             }
             State::OptionalDictionary(page) => extend_from_decoder(
                 validity,
                 &mut page.validity,
-                page.length,
-                &mut page.offset,
-                Some(remaining),
+                Some(additional),
                 values,
                 &mut page.values,
             ),
             State::RequiredDictionary(page) => {
-                page.remaining -= remaining;
-                for x in page.values.by_ref().take(remaining) {
+                page.remaining -= additional;
+                for x in page.values.by_ref().take(additional) {
                     values.push(x)
                 }
             }

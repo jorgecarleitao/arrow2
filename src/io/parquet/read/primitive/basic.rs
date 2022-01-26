@@ -5,12 +5,11 @@ use parquet2::{
     page::{DataPage, PrimitivePageDict},
     types::NativeType as ParquetNativeType,
 };
-use streaming_iterator::{convert, Convert};
 
 use super::super::utils as other_utils;
 use super::utils::chunks;
 use super::ColumnDescriptor;
-use crate::io::parquet::read::utils::Decoder;
+use crate::io::parquet::read::utils::{Decoder, OptionalPageValidity};
 use crate::{
     array::PrimitiveArray,
     bitmap::MutableBitmap,
@@ -58,17 +57,9 @@ fn read_dict_buffer_optional<T, A, F>(
 {
     let values_iterator = values_iter(indices_buffer, dict.values(), additional, op);
 
-    let mut validity_iterator = convert(hybrid_rle::Decoder::new(validity_buffer, 1));
+    let mut page_validity = OptionalPageValidity::new(validity_buffer, additional);
 
-    extend_from_decoder(
-        validity,
-        &mut validity_iterator,
-        length,
-        &mut 0,
-        None,
-        values,
-        values_iterator,
-    );
+    extend_from_decoder(validity, &mut page_validity, None, values, values_iterator)
 }
 
 fn read_dict_buffer_required<T, A, F>(
@@ -102,17 +93,9 @@ fn read_nullable<T, A, F>(
 {
     let values_iter = chunks(values_buffer).map(op);
 
-    let mut validity_iterator = convert(hybrid_rle::Decoder::new(validity_buffer, 1));
+    let mut page_validity = OptionalPageValidity::new(validity_buffer, additional);
 
-    extend_from_decoder(
-        validity,
-        &mut validity_iterator,
-        additional,
-        &mut 0,
-        None,
-        values,
-        values_iter,
-    )
+    extend_from_decoder(validity, &mut page_validity, None, values, values_iter)
 }
 
 fn read_required<T, A, F>(values_buffer: &[u8], additional: usize, values: &mut Vec<A>, op: F)
@@ -237,9 +220,7 @@ where
 {
     values: std::iter::Map<std::iter::Map<std::slice::ChunksExact<'a, u8>, G>, F>,
     phantom: std::marker::PhantomData<P>,
-    validity: Convert<hybrid_rle::Decoder<'a>>,
-    offset: usize,
-    length: usize,
+    validity: OptionalPageValidity<'a>,
 }
 
 impl<'a, T, P, G, F> OptionalPage<'a, T, P, G, F>
@@ -252,7 +233,6 @@ where
     fn new(page: &'a DataPage, op1: G, op2: F) -> Self {
         let (_, validity_buffer, values_buffer, _) =
             other_utils::split_buffer(page, page.descriptor());
-        let validity = convert(hybrid_rle::Decoder::new(validity_buffer, 1));
 
         Self {
             values: values_buffer
@@ -260,9 +240,7 @@ where
                 .map(op1)
                 .map(op2),
             phantom: Default::default(),
-            validity,
-            offset: 0,
-            length: page.num_values(),
+            validity: OptionalPageValidity::new(validity_buffer, page.num_values()),
         }
     }
 }
@@ -329,14 +307,12 @@ where
     P: ParquetNativeType,
     F: Fn(P) -> T,
 {
-    validity: Convert<hybrid_rle::Decoder<'a>>,
+    validity: OptionalPageValidity<'a>,
     values: std::iter::Map<
         std::iter::Map<hybrid_rle::HybridRleDecoder<'a>, Box<dyn Fn(u32) -> P + 'a>>,
         F,
     >,
     phantom: std::marker::PhantomData<P>,
-    offset: usize,
-    length: usize,
 }
 
 impl<'a, T, P, F> OptionalDictionaryPage<'a, T, P, F>
@@ -353,14 +329,10 @@ where
         let op1 = Box::new(move |index: u32| values[index as usize]) as Box<dyn Fn(u32) -> P>;
         let values = values_iter1(values_buffer, page.num_values(), op1, op2);
 
-        let validity = convert(hybrid_rle::Decoder::new(validity_buffer, 1));
-
         Self {
             phantom: Default::default(),
             values,
-            validity,
-            offset: 0,
-            length: page.num_values(),
+            validity: OptionalPageValidity::new(validity_buffer, page.num_values()),
         }
     }
 }
@@ -389,10 +361,10 @@ where
 {
     fn len(&self) -> usize {
         match self {
-            PrimitivePageState::Optional(optional) => optional.length - optional.offset,
+            PrimitivePageState::Optional(optional) => optional.validity.len(),
             PrimitivePageState::Required(required) => required.values.size_hint().0,
             PrimitivePageState::RequiredDictionary(required) => required.values.size_hint().0,
-            PrimitivePageState::OptionalDictionary(optional) => optional.length - optional.offset,
+            PrimitivePageState::OptionalDictionary(optional) => optional.validity.len(),
         }
     }
 }
@@ -494,8 +466,6 @@ where
             PrimitivePageState::Optional(page) => extend_from_decoder(
                 validity,
                 &mut page.validity,
-                page.length,
-                &mut page.offset,
                 Some(remaining),
                 values,
                 &mut page.values,
@@ -506,8 +476,6 @@ where
             PrimitivePageState::OptionalDictionary(page) => extend_from_decoder(
                 validity,
                 &mut page.validity,
-                page.length,
-                &mut page.offset,
                 Some(remaining),
                 values,
                 &mut page.values,

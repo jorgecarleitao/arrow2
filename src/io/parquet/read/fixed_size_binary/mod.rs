@@ -7,7 +7,6 @@ use parquet2::{
     page::{DataPage, FixedLenByteArrayPageDict},
     FallibleStreamingIterator,
 };
-use streaming_iterator::convert;
 
 use self::utils::FixedSizeBinary;
 
@@ -17,6 +16,7 @@ use crate::{
     bitmap::MutableBitmap,
     datatypes::DataType,
     error::{ArrowError, Result},
+    io::parquet::read::utils::OptionalPageValidity,
 };
 pub use basic::BinaryArrayIterator;
 
@@ -53,17 +53,9 @@ pub(crate) fn read_dict_buffer(
 ) {
     let values_iter = values_iter(indices_buffer, dict.values(), values.size, additional);
 
-    let mut validity_iterator = convert(hybrid_rle::Decoder::new(validity_buffer, 1));
+    let mut page_validity = OptionalPageValidity::new(validity_buffer, additional);
 
-    extend_from_decoder(
-        validity,
-        &mut validity_iterator,
-        additional,
-        &mut 0,
-        None,
-        values,
-        values_iter,
-    )
+    extend_from_decoder(validity, &mut page_validity, None, values, values_iter)
 }
 
 /// Assumptions: No rep levels
@@ -92,17 +84,9 @@ pub(crate) fn read_optional(
     assert_eq!(values_buffer.len() % values.size, 0);
     let values_iter = values_buffer.chunks_exact(values.size);
 
-    let mut validity_iterator = convert(hybrid_rle::Decoder::new(validity_buffer, 1));
+    let mut page_validity = OptionalPageValidity::new(validity_buffer, additional);
 
-    extend_from_decoder(
-        validity,
-        &mut validity_iterator,
-        additional,
-        &mut 0,
-        None,
-        values,
-        values_iter,
-    )
+    extend_from_decoder(validity, &mut page_validity, None, values, values_iter)
 }
 
 pub(crate) fn read_required(buffer: &[u8], additional: usize, values: &mut FixedSizeBinary) {

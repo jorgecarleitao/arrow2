@@ -129,36 +129,68 @@ impl<A: Copy + Default> Pushable<A> for Vec<A> {
     }
 }
 
-/// Extends a [`Pushable`] from an iterator of non-null values and an hybrid-rle decoder
-#[inline]
-pub(super) fn extend_from_decoder<'a, T: Default, C: Pushable<T>, I: Iterator<Item = T>>(
-    validity: &mut MutableBitmap,
-    decoder: &mut Convert<hybrid_rle::Decoder<'a>>,
-    page_length: usize, // data page length
-    offset: &mut usize,
-    limit: Option<usize>,
-    values: &mut C,
-    mut values_iter: I,
-) {
-    if *offset == 0 {
-        decoder.advance()
+#[derive(Debug)]
+pub struct OptionalPageValidity<'a> {
+    validity: Convert<hybrid_rle::Decoder<'a>>,
+    // invariants:
+    // * run_offset < length
+    // * consumed < length
+    run_offset: usize,
+    consumed: usize,
+    length: usize,
+}
+
+impl<'a> OptionalPageValidity<'a> {
+    #[inline]
+    pub fn new(validity: &'a [u8], length: usize) -> Self {
+        let validity = convert(hybrid_rle::Decoder::new(validity, 1));
+        Self {
+            validity,
+            run_offset: 0,
+            consumed: 0,
+            length,
+        }
     }
 
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.length - self.consumed
+    }
+}
+
+/// Extends a [`Pushable`] from an iterator of non-null values and an hybrid-rle decoder
+#[inline]
+pub(super) fn extend_from_decoder<'a, T: Default, P: Pushable<T>, I: Iterator<Item = T>>(
+    validity: &mut MutableBitmap,
+    page_validity: &mut OptionalPageValidity<'a>,
+    limit: Option<usize>,
+    values: &mut P,
+    mut values_iter: I,
+) {
     let limit = limit.unwrap_or(usize::MAX);
 
-    let mut consumed = 0;
-    while consumed < limit {
-        if let Some(run) = decoder.get() {
-            let length = match run {
+    // todo: remove `consumed_here` and compute next limit from `consumed`
+    let mut consumed_here = 0;
+    while consumed_here < limit {
+        if page_validity.run_offset == 0 {
+            page_validity.validity.advance()
+        }
+
+        if let Some(run) = page_validity.validity.get() {
+            match run {
                 hybrid_rle::HybridEncoded::Bitpacked(pack) => {
-                    let pack_size = pack.len() * 8 - *offset;
-                    let remaining = page_length - (*offset + consumed);
+                    // a pack has at most `pack.len() * 8` bits
+                    // during execution, we may end in the middle of a pack (run_offset != 0)
+                    // the remaining items in the pack is dictacted by a combination
+                    // of the page length, the offset in the pack, and where we are in the page
+                    let pack_size = pack.len() * 8 - page_validity.run_offset;
+                    let remaining = page_validity.length - page_validity.consumed;
                     let length = std::cmp::min(pack_size, remaining);
 
                     let additional = limit.min(length);
 
                     // consume `additional` items
-                    let iter = BitmapIter::new(pack, *offset, additional);
+                    let iter = BitmapIter::new(pack, page_validity.run_offset, additional);
                     for is_valid in iter {
                         if is_valid {
                             values.push(values_iter.next().unwrap())
@@ -166,28 +198,38 @@ pub(super) fn extend_from_decoder<'a, T: Default, C: Pushable<T>, I: Iterator<It
                             values.push_null()
                         };
                     }
-                    validity.extend_from_slice(pack, *offset, additional);
-                    length
+
+                    validity.extend_from_slice(pack, page_validity.run_offset, additional);
+
+                    if additional == length {
+                        page_validity.run_offset = 0
+                    } else {
+                        page_validity.run_offset += additional;
+                    };
+                    consumed_here += additional;
+                    page_validity.consumed += additional;
                 }
-                hybrid_rle::HybridEncoded::Rle(value, length) => {
+                &hybrid_rle::HybridEncoded::Rle(value, length) => {
                     let is_set = value[0] == 1;
-                    let length = *length;
+                    let length = length - page_validity.run_offset;
+
+                    // the number of elements that will be consumed in this (run, iteration)
                     let additional = limit.min(length);
+
                     validity.extend_constant(additional, is_set);
                     if is_set {
                         (0..additional).for_each(|_| values.push(values_iter.next().unwrap()));
                     }
-                    length
+
+                    if additional == length {
+                        page_validity.run_offset = 0
+                    } else {
+                        page_validity.run_offset += additional;
+                    };
+                    consumed_here += additional;
+                    page_validity.consumed += additional;
                 }
             };
-            if limit < length {
-                *offset += limit;
-                consumed += limit;
-            } else {
-                consumed += length;
-                *offset = 0;
-                decoder.advance();
-            }
         } else {
             break;
         }
@@ -214,17 +256,9 @@ pub(super) fn read_dict_optional<K>(
         hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional);
     let indices_iter = new_indices.map(|x| K::from_u32(x).unwrap());
 
-    let mut validity_iterator = convert(hybrid_rle::Decoder::new(validity_buffer, 1));
+    let mut page_validity = OptionalPageValidity::new(validity_buffer, additional);
 
-    extend_from_decoder(
-        validity,
-        &mut validity_iterator,
-        additional,
-        &mut 0,
-        None,
-        indices,
-        indices_iter,
-    )
+    extend_from_decoder(validity, &mut page_validity, None, indices, indices_iter)
 }
 
 /// The state of a partially deserialized page
@@ -246,7 +280,7 @@ pub(super) trait Decoder<'a, C: Default, P: Pushable<C>> {
         page: &mut Self::State,
         values: &mut P,
         validity: &mut MutableBitmap,
-        remaining: usize,
+        additional: usize,
     );
     fn finish(data_type: DataType, values: P, validity: MutableBitmap) -> Self::Array;
 }

@@ -2,18 +2,20 @@ use std::collections::VecDeque;
 
 use futures::{pin_mut, Stream, StreamExt};
 use parquet2::{
-    encoding::{hybrid_rle, Encoding},
+    encoding::Encoding,
     metadata::{ColumnChunkMetaData, ColumnDescriptor},
     page::DataPage,
 };
-use streaming_iterator::{convert, Convert};
 
 use crate::{
     array::BooleanArray,
     bitmap::{utils::BitmapIter, MutableBitmap},
     datatypes::DataType,
     error::{ArrowError, Result},
-    io::parquet::read::{utils::extend_from_decoder, DataPages},
+    io::parquet::read::{
+        utils::{extend_from_decoder, OptionalPageValidity},
+        DataPages,
+    },
 };
 
 use super::super::utils;
@@ -38,17 +40,9 @@ fn read_optional(
     let values_len = values_buffer.len() * 8;
     let values_iterator = BitmapIter::new(values_buffer, 0, values_len);
 
-    let mut validity_iterator = convert(hybrid_rle::Decoder::new(validity_buffer, 1));
+    let mut page_validity = OptionalPageValidity::new(validity_buffer, length);
 
-    extend_from_decoder(
-        validity,
-        &mut validity_iterator,
-        length,
-        &mut 0,
-        None,
-        values,
-        values_iterator,
-    )
+    extend_from_decoder(validity, &mut page_validity, None, values, values_iterator)
 }
 
 pub async fn stream_to_array<I, E>(pages: I, metadata: &ColumnChunkMetaData) -> Result<BooleanArray>
@@ -115,18 +109,14 @@ pub(super) fn extend_from_page(
 
 // The state of an optional DataPage with a boolean physical type
 #[derive(Debug)]
-struct OptionalBooleanDataPage<'a> {
-    pub values: BitmapIter<'a>,
-    pub validity: Convert<hybrid_rle::Decoder<'a>>,
-    // invariant: offset <= length;
-    pub offset: usize,
-    pub length: usize,
+struct Optional<'a> {
+    values: BitmapIter<'a>,
+    validity: OptionalPageValidity<'a>,
 }
 
-impl<'a> OptionalBooleanDataPage<'a> {
+impl<'a> Optional<'a> {
     pub fn new(page: &'a DataPage) -> Self {
         let (_, validity_buffer, values_buffer, _) = utils::split_buffer(page, page.descriptor());
-        let validity = convert(hybrid_rle::Decoder::new(validity_buffer, 1));
 
         // in PLAIN, booleans are LSB bitpacked and thus we can read them as if they were a bitmap.
         // note that `values_buffer` contains only non-null values.
@@ -137,23 +127,21 @@ impl<'a> OptionalBooleanDataPage<'a> {
 
         Self {
             values,
-            validity,
-            offset: 0,
-            length: page.num_values(),
+            validity: OptionalPageValidity::new(validity_buffer, page.num_values()),
         }
     }
 }
 
 // The state of a required DataPage with a boolean physical type
 #[derive(Debug)]
-struct RequiredBooleanDataPage<'a> {
-    pub values: &'a [u8],
+struct Required<'a> {
+    values: &'a [u8],
     // invariant: offset <= length;
-    pub offset: usize,
-    pub length: usize,
+    offset: usize,
+    length: usize,
 }
 
-impl<'a> RequiredBooleanDataPage<'a> {
+impl<'a> Required<'a> {
     pub fn new(page: &'a DataPage) -> Self {
         Self {
             values: page.buffer(),
@@ -166,14 +154,14 @@ impl<'a> RequiredBooleanDataPage<'a> {
 // The state of a `DataPage` of `Boolean` parquet primitive type
 #[derive(Debug)]
 enum BooleanPageState<'a> {
-    Optional(OptionalBooleanDataPage<'a>),
-    Required(RequiredBooleanDataPage<'a>),
+    Optional(Optional<'a>),
+    Required(Required<'a>),
 }
 
 impl<'a> BooleanPageState<'a> {
     pub fn len(&self) -> usize {
         match self {
-            BooleanPageState::Optional(page) => page.length - page.offset,
+            BooleanPageState::Optional(page) => page.validity.len(),
             BooleanPageState::Required(page) => page.length - page.offset,
         }
     }
@@ -187,12 +175,8 @@ impl<'a> utils::PageState<'a> for BooleanPageState<'a> {
 
 fn build_state(page: &DataPage, is_optional: bool) -> Result<BooleanPageState> {
     match (page.encoding(), is_optional) {
-        (Encoding::Plain, true) => Ok(BooleanPageState::Optional(OptionalBooleanDataPage::new(
-            page,
-        ))),
-        (Encoding::Plain, false) => Ok(BooleanPageState::Required(RequiredBooleanDataPage::new(
-            page,
-        ))),
+        (Encoding::Plain, true) => Ok(BooleanPageState::Optional(Optional::new(page))),
+        (Encoding::Plain, false) => Ok(BooleanPageState::Required(Required::new(page))),
         _ => Err(utils::not_implemented(
             &page.encoding(),
             is_optional,
@@ -224,8 +208,6 @@ impl<'a> utils::Decoder<'a, bool, MutableBitmap> for BooleanDecoder {
             BooleanPageState::Optional(page) => extend_from_decoder(
                 validity,
                 &mut page.validity,
-                page.length,
-                &mut page.offset,
                 Some(remaining),
                 values,
                 &mut page.values,

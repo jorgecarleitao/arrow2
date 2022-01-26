@@ -4,7 +4,6 @@ use parquet2::{
     encoding::{hybrid_rle, Encoding},
     page::{DataPage, FixedLenByteArrayPageDict},
 };
-use streaming_iterator::{convert, Convert};
 
 use crate::{
     array::FixedSizeBinaryArray,
@@ -14,7 +13,7 @@ use crate::{
     io::parquet::read::{
         utils::{
             extend_from_decoder, extend_from_new_page, not_implemented, split_buffer, Decoder,
-            PageState, Pushable,
+            OptionalPageValidity, PageState, Pushable,
         },
         DataPages,
     },
@@ -23,11 +22,8 @@ use crate::{
 use super::utils::FixedSizeBinary;
 
 struct Optional<'a> {
-    pub values: std::slice::ChunksExact<'a, u8>,
-    pub validity: Convert<hybrid_rle::Decoder<'a>>,
-    // invariant: offset <= length;
-    pub offset: usize,
-    pub length: usize,
+    values: std::slice::ChunksExact<'a, u8>,
+    validity: OptionalPageValidity<'a>,
 }
 
 impl<'a> Optional<'a> {
@@ -36,12 +32,9 @@ impl<'a> Optional<'a> {
 
         let values = values_buffer.chunks_exact(size);
 
-        let validity = convert(hybrid_rle::Decoder::new(validity_buffer, 1));
         Self {
             values,
-            validity,
-            offset: 0,
-            length: page.num_values(),
+            validity: OptionalPageValidity::new(validity_buffer, page.num_values()),
         }
     }
 }
@@ -100,11 +93,8 @@ impl<'a> RequiredDictionary<'a> {
 }
 
 struct OptionalDictionary<'a> {
-    pub values: std::iter::Map<hybrid_rle::HybridRleDecoder<'a>, Box<dyn Fn(u32) -> &'a [u8] + 'a>>,
-    pub validity: Convert<hybrid_rle::Decoder<'a>>,
-    // invariant: offset <= length;
-    pub offset: usize,
-    pub length: usize,
+    values: std::iter::Map<hybrid_rle::HybridRleDecoder<'a>, Box<dyn Fn(u32) -> &'a [u8] + 'a>>,
+    validity: OptionalPageValidity<'a>,
 }
 
 impl<'a> OptionalDictionary<'a> {
@@ -113,13 +103,9 @@ impl<'a> OptionalDictionary<'a> {
 
         let values = values_iter1(values_buffer, dict, page.num_values());
 
-        let validity = convert(hybrid_rle::Decoder::new(validity_buffer, 1));
-
         Self {
             values,
-            validity,
-            offset: 0,
-            length: page.num_values(),
+            validity: OptionalPageValidity::new(validity_buffer, page.num_values()),
         }
     }
 }
@@ -160,10 +146,10 @@ fn build_state(page: &DataPage, is_optional: bool, size: usize) -> Result<State>
 impl<'a> PageState<'a> for State<'a> {
     fn len(&self) -> usize {
         match self {
-            State::Optional(state) => state.length - state.offset,
+            State::Optional(state) => state.validity.len(),
             State::Required(state) => state.remaining,
             State::RequiredDictionary(state) => state.remaining,
-            State::OptionalDictionary(state) => state.length - state.offset,
+            State::OptionalDictionary(state) => state.validity.len(),
         }
     }
 }
@@ -190,8 +176,6 @@ impl<'a> Decoder<'a, &'a [u8], FixedSizeBinary> for BinaryDecoder {
             State::Optional(page) => extend_from_decoder(
                 validity,
                 &mut page.validity,
-                page.length,
-                &mut page.offset,
                 Some(remaining),
                 values,
                 &mut page.values,
@@ -205,8 +189,6 @@ impl<'a> Decoder<'a, &'a [u8], FixedSizeBinary> for BinaryDecoder {
             State::OptionalDictionary(page) => extend_from_decoder(
                 validity,
                 &mut page.validity,
-                page.length,
-                &mut page.offset,
                 Some(remaining),
                 values,
                 &mut page.values,
