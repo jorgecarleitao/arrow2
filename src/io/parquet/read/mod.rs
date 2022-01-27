@@ -39,6 +39,7 @@ use crate::{
 
 mod binary;
 mod boolean;
+mod dictionary;
 mod file;
 mod fixed_size_binary;
 mod nested_utils;
@@ -226,12 +227,13 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
             chunk_size,
             |x: f64| x,
         ),
-        /*
-        Utf8 | Binary => binary::iter_to_dict_array::<K, i32, _, _>(iter, metadata, data_type),
-        LargeUtf8 | LargeBinary => {
-            binary::iter_to_dict_array::<K, i64, _, _>(iter, metadata, data_type)
+
+        Utf8 | Binary => {
+            binary::iter_to_dict_arrays::<K, i32, _>(iter, is_optional, data_type, chunk_size)
         }
-         */
+        LargeUtf8 | LargeBinary => {
+            binary::iter_to_dict_arrays::<K, i64, _>(iter, is_optional, data_type, chunk_size)
+        }
         other => {
             return Err(ArrowError::nyi(format!(
                 "Reading dictionaries of type {:?}",

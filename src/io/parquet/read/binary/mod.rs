@@ -16,49 +16,12 @@ mod dictionary;
 mod nested;
 mod utils;
 
-pub use dictionary::iter_to_array as iter_to_dict_array;
+pub use dictionary::iter_to_arrays as iter_to_dict_arrays;
 
 use self::{basic::TraitBinaryArray, utils::Binary};
 
 use super::{nested_utils::Nested, DataPages};
 use basic::BinaryArrayIterator;
-
-pub fn iter_to_array<O, I, E>(
-    mut iter: I,
-    metadata: &ColumnChunkMetaData,
-    data_type: DataType,
-    nested: &mut Vec<Box<dyn Nested>>,
-) -> Result<Box<dyn Array>>
-where
-    O: Offset,
-    ArrowError: From<E>,
-    I: FallibleStreamingIterator<Item = DataPage, Error = E>,
-{
-    let is_nullable = nested.pop().unwrap().is_nullable();
-    let capacity = metadata.num_values() as usize;
-    let mut values = Binary::<O>::with_capacity(capacity);
-    let mut validity = MutableBitmap::with_capacity(capacity * usize::from(is_nullable));
-
-    if nested.is_empty() {
-        while let Some(page) = iter.next()? {
-            basic::extend_from_page(page, metadata.descriptor(), &mut values, &mut validity)?
-        }
-        debug_assert_eq!(values.len(), capacity);
-        debug_assert_eq!(validity.len(), capacity * usize::from(is_nullable));
-    } else {
-        while let Some(page) = iter.next()? {
-            nested::extend_from_page(
-                page,
-                metadata.descriptor(),
-                is_nullable,
-                nested,
-                &mut values,
-                &mut validity,
-            )?
-        }
-    }
-    Ok(utils::finish_array(data_type, values, validity))
-}
 
 pub async fn stream_to_array<O, I, E>(
     pages: I,
