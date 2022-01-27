@@ -31,16 +31,17 @@ where
     ArrowError: From<E>,
     I: FallibleStreamingIterator<Item = DataPage, Error = E>,
 {
+    let is_nullable = nested.pop().unwrap().is_nullable();
     let capacity = metadata.num_values() as usize;
     let mut values = Binary::<O>::with_capacity(capacity);
-    let mut validity = MutableBitmap::with_capacity(capacity);
-
-    let is_nullable = nested.pop().unwrap().is_nullable();
+    let mut validity = MutableBitmap::with_capacity(capacity * usize::from(is_nullable));
 
     if nested.is_empty() {
         while let Some(page) = iter.next()? {
             basic::extend_from_page(page, metadata.descriptor(), &mut values, &mut validity)?
         }
+        debug_assert_eq!(values.len(), capacity);
+        debug_assert_eq!(validity.len(), capacity * usize::from(is_nullable));
     } else {
         while let Some(page) = iter.next()? {
             nested::extend_from_page(

@@ -46,8 +46,6 @@ fn read_dict_buffer<O: Offset>(
     values: &mut Binary<O>,
     validity: &mut MutableBitmap,
 ) {
-    let length = values.len() + additional;
-
     let values_iterator = values_iter(indices_buffer, dict, additional);
 
     let mut validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
@@ -55,7 +53,7 @@ fn read_dict_buffer<O: Offset>(
     extend_from_decoder(
         validity,
         &mut validity_iterator,
-        length,
+        additional,
         values,
         values_iterator,
     );
@@ -69,12 +67,11 @@ fn read_dict_required<O: Offset>(
     values: &mut Binary<O>,
     validity: &mut MutableBitmap,
 ) {
+    debug_assert_eq!(0, validity.len());
     let values_iterator = values_iter(indices_buffer, dict, additional);
-
     for value in values_iterator {
         values.push(value);
     }
-    validity.extend_constant(additional, true);
 }
 
 struct Offsets<'a, O: Offset>(pub &'a mut Vec<O>);
@@ -108,8 +105,6 @@ fn read_delta_optional<O: Offset>(
     values: &mut Binary<O>,
     validity: &mut MutableBitmap,
 ) {
-    let length = values.len() + additional;
-
     let Binary {
         offsets,
         values,
@@ -129,7 +124,7 @@ fn read_delta_optional<O: Offset>(
     extend_from_decoder(
         validity,
         &mut validity_iterator,
-        length,
+        additional,
         &mut Offsets::<O>(offsets),
         offsets_iterator,
     );
@@ -146,8 +141,6 @@ fn read_plain_optional<O: Offset>(
     values: &mut Binary<O>,
     validity: &mut MutableBitmap,
 ) {
-    let length = values.len() + additional;
-
     // values_buffer: first 4 bytes are len, remaining is values
     let values_iterator = utils::BinaryIter::new(values_buffer);
 
@@ -156,7 +149,7 @@ fn read_plain_optional<O: Offset>(
     extend_from_decoder(
         validity,
         &mut validity_iterator,
-        length,
+        additional,
         values,
         values_iterator,
     )

@@ -117,16 +117,13 @@ pub(super) fn extend_from_decoder<'a, T: Default, C: Pushable<T>, I: Iterator<It
     values: &mut C,
     mut values_iter: I,
 ) {
-    let remaining = page_length;
+    let mut remaining = page_length;
     for run in decoder {
         match run {
             hybrid_rle::HybridEncoded::Bitpacked(pack) => {
                 // compute the length of the pack
                 let pack_size = pack.len() * 8;
-                let pack_remaining = page_length;
-                let length = std::cmp::min(pack_size, pack_remaining);
-
-                let additional = remaining.min(length);
+                let additional = pack_size.min(remaining);
 
                 // extend validity
                 validity.extend_from_slice(pack, 0, additional);
@@ -140,13 +137,13 @@ pub(super) fn extend_from_decoder<'a, T: Default, C: Pushable<T>, I: Iterator<It
                         values.push_null()
                     };
                 }
+
+                remaining -= additional;
             }
-            hybrid_rle::HybridEncoded::Rle(value, length) => {
+            hybrid_rle::HybridEncoded::Rle(value, additional) => {
                 let is_set = value[0] == 1;
 
                 // extend validity
-                let length = length;
-                let additional = remaining.min(length);
                 validity.extend_constant(additional, is_set);
 
                 // extend values
@@ -155,9 +152,13 @@ pub(super) fn extend_from_decoder<'a, T: Default, C: Pushable<T>, I: Iterator<It
                 } else {
                     values.extend_constant(additional, T::default());
                 }
+
+                remaining -= additional;
             }
         }
     }
+
+    debug_assert_eq!(remaining, 0);
 }
 
 pub(super) fn read_dict_optional<K>(
