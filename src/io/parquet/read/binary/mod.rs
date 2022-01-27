@@ -40,6 +40,8 @@ where
         while let Some(page) = iter.next()? {
             basic::extend_from_page(page, metadata.descriptor(), &mut values, &mut validity)?
         }
+        debug_assert_eq!(values.len(), capacity);
+        debug_assert_eq!(validity.len(), capacity * usize::from(is_nullable));
     } else {
         while let Some(page) = iter.next()? {
             nested::extend_from_page(
@@ -52,8 +54,6 @@ where
             )?
         }
     }
-    debug_assert_eq!(values.len(), capacity);
-    debug_assert_eq!(validity.len(), capacity * usize::from(is_nullable));
     Ok(utils::finish_array(data_type, values, validity))
 }
 

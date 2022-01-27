@@ -84,6 +84,8 @@ where
         while let Some(page) = iter.next()? {
             basic::extend_from_page(page, metadata.descriptor(), &mut values, &mut validity, op)?
         }
+        debug_assert_eq!(values.len(), capacity);
+        debug_assert_eq!(validity.len(), capacity * usize::from(is_nullable));
     } else {
         while let Some(page) = iter.next()? {
             nested::extend_from_page(
@@ -97,8 +99,6 @@ where
             )?
         }
     }
-    debug_assert_eq!(values.len(), capacity);
-    debug_assert_eq!(validity.len(), capacity * usize::from(is_nullable));
 
     let data_type = match data_type {
         DataType::Dictionary(_, values, _) => values.as_ref().clone(),
