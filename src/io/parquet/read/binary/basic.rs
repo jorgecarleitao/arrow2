@@ -54,8 +54,6 @@ fn read_dict_buffer<O: Offset>(
     values: &mut Binary<O>,
     validity: &mut MutableBitmap,
 ) {
-    let length = values.len() + additional;
-
     let values_iter = values_iter(indices_buffer, dict, additional);
 
     let mut page_validity = OptionalPageValidity::new(validity_buffer, additional);

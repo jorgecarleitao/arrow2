@@ -96,14 +96,13 @@ pub async fn read_metadata_async<R: AsyncRead + AsyncSeek + Send + Unpin>(
     Ok(_read_metadata_async(reader).await?)
 }
 
-fn dict_read<
-    K: DictionaryKey,
-    I: FallibleStreamingIterator<Item = DataPage, Error = ParquetError>,
->(
-    iter: &mut I,
-    metadata: &ColumnChunkMetaData,
+fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
+    iter: I,
+    is_optional: bool,
+    type_: &ParquetType,
     data_type: DataType,
-) -> Result<Box<dyn Array>> {
+    chunk_size: usize,
+) -> Result<Box<dyn Iterator<Item = Result<Arc<dyn Array>>> + 'a>> {
     use DataType::*;
     let values_data_type = if let Dictionary(_, v, _) = &data_type {
         v.as_ref()
@@ -111,108 +110,135 @@ fn dict_read<
         panic!()
     };
 
-    match values_data_type.to_logical_type() {
-        UInt8 => primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+    Ok(match values_data_type.to_logical_type() {
+        UInt8 => primitive::iter_to_dict_arrays::<K, _, _, _, _>(
             iter,
-            metadata,
+            is_optional,
             data_type,
+            chunk_size,
             |x: i32| x as u8,
         ),
-        UInt16 => primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+        UInt16 => primitive::iter_to_dict_arrays::<K, _, _, _, _>(
             iter,
-            metadata,
+            is_optional,
             data_type,
+            chunk_size,
             |x: i32| x as u16,
         ),
-        UInt32 => primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+        UInt32 => primitive::iter_to_dict_arrays::<K, _, _, _, _>(
             iter,
-            metadata,
+            is_optional,
             data_type,
+            chunk_size,
             |x: i32| x as u32,
         ),
-        Int8 => primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+        Int8 => primitive::iter_to_dict_arrays::<K, _, _, _, _>(
             iter,
-            metadata,
+            is_optional,
             data_type,
+            chunk_size,
             |x: i32| x as i8,
         ),
-        Int16 => primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+        Int16 => primitive::iter_to_dict_arrays::<K, _, _, _, _>(
             iter,
-            metadata,
+            is_optional,
             data_type,
+            chunk_size,
             |x: i32| x as i16,
         ),
         Int32 | Date32 | Time32(_) | Interval(IntervalUnit::YearMonth) => {
-            primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+            primitive::iter_to_dict_arrays::<K, _, _, _, _>(
                 iter,
-                metadata,
+                is_optional,
                 data_type,
+                chunk_size,
                 |x: i32| x as i32,
             )
         }
-        Timestamp(TimeUnit::Nanosecond, None) => match metadata.descriptor().type_() {
+
+        Timestamp(TimeUnit::Nanosecond, None) => match type_ {
             ParquetType::PrimitiveType {
                 physical_type,
                 logical_type,
                 ..
             } => match (physical_type, logical_type) {
-                (PhysicalType::Int96, _) => primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+                (PhysicalType::Int96, _) => primitive::iter_to_dict_arrays::<K, _, _, _, _>(
                     iter,
-                    metadata,
+                    is_optional,
                     DataType::Timestamp(TimeUnit::Nanosecond, None),
+                    chunk_size,
                     int96_to_i64_ns,
                 ),
                 (_, Some(LogicalType::TIMESTAMP(TimestampType { unit, .. }))) => match unit {
-                    ParquetTimeUnit::MILLIS(_) => {
-                        primitive::iter_to_dict_array::<K, _, _, _, _, _>(
-                            iter,
-                            metadata,
-                            data_type,
-                            |x: i64| x * 1_000_000,
-                        )
-                    }
-                    ParquetTimeUnit::MICROS(_) => {
-                        primitive::iter_to_dict_array::<K, _, _, _, _, _>(
-                            iter,
-                            metadata,
-                            data_type,
-                            |x: i64| x * 1_000,
-                        )
-                    }
-                    ParquetTimeUnit::NANOS(_) => primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+                    ParquetTimeUnit::MILLIS(_) => primitive::iter_to_dict_arrays::<K, _, _, _, _>(
                         iter,
-                        metadata,
+                        is_optional,
                         data_type,
+                        chunk_size,
+                        |x: i64| x * 1_000_000,
+                    ),
+                    ParquetTimeUnit::MICROS(_) => primitive::iter_to_dict_arrays::<K, _, _, _, _>(
+                        iter,
+                        is_optional,
+                        data_type,
+                        chunk_size,
+                        |x: i64| x * 1_000,
+                    ),
+                    ParquetTimeUnit::NANOS(_) => primitive::iter_to_dict_arrays::<K, _, _, _, _>(
+                        iter,
+                        is_optional,
+                        data_type,
+                        chunk_size,
                         |x: i64| x,
                     ),
                 },
-                _ => primitive::iter_to_dict_array::<K, _, _, _, _, _>(
+                _ => primitive::iter_to_dict_arrays::<K, _, _, _, _>(
                     iter,
-                    metadata,
+                    is_optional,
                     data_type,
+                    chunk_size,
                     |x: i64| x,
                 ),
             },
             _ => unreachable!(),
         },
+
         Int64 | Date64 | Time64(_) | Duration(_) | Timestamp(_, _) => {
-            primitive::iter_to_dict_array::<K, _, _, _, _, _>(iter, metadata, data_type, |x: i64| x)
+            primitive::iter_to_dict_arrays::<K, _, _, _, _>(
+                iter,
+                is_optional,
+                data_type,
+                chunk_size,
+                |x: i64| x,
+            )
         }
-        Float32 => {
-            primitive::iter_to_dict_array::<K, _, _, _, _, _>(iter, metadata, data_type, |x: f32| x)
-        }
-        Float64 => {
-            primitive::iter_to_dict_array::<K, _, _, _, _, _>(iter, metadata, data_type, |x: f64| x)
-        }
+        Float32 => primitive::iter_to_dict_arrays::<K, _, _, _, _>(
+            iter,
+            is_optional,
+            data_type,
+            chunk_size,
+            |x: f32| x,
+        ),
+        Float64 => primitive::iter_to_dict_arrays::<K, _, _, _, _>(
+            iter,
+            is_optional,
+            data_type,
+            chunk_size,
+            |x: f64| x,
+        ),
+        /*
         Utf8 | Binary => binary::iter_to_dict_array::<K, i32, _, _>(iter, metadata, data_type),
         LargeUtf8 | LargeBinary => {
             binary::iter_to_dict_array::<K, i64, _, _>(iter, metadata, data_type)
         }
-        other => Err(ArrowError::NotYetImplemented(format!(
-            "Reading dictionaries of type {:?}",
-            other
-        ))),
-    }
+         */
+        other => {
+            return Err(ArrowError::nyi(format!(
+                "Reading dictionaries of type {:?}",
+                other
+            )))
+        }
+    })
 }
 
 fn column_offset(data_type: &DataType) -> usize {
@@ -273,6 +299,7 @@ fn page_iter_to_arrays<
     use DataType::*;
     let is_optional =
         metadata.descriptor().max_def_level() != metadata.descriptor().max_rep_level();
+    let type_ = metadata.descriptor().type_();
     match data_type.to_logical_type() {
         /*Null => Ok(Box::new(NullArray::from_data(
             data_type,
@@ -392,7 +419,7 @@ fn page_iter_to_arrays<
                 .map(|x| x.map(|x| Arc::new(x) as _)),
         )),
 
-        Decimal(_, _) => match metadata.descriptor().type_() {
+        Decimal(_, _) => match type_ {
             ParquetType::PrimitiveType { physical_type, .. } => Ok(match physical_type {
                 PhysicalType::Int32 => primitive::iter_to_arrays(
                     iter,
@@ -521,11 +548,11 @@ fn page_iter_to_arrays<
             chunk_size,
         )),
 
-        /*
-        Dictionary(key_type, _, _) => match_integer_type!(key_type, |$T| {
-            dict_read::<$T, _>(iter, metadata, data_type)
+        Dictionary(key_type, _, _) => match_integer_type!(key_type, |$K| {
+            dict_read::<$K, _>(iter, is_optional, type_, data_type, chunk_size)
         }),
 
+        /*
         List(ref inner) => {
             let values = page_iter_to_array(iter, nested, metadata, inner.data_type().clone());
             create_list(data_type, nested, values.into())
@@ -623,66 +650,3 @@ where
     Ok((array, page_buffer, buffer))
 }
  */
-
-/// Converts an async stream of [`DataPage`] into a single [`Array`].
-pub async fn page_stream_to_array<I: Stream<Item = std::result::Result<DataPage, ParquetError>>>(
-    pages: I,
-    metadata: &ColumnChunkMetaData,
-    data_type: DataType,
-) -> Result<Box<dyn Array>> {
-    use DataType::*;
-    match data_type.to_logical_type() {
-        Null => Ok(Box::new(NullArray::from_data(
-            data_type,
-            metadata.num_values() as usize,
-        ))),
-        // INT32
-        UInt8 => primitive::stream_to_array(pages, metadata, data_type, |x: i32| x as u8).await,
-        UInt16 => primitive::stream_to_array(pages, metadata, data_type, |x: i32| x as u16).await,
-        UInt32 => primitive::stream_to_array(pages, metadata, data_type, |x: i32| x as u32).await,
-        Int8 => primitive::stream_to_array(pages, metadata, data_type, |x: i32| x as i8).await,
-        Int16 => primitive::stream_to_array(pages, metadata, data_type, |x: i32| x as i16).await,
-        Int32 | Date32 | Time32(_) | Interval(IntervalUnit::YearMonth) => {
-            primitive::stream_to_array(pages, metadata, data_type, |x: i32| x as i32).await
-        }
-
-        Timestamp(TimeUnit::Nanosecond, None) => match metadata.descriptor().type_() {
-            ParquetType::PrimitiveType { physical_type, .. } => match physical_type {
-                PhysicalType::Int96 => {
-                    primitive::stream_to_array(
-                        pages,
-                        metadata,
-                        DataType::Timestamp(TimeUnit::Nanosecond, None),
-                        int96_to_i64_ns,
-                    )
-                    .await
-                }
-                _ => primitive::stream_to_array(pages, metadata, data_type, |x: i64| x).await,
-            },
-            _ => unreachable!(),
-        },
-
-        // INT64
-        Int64 | Date64 | Time64(_) | Duration(_) | Timestamp(_, _) => {
-            primitive::stream_to_array(pages, metadata, data_type, |x: i64| x).await
-        }
-        UInt64 => primitive::stream_to_array(pages, metadata, data_type, |x: i64| x as u64).await,
-
-        Float32 => primitive::stream_to_array(pages, metadata, data_type, |x: f32| x).await,
-        Float64 => primitive::stream_to_array(pages, metadata, data_type, |x: f64| x).await,
-
-        Boolean => Ok(Box::new(boolean::stream_to_array(pages, metadata).await?)),
-
-        Binary | Utf8 => binary::stream_to_array::<i32, _, _>(pages, metadata, &data_type).await,
-        LargeBinary | LargeUtf8 => {
-            binary::stream_to_array::<i64, _, _>(pages, metadata, &data_type).await
-        }
-        FixedSizeBinary(_) => Ok(Box::new(
-            fixed_size_binary::stream_to_array(pages, data_type, metadata).await?,
-        )),
-        other => Err(ArrowError::NotYetImplemented(format!(
-            "Async conversion of {:?}",
-            other
-        ))),
-    }
-}

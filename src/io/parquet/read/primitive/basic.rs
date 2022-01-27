@@ -6,174 +6,14 @@ use parquet2::{
     types::NativeType as ParquetNativeType,
 };
 
-use super::super::utils as other_utils;
-use super::utils::chunks;
-use super::ColumnDescriptor;
 use crate::io::parquet::read::utils::{Decoder, OptionalPageValidity};
 use crate::{
-    array::PrimitiveArray,
-    bitmap::MutableBitmap,
-    datatypes::DataType,
-    error::Result,
-    io::parquet::read::{utils::extend_from_decoder, DataPages},
+    array::PrimitiveArray, bitmap::MutableBitmap, datatypes::DataType, error::Result,
     types::NativeType,
 };
 
-#[inline]
-fn values_iter<'a, T, A, F>(
-    indices_buffer: &'a [u8],
-    dict_values: &'a [T],
-    additional: usize,
-    op: F,
-) -> impl Iterator<Item = A> + 'a
-where
-    T: ParquetNativeType,
-    A: NativeType,
-    F: 'a + Fn(T) -> A,
-{
-    // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
-    // SPEC: followed by the values encoded using RLE/Bit packed described above (with the given bit width).
-    let bit_width = indices_buffer[0];
-    let indices_buffer = &indices_buffer[1..];
-
-    let indices = hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional);
-    indices
-        .map(move |index| dict_values[index as usize])
-        .map(op)
-}
-
-fn read_dict_buffer_optional<T, A, F>(
-    validity_buffer: &[u8],
-    indices_buffer: &[u8],
-    additional: usize,
-    dict: &PrimitivePageDict<T>,
-    values: &mut Vec<A>,
-    validity: &mut MutableBitmap,
-    op: F,
-) where
-    T: ParquetNativeType,
-    A: NativeType,
-    F: Fn(T) -> A,
-{
-    let values_iterator = values_iter(indices_buffer, dict.values(), additional, op);
-
-    let mut page_validity = OptionalPageValidity::new(validity_buffer, additional);
-
-    extend_from_decoder(validity, &mut page_validity, None, values, values_iterator)
-}
-
-fn read_dict_buffer_required<T, A, F>(
-    indices_buffer: &[u8],
-    additional: usize,
-    dict: &PrimitivePageDict<T>,
-    values: &mut Vec<A>,
-    validity: &mut MutableBitmap,
-    op: F,
-) where
-    T: ParquetNativeType,
-    A: NativeType,
-    F: Fn(T) -> A,
-{
-    debug_assert_eq!(0, validity.len());
-    let values_iterator = values_iter(indices_buffer, dict.values(), additional, op);
-    values.extend(values_iterator);
-}
-
-fn read_nullable<T, A, F>(
-    validity_buffer: &[u8],
-    values_buffer: &[u8],
-    additional: usize,
-    values: &mut Vec<A>,
-    validity: &mut MutableBitmap,
-    op: F,
-) where
-    T: ParquetNativeType,
-    A: NativeType,
-    F: Fn(T) -> A,
-{
-    let values_iter = chunks(values_buffer).map(op);
-
-    let mut page_validity = OptionalPageValidity::new(validity_buffer, additional);
-
-    extend_from_decoder(validity, &mut page_validity, None, values, values_iter)
-}
-
-fn read_required<T, A, F>(values_buffer: &[u8], additional: usize, values: &mut Vec<A>, op: F)
-where
-    T: ParquetNativeType,
-    A: NativeType,
-    F: Fn(T) -> A,
-{
-    assert_eq!(values_buffer.len(), additional * std::mem::size_of::<T>());
-    let iterator = chunks(values_buffer).map(op);
-
-    values.extend(iterator);
-}
-
-pub fn extend_from_page<T, A, F>(
-    page: &DataPage,
-    descriptor: &ColumnDescriptor,
-    values: &mut Vec<A>,
-    validity: &mut MutableBitmap,
-    op: F,
-) -> Result<()>
-where
-    T: ParquetNativeType,
-    A: NativeType,
-    F: Fn(T) -> A,
-{
-    let additional = page.num_values();
-
-    assert_eq!(descriptor.max_rep_level(), 0);
-    let is_optional = descriptor.max_def_level() == 1;
-
-    let (_, validity_buffer, values_buffer, version) = other_utils::split_buffer(page, descriptor);
-
-    match (&page.encoding(), page.dictionary_page(), is_optional) {
-        (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
-            read_dict_buffer_optional(
-                validity_buffer,
-                values_buffer,
-                additional,
-                dict.as_any().downcast_ref().unwrap(),
-                values,
-                validity,
-                op,
-            )
-        }
-        (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false) => {
-            read_dict_buffer_required(
-                values_buffer,
-                additional,
-                dict.as_any().downcast_ref().unwrap(),
-                values,
-                validity,
-                op,
-            )
-        }
-        // it can happen that there is a dictionary but the encoding is plain because
-        // it falled back.
-        (Encoding::Plain, _, true) => read_nullable(
-            validity_buffer,
-            values_buffer,
-            additional,
-            values,
-            validity,
-            op,
-        ),
-        (Encoding::Plain, _, false) => read_required(page.buffer(), additional, values, op),
-        _ => {
-            return Err(other_utils::not_implemented(
-                &page.encoding(),
-                is_optional,
-                page.dictionary_page().is_some(),
-                version,
-                "primitive",
-            ))
-        }
-    }
-    Ok(())
-}
+use super::super::utils;
+use super::super::DataPages;
 
 #[derive(Debug)]
 struct RequiredPage<'a, T, P, G, F>
@@ -231,8 +71,7 @@ where
     F: Fn(P) -> T,
 {
     fn new(page: &'a DataPage, op1: G, op2: F) -> Self {
-        let (_, validity_buffer, values_buffer, _) =
-            other_utils::split_buffer(page, page.descriptor());
+        let (_, validity_buffer, values_buffer, _) = utils::split_buffer(page, page.descriptor());
 
         Self {
             values: values_buffer
@@ -253,7 +92,6 @@ fn values_iter1<P, T, G, F>(
     op2: F,
 ) -> std::iter::Map<std::iter::Map<hybrid_rle::HybridRleDecoder, G>, F>
 where
-    P: ParquetNativeType,
     T: NativeType,
     G: Fn(u32) -> P,
     F: Fn(P) -> T,
@@ -322,8 +160,7 @@ where
     F: Fn(P) -> T,
 {
     fn new(page: &'a DataPage, dict: &'a PrimitivePageDict<P>, op2: F) -> Self {
-        let (_, validity_buffer, values_buffer, _) =
-            other_utils::split_buffer(page, page.descriptor());
+        let (_, validity_buffer, values_buffer, _) = utils::split_buffer(page, page.descriptor());
 
         let values = dict.values();
         let op1 = Box::new(move |index: u32| values[index as usize]) as Box<dyn Fn(u32) -> P>;
@@ -352,7 +189,7 @@ where
     OptionalDictionary(OptionalDictionaryPage<'a, T, P, F>),
 }
 
-impl<'a, T, P, G, F> other_utils::PageState<'a> for PrimitivePageState<'a, T, P, G, F>
+impl<'a, T, P, G, F> utils::PageState<'a> for PrimitivePageState<'a, T, P, G, F>
 where
     T: NativeType,
     P: ParquetNativeType,
@@ -400,7 +237,7 @@ where
         (Encoding::Plain, None, false) => Ok(PrimitivePageState::Required(RequiredPage::new(
             page, op1, op2,
         ))),
-        _ => Err(other_utils::not_implemented(
+        _ => Err(utils::not_implemented(
             &page.encoding(),
             is_optional,
             false,
@@ -442,7 +279,7 @@ where
     }
 }
 
-impl<'a, T, P, G, F> other_utils::Decoder<'a, T, Vec<T>> for PrimitiveDecoder<T, P, G, F>
+impl<'a, T, P, G, F> utils::Decoder<'a, T, Vec<T>> for PrimitiveDecoder<T, P, G, F>
 where
     T: NativeType,
     P: ParquetNativeType,
@@ -463,7 +300,7 @@ where
         remaining: usize,
     ) {
         match state {
-            PrimitivePageState::Optional(page) => extend_from_decoder(
+            PrimitivePageState::Optional(page) => utils::extend_from_decoder(
                 validity,
                 &mut page.validity,
                 Some(remaining),
@@ -473,7 +310,7 @@ where
             PrimitivePageState::Required(page) => {
                 values.extend(page.values.by_ref().take(remaining));
             }
-            PrimitivePageState::OptionalDictionary(page) => extend_from_decoder(
+            PrimitivePageState::OptionalDictionary(page) => utils::extend_from_decoder(
                 validity,
                 &mut page.validity,
                 Some(remaining),
@@ -578,7 +415,7 @@ where
                         Err(e) => return Some(Err(e)),
                     };
 
-                    other_utils::extend_from_new_page::<PrimitiveDecoder<T, P, G, F>, _, _>(
+                    utils::extend_from_new_page::<PrimitiveDecoder<T, P, G, F>, _, _>(
                         page,
                         state,
                         &self.data_type,

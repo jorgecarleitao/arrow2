@@ -12,8 +12,6 @@ use parquet2::{metadata::ColumnDescriptor, page::DataPage};
 mod basic;
 mod nested;
 
-pub use basic::stream_to_array;
-
 use self::basic::BooleanArrayIterator;
 
 use super::{nested_utils::Nested, DataPages};
