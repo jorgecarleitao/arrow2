@@ -313,31 +313,21 @@ pub(super) fn extend_from_new_page<'a, T: Decoder<'a, C, P>, C: Default, P: Push
     // extend the current state
     T::extend_from_state(&mut page, &mut values, &mut validity, remaining);
 
-    use std::cmp::Ordering::*;
-    match chunk_size.cmp(&page.len()) {
-        Less => {
-            // the page contains more items than chunk_size => deserialize the
-            // remaining to the ring
-            while page.len() > 0 {
-                let mut values = decoder.with_capacity(chunk_size);
-                let mut validity = MutableBitmap::with_capacity(chunk_size);
-                T::extend_from_state(&mut page, &mut values, &mut validity, chunk_size);
-                items.push_back((values, validity))
-            }
-
-            // and return this array
-            Ok(Some(T::finish(data_type.clone(), values, validity)))
-        }
-        Equal => {
-            // the page contains exacty what we need => bypass the ring
-            // and output the array as is
-            Ok(Some(T::finish(data_type.clone(), values, validity)))
-        }
-        Greater => {
-            // the page contains less items than what we need => push the temp array
-            // to the ring and fetch a new page
-            items.push_back((values, validity));
-            Ok(None)
-        }
+    if values.len() < chunk_size {
+        // the whole page was consumed and we still do not have enough items
+        // => push the values to `items` so that it can be continued later
+        items.push_back((values, validity));
+        // and indicate that there is no item available
+        return Ok(None);
     }
+
+    while page.len() > 0 {
+        let mut values = decoder.with_capacity(chunk_size);
+        let mut validity = MutableBitmap::with_capacity(chunk_size);
+        T::extend_from_state(&mut page, &mut values, &mut validity, chunk_size);
+        items.push_back((values, validity))
+    }
+
+    // and return this array
+    Ok(Some(T::finish(data_type.clone(), values, validity)))
 }

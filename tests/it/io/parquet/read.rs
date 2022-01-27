@@ -399,3 +399,54 @@ fn all_types() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn all_types_chunked() -> Result<()> {
+    // this has one batch with 8 elements
+    let path = "testing/parquet-testing/data/alltypes_plain.parquet";
+    let reader = std::fs::File::open(path)?;
+
+    // chunk it in 5 (so, (5,3))
+    let reader = FileReader::try_new(reader, None, Some(5), None, None)?;
+
+    let batches = reader.collect::<Result<Vec<_>>>()?;
+    assert_eq!(batches.len(), 2);
+
+    assert_eq!(batches[0].len(), 5);
+    assert_eq!(batches[1].len(), 3);
+
+    let result = batches[0].columns()[0]
+        .as_any()
+        .downcast_ref::<Int32Array>()
+        .unwrap();
+    assert_eq!(result, &Int32Array::from_slice([4, 5, 6, 7, 2]));
+
+    let result = batches[1].columns()[0]
+        .as_any()
+        .downcast_ref::<Int32Array>()
+        .unwrap();
+    assert_eq!(result, &Int32Array::from_slice([3, 0, 1]));
+
+    let result = batches[0].columns()[6]
+        .as_any()
+        .downcast_ref::<Float32Array>()
+        .unwrap();
+    assert_eq!(result, &Float32Array::from_slice([0.0, 1.1, 0.0, 1.1, 0.0]));
+
+    let result = batches[0].columns()[9]
+        .as_any()
+        .downcast_ref::<BinaryArray<i32>>()
+        .unwrap();
+    assert_eq!(
+        result,
+        &BinaryArray::<i32>::from_slice([[48], [49], [48], [49], [48]])
+    );
+
+    let result = batches[1].columns()[9]
+        .as_any()
+        .downcast_ref::<BinaryArray<i32>>()
+        .unwrap();
+    assert_eq!(result, &BinaryArray::<i32>::from_slice([[49], [48], [49]]));
+
+    Ok(())
+}
