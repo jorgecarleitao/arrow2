@@ -6,10 +6,23 @@ use parquet2::{
 };
 
 use super::super::utils;
-use super::basic::read_plain_required;
+use super::super::utils::Pushable;
 use super::{super::nested_utils::*, utils::Binary};
 
 use crate::{array::Offset, bitmap::MutableBitmap, error::Result};
+
+fn read_plain_required<O: Offset>(buffer: &[u8], additional: usize, values: &mut Binary<O>) {
+    let values_iterator = utils::BinaryIter::new(buffer);
+
+    // each value occupies 4 bytes + len declared in 4 bytes => reserve accordingly.
+    values.offsets.reserve(additional);
+    values.values.reserve(buffer.len() - 4 * additional);
+    let a = values.values.capacity();
+    for value in values_iterator {
+        values.push(value);
+    }
+    debug_assert_eq!(a, values.values.capacity());
+}
 
 fn read_values<'a, O, D, G>(
     def_levels: D,

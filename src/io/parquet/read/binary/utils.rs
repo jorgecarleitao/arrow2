@@ -1,31 +1,4 @@
-use crate::{
-    array::{Array, BinaryArray, Offset, Utf8Array},
-    bitmap::MutableBitmap,
-    datatypes::DataType,
-    io::parquet::read::utils::Pushable,
-};
-
-pub(super) fn finish_array<O: Offset>(
-    data_type: DataType,
-    values: Binary<O>,
-    validity: MutableBitmap,
-) -> Box<dyn Array> {
-    match data_type {
-        DataType::LargeBinary | DataType::Binary => Box::new(BinaryArray::from_data(
-            data_type,
-            values.offsets.0.into(),
-            values.values.into(),
-            validity.into(),
-        )),
-        DataType::LargeUtf8 | DataType::Utf8 => Box::new(Utf8Array::from_data(
-            data_type,
-            values.offsets.0.into(),
-            values.values.into(),
-            validity.into(),
-        )),
-        _ => unreachable!(),
-    }
-}
+use crate::{array::Offset, io::parquet::read::utils::Pushable};
 
 /// [`Pushable`] for variable length binary data.
 #[derive(Debug)]

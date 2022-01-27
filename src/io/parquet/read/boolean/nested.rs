@@ -7,11 +7,15 @@ use parquet2::{
 
 use super::super::nested_utils::*;
 use super::super::utils;
-use super::basic::read_required;
 use crate::{
     bitmap::{utils::BitmapIter, MutableBitmap},
     error::Result,
 };
+
+fn read_required(buffer: &[u8], additional: usize, values: &mut MutableBitmap) {
+    // in PLAIN, booleans are LSB bitpacked and thus we can read them as if they were a bitmap.
+    values.extend_from_slice(buffer, 0, additional);
+}
 
 fn read_values<D, G>(
     def_levels: D,

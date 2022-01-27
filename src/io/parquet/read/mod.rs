@@ -7,7 +7,7 @@ use std::{
     sync::Arc,
 };
 
-use futures::{AsyncRead, AsyncSeek, Stream};
+use futures::{AsyncRead, AsyncSeek};
 pub use parquet2::{
     error::ParquetError,
     fallible_streaming_iterator,
@@ -72,17 +72,6 @@ pub fn get_page_iterator<R: Read + Seek>(
         pages_filter,
         buffer,
     )?)
-}
-
-/// Creates a new iterator of compressed pages.
-pub async fn get_page_stream<'a, RR: AsyncRead + Unpin + Send + AsyncSeek>(
-    column_metadata: &'a ColumnChunkMetaData,
-    reader: &'a mut RR,
-    pages_filter: Option<PageFilter>,
-    buffer: Vec<u8>,
-) -> Result<impl Stream<Item = std::result::Result<CompressedDataPage, ParquetError>> + 'a> {
-    let pages_filter = pages_filter.unwrap_or_else(|| Arc::new(|_, _| true));
-    Ok(_get_page_stream(column_metadata, reader, buffer, pages_filter).await?)
 }
 
 /// Reads parquets' metadata syncronously.

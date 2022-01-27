@@ -10,13 +10,10 @@ use crate::{
 };
 
 use super::super::utils;
-use super::super::utils::{extend_from_decoder, split_buffer, Decoder, OptionalPageValidity};
+use super::super::utils::{
+    extend_from_decoder, extend_from_new_page, split_buffer, Decoder, OptionalPageValidity,
+};
 use super::super::DataPages;
-
-pub(super) fn read_required(buffer: &[u8], additional: usize, values: &mut MutableBitmap) {
-    // in PLAIN, booleans are LSB bitpacked and thus we can read them as if they were a bitmap.
-    values.extend_from_slice(buffer, 0, additional);
-}
 
 // The state of an optional DataPage with a boolean physical type
 #[derive(Debug)]
@@ -101,7 +98,7 @@ fn build_state(page: &DataPage, is_optional: bool) -> Result<BooleanPageState> {
 #[derive(Default)]
 struct BooleanDecoder {}
 
-impl<'a> utils::Decoder<'a, bool, MutableBitmap> for BooleanDecoder {
+impl<'a> Decoder<'a, bool, MutableBitmap> for BooleanDecoder {
     type State = BooleanPageState<'a>;
     type Array = BooleanArray;
 
@@ -183,7 +180,7 @@ impl<I: DataPages> Iterator for BooleanArrayIterator<I> {
                     Err(e) => return Some(Err(e)),
                 };
 
-                let maybe_array = utils::extend_from_new_page::<BooleanDecoder, _, _>(
+                let maybe_array = extend_from_new_page::<BooleanDecoder, _, _>(
                     page,
                     state,
                     &self.data_type,
