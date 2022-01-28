@@ -65,8 +65,6 @@ fn read<O: Offset>(
 
     match (rep_level_encoding.0, def_level_encoding.0) {
         (Encoding::Rle, Encoding::Rle) => {
-            let rep_levels =
-                HybridRleDecoder::new(rep_levels, get_bit_width(rep_level_encoding.1), additional);
             if is_nullable {
                 let def_levels = HybridRleDecoder::new(
                     def_levels,
@@ -79,6 +77,8 @@ fn read<O: Offset>(
                 read_plain_required(values_buffer, additional, values)
             }
 
+            let rep_levels =
+                HybridRleDecoder::new(rep_levels, get_bit_width(rep_level_encoding.1), additional);
             let def_levels =
                 HybridRleDecoder::new(def_levels, get_bit_width(def_level_encoding.1), additional);
 

@@ -72,14 +72,14 @@ pub(super) fn get_iterators<R: Read + Seek>(
                         page_iter_to_arrays(
                             pages,
                             column_meta,
-                            field.data_type().clone(),
+                            field.clone(),
                             chunk_size
                                 .unwrap_or(usize::MAX)
-                                .min(column_meta.num_values() as usize),
+                                .min(row_group.num_rows() as usize),
                         )
                     })
                 })
-                // todo: generalize for nested
+                // todo: generalize for struct type
                 .next()
                 .unwrap()
         })

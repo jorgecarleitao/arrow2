@@ -31,10 +31,7 @@ use crate::{
     array::{Array, BinaryArray, DictionaryKey, NullArray, PrimitiveArray, StructArray, Utf8Array},
     datatypes::{DataType, Field, IntervalUnit, TimeUnit},
     error::{ArrowError, Result},
-    io::parquet::read::{
-        nested_utils::{create_list, init_nested},
-        primitive::read_item,
-    },
+    io::parquet::read::{nested_utils::create_list, primitive::read_item},
 };
 
 mod binary;
@@ -53,8 +50,6 @@ pub use file::FileReader;
 pub use row_group::*;
 pub(crate) use schema::is_type_nullable;
 pub use schema::{get_schema, FileMetaData};
-
-use self::nested_utils::Nested;
 
 pub trait DataPages: FallibleStreamingIterator<Item = DataPage, Error = ParquetError> {}
 impl<I: FallibleStreamingIterator<Item = DataPage, Error = ParquetError>> DataPages for I {}
@@ -278,20 +273,17 @@ fn column_datatype(data_type: &DataType, column: usize) -> DataType {
     }
 }
 
-fn page_iter_to_arrays<
-    'a,
-    I: 'a + FallibleStreamingIterator<Item = DataPage, Error = ParquetError>,
->(
+fn page_iter_to_arrays<'a, I: 'a + DataPages>(
     iter: I,
     metadata: &ColumnChunkMetaData,
-    data_type: DataType,
+    field: Field,
     chunk_size: usize,
 ) -> Result<Box<dyn Iterator<Item = Result<Arc<dyn Array>>> + 'a>> {
     use DataType::*;
     let is_optional =
         metadata.descriptor().max_def_level() != metadata.descriptor().max_rep_level();
     let type_ = metadata.descriptor().type_();
-    match data_type.to_logical_type() {
+    match field.data_type.to_logical_type() {
         /*Null => Ok(Box::new(NullArray::from_data(
             data_type,
             metadata.num_values() as usize,
@@ -299,13 +291,13 @@ fn page_iter_to_arrays<
         Boolean => Ok(boolean::iter_to_arrays(
             iter,
             is_optional,
-            data_type,
+            field.data_type,
             chunk_size,
         )),
         UInt8 => Ok(primitive::iter_to_arrays(
             iter,
             is_optional,
-            data_type,
+            field.data_type,
             chunk_size,
             read_item,
             |x: i32| x as u8,
@@ -313,7 +305,7 @@ fn page_iter_to_arrays<
         UInt16 => Ok(primitive::iter_to_arrays(
             iter,
             is_optional,
-            data_type,
+            field.data_type,
             chunk_size,
             read_item,
             |x: i32| x as u16,
@@ -321,7 +313,7 @@ fn page_iter_to_arrays<
         UInt32 => Ok(primitive::iter_to_arrays(
             iter,
             is_optional,
-            data_type,
+            field.data_type,
             chunk_size,
             read_item,
             |x: i32| x as u32,
@@ -329,7 +321,7 @@ fn page_iter_to_arrays<
         Int8 => Ok(primitive::iter_to_arrays(
             iter,
             is_optional,
-            data_type,
+            field.data_type,
             chunk_size,
             read_item,
             |x: i32| x as i8,
@@ -337,7 +329,7 @@ fn page_iter_to_arrays<
         Int16 => Ok(primitive::iter_to_arrays(
             iter,
             is_optional,
-            data_type,
+            field.data_type,
             chunk_size,
             read_item,
             |x: i32| x as i16,
@@ -346,7 +338,7 @@ fn page_iter_to_arrays<
             Ok(primitive::iter_to_arrays(
                 iter,
                 is_optional,
-                data_type,
+                field.data_type,
                 chunk_size,
                 read_item,
                 |x: i32| x as i32,
@@ -371,7 +363,7 @@ fn page_iter_to_arrays<
                     ParquetTimeUnit::MILLIS(_) => primitive::iter_to_arrays(
                         iter,
                         is_optional,
-                        data_type,
+                        field.data_type,
                         chunk_size,
                         read_item,
                         |x: i64| x * 1_000_000,
@@ -379,7 +371,7 @@ fn page_iter_to_arrays<
                     ParquetTimeUnit::MICROS(_) => primitive::iter_to_arrays(
                         iter,
                         is_optional,
-                        data_type,
+                        field.data_type,
                         chunk_size,
                         read_item,
                         |x: i64| x * 1_000,
@@ -387,7 +379,7 @@ fn page_iter_to_arrays<
                     ParquetTimeUnit::NANOS(_) => primitive::iter_to_arrays(
                         iter,
                         is_optional,
-                        data_type,
+                        field.data_type,
                         chunk_size,
                         read_item,
                         |x: i64| x,
@@ -396,7 +388,7 @@ fn page_iter_to_arrays<
                 _ => Ok(primitive::iter_to_arrays(
                     iter,
                     is_optional,
-                    data_type,
+                    field.data_type,
                     chunk_size,
                     read_item,
                     |x: i64| x,
@@ -406,8 +398,13 @@ fn page_iter_to_arrays<
         },
 
         FixedSizeBinary(_) => Ok(Box::new(
-            fixed_size_binary::BinaryArrayIterator::new(iter, data_type, chunk_size, is_optional)
-                .map(|x| x.map(|x| Arc::new(x) as _)),
+            fixed_size_binary::BinaryArrayIterator::new(
+                iter,
+                field.data_type,
+                chunk_size,
+                is_optional,
+            )
+            .map(|x| x.map(|x| Arc::new(x) as _)),
         )),
 
         Decimal(_, _) => match type_ {
@@ -415,7 +412,7 @@ fn page_iter_to_arrays<
                 PhysicalType::Int32 => primitive::iter_to_arrays(
                     iter,
                     is_optional,
-                    data_type,
+                    field.data_type,
                     chunk_size,
                     read_item,
                     |x: i32| x as i128,
@@ -423,7 +420,7 @@ fn page_iter_to_arrays<
                 PhysicalType::Int64 => primitive::iter_to_arrays(
                     iter,
                     is_optional,
-                    data_type,
+                    field.data_type,
                     chunk_size,
                     read_item,
                     |x: i64| x as i128,
@@ -462,7 +459,7 @@ fn page_iter_to_arrays<
                         let validity = array.validity().cloned();
 
                         Ok(PrimitiveArray::<i128>::from_data(
-                            data_type.clone(),
+                            field.data_type.clone(),
                             values.into(),
                             validity,
                         ))
@@ -482,7 +479,7 @@ fn page_iter_to_arrays<
             Ok(primitive::iter_to_arrays(
                 iter,
                 is_optional,
-                data_type,
+                field.data_type,
                 chunk_size,
                 read_item,
                 |x: i64| x as i64,
@@ -491,7 +488,7 @@ fn page_iter_to_arrays<
         UInt64 => Ok(primitive::iter_to_arrays(
             iter,
             is_optional,
-            data_type,
+            field.data_type,
             chunk_size,
             read_item,
             |x: i64| x as u64,
@@ -500,7 +497,7 @@ fn page_iter_to_arrays<
         Float32 => Ok(primitive::iter_to_arrays(
             iter,
             is_optional,
-            data_type,
+            field.data_type,
             chunk_size,
             read_item,
             |x: f32| x,
@@ -508,7 +505,7 @@ fn page_iter_to_arrays<
         Float64 => Ok(primitive::iter_to_arrays(
             iter,
             is_optional,
-            data_type,
+            field.data_type,
             chunk_size,
             read_item,
             |x: f64| x,
@@ -517,37 +514,34 @@ fn page_iter_to_arrays<
         Binary => Ok(binary::iter_to_arrays::<i32, BinaryArray<i32>, _>(
             iter,
             is_optional,
-            data_type,
+            field.data_type,
             chunk_size,
         )),
         LargeBinary => Ok(binary::iter_to_arrays::<i64, BinaryArray<i64>, _>(
             iter,
             is_optional,
-            data_type,
+            field.data_type,
             chunk_size,
         )),
         Utf8 => Ok(binary::iter_to_arrays::<i32, Utf8Array<i32>, _>(
             iter,
             is_optional,
-            data_type,
+            field.data_type,
             chunk_size,
         )),
         LargeUtf8 => Ok(binary::iter_to_arrays::<i64, Utf8Array<i64>, _>(
             iter,
             is_optional,
-            data_type,
+            field.data_type,
             chunk_size,
         )),
 
         Dictionary(key_type, _, _) => match_integer_type!(key_type, |$K| {
-            dict_read::<$K, _>(iter, is_optional, type_, data_type, chunk_size)
+            dict_read::<$K, _>(iter, is_optional, type_, field.data_type, chunk_size)
         }),
 
+        List(_) => page_iter_to_arrays_nested(iter, field, chunk_size),
         /*
-        List(ref inner) => {
-            let values = page_iter_to_array(iter, nested, metadata, inner.data_type().clone());
-            create_list(data_type, nested, values.into())
-        }
         LargeList(ref inner) => {
             let values = page_iter_to_array(iter, nested, metadata, inner.data_type().clone());
             create_list(data_type, nested, values.into())
@@ -582,6 +576,22 @@ fn finish_array(data_type: DataType, arrays: &mut VecDeque<Box<dyn Array>>) -> B
         Union => todo!(),
         Map => todo!(),
     }
+}
+
+fn page_iter_to_arrays_nested<'a, I: 'a + DataPages>(
+    iter: I,
+    field: Field,
+    chunk_size: usize,
+) -> Result<Box<dyn Iterator<Item = Result<Arc<dyn Array>>> + 'a>> {
+    let iter = boolean::iter_to_arrays_nested(iter, field.clone(), chunk_size);
+
+    let iter = iter.map(move |x| {
+        let (mut nested, array) = x?;
+        let _ = nested.nested.pop().unwrap(); // the primitive
+        create_list(field.data_type().clone(), &mut nested, array)
+    });
+
+    Ok(Box::new(iter))
 }
 
 /*

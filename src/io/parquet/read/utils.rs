@@ -233,8 +233,6 @@ pub(super) fn extend_from_decoder<'a, T: Default, P: Pushable<T>, I: Iterator<It
             break;
         }
     }
-
-    debug_assert_eq!(remaining, 0);
 }
 
 pub(super) fn read_dict_optional<K>(

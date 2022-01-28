@@ -159,6 +159,8 @@ pub fn pyarrow_nested_nullable(column: usize) -> Box<dyn Array> {
             let validity = Some(Bitmap::from([
                 true, false, true, true, true, true, false, true,
             ]));
+            // [0, 2, 2, 5, 8, 8, 11, 11, 12]
+            // [[a1, a2], None, [a3, a4, a5], [a6, a7, a8], [], [a9, a10, a11], None, [a12]]
             let data_type = DataType::List(Box::new(field));
             Box::new(ListArray::<i32>::from_data(
                 data_type, offsets, values, validity,
