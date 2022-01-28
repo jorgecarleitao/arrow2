@@ -6,10 +6,9 @@ use parquet2::metadata::ColumnDescriptor;
 use parquet2::page::{split_buffer as _split_buffer, DataPage, DataPageHeader};
 use streaming_iterator::{convert, Convert, StreamingIterator};
 
-use crate::array::{Array, DictionaryKey};
+use crate::array::DictionaryKey;
 use crate::bitmap::utils::BitmapIter;
 use crate::bitmap::MutableBitmap;
-use crate::datatypes::DataType;
 use crate::error::ArrowError;
 
 pub struct BinaryIter<'a> {
@@ -269,7 +268,6 @@ pub(super) trait PageState<'a> {
 /// A decoder that knows how to map `State` -> Array
 pub(super) trait Decoder<'a, C: Default, P: Pushable<C>> {
     type State: PageState<'a>;
-    type Array: Array;
 
     /// Initializes a new pushable
     fn with_capacity(&self, capacity: usize) -> P;
@@ -282,17 +280,15 @@ pub(super) trait Decoder<'a, C: Default, P: Pushable<C>> {
         validity: &mut MutableBitmap,
         additional: usize,
     );
-    fn finish(data_type: DataType, values: P, validity: MutableBitmap) -> Self::Array;
 }
 
 pub(super) fn extend_from_new_page<'a, T: Decoder<'a, C, P>, C: Default, P: Pushable<C>>(
     mut page: T::State,
     state: Option<(P, MutableBitmap)>,
-    data_type: &DataType,
     chunk_size: usize,
     items: &mut VecDeque<(P, MutableBitmap)>,
     decoder: &T,
-) -> Result<Option<T::Array>, ArrowError> {
+) -> Result<Option<(P, MutableBitmap)>, ArrowError> {
     let (mut values, mut validity) = if let Some((values, validity)) = state {
         // there is a already a state => it must be incomplete...
         debug_assert!(
@@ -329,5 +325,5 @@ pub(super) fn extend_from_new_page<'a, T: Decoder<'a, C, P>, C: Default, P: Push
     }
 
     // and return this array
-    Ok(Some(T::finish(data_type.clone(), values, validity)))
+    Ok(Some((values, validity)))
 }

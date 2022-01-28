@@ -9,7 +9,6 @@ use super::utils;
 use crate::{
     array::{Array, DictionaryKey, PrimitiveArray},
     bitmap::MutableBitmap,
-    datatypes::DataType,
     error::Result,
     io::parquet::read::utils::{extend_from_decoder, OptionalPageValidity},
 };
@@ -126,7 +125,6 @@ where
     K: DictionaryKey,
 {
     type State = State<'a, K>;
-    type Array = PrimitiveArray<K>;
 
     fn with_capacity(&self, capacity: usize) -> Vec<K> {
         Vec::<K>::with_capacity(capacity)
@@ -151,10 +149,6 @@ where
             }*/
         }
     }
-
-    fn finish(data_type: DataType, values: Vec<K>, validity: MutableBitmap) -> Self::Array {
-        PrimitiveArray::from_data(data_type, values.into(), validity.into())
-    }
 }
 
 #[derive(Debug)]
@@ -170,4 +164,8 @@ impl Dict {
             Self::Complete(array) => array.clone(),
         }
     }
+}
+
+pub fn finish_key<K: DictionaryKey>(values: Vec<K>, validity: MutableBitmap) -> PrimitiveArray<K> {
+    PrimitiveArray::from_data(K::PRIMITIVE.into(), values.into(), validity.into())
 }

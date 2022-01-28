@@ -6,7 +6,7 @@ use parquet2::{
     types::NativeType as ParquetNativeType,
 };
 
-use crate::io::parquet::read::utils::{Decoder, OptionalPageValidity};
+use crate::io::parquet::read::utils::OptionalPageValidity;
 use crate::{
     array::PrimitiveArray, bitmap::MutableBitmap, datatypes::DataType, error::Result,
     types::NativeType,
@@ -287,7 +287,6 @@ where
     F: Copy + Fn(P) -> T,
 {
     type State = PrimitivePageState<'a, T, P, G, F>;
-    type Array = PrimitiveArray<T>;
 
     fn with_capacity(&self, capacity: usize) -> Vec<T> {
         Vec::<T>::with_capacity(capacity)
@@ -322,14 +321,14 @@ where
             }
         }
     }
+}
 
-    fn finish(data_type: DataType, values: Vec<T>, validity: MutableBitmap) -> Self::Array {
-        let data_type = match data_type {
-            DataType::Dictionary(_, values, _) => values.as_ref().clone(),
-            _ => data_type,
-        };
-        PrimitiveArray::from_data(data_type, values.into(), validity.into())
-    }
+pub(super) fn finish<T: NativeType>(
+    data_type: &DataType,
+    values: Vec<T>,
+    validity: MutableBitmap,
+) -> PrimitiveArray<T> {
+    PrimitiveArray::from_data(data_type.clone(), values.into(), validity.into())
 }
 
 /// An iterator adapter over [`DataPages`] assumed to be encoded as boolean arrays
@@ -395,13 +394,10 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         // back[a1, a2, a3, ...]front
         if self.items.len() > 1 {
-            return self.items.pop_back().map(|(values, validity)| {
-                Ok(PrimitiveDecoder::<T, P, G, F>::finish(
-                    self.data_type.clone(),
-                    values,
-                    validity,
-                ))
-            });
+            return self
+                .items
+                .pop_back()
+                .map(|(values, validity)| Ok(finish(&self.data_type, values, validity)));
         }
         match (self.items.pop_back(), self.iter.next()) {
             (_, Err(e)) => Some(Err(e.into())),
@@ -418,14 +414,15 @@ where
                     utils::extend_from_new_page::<PrimitiveDecoder<T, P, G, F>, _, _>(
                         page,
                         state,
-                        &self.data_type,
                         self.chunk_size,
                         &mut self.items,
                         &PrimitiveDecoder::default(),
                     )
                 };
                 match maybe_array {
-                    Ok(Some(array)) => Some(Ok(array)),
+                    Ok(Some((values, validity))) => {
+                        Some(Ok(finish(&self.data_type, values, validity)))
+                    }
                     Ok(None) => self.next(),
                     Err(e) => Some(Err(e)),
                 }
@@ -434,11 +431,7 @@ where
                 // we have a populated item and no more pages
                 // the only case where an item's length may be smaller than chunk_size
                 debug_assert!(values.len() <= self.chunk_size);
-                Some(Ok(PrimitiveDecoder::<T, P, G, F>::finish(
-                    self.data_type.clone(),
-                    values,
-                    validity,
-                )))
+                Some(Ok(finish(&self.data_type, values, validity)))
             }
         }
     }

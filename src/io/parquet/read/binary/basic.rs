@@ -14,8 +14,8 @@ use crate::{
     error::Result,
 };
 
+use super::super::utils::{extend_from_decoder, OptionalPageValidity};
 use super::super::DataPages;
-use super::super::utils::{extend_from_decoder, Decoder, OptionalPageValidity};
 use super::{super::utils, utils::Binary};
 
 fn read_delta_optional<O: Offset>(
@@ -220,27 +220,13 @@ impl<O: Offset> TraitBinaryArray<O> for Utf8Array<O> {
     }
 }
 
-#[derive(Debug)]
-struct BinaryDecoder<O: Offset, A: TraitBinaryArray<O>> {
+#[derive(Debug, Default)]
+struct BinaryDecoder<O: Offset> {
     phantom_o: std::marker::PhantomData<O>,
-    phantom_a: std::marker::PhantomData<A>,
 }
 
-impl<O: Offset, A: TraitBinaryArray<O>> Default for BinaryDecoder<O, A> {
-    #[inline]
-    fn default() -> Self {
-        Self {
-            phantom_o: std::marker::PhantomData,
-            phantom_a: std::marker::PhantomData,
-        }
-    }
-}
-
-impl<'a, O: Offset, A: TraitBinaryArray<O>> utils::Decoder<'a, &'a [u8], Binary<O>>
-    for BinaryDecoder<O, A>
-{
+impl<'a, O: Offset> utils::Decoder<'a, &'a [u8], Binary<O>> for BinaryDecoder<O> {
     type State = State<'a>;
-    type Array = A;
 
     fn with_capacity(&self, capacity: usize) -> Binary<O> {
         Binary::<O>::with_capacity(capacity)
@@ -281,15 +267,19 @@ impl<'a, O: Offset, A: TraitBinaryArray<O>> utils::Decoder<'a, &'a [u8], Binary<
             }
         }
     }
+}
 
-    fn finish(data_type: DataType, values: Binary<O>, validity: MutableBitmap) -> Self::Array {
-        A::from_data(
-            data_type,
-            values.offsets.0.into(),
-            values.values.into(),
-            validity.into(),
-        )
-    }
+fn finish<O: Offset, A: TraitBinaryArray<O>>(
+    data_type: &DataType,
+    values: Binary<O>,
+    validity: MutableBitmap,
+) -> A {
+    A::from_data(
+        data_type.clone(),
+        values.offsets.0.into(),
+        values.values.into(),
+        validity.into(),
+    )
 }
 
 pub struct BinaryArrayIterator<O: Offset, A: TraitBinaryArray<O>, I: DataPages> {
@@ -320,13 +310,10 @@ impl<O: Offset, A: TraitBinaryArray<O>, I: DataPages> Iterator for BinaryArrayIt
     fn next(&mut self) -> Option<Self::Item> {
         // back[a1, a2, a3, ...]front
         if self.items.len() > 1 {
-            return self.items.pop_back().map(|(values, validity)| {
-                Ok(BinaryDecoder::finish(
-                    self.data_type.clone(),
-                    values,
-                    validity,
-                ))
-            });
+            return self
+                .items
+                .pop_back()
+                .map(|(values, validity)| Ok(finish(&self.data_type, values, validity)));
         }
         match (self.items.pop_back(), self.iter.next()) {
             (_, Err(e)) => Some(Err(e.into())),
@@ -340,17 +327,18 @@ impl<O: Offset, A: TraitBinaryArray<O>, I: DataPages> Iterator for BinaryArrayIt
                         Err(e) => return Some(Err(e)),
                     };
 
-                    utils::extend_from_new_page::<BinaryDecoder<O, A>, _, _>(
+                    utils::extend_from_new_page(
                         page,
                         state,
-                        &self.data_type,
                         self.chunk_size,
                         &mut self.items,
-                        &BinaryDecoder::<O, A>::default(),
+                        &BinaryDecoder::<O>::default(),
                     )
                 };
                 match maybe_array {
-                    Ok(Some(array)) => Some(Ok(array)),
+                    Ok(Some((values, validity))) => {
+                        Some(Ok(finish(&self.data_type, values, validity)))
+                    }
                     Ok(None) => self.next(),
                     Err(e) => Some(Err(e)),
                 }
@@ -359,11 +347,7 @@ impl<O: Offset, A: TraitBinaryArray<O>, I: DataPages> Iterator for BinaryArrayIt
                 // we have a populated item and no more pages
                 // the only case where an item's length may be smaller than chunk_size
                 debug_assert!(values.len() <= self.chunk_size);
-                Some(Ok(BinaryDecoder::finish(
-                    self.data_type.clone(),
-                    values,
-                    validity,
-                )))
+                Some(Ok(finish(&self.data_type, values, validity)))
             }
         }
     }

@@ -59,32 +59,32 @@ impl<'a> Required<'a> {
     }
 }
 
-// The state of a `DataPage` of `Boolean` parquet primitive type
+// The state of a `DataPage` of `Boolean` parquet boolean type
 #[derive(Debug)]
-enum BooleanPageState<'a> {
+enum State<'a> {
     Optional(Optional<'a>),
     Required(Required<'a>),
 }
 
-impl<'a> BooleanPageState<'a> {
+impl<'a> State<'a> {
     pub fn len(&self) -> usize {
         match self {
-            BooleanPageState::Optional(page) => page.validity.len(),
-            BooleanPageState::Required(page) => page.length - page.offset,
+            State::Optional(page) => page.validity.len(),
+            State::Required(page) => page.length - page.offset,
         }
     }
 }
 
-impl<'a> utils::PageState<'a> for BooleanPageState<'a> {
+impl<'a> utils::PageState<'a> for State<'a> {
     fn len(&self) -> usize {
         self.len()
     }
 }
 
-fn build_state(page: &DataPage, is_optional: bool) -> Result<BooleanPageState> {
+fn build_state(page: &DataPage, is_optional: bool) -> Result<State> {
     match (page.encoding(), is_optional) {
-        (Encoding::Plain, true) => Ok(BooleanPageState::Optional(Optional::new(page))),
-        (Encoding::Plain, false) => Ok(BooleanPageState::Required(Required::new(page))),
+        (Encoding::Plain, true) => Ok(State::Optional(Optional::new(page))),
+        (Encoding::Plain, false) => Ok(State::Required(Required::new(page))),
         _ => Err(utils::not_implemented(
             &page.encoding(),
             is_optional,
@@ -99,8 +99,7 @@ fn build_state(page: &DataPage, is_optional: bool) -> Result<BooleanPageState> {
 struct BooleanDecoder {}
 
 impl<'a> Decoder<'a, bool, MutableBitmap> for BooleanDecoder {
-    type State = BooleanPageState<'a>;
-    type Array = BooleanArray;
+    type State = State<'a>;
 
     fn with_capacity(&self, capacity: usize) -> MutableBitmap {
         MutableBitmap::with_capacity(capacity)
@@ -113,24 +112,24 @@ impl<'a> Decoder<'a, bool, MutableBitmap> for BooleanDecoder {
         remaining: usize,
     ) {
         match state {
-            BooleanPageState::Optional(page) => extend_from_decoder(
+            State::Optional(page) => extend_from_decoder(
                 validity,
                 &mut page.validity,
                 Some(remaining),
                 values,
                 &mut page.values,
             ),
-            BooleanPageState::Required(page) => {
+            State::Required(page) => {
                 let remaining = remaining.min(page.length - page.offset);
                 values.extend_from_slice(page.values, page.offset, remaining);
                 page.offset += remaining;
             }
         }
     }
+}
 
-    fn finish(data_type: DataType, values: MutableBitmap, validity: MutableBitmap) -> Self::Array {
-        BooleanArray::from_data(data_type, values.into(), validity.into())
-    }
+fn finish(data_type: &DataType, values: MutableBitmap, validity: MutableBitmap) -> BooleanArray {
+    BooleanArray::from_data(data_type.clone(), values.into(), validity.into())
 }
 
 /// An iterator adapter over [`DataPages`] assumed to be encoded as boolean arrays
@@ -161,13 +160,10 @@ impl<I: DataPages> Iterator for BooleanArrayIterator<I> {
     fn next(&mut self) -> Option<Self::Item> {
         // back[a1, a2, a3, ...]front
         if self.items.len() > 1 {
-            return self.items.pop_back().map(|(values, validity)| {
-                Ok(BooleanDecoder::finish(
-                    self.data_type.clone(),
-                    values,
-                    validity,
-                ))
-            });
+            return self
+                .items
+                .pop_back()
+                .map(|(values, validity)| Ok(finish(&self.data_type, values, validity)));
         }
         match (self.items.pop_back(), self.iter.next()) {
             (_, Err(e)) => Some(Err(e.into())),
@@ -180,16 +176,17 @@ impl<I: DataPages> Iterator for BooleanArrayIterator<I> {
                     Err(e) => return Some(Err(e)),
                 };
 
-                let maybe_array = extend_from_new_page::<BooleanDecoder, _, _>(
+                let maybe_array = extend_from_new_page(
                     page,
                     state,
-                    &self.data_type,
                     self.chunk_size,
                     &mut self.items,
                     &BooleanDecoder::default(),
                 );
                 match maybe_array {
-                    Ok(Some(array)) => Some(Ok(array)),
+                    Ok(Some((values, validity))) => {
+                        Some(Ok(finish(&self.data_type, values, validity)))
+                    }
                     Ok(None) => self.next(),
                     Err(e) => Some(Err(e)),
                 }
@@ -198,11 +195,7 @@ impl<I: DataPages> Iterator for BooleanArrayIterator<I> {
                 // we have a populated item and no more pages
                 // the only case where an item's length may be smaller than chunk_size
                 debug_assert!(values.len() <= self.chunk_size);
-                Some(Ok(BooleanDecoder::finish(
-                    self.data_type.clone(),
-                    values,
-                    validity,
-                )))
+                Some(Ok(finish(&self.data_type, values, validity)))
             }
         }
     }

@@ -160,7 +160,6 @@ struct BinaryDecoder {
 
 impl<'a> Decoder<'a, &'a [u8], FixedSizeBinary> for BinaryDecoder {
     type State = State<'a>;
-    type Array = FixedSizeBinaryArray;
 
     fn with_capacity(&self, capacity: usize) -> FixedSizeBinary {
         FixedSizeBinary::with_capacity(capacity, self.size)
@@ -201,14 +200,14 @@ impl<'a> Decoder<'a, &'a [u8], FixedSizeBinary> for BinaryDecoder {
             }
         }
     }
+}
 
-    fn finish(
-        data_type: DataType,
-        values: FixedSizeBinary,
-        validity: MutableBitmap,
-    ) -> Self::Array {
-        FixedSizeBinaryArray::from_data(data_type, values.values.into(), validity.into())
-    }
+fn finish(
+    data_type: &DataType,
+    values: FixedSizeBinary,
+    validity: MutableBitmap,
+) -> FixedSizeBinaryArray {
+    FixedSizeBinaryArray::from_data(data_type.clone(), values.values.into(), validity.into())
 }
 
 pub struct BinaryArrayIterator<I: DataPages> {
@@ -240,13 +239,10 @@ impl<I: DataPages> Iterator for BinaryArrayIterator<I> {
     fn next(&mut self) -> Option<Self::Item> {
         // back[a1, a2, a3, ...]front
         if self.items.len() > 1 {
-            return self.items.pop_back().map(|(values, validity)| {
-                Ok(BinaryDecoder::finish(
-                    self.data_type.clone(),
-                    values,
-                    validity,
-                ))
-            });
+            return self
+                .items
+                .pop_back()
+                .map(|(values, validity)| Ok(finish(&self.data_type, values, validity)));
         }
         match (self.items.pop_back(), self.iter.next()) {
             (_, Err(e)) => Some(Err(e.into())),
@@ -263,14 +259,15 @@ impl<I: DataPages> Iterator for BinaryArrayIterator<I> {
                     extend_from_new_page::<BinaryDecoder, _, _>(
                         page,
                         state,
-                        &self.data_type,
                         self.chunk_size,
                         &mut self.items,
                         &BinaryDecoder { size: self.size },
                     )
                 };
                 match maybe_array {
-                    Ok(Some(array)) => Some(Ok(array)),
+                    Ok(Some((values, validity))) => {
+                        Some(Ok(finish(&self.data_type, values, validity)))
+                    }
                     Ok(None) => self.next(),
                     Err(e) => Some(Err(e)),
                 }
@@ -279,11 +276,7 @@ impl<I: DataPages> Iterator for BinaryArrayIterator<I> {
                 // we have a populated item and no more pages
                 // the only case where an item's length may be smaller than chunk_size
                 debug_assert!(values.len() <= self.chunk_size);
-                Some(Ok(BinaryDecoder::finish(
-                    self.data_type.clone(),
-                    values,
-                    validity,
-                )))
+                Some(Ok(finish(&self.data_type, values, validity)))
             }
         }
     }

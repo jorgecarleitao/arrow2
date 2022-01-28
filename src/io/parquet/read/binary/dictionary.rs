@@ -3,7 +3,9 @@ use std::{collections::VecDeque, sync::Arc};
 use parquet2::page::BinaryPageDict;
 
 use crate::{
-    array::{Array, BinaryArray, DictionaryArray, DictionaryKey, Offset, Utf8Array},
+    array::{
+        Array, BinaryArray, DictionaryArray, DictionaryKey, Offset, PrimitiveArray, Utf8Array,
+    },
     bitmap::MutableBitmap,
     datatypes::{DataType, PhysicalType},
     error::{ArrowError, Result},
@@ -11,7 +13,6 @@ use crate::{
 
 use super::super::dictionary::*;
 use super::super::utils;
-use super::super::utils::Decoder;
 use super::super::DataPages;
 
 /// An iterator adapter over [`DataPages`] assumed to be encoded as parquet's dictionary-encoded binary representation
@@ -66,7 +67,7 @@ where
         // back[a1, a2, a3, ...]front
         if self.items.len() > 1 {
             return self.items.pop_back().map(|(values, validity)| {
-                let keys = PrimitiveDecoder::<K>::finish(self.data_type.clone(), values, validity);
+                let keys = finish_key(values, validity);
                 let values = self.values.unwrap();
                 Ok(DictionaryArray::from_data(keys, values))
             });
@@ -128,14 +129,19 @@ where
                     utils::extend_from_new_page::<PrimitiveDecoder<K>, _, _>(
                         page,
                         state,
-                        &self.data_type,
                         self.chunk_size,
                         &mut self.items,
                         &PrimitiveDecoder::default(),
                     )
                 };
                 match maybe_array {
-                    Ok(Some(keys)) => {
+                    Ok(Some((values, validity))) => {
+                        let keys = PrimitiveArray::from_data(
+                            K::PRIMITIVE.into(),
+                            values.into(),
+                            validity.into(),
+                        );
+
                         let values = self.values.unwrap();
                         Some(Ok(DictionaryArray::from_data(keys, values)))
                     }
@@ -148,7 +154,8 @@ where
                 // the only case where an item's length may be smaller than chunk_size
                 debug_assert!(values.len() <= self.chunk_size);
 
-                let keys = PrimitiveDecoder::<K>::finish(self.data_type.clone(), values, validity);
+                let keys = finish_key(values, validity);
+
                 let values = self.values.unwrap();
                 Some(Ok(DictionaryArray::from_data(keys, values)))
             }
