@@ -12,6 +12,7 @@ use crate::{
 
 use super::super::dictionary::*;
 use super::super::utils;
+use super::super::utils::Decoder;
 use super::super::DataPages;
 
 /// An iterator adapter over [`DataPages`] assumed to be encoded as boolean arrays
@@ -29,7 +30,6 @@ where
     values: Dict,
     items: VecDeque<(Vec<K>, MutableBitmap)>,
     chunk_size: usize,
-    is_optional: bool,
     op: F,
     phantom: std::marker::PhantomData<P>,
 }
@@ -43,7 +43,7 @@ where
     P: ParquetNativeType,
     F: Copy + Fn(P) -> T,
 {
-    fn new(iter: I, data_type: DataType, chunk_size: usize, is_optional: bool, op: F) -> Self {
+    fn new(iter: I, data_type: DataType, chunk_size: usize, op: F) -> Self {
         let data_type = match data_type {
             DataType::Dictionary(_, values, _) => *values,
             _ => data_type,
@@ -54,7 +54,6 @@ where
             values: Dict::Empty,
             items: VecDeque::new(),
             chunk_size,
-            is_optional,
             op,
             phantom: Default::default(),
         }
@@ -114,7 +113,8 @@ where
 
                 let maybe_array = {
                     // there is a new page => consume the page from the start
-                    let maybe_page = build_state(page, self.is_optional);
+                    let decoder = PrimitiveDecoder::default();
+                    let maybe_page = decoder.build_state(page);
                     let page = match maybe_page {
                         Ok(page) => page,
                         Err(e) => return Some(Err(e)),
@@ -157,7 +157,6 @@ where
 /// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
 pub fn iter_to_arrays<'a, K, I, T, P, F>(
     iter: I,
-    is_optional: bool,
     data_type: DataType,
     chunk_size: usize,
     op: F,
@@ -170,7 +169,7 @@ where
     F: 'a + Copy + Fn(P) -> T,
 {
     Box::new(
-        ArrayIterator::<K, T, I, P, F>::new(iter, data_type, chunk_size, is_optional, op)
+        ArrayIterator::<K, T, I, P, F>::new(iter, data_type, chunk_size, op)
             .map(|x| x.map(|x| Arc::new(x) as Arc<dyn Array>)),
     )
 }

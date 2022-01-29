@@ -16,7 +16,6 @@ pub use dictionary::iter_to_arrays as iter_to_dict_arrays;
 /// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
 pub fn iter_to_arrays<'a, I, T, P, G, F>(
     iter: I,
-    is_optional: bool,
     data_type: DataType,
     chunk_size: usize,
     op1: G,
@@ -30,15 +29,8 @@ where
     F: 'a + Copy + Fn(P) -> T,
 {
     Box::new(
-        PrimitiveArrayIterator::<T, I, P, G, F>::new(
-            iter,
-            data_type,
-            chunk_size,
-            is_optional,
-            op1,
-            op2,
-        )
-        .map(|x| x.map(|x| Arc::new(x) as Arc<dyn Array>)),
+        PrimitiveArrayIterator::<T, I, P, G, F>::new(iter, data_type, chunk_size, op1, op2)
+            .map(|x| x.map(|x| Arc::new(x) as Arc<dyn Array>)),
     )
 }
 

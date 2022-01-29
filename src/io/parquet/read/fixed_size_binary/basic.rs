@@ -3,6 +3,7 @@ use std::collections::VecDeque;
 use parquet2::{
     encoding::{hybrid_rle, Encoding},
     page::{DataPage, FixedLenByteArrayPageDict},
+    schema::Repetition,
 };
 
 use crate::{
@@ -12,8 +13,8 @@ use crate::{
     error::Result,
     io::parquet::read::{
         utils::{
-            extend_from_decoder, extend_from_new_page, not_implemented, split_buffer, Decoder,
-            OptionalPageValidity, PageState, Pushable,
+            extend_from_decoder, next, not_implemented, split_buffer, Decoder, MaybeNext,
+            OptionalPageValidity, PageState,
         },
         DataPages,
     },
@@ -28,13 +29,13 @@ struct Optional<'a> {
 
 impl<'a> Optional<'a> {
     fn new(page: &'a DataPage, size: usize) -> Self {
-        let (_, validity_buffer, values_buffer, _) = split_buffer(page, page.descriptor());
+        let (_, _, values_buffer, _) = split_buffer(page, page.descriptor());
 
         let values = values_buffer.chunks_exact(size);
 
         Self {
             values,
-            validity: OptionalPageValidity::new(validity_buffer, page.num_values()),
+            validity: OptionalPageValidity::new(page),
         }
     }
 }
@@ -99,13 +100,13 @@ struct OptionalDictionary<'a> {
 
 impl<'a> OptionalDictionary<'a> {
     fn new(page: &'a DataPage, dict: &'a FixedLenByteArrayPageDict) -> Self {
-        let (_, validity_buffer, values_buffer, _) = split_buffer(page, page.descriptor());
+        let (_, _, values_buffer, _) = split_buffer(page, page.descriptor());
 
         let values = values_iter1(values_buffer, dict, page.num_values());
 
         Self {
             values,
-            validity: OptionalPageValidity::new(validity_buffer, page.num_values()),
+            validity: OptionalPageValidity::new(page),
         }
     }
 }
@@ -115,32 +116,6 @@ enum State<'a> {
     Required(Required<'a>),
     RequiredDictionary(RequiredDictionary<'a>),
     OptionalDictionary(OptionalDictionary<'a>),
-}
-
-fn build_state(page: &DataPage, is_optional: bool, size: usize) -> Result<State> {
-    match (page.encoding(), page.dictionary_page(), is_optional) {
-        (Encoding::Plain, None, true) => Ok(State::Optional(Optional::new(page, size))),
-        (Encoding::Plain, None, false) => Ok(State::Required(Required::new(page, size))),
-        (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false) => {
-            Ok(State::RequiredDictionary(RequiredDictionary::new(
-                page,
-                dict.as_any().downcast_ref().unwrap(),
-            )))
-        }
-        (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
-            Ok(State::OptionalDictionary(OptionalDictionary::new(
-                page,
-                dict.as_any().downcast_ref().unwrap(),
-            )))
-        }
-        _ => Err(not_implemented(
-            &page.encoding(),
-            is_optional,
-            false,
-            "any",
-            "FixedBinary",
-        )),
-    }
 }
 
 impl<'a> PageState<'a> for State<'a> {
@@ -160,6 +135,35 @@ struct BinaryDecoder {
 
 impl<'a> Decoder<'a, &'a [u8], FixedSizeBinary> for BinaryDecoder {
     type State = State<'a>;
+
+    fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
+        let is_optional =
+            page.descriptor().type_().get_basic_info().repetition() == &Repetition::Optional;
+
+        match (page.encoding(), page.dictionary_page(), is_optional) {
+            (Encoding::Plain, None, true) => Ok(State::Optional(Optional::new(page, self.size))),
+            (Encoding::Plain, None, false) => Ok(State::Required(Required::new(page, self.size))),
+            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false) => {
+                Ok(State::RequiredDictionary(RequiredDictionary::new(
+                    page,
+                    dict.as_any().downcast_ref().unwrap(),
+                )))
+            }
+            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
+                Ok(State::OptionalDictionary(OptionalDictionary::new(
+                    page,
+                    dict.as_any().downcast_ref().unwrap(),
+                )))
+            }
+            _ => Err(not_implemented(
+                &page.encoding(),
+                is_optional,
+                false,
+                "any",
+                "FixedBinary",
+            )),
+        }
+    }
 
     fn with_capacity(&self, capacity: usize) -> FixedSizeBinary {
         FixedSizeBinary::with_capacity(capacity, self.size)
@@ -216,11 +220,10 @@ pub struct BinaryArrayIterator<I: DataPages> {
     size: usize,
     items: VecDeque<(FixedSizeBinary, MutableBitmap)>,
     chunk_size: usize,
-    is_optional: bool,
 }
 
 impl<I: DataPages> BinaryArrayIterator<I> {
-    pub fn new(iter: I, data_type: DataType, chunk_size: usize, is_optional: bool) -> Self {
+    pub fn new(iter: I, data_type: DataType, chunk_size: usize) -> Self {
         let size = FixedSizeBinaryArray::get_size(&data_type);
         Self {
             iter,
@@ -228,7 +231,6 @@ impl<I: DataPages> BinaryArrayIterator<I> {
             size,
             items: VecDeque::new(),
             chunk_size,
-            is_optional,
         }
     }
 }
@@ -237,47 +239,19 @@ impl<I: DataPages> Iterator for BinaryArrayIterator<I> {
     type Item = Result<FixedSizeBinaryArray>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        // back[a1, a2, a3, ...]front
-        if self.items.len() > 1 {
-            return self
-                .items
-                .pop_back()
-                .map(|(values, validity)| Ok(finish(&self.data_type, values, validity)));
-        }
-        match (self.items.pop_back(), self.iter.next()) {
-            (_, Err(e)) => Some(Err(e.into())),
-            (None, Ok(None)) => None,
-            (state, Ok(Some(page))) => {
-                let maybe_array = {
-                    // there is a new page => consume the page from the start
-                    let maybe_page = build_state(page, self.is_optional, self.size);
-                    let page = match maybe_page {
-                        Ok(page) => page,
-                        Err(e) => return Some(Err(e)),
-                    };
-
-                    extend_from_new_page::<BinaryDecoder, _, _>(
-                        page,
-                        state,
-                        self.chunk_size,
-                        &mut self.items,
-                        &BinaryDecoder { size: self.size },
-                    )
-                };
-                match maybe_array {
-                    Ok(Some((values, validity))) => {
-                        Some(Ok(finish(&self.data_type, values, validity)))
-                    }
-                    Ok(None) => self.next(),
-                    Err(e) => Some(Err(e)),
-                }
-            }
-            (Some((values, validity)), Ok(None)) => {
-                // we have a populated item and no more pages
-                // the only case where an item's length may be smaller than chunk_size
-                debug_assert!(values.len() <= self.chunk_size);
+        let maybe_state = next(
+            &mut self.iter,
+            &mut self.items,
+            self.chunk_size,
+            &BinaryDecoder { size: self.size },
+        );
+        match maybe_state {
+            MaybeNext::Some(Ok((values, validity))) => {
                 Some(Ok(finish(&self.data_type, values, validity)))
             }
+            MaybeNext::Some(Err(e)) => Some(Err(e)),
+            MaybeNext::None => None,
+            MaybeNext::More => self.next(),
         }
     }
 }

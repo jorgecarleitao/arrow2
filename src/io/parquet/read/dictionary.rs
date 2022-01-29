@@ -3,6 +3,7 @@ use std::sync::Arc;
 use parquet2::{
     encoding::{hybrid_rle::HybridRleDecoder, Encoding},
     page::DataPage,
+    schema::Repetition,
 };
 
 use super::utils;
@@ -54,13 +55,13 @@ where
     K: DictionaryKey,
 {
     fn new(page: &'a DataPage) -> Self {
-        let (_, validity_buffer, indices_buffer, _) = utils::split_buffer(page, page.descriptor());
+        let (_, _, indices_buffer, _) = utils::split_buffer(page, page.descriptor());
 
         let values = values_iter1(indices_buffer, page.num_values());
 
         Self {
             values,
-            validity: OptionalPageValidity::new(validity_buffer, page.num_values()),
+            validity: OptionalPageValidity::new(page),
         }
     }
 }
@@ -73,30 +74,6 @@ where
         match self {
             State::Optional(optional) => optional.validity.len(),
         }
-    }
-}
-
-pub fn build_state<K>(page: &DataPage, is_optional: bool) -> Result<State<K>>
-where
-    K: DictionaryKey,
-{
-    match (page.encoding(), is_optional) {
-        (Encoding::PlainDictionary | Encoding::RleDictionary, false) => {
-            todo!()
-            /*Ok(State::Required(
-                RequiredDictionaryPage::new(page, dict, op2),
-            ))*/
-        }
-        (Encoding::PlainDictionary | Encoding::RleDictionary, true) => {
-            Ok(State::Optional(Optional::new(page)))
-        }
-        _ => Err(utils::not_implemented(
-            &page.encoding(),
-            is_optional,
-            false,
-            "any",
-            "Primitive",
-        )),
     }
 }
 
@@ -125,6 +102,30 @@ where
     K: DictionaryKey,
 {
     type State = State<'a, K>;
+
+    fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
+        let is_optional =
+            page.descriptor().type_().get_basic_info().repetition() == &Repetition::Optional;
+
+        match (page.encoding(), is_optional) {
+            (Encoding::PlainDictionary | Encoding::RleDictionary, false) => {
+                todo!()
+                /*Ok(State::Required(
+                    RequiredDictionaryPage::new(page, dict, op2),
+                ))*/
+            }
+            (Encoding::PlainDictionary | Encoding::RleDictionary, true) => {
+                Ok(State::Optional(Optional::new(page)))
+            }
+            _ => Err(utils::not_implemented(
+                &page.encoding(),
+                is_optional,
+                false,
+                "any",
+                "Primitive",
+            )),
+        }
+    }
 
     fn with_capacity(&self, capacity: usize) -> Vec<K> {
         Vec::<K>::with_capacity(capacity)

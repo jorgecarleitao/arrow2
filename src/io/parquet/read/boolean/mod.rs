@@ -16,7 +16,6 @@ use super::{nested_utils::NestedState, DataPages};
 /// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
 pub fn iter_to_arrays<'a, I: 'a>(
     iter: I,
-    is_optional: bool,
     data_type: DataType,
     chunk_size: usize,
 ) -> Box<dyn Iterator<Item = Result<Arc<dyn Array>>> + 'a>
@@ -24,7 +23,7 @@ where
     I: DataPages,
 {
     Box::new(
-        BooleanArrayIterator::new(iter, data_type, chunk_size, is_optional)
+        BooleanArrayIterator::new(iter, data_type, chunk_size)
             .map(|x| x.map(|x| Arc::new(x) as Arc<dyn Array>)),
     )
 }

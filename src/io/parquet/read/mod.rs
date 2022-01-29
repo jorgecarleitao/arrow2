@@ -83,7 +83,6 @@ pub async fn read_metadata_async<R: AsyncRead + AsyncSeek + Send + Unpin>(
 
 fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
     iter: I,
-    is_optional: bool,
     type_: &ParquetType,
     data_type: DataType,
     chunk_size: usize,
@@ -98,35 +97,30 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
     Ok(match values_data_type.to_logical_type() {
         UInt8 => primitive::iter_to_dict_arrays::<K, _, _, _, _>(
             iter,
-            is_optional,
             data_type,
             chunk_size,
             |x: i32| x as u8,
         ),
         UInt16 => primitive::iter_to_dict_arrays::<K, _, _, _, _>(
             iter,
-            is_optional,
             data_type,
             chunk_size,
             |x: i32| x as u16,
         ),
         UInt32 => primitive::iter_to_dict_arrays::<K, _, _, _, _>(
             iter,
-            is_optional,
             data_type,
             chunk_size,
             |x: i32| x as u32,
         ),
         Int8 => primitive::iter_to_dict_arrays::<K, _, _, _, _>(
             iter,
-            is_optional,
             data_type,
             chunk_size,
             |x: i32| x as i8,
         ),
         Int16 => primitive::iter_to_dict_arrays::<K, _, _, _, _>(
             iter,
-            is_optional,
             data_type,
             chunk_size,
             |x: i32| x as i16,
@@ -134,7 +128,6 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
         Int32 | Date32 | Time32(_) | Interval(IntervalUnit::YearMonth) => {
             primitive::iter_to_dict_arrays::<K, _, _, _, _>(
                 iter,
-                is_optional,
                 data_type,
                 chunk_size,
                 |x: i32| x as i32,
@@ -149,7 +142,6 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
             } => match (physical_type, logical_type) {
                 (PhysicalType::Int96, _) => primitive::iter_to_dict_arrays::<K, _, _, _, _>(
                     iter,
-                    is_optional,
                     DataType::Timestamp(TimeUnit::Nanosecond, None),
                     chunk_size,
                     int96_to_i64_ns,
@@ -157,21 +149,18 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
                 (_, Some(LogicalType::TIMESTAMP(TimestampType { unit, .. }))) => match unit {
                     ParquetTimeUnit::MILLIS(_) => primitive::iter_to_dict_arrays::<K, _, _, _, _>(
                         iter,
-                        is_optional,
                         data_type,
                         chunk_size,
                         |x: i64| x * 1_000_000,
                     ),
                     ParquetTimeUnit::MICROS(_) => primitive::iter_to_dict_arrays::<K, _, _, _, _>(
                         iter,
-                        is_optional,
                         data_type,
                         chunk_size,
                         |x: i64| x * 1_000,
                     ),
                     ParquetTimeUnit::NANOS(_) => primitive::iter_to_dict_arrays::<K, _, _, _, _>(
                         iter,
-                        is_optional,
                         data_type,
                         chunk_size,
                         |x: i64| x,
@@ -179,7 +168,6 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
                 },
                 _ => primitive::iter_to_dict_arrays::<K, _, _, _, _>(
                     iter,
-                    is_optional,
                     data_type,
                     chunk_size,
                     |x: i64| x,
@@ -189,34 +177,18 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
         },
 
         Int64 | Date64 | Time64(_) | Duration(_) | Timestamp(_, _) => {
-            primitive::iter_to_dict_arrays::<K, _, _, _, _>(
-                iter,
-                is_optional,
-                data_type,
-                chunk_size,
-                |x: i64| x,
-            )
+            primitive::iter_to_dict_arrays::<K, _, _, _, _>(iter, data_type, chunk_size, |x: i64| x)
         }
-        Float32 => primitive::iter_to_dict_arrays::<K, _, _, _, _>(
-            iter,
-            is_optional,
-            data_type,
-            chunk_size,
-            |x: f32| x,
-        ),
-        Float64 => primitive::iter_to_dict_arrays::<K, _, _, _, _>(
-            iter,
-            is_optional,
-            data_type,
-            chunk_size,
-            |x: f64| x,
-        ),
+        Float32 => {
+            primitive::iter_to_dict_arrays::<K, _, _, _, _>(iter, data_type, chunk_size, |x: f32| x)
+        }
+        Float64 => {
+            primitive::iter_to_dict_arrays::<K, _, _, _, _>(iter, data_type, chunk_size, |x: f64| x)
+        }
 
-        Utf8 | Binary => {
-            binary::iter_to_dict_arrays::<K, i32, _>(iter, is_optional, data_type, chunk_size)
-        }
+        Utf8 | Binary => binary::iter_to_dict_arrays::<K, i32, _>(iter, data_type, chunk_size),
         LargeUtf8 | LargeBinary => {
-            binary::iter_to_dict_arrays::<K, i64, _>(iter, is_optional, data_type, chunk_size)
+            binary::iter_to_dict_arrays::<K, i64, _>(iter, data_type, chunk_size)
         }
         other => {
             return Err(ArrowError::nyi(format!(
@@ -280,23 +252,15 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
     chunk_size: usize,
 ) -> Result<Box<dyn Iterator<Item = Result<Arc<dyn Array>>> + 'a>> {
     use DataType::*;
-    let is_optional =
-        metadata.descriptor().max_def_level() != metadata.descriptor().max_rep_level();
     let type_ = metadata.descriptor().type_();
     match field.data_type.to_logical_type() {
         /*Null => Ok(Box::new(NullArray::from_data(
             data_type,
             metadata.num_values() as usize,
         ))),*/
-        Boolean => Ok(boolean::iter_to_arrays(
-            iter,
-            is_optional,
-            field.data_type,
-            chunk_size,
-        )),
+        Boolean => Ok(boolean::iter_to_arrays(iter, field.data_type, chunk_size)),
         UInt8 => Ok(primitive::iter_to_arrays(
             iter,
-            is_optional,
             field.data_type,
             chunk_size,
             read_item,
@@ -304,7 +268,6 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
         )),
         UInt16 => Ok(primitive::iter_to_arrays(
             iter,
-            is_optional,
             field.data_type,
             chunk_size,
             read_item,
@@ -312,7 +275,6 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
         )),
         UInt32 => Ok(primitive::iter_to_arrays(
             iter,
-            is_optional,
             field.data_type,
             chunk_size,
             read_item,
@@ -320,7 +282,6 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
         )),
         Int8 => Ok(primitive::iter_to_arrays(
             iter,
-            is_optional,
             field.data_type,
             chunk_size,
             read_item,
@@ -328,22 +289,16 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
         )),
         Int16 => Ok(primitive::iter_to_arrays(
             iter,
-            is_optional,
             field.data_type,
             chunk_size,
             read_item,
             |x: i32| x as i16,
         )),
-        Int32 | Date32 | Time32(_) | Interval(IntervalUnit::YearMonth) => {
-            Ok(primitive::iter_to_arrays(
-                iter,
-                is_optional,
-                field.data_type,
-                chunk_size,
-                read_item,
-                |x: i32| x as i32,
-            ))
-        }
+        Int32 | Date32 | Time32(_) | Interval(IntervalUnit::YearMonth) => Ok(
+            primitive::iter_to_arrays(iter, field.data_type, chunk_size, read_item, |x: i32| {
+                x as i32
+            }),
+        ),
 
         Timestamp(TimeUnit::Nanosecond, None) => match metadata.descriptor().type_() {
             ParquetType::PrimitiveType {
@@ -353,7 +308,6 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
             } => match (physical_type, logical_type) {
                 (PhysicalType::Int96, _) => Ok(primitive::iter_to_arrays(
                     iter,
-                    is_optional,
                     DataType::Timestamp(TimeUnit::Nanosecond, None),
                     chunk_size,
                     read_item,
@@ -362,7 +316,6 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
                 (_, Some(LogicalType::TIMESTAMP(TimestampType { unit, .. }))) => Ok(match unit {
                     ParquetTimeUnit::MILLIS(_) => primitive::iter_to_arrays(
                         iter,
-                        is_optional,
                         field.data_type,
                         chunk_size,
                         read_item,
@@ -370,7 +323,6 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
                     ),
                     ParquetTimeUnit::MICROS(_) => primitive::iter_to_arrays(
                         iter,
-                        is_optional,
                         field.data_type,
                         chunk_size,
                         read_item,
@@ -378,7 +330,6 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
                     ),
                     ParquetTimeUnit::NANOS(_) => primitive::iter_to_arrays(
                         iter,
-                        is_optional,
                         field.data_type,
                         chunk_size,
                         read_item,
@@ -387,7 +338,6 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
                 }),
                 _ => Ok(primitive::iter_to_arrays(
                     iter,
-                    is_optional,
                     field.data_type,
                     chunk_size,
                     read_item,
@@ -398,20 +348,14 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
         },
 
         FixedSizeBinary(_) => Ok(Box::new(
-            fixed_size_binary::BinaryArrayIterator::new(
-                iter,
-                field.data_type,
-                chunk_size,
-                is_optional,
-            )
-            .map(|x| x.map(|x| Arc::new(x) as _)),
+            fixed_size_binary::BinaryArrayIterator::new(iter, field.data_type, chunk_size)
+                .map(|x| x.map(|x| Arc::new(x) as _)),
         )),
 
         Decimal(_, _) => match type_ {
             ParquetType::PrimitiveType { physical_type, .. } => Ok(match physical_type {
                 PhysicalType::Int32 => primitive::iter_to_arrays(
                     iter,
-                    is_optional,
                     field.data_type,
                     chunk_size,
                     read_item,
@@ -419,7 +363,6 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
                 ),
                 PhysicalType::Int64 => primitive::iter_to_arrays(
                     iter,
-                    is_optional,
                     field.data_type,
                     chunk_size,
                     read_item,
@@ -438,7 +381,6 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
                         iter,
                         DataType::FixedSizeBinary(n),
                         chunk_size,
-                        is_optional,
                     );
 
                     let iter = iter.map(move |maybe_array| {
@@ -475,19 +417,13 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
         },
 
         // INT64
-        Int64 | Date64 | Time64(_) | Duration(_) | Timestamp(_, _) => {
-            Ok(primitive::iter_to_arrays(
-                iter,
-                is_optional,
-                field.data_type,
-                chunk_size,
-                read_item,
-                |x: i64| x as i64,
-            ))
-        }
+        Int64 | Date64 | Time64(_) | Duration(_) | Timestamp(_, _) => Ok(
+            primitive::iter_to_arrays(iter, field.data_type, chunk_size, read_item, |x: i64| {
+                x as i64
+            }),
+        ),
         UInt64 => Ok(primitive::iter_to_arrays(
             iter,
-            is_optional,
             field.data_type,
             chunk_size,
             read_item,
@@ -496,7 +432,6 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
 
         Float32 => Ok(primitive::iter_to_arrays(
             iter,
-            is_optional,
             field.data_type,
             chunk_size,
             read_item,
@@ -504,7 +439,6 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
         )),
         Float64 => Ok(primitive::iter_to_arrays(
             iter,
-            is_optional,
             field.data_type,
             chunk_size,
             read_item,
@@ -513,31 +447,27 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
 
         Binary => Ok(binary::iter_to_arrays::<i32, BinaryArray<i32>, _>(
             iter,
-            is_optional,
             field.data_type,
             chunk_size,
         )),
         LargeBinary => Ok(binary::iter_to_arrays::<i64, BinaryArray<i64>, _>(
             iter,
-            is_optional,
             field.data_type,
             chunk_size,
         )),
         Utf8 => Ok(binary::iter_to_arrays::<i32, Utf8Array<i32>, _>(
             iter,
-            is_optional,
             field.data_type,
             chunk_size,
         )),
         LargeUtf8 => Ok(binary::iter_to_arrays::<i64, Utf8Array<i64>, _>(
             iter,
-            is_optional,
             field.data_type,
             chunk_size,
         )),
 
         Dictionary(key_type, _, _) => match_integer_type!(key_type, |$K| {
-            dict_read::<$K, _>(iter, is_optional, type_, field.data_type, chunk_size)
+            dict_read::<$K, _>(iter, type_, field.data_type, chunk_size)
         }),
 
         List(_) => page_iter_to_arrays_nested(iter, field, chunk_size),

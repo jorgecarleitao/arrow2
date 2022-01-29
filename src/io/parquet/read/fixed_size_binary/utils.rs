@@ -27,11 +27,6 @@ impl FixedSizeBinary {
         self.values
             .resize(self.values.len() + additional * self.size, 0);
     }
-
-    #[inline]
-    pub fn len(&mut self) -> usize {
-        self.values.len() / self.size
-    }
 }
 
 impl<'a> Pushable<&'a [u8]> for FixedSizeBinary {
@@ -57,6 +52,7 @@ impl<'a> Pushable<&'a [u8]> for FixedSizeBinary {
         self.extend_constant(additional)
     }
 
+    #[inline]
     fn len(&self) -> usize {
         self.values.len() / self.size
     }

@@ -13,6 +13,7 @@ use crate::{
 
 use super::super::dictionary::*;
 use super::super::utils;
+use super::super::utils::Decoder;
 use super::super::DataPages;
 
 /// An iterator adapter over [`DataPages`] assumed to be encoded as parquet's dictionary-encoded binary representation
@@ -28,7 +29,6 @@ where
     values: Dict,
     items: VecDeque<(Vec<K>, MutableBitmap)>,
     chunk_size: usize,
-    is_optional: bool,
     phantom: std::marker::PhantomData<O>,
 }
 
@@ -38,7 +38,7 @@ where
     O: Offset,
     I: DataPages,
 {
-    fn new(iter: I, data_type: DataType, chunk_size: usize, is_optional: bool) -> Self {
+    fn new(iter: I, data_type: DataType, chunk_size: usize) -> Self {
         let data_type = match data_type {
             DataType::Dictionary(_, values, _) => values.as_ref().clone(),
             _ => unreachable!(),
@@ -49,7 +49,6 @@ where
             values: Dict::Empty,
             items: VecDeque::new(),
             chunk_size,
-            is_optional,
             phantom: std::marker::PhantomData,
         }
     }
@@ -120,7 +119,7 @@ where
 
                 let maybe_array = {
                     // there is a new page => consume the page from the start
-                    let maybe_page = build_state(page, self.is_optional);
+                    let maybe_page = PrimitiveDecoder::default().build_state(page);
                     let page = match maybe_page {
                         Ok(page) => page,
                         Err(e) => return Some(Err(e)),
@@ -166,7 +165,6 @@ where
 /// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
 pub fn iter_to_arrays<'a, K, O, I>(
     iter: I,
-    is_optional: bool,
     data_type: DataType,
     chunk_size: usize,
 ) -> Box<dyn Iterator<Item = Result<Arc<dyn Array>>> + 'a>
@@ -176,7 +174,7 @@ where
     K: DictionaryKey,
 {
     Box::new(
-        ArrayIterator::<K, O, I>::new(iter, data_type, chunk_size, is_optional)
+        ArrayIterator::<K, O, I>::new(iter, data_type, chunk_size)
             .map(|x| x.map(|x| Arc::new(x) as Arc<dyn Array>)),
     )
 }

@@ -1,55 +1,19 @@
 use std::collections::VecDeque;
 
-use parquet2::{
-    encoding::{hybrid_rle::HybridRleDecoder, Encoding},
-    page::DataPage,
-    read::levels::get_bit_width,
-    schema::Repetition,
-};
+use parquet2::{encoding::Encoding, page::DataPage, schema::Repetition};
 
 use crate::{
     array::BooleanArray,
     bitmap::{utils::BitmapIter, MutableBitmap},
     datatypes::{DataType, Field},
     error::Result,
-    io::parquet::read::{utils::Decoder, DataPages},
 };
 
 use super::super::nested_utils::*;
 use super::super::utils;
-
-// The state of an optional DataPage with a boolean physical type
-#[derive(Debug)]
-struct Optional<'a> {
-    values: BitmapIter<'a>,
-    definition_levels: HybridRleDecoder<'a>,
-    max_def: u32,
-}
-
-impl<'a> Optional<'a> {
-    pub fn new(page: &'a DataPage) -> Self {
-        let (_, def_levels, values_buffer, _) = utils::split_buffer(page, page.descriptor());
-
-        // in PLAIN, booleans are LSB bitpacked and thus we can read them as if they were a bitmap.
-        // note that `values_buffer` contains only non-null values.
-        // thus, at this point, it is not known how many values this buffer contains
-        // values_len is the upper bound. The actual number depends on how many nulls there is.
-        let values_len = values_buffer.len() * 8;
-        let values = BitmapIter::new(values_buffer, 0, values_len);
-
-        let max_def = page.descriptor().max_def_level();
-
-        Self {
-            values,
-            definition_levels: HybridRleDecoder::new(
-                def_levels,
-                get_bit_width(max_def),
-                page.num_values(),
-            ),
-            max_def: max_def as u32,
-        }
-    }
-}
+use super::super::utils::{Decoder, MaybeNext};
+use super::super::DataPages;
+use super::basic::values_iter;
 
 // The state of a required DataPage with a boolean physical type
 #[derive(Debug)]
@@ -74,14 +38,14 @@ impl<'a> Required<'a> {
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 enum State<'a> {
-    Optional(Optional<'a>),
+    Optional(Optional<'a>, BitmapIter<'a>),
     Required(Required<'a>),
 }
 
 impl<'a> State<'a> {
     pub fn len(&self) -> usize {
         match self {
-            State::Optional(page) => page.definition_levels.size_hint().0,
+            State::Optional(optional, _) => optional.len(),
             State::Required(page) => page.length - page.offset,
         }
     }
@@ -93,28 +57,31 @@ impl<'a> utils::PageState<'a> for State<'a> {
     }
 }
 
-fn build_state(page: &DataPage) -> Result<State> {
-    let is_optional =
-        page.descriptor().type_().get_basic_info().repetition() == &Repetition::Optional;
-
-    match (page.encoding(), is_optional) {
-        (Encoding::Plain, true) => Ok(State::Optional(Optional::new(page))),
-        (Encoding::Plain, false) => Ok(State::Required(Required::new(page))),
-        _ => Err(utils::not_implemented(
-            &page.encoding(),
-            is_optional,
-            false,
-            "any",
-            "Boolean",
-        )),
-    }
-}
-
 #[derive(Default)]
 struct BooleanDecoder {}
 
 impl<'a> Decoder<'a, bool, MutableBitmap> for BooleanDecoder {
     type State = State<'a>;
+
+    fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
+        let is_optional =
+            page.descriptor().type_().get_basic_info().repetition() == &Repetition::Optional;
+
+        match (page.encoding(), is_optional) {
+            (Encoding::Plain, true) => {
+                let (_, _, values, _) = utils::split_buffer(page, page.descriptor());
+                Ok(State::Optional(Optional::new(page), values_iter(values)))
+            }
+            (Encoding::Plain, false) => Ok(State::Required(Required::new(page))),
+            _ => Err(utils::not_implemented(
+                &page.encoding(),
+                is_optional,
+                false,
+                "any",
+                "Boolean",
+            )),
+        }
+    }
 
     fn with_capacity(&self, capacity: usize) -> MutableBitmap {
         MutableBitmap::with_capacity(capacity)
@@ -127,14 +94,17 @@ impl<'a> Decoder<'a, bool, MutableBitmap> for BooleanDecoder {
         required: usize,
     ) {
         match state {
-            State::Optional(page) => read_optional_values(
-                page.definition_levels.by_ref(),
-                page.max_def,
-                page.values.by_ref(),
-                values,
-                validity,
-                required,
-            ),
+            State::Optional(page_validity, page_values) => {
+                let max_def = page_validity.max_def();
+                read_optional_values(
+                    page_validity.definition_levels.by_ref(),
+                    max_def,
+                    page_values.by_ref(),
+                    values,
+                    validity,
+                    required,
+                )
+            }
             State::Required(page) => {
                 values.extend_from_slice(page.values, page.offset, required);
                 page.offset += required;
@@ -166,82 +136,29 @@ impl<I: DataPages> ArrayIterator<I> {
     }
 }
 
+fn finish(data_type: &DataType, values: MutableBitmap, validity: MutableBitmap) -> BooleanArray {
+    BooleanArray::from_data(data_type.clone(), values.into(), validity.into())
+}
+
 impl<I: DataPages> Iterator for ArrayIterator<I> {
     type Item = Result<(NestedState, BooleanArray)>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        // back[a1, a2, a3, ...]front
-        if self.items.len() > 1 {
-            let nested = self.nested.pop_back().unwrap();
-            let (values, validity) = self.items.pop_back().unwrap();
-            let array = BooleanArray::from_data(DataType::Boolean, values.into(), validity.into());
-            return Some(Ok((nested, array)));
-        }
-        match (
-            self.nested.pop_back(),
-            self.items.pop_back(),
-            self.iter.next(),
-        ) {
-            (_, _, Err(e)) => Some(Err(e.into())),
-            (None, None, Ok(None)) => None,
-            (state, p_state, Ok(Some(page))) => {
-                // the invariant
-                assert_eq!(state.is_some(), p_state.is_some());
-
-                // there is a new page => consume the page from the start
-                let mut nested_page = NestedPage::new(page);
-
-                // read next chunk from `nested_page` and get number of values to read
-                let maybe_nested = extend_offsets1(
-                    &mut nested_page,
-                    state,
-                    &self.field,
-                    &mut self.nested,
-                    self.chunk_size,
-                );
-                let nested = match maybe_nested {
-                    Ok(nested) => nested,
-                    Err(e) => return Some(Err(e)),
-                };
-                // at this point we know whether there were enough rows in `page`
-                // to fill chunk_size or not (`nested.is_some()`)
-                // irrespectively, we need to consume the values from the page
-
-                let maybe_page = build_state(page);
-                let page = match maybe_page {
-                    Ok(page) => page,
-                    Err(e) => return Some(Err(e)),
-                };
-
-                let maybe_array = extend_from_new_page::<BooleanDecoder, _, _>(
-                    page,
-                    p_state,
-                    &mut self.items,
-                    &nested,
-                    &self.nested,
-                    &BooleanDecoder::default(),
-                );
-                let state = match maybe_array {
-                    Ok(s) => s,
-                    Err(e) => return Some(Err(e)),
-                };
-                match nested {
-                    Some(p_state) => Some(Ok((
-                        p_state,
-                        BooleanArray::from_data(DataType::Boolean, state.0.into(), state.1.into()),
-                    ))),
-                    None => self.next(),
-                }
+        let maybe_state = next(
+            &mut self.iter,
+            &mut self.items,
+            &mut self.nested,
+            &self.field,
+            self.chunk_size,
+            &BooleanDecoder::default(),
+        );
+        match maybe_state {
+            MaybeNext::Some(Ok((nested, values, validity))) => {
+                Some(Ok((nested, finish(&DataType::Boolean, values, validity))))
             }
-            (Some(nested), Some((values, validity)), Ok(None)) => {
-                // we have a populated item and no more pages
-                // the only case where an item's length may be smaller than chunk_size
-                let array =
-                    BooleanArray::from_data(DataType::Boolean, values.into(), validity.into());
-                Some(Ok((nested, array)))
-            }
-            (Some(_), None, _) => unreachable!(),
-            (None, Some(_), _) => unreachable!(),
+            MaybeNext::Some(Err(e)) => Some(Err(e)),
+            MaybeNext::None => None,
+            MaybeNext::More => self.next(),
         }
     }
 }

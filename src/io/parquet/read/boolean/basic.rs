@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use parquet2::{encoding::Encoding, page::DataPage};
+use parquet2::{encoding::Encoding, page::DataPage, schema::Repetition};
 
 use crate::{
     array::BooleanArray,
@@ -11,9 +11,19 @@ use crate::{
 
 use super::super::utils;
 use super::super::utils::{
-    extend_from_decoder, extend_from_new_page, split_buffer, Decoder, OptionalPageValidity,
+    extend_from_decoder, next, split_buffer, Decoder, MaybeNext, OptionalPageValidity,
 };
 use super::super::DataPages;
+
+#[inline]
+pub(super) fn values_iter(values: &[u8]) -> BitmapIter {
+    // in PLAIN, booleans are LSB bitpacked and thus we can read them as if they were a bitmap.
+    // note that `values_buffer` contains only non-null values.
+    // thus, at this point, it is not known how many values this buffer contains
+    // values_len is the upper bound. The actual number depends on how many nulls there is.
+    let values_len = values.len() * 8;
+    BitmapIter::new(values, 0, values_len)
+}
 
 // The state of an optional DataPage with a boolean physical type
 #[derive(Debug)]
@@ -24,18 +34,11 @@ struct Optional<'a> {
 
 impl<'a> Optional<'a> {
     pub fn new(page: &'a DataPage) -> Self {
-        let (_, validity_buffer, values_buffer, _) = split_buffer(page, page.descriptor());
-
-        // in PLAIN, booleans are LSB bitpacked and thus we can read them as if they were a bitmap.
-        // note that `values_buffer` contains only non-null values.
-        // thus, at this point, it is not known how many values this buffer contains
-        // values_len is the upper bound. The actual number depends on how many nulls there is.
-        let values_len = values_buffer.len() * 8;
-        let values = BitmapIter::new(values_buffer, 0, values_len);
+        let (_, _, values_buffer, _) = split_buffer(page, page.descriptor());
 
         Self {
-            values,
-            validity: OptionalPageValidity::new(validity_buffer, page.num_values()),
+            values: values_iter(values_buffer),
+            validity: OptionalPageValidity::new(page),
         }
     }
 }
@@ -81,25 +84,28 @@ impl<'a> utils::PageState<'a> for State<'a> {
     }
 }
 
-fn build_state(page: &DataPage, is_optional: bool) -> Result<State> {
-    match (page.encoding(), is_optional) {
-        (Encoding::Plain, true) => Ok(State::Optional(Optional::new(page))),
-        (Encoding::Plain, false) => Ok(State::Required(Required::new(page))),
-        _ => Err(utils::not_implemented(
-            &page.encoding(),
-            is_optional,
-            false,
-            "any",
-            "Boolean",
-        )),
-    }
-}
-
 #[derive(Default)]
 struct BooleanDecoder {}
 
 impl<'a> Decoder<'a, bool, MutableBitmap> for BooleanDecoder {
     type State = State<'a>;
+
+    fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
+        let is_optional =
+            page.descriptor().type_().get_basic_info().repetition() == &Repetition::Optional;
+
+        match (page.encoding(), is_optional) {
+            (Encoding::Plain, true) => Ok(State::Optional(Optional::new(page))),
+            (Encoding::Plain, false) => Ok(State::Required(Required::new(page))),
+            _ => Err(utils::not_implemented(
+                &page.encoding(),
+                is_optional,
+                false,
+                "any",
+                "Boolean",
+            )),
+        }
+    }
 
     fn with_capacity(&self, capacity: usize) -> MutableBitmap {
         MutableBitmap::with_capacity(capacity)
@@ -139,17 +145,15 @@ pub struct BooleanArrayIterator<I: DataPages> {
     data_type: DataType,
     items: VecDeque<(MutableBitmap, MutableBitmap)>,
     chunk_size: usize,
-    is_optional: bool,
 }
 
 impl<I: DataPages> BooleanArrayIterator<I> {
-    pub fn new(iter: I, data_type: DataType, chunk_size: usize, is_optional: bool) -> Self {
+    pub fn new(iter: I, data_type: DataType, chunk_size: usize) -> Self {
         Self {
             iter,
             data_type,
             items: VecDeque::new(),
             chunk_size,
-            is_optional,
         }
     }
 }
@@ -158,45 +162,19 @@ impl<I: DataPages> Iterator for BooleanArrayIterator<I> {
     type Item = Result<BooleanArray>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        // back[a1, a2, a3, ...]front
-        if self.items.len() > 1 {
-            return self
-                .items
-                .pop_back()
-                .map(|(values, validity)| Ok(finish(&self.data_type, values, validity)));
-        }
-        match (self.items.pop_back(), self.iter.next()) {
-            (_, Err(e)) => Some(Err(e.into())),
-            (None, Ok(None)) => None,
-            (state, Ok(Some(page))) => {
-                // there is a new page => consume the page from the start
-                let maybe_page = build_state(page, self.is_optional);
-                let page = match maybe_page {
-                    Ok(page) => page,
-                    Err(e) => return Some(Err(e)),
-                };
-
-                let maybe_array = extend_from_new_page(
-                    page,
-                    state,
-                    self.chunk_size,
-                    &mut self.items,
-                    &BooleanDecoder::default(),
-                );
-                match maybe_array {
-                    Ok(Some((values, validity))) => {
-                        Some(Ok(finish(&self.data_type, values, validity)))
-                    }
-                    Ok(None) => self.next(),
-                    Err(e) => Some(Err(e)),
-                }
-            }
-            (Some((values, validity)), Ok(None)) => {
-                // we have a populated item and no more pages
-                // the only case where an item's length may be smaller than chunk_size
-                debug_assert!(values.len() <= self.chunk_size);
+        let maybe_state = next(
+            &mut self.iter,
+            &mut self.items,
+            self.chunk_size,
+            &BooleanDecoder::default(),
+        );
+        match maybe_state {
+            MaybeNext::Some(Ok((values, validity))) => {
                 Some(Ok(finish(&self.data_type, values, validity)))
             }
+            MaybeNext::Some(Err(e)) => Some(Err(e)),
+            MaybeNext::None => None,
+            MaybeNext::More => self.next(),
         }
     }
 }

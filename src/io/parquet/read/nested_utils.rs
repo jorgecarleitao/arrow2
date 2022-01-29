@@ -12,7 +12,10 @@ use crate::{
     error::{ArrowError, Result},
 };
 
-use super::utils::{split_buffer, Decoder, Pushable};
+use super::{
+    utils::{split_buffer, Decoder, MaybeNext, Pushable},
+    DataPages,
+};
 
 /// trait describing deserialized repetition and definition levels
 pub trait Nested: std::fmt::Debug {
@@ -597,4 +600,114 @@ fn extend_offsets2<'a>(page: &mut NestedPage<'a>, nested: &mut NestedState, addi
         .for_each(|(nested, length)| {
             nested.close(*length);
         });
+}
+
+// The state of an optional DataPage with a boolean physical type
+#[derive(Debug)]
+pub struct Optional<'a> {
+    pub definition_levels: HybridRleDecoder<'a>,
+    max_def: u32,
+}
+
+impl<'a> Optional<'a> {
+    pub fn new(page: &'a DataPage) -> Self {
+        let (_, def_levels, values_buffer, _) = split_buffer(page, page.descriptor());
+
+        let max_def = page.descriptor().max_def_level();
+
+        Self {
+            definition_levels: HybridRleDecoder::new(
+                def_levels,
+                get_bit_width(max_def),
+                page.num_values(),
+            ),
+            max_def: max_def as u32,
+        }
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.definition_levels.size_hint().0
+    }
+
+    #[inline]
+    pub fn max_def(&self) -> u32 {
+        self.max_def
+    }
+}
+
+#[inline]
+pub(super) fn next<'a, I, C, P, D>(
+    iter: &'a mut I,
+    items: &mut VecDeque<(P, MutableBitmap)>,
+    nested_items: &mut VecDeque<NestedState>,
+    field: &Field,
+    chunk_size: usize,
+    decoder: &D,
+) -> MaybeNext<Result<(NestedState, P, MutableBitmap)>>
+where
+    I: DataPages,
+    C: Default,
+    P: Pushable<C>,
+    D: Decoder<'a, C, P>,
+{
+    // back[a1, a2, a3, ...]front
+    if items.len() > 1 {
+        let nested = nested_items.pop_back().unwrap();
+        let (values, validity) = items.pop_back().unwrap();
+        //let array = BooleanArray::from_data(DataType::Boolean, values.into(), validity.into());
+        return MaybeNext::Some(Ok((nested, values, validity)));
+    }
+    match (nested_items.pop_back(), items.pop_back(), iter.next()) {
+        (_, _, Err(e)) => MaybeNext::Some(Err(e.into())),
+        (None, None, Ok(None)) => MaybeNext::None,
+        (state, p_state, Ok(Some(page))) => {
+            // the invariant
+            assert_eq!(state.is_some(), p_state.is_some());
+
+            // there is a new page => consume the page from the start
+            let mut nested_page = NestedPage::new(page);
+
+            // read next chunk from `nested_page` and get number of values to read
+            let maybe_nested =
+                extend_offsets1(&mut nested_page, state, field, nested_items, chunk_size);
+            let nested = match maybe_nested {
+                Ok(nested) => nested,
+                Err(e) => return MaybeNext::Some(Err(e)),
+            };
+            // at this point we know whether there were enough rows in `page`
+            // to fill chunk_size or not (`nested.is_some()`)
+            // irrespectively, we need to consume the values from the page
+
+            let maybe_page = decoder.build_state(page);
+            let page = match maybe_page {
+                Ok(page) => page,
+                Err(e) => return MaybeNext::Some(Err(e)),
+            };
+
+            let maybe_array = extend_from_new_page::<D, _, _>(
+                page,
+                p_state,
+                items,
+                &nested,
+                nested_items,
+                decoder,
+            );
+            let state = match maybe_array {
+                Ok(s) => s,
+                Err(e) => return MaybeNext::Some(Err(e)),
+            };
+            match nested {
+                Some(p_state) => MaybeNext::Some(Ok((p_state, state.0, state.1))),
+                None => MaybeNext::More,
+            }
+        }
+        (Some(nested), Some((values, validity)), Ok(None)) => {
+            // we have a populated item and no more pages
+            // the only case where an item's length may be smaller than chunk_size
+            MaybeNext::Some(Ok((nested, values, validity)))
+        }
+        (Some(_), None, _) => unreachable!(),
+        (None, Some(_), _) => unreachable!(),
+    }
 }

@@ -6,10 +6,11 @@ use parquet2::metadata::ColumnDescriptor;
 use parquet2::page::{split_buffer as _split_buffer, DataPage, DataPageHeader};
 use streaming_iterator::{convert, Convert, StreamingIterator};
 
-use crate::array::DictionaryKey;
 use crate::bitmap::utils::BitmapIter;
 use crate::bitmap::MutableBitmap;
 use crate::error::ArrowError;
+
+use super::DataPages;
 
 pub struct BinaryIter<'a> {
     values: &'a [u8],
@@ -52,6 +53,7 @@ pub fn not_implemented(
     ))
 }
 
+#[inline]
 pub fn split_buffer<'a>(
     page: &'a DataPage,
     descriptor: &ColumnDescriptor,
@@ -141,13 +143,15 @@ pub struct OptionalPageValidity<'a> {
 
 impl<'a> OptionalPageValidity<'a> {
     #[inline]
-    pub fn new(validity: &'a [u8], length: usize) -> Self {
+    pub fn new(page: &'a DataPage) -> Self {
+        let (_, validity, _, _) = split_buffer(page, page.descriptor());
+
         let validity = convert(hybrid_rle::Decoder::new(validity, 1));
         Self {
             validity,
             run_offset: 0,
             consumed: 0,
-            length,
+            length: page.num_values(),
         }
     }
 
@@ -235,6 +239,7 @@ pub(super) fn extend_from_decoder<'a, T: Default, P: Pushable<T>, I: Iterator<It
     }
 }
 
+/*
 pub(super) fn read_dict_optional<K>(
     validity_buffer: &[u8],
     indices_buffer: &[u8],
@@ -257,6 +262,7 @@ pub(super) fn read_dict_optional<K>(
 
     extend_from_decoder(validity, &mut page_validity, None, indices, indices_iter)
 }
+ */
 
 /// The state of a partially deserialized page
 pub(super) trait PageState<'a> {
@@ -266,6 +272,8 @@ pub(super) trait PageState<'a> {
 /// A decoder that knows how to map `State` -> Array
 pub(super) trait Decoder<'a, C: Default, P: Pushable<C>> {
     type State: PageState<'a>;
+
+    fn build_state(&self, page: &'a DataPage) -> Result<Self::State, ArrowError>;
 
     /// Initializes a new pushable
     fn with_capacity(&self, capacity: usize) -> P;
@@ -324,4 +332,51 @@ pub(super) fn extend_from_new_page<'a, T: Decoder<'a, C, P>, C: Default, P: Push
 
     // and return this array
     Ok(Some((values, validity)))
+}
+
+#[derive(Debug)]
+pub enum MaybeNext<P> {
+    Some(P),
+    None,
+    More,
+}
+
+#[inline]
+pub(super) fn next<'a, I: DataPages, C: Default, P: Pushable<C>, D: Decoder<'a, C, P>>(
+    iter: &'a mut I,
+    items: &mut VecDeque<(P, MutableBitmap)>,
+    chunk_size: usize,
+    decoder: &D,
+) -> MaybeNext<Result<(P, MutableBitmap), ArrowError>> {
+    // back[a1, a2, a3, ...]front
+    if items.len() > 1 {
+        let item = items.pop_back().unwrap();
+        return MaybeNext::Some(Ok(item));
+    }
+    match (items.pop_back(), iter.next()) {
+        (_, Err(e)) => MaybeNext::Some(Err(e.into())),
+        (None, Ok(None)) => MaybeNext::None,
+        (state, Ok(Some(page))) => {
+            // there is a new page => consume the page from the start
+            let maybe_page = decoder.build_state(page);
+            let page = match maybe_page {
+                Ok(page) => page,
+                Err(e) => return MaybeNext::Some(Err(e)),
+            };
+
+            let maybe_array = extend_from_new_page(page, state, chunk_size, items, decoder);
+
+            match maybe_array {
+                Ok(Some((values, validity))) => MaybeNext::Some(Ok((values, validity))),
+                Ok(None) => MaybeNext::More,
+                Err(e) => MaybeNext::Some(Err(e)),
+            }
+        }
+        (Some((values, validity)), Ok(None)) => {
+            // we have a populated item and no more pages
+            // the only case where an item's length may be smaller than chunk_size
+            debug_assert!(values.len() <= chunk_size);
+            MaybeNext::Some(Ok((values, validity)))
+        }
+    }
 }
