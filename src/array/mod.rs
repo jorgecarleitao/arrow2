@@ -90,7 +90,7 @@ pub trait Array: Send + Sync {
     /// This operation is `O(1)` over `len`, as it amounts to increase two ref counts
     /// and moving the struct to the heap.
     /// # Panic
-    /// This function panics iff `offset + length >= self.len()`.
+    /// This function panics iff `offset + length > self.len()`.
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array>;
 
     /// Slices the [`Array`], returning a new `Box<dyn Array>`.
@@ -98,7 +98,7 @@ pub trait Array: Send + Sync {
     /// This operation is `O(1)` over `len`, as it amounts to increase two ref counts
     /// and moving the struct to the heap.
     /// # Safety
-    /// The caller must ensure that `offset + length <=| self.len()`
+    /// The caller must ensure that `offset + length <= self.len()`
     unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array>;
 
     /// Sets the validity bitmap on this [`Array`].
