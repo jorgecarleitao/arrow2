@@ -12,6 +12,7 @@ use crate::error::ArrowError;
 
 use super::DataPages;
 
+#[derive(Debug)]
 pub struct BinaryIter<'a> {
     values: &'a [u8],
 }

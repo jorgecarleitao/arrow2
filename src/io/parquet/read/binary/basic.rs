@@ -15,7 +15,7 @@ use crate::{
     error::Result,
 };
 
-use super::super::utils::{extend_from_decoder, next, MaybeNext, OptionalPageValidity};
+use super::super::utils::{extend_from_decoder, next, BinaryIter, MaybeNext, OptionalPageValidity};
 use super::super::DataPages;
 use super::{super::utils, utils::Binary};
 
@@ -57,33 +57,16 @@ fn read_delta_optional<O: Offset>(
 }
  */
 
-struct Optional<'a> {
-    values: utils::BinaryIter<'a>,
-    validity: OptionalPageValidity<'a>,
-}
-
-impl<'a> Optional<'a> {
-    fn new(page: &'a DataPage) -> Self {
-        let (_, validity_buffer, values_buffer, _) = utils::split_buffer(page, page.descriptor());
-
-        let values = utils::BinaryIter::new(values_buffer);
-
-        Self {
-            values,
-            validity: OptionalPageValidity::new(page),
-        }
-    }
-}
-
-struct Required<'a> {
-    pub values: utils::BinaryIter<'a>,
+#[derive(Debug)]
+pub(super) struct Required<'a> {
+    pub values: BinaryIter<'a>,
     pub remaining: usize,
 }
 
 impl<'a> Required<'a> {
-    fn new(page: &'a DataPage) -> Self {
+    pub fn new(page: &'a DataPage) -> Self {
         Self {
-            values: utils::BinaryIter::new(page.buffer()),
+            values: BinaryIter::new(page.buffer()),
             remaining: page.num_values(),
         }
     }
@@ -149,7 +132,7 @@ impl<'a> OptionalDictionary<'a> {
 }
 
 enum State<'a> {
-    Optional(Optional<'a>),
+    Optional(OptionalPageValidity<'a>, BinaryIter<'a>),
     Required(Required<'a>),
     RequiredDictionary(RequiredDictionary<'a>),
     OptionalDictionary(OptionalDictionary<'a>),
@@ -158,7 +141,7 @@ enum State<'a> {
 impl<'a> utils::PageState<'a> for State<'a> {
     fn len(&self) -> usize {
         match self {
-            State::Optional(state) => state.validity.len(),
+            State::Optional(validity, _) => validity.len(),
             State::Required(state) => state.remaining,
             State::RequiredDictionary(state) => state.remaining,
             State::OptionalDictionary(state) => state.validity.len(),
@@ -210,7 +193,13 @@ impl<'a, O: Offset> utils::Decoder<'a, &'a [u8], Binary<O>> for BinaryDecoder<O>
             page.descriptor().type_().get_basic_info().repetition() == &Repetition::Optional;
 
         match (page.encoding(), page.dictionary_page(), is_optional) {
-            (Encoding::Plain, None, true) => Ok(State::Optional(Optional::new(page))),
+            (Encoding::Plain, None, true) => {
+                let (_, _, values, _) = utils::split_buffer(page, page.descriptor());
+
+                let values = BinaryIter::new(values);
+
+                Ok(State::Optional(OptionalPageValidity::new(page), values))
+            }
             (Encoding::Plain, None, false) => Ok(State::Required(Required::new(page))),
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false) => {
                 Ok(State::RequiredDictionary(RequiredDictionary::new(
@@ -245,12 +234,12 @@ impl<'a, O: Offset> utils::Decoder<'a, &'a [u8], Binary<O>> for BinaryDecoder<O>
         additional: usize,
     ) {
         match state {
-            State::Optional(page) => extend_from_decoder(
+            State::Optional(page_validity, page_values) => extend_from_decoder(
                 validity,
-                &mut page.validity,
+                page_validity,
                 Some(additional),
                 values,
-                &mut page.values,
+                page_values,
             ),
             State::Required(page) => {
                 page.remaining -= additional;
@@ -275,7 +264,7 @@ impl<'a, O: Offset> utils::Decoder<'a, &'a [u8], Binary<O>> for BinaryDecoder<O>
     }
 }
 
-fn finish<O: Offset, A: TraitBinaryArray<O>>(
+pub(super) fn finish<O: Offset, A: TraitBinaryArray<O>>(
     data_type: &DataType,
     values: Binary<O>,
     validity: MutableBitmap,

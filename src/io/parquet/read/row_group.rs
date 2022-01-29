@@ -11,7 +11,7 @@ use parquet2::{
 
 use crate::{
     array::Array, chunk::Chunk, datatypes::Field, error::Result,
-    io::parquet::read::page_iter_to_arrays,
+    io::parquet::read::column_iter_to_arrays,
 };
 
 use super::RowGroupMetaData;
@@ -23,66 +23,77 @@ pub struct RowGroupReader {
 
 fn get_field_columns<'a>(
     row_group: &'a RowGroupMetaData,
-    field: &ParquetType,
+    field_name: &str,
 ) -> Vec<&'a ColumnChunkMetaData> {
     row_group
         .columns()
         .iter()
         .enumerate()
-        .filter(|x| x.1.descriptor().path_in_schema()[0] == field.name())
+        .filter(|x| x.1.descriptor().path_in_schema()[0] == field_name)
         .map(|x| x.1)
         .collect()
 }
 
-pub(super) fn get_iterators<R: Read + Seek>(
+/// Reads all columns that are part of the parquet field `field_name`
+pub fn read_columns<'a, R: Read + Seek>(
+    reader: &mut R,
+    row_group: &'a RowGroupMetaData,
+    field_name: &str,
+) -> Result<Vec<(&'a ColumnChunkMetaData, Vec<u8>)>> {
+    get_field_columns(row_group, field_name)
+        .into_iter()
+        .map(|meta| {
+            let (start, len) = meta.byte_range();
+            reader.seek(std::io::SeekFrom::Start(start))?;
+            let mut chunk = vec![0; len as usize];
+            reader.read_exact(&mut chunk)?;
+            Ok((meta, chunk))
+        })
+        .collect()
+}
+
+pub(super) fn get_iterators<'a, R: Read + Seek>(
     reader: &mut R,
     parquet_fields: &[ParquetType],
     row_group: &RowGroupMetaData,
     fields: Vec<Field>,
     chunk_size: Option<usize>,
-) -> Result<Vec<Box<dyn Iterator<Item = Result<Arc<dyn Array>>>>>> {
+) -> Result<Vec<Box<dyn Iterator<Item = Result<Arc<dyn Array>>> + 'a>>> {
+    let chunk_size = chunk_size
+        .unwrap_or(usize::MAX)
+        .min(row_group.num_rows() as usize);
+
     // reads all the necessary columns for all fields from the row group
     // This operation is IO-bounded `O(C)` where C is the number of columns in the row group
-    fields
+    let columns = parquet_fields
         .iter()
-        .zip(parquet_fields.iter())
-        .map(|(field, parquet_field)| {
-            let chunks = get_field_columns(row_group, parquet_field)
-                .into_iter()
-                .map(|meta| {
-                    let (start, len) = meta.byte_range();
-                    reader.seek(std::io::SeekFrom::Start(start))?;
-                    let mut chunk = vec![0; len as usize];
-                    reader.read_exact(&mut chunk)?;
-                    Ok((meta, chunk))
-                });
+        .map(|parquet_field| read_columns(reader, row_group, parquet_field.name()))
+        .collect::<Result<Vec<_>>>()?;
 
-            chunks
-                .map(|x| {
-                    x.and_then(|(column_meta, chunk)| {
-                        let pages = PageIterator::new(
-                            std::io::Cursor::new(chunk),
-                            column_meta.num_values(),
-                            column_meta.compression(),
-                            column_meta.descriptor().clone(),
-                            Arc::new(|_, _| true),
-                            vec![],
-                        );
-                        let pages = BasicDecompressor::new(pages, vec![]);
-                        page_iter_to_arrays(
-                            pages,
-                            column_meta,
-                            field.clone(),
-                            chunk_size
-                                .unwrap_or(usize::MAX)
-                                .min(row_group.num_rows() as usize),
-                        )
-                    })
+    columns
+        .into_iter()
+        .map(|columns| {
+            let (pages, types): (Vec<_>, Vec<_>) = columns
+                .into_iter()
+                .map(|(column_meta, chunk)| {
+                    let pages = PageIterator::new(
+                        std::io::Cursor::new(chunk),
+                        column_meta.num_values(),
+                        column_meta.compression(),
+                        column_meta.descriptor().clone(),
+                        Arc::new(|_, _| true),
+                        vec![],
+                    );
+                    (
+                        BasicDecompressor::new(pages, vec![]),
+                        column_meta.descriptor().type_(),
+                    )
                 })
-                // todo: generalize for struct type
-                .next()
-                .unwrap()
+                .unzip();
+            (pages, types)
         })
+        .zip(fields.into_iter())
+        .map(|((columns, types), field)| column_iter_to_arrays(columns, types, &field, chunk_size))
         .collect()
 }
 

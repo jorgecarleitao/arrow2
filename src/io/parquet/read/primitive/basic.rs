@@ -17,14 +17,14 @@ use super::super::utils::OptionalPageValidity;
 use super::super::DataPages;
 
 #[derive(Debug)]
-struct Values<'a, T, P, G, F>
+pub(super) struct Values<'a, T, P, G, F>
 where
     T: NativeType,
     P: ParquetNativeType,
     G: for<'b> Fn(&'b [u8]) -> P,
     F: Fn(P) -> T,
 {
-    values: std::iter::Map<std::iter::Map<std::slice::ChunksExact<'a, u8>, G>, F>,
+    pub values: std::iter::Map<std::iter::Map<std::slice::ChunksExact<'a, u8>, G>, F>,
     phantom: std::marker::PhantomData<P>,
 }
 
@@ -35,9 +35,9 @@ where
     G: for<'b> Fn(&'b [u8]) -> P,
     F: Fn(P) -> T,
 {
-    fn new(page: &'a DataPage, op1: G, op2: F) -> Self {
+    pub fn new(page: &'a DataPage, op1: G, op2: F) -> Self {
         let (_, _, values, _) = utils::split_buffer(page, page.descriptor());
-        assert_eq!(values.len(), page.num_values() * std::mem::size_of::<T>());
+        assert_eq!(values.len() % std::mem::size_of::<P>(), 0);
         Self {
             phantom: Default::default(),
             values: values
@@ -45,6 +45,11 @@ where
                 .map(op1)
                 .map(op2),
         }
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.values.size_hint().0
     }
 }
 
@@ -70,7 +75,7 @@ where
 }
 
 #[derive(Debug)]
-struct ValuesDictionary<'a, T, P, F>
+pub(super) struct ValuesDictionary<'a, T, P, F>
 where
     T: NativeType,
     P: ParquetNativeType,
@@ -100,6 +105,11 @@ where
             values,
         }
     }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.values.size_hint().0
+    }
 }
 
 // The state of a `DataPage` of `Primitive` parquet primitive type
@@ -127,8 +137,8 @@ where
     fn len(&self) -> usize {
         match self {
             State::Optional(optional, _) => optional.len(),
-            State::Required(values) => values.values.size_hint().0,
-            State::RequiredDictionary(values) => values.values.size_hint().0,
+            State::Required(values) => values.len(),
+            State::RequiredDictionary(values) => values.len(),
             State::OptionalDictionary(optional, _) => optional.len(),
         }
     }

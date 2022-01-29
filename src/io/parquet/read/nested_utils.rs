@@ -215,77 +215,6 @@ pub(super) fn read_optional_values<D, C, G, P>(
     }
 }
 
-pub fn extend_offsets<R, D>(
-    rep_levels: R,
-    def_levels: D,
-    is_nullable: bool,
-    max_rep: u32,
-    max_def: u32,
-    nested: &mut Vec<Box<dyn Nested>>,
-) where
-    R: Iterator<Item = u32>,
-    D: Iterator<Item = u32>,
-{
-    let mut values_count = vec![0; nested.len()];
-    let mut prev_def: u32 = 0;
-    let mut is_first = true;
-
-    rep_levels.zip(def_levels).for_each(|(rep, def)| {
-        let mut closures = max_rep - rep;
-        if prev_def <= 1 {
-            closures = 1;
-        };
-        if is_first {
-            // close on first run to ensure offsets start with 0.
-            closures = max_rep;
-            is_first = false;
-        }
-
-        nested
-            .iter_mut()
-            .zip(values_count.iter())
-            .enumerate()
-            .skip(rep as usize)
-            .take((rep + closures) as usize)
-            .for_each(|(depth, (nested, length))| {
-                let is_null = (def - rep) as usize == depth && depth == rep as usize;
-                nested.push(*length, !is_null);
-            });
-
-        values_count
-            .iter_mut()
-            .enumerate()
-            .for_each(|(depth, values)| {
-                if depth == 1 {
-                    if def == max_def || (is_nullable && def == max_def - 1) {
-                        *values += 1
-                    }
-                } else if depth == 0 {
-                    let a = nested
-                        .get(depth + 1)
-                        .map(|x| x.is_nullable())
-                        .unwrap_or_default(); // todo: cumsum this
-                    let condition = rep == 1
-                        || rep == 0
-                            && def >= max_def.saturating_sub((a as u32) + (is_nullable as u32));
-
-                    if condition {
-                        *values += 1;
-                    }
-                }
-            });
-        prev_def = def;
-    });
-
-    // close validities
-    nested
-        .iter_mut()
-        .zip(values_count.iter())
-        .for_each(|(nested, length)| {
-            nested.close(*length);
-        });
-}
-
 fn init_nested_recursive(field: &Field, capacity: usize, container: &mut Vec<Box<dyn Nested>>) {
     let is_nullable = field.is_nullable;
 
@@ -417,11 +346,6 @@ impl NestedState {
         self.nested[0].num_values()
     }
 
-    /// Whether the primitive is optional
-    pub fn is_optional(&self) -> bool {
-        self.nested.last().unwrap().is_nullable()
-    }
-
     pub fn depth(&self) -> usize {
         // outermost is the number of rows
         self.nested.len()
@@ -526,12 +450,22 @@ pub fn extend_offsets1<'a>(
 }
 
 fn extend_offsets2<'a>(page: &mut NestedPage<'a>, nested: &mut NestedState, additional: usize) {
-    let is_optional = nested.is_optional();
     let mut values_count = vec![0; nested.depth()];
     let mut prev_def: u32 = 0;
     let mut is_first = true;
 
-    let max_def = page.max_def_level;
+    let mut def_threshold = page.max_def_level;
+    let thres = nested
+        .nested
+        .iter()
+        .rev()
+        .map(|nested| {
+            let is_nullable = nested.is_nullable();
+            def_threshold -= is_nullable as u32;
+            def_threshold
+        })
+        .collect::<Vec<_>>();
+
     let max_rep = page.max_rep_level;
 
     let mut iter = page.repetitions.by_ref().zip(page.definitions.by_ref());
@@ -568,25 +502,15 @@ fn extend_offsets2<'a>(page: &mut NestedPage<'a>, nested: &mut NestedState, addi
 
         values_count
             .iter_mut()
+            .zip(thres.iter())
             .enumerate()
-            .for_each(|(depth, values)| {
+            .for_each(|(depth, (values, thre))| {
                 if depth == 1 {
-                    if def == max_def || (is_optional && def == max_def - 1) {
+                    if def >= *thre {
                         *values += 1
                     }
-                } else if depth == 0 {
-                    let a = nested
-                        .nested
-                        .get(depth + 1)
-                        .map(|x| x.is_nullable())
-                        .unwrap_or_default(); // todo: cumsum this
-                    let condition = rep == 1
-                        || rep == 0
-                            && def >= max_def.saturating_sub((a as u32) + (!is_optional as u32));
-
-                    if condition {
-                        *values += 1;
-                    }
+                } else if depth == 0 && def >= *thre {
+                    *values += 1;
                 }
             });
         prev_def = def;
@@ -611,7 +535,7 @@ pub struct Optional<'a> {
 
 impl<'a> Optional<'a> {
     pub fn new(page: &'a DataPage) -> Self {
-        let (_, def_levels, values_buffer, _) = split_buffer(page, page.descriptor());
+        let (_, def_levels, _, _) = split_buffer(page, page.descriptor());
 
         let max_def = page.descriptor().max_def_level();
 

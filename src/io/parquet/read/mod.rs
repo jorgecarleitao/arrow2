@@ -246,68 +246,67 @@ fn column_datatype(data_type: &DataType, column: usize) -> DataType {
 }
 
 fn page_iter_to_arrays<'a, I: 'a + DataPages>(
-    iter: I,
-    metadata: &ColumnChunkMetaData,
+    pages: I,
+    type_: &ParquetType,
     field: Field,
     chunk_size: usize,
 ) -> Result<Box<dyn Iterator<Item = Result<Arc<dyn Array>>> + 'a>> {
     use DataType::*;
-    let type_ = metadata.descriptor().type_();
     match field.data_type.to_logical_type() {
         /*Null => Ok(Box::new(NullArray::from_data(
             data_type,
             metadata.num_values() as usize,
         ))),*/
-        Boolean => Ok(boolean::iter_to_arrays(iter, field.data_type, chunk_size)),
+        Boolean => Ok(boolean::iter_to_arrays(pages, field.data_type, chunk_size)),
         UInt8 => Ok(primitive::iter_to_arrays(
-            iter,
+            pages,
             field.data_type,
             chunk_size,
             read_item,
             |x: i32| x as u8,
         )),
         UInt16 => Ok(primitive::iter_to_arrays(
-            iter,
+            pages,
             field.data_type,
             chunk_size,
             read_item,
             |x: i32| x as u16,
         )),
         UInt32 => Ok(primitive::iter_to_arrays(
-            iter,
+            pages,
             field.data_type,
             chunk_size,
             read_item,
             |x: i32| x as u32,
         )),
         Int8 => Ok(primitive::iter_to_arrays(
-            iter,
+            pages,
             field.data_type,
             chunk_size,
             read_item,
             |x: i32| x as i8,
         )),
         Int16 => Ok(primitive::iter_to_arrays(
-            iter,
+            pages,
             field.data_type,
             chunk_size,
             read_item,
             |x: i32| x as i16,
         )),
         Int32 | Date32 | Time32(_) | Interval(IntervalUnit::YearMonth) => Ok(
-            primitive::iter_to_arrays(iter, field.data_type, chunk_size, read_item, |x: i32| {
+            primitive::iter_to_arrays(pages, field.data_type, chunk_size, read_item, |x: i32| {
                 x as i32
             }),
         ),
 
-        Timestamp(TimeUnit::Nanosecond, None) => match metadata.descriptor().type_() {
+        Timestamp(TimeUnit::Nanosecond, None) => match type_ {
             ParquetType::PrimitiveType {
                 physical_type,
                 logical_type,
                 ..
             } => match (physical_type, logical_type) {
                 (PhysicalType::Int96, _) => Ok(primitive::iter_to_arrays(
-                    iter,
+                    pages,
                     DataType::Timestamp(TimeUnit::Nanosecond, None),
                     chunk_size,
                     read_item,
@@ -315,21 +314,21 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
                 )),
                 (_, Some(LogicalType::TIMESTAMP(TimestampType { unit, .. }))) => Ok(match unit {
                     ParquetTimeUnit::MILLIS(_) => primitive::iter_to_arrays(
-                        iter,
+                        pages,
                         field.data_type,
                         chunk_size,
                         read_item,
                         |x: i64| x * 1_000_000,
                     ),
                     ParquetTimeUnit::MICROS(_) => primitive::iter_to_arrays(
-                        iter,
+                        pages,
                         field.data_type,
                         chunk_size,
                         read_item,
                         |x: i64| x * 1_000,
                     ),
                     ParquetTimeUnit::NANOS(_) => primitive::iter_to_arrays(
-                        iter,
+                        pages,
                         field.data_type,
                         chunk_size,
                         read_item,
@@ -337,7 +336,7 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
                     ),
                 }),
                 _ => Ok(primitive::iter_to_arrays(
-                    iter,
+                    pages,
                     field.data_type,
                     chunk_size,
                     read_item,
@@ -348,21 +347,21 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
         },
 
         FixedSizeBinary(_) => Ok(Box::new(
-            fixed_size_binary::BinaryArrayIterator::new(iter, field.data_type, chunk_size)
+            fixed_size_binary::BinaryArrayIterator::new(pages, field.data_type, chunk_size)
                 .map(|x| x.map(|x| Arc::new(x) as _)),
         )),
 
         Decimal(_, _) => match type_ {
             ParquetType::PrimitiveType { physical_type, .. } => Ok(match physical_type {
                 PhysicalType::Int32 => primitive::iter_to_arrays(
-                    iter,
+                    pages,
                     field.data_type,
                     chunk_size,
                     read_item,
                     |x: i32| x as i128,
                 ),
                 PhysicalType::Int64 => primitive::iter_to_arrays(
-                    iter,
+                    pages,
                     field.data_type,
                     chunk_size,
                     read_item,
@@ -377,13 +376,13 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
                 &PhysicalType::FixedLenByteArray(n) => {
                     let n = n as usize;
 
-                    let iter = fixed_size_binary::BinaryArrayIterator::new(
-                        iter,
+                    let pages = fixed_size_binary::BinaryArrayIterator::new(
+                        pages,
                         DataType::FixedSizeBinary(n),
                         chunk_size,
                     );
 
-                    let iter = iter.map(move |maybe_array| {
+                    let pages = pages.map(move |maybe_array| {
                         let array = maybe_array?;
                         let values = array
                             .values()
@@ -407,9 +406,9 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
                         ))
                     });
 
-                    let iter = iter.map(|x| x.map(|x| Arc::new(x) as Arc<dyn Array>));
+                    let arrays = pages.map(|x| x.map(|x| Arc::new(x) as Arc<dyn Array>));
 
-                    Box::new(iter) as _
+                    Box::new(arrays) as _
                 }
                 _ => unreachable!(),
             }),
@@ -418,12 +417,12 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
 
         // INT64
         Int64 | Date64 | Time64(_) | Duration(_) | Timestamp(_, _) => Ok(
-            primitive::iter_to_arrays(iter, field.data_type, chunk_size, read_item, |x: i64| {
+            primitive::iter_to_arrays(pages, field.data_type, chunk_size, read_item, |x: i64| {
                 x as i64
             }),
         ),
         UInt64 => Ok(primitive::iter_to_arrays(
-            iter,
+            pages,
             field.data_type,
             chunk_size,
             read_item,
@@ -431,14 +430,14 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
         )),
 
         Float32 => Ok(primitive::iter_to_arrays(
-            iter,
+            pages,
             field.data_type,
             chunk_size,
             read_item,
             |x: f32| x,
         )),
         Float64 => Ok(primitive::iter_to_arrays(
-            iter,
+            pages,
             field.data_type,
             chunk_size,
             read_item,
@@ -446,37 +445,34 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
         )),
 
         Binary => Ok(binary::iter_to_arrays::<i32, BinaryArray<i32>, _>(
-            iter,
+            pages,
             field.data_type,
             chunk_size,
         )),
         LargeBinary => Ok(binary::iter_to_arrays::<i64, BinaryArray<i64>, _>(
-            iter,
+            pages,
             field.data_type,
             chunk_size,
         )),
         Utf8 => Ok(binary::iter_to_arrays::<i32, Utf8Array<i32>, _>(
-            iter,
+            pages,
             field.data_type,
             chunk_size,
         )),
         LargeUtf8 => Ok(binary::iter_to_arrays::<i64, Utf8Array<i64>, _>(
-            iter,
+            pages,
             field.data_type,
             chunk_size,
         )),
 
         Dictionary(key_type, _, _) => match_integer_type!(key_type, |$K| {
-            dict_read::<$K, _>(iter, type_, field.data_type, chunk_size)
+            dict_read::<$K, _>(pages, type_, field.data_type, chunk_size)
         }),
 
-        List(_) => page_iter_to_arrays_nested(iter, field, chunk_size),
-        /*
-        LargeList(ref inner) => {
-            let values = page_iter_to_array(iter, nested, metadata, inner.data_type().clone());
-            create_list(data_type, nested, values.into())
+        LargeList(inner) | List(inner) => {
+            let data_type = inner.data_type.clone();
+            page_iter_to_arrays_nested(pages, field, data_type, chunk_size)
         }
-         */
         other => Err(ArrowError::NotYetImplemented(format!(
             "Reading {:?} from parquet still not implemented",
             other
@@ -509,11 +505,56 @@ fn finish_array(data_type: DataType, arrays: &mut VecDeque<Box<dyn Array>>) -> B
 }
 
 fn page_iter_to_arrays_nested<'a, I: 'a + DataPages>(
-    iter: I,
+    pages: I,
     field: Field,
+    data_type: DataType,
     chunk_size: usize,
 ) -> Result<Box<dyn Iterator<Item = Result<Arc<dyn Array>>> + 'a>> {
-    let iter = boolean::iter_to_arrays_nested(iter, field.clone(), chunk_size);
+    use DataType::*;
+    let iter = match data_type {
+        Boolean => boolean::iter_to_arrays_nested(pages, field.clone(), chunk_size),
+        Int32 => primitive::iter_to_arrays_nested(
+            pages,
+            field.clone(),
+            data_type,
+            chunk_size,
+            read_item,
+            |x: i32| x,
+        ),
+        Int64 => primitive::iter_to_arrays_nested(
+            pages,
+            field.clone(),
+            data_type,
+            chunk_size,
+            read_item,
+            |x: i64| x,
+        ),
+        Binary => binary::iter_to_arrays_nested::<i32, BinaryArray<i32>, _>(
+            pages,
+            field.clone(),
+            data_type,
+            chunk_size,
+        ),
+        LargeBinary => binary::iter_to_arrays_nested::<i64, BinaryArray<i64>, _>(
+            pages,
+            field.clone(),
+            data_type,
+            chunk_size,
+        ),
+        Utf8 => binary::iter_to_arrays_nested::<i32, Utf8Array<i32>, _>(
+            pages,
+            field.clone(),
+            data_type,
+            chunk_size,
+        ),
+        LargeUtf8 => binary::iter_to_arrays_nested::<i64, Utf8Array<i64>, _>(
+            pages,
+            field.clone(),
+            data_type,
+            chunk_size,
+        ),
+        _ => todo!(),
+    };
 
     let iter = iter.map(move |x| {
         let (mut nested, array) = x?;
@@ -524,60 +565,91 @@ fn page_iter_to_arrays_nested<'a, I: 'a + DataPages>(
     Ok(Box::new(iter))
 }
 
-/*
-/// Returns an iterator of [`Array`] built from an iterator of column chunks. It also returns
-/// the two buffers used to decompress and deserialize pages (to be re-used).
-#[allow(clippy::type_complexity)]
-pub fn column_iter_to_arrays<II, I>(
-    mut columns: I,
-    field: &Field,
-    mut buffer: Vec<u8>,
-    chunk_size: usize,
-) -> Result<(impl Iterator<Item = Box<dyn Array>>, Vec<u8>, Vec<u8>)>
-where
-    II: Iterator<Item = std::result::Result<CompressedDataPage, ParquetError>>,
-    I: ColumnChunkIter<II>,
-{
-    let mut nested_info = vec![];
-    init_nested(field, 0, &mut nested_info);
+struct StructIterator {
+    iters: Vec<Box<dyn Iterator<Item = Result<Arc<dyn Array>>>>>,
+    fields: Vec<Field>,
+}
 
-    let data_type = field.data_type().clone();
+impl StructIterator {
+    pub fn new(
+        iters: Vec<Box<dyn Iterator<Item = Result<Arc<dyn Array>>>>>,
+        fields: Vec<Field>,
+    ) -> Self {
+        assert_eq!(iters.len(), fields.len());
+        Self { iters, fields }
+    }
+}
 
-    let mut arrays = VecDeque::new();
-    let page_buffer;
-    let mut column = 0;
-    loop {
-        match columns.advance()? {
-            State::Some(mut new_iter) => {
-                let data_type = column_datatype(&data_type, column);
-                if let Some((pages, metadata)) = new_iter.get() {
-                    let mut iterator = BasicDecompressor::new(pages, buffer);
+impl Iterator for StructIterator {
+    type Item = Result<Arc<dyn Array>>;
 
-                    let array = page_iter_to_arrays(
-                        &mut iterator,
-                        &mut nested_info,
-                        metadata,
-                        data_type,
-                        chunk_size,
-                    )?
-                    .collect::<Result<Vec<_>>>()?
-                    .pop()
-                    .unwrap();
-                    buffer = iterator.into_inner();
-                    arrays.push_back(array)
-                }
-                column += 1;
-                columns = new_iter;
-            }
-            State::Finished(b) => {
-                page_buffer = b;
-                break;
-            }
+    fn next(&mut self) -> Option<Self::Item> {
+        let values = self
+            .iters
+            .iter_mut()
+            .map(|iter| iter.next())
+            .collect::<Vec<Option<Self::Item>>>();
+
+        if values.iter().any(|x| x.is_none()) {
+            return None;
+        }
+        let values = values
+            .into_iter()
+            .map(|x| x.unwrap())
+            .collect::<Result<Vec<_>>>();
+
+        match values {
+            Ok(values) => Some(Ok(Arc::new(StructArray::from_data(
+                DataType::Struct(self.fields.clone()),
+                values,
+                None,
+            )))),
+            Err(e) => Some(Err(e)),
         }
     }
-
-    let array = finish_array(data_type, &mut arrays);
-    assert!(arrays.is_empty());
-    Ok((array, page_buffer, buffer))
 }
- */
+
+fn get_fields(field: &Field) -> Vec<Field> {
+    use crate::datatypes::PhysicalType::*;
+    match field.data_type.to_physical_type() {
+        Null | Boolean | Primitive(_) | Binary | FixedSizeBinary | LargeBinary | Utf8
+        | Dictionary(_) | LargeUtf8 | List | FixedSizeList | LargeList => {
+            vec![field.clone()]
+        }
+        Struct => {
+            if let DataType::Struct(fields) = field.data_type.to_logical_type() {
+                fields.clone()
+            } else {
+                unreachable!()
+            }
+        }
+        _ => todo!(),
+    }
+}
+
+/// Returns an iterator of [`Array`] built from an iterator of column chunks.
+pub fn column_iter_to_arrays<'a, I: 'static>(
+    columns: Vec<I>,
+    types: Vec<&ParquetType>,
+    field: &Field,
+    chunk_size: usize,
+) -> Result<Box<dyn Iterator<Item = Result<Arc<dyn Array>>> + 'a>>
+where
+    I: DataPages,
+{
+    // get fields
+    let fields = get_fields(field);
+
+    let mut iters = columns
+        .into_iter()
+        .zip(types.into_iter())
+        .zip(fields.clone().into_iter())
+        .map(|((pages, type_), field)| page_iter_to_arrays(pages, type_, field, chunk_size))
+        .collect::<Result<Vec<_>>>()?;
+
+    Ok(if fields.len() > 1 {
+        Box::new(StructIterator::new(iters, fields))
+    } else {
+        iters.pop().unwrap()
+    })
+}
