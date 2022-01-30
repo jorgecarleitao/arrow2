@@ -86,6 +86,39 @@ impl<T: NativeType> Bytes<T> {
         debug_assert!(!self.data.as_ptr().is_null());
         unsafe { NonNull::new_unchecked(self.data.as_ptr() as *mut T) }
     }
+
+    /// Returns a mutable reference to the `Vec<T>` data if it is allocated in this process.
+    /// Returns `None` if allocated by a foreign interface.
+    ///
+    /// See also [`Bytes::make_vec`], which will clone the inner data when allocated via ffi.
+    pub fn get_vec(&mut self) -> Option<&mut Vec<T>> {
+        match &self.deallocation {
+            Deallocation::Foreign(_) => None,
+            Deallocation::Native => Some(&mut self.data),
+        }
+    }
+
+    /// Returns a mutable reference to the `Vec<T>` data if it is allocated in this process.
+    /// This function will clone the inner data when allocated via ffi.
+    ///
+    /// See also [`Bytes::get_vec`], which will return `None` if this [`Bytes`] does not own its data.
+    pub fn make_vec(&mut self) -> &mut Vec<T> {
+        match &self.deallocation {
+            // We clone the data, set that as native allocation
+            // and return a mutable reference to the new data
+            Deallocation::Foreign(_) => {
+                self.deallocation = Deallocation::Native;
+                // forget the memory because the foreign interface will dealocate
+                let data = std::mem::take(&mut self.data);
+                let new_data = data.clone();
+                let _ = ManuallyDrop::new(data);
+
+                self.data = new_data;
+                &mut self.data
+            }
+            Deallocation::Native => &mut self.data,
+        }
+    }
 }
 
 impl<T: NativeType> Drop for Bytes<T> {
