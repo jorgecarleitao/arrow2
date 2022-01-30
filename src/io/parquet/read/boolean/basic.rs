@@ -1,12 +1,4 @@
-use crate::{
-    array::BooleanArray,
-    bitmap::{utils::BitmapIter, MutableBitmap},
-    datatypes::DataType,
-    error::{ArrowError, Result},
-    io::parquet::read::utils::extend_from_decoder,
-};
-
-use super::super::utils;
+use std::collections::VecDeque;
 
 use futures::{pin_mut, Stream, StreamExt};
 use parquet2::{
@@ -14,6 +6,18 @@ use parquet2::{
     metadata::{ColumnChunkMetaData, ColumnDescriptor},
     page::DataPage,
 };
+use streaming_iterator::{convert, Convert};
+
+use crate::{
+    array::BooleanArray,
+    bitmap::{utils::BitmapIter, MutableBitmap},
+    datatypes::DataType,
+    error::{ArrowError, Result},
+    io::parquet::read::{utils::extend_from_decoder, DataPages},
+};
+
+use super::super::utils;
+use super::super::utils::Decoder;
 
 pub(super) fn read_required(buffer: &[u8], additional: usize, values: &mut MutableBitmap) {
     // in PLAIN, booleans are LSB bitpacked and thus we can read them as if they were a bitmap.
@@ -34,12 +38,14 @@ fn read_optional(
     let values_len = values_buffer.len() * 8;
     let values_iterator = BitmapIter::new(values_buffer, 0, values_len);
 
-    let mut validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
+    let mut validity_iterator = convert(hybrid_rle::Decoder::new(validity_buffer, 1));
 
     extend_from_decoder(
         validity,
         &mut validity_iterator,
         length,
+        &mut 0,
+        None,
         values,
         values_iterator,
     )
@@ -105,4 +111,202 @@ pub(super) fn extend_from_page(
         }
     }
     Ok(())
+}
+
+// The state of an optional DataPage with a boolean physical type
+#[derive(Debug)]
+struct OptionalBooleanDataPage<'a> {
+    pub values: BitmapIter<'a>,
+    pub validity: Convert<hybrid_rle::Decoder<'a>>,
+    // invariant: offset <= length;
+    pub offset: usize,
+    pub length: usize,
+}
+
+impl<'a> OptionalBooleanDataPage<'a> {
+    pub fn new(page: &'a DataPage) -> Self {
+        let (_, validity_buffer, values_buffer, _) = utils::split_buffer(page, page.descriptor());
+        let validity = convert(hybrid_rle::Decoder::new(validity_buffer, 1));
+
+        // in PLAIN, booleans are LSB bitpacked and thus we can read them as if they were a bitmap.
+        // note that `values_buffer` contains only non-null values.
+        // thus, at this point, it is not known how many values this buffer contains
+        // values_len is the upper bound. The actual number depends on how many nulls there is.
+        let values_len = values_buffer.len() * 8;
+        let values = BitmapIter::new(values_buffer, 0, values_len);
+
+        Self {
+            values,
+            validity,
+            offset: 0,
+            length: page.num_values(),
+        }
+    }
+}
+
+// The state of a required DataPage with a boolean physical type
+#[derive(Debug)]
+struct RequiredBooleanDataPage<'a> {
+    pub values: &'a [u8],
+    // invariant: offset <= length;
+    pub offset: usize,
+    pub length: usize,
+}
+
+impl<'a> RequiredBooleanDataPage<'a> {
+    pub fn new(page: &'a DataPage) -> Self {
+        Self {
+            values: page.buffer(),
+            offset: 0,
+            length: page.num_values(),
+        }
+    }
+}
+
+// The state of a `DataPage` of `Boolean` parquet primitive type
+#[derive(Debug)]
+enum BooleanPageState<'a> {
+    Optional(OptionalBooleanDataPage<'a>),
+    Required(RequiredBooleanDataPage<'a>),
+}
+
+impl<'a> BooleanPageState<'a> {
+    pub fn len(&self) -> usize {
+        match self {
+            BooleanPageState::Optional(page) => page.length - page.offset,
+            BooleanPageState::Required(page) => page.length - page.offset,
+        }
+    }
+}
+
+impl<'a> utils::PageState<'a> for BooleanPageState<'a> {
+    fn len(&self) -> usize {
+        self.len()
+    }
+}
+
+fn build_state(page: &DataPage, is_optional: bool) -> Result<BooleanPageState> {
+    match (page.encoding(), is_optional) {
+        (Encoding::Plain, true) => Ok(BooleanPageState::Optional(OptionalBooleanDataPage::new(
+            page,
+        ))),
+        (Encoding::Plain, false) => Ok(BooleanPageState::Required(RequiredBooleanDataPage::new(
+            page,
+        ))),
+        _ => Err(utils::not_implemented(
+            &page.encoding(),
+            is_optional,
+            false,
+            "any",
+            "Boolean",
+        )),
+    }
+}
+
+struct BooleanDecoder {}
+impl<'a> utils::Decoder<'a, bool, MutableBitmap> for BooleanDecoder {
+    type State = BooleanPageState<'a>;
+    type Array = BooleanArray;
+
+    fn extend_from_state(
+        state: &mut Self::State,
+        values: &mut MutableBitmap,
+        validity: &mut MutableBitmap,
+        remaining: usize,
+    ) {
+        match state {
+            BooleanPageState::Optional(page) => extend_from_decoder(
+                validity,
+                &mut page.validity,
+                page.length,
+                &mut page.offset,
+                Some(remaining),
+                values,
+                &mut page.values,
+            ),
+            BooleanPageState::Required(page) => {
+                let remaining = remaining.min(page.length - page.offset);
+                values.extend_from_slice(page.values, page.offset, remaining);
+                page.offset += remaining;
+            }
+        }
+    }
+
+    fn finish(data_type: DataType, values: MutableBitmap, validity: MutableBitmap) -> Self::Array {
+        BooleanArray::from_data(data_type, values.into(), validity.into())
+    }
+}
+
+/// An iterator adapter over [`DataPages`] assumed to be encoded as boolean arrays
+#[derive(Debug)]
+pub struct BooleanArrayIterator<I: DataPages> {
+    iter: I,
+    data_type: DataType,
+    items: VecDeque<(MutableBitmap, MutableBitmap)>,
+    chunk_size: usize,
+    is_optional: bool,
+}
+
+impl<I: DataPages> BooleanArrayIterator<I> {
+    pub fn new(iter: I, data_type: DataType, chunk_size: usize, is_optional: bool) -> Self {
+        Self {
+            iter,
+            data_type,
+            items: VecDeque::new(),
+            chunk_size,
+            is_optional,
+        }
+    }
+}
+
+impl<I: DataPages> Iterator for BooleanArrayIterator<I> {
+    type Item = Result<BooleanArray>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // back[a1, a2, a3, ...]front
+        if self.items.len() > 1 {
+            return self.items.pop_back().map(|(values, validity)| {
+                Ok(BooleanDecoder::finish(
+                    self.data_type.clone(),
+                    values,
+                    validity,
+                ))
+            });
+        }
+        match (self.items.pop_back(), self.iter.next()) {
+            (_, Err(e)) => Some(Err(e.into())),
+            (None, Ok(None)) => None,
+            (state, Ok(Some(page))) => {
+                // there is a new page => consume the page from the start
+                let maybe_page = build_state(page, self.is_optional);
+                let page = match maybe_page {
+                    Ok(page) => page,
+                    Err(e) => return Some(Err(e)),
+                };
+
+                let maybe_array = utils::extend_from_new_page::<BooleanDecoder, _, _>(
+                    page,
+                    state,
+                    &self.data_type,
+                    self.chunk_size,
+                    &mut self.items,
+                );
+                match maybe_array {
+                    Ok(Some(array)) => Some(Ok(array)),
+                    Ok(None) => self.next(),
+                    Err(e) => Some(Err(e)),
+                }
+            }
+            (Some((values, validity)), Ok(None)) => {
+                // we have a populated item and no more pages
+                // the only case where an item's length may be smaller than chunk_size
+                debug_assert!(values.len() <= self.chunk_size);
+                Some(Ok(BooleanDecoder::finish(
+                    self.data_type.clone(),
+                    values,
+                    validity,
+                )))
+            }
+        }
+    }
 }

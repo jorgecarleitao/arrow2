@@ -3,6 +3,7 @@ use parquet2::{
     metadata::ColumnDescriptor,
     page::{BinaryPageDict, DataPage},
 };
+use streaming_iterator::convert;
 
 use crate::{
     array::Offset,
@@ -46,16 +47,20 @@ fn read_dict_buffer<O: Offset>(
     values: &mut Binary<O>,
     validity: &mut MutableBitmap,
 ) {
-    let values_iterator = values_iter(indices_buffer, dict, additional);
+    let length = values.len() + additional;
 
-    let mut validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
+    let values_iter = values_iter(indices_buffer, dict, additional);
+
+    let mut validity_iterator = convert(hybrid_rle::Decoder::new(validity_buffer, 1));
 
     extend_from_decoder(
         validity,
         &mut validity_iterator,
-        additional,
+        length,
+        &mut 0,
+        None,
         values,
-        values_iterator,
+        values_iter,
     );
 }
 
@@ -71,30 +76,6 @@ fn read_dict_required<O: Offset>(
     let values_iterator = values_iter(indices_buffer, dict, additional);
     for value in values_iterator {
         values.push(value);
-    }
-}
-
-struct Offsets<'a, O: Offset>(pub &'a mut Vec<O>);
-
-impl<'a, O: Offset> Pushable<O> for Offsets<'a, O> {
-    #[inline]
-    fn reserve(&mut self, additional: usize) {
-        self.0.reserve(additional)
-    }
-
-    #[inline]
-    fn push(&mut self, value: O) {
-        self.0.push(value)
-    }
-
-    #[inline]
-    fn push_null(&mut self) {
-        self.0.push(*self.0.last().unwrap())
-    }
-
-    #[inline]
-    fn extend_constant(&mut self, additional: usize, value: O) {
-        self.0.extend_constant(additional, value)
     }
 }
 
@@ -118,14 +99,16 @@ fn read_delta_optional<O: Offset>(
         *last_offset
     });
 
-    let mut validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
+    let mut validity_iterator = convert(hybrid_rle::Decoder::new(validity_buffer, 1));
 
     // offsets:
     extend_from_decoder(
         validity,
         &mut validity_iterator,
-        additional,
-        &mut Offsets::<O>(offsets),
+        length,
+        &mut 0,
+        None,
+        offsets,
         offsets_iterator,
     );
 
@@ -142,16 +125,18 @@ fn read_plain_optional<O: Offset>(
     validity: &mut MutableBitmap,
 ) {
     // values_buffer: first 4 bytes are len, remaining is values
-    let values_iterator = utils::BinaryIter::new(values_buffer);
+    let values_iter = utils::BinaryIter::new(values_buffer);
 
-    let mut validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
+    let mut validity_iterator = convert(hybrid_rle::Decoder::new(validity_buffer, 1));
 
     extend_from_decoder(
         validity,
         &mut validity_iterator,
-        additional,
+        length,
+        &mut 0,
+        None,
         values,
-        values_iterator,
+        values_iter,
     )
 }
 

@@ -20,7 +20,7 @@ pub fn read_column<R: Read + Seek>(
 ) -> Result<ArrayStats> {
     let metadata = read_metadata(&mut reader)?;
 
-    let mut reader = RecordReader::try_new(reader, Some(vec![column]), None, None, None)?;
+    let mut reader = FileReader::try_new(reader, Some(&[column]), None, None, None)?;
 
     let statistics = metadata.row_groups[row_group]
         .column(column)
@@ -28,7 +28,10 @@ pub fn read_column<R: Read + Seek>(
         .map(|x| statistics::deserialize_statistics(x?.as_ref()))
         .transpose()?;
 
-    Ok((reader.next().unwrap()?.columns()[0].clone(), statistics))
+    Ok((
+        reader.next().unwrap()?.into_arrays().pop().unwrap(),
+        statistics,
+    ))
 }
 
 pub fn pyarrow_nested_nullable(column: usize) -> Box<dyn Array> {
@@ -659,7 +662,7 @@ type IntegrationRead = (Arc<Schema>, Vec<Chunk<Arc<dyn Array>>>);
 
 fn integration_read(data: &[u8]) -> Result<IntegrationRead> {
     let reader = Cursor::new(data);
-    let reader = RecordReader::try_new(reader, None, None, None, None)?;
+    let reader = FileReader::try_new(reader, None, None, None, None)?;
     let schema = reader.schema().clone();
     let batches = reader.collect::<Result<Vec<_>>>()?;
 

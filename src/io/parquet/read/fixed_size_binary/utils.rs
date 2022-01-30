@@ -54,4 +54,12 @@ impl Pushable<&[u8]> for FixedSizeBinary {
         assert_eq!(value.len(), 0);
         self.extend_constant(additional)
     }
+
+    fn with_capacity(capacity: usize) -> Self {
+        todo!()
+    }
+
+    fn len(&self) -> usize {
+        self.len()
+    }
 }

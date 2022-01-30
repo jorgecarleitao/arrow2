@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     io::{Read, Seek},
     sync::Arc,
 };
@@ -11,8 +12,8 @@ use crate::{
 };
 
 use super::{
-    column_iter_to_array, get_column_iterator, get_schema, read_metadata, FileMetaData, PageFilter,
-    RowGroupMetaData,
+    column_iter_to_arrays, get_column_iterator, get_schema, read_metadata, FileMetaData,
+    PageFilter, RowGroupMetaData,
 };
 
 type GroupFilter = Arc<dyn Fn(usize, &RowGroupMetaData) -> bool>;
@@ -28,6 +29,7 @@ pub struct RecordReader<R: Read + Seek> {
     pages_filter: Option<PageFilter>,
     metadata: FileMetaData,
     current_group: usize,
+    chunk_size: Option<usize>,
     remaining_rows: usize,
 }
 
@@ -37,6 +39,7 @@ impl<R: Read + Seek> RecordReader<R> {
     pub fn try_new(
         mut reader: R,
         projection: Option<Vec<usize>>,
+        chunk_size: Option<usize>,
         limit: Option<usize>,
         groups_filter: Option<GroupFilter>,
         pages_filter: Option<PageFilter>,
@@ -87,6 +90,7 @@ impl<R: Read + Seek> RecordReader<R> {
             current_group: 0,
             buffer: vec![],
             decompress_buffer: vec![],
+            chunk_size,
             remaining_rows: limit.unwrap_or(usize::MAX),
         })
     }
@@ -151,7 +155,7 @@ impl<R: Read + Seek> Iterator for RecordReader<R> {
                     b1,
                 );
 
-                let (array, b1, b2) = column_iter_to_array(column_iter, field, b2)?;
+                let (array, b1, b2) = column_iter_to_arrays(column_iter, field, b2)?;
 
                 let array = if array.len() > remaining_rows {
                     array.slice(0, remaining_rows)

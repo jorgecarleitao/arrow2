@@ -31,24 +31,32 @@ use crate::{
     array::{Array, DictionaryKey, NullArray, PrimitiveArray, StructArray},
     datatypes::{DataType, Field, IntervalUnit, TimeUnit},
     error::{ArrowError, Result},
-    io::parquet::read::nested_utils::{create_list, init_nested},
+    io::parquet::read::{
+        nested_utils::{create_list, init_nested},
+        primitive::read_item,
+    },
 };
 
 mod binary;
 mod boolean;
+mod file;
 mod fixed_size_binary;
 mod nested_utils;
 mod primitive;
-mod record_batch;
+mod row_group;
 pub mod schema;
 pub mod statistics;
 mod utils;
 
-pub use record_batch::RecordReader;
+pub use file::FileReader;
+pub use row_group::*;
 pub(crate) use schema::is_type_nullable;
 pub use schema::{get_schema, FileMetaData};
 
 use self::nested_utils::Nested;
+
+pub trait DataPages: FallibleStreamingIterator<Item = DataPage, Error = ParquetError> {}
+impl<I: FallibleStreamingIterator<Item = DataPage, Error = ParquetError>> DataPages for I {}
 
 /// Creates a new iterator of compressed pages.
 pub fn get_page_iterator<R: Read + Seek>(
@@ -253,28 +261,78 @@ fn column_datatype(data_type: &DataType, column: usize) -> DataType {
     }
 }
 
-fn page_iter_to_array<I: FallibleStreamingIterator<Item = DataPage, Error = ParquetError>>(
-    iter: &mut I,
-    nested: &mut Vec<Box<dyn Nested>>,
+fn page_iter_to_arrays<
+    'a,
+    I: 'a + FallibleStreamingIterator<Item = DataPage, Error = ParquetError>,
+>(
+    iter: I,
     metadata: &ColumnChunkMetaData,
     data_type: DataType,
-) -> Result<Box<dyn Array>> {
+    chunk_size: usize,
+) -> Result<Box<dyn Iterator<Item = Result<Arc<dyn Array>>> + 'a>> {
     use DataType::*;
+    let is_optional =
+        metadata.descriptor().max_def_level() != metadata.descriptor().max_rep_level();
     match data_type.to_logical_type() {
-        Null => Ok(Box::new(NullArray::from_data(
+        /*Null => Ok(Box::new(NullArray::from_data(
             data_type,
             metadata.num_values() as usize,
-        ))),
-
-        Boolean => boolean::iter_to_array(iter, metadata, data_type, nested),
-
-        UInt8 => primitive::iter_to_array(iter, metadata, data_type, nested, |x: i32| x as u8),
-        UInt16 => primitive::iter_to_array(iter, metadata, data_type, nested, |x: i32| x as u16),
-        UInt32 => primitive::iter_to_array(iter, metadata, data_type, nested, |x: i32| x as u32),
-        Int8 => primitive::iter_to_array(iter, metadata, data_type, nested, |x: i32| x as i8),
-        Int16 => primitive::iter_to_array(iter, metadata, data_type, nested, |x: i32| x as i16),
+        ))),*/
+        Boolean => Ok(boolean::iter_to_arrays(
+            iter,
+            is_optional,
+            data_type,
+            chunk_size,
+        )),
+        UInt8 => Ok(primitive::iter_to_arrays(
+            iter,
+            is_optional,
+            data_type,
+            chunk_size,
+            read_item,
+            |x: i32| x as u8,
+        )),
+        UInt16 => Ok(primitive::iter_to_arrays(
+            iter,
+            is_optional,
+            data_type,
+            chunk_size,
+            read_item,
+            |x: i32| x as u16,
+        )),
+        UInt32 => Ok(primitive::iter_to_arrays(
+            iter,
+            is_optional,
+            data_type,
+            chunk_size,
+            read_item,
+            |x: i32| x as u32,
+        )),
+        Int8 => Ok(primitive::iter_to_arrays(
+            iter,
+            is_optional,
+            data_type,
+            chunk_size,
+            read_item,
+            |x: i32| x as i8,
+        )),
+        Int16 => Ok(primitive::iter_to_arrays(
+            iter,
+            is_optional,
+            data_type,
+            chunk_size,
+            read_item,
+            |x: i32| x as i16,
+        )),
         Int32 | Date32 | Time32(_) | Interval(IntervalUnit::YearMonth) => {
-            primitive::iter_to_array(iter, metadata, data_type, nested, |x: i32| x as i32)
+            Ok(primitive::iter_to_arrays(
+                iter,
+                is_optional,
+                data_type,
+                chunk_size,
+                read_item,
+                |x: i32| x as i32,
+            ))
         }
 
         Timestamp(TimeUnit::Nanosecond, None) => match metadata.descriptor().type_() {
@@ -283,33 +341,53 @@ fn page_iter_to_array<I: FallibleStreamingIterator<Item = DataPage, Error = Parq
                 logical_type,
                 ..
             } => match (physical_type, logical_type) {
-                (PhysicalType::Int96, _) => primitive::iter_to_array(
+                (PhysicalType::Int96, _) => Ok(primitive::iter_to_arrays(
                     iter,
-                    metadata,
+                    is_optional,
                     DataType::Timestamp(TimeUnit::Nanosecond, None),
-                    nested,
+                    chunk_size,
+                    read_item,
                     int96_to_i64_ns,
-                ),
-                (_, Some(LogicalType::TIMESTAMP(TimestampType { unit, .. }))) => match unit {
-                    ParquetTimeUnit::MILLIS(_) => {
-                        primitive::iter_to_array(iter, metadata, data_type, nested, |x: i64| {
-                            x * 1_000_000
-                        })
-                    }
-                    ParquetTimeUnit::MICROS(_) => {
-                        primitive::iter_to_array(iter, metadata, data_type, nested, |x: i64| {
-                            x * 1_000
-                        })
-                    }
-                    ParquetTimeUnit::NANOS(_) => {
-                        primitive::iter_to_array(iter, metadata, data_type, nested, |x: i64| x)
-                    }
-                },
-                _ => primitive::iter_to_array(iter, metadata, data_type, nested, |x: i64| x),
+                )),
+                (_, Some(LogicalType::TIMESTAMP(TimestampType { unit, .. }))) => Ok(match unit {
+                    ParquetTimeUnit::MILLIS(_) => primitive::iter_to_arrays(
+                        iter,
+                        is_optional,
+                        data_type,
+                        chunk_size,
+                        read_item,
+                        |x: i64| x * 1_000_000,
+                    ),
+                    ParquetTimeUnit::MICROS(_) => primitive::iter_to_arrays(
+                        iter,
+                        is_optional,
+                        data_type,
+                        chunk_size,
+                        read_item,
+                        |x: i64| x * 1_000,
+                    ),
+                    ParquetTimeUnit::NANOS(_) => primitive::iter_to_arrays(
+                        iter,
+                        is_optional,
+                        data_type,
+                        chunk_size,
+                        read_item,
+                        |x: i64| x,
+                    ),
+                }),
+                _ => Ok(primitive::iter_to_arrays(
+                    iter,
+                    is_optional,
+                    data_type,
+                    chunk_size,
+                    read_item,
+                    |x: i64| x,
+                )),
             },
             _ => unreachable!(),
         },
 
+        /*
         FixedSizeBinary(_) => Ok(Box::new(fixed_size_binary::iter_to_array(
             iter, data_type, metadata,
         )?)),
@@ -356,16 +434,45 @@ fn page_iter_to_array<I: FallibleStreamingIterator<Item = DataPage, Error = Parq
             },
             _ => unreachable!(),
         },
-
+        */
         // INT64
         Int64 | Date64 | Time64(_) | Duration(_) | Timestamp(_, _) => {
-            primitive::iter_to_array(iter, metadata, data_type, nested, |x: i64| x)
+            Ok(primitive::iter_to_arrays(
+                iter,
+                is_optional,
+                data_type,
+                chunk_size,
+                read_item,
+                |x: i64| x as i64,
+            ))
         }
-        UInt64 => primitive::iter_to_array(iter, metadata, data_type, nested, |x: i64| x as u64),
+        UInt64 => Ok(primitive::iter_to_arrays(
+            iter,
+            is_optional,
+            data_type,
+            chunk_size,
+            read_item,
+            |x: i64| x as u64,
+        )),
 
-        Float32 => primitive::iter_to_array(iter, metadata, data_type, nested, |x: f32| x),
-        Float64 => primitive::iter_to_array(iter, metadata, data_type, nested, |x: f64| x),
+        Float32 => Ok(primitive::iter_to_arrays(
+            iter,
+            is_optional,
+            data_type,
+            chunk_size,
+            read_item,
+            |x: f32| x,
+        )),
+        Float64 => Ok(primitive::iter_to_arrays(
+            iter,
+            is_optional,
+            data_type,
+            chunk_size,
+            read_item,
+            |x: f64| x,
+        )),
 
+        /*
         Binary | Utf8 => binary::iter_to_array::<i32, _, _>(iter, metadata, data_type, nested),
         LargeBinary | LargeUtf8 => {
             binary::iter_to_array::<i64, _, _>(iter, metadata, data_type, nested)
@@ -376,14 +483,14 @@ fn page_iter_to_array<I: FallibleStreamingIterator<Item = DataPage, Error = Parq
         }),
 
         List(ref inner) => {
-            let values = page_iter_to_array(iter, nested, metadata, inner.data_type().clone())?;
+            let values = page_iter_to_array(iter, nested, metadata, inner.data_type().clone());
             create_list(data_type, nested, values.into())
         }
         LargeList(ref inner) => {
-            let values = page_iter_to_array(iter, nested, metadata, inner.data_type().clone())?;
+            let values = page_iter_to_array(iter, nested, metadata, inner.data_type().clone());
             create_list(data_type, nested, values.into())
         }
-
+         */
         other => Err(ArrowError::NotYetImplemented(format!(
             "Reading {:?} from parquet still not implemented",
             other
@@ -415,14 +522,16 @@ fn finish_array(data_type: DataType, arrays: &mut VecDeque<Box<dyn Array>>) -> B
     }
 }
 
-/// Returns an [`Array`] built from an iterator of column chunks. It also returns
+/*
+/// Returns an iterator of [`Array`] built from an iterator of column chunks. It also returns
 /// the two buffers used to decompress and deserialize pages (to be re-used).
 #[allow(clippy::type_complexity)]
-pub fn column_iter_to_array<II, I>(
+pub fn column_iter_to_arrays<II, I>(
     mut columns: I,
     field: &Field,
     mut buffer: Vec<u8>,
-) -> Result<(Box<dyn Array>, Vec<u8>, Vec<u8>)>
+    chunk_size: usize,
+) -> Result<(impl Iterator<Item = Box<dyn Array>>, Vec<u8>, Vec<u8>)>
 where
     II: Iterator<Item = std::result::Result<CompressedDataPage, ParquetError>>,
     I: ColumnChunkIter<II>,
@@ -442,8 +551,16 @@ where
                 if let Some((pages, metadata)) = new_iter.get() {
                     let mut iterator = BasicDecompressor::new(pages, buffer);
 
-                    let array =
-                        page_iter_to_array(&mut iterator, &mut nested_info, metadata, data_type)?;
+                    let array = page_iter_to_arrays(
+                        &mut iterator,
+                        &mut nested_info,
+                        metadata,
+                        data_type,
+                        chunk_size,
+                    )?
+                    .collect::<Result<Vec<_>>>()?
+                    .pop()
+                    .unwrap();
                     buffer = iterator.into_inner();
                     arrays.push_back(array)
                 }
@@ -461,6 +578,7 @@ where
     assert!(arrays.is_empty());
     Ok((array, page_buffer, buffer))
 }
+ */
 
 /// Converts an async stream of [`DataPage`] into a single [`Array`].
 pub async fn page_stream_to_array<I: Stream<Item = std::result::Result<DataPage, ParquetError>>>(

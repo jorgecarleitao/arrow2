@@ -86,6 +86,8 @@ strength_reduce = { version = "0.2", optional = true }
 # For instruction multiversioning
 multiversion = { version = "0.6.1", optional = true }
 
+ouroboros = { version = "0.14", optional = true }
+
 [dev-dependencies]
 criterion = "0.3"
 flate2 = "1"
@@ -105,24 +107,8 @@ rustdoc-args = ["--cfg", "docsrs"]
 [features]
 default = []
 full = [
-    "io_csv",
-    "io_csv_async",
-    "io_json",
-    "io_ipc",
-    "io_flight",
-    "io_ipc_write_async",
-    "io_ipc_compression",
-    "io_json_integration",
-    "io_print",
     "io_parquet",
     "io_parquet_compression",
-    "io_avro",
-    "io_avro_compression",
-    "io_avro_async",
-    "regex",
-    "compute",
-    # parses timezones used in timestamp conversions
-    "chrono-tz",
 ]
 io_csv = ["io_csv_read", "io_csv_write"]
 io_csv_async = ["io_csv_read_async"]
@@ -134,6 +120,8 @@ io_ipc = ["arrow-format"]
 io_ipc_write_async = ["io_ipc", "futures"]
 io_ipc_compression = ["lz4", "zstd"]
 io_flight = ["io_ipc", "arrow-format/flight-data"]
+# base64 + io_ipc because arrow schemas are stored as base64-encoded ipc format.
+io_parquet = ["parquet2", "io_ipc", "base64", "futures", "streaming-iterator", "fallible-streaming-iterator", "ouroboros"]
 io_parquet_compression = [
     "parquet2/zstd",
     "parquet2/snappy",
@@ -207,8 +195,6 @@ compute = [
     "compute_lower",
     "compute_upper"
 ]
-# base64 + io_ipc because arrow schemas are stored as base64-encoded ipc format.
-io_parquet = ["parquet2", "io_ipc", "base64", "futures"]
 benchmarks = ["rand"]
 simd = ["packed_simd"]
 

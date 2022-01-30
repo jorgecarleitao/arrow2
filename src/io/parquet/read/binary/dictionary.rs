@@ -41,7 +41,7 @@ where
             let dict = dict.as_any().downcast_ref::<BinaryPageDict>().unwrap();
 
             values.values.extend_from_slice(dict.values());
-            values.offsets.extend(
+            values.offsets.0.extend(
                 dict.offsets()
                     .iter()
                     .map(|x| O::from_usize(*x as usize).unwrap()),
@@ -82,7 +82,7 @@ where
     let capacity = metadata.num_values() as usize;
     let mut indices = Vec::<K>::with_capacity(capacity);
     let mut values = Binary::<O>::with_capacity(capacity);
-    values.offsets.clear();
+    values.offsets.0.clear();
     let mut validity = MutableBitmap::with_capacity(capacity);
     while let Some(page) = iter.next()? {
         extend_from_page(
@@ -94,9 +94,9 @@ where
         )?
     }
 
-    if values.offsets.is_empty() {
+    if values.offsets.0.is_empty() {
         // the array is empty and thus we need to push the first offset ourselves.
-        values.offsets.push(O::zero());
+        values.offsets.0.push(O::zero());
     };
     let keys = PrimitiveArray::from_data(K::PRIMITIVE.into(), indices.into(), validity.into());
     let data_type = DictionaryArray::<K>::get_child(&data_type).clone();
@@ -104,13 +104,13 @@ where
     let values = match data_type.to_physical_type() {
         PhysicalType::Binary | PhysicalType::LargeBinary => Arc::new(BinaryArray::from_data(
             data_type,
-            values.offsets.into(),
+            values.offsets.0.into(),
             values.values.into(),
             None,
         )) as Arc<dyn Array>,
         PhysicalType::Utf8 | PhysicalType::LargeUtf8 => Arc::new(Utf8Array::from_data(
             data_type,
-            values.offsets.into(),
+            values.offsets.0.into(),
             values.values.into(),
             None,
         )),

@@ -8,10 +8,7 @@ use parquet2::{
 use super::super::nested_utils::extend_offsets;
 use super::ColumnDescriptor;
 use super::{super::utils, utils::chunks, Nested};
-use crate::{
-    bitmap::MutableBitmap, error::Result, trusted_len::TrustedLen,
-    types::NativeType as ArrowNativeType,
-};
+use crate::{bitmap::MutableBitmap, error::Result, types::NativeType as ArrowNativeType};
 
 fn read_values<T, D, G, F, A>(
     def_levels: D,
@@ -41,7 +38,7 @@ fn read_values<T, D, G, F, A>(
 fn read_values_required<T, G, F, A>(new_values: G, op: F, values: &mut Vec<A>)
 where
     T: NativeType,
-    G: TrustedLen<Item = T>,
+    G: Iterator<Item = T>,
     A: ArrowNativeType,
     F: Fn(T) -> A,
 {

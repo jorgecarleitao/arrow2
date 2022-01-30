@@ -368,7 +368,7 @@ fn all_types() -> Result<()> {
     let path = "testing/parquet-testing/data/alltypes_plain.parquet";
     let reader = std::fs::File::open(path)?;
 
-    let reader = RecordReader::try_new(reader, None, None, None, None)?;
+    let reader = FileReader::try_new(reader, None, None, None, None)?;
 
     let batches = reader.collect::<Result<Vec<_>>>()?;
     assert_eq!(batches.len(), 1);

@@ -1,56 +1,61 @@
+use std::sync::Arc;
+
 use crate::{
     array::{Array, BooleanArray},
     bitmap::MutableBitmap,
     datatypes::DataType,
-    error::{ArrowError, Result},
+    error::Result,
 };
 
-use parquet2::{metadata::ColumnChunkMetaData, page::DataPage, FallibleStreamingIterator};
+use parquet2::{metadata::ColumnDescriptor, page::DataPage};
 
 mod basic;
 mod nested;
 
 pub use basic::stream_to_array;
 
-use super::nested_utils::Nested;
+use self::basic::BooleanArrayIterator;
 
-pub fn iter_to_array<I, E>(
-    mut iter: I,
-    metadata: &ColumnChunkMetaData,
+use super::{nested_utils::Nested, DataPages};
+
+fn page_to_array_nested(
+    page: &DataPage,
+    descriptor: &ColumnDescriptor,
     data_type: DataType,
     nested: &mut Vec<Box<dyn Nested>>,
-) -> Result<Box<dyn Array>>
-where
-    ArrowError: From<E>,
-    I: FallibleStreamingIterator<Item = DataPage, Error = E>,
-{
-    let is_nullable = nested.pop().unwrap().is_nullable();
-    let capacity = metadata.num_values() as usize;
+    is_nullable: bool,
+) -> Result<BooleanArray> {
+    let capacity = page.num_values() as usize;
     let mut values = MutableBitmap::with_capacity(capacity);
-    let mut validity = MutableBitmap::with_capacity(capacity * usize::from(is_nullable));
+    let mut validity = MutableBitmap::with_capacity(capacity);
+    nested::extend_from_page(
+        page,
+        descriptor,
+        is_nullable,
+        nested,
+        &mut values,
+        &mut validity,
+    )?;
 
-    if nested.is_empty() {
-        while let Some(page) = iter.next()? {
-            basic::extend_from_page(page, metadata.descriptor(), &mut values, &mut validity)?
-        }
-        debug_assert_eq!(values.len(), capacity);
-        debug_assert_eq!(validity.len(), capacity * usize::from(is_nullable));
-    } else {
-        while let Some(page) = iter.next()? {
-            nested::extend_from_page(
-                page,
-                metadata.descriptor(),
-                is_nullable,
-                nested,
-                &mut values,
-                &mut validity,
-            )?
-        }
-    }
-
-    Ok(Box::new(BooleanArray::from_data(
+    Ok(BooleanArray::from_data(
         data_type,
         values.into(),
         validity.into(),
-    )))
+    ))
+}
+
+/// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
+pub fn iter_to_arrays<'a, I: 'a>(
+    iter: I,
+    is_optional: bool,
+    data_type: DataType,
+    chunk_size: usize,
+) -> Box<dyn Iterator<Item = Result<Arc<dyn Array>>> + 'a>
+where
+    I: DataPages,
+{
+    Box::new(
+        BooleanArrayIterator::new(iter, data_type, chunk_size, is_optional)
+            .map(|x| x.map(|x| Arc::new(x) as Arc<dyn Array>)),
+    )
 }

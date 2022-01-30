@@ -1,12 +1,15 @@
+use std::collections::VecDeque;
 use std::convert::TryInto;
 
 use parquet2::encoding::{hybrid_rle, Encoding};
 use parquet2::metadata::ColumnDescriptor;
 use parquet2::page::{split_buffer as _split_buffer, DataPage, DataPageHeader};
+use streaming_iterator::{convert, Convert, StreamingIterator};
 
-use crate::array::DictionaryKey;
+use crate::array::{Array, DictionaryKey};
 use crate::bitmap::utils::BitmapIter;
 use crate::bitmap::MutableBitmap;
+use crate::datatypes::DataType;
 use crate::error::ArrowError;
 
 pub struct BinaryIter<'a> {
@@ -65,8 +68,10 @@ pub fn split_buffer<'a>(
 
 /// A private trait representing structs that can receive elements.
 pub(super) trait Pushable<T: Default> {
+    fn with_capacity(capacity: usize) -> Self;
     fn reserve(&mut self, additional: usize);
     fn push(&mut self, value: T);
+    fn len(&self) -> usize;
     #[inline]
     fn push_null(&mut self) {
         self.push(T::default())
@@ -75,6 +80,16 @@ pub(super) trait Pushable<T: Default> {
 }
 
 impl Pushable<bool> for MutableBitmap {
+    #[inline]
+    fn len(&self) -> usize {
+        self.len()
+    }
+
+    #[inline]
+    fn with_capacity(capacity: usize) -> Self {
+        Self::with_capacity(capacity)
+    }
+
     #[inline]
     fn reserve(&mut self, additional: usize) {
         self.reserve(additional)
@@ -92,6 +107,16 @@ impl Pushable<bool> for MutableBitmap {
 }
 
 impl<A: Copy + Default> Pushable<A> for Vec<A> {
+    #[inline]
+    fn len(&self) -> usize {
+        self.len()
+    }
+
+    #[inline]
+    fn with_capacity(capacity: usize) -> Self {
+        Self::with_capacity(capacity)
+    }
+
     #[inline]
     fn reserve(&mut self, additional: usize) {
         self.reserve(additional)
@@ -112,49 +137,63 @@ impl<A: Copy + Default> Pushable<A> for Vec<A> {
 #[inline]
 pub(super) fn extend_from_decoder<'a, T: Default, C: Pushable<T>, I: Iterator<Item = T>>(
     validity: &mut MutableBitmap,
-    decoder: &mut hybrid_rle::Decoder<'a>,
+    decoder: &mut Convert<hybrid_rle::Decoder<'a>>,
     page_length: usize, // data page length
+    offset: &mut usize,
+    limit: Option<usize>,
     values: &mut C,
     mut values_iter: I,
 ) {
-    let mut remaining = page_length;
-    for run in decoder {
-        match run {
-            hybrid_rle::HybridEncoded::Bitpacked(pack) => {
-                // compute the length of the pack
-                let pack_size = pack.len() * 8;
-                let additional = pack_size.min(remaining);
+    if *offset == 0 {
+        decoder.advance()
+    }
 
-                // extend validity
-                validity.extend_from_slice(pack, 0, additional);
+    let limit = limit.unwrap_or(usize::MAX);
 
-                // extend values
-                let iter = BitmapIter::new(pack, 0, additional);
-                for is_valid in iter {
-                    if is_valid {
-                        values.push(values_iter.next().unwrap())
-                    } else {
-                        values.push_null()
-                    };
+    let mut consumed = 0;
+    while consumed < limit {
+        if let Some(run) = decoder.get() {
+            let length = match run {
+                hybrid_rle::HybridEncoded::Bitpacked(pack) => {
+                    let pack_size = pack.len() * 8 - *offset;
+                    let remaining = page_length - (*offset + consumed);
+                    let length = std::cmp::min(pack_size, remaining);
+
+                    let additional = limit.min(length);
+
+                    // consume `additional` items
+                    let iter = BitmapIter::new(pack, *offset, additional);
+                    for is_valid in iter {
+                        values.push(if is_valid {
+                            values_iter.next().unwrap()
+                        } else {
+                            T::default()
+                        });
+                    }
+                    validity.extend_from_slice(pack, *offset, additional);
+                    length
                 }
-
-                remaining -= additional;
-            }
-            hybrid_rle::HybridEncoded::Rle(value, additional) => {
-                let is_set = value[0] == 1;
-
-                // extend validity
-                validity.extend_constant(additional, is_set);
-
-                // extend values
-                if is_set {
-                    (0..additional).for_each(|_| values.push(values_iter.next().unwrap()));
-                } else {
-                    values.extend_constant(additional, T::default());
+                hybrid_rle::HybridEncoded::Rle(value, length) => {
+                    let is_set = value[0] == 1;
+                    let length = *length;
+                    let additional = limit.min(length);
+                    validity.extend_constant(additional, is_set);
+                    if is_set {
+                        (0..additional).for_each(|_| values.push(values_iter.next().unwrap()));
+                    }
+                    length
                 }
-
-                remaining -= additional;
+            };
+            if limit < length {
+                *offset += limit;
+                consumed += limit;
+            } else {
+                consumed += length;
+                *offset = 0;
+                decoder.advance();
             }
+        } else {
+            break;
         }
     }
 
@@ -179,13 +218,93 @@ pub(super) fn read_dict_optional<K>(
         hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional);
     let indices_iter = new_indices.map(|x| K::from_u32(x).unwrap());
 
-    let mut validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
+    let mut validity_iterator = convert(hybrid_rle::Decoder::new(validity_buffer, 1));
 
     extend_from_decoder(
         validity,
         &mut validity_iterator,
         additional,
+        &mut 0,
+        None,
         indices,
         indices_iter,
     )
+}
+
+pub(super) trait PageState<'a> {
+    fn len(&self) -> usize;
+}
+
+pub(super) trait Decoder<'a, C: Default, P: Pushable<C>> {
+    type State: PageState<'a>;
+    type Array: Array;
+
+    /// Initializes a page state from a [`DataPage`]
+    //fn build_state(page: &'a DataPage, is_optional: bool) -> Result<Self::State, ArrowError>;
+
+    /// extends (values, validity) by deserializing items in `State`.
+    /// It guarantees that the length of `values` is at most `values.len() + remaining`.
+    fn extend_from_state(
+        page: &mut Self::State,
+        values: &mut P,
+        validity: &mut MutableBitmap,
+        remaining: usize,
+    );
+    fn finish(data_type: DataType, values: P, validity: MutableBitmap) -> Self::Array;
+}
+
+pub(super) fn extend_from_new_page<'a, T: Decoder<'a, C, P>, C: Default, P: Pushable<C>>(
+    mut page: T::State,
+    state: Option<(P, MutableBitmap)>,
+    data_type: &DataType,
+    chunk_size: usize,
+    items: &mut VecDeque<(P, MutableBitmap)>,
+) -> Result<Option<T::Array>, ArrowError> {
+    let (mut values, mut validity) = if let Some((values, validity)) = state {
+        // there is a already a state => it must be incomplete...
+        debug_assert!(
+            values.len() < chunk_size,
+            "the temp array is expected to be incomplete"
+        );
+        (values, validity)
+    } else {
+        // there is no state => initialize it
+        (
+            P::with_capacity(chunk_size),
+            MutableBitmap::with_capacity(chunk_size),
+        )
+    };
+
+    let remaining = chunk_size - values.len();
+
+    // extend the current state
+    T::extend_from_state(&mut page, &mut values, &mut validity, remaining);
+
+    use std::cmp::Ordering::*;
+    match chunk_size.cmp(&page.len()) {
+        Less => {
+            // the page contains more items than chunk_size => deserialize the
+            // remaining to the ring
+            while page.len() > 0 {
+                let mut values = P::with_capacity(chunk_size);
+                let mut validity = MutableBitmap::with_capacity(chunk_size);
+                T::extend_from_state(&mut page, &mut values, &mut validity, chunk_size);
+                items.push_back((values, validity))
+            }
+
+            // and return this array
+            Ok(Some(T::finish(data_type.clone(), values, validity)))
+        }
+        Equal => {
+            // the page contains exacty what we need => bypass the ring
+            // and output the array as is
+            Ok(Some(T::finish(data_type.clone(), values, validity)))
+        }
+        Greater => {
+            // the page contains less items than what we need => push the temp array
+            // to the ring and fetch a new page
+            items.push_back((values, validity));
+            Ok(None)
+        }
+    }
 }
