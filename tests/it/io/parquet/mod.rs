@@ -628,30 +628,21 @@ fn integration_write(schema: &Schema, batches: &[Chunk<Arc<dyn Array>>]) -> Resu
     };
 
     let parquet_schema = to_parquet_schema(schema)?;
-    let descritors = parquet_schema.columns().to_vec().into_iter();
 
-    let row_groups = batches.iter().map(|batch| {
-        let iterator = batch
-            .columns()
-            .iter()
-            .zip(descritors.clone())
-            .map(|(array, descriptor)| {
-                let encoding = if let DataType::Dictionary(..) = array.data_type() {
-                    Encoding::RleDictionary
-                } else {
-                    Encoding::Plain
-                };
-                array_to_pages(array.as_ref(), descriptor, options, encoding).map(|pages| {
-                    let encoded_pages = DynIter::new(pages.map(|x| Ok(x?)));
-                    let compressed_pages =
-                        Compressor::new(encoded_pages, options.compression, vec![])
-                            .map_err(ArrowError::from);
-                    DynStreamingIterator::new(compressed_pages)
-                })
-            });
-        let iterator = DynIter::new(iterator);
-        Ok(iterator)
-    });
+    let encodings = schema
+        .fields
+        .iter()
+        .map(|x| {
+            if let DataType::Dictionary(..) = x.data_type() {
+                Encoding::RleDictionary
+            } else {
+                Encoding::Plain
+            }
+        })
+        .collect();
+
+    let row_groups =
+        RowGroupIterator::try_new(batches.iter().cloned().map(Ok), schema, options, encodings)?;
 
     let mut writer = Cursor::new(vec![]);
 
