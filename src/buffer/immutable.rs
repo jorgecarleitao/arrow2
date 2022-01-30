@@ -123,6 +123,17 @@ impl<T: NativeType> Buffer<T> {
     pub fn offset(&self) -> usize {
         self.offset
     }
+
+    /// Try to get a hold to the inner data as `&mut Vec`.
+    /// This will only succeed if the `reference count == 1` and the data
+    /// is allocated by this program.
+    pub fn get_vec(&mut self) -> Option<&mut Vec<T>> {
+        if self.offset != 0 {
+            None
+        } else {
+            Arc::get_mut(&mut self.data).map(|b| b.get_vec()).flatten()
+        }
+    }
 }
 
 impl<T: NativeType> Buffer<T> {

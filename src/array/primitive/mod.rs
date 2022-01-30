@@ -14,6 +14,7 @@ mod from_natural;
 mod iterator;
 pub use iterator::*;
 mod mutable;
+use crate::to_mutable::MaybeMut;
 pub use mutable::*;
 
 /// A [`PrimitiveArray`] is arrow's equivalent to `Vec<Option<T: NativeType>>`, i.e.
@@ -182,6 +183,38 @@ impl<T: NativeType> PrimitiveArray<T> {
             data_type,
             values: self.values,
             validity: self.validity,
+        }
+    }
+    /// Try to convert this `PrimitiveArray` to a `MutablePrimitiveArray`
+    pub fn into_mutable(mut self) -> MaybeMut<Self, MutablePrimitiveArray<T>> {
+        match (self.validity, self.values.get_vec()) {
+            (None, None) => {
+                MaybeMut::Immutable(PrimitiveArray::from_data(self.data_type, self.values, None))
+            }
+            (None, Some(v)) => {
+                let data = std::mem::take(v);
+                MaybeMut::Mutable(MutablePrimitiveArray::from_data(self.data_type, data, None))
+            }
+            (Some(bitmap), None) => MaybeMut::Immutable(PrimitiveArray::from_data(
+                self.data_type,
+                self.values,
+                Some(bitmap),
+            )),
+            (Some(bitmap), Some(v)) => match bitmap.into_inner() {
+                MaybeMut::Immutable(bitmap) => MaybeMut::Immutable(PrimitiveArray::from_data(
+                    self.data_type,
+                    self.values,
+                    Some(bitmap),
+                )),
+                MaybeMut::Mutable(mutable) => {
+                    let data = std::mem::take(v);
+                    MaybeMut::Mutable(MutablePrimitiveArray::from_data(
+                        self.data_type,
+                        data,
+                        Some(mutable),
+                    ))
+                }
+            },
         }
     }
 }

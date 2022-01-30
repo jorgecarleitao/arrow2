@@ -121,34 +121,10 @@ impl<T: NativeType> Bytes<T> {
 
     /// Returns a mutable reference to the `Vec<T>` data if it is allocated in this process.
     /// Returns `None` if allocated by a foreign interface.
-    ///
-    /// See also [`Bytes::make_vec`], which will clone the inner data when allocated via ffi.
     pub fn get_vec(&mut self) -> Option<&mut Vec<T>> {
         match &self.deallocation {
             Deallocation::Foreign(_) => None,
             Deallocation::Native => Some(&mut self.data.inner),
-        }
-    }
-
-    /// Returns a mutable reference to the `Vec<T>` data if it is allocated in this process.
-    /// This function will clone the inner data when allocated via ffi.
-    ///
-    /// See also [`Bytes::get_vec`], which will return `None` if this [`Bytes`] does not own its data.
-    pub fn make_vec(&mut self) -> &mut Vec<T> {
-        match &self.deallocation {
-            // We clone the data, set that as native allocation
-            // and return a mutable reference to the new data
-            Deallocation::Foreign(_) => {
-                self.deallocation = Deallocation::Native;
-                let new_data = self.data.inner.clone();
-                // Safety:
-                // the new data is allocated by Vec itself
-                let data = unsafe { MaybeUnaligned::new(new_data, true) };
-
-                self.data = data;
-                &mut self.data.inner
-            }
-            Deallocation::Native => &mut self.data.inner,
         }
     }
 }
