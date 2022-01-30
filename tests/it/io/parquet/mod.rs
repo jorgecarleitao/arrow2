@@ -1,7 +1,6 @@
 use std::io::{Cursor, Read, Seek};
 use std::sync::Arc;
 
-use arrow2::error::ArrowError;
 use arrow2::{
     array::*, bitmap::Bitmap, buffer::Buffer, chunk::Chunk, datatypes::*, error::Result,
     io::parquet::read::statistics::*, io::parquet::read::*, io::parquet::write::*,
@@ -627,8 +626,6 @@ fn integration_write(schema: &Schema, batches: &[Chunk<Arc<dyn Array>>]) -> Resu
         version: Version::V1,
     };
 
-    let parquet_schema = to_parquet_schema(schema)?;
-
     let encodings = schema
         .fields
         .iter()
@@ -644,16 +641,15 @@ fn integration_write(schema: &Schema, batches: &[Chunk<Arc<dyn Array>>]) -> Resu
     let row_groups =
         RowGroupIterator::try_new(batches.iter().cloned().map(Ok), schema, options, encodings)?;
 
-    let mut writer = Cursor::new(vec![]);
+    let writer = Cursor::new(vec![]);
 
-    write_file(
-        &mut writer,
-        row_groups,
-        schema,
-        parquet_schema,
-        options,
-        None,
-    )?;
+    let mut writer = FileWriter::try_new(writer, schema.clone(), options)?;
+
+    for group in row_groups {
+        let (group, len) = group?;
+        writer.write(group, len)?;
+    }
+    let (_size, writer) = writer.end(None)?;
 
     Ok(writer.into_inner())
 }

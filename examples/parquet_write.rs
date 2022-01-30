@@ -24,10 +24,11 @@ fn write_batch(path: &str, schema: Schema, columns: Chunk<Arc<dyn Array>>) -> Re
         RowGroupIterator::try_new(iter.into_iter(), &schema, options, vec![Encoding::Plain])?;
 
     // Create a new empty file
-    let mut file = File::create(path)?;
+    let file = File::create(path)?;
 
     let mut writer = FileWriter::try_new(file, schema, options)?;
 
+    writer.start()?;
     for group in row_groups {
         let (group, len) = group?;
         writer.write(group, len)?;

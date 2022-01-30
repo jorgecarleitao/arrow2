@@ -31,8 +31,7 @@ pub use parquet2::{
     page::{CompressedDataPage, CompressedPage, EncodedPage},
     schema::types::ParquetType,
     write::{
-        compress, write_file as parquet_write_file, Compressor, DynIter, DynStreamingIterator,
-        RowGroupIter, Version, WriteOptions,
+        compress, Compressor, DynIter, DynStreamingIterator, RowGroupIter, Version, WriteOptions,
     },
     FallibleStreamingIterator,
 };

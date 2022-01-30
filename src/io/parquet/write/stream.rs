@@ -64,7 +64,7 @@ impl<W: AsyncWrite + Unpin + Send> FileStreamer<W> {
     }
 
     /// Writes the footer of the parquet file. Returns the total size of the file.
-    pub async fn end(self, key_value_metadata: Option<Vec<KeyValue>>) -> Result<u64> {
+    pub async fn end(self, key_value_metadata: Option<Vec<KeyValue>>) -> Result<(u64, W)> {
         let key_value_metadata = add_arrow_schema(&self.schema, key_value_metadata);
         Ok(self.writer.end(key_value_metadata).await?)
     }
