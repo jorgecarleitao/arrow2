@@ -31,11 +31,6 @@ impl FixedSizeBinary {
 
 impl<'a> Pushable<&'a [u8]> for FixedSizeBinary {
     #[inline]
-    fn reserve(&mut self, additional: usize) {
-        self.values.reserve(additional * self.size)
-    }
-
-    #[inline]
     fn push(&mut self, value: &[u8]) {
         debug_assert_eq!(value.len(), self.size);
         self.push(value);

@@ -677,7 +677,7 @@ fn test_file(version: &str, file_name: &str) -> Result<()> {
     // empty batches are not written/read from parquet and can be ignored
     let batches = batches
         .into_iter()
-        .filter(|x| x.len() > 0)
+        .filter(|x| !x.is_empty())
         .collect::<Vec<_>>();
 
     let data = integration_write(&schema, &batches)?;

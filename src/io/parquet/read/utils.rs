@@ -70,7 +70,7 @@ pub fn split_buffer<'a>(
 
 /// A private trait representing structs that can receive elements.
 pub(super) trait Pushable<T>: Sized {
-    fn reserve(&mut self, additional: usize);
+    //fn reserve(&mut self, additional: usize);
     fn push(&mut self, value: T);
     fn len(&self) -> usize;
     fn push_null(&mut self);
@@ -81,11 +81,6 @@ impl Pushable<bool> for MutableBitmap {
     #[inline]
     fn len(&self) -> usize {
         self.len()
-    }
-
-    #[inline]
-    fn reserve(&mut self, additional: usize) {
-        self.reserve(additional)
     }
 
     #[inline]
@@ -108,11 +103,6 @@ impl<A: Copy + Default> Pushable<A> for Vec<A> {
     #[inline]
     fn len(&self) -> usize {
         self.len()
-    }
-
-    #[inline]
-    fn reserve(&mut self, additional: usize) {
-        self.reserve(additional)
     }
 
     #[inline]
@@ -163,7 +153,6 @@ impl<'a> OptionalPageValidity<'a> {
 }
 
 /// Extends a [`Pushable`] from an iterator of non-null values and an hybrid-rle decoder
-#[inline]
 pub(super) fn extend_from_decoder<'a, T: Default, P: Pushable<T>, I: Iterator<Item = T>>(
     validity: &mut MutableBitmap,
     page_validity: &mut OptionalPageValidity<'a>,
@@ -239,31 +228,6 @@ pub(super) fn extend_from_decoder<'a, T: Default, P: Pushable<T>, I: Iterator<It
         }
     }
 }
-
-/*
-pub(super) fn read_dict_optional<K>(
-    validity_buffer: &[u8],
-    indices_buffer: &[u8],
-    additional: usize,
-    indices: &mut Vec<K>,
-    validity: &mut MutableBitmap,
-) where
-    K: DictionaryKey,
-{
-    // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
-    // SPEC: followed by the values encoded using RLE/Bit packed described above (with the given bit width).
-    let bit_width = indices_buffer[0];
-    let indices_buffer = &indices_buffer[1..];
-
-    let new_indices =
-        hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional);
-    let indices_iter = new_indices.map(|x| K::from_u32(x).unwrap());
-
-    let mut page_validity = OptionalPageValidity::new(validity_buffer, additional);
-
-    extend_from_decoder(validity, &mut page_validity, None, indices, indices_iter)
-}
- */
 
 /// The state of a partially deserialized page
 pub(super) trait PageState<'a> {

@@ -18,11 +18,6 @@ impl<O: Offset> Pushable<O> for Offsets<O> {
     }
 
     #[inline]
-    fn reserve(&mut self, additional: usize) {
-        self.0.reserve(additional)
-    }
-
-    #[inline]
     fn push(&mut self, value: O) {
         self.0.push(value)
     }
@@ -74,11 +69,6 @@ impl<'a, O: Offset> Pushable<&'a [u8]> for Binary<O> {
     #[inline]
     fn len(&self) -> usize {
         self.len()
-    }
-
-    #[inline]
-    fn reserve(&mut self, additional: usize) {
-        self.offsets.reserve(additional)
     }
 
     #[inline]
