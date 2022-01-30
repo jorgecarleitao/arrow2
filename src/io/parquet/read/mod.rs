@@ -190,6 +190,9 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
         LargeUtf8 | LargeBinary => {
             binary::iter_to_dict_arrays::<K, i64, _>(iter, data_type, chunk_size)
         }
+        FixedSizeBinary(_) => {
+            fixed_size_binary::iter_to_dict_arrays::<K, _>(iter, data_type, chunk_size)
+        }
         other => {
             return Err(ArrowError::nyi(format!(
                 "Reading dictionaries of type {:?}",
