@@ -13,6 +13,19 @@ use crate::{
     io::parquet::read::is_type_nullable,
 };
 
+pub(crate) fn encode_plain(array: &FixedSizeBinaryArray, is_optional: bool, buffer: &mut Vec<u8>) {
+    // append the non-null values
+    if is_optional {
+        array.iter().for_each(|x| {
+            if let Some(x) = x {
+                buffer.extend_from_slice(x);
+            }
+        })
+    } else {
+        buffer.extend_from_slice(array.values());
+    }
+}
+
 pub fn array_to_page(
     array: &FixedSizeBinaryArray,
     options: WriteOptions,
@@ -32,17 +45,7 @@ pub fn array_to_page(
 
     let definition_levels_byte_length = buffer.len();
 
-    if is_optional {
-        // append the non-null values
-        array.iter().for_each(|x| {
-            if let Some(x) = x {
-                buffer.extend_from_slice(x);
-            }
-        });
-    } else {
-        // append all values
-        buffer.extend_from_slice(array.values());
-    }
+    encode_plain(array, is_optional, &mut buffer);
 
     let statistics = if options.write_statistics {
         build_statistics(array, descriptor.clone())
