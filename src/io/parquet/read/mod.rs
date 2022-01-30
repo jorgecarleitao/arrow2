@@ -2,7 +2,6 @@
 #![allow(clippy::type_complexity)]
 
 use std::{
-    collections::VecDeque,
     io::{Read, Seek},
     sync::Arc,
 };
@@ -28,7 +27,7 @@ pub use parquet2::{
 };
 
 use crate::{
-    array::{Array, BinaryArray, DictionaryKey, NullArray, PrimitiveArray, StructArray, Utf8Array},
+    array::{Array, BinaryArray, DictionaryKey, PrimitiveArray, StructArray, Utf8Array},
     datatypes::{DataType, Field, IntervalUnit, TimeUnit},
     error::{ArrowError, Result},
     io::parquet::read::{nested_utils::create_list, primitive::read_item},
@@ -40,6 +39,7 @@ mod dictionary;
 mod file;
 mod fixed_size_binary;
 mod nested_utils;
+mod null;
 mod primitive;
 mod row_group;
 pub mod schema;
@@ -202,52 +202,6 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
     })
 }
 
-fn column_offset(data_type: &DataType) -> usize {
-    use crate::datatypes::PhysicalType::*;
-    match data_type.to_physical_type() {
-        Null | Boolean | Primitive(_) | FixedSizeBinary | Binary | LargeBinary | Utf8
-        | LargeUtf8 | Dictionary(_) | List | LargeList | FixedSizeList => 0,
-        Struct => {
-            if let DataType::Struct(v) = data_type.to_logical_type() {
-                v.iter().map(|x| 1 + column_offset(x.data_type())).sum()
-            } else {
-                unreachable!()
-            }
-        }
-        Union => todo!(),
-        Map => todo!(),
-    }
-}
-
-fn column_datatype(data_type: &DataType, column: usize) -> DataType {
-    use crate::datatypes::PhysicalType::*;
-    match data_type.to_physical_type() {
-        Null | Boolean | Primitive(_) | FixedSizeBinary | Binary | LargeBinary | Utf8
-        | LargeUtf8 | Dictionary(_) | List | LargeList | FixedSizeList => data_type.clone(),
-        Struct => {
-            if let DataType::Struct(fields) = data_type.to_logical_type() {
-                let mut total_chunk = 0;
-                let mut total_fields = 0;
-                for f in fields {
-                    let field_chunk = column_offset(f.data_type());
-                    if column < total_chunk + field_chunk {
-                        return column_datatype(f.data_type(), column + total_chunk);
-                    }
-                    total_fields += (field_chunk > 0) as usize;
-                    total_chunk += field_chunk;
-                }
-                fields[column + total_fields - total_chunk]
-                    .data_type()
-                    .clone()
-            } else {
-                unreachable!()
-            }
-        }
-        Union => todo!(),
-        Map => todo!(),
-    }
-}
-
 fn page_iter_to_arrays<'a, I: 'a + DataPages>(
     pages: I,
     type_: &ParquetType,
@@ -256,10 +210,7 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
 ) -> Result<Box<dyn Iterator<Item = Result<Arc<dyn Array>>> + 'a>> {
     use DataType::*;
     match field.data_type.to_logical_type() {
-        /*Null => Ok(Box::new(NullArray::from_data(
-            data_type,
-            metadata.num_values() as usize,
-        ))),*/
+        Null => Ok(null::iter_to_arrays(pages, field.data_type, chunk_size)),
         Boolean => Ok(boolean::iter_to_arrays(pages, field.data_type, chunk_size)),
         UInt8 => Ok(primitive::iter_to_arrays(
             pages,
@@ -474,7 +425,7 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
 
         LargeList(inner) | List(inner) => {
             let data_type = inner.data_type.clone();
-            page_iter_to_arrays_nested(pages, field, data_type, chunk_size)
+            page_iter_to_arrays_nested(pages, type_, field, data_type, chunk_size)
         }
         other => Err(ArrowError::NotYetImplemented(format!(
             "Reading {:?} from parquet still not implemented",
@@ -483,32 +434,9 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
     }
 }
 
-fn finish_array(data_type: DataType, arrays: &mut VecDeque<Box<dyn Array>>) -> Box<dyn Array> {
-    use crate::datatypes::PhysicalType::*;
-    match data_type.to_physical_type() {
-        Null | Boolean | Primitive(_) | FixedSizeBinary | Binary | LargeBinary | Utf8
-        | LargeUtf8 | List | LargeList | FixedSizeList | Dictionary(_) => {
-            arrays.pop_front().unwrap()
-        }
-        Struct => {
-            if let DataType::Struct(fields) = data_type.to_logical_type() {
-                let values = fields
-                    .iter()
-                    .map(|f| finish_array(f.data_type().clone(), arrays))
-                    .map(|x| x.into())
-                    .collect();
-                Box::new(StructArray::from_data(data_type, values, None))
-            } else {
-                unreachable!()
-            }
-        }
-        Union => todo!(),
-        Map => todo!(),
-    }
-}
-
 fn page_iter_to_arrays_nested<'a, I: 'a + DataPages>(
     pages: I,
+    type_: &ParquetType,
     field: Field,
     data_type: DataType,
     chunk_size: usize,
@@ -516,14 +444,57 @@ fn page_iter_to_arrays_nested<'a, I: 'a + DataPages>(
     use DataType::*;
     let iter = match data_type {
         Boolean => boolean::iter_to_arrays_nested(pages, field.clone(), chunk_size),
-        Int32 => primitive::iter_to_arrays_nested(
+
+        UInt8 => primitive::iter_to_arrays_nested(
             pages,
             field.clone(),
             data_type,
             chunk_size,
             read_item,
-            |x: i32| x,
+            |x: i32| x as u8,
         ),
+        UInt16 => primitive::iter_to_arrays_nested(
+            pages,
+            field.clone(),
+            data_type,
+            chunk_size,
+            read_item,
+            |x: i32| x as u16,
+        ),
+        UInt32 => primitive::iter_to_arrays_nested(
+            pages,
+            field.clone(),
+            data_type,
+            chunk_size,
+            read_item,
+            |x: i32| x as u32,
+        ),
+        Int8 => primitive::iter_to_arrays_nested(
+            pages,
+            field.clone(),
+            data_type,
+            chunk_size,
+            read_item,
+            |x: i32| x as i8,
+        ),
+        Int16 => primitive::iter_to_arrays_nested(
+            pages,
+            field.clone(),
+            data_type,
+            chunk_size,
+            read_item,
+            |x: i32| x as i16,
+        ),
+        Int32 | Date32 | Time32(_) | Interval(IntervalUnit::YearMonth) => {
+            primitive::iter_to_arrays_nested(
+                pages,
+                field.clone(),
+                data_type,
+                chunk_size,
+                read_item,
+                |x: i32| x,
+            )
+        }
         Int64 => primitive::iter_to_arrays_nested(
             pages,
             field.clone(),
@@ -532,6 +503,59 @@ fn page_iter_to_arrays_nested<'a, I: 'a + DataPages>(
             read_item,
             |x: i64| x,
         ),
+
+        Timestamp(TimeUnit::Nanosecond, None) => match type_ {
+            ParquetType::PrimitiveType {
+                physical_type,
+                logical_type,
+                ..
+            } => match (physical_type, logical_type) {
+                (PhysicalType::Int96, _) => primitive::iter_to_arrays_nested(
+                    pages,
+                    field.clone(),
+                    DataType::Timestamp(TimeUnit::Nanosecond, None),
+                    chunk_size,
+                    read_item,
+                    int96_to_i64_ns,
+                ),
+                (_, Some(LogicalType::TIMESTAMP(TimestampType { unit, .. }))) => match unit {
+                    ParquetTimeUnit::MILLIS(_) => primitive::iter_to_arrays_nested(
+                        pages,
+                        field.clone(),
+                        data_type,
+                        chunk_size,
+                        read_item,
+                        |x: i64| x * 1_000_000,
+                    ),
+                    ParquetTimeUnit::MICROS(_) => primitive::iter_to_arrays_nested(
+                        pages,
+                        field.clone(),
+                        data_type,
+                        chunk_size,
+                        read_item,
+                        |x: i64| x * 1_000,
+                    ),
+                    ParquetTimeUnit::NANOS(_) => primitive::iter_to_arrays_nested(
+                        pages,
+                        field.clone(),
+                        data_type,
+                        chunk_size,
+                        read_item,
+                        |x: i64| x,
+                    ),
+                },
+                _ => primitive::iter_to_arrays_nested(
+                    pages,
+                    field.clone(),
+                    data_type,
+                    chunk_size,
+                    read_item,
+                    |x: i64| x,
+                ),
+            },
+            _ => unreachable!(),
+        },
+
         Binary => binary::iter_to_arrays_nested::<i32, BinaryArray<i32>, _>(
             pages,
             field.clone(),

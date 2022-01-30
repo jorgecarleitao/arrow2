@@ -3,6 +3,9 @@ mod dictionary;
 mod nested;
 mod utils;
 
+pub use dictionary::iter_to_arrays as iter_to_dict_arrays;
+pub use utils::read_item;
+
 use std::sync::Arc;
 
 use super::{nested_utils::*, DataPages};
@@ -14,9 +17,6 @@ use crate::{
 
 use basic::PrimitiveArrayIterator;
 use nested::ArrayIterator;
-
-pub use dictionary::iter_to_arrays as iter_to_dict_arrays;
-pub use utils::read_item;
 
 /// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
 pub fn iter_to_arrays<'a, I, T, P, G, F>(

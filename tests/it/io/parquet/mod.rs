@@ -674,6 +674,12 @@ fn integration_read(data: &[u8]) -> Result<IntegrationRead> {
 fn test_file(version: &str, file_name: &str) -> Result<()> {
     let (schema, _, batches) = read_gzip_json(version, file_name)?;
 
+    // empty batches are not written/read from parquet and can be ignored
+    let batches = batches
+        .into_iter()
+        .filter(|x| x.len() > 0)
+        .collect::<Vec<_>>();
+
     let data = integration_write(&schema, &batches)?;
 
     let (read_schema, read_batches) = integration_read(&data)?;

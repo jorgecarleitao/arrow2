@@ -339,6 +339,7 @@ fn list_large_binary_optional_v1() -> Result<()> {
 }
 
 #[test]
+#[ignore]
 fn utf8_optional_v2_delta() -> Result<()> {
     round_trip(
         2,
