@@ -35,7 +35,7 @@ fn to_buffer(
 fn read_batch(buffer: &[u8], size: usize, column: usize) -> Result<()> {
     let file = Cursor::new(buffer);
 
-    let reader = read::RecordReader::try_new(file, Some(vec![column]), None, None, None)?;
+    let reader = read::FileReader::try_new(file, Some(&[column]), None, None, None)?;
 
     for maybe_chunk in reader {
         let columns = maybe_chunk?;
