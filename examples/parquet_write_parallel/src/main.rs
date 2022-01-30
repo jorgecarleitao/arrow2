@@ -92,10 +92,17 @@ fn parallel_write(path: &str, schema: &Schema, batches: &[Chunk]) -> Result<()> 
     });
 
     // Create a new empty file
-    let mut file = std::fs::File::create(path)?;
+    let file = std::fs::File::create(path)?;
+
+    let mut writer = FileWriter::try_new(file, schema, options)?;
 
     // Write the file.
-    let _file_size = write_file(&mut file, row_groups, schema, parquet_schema, options, None)?;
+    writer.start()?;
+    for group in row_groups {
+        let (group, len) = group?;
+        writer.write(group, len)?;
+    }
+    let _size = writer.end(None)?;
 
     Ok(())
 }
