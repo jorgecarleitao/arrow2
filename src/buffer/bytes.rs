@@ -1,43 +1,12 @@
 //! This module contains an implementation of a contiguous immutable memory region that knows
 //! how to de-allocate itself, [`Bytes`].
 
-use std::mem::ManuallyDrop;
 use std::{fmt::Debug, fmt::Formatter};
 use std::{ptr::NonNull, sync::Arc};
 
+use super::foreign::MaybeForeign;
 use crate::ffi;
 use crate::types::NativeType;
-
-/// Holds a `Vec` that may hold a pointer memory that is not
-/// allocated by `Vec`. It is therefore not
-/// safe to deallocate the inner type naively
-struct MaybeUnaligned<T: NativeType> {
-    inner: Vec<T>,
-    aligned: bool,
-}
-
-impl<T: NativeType> Drop for MaybeUnaligned<T> {
-    fn drop(&mut self) {
-        // this memory is not allocated by `Vec`, we leak it
-        // this memory will be deallocated by the foreign interface
-        if !self.aligned {
-            let data = std::mem::take(&mut self.inner);
-            let _ = ManuallyDrop::new(data);
-        }
-    }
-}
-
-impl<T: NativeType> MaybeUnaligned<T> {
-    /// # Safety
-    /// The caller must ensure that if `aligned` the `Vec<T>` holds
-    /// all invariants set by https://doc.rust-lang.org/std/vec/struct.Vec.html#safety
-    unsafe fn new(data: Vec<T>, aligned: bool) -> Self {
-        Self {
-            inner: data,
-            aligned,
-        }
-    }
-}
 
 /// Mode of deallocating memory regions
 pub enum Deallocation {
@@ -68,7 +37,7 @@ impl Debug for Deallocation {
 /// foreign deallocator to deallocate the region when it is no longer needed.
 pub struct Bytes<T: NativeType> {
     /// inner data
-    data: MaybeUnaligned<T>,
+    data: MaybeForeign<T>,
     /// how to deallocate this region
     deallocation: Deallocation,
 }
@@ -98,7 +67,7 @@ impl<T: NativeType> Bytes<T> {
     ) -> Self {
         assert!(matches!(deallocation, Deallocation::Foreign(_)));
         let data = Vec::from_raw_parts(ptr.as_ptr(), len, len);
-        let data = MaybeUnaligned::new(data, false);
+        let data = MaybeForeign::new(data);
 
         Self { data, deallocation }
     }
@@ -110,13 +79,13 @@ impl<T: NativeType> Bytes<T> {
 
     #[inline]
     pub fn len(&self) -> usize {
-        self.data.inner.len()
+        self.data.len()
     }
 
     #[inline]
     pub fn ptr(&self) -> NonNull<T> {
-        debug_assert!(!self.data.inner.as_ptr().is_null());
-        unsafe { NonNull::new_unchecked(self.data.inner.as_ptr() as *mut T) }
+        debug_assert!(!self.data.as_ptr().is_null());
+        unsafe { NonNull::new_unchecked(self.data.as_ptr() as *mut T) }
     }
 
     /// Returns a mutable reference to the `Vec<T>` data if it is allocated in this process.
@@ -124,7 +93,23 @@ impl<T: NativeType> Bytes<T> {
     pub fn get_vec(&mut self) -> Option<&mut Vec<T>> {
         match &self.deallocation {
             Deallocation::Foreign(_) => None,
-            Deallocation::Native => Some(&mut self.data.inner),
+            // Safety:
+            // The allocation is native so we can share the vec
+            Deallocation::Native => Some(unsafe { self.data.mut_vec() }),
+        }
+    }
+}
+
+impl<T: NativeType> Drop for Bytes<T> {
+    fn drop(&mut self) {
+        match self.deallocation {
+            // a foreign interface knows how to deallocate itself
+            Deallocation::Foreign(_) => {}
+            Deallocation::Native => {
+                // Safety:
+                // the allocation is native, so we can safely drop
+                unsafe { self.data.drop_local() }
+            }
         }
     }
 }
@@ -133,7 +118,7 @@ impl<T: NativeType> std::ops::Deref for Bytes<T> {
     type Target = [T];
 
     fn deref(&self) -> &[T] {
-        &self.data.inner
+        &self.data
     }
 }
 
@@ -148,7 +133,7 @@ impl<T: NativeType> Debug for Bytes<T> {
         write!(
             f,
             "Bytes {{ ptr: {:?}, len: {}, data: ",
-            self.data.inner.as_ptr(),
+            self.data.as_ptr(),
             self.len(),
         )?;
 
@@ -161,9 +146,7 @@ impl<T: NativeType> Debug for Bytes<T> {
 impl<T: NativeType> From<Vec<T>> for Bytes<T> {
     #[inline]
     fn from(data: Vec<T>) -> Self {
-        // Safety:
-        // A `Vec` is allocated by `Vec`
-        let data = unsafe { MaybeUnaligned::new(data, true) };
+        let data = MaybeForeign::new(data);
         Self {
             data,
             deallocation: Deallocation::Native,
