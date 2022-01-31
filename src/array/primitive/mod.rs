@@ -186,7 +186,7 @@ impl<T: NativeType> PrimitiveArray<T> {
         }
     }
     /// Try to convert this `PrimitiveArray` to a `MutablePrimitiveArray`
-    pub fn into_mutable(mut self) -> MaybeMut<Self, MutablePrimitiveArray<T>> {
+    pub fn into_mut(mut self) -> MaybeMut<Self, MutablePrimitiveArray<T>> {
         match (self.validity, self.values.get_vec()) {
             (None, None) => {
                 MaybeMut::Immutable(PrimitiveArray::from_data(self.data_type, self.values, None))
@@ -200,7 +200,7 @@ impl<T: NativeType> PrimitiveArray<T> {
                 self.values,
                 Some(bitmap),
             )),
-            (Some(bitmap), Some(v)) => match bitmap.into_inner() {
+            (Some(bitmap), Some(v)) => match bitmap.into_mut() {
                 MaybeMut::Immutable(bitmap) => MaybeMut::Immutable(PrimitiveArray::from_data(
                     self.data_type,
                     self.values,

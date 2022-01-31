@@ -178,7 +178,7 @@ impl Bitmap {
     }
 
     /// Try to convert this `Bitmap` to a `MutableBitmap`
-    pub fn into_inner(mut self) -> MaybeMut<Self, MutableBitmap> {
+    pub fn into_mut(mut self) -> MaybeMut<Self, MutableBitmap> {
         match (
             self.offset,
             Arc::get_mut(&mut self.bytes).map(|b| b.get_vec()).flatten(),
