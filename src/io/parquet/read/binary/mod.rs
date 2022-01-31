@@ -1,11 +1,3 @@
-use std::sync::Arc;
-
-use crate::{
-    array::{Array, Offset},
-    datatypes::{DataType, Field},
-    error::Result,
-};
-
 mod basic;
 mod dictionary;
 mod nested;
@@ -13,18 +5,21 @@ mod utils;
 
 pub use dictionary::iter_to_arrays as iter_to_dict_arrays;
 
-use self::basic::TraitBinaryArray;
+use std::sync::Arc;
 
+use crate::{
+    array::{Array, Offset},
+    datatypes::{DataType, Field},
+};
+
+use self::basic::TraitBinaryArray;
 use self::nested::ArrayIterator;
-use super::{nested_utils::NestedState, DataPages};
+use super::ArrayIter;
+use super::{nested_utils::NestedArrayIter, DataPages};
 use basic::BinaryArrayIterator;
 
 /// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
-pub fn iter_to_arrays<'a, O, A, I>(
-    iter: I,
-    data_type: DataType,
-    chunk_size: usize,
-) -> Box<dyn Iterator<Item = Result<Arc<dyn Array>>> + 'a>
+pub fn iter_to_arrays<'a, O, A, I>(iter: I, data_type: DataType, chunk_size: usize) -> ArrayIter<'a>
 where
     I: 'a + DataPages,
     A: TraitBinaryArray<O>,
@@ -42,7 +37,7 @@ pub fn iter_to_arrays_nested<'a, O, A, I>(
     field: Field,
     data_type: DataType,
     chunk_size: usize,
-) -> Box<dyn Iterator<Item = Result<(NestedState, Arc<dyn Array>)>> + 'a>
+) -> NestedArrayIter<'a>
 where
     I: 'a + DataPages,
     A: TraitBinaryArray<O>,

@@ -6,19 +6,15 @@ use std::sync::Arc;
 use crate::{
     array::Array,
     datatypes::{DataType, Field},
-    error::Result,
 };
 
 use self::basic::BooleanArrayIterator;
 use self::nested::ArrayIterator;
-use super::{nested_utils::NestedState, DataPages};
+use super::ArrayIter;
+use super::{nested_utils::NestedArrayIter, DataPages};
 
 /// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
-pub fn iter_to_arrays<'a, I: 'a>(
-    iter: I,
-    data_type: DataType,
-    chunk_size: usize,
-) -> Box<dyn Iterator<Item = Result<Arc<dyn Array>>> + 'a>
+pub fn iter_to_arrays<'a, I: 'a>(iter: I, data_type: DataType, chunk_size: usize) -> ArrayIter<'a>
 where
     I: DataPages,
 {
@@ -33,7 +29,7 @@ pub fn iter_to_arrays_nested<'a, I: 'a>(
     iter: I,
     field: Field,
     chunk_size: usize,
-) -> Box<dyn Iterator<Item = Result<(NestedState, Arc<dyn Array>)>> + 'a>
+) -> NestedArrayIter<'a>
 where
     I: DataPages,
 {

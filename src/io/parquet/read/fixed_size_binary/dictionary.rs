@@ -12,6 +12,7 @@ use crate::{
 use super::super::dictionary::*;
 use super::super::utils;
 use super::super::utils::Decoder;
+use super::super::ArrayIter;
 use super::super::DataPages;
 
 /// An iterator adapter over [`DataPages`] assumed to be encoded as parquet's dictionary-encoded binary representation
@@ -139,11 +140,7 @@ where
 }
 
 /// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
-pub fn iter_to_arrays<'a, K, I>(
-    iter: I,
-    data_type: DataType,
-    chunk_size: usize,
-) -> Box<dyn Iterator<Item = Result<Arc<dyn Array>>> + 'a>
+pub fn iter_to_arrays<'a, K, I>(iter: I, data_type: DataType, chunk_size: usize) -> ArrayIter<'a>
 where
     I: 'a + DataPages,
     K: DictionaryKey,

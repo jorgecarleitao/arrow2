@@ -660,7 +660,7 @@ fn integration_write(schema: &Schema, batches: &[Chunk<Arc<dyn Array>>]) -> Resu
     Ok(writer.into_inner())
 }
 
-type IntegrationRead = (Arc<Schema>, Vec<Chunk<Arc<dyn Array>>>);
+type IntegrationRead = (Schema, Vec<Chunk<Arc<dyn Array>>>);
 
 fn integration_read(data: &[u8]) -> Result<IntegrationRead> {
     let reader = Cursor::new(data);
@@ -684,7 +684,7 @@ fn test_file(version: &str, file_name: &str) -> Result<()> {
 
     let (read_schema, read_batches) = integration_read(&data)?;
 
-    assert_eq!(&schema, read_schema.as_ref());
+    assert_eq!(schema, read_schema);
     assert_eq!(batches, read_batches);
 
     Ok(())
@@ -749,7 +749,7 @@ fn arrow_type() -> Result<()> {
 
     let (new_schema, new_batches) = integration_read(&r)?;
 
-    assert_eq!(new_schema.as_ref(), &schema);
+    assert_eq!(new_schema, schema);
     assert_eq!(new_batches, vec![batch]);
     Ok(())
 }

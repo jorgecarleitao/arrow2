@@ -18,7 +18,7 @@ use super::{
 };
 
 /// trait describing deserialized repetition and definition levels
-pub trait Nested: std::fmt::Debug {
+pub trait Nested: std::fmt::Debug + Send + Sync {
     fn inner(&mut self) -> (Buffer<i64>, Option<Bitmap>);
 
     fn last_offset(&self) -> i64;
@@ -635,3 +635,6 @@ where
         (None, Some(_), _) => unreachable!(),
     }
 }
+
+pub type NestedArrayIter<'a> =
+    Box<dyn Iterator<Item = Result<(NestedState, Arc<dyn Array>)>> + Send + Sync + 'a>;

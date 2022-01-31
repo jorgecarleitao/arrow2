@@ -13,6 +13,7 @@ use crate::{
 use super::super::dictionary::*;
 use super::super::utils;
 use super::super::utils::Decoder;
+use super::super::ArrayIter;
 use super::super::DataPages;
 
 /// An iterator adapter over [`DataPages`] assumed to be encoded as boolean arrays
@@ -160,13 +161,13 @@ pub fn iter_to_arrays<'a, K, I, T, P, F>(
     data_type: DataType,
     chunk_size: usize,
     op: F,
-) -> Box<dyn Iterator<Item = Result<Arc<dyn Array>>> + 'a>
+) -> ArrayIter<'a>
 where
     I: 'a + DataPages,
     K: DictionaryKey,
     T: NativeType,
     P: ParquetNativeType,
-    F: 'a + Copy + Fn(P) -> T,
+    F: 'a + Copy + Send + Sync + Fn(P) -> T,
 {
     Box::new(
         ArrayIterator::<K, T, I, P, F>::new(iter, data_type, chunk_size, op)

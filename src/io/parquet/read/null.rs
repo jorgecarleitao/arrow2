@@ -1,18 +1,15 @@
 use std::sync::Arc;
 
-use super::DataPages;
 use crate::{
     array::{Array, NullArray},
     datatypes::DataType,
-    error::Result,
 };
 
+use super::ArrayIter;
+use super::DataPages;
+
 /// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
-pub fn iter_to_arrays<'a, I>(
-    mut iter: I,
-    data_type: DataType,
-    chunk_size: usize,
-) -> Box<dyn Iterator<Item = Result<Arc<dyn Array>>> + 'a>
+pub fn iter_to_arrays<'a, I>(mut iter: I, data_type: DataType, chunk_size: usize) -> ArrayIter<'a>
 where
     I: 'a + DataPages,
 {

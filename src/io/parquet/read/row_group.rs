@@ -6,7 +6,6 @@ use std::{
 use parquet2::{
     metadata::ColumnChunkMetaData,
     read::{BasicDecompressor, PageIterator},
-    schema::types::ParquetType,
 };
 
 use crate::{
@@ -14,19 +13,29 @@ use crate::{
     io::parquet::read::column_iter_to_arrays,
 };
 
+use super::ArrayIter;
 use super::RowGroupMetaData;
 
-pub struct RowGroupReader {
+/// An [`Iterator`] of [`Chunk`] that (dynamically) adapts a vector of iterators of [`Array`] into
+/// an iterator of [`Chunk`].
+///
+/// This struct tracks advances each of the iterators individually and combines the
+/// result in a single [`Chunk`].
+///
+/// # Implementation
+/// Advancing this iterator is CPU-bounded.
+pub struct RowGroupDeserializer {
+    num_rows: usize,
     remaining_rows: usize,
-    column_chunks: Vec<Box<dyn Iterator<Item = Result<Arc<dyn Array>>>>>,
+    column_chunks: Vec<ArrayIter<'static>>,
 }
 
+/// Returns all the column metadata in `row_group` associated to `field_name`.
 fn get_field_columns<'a>(
-    row_group: &'a RowGroupMetaData,
+    columns: &'a [ColumnChunkMetaData],
     field_name: &str,
 ) -> Vec<&'a ColumnChunkMetaData> {
-    row_group
-        .columns()
+    columns
         .iter()
         .enumerate()
         .filter(|x| x.1.descriptor().path_in_schema()[0] == field_name)
@@ -35,12 +44,12 @@ fn get_field_columns<'a>(
 }
 
 /// Reads all columns that are part of the parquet field `field_name`
-pub fn read_columns<'a, R: Read + Seek>(
+pub(super) fn _read_columns<'a, R: Read + Seek>(
     reader: &mut R,
-    row_group: &'a RowGroupMetaData,
+    columns: &'a [ColumnChunkMetaData],
     field_name: &str,
 ) -> Result<Vec<(&'a ColumnChunkMetaData, Vec<u8>)>> {
-    get_field_columns(row_group, field_name)
+    get_field_columns(columns, field_name)
         .into_iter()
         .map(|meta| {
             let (start, len) = meta.byte_range();
@@ -52,22 +61,26 @@ pub fn read_columns<'a, R: Read + Seek>(
         .collect()
 }
 
-pub(super) fn get_iterators<'a, R: Read + Seek>(
+/// Returns a vector of iterators of [`Array`] corresponding to the top level parquet fields whose
+/// name matches `fields`'s names.
+///
+/// This operation is IO-bounded `O(C)` where C is the number of columns in the row group -
+/// it reads all the columns to memory from the row group associated to the requested fields.
+pub fn read_columns<'a, R: Read + Seek>(
     reader: &mut R,
-    parquet_fields: &[ParquetType],
     row_group: &RowGroupMetaData,
     fields: Vec<Field>,
     chunk_size: Option<usize>,
-) -> Result<Vec<Box<dyn Iterator<Item = Result<Arc<dyn Array>>> + 'a>>> {
+) -> Result<Vec<ArrayIter<'a>>> {
     let chunk_size = chunk_size
         .unwrap_or(usize::MAX)
         .min(row_group.num_rows() as usize);
 
     // reads all the necessary columns for all fields from the row group
     // This operation is IO-bounded `O(C)` where C is the number of columns in the row group
-    let columns = parquet_fields
+    let columns = fields
         .iter()
-        .map(|parquet_field| read_columns(reader, row_group, parquet_field.name()))
+        .map(|field| _read_columns(reader, row_group.columns(), &field.name))
         .collect::<Result<Vec<_>>>()?;
 
     columns
@@ -97,20 +110,31 @@ pub(super) fn get_iterators<'a, R: Read + Seek>(
         .collect()
 }
 
-impl RowGroupReader {
+impl RowGroupDeserializer {
+    /// Creates a new [`RowGroupDeserializer`].
+    ///
+    /// # Panic
+    /// This function panics iff any of the `column_chunks`
+    /// do not return an array with an equal length.
     pub fn new(
-        column_chunks: Vec<Box<dyn Iterator<Item = Result<Arc<dyn Array>>>>>,
+        column_chunks: Vec<ArrayIter<'static>>,
         num_rows: usize,
         limit: Option<usize>,
     ) -> Self {
         Self {
+            num_rows,
             remaining_rows: limit.unwrap_or(usize::MAX).min(num_rows),
             column_chunks,
         }
     }
+
+    /// Returns the number of rows on this row group
+    pub fn num_rows(&self) -> usize {
+        self.num_rows
+    }
 }
 
-impl Iterator for RowGroupReader {
+impl Iterator for RowGroupDeserializer {
     type Item = Result<Chunk<Arc<dyn Array>>>;
 
     fn next(&mut self) -> Option<Self::Item> {

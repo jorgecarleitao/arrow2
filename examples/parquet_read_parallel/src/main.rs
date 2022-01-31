@@ -6,61 +6,28 @@ use std::time::SystemTime;
 
 use rayon::prelude::*;
 
-use arrow2::{
-    array::Array, chunk::Chunk, error::Result, io::parquet::read,
-    io::parquet::read::MutStreamingIterator,
-};
+use arrow2::{array::Array, chunk::Chunk, error::Result, io::parquet::read};
 
 fn parallel_read(path: &str, row_group: usize) -> Result<Chunk<Arc<dyn Array>>> {
     let mut file = BufReader::new(File::open(path)?);
-    let file_metadata = read::read_metadata(&mut file)?;
-    let schema = read::get_schema(&file_metadata)?;
+    let metadata = read::read_metadata(&mut file)?;
+    let schema = read::get_schema(&metadata)?;
 
-    // IO-bounded
-    let columns = file_metadata
-        .schema()
-        .fields()
-        .iter()
-        .enumerate()
-        .map(|(field_i, field)| {
-            let start = SystemTime::now();
-            println!("read start - field: {}", field_i);
-            let mut columns = read::get_column_iterator(
-                &mut file,
-                &file_metadata,
-                row_group,
-                field_i,
-                None,
-                vec![],
-            );
-
-            let mut column_chunks = vec![];
-            while let read::State::Some(mut new_iter) = columns.advance().unwrap() {
-                if let Some((pages, metadata)) = new_iter.get() {
-                    let pages = pages.collect::<Vec<_>>();
-
-                    column_chunks.push((pages, metadata.clone()));
-                }
-                columns = new_iter;
-            }
-            println!(
-                "read end - {:?}: {} {}",
-                start.elapsed().unwrap(),
-                field_i,
-                row_group
-            );
-            (field_i, field.clone(), column_chunks)
-        })
-        .collect::<Vec<_>>();
+    // read (IO-bounded) all columns into memory (use a subset of the fields to project)
+    let columns = read::read_columns(
+        &mut file,
+        &metadata.row_groups[row_group],
+        schema.fields,
+        None,
+    )?;
 
     // CPU-bounded
     let columns = columns
         .into_par_iter()
-        .map(|(field_i, parquet_field, column_chunks)| {
-            let columns = read::ReadColumnIterator::new(parquet_field, column_chunks);
-            let field = &schema.fields()[field_i];
-
-            read::column_iter_to_array(columns, field, vec![]).map(|x| x.0.into())
+        .map(|mut iter| {
+            // when chunk_size != None, `iter` must be iterated multiple times to get all the chunks,
+            // and some synchronization is required to output a single `Chunk` per iterator
+            iter.next().unwrap()
         })
         .collect::<Result<Vec<_>>>()?;
 

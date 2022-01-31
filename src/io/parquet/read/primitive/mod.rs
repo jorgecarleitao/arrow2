@@ -8,12 +8,13 @@ pub use utils::read_item;
 
 use std::sync::Arc;
 
-use super::{nested_utils::*, DataPages};
 use crate::{
     array::Array,
     datatypes::{DataType, Field},
-    error::Result,
 };
+
+use super::ArrayIter;
+use super::{nested_utils::*, DataPages};
 
 use basic::PrimitiveArrayIterator;
 use nested::ArrayIterator;
@@ -25,13 +26,13 @@ pub fn iter_to_arrays<'a, I, T, P, G, F>(
     chunk_size: usize,
     op1: G,
     op2: F,
-) -> Box<dyn Iterator<Item = Result<Arc<dyn Array>>> + 'a>
+) -> ArrayIter<'a>
 where
     I: 'a + DataPages,
     T: crate::types::NativeType,
     P: parquet2::types::NativeType,
-    G: 'a + Copy + for<'b> Fn(&'b [u8]) -> P,
-    F: 'a + Copy + Fn(P) -> T,
+    G: 'a + Copy + Send + Sync + for<'b> Fn(&'b [u8]) -> P,
+    F: 'a + Copy + Send + Sync + Fn(P) -> T,
 {
     Box::new(
         PrimitiveArrayIterator::<T, I, P, G, F>::new(iter, data_type, chunk_size, op1, op2)
@@ -47,13 +48,13 @@ pub fn iter_to_arrays_nested<'a, I, T, P, G, F>(
     chunk_size: usize,
     op1: G,
     op2: F,
-) -> Box<dyn Iterator<Item = Result<(NestedState, Arc<dyn Array>)>> + 'a>
+) -> NestedArrayIter<'a>
 where
     I: 'a + DataPages,
     T: crate::types::NativeType,
     P: parquet2::types::NativeType,
-    G: 'a + Copy + for<'b> Fn(&'b [u8]) -> P,
-    F: 'a + Copy + Fn(P) -> T,
+    G: 'a + Copy + Send + Sync + for<'b> Fn(&'b [u8]) -> P,
+    F: 'a + Copy + Send + Sync + Fn(P) -> T,
 {
     Box::new(
         ArrayIterator::<T, I, P, G, F>::new(iter, field, data_type, chunk_size, op1, op2).map(

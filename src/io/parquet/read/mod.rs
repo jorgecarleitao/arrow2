@@ -46,13 +46,19 @@ pub mod schema;
 pub mod statistics;
 mod utils;
 
-pub use file::FileReader;
+pub use file::{FileReader, RowGroupReader};
 pub use row_group::*;
 pub(crate) use schema::is_type_nullable;
 pub use schema::{get_schema, FileMetaData};
 
-pub trait DataPages: FallibleStreamingIterator<Item = DataPage, Error = ParquetError> {}
-impl<I: FallibleStreamingIterator<Item = DataPage, Error = ParquetError>> DataPages for I {}
+pub trait DataPages:
+    FallibleStreamingIterator<Item = DataPage, Error = ParquetError> + Send + Sync
+{
+}
+impl<I: FallibleStreamingIterator<Item = DataPage, Error = ParquetError> + Send + Sync> DataPages
+    for I
+{
+}
 
 /// Creates a new iterator of compressed pages.
 pub fn get_page_iterator<R: Read + Seek>(
@@ -86,7 +92,7 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
     type_: &ParquetType,
     data_type: DataType,
     chunk_size: usize,
-) -> Result<Box<dyn Iterator<Item = Result<Arc<dyn Array>>> + 'a>> {
+) -> Result<ArrayIter<'a>> {
     use DataType::*;
     let values_data_type = if let Dictionary(_, v, _) = &data_type {
         v.as_ref()
@@ -207,7 +213,7 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
     type_: &ParquetType,
     field: Field,
     chunk_size: usize,
-) -> Result<Box<dyn Iterator<Item = Result<Arc<dyn Array>>> + 'a>> {
+) -> Result<ArrayIter<'a>> {
     use DataType::*;
     match field.data_type.to_logical_type() {
         Null => Ok(null::iter_to_arrays(pages, field.data_type, chunk_size)),
@@ -440,7 +446,7 @@ fn page_iter_to_arrays_nested<'a, I: 'a + DataPages>(
     field: Field,
     data_type: DataType,
     chunk_size: usize,
-) -> Result<Box<dyn Iterator<Item = Result<Arc<dyn Array>>> + 'a>> {
+) -> Result<ArrayIter<'a>> {
     use DataType::*;
     let iter = match data_type {
         Boolean => boolean::iter_to_arrays_nested(pages, field.clone(), chunk_size),
@@ -592,22 +598,19 @@ fn page_iter_to_arrays_nested<'a, I: 'a + DataPages>(
     Ok(Box::new(iter))
 }
 
-struct StructIterator {
-    iters: Vec<Box<dyn Iterator<Item = Result<Arc<dyn Array>>>>>,
+struct StructIterator<'a> {
+    iters: Vec<ArrayIter<'a>>,
     fields: Vec<Field>,
 }
 
-impl StructIterator {
-    pub fn new(
-        iters: Vec<Box<dyn Iterator<Item = Result<Arc<dyn Array>>>>>,
-        fields: Vec<Field>,
-    ) -> Self {
+impl<'a> StructIterator<'a> {
+    pub fn new(iters: Vec<ArrayIter<'a>>, fields: Vec<Field>) -> Self {
         assert_eq!(iters.len(), fields.len());
         Self { iters, fields }
     }
 }
 
-impl Iterator for StructIterator {
+impl<'a> Iterator for StructIterator<'a> {
     type Item = Result<Arc<dyn Array>>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -660,7 +663,7 @@ pub fn column_iter_to_arrays<'a, I: 'static>(
     types: Vec<&ParquetType>,
     field: &Field,
     chunk_size: usize,
-) -> Result<Box<dyn Iterator<Item = Result<Arc<dyn Array>>> + 'a>>
+) -> Result<ArrayIter<'a>>
 where
     I: DataPages,
 {
@@ -680,3 +683,5 @@ where
         iters.pop().unwrap()
     })
 }
+
+pub type ArrayIter<'a> = Box<dyn Iterator<Item = Result<Arc<dyn Array>>> + Send + Sync + 'a>;
