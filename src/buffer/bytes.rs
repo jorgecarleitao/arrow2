@@ -66,6 +66,10 @@ impl<T: NativeType> Bytes<T> {
         deallocation: Deallocation,
     ) -> Self {
         assert!(matches!(deallocation, Deallocation::Foreign(_)));
+        // This line is technically outside the assumptions of `Vec::from_raw_parts`, since
+        // `ptr` was not allocated by `Vec`. However, one of the invariants of this struct
+        // is that we do not expose this region as a `Vec`; we only use `Vec` on it to provide
+        // immutable access to the region (via `Vec::deref` to `&[T]`).
         let data = Vec::from_raw_parts(ptr.as_ptr(), len, len);
         let data = MaybeForeign::new(data);
 
@@ -88,7 +92,7 @@ impl<T: NativeType> Bytes<T> {
         unsafe { NonNull::new_unchecked(self.data.as_ptr() as *mut T) }
     }
 
-    /// Returns a mutable reference to the `Vec<T>` data if it is allocated in this process.
+    /// Returns a mutable reference to the internal [`Vec<T>`] if it is natively allocated.
     /// Returns `None` if allocated by a foreign interface.
     pub fn get_vec(&mut self) -> Option<&mut Vec<T>> {
         match &self.deallocation {

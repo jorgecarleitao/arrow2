@@ -181,7 +181,7 @@ impl Bitmap {
     pub fn into_mut(mut self) -> MaybeMut<Self, MutableBitmap> {
         match (
             self.offset,
-            Arc::get_mut(&mut self.bytes).map(|b| b.get_vec()).flatten(),
+            Arc::get_mut(&mut self.bytes).and_then(|b| b.get_vec()),
         ) {
             (0, Some(v)) => {
                 let data = std::mem::take(v);

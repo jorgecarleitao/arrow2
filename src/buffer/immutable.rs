@@ -124,14 +124,16 @@ impl<T: NativeType> Buffer<T> {
         self.offset
     }
 
-    /// Try to get a hold to the inner data as `&mut Vec`.
-    /// This will only succeed if the `reference count == 1` and the data
-    /// is allocated by this program.
+    /// Try to get the inner data as a mutable [`Vec<T>`].
+    /// This succeeds iff:
+    /// * This data was allocated by Rust (i.e. it does not come from the C data interface)
+    /// * This region is not being shared any other struct.
+    /// * This buffer has not been offsetted
     pub fn get_vec(&mut self) -> Option<&mut Vec<T>> {
         if self.offset != 0 {
             None
         } else {
-            Arc::get_mut(&mut self.data).map(|b| b.get_vec()).flatten()
+            Arc::get_mut(&mut self.data).and_then(|b| b.get_vec())
         }
     }
 }
