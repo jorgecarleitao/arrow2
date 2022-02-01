@@ -78,15 +78,15 @@ pub fn read_columns<'a, R: Read + Seek>(
 
     // reads all the necessary columns for all fields from the row group
     // This operation is IO-bounded `O(C)` where C is the number of columns in the row group
-    let columns = fields
+    let field_columns = fields
         .iter()
         .map(|field| _read_columns(reader, row_group.columns(), &field.name))
         .collect::<Result<Vec<_>>>()?;
 
-    columns
+    field_columns
         .into_iter()
         .map(|columns| {
-            let (pages, types): (Vec<_>, Vec<_>) = columns
+            let (columns, types): (Vec<_>, Vec<_>) = columns
                 .into_iter()
                 .map(|(column_meta, chunk)| {
                     let pages = PageIterator::new(
@@ -103,10 +103,10 @@ pub fn read_columns<'a, R: Read + Seek>(
                     )
                 })
                 .unzip();
-            (pages, types)
+            (columns, types)
         })
         .zip(fields.into_iter())
-        .map(|((columns, types), field)| column_iter_to_arrays(columns, types, &field, chunk_size))
+        .map(|((columns, types), field)| column_iter_to_arrays(columns, types, field, chunk_size))
         .collect()
 }
 

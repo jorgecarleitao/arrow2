@@ -5,7 +5,7 @@ use parquet2::{encoding::Encoding, page::DataPage, schema::Repetition};
 use crate::{
     array::Offset,
     bitmap::MutableBitmap,
-    datatypes::{DataType, Field},
+    datatypes::DataType,
     error::Result,
     io::parquet::read::{utils::MaybeNext, DataPages},
 };
@@ -99,7 +99,7 @@ impl<'a, O: Offset> utils::Decoder<'a, &'a [u8], Binary<O>> for BinaryDecoder<O>
 pub struct ArrayIterator<O: Offset, A: TraitBinaryArray<O>, I: DataPages> {
     iter: I,
     data_type: DataType,
-    field: Field,
+    init: InitNested,
     items: VecDeque<(Binary<O>, MutableBitmap)>,
     nested: VecDeque<NestedState>,
     chunk_size: usize,
@@ -107,11 +107,11 @@ pub struct ArrayIterator<O: Offset, A: TraitBinaryArray<O>, I: DataPages> {
 }
 
 impl<O: Offset, A: TraitBinaryArray<O>, I: DataPages> ArrayIterator<O, A, I> {
-    pub fn new(iter: I, field: Field, data_type: DataType, chunk_size: usize) -> Self {
+    pub fn new(iter: I, init: InitNested, data_type: DataType, chunk_size: usize) -> Self {
         Self {
             iter,
             data_type,
-            field,
+            init,
             items: VecDeque::new(),
             nested: VecDeque::new(),
             chunk_size,
@@ -128,7 +128,7 @@ impl<O: Offset, A: TraitBinaryArray<O>, I: DataPages> Iterator for ArrayIterator
             &mut self.iter,
             &mut self.items,
             &mut self.nested,
-            &self.field,
+            &self.init,
             self.chunk_size,
             &BinaryDecoder::<O>::default(),
         );

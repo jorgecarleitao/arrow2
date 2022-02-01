@@ -8,10 +8,7 @@ pub use utils::read_item;
 
 use std::sync::Arc;
 
-use crate::{
-    array::Array,
-    datatypes::{DataType, Field},
-};
+use crate::{array::Array, datatypes::DataType};
 
 use super::ArrayIter;
 use super::{nested_utils::*, DataPages};
@@ -43,7 +40,7 @@ where
 /// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
 pub fn iter_to_arrays_nested<'a, I, T, P, G, F>(
     iter: I,
-    field: Field,
+    init: InitNested,
     data_type: DataType,
     chunk_size: usize,
     op1: G,
@@ -57,13 +54,12 @@ where
     F: 'a + Copy + Send + Sync + Fn(P) -> T,
 {
     Box::new(
-        ArrayIterator::<T, I, P, G, F>::new(iter, field, data_type, chunk_size, op1, op2).map(
-            |x| {
-                x.map(|(nested, array)| {
-                    let values = Arc::new(array) as Arc<dyn Array>;
-                    (nested, values)
-                })
-            },
-        ),
+        ArrayIterator::<T, I, P, G, F>::new(iter, init, data_type, chunk_size, op1, op2).map(|x| {
+            x.map(|(mut nested, array)| {
+                let _ = nested.nested.pop().unwrap(); // the primitive
+                let values = Arc::new(array) as Arc<dyn Array>;
+                (nested, values)
+            })
+        }),
     )
 }

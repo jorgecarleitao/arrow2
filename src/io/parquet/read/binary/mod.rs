@@ -9,13 +9,16 @@ use std::sync::Arc;
 
 use crate::{
     array::{Array, Offset},
-    datatypes::{DataType, Field},
+    datatypes::DataType,
 };
 
 use self::basic::TraitBinaryArray;
 use self::nested::ArrayIterator;
 use super::ArrayIter;
-use super::{nested_utils::NestedArrayIter, DataPages};
+use super::{
+    nested_utils::{InitNested, NestedArrayIter},
+    DataPages,
+};
 use basic::BinaryArrayIterator;
 
 /// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
@@ -34,7 +37,7 @@ where
 /// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
 pub fn iter_to_arrays_nested<'a, O, A, I>(
     iter: I,
-    field: Field,
+    init: InitNested,
     data_type: DataType,
     chunk_size: usize,
 ) -> NestedArrayIter<'a>
@@ -44,8 +47,9 @@ where
     O: Offset,
 {
     Box::new(
-        ArrayIterator::<O, A, I>::new(iter, field, data_type, chunk_size).map(|x| {
-            x.map(|(nested, array)| {
+        ArrayIterator::<O, A, I>::new(iter, init, data_type, chunk_size).map(|x| {
+            x.map(|(mut nested, array)| {
+                let _ = nested.nested.pop().unwrap(); // the primitive
                 let values = Arc::new(array) as Arc<dyn Array>;
                 (nested, values)
             })

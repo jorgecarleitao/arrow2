@@ -5,12 +5,8 @@ use parquet2::{
 };
 
 use crate::{
-    array::PrimitiveArray,
-    bitmap::MutableBitmap,
-    datatypes::{DataType, Field},
-    error::Result,
-    io::parquet::read::utils::MaybeNext,
-    types::NativeType,
+    array::PrimitiveArray, bitmap::MutableBitmap, datatypes::DataType, error::Result,
+    io::parquet::read::utils::MaybeNext, types::NativeType,
 };
 
 use super::super::nested_utils::*;
@@ -174,7 +170,7 @@ where
     F: Copy + Fn(P) -> T,
 {
     iter: I,
-    field: Field,
+    init: InitNested,
     data_type: DataType,
     // invariant: items.len() == nested.len()
     items: VecDeque<(Vec<T>, MutableBitmap)>,
@@ -194,7 +190,7 @@ where
 {
     pub fn new(
         iter: I,
-        field: Field,
+        init: InitNested,
         data_type: DataType,
         chunk_size: usize,
         op1: G,
@@ -202,7 +198,7 @@ where
     ) -> Self {
         Self {
             iter,
-            field,
+            init,
             data_type,
             items: VecDeque::new(),
             nested: VecDeque::new(),
@@ -228,7 +224,7 @@ where
             &mut self.iter,
             &mut self.items,
             &mut self.nested,
-            &self.field,
+            &self.init,
             self.chunk_size,
             &self.decoder,
         );

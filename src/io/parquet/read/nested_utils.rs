@@ -5,11 +5,10 @@ use parquet2::{
 };
 
 use crate::{
-    array::{Array, ListArray},
+    array::Array,
     bitmap::{Bitmap, MutableBitmap},
     buffer::Buffer,
-    datatypes::{DataType, Field},
-    error::{ArrowError, Result},
+    error::Result,
 };
 
 use super::{
@@ -215,83 +214,53 @@ pub(super) fn read_optional_values<D, C, G, P>(
     }
 }
 
-fn init_nested_recursive(field: &Field, capacity: usize, container: &mut Vec<Box<dyn Nested>>) {
-    let is_nullable = field.is_nullable;
+#[derive(Debug, Clone)]
+pub enum InitNested {
+    Primitive(bool),
+    List(Box<InitNested>, bool),
+    Struct(Box<InitNested>, bool),
+}
 
-    use crate::datatypes::PhysicalType::*;
-    match field.data_type().to_physical_type() {
-        Null | Boolean | Primitive(_) | FixedSizeBinary | Binary | LargeBinary | Utf8
-        | LargeUtf8 | Dictionary(_) => {
-            container.push(Box::new(NestedPrimitive::new(is_nullable)) as Box<dyn Nested>)
+impl InitNested {
+    pub fn is_primitive(&self) -> bool {
+        matches!(self, Self::Primitive(_))
+    }
+}
+
+fn init_nested_recursive(init: &InitNested, capacity: usize, container: &mut Vec<Box<dyn Nested>>) {
+    match init {
+        InitNested::Primitive(is_nullable) => {
+            container.push(Box::new(NestedPrimitive::new(*is_nullable)) as Box<dyn Nested>)
         }
-        List | LargeList | FixedSizeList => {
-            if is_nullable {
+        InitNested::List(inner, is_nullable) => {
+            container.push(if *is_nullable {
+                Box::new(NestedOptional::with_capacity(capacity)) as Box<dyn Nested>
+            } else {
+                Box::new(NestedValid::with_capacity(capacity)) as Box<dyn Nested>
+            });
+            init_nested_recursive(inner, capacity, container)
+        }
+        InitNested::Struct(inner, is_nullable) => {
+            if *is_nullable {
                 container.push(Box::new(NestedOptional::with_capacity(capacity)) as Box<dyn Nested>)
             } else {
                 container.push(Box::new(NestedValid::with_capacity(capacity)) as Box<dyn Nested>)
             }
-            match field.data_type().to_logical_type() {
-                DataType::List(ref inner)
-                | DataType::LargeList(ref inner)
-                | DataType::FixedSizeList(ref inner, _) => {
-                    init_nested_recursive(inner.as_ref(), capacity, container)
-                }
-                _ => unreachable!(),
-            };
+            init_nested_recursive(inner, capacity, container)
         }
-        Struct => {
-            container.push(Box::new(NestedPrimitive::new(is_nullable)) as Box<dyn Nested>);
-            if let DataType::Struct(fields) = field.data_type().to_logical_type() {
-                fields
-                    .iter()
-                    .for_each(|field| init_nested_recursive(field, capacity, container));
-            } else {
-                unreachable!()
-            }
-        }
-        _ => todo!(),
     }
 }
 
-fn init_nested(field: &Field, capacity: usize) -> NestedState {
+fn init_nested(init: &InitNested, capacity: usize) -> NestedState {
     let mut container = vec![];
-    init_nested_recursive(field, capacity, &mut container);
+    init_nested_recursive(init, capacity, &mut container);
+    println!("{:?}", container);
     NestedState::new(container)
-}
-
-pub fn create_list(
-    data_type: DataType,
-    nested: &mut NestedState,
-    values: Arc<dyn Array>,
-) -> Result<Arc<dyn Array>> {
-    Ok(match data_type {
-        DataType::List(_) => {
-            let (offsets, validity) = nested.nested.pop().unwrap().inner();
-
-            let offsets = Buffer::<i32>::from_trusted_len_iter(offsets.iter().map(|x| *x as i32));
-            Arc::new(ListArray::<i32>::from_data(
-                data_type, offsets, values, validity,
-            ))
-        }
-        DataType::LargeList(_) => {
-            let (offsets, validity) = nested.nested.pop().unwrap().inner();
-
-            Arc::new(ListArray::<i64>::from_data(
-                data_type, offsets, values, validity,
-            ))
-        }
-        _ => {
-            return Err(ArrowError::NotYetImplemented(format!(
-                "Read nested datatype {:?}",
-                data_type
-            )))
-        }
-    })
 }
 
 pub struct NestedPage<'a> {
     repetitions: HybridRleDecoder<'a>,
-    max_rep_level: u32,
+    _max_rep_level: u32,
     definitions: HybridRleDecoder<'a>,
     max_def_level: u32,
 }
@@ -309,7 +278,7 @@ impl<'a> NestedPage<'a> {
                 get_bit_width(max_rep_level),
                 page.num_values(),
             ),
-            max_rep_level: max_rep_level as u32,
+            _max_rep_level: max_rep_level as u32,
             definitions: HybridRleDecoder::new(
                 def_levels,
                 get_bit_width(max_def_level),
@@ -410,7 +379,7 @@ pub(super) fn extend_from_new_page<'a, T: Decoder<'a, C, P>, C: Default, P: Push
 pub fn extend_offsets1<'a>(
     page: &mut NestedPage<'a>,
     state: Option<NestedState>,
-    field: &Field,
+    init: &InitNested,
     items: &mut VecDeque<NestedState>,
     chunk_size: usize,
 ) -> Result<Option<NestedState>> {
@@ -423,7 +392,7 @@ pub fn extend_offsets1<'a>(
         nested
     } else {
         // there is no state => initialize it
-        init_nested(field, chunk_size)
+        init_nested(init, chunk_size)
     };
 
     let remaining = chunk_size - nested.len();
@@ -440,7 +409,7 @@ pub fn extend_offsets1<'a>(
     }
 
     while page.len() > 0 {
-        let mut nested = init_nested(field, chunk_size);
+        let mut nested = init_nested(init, chunk_size);
         extend_offsets2(page, &mut nested, chunk_size);
         items.push_back(nested)
     }
@@ -451,8 +420,6 @@ pub fn extend_offsets1<'a>(
 
 fn extend_offsets2<'a>(page: &mut NestedPage<'a>, nested: &mut NestedState, additional: usize) {
     let mut values_count = vec![0; nested.depth()];
-    let mut prev_def: u32 = 0;
-    let mut is_first = true;
 
     let mut def_threshold = page.max_def_level;
     let thres = nested
@@ -466,7 +433,7 @@ fn extend_offsets2<'a>(page: &mut NestedPage<'a>, nested: &mut NestedState, addi
         })
         .collect::<Vec<_>>();
 
-    let max_rep = page.max_rep_level;
+    let rate = if page.max_def_level == 1 { 1 } else { 2 };
 
     let mut iter = page.repetitions.by_ref().zip(page.definitions.by_ref());
 
@@ -478,25 +445,17 @@ fn extend_offsets2<'a>(page: &mut NestedPage<'a>, nested: &mut NestedState, addi
             rows += 1
         }
 
-        let mut closures = max_rep - rep;
-        if prev_def <= 1 {
-            closures = 1;
-        };
-        if is_first {
-            // close on first run to ensure offsets start with 0.
-            closures = max_rep;
-            is_first = false;
-        }
+        let closures = rep + 1 + (def / rate);
 
         nested
             .nested
             .iter_mut()
-            .zip(values_count.iter())
             .enumerate()
+            .zip(values_count.iter())
             .skip(rep as usize)
-            .take((rep + closures) as usize)
-            .for_each(|(depth, (nested, length))| {
-                let is_null = (def - rep) as usize == depth && depth == rep as usize;
+            .take(closures as usize)
+            .for_each(|((depth, nested), length)| {
+                let is_null = def - rep == depth as u32;
                 nested.push(*length, !is_null);
             });
 
@@ -513,7 +472,6 @@ fn extend_offsets2<'a>(page: &mut NestedPage<'a>, nested: &mut NestedState, addi
                     *values += 1;
                 }
             });
-        prev_def = def;
     }
 
     // close validities
@@ -565,7 +523,7 @@ pub(super) fn next<'a, I, C, P, D>(
     iter: &'a mut I,
     items: &mut VecDeque<(P, MutableBitmap)>,
     nested_items: &mut VecDeque<NestedState>,
-    field: &Field,
+    init: &InitNested,
     chunk_size: usize,
     decoder: &D,
 ) -> MaybeNext<Result<(NestedState, P, MutableBitmap)>>
@@ -579,7 +537,6 @@ where
     if items.len() > 1 {
         let nested = nested_items.pop_back().unwrap();
         let (values, validity) = items.pop_back().unwrap();
-        //let array = BooleanArray::from_data(DataType::Boolean, values.into(), validity.into());
         return MaybeNext::Some(Ok((nested, values, validity)));
     }
     match (nested_items.pop_back(), items.pop_back(), iter.next()) {
@@ -594,7 +551,7 @@ where
 
             // read next chunk from `nested_page` and get number of values to read
             let maybe_nested =
-                extend_offsets1(&mut nested_page, state, field, nested_items, chunk_size);
+                extend_offsets1(&mut nested_page, state, init, nested_items, chunk_size);
             let nested = match maybe_nested {
                 Ok(nested) => nested,
                 Err(e) => return MaybeNext::Some(Err(e)),

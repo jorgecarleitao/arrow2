@@ -5,7 +5,7 @@ use parquet2::{encoding::Encoding, page::DataPage, schema::Repetition};
 use crate::{
     array::BooleanArray,
     bitmap::{utils::BitmapIter, MutableBitmap},
-    datatypes::{DataType, Field},
+    datatypes::DataType,
     error::Result,
 };
 
@@ -117,7 +117,7 @@ impl<'a> Decoder<'a, bool, MutableBitmap> for BooleanDecoder {
 #[derive(Debug)]
 pub struct ArrayIterator<I: DataPages> {
     iter: I,
-    field: Field,
+    init: InitNested,
     // invariant: items.len() == nested.len()
     items: VecDeque<(MutableBitmap, MutableBitmap)>,
     nested: VecDeque<NestedState>,
@@ -125,10 +125,10 @@ pub struct ArrayIterator<I: DataPages> {
 }
 
 impl<I: DataPages> ArrayIterator<I> {
-    pub fn new(iter: I, field: Field, chunk_size: usize) -> Self {
+    pub fn new(iter: I, init: InitNested, chunk_size: usize) -> Self {
         Self {
             iter,
-            field,
+            init,
             items: VecDeque::new(),
             nested: VecDeque::new(),
             chunk_size,
@@ -148,7 +148,7 @@ impl<I: DataPages> Iterator for ArrayIterator<I> {
             &mut self.iter,
             &mut self.items,
             &mut self.nested,
-            &self.field,
+            &self.init,
             self.chunk_size,
             &BooleanDecoder::default(),
         );
