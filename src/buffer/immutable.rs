@@ -85,7 +85,13 @@ impl<T: NativeType> Buffer<T> {
     /// Returns the byte slice stored in this buffer
     #[inline]
     pub fn as_slice(&self) -> &[T] {
-        &self.data[self.offset..self.offset + self.length]
+        // Safety:
+        // invariant of this struct `offset + length <= data.len()`
+        debug_assert!(self.offset + self.length <= self.data.len());
+        unsafe {
+            self.data
+                .get_unchecked(self.offset..self.offset + self.length)
+        }
     }
 
     /// Returns a new [Buffer] that is a slice of this buffer starting at `offset`.
