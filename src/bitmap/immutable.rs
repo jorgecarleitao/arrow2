@@ -1,3 +1,4 @@
+use either::Either;
 use std::iter::FromIterator;
 use std::sync::Arc;
 
@@ -107,7 +108,7 @@ impl Bitmap {
         self.null_count
     }
 
-    /// Slices `self`, offseting by `offset` and truncating up to `length` bits.
+    /// Slices `self`, offsetting by `offset` and truncating up to `length` bits.
     /// # Panic
     /// Panics iff `self.offset + offset + length >= self.bytes.len() * 8`, i.e. if the offset and `length`
     /// exceeds the allocated capacity of `self`.
@@ -174,6 +175,20 @@ impl Bitmap {
     /// This pointer is allocated iff `self.len() > 0`.
     pub(crate) fn offset(&self) -> usize {
         self.offset
+    }
+
+    /// Try to convert this `Bitmap` to a `MutableBitmap`
+    pub fn into_mut(mut self) -> Either<Self, MutableBitmap> {
+        match (
+            self.offset,
+            Arc::get_mut(&mut self.bytes).and_then(|b| b.get_vec()),
+        ) {
+            (0, Some(v)) => {
+                let data = std::mem::take(v);
+                Either::Right(MutableBitmap::from_vec(data, self.length))
+            }
+            _ => Either::Left(self),
+        }
     }
 }
 

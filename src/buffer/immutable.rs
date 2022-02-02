@@ -1,3 +1,4 @@
+use either::Either;
 use std::{iter::FromIterator, sync::Arc, usize};
 
 use crate::{trusted_len::TrustedLen, types::NativeType};
@@ -84,7 +85,13 @@ impl<T: NativeType> Buffer<T> {
     /// Returns the byte slice stored in this buffer
     #[inline]
     pub fn as_slice(&self) -> &[T] {
-        &self.data[self.offset..self.offset + self.length]
+        // Safety:
+        // invariant of this struct `offset + length <= data.len()`
+        debug_assert!(self.offset + self.length <= self.data.len());
+        unsafe {
+            self.data
+                .get_unchecked(self.offset..self.offset + self.length)
+        }
     }
 
     /// Returns a new [Buffer] that is a slice of this buffer starting at `offset`.
@@ -122,6 +129,25 @@ impl<T: NativeType> Buffer<T> {
     #[inline]
     pub fn offset(&self) -> usize {
         self.offset
+    }
+
+    /// Try to get the inner data as a mutable [`Vec<T>`].
+    /// This succeeds iff:
+    /// * This data was allocated by Rust (i.e. it does not come from the C data interface)
+    /// * This region is not being shared any other struct.
+    /// * This buffer has no offset
+    pub fn get_vec(mut self) -> Either<Self, Vec<T>> {
+        if self.offset != 0 {
+            Either::Left(self)
+        } else {
+            match Arc::get_mut(&mut self.data).and_then(|b| b.get_vec()) {
+                Some(v) => {
+                    let data = std::mem::take(v);
+                    Either::Right(data)
+                }
+                None => Either::Left(self),
+            }
+        }
     }
 }
 

@@ -205,7 +205,7 @@ unsafe fn create_buffer<T: NativeType>(
     let len = buffer_len(array, data_type, index)?;
     let offset = buffer_offset(array, data_type, index);
     let bytes = ptr
-        .map(|ptr| Bytes::new(ptr, len, deallocation))
+        .map(|ptr| Bytes::from_ffi(ptr, len, deallocation))
         .ok_or_else(|| {
             ArrowError::OutOfSpec(format!("The buffer at position {} is null", index))
         })?;
@@ -240,7 +240,7 @@ unsafe fn create_bitmap(
     let bytes_len = bytes_for(offset + len);
     let ptr = NonNull::new(ptr as *mut u8);
     let bytes = ptr
-        .map(|ptr| Bytes::new(ptr, bytes_len, deallocation))
+        .map(|ptr| Bytes::from_ffi(ptr, bytes_len, deallocation))
         .ok_or_else(|| {
             ArrowError::OutOfSpec(format!(
                 "The buffer {} is a null pointer and cannot be interpreted as a bitmap",

@@ -7,6 +7,7 @@ use crate::{
 };
 
 use super::Array;
+use either::Either;
 
 mod display;
 mod ffi;
@@ -182,6 +183,41 @@ impl<T: NativeType> PrimitiveArray<T> {
             data_type,
             values: self.values,
             validity: self.validity,
+        }
+    }
+    /// Try to convert this `PrimitiveArray` to a `MutablePrimitiveArray`
+    pub fn into_mut(self) -> Either<Self, MutablePrimitiveArray<T>> {
+        use Either::*;
+
+        if let Some(bitmap) = self.validity {
+            match bitmap.into_mut() {
+                Left(bitmap) => Left(PrimitiveArray::from_data(
+                    self.data_type,
+                    self.values,
+                    Some(bitmap),
+                )),
+                Right(mutable_bitmap) => match self.values.get_vec() {
+                    Left(buffer) => Left(PrimitiveArray::from_data(
+                        self.data_type,
+                        buffer,
+                        Some(mutable_bitmap.into()),
+                    )),
+                    Right(values) => Right(MutablePrimitiveArray::from_data(
+                        self.data_type,
+                        values,
+                        Some(mutable_bitmap),
+                    )),
+                },
+            }
+        } else {
+            match self.values.get_vec() {
+                Left(buffer) => Left(PrimitiveArray::from_data(self.data_type, buffer, None)),
+                Right(values) => Right(MutablePrimitiveArray::from_data(
+                    self.data_type,
+                    values,
+                    None,
+                )),
+            }
         }
     }
 }

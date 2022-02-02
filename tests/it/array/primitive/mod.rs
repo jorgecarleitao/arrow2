@@ -9,6 +9,7 @@ use arrow2::{
 };
 
 mod mutable;
+mod to_mutable;
 
 #[test]
 fn basics() {
