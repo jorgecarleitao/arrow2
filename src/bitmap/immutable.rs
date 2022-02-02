@@ -1,7 +1,7 @@
+use either::Either;
 use std::iter::FromIterator;
 use std::sync::Arc;
 
-use crate::to_mutable::MaybeMut;
 use crate::{buffer::bytes::Bytes, trusted_len::TrustedLen};
 
 use super::{
@@ -178,16 +178,16 @@ impl Bitmap {
     }
 
     /// Try to convert this `Bitmap` to a `MutableBitmap`
-    pub fn into_mut(mut self) -> MaybeMut<Self, MutableBitmap> {
+    pub fn into_mut(mut self) -> Either<Self, MutableBitmap> {
         match (
             self.offset,
             Arc::get_mut(&mut self.bytes).and_then(|b| b.get_vec()),
         ) {
             (0, Some(v)) => {
                 let data = std::mem::take(v);
-                MaybeMut::Mutable(MutableBitmap::from_vec(data, self.length))
+                Either::Right(MutableBitmap::from_vec(data, self.length))
             }
-            _ => MaybeMut::Immutable(self),
+            _ => Either::Left(self),
         }
     }
 }

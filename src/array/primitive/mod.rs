@@ -7,6 +7,7 @@ use crate::{
 };
 
 use super::Array;
+use either::Either;
 
 mod display;
 mod ffi;
@@ -14,7 +15,6 @@ mod from_natural;
 mod iterator;
 pub use iterator::*;
 mod mutable;
-use crate::to_mutable::MaybeMut;
 pub use mutable::*;
 
 /// A [`PrimitiveArray`] is arrow's equivalent to `Vec<Option<T: NativeType>>`, i.e.
@@ -186,35 +186,38 @@ impl<T: NativeType> PrimitiveArray<T> {
         }
     }
     /// Try to convert this `PrimitiveArray` to a `MutablePrimitiveArray`
-    pub fn into_mut(mut self) -> MaybeMut<Self, MutablePrimitiveArray<T>> {
-        match (self.validity, self.values.get_vec()) {
-            (None, None) => {
-                MaybeMut::Immutable(PrimitiveArray::from_data(self.data_type, self.values, None))
-            }
-            (None, Some(v)) => {
-                let data = std::mem::take(v);
-                MaybeMut::Mutable(MutablePrimitiveArray::from_data(self.data_type, data, None))
-            }
-            (Some(bitmap), None) => MaybeMut::Immutable(PrimitiveArray::from_data(
-                self.data_type,
-                self.values,
-                Some(bitmap),
-            )),
-            (Some(bitmap), Some(v)) => match bitmap.into_mut() {
-                MaybeMut::Immutable(bitmap) => MaybeMut::Immutable(PrimitiveArray::from_data(
+    pub fn into_mut(self) -> Either<Self, MutablePrimitiveArray<T>> {
+        use Either::*;
+
+        if let Some(bitmap) = self.validity {
+            match bitmap.into_mut() {
+                Left(bitmap) => Left(PrimitiveArray::from_data(
                     self.data_type,
                     self.values,
                     Some(bitmap),
                 )),
-                MaybeMut::Mutable(mutable) => {
-                    let data = std::mem::take(v);
-                    MaybeMut::Mutable(MutablePrimitiveArray::from_data(
+                Right(mutable_bitmap) => match self.values.get_vec() {
+                    Left(buffer) => Left(PrimitiveArray::from_data(
                         self.data_type,
-                        data,
-                        Some(mutable),
-                    ))
-                }
-            },
+                        buffer,
+                        Some(mutable_bitmap.into()),
+                    )),
+                    Right(values) => Right(MutablePrimitiveArray::from_data(
+                        self.data_type,
+                        values,
+                        Some(mutable_bitmap),
+                    )),
+                },
+            }
+        } else {
+            match self.values.get_vec() {
+                Left(buffer) => Left(PrimitiveArray::from_data(self.data_type, buffer, None)),
+                Right(values) => Right(MutablePrimitiveArray::from_data(
+                    self.data_type,
+                    values,
+                    None,
+                )),
+            }
         }
     }
 }

@@ -1,3 +1,4 @@
+use either::Either;
 use std::{iter::FromIterator, sync::Arc, usize};
 
 use crate::{trusted_len::TrustedLen, types::NativeType};
@@ -128,12 +129,18 @@ impl<T: NativeType> Buffer<T> {
     /// This succeeds iff:
     /// * This data was allocated by Rust (i.e. it does not come from the C data interface)
     /// * This region is not being shared any other struct.
-    /// * This buffer has not been offsetted
-    pub fn get_vec(&mut self) -> Option<&mut Vec<T>> {
+    /// * This buffer has no offset
+    pub fn get_vec(mut self) -> Either<Self, Vec<T>> {
         if self.offset != 0 {
-            None
+            Either::Left(self)
         } else {
-            Arc::get_mut(&mut self.data).and_then(|b| b.get_vec())
+            match Arc::get_mut(&mut self.data).and_then(|b| b.get_vec()) {
+                Some(v) => {
+                    let data = std::mem::take(v);
+                    Either::Right(data)
+                }
+                None => Either::Left(self),
+            }
         }
     }
 }

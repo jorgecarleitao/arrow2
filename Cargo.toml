@@ -15,6 +15,7 @@ name = "arrow2"
 bench = false
 
 [dependencies]
+either = "1.6"
 num-traits = "0.2"
 bytemuck = { version = "1", features = ["derive"] }
 chrono = { version = "0.4", default_features = false, features = ["std"] }
