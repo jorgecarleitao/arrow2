@@ -57,16 +57,15 @@ fn main() -> Result<()> {
     // anything implementing `std::io::Write` works
     let mut file = vec![];
 
-    let parquet_schema = row_groups.parquet_schema().clone();
-    let _ = write_file(
-        &mut file,
-        row_groups,
-        &schema,
-        parquet_schema,
-        options,
-        None,
-    )?;
+    let mut writer = FileWriter::try_new(file, schema, options)?;
 
+    // Write the file.
+    writer.start()?;
+    for group in row_groups {
+        let (group, len) = group?;
+        writer.write(group, len)?;
+    }
+    let _ = writer.end(None)?;
     Ok(())
 }
 ```

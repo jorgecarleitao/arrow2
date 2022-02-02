@@ -40,21 +40,19 @@ fn round_trip(
         version,
     };
 
-    let parquet_schema = to_parquet_schema(&schema)?;
-
     let iter = vec![Chunk::try_new(vec![array.clone()])];
 
     let row_groups = RowGroupIterator::try_new(iter.into_iter(), &schema, options, vec![encoding])?;
 
-    let mut writer = Cursor::new(vec![]);
-    write_file(
-        &mut writer,
-        row_groups,
-        &schema,
-        parquet_schema,
-        options,
-        None,
-    )?;
+    let writer = Cursor::new(vec![]);
+    let mut writer = FileWriter::try_new(writer, schema, options)?;
+
+    writer.start()?;
+    for group in row_groups {
+        let (group, len) = group?;
+        writer.write(group, len)?;
+    }
+    let (_size, writer) = writer.end(None)?;
 
     let data = writer.into_inner();
 

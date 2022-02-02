@@ -1,7 +1,6 @@
 use std::io::{Cursor, Read, Seek};
 use std::sync::Arc;
 
-use arrow2::error::ArrowError;
 use arrow2::{
     array::*, bitmap::Bitmap, buffer::Buffer, chunk::Chunk, datatypes::*, error::Result,
     io::parquet::read::statistics::*, io::parquet::read::*, io::parquet::write::*,
@@ -627,42 +626,31 @@ fn integration_write(schema: &Schema, batches: &[Chunk<Arc<dyn Array>>]) -> Resu
         version: Version::V1,
     };
 
-    let parquet_schema = to_parquet_schema(schema)?;
-    let descritors = parquet_schema.columns().to_vec().into_iter();
+    let encodings = schema
+        .fields
+        .iter()
+        .map(|x| {
+            if let DataType::Dictionary(..) = x.data_type() {
+                Encoding::RleDictionary
+            } else {
+                Encoding::Plain
+            }
+        })
+        .collect();
 
-    let row_groups = batches.iter().map(|batch| {
-        let iterator = batch
-            .columns()
-            .iter()
-            .zip(descritors.clone())
-            .map(|(array, descriptor)| {
-                let encoding = if let DataType::Dictionary(..) = array.data_type() {
-                    Encoding::RleDictionary
-                } else {
-                    Encoding::Plain
-                };
-                array_to_pages(array.as_ref(), descriptor, options, encoding).map(|pages| {
-                    let encoded_pages = DynIter::new(pages.map(|x| Ok(x?)));
-                    let compressed_pages =
-                        Compressor::new(encoded_pages, options.compression, vec![])
-                            .map_err(ArrowError::from);
-                    DynStreamingIterator::new(compressed_pages)
-                })
-            });
-        let iterator = DynIter::new(iterator);
-        Ok(iterator)
-    });
+    let row_groups =
+        RowGroupIterator::try_new(batches.iter().cloned().map(Ok), schema, options, encodings)?;
 
-    let mut writer = Cursor::new(vec![]);
+    let writer = Cursor::new(vec![]);
 
-    write_file(
-        &mut writer,
-        row_groups,
-        schema,
-        parquet_schema,
-        options,
-        None,
-    )?;
+    let mut writer = FileWriter::try_new(writer, schema.clone(), options)?;
+
+    writer.start()?;
+    for group in row_groups {
+        let (group, len) = group?;
+        writer.write(group, len)?;
+    }
+    let (_size, writer) = writer.end(None)?;
 
     Ok(writer.into_inner())
 }

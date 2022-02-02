@@ -1,16 +1,43 @@
-use parquet2::write::Compressor;
 use parquet2::FallibleStreamingIterator;
+use parquet2::{metadata::ColumnDescriptor, write::Compressor};
 
-use super::{
-    array_to_pages, to_parquet_schema, DynIter, DynStreamingIterator, Encoding, RowGroupIter,
-    SchemaDescriptor, WriteOptions,
-};
 use crate::{
     array::Array,
     chunk::Chunk,
     datatypes::Schema,
     error::{ArrowError, Result},
 };
+
+use super::{
+    array_to_pages, to_parquet_schema, DynIter, DynStreamingIterator, Encoding, RowGroupIter,
+    SchemaDescriptor, WriteOptions,
+};
+
+/// Maps a [`Chunk`] and parquet-specific options to an [`RowGroupIter`] used to
+/// write to parquet
+pub fn row_group_iter<A: AsRef<dyn Array> + 'static + Send + Sync>(
+    chunk: Chunk<A>,
+    encodings: Vec<Encoding>,
+    columns: Vec<ColumnDescriptor>,
+    options: WriteOptions,
+) -> RowGroupIter<'static, ArrowError> {
+    DynIter::new(
+        chunk
+            .into_arrays()
+            .into_iter()
+            .zip(columns.into_iter())
+            .zip(encodings.into_iter())
+            .map(move |((array, descriptor), encoding)| {
+                array_to_pages(array.as_ref(), descriptor, options, encoding).map(move |pages| {
+                    let encoded_pages = DynIter::new(pages.map(|x| Ok(x?)));
+                    let compressed_pages =
+                        Compressor::new(encoded_pages, options.compression, vec![])
+                            .map_err(ArrowError::from);
+                    DynStreamingIterator::new(compressed_pages)
+                })
+            }),
+    )
+}
 
 /// An iterator adapter that converts an iterator over [`Chunk`] into an iterator
 /// of row groups.
@@ -51,31 +78,23 @@ impl<A: AsRef<dyn Array> + 'static, I: Iterator<Item = Result<Chunk<A>>>> RowGro
 impl<A: AsRef<dyn Array> + 'static + Send + Sync, I: Iterator<Item = Result<Chunk<A>>>> Iterator
     for RowGroupIterator<A, I>
 {
-    type Item = Result<RowGroupIter<'static, ArrowError>>;
+    type Item = Result<(RowGroupIter<'static, ArrowError>, usize)>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let options = self.options;
 
         self.iter.next().map(|maybe_chunk| {
-            let columns = maybe_chunk?;
+            let chunk = maybe_chunk?;
+            let len = chunk.len();
             let encodings = self.encodings.clone();
-            Ok(DynIter::new(
-                columns
-                    .into_arrays()
-                    .into_iter()
-                    .zip(self.parquet_schema.columns().to_vec().into_iter())
-                    .zip(encodings.into_iter())
-                    .map(move |((array, descriptor), encoding)| {
-                        array_to_pages(array.as_ref(), descriptor, options, encoding).map(
-                            move |pages| {
-                                let encoded_pages = DynIter::new(pages.map(|x| Ok(x?)));
-                                let compressed_pages =
-                                    Compressor::new(encoded_pages, options.compression, vec![])
-                                        .map_err(ArrowError::from);
-                                DynStreamingIterator::new(compressed_pages)
-                            },
-                        )
-                    }),
+            Ok((
+                row_group_iter(
+                    chunk,
+                    encodings,
+                    self.parquet_schema.columns().to_vec(),
+                    options,
+                ),
+                len,
             ))
         })
     }

@@ -13,17 +13,10 @@ First, some notation:
 
 ## Single threaded
 
-Here is an example of how to write a single column chunk into a single row group:
+Here is an example of how to write a single chunk:
 
 ```rust
 {{#include ../../../examples/parquet_write.rs}}
-```
-
-For single-threaded writing, this crate offers an API that encapsulates the above logic. It 
-assumes that a `Chunk` is mapped to a single row group with a single page per column.
-
-```rust
-{{#include ../../../examples/parquet_write_record.rs}}
 ```
 
 ## Multi-threaded writing

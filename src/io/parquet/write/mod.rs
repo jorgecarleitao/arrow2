@@ -2,15 +2,15 @@
 mod binary;
 mod boolean;
 mod dictionary;
+mod file;
 mod fixed_len_bytes;
 mod levels;
 mod primitive;
-mod record_batch;
+mod row_group;
 mod schema;
+mod stream;
 mod utf8;
 mod utils;
-
-pub mod stream;
 
 use crate::array::*;
 use crate::bitmap::Bitmap;
@@ -31,14 +31,15 @@ pub use parquet2::{
     page::{CompressedDataPage, CompressedPage, EncodedPage},
     schema::types::ParquetType,
     write::{
-        compress, write_file as parquet_write_file, Compressor, DynIter, DynStreamingIterator,
-        RowGroupIter, Version, WriteOptions,
+        compress, Compressor, DynIter, DynStreamingIterator, RowGroupIter, Version, WriteOptions,
     },
     FallibleStreamingIterator,
 };
-pub use record_batch::RowGroupIterator;
-use schema::schema_to_metadata_key;
+
+pub use file::FileWriter;
+pub use row_group::{row_group_iter, RowGroupIterator};
 pub use schema::to_parquet_type;
+pub use stream::FileStreamer;
 
 pub(self) fn decimal_length_from_precision(precision: usize) -> usize {
     // digits = floor(log_10(2^(8*n - 1) - 1))
@@ -59,37 +60,6 @@ pub fn to_parquet_schema(schema: &Schema) -> Result<SchemaDescriptor> {
         .map(to_parquet_type)
         .collect::<Result<Vec<_>>>()?;
     Ok(SchemaDescriptor::new("root".to_string(), parquet_types))
-}
-
-/// Writes
-pub fn write_file<'a, W, I>(
-    writer: &mut W,
-    row_groups: I,
-    schema: &Schema,
-    parquet_schema: SchemaDescriptor,
-    options: WriteOptions,
-    key_value_metadata: Option<Vec<KeyValue>>,
-) -> Result<u64>
-where
-    W: std::io::Write,
-    I: Iterator<Item = Result<RowGroupIter<'a, ArrowError>>>,
-{
-    let key_value_metadata = key_value_metadata
-        .map(|mut x| {
-            x.push(schema_to_metadata_key(schema));
-            x
-        })
-        .or_else(|| Some(vec![schema_to_metadata_key(schema)]));
-
-    let created_by = Some("Arrow2 - Native Rust implementation of Arrow".to_string());
-    Ok(parquet_write_file(
-        writer,
-        row_groups,
-        parquet_schema,
-        options,
-        created_by,
-        key_value_metadata,
-    )?)
 }
 
 /// Checks whether the `data_type` can be encoded as `encoding`.

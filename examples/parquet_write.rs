@@ -1,60 +1,39 @@
 use std::fs::File;
-use std::iter::once;
+use std::sync::Arc;
 
-use arrow2::error::ArrowError;
-use arrow2::io::parquet::write::to_parquet_schema;
 use arrow2::{
     array::{Array, Int32Array},
-    datatypes::Field,
+    chunk::Chunk,
+    datatypes::{Field, Schema},
     error::Result,
     io::parquet::write::{
-        array_to_pages, write_file, Compression, Compressor, DynIter, DynStreamingIterator,
-        Encoding, FallibleStreamingIterator, Version, WriteOptions,
+        Compression, Encoding, FileWriter, RowGroupIterator, Version, WriteOptions,
     },
 };
 
-fn write_single_array(path: &str, array: &dyn Array, field: Field) -> Result<()> {
-    let schema = vec![field].into();
-
+fn write_batch(path: &str, schema: Schema, columns: Chunk<Arc<dyn Array>>) -> Result<()> {
     let options = WriteOptions {
         write_statistics: true,
         compression: Compression::Uncompressed,
         version: Version::V2,
     };
-    let encoding = Encoding::Plain;
 
-    // map arrow fields to parquet fields
-    let parquet_schema = to_parquet_schema(&schema)?;
+    let iter = vec![Ok(columns)];
 
-    let descriptor = parquet_schema.columns()[0].clone();
-
-    // Declare the row group iterator. This must be an iterator of iterators of streaming iterators
-    // * first iterator over row groups
-    let row_groups = once(Result::Ok(DynIter::new(
-        // * second iterator over column chunks (we assume no struct arrays -> `once` column)
-        once(
-            // * third iterator over (compressed) pages; dictionary encoding may lead to multiple pages per array.
-            array_to_pages(array, descriptor, options, encoding).map(move |pages| {
-                let encoded_pages = DynIter::new(pages.map(|x| Ok(x?)));
-                let compressed_pages = Compressor::new(encoded_pages, options.compression, vec![])
-                    .map_err(ArrowError::from);
-                DynStreamingIterator::new(compressed_pages)
-            }),
-        ),
-    )));
+    let row_groups =
+        RowGroupIterator::try_new(iter.into_iter(), &schema, options, vec![Encoding::Plain])?;
 
     // Create a new empty file
-    let mut file = File::create(path)?;
+    let file = File::create(path)?;
 
-    // Write the file. Note that, at present, any error results in a corrupted file.
-    let _ = write_file(
-        &mut file,
-        row_groups,
-        &schema,
-        parquet_schema,
-        options,
-        None,
-    )?;
+    let mut writer = FileWriter::try_new(file, schema, options)?;
+
+    writer.start()?;
+    for group in row_groups {
+        let (group, len) = group?;
+        writer.write(group, len)?;
+    }
+    let _size = writer.end(None)?;
     Ok(())
 }
 
@@ -69,5 +48,8 @@ fn main() -> Result<()> {
         Some(6),
     ]);
     let field = Field::new("c1", array.data_type().clone(), true);
-    write_single_array("test.parquet", &array, field)
+    let schema = Schema::from(vec![field]);
+    let columns = Chunk::new(vec![Arc::new(array) as Arc<dyn Array>]);
+
+    write_batch("test.parquet", schema, columns)
 }

@@ -29,15 +29,16 @@ fn write(array: &dyn Array, encoding: Encoding) -> Result<()> {
         vec![encoding],
     )?;
 
-    let mut writer = Cursor::new(vec![]);
-    write_file(
-        &mut writer,
-        row_groups,
-        &schema,
-        to_parquet_schema(&schema)?,
-        options,
-        None,
-    )?;
+    let mut writer = vec![];
+
+    let mut writer = FileWriter::try_new(writer, schema, options)?;
+
+    writer.start()?;
+    for group in row_groups {
+        let (group, len) = group?;
+        writer.write(group, len)?;
+    }
+    let _ = writer.end(None)?;
     Ok(())
 }
 

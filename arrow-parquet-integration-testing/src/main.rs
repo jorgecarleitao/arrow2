@@ -12,7 +12,7 @@ use arrow2::{
         json_integration::read,
         json_integration::ArrowJson,
         parquet::write::{
-            write_file, Compression, Encoding, RowGroupIterator, Version, WriteOptions,
+            Compression, Encoding, FileWriter, RowGroupIterator, Version, WriteOptions,
         },
     },
 };
@@ -201,17 +201,17 @@ fn main() -> Result<()> {
 
     let row_groups =
         RowGroupIterator::try_new(batches.into_iter().map(Ok), &schema, options, encodings)?;
-    let parquet_schema = row_groups.parquet_schema().clone();
 
-    let mut writer = File::create(write_path)?;
+    let writer = File::create(write_path)?;
 
-    let _ = write_file(
-        &mut writer,
-        row_groups,
-        &schema,
-        parquet_schema,
-        options,
-        None,
-    )?;
+    let mut writer = FileWriter::try_new(writer, schema, options)?;
+
+    writer.start()?;
+    for group in row_groups {
+        let (group, len) = group?;
+        writer.write(group, len)?;
+    }
+    let _ = writer.end(None)?;
+
     Ok(())
 }
