@@ -18,6 +18,19 @@ impl BooleanArray {
         MutableBooleanArray::from_trusted_len_values_iter(iterator).into()
     }
 
+    /// Creates a new [`BooleanArray`] from an [`TrustedLen`] of `bool`.
+    /// Use this over [`BooleanArray::from_trusted_len_iter`] when the iterator is trusted len
+    /// but this crate does not mark it as such.
+    /// # Safety
+    /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
+    /// I.e. that `size_hint().1` correctly reports its length.
+    #[inline]
+    pub unsafe fn from_trusted_len_values_iter_unchecked<I: Iterator<Item = bool>>(
+        iterator: I,
+    ) -> Self {
+        MutableBooleanArray::from_trusted_len_values_iter_unchecked(iterator).into()
+    }
+
     /// Creates a new [`BooleanArray`] from a slice of `bool`.
     #[inline]
     pub fn from_slice<P: AsRef<[bool]>>(slice: P) -> Self {
