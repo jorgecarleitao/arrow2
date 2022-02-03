@@ -41,7 +41,7 @@ type TonicStream<T> = Pin<Box<dyn Stream<Item = T> + Send + Sync + 'static>>;
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 type Result<T = (), E = Error> = std::result::Result<T, E>;
 
-pub async fn scenario_setup(port: &str) -> Result {
+pub async fn scenario_setup(port: u16) -> Result {
     let addr = super::listen_on(port).await?;
 
     let service = FlightServiceImpl {
@@ -175,11 +175,12 @@ impl FlightService for FlightServiceImpl {
 
                 let total_records: usize = flight.chunks.iter().map(|chunk| chunk.len()).sum();
 
-                let schema = serialize_schema_to_info(&flight.schema, Some(&flight.ipc_schema.fields))
-                    .expect(
-                        "Could not generate schema bytes from schema stored by a DoPut; \
+                let schema =
+                    serialize_schema_to_info(&flight.schema, Some(&flight.ipc_schema.fields))
+                        .expect(
+                            "Could not generate schema bytes from schema stored by a DoPut; \
                          this should be impossible",
-                    );
+                        );
 
                 let info = FlightInfo {
                     schema,

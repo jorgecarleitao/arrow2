@@ -1,7 +1,7 @@
 use std::fs::File;
 
 use arrow2::io::json_integration::ArrowJson;
-use clap::{App, Arg};
+use clap::Parser;
 
 use arrow2::io::ipc::read;
 use arrow2::io::ipc::write;
@@ -11,49 +11,40 @@ use arrow2::{
 };
 use arrow_integration_testing::read_json_file;
 
-fn main() -> Result<()> {
-    let matches = App::new("rust arrow-json-integration-test")
-        .arg(Arg::with_name("integration").long("integration"))
-        .arg(
-            Arg::with_name("arrow")
-                .long("arrow")
-                .help("path to ARROW file")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("json")
-                .long("json")
-                .help("path to JSON file")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("mode")
-                .long("mode")
-                .help("mode of integration testing tool (ARROW_TO_JSON, JSON_TO_ARROW, VALIDATE)")
-                .takes_value(true)
-                .default_value("VALIDATE"),
-        )
-        .arg(
-            Arg::with_name("verbose")
-                .long("verbose")
-                .help("enable/disable verbose mode"),
-        )
-        .get_matches();
+#[derive(Debug, Clone, clap::ArgEnum)]
+#[clap(rename_all = "SCREAMING_SNAKE_CASE")]
+enum Mode {
+    ArrowToJson,
+    JsonToArrow,
+    Validate,
+}
 
-    let arrow_file = matches
-        .value_of("arrow")
-        .expect("must provide path to arrow file");
-    let json_file = matches
-        .value_of("json")
-        .expect("must provide path to json file");
-    let mode = matches.value_of("mode").unwrap();
-    let verbose = true; //matches.value_of("verbose").is_some();
+#[derive(Debug, Parser)]
+struct Args {
+    #[clap(short, long, help = "integration flag")]
+    integration: bool,
+    #[clap(short, long, help = "Path to arrow file")]
+    arrow: String,
+    #[clap(short, long, help = "Path to json file")]
+    json: String,
+    #[clap(arg_enum, short, long)]
+    mode: Mode,
+    #[clap(short, long, help = "enable/disable verbose mode")]
+    verbose: bool,
+}
+
+fn main() -> Result<()> {
+    let args = Args::parse();
+
+    let arrow_file = args.arrow;
+    let json_file = args.json;
+    let mode = args.mode;
+    let verbose = args.verbose;
 
     match mode {
-        "JSON_TO_ARROW" => json_to_arrow(json_file, arrow_file, verbose),
-        "ARROW_TO_JSON" => arrow_to_json(arrow_file, json_file, verbose),
-        "VALIDATE" => validate(arrow_file, json_file, verbose),
-        _ => panic!("mode {} not supported", mode),
+        Mode::JsonToArrow => json_to_arrow(&json_file, &arrow_file, verbose),
+        Mode::ArrowToJson => arrow_to_json(&arrow_file, &json_file, verbose),
+        Mode::Validate => validate(&arrow_file, &json_file, verbose),
     }
 }
 
