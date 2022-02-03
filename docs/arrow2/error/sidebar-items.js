@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["ArrowError","Enum with all errors in this crate."]],"type":[["Result","Typedef for a [`std::result::Result`] of an [`ArrowError`]."]]});
