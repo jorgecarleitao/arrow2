@@ -2,6 +2,7 @@ use crate::{
     bitmap::Bitmap,
     datatypes::{DataType, PhysicalType},
 };
+use either::Either;
 
 use super::{display_fmt, Array};
 
@@ -94,6 +95,42 @@ impl BooleanArray {
         let mut arr = self.clone();
         arr.validity = validity;
         arr
+    }
+
+    /// Try to convert this `BooleanArray` to a `MutableBooleanArray`
+    pub fn into_mut(self) -> Either<Self, MutableBooleanArray> {
+        use Either::*;
+
+        if let Some(bitmap) = self.validity {
+            match bitmap.into_mut() {
+                Left(bitmap) => Left(BooleanArray::from_data(
+                    self.data_type,
+                    self.values,
+                    Some(bitmap),
+                )),
+                Right(mutable_bitmap) => match self.values.into_mut() {
+                    Left(immutable) => Left(BooleanArray::from_data(
+                        self.data_type,
+                        immutable,
+                        Some(mutable_bitmap.into()),
+                    )),
+                    Right(mutable) => Right(MutableBooleanArray::from_data(
+                        self.data_type,
+                        mutable,
+                        Some(mutable_bitmap),
+                    )),
+                },
+            }
+        } else {
+            match self.values.into_mut() {
+                Left(immutable) => Left(BooleanArray::from_data(self.data_type, immutable, None)),
+                Right(mutable) => Right(MutableBooleanArray::from_data(
+                    self.data_type,
+                    mutable,
+                    None,
+                )),
+            }
+        }
     }
 }
 

@@ -1,4 +1,5 @@
 use crate::{bitmap::Bitmap, buffer::Buffer, datatypes::DataType};
+use either::Either;
 
 use super::{
     display_fmt,
@@ -176,6 +177,80 @@ impl<O: Offset> Utf8Array<O> {
         let mut arr = self.clone();
         arr.validity = validity;
         arr
+    }
+
+    /// Try to convert this `Utf8Array` to a `MutableUtf8Array`
+    pub fn into_mut(self) -> Either<Self, MutableUtf8Array<O>> {
+        use Either::*;
+        if let Some(bitmap) = self.validity {
+            match bitmap.into_mut() {
+                Left(bitmap) => Left(Utf8Array::from_data(
+                    self.data_type,
+                    self.offsets,
+                    self.values,
+                    Some(bitmap),
+                )),
+                Right(mutable_bitmap) => match (self.values.get_vec(), self.offsets.get_vec()) {
+                    (Left(immutable_values), Left(immutable_offsets)) => {
+                        Left(Utf8Array::from_data(
+                            self.data_type,
+                            immutable_offsets,
+                            immutable_values,
+                            Some(mutable_bitmap.into()),
+                        ))
+                    }
+                    (Left(immutable_values), Right(mutable_offsets)) => Left(Utf8Array::from_data(
+                        self.data_type,
+                        mutable_offsets.into(),
+                        immutable_values,
+                        Some(mutable_bitmap.into()),
+                    )),
+                    (Right(mutable_values), Left(immutable_offsets)) => Left(Utf8Array::from_data(
+                        self.data_type,
+                        immutable_offsets,
+                        mutable_values.into(),
+                        Some(mutable_bitmap.into()),
+                    )),
+                    (Right(mutable_values), Right(mutable_offsets)) => {
+                        Right(MutableUtf8Array::from_data(
+                            self.data_type,
+                            mutable_offsets,
+                            mutable_values,
+                            Some(mutable_bitmap),
+                        ))
+                    }
+                },
+            }
+        } else {
+            match (self.values.get_vec(), self.offsets.get_vec()) {
+                (Left(immutable_values), Left(immutable_offsets)) => Left(Utf8Array::from_data(
+                    self.data_type,
+                    immutable_offsets,
+                    immutable_values,
+                    None,
+                )),
+                (Left(immutable_values), Right(mutable_offsets)) => Left(Utf8Array::from_data(
+                    self.data_type,
+                    mutable_offsets.into(),
+                    immutable_values,
+                    None,
+                )),
+                (Right(mutable_values), Left(immutable_offsets)) => Left(Utf8Array::from_data(
+                    self.data_type,
+                    immutable_offsets,
+                    mutable_values.into(),
+                    None,
+                )),
+                (Right(mutable_values), Right(mutable_offsets)) => {
+                    Right(MutableUtf8Array::from_data(
+                        self.data_type,
+                        mutable_offsets,
+                        mutable_values,
+                        None,
+                    ))
+                }
+            }
+        }
     }
 }
 
