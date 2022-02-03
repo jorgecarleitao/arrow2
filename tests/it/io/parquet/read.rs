@@ -254,7 +254,6 @@ fn v1_nested_large_binary() -> Result<()> {
 }
 
 #[test]
-#[ignore] // todo
 fn v2_nested_nested() -> Result<()> {
     test_pyarrow_integration(7, 2, "nested", false, false, None)
 }
