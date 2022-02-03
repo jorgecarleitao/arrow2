@@ -14,8 +14,8 @@ use crate::{
 use super::Utf8Array;
 use crate::array::physical_binary::*;
 
-struct Wrapper<P>(P);
-impl<T: AsRef<str>> AsRef<[u8]> for Wrapper<T> {
+struct StrAsBytes<P>(P);
+impl<T: AsRef<str>> AsRef<[u8]> for StrAsBytes<T> {
     #[inline]
     fn as_ref(&self) -> &[u8] {
         self.0.as_ref().as_bytes()
@@ -278,6 +278,22 @@ impl<O: Offset> MutableUtf8Array<O> {
         unsafe { self.extend_trusted_len_values_unchecked(iterator) }
     }
 
+    /// Extends the [`MutableUtf8Array`] from an iterator of values.
+    /// This differs from `extended_trusted_len` which accepts iterator of optional values.
+    #[inline]
+    pub fn extend_values<I, P>(&mut self, iterator: I)
+    where
+        P: AsRef<str>,
+        I: Iterator<Item = P>,
+    {
+        let iterator = iterator.map(StrAsBytes);
+        let additional = extend_from_values_iter(&mut self.offsets, &mut self.values, iterator);
+
+        if let Some(validity) = self.validity.as_mut() {
+            validity.extend_constant(additional, true);
+        }
+    }
+
     /// Extends the [`MutableUtf8Array`] from an iterator of values of trusted len.
     /// This differs from `extended_trusted_len_unchecked` which accepts iterator of optional
     /// values.
@@ -292,7 +308,7 @@ impl<O: Offset> MutableUtf8Array<O> {
         let (_, upper) = iterator.size_hint();
         let additional = upper.expect("extend_trusted_len_values requires an upper limit");
 
-        let iterator = iterator.map(Wrapper);
+        let iterator = iterator.map(StrAsBytes);
         extend_from_trusted_len_values_iter(&mut self.offsets, &mut self.values, iterator);
 
         if let Some(validity) = self.validity.as_mut() {
@@ -325,7 +341,7 @@ impl<O: Offset> MutableUtf8Array<O> {
             self.validity = Some(validity);
         }
 
-        let iterator = iterator.map(|x| x.map(Wrapper));
+        let iterator = iterator.map(|x| x.map(StrAsBytes));
         extend_from_trusted_len_iter(
             &mut self.offsets,
             &mut self.values,
@@ -348,7 +364,7 @@ impl<O: Offset> MutableUtf8Array<O> {
         P: AsRef<str>,
         I: Iterator<Item = Option<P>>,
     {
-        let iterator = iterator.map(|x| x.map(Wrapper));
+        let iterator = iterator.map(|x| x.map(StrAsBytes));
         let (validity, offsets, values) = trusted_len_unzip(iterator);
 
         // soundness: P is `str`
@@ -374,7 +390,7 @@ impl<O: Offset> MutableUtf8Array<O> {
     pub unsafe fn from_trusted_len_values_iter_unchecked<T: AsRef<str>, I: Iterator<Item = T>>(
         iterator: I,
     ) -> Self {
-        let iterator = iterator.map(Wrapper);
+        let iterator = iterator.map(StrAsBytes);
         let (offsets, values) = unsafe { trusted_len_values_iter(iterator) };
         // soundness: T is AsRef<str>
         Self::from_data_unchecked(Self::default_data_type(), offsets, values, None)
@@ -417,7 +433,7 @@ impl<O: Offset> MutableUtf8Array<O> {
     {
         let iterator = iterator.into_iter();
 
-        let iterator = iterator.map(|x| x.map(|x| x.map(Wrapper)));
+        let iterator = iterator.map(|x| x.map(|x| x.map(StrAsBytes)));
         let (validity, offsets, values) = try_trusted_len_unzip(iterator)?;
 
         // soundness: P is `str`
@@ -442,7 +458,7 @@ impl<O: Offset> MutableUtf8Array<O> {
 
     /// Creates a new [`MutableUtf8Array`] from a [`Iterator`] of `&str`.
     pub fn from_iter_values<T: AsRef<str>, I: Iterator<Item = T>>(iterator: I) -> Self {
-        let iterator = iterator.map(Wrapper);
+        let iterator = iterator.map(StrAsBytes);
         let (offsets, values) = values_iter(iterator);
         // soundness: T: AsRef<str>
         unsafe { Self::from_data_unchecked(Self::default_data_type(), offsets, values, None) }

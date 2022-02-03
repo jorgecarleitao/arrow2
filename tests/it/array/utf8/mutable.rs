@@ -80,3 +80,18 @@ fn test_extend_trusted_len() {
         Some(&Bitmap::from_u8_slice(&[0b00011011], 5))
     );
 }
+
+#[test]
+fn test_extend_values() {
+    let mut array = MutableUtf8Array::<i32>::new();
+
+    array.extend_values([Some("hi"), None, Some("there"), None].iter().flatten());
+    array.extend_values([Some("hello"), None].iter().flatten());
+    array.extend_values(vec![Some("again"), None].into_iter().flatten());
+
+    let array: Utf8Array<i32> = array.into();
+
+    assert_eq!(array.values().as_slice(), b"hitherehelloagain");
+    assert_eq!(array.offsets().as_slice(), &[0, 2, 7, 12, 17]);
+    assert_eq!(array.validity(), None,);
+}
