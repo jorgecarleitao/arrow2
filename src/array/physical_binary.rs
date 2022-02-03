@@ -157,6 +157,41 @@ pub(crate) unsafe fn extend_from_trusted_len_values_iter<I, P, O>(
     offsets.set_len(offsets.len() + additional);
 }
 
+// Populates `offsets` and `values` [`Vec`]s with information extracted
+// from the incoming `iterator`.
+
+// the return value indicates how many items were added.
+#[inline]
+pub(crate) fn extend_from_values_iter<I, P, O>(
+    offsets: &mut Vec<O>,
+    values: &mut Vec<u8>,
+    iterator: I,
+) -> usize
+where
+    O: Offset,
+    P: AsRef<[u8]>,
+    I: Iterator<Item = P>,
+{
+    let (size_hint, _) = iterator.size_hint();
+
+    offsets.reserve(size_hint);
+
+    // Read in the last offset, will be used to increment and store
+    // new values later on
+    let mut length = *offsets.last().unwrap();
+    let start_index = offsets.len();
+
+    for item in iterator {
+        let s = item.as_ref();
+        // Calculate the new offset value
+        length += O::from_usize(s.len()).unwrap();
+
+        values.extend_from_slice(s);
+        offsets.push(length);
+    }
+    offsets.len() - start_index
+}
+
 // Populates `offsets`, `values`, and `validity` [`Vec`]s with
 // information extracted from the incoming `iterator`.
 //
