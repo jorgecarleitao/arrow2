@@ -226,6 +226,21 @@ impl MutableBooleanArray {
         )
     }
 
+    /// Creates a new [`MutableBooleanArray`] from an [`TrustedLen`] of `bool`.
+    /// Use this over [`BooleanArray::from_trusted_len_iter`] when the iterator is trusted len
+    /// but this crate does not mark it as such.
+    /// # Safety
+    /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
+    /// I.e. that `size_hint().1` correctly reports its length.
+    #[inline]
+    pub unsafe fn from_trusted_len_values_iter_unchecked<I: Iterator<Item = bool>>(
+        iterator: I,
+    ) -> Self {
+        let mut mutable = MutableBitmap::new();
+        mutable.extend_from_trusted_len_iter_unchecked(iterator);
+        MutableBooleanArray::from_data(DataType::Boolean, mutable, None)
+    }
+
     /// Creates a new [`MutableBooleanArray`] from a slice of `bool`.
     #[inline]
     pub fn from_slice<P: AsRef<[bool]>>(slice: P) -> Self {
