@@ -15,16 +15,21 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use std::env;
-use std::fs::File;
-
 use arrow2::error::Result;
 use arrow2::io::ipc::read;
 use arrow2::io::ipc::write;
+use clap::Parser;
+use std::fs::File;
+
+#[derive(Debug, Parser)]
+#[clap(author, version, about("Read an arrow file and stream to stdout"), long_about = None)]
+struct Args {
+    file_name: String,
+}
 
 fn main() -> Result<()> {
-    let args: Vec<String> = env::args().collect();
-    let filename = &args[1];
+    let args = Args::parse();
+    let filename = args.file_name;
     let mut f = File::open(filename)?;
     let metadata = read::read_file_metadata(&mut f)?;
     let mut reader = read::FileReader::new(f, metadata.clone(), None);

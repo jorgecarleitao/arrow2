@@ -1,7 +1,3 @@
-use std::fs::File;
-use std::sync::Arc;
-use std::{collections::HashMap, io::Read};
-
 use arrow2::array::Array;
 use arrow2::io::ipc::IpcField;
 use arrow2::{
@@ -12,14 +8,16 @@ use arrow2::{
         json_integration::read,
         json_integration::ArrowJson,
         parquet::write::{
-            Compression, Encoding, FileWriter, RowGroupIterator, Version, WriteOptions,
+            Compression as ParquetCompression, Encoding, FileWriter, RowGroupIterator,
+            Version as ParquetVersion, WriteOptions,
         },
     },
 };
-
-use clap::{App, Arg};
-
+use clap::Parser;
 use flate2::read::GzDecoder;
+use std::fs::File;
+use std::sync::Arc;
+use std::{collections::HashMap, io::Read};
 
 /// Read gzipped JSON file
 pub fn read_gzip_json(
@@ -59,69 +57,72 @@ pub fn read_gzip_json(
     Ok((schema, ipc_fields, batches))
 }
 
-fn main() -> Result<()> {
-    let matches = App::new("json-parquet-integration")
-        .arg(
-            Arg::with_name("json")
-                .long("json")
-                .required(true)
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("write_path")
-                .long("output")
-                .required(true)
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("version")
-                .long("version")
-                .required(true)
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("projection")
-                .long("projection")
-                .required(false)
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("encoding-utf8")
-                .long("encoding-utf8")
-                .required(true)
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("compression")
-                .long("compression")
-                .required(true)
-                .takes_value(true),
-        )
-        .get_matches();
-    let json_file = matches
-        .value_of("json")
-        .expect("must provide path to json file");
-    let write_path = matches
-        .value_of("write_path")
-        .expect("must provide path to write parquet");
-    let version = matches
-        .value_of("version")
-        .expect("must provide version of parquet");
-    let projection = matches.value_of("projection");
-    let utf8_encoding = matches
-        .value_of("encoding-utf8")
-        .expect("must provide utf8 type encoding");
-    let compression = matches
-        .value_of("compression")
-        .expect("must provide compression");
+#[derive(clap::ArgEnum, Debug, Clone)]
+enum Version {
+    #[clap(name = "1")]
+    V1,
+    #[clap(name = "2")]
+    V2,
+}
 
-    let projection = projection.map(|x| {
+impl Into<ParquetVersion> for Version {
+    fn into(self) -> ParquetVersion {
+        match self {
+            Version::V1 => ParquetVersion::V1,
+            Version::V2 => ParquetVersion::V2,
+        }
+    }
+}
+
+#[derive(clap::ArgEnum, Debug, Clone)]
+enum Compression {
+    Zstd,
+    Snappy,
+    Uncompressed,
+}
+
+impl Into<ParquetCompression> for Compression {
+    fn into(self) -> ParquetCompression {
+        match self {
+            Compression::Zstd => ParquetCompression::Zstd,
+            Compression::Snappy => ParquetCompression::Snappy,
+            Compression::Uncompressed => ParquetCompression::Uncompressed,
+        }
+    }
+}
+
+#[derive(clap::ArgEnum, PartialEq, Debug, Clone)]
+enum EncodingScheme {
+    Plain,
+    Delta,
+}
+
+#[derive(Debug, Parser)]
+struct Args {
+    #[clap(short, long, help = "Path to JSON file")]
+    json: String,
+    #[clap(short('o'), long("output"), help = "Path to write parquet file")]
+    write_path: String,
+    #[clap(short, long, arg_enum, help = "Parquet version", default_value_t = Version::V2)]
+    version: Version,
+    #[clap(short, long, help = "commas separated projection")]
+    projection: Option<String>,
+    #[clap(short, long, arg_enum, help = "encoding scheme for utf8", default_value_t = EncodingScheme::Plain)]
+    encoding_utf8: EncodingScheme,
+    #[clap(short, long, arg_enum)]
+    compression: Compression,
+}
+
+fn main() -> Result<()> {
+    let args = Args::parse();
+
+    let projection = args.projection.map(|x| {
         x.split(',')
             .map(|x| x.parse::<usize>().unwrap())
             .collect::<Vec<_>>()
     });
 
-    let (schema, _, batches) = read_gzip_json("1.0.0-littleendian", json_file)?;
+    let (schema, _, batches) = read_gzip_json("1.0.0-littleendian", &args.json)?;
 
     let schema = if let Some(projection) = &projection {
         let fields = schema
@@ -164,23 +165,10 @@ fn main() -> Result<()> {
         batches
     };
 
-    let version = if version == "1" {
-        Version::V1
-    } else {
-        Version::V2
-    };
-
-    let compression = match compression {
-        "uncompressed" => Compression::Uncompressed,
-        "zstd" => Compression::Zstd,
-        "snappy" => Compression::Snappy,
-        other => todo!("{}", other),
-    };
-
     let options = WriteOptions {
         write_statistics: true,
-        compression,
-        version,
+        compression: args.compression.into(),
+        version: args.version.into(),
     };
 
     let encodings = schema
@@ -189,7 +177,7 @@ fn main() -> Result<()> {
         .map(|x| match x.data_type() {
             DataType::Dictionary(..) => Encoding::RleDictionary,
             DataType::Utf8 | DataType::LargeUtf8 => {
-                if utf8_encoding == "delta" {
+                if args.encoding_utf8 == EncodingScheme::Delta {
                     Encoding::DeltaLengthByteArray
                 } else {
                     Encoding::Plain
@@ -202,7 +190,7 @@ fn main() -> Result<()> {
     let row_groups =
         RowGroupIterator::try_new(batches.into_iter().map(Ok), &schema, options, encodings)?;
 
-    let writer = File::create(write_path)?;
+    let writer = File::create(args.write_path)?;
 
     let mut writer = FileWriter::try_new(writer, schema, options)?;
 

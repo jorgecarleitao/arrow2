@@ -31,7 +31,7 @@ logging = ["tracing-subscriber"]
 arrow2 = { path = "../", features = ["io_ipc", "io_ipc_compression", "io_flight", "io_json_integration"] }
 arrow-format = { version = "0.4", features = ["full"] }
 async-trait = "0.1.41"
-clap = "2.33"
+clap = { version = "^3", features = ["derive"] }
 futures = "0.3"
 hex = "0.4"
 prost = "0.9"
