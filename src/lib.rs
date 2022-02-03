@@ -28,3 +28,6 @@ pub mod util;
 // so that documentation gets test
 #[cfg(any(test, doctest))]
 mod docs;
+
+// re-exported because we return `Either` in our public API
+pub use either::Either;
