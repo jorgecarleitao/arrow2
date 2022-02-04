@@ -29,6 +29,7 @@ def case_basic_nullable(size=1):
         pa.field("decimal_18", pa.decimal128(18, 0)),
         pa.field("decimal_26", pa.decimal128(26, 0)),
         pa.field("timestamp_us", pa.timestamp("us")),
+        pa.field("timestamp_s", pa.timestamp("s")),
     ]
     schema = pa.schema(fields)
 
@@ -45,6 +46,7 @@ def case_basic_nullable(size=1):
             "decimal_18": decimal * size,
             "decimal_26": decimal * size,
             "timestamp_us": int64 * size,
+            "timestamp_s": int64 * size,
         },
         schema,
         f"basic_nullable_{size*10}.parquet",

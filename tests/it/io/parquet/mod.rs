@@ -19,18 +19,17 @@ pub fn read_column<R: Read + Seek>(
     column: usize,
 ) -> Result<ArrayStats> {
     let metadata = read_metadata(&mut reader)?;
+    let schema = get_schema(&metadata)?;
 
     let mut reader = FileReader::try_new(reader, Some(&[column]), None, None, None)?;
 
-    let statistics = metadata.row_groups[row_group]
-        .column(column)
-        .statistics()
-        .map(|x| statistics::deserialize_statistics(x?.as_ref()))
-        .transpose()?;
+    let field = &schema.fields[column];
+
+    let mut statistics = deserialize_statistics(field, metadata.row_groups[row_group].columns())?;
 
     Ok((
         reader.next().unwrap()?.into_arrays().pop().unwrap(),
-        statistics,
+        statistics.pop().unwrap(),
     ))
 }
 
@@ -328,6 +327,9 @@ pub fn pyarrow_nullable(column: usize) -> Box<dyn Array> {
             PrimitiveArray::<i64>::from(i64_values)
                 .to(DataType::Timestamp(TimeUnit::Microsecond, None)),
         ),
+        11 => Box::new(
+            PrimitiveArray::<i64>::from(i64_values).to(DataType::Timestamp(TimeUnit::Second, None)),
+        ),
         _ => unreachable!(),
     }
 }
@@ -401,6 +403,13 @@ pub fn pyarrow_nullable_statistics(column: usize) -> Option<Box<dyn Statistics>>
         }),
         10 => Box::new(PrimitiveStatistics::<i64> {
             data_type: DataType::Timestamp(TimeUnit::Microsecond, None),
+            distinct_count: None,
+            null_count: Some(3),
+            min_value: Some(0),
+            max_value: Some(9),
+        }),
+        11 => Box::new(PrimitiveStatistics::<i64> {
+            data_type: DataType::Timestamp(TimeUnit::Second, None),
             distinct_count: None,
             null_count: Some(3),
             min_value: Some(0),
@@ -607,11 +616,11 @@ pub fn pyarrow_struct(column: usize) -> Box<dyn Array> {
 
 pub fn pyarrow_struct_statistics(column: usize) -> Option<Box<dyn Statistics>> {
     match column {
-        0 => Some(Box::new(Utf8Statistics {
+        0 => Some(Box::new(BooleanStatistics {
             distinct_count: None,
-            null_count: Some(1),
-            min_value: Some("".to_string()),
-            max_value: Some("def".to_string()),
+            null_count: Some(4),
+            min_value: Some(false),
+            max_value: Some(true),
         })),
         1 => Some(Box::new(BooleanStatistics {
             distinct_count: None,

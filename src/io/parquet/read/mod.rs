@@ -322,6 +322,7 @@ fn page_iter_to_arrays<'a, I: 'a + DataPages>(
     chunk_size: usize,
 ) -> Result<ArrayIter<'a>> {
     use DataType::*;
+
     match data_type.to_logical_type() {
         Null => Ok(null::iter_to_arrays(pages, data_type, chunk_size)),
         Boolean => Ok(boolean::iter_to_arrays(pages, data_type, chunk_size)),
@@ -669,16 +670,6 @@ where
         _ => todo!(),
     })
 }
-
-// [Struct<Int, Utf8>, List<Int>, Bool]
-// => [Struct(Int), Struct(Utf8), List(Int), Bool]
-// [Struct<Struct<Int>, Utf8>, List<Int>, Bool]
-// => [Struct(Struct(Int)), Struct(Utf8), List(Int), Bool]
-// [List<Struct<Int, Bool>>]
-// => [List(Struct(Int)), List(Struct(Bool))]
-// [Struct<Struct<Int, Bool>, Utf8>]
-// => [Struct(Int), Struct(Bool)]
-// => [Struct(Struct(Int)), Struct(Struct(Bool)), Struct(Utf8)]
 
 fn field_to_init(field: &Field) -> Vec<InitNested> {
     use crate::datatypes::PhysicalType::*;

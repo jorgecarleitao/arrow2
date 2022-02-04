@@ -268,7 +268,12 @@ pub(super) fn finish<T: NativeType>(
     values: Vec<T>,
     validity: MutableBitmap,
 ) -> MutablePrimitiveArray<T> {
-    MutablePrimitiveArray::from_data(data_type.clone(), values, validity.into())
+    let validity = if validity.is_empty() {
+        None
+    } else {
+        Some(validity)
+    };
+    MutablePrimitiveArray::from_data(data_type.clone(), values, validity)
 }
 
 /// An iterator adapter over [`DataPages`] assumed to be encoded as primitive arrays
