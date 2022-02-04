@@ -92,7 +92,7 @@ flate2 = "1"
 doc-comment = "0.3"
 crossbeam-channel = "0.5.1"
 # used to test async readers
-tokio = { version = "1", features = ["macros", "rt", "fs"] }
+tokio = { version = "1", features = ["macros", "rt", "fs", "io-util"] }
 tokio-util = { version = "0.6", features = ["compat"] }
 # used to run formal property testing
 proptest = { version = "1", default_features = false, features = ["std"] }

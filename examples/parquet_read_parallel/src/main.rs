@@ -25,8 +25,9 @@ fn parallel_read(path: &str, row_group: usize) -> Result<Chunk<Arc<dyn Array>>> 
     let columns = columns
         .into_par_iter()
         .map(|mut iter| {
-            // when chunk_size != None, `iter` must be iterated multiple times to get all the chunks,
-            // and some synchronization is required to output a single `Chunk` per iterator
+            // when chunk_size != None, `iter` must be iterated multiple times to get all the chunks
+            // see the implementation of `arrow2::io::parquet::read::RowGroupDeserializer::next`
+            // to see how this can be done.
             iter.next().unwrap()
         })
         .collect::<Result<Vec<_>>>()?;

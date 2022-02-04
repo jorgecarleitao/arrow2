@@ -687,4 +687,5 @@ where
     ))
 }
 
+/// Type def for a sharable, boxed dyn [`Iterator`] of arrays
 pub type ArrayIter<'a> = Box<dyn Iterator<Item = Result<Arc<dyn Array>>> + Send + Sync + 'a>;
