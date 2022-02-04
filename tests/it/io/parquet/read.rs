@@ -346,6 +346,11 @@ fn v1_timestamp_us_nullable() -> Result<()> {
 }
 
 #[test]
+fn v1_timestamp_s_nullable() -> Result<()> {
+    test_pyarrow_integration(11, 1, "basic", false, false, None)
+}
+
+#[test]
 fn v2_decimal_26_required() -> Result<()> {
     test_pyarrow_integration(8, 2, "basic", false, true, None)
 }

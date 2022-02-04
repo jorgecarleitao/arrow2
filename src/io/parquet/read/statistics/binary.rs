@@ -2,13 +2,12 @@ use std::any::Any;
 use std::convert::TryFrom;
 
 use crate::datatypes::DataType;
-use parquet2::schema::types::ParquetType;
 use parquet2::statistics::BinaryStatistics as ParquetByteArrayStatistics;
 
-use super::super::schema;
 use super::Statistics;
 use crate::error::{ArrowError, Result};
 
+/// Represents a `Binary` or `LargeBinary`
 #[derive(Debug, Clone, PartialEq)]
 pub struct BinaryStatistics {
     pub null_count: Option<i64>,
@@ -87,14 +86,14 @@ impl TryFrom<&ParquetByteArrayStatistics> for Utf8Statistics {
 
 pub(super) fn statistics_from_byte_array(
     stats: &ParquetByteArrayStatistics,
-    type_: &ParquetType,
+    data_type: DataType,
 ) -> Result<Box<dyn Statistics>> {
-    let data_type = schema::to_data_type(type_)?.unwrap();
-
     use DataType::*;
     Ok(match data_type {
         Utf8 => Box::new(Utf8Statistics::try_from(stats)?),
+        LargeUtf8 => Box::new(Utf8Statistics::try_from(stats)?),
         Binary => Box::new(BinaryStatistics::from(stats)),
+        LargeBinary => Box::new(BinaryStatistics::from(stats)),
         other => {
             return Err(ArrowError::NotYetImplemented(format!(
                 "Can't read {:?} from parquet",

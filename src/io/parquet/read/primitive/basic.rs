@@ -8,7 +8,7 @@ use parquet2::{
 };
 
 use crate::{
-    array::PrimitiveArray, bitmap::MutableBitmap, datatypes::DataType, error::Result,
+    array::MutablePrimitiveArray, bitmap::MutableBitmap, datatypes::DataType, error::Result,
     types::NativeType,
 };
 
@@ -267,13 +267,18 @@ pub(super) fn finish<T: NativeType>(
     data_type: &DataType,
     values: Vec<T>,
     validity: MutableBitmap,
-) -> PrimitiveArray<T> {
-    PrimitiveArray::from_data(data_type.clone(), values.into(), validity.into())
+) -> MutablePrimitiveArray<T> {
+    let validity = if validity.is_empty() {
+        None
+    } else {
+        Some(validity)
+    };
+    MutablePrimitiveArray::from_data(data_type.clone(), values, validity)
 }
 
-/// An iterator adapter over [`DataPages`] assumed to be encoded as boolean arrays
+/// An iterator adapter over [`DataPages`] assumed to be encoded as primitive arrays
 #[derive(Debug)]
-pub struct PrimitiveArrayIterator<T, I, P, G, F>
+pub struct Iter<T, I, P, G, F>
 where
     I: DataPages,
     T: NativeType,
@@ -290,7 +295,7 @@ where
     phantom: std::marker::PhantomData<P>,
 }
 
-impl<T, I, P, G, F> PrimitiveArrayIterator<T, I, P, G, F>
+impl<T, I, P, G, F> Iter<T, I, P, G, F>
 where
     I: DataPages,
     T: NativeType,
@@ -312,7 +317,7 @@ where
     }
 }
 
-impl<T, I, P, G, F> Iterator for PrimitiveArrayIterator<T, I, P, G, F>
+impl<T, I, P, G, F> Iterator for Iter<T, I, P, G, F>
 where
     I: DataPages,
     T: NativeType,
@@ -320,7 +325,7 @@ where
     G: Copy + for<'b> Fn(&'b [u8]) -> P,
     F: Copy + Fn(P) -> T,
 {
-    type Item = Result<PrimitiveArray<T>>;
+    type Item = Result<MutablePrimitiveArray<T>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let maybe_state = utils::next(
