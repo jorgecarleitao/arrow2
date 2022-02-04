@@ -1,17 +1,20 @@
-use std::sync::Arc;
+use std::{collections::VecDeque, sync::Arc};
 
 use parquet2::{
     encoding::{hybrid_rle::HybridRleDecoder, Encoding},
-    page::DataPage,
+    page::{DataPage, DictPage},
     schema::Repetition,
 };
 
-use super::utils;
 use crate::{
-    array::{Array, DictionaryKey, PrimitiveArray},
+    array::{Array, DictionaryArray, DictionaryKey, PrimitiveArray},
     bitmap::MutableBitmap,
-    error::Result,
-    io::parquet::read::utils::{extend_from_decoder, OptionalPageValidity},
+    error::{ArrowError, Result},
+};
+
+use super::{
+    utils::{self, extend_from_decoder, Decoder, MaybeNext, OptionalPageValidity},
+    DataPages,
 };
 
 // The state of a `DataPage` of `Primitive` parquet primitive type
@@ -169,4 +172,80 @@ impl Dict {
 
 pub fn finish_key<K: DictionaryKey>(values: Vec<K>, validity: MutableBitmap) -> PrimitiveArray<K> {
     PrimitiveArray::from_data(K::PRIMITIVE.into(), values.into(), validity.into())
+}
+
+#[inline]
+pub(super) fn next_dict<
+    'a,
+    K: DictionaryKey,
+    I: DataPages,
+    F: Fn(&dyn DictPage) -> Arc<dyn Array>,
+>(
+    iter: &'a mut I,
+    items: &mut VecDeque<(Vec<K>, MutableBitmap)>,
+    dict: &mut Dict,
+    chunk_size: usize,
+    read_dict: F,
+) -> MaybeNext<Result<DictionaryArray<K>>> {
+    if items.len() > 1 {
+        let (values, validity) = items.pop_back().unwrap();
+        let keys = finish_key(values, validity);
+        return MaybeNext::Some(Ok(DictionaryArray::from_data(keys, dict.unwrap())));
+    }
+    match (items.pop_back(), iter.next()) {
+        (_, Err(e)) => MaybeNext::Some(Err(e.into())),
+        (None, Ok(None)) => MaybeNext::None,
+        (state, Ok(Some(page))) => {
+            // consume the dictionary page
+            if let Some(dict_page) = page.dictionary_page() {
+                *dict = match dict {
+                    Dict::Empty => Dict::Complete(read_dict(dict_page.as_ref())),
+                    _ => unreachable!(),
+                };
+            } else {
+                return MaybeNext::Some(Err(ArrowError::nyi(
+                    "dictionary arrays from non-dict-encoded pages",
+                )));
+            }
+
+            let maybe_array = {
+                // there is a new page => consume the page from the start
+                let maybe_page = PrimitiveDecoder::default().build_state(page);
+                let page = match maybe_page {
+                    Ok(page) => page,
+                    Err(e) => return MaybeNext::Some(Err(e)),
+                };
+
+                utils::extend_from_new_page::<PrimitiveDecoder<K>, _, _>(
+                    page,
+                    state,
+                    chunk_size,
+                    items,
+                    &PrimitiveDecoder::default(),
+                )
+            };
+            match maybe_array {
+                Ok(Some((values, validity))) => {
+                    let keys = PrimitiveArray::from_data(
+                        K::PRIMITIVE.into(),
+                        values.into(),
+                        validity.into(),
+                    );
+
+                    MaybeNext::Some(Ok(DictionaryArray::from_data(keys, dict.unwrap())))
+                }
+                Ok(None) => MaybeNext::More,
+                Err(e) => MaybeNext::Some(Err(e)),
+            }
+        }
+        (Some((values, validity)), Ok(None)) => {
+            // we have a populated item and no more pages
+            // the only case where an item's length may be smaller than chunk_size
+            debug_assert!(values.len() <= chunk_size);
+
+            let keys = finish_key(values, validity);
+
+            MaybeNext::Some(Ok(DictionaryArray::from_data(keys, dict.unwrap())))
+        }
+    }
 }
