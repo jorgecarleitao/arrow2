@@ -3,7 +3,7 @@ use std::{collections::VecDeque, sync::Arc};
 use parquet2::page::FixedLenByteArrayPageDict;
 
 use crate::{
-    array::{Array, DictionaryArray, DictionaryKey, FixedSizeBinaryArray, PrimitiveArray},
+    array::{DictionaryArray, DictionaryKey, FixedSizeBinaryArray, PrimitiveArray},
     bitmap::MutableBitmap,
     datatypes::DataType,
     error::{ArrowError, Result},
@@ -12,12 +12,11 @@ use crate::{
 use super::super::dictionary::*;
 use super::super::utils;
 use super::super::utils::Decoder;
-use super::super::ArrayIter;
 use super::super::DataPages;
 
 /// An iterator adapter over [`DataPages`] assumed to be encoded as parquet's dictionary-encoded binary representation
 #[derive(Debug)]
-pub struct ArrayIterator<K, I>
+pub struct DictIter<K, I>
 where
     I: DataPages,
     K: DictionaryKey,
@@ -29,12 +28,12 @@ where
     chunk_size: usize,
 }
 
-impl<K, I> ArrayIterator<K, I>
+impl<K, I> DictIter<K, I>
 where
     K: DictionaryKey,
     I: DataPages,
 {
-    fn new(iter: I, data_type: DataType, chunk_size: usize) -> Self {
+    pub fn new(iter: I, data_type: DataType, chunk_size: usize) -> Self {
         let data_type = match data_type {
             DataType::Dictionary(_, values, _) => values.as_ref().clone(),
             _ => unreachable!(),
@@ -49,7 +48,7 @@ where
     }
 }
 
-impl<K, I> Iterator for ArrayIterator<K, I>
+impl<K, I> Iterator for DictIter<K, I>
 where
     I: DataPages,
     K: DictionaryKey,
@@ -137,16 +136,4 @@ where
             }
         }
     }
-}
-
-/// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
-pub fn iter_to_arrays<'a, K, I>(iter: I, data_type: DataType, chunk_size: usize) -> ArrayIter<'a>
-where
-    I: 'a + DataPages,
-    K: DictionaryKey,
-{
-    Box::new(
-        ArrayIterator::<K, I>::new(iter, data_type, chunk_size)
-            .map(|x| x.map(|x| Arc::new(x) as Arc<dyn Array>)),
-    )
 }

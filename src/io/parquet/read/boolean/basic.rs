@@ -140,14 +140,14 @@ fn finish(data_type: &DataType, values: MutableBitmap, validity: MutableBitmap) 
 
 /// An iterator adapter over [`DataPages`] assumed to be encoded as boolean arrays
 #[derive(Debug)]
-pub struct BooleanArrayIterator<I: DataPages> {
+pub struct Iter<I: DataPages> {
     iter: I,
     data_type: DataType,
     items: VecDeque<(MutableBitmap, MutableBitmap)>,
     chunk_size: usize,
 }
 
-impl<I: DataPages> BooleanArrayIterator<I> {
+impl<I: DataPages> Iter<I> {
     pub fn new(iter: I, data_type: DataType, chunk_size: usize) -> Self {
         Self {
             iter,
@@ -158,7 +158,7 @@ impl<I: DataPages> BooleanArrayIterator<I> {
     }
 }
 
-impl<I: DataPages> Iterator for BooleanArrayIterator<I> {
+impl<I: DataPages> Iterator for Iter<I> {
     type Item = Result<BooleanArray>;
 
     fn next(&mut self) -> Option<Self::Item> {

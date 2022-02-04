@@ -3,7 +3,7 @@ mod dictionary;
 mod nested;
 mod utils;
 
-pub use dictionary::iter_to_arrays as iter_to_dict_arrays;
+pub use dictionary::DictIter;
 pub use utils::read_item;
 
 use std::sync::Arc;

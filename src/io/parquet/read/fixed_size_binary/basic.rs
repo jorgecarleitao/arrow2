@@ -214,7 +214,7 @@ fn finish(
     FixedSizeBinaryArray::from_data(data_type.clone(), values.values.into(), validity.into())
 }
 
-pub struct BinaryArrayIterator<I: DataPages> {
+pub struct Iter<I: DataPages> {
     iter: I,
     data_type: DataType,
     size: usize,
@@ -222,7 +222,7 @@ pub struct BinaryArrayIterator<I: DataPages> {
     chunk_size: usize,
 }
 
-impl<I: DataPages> BinaryArrayIterator<I> {
+impl<I: DataPages> Iter<I> {
     pub fn new(iter: I, data_type: DataType, chunk_size: usize) -> Self {
         let size = FixedSizeBinaryArray::get_size(&data_type);
         Self {
@@ -235,7 +235,7 @@ impl<I: DataPages> BinaryArrayIterator<I> {
     }
 }
 
-impl<I: DataPages> Iterator for BinaryArrayIterator<I> {
+impl<I: DataPages> Iterator for Iter<I> {
     type Item = Result<FixedSizeBinaryArray>;
 
     fn next(&mut self) -> Option<Self::Item> {
