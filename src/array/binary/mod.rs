@@ -1,8 +1,13 @@
-use crate::{bitmap::Bitmap, buffer::Buffer, datatypes::DataType};
+use crate::{
+    bitmap::Bitmap,
+    buffer::Buffer,
+    datatypes::DataType,
+    error::{ArrowError, Result},
+};
 
 use super::{
     display_fmt, display_helper,
-    specification::{check_offsets, check_offsets_minimal},
+    specification::{check_offsets_minimal, try_check_offsets},
     Array, GenericBinaryArray, Offset,
 };
 
@@ -61,22 +66,45 @@ impl<O: Offset> BinaryArray<O> {
         values: Buffer<u8>,
         validity: Option<Bitmap>,
     ) -> Self {
-        check_offsets(&offsets, values.len());
+        Self::try_from_data(data_type, offsets, values, validity).unwrap()
+    }
 
-        if let Some(validity) = &validity {
-            assert_eq!(offsets.len() - 1, validity.len());
+    /// Creates a new [`BinaryArray`] from lower-level parts.
+    ///
+    /// This function returns an error iff:
+    /// * the offsets are not monotonically increasing
+    /// * The last offset is not equal to the values' length.
+    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * The `data_type`'s physical type is not equal to `Binary` or `LargeBinary`.
+    pub fn try_from_data(
+        data_type: DataType,
+        offsets: Buffer<O>,
+        values: Buffer<u8>,
+        validity: Option<Bitmap>,
+    ) -> Result<Self> {
+        try_check_offsets(&offsets, values.len())?;
+
+        if validity
+            .as_ref()
+            .map_or(false, |validity| validity.len() != offsets.len() - 1)
+        {
+            return Err(ArrowError::oos(
+                "validity mask length must match the number of values",
+            ));
         }
 
         if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
-            panic!("BinaryArray can only be initialized with DataType::Binary or DataType::LargeBinary")
+            return Err(ArrowError::oos(
+                "BinaryArray can only be initialized with DataType::Binary or DataType::LargeBinary",
+            ));
         }
 
-        Self {
+        Ok(Self {
             data_type,
             offsets,
             values,
             validity,
-        }
+        })
     }
 
     /// Returns the default [`DataType`], `DataType::Binary` or `DataType::LargeBinary`

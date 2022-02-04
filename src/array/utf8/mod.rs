@@ -1,9 +1,14 @@
-use crate::{bitmap::Bitmap, buffer::Buffer, datatypes::DataType};
+use crate::{
+    bitmap::Bitmap,
+    buffer::Buffer,
+    datatypes::DataType,
+    error::{ArrowError, Result},
+};
 use either::Either;
 
 use super::{
     display_fmt,
-    specification::{check_offsets_and_utf8, check_offsets_minimal},
+    specification::{check_offsets_minimal, try_check_offsets_and_utf8},
     Array, GenericBinaryArray, Offset,
 };
 
@@ -77,21 +82,44 @@ impl<O: Offset> Utf8Array<O> {
         values: Buffer<u8>,
         validity: Option<Bitmap>,
     ) -> Self {
-        check_offsets_and_utf8(&offsets, &values);
-        if let Some(ref validity) = validity {
-            assert_eq!(offsets.len() - 1, validity.len());
+        Utf8Array::try_from_data(data_type, offsets, values, validity).unwrap()
+    }
+
+    /// The canonical method to create a [`Utf8Array`] out of low-end APIs.
+    ///
+    /// This function returns an error iff:
+    /// * The `data_type`'s physical type is not consistent with the offset `O`.
+    /// * The `offsets` and `values` are inconsistent
+    /// * The `values` between `offsets` are utf8 encoded
+    /// * The validity is not `None` and its length is different from `offsets.len() - 1`.
+    pub fn try_from_data(
+        data_type: DataType,
+        offsets: Buffer<O>,
+        values: Buffer<u8>,
+        validity: Option<Bitmap>,
+    ) -> Result<Self> {
+        try_check_offsets_and_utf8(&offsets, &values)?;
+        if validity
+            .as_ref()
+            .map_or(false, |validity| validity.len() != offsets.len() - 1)
+        {
+            return Err(ArrowError::oos(
+                "validity mask length must match the number of values",
+            ));
         }
 
         if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
-            panic!("Utf8Array can only be initialized with DataType::Utf8 or DataType::LargeUtf8")
+            return Err(ArrowError::oos(
+                "Utf8Array can only be initialized with DataType::Utf8 or DataType::LargeUtf8",
+            ));
         }
 
-        Self {
+        Ok(Self {
             data_type,
             offsets,
             values,
             validity,
-        }
+        })
     }
 
     /// Returns the default [`DataType`], `DataType::Utf8` or `DataType::LargeUtf8`

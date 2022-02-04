@@ -134,7 +134,7 @@ impl<O: Offset, A: TraitBinaryArray<O>, I: DataPages> Iterator for ArrayIterator
         );
         match maybe_state {
             MaybeNext::Some(Ok((nested, values, validity))) => {
-                Some(Ok((nested, finish(&self.data_type, values, validity))))
+                Some(finish(&self.data_type, values, validity).map(|array| (nested, array)))
             }
             MaybeNext::Some(Err(e)) => Some(Err(e)),
             MaybeNext::None => None,
