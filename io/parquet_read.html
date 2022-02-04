@@ -146,57 +146,6 @@ It makes minimal assumptions on how you to decompose CPU and IO intensive tasks.
 </ul>
 <p>Here is how to read a single column chunk from a single row group:</p>
 <pre><pre class="playground"><code class="language-rust">use std::fs::File;
-use std::io::BufReader;
-
-use arrow2::io::parquet::read;
-use arrow2::{array::Array, error::Result};
-
-fn read_field(path: &amp;str, row_group: usize, field: usize) -&gt; Result&lt;Box&lt;dyn Array&gt;&gt; {
-    // Open a file, a common operation in Rust
-    let mut file = BufReader::new(File::open(path)?);
-
-    // Read the files' metadata. This has a small IO cost because it requires seeking to the end
-    // of the file to read its footer.
-    let metadata = read::read_metadata(&amp;mut file)?;
-
-    // Convert the files' metadata into an arrow schema. This is CPU-only and amounts to
-    // parse thrift if the arrow format is available on a key, or infering the arrow schema from
-    // the parquet's physical, converted and logical types.
-    let arrow_schema = read::get_schema(&amp;metadata)?;
-
-    // Created an iterator of column chunks. Each iteration
-    // yields an iterator of compressed pages. There is almost no CPU work in iterating.
-    let columns = read::get_column_iterator(&amp;mut file, &amp;metadata, row_group, field, None, vec![]);
-
-    // get the columns' field
-    let field = &amp;arrow_schema.fields[field];
-
-    // This is the actual work. In this case, pages are read and
-    // decompressed, decoded and deserialized to arrow.
-    // Because `columns` is an iterator, it uses a combination of IO and CPU.
-    let (array, _, _) = read::column_iter_to_array(columns, field, vec![])?;
-
-    Ok(array)
-}
-
-fn main() -&gt; Result&lt;()&gt; {
-    use std::env;
-    let args: Vec&lt;String&gt; = env::args().collect();
-
-    let file_path = &amp;args[1];
-    let field = args[2].parse::&lt;usize&gt;().unwrap();
-    let row_group = args[3].parse::&lt;usize&gt;().unwrap();
-
-    let array = read_field(file_path, row_group, field)?;
-    println!(&quot;{:?}&quot;, array);
-    Ok(())
-}
-</code></pre></pre>
-<p>The example above minimizes memory usage at the expense of mixing IO and CPU tasks
-on the same thread, which may hurt performance if one of them is a bottleneck.</p>
-<p>For single-threaded reading, buffers used to read and decompress pages can be re-used.
-This create offers an API that encapsulates the above logic:</p>
-<pre><pre class="playground"><code class="language-rust">use std::fs::File;
 use std::time::SystemTime;
 
 use arrow2::error::Result;
@@ -209,7 +158,7 @@ fn main() -&gt; Result&lt;()&gt; {
     let file_path = &amp;args[1];
 
     let reader = File::open(file_path)?;
-    let reader = read::RecordReader::try_new(reader, None, None, None, None)?;
+    let reader = read::FileReader::try_new(reader, None, None, None, None)?;
 
     let start = SystemTime::now();
     for maybe_chunk in reader {
@@ -220,6 +169,16 @@ fn main() -&gt; Result&lt;()&gt; {
     Ok(())
 }
 </code></pre></pre>
+<p>The example above minimizes memory usage at the expense of mixing IO and CPU tasks
+on the same thread, which may hurt performance if one of them is a bottleneck.</p>
+<p>For single-threaded reading, buffers used to read and decompress pages can be re-used.
+This create offers an API that encapsulates the above logic:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>{{#include ../../../examples/parquet_read_record.rs}}
+<span class="boring">}
+</span></code></pre></pre>
 <h3 id="parallelism-decoupling-of-cpu-from-io"><a class="header" href="#parallelism-decoupling-of-cpu-from-io">Parallelism decoupling of CPU from IO</a></h3>
 <p>One important aspect of the pages created by the iterator above is that they can cross
 thread boundaries. Consequently, the thread reading pages from a file (IO-bounded)
@@ -228,122 +187,12 @@ decoding, etc.).</p>
 <p>The example below assumes that CPU starves the consumption of pages,
 and that it is advantageous to have a single thread performing all IO-intensive work,
 by delegating all CPU-intensive tasks to separate threads.</p>
-<pre><pre class="playground"><code class="language-rust">use std::fs::File;
-use std::sync::Arc;
-use std::thread;
-use std::time::SystemTime;
-
-use crossbeam_channel::unbounded;
-
-use arrow2::{
-    array::Array, chunk::Chunk, error::Result, io::parquet::read,
-    io::parquet::read::MutStreamingIterator,
-};
-
-fn parallel_read(path: &amp;str, row_group: usize) -&gt; Result&lt;Chunk&lt;Arc&lt;dyn Array&gt;&gt;&gt; {
-    // prepare a channel to send compressed pages across threads.
-    let (tx, rx) = unbounded();
-
-    let mut file = File::open(path)?;
-    let file_metadata = read::read_metadata(&amp;mut file)?;
-    let arrow_schema = Arc::new(read::get_schema(&amp;file_metadata)?);
-
-    let start = SystemTime::now();
-    // spawn a thread to produce `Vec&lt;CompressedPage&gt;` (IO bounded)
-    let producer = thread::spawn(move || {
-        for (field_i, field) in file_metadata.schema().fields().iter().enumerate() {
-            let start = SystemTime::now();
-
-            let mut columns = read::get_column_iterator(
-                &amp;mut file,
-                &amp;file_metadata,
-                row_group,
-                field_i,
-                None,
-                vec![],
-            );
-
-            println!(&quot;produce start - field: {}&quot;, field_i);
-
-            let mut column_chunks = vec![];
-            while let read::State::Some(mut new_iter) = columns.advance().unwrap() {
-                if let Some((pages, metadata)) = new_iter.get() {
-                    let pages = pages.collect::&lt;Vec&lt;_&gt;&gt;();
-
-                    column_chunks.push((pages, metadata.clone()));
-                }
-                columns = new_iter;
-            }
-            // todo: create API to allow sending each column (and not column chunks) to be processed in parallel
-            tx.send((field_i, field.clone(), column_chunks)).unwrap();
-            println!(
-                &quot;produce end - {:?}: {} {}&quot;,
-                start.elapsed().unwrap(),
-                field_i,
-                row_group
-            );
-        }
-    });
-
-    // use 2 consumers for CPU-intensive to decompress, decode and deserialize.
-    #[allow(clippy::needless_collect)] // we need to collect to parallelize
-    let consumers = (0..2)
-        .map(|i| {
-            let rx_consumer = rx.clone();
-            let arrow_schema_consumer = arrow_schema.clone();
-            thread::spawn(move || {
-                let mut arrays = vec![];
-                while let Ok((field_i, parquet_field, column_chunks)) = rx_consumer.recv() {
-                    let start = SystemTime::now();
-                    let field = &amp;arrow_schema_consumer.fields[field_i];
-                    println!(&quot;consumer {} start - {}&quot;, i, field_i);
-
-                    let columns = read::ReadColumnIterator::new(parquet_field, column_chunks);
-
-                    let array = read::column_iter_to_array(columns, field, vec![]).map(|x| x.0);
-                    println!(
-                        &quot;consumer {} end - {:?}: {}&quot;,
-                        i,
-                        start.elapsed().unwrap(),
-                        field_i
-                    );
-
-                    arrays.push((field_i, array))
-                }
-                arrays
-            })
-        })
-        .collect::&lt;Vec&lt;_&gt;&gt;();
-
-    producer.join().expect(&quot;producer thread panicked&quot;);
-
-    // collect all columns (join threads)
-    let mut columns = consumers
-        .into_iter()
-        .map(|x| x.join().unwrap())
-        .flatten()
-        .map(|x| Ok((x.0, x.1?)))
-        .collect::&lt;Result&lt;Vec&lt;(usize, Box&lt;dyn Array&gt;)&gt;&gt;&gt;()?;
-    // order may not be the same
-    columns.sort_unstable_by_key(|x| x.0);
-    let columns = columns.into_iter().map(|x| x.1.into()).collect();
-    println!(&quot;Finished - {:?}&quot;, start.elapsed().unwrap());
-
-    Chunk::try_new(columns)
-}
-
-fn main() -&gt; Result&lt;()&gt; {
-    use std::env;
-    let args: Vec&lt;String&gt; = env::args().collect();
-    let file_path = &amp;args[1];
-
-    let start = SystemTime::now();
-    let batch = parallel_read(file_path, 0)?;
-    assert!(!batch.is_empty());
-    println!(&quot;took: {} ms&quot;, start.elapsed().unwrap().as_millis());
-    Ok(())
-}
-</code></pre></pre>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>{{#include ../../../examples/parquet_read_parallel.rs}}
+<span class="boring">}
+</span></code></pre></pre>
 <p>This can of course be reversed; in configurations where IO is bounded (e.g. when a
 network is involved), we can use multiple producers of pages, potentially divided
 in file readers, and a single consumer that performs all CPU-intensive work.</p>
