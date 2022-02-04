@@ -92,7 +92,7 @@ flate2 = "1"
 doc-comment = "0.3"
 crossbeam-channel = "0.5.1"
 # used to test async readers
-tokio = { version = "1", features = ["macros", "rt", "fs"] }
+tokio = { version = "1", features = ["macros", "rt", "fs", "io-util"] }
 tokio-util = { version = "0.6", features = ["compat"] }
 # used to run formal property testing
 proptest = { version = "1", default_features = false, features = ["std"] }
@@ -134,6 +134,8 @@ io_ipc = ["arrow-format"]
 io_ipc_write_async = ["io_ipc", "futures"]
 io_ipc_compression = ["lz4", "zstd"]
 io_flight = ["io_ipc", "arrow-format/flight-data"]
+# base64 + io_ipc because arrow schemas are stored as base64-encoded ipc format.
+io_parquet = ["parquet2", "io_ipc", "base64", "futures", "streaming-iterator", "fallible-streaming-iterator"]
 io_parquet_compression = [
     "parquet2/zstd",
     "parquet2/snappy",
@@ -207,8 +209,6 @@ compute = [
     "compute_lower",
     "compute_upper"
 ]
-# base64 + io_ipc because arrow schemas are stored as base64-encoded ipc format.
-io_parquet = ["parquet2", "io_ipc", "base64", "futures"]
 benchmarks = ["rand"]
 simd = ["packed_simd"]
 

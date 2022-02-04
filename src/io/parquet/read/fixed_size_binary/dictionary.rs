@@ -1,13 +1,11 @@
 use std::{collections::VecDeque, sync::Arc};
 
-use parquet2::page::BinaryPageDict;
+use parquet2::page::FixedLenByteArrayPageDict;
 
 use crate::{
-    array::{
-        Array, BinaryArray, DictionaryArray, DictionaryKey, Offset, PrimitiveArray, Utf8Array,
-    },
+    array::{Array, DictionaryArray, DictionaryKey, FixedSizeBinaryArray, PrimitiveArray},
     bitmap::MutableBitmap,
-    datatypes::{DataType, PhysicalType},
+    datatypes::DataType,
     error::{ArrowError, Result},
 };
 
@@ -19,10 +17,9 @@ use super::super::DataPages;
 
 /// An iterator adapter over [`DataPages`] assumed to be encoded as parquet's dictionary-encoded binary representation
 #[derive(Debug)]
-pub struct ArrayIterator<K, O, I>
+pub struct ArrayIterator<K, I>
 where
     I: DataPages,
-    O: Offset,
     K: DictionaryKey,
 {
     iter: I,
@@ -30,13 +27,11 @@ where
     values: Dict,
     items: VecDeque<(Vec<K>, MutableBitmap)>,
     chunk_size: usize,
-    phantom: std::marker::PhantomData<O>,
 }
 
-impl<K, O, I> ArrayIterator<K, O, I>
+impl<K, I> ArrayIterator<K, I>
 where
     K: DictionaryKey,
-    O: Offset,
     I: DataPages,
 {
     fn new(iter: I, data_type: DataType, chunk_size: usize) -> Self {
@@ -50,15 +45,13 @@ where
             values: Dict::Empty,
             items: VecDeque::new(),
             chunk_size,
-            phantom: std::marker::PhantomData,
         }
     }
 }
 
-impl<K, O, I> Iterator for ArrayIterator<K, O, I>
+impl<K, I> Iterator for ArrayIterator<K, I>
 where
     I: DataPages,
-    O: Offset,
     K: DictionaryKey,
 {
     type Item = Result<DictionaryArray<K>>;
@@ -78,36 +71,19 @@ where
             (state, Ok(Some(page))) => {
                 // consume the dictionary page
                 if let Some(dict) = page.dictionary_page() {
-                    let dict = dict.as_any().downcast_ref::<BinaryPageDict>().unwrap();
+                    let dict = dict
+                        .as_any()
+                        .downcast_ref::<FixedLenByteArrayPageDict>()
+                        .unwrap();
                     self.values = match &mut self.values {
                         Dict::Empty => {
-                            let offsets = dict
-                                .offsets()
-                                .iter()
-                                .map(|x| O::from_usize(*x as usize).unwrap())
-                                .collect::<Vec<_>>();
                             let values = dict.values().to_vec();
 
-                            let array = match self.data_type.to_physical_type() {
-                                PhysicalType::Utf8 | PhysicalType::LargeUtf8 => {
-                                    Arc::new(Utf8Array::<O>::from_data(
-                                        self.data_type.clone(),
-                                        offsets.into(),
-                                        values.into(),
-                                        None,
-                                    )) as _
-                                }
-                                PhysicalType::Binary | PhysicalType::LargeBinary => {
-                                    Arc::new(BinaryArray::<O>::from_data(
-                                        self.data_type.clone(),
-                                        offsets.into(),
-                                        values.into(),
-                                        None,
-                                    )) as _
-                                }
-                                _ => unreachable!(),
-                            };
-
+                            let array = Arc::new(FixedSizeBinaryArray::from_data(
+                                self.data_type.clone(),
+                                values.into(),
+                                None,
+                            )) as _;
                             Dict::Complete(array)
                         }
                         _ => unreachable!(),
@@ -164,14 +140,13 @@ where
 }
 
 /// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
-pub fn iter_to_arrays<'a, K, O, I>(iter: I, data_type: DataType, chunk_size: usize) -> ArrayIter<'a>
+pub fn iter_to_arrays<'a, K, I>(iter: I, data_type: DataType, chunk_size: usize) -> ArrayIter<'a>
 where
     I: 'a + DataPages,
-    O: Offset,
     K: DictionaryKey,
 {
     Box::new(
-        ArrayIterator::<K, O, I>::new(iter, data_type, chunk_size)
+        ArrayIterator::<K, I>::new(iter, data_type, chunk_size)
             .map(|x| x.map(|x| Arc::new(x) as Arc<dyn Array>)),
     )
 }

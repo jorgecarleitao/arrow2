@@ -20,7 +20,7 @@ pub fn read_column<R: Read + Seek>(
 ) -> Result<ArrayStats> {
     let metadata = read_metadata(&mut reader)?;
 
-    let mut reader = RecordReader::try_new(reader, Some(vec![column]), None, None, None)?;
+    let mut reader = FileReader::try_new(reader, Some(&[column]), None, None, None)?;
 
     let statistics = metadata.row_groups[row_group]
         .column(column)
@@ -28,7 +28,10 @@ pub fn read_column<R: Read + Seek>(
         .map(|x| statistics::deserialize_statistics(x?.as_ref()))
         .transpose()?;
 
-    Ok((reader.next().unwrap()?.columns()[0].clone(), statistics))
+    Ok((
+        reader.next().unwrap()?.into_arrays().pop().unwrap(),
+        statistics,
+    ))
 }
 
 pub fn pyarrow_nested_nullable(column: usize) -> Box<dyn Array> {
@@ -156,6 +159,8 @@ pub fn pyarrow_nested_nullable(column: usize) -> Box<dyn Array> {
             let validity = Some(Bitmap::from([
                 true, false, true, true, true, true, false, true,
             ]));
+            // [0, 2, 2, 5, 8, 8, 11, 11, 12]
+            // [[a1, a2], None, [a3, a4, a5], [a6, a7, a8], [], [a9, a10, a11], None, [a12]]
             let data_type = DataType::List(Box::new(field));
             Box::new(ListArray::<i32>::from_data(
                 data_type, offsets, values, validity,
@@ -655,11 +660,11 @@ fn integration_write(schema: &Schema, batches: &[Chunk<Arc<dyn Array>>]) -> Resu
     Ok(writer.into_inner())
 }
 
-type IntegrationRead = (Arc<Schema>, Vec<Chunk<Arc<dyn Array>>>);
+type IntegrationRead = (Schema, Vec<Chunk<Arc<dyn Array>>>);
 
 fn integration_read(data: &[u8]) -> Result<IntegrationRead> {
     let reader = Cursor::new(data);
-    let reader = RecordReader::try_new(reader, None, None, None, None)?;
+    let reader = FileReader::try_new(reader, None, None, None, None)?;
     let schema = reader.schema().clone();
     let batches = reader.collect::<Result<Vec<_>>>()?;
 
@@ -669,11 +674,17 @@ fn integration_read(data: &[u8]) -> Result<IntegrationRead> {
 fn test_file(version: &str, file_name: &str) -> Result<()> {
     let (schema, _, batches) = read_gzip_json(version, file_name)?;
 
+    // empty batches are not written/read from parquet and can be ignored
+    let batches = batches
+        .into_iter()
+        .filter(|x| !x.is_empty())
+        .collect::<Vec<_>>();
+
     let data = integration_write(&schema, &batches)?;
 
     let (read_schema, read_batches) = integration_read(&data)?;
 
-    assert_eq!(&schema, read_schema.as_ref());
+    assert_eq!(schema, read_schema);
     assert_eq!(batches, read_batches);
 
     Ok(())
@@ -710,26 +721,35 @@ fn arrow_type() -> Result<()> {
     let array3 = DictionaryArray::from_data(indices.clone(), std::sync::Arc::new(values));
 
     let values = BinaryArray::<i32>::from_slice([b"ab", b"ac"]);
-    let array4 = DictionaryArray::from_data(indices, std::sync::Arc::new(values));
+    let array4 = DictionaryArray::from_data(indices.clone(), std::sync::Arc::new(values));
+
+    let values = FixedSizeBinaryArray::from_data(
+        DataType::FixedSizeBinary(2),
+        vec![b'a', b'b', b'a', b'c'].into(),
+        None,
+    );
+    let array5 = DictionaryArray::from_data(indices, std::sync::Arc::new(values));
 
     let schema = Schema::from(vec![
         Field::new("a1", dt1, true),
         Field::new("a2", array2.data_type().clone(), true),
         Field::new("a3", array3.data_type().clone(), true),
         Field::new("a4", array4.data_type().clone(), true),
+        Field::new("a5", array5.data_type().clone(), true),
     ]);
     let batch = Chunk::try_new(vec![
         Arc::new(array) as Arc<dyn Array>,
         Arc::new(array2),
         Arc::new(array3),
         Arc::new(array4),
+        Arc::new(array5),
     ])?;
 
     let r = integration_write(&schema, &[batch.clone()])?;
 
     let (new_schema, new_batches) = integration_read(&r)?;
 
-    assert_eq!(new_schema.as_ref(), &schema);
+    assert_eq!(new_schema, schema);
     assert_eq!(new_batches, vec![batch]);
     Ok(())
 }

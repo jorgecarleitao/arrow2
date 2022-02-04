@@ -135,6 +135,17 @@ fn equal(lhs: &dyn Scalar, rhs: &dyn Scalar) -> bool {
             let rhs = rhs.as_any().downcast_ref::<StructScalar>().unwrap();
             lhs == rhs
         }
+        DataType::FixedSizeBinary(_) => {
+            let lhs = lhs
+                .as_any()
+                .downcast_ref::<FixedSizeBinaryScalar>()
+                .unwrap();
+            let rhs = rhs
+                .as_any()
+                .downcast_ref::<FixedSizeBinaryScalar>()
+                .unwrap();
+            lhs == rhs
+        }
         other => unimplemented!("{:?}", other),
     }
 }

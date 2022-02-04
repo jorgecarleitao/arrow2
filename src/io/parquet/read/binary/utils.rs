@@ -1,38 +1,36 @@
-use crate::{
-    array::{Array, BinaryArray, Offset, Utf8Array},
-    bitmap::MutableBitmap,
-    datatypes::DataType,
-    io::parquet::read::utils::Pushable,
-};
-
-pub(super) fn finish_array<O: Offset>(
-    data_type: DataType,
-    values: Binary<O>,
-    validity: MutableBitmap,
-) -> Box<dyn Array> {
-    match data_type {
-        DataType::LargeBinary | DataType::Binary => Box::new(BinaryArray::from_data(
-            data_type,
-            values.offsets.into(),
-            values.values.into(),
-            validity.into(),
-        )),
-        DataType::LargeUtf8 | DataType::Utf8 => Box::new(Utf8Array::from_data(
-            data_type,
-            values.offsets.into(),
-            values.values.into(),
-            validity.into(),
-        )),
-        _ => unreachable!(),
-    }
-}
+use crate::{array::Offset, io::parquet::read::utils::Pushable};
 
 /// [`Pushable`] for variable length binary data.
 #[derive(Debug)]
 pub struct Binary<O: Offset> {
-    pub offsets: Vec<O>,
+    pub offsets: Offsets<O>,
     pub values: Vec<u8>,
     pub last_offset: O,
+}
+
+#[derive(Debug)]
+pub struct Offsets<O: Offset>(pub Vec<O>);
+
+impl<O: Offset> Pushable<O> for Offsets<O> {
+    #[inline]
+    fn len(&self) -> usize {
+        self.0.len() - 1
+    }
+
+    #[inline]
+    fn push(&mut self, value: O) {
+        self.0.push(value)
+    }
+
+    #[inline]
+    fn push_null(&mut self) {
+        self.0.push(*self.0.last().unwrap())
+    }
+
+    #[inline]
+    fn extend_constant(&mut self, additional: usize, value: O) {
+        self.0.extend_constant(additional, value)
+    }
 }
 
 impl<O: Offset> Binary<O> {
@@ -41,7 +39,7 @@ impl<O: Offset> Binary<O> {
         let mut offsets = Vec::with_capacity(1 + capacity);
         offsets.push(O::default());
         Self {
-            offsets,
+            offsets: Offsets(offsets),
             values: vec![],
             last_offset: O::default(),
         }
@@ -57,19 +55,25 @@ impl<O: Offset> Binary<O> {
     #[inline]
     pub fn extend_constant(&mut self, additional: usize) {
         self.offsets
+            .0
             .resize(self.offsets.len() + additional, self.last_offset);
     }
 
     #[inline]
     pub fn len(&self) -> usize {
-        self.offsets.len() - 1
+        self.offsets.len()
     }
 }
 
-impl<O: Offset> Pushable<&[u8]> for Binary<O> {
+impl<'a, O: Offset> Pushable<&'a [u8]> for Binary<O> {
     #[inline]
-    fn reserve(&mut self, additional: usize) {
-        self.offsets.reserve(additional)
+    fn len(&self) -> usize {
+        self.len()
+    }
+
+    #[inline]
+    fn push_null(&mut self) {
+        self.push(&[])
     }
 
     #[inline]

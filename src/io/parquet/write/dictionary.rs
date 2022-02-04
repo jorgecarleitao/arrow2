@@ -6,6 +6,7 @@ use parquet2::{
 };
 
 use super::binary::encode_plain as binary_encode_plain;
+use super::fixed_len_bytes::encode_plain as fixed_binary_encode_plain;
 use super::primitive::encode_plain as primitive_encode_plain;
 use super::utf8::encode_plain as utf8_encode_plain;
 use crate::array::{Array, DictionaryArray, DictionaryKey, PrimitiveArray};
@@ -171,6 +172,12 @@ pub fn array_to_pages<K: DictionaryKey>(
                     let mut buffer = vec![];
                     binary_encode_plain::<i64>(values, false, &mut buffer);
                     EncodedDictPage::new(buffer, values.len())
+                }
+                DataType::FixedSizeBinary(_) => {
+                    let mut buffer = vec![];
+                    let array = array.values().as_any().downcast_ref().unwrap();
+                    fixed_binary_encode_plain(array, false, &mut buffer);
+                    EncodedDictPage::new(buffer, array.len())
                 }
                 other => {
                     return Err(ArrowError::NotYetImplemented(format!(

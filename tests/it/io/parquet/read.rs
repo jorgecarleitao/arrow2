@@ -259,11 +259,13 @@ fn v2_nested_nested() -> Result<()> {
 }
 
 #[test]
+#[ignore] // todo
 fn v2_nested_nested_required() -> Result<()> {
     test_pyarrow_integration(8, 2, "nested", false, false, None)
 }
 
 #[test]
+#[ignore] // todo
 fn v2_nested_nested_required_required() -> Result<()> {
     test_pyarrow_integration(9, 2, "nested", false, false, None)
 }
@@ -359,6 +361,7 @@ fn v1_struct_optional() -> Result<()> {
 }
 
 #[test]
+#[ignore]
 fn v1_struct_struct_optional() -> Result<()> {
     test_pyarrow_integration(1, 1, "struct", false, false, None)
 }
@@ -368,7 +371,7 @@ fn all_types() -> Result<()> {
     let path = "testing/parquet-testing/data/alltypes_plain.parquet";
     let reader = std::fs::File::open(path)?;
 
-    let reader = RecordReader::try_new(reader, None, None, None, None)?;
+    let reader = FileReader::try_new(reader, None, None, None, None)?;
 
     let batches = reader.collect::<Result<Vec<_>>>()?;
     assert_eq!(batches.len(), 1);
@@ -396,6 +399,57 @@ fn all_types() -> Result<()> {
         result,
         &BinaryArray::<i32>::from_slice([[48], [49], [48], [49], [48], [49], [48], [49]])
     );
+
+    Ok(())
+}
+
+#[test]
+fn all_types_chunked() -> Result<()> {
+    // this has one batch with 8 elements
+    let path = "testing/parquet-testing/data/alltypes_plain.parquet";
+    let reader = std::fs::File::open(path)?;
+
+    // chunk it in 5 (so, (5,3))
+    let reader = FileReader::try_new(reader, None, Some(5), None, None)?;
+
+    let batches = reader.collect::<Result<Vec<_>>>()?;
+    assert_eq!(batches.len(), 2);
+
+    assert_eq!(batches[0].len(), 5);
+    assert_eq!(batches[1].len(), 3);
+
+    let result = batches[0].columns()[0]
+        .as_any()
+        .downcast_ref::<Int32Array>()
+        .unwrap();
+    assert_eq!(result, &Int32Array::from_slice([4, 5, 6, 7, 2]));
+
+    let result = batches[1].columns()[0]
+        .as_any()
+        .downcast_ref::<Int32Array>()
+        .unwrap();
+    assert_eq!(result, &Int32Array::from_slice([3, 0, 1]));
+
+    let result = batches[0].columns()[6]
+        .as_any()
+        .downcast_ref::<Float32Array>()
+        .unwrap();
+    assert_eq!(result, &Float32Array::from_slice([0.0, 1.1, 0.0, 1.1, 0.0]));
+
+    let result = batches[0].columns()[9]
+        .as_any()
+        .downcast_ref::<BinaryArray<i32>>()
+        .unwrap();
+    assert_eq!(
+        result,
+        &BinaryArray::<i32>::from_slice([[48], [49], [48], [49], [48]])
+    );
+
+    let result = batches[1].columns()[9]
+        .as_any()
+        .downcast_ref::<BinaryArray<i32>>()
+        .unwrap();
+    assert_eq!(result, &BinaryArray::<i32>::from_slice([[49], [48], [49]]));
 
     Ok(())
 }

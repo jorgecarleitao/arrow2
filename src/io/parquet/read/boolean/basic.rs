@@ -1,108 +1,180 @@
+use std::collections::VecDeque;
+
+use parquet2::{encoding::Encoding, page::DataPage, schema::Repetition};
+
 use crate::{
     array::BooleanArray,
     bitmap::{utils::BitmapIter, MutableBitmap},
     datatypes::DataType,
-    error::{ArrowError, Result},
-    io::parquet::read::utils::extend_from_decoder,
+    error::Result,
 };
 
 use super::super::utils;
-
-use futures::{pin_mut, Stream, StreamExt};
-use parquet2::{
-    encoding::{hybrid_rle, Encoding},
-    metadata::{ColumnChunkMetaData, ColumnDescriptor},
-    page::DataPage,
+use super::super::utils::{
+    extend_from_decoder, next, split_buffer, Decoder, MaybeNext, OptionalPageValidity,
 };
+use super::super::DataPages;
 
-pub(super) fn read_required(buffer: &[u8], additional: usize, values: &mut MutableBitmap) {
-    // in PLAIN, booleans are LSB bitpacked and thus we can read them as if they were a bitmap.
-    values.extend_from_slice(buffer, 0, additional);
-}
-
-fn read_optional(
-    validity_buffer: &[u8],
-    values_buffer: &[u8],
-    length: usize,
-    values: &mut MutableBitmap,
-    validity: &mut MutableBitmap,
-) {
+#[inline]
+pub(super) fn values_iter(values: &[u8]) -> BitmapIter {
     // in PLAIN, booleans are LSB bitpacked and thus we can read them as if they were a bitmap.
     // note that `values_buffer` contains only non-null values.
     // thus, at this point, it is not known how many values this buffer contains
     // values_len is the upper bound. The actual number depends on how many nulls there is.
-    let values_len = values_buffer.len() * 8;
-    let values_iterator = BitmapIter::new(values_buffer, 0, values_len);
-
-    let mut validity_iterator = hybrid_rle::Decoder::new(validity_buffer, 1);
-
-    extend_from_decoder(
-        validity,
-        &mut validity_iterator,
-        length,
-        values,
-        values_iterator,
-    )
+    let values_len = values.len() * 8;
+    BitmapIter::new(values, 0, values_len)
 }
 
-pub async fn stream_to_array<I, E>(pages: I, metadata: &ColumnChunkMetaData) -> Result<BooleanArray>
-where
-    ArrowError: From<E>,
-    E: Clone,
-    I: Stream<Item = std::result::Result<DataPage, E>>,
-{
-    let capacity = metadata.num_values() as usize;
-    let mut values = MutableBitmap::with_capacity(capacity);
-    let mut validity = MutableBitmap::with_capacity(capacity);
-
-    pin_mut!(pages); // needed for iteration
-
-    while let Some(page) = pages.next().await {
-        extend_from_page(
-            page.as_ref().map_err(|x| x.clone())?,
-            metadata.descriptor(),
-            &mut values,
-            &mut validity,
-        )?
-    }
-
-    Ok(BooleanArray::from_data(
-        DataType::Boolean,
-        values.into(),
-        validity.into(),
-    ))
+// The state of an optional DataPage with a boolean physical type
+#[derive(Debug)]
+struct Optional<'a> {
+    values: BitmapIter<'a>,
+    validity: OptionalPageValidity<'a>,
 }
 
-pub(super) fn extend_from_page(
-    page: &DataPage,
-    descriptor: &ColumnDescriptor,
-    values: &mut MutableBitmap,
-    validity: &mut MutableBitmap,
-) -> Result<()> {
-    assert_eq!(descriptor.max_rep_level(), 0);
-    assert!(descriptor.max_def_level() <= 1);
-    let is_optional = descriptor.max_def_level() == 1;
+impl<'a> Optional<'a> {
+    pub fn new(page: &'a DataPage) -> Self {
+        let (_, _, values_buffer, _) = split_buffer(page, page.descriptor());
 
-    let (_, validity_buffer, values_buffer, version) = utils::split_buffer(page, descriptor);
-
-    match (page.encoding(), page.dictionary_page(), is_optional) {
-        (Encoding::Plain, None, true) => read_optional(
-            validity_buffer,
-            values_buffer,
-            page.num_values(),
-            values,
-            validity,
-        ),
-        (Encoding::Plain, None, false) => read_required(page.buffer(), page.num_values(), values),
-        _ => {
-            return Err(utils::not_implemented(
-                &page.encoding(),
-                is_optional,
-                page.dictionary_page().is_some(),
-                version,
-                "Boolean",
-            ))
+        Self {
+            values: values_iter(values_buffer),
+            validity: OptionalPageValidity::new(page),
         }
     }
-    Ok(())
+}
+
+// The state of a required DataPage with a boolean physical type
+#[derive(Debug)]
+struct Required<'a> {
+    values: &'a [u8],
+    // invariant: offset <= length;
+    offset: usize,
+    length: usize,
+}
+
+impl<'a> Required<'a> {
+    pub fn new(page: &'a DataPage) -> Self {
+        Self {
+            values: page.buffer(),
+            offset: 0,
+            length: page.num_values(),
+        }
+    }
+}
+
+// The state of a `DataPage` of `Boolean` parquet boolean type
+#[derive(Debug)]
+enum State<'a> {
+    Optional(Optional<'a>),
+    Required(Required<'a>),
+}
+
+impl<'a> State<'a> {
+    pub fn len(&self) -> usize {
+        match self {
+            State::Optional(page) => page.validity.len(),
+            State::Required(page) => page.length - page.offset,
+        }
+    }
+}
+
+impl<'a> utils::PageState<'a> for State<'a> {
+    fn len(&self) -> usize {
+        self.len()
+    }
+}
+
+#[derive(Default)]
+struct BooleanDecoder {}
+
+impl<'a> Decoder<'a, bool, MutableBitmap> for BooleanDecoder {
+    type State = State<'a>;
+
+    fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
+        let is_optional =
+            page.descriptor().type_().get_basic_info().repetition() == &Repetition::Optional;
+
+        match (page.encoding(), is_optional) {
+            (Encoding::Plain, true) => Ok(State::Optional(Optional::new(page))),
+            (Encoding::Plain, false) => Ok(State::Required(Required::new(page))),
+            _ => Err(utils::not_implemented(
+                &page.encoding(),
+                is_optional,
+                false,
+                "any",
+                "Boolean",
+            )),
+        }
+    }
+
+    fn with_capacity(&self, capacity: usize) -> MutableBitmap {
+        MutableBitmap::with_capacity(capacity)
+    }
+
+    fn extend_from_state(
+        state: &mut Self::State,
+        values: &mut MutableBitmap,
+        validity: &mut MutableBitmap,
+        remaining: usize,
+    ) {
+        match state {
+            State::Optional(page) => extend_from_decoder(
+                validity,
+                &mut page.validity,
+                Some(remaining),
+                values,
+                &mut page.values,
+            ),
+            State::Required(page) => {
+                let remaining = remaining.min(page.length - page.offset);
+                values.extend_from_slice(page.values, page.offset, remaining);
+                page.offset += remaining;
+            }
+        }
+    }
+}
+
+fn finish(data_type: &DataType, values: MutableBitmap, validity: MutableBitmap) -> BooleanArray {
+    BooleanArray::from_data(data_type.clone(), values.into(), validity.into())
+}
+
+/// An iterator adapter over [`DataPages`] assumed to be encoded as boolean arrays
+#[derive(Debug)]
+pub struct BooleanArrayIterator<I: DataPages> {
+    iter: I,
+    data_type: DataType,
+    items: VecDeque<(MutableBitmap, MutableBitmap)>,
+    chunk_size: usize,
+}
+
+impl<I: DataPages> BooleanArrayIterator<I> {
+    pub fn new(iter: I, data_type: DataType, chunk_size: usize) -> Self {
+        Self {
+            iter,
+            data_type,
+            items: VecDeque::new(),
+            chunk_size,
+        }
+    }
+}
+
+impl<I: DataPages> Iterator for BooleanArrayIterator<I> {
+    type Item = Result<BooleanArray>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let maybe_state = next(
+            &mut self.iter,
+            &mut self.items,
+            self.chunk_size,
+            &BooleanDecoder::default(),
+        );
+        match maybe_state {
+            MaybeNext::Some(Ok((values, validity))) => {
+                Some(Ok(finish(&self.data_type, values, validity)))
+            }
+            MaybeNext::Some(Err(e)) => Some(Err(e)),
+            MaybeNext::None => None,
+            MaybeNext::More => self.next(),
+        }
+    }
 }

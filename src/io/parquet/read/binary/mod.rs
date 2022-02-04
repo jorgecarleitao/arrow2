@@ -1,87 +1,58 @@
-use futures::{pin_mut, Stream, StreamExt};
-use parquet2::{metadata::ColumnChunkMetaData, page::DataPage, FallibleStreamingIterator};
-
-use crate::{
-    array::{Array, Offset},
-    bitmap::MutableBitmap,
-    datatypes::DataType,
-    error::{ArrowError, Result},
-    io::parquet::read::binary::utils::finish_array,
-};
-
 mod basic;
 mod dictionary;
 mod nested;
 mod utils;
 
-pub use dictionary::iter_to_array as iter_to_dict_array;
+pub use dictionary::iter_to_arrays as iter_to_dict_arrays;
 
-use self::utils::Binary;
+use std::sync::Arc;
 
-use super::nested_utils::Nested;
+use crate::{
+    array::{Array, Offset},
+    datatypes::DataType,
+};
 
-pub fn iter_to_array<O, I, E>(
-    mut iter: I,
-    metadata: &ColumnChunkMetaData,
-    data_type: DataType,
-    nested: &mut Vec<Box<dyn Nested>>,
-) -> Result<Box<dyn Array>>
+use self::basic::TraitBinaryArray;
+use self::nested::ArrayIterator;
+use super::ArrayIter;
+use super::{
+    nested_utils::{InitNested, NestedArrayIter},
+    DataPages,
+};
+use basic::BinaryArrayIterator;
+
+/// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
+pub fn iter_to_arrays<'a, O, A, I>(iter: I, data_type: DataType, chunk_size: usize) -> ArrayIter<'a>
 where
+    I: 'a + DataPages,
+    A: TraitBinaryArray<O>,
     O: Offset,
-    ArrowError: From<E>,
-    I: FallibleStreamingIterator<Item = DataPage, Error = E>,
 {
-    let is_nullable = nested.pop().unwrap().is_nullable();
-    let capacity = metadata.num_values() as usize;
-    let mut values = Binary::<O>::with_capacity(capacity);
-    let mut validity = MutableBitmap::with_capacity(capacity * usize::from(is_nullable));
-
-    if nested.is_empty() {
-        while let Some(page) = iter.next()? {
-            basic::extend_from_page(page, metadata.descriptor(), &mut values, &mut validity)?
-        }
-        debug_assert_eq!(values.len(), capacity);
-        debug_assert_eq!(validity.len(), capacity * usize::from(is_nullable));
-    } else {
-        while let Some(page) = iter.next()? {
-            nested::extend_from_page(
-                page,
-                metadata.descriptor(),
-                is_nullable,
-                nested,
-                &mut values,
-                &mut validity,
-            )?
-        }
-    }
-    Ok(utils::finish_array(data_type, values, validity))
+    Box::new(
+        BinaryArrayIterator::<O, A, I>::new(iter, data_type, chunk_size)
+            .map(|x| x.map(|x| Arc::new(x) as Arc<dyn Array>)),
+    )
 }
 
-pub async fn stream_to_array<O, I, E>(
-    pages: I,
-    metadata: &ColumnChunkMetaData,
-    data_type: &DataType,
-) -> Result<Box<dyn Array>>
+/// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
+pub fn iter_to_arrays_nested<'a, O, A, I>(
+    iter: I,
+    init: InitNested,
+    data_type: DataType,
+    chunk_size: usize,
+) -> NestedArrayIter<'a>
 where
-    ArrowError: From<E>,
+    I: 'a + DataPages,
+    A: TraitBinaryArray<O>,
     O: Offset,
-    E: Clone,
-    I: Stream<Item = std::result::Result<DataPage, E>>,
 {
-    let capacity = metadata.num_values() as usize;
-    let mut values = Binary::<O>::with_capacity(capacity);
-    let mut validity = MutableBitmap::with_capacity(capacity);
-
-    pin_mut!(pages); // needed for iteration
-
-    while let Some(page) = pages.next().await {
-        basic::extend_from_page(
-            page.as_ref().map_err(|x| x.clone())?,
-            metadata.descriptor(),
-            &mut values,
-            &mut validity,
-        )?
-    }
-
-    Ok(finish_array(data_type.clone(), values, validity))
+    Box::new(
+        ArrayIterator::<O, A, I>::new(iter, init, data_type, chunk_size).map(|x| {
+            x.map(|(mut nested, array)| {
+                let _ = nested.nested.pop().unwrap(); // the primitive
+                let values = Arc::new(array) as Arc<dyn Array>;
+                (nested, values)
+            })
+        }),
+    )
 }

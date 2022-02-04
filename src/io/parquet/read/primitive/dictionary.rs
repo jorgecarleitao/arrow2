@@ -1,103 +1,176 @@
-use std::sync::Arc;
+use std::{collections::VecDeque, sync::Arc};
 
-use parquet2::{
-    encoding::Encoding,
-    page::{DataPage, PrimitivePageDict},
-    types::NativeType,
-    FallibleStreamingIterator,
-};
+use parquet2::{page::PrimitivePageDict, types::NativeType as ParquetNativeType};
 
-use super::super::utils;
-use super::{ColumnChunkMetaData, ColumnDescriptor};
 use crate::{
     array::{Array, DictionaryArray, DictionaryKey, PrimitiveArray},
     bitmap::MutableBitmap,
     datatypes::DataType,
     error::{ArrowError, Result},
-    io::parquet::read::utils::read_dict_optional,
-    types::NativeType as ArrowNativeType,
+    types::NativeType,
 };
 
-fn extend_from_page<K, T, A, F>(
-    page: &DataPage,
-    descriptor: &ColumnDescriptor,
-    indices: &mut Vec<K>,
-    values: &mut Vec<A>,
-    validity: &mut MutableBitmap,
-    op: F,
-) -> Result<()>
+use super::super::dictionary::*;
+use super::super::utils;
+use super::super::utils::Decoder;
+use super::super::ArrayIter;
+use super::super::DataPages;
+
+/// An iterator adapter over [`DataPages`] assumed to be encoded as boolean arrays
+#[derive(Debug)]
+pub struct ArrayIterator<K, T, I, P, F>
 where
-    K: DictionaryKey,
+    I: DataPages,
     T: NativeType,
-    A: ArrowNativeType,
-    F: Fn(T) -> A,
+    K: DictionaryKey,
+    P: ParquetNativeType,
+    F: Fn(P) -> T,
 {
-    let additional = page.num_values();
-
-    assert_eq!(descriptor.max_rep_level(), 0);
-    let is_optional = descriptor.max_def_level() == 1;
-
-    let (_, validity_buffer, values_buffer, version) = utils::split_buffer(page, descriptor);
-
-    match (&page.encoding(), page.dictionary_page(), is_optional) {
-        (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
-            let dict = dict
-                .as_any()
-                .downcast_ref::<PrimitivePageDict<T>>()
-                .unwrap();
-            values.extend(dict.values().iter().map(|x| op(*x)));
-            read_dict_optional(
-                validity_buffer,
-                values_buffer,
-                additional,
-                indices,
-                validity,
-            )
-        }
-        _ => {
-            return Err(utils::not_implemented(
-                &page.encoding(),
-                is_optional,
-                page.dictionary_page().is_some(),
-                version,
-                "primitive",
-            ))
-        }
-    }
-    Ok(())
+    iter: I,
+    data_type: DataType,
+    values: Dict,
+    items: VecDeque<(Vec<K>, MutableBitmap)>,
+    chunk_size: usize,
+    op: F,
+    phantom: std::marker::PhantomData<P>,
 }
 
-pub fn iter_to_array<K, T, A, I, E, F>(
-    mut iter: I,
-    metadata: &ColumnChunkMetaData,
-    data_type: DataType,
-    op: F,
-) -> Result<Box<dyn Array>>
+impl<K, T, I, P, F> ArrayIterator<K, T, I, P, F>
 where
-    ArrowError: From<E>,
+    K: DictionaryKey,
+    I: DataPages,
+    T: NativeType,
+
+    P: ParquetNativeType,
+    F: Copy + Fn(P) -> T,
+{
+    fn new(iter: I, data_type: DataType, chunk_size: usize, op: F) -> Self {
+        let data_type = match data_type {
+            DataType::Dictionary(_, values, _) => *values,
+            _ => data_type,
+        };
+        Self {
+            iter,
+            data_type,
+            values: Dict::Empty,
+            items: VecDeque::new(),
+            chunk_size,
+            op,
+            phantom: Default::default(),
+        }
+    }
+}
+
+impl<K, T, I, P, F> Iterator for ArrayIterator<K, T, I, P, F>
+where
+    I: DataPages,
     T: NativeType,
     K: DictionaryKey,
-    A: ArrowNativeType,
-    F: Copy + Fn(T) -> A,
-    I: FallibleStreamingIterator<Item = DataPage, Error = E>,
+    P: ParquetNativeType,
+    F: Copy + Fn(P) -> T,
 {
-    let capacity = metadata.num_values() as usize;
-    let mut indices = Vec::<K>::with_capacity(capacity);
-    let mut values = Vec::<A>::with_capacity(capacity);
-    let mut validity = MutableBitmap::with_capacity(capacity);
-    while let Some(page) = iter.next()? {
-        extend_from_page(
-            page,
-            metadata.descriptor(),
-            &mut indices,
-            &mut values,
-            &mut validity,
-            op,
-        )?
-    }
+    type Item = Result<DictionaryArray<K>>;
 
-    let keys = PrimitiveArray::from_data(K::PRIMITIVE.into(), indices.into(), validity.into());
-    let data_type = DictionaryArray::<K>::get_child(&data_type).clone();
-    let values = Arc::new(PrimitiveArray::from_data(data_type, values.into(), None));
-    Ok(Box::new(DictionaryArray::<K>::from_data(keys, values)))
+    fn next(&mut self) -> Option<Self::Item> {
+        // back[a1, a2, a3, ...]front
+        if self.items.len() > 1 {
+            return self.items.pop_back().map(|(values, validity)| {
+                let keys = finish_key(values, validity);
+                let values = self.values.unwrap();
+                Ok(DictionaryArray::from_data(keys, values))
+            });
+        }
+        match (self.items.pop_back(), self.iter.next()) {
+            (_, Err(e)) => Some(Err(e.into())),
+            (None, Ok(None)) => None,
+            (state, Ok(Some(page))) => {
+                // consume the dictionary page
+                if let Some(dict) = page.dictionary_page() {
+                    let dict = dict
+                        .as_any()
+                        .downcast_ref::<PrimitivePageDict<P>>()
+                        .unwrap();
+                    self.values = match &mut self.values {
+                        Dict::Empty => {
+                            let values = dict
+                                .values()
+                                .iter()
+                                .map(|x| (self.op)(*x))
+                                .collect::<Vec<_>>();
+
+                            Dict::Complete(Arc::new(PrimitiveArray::from_data(
+                                self.data_type.clone(),
+                                values.into(),
+                                None,
+                            )) as _)
+                        }
+                        _ => unreachable!(),
+                    };
+                } else {
+                    return Some(Err(ArrowError::nyi(
+                        "dictionary arrays from non-dict-encoded pages",
+                    )));
+                }
+
+                let maybe_array = {
+                    // there is a new page => consume the page from the start
+                    let decoder = PrimitiveDecoder::default();
+                    let maybe_page = decoder.build_state(page);
+                    let page = match maybe_page {
+                        Ok(page) => page,
+                        Err(e) => return Some(Err(e)),
+                    };
+
+                    utils::extend_from_new_page::<PrimitiveDecoder<K>, _, _>(
+                        page,
+                        state,
+                        self.chunk_size,
+                        &mut self.items,
+                        &PrimitiveDecoder::default(),
+                    )
+                };
+                match maybe_array {
+                    Ok(Some((values, validity))) => {
+                        let keys = finish_key(values, validity);
+
+                        let values = self.values.unwrap();
+                        Some(Ok(DictionaryArray::from_data(keys, values)))
+                    }
+                    Ok(None) => self.next(),
+                    Err(e) => Some(Err(e)),
+                }
+            }
+            (Some((values, validity)), Ok(None)) => {
+                // we have a populated item and no more pages
+                // the only case where an item's length may be smaller than chunk_size
+                debug_assert!(values.len() <= self.chunk_size);
+
+                let keys =
+                    PrimitiveArray::from_data(K::PRIMITIVE.into(), values.into(), validity.into());
+
+                let values = self.values.unwrap();
+                Some(Ok(DictionaryArray::from_data(keys, values)))
+            }
+        }
+    }
+}
+
+/// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
+pub fn iter_to_arrays<'a, K, I, T, P, F>(
+    iter: I,
+    data_type: DataType,
+    chunk_size: usize,
+    op: F,
+) -> ArrayIter<'a>
+where
+    I: 'a + DataPages,
+    K: DictionaryKey,
+    T: NativeType,
+    P: ParquetNativeType,
+    F: 'a + Copy + Send + Sync + Fn(P) -> T,
+{
+    Box::new(
+        ArrayIterator::<K, T, I, P, F>::new(iter, data_type, chunk_size, op)
+            .map(|x| x.map(|x| Arc::new(x) as Arc<dyn Array>)),
+    )
 }

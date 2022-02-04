@@ -1,127 +1,144 @@
-use parquet2::{
-    encoding::{hybrid_rle::HybridRleDecoder, Encoding},
-    metadata::ColumnDescriptor,
-    page::DataPage,
-    read::levels::get_bit_width,
+use std::collections::VecDeque;
+
+use parquet2::{encoding::Encoding, page::DataPage, schema::Repetition};
+
+use crate::{
+    array::Offset,
+    bitmap::MutableBitmap,
+    datatypes::DataType,
+    error::Result,
+    io::parquet::read::{utils::MaybeNext, DataPages},
 };
 
-use super::super::utils;
-use super::basic::read_plain_required;
-use super::{super::nested_utils::*, utils::Binary};
+use super::super::nested_utils::*;
+use super::utils::Binary;
+use super::{
+    super::utils,
+    basic::{finish, Required, TraitBinaryArray},
+};
 
-use crate::{array::Offset, bitmap::MutableBitmap, error::Result};
-
-fn read_values<'a, O, D, G>(
-    def_levels: D,
-    max_def: u32,
-    mut new_values: G,
-    values: &mut Binary<O>,
-    validity: &mut MutableBitmap,
-) where
-    O: Offset,
-    D: Iterator<Item = u32>,
-    G: Iterator<Item = &'a [u8]>,
-{
-    def_levels.for_each(|def| {
-        if def == max_def {
-            let v = new_values.next().unwrap();
-            values.push(v);
-            validity.push(true);
-        } else if def == max_def - 1 {
-            values.push(&[]);
-            validity.push(false);
-        }
-    });
+#[allow(clippy::large_enum_variant)]
+#[derive(Debug)]
+enum State<'a> {
+    Optional(Optional<'a>, utils::BinaryIter<'a>),
+    Required(Required<'a>),
 }
 
-#[allow(clippy::too_many_arguments)]
-fn read<O: Offset>(
-    rep_levels: &[u8],
-    def_levels: &[u8],
-    values_buffer: &[u8],
-    additional: usize,
-    rep_level_encoding: (&Encoding, i16),
-    def_level_encoding: (&Encoding, i16),
-    is_nullable: bool,
-    nested: &mut Vec<Box<dyn Nested>>,
-    values: &mut Binary<O>,
-    validity: &mut MutableBitmap,
-) {
-    let max_rep_level = rep_level_encoding.1 as u32;
-    let max_def_level = def_level_encoding.1 as u32;
+impl<'a> utils::PageState<'a> for State<'a> {
+    fn len(&self) -> usize {
+        match self {
+            State::Optional(validity, _) => validity.len(),
+            State::Required(state) => state.remaining,
+        }
+    }
+}
 
-    match (rep_level_encoding.0, def_level_encoding.0) {
-        (Encoding::Rle, Encoding::Rle) => {
-            let rep_levels =
-                HybridRleDecoder::new(rep_levels, get_bit_width(rep_level_encoding.1), additional);
-            if is_nullable {
-                let def_levels = HybridRleDecoder::new(
-                    def_levels,
-                    get_bit_width(def_level_encoding.1),
-                    additional,
-                );
-                let new_values = utils::BinaryIter::new(values_buffer);
-                read_values(def_levels, max_def_level, new_values, values, validity)
-            } else {
-                read_plain_required(values_buffer, additional, values)
+#[derive(Debug, Default)]
+struct BinaryDecoder<O: Offset> {
+    phantom_o: std::marker::PhantomData<O>,
+}
+
+impl<'a, O: Offset> utils::Decoder<'a, &'a [u8], Binary<O>> for BinaryDecoder<O> {
+    type State = State<'a>;
+
+    fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
+        let is_optional =
+            page.descriptor().type_().get_basic_info().repetition() == &Repetition::Optional;
+
+        match (page.encoding(), page.dictionary_page(), is_optional) {
+            (Encoding::Plain, None, true) => {
+                let (_, _, values, _) = utils::split_buffer(page, page.descriptor());
+
+                let values = utils::BinaryIter::new(values);
+
+                Ok(State::Optional(Optional::new(page), values))
             }
-
-            let def_levels =
-                HybridRleDecoder::new(def_levels, get_bit_width(def_level_encoding.1), additional);
-
-            extend_offsets(
-                rep_levels,
-                def_levels,
-                is_nullable,
-                max_rep_level,
-                max_def_level,
-                nested,
-            )
+            (Encoding::Plain, None, false) => Ok(State::Required(Required::new(page))),
+            _ => Err(utils::not_implemented(
+                &page.encoding(),
+                is_optional,
+                false,
+                "any",
+                "Binary",
+            )),
         }
-        _ => todo!(),
+    }
+
+    fn with_capacity(&self, capacity: usize) -> Binary<O> {
+        Binary::<O>::with_capacity(capacity)
+    }
+
+    fn extend_from_state(
+        state: &mut Self::State,
+        values: &mut Binary<O>,
+        validity: &mut MutableBitmap,
+        additional: usize,
+    ) {
+        match state {
+            State::Optional(page_validity, page_values) => {
+                let max_def = page_validity.max_def();
+                read_optional_values(
+                    page_validity.definition_levels.by_ref(),
+                    max_def,
+                    page_values.by_ref(),
+                    values,
+                    validity,
+                    additional,
+                )
+            }
+            State::Required(page) => {
+                page.remaining -= additional;
+                for x in page.values.by_ref().take(additional) {
+                    values.push(x)
+                }
+            }
+        }
     }
 }
 
-pub(super) fn extend_from_page<O: Offset>(
-    page: &DataPage,
-    descriptor: &ColumnDescriptor,
-    is_nullable: bool,
-    nested: &mut Vec<Box<dyn Nested>>,
-    values: &mut Binary<O>,
-    validity: &mut MutableBitmap,
-) -> Result<()> {
-    let additional = page.num_values();
+pub struct ArrayIterator<O: Offset, A: TraitBinaryArray<O>, I: DataPages> {
+    iter: I,
+    data_type: DataType,
+    init: InitNested,
+    items: VecDeque<(Binary<O>, MutableBitmap)>,
+    nested: VecDeque<NestedState>,
+    chunk_size: usize,
+    phantom_a: std::marker::PhantomData<A>,
+}
 
-    let (rep_levels, def_levels, values_buffer, version) = utils::split_buffer(page, descriptor);
-
-    match (&page.encoding(), page.dictionary_page()) {
-        (Encoding::Plain, None) => read(
-            rep_levels,
-            def_levels,
-            values_buffer,
-            additional,
-            (
-                &page.repetition_level_encoding(),
-                descriptor.max_rep_level(),
-            ),
-            (
-                &page.definition_level_encoding(),
-                descriptor.max_def_level(),
-            ),
-            is_nullable,
-            nested,
-            values,
-            validity,
-        ),
-        _ => {
-            return Err(utils::not_implemented(
-                &page.encoding(),
-                is_nullable,
-                page.dictionary_page().is_some(),
-                version,
-                "primitive",
-            ))
+impl<O: Offset, A: TraitBinaryArray<O>, I: DataPages> ArrayIterator<O, A, I> {
+    pub fn new(iter: I, init: InitNested, data_type: DataType, chunk_size: usize) -> Self {
+        Self {
+            iter,
+            data_type,
+            init,
+            items: VecDeque::new(),
+            nested: VecDeque::new(),
+            chunk_size,
+            phantom_a: Default::default(),
         }
     }
-    Ok(())
+}
+
+impl<O: Offset, A: TraitBinaryArray<O>, I: DataPages> Iterator for ArrayIterator<O, A, I> {
+    type Item = Result<(NestedState, A)>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let maybe_state = next(
+            &mut self.iter,
+            &mut self.items,
+            &mut self.nested,
+            &self.init,
+            self.chunk_size,
+            &BinaryDecoder::<O>::default(),
+        );
+        match maybe_state {
+            MaybeNext::Some(Ok((nested, values, validity))) => {
+                Some(Ok((nested, finish(&self.data_type, values, validity))))
+            }
+            MaybeNext::Some(Err(e)) => Some(Err(e)),
+            MaybeNext::None => None,
+            MaybeNext::More => self.next(),
+        }
+    }
 }

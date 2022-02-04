@@ -1,154 +1,240 @@
+use std::collections::VecDeque;
+
 use parquet2::{
-    encoding::{hybrid_rle::HybridRleDecoder, Encoding},
-    page::DataPage,
-    read::levels::get_bit_width,
-    types::NativeType,
+    encoding::Encoding, page::DataPage, schema::Repetition, types::NativeType as ParquetNativeType,
 };
 
-use super::super::nested_utils::extend_offsets;
-use super::ColumnDescriptor;
-use super::{super::utils, utils::chunks, Nested};
 use crate::{
-    bitmap::MutableBitmap, error::Result, trusted_len::TrustedLen,
-    types::NativeType as ArrowNativeType,
+    array::PrimitiveArray, bitmap::MutableBitmap, datatypes::DataType, error::Result,
+    io::parquet::read::utils::MaybeNext, types::NativeType,
 };
 
-fn read_values<T, D, G, F, A>(
-    def_levels: D,
-    max_def: u32,
-    mut new_values: G,
-    op: F,
-    values: &mut Vec<A>,
-    validity: &mut MutableBitmap,
-) where
-    T: NativeType,
-    D: Iterator<Item = u32>,
-    G: Iterator<Item = T>,
-    A: ArrowNativeType,
-    F: Fn(T) -> A,
-{
-    def_levels.for_each(|def| {
-        if def == max_def {
-            values.push(op(new_values.next().unwrap()));
-            validity.push(true);
-        } else if def == max_def - 1 {
-            values.push(A::default());
-            validity.push(false);
-        }
-    });
-}
+use super::super::nested_utils::*;
+use super::super::utils;
+use super::super::DataPages;
+use super::basic::Values;
 
-fn read_values_required<T, G, F, A>(new_values: G, op: F, values: &mut Vec<A>)
+// The state of a `DataPage` of `Primitive` parquet primitive type
+#[allow(clippy::large_enum_variant)]
+#[derive(Debug)]
+enum State<'a, T, P, G, F>
 where
     T: NativeType,
-    G: TrustedLen<Item = T>,
-    A: ArrowNativeType,
-    F: Fn(T) -> A,
+    P: ParquetNativeType,
+    G: Copy + for<'b> Fn(&'b [u8]) -> P,
+    F: Copy + Fn(P) -> T,
 {
-    values.extend(new_values.map(op));
+    Optional(Optional<'a>, Values<'a, T, P, G, F>),
+    Required(Values<'a, T, P, G, F>),
+    //RequiredDictionary(ValuesDictionary<'a, T, P, F>),
+    //OptionalDictionary(Optional<'a>, ValuesDictionary<'a, T, P, F>),
 }
 
-#[allow(clippy::too_many_arguments)]
-fn read<T, A, F>(
-    rep_levels: &[u8],
-    def_levels: &[u8],
-    values_buffer: &[u8],
-    additional: usize,
-    rep_level_encoding: (&Encoding, i16),
-    def_level_encoding: (&Encoding, i16),
-    is_nullable: bool,
-    nested: &mut Vec<Box<dyn Nested>>,
-    values: &mut Vec<A>,
-    validity: &mut MutableBitmap,
-    op: F,
-) where
+impl<'a, T, P, G, F> utils::PageState<'a> for State<'a, T, P, G, F>
+where
     T: NativeType,
-    A: ArrowNativeType,
-    F: Fn(T) -> A,
+    P: ParquetNativeType,
+    G: Copy + for<'b> Fn(&'b [u8]) -> P,
+    F: Copy + Fn(P) -> T,
 {
-    let new_values = chunks(values_buffer);
+    fn len(&self) -> usize {
+        match self {
+            State::Optional(optional, _) => optional.len(),
+            State::Required(required) => required.len(),
+            //State::RequiredDictionary(required) => required.len(),
+            //State::OptionalDictionary(optional, _) => optional.len(),
+        }
+    }
+}
 
-    let max_rep_level = rep_level_encoding.1 as u32;
-    let max_def_level = def_level_encoding.1 as u32;
+#[derive(Debug)]
+struct PrimitiveDecoder<T, P, G, F>
+where
+    T: NativeType,
+    P: ParquetNativeType,
+    G: for<'b> Fn(&'b [u8]) -> P,
+    F: Fn(P) -> T,
+{
+    phantom: std::marker::PhantomData<T>,
+    phantom_p: std::marker::PhantomData<P>,
+    op1: G,
+    op2: F,
+}
 
-    match (rep_level_encoding.0, def_level_encoding.0) {
-        (Encoding::Rle, Encoding::Rle) => {
-            let rep_levels =
-                HybridRleDecoder::new(rep_levels, get_bit_width(rep_level_encoding.1), additional);
-            if is_nullable {
-                let def_levels = HybridRleDecoder::new(
-                    def_levels,
-                    get_bit_width(def_level_encoding.1),
-                    additional,
-                );
-                read_values(def_levels, max_def_level, new_values, op, values, validity)
-            } else {
-                read_values_required(new_values, op, values)
+impl<'a, T, P, G, F> PrimitiveDecoder<T, P, G, F>
+where
+    T: NativeType,
+    P: ParquetNativeType,
+    G: for<'b> Fn(&'b [u8]) -> P,
+    F: Fn(P) -> T,
+{
+    #[inline]
+    fn new(op1: G, op2: F) -> Self {
+        Self {
+            phantom: std::marker::PhantomData,
+            phantom_p: std::marker::PhantomData,
+            op1,
+            op2,
+        }
+    }
+}
+
+impl<'a, T, P, G, F> utils::Decoder<'a, T, Vec<T>> for PrimitiveDecoder<T, P, G, F>
+where
+    T: NativeType,
+    P: ParquetNativeType,
+    G: Copy + for<'b> Fn(&'b [u8]) -> P,
+    F: Copy + Fn(P) -> T,
+{
+    type State = State<'a, T, P, G, F>;
+
+    fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
+        let is_optional =
+            page.descriptor().type_().get_basic_info().repetition() == &Repetition::Optional;
+
+        match (page.encoding(), page.dictionary_page(), is_optional) {
+            /*(Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false) => {
+                todo!()
             }
-
-            let def_levels =
-                HybridRleDecoder::new(def_levels, get_bit_width(def_level_encoding.1), additional);
-
-            extend_offsets(
-                rep_levels,
-                def_levels,
-                is_nullable,
-                max_rep_level,
-                max_def_level,
-                nested,
-            )
+            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
+                let dict = dict.as_any().downcast_ref().unwrap();
+                Ok(State::OptionalDictionary(OptionalDictionaryPage::new(
+                    page, dict, self.op2,
+                )))
+            }*/
+            (Encoding::Plain, None, true) => Ok(State::Optional(
+                Optional::new(page),
+                Values::new(page, self.op1, self.op2),
+            )),
+            (Encoding::Plain, None, false) => {
+                Ok(State::Required(Values::new(page, self.op1, self.op2)))
+            }
+            _ => Err(utils::not_implemented(
+                &page.encoding(),
+                is_optional,
+                false,
+                "any",
+                "Primitive",
+            )),
         }
-        _ => todo!(),
+    }
+
+    fn with_capacity(&self, capacity: usize) -> Vec<T> {
+        Vec::<T>::with_capacity(capacity)
+    }
+
+    fn extend_from_state(
+        state: &mut Self::State,
+        values: &mut Vec<T>,
+        validity: &mut MutableBitmap,
+        remaining: usize,
+    ) {
+        match state {
+            State::Optional(page_validity, page_values) => {
+                let max_def = page_validity.max_def();
+                read_optional_values(
+                    page_validity.definition_levels.by_ref(),
+                    max_def,
+                    page_values.values.by_ref(),
+                    values,
+                    validity,
+                    remaining,
+                )
+            }
+            State::Required(page) => {
+                values.extend(page.values.by_ref().take(remaining));
+            }
+            //State::OptionalDictionary(page) => todo!(),
+            //State::RequiredDictionary(page) => todo!(),
+        }
     }
 }
 
-pub fn extend_from_page<T, A, F>(
-    page: &DataPage,
-    descriptor: &ColumnDescriptor,
-    is_nullable: bool,
-    nested: &mut Vec<Box<dyn Nested>>,
-    values: &mut Vec<A>,
-    validity: &mut MutableBitmap,
-    op: F,
-) -> Result<()>
+fn finish<T: NativeType>(
+    data_type: &DataType,
+    values: Vec<T>,
+    validity: MutableBitmap,
+) -> PrimitiveArray<T> {
+    PrimitiveArray::from_data(data_type.clone(), values.into(), validity.into())
+}
+
+/// An iterator adapter over [`DataPages`] assumed to be encoded as boolean arrays
+#[derive(Debug)]
+pub struct ArrayIterator<T, I, P, G, F>
 where
+    I: DataPages,
     T: NativeType,
-    A: ArrowNativeType,
-    F: Fn(T) -> A,
+
+    P: ParquetNativeType,
+    G: Copy + for<'b> Fn(&'b [u8]) -> P,
+    F: Copy + Fn(P) -> T,
 {
-    let additional = page.num_values();
+    iter: I,
+    init: InitNested,
+    data_type: DataType,
+    // invariant: items.len() == nested.len()
+    items: VecDeque<(Vec<T>, MutableBitmap)>,
+    nested: VecDeque<NestedState>,
+    chunk_size: usize,
+    decoder: PrimitiveDecoder<T, P, G, F>,
+}
 
-    let (rep_levels, def_levels, values_buffer, version) = utils::split_buffer(page, descriptor);
+impl<T, I, P, G, F> ArrayIterator<T, I, P, G, F>
+where
+    I: DataPages,
+    T: NativeType,
 
-    match (&page.encoding(), page.dictionary_page()) {
-        (Encoding::Plain, None) => read(
-            rep_levels,
-            def_levels,
-            values_buffer,
-            additional,
-            (
-                &page.repetition_level_encoding(),
-                descriptor.max_rep_level(),
-            ),
-            (
-                &page.definition_level_encoding(),
-                descriptor.max_def_level(),
-            ),
-            is_nullable,
-            nested,
-            values,
-            validity,
-            op,
-        ),
-        _ => {
-            return Err(utils::not_implemented(
-                &page.encoding(),
-                is_nullable,
-                page.dictionary_page().is_some(),
-                version,
-                "primitive",
-            ))
+    P: ParquetNativeType,
+    G: Copy + for<'b> Fn(&'b [u8]) -> P,
+    F: Copy + Fn(P) -> T,
+{
+    pub fn new(
+        iter: I,
+        init: InitNested,
+        data_type: DataType,
+        chunk_size: usize,
+        op1: G,
+        op2: F,
+    ) -> Self {
+        Self {
+            iter,
+            init,
+            data_type,
+            items: VecDeque::new(),
+            nested: VecDeque::new(),
+            chunk_size,
+            decoder: PrimitiveDecoder::new(op1, op2),
         }
     }
-    Ok(())
+}
+
+impl<T, I, P, G, F> Iterator for ArrayIterator<T, I, P, G, F>
+where
+    I: DataPages,
+    T: NativeType,
+
+    P: ParquetNativeType,
+    G: Copy + for<'b> Fn(&'b [u8]) -> P,
+    F: Copy + Fn(P) -> T,
+{
+    type Item = Result<(NestedState, PrimitiveArray<T>)>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let maybe_state = next(
+            &mut self.iter,
+            &mut self.items,
+            &mut self.nested,
+            &self.init,
+            self.chunk_size,
+            &self.decoder,
+        );
+        match maybe_state {
+            MaybeNext::Some(Ok((nested, values, validity))) => {
+                Some(Ok((nested, finish(&self.data_type, values, validity))))
+            }
+            MaybeNext::Some(Err(e)) => Some(Err(e)),
+            MaybeNext::None => None,
+            MaybeNext::More => self.next(),
+        }
+    }
 }

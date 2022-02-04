@@ -74,6 +74,13 @@ impl StructArray {
         let fields = Self::get_fields(&data_type);
         assert!(!fields.is_empty());
         assert_eq!(fields.len(), values.len());
+        assert!(
+            fields
+                .iter()
+                .map(|f| f.data_type())
+                .eq(values.iter().map(|a| a.data_type())),
+            "The fields' datatypes must equal the values datatypes"
+        );
         assert!(values.iter().all(|x| x.len() == values[0].len()));
         if let Some(ref validity) = validity {
             assert_eq!(values[0].len(), validity.len());
