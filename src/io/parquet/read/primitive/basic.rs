@@ -273,7 +273,7 @@ pub(super) fn finish<T: NativeType>(
 
 /// An iterator adapter over [`DataPages`] assumed to be encoded as boolean arrays
 #[derive(Debug)]
-pub struct PrimitiveArrayIterator<T, I, P, G, F>
+pub struct Iter<T, I, P, G, F>
 where
     I: DataPages,
     T: NativeType,
@@ -290,7 +290,7 @@ where
     phantom: std::marker::PhantomData<P>,
 }
 
-impl<T, I, P, G, F> PrimitiveArrayIterator<T, I, P, G, F>
+impl<T, I, P, G, F> Iter<T, I, P, G, F>
 where
     I: DataPages,
     T: NativeType,
@@ -312,7 +312,7 @@ where
     }
 }
 
-impl<T, I, P, G, F> Iterator for PrimitiveArrayIterator<T, I, P, G, F>
+impl<T, I, P, G, F> Iterator for Iter<T, I, P, G, F>
 where
     I: DataPages,
     T: NativeType,
