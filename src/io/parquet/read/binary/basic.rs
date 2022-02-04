@@ -277,7 +277,7 @@ pub(super) fn finish<O: Offset, A: TraitBinaryArray<O>>(
     )
 }
 
-pub struct BinaryArrayIterator<O: Offset, A: TraitBinaryArray<O>, I: DataPages> {
+pub struct Iter<O: Offset, A: TraitBinaryArray<O>, I: DataPages> {
     iter: I,
     data_type: DataType,
     items: VecDeque<(Binary<O>, MutableBitmap)>,
@@ -285,7 +285,7 @@ pub struct BinaryArrayIterator<O: Offset, A: TraitBinaryArray<O>, I: DataPages> 
     phantom_a: std::marker::PhantomData<A>,
 }
 
-impl<O: Offset, A: TraitBinaryArray<O>, I: DataPages> BinaryArrayIterator<O, A, I> {
+impl<O: Offset, A: TraitBinaryArray<O>, I: DataPages> Iter<O, A, I> {
     pub fn new(iter: I, data_type: DataType, chunk_size: usize) -> Self {
         Self {
             iter,
@@ -297,7 +297,7 @@ impl<O: Offset, A: TraitBinaryArray<O>, I: DataPages> BinaryArrayIterator<O, A, 
     }
 }
 
-impl<O: Offset, A: TraitBinaryArray<O>, I: DataPages> Iterator for BinaryArrayIterator<O, A, I> {
+impl<O: Offset, A: TraitBinaryArray<O>, I: DataPages> Iterator for Iter<O, A, I> {
     type Item = Result<A>;
 
     fn next(&mut self) -> Option<Self::Item> {
