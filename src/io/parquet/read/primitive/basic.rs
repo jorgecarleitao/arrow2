@@ -8,7 +8,7 @@ use parquet2::{
 };
 
 use crate::{
-    array::PrimitiveArray, bitmap::MutableBitmap, datatypes::DataType, error::Result,
+    array::MutablePrimitiveArray, bitmap::MutableBitmap, datatypes::DataType, error::Result,
     types::NativeType,
 };
 
@@ -267,11 +267,11 @@ pub(super) fn finish<T: NativeType>(
     data_type: &DataType,
     values: Vec<T>,
     validity: MutableBitmap,
-) -> PrimitiveArray<T> {
-    PrimitiveArray::from_data(data_type.clone(), values.into(), validity.into())
+) -> MutablePrimitiveArray<T> {
+    MutablePrimitiveArray::from_data(data_type.clone(), values, validity.into())
 }
 
-/// An iterator adapter over [`DataPages`] assumed to be encoded as boolean arrays
+/// An iterator adapter over [`DataPages`] assumed to be encoded as primitive arrays
 #[derive(Debug)]
 pub struct Iter<T, I, P, G, F>
 where
@@ -320,7 +320,7 @@ where
     G: Copy + for<'b> Fn(&'b [u8]) -> P,
     F: Copy + Fn(P) -> T,
 {
-    type Item = Result<PrimitiveArray<T>>;
+    type Item = Result<MutablePrimitiveArray<T>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let maybe_state = utils::next(
