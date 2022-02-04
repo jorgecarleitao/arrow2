@@ -42,7 +42,7 @@ pub fn set(byte: u8, i: usize, value: bool) -> u8 {
     }
 }
 
-/// Returns whether bit at position `i` in `data` is set or not
+/// Sets bit at position `i` in `data`
 #[inline]
 pub fn set_bit(data: &mut [u8], i: usize, value: bool) {
     data[i / 8] = set(data[i / 8], i % 8, value);
