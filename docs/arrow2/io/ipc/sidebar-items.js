@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["read","APIs to read Arrow’s IPC format."],["write","APIs to write to Arrow’s IPC format."]],"struct":[["IpcField","Struct containing `dictionary_id` and nested `IpcField`, allowing users to specify the dictionary ids of the IPC fields when writing to IPC."],["IpcSchema",""]]});
