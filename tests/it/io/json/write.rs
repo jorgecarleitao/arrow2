@@ -301,7 +301,7 @@ fn write_escaped_utf8() -> Result<()> {
 
     assert_eq!(
         String::from_utf8(buf).unwrap().as_bytes(),
-        b"{\"c1\":\"a\na\"}\n{\"c1\":null}\n"
+        b"{\"c1\":\"a\\na\"}\n{\"c1\":null}\n"
     );
     Ok(())
 }
