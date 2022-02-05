@@ -22,7 +22,7 @@ pub use reader::{read_file_metadata, FileMetadata, FileReader};
 pub use schema::deserialize_schema;
 pub use stream::{read_stream_metadata, StreamMetadata, StreamReader, StreamState};
 
-// how dictionaries are tracked in this crate
+/// how dictionaries are tracked in this crate
 pub type Dictionaries = HashMap<i64, Arc<dyn Array>>;
 
 pub(crate) type Node<'a> = arrow_format::ipc::FieldNodeRef<'a>;

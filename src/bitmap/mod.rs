@@ -1,4 +1,3 @@
-#![deny(missing_docs)]
 //! contains [`Bitmap`] and [`MutableBitmap`], containers of `bool`.
 mod immutable;
 pub use immutable::*;

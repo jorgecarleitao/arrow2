@@ -10,9 +10,13 @@ use crate::error::{ArrowError, Result};
 /// Represents a `Binary` or `LargeBinary`
 #[derive(Debug, Clone, PartialEq)]
 pub struct BinaryStatistics {
+    /// number of nulls
     pub null_count: Option<i64>,
+    /// number of dictinct values
     pub distinct_count: Option<i64>,
+    /// Minimum
     pub min_value: Option<Vec<u8>>,
+    /// Maximum
     pub max_value: Option<Vec<u8>>,
 }
 
@@ -41,11 +45,16 @@ impl From<&ParquetByteArrayStatistics> for BinaryStatistics {
     }
 }
 
+/// Statistics of a string parquet column
 #[derive(Debug, Clone, PartialEq)]
 pub struct Utf8Statistics {
+    /// number of nulls
     pub null_count: Option<i64>,
+    /// number of dictinct values
     pub distinct_count: Option<i64>,
+    /// Minimum
     pub min_value: Option<String>,
+    /// Maximum
     pub max_value: Option<String>,
 }
 

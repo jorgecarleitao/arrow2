@@ -4,11 +4,16 @@ use std::any::Any;
 
 use super::Statistics;
 
+/// Statistics of a boolean parquet column
 #[derive(Debug, Clone, PartialEq)]
 pub struct BooleanStatistics {
+    /// number of nulls
     pub null_count: Option<i64>,
+    /// number of dictinct values
     pub distinct_count: Option<i64>,
+    /// Minimum
     pub min_value: Option<bool>,
+    /// Maximum
     pub max_value: Option<bool>,
 }
 

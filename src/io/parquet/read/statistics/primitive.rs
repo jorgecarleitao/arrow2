@@ -10,12 +10,18 @@ use std::any::Any;
 use super::Statistics;
 use crate::error::Result;
 
+/// Arrow-deserialized parquet Statistics of a primitive type
 #[derive(Debug, Clone, PartialEq)]
 pub struct PrimitiveStatistics<T: NativeType> {
+    /// the data type
     pub data_type: DataType,
+    /// number of nulls
     pub null_count: Option<i64>,
+    /// number of dictinct values
     pub distinct_count: Option<i64>,
+    /// Minimum
     pub min_value: Option<T>,
+    /// Maximum
     pub max_value: Option<T>,
 }
 

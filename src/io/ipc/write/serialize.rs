@@ -458,6 +458,7 @@ pub fn _write_dictionary<K: DictionaryKey>(
     }
 }
 
+/// Writes a dictionary array
 #[allow(clippy::too_many_arguments)]
 pub fn write_dictionary(
     array: &dyn Array,
@@ -488,6 +489,7 @@ pub fn write_dictionary(
     }
 }
 
+/// Writes an [`Array`] to `arrow_data`
 pub fn write(
     array: &dyn Array,
     buffers: &mut Vec<ipc::Buffer>,

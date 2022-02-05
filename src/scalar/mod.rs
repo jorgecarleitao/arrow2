@@ -1,4 +1,3 @@
-#![warn(missing_docs)]
 //! contains the [`Scalar`] trait object representing individual items of [`Array`](crate::array::Array)s,
 //! as well as concrete implementations such as [`BooleanScalar`].
 use std::any::Any;

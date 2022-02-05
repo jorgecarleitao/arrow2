@@ -15,13 +15,16 @@ use super::common::*;
 use super::schema::fb_to_schema;
 use super::Dictionaries;
 
+/// Metadata of an Arrow IPC stream, written at the start of the stream
 #[derive(Debug, Clone)]
 pub struct StreamMetadata {
     /// The schema that is read from the stream's first message
     pub schema: Schema,
 
+    /// The IPC version of the stream
     pub version: arrow_format::ipc::MetadataVersion,
 
+    /// The IPC fields tracking dictionaries
     pub ipc_schema: IpcSchema,
 }
 

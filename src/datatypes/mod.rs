@@ -1,4 +1,3 @@
-#![deny(missing_docs)]
 #![forbid(unsafe_code)]
 //! Contains all metadata, such as [`PhysicalType`], [`DataType`], [`Field`] and [`Schema`].
 

@@ -22,6 +22,7 @@ pub fn add_arrow_schema(
         .or_else(|| Some(vec![schema_to_metadata_key(schema)]))
 }
 
+/// An interface to write a parquet to a [`Write`]
 pub struct FileWriter<W: Write> {
     writer: parquet2::write::FileWriter<W>,
     schema: Schema,
