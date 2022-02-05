@@ -30,6 +30,19 @@ pub fn page_iter_to_arrays<'a, I: 'a + DataPages>(
 ) -> Result<ArrayIter<'a>> {
     use DataType::*;
 
+    let (physical_type, logical_type) = if let ParquetType::PrimitiveType {
+        physical_type,
+        logical_type,
+        ..
+    } = type_
+    {
+        (physical_type, logical_type)
+    } else {
+        return Err(ArrowError::InvalidArgumentError(
+            "page_iter_to_arrays can only be called with a parquet primitive type".into(),
+        ));
+    };
+
     Ok(match data_type.to_logical_type() {
         Null => null::iter_to_arrays(pages, data_type, chunk_size),
         Boolean => dyn_iter(boolean::Iter::new(pages, data_type, chunk_size)),
@@ -74,72 +87,73 @@ pub fn page_iter_to_arrays<'a, I: 'a + DataPages>(
 
         Timestamp(time_unit, None) => {
             let time_unit = *time_unit;
-            return timestamp(pages, type_, data_type, chunk_size, time_unit);
+            return timestamp(
+                pages,
+                physical_type,
+                logical_type,
+                data_type,
+                chunk_size,
+                time_unit,
+            );
         }
 
         FixedSizeBinary(_) => dyn_iter(fixed_size_binary::Iter::new(pages, data_type, chunk_size)),
 
-        Decimal(_, _) => match type_ {
-            ParquetType::PrimitiveType { physical_type, .. } => match physical_type {
-                PhysicalType::Int32 => dyn_iter(iden(primitive::Iter::new(
-                    pages,
-                    data_type,
-                    chunk_size,
-                    read_item,
-                    |x: i32| x as i128,
-                ))),
-                PhysicalType::Int64 => dyn_iter(iden(primitive::Iter::new(
-                    pages,
-                    data_type,
-                    chunk_size,
-                    read_item,
-                    |x: i64| x as i128,
-                ))),
-                &PhysicalType::FixedLenByteArray(n) if n > 16 => {
-                    return Err(ArrowError::NotYetImplemented(format!(
-                        "Can't decode Decimal128 type from Fixed Size Byte Array of len {:?}",
-                        n
-                    )))
-                }
-                &PhysicalType::FixedLenByteArray(n) => {
-                    let n = n as usize;
+        Decimal(_, _) => match physical_type {
+            PhysicalType::Int32 => dyn_iter(iden(primitive::Iter::new(
+                pages,
+                data_type,
+                chunk_size,
+                read_item,
+                |x: i32| x as i128,
+            ))),
+            PhysicalType::Int64 => dyn_iter(iden(primitive::Iter::new(
+                pages,
+                data_type,
+                chunk_size,
+                read_item,
+                |x: i64| x as i128,
+            ))),
+            &PhysicalType::FixedLenByteArray(n) if n > 16 => {
+                return Err(ArrowError::NotYetImplemented(format!(
+                    "Can't decode Decimal128 type from Fixed Size Byte Array of len {:?}",
+                    n
+                )))
+            }
+            &PhysicalType::FixedLenByteArray(n) => {
+                let n = n as usize;
 
-                    let pages = fixed_size_binary::Iter::new(
-                        pages,
-                        DataType::FixedSizeBinary(n),
-                        chunk_size,
-                    );
+                let pages =
+                    fixed_size_binary::Iter::new(pages, DataType::FixedSizeBinary(n), chunk_size);
 
-                    let pages = pages.map(move |maybe_array| {
-                        let array = maybe_array?;
-                        let values = array
-                            .values()
-                            .chunks_exact(n)
-                            .map(|value: &[u8]| {
-                                // Copy the fixed-size byte value to the start of a 16 byte stack
-                                // allocated buffer, then use an arithmetic right shift to fill in
-                                // MSBs, which accounts for leading 1's in negative (two's complement)
-                                // values.
-                                let mut bytes = [0u8; 16];
-                                bytes[..n].copy_from_slice(value);
-                                i128::from_be_bytes(bytes) >> (8 * (16 - n))
-                            })
-                            .collect::<Vec<_>>();
-                        let validity = array.validity().cloned();
+                let pages = pages.map(move |maybe_array| {
+                    let array = maybe_array?;
+                    let values = array
+                        .values()
+                        .chunks_exact(n)
+                        .map(|value: &[u8]| {
+                            // Copy the fixed-size byte value to the start of a 16 byte stack
+                            // allocated buffer, then use an arithmetic right shift to fill in
+                            // MSBs, which accounts for leading 1's in negative (two's complement)
+                            // values.
+                            let mut bytes = [0u8; 16];
+                            bytes[..n].copy_from_slice(value);
+                            i128::from_be_bytes(bytes) >> (8 * (16 - n))
+                        })
+                        .collect::<Vec<_>>();
+                    let validity = array.validity().cloned();
 
-                        Ok(PrimitiveArray::<i128>::from_data(
-                            data_type.clone(),
-                            values.into(),
-                            validity,
-                        ))
-                    });
+                    Ok(PrimitiveArray::<i128>::from_data(
+                        data_type.clone(),
+                        values.into(),
+                        validity,
+                    ))
+                });
 
-                    let arrays = pages.map(|x| x.map(|x| Arc::new(x) as Arc<dyn Array>));
+                let arrays = pages.map(|x| x.map(|x| Arc::new(x) as Arc<dyn Array>));
 
-                    Box::new(arrays) as _
-                }
-                _ => unreachable!(),
-            },
+                Box::new(arrays) as _
+            }
             _ => unreachable!(),
         },
 
@@ -185,7 +199,7 @@ pub fn page_iter_to_arrays<'a, I: 'a + DataPages>(
 
         Dictionary(key_type, _, _) => {
             return match_integer_type!(key_type, |$K| {
-                dict_read::<$K, _>(pages, type_, data_type, chunk_size)
+                dict_read::<$K, _>(pages, physical_type, logical_type, data_type, chunk_size)
             })
         }
 
@@ -200,22 +214,12 @@ pub fn page_iter_to_arrays<'a, I: 'a + DataPages>(
 
 fn timestamp<'a, I: 'a + DataPages>(
     pages: I,
-    type_: &ParquetType,
+    physical_type: &PhysicalType,
+    logical_type: &Option<LogicalType>,
     data_type: DataType,
     chunk_size: usize,
     time_unit: TimeUnit,
 ) -> Result<ArrayIter<'a>> {
-    let (physical_type, logical_type) = if let ParquetType::PrimitiveType {
-        physical_type,
-        logical_type,
-        ..
-    } = type_
-    {
-        (physical_type, logical_type)
-    } else {
-        unreachable!()
-    };
-
     if physical_type == &PhysicalType::Int96 {
         if time_unit == TimeUnit::Nanosecond {
             return Ok(dyn_iter(iden(primitive::Iter::new(
@@ -264,9 +268,147 @@ fn timestamp<'a, I: 'a + DataPages>(
     })
 }
 
+fn timestamp_dict<'a, K: DictionaryKey, I: 'a + DataPages>(
+    pages: I,
+    physical_type: &PhysicalType,
+    logical_type: &Option<LogicalType>,
+    data_type: DataType,
+    chunk_size: usize,
+    time_unit: TimeUnit,
+) -> Result<ArrayIter<'a>> {
+    if physical_type == &PhysicalType::Int96 {
+        if time_unit == TimeUnit::Nanosecond {
+            return Ok(dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
+                pages,
+                DataType::Timestamp(TimeUnit::Nanosecond, None),
+                chunk_size,
+                int96_to_i64_ns,
+            )));
+        } else {
+            return Err(ArrowError::nyi(
+                "Can't decode int96 to timestamp other than ns",
+            ));
+        }
+    };
+
+    let unit = if let Some(LogicalType::TIMESTAMP(TimestampType { unit, .. })) = logical_type {
+        unit
+    } else {
+        return Ok(dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
+            pages,
+            data_type,
+            chunk_size,
+            |x: i64| x,
+        )));
+    };
+
+    Ok(match (unit, time_unit) {
+        (ParquetTimeUnit::MILLIS(_), TimeUnit::Second) => {
+            dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
+                pages,
+                data_type,
+                chunk_size,
+                |x: i64| x / 1_000,
+            ))
+        }
+        (ParquetTimeUnit::MICROS(_), TimeUnit::Second) => {
+            dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
+                pages,
+                data_type,
+                chunk_size,
+                |x: i64| x / 1_000_000,
+            ))
+        }
+        (ParquetTimeUnit::NANOS(_), TimeUnit::Second) => {
+            dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
+                pages,
+                data_type,
+                chunk_size,
+                |x: i64| x * 1_000_000_000,
+            ))
+        }
+
+        (ParquetTimeUnit::MILLIS(_), TimeUnit::Millisecond) => {
+            dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
+                pages,
+                data_type,
+                chunk_size,
+                |x: i64| x,
+            ))
+        }
+        (ParquetTimeUnit::MICROS(_), TimeUnit::Millisecond) => {
+            dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
+                pages,
+                data_type,
+                chunk_size,
+                |x: i64| x / 1_000,
+            ))
+        }
+        (ParquetTimeUnit::NANOS(_), TimeUnit::Millisecond) => {
+            dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
+                pages,
+                data_type,
+                chunk_size,
+                |x: i64| x / 1_000_000,
+            ))
+        }
+
+        (ParquetTimeUnit::MILLIS(_), TimeUnit::Microsecond) => {
+            dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
+                pages,
+                data_type,
+                chunk_size,
+                |x: i64| x * 1_000,
+            ))
+        }
+        (ParquetTimeUnit::MICROS(_), TimeUnit::Microsecond) => {
+            dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
+                pages,
+                data_type,
+                chunk_size,
+                |x: i64| x,
+            ))
+        }
+        (ParquetTimeUnit::NANOS(_), TimeUnit::Microsecond) => {
+            dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
+                pages,
+                data_type,
+                chunk_size,
+                |x: i64| x / 1_000,
+            ))
+        }
+
+        (ParquetTimeUnit::MILLIS(_), TimeUnit::Nanosecond) => {
+            dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
+                pages,
+                data_type,
+                chunk_size,
+                |x: i64| x * 1_000_000,
+            ))
+        }
+        (ParquetTimeUnit::MICROS(_), TimeUnit::Nanosecond) => {
+            dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
+                pages,
+                data_type,
+                chunk_size,
+                |x: i64| x * 1_000,
+            ))
+        }
+        (ParquetTimeUnit::NANOS(_), TimeUnit::Nanosecond) => {
+            dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
+                pages,
+                data_type,
+                chunk_size,
+                |x: i64| x,
+            ))
+        }
+    })
+}
+
 fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
     iter: I,
-    type_: &ParquetType,
+    physical_type: &PhysicalType,
+    logical_type: &Option<LogicalType>,
     data_type: DataType,
     chunk_size: usize,
 ) -> Result<ArrayIter<'a>> {
@@ -314,53 +456,17 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
             }),
         ),
 
-        Timestamp(TimeUnit::Nanosecond, None) => match type_ {
-            ParquetType::PrimitiveType {
+        Timestamp(time_unit, None) => {
+            let time_unit = *time_unit;
+            return timestamp_dict::<K, _>(
+                iter,
                 physical_type,
                 logical_type,
-                ..
-            } => match (physical_type, logical_type) {
-                (PhysicalType::Int96, _) => dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
-                    iter,
-                    DataType::Timestamp(TimeUnit::Nanosecond, None),
-                    chunk_size,
-                    int96_to_i64_ns,
-                )),
-                (_, Some(LogicalType::TIMESTAMP(TimestampType { unit, .. }))) => match unit {
-                    ParquetTimeUnit::MILLIS(_) => {
-                        dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
-                            iter,
-                            data_type,
-                            chunk_size,
-                            |x: i64| x * 1_000_000,
-                        ))
-                    }
-                    ParquetTimeUnit::MICROS(_) => {
-                        dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
-                            iter,
-                            data_type,
-                            chunk_size,
-                            |x: i64| x * 1_000,
-                        ))
-                    }
-                    ParquetTimeUnit::NANOS(_) => {
-                        dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
-                            iter,
-                            data_type,
-                            chunk_size,
-                            |x: i64| x,
-                        ))
-                    }
-                },
-                _ => dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
-                    iter,
-                    data_type,
-                    chunk_size,
-                    |x: i64| x,
-                )),
-            },
-            _ => unreachable!(),
-        },
+                data_type,
+                chunk_size,
+                time_unit,
+            );
+        }
 
         Int64 | Date64 | Time64(_) | Duration(_) | Timestamp(_, _) => dyn_iter(
             primitive::DictIter::<K, _, _, _, _>::new(iter, data_type, chunk_size, |x: i64| x),
