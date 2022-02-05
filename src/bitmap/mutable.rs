@@ -1,7 +1,7 @@
 use std::hint::unreachable_unchecked;
 use std::iter::FromIterator;
 
-use crate::bitmap::utils::merge_reversed;
+use crate::bitmap::utils::{merge_reversed, set_bit_unchecked};
 use crate::trusted_len::TrustedLen;
 
 use super::utils::{count_zeros, fmt, get_bit, set, set_bit, BitmapIter};
@@ -207,6 +207,14 @@ impl MutableBitmap {
     #[inline]
     pub fn set(&mut self, index: usize, value: bool) {
         set_bit(self.buffer.as_mut_slice(), index, value)
+    }
+
+    /// Sets the position `index` to `value`
+    /// # Safety
+    /// Caller must ensure that `index < self.len()`
+    #[inline]
+    pub unsafe fn set_unchecked(&mut self, index: usize, value: bool) {
+        set_bit_unchecked(self.buffer.as_mut_slice(), index, value)
     }
 
     /// Shrinks the capacity of the [`MutableBitmap`] to fit its current length.

@@ -285,7 +285,19 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
     /// # Panic
     /// Panics iff index is larger than `self.len()`.
     pub fn set(&mut self, index: usize, value: Option<T>) {
-        self.values[index] = value.unwrap_or_default();
+        assert!(index < self.len());
+        // Safety:
+        // we just checked bounds
+        unsafe { self.set_unchecked(index, value) }
+    }
+
+    /// Sets position `index` to `value`.
+    /// Note that if it is the first time a null appears in this array,
+    /// this initializes the validity bitmap (`O(N)`).
+    /// # Safety
+    /// Caller must ensure `index < self.len()`
+    pub unsafe fn set_unchecked(&mut self, index: usize, value: Option<T>) {
+        *self.values.get_unchecked_mut(index) = value.unwrap_or_default();
 
         if value.is_none() && self.validity.is_none() {
             // When the validity is None, all elements so far are valid. When one of the elements is set fo null,
@@ -295,7 +307,7 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
             self.validity = Some(validity);
         }
         if let Some(x) = self.validity.as_mut() {
-            x.set(index, value.is_some())
+            x.set_unchecked(index, value.is_some())
         }
     }
 
