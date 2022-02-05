@@ -150,33 +150,35 @@ impl<'a> utils::PageState<'a> for State<'a> {
 }
 
 pub trait TraitBinaryArray<O: Offset>: Array + 'static {
-    fn from_data(
+    fn try_new(
         data_type: DataType,
         offsets: Buffer<O>,
         values: Buffer<u8>,
         validity: Option<Bitmap>,
-    ) -> Self;
+    ) -> Result<Self>
+    where
+        Self: Sized;
 }
 
 impl<O: Offset> TraitBinaryArray<O> for BinaryArray<O> {
-    fn from_data(
+    fn try_new(
         data_type: DataType,
         offsets: Buffer<O>,
         values: Buffer<u8>,
         validity: Option<Bitmap>,
-    ) -> Self {
-        Self::from_data(data_type, offsets, values, validity)
+    ) -> Result<Self> {
+        Self::try_new(data_type, offsets, values, validity)
     }
 }
 
 impl<O: Offset> TraitBinaryArray<O> for Utf8Array<O> {
-    fn from_data(
+    fn try_new(
         data_type: DataType,
         offsets: Buffer<O>,
         values: Buffer<u8>,
         validity: Option<Bitmap>,
-    ) -> Self {
-        Self::from_data(data_type, offsets, values, validity)
+    ) -> Result<Self> {
+        Self::try_new(data_type, offsets, values, validity)
     }
 }
 
@@ -268,8 +270,8 @@ pub(super) fn finish<O: Offset, A: TraitBinaryArray<O>>(
     data_type: &DataType,
     values: Binary<O>,
     validity: MutableBitmap,
-) -> A {
-    A::from_data(
+) -> Result<A> {
+    A::try_new(
         data_type.clone(),
         values.offsets.0.into(),
         values.values.into(),
@@ -309,7 +311,7 @@ impl<O: Offset, A: TraitBinaryArray<O>, I: DataPages> Iterator for Iter<O, A, I>
         );
         match maybe_state {
             MaybeNext::Some(Ok((values, validity))) => {
-                Some(Ok(finish(&self.data_type, values, validity)))
+                Some(finish(&self.data_type, values, validity))
             }
             MaybeNext::Some(Err(e)) => Some(Err(e)),
             MaybeNext::None => None,
