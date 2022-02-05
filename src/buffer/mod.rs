@@ -1,4 +1,3 @@
-#![deny(missing_docs)]
 //! Contains [`Buffer`], an immutable container for all Arrow physical types (e.g. i32, f64).
 
 mod immutable;

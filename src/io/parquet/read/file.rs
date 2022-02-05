@@ -184,6 +184,7 @@ pub struct RowGroupReader<R: Read + Seek> {
 }
 
 impl<R: Read + Seek> RowGroupReader<R> {
+    /// Returns a new [`RowGroupReader`]
     pub fn new(
         reader: R,
         schema: Schema,

@@ -1,4 +1,3 @@
-#![deny(missing_docs)]
 //! contains FFI bindings to import and export [`Array`](crate::array::Array) via
 //! Arrow's [C Data Interface](https://arrow.apache.org/docs/format/CDataInterface.html)
 mod array;

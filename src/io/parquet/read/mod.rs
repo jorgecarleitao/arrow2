@@ -59,6 +59,7 @@ pub use schema::{get_schema, FileMetaData};
 use self::nested_utils::{InitNested, NestedArrayIter, NestedState};
 use deserialize::page_iter_to_arrays;
 
+/// Trait describing a [`FallibleStreamingIterator`] of [`DataPage`]
 pub trait DataPages:
     FallibleStreamingIterator<Item = DataPage, Error = ParquetError> + Send + Sync
 {

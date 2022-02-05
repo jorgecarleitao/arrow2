@@ -14,6 +14,7 @@ use super::schema::fb_to_schema;
 use super::Dictionaries;
 use arrow_format::ipc::planus::{ReadAsRoot, Vector};
 
+/// Metadata of an Arrow IPC file, written in the footer of the file.
 #[derive(Debug, Clone)]
 pub struct FileMetadata {
     /// The schema that is read from the file footer

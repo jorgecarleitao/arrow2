@@ -74,6 +74,7 @@ impl<W: Write> FileWriter<W> {
         })
     }
 
+    /// Consumes itself into the inner writer
     pub fn into_inner(self) -> W {
         self.writer
     }

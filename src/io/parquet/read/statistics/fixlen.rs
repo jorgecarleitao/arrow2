@@ -15,12 +15,18 @@ use parquet2::{
 
 use super::Statistics;
 
+/// Arrow-deserialized parquet Statistics of a fixed-len binary
 #[derive(Debug, Clone, PartialEq)]
 pub struct FixedLenStatistics {
+    /// number of nulls
     pub null_count: Option<i64>,
+    /// number of dictinct values
     pub distinct_count: Option<i64>,
+    /// Minimum
     pub min_value: Option<Vec<u8>>,
+    /// Maximum
     pub max_value: Option<Vec<u8>>,
+    /// data type
     pub data_type: DataType,
 }
 

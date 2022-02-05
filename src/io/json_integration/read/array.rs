@@ -410,6 +410,7 @@ pub fn to_array(
     }
 }
 
+/// Deserializes a [`ArrowJsonBatch`] to a [`Chunk`]
 pub fn deserialize_chunk(
     schema: &Schema,
     ipc_fields: &[IpcField],

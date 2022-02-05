@@ -91,15 +91,18 @@ const CONTINUATION_MARKER: [u8; 4] = [0xff; 4];
 /// to specify the dictionary ids of the IPC fields when writing to IPC.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct IpcField {
-    // optional children
+    /// optional children
     pub fields: Vec<IpcField>,
-    // dictionary id
+    /// dictionary id
     pub dictionary_id: Option<i64>,
 }
 
+/// Struct containing fields and whether the file is written in little or big endian.
 #[derive(Debug, Clone, PartialEq)]
 pub struct IpcSchema {
+    /// The fields in the schema
     pub fields: Vec<IpcField>,
+    /// Endianness of the file
     pub is_little_endian: bool,
 }
 
