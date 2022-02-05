@@ -1,5 +1,4 @@
 use lexical_core::ToLexical;
-use serde_json::Value;
 use streaming_iterator::StreamingIterator;
 
 use crate::bitmap::utils::zip_validity;
@@ -8,6 +7,7 @@ use crate::io::iterator::BufStreamingIterator;
 use crate::util::lexical_to_bytes_mut;
 use crate::{array::*, datatypes::DataType, types::NativeType};
 
+use super::utf8::utf8_serialize;
 use super::{JsonArray, JsonFormat};
 
 fn boolean_serializer<'a>(
@@ -135,20 +135,6 @@ fn list_serializer<'a, O: Offset>(
         },
         vec![],
     ))
-}
-
-#[inline]
-fn utf8_serialize(value: &str, buf: &mut Vec<u8>) {
-    if value.as_bytes().is_ascii() {
-        buf.reserve(value.len() + 2);
-        buf.push(b'"');
-        buf.extend_from_slice(value.as_bytes());
-        buf.push(b'"');
-    } else {
-        // it may contain reserved keywords: perform roundtrip for
-        // todo: avoid this roundtrip over serde_json
-        serde_json::to_writer(buf, &Value::String(value.to_string())).unwrap();
-    }
 }
 
 fn new_serializer<'a>(

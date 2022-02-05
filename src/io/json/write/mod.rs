@@ -1,6 +1,7 @@
 //! APIs to write to JSON
 mod format;
 mod serialize;
+mod utf8;
 pub use fallible_streaming_iterator::*;
 pub use format::*;
 pub use serialize::serialize;
