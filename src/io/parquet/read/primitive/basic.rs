@@ -209,13 +209,13 @@ where
                     ValuesDictionary::new(values_buffer, page.num_values(), dict, self.op2),
                 ))
             }
-            (Encoding::Plain, None, true) => {
+            (Encoding::Plain, _, true) => {
                 let validity = OptionalPageValidity::new(page);
                 let values = Values::new(page, self.op1, self.op2);
 
                 Ok(State::Optional(validity, values))
             }
-            (Encoding::Plain, None, false) => {
+            (Encoding::Plain, _, false) => {
                 Ok(State::Required(Values::new(page, self.op1, self.op2)))
             }
             _ => Err(utils::not_implemented(
