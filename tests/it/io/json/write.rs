@@ -305,3 +305,22 @@ fn write_escaped_utf8() -> Result<()> {
     );
     Ok(())
 }
+
+#[test]
+fn write_quotation_marks_in_utf8() -> Result<()> {
+    let a = Utf8Array::<i32>::from(&vec![Some("a\"a"), None]);
+
+    let batch = Chunk::try_new(vec![&a as &dyn Array]).unwrap();
+
+    let buf = write_batch(
+        batch,
+        vec!["c1".to_string()],
+        json_write::LineDelimited::default(),
+    )?;
+
+    assert_eq!(
+        String::from_utf8(buf).unwrap().as_bytes(),
+        b"{\"c1\":\"a\\\"a\"}\n{\"c1\":null}\n"
+    );
+    Ok(())
+}
