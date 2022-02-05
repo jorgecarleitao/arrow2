@@ -303,6 +303,7 @@ fn write_escaped_utf8() -> Result<()> {
         String::from_utf8(buf).unwrap().as_bytes(),
         b"{\"c1\":\"a\\na\"}\n{\"c1\":null}\n"
     );
+    serde_json::from_slice::<serde_json::Value>(b"{\"c1\":\"a\\na\"}").unwrap();
     Ok(())
 }
 
@@ -322,5 +323,6 @@ fn write_quotation_marks_in_utf8() -> Result<()> {
         String::from_utf8(buf).unwrap().as_bytes(),
         b"{\"c1\":\"a\\\"a\"}\n{\"c1\":null}\n"
     );
+    serde_json::from_slice::<serde_json::Value>(b"{\"c1\":\"a\\\"a\"}").unwrap();
     Ok(())
 }
