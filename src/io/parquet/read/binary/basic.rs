@@ -150,7 +150,7 @@ impl<'a> utils::PageState<'a> for State<'a> {
 }
 
 pub trait TraitBinaryArray<O: Offset>: Array + 'static {
-    fn try_from_data(
+    fn try_new(
         data_type: DataType,
         offsets: Buffer<O>,
         values: Buffer<u8>,
@@ -161,24 +161,24 @@ pub trait TraitBinaryArray<O: Offset>: Array + 'static {
 }
 
 impl<O: Offset> TraitBinaryArray<O> for BinaryArray<O> {
-    fn try_from_data(
+    fn try_new(
         data_type: DataType,
         offsets: Buffer<O>,
         values: Buffer<u8>,
         validity: Option<Bitmap>,
     ) -> Result<Self> {
-        Self::try_from_data(data_type, offsets, values, validity)
+        Self::try_new(data_type, offsets, values, validity)
     }
 }
 
 impl<O: Offset> TraitBinaryArray<O> for Utf8Array<O> {
-    fn try_from_data(
+    fn try_new(
         data_type: DataType,
         offsets: Buffer<O>,
         values: Buffer<u8>,
         validity: Option<Bitmap>,
     ) -> Result<Self> {
-        Self::try_from_data(data_type, offsets, values, validity)
+        Self::try_new(data_type, offsets, values, validity)
     }
 }
 
@@ -271,7 +271,7 @@ pub(super) fn finish<O: Offset, A: TraitBinaryArray<O>>(
     values: Binary<O>,
     validity: MutableBitmap,
 ) -> Result<A> {
-    A::try_from_data(
+    A::try_new(
         data_type.clone(),
         values.offsets.0.into(),
         values.values.into(),

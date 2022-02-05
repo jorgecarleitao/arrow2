@@ -82,7 +82,7 @@ impl<O: Offset> Utf8Array<O> {
         values: Buffer<u8>,
         validity: Option<Bitmap>,
     ) -> Self {
-        Utf8Array::try_from_data(data_type, offsets, values, validity).unwrap()
+        Utf8Array::try_new(data_type, offsets, values, validity).unwrap()
     }
 
     /// The canonical method to create a [`Utf8Array`] out of low-end APIs.
@@ -92,7 +92,7 @@ impl<O: Offset> Utf8Array<O> {
     /// * The `offsets` and `values` are inconsistent
     /// * The `values` between `offsets` are utf8 encoded
     /// * The validity is not `None` and its length is different from `offsets.len() - 1`.
-    pub fn try_from_data(
+    pub fn try_new(
         data_type: DataType,
         offsets: Buffer<O>,
         values: Buffer<u8>,

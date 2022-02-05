@@ -66,7 +66,7 @@ impl<O: Offset> BinaryArray<O> {
         values: Buffer<u8>,
         validity: Option<Bitmap>,
     ) -> Self {
-        Self::try_from_data(data_type, offsets, values, validity).unwrap()
+        Self::try_new(data_type, offsets, values, validity).unwrap()
     }
 
     /// Creates a new [`BinaryArray`] from lower-level parts.
@@ -76,7 +76,7 @@ impl<O: Offset> BinaryArray<O> {
     /// * The last offset is not equal to the values' length.
     /// * the validity's length is not equal to `offsets.len() - 1`.
     /// * The `data_type`'s physical type is not equal to `Binary` or `LargeBinary`.
-    pub fn try_from_data(
+    pub fn try_new(
         data_type: DataType,
         offsets: Buffer<O>,
         values: Buffer<u8>,
