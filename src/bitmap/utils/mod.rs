@@ -43,9 +43,20 @@ pub fn set(byte: u8, i: usize, value: bool) -> u8 {
 }
 
 /// Sets bit at position `i` in `data`
+/// # Panics
+/// panics if `i >= data.len() / 8`
 #[inline]
 pub fn set_bit(data: &mut [u8], i: usize, value: bool) {
     data[i / 8] = set(data[i / 8], i % 8, value);
+}
+
+/// Sets bit at position `i` in `data` without doing bound checks
+/// # Safety
+/// caller must ensure that `i < data.len() / 8`
+#[inline]
+pub unsafe fn set_bit_unchecked(data: &mut [u8], i: usize, value: bool) {
+    let byte = data.get_unchecked_mut(i / 8);
+    *byte = set(*byte, i % 8, value);
 }
 
 /// Returns whether bit at position `i` in `data` is set or not
