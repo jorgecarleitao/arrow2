@@ -1,9 +1,16 @@
+use chrono::{NaiveDate, NaiveDateTime};
 use lexical_core::ToLexical;
+use std::io::Write;
 use streaming_iterator::StreamingIterator;
 
 use crate::bitmap::utils::zip_validity;
 use crate::chunk::Chunk;
+use crate::datatypes::TimeUnit;
 use crate::io::iterator::BufStreamingIterator;
+use crate::temporal_conversions::{
+    date32_to_date, date64_to_date, timestamp_ms_to_datetime, timestamp_ns_to_datetime,
+    timestamp_s_to_datetime, timestamp_us_to_datetime,
+};
 use crate::util::lexical_to_bytes_mut;
 use crate::{array::*, datatypes::DataType, types::NativeType};
 
@@ -136,6 +143,49 @@ fn list_serializer<'a, O: Offset>(
     ))
 }
 
+fn date_serializer<'a, T, F>(
+    array: &'a PrimitiveArray<T>,
+    convert: F,
+) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync>
+where
+    T: NativeType,
+    F: Fn(T) -> NaiveDate + 'static + Send + Sync,
+{
+    Box::new(BufStreamingIterator::new(
+        array.iter(),
+        move |x, buf| {
+            if let Some(x) = x {
+                let nd = convert(*x);
+                write!(buf, "{}", nd).unwrap();
+            } else {
+                buf.extend_from_slice(b"null")
+            }
+        },
+        vec![],
+    ))
+}
+
+fn timestamp_serializer<'a, F>(
+    array: &'a PrimitiveArray<i64>,
+    convert: F,
+) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync>
+where
+    F: Fn(i64) -> NaiveDateTime + 'static + Send + Sync,
+{
+    Box::new(BufStreamingIterator::new(
+        array.iter(),
+        move |x, buf| {
+            if let Some(x) = x {
+                let ndt = convert(*x);
+                write!(buf, "{}", ndt).unwrap();
+            } else {
+                buf.extend_from_slice(b"null")
+            }
+        },
+        vec![],
+    ))
+}
+
 fn new_serializer<'a>(
     array: &'a dyn Array,
 ) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync> {
@@ -156,6 +206,21 @@ fn new_serializer<'a>(
         DataType::Struct(_) => struct_serializer(array.as_any().downcast_ref().unwrap()),
         DataType::List(_) => list_serializer::<i32>(array.as_any().downcast_ref().unwrap()),
         DataType::LargeList(_) => list_serializer::<i64>(array.as_any().downcast_ref().unwrap()),
+        DataType::Date32 => date_serializer(array.as_any().downcast_ref().unwrap(), date32_to_date),
+        DataType::Date64 => date_serializer(array.as_any().downcast_ref().unwrap(), date64_to_date),
+        DataType::Timestamp(tu, tz) => {
+            if tz.is_some() {
+                todo!("still have to implement timezone")
+            } else {
+                let convert = match tu {
+                    TimeUnit::Nanosecond => timestamp_ns_to_datetime,
+                    TimeUnit::Microsecond => timestamp_us_to_datetime,
+                    TimeUnit::Millisecond => timestamp_ms_to_datetime,
+                    TimeUnit::Second => timestamp_s_to_datetime,
+                };
+                timestamp_serializer(array.as_any().downcast_ref().unwrap(), convert)
+            }
+        }
         other => todo!("Writing {:?} to JSON", other),
     }
 }

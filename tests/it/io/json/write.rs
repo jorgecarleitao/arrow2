@@ -324,3 +324,44 @@ fn write_quotation_marks_in_utf8() -> Result<()> {
     );
     Ok(())
 }
+
+#[test]
+fn write_date32() -> Result<()> {
+    let a = PrimitiveArray::from_data(DataType::Date32, vec![1000i32, 8000, 10000].into(), None);
+
+    let batch = Chunk::try_new(vec![&a as &dyn Array]).unwrap();
+
+    let buf = write_batch(
+        batch,
+        vec!["c1".to_string()],
+        json_write::LineDelimited::default(),
+    )?;
+
+    assert_eq!(
+        String::from_utf8(buf).unwrap().as_bytes(),
+        b"{\"c1\":1972-09-27}\n{\"c1\":1991-11-27}\n{\"c1\":1997-05-19}\n"
+    );
+    Ok(())
+}
+#[test]
+fn write_timestamp() -> Result<()> {
+    let a = PrimitiveArray::from_data(
+        DataType::Timestamp(TimeUnit::Second, None),
+        vec![10i64, 1 << 32, 1 << 33].into(),
+        None,
+    );
+
+    let batch = Chunk::try_new(vec![&a as &dyn Array]).unwrap();
+
+    let buf = write_batch(
+        batch,
+        vec!["c1".to_string()],
+        json_write::LineDelimited::default(),
+    )?;
+
+    assert_eq!(
+        String::from_utf8(buf).unwrap().as_bytes(),
+        b"{\"c1\":1970-01-01 00:00:10}\n{\"c1\":2106-02-07 06:28:16}\n{\"c1\":2242-03-16 12:56:32}\n"
+    );
+    Ok(())
+}
