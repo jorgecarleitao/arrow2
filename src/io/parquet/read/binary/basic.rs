@@ -255,7 +255,7 @@ impl<'a, O: Offset> utils::Decoder<'a, &'a [u8], Binary<O>> for BinaryDecoder<O>
                 &mut page.values,
             ),
             State::RequiredDictionary(page) => {
-                page.remaining -= additional;
+                page.remaining = page.remaining.saturating_sub(additional);
                 for x in page.values.by_ref().take(additional) {
                     values.push(x)
                 }
