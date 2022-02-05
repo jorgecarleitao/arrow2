@@ -12,9 +12,12 @@ fn basics() {
 
     let array: BooleanArray = data.into_iter().collect();
 
+    assert_eq!(array.data_type(), &DataType::Boolean);
+
     assert!(array.value(0));
     assert!(!array.value(1));
     assert!(!array.value(2));
+    assert!(!unsafe { array.value_unchecked(2) });
     assert_eq!(array.values(), &Bitmap::from_u8_slice(&[0b00000001], 3));
     assert_eq!(
         array.validity(),
@@ -48,6 +51,21 @@ fn with_validity() {
 fn display() {
     let array = BooleanArray::from([Some(true), None, Some(false)]);
     assert_eq!(format!("{:?}", array), "BooleanArray[true, None, false]");
+}
+
+#[test]
+fn into_mut_valid() {
+    let bitmap = Bitmap::from([true, false, true]);
+    let a = BooleanArray::from_data(DataType::Boolean, bitmap, None);
+    let _ = a.into_mut().right().unwrap();
+}
+
+#[test]
+fn into_mut_invalid() {
+    let bitmap = Bitmap::from([true, false, true]);
+    let _other = bitmap.clone(); // values are shared
+    let a = BooleanArray::from_data(DataType::Boolean, bitmap, None);
+    let _ = a.into_mut().left().unwrap();
 }
 
 #[test]
