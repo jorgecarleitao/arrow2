@@ -745,12 +745,14 @@ fn arrow_type() -> Result<()> {
         Field::new("a3", array3.data_type().clone(), true),
         Field::new("a4", array4.data_type().clone(), true),
         Field::new("a5", array5.data_type().clone(), true),
+        Field::new("a6", array5.data_type().clone(), false),
     ]);
     let batch = Chunk::try_new(vec![
         Arc::new(array) as Arc<dyn Array>,
         Arc::new(array2),
         Arc::new(array3),
         Arc::new(array4),
+        Arc::new(array5.clone()),
         Arc::new(array5),
     ])?;
 

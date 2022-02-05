@@ -24,7 +24,7 @@ where
     K: DictionaryKey,
 {
     Optional(Optional<'a, K>),
-    //Required(Required<'a, T, P, F>),
+    Required(Required<'a, K>),
 }
 
 #[inline]
@@ -42,6 +42,27 @@ where
 
     let new_indices = HybridRleDecoder::new(indices_buffer, bit_width as u32, additional);
     new_indices.map(Box::new(|x| K::from_u32(x).unwrap()) as _)
+}
+
+#[derive(Debug)]
+pub struct Required<'a, K>
+where
+    K: DictionaryKey,
+{
+    values: std::iter::Map<HybridRleDecoder<'a>, Box<dyn Fn(u32) -> K + 'a>>,
+}
+
+impl<'a, K> Required<'a, K>
+where
+    K: DictionaryKey,
+{
+    fn new(page: &'a DataPage) -> Self {
+        let (_, _, indices_buffer, _) = utils::split_buffer(page, page.descriptor());
+
+        let values = values_iter1(indices_buffer, page.num_values());
+
+        Self { values }
+    }
 }
 
 #[derive(Debug)]
@@ -76,6 +97,7 @@ where
     fn len(&self) -> usize {
         match self {
             State::Optional(optional) => optional.validity.len(),
+            State::Required(required) => required.values.size_hint().0,
         }
     }
 }
@@ -112,10 +134,7 @@ where
 
         match (page.encoding(), is_optional) {
             (Encoding::PlainDictionary | Encoding::RleDictionary, false) => {
-                todo!()
-                /*Ok(State::Required(
-                    RequiredDictionaryPage::new(page, dict, op2),
-                ))*/
+                Ok(State::Required(Required::new(page)))
             }
             (Encoding::PlainDictionary | Encoding::RleDictionary, true) => {
                 Ok(State::Optional(Optional::new(page)))
@@ -148,9 +167,9 @@ where
                 values,
                 &mut page.values,
             ),
-            /*State::Required(page) => {
+            State::Required(page) => {
                 values.extend(page.values.by_ref().take(remaining));
-            }*/
+            }
         }
     }
 }
@@ -170,7 +189,7 @@ impl Dict {
     }
 }
 
-pub fn finish_key<K: DictionaryKey>(values: Vec<K>, validity: MutableBitmap) -> PrimitiveArray<K> {
+fn finish_key<K: DictionaryKey>(values: Vec<K>, validity: MutableBitmap) -> PrimitiveArray<K> {
     PrimitiveArray::from_data(K::PRIMITIVE.into(), values.into(), validity.into())
 }
 
