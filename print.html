@@ -1206,6 +1206,47 @@ by delegating all CPU-intensive tasks to separate threads.</p>
 <p>This can of course be reversed; in configurations where IO is bounded (e.g. when a
 network is involved), we can use multiple producers of pages, potentially divided
 in file readers, and a single consumer that performs all CPU-intensive work.</p>
+<h2 id="apache-arrow---apache-parquet"><a class="header" href="#apache-arrow---apache-parquet">Apache Arrow &lt;-&gt; Apache Parquet</a></h2>
+<p>Arrow and Parquet are two different formats that declare different physical and logical types.
+When reading Parquet, we must <em>infer</em> to which types we are reading the data to.
+This inference is based on Parquet's physical, logical and converted types.</p>
+<p>When a logical type is defined, we use it as follows:</p>
+<table><thead><tr><th><code>Parquet</code></th><th><code>Parquet logical</code></th><th><code>DataType</code></th></tr></thead><tbody>
+<tr><td>Int32</td><td>Int8</td><td>Int8</td></tr>
+<tr><td>Int32</td><td>Int16</td><td>Int16</td></tr>
+<tr><td>Int32</td><td>Int32</td><td>Int32</td></tr>
+<tr><td>Int32</td><td>UInt8</td><td>UInt8</td></tr>
+<tr><td>Int32</td><td>UInt16</td><td>UInt16</td></tr>
+<tr><td>Int32</td><td>UInt32</td><td>UInt32</td></tr>
+<tr><td>Int32</td><td>Decimal</td><td>Decimal</td></tr>
+<tr><td>Int32</td><td>Date</td><td>Date32</td></tr>
+<tr><td>Int32</td><td>Time(ms)</td><td>Time32(ms)</td></tr>
+<tr><td>Int64</td><td>Int64</td><td>Int64</td></tr>
+<tr><td>Int64</td><td>UInt64</td><td>UInt64</td></tr>
+<tr><td>Int64</td><td>Time(us)</td><td>Time64(us)</td></tr>
+<tr><td>Int64</td><td>Time(ns)</td><td>Time64(ns)</td></tr>
+<tr><td>Int64</td><td>Timestamp(_)</td><td>Timestamp(_)</td></tr>
+<tr><td>Int64</td><td>Decimal</td><td>Decimal</td></tr>
+<tr><td>ByteArray</td><td>Utf8</td><td>Utf8</td></tr>
+<tr><td>ByteArray</td><td>JSON</td><td>Binary</td></tr>
+<tr><td>ByteArray</td><td>BSON</td><td>Binary</td></tr>
+<tr><td>ByteArray</td><td>ENUM</td><td>Binary</td></tr>
+<tr><td>ByteArray</td><td>Decimal</td><td>Decimal</td></tr>
+<tr><td>FixedLenByteArray</td><td>Decimal</td><td>Decimal</td></tr>
+</tbody></table>
+<p>When a a logical type is not defined but a converted type is defined, we use
+the equivalent convertion as above, mutatis mutandis.</p>
+<p>When neither is defined, we fall back to the physical representation:</p>
+<table><thead><tr><th><code>Parquet</code></th><th><code>DataType</code></th></tr></thead><tbody>
+<tr><td>Boolean</td><td>Boolean</td></tr>
+<tr><td>Int32</td><td>Int32</td></tr>
+<tr><td>Int64</td><td>Int64</td></tr>
+<tr><td>Int96</td><td>Timestamp(ns)</td></tr>
+<tr><td>Float</td><td>Float32</td></tr>
+<tr><td>Double</td><td>Float64</td></tr>
+<tr><td>ByteArray</td><td>Binary</td></tr>
+<tr><td>FixedLenByteArray</td><td>FixedSizeBinary</td></tr>
+</tbody></table>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="write-to-parquet"><a class="header" href="#write-to-parquet">Write to Parquet</a></h1>
 <p>When compiled with feature <code>io_parquet</code>, this crate can be used to write parquet files
 from arrow.
