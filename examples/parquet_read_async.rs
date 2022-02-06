@@ -25,7 +25,7 @@ async fn main() -> Result<()> {
     // this operation is usually done before reading the data, during planning.
     // This is a mix of IO and CPU-bounded tasks but both of them are O(1)
     let metadata = read::read_metadata_async(&mut reader).await?;
-    let schema = read::get_schema(&metadata)?;
+    let schema = read::infer_schema(&metadata)?;
 
     // This factory yields one file descriptor per column and is used to read columns concurrently.
     // They do not need to be buffered since we execute exactly 1 seek and 1 read on them.

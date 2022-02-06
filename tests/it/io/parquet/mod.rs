@@ -19,7 +19,7 @@ pub fn read_column<R: Read + Seek>(
     column: usize,
 ) -> Result<ArrayStats> {
     let metadata = read_metadata(&mut reader)?;
-    let schema = get_schema(&metadata)?;
+    let schema = infer_schema(&metadata)?;
 
     let mut reader = FileReader::try_new(reader, Some(&[column]), None, None, None)?;
 
