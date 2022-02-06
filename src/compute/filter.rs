@@ -1,56 +1,166 @@
 //! Contains operators to filter arrays such as [`filter`].
 use crate::array::growable::{make_growable, Growable};
+use crate::bitmap::utils::{BitChunkIterExact, BitChunksExact};
 use crate::bitmap::{utils::SlicesIterator, Bitmap, MutableBitmap};
 use crate::chunk::Chunk;
 use crate::datatypes::DataType;
 use crate::error::Result;
+use crate::types::simd::{NativeSimd, Simd};
+use crate::types::BitChunkIter;
 use crate::{array::*, types::NativeType};
 
 /// Function that can filter arbitrary arrays
 pub type Filter<'a> = Box<dyn Fn(&dyn Array) -> Box<dyn Array> + 'a + Send + Sync>;
 
-fn filter_nonnull_primitive<T: NativeType>(
+/// # Safety
+/// This assumes that the `mask_chunks` contains a number of set/true items equal
+/// to `filter_count`
+unsafe fn nonnull_filter_impl<T, I>(values: &[T], mut mask_chunks: I, filter_count: usize) -> Vec<T>
+where
+    T: NativeType + Simd,
+    I: BitChunkIterExact<<<T as Simd>::Simd as NativeSimd>::Chunk>,
+{
+    let mut chunks = values.chunks_exact(T::Simd::LANES);
+
+    let mut new = Vec::<T>::with_capacity(filter_count);
+    let mut dst = new.as_mut_ptr();
+    chunks
+        .by_ref()
+        .zip(mask_chunks.by_ref())
+        .for_each(|(chunk, validity_chunk)| {
+            let iter = BitChunkIter::new(validity_chunk, T::Simd::LANES);
+            for (value, b) in chunk.iter().zip(iter) {
+                if b {
+                    unsafe {
+                        dst.write(*value);
+                        dst = dst.add(1);
+                    };
+                }
+            }
+        });
+
+    chunks
+        .remainder()
+        .iter()
+        .zip(mask_chunks.remainder_iter())
+        .for_each(|(value, b)| {
+            if b {
+                unsafe {
+                    dst.write(*value);
+                    dst = dst.add(1);
+                };
+            }
+        });
+
+    unsafe { new.set_len(filter_count) };
+    new
+}
+
+/// # Safety
+/// This assumes that the `mask_chunks` contains a number of set/true items equal
+/// to `filter_count`
+unsafe fn null_filter_impl<T, I>(
+    values: &[T],
+    validity: &Bitmap,
+    mut mask_chunks: I,
+    filter_count: usize,
+) -> (Vec<T>, MutableBitmap)
+where
+    T: NativeType + Simd,
+    I: BitChunkIterExact<<<T as Simd>::Simd as NativeSimd>::Chunk>,
+{
+    let mut chunks = values.chunks_exact(T::Simd::LANES);
+
+    let mut validity_chunks = validity.chunks::<<T::Simd as NativeSimd>::Chunk>();
+
+    let mut new = Vec::<T>::with_capacity(filter_count);
+    let mut new_validity = MutableBitmap::with_capacity(filter_count);
+    let mut dst = new.as_mut_ptr();
+    chunks
+        .by_ref()
+        .zip(validity_chunks.by_ref())
+        .zip(mask_chunks.by_ref())
+        .for_each(|((chunk, validity_chunk), mask_chunk)| {
+            let mask_iter = BitChunkIter::new(mask_chunk, T::Simd::LANES);
+            let validity_iter = BitChunkIter::new(validity_chunk, T::Simd::LANES);
+            for ((value, is_valid), is_selected) in chunk.iter().zip(validity_iter).zip(mask_iter) {
+                if is_selected {
+                    unsafe {
+                        dst.write(*value);
+                        dst = dst.add(1);
+                        new_validity.push_unchecked(is_valid);
+                    };
+                }
+            }
+        });
+
+    chunks
+        .remainder()
+        .iter()
+        .zip(validity_chunks.remainder_iter())
+        .zip(mask_chunks.remainder_iter())
+        .for_each(|((value, is_valid), is_selected)| {
+            if is_selected {
+                unsafe {
+                    dst.write(*value);
+                    dst = dst.add(1);
+                    new_validity.push_unchecked(is_valid);
+                };
+            }
+        });
+
+    unsafe { new.set_len(filter_count) };
+    (new, new_validity)
+}
+
+fn null_filter_simd<T: NativeType + Simd>(
+    values: &[T],
+    validity: &Bitmap,
+    mask: &Bitmap,
+) -> (Vec<T>, MutableBitmap) {
+    assert_eq!(values.len(), mask.len());
+    let filter_count = mask.len() - mask.null_count();
+
+    let (slice, offset, length) = mask.as_slice();
+    if offset == 0 {
+        let mask_chunks = BitChunksExact::<<T::Simd as NativeSimd>::Chunk>::new(slice, length);
+        unsafe { null_filter_impl(values, validity, mask_chunks, filter_count) }
+    } else {
+        let mask_chunks = mask.chunks::<<T::Simd as NativeSimd>::Chunk>();
+        unsafe { null_filter_impl(values, validity, mask_chunks, filter_count) }
+    }
+}
+
+fn nonnull_filter_simd<T: NativeType + Simd>(values: &[T], mask: &Bitmap) -> Vec<T> {
+    assert_eq!(values.len(), mask.len());
+    let filter_count = mask.len() - mask.null_count();
+
+    let (slice, offset, length) = mask.as_slice();
+    if offset == 0 {
+        let mask_chunks = BitChunksExact::<<T::Simd as NativeSimd>::Chunk>::new(slice, length);
+        unsafe { nonnull_filter_impl(values, mask_chunks, filter_count) }
+    } else {
+        let mask_chunks = mask.chunks::<<T::Simd as NativeSimd>::Chunk>();
+        unsafe { nonnull_filter_impl(values, mask_chunks, filter_count) }
+    }
+}
+
+fn filter_nonnull_primitive<T: NativeType + Simd>(
     array: &PrimitiveArray<T>,
     mask: &Bitmap,
 ) -> PrimitiveArray<T> {
     assert_eq!(array.len(), mask.len());
-    let filter_count = mask.len() - mask.null_count();
 
-    let mut buffer = Vec::<T>::with_capacity(filter_count);
     if let Some(validity) = array.validity() {
-        let mut new_validity = MutableBitmap::with_capacity(filter_count);
-
-        array
-            .values()
-            .iter()
-            .zip(validity.iter())
-            .zip(mask.iter())
-            .filter(|x| x.1)
-            .map(|x| x.0)
-            .for_each(|(item, is_valid)| unsafe {
-                buffer.push(*item);
-                new_validity.push_unchecked(is_valid);
-            });
-
-        PrimitiveArray::<T>::from_data(
-            array.data_type().clone(),
-            buffer.into(),
-            new_validity.into(),
-        )
+        let (values, validity) = null_filter_simd(array.values(), validity, mask);
+        PrimitiveArray::<T>::from_data(array.data_type().clone(), values.into(), validity.into())
     } else {
-        array
-            .values()
-            .iter()
-            .zip(mask.iter())
-            .filter(|x| x.1)
-            .map(|x| x.0)
-            .for_each(|item| buffer.push(*item));
-
-        PrimitiveArray::<T>::from_data(array.data_type().clone(), buffer.into(), None)
+        let values = nonnull_filter_simd(array.values(), mask);
+        PrimitiveArray::<T>::from_data(array.data_type().clone(), values.into(), None)
     }
 }
 
-fn filter_primitive<T: NativeType>(
+fn filter_primitive<T: NativeType + Simd>(
     array: &PrimitiveArray<T>,
     mask: &BooleanArray,
 ) -> PrimitiveArray<T> {
