@@ -89,7 +89,7 @@ fn _deserialize_statistics(
         }
         PhysicalType::FixedLenByteArray(_) => {
             let stats = stats.as_any().downcast_ref().unwrap();
-            fixlen::statistics_from_fix_len(stats, stats.descriptor.type_())
+            fixlen::statistics_from_fix_len(stats, data_type)
         }
         _ => Err(ArrowError::NotYetImplemented(
             "Reading Fixed-len array statistics is not yet supported".to_string(),

@@ -1,11 +1,9 @@
 use std::any::Any;
 use std::convert::{TryFrom, TryInto};
 
-use super::super::schema;
 use super::primitive::PrimitiveStatistics;
 use crate::datatypes::DataType;
 use crate::error::{ArrowError, Result};
-use parquet2::schema::types::ParquetType;
 use parquet2::{
     schema::types::PhysicalType,
     statistics::{
@@ -102,10 +100,8 @@ impl TryFrom<(&ParquetFixedLenStatistics, DataType)> for PrimitiveStatistics<i12
 
 pub(super) fn statistics_from_fix_len(
     stats: &ParquetFixedLenStatistics,
-    type_: &ParquetType,
+    data_type: DataType,
 ) -> Result<Box<dyn Statistics>> {
-    let data_type = schema::to_data_type(type_)?.unwrap();
-
     use DataType::*;
     Ok(match data_type {
         Decimal(_, _) => Box::new(PrimitiveStatistics::<i128>::try_from((stats, data_type))?),
