@@ -1,8 +1,6 @@
-use std::collections::HashMap;
-
 pub use parquet2::metadata::KeyValue;
 
-use crate::datatypes::Schema;
+use crate::datatypes::{Metadata, Schema};
 use crate::error::{ArrowError, Result};
 use crate::io::ipc::read::deserialize_schema;
 
@@ -11,10 +9,7 @@ use super::super::super::ARROW_SCHEMA_META_KEY;
 /// Reads an arrow schema from Parquet's file metadata. Returns `None` if no schema was found.
 /// # Errors
 /// Errors iff the schema cannot be correctly parsed.
-pub fn read_schema_from_metadata(
-    key_value_metadata: &Option<Vec<KeyValue>>,
-) -> Result<Option<Schema>> {
-    let mut metadata = parse_key_value_metadata(key_value_metadata).unwrap_or_default();
+pub fn read_schema_from_metadata(metadata: &mut Metadata) -> Result<Option<Schema>> {
     metadata
         .remove(ARROW_SCHEMA_META_KEY)
         .map(|encoded| get_arrow_schema_from_metadata(&encoded))
@@ -43,26 +38,18 @@ fn get_arrow_schema_from_metadata(encoded_meta: &str) -> Result<Schema> {
     }
 }
 
-fn parse_key_value_metadata(
-    key_value_metadata: &Option<Vec<KeyValue>>,
-) -> Option<HashMap<String, String>> {
-    match key_value_metadata {
-        Some(key_values) => {
-            let map: HashMap<String, String> = key_values
+pub(super) fn parse_key_value_metadata(key_value_metadata: &Option<Vec<KeyValue>>) -> Metadata {
+    key_value_metadata
+        .as_ref()
+        .map(|key_values| {
+            key_values
                 .iter()
                 .filter_map(|kv| {
                     kv.value
                         .as_ref()
                         .map(|value| (kv.key.clone(), value.clone()))
                 })
-                .collect();
-
-            if map.is_empty() {
-                None
-            } else {
-                Some(map)
-            }
-        }
-        None => None,
-    }
+                .collect()
+        })
+        .unwrap_or_default()
 }

@@ -54,7 +54,7 @@ mod utils;
 pub use file::{FileReader, RowGroupReader};
 pub use row_group::*;
 pub(crate) use schema::is_type_nullable;
-pub use schema::{get_schema, FileMetaData};
+pub use schema::{infer_schema, FileMetaData};
 
 use self::nested_utils::{InitNested, NestedArrayIter, NestedState};
 use deserialize::page_iter_to_arrays;

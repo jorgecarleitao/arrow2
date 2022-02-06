@@ -11,7 +11,7 @@ use arrow2::{array::Array, chunk::Chunk, error::Result, io::parquet::read};
 fn parallel_read(path: &str, row_group: usize) -> Result<Chunk<Arc<dyn Array>>> {
     let mut file = BufReader::new(File::open(path)?);
     let metadata = read::read_metadata(&mut file)?;
-    let schema = read::get_schema(&metadata)?;
+    let schema = read::infer_schema(&metadata)?;
 
     // read (IO-bounded) all columns into memory (use a subset of the fields to project)
     let columns = read::read_columns(

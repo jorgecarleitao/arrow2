@@ -10,7 +10,7 @@ use crate::{
     error::{ArrowError, Result},
 };
 
-use super::{get_schema, read_metadata, FileMetaData, RowGroupDeserializer, RowGroupMetaData};
+use super::{infer_schema, read_metadata, FileMetaData, RowGroupDeserializer, RowGroupMetaData};
 
 type GroupFilter = Arc<dyn Fn(usize, &RowGroupMetaData) -> bool>;
 
@@ -47,7 +47,7 @@ impl<R: Read + Seek> FileReader<R> {
     ) -> Result<Self> {
         let metadata = read_metadata(&mut reader)?;
 
-        let schema = get_schema(&metadata)?;
+        let schema = infer_schema(&metadata)?;
 
         let schema_metadata = schema.metadata;
         let fields: Vec<Field> = if let Some(projection) = &projection {
