@@ -9,6 +9,7 @@ use super::{BitChunk, BitChunkIterExact};
 pub struct BitChunksExact<'a, T: BitChunk> {
     iter: ChunksExact<'a, u8>,
     remainder: &'a [u8],
+    remainder_len: usize,
     phantom: std::marker::PhantomData<T>,
 }
 
@@ -22,11 +23,13 @@ impl<'a, T: BitChunk> BitChunksExact<'a, T> {
         let split = (len / 8 / size_of) * size_of;
         let chunks = &slice[..split];
         let remainder = &slice[split..];
+        let remainder_len = len - chunks.len() * 8;
         let iter = chunks.chunks_exact(size_of);
 
         Self {
             iter,
             remainder,
+            remainder_len,
             phantom: std::marker::PhantomData,
         }
     }
@@ -88,5 +91,10 @@ impl<T: BitChunk> BitChunkIterExact<T> for BitChunksExact<'_, T> {
     #[inline]
     fn remainder(&self) -> T {
         self.remainder()
+    }
+
+    #[inline]
+    fn remainder_len(&self) -> usize {
+        self.remainder_len
     }
 }

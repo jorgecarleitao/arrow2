@@ -1,7 +1,8 @@
 //! Contains traits and implementations of multi-data used in SIMD.
 //! The actual representation is driven by the feature flag `"simd"`, which, if set,
 //! uses `packed_simd2` to get the intrinsics.
-use super::{BitChunk, NativeType};
+use super::{days_ms, months_days_ns};
+use super::{BitChunk, BitChunkIter, NativeType};
 
 /// Describes the ability to convert itself from a [`BitChunk`].
 pub trait FromMaskChunk<T> {
@@ -57,6 +58,89 @@ mod packed;
 #[cfg(feature = "simd")]
 pub use packed::*;
 
+macro_rules! native_simd {
+    ($name:tt, $type:ty, $lanes:expr, $mask:ty) => {
+        /// Multi-Data correspondence of the native type
+        #[allow(non_camel_case_types)]
+        #[derive(Copy, Clone)]
+        pub struct $name(pub [$type; $lanes]);
+
+        unsafe impl NativeSimd for $name {
+            const LANES: usize = $lanes;
+            type Native = $type;
+            type Chunk = $mask;
+            type Mask = $mask;
+
+            #[inline]
+            fn select(self, mask: $mask, default: Self) -> Self {
+                let mut reduced = default;
+                let iter = BitChunkIter::new(mask, Self::LANES);
+                for (i, b) in (0..Self::LANES).zip(iter) {
+                    reduced[i] = if b { self[i] } else { reduced[i] };
+                }
+                reduced
+            }
+
+            #[inline]
+            fn from_chunk(v: &[$type]) -> Self {
+                ($name)(v.try_into().unwrap())
+            }
+
+            #[inline]
+            fn from_incomplete_chunk(v: &[$type], remaining: $type) -> Self {
+                let mut a = [remaining; $lanes];
+                a.iter_mut().zip(v.iter()).for_each(|(a, b)| *a = *b);
+                Self(a)
+            }
+
+            #[inline]
+            fn align(values: &[Self::Native]) -> (&[Self::Native], &[Self], &[Self::Native]) {
+                unsafe { values.align_to::<Self>() }
+            }
+        }
+
+        impl std::ops::Index<usize> for $name {
+            type Output = $type;
+
+            #[inline]
+            fn index(&self, index: usize) -> &Self::Output {
+                &self.0[index]
+            }
+        }
+
+        impl std::ops::IndexMut<usize> for $name {
+            #[inline]
+            fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+                &mut self.0[index]
+            }
+        }
+
+        impl Default for $name {
+            #[inline]
+            fn default() -> Self {
+                ($name)([<$type>::default(); $lanes])
+            }
+        }
+    };
+}
+
+pub(super) use native_simd;
+
+// Types do not have specific intrinsics and thus SIMD can't be specialized.
+// Therefore, we can declare their MD representation as `[$t; 8]` irrespectively
+// of how they are represented in the different channels.
+native_simd!(days_msx8, days_ms, 8, u8);
+native_simd!(months_days_nsx8, months_days_ns, 8, u8);
+native_simd!(i128x8, i128, 8, u8);
+
+// In the native implementation, a mask is 1 bit wide, as per AVX512.
+impl<T: BitChunk> FromMaskChunk<T> for T {
+    #[inline]
+    fn from_chunk(v: T) -> Self {
+        v
+    }
+}
+
 macro_rules! native {
     ($type:ty, $simd:ty) => {
         impl Simd for $type {
@@ -75,3 +159,6 @@ native!(i32, i32x16);
 native!(i64, i64x8);
 native!(f32, f32x16);
 native!(f64, f64x8);
+native!(i128, i128x8);
+native!(days_ms, days_msx8);
+native!(months_days_ns, months_days_nsx8);

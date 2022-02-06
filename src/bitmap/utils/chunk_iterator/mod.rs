@@ -13,6 +13,15 @@ pub(crate) use merge::merge_reversed;
 pub trait BitChunkIterExact<B: BitChunk>: TrustedLen<Item = B> {
     /// The remainder of the iterator.
     fn remainder(&self) -> B;
+
+    /// The number of items in the remainder
+    fn remainder_len(&self) -> usize;
+
+    /// An iterator over individual items of the remainder
+    #[inline]
+    fn remainder_iter(&self) -> BitChunkIter<B> {
+        BitChunkIter::new(self.remainder(), self.remainder_len())
+    }
 }
 
 /// This struct is used to efficiently iterate over bit masks by loading bytes on
@@ -131,11 +140,6 @@ impl<'a, T: BitChunk> BitChunks<'a, T> {
     pub fn remainder_len(&self) -> usize {
         self.len - (std::mem::size_of::<T>() * ((self.len / 8) / std::mem::size_of::<T>()) * 8)
     }
-
-    /// Returns an iterator over the remainder bits.
-    pub fn remainder_iter(&self) -> BitChunkIter<T> {
-        BitChunkIter::new(self.remainder(), self.remainder_len())
-    }
 }
 
 impl<T: BitChunk> Iterator for BitChunks<'_, T> {
@@ -180,8 +184,14 @@ impl<T: BitChunk> Iterator for BitChunks<'_, T> {
 }
 
 impl<T: BitChunk> BitChunkIterExact<T> for BitChunks<'_, T> {
+    #[inline]
     fn remainder(&self) -> T {
         self.remainder()
+    }
+
+    #[inline]
+    fn remainder_len(&self) -> usize {
+        self.remainder_len()
     }
 }
 
