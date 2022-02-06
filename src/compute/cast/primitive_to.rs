@@ -1,6 +1,6 @@
 use std::hash::Hash;
 
-use num_traits::{AsPrimitive, Float};
+use num_traits::{AsPrimitive, Float, ToPrimitive};
 
 use crate::error::Result;
 use crate::{
@@ -203,10 +203,8 @@ pub fn float_to_decimal<T>(
     to_scale: usize,
 ) -> PrimitiveArray<i128>
 where
-    T: NativeType + Float,
+    T: NativeType + Float + ToPrimitive,
     f64: AsPrimitive<T>,
-    i128: From<T>,
-    T: AsPrimitive<f64>,
 {
     // 1.2 => 12
     let multiplier: T = (10_f64).powi(to_scale as i32).as_();
@@ -218,7 +216,7 @@ where
 
     let values = from.iter().map(|x| {
         x.and_then(|x| {
-            let x = i128::from(*x * multiplier);
+            let x = (*x * multiplier).to_i128().unwrap();
             if x > max_for_precision || x < min_for_precision {
                 None
             } else {
@@ -237,10 +235,11 @@ pub(super) fn float_to_decimal_dyn<T>(
     scale: usize,
 ) -> Result<Box<dyn Array>>
 where
-    T: NativeType + AsPrimitive<i128>,
+    T: NativeType + Float + ToPrimitive,
+    f64: AsPrimitive<T>,
 {
     let from = from.as_any().downcast_ref().unwrap();
-    Ok(Box::new(integer_to_decimal::<T>(from, precision, scale)))
+    Ok(Box::new(float_to_decimal::<T>(from, precision, scale)))
 }
 
 /// Cast [`PrimitiveArray`] as a [`PrimitiveArray`]

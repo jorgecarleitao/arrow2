@@ -254,19 +254,28 @@ fn int32_to_decimal() {
 #[test]
 fn float32_to_decimal() {
     let array = Float32Array::from(&[
-        Some(2.0),
+        Some(2.4),
         Some(10.0),
+        Some(1.123_456_8),
         Some(-2.0),
         Some(-10.0),
-        Some(-100.0), // can't be represented in (1,0)
+        Some(-100.01), // can't be represented in (1,0)
         None,
     ]);
 
-    let b = cast(&array, &DataType::Decimal(1, 0), CastOptions::default()).unwrap();
+    let b = cast(&array, &DataType::Decimal(10, 2), CastOptions::default()).unwrap();
     let c = b.as_any().downcast_ref::<PrimitiveArray<i128>>().unwrap();
 
-    let expected = Int128Array::from(&[Some(2), Some(10), Some(-2), Some(-10), None, None])
-        .to(DataType::Decimal(1, 0));
+    let expected = Int128Array::from(&[
+        Some(240),
+        Some(1000),
+        Some(112),
+        Some(-200),
+        Some(-1000),
+        Some(-10001),
+        None,
+    ])
+    .to(DataType::Decimal(10, 2));
     assert_eq!(c, &expected)
 }
 
