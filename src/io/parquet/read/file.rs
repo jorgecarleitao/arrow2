@@ -4,7 +4,7 @@ use std::sync::Arc;
 use crate::array::Array;
 use crate::chunk::Chunk;
 use crate::datatypes::Schema;
-use crate::io::parquet::read::read_columns;
+use crate::io::parquet::read::read_columns_many;
 use crate::{
     datatypes::Field,
     error::{ArrowError, Result},
@@ -233,7 +233,7 @@ impl<R: Read + Seek> RowGroupReader<R> {
         }
         self.current_group += 1;
 
-        let column_chunks = read_columns(
+        let column_chunks = read_columns_many(
             &mut self.reader,
             row_group,
             self.schema.fields.clone(),
