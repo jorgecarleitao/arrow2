@@ -88,3 +88,32 @@ pub fn try_check_offsets<O: Offset>(offsets: &[O], values_len: usize) -> Result<
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use proptest::prelude::*;
+
+    use super::*;
+
+    pub(crate) fn binary_strategy() -> impl Strategy<Value = Vec<u8>> {
+        prop::collection::vec(any::<u8>(), 1..100)
+    }
+
+    proptest! {
+        // a bit expensive, feel free to run it when changing the code above
+        //#![proptest_config(ProptestConfig::with_cases(100000))]
+        #[test]
+        #[cfg_attr(miri, ignore)] // miri and proptest do not work well
+        fn check_utf8_validation(values in binary_strategy()) {
+
+            for offset in 0..values.len() - 1 {
+                let offsets = vec![0, offset as i32, values.len() as i32];
+
+                let mut is_valid = std::str::from_utf8(&values[..offset]).is_ok();
+                is_valid &= std::str::from_utf8(&values[offset..]).is_ok();
+
+                assert_eq!(try_check_offsets_and_utf8::<i32>(&offsets, &values).is_ok(), is_valid)
+            }
+        }
+    }
+}
