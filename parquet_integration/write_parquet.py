@@ -14,6 +14,7 @@ def case_basic_nullable(size=1):
     string_large = [
         "ABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCD😃🌚🕳👊"
     ] * 10
+    emoji = ["😃"] * 10
     decimal = [Decimal(e) if e is not None else None for e in int64]
 
     fields = [
@@ -24,6 +25,7 @@ def case_basic_nullable(size=1):
         pa.field("date", pa.timestamp("ms")),
         pa.field("uint32", pa.uint32()),
         pa.field("string_large", pa.utf8()),
+        pa.field("emoji", pa.utf8()),
         # decimal testing
         pa.field("decimal_9", pa.decimal128(9, 0)),
         pa.field("decimal_18", pa.decimal128(18, 0)),
@@ -42,6 +44,7 @@ def case_basic_nullable(size=1):
             "date": int64 * size,
             "uint32": int64 * size,
             "string_large": string_large * size,
+            "emoji": emoji * size,
             "decimal_9": decimal * size,
             "decimal_18": decimal * size,
             "decimal_26": decimal * size,
