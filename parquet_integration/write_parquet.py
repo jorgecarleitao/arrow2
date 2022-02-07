@@ -25,13 +25,13 @@ def case_basic_nullable(size=1):
         pa.field("date", pa.timestamp("ms")),
         pa.field("uint32", pa.uint32()),
         pa.field("string_large", pa.utf8()),
-        pa.field("emoji", pa.utf8()),
         # decimal testing
         pa.field("decimal_9", pa.decimal128(9, 0)),
         pa.field("decimal_18", pa.decimal128(18, 0)),
         pa.field("decimal_26", pa.decimal128(26, 0)),
         pa.field("timestamp_us", pa.timestamp("us")),
         pa.field("timestamp_s", pa.timestamp("s")),
+        pa.field("emoji", pa.utf8()),
     ]
     schema = pa.schema(fields)
 
