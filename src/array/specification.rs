@@ -31,10 +31,11 @@ pub fn check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) {
 /// * any slice of `values` between two consecutive pairs from `offsets` is invalid `utf8`, or
 /// * any offset is larger or equal to `values_len`.
 pub fn try_check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) -> Result<()> {
-    const SIMD_CHUNK_SIZE: usize = 64;
     if values.is_ascii() {
         try_check_offsets(offsets, values.len())
     } else {
+        simdutf8::basic::from_utf8(values)?;
+
         for window in offsets.windows(2) {
             let start = window[0].to_usize();
             let end = window[1].to_usize();
@@ -44,21 +45,23 @@ pub fn try_check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) -> Re
                 return Err(ArrowError::oos("offsets must be monotonically increasing"));
             }
 
-            // check bounds
-            if end > values.len() {
-                return Err(ArrowError::oos("offsets must not exceed values length"));
-            };
+            let first = values.get(start);
 
-            let slice = &values[start..end];
-
-            // fast ASCII check per item
-            if slice.len() < SIMD_CHUNK_SIZE && slice.is_ascii() {
-                continue;
+            if let Some(&b) = first {
+                // A valid code-point iff it does not start with 0b10xxxxxx
+                // Bit-magic taken from `std::str::is_char_boundary`
+                if (b as i8) < -0x40 {
+                    return Err(ArrowError::oos("Non-valid char boundary detected"));
+                }
             }
-
-            // check utf8
-            simdutf8::basic::from_utf8(slice)?;
         }
+        // check bounds
+        if offsets
+            .last()
+            .map_or(false, |last| last.to_usize() > values.len())
+        {
+            return Err(ArrowError::oos("offsets must not exceed values length"));
+        };
 
         Ok(())
     }
