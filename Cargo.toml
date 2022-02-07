@@ -306,3 +306,7 @@ harness = false
 [[bench]]
 name = "write_json"
 harness = false
+
+[[bench]]
+name = "slices_iterator"
+harness = false
