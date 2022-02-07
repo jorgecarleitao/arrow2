@@ -50,6 +50,7 @@ impl<'a> SlicesIterator<'a> {
         }
     }
 
+    #[inline]
     fn finish(&mut self) -> Option<(usize, usize)> {
         self.state = State::Finished;
         if self.on_region {
@@ -75,6 +76,7 @@ impl<'a> SlicesIterator<'a> {
 impl<'a> Iterator for SlicesIterator<'a> {
     type Item = (usize, usize);
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             if self.state == State::Finished {
@@ -89,17 +91,15 @@ impl<'a> Iterator for SlicesIterator<'a> {
                 match (self.on_region, self.current_byte) {
                     (true, &255u8) => {
                         self.len = std::cmp::min(self.max_len - self.start, self.len + 8);
-                        match self.values.next() {
-                            Some(v) => self.current_byte = v,
-                            None => return self.finish(),
+                        if let Some(v) = self.values.next() {
+                            self.current_byte = v;
                         };
                         continue;
                     }
                     (false, &0) => {
                         self.len = std::cmp::min(self.max_len - self.start, self.len + 8);
-                        match self.values.next() {
-                            Some(v) => self.current_byte = v,
-                            None => return self.finish(),
+                        if let Some(v) = self.values.next() {
+                            self.current_byte = v;
                         };
                         continue;
                     }
@@ -114,26 +114,17 @@ impl<'a> Iterator for SlicesIterator<'a> {
                 (true, true) => self.len += 1,
                 (false, false) => self.len += 1,
                 (true, false) => {
+                    self.on_region = false;
+                    let result = (self.start, self.len);
+                    self.start += self.len;
+                    self.len = 1;
                     if self.mask == 1 {
                         // reached a new byte => try to fetch it from the iterator
-                        match self.values.next() {
-                            Some(v) => {
-                                self.on_region = false;
-                                let result = (self.start, self.len);
-                                self.start += self.len;
-                                self.len = 1;
-                                self.current_byte = v;
-                                return Some(result);
-                            }
-                            None => return self.finish(),
+                        if let Some(v) = self.values.next() {
+                            self.current_byte = v;
                         };
-                    } else {
-                        self.on_region = false;
-                        let result = (self.start, self.len);
-                        self.start += self.len;
-                        self.len = 1;
-                        return Some(result);
                     }
+                    return Some(result);
                 }
                 (false, true) => {
                     self.start += self.len;
