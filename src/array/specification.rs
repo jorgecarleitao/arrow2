@@ -31,10 +31,11 @@ pub fn check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) {
 /// * any slice of `values` between two consecutive pairs from `offsets` is invalid `utf8`, or
 /// * any offset is larger or equal to `values_len`.
 pub fn try_check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) -> Result<()> {
-    const SIMD_CHUNK_SIZE: usize = 64;
     if values.is_ascii() {
         try_check_offsets(offsets, values.len())
     } else {
+        simdutf8::basic::from_utf8(values)?;
+
         for window in offsets.windows(2) {
             let start = window[0].to_usize();
             let end = window[1].to_usize();
@@ -44,21 +45,23 @@ pub fn try_check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) -> Re
                 return Err(ArrowError::oos("offsets must be monotonically increasing"));
             }
 
-            // check bounds
-            if end > values.len() {
-                return Err(ArrowError::oos("offsets must not exceed values length"));
-            };
+            let first = values.get(start);
 
-            let slice = &values[start..end];
-
-            // fast ASCII check per item
-            if slice.len() < SIMD_CHUNK_SIZE && slice.is_ascii() {
-                continue;
+            if let Some(&b) = first {
+                // A valid code-point iff it does not start with 0b10xxxxxx
+                // Bit-magic taken from `std::str::is_char_boundary`
+                if (b as i8) < -0x40 {
+                    return Err(ArrowError::oos("Non-valid char boundary detected"));
+                }
             }
-
-            // check utf8
-            simdutf8::basic::from_utf8(slice)?;
         }
+        // check bounds
+        if offsets
+            .last()
+            .map_or(false, |last| last.to_usize() > values.len())
+        {
+            return Err(ArrowError::oos("offsets must not exceed values length"));
+        };
 
         Ok(())
     }
@@ -83,5 +86,34 @@ pub fn try_check_offsets<O: Offset>(offsets: &[O], values_len: usize) -> Result<
         Err(ArrowError::oos("offsets must not exceed values length"))
     } else {
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use proptest::prelude::*;
+
+    use super::*;
+
+    pub(crate) fn binary_strategy() -> impl Strategy<Value = Vec<u8>> {
+        prop::collection::vec(any::<u8>(), 1..100)
+    }
+
+    proptest! {
+        // a bit expensive, feel free to run it when changing the code above
+        //#![proptest_config(ProptestConfig::with_cases(100000))]
+        #[test]
+        #[cfg_attr(miri, ignore)] // miri and proptest do not work well
+        fn check_utf8_validation(values in binary_strategy()) {
+
+            for offset in 0..values.len() - 1 {
+                let offsets = vec![0, offset as i32, values.len() as i32];
+
+                let mut is_valid = std::str::from_utf8(&values[..offset]).is_ok();
+                is_valid &= std::str::from_utf8(&values[offset..]).is_ok();
+
+                assert_eq!(try_check_offsets_and_utf8::<i32>(&offsets, &values).is_ok(), is_valid)
+            }
+        }
     }
 }

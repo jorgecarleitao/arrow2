@@ -57,6 +57,9 @@ fn add_benchmark(c: &mut Criterion) {
         let a = format!("read utf8 large 2^{}", i);
         c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size, 6).unwrap()));
 
+        let a = format!("read utf8 emoji 2^{}", i);
+        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size, 12).unwrap()));
+
         let a = format!("read bool 2^{}", i);
         c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size, 3).unwrap()));
 

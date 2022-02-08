@@ -14,6 +14,7 @@ def case_basic_nullable(size=1):
     string_large = [
         "ABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCD😃🌚🕳👊"
     ] * 10
+    emoji = ["😃"] * 10
     decimal = [Decimal(e) if e is not None else None for e in int64]
 
     fields = [
@@ -30,6 +31,7 @@ def case_basic_nullable(size=1):
         pa.field("decimal_26", pa.decimal128(26, 0)),
         pa.field("timestamp_us", pa.timestamp("us")),
         pa.field("timestamp_s", pa.timestamp("s")),
+        pa.field("emoji", pa.utf8()),
     ]
     schema = pa.schema(fields)
 
@@ -47,6 +49,7 @@ def case_basic_nullable(size=1):
             "decimal_26": decimal * size,
             "timestamp_us": int64 * size,
             "timestamp_s": int64 * size,
+            "emoji": emoji * size,
         },
         schema,
         f"basic_nullable_{size*10}.parquet",
