@@ -28,12 +28,6 @@ impl<O: Offset> DynMutableListArray<O> {
         }
     }
 
-    /// Creates a new [`MutableListArray`] from a [`MutableArray`] and capacity.
-    pub fn new_with_capacity(values: Box<dyn MutableArray>, capacity: usize) -> Self {
-        let data_type = ListArray::<O>::default_datatype(values.data_type().clone());
-        Self::new_from(values, data_type, capacity)
-    }
-
     /// The values
     pub fn mut_values(&mut self) -> &mut dyn MutableArray {
         self.values.as_mut()
@@ -175,6 +169,97 @@ impl MutableArray for FixedItemsUtf8Dictionary {
         Arc::new(DictionaryArray::from_data(
             std::mem::take(&mut self.keys).into(),
             Arc::new(self.values.clone()),
+        ))
+    }
+
+    fn data_type(&self) -> &DataType {
+        &self.data_type
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_mut_any(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
+    #[inline]
+    fn push_null(&mut self) {
+        self.push_null()
+    }
+
+    fn shrink_to_fit(&mut self) {
+        todo!();
+    }
+}
+
+/// Auxiliary struct
+#[derive(Debug)]
+pub struct DynMutableStructArray {
+    data_type: DataType,
+    values: Vec<Box<dyn MutableArray>>,
+    validity: Option<MutableBitmap>,
+}
+
+impl DynMutableStructArray {
+    pub fn new(values: Vec<Box<dyn MutableArray>>, data_type: DataType) -> Self {
+        Self {
+            data_type,
+            values,
+            validity: None,
+        }
+    }
+
+    /// The values
+    pub fn mut_values(&mut self, field: usize) -> &mut dyn MutableArray {
+        self.values[field].as_mut()
+    }
+
+    #[inline]
+    fn push_null(&mut self) {
+        match &mut self.validity {
+            Some(validity) => validity.push(false),
+            None => self.init_validity(),
+        }
+    }
+
+    fn init_validity(&mut self) {
+        let len = self.len();
+
+        let mut validity = MutableBitmap::new();
+        validity.extend_constant(len, true);
+        validity.set(len - 1, false);
+        self.validity = Some(validity)
+    }
+}
+
+impl MutableArray for DynMutableStructArray {
+    fn len(&self) -> usize {
+        self.values[0].len()
+    }
+
+    fn validity(&self) -> Option<&MutableBitmap> {
+        self.validity.as_ref()
+    }
+
+    fn as_box(&mut self) -> Box<dyn Array> {
+        let values = self.values.iter_mut().map(|x| x.as_arc()).collect();
+
+        Box::new(StructArray::from_data(
+            self.data_type.clone(),
+            values,
+            std::mem::take(&mut self.validity).map(|x| x.into()),
+        ))
+    }
+
+    fn as_arc(&mut self) -> Arc<dyn Array> {
+        let values = self.values.iter_mut().map(|x| x.as_arc()).collect();
+
+        Arc::new(StructArray::from_data(
+            self.data_type.clone(),
+            values,
+            std::mem::take(&mut self.validity).map(|x| x.into()),
         ))
     }
 

@@ -19,36 +19,29 @@ fn external_props(schema: &AvroSchema) -> Metadata {
     props
 }
 
-/// Maps an Avro Schema into a [`Schema`].
+/// Maps an [`AvroSchema`] into a [`Schema`].
 pub fn convert_schema(schema: &AvroSchema) -> Result<Schema> {
-    let mut schema_fields = vec![];
-    match schema {
-        AvroSchema::Record(Record { fields, .. }) => {
-            for field in fields {
-                schema_fields.push(schema_to_field(
+    if let AvroSchema::Record(Record { fields, .. }) = schema {
+        Ok(fields
+            .iter()
+            .map(|field| {
+                schema_to_field(
                     &field.schema,
                     Some(&field.name),
-                    false,
                     external_props(&field.schema),
-                )?)
-            }
-        }
-        other => {
-            return Err(ArrowError::OutOfSpec(format!(
-                "An avro Schema must be of type Record - it is of type {:?}",
-                other
-            )))
-        }
-    };
-    Ok(schema_fields.into())
+                )
+            })
+            .collect::<Result<Vec<_>>>()?
+            .into())
+    } else {
+        Err(ArrowError::OutOfSpec(
+            "An avro Schema must be of type Record".to_string(),
+        ))
+    }
 }
 
-fn schema_to_field(
-    schema: &AvroSchema,
-    name: Option<&str>,
-    mut nullable: bool,
-    props: Metadata,
-) -> Result<Field> {
+fn schema_to_field(schema: &AvroSchema, name: Option<&str>, props: Metadata) -> Result<Field> {
+    let mut nullable = false;
     let data_type = match schema {
         AvroSchema::Null => DataType::Null,
         AvroSchema::Boolean => DataType::Boolean,
@@ -91,7 +84,6 @@ fn schema_to_field(
         AvroSchema::Array(item_schema) => DataType::List(Box::new(schema_to_field(
             item_schema,
             Some("item"), // default name for list items
-            false,
             Metadata::default(),
         )?)),
         AvroSchema::Map(_) => todo!("Avro maps are mapped to MapArrays"),
@@ -104,9 +96,7 @@ fn schema_to_field(
                     .iter()
                     .find(|&schema| !matches!(schema, AvroSchema::Null))
                 {
-                    schema_to_field(schema, None, has_nullable, Metadata::default())?
-                        .data_type()
-                        .clone()
+                    schema_to_field(schema, None, Metadata::default())?.data_type
                 } else {
                     return Err(ArrowError::NotYetImplemented(format!(
                         "Can't read avro union {:?}",
@@ -116,31 +106,27 @@ fn schema_to_field(
             } else {
                 let fields = schemas
                     .iter()
-                    .map(|s| schema_to_field(s, None, has_nullable, Metadata::default()))
+                    .map(|s| schema_to_field(s, None, Metadata::default()))
                     .collect::<Result<Vec<Field>>>()?;
                 DataType::Union(fields, None, UnionMode::Dense)
             }
         }
         AvroSchema::Record(Record { name, fields, .. }) => {
-            let fields: Result<Vec<Field>> = fields
+            let fields = fields
                 .iter()
                 .map(|field| {
                     let mut props = Metadata::new();
                     if let Some(doc) = &field.doc {
                         props.insert("avro::doc".to_string(), doc.clone());
                     }
-                    /*if let Some(aliases) = fields.aliases {
-                        props.insert("aliases", aliases);
-                    }*/
                     schema_to_field(
                         &field.schema,
                         Some(&format!("{}.{}", name, field.name)),
-                        false,
                         props,
                     )
                 })
-                .collect();
-            DataType::Struct(fields?)
+                .collect::<Result<_>>()?;
+            DataType::Struct(fields)
         }
         AvroSchema::Enum { .. } => {
             return Ok(Field::new(
