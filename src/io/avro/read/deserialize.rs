@@ -1,6 +1,7 @@
 use std::convert::TryInto;
 use std::sync::Arc;
 
+use avro_schema::Record;
 use avro_schema::{Enum, Schema as AvroSchema};
 
 use crate::array::*;
@@ -45,17 +46,27 @@ fn make_mutable(
         _ => match data_type {
             DataType::List(inner) => {
                 let values = make_mutable(inner.data_type(), None, 0)?;
-                Box::new(DynMutableListArray::<i32>::new_with_capacity(
-                    values, capacity,
+                Box::new(DynMutableListArray::<i32>::new_from(
+                    values,
+                    data_type.clone(),
+                    capacity,
                 )) as Box<dyn MutableArray>
             }
             DataType::FixedSizeBinary(size) => Box::new(MutableFixedSizeBinaryArray::with_capacity(
                 *size as usize,
                 capacity,
             )) as Box<dyn MutableArray>,
+            DataType::Struct(fields) => {
+                let values = fields
+                    .iter()
+                    .map(|field| make_mutable(field.data_type(), None, capacity))
+                    .collect::<Result<Vec<_>>>()?;
+                Box::new(DynMutableStructArray::new(values, data_type.clone()))
+                    as Box<dyn MutableArray>
+            }
             other => {
                 return Err(ArrowError::NotYetImplemented(format!(
-                    "Deserializing type {:?} is still not implemented",
+                    "Deserializing type {:#?} is still not implemented",
                     other
                 )))
             }
@@ -96,6 +107,7 @@ fn deserialize_value<'a>(
     let data_type = array.data_type();
     match data_type {
         DataType::List(inner) => {
+            let is_nullable = inner.is_nullable;
             let avro_inner = match avro_field {
                 AvroSchema::Array(inner) => inner.as_ref(),
                 AvroSchema::Union(u) => match &u.as_slice() {
@@ -107,7 +119,6 @@ fn deserialize_value<'a>(
                 _ => unreachable!(),
             };
 
-            let is_nullable = inner.is_nullable;
             let array = array
                 .as_mut_any()
                 .downcast_mut::<DynMutableListArray<i32>>()
@@ -143,6 +154,31 @@ fn deserialize_value<'a>(
                 .downcast_mut::<MutablePrimitiveArray<months_days_ns>>()
                 .unwrap();
             array.push(Some(value))
+        }
+        DataType::Struct(inner_fields) => {
+            let fields = match avro_field {
+                AvroSchema::Record(Record { fields, .. }) => fields,
+                AvroSchema::Union(u) => match &u.as_slice() {
+                    &[AvroSchema::Record(Record { fields, .. }), _]
+                    | &[_, AvroSchema::Record(Record { fields, .. })] => fields,
+                    _ => unreachable!(),
+                },
+                _ => unreachable!(),
+            };
+
+            let is_nullable = inner_fields
+                .iter()
+                .map(|x| x.is_nullable)
+                .collect::<Vec<_>>();
+            let array = array
+                .as_mut_any()
+                .downcast_mut::<DynMutableStructArray>()
+                .unwrap();
+
+            for (index, (field, is_nullable)) in fields.iter().zip(is_nullable.iter()).enumerate() {
+                let values = array.mut_values(index);
+                block = deserialize_item(values, *is_nullable, &field.schema, block)?;
+            }
         }
         _ => match data_type.to_physical_type() {
             PhysicalType::Boolean => {

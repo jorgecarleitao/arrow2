@@ -36,6 +36,13 @@ pub(super) fn schema() -> (AvroSchema, Schema) {
                     "default": null
                 }
             }},
+            {"name": "i", "type": {
+                "type": "record",
+                "name": "bla",
+                "fields": [
+                    {"name": "e", "type": "double"}
+                ]
+            }},
             {"name": "enum", "type": {
                 "type": "enum",
                 "name": "",
@@ -57,6 +64,11 @@ pub(super) fn schema() -> (AvroSchema, Schema) {
         Field::new(
             "h",
             DataType::List(Box::new(Field::new("item", DataType::Int32, true))),
+            false,
+        ),
+        Field::new(
+            "i",
+            DataType::Struct(vec![Field::new("bla.e", DataType::Float64, false)]),
             false,
         ),
         Field::new(
@@ -88,6 +100,11 @@ pub(super) fn data() -> Chunk<Arc<dyn Array>> {
         Arc::new(BooleanArray::from_slice([true, false])),
         Arc::new(Utf8Array::<i32>::from([Some("foo"), None])),
         array.into_arc(),
+        Arc::new(StructArray::from_data(
+            DataType::Struct(vec![Field::new("bla.e", DataType::Float64, false)]),
+            vec![Arc::new(PrimitiveArray::<f64>::from_slice([1.0, 2.0]))],
+            None,
+        )),
         Arc::new(DictionaryArray::<i32>::from_data(
             Int32Array::from_slice([1, 0]),
             Arc::new(Utf8Array::<i32>::from_slice(["SPADES", "HEARTS"])),
@@ -120,6 +137,10 @@ pub(super) fn write_avro(codec: Codec) -> std::result::Result<Vec<u8>, avro_rs::
             Value::Union(Box::new(Value::Int(3))),
         ]),
     );
+    record.put(
+        "i",
+        Value::Record(vec![("e".to_string(), Value::Double(1.0f64))]),
+    );
     record.put("enum", Value::Enum(1, "HEARTS".to_string()));
     record.put(
         "duration",
@@ -143,6 +164,10 @@ pub(super) fn write_avro(codec: Codec) -> std::result::Result<Vec<u8>, avro_rs::
             Value::Union(Box::new(Value::Null)),
             Value::Union(Box::new(Value::Int(3))),
         ]),
+    );
+    record.put(
+        "i",
+        Value::Record(vec![("e".to_string(), Value::Double(2.0f64))]),
     );
     record.put("enum", Value::Enum(0, "SPADES".to_string()));
     writer.append(record)?;
