@@ -159,6 +159,7 @@ async fn main() -&gt; Result&lt;()&gt; {
 
     let (avro_schemas, schema, compression, marker) = read_metadata(&amp;mut reader).await?;
     let avro_schemas = Arc::new(avro_schemas);
+    let projection = Arc::new(schema.fields.iter().map(|_| true).collect::&lt;Vec&lt;_&gt;&gt;());
 
     let blocks = block_stream(&amp;mut reader, marker).await;
 
@@ -166,11 +167,12 @@ async fn main() -&gt; Result&lt;()&gt; {
     while let Some(mut block) = blocks.next().await.transpose()? {
         let schema = schema.clone();
         let avro_schemas = avro_schemas.clone();
+        let projection = projection.clone();
         // the content here is CPU-bounded. It should run on a dedicated thread pool
         let handle = tokio::task::spawn_blocking(move || {
             let mut decompressed = Block::new(0, vec![]);
             decompress_block(&amp;mut block, &amp;mut decompressed, compression)?;
-            deserialize(&amp;decompressed, &amp;schema.fields, &amp;avro_schemas)
+            deserialize(&amp;decompressed, &amp;schema.fields, &amp;avro_schemas, &amp;projection)
         });
         let batch = handle.await.unwrap()?;
         assert!(!batch.is_empty());
