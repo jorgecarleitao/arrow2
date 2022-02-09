@@ -19,8 +19,9 @@ fn external_props(schema: &AvroSchema) -> Metadata {
     props
 }
 
-/// Maps an [`AvroSchema`] into a [`Schema`].
-pub fn convert_schema(schema: &AvroSchema) -> Result<Schema> {
+/// Infers an [`Schema`] from the root [`AvroSchema`].
+/// This
+pub fn infer_schema(schema: &AvroSchema) -> Result<Schema> {
     if let AvroSchema::Record(Record { fields, .. }) = schema {
         Ok(fields
             .iter()
@@ -35,7 +36,7 @@ pub fn convert_schema(schema: &AvroSchema) -> Result<Schema> {
             .into())
     } else {
         Err(ArrowError::OutOfSpec(
-            "An avro Schema must be of type Record".to_string(),
+            "The root AvroSchema must be of type Record".to_string(),
         ))
     }
 }

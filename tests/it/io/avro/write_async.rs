@@ -32,7 +32,7 @@ async fn roundtrip(compression: Option<write::Compression>) -> Result<()> {
 
     let data = write_avro(&expected, &expected_schema, compression).await?;
 
-    let (result, read_schema) = read_avro(&data)?;
+    let (result, read_schema) = read_avro(&data, None)?;
 
     assert_eq!(expected_schema, read_schema);
     for (c1, c2) in result.columns().iter().zip(expected.columns().iter()) {

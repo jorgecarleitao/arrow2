@@ -17,7 +17,7 @@ mod schema;
 mod util;
 
 pub(super) use header::deserialize_header;
-pub(super) use schema::convert_schema;
+pub(super) use schema::infer_schema;
 
 use crate::array::Array;
 use crate::chunk::Chunk;
@@ -32,7 +32,7 @@ pub fn read_metadata<R: std::io::Read>(
     reader: &mut R,
 ) -> Result<(Vec<AvroSchema>, Schema, Option<Compression>, [u8; 16])> {
     let (avro_schema, codec, marker) = util::read_schema(reader)?;
-    let schema = convert_schema(&avro_schema)?;
+    let schema = infer_schema(&avro_schema)?;
 
     let avro_schema = if let AvroSchema::Record(Record { fields, .. }) = avro_schema {
         fields.into_iter().map(|x| x.schema).collect()
@@ -48,15 +48,23 @@ pub struct Reader<R: Read> {
     iter: Decompressor<R>,
     avro_schemas: Vec<AvroSchema>,
     fields: Vec<Field>,
+    projection: Vec<bool>,
 }
 
 impl<R: Read> Reader<R> {
     /// Creates a new [`Reader`].
-    pub fn new(iter: Decompressor<R>, avro_schemas: Vec<AvroSchema>, fields: Vec<Field>) -> Self {
+    pub fn new(
+        iter: Decompressor<R>,
+        avro_schemas: Vec<AvroSchema>,
+        fields: Vec<Field>,
+        projection: Option<Vec<bool>>,
+    ) -> Self {
+        let projection = projection.unwrap_or_else(|| fields.iter().map(|_| true).collect());
         Self {
             iter,
             avro_schemas,
             fields,
+            projection,
         }
     }
 
@@ -72,10 +80,11 @@ impl<R: Read> Iterator for Reader<R> {
     fn next(&mut self) -> Option<Self::Item> {
         let fields = &self.fields[..];
         let avro_schemas = &self.avro_schemas;
+        let projection = &self.projection;
 
         self.iter
             .next()
             .transpose()
-            .map(|maybe_block| deserialize(maybe_block?, fields, avro_schemas))
+            .map(|maybe_block| deserialize(maybe_block?, fields, avro_schemas, projection))
     }
 }

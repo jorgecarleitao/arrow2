@@ -52,6 +52,7 @@ fn read_batch(buffer: &[u8], size: usize) -> Result<()> {
         ),
         avro_schema,
         schema.fields,
+        None,
     );
 
     let mut rows = 0;
