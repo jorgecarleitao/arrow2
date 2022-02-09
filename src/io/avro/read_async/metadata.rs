@@ -8,8 +8,8 @@ use futures::AsyncReadExt;
 use crate::datatypes::Schema;
 use crate::error::{ArrowError, Result};
 
-use super::super::read::convert_schema;
 use super::super::read::deserialize_header;
+use super::super::read::infer_schema;
 use super::super::Compression;
 use super::super::{read_header, read_metadata};
 use super::utils::zigzag_i64;
@@ -28,7 +28,7 @@ pub async fn read_metadata<R: AsyncRead + Unpin + Send>(
     reader: &mut R,
 ) -> Result<(Vec<AvroSchema>, Schema, Option<Compression>, [u8; 16])> {
     let (avro_schema, codec, marker) = read_metadata_async(reader).await?;
-    let schema = convert_schema(&avro_schema)?;
+    let schema = infer_schema(&avro_schema)?;
 
     let avro_schema = if let AvroSchema::Record(Record { fields, .. }) = avro_schema {
         fields.into_iter().map(|x| x.schema).collect()
