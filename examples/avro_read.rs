@@ -20,6 +20,7 @@ fn main() -> Result<()> {
         read::Decompressor::new(read::BlockStreamIterator::new(file, file_marker), codec),
         avro_schema,
         schema.fields,
+        None,
     );
 
     for maybe_chunk in reader {

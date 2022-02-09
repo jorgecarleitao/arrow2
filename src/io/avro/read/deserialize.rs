@@ -137,24 +137,6 @@ fn deserialize_value<'a>(
                 array.try_push_valid()?;
             }
         }
-        DataType::Interval(IntervalUnit::MonthDayNano) => {
-            // https://avro.apache.org/docs/current/spec.html#Duration
-            // 12 bytes, months, days, millis in LE
-            let data = &block[..12];
-            block = &block[12..];
-
-            let value = months_days_ns::new(
-                i32::from_le_bytes([data[0], data[1], data[2], data[3]]),
-                i32::from_le_bytes([data[4], data[5], data[6], data[7]]),
-                i32::from_le_bytes([data[8], data[9], data[10], data[11]]) as i64 * 1_000_000,
-            );
-
-            let array = array
-                .as_mut_any()
-                .downcast_mut::<MutablePrimitiveArray<months_days_ns>>()
-                .unwrap();
-            array.push(Some(value))
-        }
         DataType::Struct(inner_fields) => {
             let fields = match avro_field {
                 AvroSchema::Record(Record { fields, .. }) => fields,
@@ -227,6 +209,25 @@ fn deserialize_value<'a>(
                         .unwrap();
                     array.push(Some(value))
                 }
+                PrimitiveType::MonthDayNano => {
+                    // https://avro.apache.org/docs/current/spec.html#Duration
+                    // 12 bytes, months, days, millis in LE
+                    let data = &block[..12];
+                    block = &block[12..];
+
+                    let value = months_days_ns::new(
+                        i32::from_le_bytes([data[0], data[1], data[2], data[3]]),
+                        i32::from_le_bytes([data[4], data[5], data[6], data[7]]),
+                        i32::from_le_bytes([data[8], data[9], data[10], data[11]]) as i64
+                            * 1_000_000,
+                    );
+
+                    let array = array
+                        .as_mut_any()
+                        .downcast_mut::<MutablePrimitiveArray<months_days_ns>>()
+                        .unwrap();
+                    array.push(Some(value))
+                }
                 _ => unreachable!(),
             },
             PhysicalType::Utf8 => {
@@ -283,11 +284,109 @@ fn deserialize_value<'a>(
     Ok(block)
 }
 
-/// Deserializes a [`Block`] into [`Chunk`].
+fn skip_item<'a>(field: &Field, avro_field: &AvroSchema, mut block: &'a [u8]) -> Result<&'a [u8]> {
+    if field.is_nullable {
+        let variant = util::zigzag_i64(&mut block)?;
+        let is_null_first = is_union_null_first(avro_field);
+        if is_null_first && variant == 0 || !is_null_first && variant != 0 {
+            return Ok(block);
+        }
+    }
+    match &field.data_type {
+        DataType::List(inner) => {
+            let avro_inner = match avro_field {
+                AvroSchema::Array(inner) => inner.as_ref(),
+                AvroSchema::Union(u) => match &u.as_slice() {
+                    &[AvroSchema::Array(inner), _] | &[_, AvroSchema::Array(inner)] => {
+                        inner.as_ref()
+                    }
+                    _ => unreachable!(),
+                },
+                _ => unreachable!(),
+            };
+
+            loop {
+                let len = util::zigzag_i64(&mut block)? as usize;
+
+                if len == 0 {
+                    break;
+                }
+
+                for _ in 0..len {
+                    block = skip_item(inner, avro_inner, block)?;
+                }
+            }
+        }
+        DataType::Struct(inner_fields) => {
+            let fields = match avro_field {
+                AvroSchema::Record(Record { fields, .. }) => fields,
+                AvroSchema::Union(u) => match &u.as_slice() {
+                    &[AvroSchema::Record(Record { fields, .. }), _]
+                    | &[_, AvroSchema::Record(Record { fields, .. })] => fields,
+                    _ => unreachable!(),
+                },
+                _ => unreachable!(),
+            };
+
+            for (field, avro_field) in inner_fields.iter().zip(fields.iter()) {
+                block = skip_item(field, &avro_field.schema, block)?;
+            }
+        }
+        _ => match field.data_type.to_physical_type() {
+            PhysicalType::Boolean => {
+                let _ = block[0] == 1;
+                block = &block[1..];
+            }
+            PhysicalType::Primitive(primitive) => match primitive {
+                PrimitiveType::Int32 => {
+                    let _ = util::zigzag_i64(&mut block)?;
+                }
+                PrimitiveType::Int64 => {
+                    let _ = util::zigzag_i64(&mut block)?;
+                }
+                PrimitiveType::Float32 => {
+                    block = &block[std::mem::size_of::<f32>()..];
+                }
+                PrimitiveType::Float64 => {
+                    block = &block[std::mem::size_of::<f64>()..];
+                }
+                PrimitiveType::MonthDayNano => {
+                    block = &block[12..];
+                }
+                _ => unreachable!(),
+            },
+            PhysicalType::Utf8 | PhysicalType::Binary => {
+                let len: usize = util::zigzag_i64(&mut block)?.try_into().map_err(|_| {
+                    ArrowError::ExternalFormat(
+                        "Avro format contains a non-usize number of bytes".to_string(),
+                    )
+                })?;
+                block = &block[len..];
+            }
+            PhysicalType::FixedSizeBinary => {
+                let len = if let DataType::FixedSizeBinary(len) = &field.data_type {
+                    *len
+                } else {
+                    unreachable!()
+                };
+
+                block = &block[len..];
+            }
+            PhysicalType::Dictionary(_) => {
+                let _ = util::zigzag_i64(&mut block)? as i32;
+            }
+            _ => todo!(),
+        },
+    }
+    Ok(block)
+}
+
+/// Deserializes a [`Block`] into [`Chunk`], projected
 pub fn deserialize(
     block: &Block,
     fields: &[Field],
     avro_schemas: &[AvroSchema],
+    projection: &[bool],
 ) -> Result<Chunk<Arc<dyn Array>>> {
     let rows = block.number_of_rows;
     let mut block = block.data.as_ref();
@@ -296,21 +395,39 @@ pub fn deserialize(
     let mut arrays: Vec<Box<dyn MutableArray>> = fields
         .iter()
         .zip(avro_schemas.iter())
-        .map(|(field, avro_schema)| {
-            let data_type = field.data_type().to_logical_type();
-            make_mutable(data_type, Some(avro_schema), rows)
+        .zip(projection.iter())
+        .map(|((field, avro_schema), projection)| {
+            if *projection {
+                make_mutable(&field.data_type, Some(avro_schema), rows)
+            } else {
+                // just something; we are not going to use it
+                make_mutable(&DataType::Int32, None, 0)
+            }
         })
         .collect::<Result<_>>()?;
 
     // this is _the_ expensive transpose (rows -> columns)
     for _ in 0..rows {
-        for ((array, field), avro_field) in arrays
+        let iter = arrays
             .iter_mut()
             .zip(fields.iter())
             .zip(avro_schemas.iter())
-        {
-            block = deserialize_item(array.as_mut(), field.is_nullable, avro_field, block)?
+            .zip(projection.iter());
+
+        for (((array, field), avro_field), projection) in iter {
+            block = if *projection {
+                deserialize_item(array.as_mut(), field.is_nullable, avro_field, block)
+            } else {
+                skip_item(field, avro_field, block)
+            }?
         }
     }
-    Chunk::try_new(arrays.iter_mut().map(|array| array.as_arc()).collect())
+    Chunk::try_new(
+        arrays
+            .iter_mut()
+            .zip(projection.iter())
+            .filter_map(|x| if *x.1 { Some(x.0) } else { None })
+            .map(|array| array.as_arc())
+            .collect(),
+    )
 }
