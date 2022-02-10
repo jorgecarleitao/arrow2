@@ -1,3 +1,5 @@
+use std::fmt::Binary;
+
 use arrow2::array::*;
 use arrow2::chunk::Chunk;
 use arrow2::datatypes::*;
@@ -139,4 +141,61 @@ fn snappy() -> Result<()> {
 #[test]
 fn deflate() -> Result<()> {
     roundtrip(Some(write::Compression::Deflate))
+}
+
+fn large_format_schema() -> Schema {
+    Schema::from(vec![
+        Field::new("large_utf8", DataType::LargeUtf8, false),
+        Field::new("large_utf8_nullable", DataType::LargeUtf8, true),
+        Field::new("large_binary", DataType::LargeBinary, false),
+        Field::new("large_binary_nullable", DataType::LargeBinary, true),
+    ])
+}
+
+fn large_format_data() -> Chunk<Box<dyn Array>> {
+    let columns = vec![
+        Box::new(Utf8Array::<i64>::from_slice(&["a", "b"])) as Box<dyn Array>,
+        Box::new(Utf8Array::<i64>::from(&[Some("a"), None])),
+        Box::new(BinaryArray::<i64>::from_slice([b"foo", b"bar"])),
+        Box::new(BinaryArray::<i64>::from([Some(b"foo"), None])),
+    ];
+    Chunk::new(columns)
+}
+
+fn large_format_expected_schema() -> Schema {
+    Schema::from(vec![
+        Field::new("large_utf8", DataType::Utf8, false),
+        Field::new("large_utf8_nullable", DataType::Utf8, true),
+        Field::new("large_binary", DataType::Binary, false),
+        Field::new("large_binary_nullable", DataType::Binary, true),
+    ])
+}
+
+fn large_format_expected_data() -> Chunk<Box<dyn Array>> {
+    let columns = vec![
+        Box::new(Utf8Array::<i32>::from_slice(&["a", "b"])) as Box<dyn Array>,
+        Box::new(Utf8Array::<i32>::from(&[Some("a"), None])),
+        Box::new(BinaryArray::<i32>::from_slice([b"foo", b"bar"])),
+        Box::new(BinaryArray::<i32>::from([Some(b"foo"), None])),
+    ];
+    Chunk::new(columns)
+}
+
+#[test]
+fn check_large_format() -> Result<()> {
+    let write_schema = large_format_schema();
+    let write_data = large_format_data();
+
+    let data = write_avro(&write_data, &write_schema, None)?;
+    let (result, read_schame) = read_avro(&data, None)?;
+
+    let expected_schema = large_format_expected_schema();
+    assert_eq!(read_schame, expected_schema);
+
+    let expected_data = large_format_expected_data();
+    for (c1, c2) in result.columns().iter().zip(expected_data.columns().iter()) {
+        assert_eq!(c1.as_ref(), c2.as_ref());
+    }
+
+    Ok(())
 }
