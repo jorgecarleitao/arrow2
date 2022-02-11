@@ -195,14 +195,6 @@ impl<'a, O: Offset> utils::Decoder<'a, &'a [u8], Binary<O>> for BinaryDecoder<O>
             page.descriptor().type_().get_basic_info().repetition() == &Repetition::Optional;
 
         match (page.encoding(), page.dictionary_page(), is_optional) {
-            (Encoding::Plain, None, true) => {
-                let (_, _, values, _) = utils::split_buffer(page, page.descriptor());
-
-                let values = BinaryIter::new(values);
-
-                Ok(State::Optional(OptionalPageValidity::new(page), values))
-            }
-            (Encoding::Plain, None, false) => Ok(State::Required(Required::new(page))),
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false) => {
                 Ok(State::RequiredDictionary(RequiredDictionary::new(
                     page,
@@ -215,6 +207,14 @@ impl<'a, O: Offset> utils::Decoder<'a, &'a [u8], Binary<O>> for BinaryDecoder<O>
                     dict.as_any().downcast_ref().unwrap(),
                 )))
             }
+            (Encoding::Plain, _, true) => {
+                let (_, _, values, _) = utils::split_buffer(page, page.descriptor());
+
+                let values = BinaryIter::new(values);
+
+                Ok(State::Optional(OptionalPageValidity::new(page), values))
+            }
+            (Encoding::Plain, _, false) => Ok(State::Required(Required::new(page))),
             _ => Err(utils::not_implemented(
                 &page.encoding(),
                 is_optional,
