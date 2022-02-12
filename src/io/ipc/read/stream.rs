@@ -12,7 +12,7 @@ use crate::io::ipc::IpcSchema;
 
 use super::super::CONTINUATION_MARKER;
 use super::common::*;
-use super::schema::fb_to_schema;
+use super::schema::deserialize_stream_metadata;
 use super::Dictionaries;
 
 /// Metadata of an Arrow IPC stream, written at the start of the stream
@@ -45,29 +45,7 @@ pub fn read_stream_metadata<R: Read>(reader: &mut R) -> Result<StreamMetadata> {
     let mut meta_buffer = vec![0; meta_len as usize];
     reader.read_exact(&mut meta_buffer)?;
 
-    let message =
-        arrow_format::ipc::MessageRef::read_as_root(meta_buffer.as_slice()).map_err(|err| {
-            ArrowError::OutOfSpec(format!("Unable to get root as message: {:?}", err))
-        })?;
-    let version = message.version()?;
-    // message header is a Schema, so read it
-    let header = message
-        .header()?
-        .ok_or_else(|| ArrowError::oos("Unable to read the first IPC message"))?;
-    let schema = if let arrow_format::ipc::MessageHeaderRef::Schema(schema) = header {
-        schema
-    } else {
-        return Err(ArrowError::oos(
-            "The first IPC message of the stream must be a schema",
-        ));
-    };
-    let (schema, ipc_schema) = fb_to_schema(schema)?;
-
-    Ok(StreamMetadata {
-        schema,
-        version,
-        ipc_schema,
-    })
+    deserialize_stream_metadata(&meta_buffer)
 }
 
 /// Encodes the stream's status after each read.
