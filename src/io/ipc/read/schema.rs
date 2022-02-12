@@ -8,7 +8,10 @@ use crate::{
     error::{ArrowError, Result},
 };
 
-use super::super::{IpcField, IpcSchema};
+use super::{
+    super::{IpcField, IpcSchema},
+    StreamMetadata,
+};
 
 fn try_unzip_vec<A, B, I: Iterator<Item = Result<(A, B)>>>(iter: I) -> Result<(Vec<A>, Vec<B>)> {
     let mut a = vec![];
@@ -369,4 +372,29 @@ pub(super) fn fb_to_schema(schema: arrow_format::ipc::SchemaRef) -> Result<(Sche
             is_little_endian,
         },
     ))
+}
+
+pub(super) fn deserialize_stream_metadata(meta: &[u8]) -> Result<StreamMetadata> {
+    let message = arrow_format::ipc::MessageRef::read_as_root(meta).map_err(|err| {
+        ArrowError::OutOfSpec(format!("Unable to get root as message: {:?}", err))
+    })?;
+    let version = message.version()?;
+    // message header is a Schema, so read it
+    let header = message
+        .header()?
+        .ok_or_else(|| ArrowError::oos("Unable to read the first IPC message"))?;
+    let schema = if let arrow_format::ipc::MessageHeaderRef::Schema(schema) = header {
+        schema
+    } else {
+        return Err(ArrowError::oos(
+            "The first IPC message of the stream must be a schema",
+        ));
+    };
+    let (schema, ipc_schema) = fb_to_schema(schema)?;
+
+    Ok(StreamMetadata {
+        schema,
+        version,
+        ipc_schema,
+    })
 }

@@ -16,6 +16,9 @@ mod read_basic;
 mod reader;
 mod schema;
 mod stream;
+#[cfg(feature = "io_ipc_read_async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "io_ipc_read_async")))]
+pub mod stream_async;
 
 pub use common::{read_dictionary, read_record_batch};
 pub use reader::{read_file_metadata, FileMetadata, FileReader};
