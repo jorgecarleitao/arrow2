@@ -177,7 +177,13 @@ impl Bitmap {
         self.offset
     }
 
-    /// Try to convert this `Bitmap` to a `MutableBitmap`
+    /// Converts this [`Bitmap`] to [`MutableBitmap`], returning itself if the conversion
+    /// is not possible
+    ///
+    /// This operation returns a [`MutableBitmap`] iff:
+    /// * this [`Bitmap`] is not an offsetted slice of another [`Bitmap`]
+    /// * this [`Bitmap`] has not been cloned (i.e. [`Arc`]`::get_mut` yields [`Some`])
+    /// * this [`Bitmap`] was not imported from the c data interface (FFI)
     pub fn into_mut(mut self) -> Either<Self, MutableBitmap> {
         match (
             self.offset,

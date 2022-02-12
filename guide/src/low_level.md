@@ -5,7 +5,7 @@ The starting point of this crate is the idea that data is stored in memory in a 
 The most important design aspect of this crate is that contiguous regions are shared via an
 `Arc`. In this context, the operation of slicing a memory region is `O(1)` because it
 corresponds to changing an offset and length. The tradeoff is that once under
-an `Arc`, memory regions are immutable.
+an `Arc`, memory regions are immutable. See note below on how to overcome this.
 
 The second most important aspect is that Arrow has two main types of data buffers: bitmaps,
 whose offsets are measured in bits, and byte types (such as `i32`), whose offsets are
@@ -55,7 +55,8 @@ interoperable in-memory format.
 ## Bitmaps
 
 Arrow's in-memory arrangement of boolean values is different from `Vec<bool>`. Specifically,
-arrow uses individual bits to represent a boolean, as opposed to the usual byte that `bool` holds.
+arrow uses individual bits to represent a boolean, as opposed to the usual byte
+that `bool` holds.
 Besides the 8x compression, this makes the validity particularly useful for 
 [AVX512](https://en.wikipedia.org/wiki/AVX-512) masks.
 One tradeoff is that an arrows' bitmap is not represented as a Rust slice, as Rust slices use
@@ -86,3 +87,10 @@ x.set(1, true);
 assert_eq!(x.get(1), true);
 # }
 ```
+
+## Copy on write (COW) semantics
+
+Both `Buffer` and `Bitmap` support copy on write semantics via `into_mut`, that may convert
+them to a `Vec` or `MutableBitmap` respectively.
+
+This allows re-using them to e.g. perform multiple operations without allocations.
