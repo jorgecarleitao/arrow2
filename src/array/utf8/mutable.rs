@@ -159,6 +159,7 @@ impl<O: Offset> MutableUtf8Array<O> {
     /// Pushes a new element to the array.
     /// # Panic
     /// This operation panics iff the length of all values (in bytes) exceeds `O` maximum value.
+    #[inline]
     pub fn push<T: AsRef<str>>(&mut self, value: Option<T>) {
         self.try_push(value).unwrap()
     }
@@ -251,6 +252,7 @@ impl<O: Offset> MutableArray for MutableUtf8Array<O> {
         self
     }
 
+    #[inline]
     fn push_null(&mut self) {
         self.push::<&str>(None)
     }
@@ -464,6 +466,7 @@ impl<O: Offset, T: AsRef<str>> TryExtend<Option<T>> for MutableUtf8Array<O> {
 }
 
 impl<O: Offset, T: AsRef<str>> TryPush<Option<T>> for MutableUtf8Array<O> {
+    #[inline]
     fn try_push(&mut self, value: Option<T>) -> Result<()> {
         match value {
             Some(value) => {
