@@ -6,7 +6,7 @@ Contrarily to `Arc<Vec<Option<T>>`, arrays in this crate are represented in such
 that they can be zero-copied to any other Arrow implementation via foreign interfaces (FFI).
 
 Probably the simplest `Array` in this crate is the `PrimitiveArray<T>`. It can be
-constructed as from a slice of option values,
+constructed from a slice of option values,
 
 ```rust
 # use arrow2::array::{Array, PrimitiveArray};
@@ -36,13 +36,13 @@ assert_eq!(array.len(), 3)
 # }
 ```
 
-A `PrimitiveArray` has 3 components:
+A `PrimitiveArray` (and every `Array` implemented in this crate) has 3 components:
 
 1. A physical type (e.g. `i32`)
 2. A logical type (e.g. `DataType::Int32`)
 3. Data
 
-The main differences from a `Vec<Option<T>>` are:
+The main differences from a `Arc<Vec<Option<T>>>` are:
 
 * Its data is laid out in memory as a `Buffer<T>` and an `Option<Bitmap>` (see [../low_level.md])
 * It has an associated logical type (`DataType`).
@@ -84,16 +84,16 @@ The following arrays are supported:
 * `Utf8Array<i32>` and `Utf8Array<i64>` (for strings)
 * `BinaryArray<i32>` and `BinaryArray<i64>` (for opaque binaries)
 * `FixedSizeBinaryArray` (like `BinaryArray`, but fixed size)
-* `ListArray<i32>` and `ListArray<i64>` (nested arrays)
-* `FixedSizeListArray` (nested arrays of fixed size)
-* `StructArray` (every row has multiple logical types)
+* `ListArray<i32>` and `ListArray<i64>` (array of arrays)
+* `FixedSizeListArray` (array of arrays of a fixed size)
+* `StructArray` (multiple named arrays where each row has one element from each array)
 * `UnionArray` (every row has a different logical type)
 * `DictionaryArray<K>` (nested array with encoded values)
 
 ## Array as a trait object
 
 `Array` is object safe, and all implementations of `Array` and can be casted
-to `&dyn Array`, which enables run-time nesting.
+to `&dyn Array`, which enables dynamic casting and run-time nesting.
 
 ```rust
 # use arrow2::array::{Array, PrimitiveArray};
@@ -177,8 +177,8 @@ This crate's APIs are generally split into two patterns: whether an operation le
 contiguous memory regions or whether it does not.
 
 What this means is that certain operations can be performed irrespectively of whether a value
-is "null" or not (e.g. `PrimitiveArray<i32> + i32` can be applied to _all_ values via SIMD and 
-only copy the validity bitmap independently).
+is "null" or not (e.g. `PrimitiveArray<i32> + i32` can be applied to _all_ values
+via SIMD and only copy the validity bitmap independently).
 
 When an operation benefits from such arrangement, it is advantageous to use
 

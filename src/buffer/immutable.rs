@@ -131,12 +131,14 @@ impl<T: NativeType> Buffer<T> {
         self.offset
     }
 
-    /// Try to get the inner data as a mutable [`Vec<T>`].
-    /// This succeeds iff:
-    /// * This data was allocated by Rust (i.e. it does not come from the C data interface)
-    /// * This region is not being shared any other struct.
-    /// * This buffer has no offset
-    pub fn get_vec(mut self) -> Either<Self, Vec<T>> {
+    /// Converts this [`Buffer`] to [`Vec`], returning itself if the conversion
+    /// is not possible
+    ///
+    /// This operation returns a [`Vec`] iff this [`Buffer`]:
+    /// * is not an offsetted slice of another [`Buffer`]
+    /// * has not been cloned (i.e. [`Arc`]`::get_mut` yields [`Some`])
+    /// * has not been imported from the c data interface (FFI)
+    pub fn into_mut(mut self) -> Either<Self, Vec<T>> {
         if self.offset != 0 {
             Either::Left(self)
         } else {

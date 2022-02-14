@@ -218,7 +218,7 @@ impl<O: Offset> Utf8Array<O> {
                     self.values,
                     Some(bitmap),
                 )),
-                Right(mutable_bitmap) => match (self.values.get_vec(), self.offsets.get_vec()) {
+                Right(mutable_bitmap) => match (self.values.into_mut(), self.offsets.into_mut()) {
                     (Left(immutable_values), Left(immutable_offsets)) => {
                         Left(Utf8Array::from_data(
                             self.data_type,
@@ -250,7 +250,7 @@ impl<O: Offset> Utf8Array<O> {
                 },
             }
         } else {
-            match (self.values.get_vec(), self.offsets.get_vec()) {
+            match (self.values.into_mut(), self.offsets.into_mut()) {
                 (Left(immutable_values), Left(immutable_offsets)) => Left(Utf8Array::from_data(
                     self.data_type,
                     immutable_offsets,

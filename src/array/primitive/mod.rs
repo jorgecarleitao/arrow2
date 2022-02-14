@@ -196,7 +196,7 @@ impl<T: NativeType> PrimitiveArray<T> {
                     self.values,
                     Some(bitmap),
                 )),
-                Right(mutable_bitmap) => match self.values.get_vec() {
+                Right(mutable_bitmap) => match self.values.into_mut() {
                     Left(buffer) => Left(PrimitiveArray::from_data(
                         self.data_type,
                         buffer,
@@ -210,7 +210,7 @@ impl<T: NativeType> PrimitiveArray<T> {
                 },
             }
         } else {
-            match self.values.get_vec() {
+            match self.values.into_mut() {
                 Left(buffer) => Left(PrimitiveArray::from_data(self.data_type, buffer, None)),
                 Right(values) => Right(MutablePrimitiveArray::from_data(
                     self.data_type,
