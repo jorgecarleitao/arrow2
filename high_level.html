@@ -140,7 +140,7 @@ with associated metadata (see <a href="../metadata.html">metadata</a>)).
 Contrarily to <code>Arc&lt;Vec&lt;Option&lt;T&gt;&gt;</code>, arrays in this crate are represented in such a way
 that they can be zero-copied to any other Arrow implementation via foreign interfaces (FFI).</p>
 <p>Probably the simplest <code>Array</code> in this crate is the <code>PrimitiveArray&lt;T&gt;</code>. It can be
-constructed as from a slice of option values,</p>
+constructed from a slice of option values,</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::array::{Array, PrimitiveArray};
 </span><span class="boring">fn main() {
 </span>let array = PrimitiveArray::&lt;i32&gt;::from([Some(1), None, Some(123)]);
@@ -161,13 +161,13 @@ assert_eq!(array.len(), 3)
 assert_eq!(array.len(), 3)
 <span class="boring">}
 </span></code></pre></pre>
-<p>A <code>PrimitiveArray</code> has 3 components:</p>
+<p>A <code>PrimitiveArray</code> (and every <code>Array</code> implemented in this crate) has 3 components:</p>
 <ol>
 <li>A physical type (e.g. <code>i32</code>)</li>
 <li>A logical type (e.g. <code>DataType::Int32</code>)</li>
 <li>Data</li>
 </ol>
-<p>The main differences from a <code>Vec&lt;Option&lt;T&gt;&gt;</code> are:</p>
+<p>The main differences from a <code>Arc&lt;Vec&lt;Option&lt;T&gt;&gt;&gt;</code> are:</p>
 <ul>
 <li>Its data is laid out in memory as a <code>Buffer&lt;T&gt;</code> and an <code>Option&lt;Bitmap&gt;</code> (see [../low_level.md])</li>
 <li>It has an associated logical type (<code>DataType</code>).</li>
@@ -202,15 +202,15 @@ assert_eq!(array.data_type(), &amp;DataType::Int32);
 <li><code>Utf8Array&lt;i32&gt;</code> and <code>Utf8Array&lt;i64&gt;</code> (for strings)</li>
 <li><code>BinaryArray&lt;i32&gt;</code> and <code>BinaryArray&lt;i64&gt;</code> (for opaque binaries)</li>
 <li><code>FixedSizeBinaryArray</code> (like <code>BinaryArray</code>, but fixed size)</li>
-<li><code>ListArray&lt;i32&gt;</code> and <code>ListArray&lt;i64&gt;</code> (nested arrays)</li>
-<li><code>FixedSizeListArray</code> (nested arrays of fixed size)</li>
-<li><code>StructArray</code> (every row has multiple logical types)</li>
+<li><code>ListArray&lt;i32&gt;</code> and <code>ListArray&lt;i64&gt;</code> (array of arrays)</li>
+<li><code>FixedSizeListArray</code> (array of arrays of a fixed size)</li>
+<li><code>StructArray</code> (multiple named arrays where each row has one element from each array)</li>
 <li><code>UnionArray</code> (every row has a different logical type)</li>
 <li><code>DictionaryArray&lt;K&gt;</code> (nested array with encoded values)</li>
 </ul>
 <h2 id="array-as-a-trait-object"><a class="header" href="#array-as-a-trait-object">Array as a trait object</a></h2>
 <p><code>Array</code> is object safe, and all implementations of <code>Array</code> and can be casted
-to <code>&amp;dyn Array</code>, which enables run-time nesting.</p>
+to <code>&amp;dyn Array</code>, which enables dynamic casting and run-time nesting.</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::array::{Array, PrimitiveArray};
 </span><span class="boring">fn main() {
 </span>let a = PrimitiveArray::&lt;i32&gt;::from(&amp;[Some(1), None]);
@@ -282,8 +282,8 @@ and how to make them even more efficient.</p>
 <p>This crate's APIs are generally split into two patterns: whether an operation leverages
 contiguous memory regions or whether it does not.</p>
 <p>What this means is that certain operations can be performed irrespectively of whether a value
-is &quot;null&quot; or not (e.g. <code>PrimitiveArray&lt;i32&gt; + i32</code> can be applied to <em>all</em> values via SIMD and 
-only copy the validity bitmap independently).</p>
+is &quot;null&quot; or not (e.g. <code>PrimitiveArray&lt;i32&gt; + i32</code> can be applied to <em>all</em> values
+via SIMD and only copy the validity bitmap independently).</p>
 <p>When an operation benefits from such arrangement, it is advantageous to use</p>
 <ul>
 <li><code>Buffer::from_iter</code></li>

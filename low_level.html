@@ -139,7 +139,7 @@
 <p>The most important design aspect of this crate is that contiguous regions are shared via an
 <code>Arc</code>. In this context, the operation of slicing a memory region is <code>O(1)</code> because it
 corresponds to changing an offset and length. The tradeoff is that once under
-an <code>Arc</code>, memory regions are immutable.</p>
+an <code>Arc</code>, memory regions are immutable. See note below on how to overcome this.</p>
 <p>The second most important aspect is that Arrow has two main types of data buffers: bitmaps,
 whose offsets are measured in bits, and byte types (such as <code>i32</code>), whose offsets are
 measured in bytes. With this in mind, this crate has 2 main types of containers of
@@ -181,7 +181,8 @@ types supported by arrow are built on top of these types, which enables Arrow to
 interoperable in-memory format.</p>
 <h2 id="bitmaps"><a class="header" href="#bitmaps">Bitmaps</a></h2>
 <p>Arrow's in-memory arrangement of boolean values is different from <code>Vec&lt;bool&gt;</code>. Specifically,
-arrow uses individual bits to represent a boolean, as opposed to the usual byte that <code>bool</code> holds.
+arrow uses individual bits to represent a boolean, as opposed to the usual byte
+that <code>bool</code> holds.
 Besides the 8x compression, this makes the validity particularly useful for 
 <a href="https://en.wikipedia.org/wiki/AVX-512">AVX512</a> masks.
 One tradeoff is that an arrows' bitmap is not represented as a Rust slice, as Rust slices use
@@ -207,6 +208,10 @@ x.set(1, true);
 assert_eq!(x.get(1), true);
 <span class="boring">}
 </span></code></pre></pre>
+<h2 id="copy-on-write-cow-semantics"><a class="header" href="#copy-on-write-cow-semantics">Copy on write (COW) semantics</a></h2>
+<p>Both <code>Buffer</code> and <code>Bitmap</code> support copy on write semantics via <code>into_mut</code>, that may convert
+them to a <code>Vec</code> or <code>MutableBitmap</code> respectively.</p>
+<p>This allows re-using them to e.g. perform multiple operations without allocations.</p>
 
                     </main>
 
