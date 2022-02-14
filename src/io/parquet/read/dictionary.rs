@@ -216,16 +216,17 @@ pub(super) fn next_dict<
         (None, Ok(None)) => MaybeNext::None,
         (state, Ok(Some(page))) => {
             // consume the dictionary page
-            if let Some(dict_page) = page.dictionary_page() {
-                *dict = match dict {
-                    Dict::Empty => Dict::Complete(read_dict(dict_page.as_ref())),
-                    _ => unreachable!(),
-                };
-            } else {
-                return MaybeNext::Some(Err(ArrowError::nyi(
-                    "dictionary arrays from non-dict-encoded pages",
-                )));
-            }
+            match (&dict, page.dictionary_page()) {
+                (Dict::Empty, None) => {
+                    return MaybeNext::Some(Err(ArrowError::nyi(
+                        "dictionary arrays from non-dict-encoded pages",
+                    )));
+                }
+                (Dict::Empty, Some(dict_page)) => {
+                    *dict = Dict::Complete(read_dict(dict_page.as_ref()))
+                }
+                (Dict::Complete(_), _) => {}
+            };
 
             let maybe_array = {
                 // there is a new page => consume the page from the start
