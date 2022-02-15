@@ -11,7 +11,7 @@
 //! * overflowing: returns an extra [`Bitmap`] denoting whether the operation overflowed.
 //! * adaptive: for [`Decimal`](crate::datatypes::DataType::Decimal) only,
 //!   adjusts the precision and scale to make the resulting value fit.
-
+#[forbid(unsafe_code)]
 pub mod basic;
 pub mod decimal;
 pub mod time;
