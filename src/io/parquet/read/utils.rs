@@ -212,6 +212,8 @@ pub(super) fn extend_from_decoder<'a, T: Default, P: Pushable<T>, I: Iterator<It
                     validity.extend_constant(additional, is_set);
                     if is_set {
                         (0..additional).for_each(|_| values.push(values_iter.next().unwrap()));
+                    } else {
+                        values.extend_constant(additional, T::default());
                     }
 
                     if additional == length {
