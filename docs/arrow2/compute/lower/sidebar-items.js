@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["can_lower","Checks if an array of type `datatype` can perform lower operation"],["lower","Returns a new `Array` where each of each of the elements is lower-cased. this function errors when the passed array is not a [Large]String array."]]});
