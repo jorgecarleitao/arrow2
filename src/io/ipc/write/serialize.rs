@@ -657,9 +657,8 @@ fn write_bytes(
         }
     } else {
         arrow_data.extend_from_slice(bytes);
+        pad_buffer_to_8(arrow_data, arrow_data.len() - start);
     };
-
-    pad_buffer_to_8(arrow_data, arrow_data.len() - start);
 
     let total_len = (arrow_data.len() - start) as i64;
     buffers.push(ipc::Buffer {
@@ -713,9 +712,8 @@ fn write_buffer<T: NativeType>(
         _write_compressed_buffer(buffer, arrow_data, is_little_endian, compression);
     } else {
         _write_buffer(buffer, arrow_data, is_little_endian);
+        pad_buffer_to_8(arrow_data, arrow_data.len() - start);
     };
-
-    pad_buffer_to_8(arrow_data, arrow_data.len() - start);
 
     let total_len = (arrow_data.len() - start) as i64;
     buffers.push(ipc::Buffer {
@@ -821,9 +819,8 @@ fn write_buffer_from_iter<T: NativeType, I: TrustedLen<Item = T>>(
         _write_compressed_buffer_from_iter(buffer, arrow_data, is_little_endian, compression);
     } else {
         _write_buffer_from_iter(buffer, arrow_data, is_little_endian);
+        pad_buffer_to_8(arrow_data, arrow_data.len() - start);
     }
-
-    pad_buffer_to_8(arrow_data, arrow_data.len() - start);
 
     let total_len = (arrow_data.len() - start) as i64;
     buffers.push(ipc::Buffer {

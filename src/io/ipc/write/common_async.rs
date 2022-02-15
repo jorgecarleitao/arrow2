@@ -13,7 +13,6 @@ pub async fn write_message<W: AsyncWrite + Unpin + Send>(
     encoded: EncodedData,
 ) -> Result<(usize, usize)> {
     let arrow_data_len = encoded.arrow_data.len();
-    assert_eq!(arrow_data_len % 8, 0, "Arrow data not aligned");
 
     let a = 8 - 1;
     let buffer = encoded.ipc_message;
