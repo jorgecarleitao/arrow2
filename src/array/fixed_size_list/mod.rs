@@ -5,9 +5,10 @@ use crate::{
     datatypes::{DataType, Field},
 };
 
-use super::{debug_fmt, new_empty_array, new_null_array, Array};
+use super::{new_empty_array, new_null_array, Array};
 
 mod ffi;
+pub(super) mod fmt;
 mod iterator;
 pub use iterator::*;
 mod mutable;
@@ -193,11 +194,5 @@ impl Array for FixedSizeListArray {
     }
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.with_validity(validity))
-    }
-}
-
-impl std::fmt::Debug for FixedSizeListArray {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        debug_fmt(self.iter(), "FixedSizeListArray", f, true)
     }
 }

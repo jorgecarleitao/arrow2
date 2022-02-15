@@ -7,12 +7,12 @@ use crate::{
 use either::Either;
 
 use super::{
-    display_fmt,
     specification::{check_offsets_minimal, try_check_offsets_and_utf8},
     Array, GenericBinaryArray, Offset,
 };
 
 mod ffi;
+pub(super) mod fmt;
 mod from;
 mod iterator;
 mod mutable;
@@ -364,12 +364,6 @@ impl<O: Offset> Array for Utf8Array<O> {
     }
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.with_validity(validity))
-    }
-}
-
-impl<O: Offset> std::fmt::Debug for Utf8Array<O> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        display_fmt(self.iter(), &format!("{:?}", self.data_type()), f, false)
     }
 }
 

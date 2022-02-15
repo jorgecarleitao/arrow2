@@ -77,13 +77,13 @@ fn from() {
 }
 
 #[test]
-fn display_int32() {
+fn debug_int32() {
     let array = Int32Array::from(&[Some(1), None, Some(2)]);
     assert_eq!(format!("{:?}", array), "Int32[1, None, 2]");
 }
 
 #[test]
-fn display_date32() {
+fn debug_date32() {
     let array = Int32Array::from(&[Some(1), None, Some(2)]).to(DataType::Date32);
     assert_eq!(
         format!("{:?}", array),
@@ -92,7 +92,7 @@ fn display_date32() {
 }
 
 #[test]
-fn display_time32s() {
+fn debug_time32s() {
     let array = Int32Array::from(&[Some(1), None, Some(2)]).to(DataType::Time32(TimeUnit::Second));
     assert_eq!(
         format!("{:?}", array),
@@ -101,7 +101,7 @@ fn display_time32s() {
 }
 
 #[test]
-fn display_time32ms() {
+fn debug_time32ms() {
     let array =
         Int32Array::from(&[Some(1), None, Some(2)]).to(DataType::Time32(TimeUnit::Millisecond));
     assert_eq!(
@@ -111,20 +111,20 @@ fn display_time32ms() {
 }
 
 #[test]
-fn display_interval_d() {
+fn debug_interval_d() {
     let array =
         Int32Array::from(&[Some(1), None, Some(2)]).to(DataType::Interval(IntervalUnit::YearMonth));
     assert_eq!(format!("{:?}", array), "Interval(YearMonth)[1m, None, 2m]");
 }
 
 #[test]
-fn display_int64() {
+fn debug_int64() {
     let array = Int64Array::from(&[Some(1), None, Some(2)]).to(DataType::Int64);
     assert_eq!(format!("{:?}", array), "Int64[1, None, 2]");
 }
 
 #[test]
-fn display_date64() {
+fn debug_date64() {
     let array = Int64Array::from(&[Some(1), None, Some(86400000)]).to(DataType::Date64);
     assert_eq!(
         format!("{:?}", array),
@@ -133,7 +133,7 @@ fn display_date64() {
 }
 
 #[test]
-fn display_time64us() {
+fn debug_time64us() {
     let array =
         Int64Array::from(&[Some(1), None, Some(2)]).to(DataType::Time64(TimeUnit::Microsecond));
     assert_eq!(
@@ -143,7 +143,7 @@ fn display_time64us() {
 }
 
 #[test]
-fn display_time64ns() {
+fn debug_time64ns() {
     let array =
         Int64Array::from(&[Some(1), None, Some(2)]).to(DataType::Time64(TimeUnit::Nanosecond));
     assert_eq!(
@@ -153,7 +153,7 @@ fn display_time64ns() {
 }
 
 #[test]
-fn display_timestamp_s() {
+fn debug_timestamp_s() {
     let array =
         Int64Array::from(&[Some(1), None, Some(2)]).to(DataType::Timestamp(TimeUnit::Second, None));
     assert_eq!(
@@ -163,7 +163,7 @@ fn display_timestamp_s() {
 }
 
 #[test]
-fn display_timestamp_ms() {
+fn debug_timestamp_ms() {
     let array = Int64Array::from(&[Some(1), None, Some(2)])
         .to(DataType::Timestamp(TimeUnit::Millisecond, None));
     assert_eq!(
@@ -173,7 +173,7 @@ fn display_timestamp_ms() {
 }
 
 #[test]
-fn display_timestamp_us() {
+fn debug_timestamp_us() {
     let array = Int64Array::from(&[Some(1), None, Some(2)])
         .to(DataType::Timestamp(TimeUnit::Microsecond, None));
     assert_eq!(
@@ -183,7 +183,7 @@ fn display_timestamp_us() {
 }
 
 #[test]
-fn display_timestamp_ns() {
+fn debug_timestamp_ns() {
     let array = Int64Array::from(&[Some(1), None, Some(2)])
         .to(DataType::Timestamp(TimeUnit::Nanosecond, None));
     assert_eq!(
@@ -193,7 +193,7 @@ fn display_timestamp_ns() {
 }
 
 #[test]
-fn display_timestamp_tz_ns() {
+fn debug_timestamp_tz_ns() {
     let array = Int64Array::from(&[Some(1), None, Some(2)]).to(DataType::Timestamp(
         TimeUnit::Nanosecond,
         Some("+02:00".to_string()),
@@ -205,7 +205,7 @@ fn display_timestamp_tz_ns() {
 }
 
 #[test]
-fn display_duration_ms() {
+fn debug_duration_ms() {
     let array =
         Int64Array::from(&[Some(1), None, Some(2)]).to(DataType::Duration(TimeUnit::Millisecond));
     assert_eq!(
@@ -215,14 +215,14 @@ fn display_duration_ms() {
 }
 
 #[test]
-fn display_duration_s() {
+fn debug_duration_s() {
     let array =
         Int64Array::from(&[Some(1), None, Some(2)]).to(DataType::Duration(TimeUnit::Second));
     assert_eq!(format!("{:?}", array), "Duration(Second)[1s, None, 2s]");
 }
 
 #[test]
-fn display_duration_us() {
+fn debug_duration_us() {
     let array =
         Int64Array::from(&[Some(1), None, Some(2)]).to(DataType::Duration(TimeUnit::Microsecond));
     assert_eq!(
@@ -232,7 +232,7 @@ fn display_duration_us() {
 }
 
 #[test]
-fn display_duration_ns() {
+fn debug_duration_ns() {
     let array =
         Int64Array::from(&[Some(1), None, Some(2)]).to(DataType::Duration(TimeUnit::Nanosecond));
     assert_eq!(
@@ -242,7 +242,7 @@ fn display_duration_ns() {
 }
 
 #[test]
-fn display_decimal() {
+fn debug_decimal() {
     let array = Int128Array::from(&[Some(12345), None, Some(23456)]).to(DataType::Decimal(5, 2));
     assert_eq!(
         format!("{:?}", array),
@@ -251,7 +251,7 @@ fn display_decimal() {
 }
 
 #[test]
-fn display_decimal1() {
+fn debug_decimal1() {
     let array = Int128Array::from(&[Some(12345), None, Some(23456)]).to(DataType::Decimal(5, 1));
     assert_eq!(
         format!("{:?}", array),
@@ -260,7 +260,7 @@ fn display_decimal1() {
 }
 
 #[test]
-fn display_interval_days_ms() {
+fn debug_interval_days_ms() {
     let array = DaysMsArray::from(&[Some(days_ms::new(1, 1)), None, Some(days_ms::new(2, 2))]);
     assert_eq!(
         format!("{:?}", array),

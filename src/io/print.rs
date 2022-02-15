@@ -23,14 +23,15 @@ pub fn write<A: AsRef<dyn Array>, N: AsRef<str>>(batches: &[Chunk<A>], names: &[
         let displayes = batch
             .arrays()
             .iter()
-            .map(|array| get_display(array.as_ref()))
+            .map(|array| get_display(array.as_ref(), ""))
             .collect::<Vec<_>>();
 
         for row in 0..batch.len() {
             let mut cells = Vec::new();
             (0..batch.arrays().len()).for_each(|col| {
-                let string = displayes[col](row);
-                cells.push(Cell::new(&string));
+                let mut string = String::new();
+                displayes[col](&mut string, row).unwrap();
+                cells.push(Cell::new(string));
             });
             table.add_row(cells);
         }

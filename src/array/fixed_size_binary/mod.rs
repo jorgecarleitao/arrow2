@@ -1,8 +1,9 @@
 use crate::{bitmap::Bitmap, buffer::Buffer, datatypes::DataType, error::Result};
 
-use super::{display_fmt, Array};
+use super::Array;
 
 mod ffi;
+pub(super) mod fmt;
 mod iterator;
 mod mutable;
 pub use mutable::*;
@@ -202,13 +203,6 @@ impl Array for FixedSizeBinaryArray {
     }
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.with_validity(validity))
-    }
-}
-
-impl std::fmt::Debug for FixedSizeBinaryArray {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let iter = self.iter().map(|x| x.map(|x| format!("{:?}", x)));
-        display_fmt(iter, "FixedSizeBinaryArray", f, false)
     }
 }
 

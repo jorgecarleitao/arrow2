@@ -19,7 +19,6 @@
 use std::any::Any;
 
 use crate::error::Result;
-use crate::types::{days_ms, months_days_ns};
 use crate::{
     bitmap::{Bitmap, MutableBitmap},
     datatypes::DataType,
@@ -350,7 +349,6 @@ impl<'a> AsRef<(dyn Array + 'a)> for dyn Array {
 mod binary;
 mod boolean;
 mod dictionary;
-mod display;
 mod fixed_size_binary;
 mod fixed_size_list;
 mod list;
@@ -364,11 +362,12 @@ mod utf8;
 
 mod equal;
 mod ffi;
+mod fmt;
 pub mod growable;
 pub mod ord;
 
-pub use display::get_display;
 pub use equal::equal;
+pub use fmt::{get_display, get_value_display};
 
 pub use crate::types::Offset;
 pub use binary::{BinaryArray, BinaryValueIter, MutableBinaryArray};
@@ -399,52 +398,6 @@ pub trait TryExtend<A> {
 pub trait TryPush<A> {
     /// Tries to push a new element.
     fn try_push(&mut self, item: A) -> Result<()>;
-}
-
-fn display_helper<T: std::fmt::Display, I: IntoIterator<Item = Option<T>>>(iter: I) -> Vec<String> {
-    iter.into_iter()
-        .map(|x| match x {
-            Some(x) => x.to_string(),
-            None => "None".to_string(),
-        })
-        .collect::<Vec<_>>()
-}
-
-fn debug_helper<T: std::fmt::Debug, I: IntoIterator<Item = Option<T>>>(iter: I) -> Vec<String> {
-    iter.into_iter()
-        .map(|x| match x {
-            Some(x) => format!("{:?}", x),
-            None => "None".to_string(),
-        })
-        .collect::<Vec<_>>()
-}
-
-fn debug_fmt<T: std::fmt::Debug, I: IntoIterator<Item = Option<T>>>(
-    iter: I,
-    head: &str,
-    f: &mut std::fmt::Formatter<'_>,
-    new_lines: bool,
-) -> std::fmt::Result {
-    let result = debug_helper(iter);
-    if new_lines {
-        write!(f, "{}[\n{}\n]", head, result.join(",\n"))
-    } else {
-        write!(f, "{}[{}]", head, result.join(", "))
-    }
-}
-
-fn display_fmt<T: std::fmt::Display, I: IntoIterator<Item = Option<T>>>(
-    iter: I,
-    head: &str,
-    f: &mut std::fmt::Formatter<'_>,
-    new_lines: bool,
-) -> std::fmt::Result {
-    let result = display_helper(iter);
-    if new_lines {
-        write!(f, "{}[\n{}\n]", head, result.join(",\n"))
-    } else {
-        write!(f, "{}[{}]", head, result.join(", "))
-    }
 }
 
 /// Trait that list arrays implement for the purposes of DRY.

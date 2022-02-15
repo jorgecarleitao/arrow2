@@ -9,8 +9,8 @@ use crate::{
 use super::Array;
 use either::Either;
 
-mod display;
 mod ffi;
+pub(super) mod fmt;
 mod from_natural;
 mod iterator;
 pub use iterator::*;

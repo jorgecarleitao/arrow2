@@ -1,14 +1,16 @@
 use std::{collections::HashMap, sync::Arc};
 
 use crate::{
-    array::{display::get_value_display, display_fmt, new_empty_array, new_null_array, Array},
     bitmap::Bitmap,
     buffer::Buffer,
     datatypes::{DataType, Field, UnionMode},
     scalar::{new_scalar, Scalar},
 };
 
+use super::{new_empty_array, new_null_array, Array};
+
 mod ffi;
+pub(super) mod fmt;
 mod iterator;
 
 type FieldEntry = (usize, Arc<dyn Array>);
@@ -271,18 +273,5 @@ impl UnionArray {
     /// Panics iff `data_type`'s logical type is not [`DataType::Union`].
     pub fn is_sparse(data_type: &DataType) -> bool {
         Self::get_all(data_type).2.is_sparse()
-    }
-}
-
-impl std::fmt::Debug for UnionArray {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let display = get_value_display(self);
-        let new_lines = false;
-        let head = "UnionArray";
-        let iter = self
-            .iter()
-            .enumerate()
-            .map(|(i, x)| if x.is_valid() { Some(display(i)) } else { None });
-        display_fmt(iter, head, f, new_lines)
     }
 }

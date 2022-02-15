@@ -7,7 +7,7 @@ use arrow2::datatypes::DataType;
 mod mutable;
 
 #[test]
-fn display() {
+fn debug() {
     let values = Buffer::from_slice([1, 2, 3, 4, 5]);
     let values = PrimitiveArray::<i32>::from_data(DataType::Int32, values, None);
 
@@ -19,10 +19,7 @@ fn display() {
         None,
     );
 
-    assert_eq!(
-        format!("{:?}", array),
-        "ListArray[\nInt32[1, 2],\nInt32[],\nInt32[3],\nInt32[4, 5]\n]"
-    );
+    assert_eq!(format!("{:?}", array), "ListArray[[1, 2], [], [3], [4, 5]]");
 }
 
 #[test]
@@ -70,6 +67,6 @@ fn test_nested_display() {
         None,
     );
 
-    let expected = "ListArray[\nListArray[\nInt32[1, 2],\nInt32[3, 4]\n],\nListArray[\nInt32[5, 6, 7],\nInt32[],\nInt32[8]\n],\nListArray[\nInt32[9, 10]\n]\n]";
+    let expected = "ListArray[[[1, 2], [3, 4]], [[5, 6, 7], [], [8]], [[9, 10]]]";
     assert_eq!(format!("{:?}", nested), expected);
 }

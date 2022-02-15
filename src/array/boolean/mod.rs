@@ -4,9 +4,10 @@ use crate::{
 };
 use either::Either;
 
-use super::{display_fmt, Array};
+use super::Array;
 
 mod ffi;
+pub(super) mod fmt;
 mod from;
 mod iterator;
 mod mutable;
@@ -202,11 +203,5 @@ impl Array for BooleanArray {
     }
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.with_validity(validity))
-    }
-}
-
-impl std::fmt::Debug for BooleanArray {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        display_fmt(self.iter(), "BooleanArray", f, false)
     }
 }
