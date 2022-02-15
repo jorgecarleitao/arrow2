@@ -253,11 +253,10 @@ fn deserialize_value<'a>(
                             "Avro decimal bytes return more than 16 bytes".to_string(),
                         ));
                     }
-                    let value = &block[..len];
-                    block = &block[len..];
                     let mut bytes = [0u8; 16];
-                    bytes[..len].copy_from_slice(value);
-                    let data = u128::from_be_bytes(bytes) >> (8 * (16 - len));
+                    bytes[..len].copy_from_slice(&block[..len]);
+                    block = &block[len..];
+                    let data = i128::from_be_bytes(bytes) >> (8 * (16 - len));
                     let array = array
                         .as_mut_any()
                         .downcast_mut::<MutablePrimitiveArray<i128>>()

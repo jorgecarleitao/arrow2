@@ -112,7 +112,7 @@ pub(super) fn data() -> Chunk<Arc<dyn Array>> {
             Arc::new(Utf8Array::<i32>::from_slice(["SPADES", "HEARTS"])),
         )),
         Arc::new(
-            PrimitiveArray::<i128>::from_slice([12345678i128, 23456781i128])
+            PrimitiveArray::<i128>::from_slice([12345678i128, -12345678i128])
                 .to(DataType::Decimal(18, 5)),
         ),
     ];
@@ -150,7 +150,7 @@ pub(super) fn write_avro(codec: Codec) -> std::result::Result<Vec<u8>, avro_rs::
     record.put("enum", Value::Enum(1, "HEARTS".to_string()));
     record.put(
         "decimal",
-        Value::Decimal(Decimal::from(&[188u8, 97u8, 78u8])),
+        Value::Decimal(Decimal::from(&[0u8, 188u8, 97u8, 78u8])),
     );
     record.put(
         "duration",
@@ -182,7 +182,9 @@ pub(super) fn write_avro(codec: Codec) -> std::result::Result<Vec<u8>, avro_rs::
     record.put("enum", Value::Enum(0, "SPADES".to_string()));
     record.put(
         "decimal",
-        Value::Decimal(Decimal::from(&[1u8, 101u8, 236u8, 13u8])),
+        Value::Decimal(Decimal::from(&[
+            255u8, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 67, 158, 178,
+        ])),
     );
     writer.append(record)?;
     Ok(writer.into_inner().unwrap())

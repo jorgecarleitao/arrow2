@@ -138,7 +138,7 @@ pub fn page_iter_to_arrays<'a, I: 'a + DataPages>(
                             // values.
                             let mut bytes = [0u8; 16];
                             bytes[..n].copy_from_slice(value);
-                            (u128::from_be_bytes(bytes) >> (8 * (16 - n))) as i128
+                            i128::from_be_bytes(bytes) >> (8 * (16 - n))
                         })
                         .collect::<Vec<_>>();
                     let validity = array.validity().cloned();

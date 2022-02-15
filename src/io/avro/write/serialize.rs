@@ -244,7 +244,7 @@ pub fn new_serializer<'a>(array: &'a dyn Array, schema: &AvroSchema) -> BoxSeria
             Box::new(BufStreamingIterator::new(
                 values.values().iter(),
                 |x, buf| {
-                    let len = (x.leading_zeros() / 8) as usize;
+                    let len = ((x.leading_zeros() / 8) - ((x.leading_zeros() / 8) % 2)) as usize;
                     util::zigzag_encode((16 - len) as i64, buf).unwrap();
                     buf.extend_from_slice(&x.to_be_bytes()[len..]);
                 },
@@ -261,7 +261,7 @@ pub fn new_serializer<'a>(array: &'a dyn Array, schema: &AvroSchema) -> BoxSeria
                 |x, buf| {
                     util::zigzag_encode(x.is_some() as i64, buf).unwrap();
                     if let Some(x) = x {
-                        let len = (x.leading_zeros() / 8) as usize;
+                        let len = ((x.leading_zeros() / 8) - ((x.leading_zeros() / 8) % 2)) as usize;
                         util::zigzag_encode((16 - len) as i64, buf).unwrap();
                         buf.extend_from_slice(&x.to_be_bytes()[len..]);
                     }
