@@ -117,60 +117,49 @@ where
             let rhs = rhs.to_u64().unwrap();
 
             let reduced_div = StrengthReducedU64::new(rhs);
-            // Safety: we just proved that `lhs` is `PrimitiveArray<u64>` which means that
-            // T = u64
-            unsafe {
-                std::mem::transmute::<PrimitiveArray<u64>, PrimitiveArray<T>>(unary(
-                    lhs,
-                    |a| a / reduced_div,
-                    lhs.data_type().clone(),
-                ))
-            }
+            let r = unary(lhs, |a| a / reduced_div, lhs.data_type().clone());
+            (&r as &dyn Array)
+                .as_any()
+                .downcast_ref::<PrimitiveArray<T>>()
+                .unwrap()
+                .clone()
         }
         PrimitiveType::UInt32 => {
             let lhs = lhs.as_any().downcast_ref::<PrimitiveArray<u32>>().unwrap();
             let rhs = rhs.to_u32().unwrap();
 
             let reduced_div = StrengthReducedU32::new(rhs);
-            // Safety: we just proved that `lhs` is `PrimitiveArray<u32>` which means that
-            // T = u32
-            unsafe {
-                std::mem::transmute::<PrimitiveArray<u32>, PrimitiveArray<T>>(unary(
-                    lhs,
-                    |a| a / reduced_div,
-                    lhs.data_type().clone(),
-                ))
-            }
+            let r = unary(lhs, |a| a / reduced_div, lhs.data_type().clone());
+            (&r as &dyn Array)
+                .as_any()
+                .downcast_ref::<PrimitiveArray<T>>()
+                .unwrap()
+                .clone()
         }
         PrimitiveType::UInt16 => {
             let lhs = lhs.as_any().downcast_ref::<PrimitiveArray<u16>>().unwrap();
             let rhs = rhs.to_u16().unwrap();
 
             let reduced_div = StrengthReducedU16::new(rhs);
-            // Safety: we just proved that `lhs` is `PrimitiveArray<u16>` which means that
-            // T = u16
-            unsafe {
-                std::mem::transmute::<PrimitiveArray<u16>, PrimitiveArray<T>>(unary(
-                    lhs,
-                    |a| a / reduced_div,
-                    lhs.data_type().clone(),
-                ))
-            }
+
+            let r = unary(lhs, |a| a / reduced_div, lhs.data_type().clone());
+            (&r as &dyn Array)
+                .as_any()
+                .downcast_ref::<PrimitiveArray<T>>()
+                .unwrap()
+                .clone()
         }
         PrimitiveType::UInt8 => {
             let lhs = lhs.as_any().downcast_ref::<PrimitiveArray<u8>>().unwrap();
             let rhs = rhs.to_u8().unwrap();
 
             let reduced_div = StrengthReducedU8::new(rhs);
-            // Safety: we just proved that `lhs` is `PrimitiveArray<u8>` which means that
-            // T = u8
-            unsafe {
-                std::mem::transmute::<PrimitiveArray<u8>, PrimitiveArray<T>>(unary(
-                    lhs,
-                    |a| a / reduced_div,
-                    lhs.data_type().clone(),
-                ))
-            }
+            let r = unary(lhs, |a| a / reduced_div, lhs.data_type().clone());
+            (&r as &dyn Array)
+                .as_any()
+                .downcast_ref::<PrimitiveArray<T>>()
+                .unwrap()
+                .clone()
         }
         _ => unary(lhs, |a| a / rhs, lhs.data_type().clone()),
     }
