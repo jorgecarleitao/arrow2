@@ -44,9 +44,7 @@ pub fn compress_lz4(input_buf: &[u8], output_buf: &mut Vec<u8>) -> Result<()> {
 #[cfg(feature = "io_ipc_compression")]
 #[cfg_attr(docsrs, doc(cfg(feature = "io_ipc_compression")))]
 pub fn compress_zstd(input_buf: &[u8], output_buf: &mut Vec<u8>) -> Result<()> {
-    use std::io::Write;
-    let mut encoder = zstd::Encoder::new(output_buf, 0)?.auto_finish();
-    encoder.write_all(input_buf).map_err(|e| e.into())
+    zstd::stream::copy_encode(input_buf, output_buf, 0).map_err(|e| e.into())
 }
 
 #[cfg(not(feature = "io_ipc_compression"))]

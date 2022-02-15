@@ -9,7 +9,6 @@ use super::common::EncodedData;
 /// Write a message's IPC data and buffers, returning metadata and buffer data lengths written
 pub fn write_message<W: Write>(writer: &mut W, encoded: EncodedData) -> Result<(usize, usize)> {
     let arrow_data_len = encoded.arrow_data.len();
-    assert_eq!(arrow_data_len % 8, 0, "Arrow data not aligned");
 
     let a = 8 - 1;
     let buffer = encoded.ipc_message;
