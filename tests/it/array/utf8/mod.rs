@@ -175,3 +175,10 @@ fn index_out_of_bounds_panics() {
 
     array.value(3);
 }
+
+#[test]
+fn debug() {
+    let array = Utf8Array::<i32>::from(&[Some("aa"), Some(""), None]);
+
+    assert_eq!(format!("{:?}", array), "Utf8Array[aa, , None]");
+}

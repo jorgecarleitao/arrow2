@@ -6,12 +6,12 @@ use crate::{
 };
 
 use super::{
-    display_fmt, display_helper,
     specification::{check_offsets_minimal, try_check_offsets},
     Array, GenericBinaryArray, Offset,
 };
 
 mod ffi;
+pub(super) mod fmt;
 mod iterator;
 pub use iterator::*;
 mod from;
@@ -23,7 +23,7 @@ pub use mutable::*;
 /// The following invariants hold:
 /// * Two consecutives `offsets` casted (`as`) to `usize` are valid slices of `values`.
 /// * `len` is equal to `validity.len()`, when defined.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct BinaryArray<O: Offset> {
     data_type: DataType,
     offsets: Buffer<O>,
@@ -271,19 +271,6 @@ impl<O: Offset> Array for BinaryArray<O> {
     }
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.with_validity(validity))
-    }
-}
-
-impl<O: Offset> std::fmt::Display for BinaryArray<O> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let a = |x: &[u8]| display_helper(x.iter().map(|x| Some(format!("{:b}", x)))).join(" ");
-        let iter = self.iter().map(|x| x.map(a));
-        let head = if O::is_large() {
-            "LargeBinaryArray"
-        } else {
-            "BinaryArray"
-        };
-        display_fmt(iter, head, f, false)
     }
 }
 

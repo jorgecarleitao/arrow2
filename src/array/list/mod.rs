@@ -6,9 +6,10 @@ use crate::{
     datatypes::{DataType, Field},
 };
 
-use super::{debug_fmt, new_empty_array, specification::check_offsets, Array, Offset};
+use super::{new_empty_array, specification::check_offsets, Array, Offset};
 
 mod ffi;
+pub(super) mod fmt;
 mod iterator;
 pub use iterator::*;
 mod mutable;
@@ -234,16 +235,5 @@ impl<O: Offset> Array for ListArray<O> {
     }
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.with_validity(validity))
-    }
-}
-
-impl<O: Offset> std::fmt::Debug for ListArray<O> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let head = if O::is_large() {
-            "LargeListArray"
-        } else {
-            "ListArray"
-        };
-        debug_fmt(self.iter(), head, f, true)
     }
 }

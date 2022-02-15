@@ -30,7 +30,7 @@ fn with_validity() {
 }
 
 #[test]
-fn display() {
+fn debug() {
     let values = Buffer::from_slice([1, 2, 3, 4, 5, 6]);
     let a = FixedSizeBinaryArray::from_data(
         DataType::FixedSizeBinary(2),
@@ -39,7 +39,7 @@ fn display() {
     );
     assert_eq!(
         format!("{:?}", a),
-        "FixedSizeBinaryArray[[1, 2], None, [5, 6]]"
+        "FixedSizeBinary(2)[[1, 2], None, [5, 6]]"
     );
 }
 

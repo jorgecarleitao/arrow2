@@ -8,13 +8,13 @@ use crate::{
 };
 
 mod ffi;
+pub(super) mod fmt;
 mod iterator;
 mod mutable;
 pub use iterator::*;
 pub use mutable::*;
 
-use super::display::get_value_display;
-use super::{display_fmt, new_empty_array, primitive::PrimitiveArray, Array};
+use super::{new_empty_array, primitive::PrimitiveArray, Array};
 use crate::scalar::NullScalar;
 
 /// Trait denoting [`NativeType`]s that can be used as keys of a dictionary.
@@ -50,7 +50,7 @@ impl DictionaryKey for u64 {
 
 /// An [`Array`] whose values are encoded by keys. This [`Array`] is useful when the cardinality of
 /// values is low compared to the length of the [`Array`].
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct DictionaryArray<K: DictionaryKey> {
     data_type: DataType,
     keys: PrimitiveArray<K>,
@@ -201,18 +201,5 @@ impl<K: DictionaryKey> Array for DictionaryArray<K> {
     }
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.with_validity(validity))
-    }
-}
-
-impl<K: DictionaryKey> std::fmt::Display for DictionaryArray<K>
-where
-    PrimitiveArray<K>: std::fmt::Display,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let display = get_value_display(self);
-        let new_lines = false;
-        let head = &format!("{:?}", self.data_type());
-        let iter = self.iter().enumerate().map(|(i, x)| x.map(|_| display(i)));
-        display_fmt(iter, head, f, new_lines)
     }
 }

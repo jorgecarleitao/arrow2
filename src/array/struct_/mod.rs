@@ -8,6 +8,7 @@ use crate::{
 use super::{new_empty_array, new_null_array, Array};
 
 mod ffi;
+pub(super) mod fmt;
 mod iterator;
 
 /// A [`StructArray`] is a nested [`Array`] with an optional validity representing
@@ -218,15 +219,5 @@ impl Array for StructArray {
     }
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.with_validity(validity))
-    }
-}
-
-impl std::fmt::Debug for StructArray {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "StructArray{{")?;
-        for (field, column) in self.fields().iter().zip(self.values()) {
-            writeln!(f, "{}: {:?},", field.name, column)?;
-        }
-        write!(f, "}}")
     }
 }
