@@ -257,13 +257,12 @@ fn deserialize_value<'a>(
                     block = &block[len..];
                     let mut bytes = [0u8; 16];
                     bytes[..len].copy_from_slice(value);
-                    let data = i128::from_be_bytes(bytes) >> (8 * (16 - len));
-                    // println!("{:?}", data);
+                    let data = u128::from_be_bytes(bytes) >> (8 * (16 - len));
                     let array = array
                         .as_mut_any()
                         .downcast_mut::<MutablePrimitiveArray<i128>>()
                         .unwrap();
-                    array.push(Some(data))
+                    array.push(Some(data as i128))
                 }
                 _ => unreachable!(),
             },
@@ -389,6 +388,28 @@ fn skip_item<'a>(field: &Field, avro_field: &AvroSchema, mut block: &'a [u8]) ->
                 }
                 PrimitiveType::MonthDayNano => {
                     block = &block[12..];
+                }
+                PrimitiveType::Int128 => {
+                    let avro_inner = match avro_field {
+                        AvroSchema::Bytes(_) | AvroSchema::Fixed(_) => avro_field,
+                        AvroSchema::Union(u) => match &u.as_slice() {
+                            &[e, AvroSchema::Null] | &[AvroSchema::Null, e] => e,
+                            _ => unreachable!(),
+                        },
+                        _ => unreachable!(),
+                    };
+                    let len = match avro_inner {
+                        AvroSchema::Bytes(_) => {
+                            util::zigzag_i64(&mut block)?.try_into().map_err(|_| {
+                                ArrowError::ExternalFormat(
+                                    "Avro format contains a non-usize number of bytes".to_string(),
+                                )
+                            })?
+                        }
+                        AvroSchema::Fixed(b) => b.size,
+                        _ => unreachable!(),
+                    };
+                    block = &block[len..];
                 }
                 _ => unreachable!(),
             },
