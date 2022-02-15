@@ -54,9 +54,7 @@ impl<O: Offset> Binary<O> {
 
     #[inline]
     pub fn extend_constant(&mut self, additional: usize) {
-        self.offsets
-            .0
-            .resize(self.offsets.len() + additional, self.last_offset);
+        self.offsets.extend_constant(additional, self.last_offset);
     }
 
     #[inline]
