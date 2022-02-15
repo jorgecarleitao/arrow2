@@ -3,7 +3,7 @@ use std::sync::Arc;
 use arrow2::chunk::Chunk;
 use avro_rs::types::{Record, Value};
 use avro_rs::{Codec, Writer};
-use avro_rs::{Days, Duration, Millis, Months, Schema as AvroSchema};
+use avro_rs::{Days, Decimal, Duration, Millis, Months, Schema as AvroSchema};
 
 use arrow2::array::*;
 use arrow2::datatypes::*;
@@ -47,7 +47,8 @@ pub(super) fn schema() -> (AvroSchema, Schema) {
                 "type": "enum",
                 "name": "",
                 "symbols" : ["SPADES", "HEARTS", "DIAMONDS", "CLUBS"]
-            }}
+            }},
+            {"name": "decimal", "type": {"type": "bytes", "logicalType": "decimal", "precision": 18, "scale": 5}}
         ]
     }
 "#;
@@ -76,6 +77,7 @@ pub(super) fn schema() -> (AvroSchema, Schema) {
             DataType::Dictionary(i32::KEY_TYPE, Box::new(DataType::Utf8), false),
             false,
         ),
+        Field::new("decimal", DataType::Decimal(18, 5), false),
     ]);
 
     (AvroSchema::parse_str(raw_schema).unwrap(), schema)
@@ -109,6 +111,10 @@ pub(super) fn data() -> Chunk<Arc<dyn Array>> {
             Int32Array::from_slice([1, 0]),
             Arc::new(Utf8Array::<i32>::from_slice(["SPADES", "HEARTS"])),
         )),
+        Arc::new(
+            PrimitiveArray::<i128>::from_slice([12345678i128, -12345678i128])
+                .to(DataType::Decimal(18, 5)),
+        ),
     ];
 
     Chunk::try_new(columns).unwrap()
@@ -143,6 +149,10 @@ pub(super) fn write_avro(codec: Codec) -> std::result::Result<Vec<u8>, avro_rs::
     );
     record.put("enum", Value::Enum(1, "HEARTS".to_string()));
     record.put(
+        "decimal",
+        Value::Decimal(Decimal::from(&[0u8, 188u8, 97u8, 78u8])),
+    );
+    record.put(
         "duration",
         Value::Duration(Duration::new(Months::new(1), Days::new(1), Millis::new(1))),
     );
@@ -170,6 +180,12 @@ pub(super) fn write_avro(codec: Codec) -> std::result::Result<Vec<u8>, avro_rs::
         Value::Record(vec![("e".to_string(), Value::Double(2.0f64))]),
     );
     record.put("enum", Value::Enum(0, "SPADES".to_string()));
+    record.put(
+        "decimal",
+        Value::Decimal(Decimal::from(&[
+            255u8, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 67, 158, 178,
+        ])),
+    );
     writer.append(record)?;
     Ok(writer.into_inner().unwrap())
 }
@@ -260,6 +276,6 @@ fn test_projected(projection: Vec<bool>) -> Result<()> {
 #[test]
 fn read_projected() -> Result<()> {
     test_projected(vec![
-        true, false, false, false, false, false, false, false, false, false, false,
+        true, false, false, false, false, false, false, false, false, false, false, false,
     ])
 }

@@ -1,5 +1,6 @@
 use avro_schema::{
-    Field as AvroField, Fixed, FixedLogical, IntLogical, LongLogical, Schema as AvroSchema,
+    BytesLogical, Field as AvroField, Fixed, FixedLogical, IntLogical, LongLogical,
+    Schema as AvroSchema,
 };
 
 use crate::datatypes::*;
@@ -54,6 +55,7 @@ fn _type_to_schema(data_type: &DataType) -> Result<AvroSchema> {
             AvroSchema::Fixed(fixed)
         }
         DataType::FixedSizeBinary(size) => AvroSchema::Fixed(Fixed::new("", *size)),
+        DataType::Decimal(p, s) => AvroSchema::Bytes(Some(BytesLogical::Decimal(*p, *s))),
         other => {
             return Err(ArrowError::NotYetImplemented(format!(
                 "write {:?} to avro",

@@ -236,6 +236,40 @@ pub fn new_serializer<'a>(array: &'a dyn Array, schema: &AvroSchema) -> BoxSeria
                 vec![],
             ))
         }
+        (PhysicalType::Primitive(PrimitiveType::Int128), AvroSchema::Bytes(_)) => {
+            let values = array
+                .as_any()
+                .downcast_ref::<PrimitiveArray<i128>>()
+                .unwrap();
+            Box::new(BufStreamingIterator::new(
+                values.values().iter(),
+                |x, buf| {
+                    let len = ((x.leading_zeros() / 8) - ((x.leading_zeros() / 8) % 2)) as usize;
+                    util::zigzag_encode((16 - len) as i64, buf).unwrap();
+                    buf.extend_from_slice(&x.to_be_bytes()[len..]);
+                },
+                vec![],
+            ))
+        }
+        (PhysicalType::Primitive(PrimitiveType::Int128), AvroSchema::Union(_)) => {
+            let values = array
+                .as_any()
+                .downcast_ref::<PrimitiveArray<i128>>()
+                .unwrap();
+            Box::new(BufStreamingIterator::new(
+                values.iter(),
+                |x, buf| {
+                    util::zigzag_encode(x.is_some() as i64, buf).unwrap();
+                    if let Some(x) = x {
+                        let len =
+                            ((x.leading_zeros() / 8) - ((x.leading_zeros() / 8) % 2)) as usize;
+                        util::zigzag_encode((16 - len) as i64, buf).unwrap();
+                        buf.extend_from_slice(&x.to_be_bytes()[len..]);
+                    }
+                },
+                vec![],
+            ))
+        }
         (PhysicalType::Primitive(PrimitiveType::MonthDayNano), AvroSchema::Fixed(_)) => {
             let values = array
                 .as_any()
