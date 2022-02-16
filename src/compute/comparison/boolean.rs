@@ -64,7 +64,7 @@ pub fn eq_scalar_and_validity(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
     let validity = lhs.validity().cloned();
     let lhs = lhs.with_validity(None);
     if rhs {
-        eq_validities(lhs.clone(), validity, None)
+        eq_validities(lhs, validity, None)
     } else {
         let lhs = lhs.with_validity(None);
 
