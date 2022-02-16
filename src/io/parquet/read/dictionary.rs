@@ -154,6 +154,7 @@ where
     }
 
     fn extend_from_state(
+        &self,
         state: &mut Self::State,
         values: &mut Vec<K>,
         validity: &mut MutableBitmap,

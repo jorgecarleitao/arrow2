@@ -88,6 +88,7 @@ impl<'a> Decoder<'a, bool, MutableBitmap> for BooleanDecoder {
     }
 
     fn extend_from_state(
+        &self,
         state: &mut State,
         values: &mut MutableBitmap,
         validity: &mut MutableBitmap,

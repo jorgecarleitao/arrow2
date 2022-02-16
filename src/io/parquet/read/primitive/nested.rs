@@ -17,25 +17,19 @@ use super::basic::Values;
 // The state of a `DataPage` of `Primitive` parquet primitive type
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
-enum State<'a, T, P, G, F>
+enum State<'a, P>
 where
-    T: NativeType,
     P: ParquetNativeType,
-    G: Copy + for<'b> Fn(&'b [u8]) -> P,
-    F: Copy + Fn(P) -> T,
 {
-    Optional(Optional<'a>, Values<'a, T, P, G, F>),
-    Required(Values<'a, T, P, G, F>),
+    Optional(Optional<'a>, Values<'a, P>),
+    Required(Values<'a, P>),
     //RequiredDictionary(ValuesDictionary<'a, T, P, F>),
     //OptionalDictionary(Optional<'a>, ValuesDictionary<'a, T, P, F>),
 }
 
-impl<'a, T, P, G, F> utils::PageState<'a> for State<'a, T, P, G, F>
+impl<'a, P> utils::PageState<'a> for State<'a, P>
 where
-    T: NativeType,
     P: ParquetNativeType,
-    G: Copy + for<'b> Fn(&'b [u8]) -> P,
-    F: Copy + Fn(P) -> T,
 {
     fn len(&self) -> usize {
         match self {
@@ -48,45 +42,40 @@ where
 }
 
 #[derive(Debug)]
-struct PrimitiveDecoder<T, P, G, F>
+struct PrimitiveDecoder<T, P, F>
 where
     T: NativeType,
     P: ParquetNativeType,
-    G: for<'b> Fn(&'b [u8]) -> P,
     F: Fn(P) -> T,
 {
     phantom: std::marker::PhantomData<T>,
     phantom_p: std::marker::PhantomData<P>,
-    op1: G,
-    op2: F,
+    op: F,
 }
 
-impl<'a, T, P, G, F> PrimitiveDecoder<T, P, G, F>
+impl<'a, T, P, F> PrimitiveDecoder<T, P, F>
 where
     T: NativeType,
     P: ParquetNativeType,
-    G: for<'b> Fn(&'b [u8]) -> P,
     F: Fn(P) -> T,
 {
     #[inline]
-    fn new(op1: G, op2: F) -> Self {
+    fn new(op: F) -> Self {
         Self {
             phantom: std::marker::PhantomData,
             phantom_p: std::marker::PhantomData,
-            op1,
-            op2,
+            op,
         }
     }
 }
 
-impl<'a, T, P, G, F> utils::Decoder<'a, T, Vec<T>> for PrimitiveDecoder<T, P, G, F>
+impl<'a, T, P, F> utils::Decoder<'a, T, Vec<T>> for PrimitiveDecoder<T, P, F>
 where
     T: NativeType,
     P: ParquetNativeType,
-    G: Copy + for<'b> Fn(&'b [u8]) -> P,
     F: Copy + Fn(P) -> T,
 {
-    type State = State<'a, T, P, G, F>;
+    type State = State<'a, P>;
 
     fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
         let is_optional =
@@ -102,13 +91,10 @@ where
                     page, dict, self.op2,
                 )))
             }*/
-            (Encoding::Plain, None, true) => Ok(State::Optional(
-                Optional::new(page),
-                Values::new(page, self.op1, self.op2),
-            )),
-            (Encoding::Plain, None, false) => {
-                Ok(State::Required(Values::new(page, self.op1, self.op2)))
+            (Encoding::Plain, None, true) => {
+                Ok(State::Optional(Optional::new(page), Values::new(page)))
             }
+            (Encoding::Plain, None, false) => Ok(State::Required(Values::new(page))),
             _ => Err(utils::not_implemented(
                 &page.encoding(),
                 is_optional,
@@ -124,6 +110,7 @@ where
     }
 
     fn extend_from_state(
+        &self,
         state: &mut Self::State,
         values: &mut Vec<T>,
         validity: &mut MutableBitmap,
@@ -135,14 +122,14 @@ where
                 read_optional_values(
                     page_validity.definition_levels.by_ref(),
                     max_def,
-                    page_values.values.by_ref(),
+                    page_values.values.by_ref().map(self.op),
                     values,
                     validity,
                     remaining,
                 )
             }
             State::Required(page) => {
-                values.extend(page.values.by_ref().take(remaining));
+                values.extend(page.values.by_ref().map(self.op).take(remaining));
             }
             //State::OptionalDictionary(page) => todo!(),
             //State::RequiredDictionary(page) => todo!(),
@@ -160,13 +147,12 @@ fn finish<T: NativeType>(
 
 /// An iterator adapter over [`DataPages`] assumed to be encoded as boolean arrays
 #[derive(Debug)]
-pub struct ArrayIterator<T, I, P, G, F>
+pub struct ArrayIterator<T, I, P, F>
 where
     I: DataPages,
     T: NativeType,
 
     P: ParquetNativeType,
-    G: Copy + for<'b> Fn(&'b [u8]) -> P,
     F: Copy + Fn(P) -> T,
 {
     iter: I,
@@ -176,26 +162,18 @@ where
     items: VecDeque<(Vec<T>, MutableBitmap)>,
     nested: VecDeque<NestedState>,
     chunk_size: usize,
-    decoder: PrimitiveDecoder<T, P, G, F>,
+    decoder: PrimitiveDecoder<T, P, F>,
 }
 
-impl<T, I, P, G, F> ArrayIterator<T, I, P, G, F>
+impl<T, I, P, F> ArrayIterator<T, I, P, F>
 where
     I: DataPages,
     T: NativeType,
 
     P: ParquetNativeType,
-    G: Copy + for<'b> Fn(&'b [u8]) -> P,
     F: Copy + Fn(P) -> T,
 {
-    pub fn new(
-        iter: I,
-        init: InitNested,
-        data_type: DataType,
-        chunk_size: usize,
-        op1: G,
-        op2: F,
-    ) -> Self {
+    pub fn new(iter: I, init: InitNested, data_type: DataType, chunk_size: usize, op: F) -> Self {
         Self {
             iter,
             init,
@@ -203,18 +181,17 @@ where
             items: VecDeque::new(),
             nested: VecDeque::new(),
             chunk_size,
-            decoder: PrimitiveDecoder::new(op1, op2),
+            decoder: PrimitiveDecoder::new(op),
         }
     }
 }
 
-impl<T, I, P, G, F> Iterator for ArrayIterator<T, I, P, G, F>
+impl<T, I, P, F> Iterator for ArrayIterator<T, I, P, F>
 where
     I: DataPages,
     T: NativeType,
 
     P: ParquetNativeType,
-    G: Copy + for<'b> Fn(&'b [u8]) -> P,
     F: Copy + Fn(P) -> T,
 {
     type Item = Result<(NestedState, PrimitiveArray<T>)>;

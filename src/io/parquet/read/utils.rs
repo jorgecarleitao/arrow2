@@ -248,6 +248,7 @@ pub(super) trait Decoder<'a, C: Default, P: Pushable<C>> {
     /// extends (values, validity) by deserializing items in `State`.
     /// It guarantees that the length of `values` is at most `values.len() + remaining`.
     fn extend_from_state(
+        &self,
         page: &mut Self::State,
         values: &mut P,
         validity: &mut MutableBitmap,
@@ -280,7 +281,7 @@ pub(super) fn extend_from_new_page<'a, T: Decoder<'a, C, P>, C: Default, P: Push
     let remaining = chunk_size - values.len();
 
     // extend the current state
-    T::extend_from_state(&mut page, &mut values, &mut validity, remaining);
+    decoder.extend_from_state(&mut page, &mut values, &mut validity, remaining);
 
     if values.len() < chunk_size {
         // the whole page was consumed and we still do not have enough items
@@ -293,7 +294,7 @@ pub(super) fn extend_from_new_page<'a, T: Decoder<'a, C, P>, C: Default, P: Push
     while page.len() > 0 {
         let mut values = decoder.with_capacity(chunk_size);
         let mut validity = MutableBitmap::with_capacity(chunk_size);
-        T::extend_from_state(&mut page, &mut values, &mut validity, chunk_size);
+        decoder.extend_from_state(&mut page, &mut values, &mut validity, chunk_size);
         items.push_back((values, validity))
     }
 
@@ -346,4 +347,17 @@ pub(super) fn next<'a, I: DataPages, C: Default, P: Pushable<C>, D: Decoder<'a, 
             MaybeNext::Some(Ok((values, validity)))
         }
     }
+}
+
+#[inline]
+pub(super) fn dict_indices_decoder(
+    indices_buffer: &[u8],
+    additional: usize,
+) -> hybrid_rle::HybridRleDecoder {
+    // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
+    // SPEC: followed by the values encoded using RLE/Bit packed described above (with the given bit width).
+    let bit_width = indices_buffer[0];
+    let indices_buffer = &indices_buffer[1..];
+
+    hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional)
 }

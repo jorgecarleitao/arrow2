@@ -69,6 +69,7 @@ impl<'a, O: Offset> utils::Decoder<'a, &'a [u8], Binary<O>> for BinaryDecoder<O>
     }
 
     fn extend_from_state(
+        &self,
         state: &mut Self::State,
         values: &mut Binary<O>,
         validity: &mut MutableBitmap,

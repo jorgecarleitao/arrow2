@@ -366,7 +366,7 @@ pub(super) fn extend_from_new_page<'a, T: Decoder<'a, C, P>, C: Default, P: Push
     let remaining = needed - values.len();
 
     // extend the current state
-    T::extend_from_state(&mut page, &mut values, &mut validity, remaining);
+    decoder.extend_from_state(&mut page, &mut values, &mut validity, remaining);
 
     // the number of values required is always fulfilled because
     // dremel assigns one (rep, def) to each value and we request
@@ -377,7 +377,7 @@ pub(super) fn extend_from_new_page<'a, T: Decoder<'a, C, P>, C: Default, P: Push
         let num_values = nest.num_values();
         let mut values = decoder.with_capacity(num_values);
         let mut validity = MutableBitmap::with_capacity(num_values);
-        T::extend_from_state(&mut page, &mut values, &mut validity, num_values);
+        decoder.extend_from_state(&mut page, &mut values, &mut validity, num_values);
         items.push_back((values, validity));
     }
 
