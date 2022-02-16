@@ -57,6 +57,8 @@ mod simd;
 pub use simd::{Simd8, Simd8Lanes, Simd8PartialEq, Simd8PartialOrd};
 
 use super::take::take_boolean;
+use crate::bitmap::Bitmap;
+use crate::compute;
 pub(crate) use primitive::{
     compare_values_op as primitive_compare_values_op,
     compare_values_op_scalar as primitive_compare_values_op_scalar,
@@ -167,6 +169,17 @@ pub fn eq(lhs: &dyn Array, rhs: &dyn Array) -> BooleanArray {
     compare!(lhs, rhs, eq, match_eq)
 }
 
+/// `==` between two [`Array`]s and includes validities in comparison.
+/// Use [`can_eq`] to check whether the operation is valid
+/// # Panic
+/// Panics iff either:
+/// * the arrays do not have have the same logical type
+/// * the arrays do not have the same length
+/// * the operation is not supported for the logical type
+pub fn eq_and_validity(lhs: &dyn Array, rhs: &dyn Array) -> BooleanArray {
+    compare!(lhs, rhs, eq_and_validity, match_eq)
+}
+
 /// Returns whether a [`DataType`] is comparable is supported by [`eq`].
 pub fn can_eq(data_type: &DataType) -> bool {
     can_partial_eq(data_type)
@@ -181,6 +194,17 @@ pub fn can_eq(data_type: &DataType) -> bool {
 /// * the operation is not supported for the logical type
 pub fn neq(lhs: &dyn Array, rhs: &dyn Array) -> BooleanArray {
     compare!(lhs, rhs, neq, match_eq)
+}
+
+/// `!=` between two [`Array`]s and includes validities in comparison.
+/// Use [`can_neq`] to check whether the operation is valid
+/// # Panic
+/// Panics iff either:
+/// * the arrays do not have have the same logical type
+/// * the arrays do not have the same length
+/// * the operation is not supported for the logical type
+pub fn neq_and_validity(lhs: &dyn Array, rhs: &dyn Array) -> BooleanArray {
+    compare!(lhs, rhs, neq_and_validity, match_eq)
 }
 
 /// Returns whether a [`DataType`] is comparable is supported by [`neq`].
@@ -320,6 +344,16 @@ pub fn eq_scalar(lhs: &dyn Array, rhs: &dyn Scalar) -> BooleanArray {
     compare_scalar!(lhs, rhs, eq_scalar, match_eq)
 }
 
+/// `==` between an [`Array`] and a [`Scalar`] and includes validities in comparison.
+/// Use [`can_eq_scalar`] to check whether the operation is valid
+/// # Panic
+/// Panics iff either:
+/// * they do not have have the same logical type
+/// * the operation is not supported for the logical type
+pub fn eq_scalar_and_validity(lhs: &dyn Array, rhs: &dyn Scalar) -> BooleanArray {
+    compare_scalar!(lhs, rhs, eq_scalar_and_validity, match_eq)
+}
+
 /// Returns whether a [`DataType`] is supported by [`eq_scalar`].
 pub fn can_eq_scalar(data_type: &DataType) -> bool {
     can_partial_eq_scalar(data_type)
@@ -333,6 +367,16 @@ pub fn can_eq_scalar(data_type: &DataType) -> bool {
 /// * the operation is not supported for the logical type
 pub fn neq_scalar(lhs: &dyn Array, rhs: &dyn Scalar) -> BooleanArray {
     compare_scalar!(lhs, rhs, neq_scalar, match_eq)
+}
+
+/// `!=` between an [`Array`] and a [`Scalar`] and includes validities in comparison.
+/// Use [`can_neq_scalar`] to check whether the operation is valid
+/// # Panic
+/// Panics iff either:
+/// * they do not have have the same logical type
+/// * the operation is not supported for the logical type
+pub fn neq_scalar_and_validity(lhs: &dyn Array, rhs: &dyn Scalar) -> BooleanArray {
+    compare_scalar!(lhs, rhs, neq_scalar_and_validity, match_eq)
 }
 
 /// Returns whether a [`DataType`] is supported by [`neq_scalar`].
@@ -456,4 +500,55 @@ fn can_partial_eq_scalar(data_type: &DataType) -> bool {
             DataType::Interval(IntervalUnit::DayTime)
                 | DataType::Interval(IntervalUnit::MonthDayNano)
         )
+}
+
+fn finish_eq_validities(
+    output_without_validities: BooleanArray,
+    validity_lhs: Option<Bitmap>,
+    validity_rhs: Option<Bitmap>,
+) -> BooleanArray {
+    match (validity_lhs, validity_rhs) {
+        (None, None) => output_without_validities,
+        (Some(lhs), None) => compute::boolean::and(
+            &BooleanArray::from_data(DataType::Boolean, lhs, None),
+            &output_without_validities,
+        )
+        .unwrap(),
+        (None, Some(rhs)) => compute::boolean::and(
+            &output_without_validities,
+            &BooleanArray::from_data(DataType::Boolean, rhs, None),
+        )
+        .unwrap(),
+        (Some(lhs), Some(rhs)) => {
+            let lhs = BooleanArray::from_data(DataType::Boolean, lhs, None);
+            let rhs = BooleanArray::from_data(DataType::Boolean, rhs, None);
+            let eq_validities = compute::comparison::boolean::eq(&lhs, &rhs);
+            compute::boolean::and(&output_without_validities, &eq_validities).unwrap()
+        }
+    }
+}
+fn finish_neq_validities(
+    output_without_validities: BooleanArray,
+    validity_lhs: Option<Bitmap>,
+    validity_rhs: Option<Bitmap>,
+) -> BooleanArray {
+    match (validity_lhs, validity_rhs) {
+        (None, None) => output_without_validities,
+        (Some(lhs), None) => {
+            let lhs_negated =
+                compute::boolean::not(&BooleanArray::from_data(DataType::Boolean, lhs, None));
+            compute::boolean::or(&lhs_negated, &output_without_validities).unwrap()
+        }
+        (None, Some(rhs)) => {
+            let rhs_negated =
+                compute::boolean::not(&BooleanArray::from_data(DataType::Boolean, rhs, None));
+            compute::boolean::or(&output_without_validities, &rhs_negated).unwrap()
+        }
+        (Some(lhs), Some(rhs)) => {
+            let lhs = BooleanArray::from_data(DataType::Boolean, lhs, None);
+            let rhs = BooleanArray::from_data(DataType::Boolean, rhs, None);
+            let neq_validities = compute::comparison::boolean::neq(&lhs, &rhs);
+            compute::boolean::or(&output_without_validities, &neq_validities).unwrap()
+        }
+    }
 }
