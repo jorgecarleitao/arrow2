@@ -87,6 +87,9 @@ strength_reduce = { version = "0.2", optional = true }
 # For instruction multiversioning
 multiversion = { version = "0.6.1", optional = true }
 
+# For instruction multiversioning
+odbc-api = { version = "0.34", optional = true }
+
 [dev-dependencies]
 criterion = "0.3"
 flate2 = "1"
@@ -104,8 +107,9 @@ features = ["full"]
 rustdoc-args = ["--cfg", "docsrs"]
 
 [features]
-default = []
+default = ["io_odbc"]
 full = [
+    "io_odbc",
     "io_csv",
     "io_csv_async",
     "io_json",
@@ -126,6 +130,7 @@ full = [
     # parses timezones used in timestamp conversions
     "chrono-tz",
 ]
+io_odbc = ["odbc-api"]
 io_csv = ["io_csv_read", "io_csv_write"]
 io_csv_async = ["io_csv_read_async"]
 io_csv_read = ["csv", "lexical-core"]
