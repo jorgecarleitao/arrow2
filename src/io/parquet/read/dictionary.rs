@@ -57,7 +57,7 @@ where
     K: DictionaryKey,
 {
     fn new(page: &'a DataPage) -> Self {
-        let (_, _, indices_buffer, _) = utils::split_buffer(page, page.descriptor());
+        let (_, _, indices_buffer) = utils::split_buffer(page);
 
         let values = values_iter1(indices_buffer, page.num_values());
 
@@ -79,7 +79,7 @@ where
     K: DictionaryKey,
 {
     fn new(page: &'a DataPage) -> Self {
-        let (_, _, indices_buffer, _) = utils::split_buffer(page, page.descriptor());
+        let (_, _, indices_buffer) = utils::split_buffer(page);
 
         let values = values_iter1(indices_buffer, page.num_values());
 
@@ -154,6 +154,7 @@ where
     }
 
     fn extend_from_state(
+        &self,
         state: &mut Self::State,
         values: &mut Vec<K>,
         validity: &mut MutableBitmap,

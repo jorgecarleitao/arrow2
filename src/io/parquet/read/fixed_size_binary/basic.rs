@@ -13,8 +13,8 @@ use crate::{
     error::Result,
     io::parquet::read::{
         utils::{
-            extend_from_decoder, next, not_implemented, split_buffer, Decoder, MaybeNext,
-            OptionalPageValidity, PageState,
+            dict_indices_decoder, extend_from_decoder, next, not_implemented, split_buffer,
+            Decoder, MaybeNext, OptionalPageValidity, PageState,
         },
         DataPages,
     },
@@ -29,7 +29,7 @@ struct Optional<'a> {
 
 impl<'a> Optional<'a> {
     fn new(page: &'a DataPage, size: usize) -> Self {
-        let (_, _, values_buffer, _) = split_buffer(page, page.descriptor());
+        let (_, _, values_buffer) = split_buffer(page);
 
         let values = values_buffer.chunks_exact(size);
 
@@ -54,59 +54,40 @@ impl<'a> Required<'a> {
     }
 }
 
-#[inline]
-fn values_iter1<'a>(
-    indices_buffer: &'a [u8],
-    dict: &'a FixedLenByteArrayPageDict,
-    additional: usize,
-) -> std::iter::Map<hybrid_rle::HybridRleDecoder<'a>, Box<dyn Fn(u32) -> &'a [u8] + 'a>> {
-    let dict_values = dict.values();
-    let size = dict.size();
-
-    let op = Box::new(move |index: u32| {
-        let index = index as usize;
-        &dict_values[index * size..(index + 1) * size]
-    }) as _;
-
-    // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
-    // SPEC: followed by the values encoded using RLE/Bit packed described above (with the given bit width).
-    let bit_width = indices_buffer[0];
-    let indices_buffer = &indices_buffer[1..];
-
-    let indices = hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional);
-    indices.map(op)
-}
-
 struct RequiredDictionary<'a> {
-    pub values: std::iter::Map<hybrid_rle::HybridRleDecoder<'a>, Box<dyn Fn(u32) -> &'a [u8] + 'a>>,
+    pub values: hybrid_rle::HybridRleDecoder<'a>,
     pub remaining: usize,
+    dict: &'a FixedLenByteArrayPageDict,
 }
 
 impl<'a> RequiredDictionary<'a> {
     fn new(page: &'a DataPage, dict: &'a FixedLenByteArrayPageDict) -> Self {
-        let values = values_iter1(page.buffer(), dict, page.num_values());
+        let values = dict_indices_decoder(page.buffer(), page.num_values());
 
         Self {
             values,
             remaining: page.num_values(),
+            dict,
         }
     }
 }
 
 struct OptionalDictionary<'a> {
-    values: std::iter::Map<hybrid_rle::HybridRleDecoder<'a>, Box<dyn Fn(u32) -> &'a [u8] + 'a>>,
+    values: hybrid_rle::HybridRleDecoder<'a>,
     validity: OptionalPageValidity<'a>,
+    dict: &'a FixedLenByteArrayPageDict,
 }
 
 impl<'a> OptionalDictionary<'a> {
     fn new(page: &'a DataPage, dict: &'a FixedLenByteArrayPageDict) -> Self {
-        let (_, _, values_buffer, _) = split_buffer(page, page.descriptor());
+        let (_, _, indices_buffer) = split_buffer(page);
 
-        let values = values_iter1(values_buffer, dict, page.num_values());
+        let values = dict_indices_decoder(indices_buffer, page.num_values());
 
         Self {
             values,
             validity: OptionalPageValidity::new(page),
+            dict,
         }
     }
 }
@@ -170,6 +151,7 @@ impl<'a> Decoder<'a, &'a [u8], FixedSizeBinary> for BinaryDecoder {
     }
 
     fn extend_from_state(
+        &self,
         state: &mut Self::State,
         values: &mut FixedSizeBinary,
         validity: &mut MutableBitmap,
@@ -189,16 +171,32 @@ impl<'a> Decoder<'a, &'a [u8], FixedSizeBinary> for BinaryDecoder {
                     values.push(x)
                 }
             }
-            State::OptionalDictionary(page) => extend_from_decoder(
-                validity,
-                &mut page.validity,
-                Some(remaining),
-                values,
-                &mut page.values,
-            ),
+            State::OptionalDictionary(page) => {
+                let dict_values = page.dict.values();
+                let size = page.dict.size();
+                let op = |index: u32| {
+                    let index = index as usize;
+                    &dict_values[index * size..(index + 1) * size]
+                };
+
+                extend_from_decoder(
+                    validity,
+                    &mut page.validity,
+                    Some(remaining),
+                    values,
+                    page.values.by_ref().map(op),
+                )
+            }
             State::RequiredDictionary(page) => {
+                let dict_values = page.dict.values();
+                let size = page.dict.size();
+                let op = |index: u32| {
+                    let index = index as usize;
+                    &dict_values[index * size..(index + 1) * size]
+                };
+
                 page.remaining -= remaining;
-                for x in page.values.by_ref().take(remaining) {
+                for x in page.values.by_ref().map(op).take(remaining) {
                     values.push(x)
                 }
             }

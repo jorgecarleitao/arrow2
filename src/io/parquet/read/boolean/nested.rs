@@ -13,7 +13,6 @@ use super::super::nested_utils::*;
 use super::super::utils;
 use super::super::utils::{Decoder, MaybeNext};
 use super::super::DataPages;
-use super::basic::values_iter;
 
 // The state of a required DataPage with a boolean physical type
 #[derive(Debug)]
@@ -69,8 +68,10 @@ impl<'a> Decoder<'a, bool, MutableBitmap> for BooleanDecoder {
 
         match (page.encoding(), is_optional) {
             (Encoding::Plain, true) => {
-                let (_, _, values, _) = utils::split_buffer(page, page.descriptor());
-                Ok(State::Optional(Optional::new(page), values_iter(values)))
+                let (_, _, values) = utils::split_buffer(page);
+                let values = BitmapIter::new(values, 0, values.len() * 8);
+
+                Ok(State::Optional(Optional::new(page), values))
             }
             (Encoding::Plain, false) => Ok(State::Required(Required::new(page))),
             _ => Err(utils::not_implemented(
@@ -88,6 +89,7 @@ impl<'a> Decoder<'a, bool, MutableBitmap> for BooleanDecoder {
     }
 
     fn extend_from_state(
+        &self,
         state: &mut State,
         values: &mut MutableBitmap,
         validity: &mut MutableBitmap,

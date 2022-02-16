@@ -33,7 +33,6 @@ use crate::{
     },
     datatypes::{DataType, Field},
     error::{ArrowError, Result},
-    io::parquet::read::primitive::read_item,
     types::NativeType,
 };
 
@@ -243,7 +242,6 @@ where
                 init.pop().unwrap(),
                 field.data_type().clone(),
                 chunk_size,
-                read_item,
                 |x: i32| x as i16,
             )
         }
@@ -254,7 +252,6 @@ where
                 init.pop().unwrap(),
                 field.data_type().clone(),
                 chunk_size,
-                read_item,
                 |x: i64| x,
             )
         }
