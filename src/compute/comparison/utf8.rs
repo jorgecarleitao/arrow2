@@ -1,5 +1,5 @@
 //! Comparison functions for [`Utf8Array`]
-use crate::compute::comparison::{eq_validities, neq_validities};
+use crate::compute::comparison::{finish_eq_validities, finish_neq_validities};
 use crate::{
     array::{BooleanArray, Offset, Utf8Array},
     bitmap::Bitmap,
@@ -55,7 +55,7 @@ pub fn eq_and_validity<O: Offset>(lhs: &Utf8Array<O>, rhs: &Utf8Array<O>) -> Boo
     let rhs = rhs.with_validity(None);
     let out = compare_op(&lhs, &rhs, |a, b| a == b);
 
-    eq_validities(out, validity_lhs, validity_rhs)
+    finish_eq_validities(out, validity_lhs, validity_rhs)
 }
 
 /// Perform `lhs != rhs` operation on [`Utf8Array`] and include validities in comparison.
@@ -66,7 +66,7 @@ pub fn neq_and_validity<O: Offset>(lhs: &Utf8Array<O>, rhs: &Utf8Array<O>) -> Bo
     let rhs = rhs.with_validity(None);
     let out = compare_op(&lhs, &rhs, |a, b| a != b);
 
-    neq_validities(out, validity_lhs, validity_rhs)
+    finish_neq_validities(out, validity_lhs, validity_rhs)
 }
 
 /// Perform `lhs == rhs` operation on [`Utf8Array`] and a scalar.
@@ -80,7 +80,7 @@ pub fn eq_scalar_and_validity<O: Offset>(lhs: &Utf8Array<O>, rhs: &str) -> Boole
     let lhs = lhs.with_validity(None);
     let out = compare_op_scalar(&lhs, rhs, |a, b| a == b);
 
-    eq_validities(out, validity, None)
+    finish_eq_validities(out, validity, None)
 }
 
 /// Perform `lhs != rhs` operation on [`Utf8Array`] and a scalar. Also includes null values in comparisson.
@@ -89,7 +89,7 @@ pub fn neq_scalar_and_validity<O: Offset>(lhs: &Utf8Array<O>, rhs: &str) -> Bool
     let lhs = lhs.with_validity(None);
     let out = compare_op_scalar(&lhs, rhs, |a, b| a != b);
 
-    neq_validities(out, validity, None)
+    finish_neq_validities(out, validity, None)
 }
 
 /// Perform `lhs != rhs` operation on [`Utf8Array`].

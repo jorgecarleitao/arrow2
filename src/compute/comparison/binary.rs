@@ -1,5 +1,5 @@
 //! Comparison functions for [`BinaryArray`]
-use crate::compute::comparison::{eq_validities, neq_validities};
+use crate::compute::comparison::{finish_eq_validities, finish_neq_validities};
 use crate::{
     array::{BinaryArray, BooleanArray, Offset},
     bitmap::Bitmap,
@@ -60,7 +60,7 @@ pub fn eq_and_validity<O: Offset>(lhs: &BinaryArray<O>, rhs: &BinaryArray<O>) ->
     let rhs = rhs.with_validity(None);
     let out = compare_op(&lhs, &rhs, |a, b| a == b);
 
-    eq_validities(out, validity_lhs, validity_rhs)
+    finish_eq_validities(out, validity_lhs, validity_rhs)
 }
 
 /// Perform `lhs == rhs` operation on [`BinaryArray`] and a scalar.
@@ -74,7 +74,7 @@ pub fn eq_scalar_and_validity<O: Offset>(lhs: &BinaryArray<O>, rhs: &[u8]) -> Bo
     let lhs = lhs.with_validity(None);
     let out = compare_op_scalar(&lhs, rhs, |a, b| a == b);
 
-    eq_validities(out, validity, None)
+    finish_eq_validities(out, validity, None)
 }
 
 /// Perform `lhs != rhs` operation on [`BinaryArray`].
@@ -94,7 +94,7 @@ pub fn neq_and_validity<O: Offset>(lhs: &BinaryArray<O>, rhs: &BinaryArray<O>) -
     let rhs = rhs.with_validity(None);
 
     let out = compare_op(&lhs, &rhs, |a, b| a != b);
-    neq_validities(out, validity_lhs, validity_rhs)
+    finish_neq_validities(out, validity_lhs, validity_rhs)
 }
 
 /// Perform `lhs != rhs` operation on [`BinaryArray`] and a scalar.
@@ -108,7 +108,7 @@ pub fn neq_scalar_and_validity<O: Offset>(lhs: &BinaryArray<O>, rhs: &[u8]) -> B
     let lhs = lhs.with_validity(None);
     let out = compare_op_scalar(&lhs, rhs, |a, b| a != b);
 
-    neq_validities(out, validity, None)
+    finish_neq_validities(out, validity, None)
 }
 
 /// Perform `lhs < rhs` operation on [`BinaryArray`].
