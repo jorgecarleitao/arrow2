@@ -1,4 +1,5 @@
 //! Comparison functions for [`BooleanArray`]
+use crate::compute::comparison::{eq_validities, neq_validities};
 use crate::{
     array::BooleanArray,
     bitmap::{binary, unary, Bitmap},
@@ -38,6 +39,17 @@ pub fn eq(lhs: &BooleanArray, rhs: &BooleanArray) -> BooleanArray {
     compare_op(lhs, rhs, |a, b| !(a ^ b))
 }
 
+/// Perform `lhs == rhs` operation on two [`BooleanArray`]s and include validities in comparison.
+pub fn eq_and_validity(lhs: &BooleanArray, rhs: &BooleanArray) -> BooleanArray {
+    let validity_lhs = lhs.validity().cloned();
+    let validity_rhs = rhs.validity().cloned();
+    let lhs = lhs.with_validity(None);
+    let rhs = rhs.with_validity(None);
+    let out = compare_op(&lhs, &rhs, |a, b| !(a ^ b));
+
+    eq_validities(out, validity_lhs, validity_rhs)
+}
+
 /// Perform `lhs == rhs` operation on a [`BooleanArray`] and a scalar value.
 pub fn eq_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
     if rhs {
@@ -47,14 +59,48 @@ pub fn eq_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
     }
 }
 
+/// Perform `lhs == rhs` operation on a [`BooleanArray`] and a scalar value and include validities in comparison.
+pub fn eq_scalar_and_validity(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
+    let validity = lhs.validity().cloned();
+    let lhs = lhs.with_validity(None);
+    if rhs {
+        eq_validities(lhs.clone(), validity, None)
+    } else {
+        let lhs = lhs.with_validity(None);
+
+        let out = compare_op_scalar(&lhs, rhs, |a, _| !a);
+
+        eq_validities(out, validity, None)
+    }
+}
+
 /// `lhs != rhs` for [`BooleanArray`]
 pub fn neq(lhs: &BooleanArray, rhs: &BooleanArray) -> BooleanArray {
     compare_op(lhs, rhs, |a, b| a ^ b)
 }
 
+/// `lhs != rhs` for [`BooleanArray`] and include validities in comparison.
+pub fn neq_and_validity(lhs: &BooleanArray, rhs: &BooleanArray) -> BooleanArray {
+    let validity_lhs = lhs.validity().cloned();
+    let validity_rhs = rhs.validity().cloned();
+    let lhs = lhs.with_validity(None);
+    let rhs = rhs.with_validity(None);
+    let out = compare_op(&lhs, &rhs, |a, b| a ^ b);
+
+    neq_validities(out, validity_lhs, validity_rhs)
+}
+
 /// Perform `left != right` operation on an array and a scalar value.
 pub fn neq_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
     eq_scalar(lhs, !rhs)
+}
+
+/// Perform `left != right` operation on an array and a scalar value.
+pub fn neq_scalar_and_validity(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
+    let validity = lhs.validity().cloned();
+    let lhs = lhs.with_validity(None);
+    let out = eq_scalar(&lhs, !rhs);
+    neq_validities(out, validity, None)
 }
 
 /// Perform `left < right` operation on two arrays.

@@ -1,4 +1,5 @@
 //! Comparison functions for [`Utf8Array`]
+use crate::compute::comparison::{eq_validities, neq_validities};
 use crate::{
     array::{BooleanArray, Offset, Utf8Array},
     bitmap::Bitmap,
@@ -46,9 +47,49 @@ pub fn eq<O: Offset>(lhs: &Utf8Array<O>, rhs: &Utf8Array<O>) -> BooleanArray {
     compare_op(lhs, rhs, |a, b| a == b)
 }
 
+/// Perform `lhs == rhs` operation on [`Utf8Array`] and include validities in comparison.
+pub fn eq_and_validity<O: Offset>(lhs: &Utf8Array<O>, rhs: &Utf8Array<O>) -> BooleanArray {
+    let validity_lhs = lhs.validity().cloned();
+    let validity_rhs = rhs.validity().cloned();
+    let lhs = lhs.with_validity(None);
+    let rhs = rhs.with_validity(None);
+    let out = compare_op(&lhs, &rhs, |a, b| a == b);
+
+    eq_validities(out, validity_lhs, validity_rhs)
+}
+
+/// Perform `lhs != rhs` operation on [`Utf8Array`] and include validities in comparison.
+pub fn neq_and_validity<O: Offset>(lhs: &Utf8Array<O>, rhs: &Utf8Array<O>) -> BooleanArray {
+    let validity_lhs = lhs.validity().cloned();
+    let validity_rhs = rhs.validity().cloned();
+    let lhs = lhs.with_validity(None);
+    let rhs = rhs.with_validity(None);
+    let out = compare_op(&lhs, &rhs, |a, b| a != b);
+
+    neq_validities(out, validity_lhs, validity_rhs)
+}
+
 /// Perform `lhs == rhs` operation on [`Utf8Array`] and a scalar.
 pub fn eq_scalar<O: Offset>(lhs: &Utf8Array<O>, rhs: &str) -> BooleanArray {
     compare_op_scalar(lhs, rhs, |a, b| a == b)
+}
+
+/// Perform `lhs == rhs` operation on [`Utf8Array`] and a scalar. Also includes null values in comparisson.
+pub fn eq_scalar_and_validity<O: Offset>(lhs: &Utf8Array<O>, rhs: &str) -> BooleanArray {
+    let validity = lhs.validity().cloned();
+    let lhs = lhs.with_validity(None);
+    let out = compare_op_scalar(&lhs, rhs, |a, b| a == b);
+
+    eq_validities(out, validity, None)
+}
+
+/// Perform `lhs != rhs` operation on [`Utf8Array`] and a scalar. Also includes null values in comparisson.
+pub fn neq_scalar_and_validity<O: Offset>(lhs: &Utf8Array<O>, rhs: &str) -> BooleanArray {
+    let validity = lhs.validity().cloned();
+    let lhs = lhs.with_validity(None);
+    let out = compare_op_scalar(&lhs, rhs, |a, b| a != b);
+
+    neq_validities(out, validity, None)
 }
 
 /// Perform `lhs != rhs` operation on [`Utf8Array`].

@@ -57,6 +57,8 @@ mod simd;
 pub use simd::{Simd8, Simd8Lanes, Simd8PartialEq, Simd8PartialOrd};
 
 use super::take::take_boolean;
+use crate::bitmap::Bitmap;
+use crate::compute;
 pub(crate) use primitive::{
     compare_values_op as primitive_compare_values_op,
     compare_values_op_scalar as primitive_compare_values_op_scalar,
@@ -456,4 +458,55 @@ fn can_partial_eq_scalar(data_type: &DataType) -> bool {
             DataType::Interval(IntervalUnit::DayTime)
                 | DataType::Interval(IntervalUnit::MonthDayNano)
         )
+}
+
+fn eq_validities(
+    output_without_validities: BooleanArray,
+    validity_lhs: Option<Bitmap>,
+    validity_rhs: Option<Bitmap>,
+) -> BooleanArray {
+    match (validity_lhs, validity_rhs) {
+        (None, None) => output_without_validities,
+        (Some(lhs), None) => compute::boolean::and(
+            &BooleanArray::from_data(DataType::Boolean, lhs, None),
+            &output_without_validities,
+        )
+        .unwrap(),
+        (None, Some(rhs)) => compute::boolean::and(
+            &output_without_validities,
+            &BooleanArray::from_data(DataType::Boolean, rhs, None),
+        )
+        .unwrap(),
+        (Some(lhs), Some(rhs)) => {
+            let lhs = BooleanArray::from_data(DataType::Boolean, lhs, None);
+            let rhs = BooleanArray::from_data(DataType::Boolean, rhs, None);
+            let eq_validities = compute::comparison::boolean::eq(&lhs, &rhs);
+            compute::boolean::and(&output_without_validities, &eq_validities).unwrap()
+        }
+    }
+}
+fn neq_validities(
+    output_without_validities: BooleanArray,
+    validity_lhs: Option<Bitmap>,
+    validity_rhs: Option<Bitmap>,
+) -> BooleanArray {
+    match (validity_lhs, validity_rhs) {
+        (None, None) => output_without_validities,
+        (Some(lhs), None) => {
+            let lhs_negated =
+                compute::boolean::not(&BooleanArray::from_data(DataType::Boolean, lhs, None));
+            compute::boolean::or(&lhs_negated, &output_without_validities).unwrap()
+        }
+        (None, Some(rhs)) => {
+            let rhs_negated =
+                compute::boolean::not(&BooleanArray::from_data(DataType::Boolean, rhs, None));
+            compute::boolean::or(&output_without_validities, &rhs_negated).unwrap()
+        }
+        (Some(lhs), Some(rhs)) => {
+            let lhs = BooleanArray::from_data(DataType::Boolean, lhs, None);
+            let rhs = BooleanArray::from_data(DataType::Boolean, rhs, None);
+            let neq_validities = compute::comparison::boolean::neq(&lhs, &rhs);
+            compute::boolean::or(&output_without_validities, &neq_validities).unwrap()
+        }
+    }
 }

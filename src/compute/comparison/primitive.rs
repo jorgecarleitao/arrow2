@@ -1,4 +1,5 @@
 //! Comparison functions for [`PrimitiveArray`]
+use crate::compute::comparison::{eq_validities, neq_validities};
 use crate::{
     array::{BooleanArray, PrimitiveArray},
     bitmap::MutableBitmap,
@@ -99,6 +100,21 @@ where
     compare_op(lhs, rhs, |a, b| a.eq(b))
 }
 
+/// Perform `lhs == rhs` operation on two arrays and include validities in comparison.
+pub fn eq_and_validity<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> BooleanArray
+where
+    T: NativeType + Simd8,
+    T::Simd: Simd8PartialEq,
+{
+    let validity_lhs = lhs.validity().cloned();
+    let validity_rhs = rhs.validity().cloned();
+    let lhs = lhs.with_validity(None);
+    let rhs = rhs.with_validity(None);
+    let out = compare_op(&lhs, &rhs, |a, b| a.eq(b));
+
+    eq_validities(out, validity_lhs, validity_rhs)
+}
+
 /// Perform `left == right` operation on an array and a scalar value.
 pub fn eq_scalar<T>(lhs: &PrimitiveArray<T>, rhs: T) -> BooleanArray
 where
@@ -106,6 +122,19 @@ where
     T::Simd: Simd8PartialEq,
 {
     compare_op_scalar(lhs, rhs, |a, b| a.eq(b))
+}
+
+/// Perform `left == right` operation on an array and a scalar value and include validities in comparison.
+pub fn eq_scalar_and_validity<T>(lhs: &PrimitiveArray<T>, rhs: T) -> BooleanArray
+where
+    T: NativeType + Simd8,
+    T::Simd: Simd8PartialEq,
+{
+    let validity = lhs.validity().cloned();
+    let lhs = lhs.with_validity(None);
+    let out = compare_op_scalar(&lhs, rhs, |a, b| a.eq(b));
+
+    eq_validities(out, validity, None)
 }
 
 /// Perform `left != right` operation on two arrays.
@@ -117,6 +146,21 @@ where
     compare_op(lhs, rhs, |a, b| a.neq(b))
 }
 
+/// Perform `left != right` operation on two arrays and include validities in comparison.
+pub fn neq_and_validity<T>(lhs: &PrimitiveArray<T>, rhs: &PrimitiveArray<T>) -> BooleanArray
+where
+    T: NativeType + Simd8,
+    T::Simd: Simd8PartialEq,
+{
+    let validity_lhs = lhs.validity().cloned();
+    let validity_rhs = rhs.validity().cloned();
+    let lhs = lhs.with_validity(None);
+    let rhs = rhs.with_validity(None);
+    let out = compare_op(&lhs, &rhs, |a, b| a.neq(b));
+
+    neq_validities(out, validity_lhs, validity_rhs)
+}
+
 /// Perform `left != right` operation on an array and a scalar value.
 pub fn neq_scalar<T>(lhs: &PrimitiveArray<T>, rhs: T) -> BooleanArray
 where
@@ -124,6 +168,19 @@ where
     T::Simd: Simd8PartialEq,
 {
     compare_op_scalar(lhs, rhs, |a, b| a.neq(b))
+}
+
+/// Perform `left != right` operation on an array and a scalar value and include validities in comparison.
+pub fn neq_scalar_and_validity<T>(lhs: &PrimitiveArray<T>, rhs: T) -> BooleanArray
+where
+    T: NativeType + Simd8,
+    T::Simd: Simd8PartialEq,
+{
+    let validity = lhs.validity().cloned();
+    let lhs = lhs.with_validity(None);
+    let out = compare_op_scalar(&lhs, rhs, |a, b| a.neq(b));
+
+    neq_validities(out, validity, None)
 }
 
 /// Perform `left < right` operation on two arrays.

@@ -1,5 +1,5 @@
 use arrow2::array::*;
-use arrow2::compute::comparison::boolean::*;
+use arrow2::compute::comparison::{self, boolean::*};
 use arrow2::datatypes::{DataType::*, IntervalUnit};
 use arrow2::datatypes::{IntegerType, TimeUnit};
 use arrow2::scalar::new_scalar;
@@ -73,6 +73,7 @@ fn consistency() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use arrow2::bitmap::Bitmap;
 
     macro_rules! cmp_bool {
         ($KERNEL:ident, $A_VEC:expr, $B_VEC:expr, $EXPECTED:expr) => {
@@ -237,5 +238,93 @@ mod tests {
                 Some(true)
             ]
         );
+    }
+
+    fn check_mask(mask: &BooleanArray, expected: &[bool]) {
+        assert!(mask.validity().is_none());
+        let mask = mask.values_iter().collect::<Vec<_>>();
+        assert_eq!(mask, expected);
+    }
+
+    #[test]
+    fn compare_no_propagating_nulls_eq() {
+        // single validity
+        let a = Utf8Array::<i32>::from_iter([Some("a"), None, Some("c")]);
+        let b = Utf8Array::<i32>::from_iter([Some("a"), Some("c"), Some("c")]);
+
+        let out = comparison::utf8::eq_and_validity(&a, &b);
+        check_mask(&out, &[true, false, true]);
+        let out = comparison::utf8::eq_and_validity(&b, &a);
+        check_mask(&out, &[true, false, true]);
+
+        // both have validities
+        let b = Utf8Array::<i32>::from_iter([Some("a"), None, None]);
+        let out = comparison::utf8::eq_and_validity(&a, &b);
+        check_mask(&out, &[true, true, false]);
+
+        // scalar
+        let out = comparison::utf8::eq_scalar_and_validity(&a, "a");
+        check_mask(&out, &[true, false, false]);
+
+        // now we add a mask while we know that underlying values are equal
+        let a = Utf8Array::<i32>::from_iter([Some("a"), Some("b"), Some("c")]);
+
+        // now mask with a null
+        let mask = Bitmap::from_iter([false, true, true]);
+        let a_masked = a.with_validity(Some(mask));
+        let out = comparison::utf8::eq_and_validity(&a, &a_masked);
+        check_mask(&out, &[false, true, true]);
+
+        // other types
+        let a = Int32Array::from_iter([Some(1), Some(2), Some(3)]);
+        let b = Int32Array::from_iter([Some(1), Some(2), None]);
+        let out = comparison::primitive::eq_and_validity(&a, &b);
+        check_mask(&out, &[true, true, false]);
+
+        let a = BooleanArray::from_iter([Some(true), Some(false), Some(false)]);
+        let b = BooleanArray::from_iter([Some(true), Some(true), None]);
+        let out = comparison::boolean::eq_and_validity(&a, &b);
+        check_mask(&out, &[true, false, false]);
+    }
+
+    #[test]
+    fn compare_no_propagating_nulls_neq() {
+        // single validity
+        let a = Utf8Array::<i32>::from_iter([Some("a"), None, Some("c")]);
+        let b = Utf8Array::<i32>::from_iter([Some("foo"), Some("c"), Some("c")]);
+
+        let out = comparison::utf8::neq_and_validity(&a, &b);
+        check_mask(&out, &[true, true, false]);
+        let out = comparison::utf8::neq_and_validity(&b, &a);
+        check_mask(&out, &[true, true, false]);
+
+        // both have validities
+        let b = Utf8Array::<i32>::from_iter([Some("a"), None, None]);
+        let out = comparison::utf8::neq_and_validity(&a, &b);
+        check_mask(&out, &[false, false, true]);
+
+        // scalar
+        let out = comparison::utf8::neq_scalar_and_validity(&a, "a");
+        check_mask(&out, &[false, true, true]);
+
+        // now we add a mask while we know that underlying values are equal
+        let a = Utf8Array::<i32>::from_iter([Some("a"), Some("b"), Some("c")]);
+
+        // now mask with a null
+        let mask = Bitmap::from_iter([false, true, true]);
+        let a_masked = a.with_validity(Some(mask));
+        let out = comparison::utf8::neq_and_validity(&a, &a_masked);
+        check_mask(&out, &[true, false, false]);
+
+        // other types
+        let a = Int32Array::from_iter([Some(1), Some(2), Some(3)]);
+        let b = Int32Array::from_iter([Some(1), Some(2), None]);
+        let out = comparison::primitive::neq_and_validity(&a, &b);
+        check_mask(&out, &[false, false, true]);
+
+        let a = BooleanArray::from_iter([Some(true), Some(false), Some(false)]);
+        let b = BooleanArray::from_iter([Some(true), Some(true), None]);
+        let out = comparison::boolean::neq_and_validity(&a, &b);
+        check_mask(&out, &[false, true, true]);
     }
 }
