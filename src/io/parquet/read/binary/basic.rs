@@ -98,7 +98,7 @@ struct OptionalDictionary<'a> {
 
 impl<'a> OptionalDictionary<'a> {
     fn new(page: &'a DataPage, dict: &'a BinaryPageDict) -> Self {
-        let (_, _, indices_buffer, _) = utils::split_buffer(page, page.descriptor());
+        let (_, _, indices_buffer) = utils::split_buffer(page);
 
         let values = utils::dict_indices_decoder(indices_buffer, page.num_values());
 
@@ -187,7 +187,7 @@ impl<'a, O: Offset> utils::Decoder<'a, &'a [u8], Binary<O>> for BinaryDecoder<O>
                 )))
             }
             (Encoding::Plain, _, true) => {
-                let (_, _, values, _) = utils::split_buffer(page, page.descriptor());
+                let (_, _, values) = utils::split_buffer(page);
 
                 let values = BinaryIter::new(values);
 

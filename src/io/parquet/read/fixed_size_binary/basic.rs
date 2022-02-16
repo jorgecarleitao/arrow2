@@ -29,7 +29,7 @@ struct Optional<'a> {
 
 impl<'a> Optional<'a> {
     fn new(page: &'a DataPage, size: usize) -> Self {
-        let (_, _, values_buffer, _) = split_buffer(page, page.descriptor());
+        let (_, _, values_buffer) = split_buffer(page);
 
         let values = values_buffer.chunks_exact(size);
 
@@ -80,7 +80,7 @@ struct OptionalDictionary<'a> {
 
 impl<'a> OptionalDictionary<'a> {
     fn new(page: &'a DataPage, dict: &'a FixedLenByteArrayPageDict) -> Self {
-        let (_, _, indices_buffer, _) = split_buffer(page, page.descriptor());
+        let (_, _, indices_buffer) = split_buffer(page);
 
         let values = dict_indices_decoder(indices_buffer, page.num_values());
 

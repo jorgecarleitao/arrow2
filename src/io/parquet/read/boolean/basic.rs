@@ -15,16 +15,6 @@ use super::super::utils::{
 };
 use super::super::DataPages;
 
-#[inline]
-pub(super) fn values_iter(values: &[u8]) -> BitmapIter {
-    // in PLAIN, booleans are LSB bitpacked and thus we can read them as if they were a bitmap.
-    // note that `values_buffer` contains only non-null values.
-    // thus, at this point, it is not known how many values this buffer contains
-    // values_len is the upper bound. The actual number depends on how many nulls there is.
-    let values_len = values.len() * 8;
-    BitmapIter::new(values, 0, values_len)
-}
-
 // The state of an optional DataPage with a boolean physical type
 #[derive(Debug)]
 struct Optional<'a> {
@@ -34,10 +24,10 @@ struct Optional<'a> {
 
 impl<'a> Optional<'a> {
     pub fn new(page: &'a DataPage) -> Self {
-        let (_, _, values_buffer, _) = split_buffer(page, page.descriptor());
+        let (_, _, values_buffer) = split_buffer(page);
 
         Self {
-            values: values_iter(values_buffer),
+            values: BitmapIter::new(values_buffer, 0, page.num_values()),
             validity: OptionalPageValidity::new(page),
         }
     }

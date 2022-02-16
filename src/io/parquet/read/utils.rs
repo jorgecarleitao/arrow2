@@ -2,8 +2,7 @@ use std::collections::VecDeque;
 use std::convert::TryInto;
 
 use parquet2::encoding::{hybrid_rle, Encoding};
-use parquet2::metadata::ColumnDescriptor;
-use parquet2::page::{split_buffer as _split_buffer, DataPage, DataPageHeader};
+use parquet2::page::{split_buffer as _split_buffer, DataPage};
 use streaming_iterator::{convert, Convert, StreamingIterator};
 
 use crate::bitmap::utils::BitmapIter;
@@ -55,17 +54,8 @@ pub fn not_implemented(
 }
 
 #[inline]
-pub fn split_buffer<'a>(
-    page: &'a DataPage,
-    descriptor: &ColumnDescriptor,
-) -> (&'a [u8], &'a [u8], &'a [u8], &'static str) {
-    let (rep_levels, validity_buffer, values_buffer) = _split_buffer(page, descriptor);
-
-    let version = match page.header() {
-        DataPageHeader::V1(_) => "V1",
-        DataPageHeader::V2(_) => "V2",
-    };
-    (rep_levels, validity_buffer, values_buffer, version)
+pub fn split_buffer(page: &DataPage) -> (&[u8], &[u8], &[u8]) {
+    _split_buffer(page, page.descriptor())
 }
 
 /// A private trait representing structs that can receive elements.
@@ -135,7 +125,7 @@ pub struct OptionalPageValidity<'a> {
 impl<'a> OptionalPageValidity<'a> {
     #[inline]
     pub fn new(page: &'a DataPage) -> Self {
-        let (_, validity, _, _) = split_buffer(page, page.descriptor());
+        let (_, validity, _) = split_buffer(page);
 
         let validity = convert(hybrid_rle::Decoder::new(validity, 1));
         Self {

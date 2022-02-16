@@ -280,7 +280,7 @@ pub struct NestedPage<'a> {
 
 impl<'a> NestedPage<'a> {
     pub fn new(page: &'a DataPage) -> Self {
-        let (rep_levels, def_levels, _, _) = split_buffer(page, page.descriptor());
+        let (rep_levels, def_levels, _) = split_buffer(page);
 
         let max_rep_level = page.descriptor().max_rep_level();
         let max_def_level = page.descriptor().max_def_level();
@@ -502,7 +502,7 @@ pub struct Optional<'a> {
 
 impl<'a> Optional<'a> {
     pub fn new(page: &'a DataPage) -> Self {
-        let (_, def_levels, _, _) = split_buffer(page, page.descriptor());
+        let (_, def_levels, _) = split_buffer(page);
 
         let max_def = page.descriptor().max_def_level();
 

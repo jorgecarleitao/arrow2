@@ -30,7 +30,7 @@ where
     P: ParquetNativeType,
 {
     pub fn new(page: &'a DataPage) -> Self {
-        let (_, _, values, _) = utils::split_buffer(page, page.descriptor());
+        let (_, _, values) = utils::split_buffer(page);
         assert_eq!(values.len() % std::mem::size_of::<P>(), 0);
         Self {
             values: decode(values).iter().copied(),
@@ -149,7 +149,7 @@ where
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
                 let dict = dict.as_any().downcast_ref().unwrap();
 
-                let (_, _, values_buffer, _) = utils::split_buffer(page, page.descriptor());
+                let (_, _, values_buffer) = utils::split_buffer(page);
 
                 Ok(State::OptionalDictionary(
                     OptionalPageValidity::new(page),
