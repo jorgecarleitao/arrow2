@@ -22,7 +22,8 @@ pub(super) struct Values<'a, P>
 where
     P: ParquetNativeType,
 {
-    pub values: std::iter::Copied<std::slice::Iter<'a, P>>,
+    pub values: std::slice::ChunksExact<'a, u8>,
+    phantom: std::marker::PhantomData<P>,
 }
 
 impl<'a, P> Values<'a, P>
@@ -33,7 +34,8 @@ where
         let (_, _, values) = utils::split_buffer(page);
         assert_eq!(values.len() % std::mem::size_of::<P>(), 0);
         Self {
-            values: decode(values).iter().copied(),
+            values: values.chunks_exact(std::mem::size_of::<P>()),
+            phantom: std::marker::PhantomData,
         }
     }
 
@@ -190,10 +192,16 @@ where
                 page_validity,
                 Some(remaining),
                 values,
-                page_values.values.by_ref().map(self.op),
+                page_values.values.by_ref().map(decode).map(self.op),
             ),
             State::Required(page) => {
-                values.extend(page.values.by_ref().map(self.op).take(remaining));
+                values.extend(
+                    page.values
+                        .by_ref()
+                        .map(decode)
+                        .map(self.op)
+                        .take(remaining),
+                );
             }
             State::OptionalDictionary(page_validity, page_values) => {
                 let op1 = |index: u32| page_values.dict[index as usize];

@@ -1,7 +1,8 @@
 use std::collections::VecDeque;
 
 use parquet2::{
-    encoding::Encoding, page::DataPage, schema::Repetition, types::NativeType as ParquetNativeType,
+    encoding::Encoding, page::DataPage, schema::Repetition, types::decode,
+    types::NativeType as ParquetNativeType,
 };
 
 use crate::{
@@ -122,14 +123,14 @@ where
                 read_optional_values(
                     page_validity.definition_levels.by_ref(),
                     max_def,
-                    page_values.values.by_ref().map(self.op),
+                    page_values.values.by_ref().map(decode).map(self.op),
                     values,
                     validity,
                     remaining,
                 )
             }
             State::Required(page) => {
-                values.extend(page.values.by_ref().map(self.op).take(remaining));
+                values.extend(page.values.by_ref().map(decode).map(self.op).take(remaining));
             }
             //State::OptionalDictionary(page) => todo!(),
             //State::RequiredDictionary(page) => todo!(),

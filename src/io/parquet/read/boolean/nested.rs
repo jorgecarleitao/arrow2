@@ -69,7 +69,7 @@ impl<'a> Decoder<'a, bool, MutableBitmap> for BooleanDecoder {
         match (page.encoding(), is_optional) {
             (Encoding::Plain, true) => {
                 let (_, _, values) = utils::split_buffer(page);
-                let values = BitmapIter::new(values, 0, page.num_values());
+                let values = BitmapIter::new(values, 0, values.len() * 8);
 
                 Ok(State::Optional(Optional::new(page), values))
             }

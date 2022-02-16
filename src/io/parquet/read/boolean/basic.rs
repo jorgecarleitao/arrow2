@@ -27,7 +27,7 @@ impl<'a> Optional<'a> {
         let (_, _, values_buffer) = split_buffer(page);
 
         Self {
-            values: BitmapIter::new(values_buffer, 0, page.num_values()),
+            values: BitmapIter::new(values_buffer, 0, values_buffer.len() * 8),
             validity: OptionalPageValidity::new(page),
         }
     }
