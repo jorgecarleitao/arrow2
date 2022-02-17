@@ -11,6 +11,7 @@ mod schema;
 mod stream;
 mod utf8;
 mod utils;
+mod sink;
 
 use crate::array::*;
 use crate::bitmap::Bitmap;
@@ -40,6 +41,7 @@ pub use file::FileWriter;
 pub use row_group::{row_group_iter, RowGroupIterator};
 pub use schema::to_parquet_type;
 pub use stream::FileStreamer;
+pub use sink::ParquetSink;
 
 pub(self) fn decimal_length_from_precision(precision: usize) -> usize {
     // digits = floor(log_10(2^(8*n - 1) - 1))
