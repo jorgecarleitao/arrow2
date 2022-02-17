@@ -87,7 +87,7 @@ strength_reduce = { version = "0.2", optional = true }
 # For instruction multiversioning
 multiversion = { version = "0.6.1", optional = true }
 
-# For instruction multiversioning
+# For support for odbc
 #odbc-api = { version = "0.34", optional = true }
 odbc-api = { git = "https://github.com/jorgecarleitao/odbc-api", branch= "expose_indicators", optional = true }
 

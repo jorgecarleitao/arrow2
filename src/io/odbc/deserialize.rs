@@ -8,7 +8,7 @@ use crate::types::NativeType;
 use super::api::buffers::AnyColumnView;
 
 /// Deserializes a [`AnyColumnView`] into an array of [`DataType`].
-/// This is Pure CPU
+/// This is CPU-bounded
 pub fn deserialize(column: AnyColumnView, data_type: DataType) -> Box<dyn Array> {
     match column {
         AnyColumnView::Text(_) => todo!(),

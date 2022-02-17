@@ -9,7 +9,7 @@ pub use schema::infer_schema;
 
 /// Creates a [`api::buffers::ColumnarBuffer`] from the metadata.
 /// # Errors
-/// If the driver provides incorrect an incorrect [`ResultSetMetadata`]
+/// Iff the driver provides an incorrect [`ResultSetMetadata`]
 pub fn buffer_from_metadata(
     resut_set_metadata: &impl api::ResultSetMetadata,
     max_batch_size: usize,

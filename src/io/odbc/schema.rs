@@ -4,7 +4,7 @@ use super::api::ResultSetMetadata;
 use crate::datatypes::{DataType, Field, TimeUnit};
 use crate::error::Result;
 
-/// Infers the Arrow [Field]s from a [`ResultSetMetadata`]
+/// Infers the Arrow [`Field`]s from a [`ResultSetMetadata`]
 pub fn infer_schema(resut_set_metadata: &impl ResultSetMetadata) -> Result<Vec<Field>> {
     let num_cols: u16 = resut_set_metadata.num_result_cols().unwrap() as u16;
 
