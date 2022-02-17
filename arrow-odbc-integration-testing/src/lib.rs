@@ -1,6 +1,7 @@
 #![cfg(test)]
-use arrow2::array::Int32Array;
+use arrow2::array::{Array, BinaryArray, BooleanArray, Int32Array, Utf8Array};
 use arrow2::chunk::Chunk;
+use arrow2::datatypes::Field;
 use arrow2::error::Result;
 use arrow2::io::odbc::api::{Connection, Cursor, Environment, Error as OdbcError};
 use arrow2::io::odbc::{buffer_from_metadata, deserialize, infer_schema};
@@ -17,18 +18,111 @@ const MSSQL: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=My@Test@Password1;";
 
 #[test]
-fn test() -> Result<()> {
-    // Given a table with a single string
+fn int() -> Result<()> {
     let table_name = function_name!().rsplit_once(':').unwrap().1;
+    let expected = vec![Chunk::new(vec![Box::new(Int32Array::from_slice([1])) as _])];
+
+    test(expected, "INT", "(1)", table_name)
+}
+
+#[test]
+fn int_nullable() -> Result<()> {
+    let table_name = function_name!().rsplit_once(':').unwrap().1;
+    let expected = vec![Chunk::new(vec![
+        Box::new(Int32Array::from([Some(1), None])) as _,
+    ])];
+
+    test(expected, "INT", "(1),(NULL)", table_name)
+}
+
+#[test]
+fn bool() -> Result<()> {
+    let table_name = function_name!().rsplit_once(':').unwrap().1;
+    let expected = vec![Chunk::new(vec![
+        Box::new(BooleanArray::from_slice([true])) as _
+    ])];
+
+    test(expected, "BIT", "(1)", table_name)
+}
+
+#[test]
+fn bool_nullable() -> Result<()> {
+    let table_name = function_name!().rsplit_once(':').unwrap().1;
+    let expected = vec![Chunk::new(vec![
+        Box::new(BooleanArray::from([Some(true), None])) as _,
+    ])];
+
+    test(expected, "BIT", "(1),(NULL)", table_name)
+}
+
+#[test]
+fn binary() -> Result<()> {
+    let table_name = function_name!().rsplit_once(':').unwrap().1;
+    let expected = vec![Chunk::new(vec![
+        Box::new(BinaryArray::<i32>::from([Some(b"ab")])) as _,
+    ])];
+
+    test(
+        expected,
+        "VARBINARY(2)",
+        "(CAST('ab' AS VARBINARY(2)))",
+        table_name,
+    )
+}
+
+#[test]
+fn binary_nullable() -> Result<()> {
+    let table_name = function_name!().rsplit_once(':').unwrap().1;
+    let expected =
+        vec![Chunk::new(vec![
+            Box::new(BinaryArray::<i32>::from([Some(b"ab"), None, Some(b"ac")])) as _,
+        ])];
+
+    test(
+        expected,
+        "VARBINARY(2)",
+        "(CAST('ab' AS VARBINARY(2))),(NULL),(CAST('ac' AS VARBINARY(2)))",
+        table_name,
+    )
+}
+
+#[test]
+fn utf8_nullable() -> Result<()> {
+    let table_name = function_name!().rsplit_once(':').unwrap().1;
+    let expected =
+        vec![Chunk::new(vec![
+            Box::new(Utf8Array::<i32>::from([Some("ab"), None, Some("ac")])) as _,
+        ])];
+
+    test(expected, "VARCHAR(2)", "('ab'),(NULL),('ac')", table_name)
+}
+
+fn test(
+    expected: Vec<Chunk<Box<dyn Array>>>,
+    type_: &str,
+    insert: &str,
+    table_name: &str,
+) -> Result<()> {
     let connection = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&connection, table_name, &["INT"]).unwrap();
+    setup_empty_table(&connection, table_name, &[type_]).unwrap();
     connection
-        .execute(&format!("INSERT INTO {table_name} (a) VALUES (1)"), ())
+        .execute(&format!("INSERT INTO {table_name} (a) VALUES {insert}"), ())
         .unwrap();
 
     // When
     let query = format!("SELECT a FROM {table_name} ORDER BY id");
-    let mut a = connection.prepare(&query).unwrap();
+
+    let chunks = read(&connection, &query)?.1;
+
+    assert_eq!(chunks, expected);
+    Ok(())
+}
+
+fn read(
+    connection: &Connection<'_>,
+    query: &str,
+) -> Result<(Vec<Field>, Vec<Chunk<Box<dyn Array>>>)> {
+    let mut a = connection.prepare(query).unwrap();
     let fields = infer_schema(&a)?;
 
     let max_batch_size = 100;
@@ -49,12 +143,7 @@ fn test() -> Result<()> {
         chunks.push(Chunk::new(arrays));
     }
 
-    assert_eq!(
-        chunks,
-        vec![Chunk::new(vec![Box::new(Int32Array::from_slice([1])) as _])]
-    );
-
-    Ok(())
+    Ok((fields, chunks))
 }
 
 /// Creates the table and assures it is empty. Columns are named a,b,c, etc.
