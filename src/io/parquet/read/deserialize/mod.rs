@@ -12,7 +12,6 @@ use crate::{
     array::{Array, BinaryArray, DictionaryKey, PrimitiveArray, Utf8Array},
     datatypes::{DataType, IntervalUnit, TimeUnit},
     error::{ArrowError, Result},
-    io::parquet::read::primitive::read_item,
 };
 
 use super::binary;
@@ -50,39 +49,34 @@ pub fn page_iter_to_arrays<'a, I: 'a + DataPages>(
             pages,
             data_type,
             chunk_size,
-            read_item,
             |x: i32| x as u8,
         ))),
         UInt16 => dyn_iter(iden(primitive::Iter::new(
             pages,
             data_type,
             chunk_size,
-            read_item,
             |x: i32| x as u16,
         ))),
         UInt32 => dyn_iter(iden(primitive::Iter::new(
             pages,
             data_type,
             chunk_size,
-            read_item,
             |x: i32| x as u32,
         ))),
         Int8 => dyn_iter(iden(primitive::Iter::new(
             pages,
             data_type,
             chunk_size,
-            read_item,
             |x: i32| x as i8,
         ))),
         Int16 => dyn_iter(iden(primitive::Iter::new(
             pages,
             data_type,
             chunk_size,
-            read_item,
             |x: i32| x as i16,
         ))),
         Int32 | Date32 | Time32(_) | Interval(IntervalUnit::YearMonth) => dyn_iter(iden(
-            primitive::Iter::new(pages, data_type, chunk_size, read_item, |x: i32| x as i32),
+            primitive::Iter::new(pages, data_type, chunk_size, |x: i32| x as i32),
         )),
 
         Timestamp(time_unit, None) => {
@@ -104,14 +98,12 @@ pub fn page_iter_to_arrays<'a, I: 'a + DataPages>(
                 pages,
                 data_type,
                 chunk_size,
-                read_item,
                 |x: i32| x as i128,
             ))),
             PhysicalType::Int64 => dyn_iter(iden(primitive::Iter::new(
                 pages,
                 data_type,
                 chunk_size,
-                read_item,
                 |x: i64| x as i128,
             ))),
             &PhysicalType::FixedLenByteArray(n) if n > 16 => {
@@ -159,13 +151,12 @@ pub fn page_iter_to_arrays<'a, I: 'a + DataPages>(
 
         // INT64
         Int64 | Date64 | Time64(_) | Duration(_) | Timestamp(_, _) => dyn_iter(iden(
-            primitive::Iter::new(pages, data_type, chunk_size, read_item, |x: i64| x as i64),
+            primitive::Iter::new(pages, data_type, chunk_size, |x: i64| x as i64),
         )),
         UInt64 => dyn_iter(iden(primitive::Iter::new(
             pages,
             data_type,
             chunk_size,
-            read_item,
             |x: i64| x as u64,
         ))),
 
@@ -173,14 +164,12 @@ pub fn page_iter_to_arrays<'a, I: 'a + DataPages>(
             pages,
             data_type,
             chunk_size,
-            read_item,
             |x: f32| x,
         ))),
         Float64 => dyn_iter(iden(primitive::Iter::new(
             pages,
             data_type,
             chunk_size,
-            read_item,
             |x: f64| x,
         ))),
 
@@ -226,7 +215,6 @@ fn timestamp<'a, I: 'a + DataPages>(
                 pages,
                 data_type,
                 chunk_size,
-                read_item,
                 int96_to_i64_ns,
             ))));
         } else {
@@ -241,7 +229,7 @@ fn timestamp<'a, I: 'a + DataPages>(
         ));
     }
 
-    let iter = primitive::Iter::new(pages, data_type, chunk_size, read_item, |x: i64| x);
+    let iter = primitive::Iter::new(pages, data_type, chunk_size, |x: i64| x);
 
     let unit = if let Some(LogicalType::TIMESTAMP(TimestampType { unit, .. })) = logical_type {
         unit

@@ -1,4 +1,5 @@
 //! Comparison functions for [`BinaryArray`]
+use crate::compute::comparison::{finish_eq_validities, finish_neq_validities};
 use crate::{
     array::{BinaryArray, BooleanArray, Offset},
     bitmap::Bitmap,
@@ -49,9 +50,31 @@ pub fn eq<O: Offset>(lhs: &BinaryArray<O>, rhs: &BinaryArray<O>) -> BooleanArray
     compare_op(lhs, rhs, |a, b| a == b)
 }
 
+/// Perform `lhs == rhs` operation on [`BinaryArray`] and include validities in comparison.
+/// # Panic
+/// iff the arrays do not have the same length.
+pub fn eq_and_validity<O: Offset>(lhs: &BinaryArray<O>, rhs: &BinaryArray<O>) -> BooleanArray {
+    let validity_lhs = lhs.validity().cloned();
+    let validity_rhs = rhs.validity().cloned();
+    let lhs = lhs.with_validity(None);
+    let rhs = rhs.with_validity(None);
+    let out = compare_op(&lhs, &rhs, |a, b| a == b);
+
+    finish_eq_validities(out, validity_lhs, validity_rhs)
+}
+
 /// Perform `lhs == rhs` operation on [`BinaryArray`] and a scalar.
 pub fn eq_scalar<O: Offset>(lhs: &BinaryArray<O>, rhs: &[u8]) -> BooleanArray {
     compare_op_scalar(lhs, rhs, |a, b| a == b)
+}
+
+/// Perform `lhs == rhs` operation on [`BinaryArray`] and a scalar and include validities in comparison.
+pub fn eq_scalar_and_validity<O: Offset>(lhs: &BinaryArray<O>, rhs: &[u8]) -> BooleanArray {
+    let validity = lhs.validity().cloned();
+    let lhs = lhs.with_validity(None);
+    let out = compare_op_scalar(&lhs, rhs, |a, b| a == b);
+
+    finish_eq_validities(out, validity, None)
 }
 
 /// Perform `lhs != rhs` operation on [`BinaryArray`].
@@ -61,9 +84,31 @@ pub fn neq<O: Offset>(lhs: &BinaryArray<O>, rhs: &BinaryArray<O>) -> BooleanArra
     compare_op(lhs, rhs, |a, b| a != b)
 }
 
+/// Perform `lhs != rhs` operation on [`BinaryArray`].
+/// # Panic
+/// iff the arrays do not have the same length and include validities in comparison.
+pub fn neq_and_validity<O: Offset>(lhs: &BinaryArray<O>, rhs: &BinaryArray<O>) -> BooleanArray {
+    let validity_lhs = lhs.validity().cloned();
+    let validity_rhs = rhs.validity().cloned();
+    let lhs = lhs.with_validity(None);
+    let rhs = rhs.with_validity(None);
+
+    let out = compare_op(&lhs, &rhs, |a, b| a != b);
+    finish_neq_validities(out, validity_lhs, validity_rhs)
+}
+
 /// Perform `lhs != rhs` operation on [`BinaryArray`] and a scalar.
 pub fn neq_scalar<O: Offset>(lhs: &BinaryArray<O>, rhs: &[u8]) -> BooleanArray {
     compare_op_scalar(lhs, rhs, |a, b| a != b)
+}
+
+/// Perform `lhs != rhs` operation on [`BinaryArray`] and a scalar and include validities in comparison.
+pub fn neq_scalar_and_validity<O: Offset>(lhs: &BinaryArray<O>, rhs: &[u8]) -> BooleanArray {
+    let validity = lhs.validity().cloned();
+    let lhs = lhs.with_validity(None);
+    let out = compare_op_scalar(&lhs, rhs, |a, b| a != b);
+
+    finish_neq_validities(out, validity, None)
 }
 
 /// Perform `lhs < rhs` operation on [`BinaryArray`].

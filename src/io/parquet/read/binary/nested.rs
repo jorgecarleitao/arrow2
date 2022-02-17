@@ -47,7 +47,7 @@ impl<'a, O: Offset> utils::Decoder<'a, &'a [u8], Binary<O>> for BinaryDecoder<O>
 
         match (page.encoding(), page.dictionary_page(), is_optional) {
             (Encoding::Plain, None, true) => {
-                let (_, _, values, _) = utils::split_buffer(page, page.descriptor());
+                let (_, _, values) = utils::split_buffer(page);
 
                 let values = utils::BinaryIter::new(values);
 
@@ -69,6 +69,7 @@ impl<'a, O: Offset> utils::Decoder<'a, &'a [u8], Binary<O>> for BinaryDecoder<O>
     }
 
     fn extend_from_state(
+        &self,
         state: &mut Self::State,
         values: &mut Binary<O>,
         validity: &mut MutableBitmap,

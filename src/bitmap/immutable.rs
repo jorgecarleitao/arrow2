@@ -126,7 +126,7 @@ impl Bitmap {
         // count the smallest chunk
         if length < self.length / 2 {
             // count the null values in the slice
-            self.null_count = count_zeros(&self.bytes, offset, length);
+            self.null_count = count_zeros(&self.bytes, self.offset + offset, length);
         } else {
             // subtract the null count of the chunks we slice off
             let start_end = self.offset + offset + length;
