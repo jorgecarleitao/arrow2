@@ -88,7 +88,8 @@ strength_reduce = { version = "0.2", optional = true }
 multiversion = { version = "0.6.1", optional = true }
 
 # For instruction multiversioning
-odbc-api = { version = "0.34", optional = true }
+#odbc-api = { version = "0.34", optional = true }
+odbc-api = { git = "https://github.com/jorgecarleitao/odbc-api", branch= "expose_indicators", optional = true }
 
 [dev-dependencies]
 criterion = "0.3"
@@ -107,7 +108,7 @@ features = ["full"]
 rustdoc-args = ["--cfg", "docsrs"]
 
 [features]
-default = ["io_odbc"]
+default = []
 full = [
     "io_odbc",
     "io_csv",

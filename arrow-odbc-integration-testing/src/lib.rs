@@ -1,5 +1,9 @@
 #![cfg(test)]
-use arrow2::io::odbc::api::{Connection, Environment, Error as OdbcError, Cursor, buffers::{buffer_from_description, BufferDescription, BufferKind, AnyColumnView}};
+use arrow2::array::Int32Array;
+use arrow2::chunk::Chunk;
+use arrow2::error::Result;
+use arrow2::io::odbc::api::{Connection, Cursor, Environment, Error as OdbcError};
+use arrow2::io::odbc::{buffer_from_metadata, deserialize, infer_schema};
 use lazy_static::lazy_static;
 use stdext::function_name;
 
@@ -13,44 +17,44 @@ const MSSQL: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=My@Test@Password1;";
 
 #[test]
-fn test() {
+fn test() -> Result<()> {
     // Given a table with a single string
     let table_name = function_name!().rsplit_once(':').unwrap().1;
     let connection = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&connection, table_name, &["VARCHAR(50)"]).unwrap();
+    setup_empty_table(&connection, table_name, &["INT"]).unwrap();
     connection
-        .execute(
-            &format!("INSERT INTO {table_name} (a) VALUES ('Hello, World!')"),
-            (),
-        )
+        .execute(&format!("INSERT INTO {table_name} (a) VALUES (1)"), ())
         .unwrap();
 
     // When
     let query = format!("SELECT a FROM {table_name} ORDER BY id");
-    let cursor = connection.execute(&query, ()).unwrap().unwrap();
-    // This is the maximum number of rows in each batch.
-    let max_batch_size = 1;
-    // This is the list of C-Types which will be bound to the result columns of the query.
-    let buffer_descriptions = vec![BufferDescription {
-        kind: BufferKind::Text { max_str_len: 50 },
-        nullable: true,
-    }];
-    let buffer = buffer_from_description(max_batch_size, buffer_descriptions.into_iter());
+    let mut a = connection.prepare(&query).unwrap();
+    let fields = infer_schema(&a)?;
+
+    let max_batch_size = 100;
+    let buffer = buffer_from_metadata(&a, max_batch_size).unwrap();
+
+    let cursor = a.execute(()).unwrap().unwrap();
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
-    let batch = cursor.fetch().unwrap().unwrap();
-    let column_buffer = batch.column(0);
-    let mut text_it = match column_buffer {
-        AnyColumnView::Text(it) => it,
-        _ => panic!("Unexpected types")
-    };
 
-    // One unwrap, because there is a first element
-    // Second unwrap, because we know the value not to be null
-    let bytes = text_it.next().unwrap().unwrap();
+    let mut chunks = vec![];
+    while let Some(batch) = cursor.fetch().unwrap() {
+        let arrays = (0..batch.num_cols())
+            .zip(fields.iter())
+            .map(|(index, field)| {
+                let column_view = batch.column(index);
+                deserialize(column_view, field.data_type.clone())
+            })
+            .collect::<Vec<_>>();
+        chunks.push(Chunk::new(arrays));
+    }
 
-    let value = std::str::from_utf8(bytes).unwrap();
+    assert_eq!(
+        chunks,
+        vec![Chunk::new(vec![Box::new(Int32Array::from_slice([1])) as _])]
+    );
 
-    assert_eq!(value, "Hello, World!")
+    Ok(())
 }
 
 /// Creates the table and assures it is empty. Columns are named a,b,c, etc.
@@ -58,7 +62,7 @@ pub fn setup_empty_table(
     conn: &Connection<'_>,
     table_name: &str,
     column_types: &[&str],
-) -> Result<(), OdbcError> {
+) -> std::result::Result<(), OdbcError> {
     let drop_table = &format!("DROP TABLE IF EXISTS {}", table_name);
 
     let column_names = &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"];
