@@ -153,12 +153,12 @@ async fn maybe_next<R: AsyncRead + Unpin + Send>(
 }
 
 /// A [`Stream`] over an Arrow IPC stream that asynchronously yields [`Chunk`]s.
-pub struct AsyncStreamReader<R: AsyncRead + Unpin + Send + 'static> {
+pub struct AsyncStreamReader<'a, R: AsyncRead + Unpin + Send + 'a> {
     metadata: StreamMetadata,
-    future: Option<BoxFuture<'static, Result<Option<StreamState<R>>>>>,
+    future: Option<BoxFuture<'a, Result<Option<StreamState<R>>>>>,
 }
 
-impl<R: AsyncRead + Unpin + Send + 'static> AsyncStreamReader<R> {
+impl<'a, R: AsyncRead + Unpin + Send + 'a> AsyncStreamReader<'a, R> {
     /// Creates a new [`AsyncStreamReader`]
     pub fn new(reader: R, metadata: StreamMetadata) -> Self {
         let state = ReadState {
@@ -178,7 +178,7 @@ impl<R: AsyncRead + Unpin + Send + 'static> AsyncStreamReader<R> {
     }
 }
 
-impl<R: AsyncRead + Unpin + Send> Stream for AsyncStreamReader<R> {
+impl<'a, R: AsyncRead + Unpin + Send> Stream for AsyncStreamReader<'a, R> {
     type Item = Result<Chunk<Arc<dyn Array>>>;
 
     fn poll_next(
