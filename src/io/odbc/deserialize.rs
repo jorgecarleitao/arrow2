@@ -28,38 +28,52 @@ pub fn deserialize(column: AnyColumnView, data_type: DataType) -> Box<dyn Array>
         AnyColumnView::Date(_) => todo!(),
         AnyColumnView::Time(_) => todo!(),
         AnyColumnView::Timestamp(_) => todo!(),
-        AnyColumnView::F64(values) => Box::new(p(data_type, values)) as _,
-        AnyColumnView::F32(values) => Box::new(p(data_type, values)) as _,
-        AnyColumnView::I8(values) => Box::new(p(data_type, values)) as _,
-        AnyColumnView::I16(values) => Box::new(p(data_type, values)) as _,
-        AnyColumnView::I32(values) => Box::new(p(data_type, values)) as _,
-        AnyColumnView::I64(values) => Box::new(p(data_type, values)) as _,
-        AnyColumnView::U8(values) => Box::new(p(data_type, values)) as _,
+        AnyColumnView::F64(values) => Box::new(primitive(data_type, values)) as _,
+        AnyColumnView::F32(values) => Box::new(primitive(data_type, values)) as _,
+        AnyColumnView::I8(values) => Box::new(primitive(data_type, values)) as _,
+        AnyColumnView::I16(values) => Box::new(primitive(data_type, values)) as _,
+        AnyColumnView::I32(values) => Box::new(primitive(data_type, values)) as _,
+        AnyColumnView::I64(values) => Box::new(primitive(data_type, values)) as _,
+        AnyColumnView::U8(values) => Box::new(primitive(data_type, values)) as _,
         AnyColumnView::Bit(values) => Box::new(bool(data_type, values)) as _,
         AnyColumnView::NullableDate(_) => todo!(),
         AnyColumnView::NullableTime(_) => todo!(),
         AnyColumnView::NullableTimestamp(_) => todo!(),
-        AnyColumnView::NullableF64(slice) => {
-            Box::new(p_optional(data_type, slice.values(), slice.indicators())) as _
-        }
-        AnyColumnView::NullableF32(slice) => {
-            Box::new(p_optional(data_type, slice.values(), slice.indicators())) as _
-        }
-        AnyColumnView::NullableI8(slice) => {
-            Box::new(p_optional(data_type, slice.values(), slice.indicators())) as _
-        }
-        AnyColumnView::NullableI16(slice) => {
-            Box::new(p_optional(data_type, slice.values(), slice.indicators())) as _
-        }
-        AnyColumnView::NullableI32(slice) => {
-            Box::new(p_optional(data_type, slice.values(), slice.indicators())) as _
-        }
-        AnyColumnView::NullableI64(slice) => {
-            Box::new(p_optional(data_type, slice.values(), slice.indicators())) as _
-        }
-        AnyColumnView::NullableU8(slice) => {
-            Box::new(p_optional(data_type, slice.values(), slice.indicators())) as _
-        }
+        AnyColumnView::NullableF64(slice) => Box::new(primitive_optional(
+            data_type,
+            slice.values(),
+            slice.indicators(),
+        )) as _,
+        AnyColumnView::NullableF32(slice) => Box::new(primitive_optional(
+            data_type,
+            slice.values(),
+            slice.indicators(),
+        )) as _,
+        AnyColumnView::NullableI8(slice) => Box::new(primitive_optional(
+            data_type,
+            slice.values(),
+            slice.indicators(),
+        )) as _,
+        AnyColumnView::NullableI16(slice) => Box::new(primitive_optional(
+            data_type,
+            slice.values(),
+            slice.indicators(),
+        )) as _,
+        AnyColumnView::NullableI32(slice) => Box::new(primitive_optional(
+            data_type,
+            slice.values(),
+            slice.indicators(),
+        )) as _,
+        AnyColumnView::NullableI64(slice) => Box::new(primitive_optional(
+            data_type,
+            slice.values(),
+            slice.indicators(),
+        )) as _,
+        AnyColumnView::NullableU8(slice) => Box::new(primitive_optional(
+            data_type,
+            slice.values(),
+            slice.indicators(),
+        )) as _,
         AnyColumnView::NullableBit(slice) => {
             Box::new(bool_optional(data_type, slice.values(), slice.indicators())) as _
         }
@@ -70,11 +84,11 @@ fn bitmap(values: &[isize]) -> Option<Bitmap> {
     MutableBitmap::from_trusted_len_iter(values.iter().map(|x| *x != -1)).into()
 }
 
-fn p<T: NativeType>(data_type: DataType, values: &[T]) -> PrimitiveArray<T> {
+fn primitive<T: NativeType>(data_type: DataType, values: &[T]) -> PrimitiveArray<T> {
     PrimitiveArray::from_data(data_type, values.to_vec().into(), None)
 }
 
-fn p_optional<T: NativeType>(
+fn primitive_optional<T: NativeType>(
     data_type: DataType,
     values: &[T],
     indicators: &[isize],
@@ -125,8 +139,6 @@ fn binary_generic(
         // this bound check is not necessary
         values.extend_from_slice(&slice[offset..offset + len])
     });
-
-    // this O(N) check is not necessary
 
     (offsets.into(), values.into(), validity.into())
 }

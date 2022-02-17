@@ -8,14 +8,3 @@ services:
     environment:
       - MSSQL_SA_PASSWORD=My@Test@Password1
     command: ["/opt/mssql/bin/sqlservr", "--accept-eula", "--reset-sa-password"]
-
-  dev:
-    build: .
-    volumes:
-      - .:/workspace:cached
-
-    # Overrides default command so things don't shut down after the process ends.
-    command: sleep infinity
-
-    # Runs app on the same network as the database container, allows "forwardPorts" in devcontainer.json function.
-    network_mode: service:mssql
