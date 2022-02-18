@@ -15,67 +15,63 @@ pub fn serialize(array: &dyn Array, column: &mut api::buffers::AnyColumnViewMut)
     match array.data_type() {
         DataType::Boolean => {
             if let api::buffers::AnyColumnViewMut::Bit(values) = column {
-                Ok(bool(array.as_any().downcast_ref().unwrap(), values))
+                bool(array.as_any().downcast_ref().unwrap(), values);
+                Ok(())
             } else if let api::buffers::AnyColumnViewMut::NullableBit(values) = column {
-                Ok(bool_optional(
-                    array.as_any().downcast_ref().unwrap(),
-                    values,
-                ))
+                bool_optional(array.as_any().downcast_ref().unwrap(), values);
+                Ok(())
             } else {
                 Err(ArrowError::nyi("serialize bool to non-bool ODBC"))
             }
         }
         DataType::Int16 => {
             if let api::buffers::AnyColumnViewMut::I16(values) = column {
-                Ok(primitive(array.as_any().downcast_ref().unwrap(), values))
+                primitive(array.as_any().downcast_ref().unwrap(), values);
+                Ok(())
             } else if let api::buffers::AnyColumnViewMut::NullableI16(values) = column {
-                Ok(primitive_optional(
-                    array.as_any().downcast_ref().unwrap(),
-                    values,
-                ))
+                primitive_optional(array.as_any().downcast_ref().unwrap(), values);
+                Ok(())
             } else {
                 Err(ArrowError::nyi("serialize i16 to non-i16 ODBC"))
             }
         }
         DataType::Int32 => {
             if let api::buffers::AnyColumnViewMut::I32(values) = column {
-                Ok(primitive(array.as_any().downcast_ref().unwrap(), values))
+                primitive(array.as_any().downcast_ref().unwrap(), values);
+                Ok(())
             } else if let api::buffers::AnyColumnViewMut::NullableI32(values) = column {
-                Ok(primitive_optional(
-                    array.as_any().downcast_ref().unwrap(),
-                    values,
-                ))
+                primitive_optional(array.as_any().downcast_ref().unwrap(), values);
+                Ok(())
             } else {
                 Err(ArrowError::nyi("serialize i32 to non-i32 ODBC"))
             }
         }
         DataType::Float32 => {
             if let api::buffers::AnyColumnViewMut::F32(values) = column {
-                Ok(primitive(array.as_any().downcast_ref().unwrap(), values))
+                primitive(array.as_any().downcast_ref().unwrap(), values);
+                Ok(())
             } else if let api::buffers::AnyColumnViewMut::NullableF32(values) = column {
-                Ok(primitive_optional(
-                    array.as_any().downcast_ref().unwrap(),
-                    values,
-                ))
+                primitive_optional(array.as_any().downcast_ref().unwrap(), values);
+                Ok(())
             } else {
                 Err(ArrowError::nyi("serialize f32 to non-f32 ODBC"))
             }
         }
         DataType::Float64 => {
             if let api::buffers::AnyColumnViewMut::F64(values) = column {
-                Ok(primitive(array.as_any().downcast_ref().unwrap(), values))
+                primitive(array.as_any().downcast_ref().unwrap(), values);
+                Ok(())
             } else if let api::buffers::AnyColumnViewMut::NullableF64(values) = column {
-                Ok(primitive_optional(
-                    array.as_any().downcast_ref().unwrap(),
-                    values,
-                ))
+                primitive_optional(array.as_any().downcast_ref().unwrap(), values);
+                Ok(())
             } else {
                 Err(ArrowError::nyi("serialize f64 to non-f64 ODBC"))
             }
         }
         DataType::FixedSizeBinary(_) => {
             if let api::buffers::AnyColumnViewMut::Binary(values) = column {
-                Ok(binary(array.as_any().downcast_ref().unwrap(), values))
+                binary(array.as_any().downcast_ref().unwrap(), values);
+                Ok(())
             } else {
                 Err(ArrowError::nyi("serialize f64 to non-f64 ODBC"))
             }
