@@ -5,7 +5,7 @@ use arrow2::chunk::Chunk;
 use arrow2::datatypes::Field;
 use arrow2::error::Result;
 use arrow2::io::odbc::api::{Connection, Cursor};
-use arrow2::io::odbc::{buffer_from_metadata, deserialize, infer_schema};
+use arrow2::io::odbc::read::{buffer_from_metadata, deserialize, infer_schema};
 
 use super::{setup_empty_table, ENV, MSSQL};
 
@@ -110,7 +110,7 @@ fn test(
     Ok(())
 }
 
-fn read(
+pub fn read(
     connection: &Connection<'_>,
     query: &str,
 ) -> Result<(Vec<Field>, Vec<Chunk<Box<dyn Array>>>)> {

@@ -6,7 +6,7 @@ use crate::buffer::Buffer;
 use crate::datatypes::DataType;
 use crate::types::NativeType;
 
-use super::api::buffers::AnyColumnView;
+use super::super::api::buffers::AnyColumnView;
 
 /// Deserializes a [`AnyColumnView`] into an array of [`DataType`].
 /// This is CPU-bounded

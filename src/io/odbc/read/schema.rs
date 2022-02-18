@@ -1,8 +1,8 @@
-use super::api;
-use super::api::ResultSetMetadata;
-
 use crate::datatypes::{DataType, Field, TimeUnit};
-use crate::error::Result;
+use crate::error::{ArrowError, Result};
+
+use super::super::api;
+use super::super::api::ResultSetMetadata;
 
 /// Infers the Arrow [`Field`]s from a [`ResultSetMetadata`]
 pub fn infer_schema(resut_set_metadata: &impl ResultSetMetadata) -> Result<Vec<Field>> {
