@@ -12,7 +12,7 @@ pub(crate) use ffi::{ArrowArray, ArrowArrayRef};
 use std::sync::Arc;
 
 use crate::array::Array;
-use crate::datatypes::Field;
+use crate::datatypes::{DataType, Field};
 use crate::error::Result;
 
 pub use ffi::Ffi_ArrowArray;
@@ -50,7 +50,7 @@ pub unsafe fn import_field_from_c(field: &Ffi_ArrowSchema) -> Result<Field> {
 /// valid according to the [C data interface](https://arrow.apache.org/docs/format/CDataInterface.html) (FFI).
 pub unsafe fn import_array_from_c(
     array: Box<Ffi_ArrowArray>,
-    field: &Field,
+    data_type: DataType,
 ) -> Result<Box<dyn Array>> {
-    try_from(Arc::new(ArrowArray::new(array, field.clone())))
+    try_from(Arc::new(ArrowArray::new(array, data_type)))
 }

@@ -35,7 +35,7 @@ unsafe impl ToFfi for FixedSizeListArray {
 
 impl<A: ffi::ArrowArrayRef> FromFfi<A> for FixedSizeListArray {
     unsafe fn try_from_ffi(array: A) -> Result<Self> {
-        let data_type = array.field().data_type().clone();
+        let data_type = array.data_type().clone();
         let validity = unsafe { array.validity() }?;
         let child = unsafe { array.child(0)? };
         let values = ffi::try_from(child)?.into();
