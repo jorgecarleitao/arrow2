@@ -2,4 +2,4 @@
 pub use odbc_api as api;
 
 pub mod read;
-//pub mod write;
+pub mod write;

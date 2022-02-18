@@ -1,5 +1,5 @@
 use crate::datatypes::{DataType, Field, TimeUnit};
-use crate::error::{ArrowError, Result};
+use crate::error::Result;
 
 use super::super::api;
 use super::super::api::ResultSetMetadata;

@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 mod read;
-//mod write;
+mod write;
 
 use arrow2::io::odbc::api::{Connection, Environment, Error as OdbcError};
 use lazy_static::lazy_static;

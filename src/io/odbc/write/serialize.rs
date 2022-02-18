@@ -1,0 +1,126 @@
+use api::buffers::BinColumnWriter;
+
+use crate::array::{Array, BooleanArray, FixedSizeBinaryArray, PrimitiveArray};
+use crate::bitmap::Bitmap;
+use crate::datatypes::DataType;
+use crate::error::{ArrowError, Result};
+use crate::types::NativeType;
+
+use super::super::api;
+use super::super::api::buffers::NullableSliceMut;
+
+/// Serializes an [`Array`] to [`api::buffers::AnyColumnViewMut`]
+/// This operation is CPU-bounded
+pub fn serialize(array: &dyn Array, column: &mut api::buffers::AnyColumnViewMut) -> Result<()> {
+    match array.data_type() {
+        DataType::Boolean => {
+            if let api::buffers::AnyColumnViewMut::Bit(values) = column {
+                Ok(bool(array.as_any().downcast_ref().unwrap(), values))
+            } else if let api::buffers::AnyColumnViewMut::NullableBit(values) = column {
+                Ok(bool_optional(
+                    array.as_any().downcast_ref().unwrap(),
+                    values,
+                ))
+            } else {
+                Err(ArrowError::nyi("serialize bool to non-bool ODBC"))
+            }
+        }
+        DataType::Int16 => {
+            if let api::buffers::AnyColumnViewMut::I16(values) = column {
+                Ok(primitive(array.as_any().downcast_ref().unwrap(), values))
+            } else if let api::buffers::AnyColumnViewMut::NullableI16(values) = column {
+                Ok(primitive_optional(
+                    array.as_any().downcast_ref().unwrap(),
+                    values,
+                ))
+            } else {
+                Err(ArrowError::nyi("serialize i16 to non-i16 ODBC"))
+            }
+        }
+        DataType::Int32 => {
+            if let api::buffers::AnyColumnViewMut::I32(values) = column {
+                Ok(primitive(array.as_any().downcast_ref().unwrap(), values))
+            } else if let api::buffers::AnyColumnViewMut::NullableI32(values) = column {
+                Ok(primitive_optional(
+                    array.as_any().downcast_ref().unwrap(),
+                    values,
+                ))
+            } else {
+                Err(ArrowError::nyi("serialize i32 to non-i32 ODBC"))
+            }
+        }
+        DataType::Float32 => {
+            if let api::buffers::AnyColumnViewMut::F32(values) = column {
+                Ok(primitive(array.as_any().downcast_ref().unwrap(), values))
+            } else if let api::buffers::AnyColumnViewMut::NullableF32(values) = column {
+                Ok(primitive_optional(
+                    array.as_any().downcast_ref().unwrap(),
+                    values,
+                ))
+            } else {
+                Err(ArrowError::nyi("serialize f32 to non-f32 ODBC"))
+            }
+        }
+        DataType::Float64 => {
+            if let api::buffers::AnyColumnViewMut::F64(values) = column {
+                Ok(primitive(array.as_any().downcast_ref().unwrap(), values))
+            } else if let api::buffers::AnyColumnViewMut::NullableF64(values) = column {
+                Ok(primitive_optional(
+                    array.as_any().downcast_ref().unwrap(),
+                    values,
+                ))
+            } else {
+                Err(ArrowError::nyi("serialize f64 to non-f64 ODBC"))
+            }
+        }
+        DataType::FixedSizeBinary(_) => {
+            if let api::buffers::AnyColumnViewMut::Binary(values) = column {
+                Ok(binary(array.as_any().downcast_ref().unwrap(), values))
+            } else {
+                Err(ArrowError::nyi("serialize f64 to non-f64 ODBC"))
+            }
+        }
+        other => Err(ArrowError::nyi(format!("{other:?} to ODBC"))),
+    }
+}
+
+fn bool(array: &BooleanArray, values: &mut [api::Bit]) {
+    array
+        .values()
+        .iter()
+        .zip(values.iter_mut())
+        .for_each(|(from, to)| *to = api::Bit(from as u8));
+}
+
+fn bool_optional(array: &BooleanArray, values: &mut NullableSliceMut<api::Bit>) {
+    array
+        .values()
+        .iter()
+        .zip(values.values().iter_mut())
+        .for_each(|(from, to)| *to = api::Bit(from as u8));
+    write_validity(array.validity(), values.indicators());
+}
+
+fn primitive<T: NativeType>(array: &PrimitiveArray<T>, values: &mut [T]) {
+    values.copy_from_slice(array.values())
+}
+
+fn write_validity(validity: Option<&Bitmap>, indicators: &mut [isize]) {
+    if let Some(validity) = validity {
+        indicators
+            .iter_mut()
+            .zip(validity.iter())
+            .for_each(|(indicator, is_valid)| *indicator = if is_valid { 0 } else { -1 })
+    } else {
+        indicators.iter_mut().for_each(|x| *x = 0)
+    }
+}
+
+fn primitive_optional<T: NativeType>(array: &PrimitiveArray<T>, values: &mut NullableSliceMut<T>) {
+    values.values().copy_from_slice(array.values());
+    write_validity(array.validity(), values.indicators());
+}
+
+fn binary(array: &FixedSizeBinaryArray, writer: &mut BinColumnWriter) {
+    writer.write(array.iter())
+}
