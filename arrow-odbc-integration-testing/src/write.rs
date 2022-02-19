@@ -4,7 +4,6 @@ use arrow2::array::{Array, BinaryArray, BooleanArray, Int32Array, Utf8Array};
 use arrow2::chunk::Chunk;
 use arrow2::datatypes::{DataType, Field};
 use arrow2::error::Result;
-use arrow2::io::odbc::api::{Connection, Cursor};
 use arrow2::io::odbc::write::{buffer_from_description, infer_descriptions, serialize};
 
 use super::read::read;
@@ -94,6 +93,41 @@ fn bool_nullable() -> Result<()> {
         expected,
         vec![Field::new("a", DataType::Boolean, true)],
         "BIT",
+        &table_name,
+    )
+}
+
+#[test]
+fn utf8() -> Result<()> {
+    let table_name = function_name!().rsplit_once(':').unwrap().1;
+    let table_name = format!("write_{}", table_name);
+    let expected =
+        Chunk::new(vec![
+            Box::new(Utf8Array::<i32>::from([Some("aa"), None, Some("aaaa")])) as _,
+        ]);
+
+    test(
+        expected,
+        vec![Field::new("a", DataType::Utf8, true)],
+        "VARCHAR(4)",
+        &table_name,
+    )
+}
+
+#[test]
+fn binary() -> Result<()> {
+    let table_name = function_name!().rsplit_once(':').unwrap().1;
+    let table_name = format!("write_{}", table_name);
+    let expected = Chunk::new(vec![Box::new(BinaryArray::<i32>::from([
+        Some(&b"aa"[..]),
+        None,
+        Some(&b"aaaa"[..]),
+    ])) as _]);
+
+    test(
+        expected,
+        vec![Field::new("a", DataType::Binary, true)],
+        "VARBINARY(4)",
         &table_name,
     )
 }

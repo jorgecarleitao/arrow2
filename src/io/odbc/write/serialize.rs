@@ -1,6 +1,6 @@
-use api::buffers::BinColumnWriter;
+use api::buffers::{BinColumnWriter, TextColumnWriter};
 
-use crate::array::{Array, BooleanArray, FixedSizeBinaryArray, PrimitiveArray};
+use crate::array::*;
 use crate::bitmap::Bitmap;
 use crate::datatypes::DataType;
 use crate::error::{ArrowError, Result};
@@ -68,12 +68,44 @@ pub fn serialize(array: &dyn Array, column: &mut api::buffers::AnyColumnViewMut)
                 Err(ArrowError::nyi("serialize f64 to non-f64 ODBC"))
             }
         }
-        DataType::FixedSizeBinary(_) => {
-            if let api::buffers::AnyColumnViewMut::Binary(values) = column {
-                binary(array.as_any().downcast_ref().unwrap(), values);
+        DataType::Utf8 => {
+            if let api::buffers::AnyColumnViewMut::Text(values) = column {
+                utf8::<i32>(array.as_any().downcast_ref().unwrap(), values);
                 Ok(())
             } else {
-                Err(ArrowError::nyi("serialize f64 to non-f64 ODBC"))
+                Err(ArrowError::nyi("serialize utf8 to non-text ODBC"))
+            }
+        }
+        DataType::LargeUtf8 => {
+            if let api::buffers::AnyColumnViewMut::Text(values) = column {
+                utf8::<i64>(array.as_any().downcast_ref().unwrap(), values);
+                Ok(())
+            } else {
+                Err(ArrowError::nyi("serialize utf8 to non-text ODBC"))
+            }
+        }
+        DataType::Binary => {
+            if let api::buffers::AnyColumnViewMut::Binary(values) = column {
+                binary::<i32>(array.as_any().downcast_ref().unwrap(), values);
+                Ok(())
+            } else {
+                Err(ArrowError::nyi("serialize utf8 to non-binary ODBC"))
+            }
+        }
+        DataType::LargeBinary => {
+            if let api::buffers::AnyColumnViewMut::Binary(values) = column {
+                binary::<i64>(array.as_any().downcast_ref().unwrap(), values);
+                Ok(())
+            } else {
+                Err(ArrowError::nyi("serialize utf8 to non-text ODBC"))
+            }
+        }
+        DataType::FixedSizeBinary(_) => {
+            if let api::buffers::AnyColumnViewMut::Binary(values) = column {
+                fixed_binary(array.as_any().downcast_ref().unwrap(), values);
+                Ok(())
+            } else {
+                Err(ArrowError::nyi("serialize fixed to non-binary ODBC"))
             }
         }
         other => Err(ArrowError::nyi(format!("{other:?} to ODBC"))),
@@ -117,6 +149,29 @@ fn primitive_optional<T: NativeType>(array: &PrimitiveArray<T>, values: &mut Nul
     write_validity(array.validity(), values.indicators());
 }
 
-fn binary(array: &FixedSizeBinaryArray, writer: &mut BinColumnWriter) {
+fn fixed_binary(array: &FixedSizeBinaryArray, writer: &mut BinColumnWriter) {
+    writer.set_max_len(array.size());
     writer.write(array.iter())
+}
+
+fn binary<O: Offset>(array: &BinaryArray<O>, writer: &mut BinColumnWriter) {
+    let max_len = array
+        .offsets()
+        .windows(2)
+        .map(|x| (x[1] - x[0]).to_usize())
+        .max()
+        .unwrap_or(0);
+    writer.set_max_len(max_len);
+    writer.write(array.iter())
+}
+
+fn utf8<O: Offset>(array: &Utf8Array<O>, writer: &mut TextColumnWriter<u8>) {
+    let max_len = array
+        .offsets()
+        .windows(2)
+        .map(|x| (x[1] - x[0]).to_usize())
+        .max()
+        .unwrap_or(0);
+    writer.set_max_len(max_len);
+    writer.write(array.iter().map(|x| x.map(|x| x.as_bytes())))
 }
