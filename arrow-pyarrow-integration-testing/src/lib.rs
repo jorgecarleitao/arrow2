@@ -66,7 +66,8 @@ fn to_rust_array(ob: PyObject, py: Python) -> PyResult<Arc<dyn Array>> {
     )?;
 
     let field = unsafe { ffi::import_field_from_c(schema.as_ref()).map_err(PyO3ArrowError::from)? };
-    let array = unsafe { ffi::import_array_from_c(array, &field).map_err(PyO3ArrowError::from)? };
+    let array =
+        unsafe { ffi::import_array_from_c(array, field.data_type).map_err(PyO3ArrowError::from)? };
 
     Ok(array.into())
 }

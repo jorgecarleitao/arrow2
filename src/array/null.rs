@@ -96,7 +96,7 @@ unsafe impl ToFfi for NullArray {
 
 impl<A: ffi::ArrowArrayRef> FromFfi<A> for NullArray {
     unsafe fn try_from_ffi(array: A) -> Result<Self> {
-        let data_type = array.field().data_type().clone();
+        let data_type = array.data_type().clone();
         Ok(Self::from_data(data_type, array.array().len()))
     }
 }

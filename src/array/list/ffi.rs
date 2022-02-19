@@ -52,7 +52,7 @@ unsafe impl<O: Offset> ToFfi for ListArray<O> {
 
 impl<O: Offset, A: ffi::ArrowArrayRef> FromFfi<A> for ListArray<O> {
     unsafe fn try_from_ffi(array: A) -> Result<Self> {
-        let data_type = array.field().data_type().clone();
+        let data_type = array.data_type().clone();
         let validity = unsafe { array.validity() }?;
         let offsets = unsafe { array.buffer::<O>(1) }?;
         let child = unsafe { array.child(0)? };

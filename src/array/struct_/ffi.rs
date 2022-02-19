@@ -29,7 +29,7 @@ unsafe impl ToFfi for StructArray {
 
 impl<A: ffi::ArrowArrayRef> FromFfi<A> for StructArray {
     unsafe fn try_from_ffi(array: A) -> Result<Self> {
-        let data_type = array.field().data_type().clone();
+        let data_type = array.data_type().clone();
         let fields = Self::get_fields(&data_type);
 
         let validity = unsafe { array.validity() }?;
