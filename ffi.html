@@ -162,7 +162,7 @@ unsafe fn import(
     schema: &amp;ffi::Ffi_ArrowSchema,
 ) -&gt; Result&lt;Box&lt;dyn Array&gt;&gt; {
     let field = ffi::import_field_from_c(schema)?;
-    ffi::import_array_from_c(array, &amp;field)
+    ffi::import_array_from_c(array, field.data_type)
 }
 
 fn main() -&gt; Result&lt;()&gt; {
