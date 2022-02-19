@@ -32,7 +32,7 @@ fn data_type_to(data_type: &DataType) -> Result<api::DataType> {
         DataType::Float64 => api::DataType::Float { precision: 53 },
         DataType::FixedSizeBinary(length) => api::DataType::Binary { length: *length },
         DataType::Binary | DataType::LargeBinary => api::DataType::Varbinary { length: 0 },
-        DataType::Utf8 | DataType::LargeUtf8 => api::DataType::LongVarchar { length: 0 },
+        DataType::Utf8 | DataType::LargeUtf8 => api::DataType::Varchar { length: 0 },
         other => return Err(ArrowError::nyi(format!("{other:?} to ODBC"))),
     })
 }
