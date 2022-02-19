@@ -52,7 +52,7 @@ unsafe impl ToFfi for MapArray {
 
 impl<A: ffi::ArrowArrayRef> FromFfi<A> for MapArray {
     unsafe fn try_from_ffi(array: A) -> Result<Self> {
-        let data_type = array.field().data_type().clone();
+        let data_type = array.data_type().clone();
         let validity = unsafe { array.validity() }?;
         let offsets = unsafe { array.buffer::<i32>(1) }?;
         let child = array.child(0)?;

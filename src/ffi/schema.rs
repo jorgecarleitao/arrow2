@@ -455,14 +455,14 @@ fn to_format(data_type: &DataType) -> String {
     }
 }
 
-pub(super) fn get_field_child(field: &Field, index: usize) -> Result<Field> {
-    match (index, field.data_type()) {
-        (0, DataType::List(field)) => Ok(field.as_ref().clone()),
-        (0, DataType::FixedSizeList(field, _)) => Ok(field.as_ref().clone()),
-        (0, DataType::LargeList(field)) => Ok(field.as_ref().clone()),
-        (0, DataType::Map(field, _)) => Ok(field.as_ref().clone()),
-        (index, DataType::Struct(fields)) => Ok(fields[index].clone()),
-        (index, DataType::Union(fields, _, _)) => Ok(fields[index].clone()),
+pub(super) fn get_child(data_type: &DataType, index: usize) -> Result<DataType> {
+    match (index, data_type) {
+        (0, DataType::List(field)) => Ok(field.data_type().clone()),
+        (0, DataType::FixedSizeList(field, _)) => Ok(field.data_type().clone()),
+        (0, DataType::LargeList(field)) => Ok(field.data_type().clone()),
+        (0, DataType::Map(field, _)) => Ok(field.data_type().clone()),
+        (index, DataType::Struct(fields)) => Ok(fields[index].data_type().clone()),
+        (index, DataType::Union(fields, _, _)) => Ok(fields[index].data_type().clone()),
         (child, data_type) => Err(ArrowError::OutOfSpec(format!(
             "Requested child {} to type {:?} that has no such child",
             child, data_type

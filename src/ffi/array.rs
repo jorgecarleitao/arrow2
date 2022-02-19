@@ -11,7 +11,7 @@ use crate::{array::*, datatypes::PhysicalType};
 /// * the interface is not valid (e.g. a null pointer)
 pub unsafe fn try_from<A: ArrowArrayRef>(array: A) -> Result<Box<dyn Array>> {
     use PhysicalType::*;
-    Ok(match array.field().data_type().to_physical_type() {
+    Ok(match array.data_type().to_physical_type() {
         Null => Box::new(NullArray::try_from_ffi(array)?),
         Boolean => Box::new(BooleanArray::try_from_ffi(array)?),
         Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {

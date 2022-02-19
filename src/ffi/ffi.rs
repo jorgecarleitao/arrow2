@@ -24,9 +24,9 @@ use crate::{
         bytes::{Bytes, Deallocation},
         Buffer,
     },
-    datatypes::{DataType, Field, PhysicalType},
+    datatypes::{DataType, PhysicalType},
     error::{ArrowError, Result},
-    ffi::schema::get_field_child,
+    ffi::schema::get_child,
     types::NativeType,
 };
 
@@ -317,11 +317,11 @@ fn buffer_len(array: &Ffi_ArrowArray, data_type: &DataType, i: usize) -> Result<
 
 fn create_child(
     array: &Ffi_ArrowArray,
-    field: &Field,
+    field: &DataType,
     parent: Arc<ArrowArray>,
     index: usize,
 ) -> Result<ArrowArrayChild<'static>> {
-    let field = get_field_child(field, index)?;
+    let data_type = get_child(field, index)?;
     assert!(index < array.n_children as usize);
     assert!(!array.children.is_null());
     unsafe {
@@ -329,20 +329,20 @@ fn create_child(
         assert!(!arr_ptr.is_null());
         let arr_ptr = &*arr_ptr;
 
-        Ok(ArrowArrayChild::from_raw(arr_ptr, field, parent))
+        Ok(ArrowArrayChild::from_raw(arr_ptr, data_type, parent))
     }
 }
 
 fn create_dictionary(
     array: &Ffi_ArrowArray,
-    field: &Field,
+    data_type: &DataType,
     parent: Arc<ArrowArray>,
 ) -> Result<Option<ArrowArrayChild<'static>>> {
-    if let DataType::Dictionary(_, values, _) = field.data_type() {
-        let field = Field::new("", values.as_ref().clone(), true);
+    if let DataType::Dictionary(_, values, _) = data_type {
+        let data_type = values.as_ref().clone();
         assert!(!array.dictionary.is_null());
         let array = unsafe { &*array.dictionary };
-        Ok(Some(ArrowArrayChild::from_raw(array, field, parent)))
+        Ok(Some(ArrowArrayChild::from_raw(array, data_type, parent)))
     } else {
         Ok(None)
     }
@@ -371,12 +371,7 @@ pub trait ArrowArrayRef: std::fmt::Debug {
     /// The caller must guarantee that the buffer `index` corresponds to a bitmap.
     /// This function assumes that the bitmap created from FFI is valid; this is impossible to prove.
     unsafe fn buffer<T: NativeType>(&self, index: usize) -> Result<Buffer<T>> {
-        create_buffer::<T>(
-            self.array(),
-            self.field().data_type(),
-            self.deallocation(),
-            index,
-        )
+        create_buffer::<T>(self.array(), self.data_type(), self.deallocation(), index)
     }
 
     /// # Safety
@@ -390,18 +385,18 @@ pub trait ArrowArrayRef: std::fmt::Debug {
     /// # Safety
     /// The caller must guarantee that the child `index` is valid per c data interface.
     unsafe fn child(&self, index: usize) -> Result<ArrowArrayChild> {
-        create_child(self.array(), self.field(), self.parent().clone(), index)
+        create_child(self.array(), self.data_type(), self.parent().clone(), index)
     }
 
     fn dictionary(&self) -> Result<Option<ArrowArrayChild>> {
-        create_dictionary(self.array(), self.field(), self.parent().clone())
+        create_dictionary(self.array(), self.data_type(), self.parent().clone())
     }
 
     fn n_buffers(&self) -> usize;
 
     fn parent(&self) -> &Arc<ArrowArray>;
     fn array(&self) -> &Ffi_ArrowArray;
-    fn field(&self) -> &Field;
+    fn data_type(&self) -> &DataType;
 }
 
 /// Struct used to move an Array from and to the C Data Interface.
@@ -426,19 +421,19 @@ pub trait ArrowArrayRef: std::fmt::Debug {
 #[derive(Debug)]
 pub struct ArrowArray {
     array: Box<Ffi_ArrowArray>,
-    field: Field,
+    data_type: DataType,
 }
 
 impl ArrowArray {
-    pub fn new(array: Box<Ffi_ArrowArray>, field: Field) -> Self {
-        Self { array, field }
+    pub fn new(array: Box<Ffi_ArrowArray>, data_type: DataType) -> Self {
+        Self { array, data_type }
     }
 }
 
 impl ArrowArrayRef for Arc<ArrowArray> {
     /// the data_type as declared in the schema
-    fn field(&self) -> &Field {
-        &self.field
+    fn data_type(&self) -> &DataType {
+        &self.data_type
     }
 
     fn parent(&self) -> &Arc<ArrowArray> {
@@ -457,14 +452,14 @@ impl ArrowArrayRef for Arc<ArrowArray> {
 #[derive(Debug)]
 pub struct ArrowArrayChild<'a> {
     array: &'a Ffi_ArrowArray,
-    field: Field,
+    data_type: DataType,
     parent: Arc<ArrowArray>,
 }
 
 impl<'a> ArrowArrayRef for ArrowArrayChild<'a> {
     /// the data_type as declared in the schema
-    fn field(&self) -> &Field {
-        &self.field
+    fn data_type(&self) -> &DataType {
+        &self.data_type
     }
 
     fn parent(&self) -> &Arc<ArrowArray> {
@@ -481,10 +476,10 @@ impl<'a> ArrowArrayRef for ArrowArrayChild<'a> {
 }
 
 impl<'a> ArrowArrayChild<'a> {
-    fn from_raw(array: &'a Ffi_ArrowArray, field: Field, parent: Arc<ArrowArray>) -> Self {
+    fn from_raw(array: &'a Ffi_ArrowArray, data_type: DataType, parent: Arc<ArrowArray>) -> Self {
         Self {
             array,
-            field,
+            data_type,
             parent,
         }
     }
