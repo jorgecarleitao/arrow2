@@ -5,6 +5,8 @@ use crate::error::Result;
 use super::Compression;
 use super::{Block, CompressedBlock};
 
+const CRC_TABLE: crc::Crc<u32> = crc::Crc::<u32>::new(&crc::CRC_32_ISO_HDLC);
+
 /// Compresses a [`Block`] to a [`CompressedBlock`].
 pub fn compress(
     block: &mut Block,
@@ -42,8 +44,7 @@ pub fn compress(
                 .map_err(|e| crate::error::ArrowError::ExternalFormat(e.to_string()))?;
             compressed.truncate(compressed_bytes);
 
-            let crc = crc::crc32::checksum_ieee(block);
-            compressed.extend(crc.to_be_bytes());
+            compressed.extend(CRC_TABLE.checksum(block).to_be_bytes());
             Ok(false)
         }
         #[cfg(not(feature = "io_avro_compression"))]
