@@ -24,7 +24,8 @@ fn _test_round_trip(array: Arc<dyn Array>, expected: Box<dyn Array>) -> Result<(
 
     // import references
     let result_field = unsafe { ffi::import_field_from_c(schema_ptr.as_ref())? };
-    let result_array = unsafe { ffi::import_array_from_c(array_ptr, &result_field)? };
+    let result_array =
+        unsafe { ffi::import_array_from_c(array_ptr, result_field.data_type.clone())? };
 
     assert_eq!(&result_array, &expected);
     assert_eq!(result_field, field);
