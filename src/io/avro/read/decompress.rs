@@ -9,6 +9,8 @@ use super::super::{Block, CompressedBlock};
 use super::BlockStreamIterator;
 use super::Compression;
 
+const CRC_TABLE: crc::Crc<u32> = crc::Crc::<u32>::new(&crc::CRC_32_ISO_HDLC);
+
 /// Decompresses an Avro block.
 /// Returns whether the buffers where swapped.
 pub fn decompress_block(
@@ -46,7 +48,8 @@ pub fn decompress_block(
                 .map_err(|e| ArrowError::ExternalFormat(e.to_string()))?;
 
             let expected_crc = u32::from_be_bytes([crc[0], crc[1], crc[2], crc[3]]);
-            let actual_crc = crc::crc32::checksum_ieee(decompressed);
+
+            let actual_crc = CRC_TABLE.checksum(decompressed);
             if expected_crc != actual_crc {
                 return Err(ArrowError::ExternalFormat(
                     "The crc of snap-compressed block does not match".to_string(),
