@@ -3,7 +3,8 @@
 use pyo3::ffi::Py_uintptr_t;
 use pyo3::prelude::*;
 
-use arrow2::array::Int32Array;
+use arrow2::array::{Int32Array, StructArray};
+use arrow2::datatypes::DataType;
 use arrow2::ffi;
 
 use super::*;
@@ -31,6 +32,11 @@ pub fn to_rust_iterator(ob: PyObject, py: Python) -> PyResult<Vec<PyObject>> {
 pub fn from_rust_iterator(py: Python) -> PyResult<PyObject> {
     // initialize an array
     let array = Int32Array::from(&[Some(2), None, Some(1), None]);
+    let array = StructArray::from_data(
+        DataType::Struct(vec![Field::new("a", array.data_type().clone(), true)]),
+        vec![Arc::new(array)],
+        None,
+    );
     // and a field with its datatype
     let field = Field::new("a", array.data_type().clone(), true);
 
@@ -38,8 +44,7 @@ pub fn from_rust_iterator(py: Python) -> PyResult<PyObject> {
     let array: Arc<dyn Array> = Arc::new(array.clone());
 
     // create an iterator of arrays
-    //let arrays = vec![array.clone(), array.clone(), array];
-    let arrays: Vec<Arc<dyn Array>> = vec![];
+    let arrays = vec![array.clone(), array.clone(), array];
     let iter = Box::new(arrays.clone().into_iter().map(Ok)) as _;
 
     // create an [`ArrowArrayStream`] based on this iterator and field

@@ -26,14 +26,14 @@ pub use stream::{export_iterator, ArrowArrayStreamReader};
 pub unsafe fn export_array_to_c(array: Arc<dyn Array>, ptr: *mut ArrowArray) {
     let array = bridge::align_to_c_data_interface(array);
 
-    *ptr = ArrowArray::new(array);
+    std::ptr::write_unaligned(ptr, ArrowArray::new(array));
 }
 
 /// Exports a [`Field`] to the C data interface.
 /// # Safety
 /// The pointer `ptr` must be allocated and valid
 pub unsafe fn export_field_to_c(field: &Field, ptr: *mut ArrowSchema) {
-    *ptr = ArrowSchema::new(field)
+    std::ptr::write_unaligned(ptr, ArrowSchema::new(field));
 }
 
 /// Imports a [`Field`] from the C data interface.

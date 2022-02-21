@@ -18,10 +18,12 @@ class TestCase(unittest.TestCase):
         array = arrays[0].field(0)
         assert array == a
 
-    # see https://issues.apache.org/jira/browse/ARROW-15747
-    def _test_pyarrow_reads(self):
+    def test_pyarrow_reads(self):
         stream = arrow_pyarrow_integration_testing.from_rust_iterator()
 
         arrays = [a for a in stream]
 
-        assert False
+        expected = pyarrow.RecordBatch.from_arrays([pyarrow.array([2, None, 1, None], pyarrow.int32())], names=["a"])
+        expected = [expected, expected, expected]
+
+        self.assertEqual(arrays, expected)

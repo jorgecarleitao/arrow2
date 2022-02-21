@@ -159,7 +159,8 @@ unsafe extern "C" fn get_next(iter: *mut ArrowArrayStream, array: *mut ArrowArra
             2001 // custom application specific error (since this is never a result of this interface)
         }
         None => {
-            *array = ArrowArray::empty();
+            let a = ArrowArray::empty();
+            std::ptr::write_unaligned(array, a);
             private.error = None;
             0
         }
