@@ -18,7 +18,7 @@ use crate::error::Result;
 use self::schema::to_field;
 
 pub use generated::{ArrowArray, ArrowArrayStream, ArrowSchema};
-pub use stream::ArrowArrayStreamReader;
+pub use stream::{export_iterator, ArrowArrayStreamReader};
 
 /// Exports an [`Arc<dyn Array>`] to the C data interface.
 /// # Safety

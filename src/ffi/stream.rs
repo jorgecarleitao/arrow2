@@ -1,8 +1,9 @@
-use std::ffi::CStr;
+use std::ffi::{CStr, CString};
+use std::sync::Arc;
 
 use crate::{array::Array, datatypes::Field, error::ArrowError};
 
-use super::{import_array_from_c, import_field_from_c};
+use super::{export_array_to_c, export_field_to_c, import_array_from_c, import_field_from_c};
 use super::{ArrowArray, ArrowArrayStream, ArrowSchema};
 
 impl Drop for ArrowArrayStream {
@@ -48,8 +49,7 @@ unsafe fn handle_error(iter: &mut ArrowArrayStream) -> ArrowError {
     )
 }
 
-/// Interface for the Arrow C stream interface. Implements an iterator of [`Array`].
-///
+/// Implements an iterator of [`Array`] consumed from the [C stream interface](https://arrow.apache.org/docs/format/CStreamInterface.html).
 pub struct ArrowArrayStreamReader {
     iter: Box<ArrowArrayStream>,
     field: Field,
@@ -125,5 +125,98 @@ impl ArrowArrayStreamReader {
         unsafe { import_array_from_c(array, self.field.data_type.clone()) }
             .map(Some)
             .transpose()
+    }
+}
+
+struct PrivateData {
+    iter: Box<dyn Iterator<Item = Result<Arc<dyn Array>, ArrowError>>>,
+    field: Field,
+    error: Option<CString>,
+}
+
+unsafe extern "C" fn get_next(iter: *mut ArrowArrayStream, array: *mut ArrowArray) -> i32 {
+    if iter.is_null() {
+        return 2001;
+    }
+    let mut private = &mut *((*iter).private_data as *mut PrivateData);
+
+    match private.iter.next() {
+        Some(Ok(item)) => {
+            // check that the array has the same data_type as field
+            let item_dt = item.data_type();
+            let expected_dt = private.field.data_type();
+            if item_dt != expected_dt {
+                private.error = Some(CString::new(format!("The iterator produced an item of data type {item_dt:?} but the producer expects data type {expected_dt:?}").as_bytes().to_vec()).unwrap());
+                return 2001; // custom application specific error (since this is never a result of this interface)
+            }
+
+            export_array_to_c(item, array);
+            private.error = None;
+            0
+        }
+        Some(Err(err)) => {
+            private.error = Some(CString::new(err.to_string().as_bytes().to_vec()).unwrap());
+            2001 // custom application specific error (since this is never a result of this interface)
+        }
+        None => {
+            *array = ArrowArray::empty();
+            private.error = None;
+            0
+        }
+    }
+}
+
+unsafe extern "C" fn get_schema(iter: *mut ArrowArrayStream, schema: *mut ArrowSchema) -> i32 {
+    if iter.is_null() {
+        return 2001;
+    }
+    let private = &mut *((*iter).private_data as *mut PrivateData);
+
+    export_field_to_c(&private.field, schema);
+    0
+}
+
+unsafe extern "C" fn get_last_error(iter: *mut ArrowArrayStream) -> *const ::std::os::raw::c_char {
+    if iter.is_null() {
+        return std::ptr::null();
+    }
+    let private = &mut *((*iter).private_data as *mut PrivateData);
+
+    private
+        .error
+        .as_ref()
+        .map(|x| x.as_ptr())
+        .unwrap_or(std::ptr::null())
+}
+
+unsafe extern "C" fn release(iter: *mut ArrowArrayStream) {
+    if iter.is_null() {
+        return;
+    }
+    let _ = Box::from_raw((*iter).private_data as *mut PrivateData);
+    (*iter).release = None;
+    // private drops automatically
+}
+
+/// Exports an iterator to the [C stream interface](https://arrow.apache.org/docs/format/CStreamInterface.html)
+/// # Safety
+/// The pointer `consumer` must be allocated
+pub unsafe fn export_iterator(
+    iter: Box<dyn Iterator<Item = Result<Arc<dyn Array>, ArrowError>>>,
+    field: Field,
+    consumer: *mut ArrowArrayStream,
+) {
+    let private_data = Box::new(PrivateData {
+        iter,
+        field,
+        error: None,
+    });
+
+    *consumer = ArrowArrayStream {
+        get_schema: Some(get_schema),
+        get_next: Some(get_next),
+        get_last_error: Some(get_last_error),
+        release: Some(release),
+        private_data: Box::into_raw(private_data) as *mut ::std::os::raw::c_void,
     }
 }

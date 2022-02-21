@@ -7,9 +7,6 @@ import arrow_pyarrow_integration_testing
 
 class TestCase(unittest.TestCase):
     def test_rust_reads(self):
-        """
-        Python -> Rust -> Python
-        """
         schema = pyarrow.schema([pyarrow.field("aa", pyarrow.int32())])
         a = pyarrow.array([1, None, 2], type=pyarrow.int32())
 
@@ -20,3 +17,11 @@ class TestCase(unittest.TestCase):
         
         array = arrays[0].field(0)
         assert array == a
+
+    # see https://issues.apache.org/jira/browse/ARROW-15747
+    def _test_pyarrow_reads(self):
+        stream = arrow_pyarrow_integration_testing.from_rust_iterator()
+
+        arrays = [a for a in stream]
+
+        assert False

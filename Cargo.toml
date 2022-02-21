@@ -105,7 +105,25 @@ rustdoc-args = ["--cfg", "docsrs"]
 [features]
 default = []
 full = [
-    
+    "io_csv",
+    "io_csv_async",
+    "io_json",
+    "io_ipc",
+    "io_flight",
+    "io_ipc_write_async",
+    "io_ipc_read_async",
+    "io_ipc_compression",
+    "io_json_integration",
+    "io_print",
+    "io_parquet",
+    "io_parquet_compression",
+    "io_avro",
+    "io_avro_compression",
+    "io_avro_async",
+    "regex",
+    "compute",
+    # parses timezones used in timestamp conversions
+    "chrono-tz",
 ]
 io_csv = ["io_csv_read", "io_csv_write"]
 io_csv_async = ["io_csv_read_async"]

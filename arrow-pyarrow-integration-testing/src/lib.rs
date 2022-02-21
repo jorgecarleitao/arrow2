@@ -159,10 +159,16 @@ pub fn to_rust_iterator(ob: PyObject, py: Python) -> PyResult<Vec<PyObject>> {
     c_stream::to_rust_iterator(ob, py)
 }
 
+#[pyfunction]
+pub fn from_rust_iterator(py: Python) -> PyResult<PyObject> {
+    c_stream::from_rust_iterator(py)
+}
+
 #[pymodule]
 fn arrow_pyarrow_integration_testing(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(round_trip_array, m)?)?;
     m.add_function(wrap_pyfunction!(round_trip_field, m)?)?;
     m.add_function(wrap_pyfunction!(to_rust_iterator, m)?)?;
+    m.add_function(wrap_pyfunction!(from_rust_iterator, m)?)?;
     Ok(())
 }
