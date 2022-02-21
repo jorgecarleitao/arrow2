@@ -7,6 +7,8 @@ use crate::{
     error::{ArrowError, Result},
 };
 
+use super::ArrowSchema;
+
 #[allow(dead_code)]
 struct SchemaPrivateData {
     name: CString,
@@ -14,23 +16,6 @@ struct SchemaPrivateData {
     metadata: Option<Vec<u8>>,
     children_ptr: Box<[*mut ArrowSchema]>,
     dictionary: Option<*mut ArrowSchema>,
-}
-
-/// ABI-compatible struct for `ArrowSchema` from C Data Interface
-/// See <https://arrow.apache.org/docs/format/CDataInterface.html#structure-definitions>
-// This was created by bindgen
-#[repr(C)]
-#[derive(Debug)]
-pub struct ArrowSchema {
-    format: *const ::std::os::raw::c_char,
-    name: *const ::std::os::raw::c_char,
-    metadata: *const ::std::os::raw::c_char,
-    flags: i64,
-    n_children: i64,
-    children: *mut *mut ArrowSchema,
-    dictionary: *mut ArrowSchema,
-    release: ::std::option::Option<unsafe extern "C" fn(arg1: *mut ArrowSchema)>,
-    private_data: *mut ::std::os::raw::c_void,
 }
 
 // callback used to drop [ArrowSchema] when it is exported.

@@ -2,6 +2,7 @@
 //! Arrow's [C Data Interface](https://arrow.apache.org/docs/format/CDataInterface.html)
 mod array;
 mod bridge;
+mod generated;
 mod schema;
 
 pub(crate) use array::try_from;
@@ -15,8 +16,7 @@ use crate::error::Result;
 
 use self::schema::to_field;
 
-pub use array::ArrowArray;
-pub use schema::ArrowSchema;
+pub use generated::{ArrowArray, ArrowSchema};
 
 /// Exports an [`Arc<dyn Array>`] to the C data interface.
 /// # Safety

@@ -14,6 +14,8 @@ use crate::{
     types::NativeType,
 };
 
+use super::ArrowArray;
+
 /// Reads a valid `ffi` interface into a `Box<dyn Array>`
 /// # Errors
 /// If and only if:
@@ -43,29 +45,6 @@ pub unsafe fn try_from<A: ArrowArrayRef>(array: A) -> Result<Box<dyn Array>> {
         Union => Box::new(UnionArray::try_from_ffi(array)?),
         Map => Box::new(MapArray::try_from_ffi(array)?),
     })
-}
-
-/// ABI-compatible struct for ArrowArray from C Data Interface
-/// See <https://arrow.apache.org/docs/format/CDataInterface.html#structure-definitions>
-/// This was created by bindgen
-#[repr(C)]
-#[derive(Debug, Clone)]
-pub struct ArrowArray {
-    pub(crate) length: i64,
-    pub(crate) null_count: i64,
-    pub(crate) offset: i64,
-    pub(crate) n_buffers: i64,
-    pub(crate) n_children: i64,
-    pub(crate) buffers: *mut *const ::std::os::raw::c_void,
-    children: *mut *mut ArrowArray,
-    dictionary: *mut ArrowArray,
-    release: ::std::option::Option<unsafe extern "C" fn(arg1: *mut ArrowArray)>,
-    // When exported, this MUST contain everything that is owned by this array.
-    // for example, any buffer pointed to in `buffers` must be here, as well as the `buffers` pointer
-    // itself.
-    // In other words, everything in [ArrowArray] must be owned by `private_data` and can assume
-    // that they do not outlive `private_data`.
-    private_data: *mut ::std::os::raw::c_void,
 }
 
 // Sound because the arrow specification does not allow multiple implementations
