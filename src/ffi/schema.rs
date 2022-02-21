@@ -12,8 +12,8 @@ struct SchemaPrivateData {
     name: CString,
     format: CString,
     metadata: Option<Vec<u8>>,
-    children_ptr: Box<[*mut Ffi_ArrowSchema]>,
-    dictionary: Option<*mut Ffi_ArrowSchema>,
+    children_ptr: Box<[*mut ArrowSchema]>,
+    dictionary: Option<*mut ArrowSchema>,
 }
 
 /// ABI-compatible struct for `ArrowSchema` from C Data Interface
@@ -21,20 +21,20 @@ struct SchemaPrivateData {
 // This was created by bindgen
 #[repr(C)]
 #[derive(Debug)]
-pub struct Ffi_ArrowSchema {
+pub struct ArrowSchema {
     format: *const ::std::os::raw::c_char,
     name: *const ::std::os::raw::c_char,
     metadata: *const ::std::os::raw::c_char,
     flags: i64,
     n_children: i64,
-    children: *mut *mut Ffi_ArrowSchema,
-    dictionary: *mut Ffi_ArrowSchema,
-    release: ::std::option::Option<unsafe extern "C" fn(arg1: *mut Ffi_ArrowSchema)>,
+    children: *mut *mut ArrowSchema,
+    dictionary: *mut ArrowSchema,
+    release: ::std::option::Option<unsafe extern "C" fn(arg1: *mut ArrowSchema)>,
     private_data: *mut ::std::os::raw::c_void,
 }
 
-// callback used to drop [Ffi_ArrowSchema] when it is exported.
-unsafe extern "C" fn c_release_schema(schema: *mut Ffi_ArrowSchema) {
+// callback used to drop [ArrowSchema] when it is exported.
+unsafe extern "C" fn c_release_schema(schema: *mut ArrowSchema) {
     if schema.is_null() {
         return;
     }
@@ -52,8 +52,8 @@ unsafe extern "C" fn c_release_schema(schema: *mut Ffi_ArrowSchema) {
     schema.release = None;
 }
 
-impl Ffi_ArrowSchema {
-    /// creates a new [Ffi_ArrowSchema]
+impl ArrowSchema {
+    /// creates a new [ArrowSchema]
     pub(crate) fn new(field: &Field) -> Self {
         let format = to_format(field.data_type());
         let name = field.name.clone();
@@ -63,25 +63,25 @@ impl Ffi_ArrowSchema {
         // allocate (and hold) the children
         let children_vec = match field.data_type() {
             DataType::List(field) => {
-                vec![Box::new(Ffi_ArrowSchema::new(field.as_ref()))]
+                vec![Box::new(ArrowSchema::new(field.as_ref()))]
             }
             DataType::FixedSizeList(field, _) => {
-                vec![Box::new(Ffi_ArrowSchema::new(field.as_ref()))]
+                vec![Box::new(ArrowSchema::new(field.as_ref()))]
             }
             DataType::LargeList(field) => {
-                vec![Box::new(Ffi_ArrowSchema::new(field.as_ref()))]
+                vec![Box::new(ArrowSchema::new(field.as_ref()))]
             }
             DataType::Map(field, is_sorted) => {
                 flags += (*is_sorted as i64) * 4;
-                vec![Box::new(Ffi_ArrowSchema::new(field.as_ref()))]
+                vec![Box::new(ArrowSchema::new(field.as_ref()))]
             }
             DataType::Struct(fields) => fields
                 .iter()
-                .map(|field| Box::new(Ffi_ArrowSchema::new(field)))
+                .map(|field| Box::new(ArrowSchema::new(field)))
                 .collect::<Vec<_>>(),
             DataType::Union(fields, _, _) => fields
                 .iter()
-                .map(|field| Box::new(Ffi_ArrowSchema::new(field)))
+                .map(|field| Box::new(ArrowSchema::new(field)))
                 .collect::<Vec<_>>(),
             _ => vec![],
         };
@@ -96,7 +96,7 @@ impl Ffi_ArrowSchema {
             flags += *is_ordered as i64;
             // we do not store field info in the dict values, so can't recover it all :(
             let field = Field::new("", values.as_ref().clone(), true);
-            Some(Box::new(Ffi_ArrowSchema::new(&field)))
+            Some(Box::new(ArrowSchema::new(&field)))
         } else {
             None
         };
@@ -153,7 +153,7 @@ impl Ffi_ArrowSchema {
         }
     }
 
-    /// create an empty [Ffi_ArrowSchema]
+    /// create an empty [ArrowSchema]
     pub fn empty() -> Self {
         Self {
             format: std::ptr::null_mut(),
@@ -202,7 +202,7 @@ impl Ffi_ArrowSchema {
     }
 }
 
-impl Drop for Ffi_ArrowSchema {
+impl Drop for ArrowSchema {
     fn drop(&mut self) {
         match self.release {
             None => (),
@@ -211,7 +211,7 @@ impl Drop for Ffi_ArrowSchema {
     }
 }
 
-pub(crate) unsafe fn to_field(schema: &Ffi_ArrowSchema) -> Result<Field> {
+pub(crate) unsafe fn to_field(schema: &ArrowSchema) -> Result<Field> {
     let dictionary = schema.dictionary();
     let data_type = if let Some(dictionary) = dictionary {
         let indices = to_integer_type(schema.format())?;
@@ -251,7 +251,7 @@ fn to_integer_type(format: &str) -> Result<IntegerType> {
     })
 }
 
-unsafe fn to_data_type(schema: &Ffi_ArrowSchema) -> Result<DataType> {
+unsafe fn to_data_type(schema: &ArrowSchema) -> Result<DataType> {
     Ok(match schema.format() {
         "n" => DataType::Null,
         "b" => DataType::Boolean,

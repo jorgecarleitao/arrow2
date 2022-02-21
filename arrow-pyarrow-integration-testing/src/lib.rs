@@ -51,11 +51,11 @@ impl From<PyO3ArrowError> for PyErr {
 
 fn to_rust_array(ob: PyObject, py: Python) -> PyResult<Arc<dyn Array>> {
     // prepare a pointer to receive the Array struct
-    let array = Box::new(ffi::Ffi_ArrowArray::empty());
-    let schema = Box::new(ffi::Ffi_ArrowSchema::empty());
+    let array = Box::new(ffi::ArrowArray::empty());
+    let schema = Box::new(ffi::ArrowSchema::empty());
 
-    let array_ptr = &*array as *const ffi::Ffi_ArrowArray;
-    let schema_ptr = &*schema as *const ffi::Ffi_ArrowSchema;
+    let array_ptr = &*array as *const ffi::ArrowArray;
+    let schema_ptr = &*schema as *const ffi::ArrowSchema;
 
     // make the conversion through PyArrow's private API
     // this changes the pointer's memory and is thus unsafe. In particular, `_export_to_c` can go out of bounds
@@ -73,8 +73,8 @@ fn to_rust_array(ob: PyObject, py: Python) -> PyResult<Arc<dyn Array>> {
 }
 
 fn to_py_array(array: Arc<dyn Array>, py: Python) -> PyResult<PyObject> {
-    let array_ptr = Box::new(ffi::Ffi_ArrowArray::empty());
-    let schema_ptr = Box::new(ffi::Ffi_ArrowSchema::empty());
+    let array_ptr = Box::new(ffi::ArrowArray::empty());
+    let schema_ptr = Box::new(ffi::ArrowSchema::empty());
 
     let array_ptr = Box::into_raw(array_ptr);
     let schema_ptr = Box::into_raw(schema_ptr);
@@ -101,9 +101,9 @@ fn to_py_array(array: Arc<dyn Array>, py: Python) -> PyResult<PyObject> {
 
 fn to_rust_field(ob: PyObject, py: Python) -> PyResult<Field> {
     // prepare a pointer to receive the Array struct
-    let schema = Box::new(ffi::Ffi_ArrowSchema::empty());
+    let schema = Box::new(ffi::ArrowSchema::empty());
 
-    let schema_ptr = &*schema as *const ffi::Ffi_ArrowSchema;
+    let schema_ptr = &*schema as *const ffi::ArrowSchema;
 
     // make the conversion through PyArrow's private API
     // this changes the pointer's memory and is thus unsafe. In particular, `_export_to_c` can go out of bounds
@@ -115,7 +115,7 @@ fn to_rust_field(ob: PyObject, py: Python) -> PyResult<Field> {
 }
 
 fn to_py_field(field: &Field, py: Python) -> PyResult<PyObject> {
-    let schema_ptr = Box::new(ffi::Ffi_ArrowSchema::empty());
+    let schema_ptr = Box::new(ffi::ArrowSchema::empty());
     let schema_ptr = Box::into_raw(schema_ptr);
 
     unsafe {

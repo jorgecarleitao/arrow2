@@ -8,8 +8,8 @@ use std::sync::Arc;
 fn _test_round_trip(array: Arc<dyn Array>, expected: Box<dyn Array>) -> Result<()> {
     let field = Field::new("a", array.data_type().clone(), true);
 
-    let array_ptr = Box::new(ffi::Ffi_ArrowArray::empty());
-    let schema_ptr = Box::new(ffi::Ffi_ArrowSchema::empty());
+    let array_ptr = Box::new(ffi::ArrowArray::empty());
+    let schema_ptr = Box::new(ffi::ArrowSchema::empty());
 
     let array_ptr = Box::into_raw(array_ptr);
     let schema_ptr = Box::into_raw(schema_ptr);
@@ -42,8 +42,8 @@ fn test_round_trip(expected: impl Array + Clone + 'static) -> Result<()> {
 }
 
 fn test_round_trip_schema(field: Field) -> Result<()> {
-    // create a `ArrowArray` from the data.
-    let schema_ptr = Box::new(ffi::Ffi_ArrowSchema::empty());
+    // create a `InternalArrowArray` from the data.
+    let schema_ptr = Box::new(ffi::ArrowSchema::empty());
 
     let schema_ptr = Box::into_raw(schema_ptr);
 

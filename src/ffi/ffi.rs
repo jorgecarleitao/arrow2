@@ -35,20 +35,20 @@ use crate::{
 /// This was created by bindgen
 #[repr(C)]
 #[derive(Debug, Clone)]
-pub struct Ffi_ArrowArray {
+pub struct ArrowArray {
     pub(crate) length: i64,
     pub(crate) null_count: i64,
     pub(crate) offset: i64,
     pub(crate) n_buffers: i64,
     pub(crate) n_children: i64,
     pub(crate) buffers: *mut *const ::std::os::raw::c_void,
-    children: *mut *mut Ffi_ArrowArray,
-    dictionary: *mut Ffi_ArrowArray,
-    release: ::std::option::Option<unsafe extern "C" fn(arg1: *mut Ffi_ArrowArray)>,
+    children: *mut *mut ArrowArray,
+    dictionary: *mut ArrowArray,
+    release: ::std::option::Option<unsafe extern "C" fn(arg1: *mut ArrowArray)>,
     // When exported, this MUST contain everything that is owned by this array.
     // for example, any buffer pointed to in `buffers` must be here, as well as the `buffers` pointer
     // itself.
-    // In other words, everything in [Ffi_ArrowArray] must be owned by `private_data` and can assume
+    // In other words, everything in [ArrowArray] must be owned by `private_data` and can assume
     // that they do not outlive `private_data`.
     private_data: *mut ::std::os::raw::c_void,
 }
@@ -57,10 +57,10 @@ pub struct Ffi_ArrowArray {
 // to change this struct
 // This is intrinsically impossible to prove because the implementations agree
 // on this as part of the Arrow specification
-unsafe impl Send for Ffi_ArrowArray {}
-unsafe impl Sync for Ffi_ArrowArray {}
+unsafe impl Send for ArrowArray {}
+unsafe impl Sync for ArrowArray {}
 
-impl Drop for Ffi_ArrowArray {
+impl Drop for ArrowArray {
     fn drop(&mut self) {
         match self.release {
             None => (),
@@ -69,8 +69,8 @@ impl Drop for Ffi_ArrowArray {
     }
 }
 
-// callback used to drop [Ffi_ArrowArray] when it is exported
-unsafe extern "C" fn c_release_array(array: *mut Ffi_ArrowArray) {
+// callback used to drop [ArrowArray] when it is exported
+unsafe extern "C" fn c_release_array(array: *mut ArrowArray) {
     if array.is_null() {
         return;
     }
@@ -93,12 +93,12 @@ unsafe extern "C" fn c_release_array(array: *mut Ffi_ArrowArray) {
 struct PrivateData {
     array: Arc<dyn Array>,
     buffers_ptr: Box<[*const std::os::raw::c_void]>,
-    children_ptr: Box<[*mut Ffi_ArrowArray]>,
-    dictionary_ptr: Option<*mut Ffi_ArrowArray>,
+    children_ptr: Box<[*mut ArrowArray]>,
+    dictionary_ptr: Option<*mut ArrowArray>,
 }
 
-impl Ffi_ArrowArray {
-    /// creates a new `Ffi_ArrowArray` from existing data.
+impl ArrowArray {
+    /// creates a new `ArrowArray` from existing data.
     /// # Safety
     /// This method releases `buffers`. Consumers of this struct *must* call `release` before
     /// releasing this struct, or contents in `buffers` leak.
@@ -117,12 +117,12 @@ impl Ffi_ArrowArray {
 
         let children_ptr = children
             .into_iter()
-            .map(|child| Box::into_raw(Box::new(Ffi_ArrowArray::new(child))))
+            .map(|child| Box::into_raw(Box::new(ArrowArray::new(child))))
             .collect::<Box<_>>();
         let n_children = children_ptr.len() as i64;
 
         let dictionary_ptr =
-            dictionary.map(|array| Box::into_raw(Box::new(Ffi_ArrowArray::new(array))));
+            dictionary.map(|array| Box::into_raw(Box::new(ArrowArray::new(array))));
 
         let length = array.len() as i64;
         let null_count = array.null_count() as i64;
@@ -148,7 +148,7 @@ impl Ffi_ArrowArray {
         }
     }
 
-    /// creates an empty [`Ffi_ArrowArray`], which can be used to import data into
+    /// creates an empty [`ArrowArray`], which can be used to import data into
     pub fn empty() -> Self {
         Self {
             length: 0,
@@ -185,7 +185,7 @@ impl Ffi_ArrowArray {
 /// The caller must guarantee that the buffer `index` corresponds to a buffer of type `T`.
 /// This function assumes that the buffer created from FFI is valid; this is impossible to prove.
 unsafe fn create_buffer<T: NativeType>(
-    array: &Ffi_ArrowArray,
+    array: &ArrowArray,
     data_type: &DataType,
     deallocation: Deallocation,
     index: usize,
@@ -221,7 +221,7 @@ unsafe fn create_buffer<T: NativeType>(
 /// # Safety
 /// This function assumes that `ceil(self.length * bits, 8)` is the size of the buffer
 unsafe fn create_bitmap(
-    array: &Ffi_ArrowArray,
+    array: &ArrowArray,
     deallocation: Deallocation,
     index: usize,
 ) -> Result<Bitmap> {
@@ -251,7 +251,7 @@ unsafe fn create_bitmap(
     Ok(Bitmap::from_bytes(bytes, offset + len).slice(offset, len))
 }
 
-fn buffer_offset(array: &Ffi_ArrowArray, data_type: &DataType, i: usize) -> usize {
+fn buffer_offset(array: &ArrowArray, data_type: &DataType, i: usize) -> usize {
     use PhysicalType::*;
     match (data_type.to_physical_type(), i) {
         (LargeUtf8, 2) | (LargeBinary, 2) | (Utf8, 2) | (Binary, 2) => 0,
@@ -263,7 +263,7 @@ fn buffer_offset(array: &Ffi_ArrowArray, data_type: &DataType, i: usize) -> usiz
 // Rust implementation uses fixed-sized buffers, which require knowledge of their `len`.
 // for variable-sized buffers, such as the second buffer of a stringArray, we need
 // to fetch offset buffer's len to build the second buffer.
-fn buffer_len(array: &Ffi_ArrowArray, data_type: &DataType, i: usize) -> Result<usize> {
+fn buffer_len(array: &ArrowArray, data_type: &DataType, i: usize) -> Result<usize> {
     Ok(match (data_type.to_physical_type(), i) {
         (PhysicalType::FixedSizeBinary, 1) => {
             if let DataType::FixedSizeBinary(size) = data_type.to_logical_type() {
@@ -316,9 +316,9 @@ fn buffer_len(array: &Ffi_ArrowArray, data_type: &DataType, i: usize) -> Result<
 }
 
 fn create_child(
-    array: &Ffi_ArrowArray,
+    array: &ArrowArray,
     field: &DataType,
-    parent: Arc<ArrowArray>,
+    parent: Arc<InternalArrowArray>,
     index: usize,
 ) -> Result<ArrowArrayChild<'static>> {
     let data_type = get_child(field, index)?;
@@ -334,9 +334,9 @@ fn create_child(
 }
 
 fn create_dictionary(
-    array: &Ffi_ArrowArray,
+    array: &ArrowArray,
     data_type: &DataType,
-    parent: Arc<ArrowArray>,
+    parent: Arc<InternalArrowArray>,
 ) -> Result<Option<ArrowArrayChild<'static>>> {
     if let DataType::Dictionary(_, values, _) = data_type {
         let data_type = values.as_ref().clone();
@@ -394,53 +394,53 @@ pub trait ArrowArrayRef: std::fmt::Debug {
 
     fn n_buffers(&self) -> usize;
 
-    fn parent(&self) -> &Arc<ArrowArray>;
-    fn array(&self) -> &Ffi_ArrowArray;
+    fn parent(&self) -> &Arc<InternalArrowArray>;
+    fn array(&self) -> &ArrowArray;
     fn data_type(&self) -> &DataType;
 }
 
 /// Struct used to move an Array from and to the C Data Interface.
 /// Its main responsibility is to expose functionality that requires
-/// both [Ffi_ArrowArray] and [Ffi_ArrowSchema].
+/// both [ArrowArray] and [ArrowSchema].
 ///
 /// This struct has two main paths:
 ///
 /// ## Import from the C Data Interface
-/// * [ArrowArray::empty] to allocate memory to be filled by an external call
-/// * [ArrowArray::try_from_raw] to consume two non-null allocated pointers
+/// * [InternalArrowArray::empty] to allocate memory to be filled by an external call
+/// * [InternalArrowArray::try_from_raw] to consume two non-null allocated pointers
 /// ## Export to the C Data Interface
-/// * [ArrowArray::try_new] to create a new [ArrowArray] from Rust-specific information
-/// * [ArrowArray::into_raw] to expose two pointers for [Ffi_ArrowArray] and [Ffi_ArrowSchema].
+/// * [InternalArrowArray::try_new] to create a new [InternalArrowArray] from Rust-specific information
+/// * [InternalArrowArray::into_raw] to expose two pointers for [ArrowArray] and [ArrowSchema].
 ///
 /// # Safety
 /// Whoever creates this struct is responsible for releasing their resources. Specifically,
-/// consumers *must* call [ArrowArray::into_raw] and take ownership of the individual pointers,
-/// calling [Ffi_ArrowArray::release] and [Ffi_ArrowSchema::release] accordingly.
+/// consumers *must* call [InternalArrowArray::into_raw] and take ownership of the individual pointers,
+/// calling [ArrowArray::release] and [ArrowSchema::release] accordingly.
 ///
 /// Furthermore, this struct assumes that the incoming data agrees with the C data interface.
 #[derive(Debug)]
-pub struct ArrowArray {
-    array: Box<Ffi_ArrowArray>,
+pub struct InternalArrowArray {
+    array: Box<ArrowArray>,
     data_type: DataType,
 }
 
-impl ArrowArray {
-    pub fn new(array: Box<Ffi_ArrowArray>, data_type: DataType) -> Self {
+impl InternalArrowArray {
+    pub fn new(array: Box<ArrowArray>, data_type: DataType) -> Self {
         Self { array, data_type }
     }
 }
 
-impl ArrowArrayRef for Arc<ArrowArray> {
+impl ArrowArrayRef for Arc<InternalArrowArray> {
     /// the data_type as declared in the schema
     fn data_type(&self) -> &DataType {
         &self.data_type
     }
 
-    fn parent(&self) -> &Arc<ArrowArray> {
+    fn parent(&self) -> &Arc<InternalArrowArray> {
         self
     }
 
-    fn array(&self) -> &Ffi_ArrowArray {
+    fn array(&self) -> &ArrowArray {
         self.array.as_ref()
     }
 
@@ -451,9 +451,9 @@ impl ArrowArrayRef for Arc<ArrowArray> {
 
 #[derive(Debug)]
 pub struct ArrowArrayChild<'a> {
-    array: &'a Ffi_ArrowArray,
+    array: &'a ArrowArray,
     data_type: DataType,
-    parent: Arc<ArrowArray>,
+    parent: Arc<InternalArrowArray>,
 }
 
 impl<'a> ArrowArrayRef for ArrowArrayChild<'a> {
@@ -462,11 +462,11 @@ impl<'a> ArrowArrayRef for ArrowArrayChild<'a> {
         &self.data_type
     }
 
-    fn parent(&self) -> &Arc<ArrowArray> {
+    fn parent(&self) -> &Arc<InternalArrowArray> {
         &self.parent
     }
 
-    fn array(&self) -> &Ffi_ArrowArray {
+    fn array(&self) -> &ArrowArray {
         self.array
     }
 
@@ -476,7 +476,11 @@ impl<'a> ArrowArrayRef for ArrowArrayChild<'a> {
 }
 
 impl<'a> ArrowArrayChild<'a> {
-    fn from_raw(array: &'a Ffi_ArrowArray, data_type: DataType, parent: Arc<ArrowArray>) -> Self {
+    fn from_raw(
+        array: &'a ArrowArray,
+        data_type: DataType,
+        parent: Arc<InternalArrowArray>,
+    ) -> Self {
         Self {
             array,
             data_type,
