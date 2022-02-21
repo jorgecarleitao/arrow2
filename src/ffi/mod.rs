@@ -4,6 +4,7 @@ mod array;
 mod bridge;
 mod generated;
 mod schema;
+mod stream;
 
 pub(crate) use array::try_from;
 pub(crate) use array::{ArrowArrayRef, InternalArrowArray};
@@ -16,7 +17,8 @@ use crate::error::Result;
 
 use self::schema::to_field;
 
-pub use generated::{ArrowArray, ArrowSchema};
+pub use generated::{ArrowArray, ArrowArrayStream, ArrowSchema};
+pub use stream::ArrowArrayStreamReader;
 
 /// Exports an [`Arc<dyn Array>`] to the C data interface.
 /// # Safety

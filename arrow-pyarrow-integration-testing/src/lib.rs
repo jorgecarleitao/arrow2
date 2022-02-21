@@ -1,5 +1,6 @@
 //! This library demonstrates a minimal usage of Rust's C data interface to pass
 //! arrays from and to Python.
+mod c_stream;
 
 use std::error;
 use std::fmt;
@@ -153,9 +154,15 @@ fn round_trip_field(array: PyObject, py: Python) -> PyResult<PyObject> {
     to_py_field(&field, py)
 }
 
+#[pyfunction]
+pub fn to_rust_iterator(ob: PyObject, py: Python) -> PyResult<Vec<PyObject>> {
+    c_stream::to_rust_iterator(ob, py)
+}
+
 #[pymodule]
 fn arrow_pyarrow_integration_testing(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(round_trip_array, m)?)?;
     m.add_function(wrap_pyfunction!(round_trip_field, m)?)?;
+    m.add_function(wrap_pyfunction!(to_rust_iterator, m)?)?;
     Ok(())
 }
