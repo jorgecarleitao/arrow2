@@ -2,12 +2,10 @@
 //! Arrow's [C Data Interface](https://arrow.apache.org/docs/format/CDataInterface.html)
 mod array;
 mod bridge;
-#[allow(clippy::module_inception)]
-mod ffi;
 mod schema;
 
 pub(crate) use array::try_from;
-pub(crate) use ffi::{ArrowArrayRef, InternalArrowArray};
+pub(crate) use array::{ArrowArrayRef, InternalArrowArray};
 
 use std::sync::Arc;
 
@@ -17,7 +15,7 @@ use crate::error::Result;
 
 use self::schema::to_field;
 
-pub use ffi::ArrowArray;
+pub use array::ArrowArray;
 pub use schema::ArrowSchema;
 
 /// Exports an [`Arc<dyn Array>`] to the C data interface.
