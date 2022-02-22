@@ -213,6 +213,7 @@ compute = [
 ]
 benchmarks = ["rand"]
 simd = ["packed_simd"]
+serde_types = ["serde", "serde_derive"]
 
 [package.metadata.cargo-all-features]
 allowlist = ["compute", "compute_sort", "compute_hash", "compute_nullif"]
