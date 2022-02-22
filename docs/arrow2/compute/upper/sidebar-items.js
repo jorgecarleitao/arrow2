@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["can_upper","Checks if an array of type `datatype` can perform upper operation"],["upper","Returns a new `Array` where each of each of the elements is upper-cased. this function errors when the passed array is not a [Large]String array."]]});
