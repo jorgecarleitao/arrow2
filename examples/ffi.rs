@@ -6,18 +6,15 @@ use std::sync::Arc;
 
 unsafe fn export(
     array: Arc<dyn Array>,
-    array_ptr: *mut ffi::Ffi_ArrowArray,
-    schema_ptr: *mut ffi::Ffi_ArrowSchema,
+    array_ptr: *mut ffi::ArrowArray,
+    schema_ptr: *mut ffi::ArrowSchema,
 ) {
     let field = Field::new("a", array.data_type().clone(), true);
     ffi::export_array_to_c(array, array_ptr);
     ffi::export_field_to_c(&field, schema_ptr);
 }
 
-unsafe fn import(
-    array: Box<ffi::Ffi_ArrowArray>,
-    schema: &ffi::Ffi_ArrowSchema,
-) -> Result<Box<dyn Array>> {
+unsafe fn import(array: Box<ffi::ArrowArray>, schema: &ffi::ArrowSchema) -> Result<Box<dyn Array>> {
     let field = ffi::import_field_from_c(schema)?;
     ffi::import_array_from_c(array, field.data_type)
 }
@@ -28,8 +25,8 @@ fn main() -> Result<()> {
 
     // the goal is to export this array and import it back via FFI.
     // to import, we initialize the structs that will receive the data
-    let array_ptr = Box::new(ffi::Ffi_ArrowArray::empty());
-    let schema_ptr = Box::new(ffi::Ffi_ArrowSchema::empty());
+    let array_ptr = Box::new(ffi::ArrowArray::empty());
+    let schema_ptr = Box::new(ffi::ArrowSchema::empty());
 
     // since FFIs work in raw pointers, let's temporarily relinquish ownership so that producers
     // can write into it in a thread-safe manner
