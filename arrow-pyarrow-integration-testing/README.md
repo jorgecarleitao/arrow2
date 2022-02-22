@@ -31,7 +31,7 @@ Note that this crate uses two languages and an external ABI:
 
 Pyarrow exposes a C ABI to convert arrow arrays from and to its C implementation, see [here](https://arrow.apache.org/docs/format/CDataInterface.html).
 
-This package uses the equivalent struct in Rust (`arrow::array::ArrowArray`), and verifies that
+This package uses the equivalent struct in Rust (`arrow::array::InternalArrowArray`), and verifies that
 we can use pyarrow's interface to move pointers from and to Rust.
 
 ## Relevant literature
