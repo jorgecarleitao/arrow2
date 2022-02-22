@@ -13,7 +13,7 @@ pub enum Deallocation {
     /// Native deallocation, using Rust deallocator with Arrow-specific memory aligment
     Native,
     // Foreign interface, via a callback
-    Foreign(Arc<ffi::ArrowArray>),
+    Foreign(Arc<ffi::InternalArrowArray>),
 }
 
 impl Debug for Deallocation {
