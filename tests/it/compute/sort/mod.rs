@@ -27,15 +27,15 @@ fn primitive_arrays<T>(
 }
 
 fn to_indices_string_arrays(data: &[Option<&str>], options: SortOptions, expected_data: &[i32]) {
-    let input = Utf8Array::<i32>::from(&data.to_vec());
+    let input = Utf8Array::<i32>::from(data);
     let expected = Int32Array::from_slice(expected_data);
     let output = sort_to_indices(&input, &options, None).unwrap();
     assert_eq!(output, expected)
 }
 
 fn string_arrays(data: &[Option<&str>], options: SortOptions, expected_data: &[Option<&str>]) {
-    let input = Utf8Array::<i32>::from(&data.to_vec());
-    let expected = Utf8Array::<i32>::from(&expected_data.to_vec());
+    let input = Utf8Array::<i32>::from(data);
+    let expected = Utf8Array::<i32>::from(expected_data);
     let output = sort(&input, &options, None).unwrap();
     assert_eq!(expected, output.as_ref())
 }

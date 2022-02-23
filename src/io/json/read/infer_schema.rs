@@ -125,8 +125,7 @@ pub fn infer_rows(rows: &[Value]) -> Result<DataType> {
     // discard None values and deduplicate entries
     let types = types
         .into_iter()
-        .map(|x| x.transpose())
-        .flatten()
+        .filter_map(|x| x.transpose())
         .collect::<Result<HashSet<_>>>()?;
 
     Ok(if !types.is_empty() {
