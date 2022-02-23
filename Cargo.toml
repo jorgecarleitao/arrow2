@@ -181,8 +181,7 @@ compute_substring = []
 compute_take = []
 compute_temporal = []
 compute_window = ["compute_concatenate"]
-compute_lower = []
-compute_upper = []
+compute_utf8 = []
 compute = [
     "compute_aggregate",
     "compute_arithmetics",
@@ -207,9 +206,8 @@ compute = [
     "compute_substring",
     "compute_take",
     "compute_temporal",
-    "compute_window",
-    "compute_lower",
-    "compute_upper"
+    "compute_utf8",
+    "compute_window"
 ]
 benchmarks = ["rand"]
 simd = ["packed_simd"]
