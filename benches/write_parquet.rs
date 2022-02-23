@@ -1,4 +1,3 @@
-use std::io::Cursor;
 use std::sync::Arc;
 
 use criterion::{criterion_group, criterion_main, Criterion};
@@ -29,7 +28,7 @@ fn write(array: &dyn Array, encoding: Encoding) -> Result<()> {
         vec![encoding],
     )?;
 
-    let mut writer = vec![];
+    let writer = vec![];
 
     let mut writer = FileWriter::try_new(writer, schema, options)?;
 

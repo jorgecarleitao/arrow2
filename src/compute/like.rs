@@ -17,6 +17,10 @@ fn is_like_pattern(c: char) -> bool {
     c == '%' || c == '_'
 }
 
+fn replace_pattern(pattern: &str) -> String {
+    pattern.replace('%', ".*").replace('_', ".")
+}
+
 #[inline]
 fn a_like_utf8<O: Offset, F: Fn(bool) -> bool>(
     lhs: &Utf8Array<O>,
@@ -40,7 +44,7 @@ fn a_like_utf8<O: Offset, F: Fn(bool) -> bool>(
                     let pattern = if let Some(pattern) = map.get(pattern) {
                         pattern
                     } else {
-                        let re_pattern = pattern.replace("%", ".*").replace("_", ".");
+                        let re_pattern = replace_pattern(pattern);
                         let re = Regex::new(&format!("^{}$", re_pattern)).map_err(|e| {
                             ArrowError::InvalidArgumentError(format!(
                                 "Unable to build regex from LIKE pattern: {}",
@@ -113,7 +117,7 @@ fn a_like_utf8_scalar<O: Offset, F: Fn(bool) -> bool>(
         let ends_with = &rhs[1..];
         Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x.ends_with(ends_with))))
     } else {
-        let re_pattern = rhs.replace("%", ".*").replace("_", ".");
+        let re_pattern = replace_pattern(rhs);
         let re = Regex::new(&format!("^{}$", re_pattern)).map_err(|e| {
             ArrowError::InvalidArgumentError(format!(
                 "Unable to build regex from LIKE pattern: {}",
@@ -187,10 +191,8 @@ fn a_like_binary<O: Offset, F: Fn(bool) -> bool>(
                     let pattern = if let Some(pattern) = map.get(pattern) {
                         pattern
                     } else {
-                        let re_pattern = simdutf8::basic::from_utf8(pattern)
-                            .unwrap()
-                            .replace("%", ".*")
-                            .replace("_", ".");
+                        let re_pattern = simdutf8::basic::from_utf8(pattern).unwrap();
+                        let re_pattern = replace_pattern(re_pattern);
                         let re = BytesRegex::new(&format!("^{}$", re_pattern)).map_err(|e| {
                             ArrowError::InvalidArgumentError(format!(
                                 "Unable to build regex from LIKE pattern: {}",
@@ -270,7 +272,7 @@ fn a_like_binary_scalar<O: Offset, F: Fn(bool) -> bool>(
         let ends_with = &rhs[1..];
         Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x.ends_with(ends_with))))
     } else {
-        let re_pattern = pattern.replace("%", ".*").replace("_", ".");
+        let re_pattern = replace_pattern(pattern);
         let re = BytesRegex::new(&format!("^{}$", re_pattern)).map_err(|e| {
             ArrowError::InvalidArgumentError(format!(
                 "Unable to build regex from LIKE pattern: {}",
