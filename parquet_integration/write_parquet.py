@@ -32,6 +32,7 @@ def case_basic_nullable(size=1):
         pa.field("timestamp_us", pa.timestamp("us")),
         pa.field("timestamp_s", pa.timestamp("s")),
         pa.field("emoji", pa.utf8()),
+        pa.field("timestamp_s_utc", pa.timestamp("s", "UTC")),
     ]
     schema = pa.schema(fields)
 
@@ -50,6 +51,7 @@ def case_basic_nullable(size=1):
             "timestamp_us": int64 * size,
             "timestamp_s": int64 * size,
             "emoji": emoji * size,
+            "timestamp_s_utc": int64 * size,
         },
         schema,
         f"basic_nullable_{size*10}.parquet",
