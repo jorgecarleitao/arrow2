@@ -2,8 +2,6 @@ use std::sync::Arc;
 use std::time::SystemTime;
 
 use futures::future::BoxFuture;
-use futures::FutureExt;
-use tokio;
 use tokio::fs::File;
 use tokio::io::BufReader;
 use tokio_util::compat::*;

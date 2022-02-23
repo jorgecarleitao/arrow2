@@ -355,7 +355,7 @@ where
         values.chain(null_indices.into_iter()).collect::<Vec<I>>()
     };
 
-    values.truncate(limit.unwrap_or_else(|| values.len()));
+    values.truncate(limit.unwrap_or(values.len()));
 
     let data_type = I::PRIMITIVE.into();
     PrimitiveArray::<I>::from_data(data_type, values.into(), None)

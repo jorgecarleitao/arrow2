@@ -31,93 +31,36 @@ pub trait BitChunk:
     fn from_ne_bytes(v: Self::Bytes) -> Self;
 }
 
-impl BitChunk for u8 {
-    #[inline(always)]
-    fn zero() -> Self {
-        0
-    }
+macro_rules! bit_chunk {
+    ($ty:ty) => {
+        impl BitChunk for $ty {
+            #[inline(always)]
+            fn zero() -> Self {
+                0
+            }
 
-    #[inline(always)]
-    fn to_ne_bytes(self) -> Self::Bytes {
-        self.to_ne_bytes()
-    }
+            #[inline(always)]
+            fn to_ne_bytes(self) -> Self::Bytes {
+                self.to_ne_bytes()
+            }
 
-    #[inline(always)]
-    fn from_ne_bytes(v: Self::Bytes) -> Self {
-        Self::from_ne_bytes(v)
-    }
+            #[inline(always)]
+            fn from_ne_bytes(v: Self::Bytes) -> Self {
+                Self::from_ne_bytes(v)
+            }
 
-    #[inline(always)]
-    fn one() -> Self {
-        1
-    }
+            #[inline(always)]
+            fn one() -> Self {
+                1
+            }
+        }
+    };
 }
 
-impl BitChunk for u16 {
-    #[inline(always)]
-    fn zero() -> Self {
-        0
-    }
-
-    #[inline(always)]
-    fn to_ne_bytes(self) -> Self::Bytes {
-        self.to_ne_bytes()
-    }
-
-    #[inline(always)]
-    fn from_ne_bytes(v: Self::Bytes) -> Self {
-        Self::from_ne_bytes(v)
-    }
-
-    #[inline(always)]
-    fn one() -> Self {
-        1
-    }
-}
-
-impl BitChunk for u32 {
-    #[inline(always)]
-    fn zero() -> Self {
-        0
-    }
-
-    #[inline(always)]
-    fn from_ne_bytes(v: Self::Bytes) -> Self {
-        Self::from_ne_bytes(v)
-    }
-
-    #[inline(always)]
-    fn to_ne_bytes(self) -> Self::Bytes {
-        self.to_ne_bytes()
-    }
-
-    #[inline(always)]
-    fn one() -> Self {
-        1
-    }
-}
-
-impl BitChunk for u64 {
-    #[inline(always)]
-    fn zero() -> Self {
-        0
-    }
-
-    #[inline(always)]
-    fn to_ne_bytes(self) -> Self::Bytes {
-        self.to_ne_bytes()
-    }
-
-    #[inline(always)]
-    fn from_ne_bytes(v: Self::Bytes) -> Self {
-        Self::from_ne_bytes(v)
-    }
-
-    #[inline(always)]
-    fn one() -> Self {
-        1
-    }
-}
+bit_chunk!(u8);
+bit_chunk!(u16);
+bit_chunk!(u32);
+bit_chunk!(u64);
 
 /// An [`Iterator<Item=bool>`] over a [`BitChunk`]. This iterator is often
 /// compiled to SIMD.

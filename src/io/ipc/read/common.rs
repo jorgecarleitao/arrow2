@@ -121,8 +121,7 @@ pub fn read_record_batch<R: Read + Seek>(
                     Ok(None)
                 }
             })
-            .map(|x| x.transpose())
-            .flatten()
+            .filter_map(|x| x.transpose())
             .collect::<Result<Vec<_>>>()?
     } else {
         fields

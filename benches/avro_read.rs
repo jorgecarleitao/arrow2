@@ -24,12 +24,11 @@ fn schema() -> AvroSchema {
 fn write(size: usize, has_codec: bool) -> Result<Vec<u8>> {
     let avro = schema();
     // a writer needs a schema and something to write to
-    let mut writer: Writer<Vec<u8>>;
-    if has_codec {
-        writer = Writer::with_codec(&avro, Vec::new(), Codec::Deflate);
+    let mut writer = if has_codec {
+        Writer::with_codec(&avro, Vec::new(), Codec::Deflate)
     } else {
-        writer = Writer::new(&avro, Vec::new());
-    }
+        Writer::new(&avro, Vec::new())
+    };
 
     (0..size).for_each(|_| {
         let mut record = Record::new(writer.schema()).unwrap();

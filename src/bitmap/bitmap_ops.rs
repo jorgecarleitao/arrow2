@@ -7,6 +7,7 @@ use super::{
     Bitmap,
 };
 
+/// Creates a [Vec<u8>] from an [`Iterator`] of [`BitChunk`].
 /// # Safety
 /// The iterator must be [`TrustedLen`].
 pub unsafe fn from_chunk_iter_unchecked<T: BitChunk, I: Iterator<Item = T>>(
@@ -35,7 +36,7 @@ pub unsafe fn from_chunk_iter_unchecked<T: BitChunk, I: Iterator<Item = T>>(
     buffer
 }
 
-/// Creates a Vec<u8> from a [`TrustedLen`] of [`BitChunk`],
+/// Creates a [`Vec<u8>`] from a [`TrustedLen`] of [`BitChunk`].
 pub fn chunk_iter_to_vec<T: BitChunk, I: TrustedLen<Item = T>>(iter: I) -> Vec<u8> {
     unsafe { from_chunk_iter_unchecked(iter) }
 }
