@@ -79,7 +79,7 @@ pub fn page_iter_to_arrays<'a, I: 'a + DataPages>(
             primitive::Iter::new(pages, data_type, chunk_size, |x: i32| x as i32),
         )),
 
-        Timestamp(time_unit, None) => {
+        Timestamp(time_unit, _) => {
             let time_unit = *time_unit;
             return timestamp(
                 pages,
@@ -150,9 +150,12 @@ pub fn page_iter_to_arrays<'a, I: 'a + DataPages>(
         },
 
         // INT64
-        Int64 | Date64 | Time64(_) | Duration(_) | Timestamp(_, _) => dyn_iter(iden(
-            primitive::Iter::new(pages, data_type, chunk_size, |x: i64| x as i64),
-        )),
+        Int64 | Date64 | Time64(_) | Duration(_) => dyn_iter(iden(primitive::Iter::new(
+            pages,
+            data_type,
+            chunk_size,
+            |x: i64| x as i64,
+        ))),
         UInt64 => dyn_iter(iden(primitive::Iter::new(
             pages,
             data_type,
@@ -444,7 +447,7 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
             }),
         ),
 
-        Timestamp(time_unit, None) => {
+        Timestamp(time_unit, _) => {
             let time_unit = *time_unit;
             return timestamp_dict::<K, _>(
                 iter,
@@ -456,7 +459,7 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
             );
         }
 
-        Int64 | Date64 | Time64(_) | Duration(_) | Timestamp(_, _) => dyn_iter(
+        Int64 | Date64 | Time64(_) | Duration(_) => dyn_iter(
             primitive::DictIter::<K, _, _, _, _>::new(iter, data_type, chunk_size, |x: i64| x),
         ),
         Float32 => dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
