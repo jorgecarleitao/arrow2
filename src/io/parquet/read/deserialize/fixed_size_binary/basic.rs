@@ -7,19 +7,14 @@ use parquet2::{
 };
 
 use crate::{
-    array::FixedSizeBinaryArray,
-    bitmap::MutableBitmap,
-    datatypes::DataType,
-    error::Result,
-    io::parquet::read::{
-        utils::{
-            dict_indices_decoder, extend_from_decoder, next, not_implemented, split_buffer,
-            Decoder, MaybeNext, OptionalPageValidity, PageState,
-        },
-        DataPages,
-    },
+    array::FixedSizeBinaryArray, bitmap::MutableBitmap, datatypes::DataType, error::Result,
 };
 
+use super::super::utils::{
+    dict_indices_decoder, extend_from_decoder, next, not_implemented, split_buffer, Decoder,
+    MaybeNext, OptionalPageValidity, PageState,
+};
+use super::super::DataPages;
 use super::utils::FixedSizeBinary;
 
 struct Optional<'a> {

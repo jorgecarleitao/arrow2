@@ -10,11 +10,11 @@ use crate::{
     bitmap::MutableBitmap,
     datatypes::DataType,
     error::Result,
-    io::parquet::read::utils::MaybeNext,
     types::NativeType,
 };
 
 use super::super::dictionary::*;
+use super::super::utils::MaybeNext;
 use super::super::DataPages;
 
 #[inline]

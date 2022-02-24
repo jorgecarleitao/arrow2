@@ -9,7 +9,7 @@ use crate::bitmap::utils::BitmapIter;
 use crate::bitmap::MutableBitmap;
 use crate::error::ArrowError;
 
-use super::DataPages;
+use super::super::DataPages;
 
 #[derive(Debug)]
 pub struct BinaryIter<'a> {
