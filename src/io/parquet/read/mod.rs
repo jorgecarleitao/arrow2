@@ -7,12 +7,9 @@ mod row_group;
 pub mod schema;
 pub mod statistics;
 
-use std::{
-    io::{Read, Seek},
-    sync::Arc,
-};
-
 use futures::{AsyncRead, AsyncSeek};
+
+// re-exports of parquet2's relevant APIs
 pub use parquet2::{
     error::ParquetError,
     fallible_streaming_iterator,
@@ -32,21 +29,25 @@ pub use parquet2::{
     FallibleStreamingIterator,
 };
 
-use crate::{array::Array, error::Result};
-
 pub use deserialize::{column_iter_to_arrays, get_page_iterator};
 pub use file::{FileReader, RowGroupReader};
 pub use row_group::*;
 pub(crate) use schema::is_type_nullable;
 pub use schema::{infer_schema, FileMetaData};
 
-//use simple::nested_utils::{InitNested, NestedArrayIter, NestedState};
+use std::{
+    io::{Read, Seek},
+    sync::Arc,
+};
+
+use crate::{array::Array, error::Result};
 
 /// Trait describing a [`FallibleStreamingIterator`] of [`DataPage`]
 pub trait DataPages:
     FallibleStreamingIterator<Item = DataPage, Error = ParquetError> + Send + Sync
 {
 }
+
 impl<I: FallibleStreamingIterator<Item = DataPage, Error = ParquetError> + Send + Sync> DataPages
     for I
 {

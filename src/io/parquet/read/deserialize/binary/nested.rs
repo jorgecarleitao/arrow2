@@ -3,15 +3,12 @@ use std::collections::VecDeque;
 use parquet2::{encoding::Encoding, page::DataPage, schema::Repetition};
 
 use crate::{
-    array::Offset,
-    bitmap::MutableBitmap,
-    datatypes::DataType,
-    error::Result,
+    array::Offset, bitmap::MutableBitmap, datatypes::DataType, error::Result,
     io::parquet::read::DataPages,
 };
 
-use super::super::utils::MaybeNext;
 use super::super::nested_utils::*;
+use super::super::utils::MaybeNext;
 use super::utils::Binary;
 use super::{
     super::utils,
