@@ -1,4 +1,4 @@
-use crate::io::parquet::read::utils::Pushable;
+use super::super::utils::Pushable;
 
 /// A [`Pushable`] for fixed sized binary data
 #[derive(Debug)]

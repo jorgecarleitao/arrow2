@@ -14,14 +14,13 @@ use super::{infer_schema, read_metadata, FileMetaData, RowGroupDeserializer, Row
 
 type GroupFilter = Arc<dyn Fn(usize, &RowGroupMetaData) -> bool>;
 
-/// An iterator of [`Chunk`] coming from row groups of a paquet file.
+/// An iterator of [`Chunk`]s coming from row groups of a parquet file.
 ///
-/// This can be thought of flatten chain of [`Iterator<Item=Chunk>`] - each row group is sequentially
+/// This can be thought of a flatten chain of [`Iterator<Item=Chunk>`] - each row group is sequentially
 /// mapped to an [`Iterator<Item=Chunk>`] and each iterator is iterated upon until either the limit
 /// or the last iterator ends.
-///
 /// # Implementation
-/// Note that because
+/// This iterator mixes IO-bounded and CPU-bounded operations.
 pub struct FileReader<R: Read + Seek> {
     row_groups: RowGroupReader<R>,
     metadata: FileMetaData,

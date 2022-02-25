@@ -1,4 +1,6 @@
-use crate::{array::Offset, io::parquet::read::utils::Pushable};
+use crate::array::Offset;
+
+use super::super::utils::Pushable;
 
 /// [`Pushable`] for variable length binary data.
 #[derive(Debug)]
