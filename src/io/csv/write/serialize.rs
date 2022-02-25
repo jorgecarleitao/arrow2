@@ -31,6 +31,8 @@ pub struct SerializeOptions {
     pub timestamp_format: Option<String>,
     /// used as separator/delimiter
     pub delimiter: u8,
+    /// used as separator/delimiter
+    pub quote: u8,
 }
 
 impl Default for SerializeOptions {
@@ -42,6 +44,7 @@ impl Default for SerializeOptions {
             time64_format: None,
             timestamp_format: None,
             delimiter: b',',
+            quote: b'"',
         }
     }
 }
@@ -203,6 +206,45 @@ fn timestamp_with_tz<'a>(
     }
 }
 
+fn new_utf8_serializer<'a, O: Offset>(
+    array: &'a Utf8Array<O>,
+    options: &'a SerializeOptions,
+) -> Box<dyn StreamingIterator<Item = [u8]> + 'a> {
+    let mut local_buf = vec![0u8; 64];
+    let mut ser_writer = csv_core::WriterBuilder::new().quote(options.quote).build();
+
+    Box::new(BufStreamingIterator::new(
+        array.iter(),
+        move |x, buf| {
+            match x {
+                // Empty strings are quoted.
+                // This will ensure a csv parser will not read them as missing
+                // in a delimited field
+                Some("") => buf.extend_from_slice(b"\"\""),
+                Some(s) => {
+                    let bytes = s.as_bytes();
+                    buf.reserve(bytes.len() * 2);
+
+                    loop {
+                        match ser_writer.field(s.as_bytes(), &mut local_buf) {
+                            (WriteResult::OutputFull, _, _) => {
+                                let additional = local_buf.len();
+                                local_buf.extend(std::iter::repeat(0u8).take(additional))
+                            }
+                            (WriteResult::InputEmpty, _, n_out) => {
+                                buf.extend_from_slice(&local_buf[..n_out]);
+                                break;
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            }
+        },
+        vec![],
+    ))
+}
+
 /// Returns a [`StreamingIterator`] that yields `&[u8]` serialized from `array` according to `options`.
 /// For numeric types, this serializes as usual. For dates, times and timestamps, it uses `options` to
 /// Supported types:
@@ -353,75 +395,11 @@ pub fn new_serializer<'a>(
         }
         DataType::Utf8 => {
             let array = array.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
-            let mut local_buf = vec![0u8; 64];
-            let mut ser_writer = csv_core::Writer::new();
-
-            Box::new(BufStreamingIterator::new(
-                array.iter(),
-                move |x, buf| {
-                    match x {
-                        // Empty strings are quoted.
-                        // This will ensure a csv parser will not read them as missing
-                        // in a delimited field
-                        Some("") => buf.extend_from_slice(b"\"\""),
-                        Some(s) => {
-                            let bytes = s.as_bytes();
-                            buf.reserve(bytes.len() * 2);
-
-                            loop {
-                                match ser_writer.field(s.as_bytes(), &mut local_buf) {
-                                    (WriteResult::OutputFull, _, _) => {
-                                        let additional = local_buf.len();
-                                        local_buf.extend(std::iter::repeat(0u8).take(additional))
-                                    }
-                                    (WriteResult::InputEmpty, _, n_out) => {
-                                        buf.extend_from_slice(&local_buf[..n_out]);
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                        _ => {}
-                    }
-                },
-                vec![],
-            ))
+            new_utf8_serializer(array, options)
         }
         DataType::LargeUtf8 => {
             let array = array.as_any().downcast_ref::<Utf8Array<i64>>().unwrap();
-            let mut local_buf = vec![0u8; 64];
-            let mut ser_writer = csv_core::Writer::new();
-
-            Box::new(BufStreamingIterator::new(
-                array.iter(),
-                move |x, buf| {
-                    match x {
-                        // Empty strings are quoted.
-                        // This will ensure a csv parser will not read them as missing
-                        // in a delimited field
-                        Some("") => buf.extend_from_slice(b"\"\""),
-                        Some(s) => {
-                            let bytes = s.as_bytes();
-                            buf.reserve(bytes.len() * 2);
-
-                            loop {
-                                match ser_writer.field(s.as_bytes(), &mut local_buf) {
-                                    (WriteResult::OutputFull, _, _) => {
-                                        let additional = local_buf.len();
-                                        local_buf.extend(std::iter::repeat(0u8).take(additional))
-                                    }
-                                    (WriteResult::InputEmpty, _, n_out) => {
-                                        buf.extend_from_slice(&local_buf[..n_out]);
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                        _ => {}
-                    }
-                },
-                vec![],
-            ))
+            new_utf8_serializer(array, options)
         }
         DataType::Binary => {
             let array = array.as_any().downcast_ref::<BinaryArray<i32>>().unwrap();
