@@ -20,7 +20,7 @@ fn write_simple_rows() -> Result<()> {
     let buf = write_batch(
         batch,
         vec!["c1".to_string(), "c2".to_string()],
-        json_write::LineDelimited::default(),
+        json_write::Format::NewlineDelimitedJson,
     )?;
 
     assert_eq!(
@@ -45,7 +45,7 @@ fn write_simple_rows_array() -> Result<()> {
     let buf = write_batch(
         batch,
         vec!["c1".to_string(), "c2".to_string()],
-        json_write::JsonArray::default(),
+        json_write::Format::Json,
     )?;
 
     assert_eq!(
@@ -88,7 +88,7 @@ fn write_nested_struct_with_validity() -> Result<()> {
     let buf = write_batch(
         batch,
         vec!["c1".to_string(), "c2".to_string()],
-        json_write::LineDelimited::default(),
+        json_write::Format::NewlineDelimitedJson,
     )?;
 
     assert_eq!(
@@ -133,7 +133,7 @@ fn write_nested_structs() -> Result<()> {
     let buf = write_batch(
         batch,
         vec!["c1".to_string(), "c2".to_string()],
-        json_write::LineDelimited::default(),
+        json_write::Format::NewlineDelimitedJson,
     )?;
 
     assert_eq!(
@@ -169,7 +169,7 @@ fn write_struct_with_list_field() -> Result<()> {
     let buf = write_batch(
         batch,
         vec!["c1".to_string(), "c2".to_string()],
-        json_write::LineDelimited::default(),
+        json_write::Format::NewlineDelimitedJson,
     )?;
 
     assert_eq!(
@@ -213,7 +213,7 @@ fn write_nested_list() -> Result<()> {
     let buf = write_batch(
         batch,
         vec!["c1".to_string(), "c2".to_string()],
-        json_write::LineDelimited::default(),
+        json_write::Format::NewlineDelimitedJson,
     )?;
 
     assert_eq!(
@@ -274,7 +274,7 @@ fn write_list_of_struct() -> Result<()> {
     let buf = write_batch(
         batch,
         vec!["c1".to_string(), "c2".to_string()],
-        json_write::LineDelimited::default(),
+        json_write::Format::NewlineDelimitedJson,
     )?;
 
     assert_eq!(
@@ -296,7 +296,7 @@ fn write_escaped_utf8() -> Result<()> {
     let buf = write_batch(
         batch,
         vec!["c1".to_string()],
-        json_write::LineDelimited::default(),
+        json_write::Format::NewlineDelimitedJson,
     )?;
 
     assert_eq!(
@@ -315,7 +315,7 @@ fn write_quotation_marks_in_utf8() -> Result<()> {
     let buf = write_batch(
         batch,
         vec!["c1".to_string()],
-        json_write::LineDelimited::default(),
+        json_write::Format::NewlineDelimitedJson,
     )?;
 
     assert_eq!(
@@ -334,7 +334,7 @@ fn write_date32() -> Result<()> {
     let buf = write_batch(
         batch,
         vec!["c1".to_string()],
-        json_write::LineDelimited::default(),
+        json_write::Format::NewlineDelimitedJson,
     )?;
 
     assert_eq!(
@@ -356,7 +356,7 @@ fn write_timestamp() -> Result<()> {
     let buf = write_batch(
         batch,
         vec!["c1".to_string()],
-        json_write::LineDelimited::default(),
+        json_write::Format::NewlineDelimitedJson,
     )?;
 
     assert_eq!(
