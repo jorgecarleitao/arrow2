@@ -22,6 +22,10 @@ pub mod stream_async;
 #[cfg_attr(docsrs, doc(cfg(feature = "io_ipc_write_async")))]
 pub mod sink;
 
+#[cfg(feature = "io_ipc_write_async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "io_ipc_write_async")))]
+pub mod file_async;
+
 use crate::datatypes::{DataType, Field};
 
 use super::IpcField;
