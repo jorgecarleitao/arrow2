@@ -1,8 +1,8 @@
 //! APIs to write to JSON
 mod format;
 mod serialize;
+
 pub use fallible_streaming_iterator::*;
-pub use format::*;
 pub use serialize::serialize;
 
 use crate::{
@@ -10,10 +10,18 @@ use crate::{
     chunk::Chunk,
     error::{ArrowError, Result},
 };
+use format::*;
 
-/// Writes blocks of JSON-encoded data into `writer`, ensuring that the written
-/// JSON has the expected `format`
-pub fn write<W, F, I>(writer: &mut W, format: F, mut blocks: I) -> Result<()>
+/// The supported variations of JSON supported
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub enum Format {
+    /// JSON
+    Json,
+    /// NDJSON (http://ndjson.org/)
+    NewlineDelimitedJson,
+}
+
+fn _write<W, F, I>(writer: &mut W, format: F, mut blocks: I) -> Result<()>
 where
     W: std::io::Write,
     F: JsonFormat,
@@ -30,28 +38,40 @@ where
     Ok(())
 }
 
+/// Writes blocks of JSON-encoded data into `writer` according to format [`Format`].
+/// # Implementation
+/// This is IO-bounded
+pub fn write<W, I>(writer: &mut W, format: Format, blocks: I) -> Result<()>
+where
+    W: std::io::Write,
+    I: FallibleStreamingIterator<Item = [u8], Error = ArrowError>,
+{
+    match format {
+        Format::Json => _write(writer, JsonArray::default(), blocks),
+        Format::NewlineDelimitedJson => _write(writer, LineDelimited::default(), blocks),
+    }
+}
+
 /// [`FallibleStreamingIterator`] that serializes a [`Chunk`] to bytes.
 /// Advancing it is CPU-bounded
-pub struct Serializer<F, A, I>
+pub struct Serializer<A, I>
 where
-    F: JsonFormat,
     A: AsRef<dyn Array>,
     I: Iterator<Item = Result<Chunk<A>>>,
 {
     batches: I,
     names: Vec<String>,
     buffer: Vec<u8>,
-    format: F,
+    format: Format,
 }
 
-impl<F, A, I> Serializer<F, A, I>
+impl<A, I> Serializer<A, I>
 where
-    F: JsonFormat,
     A: AsRef<dyn Array>,
     I: Iterator<Item = Result<Chunk<A>>>,
 {
     /// Creates a new [`Serializer`].
-    pub fn new(batches: I, names: Vec<String>, buffer: Vec<u8>, format: F) -> Self {
+    pub fn new(batches: I, names: Vec<String>, buffer: Vec<u8>, format: Format) -> Self {
         Self {
             batches,
             names,
@@ -61,9 +81,8 @@ where
     }
 }
 
-impl<F, A, I> FallibleStreamingIterator for Serializer<F, A, I>
+impl<A, I> FallibleStreamingIterator for Serializer<A, I>
 where
-    F: JsonFormat,
     A: AsRef<dyn Array>,
     I: Iterator<Item = Result<Chunk<A>>>,
 {
