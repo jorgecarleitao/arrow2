@@ -12,11 +12,12 @@ use crate::{
 
 use super::super::super::iterator::{BufStreamingIterator, StreamingIterator};
 use crate::array::{DictionaryArray, DictionaryKey, Offset};
+use csv_core::WriteResult;
 use std::any::Any;
 
 /// Options to serialize logical types to CSV
 /// The default is to format times and dates as `chrono` crate formats them.
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Default)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct SerializeOptions {
     /// used for [`DataType::Date32`]
     pub date32_format: Option<String>,
@@ -28,6 +29,21 @@ pub struct SerializeOptions {
     pub time64_format: Option<String>,
     /// used for [`DataType::Timestamp`]
     pub timestamp_format: Option<String>,
+    /// used as separator/delimiter
+    pub delimiter: u8,
+}
+
+impl Default for SerializeOptions {
+    fn default() -> Self {
+        SerializeOptions {
+            date32_format: None,
+            date64_format: None,
+            time32_format: None,
+            time64_format: None,
+            timestamp_format: None,
+            delimiter: b',',
+        }
+    }
 }
 
 fn primitive_write<'a, T: NativeType + ToLexical>(
@@ -337,11 +353,35 @@ pub fn new_serializer<'a>(
         }
         DataType::Utf8 => {
             let array = array.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
+            let mut local_buf = vec![0u8; 64];
+            let mut ser_writer = csv_core::Writer::new();
+
             Box::new(BufStreamingIterator::new(
                 array.iter(),
-                |x, buf| {
-                    if let Some(x) = x {
-                        buf.extend_from_slice(x.as_bytes());
+                move |x, buf| {
+                    match x {
+                        // Empty strings are quoted.
+                        // This will ensure a csv parser will not read them as missing
+                        // in a delimited field
+                        Some("") => buf.extend_from_slice(b"\"\""),
+                        Some(s) => {
+                            let bytes = s.as_bytes();
+                            buf.reserve(bytes.len() * 2);
+
+                            loop {
+                                match ser_writer.field(s.as_bytes(), &mut local_buf) {
+                                    (WriteResult::OutputFull, _, _) => {
+                                        let additional = local_buf.len();
+                                        local_buf.extend(std::iter::repeat(0u8).take(additional))
+                                    }
+                                    (WriteResult::InputEmpty, _, n_out) => {
+                                        buf.extend_from_slice(&local_buf[..n_out]);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        _ => {}
                     }
                 },
                 vec![],
@@ -349,11 +389,35 @@ pub fn new_serializer<'a>(
         }
         DataType::LargeUtf8 => {
             let array = array.as_any().downcast_ref::<Utf8Array<i64>>().unwrap();
+            let mut local_buf = vec![0u8; 64];
+            let mut ser_writer = csv_core::Writer::new();
+
             Box::new(BufStreamingIterator::new(
                 array.iter(),
-                |x, buf| {
-                    if let Some(x) = x {
-                        buf.extend_from_slice(x.as_bytes());
+                move |x, buf| {
+                    match x {
+                        // Empty strings are quoted.
+                        // This will ensure a csv parser will not read them as missing
+                        // in a delimited field
+                        Some("") => buf.extend_from_slice(b"\"\""),
+                        Some(s) => {
+                            let bytes = s.as_bytes();
+                            buf.reserve(bytes.len() * 2);
+
+                            loop {
+                                match ser_writer.field(s.as_bytes(), &mut local_buf) {
+                                    (WriteResult::OutputFull, _, _) => {
+                                        let additional = local_buf.len();
+                                        local_buf.extend(std::iter::repeat(0u8).take(additional))
+                                    }
+                                    (WriteResult::InputEmpty, _, n_out) => {
+                                        buf.extend_from_slice(&local_buf[..n_out]);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        _ => {}
                     }
                 },
                 vec![],

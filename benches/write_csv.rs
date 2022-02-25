@@ -14,9 +14,9 @@ fn write_batch(columns: &ChunkArc) -> Result<()> {
     let writer = &mut write::WriterBuilder::new().from_writer(vec![]);
 
     assert_eq!(columns.arrays().len(), 1);
-    write::write_header(writer, &["a"])?;
-
     let options = write::SerializeOptions::default();
+    write::write_header(writer, &["a"], &options)?;
+
     write::write_chunk(writer, columns, &options)
 }
 
