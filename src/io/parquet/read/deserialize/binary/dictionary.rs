@@ -7,10 +7,10 @@ use crate::{
     bitmap::MutableBitmap,
     datatypes::{DataType, PhysicalType},
     error::Result,
-    io::parquet::read::utils::MaybeNext,
 };
 
 use super::super::dictionary::*;
+use super::super::utils::MaybeNext;
 use super::super::DataPages;
 
 /// An iterator adapter over [`DataPages`] assumed to be encoded as parquet's dictionary-encoded binary representation
