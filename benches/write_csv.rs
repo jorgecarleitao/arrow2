@@ -11,13 +11,13 @@ use arrow2::util::bench_util::*;
 type ChunkArc = Chunk<Arc<dyn Array>>;
 
 fn write_batch(columns: &ChunkArc) -> Result<()> {
-    let writer = &mut write::WriterBuilder::new().from_writer(vec![]);
+    let mut writer = vec![];
 
     assert_eq!(columns.arrays().len(), 1);
     let options = write::SerializeOptions::default();
-    write::write_header(writer, &["a"], &options)?;
+    write::write_header(&mut writer, &["a"], &options)?;
 
-    write::write_chunk(writer, columns, &options)
+    write::write_chunk(&mut writer, columns, &options)
 }
 
 fn make_chunk(array: impl Array + 'static) -> Chunk<Arc<dyn Array>> {
