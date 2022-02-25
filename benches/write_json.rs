@@ -10,7 +10,7 @@ use arrow2::util::bench_util::*;
 
 fn write_batch(columns: &Chunk<Arc<dyn Array>>) -> Result<()> {
     let mut writer = vec![];
-    let format = write::JsonArray::default();
+    let format = write::Format::Json;
 
     let batches = vec![Ok(columns.clone())].into_iter();
 

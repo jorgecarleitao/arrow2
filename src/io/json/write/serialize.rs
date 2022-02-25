@@ -14,7 +14,8 @@ use crate::temporal_conversions::{
 use crate::util::lexical_to_bytes_mut;
 use crate::{array::*, datatypes::DataType, types::NativeType};
 
-use super::{JsonArray, JsonFormat};
+use super::format::{JsonArray, JsonFormat, LineDelimited};
+use super::Format;
 
 fn boolean_serializer<'a>(
     array: &'a BooleanArray,
@@ -249,7 +250,7 @@ fn serialize_item<F: JsonFormat>(
 
 /// Serializes a (name, array) to a valid JSON to `buffer`
 /// This is CPU-bounded
-pub fn serialize<N, A, F>(names: &[N], columns: &Chunk<A>, format: F, buffer: &mut Vec<u8>)
+fn _serialize<N, A, F>(names: &[N], columns: &Chunk<A>, format: F, buffer: &mut Vec<u8>)
 where
     N: AsRef<str>,
     A: AsRef<dyn Array>,
@@ -277,4 +278,19 @@ where
         serialize_item(buffer, &record, format, is_first_row);
         is_first_row = false;
     })
+}
+
+/// Serializes a (name, array) to a valid JSON to `buffer`
+/// This is CPU-bounded
+pub fn serialize<N, A>(names: &[N], columns: &Chunk<A>, format: Format, buffer: &mut Vec<u8>)
+where
+    N: AsRef<str>,
+    A: AsRef<dyn Array>,
+{
+    match format {
+        Format::Json => _serialize(names, columns, JsonArray::default(), buffer),
+        Format::NewlineDelimitedJson => {
+            _serialize(names, columns, LineDelimited::default(), buffer)
+        }
+    }
 }

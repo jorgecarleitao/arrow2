@@ -22,10 +22,10 @@ fn read_batch(data: String, fields: &[Field]) -> Result<Chunk<Arc<dyn Array>>> {
     json_read::deserialize(rows, fields)
 }
 
-fn write_batch<F: json_write::JsonFormat, A: AsRef<dyn Array>>(
+fn write_batch<A: AsRef<dyn Array>>(
     batch: Chunk<A>,
     names: Vec<String>,
-    format: F,
+    format: json_write::Format,
 ) -> Result<Vec<u8>> {
     let batches = vec![Ok(batch)].into_iter();
 
@@ -46,7 +46,7 @@ fn round_trip(data: String) -> Result<()> {
     let buf = write_batch(
         columns.clone(),
         fields.iter().map(|x| x.name.clone()).collect(),
-        json_write::LineDelimited::default(),
+        json_write::Format::NewlineDelimitedJson,
     )?;
 
     let new_chunk = read_batch(String::from_utf8(buf).unwrap(), &fields)?;
