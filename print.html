@@ -1841,7 +1841,7 @@ use arrow2::{
 
 fn write_batches(path: &amp;str, names: Vec&lt;String&gt;, batches: &amp;[Chunk&lt;Arc&lt;dyn Array&gt;&gt;]) -&gt; Result&lt;()&gt; {
     let mut writer = File::create(path)?;
-    let format = write::JsonArray::default();
+    let format = write::Format::Json;
 
     let batches = batches.iter().cloned().map(Ok);
 
