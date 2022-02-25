@@ -7,7 +7,7 @@ use parquet2::{
 
 use crate::{
     array::PrimitiveArray, bitmap::MutableBitmap, datatypes::DataType, error::Result,
-    io::parquet::read::utils::MaybeNext, types::NativeType,
+    types::NativeType,
 };
 
 use super::super::nested_utils::*;
@@ -207,12 +207,12 @@ where
             &self.decoder,
         );
         match maybe_state {
-            MaybeNext::Some(Ok((nested, values, validity))) => {
+            utils::MaybeNext::Some(Ok((nested, values, validity))) => {
                 Some(Ok((nested, finish(&self.data_type, values, validity))))
             }
-            MaybeNext::Some(Err(e)) => Some(Err(e)),
-            MaybeNext::None => None,
-            MaybeNext::More => self.next(),
+            utils::MaybeNext::Some(Err(e)) => Some(Err(e)),
+            utils::MaybeNext::None => None,
+            utils::MaybeNext::More => self.next(),
         }
     }
 }

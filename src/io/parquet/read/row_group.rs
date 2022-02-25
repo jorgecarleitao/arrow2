@@ -87,7 +87,7 @@ impl Iterator for RowGroupDeserializer {
     }
 }
 
-/// Returns all the parquet columns associated to `field_name`.
+/// Returns all [`ColumnChunkMetaData`] associated to `field_name`.
 /// For non-nested parquet types, this returns a single column
 pub(super) fn get_field_columns<'a>(
     columns: &'a [ColumnChunkMetaData],

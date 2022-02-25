@@ -5,8 +5,7 @@ use crate::{
     datatypes::DataType,
 };
 
-use super::ArrayIter;
-use super::DataPages;
+use super::super::{ArrayIter, DataPages};
 
 /// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
 pub fn iter_to_arrays<'a, I>(mut iter: I, data_type: DataType, chunk_size: usize) -> ArrayIter<'a>
