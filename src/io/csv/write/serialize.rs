@@ -31,7 +31,7 @@ pub struct SerializeOptions {
     pub timestamp_format: Option<String>,
     /// used as separator/delimiter
     pub delimiter: u8,
-    /// used as separator/delimiter
+    /// quoting character
     pub quote: u8,
 }
 

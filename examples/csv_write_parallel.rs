@@ -1,3 +1,4 @@
+use std::io::Write;
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::Arc;
@@ -14,8 +15,8 @@ fn parallel_write(path: &str, batches: [Chunk<Arc<dyn Array>>; 2]) -> Result<()>
     let options = write::SerializeOptions::default();
 
     // write a header
-    let writer = &mut write::WriterBuilder::new().from_path(path)?;
-    write::write_header(writer, &["c1"])?;
+    let mut writer = std::fs::File::create(path)?;
+    write::write_header(&mut writer, &["c1"], &options)?;
 
     // prepare a channel to send serialized records from threads
     let (tx, rx): (Sender<_>, Receiver<_>) = mpsc::channel();
@@ -28,8 +29,8 @@ fn parallel_write(path: &str, batches: [Chunk<Arc<dyn Array>>; 2]) -> Result<()>
         let options = options.clone();
         let batch = batches[id].clone(); // note: this is cheap
         let child = thread::spawn(move || {
-            let records = write::serialize(&batch, &options).unwrap();
-            thread_tx.send(records).unwrap();
+            let rows = write::serialize(&batch, &options).unwrap();
+            thread_tx.send(rows).unwrap();
         });
 
         children.push(child);
@@ -38,9 +39,7 @@ fn parallel_write(path: &str, batches: [Chunk<Arc<dyn Array>>; 2]) -> Result<()>
     for _ in 0..2 {
         // block: assumes that the order of batches matter.
         let records = rx.recv().unwrap();
-        records
-            .iter()
-            .try_for_each(|record| writer.write_byte_record(record))?
+        records.iter().try_for_each(|row| writer.write_all(&row))?
     }
 
     for child in children {

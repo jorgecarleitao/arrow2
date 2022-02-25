@@ -26,24 +26,37 @@ fn new_serializers<'a, A: AsRef<dyn Array>>(
         .collect()
 }
 
-/// Serializes [`Chunk`] to a vector of `ByteRecord`.
+/// Serializes [`Chunk`] to a vector of rows.
 /// The vector is guaranteed to have `columns.len()` entries.
-/// Each `ByteRecord` is guaranteed to have `columns.array().len()` fields.
+/// Each `row` is guaranteed to have `columns.array().len()` fields.
 pub fn serialize<A: AsRef<dyn Array>>(
     columns: &Chunk<A>,
     options: &SerializeOptions,
-) -> Result<Vec<ByteRecord>> {
+) -> Result<Vec<Vec<u8>>> {
     let mut serializers = new_serializers(columns, options)?;
 
-    let rows = columns.len();
-    let mut records = vec![ByteRecord::with_capacity(0, columns.arrays().len()); rows];
-    records.iter_mut().for_each(|record| {
+    let mut rows = Vec::with_capacity(columns.len());
+    let mut row = vec![];
+
+    // this is where the (expensive) transposition happens: the outer loop is on rows, the inner on columns
+    (0..columns.len()).try_for_each(|_| {
         serializers
             .iter_mut()
-            // `unwrap` is infalible because `array.len()` equals `len` in `Chunk::len`
-            .for_each(|iter| record.push_field(iter.next().unwrap()));
-    });
-    Ok(records)
+            // `unwrap` is infalible because `array.len()` equals `Chunk::len`
+            .for_each(|iter| {
+                let field = iter.next().unwrap();
+                row.extend_from_slice(field);
+                row.push(options.delimiter);
+            });
+        // replace last delimiter with new line
+        let last_byte = row.len() - 1;
+        row[last_byte] = b'\n';
+        rows.push(row.clone());
+        row.clear();
+        Result::Ok(())
+    })?;
+
+    Ok(rows)
 }
 
 /// Writes [`Chunk`] to `writer` according to the serialization options `options`.
