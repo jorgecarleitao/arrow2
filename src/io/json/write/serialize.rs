@@ -187,7 +187,7 @@ where
     ))
 }
 
-fn new_serializer<'a>(
+pub(crate) fn new_serializer<'a>(
     array: &'a dyn Array,
 ) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync> {
     match array.data_type().to_logical_type() {

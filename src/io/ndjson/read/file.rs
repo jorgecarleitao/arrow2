@@ -10,7 +10,7 @@ use crate::{
     error::{ArrowError, Result},
 };
 
-use super::super::super::json::read::{coerce_data_type, infer_value};
+use super::super::super::json::read::{coerce_data_type, infer as infer_json};
 
 /// Reads up to a number of lines from `reader` into `rows` bounded by `limit`.
 fn read_rows<R: BufRead>(reader: &mut R, rows: &mut [String], limit: usize) -> Result<usize> {
@@ -107,15 +107,15 @@ pub fn infer<R: std::io::BufRead>(
     let rows = vec!["".to_string(); 1]; // 1 <=> read row by row
     let mut reader = FileReader::new(reader, rows, number_of_rows);
 
-    let mut values = HashSet::new();
+    let mut data_types = HashSet::new();
     while let Some(rows) = reader.next()? {
         let value: Value = serde_json::from_str(&rows[0])?; // 0 because it is row by row
-        let data_type = infer_value(&value)?;
+        let data_type = infer_json(&value)?;
         if data_type != DataType::Null {
-            values.insert(data_type);
+            data_types.insert(data_type);
         }
     }
 
-    let v: Vec<&DataType> = values.iter().collect();
+    let v: Vec<&DataType> = data_types.iter().collect();
     Ok(coerce_data_type(&v))
 }

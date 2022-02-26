@@ -3,6 +3,7 @@ mod format;
 mod serialize;
 
 pub use fallible_streaming_iterator::*;
+pub(crate) use serialize::new_serializer;
 pub use serialize::serialize;
 
 use crate::{
