@@ -19,6 +19,9 @@ pub mod csv;
 #[cfg(feature = "io_json")]
 #[cfg_attr(docsrs, doc(cfg(feature = "io_json")))]
 pub mod json;
+#[cfg(feature = "io_json")]
+#[cfg_attr(docsrs, doc(cfg(feature = "io_json")))]
+pub mod ndjson;
 
 #[cfg(feature = "io_ipc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "io_ipc")))]

@@ -87,7 +87,7 @@ pub fn infer_and_reset<R: BufRead + Seek>(
     fields
 }
 
-fn infer_value(value: &Value) -> Result<DataType> {
+pub(crate) fn infer_value(value: &Value) -> Result<DataType> {
     Ok(match value {
         Value::Bool(_) => DataType::Boolean,
         Value::Array(array) => infer_array(array)?,
@@ -185,7 +185,7 @@ fn resolve_fields(spec: HashMap<String, HashSet<DataType>>) -> Vec<Field> {
 /// * Lists and scalars are coerced to a list of a compatible scalar
 /// * Structs contain the union of all fields
 /// * All other types are coerced to `Utf8`
-fn coerce_data_type<A: Borrow<DataType>>(datatypes: &[A]) -> DataType {
+pub(crate) fn coerce_data_type<A: Borrow<DataType>>(datatypes: &[A]) -> DataType {
     use DataType::*;
 
     let are_all_equal = datatypes.windows(2).all(|w| w[0].borrow() == w[1].borrow());

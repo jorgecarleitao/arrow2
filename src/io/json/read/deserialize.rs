@@ -203,7 +203,7 @@ fn deserialize_dictionary<K: DictionaryKey, A: Borrow<Value>>(
     DictionaryArray::<K>::from_data(keys, values)
 }
 
-fn _deserialize<A: Borrow<Value>>(rows: &[A], data_type: DataType) -> Arc<dyn Array> {
+pub(crate) fn _deserialize<A: Borrow<Value>>(rows: &[A], data_type: DataType) -> Arc<dyn Array> {
     match &data_type {
         DataType::Null => Arc::new(NullArray::from_data(data_type, rows.len())),
         DataType::Boolean => Arc::new(deserialize_boolean(rows)),

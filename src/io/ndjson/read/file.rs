@@ -1,0 +1,121 @@
+use std::io::BufRead;
+
+use fallible_streaming_iterator::FallibleStreamingIterator;
+use indexmap::set::IndexSet as HashSet;
+use serde_json;
+use serde_json::Value;
+
+use crate::{
+    datatypes::DataType,
+    error::{ArrowError, Result},
+};
+
+use super::super::super::json::read::{coerce_data_type, infer_value};
+
+/// Reads up to a number of lines from `reader` into `rows` bounded by `limit`.
+fn read_rows<R: BufRead>(reader: &mut R, rows: &mut [String], limit: usize) -> Result<usize> {
+    if limit == 0 {
+        return Ok(0);
+    }
+    let mut row_number = 0;
+    for row in rows.iter_mut() {
+        loop {
+            row.clear();
+            let _ = reader.read_line(row).map_err(|e| {
+                ArrowError::External(format!(" at line {}", row_number), Box::new(e))
+            })?;
+            if row.is_empty() {
+                break;
+            }
+            if !row.trim().is_empty() {
+                break;
+            }
+        }
+        if row.is_empty() {
+            break;
+        }
+        row_number += 1;
+        if row_number == limit {
+            break;
+        }
+    }
+    Ok(row_number)
+}
+
+/// A [`FallibleStreamingIterator`] of NDJSON rows.
+///
+/// This iterator is used to read chunks of an NDJSON in batches.
+/// This iterator is guaranteed to yield at least one row.
+/// # Implementantion
+/// Advancing this iterator is IO-bounded, but does require parsing each byte to find end of lines.
+/// # Error
+/// Advancing this iterator errors iff the reader errors.
+pub struct FileReader<R: BufRead> {
+    reader: R,
+    rows: Vec<String>,
+    number_of_rows: usize,
+    remaining: usize,
+}
+
+impl<R: BufRead> FileReader<R> {
+    /// Creates a new [`FileReader`] from a reader and `rows`.
+    ///
+    /// The number of items in `rows` denotes the batch size.
+    pub fn new(reader: R, rows: Vec<String>, limit: Option<usize>) -> Self {
+        Self {
+            reader,
+            rows,
+            remaining: limit.unwrap_or(usize::MAX),
+            number_of_rows: 0,
+        }
+    }
+
+    /// Deconstruct [`FileReader`] into the reader and the internal buffer.
+    pub fn into_inner(self) -> (R, Vec<String>) {
+        (self.reader, self.rows)
+    }
+}
+
+impl<R: BufRead> FallibleStreamingIterator for FileReader<R> {
+    type Error = ArrowError;
+    type Item = [String];
+
+    fn advance(&mut self) -> Result<()> {
+        self.number_of_rows = read_rows(&mut self.reader, &mut self.rows, self.remaining)?;
+        self.remaining -= self.number_of_rows;
+        Ok(())
+    }
+
+    fn get(&self) -> Option<&Self::Item> {
+        if self.number_of_rows > 0 {
+            Some(&self.rows[..self.number_of_rows])
+        } else {
+            None
+        }
+    }
+}
+
+/// Infers the [`DataType`] from an NDJSON file, optionally only using `number_of_rows` rows.
+///
+/// # Implementantion
+/// This implementation reads the file line by line and infers the type of each line.
+/// It performs both `O(N)` IO and CPU-bounded operations where `N` is the number of rows.
+pub fn infer<R: std::io::BufRead>(
+    reader: &mut R,
+    number_of_rows: Option<usize>,
+) -> Result<DataType> {
+    let rows = vec!["".to_string(); 1]; // 1 <=> read row by row
+    let mut reader = FileReader::new(reader, rows, number_of_rows);
+
+    let mut values = HashSet::new();
+    while let Some(rows) = reader.next()? {
+        let value: Value = serde_json::from_str(&rows[0])?; // 0 because it is row by row
+        let data_type = infer_value(&value)?;
+        if data_type != DataType::Null {
+            values.insert(data_type);
+        }
+    }
+
+    let v: Vec<&DataType> = values.iter().collect();
+    Ok(coerce_data_type(&v))
+}

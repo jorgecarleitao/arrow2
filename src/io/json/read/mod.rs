@@ -5,6 +5,7 @@ mod iterator;
 
 use crate::error::{ArrowError, Result};
 
+pub(crate) use deserialize::_deserialize;
 pub use deserialize::{deserialize, deserialize_json};
 pub use infer_schema::*;
 
