@@ -6,14 +6,14 @@ use arrow2::{
 };
 
 fn write_batch<A: AsRef<dyn Array>>(path: &str, columns: &[Chunk<A>]) -> Result<()> {
-    let writer = &mut write::WriterBuilder::new().from_path(path)?;
-
-    write::write_header(writer, &["c1"])?;
+    let mut writer = std::fs::File::create(path)?;
 
     let options = write::SerializeOptions::default();
+    write::write_header(&mut writer, &["c1"], &options)?;
+
     columns
         .iter()
-        .try_for_each(|batch| write::write_chunk(writer, batch, &options))
+        .try_for_each(|batch| write::write_chunk(&mut writer, batch, &options))
 }
 
 fn main() -> Result<()> {

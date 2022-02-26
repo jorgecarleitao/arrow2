@@ -34,15 +34,18 @@ fn data() -> Chunk<Box<dyn Array>> {
 fn write_csv() -> Result<()> {
     let columns = data();
 
-    let write = Cursor::new(Vec::<u8>::new());
-    let mut writer = WriterBuilder::new().from_writer(write);
-
-    write_header(&mut writer, &["c1", "c2", "c3", "c4", "c5", "c6", "c7"])?;
+    let mut writer = Cursor::new(Vec::<u8>::new());
     let options = SerializeOptions::default();
+
+    write_header(
+        &mut writer,
+        &["c1", "c2", "c3", "c4", "c5", "c6", "c7"],
+        &options,
+    )?;
     write_chunk(&mut writer, &columns, &options)?;
 
     // check
-    let buffer = writer.into_inner().unwrap().into_inner();
+    let buffer = writer.into_inner();
     assert_eq!(
         r#"c1,c2,c3,c4,c5,c6,c7
 a b,123.564532,3,true,,00:20:34,d
@@ -59,18 +62,18 @@ d,-556132.25,1,,2019-04-18 02:45:55.555,23:46:03,c
 fn write_csv_custom_options() -> Result<()> {
     let batch = data();
 
-    let write = Cursor::new(Vec::<u8>::new());
-    let mut writer = WriterBuilder::new().delimiter(b'|').from_writer(write);
+    let mut writer = Cursor::new(Vec::<u8>::new());
 
     let options = SerializeOptions {
         time32_format: Some("%r".to_string()),
         time64_format: Some("%r".to_string()),
+        delimiter: b'|',
         ..Default::default()
     };
     write_chunk(&mut writer, &batch, &options)?;
 
     // check
-    let buffer = writer.into_inner().unwrap().into_inner();
+    let buffer = writer.into_inner();
     assert_eq!(
         r#"a b|123.564532|3|true||12:20:34 AM|d
 c||2|false|2019-04-18 10:54:47.378|06:51:20 AM|a b
@@ -230,14 +233,13 @@ fn test_array(
     data: Vec<&'static str>,
     options: SerializeOptions,
 ) -> Result<()> {
-    let write = Cursor::new(Vec::<u8>::new());
-    let mut writer = WriterBuilder::new().delimiter(b'|').from_writer(write);
+    let mut writer = Cursor::new(Vec::<u8>::new());
 
-    write_header(&mut writer, &["c1"])?;
+    write_header(&mut writer, &["c1"], &options)?;
     write_chunk(&mut writer, &columns, &options)?;
 
     // check
-    let buffer = writer.into_inner().unwrap().into_inner();
+    let buffer = writer.into_inner();
 
     let mut expected = "c1\n".to_owned();
     expected.push_str(&data.join("\n"));
@@ -313,4 +315,21 @@ fn write_tz_timezone_formatted_tz() -> Result<()> {
             ..Default::default()
         },
     )
+}
+
+#[test]
+fn write_empty_and_missing() {
+    let a = Utf8Array::<i32>::from(&[Some(""), None]);
+    let b = Utf8Array::<i32>::from(&[None, Some("")]);
+    let columns = Chunk::new(vec![
+        Arc::new(a) as Arc<dyn Array>,
+        Arc::new(b) as Arc<dyn Array>,
+    ]);
+
+    let mut writer = vec![];
+    let options = SerializeOptions::default();
+    write_chunk(&mut writer, &columns, &options).unwrap();
+    let csv = std::str::from_utf8(&writer).unwrap();
+
+    assert_eq!(csv, "\"\",\n,\"\"\n");
 }
