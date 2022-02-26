@@ -15,7 +15,7 @@ fn write_simple_rows() -> Result<()> {
     let a = Int32Array::from([Some(1), Some(2), Some(3), None, Some(5)]);
     let b = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c"), Some("d"), None]);
 
-    let batch = Chunk::try_new(vec![&a as &dyn Array, &b]).unwrap();
+    let batch = Chunk::try_new(vec![&a as &dyn Array, &b])?;
 
     let buf = write_batch(
         batch,
@@ -338,11 +338,15 @@ fn write_date32() -> Result<()> {
     )?;
 
     assert_eq!(
-        String::from_utf8(buf).unwrap().as_bytes(),
-        b"{\"c1\":1972-09-27}\n{\"c1\":1991-11-27}\n{\"c1\":1997-05-19}\n"
+        std::str::from_utf8(&buf).unwrap(),
+        r#"{"c1":"1972-09-27"}
+{"c1":"1991-11-27"}
+{"c1":"1997-05-19"}
+"#
     );
     Ok(())
 }
+
 #[test]
 fn write_timestamp() -> Result<()> {
     let a = PrimitiveArray::from_data(
@@ -360,8 +364,11 @@ fn write_timestamp() -> Result<()> {
     )?;
 
     assert_eq!(
-        String::from_utf8(buf).unwrap().as_bytes(),
-        b"{\"c1\":1970-01-01 00:00:10}\n{\"c1\":2106-02-07 06:28:16}\n{\"c1\":2242-03-16 12:56:32}\n"
+        std::str::from_utf8(&buf).unwrap(),
+        r#"{"c1":"1970-01-01 00:00:10"}
+{"c1":"2106-02-07 06:28:16"}
+{"c1":"2242-03-16 12:56:32"}
+"#
     );
     Ok(())
 }
