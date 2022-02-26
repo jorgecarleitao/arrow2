@@ -10,29 +10,31 @@ use arrow2::{
 
 use super::*;
 
+macro_rules! test {
+    ($chunk:expr, $names:expr, $format:expr, $expected:expr) => {{
+        let buf = write_batch($chunk, $names, $format)?;
+        assert_eq!(String::from_utf8(buf).unwrap(), $expected);
+        Ok(())
+    }};
+}
+
 #[test]
 fn write_simple_rows() -> Result<()> {
     let a = Int32Array::from([Some(1), Some(2), Some(3), None, Some(5)]);
     let b = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c"), Some("d"), None]);
 
-    let batch = Chunk::try_new(vec![&a as &dyn Array, &b])?;
+    let names = vec!["c1".to_string(), "c2".to_string()];
+    let chunk = Chunk::try_new(vec![&a as &dyn Array, &b])?;
+    let format = json_write::Format::NewlineDelimitedJson;
 
-    let buf = write_batch(
-        batch,
-        vec!["c1".to_string(), "c2".to_string()],
-        json_write::Format::NewlineDelimitedJson,
-    )?;
-
-    assert_eq!(
-        String::from_utf8(buf).unwrap(),
-        r#"{"c1":1,"c2":"a"}
+    let expected = r#"{"c1":1,"c2":"a"}
 {"c1":2,"c2":"b"}
 {"c1":3,"c2":"c"}
 {"c1":null,"c2":"d"}
 {"c1":5,"c2":null}
-"#
-    );
-    Ok(())
+"#;
+
+    test!(chunk, names, format, expected)
 }
 
 #[test]
@@ -40,19 +42,12 @@ fn write_simple_rows_array() -> Result<()> {
     let a = Int32Array::from([Some(1), Some(2), Some(3), None, Some(5)]);
     let b = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c"), Some("d"), None]);
 
-    let batch = Chunk::try_new(vec![&a as &dyn Array, &b]).unwrap();
+    let chunk = Chunk::try_new(vec![&a as &dyn Array, &b])?;
+    let names = vec!["c1".to_string(), "c2".to_string()];
+    let format = json_write::Format::Json;
+    let expected = r#"[{"c1":1,"c2":"a"},{"c1":2,"c2":"b"},{"c1":3,"c2":"c"},{"c1":null,"c2":"d"},{"c1":5,"c2":null}]"#;
 
-    let buf = write_batch(
-        batch,
-        vec!["c1".to_string(), "c2".to_string()],
-        json_write::Format::Json,
-    )?;
-
-    assert_eq!(
-        String::from_utf8(buf).unwrap(),
-        r#"[{"c1":1,"c2":"a"},{"c1":2,"c2":"b"},{"c1":3,"c2":"c"},{"c1":null,"c2":"d"},{"c1":5,"c2":null}]"#
-    );
-    Ok(())
+    test!(chunk, names, format, expected)
 }
 
 #[test]
@@ -83,22 +78,15 @@ fn write_nested_struct_with_validity() -> Result<()> {
     );
     let c2 = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c")]);
 
-    let batch = Chunk::try_new(vec![&c1 as &dyn Array, &c2]).unwrap();
-
-    let buf = write_batch(
-        batch,
-        vec!["c1".to_string(), "c2".to_string()],
-        json_write::Format::NewlineDelimitedJson,
-    )?;
-
-    assert_eq!(
-        String::from_utf8(buf).unwrap(),
-        r#"{"c1":{"c11":1,"c12":null},"c2":"a"}
+    let chunk = Chunk::try_new(vec![&c1 as &dyn Array, &c2])?;
+    let names = vec!["c1".to_string(), "c2".to_string()];
+    let format = json_write::Format::NewlineDelimitedJson;
+    let expected = r#"{"c1":{"c11":1,"c12":null},"c2":"a"}
 {"c1":{"c11":null,"c12":{"c121":"f","c122":null}},"c2":"b"}
 {"c1":null,"c2":"c"}
-"#
-    );
-    Ok(())
+"#;
+
+    test!(chunk, names, format, expected)
 }
 
 #[test]
@@ -128,22 +116,15 @@ fn write_nested_structs() -> Result<()> {
 
     let c2 = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c")]);
 
-    let batch = Chunk::try_new(vec![&c1 as &dyn Array, &c2]).unwrap();
-
-    let buf = write_batch(
-        batch,
-        vec!["c1".to_string(), "c2".to_string()],
-        json_write::Format::NewlineDelimitedJson,
-    )?;
-
-    assert_eq!(
-        String::from_utf8(buf).unwrap(),
-        r#"{"c1":{"c11":1,"c12":{"c121":"e"}},"c2":"a"}
+    let chunk = Chunk::try_new(vec![&c1 as &dyn Array, &c2])?;
+    let names = vec!["c1".to_string(), "c2".to_string()];
+    let format = json_write::Format::NewlineDelimitedJson;
+    let expected = r#"{"c1":{"c11":1,"c12":{"c121":"e"}},"c2":"a"}
 {"c1":{"c11":null,"c12":{"c121":"f"}},"c2":"b"}
 {"c1":{"c11":5,"c12":{"c121":"g"}},"c2":"c"}
-"#
-    );
-    Ok(())
+"#;
+
+    test!(chunk, names, format, expected)
 }
 
 #[test]
@@ -164,24 +145,17 @@ fn write_struct_with_list_field() -> Result<()> {
 
     let b = PrimitiveArray::from_slice([1, 2, 3, 4, 5]);
 
-    let batch = Chunk::try_new(vec![&a as &dyn Array, &b]).unwrap();
-
-    let buf = write_batch(
-        batch,
-        vec!["c1".to_string(), "c2".to_string()],
-        json_write::Format::NewlineDelimitedJson,
-    )?;
-
-    assert_eq!(
-        String::from_utf8(buf).unwrap(),
-        r#"{"c1":["a","a1"],"c2":1}
+    let chunk = Chunk::try_new(vec![&a as &dyn Array, &b])?;
+    let names = vec!["c1".to_string(), "c2".to_string()];
+    let format = json_write::Format::NewlineDelimitedJson;
+    let expected = r#"{"c1":["a","a1"],"c2":1}
 {"c1":["b"],"c2":2}
 {"c1":["c"],"c2":3}
 {"c1":["d"],"c2":4}
 {"c1":["e"],"c2":5}
-"#
-    );
-    Ok(())
+"#;
+
+    test!(chunk, names, format, expected)
 }
 
 #[test]
@@ -208,22 +182,15 @@ fn write_nested_list() -> Result<()> {
 
     let c2 = Utf8Array::<i32>::from(&vec![Some("foo"), Some("bar"), None]);
 
-    let batch = Chunk::try_new(vec![&c1 as &dyn Array, &c2]).unwrap();
-
-    let buf = write_batch(
-        batch,
-        vec!["c1".to_string(), "c2".to_string()],
-        json_write::Format::NewlineDelimitedJson,
-    )?;
-
-    assert_eq!(
-        String::from_utf8(buf).unwrap(),
-        r#"{"c1":[[1,2],[3]],"c2":"foo"}
+    let chunk = Chunk::try_new(vec![&c1 as &dyn Array, &c2])?;
+    let names = vec!["c1".to_string(), "c2".to_string()];
+    let format = json_write::Format::NewlineDelimitedJson;
+    let expected = r#"{"c1":[[1,2],[3]],"c2":"foo"}
 {"c1":[],"c2":"bar"}
 {"c1":[[4,5,6]],"c2":null}
-"#
-    );
-    Ok(())
+"#;
+
+    test!(chunk, names, format, expected)
 }
 
 #[test]
@@ -269,82 +236,58 @@ fn write_list_of_struct() -> Result<()> {
 
     let c2 = Int32Array::from_slice(&[1, 2, 3]);
 
-    let batch = Chunk::try_new(vec![&c1 as &dyn Array, &c2]).unwrap();
-
-    let buf = write_batch(
-        batch,
-        vec!["c1".to_string(), "c2".to_string()],
-        json_write::Format::NewlineDelimitedJson,
-    )?;
-
-    assert_eq!(
-        String::from_utf8(buf).unwrap(),
-        r#"{"c1":[{"c11":1,"c12":null},{"c11":null,"c12":{"c121":"f"}}],"c2":1}
+    let chunk = Chunk::try_new(vec![&c1 as &dyn Array, &c2])?;
+    let names = vec!["c1".to_string(), "c2".to_string()];
+    let format = json_write::Format::NewlineDelimitedJson;
+    let expected = r#"{"c1":[{"c11":1,"c12":null},{"c11":null,"c12":{"c121":"f"}}],"c2":1}
 {"c1":null,"c2":2}
 {"c1":[null],"c2":3}
-"#
-    );
-    Ok(())
+"#;
+
+    test!(chunk, names, format, expected)
 }
 
 #[test]
 fn write_escaped_utf8() -> Result<()> {
     let a = Utf8Array::<i32>::from(&vec![Some("a\na"), None]);
 
-    let batch = Chunk::try_new(vec![&a as &dyn Array]).unwrap();
+    let chunk = Chunk::try_new(vec![&a as &dyn Array])?;
+    let names = vec!["c1".to_string()];
+    let format = json_write::Format::NewlineDelimitedJson;
+    let expected = r#"{"c1":"a\na"}
+{"c1":null}
+"#;
 
-    let buf = write_batch(
-        batch,
-        vec!["c1".to_string()],
-        json_write::Format::NewlineDelimitedJson,
-    )?;
-
-    assert_eq!(
-        String::from_utf8(buf).unwrap().as_bytes(),
-        b"{\"c1\":\"a\\na\"}\n{\"c1\":null}\n"
-    );
-    Ok(())
+    test!(chunk, names, format, expected)
 }
 
 #[test]
 fn write_quotation_marks_in_utf8() -> Result<()> {
     let a = Utf8Array::<i32>::from(&vec![Some("a\"a"), None]);
 
-    let batch = Chunk::try_new(vec![&a as &dyn Array]).unwrap();
+    let chunk = Chunk::try_new(vec![&a as &dyn Array])?;
+    let names = vec!["c1".to_string()];
+    let format = json_write::Format::NewlineDelimitedJson;
+    let expected = r#"{"c1":"a\"a"}
+{"c1":null}
+"#;
 
-    let buf = write_batch(
-        batch,
-        vec!["c1".to_string()],
-        json_write::Format::NewlineDelimitedJson,
-    )?;
-
-    assert_eq!(
-        String::from_utf8(buf).unwrap().as_bytes(),
-        b"{\"c1\":\"a\\\"a\"}\n{\"c1\":null}\n"
-    );
-    Ok(())
+    test!(chunk, names, format, expected)
 }
 
 #[test]
 fn write_date32() -> Result<()> {
     let a = PrimitiveArray::from_data(DataType::Date32, vec![1000i32, 8000, 10000].into(), None);
 
-    let batch = Chunk::try_new(vec![&a as &dyn Array]).unwrap();
-
-    let buf = write_batch(
-        batch,
-        vec!["c1".to_string()],
-        json_write::Format::NewlineDelimitedJson,
-    )?;
-
-    assert_eq!(
-        std::str::from_utf8(&buf).unwrap(),
-        r#"{"c1":"1972-09-27"}
+    let chunk = Chunk::try_new(vec![&a as &dyn Array])?;
+    let names = vec!["c1".to_string()];
+    let format = json_write::Format::NewlineDelimitedJson;
+    let expected = r#"{"c1":"1972-09-27"}
 {"c1":"1991-11-27"}
 {"c1":"1997-05-19"}
-"#
-    );
-    Ok(())
+"#;
+
+    test!(chunk, names, format, expected)
 }
 
 #[test]
@@ -355,20 +298,13 @@ fn write_timestamp() -> Result<()> {
         None,
     );
 
-    let batch = Chunk::try_new(vec![&a as &dyn Array]).unwrap();
-
-    let buf = write_batch(
-        batch,
-        vec!["c1".to_string()],
-        json_write::Format::NewlineDelimitedJson,
-    )?;
-
-    assert_eq!(
-        std::str::from_utf8(&buf).unwrap(),
-        r#"{"c1":"1970-01-01 00:00:10"}
+    let chunk = Chunk::try_new(vec![&a as &dyn Array])?;
+    let names = vec!["c1".to_string()];
+    let format = json_write::Format::NewlineDelimitedJson;
+    let expected = r#"{"c1":"1970-01-01 00:00:10"}
 {"c1":"2106-02-07 06:28:16"}
 {"c1":"2242-03-16 12:56:32"}
-"#
-    );
-    Ok(())
+"#;
+
+    test!(chunk, names, format, expected)
 }
