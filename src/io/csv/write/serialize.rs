@@ -221,23 +221,18 @@ fn new_utf8_serializer<'a, O: Offset>(
                 // This will ensure a csv parser will not read them as missing
                 // in a delimited field
                 Some("") => buf.extend_from_slice(b"\"\""),
-                Some(s) => {
-                    let bytes = s.as_bytes();
-                    buf.reserve(bytes.len() * 2);
-
-                    loop {
-                        match ser_writer.field(s.as_bytes(), &mut local_buf) {
-                            (WriteResult::OutputFull, _, _) => {
-                                let additional = local_buf.len();
-                                local_buf.extend(std::iter::repeat(0u8).take(additional))
-                            }
-                            (WriteResult::InputEmpty, _, n_out) => {
-                                buf.extend_from_slice(&local_buf[..n_out]);
-                                break;
-                            }
+                Some(s) => loop {
+                    match ser_writer.field(s.as_bytes(), &mut local_buf) {
+                        (WriteResult::OutputFull, _, _) => {
+                            let additional = local_buf.len();
+                            local_buf.extend(std::iter::repeat(0u8).take(additional))
+                        }
+                        (WriteResult::InputEmpty, _, n_out) => {
+                            buf.extend_from_slice(&local_buf[..n_out]);
+                            break;
                         }
                     }
-                }
+                },
                 _ => {}
             }
         },

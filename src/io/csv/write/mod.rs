@@ -48,11 +48,13 @@ pub fn serialize<A: AsRef<dyn Array>>(
                 row.extend_from_slice(field);
                 row.push(options.delimiter);
             });
-        // replace last delimiter with new line
-        let last_byte = row.len() - 1;
-        row[last_byte] = b'\n';
-        rows.push(row.clone());
-        row.clear();
+        if !row.is_empty() {
+            // replace last delimiter with new line
+            let last_byte = row.len() - 1;
+            row[last_byte] = b'\n';
+            rows.push(row.clone());
+            row.clear();
+        }
         Result::Ok(())
     })?;
 
