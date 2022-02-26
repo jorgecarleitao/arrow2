@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["Chunk","A vector of trait objects of [`Array`] where every item has the same length, [`Chunk::len`]."]]});
