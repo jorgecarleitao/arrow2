@@ -4,7 +4,6 @@ use std::io::Write;
 use streaming_iterator::StreamingIterator;
 
 use crate::bitmap::utils::zip_validity;
-use crate::chunk::Chunk;
 use crate::datatypes::TimeUnit;
 use crate::io::iterator::BufStreamingIterator;
 use crate::temporal_conversions::{
@@ -13,9 +12,6 @@ use crate::temporal_conversions::{
 };
 use crate::util::lexical_to_bytes_mut;
 use crate::{array::*, datatypes::DataType, types::NativeType};
-
-use super::format::{JsonArray, JsonFormat, LineDelimited};
-use super::Format;
 
 fn boolean_serializer<'a>(
     array: &'a BooleanArray,
@@ -95,7 +91,7 @@ fn struct_serializer<'a>(
                         let item = iter.next().unwrap();
                         record.push((name, item));
                     });
-                serialize_item(buf, &record, JsonArray::default(), true);
+                serialize_item(buf, &record, true);
             } else {
                 serializers.iter_mut().for_each(|iter| {
                     let _ = iter.next();
@@ -226,13 +222,10 @@ pub(crate) fn new_serializer<'a>(
     }
 }
 
-fn serialize_item<F: JsonFormat>(
-    buffer: &mut Vec<u8>,
-    record: &[(&str, &[u8])],
-    format: F,
-    is_first_row: bool,
-) {
-    format.start_row(buffer, is_first_row).unwrap();
+fn serialize_item(buffer: &mut Vec<u8>, record: &[(&str, &[u8])], is_first_row: bool) {
+    if !is_first_row {
+        buffer.push(b',');
+    }
     buffer.push(b'{');
     let mut first_item = true;
     for (key, value) in record {
@@ -245,52 +238,18 @@ fn serialize_item<F: JsonFormat>(
         buffer.extend(*value);
     }
     buffer.push(b'}');
-    format.end_row(buffer).unwrap();
 }
 
-/// Serializes a (name, array) to a valid JSON to `buffer`
-/// This is CPU-bounded
-fn _serialize<N, A, F>(names: &[N], columns: &Chunk<A>, format: F, buffer: &mut Vec<u8>)
-where
-    N: AsRef<str>,
-    A: AsRef<dyn Array>,
-    F: JsonFormat,
-{
-    let num_rows = columns.len();
+/// Serializes `array` to a valid JSON to `buffer`
+/// # Implementation
+/// This operation is CPU-bounded
+pub(crate) fn serialize(array: &dyn Array, buffer: &mut Vec<u8>) {
+    let mut serializer = new_serializer(array);
 
-    let mut serializers: Vec<_> = columns
-        .arrays()
-        .iter()
-        .map(|array| new_serializer(array.as_ref()))
-        .collect();
-
-    let mut is_first_row = true;
-    (0..num_rows).for_each(|_| {
-        let mut record: Vec<(&str, &[u8])> = Default::default();
-        serializers
-            .iter_mut()
-            .zip(names.iter())
-            // `unwrap` is infalible because `array.len()` equals `len` on `Chunk`
-            .for_each(|(iter, name)| {
-                let item = iter.next().unwrap();
-                record.push((name.as_ref(), item));
-            });
-        serialize_item(buffer, &record, format, is_first_row);
-        is_first_row = false;
-    })
-}
-
-/// Serializes a (name, array) to a valid JSON to `buffer`
-/// This is CPU-bounded
-pub fn serialize<N, A>(names: &[N], columns: &Chunk<A>, format: Format, buffer: &mut Vec<u8>)
-where
-    N: AsRef<str>,
-    A: AsRef<dyn Array>,
-{
-    match format {
-        Format::Json => _serialize(names, columns, JsonArray::default(), buffer),
-        Format::NewlineDelimitedJson => {
-            _serialize(names, columns, LineDelimited::default(), buffer)
+    (0..array.len()).for_each(|i| {
+        if i != 0 {
+            buffer.push(b',');
         }
-    }
+        buffer.extend_from_slice(serializer.next().unwrap());
+    });
 }

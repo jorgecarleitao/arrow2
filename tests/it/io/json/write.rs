@@ -4,54 +4,57 @@ use arrow2::{
     array::*,
     bitmap::Bitmap,
     buffer::Buffer,
-    datatypes::{DataType, Field},
+    datatypes::{DataType, Field, TimeUnit},
     error::Result,
 };
 
 use super::*;
 
 macro_rules! test {
-    ($chunk:expr, $names:expr, $format:expr, $expected:expr) => {{
-        let buf = write_batch($chunk, $names, $format)?;
+    ($array:expr, $expected:expr) => {{
+        let buf = write_batch(Box::new($array))?;
         assert_eq!(String::from_utf8(buf).unwrap(), $expected);
         Ok(())
     }};
 }
 
 #[test]
-fn write_simple_rows() -> Result<()> {
-    let a = Int32Array::from([Some(1), Some(2), Some(3), None, Some(5)]);
-    let b = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c"), Some("d"), None]);
+fn int32() -> Result<()> {
+    let array = Int32Array::from([Some(1), Some(2), Some(3), None, Some(5)]);
+    //let b = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c"), Some("d"), None]);
 
-    let names = vec!["c1".to_string(), "c2".to_string()];
-    let chunk = Chunk::try_new(vec![&a as &dyn Array, &b])?;
-    let format = json_write::Format::NewlineDelimitedJson;
+    let expected = r#"[1,2,3,null,5]"#;
 
-    let expected = r#"{"c1":1,"c2":"a"}
-{"c1":2,"c2":"b"}
-{"c1":3,"c2":"c"}
-{"c1":null,"c2":"d"}
-{"c1":5,"c2":null}
-"#;
-
-    test!(chunk, names, format, expected)
+    test!(array, expected)
 }
 
 #[test]
-fn write_simple_rows_array() -> Result<()> {
-    let a = Int32Array::from([Some(1), Some(2), Some(3), None, Some(5)]);
-    let b = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c"), Some("d"), None]);
+fn utf8() -> Result<()> {
+    let array = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c"), Some("d"), None]);
 
-    let chunk = Chunk::try_new(vec![&a as &dyn Array, &b])?;
-    let names = vec!["c1".to_string(), "c2".to_string()];
-    let format = json_write::Format::Json;
+    let expected = r#"["a","b","c","d",null]"#;
+
+    test!(array, expected)
+}
+
+#[test]
+fn struct_() -> Result<()> {
+    let c1 = Int32Array::from([Some(1), Some(2), Some(3), None, Some(5)]);
+    let c2 = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c"), Some("d"), None]);
+
+    let data_type = DataType::Struct(vec![
+        Field::new("c1", c1.data_type().clone(), true),
+        Field::new("c2", c2.data_type().clone(), true),
+    ]);
+    let array = StructArray::from_data(data_type, vec![Arc::new(c1) as _, Arc::new(c2)], None);
+
     let expected = r#"[{"c1":1,"c2":"a"},{"c1":2,"c2":"b"},{"c1":3,"c2":"c"},{"c1":null,"c2":"d"},{"c1":5,"c2":null}]"#;
 
-    test!(chunk, names, format, expected)
+    test!(array, expected)
 }
 
 #[test]
-fn write_nested_struct_with_validity() -> Result<()> {
+fn nested_struct_with_validity() -> Result<()> {
     let inner = vec![
         Field::new("c121", DataType::Utf8, false),
         Field::new("c122", DataType::Int32, false),
@@ -78,19 +81,19 @@ fn write_nested_struct_with_validity() -> Result<()> {
     );
     let c2 = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c")]);
 
-    let chunk = Chunk::try_new(vec![&c1 as &dyn Array, &c2])?;
-    let names = vec!["c1".to_string(), "c2".to_string()];
-    let format = json_write::Format::NewlineDelimitedJson;
-    let expected = r#"{"c1":{"c11":1,"c12":null},"c2":"a"}
-{"c1":{"c11":null,"c12":{"c121":"f","c122":null}},"c2":"b"}
-{"c1":null,"c2":"c"}
-"#;
+    let data_type = DataType::Struct(vec![
+        Field::new("c1", c1.data_type().clone(), true),
+        Field::new("c2", c2.data_type().clone(), true),
+    ]);
+    let array = StructArray::from_data(data_type, vec![Arc::new(c1) as _, Arc::new(c2)], None);
 
-    test!(chunk, names, format, expected)
+    let expected = r#"[{"c1":{"c11":1,"c12":null},"c2":"a"},{"c1":{"c11":null,"c12":{"c121":"f","c122":null}},"c2":"b"},{"c1":null,"c2":"c"}]"#;
+
+    test!(array, expected)
 }
 
 #[test]
-fn write_nested_structs() -> Result<()> {
+fn nested_struct() -> Result<()> {
     let c121 = Field::new("c121", DataType::Utf8, false);
     let fields = vec![
         Field::new("c11", DataType::Int32, false),
@@ -116,19 +119,19 @@ fn write_nested_structs() -> Result<()> {
 
     let c2 = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c")]);
 
-    let chunk = Chunk::try_new(vec![&c1 as &dyn Array, &c2])?;
-    let names = vec!["c1".to_string(), "c2".to_string()];
-    let format = json_write::Format::NewlineDelimitedJson;
-    let expected = r#"{"c1":{"c11":1,"c12":{"c121":"e"}},"c2":"a"}
-{"c1":{"c11":null,"c12":{"c121":"f"}},"c2":"b"}
-{"c1":{"c11":5,"c12":{"c121":"g"}},"c2":"c"}
-"#;
+    let data_type = DataType::Struct(vec![
+        Field::new("c1", c1.data_type().clone(), true),
+        Field::new("c2", c2.data_type().clone(), true),
+    ]);
+    let array = StructArray::from_data(data_type, vec![Arc::new(c1) as _, Arc::new(c2)], None);
 
-    test!(chunk, names, format, expected)
+    let expected = r#"[{"c1":{"c11":1,"c12":{"c121":"e"}},"c2":"a"},{"c1":{"c11":null,"c12":{"c121":"f"}},"c2":"b"},{"c1":{"c11":5,"c12":{"c121":"g"}},"c2":"c"}]"#;
+
+    test!(array, expected)
 }
 
 #[test]
-fn write_struct_with_list_field() -> Result<()> {
+fn struct_with_list_field() -> Result<()> {
     let iter = vec![vec!["a", "a1"], vec!["b"], vec!["c"], vec!["d"], vec!["e"]];
 
     let iter = iter
@@ -141,25 +144,23 @@ fn write_struct_with_list_field() -> Result<()> {
         false,
     );
     a.try_extend(iter).unwrap();
-    let a: ListArray<i32> = a.into();
+    let c1: ListArray<i32> = a.into();
 
-    let b = PrimitiveArray::from_slice([1, 2, 3, 4, 5]);
+    let c2 = PrimitiveArray::from_slice([1, 2, 3, 4, 5]);
 
-    let chunk = Chunk::try_new(vec![&a as &dyn Array, &b])?;
-    let names = vec!["c1".to_string(), "c2".to_string()];
-    let format = json_write::Format::NewlineDelimitedJson;
-    let expected = r#"{"c1":["a","a1"],"c2":1}
-{"c1":["b"],"c2":2}
-{"c1":["c"],"c2":3}
-{"c1":["d"],"c2":4}
-{"c1":["e"],"c2":5}
-"#;
+    let data_type = DataType::Struct(vec![
+        Field::new("c1", c1.data_type().clone(), true),
+        Field::new("c2", c2.data_type().clone(), true),
+    ]);
+    let array = StructArray::from_data(data_type, vec![Arc::new(c1) as _, Arc::new(c2)], None);
 
-    test!(chunk, names, format, expected)
+    let expected = r#"[{"c1":["a","a1"],"c2":1},{"c1":["b"],"c2":2},{"c1":["c"],"c2":3},{"c1":["d"],"c2":4},{"c1":["e"],"c2":5}]"#;
+
+    test!(array, expected)
 }
 
 #[test]
-fn write_nested_list() -> Result<()> {
+fn nested_list() -> Result<()> {
     let iter = vec![
         vec![Some(vec![Some(1), Some(2)]), Some(vec![Some(3)])],
         vec![],
@@ -182,19 +183,20 @@ fn write_nested_list() -> Result<()> {
 
     let c2 = Utf8Array::<i32>::from(&vec![Some("foo"), Some("bar"), None]);
 
-    let chunk = Chunk::try_new(vec![&c1 as &dyn Array, &c2])?;
-    let names = vec!["c1".to_string(), "c2".to_string()];
-    let format = json_write::Format::NewlineDelimitedJson;
-    let expected = r#"{"c1":[[1,2],[3]],"c2":"foo"}
-{"c1":[],"c2":"bar"}
-{"c1":[[4,5,6]],"c2":null}
-"#;
+    let data_type = DataType::Struct(vec![
+        Field::new("c1", c1.data_type().clone(), true),
+        Field::new("c2", c2.data_type().clone(), true),
+    ]);
+    let array = StructArray::from_data(data_type, vec![Arc::new(c1) as _, Arc::new(c2)], None);
 
-    test!(chunk, names, format, expected)
+    let expected =
+        r#"[{"c1":[[1,2],[3]],"c2":"foo"},{"c1":[],"c2":"bar"},{"c1":[[4,5,6]],"c2":null}]"#;
+
+    test!(array, expected)
 }
 
 #[test]
-fn write_list_of_struct() -> Result<()> {
+fn list_of_struct() -> Result<()> {
     let inner = vec![Field::new("c121", DataType::Utf8, false)];
     let fields = vec![
         Field::new("c11", DataType::Int32, false),
@@ -236,75 +238,54 @@ fn write_list_of_struct() -> Result<()> {
 
     let c2 = Int32Array::from_slice(&[1, 2, 3]);
 
-    let chunk = Chunk::try_new(vec![&c1 as &dyn Array, &c2])?;
-    let names = vec!["c1".to_string(), "c2".to_string()];
-    let format = json_write::Format::NewlineDelimitedJson;
-    let expected = r#"{"c1":[{"c11":1,"c12":null},{"c11":null,"c12":{"c121":"f"}}],"c2":1}
-{"c1":null,"c2":2}
-{"c1":[null],"c2":3}
-"#;
+    let data_type = DataType::Struct(vec![
+        Field::new("c1", c1.data_type().clone(), true),
+        Field::new("c2", c2.data_type().clone(), true),
+    ]);
+    let array = StructArray::from_data(data_type, vec![Arc::new(c1) as _, Arc::new(c2)], None);
 
-    test!(chunk, names, format, expected)
+    let expected = r#"[{"c1":[{"c11":1,"c12":null},{"c11":null,"c12":{"c121":"f"}}],"c2":1},{"c1":null,"c2":2},{"c1":[null],"c2":3}]"#;
+
+    test!(array, expected)
 }
 
 #[test]
-fn write_escaped_utf8() -> Result<()> {
-    let a = Utf8Array::<i32>::from(&vec![Some("a\na"), None]);
+fn escaped_end_of_line_in_utf8() -> Result<()> {
+    let array = Utf8Array::<i32>::from(&vec![Some("a\na"), None]);
 
-    let chunk = Chunk::try_new(vec![&a as &dyn Array])?;
-    let names = vec!["c1".to_string()];
-    let format = json_write::Format::NewlineDelimitedJson;
-    let expected = r#"{"c1":"a\na"}
-{"c1":null}
-"#;
+    let expected = r#"["a\na",null]"#;
 
-    test!(chunk, names, format, expected)
+    test!(array, expected)
 }
 
 #[test]
-fn write_quotation_marks_in_utf8() -> Result<()> {
-    let a = Utf8Array::<i32>::from(&vec![Some("a\"a"), None]);
+fn escaped_quotation_marks_in_utf8() -> Result<()> {
+    let array = Utf8Array::<i32>::from(&vec![Some("a\"a"), None]);
 
-    let chunk = Chunk::try_new(vec![&a as &dyn Array])?;
-    let names = vec!["c1".to_string()];
-    let format = json_write::Format::NewlineDelimitedJson;
-    let expected = r#"{"c1":"a\"a"}
-{"c1":null}
-"#;
+    let expected = r#"["a\"a",null]"#;
 
-    test!(chunk, names, format, expected)
+    test!(array, expected)
 }
 
 #[test]
 fn write_date32() -> Result<()> {
-    let a = PrimitiveArray::from_data(DataType::Date32, vec![1000i32, 8000, 10000].into(), None);
+    let array =
+        PrimitiveArray::from_data(DataType::Date32, vec![1000i32, 8000, 10000].into(), None);
 
-    let chunk = Chunk::try_new(vec![&a as &dyn Array])?;
-    let names = vec!["c1".to_string()];
-    let format = json_write::Format::NewlineDelimitedJson;
-    let expected = r#"{"c1":"1972-09-27"}
-{"c1":"1991-11-27"}
-{"c1":"1997-05-19"}
-"#;
+    let expected = r#"["1972-09-27","1991-11-27","1997-05-19"]"#;
 
-    test!(chunk, names, format, expected)
+    test!(array, expected)
 }
 
 #[test]
 fn write_timestamp() -> Result<()> {
-    let a = PrimitiveArray::from_data(
+    let array = PrimitiveArray::from_data(
         DataType::Timestamp(TimeUnit::Second, None),
         vec![10i64, 1 << 32, 1 << 33].into(),
         None,
     );
 
-    let chunk = Chunk::try_new(vec![&a as &dyn Array])?;
-    let names = vec!["c1".to_string()];
-    let format = json_write::Format::NewlineDelimitedJson;
-    let expected = r#"{"c1":"1970-01-01 00:00:10"}
-{"c1":"2106-02-07 06:28:16"}
-{"c1":"2242-03-16 12:56:32"}
-"#;
+    let expected = r#"["1970-01-01 00:00:10","2106-02-07 06:28:16","2242-03-16 12:56:32"]"#;
 
-    test!(chunk, names, format, expected)
+    test!(array, expected)
 }
