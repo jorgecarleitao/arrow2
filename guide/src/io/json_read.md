@@ -14,3 +14,16 @@ This crate also supports reading JSON, at the expense of being unable to read th
 ```rust
 {{#include ../../../examples/json_read.rs}}
 ```
+
+## Metadata and inference
+
+This crate uses the following mapping between Arrow's data type and JSON:
+
+| `JSON` | `DataType` |
+| ------ | ---------- |
+| Bool   | Boolean    |
+| Int    | Int64      |
+| Float  | Float64    |
+| String | Utf8       |
+| List   | List       |
+| Object | Struct     |
