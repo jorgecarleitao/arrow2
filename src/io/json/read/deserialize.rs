@@ -10,8 +10,7 @@ use serde_json::Value;
 use crate::{
     array::*,
     bitmap::MutableBitmap,
-    chunk::Chunk,
-    datatypes::{DataType, Field, IntervalUnit},
+    datatypes::{DataType, IntervalUnit},
     error::ArrowError,
     types::NativeType,
 };
@@ -203,7 +202,7 @@ fn deserialize_dictionary<K: DictionaryKey, A: Borrow<Value>>(
     DictionaryArray::<K>::from_data(keys, values)
 }
 
-fn _deserialize<A: Borrow<Value>>(rows: &[A], data_type: DataType) -> Arc<dyn Array> {
+pub(crate) fn _deserialize<A: Borrow<Value>>(rows: &[A], data_type: DataType) -> Arc<dyn Array> {
     match &data_type {
         DataType::Null => Arc::new(NullArray::from_data(data_type, rows.len())),
         DataType::Boolean => Arc::new(deserialize_boolean(rows)),
@@ -251,30 +250,20 @@ fn _deserialize<A: Borrow<Value>>(rows: &[A], data_type: DataType) -> Arc<dyn Ar
     }
 }
 
-/// Deserializes `rows` into a [`Chunk`] according to `fields`.
+/// Deserializes a `json` [`Value`] into an [`Array`] of [`DataType`]
 /// This is CPU-bounded.
-pub fn deserialize<A: AsRef<str>>(
-    rows: &[A],
-    fields: &[Field],
-) -> Result<Chunk<Arc<dyn Array>>, ArrowError> {
-    let data_type = DataType::Struct(fields.to_vec());
-
-    // convert rows to `Value`
-    let rows = rows
-        .iter()
-        .map(|row| {
-            let row: Value = serde_json::from_str(row.as_ref()).map_err(ArrowError::from)?;
-            Ok(row)
-        })
-        .collect::<Result<Vec<_>, ArrowError>>()?;
-
-    let (_, columns, _) = deserialize_struct(&rows, data_type).into_data();
-    Ok(Chunk::new(columns))
-}
-
-/// Deserializes a slice of [`Value`] to an Array of logical type [`DataType`].
-///
-/// This function allows consuming deserialized JSON to Arrow.
-pub fn deserialize_json(rows: &[Value], data_type: DataType) -> Arc<dyn Array> {
-    _deserialize(rows, data_type)
+/// # Error
+/// This function errors iff either:
+/// * `json` is not a [`Value::Array`]
+/// * `data_type` is neither [`DataType::List`] nor [`DataType::LargeList`]
+pub fn deserialize(json: &Value, data_type: DataType) -> Result<Arc<dyn Array>, ArrowError> {
+    match json {
+        Value::Array(rows) => match data_type {
+            DataType::List(inner) | DataType::LargeList(inner) => {
+                Ok(_deserialize(rows, inner.data_type))
+            }
+            _ => Err(ArrowError::nyi("read an Array from a non-Array data type")),
+        },
+        _ => Err(ArrowError::nyi("read an Array from a non-Array JSON")),
+    }
 }
