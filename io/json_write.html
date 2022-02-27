@@ -135,35 +135,65 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="write-json"><a class="header" href="#write-json">Write JSON</a></h1>
-<p>When compiled with feature <code>io_json</code>, you can use this crate to write JSON files.
-The following example writes a batch as a JSON file:</p>
+<p>When compiled with feature <code>io_json</code>, you can use this crate to write JSON.
+The following example writes an array to JSON:</p>
 <pre><pre class="playground"><code class="language-rust">use std::fs::File;
-use std::sync::Arc;
 
 use arrow2::{
     array::{Array, Int32Array},
-    chunk::Chunk,
-    error::Result,
+    error::ArrowError,
     io::json::write,
 };
 
-fn write_batches(path: &amp;str, names: Vec&lt;String&gt;, batches: &amp;[Chunk&lt;Arc&lt;dyn Array&gt;&gt;]) -&gt; Result&lt;()&gt; {
+fn write_array(path: &amp;str, array: Box&lt;dyn Array&gt;) -&gt; Result&lt;(), ArrowError&gt; {
     let mut writer = File::create(path)?;
-    let format = write::Format::Json;
 
-    let batches = batches.iter().cloned().map(Ok);
+    let arrays = vec![Ok(array)].into_iter();
 
-    // Advancing this iterator serializes the next batch to its internal buffer (i.e. CPU-bounded)
-    let blocks = write::Serializer::new(batches, names, vec![], format);
+    // Advancing this iterator serializes the next array to its internal buffer (i.e. CPU-bounded)
+    let blocks = write::Serializer::new(arrays, vec![]);
 
     // the operation of writing is IO-bounded.
-    write::write(&amp;mut writer, format, blocks)?;
+    write::write(&amp;mut writer, blocks)?;
 
     Ok(())
 }
 
+fn main() -&gt; Result&lt;(), ArrowError&gt; {
+    use std::env;
+    let args: Vec&lt;String&gt; = env::args().collect();
+
+    let file_path = &amp;args[1];
+
+    let array = Int32Array::from(&amp;[Some(0), None, Some(2), Some(3), Some(4), Some(5), Some(6)]);
+
+    write_array(file_path, Box::new(array))
+}
+</code></pre></pre>
+<p>Likewise, you can also use it to write to NDJSON:</p>
+<pre><pre class="playground"><code class="language-rust">use std::fs::File;
+
+use arrow2::array::{Array, Int32Array};
+use arrow2::error::Result;
+use arrow2::io::ndjson::write;
+
+fn write_path(path: &amp;str, array: Box&lt;dyn Array&gt;) -&gt; Result&lt;()&gt; {
+    let writer = File::create(path)?;
+
+    let serializer = write::Serializer::new(vec![Ok(array)].into_iter(), vec![]);
+
+    let mut writer = write::FileWriter::new(writer, serializer);
+    writer.by_ref().collect::&lt;Result&lt;()&gt;&gt;()
+}
+
 fn main() -&gt; Result&lt;()&gt; {
-    let array = Arc::new(Int32Array::from(&amp;[
+    // Example of reading a NDJSON file from a path
+    use std::env;
+    let args: Vec&lt;String&gt; = env::args().collect();
+
+    let file_path = &amp;args[1];
+
+    let array = Box::new(Int32Array::from(&amp;[
         Some(0),
         None,
         Some(2),
@@ -171,13 +201,10 @@ fn main() -&gt; Result&lt;()&gt; {
         Some(4),
         Some(5),
         Some(6),
-    ])) as Arc&lt;dyn Array&gt;;
+    ]));
 
-    write_batches(
-        &quot;example.json&quot;,
-        vec![&quot;c1&quot;.to_string()],
-        &amp;[Chunk::new(vec![array.clone()]), Chunk::new(vec![array])],
-    )
+    write_path(file_path, array)?;
+    Ok(())
 }
 </code></pre></pre>
 

@@ -137,51 +137,43 @@
                         <h1 id="json-read"><a class="header" href="#json-read">JSON read</a></h1>
 <p>When compiled with feature <code>io_json</code>, you can use this crate to read NDJSON files:</p>
 <pre><pre class="playground"><code class="language-rust">use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufReader, Seek};
 use std::sync::Arc;
 
 use arrow2::array::Array;
-use arrow2::chunk::Chunk;
 use arrow2::error::Result;
-use arrow2::io::json::read;
+use arrow2::io::ndjson::read;
+use arrow2::io::ndjson::read::FallibleStreamingIterator;
 
-fn read_path(path: &amp;str, projection: Option&lt;Vec&lt;&amp;str&gt;&gt;) -&gt; Result&lt;Chunk&lt;Arc&lt;dyn Array&gt;&gt;&gt; {
-    // Example of reading a NDJSON file.
+fn read_path(path: &amp;str) -&gt; Result&lt;Vec&lt;Arc&lt;dyn Array&gt;&gt;&gt; {
+    let batch_size = 1024; // number of rows per array
     let mut reader = BufReader::new(File::open(path)?);
 
-    let fields = read::infer_and_reset(&amp;mut reader, None)?;
+    let data_type = read::infer(&amp;mut reader, None)?;
+    reader.rewind()?;
 
-    let fields = if let Some(projection) = projection {
-        fields
-            .into_iter()
-            .filter(|field| projection.contains(&amp;field.name.as_ref()))
-            .collect()
-    } else {
-        fields
-    };
+    let mut reader = read::FileReader::new(reader, vec![&quot;&quot;.to_string(); batch_size], None);
 
-    // at most 1024 rows. This container can be re-used across batches.
-    let mut rows = vec![String::default(); 1024];
+    let mut arrays = vec![];
+    // `next` is IO-bounded
+    while let Some(rows) = reader.next()? {
+        // `deserialize` is CPU-bounded
+        let array = read::deserialize(rows, data_type.clone())?;
+        arrays.push(array);
+    }
 
-    // Reads up to 1024 rows.
-    // this is IO-intensive and performs minimal CPU work. In particular,
-    // no deserialization is performed.
-    let read = read::read_rows(&amp;mut reader, &amp;mut rows)?;
-    let rows = &amp;rows[..read];
-
-    // deserialize `rows` into `Chunk`. This is CPU-intensive, has no IO,
-    // and can be performed on a different thread pool via a channel.
-    read::deserialize(rows, &amp;fields)
+    Ok(arrays)
 }
 
 fn main() -&gt; Result&lt;()&gt; {
+    // Example of reading a NDJSON file from a path
     use std::env;
     let args: Vec&lt;String&gt; = env::args().collect();
 
     let file_path = &amp;args[1];
 
-    let batch = read_path(file_path, None)?;
-    println!(&quot;{:#?}&quot;, batch);
+    let arrays = read_path(file_path)?;
+    println!(&quot;{:#?}&quot;, arrays);
     Ok(())
 }
 </code></pre></pre>
@@ -193,23 +185,17 @@ use std::io::BufReader;
 use std::sync::Arc;
 
 use arrow2::array::Array;
-use arrow2::error::{ArrowError, Result};
+use arrow2::error::Result;
 use arrow2::io::json::read;
 
 fn read_path(path: &amp;str) -&gt; Result&lt;Arc&lt;dyn Array&gt;&gt; {
     // Example of reading a JSON file.
     let reader = BufReader::new(File::open(path)?);
-    let data = serde_json::from_reader(reader)?;
+    let json = serde_json::from_reader(reader)?;
 
-    let values = if let serde_json::Value::Array(values) = data {
-        Ok(values)
-    } else {
-        Err(ArrowError::InvalidArgumentError(&quot;&quot;.to_string()))
-    }?;
+    let data_type = read::infer(&amp;json)?;
 
-    let data_type = read::infer_rows(&amp;values)?;
-
-    Ok(read::deserialize_json(&amp;values, data_type))
+    read::deserialize(&amp;json, data_type)
 }
 
 fn main() -&gt; Result&lt;()&gt; {
@@ -223,6 +209,16 @@ fn main() -&gt; Result&lt;()&gt; {
     Ok(())
 }
 </code></pre></pre>
+<h2 id="metadata-and-inference"><a class="header" href="#metadata-and-inference">Metadata and inference</a></h2>
+<p>This crate uses the following mapping between Arrow's data type and JSON:</p>
+<table><thead><tr><th><code>JSON</code></th><th><code>DataType</code></th></tr></thead><tbody>
+<tr><td>Bool</td><td>Boolean</td></tr>
+<tr><td>Int</td><td>Int64</td></tr>
+<tr><td>Float</td><td>Float64</td></tr>
+<tr><td>String</td><td>Utf8</td></tr>
+<tr><td>List</td><td>List</td></tr>
+<tr><td>Object</td><td>Struct</td></tr>
+</tbody></table>
 
                     </main>
 
