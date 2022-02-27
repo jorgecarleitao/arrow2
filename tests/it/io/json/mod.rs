@@ -11,7 +11,6 @@ fn write_batch(array: Box<dyn Array>) -> Result<Vec<u8>> {
     let mut serializer = json_write::Serializer::new(vec![Ok(array)].into_iter(), vec![]);
 
     let mut buf = vec![];
-    json_write::write(&mut buf, &mut serializer);
-
+    json_write::write(&mut buf, &mut serializer)?;
     Ok(buf)
 }
