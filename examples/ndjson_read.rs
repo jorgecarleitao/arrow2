@@ -1,48 +1,40 @@
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufReader, Seek};
 use std::sync::Arc;
 
 use arrow2::array::Array;
-use arrow2::chunk::Chunk;
 use arrow2::error::Result;
-use arrow2::io::json::read;
+use arrow2::io::ndjson::read;
+use arrow2::io::ndjson::read::FallibleStreamingIterator;
 
-fn read_path(path: &str, projection: Option<Vec<&str>>) -> Result<Chunk<Arc<dyn Array>>> {
-    // Example of reading a NDJSON file.
+fn read_path(path: &str) -> Result<Vec<Arc<dyn Array>>> {
+    let batch_size = 1024; // number of rows per array
     let mut reader = BufReader::new(File::open(path)?);
 
-    let fields = read::infer_and_reset(&mut reader, None)?;
+    let data_type = read::infer(&mut reader, None)?;
+    reader.rewind()?;
 
-    let fields = if let Some(projection) = projection {
-        fields
-            .into_iter()
-            .filter(|field| projection.contains(&field.name.as_ref()))
-            .collect()
-    } else {
-        fields
-    };
+    let mut reader = read::FileReader::new(reader, vec!["".to_string(); batch_size], None);
 
-    // at most 1024 rows. This container can be re-used across batches.
-    let mut rows = vec![String::default(); 1024];
+    let mut arrays = vec![];
+    // `next` is IO-bounded
+    while let Some(rows) = reader.next()? {
+        // `deserialize` is CPU-bounded
+        let array = read::deserialize(rows, data_type.clone())?;
+        arrays.push(array);
+    }
 
-    // Reads up to 1024 rows.
-    // this is IO-intensive and performs minimal CPU work. In particular,
-    // no deserialization is performed.
-    let read = read::read_rows(&mut reader, &mut rows)?;
-    let rows = &rows[..read];
-
-    // deserialize `rows` into `Chunk`. This is CPU-intensive, has no IO,
-    // and can be performed on a different thread pool via a channel.
-    read::deserialize(rows, &fields)
+    Ok(arrays)
 }
 
 fn main() -> Result<()> {
+    // Example of reading a NDJSON file from a path
     use std::env;
     let args: Vec<String> = env::args().collect();
 
     let file_path = &args[1];
 
-    let batch = read_path(file_path, None)?;
-    println!("{:#?}", batch);
+    let arrays = read_path(file_path)?;
+    println!("{:#?}", arrays);
     Ok(())
 }
