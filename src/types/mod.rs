@@ -21,7 +21,7 @@
 //! for SIMD, at [`mod@simd`].
 
 mod bit_chunk;
-pub use bit_chunk::{BitChunk, BitChunkIter};
+pub use bit_chunk::{BitChunk, BitChunkIter, BitChunkOnes};
 mod index;
 pub mod simd;
 pub use index::*;
