@@ -249,13 +249,15 @@ harness = false
 name = "comparison_kernels"
 harness = false
 
-[[bench]]
-name = "read_parquet"
-harness = false
+## disabled because we don't have the path of env `CARGO_MANIFEST_DIR`
 
-[[bench]]
-name = "write_parquet"
-harness = false
+# [[bench]]
+# name = "read_parquet"
+# harness = false
+
+# [[bench]]
+# name = "write_parquet"
+# harness = false
 
 [[bench]]
 name = "aggregate"
