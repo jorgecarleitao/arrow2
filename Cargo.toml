@@ -249,6 +249,7 @@ harness = false
 name = "comparison_kernels"
 harness = false
 
+
 [[bench]]
 name = "read_parquet"
 harness = false

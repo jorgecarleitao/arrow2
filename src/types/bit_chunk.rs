@@ -1,7 +1,9 @@
 use std::{
     fmt::Binary,
-    ops::{BitAnd, BitAndAssign, BitOr, Not, Shl, ShlAssign, ShrAssign},
+    ops::{BitAndAssign, Not, Shl, ShlAssign, ShrAssign},
 };
+
+use num_traits::PrimInt;
 
 use super::NativeType;
 
@@ -9,22 +11,16 @@ use super::NativeType;
 /// whose width is `1` bit. In `simd_packed` notation, this corresponds to `m1xY`.
 pub trait BitChunk:
     super::private::Sealed
+    + PrimInt
     + NativeType
     + Binary
-    + BitAnd<Output = Self>
     + ShlAssign
     + Not<Output = Self>
     + ShrAssign<usize>
     + ShlAssign<usize>
     + Shl<usize, Output = Self>
-    + Eq
     + BitAndAssign
-    + BitOr<Output = Self>
 {
-    /// A value with a single bit set at the most right position.
-    fn one() -> Self;
-    /// A value with no bits set.
-    fn zero() -> Self;
     /// convert itself into bytes.
     fn to_ne_bytes(self) -> Self::Bytes;
     /// convert itself from bytes.
@@ -35,11 +31,6 @@ macro_rules! bit_chunk {
     ($ty:ty) => {
         impl BitChunk for $ty {
             #[inline(always)]
-            fn zero() -> Self {
-                0
-            }
-
-            #[inline(always)]
             fn to_ne_bytes(self) -> Self::Bytes {
                 self.to_ne_bytes()
             }
@@ -47,11 +38,6 @@ macro_rules! bit_chunk {
             #[inline(always)]
             fn from_ne_bytes(v: Self::Bytes) -> Self {
                 Self::from_ne_bytes(v)
-            }
-
-            #[inline(always)]
-            fn one() -> Self {
-                1
             }
         }
     };
@@ -113,6 +99,62 @@ impl<T: BitChunk> Iterator for BitChunkIter<T> {
     }
 }
 
+// # Safety
+// a mathematical invariant of this iterator
+unsafe impl<T: BitChunk> crate::trusted_len::TrustedLen for BitChunkIter<T> {}
+
+/// An [`Iterator<Item=usize>`] over a [`BitChunk`].
+/// This iterator returns the postion of bit set.
+/// Refer: https://lemire.me/blog/2018/03/08/iterating-over-set-bits-quickly-simd-edition/
+/// # Example
+/// ```
+/// use arrow2::types::BitChunkOnes;
+/// let a = 0b00010000u8;
+/// let iter = BitChunkOnes::new(a);
+/// let r = iter.collect::<Vec<_>>();
+/// assert_eq!(r, vec![4]);
+/// ```
+pub struct BitChunkOnes<T: BitChunk> {
+    value: T,
+    remaining: usize,
+}
+
+impl<T: BitChunk> BitChunkOnes<T> {
+    /// Creates a new [`BitChunkOnes`] with `len` bits.
+    #[inline]
+    pub fn new(value: T) -> Self {
+        Self {
+            value,
+            remaining: value.count_ones() as usize,
+        }
+    }
+}
+
+impl<T: BitChunk> Iterator for BitChunkOnes<T> {
+    type Item = usize;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.remaining == 0 {
+            return None;
+        }
+        let v = self.value.trailing_zeros() as usize;
+        self.value &= self.value - T::one();
+
+        self.remaining -= 1;
+        Some(v)
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.remaining, Some(self.remaining))
+    }
+}
+
+// # Safety
+// a mathematical invariant of this iterator
+unsafe impl<T: BitChunk> crate::trusted_len::TrustedLen for BitChunkOnes<T> {}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -124,5 +166,15 @@ mod tests {
         let iter = BitChunkIter::new(a, 16);
         let r = iter.collect::<Vec<_>>();
         assert_eq!(r, (0..16).map(|x| x == 0 || x == 12).collect::<Vec<_>>(),);
+    }
+
+    #[test]
+    fn test_ones() {
+        let a = [0b00000001, 0b00010000]; // 0th and 13th entry
+        let a = u16::from_ne_bytes(a);
+        let mut iter = BitChunkOnes::new(a);
+        assert_eq!(iter.size_hint(), (2, Some(2)));
+        assert_eq!(iter.next(), Some(0));
+        assert_eq!(iter.next(), Some(12));
     }
 }
