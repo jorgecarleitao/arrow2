@@ -45,47 +45,7 @@ pub struct Utf8Array<O: Offset> {
 }
 
 impl<O: Offset> Utf8Array<O> {
-    /// Returns a new empty [`Utf8Array`].
-    #[inline]
-    pub fn new_empty(data_type: DataType) -> Self {
-        unsafe {
-            Self::from_data_unchecked(
-                data_type,
-                Buffer::from(vec![O::zero()]),
-                Buffer::new(),
-                None,
-            )
-        }
-    }
-
-    /// Returns a new [`Utf8Array`] whose all slots are null / `None`.
-    #[inline]
-    pub fn new_null(data_type: DataType, length: usize) -> Self {
-        Self::from_data(
-            data_type,
-            Buffer::new_zeroed(length + 1),
-            Buffer::new(),
-            Some(Bitmap::new_zeroed(length)),
-        )
-    }
-
-    /// The canonical method to create a [`Utf8Array`] out of low-end APIs.
-    /// # Panics
-    /// This function panics iff:
-    /// * The `data_type`'s physical type is not consistent with the offset `O`.
-    /// * The `offsets` and `values` are inconsistent
-    /// * The `values` between `offsets` are utf8 encoded
-    /// * The validity is not `None` and its length is different from `offsets.len() - 1`.
-    pub fn from_data(
-        data_type: DataType,
-        offsets: Buffer<O>,
-        values: Buffer<u8>,
-        validity: Option<Bitmap>,
-    ) -> Self {
-        Utf8Array::try_new(data_type, offsets, values, validity).unwrap()
-    }
-
-    /// The canonical method to create a [`Utf8Array`] out of low-end APIs.
+    /// The canonical method to create a [`Utf8Array`].
     ///
     /// This function returns an error iff:
     /// * The `data_type`'s physical type is not consistent with the offset `O`.
@@ -120,6 +80,55 @@ impl<O: Offset> Utf8Array<O> {
             values,
             validity,
         })
+    }
+
+    /// Creates a new [`Utf8Array`].
+    /// # Panics
+    /// * the offsets are not monotonically increasing
+    /// * The last offset is not equal to the values' length.
+    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Utf8` or `LargeUtf8`.
+    pub fn new(
+        data_type: DataType,
+        offsets: Buffer<O>,
+        values: Buffer<u8>,
+        validity: Option<Bitmap>,
+    ) -> Self {
+        Self::try_new(data_type, offsets, values, validity).unwrap()
+    }
+
+    /// Alias for `new`
+    pub fn from_data(
+        data_type: DataType,
+        offsets: Buffer<O>,
+        values: Buffer<u8>,
+        validity: Option<Bitmap>,
+    ) -> Self {
+        Self::new(data_type, offsets, values, validity)
+    }
+
+    /// Returns a new empty [`Utf8Array`].
+    #[inline]
+    pub fn new_empty(data_type: DataType) -> Self {
+        unsafe {
+            Self::from_data_unchecked(
+                data_type,
+                Buffer::from(vec![O::zero()]),
+                Buffer::new(),
+                None,
+            )
+        }
+    }
+
+    /// Returns a new [`Utf8Array`] whose all slots are null / `None`.
+    #[inline]
+    pub fn new_null(data_type: DataType, length: usize) -> Self {
+        Self::from_data(
+            data_type,
+            Buffer::new_zeroed(length + 1),
+            Buffer::new(),
+            Some(Bitmap::new_zeroed(length)),
+        )
     }
 
     /// Returns the default [`DataType`], `DataType::Utf8` or `DataType::LargeUtf8`
@@ -162,12 +171,16 @@ impl<O: Offset> Utf8Array<O> {
             validity,
         }
     }
+}
 
+// must use
+impl<O: Offset> Utf8Array<O> {
     /// Returns a slice of this [`Utf8Array`].
     /// # Implementation
     /// This operation is `O(1)` as it amounts to essentially increase two ref counts.
     /// # Panic
     /// This function panics iff `offset + length >= self.len()`.
+    #[must_use]
     pub fn slice(&self, offset: usize, length: usize) -> Self {
         assert!(
             offset + length <= self.len(),
@@ -180,6 +193,7 @@ impl<O: Offset> Utf8Array<O> {
     /// This operation is `O(1)` as it amounts to essentially increase two ref counts.
     /// # Safety
     /// The caller must ensure that `offset + length <= self.len()`.
+    #[must_use]
     pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
         let validity = self
             .validity

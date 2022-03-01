@@ -4,9 +4,10 @@ use crate::{
     bitmap::Bitmap,
     buffer::Buffer,
     datatypes::{DataType, Field},
+    error::ArrowError,
 };
 
-use super::{new_empty_array, specification::check_offsets, Array};
+use super::{new_empty_array, specification::try_check_offsets, Array};
 
 mod ffi;
 mod iterator;
@@ -24,12 +25,80 @@ pub struct MapArray {
 }
 
 impl MapArray {
-    pub(crate) fn get_field(datatype: &DataType) -> &Field {
-        if let DataType::Map(field, _) = datatype.to_logical_type() {
-            field.as_ref()
+    /// Returns a new [`MapArray`].
+    /// # Errors
+    /// This function errors iff:
+    /// * the offsets are not monotonically increasing
+    /// * The last offset is not equal to the field' length
+    /// * The `data_type`'s physical type is not [`crate::datatypes::PhysicalType::Map`]
+    /// * The fields' `data_type` is not equal to the inner field of `data_type`
+    /// * The validity is not `None` and its length is different from `offsets.len() - 1`.
+    pub fn try_new(
+        data_type: DataType,
+        offsets: Buffer<i32>,
+        field: Arc<dyn Array>,
+        validity: Option<Bitmap>,
+    ) -> Result<Self, ArrowError> {
+        try_check_offsets(&offsets, field.len())?;
+
+        let inner_field = Self::try_get_field(&data_type)?;
+        if let DataType::Struct(inner) = inner_field.data_type() {
+            if inner.len() != 2 {
+                return Err(ArrowError::InvalidArgumentError(
+                    "MapArray's inner `Struct` must have 2 fields (keys and maps)".to_string(),
+                ));
+            }
         } else {
-            panic!("MapArray expects `DataType::Map` logical type")
+            return Err(ArrowError::InvalidArgumentError(
+                "MapArray expects `DataType::Struct` as its inner logical type".to_string(),
+            ));
         }
+        if field.data_type() != inner_field.data_type() {
+            return Err(ArrowError::InvalidArgumentError(
+                "MapArray expects `field.data_type` to match its inner DataType".to_string(),
+            ));
+        }
+
+        if validity
+            .as_ref()
+            .map_or(false, |validity| validity.len() != offsets.len() - 1)
+        {
+            return Err(ArrowError::oos(
+                "validity mask length must match the number of values",
+            ));
+        }
+
+        Ok(Self {
+            data_type,
+            field,
+            offsets,
+            validity,
+        })
+    }
+
+    /// Creates a new [`MapArray`].
+    /// # Panics
+    /// * the offsets are not monotonically increasing
+    /// * The last offset is not equal to the field' length.
+    /// * The `data_type`'s physical type is not [`crate::datatypes::PhysicalType::Map`],
+    /// * The validity is not `None` and its length is different from `offsets.len() - 1`.
+    pub fn new(
+        data_type: DataType,
+        offsets: Buffer<i32>,
+        field: Arc<dyn Array>,
+        validity: Option<Bitmap>,
+    ) -> Self {
+        Self::try_new(data_type, offsets, field, validity).unwrap()
+    }
+
+    /// Alias for `new`
+    pub fn from_data(
+        data_type: DataType,
+        offsets: Buffer<i32>,
+        field: Arc<dyn Array>,
+        validity: Option<Bitmap>,
+    ) -> Self {
+        Self::new(data_type, offsets, field, validity)
     }
 
     /// Returns a new null [`MapArray`] of `length`.
@@ -48,41 +117,9 @@ impl MapArray {
         let field = new_empty_array(Self::get_field(&data_type).data_type().clone()).into();
         Self::from_data(data_type, Buffer::from(vec![0i32]), field, None)
     }
+}
 
-    /// Returns a new [`MapArray`].
-    /// # Panic
-    /// This function panics iff:
-    /// * The `data_type`'s physical type is not consistent with [`MapArray`],
-    /// * The `offsets` and `field` are inconsistent
-    /// * The validity is not `None` and its length is different from `offsets.len() - 1`.
-    pub fn from_data(
-        data_type: DataType,
-        offsets: Buffer<i32>,
-        field: Arc<dyn Array>,
-        validity: Option<Bitmap>,
-    ) -> Self {
-        check_offsets(&offsets, field.len());
-
-        if let Some(ref validity) = validity {
-            assert_eq!(offsets.len() - 1, validity.len());
-        }
-
-        if let DataType::Struct(inner) = Self::get_field(&data_type).data_type() {
-            if inner.len() != 2 {
-                panic!("MapArray expects its inner `Struct` to have 2 fields (keys and maps)")
-            }
-        } else {
-            panic!("MapArray expects `DataType::Struct` as its inner logical type")
-        }
-
-        Self {
-            data_type,
-            field,
-            offsets,
-            validity,
-        }
-    }
-
+impl MapArray {
     /// Returns a slice of this [`MapArray`].
     /// # Panics
     /// panics iff `offset + length >= self.len()`
@@ -109,6 +146,20 @@ impl MapArray {
             field: self.field.clone(),
             validity,
         }
+    }
+
+    pub(crate) fn try_get_field(data_type: &DataType) -> Result<&Field, ArrowError> {
+        if let DataType::Map(field, _) = data_type.to_logical_type() {
+            Ok(field.as_ref())
+        } else {
+            Err(ArrowError::oos(
+                "The data_type's logical type must be DataType::Map",
+            ))
+        }
+    }
+
+    pub(crate) fn get_field(data_type: &DataType) -> &Field {
+        Self::try_get_field(data_type).unwrap()
     }
 }
 

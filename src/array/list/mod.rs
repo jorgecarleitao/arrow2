@@ -4,9 +4,10 @@ use crate::{
     bitmap::Bitmap,
     buffer::Buffer,
     datatypes::{DataType, Field},
+    error::ArrowError,
 };
 
-use super::{new_empty_array, specification::check_offsets, Array, Offset};
+use super::{new_empty_array, specification::try_check_offsets, Array, Offset};
 
 mod ffi;
 pub(super) mod fmt;
@@ -25,58 +26,96 @@ pub struct ListArray<O: Offset> {
 }
 
 impl<O: Offset> ListArray<O> {
-    /// Returns a new empty [`ListArray`].
-    pub fn new_empty(data_type: DataType) -> Self {
-        let values = new_empty_array(Self::get_child_type(&data_type).clone()).into();
-        Self::from_data(data_type, Buffer::from(vec![O::zero()]), values, None)
-    }
+    /// Creates a new [`ListArray`].
+    ///
+    /// # Errors
+    /// This function returns an error iff:
+    /// * the offsets are not monotonically increasing
+    /// * The last offset is not equal to the values' length.
+    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either [`crate::datatypes::PhysicalType::List`] or [`crate::datatypes::PhysicalType::LargeList`].
+    /// * The `data_type`'s inner field's data type is not equal to `values.data_type`.
+    pub fn try_new(
+        data_type: DataType,
+        offsets: Buffer<O>,
+        values: Arc<dyn Array>,
+        validity: Option<Bitmap>,
+    ) -> Result<Self, ArrowError> {
+        try_check_offsets(&offsets, values.len())?;
 
-    /// Returns a new null [`ListArray`].
-    #[inline]
-    pub fn new_null(data_type: DataType, length: usize) -> Self {
-        let child = Self::get_child_type(&data_type).clone();
-        Self::from_data(
+        if validity
+            .as_ref()
+            .map_or(false, |validity| validity.len() != offsets.len() - 1)
+        {
+            return Err(ArrowError::oos(
+                "validity mask length must match the number of values",
+            ));
+        }
+
+        let child_data_type = Self::try_get_child(&data_type)?.data_type();
+        let values_data_type = values.data_type();
+        if child_data_type != values_data_type {
+            return Err(ArrowError::oos(
+                format!("ListArray's child's DataType must match. However, the expected DataType is {child_data_type:?} while it got {values_data_type:?}."),
+            ));
+        }
+
+        Ok(Self {
             data_type,
-            Buffer::new_zeroed(length + 1),
-            new_empty_array(child).into(),
-            Some(Bitmap::new_zeroed(length)),
-        )
+            offsets,
+            values,
+            validity,
+        })
     }
 
-    /// Returns a new [`ListArray`].
-    /// # Panic
+    /// Creates a new [`ListArray`].
+    ///
+    /// # Panics
     /// This function panics iff:
-    /// * The `data_type`'s physical type is not consistent with the offset `O`.
-    /// * The `offsets` and `values` are inconsistent
-    /// * The validity is not `None` and its length is different from `offsets.len() - 1`.
+    /// * the offsets are not monotonically increasing
+    /// * The last offset is not equal to the values' length.
+    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either [`crate::datatypes::PhysicalType::List`] or [`crate::datatypes::PhysicalType::LargeList`].
+    /// * The `data_type`'s inner field's data type is not equal to `values.data_type`.
+    pub fn new(
+        data_type: DataType,
+        offsets: Buffer<O>,
+        values: Arc<dyn Array>,
+        validity: Option<Bitmap>,
+    ) -> Self {
+        Self::try_new(data_type, offsets, values, validity).unwrap()
+    }
+
+    /// Alias of `new`
     pub fn from_data(
         data_type: DataType,
         offsets: Buffer<O>,
         values: Arc<dyn Array>,
         validity: Option<Bitmap>,
     ) -> Self {
-        check_offsets(&offsets, values.len());
-
-        if let Some(ref validity) = validity {
-            assert_eq!(offsets.len() - 1, validity.len());
-        }
-
-        // validate data_type
-        let child_data_type = Self::get_child_type(&data_type);
-        assert_eq!(
-            child_data_type,
-            values.data_type(),
-            "The child's datatype must match the inner type of the \'data_type\'"
-        );
-
-        Self {
-            data_type,
-            offsets,
-            values,
-            validity,
-        }
+        Self::new(data_type, offsets, values, validity)
     }
 
+    /// Returns a new empty [`ListArray`].
+    pub fn new_empty(data_type: DataType) -> Self {
+        let values = new_empty_array(Self::get_child_type(&data_type).clone()).into();
+        Self::new(data_type, Buffer::from(vec![O::zero()]), values, None)
+    }
+
+    /// Returns a new null [`ListArray`].
+    #[inline]
+    pub fn new_null(data_type: DataType, length: usize) -> Self {
+        let child = Self::get_child_type(&data_type).clone();
+        Self::new(
+            data_type,
+            Buffer::new_zeroed(length + 1),
+            new_empty_array(child).into(),
+            Some(Bitmap::new_zeroed(length)),
+        )
+    }
+}
+
+impl<O: Offset> ListArray<O> {
     /// Returns a slice of this [`ListArray`].
     /// # Panics
     /// panics iff `offset + length >= self.len()`
@@ -185,15 +224,24 @@ impl<O: Offset> ListArray<O> {
     /// # Panics
     /// Panics iff the logical type is not consistent with this struct.
     pub fn get_child_field(data_type: &DataType) -> &Field {
+        Self::try_get_child(data_type).unwrap()
+    }
+
+    /// Returns a the inner [`Field`]
+    /// # Errors
+    /// Panics iff the logical type is not consistent with this struct.
+    fn try_get_child(data_type: &DataType) -> Result<&Field, ArrowError> {
         if O::is_large() {
             match data_type.to_logical_type() {
-                DataType::LargeList(child) => child.as_ref(),
-                _ => panic!("ListArray<i64> expects DataType::List or DataType::LargeList"),
+                DataType::LargeList(child) => Ok(child.as_ref()),
+                _ => Err(ArrowError::oos(
+                    "ListArray<i64> expects DataType::LargeList",
+                )),
             }
         } else {
             match data_type.to_logical_type() {
-                DataType::List(child) => child.as_ref(),
-                _ => panic!("ListArray<i32> expects DataType::List or DataType::List"),
+                DataType::List(child) => Ok(child.as_ref()),
+                _ => Err(ArrowError::oos("ListArray<i32> expects DataType::List")),
             }
         }
     }

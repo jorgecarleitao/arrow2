@@ -39,51 +39,76 @@ pub struct PrimitiveArray<T: NativeType> {
 }
 
 impl<T: NativeType> PrimitiveArray<T> {
+    /// The canonical method to create a [`PrimitiveArray`].
+    /// # Errors
+    /// This function errors iff:
+    /// * The validity is not `None` and its length is different from `values`'s length
+    /// * The `data_type`'s [`PhysicalType`] is not equal to [`PhysicalType::Primitive`].
+    pub fn try_new(
+        data_type: DataType,
+        values: Buffer<T>,
+        validity: Option<Bitmap>,
+    ) -> Result<Self, ArrowError> {
+        if validity
+            .as_ref()
+            .map_or(false, |validity| validity.len() != values.len())
+        {
+            return Err(ArrowError::oos(
+                "validity mask length must match the number of values",
+            ));
+        }
+
+        if data_type.to_physical_type() != PhysicalType::Boolean {
+            return Err(ArrowError::oos(
+                "BooleanArray can only be initialized with a DataType whose physical type is Boolean",
+            ));
+        }
+
+        Ok(Self {
+            data_type,
+            values,
+            validity,
+        })
+    }
+
+    /// The canonical method to create a [`PrimitiveArray`]
+    /// # Panics
+    /// This function errors iff:
+    /// * The validity is not `None` and its length is different from `values`'s length
+    /// * The `data_type`'s [`PhysicalType`] is not equal to [`PhysicalType::Primitive`].
+    pub fn new(data_type: DataType, values: Buffer<T>, validity: Option<Bitmap>) -> Self {
+        Self::try_new(data_type, values, validity).unwrap()
+    }
+
+    /// Alias for `new`
+    pub fn from_data(data_type: DataType, values: Buffer<T>, validity: Option<Bitmap>) -> Self {
+        Self::new(data_type, values, validity)
+    }
+
     /// Returns a new empty [`PrimitiveArray`].
     pub fn new_empty(data_type: DataType) -> Self {
-        Self::from_data(data_type, Buffer::new(), None)
+        Self::new(data_type, Buffer::new(), None)
     }
 
     /// Returns a new [`PrimitiveArray`] whose all slots are null / `None`.
     #[inline]
     pub fn new_null(data_type: DataType, length: usize) -> Self {
-        Self::from_data(
+        Self::new(
             data_type,
             Buffer::new_zeroed(length),
             Some(Bitmap::new_zeroed(length)),
         )
     }
+}
 
-    /// The canonical method to create a [`PrimitiveArray`] out of low-end APIs.
-    /// # Panics
-    /// This function panics iff:
-    /// * `data_type` is not supported by the physical type
-    /// * The validity is not `None` and its length is different from the `values`'s length
-    pub fn from_data(data_type: DataType, values: Buffer<T>, validity: Option<Bitmap>) -> Self {
-        if !data_type.to_physical_type().eq_primitive(T::PRIMITIVE) {
-            Err(ArrowError::InvalidArgumentError(format!(
-                "Type {} does not support logical type {:?}",
-                std::any::type_name::<T>(),
-                data_type
-            )))
-            .unwrap()
-        }
-        if let Some(ref validity) = validity {
-            assert_eq!(values.len(), validity.len());
-        }
-        Self {
-            data_type,
-            values,
-            validity,
-        }
-    }
-
+impl<T: NativeType> PrimitiveArray<T> {
     /// Returns a slice of this [`PrimitiveArray`].
     /// # Implementation
     /// This operation is `O(1)` as it amounts to increase two ref counts.
     /// # Panic
     /// This function panics iff `offset + length >= self.len()`.
     #[inline]
+    #[must_use]
     pub fn slice(&self, offset: usize, length: usize) -> Self {
         assert!(
             offset + length <= self.len(),
@@ -98,6 +123,7 @@ impl<T: NativeType> PrimitiveArray<T> {
     /// # Safety
     /// The caller must ensure that `offset + length <= self.len()`.
     #[inline]
+    #[must_use]
     pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
         let validity = self
             .validity
@@ -113,6 +139,7 @@ impl<T: NativeType> PrimitiveArray<T> {
     /// Sets the validity bitmap on this [`PrimitiveArray`].
     /// # Panics
     /// This function panics iff `validity.len() != self.len()`.
+    #[must_use]
     pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
         if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
             panic!("validity should be as least as large as the array")
@@ -191,13 +218,13 @@ impl<T: NativeType> PrimitiveArray<T> {
 
         if let Some(bitmap) = self.validity {
             match bitmap.into_mut() {
-                Left(bitmap) => Left(PrimitiveArray::from_data(
+                Left(bitmap) => Left(PrimitiveArray::new(
                     self.data_type,
                     self.values,
                     Some(bitmap),
                 )),
                 Right(mutable_bitmap) => match self.values.into_mut() {
-                    Left(buffer) => Left(PrimitiveArray::from_data(
+                    Left(buffer) => Left(PrimitiveArray::new(
                         self.data_type,
                         buffer,
                         Some(mutable_bitmap.into()),
@@ -211,7 +238,7 @@ impl<T: NativeType> PrimitiveArray<T> {
             }
         } else {
             match self.values.into_mut() {
-                Left(buffer) => Left(PrimitiveArray::from_data(self.data_type, buffer, None)),
+                Left(values) => Left(PrimitiveArray::new(self.data_type, values, None)),
                 Right(values) => Right(MutablePrimitiveArray::from_data(
                     self.data_type,
                     values,

@@ -33,49 +33,14 @@ pub struct BinaryArray<O: Offset> {
 
 // constructors
 impl<O: Offset> BinaryArray<O> {
-    /// Creates an empty [`BinaryArray`], i.e. whose `.len` is zero.
-    pub fn new_empty(data_type: DataType) -> Self {
-        Self::from_data(
-            data_type,
-            Buffer::from(vec![O::zero()]),
-            Buffer::new(),
-            None,
-        )
-    }
-
-    /// Creates an null [`BinaryArray`], i.e. whose `.null_count() == .len()`.
-    #[inline]
-    pub fn new_null(data_type: DataType, length: usize) -> Self {
-        Self::from_data(
-            data_type,
-            Buffer::new_zeroed(length + 1),
-            Buffer::new(),
-            Some(Bitmap::new_zeroed(length)),
-        )
-    }
-
-    /// Creates a new [`BinaryArray`] from lower-level parts
-    /// # Panics
-    /// * the offsets are not monotonically increasing
-    /// * The last offset is not equal to the values' length.
-    /// * the validity's length is not equal to `offsets.len() - 1`.
-    /// * The `data_type`'s physical type is not equal to `Binary` or `LargeBinary`.
-    pub fn from_data(
-        data_type: DataType,
-        offsets: Buffer<O>,
-        values: Buffer<u8>,
-        validity: Option<Bitmap>,
-    ) -> Self {
-        Self::try_new(data_type, offsets, values, validity).unwrap()
-    }
-
-    /// Creates a new [`BinaryArray`] from lower-level parts.
+    /// Creates a new [`BinaryArray`].
     ///
+    /// # Errors
     /// This function returns an error iff:
     /// * the offsets are not monotonically increasing
     /// * The last offset is not equal to the values' length.
     /// * the validity's length is not equal to `offsets.len() - 1`.
-    /// * The `data_type`'s physical type is not equal to `Binary` or `LargeBinary`.
+    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Binary` or `LargeBinary`.
     pub fn try_new(
         data_type: DataType,
         offsets: Buffer<O>,
@@ -105,6 +70,52 @@ impl<O: Offset> BinaryArray<O> {
             values,
             validity,
         })
+    }
+
+    /// Creates a new [`BinaryArray`].
+    /// # Panics
+    /// * the offsets are not monotonically increasing
+    /// * The last offset is not equal to the values' length.
+    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Binary` or `LargeBinary`.
+    pub fn new(
+        data_type: DataType,
+        offsets: Buffer<O>,
+        values: Buffer<u8>,
+        validity: Option<Bitmap>,
+    ) -> Self {
+        Self::try_new(data_type, offsets, values, validity).unwrap()
+    }
+
+    /// Alias for `new`
+    pub fn from_data(
+        data_type: DataType,
+        offsets: Buffer<O>,
+        values: Buffer<u8>,
+        validity: Option<Bitmap>,
+    ) -> Self {
+        Self::new(data_type, offsets, values, validity)
+    }
+
+    /// Creates an empty [`BinaryArray`], i.e. whose `.len` is zero.
+    pub fn new_empty(data_type: DataType) -> Self {
+        Self::new(
+            data_type,
+            Buffer::from(vec![O::zero()]),
+            Buffer::new(),
+            None,
+        )
+    }
+
+    /// Creates an null [`BinaryArray`], i.e. whose `.null_count() == .len()`.
+    #[inline]
+    pub fn new_null(data_type: DataType, length: usize) -> Self {
+        Self::new(
+            data_type,
+            Buffer::new_zeroed(length + 1),
+            Buffer::new(),
+            Some(Bitmap::new_zeroed(length)),
+        )
     }
 
     /// Returns the default [`DataType`], `DataType::Binary` or `DataType::LargeBinary`
@@ -147,12 +158,16 @@ impl<O: Offset> BinaryArray<O> {
             validity,
         }
     }
+}
 
+// must use
+impl<O: Offset> BinaryArray<O> {
     /// Creates a new [`BinaryArray`] by slicing this [`BinaryArray`].
     /// # Implementation
     /// This function is `O(1)`: all data will be shared between both arrays.
     /// # Panics
     /// iff `offset + length > self.len()`.
+    #[must_use]
     pub fn slice(&self, offset: usize, length: usize) -> Self {
         assert!(
             offset + length <= self.len(),
@@ -166,6 +181,7 @@ impl<O: Offset> BinaryArray<O> {
     /// This function is `O(1)`: all data will be shared between both arrays.
     /// # Safety
     /// The caller must ensure that `offset + length <= self.len()`.
+    #[must_use]
     pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
         let validity = self
             .validity
@@ -183,6 +199,7 @@ impl<O: Offset> BinaryArray<O> {
     /// Clones this [`BinaryArray`] with a different validity.
     /// # Panic
     /// Panics iff `validity.len() != self.len()`.
+    #[must_use]
     pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
         if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
             panic!("validity's length must be equal to the array's length")
