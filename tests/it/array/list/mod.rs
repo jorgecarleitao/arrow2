@@ -23,7 +23,7 @@ fn debug() {
 }
 
 #[test]
-#[should_panic(expected = "The child's datatype must match the inner type of the \'data_type\'")]
+#[should_panic]
 fn test_nested_panic() {
     let values = Buffer::from_slice([1, 2, 3, 4, 5]);
     let values = PrimitiveArray::<i32>::from_data(DataType::Int32, values, None);

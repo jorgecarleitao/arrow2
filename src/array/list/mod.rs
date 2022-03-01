@@ -7,7 +7,11 @@ use crate::{
     error::ArrowError,
 };
 
-use super::{new_empty_array, specification::try_check_offsets, Array, Offset};
+use super::{
+    new_empty_array,
+    specification::{try_check_offsets, try_check_offsets_bounds},
+    Array, Offset,
+};
 
 mod ffi;
 pub(super) mod fmt;
@@ -35,6 +39,8 @@ impl<O: Offset> ListArray<O> {
     /// * the validity's length is not equal to `offsets.len() - 1`.
     /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either [`crate::datatypes::PhysicalType::List`] or [`crate::datatypes::PhysicalType::LargeList`].
     /// * The `data_type`'s inner field's data type is not equal to `values.data_type`.
+    /// # Implementation
+    /// This function is `O(N)` - checking monotinicity is `O(N)`
     pub fn try_new(
         data_type: DataType,
         offsets: Buffer<O>,
@@ -77,6 +83,8 @@ impl<O: Offset> ListArray<O> {
     /// * the validity's length is not equal to `offsets.len() - 1`.
     /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either [`crate::datatypes::PhysicalType::List`] or [`crate::datatypes::PhysicalType::LargeList`].
     /// * The `data_type`'s inner field's data type is not equal to `values.data_type`.
+    /// # Implementation
+    /// This function is `O(N)` - checking monotinicity is `O(N)`
     pub fn new(
         data_type: DataType,
         offsets: Buffer<O>,
@@ -112,6 +120,77 @@ impl<O: Offset> ListArray<O> {
             new_empty_array(child).into(),
             Some(Bitmap::new_zeroed(length)),
         )
+    }
+}
+
+// unsafe construtors
+impl<O: Offset> ListArray<O> {
+    /// Creates a new [`ListArray`].
+    ///
+    /// # Errors
+    /// This function returns an error iff:
+    /// * The last offset is not equal to the values' length.
+    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either [`crate::datatypes::PhysicalType::List`] or [`crate::datatypes::PhysicalType::LargeList`].
+    /// * The `data_type`'s inner field's data type is not equal to `values.data_type`.
+    /// # Safety
+    /// This function is unsafe iff:
+    /// * the offsets are not monotonically increasing
+    /// # Implementation
+    /// This function is `O(1)`
+    pub unsafe fn try_new_unchecked(
+        data_type: DataType,
+        offsets: Buffer<O>,
+        values: Arc<dyn Array>,
+        validity: Option<Bitmap>,
+    ) -> Result<Self, ArrowError> {
+        try_check_offsets_bounds(&offsets, values.len())?;
+
+        if validity
+            .as_ref()
+            .map_or(false, |validity| validity.len() != offsets.len() - 1)
+        {
+            return Err(ArrowError::oos(
+                "validity mask length must match the number of values",
+            ));
+        }
+
+        let child_data_type = Self::try_get_child(&data_type)?.data_type();
+        let values_data_type = values.data_type();
+        if child_data_type != values_data_type {
+            return Err(ArrowError::oos(
+                format!("ListArray's child's DataType must match. However, the expected DataType is {child_data_type:?} while it got {values_data_type:?}."),
+            ));
+        }
+
+        Ok(Self {
+            data_type,
+            offsets,
+            values,
+            validity,
+        })
+    }
+
+    /// Creates a new [`ListArray`].
+    ///
+    /// # Panics
+    /// This function panics iff:
+    /// * The last offset is not equal to the values' length.
+    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either [`crate::datatypes::PhysicalType::List`] or [`crate::datatypes::PhysicalType::LargeList`].
+    /// * The `data_type`'s inner field's data type is not equal to `values.data_type`.
+    /// # Safety
+    /// This function is unsafe iff:
+    /// * the offsets are not monotonically increasing
+    /// # Implementation
+    /// This function is `O(1)`
+    pub unsafe fn new_unchecked(
+        data_type: DataType,
+        offsets: Buffer<O>,
+        values: Arc<dyn Array>,
+        validity: Option<Bitmap>,
+    ) -> Self {
+        Self::try_new_unchecked(data_type, offsets, values, validity).unwrap()
     }
 }
 
