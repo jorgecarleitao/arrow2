@@ -73,7 +73,6 @@ pub fn make_growable<'a>(
 ) -> Box<dyn Growable<'a> + 'a> {
     assert!(!arrays.is_empty());
     let data_type = arrays[0].data_type();
-    assert!(arrays.iter().all(|&item| item.data_type() == data_type));
 
     use PhysicalType::*;
     match data_type.to_physical_type() {
