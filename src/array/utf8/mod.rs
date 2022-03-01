@@ -7,7 +7,7 @@ use crate::{
 use either::Either;
 
 use super::{
-    specification::{check_offsets_minimal, try_check_offsets_and_utf8},
+    specification::{try_check_offsets_and_utf8, try_check_offsets_bounds},
     Array, GenericBinaryArray, Offset,
 };
 
@@ -44,14 +44,19 @@ pub struct Utf8Array<O: Offset> {
     validity: Option<Bitmap>,
 }
 
+// constructors
 impl<O: Offset> Utf8Array<O> {
-    /// The canonical method to create a [`Utf8Array`].
+    /// Returns a new [`Utf8Array`].
     ///
+    /// # Errors
     /// This function returns an error iff:
-    /// * The `data_type`'s physical type is not consistent with the offset `O`.
-    /// * The `offsets` and `values` are inconsistent
-    /// * The `values` between `offsets` are utf8 encoded
-    /// * The validity is not `None` and its length is different from `offsets.len() - 1`.
+    /// * the offsets are not monotonically increasing
+    /// * The last offset is not equal to the values' length.
+    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Utf8` or `LargeUtf8`.
+    /// * The `values` between two consecutive `offsets` are not valid utf8
+    /// # Implementation
+    /// This function is `O(N)` - checking monotinicity and utf8 is `O(N)`
     pub fn try_new(
         data_type: DataType,
         offsets: Buffer<O>,
@@ -84,10 +89,14 @@ impl<O: Offset> Utf8Array<O> {
 
     /// Creates a new [`Utf8Array`].
     /// # Panics
+    /// This function panics iff:
     /// * the offsets are not monotonically increasing
     /// * The last offset is not equal to the values' length.
     /// * the validity's length is not equal to `offsets.len() - 1`.
     /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Utf8` or `LargeUtf8`.
+    /// * The `values` between two consecutive `offsets` are not valid utf8
+    /// # Implementation
+    /// This function is `O(N)` - checking monotinicity and utf8 is `O(N)`
     pub fn new(
         data_type: DataType,
         offsets: Buffer<O>,
@@ -139,37 +148,88 @@ impl<O: Offset> Utf8Array<O> {
             DataType::Utf8
         }
     }
+}
 
-    /// The same as [`Utf8Array::from_data`] but does not check for offsets nor utf8 validity.
+// unsafe constructors
+impl<O: Offset> Utf8Array<O> {
+    /// Creates a new [`Utf8Array`] without checking for offsets monotinicity nor utf8-validity
+    ///
+    /// # Errors
+    /// This function returns an error iff:
+    /// * The last offset is not equal to the values' length.
+    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Utf8` or `LargeUtf8`.
     /// # Safety
-    /// * `offsets` MUST be monotonically increasing; and
-    /// * every slice of `values` constructed from `offsets` MUST be valid utf8
-    /// # Panics
-    /// This function panics iff:
-    /// * The `data_type`'s physical type is not consistent with the offset `O`.
-    /// * The last element of `offsets` is different from `values.len()`.
-    /// * The validity is not `None` and its length is different from `offsets.len() - 1`.
+    /// This function is unsound iff:
+    /// * the offsets are not monotonically increasing
+    /// * The `values` between two consecutive `offsets` are not valid utf8
+    /// # Implementation
+    /// This function is `O(1)`
+    pub unsafe fn try_new_unchecked(
+        data_type: DataType,
+        offsets: Buffer<O>,
+        values: Buffer<u8>,
+        validity: Option<Bitmap>,
+    ) -> Result<Self> {
+        try_check_offsets_bounds(&offsets, values.len())?;
+
+        if validity
+            .as_ref()
+            .map_or(false, |validity| validity.len() != offsets.len() - 1)
+        {
+            return Err(ArrowError::oos(
+                "validity mask length must match the number of values",
+            ));
+        }
+
+        if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
+            return Err(ArrowError::oos(
+                "BinaryArray can only be initialized with DataType::Utf8 or DataType::LargeUtf8",
+            ));
+        }
+
+        Ok(Self {
+            data_type,
+            offsets,
+            values,
+            validity,
+        })
+    }
+
+    /// Creates a new [`Utf8Array`] without checking for offsets monotinicity.
+    ///
+    /// # Errors
+    /// This function returns an error iff:
+    /// * The last offset is not equal to the values' length.
+    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Utf8` or `LargeUtf8`.
+    /// # Safety
+    /// This function is unsound iff:
+    /// * the offsets are not monotonically increasing
+    /// * The `values` between two consecutive `offsets` are not valid utf8
+    /// # Implementation
+    /// This function is `O(1)`
+    pub unsafe fn new_unchecked(
+        data_type: DataType,
+        offsets: Buffer<O>,
+        values: Buffer<u8>,
+        validity: Option<Bitmap>,
+    ) -> Self {
+        Self::try_new_unchecked(data_type, offsets, values, validity).unwrap()
+    }
+
+    /// Alias for [`new_unchecked`]
+    /// # Safety
+    /// This function is unsafe iff:
+    /// * the offsets are not monotonically increasing
+    /// * The `values` between two consecutive `offsets` are not valid utf8
     pub unsafe fn from_data_unchecked(
         data_type: DataType,
         offsets: Buffer<O>,
         values: Buffer<u8>,
         validity: Option<Bitmap>,
     ) -> Self {
-        check_offsets_minimal(&offsets, values.len());
-        if let Some(ref validity) = validity {
-            assert_eq!(offsets.len() - 1, validity.len());
-        }
-
-        if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
-            panic!("Utf8Array can only be initialized with DataType::Utf8 or DataType::LargeUtf8")
-        }
-
-        Self {
-            data_type,
-            offsets,
-            values,
-            validity,
-        }
+        Self::new_unchecked(data_type, offsets, values, validity)
     }
 }
 

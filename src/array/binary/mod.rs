@@ -6,7 +6,7 @@ use crate::{
 };
 
 use super::{
-    specification::{check_offsets_minimal, try_check_offsets},
+    specification::{try_check_offsets, try_check_offsets_bounds},
     Array, GenericBinaryArray, Offset,
 };
 
@@ -41,6 +41,8 @@ impl<O: Offset> BinaryArray<O> {
     /// * The last offset is not equal to the values' length.
     /// * the validity's length is not equal to `offsets.len() - 1`.
     /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Binary` or `LargeBinary`.
+    /// # Implementation
+    /// This function is `O(N)` - checking monotinicity is `O(N)`
     pub fn try_new(
         data_type: DataType,
         offsets: Buffer<O>,
@@ -78,6 +80,8 @@ impl<O: Offset> BinaryArray<O> {
     /// * The last offset is not equal to the values' length.
     /// * the validity's length is not equal to `offsets.len() - 1`.
     /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Binary` or `LargeBinary`.
+    /// # Implementation
+    /// This function is `O(N)` - checking monotinicity is `O(N)`
     pub fn new(
         data_type: DataType,
         offsets: Buffer<O>,
@@ -126,37 +130,85 @@ impl<O: Offset> BinaryArray<O> {
             DataType::Binary
         }
     }
+}
 
-    /// The same as [`BinaryArray::from_data`] but does not check for offsets.
+// unsafe constructors
+impl<O: Offset> BinaryArray<O> {
+    /// Creates a new [`BinaryArray`] without checking for offsets monotinicity.
+    ///
+    /// # Errors
+    /// This function returns an error iff:
+    /// * The last offset is not equal to the values' length.
+    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Binary` or `LargeBinary`.
     /// # Safety
-    /// * `offsets` MUST be monotonically increasing
+    /// This function is unsafe iff:
+    /// * the offsets are not monotonically increasing
+    /// # Implementation
+    /// This function is `O(1)`
+    pub unsafe fn try_new_unchecked(
+        data_type: DataType,
+        offsets: Buffer<O>,
+        values: Buffer<u8>,
+        validity: Option<Bitmap>,
+    ) -> Result<Self> {
+        try_check_offsets_bounds(&offsets, values.len())?;
+
+        if validity
+            .as_ref()
+            .map_or(false, |validity| validity.len() != offsets.len() - 1)
+        {
+            return Err(ArrowError::oos(
+                "validity mask length must match the number of values",
+            ));
+        }
+
+        if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
+            return Err(ArrowError::oos(
+                "BinaryArray can only be initialized with DataType::Binary or DataType::LargeBinary",
+            ));
+        }
+
+        Ok(Self {
+            data_type,
+            offsets,
+            values,
+            validity,
+        })
+    }
+
+    /// Creates a new [`BinaryArray`] without checking for offsets monotinicity.
+    ///
     /// # Panics
-    /// This function panics iff:
-    /// * The `data_type`'s physical type is not consistent with the offset `O`.
-    /// * The last element of `offsets` is different from `values.len()`.
-    /// * The validity is not `None` and its length is different from `offsets.len() - 1`.
+    /// This function returns an error iff:
+    /// * The last offset is not equal to the values' length.
+    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Binary` or `LargeBinary`.
+    /// # Safety
+    /// This function is unsafe iff:
+    /// * the offsets are not monotonically increasing
+    /// # Implementation
+    /// This function is `O(1)`
+    pub unsafe fn new_unchecked(
+        data_type: DataType,
+        offsets: Buffer<O>,
+        values: Buffer<u8>,
+        validity: Option<Bitmap>,
+    ) -> Self {
+        Self::try_new_unchecked(data_type, offsets, values, validity).unwrap()
+    }
+
+    /// Alias for [`new_unchecked`]
+    /// # Safety
+    /// This function is unsafe iff:
+    /// * the offsets are not monotonically increasing
     pub unsafe fn from_data_unchecked(
         data_type: DataType,
         offsets: Buffer<O>,
         values: Buffer<u8>,
         validity: Option<Bitmap>,
     ) -> Self {
-        check_offsets_minimal(&offsets, values.len());
-
-        if let Some(validity) = &validity {
-            assert_eq!(offsets.len() - 1, validity.len());
-        }
-
-        if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
-            panic!("BinaryArray can only be initialized with DataType::Binary or DataType::LargeBinary")
-        }
-
-        Self {
-            data_type,
-            offsets,
-            values,
-            validity,
-        }
+        Self::new_unchecked(data_type, offsets, values, validity)
     }
 }
 

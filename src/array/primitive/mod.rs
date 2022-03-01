@@ -58,9 +58,9 @@ impl<T: NativeType> PrimitiveArray<T> {
             ));
         }
 
-        if data_type.to_physical_type() != PhysicalType::Boolean {
+        if data_type.to_physical_type() != PhysicalType::Primitive(T::PRIMITIVE) {
             return Err(ArrowError::oos(
-                "BooleanArray can only be initialized with a DataType whose physical type is Boolean",
+                "BooleanArray can only be initialized with a DataType whose physical type is Primitive",
             ));
         }
 
