@@ -7,7 +7,7 @@ use crate::{
 use either::Either;
 
 use super::{
-    specification::{check_offsets_minimal, try_check_offsets_and_utf8},
+    specification::{try_check_offsets_and_utf8, try_check_offsets_bounds},
     Array, GenericBinaryArray, Offset,
 };
 
@@ -44,54 +44,19 @@ pub struct Utf8Array<O: Offset> {
     validity: Option<Bitmap>,
 }
 
+// constructors
 impl<O: Offset> Utf8Array<O> {
-    /// Returns a new empty [`Utf8Array`].
-    #[inline]
-    pub fn new_empty(data_type: DataType) -> Self {
-        unsafe {
-            Self::from_data_unchecked(
-                data_type,
-                Buffer::from(vec![O::zero()]),
-                Buffer::new(),
-                None,
-            )
-        }
-    }
-
-    /// Returns a new [`Utf8Array`] whose all slots are null / `None`.
-    #[inline]
-    pub fn new_null(data_type: DataType, length: usize) -> Self {
-        Self::from_data(
-            data_type,
-            Buffer::new_zeroed(length + 1),
-            Buffer::new(),
-            Some(Bitmap::new_zeroed(length)),
-        )
-    }
-
-    /// The canonical method to create a [`Utf8Array`] out of low-end APIs.
-    /// # Panics
-    /// This function panics iff:
-    /// * The `data_type`'s physical type is not consistent with the offset `O`.
-    /// * The `offsets` and `values` are inconsistent
-    /// * The `values` between `offsets` are utf8 encoded
-    /// * The validity is not `None` and its length is different from `offsets.len() - 1`.
-    pub fn from_data(
-        data_type: DataType,
-        offsets: Buffer<O>,
-        values: Buffer<u8>,
-        validity: Option<Bitmap>,
-    ) -> Self {
-        Utf8Array::try_new(data_type, offsets, values, validity).unwrap()
-    }
-
-    /// The canonical method to create a [`Utf8Array`] out of low-end APIs.
+    /// Returns a new [`Utf8Array`].
     ///
+    /// # Errors
     /// This function returns an error iff:
-    /// * The `data_type`'s physical type is not consistent with the offset `O`.
-    /// * The `offsets` and `values` are inconsistent
-    /// * The `values` between `offsets` are utf8 encoded
-    /// * The validity is not `None` and its length is different from `offsets.len() - 1`.
+    /// * the offsets are not monotonically increasing
+    /// * The last offset is not equal to the values' length.
+    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Utf8` or `LargeUtf8`.
+    /// * The `values` between two consecutive `offsets` are not valid utf8
+    /// # Implementation
+    /// This function is `O(N)` - checking monotinicity and utf8 is `O(N)`
     pub fn try_new(
         data_type: DataType,
         offsets: Buffer<O>,
@@ -122,6 +87,59 @@ impl<O: Offset> Utf8Array<O> {
         })
     }
 
+    /// Creates a new [`Utf8Array`].
+    /// # Panics
+    /// This function panics iff:
+    /// * the offsets are not monotonically increasing
+    /// * The last offset is not equal to the values' length.
+    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Utf8` or `LargeUtf8`.
+    /// * The `values` between two consecutive `offsets` are not valid utf8
+    /// # Implementation
+    /// This function is `O(N)` - checking monotinicity and utf8 is `O(N)`
+    pub fn new(
+        data_type: DataType,
+        offsets: Buffer<O>,
+        values: Buffer<u8>,
+        validity: Option<Bitmap>,
+    ) -> Self {
+        Self::try_new(data_type, offsets, values, validity).unwrap()
+    }
+
+    /// Alias for `new`
+    pub fn from_data(
+        data_type: DataType,
+        offsets: Buffer<O>,
+        values: Buffer<u8>,
+        validity: Option<Bitmap>,
+    ) -> Self {
+        Self::new(data_type, offsets, values, validity)
+    }
+
+    /// Returns a new empty [`Utf8Array`].
+    #[inline]
+    pub fn new_empty(data_type: DataType) -> Self {
+        unsafe {
+            Self::from_data_unchecked(
+                data_type,
+                Buffer::from(vec![O::zero()]),
+                Buffer::new(),
+                None,
+            )
+        }
+    }
+
+    /// Returns a new [`Utf8Array`] whose all slots are null / `None`.
+    #[inline]
+    pub fn new_null(data_type: DataType, length: usize) -> Self {
+        Self::from_data(
+            data_type,
+            Buffer::new_zeroed(length + 1),
+            Buffer::new(),
+            Some(Bitmap::new_zeroed(length)),
+        )
+    }
+
     /// Returns the default [`DataType`], `DataType::Utf8` or `DataType::LargeUtf8`
     pub fn default_data_type() -> DataType {
         if O::is_large() {
@@ -130,44 +148,99 @@ impl<O: Offset> Utf8Array<O> {
             DataType::Utf8
         }
     }
+}
 
-    /// The same as [`Utf8Array::from_data`] but does not check for offsets nor utf8 validity.
+// unsafe constructors
+impl<O: Offset> Utf8Array<O> {
+    /// Creates a new [`Utf8Array`] without checking for offsets monotinicity nor utf8-validity
+    ///
+    /// # Errors
+    /// This function returns an error iff:
+    /// * The last offset is not equal to the values' length.
+    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Utf8` or `LargeUtf8`.
     /// # Safety
-    /// * `offsets` MUST be monotonically increasing; and
-    /// * every slice of `values` constructed from `offsets` MUST be valid utf8
-    /// # Panics
-    /// This function panics iff:
-    /// * The `data_type`'s physical type is not consistent with the offset `O`.
-    /// * The last element of `offsets` is different from `values.len()`.
-    /// * The validity is not `None` and its length is different from `offsets.len() - 1`.
+    /// This function is unsound iff:
+    /// * the offsets are not monotonically increasing
+    /// * The `values` between two consecutive `offsets` are not valid utf8
+    /// # Implementation
+    /// This function is `O(1)`
+    pub unsafe fn try_new_unchecked(
+        data_type: DataType,
+        offsets: Buffer<O>,
+        values: Buffer<u8>,
+        validity: Option<Bitmap>,
+    ) -> Result<Self> {
+        try_check_offsets_bounds(&offsets, values.len())?;
+
+        if validity
+            .as_ref()
+            .map_or(false, |validity| validity.len() != offsets.len() - 1)
+        {
+            return Err(ArrowError::oos(
+                "validity mask length must match the number of values",
+            ));
+        }
+
+        if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
+            return Err(ArrowError::oos(
+                "BinaryArray can only be initialized with DataType::Utf8 or DataType::LargeUtf8",
+            ));
+        }
+
+        Ok(Self {
+            data_type,
+            offsets,
+            values,
+            validity,
+        })
+    }
+
+    /// Creates a new [`Utf8Array`] without checking for offsets monotinicity.
+    ///
+    /// # Errors
+    /// This function returns an error iff:
+    /// * The last offset is not equal to the values' length.
+    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Utf8` or `LargeUtf8`.
+    /// # Safety
+    /// This function is unsound iff:
+    /// * the offsets are not monotonically increasing
+    /// * The `values` between two consecutive `offsets` are not valid utf8
+    /// # Implementation
+    /// This function is `O(1)`
+    pub unsafe fn new_unchecked(
+        data_type: DataType,
+        offsets: Buffer<O>,
+        values: Buffer<u8>,
+        validity: Option<Bitmap>,
+    ) -> Self {
+        Self::try_new_unchecked(data_type, offsets, values, validity).unwrap()
+    }
+
+    /// Alias for [`new_unchecked`]
+    /// # Safety
+    /// This function is unsafe iff:
+    /// * the offsets are not monotonically increasing
+    /// * The `values` between two consecutive `offsets` are not valid utf8
     pub unsafe fn from_data_unchecked(
         data_type: DataType,
         offsets: Buffer<O>,
         values: Buffer<u8>,
         validity: Option<Bitmap>,
     ) -> Self {
-        check_offsets_minimal(&offsets, values.len());
-        if let Some(ref validity) = validity {
-            assert_eq!(offsets.len() - 1, validity.len());
-        }
-
-        if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
-            panic!("Utf8Array can only be initialized with DataType::Utf8 or DataType::LargeUtf8")
-        }
-
-        Self {
-            data_type,
-            offsets,
-            values,
-            validity,
-        }
+        Self::new_unchecked(data_type, offsets, values, validity)
     }
+}
 
+// must use
+impl<O: Offset> Utf8Array<O> {
     /// Returns a slice of this [`Utf8Array`].
     /// # Implementation
     /// This operation is `O(1)` as it amounts to essentially increase two ref counts.
     /// # Panic
     /// This function panics iff `offset + length >= self.len()`.
+    #[must_use]
     pub fn slice(&self, offset: usize, length: usize) -> Self {
         assert!(
             offset + length <= self.len(),
@@ -180,6 +253,7 @@ impl<O: Offset> Utf8Array<O> {
     /// This operation is `O(1)` as it amounts to essentially increase two ref counts.
     /// # Safety
     /// The caller must ensure that `offset + length <= self.len()`.
+    #[must_use]
     pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
         let validity = self
             .validity
