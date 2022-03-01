@@ -58,9 +58,11 @@ pub fn try_check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) -> Re
         // check bounds
         if offsets
             .last()
-            .map_or(false, |last| last.to_usize() > values.len())
+            .map_or(true, |last| last.to_usize() > values.len())
         {
-            return Err(ArrowError::oos("offsets must not exceed values length"));
+            return Err(ArrowError::oos(
+                "offsets must have at least one element and must not exceed values length",
+            ));
         };
 
         Ok(())
@@ -81,9 +83,11 @@ pub fn try_check_offsets<O: Offset>(offsets: &[O], values_len: usize) -> Result<
         Err(ArrowError::oos("offsets must be monotonically increasing"))
     } else if offsets
         .last()
-        .map_or(false, |last| last.to_usize() > values_len)
+        .map_or(true, |last| last.to_usize() > values_len)
     {
-        Err(ArrowError::oos("offsets must not exceed values length"))
+        Err(ArrowError::oos(
+            "offsets must have at least one element and must not exceed values length",
+        ))
     } else {
         Ok(())
     }
