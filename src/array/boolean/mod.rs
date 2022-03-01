@@ -1,6 +1,7 @@
 use crate::{
     bitmap::Bitmap,
     datatypes::{DataType, PhysicalType},
+    error::ArrowError,
 };
 use either::Either;
 
@@ -25,6 +26,52 @@ pub struct BooleanArray {
 }
 
 impl BooleanArray {
+    /// The canonical method to create a [`BooleanArray`] out of low-end APIs.
+    /// # Errors
+    /// This function errors iff:
+    /// * The validity is not `None` and its length is different from `values`'s length
+    /// * The `data_type`'s [`PhysicalType`] is not equal to [`PhysicalType::Boolean`].
+    pub fn try_new(
+        data_type: DataType,
+        values: Bitmap,
+        validity: Option<Bitmap>,
+    ) -> Result<Self, ArrowError> {
+        if validity
+            .as_ref()
+            .map_or(false, |validity| validity.len() != values.len())
+        {
+            return Err(ArrowError::oos(
+                "validity mask length must match the number of values",
+            ));
+        }
+
+        if data_type.to_physical_type() != PhysicalType::Boolean {
+            return Err(ArrowError::oos(
+                "BooleanArray can only be initialized with a DataType whose physical type is Boolean",
+            ));
+        }
+
+        Ok(Self {
+            data_type,
+            values,
+            validity,
+        })
+    }
+
+    /// The canonical method to create a [`BooleanArray`]
+    /// # Panics
+    /// This function errors iff:
+    /// * The validity is not `None` and its length is different from `values`'s length
+    /// * The `data_type`'s [`PhysicalType`] is not equal to [`PhysicalType::Boolean`].
+    pub fn new(data_type: DataType, values: Bitmap, validity: Option<Bitmap>) -> Self {
+        Self::try_new(data_type, values, validity).unwrap()
+    }
+
+    /// Alias for `new`
+    pub fn from_data(data_type: DataType, values: Bitmap, validity: Option<Bitmap>) -> Self {
+        Self::new(data_type, values, validity)
+    }
+
     /// Returns a new empty [`BooleanArray`].
     pub fn new_empty(data_type: DataType) -> Self {
         Self::from_data(data_type, Bitmap::new(), None)
@@ -35,31 +82,17 @@ impl BooleanArray {
         let bitmap = Bitmap::new_zeroed(length);
         Self::from_data(data_type, bitmap.clone(), Some(bitmap))
     }
+}
 
-    /// The canonical method to create a [`BooleanArray`] out of low-end APIs.
-    /// # Panics
-    /// This function panics iff:
-    /// * The validity is not `None` and its length is different from `values`'s length
-    pub fn from_data(data_type: DataType, values: Bitmap, validity: Option<Bitmap>) -> Self {
-        if let Some(ref validity) = validity {
-            assert_eq!(values.len(), validity.len());
-        }
-        if data_type.to_physical_type() != PhysicalType::Boolean {
-            panic!("BooleanArray can only be initialized with DataType::Boolean")
-        }
-        Self {
-            data_type,
-            values,
-            validity,
-        }
-    }
-
+// must use
+impl BooleanArray {
     /// Returns a slice of this [`BooleanArray`].
     /// # Implementation
     /// This operation is `O(1)` as it amounts to increase two ref counts.
     /// # Panic
     /// This function panics iff `offset + length >= self.len()`.
     #[inline]
+    #[must_use]
     pub fn slice(&self, offset: usize, length: usize) -> Self {
         assert!(
             offset + length <= self.len(),
@@ -74,6 +107,7 @@ impl BooleanArray {
     /// # Safety
     /// The caller must ensure that `offset + length <= self.len()`.
     #[inline]
+    #[must_use]
     pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
         let validity = self
             .validity
@@ -89,6 +123,7 @@ impl BooleanArray {
     /// Sets the validity bitmap on this [`BooleanArray`].
     /// # Panic
     /// This function panics iff `validity.len() != self.len()`.
+    #[must_use]
     pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
         if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
             panic!("validity should be as least as large as the array")
@@ -98,7 +133,7 @@ impl BooleanArray {
         arr
     }
 
-    /// Try to convert this `BooleanArray` to a `MutableBooleanArray`
+    /// Try to convert this [`BooleanArray`] to a [`MutableBooleanArray`]
     pub fn into_mut(self) -> Either<Self, MutableBooleanArray> {
         use Either::*;
 
