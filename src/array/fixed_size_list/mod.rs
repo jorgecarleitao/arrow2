@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::{
     bitmap::Bitmap,
     datatypes::{DataType, Field},
+    error::ArrowError,
 };
 
 use super::{new_empty_array, new_null_array, Array};
@@ -25,6 +26,75 @@ pub struct FixedSizeListArray {
 }
 
 impl FixedSizeListArray {
+    /// Creates a new [`FixedSizeListArray`].
+    ///
+    /// # Errors
+    /// This function returns an error iff:
+    /// * The `data_type`'s physical type is not [`crate::datatypes::PhysicalType::FixedSizeList`]
+    /// * The `data_type`'s inner field's data type is not equal to `values.data_type`.
+    /// * The length of `values` is not a multiple of `size` in `data_type`
+    /// * the validity's length is not equal to `values.len() / size`.
+    pub fn try_new(
+        data_type: DataType,
+        values: Arc<dyn Array>,
+        validity: Option<Bitmap>,
+    ) -> Result<Self, ArrowError> {
+        let (child, size) = Self::try_child_and_size(&data_type)?;
+
+        let child_data_type = &child.data_type;
+        let values_data_type = values.data_type();
+        if child_data_type != values_data_type {
+            return Err(ArrowError::oos(
+                format!("FixedSizeListArray's child's DataType must match. However, the expected DataType is {child_data_type:?} while it got {values_data_type:?}."),
+            ));
+        }
+
+        if values.len() % size != 0 {
+            return Err(ArrowError::oos(format!(
+                "values (of len {}) must be a multiple of size ({}) in FixedSizeListArray.",
+                values.len(),
+                size
+            )));
+        }
+        let len = values.len() / size;
+
+        if validity
+            .as_ref()
+            .map_or(false, |validity| validity.len() != len)
+        {
+            return Err(ArrowError::oos(
+                "validity mask length must be equal to the number of values divided by size",
+            ));
+        }
+
+        Ok(Self {
+            size,
+            data_type,
+            values,
+            validity,
+        })
+    }
+
+    /// Creates a new [`FixedSizeListArray`].
+    /// # Panics
+    /// This function panics iff:
+    /// * The `data_type`'s physical type is not [`crate::datatypes::PhysicalType::FixedSizeList`]
+    /// * The `data_type`'s inner field's data type is not equal to `values.data_type`.
+    /// * The length of `values` is not a multiple of `size` in `data_type`
+    /// * the validity's length is not equal to `values.len() / size`.
+    pub fn new(data_type: DataType, values: Arc<dyn Array>, validity: Option<Bitmap>) -> Self {
+        Self::try_new(data_type, values, validity).unwrap()
+    }
+
+    /// Alias for `new`
+    pub fn from_data(
+        data_type: DataType,
+        values: Arc<dyn Array>,
+        validity: Option<Bitmap>,
+    ) -> Self {
+        Self::new(data_type, values, validity)
+    }
+
     /// Returns a new empty [`FixedSizeListArray`].
     pub fn new_empty(data_type: DataType) -> Self {
         let values =
@@ -41,34 +111,16 @@ impl FixedSizeListArray {
         .into();
         Self::from_data(data_type, values, Some(Bitmap::new_zeroed(length)))
     }
+}
 
-    /// Returns a [`FixedSizeListArray`].
-    pub fn from_data(
-        data_type: DataType,
-        values: Arc<dyn Array>,
-        validity: Option<Bitmap>,
-    ) -> Self {
-        let (_, size) = Self::get_child_and_size(&data_type);
-
-        assert_eq!(values.len() % size, 0);
-
-        if let Some(ref validity) = validity {
-            assert_eq!(values.len() / size, validity.len());
-        }
-
-        Self {
-            size,
-            data_type,
-            values,
-            validity,
-        }
-    }
-
+// must use
+impl FixedSizeListArray {
     /// Returns a slice of this [`FixedSizeListArray`].
     /// # Implementation
     /// This operation is `O(1)`.
     /// # Panics
     /// panics iff `offset + length > self.len()`
+    #[must_use]
     pub fn slice(&self, offset: usize, length: usize) -> Self {
         assert!(
             offset + length <= self.len(),
@@ -82,6 +134,7 @@ impl FixedSizeListArray {
     /// This operation is `O(1)`.
     /// # Safety
     /// The caller must ensure that `offset + length <= self.len()`.
+    #[must_use]
     pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
         let validity = self
             .validity
@@ -103,6 +156,7 @@ impl FixedSizeListArray {
     /// Sets the validity bitmap on this [`FixedSizeListArray`].
     /// # Panic
     /// This function panics iff `validity.len() != self.len()`.
+    #[must_use]
     pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
         if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
             panic!("validity should be as least as large as the array")
@@ -152,11 +206,17 @@ impl FixedSizeListArray {
 }
 
 impl FixedSizeListArray {
-    pub(crate) fn get_child_and_size(data_type: &DataType) -> (&Field, usize) {
+    pub(crate) fn try_child_and_size(data_type: &DataType) -> Result<(&Field, usize), ArrowError> {
         match data_type.to_logical_type() {
-            DataType::FixedSizeList(child, size) => (child.as_ref(), *size as usize),
-            _ => panic!("FixedSizeListArray expects DataType::FixedSizeList"),
+            DataType::FixedSizeList(child, size) => Ok((child.as_ref(), *size as usize)),
+            _ => Err(ArrowError::oos(
+                "FixedSizeListArray expects DataType::FixedSizeList",
+            )),
         }
+    }
+
+    pub(crate) fn get_child_and_size(data_type: &DataType) -> (&Field, usize) {
+        Self::try_child_and_size(data_type).unwrap()
     }
 
     /// Returns a [`DataType`] consistent with [`FixedSizeListArray`].
