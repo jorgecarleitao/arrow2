@@ -2,35 +2,25 @@
 use std::io::SeekFrom;
 use std::sync::Arc;
 
-use arrow_format::ipc::BlockRef;
-use arrow_format::ipc::FooterRef;
-use arrow_format::ipc::MessageHeaderRef;
-use arrow_format::ipc::MessageRef;
-use arrow_format::ipc::planus::ReadAsRoot;
-use arrow_format::ipc::planus::Vector;
-use futures::AsyncSeek;
-use futures::AsyncSeekExt;
-use futures::AsyncRead;
-use futures::AsyncReadExt;
-use futures::Stream;
-use futures::stream::BoxStream;
-use futures::StreamExt;
+use arrow_format::ipc::{
+    planus::{ReadAsRoot, Vector},
+    BlockRef, FooterRef, MessageHeaderRef, MessageRef,
+};
+use futures::{
+    stream::BoxStream, AsyncRead, AsyncReadExt, AsyncSeek, AsyncSeekExt, Stream, StreamExt,
+};
 
 use crate::array::*;
 use crate::chunk::Chunk;
+use crate::datatypes::{Field, Schema};
 use crate::error::{ArrowError, Result};
-use crate::io::ipc::ARROW_MAGIC;
-use crate::datatypes::Schema;
-use crate::io::ipc::IpcSchema;
-use crate::datatypes::Field;
+use crate::io::ipc::{IpcSchema, ARROW_MAGIC, CONTINUATION_MARKER};
 
-use super::super::CONTINUATION_MARKER;
-use super::FileMetadata;
 use super::common::{read_dictionary, read_record_batch};
 use super::reader::get_serialized_batch;
-use super::schema::deserialize_stream_metadata;
-use super::Dictionaries;
 use super::schema::fb_to_schema;
+use super::Dictionaries;
+use super::FileMetadata;
 
 /// Async reader for Arrow IPC files
 pub struct FileStream<'a> {
@@ -41,14 +31,20 @@ pub struct FileStream<'a> {
 
 impl<'a> FileStream<'a> {
     /// Create a new IPC file reader.
+    ///
+    /// # Examples
+    /// See [`FileSink`](crate::io::ipc::write::file_async::FileSink).
     pub fn new<R>(reader: R, metadata: FileMetadata, projection: Option<Vec<usize>>) -> Self
-        where R: AsyncRead + AsyncSeek + Unpin + Send + 'a
+    where
+        R: AsyncRead + AsyncSeek + Unpin + Send + 'a,
     {
         let schema = if let Some(projection) = projection.as_ref() {
-            projection.windows(2).for_each(|x| assert!(
-                x[0] < x[1],
-                "IPC projection must be ordered and non-overlapping",
-            ));
+            projection.windows(2).for_each(|x| {
+                assert!(
+                    x[0] < x[1],
+                    "IPC projection must be ordered and non-overlapping",
+                )
+            });
             let fields = projection
                 .iter()
                 .map(|&x| metadata.schema.fields[x].clone())
@@ -79,8 +75,13 @@ impl<'a> FileStream<'a> {
         &self.schema
     }
 
-    fn stream<R>(mut reader: R, metadata: FileMetadata, projection: Option<Vec<usize>>) -> BoxStream<'a, Result<Chunk<Arc<dyn Array>>>>
-        where R: AsyncRead + AsyncSeek + Unpin + Send + 'a
+    fn stream<R>(
+        mut reader: R,
+        metadata: FileMetadata,
+        projection: Option<Vec<usize>>,
+    ) -> BoxStream<'a, Result<Chunk<Arc<dyn Array>>>>
+    where
+        R: AsyncRead + AsyncSeek + Unpin + Send + 'a,
     {
         async_stream::try_stream! {
             let mut meta_buffer = vec![];
@@ -96,33 +97,42 @@ impl<'a> FileStream<'a> {
                 ).await?;
                 yield chunk;
             }
-        }.boxed()
+        }
+        .boxed()
     }
 }
 
 impl<'a> Stream for FileStream<'a> {
     type Item = Result<Chunk<Arc<dyn Array>>>;
 
-    fn poll_next(self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Option<Self::Item>> {
+    fn poll_next(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
         self.get_mut().stream.poll_next_unpin(cx)
     }
 }
 
 /// Read the metadata from an IPC file.
 pub async fn read_file_metadata_async<R>(reader: &mut R) -> Result<FileMetadata>
-    where R: AsyncRead + AsyncSeek + Unpin
+where
+    R: AsyncRead + AsyncSeek + Unpin,
 {
     // Check header
     let mut magic = [0; 6];
     reader.read_exact(&mut magic).await?;
     if magic != ARROW_MAGIC {
-        return Err(ArrowError::OutOfSpec("file does not contain correct Arrow header".to_string()));
+        return Err(ArrowError::OutOfSpec(
+            "file does not contain correct Arrow header".to_string(),
+        ));
     }
     // Check footer
     reader.seek(SeekFrom::End(-6)).await?;
     reader.read_exact(&mut magic).await?;
     if magic != ARROW_MAGIC {
-        return Err(ArrowError::OutOfSpec("file does not contain correct Arrow footer".to_string()));
+        return Err(ArrowError::OutOfSpec(
+            "file does not contain correct Arrow footer".to_string(),
+        ));
     }
     // Get footer size
     let mut footer_size = [0; 4];
@@ -136,9 +146,11 @@ pub async fn read_file_metadata_async<R>(reader: &mut R) -> Result<FileMetadata>
     let footer = FooterRef::read_as_root(&footer[..])
         .map_err(|err| ArrowError::OutOfSpec(format!("unable to get root as footer: {:?}", err)))?;
 
-    let blocks = footer.record_batches()?
-        .ok_or_else(|| ArrowError::OutOfSpec("unable to get record batches from footer".to_string()))?;
-    let schema = footer.schema()?
+    let blocks = footer.record_batches()?.ok_or_else(|| {
+        ArrowError::OutOfSpec("unable to get record batches from footer".to_string())
+    })?;
+    let schema = footer
+        .schema()?
         .ok_or_else(|| ArrowError::OutOfSpec("unable to get schema from footer".to_string()))?;
     let (schema, ipc_schema) = fb_to_schema(schema)?;
     let dictionary_blocks = footer.dictionaries()?;
@@ -151,7 +163,10 @@ pub async fn read_file_metadata_async<R>(reader: &mut R) -> Result<FileMetadata>
     Ok(FileMetadata {
         schema,
         ipc_schema,
-        blocks: blocks.iter().map(|block| Ok(block.try_into()?)).collect::<Result<Vec<_>>>()?,
+        blocks: blocks
+            .iter()
+            .map(|block| Ok(block.try_into()?))
+            .collect::<Result<Vec<_>>>()?,
         dictionaries,
     })
 }
@@ -162,7 +177,8 @@ async fn read_dictionaries<R>(
     ipc_schema: &IpcSchema,
     blocks: Vector<'_, BlockRef<'_>>,
 ) -> Result<Dictionaries>
-    where R: AsyncRead + AsyncSeek + Unpin,
+where
+    R: AsyncRead + AsyncSeek + Unpin,
 {
     let mut dictionaries = Default::default();
     let mut data = vec![];
@@ -172,9 +188,11 @@ async fn read_dictionaries<R>(
         let offset = block.offset() as u64;
         read_dictionary_message(reader, offset, &mut data).await?;
 
-        let message = MessageRef::read_as_root(&data)
-            .map_err(|err| ArrowError::OutOfSpec(format!("unable to get root as message: {:?}", err)))?;
-        let header = message.header()?
+        let message = MessageRef::read_as_root(&data).map_err(|err| {
+            ArrowError::OutOfSpec(format!("unable to get root as message: {:?}", err))
+        })?;
+        let header = message
+            .header()?
             .ok_or_else(|| ArrowError::oos("message must have a header"))?;
         match header {
             MessageHeaderRef::DictionaryBatch(batch) => {
@@ -182,26 +200,22 @@ async fn read_dictionaries<R>(
                 buffer.resize(block.body_length() as usize, 0);
                 reader.read_exact(&mut buffer).await?;
                 let mut cursor = std::io::Cursor::new(&mut buffer);
-                read_dictionary(
-                    batch,
-                    fields,
-                    ipc_schema,
-                    &mut dictionaries,
-                    &mut cursor,
-                    0,
-                )?;
-            },
-            other => return Err(ArrowError::OutOfSpec(format!(
-                "expected DictionaryBatch in dictionary blocks, found {:?}",
-                other,
-            ))),
+                read_dictionary(batch, fields, ipc_schema, &mut dictionaries, &mut cursor, 0)?;
+            }
+            other => {
+                return Err(ArrowError::OutOfSpec(format!(
+                    "expected DictionaryBatch in dictionary blocks, found {:?}",
+                    other,
+                )))
+            }
         }
     }
     Ok(dictionaries)
 }
 
 async fn read_dictionary_message<R>(reader: &mut R, offset: u64, data: &mut Vec<u8>) -> Result<()>
-    where R: AsyncRead + AsyncSeek + Unpin,
+where
+    R: AsyncRead + AsyncSeek + Unpin,
 {
     let mut message_size = [0; 4];
     reader.seek(SeekFrom::Start(offset)).await?;
@@ -225,7 +239,8 @@ async fn read_batch<R>(
     meta_buffer: &mut Vec<u8>,
     block_buffer: &mut Vec<u8>,
 ) -> Result<Chunk<Arc<dyn Array>>>
-    where R: AsyncRead + AsyncSeek + Unpin,
+where
+    R: AsyncRead + AsyncSeek + Unpin,
 {
     let block = metadata.blocks[block];
     reader.seek(SeekFrom::Start(block.offset as u64)).await?;

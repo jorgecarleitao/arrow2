@@ -27,17 +27,18 @@ type WriteOutput<W> = (usize, Option<Block>, Vec<Block>, Option<W>);
 ///
 /// ```
 /// use std::sync::Arc;
-/// use futures::SinkExt;
+/// use futures::{SinkExt, TryStreamExt, io::Cursor};
 /// use arrow2::array::{Array, Int32Array};
 /// use arrow2::datatypes::{DataType, Field, Schema};
 /// use arrow2::chunk::Chunk;
-/// # use arrow2::io::ipc::write::file_async::FileSink;
+/// use arrow2::io::ipc::write::file_async::FileSink;
+/// use arrow2::io::ipc::read::file_async::{read_file_metadata_async, FileStream};
 /// # futures::executor::block_on(async move {
 /// let schema = Schema::from(vec![
 ///     Field::new("values", DataType::Int32, true),
 /// ]);
 ///
-/// let mut buffer = vec![];
+/// let mut buffer = Cursor::new(vec![]);
 /// let mut sink = FileSink::new(
 ///     &mut buffer,
 ///     schema,
@@ -45,12 +46,20 @@ type WriteOutput<W> = (usize, Option<Block>, Vec<Block>, Option<W>);
 ///     Default::default(),
 /// );
 ///
+/// // Write chunks to file
 /// for i in 0..3 {
 ///     let values = Int32Array::from(&[Some(i), None]);
 ///     let chunk = Chunk::new(vec![Arc::new(values) as Arc<dyn Array>]);
 ///     sink.feed(chunk).await?;
 /// }
 /// sink.close().await?;
+/// drop(sink);
+///
+/// // Read chunks from file
+/// buffer.set_position(0);
+/// let metadata = read_file_metadata_async(&mut buffer).await?;
+/// let mut stream = FileStream::new(buffer, metadata, None);
+/// let chunks = stream.try_collect::<Vec<_>>().await?;
 /// # arrow2::error::Result::Ok(())
 /// # }).unwrap();
 /// ```
@@ -271,7 +280,7 @@ mod tests {
             ]);
 
             let mut buffer = Cursor::new(Vec::new());
-            let mut sink = FileSink::new(&mut buffer, schema, None, Default::default());
+            let mut sink = FileSink::new(&mut buffer, schema.clone(), None, Default::default());
             for chunk in &data {
                 sink.feed(chunk.clone()).await.unwrap();
             }
@@ -280,6 +289,7 @@ mod tests {
 
             buffer.set_position(0);
             let metadata = read_file_metadata_async(&mut buffer).await.unwrap();
+            assert_eq!(schema, metadata.schema);
             let stream = FileStream::new(buffer, metadata, None);
             let out = stream.try_collect::<Vec<_>>().await.unwrap();
             for i in 0..5 {
