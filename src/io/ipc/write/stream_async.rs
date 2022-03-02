@@ -1,13 +1,14 @@
 //! `async` writing of arrow streams
 use std::sync::Arc;
 
-use futures::AsyncWrite;
-
 use super::super::IpcField;
 pub use super::common::WriteOptions;
 use super::common::{encode_chunk, DictionaryTracker, EncodedData};
 use super::common_async::{write_continuation, write_message};
 use super::{default_ipc_fields, schema_to_bytes};
+
+use futures::{future::BoxFuture, AsyncWrite, FutureExt, Sink};
+use std::{pin::Pin, task::Poll};
 
 use crate::array::Array;
 use crate::chunk::Chunk;
@@ -104,5 +105,162 @@ impl<W: AsyncWrite + Unpin + Send> StreamWriter<W> {
     /// Consumes itself, returning the inner writer.
     pub fn into_inner(self) -> W {
         self.writer
+    }
+}
+
+
+/// A sink that writes array [`chunks`](Chunk) to an async writer.
+///
+/// # Examples
+///
+/// ```
+/// use std::sync::Arc;
+/// use futures::SinkExt;
+/// use arrow2::array::{Array, Int32Array};
+/// use arrow2::datatypes::{DataType, Field, Schema};
+/// use arrow2::chunk::Chunk;
+/// # use arrow2::io::ipc::write::stream_async::StreamSink;
+/// # futures::executor::block_on(async move {
+/// let schema = Schema::from(vec![
+///     Field::new("values", DataType::Int32, true),
+/// ]);
+///
+/// let mut buffer = vec![];
+/// let mut sink = StreamSink::new(
+///     &mut buffer,
+///     schema,
+///     None,
+///     Default::default(),
+/// );
+///
+/// for i in 0..3 {
+///     let values = Int32Array::from(&[Some(i), None]);
+///     let chunk = Chunk::new(vec![Arc::new(values) as Arc<dyn Array>]);
+///     sink.feed(chunk).await?;
+/// }
+/// sink.close().await?;
+/// # arrow2::error::Result::Ok(())
+/// # }).unwrap();
+/// ```
+pub struct StreamSink<'a, W: AsyncWrite + Unpin + Send + 'a> {
+    sink: Option<StreamWriter<W>>,
+    task: Option<BoxFuture<'a, Result<Option<StreamWriter<W>>>>>,
+    schema: Arc<Schema>,
+    ipc_fields: Arc<Option<Vec<IpcField>>>,
+}
+
+impl<'a, W> StreamSink<'a, W>
+where
+    W: AsyncWrite + Unpin + Send + 'a,
+{
+    /// Create a new [`StreamSink`].
+    pub fn new(
+        writer: W,
+        schema: Schema,
+        ipc_fields: Option<&[IpcField]>,
+        write_options: WriteOptions,
+    ) -> Self {
+        let mut sink = StreamWriter::new(writer, write_options);
+        let schema = Arc::new(schema);
+        let s = schema.clone();
+        let ipc_fields = Arc::new(ipc_fields.map(|f| f.to_vec()));
+        let f = ipc_fields.clone();
+        let task = Some(
+            async move {
+                sink.start(&s, f.as_deref()).await?;
+                Ok(Some(sink))
+            }
+            .boxed(),
+        );
+        Self {
+            sink: None,
+            task,
+            schema,
+            ipc_fields,
+        }
+    }
+
+    fn poll_complete(&mut self, cx: &mut std::task::Context<'_>) -> Poll<Result<()>> {
+        if let Some(task) = &mut self.task {
+            match futures::ready!(task.poll_unpin(cx)) {
+                Ok(sink) => {
+                    self.sink = sink;
+                    self.task = None;
+                    Poll::Ready(Ok(()))
+                }
+                Err(error) => {
+                    self.task = None;
+                    Poll::Ready(Err(error))
+                }
+            }
+        } else {
+            Poll::Ready(Ok(()))
+        }
+    }
+}
+
+impl<'a, W> Sink<Chunk<Arc<dyn Array>>> for StreamSink<'a, W>
+where
+    W: AsyncWrite + Unpin + Send,
+{
+    type Error = ArrowError;
+
+    fn poll_ready(
+        self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<Result<()>> {
+        self.get_mut().poll_complete(cx)
+    }
+
+    fn start_send(self: Pin<&mut Self>, item: Chunk<Arc<dyn Array>>) -> Result<()> {
+        let this = self.get_mut();
+        if let Some(mut sink) = this.sink.take() {
+            let schema = this.schema.clone();
+            let fields = this.ipc_fields.clone();
+            this.task = Some(
+                async move {
+                    sink.write(&item, &schema, fields.as_deref()).await?;
+                    Ok(Some(sink))
+                }
+                .boxed(),
+            );
+            Ok(())
+        } else {
+            Err(ArrowError::Io(std::io::Error::new(
+                std::io::ErrorKind::UnexpectedEof,
+                "writer closed".to_string(),
+            )))
+        }
+    }
+
+    fn poll_flush(
+        self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<Result<()>> {
+        self.get_mut().poll_complete(cx)
+    }
+
+    fn poll_close(
+        self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<Result<()>> {
+        let this = self.get_mut();
+        match this.poll_complete(cx) {
+            Poll::Ready(Ok(())) => {
+                if let Some(mut sink) = this.sink.take() {
+                    this.task = Some(
+                        async move {
+                            sink.finish().await?;
+                            Ok(None)
+                        }
+                        .boxed(),
+                    );
+                    this.poll_complete(cx)
+                } else {
+                    Poll::Ready(Ok(()))
+                }
+            }
+            res => res,
+        }
     }
 }
