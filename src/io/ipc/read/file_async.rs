@@ -114,7 +114,7 @@ impl<'a> Stream for FileStream<'a> {
 }
 
 /// Read the metadata from an IPC file.
-pub async fn read_file_metadata_async<R>(reader: &mut R) -> Result<FileMetadata>
+pub async fn read_file_metadata_async<R>(mut reader: R) -> Result<FileMetadata>
 where
     R: AsyncRead + AsyncSeek + Unpin,
 {
@@ -172,7 +172,7 @@ where
 }
 
 async fn read_dictionaries<R>(
-    reader: &mut R,
+    mut reader: R,
     fields: &[Field],
     ipc_schema: &IpcSchema,
     blocks: Vector<'_, BlockRef<'_>>,
@@ -186,7 +186,7 @@ where
 
     for block in blocks {
         let offset = block.offset() as u64;
-        read_dictionary_message(reader, offset, &mut data).await?;
+        read_dictionary_message(&mut reader, offset, &mut data).await?;
 
         let message = MessageRef::read_as_root(&data).map_err(|err| {
             ArrowError::OutOfSpec(format!("unable to get root as message: {:?}", err))
@@ -213,7 +213,7 @@ where
     Ok(dictionaries)
 }
 
-async fn read_dictionary_message<R>(reader: &mut R, offset: u64, data: &mut Vec<u8>) -> Result<()>
+async fn read_dictionary_message<R>(mut reader: R, offset: u64, data: &mut Vec<u8>) -> Result<()>
 where
     R: AsyncRead + AsyncSeek + Unpin,
 {
@@ -232,7 +232,7 @@ where
 }
 
 async fn read_batch<R>(
-    reader: &mut R,
+    mut reader: R,
     metadata: &FileMetadata,
     projection: Option<&[usize]>,
     block: usize,
