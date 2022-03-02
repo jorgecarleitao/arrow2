@@ -3,11 +3,14 @@ use crate::{
     chunk::Chunk,
     datatypes::Schema,
     error::ArrowError,
-    io::parquet::write::{Encoding, FileStreamer, SchemaDescriptor, WriteOptions},
+    io::parquet::write::{Encoding, SchemaDescriptor, WriteOptions},
 };
 use futures::{future::BoxFuture, AsyncWrite, FutureExt, Sink, TryFutureExt};
 use parquet2::metadata::KeyValue;
+use parquet2::write::FileStreamer;
 use std::{collections::HashMap, pin::Pin, sync::Arc, task::Poll};
+
+use super::file::add_arrow_schema;
 
 /// Sink that writes array [`chunks`](Chunk) as a Parquet file.
 ///
@@ -55,7 +58,8 @@ pub struct FileSink<'a, W: AsyncWrite + Send + Unpin> {
     task: Option<BoxFuture<'a, Result<Option<FileStreamer<W>>, ArrowError>>>,
     options: WriteOptions,
     encoding: Vec<Encoding>,
-    schema: SchemaDescriptor,
+    schema: Schema,
+    parquet_schema: SchemaDescriptor,
     /// Key-value metadata that will be written to the file on close.
     pub metadata: HashMap<String, Option<String>>,
 }
@@ -74,8 +78,10 @@ where
         encoding: Vec<Encoding>,
         options: WriteOptions,
     ) -> Result<Self, ArrowError> {
-        let mut writer = FileStreamer::try_new(writer, schema.clone(), options)?;
-        let schema = crate::io::parquet::write::to_parquet_schema(&schema)?;
+        // let mut writer = FileStreamer::try_new(writer, schema.clone(), options)?;
+        let parquet_schema = crate::io::parquet::write::to_parquet_schema(&schema)?;
+        let created_by = Some("Arrow2 - Native Rust implementation of Arrow".to_string());
+        let mut writer = FileStreamer::new(writer, parquet_schema.clone(), options, created_by);
         let task = Some(
             async move {
                 writer.start().await?;
@@ -89,8 +95,24 @@ where
             options,
             schema,
             encoding,
+            parquet_schema,
             metadata: HashMap::default(),
         })
+    }
+
+    /// The Arrow [`Schema`] for the file.
+    pub fn schema(&self) -> &Schema {
+        &self.schema
+    }
+
+    /// The Parquet [`SchemaDescriptor`] for the file.
+    pub fn parquet_schema(&self) -> &SchemaDescriptor {
+        &self.parquet_schema
+    }
+
+    /// The write options for the file.
+    pub fn options(&self) -> &WriteOptions {
+        &self.options
     }
 
     fn poll_complete(
@@ -128,7 +150,7 @@ where
             let rows = crate::io::parquet::write::row_group_iter(
                 item,
                 this.encoding.clone(),
-                this.schema.columns().to_vec(),
+                this.parquet_schema.columns().to_vec(),
                 this.options,
             );
             this.task = Some(Box::pin(async move {
@@ -177,8 +199,15 @@ where
                                 .collect::<Vec<_>>(),
                         )
                     };
+                    let kv_meta = add_arrow_schema(&this.schema, metadata);
 
-                    this.task = Some(writer.end(metadata).map_ok(|_| None).boxed());
+                    this.task = Some(
+                        writer
+                            .end(kv_meta)
+                            .map_ok(|_| None)
+                            .map_err(ArrowError::from)
+                            .boxed(),
+                    );
                     this.poll_complete(cx)
                 } else {
                     Poll::Ready(Ok(()))
