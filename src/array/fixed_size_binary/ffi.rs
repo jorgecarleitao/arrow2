@@ -50,7 +50,7 @@ unsafe impl ToFfi for FixedSizeBinaryArray {
 
 impl<A: ffi::ArrowArrayRef> FromFfi<A> for FixedSizeBinaryArray {
     unsafe fn try_from_ffi(array: A) -> Result<Self> {
-        let data_type = array.field().data_type().clone();
+        let data_type = array.data_type().clone();
         let validity = unsafe { array.validity() }?;
         let values = unsafe { array.buffer::<u8>(1) }?;
 

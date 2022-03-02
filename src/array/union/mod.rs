@@ -4,6 +4,7 @@ use crate::{
     bitmap::Bitmap,
     buffer::Buffer,
     datatypes::{DataType, Field, UnionMode},
+    error::ArrowError,
     scalar::{new_scalar, Scalar},
 };
 
@@ -14,6 +15,7 @@ pub(super) mod fmt;
 mod iterator;
 
 type FieldEntry = (usize, Arc<dyn Array>);
+type UnionComponents<'a> = (&'a [Field], Option<&'a [i32]>, UnionMode);
 
 /// [`UnionArray`] represents an array whose each slot can contain different values.
 ///
@@ -37,6 +39,94 @@ pub struct UnionArray {
 }
 
 impl UnionArray {
+    /// Returns a new [`UnionArray`].
+    /// # Errors
+    /// This function errors iff:
+    /// * `data_type`'s physical type is not [`crate::datatypes::PhysicalType::Union`].
+    /// * the fields's len is different from the `data_type`'s children's length
+    /// * any of the values's data type is different from its corresponding children' data type
+    pub fn try_new(
+        data_type: DataType,
+        types: Buffer<i8>,
+        fields: Vec<Arc<dyn Array>>,
+        offsets: Option<Buffer<i32>>,
+    ) -> Result<Self, ArrowError> {
+        let (f, ids, mode) = Self::try_get_all(&data_type)?;
+
+        if f.len() != fields.len() {
+            return Err(ArrowError::oos(
+                "The number of `fields` must equal the number of children fields in DataType::Union",
+            ));
+        };
+
+        f
+            .iter().map(|a| a.data_type())
+            .zip(fields.iter().map(|a| a.data_type()))
+            .enumerate()
+            .try_for_each(|(index, (data_type, child))| {
+                if data_type != child {
+                    Err(ArrowError::oos(format!(
+                        "The children DataTypes of a UnionArray must equal the children data types. 
+                         However, the field {index} has data type {data_type:?} but the value has data type {child:?}"
+                    )))
+                } else {
+                    Ok(())
+                }
+            })?;
+
+        if offsets.is_none() != mode.is_sparse() {
+            return Err(ArrowError::oos(
+                "The offsets must be set when the Union is dense and vice-versa",
+            ));
+        }
+
+        let fields_hash = ids.as_ref().map(|ids| {
+            ids.iter()
+                .map(|x| *x as i8)
+                .enumerate()
+                .zip(fields.iter().cloned())
+                .map(|((i, type_), field)| (type_, (i, field)))
+                .collect()
+        });
+
+        // not validated:
+        // * `offsets` is valid
+        // * max id < fields.len()
+        Ok(Self {
+            data_type,
+            fields_hash,
+            fields,
+            offsets,
+            types,
+            offset: 0,
+        })
+    }
+
+    /// Returns a new [`UnionArray`].
+    /// # Panics
+    /// This function panics iff:
+    /// * `data_type`'s physical type is not [`crate::datatypes::PhysicalType::Union`].
+    /// * the fields's len is different from the `data_type`'s children's length
+    /// * any of the values's data type is different from its corresponding children' data type
+    pub fn new(
+        data_type: DataType,
+        types: Buffer<i8>,
+        fields: Vec<Arc<dyn Array>>,
+        offsets: Option<Buffer<i32>>,
+    ) -> Self {
+        Self::try_new(data_type, types, fields, offsets).unwrap()
+    }
+
+    /// Alias for `new`
+    pub fn from_data(
+        data_type: DataType,
+        types: Buffer<i8>,
+        fields: Vec<Arc<dyn Array>>,
+        offsets: Option<Buffer<i32>>,
+    ) -> Self {
+        Self::new(data_type, types, fields, offsets)
+    }
+
     /// Creates a new null [`UnionArray`].
     pub fn new_null(data_type: DataType, length: usize) -> Self {
         if let DataType::Union(f, _, mode) = &data_type {
@@ -86,51 +176,9 @@ impl UnionArray {
             panic!("Union struct must be created with the corresponding Union DataType")
         }
     }
+}
 
-    /// Creates a new [`UnionArray`].
-    pub fn from_data(
-        data_type: DataType,
-        types: Buffer<i8>,
-        fields: Vec<Arc<dyn Array>>,
-        offsets: Option<Buffer<i32>>,
-    ) -> Self {
-        let (f, ids, mode) = Self::get_all(&data_type);
-
-        if f.len() != fields.len() {
-            panic!("The number of `fields` must equal the number of fields in the Union DataType")
-        };
-        let same_data_types = f
-            .iter()
-            .zip(fields.iter())
-            .all(|(f, array)| f.data_type() == array.data_type());
-        if !same_data_types {
-            panic!("All fields' datatype in the union must equal the datatypes on the fields.")
-        }
-        if offsets.is_none() != mode.is_sparse() {
-            panic!("Sparsness flag must equal to noness of offsets in UnionArray")
-        }
-        let fields_hash = ids.as_ref().map(|ids| {
-            ids.iter()
-                .map(|x| *x as i8)
-                .enumerate()
-                .zip(fields.iter().cloned())
-                .map(|((i, type_), field)| (type_, (i, field)))
-                .collect()
-        });
-
-        // not validated:
-        // * `offsets` is valid
-        // * max id < fields.len()
-        Self {
-            data_type,
-            fields_hash,
-            fields,
-            offsets,
-            types,
-            offset: 0,
-        }
-    }
-
+impl UnionArray {
     /// Returns a slice of this [`UnionArray`].
     /// # Implementation
     /// This operation is `O(F)` where `F` is the number of fields.
@@ -254,11 +302,19 @@ impl Array for UnionArray {
 }
 
 impl UnionArray {
-    fn get_all(data_type: &DataType) -> (&[Field], Option<&[i32]>, UnionMode) {
+    fn try_get_all(data_type: &DataType) -> Result<UnionComponents, ArrowError> {
         match data_type.to_logical_type() {
-            DataType::Union(fields, ids, mode) => (fields, ids.as_ref().map(|x| x.as_ref()), *mode),
-            _ => panic!("Wrong datatype passed to UnionArray."),
+            DataType::Union(fields, ids, mode) => {
+                Ok((fields, ids.as_ref().map(|x| x.as_ref()), *mode))
+            }
+            _ => Err(ArrowError::oos(
+                "The UnionArray requires a logical type of DataType::Union",
+            )),
         }
+    }
+
+    fn get_all(data_type: &DataType) -> (&[Field], Option<&[i32]>, UnionMode) {
+        Self::try_get_all(data_type).unwrap()
     }
 
     /// Returns all fields from [`DataType::Union`].

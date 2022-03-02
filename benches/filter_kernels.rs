@@ -94,12 +94,21 @@ fn add_benchmark(c: &mut Criterion) {
     });
 
     let data_array = create_primitive_array::<f32>(size, 0.5);
+    let data_array_nonull = create_primitive_array::<f32>(size, 0.0);
     c.bench_function("filter f32", |b| {
         b.iter(|| bench_filter(&data_array, &filter_array))
     });
     c.bench_function("filter f32 high selectivity", |b| {
         b.iter(|| bench_filter(&data_array, &dense_filter_array))
     });
+
+    c.bench_function("filter f32 nonull", |b| {
+        b.iter(|| bench_filter(&data_array_nonull, &filter_array))
+    });
+    c.bench_function("filter f32 nonull high selectivity", |b| {
+        b.iter(|| bench_filter(&data_array_nonull, &dense_filter_array))
+    });
+
     c.bench_function("filter context f32", |b| {
         b.iter(|| bench_built_filter(&filter, &data_array))
     });

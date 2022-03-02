@@ -1,4 +1,4 @@
-use crate::{bitmap::Bitmap, buffer::Buffer, datatypes::DataType, error::Result};
+use crate::{bitmap::Bitmap, buffer::Buffer, datatypes::DataType, error::ArrowError};
 
 use super::Array;
 
@@ -19,6 +19,61 @@ pub struct FixedSizeBinaryArray {
 }
 
 impl FixedSizeBinaryArray {
+    /// Creates a new [`FixedSizeBinaryArray`].
+    ///
+    /// # Errors
+    /// This function returns an error iff:
+    /// * The `data_type`'s physical type is not [`crate::datatypes::PhysicalType::FixedSizeBinary`]
+    /// * The length of `values` is not a multiple of `size` in `data_type`
+    /// * the validity's length is not equal to `values.len() / size`.
+    pub fn try_new(
+        data_type: DataType,
+        values: Buffer<u8>,
+        validity: Option<Bitmap>,
+    ) -> Result<Self, ArrowError> {
+        let size = Self::maybe_get_size(&data_type)?;
+
+        if values.len() % size != 0 {
+            return Err(ArrowError::oos(format!(
+                "values (of len {}) must be a multiple of size ({}) in FixedSizeBinaryArray.",
+                values.len(),
+                size
+            )));
+        }
+        let len = values.len() / size;
+
+        if validity
+            .as_ref()
+            .map_or(false, |validity| validity.len() != len)
+        {
+            return Err(ArrowError::oos(
+                "validity mask length must be equal to the number of values divided by size",
+            ));
+        }
+
+        Ok(Self {
+            size,
+            data_type,
+            values,
+            validity,
+        })
+    }
+
+    /// Creates a new [`FixedSizeBinaryArray`].
+    /// # Panics
+    /// This function panics iff:
+    /// * The `data_type`'s physical type is not [`crate::datatypes::PhysicalType::FixedSizeBinary`]
+    /// * The length of `values` is not a multiple of `size` in `data_type`
+    /// * the validity's length is not equal to `values.len() / size`.
+    pub fn new(data_type: DataType, values: Buffer<u8>, validity: Option<Bitmap>) -> Self {
+        Self::try_new(data_type, values, validity).unwrap()
+    }
+
+    /// Alias for `new`
+    pub fn from_data(data_type: DataType, values: Buffer<u8>, validity: Option<Bitmap>) -> Self {
+        Self::new(data_type, values, validity)
+    }
+
     /// Returns a new empty [`FixedSizeBinaryArray`].
     pub fn new_empty(data_type: DataType) -> Self {
         Self::from_data(data_type, Buffer::new(), None)
@@ -32,30 +87,16 @@ impl FixedSizeBinaryArray {
             Some(Bitmap::new_zeroed(length)),
         )
     }
+}
 
-    /// Returns a new [`FixedSizeBinaryArray`].
-    pub fn from_data(data_type: DataType, values: Buffer<u8>, validity: Option<Bitmap>) -> Self {
-        let size = Self::get_size(&data_type);
-
-        assert_eq!(values.len() % size, 0);
-
-        if let Some(ref validity) = validity {
-            assert_eq!(values.len() / size, validity.len());
-        }
-
-        Self {
-            size,
-            data_type,
-            values,
-            validity,
-        }
-    }
-
+// must use
+impl FixedSizeBinaryArray {
     /// Returns a slice of this [`FixedSizeBinaryArray`].
     /// # Implementation
     /// This operation is `O(1)` as it amounts to increase 3 ref counts.
     /// # Panics
     /// panics iff `offset + length > self.len()`
+    #[must_use]
     pub fn slice(&self, offset: usize, length: usize) -> Self {
         assert!(
             offset + length <= self.len(),
@@ -69,6 +110,7 @@ impl FixedSizeBinaryArray {
     /// This operation is `O(1)` as it amounts to increase 3 ref counts.
     /// # Safety
     /// The caller must ensure that `offset + length <= self.len()`.
+    #[must_use]
     pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
         let validity = self
             .validity
@@ -89,6 +131,7 @@ impl FixedSizeBinaryArray {
     /// Sets the validity bitmap on this [`FixedSizeBinaryArray`].
     /// # Panic
     /// This function panics iff `validity.len() != self.len()`.
+    #[must_use]
     pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
         if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
             panic!("validity should be as least as large as the array")
@@ -167,11 +210,17 @@ impl FixedSizeBinaryArray {
 }
 
 impl FixedSizeBinaryArray {
-    pub(crate) fn get_size(data_type: &DataType) -> usize {
+    pub(crate) fn maybe_get_size(data_type: &DataType) -> Result<usize, ArrowError> {
         match data_type.to_logical_type() {
-            DataType::FixedSizeBinary(size) => *size,
-            _ => panic!("Wrong DataType"),
+            DataType::FixedSizeBinary(size) => Ok(*size),
+            _ => Err(ArrowError::oos(
+                "FixedSizeBinaryArray expects DataType::FixedSizeBinary",
+            )),
         }
+    }
+
+    pub(crate) fn get_size(data_type: &DataType) -> usize {
+        Self::maybe_get_size(data_type).unwrap()
     }
 }
 
@@ -211,7 +260,7 @@ impl FixedSizeBinaryArray {
     pub fn try_from_iter<P: AsRef<[u8]>, I: IntoIterator<Item = Option<P>>>(
         iter: I,
         size: usize,
-    ) -> Result<Self> {
+    ) -> Result<Self, ArrowError> {
         MutableFixedSizeBinaryArray::try_from_iter(iter, size).map(|x| x.into())
     }
 

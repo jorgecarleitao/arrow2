@@ -28,8 +28,6 @@ mod length;
 mod like;
 #[cfg(feature = "compute_limit")]
 mod limit;
-#[cfg(feature = "compute_lower")]
-mod lower;
 #[cfg(feature = "compute_merge_sort")]
 mod merge_sort;
 #[cfg(feature = "compute_partition")]
@@ -44,7 +42,7 @@ mod substring;
 mod take;
 #[cfg(feature = "compute_temporal")]
 mod temporal;
-#[cfg(feature = "compute_upper")]
-mod upper;
+#[cfg(feature = "compute_utf8")]
+mod utf8;
 #[cfg(feature = "compute_window")]
 mod window;

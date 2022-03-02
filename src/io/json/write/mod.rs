@@ -1,84 +1,50 @@
 //! APIs to write to JSON
-mod format;
 mod serialize;
+
 pub use fallible_streaming_iterator::*;
-pub use format::*;
-pub use serialize::serialize;
+pub(crate) use serialize::new_serializer;
+use serialize::serialize;
 
-use crate::{
-    array::Array,
-    chunk::Chunk,
-    error::{ArrowError, Result},
-};
+use crate::{array::Array, error::ArrowError};
 
-/// Writes blocks of JSON-encoded data into `writer`, ensuring that the written
-/// JSON has the expected `format`
-pub fn write<W, F, I>(writer: &mut W, format: F, mut blocks: I) -> Result<()>
+/// [`FallibleStreamingIterator`] that serializes an [`Array`] to bytes of valid JSON
+/// # Implementation
+/// Advancing this iterator CPU-bounded
+#[derive(Debug, Clone)]
+pub struct Serializer<A, I>
 where
-    W: std::io::Write,
-    F: JsonFormat,
-    I: FallibleStreamingIterator<Item = [u8], Error = ArrowError>,
-{
-    format.start_stream(writer)?;
-    let mut is_first_row = true;
-    while let Some(block) = blocks.next()? {
-        format.start_row(writer, is_first_row)?;
-        is_first_row = false;
-        writer.write_all(block)?;
-    }
-    format.end_stream(writer)?;
-    Ok(())
-}
-
-/// [`FallibleStreamingIterator`] that serializes a [`Chunk`] to bytes.
-/// Advancing it is CPU-bounded
-pub struct Serializer<F, A, I>
-where
-    F: JsonFormat,
     A: AsRef<dyn Array>,
-    I: Iterator<Item = Result<Chunk<A>>>,
+    I: Iterator<Item = Result<A, ArrowError>>,
 {
-    batches: I,
-    names: Vec<String>,
+    arrays: I,
     buffer: Vec<u8>,
-    format: F,
 }
 
-impl<F, A, I> Serializer<F, A, I>
+impl<A, I> Serializer<A, I>
 where
-    F: JsonFormat,
     A: AsRef<dyn Array>,
-    I: Iterator<Item = Result<Chunk<A>>>,
+    I: Iterator<Item = Result<A, ArrowError>>,
 {
     /// Creates a new [`Serializer`].
-    pub fn new(batches: I, names: Vec<String>, buffer: Vec<u8>, format: F) -> Self {
-        Self {
-            batches,
-            names,
-            buffer,
-            format,
-        }
+    pub fn new(arrays: I, buffer: Vec<u8>) -> Self {
+        Self { arrays, buffer }
     }
 }
 
-impl<F, A, I> FallibleStreamingIterator for Serializer<F, A, I>
+impl<A, I> FallibleStreamingIterator for Serializer<A, I>
 where
-    F: JsonFormat,
     A: AsRef<dyn Array>,
-    I: Iterator<Item = Result<Chunk<A>>>,
+    I: Iterator<Item = Result<A, ArrowError>>,
 {
     type Item = [u8];
 
     type Error = ArrowError;
 
-    fn advance(&mut self) -> Result<()> {
+    fn advance(&mut self) -> Result<(), ArrowError> {
         self.buffer.clear();
-        self.batches
+        self.arrays
             .next()
-            .map(|maybe_chunk| {
-                maybe_chunk
-                    .map(|columns| serialize(&self.names, &columns, self.format, &mut self.buffer))
-            })
+            .map(|maybe_array| maybe_array.map(|array| serialize(array.as_ref(), &mut self.buffer)))
             .transpose()?;
         Ok(())
     }
@@ -90,4 +56,23 @@ where
             None
         }
     }
+}
+
+/// Writes valid JSON from an iterator of (assumed JSON-encoded) bytes to `writer`
+pub fn write<W, I>(writer: &mut W, mut blocks: I) -> Result<(), ArrowError>
+where
+    W: std::io::Write,
+    I: FallibleStreamingIterator<Item = [u8], Error = ArrowError>,
+{
+    writer.write_all(&[b'['])?;
+    let mut is_first_row = true;
+    while let Some(block) = blocks.next()? {
+        if !is_first_row {
+            writer.write_all(&[b','])?;
+        }
+        is_first_row = false;
+        writer.write_all(block)?;
+    }
+    writer.write_all(&[b']'])?;
+    Ok(())
 }

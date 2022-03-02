@@ -101,7 +101,7 @@ fn get_fields(field: &Field) -> Vec<&Field> {
     match field.data_type.to_logical_type() {
         DataType::List(inner) => get_fields(inner),
         DataType::LargeList(inner) => get_fields(inner),
-        DataType::Struct(fields) => fields.iter().map(get_fields).flatten().collect(),
+        DataType::Struct(fields) => fields.iter().flat_map(get_fields).collect(),
         _ => vec![field],
     }
 }

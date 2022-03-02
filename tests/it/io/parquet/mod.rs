@@ -330,6 +330,12 @@ pub fn pyarrow_nullable(column: usize) -> Box<dyn Array> {
         11 => Box::new(
             PrimitiveArray::<i64>::from(i64_values).to(DataType::Timestamp(TimeUnit::Second, None)),
         ),
+        13 => Box::new(
+            PrimitiveArray::<i64>::from(i64_values).to(DataType::Timestamp(
+                TimeUnit::Second,
+                Some("UTC".to_string()),
+            )),
+        ),
         _ => unreachable!(),
     }
 }
@@ -410,6 +416,13 @@ pub fn pyarrow_nullable_statistics(column: usize) -> Option<Box<dyn Statistics>>
         }),
         11 => Box::new(PrimitiveStatistics::<i64> {
             data_type: DataType::Timestamp(TimeUnit::Second, None),
+            distinct_count: None,
+            null_count: Some(3),
+            min_value: Some(0),
+            max_value: Some(9),
+        }),
+        13 => Box::new(PrimitiveStatistics::<i64> {
+            data_type: DataType::Timestamp(TimeUnit::Second, Some("UTC".to_string())),
             distinct_count: None,
             null_count: Some(3),
             min_value: Some(0),

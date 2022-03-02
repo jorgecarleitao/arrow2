@@ -1,144 +1,64 @@
 use std::borrow::Borrow;
-use std::io::{BufRead, Seek, SeekFrom};
 
 use indexmap::map::IndexMap as HashMap;
 use indexmap::set::IndexSet as HashSet;
 use serde_json::Value;
 
 use crate::datatypes::*;
-use crate::error::{ArrowError, Result};
-
-use super::iterator::ValueIter;
-
-type Tracker = HashMap<String, HashSet<DataType>>;
+use crate::error::Result;
 
 const ITEM_NAME: &str = "item";
 
-/// Infers the fields of a JSON file by reading the first `number_of_rows` rows.
-/// # Examples
-/// ```
-/// use std::io::Cursor;
-/// use arrow2::io::json::read::infer;
-///
-/// let data = r#"{"a":1, "b":[2.0, 1.3, -6.1], "c":[false, true], "d":4.1}
-/// {"a":-10, "b":[2.0, 1.3, -6.1], "c":null, "d":null}
-/// {"a":2, "b":[2.0, null, -6.1], "c":[false, null], "d":"text"}
-/// {"a":3, "b":4, "c": true, "d":[1, false, "array", 2.4]}
-/// "#;
-///
-/// // file's cursor's offset at 0
-/// let mut reader = Cursor::new(data);
-/// let fields = infer(&mut reader, None).unwrap();
-/// ```
-pub fn infer<R: BufRead>(reader: &mut R, number_of_rows: Option<usize>) -> Result<Vec<Field>> {
-    infer_iterator(ValueIter::new(reader, number_of_rows))
-}
-
-/// Infer [`Field`]s from an iterator of [`Value`].
-pub fn infer_iterator<I, A>(value_iter: I) -> Result<Vec<Field>>
-where
-    I: Iterator<Item = Result<A>>,
-    A: Borrow<Value>,
-{
-    let mut values: Tracker = Tracker::new();
-
-    for record in value_iter {
-        match record?.borrow() {
-            Value::Object(map) => map.iter().try_for_each(|(k, v)| {
-                let data_type = infer_value(v)?;
-                add_or_insert(&mut values, k, data_type);
-                Result::Ok(())
-            }),
-            value => Err(ArrowError::ExternalFormat(format!(
-                "Expected JSON record to be an object, found {:?}",
-                value
-            ))),
-        }?;
-    }
-
-    Ok(resolve_fields(values))
-}
-
-/// Infer the fields of a JSON file from `number_of_rows` in `reader`.
-///
-/// This function seeks back to the start of the `reader`.
-///
-/// # Examples
-/// ```
-/// use std::fs::File;
-/// use std::io::Cursor;
-/// use arrow2::io::json::read::infer_and_reset;
-///
-/// let data = r#"{"a":1, "b":[2.0, 1.3, -6.1], "c":[false, true], "d":4.1}
-/// {"a":-10, "b":[2.0, 1.3, -6.1], "c":null, "d":null}
-/// {"a":2, "b":[2.0, null, -6.1], "c":[false, null], "d":"text"}
-/// {"a":3, "b":4, "c": true, "d":[1, false, "array", 2.4]}
-/// "#;
-/// let mut reader = Cursor::new(data);
-/// let fields = infer_and_reset(&mut reader, None).unwrap();
-/// // cursor's position automatically set at 0
-/// ```
-pub fn infer_and_reset<R: BufRead + Seek>(
-    reader: &mut R,
-    number_of_rows: Option<usize>,
-) -> Result<Vec<Field>> {
-    let fields = infer(reader, number_of_rows);
-    reader.seek(SeekFrom::Start(0))?;
-    fields
-}
-
-fn infer_value(value: &Value) -> Result<DataType> {
-    Ok(match value {
+/// Infers [`DataType`] from [`Value`].
+pub fn infer(json: &Value) -> Result<DataType> {
+    Ok(match json {
         Value::Bool(_) => DataType::Boolean,
         Value::Array(array) => infer_array(array)?,
         Value::Null => DataType::Null,
         Value::Number(number) => infer_number(number),
         Value::String(_) => DataType::Utf8,
-        Value::Object(inner) => {
-            let fields = inner
-                .iter()
-                .map(|(key, value)| infer_value(value).map(|dt| Field::new(key, dt, true)))
-                .collect::<Result<Vec<_>>>()?;
-            DataType::Struct(fields)
-        }
+        Value::Object(inner) => infer_object(inner)?,
     })
 }
 
-/// Infers a [`DataType`] from a list of JSON values
-pub fn infer_rows(rows: &[Value]) -> Result<DataType> {
-    let types = rows.iter().map(|a| {
-        Ok(match a {
-            Value::Null => None,
-            Value::Number(n) => Some(infer_number(n)),
-            Value::Bool(_) => Some(DataType::Boolean),
-            Value::String(_) => Some(DataType::Utf8),
-            Value::Array(array) => Some(infer_array(array)?),
-            Value::Object(inner) => {
-                let fields = inner
-                    .iter()
-                    .map(|(key, value)| infer_value(value).map(|dt| Field::new(key, dt, true)))
-                    .collect::<Result<Vec<_>>>()?;
-                Some(DataType::Struct(fields))
-            }
+fn filter_map_nulls(dt: DataType) -> Option<DataType> {
+    if dt == DataType::Null {
+        None
+    } else {
+        Some(dt)
+    }
+}
+
+fn infer_object(inner: &serde_json::Map<String, Value>) -> Result<DataType> {
+    let fields = inner
+        .iter()
+        .filter_map(|(key, value)| {
+            infer(value)
+                .map(|dt| filter_map_nulls(dt).map(|dt| (key, dt)))
+                .transpose()
         })
-    });
-    // discard None values and deduplicate entries
-    let types = types
-        .into_iter()
-        .map(|x| x.transpose())
-        .flatten()
+        .map(|maybe_dt| {
+            let (key, dt) = maybe_dt?;
+            Ok(Field::new(key, dt, true))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    Ok(DataType::Struct(fields))
+}
+
+fn infer_array(values: &[Value]) -> Result<DataType> {
+    let types = values
+        .iter()
+        .map(infer)
+        .filter_map(|x| x.map(filter_map_nulls).transpose())
+        // deduplicate entries
         .collect::<Result<HashSet<_>>>()?;
 
-    Ok(if !types.is_empty() {
+    let dt = if !types.is_empty() {
         let types = types.into_iter().collect::<Vec<_>>();
         coerce_data_type(&types)
     } else {
         DataType::Null
-    })
-}
-
-fn infer_array(values: &[Value]) -> Result<DataType> {
-    let dt = infer_rows(values)?;
+    };
 
     // if a record contains only nulls, it is not
     // added to values
@@ -157,36 +77,12 @@ fn infer_number(n: &serde_json::Number) -> DataType {
     }
 }
 
-fn add_or_insert(values: &mut Tracker, key: &str, data_type: DataType) {
-    if data_type == DataType::Null {
-        return;
-    }
-    if values.contains_key(key) {
-        let x = values.get_mut(key).unwrap();
-        x.insert(data_type);
-    } else {
-        // create hashset and add value type
-        let mut hs = HashSet::new();
-        hs.insert(data_type);
-        values.insert(key.to_string(), hs);
-    }
-}
-
-fn resolve_fields(spec: HashMap<String, HashSet<DataType>>) -> Vec<Field> {
-    spec.iter()
-        .map(|(k, hs)| {
-            let v: Vec<&DataType> = hs.iter().collect();
-            Field::new(k, coerce_data_type(&v), true)
-        })
-        .collect()
-}
-
 /// Coerce an heterogeneous set of [`DataType`] into a single one. Rules:
 /// * `Int64` and `Float64` are `Float64`
 /// * Lists and scalars are coerced to a list of a compatible scalar
 /// * Structs contain the union of all fields
 /// * All other types are coerced to `Utf8`
-fn coerce_data_type<A: Borrow<DataType>>(datatypes: &[A]) -> DataType {
+pub(crate) fn coerce_data_type<A: Borrow<DataType>>(datatypes: &[A]) -> DataType {
     use DataType::*;
 
     let are_all_equal = datatypes.windows(2).all(|w| w[0].borrow() == w[1].borrow());
@@ -207,14 +103,16 @@ fn coerce_data_type<A: Borrow<DataType>>(datatypes: &[A]) -> DataType {
         });
         // group fields by unique
         let fields = fields.iter().fold(
-            HashMap::<&String, Vec<&DataType>>::new(),
+            HashMap::<&String, HashSet<&DataType>>::new(),
             |mut acc, field| {
                 match acc.entry(&field.name) {
                     indexmap::map::Entry::Occupied(mut v) => {
-                        v.get_mut().push(&field.data_type);
+                        v.get_mut().insert(&field.data_type);
                     }
                     indexmap::map::Entry::Vacant(v) => {
-                        v.insert(vec![&field.data_type]);
+                        let mut a = HashSet::new();
+                        a.insert(&field.data_type);
+                        v.insert(a);
                     }
                 }
                 acc
@@ -223,7 +121,10 @@ fn coerce_data_type<A: Borrow<DataType>>(datatypes: &[A]) -> DataType {
         // and finally, coerce each of the fields within the same name
         let fields = fields
             .into_iter()
-            .map(|(name, dts)| Field::new(name, coerce_data_type(&dts), true))
+            .map(|(name, dts)| {
+                let dts = dts.into_iter().collect::<Vec<_>>();
+                Field::new(name, coerce_data_type(&dts), true)
+            })
             .collect();
         return Struct(fields);
     } else if datatypes.len() > 2 {

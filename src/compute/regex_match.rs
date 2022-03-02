@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use regex::Regex;
 
-use super::utils::{combine_validities, unary_utf8_boolean};
+use super::utils::combine_validities;
 use crate::array::{BooleanArray, Offset, Utf8Array};
 use crate::bitmap::Bitmap;
 use crate::datatypes::DataType;
@@ -68,4 +68,20 @@ pub fn regex_match_scalar<O: Offset>(values: &Utf8Array<O>, regex: &str) -> Resu
     let regex = Regex::new(regex)
         .map_err(|e| ArrowError::InvalidArgumentError(format!("Unable to compile regex: {}", e)))?;
     Ok(unary_utf8_boolean(values, |x| regex.is_match(x)))
+}
+
+fn unary_utf8_boolean<O: Offset, F: Fn(&str) -> bool>(
+    values: &Utf8Array<O>,
+    op: F,
+) -> BooleanArray {
+    let validity = values.validity().cloned();
+
+    let iterator = values.iter().map(|value| {
+        if value.is_none() {
+            return false;
+        };
+        op(value.unwrap())
+    });
+    let values = Bitmap::from_trusted_len_iter(iterator);
+    BooleanArray::from_data(DataType::Boolean, values, validity)
 }
