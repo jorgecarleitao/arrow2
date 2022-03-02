@@ -12,7 +12,7 @@ use crate::datatypes::{DataType, Field, IntervalUnit, TimeUnit};
 /// Converts [`ParquetType`]s to a [`Field`], ignoring parquet fields that do not contain
 /// any physical column.
 pub fn parquet_to_arrow_schema(fields: &[ParquetType]) -> Vec<Field> {
-    fields.iter().map(to_field).flatten().collect::<Vec<_>>()
+    fields.iter().filter_map(to_field).collect::<Vec<_>>()
 }
 
 fn from_int32(
@@ -224,11 +224,7 @@ fn non_repeated_group(
 /// Converts a parquet group type to an arrow [`DataType::Struct`].
 /// Returns [`None`] if all its fields are empty
 fn to_struct(fields: &[ParquetType]) -> Option<DataType> {
-    let fields = fields
-        .iter()
-        .map(to_field)
-        .flatten()
-        .collect::<Vec<Field>>();
+    let fields = fields.iter().filter_map(to_field).collect::<Vec<Field>>();
     if fields.is_empty() {
         None
     } else {

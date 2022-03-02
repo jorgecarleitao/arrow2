@@ -1,5 +1,8 @@
 use super::{DataType, Metadata};
 
+#[cfg(feature = "serde_types")]
+use serde_derive::{Deserialize, Serialize};
+
 /// Represents Arrow's metadata of a "column".
 ///
 /// A [`Field`] is the closest representation of the traditional "column": a logical type
@@ -9,6 +12,7 @@ use super::{DataType, Metadata};
 /// Almost all IO in this crate uses [`Field`] to represent logical information about the data
 /// to be serialized.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[cfg_attr(feature = "serde_types", derive(Serialize, Deserialize))]
 pub struct Field {
     /// Its name
     pub name: String,

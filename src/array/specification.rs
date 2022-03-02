@@ -1,6 +1,18 @@
 use crate::error::{ArrowError, Result};
 use crate::types::Offset;
 
+pub fn try_check_offsets_bounds<O: Offset>(offsets: &[O], values_len: usize) -> Result<usize> {
+    if let Some(last_offset) = offsets.last() {
+        if last_offset.to_usize() > values_len {
+            Err(ArrowError::oos("offsets must not exceed the values length"))
+        } else {
+            Ok(last_offset.to_usize())
+        }
+    } else {
+        Err(ArrowError::oos("offsets must have at least one element"))
+    }
+}
+
 pub fn check_offsets_minimal<O: Offset>(offsets: &[O], values_len: usize) -> usize {
     assert!(
         !offsets.is_empty(),
@@ -58,9 +70,11 @@ pub fn try_check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) -> Re
         // check bounds
         if offsets
             .last()
-            .map_or(false, |last| last.to_usize() > values.len())
+            .map_or(true, |last| last.to_usize() > values.len())
         {
-            return Err(ArrowError::oos("offsets must not exceed values length"));
+            return Err(ArrowError::oos(
+                "offsets must have at least one element and must not exceed values length",
+            ));
         };
 
         Ok(())
@@ -81,9 +95,11 @@ pub fn try_check_offsets<O: Offset>(offsets: &[O], values_len: usize) -> Result<
         Err(ArrowError::oos("offsets must be monotonically increasing"))
     } else if offsets
         .last()
-        .map_or(false, |last| last.to_usize() > values_len)
+        .map_or(true, |last| last.to_usize() > values_len)
     {
-        Err(ArrowError::oos("offsets must not exceed values length"))
+        Err(ArrowError::oos(
+            "offsets must have at least one element and must not exceed values length",
+        ))
     } else {
         Ok(())
     }

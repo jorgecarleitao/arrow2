@@ -16,17 +16,16 @@ This document describes the overall design of this module.
 
 * An array with a null bitmap MUST implement it as `Option<Bitmap>`
 
-* An array MUST be `#[derive(Debug, Clone)]`
+* An array MUST be `#[derive(Clone)]`
 
 * The trait `Array` MUST only be implemented by structs in this module.
 
 * Every child array on the struct MUST be `Arc<dyn Array>`. This enables the struct to be clonable.
 
-* An array MUST implement `from_data(...) -> Self`. This method MUST panic iff:
-    * the data does not follow the arrow specification
-    * the arguments lead to unsound code (e.g. a Utf8 array MUST verify that its each item is valid `utf8`)
+* An array MUST implement `try_new(...) -> Self`. This method MUST error iff
+  the data does not follow the arrow specification, including any sentinel types such as utf8.
 
-* An array MAY implement `unsafe from_data_unchecked` that skips the soundness validation. `from_data_unchecked` MUST panic if the specification is incorrect.
+* An array MAY implement `unsafe try_new_unchecked` that skips validation steps that are `O(N)`.
 
 * An array MUST implement either `new_empty()` or `new_empty(DataType)` that returns a zero-len of `Self`.
 
@@ -36,7 +35,7 @@ This document describes the overall design of this module.
 
 * functions to create new arrays from native Rust SHOULD be named as follows:
     * `from`: from a slice of optional values (e.g. `AsRef<[Option<bool>]` for `BooleanArray`)
-    * `from_slice`: from a slice of values (e.g. `AsRef<[bool]` for `BooleanArray`)
+    * `from_slice`: from a slice of values (e.g. `AsRef<[bool]>` for `BooleanArray`)
     * `from_trusted_len_iter` from an iterator of trusted len of optional values
     * `from_trusted_len_values_iter` from an iterator of trusted len of values
     * `try_from_trusted_len_iter` from an fallible iterator of trusted len of optional values

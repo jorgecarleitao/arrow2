@@ -60,19 +60,15 @@ fn encode_keys<K: DictionaryKey>(
     // encode indices
     // compute the required number of bits
     if let Some(validity) = validity {
-        let keys = array
-            .iter()
-            .flatten()
-            .map(|x| {
-                let index = x.to_usize().unwrap();
-                // discard indices whose values are null, since they are part of the def levels.
-                if validity.get_bit(index) {
-                    Some(index as u32)
-                } else {
-                    None
-                }
-            })
-            .flatten();
+        let keys = array.iter().flatten().filter_map(|x| {
+            let index = x.to_usize().unwrap();
+            // discard indices whose values are null, since they are part of the def levels.
+            if validity.get_bit(index) {
+                Some(index as u32)
+            } else {
+                None
+            }
+        });
         let num_bits = utils::get_bit_width(keys.clone().max().unwrap_or(0) as u64) as u8;
 
         let keys = utils::ExactSizedIter::new(keys, array.len() - null_count);

@@ -170,8 +170,7 @@ fn to_binary<O: Offset>(json_col: &ArrowJsonColumn, data_type: DataType) -> Arc<
         .as_ref()
         .unwrap()
         .iter()
-        .map(|value| value.as_str().map(|x| hex::decode(x).unwrap()).unwrap())
-        .flatten()
+        .flat_map(|value| value.as_str().map(|x| hex::decode(x).unwrap()).unwrap())
         .collect();
     Arc::new(BinaryArray::from_data(data_type, offsets, values, validity))
 }
@@ -184,8 +183,7 @@ fn to_utf8<O: Offset>(json_col: &ArrowJsonColumn, data_type: DataType) -> Arc<dy
         .as_ref()
         .unwrap()
         .iter()
-        .map(|value| value.as_str().unwrap().as_bytes().to_vec())
-        .flatten()
+        .flat_map(|value| value.as_str().unwrap().as_bytes().to_vec())
         .collect();
     Arc::new(Utf8Array::from_data(data_type, offsets, values, validity))
 }
@@ -309,8 +307,7 @@ pub fn to_array(
                 .as_ref()
                 .unwrap()
                 .iter()
-                .map(|value| value.as_str().map(|x| hex::decode(x).unwrap()).unwrap())
-                .flatten()
+                .flat_map(|value| value.as_str().map(|x| hex::decode(x).unwrap()).unwrap())
                 .collect();
             Ok(Arc::new(FixedSizeBinaryArray::from_data(
                 data_type, values, validity,

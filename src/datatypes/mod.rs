@@ -12,6 +12,9 @@ pub use schema::Schema;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
+#[cfg(feature = "serde_types")]
+use serde_derive::{Deserialize, Serialize};
+
 /// typedef for [BTreeMap<String, String>] denoting [`Field`]'s and [`Schema`]'s metadata.
 pub type Metadata = BTreeMap<String, String>;
 /// typedef fpr [Option<(String, Option<String>)>] descr
@@ -26,6 +29,7 @@ pub(crate) type Extension = Option<(String, Option<String>)>;
 /// The [`DataType::Extension`] is special in that it augments a [`DataType`] with metadata to support custom types.
 /// Use `to_logical_type` to desugar such type and return its correspoding logical type.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde_types", derive(Serialize, Deserialize))]
 pub enum DataType {
     /// Null type
     Null,
@@ -156,6 +160,7 @@ pub enum DataType {
 
 /// Mode of [`DataType::Union`]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde_types", derive(Serialize, Deserialize))]
 pub enum UnionMode {
     /// Dense union
     Dense,
@@ -187,6 +192,7 @@ impl UnionMode {
 
 /// The time units defined in Arrow.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde_types", derive(Serialize, Deserialize))]
 pub enum TimeUnit {
     /// Time in seconds.
     Second,
@@ -200,6 +206,7 @@ pub enum TimeUnit {
 
 /// Interval units defined in Arrow
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde_types", derive(Serialize, Deserialize))]
 pub enum IntervalUnit {
     /// The number of elapsed whole months.
     YearMonth,

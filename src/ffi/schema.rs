@@ -7,34 +7,19 @@ use crate::{
     error::{ArrowError, Result},
 };
 
+use super::ArrowSchema;
+
 #[allow(dead_code)]
 struct SchemaPrivateData {
     name: CString,
     format: CString,
     metadata: Option<Vec<u8>>,
-    children_ptr: Box<[*mut Ffi_ArrowSchema]>,
-    dictionary: Option<*mut Ffi_ArrowSchema>,
+    children_ptr: Box<[*mut ArrowSchema]>,
+    dictionary: Option<*mut ArrowSchema>,
 }
 
-/// ABI-compatible struct for `ArrowSchema` from C Data Interface
-/// See <https://arrow.apache.org/docs/format/CDataInterface.html#structure-definitions>
-// This was created by bindgen
-#[repr(C)]
-#[derive(Debug)]
-pub struct Ffi_ArrowSchema {
-    format: *const ::std::os::raw::c_char,
-    name: *const ::std::os::raw::c_char,
-    metadata: *const ::std::os::raw::c_char,
-    flags: i64,
-    n_children: i64,
-    children: *mut *mut Ffi_ArrowSchema,
-    dictionary: *mut Ffi_ArrowSchema,
-    release: ::std::option::Option<unsafe extern "C" fn(arg1: *mut Ffi_ArrowSchema)>,
-    private_data: *mut ::std::os::raw::c_void,
-}
-
-// callback used to drop [Ffi_ArrowSchema] when it is exported.
-unsafe extern "C" fn c_release_schema(schema: *mut Ffi_ArrowSchema) {
+// callback used to drop [ArrowSchema] when it is exported.
+unsafe extern "C" fn c_release_schema(schema: *mut ArrowSchema) {
     if schema.is_null() {
         return;
     }
@@ -52,8 +37,8 @@ unsafe extern "C" fn c_release_schema(schema: *mut Ffi_ArrowSchema) {
     schema.release = None;
 }
 
-impl Ffi_ArrowSchema {
-    /// creates a new [Ffi_ArrowSchema]
+impl ArrowSchema {
+    /// creates a new [ArrowSchema]
     pub(crate) fn new(field: &Field) -> Self {
         let format = to_format(field.data_type());
         let name = field.name.clone();
@@ -63,25 +48,25 @@ impl Ffi_ArrowSchema {
         // allocate (and hold) the children
         let children_vec = match field.data_type() {
             DataType::List(field) => {
-                vec![Box::new(Ffi_ArrowSchema::new(field.as_ref()))]
+                vec![Box::new(ArrowSchema::new(field.as_ref()))]
             }
             DataType::FixedSizeList(field, _) => {
-                vec![Box::new(Ffi_ArrowSchema::new(field.as_ref()))]
+                vec![Box::new(ArrowSchema::new(field.as_ref()))]
             }
             DataType::LargeList(field) => {
-                vec![Box::new(Ffi_ArrowSchema::new(field.as_ref()))]
+                vec![Box::new(ArrowSchema::new(field.as_ref()))]
             }
             DataType::Map(field, is_sorted) => {
                 flags += (*is_sorted as i64) * 4;
-                vec![Box::new(Ffi_ArrowSchema::new(field.as_ref()))]
+                vec![Box::new(ArrowSchema::new(field.as_ref()))]
             }
             DataType::Struct(fields) => fields
                 .iter()
-                .map(|field| Box::new(Ffi_ArrowSchema::new(field)))
+                .map(|field| Box::new(ArrowSchema::new(field)))
                 .collect::<Vec<_>>(),
             DataType::Union(fields, _, _) => fields
                 .iter()
-                .map(|field| Box::new(Ffi_ArrowSchema::new(field)))
+                .map(|field| Box::new(ArrowSchema::new(field)))
                 .collect::<Vec<_>>(),
             _ => vec![],
         };
@@ -96,7 +81,7 @@ impl Ffi_ArrowSchema {
             flags += *is_ordered as i64;
             // we do not store field info in the dict values, so can't recover it all :(
             let field = Field::new("", values.as_ref().clone(), true);
-            Some(Box::new(Ffi_ArrowSchema::new(&field)))
+            Some(Box::new(ArrowSchema::new(&field)))
         } else {
             None
         };
@@ -153,7 +138,7 @@ impl Ffi_ArrowSchema {
         }
     }
 
-    /// create an empty [Ffi_ArrowSchema]
+    /// create an empty [ArrowSchema]
     pub fn empty() -> Self {
         Self {
             format: std::ptr::null_mut(),
@@ -202,7 +187,7 @@ impl Ffi_ArrowSchema {
     }
 }
 
-impl Drop for Ffi_ArrowSchema {
+impl Drop for ArrowSchema {
     fn drop(&mut self) {
         match self.release {
             None => (),
@@ -211,7 +196,7 @@ impl Drop for Ffi_ArrowSchema {
     }
 }
 
-pub(crate) unsafe fn to_field(schema: &Ffi_ArrowSchema) -> Result<Field> {
+pub(crate) unsafe fn to_field(schema: &ArrowSchema) -> Result<Field> {
     let dictionary = schema.dictionary();
     let data_type = if let Some(dictionary) = dictionary {
         let indices = to_integer_type(schema.format())?;
@@ -251,7 +236,7 @@ fn to_integer_type(format: &str) -> Result<IntegerType> {
     })
 }
 
-unsafe fn to_data_type(schema: &Ffi_ArrowSchema) -> Result<DataType> {
+unsafe fn to_data_type(schema: &ArrowSchema) -> Result<DataType> {
     Ok(match schema.format() {
         "n" => DataType::Null,
         "b" => DataType::Boolean,
@@ -455,14 +440,14 @@ fn to_format(data_type: &DataType) -> String {
     }
 }
 
-pub(super) fn get_field_child(field: &Field, index: usize) -> Result<Field> {
-    match (index, field.data_type()) {
-        (0, DataType::List(field)) => Ok(field.as_ref().clone()),
-        (0, DataType::FixedSizeList(field, _)) => Ok(field.as_ref().clone()),
-        (0, DataType::LargeList(field)) => Ok(field.as_ref().clone()),
-        (0, DataType::Map(field, _)) => Ok(field.as_ref().clone()),
-        (index, DataType::Struct(fields)) => Ok(fields[index].clone()),
-        (index, DataType::Union(fields, _, _)) => Ok(fields[index].clone()),
+pub(super) fn get_child(data_type: &DataType, index: usize) -> Result<DataType> {
+    match (index, data_type) {
+        (0, DataType::List(field)) => Ok(field.data_type().clone()),
+        (0, DataType::FixedSizeList(field, _)) => Ok(field.data_type().clone()),
+        (0, DataType::LargeList(field)) => Ok(field.data_type().clone()),
+        (0, DataType::Map(field, _)) => Ok(field.data_type().clone()),
+        (index, DataType::Struct(fields)) => Ok(fields[index].data_type().clone()),
+        (index, DataType::Union(fields, _, _)) => Ok(fields[index].data_type().clone()),
         (child, data_type) => Err(ArrowError::OutOfSpec(format!(
             "Requested child {} to type {:?} that has no such child",
             child, data_type

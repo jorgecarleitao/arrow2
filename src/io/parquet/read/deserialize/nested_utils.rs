@@ -11,10 +11,8 @@ use crate::{
     error::Result,
 };
 
-use super::{
-    utils::{split_buffer, Decoder, MaybeNext, Pushable},
-    DataPages,
-};
+use super::super::DataPages;
+use super::utils::{split_buffer, Decoder, MaybeNext, Pushable};
 
 /// trait describing deserialized repetition and definition levels
 pub trait Nested: std::fmt::Debug + Send + Sync {

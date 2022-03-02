@@ -34,6 +34,7 @@ impl ArrowError {
         Self::OutOfSpec(msg.into())
     }
 
+    #[allow(dead_code)]
     pub(crate) fn nyi<A: Into<String>>(msg: A) -> Self {
         Self::NotYetImplemented(msg.into())
     }

@@ -32,9 +32,8 @@ unsafe impl ToFfi for UnionArray {
 
 impl<A: ffi::ArrowArrayRef> FromFfi<A> for UnionArray {
     unsafe fn try_from_ffi(array: A) -> Result<Self> {
-        let field = array.field();
-        let data_type = field.data_type().clone();
-        let fields = Self::get_fields(field.data_type());
+        let data_type = array.data_type().clone();
+        let fields = Self::get_fields(&data_type);
 
         let mut types = unsafe { array.buffer::<i8>(0) }?;
         let offsets = if Self::is_sparse(&data_type) {

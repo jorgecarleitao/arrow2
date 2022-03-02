@@ -1,7 +1,6 @@
 use crate::{
-    array::{Array, BooleanArray, Offset, Utf8Array},
+    array::Array,
     bitmap::Bitmap,
-    datatypes::DataType,
     error::{ArrowError, Result},
 };
 
@@ -12,30 +11,6 @@ pub fn combine_validities(lhs: Option<&Bitmap>, rhs: Option<&Bitmap>) -> Option<
         (None, None) => None,
         (Some(lhs), Some(rhs)) => Some(lhs & rhs),
     }
-}
-
-pub fn unary_utf8_boolean<O: Offset, F: Fn(&str) -> bool>(
-    values: &Utf8Array<O>,
-    op: F,
-) -> BooleanArray {
-    let validity = values.validity().cloned();
-
-    let iterator = values.iter().map(|value| {
-        if value.is_none() {
-            return false;
-        };
-        op(value.unwrap())
-    });
-    let values = Bitmap::from_trusted_len_iter(iterator);
-    BooleanArray::from_data(DataType::Boolean, values, validity)
-}
-
-/// utf8_apply will apply `Fn(&str) -> String` to every value in Utf8Array.
-pub fn utf8_apply<O: Offset, F: Fn(&str) -> String>(f: F, array: &Utf8Array<O>) -> Utf8Array<O> {
-    let iter = array.values_iter().map(f);
-
-    let new = Utf8Array::<O>::from_trusted_len_values_iter(iter);
-    new.with_validity(array.validity().cloned())
 }
 
 // Errors iff the two arrays have a different length.

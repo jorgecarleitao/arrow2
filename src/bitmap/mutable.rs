@@ -58,7 +58,7 @@ impl MutableBitmap {
         }
     }
 
-    /// Initializes an a pre-allocated [`MutableBitmap`] with capacity for `capacity` bits.
+    /// Initializes a pre-allocated [`MutableBitmap`] with capacity for `capacity` bits.
     #[inline]
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
@@ -67,7 +67,7 @@ impl MutableBitmap {
         }
     }
 
-    /// Initializes an a pre-allocated [`MutableBitmap`] with capacity for `capacity` bits.
+    /// Reserves `additional` bits in the [`MutableBitmap`], potentially re-allocating its buffer.
     #[inline(always)]
     pub fn reserve(&mut self, additional: usize) {
         self.buffer

@@ -657,15 +657,9 @@ fn write_bytes(
         }
     } else {
         arrow_data.extend_from_slice(bytes);
-        pad_buffer_to_8(arrow_data, arrow_data.len() - start);
     };
 
-    let total_len = (arrow_data.len() - start) as i64;
-    buffers.push(ipc::Buffer {
-        offset: *offset,
-        length: total_len,
-    });
-    *offset += total_len;
+    buffers.push(finish_buffer(arrow_data, start, offset));
 }
 
 fn write_bitmap(
@@ -712,15 +706,9 @@ fn write_buffer<T: NativeType>(
         _write_compressed_buffer(buffer, arrow_data, is_little_endian, compression);
     } else {
         _write_buffer(buffer, arrow_data, is_little_endian);
-        pad_buffer_to_8(arrow_data, arrow_data.len() - start);
     };
 
-    let total_len = (arrow_data.len() - start) as i64;
-    buffers.push(ipc::Buffer {
-        offset: *offset,
-        length: total_len,
-    });
-    *offset += total_len;
+    buffers.push(finish_buffer(arrow_data, start, offset));
 }
 
 #[inline]
@@ -819,13 +807,21 @@ fn write_buffer_from_iter<T: NativeType, I: TrustedLen<Item = T>>(
         _write_compressed_buffer_from_iter(buffer, arrow_data, is_little_endian, compression);
     } else {
         _write_buffer_from_iter(buffer, arrow_data, is_little_endian);
-        pad_buffer_to_8(arrow_data, arrow_data.len() - start);
     }
 
+    buffers.push(finish_buffer(arrow_data, start, offset));
+}
+
+fn finish_buffer(arrow_data: &mut Vec<u8>, start: usize, offset: &mut i64) -> ipc::Buffer {
+    let buffer_len = (arrow_data.len() - start) as i64;
+
+    pad_buffer_to_8(arrow_data, arrow_data.len() - start);
     let total_len = (arrow_data.len() - start) as i64;
-    buffers.push(ipc::Buffer {
+
+    let buffer = ipc::Buffer {
         offset: *offset,
-        length: total_len,
-    });
+        length: buffer_len,
+    };
     *offset += total_len;
+    buffer
 }
