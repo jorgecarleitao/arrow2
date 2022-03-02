@@ -292,7 +292,7 @@ mod tests {
             ]);
 
             let mut buffer = vec![];
-            let mut sink = StreamSink::new(&mut buffer, schema, None, Default::default());
+            let mut sink = StreamSink::new(&mut buffer, schema.clone(), None, Default::default());
             for chunk in &data {
                 sink.feed(chunk.clone()).await.unwrap();
             }
@@ -301,6 +301,7 @@ mod tests {
 
             let mut reader = &buffer[..];
             let metadata = read_stream_metadata_async(&mut reader).await.unwrap();
+            assert_eq!(schema, metadata.schema);
             let stream = AsyncStreamReader::new(reader, metadata);
             let out = stream.try_collect::<Vec<_>>().await.unwrap();
             for i in 0..5 {
