@@ -108,7 +108,12 @@ impl<W: AsyncWrite + Unpin + Send> StreamWriter<W> {
     }
 }
 
-/// A sink that writes array [`chunks`](Chunk) to an async writer.
+/// A sink that writes array [`chunks`](Chunk) as an IPC stream.
+///
+/// The stream header is automatically written before writing the first chunk.
+///
+/// The sink uses the same `ipc_fields` projection and `write_options` for each chunk.
+/// For more fine-grained control over those parameters, see [`StreamWriter`].
 ///
 /// # Examples
 ///
@@ -257,22 +262,19 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
-    use futures::{SinkExt, TryStreamExt};
-
+    use super::StreamSink;
     use crate::{
         array::{Array, Float32Array, Int32Array},
         chunk::Chunk,
         datatypes::{DataType, Field, Schema},
         io::ipc::read::stream_async::{read_stream_metadata_async, AsyncStreamReader},
     };
-
-    use super::StreamSink;
+    use futures::{SinkExt, TryStreamExt};
+    use std::sync::Arc;
 
     // Verify round trip data integrity when using async read + write.
     #[test]
-    fn test_stream_sink_roundtrip() {
+    fn test_stream_async_roundtrip() {
         futures::executor::block_on(async move {
             let mut data = vec![];
             for i in 0..5 {

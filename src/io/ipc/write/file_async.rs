@@ -1,14 +1,6 @@
 //! Async writer for IPC files.
 
-use std::sync::Arc;
-use std::task::Poll;
-use arrow_format::ipc::planus::Builder;
-use arrow_format::ipc::{Block, Footer, MetadataVersion};
-use futures::future::BoxFuture;
-use futures::{AsyncWrite, Sink, AsyncWriteExt, FutureExt};
-use super::super::IpcField;
-pub use super::common::WriteOptions;
-use super::common::{encode_chunk, DictionaryTracker, EncodedData};
+use super::common::{encode_chunk, DictionaryTracker, EncodedData, WriteOptions};
 use super::common_async::{write_continuation, write_message};
 use super::schema::serialize_schema;
 use super::{default_ipc_fields, schema_to_bytes};
@@ -16,15 +8,56 @@ use crate::array::Array;
 use crate::chunk::Chunk;
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
-use crate::io::ipc::ARROW_MAGIC;
+use crate::io::ipc::{IpcField, ARROW_MAGIC};
+use arrow_format::ipc::{planus::Builder, Block, Footer, MetadataVersion};
+use futures::{future::BoxFuture, AsyncWrite, AsyncWriteExt, FutureExt, Sink};
+use std::sync::Arc;
+use std::task::Poll;
 
-/// Async Arrow file writer
+type WriteOutput<W> = (usize, Option<Block>, Vec<Block>, Option<W>);
+
+///  Sink that writes array [`chunks`](Chunk) as an IPC file.
+///
+/// The file header is automatically written before writing the first chunk, and the file footer is
+/// automatically written when the sink is closed.
+///
+/// The sink uses the same `ipc_fields` projection and `write_options` for each chunk.
+///
+/// # Examples
+///
+/// ```
+/// use std::sync::Arc;
+/// use futures::SinkExt;
+/// use arrow2::array::{Array, Int32Array};
+/// use arrow2::datatypes::{DataType, Field, Schema};
+/// use arrow2::chunk::Chunk;
+/// # use arrow2::io::ipc::write::file_async::FileSink;
+/// # futures::executor::block_on(async move {
+/// let schema = Schema::from(vec![
+///     Field::new("values", DataType::Int32, true),
+/// ]);
+///
+/// let mut buffer = vec![];
+/// let mut sink = FileSink::new(
+///     &mut buffer,
+///     schema,
+///     None,
+///     Default::default(),
+/// );
+///
+/// for i in 0..3 {
+///     let values = Int32Array::from(&[Some(i), None]);
+///     let chunk = Chunk::new(vec![Arc::new(values) as Arc<dyn Array>]);
+///     sink.feed(chunk).await?;
+/// }
+/// sink.close().await?;
+/// # arrow2::error::Result::Ok(())
+/// # }).unwrap();
+/// ```
 pub struct FileSink<'a, W: AsyncWrite + Unpin + Send + 'a> {
     writer: Option<W>,
-    task: Option<BoxFuture<'a, Result<(usize, Option<Block>, Vec<Block>, Option<W>)>>>,
-    /// IPC write options
+    task: Option<BoxFuture<'a, Result<WriteOutput<W>>>>,
     options: WriteOptions,
-    /// Keeps track of dictionaries that have been written
     dictionary_tracker: DictionaryTracker,
     offset: usize,
     fields: Vec<IpcField>,
@@ -33,12 +66,20 @@ pub struct FileSink<'a, W: AsyncWrite + Unpin + Send + 'a> {
     schema: Schema,
 }
 
-impl<'a, W> FileSink<'a, W> where W: AsyncWrite + Unpin + Send + 'a {
+impl<'a, W> FileSink<'a, W>
+where
+    W: AsyncWrite + Unpin + Send + 'a,
+{
     /// Create a new file writer.
-    pub fn new(writer: W, schema: &Schema, ipc_fields: Option<Vec<IpcField>>, options: WriteOptions) -> Self {
+    pub fn new(
+        writer: W,
+        schema: Schema,
+        ipc_fields: Option<Vec<IpcField>>,
+        options: WriteOptions,
+    ) -> Self {
         let fields = ipc_fields.unwrap_or_else(|| default_ipc_fields(&schema.fields));
         let encoded = EncodedData {
-            ipc_message: schema_to_bytes(schema, &fields),
+            ipc_message: schema_to_bytes(&schema, &fields),
             arrow_data: vec![],
         };
         let task = Some(Self::start(writer, encoded).boxed());
@@ -48,14 +89,14 @@ impl<'a, W> FileSink<'a, W> where W: AsyncWrite + Unpin + Send + 'a {
             options,
             fields,
             offset: 0,
-            schema: schema.clone(),
+            schema,
             dictionary_tracker: DictionaryTracker::new(true),
             record_blocks: vec![],
             dictionary_blocks: vec![],
         }
     }
 
-    async fn start(mut writer: W, encoded: EncodedData) -> Result<(usize, Option<Block>, Vec<Block>, Option<W>)> {
+    async fn start(mut writer: W, encoded: EncodedData) -> Result<WriteOutput<W>> {
         writer.write_all(&ARROW_MAGIC[..]).await?;
         writer.write_all(&[0, 0]).await?;
         let (meta, data) = write_message(&mut writer, encoded).await?;
@@ -63,7 +104,12 @@ impl<'a, W> FileSink<'a, W> where W: AsyncWrite + Unpin + Send + 'a {
         Ok((meta + data + 8, None, vec![], Some(writer)))
     }
 
-    async fn write(mut writer: W, mut offset: usize, record: EncodedData, dictionaries: Vec<EncodedData>) -> Result<(usize, Option<Block>, Vec<Block>, Option<W>)> {
+    async fn write(
+        mut writer: W,
+        mut offset: usize,
+        record: EncodedData,
+        dictionaries: Vec<EncodedData>,
+    ) -> Result<WriteOutput<W>> {
         let mut dict_blocks = vec![];
         for dict in dictionaries {
             let (meta, data) = write_message(&mut writer, dict).await?;
@@ -85,14 +131,16 @@ impl<'a, W> FileSink<'a, W> where W: AsyncWrite + Unpin + Send + 'a {
         Ok((offset, Some(block), dict_blocks, Some(writer)))
     }
 
-    async fn finish(mut writer: W, footer: Footer) -> Result<(usize, Option<Block>, Vec<Block>, Option<W>)> {
+    async fn finish(mut writer: W, footer: Footer) -> Result<WriteOutput<W>> {
         write_continuation(&mut writer, 0).await?;
         let footer = {
             let mut builder = Builder::new();
             builder.finish(&footer, None).to_owned()
         };
         writer.write_all(&footer[..]).await?;
-        writer.write_all(&(footer.len() as i32).to_le_bytes()).await?;
+        writer
+            .write_all(&(footer.len() as i32).to_le_bytes())
+            .await?;
         writer.write_all(&ARROW_MAGIC).await?;
         writer.close().await?;
 
@@ -111,11 +159,11 @@ impl<'a, W> FileSink<'a, W> where W: AsyncWrite + Unpin + Send + 'a {
                     }
                     self.dictionary_blocks.append(&mut dictionaries);
                     Poll::Ready(Ok(()))
-                },
+                }
                 Err(error) => {
                     self.task = None;
                     Poll::Ready(Err(error))
-                },
+                }
             }
         } else {
             Poll::Ready(Ok(()))
@@ -123,10 +171,16 @@ impl<'a, W> FileSink<'a, W> where W: AsyncWrite + Unpin + Send + 'a {
     }
 }
 
-impl<'a, W> Sink<Chunk<Arc<dyn Array>>> for FileSink<'a, W> where W: AsyncWrite + Unpin + Send + 'a {
+impl<'a, W> Sink<Chunk<Arc<dyn Array>>> for FileSink<'a, W>
+where
+    W: AsyncWrite + Unpin + Send + 'a,
+{
     type Error = ArrowError;
 
-    fn poll_ready(self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Result<()>> {
+    fn poll_ready(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Result<()>> {
         self.get_mut().poll_write(cx)
     }
 
@@ -151,11 +205,17 @@ impl<'a, W> Sink<Chunk<Arc<dyn Array>>> for FileSink<'a, W> where W: AsyncWrite 
         }
     }
 
-    fn poll_flush(self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Result<()>> {
+    fn poll_flush(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Result<()>> {
         self.get_mut().poll_write(cx)
     }
 
-    fn poll_close(self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Result<()>> {
+    fn poll_close(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Result<()>> {
         let this = self.get_mut();
         match futures::ready!(this.poll_write(cx)) {
             Ok(()) => {
@@ -173,8 +233,58 @@ impl<'a, W> Sink<Chunk<Arc<dyn Array>>> for FileSink<'a, W> where W: AsyncWrite 
                 } else {
                     Poll::Ready(Ok(()))
                 }
-            },
+            }
             Err(error) => Poll::Ready(Err(error)),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::FileSink;
+    use crate::{
+        array::{Array, Float32Array, Int32Array},
+        chunk::Chunk,
+        datatypes::{DataType, Field, Schema},
+        io::ipc::read::file_async::{read_file_metadata_async, FileStream},
+    };
+    use futures::{io::Cursor, SinkExt, TryStreamExt};
+    use std::sync::Arc;
+
+    // Verify round trip data integrity when using async read + write.
+    #[test]
+    fn test_file_async_roundtrip() {
+        futures::executor::block_on(async move {
+            let mut data = vec![];
+            for i in 0..5 {
+                let a1 = Int32Array::from(&[Some(i), None, Some(i + 1)]);
+                let a2 = Float32Array::from(&[None, Some(i as f32), None]);
+                let chunk = Chunk::new(vec![
+                    Arc::new(a1) as Arc<dyn Array>,
+                    Arc::new(a2) as Arc<dyn Array>,
+                ]);
+                data.push(chunk);
+            }
+            let schema = Schema::from(vec![
+                Field::new("a1", DataType::Int32, true),
+                Field::new("a2", DataType::Float32, true),
+            ]);
+
+            let mut buffer = Cursor::new(Vec::new());
+            let mut sink = FileSink::new(&mut buffer, schema, None, Default::default());
+            for chunk in &data {
+                sink.feed(chunk.clone()).await.unwrap();
+            }
+            sink.close().await.unwrap();
+            drop(sink);
+
+            buffer.set_position(0);
+            let metadata = read_file_metadata_async(&mut buffer).await.unwrap();
+            let stream = FileStream::new(buffer, metadata, None);
+            let out = stream.try_collect::<Vec<_>>().await.unwrap();
+            for i in 0..5 {
+                assert_eq!(data[i], out[i]);
+            }
+        })
     }
 }
