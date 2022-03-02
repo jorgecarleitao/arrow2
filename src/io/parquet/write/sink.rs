@@ -14,6 +14,9 @@ use super::file::add_arrow_schema;
 
 /// Sink that writes array [`chunks`](Chunk) as a Parquet file.
 ///
+/// Any values in the sink's `metadata` field will be written to the file's footer
+/// when the sink is closed.
+///
 /// # Examples
 ///
 /// ```
@@ -25,6 +28,7 @@ use super::file::add_arrow_schema;
 /// use arrow2::io::parquet::write::{Encoding, WriteOptions, Compression, Version};
 /// # use arrow2::io::parquet::write::FileSink;
 /// # futures::executor::block_on(async move {
+///
 /// let schema = Schema::from(vec![
 ///     Field::new("values", DataType::Int32, true),
 /// ]);
