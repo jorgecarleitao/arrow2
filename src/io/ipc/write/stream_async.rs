@@ -108,7 +108,6 @@ impl<W: AsyncWrite + Unpin + Send> StreamWriter<W> {
     }
 }
 
-
 /// A sink that writes array [`chunks`](Chunk) to an async writer.
 ///
 /// # Examples
@@ -205,10 +204,7 @@ where
 {
     type Error = ArrowError;
 
-    fn poll_ready(
-        self: Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> Poll<Result<()>> {
+    fn poll_ready(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Result<()>> {
         self.get_mut().poll_complete(cx)
     }
 
@@ -233,17 +229,11 @@ where
         }
     }
 
-    fn poll_flush(
-        self: Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> Poll<Result<()>> {
+    fn poll_flush(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Result<()>> {
         self.get_mut().poll_complete(cx)
     }
 
-    fn poll_close(
-        self: Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> Poll<Result<()>> {
+    fn poll_close(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Result<()>> {
         let this = self.get_mut();
         match this.poll_complete(cx) {
             Poll::Ready(Ok(())) => {
@@ -262,5 +252,58 @@ where
             }
             res => res,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use futures::{SinkExt, TryStreamExt};
+
+    use crate::{
+        array::{Array, Float32Array, Int32Array},
+        chunk::Chunk,
+        datatypes::{DataType, Field, Schema},
+        io::ipc::read::stream_async::{read_stream_metadata_async, AsyncStreamReader},
+    };
+
+    use super::StreamSink;
+
+    // Verify round trip data integrity when using async read + write.
+    #[test]
+    fn test_stream_sink_roundtrip() {
+        futures::executor::block_on(async move {
+            let mut data = vec![];
+            for i in 0..5 {
+                let a1 = Int32Array::from(&[Some(i), None, Some(i + 1)]);
+                let a2 = Float32Array::from(&[None, Some(i as f32), None]);
+                let chunk = Chunk::new(vec![
+                    Arc::new(a1) as Arc<dyn Array>,
+                    Arc::new(a2) as Arc<dyn Array>,
+                ]);
+                data.push(chunk);
+            }
+            let schema = Schema::from(vec![
+                Field::new("a1", DataType::Int32, true),
+                Field::new("a2", DataType::Float32, true),
+            ]);
+
+            let mut buffer = vec![];
+            let mut sink = StreamSink::new(&mut buffer, schema, None, Default::default());
+            for chunk in &data {
+                sink.feed(chunk.clone()).await.unwrap();
+            }
+            sink.close().await.unwrap();
+            drop(sink);
+
+            let mut reader = &buffer[..];
+            let metadata = read_stream_metadata_async(&mut reader).await.unwrap();
+            let stream = AsyncStreamReader::new(reader, metadata);
+            let out = stream.try_collect::<Vec<_>>().await.unwrap();
+            for i in 0..5 {
+                assert_eq!(data[i], out[i]);
+            }
+        })
     }
 }
