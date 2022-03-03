@@ -36,7 +36,7 @@ type WriteOutput<W> = (usize, Option<Block>, Vec<Block>, Option<W>);
 /// let mut buffer = Cursor::new(vec![]);
 /// let mut sink = FileSink::new(
 ///     &mut buffer,
-///     schema,
+///     &schema,
 ///     None,
 ///     Default::default(),
 /// );
