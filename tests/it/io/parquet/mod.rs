@@ -10,6 +10,7 @@ use crate::io::ipc::read_gzip_json;
 
 mod read;
 mod write;
+mod write_async;
 
 type ArrayStats = (Arc<dyn Array>, Option<Box<dyn Statistics>>);
 
