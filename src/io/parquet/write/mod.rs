@@ -8,7 +8,7 @@ mod levels;
 mod primitive;
 mod row_group;
 mod schema;
-mod stream;
+mod sink;
 mod utf8;
 mod utils;
 
@@ -39,7 +39,7 @@ pub use parquet2::{
 pub use file::FileWriter;
 pub use row_group::{row_group_iter, RowGroupIterator};
 pub use schema::to_parquet_type;
-pub use stream::FileStreamer;
+pub use sink::FileSink;
 
 pub(self) fn decimal_length_from_precision(precision: usize) -> usize {
     // digits = floor(log_10(2^(8*n - 1) - 1))
