@@ -1,5 +1,4 @@
 //! `async` writing of arrow streams
-use std::sync::Arc;
 
 use super::super::IpcField;
 pub use super::common::WriteOptions;
@@ -10,110 +9,12 @@ use super::{default_ipc_fields, schema_to_bytes, Record};
 use futures::{future::BoxFuture, AsyncWrite, FutureExt, Sink};
 use std::{pin::Pin, task::Poll};
 
-use crate::array::Array;
-use crate::chunk::Chunk;
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
-
-/// An `async` writer to the Apache Arrow stream format.
-pub struct StreamWriter<W: AsyncWrite + Unpin + Send> {
-    /// The object to write to
-    writer: W,
-    /// IPC write options
-    write_options: WriteOptions,
-    /// Whether the stream has been finished
-    finished: bool,
-    /// Keeps track of dictionaries that have been written
-    dictionary_tracker: DictionaryTracker,
-}
-
-impl<W: AsyncWrite + Unpin + Send> StreamWriter<W> {
-    /// Creates a new [`StreamWriter`]
-    pub fn new(writer: W, write_options: WriteOptions) -> Self {
-        Self {
-            writer,
-            write_options,
-            finished: false,
-            dictionary_tracker: DictionaryTracker::new(false),
-        }
-    }
-
-    /// Starts the stream
-    pub async fn start(&mut self, schema: &Schema, ipc_fields: Option<&[IpcField]>) -> Result<()> {
-        let encoded_message = if let Some(ipc_fields) = ipc_fields {
-            EncodedData {
-                ipc_message: schema_to_bytes(schema, ipc_fields),
-                arrow_data: vec![],
-            }
-        } else {
-            let ipc_fields = default_ipc_fields(&schema.fields);
-            EncodedData {
-                ipc_message: schema_to_bytes(schema, &ipc_fields),
-                arrow_data: vec![],
-            }
-        };
-        write_message(&mut self.writer, encoded_message).await?;
-        Ok(())
-    }
-
-    /// Writes [`Chunk`] to the stream
-    pub async fn write(
-        &mut self,
-        columns: &Chunk<Arc<dyn Array>>,
-        schema: &Schema,
-        ipc_fields: Option<&[IpcField]>,
-    ) -> Result<()> {
-        if self.finished {
-            return Err(ArrowError::Io(std::io::Error::new(
-                std::io::ErrorKind::UnexpectedEof,
-                "Cannot write to a finished stream".to_string(),
-            )));
-        }
-
-        let (encoded_dictionaries, encoded_message) = if let Some(ipc_fields) = ipc_fields {
-            encode_chunk(
-                columns,
-                ipc_fields,
-                &mut self.dictionary_tracker,
-                &self.write_options,
-            )?
-        } else {
-            let ipc_fields = default_ipc_fields(&schema.fields);
-            encode_chunk(
-                columns,
-                &ipc_fields,
-                &mut self.dictionary_tracker,
-                &self.write_options,
-            )?
-        };
-
-        for encoded_dictionary in encoded_dictionaries {
-            write_message(&mut self.writer, encoded_dictionary).await?;
-        }
-
-        write_message(&mut self.writer, encoded_message).await?;
-        Ok(())
-    }
-
-    /// Finishes the stream
-    pub async fn finish(&mut self) -> Result<()> {
-        write_continuation(&mut self.writer, 0).await?;
-        self.finished = true;
-        Ok(())
-    }
-
-    /// Consumes itself, returning the inner writer.
-    pub fn into_inner(self) -> W {
-        self.writer
-    }
-}
 
 /// A sink that writes array [`chunks`](Chunk) as an IPC stream.
 ///
 /// The stream header is automatically written before writing the first chunk.
-///
-/// The sink uses the same `ipc_fields` projection and `write_options` for each chunk.
-/// For more fine-grained control over those parameters, see [`StreamWriter`].
 ///
 /// # Examples
 ///
@@ -132,7 +33,7 @@ impl<W: AsyncWrite + Unpin + Send> StreamWriter<W> {
 /// let mut buffer = vec![];
 /// let mut sink = StreamSink::new(
 ///     &mut buffer,
-///     schema,
+///     &schema,
 ///     None,
 ///     Default::default(),
 /// );
@@ -161,12 +62,12 @@ where
     /// Create a new [`StreamSink`].
     pub fn new(
         writer: W,
-        schema: Schema,
+        schema: &Schema,
         ipc_fields: Option<Vec<IpcField>>,
         write_options: WriteOptions,
     ) -> Self {
         let fields = ipc_fields.unwrap_or_else(|| default_ipc_fields(&schema.fields));
-        let task = Some(Self::start(writer, &schema, &fields[..]));
+        let task = Some(Self::start(writer, schema, &fields[..]));
         Self {
             writer: None,
             task,

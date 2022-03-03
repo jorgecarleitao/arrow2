@@ -18,8 +18,6 @@ type WriteOutput<W> = (usize, Option<Block>, Vec<Block>, Option<W>);
 /// The file header is automatically written before writing the first chunk, and the file footer is
 /// automatically written when the sink is closed.
 ///
-/// The sink uses the same `ipc_fields` projection and `write_options` for each chunk.
-///
 /// # Examples
 ///
 /// ```
@@ -79,13 +77,13 @@ where
     /// Create a new file writer.
     pub fn new(
         writer: W,
-        schema: Schema,
+        schema: &Schema,
         ipc_fields: Option<Vec<IpcField>>,
         options: WriteOptions,
     ) -> Self {
         let fields = ipc_fields.unwrap_or_else(|| default_ipc_fields(&schema.fields));
         let encoded = EncodedData {
-            ipc_message: schema_to_bytes(&schema, &fields),
+            ipc_message: schema_to_bytes(schema, &fields),
             arrow_data: vec![],
         };
         let task = Some(Self::start(writer, encoded).boxed());
@@ -95,7 +93,7 @@ where
             options,
             fields,
             offset: 0,
-            schema,
+            schema: schema.clone(),
             dictionary_tracker: DictionaryTracker::new(true),
             record_blocks: vec![],
             dictionary_blocks: vec![],
