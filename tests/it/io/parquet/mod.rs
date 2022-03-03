@@ -174,6 +174,7 @@ pub fn pyarrow_nested_nullable(column: usize) -> Box<dyn Array> {
             ))
         }
         7 => {
+            // [[0, 1]], None, [[2, None], [3]], [[4, 5], [6]], [], [[7], None, [9]], [[], [None], None], [[10]]
             let data = [
                 Some(vec![Some(vec![Some(0), Some(1)])]),
                 None,

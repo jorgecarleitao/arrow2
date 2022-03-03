@@ -259,13 +259,11 @@ fn v2_nested_nested() -> Result<()> {
 }
 
 #[test]
-#[ignore] // todo
 fn v2_nested_nested_required() -> Result<()> {
     test_pyarrow_integration(8, 2, "nested", false, false, None)
 }
 
 #[test]
-#[ignore] // todo
 fn v2_nested_nested_required_required() -> Result<()> {
     test_pyarrow_integration(9, 2, "nested", false, false, None)
 }
