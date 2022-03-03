@@ -70,7 +70,7 @@ async fn test_stream_async_roundtrip() {
     let mut buffer = vec![];
     let mut sink = StreamSink::new(&mut buffer, schema.clone(), None, Default::default());
     for chunk in &data {
-        sink.feed(chunk.clone()).await.unwrap();
+        sink.feed(chunk.clone().into()).await.unwrap();
     }
     sink.close().await.unwrap();
     drop(sink);

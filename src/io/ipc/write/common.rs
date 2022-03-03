@@ -379,3 +379,33 @@ pub struct EncodedData {
 pub(crate) fn pad_to_8(len: usize) -> usize {
     (((len + 7) & !7) - len) as usize
 }
+
+/// An array [`Chunk`] with optional accompanying IPC fields.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Record {
+    /// Chunk of Arrow columns to be written in IPC format.
+    pub columns: Chunk<Arc<dyn Array>>,
+    /// Optional IPC field list used to map Arrow columns to IPC dictionaries.
+    pub fields: Option<Vec<IpcField>>,
+}
+
+impl From<Chunk<Arc<dyn Array>>> for Record {
+    fn from(columns: Chunk<Arc<dyn Array>>) -> Self {
+        Self {
+            columns,
+            fields: None,
+        }
+    }
+}
+
+impl From<(Chunk<Arc<dyn Array>>, Option<Vec<IpcField>>)> for Record {
+    fn from((columns, fields): (Chunk<Arc<dyn Array>>, Option<Vec<IpcField>>)) -> Self {
+        Self { columns, fields }
+    }
+}
+
+impl From<Record> for (Chunk<Arc<dyn Array>>, Option<Vec<IpcField>>) {
+    fn from(record: Record) -> Self {
+        (record.columns, record.fields)
+    }
+}

@@ -28,7 +28,7 @@ async fn test_file_async_roundtrip() {
     let mut buffer = Cursor::new(Vec::new());
     let mut sink = FileSink::new(&mut buffer, schema.clone(), None, Default::default());
     for chunk in &data {
-        sink.feed(chunk.clone()).await.unwrap();
+        sink.feed(chunk.clone().into()).await.unwrap();
     }
     sink.close().await.unwrap();
     drop(sink);

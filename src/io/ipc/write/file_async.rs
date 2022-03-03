@@ -3,15 +3,12 @@
 use super::common::{encode_chunk, DictionaryTracker, EncodedData, WriteOptions};
 use super::common_async::{write_continuation, write_message};
 use super::schema::serialize_schema;
-use super::{default_ipc_fields, schema_to_bytes};
-use crate::array::Array;
-use crate::chunk::Chunk;
+use super::{default_ipc_fields, schema_to_bytes, Record};
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 use crate::io::ipc::{IpcField, ARROW_MAGIC};
 use arrow_format::ipc::{planus::Builder, Block, Footer, MetadataVersion};
 use futures::{future::BoxFuture, AsyncWrite, AsyncWriteExt, FutureExt, Sink};
-use std::sync::Arc;
 use std::task::Poll;
 
 type WriteOutput<W> = (usize, Option<Block>, Vec<Block>, Option<W>);
@@ -50,7 +47,7 @@ type WriteOutput<W> = (usize, Option<Block>, Vec<Block>, Option<W>);
 /// for i in 0..3 {
 ///     let values = Int32Array::from(&[Some(i), None]);
 ///     let chunk = Chunk::new(vec![Arc::new(values) as Arc<dyn Array>]);
-///     sink.feed(chunk).await?;
+///     sink.feed(chunk.into()).await?;
 /// }
 /// sink.close().await?;
 /// drop(sink);
@@ -180,7 +177,7 @@ where
     }
 }
 
-impl<'a, W> Sink<Chunk<Arc<dyn Array>>> for FileSink<'a, W>
+impl<'a, W> Sink<Record> for FileSink<'a, W>
 where
     W: AsyncWrite + Unpin + Send + 'a,
 {
@@ -193,13 +190,16 @@ where
         self.get_mut().poll_write(cx)
     }
 
-    fn start_send(self: std::pin::Pin<&mut Self>, item: Chunk<Arc<dyn Array>>) -> Result<()> {
+    fn start_send(self: std::pin::Pin<&mut Self>, item: Record) -> Result<()> {
         let this = self.get_mut();
 
         if let Some(writer) = this.writer.take() {
+            let Record { columns, fields } = item;
+            let fields = fields.unwrap_or_else(|| this.fields.clone());
+
             let (dictionaries, record) = encode_chunk(
-                &item,
-                &this.fields[..],
+                &columns,
+                &fields[..],
                 &mut this.dictionary_tracker,
                 &this.options,
             )?;
