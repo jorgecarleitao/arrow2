@@ -375,7 +375,7 @@ pub use boolean::{BooleanArray, MutableBooleanArray};
 pub use dictionary::{DictionaryArray, DictionaryKey, MutableDictionaryArray};
 pub use fixed_size_binary::{FixedSizeBinaryArray, MutableFixedSizeBinaryArray};
 pub use fixed_size_list::{FixedSizeListArray, MutableFixedSizeListArray};
-pub use list::{ListArray, MutableListArray};
+pub use list::{ListArray, ListValuesIter, MutableListArray};
 pub use map::MapArray;
 pub use null::NullArray;
 pub use primitive::*;

@@ -13,7 +13,7 @@ pub struct ListValuesIter<'a, A: IterableListArray> {
 
 impl<'a, A: IterableListArray> ListValuesIter<'a, A> {
     #[inline]
-    pub fn new(array: &'a A) -> Self {
+    pub(crate) fn new(array: &'a A) -> Self {
         Self {
             array,
             index: 0,
