@@ -1,13 +1,14 @@
 //! `async` writing of arrow streams
 
+use std::{pin::Pin, task::Poll};
+
+use futures::{future::BoxFuture, AsyncWrite, FutureExt, Sink};
+
 use super::super::IpcField;
 pub use super::common::WriteOptions;
 use super::common::{encode_chunk, DictionaryTracker, EncodedData};
 use super::common_async::{write_continuation, write_message};
 use super::{default_ipc_fields, schema_to_bytes, Record};
-
-use futures::{future::BoxFuture, AsyncWrite, FutureExt, Sink};
-use std::{pin::Pin, task::Poll};
 
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
@@ -93,11 +94,14 @@ where
         .boxed()
     }
 
-    fn write(&mut self, record: &Record) -> Result<()> {
-        let Record { columns, fields } = record;
-        let fields = fields.as_ref().unwrap_or(&self.fields);
-        let (dictionaries, message) =
-            encode_chunk(columns, fields, &mut self.dictionary_tracker, &self.options)?;
+    fn write(&mut self, record: Record<'_>) -> Result<()> {
+        let fields = record.fields().unwrap_or(&self.fields[..]);
+        let (dictionaries, message) = encode_chunk(
+            record.columns(),
+            fields,
+            &mut self.dictionary_tracker,
+            &self.options,
+        )?;
 
         if let Some(mut writer) = self.writer.take() {
             self.task = Some(
@@ -138,7 +142,7 @@ where
     }
 }
 
-impl<'a, W> Sink<Record> for StreamSink<'a, W>
+impl<'a, W> Sink<Record<'_>> for StreamSink<'a, W>
 where
     W: AsyncWrite + Unpin + Send,
 {
@@ -148,8 +152,8 @@ where
         self.get_mut().poll_complete(cx)
     }
 
-    fn start_send(self: Pin<&mut Self>, item: Record) -> Result<()> {
-        self.get_mut().write(&item)
+    fn start_send(self: Pin<&mut Self>, item: Record<'_>) -> Result<()> {
+        self.get_mut().write(item)
     }
 
     fn poll_flush(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Result<()>> {

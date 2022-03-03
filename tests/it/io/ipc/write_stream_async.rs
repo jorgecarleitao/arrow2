@@ -25,8 +25,7 @@ async fn write_(
     let options = stream_async::WriteOptions { compression: None };
     let mut sink = StreamSink::new(&mut result, schema, Some(ipc_fields.to_vec()), options);
     for batch in batches {
-        sink.feed((batch.clone(), Some(ipc_fields.to_vec())).into())
-            .await?;
+        sink.feed((batch, Some(ipc_fields)).into()).await?;
     }
     sink.close().await?;
     drop(sink);

@@ -1,3 +1,4 @@
+use std::borrow::{Borrow, Cow};
 use std::sync::Arc;
 
 use arrow_format::ipc::planus::Builder;
@@ -382,30 +383,52 @@ pub(crate) fn pad_to_8(len: usize) -> usize {
 
 /// An array [`Chunk`] with optional accompanying IPC fields.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Record {
-    /// Chunk of Arrow columns to be written in IPC format.
-    pub columns: Chunk<Arc<dyn Array>>,
-    /// Optional IPC field list used to map Arrow columns to IPC dictionaries.
-    pub fields: Option<Vec<IpcField>>,
+pub struct Record<'a> {
+    columns: Cow<'a, Chunk<Arc<dyn Array>>>,
+    fields: Option<Cow<'a, [IpcField]>>,
 }
 
-impl From<Chunk<Arc<dyn Array>>> for Record {
+impl<'a> Record<'a> {
+    /// Get the IPC fields for this record.
+    pub fn fields(&self) -> Option<&[IpcField]> {
+        self.fields.as_deref()
+    }
+
+    /// Get the Arrow columns in this record.
+    pub fn columns(&self) -> &Chunk<Arc<dyn Array>> {
+        self.columns.borrow()
+    }
+}
+
+impl From<Chunk<Arc<dyn Array>>> for Record<'static> {
     fn from(columns: Chunk<Arc<dyn Array>>) -> Self {
         Self {
-            columns,
+            columns: Cow::Owned(columns),
             fields: None,
         }
     }
 }
 
-impl From<(Chunk<Arc<dyn Array>>, Option<Vec<IpcField>>)> for Record {
-    fn from((columns, fields): (Chunk<Arc<dyn Array>>, Option<Vec<IpcField>>)) -> Self {
-        Self { columns, fields }
+impl<'a, F> From<(Chunk<Arc<dyn Array>>, Option<F>)> for Record<'a>
+where
+    F: Into<Cow<'a, [IpcField]>>,
+{
+    fn from((columns, fields): (Chunk<Arc<dyn Array>>, Option<F>)) -> Self {
+        Self {
+            columns: Cow::Owned(columns),
+            fields: fields.map(|f| f.into()),
+        }
     }
 }
 
-impl From<Record> for (Chunk<Arc<dyn Array>>, Option<Vec<IpcField>>) {
-    fn from(record: Record) -> Self {
-        (record.columns, record.fields)
+impl<'a, F> From<(&'a Chunk<Arc<dyn Array>>, Option<F>)> for Record<'a>
+where
+    F: Into<Cow<'a, [IpcField]>>,
+{
+    fn from((columns, fields): (&'a Chunk<Arc<dyn Array>>, Option<F>)) -> Self {
+        Self {
+            columns: Cow::Borrowed(columns),
+            fields: fields.map(|f| f.into()),
+        }
     }
 }

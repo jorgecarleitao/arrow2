@@ -1,5 +1,10 @@
 //! Async writer for IPC files.
 
+use std::task::Poll;
+
+use arrow_format::ipc::{planus::Builder, Block, Footer, MetadataVersion};
+use futures::{future::BoxFuture, AsyncWrite, AsyncWriteExt, FutureExt, Sink};
+
 use super::common::{encode_chunk, DictionaryTracker, EncodedData, WriteOptions};
 use super::common_async::{write_continuation, write_message};
 use super::schema::serialize_schema;
@@ -7,9 +12,6 @@ use super::{default_ipc_fields, schema_to_bytes, Record};
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 use crate::io::ipc::{IpcField, ARROW_MAGIC};
-use arrow_format::ipc::{planus::Builder, Block, Footer, MetadataVersion};
-use futures::{future::BoxFuture, AsyncWrite, AsyncWriteExt, FutureExt, Sink};
-use std::task::Poll;
 
 type WriteOutput<W> = (usize, Option<Block>, Vec<Block>, Option<W>);
 
@@ -175,7 +177,7 @@ where
     }
 }
 
-impl<'a, W> Sink<Record> for FileSink<'a, W>
+impl<'a, W> Sink<Record<'_>> for FileSink<'a, W>
 where
     W: AsyncWrite + Unpin + Send + 'a,
 {
@@ -188,16 +190,15 @@ where
         self.get_mut().poll_write(cx)
     }
 
-    fn start_send(self: std::pin::Pin<&mut Self>, item: Record) -> Result<()> {
+    fn start_send(self: std::pin::Pin<&mut Self>, item: Record<'_>) -> Result<()> {
         let this = self.get_mut();
 
         if let Some(writer) = this.writer.take() {
-            let Record { columns, fields } = item;
-            let fields = fields.unwrap_or_else(|| this.fields.clone());
+            let fields = item.fields().unwrap_or_else(|| &this.fields[..]);
 
             let (dictionaries, record) = encode_chunk(
-                &columns,
-                &fields[..],
+                item.columns(),
+                fields,
                 &mut this.dictionary_tracker,
                 &this.options,
             )?;
