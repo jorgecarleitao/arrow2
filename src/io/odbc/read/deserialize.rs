@@ -1,3 +1,4 @@
+use odbc_api::buffers::{BinColumnIt, TextColumnIt};
 use odbc_api::Bit;
 
 use crate::array::{Array, BinaryArray, BooleanArray, PrimitiveArray, Utf8Array};
@@ -12,19 +13,9 @@ use super::super::api::buffers::AnyColumnView;
 /// This is CPU-bounded
 pub fn deserialize(column: AnyColumnView, data_type: DataType) -> Box<dyn Array> {
     match column {
-        AnyColumnView::Text(slice) => Box::new(utf8(
-            data_type,
-            slice.values(),
-            slice.lengths(),
-            slice.max_len(),
-        )) as _,
+        AnyColumnView::Text(iter) => Box::new(utf8(data_type, iter)) as _,
         AnyColumnView::WText(_) => todo!(),
-        AnyColumnView::Binary(slice) => Box::new(binary(
-            data_type,
-            slice.values(),
-            slice.lengths(),
-            slice.max_len(),
-        )) as _,
+        AnyColumnView::Binary(iter) => Box::new(binary(data_type, iter)) as _,
         AnyColumnView::Date(_) => todo!(),
         AnyColumnView::Time(_) => todo!(),
         AnyColumnView::Timestamp(_) => todo!(),
@@ -41,42 +32,44 @@ pub fn deserialize(column: AnyColumnView, data_type: DataType) -> Box<dyn Array>
         AnyColumnView::NullableTimestamp(_) => todo!(),
         AnyColumnView::NullableF64(slice) => Box::new(primitive_optional(
             data_type,
-            slice.values(),
-            slice.indicators(),
+            slice.raw_values().0,
+            slice.raw_values().1,
         )) as _,
         AnyColumnView::NullableF32(slice) => Box::new(primitive_optional(
             data_type,
-            slice.values(),
-            slice.indicators(),
+            slice.raw_values().0,
+            slice.raw_values().1,
         )) as _,
         AnyColumnView::NullableI8(slice) => Box::new(primitive_optional(
             data_type,
-            slice.values(),
-            slice.indicators(),
+            slice.raw_values().0,
+            slice.raw_values().1,
         )) as _,
         AnyColumnView::NullableI16(slice) => Box::new(primitive_optional(
             data_type,
-            slice.values(),
-            slice.indicators(),
+            slice.raw_values().0,
+            slice.raw_values().1,
         )) as _,
         AnyColumnView::NullableI32(slice) => Box::new(primitive_optional(
             data_type,
-            slice.values(),
-            slice.indicators(),
+            slice.raw_values().0,
+            slice.raw_values().1,
         )) as _,
         AnyColumnView::NullableI64(slice) => Box::new(primitive_optional(
             data_type,
-            slice.values(),
-            slice.indicators(),
+            slice.raw_values().0,
+            slice.raw_values().1,
         )) as _,
         AnyColumnView::NullableU8(slice) => Box::new(primitive_optional(
             data_type,
-            slice.values(),
-            slice.indicators(),
+            slice.raw_values().0,
+            slice.raw_values().1,
         )) as _,
-        AnyColumnView::NullableBit(slice) => {
-            Box::new(bool_optional(data_type, slice.values(), slice.indicators())) as _
-        }
+        AnyColumnView::NullableBit(slice) => Box::new(bool_optional(
+            data_type,
+            slice.raw_values().0,
+            slice.raw_values().1,
+        )) as _,
     }
 }
 
@@ -110,53 +103,38 @@ fn bool_optional(data_type: DataType, values: &[Bit], indicators: &[isize]) -> B
     BooleanArray::from_data(data_type, values, validity)
 }
 
-fn binary_generic(
-    slice: &[u8],
-    lengths: &[isize],
-    max_length: usize,
-    null_terminator: usize,
+fn binary_generic<'a>(
+    iter: impl Iterator<Item = Option<&'a [u8]>>,
 ) -> (Buffer<i32>, Buffer<u8>, Option<Bitmap>) {
-    let mut validity = MutableBitmap::with_capacity(lengths.len());
+    let length = iter.size_hint().0;
+    let mut validity = MutableBitmap::with_capacity(length);
+    let mut values = Vec::<u8>::with_capacity(0);
 
-    println!("{:?}", lengths);
-    println!("{:?}", slice);
-    let mut offsets = Vec::with_capacity(lengths.len() + 1);
+    let mut offsets = Vec::with_capacity(length + 1);
     offsets.push(0i32);
-    let mut length = 0;
-    offsets.extend(lengths.iter().map(|&indicator| {
-        validity.push(indicator != -1);
-        length += if indicator > 0 { indicator as i32 } else { 0 };
-        length
-    }));
-    // the loop above ensures monotonicity
-    // this proves boundness
-    assert!((length as usize) < slice.len());
 
-    let mut values = Vec::<u8>::with_capacity(length as usize);
-    offsets.windows(2).enumerate().for_each(|(index, x)| {
-        let len = (x[1] - x[0]) as usize;
-        let offset = index * (max_length + null_terminator);
-        // this bound check is not necessary
-        values.extend_from_slice(&slice[offset..offset + len])
-    });
+    for item in iter {
+        if let Some(item) = item {
+            values.extend_from_slice(item);
+            validity.push(true);
+        } else {
+            validity.push(false);
+        }
+        offsets.push(values.len() as i32)
+    }
 
     (offsets.into(), values.into(), validity.into())
 }
 
-fn binary(
-    data_type: DataType,
-    slice: &[u8],
-    lengths: &[isize],
-    max_length: usize,
-) -> BinaryArray<i32> {
-    let (offsets, values, validity) = binary_generic(slice, lengths, max_length, 0);
+fn binary(data_type: DataType, iter: BinColumnIt) -> BinaryArray<i32> {
+    let (offsets, values, validity) = binary_generic(iter);
 
     // this O(N) check is not necessary
     BinaryArray::from_data(data_type, offsets, values, validity)
 }
 
-fn utf8(data_type: DataType, slice: &[u8], lengths: &[isize], max_length: usize) -> Utf8Array<i32> {
-    let (offsets, values, validity) = binary_generic(slice, lengths, max_length, 1);
+fn utf8(data_type: DataType, iter: TextColumnIt<u8>) -> Utf8Array<i32> {
+    let (offsets, values, validity) = binary_generic(iter);
 
     // this O(N) check is necessary for the utf8 validity
     Utf8Array::from_data(data_type, offsets, values, validity)
