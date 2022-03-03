@@ -172,11 +172,7 @@ pub fn page_iter_to_arrays<'a, I: 'a + DataPages>(
                         .collect::<Vec<_>>();
                     let validity = array.validity().cloned();
 
-                    Ok(PrimitiveArray::<i128>::from_data(
-                        data_type.clone(),
-                        values.into(),
-                        validity,
-                    ))
+                    PrimitiveArray::<i128>::try_new(data_type.clone(), values.into(), validity)
                 });
 
                 let arrays = pages.map(|x| x.map(|x| Arc::new(x) as Arc<dyn Array>));

@@ -70,7 +70,7 @@ where
         compression,
         version,
     )?;
-    Ok(ListArray::from_data(data_type, offsets, values, validity))
+    ListArray::try_new(data_type, offsets, values, validity)
 }
 
 pub fn skip_list<O: Offset>(

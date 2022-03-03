@@ -90,7 +90,7 @@ fn to_primitive_days_ms(
         .iter()
         .map(to_days_ms)
         .collect();
-    PrimitiveArray::<days_ms>::from_data(data_type, values, validity)
+    PrimitiveArray::<days_ms>::new(data_type, values, validity)
 }
 
 fn to_primitive_months_days_ns(
@@ -105,7 +105,7 @@ fn to_primitive_months_days_ns(
         .iter()
         .map(to_months_days_ns)
         .collect();
-    PrimitiveArray::<months_days_ns>::from_data(data_type, values, validity)
+    PrimitiveArray::<months_days_ns>::new(data_type, values, validity)
 }
 
 fn to_decimal(json_col: &ArrowJsonColumn, data_type: DataType) -> PrimitiveArray<i128> {
@@ -123,7 +123,7 @@ fn to_decimal(json_col: &ArrowJsonColumn, data_type: DataType) -> PrimitiveArray
         })
         .collect();
 
-    PrimitiveArray::<i128>::from_data(data_type, values, validity)
+    PrimitiveArray::<i128>::new(data_type, values, validity)
 }
 
 fn to_primitive<T: NativeType + NumCast>(
@@ -159,7 +159,7 @@ fn to_primitive<T: NativeType + NumCast>(
             .collect()
     };
 
-    PrimitiveArray::<T>::from_data(data_type, values, validity)
+    PrimitiveArray::<T>::new(data_type, values, validity)
 }
 
 fn to_binary<O: Offset>(json_col: &ArrowJsonColumn, data_type: DataType) -> Arc<dyn Array> {
@@ -172,7 +172,7 @@ fn to_binary<O: Offset>(json_col: &ArrowJsonColumn, data_type: DataType) -> Arc<
         .iter()
         .flat_map(|value| value.as_str().map(|x| hex::decode(x).unwrap()).unwrap())
         .collect();
-    Arc::new(BinaryArray::from_data(data_type, offsets, values, validity))
+    Arc::new(BinaryArray::new(data_type, offsets, values, validity))
 }
 
 fn to_utf8<O: Offset>(json_col: &ArrowJsonColumn, data_type: DataType) -> Arc<dyn Array> {
@@ -185,7 +185,7 @@ fn to_utf8<O: Offset>(json_col: &ArrowJsonColumn, data_type: DataType) -> Arc<dy
         .iter()
         .flat_map(|value| value.as_str().unwrap().as_bytes().to_vec())
         .collect();
-    Arc::new(Utf8Array::from_data(data_type, offsets, values, validity))
+    Arc::new(Utf8Array::new(data_type, offsets, values, validity))
 }
 
 fn to_list<O: Offset>(
@@ -205,7 +205,7 @@ fn to_list<O: Offset>(
         dictionaries,
     )?;
     let offsets = to_offsets::<O>(json_col.offset.as_ref());
-    Ok(Arc::new(ListArray::<O>::from_data(
+    Ok(Arc::new(ListArray::<O>::new(
         data_type, offsets, values, validity,
     )))
 }
@@ -227,9 +227,7 @@ fn to_map(
         dictionaries,
     )?;
     let offsets = to_offsets::<i32>(json_col.offset.as_ref());
-    Ok(Arc::new(MapArray::from_data(
-        data_type, offsets, field, validity,
-    )))
+    Ok(Arc::new(MapArray::new(data_type, offsets, field, validity)))
 }
 
 fn to_dictionary<K: DictionaryKey>(
@@ -266,7 +264,7 @@ pub fn to_array(
 ) -> Result<Arc<dyn Array>> {
     use PhysicalType::*;
     match data_type.to_physical_type() {
-        Null => Ok(Arc::new(NullArray::from_data(data_type, json_col.count))),
+        Null => Ok(Arc::new(NullArray::new(data_type, json_col.count))),
         Boolean => {
             let validity = to_validity(&json_col.validity);
             let values = json_col
@@ -276,9 +274,7 @@ pub fn to_array(
                 .iter()
                 .map(|value| value.as_bool().unwrap())
                 .collect::<Bitmap>();
-            Ok(Arc::new(BooleanArray::from_data(
-                data_type, values, validity,
-            )))
+            Ok(Arc::new(BooleanArray::new(data_type, values, validity)))
         }
         Primitive(PrimitiveType::Int8) => Ok(Arc::new(to_primitive::<i8>(json_col, data_type))),
         Primitive(PrimitiveType::Int16) => Ok(Arc::new(to_primitive::<i16>(json_col, data_type))),
@@ -309,7 +305,7 @@ pub fn to_array(
                 .iter()
                 .flat_map(|value| value.as_str().map(|x| hex::decode(x).unwrap()).unwrap())
                 .collect();
-            Ok(Arc::new(FixedSizeBinaryArray::from_data(
+            Ok(Arc::new(FixedSizeBinaryArray::new(
                 data_type, values, validity,
             )))
         }
@@ -328,7 +324,7 @@ pub fn to_array(
                 dictionaries,
             )?;
 
-            Ok(Arc::new(FixedSizeListArray::from_data(
+            Ok(Arc::new(FixedSizeListArray::new(
                 data_type, values, validity,
             )))
         }
@@ -346,7 +342,7 @@ pub fn to_array(
                 })
                 .collect::<Result<Vec<_>>>()?;
 
-            let array = StructArray::from_data(data_type, values, validity);
+            let array = StructArray::new(data_type, values, validity);
             Ok(Arc::new(array))
         }
         Dictionary(key_type) => {
@@ -400,7 +396,7 @@ pub fn to_array(
                 })
                 .unwrap_or_default();
 
-            let array = UnionArray::from_data(data_type, types, fields, offsets);
+            let array = UnionArray::new(data_type, types, fields, offsets);
             Ok(Arc::new(array))
         }
         Map => to_map(json_col, data_type, field, dictionaries),

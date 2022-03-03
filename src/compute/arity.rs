@@ -29,7 +29,7 @@ where
     let values = array.values().iter().map(|v| op(*v));
     let values = Buffer::from_trusted_len_iter(values);
 
-    PrimitiveArray::<O>::from_data(data_type, values, array.validity().cloned())
+    PrimitiveArray::<O>::new(data_type, values, array.validity().cloned())
 }
 
 /// Version of unary that checks for errors in the closure used to create the
@@ -47,7 +47,7 @@ where
     let values = array.values().iter().map(|v| op(*v));
     let values = Buffer::try_from_trusted_len_iter(values)?;
 
-    Ok(PrimitiveArray::<O>::from_data(
+    Ok(PrimitiveArray::<O>::new(
         data_type,
         values,
         array.validity().cloned(),
@@ -77,7 +77,7 @@ where
     let values = Buffer::from_trusted_len_iter(values);
 
     (
-        PrimitiveArray::<O>::from_data(data_type, values, array.validity().cloned()),
+        PrimitiveArray::<O>::new(data_type, values, array.validity().cloned()),
         mut_bitmap.into(),
     )
 }
@@ -117,7 +117,7 @@ where
     let bitmap: Bitmap = mut_bitmap.into();
     let validity = combine_validities(array.validity(), Some(&bitmap));
 
-    PrimitiveArray::<O>::from_data(data_type, values, validity)
+    PrimitiveArray::<O>::new(data_type, values, validity)
 }
 
 /// Applies a binary operations to two primitive arrays. This is the fastest
@@ -156,7 +156,7 @@ where
         .map(|(l, r)| op(*l, *r));
     let values = Buffer::from_trusted_len_iter(values);
 
-    PrimitiveArray::<T>::from_data(data_type, values, validity)
+    PrimitiveArray::<T>::new(data_type, values, validity)
 }
 
 /// Version of binary that checks for errors in the closure used to create the
@@ -184,7 +184,7 @@ where
 
     let values = Buffer::try_from_trusted_len_iter(values)?;
 
-    Ok(PrimitiveArray::<T>::from_data(data_type, values, validity))
+    Ok(PrimitiveArray::<T>::new(data_type, values, validity))
 }
 
 /// Version of binary that returns an array and bitmap. Used when working with
@@ -215,7 +215,7 @@ where
     let values = Buffer::from_trusted_len_iter(values);
 
     (
-        PrimitiveArray::<T>::from_data(data_type, values, validity),
+        PrimitiveArray::<T>::new(data_type, values, validity),
         mut_bitmap.into(),
     )
 }
@@ -264,5 +264,5 @@ where
     // as Null
     let validity = combine_validities(validity.as_ref(), Some(&bitmap));
 
-    PrimitiveArray::<T>::from_data(data_type, values, validity)
+    PrimitiveArray::<T>::new(data_type, values, validity)
 }

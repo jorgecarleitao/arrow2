@@ -170,10 +170,10 @@ fn filter_nonnull_primitive<T: NativeType + Simd>(
 
     if let Some(validity) = array.validity() {
         let (values, validity) = null_filter_simd(array.values(), validity, mask);
-        PrimitiveArray::<T>::from_data(array.data_type().clone(), values.into(), validity.into())
+        PrimitiveArray::<T>::new(array.data_type().clone(), values.into(), validity.into())
     } else {
         let values = nonnull_filter_simd(array.values(), mask);
-        PrimitiveArray::<T>::from_data(array.data_type().clone(), values.into(), None)
+        PrimitiveArray::<T>::new(array.data_type().clone(), values.into(), None)
     }
 }
 
@@ -260,7 +260,7 @@ pub fn filter(array: &dyn Array, filter: &BooleanArray) -> Result<Box<dyn Array>
     if let Some(validities) = filter.validity() {
         let values = filter.values();
         let new_values = values & validities;
-        let filter = BooleanArray::from_data(DataType::Boolean, new_values, None);
+        let filter = BooleanArray::new(DataType::Boolean, new_values, None);
         return crate::compute::filter::filter(array, &filter);
     }
 

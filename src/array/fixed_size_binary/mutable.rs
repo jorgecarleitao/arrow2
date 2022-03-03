@@ -23,7 +23,7 @@ pub struct MutableFixedSizeBinaryArray {
 
 impl From<MutableFixedSizeBinaryArray> for FixedSizeBinaryArray {
     fn from(other: MutableFixedSizeBinaryArray) -> Self {
-        FixedSizeBinaryArray::from_data(
+        FixedSizeBinaryArray::new(
             other.data_type,
             other.values.into(),
             other.validity.map(|x| x.into()),
@@ -187,7 +187,7 @@ impl MutableArray for MutableFixedSizeBinaryArray {
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        Box::new(FixedSizeBinaryArray::from_data(
+        Box::new(FixedSizeBinaryArray::new(
             DataType::FixedSizeBinary(self.size),
             std::mem::take(&mut self.values).into(),
             std::mem::take(&mut self.validity).map(|x| x.into()),
@@ -195,7 +195,7 @@ impl MutableArray for MutableFixedSizeBinaryArray {
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
-        Arc::new(FixedSizeBinaryArray::from_data(
+        Arc::new(FixedSizeBinaryArray::new(
             DataType::FixedSizeBinary(self.size),
             std::mem::take(&mut self.values).into(),
             std::mem::take(&mut self.validity).map(|x| x.into()),

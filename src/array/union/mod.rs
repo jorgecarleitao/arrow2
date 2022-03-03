@@ -144,7 +144,7 @@ impl UnionArray {
             // all from the same field
             let types = Buffer::new_zeroed(length);
 
-            Self::from_data(data_type, types, fields, offsets)
+            Self::new(data_type, types, fields, offsets)
         } else {
             panic!("Union struct must be created with the corresponding Union DataType")
         }

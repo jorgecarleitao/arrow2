@@ -126,7 +126,7 @@ impl<'a> Decoder<'a, bool, MutableBitmap> for BooleanDecoder {
 }
 
 fn finish(data_type: &DataType, values: MutableBitmap, validity: MutableBitmap) -> BooleanArray {
-    BooleanArray::from_data(data_type.clone(), values.into(), validity.into())
+    BooleanArray::new(data_type.clone(), values.into(), validity.into())
 }
 
 /// An iterator adapter over [`DataPages`] assumed to be encoded as boolean arrays

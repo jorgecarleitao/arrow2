@@ -104,7 +104,7 @@ impl MapArray {
     /// Returns a new null [`MapArray`] of `length`.
     pub fn new_null(data_type: DataType, length: usize) -> Self {
         let field = new_empty_array(Self::get_field(&data_type).data_type().clone()).into();
-        Self::from_data(
+        Self::new(
             data_type,
             Buffer::new_zeroed(length + 1),
             field,
@@ -115,7 +115,7 @@ impl MapArray {
     /// Returns a new empty [`MapArray`].
     pub fn new_empty(data_type: DataType) -> Self {
         let field = new_empty_array(Self::get_field(&data_type).data_type().clone()).into();
-        Self::from_data(data_type, Buffer::from(vec![0i32]), field, None)
+        Self::new(data_type, Buffer::from(vec![0i32]), field, None)
     }
 }
 

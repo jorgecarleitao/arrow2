@@ -90,7 +90,7 @@ pub fn or(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
         }
         (None, None) => None,
     };
-    Ok(BooleanArray::from_data(
+    Ok(BooleanArray::new(
         DataType::Boolean,
         lhs_values | rhs_values,
         validity,
@@ -179,7 +179,7 @@ pub fn and(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
         }
         (None, None) => None,
     };
-    Ok(BooleanArray::from_data(
+    Ok(BooleanArray::new(
         DataType::Boolean,
         lhs_values & rhs_values,
         validity,
@@ -205,7 +205,7 @@ pub fn or_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray {
         Some(true) => {
             let mut values = MutableBitmap::new();
             values.extend_constant(array.len(), true);
-            BooleanArray::from_data(DataType::Boolean, values.into(), None)
+            BooleanArray::new(DataType::Boolean, values.into(), None)
         }
         Some(false) => array.clone(),
         None => {
@@ -214,7 +214,7 @@ pub fn or_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray {
                 Some(validity) => binary(values, validity, |value, validity| validity & value),
                 None => unary(values, |value| value),
             };
-            BooleanArray::from_data(DataType::Boolean, values.clone(), Some(validity))
+            BooleanArray::new(DataType::Boolean, values.clone(), Some(validity))
         }
     }
 }
@@ -238,7 +238,7 @@ pub fn and_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray 
         Some(true) => array.clone(),
         Some(false) => {
             let values = Bitmap::new_zeroed(array.len());
-            BooleanArray::from_data(DataType::Boolean, values, None)
+            BooleanArray::new(DataType::Boolean, values, None)
         }
         None => {
             let values = array.values();
@@ -246,7 +246,7 @@ pub fn and_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray 
                 Some(validity) => binary(values, validity, |value, validity| validity & !value),
                 None => unary(values, |value| !value),
             };
-            BooleanArray::from_data(DataType::Boolean, array.values().clone(), Some(validity))
+            BooleanArray::new(DataType::Boolean, array.values().clone(), Some(validity))
         }
     }
 }

@@ -43,7 +43,7 @@ where
         DataType::Int32
     };
 
-    PrimitiveArray::<O>::from_data(data_type, values, array.validity().cloned())
+    PrimitiveArray::<O>::new(data_type, values, array.validity().cloned())
 }
 
 /// Returns an array of integers with the number of bytes on each string of the array.

@@ -30,7 +30,7 @@ where
         .unwrap();
     let values = dict.values().iter().map(|x| (op)(*x)).collect::<Vec<_>>();
 
-    Arc::new(PrimitiveArray::from_data(data_type, values.into(), None))
+    Arc::new(PrimitiveArray::new(data_type, values.into(), None))
 }
 
 /// An iterator adapter over [`DataPages`] assumed to be encoded as boolean arrays

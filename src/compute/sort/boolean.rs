@@ -49,5 +49,5 @@ pub fn sort_boolean<I: Index>(
     }
 
     let data_type = I::PRIMITIVE.into();
-    PrimitiveArray::<I>::from_data(data_type, values.into(), None)
+    PrimitiveArray::<I>::new(data_type, values.into(), None)
 }

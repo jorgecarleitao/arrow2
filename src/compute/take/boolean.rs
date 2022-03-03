@@ -97,7 +97,7 @@ pub fn take<I: Index>(values: &BooleanArray, indices: &PrimitiveArray<I>) -> Boo
         (true, true) => take_values_indices_validity(values, indices),
     };
 
-    BooleanArray::from_data(data_type, values, validity)
+    BooleanArray::new(data_type, values, validity)
 }
 
 #[cfg(test)]

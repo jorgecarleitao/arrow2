@@ -307,7 +307,7 @@ fn cast_list<O: Offset>(
     )?
     .into();
 
-    Ok(ListArray::<O>::from_data(
+    Ok(ListArray::<O>::new(
         to_type.clone(),
         array.offsets().clone(),
         new_values,
@@ -323,7 +323,7 @@ fn cast_list_to_large_list(array: &ListArray<i32>, to_type: &DataType) -> ListAr
         .collect::<Vec<_>>()
         .into();
 
-    ListArray::<i64>::from_data(
+    ListArray::<i64>::new(
         to_type.clone(),
         offets,
         array.values().clone(),
@@ -339,7 +339,7 @@ fn cast_large_to_list(array: &ListArray<i64>, to_type: &DataType) -> ListArray<i
         .collect::<Vec<_>>()
         .into();
 
-    ListArray::<i32>::from_data(
+    ListArray::<i32>::new(
         to_type.clone(),
         offsets,
         array.values().clone(),
@@ -419,8 +419,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
             // create offsets, where if array.len() = 2, we have [0,1,2]
             let offsets = (0..=array.len() as i32).collect::<Vec<_>>();
 
-            let list_array =
-                ListArray::<i32>::from_data(to_type.clone(), offsets.into(), values, None);
+            let list_array = ListArray::<i32>::new(to_type.clone(), offsets.into(), values, None);
 
             Ok(Box::new(list_array))
         }

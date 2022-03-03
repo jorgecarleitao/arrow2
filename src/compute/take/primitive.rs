@@ -111,5 +111,5 @@ pub fn take<T: NativeType, I: Index>(
         (true, true) => take_values_indices_validity::<T, I>(values, indices),
     };
 
-    PrimitiveArray::<T>::from_data(values.data_type().clone(), buffer, validity)
+    PrimitiveArray::<T>::new(values.data_type().clone(), buffer, validity)
 }

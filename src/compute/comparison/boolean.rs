@@ -19,7 +19,7 @@ where
 
     let values = binary(lhs.values(), rhs.values(), op);
 
-    BooleanArray::from_data(DataType::Boolean, values, validity)
+    BooleanArray::new(DataType::Boolean, values, validity)
 }
 
 /// Evaluate `op(left, right)` for [`BooleanArray`] and scalar using
@@ -31,7 +31,7 @@ where
     let rhs = if rhs { !0 } else { 0 };
 
     let values = unary(lhs.values(), |x| op(x, rhs));
-    BooleanArray::from_data(DataType::Boolean, values, lhs.validity().cloned())
+    BooleanArray::new(DataType::Boolean, values, lhs.validity().cloned())
 }
 
 /// Perform `lhs == rhs` operation on two [`BooleanArray`]s.
@@ -113,7 +113,7 @@ pub fn lt_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
     if rhs {
         compare_op_scalar(lhs, rhs, |a, _| !a)
     } else {
-        BooleanArray::from_data(
+        BooleanArray::new(
             DataType::Boolean,
             Bitmap::new_zeroed(lhs.len()),
             lhs.validity().cloned(),
@@ -147,7 +147,7 @@ pub fn gt(lhs: &BooleanArray, rhs: &BooleanArray) -> BooleanArray {
 /// Non-null values are greater than null values.
 pub fn gt_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
     if rhs {
-        BooleanArray::from_data(
+        BooleanArray::new(
             DataType::Boolean,
             Bitmap::new_zeroed(lhs.len()),
             lhs.validity().cloned(),

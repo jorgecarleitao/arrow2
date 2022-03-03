@@ -25,7 +25,7 @@ where
 
     let values = op(left_buffer, right_buffer);
 
-    Ok(BooleanArray::from_data(DataType::Boolean, values, validity))
+    Ok(BooleanArray::new(DataType::Boolean, values, validity))
 }
 
 /// Performs `AND` operation on two arrays. If either left or right value is null then the
@@ -85,7 +85,7 @@ pub fn or(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
 pub fn not(array: &BooleanArray) -> BooleanArray {
     let values = !array.values();
     let validity = array.validity().cloned();
-    BooleanArray::from_data(DataType::Boolean, values, validity)
+    BooleanArray::new(DataType::Boolean, values, validity)
 }
 
 /// Returns a non-null [BooleanArray] with whether each value of the array is null.
@@ -109,7 +109,7 @@ pub fn is_null(input: &dyn Array) -> BooleanArray {
         Some(buffer) => !buffer,
     };
 
-    BooleanArray::from_data(DataType::Boolean, values, None)
+    BooleanArray::new(DataType::Boolean, values, None)
 }
 
 /// Returns a non-null [BooleanArray] with whether each value of the array is not null.
@@ -132,7 +132,7 @@ pub fn is_not_null(input: &dyn Array) -> BooleanArray {
         }
         Some(buffer) => buffer.clone(),
     };
-    BooleanArray::from_data(DataType::Boolean, values, None)
+    BooleanArray::new(DataType::Boolean, values, None)
 }
 
 /// Performs `AND` operation on an array and a scalar value. If either left or right value
@@ -154,7 +154,7 @@ pub fn and_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray 
         Some(true) => array.clone(),
         Some(false) => {
             let values = Bitmap::new_zeroed(array.len());
-            BooleanArray::from_data(DataType::Boolean, values, array.validity().cloned())
+            BooleanArray::new(DataType::Boolean, values, array.validity().cloned())
         }
         None => BooleanArray::new_null(DataType::Boolean, array.len()),
     }
@@ -179,7 +179,7 @@ pub fn or_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray {
         Some(true) => {
             let mut values = MutableBitmap::new();
             values.extend_constant(array.len(), true);
-            BooleanArray::from_data(DataType::Boolean, values.into(), array.validity().cloned())
+            BooleanArray::new(DataType::Boolean, values.into(), array.validity().cloned())
         }
         Some(false) => array.clone(),
         None => BooleanArray::new_null(DataType::Boolean, array.len()),

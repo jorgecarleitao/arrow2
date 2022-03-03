@@ -24,7 +24,7 @@ pub struct MutableBooleanArray {
 
 impl From<MutableBooleanArray> for BooleanArray {
     fn from(other: MutableBooleanArray) -> Self {
-        BooleanArray::from_data(
+        BooleanArray::new(
             other.data_type,
             other.values.into(),
             other.validity.map(|x| x.into()),

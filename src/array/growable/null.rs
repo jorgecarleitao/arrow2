@@ -39,16 +39,16 @@ impl<'a> Growable<'a> for GrowableNull {
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
-        Arc::new(NullArray::from_data(self.data_type.clone(), self.length))
+        Arc::new(NullArray::new(self.data_type.clone(), self.length))
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        Box::new(NullArray::from_data(self.data_type.clone(), self.length))
+        Box::new(NullArray::new(self.data_type.clone(), self.length))
     }
 }
 
 impl From<GrowableNull> for NullArray {
     fn from(val: GrowableNull) -> Self {
-        NullArray::from_data(val.data_type, val.length)
+        NullArray::new(val.data_type, val.length)
     }
 }

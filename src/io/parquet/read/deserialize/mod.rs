@@ -45,7 +45,7 @@ fn create_list(
             let (offsets, validity) = nested.nested.pop().unwrap().inner();
 
             let offsets = offsets.iter().map(|x| *x as i32).collect::<Vec<_>>();
-            Arc::new(ListArray::<i32>::from_data(
+            Arc::new(ListArray::<i32>::new(
                 data_type,
                 offsets.into(),
                 values,
@@ -55,9 +55,7 @@ fn create_list(
         DataType::LargeList(_) => {
             let (offsets, validity) = nested.nested.pop().unwrap().inner();
 
-            Arc::new(ListArray::<i64>::from_data(
-                data_type, offsets, values, validity,
-            ))
+            Arc::new(ListArray::<i64>::new(data_type, offsets, values, validity))
         }
         _ => {
             return Err(ArrowError::NotYetImplemented(format!(

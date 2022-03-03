@@ -510,18 +510,18 @@ fn finish_eq_validities(
     match (validity_lhs, validity_rhs) {
         (None, None) => output_without_validities,
         (Some(lhs), None) => compute::boolean::and(
-            &BooleanArray::from_data(DataType::Boolean, lhs, None),
+            &BooleanArray::new(DataType::Boolean, lhs, None),
             &output_without_validities,
         )
         .unwrap(),
         (None, Some(rhs)) => compute::boolean::and(
             &output_without_validities,
-            &BooleanArray::from_data(DataType::Boolean, rhs, None),
+            &BooleanArray::new(DataType::Boolean, rhs, None),
         )
         .unwrap(),
         (Some(lhs), Some(rhs)) => {
-            let lhs = BooleanArray::from_data(DataType::Boolean, lhs, None);
-            let rhs = BooleanArray::from_data(DataType::Boolean, rhs, None);
+            let lhs = BooleanArray::new(DataType::Boolean, lhs, None);
+            let rhs = BooleanArray::new(DataType::Boolean, rhs, None);
             let eq_validities = compute::comparison::boolean::eq(&lhs, &rhs);
             compute::boolean::and(&output_without_validities, &eq_validities).unwrap()
         }
@@ -536,17 +536,17 @@ fn finish_neq_validities(
         (None, None) => output_without_validities,
         (Some(lhs), None) => {
             let lhs_negated =
-                compute::boolean::not(&BooleanArray::from_data(DataType::Boolean, lhs, None));
+                compute::boolean::not(&BooleanArray::new(DataType::Boolean, lhs, None));
             compute::boolean::or(&lhs_negated, &output_without_validities).unwrap()
         }
         (None, Some(rhs)) => {
             let rhs_negated =
-                compute::boolean::not(&BooleanArray::from_data(DataType::Boolean, rhs, None));
+                compute::boolean::not(&BooleanArray::new(DataType::Boolean, rhs, None));
             compute::boolean::or(&output_without_validities, &rhs_negated).unwrap()
         }
         (Some(lhs), Some(rhs)) => {
-            let lhs = BooleanArray::from_data(DataType::Boolean, lhs, None);
-            let rhs = BooleanArray::from_data(DataType::Boolean, rhs, None);
+            let lhs = BooleanArray::new(DataType::Boolean, lhs, None);
+            let rhs = BooleanArray::new(DataType::Boolean, rhs, None);
             let neq_validities = compute::comparison::boolean::neq(&lhs, &rhs);
             compute::boolean::or(&output_without_validities, &neq_validities).unwrap()
         }

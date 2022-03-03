@@ -25,7 +25,7 @@ pub struct MutableBinaryArray<O: Offset> {
 
 impl<O: Offset> From<MutableBinaryArray<O>> for BinaryArray<O> {
     fn from(other: MutableBinaryArray<O>) -> Self {
-        BinaryArray::<O>::from_data(
+        BinaryArray::<O>::new(
             other.data_type,
             other.offsets.into(),
             other.values.into(),
@@ -179,7 +179,7 @@ impl<O: Offset> MutableArray for MutableBinaryArray<O> {
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        Box::new(BinaryArray::from_data(
+        Box::new(BinaryArray::new(
             self.data_type.clone(),
             std::mem::take(&mut self.offsets).into(),
             std::mem::take(&mut self.values).into(),
@@ -188,7 +188,7 @@ impl<O: Offset> MutableArray for MutableBinaryArray<O> {
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
-        Arc::new(BinaryArray::from_data(
+        Arc::new(BinaryArray::new(
             self.data_type.clone(),
             std::mem::take(&mut self.offsets).into(),
             std::mem::take(&mut self.values).into(),

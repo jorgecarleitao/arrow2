@@ -46,11 +46,7 @@ pub fn regex_match<O: Offset>(values: &Utf8Array<O>, regex: &Utf8Array<O>) -> Re
     });
     let new_values = Bitmap::try_from_trusted_len_iter(iterator)?;
 
-    Ok(BooleanArray::from_data(
-        DataType::Boolean,
-        new_values,
-        validity,
-    ))
+    Ok(BooleanArray::new(DataType::Boolean, new_values, validity))
 }
 
 /// Regex matches
@@ -83,5 +79,5 @@ fn unary_utf8_boolean<O: Offset, F: Fn(&str) -> bool>(
         op(value.unwrap())
     });
     let values = Bitmap::from_trusted_len_iter(iterator);
-    BooleanArray::from_data(DataType::Boolean, values, validity)
+    BooleanArray::new(DataType::Boolean, values, validity)
 }

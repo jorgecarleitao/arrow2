@@ -132,7 +132,7 @@ impl<O: Offset> Utf8Array<O> {
     /// Returns a new [`Utf8Array`] whose all slots are null / `None`.
     #[inline]
     pub fn new_null(data_type: DataType, length: usize) -> Self {
-        Self::from_data(
+        Self::new(
             data_type,
             Buffer::new_zeroed(length + 1),
             Buffer::new(),
@@ -286,33 +286,49 @@ impl<O: Offset> Utf8Array<O> {
         use Either::*;
         if let Some(bitmap) = self.validity {
             match bitmap.into_mut() {
-                Left(bitmap) => Left(Utf8Array::from_data(
-                    self.data_type,
-                    self.offsets,
-                    self.values,
-                    Some(bitmap),
-                )),
+                // Safety: invariants are preserved
+                Left(bitmap) => Left(unsafe {
+                    Utf8Array::new_unchecked(
+                        self.data_type,
+                        self.offsets,
+                        self.values,
+                        Some(bitmap),
+                    )
+                }),
                 Right(mutable_bitmap) => match (self.values.into_mut(), self.offsets.into_mut()) {
                     (Left(immutable_values), Left(immutable_offsets)) => {
-                        Left(Utf8Array::from_data(
-                            self.data_type,
-                            immutable_offsets,
-                            immutable_values,
-                            Some(mutable_bitmap.into()),
-                        ))
+                        // Safety: invariants are preserved
+                        Left(unsafe {
+                            Utf8Array::new_unchecked(
+                                self.data_type,
+                                immutable_offsets,
+                                immutable_values,
+                                Some(mutable_bitmap.into()),
+                            )
+                        })
                     }
-                    (Left(immutable_values), Right(mutable_offsets)) => Left(Utf8Array::from_data(
-                        self.data_type,
-                        mutable_offsets.into(),
-                        immutable_values,
-                        Some(mutable_bitmap.into()),
-                    )),
-                    (Right(mutable_values), Left(immutable_offsets)) => Left(Utf8Array::from_data(
-                        self.data_type,
-                        immutable_offsets,
-                        mutable_values.into(),
-                        Some(mutable_bitmap.into()),
-                    )),
+                    (Left(immutable_values), Right(mutable_offsets)) => {
+                        // Safety: invariants are preserved
+                        Left(unsafe {
+                            Utf8Array::new_unchecked(
+                                self.data_type,
+                                mutable_offsets.into(),
+                                immutable_values,
+                                Some(mutable_bitmap.into()),
+                            )
+                        })
+                    }
+                    (Right(mutable_values), Left(immutable_offsets)) => {
+                        // Safety: invariants are preserved
+                        Left(unsafe {
+                            Utf8Array::new_unchecked(
+                                self.data_type,
+                                immutable_offsets,
+                                mutable_values.into(),
+                                Some(mutable_bitmap.into()),
+                            )
+                        })
+                    }
                     (Right(mutable_values), Right(mutable_offsets)) => {
                         Right(MutableUtf8Array::from_data(
                             self.data_type,

@@ -135,7 +135,7 @@ fn deserialize_list<O: Offset, A: Borrow<Value>>(rows: &[A], data_type: DataType
 
     let values = _deserialize(&inner, child.clone());
 
-    ListArray::<O>::from_data(data_type, offsets.into(), values, validity.into())
+    ListArray::<O>::new(data_type, offsets.into(), values, validity.into())
 }
 
 fn deserialize_struct<A: Borrow<Value>>(rows: &[A], data_type: DataType) -> StructArray {
@@ -166,7 +166,7 @@ fn deserialize_struct<A: Borrow<Value>>(rows: &[A], data_type: DataType) -> Stru
         .map(|(_, (data_type, values))| _deserialize(&values, data_type.clone()))
         .collect::<Vec<_>>();
 
-    StructArray::from_data(data_type, values, None)
+    StructArray::new(data_type, values, None)
 }
 
 fn deserialize_dictionary<K: DictionaryKey, A: Borrow<Value>>(
@@ -204,7 +204,7 @@ fn deserialize_dictionary<K: DictionaryKey, A: Borrow<Value>>(
 
 pub(crate) fn _deserialize<A: Borrow<Value>>(rows: &[A], data_type: DataType) -> Arc<dyn Array> {
     match &data_type {
-        DataType::Null => Arc::new(NullArray::from_data(data_type, rows.len())),
+        DataType::Null => Arc::new(NullArray::new(data_type, rows.len())),
         DataType::Boolean => Arc::new(deserialize_boolean(rows)),
         DataType::Int8 => Arc::new(deserialize_int::<i8, _>(rows, data_type)),
         DataType::Int16 => Arc::new(deserialize_int::<i16, _>(rows, data_type)),

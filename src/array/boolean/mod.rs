@@ -74,13 +74,13 @@ impl BooleanArray {
 
     /// Returns a new empty [`BooleanArray`].
     pub fn new_empty(data_type: DataType) -> Self {
-        Self::from_data(data_type, Bitmap::new(), None)
+        Self::new(data_type, Bitmap::new(), None)
     }
 
     /// Returns a new [`BooleanArray`] whose all slots are null / `None`.
     pub fn new_null(data_type: DataType, length: usize) -> Self {
         let bitmap = Bitmap::new_zeroed(length);
-        Self::from_data(data_type, bitmap.clone(), Some(bitmap))
+        Self::new(data_type, bitmap.clone(), Some(bitmap))
     }
 }
 
@@ -139,13 +139,9 @@ impl BooleanArray {
 
         if let Some(bitmap) = self.validity {
             match bitmap.into_mut() {
-                Left(bitmap) => Left(BooleanArray::from_data(
-                    self.data_type,
-                    self.values,
-                    Some(bitmap),
-                )),
+                Left(bitmap) => Left(BooleanArray::new(self.data_type, self.values, Some(bitmap))),
                 Right(mutable_bitmap) => match self.values.into_mut() {
-                    Left(immutable) => Left(BooleanArray::from_data(
+                    Left(immutable) => Left(BooleanArray::new(
                         self.data_type,
                         immutable,
                         Some(mutable_bitmap.into()),
@@ -159,7 +155,7 @@ impl BooleanArray {
             }
         } else {
             match self.values.into_mut() {
-                Left(immutable) => Left(BooleanArray::from_data(self.data_type, immutable, None)),
+                Left(immutable) => Left(BooleanArray::new(self.data_type, immutable, None)),
                 Right(mutable) => Right(MutableBooleanArray::from_data(
                     self.data_type,
                     mutable,

@@ -24,7 +24,7 @@ where
         .map(|(lhs, rhs)| op(lhs, rhs));
     let values = Bitmap::from_trusted_len_iter(values);
 
-    BooleanArray::from_data(DataType::Boolean, values, validity)
+    BooleanArray::new(DataType::Boolean, values, validity)
 }
 
 /// Evaluate `op(lhs, rhs)` for [`Utf8Array`] and scalar using
@@ -39,7 +39,7 @@ where
     let values = lhs.values_iter().map(|lhs| op(lhs, rhs));
     let values = Bitmap::from_trusted_len_iter(values);
 
-    BooleanArray::from_data(DataType::Boolean, values, validity)
+    BooleanArray::new(DataType::Boolean, values, validity)
 }
 
 /// Perform `lhs == rhs` operation on [`Utf8Array`].

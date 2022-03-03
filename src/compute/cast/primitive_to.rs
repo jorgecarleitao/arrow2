@@ -66,7 +66,7 @@ pub fn primitive_to_boolean<T: NativeType>(
     let iter = from.values().iter().map(|v| *v != T::default());
     let values = Bitmap::from_trusted_len_iter(iter);
 
-    BooleanArray::from_data(to_type, values, from.validity().cloned())
+    BooleanArray::new(to_type, values, from.validity().cloned())
 }
 
 pub(super) fn primitive_to_boolean_dyn<T>(
@@ -264,7 +264,7 @@ pub fn primitive_to_same_primitive<T>(
 where
     T: NativeType,
 {
-    PrimitiveArray::<T>::from_data(
+    PrimitiveArray::<T>::new(
         to_type.clone(),
         from.values().clone(),
         from.validity().cloned(),
