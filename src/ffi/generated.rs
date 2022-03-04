@@ -2,7 +2,7 @@
 
 /// ABI-compatible struct for [`ArrowSchema`](https://arrow.apache.org/docs/format/CDataInterface.html#structure-definitions)
 #[repr(C)]
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ArrowSchema {
     pub(super) format: *const ::std::os::raw::c_char,
     pub(super) name: *const ::std::os::raw::c_char,
@@ -17,7 +17,7 @@ pub struct ArrowSchema {
 
 /// ABI-compatible struct for [`ArrowArray`](https://arrow.apache.org/docs/format/CDataInterface.html#structure-definitions)
 #[repr(C)]
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ArrowArray {
     pub(super) length: i64,
     pub(super) null_count: i64,
@@ -33,7 +33,7 @@ pub struct ArrowArray {
 
 /// ABI-compatible struct for [`ArrowArrayStream`](https://arrow.apache.org/docs/format/CStreamInterface.html).
 #[repr(C)]
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ArrowArrayStream {
     pub(super) get_schema: ::std::option::Option<
         unsafe extern "C" fn(
