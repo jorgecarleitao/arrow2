@@ -1,5 +1,13 @@
 # Changelog
 
+## [v0.9.2](https://github.com/jorgecarleitao/arrow2/tree/v0.9.2) (2022-03-04)
+
+[Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.9.1...v0.9.2)
+
+**Fixed bugs:**
+
+- Fixed unsound implementation of Clone for Ffi_ArrowArray struct
+
 ## [v0.9.1](https://github.com/jorgecarleitao/arrow2/tree/v0.9.1) (2022-01-19)
 
 [Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.9.0...v0.9.1)
