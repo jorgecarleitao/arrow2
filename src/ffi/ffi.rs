@@ -34,7 +34,7 @@ use crate::{
 /// See <https://arrow.apache.org/docs/format/CDataInterface.html#structure-definitions>
 /// This was created by bindgen
 #[repr(C)]
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Ffi_ArrowArray {
     pub(crate) length: i64,
     pub(crate) null_count: i64,
