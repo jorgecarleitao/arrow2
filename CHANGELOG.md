@@ -1,5 +1,13 @@
 # Changelog
 
+## [v0.7.1](https://github.com/jorgecarleitao/arrow2/tree/v0.7.1) (2022-03-04)
+
+[Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.7.0...v0.7.1)
+
+**Fixed bugs:**
+
+- Fixed unsoundness in invalid derived Clone
+
 ## [v0.7.0](https://github.com/jorgecarleitao/arrow2/tree/v0.7.0) (2021-10-29)
 
 [Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.6.2...v0.7.0)
