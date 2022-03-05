@@ -1,4 +1,4 @@
-//! Example showing how to write to, and read from, an ODBC connector
+//! Demo of how to write to, and read from, an ODBC connector
 //!
 //! On an Ubuntu, you need to run the following (to install the driver):
 //! ```bash
@@ -28,13 +28,14 @@ fn main() -> Result<()> {
     let query = "INSERT INTO example (c1, c2) VALUES (?, ?)";
     let prepared = connection.prepare(query).unwrap();
 
-    // first, initialize buffers from odbc-api
+    // secondly, we initialize buffers from odbc-api
     let fields = vec![
         // (for now) the types here must match the tables' schema
         Field::new("unused", DataType::Int32, true),
         Field::new("unused", DataType::LargeUtf8, true),
     ];
 
+    // third, we initialize the writer
     let mut writer = write::Writer::try_new(prepared, fields)?;
 
     // say we have (or receive from a channel) a chunk:

@@ -121,12 +121,13 @@ fn bool(array: &BooleanArray, values: &mut [api::Bit]) {
 }
 
 fn bool_optional(array: &BooleanArray, values: &mut NullableSliceMut<api::Bit>) {
+    let (values, indicators) = values.raw_values();
     array
         .values()
         .iter()
-        .zip(values.values().iter_mut())
+        .zip(values.iter_mut())
         .for_each(|(from, to)| *to = api::Bit(from as u8));
-    write_validity(array.validity(), values.indicators());
+    write_validity(array.validity(), indicators);
 }
 
 fn primitive<T: NativeType>(array: &PrimitiveArray<T>, values: &mut [T]) {
@@ -145,8 +146,9 @@ fn write_validity(validity: Option<&Bitmap>, indicators: &mut [isize]) {
 }
 
 fn primitive_optional<T: NativeType>(array: &PrimitiveArray<T>, values: &mut NullableSliceMut<T>) {
-    values.values().copy_from_slice(array.values());
-    write_validity(array.validity(), values.indicators());
+    let (values, indicators) = values.raw_values();
+    values.copy_from_slice(array.values());
+    write_validity(array.validity(), indicators);
 }
 
 fn fixed_binary(array: &FixedSizeBinaryArray, writer: &mut BinColumnWriter) {

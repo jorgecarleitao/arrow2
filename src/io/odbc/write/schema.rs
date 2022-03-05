@@ -3,7 +3,7 @@ use super::super::api;
 use crate::datatypes::{DataType, Field};
 use crate::error::{ArrowError, Result};
 
-/// Infers the [`ColumnDescription`] from the fields
+/// Infers the [`api::ColumnDescription`] from the fields
 pub fn infer_descriptions(fields: &[Field]) -> Result<Vec<api::ColumnDescription>> {
     fields
         .iter()

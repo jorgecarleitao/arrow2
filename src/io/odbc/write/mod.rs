@@ -9,6 +9,8 @@ pub use schema::infer_descriptions;
 pub use serialize::serialize;
 
 /// Creates a [`api::buffers::ColumnarBuffer`] from [`api::ColumnDescription`]s.
+///
+/// This is useful when separating the serialization (CPU-bounded) to writing to the DB (IO-bounded).
 pub fn buffer_from_description(
     descriptions: Vec<api::ColumnDescription>,
     capacity: usize,
@@ -23,7 +25,10 @@ pub fn buffer_from_description(
     api::buffers::buffer_from_description(capacity, descs)
 }
 
-/// A writer of [`Chunk`] to an ODBC prepared statement.
+/// A writer of [`Chunk`]s to an ODBC [`api::Prepared`] statement.
+/// # Implementation
+/// This struct mixes CPU-bounded and IO-bounded tasks and is not ideal
+/// for an `async` context.
 pub struct Writer<'a> {
     fields: Vec<Field>,
     buffer: api::buffers::ColumnarBuffer<api::buffers::AnyColumnBuffer>,
@@ -31,7 +36,9 @@ pub struct Writer<'a> {
 }
 
 impl<'a> Writer<'a> {
-    /// Creates a new [`Writer`]
+    /// Creates a new [`Writer`].
+    /// # Errors
+    /// Errors iff any of the types from [`Field`] is not supported.
     pub fn try_new(prepared: api::Prepared<'a>, fields: Vec<Field>) -> Result<Self> {
         let buffer = buffer_from_description(infer_descriptions(&fields)?, 0);
         Ok(Self {
@@ -41,7 +48,9 @@ impl<'a> Writer<'a> {
         })
     }
 
-    /// Writes a chunk to the writter.
+    /// Writes a chunk to the writer.
+    /// # Errors
+    /// Errors iff the execution of the statement fails.
     pub fn write<A: AsRef<dyn Array>>(&mut self, chunk: &Chunk<A>) -> Result<()> {
         if chunk.len() > self.buffer.num_rows() {
             // if the chunk is larger, we re-allocate new buffers to hold it
