@@ -1,8 +1,8 @@
 use stdext::function_name;
 
-use arrow2::array::{Array, BinaryArray, BooleanArray, Int32Array, Utf8Array};
+use arrow2::array::{Array, BinaryArray, BooleanArray, Int32Array, Int64Array, Utf8Array};
 use arrow2::chunk::Chunk;
-use arrow2::datatypes::Field;
+use arrow2::datatypes::{DataType, Field, TimeUnit};
 use arrow2::error::Result;
 use arrow2::io::odbc::api::{Connection, Cursor};
 use arrow2::io::odbc::read::{buffer_from_metadata, deserialize, infer_schema};
@@ -45,6 +45,49 @@ fn bool_nullable() -> Result<()> {
     ])];
 
     test(expected, "BIT", "(1),(NULL)", table_name)
+}
+
+#[test]
+fn date_nullable() -> Result<()> {
+    let table_name = function_name!().rsplit_once(':').unwrap().1;
+    let expected =
+        vec![Chunk::new(vec![
+            Box::new(Int32Array::from([Some(100), None]).to(DataType::Date32)) as _,
+        ])];
+
+    test(expected, "DATE", "('1970-04-11'),(NULL)", table_name)
+}
+
+#[test]
+fn timestamp_nullable() -> Result<()> {
+    let table_name = function_name!().rsplit_once(':').unwrap().1;
+    let expected = vec![Chunk::new(vec![Box::new(
+        Int64Array::from([Some(60 * 60 * 1000), None])
+            .to(DataType::Timestamp(TimeUnit::Millisecond, None)),
+    ) as _])];
+
+    test(
+        expected,
+        "DATETIME",
+        "('1970-01-01 01:00:00'),(NULL)",
+        table_name,
+    )
+}
+
+#[test]
+fn timestamp_ms_nullable() -> Result<()> {
+    let table_name = function_name!().rsplit_once(':').unwrap().1;
+    let expected = vec![Chunk::new(vec![Box::new(
+        Int64Array::from([Some(60 * 60 * 1000 + 110), None])
+            .to(DataType::Timestamp(TimeUnit::Millisecond, None)),
+    ) as _])];
+
+    test(
+        expected,
+        "DATETIME",
+        "('1970-01-01 01:00:00.110'),(NULL)",
+        table_name,
+    )
 }
 
 #[test]
