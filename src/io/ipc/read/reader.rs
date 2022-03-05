@@ -26,10 +26,10 @@ pub struct FileMetadata {
     /// The blocks in the file
     ///
     /// A block indicates the regions in the file to read to get data
-    blocks: Vec<arrow_format::ipc::Block>,
+    pub(super) blocks: Vec<arrow_format::ipc::Block>,
 
     /// Dictionaries associated to each dict_id
-    dictionaries: Dictionaries,
+    pub(super) dictionaries: Dictionaries,
 }
 
 /// Arrow File reader
@@ -166,7 +166,7 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
     })
 }
 
-fn get_serialized_batch<'a>(
+pub(super) fn get_serialized_batch<'a>(
     message: &'a arrow_format::ipc::MessageRef,
 ) -> Result<arrow_format::ipc::RecordBatchRef<'a>> {
     let header = message.header()?.ok_or_else(|| {

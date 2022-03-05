@@ -7,8 +7,10 @@ use arrow2::datatypes::Schema;
 use arrow2::error::Result;
 use arrow2::io::ipc::read;
 use arrow2::io::ipc::write::stream_async;
+use arrow2::io::ipc::write::stream_async::StreamSink;
 use arrow2::io::ipc::IpcField;
 use futures::io::Cursor as AsyncCursor;
+use futures::SinkExt;
 
 use crate::io::ipc::common::read_arrow_stream;
 use crate::io::ipc::common::read_gzip_json;
@@ -21,12 +23,12 @@ async fn write_(
     let mut result = AsyncCursor::new(vec![]);
 
     let options = stream_async::WriteOptions { compression: None };
-    let mut writer = stream_async::StreamWriter::new(&mut result, options);
-    writer.start(schema, Some(ipc_fields)).await?;
+    let mut sink = StreamSink::new(&mut result, schema, Some(ipc_fields.to_vec()), options);
     for batch in batches {
-        writer.write(batch, schema, Some(ipc_fields)).await?;
+        sink.feed((batch, Some(ipc_fields)).into()).await?;
     }
-    writer.finish().await?;
+    sink.close().await?;
+    drop(sink);
     Ok(result.into_inner())
 }
 

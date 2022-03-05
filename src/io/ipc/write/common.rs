@@ -1,3 +1,4 @@
+use std::borrow::{Borrow, Cow};
 use std::sync::Arc;
 
 use arrow_format::ipc::planus::Builder;
@@ -378,4 +379,56 @@ pub struct EncodedData {
 #[inline]
 pub(crate) fn pad_to_8(len: usize) -> usize {
     (((len + 7) & !7) - len) as usize
+}
+
+/// An array [`Chunk`] with optional accompanying IPC fields.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Record<'a> {
+    columns: Cow<'a, Chunk<Arc<dyn Array>>>,
+    fields: Option<Cow<'a, [IpcField]>>,
+}
+
+impl<'a> Record<'a> {
+    /// Get the IPC fields for this record.
+    pub fn fields(&self) -> Option<&[IpcField]> {
+        self.fields.as_deref()
+    }
+
+    /// Get the Arrow columns in this record.
+    pub fn columns(&self) -> &Chunk<Arc<dyn Array>> {
+        self.columns.borrow()
+    }
+}
+
+impl From<Chunk<Arc<dyn Array>>> for Record<'static> {
+    fn from(columns: Chunk<Arc<dyn Array>>) -> Self {
+        Self {
+            columns: Cow::Owned(columns),
+            fields: None,
+        }
+    }
+}
+
+impl<'a, F> From<(Chunk<Arc<dyn Array>>, Option<F>)> for Record<'a>
+where
+    F: Into<Cow<'a, [IpcField]>>,
+{
+    fn from((columns, fields): (Chunk<Arc<dyn Array>>, Option<F>)) -> Self {
+        Self {
+            columns: Cow::Owned(columns),
+            fields: fields.map(|f| f.into()),
+        }
+    }
+}
+
+impl<'a, F> From<(&'a Chunk<Arc<dyn Array>>, Option<F>)> for Record<'a>
+where
+    F: Into<Cow<'a, [IpcField]>>,
+{
+    fn from((columns, fields): (&'a Chunk<Arc<dyn Array>>, Option<F>)) -> Self {
+        Self {
+            columns: Cow::Borrowed(columns),
+            fields: fields.map(|f| f.into()),
+        }
+    }
 }

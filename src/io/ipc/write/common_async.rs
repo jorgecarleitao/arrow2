@@ -9,7 +9,7 @@ use super::common::EncodedData;
 
 /// Write a message's IPC data and buffers, returning metadata and buffer data lengths written
 pub async fn write_message<W: AsyncWrite + Unpin + Send>(
-    writer: &mut W,
+    mut writer: W,
     encoded: EncodedData,
 ) -> Result<(usize, usize)> {
     let arrow_data_len = encoded.arrow_data.len();
@@ -21,7 +21,7 @@ pub async fn write_message<W: AsyncWrite + Unpin + Send>(
     let aligned_size = (flatbuf_size + prefix_size + a) & !a;
     let padding_bytes = aligned_size - flatbuf_size - prefix_size;
 
-    write_continuation(writer, (aligned_size - prefix_size) as i32).await?;
+    write_continuation(&mut writer, (aligned_size - prefix_size) as i32).await?;
 
     // write the flatbuf
     if flatbuf_size > 0 {
@@ -43,7 +43,7 @@ pub async fn write_message<W: AsyncWrite + Unpin + Send>(
 /// Write a record batch to the writer, writing the message size before the message
 /// if the record batch is being written to a stream
 pub async fn write_continuation<W: AsyncWrite + Unpin + Send>(
-    writer: &mut W,
+    mut writer: W,
     total_len: i32,
 ) -> Result<usize> {
     writer.write_all(&CONTINUATION_MARKER).await?;
