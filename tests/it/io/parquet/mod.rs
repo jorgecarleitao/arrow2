@@ -17,10 +17,18 @@ type ArrayStats = (Arc<dyn Array>, Option<Box<dyn Statistics>>);
 pub fn read_column<R: Read + Seek>(
     mut reader: R,
     row_group: usize,
-    column: usize,
+    column: &str,
 ) -> Result<ArrayStats> {
     let metadata = read_metadata(&mut reader)?;
     let schema = infer_schema(&metadata)?;
+
+    let column = schema
+        .fields
+        .iter()
+        .enumerate()
+        .filter_map(|(i, f)| if f.name == column { Some(i) } else { None })
+        .next()
+        .unwrap();
 
     let mut reader = FileReader::try_new(reader, Some(&[column]), None, None, None)?;
 
@@ -34,11 +42,11 @@ pub fn read_column<R: Read + Seek>(
     ))
 }
 
-pub fn pyarrow_nested_nullable(column: usize) -> Box<dyn Array> {
+pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
     let offsets = Buffer::from_slice([0, 2, 2, 5, 8, 8, 11, 11, 12]);
 
     let values = match column {
-        0 => {
+        "list_int64" => {
             // [[0, 1], None, [2, None, 3], [4, 5, 6], [], [7, 8, 9], None, [10]]
             Arc::new(PrimitiveArray::<i64>::from(&[
                 Some(0),
@@ -55,7 +63,7 @@ pub fn pyarrow_nested_nullable(column: usize) -> Box<dyn Array> {
                 Some(10),
             ])) as Arc<dyn Array>
         }
-        1 | 2 => {
+        "list_int64_required" | "list_int64_required_required" => {
             // [[0, 1], None, [2, 0, 3], [4, 5, 6], [], [7, 8, 9], None, [10]]
             Arc::new(PrimitiveArray::<i64>::from(&[
                 Some(0),
@@ -72,7 +80,7 @@ pub fn pyarrow_nested_nullable(column: usize) -> Box<dyn Array> {
                 Some(10),
             ])) as Arc<dyn Array>
         }
-        3 => Arc::new(PrimitiveArray::<i16>::from(&[
+        "list_int16" => Arc::new(PrimitiveArray::<i16>::from(&[
             Some(0),
             Some(1),
             Some(2),
@@ -86,7 +94,7 @@ pub fn pyarrow_nested_nullable(column: usize) -> Box<dyn Array> {
             Some(9),
             Some(10),
         ])) as Arc<dyn Array>,
-        4 => Arc::new(BooleanArray::from(&[
+        "list_bool" => Arc::new(BooleanArray::from(&[
             Some(false),
             Some(true),
             Some(true),
@@ -112,7 +120,7 @@ pub fn pyarrow_nested_nullable(column: usize) -> Box<dyn Array> {
                 [""],
             ]
         */
-        5 => Arc::new(Utf8Array::<i32>::from(&[
+        "list_utf8" => Arc::new(Utf8Array::<i32>::from(&[
             Some("Hello".to_string()),
             Some("bbb".to_string()),
             Some("aa".to_string()),
@@ -126,7 +134,7 @@ pub fn pyarrow_nested_nullable(column: usize) -> Box<dyn Array> {
             Some("bbb".to_string()),
             Some("".to_string()),
         ])),
-        6 => Arc::new(BinaryArray::<i64>::from(&[
+        "list_large_binary" => Arc::new(BinaryArray::<i64>::from(&[
             Some(b"Hello".to_vec()),
             Some(b"bbb".to_vec()),
             Some(b"aa".to_vec()),
@@ -140,40 +148,23 @@ pub fn pyarrow_nested_nullable(column: usize) -> Box<dyn Array> {
             Some(b"bbb".to_vec()),
             Some(b"".to_vec()),
         ])),
-        7 | 8 | 9 => Arc::new(NullArray::from_data(DataType::Null, 1)),
+        "list_nested_i64"
+        | "list_nested_inner_required_i64"
+        | "list_nested_inner_required_required_i64" => {
+            Arc::new(NullArray::from_data(DataType::Null, 1))
+        }
         _ => unreachable!(),
     };
 
     match column {
-        0 | 1 | 3 | 4 | 5 | 6 => {
-            let field = match column {
-                0 => Field::new("item", DataType::Int64, true),
-                1 => Field::new("item", DataType::Int64, false),
-                3 => Field::new("item", DataType::Int16, true),
-                4 => Field::new("item", DataType::Boolean, true),
-                5 => Field::new("item", DataType::Utf8, true),
-                6 => Field::new("item", DataType::LargeBinary, true),
-                _ => unreachable!(),
-            };
-
-            let validity = Some(Bitmap::from([
-                true, false, true, true, true, true, false, true,
-            ]));
-            // [0, 2, 2, 5, 8, 8, 11, 11, 12]
-            // [[a1, a2], None, [a3, a4, a5], [a6, a7, a8], [], [a9, a10, a11], None, [a12]]
-            let data_type = DataType::List(Box::new(field));
-            Box::new(ListArray::<i32>::from_data(
-                data_type, offsets, values, validity,
-            ))
-        }
-        2 => {
+        "list_int64_required_required" => {
             // [[0, 1], [], [2, None, 3], [4, 5, 6], [], [7, 8, 9], [], [10]]
             let data_type = DataType::List(Box::new(Field::new("item", DataType::Int64, false)));
             Box::new(ListArray::<i32>::from_data(
                 data_type, offsets, values, None,
             ))
         }
-        7 => {
+        "list_nested_i64" => {
             // [[0, 1]], None, [[2, None], [3]], [[4, 5], [6]], [], [[7], None, [9]], [[], [None], None], [[10]]
             let data = [
                 Some(vec![Some(vec![Some(0), Some(1)])]),
@@ -191,7 +182,7 @@ pub fn pyarrow_nested_nullable(column: usize) -> Box<dyn Array> {
             let array: ListArray<i32> = a.into();
             Box::new(array)
         }
-        8 => {
+        "list_nested_inner_required_i64" => {
             let data = [
                 Some(vec![Some(vec![Some(0), Some(1)])]),
                 None,
@@ -208,7 +199,7 @@ pub fn pyarrow_nested_nullable(column: usize) -> Box<dyn Array> {
             let array: ListArray<i32> = a.into();
             Box::new(array)
         }
-        9 => {
+        "list_nested_inner_required_required_i64" => {
             let data = [
                 Some(vec![Some(vec![Some(0), Some(1)])]),
                 None,
@@ -229,11 +220,31 @@ pub fn pyarrow_nested_nullable(column: usize) -> Box<dyn Array> {
             let array: ListArray<i32> = a.into();
             Box::new(array)
         }
-        _ => unreachable!(),
+        _ => {
+            let field = match column {
+                "list_int64" => Field::new("item", DataType::Int64, true),
+                "list_int64_required" => Field::new("item", DataType::Int64, false),
+                "list_int16" => Field::new("item", DataType::Int16, true),
+                "list_bool" => Field::new("item", DataType::Boolean, true),
+                "list_utf8" => Field::new("item", DataType::Utf8, true),
+                "list_large_binary" => Field::new("item", DataType::LargeBinary, true),
+                _ => unreachable!(),
+            };
+
+            let validity = Some(Bitmap::from([
+                true, false, true, true, true, true, false, true,
+            ]));
+            // [0, 2, 2, 5, 8, 8, 11, 11, 12]
+            // [[a1, a2], None, [a3, a4, a5], [a6, a7, a8], [], [a9, a10, a11], None, [a12]]
+            let data_type = DataType::List(Box::new(field));
+            Box::new(ListArray::<i32>::from_data(
+                data_type, offsets, values, validity,
+            ))
+        }
     }
 }
 
-pub fn pyarrow_nullable(column: usize) -> Box<dyn Array> {
+pub fn pyarrow_nullable(column: &str) -> Box<dyn Array> {
     let i64_values = &[
         Some(0),
         Some(1),
@@ -248,8 +259,8 @@ pub fn pyarrow_nullable(column: usize) -> Box<dyn Array> {
     ];
 
     match column {
-        0 => Box::new(PrimitiveArray::<i64>::from(i64_values)),
-        1 => Box::new(PrimitiveArray::<f64>::from(&[
+        "int64" => Box::new(PrimitiveArray::<i64>::from(i64_values)),
+        "float64" => Box::new(PrimitiveArray::<f64>::from(&[
             Some(0.0),
             Some(1.0),
             None,
@@ -261,7 +272,7 @@ pub fn pyarrow_nullable(column: usize) -> Box<dyn Array> {
             None,
             Some(9.0),
         ])),
-        2 => Box::new(Utf8Array::<i32>::from(&[
+        "string" => Box::new(Utf8Array::<i32>::from(&[
             Some("Hello".to_string()),
             None,
             Some("aa".to_string()),
@@ -273,7 +284,7 @@ pub fn pyarrow_nullable(column: usize) -> Box<dyn Array> {
             Some("def".to_string()),
             Some("aaa".to_string()),
         ])),
-        3 => Box::new(BooleanArray::from(&[
+        "bool" => Box::new(BooleanArray::from(&[
             Some(true),
             None,
             Some(false),
@@ -285,100 +296,94 @@ pub fn pyarrow_nullable(column: usize) -> Box<dyn Array> {
             Some(true),
             Some(true),
         ])),
-        4 => Box::new(
+        "date" => Box::new(
             PrimitiveArray::<i64>::from(i64_values)
                 .to(DataType::Timestamp(TimeUnit::Millisecond, None)),
         ),
-        5 => {
+        "uint32" => {
             let values = i64_values
                 .iter()
                 .map(|x| x.map(|x| x as u32))
                 .collect::<Vec<_>>();
             Box::new(PrimitiveArray::<u32>::from(values))
         }
-        6 => {
+        "string_large" => {
             let keys = PrimitiveArray::<i32>::from([Some(0), Some(1), None, Some(1)]);
             let values = Arc::new(PrimitiveArray::<i32>::from_slice([10, 200]));
             Box::new(DictionaryArray::<i32>::from_data(keys, values))
         }
-        // decimal 9
-        7 => {
+        "decimal_9" => {
             let values = i64_values
                 .iter()
                 .map(|x| x.map(|x| x as i128))
                 .collect::<Vec<_>>();
             Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(9, 0)))
         }
-        // decimal 18
-        8 => {
+        "decimal_18" => {
             let values = i64_values
                 .iter()
                 .map(|x| x.map(|x| x as i128))
                 .collect::<Vec<_>>();
             Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(18, 0)))
         }
-        // decimal 26
-        9 => {
+        "decimal_26" => {
             let values = i64_values
                 .iter()
                 .map(|x| x.map(|x| x as i128))
                 .collect::<Vec<_>>();
             Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(26, 0)))
         }
-        10 => Box::new(
+        "timestamp_us" => Box::new(
             PrimitiveArray::<i64>::from(i64_values)
                 .to(DataType::Timestamp(TimeUnit::Microsecond, None)),
         ),
-        11 => Box::new(
+        "timestamp_s" => Box::new(
             PrimitiveArray::<i64>::from(i64_values).to(DataType::Timestamp(TimeUnit::Second, None)),
         ),
-        13 => Box::new(
-            PrimitiveArray::<i64>::from(i64_values).to(DataType::Timestamp(
-                TimeUnit::Second,
-                Some("UTC".to_string()),
-            )),
-        ),
+        "timestamp_s_utc" => Box::new(PrimitiveArray::<i64>::from(i64_values).to(
+            DataType::Timestamp(TimeUnit::Second, Some("UTC".to_string())),
+        )),
         _ => unreachable!(),
     }
 }
 
-pub fn pyarrow_nullable_statistics(column: usize) -> Option<Box<dyn Statistics>> {
+pub fn pyarrow_nullable_statistics(column: &str) -> Option<Box<dyn Statistics>> {
     Some(match column {
-        0 => Box::new(PrimitiveStatistics::<i64> {
+        "int64" => Box::new(PrimitiveStatistics::<i64> {
             data_type: DataType::Int64,
             distinct_count: None,
             null_count: Some(3),
             min_value: Some(0),
             max_value: Some(9),
         }),
-        1 => Box::new(PrimitiveStatistics::<f64> {
+        "float64" => Box::new(PrimitiveStatistics::<f64> {
             data_type: DataType::Float64,
             distinct_count: None,
             null_count: Some(3),
             min_value: Some(0.0),
             max_value: Some(9.0),
         }),
-        2 => Box::new(Utf8Statistics {
+        "string" => Box::new(Utf8Statistics {
             null_count: Some(4),
             distinct_count: None,
             min_value: Some("".to_string()),
             max_value: Some("def".to_string()),
         }),
-        3 => Box::new(BooleanStatistics {
+        "bool" => Box::new(BooleanStatistics {
             null_count: Some(4),
             distinct_count: None,
 
             min_value: Some(false),
             max_value: Some(true),
         }),
-        4 => Box::new(PrimitiveStatistics::<i64> {
+        "date" => Box::new(PrimitiveStatistics::<i64> {
             data_type: DataType::Timestamp(TimeUnit::Millisecond, None),
             distinct_count: None,
             null_count: Some(3),
             min_value: Some(0),
             max_value: Some(9),
         }),
-        5 => Box::new(PrimitiveStatistics::<u32> {
+        "uint32" => Box::new(PrimitiveStatistics::<u32> {
             data_type: DataType::UInt32,
             null_count: Some(3),
             distinct_count: None,
@@ -386,44 +391,43 @@ pub fn pyarrow_nullable_statistics(column: usize) -> Option<Box<dyn Statistics>>
             min_value: Some(0),
             max_value: Some(9),
         }),
-        6 => return None,
-        // Decimal statistics
-        7 => Box::new(PrimitiveStatistics::<i128> {
+        "string_large" => return None,
+        "decimal_9" => Box::new(PrimitiveStatistics::<i128> {
             distinct_count: None,
             null_count: Some(3),
             min_value: Some(0i128),
             max_value: Some(9i128),
             data_type: DataType::Decimal(9, 0),
         }),
-        8 => Box::new(PrimitiveStatistics::<i128> {
+        "decimal_18" => Box::new(PrimitiveStatistics::<i128> {
             distinct_count: None,
             null_count: Some(3),
             min_value: Some(0i128),
             max_value: Some(9i128),
             data_type: DataType::Decimal(18, 0),
         }),
-        9 => Box::new(PrimitiveStatistics::<i128> {
+        "decimal_26" => Box::new(PrimitiveStatistics::<i128> {
             distinct_count: None,
             null_count: Some(3),
             min_value: Some(0i128),
             max_value: Some(9i128),
             data_type: DataType::Decimal(26, 0),
         }),
-        10 => Box::new(PrimitiveStatistics::<i64> {
+        "timestamp_us" => Box::new(PrimitiveStatistics::<i64> {
             data_type: DataType::Timestamp(TimeUnit::Microsecond, None),
             distinct_count: None,
             null_count: Some(3),
             min_value: Some(0),
             max_value: Some(9),
         }),
-        11 => Box::new(PrimitiveStatistics::<i64> {
+        "timestamp_s" => Box::new(PrimitiveStatistics::<i64> {
             data_type: DataType::Timestamp(TimeUnit::Second, None),
             distinct_count: None,
             null_count: Some(3),
             min_value: Some(0),
             max_value: Some(9),
         }),
-        13 => Box::new(PrimitiveStatistics::<i64> {
+        "timestamp_s_utc" => Box::new(PrimitiveStatistics::<i64> {
             data_type: DataType::Timestamp(TimeUnit::Second, Some("UTC".to_string())),
             distinct_count: None,
             null_count: Some(3),
@@ -435,7 +439,7 @@ pub fn pyarrow_nullable_statistics(column: usize) -> Option<Box<dyn Statistics>>
 }
 
 // these values match the values in `integration`
-pub fn pyarrow_required(column: usize) -> Box<dyn Array> {
+pub fn pyarrow_required(column: &str) -> Box<dyn Array> {
     let i64_values = &[
         Some(-256),
         Some(-1),
@@ -450,31 +454,28 @@ pub fn pyarrow_required(column: usize) -> Box<dyn Array> {
     ];
 
     match column {
-        0 => Box::new(PrimitiveArray::<i64>::from(i64_values)),
-        3 => Box::new(BooleanArray::from_slice(&[
+        "int64" => Box::new(PrimitiveArray::<i64>::from(i64_values)),
+        "bool" => Box::new(BooleanArray::from_slice(&[
             true, true, false, false, false, true, true, true, true, true,
         ])),
-        2 => Box::new(Utf8Array::<i32>::from_slice(&[
+        "string" => Box::new(Utf8Array::<i32>::from_slice(&[
             "Hello", "bbb", "aa", "", "bbb", "abc", "bbb", "bbb", "def", "aaa",
         ])),
-        // decimal 9
-        6 => {
+        "decimal_9" => {
             let values = i64_values
                 .iter()
                 .map(|x| x.map(|x| x as i128))
                 .collect::<Vec<_>>();
             Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(9, 0)))
         }
-        // decimal 18
-        7 => {
+        "decimal_18" => {
             let values = i64_values
                 .iter()
                 .map(|x| x.map(|x| x as i128))
                 .collect::<Vec<_>>();
             Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(18, 0)))
         }
-        // decimal 26
-        8 => {
+        "decimal_26" => {
             let values = i64_values
                 .iter()
                 .map(|x| x.map(|x| x as i128))
@@ -485,45 +486,42 @@ pub fn pyarrow_required(column: usize) -> Box<dyn Array> {
     }
 }
 
-pub fn pyarrow_required_statistics(column: usize) -> Option<Box<dyn Statistics>> {
+pub fn pyarrow_required_statistics(column: &str) -> Option<Box<dyn Statistics>> {
     Some(match column {
-        0 => Box::new(PrimitiveStatistics::<i64> {
+        "int64" => Box::new(PrimitiveStatistics::<i64> {
             data_type: DataType::Int64,
             null_count: Some(0),
             distinct_count: None,
             min_value: Some(0),
             max_value: Some(9),
         }),
-        3 => Box::new(BooleanStatistics {
+        "bool" => Box::new(BooleanStatistics {
             null_count: Some(0),
             distinct_count: None,
             min_value: Some(false),
             max_value: Some(true),
         }),
-        2 => Box::new(Utf8Statistics {
+        "string" => Box::new(Utf8Statistics {
             null_count: Some(0),
             distinct_count: None,
             min_value: Some("".to_string()),
             max_value: Some("def".to_string()),
         }),
-        // decimal_9
-        6 => Box::new(PrimitiveStatistics::<i128> {
+        "decimal_9" => Box::new(PrimitiveStatistics::<i128> {
             distinct_count: None,
             null_count: Some(0),
             min_value: Some(0i128),
             max_value: Some(9i128),
             data_type: DataType::Decimal(9, 0),
         }),
-        // decimal_18
-        7 => Box::new(PrimitiveStatistics::<i128> {
+        "decimal_18" => Box::new(PrimitiveStatistics::<i128> {
             distinct_count: None,
             null_count: Some(0),
             min_value: Some(0i128),
             max_value: Some(9i128),
             data_type: DataType::Decimal(18, 0),
         }),
-        // decimal_26
-        8 => Box::new(PrimitiveStatistics::<i128> {
+        "decimal_26" => Box::new(PrimitiveStatistics::<i128> {
             distinct_count: None,
             null_count: Some(0),
             min_value: Some(0i128),
@@ -534,28 +532,28 @@ pub fn pyarrow_required_statistics(column: usize) -> Option<Box<dyn Statistics>>
     })
 }
 
-pub fn pyarrow_nested_nullable_statistics(column: usize) -> Option<Box<dyn Statistics>> {
+pub fn pyarrow_nested_nullable_statistics(column: &str) -> Option<Box<dyn Statistics>> {
     Some(match column {
-        3 => Box::new(PrimitiveStatistics::<i16> {
+        "list_int16" => Box::new(PrimitiveStatistics::<i16> {
             data_type: DataType::Int16,
             distinct_count: None,
             null_count: Some(1),
             min_value: Some(0),
             max_value: Some(10),
         }),
-        4 => Box::new(BooleanStatistics {
+        "list_bool" => Box::new(BooleanStatistics {
             distinct_count: None,
             null_count: Some(1),
             min_value: Some(false),
             max_value: Some(true),
         }),
-        5 => Box::new(Utf8Statistics {
+        "list_utf8" => Box::new(Utf8Statistics {
             distinct_count: None,
             null_count: Some(1),
             min_value: Some("".to_string()),
             max_value: Some("def".to_string()),
         }),
-        6 => Box::new(BinaryStatistics {
+        "list_large_binary" => Box::new(BinaryStatistics {
             distinct_count: None,
             null_count: Some(1),
             min_value: Some(b"".to_vec()),
@@ -571,7 +569,7 @@ pub fn pyarrow_nested_nullable_statistics(column: usize) -> Option<Box<dyn Stati
     })
 }
 
-pub fn pyarrow_struct(column: usize) -> Box<dyn Array> {
+pub fn pyarrow_struct(column: &str) -> Box<dyn Array> {
     let boolean = [
         Some(true),
         None,
@@ -590,7 +588,7 @@ pub fn pyarrow_struct(column: usize) -> Box<dyn Array> {
         Field::new("f2", DataType::Boolean, true),
     ];
     match column {
-        0 => {
+        "struct" => {
             let string = [
                 Some("Hello"),
                 None,
@@ -613,8 +611,8 @@ pub fn pyarrow_struct(column: usize) -> Box<dyn Array> {
                 None,
             ))
         }
-        1 => {
-            let struct_ = pyarrow_struct(0).into();
+        "struct_struct" => {
+            let struct_ = pyarrow_struct("struct").into();
             let values = vec![struct_, boolean];
             Box::new(StructArray::from_data(
                 DataType::Struct(vec![
@@ -629,15 +627,15 @@ pub fn pyarrow_struct(column: usize) -> Box<dyn Array> {
     }
 }
 
-pub fn pyarrow_struct_statistics(column: usize) -> Option<Box<dyn Statistics>> {
+pub fn pyarrow_struct_statistics(column: &str) -> Option<Box<dyn Statistics>> {
     match column {
-        0 => Some(Box::new(BooleanStatistics {
+        "struct" => Some(Box::new(BooleanStatistics {
             distinct_count: None,
             null_count: Some(4),
             min_value: Some(false),
             max_value: Some(true),
         })),
-        1 => Some(Box::new(BooleanStatistics {
+        "struct_struct" => Some(Box::new(BooleanStatistics {
             distinct_count: None,
             null_count: Some(1),
             min_value: Some(false),

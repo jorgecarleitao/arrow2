@@ -6,7 +6,7 @@ use arrow2::io::parquet::write::*;
 use super::*;
 
 fn round_trip(
-    column: usize,
+    column: &str,
     nullable: bool,
     nested: bool,
     version: Version,
@@ -56,7 +56,7 @@ fn round_trip(
 
     let data = writer.into_inner();
 
-    let (result, stats) = read_column(&mut Cursor::new(data), 0, 0)?;
+    let (result, stats) = read_column(&mut Cursor::new(data), 0, "a1")?;
     assert_eq!(array.as_ref(), result.as_ref());
     assert_eq!(statistics.as_ref(), stats.as_ref());
     Ok(())
@@ -65,7 +65,7 @@ fn round_trip(
 #[test]
 fn int64_optional_v1() -> Result<()> {
     round_trip(
-        0,
+        "int64",
         true,
         false,
         Version::V1,
@@ -77,7 +77,7 @@ fn int64_optional_v1() -> Result<()> {
 #[test]
 fn int64_required_v1() -> Result<()> {
     round_trip(
-        0,
+        "int64",
         false,
         false,
         Version::V1,
@@ -89,7 +89,7 @@ fn int64_required_v1() -> Result<()> {
 #[test]
 fn int64_optional_v2() -> Result<()> {
     round_trip(
-        0,
+        "int64",
         true,
         false,
         Version::V2,
@@ -101,7 +101,7 @@ fn int64_optional_v2() -> Result<()> {
 #[test]
 fn int64_optional_v2_compressed() -> Result<()> {
     round_trip(
-        0,
+        "int64",
         true,
         false,
         Version::V2,
@@ -113,7 +113,7 @@ fn int64_optional_v2_compressed() -> Result<()> {
 #[test]
 fn utf8_optional_v1() -> Result<()> {
     round_trip(
-        2,
+        "string",
         true,
         false,
         Version::V1,
@@ -125,7 +125,7 @@ fn utf8_optional_v1() -> Result<()> {
 #[test]
 fn utf8_required_v1() -> Result<()> {
     round_trip(
-        2,
+        "string",
         false,
         false,
         Version::V1,
@@ -137,7 +137,7 @@ fn utf8_required_v1() -> Result<()> {
 #[test]
 fn utf8_optional_v2() -> Result<()> {
     round_trip(
-        2,
+        "string",
         true,
         false,
         Version::V2,
@@ -149,7 +149,7 @@ fn utf8_optional_v2() -> Result<()> {
 #[test]
 fn utf8_required_v2() -> Result<()> {
     round_trip(
-        2,
+        "string",
         false,
         false,
         Version::V2,
@@ -161,7 +161,7 @@ fn utf8_required_v2() -> Result<()> {
 #[test]
 fn utf8_optional_v2_compressed() -> Result<()> {
     round_trip(
-        2,
+        "string",
         true,
         false,
         Version::V2,
@@ -173,7 +173,7 @@ fn utf8_optional_v2_compressed() -> Result<()> {
 #[test]
 fn utf8_required_v2_compressed() -> Result<()> {
     round_trip(
-        2,
+        "string",
         false,
         false,
         Version::V2,
@@ -185,7 +185,7 @@ fn utf8_required_v2_compressed() -> Result<()> {
 #[test]
 fn bool_optional_v1() -> Result<()> {
     round_trip(
-        3,
+        "bool",
         true,
         false,
         Version::V1,
@@ -197,7 +197,7 @@ fn bool_optional_v1() -> Result<()> {
 #[test]
 fn bool_required_v1() -> Result<()> {
     round_trip(
-        3,
+        "bool",
         false,
         false,
         Version::V1,
@@ -209,7 +209,7 @@ fn bool_required_v1() -> Result<()> {
 #[test]
 fn bool_optional_v2_uncompressed() -> Result<()> {
     round_trip(
-        3,
+        "bool",
         true,
         false,
         Version::V2,
@@ -221,7 +221,7 @@ fn bool_optional_v2_uncompressed() -> Result<()> {
 #[test]
 fn bool_required_v2_uncompressed() -> Result<()> {
     round_trip(
-        3,
+        "bool",
         false,
         false,
         Version::V2,
@@ -233,7 +233,7 @@ fn bool_required_v2_uncompressed() -> Result<()> {
 #[test]
 fn bool_required_v2_compressed() -> Result<()> {
     round_trip(
-        3,
+        "bool",
         false,
         false,
         Version::V2,
@@ -245,7 +245,7 @@ fn bool_required_v2_compressed() -> Result<()> {
 #[test]
 fn list_int64_optional_v2() -> Result<()> {
     round_trip(
-        0,
+        "list_int64",
         true,
         true,
         Version::V2,
@@ -257,7 +257,7 @@ fn list_int64_optional_v2() -> Result<()> {
 #[test]
 fn list_int64_optional_v1() -> Result<()> {
     round_trip(
-        0,
+        "list_int64",
         true,
         true,
         Version::V1,
@@ -269,7 +269,7 @@ fn list_int64_optional_v1() -> Result<()> {
 #[test]
 fn list_bool_optional_v2() -> Result<()> {
     round_trip(
-        4,
+        "list_bool",
         true,
         true,
         Version::V2,
@@ -281,7 +281,7 @@ fn list_bool_optional_v2() -> Result<()> {
 #[test]
 fn list_bool_optional_v1() -> Result<()> {
     round_trip(
-        4,
+        "list_bool",
         true,
         true,
         Version::V1,
@@ -293,7 +293,7 @@ fn list_bool_optional_v1() -> Result<()> {
 #[test]
 fn list_utf8_optional_v2() -> Result<()> {
     round_trip(
-        5,
+        "list_utf8",
         true,
         true,
         Version::V2,
@@ -305,7 +305,7 @@ fn list_utf8_optional_v2() -> Result<()> {
 #[test]
 fn list_utf8_optional_v1() -> Result<()> {
     round_trip(
-        5,
+        "list_utf8",
         true,
         true,
         Version::V1,
@@ -317,7 +317,7 @@ fn list_utf8_optional_v1() -> Result<()> {
 #[test]
 fn list_large_binary_optional_v2() -> Result<()> {
     round_trip(
-        6,
+        "list_large_binary",
         true,
         true,
         Version::V2,
@@ -329,7 +329,7 @@ fn list_large_binary_optional_v2() -> Result<()> {
 #[test]
 fn list_large_binary_optional_v1() -> Result<()> {
     round_trip(
-        6,
+        "list_large_binary",
         true,
         true,
         Version::V1,
@@ -342,7 +342,7 @@ fn list_large_binary_optional_v1() -> Result<()> {
 #[ignore]
 fn utf8_optional_v2_delta() -> Result<()> {
     round_trip(
-        2,
+        "string",
         true,
         false,
         Version::V2,
@@ -354,7 +354,7 @@ fn utf8_optional_v2_delta() -> Result<()> {
 #[test]
 fn i32_optional_v2_dict() -> Result<()> {
     round_trip(
-        6,
+        "string_large",
         true,
         false,
         Version::V2,
@@ -366,7 +366,7 @@ fn i32_optional_v2_dict() -> Result<()> {
 #[test]
 fn i32_optional_v2_dict_compressed() -> Result<()> {
     round_trip(
-        6,
+        "string_large",
         true,
         false,
         Version::V2,
@@ -379,7 +379,7 @@ fn i32_optional_v2_dict_compressed() -> Result<()> {
 #[test]
 fn decimal_9_optional_v1() -> Result<()> {
     round_trip(
-        7,
+        "decimal_9",
         true,
         false,
         Version::V1,
@@ -391,7 +391,7 @@ fn decimal_9_optional_v1() -> Result<()> {
 #[test]
 fn decimal_9_required_v1() -> Result<()> {
     round_trip(
-        6,
+        "decimal_9",
         false,
         false,
         Version::V1,
@@ -403,7 +403,7 @@ fn decimal_9_required_v1() -> Result<()> {
 #[test]
 fn decimal_18_optional_v1() -> Result<()> {
     round_trip(
-        8,
+        "decimal_18",
         true,
         false,
         Version::V1,
@@ -415,7 +415,7 @@ fn decimal_18_optional_v1() -> Result<()> {
 #[test]
 fn decimal_18_required_v1() -> Result<()> {
     round_trip(
-        7,
+        "decimal_18",
         false,
         false,
         Version::V1,
@@ -427,7 +427,7 @@ fn decimal_18_required_v1() -> Result<()> {
 #[test]
 fn decimal_26_optional_v1() -> Result<()> {
     round_trip(
-        9,
+        "decimal_26",
         true,
         false,
         Version::V1,
@@ -439,7 +439,7 @@ fn decimal_26_optional_v1() -> Result<()> {
 #[test]
 fn decimal_26_required_v1() -> Result<()> {
     round_trip(
-        8,
+        "decimal_26",
         false,
         false,
         Version::V1,
@@ -451,7 +451,7 @@ fn decimal_26_required_v1() -> Result<()> {
 #[test]
 fn decimal_9_optional_v2() -> Result<()> {
     round_trip(
-        7,
+        "decimal_9",
         true,
         false,
         Version::V2,
@@ -463,7 +463,7 @@ fn decimal_9_optional_v2() -> Result<()> {
 #[test]
 fn decimal_9_required_v2() -> Result<()> {
     round_trip(
-        6,
+        "decimal_9",
         false,
         false,
         Version::V2,
@@ -475,7 +475,7 @@ fn decimal_9_required_v2() -> Result<()> {
 #[test]
 fn decimal_18_optional_v2() -> Result<()> {
     round_trip(
-        8,
+        "decimal_18",
         true,
         false,
         Version::V2,
@@ -487,7 +487,7 @@ fn decimal_18_optional_v2() -> Result<()> {
 #[test]
 fn decimal_18_required_v2() -> Result<()> {
     round_trip(
-        7,
+        "decimal_18",
         false,
         false,
         Version::V2,
@@ -499,7 +499,7 @@ fn decimal_18_required_v2() -> Result<()> {
 #[test]
 fn decimal_26_optional_v2() -> Result<()> {
     round_trip(
-        9,
+        "decimal_26",
         true,
         false,
         Version::V2,
@@ -511,7 +511,7 @@ fn decimal_26_optional_v2() -> Result<()> {
 #[test]
 fn decimal_26_required_v2() -> Result<()> {
     round_trip(
-        8,
+        "decimal_26",
         false,
         false,
         Version::V2,
