@@ -4,12 +4,12 @@ use arrow2::array::*;
 use arrow2::compute::aggregate::*;
 use arrow2::util::bench_util::*;
 
-fn bench_sum(arr_a: &PrimitiveArray<f32>) {
+fn bench_sum(arr_a: &dyn Array) {
     sum(criterion::black_box(arr_a)).unwrap();
 }
 
-fn bench_min(arr_a: &PrimitiveArray<f32>) {
-    min_primitive(criterion::black_box(arr_a)).unwrap();
+fn bench_min(arr_a: &dyn Array) {
+    min(criterion::black_box(arr_a)).unwrap();
 }
 
 fn add_benchmark(c: &mut Criterion) {
@@ -21,6 +21,15 @@ fn add_benchmark(c: &mut Criterion) {
             b.iter(|| bench_sum(&arr_a))
         });
         c.bench_function(&format!("min 2^{} f32", log2_size), |b| {
+            b.iter(|| bench_min(&arr_a))
+        });
+
+        let arr_a = create_primitive_array::<i32>(size, 0.0);
+
+        c.bench_function(&format!("sum 2^{} i32", log2_size), |b| {
+            b.iter(|| bench_sum(&arr_a))
+        });
+        c.bench_function(&format!("min 2^{} i32", log2_size), |b| {
             b.iter(|| bench_min(&arr_a))
         });
 

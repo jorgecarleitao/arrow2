@@ -1,7 +1,7 @@
 use std::convert::TryInto;
+use std::simd::ToBitMask;
 
-use packed_simd::*;
-
+use crate::types::simd::*;
 use crate::types::{days_ms, months_days_ns};
 
 use super::*;
@@ -15,48 +15,48 @@ macro_rules! simd8 {
         impl Simd8Lanes<$type> for $md {
             #[inline]
             fn from_chunk(v: &[$type]) -> Self {
-                <$md>::from_slice_unaligned(v)
+                <$md>::from_slice(v)
             }
 
             #[inline]
             fn from_incomplete_chunk(v: &[$type], remaining: $type) -> Self {
                 let mut a = [remaining; 8];
                 a.iter_mut().zip(v.iter()).for_each(|(a, b)| *a = *b);
-                Self::from_chunk(a.as_ref())
+                Self::from_array(a)
             }
         }
 
         impl Simd8PartialEq for $md {
             #[inline]
             fn eq(self, other: Self) -> u8 {
-                self.eq(other).bitmask()
+                self.lanes_eq(other).to_bitmask()
             }
 
             #[inline]
             fn neq(self, other: Self) -> u8 {
-                self.ne(other).bitmask()
+                self.lanes_ne(other).to_bitmask()
             }
         }
 
         impl Simd8PartialOrd for $md {
             #[inline]
             fn lt_eq(self, other: Self) -> u8 {
-                self.le(other).bitmask()
+                self.lanes_le(other).to_bitmask()
             }
 
             #[inline]
             fn lt(self, other: Self) -> u8 {
-                self.lt(other).bitmask()
+                self.lanes_lt(other).to_bitmask()
             }
 
             #[inline]
             fn gt_eq(self, other: Self) -> u8 {
-                self.ge(other).bitmask()
+                self.lanes_ge(other).to_bitmask()
             }
 
             #[inline]
             fn gt(self, other: Self) -> u8 {
-                self.gt(other).bitmask()
+                self.lanes_gt(other).to_bitmask()
             }
         }
     };

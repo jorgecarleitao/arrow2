@@ -1,6 +1,6 @@
 //! Contains traits and implementations of multi-data used in SIMD.
 //! The actual representation is driven by the feature flag `"simd"`, which, if set,
-//! uses `packed_simd2` to get the intrinsics.
+//! uses [`std::simd`].
 use super::{days_ms, months_days_ns};
 use super::{BitChunk, BitChunkIter, NativeType};
 
@@ -14,7 +14,7 @@ pub trait FromMaskChunk<T> {
 /// # Safety
 /// The `NativeType` and the `NativeSimd` must have possible a matching alignment.
 /// e.g. slicing `&[NativeType]` by `align_of<NativeSimd>()` must be properly aligned/safe.
-pub unsafe trait NativeSimd: Default + Copy {
+pub unsafe trait NativeSimd: Sized + Default + Copy {
     /// Number of lanes
     const LANES: usize;
     /// The [`NativeType`] of this struct. E.g. `f32` for a `NativeSimd = f32x16`.

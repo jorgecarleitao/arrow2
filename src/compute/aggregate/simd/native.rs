@@ -70,7 +70,7 @@ macro_rules! simd_ord_int {
             }
 
             #[inline]
-            fn max(self, x: Self) -> Self {
+            fn max_lane(self, x: Self) -> Self {
                 let mut result = <$simd>::default();
                 result
                     .0
@@ -82,7 +82,7 @@ macro_rules! simd_ord_int {
             }
 
             #[inline]
-            fn min(self, x: Self) -> Self {
+            fn min_lane(self, x: Self) -> Self {
                 let mut result = <$simd>::default();
                 result
                     .0
@@ -123,7 +123,7 @@ macro_rules! simd_ord_float {
             }
 
             #[inline]
-            fn max(self, x: Self) -> Self {
+            fn max_lane(self, x: Self) -> Self {
                 let mut result = <$simd>::default();
                 result
                     .0
@@ -135,7 +135,7 @@ macro_rules! simd_ord_float {
             }
 
             #[inline]
-            fn min(self, x: Self) -> Self {
+            fn min_lane(self, x: Self) -> Self {
                 let mut result = <$simd>::default();
                 result
                     .0
