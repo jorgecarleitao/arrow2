@@ -36,6 +36,7 @@ fn test_pyarrow_integration(
         ("basic", true) => pyarrow_required(column),
         ("basic", false) => pyarrow_nullable(column),
         ("nested", false) => pyarrow_nested_nullable(column),
+        ("nested_edge", false) => pyarrow_nested_edge(column),
         ("struct", false) => pyarrow_struct(column),
         _ => unreachable!(),
     };
@@ -44,6 +45,7 @@ fn test_pyarrow_integration(
         ("basic", true) => pyarrow_required_statistics(column),
         ("basic", false) => pyarrow_nullable_statistics(column),
         ("nested", false) => pyarrow_nested_nullable_statistics(column),
+        ("nested_edge", false) => pyarrow_nested_edge_statistics(column),
         ("struct", false) => pyarrow_struct_statistics(column),
         _ => unreachable!(),
     };
@@ -398,6 +400,16 @@ fn v1_struct_optional() -> Result<()> {
 #[ignore]
 fn v1_struct_struct_optional() -> Result<()> {
     test_pyarrow_integration("struct_struct", 1, "struct", false, false, None)
+}
+
+#[test]
+fn v1_nested_edge_1() -> Result<()> {
+    test_pyarrow_integration("simple", 1, "nested_edge", false, false, None)
+}
+
+#[test]
+fn v1_nested_edge_2() -> Result<()> {
+    test_pyarrow_integration("null", 1, "nested_edge", false, false, None)
 }
 
 #[test]

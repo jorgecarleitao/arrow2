@@ -42,6 +42,28 @@ pub fn read_column<R: Read + Seek>(
     ))
 }
 
+pub fn pyarrow_nested_edge(column: &str) -> Box<dyn Array> {
+    match column {
+        "simple" => {
+            // [[0, 1]]
+            let data = [Some(vec![Some(0), Some(1)])];
+            let mut a = MutableListArray::<i32, MutablePrimitiveArray<i64>>::new();
+            a.try_extend(data).unwrap();
+            let array: ListArray<i32> = a.into();
+            Box::new(array)
+        }
+        "null" => {
+            // [None]
+            let data = [None::<Vec<Option<i64>>>];
+            let mut a = MutableListArray::<i32, MutablePrimitiveArray<i64>>::new();
+            a.try_extend(data).unwrap();
+            let array: ListArray<i32> = a.into();
+            Box::new(array)
+        }
+        _ => todo!(),
+    }
+}
+
 pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
     let offsets = Buffer::from_slice([0, 2, 2, 5, 8, 8, 11, 11, 12]);
 
@@ -566,6 +588,26 @@ pub fn pyarrow_nested_nullable_statistics(column: &str) -> Option<Box<dyn Statis
             min_value: Some(0),
             max_value: Some(9),
         }),
+    })
+}
+
+pub fn pyarrow_nested_edge_statistics(column: &str) -> Option<Box<dyn Statistics>> {
+    Some(match column {
+        "simple" => Box::new(PrimitiveStatistics::<i64> {
+            data_type: DataType::Int64,
+            distinct_count: None,
+            null_count: Some(0),
+            min_value: Some(0),
+            max_value: Some(1),
+        }),
+        "null" => Box::new(PrimitiveStatistics::<i64> {
+            data_type: DataType::Int64,
+            distinct_count: None,
+            null_count: Some(0),
+            min_value: None,
+            max_value: None,
+        }),
+        _ => unreachable!(),
     })
 }
 

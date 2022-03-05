@@ -459,14 +459,12 @@ fn extend_offsets2<'a>(page: &mut NestedPage<'a>, nested: &mut NestedState, addi
         cum_sum[i + 1] = cum_sum[i] + delta;
     }
 
-    let mut iter = page.repetitions.by_ref().zip(page.definitions.by_ref());
+    let iter = page.repetitions.by_ref().zip(page.definitions.by_ref());
 
     let mut rows = 0;
-    while rows < additional {
-        // unwrap is ok because by definition there has to be a closing statement
-        let (rep, def) = iter.next().unwrap();
+    for (rep, def) in iter {
         if rep == 0 {
-            rows += 1
+            rows += 1;
         }
 
         for (depth, (nest, length)) in nested.iter_mut().zip(values_count.iter()).enumerate() {
@@ -479,7 +477,10 @@ fn extend_offsets2<'a>(page: &mut NestedPage<'a>, nested: &mut NestedState, addi
         for (depth, nest) in nested.iter().enumerate().skip(1) {
             values_count[depth - 1] = nest.len() as i64
         }
-        values_count[nested.len() - 1] = nested[nested.len() - 1].len() as i64
+        values_count[nested.len() - 1] = nested[nested.len() - 1].len() as i64;
+        if rows == additional + 1 {
+            break;
+        }
     }
 
     // close validities
