@@ -31,8 +31,9 @@ documentation of each of its APIs.
   * Apache Arrow IPC (all types)
   * Apache Arrow Flight (all types)
   * Apache Parquet (except deep nested types)
-  * Apache Avro (not all types yet)
+  * Apache Avro (all types)
   * NJSON
+  * ODBC (some types)
 * Extensive suite of compute operations
   * aggregations
   * arithmetics
@@ -58,8 +59,10 @@ documentation of each of its APIs.
 This crate uses `unsafe` when strickly necessary:
 * when the compiler can't prove certain invariants and
 * FFI
+
 We have extensive tests over these, all of which run and pass under MIRI.
 Most uses of `unsafe` fall into 3 categories:
+
 * The Arrow format has invariants over utf8 that can't be written in safe Rust
 * `TrustedLen` and trait specialization are still nightly features
 * FFI

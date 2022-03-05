@@ -1,6 +1,10 @@
 #![forbid(unsafe_code)]
 //! Contains modules to interface with other formats such as [`csv`],
 //! [`parquet`], [`json`], [`ipc`], [`mod@print`] and [`avro`].
+
+#[cfg(feature = "io_odbc")]
+pub mod odbc;
+
 #[cfg(any(
     feature = "io_csv_read",
     feature = "io_csv_read_async",
