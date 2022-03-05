@@ -87,5 +87,5 @@ functionality, such as:
 * `compute` to operate on arrays (addition, sum, sort, etc.)
 
 The feature `simd` (not part of `full`) produces more explicit SIMD instructions
-via [`packed_simd`](https://github.com/rust-lang/packed_simd), but requires the 
+via [`std::simd`](https://doc.rust-lang.org/nightly/std/simd/index.html), but requires the 
 nightly channel.

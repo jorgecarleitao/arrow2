@@ -1,6 +1,6 @@
 //! Contains traits and implementations of multi-data used in SIMD.
 //! The actual representation is driven by the feature flag `"simd"`, which, if set,
-//! uses `packed_simd2` to get the intrinsics.
+//! uses [`std::simd`].
 use super::{days_ms, months_days_ns};
 use super::{BitChunk, BitChunkIter, NativeType};
 
