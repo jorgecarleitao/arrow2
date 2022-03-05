@@ -42,7 +42,7 @@ where
     });
     let values = Bitmap::from_trusted_len_iter(values);
 
-    Ok(BooleanArray::from_data(DataType::Boolean, values, validity))
+    Ok(BooleanArray::new(DataType::Boolean, values, validity))
 }
 
 /// Checks if a [`GenericListArray`] contains a value in the [`Utf8Array`]
@@ -76,7 +76,7 @@ where
     });
     let values = Bitmap::from_trusted_len_iter(values);
 
-    Ok(BooleanArray::from_data(DataType::Boolean, values, validity))
+    Ok(BooleanArray::new(DataType::Boolean, values, validity))
 }
 
 /// Checks if a [`ListArray`] contains a value in the [`BinaryArray`]
@@ -110,7 +110,7 @@ where
     });
     let values = Bitmap::from_trusted_len_iter(values);
 
-    Ok(BooleanArray::from_data(DataType::Boolean, values, validity))
+    Ok(BooleanArray::new(DataType::Boolean, values, validity))
 }
 
 macro_rules! primitive {

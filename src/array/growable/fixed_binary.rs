@@ -53,7 +53,7 @@ impl<'a> GrowableFixedSizeBinary<'a> {
         let validity = std::mem::take(&mut self.validity);
         let values = std::mem::take(&mut self.values);
 
-        FixedSizeBinaryArray::from_data(
+        FixedSizeBinaryArray::new(
             self.arrays[0].data_type().clone(),
             values.into(),
             validity.into(),
@@ -89,7 +89,7 @@ impl<'a> Growable<'a> for GrowableFixedSizeBinary<'a> {
 
 impl<'a> From<GrowableFixedSizeBinary<'a>> for FixedSizeBinaryArray {
     fn from(val: GrowableFixedSizeBinary<'a>) -> Self {
-        FixedSizeBinaryArray::from_data(
+        FixedSizeBinaryArray::new(
             val.arrays[0].data_type().clone(),
             val.values.into(),
             val.validity.into(),

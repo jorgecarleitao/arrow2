@@ -99,7 +99,7 @@ impl FixedSizeListArray {
     pub fn new_empty(data_type: DataType) -> Self {
         let values =
             new_empty_array(Self::get_child_and_size(&data_type).0.data_type().clone()).into();
-        Self::from_data(data_type, values, None)
+        Self::new(data_type, values, None)
     }
 
     /// Returns a new null [`FixedSizeListArray`].
@@ -109,7 +109,7 @@ impl FixedSizeListArray {
             length,
         )
         .into();
-        Self::from_data(data_type, values, Some(Bitmap::new_zeroed(length)))
+        Self::new(data_type, values, Some(Bitmap::new_zeroed(length)))
     }
 }
 

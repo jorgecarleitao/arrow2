@@ -58,6 +58,6 @@ impl<A: ffi::ArrowArrayRef> FromFfi<A> for MapArray {
         let child = array.child(0)?;
         let values = ffi::try_from(child)?.into();
 
-        Ok(Self::from_data(data_type, offsets, values, validity))
+        Self::try_new(data_type, offsets, values, validity)
     }
 }

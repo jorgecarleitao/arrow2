@@ -204,7 +204,7 @@ fn finish(
     values: FixedSizeBinary,
     validity: MutableBitmap,
 ) -> FixedSizeBinaryArray {
-    FixedSizeBinaryArray::from_data(data_type.clone(), values.values.into(), validity.into())
+    FixedSizeBinaryArray::new(data_type.clone(), values.values.into(), validity.into())
 }
 
 pub struct Iter<I: DataPages> {

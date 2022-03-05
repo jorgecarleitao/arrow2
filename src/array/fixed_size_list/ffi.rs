@@ -40,6 +40,6 @@ impl<A: ffi::ArrowArrayRef> FromFfi<A> for FixedSizeListArray {
         let child = unsafe { array.child(0)? };
         let values = ffi::try_from(child)?.into();
 
-        Ok(Self::from_data(data_type, values, validity))
+        Self::try_new(data_type, values, validity)
     }
 }

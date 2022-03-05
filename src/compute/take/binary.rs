@@ -37,5 +37,5 @@ pub fn take<O: Offset, I: Index>(
         (false, true) => take_indices_validity(values.offsets(), values.values(), indices),
         (true, true) => take_values_indices_validity(values, indices),
     };
-    BinaryArray::<O>::from_data(data_type, offsets, values, validity)
+    BinaryArray::<O>::new(data_type, offsets, values, validity)
 }

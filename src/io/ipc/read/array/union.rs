@@ -85,7 +85,7 @@ pub fn read_union<R: Read + Seek>(
         })
         .collect::<Result<Vec<_>>>()?;
 
-    Ok(UnionArray::from_data(data_type, types, fields, offsets))
+    UnionArray::try_new(data_type, types, fields, offsets)
 }
 
 pub fn skip_union(

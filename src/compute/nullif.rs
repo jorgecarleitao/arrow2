@@ -42,7 +42,7 @@ where
 
     let validity = combine_validities(lhs.validity(), equal.as_ref());
 
-    PrimitiveArray::<T>::from_data(lhs.data_type().clone(), lhs.values().clone(), validity)
+    PrimitiveArray::<T>::new(lhs.data_type().clone(), lhs.values().clone(), validity)
 }
 
 /// Returns a [`PrimitiveArray`] whose validity is null iff `lhs == rhs` or `lhs` is null.
@@ -75,7 +75,7 @@ where
 
     let validity = combine_validities(lhs.validity(), equal.as_ref());
 
-    PrimitiveArray::<T>::from_data(lhs.data_type().clone(), lhs.values().clone(), validity)
+    PrimitiveArray::<T>::new(lhs.data_type().clone(), lhs.values().clone(), validity)
 }
 
 /// Returns an [`Array`] with the same type as `lhs` and whose validity

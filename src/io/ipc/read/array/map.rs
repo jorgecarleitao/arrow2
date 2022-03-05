@@ -66,7 +66,7 @@ pub fn read_map<R: Read + Seek>(
         compression,
         version,
     )?;
-    Ok(MapArray::from_data(data_type, offsets, field, validity))
+    MapArray::try_new(data_type, offsets, field, validity)
 }
 
 pub fn skip_map(

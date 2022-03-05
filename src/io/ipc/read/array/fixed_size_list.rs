@@ -54,7 +54,7 @@ pub fn read_fixed_size_list<R: Read + Seek>(
         compression,
         version,
     )?;
-    Ok(FixedSizeListArray::from_data(data_type, values, validity))
+    FixedSizeListArray::try_new(data_type, values, validity)
 }
 
 pub fn skip_fixed_size_list(

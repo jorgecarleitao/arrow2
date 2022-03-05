@@ -44,7 +44,7 @@ pub fn take<O: Index>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result
 
     use crate::datatypes::PhysicalType::*;
     match values.data_type().to_physical_type() {
-        Null => Ok(Box::new(NullArray::from_data(
+        Null => Ok(Box::new(NullArray::new(
             values.data_type().clone(),
             indices.len(),
         ))),

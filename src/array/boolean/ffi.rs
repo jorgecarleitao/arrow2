@@ -53,6 +53,6 @@ impl<A: ffi::ArrowArrayRef> FromFfi<A> for BooleanArray {
         let data_type = array.data_type().clone();
         let validity = unsafe { array.validity() }?;
         let values = unsafe { array.bitmap(1) }?;
-        Ok(Self::from_data(data_type, values, validity))
+        Self::try_new(data_type, values, validity)
     }
 }

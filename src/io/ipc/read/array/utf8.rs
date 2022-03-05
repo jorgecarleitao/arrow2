@@ -55,9 +55,7 @@ pub fn read_utf8<O: Offset, R: Read + Seek>(
         compression,
     )?;
 
-    Ok(Utf8Array::<O>::from_data(
-        data_type, offsets, values, validity,
-    ))
+    Utf8Array::<O>::try_new(data_type, offsets, values, validity)
 }
 
 pub fn skip_utf8(

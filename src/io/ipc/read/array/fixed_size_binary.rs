@@ -43,7 +43,7 @@ pub fn read_fixed_size_binary<R: Read + Seek>(
         compression,
     )?;
 
-    Ok(FixedSizeBinaryArray::from_data(data_type, values, validity))
+    FixedSizeBinaryArray::try_new(data_type, values, validity)
 }
 
 pub fn skip_fixed_size_binary(

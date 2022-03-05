@@ -74,7 +74,7 @@ where
 
     let values = compare_values_op(lhs.values(), rhs.values(), op);
 
-    BooleanArray::from_data(DataType::Boolean, values.into(), validity)
+    BooleanArray::new(DataType::Boolean, values.into(), validity)
 }
 
 /// Evaluate `op(left, right)` for [`PrimitiveArray`] and scalar using
@@ -88,7 +88,7 @@ where
 
     let values = compare_values_op_scalar(lhs.values(), rhs, op);
 
-    BooleanArray::from_data(DataType::Boolean, values.into(), validity)
+    BooleanArray::new(DataType::Boolean, values.into(), validity)
 }
 
 /// Perform `lhs == rhs` operation on two arrays.

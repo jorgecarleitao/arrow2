@@ -16,10 +16,7 @@ pub fn read_null(field_nodes: &mut VecDeque<Node>, data_type: DataType) -> Resul
         ))
     })?;
 
-    Ok(NullArray::from_data(
-        data_type,
-        field_node.length() as usize,
-    ))
+    NullArray::try_new(data_type, field_node.length() as usize)
 }
 
 pub fn skip_null(field_nodes: &mut VecDeque<Node>) -> Result<()> {

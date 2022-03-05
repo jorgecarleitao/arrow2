@@ -108,7 +108,7 @@ fn binary_substring<O: Offset>(
         new_values.extend_from_slice(&values[start..start + length]);
     });
 
-    BinaryArray::<O>::from_data(
+    BinaryArray::<O>::new(
         array.data_type().clone(),
         new_offsets.into(),
         new_values.into(),

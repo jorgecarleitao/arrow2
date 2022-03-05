@@ -98,7 +98,7 @@ where
         .map(|x| (*x as f64 / div).as_())
         .collect();
 
-    PrimitiveArray::<T>::from_data(T::PRIMITIVE.into(), values, from.validity().cloned())
+    PrimitiveArray::<T>::new(T::PRIMITIVE.into(), values, from.validity().cloned())
 }
 
 pub(super) fn decimal_to_float_dyn<T>(from: &dyn Array) -> Result<Box<dyn Array>>

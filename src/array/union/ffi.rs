@@ -55,6 +55,6 @@ impl<A: ffi::ArrowArrayRef> FromFfi<A> for UnionArray {
             types = types.slice(offset, length);
         };
 
-        Ok(Self::from_data(data_type, types, fields, offsets))
+        Self::try_new(data_type, types, fields, offsets)
     }
 }

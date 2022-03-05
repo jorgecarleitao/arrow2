@@ -104,7 +104,7 @@ impl<'a, O: Offset> GrowableList<'a, O> {
         let offsets = std::mem::take(&mut self.offsets);
         let values = self.values.as_arc();
 
-        ListArray::<O>::from_data(
+        ListArray::<O>::new(
             self.arrays[0].data_type().clone(),
             offsets.into(),
             values,
@@ -139,7 +139,7 @@ impl<'a, O: Offset> From<GrowableList<'a, O>> for ListArray<O> {
         let mut values = val.values;
         let values = values.as_arc();
 
-        ListArray::<O>::from_data(
+        ListArray::<O>::new(
             val.arrays[0].data_type().clone(),
             val.offsets.into(),
             values,

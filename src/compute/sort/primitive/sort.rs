@@ -158,7 +158,7 @@ where
 
         (buffer.into(), None)
     };
-    PrimitiveArray::<T>::from_data(array.data_type().clone(), buffer, validity)
+    PrimitiveArray::<T>::new(array.data_type().clone(), buffer, validity)
 }
 
 #[cfg(test)]

@@ -40,6 +40,6 @@ impl<A: ffi::ArrowArrayRef> FromFfi<A> for StructArray {
             })
             .collect::<Result<Vec<Arc<dyn Array>>>>()?;
 
-        Ok(Self::from_data(data_type, values, validity))
+        Self::try_new(data_type, values, validity)
     }
 }

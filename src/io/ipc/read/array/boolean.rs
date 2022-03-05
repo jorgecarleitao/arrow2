@@ -42,7 +42,7 @@ pub fn read_boolean<R: Read + Seek>(
         is_little_endian,
         compression,
     )?;
-    Ok(BooleanArray::from_data(data_type, values, validity))
+    BooleanArray::try_new(data_type, values, validity)
 }
 
 pub fn skip_boolean(

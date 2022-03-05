@@ -180,9 +180,5 @@ pub fn lexsort_to_indices<I: Index>(
     }
 
     let data_type = I::PRIMITIVE.into();
-    Ok(PrimitiveArray::<I>::from_data(
-        data_type,
-        values.into(),
-        None,
-    ))
+    Ok(PrimitiveArray::<I>::new(data_type, values.into(), None))
 }

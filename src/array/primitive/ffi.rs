@@ -55,6 +55,6 @@ impl<T: NativeType, A: ffi::ArrowArrayRef> FromFfi<A> for PrimitiveArray<T> {
         let validity = unsafe { array.validity() }?;
         let values = unsafe { array.buffer::<T>(1) }?;
 
-        Ok(Self::from_data(data_type, values, validity))
+        Self::try_new(data_type, values, validity)
     }
 }

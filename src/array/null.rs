@@ -44,12 +44,12 @@ impl NullArray {
 
     /// Returns a new empty [`NullArray`].
     pub fn new_empty(data_type: DataType) -> Self {
-        Self::from_data(data_type, 0)
+        Self::new(data_type, 0)
     }
 
     /// Returns a new [`NullArray`].
     pub fn new_null(data_type: DataType, length: usize) -> Self {
-        Self::from_data(data_type, length)
+        Self::new(data_type, length)
     }
 }
 
@@ -124,6 +124,6 @@ unsafe impl ToFfi for NullArray {
 impl<A: ffi::ArrowArrayRef> FromFfi<A> for NullArray {
     unsafe fn try_from_ffi(array: A) -> Result<Self, ArrowError> {
         let data_type = array.data_type().clone();
-        Ok(Self::from_data(data_type, array.array().len()))
+        Self::try_new(data_type, array.array().len())
     }
 }

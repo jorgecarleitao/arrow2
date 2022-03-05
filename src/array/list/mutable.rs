@@ -50,7 +50,7 @@ impl<O: Offset, M: MutableArray + Default> Default for MutableListArray<O, M> {
 
 impl<O: Offset, M: MutableArray> From<MutableListArray<O, M>> for ListArray<O> {
     fn from(mut other: MutableListArray<O, M>) -> Self {
-        ListArray::from_data(
+        ListArray::new(
             other.data_type,
             other.offsets.into(),
             other.values.as_arc(),
@@ -209,7 +209,7 @@ impl<O: Offset, M: MutableArray + Default + 'static> MutableArray for MutableLis
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        Box::new(ListArray::from_data(
+        Box::new(ListArray::new(
             self.data_type.clone(),
             std::mem::take(&mut self.offsets).into(),
             self.values.as_arc(),
@@ -218,7 +218,7 @@ impl<O: Offset, M: MutableArray + Default + 'static> MutableArray for MutableLis
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
-        Arc::new(ListArray::from_data(
+        Arc::new(ListArray::new(
             self.data_type.clone(),
             std::mem::take(&mut self.offsets).into(),
             self.values.as_arc(),

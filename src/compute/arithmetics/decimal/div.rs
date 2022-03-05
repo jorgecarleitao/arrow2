@@ -290,7 +290,7 @@ pub fn adaptive_div(
 
         let validity = combine_validities(lhs.validity(), rhs.validity());
 
-        Ok(PrimitiveArray::<i128>::from_data(
+        Ok(PrimitiveArray::<i128>::new(
             DataType::Decimal(res_p, res_s),
             values,
             validity,

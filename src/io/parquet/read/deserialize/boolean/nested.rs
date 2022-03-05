@@ -139,7 +139,7 @@ impl<I: DataPages> ArrayIterator<I> {
 }
 
 fn finish(data_type: &DataType, values: MutableBitmap, validity: MutableBitmap) -> BooleanArray {
-    BooleanArray::from_data(data_type.clone(), values.into(), validity.into())
+    BooleanArray::new(data_type.clone(), values.into(), validity.into())
 }
 
 impl<I: DataPages> Iterator for ArrayIterator<I> {

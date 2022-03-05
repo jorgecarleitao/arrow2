@@ -76,12 +76,12 @@ impl FixedSizeBinaryArray {
 
     /// Returns a new empty [`FixedSizeBinaryArray`].
     pub fn new_empty(data_type: DataType) -> Self {
-        Self::from_data(data_type, Buffer::new(), None)
+        Self::new(data_type, Buffer::new(), None)
     }
 
     /// Returns a new null [`FixedSizeBinaryArray`].
     pub fn new_null(data_type: DataType, length: usize) -> Self {
-        Self::from_data(
+        Self::new(
             data_type,
             Buffer::new_zeroed(length),
             Some(Bitmap::new_zeroed(length)),

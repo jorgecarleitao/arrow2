@@ -60,7 +60,7 @@ pub fn take<I: Index>(array: &StructArray, indices: &PrimitiveArray<I>) -> Resul
         .map(|a| super::take(a.as_ref(), indices).map(|x| x.into()))
         .collect::<Result<_>>()?;
     let validity = take_validity(array.validity(), indices)?;
-    Ok(StructArray::from_data(
+    Ok(StructArray::new(
         array.data_type().clone(),
         values,
         validity,

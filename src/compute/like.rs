@@ -60,7 +60,7 @@ fn a_like_utf8<O: Offset, F: Fn(bool) -> bool>(
             }
         }))?;
 
-    Ok(BooleanArray::from_data(DataType::Boolean, values, validity))
+    Ok(BooleanArray::new(DataType::Boolean, values, validity))
 }
 
 /// Returns `lhs LIKE rhs` operation on two [`Utf8Array`].
@@ -126,7 +126,7 @@ fn a_like_utf8_scalar<O: Offset, F: Fn(bool) -> bool>(
         })?;
         Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(re.is_match(x))))
     };
-    Ok(BooleanArray::from_data(
+    Ok(BooleanArray::new(
         DataType::Boolean,
         values,
         validity.cloned(),
@@ -208,7 +208,7 @@ fn a_like_binary<O: Offset, F: Fn(bool) -> bool>(
             }
         }))?;
 
-    Ok(BooleanArray::from_data(DataType::Boolean, values, validity))
+    Ok(BooleanArray::new(DataType::Boolean, values, validity))
 }
 
 /// Returns `lhs LIKE rhs` operation on two [`BinaryArray`].
@@ -281,7 +281,7 @@ fn a_like_binary_scalar<O: Offset, F: Fn(bool) -> bool>(
         })?;
         Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(re.is_match(x))))
     };
-    Ok(BooleanArray::from_data(
+    Ok(BooleanArray::new(
         DataType::Boolean,
         values,
         validity.cloned(),

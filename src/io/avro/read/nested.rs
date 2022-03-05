@@ -80,7 +80,7 @@ impl<O: Offset> MutableArray for DynMutableListArray<O> {
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        Box::new(ListArray::from_data(
+        Box::new(ListArray::new(
             self.data_type.clone(),
             std::mem::take(&mut self.offsets).into(),
             self.values.as_arc(),
@@ -89,7 +89,7 @@ impl<O: Offset> MutableArray for DynMutableListArray<O> {
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
-        Arc::new(ListArray::from_data(
+        Arc::new(ListArray::new(
             self.data_type.clone(),
             std::mem::take(&mut self.offsets).into(),
             self.values.as_arc(),
@@ -246,7 +246,7 @@ impl MutableArray for DynMutableStructArray {
     fn as_box(&mut self) -> Box<dyn Array> {
         let values = self.values.iter_mut().map(|x| x.as_arc()).collect();
 
-        Box::new(StructArray::from_data(
+        Box::new(StructArray::new(
             self.data_type.clone(),
             values,
             std::mem::take(&mut self.validity).map(|x| x.into()),
@@ -256,7 +256,7 @@ impl MutableArray for DynMutableStructArray {
     fn as_arc(&mut self) -> Arc<dyn Array> {
         let values = self.values.iter_mut().map(|x| x.as_arc()).collect();
 
-        Arc::new(StructArray::from_data(
+        Arc::new(StructArray::new(
             self.data_type.clone(),
             values,
             std::mem::take(&mut self.validity).map(|x| x.into()),
