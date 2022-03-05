@@ -238,6 +238,24 @@ def case_struct() -> Tuple[dict, pa.Schema, str]:
     )
 
 
+def case_nested_edge():
+    simple = [[0, 1]]
+    null = [None]
+    fields = [
+        pa.field("simple", pa.list_(pa.int64())),
+        pa.field("null", pa.list_(pa.field("item", pa.int64(), True))),
+    ]
+    schema = pa.schema(fields)
+    return (
+        {
+            "simple": simple,
+            "null": null,
+        },
+        schema,
+        f"nested_edge_nullable_10.parquet",
+    )
+
+
 def write_pyarrow(
     case,
     page_version: int,
@@ -276,7 +294,7 @@ def write_pyarrow(
     )
 
 
-for case in [case_basic_nullable, case_basic_required, case_nested, case_struct]:
+for case in [case_basic_nullable, case_basic_required, case_nested, case_struct, case_nested_edge]:
     for version in [1, 2]:
         for use_dict in [True, False]:
             for compression in ["lz4", None, "snappy"]:
