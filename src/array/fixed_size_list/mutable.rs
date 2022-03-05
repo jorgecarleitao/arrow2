@@ -46,6 +46,11 @@ impl<M: MutableArray> MutableFixedSizeListArray<M> {
         &self.values
     }
 
+    /// The values as a mutable reference
+    pub fn mut_values(&mut self) -> &mut M {
+        &mut self.values
+    }
+
     fn init_validity(&mut self) {
         let len = self.values.len() / self.size;
 
