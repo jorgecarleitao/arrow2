@@ -9,7 +9,7 @@ use super::api;
 
 /// Creates a [`api::buffers::ColumnarBuffer`] from the metadata.
 /// # Errors
-/// Iff the driver provides an incorrect [`ResultSetMetadata`]
+/// Iff the driver provides an incorrect [`api::ResultSetMetadata`]
 pub fn buffer_from_metadata(
     resut_set_metadata: &impl api::ResultSetMetadata,
     max_batch_size: usize,
