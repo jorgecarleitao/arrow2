@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{
     array::{Array, MutableArray, TryExtend, TryPush},
     bitmap::MutableBitmap,
-    datatypes::{DataType,Field},
+    datatypes::{DataType, Field},
     error::{ArrowError, Result},
 };
 
@@ -45,7 +45,7 @@ impl<M: MutableArray> MutableFixedSizeListArray<M> {
     pub fn new_with_field(values: M, name: &str, nullable: bool, size: usize) -> Self {
         let data_type = DataType::FixedSizeList(
             Box::new(Field::new(name, values.data_type().clone(), nullable)), 
-            size
+            size,
         );
         assert_eq!(values.len(), 0);
         Self {
