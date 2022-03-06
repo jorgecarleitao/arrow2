@@ -61,7 +61,9 @@ impl<M: MutableArray> MutableFixedSizeListArray<M> {
     }
 
     #[inline]
-    fn try_push_valid(&mut self) -> Result<()> {
+    /// Needs to be called when a valid value was extended to this array.
+    /// This is a relatively low level function, prefer `try_push` when you can.
+    pub fn try_push_valid(&mut self) -> Result<()> {
         if self.values.len() % self.size != 0 {
             return Err(ArrowError::Overflow);
         };
