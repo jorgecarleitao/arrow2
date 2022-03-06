@@ -58,8 +58,9 @@ impl<'a, P> ValuesDictionary<'a, P>
 where
     P: ParquetNativeType,
 {
-    fn new(data: &'a [u8], length: usize, dict: &'a PrimitivePageDict<P>) -> Self {
-        let values = utils::dict_indices_decoder(data, length);
+    fn new(page: &'a DataPage, dict: &'a PrimitivePageDict<P>) -> Self {
+        let (_, _, indices_buffer) = utils::split_buffer(page);
+        let values = utils::dict_indices_decoder(indices_buffer, page.num_values());
 
         Self {
             dict: dict.values(),
@@ -142,20 +143,14 @@ where
         match (page.encoding(), page.dictionary_page(), is_optional) {
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false) => {
                 let dict = dict.as_any().downcast_ref().unwrap();
-                Ok(State::RequiredDictionary(ValuesDictionary::new(
-                    page.buffer(),
-                    page.num_values(),
-                    dict,
-                )))
+                Ok(State::RequiredDictionary(ValuesDictionary::new(page, dict)))
             }
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
                 let dict = dict.as_any().downcast_ref().unwrap();
 
-                let (_, _, values_buffer) = utils::split_buffer(page);
-
                 Ok(State::OptionalDictionary(
                     OptionalPageValidity::new(page),
-                    ValuesDictionary::new(values_buffer, page.num_values(), dict),
+                    ValuesDictionary::new(page, dict),
                 ))
             }
             (Encoding::Plain, _, true) => {
