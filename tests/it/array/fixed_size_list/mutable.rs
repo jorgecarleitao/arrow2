@@ -1,5 +1,5 @@
 use arrow2::array::*;
-use arrow2::datatypes::{DataType,Field};
+use arrow2::datatypes::{DataType, Field};
 
 #[test]
 fn primitive() {
@@ -34,17 +34,21 @@ fn new_with_field() {
         Some(vec![Some(4), None, Some(6)]),
     ];
 
-    let mut list = MutableFixedSizeListArray::new_with_field(MutablePrimitiveArray::<i32>::new(), "custom_items", false, 3);
+    let mut list = MutableFixedSizeListArray::new_with_field(
+        MutablePrimitiveArray::<i32>::new(),
+        "custom_items",
+        false,
+        3,
+    );
     list.try_extend(data).unwrap();
     let list: FixedSizeListArray = list.into();
 
-    assert_eq!(list.data_type(), &DataType::FixedSizeList(
-        Box::new(Field::new(
-            "custom_items", 
-            DataType::Int32,
-            false
-            )),
-        3)
+    assert_eq!(
+        list.data_type(),
+        &DataType::FixedSizeList(
+            Box::new(Field::new("custom_items", DataType::Int32, false)),
+            3
+        )
     );
 
     let a = list.value(0);
