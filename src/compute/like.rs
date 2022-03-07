@@ -107,7 +107,7 @@ fn a_like_utf8_scalar<O: Offset, F: Fn(bool) -> bool>(
     let validity = lhs.validity();
 
     let values = if !rhs.contains(is_like_pattern) {
-        Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| x == rhs))
+        Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x == rhs)))
     } else if rhs.ends_with('%') && !rhs[..rhs.len() - 1].contains(is_like_pattern) {
         // fast path, can use starts_with
         let starts_with = &rhs[..rhs.len() - 1];
@@ -262,7 +262,7 @@ fn a_like_binary_scalar<O: Offset, F: Fn(bool) -> bool>(
     })?;
 
     let values = if !pattern.contains(is_like_pattern) {
-        Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| x == rhs))
+        Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x == rhs)))
     } else if pattern.ends_with('%') && !pattern[..pattern.len() - 1].contains(is_like_pattern) {
         // fast path, can use starts_with
         let starts_with = &rhs[..rhs.len() - 1];

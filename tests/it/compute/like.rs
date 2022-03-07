@@ -29,18 +29,31 @@ fn test_nlike_binary() -> Result<()> {
 #[test]
 fn test_like_binary_scalar() -> Result<()> {
     let array = BinaryArray::<i32>::from_slice(&["Arrow", "Arrow", "Arrow", "BA"]);
+
     let result = like_binary_scalar(&array, b"A%").unwrap();
     assert_eq!(result, BooleanArray::from_slice(&[true, true, true, false]));
+
+    let result = like_binary_scalar(&array, b"Arrow").unwrap();
+    assert_eq!(result, BooleanArray::from_slice(&[true, true, true, false]));
+
     Ok(())
 }
 
 #[test]
 fn test_nlike_binary_scalar() -> Result<()> {
     let array = BinaryArray::<i32>::from_slice(&["Arrow", "Arrow", "Arrow", "BA"]);
+
     let result = nlike_binary_scalar(&array, "A%".as_bytes()).unwrap();
     assert_eq!(
         result,
         BooleanArray::from_slice(&[false, false, false, true])
     );
+
+    let result = nlike_binary_scalar(&array, "Arrow".as_bytes()).unwrap();
+    assert_eq!(
+        result,
+        BooleanArray::from_slice(&[false, false, false, true])
+    );
+
     Ok(())
 }
