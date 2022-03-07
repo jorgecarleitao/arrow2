@@ -50,15 +50,15 @@ pub(super) struct ValuesDictionary<'a, P>
 where
     P: ParquetNativeType,
 {
-    values: hybrid_rle::HybridRleDecoder<'a>,
-    dict: &'a [P],
+    pub values: hybrid_rle::HybridRleDecoder<'a>,
+    pub dict: &'a [P],
 }
 
 impl<'a, P> ValuesDictionary<'a, P>
 where
     P: ParquetNativeType,
 {
-    fn new(page: &'a DataPage, dict: &'a PrimitivePageDict<P>) -> Self {
+    pub fn new(page: &'a DataPage, dict: &'a PrimitivePageDict<P>) -> Self {
         let (_, _, indices_buffer) = utils::split_buffer(page);
         let values = utils::dict_indices_decoder(indices_buffer, page.num_values());
 

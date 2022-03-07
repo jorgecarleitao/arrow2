@@ -233,6 +233,23 @@ fn v1_nested_i16() -> Result<()> {
 }
 
 #[test]
+fn v1_nested_i16_dict() -> Result<()> {
+    test_pyarrow_integration("list_int16", 1, "nested", true, false, None)
+}
+
+#[test]
+fn v2_nested_i16_required_dict() -> Result<()> {
+    test_pyarrow_integration(
+        "list_int64_required_required",
+        1,
+        "nested",
+        true,
+        false,
+        None,
+    )
+}
+
+#[test]
 fn v2_nested_bool() -> Result<()> {
     test_pyarrow_integration("list_bool", 2, "nested", false, false, None)
 }
