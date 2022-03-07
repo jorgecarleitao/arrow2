@@ -191,7 +191,10 @@ impl UnionArray {
             fields: self.fields.clone(),
             fields_hash: self.fields_hash.clone(),
             types: self.types.clone().slice(offset, length),
-            offsets: self.offsets.clone(),
+            offsets: self
+                .offsets
+                .clone()
+                .map(|offsets| offsets.slice(offset, length)),
             offset: self.offset + offset,
         }
     }
@@ -208,7 +211,10 @@ impl UnionArray {
             fields: self.fields.clone(),
             fields_hash: self.fields_hash.clone(),
             types: self.types.clone().slice_unchecked(offset, length),
-            offsets: self.offsets.clone(),
+            offsets: self
+                .offsets
+                .clone()
+                .map(|offsets| offsets.slice_unchecked(offset, length)),
             offset: self.offset + offset,
         }
     }
@@ -249,7 +255,7 @@ impl UnionArray {
         self.offsets()
             .as_ref()
             .map(|x| x[index] as usize)
-            .unwrap_or(index)
+            .unwrap_or(index + self.offset)
     }
 
     /// Returns the index and slot of the field to select from `self.fields`.
