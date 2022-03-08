@@ -61,7 +61,9 @@ fn _type_to_schema(data_type: &DataType) -> Result<AvroSchema> {
             AvroSchema::Fixed(fixed)
         }
         DataType::FixedSizeBinary(size) => AvroSchema::Fixed(Fixed::new("", *size)),
-        DataType::Decimal(p, s) => AvroSchema::Bytes(Some(BytesLogical::Decimal(*p, *s))),
+        DataType::Decimal(DecimalType::Int128, p, s) => {
+            AvroSchema::Bytes(Some(BytesLogical::Decimal(*p, *s)))
+        }
         other => {
             return Err(Error::NotYetImplemented(format!(
                 "write {:?} to avro",

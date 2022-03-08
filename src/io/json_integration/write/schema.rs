@@ -1,6 +1,6 @@
 use serde_json::{json, Map, Value};
 
-use crate::datatypes::{DataType, Field, IntervalUnit, Metadata, Schema, TimeUnit};
+use crate::datatypes::{DataType, DecimalType, Field, IntervalUnit, Metadata, Schema, TimeUnit};
 use crate::io::ipc::IpcField;
 use crate::io::json_integration::ArrowJsonSchema;
 
@@ -86,8 +86,13 @@ fn serialize_data_type(data_type: &DataType) -> Value {
             TimeUnit::Nanosecond => "NANOSECOND",
         }}),
         DataType::Dictionary(_, _, _) => json!({ "name": "dictionary"}),
-        DataType::Decimal(precision, scale) => {
-            json!({"name": "decimal", "precision": precision, "scale": scale})
+        DataType::Decimal(decimal, precision, scale) => {
+            let bitwidth = match decimal {
+                DecimalType::Int32 => 32,
+                DecimalType::Int64 => 64,
+                DecimalType::Int128 => 128,
+            };
+            json!({"name": "decimal", "precision": precision, "scale": scale, "bitWidth": bitwidth})
         }
         DataType::Extension(_, inner_data_type, _) => serialize_data_type(inner_data_type),
     }

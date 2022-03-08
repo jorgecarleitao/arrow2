@@ -75,7 +75,11 @@ pub(super) fn schema() -> (AvroSchema, Schema) {
             DataType::Dictionary(i32::KEY_TYPE, Box::new(DataType::Utf8), false),
             false,
         ),
-        Field::new("decimal", DataType::Decimal(18, 5), false),
+        Field::new(
+            "decimal",
+            DataType::Decimal(DecimalType::Int128, 18, 5),
+            false,
+        ),
     ]);
 
     (AvroSchema::parse_str(raw_schema).unwrap(), schema)
@@ -108,6 +112,7 @@ pub(super) fn data() -> Chunk<Box<dyn Array>> {
         .boxed(),
         DictionaryArray::try_from_keys(
             Int32Array::from_slice([1, 0]),
+<<<<<<< HEAD
             Box::new(Utf8Array::<i32>::from_slice(["SPADES", "HEARTS"])),
         )
         .unwrap()
@@ -115,6 +120,14 @@ pub(super) fn data() -> Chunk<Box<dyn Array>> {
         PrimitiveArray::<i128>::from_slice([12345678i128, -12345678i128])
             .to(DataType::Decimal(18, 5))
             .boxed(),
+=======
+            Arc::new(Utf8Array::<i32>::from_slice(["SPADES", "HEARTS"])),
+        )),
+        Arc::new(
+            PrimitiveArray::<i128>::from_slice([12345678i128, -12345678i128])
+                .to(DataType::Decimal(DecimalType::Int128, 18, 5)),
+        ),
+>>>>>>> cfb7ff549a (Added support for decimal 32 and 64)
     ];
 
     Chunk::try_new(columns).unwrap()

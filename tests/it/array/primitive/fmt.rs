@@ -195,24 +195,6 @@ fn debug_duration_ns() {
 }
 
 #[test]
-fn debug_decimal() {
-    let array = Int128Array::from(&[Some(12345), None, Some(23456)]).to(DataType::Decimal(5, 2));
-    assert_eq!(
-        format!("{:?}", array),
-        "Decimal(5, 2)[123.45, None, 234.56]"
-    );
-}
-
-#[test]
-fn debug_decimal1() {
-    let array = Int128Array::from(&[Some(12345), None, Some(23456)]).to(DataType::Decimal(5, 1));
-    assert_eq!(
-        format!("{:?}", array),
-        "Decimal(5, 1)[1234.5, None, 2345.6]"
-    );
-}
-
-#[test]
 fn debug_interval_days_ms() {
     let array = DaysMsArray::from(&[Some(days_ms::new(1, 1)), None, Some(days_ms::new(2, 2))]);
     assert_eq!(

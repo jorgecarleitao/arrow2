@@ -76,7 +76,7 @@ fn schema_to_field(schema: &AvroSchema, name: Option<&str>, props: Metadata) -> 
         AvroSchema::Bytes(logical) => match logical {
             Some(logical) => match logical {
                 avro_schema::BytesLogical::Decimal(precision, scale) => {
-                    DataType::Decimal(*precision, *scale)
+                    DataType::Decimal(DecimalType::Int128, *precision, *scale)
                 }
             },
             None => DataType::Binary,
@@ -135,7 +135,7 @@ fn schema_to_field(schema: &AvroSchema, name: Option<&str>, props: Metadata) -> 
         AvroSchema::Fixed(Fixed { size, logical, .. }) => match logical {
             Some(logical) => match logical {
                 avro_schema::FixedLogical::Decimal(precision, scale) => {
-                    DataType::Decimal(*precision, *scale)
+                    DataType::Decimal(DecimalType::Int128, *precision, *scale)
                 }
                 avro_schema::FixedLogical::Duration => {
                     DataType::Interval(IntervalUnit::MonthDayNano)

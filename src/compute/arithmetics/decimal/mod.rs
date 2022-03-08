@@ -36,7 +36,7 @@ fn number_digits(num: i128) -> usize {
 }
 
 fn get_parameters(lhs: &DataType, rhs: &DataType) -> Result<(usize, usize)> {
-    if let (DataType::Decimal(lhs_p, lhs_s), DataType::Decimal(rhs_p, rhs_s)) =
+    if let (DataType::Decimal(_, lhs_p, lhs_s), DataType::Decimal(_, rhs_p, rhs_s)) =
         (lhs.to_logical_type(), rhs.to_logical_type())
     {
         if lhs_p == rhs_p && lhs_s == rhs_s {

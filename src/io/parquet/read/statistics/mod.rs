@@ -13,7 +13,7 @@ use parquet2::statistics::{
 
 use crate::array::*;
 use crate::datatypes::IntervalUnit;
-use crate::datatypes::{DataType, Field, PhysicalType};
+use crate::datatypes::{DataType, DecimalType, Field, PhysicalType};
 use crate::error::Error;
 use crate::error::Result;
 
@@ -497,7 +497,7 @@ fn push(
         }
         Float32 => primitive::push(from, min, max, |x: f32| Ok(x as f32)),
         Float64 => primitive::push(from, min, max, |x: f64| Ok(x as f64)),
-        Decimal(_, _) => match physical_type {
+        Decimal(DecimalType::Int128, _, _) => match physical_type {
             ParquetPhysicalType::Int32 => primitive::push(from, min, max, |x: i32| Ok(x as i128)),
             ParquetPhysicalType::Int64 => primitive::push(from, min, max, |x: i64| Ok(x as i128)),
             ParquetPhysicalType::FixedLenByteArray(n) if *n > 16 => {

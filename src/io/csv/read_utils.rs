@@ -1,4 +1,5 @@
 use chrono::Datelike;
+use lexical_core::FromLexical;
 
 // Ideally this trait should not be needed and both `csv` and `csv_async` crates would share
 // the same `ByteRecord` struct. Unfortunately, they do not and thus we must use generics
@@ -13,7 +14,7 @@ use crate::{
     datatypes::*,
     error::{Error, Result},
     temporal_conversions,
-    types::NativeType,
+    types::{Decimal, NativeType},
 };
 
 use super::utils::RFC3339;
@@ -24,7 +25,7 @@ fn to_utf8(bytes: &[u8]) -> Option<&str> {
 }
 
 #[inline]
-fn deserialize_primitive<T, B: ByteRecordGeneric, F>(
+fn deserialize_primitive<T, B, F>(
     rows: &[B],
     column: usize,
     datatype: DataType,
@@ -32,6 +33,7 @@ fn deserialize_primitive<T, B: ByteRecordGeneric, F>(
 ) -> Box<dyn Array>
 where
     T: NativeType + lexical_core::FromLexical,
+    B: ByteRecordGeneric,
     F: Fn(&[u8]) -> Option<T>,
 {
     let iter = rows.iter().map(|row| match row.get(column) {
@@ -54,13 +56,28 @@ fn significant_bytes(bytes: &[u8]) -> usize {
 /// Deserializes bytes to a single i128 representing a decimal
 /// The decimal precision and scale are not checked.
 #[inline]
-fn deserialize_decimal(bytes: &[u8], precision: usize, scale: usize) -> Option<i128> {
+fn deserialize_decimal<T: Decimal + FromLexical>(
+    bytes: &[u8],
+    precision: usize,
+    scale: usize,
+) -> Option<T> {
+    let ten = T::one()
+        + T::one()
+        + T::one()
+        + T::one()
+        + T::one()
+        + T::one()
+        + T::one()
+        + T::one()
+        + T::one()
+        + T::one();
+
     let mut a = bytes.split(|x| *x == b'.');
     let lhs = a.next();
     let rhs = a.next();
     match (lhs, rhs) {
-        (Some(lhs), Some(rhs)) => lexical_core::parse::<i128>(lhs).ok().and_then(|x| {
-            lexical_core::parse::<i128>(rhs)
+        (Some(lhs), Some(rhs)) => lexical_core::parse::<T>(lhs).ok().and_then(|x| {
+            lexical_core::parse::<T>(rhs)
                 .ok()
                 .map(|y| (x, lhs, y, rhs))
                 .and_then(|(lhs, lhs_b, rhs, rhs_b)| {
@@ -72,19 +89,19 @@ fn deserialize_decimal(bytes: &[u8], precision: usize, scale: usize) -> Option<i
                         Some((lhs, rhs, rhs_s))
                     }
                 })
-                .map(|(lhs, rhs, rhs_s)| lhs * 10i128.pow(rhs_s as u32) + rhs)
+                .map(|(lhs, rhs, rhs_s)| lhs * ten.pow(rhs_s as u32) + rhs)
         }),
         (None, Some(rhs)) => {
             if rhs.len() != precision || rhs.len() != scale {
                 return None;
             }
-            lexical_core::parse::<i128>(rhs).ok()
+            lexical_core::parse::<T>(rhs).ok()
         }
         (Some(lhs), None) => {
             if lhs.len() != precision || scale != 0 {
                 return None;
             }
-            lexical_core::parse::<i128>(lhs).ok()
+            lexical_core::parse::<T>(lhs).ok()
         }
         (None, None) => None,
     }
@@ -225,9 +242,22 @@ pub(crate) fn deserialize_column<B: ByteRecordGeneric>(
                     })
             })
         }
-        Decimal(precision, scale) => deserialize_primitive(rows, column, datatype, |x| {
-            deserialize_decimal(x, precision, scale)
-        }),
+        Decimal(DecimalType::Int32, precision, scale) => {
+            deserialize_primitive::<i32, _, _>(rows, column, datatype, |x| {
+                deserialize_decimal(x, precision, scale)
+            })
+        }
+        Decimal(DecimalType::Int64, precision, scale) => {
+            deserialize_primitive::<i64, _, _>(rows, column, datatype, |x| {
+                deserialize_decimal(x, precision, scale)
+            })
+        }
+        Decimal(DecimalType::Int128, precision, scale) => {
+            deserialize_primitive::<i128, _, _>(rows, column, datatype, |x| {
+                deserialize_decimal(x, precision, scale)
+            })
+        }
+
         Utf8 => deserialize_utf8::<i32, _>(rows, column),
         LargeUtf8 => deserialize_utf8::<i64, _>(rows, column),
         Binary => deserialize_binary::<i32, _>(rows, column),

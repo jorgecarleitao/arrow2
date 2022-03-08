@@ -478,7 +478,7 @@ fn can_partial_eq_and_ord(data_type: &DataType) -> bool {
             | DataType::Float64
             | DataType::Utf8
             | DataType::LargeUtf8
-            | DataType::Decimal(_, _)
+            | DataType::Decimal(_, _, _)
             | DataType::Binary
             | DataType::LargeBinary
     )

@@ -243,11 +243,16 @@ fn int32_to_decimal() {
     // 10 and -10 can be represented with precision 1 and scale 0
     let array = Int32Array::from(&[Some(2), Some(10), Some(-2), Some(-10), None]);
 
-    let b = cast(&array, &DataType::Decimal(1, 0), CastOptions::default()).unwrap();
+    let b = cast(
+        &array,
+        &DataType::Decimal(DecimalType::Int128, 1, 0),
+        CastOptions::default(),
+    )
+    .unwrap();
     let c = b.as_any().downcast_ref::<PrimitiveArray<i128>>().unwrap();
 
     let expected = Int128Array::from(&[Some(2), Some(10), Some(-2), Some(-10), None])
-        .to(DataType::Decimal(1, 0));
+        .to(DataType::Decimal(DecimalType::Int128, 1, 0));
     assert_eq!(c, &expected)
 }
 
@@ -263,7 +268,12 @@ fn float32_to_decimal() {
         None,
     ]);
 
-    let b = cast(&array, &DataType::Decimal(10, 2), CastOptions::default()).unwrap();
+    let b = cast(
+        &array,
+        &DataType::Decimal(DecimalType::Int128, 10, 2),
+        CastOptions::default(),
+    )
+    .unwrap();
     let c = b.as_any().downcast_ref::<PrimitiveArray<i128>>().unwrap();
 
     let expected = Int128Array::from(&[
@@ -275,7 +285,7 @@ fn float32_to_decimal() {
         Some(-10001),
         None,
     ])
-    .to(DataType::Decimal(10, 2));
+    .to(DataType::Decimal(DecimalType::Int128, 10, 2));
     assert_eq!(c, &expected)
 }
 
@@ -284,11 +294,16 @@ fn int32_to_decimal_scaled() {
     // 10 and -10 can't be represented with precision 1 and scale 1
     let array = Int32Array::from(&[Some(2), Some(10), Some(-2), Some(-10), None]);
 
-    let b = cast(&array, &DataType::Decimal(1, 1), CastOptions::default()).unwrap();
+    let b = cast(
+        &array,
+        &DataType::Decimal(DecimalType::Int128, 1, 1),
+        CastOptions::default(),
+    )
+    .unwrap();
     let c = b.as_any().downcast_ref::<PrimitiveArray<i128>>().unwrap();
 
-    let expected =
-        Int128Array::from(&[Some(20), None, Some(-20), None, None]).to(DataType::Decimal(1, 1));
+    let expected = Int128Array::from(&[Some(20), None, Some(-20), None, None])
+        .to(DataType::Decimal(DecimalType::Int128, 1, 1));
     assert_eq!(c, &expected)
 }
 
@@ -296,13 +311,18 @@ fn int32_to_decimal_scaled() {
 fn decimal_to_decimal() {
     // increase scale and precision
     let array = Int128Array::from(&[Some(2), Some(10), Some(-2), Some(-10), None])
-        .to(DataType::Decimal(1, 0));
+        .to(DataType::Decimal(DecimalType::Int128, 1, 0));
 
-    let b = cast(&array, &DataType::Decimal(2, 1), CastOptions::default()).unwrap();
+    let b = cast(
+        &array,
+        &DataType::Decimal(DecimalType::Int128, 2, 1),
+        CastOptions::default(),
+    )
+    .unwrap();
     let c = b.as_any().downcast_ref::<PrimitiveArray<i128>>().unwrap();
 
     let expected = Int128Array::from(&[Some(20), Some(100), Some(-20), Some(-100), None])
-        .to(DataType::Decimal(2, 1));
+        .to(DataType::Decimal(DecimalType::Int128, 2, 1));
     assert_eq!(c, &expected)
 }
 
@@ -311,13 +331,18 @@ fn decimal_to_decimal_scaled() {
     // decrease precision
     // 10 and -10 can't be represented with precision 1 and scale 1
     let array = Int128Array::from(&[Some(2), Some(10), Some(-2), Some(-10), None])
-        .to(DataType::Decimal(1, 0));
+        .to(DataType::Decimal(DecimalType::Int128, 1, 0));
 
-    let b = cast(&array, &DataType::Decimal(1, 1), CastOptions::default()).unwrap();
+    let b = cast(
+        &array,
+        &DataType::Decimal(DecimalType::Int128, 1, 1),
+        CastOptions::default(),
+    )
+    .unwrap();
     let c = b.as_any().downcast_ref::<PrimitiveArray<i128>>().unwrap();
 
-    let expected =
-        Int128Array::from(&[Some(20), None, Some(-20), None, None]).to(DataType::Decimal(1, 1));
+    let expected = Int128Array::from(&[Some(20), None, Some(-20), None, None])
+        .to(DataType::Decimal(DecimalType::Int128, 1, 1));
     assert_eq!(c, &expected)
 }
 
@@ -326,20 +351,25 @@ fn decimal_to_decimal_fast() {
     // increase precision
     // 10 and -10 can't be represented with precision 1 and scale 1
     let array = Int128Array::from(&[Some(2), Some(10), Some(-2), Some(-10), None])
-        .to(DataType::Decimal(1, 1));
+        .to(DataType::Decimal(DecimalType::Int128, 1, 1));
 
-    let b = cast(&array, &DataType::Decimal(2, 1), CastOptions::default()).unwrap();
+    let b = cast(
+        &array,
+        &DataType::Decimal(DecimalType::Int128, 2, 1),
+        CastOptions::default(),
+    )
+    .unwrap();
     let c = b.as_any().downcast_ref::<PrimitiveArray<i128>>().unwrap();
 
     let expected = Int128Array::from(&[Some(2), Some(10), Some(-2), Some(-10), None])
-        .to(DataType::Decimal(2, 1));
+        .to(DataType::Decimal(DecimalType::Int128, 2, 1));
     assert_eq!(c, &expected)
 }
 
 #[test]
 fn decimal_to_float() {
     let array = Int128Array::from(&[Some(2), Some(10), Some(-2), Some(-10), None])
-        .to(DataType::Decimal(2, 1));
+        .to(DataType::Decimal(DecimalType::Int128, 2, 1));
 
     let b = cast(&array, &DataType::Float32, CastOptions::default()).unwrap();
     let c = b.as_any().downcast_ref::<PrimitiveArray<f32>>().unwrap();
@@ -351,7 +381,7 @@ fn decimal_to_float() {
 #[test]
 fn decimal_to_integer() {
     let array = Int128Array::from(&[Some(2), Some(10), Some(-2), Some(-10), None, Some(2560)])
-        .to(DataType::Decimal(2, 1));
+        .to(DataType::Decimal(DecimalType::Int128, 2, 1));
 
     let b = cast(&array, &DataType::Int8, CastOptions::default()).unwrap();
     let c = b.as_any().downcast_ref::<PrimitiveArray<i8>>().unwrap();
@@ -459,8 +489,8 @@ fn consistency() {
         Date32,
         Time32(TimeUnit::Second),
         Time32(TimeUnit::Millisecond),
-        Decimal(1, 2),
-        Decimal(2, 2),
+        Decimal(DecimalType::Int128, 1, 2),
+        Decimal(DecimalType::Int128, 2, 2),
         Date64,
         Utf8,
         LargeUtf8,

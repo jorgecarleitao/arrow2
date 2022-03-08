@@ -80,7 +80,7 @@ The following arrays are supported:
 
 * `NullArray` (just holds nulls)
 * `BooleanArray` (booleans)
-* `PrimitiveArray<T>` (for ints, floats)
+* `PrimitiveArray<T>` (for ints, floats, decimal)
 * `Utf8Array<i32>` and `Utf8Array<i64>` (for strings)
 * `BinaryArray<i32>` and `BinaryArray<i64>` (for opaque binaries)
 * `FixedSizeBinaryArray` (like `BinaryArray`, but fixed size)
@@ -124,7 +124,7 @@ There is a one to one relationship between each variant of `PhysicalType` (an en
 an each implementation of `Array` (a struct):
 
 | `PhysicalType`    | `Array`                |
-|-------------------|------------------------|
+| ----------------- | ---------------------- |
 | `Primitive(_)`    | `PrimitiveArray<_>`    |
 | `Binary`          | `BinaryArray<i32>`     |
 | `LargeBinary`     | `BinaryArray<i64>`     |

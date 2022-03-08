@@ -2,7 +2,7 @@ use std::io::Cursor;
 
 use arrow2::array::*;
 use arrow2::chunk::Chunk;
-use arrow2::datatypes::{Field, Schema};
+use arrow2::datatypes::{DataType, DecimalType, Field, Schema};
 use arrow2::error::Result;
 use arrow2::io::ipc::read::{read_file_metadata, FileReader};
 use arrow2::io::ipc::{write::*, IpcField};
@@ -363,12 +363,22 @@ fn write_sliced_list() -> Result<()> {
 
 #[test]
 fn write_months_days_ns() -> Result<()> {
-    let array = Box::new(MonthsDaysNsArray::from([
+    let array = MonthsDaysNsArray::from([
         Some(months_days_ns::new(1, 1, 0)),
         Some(months_days_ns::new(1, 1, 1)),
         None,
         Some(months_days_ns::new(1, 1, 2)),
-    ])) as Box<dyn Array>;
+    ])
+    .boxed();
+    let schema = Schema::from(vec![Field::new("a", array.data_type().clone(), true)]);
+    let columns = Chunk::try_new(vec![array])?;
+    round_trip(columns, schema, None, None)
+}
+
+fn write_decimali32() -> Result<()> {
+    let array = Int32Array::from([Some(1), Some(2), None, Some(4)])
+        .to(DataType::Decimal(DecimalType::Int32, 2, 2))
+        .boxed();
     let schema = Schema::from(vec![Field::new("a", array.data_type().clone(), true)]);
     let columns = Chunk::try_new(vec![array])?;
     round_trip(columns, schema, None, None)

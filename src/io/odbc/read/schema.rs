@@ -1,4 +1,4 @@
-use crate::datatypes::{DataType, Field, TimeUnit};
+use crate::datatypes::{DataType, DecimalType, Field, TimeUnit};
 use crate::error::Result;
 
 use super::super::api;
@@ -41,7 +41,7 @@ fn column_to_data_type(data_type: &api::DataType) -> DataType {
         | OdbcDataType::Decimal {
             precision: p @ 0..=38,
             scale,
-        } => DataType::Decimal(*p, (*scale) as usize),
+        } => DataType::Decimal(DecimalType::Int128, *p, (*scale) as usize),
         OdbcDataType::Integer => DataType::Int32,
         OdbcDataType::SmallInt => DataType::Int16,
         OdbcDataType::Real | OdbcDataType::Float { precision: 0..=24 } => DataType::Float32,
