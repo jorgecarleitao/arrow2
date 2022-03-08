@@ -4,6 +4,7 @@ use crate::types::simd::*;
 
 use super::super::min_max::SimdOrd;
 use super::super::sum::Sum;
+use super::simd_ord_int;
 
 macro_rules! simd_add {
     ($simd:tt, $type:ty, $lanes:expr, $add:tt) => {
@@ -52,59 +53,6 @@ simd_add!(i32x16, i32, 16, wrapping_add);
 simd_add!(i64x8, i64, 8, wrapping_add);
 simd_add!(f32x16, f32, 16, add);
 simd_add!(f64x8, f64, 8, add);
-
-macro_rules! simd_ord_int {
-    ($simd:tt, $type:ty) => {
-        impl SimdOrd<$type> for $simd {
-            const MIN: $type = <$type>::MIN;
-            const MAX: $type = <$type>::MAX;
-
-            #[inline]
-            fn max_element(self) -> $type {
-                self.0.iter().copied().fold(Self::MIN, <$type>::max)
-            }
-
-            #[inline]
-            fn min_element(self) -> $type {
-                self.0.iter().copied().fold(Self::MAX, <$type>::min)
-            }
-
-            #[inline]
-            fn max_lane(self, x: Self) -> Self {
-                let mut result = <$simd>::default();
-                result
-                    .0
-                    .iter_mut()
-                    .zip(self.0.iter())
-                    .zip(x.0.iter())
-                    .for_each(|((a, b), c)| *a = (*b).max(*c));
-                result
-            }
-
-            #[inline]
-            fn min_lane(self, x: Self) -> Self {
-                let mut result = <$simd>::default();
-                result
-                    .0
-                    .iter_mut()
-                    .zip(self.0.iter())
-                    .zip(x.0.iter())
-                    .for_each(|((a, b), c)| *a = (*b).min(*c));
-                result
-            }
-
-            #[inline]
-            fn new_min() -> Self {
-                Self([Self::MAX; <$simd>::LANES])
-            }
-
-            #[inline]
-            fn new_max() -> Self {
-                Self([Self::MIN; <$simd>::LANES])
-            }
-        }
-    };
-}
 
 macro_rules! simd_ord_float {
     ($simd:tt, $type:ty) => {
