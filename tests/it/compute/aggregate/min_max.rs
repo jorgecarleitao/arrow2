@@ -202,3 +202,13 @@ fn test_binary_min_max_1() {
     assert_eq!(Some("a".as_bytes()), min_binary(&a));
     assert_eq!(Some("b".as_bytes()), max_binary(&a));
 }
+
+#[test]
+fn test_max_not_lexi() {
+    let values = [0, 10, 0, 0, 0, 0, 0, 0, 1, 0];
+    let arr = Int64Array::from_slice(&values);
+
+    let maximum = 10;
+    let out = max_primitive(&arr).unwrap();
+    assert_eq!(out, maximum);
+}

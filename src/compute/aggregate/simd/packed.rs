@@ -43,12 +43,12 @@ macro_rules! simd_ord_int {
 
             #[inline]
             fn max_lane(self, x: Self) -> Self {
-                self.max(x)
+                self.lanes_lt(x).select(x, self)
             }
 
             #[inline]
             fn min_lane(self, x: Self) -> Self {
-                self.min(x)
+                self.lanes_gt(x).select(x, self)
             }
 
             #[inline]
