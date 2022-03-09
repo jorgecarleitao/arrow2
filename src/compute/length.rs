@@ -19,7 +19,6 @@
 
 use crate::{
     array::*,
-    buffer::Buffer,
     datatypes::DataType,
     error::{ArrowError, Result},
     types::NativeType,
@@ -33,9 +32,8 @@ where
     let values = array
         .offsets()
         .windows(2)
-        .map(|offset| op(offset[1] - offset[0]));
-
-    let values = Buffer::from_trusted_len_iter(values);
+        .map(|offset| op(offset[1] - offset[0]))
+        .collect::<Vec<_>>();
 
     let data_type = if O::is_large() {
         DataType::Int64
@@ -43,7 +41,7 @@ where
         DataType::Int32
     };
 
-    PrimitiveArray::<O>::new(data_type, values, array.validity().cloned())
+    PrimitiveArray::<O>::new(data_type, values.into(), array.validity().cloned())
 }
 
 /// Returns an array of integers with the number of bytes on each string of the array.

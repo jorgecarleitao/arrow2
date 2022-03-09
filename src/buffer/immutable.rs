@@ -169,9 +169,7 @@ impl<T: NativeType> Buffer<T> {
         iterator.collect::<Vec<_>>().into()
     }
 
-    /// # Safety
-    /// This method assumes that the iterator's size is correct and is undefined behavior
-    /// to use it on an iterator that reports an incorrect length.
+    /// Creates a [`Buffer`] from an fallible [`Iterator`] with a trusted length.
     #[inline]
     pub fn try_from_trusted_len_iter<E, I: TrustedLen<Item = std::result::Result<T, E>>>(
         iterator: I,
