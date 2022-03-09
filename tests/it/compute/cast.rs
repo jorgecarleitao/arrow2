@@ -1,7 +1,7 @@
 use arrow2::array::*;
 use arrow2::compute::cast::{can_cast_types, cast, CastOptions};
 use arrow2::datatypes::*;
-use arrow2::types::NativeType;
+use arrow2::types::{days_ms, months_days_ns, NativeType};
 
 #[test]
 fn i32_to_f64() {
@@ -509,6 +509,29 @@ fn date32_to_date64() {
         DataType::Date32,
         &[864000000000i64, 1545696000000],
         DataType::Date64,
+    );
+}
+
+#[test]
+fn days_ms_to_months_days_ns() {
+    test_primitive_to_primitive(
+        &[days_ms::new(1, 1), days_ms::new(1, 2)],
+        DataType::Interval(IntervalUnit::DayTime),
+        &[
+            months_days_ns::new(0, 1, 1000),
+            months_days_ns::new(0, 1, 2000),
+        ],
+        DataType::Interval(IntervalUnit::MonthDayNano),
+    );
+}
+
+#[test]
+fn months_to_months_days_ns() {
+    test_primitive_to_primitive(
+        &[1, 2],
+        DataType::Interval(IntervalUnit::YearMonth),
+        &[months_days_ns::new(1, 0, 0), months_days_ns::new(2, 0, 0)],
+        DataType::Interval(IntervalUnit::MonthDayNano),
     );
 }
 

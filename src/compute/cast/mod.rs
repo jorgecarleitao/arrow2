@@ -290,6 +290,7 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (Timestamp(_, _), Date64) => true,
         (Int64, Duration(_)) => true,
         (Duration(_), Int64) => true,
+        (Interval(_), Interval(IntervalUnit::MonthDayNano)) => true,
         (_, _) => false,
     }
 }
@@ -841,6 +842,13 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
 
         (Int64, Duration(_)) => primitive_to_same_primitive_dyn::<i64>(array, to_type),
         (Duration(_), Int64) => primitive_to_same_primitive_dyn::<i64>(array, to_type),
+
+        (Interval(IntervalUnit::DayTime), Interval(IntervalUnit::MonthDayNano)) => {
+            primitive_dyn!(array, days_ms_to_months_days_ns)
+        }
+        (Interval(IntervalUnit::YearMonth), Interval(IntervalUnit::MonthDayNano)) => {
+            primitive_dyn!(array, months_to_months_days_ns)
+        }
 
         (_, _) => Err(ArrowError::NotYetImplemented(format!(
             "Casting from {:?} to {:?} not supported",

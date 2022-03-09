@@ -2,7 +2,9 @@ use std::hash::Hash;
 
 use num_traits::{AsPrimitive, Float, ToPrimitive};
 
+use crate::datatypes::IntervalUnit;
 use crate::error::Result;
+use crate::types::{days_ms, months_days_ns};
 use crate::{
     array::*,
     bitmap::Bitmap,
@@ -550,4 +552,32 @@ pub fn naive_timestamp_to_utf8<O: Offset>(
             Utf8Array::from_trusted_len_iter(iter)
         }
     }
+}
+
+#[inline]
+fn days_ms_to_months_days_ns_scalar(from: days_ms) -> months_days_ns {
+    months_days_ns::new(0, from.days(), from.milliseconds() as i64 * 1000)
+}
+
+/// Casts [`days_ms`]s to [`months_days_ns`]. This operation is infalible and lossless.
+pub fn days_ms_to_months_days_ns(from: &PrimitiveArray<days_ms>) -> PrimitiveArray<months_days_ns> {
+    unary(
+        from,
+        days_ms_to_months_days_ns_scalar,
+        DataType::Interval(IntervalUnit::MonthDayNano),
+    )
+}
+
+#[inline]
+fn months_to_months_days_ns_scalar(from: i32) -> months_days_ns {
+    months_days_ns::new(from, 0, 0)
+}
+
+/// Casts months represented as [`i32`]s to [`months_days_ns`]. This operation is infalible and lossless.
+pub fn months_to_months_days_ns(from: &PrimitiveArray<i32>) -> PrimitiveArray<months_days_ns> {
+    unary(
+        from,
+        months_to_months_days_ns_scalar,
+        DataType::Interval(IntervalUnit::MonthDayNano),
+    )
 }
