@@ -26,6 +26,13 @@ fn test_primitive_min_max_1() {
 }
 
 #[test]
+fn decimal() {
+    let a = Int128Array::from(&[None, None, Some(5), Some(2)]);
+    assert_eq!(Some(2), min_primitive(&a));
+    assert_eq!(Some(5), max_primitive(&a));
+}
+
+#[test]
 fn min_max_f32() {
     let a = Float32Array::from(&[None, None, Some(5.0), Some(2.0)]);
     assert_eq!(Some(2.0), min_primitive(&a));
