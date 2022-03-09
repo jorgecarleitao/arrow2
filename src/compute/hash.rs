@@ -1,5 +1,5 @@
 //! Contains the [`hash`] and typed (e.g. [`hash_primitive`]) operators.
-//! // multiversion does not copy documentation, causing a false positive
+// multiversion does not copy documentation, causing a false positive
 #![allow(missing_docs)]
 use ahash::{CallHasher, RandomState};
 use multiversion::multiversion;
@@ -13,7 +13,6 @@ macro_rules! new_state {
 
 use crate::{
     array::{Array, BinaryArray, BooleanArray, Offset, PrimitiveArray, Utf8Array},
-    buffer::Buffer,
     datatypes::{DataType, PhysicalType, PrimitiveType},
     error::{ArrowError, Result},
     types::NativeType,
@@ -36,8 +35,12 @@ pub fn hash_primitive<T: NativeType + Hash>(array: &PrimitiveArray<T>) -> Primit
 pub fn hash_boolean(array: &BooleanArray) -> PrimitiveArray<u64> {
     let state = new_state!();
 
-    let iter = array.values_iter().map(|x| u8::get_hash(&x, &state));
-    let values = Buffer::from_trusted_len_iter(iter);
+    let values = array
+        .values_iter()
+        .map(|x| u8::get_hash(&x, &state))
+        .collect::<Vec<_>>()
+        .into();
+
     PrimitiveArray::<u64>::new(DataType::UInt64, values, array.validity().cloned())
 }
 
@@ -47,18 +50,24 @@ pub fn hash_boolean(array: &BooleanArray) -> PrimitiveArray<u64> {
 pub fn hash_utf8<O: Offset>(array: &Utf8Array<O>) -> PrimitiveArray<u64> {
     let state = new_state!();
 
-    let iter = array
+    let values = array
         .values_iter()
-        .map(|x| <[u8]>::get_hash(&x.as_bytes(), &state));
-    let values = Buffer::from_trusted_len_iter(iter);
+        .map(|x| <[u8]>::get_hash(&x.as_bytes(), &state))
+        .collect::<Vec<_>>()
+        .into();
+
     PrimitiveArray::<u64>::new(DataType::UInt64, values, array.validity().cloned())
 }
 
 /// Element-wise hash of a [`BinaryArray`]. Validity is preserved.
 pub fn hash_binary<O: Offset>(array: &BinaryArray<O>) -> PrimitiveArray<u64> {
     let state = new_state!();
-    let iter = array.values_iter().map(|x| <[u8]>::get_hash(&x, &state));
-    let values = Buffer::from_trusted_len_iter(iter);
+    let values = array
+        .values_iter()
+        .map(|x| <[u8]>::get_hash(&x, &state))
+        .collect::<Vec<_>>()
+        .into();
+
     PrimitiveArray::<u64>::new(DataType::UInt64, values, array.validity().cloned())
 }
 
@@ -67,7 +76,7 @@ macro_rules! with_match_primitive_type {(
 ) => ({
     macro_rules! __with_ty__ {( $_ $T:ident ) => ( $($body)* )}
     use crate::datatypes::PrimitiveType::*;
-    use crate::types::days_ms;
+    use crate::types::{days_ms, months_days_ns};
     match $key_type {
         Int8 => __with_ty__! { i8 },
         Int16 => __with_ty__! { i16 },
@@ -75,6 +84,7 @@ macro_rules! with_match_primitive_type {(
         Int64 => __with_ty__! { i64 },
         Int128 => __with_ty__! { i128 },
         DaysMs => __with_ty__! { days_ms },
+        MonthDayNano => __with_ty__! { months_days_ns },
         UInt8 => __with_ty__! { u8 },
         UInt16 => __with_ty__! { u16 },
         UInt32 => __with_ty__! { u32 },
@@ -137,6 +147,7 @@ pub fn can_hash(data_type: &DataType) -> bool {
             | PhysicalType::Primitive(PrimitiveType::Int64)
             | PhysicalType::Primitive(PrimitiveType::Int128)
             | PhysicalType::Primitive(PrimitiveType::DaysMs)
+            | PhysicalType::Primitive(PrimitiveType::MonthDayNano)
             | PhysicalType::Primitive(PrimitiveType::UInt8)
             | PhysicalType::Primitive(PrimitiveType::UInt16)
             | PhysicalType::Primitive(PrimitiveType::UInt32)

@@ -1,7 +1,7 @@
-use crate::{array::*, buffer::Buffer, types::NativeType};
 use crate::{
-    array::{BinaryArray, Offset, Utf8Array},
+    array::{Array, BinaryArray, BooleanArray, Offset, PrimitiveArray, Utf8Array},
     error::Result,
+    types::NativeType,
 };
 
 pub(super) fn boolean_to_primitive_dyn<T>(array: &dyn Array) -> Result<Box<dyn Array>>
@@ -17,13 +17,13 @@ pub fn boolean_to_primitive<T>(from: &BooleanArray) -> PrimitiveArray<T>
 where
     T: NativeType + num_traits::One,
 {
-    let iter = from
+    let values = from
         .values()
         .iter()
-        .map(|x| if x { T::one() } else { T::default() });
-    let values = Buffer::<T>::from_trusted_len_iter(iter);
+        .map(|x| if x { T::one() } else { T::default() })
+        .collect::<Vec<_>>();
 
-    PrimitiveArray::<T>::new(T::PRIMITIVE.into(), values, from.validity().cloned())
+    PrimitiveArray::<T>::new(T::PRIMITIVE.into(), values.into(), from.validity().cloned())
 }
 
 /// Casts the [`BooleanArray`] to a [`Utf8Array`], casting trues to `"1"` and falses to `"0"`

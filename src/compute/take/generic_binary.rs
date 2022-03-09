@@ -39,8 +39,10 @@ pub fn take_no_validity<O: Offset, I: Index>(
         buffer.extend_from_slice(&values[_start..end]);
         length
     });
-    let offsets = std::iter::once(O::default()).chain(offsets);
-    let offsets = Buffer::from_trusted_len_iter(offsets);
+    let offsets = std::iter::once(O::default())
+        .chain(offsets)
+        .collect::<Vec<_>>()
+        .into();
 
     (offsets, buffer.into(), None)
 }
@@ -69,12 +71,13 @@ pub fn take_values_validity<O: Offset, I: Index, A: GenericBinaryArray<O>>(
         starts.push(start);
         length
     });
-    let offsets = std::iter::once(O::default()).chain(offsets);
-    let offsets = Buffer::from_trusted_len_iter(offsets);
+    let offsets = std::iter::once(O::default())
+        .chain(offsets)
+        .collect::<Vec<_>>();
 
     let buffer = take_values(length, starts.as_slice(), offsets.as_slice(), values_values);
 
-    (offsets, buffer, validity.into())
+    (offsets.into(), buffer, validity.into())
 }
 
 // take implementation when only indices contain nulls
@@ -98,13 +101,14 @@ pub fn take_indices_validity<O: Offset, I: Index>(
         };
         length
     });
-    let offsets = std::iter::once(O::default()).chain(offsets);
-    let offsets = Buffer::from_trusted_len_iter(offsets);
+    let offsets = std::iter::once(O::default())
+        .chain(offsets)
+        .collect::<Vec<_>>();
     let starts: Buffer<O> = starts.into();
 
     let buffer = take_values(length, starts.as_slice(), offsets.as_slice(), values);
 
-    (offsets, buffer, indices.validity().cloned())
+    (offsets.into(), buffer, indices.validity().cloned())
 }
 
 // take implementation when both indices and values contain nulls
@@ -140,11 +144,13 @@ pub fn take_values_indices_validity<O: Offset, I: Index, A: GenericBinaryArray<O
         };
         length
     });
-    let offsets = std::iter::once(O::default()).chain(offsets);
-    let offsets = Buffer::from_trusted_len_iter(offsets);
+    let offsets = std::iter::once(O::default())
+        .chain(offsets)
+        .collect::<Vec<_>>();
+
     let starts: Buffer<O> = starts.into();
 
     let buffer = take_values(length, starts.as_slice(), offsets.as_slice(), values_values);
 
-    (offsets, buffer, validity.into())
+    (offsets.into(), buffer, validity.into())
 }

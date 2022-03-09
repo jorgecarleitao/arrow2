@@ -3,7 +3,6 @@
 
 use crate::{
     array::PrimitiveArray,
-    buffer::Buffer,
     compute::{
         arithmetics::{ArrayCheckedMul, ArrayMul, ArraySaturatingMul},
         arity::{binary, binary_checked, unary},
@@ -260,18 +259,30 @@ pub fn adaptive_mul(
 ) -> Result<PrimitiveArray<i128>> {
     check_same_len(lhs, rhs)?;
 
-    if let (DataType::Decimal(lhs_p, lhs_s), DataType::Decimal(rhs_p, rhs_s)) =
-        (lhs.data_type(), rhs.data_type())
-    {
-        // The resulting precision is mutable because it could change while
-        // looping through the iterator
-        let (mut res_p, res_s, diff) = adjusted_precision_scale(*lhs_p, *lhs_s, *rhs_p, *rhs_s);
+    let (lhs_p, lhs_s, rhs_p, rhs_s) =
+        if let (DataType::Decimal(lhs_p, lhs_s), DataType::Decimal(rhs_p, rhs_s)) =
+            (lhs.data_type(), rhs.data_type())
+        {
+            (*lhs_p, *lhs_s, *rhs_p, *rhs_s)
+        } else {
+            return Err(ArrowError::InvalidArgumentError(
+                "Incorrect data type for the array".to_string(),
+            ));
+        };
 
-        let shift = 10i128.pow(diff as u32);
-        let shift_1 = 10i128.pow(res_s as u32);
-        let mut max = max_value(res_p);
+    // The resulting precision is mutable because it could change while
+    // looping through the iterator
+    let (mut res_p, res_s, diff) = adjusted_precision_scale(lhs_p, lhs_s, rhs_p, rhs_s);
 
-        let iter = lhs.values().iter().zip(rhs.values().iter()).map(|(l, r)| {
+    let shift = 10i128.pow(diff as u32);
+    let shift_1 = 10i128.pow(res_s as u32);
+    let mut max = max_value(res_p);
+
+    let values = lhs
+        .values()
+        .iter()
+        .zip(rhs.values().iter())
+        .map(|(l, r)| {
             // Based on the array's scales one of the arguments in the sum has to be shifted
             // to the left to match the final scale
             let res = if lhs_s > rhs_s {
@@ -297,19 +308,14 @@ pub fn adaptive_mul(
             }
 
             res
-        });
-        let values = Buffer::from_trusted_len_iter(iter);
+        })
+        .collect::<Vec<_>>();
 
-        let validity = combine_validities(lhs.validity(), rhs.validity());
+    let validity = combine_validities(lhs.validity(), rhs.validity());
 
-        Ok(PrimitiveArray::<i128>::new(
-            DataType::Decimal(res_p, res_s),
-            values,
-            validity,
-        ))
-    } else {
-        Err(ArrowError::InvalidArgumentError(
-            "Incorrect data type for the array".to_string(),
-        ))
-    }
+    Ok(PrimitiveArray::<i128>::new(
+        DataType::Decimal(res_p, res_s),
+        values.into(),
+        validity,
+    ))
 }

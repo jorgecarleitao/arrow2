@@ -4,14 +4,13 @@ use super::utils::{check_same_len, combine_validities};
 use crate::{
     array::PrimitiveArray,
     bitmap::{Bitmap, MutableBitmap},
-    buffer::Buffer,
     datatypes::DataType,
     error::Result,
     types::NativeType,
 };
 
-/// Applies an unary and infallible function to a primitive array. This is the
-/// fastest way to perform an operation on a primitive array when the benefits
+/// Applies an unary and infallible function to a [`PrimitiveArray`]. This is the
+/// fastest way to perform an operation on a [`PrimitiveArray`] when the benefits
 /// of a vectorized operation outweighs the cost of branching nulls and
 /// non-nulls.
 ///
@@ -26,10 +25,9 @@ where
     O: NativeType,
     F: Fn(I) -> O,
 {
-    let values = array.values().iter().map(|v| op(*v));
-    let values = Buffer::from_trusted_len_iter(values);
+    let values = array.values().iter().map(|v| op(*v)).collect::<Vec<_>>();
 
-    PrimitiveArray::<O>::new(data_type, values, array.validity().cloned())
+    PrimitiveArray::<O>::new(data_type, values.into(), array.validity().cloned())
 }
 
 /// Version of unary that checks for errors in the closure used to create the
@@ -44,8 +42,12 @@ where
     O: NativeType,
     F: Fn(I) -> Result<O>,
 {
-    let values = array.values().iter().map(|v| op(*v));
-    let values = Buffer::try_from_trusted_len_iter(values)?;
+    let values = array
+        .values()
+        .iter()
+        .map(|v| op(*v))
+        .collect::<Result<Vec<_>>>()?
+        .into();
 
     Ok(PrimitiveArray::<O>::new(
         data_type,
@@ -68,13 +70,16 @@ where
 {
     let mut mut_bitmap = MutableBitmap::with_capacity(array.len());
 
-    let values = array.values().iter().map(|v| {
-        let (res, over) = op(*v);
-        mut_bitmap.push(over);
-        res
-    });
-
-    let values = Buffer::from_trusted_len_iter(values);
+    let values = array
+        .values()
+        .iter()
+        .map(|v| {
+            let (res, over) = op(*v);
+            mut_bitmap.push(over);
+            res
+        })
+        .collect::<Vec<_>>()
+        .into();
 
     (
         PrimitiveArray::<O>::new(data_type, values, array.validity().cloned()),
@@ -97,18 +102,21 @@ where
 {
     let mut mut_bitmap = MutableBitmap::with_capacity(array.len());
 
-    let values = array.values().iter().map(|v| match op(*v) {
-        Some(val) => {
-            mut_bitmap.push(true);
-            val
-        }
-        None => {
-            mut_bitmap.push(false);
-            O::default()
-        }
-    });
-
-    let values = Buffer::from_trusted_len_iter(values);
+    let values = array
+        .values()
+        .iter()
+        .map(|v| match op(*v) {
+            Some(val) => {
+                mut_bitmap.push(true);
+                val
+            }
+            None => {
+                mut_bitmap.push(false);
+                O::default()
+            }
+        })
+        .collect::<Vec<_>>()
+        .into();
 
     // The validity has to be checked against the bitmap created during the
     // creation of the values with the iterator. If an error was found during
@@ -153,8 +161,9 @@ where
         .values()
         .iter()
         .zip(rhs.values().iter())
-        .map(|(l, r)| op(*l, *r));
-    let values = Buffer::from_trusted_len_iter(values);
+        .map(|(l, r)| op(*l, *r))
+        .collect::<Vec<_>>()
+        .into();
 
     PrimitiveArray::<T>::new(data_type, values, validity)
 }
@@ -180,9 +189,9 @@ where
         .values()
         .iter()
         .zip(rhs.values().iter())
-        .map(|(l, r)| op(*l, *r));
-
-    let values = Buffer::try_from_trusted_len_iter(values)?;
+        .map(|(l, r)| op(*l, *r))
+        .collect::<Result<Vec<_>>>()?
+        .into();
 
     Ok(PrimitiveArray::<T>::new(data_type, values, validity))
 }
@@ -206,13 +215,17 @@ where
 
     let mut mut_bitmap = MutableBitmap::with_capacity(lhs.len());
 
-    let values = lhs.values().iter().zip(rhs.values().iter()).map(|(l, r)| {
-        let (res, over) = op(*l, *r);
-        mut_bitmap.push(over);
-        res
-    });
-
-    let values = Buffer::from_trusted_len_iter(values);
+    let values = lhs
+        .values()
+        .iter()
+        .zip(rhs.values().iter())
+        .map(|(l, r)| {
+            let (res, over) = op(*l, *r);
+            mut_bitmap.push(over);
+            res
+        })
+        .collect::<Vec<_>>()
+        .into();
 
     (
         PrimitiveArray::<T>::new(data_type, values, validity),
@@ -251,9 +264,9 @@ where
                 mut_bitmap.push(false);
                 T::default()
             }
-        });
-
-    let values = Buffer::from_trusted_len_iter(values);
+        })
+        .collect::<Vec<_>>()
+        .into();
 
     let bitmap: Bitmap = mut_bitmap.into();
     let validity = combine_validities(lhs.validity(), rhs.validity());
