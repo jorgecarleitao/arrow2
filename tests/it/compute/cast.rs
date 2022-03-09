@@ -782,137 +782,24 @@ fn null_array_from_and_to_others() {
     typed_test!(Float64Array, Float64);
 }
 
-/*
-#[test]
-fn dict_to_dict_bad_index_value_primitive() {
-    use DataType::*;
-    // test converting from an array that has indexes of a type
-    // that are out of bounds for a particular other kind of
-    // index.
-
-    let keys_builder = PrimitiveBuilder::<i32>::new(10);
-    let values_builder = PrimitiveBuilder::<i64>::new(10);
-    let mut builder = PrimitiveDictionaryBuilder::new(keys_builder, values_builder);
-
-    // add 200 distinct values (which can be stored by a
-    // dictionary indexed by int32, but not a dictionary indexed
-    // with int8)
-    for i in 0..200 {
-        builder.append(i).unwrap();
-    }
-    let array: ArrayRef = Arc::new(builder.finish());
-
-    let cast_type = Dictionary(i8::KEY_TYPE, Box::new(Utf8));
-    let res = cast(&array, &cast_type, CastOptions::default());
-    assert, CastOptions::default())!(res.is_err());
-    let actual_error = format!("{:?}", res);
-    let expected_error = "Could not convert 72 dictionary indexes from Int32 to Int8";
-    assert!(
-        actual_error.contains(expected_error),
-        "did not find expected error '{}' in actual error '{}'",
-        actual_error,
-        expected_error
-    );
-}
-
-#[test]
-fn dict_to_dict_bad_index_value_utf8() {
-    use DataType::*;
-    // Same test as dict_to_dict_bad_index_value but use
-    // string values (and encode the expected behavior here);
-
-    let keys_builder = PrimitiveBuilder::<i32>::new(10);
-    let values_builder = StringBuilder::new(10);
-    let mut builder = StringDictionaryBuilder::new(keys_builder, values_builder);
-
-    // add 200 distinct values (which can be stored by a
-    // dictionary indexed by int32, but not a dictionary indexed
-    // with int8)
-    for i in 0..200 {
-        let val = format!("val{}", i);
-        builder.append(&val).unwrap();
-    }
-    let array: ArrayRef = Arc::new(builder.finish());
-
-    let cast_type = Dictionary(i8::KEY_TYPE, Box::new(Utf8));
-    let res = cast(&array, &cast_type, CastOptions::default());
-    assert, CastOptions::default())!(res.is_err());
-    let actual_error = format!("{:?}", res);
-    let expected_error = "Could not convert 72 dictionary indexes from Int32 to Int8";
-    assert!(
-        actual_error.contains(expected_error),
-        "did not find expected error '{}' in actual error '{}'",
-        actual_error,
-        expected_error
-    );
-}
-
 #[test]
 fn utf8_to_date32() {
-    use chrono::NaiveDate;
-    let from_ymd = chrono::NaiveDate::from_ymd;
-    let since = chrono::NaiveDate::signed_duration_since;
-
-    let a = StringArray::from(vec![
-        "2000-01-01",          // valid date with leading 0s
-        "2000-2-2",            // valid date without leading 0s
-        "2000-00-00",          // invalid month and day
-        "2000-01-01T12:00:00", // date + time is invalid
-        "2000",                // just a year is invalid
-    ]);
-    let array = Arc::new(a) as ArrayRef;
+    let array = Utf8Array::<i32>::from_slice(&["1970-01-01", "1970-01-02"]);
     let b = cast(&array, &DataType::Date32, CastOptions::default()).unwrap();
-    let c = b.as_any().downcast_ref::<Date32Array>().unwrap();
+    let c = b.as_any().downcast_ref::<Int32Array>().unwrap();
 
-    // test valid inputs
-    let date_value = since(NaiveDate::from_ymd(2000, 1, 1), from_ymd(1970, 1, 1))
-        .num_days() as i32;
-    assert_eq!(true, c.is_valid(0)); // "2000-01-01"
-    assert_eq!(date_value, c.value(0));
+    let expected = Int32Array::from_slice(&[0, 1]).to(DataType::Date32);
 
-    let date_value = since(NaiveDate::from_ymd(2000, 2, 2), from_ymd(1970, 1, 1))
-        .num_days() as i32;
-    assert_eq!(true, c.is_valid(1)); // "2000-2-2"
-    assert_eq!(date_value, c.value(1));
-
-    // test invalid inputs
-    assert_eq!(false, c.is_valid(2)); // "2000-00-00"
-    assert_eq!(false, c.is_valid(3)); // "2000-01-01T12:00:00"
-    assert_eq!(false, c.is_valid(4)); // "2000"
+    assert_eq!(&expected, c);
 }
 
 #[test]
 fn utf8_to_date64() {
-    let a = StringArray::from(vec![
-        "2000-01-01T12:00:00", // date + time valid
-        "2020-12-15T12:34:56", // date + time valid
-        "2020-2-2T12:34:56",   // valid date time without leading 0s
-        "2000-00-00T12:00:00", // invalid month and day
-        "2000-01-01 12:00:00", // missing the 'T'
-        "2000-01-01",          // just a date is invalid
-    ]);
-    let array = Arc::new(a) as ArrayRef;
+    let array = Utf8Array::<i32>::from_slice(&["1970-01-01", "1970-01-02"]);
     let b = cast(&array, &DataType::Date64, CastOptions::default()).unwrap();
-    let c = b.as_any().downcast_ref::<Date64Array>().unwrap();
+    let c = b.as_any().downcast_ref::<Int64Array>().unwrap();
 
-    // test valid inputs
-    assert_eq!(true, c.is_valid(0)); // "2000-01-01T12:00:00"
-    assert_eq!(946728000000, c.value(0));
-    assert_eq!(true, c.is_valid(1)); // "2020-12-15T12:34:56"
-    assert_eq!(1608035696000, c.value(1));
-    assert_eq!(true, c.is_valid(2)); // "2020-2-2T12:34:56"
-    assert_eq!(1580646896000, c.value(2));
+    let expected = Int64Array::from_slice(&[0, 86400000]).to(DataType::Date64);
 
-    // test invalid inputs
-    assert_eq!(false, c.is_valid(3)); // "2000-00-00T12:00:00"
-    assert_eq!(false, c.is_valid(4)); // "2000-01-01 12:00:00"
-    assert_eq!(false, c.is_valid(5)); // "2000-01-01"
+    assert_eq!(&expected, c);
 }
-
-fn make_union_array() -> UnionArray {
-    let mut builder = UnionBuilder::new_dense(7);
-    builder.append::<i32>("a", 1).unwrap();
-    builder.append::<i64>("b", 2).unwrap();
-    builder.build().unwrap()
-}
-*/

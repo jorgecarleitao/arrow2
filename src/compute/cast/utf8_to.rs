@@ -81,12 +81,12 @@ pub(super) fn utf8_to_date32_dyn<O: Offset>(from: &dyn Array) -> Result<Box<dyn 
 pub fn utf8_to_date64<O: Offset>(from: &Utf8Array<O>) -> PrimitiveArray<i64> {
     let iter = from.iter().map(|x| {
         x.and_then(|x| {
-            x.parse::<chrono::NaiveDateTime>()
+            x.parse::<chrono::NaiveDate>()
                 .ok()
-                .map(|x| x.timestamp_millis())
+                .map(|x| (x.num_days_from_ce() - EPOCH_DAYS_FROM_CE) as i64 * 86400000)
         })
     });
-    PrimitiveArray::<i64>::from_trusted_len_iter(iter).to(DataType::Date64)
+    PrimitiveArray::from_trusted_len_iter(iter).to(DataType::Date64)
 }
 
 pub(super) fn utf8_to_date64_dyn<O: Offset>(from: &dyn Array) -> Result<Box<dyn Array>> {
