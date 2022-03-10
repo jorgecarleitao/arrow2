@@ -228,8 +228,8 @@ impl UnionArray {
     }
 
     /// The optional offsets.
-    pub fn offsets(&self) -> &Option<Buffer<i32>> {
-        &self.offsets
+    pub fn offsets(&self) -> Option<&Buffer<i32>> {
+        self.offsets.as_ref()
     }
 
     /// The fields.

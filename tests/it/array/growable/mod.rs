@@ -7,6 +7,7 @@ mod list;
 mod null;
 mod primitive;
 mod struct_;
+mod union;
 mod utf8;
 
 /*
