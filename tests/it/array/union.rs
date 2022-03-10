@@ -9,19 +9,40 @@ use arrow2::{
 };
 
 #[test]
-fn debug() -> Result<()> {
+fn sparse_debug() -> Result<()> {
     let fields = vec![
         Field::new("a", DataType::Int32, true),
         Field::new("b", DataType::Utf8, true),
     ];
     let data_type = DataType::Union(fields, None, UnionMode::Sparse);
-    let types = Buffer::from_slice([0, 0, 1]);
+    let types = vec![0, 0, 1].into();
     let fields = vec![
         Arc::new(Int32Array::from(&[Some(1), None, Some(2)])) as Arc<dyn Array>,
         Arc::new(Utf8Array::<i32>::from(&[Some("a"), Some("b"), Some("c")])) as Arc<dyn Array>,
     ];
 
     let array = UnionArray::from_data(data_type, types, fields, None);
+
+    assert_eq!(format!("{:?}", array), "UnionArray[1, None, c]");
+
+    Ok(())
+}
+
+#[test]
+fn dense_debug() -> Result<()> {
+    let fields = vec![
+        Field::new("a", DataType::Int32, true),
+        Field::new("b", DataType::Utf8, true),
+    ];
+    let data_type = DataType::Union(fields, None, UnionMode::Dense);
+    let types = vec![0, 0, 1].into();
+    let fields = vec![
+        Arc::new(Int32Array::from(&[Some(1), None, Some(2)])) as Arc<dyn Array>,
+        Arc::new(Utf8Array::<i32>::from(&[Some("c")])) as Arc<dyn Array>,
+    ];
+    let offsets = Some(vec![0, 1, 0].into());
+
+    let array = UnionArray::from_data(data_type, types, fields, offsets);
 
     assert_eq!(format!("{:?}", array), "UnionArray[1, None, c]");
 

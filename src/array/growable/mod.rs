@@ -6,6 +6,8 @@ use crate::datatypes::*;
 
 mod binary;
 pub use binary::GrowableBinary;
+mod union;
+pub use union::GrowableUnion;
 mod boolean;
 pub use boolean::GrowableBoolean;
 mod fixed_binary;
@@ -28,7 +30,7 @@ pub use dictionary::GrowableDictionary;
 mod utils;
 
 /// Describes a struct that can be extended from slices of other pre-existing [`Array`]s.
-/// This is used in operations where a new array is built out of other arrays such
+/// This is used in operations where a new array is built out of other arrays, such
 /// as filter and concatenation.
 pub trait Growable<'a> {
     /// Extends this [`Growable`] with elements from the bounded [`Array`] at index `index` from
@@ -110,7 +112,14 @@ pub fn make_growable<'a>(
             use_validity,
             capacity
         ),
-        Union | Map => todo!(),
+        Union => {
+            let arrays = arrays
+                .iter()
+                .map(|array| array.as_any().downcast_ref().unwrap())
+                .collect::<Vec<_>>();
+            Box::new(union::GrowableUnion::new(arrays, capacity))
+        }
+        Map => todo!(),
         Dictionary(key_type) => {
             match_integer_type!(key_type, |$T| {
                 let arrays = arrays
