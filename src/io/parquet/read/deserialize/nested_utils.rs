@@ -359,7 +359,7 @@ pub(super) fn extend_from_new_page<'a, T: Decoder<'a, C, P>, C: Default, P: Push
     nested_state: &Option<NestedState>,
     nested: &VecDeque<NestedState>,
     decoder: &T,
-) -> Result<(P, MutableBitmap)> {
+) -> (P, MutableBitmap) {
     let needed = nested_state
         .as_ref()
         .map(|x| x.num_values())
@@ -402,7 +402,7 @@ pub(super) fn extend_from_new_page<'a, T: Decoder<'a, C, P>, C: Default, P: Push
     assert_eq!(items.len(), nested.len());
 
     // and return this item
-    Ok((values, validity))
+    (values, validity)
 }
 
 /// Extends `state` by consuming `page`, optionally extending `items` if `page`
@@ -413,7 +413,7 @@ pub fn extend_offsets1<'a>(
     init: &InitNested,
     items: &mut VecDeque<NestedState>,
     chunk_size: usize,
-) -> Result<Option<NestedState>> {
+) -> Option<NestedState> {
     let mut nested = if let Some(nested) = state {
         // there is a already a state => it must be incomplete...
         debug_assert!(
@@ -436,7 +436,7 @@ pub fn extend_offsets1<'a>(
         // => push the values to `items` so that it can be continued later
         items.push_back(nested);
         // and indicate that there is no item available
-        return Ok(None);
+        return None;
     }
 
     while page.len() > 0 {
@@ -446,7 +446,7 @@ pub fn extend_offsets1<'a>(
     }
 
     // and return
-    Ok(Some(nested))
+    Some(nested)
 }
 
 fn extend_offsets2<'a>(page: &mut NestedPage<'a>, nested: &mut NestedState, additional: usize) {
@@ -558,12 +558,8 @@ where
             let mut nested_page = NestedPage::new(page);
 
             // read next chunk from `nested_page` and get number of values to read
-            let maybe_nested =
-                extend_offsets1(&mut nested_page, state, init, nested_items, chunk_size);
-            let nested = match maybe_nested {
-                Ok(nested) => nested,
-                Err(e) => return MaybeNext::Some(Err(e)),
-            };
+            let nested = extend_offsets1(&mut nested_page, state, init, nested_items, chunk_size);
+
             // at this point we know whether there were enough rows in `page`
             // to fill chunk_size or not (`nested.is_some()`)
             // irrespectively, we need to consume the values from the page
@@ -574,7 +570,7 @@ where
                 Err(e) => return MaybeNext::Some(Err(e)),
             };
 
-            let maybe_array = extend_from_new_page::<D, _, _>(
+            let state = extend_from_new_page::<D, _, _>(
                 page,
                 p_state,
                 items,
@@ -582,10 +578,7 @@ where
                 nested_items,
                 decoder,
             );
-            let state = match maybe_array {
-                Ok(s) => s,
-                Err(e) => return MaybeNext::Some(Err(e)),
-            };
+
             match nested {
                 Some(p_state) => MaybeNext::Some(Ok((p_state, state.0, state.1))),
                 None => MaybeNext::More,
