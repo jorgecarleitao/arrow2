@@ -42,20 +42,27 @@ fn create_list(
 ) -> Result<Arc<dyn Array>> {
     Ok(match data_type {
         DataType::List(_) => {
-            let (offsets, validity) = nested.nested.pop().unwrap().inner();
+            let (mut offsets, validity) = nested.nested.pop().unwrap().inner();
+            offsets.push(values.len() as i64);
 
             let offsets = offsets.iter().map(|x| *x as i32).collect::<Vec<_>>();
             Arc::new(ListArray::<i32>::new(
                 data_type,
                 offsets.into(),
                 values,
-                validity,
+                validity.and_then(|x| x.into()),
             ))
         }
         DataType::LargeList(_) => {
-            let (offsets, validity) = nested.nested.pop().unwrap().inner();
+            let (mut offsets, validity) = nested.nested.pop().unwrap().inner();
+            offsets.push(values.len() as i64);
 
-            Arc::new(ListArray::<i64>::new(data_type, offsets, values, validity))
+            Arc::new(ListArray::<i64>::new(
+                data_type,
+                offsets.into(),
+                values,
+                validity.and_then(|x| x.into()),
+            ))
         }
         _ => {
             return Err(ArrowError::NotYetImplemented(format!(
