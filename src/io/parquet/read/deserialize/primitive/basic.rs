@@ -128,13 +128,20 @@ where
     }
 }
 
-impl<'a, T, P, F> utils::Decoder<'a, T, Vec<T>> for PrimitiveDecoder<T, P, F>
+impl<'a, T> utils::DecodedState<'a> for (Vec<T>, MutableBitmap) {
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+}
+
+impl<'a, T, P, F> utils::Decoder<'a> for PrimitiveDecoder<T, P, F>
 where
     T: NativeType,
     P: ParquetNativeType,
     F: Copy + Fn(P) -> T,
 {
     type State = State<'a, P>;
+    type DecodedState = (Vec<T>, MutableBitmap);
 
     fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
         let is_optional =
@@ -170,17 +177,20 @@ where
         }
     }
 
-    fn with_capacity(&self, capacity: usize) -> Vec<T> {
-        Vec::<T>::with_capacity(capacity)
+    fn with_capacity(&self, capacity: usize) -> Self::DecodedState {
+        (
+            Vec::<T>::with_capacity(capacity),
+            MutableBitmap::with_capacity(capacity),
+        )
     }
 
     fn extend_from_state(
         &self,
         state: &mut Self::State,
-        values: &mut Vec<T>,
-        validity: &mut MutableBitmap,
+        decoded: &mut Self::DecodedState,
         remaining: usize,
     ) {
+        let (values, validity) = decoded;
         match state {
             State::Optional(page_validity, page_values) => utils::extend_from_decoder(
                 validity,

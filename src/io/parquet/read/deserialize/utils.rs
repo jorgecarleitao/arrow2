@@ -226,70 +226,61 @@ pub(super) trait PageState<'a> {
     fn len(&self) -> usize;
 }
 
+/// The state of a partially deserialized page
+pub(super) trait DecodedState<'a> {
+    fn len(&self) -> usize;
+}
+
 /// A decoder that knows how to map `State` -> Array
-pub(super) trait Decoder<'a, C: Default, P: Pushable<C>> {
+pub(super) trait Decoder<'a> {
     type State: PageState<'a>;
+    type DecodedState: DecodedState<'a>;
 
     fn build_state(&self, page: &'a DataPage) -> Result<Self::State, ArrowError>;
 
-    /// Initializes a new pushable
-    fn with_capacity(&self, capacity: usize) -> P;
+    /// Initializes a new state
+    fn with_capacity(&self, capacity: usize) -> Self::DecodedState;
 
     /// extends (values, validity) by deserializing items in `State`.
     /// It guarantees that the length of `values` is at most `values.len() + remaining`.
     fn extend_from_state(
         &self,
         page: &mut Self::State,
-        values: &mut P,
-        validity: &mut MutableBitmap,
+        decoded: &mut Self::DecodedState,
         additional: usize,
     );
 }
 
-pub(super) fn extend_from_new_page<'a, T: Decoder<'a, C, P>, C: Default, P: Pushable<C>>(
+pub(super) fn extend_from_new_page<'a, T: Decoder<'a>>(
     mut page: T::State,
-    state: Option<(P, MutableBitmap)>,
     chunk_size: usize,
-    items: &mut VecDeque<(P, MutableBitmap)>,
+    items: &mut VecDeque<T::DecodedState>,
     decoder: &T,
-) -> Result<Option<(P, MutableBitmap)>, ArrowError> {
-    let (mut values, mut validity) = if let Some((values, validity)) = state {
+) {
+    let mut decoded = if let Some(decoded) = items.pop_back() {
         // there is a already a state => it must be incomplete...
         debug_assert!(
-            values.len() < chunk_size,
-            "the temp array is expected to be incomplete"
+            decoded.len() < chunk_size,
+            "the temp state is expected to be incomplete"
         );
-        (values, validity)
+        decoded
     } else {
         // there is no state => initialize it
-        (
-            decoder.with_capacity(chunk_size),
-            MutableBitmap::with_capacity(chunk_size),
-        )
+        decoder.with_capacity(chunk_size)
     };
 
-    let remaining = chunk_size - values.len();
+    let remaining = chunk_size - decoded.len();
 
     // extend the current state
-    decoder.extend_from_state(&mut page, &mut values, &mut validity, remaining);
+    decoder.extend_from_state(&mut page, &mut decoded, remaining);
 
-    if values.len() < chunk_size {
-        // the whole page was consumed and we still do not have enough items
-        // => push the values to `items` so that it can be continued later
-        items.push_back((values, validity));
-        // and indicate that there is no item available
-        return Ok(None);
-    }
+    items.push_back(decoded);
 
     while page.len() > 0 {
-        let mut values = decoder.with_capacity(chunk_size);
-        let mut validity = MutableBitmap::with_capacity(chunk_size);
-        decoder.extend_from_state(&mut page, &mut values, &mut validity, chunk_size);
-        items.push_back((values, validity))
+        let mut decoded = decoder.with_capacity(chunk_size);
+        decoder.extend_from_state(&mut page, &mut decoded, chunk_size);
+        items.push_back(decoded)
     }
-
-    // and return this array
-    Ok(Some((values, validity)))
 }
 
 #[derive(Debug)]
@@ -300,21 +291,20 @@ pub enum MaybeNext<P> {
 }
 
 #[inline]
-pub(super) fn next<'a, I: DataPages, C: Default, P: Pushable<C>, D: Decoder<'a, C, P>>(
+pub(super) fn next<'a, I: DataPages, D: Decoder<'a>>(
     iter: &'a mut I,
-    items: &mut VecDeque<(P, MutableBitmap)>,
+    items: &mut VecDeque<D::DecodedState>,
     chunk_size: usize,
     decoder: &D,
-) -> MaybeNext<Result<(P, MutableBitmap), ArrowError>> {
-    // back[a1, a2, a3, ...]front
+) -> MaybeNext<Result<D::DecodedState, ArrowError>> {
+    // front[a1, a2, a3, ...]back
     if items.len() > 1 {
-        let item = items.pop_back().unwrap();
+        let item = items.pop_front().unwrap();
         return MaybeNext::Some(Ok(item));
     }
-    match (items.pop_back(), iter.next()) {
-        (_, Err(e)) => MaybeNext::Some(Err(e.into())),
-        (None, Ok(None)) => MaybeNext::None,
-        (state, Ok(Some(page))) => {
+    match iter.next() {
+        Err(e) => MaybeNext::Some(Err(e.into())),
+        Ok(Some(page)) => {
             // there is a new page => consume the page from the start
             let maybe_page = decoder.build_state(page);
             let page = match maybe_page {
@@ -322,19 +312,24 @@ pub(super) fn next<'a, I: DataPages, C: Default, P: Pushable<C>, D: Decoder<'a, 
                 Err(e) => return MaybeNext::Some(Err(e)),
             };
 
-            let maybe_array = extend_from_new_page(page, state, chunk_size, items, decoder);
+            extend_from_new_page(page, chunk_size, items, decoder);
 
-            match maybe_array {
-                Ok(Some((values, validity))) => MaybeNext::Some(Ok((values, validity))),
-                Ok(None) => MaybeNext::More,
-                Err(e) => MaybeNext::Some(Err(e)),
+            if items.front().unwrap().len() < chunk_size {
+                MaybeNext::More
+            } else {
+                let decoded = items.pop_front().unwrap();
+                MaybeNext::Some(Ok(decoded))
             }
         }
-        (Some((values, validity)), Ok(None)) => {
-            // we have a populated item and no more pages
-            // the only case where an item's length may be smaller than chunk_size
-            debug_assert!(values.len() <= chunk_size);
-            MaybeNext::Some(Ok((values, validity)))
+        Ok(None) => {
+            if let Some(decoded) = items.pop_front() {
+                // we have a populated item and no more pages
+                // the only case where an item's length may be smaller than chunk_size
+                debug_assert!(decoded.len() <= chunk_size);
+                MaybeNext::Some(Ok(decoded))
+            } else {
+                MaybeNext::None
+            }
         }
     }
 }

@@ -11,7 +11,7 @@ use crate::{
 
 use super::super::utils;
 use super::super::utils::{
-    extend_from_decoder, next, split_buffer, Decoder, MaybeNext, OptionalPageValidity,
+    extend_from_decoder, next, split_buffer, DecodedState, Decoder, MaybeNext, OptionalPageValidity,
 };
 use super::super::DataPages;
 
@@ -74,11 +74,18 @@ impl<'a> utils::PageState<'a> for State<'a> {
     }
 }
 
+impl<'a> DecodedState<'a> for (MutableBitmap, MutableBitmap) {
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+}
+
 #[derive(Default)]
 struct BooleanDecoder {}
 
-impl<'a> Decoder<'a, bool, MutableBitmap> for BooleanDecoder {
+impl<'a> Decoder<'a> for BooleanDecoder {
     type State = State<'a>;
+    type DecodedState = (MutableBitmap, MutableBitmap);
 
     fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
         let is_optional =
@@ -97,17 +104,20 @@ impl<'a> Decoder<'a, bool, MutableBitmap> for BooleanDecoder {
         }
     }
 
-    fn with_capacity(&self, capacity: usize) -> MutableBitmap {
-        MutableBitmap::with_capacity(capacity)
+    fn with_capacity(&self, capacity: usize) -> Self::DecodedState {
+        (
+            MutableBitmap::with_capacity(capacity),
+            MutableBitmap::with_capacity(capacity),
+        )
     }
 
     fn extend_from_state(
         &self,
         state: &mut Self::State,
-        values: &mut MutableBitmap,
-        validity: &mut MutableBitmap,
+        decoded: &mut Self::DecodedState,
         remaining: usize,
     ) {
+        let (values, validity) = decoded;
         match state {
             State::Optional(page) => extend_from_decoder(
                 validity,

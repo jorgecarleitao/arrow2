@@ -59,8 +59,9 @@ impl<'a> utils::PageState<'a> for State<'a> {
 #[derive(Default)]
 struct BooleanDecoder {}
 
-impl<'a> Decoder<'a, bool, MutableBitmap> for BooleanDecoder {
+impl<'a> Decoder<'a> for BooleanDecoder {
     type State = State<'a>;
+    type DecodedState = (MutableBitmap, MutableBitmap);
 
     fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
         let is_optional =
@@ -84,17 +85,20 @@ impl<'a> Decoder<'a, bool, MutableBitmap> for BooleanDecoder {
         }
     }
 
-    fn with_capacity(&self, capacity: usize) -> MutableBitmap {
-        MutableBitmap::with_capacity(capacity)
+    fn with_capacity(&self, capacity: usize) -> Self::DecodedState {
+        (
+            MutableBitmap::with_capacity(capacity),
+            MutableBitmap::with_capacity(capacity),
+        )
     }
 
     fn extend_from_state(
         &self,
         state: &mut State,
-        values: &mut MutableBitmap,
-        validity: &mut MutableBitmap,
+        decoded: &mut Self::DecodedState,
         required: usize,
     ) {
+        let (values, validity) = decoded;
         match state {
             State::Optional(page_validity, page_values) => {
                 let max_def = page_validity.max_def();
@@ -155,7 +159,7 @@ impl<I: DataPages> Iterator for ArrayIterator<I> {
             &BooleanDecoder::default(),
         );
         match maybe_state {
-            MaybeNext::Some(Ok((nested, values, validity))) => {
+            MaybeNext::Some(Ok((nested, (values, validity)))) => {
                 Some(Ok((nested, finish(&DataType::Boolean, values, validity))))
             }
             MaybeNext::Some(Err(e)) => Some(Err(e)),
