@@ -1,5 +1,100 @@
 # Changelog
 
+## [v0.10.0](https://github.com/jorgecarleitao/arrow2/tree/v0.10.0) (2022-03-12)
+
+[Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.9.1...v0.10.0)
+
+**Breaking changes:**
+
+- Renamed `Ffi_ArrowArray` and `Ffi_ArrowSchema` [\#859](https://github.com/jorgecarleitao/arrow2/issues/859)
+- Improved performance and stability of writing to CSV [\#866](https://github.com/jorgecarleitao/arrow2/pull/866) ([ritchie46](https://github.com/ritchie46))
+- Simplified API for writing to JSON [\#864](https://github.com/jorgecarleitao/arrow2/pull/864) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Simplified API to import from FFI [\#854](https://github.com/jorgecarleitao/arrow2/pull/854) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Simplified compute \(lower/upper\) [\#847](https://github.com/jorgecarleitao/arrow2/pull/847) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Simplified infering arrow schema from a parquet schema [\#819](https://github.com/jorgecarleitao/arrow2/pull/819) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Bumped parquet and aligned API to fit into it [\#795](https://github.com/jorgecarleitao/arrow2/pull/795) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**New features:**
+
+- Added `GrowableUnion` [\#902](https://github.com/jorgecarleitao/arrow2/pull/902) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added cast to `months_days_ns` [\#900](https://github.com/jorgecarleitao/arrow2/pull/900) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support for `hash` of `month_day_ns` arrays [\#899](https://github.com/jorgecarleitao/arrow2/pull/899) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- IPC sink types and IPC file stream [\#878](https://github.com/jorgecarleitao/arrow2/pull/878) ([dexterduck](https://github.com/dexterduck))
+- implemented `futures::Sink` for parquet async writer [\#877](https://github.com/jorgecarleitao/arrow2/pull/877) ([dexterduck](https://github.com/dexterduck))
+- Added `try_new` and `new` to all arrays [\#873](https://github.com/jorgecarleitao/arrow2/pull/873) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support for datatypes serde [\#858](https://github.com/jorgecarleitao/arrow2/pull/858) ([houqp](https://github.com/houqp))
+- Added support to the Arrow C stream interface \(read and write\) [\#857](https://github.com/jorgecarleitao/arrow2/pull/857) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Support to read/write from/to ODBC [\#849](https://github.com/jorgecarleitao/arrow2/pull/849) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added operators that include validities in comparisons [\#846](https://github.com/jorgecarleitao/arrow2/pull/846) ([ritchie46](https://github.com/ritchie46))
+- Added support to read and write `Decimal128` to Avro [\#837](https://github.com/jorgecarleitao/arrow2/pull/837) ([potter420](https://github.com/potter420))
+- Added support to read Arrow streams asynchronously [\#832](https://github.com/jorgecarleitao/arrow2/pull/832) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support to write `LargeUtf8` and `LargeBinary` to Avro [\#828](https://github.com/jorgecarleitao/arrow2/pull/828) ([illumination-k](https://github.com/illumination-k))
+- Added support for pushdown projection in reading Avro [\#827](https://github.com/jorgecarleitao/arrow2/pull/827) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support to read Avro's structs [\#826](https://github.com/jorgecarleitao/arrow2/pull/826) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support to write largeUtf8/Binary to Avro [\#825](https://github.com/jorgecarleitao/arrow2/pull/825) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added json serialization of timestamp/date32/date64 [\#814](https://github.com/jorgecarleitao/arrow2/pull/814) ([ritchie46](https://github.com/ritchie46))
+- Added `BooleanArray::from_trusted_len_values_iter_unchecked` [\#799](https://github.com/jorgecarleitao/arrow2/pull/799) ([ritchie46](https://github.com/ritchie46))
+- Added `MutableUtf8Array::extend_values` [\#798](https://github.com/jorgecarleitao/arrow2/pull/798) ([ritchie46](https://github.com/ritchie46))
+- Added COW semantics to `Buffer`, `Bitmap` and some arrays [\#794](https://github.com/jorgecarleitao/arrow2/pull/794) ([ritchie46](https://github.com/ritchie46))
+- Added support to read parquet row groups in chunks [\#789](https://github.com/jorgecarleitao/arrow2/pull/789) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added scalar bitwise ops [\#788](https://github.com/jorgecarleitao/arrow2/pull/788) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Migrated to portable simd [\#747](https://github.com/jorgecarleitao/arrow2/pull/747) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Fixed bugs:**
+
+- Fixed edge case in reading multiple parquet pages [\#904](https://github.com/jorgecarleitao/arrow2/pull/904) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Bug fix in offset for sliced unions [\#891](https://github.com/jorgecarleitao/arrow2/pull/891) ([ncpenke](https://github.com/ncpenke))
+- Fix edge case in reading nested parquet [\#884](https://github.com/jorgecarleitao/arrow2/pull/884) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed unsoundness of `#derive(Clone)` for FFI structs [\#882](https://github.com/jorgecarleitao/arrow2/pull/882) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed json writing of dates and datetimes [\#867](https://github.com/jorgecarleitao/arrow2/pull/867) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed reading parquet with timezone [\#862](https://github.com/jorgecarleitao/arrow2/pull/862) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed error in writing compressed IPC arrow [\#855](https://github.com/jorgecarleitao/arrow2/pull/855) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed wrong null\_count when slicing a sliced Bitmap [\#848](https://github.com/jorgecarleitao/arrow2/pull/848) ([satlank](https://github.com/satlank))
+- Fixed error in writing compressed IPC files [\#840](https://github.com/jorgecarleitao/arrow2/pull/840) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed float to i128 cast [\#817](https://github.com/jorgecarleitao/arrow2/pull/817) ([houqp](https://github.com/houqp))
+- fix unescaped '"' in json writing [\#812](https://github.com/jorgecarleitao/arrow2/pull/812) ([ritchie46](https://github.com/ritchie46))
+- Fixed reading parquet binary dict page [\#791](https://github.com/jorgecarleitao/arrow2/pull/791) ([danburkert](https://github.com/danburkert))
+
+**Enhancements:**
+
+- Add `FixedSizeBinaryScalar` [\#782](https://github.com/jorgecarleitao/arrow2/issues/782)
+- Use more idiomatic versions [\#898](https://github.com/jorgecarleitao/arrow2/pull/898) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support for min/max for decimal [\#897](https://github.com/jorgecarleitao/arrow2/pull/897) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Made `FixedSizeList::try_push_valid` public and added `new_with_field` [\#887](https://github.com/jorgecarleitao/arrow2/pull/887) ([ncpenke](https://github.com/ncpenke))
+- Added `MutableFixedList::mut_values` [\#886](https://github.com/jorgecarleitao/arrow2/pull/886) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Made IPC IO use `try_new` [\#879](https://github.com/jorgecarleitao/arrow2/pull/879) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- expose `ListValuesIter` [\#874](https://github.com/jorgecarleitao/arrow2/pull/874) ([ritchie46](https://github.com/ritchie46))
+- Bumped crc [\#856](https://github.com/jorgecarleitao/arrow2/pull/856) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- DRY parquet reading [\#845](https://github.com/jorgecarleitao/arrow2/pull/845) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Refactored \(internal\) fmt [\#842](https://github.com/jorgecarleitao/arrow2/pull/842) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Bumped zstd [\#841](https://github.com/jorgecarleitao/arrow2/pull/841) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- inline push [\#835](https://github.com/jorgecarleitao/arrow2/pull/835) ([ritchie46](https://github.com/ritchie46))
+- Increased API consistency for COW and respective docs [\#833](https://github.com/jorgecarleitao/arrow2/pull/833) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Improved flexibility of reading parquet [\#820](https://github.com/jorgecarleitao/arrow2/pull/820) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Small improvement to deserializing fixed-len parquet statistics. [\#818](https://github.com/jorgecarleitao/arrow2/pull/818) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support for other timestamp units from parquet [\#803](https://github.com/jorgecarleitao/arrow2/pull/803) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- More to `into_mut` implementations [\#801](https://github.com/jorgecarleitao/arrow2/pull/801) ([ritchie46](https://github.com/ritchie46))
+- Added `FixedSizeListScalar` and `FixedSizeBinaryScalar` [\#786](https://github.com/jorgecarleitao/arrow2/pull/786) ([illumination-k](https://github.com/illumination-k))
+- DRY parquet module [\#785](https://github.com/jorgecarleitao/arrow2/pull/785) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Documentation updates:**
+
+- Improved documentation [\#860](https://github.com/jorgecarleitao/arrow2/pull/860) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Made crate `deny(missing_docs)` [\#808](https://github.com/jorgecarleitao/arrow2/pull/808) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed doc for `Bitmap::set_bit` [\#802](https://github.com/jorgecarleitao/arrow2/pull/802) ([yjshen](https://github.com/yjshen))
+- Fixed `dyn Array::slice` docstring [\#792](https://github.com/jorgecarleitao/arrow2/pull/792) ([ritchie46](https://github.com/ritchie46))
+
+**Testing updates:**
+
+- Simpler code \(DRY\) [\#901](https://github.com/jorgecarleitao/arrow2/pull/901) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed integration test [\#885](https://github.com/jorgecarleitao/arrow2/pull/885) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Simplified code to generate parquet files for tests [\#883](https://github.com/jorgecarleitao/arrow2/pull/883) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Removed un-needed `unsafe` [\#843](https://github.com/jorgecarleitao/arrow2/pull/843) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added more tests [\#810](https://github.com/jorgecarleitao/arrow2/pull/810) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Reduced code duplication [\#805](https://github.com/jorgecarleitao/arrow2/pull/805) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- upgrade to clap 3.0 [\#797](https://github.com/jorgecarleitao/arrow2/pull/797) ([Jimexist](https://github.com/Jimexist))
+- Simplified avro reading and added more tests [\#737](https://github.com/jorgecarleitao/arrow2/pull/737) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
 ## [v0.9.1](https://github.com/jorgecarleitao/arrow2/tree/v0.9.1) (2022-01-19)
 
 [Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.9.0...v0.9.1)
