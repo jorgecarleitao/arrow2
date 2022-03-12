@@ -15,7 +15,9 @@ use crate::{
     error::Result,
 };
 
-use super::super::utils::{extend_from_decoder, next, BinaryIter, MaybeNext, OptionalPageValidity};
+use super::super::utils::{
+    extend_from_decoder, next, BinaryIter, DecodedState, MaybeNext, OptionalPageValidity,
+};
 use super::super::DataPages;
 use super::{super::utils, utils::Binary};
 
@@ -161,13 +163,20 @@ impl<O: Offset> TraitBinaryArray<O> for Utf8Array<O> {
     }
 }
 
+impl<'a, O: Offset> DecodedState<'a> for (Binary<O>, MutableBitmap) {
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+}
+
 #[derive(Debug, Default)]
 struct BinaryDecoder<O: Offset> {
     phantom_o: std::marker::PhantomData<O>,
 }
 
-impl<'a, O: Offset> utils::Decoder<'a, &'a [u8], Binary<O>> for BinaryDecoder<O> {
+impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
     type State = State<'a>;
+    type DecodedState = (Binary<O>, MutableBitmap);
 
     fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
         let is_optional =
@@ -204,17 +213,20 @@ impl<'a, O: Offset> utils::Decoder<'a, &'a [u8], Binary<O>> for BinaryDecoder<O>
         }
     }
 
-    fn with_capacity(&self, capacity: usize) -> Binary<O> {
-        Binary::<O>::with_capacity(capacity)
+    fn with_capacity(&self, capacity: usize) -> Self::DecodedState {
+        (
+            Binary::<O>::with_capacity(capacity),
+            MutableBitmap::with_capacity(capacity),
+        )
     }
 
     fn extend_from_state(
         &self,
         state: &mut Self::State,
-        values: &mut Binary<O>,
-        validity: &mut MutableBitmap,
+        decoded: &mut Self::DecodedState,
         additional: usize,
     ) {
+        let (values, validity) = decoded;
         match state {
             State::Optional(page_validity, page_values) => extend_from_decoder(
                 validity,

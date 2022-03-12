@@ -36,8 +36,9 @@ struct BinaryDecoder<O: Offset> {
     phantom_o: std::marker::PhantomData<O>,
 }
 
-impl<'a, O: Offset> utils::Decoder<'a, &'a [u8], Binary<O>> for BinaryDecoder<O> {
+impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
     type State = State<'a>;
+    type DecodedState = (Binary<O>, MutableBitmap);
 
     fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
         let is_optional =
@@ -62,17 +63,20 @@ impl<'a, O: Offset> utils::Decoder<'a, &'a [u8], Binary<O>> for BinaryDecoder<O>
         }
     }
 
-    fn with_capacity(&self, capacity: usize) -> Binary<O> {
-        Binary::<O>::with_capacity(capacity)
+    fn with_capacity(&self, capacity: usize) -> Self::DecodedState {
+        (
+            Binary::<O>::with_capacity(capacity),
+            MutableBitmap::with_capacity(capacity),
+        )
     }
 
     fn extend_from_state(
         &self,
         state: &mut Self::State,
-        values: &mut Binary<O>,
-        validity: &mut MutableBitmap,
+        decoded: &mut Self::DecodedState,
         additional: usize,
     ) {
+        let (values, validity) = decoded;
         match state {
             State::Optional(page_validity, page_values) => {
                 let max_def = page_validity.max_def();
@@ -132,8 +136,8 @@ impl<O: Offset, A: TraitBinaryArray<O>, I: DataPages> Iterator for ArrayIterator
             &BinaryDecoder::<O>::default(),
         );
         match maybe_state {
-            MaybeNext::Some(Ok((nested, values, validity))) => {
-                Some(finish(&self.data_type, values, validity).map(|array| (nested, array)))
+            MaybeNext::Some(Ok((nested, decoded))) => {
+                Some(finish(&self.data_type, decoded.0, decoded.1).map(|array| (nested, array)))
             }
             MaybeNext::Some(Err(e)) => Some(Err(e)),
             MaybeNext::None => None,

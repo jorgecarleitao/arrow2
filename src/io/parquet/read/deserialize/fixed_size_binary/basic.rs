@@ -11,8 +11,8 @@ use crate::{
 };
 
 use super::super::utils::{
-    dict_indices_decoder, extend_from_decoder, next, not_implemented, split_buffer, Decoder,
-    MaybeNext, OptionalPageValidity, PageState,
+    dict_indices_decoder, extend_from_decoder, next, not_implemented, split_buffer, DecodedState,
+    Decoder, MaybeNext, OptionalPageValidity, PageState, Pushable,
 };
 use super::super::DataPages;
 use super::utils::FixedSizeBinary;
@@ -109,8 +109,15 @@ struct BinaryDecoder {
     size: usize,
 }
 
-impl<'a> Decoder<'a, &'a [u8], FixedSizeBinary> for BinaryDecoder {
+impl<'a> DecodedState<'a> for (FixedSizeBinary, MutableBitmap) {
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+}
+
+impl<'a> Decoder<'a> for BinaryDecoder {
     type State = State<'a>;
+    type DecodedState = (FixedSizeBinary, MutableBitmap);
 
     fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
         let is_optional =
@@ -141,17 +148,21 @@ impl<'a> Decoder<'a, &'a [u8], FixedSizeBinary> for BinaryDecoder {
         }
     }
 
-    fn with_capacity(&self, capacity: usize) -> FixedSizeBinary {
-        FixedSizeBinary::with_capacity(capacity, self.size)
+    fn with_capacity(&self, capacity: usize) -> Self::DecodedState {
+        (
+            FixedSizeBinary::with_capacity(capacity, self.size),
+            MutableBitmap::with_capacity(capacity),
+        )
     }
 
     fn extend_from_state(
         &self,
         state: &mut Self::State,
-        values: &mut FixedSizeBinary,
-        validity: &mut MutableBitmap,
+        decoded: &mut Self::DecodedState,
+
         remaining: usize,
     ) {
+        let (values, validity) = decoded;
         match state {
             State::Optional(page) => extend_from_decoder(
                 validity,

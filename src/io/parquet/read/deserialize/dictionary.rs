@@ -13,7 +13,7 @@ use crate::{
 };
 
 use super::{
-    utils::{self, extend_from_decoder, Decoder, MaybeNext, OptionalPageValidity},
+    utils::{self, extend_from_decoder, DecodedState, Decoder, MaybeNext, OptionalPageValidity},
     DataPages,
 };
 
@@ -122,11 +122,12 @@ where
     }
 }
 
-impl<'a, K> utils::Decoder<'a, K, Vec<K>> for PrimitiveDecoder<K>
+impl<'a, K> utils::Decoder<'a> for PrimitiveDecoder<K>
 where
     K: DictionaryKey,
 {
     type State = State<'a, K>;
+    type DecodedState = (Vec<K>, MutableBitmap);
 
     fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
         let is_optional =
@@ -149,17 +150,20 @@ where
         }
     }
 
-    fn with_capacity(&self, capacity: usize) -> Vec<K> {
-        Vec::<K>::with_capacity(capacity)
+    fn with_capacity(&self, capacity: usize) -> Self::DecodedState {
+        (
+            Vec::<K>::with_capacity(capacity),
+            MutableBitmap::with_capacity(capacity),
+        )
     }
 
     fn extend_from_state(
         &self,
         state: &mut Self::State,
-        values: &mut Vec<K>,
-        validity: &mut MutableBitmap,
+        decoded: &mut Self::DecodedState,
         remaining: usize,
     ) {
+        let (values, validity) = decoded;
         match state {
             State::Optional(page) => extend_from_decoder(
                 validity,
@@ -208,14 +212,13 @@ pub(super) fn next_dict<
     read_dict: F,
 ) -> MaybeNext<Result<DictionaryArray<K>>> {
     if items.len() > 1 {
-        let (values, validity) = items.pop_back().unwrap();
+        let (values, validity) = items.pop_front().unwrap();
         let keys = finish_key(values, validity);
         return MaybeNext::Some(Ok(DictionaryArray::from_data(keys, dict.unwrap())));
     }
-    match (items.pop_back(), iter.next()) {
-        (_, Err(e)) => MaybeNext::Some(Err(e.into())),
-        (None, Ok(None)) => MaybeNext::None,
-        (state, Ok(Some(page))) => {
+    match iter.next() {
+        Err(e) => MaybeNext::Some(Err(e.into())),
+        Ok(Some(page)) => {
             // consume the dictionary page
             match (&dict, page.dictionary_page()) {
                 (Dict::Empty, None) => {
@@ -229,43 +232,36 @@ pub(super) fn next_dict<
                 (Dict::Complete(_), _) => {}
             };
 
-            let maybe_array = {
-                // there is a new page => consume the page from the start
-                let maybe_page = PrimitiveDecoder::default().build_state(page);
-                let page = match maybe_page {
-                    Ok(page) => page,
-                    Err(e) => return MaybeNext::Some(Err(e)),
-                };
-
-                utils::extend_from_new_page::<PrimitiveDecoder<K>, _, _>(
-                    page,
-                    state,
-                    chunk_size,
-                    items,
-                    &PrimitiveDecoder::default(),
-                )
+            // there is a new page => consume the page from the start
+            let maybe_page = PrimitiveDecoder::default().build_state(page);
+            let page = match maybe_page {
+                Ok(page) => page,
+                Err(e) => return MaybeNext::Some(Err(e)),
             };
-            match maybe_array {
-                Some((values, validity)) => {
-                    let keys = PrimitiveArray::from_data(
-                        K::PRIMITIVE.into(),
-                        values.into(),
-                        validity.into(),
-                    );
 
-                    MaybeNext::Some(Ok(DictionaryArray::from_data(keys, dict.unwrap())))
-                }
-                None => MaybeNext::More,
+            utils::extend_from_new_page(page, chunk_size, items, &PrimitiveDecoder::<K>::default());
+
+            if items.front().unwrap().len() < chunk_size {
+                MaybeNext::More
+            } else {
+                let (values, validity) = items.pop_front().unwrap();
+                let keys =
+                    PrimitiveArray::from_data(K::PRIMITIVE.into(), values.into(), validity.into());
+                MaybeNext::Some(Ok(DictionaryArray::from_data(keys, dict.unwrap())))
             }
         }
-        (Some((values, validity)), Ok(None)) => {
-            // we have a populated item and no more pages
-            // the only case where an item's length may be smaller than chunk_size
-            debug_assert!(values.len() <= chunk_size);
+        Ok(None) => {
+            if let Some((values, validity)) = items.pop_front() {
+                // we have a populated item and no more pages
+                // the only case where an item's length may be smaller than chunk_size
+                debug_assert!(values.len() <= chunk_size);
 
-            let keys = finish_key(values, validity);
+                let keys = finish_key(values, validity);
 
-            MaybeNext::Some(Ok(DictionaryArray::from_data(keys, dict.unwrap())))
+                MaybeNext::Some(Ok(DictionaryArray::from_data(keys, dict.unwrap())))
+            } else {
+                MaybeNext::None
+            }
         }
     }
 }
