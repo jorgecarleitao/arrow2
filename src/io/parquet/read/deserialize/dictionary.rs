@@ -246,7 +246,7 @@ pub(super) fn next_dict<
                 )
             };
             match maybe_array {
-                Ok(Some((values, validity))) => {
+                Some((values, validity)) => {
                     let keys = PrimitiveArray::from_data(
                         K::PRIMITIVE.into(),
                         values.into(),
@@ -255,8 +255,7 @@ pub(super) fn next_dict<
 
                     MaybeNext::Some(Ok(DictionaryArray::from_data(keys, dict.unwrap())))
                 }
-                Ok(None) => MaybeNext::More,
-                Err(e) => MaybeNext::Some(Err(e)),
+                None => MaybeNext::More,
             }
         }
         (Some((values, validity)), Ok(None)) => {

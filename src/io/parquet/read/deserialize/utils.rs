@@ -252,7 +252,7 @@ pub(super) fn extend_from_new_page<'a, T: Decoder<'a, C, P>, C: Default, P: Push
     chunk_size: usize,
     items: &mut VecDeque<(P, MutableBitmap)>,
     decoder: &T,
-) -> Result<Option<(P, MutableBitmap)>, ArrowError> {
+) -> Option<(P, MutableBitmap)> {
     let (mut values, mut validity) = if let Some((values, validity)) = state {
         // there is a already a state => it must be incomplete...
         debug_assert!(
@@ -278,7 +278,7 @@ pub(super) fn extend_from_new_page<'a, T: Decoder<'a, C, P>, C: Default, P: Push
         // => push the values to `items` so that it can be continued later
         items.push_back((values, validity));
         // and indicate that there is no item available
-        return Ok(None);
+        return None;
     }
 
     while page.len() > 0 {
@@ -289,7 +289,7 @@ pub(super) fn extend_from_new_page<'a, T: Decoder<'a, C, P>, C: Default, P: Push
     }
 
     // and return this array
-    Ok(Some((values, validity)))
+    Some((values, validity))
 }
 
 #[derive(Debug)]
@@ -322,13 +322,10 @@ pub(super) fn next<'a, I: DataPages, C: Default, P: Pushable<C>, D: Decoder<'a, 
                 Err(e) => return MaybeNext::Some(Err(e)),
             };
 
-            let maybe_array = extend_from_new_page(page, state, chunk_size, items, decoder);
-
-            match maybe_array {
-                Ok(Some((values, validity))) => MaybeNext::Some(Ok((values, validity))),
-                Ok(None) => MaybeNext::More,
-                Err(e) => MaybeNext::Some(Err(e)),
-            }
+            extend_from_new_page(page, state, chunk_size, items, decoder)
+                .map(Ok)
+                .map(MaybeNext::Some)
+                .unwrap_or(MaybeNext::More)
         }
         (Some((values, validity)), Ok(None)) => {
             // we have a populated item and no more pages
