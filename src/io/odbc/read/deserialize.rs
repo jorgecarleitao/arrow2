@@ -237,7 +237,6 @@ fn timestamp_to_naive(timestamp: &odbc_api::sys::Timestamp) -> Option<NaiveDateT
         timestamp.day as u32,
     )
     .and_then(|x| {
-        println!("{timestamp:?}");
         x.and_hms_nano_opt(
             timestamp.hour as u32,
             timestamp.minute as u32,
