@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arrow2::array::*;
 use arrow2::chunk::Chunk;
 use arrow2::datatypes::*;
@@ -35,10 +37,23 @@ pub(super) fn schema() -> Schema {
             DataType::Interval(IntervalUnit::MonthDayNano),
             true,
         ),
+        Field::new(
+            "list",
+            DataType::List(Box::new(Field::new("item", DataType::Int32, true))),
+            false,
+        ),
+        Field::new(
+            "list nullable",
+            DataType::List(Box::new(Field::new("item", DataType::Int32, true))),
+            true,
+        ),
     ])
 }
 
 pub(super) fn data() -> Chunk<Box<dyn Array>> {
+    let list_dt = DataType::List(Box::new(Field::new("item", DataType::Int32, true)));
+    let list_dt1 = DataType::List(Box::new(Field::new("item", DataType::Int32, true)));
+
     let columns = vec![
         Box::new(Int64Array::from_slice([27, 47])) as Box<dyn Array>,
         Box::new(Int64Array::from([Some(27), None])),
@@ -64,6 +79,24 @@ pub(super) fn data() -> Chunk<Box<dyn Array>> {
             Some(months_days_ns::new(1, 1, 10 * 1_000_000)), // 10 millis
             None,
         ])),
+        Box::new(ListArray::<i32>::new(
+            list_dt,
+            vec![0, 2, 5].into(),
+            Arc::new(PrimitiveArray::<i32>::from([
+                None,
+                Some(1),
+                None,
+                Some(3),
+                Some(4),
+            ])),
+            None,
+        )),
+        Box::new(ListArray::<i32>::new(
+            list_dt1,
+            vec![0, 2, 2].into(),
+            Arc::new(PrimitiveArray::<i32>::from([None, Some(1)])),
+            Some([true, false].into()),
+        )),
     ];
 
     Chunk::new(columns)
