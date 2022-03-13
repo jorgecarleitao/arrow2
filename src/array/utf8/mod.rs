@@ -341,24 +341,30 @@ impl<O: Offset> Utf8Array<O> {
             }
         } else {
             match (self.values.into_mut(), self.offsets.into_mut()) {
-                (Left(immutable_values), Left(immutable_offsets)) => Left(Utf8Array::from_data(
-                    self.data_type,
-                    immutable_offsets,
-                    immutable_values,
-                    None,
-                )),
-                (Left(immutable_values), Right(mutable_offsets)) => Left(Utf8Array::from_data(
-                    self.data_type,
-                    mutable_offsets.into(),
-                    immutable_values,
-                    None,
-                )),
-                (Right(mutable_values), Left(immutable_offsets)) => Left(Utf8Array::from_data(
-                    self.data_type,
-                    immutable_offsets,
-                    mutable_values.into(),
-                    None,
-                )),
+                (Left(immutable_values), Left(immutable_offsets)) => Left(unsafe {
+                    Utf8Array::new_unchecked(
+                        self.data_type,
+                        immutable_offsets,
+                        immutable_values,
+                        None,
+                    )
+                }),
+                (Left(immutable_values), Right(mutable_offsets)) => Left(unsafe {
+                    Utf8Array::new_unchecked(
+                        self.data_type,
+                        mutable_offsets.into(),
+                        immutable_values,
+                        None,
+                    )
+                }),
+                (Right(mutable_values), Left(immutable_offsets)) => Left(unsafe {
+                    Utf8Array::from_data(
+                        self.data_type,
+                        immutable_offsets,
+                        mutable_values.into(),
+                        None,
+                    )
+                }),
                 (Right(mutable_values), Right(mutable_offsets)) => {
                     Right(MutableUtf8Array::from_data(
                         self.data_type,
