@@ -1,5 +1,5 @@
 use crate::bitmap::utils::{BitChunkIterExact, BitChunksExact};
-use crate::datatypes::{DataType, IntervalUnit};
+use crate::datatypes::{DataType, PhysicalType, PrimitiveType};
 use crate::error::{ArrowError, Result};
 use crate::scalar::*;
 use crate::types::simd::*;
@@ -348,19 +348,6 @@ pub fn max_boolean(array: &BooleanArray) -> Option<bool> {
         .or(Some(false))
 }
 
-macro_rules! dyn_primitive {
-    ($ty:ty, $array:expr, $f:ident) => {{
-        let array = $array
-            .as_any()
-            .downcast_ref::<PrimitiveArray<$ty>>()
-            .unwrap();
-        Box::new(PrimitiveScalar::<$ty>::new(
-            $array.data_type().clone(),
-            $f::<$ty>(array),
-        ))
-    }};
-}
-
 macro_rules! dyn_generic {
     ($array_ty:ty, $scalar_ty:ty, $array:expr, $f:ident) => {{
         let array = $array.as_any().downcast_ref::<$array_ty>().unwrap();
@@ -368,38 +355,48 @@ macro_rules! dyn_generic {
     }};
 }
 
+macro_rules! with_match_primitive_type {(
+    $key_type:expr, | $_:tt $T:ident | $($body:tt)*
+) => ({
+    macro_rules! __with_ty__ {( $_ $T:ident ) => ( $($body)* )}
+    use crate::datatypes::PrimitiveType::*;
+    match $key_type {
+        Int8 => __with_ty__! { i8 },
+        Int16 => __with_ty__! { i16 },
+        Int32 => __with_ty__! { i32 },
+        Int64 => __with_ty__! { i64 },
+        Int128 => __with_ty__! { i128 },
+        UInt8 => __with_ty__! { u8 },
+        UInt16 => __with_ty__! { u16 },
+        UInt32 => __with_ty__! { u32 },
+        UInt64 => __with_ty__! { u64 },
+        Float32 => __with_ty__! { f32 },
+        Float64 => __with_ty__! { f64 },
+        _ => return Err(ArrowError::InvalidArgumentError(format!(
+            "`min` and `max` operator do not support primitive `{:?}`",
+            $key_type,
+        ))),
+    }
+})}
+
 /// Returns the maximum of [`Array`]. The scalar is null when all elements are null.
 /// # Error
 /// Errors iff the type does not support this operation.
 pub fn max(array: &dyn Array) -> Result<Box<dyn Scalar>> {
-    Ok(match array.data_type() {
-        DataType::Boolean => dyn_generic!(BooleanArray, BooleanScalar, array, max_boolean),
-        DataType::Int8 => dyn_primitive!(i8, array, max_primitive),
-        DataType::Int16 => dyn_primitive!(i16, array, max_primitive),
-        DataType::Int32
-        | DataType::Date32
-        | DataType::Time32(_)
-        | DataType::Interval(IntervalUnit::YearMonth) => {
-            dyn_primitive!(i32, array, max_primitive)
+    Ok(match array.data_type().to_physical_type() {
+        PhysicalType::Boolean => dyn_generic!(BooleanArray, BooleanScalar, array, max_boolean),
+        PhysicalType::Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
+            let data_type = array.data_type().clone();
+            let array = array.as_any().downcast_ref().unwrap();
+            Box::new(PrimitiveScalar::<$T>::new(data_type, max_primitive::<$T>(array)))
+        }),
+        PhysicalType::Utf8 => dyn_generic!(Utf8Array<i32>, Utf8Scalar<i32>, array, max_string),
+        PhysicalType::LargeUtf8 => dyn_generic!(Utf8Array<i64>, Utf8Scalar<i64>, array, max_string),
+        PhysicalType::Binary => {
+            dyn_generic!(BinaryArray<i32>, BinaryScalar<i32>, array, max_binary)
         }
-        DataType::Int64
-        | DataType::Date64
-        | DataType::Time64(_)
-        | DataType::Timestamp(_, _)
-        | DataType::Duration(_) => dyn_primitive!(i64, array, max_primitive),
-        DataType::UInt8 => dyn_primitive!(u8, array, max_primitive),
-        DataType::UInt16 => dyn_primitive!(u16, array, max_primitive),
-        DataType::UInt32 => dyn_primitive!(u32, array, max_primitive),
-        DataType::UInt64 => dyn_primitive!(u64, array, max_primitive),
-        DataType::Float16 => unreachable!(),
-        DataType::Float32 => dyn_primitive!(f32, array, max_primitive),
-        DataType::Float64 => dyn_primitive!(f64, array, max_primitive),
-        DataType::Decimal(_, _) => dyn_primitive!(i128, array, max_primitive),
-        DataType::Utf8 => dyn_generic!(Utf8Array<i32>, Utf8Scalar<i32>, array, max_string),
-        DataType::LargeUtf8 => dyn_generic!(Utf8Array<i64>, Utf8Scalar<i64>, array, max_string),
-        DataType::Binary => dyn_generic!(BinaryArray<i32>, BinaryScalar<i32>, array, max_binary),
-        DataType::LargeBinary => {
-            dyn_generic!(BinaryArray<i64>, BinaryScalar<i64>, array, max_binary)
+        PhysicalType::LargeBinary => {
+            dyn_generic!(BinaryArray<i64>, BinaryScalar<i64>, array, min_binary)
         }
         _ => {
             return Err(ArrowError::InvalidArgumentError(format!(
@@ -414,33 +411,19 @@ pub fn max(array: &dyn Array) -> Result<Box<dyn Scalar>> {
 /// # Error
 /// Errors iff the type does not support this operation.
 pub fn min(array: &dyn Array) -> Result<Box<dyn Scalar>> {
-    Ok(match array.data_type() {
-        DataType::Boolean => dyn_generic!(BooleanArray, BooleanScalar, array, min_boolean),
-        DataType::Int8 => dyn_primitive!(i8, array, min_primitive),
-        DataType::Int16 => dyn_primitive!(i16, array, min_primitive),
-        DataType::Int32
-        | DataType::Date32
-        | DataType::Time32(_)
-        | DataType::Interval(IntervalUnit::YearMonth) => {
-            dyn_primitive!(i32, array, min_primitive)
+    Ok(match array.data_type().to_physical_type() {
+        PhysicalType::Boolean => dyn_generic!(BooleanArray, BooleanScalar, array, min_boolean),
+        PhysicalType::Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
+            let data_type = array.data_type().clone();
+            let array = array.as_any().downcast_ref().unwrap();
+            Box::new(PrimitiveScalar::<$T>::new(data_type, min_primitive::<$T>(array)))
+        }),
+        PhysicalType::Utf8 => dyn_generic!(Utf8Array<i32>, Utf8Scalar<i32>, array, min_string),
+        PhysicalType::LargeUtf8 => dyn_generic!(Utf8Array<i64>, Utf8Scalar<i64>, array, min_string),
+        PhysicalType::Binary => {
+            dyn_generic!(BinaryArray<i32>, BinaryScalar<i32>, array, min_binary)
         }
-        DataType::Int64
-        | DataType::Date64
-        | DataType::Time64(_)
-        | DataType::Timestamp(_, _)
-        | DataType::Duration(_) => dyn_primitive!(i64, array, min_primitive),
-        DataType::UInt8 => dyn_primitive!(u8, array, min_primitive),
-        DataType::UInt16 => dyn_primitive!(u16, array, min_primitive),
-        DataType::UInt32 => dyn_primitive!(u32, array, min_primitive),
-        DataType::UInt64 => dyn_primitive!(u64, array, min_primitive),
-        DataType::Float16 => unreachable!(),
-        DataType::Float32 => dyn_primitive!(f32, array, min_primitive),
-        DataType::Float64 => dyn_primitive!(f64, array, min_primitive),
-        DataType::Decimal(_, _) => dyn_primitive!(i128, array, min_primitive),
-        DataType::Utf8 => dyn_generic!(Utf8Array<i32>, Utf8Scalar<i32>, array, min_string),
-        DataType::LargeUtf8 => dyn_generic!(Utf8Array<i64>, Utf8Scalar<i64>, array, min_string),
-        DataType::Binary => dyn_generic!(BinaryArray<i32>, BinaryScalar<i32>, array, min_binary),
-        DataType::LargeBinary => {
+        PhysicalType::LargeBinary => {
             dyn_generic!(BinaryArray<i64>, BinaryScalar<i64>, array, min_binary)
         }
         _ => {
@@ -450,4 +433,24 @@ pub fn min(array: &dyn Array) -> Result<Box<dyn Scalar>> {
             )))
         }
     })
+}
+
+/// Whether [`min`] supports `data_type`
+pub fn can_min(data_type: &DataType) -> bool {
+    let physical = data_type.to_physical_type();
+    if let PhysicalType::Primitive(primitive) = physical {
+        use PrimitiveType::*;
+        matches!(
+            primitive,
+            Int8 | Int16 | Int64 | Int128 | UInt8 | UInt16 | UInt32 | UInt64 | Float32 | Float64
+        )
+    } else {
+        use PhysicalType::*;
+        matches!(physical, Boolean | Utf8 | LargeUtf8 | Binary | LargeBinary)
+    }
+}
+
+/// Whether [`max`] supports `data_type`
+pub fn can_max(data_type: &DataType) -> bool {
+    can_min(data_type)
 }
