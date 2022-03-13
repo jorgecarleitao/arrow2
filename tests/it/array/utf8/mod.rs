@@ -181,6 +181,7 @@ fn into_mut_1() {
     let offsets = Buffer::from_slice([0, 1]);
     let values = Buffer::from_slice(b"a");
     let a = values.clone(); // cloned values
+    assert_eq!(a, values);
     let array = Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
     assert!(array.into_mut().is_left());
 }
@@ -190,6 +191,7 @@ fn into_mut_2() {
     let offsets = Buffer::from_slice([0, 1]);
     let values = Buffer::from_slice(b"a");
     let a = offsets.clone(); // cloned offsets
+    assert_eq!(a, offsets);
     let array = Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
     assert!(array.into_mut().is_left());
 }
@@ -200,6 +202,7 @@ fn into_mut_3() {
     let values = Buffer::from_slice(b"a");
     let validity = Some([true].into());
     let a = validity.clone(); // cloned validity
+    assert_eq!(a, validity);
     let array = Utf8Array::<i32>::new(DataType::Utf8, offsets, values, validity);
     assert!(array.into_mut().is_left());
 }

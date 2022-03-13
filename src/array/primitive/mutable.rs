@@ -262,6 +262,11 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
             validity.shrink_to_fit()
         }
     }
+
+    /// Returns the capacity of this [`MutablePrimitiveArray`].
+    pub fn capacity(&self) -> usize {
+        self.values.capacity()
+    }
 }
 
 /// Accessors
@@ -475,6 +480,12 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
             values: iter.collect(),
             validity: None,
         }
+    }
+
+    /// Creates a (non-null) [`MutablePrimitiveArray`] from a vector of values.
+    /// This does not have memcopy and is the fastest way to create a [`PrimitiveArray`].
+    pub fn from_vec(values: Vec<T>) -> Self {
+        Self::from_data(T::PRIMITIVE.into(), values, None)
     }
 
     /// Creates a new [`MutablePrimitiveArray`] from an iterator over values
