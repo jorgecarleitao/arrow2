@@ -1,5 +1,5 @@
 use avro_schema::{
-    BytesLogical, Field as AvroField, Fixed, FixedLogical, IntLogical, LongLogical,
+    BytesLogical, Field as AvroField, Fixed, FixedLogical, IntLogical, LongLogical, Record,
     Schema as AvroSchema,
 };
 
@@ -38,6 +38,13 @@ fn _type_to_schema(data_type: &DataType) -> Result<AvroSchema> {
         DataType::LargeUtf8 => AvroSchema::String(None),
         DataType::LargeList(inner) | DataType::List(inner) => AvroSchema::Array(Box::new(
             type_to_schema(&inner.data_type, inner.is_nullable)?,
+        )),
+        DataType::Struct(fields) => AvroSchema::Record(Record::new(
+            "",
+            fields
+                .iter()
+                .map(field_to_field)
+                .collect::<Result<Vec<_>>>()?,
         )),
         DataType::Date32 => AvroSchema::Int(Some(IntLogical::Date)),
         DataType::Time32(TimeUnit::Millisecond) => AvroSchema::Int(Some(IntLogical::Time)),

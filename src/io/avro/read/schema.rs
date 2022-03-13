@@ -112,7 +112,7 @@ fn schema_to_field(schema: &AvroSchema, name: Option<&str>, props: Metadata) -> 
                 DataType::Union(fields, None, UnionMode::Dense)
             }
         }
-        AvroSchema::Record(Record { name, fields, .. }) => {
+        AvroSchema::Record(Record { fields, .. }) => {
             let fields = fields
                 .iter()
                 .map(|field| {
@@ -120,11 +120,7 @@ fn schema_to_field(schema: &AvroSchema, name: Option<&str>, props: Metadata) -> 
                     if let Some(doc) = &field.doc {
                         props.insert("avro::doc".to_string(), doc.clone());
                     }
-                    schema_to_field(
-                        &field.schema,
-                        Some(&format!("{}.{}", name, field.name)),
-                        props,
-                    )
+                    schema_to_field(&field.schema, Some(&field.name), props)
                 })
                 .collect::<Result<_>>()?;
             DataType::Struct(fields)

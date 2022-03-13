@@ -1,4 +1,4 @@
-use avro_schema::Schema as AvroSchema;
+use avro_schema::{Record, Schema as AvroSchema};
 
 use crate::bitmap::utils::zip_validity;
 use crate::datatypes::{IntervalUnit, PhysicalType, PrimitiveType};
@@ -110,6 +110,56 @@ fn list_optional<'a, O: Offset>(array: &'a ListArray<O>, schema: &AvroSchema) ->
                         break;
                     }
                 }
+            }
+        },
+        vec![],
+    ))
+}
+
+fn struct_required<'a>(array: &'a StructArray, schema: &Record) -> BoxSerializer<'a> {
+    let schemas = schema.fields.iter().map(|x| &x.schema);
+    let mut inner = array
+        .values()
+        .iter()
+        .zip(schemas)
+        .map(|(x, schema)| new_serializer(x.as_ref(), schema))
+        .collect::<Vec<_>>();
+
+    Box::new(BufStreamingIterator::new(
+        0..array.len(),
+        move |_, buf| {
+            inner
+                .iter_mut()
+                .for_each(|item| buf.extend_from_slice(item.next().unwrap()))
+        },
+        vec![],
+    ))
+}
+
+fn struct_optional<'a>(array: &'a StructArray, schema: &Record) -> BoxSerializer<'a> {
+    let schemas = schema.fields.iter().map(|x| &x.schema);
+    let mut inner = array
+        .values()
+        .iter()
+        .zip(schemas)
+        .map(|(x, schema)| new_serializer(x.as_ref(), schema))
+        .collect::<Vec<_>>();
+
+    let iterator = zip_validity(0..array.len(), array.validity().as_ref().map(|x| x.iter()));
+
+    Box::new(BufStreamingIterator::new(
+        iterator,
+        move |maybe, buf| {
+            util::zigzag_encode(maybe.is_some() as i64, buf).unwrap();
+            if maybe.is_some() {
+                inner
+                    .iter_mut()
+                    .for_each(|item| buf.extend_from_slice(item.next().unwrap()))
+            } else {
+                // skip the item
+                inner.iter_mut().for_each(|item| {
+                    let _ = item.next().unwrap();
+                });
             }
         },
         vec![],
@@ -374,6 +424,17 @@ pub fn new_serializer<'a>(array: &'a dyn Array, schema: &AvroSchema) -> BoxSeria
                 unreachable!("The schema declaration does not match the deserialization")
             };
             list_optional::<i64>(array.as_any().downcast_ref().unwrap(), schema)
+        }
+        (PhysicalType::Struct, AvroSchema::Record(inner)) => {
+            struct_required(array.as_any().downcast_ref().unwrap(), inner)
+        }
+        (PhysicalType::Struct, AvroSchema::Union(inner)) => {
+            let inner = if let AvroSchema::Record(inner) = &inner[1] {
+                inner
+            } else {
+                unreachable!("The schema declaration does not match the deserialization")
+            };
+            struct_optional(array.as_any().downcast_ref().unwrap(), inner)
         }
         (a, b) => todo!("{:?} -> {:?} not supported", a, b),
     }
