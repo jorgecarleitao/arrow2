@@ -110,60 +110,53 @@ fn try_from_trusted_len_iter() {
 }
 
 #[test]
-#[should_panic]
 fn not_utf8() {
     let offsets = Buffer::from_slice([0, 4]);
     let values = Buffer::from_slice([0, 159, 146, 150]); // invalid utf8
-    Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
+    assert!(Utf8Array::<i32>::try_new(DataType::Utf8, offsets, values, None).is_err());
 }
 
 #[test]
-#[should_panic]
 fn not_utf8_individually() {
     let offsets = Buffer::from_slice([0, 1, 2]);
     let values = Buffer::from_slice([207, 128]); // each is invalid utf8, but together is valid
-    Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
+    assert!(Utf8Array::<i32>::try_new(DataType::Utf8, offsets, values, None).is_err());
 }
 
 #[test]
-#[should_panic]
 fn wrong_offsets() {
     let offsets = Buffer::from_slice([0, 5, 4]); // invalid offsets
     let values = Buffer::from_slice(b"abbbbb");
-    Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
+    assert!(Utf8Array::<i32>::try_new(DataType::Utf8, offsets, values, None).is_err());
 }
 
 #[test]
-#[should_panic]
 fn wrong_data_type() {
     let offsets = Buffer::from_slice([0, 4]);
     let values = Buffer::from_slice(b"abbb");
-    Utf8Array::<i32>::from_data(DataType::Int8, offsets, values, None);
+    assert!(Utf8Array::<i32>::try_new(DataType::Int32, offsets, values, None).is_err());
 }
 
 #[test]
-#[should_panic]
 fn out_of_bounds_offsets_panics() {
     // the 10 is out of bounds
     let offsets = Buffer::from_slice([0, 10, 11]);
     let values = Buffer::from_slice(b"abbb");
-    let _ = Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
+    assert!(Utf8Array::<i32>::try_new(DataType::Utf8, offsets, values, None).is_err());
 }
 
 #[test]
-#[should_panic]
 fn decreasing_offset_and_ascii_panics() {
     let offsets = Buffer::from_slice([0, 2, 1]);
     let values = Buffer::from_slice(b"abbb");
-    let _ = Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
+    assert!(Utf8Array::<i32>::try_new(DataType::Utf8, offsets, values, None).is_err());
 }
 
 #[test]
-#[should_panic]
 fn decreasing_offset_and_utf8_panics() {
     let offsets = Buffer::from_slice([0, 2, 4, 2]); // not increasing
     let values = Buffer::from_slice([207, 128, 207, 128, 207, 128]); // valid utf8
-    let _ = Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
+    assert!(Utf8Array::<i32>::try_new(DataType::Utf8, offsets, values, None).is_err());
 }
 
 #[test]
@@ -181,4 +174,44 @@ fn debug() {
     let array = Utf8Array::<i32>::from(&[Some("aa"), Some(""), None]);
 
     assert_eq!(format!("{:?}", array), "Utf8Array[aa, , None]");
+}
+
+#[test]
+fn into_mut_1() {
+    let offsets = Buffer::from_slice([0, 1]);
+    let values = Buffer::from_slice(b"a");
+    let a = values.clone(); // cloned values
+    assert_eq!(a, values);
+    let array = Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
+    assert!(array.into_mut().is_left());
+}
+
+#[test]
+fn into_mut_2() {
+    let offsets = Buffer::from_slice([0, 1]);
+    let values = Buffer::from_slice(b"a");
+    let a = offsets.clone(); // cloned offsets
+    assert_eq!(a, offsets);
+    let array = Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
+    assert!(array.into_mut().is_left());
+}
+
+#[test]
+fn into_mut_3() {
+    let offsets = Buffer::from_slice([0, 1]);
+    let values = Buffer::from_slice(b"a");
+    let validity = Some([true].into());
+    let a = validity.clone(); // cloned validity
+    assert_eq!(a, validity);
+    let array = Utf8Array::<i32>::new(DataType::Utf8, offsets, values, validity);
+    assert!(array.into_mut().is_left());
+}
+
+#[test]
+fn into_mut_4() {
+    let offsets = Buffer::from_slice([0, 1]);
+    let values = Buffer::from_slice(b"a");
+    let validity = Some([true].into());
+    let array = Utf8Array::<i32>::new(DataType::Utf8, offsets, values, validity);
+    assert!(array.into_mut().is_right());
 }
