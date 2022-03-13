@@ -69,7 +69,7 @@ pub(super) fn schema() -> (AvroSchema, Schema) {
         ),
         Field::new(
             "i",
-            DataType::Struct(vec![Field::new("bla.e", DataType::Float64, false)]),
+            DataType::Struct(vec![Field::new("e", DataType::Float64, false)]),
             false,
         ),
         Field::new(
@@ -103,7 +103,7 @@ pub(super) fn data() -> Chunk<Arc<dyn Array>> {
         Arc::new(Utf8Array::<i32>::from([Some("foo"), None])),
         array.into_arc(),
         Arc::new(StructArray::from_data(
-            DataType::Struct(vec![Field::new("bla.e", DataType::Float64, false)]),
+            DataType::Struct(vec![Field::new("e", DataType::Float64, false)]),
             vec![Arc::new(PrimitiveArray::<f64>::from_slice([1.0, 2.0]))],
             None,
         )),
