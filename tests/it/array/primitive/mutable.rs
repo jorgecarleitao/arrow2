@@ -97,6 +97,27 @@ fn natural_arc() {
 }
 
 #[test]
+fn as_arc() {
+    let a = MutablePrimitiveArray::<i32>::from_slice(&[0, 1]).as_arc();
+    assert_eq!(a.len(), 2);
+}
+
+#[test]
+fn as_box() {
+    let a = MutablePrimitiveArray::<i32>::from_slice(&[0, 1]).as_box();
+    assert_eq!(a.len(), 2);
+}
+
+#[test]
+fn shrink_to_fit_and_capacity() {
+    let mut a = MutablePrimitiveArray::<i32>::with_capacity(100);
+    a.push(Some(1));
+    assert!(a.capacity() >= 100);
+    a.shrink_to_fit();
+    assert_eq!(a.capacity(), 1);
+}
+
+#[test]
 fn only_nulls() {
     let mut a = MutablePrimitiveArray::<i32>::new();
     a.push(None);
