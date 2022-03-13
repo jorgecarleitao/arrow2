@@ -36,10 +36,9 @@ fn _type_to_schema(data_type: &DataType) -> Result<AvroSchema> {
         DataType::LargeBinary => AvroSchema::Bytes(None),
         DataType::Utf8 => AvroSchema::String(None),
         DataType::LargeUtf8 => AvroSchema::String(None),
-        DataType::List(inner) => AvroSchema::Array(Box::new(type_to_schema(
-            &inner.data_type,
-            inner.is_nullable,
-        )?)),
+        DataType::LargeList(inner) | DataType::List(inner) => AvroSchema::Array(Box::new(
+            type_to_schema(&inner.data_type, inner.is_nullable)?,
+        )),
         DataType::Date32 => AvroSchema::Int(Some(IntLogical::Date)),
         DataType::Time32(TimeUnit::Millisecond) => AvroSchema::Int(Some(IntLogical::Time)),
         DataType::Time64(TimeUnit::Microsecond) => AvroSchema::Long(Some(LongLogical::Time)),
