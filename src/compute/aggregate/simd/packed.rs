@@ -14,16 +14,16 @@ macro_rules! simd_sum {
     };
 }
 
-simd_sum!(f32x16, f32, horizontal_sum);
-simd_sum!(f64x8, f64, horizontal_sum);
-simd_sum!(u8x64, u8, horizontal_sum);
-simd_sum!(u16x32, u16, horizontal_sum);
-simd_sum!(u32x16, u32, horizontal_sum);
-simd_sum!(u64x8, u64, horizontal_sum);
-simd_sum!(i8x64, i8, horizontal_sum);
-simd_sum!(i16x32, i16, horizontal_sum);
-simd_sum!(i32x16, i32, horizontal_sum);
-simd_sum!(i64x8, i64, horizontal_sum);
+simd_sum!(f32x16, f32, reduce_sum);
+simd_sum!(f64x8, f64, reduce_sum);
+simd_sum!(u8x64, u8, reduce_sum);
+simd_sum!(u16x32, u16, reduce_sum);
+simd_sum!(u32x16, u32, reduce_sum);
+simd_sum!(u64x8, u64, reduce_sum);
+simd_sum!(i8x64, i8, reduce_sum);
+simd_sum!(i16x32, i16, reduce_sum);
+simd_sum!(i32x16, i32, reduce_sum);
+simd_sum!(i64x8, i64, reduce_sum);
 
 macro_rules! simd_ord_int {
     ($simd:tt, $type:ty) => {
@@ -33,22 +33,22 @@ macro_rules! simd_ord_int {
 
             #[inline]
             fn max_element(self) -> $type {
-                self.horizontal_max()
+                self.reduce_max()
             }
 
             #[inline]
             fn min_element(self) -> $type {
-                self.horizontal_min()
+                self.reduce_min()
             }
 
             #[inline]
             fn max_lane(self, x: Self) -> Self {
-                self.lanes_lt(x).select(x, self)
+                self.max(x)
             }
 
             #[inline]
             fn min_lane(self, x: Self) -> Self {
-                self.lanes_gt(x).select(x, self)
+                self.min(x)
             }
 
             #[inline]
@@ -72,12 +72,12 @@ macro_rules! simd_ord_float {
 
             #[inline]
             fn max_element(self) -> $type {
-                self.horizontal_max()
+                self.reduce_max()
             }
 
             #[inline]
             fn min_element(self) -> $type {
-                self.horizontal_min()
+                self.reduce_min()
             }
 
             #[inline]
