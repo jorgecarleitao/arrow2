@@ -109,7 +109,7 @@ impl std::fmt::Debug for NullArray {
 
 unsafe impl ToFfi for NullArray {
     fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>> {
-        vec![]
+        vec![None]
     }
 
     fn offset(&self) -> Option<usize> {
