@@ -87,3 +87,39 @@ fn sized_offsets() {
     let expected = FixedSizeBinaryArray::from_iter(vec![Some(&[0, 2]), Some(&[0, 1])], 2);
     assert_eq!(result, expected);
 }
+
+/// to, as_box, as_arc
+#[test]
+fn as_box() {
+    let array =
+        FixedSizeBinaryArray::from_iter(vec![Some(b"ab"), Some(b"bc"), None, Some(b"de")], 2);
+    let mut a = GrowableFixedSizeBinary::new(vec![&array], false, 0);
+    a.extend(0, 1, 2);
+
+    let result = a.as_box();
+    let result = result
+        .as_any()
+        .downcast_ref::<FixedSizeBinaryArray>()
+        .unwrap();
+
+    let expected = FixedSizeBinaryArray::from_iter(vec![Some("bc"), None], 2);
+    assert_eq!(&expected, result);
+}
+
+/// as_arc
+#[test]
+fn as_arc() {
+    let array =
+        FixedSizeBinaryArray::from_iter(vec![Some(b"ab"), Some(b"bc"), None, Some(b"de")], 2);
+    let mut a = GrowableFixedSizeBinary::new(vec![&array], false, 0);
+    a.extend(0, 1, 2);
+
+    let result = a.as_arc();
+    let result = result
+        .as_any()
+        .downcast_ref::<FixedSizeBinaryArray>()
+        .unwrap();
+
+    let expected = FixedSizeBinaryArray::from_iter(vec![Some("bc"), None], 2);
+    assert_eq!(&expected, result);
+}

@@ -134,6 +134,11 @@ impl MutableFixedSizeBinaryArray {
         self.size
     }
 
+    /// Returns the capacity of this array
+    pub fn capacity(&self) -> usize {
+        self.values.capacity() / self.size
+    }
+
     fn init_validity(&mut self) {
         let mut validity = MutableBitmap::new();
         validity.extend_constant(self.len(), true);
