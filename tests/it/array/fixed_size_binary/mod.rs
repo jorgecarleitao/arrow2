@@ -51,6 +51,13 @@ fn empty() {
 }
 
 #[test]
+fn null() {
+    let array = FixedSizeBinaryArray::new_null(DataType::FixedSizeBinary(2), 2);
+    assert_eq!(array.values().len(), 4);
+    assert_eq!(array.validity().cloned(), Some([false, false].into()));
+}
+
+#[test]
 fn from_iter() {
     let iter = std::iter::repeat(vec![1u8, 2]).take(2).map(Some);
     let a = FixedSizeBinaryArray::from_iter(iter, 2);
