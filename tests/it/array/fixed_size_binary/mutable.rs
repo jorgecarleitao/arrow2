@@ -66,3 +66,35 @@ fn push_null() {
     let array: FixedSizeBinaryArray = array.into();
     assert_eq!(array.validity(), Some(&Bitmap::from([false])));
 }
+
+#[test]
+fn as_arc() {
+    let mut array = MutableFixedSizeBinaryArray::try_from_iter(
+        vec![Some(b"ab"), Some(b"bc"), None, Some(b"fh")],
+        2,
+    )
+    .unwrap();
+
+    let array = array.as_arc();
+    assert_eq!(array.len(), 4);
+}
+
+#[test]
+fn as_box() {
+    let mut array = MutableFixedSizeBinaryArray::try_from_iter(
+        vec![Some(b"ab"), Some(b"bc"), None, Some(b"fh")],
+        2,
+    )
+    .unwrap();
+
+    let array = array.as_box();
+    assert_eq!(array.len(), 4);
+}
+
+#[test]
+fn shrink_to_fit_and_capacity() {
+    let mut array = MutableFixedSizeBinaryArray::with_capacity(2, 100);
+    array.push(Some([1, 2]));
+    array.shrink_to_fit();
+    assert_eq!(array.capacity(), 1);
+}

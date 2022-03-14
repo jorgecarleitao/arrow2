@@ -58,26 +58,47 @@ fn test_round_trip_schema(field: Field) -> Result<()> {
 }
 
 #[test]
-fn u32() -> Result<()> {
+fn bool_nullable() -> Result<()> {
+    let data = BooleanArray::from(&[Some(true), None, Some(false), None]);
+    test_round_trip(data)
+}
+
+#[test]
+fn bool() -> Result<()> {
+    let data = BooleanArray::from_slice(&[true, true, false]);
+    test_round_trip(data)
+}
+
+#[test]
+fn u32_nullable() -> Result<()> {
     let data = Int32Array::from(&[Some(2), None, Some(1), None]);
     test_round_trip(data)
 }
 
 #[test]
-fn u64() -> Result<()> {
-    let data = UInt64Array::from(&[Some(2), None, Some(1), None]);
+fn u32() -> Result<()> {
+    let data = Int32Array::from_slice(&[2, 0, 1, 0]);
     test_round_trip(data)
 }
 
 #[test]
-fn i64() -> Result<()> {
-    let data = Int64Array::from(&[Some(2), None, Some(1), None]);
+fn timestamp_tz() -> Result<()> {
+    let data = Int64Array::from(&vec![Some(2), None, None]).to(DataType::Timestamp(
+        TimeUnit::Second,
+        Some("UTC".to_string()),
+    ));
+    test_round_trip(data)
+}
+
+#[test]
+fn utf8_nullable() -> Result<()> {
+    let data = Utf8Array::<i32>::from(&vec![Some("a"), None, Some("bb"), None]);
     test_round_trip(data)
 }
 
 #[test]
 fn utf8() -> Result<()> {
-    let data = Utf8Array::<i32>::from(&vec![Some("a"), None, Some("bb"), None]);
+    let data = Utf8Array::<i32>::from_slice(&["a", "", "bb", ""]);
     test_round_trip(data)
 }
 
@@ -88,18 +109,15 @@ fn large_utf8() -> Result<()> {
 }
 
 #[test]
-fn binary() -> Result<()> {
+fn binary_nullable() -> Result<()> {
     let data =
         BinaryArray::<i32>::from(&vec![Some(b"a".as_ref()), None, Some(b"bb".as_ref()), None]);
     test_round_trip(data)
 }
 
 #[test]
-fn timestamp_tz() -> Result<()> {
-    let data = Int64Array::from(&vec![Some(2), None, None]).to(DataType::Timestamp(
-        TimeUnit::Second,
-        Some("UTC".to_string()),
-    ));
+fn binary() -> Result<()> {
+    let data = BinaryArray::<i32>::from_slice(&[b"a".as_ref(), b"", b"bb", b""]);
     test_round_trip(data)
 }
 

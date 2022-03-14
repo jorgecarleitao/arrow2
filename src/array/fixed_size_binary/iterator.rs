@@ -60,10 +60,7 @@ impl<'a> FixedSizeBinaryArray {
     pub fn iter(
         &'a self,
     ) -> ZipValidity<'a, &'a [u8], FixedSizeBinaryValuesIter<'a, FixedSizeBinaryArray>> {
-        zip_validity(
-            FixedSizeBinaryValuesIter::new(self),
-            self.validity.as_ref().map(|x| x.iter()),
-        )
+        zip_validity(self.iter_values(), self.validity.as_ref().map(|x| x.iter()))
     }
 
     /// Returns iterator over the values of [`FixedSizeBinaryArray`]
@@ -88,7 +85,7 @@ impl<'a> MutableFixedSizeBinaryArray {
         &'a self,
     ) -> ZipValidity<'a, &'a [u8], FixedSizeBinaryValuesIter<'a, MutableFixedSizeBinaryArray>> {
         zip_validity(
-            FixedSizeBinaryValuesIter::new(self),
+            self.iter_values(),
             self.validity().as_ref().map(|x| x.iter()),
         )
     }
