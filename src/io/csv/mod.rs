@@ -7,7 +7,7 @@ mod read_utils;
 #[cfg(any(feature = "io_csv_read_async", feature = "io_csv_read"))]
 mod utils;
 
-#[cfg(any(feature = "io_csv_read", feature = "io_csv_write"))]
+#[cfg(feature = "io_csv_read")]
 impl From<csv::Error> for ArrowError {
     fn from(error: csv::Error) -> Self {
         ArrowError::External("".to_string(), Box::new(error))

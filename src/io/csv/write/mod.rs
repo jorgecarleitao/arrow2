@@ -5,9 +5,6 @@ use super::super::iterator::StreamingIterator;
 
 use std::io::Write;
 
-// re-export necessary public APIs from csv
-pub use csv::{ByteRecord, WriterBuilder};
-
 pub use serialize::*;
 
 use crate::array::Array;
