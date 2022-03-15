@@ -109,6 +109,8 @@ impl std::fmt::Debug for NullArray {
 
 unsafe impl ToFfi for NullArray {
     fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>> {
+        // `None` is technically not required by the specification, but older C++ implementations require it, so leaving
+        // it here for backward compatibility
         vec![None]
     }
 
