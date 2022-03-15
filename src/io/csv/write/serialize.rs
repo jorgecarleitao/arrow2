@@ -211,7 +211,15 @@ fn new_utf8_serializer<'a, O: Offset>(
     options: &'a SerializeOptions,
 ) -> Box<dyn StreamingIterator<Item = [u8]> + 'a> {
     let mut local_buf = vec![0u8; 64];
-    let mut ser_writer = csv_core::WriterBuilder::new().quote(options.quote).build();
+    let mut ser_writer = csv_core::WriterBuilder::new()
+        .quote(options.quote)
+        .delimiter(options.delimiter)
+        .build();
+
+    let resize = |local_buf: &mut Vec<u8>| {
+        let additional = local_buf.len();
+        local_buf.extend(std::iter::repeat(0u8).take(additional))
+    };
 
     Box::new(BufStreamingIterator::new(
         array.iter(),
@@ -222,13 +230,24 @@ fn new_utf8_serializer<'a, O: Offset>(
                 // in a delimited field
                 Some("") => buf.extend_from_slice(b"\"\""),
                 Some(s) => loop {
+                    // first write field
                     match ser_writer.field(s.as_bytes(), &mut local_buf) {
-                        (WriteResult::OutputFull, _, _) => {
-                            let additional = local_buf.len();
-                            local_buf.extend(std::iter::repeat(0u8).take(additional))
-                        }
+                        (WriteResult::OutputFull, _, _) => resize(&mut local_buf),
+                        // then on success write delimiter
+                        // we need to make this call because we might need to end with quotes
                         (WriteResult::InputEmpty, _, n_out) => {
-                            buf.extend_from_slice(&local_buf[..n_out]);
+                            loop {
+                                match ser_writer.delimiter(&mut local_buf[n_out..]) {
+                                    (WriteResult::OutputFull, _) => resize(&mut local_buf),
+                                    (WriteResult::InputEmpty, n_out_delimiter) => {
+                                        // we subtract 1 because we never want to include the delimiter written by csv-core
+                                        buf.extend_from_slice(
+                                            &local_buf[..n_out + n_out_delimiter - 1],
+                                        );
+                                        break;
+                                    }
+                                }
+                            }
                             break;
                         }
                     }
