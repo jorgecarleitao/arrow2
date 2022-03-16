@@ -333,3 +333,16 @@ fn write_empty_and_missing() {
 
     assert_eq!(csv, "\"\",\n,\"\"\n");
 }
+
+#[test]
+fn write_escaping() {
+    let a = Utf8Array::<i32>::from_slice(&["Acme co., Ltd."]);
+    let columns = Chunk::new(vec![Arc::new(a) as Arc<dyn Array>]);
+
+    let mut writer = vec![];
+    let options = SerializeOptions::default();
+    write_chunk(&mut writer, &columns, &options).unwrap();
+    let csv = std::str::from_utf8(&writer).unwrap();
+
+    assert_eq!(csv, "\"Acme co., Ltd.\"\n");
+}
