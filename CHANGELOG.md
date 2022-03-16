@@ -1,5 +1,28 @@
 # Changelog
 
+## [v0.10.1](https://github.com/jorgecarleitao/arrow2/tree/v0.10.1) (2022-03-16)
+
+[Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.10.0...v0.10.1)
+
+**New features:**
+
+- Added support to write `StructArray` to Avro [\#909](https://github.com/jorgecarleitao/arrow2/pull/909) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support to write `ListArray` to Avro [\#908](https://github.com/jorgecarleitao/arrow2/pull/908) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Fixed bugs:**
+
+- Fixed error in `FixedSizeBinaryArray::new_null` [\#914](https://github.com/jorgecarleitao/arrow2/pull/914) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Enhancements:**
+
+- remove csv dependency for csv-write [\#917](https://github.com/jorgecarleitao/arrow2/pull/917) ([ritchie46](https://github.com/ritchie46))
+- Added `capacity` to some mutable arrays and tests [\#913](https://github.com/jorgecarleitao/arrow2/pull/913) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Support `sum`, `min` and `max` for extension and decimal [\#907](https://github.com/jorgecarleitao/arrow2/pull/907) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Testing updates:**
+
+- Added more tests [\#910](https://github.com/jorgecarleitao/arrow2/pull/910) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
 ## [v0.10.0](https://github.com/jorgecarleitao/arrow2/tree/v0.10.0) (2022-03-12)
 
 [Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.9.1...v0.10.0)
