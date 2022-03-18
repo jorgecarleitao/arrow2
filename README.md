@@ -56,7 +56,7 @@ documentation of each of its APIs.
 
 ## Safety and Security
 
-This crate uses `unsafe` when strickly necessary:
+This crate uses `unsafe` when strictly necessary:
 * when the compiler can't prove certain invariants and
 * FFI
 
