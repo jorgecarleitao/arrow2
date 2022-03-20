@@ -53,7 +53,7 @@ hex = { version = "^0.4", optional = true }
 
 # for IPC compression
 lz4 = { version = "1.23.1", optional = true }
-zstd = { version = "0.10", optional = true }
+zstd = { version = "0.11", optional = true }
 
 rand = { version = "0.8", optional = true }
 
@@ -68,7 +68,8 @@ futures = { version = "0.3", optional = true }
 ahash = { version = "0.7", optional = true }
 
 # parquet support
-parquet2 = { version = "0.10", optional = true, default_features = false, features = ["stream"] }
+#parquet2 = { version = "0.10", optional = true, default_features = false, features = ["stream"] }
+parquet2 = { git = "https://github.com/jorgecarleitao/parquet2", branch = "filtered", optional = true, default_features = false, features = ["stream"] }
 
 # avro support
 avro-schema = { version = "0.2", optional = true }

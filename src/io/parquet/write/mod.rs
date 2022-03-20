@@ -16,7 +16,7 @@ use crate::array::*;
 use crate::bitmap::Bitmap;
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
-use crate::io::parquet::read::is_type_nullable;
+use crate::io::parquet::read::schema::is_nullable;
 use crate::io::parquet::write::levels::NestedInfo;
 use crate::types::days_ms;
 use crate::types::NativeType;
@@ -26,7 +26,7 @@ pub use parquet2::{
     compression::Compression,
     encoding::Encoding,
     fallible_streaming_iterator,
-    metadata::{ColumnDescriptor, KeyValue, SchemaDescriptor},
+    metadata::{Descriptor, KeyValue, SchemaDescriptor},
     page::{CompressedDataPage, CompressedPage, EncodedPage},
     schema::types::ParquetType,
     write::{
@@ -80,7 +80,7 @@ pub fn can_encode(data_type: &DataType, encoding: Encoding) -> bool {
 /// Returns an iterator of [`EncodedPage`].
 pub fn array_to_pages(
     array: &dyn Array,
-    descriptor: ColumnDescriptor,
+    descriptor: Descriptor,
     options: WriteOptions,
     encoding: Encoding,
 ) -> Result<DynIter<'static, Result<EncodedPage>>> {
@@ -103,7 +103,7 @@ pub fn array_to_pages(
 /// Converts an [`Array`] to a [`CompressedPage`] based on options, descriptor and `encoding`.
 pub fn array_to_page(
     array: &dyn Array,
-    descriptor: ColumnDescriptor,
+    descriptor: Descriptor,
     options: WriteOptions,
     encoding: Encoding,
 ) -> Result<EncodedPage> {
@@ -316,11 +316,11 @@ fn list_array_to_page<O: Offset>(
     offsets: &[O],
     validity: Option<&Bitmap>,
     values: &dyn Array,
-    descriptor: ColumnDescriptor,
+    descriptor: Descriptor,
     options: WriteOptions,
 ) -> Result<DataPage> {
     use DataType::*;
-    let is_optional = is_type_nullable(descriptor.type_());
+    let is_optional = is_nullable(&descriptor.primitive_type.field_info);
     let nested = NestedInfo::new(offsets, validity, is_optional);
 
     match values.data_type() {
@@ -347,47 +347,19 @@ fn list_array_to_page<O: Offset>(
 
         Utf8 => {
             let values = values.as_any().downcast_ref().unwrap();
-            let is_optional = is_type_nullable(descriptor.type_());
-
-            utf8::nested_array_to_page::<i32, O>(
-                values,
-                options,
-                descriptor,
-                NestedInfo::new(offsets, validity, is_optional),
-            )
+            utf8::nested_array_to_page::<i32, O>(values, options, descriptor, nested)
         }
         LargeUtf8 => {
             let values = values.as_any().downcast_ref().unwrap();
-            let is_optional = is_type_nullable(descriptor.type_());
-
-            utf8::nested_array_to_page::<i64, O>(
-                values,
-                options,
-                descriptor,
-                NestedInfo::new(offsets, validity, is_optional),
-            )
+            utf8::nested_array_to_page::<i64, O>(values, options, descriptor, nested)
         }
         Binary => {
             let values = values.as_any().downcast_ref().unwrap();
-            let is_optional = is_type_nullable(descriptor.type_());
-
-            binary::nested_array_to_page::<i32, O>(
-                values,
-                options,
-                descriptor,
-                NestedInfo::new(offsets, validity, is_optional),
-            )
+            binary::nested_array_to_page::<i32, O>(values, options, descriptor, nested)
         }
         LargeBinary => {
             let values = values.as_any().downcast_ref().unwrap();
-            let is_optional = is_type_nullable(descriptor.type_());
-
-            binary::nested_array_to_page::<i64, O>(
-                values,
-                options,
-                descriptor,
-                NestedInfo::new(offsets, validity, is_optional),
-            )
+            binary::nested_array_to_page::<i64, O>(values, options, descriptor, nested)
         }
         _ => todo!(),
     }
@@ -395,7 +367,7 @@ fn list_array_to_page<O: Offset>(
 
 fn nested_array_to_page(
     array: &dyn Array,
-    descriptor: ColumnDescriptor,
+    descriptor: Descriptor,
     options: WriteOptions,
 ) -> Result<DataPage> {
     match array.data_type() {

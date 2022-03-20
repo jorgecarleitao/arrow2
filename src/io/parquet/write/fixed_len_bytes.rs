@@ -1,8 +1,9 @@
 use parquet2::{
     encoding::Encoding,
-    metadata::ColumnDescriptor,
+    metadata::Descriptor,
     page::DataPage,
-    statistics::{deserialize_statistics, serialize_statistics, ParquetStatistics},
+    schema::types::PrimitiveType,
+    statistics::{serialize_statistics, FixedLenStatistics, ParquetStatistics, Statistics},
     write::WriteOptions,
 };
 
@@ -10,7 +11,7 @@ use super::{binary::ord_binary, utils};
 use crate::{
     array::{Array, FixedSizeBinaryArray},
     error::Result,
-    io::parquet::read::is_type_nullable,
+    io::parquet::read::schema::is_nullable,
 };
 
 pub(crate) fn encode_plain(array: &FixedSizeBinaryArray, is_optional: bool, buffer: &mut Vec<u8>) {
@@ -29,9 +30,9 @@ pub(crate) fn encode_plain(array: &FixedSizeBinaryArray, is_optional: bool, buff
 pub fn array_to_page(
     array: &FixedSizeBinaryArray,
     options: WriteOptions,
-    descriptor: ColumnDescriptor,
+    descriptor: Descriptor,
 ) -> Result<DataPage> {
-    let is_optional = is_type_nullable(descriptor.type_());
+    let is_optional = is_nullable(&descriptor.primitive_type.field_info);
     let validity = array.validity();
 
     let mut buffer = vec![];
@@ -48,13 +49,14 @@ pub fn array_to_page(
     encode_plain(array, is_optional, &mut buffer);
 
     let statistics = if options.write_statistics {
-        build_statistics(array, descriptor.clone())
+        Some(build_statistics(array, descriptor.primitive_type.clone()))
     } else {
         None
     };
 
     utils::build_plain_page(
         buffer,
+        array.len(),
         array.len(),
         array.null_count(),
         0,
@@ -68,11 +70,10 @@ pub fn array_to_page(
 
 pub(super) fn build_statistics(
     array: &FixedSizeBinaryArray,
-    descriptor: ColumnDescriptor,
-) -> Option<ParquetStatistics> {
-    let pq_statistics = &ParquetStatistics {
-        max: None,
-        min: None,
+    primitive_type: PrimitiveType,
+) -> ParquetStatistics {
+    let statistics = &FixedLenStatistics {
+        primitive_type,
         null_count: Some(array.null_count() as i64),
         distinct_count: None,
         max_value: array
@@ -85,8 +86,6 @@ pub(super) fn build_statistics(
             .flatten()
             .min_by(|x, y| ord_binary(x, y))
             .map(|x| x.to_vec()),
-    };
-    deserialize_statistics(pq_statistics, descriptor)
-        .map(|e| serialize_statistics(&*e))
-        .ok()
+    } as &dyn Statistics;
+    serialize_statistics(statistics)
 }

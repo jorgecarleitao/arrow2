@@ -1,7 +1,8 @@
 use parquet2::{
     encoding::Encoding,
-    metadata::ColumnDescriptor,
+    metadata::Descriptor,
     page::DataPage,
+    schema::types::PrimitiveType,
     statistics::{serialize_statistics, ParquetStatistics, PrimitiveStatistics, Statistics},
     types::NativeType,
     write::WriteOptions,
@@ -11,7 +12,7 @@ use super::super::utils;
 use crate::{
     array::{Array, PrimitiveArray},
     error::Result,
-    io::parquet::read::is_type_nullable,
+    io::parquet::read::schema::is_nullable,
     types::NativeType as ArrowNativeType,
 };
 
@@ -41,14 +42,14 @@ where
 pub fn array_to_page<T, R>(
     array: &PrimitiveArray<T>,
     options: WriteOptions,
-    descriptor: ColumnDescriptor,
+    descriptor: Descriptor,
 ) -> Result<DataPage>
 where
     T: ArrowNativeType,
     R: NativeType,
     T: num_traits::AsPrimitive<R>,
 {
-    let is_optional = is_type_nullable(descriptor.type_());
+    let is_optional = is_nullable(&descriptor.primitive_type.field_info);
 
     let validity = array.validity();
 
@@ -66,13 +67,14 @@ where
     encode_plain(array, is_optional, &mut buffer);
 
     let statistics = if options.write_statistics {
-        Some(build_statistics(array, descriptor.clone()))
+        Some(build_statistics(array, descriptor.primitive_type.clone()))
     } else {
         None
     };
 
     utils::build_plain_page(
         buffer,
+        array.len(),
         array.len(),
         array.null_count(),
         0,
@@ -86,7 +88,7 @@ where
 
 pub fn build_statistics<T, R>(
     array: &PrimitiveArray<T>,
-    descriptor: ColumnDescriptor,
+    primitive_type: PrimitiveType,
 ) -> ParquetStatistics
 where
     T: ArrowNativeType,
@@ -94,7 +96,7 @@ where
     T: num_traits::AsPrimitive<R>,
 {
     let statistics = &PrimitiveStatistics::<R> {
-        descriptor,
+        primitive_type,
         null_count: Some(array.null_count() as i64),
         distinct_count: None,
         max_value: array

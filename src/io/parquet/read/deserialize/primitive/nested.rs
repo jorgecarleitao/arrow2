@@ -81,7 +81,7 @@ where
 
     fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
         let is_optional =
-            page.descriptor().type_().get_basic_info().repetition() == &Repetition::Optional;
+            page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
 
         match (page.encoding(), page.dictionary_page(), is_optional) {
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false) => {
@@ -120,20 +120,15 @@ where
         &self,
         state: &mut Self::State,
         decoded: &mut Self::DecodedState,
-        remaining: usize,
+        additional: usize,
     ) {
         let (values, validity) = decoded;
         match state {
             State::Optional(page_validity, page_values) => {
-                let max_def = page_validity.max_def();
-                read_optional_values(
-                    page_validity.definition_levels.by_ref(),
-                    max_def,
-                    page_values.values.by_ref().map(decode).map(self.op),
-                    values,
-                    validity,
-                    remaining,
-                )
+                let items = page_validity.by_ref().take(additional);
+                let items = Zip::new(items, page_values.values.by_ref().map(decode).map(self.op));
+
+                read_optional_values(items, values, validity)
             }
             State::Required(page) => {
                 values.extend(
@@ -141,24 +136,20 @@ where
                         .by_ref()
                         .map(decode)
                         .map(self.op)
-                        .take(remaining),
+                        .take(additional),
                 );
             }
             State::RequiredDictionary(page) => {
                 let op1 = |index: u32| page.dict[index as usize];
-                values.extend(page.values.by_ref().map(op1).map(self.op).take(remaining));
+                values.extend(page.values.by_ref().map(op1).map(self.op).take(additional));
             }
             State::OptionalDictionary(page_validity, page_values) => {
-                let max_def = page_validity.max_def();
                 let op1 = |index: u32| page_values.dict[index as usize];
-                read_optional_values(
-                    page_validity.definition_levels.by_ref(),
-                    max_def,
-                    page_values.values.by_ref().map(op1).map(self.op),
-                    values,
-                    validity,
-                    remaining,
-                )
+
+                let items = page_validity.by_ref().take(additional);
+                let items = Zip::new(items, page_values.values.by_ref().map(op1).map(self.op));
+
+                read_optional_values(items, values, validity)
             }
         }
     }

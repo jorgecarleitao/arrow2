@@ -6,10 +6,10 @@ pub mod write;
 
 const ARROW_SCHEMA_META_KEY: &str = "ARROW:schema";
 
-impl From<parquet2::error::ParquetError> for ArrowError {
-    fn from(error: parquet2::error::ParquetError) -> Self {
+impl From<parquet2::error::Error> for ArrowError {
+    fn from(error: parquet2::error::Error) -> Self {
         match error {
-            parquet2::error::ParquetError::FeatureNotActive(_, _) => {
+            parquet2::error::Error::FeatureNotActive(_, _) => {
                 let message = "Failed to read a compressed parquet file. \
                     Use the cargo feature \"io_parquet_compression\" to read compressed parquet files."
                     .to_string();
@@ -20,8 +20,8 @@ impl From<parquet2::error::ParquetError> for ArrowError {
     }
 }
 
-impl From<ArrowError> for parquet2::error::ParquetError {
+impl From<ArrowError> for parquet2::error::Error {
     fn from(error: ArrowError) -> Self {
-        parquet2::error::ParquetError::General(error.to_string())
+        parquet2::error::Error::General(error.to_string())
     }
 }

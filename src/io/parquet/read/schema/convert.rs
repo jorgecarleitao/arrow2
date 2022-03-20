@@ -1,8 +1,8 @@
 //! This module has a single entry point, [`parquet_to_arrow_schema`].
 use parquet2::schema::{
     types::{
-        BasicTypeInfo, GroupConvertedType, LogicalType, ParquetType, PhysicalType,
-        PrimitiveConvertedType, TimeUnit as ParquetTimeUnit, TimestampType,
+        FieldInfo, GroupConvertedType, GroupLogicalType, IntegerType, ParquetType, PhysicalType,
+        PrimitiveConvertedType, PrimitiveLogicalType, PrimitiveType, TimeUnit as ParquetTimeUnit,
     },
     Repetition,
 };
@@ -16,28 +16,27 @@ pub fn parquet_to_arrow_schema(fields: &[ParquetType]) -> Vec<Field> {
 }
 
 fn from_int32(
-    logical_type: &Option<LogicalType>,
-    converted_type: &Option<PrimitiveConvertedType>,
+    logical_type: Option<PrimitiveLogicalType>,
+    converted_type: Option<PrimitiveConvertedType>,
 ) -> DataType {
+    use PrimitiveLogicalType::*;
     match (logical_type, converted_type) {
         // handle logical types first
-        (Some(LogicalType::INTEGER(t)), _) => match (t.bit_width, t.is_signed) {
-            (8, true) => DataType::Int8,
-            (16, true) => DataType::Int16,
-            (32, true) => DataType::Int32,
-            (8, false) => DataType::UInt8,
-            (16, false) => DataType::UInt16,
-            (32, false) => DataType::UInt32,
+        (Some(Integer(t)), _) => match t {
+            IntegerType::Int8 => DataType::Int8,
+            IntegerType::Int16 => DataType::Int16,
+            IntegerType::Int32 => DataType::Int32,
+            IntegerType::UInt8 => DataType::UInt8,
+            IntegerType::UInt16 => DataType::UInt16,
+            IntegerType::UInt32 => DataType::UInt32,
             // The above are the only possible annotations for parquet's int32. Anything else
             // is a deviation to the parquet specification and we ignore
             _ => DataType::Int32,
         },
-        (Some(LogicalType::DECIMAL(t)), _) => {
-            DataType::Decimal(t.precision as usize, t.scale as usize)
-        }
-        (Some(LogicalType::DATE(_)), _) => DataType::Date32,
-        (Some(LogicalType::TIME(t)), _) => match t.unit {
-            ParquetTimeUnit::MILLIS(_) => DataType::Time32(TimeUnit::Millisecond),
+        (Some(Decimal(precision, scale)), _) => DataType::Decimal(precision, scale),
+        (Some(Date), _) => DataType::Date32,
+        (Some(Time { unit, .. }), _) => match unit {
+            ParquetTimeUnit::Milliseconds => DataType::Time32(TimeUnit::Millisecond),
             // MILLIS is the only possible annotation for parquet's int32. Anything else
             // is a deviation to the parquet specification and we ignore
             _ => DataType::Int32,
@@ -52,30 +51,32 @@ fn from_int32(
         (_, Some(PrimitiveConvertedType::Date)) => DataType::Date32,
         (_, Some(PrimitiveConvertedType::TimeMillis)) => DataType::Time32(TimeUnit::Millisecond),
         (_, Some(PrimitiveConvertedType::Decimal(precision, scale))) => {
-            DataType::Decimal(*precision as usize, *scale as usize)
+            DataType::Decimal(precision, scale)
         }
         (_, _) => DataType::Int32,
     }
 }
 
 fn from_int64(
-    logical_type: &Option<LogicalType>,
-    converted_type: &Option<PrimitiveConvertedType>,
+    logical_type: Option<PrimitiveLogicalType>,
+    converted_type: Option<PrimitiveConvertedType>,
 ) -> DataType {
+    use PrimitiveLogicalType::*;
     match (logical_type, converted_type) {
         // handle logical types first
-        (Some(LogicalType::INTEGER(t)), _) if t.bit_width == 64 => match t.is_signed {
-            true => DataType::Int64,
-            false => DataType::UInt64,
+        (Some(Integer(integer)), _) => match integer {
+            IntegerType::UInt64 => DataType::UInt64,
+            IntegerType::Int64 => DataType::Int64,
+            _ => DataType::Int64,
         },
         (
-            Some(LogicalType::TIMESTAMP(TimestampType {
-                is_adjusted_to_u_t_c,
+            Some(Timestamp {
+                is_adjusted_to_utc,
                 unit,
-            })),
+            }),
             _,
         ) => {
-            let timezone = if *is_adjusted_to_u_t_c {
+            let timezone = if is_adjusted_to_utc {
                 // https://github.com/apache/parquet-format/blob/master/LogicalTypes.md
                 // A TIMESTAMP with isAdjustedToUTC=true is defined as [...] elapsed since the Unix epoch
                 Some("+00:00".to_string())
@@ -93,21 +94,23 @@ fn from_int64(
             };
 
             match unit {
-                ParquetTimeUnit::MILLIS(_) => DataType::Timestamp(TimeUnit::Millisecond, timezone),
-                ParquetTimeUnit::MICROS(_) => DataType::Timestamp(TimeUnit::Microsecond, timezone),
-                ParquetTimeUnit::NANOS(_) => DataType::Timestamp(TimeUnit::Nanosecond, timezone),
+                ParquetTimeUnit::Milliseconds => {
+                    DataType::Timestamp(TimeUnit::Millisecond, timezone)
+                }
+                ParquetTimeUnit::Microseconds => {
+                    DataType::Timestamp(TimeUnit::Microsecond, timezone)
+                }
+                ParquetTimeUnit::Nanoseconds => DataType::Timestamp(TimeUnit::Nanosecond, timezone),
             }
         }
-        (Some(LogicalType::TIME(t)), _) => match t.unit {
-            ParquetTimeUnit::MICROS(_) => DataType::Time64(TimeUnit::Microsecond),
-            ParquetTimeUnit::NANOS(_) => DataType::Time64(TimeUnit::Nanosecond),
+        (Some(Time { unit, .. }), _) => match unit {
+            ParquetTimeUnit::Microseconds => DataType::Time64(TimeUnit::Microsecond),
+            ParquetTimeUnit::Nanoseconds => DataType::Time64(TimeUnit::Nanosecond),
             // MILLIS is only possible for int32. Appearing in int64 is a deviation
             // to parquet's spec, which we ignore
             _ => DataType::Int64,
         },
-        (Some(LogicalType::DECIMAL(t)), _) => {
-            DataType::Decimal(t.precision as usize, t.scale as usize)
-        }
+        (Some(Decimal(precision, scale)), _) => DataType::Decimal(precision, scale),
         // handle converted types:
         (_, Some(PrimitiveConvertedType::TimeMicros)) => DataType::Time64(TimeUnit::Microsecond),
         (_, Some(PrimitiveConvertedType::TimestampMillis)) => {
@@ -119,7 +122,7 @@ fn from_int64(
         (_, Some(PrimitiveConvertedType::Int64)) => DataType::Int64,
         (_, Some(PrimitiveConvertedType::Uint64)) => DataType::UInt64,
         (_, Some(PrimitiveConvertedType::Decimal(precision, scale))) => {
-            DataType::Decimal(*precision as usize, *scale as usize)
+            DataType::Decimal(precision, scale)
         }
 
         (_, _) => DataType::Int64,
@@ -127,14 +130,14 @@ fn from_int64(
 }
 
 fn from_byte_array(
-    logical_type: &Option<LogicalType>,
+    logical_type: &Option<PrimitiveLogicalType>,
     converted_type: &Option<PrimitiveConvertedType>,
 ) -> DataType {
     match (logical_type, converted_type) {
-        (Some(LogicalType::STRING(_)), _) => DataType::Utf8,
-        (Some(LogicalType::JSON(_)), _) => DataType::Binary,
-        (Some(LogicalType::BSON(_)), _) => DataType::Binary,
-        (Some(LogicalType::ENUM(_)), _) => DataType::Binary,
+        (Some(PrimitiveLogicalType::String), _) => DataType::Utf8,
+        (Some(PrimitiveLogicalType::Json), _) => DataType::Binary,
+        (Some(PrimitiveLogicalType::Bson), _) => DataType::Binary,
+        (Some(PrimitiveLogicalType::Enum), _) => DataType::Binary,
         (_, Some(PrimitiveConvertedType::Json)) => DataType::Binary,
         (_, Some(PrimitiveConvertedType::Bson)) => DataType::Binary,
         (_, Some(PrimitiveConvertedType::Enum)) => DataType::Binary,
@@ -144,16 +147,16 @@ fn from_byte_array(
 }
 
 fn from_fixed_len_byte_array(
-    length: &i32,
-    logical_type: &Option<LogicalType>,
-    converted_type: &Option<PrimitiveConvertedType>,
+    length: usize,
+    logical_type: Option<PrimitiveLogicalType>,
+    converted_type: Option<PrimitiveConvertedType>,
 ) -> DataType {
     match (logical_type, converted_type) {
-        (Some(LogicalType::DECIMAL(t)), _) => {
-            DataType::Decimal(t.precision as usize, t.scale as usize)
+        (Some(PrimitiveLogicalType::Decimal(precision, scale)), _) => {
+            DataType::Decimal(precision, scale)
         }
         (None, Some(PrimitiveConvertedType::Decimal(precision, scale))) => {
-            DataType::Decimal(*precision as usize, *scale as usize)
+            DataType::Decimal(precision, scale)
         }
         (None, Some(PrimitiveConvertedType::Interval)) => {
             // There is currently no reliable way of determining which IntervalUnit
@@ -161,46 +164,45 @@ fn from_fixed_len_byte_array(
             // would be incorrect if all 12 bytes of the interval are populated
             DataType::Interval(IntervalUnit::DayTime)
         }
-        _ => DataType::FixedSizeBinary(*length as usize),
+        _ => DataType::FixedSizeBinary(length),
     }
 }
 
 /// Maps a [`PhysicalType`] with optional metadata to a [`DataType`]
-fn to_primitive_type_inner(
-    physical_type: &PhysicalType,
-    logical_type: &Option<LogicalType>,
-    converted_type: &Option<PrimitiveConvertedType>,
-) -> DataType {
-    match physical_type {
+fn to_primitive_type_inner(primitive_type: &PrimitiveType) -> DataType {
+    match primitive_type.physical_type {
         PhysicalType::Boolean => DataType::Boolean,
-        PhysicalType::Int32 => from_int32(logical_type, converted_type),
-        PhysicalType::Int64 => from_int64(logical_type, converted_type),
+        PhysicalType::Int32 => {
+            from_int32(primitive_type.logical_type, primitive_type.converted_type)
+        }
+        PhysicalType::Int64 => {
+            from_int64(primitive_type.logical_type, primitive_type.converted_type)
+        }
         PhysicalType::Int96 => DataType::Timestamp(TimeUnit::Nanosecond, None),
         PhysicalType::Float => DataType::Float32,
         PhysicalType::Double => DataType::Float64,
-        PhysicalType::ByteArray => from_byte_array(logical_type, converted_type),
-        PhysicalType::FixedLenByteArray(length) => {
-            from_fixed_len_byte_array(length, logical_type, converted_type)
+        PhysicalType::ByteArray => {
+            from_byte_array(&primitive_type.logical_type, &primitive_type.converted_type)
         }
+        PhysicalType::FixedLenByteArray(length) => from_fixed_len_byte_array(
+            length,
+            primitive_type.logical_type,
+            primitive_type.converted_type,
+        ),
     }
 }
 
 /// Entry point for converting parquet primitive type to arrow type.
 ///
 /// This function takes care of repetition.
-fn to_primitive_type(
-    basic_info: &BasicTypeInfo,
-    physical_type: &PhysicalType,
-    logical_type: &Option<LogicalType>,
-    converted_type: &Option<PrimitiveConvertedType>,
-) -> DataType {
-    let base_type = to_primitive_type_inner(physical_type, logical_type, converted_type);
+fn to_primitive_type(primitive_type: &PrimitiveType) -> DataType {
+    let base_type = to_primitive_type_inner(primitive_type);
 
-    if basic_info.repetition() == &Repetition::Repeated {
+    if primitive_type.field_info.repetition == Repetition::Repeated {
         DataType::List(Box::new(Field::new(
-            basic_info.name(),
+            &primitive_type.field_info.name,
             base_type,
-            is_nullable(basic_info),
+            is_nullable(&primitive_type.field_info),
         )))
     } else {
         base_type
@@ -208,14 +210,14 @@ fn to_primitive_type(
 }
 
 fn non_repeated_group(
-    logical_type: &Option<LogicalType>,
+    logical_type: &Option<GroupLogicalType>,
     converted_type: &Option<GroupConvertedType>,
     fields: &[ParquetType],
     parent_name: &str,
 ) -> Option<DataType> {
     debug_assert!(!fields.is_empty());
     match (logical_type, converted_type) {
-        (Some(LogicalType::LIST(_)), _) => to_list(fields, parent_name),
+        (Some(GroupLogicalType::List), _) => to_list(fields, parent_name),
         (None, Some(GroupConvertedType::List)) => to_list(fields, parent_name),
         _ => to_struct(fields),
     }
@@ -236,18 +238,18 @@ fn to_struct(fields: &[ParquetType]) -> Option<DataType> {
 ///
 /// This function takes care of logical type and repetition.
 fn to_group_type(
-    basic_info: &BasicTypeInfo,
-    logical_type: &Option<LogicalType>,
+    field_info: &FieldInfo,
+    logical_type: &Option<GroupLogicalType>,
     converted_type: &Option<GroupConvertedType>,
     fields: &[ParquetType],
     parent_name: &str,
 ) -> Option<DataType> {
     debug_assert!(!fields.is_empty());
-    if basic_info.repetition() == &Repetition::Repeated {
+    if field_info.repetition == Repetition::Repeated {
         Some(DataType::List(Box::new(Field::new(
-            basic_info.name(),
+            &field_info.name,
             to_struct(fields)?,
-            is_nullable(basic_info),
+            is_nullable(field_info),
         ))))
     } else {
         non_repeated_group(logical_type, converted_type, fields, parent_name)
@@ -255,8 +257,8 @@ fn to_group_type(
 }
 
 /// Checks whether this schema is nullable.
-pub(crate) fn is_nullable(basic_info: &BasicTypeInfo) -> bool {
-    match basic_info.repetition() {
+pub(crate) fn is_nullable(field_info: &FieldInfo) -> bool {
+    match field_info.repetition {
         Repetition::Optional => true,
         Repetition::Repeated => true,
         Repetition::Required => false,
@@ -268,9 +270,9 @@ pub(crate) fn is_nullable(basic_info: &BasicTypeInfo) -> bool {
 /// i.e. if it is a column-less group type.
 fn to_field(type_: &ParquetType) -> Option<Field> {
     Some(Field::new(
-        type_.get_basic_info().name(),
+        &type_.get_field_info().name,
         to_data_type(type_)?,
-        is_nullable(type_.get_basic_info()),
+        is_nullable(type_.get_field_info()),
     ))
 }
 
@@ -282,16 +284,7 @@ fn to_list(fields: &[ParquetType], parent_name: &str) -> Option<DataType> {
     let item = fields.first().unwrap();
 
     let item_type = match item {
-        ParquetType::PrimitiveType {
-            physical_type,
-            logical_type,
-            converted_type,
-            ..
-        } => Some(to_primitive_type_inner(
-            physical_type,
-            logical_type,
-            converted_type,
-        )),
+        ParquetType::PrimitiveType(primitive) => Some(to_primitive_type_inner(primitive)),
         ParquetType::GroupType { fields, .. } => {
             if fields.len() == 1
                 && item.name() != "array"
@@ -312,17 +305,17 @@ fn to_list(fields: &[ParquetType], parent_name: &str) -> Option<DataType> {
     // Without this step, the child incorrectly inherits the parent's optionality
     let (list_item_name, item_is_optional) = match item {
         ParquetType::GroupType {
-            basic_info, fields, ..
-        } if basic_info.name() == "list" && fields.len() == 1 => {
+            field_info, fields, ..
+        } if field_info.name == "list" && fields.len() == 1 => {
             let field = fields.first().unwrap();
             (
-                field.name(),
-                field.get_basic_info().repetition() != &Repetition::Required,
+                &field.get_field_info().name,
+                field.get_field_info().repetition != Repetition::Required,
             )
         }
         _ => (
-            item.name(),
-            item.get_basic_info().repetition() != &Repetition::Required,
+            &item.get_field_info().name,
+            item.get_field_info().repetition != Repetition::Required,
         ),
     };
 
@@ -344,19 +337,9 @@ fn to_list(fields: &[ParquetType], parent_name: &str) -> Option<DataType> {
 /// conversion, the result is Ok(None).
 pub(crate) fn to_data_type(type_: &ParquetType) -> Option<DataType> {
     match type_ {
-        ParquetType::PrimitiveType {
-            basic_info,
-            physical_type,
-            logical_type,
-            converted_type,
-        } => Some(to_primitive_type(
-            basic_info,
-            physical_type,
-            logical_type,
-            converted_type,
-        )),
+        ParquetType::PrimitiveType(primitive) => Some(to_primitive_type(primitive)),
         ParquetType::GroupType {
-            basic_info,
+            field_info,
             logical_type,
             converted_type,
             fields,
@@ -365,11 +348,11 @@ pub(crate) fn to_data_type(type_: &ParquetType) -> Option<DataType> {
                 None
             } else {
                 to_group_type(
-                    basic_info,
+                    field_info,
                     logical_type,
                     converted_type,
                     fields,
-                    basic_info.name(),
+                    &field_info.name,
                 )
             }
         }

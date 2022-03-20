@@ -37,33 +37,37 @@ impl<'a> Optional<'a> {
 
 struct Required<'a> {
     pub values: std::slice::ChunksExact<'a, u8>,
-    pub remaining: usize,
 }
 
 impl<'a> Required<'a> {
     fn new(page: &'a DataPage, size: usize) -> Self {
-        Self {
-            values: page.buffer().chunks_exact(size),
-            remaining: page.num_values(),
-        }
+        let values = page.buffer();
+        assert_eq!(values.len() % size, 0);
+        let values = values.chunks_exact(size);
+        Self { values }
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.values.size_hint().0
     }
 }
 
 struct RequiredDictionary<'a> {
     pub values: hybrid_rle::HybridRleDecoder<'a>,
-    pub remaining: usize,
     dict: &'a FixedLenByteArrayPageDict,
 }
 
 impl<'a> RequiredDictionary<'a> {
     fn new(page: &'a DataPage, dict: &'a FixedLenByteArrayPageDict) -> Self {
-        let values = dict_indices_decoder(page.buffer(), page.num_values());
+        let values = dict_indices_decoder(page);
 
-        Self {
-            values,
-            remaining: page.num_values(),
-            dict,
-        }
+        Self { dict, values }
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.values.size_hint().0
     }
 }
 
@@ -75,9 +79,7 @@ struct OptionalDictionary<'a> {
 
 impl<'a> OptionalDictionary<'a> {
     fn new(page: &'a DataPage, dict: &'a FixedLenByteArrayPageDict) -> Self {
-        let (_, _, indices_buffer) = split_buffer(page);
-
-        let values = dict_indices_decoder(indices_buffer, page.num_values());
+        let values = dict_indices_decoder(page);
 
         Self {
             values,
@@ -98,8 +100,8 @@ impl<'a> PageState<'a> for State<'a> {
     fn len(&self) -> usize {
         match self {
             State::Optional(state) => state.validity.len(),
-            State::Required(state) => state.remaining,
-            State::RequiredDictionary(state) => state.remaining,
+            State::Required(state) => state.len(),
+            State::RequiredDictionary(state) => state.len(),
             State::OptionalDictionary(state) => state.validity.len(),
         }
     }
@@ -121,7 +123,7 @@ impl<'a> Decoder<'a> for BinaryDecoder {
 
     fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
         let is_optional =
-            page.descriptor().type_().get_basic_info().repetition() == &Repetition::Optional;
+            page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
 
         match (page.encoding(), page.dictionary_page(), is_optional) {
             (Encoding::Plain, None, true) => Ok(State::Optional(Optional::new(page, self.size))),
@@ -172,7 +174,6 @@ impl<'a> Decoder<'a> for BinaryDecoder {
                 &mut page.values,
             ),
             State::Required(page) => {
-                page.remaining -= remaining;
                 for x in page.values.by_ref().take(remaining) {
                     values.push(x)
                 }
@@ -201,7 +202,6 @@ impl<'a> Decoder<'a> for BinaryDecoder {
                     &dict_values[index * size..(index + 1) * size]
                 };
 
-                page.remaining -= remaining;
                 for x in page.values.by_ref().map(op).take(remaining) {
                     values.push(x)
                 }

@@ -1,14 +1,14 @@
 use parquet2::{
     encoding::{hybrid_rle::bitpacked_encode, Encoding},
-    metadata::ColumnDescriptor,
+    metadata::Descriptor,
     page::DataPage,
     statistics::{serialize_statistics, BooleanStatistics, ParquetStatistics, Statistics},
     write::WriteOptions,
 };
 
 use super::super::utils;
-use crate::error::Result;
-use crate::{array::*, io::parquet::read::is_type_nullable};
+use crate::array::*;
+use crate::{error::Result, io::parquet::read::schema::is_nullable};
 
 fn encode(iterator: impl Iterator<Item = bool>, buffer: &mut Vec<u8>) -> Result<()> {
     // encode values using bitpacking
@@ -41,9 +41,9 @@ pub(super) fn encode_plain(
 pub fn array_to_page(
     array: &BooleanArray,
     options: WriteOptions,
-    descriptor: ColumnDescriptor,
+    descriptor: Descriptor,
 ) -> Result<DataPage> {
-    let is_optional = is_type_nullable(descriptor.type_());
+    let is_optional = is_nullable(&descriptor.primitive_type.field_info);
 
     let validity = array.validity();
 
@@ -68,6 +68,7 @@ pub fn array_to_page(
 
     utils::build_plain_page(
         buffer,
+        array.len(),
         array.len(),
         array.null_count(),
         0,

@@ -196,8 +196,7 @@ fn main() -> Result<()> {
 
     writer.start()?;
     for group in row_groups {
-        let (group, len) = group?;
-        writer.write(group, len)?;
+        writer.write(group?)?;
     }
     let _ = writer.end(None)?;
 

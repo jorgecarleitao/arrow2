@@ -150,7 +150,6 @@ where
     fn start_send(self: Pin<&mut Self>, item: Chunk<Arc<dyn Array>>) -> Result<(), Self::Error> {
         let this = self.get_mut();
         if let Some(mut writer) = this.writer.take() {
-            let count = item.len();
             let rows = crate::io::parquet::write::row_group_iter(
                 item,
                 this.encoding.clone(),
@@ -158,7 +157,7 @@ where
                 this.options,
             );
             this.task = Some(Box::pin(async move {
-                writer.write(rows, count).await?;
+                writer.write(rows).await?;
                 Ok(Some(writer))
             }));
             Ok(())

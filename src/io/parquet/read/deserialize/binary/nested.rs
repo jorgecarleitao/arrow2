@@ -47,7 +47,7 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
 
     fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
         let is_optional =
-            page.descriptor().type_().get_basic_info().repetition() == &Repetition::Optional;
+            page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
 
         match (page.encoding(), page.dictionary_page(), is_optional) {
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false) => {
@@ -95,15 +95,10 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
         let (values, validity) = decoded;
         match state {
             State::Optional(page_validity, page_values) => {
-                let max_def = page_validity.max_def();
-                read_optional_values(
-                    page_validity.definition_levels.by_ref(),
-                    max_def,
-                    page_values.by_ref(),
-                    values,
-                    validity,
-                    additional,
-                )
+                let items = page_validity.by_ref().take(additional);
+                let items = Zip::new(items, page_values.by_ref());
+
+                read_optional_values(items, values, validity)
             }
             State::Required(page) => {
                 page.remaining -= additional;
@@ -126,7 +121,6 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
                 }
             }
             State::OptionalDictionary(page_validity, page_values) => {
-                let max_def = page_validity.max_def();
                 let dict_values = page_values.dict.values();
                 let dict_offsets = page_values.dict.offsets();
 
@@ -136,14 +130,11 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
                     let dict_offset_ip1 = dict_offsets[index + 1] as usize;
                     &dict_values[dict_offset_i..dict_offset_ip1]
                 };
-                read_optional_values(
-                    page_validity.definition_levels.by_ref(),
-                    max_def,
-                    page_values.values.by_ref().map(op),
-                    values,
-                    validity,
-                    additional,
-                )
+
+                let items = page_validity.by_ref().take(additional);
+                let items = Zip::new(items, page_values.values.by_ref().map(op));
+
+                read_optional_values(items, values, validity)
             }
         }
     }

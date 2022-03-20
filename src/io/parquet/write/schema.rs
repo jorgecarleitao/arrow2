@@ -2,8 +2,8 @@ use parquet2::{
     metadata::KeyValue,
     schema::{
         types::{
-            DecimalType, IntType, LogicalType, ParquetType, PhysicalType, PrimitiveConvertedType,
-            TimeType, TimeUnit as ParquetTimeUnit, TimestampType,
+            GroupLogicalType, IntegerType, ParquetType, PhysicalType, PrimitiveConvertedType,
+            PrimitiveLogicalType, TimeUnit as ParquetTimeUnit,
         },
         Repetition,
     },
@@ -53,7 +53,7 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             PhysicalType::Int32,
             repetition,
             None,
-            Some(LogicalType::UNKNOWN(Default::default())),
+            Some(PrimitiveLogicalType::Unknown),
             None,
         )?),
         DataType::Boolean => Ok(ParquetType::try_from_primitive(
@@ -120,7 +120,7 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             PhysicalType::ByteArray,
             repetition,
             Some(PrimitiveConvertedType::Utf8),
-            Some(LogicalType::STRING(Default::default())),
+            Some(PrimitiveLogicalType::String),
             None,
         )?),
         DataType::Date32 => Ok(ParquetType::try_from_primitive(
@@ -128,7 +128,7 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             PhysicalType::Int32,
             repetition,
             Some(PrimitiveConvertedType::Date),
-            Some(LogicalType::DATE(Default::default())),
+            Some(PrimitiveLogicalType::Date),
             None,
         )?),
         DataType::Int8 => Ok(ParquetType::try_from_primitive(
@@ -136,10 +136,7 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             PhysicalType::Int32,
             repetition,
             Some(PrimitiveConvertedType::Int8),
-            Some(LogicalType::INTEGER(IntType {
-                bit_width: 8,
-                is_signed: true,
-            })),
+            Some(PrimitiveLogicalType::Integer(IntegerType::Int8)),
             None,
         )?),
         DataType::Int16 => Ok(ParquetType::try_from_primitive(
@@ -147,10 +144,7 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             PhysicalType::Int32,
             repetition,
             Some(PrimitiveConvertedType::Int16),
-            Some(LogicalType::INTEGER(IntType {
-                bit_width: 16,
-                is_signed: true,
-            })),
+            Some(PrimitiveLogicalType::Integer(IntegerType::Int16)),
             None,
         )?),
         DataType::UInt8 => Ok(ParquetType::try_from_primitive(
@@ -158,10 +152,7 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             PhysicalType::Int32,
             repetition,
             Some(PrimitiveConvertedType::Uint8),
-            Some(LogicalType::INTEGER(IntType {
-                bit_width: 8,
-                is_signed: false,
-            })),
+            Some(PrimitiveLogicalType::Integer(IntegerType::UInt8)),
             None,
         )?),
         DataType::UInt16 => Ok(ParquetType::try_from_primitive(
@@ -169,10 +160,7 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             PhysicalType::Int32,
             repetition,
             Some(PrimitiveConvertedType::Uint16),
-            Some(LogicalType::INTEGER(IntType {
-                bit_width: 16,
-                is_signed: false,
-            })),
+            Some(PrimitiveLogicalType::Integer(IntegerType::UInt16)),
             None,
         )?),
         DataType::UInt32 => Ok(ParquetType::try_from_primitive(
@@ -180,10 +168,7 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             PhysicalType::Int32,
             repetition,
             Some(PrimitiveConvertedType::Uint32),
-            Some(LogicalType::INTEGER(IntType {
-                bit_width: 32,
-                is_signed: false,
-            })),
+            Some(PrimitiveLogicalType::Integer(IntegerType::UInt32)),
             None,
         )?),
         DataType::UInt64 => Ok(ParquetType::try_from_primitive(
@@ -191,10 +176,7 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             PhysicalType::Int64,
             repetition,
             Some(PrimitiveConvertedType::Uint64),
-            Some(LogicalType::INTEGER(IntType {
-                bit_width: 64,
-                is_signed: false,
-            })),
+            Some(PrimitiveLogicalType::Integer(IntegerType::UInt64)),
             None,
         )?),
         // no natural representation in parquet; leave it as is.
@@ -212,15 +194,15 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             PhysicalType::Int64,
             repetition,
             None,
-            Some(LogicalType::TIMESTAMP(TimestampType {
-                is_adjusted_to_u_t_c: matches!(zone, Some(z) if !z.as_str().is_empty()),
+            Some(PrimitiveLogicalType::Timestamp {
+                is_adjusted_to_utc: matches!(zone, Some(z) if !z.as_str().is_empty()),
                 unit: match time_unit {
                     TimeUnit::Second => unreachable!(),
-                    TimeUnit::Millisecond => ParquetTimeUnit::MILLIS(Default::default()),
-                    TimeUnit::Microsecond => ParquetTimeUnit::MICROS(Default::default()),
-                    TimeUnit::Nanosecond => ParquetTimeUnit::NANOS(Default::default()),
+                    TimeUnit::Millisecond => ParquetTimeUnit::Milliseconds,
+                    TimeUnit::Microsecond => ParquetTimeUnit::Microseconds,
+                    TimeUnit::Nanosecond => ParquetTimeUnit::Nanoseconds,
                 },
-            })),
+            }),
             None,
         )?),
         // no natural representation in parquet; leave it as is.
@@ -238,10 +220,10 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             PhysicalType::Int32,
             repetition,
             Some(PrimitiveConvertedType::TimeMillis),
-            Some(LogicalType::TIME(TimeType {
-                is_adjusted_to_u_t_c: false,
-                unit: ParquetTimeUnit::MILLIS(Default::default()),
-            })),
+            Some(PrimitiveLogicalType::Time {
+                is_adjusted_to_utc: false,
+                unit: ParquetTimeUnit::Milliseconds,
+            }),
             None,
         )?),
         DataType::Time64(time_unit) => Ok(ParquetType::try_from_primitive(
@@ -253,14 +235,14 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
                 TimeUnit::Nanosecond => None,
                 _ => unreachable!(),
             },
-            Some(LogicalType::TIME(TimeType {
-                is_adjusted_to_u_t_c: false,
+            Some(PrimitiveLogicalType::Time {
+                is_adjusted_to_utc: false,
                 unit: match time_unit {
-                    TimeUnit::Microsecond => ParquetTimeUnit::MICROS(Default::default()),
-                    TimeUnit::Nanosecond => ParquetTimeUnit::NANOS(Default::default()),
+                    TimeUnit::Microsecond => ParquetTimeUnit::Microseconds,
+                    TimeUnit::Nanosecond => ParquetTimeUnit::Nanoseconds,
                     _ => unreachable!(),
                 },
-            })),
+            }),
             None,
         )?),
         DataType::Struct(fields) => {
@@ -274,9 +256,9 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
                 .iter()
                 .map(to_parquet_type)
                 .collect::<Result<Vec<_>>>()?;
-            Ok(ParquetType::try_from_group(
+            Ok(ParquetType::from_group(
                 name, repetition, None, None, fields, None,
-            )?)
+            ))
         }
         DataType::Dictionary(_, value, _) => {
             let dict_field = Field::new(name.as_str(), value.as_ref().clone(), field.is_nullable);
@@ -284,7 +266,7 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
         }
         DataType::FixedSizeBinary(size) => Ok(ParquetType::try_from_primitive(
             name,
-            PhysicalType::FixedLenByteArray(*size as i32),
+            PhysicalType::FixedLenByteArray(*size),
             repetition,
             None,
             None,
@@ -293,27 +275,21 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
         DataType::Decimal(precision, scale) => {
             let precision = *precision;
             let scale = *scale;
-            let logical_type = Some(LogicalType::DECIMAL(DecimalType {
-                scale: scale as i32,
-                precision: precision as i32,
-            }));
+            let logical_type = Some(PrimitiveLogicalType::Decimal(precision, scale));
 
             let physical_type = if precision <= 9 {
                 PhysicalType::Int32
             } else if precision <= 18 {
                 PhysicalType::Int64
             } else {
-                let len = decimal_length_from_precision(precision) as i32;
+                let len = decimal_length_from_precision(precision);
                 PhysicalType::FixedLenByteArray(len)
             };
             Ok(ParquetType::try_from_primitive(
                 name,
                 physical_type,
                 repetition,
-                Some(PrimitiveConvertedType::Decimal(
-                    precision as i32,
-                    scale as i32,
-                )),
+                Some(PrimitiveConvertedType::Decimal(precision, scale)),
                 logical_type,
                 None,
             )?)
@@ -327,21 +303,21 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             None,
         )?),
         DataType::List(f) | DataType::FixedSizeList(f, _) | DataType::LargeList(f) => {
-            Ok(ParquetType::try_from_group(
+            Ok(ParquetType::from_group(
                 name,
                 repetition,
                 None,
-                Some(LogicalType::LIST(Default::default())),
-                vec![ParquetType::try_from_group(
+                Some(GroupLogicalType::List),
+                vec![ParquetType::from_group(
                     "list".to_string(),
                     Repetition::Repeated,
                     None,
                     None,
                     vec![to_parquet_type(f)?],
                     None,
-                )?],
+                )],
                 None,
-            )?)
+            ))
         }
         other => Err(ArrowError::NotYetImplemented(format!(
             "Writing the data type {:?} is not yet implemented",

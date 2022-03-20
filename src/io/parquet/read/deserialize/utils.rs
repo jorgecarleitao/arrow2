@@ -55,7 +55,7 @@ pub fn not_implemented(
 
 #[inline]
 pub fn split_buffer(page: &DataPage) -> (&[u8], &[u8], &[u8]) {
-    _split_buffer(page, page.descriptor())
+    _split_buffer(page)
 }
 
 /// A private trait representing structs that can receive elements.
@@ -117,9 +117,15 @@ pub struct OptionalPageValidity<'a> {
     // invariants:
     // * run_offset < length
     // * consumed < length
+    // how many items have been taken on the current encoded run.
+    // 0 implies we need to advance the decoder
     run_offset: usize,
+    // how many items have been consumed from the encoder
     consumed: usize,
+    // how many items we must read from the page
     length: usize,
+    // how many items must be skipped from the page
+    offset: usize,
 }
 
 impl<'a> OptionalPageValidity<'a> {
@@ -133,12 +139,40 @@ impl<'a> OptionalPageValidity<'a> {
             run_offset: 0,
             consumed: 0,
             length: page.num_values(),
+            offset: 0,
         }
     }
 
     #[inline]
     pub fn len(&self) -> usize {
         self.length - self.consumed
+    }
+}
+
+pub struct Zip<V, I> {
+    validity: V,
+    values: I,
+}
+
+impl<V, I> Zip<V, I> {
+    pub fn new(validity: V, values: I) -> Self {
+        Self { validity, values }
+    }
+}
+
+impl<T, V: Iterator<Item = bool>, I: Iterator<Item = T>> Iterator for Zip<V, I> {
+    type Item = Option<T>;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.validity
+            .next()
+            .map(|x| if x { self.values.next() } else { None })
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.validity.size_hint()
     }
 }
 
@@ -158,31 +192,35 @@ pub(super) fn extend_from_decoder<'a, T: Default, P: Pushable<T>, I: Iterator<It
         if page_validity.run_offset == 0 {
             page_validity.validity.advance()
         }
-
         if let Some(run) = page_validity.validity.get() {
             match run {
                 hybrid_rle::HybridEncoded::Bitpacked(pack) => {
                     // a pack has at most `pack.len() * 8` bits
                     // during execution, we may end in the middle of a pack (run_offset != 0)
-                    // the remaining items in the pack is dictacted by a combination
+                    // the remaining items in the pack is given by a combination
                     // of the page length, the offset in the pack, and where we are in the page
                     let pack_size = pack.len() * 8 - page_validity.run_offset;
-                    let remaining = page_validity.length - page_validity.consumed;
+                    let remaining = page_validity.len();
                     let length = std::cmp::min(pack_size, remaining);
 
+                    let offset = page_validity.offset.saturating_sub(page_validity.consumed);
+
+                    // todo: if `offset` is larger than the run, we need to restrict `additional`
                     let additional = limit.min(length);
 
                     // consume `additional` items
-                    let iter = BitmapIter::new(pack, page_validity.run_offset, additional);
-                    for is_valid in iter {
-                        if is_valid {
-                            values.push(values_iter.next().unwrap())
+                    let iter = BitmapIter::new(pack, page_validity.run_offset, offset + additional);
+                    let iter = Zip::new(iter, &mut values_iter);
+                    let iter = iter.skip(offset);
+
+                    for item in iter {
+                        if let Some(item) = item {
+                            values.push(item)
                         } else {
                             values.push_null()
-                        };
+                        }
                     }
-
-                    validity.extend_from_slice(pack, page_validity.run_offset, additional);
+                    validity.extend_from_slice(pack, offset + page_validity.run_offset, additional);
 
                     if additional == length {
                         page_validity.run_offset = 0
@@ -335,14 +373,13 @@ pub(super) fn next<'a, I: DataPages, D: Decoder<'a>>(
 }
 
 #[inline]
-pub(super) fn dict_indices_decoder(
-    indices_buffer: &[u8],
-    additional: usize,
-) -> hybrid_rle::HybridRleDecoder {
+pub(super) fn dict_indices_decoder(page: &DataPage) -> hybrid_rle::HybridRleDecoder {
+    let (_, _, indices_buffer) = split_buffer(page);
+
     // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
     // SPEC: followed by the values encoded using RLE/Bit packed described above (with the given bit width).
     let bit_width = indices_buffer[0];
     let indices_buffer = &indices_buffer[1..];
 
-    hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional)
+    hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, page.num_values())
 }

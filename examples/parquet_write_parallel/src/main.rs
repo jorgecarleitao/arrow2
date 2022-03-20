@@ -99,8 +99,7 @@ fn parallel_write(path: &str, schema: &Schema, batches: &[Chunk]) -> Result<()> 
     // Write the file.
     writer.start()?;
     for group in row_groups {
-        let (group, len) = group?;
-        writer.write(group, len)?;
+        writer.write(group?)?;
     }
     let _size = writer.end(None)?;
 

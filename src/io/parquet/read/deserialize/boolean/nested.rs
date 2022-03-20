@@ -65,7 +65,7 @@ impl<'a> Decoder<'a> for BooleanDecoder {
 
     fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
         let is_optional =
-            page.descriptor().type_().get_basic_info().repetition() == &Repetition::Optional;
+            page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
 
         match (page.encoding(), is_optional) {
             (Encoding::Plain, true) => {
@@ -96,24 +96,19 @@ impl<'a> Decoder<'a> for BooleanDecoder {
         &self,
         state: &mut State,
         decoded: &mut Self::DecodedState,
-        required: usize,
+        additional: usize,
     ) {
         let (values, validity) = decoded;
         match state {
             State::Optional(page_validity, page_values) => {
-                let max_def = page_validity.max_def();
-                read_optional_values(
-                    page_validity.definition_levels.by_ref(),
-                    max_def,
-                    page_values.by_ref(),
-                    values,
-                    validity,
-                    required,
-                )
+                let items = page_validity.by_ref().take(additional);
+                let items = Zip::new(items, page_values.by_ref());
+
+                read_optional_values(items, values, validity)
             }
             State::Required(page) => {
-                values.extend_from_slice(page.values, page.offset, required);
-                page.offset += required;
+                values.extend_from_slice(page.values, page.offset, additional);
+                page.offset += additional;
             }
         }
     }

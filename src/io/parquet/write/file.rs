@@ -67,12 +67,8 @@ impl<W: Write> FileWriter<W> {
     }
 
     /// Writes a row group to the file.
-    pub fn write(
-        &mut self,
-        row_group: RowGroupIter<'_, ArrowError>,
-        num_rows: usize,
-    ) -> Result<()> {
-        Ok(self.writer.write(row_group, num_rows)?)
+    pub fn write(&mut self, row_group: RowGroupIter<'_, ArrowError>) -> Result<()> {
+        Ok(self.writer.write(row_group)?)
     }
 
     /// Writes the footer of the parquet file. Returns the total size of the file.

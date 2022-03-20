@@ -62,15 +62,37 @@ fn read_delta_optional<O: Offset>(
 #[derive(Debug)]
 pub(super) struct Required<'a> {
     pub values: BinaryIter<'a>,
+    // here because `BinaryIter` has no size_hint.
     pub remaining: usize,
 }
 
 impl<'a> Required<'a> {
     pub fn new(page: &'a DataPage) -> Self {
+        let values = BinaryIter::new(page.buffer());
+
         Self {
-            values: BinaryIter::new(page.buffer()),
+            values,
             remaining: page.num_values(),
         }
+    }
+}
+
+#[derive(Debug)]
+pub(super) struct RequiredDictionary<'a> {
+    pub values: hybrid_rle::HybridRleDecoder<'a>,
+    pub dict: &'a BinaryPageDict,
+}
+
+impl<'a> RequiredDictionary<'a> {
+    pub fn new(page: &'a DataPage, dict: &'a BinaryPageDict) -> Self {
+        let values = utils::dict_indices_decoder(page);
+
+        Self { dict, values }
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.values.size_hint().0
     }
 }
 
@@ -82,8 +104,7 @@ pub(super) struct ValuesDictionary<'a> {
 
 impl<'a> ValuesDictionary<'a> {
     pub fn new(page: &'a DataPage, dict: &'a BinaryPageDict) -> Self {
-        let (_, _, indices_buffer) = utils::split_buffer(page);
-        let values = utils::dict_indices_decoder(indices_buffer, page.num_values());
+        let values = utils::dict_indices_decoder(page);
 
         Self { dict, values }
     }
@@ -97,7 +118,7 @@ impl<'a> ValuesDictionary<'a> {
 enum State<'a> {
     Optional(OptionalPageValidity<'a>, BinaryIter<'a>),
     Required(Required<'a>),
-    RequiredDictionary(ValuesDictionary<'a>),
+    RequiredDictionary(RequiredDictionary<'a>),
     OptionalDictionary(OptionalPageValidity<'a>, ValuesDictionary<'a>),
 }
 
@@ -162,11 +183,11 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
 
     fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
         let is_optional =
-            page.descriptor().type_().get_basic_info().repetition() == &Repetition::Optional;
+            page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
 
         match (page.encoding(), page.dictionary_page(), is_optional) {
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false) => {
-                Ok(State::RequiredDictionary(ValuesDictionary::new(
+                Ok(State::RequiredDictionary(RequiredDictionary::new(
                     page,
                     dict.as_any().downcast_ref().unwrap(),
                 )))

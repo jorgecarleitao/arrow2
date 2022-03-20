@@ -9,7 +9,7 @@ use futures::{
 };
 use parquet2::{
     metadata::ColumnChunkMetaData,
-    read::{BasicDecompressor, PageIterator},
+    read::{BasicDecompressor, PageReader},
 };
 
 use crate::{
@@ -95,7 +95,7 @@ pub(super) fn get_field_columns<'a>(
 ) -> Vec<&'a ColumnChunkMetaData> {
     columns
         .iter()
-        .filter(|x| x.descriptor().path_in_schema()[0] == field_name)
+        .filter(|x| x.descriptor().path_in_schema[0] == field_name)
         .collect()
 }
 
@@ -181,17 +181,15 @@ pub fn to_deserializer<'a>(
     let (columns, types): (Vec<_>, Vec<_>) = columns
         .into_iter()
         .map(|(column_meta, chunk)| {
-            let pages = PageIterator::new(
+            let pages = PageReader::new(
                 std::io::Cursor::new(chunk),
-                column_meta.num_values(),
-                column_meta.compression(),
-                column_meta.descriptor().clone(),
+                column_meta,
                 Arc::new(|_, _| true),
                 vec![],
             );
             (
                 BasicDecompressor::new(pages, vec![]),
-                column_meta.descriptor().type_(),
+                &column_meta.descriptor().descriptor.primitive_type,
             )
         })
         .unzip();
