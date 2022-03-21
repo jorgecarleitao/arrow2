@@ -74,49 +74,31 @@ impl<'a> Required<'a> {
     }
 }
 
-struct RequiredDictionary<'a> {
+#[derive(Debug)]
+pub(super) struct ValuesDictionary<'a> {
     pub values: hybrid_rle::HybridRleDecoder<'a>,
-    pub remaining: usize,
     pub dict: &'a BinaryPageDict,
 }
 
-impl<'a> RequiredDictionary<'a> {
-    fn new(page: &'a DataPage, dict: &'a BinaryPageDict) -> Self {
-        let values = utils::dict_indices_decoder(page.buffer(), page.num_values());
-
-        Self {
-            values,
-            remaining: page.num_values(),
-            dict,
-        }
-    }
-}
-
-struct OptionalDictionary<'a> {
-    values: hybrid_rle::HybridRleDecoder<'a>,
-    validity: OptionalPageValidity<'a>,
-    dict: &'a BinaryPageDict,
-}
-
-impl<'a> OptionalDictionary<'a> {
-    fn new(page: &'a DataPage, dict: &'a BinaryPageDict) -> Self {
+impl<'a> ValuesDictionary<'a> {
+    pub fn new(page: &'a DataPage, dict: &'a BinaryPageDict) -> Self {
         let (_, _, indices_buffer) = utils::split_buffer(page);
-
         let values = utils::dict_indices_decoder(indices_buffer, page.num_values());
 
-        Self {
-            values,
-            validity: OptionalPageValidity::new(page),
-            dict,
-        }
+        Self { dict, values }
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.values.size_hint().0
     }
 }
 
 enum State<'a> {
     Optional(OptionalPageValidity<'a>, BinaryIter<'a>),
     Required(Required<'a>),
-    RequiredDictionary(RequiredDictionary<'a>),
-    OptionalDictionary(OptionalDictionary<'a>),
+    RequiredDictionary(ValuesDictionary<'a>),
+    OptionalDictionary(OptionalPageValidity<'a>, ValuesDictionary<'a>),
 }
 
 impl<'a> utils::PageState<'a> for State<'a> {
@@ -124,8 +106,8 @@ impl<'a> utils::PageState<'a> for State<'a> {
         match self {
             State::Optional(validity, _) => validity.len(),
             State::Required(state) => state.remaining,
-            State::RequiredDictionary(state) => state.remaining,
-            State::OptionalDictionary(state) => state.validity.len(),
+            State::RequiredDictionary(values) => values.len(),
+            State::OptionalDictionary(optional, _) => optional.len(),
         }
     }
 }
@@ -184,16 +166,18 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
 
         match (page.encoding(), page.dictionary_page(), is_optional) {
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false) => {
-                Ok(State::RequiredDictionary(RequiredDictionary::new(
+                Ok(State::RequiredDictionary(ValuesDictionary::new(
                     page,
                     dict.as_any().downcast_ref().unwrap(),
                 )))
             }
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
-                Ok(State::OptionalDictionary(OptionalDictionary::new(
-                    page,
-                    dict.as_any().downcast_ref().unwrap(),
-                )))
+                let dict = dict.as_any().downcast_ref().unwrap();
+
+                Ok(State::OptionalDictionary(
+                    OptionalPageValidity::new(page),
+                    ValuesDictionary::new(page, dict),
+                ))
             }
             (Encoding::Plain, _, true) => {
                 let (_, _, values) = utils::split_buffer(page);
@@ -241,9 +225,9 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
                     values.push(x)
                 }
             }
-            State::OptionalDictionary(page) => {
-                let dict_values = page.dict.values();
-                let dict_offsets = page.dict.offsets();
+            State::OptionalDictionary(page_validity, page_values) => {
+                let dict_values = page_values.dict.values();
+                let dict_offsets = page_values.dict.offsets();
 
                 let op = move |index: u32| {
                     let index = index as usize;
@@ -251,12 +235,12 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
                     let dict_offset_ip1 = dict_offsets[index + 1] as usize;
                     &dict_values[dict_offset_i..dict_offset_ip1]
                 };
-                extend_from_decoder(
+                utils::extend_from_decoder(
                     validity,
-                    &mut page.validity,
+                    page_validity,
                     Some(additional),
                     values,
-                    &mut page.values.by_ref().map(op),
+                    &mut page_values.values.by_ref().map(op),
                 )
             }
             State::RequiredDictionary(page) => {
@@ -269,7 +253,6 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
                     &dict_values[dict_offset_i..dict_offset_ip1]
                 };
 
-                page.remaining = page.remaining.saturating_sub(additional);
                 for x in page.values.by_ref().map(op).take(additional) {
                     values.push(x)
                 }

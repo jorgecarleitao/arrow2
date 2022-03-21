@@ -270,6 +270,11 @@ fn v1_nested_utf8() -> Result<()> {
 }
 
 #[test]
+fn v1_nested_utf8_dict() -> Result<()> {
+    test_pyarrow_integration("list_utf8", 1, "nested", true, false, None)
+}
+
+#[test]
 fn v2_nested_large_binary() -> Result<()> {
     test_pyarrow_integration("list_large_binary", 2, "nested", false, false, None)
 }
