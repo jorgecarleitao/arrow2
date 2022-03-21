@@ -1,5 +1,5 @@
 use chrono::{NaiveDate, NaiveDateTime};
-use odbc_api::buffers::{BinColumnIt, TextColumnIt};
+use odbc_api::buffers::{BinColumnView, TextColumnView};
 use odbc_api::Bit;
 
 use crate::array::{Array, BinaryArray, BooleanArray, PrimitiveArray, Utf8Array};
@@ -14,9 +14,9 @@ use super::super::api::buffers::AnyColumnView;
 /// This is CPU-bounded
 pub fn deserialize(column: AnyColumnView, data_type: DataType) -> Box<dyn Array> {
     match column {
-        AnyColumnView::Text(iter) => Box::new(utf8(data_type, iter)) as _,
+        AnyColumnView::Text(view) => Box::new(utf8(data_type, view)) as _,
         AnyColumnView::WText(_) => todo!(),
-        AnyColumnView::Binary(iter) => Box::new(binary(data_type, iter)) as _,
+        AnyColumnView::Binary(view) => Box::new(binary(data_type, view)) as _,
         AnyColumnView::Date(values) => Box::new(date(data_type, values)) as _,
         AnyColumnView::Time(values) => Box::new(time(data_type, values)) as _,
         AnyColumnView::Timestamp(values) => Box::new(timestamp(data_type, values)) as _,
@@ -139,15 +139,15 @@ fn binary_generic<'a>(
     (offsets.into(), values.into(), validity.into())
 }
 
-fn binary(data_type: DataType, iter: BinColumnIt) -> BinaryArray<i32> {
-    let (offsets, values, validity) = binary_generic(iter);
+fn binary(data_type: DataType, view: BinColumnView) -> BinaryArray<i32> {
+    let (offsets, values, validity) = binary_generic(view.iter());
 
     // this O(N) check is not necessary
     BinaryArray::from_data(data_type, offsets, values, validity)
 }
 
-fn utf8(data_type: DataType, iter: TextColumnIt<u8>) -> Utf8Array<i32> {
-    let (offsets, values, validity) = binary_generic(iter);
+fn utf8(data_type: DataType, view: TextColumnView<u8>) -> Utf8Array<i32> {
+    let (offsets, values, validity) = binary_generic(view.iter());
 
     // this O(N) check is necessary for the utf8 validity
     Utf8Array::from_data(data_type, offsets, values, validity)
