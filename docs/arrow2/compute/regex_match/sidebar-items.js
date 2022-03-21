@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["regex_match","Regex matches"],["regex_match_scalar","Regex matches"]]});
