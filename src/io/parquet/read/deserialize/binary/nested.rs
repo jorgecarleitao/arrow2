@@ -9,6 +9,7 @@ use crate::{
 
 use super::super::nested_utils::*;
 use super::super::utils::MaybeNext;
+use super::basic::ValuesDictionary;
 use super::utils::Binary;
 use super::{
     super::utils,
@@ -20,6 +21,8 @@ use super::{
 enum State<'a> {
     Optional(Optional<'a>, utils::BinaryIter<'a>),
     Required(Required<'a>),
+    RequiredDictionary(ValuesDictionary<'a>),
+    OptionalDictionary(Optional<'a>, ValuesDictionary<'a>),
 }
 
 impl<'a> utils::PageState<'a> for State<'a> {
@@ -27,6 +30,8 @@ impl<'a> utils::PageState<'a> for State<'a> {
         match self {
             State::Optional(validity, _) => validity.len(),
             State::Required(state) => state.remaining,
+            State::RequiredDictionary(required) => required.len(),
+            State::OptionalDictionary(optional, _) => optional.len(),
         }
     }
 }
@@ -45,6 +50,17 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
             page.descriptor().type_().get_basic_info().repetition() == &Repetition::Optional;
 
         match (page.encoding(), page.dictionary_page(), is_optional) {
+            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false) => {
+                let dict = dict.as_any().downcast_ref().unwrap();
+                Ok(State::RequiredDictionary(ValuesDictionary::new(page, dict)))
+            }
+            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
+                let dict = dict.as_any().downcast_ref().unwrap();
+                Ok(State::OptionalDictionary(
+                    Optional::new(page),
+                    ValuesDictionary::new(page, dict),
+                ))
+            }
             (Encoding::Plain, None, true) => {
                 let (_, _, values) = utils::split_buffer(page);
 
@@ -94,6 +110,40 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
                 for x in page.values.by_ref().take(additional) {
                     values.push(x)
                 }
+            }
+            State::RequiredDictionary(page) => {
+                let dict_values = page.dict.values();
+                let dict_offsets = page.dict.offsets();
+
+                let op = move |index: u32| {
+                    let index = index as usize;
+                    let dict_offset_i = dict_offsets[index] as usize;
+                    let dict_offset_ip1 = dict_offsets[index + 1] as usize;
+                    &dict_values[dict_offset_i..dict_offset_ip1]
+                };
+                for x in page.values.by_ref().map(op).take(additional) {
+                    values.push(x)
+                }
+            }
+            State::OptionalDictionary(page_validity, page_values) => {
+                let max_def = page_validity.max_def();
+                let dict_values = page_values.dict.values();
+                let dict_offsets = page_values.dict.offsets();
+
+                let op = move |index: u32| {
+                    let index = index as usize;
+                    let dict_offset_i = dict_offsets[index] as usize;
+                    let dict_offset_ip1 = dict_offsets[index + 1] as usize;
+                    &dict_values[dict_offset_i..dict_offset_ip1]
+                };
+                read_optional_values(
+                    page_validity.definition_levels.by_ref(),
+                    max_def,
+                    page_values.values.by_ref().map(op),
+                    values,
+                    validity,
+                    additional,
+                )
             }
         }
     }
