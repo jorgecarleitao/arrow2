@@ -22,8 +22,8 @@ enum State<'a, P>
 where
     P: ParquetNativeType,
 {
-    Optional(Optional<'a>, Values<'a, P>),
-    Required(Values<'a, P>),
+    Optional(Optional<'a>, Values<'a>),
+    Required(Values<'a>),
     RequiredDictionary(ValuesDictionary<'a, P>),
     OptionalDictionary(Optional<'a>, ValuesDictionary<'a, P>),
 }
@@ -96,9 +96,9 @@ where
                 ))
             }
             (Encoding::Plain, _, true) => {
-                Ok(State::Optional(Optional::new(page), Values::new(page)))
+                Ok(State::Optional(Optional::new(page), Values::new::<P>(page)))
             }
-            (Encoding::Plain, _, false) => Ok(State::Required(Values::new(page))),
+            (Encoding::Plain, _, false) => Ok(State::Required(Values::new::<P>(page))),
             _ => Err(utils::not_implemented(
                 &page.encoding(),
                 is_optional,
