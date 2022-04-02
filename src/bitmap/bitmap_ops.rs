@@ -168,7 +168,7 @@ pub(crate) fn align(bitmap: &Bitmap, new_offset: usize) -> Bitmap {
 pub fn and(lhs: &Bitmap, rhs: &Bitmap) -> Bitmap {
     if lhs.null_count() == lhs.len() || rhs.null_count() == rhs.len() {
         assert_eq!(lhs.len(), rhs.len());
-        return Bitmap::new_zeroed(lhs.len());
+        Bitmap::new_zeroed(lhs.len())
     } else {
         binary(lhs, rhs, |x, y| x & y)
     }
@@ -181,7 +181,7 @@ pub fn or(lhs: &Bitmap, rhs: &Bitmap) -> Bitmap {
         assert_eq!(lhs.len(), rhs.len());
         let mut mutable = MutableBitmap::with_capacity(lhs.len());
         mutable.extend_constant(lhs.len(), true);
-        return mutable.into();
+        mutable.into()
     } else {
         binary(lhs, rhs, |x, y| x | y)
     }
@@ -196,7 +196,7 @@ pub fn xor(lhs: &Bitmap, rhs: &Bitmap) -> Bitmap {
     // all false or all true
     if lhs_nulls == rhs_nulls && rhs_nulls == rhs.len() || lhs_nulls == 0 && rhs_nulls == 0 {
         assert_eq!(lhs.len(), rhs.len());
-        return Bitmap::new_zeroed(rhs.len());
+        Bitmap::new_zeroed(rhs.len())
     }
     // all false and all true or vice versa
     else if (lhs_nulls == 0 && rhs_nulls == rhs.len())
@@ -205,10 +205,10 @@ pub fn xor(lhs: &Bitmap, rhs: &Bitmap) -> Bitmap {
         assert_eq!(lhs.len(), rhs.len());
         let mut mutable = MutableBitmap::with_capacity(lhs.len());
         mutable.extend_constant(lhs.len(), true);
-        return mutable.into();
+        mutable.into()
+    } else {
+        binary(lhs, rhs, |x, y| x ^ y)
     }
-
-    binary(lhs, rhs, |x, y| x ^ y)
 }
 
 fn eq(lhs: &Bitmap, rhs: &Bitmap) -> bool {
