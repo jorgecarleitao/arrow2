@@ -243,14 +243,6 @@ impl UnionArray {
     }
 
     #[inline]
-    fn field(&self, type_: i8) -> &Arc<dyn Array> {
-        self.fields_hash
-            .as_ref()
-            .map(|x| &x[&type_].1)
-            .unwrap_or_else(|| &self.fields[type_ as usize])
-    }
-
-    #[inline]
     fn field_slot(&self, index: usize) -> usize {
         self.offsets()
             .as_ref()
@@ -291,13 +283,6 @@ impl Array for UnionArray {
 
     fn validity(&self) -> Option<&Bitmap> {
         None
-    }
-
-    fn is_valid(&self, index: usize) -> bool {
-        let type_ = self.types()[index];
-        let field = self.field(type_);
-        let index = self.field_slot(index);
-        field.is_valid(index)
     }
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
