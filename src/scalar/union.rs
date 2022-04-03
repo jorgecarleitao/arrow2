@@ -7,7 +7,7 @@ use super::Scalar;
 /// A single entry of a [`crate::array::UnionArray`].
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnionScalar {
-    value: Option<Arc<dyn Scalar>>,
+    value: Arc<dyn Scalar>,
     type_: i8,
     data_type: DataType,
 }
@@ -15,7 +15,7 @@ pub struct UnionScalar {
 impl UnionScalar {
     /// Returns a new [`UnionScalar`]
     #[inline]
-    pub fn new(data_type: DataType, type_: i8, value: Option<Arc<dyn Scalar>>) -> Self {
+    pub fn new(data_type: DataType, type_: i8, value: Arc<dyn Scalar>) -> Self {
         Self {
             value,
             type_,
@@ -25,7 +25,7 @@ impl UnionScalar {
 
     /// Returns the values irrespectively of the validity.
     #[inline]
-    pub fn value(&self) -> &Option<Arc<dyn Scalar>> {
+    pub fn value(&self) -> &Arc<dyn Scalar> {
         &self.value
     }
 }
@@ -38,7 +38,7 @@ impl Scalar for UnionScalar {
 
     #[inline]
     fn is_valid(&self) -> bool {
-        self.value.is_some()
+        true
     }
 
     #[inline]

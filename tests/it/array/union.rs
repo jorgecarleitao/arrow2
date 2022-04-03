@@ -19,8 +19,6 @@ where
         .downcast_ref::<UnionScalar>()
         .unwrap()
         .value()
-        .as_ref()
-        .unwrap()
         .as_any()
         .downcast_ref::<T>()
         .unwrap()
@@ -31,14 +29,14 @@ fn assert_next_is_none<I>(iter: &mut I)
 where
     I: Iterator<Item = Box<dyn Scalar>>,
 {
-    assert!(iter
+    assert!(!iter
         .next()
         .unwrap()
         .as_any()
         .downcast_ref::<UnionScalar>()
         .unwrap()
         .value()
-        .is_none())
+        .is_valid())
 }
 
 #[test]
