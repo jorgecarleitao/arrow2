@@ -325,10 +325,12 @@ a contiguous in-memory representation, while <code>iter()</code> returns items t
 To get an iterator over contiguous values, use <code>array.values().iter()</code>.</p>
 <p>There is one last API that is worth mentioning, and that is <code>Bitmap::chunks</code>. When performing
 bitwise operations, it is often more performant to operate on chunks of bits
-instead of single bits. <code>chunks</code> offers a <code>TrustedLen</code> of <code>u64</code> with the bits
-+ an extra <code>u64</code> remainder. We expose two functions, <code>unary(Bitmap, Fn) -&gt; Bitmap</code>
+instead of single bits. <code>chunks</code> offers a <code>TrustedLen</code> of <code>u64</code> with the bits</p>
+<ul>
+<li>an extra <code>u64</code> remainder. We expose two functions, <code>unary(Bitmap, Fn) -&gt; Bitmap</code>
 and <code>binary(Bitmap, Bitmap, Fn) -&gt; Bitmap</code> that use this API to efficiently
-perform bitmap operations.</p>
+perform bitmap operations.</li>
+</ul>
 <h2 id="vectorized-operations"><a class="header" href="#vectorized-operations">Vectorized operations</a></h2>
 <p>One of the main advantages of the arrow format and its memory layout is that
 it often enables SIMD. For example, an unary operation <code>op</code> on a <code>PrimitiveArray</code>
