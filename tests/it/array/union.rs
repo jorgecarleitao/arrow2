@@ -5,8 +5,41 @@ use arrow2::{
     buffer::Buffer,
     datatypes::*,
     error::Result,
-    scalar::{PrimitiveScalar, Utf8Scalar},
+    scalar::{PrimitiveScalar, Scalar, UnionScalar, Utf8Scalar},
 };
+
+fn next_unchecked<T, I>(iter: &mut I) -> T
+where
+    I: Iterator<Item = Box<dyn Scalar>>,
+    T: Clone + 'static,
+{
+    iter.next()
+        .unwrap()
+        .as_any()
+        .downcast_ref::<UnionScalar>()
+        .unwrap()
+        .value()
+        .as_ref()
+        .unwrap()
+        .as_any()
+        .downcast_ref::<T>()
+        .unwrap()
+        .clone()
+}
+
+fn assert_next_is_none<I>(iter: &mut I)
+where
+    I: Iterator<Item = Box<dyn Scalar>>,
+{
+    assert!(iter
+        .next()
+        .unwrap()
+        .as_any()
+        .downcast_ref::<UnionScalar>()
+        .unwrap()
+        .value()
+        .is_none())
+}
 
 #[test]
 fn sparse_debug() -> Result<()> {
@@ -94,30 +127,12 @@ fn iter_sparse() -> Result<()> {
     let mut iter = array.iter();
 
     assert_eq!(
-        iter.next()
-            .unwrap()
-            .as_any()
-            .downcast_ref::<PrimitiveScalar<i32>>()
-            .unwrap()
-            .value(),
+        next_unchecked::<PrimitiveScalar<i32>, _>(&mut iter).value(),
         Some(1)
     );
+    assert_next_is_none(&mut iter);
     assert_eq!(
-        iter.next()
-            .unwrap()
-            .as_any()
-            .downcast_ref::<PrimitiveScalar<i32>>()
-            .unwrap()
-            .value(),
-        None
-    );
-    assert_eq!(
-        iter.next()
-            .unwrap()
-            .as_any()
-            .downcast_ref::<Utf8Scalar<i32>>()
-            .unwrap()
-            .value(),
+        next_unchecked::<Utf8Scalar<i32>, _>(&mut iter).value(),
         Some("c")
     );
     assert_eq!(iter.next(), None);
@@ -143,30 +158,12 @@ fn iter_dense() -> Result<()> {
     let mut iter = array.iter();
 
     assert_eq!(
-        iter.next()
-            .unwrap()
-            .as_any()
-            .downcast_ref::<PrimitiveScalar<i32>>()
-            .unwrap()
-            .value(),
+        next_unchecked::<PrimitiveScalar<i32>, _>(&mut iter).value(),
         Some(1)
     );
+    assert_next_is_none(&mut iter);
     assert_eq!(
-        iter.next()
-            .unwrap()
-            .as_any()
-            .downcast_ref::<PrimitiveScalar<i32>>()
-            .unwrap()
-            .value(),
-        None
-    );
-    assert_eq!(
-        iter.next()
-            .unwrap()
-            .as_any()
-            .downcast_ref::<Utf8Scalar<i32>>()
-            .unwrap()
-            .value(),
+        next_unchecked::<Utf8Scalar<i32>, _>(&mut iter).value(),
         Some("c")
     );
     assert_eq!(iter.next(), None);
@@ -192,12 +189,7 @@ fn iter_sparse_slice() -> Result<()> {
     let mut iter = array_slice.iter();
 
     assert_eq!(
-        iter.next()
-            .unwrap()
-            .as_any()
-            .downcast_ref::<PrimitiveScalar<i32>>()
-            .unwrap()
-            .value(),
+        next_unchecked::<PrimitiveScalar<i32>, _>(&mut iter).value(),
         Some(3)
     );
     assert_eq!(iter.next(), None);
@@ -224,12 +216,7 @@ fn iter_dense_slice() -> Result<()> {
     let mut iter = array_slice.iter();
 
     assert_eq!(
-        iter.next()
-            .unwrap()
-            .as_any()
-            .downcast_ref::<PrimitiveScalar<i32>>()
-            .unwrap()
-            .value(),
+        next_unchecked::<PrimitiveScalar<i32>, _>(&mut iter).value(),
         Some(3)
     );
     assert_eq!(iter.next(), None);

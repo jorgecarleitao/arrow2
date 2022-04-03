@@ -22,7 +22,7 @@ impl NullArray {
     pub fn try_new(data_type: DataType, length: usize) -> Result<Self, ArrowError> {
         if data_type.to_physical_type() != PhysicalType::Null {
             return Err(ArrowError::oos(
-                "BooleanArray can only be initialized with a DataType whose physical type is Boolean",
+                "NullArray can only be initialized with a DataType whose physical type is Boolean",
             ));
         }
 

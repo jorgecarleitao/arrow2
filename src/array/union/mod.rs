@@ -272,10 +272,7 @@ impl UnionArray {
 
     /// Returns the slot `index` as a [`Scalar`].
     pub fn value(&self, index: usize) -> Box<dyn Scalar> {
-        let type_ = self.types()[index];
-        let field = self.field(type_);
-        let index = self.field_slot(index);
-        new_scalar(field.as_ref(), index)
+        new_scalar(self, index)
     }
 }
 
@@ -294,6 +291,13 @@ impl Array for UnionArray {
 
     fn validity(&self) -> Option<&Bitmap> {
         None
+    }
+
+    fn is_valid(&self, index: usize) -> bool {
+        let type_ = self.types()[index];
+        let field = self.field(type_);
+        let index = self.field_slot(index);
+        field.is_valid(index)
     }
 
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
