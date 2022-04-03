@@ -1,3 +1,4 @@
+use crate::bitmap::MutableBitmap;
 use std::ops::{BitAnd, BitOr, BitXor, Not};
 
 use crate::trusted_len::TrustedLen;
@@ -163,18 +164,51 @@ pub(crate) fn align(bitmap: &Bitmap, new_offset: usize) -> Bitmap {
 }
 
 #[inline]
-fn and(lhs: &Bitmap, rhs: &Bitmap) -> Bitmap {
-    binary(lhs, rhs, |x, y| x & y)
+/// Compute bitwise AND operation
+pub fn and(lhs: &Bitmap, rhs: &Bitmap) -> Bitmap {
+    if lhs.null_count() == lhs.len() || rhs.null_count() == rhs.len() {
+        assert_eq!(lhs.len(), rhs.len());
+        Bitmap::new_zeroed(lhs.len())
+    } else {
+        binary(lhs, rhs, |x, y| x & y)
+    }
 }
 
 #[inline]
-fn or(lhs: &Bitmap, rhs: &Bitmap) -> Bitmap {
-    binary(lhs, rhs, |x, y| x | y)
+/// Compute bitwise OR operation
+pub fn or(lhs: &Bitmap, rhs: &Bitmap) -> Bitmap {
+    if lhs.null_count() == 0 || rhs.null_count() == 0 {
+        assert_eq!(lhs.len(), rhs.len());
+        let mut mutable = MutableBitmap::with_capacity(lhs.len());
+        mutable.extend_constant(lhs.len(), true);
+        mutable.into()
+    } else {
+        binary(lhs, rhs, |x, y| x | y)
+    }
 }
 
 #[inline]
-fn xor(lhs: &Bitmap, rhs: &Bitmap) -> Bitmap {
-    binary(lhs, rhs, |x, y| x ^ y)
+/// Compute bitwise XOR operation
+pub fn xor(lhs: &Bitmap, rhs: &Bitmap) -> Bitmap {
+    let lhs_nulls = lhs.null_count();
+    let rhs_nulls = rhs.null_count();
+
+    // all false or all true
+    if lhs_nulls == rhs_nulls && rhs_nulls == rhs.len() || lhs_nulls == 0 && rhs_nulls == 0 {
+        assert_eq!(lhs.len(), rhs.len());
+        Bitmap::new_zeroed(rhs.len())
+    }
+    // all false and all true or vice versa
+    else if (lhs_nulls == 0 && rhs_nulls == rhs.len())
+        || (lhs_nulls == lhs.len() && rhs_nulls == 0)
+    {
+        assert_eq!(lhs.len(), rhs.len());
+        let mut mutable = MutableBitmap::with_capacity(lhs.len());
+        mutable.extend_constant(lhs.len(), true);
+        mutable.into()
+    } else {
+        binary(lhs, rhs, |x, y| x ^ y)
+    }
 }
 
 fn eq(lhs: &Bitmap, rhs: &Bitmap) -> bool {
