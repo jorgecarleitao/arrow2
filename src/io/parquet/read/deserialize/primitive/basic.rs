@@ -18,26 +18,6 @@ use super::super::utils::OptionalPageValidity;
 use super::super::DataPages;
 
 #[derive(Debug)]
-pub(super) struct RequiredValues<'a> {
-    pub values: std::slice::ChunksExact<'a, u8>,
-}
-
-impl<'a> RequiredValues<'a> {
-    pub fn new<P: ParquetNativeType>(page: &'a DataPage) -> Self {
-        let (_, _, values) = utils::split_buffer(page);
-        assert_eq!(values.len() % std::mem::size_of::<P>(), 0);
-        let values = values.chunks_exact(std::mem::size_of::<P>());
-
-        Self { values }
-    }
-
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.values.size_hint().0
-    }
-}
-
-#[derive(Debug)]
 pub(super) struct Values<'a> {
     pub values: std::slice::ChunksExact<'a, u8>,
 }
@@ -48,34 +28,6 @@ impl<'a> Values<'a> {
         assert_eq!(values.len() % std::mem::size_of::<P>(), 0);
         Self {
             values: values.chunks_exact(std::mem::size_of::<P>()),
-        }
-    }
-
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.values.size_hint().0
-    }
-}
-
-#[derive(Debug)]
-pub(super) struct RequiredDictionary<'a, P>
-where
-    P: ParquetNativeType,
-{
-    pub values: hybrid_rle::HybridRleDecoder<'a>,
-    pub dict: &'a [P],
-}
-
-impl<'a, P> RequiredDictionary<'a, P>
-where
-    P: ParquetNativeType,
-{
-    pub fn new(page: &'a DataPage, dict: &'a PrimitivePageDict<P>) -> Self {
-        let values = utils::dict_indices_decoder(page);
-
-        Self {
-            dict: dict.values(),
-            values,
         }
     }
 
@@ -120,8 +72,8 @@ where
     P: ParquetNativeType,
 {
     Optional(OptionalPageValidity<'a>, Values<'a>),
-    Required(RequiredValues<'a>),
-    RequiredDictionary(RequiredDictionary<'a, P>),
+    Required(Values<'a>),
+    RequiredDictionary(ValuesDictionary<'a, P>),
     OptionalDictionary(OptionalPageValidity<'a>, ValuesDictionary<'a, P>),
 }
 
@@ -189,9 +141,7 @@ where
         match (page.encoding(), page.dictionary_page(), is_optional) {
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false) => {
                 let dict = dict.as_any().downcast_ref().unwrap();
-                Ok(State::RequiredDictionary(RequiredDictionary::new(
-                    page, dict,
-                )))
+                Ok(State::RequiredDictionary(ValuesDictionary::new(page, dict)))
             }
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
                 let dict = dict.as_any().downcast_ref().unwrap();
@@ -207,7 +157,7 @@ where
 
                 Ok(State::Optional(validity, values))
             }
-            (Encoding::Plain, _, false) => Ok(State::Required(RequiredValues::new::<P>(page))),
+            (Encoding::Plain, _, false) => Ok(State::Required(Values::new::<P>(page))),
             _ => Err(utils::not_implemented(
                 &page.encoding(),
                 is_optional,
