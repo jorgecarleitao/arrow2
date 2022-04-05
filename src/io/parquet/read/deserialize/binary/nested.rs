@@ -29,7 +29,7 @@ impl<'a> utils::PageState<'a> for State<'a> {
     fn len(&self) -> usize {
         match self {
             State::Optional(validity, _) => validity.len(),
-            State::Required(state) => state.remaining,
+            State::Required(state) => state.len(),
             State::RequiredDictionary(required) => required.len(),
             State::OptionalDictionary(optional, _) => optional.len(),
         }
@@ -95,7 +95,6 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
                 read_optional_values(items, values, validity)
             }
             State::Required(page) => {
-                page.remaining -= additional;
                 for x in page.values.by_ref().take(additional) {
                     values.push(x)
                 }

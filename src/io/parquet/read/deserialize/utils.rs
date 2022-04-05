@@ -39,6 +39,40 @@ impl<'a> Iterator for BinaryIter<'a> {
     }
 }
 
+#[derive(Debug)]
+pub struct SizedBinaryIter<'a> {
+    iter: BinaryIter<'a>,
+    remaining: usize,
+}
+
+impl<'a> SizedBinaryIter<'a> {
+    pub fn new(values: &'a [u8], size: usize) -> Self {
+        let iter = BinaryIter::new(values);
+        Self {
+            iter,
+            remaining: size,
+        }
+    }
+}
+
+impl<'a> Iterator for SizedBinaryIter<'a> {
+    type Item = &'a [u8];
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.remaining == 0 {
+            return None;
+        } else {
+            self.remaining -= 1
+        };
+        self.iter.next()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.remaining, Some(self.remaining))
+    }
+}
+
 pub fn not_implemented(page: &DataPage) -> ArrowError {
     let is_optional = page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
     let required = if is_optional { "optional" } else { "required" };

@@ -1,7 +1,9 @@
 use std::collections::VecDeque;
 
 use parquet2::{
+    deserialize::SliceFilteredIter,
     encoding::{hybrid_rle, Encoding},
+    indexes::Interval,
     page::{DataPage, FixedLenByteArrayPageDict},
     schema::Repetition,
 };
@@ -53,6 +55,33 @@ impl<'a> Required<'a> {
     }
 }
 
+struct FilteredRequired<'a> {
+    pub values: SliceFilteredIter<std::slice::ChunksExact<'a, u8>>,
+}
+
+impl<'a> FilteredRequired<'a> {
+    fn new(page: &'a DataPage, size: usize) -> Self {
+        let values = page.buffer();
+        assert_eq!(values.len() % size, 0);
+        let values = values.chunks_exact(size);
+
+        let rows = page
+            .selected_rows()
+            .unwrap_or(&[Interval::new(0, page.num_values())])
+            .iter()
+            .copied()
+            .collect();
+        let values = SliceFilteredIter::new(values, rows);
+
+        Self { values }
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.values.size_hint().0
+    }
+}
+
 struct RequiredDictionary<'a> {
     pub values: hybrid_rle::HybridRleDecoder<'a>,
     dict: &'a FixedLenByteArrayPageDict,
@@ -94,6 +123,7 @@ enum State<'a> {
     Required(Required<'a>),
     RequiredDictionary(RequiredDictionary<'a>),
     OptionalDictionary(OptionalDictionary<'a>),
+    FilteredRequired(FilteredRequired<'a>),
 }
 
 impl<'a> PageState<'a> for State<'a> {
@@ -103,6 +133,7 @@ impl<'a> PageState<'a> for State<'a> {
             State::Required(state) => state.len(),
             State::RequiredDictionary(state) => state.len(),
             State::OptionalDictionary(state) => state.validity.len(),
+            State::FilteredRequired(state) => state.len(),
         }
     }
 }
@@ -124,22 +155,35 @@ impl<'a> Decoder<'a> for BinaryDecoder {
     fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
         let is_optional =
             page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
+        let is_filtered = page.selected_rows().is_some();
 
-        match (page.encoding(), page.dictionary_page(), is_optional) {
-            (Encoding::Plain, None, true) => Ok(State::Optional(Optional::new(page, self.size))),
-            (Encoding::Plain, None, false) => Ok(State::Required(Required::new(page, self.size))),
-            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false) => {
+        match (
+            page.encoding(),
+            page.dictionary_page(),
+            is_optional,
+            is_filtered,
+        ) {
+            (Encoding::Plain, None, true, false) => {
+                Ok(State::Optional(Optional::new(page, self.size)))
+            }
+            (Encoding::Plain, None, false, false) => {
+                Ok(State::Required(Required::new(page, self.size)))
+            }
+            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false, false) => {
                 Ok(State::RequiredDictionary(RequiredDictionary::new(
                     page,
                     dict.as_any().downcast_ref().unwrap(),
                 )))
             }
-            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
+            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true, false) => {
                 Ok(State::OptionalDictionary(OptionalDictionary::new(
                     page,
                     dict.as_any().downcast_ref().unwrap(),
                 )))
             }
+            (Encoding::Plain, None, false, true) => Ok(State::FilteredRequired(
+                FilteredRequired::new(page, self.size),
+            )),
             _ => Err(not_implemented(page)),
         }
     }
@@ -168,6 +212,11 @@ impl<'a> Decoder<'a> for BinaryDecoder {
                 &mut page.values,
             ),
             State::Required(page) => {
+                for x in page.values.by_ref().take(remaining) {
+                    values.push(x)
+                }
+            }
+            State::FilteredRequired(page) => {
                 for x in page.values.by_ref().take(remaining) {
                     values.push(x)
                 }
