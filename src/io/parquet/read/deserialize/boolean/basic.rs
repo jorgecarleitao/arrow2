@@ -94,13 +94,7 @@ impl<'a> Decoder<'a> for BooleanDecoder {
         match (page.encoding(), is_optional) {
             (Encoding::Plain, true) => Ok(State::Optional(Optional::new(page))),
             (Encoding::Plain, false) => Ok(State::Required(Required::new(page))),
-            _ => Err(utils::not_implemented(
-                &page.encoding(),
-                is_optional,
-                false,
-                "any",
-                "Boolean",
-            )),
+            _ => Err(utils::not_implemented(page)),
         }
     }
 

@@ -1,8 +1,9 @@
 use std::collections::VecDeque;
 use std::convert::TryInto;
 
-use parquet2::encoding::{hybrid_rle, Encoding};
+use parquet2::encoding::hybrid_rle;
 use parquet2::page::{split_buffer as _split_buffer, DataPage};
+use parquet2::schema::Repetition;
 use streaming_iterator::{convert, Convert, StreamingIterator};
 
 use crate::bitmap::utils::BitmapIter;
@@ -38,18 +39,20 @@ impl<'a> Iterator for BinaryIter<'a> {
     }
 }
 
-pub fn not_implemented(
-    encoding: &Encoding,
-    is_optional: bool,
-    has_dict: bool,
-    version: &str,
-    physical_type: &str,
-) -> ArrowError {
+pub fn not_implemented(page: &DataPage) -> ArrowError {
+    let is_optional = page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
     let required = if is_optional { "optional" } else { "required" };
-    let dict = if has_dict { ", dictionary-encoded" } else { "" };
+    let dict = if page.dictionary_page().is_some() {
+        ", dictionary-encoded"
+    } else {
+        ""
+    };
     ArrowError::NotYetImplemented(format!(
-        "Decoding \"{:?}\"-encoded{} {} {} pages is not yet implemented for {}",
-        encoding, dict, required, version, physical_type
+        "Decoding {:?} \"{:?}\"-encoded{} {} parquet pages",
+        page.descriptor.primitive_type.physical_type,
+        page.encoding(),
+        dict,
+        required,
     ))
 }
 

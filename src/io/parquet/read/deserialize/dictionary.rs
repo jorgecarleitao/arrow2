@@ -103,13 +103,7 @@ where
             (Encoding::PlainDictionary | Encoding::RleDictionary, true) => {
                 Ok(State::Optional(Optional::new(page)))
             }
-            _ => Err(utils::not_implemented(
-                &page.encoding(),
-                is_optional,
-                false,
-                "any",
-                "Primitive",
-            )),
+            _ => Err(utils::not_implemented(page)),
         }
     }
 

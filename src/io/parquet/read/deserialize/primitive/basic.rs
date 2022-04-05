@@ -158,13 +158,7 @@ where
                 Ok(State::Optional(validity, values))
             }
             (Encoding::Plain, _, false) => Ok(State::Required(Values::new::<P>(page))),
-            _ => Err(utils::not_implemented(
-                &page.encoding(),
-                is_optional,
-                false,
-                "any",
-                "Primitive",
-            )),
+            _ => Err(utils::not_implemented(page)),
         }
     }
 

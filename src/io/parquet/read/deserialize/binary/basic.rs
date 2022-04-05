@@ -208,13 +208,7 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
                 Ok(State::Optional(OptionalPageValidity::new(page), values))
             }
             (Encoding::Plain, _, false) => Ok(State::Required(Required::new(page))),
-            _ => Err(utils::not_implemented(
-                &page.encoding(),
-                is_optional,
-                false,
-                "any",
-                "Binary",
-            )),
+            _ => Err(utils::not_implemented(page)),
         }
     }
 

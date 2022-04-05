@@ -140,13 +140,7 @@ impl<'a> Decoder<'a> for BinaryDecoder {
                     dict.as_any().downcast_ref().unwrap(),
                 )))
             }
-            _ => Err(not_implemented(
-                &page.encoding(),
-                is_optional,
-                false,
-                "any",
-                "FixedBinary",
-            )),
+            _ => Err(not_implemented(page)),
         }
     }
 
