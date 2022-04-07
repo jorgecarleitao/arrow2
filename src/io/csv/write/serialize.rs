@@ -14,7 +14,7 @@ use super::super::super::iterator::{BufStreamingIterator, StreamingIterator};
 use crate::array::{DictionaryArray, DictionaryKey, Offset};
 use csv_core::WriteResult;
 use std::any::Any;
-use std::fmt::{Debug, Formatter, Write};
+use std::fmt::{Debug, Write};
 
 /// Options to serialize logical types to CSV
 /// The default is to format times and dates as `chrono` crate formats them.
@@ -50,7 +50,7 @@ impl Default for SerializeOptions {
     }
 }
 
-/// Utility to write to `&muy Vec<u8>` buffer
+/// Utility to write to `&mut Vec<u8>` buffer
 struct StringWrap<'a>(pub &'a mut Vec<u8>);
 
 impl<'a> Write for StringWrap<'a> {
@@ -93,7 +93,7 @@ macro_rules! dyn_date {
                 move |x, buf| {
                     if let Some(x) = x {
                         let dt = ($fn)(*x).format(format);
-                        write!(StringWrap(buf), "{}", dt);
+                        let _ = write!(StringWrap(buf), "{}", dt);
                     }
                 },
                 vec![],
@@ -104,7 +104,7 @@ macro_rules! dyn_date {
                 move |x, buf| {
                     if let Some(x) = x {
                         let dt = ($fn)(*x);
-                        write!(StringWrap(buf), "{}", dt);
+                        let _ = write!(StringWrap(buf), "{}", dt);
                     }
                 },
                 vec![],
@@ -125,7 +125,7 @@ fn timestamp_with_tz_default<'a>(
             move |x, buf| {
                 if let Some(x) = x {
                     let dt = temporal_conversions::timestamp_to_datetime(*x, time_unit, &timezone);
-                    write!(StringWrap(buf), "{}", dt);
+                    let _ = write!(StringWrap(buf), "{}", dt);
                 }
             },
             vec![],
@@ -139,7 +139,7 @@ fn timestamp_with_tz_default<'a>(
                     if let Some(x) = x {
                         let dt =
                             temporal_conversions::timestamp_to_datetime(*x, time_unit, &timezone);
-                        write!(StringWrap(buf), "{}", dt);
+                        let _ = write!(StringWrap(buf), "{}", dt);
                     }
                 },
                 vec![],
@@ -169,7 +169,7 @@ fn timestamp_with_tz_with_format<'a>(
                 if let Some(x) = x {
                     let dt = temporal_conversions::timestamp_to_datetime(*x, time_unit, &timezone)
                         .format(format);
-                    write!(StringWrap(buf), "{}", dt);
+                    let _ = write!(StringWrap(buf), "{}", dt);
                 }
             },
             vec![],
@@ -184,7 +184,7 @@ fn timestamp_with_tz_with_format<'a>(
                         let dt =
                             temporal_conversions::timestamp_to_datetime(*x, time_unit, &timezone)
                                 .format(format);
-                        write!(StringWrap(buf), "{}", dt);
+                        let _ = write!(StringWrap(buf), "{}", dt);
                     }
                 },
                 vec![],
