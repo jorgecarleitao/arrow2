@@ -58,6 +58,15 @@ impl MutableBitmap {
         }
     }
 
+    /// Initializes a [`MutableBitmap`] with all values set to valid/ true.
+    #[inline]
+    pub fn from_len_set(length: usize) -> Self {
+        Self {
+            buffer: vec![u8::MAX; length.saturating_add(7) / 8],
+            length,
+        }
+    }
+
     /// Initializes a pre-allocated [`MutableBitmap`] with capacity for `capacity` bits.
     #[inline]
     pub fn with_capacity(capacity: usize) -> Self {
