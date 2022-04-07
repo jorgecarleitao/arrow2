@@ -264,6 +264,17 @@ pub fn filter(array: &dyn Array, filter: &BooleanArray) -> Result<Box<dyn Array>
         return crate::compute::filter::filter(array, &filter);
     }
 
+    let false_count = filter.values().null_count();
+    if false_count == filter.len() {
+        assert_eq!(array.len(), filter.len());
+        return Ok(array.slice(0, 0));
+    }
+    if false_count == 0 {
+        assert_eq!(array.len(), filter.len());
+        // a hack to clone
+        return Ok(array.with_validity(array.validity().cloned()));
+    }
+
     use crate::datatypes::PhysicalType::*;
     match array.data_type().to_physical_type() {
         Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
