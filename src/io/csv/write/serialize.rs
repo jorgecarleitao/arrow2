@@ -14,6 +14,7 @@ use super::super::super::iterator::{BufStreamingIterator, StreamingIterator};
 use crate::array::{DictionaryArray, DictionaryKey, Offset};
 use csv_core::WriteResult;
 use std::any::Any;
+use std::fmt::{Debug, Write};
 
 /// Options to serialize logical types to CSV
 /// The default is to format times and dates as `chrono` crate formats them.
@@ -49,6 +50,16 @@ impl Default for SerializeOptions {
     }
 }
 
+/// Utility to write to `&mut Vec<u8>` buffer
+struct StringWrap<'a>(pub &'a mut Vec<u8>);
+
+impl<'a> Write for StringWrap<'a> {
+    fn write_str(&mut self, s: &str) -> std::fmt::Result {
+        self.0.extend_from_slice(s.as_bytes());
+        Ok(())
+    }
+}
+
 fn primitive_write<'a, T: NativeType + ToLexical>(
     array: &'a PrimitiveArray<T>,
 ) -> Box<dyn StreamingIterator<Item = [u8]> + 'a> {
@@ -81,7 +92,8 @@ macro_rules! dyn_date {
                 array.iter(),
                 move |x, buf| {
                     if let Some(x) = x {
-                        buf.extend_from_slice(($fn)(*x).format(format).to_string().as_bytes())
+                        let dt = ($fn)(*x).format(format);
+                        let _ = write!(StringWrap(buf), "{}", dt);
                     }
                 },
                 vec![],
@@ -91,7 +103,8 @@ macro_rules! dyn_date {
                 array.iter(),
                 move |x, buf| {
                     if let Some(x) = x {
-                        buf.extend_from_slice(($fn)(*x).to_string().as_bytes())
+                        let dt = ($fn)(*x);
+                        let _ = write!(StringWrap(buf), "{}", dt);
                     }
                 },
                 vec![],
@@ -111,10 +124,8 @@ fn timestamp_with_tz_default<'a>(
             array.iter(),
             move |x, buf| {
                 if let Some(x) = x {
-                    let data =
-                        temporal_conversions::timestamp_to_datetime(*x, time_unit, &timezone)
-                            .to_string();
-                    buf.extend_from_slice(data.as_bytes())
+                    let dt = temporal_conversions::timestamp_to_datetime(*x, time_unit, &timezone);
+                    let _ = write!(StringWrap(buf), "{}", dt);
                 }
             },
             vec![],
@@ -126,10 +137,9 @@ fn timestamp_with_tz_default<'a>(
                 array.iter(),
                 move |x, buf| {
                     if let Some(x) = x {
-                        let data =
-                            temporal_conversions::timestamp_to_datetime(*x, time_unit, &timezone)
-                                .to_string();
-                        buf.extend_from_slice(data.as_bytes())
+                        let dt =
+                            temporal_conversions::timestamp_to_datetime(*x, time_unit, &timezone);
+                        let _ = write!(StringWrap(buf), "{}", dt);
                     }
                 },
                 vec![],
@@ -157,11 +167,9 @@ fn timestamp_with_tz_with_format<'a>(
             array.iter(),
             move |x, buf| {
                 if let Some(x) = x {
-                    let data =
-                        temporal_conversions::timestamp_to_datetime(*x, time_unit, &timezone)
-                            .format(format)
-                            .to_string();
-                    buf.extend_from_slice(data.as_bytes())
+                    let dt = temporal_conversions::timestamp_to_datetime(*x, time_unit, &timezone)
+                        .format(format);
+                    let _ = write!(StringWrap(buf), "{}", dt);
                 }
             },
             vec![],
@@ -173,11 +181,10 @@ fn timestamp_with_tz_with_format<'a>(
                 array.iter(),
                 move |x, buf| {
                     if let Some(x) = x {
-                        let data =
+                        let dt =
                             temporal_conversions::timestamp_to_datetime(*x, time_unit, &timezone)
-                                .format(format)
-                                .to_string();
-                        buf.extend_from_slice(data.as_bytes())
+                                .format(format);
+                        let _ = write!(StringWrap(buf), "{}", dt);
                     }
                 },
                 vec![],
