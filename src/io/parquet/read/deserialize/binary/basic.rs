@@ -18,11 +18,10 @@ use crate::{
 };
 
 use super::super::utils::{
-    extend_from_decoder, next, BinaryIter, DecodedState, MaybeNext, OptionalPageValidity,
-    SizedBinaryIter,
+    extend_from_decoder, next, DecodedState, MaybeNext, OptionalPageValidity,
 };
 use super::super::DataPages;
-use super::{super::utils, utils::Binary};
+use super::{super::utils, utils::*};
 
 /*
 fn read_delta_optional<O: Offset>(

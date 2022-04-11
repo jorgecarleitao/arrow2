@@ -10,7 +10,7 @@ use crate::{
 use super::super::nested_utils::*;
 use super::super::utils::MaybeNext;
 use super::basic::ValuesDictionary;
-use super::utils::Binary;
+use super::utils::*;
 use super::{
     super::utils,
     basic::{finish, Required, TraitBinaryArray},
@@ -19,7 +19,7 @@ use super::{
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 enum State<'a> {
-    Optional(Optional<'a>, utils::BinaryIter<'a>),
+    Optional(Optional<'a>, BinaryIter<'a>),
     Required(Required<'a>),
     RequiredDictionary(ValuesDictionary<'a>),
     OptionalDictionary(Optional<'a>, ValuesDictionary<'a>),
@@ -64,7 +64,7 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
             (Encoding::Plain, None, true) => {
                 let (_, _, values) = utils::split_buffer(page);
 
-                let values = utils::BinaryIter::new(values);
+                let values = BinaryIter::new(values);
 
                 Ok(State::Optional(Optional::new(page), values))
             }
