@@ -3,7 +3,6 @@ use std::collections::VecDeque;
 use parquet2::{
     deserialize::SliceFilteredIter,
     encoding::{hybrid_rle, Encoding},
-    indexes::Interval,
     page::{DataPage, PrimitivePageDict},
     schema::Repetition,
     types::decode,
@@ -16,7 +15,7 @@ use crate::{
 };
 
 use super::super::utils;
-use super::super::utils::OptionalPageValidity;
+use super::super::utils::{get_selected_rows, FilteredOptionalPageValidity, OptionalPageValidity};
 use super::super::DataPages;
 
 #[derive(Debug)]
@@ -31,12 +30,7 @@ impl<'a> FilteredRequiredValues<'a> {
 
         let values = values.chunks_exact(std::mem::size_of::<P>());
 
-        let rows = page
-            .selected_rows()
-            .unwrap_or(&[Interval::new(0, page.num_values())])
-            .iter()
-            .copied()
-            .collect();
+        let rows = get_selected_rows(page);
         let values = SliceFilteredIter::new(values, rows);
 
         Self { values }
@@ -107,6 +101,7 @@ where
     RequiredDictionary(ValuesDictionary<'a, P>),
     OptionalDictionary(OptionalPageValidity<'a>, ValuesDictionary<'a, P>),
     FilteredRequired(FilteredRequiredValues<'a>),
+    FilteredOptional(FilteredOptionalPageValidity<'a>, Values<'a>),
 }
 
 impl<'a, P> utils::PageState<'a> for State<'a, P>
@@ -120,6 +115,7 @@ where
             State::RequiredDictionary(values) => values.len(),
             State::OptionalDictionary(optional, _) => optional.len(),
             State::FilteredRequired(values) => values.len(),
+            State::FilteredOptional(optional, _) => optional.len(),
         }
     }
 }
@@ -200,6 +196,10 @@ where
             (Encoding::Plain, _, false, true) => Ok(State::FilteredRequired(
                 FilteredRequiredValues::new::<P>(page),
             )),
+            (Encoding::Plain, _, true, true) => Ok(State::FilteredOptional(
+                FilteredOptionalPageValidity::new(page),
+                Values::new::<P>(page),
+            )),
             _ => Err(utils::not_implemented(page)),
         }
     }
@@ -256,6 +256,15 @@ where
                         .map(decode)
                         .map(self.op)
                         .take(remaining),
+                );
+            }
+            State::FilteredOptional(page_validity, page_values) => {
+                utils::extend_from_decoder(
+                    validity,
+                    page_validity,
+                    Some(remaining),
+                    values,
+                    page_values.values.by_ref().map(decode).map(self.op),
                 );
             }
         }

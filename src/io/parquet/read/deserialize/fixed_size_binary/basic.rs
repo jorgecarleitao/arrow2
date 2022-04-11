@@ -3,7 +3,6 @@ use std::collections::VecDeque;
 use parquet2::{
     deserialize::SliceFilteredIter,
     encoding::{hybrid_rle, Encoding},
-    indexes::Interval,
     page::{DataPage, FixedLenByteArrayPageDict},
     schema::Repetition,
 };
@@ -13,8 +12,9 @@ use crate::{
 };
 
 use super::super::utils::{
-    dict_indices_decoder, extend_from_decoder, next, not_implemented, split_buffer, DecodedState,
-    Decoder, MaybeNext, OptionalPageValidity, PageState, Pushable,
+    dict_indices_decoder, extend_from_decoder, get_selected_rows, next, not_implemented,
+    split_buffer, DecodedState, Decoder, FilteredOptionalPageValidity, MaybeNext,
+    OptionalPageValidity, PageState, Pushable,
 };
 use super::super::DataPages;
 use super::utils::FixedSizeBinary;
@@ -65,12 +65,7 @@ impl<'a> FilteredRequired<'a> {
         assert_eq!(values.len() % size, 0);
         let values = values.chunks_exact(size);
 
-        let rows = page
-            .selected_rows()
-            .unwrap_or(&[Interval::new(0, page.num_values())])
-            .iter()
-            .copied()
-            .collect();
+        let rows = get_selected_rows(page);
         let values = SliceFilteredIter::new(values, rows);
 
         Self { values }
@@ -124,6 +119,10 @@ enum State<'a> {
     RequiredDictionary(RequiredDictionary<'a>),
     OptionalDictionary(OptionalDictionary<'a>),
     FilteredRequired(FilteredRequired<'a>),
+    FilteredOptional(
+        FilteredOptionalPageValidity<'a>,
+        std::slice::ChunksExact<'a, u8>,
+    ),
 }
 
 impl<'a> PageState<'a> for State<'a> {
@@ -134,6 +133,7 @@ impl<'a> PageState<'a> for State<'a> {
             State::RequiredDictionary(state) => state.len(),
             State::OptionalDictionary(state) => state.validity.len(),
             State::FilteredRequired(state) => state.len(),
+            State::FilteredOptional(state, _) => state.len(),
         }
     }
 }
@@ -184,6 +184,14 @@ impl<'a> Decoder<'a> for BinaryDecoder {
             (Encoding::Plain, None, false, true) => Ok(State::FilteredRequired(
                 FilteredRequired::new(page, self.size),
             )),
+            (Encoding::Plain, _, true, true) => {
+                let (_, _, values) = split_buffer(page);
+
+                Ok(State::FilteredOptional(
+                    FilteredOptionalPageValidity::new(page),
+                    values.chunks_exact(self.size),
+                ))
+            }
             _ => Err(not_implemented(page)),
         }
     }
@@ -248,6 +256,15 @@ impl<'a> Decoder<'a> for BinaryDecoder {
                 for x in page.values.by_ref().map(op).take(remaining) {
                     values.push(x)
                 }
+            }
+            State::FilteredOptional(page_validity, page_values) => {
+                extend_from_decoder(
+                    validity,
+                    page_validity,
+                    Some(remaining),
+                    values,
+                    page_values.by_ref(),
+                );
             }
         }
     }

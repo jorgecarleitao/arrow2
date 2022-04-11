@@ -4,7 +4,6 @@ use std::default::Default;
 use parquet2::{
     deserialize::SliceFilteredIter,
     encoding::{hybrid_rle, Encoding},
-    indexes::Interval,
     page::{BinaryPageDict, DataPage},
     schema::Repetition,
 };
@@ -18,7 +17,8 @@ use crate::{
 };
 
 use super::super::utils::{
-    extend_from_decoder, next, DecodedState, MaybeNext, OptionalPageValidity,
+    extend_from_decoder, get_selected_rows, next, DecodedState, FilteredOptionalPageValidity,
+    MaybeNext, OptionalPageValidity,
 };
 use super::super::DataPages;
 use super::{super::utils, utils::*};
@@ -87,12 +87,7 @@ impl<'a> FilteredRequired<'a> {
     pub fn new(page: &'a DataPage) -> Self {
         let values = SizedBinaryIter::new(page.buffer(), page.num_values());
 
-        let rows = page
-            .selected_rows()
-            .unwrap_or(&[Interval::new(0, page.num_values())])
-            .iter()
-            .copied()
-            .collect();
+        let rows = get_selected_rows(page);
         let values = SliceFilteredIter::new(values, rows);
 
         Self { values }
@@ -147,6 +142,7 @@ enum State<'a> {
     RequiredDictionary(RequiredDictionary<'a>),
     OptionalDictionary(OptionalPageValidity<'a>, ValuesDictionary<'a>),
     FilteredRequired(FilteredRequired<'a>),
+    FilteredOptional(FilteredOptionalPageValidity<'a>, BinaryIter<'a>),
 }
 
 impl<'a> utils::PageState<'a> for State<'a> {
@@ -157,6 +153,7 @@ impl<'a> utils::PageState<'a> for State<'a> {
             State::RequiredDictionary(values) => values.len(),
             State::OptionalDictionary(optional, _) => optional.len(),
             State::FilteredRequired(state) => state.len(),
+            State::FilteredOptional(validity, _) => validity.len(),
         }
     }
 }
@@ -245,6 +242,14 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
             (Encoding::Plain, _, false, true) => {
                 Ok(State::FilteredRequired(FilteredRequired::new(page)))
             }
+            (Encoding::Plain, _, true, true) => {
+                let (_, _, values) = utils::split_buffer(page);
+
+                Ok(State::FilteredOptional(
+                    FilteredOptionalPageValidity::new(page),
+                    BinaryIter::new(values),
+                ))
+            }
             _ => Err(utils::not_implemented(page)),
         }
     }
@@ -312,6 +317,15 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
                 for x in page.values.by_ref().map(op).take(additional) {
                     values.push(x)
                 }
+            }
+            State::FilteredOptional(page_validity, page_values) => {
+                utils::extend_from_decoder(
+                    validity,
+                    page_validity,
+                    Some(additional),
+                    values,
+                    page_values.by_ref(),
+                );
             }
         }
     }

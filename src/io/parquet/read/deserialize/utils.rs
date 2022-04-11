@@ -1,7 +1,10 @@
 use std::collections::VecDeque;
 
-use parquet2::deserialize::{FilteredHybridEncoded, HybridDecoderBitmapIter, HybridEncoded};
+use parquet2::deserialize::{
+    FilteredHybridEncoded, FilteredHybridRleDecoderIter, HybridDecoderBitmapIter, HybridEncoded,
+};
 use parquet2::encoding::hybrid_rle;
+use parquet2::indexes::Interval;
 use parquet2::page::{split_buffer as _split_buffer, DataPage};
 use parquet2::schema::Repetition;
 
@@ -83,6 +86,99 @@ impl<A: Copy + Default> Pushable<A> for Vec<A> {
     #[inline]
     fn extend_constant(&mut self, additional: usize, value: A) {
         self.resize(self.len() + additional, value);
+    }
+}
+
+/// The state of a partially deserialized page
+pub(super) trait PageValidity<'a> {
+    fn next_limited(&mut self, limit: usize) -> Option<FilteredHybridEncoded<'a>>;
+}
+
+#[derive(Debug, Clone)]
+pub struct FilteredOptionalPageValidity<'a> {
+    iter: FilteredHybridRleDecoderIter<'a>,
+    current: Option<(FilteredHybridEncoded<'a>, usize)>,
+}
+
+impl<'a> FilteredOptionalPageValidity<'a> {
+    pub fn new(page: &'a DataPage) -> Self {
+        let (_, validity, _) = split_buffer(page);
+
+        let iter = hybrid_rle::Decoder::new(validity, 1);
+        let iter = HybridDecoderBitmapIter::new(iter, page.num_values());
+        let selected_rows = get_selected_rows(page);
+        let iter = FilteredHybridRleDecoderIter::new(iter, selected_rows);
+
+        Self {
+            iter,
+            current: None,
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.iter.len()
+    }
+}
+
+pub fn get_selected_rows(page: &DataPage) -> VecDeque<Interval> {
+    page.selected_rows()
+        .unwrap_or(&[Interval::new(0, page.num_values())])
+        .iter()
+        .copied()
+        .collect()
+}
+
+impl<'a> PageValidity<'a> for FilteredOptionalPageValidity<'a> {
+    fn next_limited(&mut self, limit: usize) -> Option<FilteredHybridEncoded<'a>> {
+        let (run, own_offset) = if let Some((run, offset)) = self.current {
+            (run, offset)
+        } else {
+            // a new run
+            let run = self.iter.next()?; // no run -> None
+            self.current = Some((run, 0));
+            return self.next_limited(limit);
+        };
+
+        match run {
+            FilteredHybridEncoded::Bitmap {
+                values,
+                offset,
+                length,
+            } => {
+                let run_length = length - own_offset;
+
+                let length = limit.min(run_length);
+
+                if length == run_length {
+                    self.current = None;
+                } else {
+                    self.current = Some((run, own_offset + length));
+                }
+
+                Some(FilteredHybridEncoded::Bitmap {
+                    values,
+                    offset,
+                    length,
+                })
+            }
+            FilteredHybridEncoded::Repeated { is_set, length } => {
+                let run_length = length - own_offset;
+
+                let length = limit.min(run_length);
+
+                if length == run_length {
+                    self.current = None;
+                } else {
+                    self.current = Some((run, own_offset + length));
+                }
+
+                Some(FilteredHybridEncoded::Repeated { is_set, length })
+            }
+            FilteredHybridEncoded::Skipped(set) => {
+                self.current = None;
+                Some(FilteredHybridEncoded::Skipped(set))
+            }
+        }
     }
 }
 
@@ -185,10 +281,16 @@ impl<'a> OptionalPageValidity<'a> {
     }
 }
 
+impl<'a> PageValidity<'a> for OptionalPageValidity<'a> {
+    fn next_limited(&mut self, limit: usize) -> Option<FilteredHybridEncoded<'a>> {
+        self.next_limited(limit)
+    }
+}
+
 /// Extends a [`Pushable`] from an iterator of non-null values and an hybrid-rle decoder
-pub(super) fn extend_from_decoder<T: Default, P: Pushable<T>, I: Iterator<Item = T>>(
+pub(super) fn extend_from_decoder<'a, T: Default, P: Pushable<T>, I: Iterator<Item = T>>(
     validity: &mut MutableBitmap,
-    page_validity: &mut OptionalPageValidity,
+    page_validity: &mut dyn PageValidity<'a>,
     limit: Option<usize>,
     pushable: &mut P,
     mut values_iter: I,
@@ -207,10 +309,9 @@ pub(super) fn extend_from_decoder<T: Default, P: Pushable<T>, I: Iterator<Item =
                 offset,
                 length,
             } => {
-                // consume `additional` items
+                // consume `length` items
                 let iter = BitmapIter::new(values, offset, length);
                 let iter = Zip::new(iter, &mut values_iter);
-                let iter = iter.skip(offset);
 
                 for item in iter {
                     if let Some(item) = item {
