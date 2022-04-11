@@ -16,18 +16,21 @@ use super::super::DataPages;
 
 pub fn not_implemented(page: &DataPage) -> ArrowError {
     let is_optional = page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
+    let is_filtered = page.selected_rows().is_some();
     let required = if is_optional { "optional" } else { "required" };
+    let is_filtered = if is_filtered { ", index-filtered" } else { "" };
     let dict = if page.dictionary_page().is_some() {
         ", dictionary-encoded"
     } else {
         ""
     };
     ArrowError::NotYetImplemented(format!(
-        "Decoding {:?} \"{:?}\"-encoded{} {} parquet pages",
+        "Decoding {:?} \"{:?}\"-encoded{} {} {} parquet pages",
         page.descriptor.primitive_type.physical_type,
         page.encoding(),
         dict,
         required,
+        is_filtered,
     ))
 }
 

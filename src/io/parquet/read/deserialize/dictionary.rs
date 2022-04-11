@@ -1,6 +1,7 @@
 use std::{collections::VecDeque, sync::Arc};
 
 use parquet2::{
+    deserialize::SliceFilteredIter,
     encoding::{hybrid_rle::HybridRleDecoder, Encoding},
     page::{DataPage, DictPage},
     schema::Repetition,
@@ -14,8 +15,8 @@ use crate::{
 
 use super::{
     utils::{
-        self, dict_indices_decoder, extend_from_decoder, DecodedState, Decoder, MaybeNext,
-        OptionalPageValidity,
+        self, dict_indices_decoder, extend_from_decoder, get_selected_rows, DecodedState, Decoder,
+        FilteredOptionalPageValidity, MaybeNext, OptionalPageValidity,
     },
     DataPages,
 };
@@ -25,6 +26,8 @@ use super::{
 pub enum State<'a> {
     Optional(Optional<'a>),
     Required(Required<'a>),
+    FilteredRequired(FilteredRequired<'a>),
+    FilteredOptional(FilteredOptionalPageValidity<'a>, HybridRleDecoder<'a>),
 }
 
 #[derive(Debug)]
@@ -35,6 +38,22 @@ pub struct Required<'a> {
 impl<'a> Required<'a> {
     fn new(page: &'a DataPage) -> Self {
         let values = dict_indices_decoder(page);
+        Self { values }
+    }
+}
+
+#[derive(Debug)]
+pub struct FilteredRequired<'a> {
+    values: SliceFilteredIter<HybridRleDecoder<'a>>,
+}
+
+impl<'a> FilteredRequired<'a> {
+    fn new(page: &'a DataPage) -> Self {
+        let values = dict_indices_decoder(page);
+
+        let rows = get_selected_rows(page);
+        let values = SliceFilteredIter::new(values, rows);
+
         Self { values }
     }
 }
@@ -61,6 +80,8 @@ impl<'a> utils::PageState<'a> for State<'a> {
         match self {
             State::Optional(optional) => optional.validity.len(),
             State::Required(required) => required.values.size_hint().0,
+            State::FilteredRequired(required) => required.values.size_hint().0,
+            State::FilteredOptional(validity, _) => validity.len(),
         }
     }
 }
@@ -95,13 +116,23 @@ where
     fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
         let is_optional =
             page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
+        let is_filtered = page.selected_rows().is_some();
 
-        match (page.encoding(), is_optional) {
-            (Encoding::PlainDictionary | Encoding::RleDictionary, false) => {
+        match (page.encoding(), is_optional, is_filtered) {
+            (Encoding::PlainDictionary | Encoding::RleDictionary, false, false) => {
                 Ok(State::Required(Required::new(page)))
             }
-            (Encoding::PlainDictionary | Encoding::RleDictionary, true) => {
+            (Encoding::PlainDictionary | Encoding::RleDictionary, true, false) => {
                 Ok(State::Optional(Optional::new(page)))
+            }
+            (Encoding::PlainDictionary | Encoding::RleDictionary, false, true) => {
+                Ok(State::FilteredRequired(FilteredRequired::new(page)))
+            }
+            (Encoding::PlainDictionary | Encoding::RleDictionary, true, true) => {
+                Ok(State::FilteredOptional(
+                    FilteredOptionalPageValidity::new(page),
+                    dict_indices_decoder(page),
+                ))
             }
             _ => Err(utils::not_implemented(page)),
         }
@@ -130,6 +161,21 @@ where
                 &mut page.values.by_ref().map(|x| K::from_u32(x).unwrap()),
             ),
             State::Required(page) => {
+                values.extend(
+                    page.values
+                        .by_ref()
+                        .map(|x| K::from_u32(x).unwrap())
+                        .take(remaining),
+                );
+            }
+            State::FilteredOptional(page_validity, page_values) => extend_from_decoder(
+                validity,
+                page_validity,
+                Some(remaining),
+                values,
+                &mut page_values.by_ref().map(|x| K::from_u32(x).unwrap()),
+            ),
+            State::FilteredRequired(page) => {
                 values.extend(
                     page.values
                         .by_ref()

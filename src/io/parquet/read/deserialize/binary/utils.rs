@@ -88,7 +88,6 @@ impl<'a, O: Offset> Pushable<&'a [u8]> for Binary<O> {
     }
 }
 
-
 #[derive(Debug)]
 pub struct BinaryIter<'a> {
     values: &'a [u8],

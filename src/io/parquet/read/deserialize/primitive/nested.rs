@@ -82,23 +82,29 @@ where
     fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
         let is_optional =
             page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
+        let is_filtered = page.selected_rows().is_some();
 
-        match (page.encoding(), page.dictionary_page(), is_optional) {
-            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false) => {
+        match (
+            page.encoding(),
+            page.dictionary_page(),
+            is_optional,
+            is_filtered,
+        ) {
+            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false, false) => {
                 let dict = dict.as_any().downcast_ref().unwrap();
                 Ok(State::RequiredDictionary(ValuesDictionary::new(page, dict)))
             }
-            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
+            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true, false) => {
                 let dict = dict.as_any().downcast_ref().unwrap();
                 Ok(State::OptionalDictionary(
                     Optional::new(page),
                     ValuesDictionary::new(page, dict),
                 ))
             }
-            (Encoding::Plain, _, true) => {
+            (Encoding::Plain, _, true, false) => {
                 Ok(State::Optional(Optional::new(page), Values::new::<P>(page)))
             }
-            (Encoding::Plain, _, false) => Ok(State::Required(Values::new::<P>(page))),
+            (Encoding::Plain, _, false, false) => Ok(State::Required(Values::new::<P>(page))),
             _ => Err(utils::not_implemented(page)),
         }
     }

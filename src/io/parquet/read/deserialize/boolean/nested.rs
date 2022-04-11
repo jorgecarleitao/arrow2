@@ -66,15 +66,16 @@ impl<'a> Decoder<'a> for BooleanDecoder {
     fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
         let is_optional =
             page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
+        let is_filtered = page.selected_rows().is_some();
 
-        match (page.encoding(), is_optional) {
-            (Encoding::Plain, true) => {
+        match (page.encoding(), is_optional, is_filtered) {
+            (Encoding::Plain, true, false) => {
                 let (_, _, values) = utils::split_buffer(page);
                 let values = BitmapIter::new(values, 0, values.len() * 8);
 
                 Ok(State::Optional(Optional::new(page), values))
             }
-            (Encoding::Plain, false) => Ok(State::Required(Required::new(page))),
+            (Encoding::Plain, false, false) => Ok(State::Required(Required::new(page))),
             _ => Err(utils::not_implemented(page)),
         }
     }

@@ -48,27 +48,33 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
     fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
         let is_optional =
             page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
+        let is_filtered = page.selected_rows().is_some();
 
-        match (page.encoding(), page.dictionary_page(), is_optional) {
-            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false) => {
+        match (
+            page.encoding(),
+            page.dictionary_page(),
+            is_optional,
+            is_filtered,
+        ) {
+            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false, false) => {
                 let dict = dict.as_any().downcast_ref().unwrap();
                 Ok(State::RequiredDictionary(ValuesDictionary::new(page, dict)))
             }
-            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
+            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true, false) => {
                 let dict = dict.as_any().downcast_ref().unwrap();
                 Ok(State::OptionalDictionary(
                     Optional::new(page),
                     ValuesDictionary::new(page, dict),
                 ))
             }
-            (Encoding::Plain, None, true) => {
+            (Encoding::Plain, None, true, false) => {
                 let (_, _, values) = utils::split_buffer(page);
 
                 let values = BinaryIter::new(values);
 
                 Ok(State::Optional(Optional::new(page), values))
             }
-            (Encoding::Plain, None, false) => Ok(State::Required(Required::new(page))),
+            (Encoding::Plain, None, false, false) => Ok(State::Required(Required::new(page))),
             _ => Err(utils::not_implemented(page)),
         }
     }
