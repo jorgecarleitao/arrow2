@@ -69,7 +69,7 @@ ahash = { version = "0.7", optional = true }
 
 # parquet support
 #parquet2 = { version = "0.10", optional = true, default_features = false, features = ["stream"] }
-parquet2 = { git = "https://github.com/jorgecarleitao/parquet2", branch = "filtered", optional = true, default_features = false, features = ["stream"] }
+parquet2 = { git = "https://github.com/jorgecarleitao/parquet2", branch = "filter", optional = true, default_features = false, features = ["stream"] }
 
 # avro support
 avro-schema = { version = "0.2", optional = true }
@@ -108,26 +108,12 @@ rustdoc-args = ["--cfg", "docsrs"]
 [features]
 default = []
 full = [
-    "io_odbc",
-    "io_csv",
-    "io_csv_async",
-    "io_json",
-    "io_ipc",
-    "io_flight",
-    "io_ipc_write_async",
-    "io_ipc_read_async",
-    "io_ipc_compression",
-    "io_json_integration",
-    "io_print",
     "io_parquet",
     "io_parquet_compression",
-    "io_avro",
-    "io_avro_compression",
-    "io_avro_async",
-    "regex",
-    "compute",
+    #"regex",
+    #"compute",
     # parses timezones used in timestamp conversions
-    "chrono-tz",
+    #"chrono-tz",
 ]
 io_odbc = ["odbc-api"]
 io_csv = ["io_csv_read", "io_csv_write"]
