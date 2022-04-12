@@ -1,3 +1,4 @@
+#![allow(clippy::ptr_arg)] // false positive in clippy, see https://github.com/rust-lang/rust-clippy/issues/8463
 use arrow_format::ipc;
 
 use crate::{
