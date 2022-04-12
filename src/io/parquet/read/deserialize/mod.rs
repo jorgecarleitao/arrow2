@@ -11,7 +11,7 @@ mod struct_;
 mod utils;
 
 use crate::{
-    array::{Array, BinaryArray, ListArray, Utf8Array},
+    array::{Array, BinaryArray, FixedSizeListArray, ListArray, Utf8Array},
     datatypes::{DataType, Field},
     error::{ArrowError, Result},
 };
@@ -65,6 +65,15 @@ fn create_list(
                 validity.and_then(|x| x.into()),
             ))
         }
+        DataType::FixedSizeList(_, _) => {
+            let (_, validity) = nested.nested.pop().unwrap().inner();
+
+            Arc::new(FixedSizeListArray::new(
+                data_type,
+                values,
+                validity.and_then(|x| x.into()),
+            ))
+        }
         _ => {
             return Err(ArrowError::NotYetImplemented(format!(
                 "Read nested datatype {:?}",
@@ -102,6 +111,16 @@ where
             types.pop();
             boolean::iter_to_arrays_nested(columns.pop().unwrap(), init.pop().unwrap(), chunk_size)
         }
+        Int8 => {
+            types.pop();
+            primitive::iter_to_arrays_nested(
+                columns.pop().unwrap(),
+                init.pop().unwrap(),
+                field.data_type().clone(),
+                chunk_size,
+                |x: i32| x as i8,
+            )
+        }
         Int16 => {
             types.pop();
             primitive::iter_to_arrays_nested(
@@ -110,6 +129,16 @@ where
                 field.data_type().clone(),
                 chunk_size,
                 |x: i32| x as i16,
+            )
+        }
+        Int32 => {
+            types.pop();
+            primitive::iter_to_arrays_nested(
+                columns.pop().unwrap(),
+                init.pop().unwrap(),
+                field.data_type().clone(),
+                chunk_size,
+                |x: i32| x,
             )
         }
         Int64 => {
@@ -192,7 +221,24 @@ where
             let columns = columns.into_iter().rev().collect();
             Box::new(struct_::StructIterator::new(columns, fields.clone()))
         }
-        _ => todo!(),
+        FixedSizeList(inner, _) => {
+            let iter = columns_to_iter_recursive(
+                vec![columns.pop().unwrap()],
+                types,
+                inner.as_ref().clone(),
+                init,
+                chunk_size,
+            )?;
+            let iter = iter.map(move |x| {
+                let (mut nested, array) = x?;
+                println!("{nested:?}");
+                println!("{array:?}");
+                let array = create_list(field.data_type().clone(), &mut nested, array)?;
+                Ok((nested, array))
+            });
+            Box::new(iter) as _
+        }
+        other => todo!("{other:?}"),
     })
 }
 

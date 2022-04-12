@@ -94,6 +94,7 @@ impl<'a> ValuesDictionary<'a> {
     }
 }
 
+#[derive(Debug)]
 enum State<'a> {
     Optional(OptionalPageValidity<'a>, BinaryIter<'a>),
     Required(Required<'a>),
