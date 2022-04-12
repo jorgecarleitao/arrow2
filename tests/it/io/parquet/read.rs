@@ -546,3 +546,15 @@ fn invalid_utf8() {
         error
     );
 }
+
+
+#[test]
+fn binary_column_with_nulls_test() -> Result<()> {
+    let path = "testing/data_0_0_0.snappy.parquet";
+    let reader = std::fs::File::open(path)?;
+    let reader = FileReader::try_new(reader, None, Some(178111), None, None)?;
+
+    reader.collect::<Result<Vec<_>>>()?;
+
+    Ok(())
+}
