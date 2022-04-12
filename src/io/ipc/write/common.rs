@@ -45,7 +45,10 @@ fn encode_dictionary(
             let dict_id = field.dictionary_id
                 .ok_or_else(|| ArrowError::InvalidArgumentError("Dictionaries must have an associated id".to_string()))?;
 
-            let values = array.as_any().downcast_ref::<DictionaryArray<$T>>().unwrap().values();
+            let emit = dictionary_tracker.insert(dict_id, array)?;
+
+            let array = array.as_any().downcast_ref::<DictionaryArray<$T>>().unwrap();
+            let values = array.values();
             encode_dictionary(field,
                 values,
                 options,
@@ -53,12 +56,10 @@ fn encode_dictionary(
                 encoded_dictionaries
             )?;
 
-            let emit = dictionary_tracker.insert(dict_id, array)?;
-
             if emit {
-                encoded_dictionaries.push(dictionary_batch_to_bytes(
+                encoded_dictionaries.push(dictionary_batch_to_bytes::<$T>(
                     dict_id,
-                    array.as_ref(),
+                    array,
                     options,
                     is_native_little_endian(),
                 ));
@@ -257,9 +258,9 @@ fn columns_to_bytes(columns: &Chunk<Arc<dyn Array>>, options: &WriteOptions) -> 
 
 /// Write dictionary values into two sets of bytes, one for the header (ipc::Schema::Message) and the
 /// other for the data
-fn dictionary_batch_to_bytes(
+fn dictionary_batch_to_bytes<K: DictionaryKey>(
     dict_id: i64,
-    array: &dyn Array,
+    array: &DictionaryArray<K>,
     options: &WriteOptions,
     is_little_endian: bool,
 ) -> EncodedData {
