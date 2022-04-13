@@ -12,7 +12,7 @@ use crate::{
 
 use super::{infer_schema, read_metadata, FileMetaData, RowGroupDeserializer, RowGroupMetaData};
 
-type GroupFilter = Arc<dyn Fn(usize, &RowGroupMetaData) -> bool>;
+type GroupFilter = Arc<dyn Fn(usize, &RowGroupMetaData) -> bool + Send + Sync>;
 
 /// An iterator of [`Chunk`]s coming from row groups of a parquet file.
 ///
