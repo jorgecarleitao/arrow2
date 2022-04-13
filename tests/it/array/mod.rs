@@ -6,6 +6,7 @@ mod fixed_size_binary;
 mod fixed_size_list;
 mod growable;
 mod list;
+mod map;
 mod ord;
 mod primitive;
 mod struct_;
