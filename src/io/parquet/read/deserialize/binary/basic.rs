@@ -220,7 +220,7 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
                 page_values,
             ),
             State::Required(page) => {
-                page.remaining -= additional;
+                page.remaining = page.remaining.saturating_sub(additional);
                 for x in page.values.by_ref().take(additional) {
                     values.push(x)
                 }
