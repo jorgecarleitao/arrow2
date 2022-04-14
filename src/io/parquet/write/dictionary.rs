@@ -3,9 +3,10 @@ use parquet2::{
     metadata::Descriptor,
     page::{EncodedDictPage, EncodedPage},
     statistics::ParquetStatistics,
-    write::{DynIter, WriteOptions},
+    write::DynIter,
 };
 
+use super::WriteOptions;
 use super::binary::build_statistics as binary_build_statistics;
 use super::binary::encode_plain as binary_encode_plain;
 use super::fixed_len_bytes::build_statistics as fixed_binary_build_statistics;

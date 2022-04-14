@@ -4,9 +4,9 @@ use parquet2::{
     page::DataPage,
     schema::types::PrimitiveType,
     statistics::{serialize_statistics, BinaryStatistics, ParquetStatistics, Statistics},
-    write::WriteOptions,
 };
 
+use super::super::WriteOptions;
 use super::super::utils;
 use crate::{
     array::{Array, BinaryArray, Offset},

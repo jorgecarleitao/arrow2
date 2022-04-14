@@ -1,15 +1,18 @@
+use std::{collections::HashMap, pin::Pin, sync::Arc, task::Poll};
+
+use futures::{future::BoxFuture, AsyncWrite, FutureExt, Sink, TryFutureExt};
+use parquet2::metadata::KeyValue;
+use parquet2::write::FileStreamer;
+use parquet2::write::WriteOptions as ParquetWriteOptions;
+
 use crate::{
     array::Array,
     chunk::Chunk,
     datatypes::Schema,
     error::ArrowError,
-    io::parquet::write::{Encoding, SchemaDescriptor, WriteOptions},
 };
-use futures::{future::BoxFuture, AsyncWrite, FutureExt, Sink, TryFutureExt};
-use parquet2::metadata::KeyValue;
-use parquet2::write::FileStreamer;
-use std::{collections::HashMap, pin::Pin, sync::Arc, task::Poll};
 
+use super::{Encoding, SchemaDescriptor, WriteOptions};
 use super::file::add_arrow_schema;
 
 /// Sink that writes array [`chunks`](Chunk) as a Parquet file.
@@ -82,10 +85,17 @@ where
         encoding: Vec<Encoding>,
         options: WriteOptions,
     ) -> Result<Self, ArrowError> {
-        // let mut writer = FileStreamer::try_new(writer, schema.clone(), options)?;
         let parquet_schema = crate::io::parquet::write::to_parquet_schema(&schema)?;
         let created_by = Some("Arrow2 - Native Rust implementation of Arrow".to_string());
-        let mut writer = FileStreamer::new(writer, parquet_schema.clone(), options, created_by);
+        let mut writer = FileStreamer::new(
+            writer,
+            parquet_schema.clone(),
+            ParquetWriteOptions {
+                version: options.version,
+                write_statistics: options.write_statistics,
+            },
+            created_by,
+        );
         let task = Some(
             async move {
                 writer.start().await?;

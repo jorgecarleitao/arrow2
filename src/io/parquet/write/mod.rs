@@ -29,11 +29,20 @@ pub use parquet2::{
     metadata::{Descriptor, KeyValue, SchemaDescriptor},
     page::{CompressedDataPage, CompressedPage, EncodedPage},
     schema::types::ParquetType,
-    write::{
-        compress, Compressor, DynIter, DynStreamingIterator, RowGroupIter, Version, WriteOptions,
-    },
+    write::{compress, Compressor, DynIter, DynStreamingIterator, RowGroupIter, Version},
     FallibleStreamingIterator,
 };
+
+/// Currently supported options to write to parquet
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct WriteOptions {
+    /// Whether to write statistics
+    pub write_statistics: bool,
+    /// The page and file version to use
+    pub version: Version,
+    /// The compression to apply to every page
+    pub compression: Compression,
+}
 
 pub use file::FileWriter;
 pub use row_group::{row_group_iter, RowGroupIterator};

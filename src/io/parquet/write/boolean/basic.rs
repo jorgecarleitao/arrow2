@@ -3,10 +3,10 @@ use parquet2::{
     metadata::Descriptor,
     page::DataPage,
     statistics::{serialize_statistics, BooleanStatistics, ParquetStatistics, Statistics},
-    write::WriteOptions,
 };
 
 use super::super::utils;
+use super::super::WriteOptions;
 use crate::array::*;
 use crate::{error::Result, io::parquet::read::schema::is_nullable};
 

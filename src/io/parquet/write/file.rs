@@ -1,13 +1,14 @@
 use std::io::Write;
 
+use parquet2::metadata::KeyValue;
 use parquet2::metadata::SchemaDescriptor;
 use parquet2::write::RowGroupIter;
-use parquet2::{metadata::KeyValue, write::WriteOptions};
+use parquet2::write::WriteOptions as FileWriteOptions;
 
 use crate::datatypes::Schema;
 use crate::error::{ArrowError, Result};
 
-use super::{schema::schema_to_metadata_key, to_parquet_schema};
+use super::{schema::schema_to_metadata_key, to_parquet_schema, WriteOptions};
 
 /// Attaches [`Schema`] to `key_value_metadata`
 pub fn add_arrow_schema(
@@ -26,13 +27,14 @@ pub fn add_arrow_schema(
 pub struct FileWriter<W: Write> {
     writer: parquet2::write::FileWriter<W>,
     schema: Schema,
+    options: WriteOptions,
 }
 
 // Accessors
 impl<W: Write> FileWriter<W> {
     /// The options assigned to the file
-    pub fn options(&self) -> &WriteOptions {
-        self.writer.options()
+    pub fn options(&self) -> WriteOptions {
+        self.options
     }
 
     /// The [`SchemaDescriptor`] assigned to this file
@@ -56,8 +58,17 @@ impl<W: Write> FileWriter<W> {
         let created_by = Some("Arrow2 - Native Rust implementation of Arrow".to_string());
 
         Ok(Self {
-            writer: parquet2::write::FileWriter::new(writer, parquet_schema, options, created_by),
+            writer: parquet2::write::FileWriter::new(
+                writer,
+                parquet_schema,
+                FileWriteOptions {
+                    version: options.version,
+                    write_statistics: options.write_statistics,
+                },
+                created_by,
+            ),
             schema,
+            options,
         })
     }
 

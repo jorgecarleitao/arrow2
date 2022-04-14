@@ -5,10 +5,10 @@ use parquet2::{
     schema::types::PrimitiveType,
     statistics::{serialize_statistics, ParquetStatistics, PrimitiveStatistics, Statistics},
     types::NativeType,
-    write::WriteOptions,
 };
 
 use super::super::utils;
+use super::super::WriteOptions;
 use crate::{
     array::{Array, PrimitiveArray},
     error::Result,

@@ -7,14 +7,10 @@ use arrow2::{
     error::Result,
     io::parquet::{
         read::{infer_schema, read_columns_many_async, read_metadata_async, RowGroupDeserializer},
-        write::Encoding,
+        write::{Compression, Encoding, Version, WriteOptions},
     },
 };
 use futures::{future::BoxFuture, io::Cursor, SinkExt};
-use parquet2::{
-    compression::Compression,
-    write::{Version, WriteOptions},
-};
 
 use super::FileSink;
 

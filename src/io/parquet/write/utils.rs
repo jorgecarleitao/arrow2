@@ -6,9 +6,9 @@ use parquet2::{
     metadata::Descriptor,
     page::{DataPage, DataPageHeader, DataPageHeaderV1, DataPageHeaderV2},
     statistics::ParquetStatistics,
-    write::WriteOptions,
 };
 
+use super::WriteOptions;
 use crate::error::Result;
 
 use super::Version;

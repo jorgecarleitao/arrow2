@@ -4,10 +4,9 @@ use parquet2::{
     page::DataPage,
     schema::types::PrimitiveType,
     statistics::{serialize_statistics, FixedLenStatistics, ParquetStatistics, Statistics},
-    write::WriteOptions,
 };
 
-use super::{binary::ord_binary, utils};
+use super::{binary::ord_binary, utils, WriteOptions};
 use crate::{
     array::{Array, FixedSizeBinaryArray},
     error::Result,

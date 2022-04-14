@@ -1,6 +1,6 @@
-use parquet2::{encoding::Encoding, metadata::Descriptor, page::DataPage, write::WriteOptions};
+use parquet2::{encoding::Encoding, metadata::Descriptor, page::DataPage};
 
-use super::super::{levels, utils};
+use super::super::{levels, utils, WriteOptions};
 use super::basic::{build_statistics, encode_plain};
 use crate::io::parquet::read::schema::is_nullable;
 use crate::{
