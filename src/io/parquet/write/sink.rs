@@ -5,15 +5,10 @@ use parquet2::metadata::KeyValue;
 use parquet2::write::FileStreamer;
 use parquet2::write::WriteOptions as ParquetWriteOptions;
 
-use crate::{
-    array::Array,
-    chunk::Chunk,
-    datatypes::Schema,
-    error::ArrowError,
-};
+use crate::{array::Array, chunk::Chunk, datatypes::Schema, error::ArrowError};
 
-use super::{Encoding, SchemaDescriptor, WriteOptions};
 use super::file::add_arrow_schema;
+use super::{Encoding, SchemaDescriptor, WriteOptions};
 
 /// Sink that writes array [`chunks`](Chunk) as a Parquet file.
 ///

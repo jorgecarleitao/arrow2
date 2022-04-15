@@ -6,9 +6,9 @@ use parquet2::{
     statistics::{serialize_statistics, BinaryStatistics, ParquetStatistics, Statistics},
 };
 
-use super::super::WriteOptions;
 use super::super::binary::{encode_delta, ord_binary};
 use super::super::utils;
+use super::super::WriteOptions;
 use crate::{
     array::{Array, Offset, Utf8Array},
     error::{ArrowError, Result},

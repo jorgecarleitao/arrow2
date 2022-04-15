@@ -6,7 +6,6 @@ use parquet2::{
     write::DynIter,
 };
 
-use super::WriteOptions;
 use super::binary::build_statistics as binary_build_statistics;
 use super::binary::encode_plain as binary_encode_plain;
 use super::fixed_len_bytes::build_statistics as fixed_binary_build_statistics;
@@ -15,6 +14,7 @@ use super::primitive::build_statistics as primitive_build_statistics;
 use super::primitive::encode_plain as primitive_encode_plain;
 use super::utf8::build_statistics as utf8_build_statistics;
 use super::utf8::encode_plain as utf8_encode_plain;
+use super::WriteOptions;
 use crate::bitmap::Bitmap;
 use crate::datatypes::DataType;
 use crate::error::{ArrowError, Result};

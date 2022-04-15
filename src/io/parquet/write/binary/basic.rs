@@ -6,8 +6,8 @@ use parquet2::{
     statistics::{serialize_statistics, BinaryStatistics, ParquetStatistics, Statistics},
 };
 
-use super::super::WriteOptions;
 use super::super::utils;
+use super::super::WriteOptions;
 use crate::{
     array::{Array, BinaryArray, Offset},
     bitmap::Bitmap,
