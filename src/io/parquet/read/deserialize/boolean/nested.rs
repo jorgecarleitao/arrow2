@@ -65,23 +65,18 @@ impl<'a> Decoder<'a> for BooleanDecoder {
 
     fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
         let is_optional =
-            page.descriptor().type_().get_basic_info().repetition() == &Repetition::Optional;
+            page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
+        let is_filtered = page.selected_rows().is_some();
 
-        match (page.encoding(), is_optional) {
-            (Encoding::Plain, true) => {
+        match (page.encoding(), is_optional, is_filtered) {
+            (Encoding::Plain, true, false) => {
                 let (_, _, values) = utils::split_buffer(page);
                 let values = BitmapIter::new(values, 0, values.len() * 8);
 
                 Ok(State::Optional(Optional::new(page), values))
             }
-            (Encoding::Plain, false) => Ok(State::Required(Required::new(page))),
-            _ => Err(utils::not_implemented(
-                &page.encoding(),
-                is_optional,
-                false,
-                "any",
-                "Boolean",
-            )),
+            (Encoding::Plain, false, false) => Ok(State::Required(Required::new(page))),
+            _ => Err(utils::not_implemented(page)),
         }
     }
 
@@ -96,24 +91,19 @@ impl<'a> Decoder<'a> for BooleanDecoder {
         &self,
         state: &mut State,
         decoded: &mut Self::DecodedState,
-        required: usize,
+        additional: usize,
     ) {
         let (values, validity) = decoded;
         match state {
             State::Optional(page_validity, page_values) => {
-                let max_def = page_validity.max_def();
-                read_optional_values(
-                    page_validity.definition_levels.by_ref(),
-                    max_def,
-                    page_values.by_ref(),
-                    values,
-                    validity,
-                    required,
-                )
+                let items = page_validity.by_ref().take(additional);
+                let items = Zip::new(items, page_values.by_ref());
+
+                read_optional_values(items, values, validity)
             }
             State::Required(page) => {
-                values.extend_from_slice(page.values, page.offset, required);
-                page.offset += required;
+                values.extend_from_slice(page.values, page.offset, additional);
+                page.offset += additional;
             }
         }
     }

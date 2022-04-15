@@ -30,8 +30,7 @@ fn write_batch(path: &str, schema: Schema, columns: Chunk<Arc<dyn Array>>) -> Re
 
     writer.start()?;
     for group in row_groups {
-        let (group, len) = group?;
-        writer.write(group, len)?;
+        writer.write(group?)?;
     }
     let _size = writer.end(None)?;
     Ok(())

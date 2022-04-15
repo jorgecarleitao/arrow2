@@ -3,12 +3,12 @@ use crate::bitmap::Bitmap;
 use parquet2::{
     compression::Compression,
     encoding::{hybrid_rle::encode_bool, Encoding},
-    metadata::ColumnDescriptor,
+    metadata::Descriptor,
     page::{DataPage, DataPageHeader, DataPageHeaderV1, DataPageHeaderV2},
     statistics::ParquetStatistics,
-    write::WriteOptions,
 };
 
+use super::WriteOptions;
 use crate::error::Result;
 
 use super::Version;
@@ -60,42 +60,42 @@ pub fn write_def_levels(
 #[allow(clippy::too_many_arguments)]
 pub fn build_plain_page(
     buffer: Vec<u8>,
-    len: usize,
+    num_values: usize,
+    num_rows: usize,
     null_count: usize,
     repetition_levels_byte_length: usize,
     definition_levels_byte_length: usize,
     statistics: Option<ParquetStatistics>,
-    descriptor: ColumnDescriptor,
+    descriptor: Descriptor,
     options: WriteOptions,
     encoding: Encoding,
 ) -> Result<DataPage> {
-    match options.version {
-        Version::V1 => {
-            let header = DataPageHeader::V1(DataPageHeaderV1 {
-                num_values: len as i32,
-                encoding: encoding.into(),
-                definition_level_encoding: Encoding::Rle.into(),
-                repetition_level_encoding: Encoding::Rle.into(),
-                statistics,
-            });
-
-            Ok(DataPage::new(header, buffer, None, descriptor))
-        }
-        Version::V2 => {
-            let header = DataPageHeader::V2(DataPageHeaderV2 {
-                num_values: len as i32,
-                encoding: encoding.into(),
-                num_nulls: null_count as i32,
-                num_rows: len as i32,
-                definition_levels_byte_length: definition_levels_byte_length as i32,
-                repetition_levels_byte_length: repetition_levels_byte_length as i32,
-                is_compressed: Some(options.compression != Compression::Uncompressed),
-                statistics,
-            });
-
-            Ok(DataPage::new(header, buffer, None, descriptor))
-        }
-    }
+    let header = match options.version {
+        Version::V1 => DataPageHeader::V1(DataPageHeaderV1 {
+            num_values: num_values as i32,
+            encoding: encoding.into(),
+            definition_level_encoding: Encoding::Rle.into(),
+            repetition_level_encoding: Encoding::Rle.into(),
+            statistics,
+        }),
+        Version::V2 => DataPageHeader::V2(DataPageHeaderV2 {
+            num_values: num_values as i32,
+            encoding: encoding.into(),
+            num_nulls: null_count as i32,
+            num_rows: num_rows as i32,
+            definition_levels_byte_length: definition_levels_byte_length as i32,
+            repetition_levels_byte_length: repetition_levels_byte_length as i32,
+            is_compressed: Some(options.compression != Compression::Uncompressed),
+            statistics,
+        }),
+    };
+    Ok(DataPage::new(
+        header,
+        buffer,
+        None,
+        descriptor,
+        Some(num_rows),
+    ))
 }
 
 /// Auxiliary iterator adapter to declare the size hint of an iterator.

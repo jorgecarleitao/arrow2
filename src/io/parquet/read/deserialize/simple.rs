@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use parquet2::{
     schema::types::{
-        LogicalType, ParquetType, PhysicalType, TimeUnit as ParquetTimeUnit, TimestampType,
+        PhysicalType, PrimitiveLogicalType, PrimitiveType, TimeUnit as ParquetTimeUnit,
     },
     types::int96_to_i64_ns,
 };
@@ -60,24 +60,14 @@ where
 /// of [`DataType`] `data_type` and `chunk_size`.
 pub fn page_iter_to_arrays<'a, I: 'a + DataPages>(
     pages: I,
-    type_: &ParquetType,
+    type_: &PrimitiveType,
     data_type: DataType,
     chunk_size: usize,
 ) -> Result<ArrayIter<'a>> {
     use DataType::*;
 
-    let (physical_type, logical_type) = if let ParquetType::PrimitiveType {
-        physical_type,
-        logical_type,
-        ..
-    } = type_
-    {
-        (physical_type, logical_type)
-    } else {
-        return Err(ArrowError::InvalidArgumentError(
-            "page_iter_to_arrays can only be called with a parquet primitive type".into(),
-        ));
-    };
+    let physical_type = &type_.physical_type;
+    let logical_type = &type_.logical_type;
 
     Ok(match data_type.to_logical_type() {
         Null => null::iter_to_arrays(pages, data_type, chunk_size),
@@ -240,7 +230,7 @@ pub fn page_iter_to_arrays<'a, I: 'a + DataPages>(
 fn timestamp<'a, I: 'a + DataPages>(
     pages: I,
     physical_type: &PhysicalType,
-    logical_type: &Option<LogicalType>,
+    logical_type: &Option<PrimitiveLogicalType>,
     data_type: DataType,
     chunk_size: usize,
     time_unit: TimeUnit,
@@ -267,35 +257,41 @@ fn timestamp<'a, I: 'a + DataPages>(
 
     let iter = primitive::Iter::new(pages, data_type, chunk_size, |x: i64| x);
 
-    let unit = if let Some(LogicalType::TIMESTAMP(TimestampType { unit, .. })) = logical_type {
+    let unit = if let Some(PrimitiveLogicalType::Timestamp { unit, .. }) = logical_type {
         unit
     } else {
         return Ok(dyn_iter(iden(iter)));
     };
 
     Ok(match (unit, time_unit) {
-        (ParquetTimeUnit::MILLIS(_), TimeUnit::Second) => dyn_iter(op(iter, |x| x / 1_000)),
-        (ParquetTimeUnit::MICROS(_), TimeUnit::Second) => dyn_iter(op(iter, |x| x / 1_000_000)),
-        (ParquetTimeUnit::NANOS(_), TimeUnit::Second) => dyn_iter(op(iter, |x| x * 1_000_000_000)),
+        (ParquetTimeUnit::Milliseconds, TimeUnit::Second) => dyn_iter(op(iter, |x| x / 1_000)),
+        (ParquetTimeUnit::Microseconds, TimeUnit::Second) => dyn_iter(op(iter, |x| x / 1_000_000)),
+        (ParquetTimeUnit::Nanoseconds, TimeUnit::Second) => {
+            dyn_iter(op(iter, |x| x / 1_000_000_000))
+        }
 
-        (ParquetTimeUnit::MILLIS(_), TimeUnit::Millisecond) => dyn_iter(iden(iter)),
-        (ParquetTimeUnit::MICROS(_), TimeUnit::Millisecond) => dyn_iter(op(iter, |x| x / 1_000)),
-        (ParquetTimeUnit::NANOS(_), TimeUnit::Millisecond) => dyn_iter(op(iter, |x| x / 1_000_000)),
+        (ParquetTimeUnit::Milliseconds, TimeUnit::Millisecond) => dyn_iter(iden(iter)),
+        (ParquetTimeUnit::Microseconds, TimeUnit::Millisecond) => dyn_iter(op(iter, |x| x / 1_000)),
+        (ParquetTimeUnit::Nanoseconds, TimeUnit::Millisecond) => {
+            dyn_iter(op(iter, |x| x / 1_000_000))
+        }
 
-        (ParquetTimeUnit::MILLIS(_), TimeUnit::Microsecond) => dyn_iter(op(iter, |x| x * 1_000)),
-        (ParquetTimeUnit::MICROS(_), TimeUnit::Microsecond) => dyn_iter(iden(iter)),
-        (ParquetTimeUnit::NANOS(_), TimeUnit::Microsecond) => dyn_iter(op(iter, |x| x / 1_000)),
+        (ParquetTimeUnit::Milliseconds, TimeUnit::Microsecond) => dyn_iter(op(iter, |x| x * 1_000)),
+        (ParquetTimeUnit::Microseconds, TimeUnit::Microsecond) => dyn_iter(iden(iter)),
+        (ParquetTimeUnit::Nanoseconds, TimeUnit::Microsecond) => dyn_iter(op(iter, |x| x / 1_000)),
 
-        (ParquetTimeUnit::MILLIS(_), TimeUnit::Nanosecond) => dyn_iter(op(iter, |x| x * 1_000_000)),
-        (ParquetTimeUnit::MICROS(_), TimeUnit::Nanosecond) => dyn_iter(op(iter, |x| x * 1_000)),
-        (ParquetTimeUnit::NANOS(_), TimeUnit::Nanosecond) => dyn_iter(iden(iter)),
+        (ParquetTimeUnit::Milliseconds, TimeUnit::Nanosecond) => {
+            dyn_iter(op(iter, |x| x * 1_000_000))
+        }
+        (ParquetTimeUnit::Microseconds, TimeUnit::Nanosecond) => dyn_iter(op(iter, |x| x * 1_000)),
+        (ParquetTimeUnit::Nanoseconds, TimeUnit::Nanosecond) => dyn_iter(iden(iter)),
     })
 }
 
 fn timestamp_dict<'a, K: DictionaryKey, I: 'a + DataPages>(
     pages: I,
     physical_type: &PhysicalType,
-    logical_type: &Option<LogicalType>,
+    logical_type: &Option<PrimitiveLogicalType>,
     data_type: DataType,
     chunk_size: usize,
     time_unit: TimeUnit,
@@ -315,7 +311,7 @@ fn timestamp_dict<'a, K: DictionaryKey, I: 'a + DataPages>(
         }
     };
 
-    let unit = if let Some(LogicalType::TIMESTAMP(TimestampType { unit, .. })) = logical_type {
+    let unit = if let Some(PrimitiveLogicalType::Timestamp { unit, .. }) = logical_type {
         unit
     } else {
         return Ok(dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
@@ -327,7 +323,7 @@ fn timestamp_dict<'a, K: DictionaryKey, I: 'a + DataPages>(
     };
 
     Ok(match (unit, time_unit) {
-        (ParquetTimeUnit::MILLIS(_), TimeUnit::Second) => {
+        (ParquetTimeUnit::Milliseconds, TimeUnit::Second) => {
             dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
                 pages,
                 data_type,
@@ -335,7 +331,7 @@ fn timestamp_dict<'a, K: DictionaryKey, I: 'a + DataPages>(
                 |x: i64| x / 1_000,
             ))
         }
-        (ParquetTimeUnit::MICROS(_), TimeUnit::Second) => {
+        (ParquetTimeUnit::Microseconds, TimeUnit::Second) => {
             dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
                 pages,
                 data_type,
@@ -343,16 +339,16 @@ fn timestamp_dict<'a, K: DictionaryKey, I: 'a + DataPages>(
                 |x: i64| x / 1_000_000,
             ))
         }
-        (ParquetTimeUnit::NANOS(_), TimeUnit::Second) => {
+        (ParquetTimeUnit::Nanoseconds, TimeUnit::Second) => {
             dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
                 pages,
                 data_type,
                 chunk_size,
-                |x: i64| x * 1_000_000_000,
+                |x: i64| x / 1_000_000_000,
             ))
         }
 
-        (ParquetTimeUnit::MILLIS(_), TimeUnit::Millisecond) => {
+        (ParquetTimeUnit::Milliseconds, TimeUnit::Millisecond) => {
             dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
                 pages,
                 data_type,
@@ -360,7 +356,7 @@ fn timestamp_dict<'a, K: DictionaryKey, I: 'a + DataPages>(
                 |x: i64| x,
             ))
         }
-        (ParquetTimeUnit::MICROS(_), TimeUnit::Millisecond) => {
+        (ParquetTimeUnit::Microseconds, TimeUnit::Millisecond) => {
             dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
                 pages,
                 data_type,
@@ -368,7 +364,7 @@ fn timestamp_dict<'a, K: DictionaryKey, I: 'a + DataPages>(
                 |x: i64| x / 1_000,
             ))
         }
-        (ParquetTimeUnit::NANOS(_), TimeUnit::Millisecond) => {
+        (ParquetTimeUnit::Nanoseconds, TimeUnit::Millisecond) => {
             dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
                 pages,
                 data_type,
@@ -377,7 +373,7 @@ fn timestamp_dict<'a, K: DictionaryKey, I: 'a + DataPages>(
             ))
         }
 
-        (ParquetTimeUnit::MILLIS(_), TimeUnit::Microsecond) => {
+        (ParquetTimeUnit::Milliseconds, TimeUnit::Microsecond) => {
             dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
                 pages,
                 data_type,
@@ -385,7 +381,7 @@ fn timestamp_dict<'a, K: DictionaryKey, I: 'a + DataPages>(
                 |x: i64| x * 1_000,
             ))
         }
-        (ParquetTimeUnit::MICROS(_), TimeUnit::Microsecond) => {
+        (ParquetTimeUnit::Microseconds, TimeUnit::Microsecond) => {
             dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
                 pages,
                 data_type,
@@ -393,7 +389,7 @@ fn timestamp_dict<'a, K: DictionaryKey, I: 'a + DataPages>(
                 |x: i64| x,
             ))
         }
-        (ParquetTimeUnit::NANOS(_), TimeUnit::Microsecond) => {
+        (ParquetTimeUnit::Nanoseconds, TimeUnit::Microsecond) => {
             dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
                 pages,
                 data_type,
@@ -402,7 +398,7 @@ fn timestamp_dict<'a, K: DictionaryKey, I: 'a + DataPages>(
             ))
         }
 
-        (ParquetTimeUnit::MILLIS(_), TimeUnit::Nanosecond) => {
+        (ParquetTimeUnit::Milliseconds, TimeUnit::Nanosecond) => {
             dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
                 pages,
                 data_type,
@@ -410,7 +406,7 @@ fn timestamp_dict<'a, K: DictionaryKey, I: 'a + DataPages>(
                 |x: i64| x * 1_000_000,
             ))
         }
-        (ParquetTimeUnit::MICROS(_), TimeUnit::Nanosecond) => {
+        (ParquetTimeUnit::Microseconds, TimeUnit::Nanosecond) => {
             dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
                 pages,
                 data_type,
@@ -418,7 +414,7 @@ fn timestamp_dict<'a, K: DictionaryKey, I: 'a + DataPages>(
                 |x: i64| x * 1_000,
             ))
         }
-        (ParquetTimeUnit::NANOS(_), TimeUnit::Nanosecond) => {
+        (ParquetTimeUnit::Nanoseconds, TimeUnit::Nanosecond) => {
             dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
                 pages,
                 data_type,
@@ -432,7 +428,7 @@ fn timestamp_dict<'a, K: DictionaryKey, I: 'a + DataPages>(
 fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
     iter: I,
     physical_type: &PhysicalType,
-    logical_type: &Option<LogicalType>,
+    logical_type: &Option<PrimitiveLogicalType>,
     data_type: DataType,
     chunk_size: usize,
 ) -> Result<ArrayIter<'a>> {

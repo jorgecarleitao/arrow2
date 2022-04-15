@@ -17,6 +17,7 @@ use crate::{
 };
 
 use self::nested_utils::{InitNested, NestedArrayIter, NestedState};
+use parquet2::schema::types::PrimitiveType;
 use simple::page_iter_to_arrays;
 
 use super::*;
@@ -27,7 +28,7 @@ pub fn get_page_iterator<R: Read + Seek>(
     reader: R,
     pages_filter: Option<PageFilter>,
     buffer: Vec<u8>,
-) -> Result<PageIterator<R>> {
+) -> Result<PageReader<R>> {
     Ok(_get_page_iterator(
         column_metadata,
         reader,
@@ -76,7 +77,7 @@ fn create_list(
 
 fn columns_to_iter_recursive<'a, I: 'a>(
     mut columns: Vec<I>,
-    mut types: Vec<&ParquetType>,
+    mut types: Vec<&PrimitiveType>,
     field: Field,
     mut init: Vec<InitNested>,
     chunk_size: usize,
@@ -238,7 +239,7 @@ fn field_to_init(field: &Field) -> Vec<InitNested> {
 /// The arrays are guaranteed to be at most of size `chunk_size` and data type `field.data_type`.
 pub fn column_iter_to_arrays<'a, I: 'a>(
     columns: Vec<I>,
-    types: Vec<&ParquetType>,
+    types: Vec<&PrimitiveType>,
     field: Field,
     chunk_size: usize,
 ) -> Result<ArrayIter<'a>>

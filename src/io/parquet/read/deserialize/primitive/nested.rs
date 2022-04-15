@@ -81,31 +81,31 @@ where
 
     fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
         let is_optional =
-            page.descriptor().type_().get_basic_info().repetition() == &Repetition::Optional;
+            page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
+        let is_filtered = page.selected_rows().is_some();
 
-        match (page.encoding(), page.dictionary_page(), is_optional) {
-            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false) => {
+        match (
+            page.encoding(),
+            page.dictionary_page(),
+            is_optional,
+            is_filtered,
+        ) {
+            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false, false) => {
                 let dict = dict.as_any().downcast_ref().unwrap();
                 Ok(State::RequiredDictionary(ValuesDictionary::new(page, dict)))
             }
-            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
+            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true, false) => {
                 let dict = dict.as_any().downcast_ref().unwrap();
                 Ok(State::OptionalDictionary(
                     Optional::new(page),
                     ValuesDictionary::new(page, dict),
                 ))
             }
-            (Encoding::Plain, _, true) => {
+            (Encoding::Plain, _, true, false) => {
                 Ok(State::Optional(Optional::new(page), Values::new::<P>(page)))
             }
-            (Encoding::Plain, _, false) => Ok(State::Required(Values::new::<P>(page))),
-            _ => Err(utils::not_implemented(
-                &page.encoding(),
-                is_optional,
-                false,
-                "any",
-                "Primitive",
-            )),
+            (Encoding::Plain, _, false, false) => Ok(State::Required(Values::new::<P>(page))),
+            _ => Err(utils::not_implemented(page)),
         }
     }
 
@@ -120,20 +120,15 @@ where
         &self,
         state: &mut Self::State,
         decoded: &mut Self::DecodedState,
-        remaining: usize,
+        additional: usize,
     ) {
         let (values, validity) = decoded;
         match state {
             State::Optional(page_validity, page_values) => {
-                let max_def = page_validity.max_def();
-                read_optional_values(
-                    page_validity.definition_levels.by_ref(),
-                    max_def,
-                    page_values.values.by_ref().map(decode).map(self.op),
-                    values,
-                    validity,
-                    remaining,
-                )
+                let items = page_validity.by_ref().take(additional);
+                let items = Zip::new(items, page_values.values.by_ref().map(decode).map(self.op));
+
+                read_optional_values(items, values, validity)
             }
             State::Required(page) => {
                 values.extend(
@@ -141,24 +136,20 @@ where
                         .by_ref()
                         .map(decode)
                         .map(self.op)
-                        .take(remaining),
+                        .take(additional),
                 );
             }
             State::RequiredDictionary(page) => {
                 let op1 = |index: u32| page.dict[index as usize];
-                values.extend(page.values.by_ref().map(op1).map(self.op).take(remaining));
+                values.extend(page.values.by_ref().map(op1).map(self.op).take(additional));
             }
             State::OptionalDictionary(page_validity, page_values) => {
-                let max_def = page_validity.max_def();
                 let op1 = |index: u32| page_values.dict[index as usize];
-                read_optional_values(
-                    page_validity.definition_levels.by_ref(),
-                    max_def,
-                    page_values.values.by_ref().map(op1).map(self.op),
-                    values,
-                    validity,
-                    remaining,
-                )
+
+                let items = page_validity.by_ref().take(additional);
+                let items = Zip::new(items, page_values.values.by_ref().map(op1).map(self.op));
+
+                read_optional_values(items, values, validity)
             }
         }
     }

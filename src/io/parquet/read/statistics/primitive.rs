@@ -1,14 +1,14 @@
-use crate::datatypes::TimeUnit;
-use crate::{datatypes::DataType, types::NativeType};
-use parquet2::schema::types::{
-    LogicalType, ParquetType, TimeUnit as ParquetTimeUnit, TimestampType,
-};
-use parquet2::statistics::PrimitiveStatistics as ParquetPrimitiveStatistics;
-use parquet2::types::NativeType as ParquetNativeType;
 use std::any::Any;
 
-use super::Statistics;
+use parquet2::schema::types::{PrimitiveLogicalType, PrimitiveType, TimeUnit as ParquetTimeUnit};
+use parquet2::statistics::PrimitiveStatistics as ParquetPrimitiveStatistics;
+use parquet2::types::NativeType as ParquetNativeType;
+
+use crate::datatypes::TimeUnit;
 use crate::error::Result;
+use crate::{datatypes::DataType, types::NativeType};
+
+use super::Statistics;
 
 /// Arrow-deserialized parquet Statistics of a primitive type
 #[derive(Debug, Clone, PartialEq)]
@@ -74,35 +74,29 @@ pub(super) fn statistics_from_i32(
     })
 }
 
-fn timestamp(type_: &ParquetType, time_unit: TimeUnit, x: i64) -> i64 {
-    let logical_type = if let ParquetType::PrimitiveType { logical_type, .. } = type_ {
-        logical_type
-    } else {
-        unreachable!()
-    };
-
-    let unit = if let Some(LogicalType::TIMESTAMP(TimestampType { unit, .. })) = logical_type {
+fn timestamp(type_: &PrimitiveType, time_unit: TimeUnit, x: i64) -> i64 {
+    let unit = if let Some(PrimitiveLogicalType::Timestamp { unit, .. }) = &type_.logical_type {
         unit
     } else {
         return x;
     };
 
     match (unit, time_unit) {
-        (ParquetTimeUnit::MILLIS(_), TimeUnit::Second) => x / 1_000,
-        (ParquetTimeUnit::MICROS(_), TimeUnit::Second) => x / 1_000_000,
-        (ParquetTimeUnit::NANOS(_), TimeUnit::Second) => x * 1_000_000_000,
+        (ParquetTimeUnit::Milliseconds, TimeUnit::Second) => x / 1_000,
+        (ParquetTimeUnit::Microseconds, TimeUnit::Second) => x / 1_000_000,
+        (ParquetTimeUnit::Nanoseconds, TimeUnit::Second) => x * 1_000_000_000,
 
-        (ParquetTimeUnit::MILLIS(_), TimeUnit::Millisecond) => x,
-        (ParquetTimeUnit::MICROS(_), TimeUnit::Millisecond) => x / 1_000,
-        (ParquetTimeUnit::NANOS(_), TimeUnit::Millisecond) => x / 1_000_000,
+        (ParquetTimeUnit::Milliseconds, TimeUnit::Millisecond) => x,
+        (ParquetTimeUnit::Microseconds, TimeUnit::Millisecond) => x / 1_000,
+        (ParquetTimeUnit::Nanoseconds, TimeUnit::Millisecond) => x / 1_000_000,
 
-        (ParquetTimeUnit::MILLIS(_), TimeUnit::Microsecond) => x * 1_000,
-        (ParquetTimeUnit::MICROS(_), TimeUnit::Microsecond) => x,
-        (ParquetTimeUnit::NANOS(_), TimeUnit::Microsecond) => x / 1_000,
+        (ParquetTimeUnit::Milliseconds, TimeUnit::Microsecond) => x * 1_000,
+        (ParquetTimeUnit::Microseconds, TimeUnit::Microsecond) => x,
+        (ParquetTimeUnit::Nanoseconds, TimeUnit::Microsecond) => x / 1_000,
 
-        (ParquetTimeUnit::MILLIS(_), TimeUnit::Nanosecond) => x * 1_000_000,
-        (ParquetTimeUnit::MICROS(_), TimeUnit::Nanosecond) => x * 1_000,
-        (ParquetTimeUnit::NANOS(_), TimeUnit::Nanosecond) => x,
+        (ParquetTimeUnit::Milliseconds, TimeUnit::Nanosecond) => x * 1_000_000,
+        (ParquetTimeUnit::Microseconds, TimeUnit::Nanosecond) => x * 1_000,
+        (ParquetTimeUnit::Nanoseconds, TimeUnit::Nanosecond) => x,
     }
 }
 
@@ -121,10 +115,10 @@ pub(super) fn statistics_from_i64(
             distinct_count: stats.distinct_count,
             min_value: stats
                 .min_value
-                .map(|x| timestamp(stats.descriptor.type_(), time_unit, x)),
+                .map(|x| timestamp(&stats.primitive_type, time_unit, x)),
             max_value: stats
                 .max_value
-                .map(|x| timestamp(stats.descriptor.type_(), time_unit, x)),
+                .map(|x| timestamp(&stats.primitive_type, time_unit, x)),
         }),
         Decimal(_, _) => Box::new(PrimitiveStatistics::<i128>::from((stats, data_type))),
         _ => Box::new(PrimitiveStatistics::<i64>::from((stats, data_type))),

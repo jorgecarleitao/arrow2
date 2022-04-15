@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 
 use parquet2::{
+    deserialize::SliceFilteredIter,
     encoding::{hybrid_rle, Encoding},
     page::{DataPage, FixedLenByteArrayPageDict},
     schema::Repetition,
@@ -11,8 +12,9 @@ use crate::{
 };
 
 use super::super::utils::{
-    dict_indices_decoder, extend_from_decoder, next, not_implemented, split_buffer, DecodedState,
-    Decoder, MaybeNext, OptionalPageValidity, PageState, Pushable,
+    dict_indices_decoder, extend_from_decoder, get_selected_rows, next, not_implemented,
+    split_buffer, DecodedState, Decoder, FilteredOptionalPageValidity, MaybeNext,
+    OptionalPageValidity, PageState, Pushable,
 };
 use super::super::DataPages;
 use super::utils::FixedSizeBinary;
@@ -37,33 +39,59 @@ impl<'a> Optional<'a> {
 
 struct Required<'a> {
     pub values: std::slice::ChunksExact<'a, u8>,
-    pub remaining: usize,
 }
 
 impl<'a> Required<'a> {
     fn new(page: &'a DataPage, size: usize) -> Self {
-        Self {
-            values: page.buffer().chunks_exact(size),
-            remaining: page.num_values(),
-        }
+        let values = page.buffer();
+        assert_eq!(values.len() % size, 0);
+        let values = values.chunks_exact(size);
+        Self { values }
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.values.size_hint().0
+    }
+}
+
+struct FilteredRequired<'a> {
+    pub values: SliceFilteredIter<std::slice::ChunksExact<'a, u8>>,
+}
+
+impl<'a> FilteredRequired<'a> {
+    fn new(page: &'a DataPage, size: usize) -> Self {
+        let values = page.buffer();
+        assert_eq!(values.len() % size, 0);
+        let values = values.chunks_exact(size);
+
+        let rows = get_selected_rows(page);
+        let values = SliceFilteredIter::new(values, rows);
+
+        Self { values }
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.values.size_hint().0
     }
 }
 
 struct RequiredDictionary<'a> {
     pub values: hybrid_rle::HybridRleDecoder<'a>,
-    pub remaining: usize,
     dict: &'a FixedLenByteArrayPageDict,
 }
 
 impl<'a> RequiredDictionary<'a> {
     fn new(page: &'a DataPage, dict: &'a FixedLenByteArrayPageDict) -> Self {
-        let values = dict_indices_decoder(page.buffer(), page.num_values());
+        let values = dict_indices_decoder(page);
 
-        Self {
-            values,
-            remaining: page.num_values(),
-            dict,
-        }
+        Self { dict, values }
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.values.size_hint().0
     }
 }
 
@@ -75,9 +103,7 @@ struct OptionalDictionary<'a> {
 
 impl<'a> OptionalDictionary<'a> {
     fn new(page: &'a DataPage, dict: &'a FixedLenByteArrayPageDict) -> Self {
-        let (_, _, indices_buffer) = split_buffer(page);
-
-        let values = dict_indices_decoder(indices_buffer, page.num_values());
+        let values = dict_indices_decoder(page);
 
         Self {
             values,
@@ -92,15 +118,22 @@ enum State<'a> {
     Required(Required<'a>),
     RequiredDictionary(RequiredDictionary<'a>),
     OptionalDictionary(OptionalDictionary<'a>),
+    FilteredRequired(FilteredRequired<'a>),
+    FilteredOptional(
+        FilteredOptionalPageValidity<'a>,
+        std::slice::ChunksExact<'a, u8>,
+    ),
 }
 
 impl<'a> PageState<'a> for State<'a> {
     fn len(&self) -> usize {
         match self {
             State::Optional(state) => state.validity.len(),
-            State::Required(state) => state.remaining,
-            State::RequiredDictionary(state) => state.remaining,
+            State::Required(state) => state.len(),
+            State::RequiredDictionary(state) => state.len(),
             State::OptionalDictionary(state) => state.validity.len(),
+            State::FilteredRequired(state) => state.len(),
+            State::FilteredOptional(state, _) => state.len(),
         }
     }
 }
@@ -121,30 +154,45 @@ impl<'a> Decoder<'a> for BinaryDecoder {
 
     fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
         let is_optional =
-            page.descriptor().type_().get_basic_info().repetition() == &Repetition::Optional;
+            page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
+        let is_filtered = page.selected_rows().is_some();
 
-        match (page.encoding(), page.dictionary_page(), is_optional) {
-            (Encoding::Plain, None, true) => Ok(State::Optional(Optional::new(page, self.size))),
-            (Encoding::Plain, None, false) => Ok(State::Required(Required::new(page, self.size))),
-            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false) => {
+        match (
+            page.encoding(),
+            page.dictionary_page(),
+            is_optional,
+            is_filtered,
+        ) {
+            (Encoding::Plain, None, true, false) => {
+                Ok(State::Optional(Optional::new(page, self.size)))
+            }
+            (Encoding::Plain, None, false, false) => {
+                Ok(State::Required(Required::new(page, self.size)))
+            }
+            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false, false) => {
                 Ok(State::RequiredDictionary(RequiredDictionary::new(
                     page,
                     dict.as_any().downcast_ref().unwrap(),
                 )))
             }
-            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
+            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true, false) => {
                 Ok(State::OptionalDictionary(OptionalDictionary::new(
                     page,
                     dict.as_any().downcast_ref().unwrap(),
                 )))
             }
-            _ => Err(not_implemented(
-                &page.encoding(),
-                is_optional,
-                false,
-                "any",
-                "FixedBinary",
+            (Encoding::Plain, None, false, true) => Ok(State::FilteredRequired(
+                FilteredRequired::new(page, self.size),
             )),
+            (Encoding::Plain, _, true, true) => {
+                let (_, _, values) = split_buffer(page);
+
+                Ok(State::FilteredOptional(
+                    FilteredOptionalPageValidity::new(page),
+                    values.chunks_exact(self.size),
+                ))
+            }
+            _ => Err(not_implemented(page)),
         }
     }
 
@@ -172,7 +220,11 @@ impl<'a> Decoder<'a> for BinaryDecoder {
                 &mut page.values,
             ),
             State::Required(page) => {
-                page.remaining -= remaining;
+                for x in page.values.by_ref().take(remaining) {
+                    values.push(x)
+                }
+            }
+            State::FilteredRequired(page) => {
                 for x in page.values.by_ref().take(remaining) {
                     values.push(x)
                 }
@@ -201,10 +253,18 @@ impl<'a> Decoder<'a> for BinaryDecoder {
                     &dict_values[index * size..(index + 1) * size]
                 };
 
-                page.remaining -= remaining;
                 for x in page.values.by_ref().map(op).take(remaining) {
                     values.push(x)
                 }
+            }
+            State::FilteredOptional(page_validity, page_values) => {
+                extend_from_decoder(
+                    validity,
+                    page_validity,
+                    Some(remaining),
+                    values,
+                    page_values.by_ref(),
+                );
             }
         }
     }

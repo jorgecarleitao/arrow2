@@ -1,17 +1,18 @@
 use parquet2::{
     encoding::Encoding,
-    metadata::ColumnDescriptor,
+    metadata::Descriptor,
     page::DataPage,
+    schema::types::PrimitiveType,
     statistics::{serialize_statistics, BinaryStatistics, ParquetStatistics, Statistics},
-    write::WriteOptions,
 };
 
 use super::super::binary::{encode_delta, ord_binary};
 use super::super::utils;
+use super::super::WriteOptions;
 use crate::{
     array::{Array, Offset, Utf8Array},
     error::{ArrowError, Result},
-    io::parquet::read::is_type_nullable,
+    io::parquet::read::schema::is_nullable,
 };
 
 pub(crate) fn encode_plain<O: Offset>(
@@ -41,11 +42,11 @@ pub(crate) fn encode_plain<O: Offset>(
 pub fn array_to_page<O: Offset>(
     array: &Utf8Array<O>,
     options: WriteOptions,
-    descriptor: ColumnDescriptor,
+    descriptor: Descriptor,
     encoding: Encoding,
 ) -> Result<DataPage> {
     let validity = array.validity();
-    let is_optional = is_type_nullable(descriptor.type_());
+    let is_optional = is_nullable(&descriptor.primitive_type.field_info);
 
     let mut buffer = vec![];
     utils::write_def_levels(
@@ -77,13 +78,14 @@ pub fn array_to_page<O: Offset>(
     }
 
     let statistics = if options.write_statistics {
-        Some(build_statistics(array, descriptor.clone()))
+        Some(build_statistics(array, descriptor.primitive_type.clone()))
     } else {
         None
     };
 
     utils::build_plain_page(
         buffer,
+        array.len(),
         array.len(),
         array.null_count(),
         0,
@@ -95,12 +97,12 @@ pub fn array_to_page<O: Offset>(
     )
 }
 
-pub(super) fn build_statistics<O: Offset>(
+pub(crate) fn build_statistics<O: Offset>(
     array: &Utf8Array<O>,
-    descriptor: ColumnDescriptor,
+    primitive_type: PrimitiveType,
 ) -> ParquetStatistics {
     let statistics = &BinaryStatistics {
-        descriptor,
+        primitive_type,
         null_count: Some(array.null_count() as i64),
         distinct_count: None,
         max_value: array

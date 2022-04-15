@@ -1,4 +1,9 @@
-use crate::{bitmap::Bitmap, buffer::Buffer, datatypes::DataType, error::ArrowError};
+use crate::{
+    bitmap::{Bitmap, MutableBitmap},
+    buffer::Buffer,
+    datatypes::DataType,
+    error::ArrowError,
+};
 
 use super::Array;
 
@@ -273,6 +278,29 @@ impl FixedSizeBinaryArray {
         MutableFixedSizeBinaryArray::try_from_iter(iter, size)
             .unwrap()
             .into()
+    }
+
+    /// Creates a [`FixedSizeBinaryArray`] from a slice of arrays of bytes
+    pub fn from_slice<const N: usize, P: AsRef<[[u8; N]]>>(a: P) -> Self {
+        let values = a.as_ref().iter().flatten().copied().collect::<Vec<_>>();
+        Self::new(DataType::FixedSizeBinary(N), values.into(), None)
+    }
+
+    /// Creates a new [`FixedSizeBinaryArray`] from a slice of optional `[u8]`.
+    // Note: this can't be `impl From` because Rust does not allow double `AsRef` on it.
+    pub fn from<const N: usize, P: AsRef<[Option<[u8; N]>]>>(slice: P) -> Self {
+        let values = slice
+            .as_ref()
+            .iter()
+            .copied()
+            .flat_map(|x| x.unwrap_or([0; N]))
+            .collect::<Vec<_>>();
+        let validity = slice
+            .as_ref()
+            .iter()
+            .map(|x| x.is_some())
+            .collect::<MutableBitmap>();
+        Self::new(DataType::FixedSizeBinary(N), values.into(), validity.into())
     }
 }
 

@@ -7,6 +7,7 @@ use parquet2::{
 use crate::{array::Array, bitmap::MutableBitmap, error::Result};
 
 use super::super::DataPages;
+pub use super::utils::Zip;
 use super::utils::{split_buffer, DecodedState, Decoder, MaybeNext, Pushable};
 
 /// trait describing deserialized repetition and definition levels
@@ -203,31 +204,19 @@ impl Nested for NestedStruct {
     }
 }
 
-pub(super) fn read_optional_values<D, C, G, P>(
-    def_levels: D,
-    max_def: u32,
-    mut new_values: G,
-    values: &mut P,
-    validity: &mut MutableBitmap,
-    mut remaining: usize,
-) where
-    D: Iterator<Item = u32>,
-    G: Iterator<Item = C>,
+pub(super) fn read_optional_values<D, C, P>(items: D, values: &mut P, validity: &mut MutableBitmap)
+where
+    D: Iterator<Item = Option<C>>,
     C: Default,
     P: Pushable<C>,
 {
-    for def in def_levels {
-        if def == max_def {
-            values.push(new_values.next().unwrap());
+    for item in items {
+        if let Some(item) = item {
+            values.push(item);
             validity.push(true);
-            remaining -= 1;
-        } else if def == max_def - 1 {
-            values.push(C::default());
+        } else {
+            values.push_null();
             validity.push(false);
-            remaining -= 1;
-        }
-        if remaining == 0 {
-            break;
         }
     }
 }
@@ -283,8 +272,8 @@ impl<'a> NestedPage<'a> {
     pub fn new(page: &'a DataPage) -> Self {
         let (rep_levels, def_levels, _) = split_buffer(page);
 
-        let max_rep_level = page.descriptor().max_rep_level();
-        let max_def_level = page.descriptor().max_def_level();
+        let max_rep_level = page.descriptor.max_rep_level;
+        let max_def_level = page.descriptor.max_def_level;
 
         let reps =
             HybridRleDecoder::new(rep_levels, get_bit_width(max_rep_level), page.num_values());
@@ -440,37 +429,44 @@ fn extend_offsets2<'a>(page: &mut NestedPage<'a>, nested: &mut NestedState, addi
     }
 }
 
-// The state of an optional DataPage with a boolean physical type
 #[derive(Debug)]
 pub struct Optional<'a> {
-    pub definition_levels: HybridRleDecoder<'a>,
-    max_def: u32,
+    iter: HybridRleDecoder<'a>,
+    max: u32,
+}
+
+impl<'a> Iterator for Optional<'a> {
+    type Item = bool;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().and_then(|x| {
+            if x == self.max {
+                Some(true)
+            } else if x == self.max - 1 {
+                Some(false)
+            } else {
+                self.next()
+            }
+        })
+    }
 }
 
 impl<'a> Optional<'a> {
     pub fn new(page: &'a DataPage) -> Self {
         let (_, def_levels, _) = split_buffer(page);
 
-        let max_def = page.descriptor().max_def_level();
+        let max_def = page.descriptor.max_def_level;
 
         Self {
-            definition_levels: HybridRleDecoder::new(
-                def_levels,
-                get_bit_width(max_def),
-                page.num_values(),
-            ),
-            max_def: max_def as u32,
+            iter: HybridRleDecoder::new(def_levels, get_bit_width(max_def), page.num_values()),
+            max: max_def as u32,
         }
     }
 
     #[inline]
     pub fn len(&self) -> usize {
-        self.definition_levels.size_hint().0
-    }
-
-    #[inline]
-    pub fn max_def(&self) -> u32 {
-        self.max_def
+        unreachable!();
     }
 }
 

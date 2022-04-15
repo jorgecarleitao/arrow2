@@ -1,29 +1,37 @@
 use parquet2::{
     encoding::{hybrid_rle::encode_u32, Encoding},
-    metadata::ColumnDescriptor,
+    metadata::Descriptor,
     page::{EncodedDictPage, EncodedPage},
-    write::{DynIter, WriteOptions},
+    statistics::ParquetStatistics,
+    write::DynIter,
 };
 
+use super::binary::build_statistics as binary_build_statistics;
 use super::binary::encode_plain as binary_encode_plain;
+use super::fixed_len_bytes::build_statistics as fixed_binary_build_statistics;
 use super::fixed_len_bytes::encode_plain as fixed_binary_encode_plain;
+use super::primitive::build_statistics as primitive_build_statistics;
 use super::primitive::encode_plain as primitive_encode_plain;
+use super::utf8::build_statistics as utf8_build_statistics;
 use super::utf8::encode_plain as utf8_encode_plain;
-use crate::array::{Array, DictionaryArray, DictionaryKey, PrimitiveArray};
+use super::WriteOptions;
 use crate::bitmap::Bitmap;
 use crate::datatypes::DataType;
 use crate::error::{ArrowError, Result};
-use crate::io::parquet::read::is_type_nullable;
 use crate::io::parquet::write::utils;
+use crate::{
+    array::{Array, DictionaryArray, DictionaryKey, PrimitiveArray},
+    io::parquet::read::schema::is_nullable,
+};
 
 fn encode_keys<K: DictionaryKey>(
     array: &PrimitiveArray<K>,
-    // todo: merge this to not discard values' validity
     validity: Option<&Bitmap>,
-    descriptor: ColumnDescriptor,
+    descriptor: Descriptor,
+    statistics: ParquetStatistics,
     options: WriteOptions,
 ) -> Result<EncodedPage> {
-    let is_optional = is_type_nullable(descriptor.type_());
+    let is_optional = is_nullable(&descriptor.primitive_type.field_info);
 
     let mut buffer = vec![];
 
@@ -94,10 +102,11 @@ fn encode_keys<K: DictionaryKey>(
     utils::build_plain_page(
         buffer,
         array.len(),
+        array.len(),
         array.null_count(),
         0,
         definition_levels_byte_length,
-        None,
+        Some(statistics),
         descriptor,
         options,
         Encoding::RleDictionary,
@@ -106,74 +115,83 @@ fn encode_keys<K: DictionaryKey>(
 }
 
 macro_rules! dyn_prim {
-    ($from:ty, $to:ty, $array:expr, $options:expr) => {{
+    ($from:ty, $to:ty, $array:expr, $options:expr, $descriptor:expr) => {{
         let values = $array.values().as_any().downcast_ref().unwrap();
 
         let mut buffer = vec![];
         primitive_encode_plain::<$from, $to>(values, false, &mut buffer);
-        EncodedDictPage::new(buffer, values.len())
+        (
+            EncodedDictPage::new(buffer, values.len()),
+            primitive_build_statistics::<$from, $to>(values, $descriptor.primitive_type.clone()),
+        )
     }};
 }
 
 pub fn array_to_pages<K: DictionaryKey>(
     array: &DictionaryArray<K>,
-    descriptor: ColumnDescriptor,
+    descriptor: Descriptor,
     options: WriteOptions,
     encoding: Encoding,
 ) -> Result<DynIter<'static, Result<EncodedPage>>> {
     match encoding {
         Encoding::PlainDictionary | Encoding::RleDictionary => {
             // write DictPage
-            let dict_page = match array.values().data_type().to_logical_type() {
-                DataType::Int8 => dyn_prim!(i8, i32, array, options),
-                DataType::Int16 => dyn_prim!(i16, i32, array, options),
+            let (dict_page, statistics) = match array.values().data_type().to_logical_type() {
+                DataType::Int8 => dyn_prim!(i8, i32, array, options, descriptor),
+                DataType::Int16 => dyn_prim!(i16, i32, array, options, descriptor),
                 DataType::Int32 | DataType::Date32 | DataType::Time32(_) => {
-                    dyn_prim!(i32, i32, array, options)
+                    dyn_prim!(i32, i32, array, options, descriptor)
                 }
                 DataType::Int64
                 | DataType::Date64
                 | DataType::Time64(_)
                 | DataType::Timestamp(_, _)
-                | DataType::Duration(_) => dyn_prim!(i64, i64, array, options),
-                DataType::UInt8 => dyn_prim!(u8, i32, array, options),
-                DataType::UInt16 => dyn_prim!(u16, i32, array, options),
-                DataType::UInt32 => dyn_prim!(u32, i32, array, options),
-                DataType::UInt64 => dyn_prim!(i64, i64, array, options),
-                DataType::Float32 => dyn_prim!(f32, f32, array, options),
-                DataType::Float64 => dyn_prim!(f64, f64, array, options),
+                | DataType::Duration(_) => dyn_prim!(i64, i64, array, options, descriptor),
+                DataType::UInt8 => dyn_prim!(u8, i32, array, options, descriptor),
+                DataType::UInt16 => dyn_prim!(u16, i32, array, options, descriptor),
+                DataType::UInt32 => dyn_prim!(u32, i32, array, options, descriptor),
+                DataType::UInt64 => dyn_prim!(i64, i64, array, options, descriptor),
+                DataType::Float32 => dyn_prim!(f32, f32, array, options, descriptor),
+                DataType::Float64 => dyn_prim!(f64, f64, array, options, descriptor),
                 DataType::Utf8 => {
-                    let values = array.values().as_any().downcast_ref().unwrap();
+                    let array = array.values().as_any().downcast_ref().unwrap();
 
                     let mut buffer = vec![];
-                    utf8_encode_plain::<i32>(values, false, &mut buffer);
-                    EncodedDictPage::new(buffer, values.len())
+                    utf8_encode_plain::<i32>(array, false, &mut buffer);
+                    let stats = utf8_build_statistics(array, descriptor.primitive_type.clone());
+                    (EncodedDictPage::new(buffer, array.len()), stats)
                 }
                 DataType::LargeUtf8 => {
-                    let values = array.values().as_any().downcast_ref().unwrap();
+                    let array = array.values().as_any().downcast_ref().unwrap();
 
                     let mut buffer = vec![];
-                    utf8_encode_plain::<i64>(values, false, &mut buffer);
-                    EncodedDictPage::new(buffer, values.len())
+                    utf8_encode_plain::<i64>(array, false, &mut buffer);
+                    let stats = utf8_build_statistics(array, descriptor.primitive_type.clone());
+                    (EncodedDictPage::new(buffer, array.len()), stats)
                 }
                 DataType::Binary => {
-                    let values = array.values().as_any().downcast_ref().unwrap();
+                    let array = array.values().as_any().downcast_ref().unwrap();
 
                     let mut buffer = vec![];
-                    binary_encode_plain::<i32>(values, false, &mut buffer);
-                    EncodedDictPage::new(buffer, values.len())
+                    binary_encode_plain::<i32>(array, false, &mut buffer);
+                    let stats = binary_build_statistics(array, descriptor.primitive_type.clone());
+                    (EncodedDictPage::new(buffer, array.len()), stats)
                 }
                 DataType::LargeBinary => {
-                    let values = array.values().as_any().downcast_ref().unwrap();
+                    let array = array.values().as_any().downcast_ref().unwrap();
 
                     let mut buffer = vec![];
-                    binary_encode_plain::<i64>(values, false, &mut buffer);
-                    EncodedDictPage::new(buffer, values.len())
+                    binary_encode_plain::<i64>(array, false, &mut buffer);
+                    let stats = binary_build_statistics(array, descriptor.primitive_type.clone());
+                    (EncodedDictPage::new(buffer, array.len()), stats)
                 }
                 DataType::FixedSizeBinary(_) => {
                     let mut buffer = vec![];
                     let array = array.values().as_any().downcast_ref().unwrap();
                     fixed_binary_encode_plain(array, false, &mut buffer);
-                    EncodedDictPage::new(buffer, array.len())
+                    let stats =
+                        fixed_binary_build_statistics(array, descriptor.primitive_type.clone());
+                    (EncodedDictPage::new(buffer, array.len()), stats)
                 }
                 other => {
                     return Err(ArrowError::NotYetImplemented(format!(
@@ -185,8 +203,13 @@ pub fn array_to_pages<K: DictionaryKey>(
             let dict_page = EncodedPage::Dict(dict_page);
 
             // write DataPage pointing to DictPage
-            let data_page =
-                encode_keys(array.keys(), array.values().validity(), descriptor, options)?;
+            let data_page = encode_keys(
+                array.keys(),
+                array.values().validity(),
+                descriptor,
+                statistics,
+                options,
+            )?;
 
             let iter = std::iter::once(Ok(dict_page)).chain(std::iter::once(Ok(data_page)));
             Ok(DynIter::new(Box::new(iter)))

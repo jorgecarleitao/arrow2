@@ -1,6 +1,8 @@
 use std::collections::VecDeque;
 
-use parquet2::{encoding::Encoding, page::DataPage, schema::Repetition};
+use parquet2::{
+    deserialize::SliceFilteredIter, encoding::Encoding, page::DataPage, schema::Repetition,
+};
 
 use crate::{
     array::BooleanArray,
@@ -11,25 +13,19 @@ use crate::{
 
 use super::super::utils;
 use super::super::utils::{
-    extend_from_decoder, next, split_buffer, DecodedState, Decoder, MaybeNext, OptionalPageValidity,
+    extend_from_decoder, get_selected_rows, next, split_buffer, DecodedState, Decoder,
+    FilteredOptionalPageValidity, MaybeNext, OptionalPageValidity,
 };
 use super::super::DataPages;
 
-// The state of an optional DataPage with a boolean physical type
 #[derive(Debug)]
-struct Optional<'a> {
-    values: BitmapIter<'a>,
-    validity: OptionalPageValidity<'a>,
-}
+struct Values<'a>(BitmapIter<'a>);
 
-impl<'a> Optional<'a> {
+impl<'a> Values<'a> {
     pub fn new(page: &'a DataPage) -> Self {
-        let (_, _, values_buffer) = split_buffer(page);
+        let (_, _, values) = split_buffer(page);
 
-        Self {
-            values: BitmapIter::new(values_buffer, 0, values_buffer.len() * 8),
-            validity: OptionalPageValidity::new(page),
-        }
+        Self(BitmapIter::new(values, 0, values.len() * 8))
     }
 }
 
@@ -52,18 +48,44 @@ impl<'a> Required<'a> {
     }
 }
 
+#[derive(Debug)]
+struct FilteredRequired<'a> {
+    values: SliceFilteredIter<BitmapIter<'a>>,
+}
+
+impl<'a> FilteredRequired<'a> {
+    pub fn new(page: &'a DataPage) -> Self {
+        // todo: replace this by an iterator over slices, for faster deserialization
+        let values = BitmapIter::new(page.buffer(), 0, page.num_values());
+
+        let rows = get_selected_rows(page);
+        let values = SliceFilteredIter::new(values, rows);
+
+        Self { values }
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.values.size_hint().0
+    }
+}
+
 // The state of a `DataPage` of `Boolean` parquet boolean type
 #[derive(Debug)]
 enum State<'a> {
-    Optional(Optional<'a>),
+    Optional(OptionalPageValidity<'a>, Values<'a>),
     Required(Required<'a>),
+    FilteredRequired(FilteredRequired<'a>),
+    FilteredOptional(FilteredOptionalPageValidity<'a>, Values<'a>),
 }
 
 impl<'a> State<'a> {
     pub fn len(&self) -> usize {
         match self {
-            State::Optional(page) => page.validity.len(),
+            State::Optional(validity, _) => validity.len(),
             State::Required(page) => page.length - page.offset,
+            State::FilteredRequired(page) => page.len(),
+            State::FilteredOptional(optional, _) => optional.len(),
         }
     }
 }
@@ -89,18 +111,23 @@ impl<'a> Decoder<'a> for BooleanDecoder {
 
     fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
         let is_optional =
-            page.descriptor().type_().get_basic_info().repetition() == &Repetition::Optional;
+            page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
+        let is_filtered = page.selected_rows().is_some();
 
-        match (page.encoding(), is_optional) {
-            (Encoding::Plain, true) => Ok(State::Optional(Optional::new(page))),
-            (Encoding::Plain, false) => Ok(State::Required(Required::new(page))),
-            _ => Err(utils::not_implemented(
-                &page.encoding(),
-                is_optional,
-                false,
-                "any",
-                "Boolean",
+        match (page.encoding(), is_optional, is_filtered) {
+            (Encoding::Plain, true, false) => Ok(State::Optional(
+                OptionalPageValidity::new(page),
+                Values::new(page),
             )),
+            (Encoding::Plain, false, false) => Ok(State::Required(Required::new(page))),
+            (Encoding::Plain, true, true) => Ok(State::FilteredOptional(
+                FilteredOptionalPageValidity::new(page),
+                Values::new(page),
+            )),
+            (Encoding::Plain, false, true) => {
+                Ok(State::FilteredRequired(FilteredRequired::new(page)))
+            }
+            _ => Err(utils::not_implemented(page)),
         }
     }
 
@@ -119,17 +146,32 @@ impl<'a> Decoder<'a> for BooleanDecoder {
     ) {
         let (values, validity) = decoded;
         match state {
-            State::Optional(page) => extend_from_decoder(
+            State::Optional(page_validity, page_values) => extend_from_decoder(
                 validity,
-                &mut page.validity,
+                page_validity,
                 Some(remaining),
                 values,
-                &mut page.values,
+                &mut page_values.0,
             ),
             State::Required(page) => {
                 let remaining = remaining.min(page.length - page.offset);
                 values.extend_from_slice(page.values, page.offset, remaining);
                 page.offset += remaining;
+            }
+            State::FilteredRequired(page) => {
+                values.reserve(remaining);
+                for item in page.values.by_ref().take(remaining) {
+                    values.push(item)
+                }
+            }
+            State::FilteredOptional(page_validity, page_values) => {
+                utils::extend_from_decoder(
+                    validity,
+                    page_validity,
+                    Some(remaining),
+                    values,
+                    page_values.0.by_ref(),
+                );
             }
         }
     }

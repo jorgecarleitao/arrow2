@@ -28,7 +28,3 @@ pub fn infer_schema(file_metadata: &FileMetaData) -> Result<Schema> {
         Schema { fields, metadata }
     }))
 }
-
-pub(crate) fn is_type_nullable(type_: &ParquetType) -> bool {
-    is_nullable(type_.get_basic_info())
-}

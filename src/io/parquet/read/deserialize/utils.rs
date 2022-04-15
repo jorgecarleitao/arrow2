@@ -1,9 +1,12 @@
 use std::collections::VecDeque;
-use std::convert::TryInto;
 
-use parquet2::encoding::{hybrid_rle, Encoding};
+use parquet2::deserialize::{
+    FilteredHybridEncoded, FilteredHybridRleDecoderIter, HybridDecoderBitmapIter, HybridEncoded,
+};
+use parquet2::encoding::hybrid_rle;
+use parquet2::indexes::Interval;
 use parquet2::page::{split_buffer as _split_buffer, DataPage};
-use streaming_iterator::{convert, Convert, StreamingIterator};
+use parquet2::schema::Repetition;
 
 use crate::bitmap::utils::BitmapIter;
 use crate::bitmap::MutableBitmap;
@@ -11,51 +14,29 @@ use crate::error::ArrowError;
 
 use super::super::DataPages;
 
-#[derive(Debug)]
-pub struct BinaryIter<'a> {
-    values: &'a [u8],
-}
-
-impl<'a> BinaryIter<'a> {
-    pub fn new(values: &'a [u8]) -> Self {
-        Self { values }
-    }
-}
-
-impl<'a> Iterator for BinaryIter<'a> {
-    type Item = &'a [u8];
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.values.is_empty() {
-            return None;
-        }
-        let length = u32::from_le_bytes(self.values[0..4].try_into().unwrap()) as usize;
-        self.values = &self.values[4..];
-        let result = &self.values[..length];
-        self.values = &self.values[length..];
-        Some(result)
-    }
-}
-
-pub fn not_implemented(
-    encoding: &Encoding,
-    is_optional: bool,
-    has_dict: bool,
-    version: &str,
-    physical_type: &str,
-) -> ArrowError {
+pub fn not_implemented(page: &DataPage) -> ArrowError {
+    let is_optional = page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
+    let is_filtered = page.selected_rows().is_some();
     let required = if is_optional { "optional" } else { "required" };
-    let dict = if has_dict { ", dictionary-encoded" } else { "" };
+    let is_filtered = if is_filtered { ", index-filtered" } else { "" };
+    let dict = if page.dictionary_page().is_some() {
+        ", dictionary-encoded"
+    } else {
+        ""
+    };
     ArrowError::NotYetImplemented(format!(
-        "Decoding \"{:?}\"-encoded{} {} {} pages is not yet implemented for {}",
-        encoding, dict, required, version, physical_type
+        "Decoding {:?} \"{:?}\"-encoded{} {} {} parquet pages",
+        page.descriptor.primitive_type.physical_type,
+        page.encoding(),
+        dict,
+        required,
+        is_filtered,
     ))
 }
 
 #[inline]
 pub fn split_buffer(page: &DataPage) -> (&[u8], &[u8], &[u8]) {
-    _split_buffer(page, page.descriptor())
+    _split_buffer(page)
 }
 
 /// A private trait representing structs that can receive elements.
@@ -111,43 +92,210 @@ impl<A: Copy + Default> Pushable<A> for Vec<A> {
     }
 }
 
-#[derive(Debug)]
-pub struct OptionalPageValidity<'a> {
-    validity: Convert<hybrid_rle::Decoder<'a>>,
-    // invariants:
-    // * run_offset < length
-    // * consumed < length
-    run_offset: usize,
-    consumed: usize,
-    length: usize,
+/// The state of a partially deserialized page
+pub(super) trait PageValidity<'a> {
+    fn next_limited(&mut self, limit: usize) -> Option<FilteredHybridEncoded<'a>>;
 }
 
-impl<'a> OptionalPageValidity<'a> {
-    #[inline]
+#[derive(Debug, Clone)]
+pub struct FilteredOptionalPageValidity<'a> {
+    iter: FilteredHybridRleDecoderIter<'a>,
+    current: Option<(FilteredHybridEncoded<'a>, usize)>,
+}
+
+impl<'a> FilteredOptionalPageValidity<'a> {
     pub fn new(page: &'a DataPage) -> Self {
         let (_, validity, _) = split_buffer(page);
 
-        let validity = convert(hybrid_rle::Decoder::new(validity, 1));
+        let iter = hybrid_rle::Decoder::new(validity, 1);
+        let iter = HybridDecoderBitmapIter::new(iter, page.num_values());
+        let selected_rows = get_selected_rows(page);
+        let iter = FilteredHybridRleDecoderIter::new(iter, selected_rows);
+
         Self {
-            validity,
-            run_offset: 0,
-            consumed: 0,
-            length: page.num_values(),
+            iter,
+            current: None,
         }
     }
 
-    #[inline]
     pub fn len(&self) -> usize {
-        self.length - self.consumed
+        self.iter.len()
+    }
+}
+
+pub fn get_selected_rows(page: &DataPage) -> VecDeque<Interval> {
+    page.selected_rows()
+        .unwrap_or(&[Interval::new(0, page.num_values())])
+        .iter()
+        .copied()
+        .collect()
+}
+
+impl<'a> PageValidity<'a> for FilteredOptionalPageValidity<'a> {
+    fn next_limited(&mut self, limit: usize) -> Option<FilteredHybridEncoded<'a>> {
+        let (run, own_offset) = if let Some((run, offset)) = self.current {
+            (run, offset)
+        } else {
+            // a new run
+            let run = self.iter.next()?; // no run -> None
+            self.current = Some((run, 0));
+            return self.next_limited(limit);
+        };
+
+        match run {
+            FilteredHybridEncoded::Bitmap {
+                values,
+                offset,
+                length,
+            } => {
+                let run_length = length - own_offset;
+
+                let length = limit.min(run_length);
+
+                if length == run_length {
+                    self.current = None;
+                } else {
+                    self.current = Some((run, own_offset + length));
+                }
+
+                Some(FilteredHybridEncoded::Bitmap {
+                    values,
+                    offset,
+                    length,
+                })
+            }
+            FilteredHybridEncoded::Repeated { is_set, length } => {
+                let run_length = length - own_offset;
+
+                let length = limit.min(run_length);
+
+                if length == run_length {
+                    self.current = None;
+                } else {
+                    self.current = Some((run, own_offset + length));
+                }
+
+                Some(FilteredHybridEncoded::Repeated { is_set, length })
+            }
+            FilteredHybridEncoded::Skipped(set) => {
+                self.current = None;
+                Some(FilteredHybridEncoded::Skipped(set))
+            }
+        }
+    }
+}
+
+pub struct Zip<V, I> {
+    validity: V,
+    values: I,
+}
+
+impl<V, I> Zip<V, I> {
+    pub fn new(validity: V, values: I) -> Self {
+        Self { validity, values }
+    }
+}
+
+impl<T, V: Iterator<Item = bool>, I: Iterator<Item = T>> Iterator for Zip<V, I> {
+    type Item = Option<T>;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.validity
+            .next()
+            .map(|x| if x { self.values.next() } else { None })
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.validity.size_hint()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct OptionalPageValidity<'a> {
+    iter: HybridDecoderBitmapIter<'a>,
+    current: Option<(HybridEncoded<'a>, usize)>,
+}
+
+impl<'a> OptionalPageValidity<'a> {
+    pub fn new(page: &'a DataPage) -> Self {
+        let (_, validity, _) = split_buffer(page);
+
+        let iter = hybrid_rle::Decoder::new(validity, 1);
+        let iter = HybridDecoderBitmapIter::new(iter, page.num_values());
+        Self {
+            iter,
+            current: None,
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.iter.len()
+            + self
+                .current
+                .as_ref()
+                .map(|(run, offset)| run.len() - offset)
+                .unwrap_or_default()
+    }
+
+    fn next_limited(&mut self, limit: usize) -> Option<FilteredHybridEncoded<'a>> {
+        let (run, offset) = if let Some((run, offset)) = self.current {
+            (run, offset)
+        } else {
+            // a new run
+            let run = self.iter.next()?; // no run -> None
+            self.current = Some((run, 0));
+            return self.next_limited(limit);
+        };
+
+        match run {
+            HybridEncoded::Bitmap(values, length) => {
+                let run_length = length - offset;
+
+                let length = limit.min(run_length);
+
+                if length == run_length {
+                    self.current = None;
+                } else {
+                    self.current = Some((run, offset + length));
+                }
+
+                Some(FilteredHybridEncoded::Bitmap {
+                    values,
+                    offset,
+                    length,
+                })
+            }
+            HybridEncoded::Repeated(is_set, run_length) => {
+                let run_length = run_length - offset;
+
+                let length = limit.min(run_length);
+
+                if length == run_length {
+                    self.current = None;
+                } else {
+                    self.current = Some((run, offset + length));
+                }
+
+                Some(FilteredHybridEncoded::Repeated { is_set, length })
+            }
+        }
+    }
+}
+
+impl<'a> PageValidity<'a> for OptionalPageValidity<'a> {
+    fn next_limited(&mut self, limit: usize) -> Option<FilteredHybridEncoded<'a>> {
+        self.next_limited(limit)
     }
 }
 
 /// Extends a [`Pushable`] from an iterator of non-null values and an hybrid-rle decoder
 pub(super) fn extend_from_decoder<'a, T: Default, P: Pushable<T>, I: Iterator<Item = T>>(
     validity: &mut MutableBitmap,
-    page_validity: &mut OptionalPageValidity<'a>,
+    page_validity: &mut dyn PageValidity<'a>,
     limit: Option<usize>,
-    values: &mut P,
+    pushable: &mut P,
     mut values_iter: I,
 ) {
     let limit = limit.unwrap_or(usize::MAX);
@@ -155,69 +303,42 @@ pub(super) fn extend_from_decoder<'a, T: Default, P: Pushable<T>, I: Iterator<It
     // todo: remove `consumed_here` and compute next limit from `consumed`
     let mut consumed_here = 0;
     while consumed_here < limit {
-        if page_validity.run_offset == 0 {
-            page_validity.validity.advance()
-        }
+        let run = page_validity.next_limited(limit);
+        let run = if let Some(run) = run { run } else { break };
 
-        if let Some(run) = page_validity.validity.get() {
-            match run {
-                hybrid_rle::HybridEncoded::Bitpacked(pack) => {
-                    // a pack has at most `pack.len() * 8` bits
-                    // during execution, we may end in the middle of a pack (run_offset != 0)
-                    // the remaining items in the pack is dictacted by a combination
-                    // of the page length, the offset in the pack, and where we are in the page
-                    let pack_size = pack.len() * 8 - page_validity.run_offset;
-                    let remaining = page_validity.length - page_validity.consumed;
-                    let length = std::cmp::min(pack_size, remaining);
+        match run {
+            FilteredHybridEncoded::Bitmap {
+                values,
+                offset,
+                length,
+            } => {
+                // consume `length` items
+                let iter = BitmapIter::new(values, offset, length);
+                let iter = Zip::new(iter, &mut values_iter);
 
-                    let additional = limit.min(length);
-
-                    // consume `additional` items
-                    let iter = BitmapIter::new(pack, page_validity.run_offset, additional);
-                    for is_valid in iter {
-                        if is_valid {
-                            values.push(values_iter.next().unwrap())
-                        } else {
-                            values.push_null()
-                        };
+                for item in iter {
+                    if let Some(item) = item {
+                        pushable.push(item)
+                    } else {
+                        pushable.push_null()
                     }
-
-                    validity.extend_from_slice(pack, page_validity.run_offset, additional);
-
-                    if additional == length {
-                        page_validity.run_offset = 0
-                    } else {
-                        page_validity.run_offset += additional;
-                    };
-                    consumed_here += additional;
-                    page_validity.consumed += additional;
                 }
-                &hybrid_rle::HybridEncoded::Rle(value, length) => {
-                    let is_set = value[0] == 1;
-                    let length = length - page_validity.run_offset;
+                validity.extend_from_slice(values, offset, length);
 
-                    // the number of elements that will be consumed in this (run, iteration)
-                    let additional = limit.min(length);
-
-                    validity.extend_constant(additional, is_set);
-                    if is_set {
-                        (0..additional).for_each(|_| values.push(values_iter.next().unwrap()));
-                    } else {
-                        values.extend_constant(additional, T::default());
-                    }
-
-                    if additional == length {
-                        page_validity.run_offset = 0
-                    } else {
-                        page_validity.run_offset += additional;
-                    };
-                    consumed_here += additional;
-                    page_validity.consumed += additional;
+                consumed_here += length;
+            }
+            FilteredHybridEncoded::Repeated { is_set, length } => {
+                validity.extend_constant(length, is_set);
+                if is_set {
+                    (0..length).for_each(|_| pushable.push(values_iter.next().unwrap()));
+                } else {
+                    pushable.extend_constant(length, T::default());
                 }
-            };
-        } else {
-            break;
-        }
+
+                consumed_here += length;
+            }
+            FilteredHybridEncoded::Skipped(valids) => for _ in values_iter.by_ref().take(valids) {},
+        };
     }
 }
 
@@ -335,14 +456,13 @@ pub(super) fn next<'a, I: DataPages, D: Decoder<'a>>(
 }
 
 #[inline]
-pub(super) fn dict_indices_decoder(
-    indices_buffer: &[u8],
-    additional: usize,
-) -> hybrid_rle::HybridRleDecoder {
+pub(super) fn dict_indices_decoder(page: &DataPage) -> hybrid_rle::HybridRleDecoder {
+    let (_, _, indices_buffer) = split_buffer(page);
+
     // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
     // SPEC: followed by the values encoded using RLE/Bit packed described above (with the given bit width).
     let bit_width = indices_buffer[0];
     let indices_buffer = &indices_buffer[1..];
 
-    hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, additional)
+    hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, page.num_values())
 }

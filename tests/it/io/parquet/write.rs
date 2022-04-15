@@ -49,12 +49,11 @@ fn round_trip(
 
     writer.start()?;
     for group in row_groups {
-        let (group, len) = group?;
-        writer.write(group, len)?;
+        writer.write(group?)?;
     }
-    let (_size, writer) = writer.end(None)?;
+    writer.end(None)?;
 
-    let data = writer.into_inner();
+    let data = writer.into_inner().into_inner();
 
     let (result, stats) = read_column(&mut Cursor::new(data), 0, "a1")?;
     assert_eq!(array.as_ref(), result.as_ref());
@@ -354,7 +353,7 @@ fn utf8_optional_v2_delta() -> Result<()> {
 #[test]
 fn i32_optional_v2_dict() -> Result<()> {
     round_trip(
-        "string_large",
+        "int32_dict",
         true,
         false,
         Version::V2,
@@ -366,7 +365,7 @@ fn i32_optional_v2_dict() -> Result<()> {
 #[test]
 fn i32_optional_v2_dict_compressed() -> Result<()> {
     round_trip(
-        "string_large",
+        "int32_dict",
         true,
         false,
         Version::V2,

@@ -1,6 +1,7 @@
 use std::{collections::VecDeque, sync::Arc};
 
 use parquet2::{
+    deserialize::SliceFilteredIter,
     encoding::{hybrid_rle::HybridRleDecoder, Encoding},
     page::{DataPage, DictPage},
     schema::Repetition,
@@ -13,75 +14,59 @@ use crate::{
 };
 
 use super::{
-    utils::{self, extend_from_decoder, DecodedState, Decoder, MaybeNext, OptionalPageValidity},
+    utils::{
+        self, dict_indices_decoder, extend_from_decoder, get_selected_rows, DecodedState, Decoder,
+        FilteredOptionalPageValidity, MaybeNext, OptionalPageValidity,
+    },
     DataPages,
 };
 
 // The state of a `DataPage` of `Primitive` parquet primitive type
 #[derive(Debug)]
-pub enum State<'a, K>
-where
-    K: DictionaryKey,
-{
-    Optional(Optional<'a, K>),
-    Required(Required<'a, K>),
-}
-
-#[inline]
-fn values_iter1<K>(
-    indices_buffer: &[u8],
-    additional: usize,
-) -> std::iter::Map<HybridRleDecoder, Box<dyn Fn(u32) -> K>>
-where
-    K: DictionaryKey,
-{
-    // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
-    // SPEC: followed by the values encoded using RLE/Bit packed described above (with the given bit width).
-    let bit_width = indices_buffer[0];
-    let indices_buffer = &indices_buffer[1..];
-
-    let new_indices = HybridRleDecoder::new(indices_buffer, bit_width as u32, additional);
-    new_indices.map(Box::new(|x| K::from_u32(x).unwrap()) as _)
+pub enum State<'a> {
+    Optional(Optional<'a>),
+    Required(Required<'a>),
+    FilteredRequired(FilteredRequired<'a>),
+    FilteredOptional(FilteredOptionalPageValidity<'a>, HybridRleDecoder<'a>),
 }
 
 #[derive(Debug)]
-pub struct Required<'a, K>
-where
-    K: DictionaryKey,
-{
-    values: std::iter::Map<HybridRleDecoder<'a>, Box<dyn Fn(u32) -> K + 'a>>,
+pub struct Required<'a> {
+    values: HybridRleDecoder<'a>,
 }
 
-impl<'a, K> Required<'a, K>
-where
-    K: DictionaryKey,
-{
+impl<'a> Required<'a> {
     fn new(page: &'a DataPage) -> Self {
-        let (_, _, indices_buffer) = utils::split_buffer(page);
+        let values = dict_indices_decoder(page);
+        Self { values }
+    }
+}
 
-        let values = values_iter1(indices_buffer, page.num_values());
+#[derive(Debug)]
+pub struct FilteredRequired<'a> {
+    values: SliceFilteredIter<HybridRleDecoder<'a>>,
+}
+
+impl<'a> FilteredRequired<'a> {
+    fn new(page: &'a DataPage) -> Self {
+        let values = dict_indices_decoder(page);
+
+        let rows = get_selected_rows(page);
+        let values = SliceFilteredIter::new(values, rows);
 
         Self { values }
     }
 }
 
 #[derive(Debug)]
-pub struct Optional<'a, K>
-where
-    K: DictionaryKey,
-{
-    values: std::iter::Map<HybridRleDecoder<'a>, Box<dyn Fn(u32) -> K + 'a>>,
+pub struct Optional<'a> {
+    values: HybridRleDecoder<'a>,
     validity: OptionalPageValidity<'a>,
 }
 
-impl<'a, K> Optional<'a, K>
-where
-    K: DictionaryKey,
-{
+impl<'a> Optional<'a> {
     fn new(page: &'a DataPage) -> Self {
-        let (_, _, indices_buffer) = utils::split_buffer(page);
-
-        let values = values_iter1(indices_buffer, page.num_values());
+        let values = dict_indices_decoder(page);
 
         Self {
             values,
@@ -90,14 +75,13 @@ where
     }
 }
 
-impl<'a, K> utils::PageState<'a> for State<'a, K>
-where
-    K: DictionaryKey,
-{
+impl<'a> utils::PageState<'a> for State<'a> {
     fn len(&self) -> usize {
         match self {
             State::Optional(optional) => optional.validity.len(),
             State::Required(required) => required.values.size_hint().0,
+            State::FilteredRequired(required) => required.values.size_hint().0,
+            State::FilteredOptional(validity, _) => validity.len(),
         }
     }
 }
@@ -126,27 +110,31 @@ impl<'a, K> utils::Decoder<'a> for PrimitiveDecoder<K>
 where
     K: DictionaryKey,
 {
-    type State = State<'a, K>;
+    type State = State<'a>;
     type DecodedState = (Vec<K>, MutableBitmap);
 
     fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
         let is_optional =
-            page.descriptor().type_().get_basic_info().repetition() == &Repetition::Optional;
+            page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
+        let is_filtered = page.selected_rows().is_some();
 
-        match (page.encoding(), is_optional) {
-            (Encoding::PlainDictionary | Encoding::RleDictionary, false) => {
+        match (page.encoding(), is_optional, is_filtered) {
+            (Encoding::PlainDictionary | Encoding::RleDictionary, false, false) => {
                 Ok(State::Required(Required::new(page)))
             }
-            (Encoding::PlainDictionary | Encoding::RleDictionary, true) => {
+            (Encoding::PlainDictionary | Encoding::RleDictionary, true, false) => {
                 Ok(State::Optional(Optional::new(page)))
             }
-            _ => Err(utils::not_implemented(
-                &page.encoding(),
-                is_optional,
-                false,
-                "any",
-                "Primitive",
-            )),
+            (Encoding::PlainDictionary | Encoding::RleDictionary, false, true) => {
+                Ok(State::FilteredRequired(FilteredRequired::new(page)))
+            }
+            (Encoding::PlainDictionary | Encoding::RleDictionary, true, true) => {
+                Ok(State::FilteredOptional(
+                    FilteredOptionalPageValidity::new(page),
+                    dict_indices_decoder(page),
+                ))
+            }
+            _ => Err(utils::not_implemented(page)),
         }
     }
 
@@ -170,10 +158,30 @@ where
                 &mut page.validity,
                 Some(remaining),
                 values,
-                &mut page.values,
+                &mut page.values.by_ref().map(|x| K::from_u32(x).unwrap()),
             ),
             State::Required(page) => {
-                values.extend(page.values.by_ref().take(remaining));
+                values.extend(
+                    page.values
+                        .by_ref()
+                        .map(|x| K::from_u32(x).unwrap())
+                        .take(remaining),
+                );
+            }
+            State::FilteredOptional(page_validity, page_values) => extend_from_decoder(
+                validity,
+                page_validity,
+                Some(remaining),
+                values,
+                &mut page_values.by_ref().map(|x| K::from_u32(x).unwrap()),
+            ),
+            State::FilteredRequired(page) => {
+                values.extend(
+                    page.values
+                        .by_ref()
+                        .map(|x| K::from_u32(x).unwrap())
+                        .take(remaining),
+                );
             }
         }
     }
@@ -233,7 +241,7 @@ pub(super) fn next_dict<
             };
 
             // there is a new page => consume the page from the start
-            let maybe_page = PrimitiveDecoder::default().build_state(page);
+            let maybe_page = PrimitiveDecoder::<K>::default().build_state(page);
             let page = match maybe_page {
                 Ok(page) => page,
                 Err(e) => return MaybeNext::Some(Err(e)),

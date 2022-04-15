@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 
 use parquet2::{
+    deserialize::SliceFilteredIter,
     encoding::{hybrid_rle, Encoding},
     page::{DataPage, PrimitivePageDict},
     schema::Repetition,
@@ -14,8 +15,32 @@ use crate::{
 };
 
 use super::super::utils;
-use super::super::utils::OptionalPageValidity;
+use super::super::utils::{get_selected_rows, FilteredOptionalPageValidity, OptionalPageValidity};
 use super::super::DataPages;
+
+#[derive(Debug)]
+struct FilteredRequiredValues<'a> {
+    values: SliceFilteredIter<std::slice::ChunksExact<'a, u8>>,
+}
+
+impl<'a> FilteredRequiredValues<'a> {
+    pub fn new<P: ParquetNativeType>(page: &'a DataPage) -> Self {
+        let (_, _, values) = utils::split_buffer(page);
+        assert_eq!(values.len() % std::mem::size_of::<P>(), 0);
+
+        let values = values.chunks_exact(std::mem::size_of::<P>());
+
+        let rows = get_selected_rows(page);
+        let values = SliceFilteredIter::new(values, rows);
+
+        Self { values }
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.values.size_hint().0
+    }
+}
 
 #[derive(Debug)]
 pub(super) struct Values<'a> {
@@ -51,8 +76,7 @@ where
     P: ParquetNativeType,
 {
     pub fn new(page: &'a DataPage, dict: &'a PrimitivePageDict<P>) -> Self {
-        let (_, _, indices_buffer) = utils::split_buffer(page);
-        let values = utils::dict_indices_decoder(indices_buffer, page.num_values());
+        let values = utils::dict_indices_decoder(page);
 
         Self {
             dict: dict.values(),
@@ -76,6 +100,8 @@ where
     Required(Values<'a>),
     RequiredDictionary(ValuesDictionary<'a, P>),
     OptionalDictionary(OptionalPageValidity<'a>, ValuesDictionary<'a, P>),
+    FilteredRequired(FilteredRequiredValues<'a>),
+    FilteredOptional(FilteredOptionalPageValidity<'a>, Values<'a>),
 }
 
 impl<'a, P> utils::PageState<'a> for State<'a, P>
@@ -88,6 +114,8 @@ where
             State::Required(values) => values.len(),
             State::RequiredDictionary(values) => values.len(),
             State::OptionalDictionary(optional, _) => optional.len(),
+            State::FilteredRequired(values) => values.len(),
+            State::FilteredOptional(optional, _) => optional.len(),
         }
     }
 }
@@ -137,14 +165,20 @@ where
 
     fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
         let is_optional =
-            page.descriptor().type_().get_basic_info().repetition() == &Repetition::Optional;
+            page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
+        let is_filtered = page.selected_rows().is_some();
 
-        match (page.encoding(), page.dictionary_page(), is_optional) {
-            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false) => {
+        match (
+            page.encoding(),
+            page.dictionary_page(),
+            is_optional,
+            is_filtered,
+        ) {
+            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false, false) => {
                 let dict = dict.as_any().downcast_ref().unwrap();
                 Ok(State::RequiredDictionary(ValuesDictionary::new(page, dict)))
             }
-            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
+            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true, false) => {
                 let dict = dict.as_any().downcast_ref().unwrap();
 
                 Ok(State::OptionalDictionary(
@@ -152,20 +186,21 @@ where
                     ValuesDictionary::new(page, dict),
                 ))
             }
-            (Encoding::Plain, _, true) => {
+            (Encoding::Plain, _, true, false) => {
                 let validity = OptionalPageValidity::new(page);
                 let values = Values::new::<P>(page);
 
                 Ok(State::Optional(validity, values))
             }
-            (Encoding::Plain, _, false) => Ok(State::Required(Values::new::<P>(page))),
-            _ => Err(utils::not_implemented(
-                &page.encoding(),
-                is_optional,
-                false,
-                "any",
-                "Primitive",
+            (Encoding::Plain, _, false, false) => Ok(State::Required(Values::new::<P>(page))),
+            (Encoding::Plain, _, false, true) => Ok(State::FilteredRequired(
+                FilteredRequiredValues::new::<P>(page),
             )),
+            (Encoding::Plain, _, true, true) => Ok(State::FilteredOptional(
+                FilteredOptionalPageValidity::new(page),
+                Values::new::<P>(page),
+            )),
+            _ => Err(utils::not_implemented(page)),
         }
     }
 
@@ -213,6 +248,24 @@ where
             State::RequiredDictionary(page) => {
                 let op1 = |index: u32| page.dict[index as usize];
                 values.extend(page.values.by_ref().map(op1).map(self.op).take(remaining));
+            }
+            State::FilteredRequired(page) => {
+                values.extend(
+                    page.values
+                        .by_ref()
+                        .map(decode)
+                        .map(self.op)
+                        .take(remaining),
+                );
+            }
+            State::FilteredOptional(page_validity, page_values) => {
+                utils::extend_from_decoder(
+                    validity,
+                    page_validity,
+                    Some(remaining),
+                    values,
+                    page_values.values.by_ref().map(decode).map(self.op),
+                );
             }
         }
     }

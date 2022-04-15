@@ -9,6 +9,7 @@ use arrow2::{
 use crate::io::ipc::read_gzip_json;
 
 mod read;
+mod read_indexes;
 mod write;
 mod write_async;
 
@@ -22,12 +23,18 @@ pub fn read_column<R: Read + Seek>(
     let metadata = read_metadata(&mut reader)?;
     let schema = infer_schema(&metadata)?;
 
+    // verify that we can read indexes
+    let _indexes = read_columns_indexes(
+        &mut reader,
+        metadata.row_groups[0].columns(),
+        &schema.fields,
+    )?;
+
     let column = schema
         .fields
         .iter()
         .enumerate()
-        .filter_map(|(i, f)| if f.name == column { Some(i) } else { None })
-        .next()
+        .find_map(|(i, f)| if f.name == column { Some(i) } else { None })
         .unwrap();
 
     let mut reader = FileReader::try_new(reader, Some(&[column]), None, None, None)?;
@@ -329,7 +336,7 @@ pub fn pyarrow_nullable(column: &str) -> Box<dyn Array> {
                 .collect::<Vec<_>>();
             Box::new(PrimitiveArray::<u32>::from(values))
         }
-        "string_large" => {
+        "int32_dict" => {
             let keys = PrimitiveArray::<i32>::from([Some(0), Some(1), None, Some(1)]);
             let values = Arc::new(PrimitiveArray::<i32>::from_slice([10, 200]));
             Box::new(DictionaryArray::<i32>::from_data(keys, values))
@@ -413,7 +420,13 @@ pub fn pyarrow_nullable_statistics(column: &str) -> Option<Box<dyn Statistics>> 
             min_value: Some(0),
             max_value: Some(9),
         }),
-        "string_large" => return None,
+        "int32_dict" => Box::new(PrimitiveStatistics {
+            data_type: DataType::Dictionary(IntegerType::Int32, Box::new(DataType::Int32), false),
+            null_count: Some(0),
+            distinct_count: None,
+            min_value: Some(10),
+            max_value: Some(200),
+        }),
         "decimal_9" => Box::new(PrimitiveStatistics::<i128> {
             distinct_count: None,
             null_count: Some(3),
@@ -716,12 +729,11 @@ fn integration_write(schema: &Schema, batches: &[Chunk<Arc<dyn Array>>]) -> Resu
 
     writer.start()?;
     for group in row_groups {
-        let (group, len) = group?;
-        writer.write(group, len)?;
+        writer.write(group?)?;
     }
-    let (_size, writer) = writer.end(None)?;
+    writer.end(None)?;
 
-    Ok(writer.into_inner())
+    Ok(writer.into_inner().into_inner())
 }
 
 type IntegrationRead = (Schema, Vec<Chunk<Arc<dyn Array>>>);

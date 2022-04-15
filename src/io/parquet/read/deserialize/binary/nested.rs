@@ -10,7 +10,7 @@ use crate::{
 use super::super::nested_utils::*;
 use super::super::utils::MaybeNext;
 use super::basic::ValuesDictionary;
-use super::utils::Binary;
+use super::utils::*;
 use super::{
     super::utils,
     basic::{finish, Required, TraitBinaryArray},
@@ -19,7 +19,7 @@ use super::{
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 enum State<'a> {
-    Optional(Optional<'a>, utils::BinaryIter<'a>),
+    Optional(Optional<'a>, BinaryIter<'a>),
     Required(Required<'a>),
     RequiredDictionary(ValuesDictionary<'a>),
     OptionalDictionary(Optional<'a>, ValuesDictionary<'a>),
@@ -29,7 +29,7 @@ impl<'a> utils::PageState<'a> for State<'a> {
     fn len(&self) -> usize {
         match self {
             State::Optional(validity, _) => validity.len(),
-            State::Required(state) => state.remaining,
+            State::Required(state) => state.len(),
             State::RequiredDictionary(required) => required.len(),
             State::OptionalDictionary(optional, _) => optional.len(),
         }
@@ -47,35 +47,35 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
 
     fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
         let is_optional =
-            page.descriptor().type_().get_basic_info().repetition() == &Repetition::Optional;
+            page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
+        let is_filtered = page.selected_rows().is_some();
 
-        match (page.encoding(), page.dictionary_page(), is_optional) {
-            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false) => {
+        match (
+            page.encoding(),
+            page.dictionary_page(),
+            is_optional,
+            is_filtered,
+        ) {
+            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false, false) => {
                 let dict = dict.as_any().downcast_ref().unwrap();
                 Ok(State::RequiredDictionary(ValuesDictionary::new(page, dict)))
             }
-            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true) => {
+            (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true, false) => {
                 let dict = dict.as_any().downcast_ref().unwrap();
                 Ok(State::OptionalDictionary(
                     Optional::new(page),
                     ValuesDictionary::new(page, dict),
                 ))
             }
-            (Encoding::Plain, None, true) => {
+            (Encoding::Plain, None, true, false) => {
                 let (_, _, values) = utils::split_buffer(page);
 
-                let values = utils::BinaryIter::new(values);
+                let values = BinaryIter::new(values);
 
                 Ok(State::Optional(Optional::new(page), values))
             }
-            (Encoding::Plain, None, false) => Ok(State::Required(Required::new(page))),
-            _ => Err(utils::not_implemented(
-                &page.encoding(),
-                is_optional,
-                false,
-                "any",
-                "Binary",
-            )),
+            (Encoding::Plain, None, false, false) => Ok(State::Required(Required::new(page))),
+            _ => Err(utils::not_implemented(page)),
         }
     }
 
@@ -95,18 +95,12 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
         let (values, validity) = decoded;
         match state {
             State::Optional(page_validity, page_values) => {
-                let max_def = page_validity.max_def();
-                read_optional_values(
-                    page_validity.definition_levels.by_ref(),
-                    max_def,
-                    page_values.by_ref(),
-                    values,
-                    validity,
-                    additional,
-                )
+                let items = page_validity.by_ref().take(additional);
+                let items = Zip::new(items, page_values.by_ref());
+
+                read_optional_values(items, values, validity)
             }
             State::Required(page) => {
-                page.remaining -= additional;
                 for x in page.values.by_ref().take(additional) {
                     values.push(x)
                 }
@@ -126,7 +120,6 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
                 }
             }
             State::OptionalDictionary(page_validity, page_values) => {
-                let max_def = page_validity.max_def();
                 let dict_values = page_values.dict.values();
                 let dict_offsets = page_values.dict.offsets();
 
@@ -136,14 +129,11 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
                     let dict_offset_ip1 = dict_offsets[index + 1] as usize;
                     &dict_values[dict_offset_i..dict_offset_ip1]
                 };
-                read_optional_values(
-                    page_validity.definition_levels.by_ref(),
-                    max_def,
-                    page_values.values.by_ref().map(op),
-                    values,
-                    validity,
-                    additional,
-                )
+
+                let items = page_validity.by_ref().take(additional);
+                let items = Zip::new(items, page_values.values.by_ref().map(op));
+
+                read_optional_values(items, values, validity)
             }
         }
     }

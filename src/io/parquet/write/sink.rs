@@ -1,16 +1,14 @@
-use crate::{
-    array::Array,
-    chunk::Chunk,
-    datatypes::Schema,
-    error::ArrowError,
-    io::parquet::write::{Encoding, SchemaDescriptor, WriteOptions},
-};
+use std::{collections::HashMap, pin::Pin, sync::Arc, task::Poll};
+
 use futures::{future::BoxFuture, AsyncWrite, FutureExt, Sink, TryFutureExt};
 use parquet2::metadata::KeyValue;
 use parquet2::write::FileStreamer;
-use std::{collections::HashMap, pin::Pin, sync::Arc, task::Poll};
+use parquet2::write::WriteOptions as ParquetWriteOptions;
+
+use crate::{array::Array, chunk::Chunk, datatypes::Schema, error::ArrowError};
 
 use super::file::add_arrow_schema;
+use super::{Encoding, SchemaDescriptor, WriteOptions};
 
 /// Sink that writes array [`chunks`](Chunk) as a Parquet file.
 ///
@@ -82,10 +80,17 @@ where
         encoding: Vec<Encoding>,
         options: WriteOptions,
     ) -> Result<Self, ArrowError> {
-        // let mut writer = FileStreamer::try_new(writer, schema.clone(), options)?;
         let parquet_schema = crate::io::parquet::write::to_parquet_schema(&schema)?;
         let created_by = Some("Arrow2 - Native Rust implementation of Arrow".to_string());
-        let mut writer = FileStreamer::new(writer, parquet_schema.clone(), options, created_by);
+        let mut writer = FileStreamer::new(
+            writer,
+            parquet_schema.clone(),
+            ParquetWriteOptions {
+                version: options.version,
+                write_statistics: options.write_statistics,
+            },
+            created_by,
+        );
         let task = Some(
             async move {
                 writer.start().await?;
@@ -150,7 +155,6 @@ where
     fn start_send(self: Pin<&mut Self>, item: Chunk<Arc<dyn Array>>) -> Result<(), Self::Error> {
         let this = self.get_mut();
         if let Some(mut writer) = this.writer.take() {
-            let count = item.len();
             let rows = crate::io::parquet::write::row_group_iter(
                 item,
                 this.encoding.clone(),
@@ -158,7 +162,7 @@ where
                 this.options,
             );
             this.task = Some(Box::pin(async move {
-                writer.write(rows, count).await?;
+                writer.write(rows).await?;
                 Ok(Some(writer))
             }));
             Ok(())

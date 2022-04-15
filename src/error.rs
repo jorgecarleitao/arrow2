@@ -52,6 +52,12 @@ impl From<std::str::Utf8Error> for ArrowError {
     }
 }
 
+impl From<std::string::FromUtf8Error> for ArrowError {
+    fn from(error: std::string::FromUtf8Error) -> Self {
+        ArrowError::External("".to_string(), Box::new(error))
+    }
+}
+
 impl From<simdutf8::basic::Utf8Error> for ArrowError {
     fn from(error: simdutf8::basic::Utf8Error) -> Self {
         ArrowError::External("".to_string(), Box::new(error))
