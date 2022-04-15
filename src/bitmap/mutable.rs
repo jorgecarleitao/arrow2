@@ -94,6 +94,21 @@ impl MutableBitmap {
         self.length += 1;
     }
 
+    /// Pop the last bit from the [`MutableBitmap`].
+    /// # Panics
+    /// Panics iff the length is zero.
+    #[inline]
+    pub fn pop(&mut self) -> bool {
+        assert!(self.length > 0);
+
+        self.length -= 1;
+        let value = self.get(self.length);
+        if self.length % 8 == 0 {
+            self.buffer.pop();
+        }
+        value
+    }
+
     /// Returns the capacity of [`MutableBitmap`] in number of bits.
     #[inline]
     pub fn capacity(&self) -> usize {

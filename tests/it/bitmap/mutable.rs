@@ -77,6 +77,50 @@ fn push_exact_ones() {
 }
 
 #[test]
+fn pop() {
+    let mut bitmap = MutableBitmap::new();
+    bitmap.push(false);
+    bitmap.push(true);
+    bitmap.push(false);
+    bitmap.push(true);
+
+    assert!(bitmap.pop());
+    assert_eq!(bitmap.len(), 3);
+
+    assert!(!bitmap.pop());
+    assert_eq!(bitmap.len(), 2);
+
+    let bitmap: Bitmap = bitmap.into();
+    assert_eq!(bitmap.len(), 2);
+    assert_eq!(bitmap.as_slice().0[0], 0b00001010);
+}
+
+#[test]
+fn pop_large() {
+    let mut bitmap = MutableBitmap::new();
+    for _ in 0..8 {
+        bitmap.push(true);
+    }
+
+    bitmap.push(false);
+    bitmap.push(true);
+    bitmap.push(false);
+
+    assert!(!bitmap.pop());
+    assert_eq!(bitmap.len(), 10);
+
+    assert!(bitmap.pop());
+    assert_eq!(bitmap.len(), 9);
+
+    assert!(!bitmap.pop());
+    assert_eq!(bitmap.len(), 8);
+
+    let bitmap: Bitmap = bitmap.into();
+    assert_eq!(bitmap.len(), 8);
+    assert_eq!(bitmap.as_slice().0, &[0b11111111]);
+}
+
+#[test]
 fn capacity() {
     let b = MutableBitmap::with_capacity(10);
     assert!(b.capacity() >= 10);
