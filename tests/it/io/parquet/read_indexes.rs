@@ -96,7 +96,8 @@ fn read_with_indexes(
 
     writer.start()?;
     writer.write(row_group)?;
-    let (_, data) = writer.end(None)?;
+    writer.end(None)?;
+    let data = writer.into_inner();
 
     let mut reader = Cursor::new(data);
 

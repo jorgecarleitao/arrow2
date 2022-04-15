@@ -731,9 +731,9 @@ fn integration_write(schema: &Schema, batches: &[Chunk<Arc<dyn Array>>]) -> Resu
     for group in row_groups {
         writer.write(group?)?;
     }
-    let (_size, writer) = writer.end(None)?;
+    writer.end(None)?;
 
-    Ok(writer.into_inner())
+    Ok(writer.into_inner().into_inner())
 }
 
 type IntegrationRead = (Schema, Vec<Chunk<Arc<dyn Array>>>);

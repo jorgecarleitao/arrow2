@@ -51,9 +51,9 @@ fn round_trip(
     for group in row_groups {
         writer.write(group?)?;
     }
-    let (_size, writer) = writer.end(None)?;
+    writer.end(None)?;
 
-    let data = writer.into_inner();
+    let data = writer.into_inner().into_inner();
 
     let (result, stats) = read_column(&mut Cursor::new(data), 0, "a1")?;
     assert_eq!(array.as_ref(), result.as_ref());
