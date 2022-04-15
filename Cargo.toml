@@ -98,7 +98,8 @@ strength_reduce = { version = "0.2", optional = true }
 multiversion = { version = "0.6.1", optional = true }
 
 # For support for odbc
-odbc-api = { version = "0.36", optional = true }
+#odbc-api = { version = "0.36", optional = true }
+odbc-api = {git = "https://github.com/jorgecarleitao/odbc-api", branch = "lifetime", optional = true}
 
 # faster hashing
 [target.'cfg(target_arch = "wasm32")'.dependencies]
