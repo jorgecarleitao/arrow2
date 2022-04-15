@@ -1289,8 +1289,7 @@ fn write_batch(path: &amp;str, schema: Schema, columns: Chunk&lt;Arc&lt;dyn Arra
 
     writer.start()?;
     for group in row_groups {
-        let (group, len) = group?;
-        writer.write(group, len)?;
+        writer.write(group?)?;
     }
     let _size = writer.end(None)?;
     Ok(())
@@ -1422,8 +1421,7 @@ fn parallel_write(path: &amp;str, schema: &amp;Schema, batches: &amp;[Chunk]) -&
     // Write the file.
     writer.start()?;
     for group in row_groups {
-        let (group, len) = group?;
-        writer.write(group, len)?;
+        writer.write(group?)?;
     }
     let _size = writer.end(None)?;
 
