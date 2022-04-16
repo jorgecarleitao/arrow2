@@ -104,10 +104,10 @@ impl MutableBooleanArray {
         }
     }
 
-    /// Pop a entry to from [`MutableBooleanArray`].
-    /// Note If the values' length is zero, this method will return None.
+    /// Pop an entry from [`MutableBooleanArray`].
+    /// Note If the values is empty, this method will return None.
     pub fn pop(&mut self) -> Option<bool> {
-        if self.values.len() == 0 {
+        if self.values.is_empty() {
             return None;
         }
 
