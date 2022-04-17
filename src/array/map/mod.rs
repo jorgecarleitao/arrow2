@@ -239,6 +239,9 @@ impl Array for MapArray {
     }
 
     fn with_validity(&self, _validity: Option<Bitmap>) -> Box<dyn Array> {
+        self.to_boxed()
+    }
+    fn to_boxed(&self) -> Box<dyn Array> {
         Box::new(self.clone())
     }
 }

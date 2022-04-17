@@ -255,4 +255,7 @@ impl Array for FixedSizeListArray {
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.with_validity(validity))
     }
+    fn to_boxed(&self) -> Box<dyn Array> {
+        Box::new(self.clone())
+    }
 }

@@ -271,8 +271,7 @@ pub fn filter(array: &dyn Array, filter: &BooleanArray) -> Result<Box<dyn Array>
     }
     if false_count == 0 {
         assert_eq!(array.len(), filter.len());
-        // a hack to clone
-        return Ok(array.with_validity(array.validity().cloned()));
+        return Ok(array.to_boxed());
     }
 
     use crate::datatypes::PhysicalType::*;

@@ -461,6 +461,10 @@ impl<O: Offset> Array for Utf8Array<O> {
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.with_validity(validity))
     }
+
+    fn to_boxed(&self) -> Box<dyn Array> {
+        Box::new(self.clone())
+    }
 }
 
 unsafe impl<O: Offset> GenericBinaryArray<O> for Utf8Array<O> {

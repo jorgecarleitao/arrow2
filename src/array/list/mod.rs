@@ -363,4 +363,7 @@ impl<O: Offset> Array for ListArray<O> {
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.with_validity(validity))
     }
+    fn to_boxed(&self) -> Box<dyn Array> {
+        Box::new(self.clone())
+    }
 }

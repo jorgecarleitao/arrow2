@@ -305,6 +305,9 @@ impl Array for UnionArray {
     fn with_validity(&self, _: Option<Bitmap>) -> Box<dyn Array> {
         panic!("cannot set validity of a union array")
     }
+    fn to_boxed(&self) -> Box<dyn Array> {
+        Box::new(self.clone())
+    }
 }
 
 impl UnionArray {
