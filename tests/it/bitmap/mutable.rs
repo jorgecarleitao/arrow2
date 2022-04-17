@@ -84,10 +84,10 @@ fn pop() {
     bitmap.push(false);
     bitmap.push(true);
 
-    assert!(bitmap.pop());
+    assert_eq!(bitmap.pop(), Some(true));
     assert_eq!(bitmap.len(), 3);
 
-    assert!(!bitmap.pop());
+    assert_eq!(bitmap.pop(), Some(false));
     assert_eq!(bitmap.len(), 2);
 
     let bitmap: Bitmap = bitmap.into();
@@ -106,18 +106,38 @@ fn pop_large() {
     bitmap.push(true);
     bitmap.push(false);
 
-    assert!(!bitmap.pop());
+    assert_eq!(bitmap.pop(), Some(false));
     assert_eq!(bitmap.len(), 10);
 
-    assert!(bitmap.pop());
+    assert_eq!(bitmap.pop(), Some(true));
     assert_eq!(bitmap.len(), 9);
 
-    assert!(!bitmap.pop());
+    assert_eq!(bitmap.pop(), Some(false));
     assert_eq!(bitmap.len(), 8);
 
     let bitmap: Bitmap = bitmap.into();
     assert_eq!(bitmap.len(), 8);
     assert_eq!(bitmap.as_slice().0, &[0b11111111]);
+}
+
+#[test]
+fn pop_all() {
+    let mut bitmap = MutableBitmap::new();
+    bitmap.push(false);
+    bitmap.push(true);
+    bitmap.push(true);
+    bitmap.push(true);
+
+    assert_eq!(bitmap.pop(), Some(true));
+    assert_eq!(bitmap.len(), 3);
+    assert_eq!(bitmap.pop(), Some(true));
+    assert_eq!(bitmap.len(), 2);
+    assert_eq!(bitmap.pop(), Some(true));
+    assert_eq!(bitmap.len(), 1);
+    assert_eq!(bitmap.pop(), Some(false));
+    assert_eq!(bitmap.len(), 0);
+    assert_eq!(bitmap.pop(), None);
+    assert_eq!(bitmap.len(), 0);
 }
 
 #[test]

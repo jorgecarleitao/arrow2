@@ -107,14 +107,10 @@ impl MutableBooleanArray {
     /// Pop an entry from [`MutableBooleanArray`].
     /// Note If the values is empty, this method will return None.
     pub fn pop(&mut self) -> Option<bool> {
-        if self.values.is_empty() {
-            return None;
-        }
-
-        let value = self.values.pop();
+        let value = self.values.pop()?;
         match self.validity {
             Some(ref mut validity) => {
-                if validity.pop() {
+                if validity.pop().unwrap() {
                     Some(value)
                 } else {
                     None
