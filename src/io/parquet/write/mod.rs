@@ -44,6 +44,7 @@ pub struct WriteOptions {
     pub compression: Compression,
 }
 
+use crate::compute::aggregate::estimated_bytes_size;
 pub use file::FileWriter;
 pub use row_group::{row_group_iter, RowGroupIterator};
 pub use schema::to_parquet_type;
@@ -93,19 +94,32 @@ pub fn array_to_pages(
     options: WriteOptions,
     encoding: Encoding,
 ) -> Result<DynIter<'static, Result<EncodedPage>>> {
-    match array.data_type() {
-        DataType::Dictionary(key_type, _, _) => {
-            match_integer_type!(key_type, |$T| {
-                dictionary::array_to_pages::<$T>(
-                    array.as_any().downcast_ref().unwrap(),
-                    descriptor,
-                    options,
-                    encoding,
-                )
-            })
+    // maximum page size is 2^31 e.g. i32::MAX
+    // we split at 2^30 to err on the safe side
+    if estimated_bytes_size(array) >= 2u32.pow(30) as usize {
+        let split_at = array.len() / 2;
+        let left = array.slice(0, split_at);
+        let right = array.slice(split_at, array.len() - split_at);
+
+        Ok(DynIter::new(
+            array_to_pages(&*left, descriptor.clone(), options, encoding)?
+                .chain(array_to_pages(&*right, descriptor, options, encoding)?),
+        ))
+    } else {
+        match array.data_type() {
+            DataType::Dictionary(key_type, _, _) => {
+                match_integer_type!(key_type, |$T| {
+                    dictionary::array_to_pages::<$T>(
+                        array.as_any().downcast_ref().unwrap(),
+                        descriptor,
+                        options,
+                        encoding,
+                    )
+                })
+            }
+            _ => array_to_page(array, descriptor, options, encoding)
+                .map(|page| DynIter::new(std::iter::once(Ok(page)))),
         }
-        _ => array_to_page(array, descriptor, options, encoding)
-            .map(|page| DynIter::new(std::iter::once(Ok(page)))),
     }
 }
 
