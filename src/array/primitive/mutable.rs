@@ -148,7 +148,7 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
                 } else {
                     None
                 }
-            },
+            }
             None => Some(value),
         }
     }

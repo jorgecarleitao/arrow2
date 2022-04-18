@@ -107,7 +107,6 @@ impl MutableBitmap {
         if self.length % 8 == 0 {
             self.buffer.pop();
         }
-        
         Some(value)
     }
 
