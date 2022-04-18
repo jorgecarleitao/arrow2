@@ -141,16 +141,10 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
     /// Note if the values is empty, this method will return None.
     pub fn pop(&mut self) -> Option<T> {
         let value = self.values.pop()?;
-        match self.validity {
-            Some(ref mut validity) => {
-                if validity.pop().unwrap() {
-                    Some(value)
-                } else {
-                    None
-                }
-            }
-            None => Some(value),
-        }
+        self.validity
+            .as_mut()
+            .map(|x| if x.pop()? { Some(value) } else { None })
+            .unwrap_or_else(|| Some(value))
     }
 
     /// Extends the [`MutablePrimitiveArray`] with a constant

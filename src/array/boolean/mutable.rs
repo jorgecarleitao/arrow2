@@ -108,16 +108,10 @@ impl MutableBooleanArray {
     /// Note If the values is empty, this method will return None.
     pub fn pop(&mut self) -> Option<bool> {
         let value = self.values.pop()?;
-        match self.validity {
-            Some(ref mut validity) => {
-                if validity.pop().unwrap() {
-                    Some(value)
-                } else {
-                    None
-                }
-            }
-            None => Some(value),
-        }
+        self.validity
+            .as_mut()
+            .map(|x| if x.pop()? { Some(value) } else { None })
+            .unwrap_or_else(|| Some(value))
     }
 
     /// Extends the [`MutableBooleanArray`] from an iterator of values of trusted len.
