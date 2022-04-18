@@ -104,6 +104,16 @@ impl MutableBooleanArray {
         }
     }
 
+    /// Pop an entry from [`MutableBooleanArray`].
+    /// Note If the values is empty, this method will return None.
+    pub fn pop(&mut self) -> Option<bool> {
+        let value = self.values.pop()?;
+        self.validity
+            .as_mut()
+            .map(|x| x.pop()?.then(|| value))
+            .unwrap_or_else(|| Some(value))
+    }
+
     /// Extends the [`MutableBooleanArray`] from an iterator of values of trusted len.
     /// This differs from `extend_trusted_len` which accepts in iterator of optional values.
     #[inline]

@@ -59,6 +59,45 @@ fn push() {
 }
 
 #[test]
+fn pop() {
+    let mut a = MutablePrimitiveArray::<i32>::new();
+    a.push(Some(1));
+    a.push(None);
+    a.push(Some(2));
+    a.push_null();
+    assert_eq!(a.pop(), None);
+    assert_eq!(a.pop(), Some(2));
+    assert_eq!(a.pop(), None);
+    assert!(a.is_valid(0));
+    assert_eq!(a.values(), &Vec::from([1]));
+    assert_eq!(a.pop(), Some(1));
+    assert_eq!(a.len(), 0);
+    assert_eq!(a.pop(), None);
+    assert_eq!(a.len(), 0);
+}
+
+#[test]
+fn pop_all_some() {
+    let mut a = MutablePrimitiveArray::<i32>::new();
+    for v in 0..8 {
+        a.push(Some(v));
+    }
+
+    a.push(Some(8));
+    assert_eq!(a.pop(), Some(8));
+    assert_eq!(a.pop(), Some(7));
+    assert_eq!(a.pop(), Some(6));
+    assert_eq!(a.pop(), Some(5));
+    assert_eq!(a.pop(), Some(4));
+    assert_eq!(a.len(), 4);
+    assert!(a.is_valid(0));
+    assert!(a.is_valid(1));
+    assert!(a.is_valid(2));
+    assert!(a.is_valid(3));
+    assert_eq!(a.values(), &Vec::from([0, 1, 2, 3]));
+}
+
+#[test]
 fn set() {
     let mut a = MutablePrimitiveArray::<i32>::from([Some(1), None]);
 

@@ -30,6 +30,51 @@ fn push() {
 }
 
 #[test]
+fn pop() {
+    let mut a = MutableBooleanArray::new();
+    a.push(Some(true));
+    a.push(Some(false));
+    a.push(None);
+    a.push_null();
+
+    assert_eq!(a.pop(), None);
+    assert_eq!(a.len(), 3);
+    assert_eq!(a.pop(), None);
+    assert_eq!(a.len(), 2);
+    assert_eq!(a.pop(), Some(false));
+    assert_eq!(a.len(), 1);
+    assert_eq!(a.pop(), Some(true));
+    assert_eq!(a.len(), 0);
+    assert_eq!(a.pop(), None);
+    assert_eq!(a.len(), 0);
+}
+
+#[test]
+fn pop_all_some() {
+    let mut a = MutableBooleanArray::new();
+    for _ in 0..4 {
+        a.push(Some(true));
+    }
+
+    for _ in 0..4 {
+        a.push(Some(false));
+    }
+
+    a.push(Some(true));
+
+    assert_eq!(a.pop(), Some(true));
+    assert_eq!(a.pop(), Some(false));
+    assert_eq!(a.pop(), Some(false));
+    assert_eq!(a.pop(), Some(false));
+    assert_eq!(a.len(), 5);
+
+    assert_eq!(
+        a,
+        MutableBooleanArray::from([Some(true), Some(true), Some(true), Some(true), Some(false)])
+    );
+}
+
+#[test]
 fn from_trusted_len_iter() {
     let iter = std::iter::repeat(true).take(2).map(Some);
     let a = MutableBooleanArray::from_trusted_len_iter(iter);
