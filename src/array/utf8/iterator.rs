@@ -39,6 +39,18 @@ impl<'a, O: Offset> Iterator for Utf8ValuesIter<'a, O> {
     fn size_hint(&self) -> (usize, Option<usize>) {
         (self.end - self.index, Some(self.end - self.index))
     }
+
+    #[inline]
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        let new_index = self.index + n;
+        if new_index > self.end {
+            self.index = self.end;
+            None
+        } else {
+            self.index = new_index;
+            self.next()
+        }
+    }
 }
 
 impl<'a, O: Offset> DoubleEndedIterator for Utf8ValuesIter<'a, O> {

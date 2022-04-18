@@ -52,6 +52,18 @@ impl<'a> Iterator for BitmapIter<'a> {
         let exact = self.end - self.index;
         (exact, Some(exact))
     }
+
+    #[inline]
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        let new_index = self.index + n;
+        if new_index > self.end {
+            self.index = self.end;
+            None
+        } else {
+            self.index = new_index;
+            self.next()
+        }
+    }
 }
 
 impl<'a> DoubleEndedIterator for BitmapIter<'a> {

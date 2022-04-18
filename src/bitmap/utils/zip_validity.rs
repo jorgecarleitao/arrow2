@@ -52,6 +52,17 @@ impl<'a, T, I: Iterator<Item = T>> Iterator for ZipValidity<'a, T, I> {
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.values.size_hint()
     }
+
+    #[inline]
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        if !self.has_validity {
+            self.values.nth(n).map(Some)
+        } else {
+            let is_valid = self.validity_iter.nth(n);
+            let value = self.values.nth(n);
+            is_valid.map(|x| if x { value } else { None })
+        }
+    }
 }
 
 impl<'a, T, I: DoubleEndedIterator<Item = T>> DoubleEndedIterator for ZipValidity<'a, T, I> {
