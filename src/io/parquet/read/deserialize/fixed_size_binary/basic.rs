@@ -19,6 +19,7 @@ use super::super::utils::{
 use super::super::DataPages;
 use super::utils::FixedSizeBinary;
 
+#[derive(Debug)]
 struct Optional<'a> {
     values: std::slice::ChunksExact<'a, u8>,
     validity: OptionalPageValidity<'a>,
@@ -37,6 +38,7 @@ impl<'a> Optional<'a> {
     }
 }
 
+#[derive(Debug)]
 struct Required<'a> {
     pub values: std::slice::ChunksExact<'a, u8>,
 }
@@ -77,6 +79,7 @@ impl<'a> FilteredRequired<'a> {
     }
 }
 
+#[derive(Debug)]
 struct RequiredDictionary<'a> {
     pub values: hybrid_rle::HybridRleDecoder<'a>,
     dict: &'a FixedLenByteArrayPageDict,
@@ -95,6 +98,7 @@ impl<'a> RequiredDictionary<'a> {
     }
 }
 
+#[derive(Debug)]
 struct OptionalDictionary<'a> {
     values: hybrid_rle::HybridRleDecoder<'a>,
     validity: OptionalPageValidity<'a>,
@@ -113,6 +117,7 @@ impl<'a> OptionalDictionary<'a> {
     }
 }
 
+#[derive(Debug)]
 enum State<'a> {
     Optional(Optional<'a>),
     Required(Required<'a>),

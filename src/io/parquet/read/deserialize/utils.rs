@@ -343,7 +343,7 @@ pub(super) fn extend_from_decoder<'a, T: Default, P: Pushable<T>, I: Iterator<It
 }
 
 /// The state of a partially deserialized page
-pub(super) trait PageState<'a> {
+pub(super) trait PageState<'a>: std::fmt::Debug {
     fn len(&self) -> usize;
 }
 

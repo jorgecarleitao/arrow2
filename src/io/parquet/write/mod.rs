@@ -416,7 +416,7 @@ fn nested_array_to_page(
         }
         DataType::FixedSizeList(_, size) => {
             let array = array.as_any().downcast_ref::<FixedSizeListArray>().unwrap();
-            let offsets = (0..array.len())
+            let offsets = (0..=array.len())
                 .map(|x| (*size * x) as i32)
                 .collect::<Vec<_>>();
             list_array_to_page(
