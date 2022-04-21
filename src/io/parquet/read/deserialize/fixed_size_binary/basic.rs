@@ -57,6 +57,7 @@ impl<'a> Required<'a> {
     }
 }
 
+#[derive(Debug)]
 struct FilteredRequired<'a> {
     pub values: SliceFilteredIter<std::slice::ChunksExact<'a, u8>>,
 }
