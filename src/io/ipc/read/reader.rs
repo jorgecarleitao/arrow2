@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::convert::TryInto;
 use std::io::{Read, Seek, SeekFrom};
 use std::sync::Arc;
@@ -37,7 +38,7 @@ pub struct FileReader<R: Read + Seek> {
     reader: R,
     metadata: FileMetadata,
     current_block: usize,
-    projection: Option<(Vec<usize>, Schema)>,
+    projection: Option<(Vec<usize>, HashMap<usize, usize>, Schema)>,
     buffer: Vec<u8>,
 }
 
@@ -230,24 +231,13 @@ impl<R: Read + Seek> FileReader<R> {
     /// # Panic
     /// Panics iff the projection is not in increasing order (e.g. `[1, 0]` nor `[0, 1, 1]` are valid)
     pub fn new(reader: R, metadata: FileMetadata, projection: Option<Vec<usize>>) -> Self {
-        if let Some(projection) = projection.as_ref() {
-            projection.windows(2).for_each(|x| {
-                assert!(
-                    x[0] < x[1],
-                    "The projection on IPC must be ordered and non-overlapping"
-                );
-            });
-        }
         let projection = projection.map(|projection| {
-            let fields = projection
-                .iter()
-                .map(|x| metadata.schema.fields[*x].clone())
-                .collect();
+            let (p, h, fields) = prepare_projection(&metadata.schema.fields, projection);
             let schema = Schema {
                 fields,
                 metadata: metadata.schema.metadata.clone(),
             };
-            (projection, schema)
+            (p, h, schema)
         });
         Self {
             reader,
@@ -262,7 +252,7 @@ impl<R: Read + Seek> FileReader<R> {
     pub fn schema(&self) -> &Schema {
         self.projection
             .as_ref()
-            .map(|x| &x.1)
+            .map(|x| &x.2)
             .unwrap_or(&self.metadata.schema)
     }
 
@@ -285,13 +275,21 @@ impl<R: Read + Seek> Iterator for FileReader<R> {
         if self.current_block < self.metadata.blocks.len() {
             let block = self.current_block;
             self.current_block += 1;
-            Some(read_batch(
+            let chunk = read_batch(
                 &mut self.reader,
                 &self.metadata,
                 self.projection.as_ref().map(|x| x.0.as_ref()),
                 block,
                 &mut self.buffer,
-            ))
+            );
+
+            let chunk = if let Some((projection, map, _)) = &self.projection {
+                // re-order according to projection
+                chunk.map(|chunk| apply_projection(chunk, projection, map))
+            } else {
+                chunk
+            };
+            Some(chunk)
         } else {
             None
         }

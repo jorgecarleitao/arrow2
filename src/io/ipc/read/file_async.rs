@@ -1,4 +1,5 @@
 //! Async reader for Arrow IPC files
+use std::collections::HashMap;
 use std::io::SeekFrom;
 use std::sync::Arc;
 
@@ -16,7 +17,7 @@ use crate::datatypes::{Field, Schema};
 use crate::error::{ArrowError, Result};
 use crate::io::ipc::{IpcSchema, ARROW_MAGIC, CONTINUATION_MARKER};
 
-use super::common::{read_dictionary, read_record_batch};
+use super::common::{apply_projection, prepare_projection, read_dictionary, read_record_batch};
 use super::reader::get_serialized_batch;
 use super::schema::fb_to_schema;
 use super::Dictionaries;
@@ -25,8 +26,8 @@ use super::FileMetadata;
 /// Async reader for Arrow IPC files
 pub struct FileStream<'a> {
     stream: BoxStream<'a, Result<Chunk<Arc<dyn Array>>>>,
+    schema: Option<Schema>,
     metadata: FileMetadata,
-    schema: Schema,
 }
 
 impl<'a> FileStream<'a> {
@@ -38,23 +39,15 @@ impl<'a> FileStream<'a> {
     where
         R: AsyncRead + AsyncSeek + Unpin + Send + 'a,
     {
-        let schema = if let Some(projection) = projection.as_ref() {
-            projection.windows(2).for_each(|x| {
-                assert!(
-                    x[0] < x[1],
-                    "IPC projection must be ordered and non-overlapping",
-                )
-            });
-            let fields = projection
-                .iter()
-                .map(|&x| metadata.schema.fields[x].clone())
-                .collect::<Vec<_>>();
-            Schema {
+        let (projection, schema) = if let Some(projection) = projection {
+            let (p, h, fields) = prepare_projection(&metadata.schema.fields, projection);
+            let schema = Schema {
                 fields,
                 metadata: metadata.schema.metadata.clone(),
-            }
+            };
+            (Some((p, h)), Some(schema))
         } else {
-            metadata.schema.clone()
+            (None, None)
         };
 
         let stream = Self::stream(reader, metadata.clone(), projection);
@@ -72,13 +65,13 @@ impl<'a> FileStream<'a> {
 
     /// Get the projected schema from the IPC file.
     pub fn schema(&self) -> &Schema {
-        &self.schema
+        self.schema.as_ref().unwrap_or(&self.metadata.schema)
     }
 
     fn stream<R>(
         mut reader: R,
         metadata: FileMetadata,
-        projection: Option<Vec<usize>>,
+        projection: Option<(Vec<usize>, HashMap<usize, usize>)>,
     ) -> BoxStream<'a, Result<Chunk<Arc<dyn Array>>>>
     where
         R: AsyncRead + AsyncSeek + Unpin + Send + 'a,
@@ -90,11 +83,19 @@ impl<'a> FileStream<'a> {
                 let chunk = read_batch(
                     &mut reader,
                     &metadata,
-                    projection.as_deref(),
+                    projection.as_ref().map(|x| x.0.as_ref()),
                     block,
                     &mut meta_buffer,
                     &mut block_buffer,
                 ).await?;
+
+                let chunk = if let Some((projection, map)) = &projection {
+                    // re-order according to projection
+                    apply_projection(chunk, projection, map)
+                } else {
+                    chunk
+                };
+
                 yield chunk;
             }
         }

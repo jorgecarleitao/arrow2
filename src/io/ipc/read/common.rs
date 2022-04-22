@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::io::{Read, Seek};
 use std::sync::Arc;
 
@@ -276,4 +276,45 @@ mod tests {
             ]
         )
     }
+}
+
+pub fn prepare_projection(
+    fields: &[Field],
+    mut projection: Vec<usize>,
+) -> (Vec<usize>, HashMap<usize, usize>, Vec<Field>) {
+    assert_eq!(
+        projection.iter().collect::<HashSet<_>>().len(),
+        projection.len(),
+        "The projection on IPC must not contain duplicates"
+    );
+
+    let fields = projection.iter().map(|x| fields[*x].clone()).collect();
+
+    // selected index; index in
+    let sorted_projection = projection
+        .iter()
+        .copied()
+        .enumerate()
+        .map(|x| (x.1, x.0))
+        .collect::<HashMap<_, _>>(); // e.g. [2, 1] -> {2: 0, 1: 1}
+    projection.sort_unstable(); // e.g. [2, 1] -> [1, 2]
+
+    (projection, sorted_projection, fields)
+}
+
+pub fn apply_projection(
+    chunk: Chunk<Arc<dyn Array>>,
+    projection: &[usize],
+    map: &HashMap<usize, usize>,
+) -> Chunk<Arc<dyn Array>> {
+    // re-order according to projection
+    let arrays = chunk.into_arrays();
+    let arrays = projection
+        .iter()
+        .map(|x| {
+            let index = map.get(x).unwrap();
+            arrays[*index].clone()
+        })
+        .collect();
+    Chunk::new(arrays)
 }
