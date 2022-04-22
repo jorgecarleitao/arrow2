@@ -158,7 +158,9 @@ fn main() -&gt; Result&lt;()&gt; {
     let file_path = &amp;args[1];
 
     let reader = File::open(file_path)?;
-    let reader = read::FileReader::try_new(reader, None, None, None, None)?;
+    let reader = read::FileReader::try_new(reader, Some(&amp;[8]), None, None, None)?;
+
+    println!(&quot;{:#?}&quot;, reader.metadata());
 
     let start = SystemTime::now();
     for maybe_chunk in reader {
