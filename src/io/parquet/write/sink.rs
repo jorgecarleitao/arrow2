@@ -23,7 +23,7 @@ use super::{Encoding, SchemaDescriptor, WriteOptions};
 /// use arrow2::array::{Array, Int32Array};
 /// use arrow2::datatypes::{DataType, Field, Schema};
 /// use arrow2::chunk::Chunk;
-/// use arrow2::io::parquet::write::{Encoding, WriteOptions, Compression, Version};
+/// use arrow2::io::parquet::write::{Encoding, WriteOptions, CompressionOptions, Version};
 /// # use arrow2::io::parquet::write::FileSink;
 /// # futures::executor::block_on(async move {
 ///
@@ -33,7 +33,7 @@ use super::{Encoding, SchemaDescriptor, WriteOptions};
 /// let encoding = vec![Encoding::Plain];
 /// let options = WriteOptions {
 ///     write_statistics: true,
-///     compression: Compression::Uncompressed,
+///     compression: CompressionOptions::Uncompressed,
 ///     version: Version::V2,
 /// };
 ///

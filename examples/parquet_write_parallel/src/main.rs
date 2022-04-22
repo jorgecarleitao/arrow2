@@ -46,7 +46,7 @@ fn parallel_write(path: &str, schema: &Schema, batches: &[Chunk]) -> Result<()> 
     // declare the options
     let options = WriteOptions {
         write_statistics: true,
-        compression: Compression::Snappy,
+        compression: CompressionOptions::Snappy,
         version: Version::V2,
     };
 

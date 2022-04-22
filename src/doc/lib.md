@@ -43,7 +43,7 @@ fn main() -> Result<()> {
 
     let options = WriteOptions {
         write_statistics: true,
-        compression: Compression::Snappy,
+        compression: CompressionOptions::Snappy,
         version: Version::V1,
     };
 

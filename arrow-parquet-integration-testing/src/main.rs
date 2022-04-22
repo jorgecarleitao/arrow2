@@ -8,7 +8,7 @@ use arrow2::{
         json_integration::read,
         json_integration::ArrowJson,
         parquet::write::{
-            Compression as ParquetCompression, Encoding, FileWriter, RowGroupIterator,
+            CompressionOptions as ParquetCompression, Encoding, FileWriter, RowGroupIterator,
             Version as ParquetVersion, WriteOptions,
         },
     },
@@ -84,7 +84,7 @@ enum Compression {
 impl Into<ParquetCompression> for Compression {
     fn into(self) -> ParquetCompression {
         match self {
-            Compression::Zstd => ParquetCompression::Zstd,
+            Compression::Zstd => ParquetCompression::Zstd(None),
             Compression::Snappy => ParquetCompression::Snappy,
             Compression::Uncompressed => ParquetCompression::Uncompressed,
         }
