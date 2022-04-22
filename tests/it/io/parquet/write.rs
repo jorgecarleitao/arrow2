@@ -10,7 +10,7 @@ fn round_trip(
     nullable: bool,
     nested: bool,
     version: Version,
-    compression: Compression,
+    compression: CompressionOptions,
     encoding: Encoding,
 ) -> Result<()> {
     let (array, statistics) = if nested {
@@ -68,7 +68,7 @@ fn int64_optional_v1() -> Result<()> {
         true,
         false,
         Version::V1,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -80,7 +80,7 @@ fn int64_required_v1() -> Result<()> {
         false,
         false,
         Version::V1,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -92,7 +92,7 @@ fn int64_optional_v2() -> Result<()> {
         true,
         false,
         Version::V2,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -104,7 +104,7 @@ fn int64_optional_v2_compressed() -> Result<()> {
         true,
         false,
         Version::V2,
-        Compression::Snappy,
+        CompressionOptions::Snappy,
         Encoding::Plain,
     )
 }
@@ -116,7 +116,7 @@ fn utf8_optional_v1() -> Result<()> {
         true,
         false,
         Version::V1,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -128,7 +128,7 @@ fn utf8_required_v1() -> Result<()> {
         false,
         false,
         Version::V1,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -140,7 +140,7 @@ fn utf8_optional_v2() -> Result<()> {
         true,
         false,
         Version::V2,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -152,7 +152,7 @@ fn utf8_required_v2() -> Result<()> {
         false,
         false,
         Version::V2,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -164,7 +164,7 @@ fn utf8_optional_v2_compressed() -> Result<()> {
         true,
         false,
         Version::V2,
-        Compression::Snappy,
+        CompressionOptions::Snappy,
         Encoding::Plain,
     )
 }
@@ -176,7 +176,7 @@ fn utf8_required_v2_compressed() -> Result<()> {
         false,
         false,
         Version::V2,
-        Compression::Snappy,
+        CompressionOptions::Snappy,
         Encoding::Plain,
     )
 }
@@ -188,7 +188,7 @@ fn bool_optional_v1() -> Result<()> {
         true,
         false,
         Version::V1,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -200,7 +200,7 @@ fn bool_required_v1() -> Result<()> {
         false,
         false,
         Version::V1,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -212,7 +212,7 @@ fn bool_optional_v2_uncompressed() -> Result<()> {
         true,
         false,
         Version::V2,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -224,7 +224,7 @@ fn bool_required_v2_uncompressed() -> Result<()> {
         false,
         false,
         Version::V2,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -236,7 +236,7 @@ fn bool_required_v2_compressed() -> Result<()> {
         false,
         false,
         Version::V2,
-        Compression::Snappy,
+        CompressionOptions::Snappy,
         Encoding::Plain,
     )
 }
@@ -248,7 +248,7 @@ fn list_int64_optional_v2() -> Result<()> {
         true,
         true,
         Version::V2,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -260,7 +260,7 @@ fn list_int64_optional_v1() -> Result<()> {
         true,
         true,
         Version::V1,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -272,7 +272,7 @@ fn list_bool_optional_v2() -> Result<()> {
         true,
         true,
         Version::V2,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -284,7 +284,7 @@ fn list_bool_optional_v1() -> Result<()> {
         true,
         true,
         Version::V1,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -296,7 +296,7 @@ fn list_utf8_optional_v2() -> Result<()> {
         true,
         true,
         Version::V2,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -308,7 +308,7 @@ fn list_utf8_optional_v1() -> Result<()> {
         true,
         true,
         Version::V1,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -320,7 +320,7 @@ fn list_large_binary_optional_v2() -> Result<()> {
         true,
         true,
         Version::V2,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -332,7 +332,7 @@ fn list_large_binary_optional_v1() -> Result<()> {
         true,
         true,
         Version::V1,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -345,7 +345,7 @@ fn utf8_optional_v2_delta() -> Result<()> {
         true,
         false,
         Version::V2,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::DeltaLengthByteArray,
     )
 }
@@ -357,7 +357,7 @@ fn i32_optional_v2_dict() -> Result<()> {
         true,
         false,
         Version::V2,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::RleDictionary,
     )
 }
@@ -369,7 +369,7 @@ fn i32_optional_v2_dict_compressed() -> Result<()> {
         true,
         false,
         Version::V2,
-        Compression::Snappy,
+        CompressionOptions::Snappy,
         Encoding::RleDictionary,
     )
 }
@@ -382,7 +382,7 @@ fn decimal_9_optional_v1() -> Result<()> {
         true,
         false,
         Version::V1,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -394,7 +394,7 @@ fn decimal_9_required_v1() -> Result<()> {
         false,
         false,
         Version::V1,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -406,7 +406,7 @@ fn decimal_18_optional_v1() -> Result<()> {
         true,
         false,
         Version::V1,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -418,7 +418,7 @@ fn decimal_18_required_v1() -> Result<()> {
         false,
         false,
         Version::V1,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -430,7 +430,7 @@ fn decimal_26_optional_v1() -> Result<()> {
         true,
         false,
         Version::V1,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -442,7 +442,7 @@ fn decimal_26_required_v1() -> Result<()> {
         false,
         false,
         Version::V1,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -454,7 +454,7 @@ fn decimal_9_optional_v2() -> Result<()> {
         true,
         false,
         Version::V2,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -466,7 +466,7 @@ fn decimal_9_required_v2() -> Result<()> {
         false,
         false,
         Version::V2,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -478,7 +478,7 @@ fn decimal_18_optional_v2() -> Result<()> {
         true,
         false,
         Version::V2,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -490,7 +490,7 @@ fn decimal_18_required_v2() -> Result<()> {
         false,
         false,
         Version::V2,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -502,7 +502,7 @@ fn decimal_26_optional_v2() -> Result<()> {
         true,
         false,
         Version::V2,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }
@@ -514,7 +514,7 @@ fn decimal_26_required_v2() -> Result<()> {
         false,
         false,
         Version::V2,
-        Compression::Uncompressed,
+        CompressionOptions::Uncompressed,
         Encoding::Plain,
     )
 }

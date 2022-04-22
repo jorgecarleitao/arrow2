@@ -23,7 +23,7 @@ use crate::types::NativeType;
 
 use parquet2::page::DataPage;
 pub use parquet2::{
-    compression::Compression,
+    compression::CompressionOptions,
     encoding::Encoding,
     fallible_streaming_iterator,
     metadata::{Descriptor, KeyValue, SchemaDescriptor},
@@ -41,7 +41,7 @@ pub struct WriteOptions {
     /// The page and file version to use
     pub version: Version,
     /// The compression to apply to every page
-    pub compression: Compression,
+    pub compression: CompressionOptions,
 }
 
 use crate::compute::aggregate::estimated_bytes_size;

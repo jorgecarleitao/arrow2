@@ -704,7 +704,7 @@ pub fn pyarrow_struct_statistics(column: &str) -> Option<Box<dyn Statistics>> {
 fn integration_write(schema: &Schema, batches: &[Chunk<Arc<dyn Array>>]) -> Result<Vec<u8>> {
     let options = WriteOptions {
         write_statistics: true,
-        compression: Compression::Uncompressed,
+        compression: CompressionOptions::Uncompressed,
         version: Version::V1,
     };
 

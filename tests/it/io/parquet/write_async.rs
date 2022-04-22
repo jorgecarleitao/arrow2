@@ -7,7 +7,7 @@ use arrow2::{
     error::Result,
     io::parquet::{
         read::{infer_schema, read_columns_many_async, read_metadata_async, RowGroupDeserializer},
-        write::{Compression, Encoding, Version, WriteOptions},
+        write::{CompressionOptions, Encoding, Version, WriteOptions},
     },
 };
 use futures::{future::BoxFuture, io::Cursor, SinkExt};
@@ -33,7 +33,7 @@ async fn test_parquet_async_roundtrip() {
     let encoding = vec![Encoding::Plain, Encoding::Plain];
     let options = WriteOptions {
         write_statistics: true,
-        compression: Compression::Uncompressed,
+        compression: CompressionOptions::Uncompressed,
         version: Version::V2,
     };
 

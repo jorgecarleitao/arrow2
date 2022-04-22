@@ -29,7 +29,7 @@ fn pages(
 
     let options = WriteOptions {
         write_statistics: true,
-        compression: Compression::Uncompressed,
+        compression: CompressionOptions::Uncompressed,
         version: Version::V1,
     };
 
@@ -78,7 +78,7 @@ fn read_with_indexes(
 ) -> Result<()> {
     let options = WriteOptions {
         write_statistics: true,
-        compression: Compression::Uncompressed,
+        compression: CompressionOptions::Uncompressed,
         version: Version::V1,
     };
 

@@ -7,14 +7,14 @@ use arrow2::{
     datatypes::{Field, Schema},
     error::Result,
     io::parquet::write::{
-        Compression, Encoding, FileWriter, RowGroupIterator, Version, WriteOptions,
+        CompressionOptions, Encoding, FileWriter, RowGroupIterator, Version, WriteOptions,
     },
 };
 
 fn write_batch(path: &str, schema: Schema, columns: Chunk<Arc<dyn Array>>) -> Result<()> {
     let options = WriteOptions {
         write_statistics: true,
-        compression: Compression::Uncompressed,
+        compression: CompressionOptions::Uncompressed,
         version: Version::V2,
     };
 

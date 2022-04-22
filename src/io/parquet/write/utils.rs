@@ -1,7 +1,7 @@
 use crate::bitmap::Bitmap;
 
 use parquet2::{
-    compression::Compression,
+    compression::CompressionOptions,
     encoding::{hybrid_rle::encode_bool, Encoding},
     metadata::Descriptor,
     page::{DataPage, DataPageHeader, DataPageHeaderV1, DataPageHeaderV2},
@@ -85,7 +85,7 @@ pub fn build_plain_page(
             num_rows: num_rows as i32,
             definition_levels_byte_length: definition_levels_byte_length as i32,
             repetition_levels_byte_length: repetition_levels_byte_length as i32,
-            is_compressed: Some(options.compression != Compression::Uncompressed),
+            is_compressed: Some(options.compression != CompressionOptions::Uncompressed),
             statistics,
         }),
     };
