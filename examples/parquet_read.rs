@@ -11,7 +11,9 @@ fn main() -> Result<()> {
     let file_path = &args[1];
 
     let reader = File::open(file_path)?;
-    let reader = read::FileReader::try_new(reader, None, None, None, None)?;
+    let reader = read::FileReader::try_new(reader, Some(&[8]), None, None, None)?;
+
+    println!("{:#?}", reader.metadata());
 
     let start = SystemTime::now();
     for maybe_chunk in reader {
