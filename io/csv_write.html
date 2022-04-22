@@ -217,7 +217,7 @@ fn parallel_write(path: &amp;str, batches: [Chunk&lt;Arc&lt;dyn Array&gt;&gt;; 2
     for _ in 0..2 {
         // block: assumes that the order of batches matter.
         let records = rx.recv().unwrap();
-        records.iter().try_for_each(|row| writer.write_all(&amp;row))?
+        records.iter().try_for_each(|row| writer.write_all(row))?
     }
 
     for child in children {
