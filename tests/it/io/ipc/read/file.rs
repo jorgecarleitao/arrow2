@@ -157,7 +157,7 @@ fn read_generated_200_compression_zstd() -> Result<()> {
     test_file("2.0.0-compression", "generated_zstd")
 }
 
-fn test_projection(version: &str, file_name: &str, column: usize) -> Result<()> {
+fn test_projection(version: &str, file_name: &str, columns: Vec<usize>) -> Result<()> {
     let testdata = crate::test_util::arrow_test_data();
     let mut file = File::open(format!(
         "{}/arrow-ipc-stream/integration/{}/{}.arrow_file",
@@ -165,12 +165,19 @@ fn test_projection(version: &str, file_name: &str, column: usize) -> Result<()> 
     ))?;
 
     let metadata = read_file_metadata(&mut file)?;
-    let mut reader = FileReader::new(&mut file, metadata, Some(vec![column]));
 
-    assert_eq!(reader.schema().fields.len(), 1);
+    let expected = columns
+        .iter()
+        .copied()
+        .map(|x| metadata.schema.fields[x].clone())
+        .collect::<Vec<_>>();
+
+    let mut reader = FileReader::new(&mut file, metadata, Some(columns));
+
+    assert_eq!(reader.schema().fields, expected);
 
     reader.try_for_each(|rhs| {
-        assert_eq!(rhs?.arrays().len(), 1);
+        assert_eq!(rhs?.arrays().len(), expected.len());
         Result::Ok(())
     })?;
     Ok(())
@@ -178,7 +185,9 @@ fn test_projection(version: &str, file_name: &str, column: usize) -> Result<()> 
 
 #[test]
 fn read_projected() -> Result<()> {
-    test_projection("1.0.0-littleendian", "generated_primitive", 1)?;
-    test_projection("1.0.0-littleendian", "generated_dictionary", 2)?;
-    test_projection("1.0.0-littleendian", "generated_nested", 0)
+    test_projection("1.0.0-littleendian", "generated_primitive", vec![1])?;
+    test_projection("1.0.0-littleendian", "generated_dictionary", vec![2])?;
+    test_projection("1.0.0-littleendian", "generated_nested", vec![0])?;
+
+    test_projection("1.0.0-littleendian", "generated_primitive", vec![2, 1])
 }
