@@ -1,8 +1,8 @@
 diff --git a/dev/archery/archery/integration/datagen.py b/dev/archery/archery/integration/datagen.py
-index c91d9ddf1..916ca5f67 100644
+index ea69fe295..334c882bc 100644
 --- a/dev/archery/archery/integration/datagen.py
 +++ b/dev/archery/archery/integration/datagen.py
-@@ -1561,8 +1561,7 @@ def get_generated_json_files(tempdir=None):
+@@ -1598,8 +1598,7 @@ def get_generated_json_files(tempdir=None):
          .skip_category('C#')
          .skip_category('JS'),   # TODO(ARROW-7900)
  
@@ -12,7 +12,7 @@ index c91d9ddf1..916ca5f67 100644
  
          generate_decimal256_case()
          .skip_category('Go')  # TODO(ARROW-7948): Decimal + Go
-@@ -1574,16 +1573,14 @@ def get_generated_json_files(tempdir=None):
+@@ -1615,16 +1614,14 @@ def get_generated_json_files(tempdir=None):
  
          generate_interval_case()
          .skip_category('C#')
@@ -31,7 +31,7 @@ index c91d9ddf1..916ca5f67 100644
  
          generate_non_canonical_map_case()
          .skip_category('C#')
-@@ -1600,14 +1597,12 @@ def get_generated_json_files(tempdir=None):
+@@ -1641,14 +1638,12 @@ def get_generated_json_files(tempdir=None):
          generate_nested_large_offsets_case()
          .skip_category('C#')
          .skip_category('Go')
@@ -48,9 +48,9 @@ index c91d9ddf1..916ca5f67 100644
  
          generate_custom_metadata_case()
          .skip_category('C#')
-@@ -1632,14 +1627,12 @@ def get_generated_json_files(tempdir=None):
+@@ -1670,13 +1665,11 @@ def get_generated_json_files(tempdir=None):
+         generate_nested_dictionary_case()
          .skip_category('C#')
-         .skip_category('Go')
          .skip_category('Java')  # TODO(ARROW-7779)
 -        .skip_category('JS')
 -        .skip_category('Rust'),
@@ -58,7 +58,6 @@ index c91d9ddf1..916ca5f67 100644
  
          generate_extension_case()
          .skip_category('C#')
-         .skip_category('Go')  # TODO(ARROW-3039): requires dictionaries
 -        .skip_category('JS')
 -        .skip_category('Rust'),
 +        .skip_category('JS'),
