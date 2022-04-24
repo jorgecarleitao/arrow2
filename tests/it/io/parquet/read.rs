@@ -30,7 +30,7 @@ fn test_pyarrow_integration(
     );
 
     let mut file = File::open(path).unwrap();
-    let (array, statistics) = read_column(&mut file, 0, column)?;
+    let (array, statistics) = read_column(&mut file, column)?;
 
     let expected = match (type_, required) {
         ("basic", true) => pyarrow_required(column),
@@ -104,8 +104,8 @@ fn v1_boolean_required() -> Result<()> {
 }
 
 #[test]
-fn v1_timestamp_nullable() -> Result<()> {
-    test_pyarrow_integration("date", 1, "basic", false, false, None)
+fn v1_timestamp_ms_nullable() -> Result<()> {
+    test_pyarrow_integration("timestamp_ms", 1, "basic", false, false, None)
 }
 
 #[test]
@@ -198,11 +198,6 @@ fn v1_nested_int64_nullable() -> Result<()> {
 #[test]
 fn v2_nested_int64_nullable_required() -> Result<()> {
     test_pyarrow_integration("list_int64", 2, "nested", false, false, None)
-}
-
-#[test]
-fn v1_nested_int64_nullable_required() -> Result<()> {
-    test_pyarrow_integration("list_int64", 1, "nested", false, false, None)
 }
 
 #[test]

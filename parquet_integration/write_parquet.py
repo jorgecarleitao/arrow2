@@ -9,7 +9,8 @@ PYARROW_PATH = "fixtures/pyarrow3"
 
 
 def case_basic_nullable() -> Tuple[dict, pa.Schema, str]:
-    int64 = [0, 1, None, 3, None, 5, 6, 7, None, 9]
+    int64 = [-256, -1, None, 3, None, 5, 6, 7, None, 9]
+    uint32 = [0, 1, None, 3, None, 5, 6, 7, None, 9]
     float64 = [0.0, 1.0, None, 3.0, None, 5.0, 6.0, 7.0, None, 9.0]
     string = ["Hello", None, "aa", "", None, "abc", None, None, "def", "aaa"]
     boolean = [True, None, False, False, None, True, None, None, True, True]
@@ -24,7 +25,7 @@ def case_basic_nullable() -> Tuple[dict, pa.Schema, str]:
         pa.field("float64", pa.float64()),
         pa.field("string", pa.utf8()),
         pa.field("bool", pa.bool_()),
-        pa.field("date", pa.timestamp("ms")),
+        pa.field("timestamp_ms", pa.timestamp("ms")),
         pa.field("uint32", pa.uint32()),
         pa.field("string_large", pa.utf8()),
         # decimal testing
@@ -44,8 +45,8 @@ def case_basic_nullable() -> Tuple[dict, pa.Schema, str]:
             "float64": float64,
             "string": string,
             "bool": boolean,
-            "date": int64,
-            "uint32": int64,
+            "timestamp_ms": uint32,
+            "uint32": uint32,
             "string_large": string_large,
             "decimal_9": decimal,
             "decimal_18": decimal,
@@ -61,7 +62,7 @@ def case_basic_nullable() -> Tuple[dict, pa.Schema, str]:
 
 
 def case_basic_required() -> Tuple[dict, pa.Schema, str]:
-    int64 = [-256, -1, 0, 1, 2, 3, 4, 5, 6, 7]
+    int64 = [-256, -1, 2, 3, 4, 5, 6, 7, 8, 9]
     uint32 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
     float64 = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
     string = ["Hello", "bbb", "aa", "", "bbb", "abc", "bbb", "bbb", "def", "aaa"]
@@ -74,10 +75,8 @@ def case_basic_required() -> Tuple[dict, pa.Schema, str]:
         pa.field("string", pa.utf8(), nullable=False),
         pa.field("bool", pa.bool_(), nullable=False),
         pa.field(
-            "date",
-            pa.timestamp(
-                "ms",
-            ),
+            "timestamp_ms",
+            pa.timestamp("ms"),
             nullable=False,
         ),
         pa.field("uint32", pa.uint32(), nullable=False),
@@ -93,7 +92,7 @@ def case_basic_required() -> Tuple[dict, pa.Schema, str]:
             "float64": float64,
             "string": string,
             "bool": boolean,
-            "date": int64,
+            "timestamp_ms": uint32,
             "uint32": uint32,
             "decimal_9": decimal,
             "decimal_18": decimal,
