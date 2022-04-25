@@ -1167,7 +1167,15 @@ fn main() -&gt; Result&lt;()&gt; {
     let reader = File::open(file_path)?;
     let reader = read::FileReader::try_new(reader, Some(&amp;[8]), None, None, None)?;
 
-    println!(&quot;{:#?}&quot;, reader.metadata());
+    println!(&quot;{:#?}&quot;, reader.schema());
+
+    // say we want to evaluate if the we can skip some row groups based on a field's value
+    let field = &amp;reader.schema().fields[0];
+
+    // we can deserialize the parquet statistics from this field
+    let statistics = read::statistics::deserialize(field, &amp;reader.metadata().row_groups)?;
+
+    println!(&quot;{:#?}&quot;, statistics);
 
     let start = SystemTime::now();
     for maybe_chunk in reader {
