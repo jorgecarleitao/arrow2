@@ -11,7 +11,7 @@ fn main() -> Result<()> {
     let file_path = &args[1];
 
     let reader = File::open(file_path)?;
-    let reader = read::FileReader::try_new(reader, Some(&[8]), None, None, None)?;
+    let reader = read::FileReader::try_new(reader, None, None, None, None)?;
 
     println!("{:#?}", reader.schema());
 
@@ -25,8 +25,8 @@ fn main() -> Result<()> {
 
     let start = SystemTime::now();
     for maybe_chunk in reader {
-        let columns = maybe_chunk?;
-        assert!(!columns.is_empty());
+        let chunk = maybe_chunk?;
+        assert!(!chunk.is_empty());
     }
     println!("took: {} ms", start.elapsed().unwrap().as_millis());
     Ok(())
