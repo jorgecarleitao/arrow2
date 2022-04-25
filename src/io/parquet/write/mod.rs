@@ -243,7 +243,15 @@ pub fn array_to_page(
                 values.into(),
                 array.validity().cloned(),
             );
-            fixed_len_bytes::array_to_page(&array, options, descriptor)
+            let statistics = if options.write_statistics {
+                Some(fixed_len_bytes::build_statistics(
+                    &array,
+                    descriptor.primitive_type.clone(),
+                ))
+            } else {
+                None
+            };
+            fixed_len_bytes::array_to_page(&array, options, descriptor, statistics)
         }
         DataType::Interval(IntervalUnit::DayTime) => {
             let array = array
@@ -261,13 +269,29 @@ pub fn array_to_page(
                 values.into(),
                 array.validity().cloned(),
             );
-            fixed_len_bytes::array_to_page(&array, options, descriptor)
+            let statistics = if options.write_statistics {
+                Some(fixed_len_bytes::build_statistics(
+                    &array,
+                    descriptor.primitive_type.clone(),
+                ))
+            } else {
+                None
+            };
+            fixed_len_bytes::array_to_page(&array, options, descriptor, statistics)
         }
-        DataType::FixedSizeBinary(_) => fixed_len_bytes::array_to_page(
-            array.as_any().downcast_ref().unwrap(),
-            options,
-            descriptor,
-        ),
+        DataType::FixedSizeBinary(_) => {
+            let array = array.as_any().downcast_ref().unwrap();
+            let statistics = if options.write_statistics {
+                Some(fixed_len_bytes::build_statistics(
+                    array,
+                    descriptor.primitive_type.clone(),
+                ))
+            } else {
+                None
+            };
+
+            fixed_len_bytes::array_to_page(array, options, descriptor, statistics)
+        }
         DataType::Decimal(precision, _) => {
             let precision = *precision;
             let array = array
@@ -298,6 +322,18 @@ pub fn array_to_page(
                 primitive::array_to_page::<i64, i64>(&array, options, descriptor)
             } else {
                 let size = decimal_length_from_precision(precision);
+
+                let statistics = if options.write_statistics {
+                    let stats = fixed_len_bytes::build_statistics_decimal(
+                        array,
+                        descriptor.primitive_type.clone(),
+                        size,
+                    );
+                    Some(stats)
+                } else {
+                    None
+                };
+
                 let mut values = Vec::<u8>::with_capacity(size * array.len());
                 array.values().iter().for_each(|x| {
                     let bytes = &x.to_be_bytes()[16 - size..];
@@ -308,7 +344,7 @@ pub fn array_to_page(
                     values.into(),
                     array.validity().cloned(),
                 );
-                fixed_len_bytes::array_to_page(&array, options, descriptor)
+                fixed_len_bytes::array_to_page(&array, options, descriptor, statistics)
             }
         }
         DataType::FixedSizeList(_, _) | DataType::List(_) | DataType::LargeList(_) => {

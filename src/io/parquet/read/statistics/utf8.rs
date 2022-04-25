@@ -1,4 +1,4 @@
-use crate::array::{MutableArray, MutableBinaryArray, Offset};
+use crate::array::{MutableArray, MutableUtf8Array, Offset};
 use parquet2::statistics::{BinaryStatistics, Statistics as ParquetStatistics};
 
 use crate::error::Result;
@@ -10,14 +10,21 @@ pub(super) fn push<O: Offset>(
 ) -> Result<()> {
     let min = min
         .as_mut_any()
-        .downcast_mut::<MutableBinaryArray<O>>()
+        .downcast_mut::<MutableUtf8Array<O>>()
         .unwrap();
     let max = max
         .as_mut_any()
-        .downcast_mut::<MutableBinaryArray<O>>()
+        .downcast_mut::<MutableUtf8Array<O>>()
         .unwrap();
     let from = from.map(|s| s.as_any().downcast_ref::<BinaryStatistics>().unwrap());
-    min.push(from.and_then(|s| s.min_value.as_ref()));
-    max.push(from.and_then(|s| s.max_value.as_ref()));
+
+    min.push(
+        from.and_then(|s| s.min_value.as_deref().map(simdutf8::basic::from_utf8))
+            .transpose()?,
+    );
+    max.push(
+        from.and_then(|s| s.max_value.as_deref().map(simdutf8::basic::from_utf8))
+            .transpose()?,
+    );
     Ok(())
 }

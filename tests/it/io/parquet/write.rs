@@ -55,9 +55,9 @@ fn round_trip(
 
     let data = writer.into_inner().into_inner();
 
-    let (result, stats) = read_column(&mut Cursor::new(data), 0, "a1")?;
+    let (result, stats) = read_column(&mut Cursor::new(data), "a1")?;
     assert_eq!(array.as_ref(), result.as_ref());
-    assert_eq!(statistics.as_ref(), stats.as_ref());
+    assert_eq!(statistics, stats);
     Ok(())
 }
 

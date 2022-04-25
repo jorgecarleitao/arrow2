@@ -3,12 +3,12 @@ use parquet2::{
     metadata::Descriptor,
     page::DataPage,
     schema::types::PrimitiveType,
-    statistics::{serialize_statistics, FixedLenStatistics, ParquetStatistics, Statistics},
+    statistics::{serialize_statistics, FixedLenStatistics},
 };
 
 use super::{binary::ord_binary, utils, WriteOptions};
 use crate::{
-    array::{Array, FixedSizeBinaryArray},
+    array::{Array, FixedSizeBinaryArray, PrimitiveArray},
     error::Result,
     io::parquet::read::schema::is_nullable,
 };
@@ -30,6 +30,7 @@ pub fn array_to_page(
     array: &FixedSizeBinaryArray,
     options: WriteOptions,
     descriptor: Descriptor,
+    statistics: Option<FixedLenStatistics>,
 ) -> Result<DataPage> {
     let is_optional = is_nullable(&descriptor.primitive_type.field_info);
     let validity = array.validity();
@@ -47,12 +48,6 @@ pub fn array_to_page(
 
     encode_plain(array, is_optional, &mut buffer);
 
-    let statistics = if options.write_statistics {
-        Some(build_statistics(array, descriptor.primitive_type.clone()))
-    } else {
-        None
-    };
-
     utils::build_plain_page(
         buffer,
         array.len(),
@@ -60,7 +55,7 @@ pub fn array_to_page(
         array.null_count(),
         0,
         definition_levels_byte_length,
-        statistics,
+        statistics.map(|x| serialize_statistics(&x)),
         descriptor,
         options,
         Encoding::Plain,
@@ -70,8 +65,8 @@ pub fn array_to_page(
 pub(super) fn build_statistics(
     array: &FixedSizeBinaryArray,
     primitive_type: PrimitiveType,
-) -> ParquetStatistics {
-    let statistics = &FixedLenStatistics {
+) -> FixedLenStatistics {
+    FixedLenStatistics {
         primitive_type,
         null_count: Some(array.null_count() as i64),
         distinct_count: None,
@@ -85,6 +80,27 @@ pub(super) fn build_statistics(
             .flatten()
             .min_by(|x, y| ord_binary(x, y))
             .map(|x| x.to_vec()),
-    } as &dyn Statistics;
-    serialize_statistics(statistics)
+    }
+}
+
+pub(super) fn build_statistics_decimal(
+    array: &PrimitiveArray<i128>,
+    primitive_type: PrimitiveType,
+    size: usize,
+) -> FixedLenStatistics {
+    FixedLenStatistics {
+        primitive_type,
+        null_count: Some(array.null_count() as i64),
+        distinct_count: None,
+        max_value: array
+            .iter()
+            .flatten()
+            .max()
+            .map(|x| x.to_be_bytes()[16 - size..].to_vec()),
+        min_value: array
+            .iter()
+            .flatten()
+            .min()
+            .map(|x| x.to_be_bytes()[16 - size..].to_vec()),
+    }
 }

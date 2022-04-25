@@ -2,7 +2,7 @@ use parquet2::{
     encoding::{hybrid_rle::encode_u32, Encoding},
     metadata::Descriptor,
     page::{EncodedDictPage, EncodedPage},
-    statistics::ParquetStatistics,
+    statistics::{serialize_statistics, ParquetStatistics},
     write::DynIter,
 };
 
@@ -120,10 +120,10 @@ macro_rules! dyn_prim {
 
         let mut buffer = vec![];
         primitive_encode_plain::<$from, $to>(values, false, &mut buffer);
-        (
-            EncodedDictPage::new(buffer, values.len()),
-            primitive_build_statistics::<$from, $to>(values, $descriptor.primitive_type.clone()),
-        )
+        let stats =
+            primitive_build_statistics::<$from, $to>(values, $descriptor.primitive_type.clone());
+        let stats = serialize_statistics(&stats);
+        (EncodedDictPage::new(buffer, values.len()), stats)
     }};
 }
 
@@ -191,6 +191,7 @@ pub fn array_to_pages<K: DictionaryKey>(
                     fixed_binary_encode_plain(array, false, &mut buffer);
                     let stats =
                         fixed_binary_build_statistics(array, descriptor.primitive_type.clone());
+                    let stats = serialize_statistics(&stats);
                     (EncodedDictPage::new(buffer, array.len()), stats)
                 }
                 other => {

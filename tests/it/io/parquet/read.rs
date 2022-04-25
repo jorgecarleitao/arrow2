@@ -30,7 +30,7 @@ fn test_pyarrow_integration(
     );
 
     let mut file = File::open(path).unwrap();
-    let (array, statistics) = read_column(&mut file, 0, column)?;
+    let (array, statistics) = read_column(&mut file, column)?;
 
     let expected = match (type_, required) {
         ("basic", true) => pyarrow_required(column),
@@ -51,7 +51,23 @@ fn test_pyarrow_integration(
     };
 
     assert_eq!(expected.as_ref(), array.as_ref());
-    assert_eq!(expected_statistics, statistics);
+    if ![
+        "list_int16",
+        "list_large_binary",
+        "list_int64",
+        "list_int64_required",
+        "list_int64_required_required",
+        "list_nested_i64",
+        "list_utf8",
+        "list_bool",
+        "list_nested_inner_required_required_i64",
+        "list_nested_inner_required_i64",
+    ]
+    .contains(&column)
+    {
+        // pyarrow outputs an incorrect number of null count for nested types - ARROW-16299
+        assert_eq!(expected_statistics, statistics);
+    }
 
     Ok(())
 }
@@ -104,8 +120,8 @@ fn v1_boolean_required() -> Result<()> {
 }
 
 #[test]
-fn v1_timestamp_nullable() -> Result<()> {
-    test_pyarrow_integration("date", 1, "basic", false, false, None)
+fn v1_timestamp_ms_nullable() -> Result<()> {
+    test_pyarrow_integration("timestamp_ms", 1, "basic", false, false, None)
 }
 
 #[test]
@@ -198,11 +214,6 @@ fn v1_nested_int64_nullable() -> Result<()> {
 #[test]
 fn v2_nested_int64_nullable_required() -> Result<()> {
     test_pyarrow_integration("list_int64", 2, "nested", false, false, None)
-}
-
-#[test]
-fn v1_nested_int64_nullable_required() -> Result<()> {
-    test_pyarrow_integration("list_int64", 1, "nested", false, false, None)
 }
 
 #[test]
