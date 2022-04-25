@@ -1,5 +1,5 @@
 use crate::array::*;
-use crate::datatypes::DataType;
+use crate::datatypes::{DataType, PhysicalType};
 use crate::error::Result;
 
 use super::make_mutable;
@@ -38,8 +38,13 @@ impl MutableArray for DynMutableDictionary {
 
     fn as_box(&mut self) -> Box<dyn Array> {
         let inner = self.inner.as_arc();
-        let keys = PrimitiveArray::<i32>::from_iter((0..inner.len() as i32).map(Some));
-        Box::new(DictionaryArray::<i32>::from_data(keys, inner))
+        match self.data_type.to_physical_type() {
+            PhysicalType::Dictionary(key) => match_integer_type!(key, |$T| {
+                let keys = PrimitiveArray::<$T>::from_iter((0..inner.len() as $T).map(Some));
+                Box::new(DictionaryArray::<$T>::from_data(keys, inner))
+            }),
+            _ => todo!(),
+        }
     }
 
     fn as_any(&self) -> &dyn std::any::Any {

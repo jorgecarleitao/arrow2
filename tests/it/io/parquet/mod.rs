@@ -37,7 +37,7 @@ pub fn read_column<R: Read + Seek>(mut reader: R, column: &str) -> Result<ArrayS
 
     let field = &schema.fields[column];
 
-    let statistics = deserialize_statistics(field, &metadata.row_groups)?;
+    let statistics = deserialize(field, &metadata.row_groups)?;
 
     Ok((
         reader.next().unwrap()?.into_arrays().pop().unwrap(),
@@ -381,32 +381,32 @@ pub fn pyarrow_nullable(column: &str) -> Box<dyn Array> {
 pub fn pyarrow_nullable_statistics(column: &str) -> Statistics {
     match column {
         "int64" => Statistics {
-            distinct_count: UInt64Array::from([None]),
-            null_count: UInt64Array::from([Some(3)]),
+            distinct_count: Count::Single(UInt64Array::from([None])),
+            null_count: Count::Single(UInt64Array::from([Some(3)])),
             min_value: Box::new(Int64Array::from_slice([-256])),
             max_value: Box::new(Int64Array::from_slice([9])),
         },
         "float64" => Statistics {
-            distinct_count: UInt64Array::from([None]),
-            null_count: UInt64Array::from([Some(3)]),
+            distinct_count: Count::Single(UInt64Array::from([None])),
+            null_count: Count::Single(UInt64Array::from([Some(3)])),
             min_value: Box::new(Float64Array::from_slice([0.0])),
             max_value: Box::new(Float64Array::from_slice([9.0])),
         },
         "string" => Statistics {
-            distinct_count: UInt64Array::from([None]),
-            null_count: UInt64Array::from([Some(4)]),
+            distinct_count: Count::Single(UInt64Array::from([None])),
+            null_count: Count::Single(UInt64Array::from([Some(4)])),
             min_value: Box::new(Utf8Array::<i32>::from_slice([""])),
             max_value: Box::new(Utf8Array::<i32>::from_slice(["def"])),
         },
         "bool" => Statistics {
-            distinct_count: UInt64Array::from([None]),
-            null_count: UInt64Array::from([Some(4)]),
+            distinct_count: Count::Single(UInt64Array::from([None])),
+            null_count: Count::Single(UInt64Array::from([Some(4)])),
             min_value: Box::new(BooleanArray::from_slice([false])),
             max_value: Box::new(BooleanArray::from_slice([true])),
         },
         "timestamp_ms" => Statistics {
-            distinct_count: UInt64Array::from([None]),
-            null_count: UInt64Array::from([Some(3)]),
+            distinct_count: Count::Single(UInt64Array::from([None])),
+            null_count: Count::Single(UInt64Array::from([Some(3)])),
             min_value: Box::new(
                 Int64Array::from_slice([0]).to(DataType::Timestamp(TimeUnit::Millisecond, None)),
             ),
@@ -415,8 +415,8 @@ pub fn pyarrow_nullable_statistics(column: &str) -> Statistics {
             ),
         },
         "uint32" => Statistics {
-            distinct_count: UInt64Array::from([None]),
-            null_count: UInt64Array::from([Some(3)]),
+            distinct_count: Count::Single(UInt64Array::from([None])),
+            null_count: Count::Single(UInt64Array::from([Some(3)])),
             min_value: Box::new(UInt32Array::from_slice([0])),
             max_value: Box::new(UInt32Array::from_slice([9])),
         },
@@ -429,33 +429,33 @@ pub fn pyarrow_nullable_statistics(column: &str) -> Statistics {
             };
 
             Statistics {
-                distinct_count: UInt64Array::from([None]),
-                null_count: UInt64Array::from([Some(0)]),
+                distinct_count: Count::Single(UInt64Array::from([None])),
+                null_count: Count::Single(UInt64Array::from([Some(0)])),
                 min_value: new_dict(Arc::new(Int32Array::from_slice([10]))),
                 max_value: new_dict(Arc::new(Int32Array::from_slice([200]))),
             }
         }
         "decimal_9" => Statistics {
-            distinct_count: UInt64Array::from([None]),
-            null_count: UInt64Array::from([Some(3)]),
+            distinct_count: Count::Single(UInt64Array::from([None])),
+            null_count: Count::Single(UInt64Array::from([Some(3)])),
             min_value: Box::new(Int128Array::from_slice([-256]).to(DataType::Decimal(9, 0))),
             max_value: Box::new(Int128Array::from_slice([9]).to(DataType::Decimal(9, 0))),
         },
         "decimal_18" => Statistics {
-            distinct_count: UInt64Array::from([None]),
-            null_count: UInt64Array::from([Some(3)]),
+            distinct_count: Count::Single(UInt64Array::from([None])),
+            null_count: Count::Single(UInt64Array::from([Some(3)])),
             min_value: Box::new(Int128Array::from_slice([-256]).to(DataType::Decimal(18, 0))),
             max_value: Box::new(Int128Array::from_slice([9]).to(DataType::Decimal(18, 0))),
         },
         "decimal_26" => Statistics {
-            distinct_count: UInt64Array::from([None]),
-            null_count: UInt64Array::from([Some(3)]),
+            distinct_count: Count::Single(UInt64Array::from([None])),
+            null_count: Count::Single(UInt64Array::from([Some(3)])),
             min_value: Box::new(Int128Array::from_slice([-256]).to(DataType::Decimal(26, 0))),
             max_value: Box::new(Int128Array::from_slice([9]).to(DataType::Decimal(26, 0))),
         },
         "timestamp_us" => Statistics {
-            distinct_count: UInt64Array::from([None]),
-            null_count: UInt64Array::from([Some(3)]),
+            distinct_count: Count::Single(UInt64Array::from([None])),
+            null_count: Count::Single(UInt64Array::from([Some(3)])),
             min_value: Box::new(
                 Int64Array::from_slice([-256]).to(DataType::Timestamp(TimeUnit::Microsecond, None)),
             ),
@@ -464,8 +464,8 @@ pub fn pyarrow_nullable_statistics(column: &str) -> Statistics {
             ),
         },
         "timestamp_s" => Statistics {
-            distinct_count: UInt64Array::from([None]),
-            null_count: UInt64Array::from([Some(3)]),
+            distinct_count: Count::Single(UInt64Array::from([None])),
+            null_count: Count::Single(UInt64Array::from([Some(3)])),
             min_value: Box::new(
                 Int64Array::from_slice([-256]).to(DataType::Timestamp(TimeUnit::Second, None)),
             ),
@@ -474,8 +474,8 @@ pub fn pyarrow_nullable_statistics(column: &str) -> Statistics {
             ),
         },
         "timestamp_s_utc" => Statistics {
-            distinct_count: UInt64Array::from([None]),
-            null_count: UInt64Array::from([Some(3)]),
+            distinct_count: Count::Single(UInt64Array::from([None])),
+            null_count: Count::Single(UInt64Array::from([Some(3)])),
             min_value: Box::new(Int64Array::from_slice([-256]).to(DataType::Timestamp(
                 TimeUnit::Second,
                 Some("UTC".to_string()),
@@ -539,7 +539,7 @@ pub fn pyarrow_required(column: &str) -> Box<dyn Array> {
 
 pub fn pyarrow_required_statistics(column: &str) -> Statistics {
     let mut s = pyarrow_nullable_statistics(column);
-    s.null_count = UInt64Array::from([Some(0)]);
+    s.null_count = Count::Single(UInt64Array::from([Some(0)]));
     s
 }
 
@@ -559,50 +559,50 @@ pub fn pyarrow_nested_nullable_statistics(column: &str) -> Statistics {
 
     match column {
         "list_int16" => Statistics {
-            distinct_count: UInt64Array::from([None]),
-            null_count: UInt64Array::from([Some(1)]),
+            distinct_count: Count::Single(UInt64Array::from([None])),
+            null_count: Count::Single(UInt64Array::from([Some(1)])),
             min_value: new_list(Arc::new(Int16Array::from_slice([0])), true),
             max_value: new_list(Arc::new(Int16Array::from_slice([10])), true),
         },
         "list_bool" => Statistics {
-            distinct_count: UInt64Array::from([None]),
-            null_count: UInt64Array::from([Some(1)]),
+            distinct_count: Count::Single(UInt64Array::from([None])),
+            null_count: Count::Single(UInt64Array::from([Some(1)])),
             min_value: new_list(Arc::new(BooleanArray::from_slice([false])), true),
             max_value: new_list(Arc::new(BooleanArray::from_slice([true])), true),
         },
         "list_utf8" => Statistics {
-            distinct_count: UInt64Array::from([None]),
-            null_count: [Some(1)].into(),
+            distinct_count: Count::Single(UInt64Array::from([None])),
+            null_count: Count::Single([Some(1)].into()),
             min_value: new_list(Arc::new(Utf8Array::<i32>::from_slice([""])), true),
             max_value: new_list(Arc::new(Utf8Array::<i32>::from_slice(["ccc"])), true),
         },
         "list_large_binary" => Statistics {
-            distinct_count: UInt64Array::from([None]),
-            null_count: [Some(1)].into(),
+            distinct_count: Count::Single(UInt64Array::from([None])),
+            null_count: Count::Single([Some(1)].into()),
             min_value: new_list(Arc::new(BinaryArray::<i64>::from_slice([b""])), true),
             max_value: new_list(Arc::new(BinaryArray::<i64>::from_slice([b"ccc"])), true),
         },
         "list_int64" => Statistics {
-            distinct_count: UInt64Array::from([None]),
-            null_count: [Some(1)].into(),
+            distinct_count: Count::Single(UInt64Array::from([None])),
+            null_count: Count::Single([Some(1)].into()),
             min_value: new_list(Arc::new(Int64Array::from_slice([0])), true),
             max_value: new_list(Arc::new(Int64Array::from_slice([10])), true),
         },
         "list_int64_required" => Statistics {
-            distinct_count: UInt64Array::from([None]),
-            null_count: [Some(1)].into(),
+            distinct_count: Count::Single(UInt64Array::from([None])),
+            null_count: Count::Single([Some(1)].into()),
             min_value: new_list(Arc::new(Int64Array::from_slice([0])), false),
             max_value: new_list(Arc::new(Int64Array::from_slice([10])), false),
         },
         "list_int64_required_required" => Statistics {
-            distinct_count: UInt64Array::from([None]),
-            null_count: [Some(0)].into(),
+            distinct_count: Count::Single(UInt64Array::from([None])),
+            null_count: Count::Single([Some(0)].into()),
             min_value: new_list(Arc::new(Int64Array::from_slice([0])), false),
             max_value: new_list(Arc::new(Int64Array::from_slice([10])), false),
         },
         "list_nested_i64" => Statistics {
-            distinct_count: UInt64Array::from([None]),
-            null_count: [Some(2)].into(),
+            distinct_count: Count::Single(UInt64Array::from([None])),
+            null_count: Count::Single([Some(2)].into()),
             min_value: new_list(
                 new_list(Arc::new(Int64Array::from_slice([0])), true).into(),
                 true,
@@ -613,8 +613,8 @@ pub fn pyarrow_nested_nullable_statistics(column: &str) -> Statistics {
             ),
         },
         "list_nested_inner_required_required_i64" => Statistics {
-            distinct_count: UInt64Array::from([None]),
-            null_count: [Some(0)].into(),
+            distinct_count: Count::Single(UInt64Array::from([None])),
+            null_count: Count::Single([Some(0)].into()),
             min_value: new_list(
                 new_list(Arc::new(Int64Array::from_slice([0])), true).into(),
                 true,
@@ -625,8 +625,8 @@ pub fn pyarrow_nested_nullable_statistics(column: &str) -> Statistics {
             ),
         },
         "list_nested_inner_required_i64" => Statistics {
-            distinct_count: UInt64Array::from([None]),
-            null_count: [Some(0)].into(),
+            distinct_count: Count::Single(UInt64Array::from([None])),
+            null_count: Count::Single([Some(0)].into()),
             min_value: new_list(
                 new_list(Arc::new(Int64Array::from_slice([0])), true).into(),
                 true,
@@ -656,14 +656,14 @@ pub fn pyarrow_nested_edge_statistics(column: &str) -> Statistics {
 
     match column {
         "simple" => Statistics {
-            distinct_count: UInt64Array::from([None]),
-            null_count: UInt64Array::from([Some(0)]),
+            distinct_count: Count::Single(UInt64Array::from([None])),
+            null_count: Count::Single(UInt64Array::from([Some(0)])),
             min_value: new_list(Arc::new(Int64Array::from([Some(0)]))),
             max_value: new_list(Arc::new(Int64Array::from([Some(1)]))),
         },
         "null" => Statistics {
-            distinct_count: UInt64Array::from([None]),
-            null_count: UInt64Array::from([Some(1)]),
+            distinct_count: Count::Single(UInt64Array::from([None])),
+            null_count: Count::Single(UInt64Array::from([Some(1)])),
             min_value: new_list(Arc::new(Int64Array::from([None]))),
             max_value: new_list(Arc::new(Int64Array::from([None]))),
         },
@@ -730,16 +730,51 @@ pub fn pyarrow_struct(column: &str) -> Box<dyn Array> {
 }
 
 pub fn pyarrow_struct_statistics(column: &str) -> Statistics {
+    let new_struct = |arrays: Vec<Arc<dyn Array>>, names: Vec<String>| {
+        let fields = names
+            .into_iter()
+            .zip(arrays.iter())
+            .map(|(n, a)| Field::new(n, a.data_type().clone(), true))
+            .collect();
+        StructArray::new(DataType::Struct(fields), arrays, None)
+    };
+
+    let names = vec!["f1".to_string(), "f2".to_string()];
+
     match column {
         "struct" => Statistics {
-            distinct_count: UInt64Array::from([None]),
-            null_count: UInt64Array::from([Some(4)]),
-            min_value: Box::new(BooleanArray::from_slice([false])),
-            max_value: Box::new(BooleanArray::from_slice([true])),
+            distinct_count: Count::Struct(new_struct(
+                vec![
+                    Arc::new(UInt64Array::from([None])),
+                    Arc::new(UInt64Array::from([None])),
+                ],
+                names.clone(),
+            )),
+            null_count: Count::Struct(new_struct(
+                vec![
+                    Arc::new(UInt64Array::from([Some(4)])),
+                    Arc::new(UInt64Array::from([Some(4)])),
+                ],
+                names.clone(),
+            )),
+            min_value: Box::new(new_struct(
+                vec![
+                    Arc::new(Utf8Array::<i32>::from_slice([""])),
+                    Arc::new(BooleanArray::from_slice([false])),
+                ],
+                names.clone(),
+            )),
+            max_value: Box::new(new_struct(
+                vec![
+                    Arc::new(Utf8Array::<i32>::from_slice(["def"])),
+                    Arc::new(BooleanArray::from_slice([true])),
+                ],
+                names,
+            )),
         },
         "struct_struct" => Statistics {
-            distinct_count: UInt64Array::from([None]),
-            null_count: UInt64Array::from([Some(1)]),
+            distinct_count: Count::Single(UInt64Array::from([None])),
+            null_count: Count::Single(UInt64Array::from([Some(1)])),
             min_value: Box::new(BooleanArray::from_slice([false])),
             max_value: Box::new(BooleanArray::from_slice([true])),
         },
@@ -791,7 +826,7 @@ fn integration_read(data: &[u8]) -> Result<IntegrationRead> {
     let schema = reader.schema().clone();
 
     for field in &schema.fields {
-        let mut _statistics = deserialize_statistics(field, &reader.metadata().row_groups)?;
+        let mut _statistics = deserialize(field, &reader.metadata().row_groups)?;
     }
 
     let batches = reader.collect::<Result<Vec<_>>>()?;
