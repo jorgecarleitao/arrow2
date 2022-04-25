@@ -560,49 +560,49 @@ pub fn pyarrow_nested_nullable_statistics(column: &str) -> Statistics {
     match column {
         "list_int16" => Statistics {
             distinct_count: UInt64Array::from([None]),
-            null_count: UInt64Array::from([Some(4)]), // this should be 1, see ARROW-16299
+            null_count: UInt64Array::from([Some(1)]),
             min_value: new_list(Arc::new(Int16Array::from_slice([0])), true),
             max_value: new_list(Arc::new(Int16Array::from_slice([10])), true),
         },
         "list_bool" => Statistics {
             distinct_count: UInt64Array::from([None]),
-            null_count: UInt64Array::from([Some(4)]),
+            null_count: UInt64Array::from([Some(1)]),
             min_value: new_list(Arc::new(BooleanArray::from_slice([false])), true),
             max_value: new_list(Arc::new(BooleanArray::from_slice([true])), true),
         },
         "list_utf8" => Statistics {
             distinct_count: UInt64Array::from([None]),
-            null_count: [Some(4)].into(),
+            null_count: [Some(1)].into(),
             min_value: new_list(Arc::new(Utf8Array::<i32>::from_slice([""])), true),
             max_value: new_list(Arc::new(Utf8Array::<i32>::from_slice(["ccc"])), true),
         },
         "list_large_binary" => Statistics {
             distinct_count: UInt64Array::from([None]),
-            null_count: [Some(4)].into(), // this should be 1, see ARROW-16299
+            null_count: [Some(1)].into(),
             min_value: new_list(Arc::new(BinaryArray::<i64>::from_slice([b""])), true),
             max_value: new_list(Arc::new(BinaryArray::<i64>::from_slice([b"ccc"])), true),
         },
         "list_int64" => Statistics {
             distinct_count: UInt64Array::from([None]),
-            null_count: [Some(4)].into(), // this should be 1, see ARROW-16299
+            null_count: [Some(1)].into(),
             min_value: new_list(Arc::new(Int64Array::from_slice([0])), true),
             max_value: new_list(Arc::new(Int64Array::from_slice([10])), true),
         },
         "list_int64_required" => Statistics {
             distinct_count: UInt64Array::from([None]),
-            null_count: [Some(3)].into(), // this should be 1, see ARROW-16299
+            null_count: [Some(1)].into(),
             min_value: new_list(Arc::new(Int64Array::from_slice([0])), false),
             max_value: new_list(Arc::new(Int64Array::from_slice([10])), false),
         },
         "list_int64_required_required" => Statistics {
             distinct_count: UInt64Array::from([None]),
-            null_count: [Some(3)].into(), // this should be 0, see ARROW-16299
+            null_count: [Some(0)].into(),
             min_value: new_list(Arc::new(Int64Array::from_slice([0])), false),
             max_value: new_list(Arc::new(Int64Array::from_slice([10])), false),
         },
         "list_nested_i64" => Statistics {
             distinct_count: UInt64Array::from([None]),
-            null_count: [Some(7)].into(), // this should be 2, see ARROW-16299
+            null_count: [Some(2)].into(),
             min_value: new_list(
                 new_list(Arc::new(Int64Array::from_slice([0])), true).into(),
                 true,
@@ -614,7 +614,7 @@ pub fn pyarrow_nested_nullable_statistics(column: &str) -> Statistics {
         },
         "list_nested_inner_required_required_i64" => Statistics {
             distinct_count: UInt64Array::from([None]),
-            null_count: [Some(3)].into(), // this should be 0, see ARROW-16299
+            null_count: [Some(0)].into(),
             min_value: new_list(
                 new_list(Arc::new(Int64Array::from_slice([0])), true).into(),
                 true,
@@ -626,7 +626,7 @@ pub fn pyarrow_nested_nullable_statistics(column: &str) -> Statistics {
         },
         "list_nested_inner_required_i64" => Statistics {
             distinct_count: UInt64Array::from([None]),
-            null_count: [Some(4)].into(), // this should be 0, see ARROW-16299
+            null_count: [Some(0)].into(),
             min_value: new_list(
                 new_list(Arc::new(Int64Array::from_slice([0])), true).into(),
                 true,

@@ -1,3 +1,4 @@
+use parquet2::statistics::serialize_statistics;
 use parquet2::{encoding::Encoding, metadata::Descriptor, page::DataPage, types::NativeType};
 
 use super::super::levels;
@@ -37,7 +38,10 @@ where
     encode_plain(array, is_optional, &mut buffer);
 
     let statistics = if options.write_statistics {
-        Some(build_statistics(array, descriptor.primitive_type.clone()))
+        Some(serialize_statistics(&build_statistics(
+            array,
+            descriptor.primitive_type.clone(),
+        )))
     } else {
         None
     };

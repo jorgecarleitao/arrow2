@@ -3,7 +3,7 @@ use parquet2::{
     metadata::Descriptor,
     page::DataPage,
     schema::types::PrimitiveType,
-    statistics::{serialize_statistics, ParquetStatistics, PrimitiveStatistics, Statistics},
+    statistics::{serialize_statistics, PrimitiveStatistics},
     types::NativeType,
 };
 
@@ -67,7 +67,10 @@ where
     encode_plain(array, is_optional, &mut buffer);
 
     let statistics = if options.write_statistics {
-        Some(build_statistics(array, descriptor.primitive_type.clone()))
+        Some(serialize_statistics(&build_statistics(
+            array,
+            descriptor.primitive_type.clone(),
+        )))
     } else {
         None
     };
@@ -89,13 +92,13 @@ where
 pub fn build_statistics<T, R>(
     array: &PrimitiveArray<T>,
     primitive_type: PrimitiveType,
-) -> ParquetStatistics
+) -> PrimitiveStatistics<R>
 where
     T: ArrowNativeType,
     R: NativeType,
     T: num_traits::AsPrimitive<R>,
 {
-    let statistics = &PrimitiveStatistics::<R> {
+    PrimitiveStatistics::<R> {
         primitive_type,
         null_count: Some(array.null_count() as i64),
         distinct_count: None,
@@ -115,6 +118,5 @@ where
                 x
             })
             .min_by(|x, y| x.ord(y)),
-    } as &dyn Statistics;
-    serialize_statistics(statistics)
+    }
 }

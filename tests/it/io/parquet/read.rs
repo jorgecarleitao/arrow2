@@ -51,7 +51,23 @@ fn test_pyarrow_integration(
     };
 
     assert_eq!(expected.as_ref(), array.as_ref());
-    assert_eq!(expected_statistics, statistics);
+    if ![
+        "list_int16",
+        "list_large_binary",
+        "list_int64",
+        "list_int64_required",
+        "list_int64_required_required",
+        "list_nested_i64",
+        "list_utf8",
+        "list_bool",
+        "list_nested_inner_required_required_i64",
+        "list_nested_inner_required_i64",
+    ]
+    .contains(&column)
+    {
+        // pyarrow outputs an incorrect number of null count for nested types - ARROW-16299
+        assert_eq!(expected_statistics, statistics);
+    }
 
     Ok(())
 }
