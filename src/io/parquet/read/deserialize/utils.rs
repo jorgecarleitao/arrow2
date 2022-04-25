@@ -381,7 +381,7 @@ pub(super) fn extend_from_new_page<'a, T: Decoder<'a>>(
     let mut decoded = if let Some(decoded) = items.pop_back() {
         // there is a already a state => it must be incomplete...
         debug_assert!(
-            decoded.len() < chunk_size,
+            decoded.len() <= chunk_size,
             "the temp state is expected to be incomplete"
         );
         decoded
@@ -435,7 +435,7 @@ pub(super) fn next<'a, I: DataPages, D: Decoder<'a>>(
 
             extend_from_new_page(page, chunk_size, items, decoder);
 
-            if items.front().unwrap().len() < chunk_size {
+            if (items.len() == 1) && items.front().unwrap().len() < chunk_size {
                 MaybeNext::More
             } else {
                 let decoded = items.pop_front().unwrap();
