@@ -223,8 +223,7 @@ fn new_utf8_serializer<'a, O: Offset>(
         .delimiter(options.delimiter)
         .build();
 
-    let resize = |local_buf: &mut Vec<u8>| {
-        let additional = local_buf.len();
+    let resize = |local_buf: &mut Vec<u8>, additional: usize| {
         local_buf.extend(std::iter::repeat(0u8).take(additional))
     };
 
@@ -236,16 +235,15 @@ fn new_utf8_serializer<'a, O: Offset>(
                 // This will ensure a csv parser will not read them as missing
                 // in a delimited field
                 Some("") => buf.extend_from_slice(b"\"\""),
-                Some(s) => loop {
-                    // first write field
+                Some(s) => {
+                    if s.len() < local_buf.len() * 3 {
+                        resize(&mut local_buf, s.len() * 3)
+                    }
                     match ser_writer.field(s.as_bytes(), &mut local_buf) {
-                        (WriteResult::OutputFull, _, _) => resize(&mut local_buf),
-                        // then on success write delimiter
-                        // we need to make this call because we might need to end with quotes
                         (WriteResult::InputEmpty, _, n_out) => {
                             // the writer::delimiter call writes a maximum of 2 bytes
                             if local_buf.len() - n_out < 2 {
-                                resize(&mut local_buf);
+                                resize(&mut local_buf, 2);
                             }
                             match ser_writer.delimiter(&mut local_buf[n_out..]) {
                                 (WriteResult::InputEmpty, n_out_delimiter) => {
@@ -256,10 +254,10 @@ fn new_utf8_serializer<'a, O: Offset>(
                                 }
                                 _ => unreachable!(),
                             }
-                            break;
                         }
+                        _ => unreachable!(),
                     }
-                },
+                }
                 _ => {}
             }
         },
