@@ -1,5 +1,13 @@
 # Changelog
 
+## [v0.11.1](https://github.com/jorgecarleitao/arrow2/tree/v0.11.1) (2022-04-27)
+
+[Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.11.0...v0.11.1)
+
+**Fixed bugs:**
+
+- Fixed bug in writing csv with buffer resizing [\#965](https://github.com/jorgecarleitao/arrow2/pull/965) ([ritchie46](https://github.com/ritchie46))
+
 ## [v0.11.0](https://github.com/jorgecarleitao/arrow2/tree/v0.11.0) (2022-04-27)
 
 [Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.10.1...v0.11.0)

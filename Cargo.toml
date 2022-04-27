@@ -1,6 +1,6 @@
 [package]
 name = "arrow2"
-version = "0.11.0"
+version = "0.11.1"
 license = "Apache-2.0"
 description = "Unofficial implementation of Apache Arrow spec in safe Rust"
 homepage = "https://github.com/jorgecarleitao/arrow2"
