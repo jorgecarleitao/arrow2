@@ -1,5 +1,50 @@
 # Changelog
 
+## [v0.11.0](https://github.com/jorgecarleitao/arrow2/tree/v0.11.0) (2022-04-27)
+
+[Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.10.1...v0.11.0)
+
+**Breaking changes:**
+
+- Refactored parquet statistics deserialization [\#962](https://github.com/jorgecarleitao/arrow2/pull/962) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Made GroupFilter `Send + Sync` [\#947](https://github.com/jorgecarleitao/arrow2/pull/947) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**New features:**
+
+- Added support for non-ordered projections to IPC reading [\#961](https://github.com/jorgecarleitao/arrow2/pull/961) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support for reading indexed parquet pages [\#923](https://github.com/jorgecarleitao/arrow2/pull/923) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Fixed bugs:**
+
+- Parquet regression: `exceptions.ArrowErrorException: NotYetImplemented("Can't read Dictionary(UInt32, LargeUtf8, false) from parquet")` [\#955](https://github.com/jorgecarleitao/arrow2/issues/955)
+- Reading Parquet binary column panics during deserialization 'attempt to subtract with overflow` [\#944](https://github.com/jorgecarleitao/arrow2/issues/944)
+- Reading Parquet file written by pyarrow with `lz4` compression fails with `OutOfSpec("Thrift out of range")` [\#940](https://github.com/jorgecarleitao/arrow2/issues/940)
+- Issues when trying to create a parquet file with FixedSizedListArray [\#691](https://github.com/jorgecarleitao/arrow2/issues/691)
+- Fixed bug in writing csv with buffer resizing [\#965](https://github.com/jorgecarleitao/arrow2/pull/965) ([ritchie46](https://github.com/ritchie46))
+- Fixed bug in reading binary parquet [\#945](https://github.com/jorgecarleitao/arrow2/pull/945) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed error in writing fixedSizeListArray to parquet [\#941](https://github.com/jorgecarleitao/arrow2/pull/941) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed support to read dict nested binary parquet  [\#924](https://github.com/jorgecarleitao/arrow2/pull/924) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Enhancements:**
+
+- Reduced memory usage in reading parquet [\#964](https://github.com/jorgecarleitao/arrow2/pull/964) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Simpler IPC code [\#939](https://github.com/jorgecarleitao/arrow2/pull/939) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- don't allocate string when writing to csv [\#935](https://github.com/jorgecarleitao/arrow2/pull/935) ([ritchie46](https://github.com/ritchie46))
+- Removed un-needed generic parameter [\#927](https://github.com/jorgecarleitao/arrow2/pull/927) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- update to odbc-api 0.36.0 [\#925](https://github.com/jorgecarleitao/arrow2/pull/925) ([pacman82](https://github.com/pacman82))
+
+**Documentation updates:**
+
+- Fixed example of parallel read via rayon [\#958](https://github.com/jorgecarleitao/arrow2/pull/958) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed guide deployment [\#931](https://github.com/jorgecarleitao/arrow2/pull/931) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Typo fix [\#919](https://github.com/jorgecarleitao/arrow2/pull/919) ([bkmgit](https://github.com/bkmgit))
+
+**Testing updates:**
+
+- Fixed patch of integration tests [\#960](https://github.com/jorgecarleitao/arrow2/pull/960) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added test for MapArray [\#942](https://github.com/jorgecarleitao/arrow2/pull/942) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed wrong clippy warning [\#938](https://github.com/jorgecarleitao/arrow2/pull/938) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
 ## [v0.10.1](https://github.com/jorgecarleitao/arrow2/tree/v0.10.1) (2022-03-16)
 
 [Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.10.0...v0.10.1)
