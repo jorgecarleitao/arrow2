@@ -125,6 +125,22 @@ impl<O: Offset> MutableBinaryArray<O> {
         self.try_push(value).unwrap()
     }
 
+    /// Pop the last entry from [`MutableBinaryArray`].
+    /// Note If the values is empty, this method will return None.
+    pub fn pop(&mut self) -> Option<Vec<u8>> {
+        if self.offsets.len() < 2 {
+            return None;
+        }
+        self.offsets.pop()?;
+        let value_start = self.offsets.iter().last().cloned()?.to_usize();
+        let value = self.values.split_off(value_start);
+        self.validity
+            .as_mut()
+            .map(|x| x.pop()?.then(|| ()))
+            .unwrap_or_else(|| Some(()))
+            .map(|_| value)
+    }
+
     fn try_from_iter<P: AsRef<[u8]>, I: IntoIterator<Item = Option<P>>>(iter: I) -> Result<Self> {
         let iterator = iter.into_iter();
         let (lower, _) = iterator.size_hint();
