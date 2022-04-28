@@ -68,6 +68,62 @@ fn push_null() {
 }
 
 #[test]
+fn pop() {
+    let mut a = MutableFixedSizeBinaryArray::new(2);
+    a.push(Some(b"aa"));
+    a.push::<&[u8]>(None);
+    a.push(Some(b"bb"));
+    a.push::<&[u8]>(None);
+
+    assert_eq!(a.pop(), None);
+    assert_eq!(a.len(), 3);
+    assert_eq!(a.pop(), Some(b"bb".to_vec()));
+    assert_eq!(a.len(), 2);
+    assert_eq!(a.pop(), None);
+    assert_eq!(a.len(), 1);
+    assert_eq!(a.pop(), Some(b"aa".to_vec()));
+    assert!(a.is_empty());
+    assert_eq!(a.pop(), None);
+    assert!(a.is_empty());
+}
+
+#[test]
+fn pop_all_some() {
+    let mut a = MutableFixedSizeBinaryArray::new(2);
+    a.push(Some(b"aa"));
+    a.push(Some(b"bb"));
+    a.push(Some(b"cc"));
+    a.push(Some(b"dd"));
+
+    for _ in 0..4 {
+        a.push(Some(b"11"));
+    }
+
+    a.push(Some(b"22"));
+
+    assert_eq!(a.pop(), Some(b"22".to_vec()));
+    assert_eq!(a.pop(), Some(b"11".to_vec()));
+    assert_eq!(a.pop(), Some(b"11".to_vec()));
+    assert_eq!(a.pop(), Some(b"11".to_vec()));
+    assert_eq!(a.len(), 5);
+
+    assert_eq!(
+        a,
+        MutableFixedSizeBinaryArray::try_from_iter(
+            vec![
+                Some(b"aa"),
+                Some(b"bb"),
+                Some(b"cc"),
+                Some(b"dd"),
+                Some(b"11"),
+            ],
+            2,
+        )
+        .unwrap()
+    );
+}
+
+#[test]
 fn as_arc() {
     let mut array = MutableFixedSizeBinaryArray::try_from_iter(
         vec![Some(b"ab"), Some(b"bc"), None, Some(b"fh")],
