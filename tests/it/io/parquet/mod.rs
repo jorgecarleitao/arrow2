@@ -183,7 +183,7 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
 
     match column {
         "list_int64_required_required" => {
-            // [[0, 1], [], [2, None, 3], [4, 5, 6], [], [7, 8, 9], [], [10]]
+            // [[0, 1], [], [2, 0, 3], [4, 5, 6], [], [7, 8, 9], [], [10]]
             let data_type = DataType::List(Box::new(Field::new("item", DataType::Int64, false)));
             Box::new(ListArray::<i32>::from_data(
                 data_type, offsets, values, None,

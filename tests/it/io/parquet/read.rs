@@ -249,7 +249,7 @@ fn v1_nested_i16_dict() -> Result<()> {
 }
 
 #[test]
-fn v2_nested_i16_required_dict() -> Result<()> {
+fn v1_nested_i16_required_dict() -> Result<()> {
     test_pyarrow_integration(
         "list_int64_required_required",
         1,

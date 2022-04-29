@@ -72,9 +72,14 @@ impl<O: Offset> Iterator for RepLevelsIter<'_, O> {
     }
 }
 
+enum OffsetsIter<'a, O> {
+    Optional(std::iter::Zip<std::slice::Windows<'a, O>, BitmapIter<'a>>),
+    Required(std::slice::Windows<'a, O>),
+}
+
 /// Iterator adapter of parquet / dremel definition levels
 pub struct DefLevelsIter<'a, O: Offset> {
-    iter: std::iter::Zip<std::slice::Windows<'a, O>, Box<dyn Iterator<Item = bool> + 'a>>,
+    iter: OffsetsIter<'a, O>,
     primitive_validity: Option<BitmapIter<'a>>,
     remaining: usize,
     is_valid: bool,
@@ -92,15 +97,12 @@ impl<'a, O: Offset> DefLevelsIter<'a, O> {
 
         let primitive_validity = primitive_validity.map(|x| x.iter());
 
-        let validity = validity
-            .map(|x| Box::new(x.iter()) as Box<dyn Iterator<Item = bool>>)
-            .unwrap_or_else(|| {
-                Box::new(std::iter::repeat(true).take(offsets.len() - 1))
-                    as Box<dyn Iterator<Item = bool>>
-            });
+        let iter = validity
+            .map(|x| OffsetsIter::Optional(offsets.windows(2).zip(x.iter())))
+            .unwrap_or_else(|| OffsetsIter::Required(offsets.windows(2)));
 
         Self {
-            iter: offsets.windows(2).zip(validity),
+            iter,
             primitive_validity,
             remaining: 0,
             length: 0,
@@ -115,18 +117,31 @@ impl<O: Offset> Iterator for DefLevelsIter<'_, O> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.remaining == self.length {
-            if let Some((w, is_valid)) = self.iter.next() {
-                let start = w[0].to_usize();
-                let end = w[1].to_usize();
-                self.length = end - start;
-                self.remaining = 0;
-                self.is_valid = is_valid;
-                if self.length == 0 {
-                    self.total_size -= 1;
-                    return Some(is_valid as u32);
+            match &mut self.iter {
+                OffsetsIter::Optional(iter) => {
+                    let (w, is_valid) = iter.next()?;
+                    let start = w[0].to_usize();
+                    let end = w[1].to_usize();
+                    self.length = end - start;
+                    self.remaining = 0;
+                    self.is_valid = is_valid;
+                    if self.length == 0 {
+                        self.total_size -= 1;
+                        return Some(self.is_valid as u32);
+                    }
                 }
-            } else {
-                return None;
+                OffsetsIter::Required(iter) => {
+                    let w = iter.next()?;
+                    let start = w[0].to_usize();
+                    let end = w[1].to_usize();
+                    self.length = end - start;
+                    self.remaining = 0;
+                    self.is_valid = true;
+                    if self.length == 0 {
+                        self.total_size -= 1;
+                        return Some(0);
+                    }
+                }
             }
         }
         self.remaining += 1;
@@ -218,7 +233,7 @@ pub fn write_def_levels<O: Offset>(
     validity: Option<&Bitmap>,
     version: Version,
 ) -> Result<()> {
-    let num_bits = 2;
+    let num_bits = 1 + validity.is_some() as u8;
 
     match version {
         Version::V1 => {
@@ -252,6 +267,7 @@ mod tests {
 
     #[test]
     fn test_def_levels() {
+        // [[0, 1], None, [2, None, 3], [4, 5, 6], [], [7, 8, 9], None, [10]]
         let offsets = [0, 2, 2, 5, 8, 8, 11, 11, 12].as_ref();
         let validity = Some(Bitmap::from([
             true, false, true, true, true, true, false, true,
@@ -264,6 +280,19 @@ mod tests {
             true, //[10]
         ]));
         let expected = vec![3u32, 3, 0, 3, 2, 3, 3, 3, 3, 1, 3, 3, 3, 0, 3];
+
+        let result = DefLevelsIter::new(offsets, validity.as_ref(), primitive_validity.as_ref())
+            .collect::<Vec<_>>();
+        assert_eq!(result, expected)
+    }
+
+    #[test]
+    fn test_def_levels1() {
+        // [[0, 1], [], [2, 0, 3], [4, 5, 6], [], [7, 8, 9], [], [10]]
+        let offsets = [0, 2, 2, 5, 8, 8, 11, 11, 12].as_ref();
+        let validity = None;
+        let primitive_validity = None;
+        let expected = vec![1u32, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1];
 
         let result = DefLevelsIter::new(offsets, validity.as_ref(), primitive_validity.as_ref())
             .collect::<Vec<_>>();

@@ -266,6 +266,30 @@ fn list_int64_optional_v1() -> Result<()> {
 }
 
 #[test]
+fn list_int64_required_required_v1() -> Result<()> {
+    round_trip(
+        "list_int64_required_required",
+        false,
+        true,
+        Version::V1,
+        CompressionOptions::Uncompressed,
+        Encoding::Plain,
+    )
+}
+
+#[test]
+fn list_int64_required_required_v2() -> Result<()> {
+    round_trip(
+        "list_int64_required_required",
+        false,
+        true,
+        Version::V2,
+        CompressionOptions::Uncompressed,
+        Encoding::Plain,
+    )
+}
+
+#[test]
 fn list_bool_optional_v2() -> Result<()> {
     round_trip(
         "list_bool",
