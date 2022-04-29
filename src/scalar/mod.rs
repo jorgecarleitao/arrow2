@@ -148,13 +148,10 @@ pub fn new_scalar(array: &dyn Array, index: usize) -> Box<dyn Scalar> {
         }
         Union => {
             let array = array.as_any().downcast_ref::<UnionArray>().unwrap();
-            let type_id = array.types()[index];
-            let (field_index, index) = array.index(index);
-            let field_value = new_scalar(&*array.fields()[field_index], index);
             Box::new(UnionScalar::new(
                 array.data_type().clone(),
-                type_id,
-                field_value.into(),
+                array.types()[index],
+                array.value(index).into(),
             ))
         }
         Map => todo!(),

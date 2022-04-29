@@ -28,6 +28,12 @@ impl UnionScalar {
     pub fn value(&self) -> &Arc<dyn Scalar> {
         &self.value
     }
+
+    /// Returns the type of the union scalar
+    #[inline]
+    pub fn type_(&self) -> i8 {
+        self.type_
+    }
 }
 
 impl Scalar for UnionScalar {
