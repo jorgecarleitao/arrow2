@@ -113,7 +113,7 @@ impl MutableFixedSizeBinaryArray {
     }
 
     /// Pop the last entry from [`MutableFixedSizeBinaryArray`].
-    /// Note If the values is empty, this method will return None.
+    /// This function returns `None` iff this array is empty
     pub fn pop(&mut self) -> Option<Vec<u8>> {
         if self.values.len() < self.size {
             return None;
