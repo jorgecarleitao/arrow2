@@ -165,7 +165,7 @@ impl<O: Offset> MutableUtf8Array<O> {
     }
 
     /// Pop the last entry from [`MutableUtf8Array`].
-    /// Note If the values is empty, this method will return None.
+    /// This function returns `None` iff this array is empty.
     pub fn pop(&mut self) -> Option<String> {
         if self.offsets.len() < 2 {
             return None;
