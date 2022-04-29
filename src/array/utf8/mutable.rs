@@ -164,6 +164,24 @@ impl<O: Offset> MutableUtf8Array<O> {
         self.try_push(value).unwrap()
     }
 
+    /// Pop the last entry from [`MutableUtf8Array`].
+    /// This function returns `None` iff this array is empty.
+    pub fn pop(&mut self) -> Option<String> {
+        if self.offsets.len() < 2 {
+            return None;
+        }
+        self.offsets.pop()?;
+        let value_start = self.offsets.iter().last().cloned()?.to_usize();
+        let value = self.values.split_off(value_start);
+        self.validity
+            .as_mut()
+            .map(|x| x.pop()?.then(|| ()))
+            .unwrap_or_else(|| Some(()))
+            .map(|_|
+                // soundness: we always check for utf8 soundness on constructors.
+                unsafe { String::from_utf8_unchecked(value) })
+    }
+
     fn init_validity(&mut self) {
         let mut validity = MutableBitmap::with_capacity(self.offsets.capacity());
         validity.extend_constant(self.len(), true);

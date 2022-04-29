@@ -74,6 +74,54 @@ fn push_null() {
 }
 
 #[test]
+fn pop() {
+    let mut a = MutableBinaryArray::<i32>::new();
+    a.push(Some(b"first"));
+    a.push(Some(b"second"));
+    a.push::<Vec<u8>>(None);
+    a.push_null();
+
+    assert_eq!(a.pop(), None);
+    assert_eq!(a.len(), 3);
+    assert_eq!(a.pop(), None);
+    assert_eq!(a.len(), 2);
+    assert_eq!(a.pop(), Some(b"second".to_vec()));
+    assert_eq!(a.len(), 1);
+    assert_eq!(a.pop(), Some(b"first".to_vec()));
+    assert_eq!(a.len(), 0);
+    assert_eq!(a.pop(), None);
+    assert_eq!(a.len(), 0);
+}
+
+#[test]
+fn pop_all_some() {
+    let mut a = MutableBinaryArray::<i32>::new();
+    a.push(Some(b"first"));
+    a.push(Some(b"second"));
+    a.push(Some(b"third"));
+    a.push(Some(b"fourth"));
+
+    for _ in 0..4 {
+        a.push(Some(b"aaaa"));
+    }
+
+    a.push(Some(b"bbbb"));
+
+    assert_eq!(a.pop(), Some(b"bbbb".to_vec()));
+    assert_eq!(a.pop(), Some(b"aaaa".to_vec()));
+    assert_eq!(a.pop(), Some(b"aaaa".to_vec()));
+    assert_eq!(a.pop(), Some(b"aaaa".to_vec()));
+    assert_eq!(a.len(), 5);
+    assert_eq!(a.pop(), Some(b"aaaa".to_vec()));
+    assert_eq!(a.pop(), Some(b"fourth".to_vec()));
+    assert_eq!(a.pop(), Some(b"third".to_vec()));
+    assert_eq!(a.pop(), Some(b"second".to_vec()));
+    assert_eq!(a.pop(), Some(b"first".to_vec()));
+    assert!(a.is_empty());
+    assert_eq!(a.pop(), None);
+}
+
+#[test]
 fn extend_trusted_len_values() {
     let mut array = MutableBinaryArray::<i32>::new();
 

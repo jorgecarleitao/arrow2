@@ -112,6 +112,21 @@ impl MutableFixedSizeBinaryArray {
         self.try_push(value).unwrap()
     }
 
+    /// Pop the last entry from [`MutableFixedSizeBinaryArray`].
+    /// This function returns `None` iff this array is empty
+    pub fn pop(&mut self) -> Option<Vec<u8>> {
+        if self.values.len() < self.size {
+            return None;
+        }
+        let value_start = self.values.len() - self.size;
+        let value = self.values.split_off(value_start);
+        self.validity
+            .as_mut()
+            .map(|x| x.pop()?.then(|| ()))
+            .unwrap_or_else(|| Some(()))
+            .map(|_| value)
+    }
+
     /// Creates a new [`MutableFixedSizeBinaryArray`] from an iterator of values.
     /// # Errors
     /// Errors iff the size of any of the `value` is not equal to its own size.
