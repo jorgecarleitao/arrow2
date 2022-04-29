@@ -108,9 +108,59 @@ fn read_dictionaries<R: Read + Seek>(
     Ok(dictionaries)
 }
 
+/// Reads the footer's length and magic number in footer
+fn read_footer_len<R: Read + Seek>(reader: &mut R) -> Result<usize> {
+    // read footer length and magic number in footer
+    reader.seek(SeekFrom::End(-10))?;
+    let mut footer: [u8; 10] = [0; 10];
+
+    reader.read_exact(&mut footer)?;
+    let footer_len = i32::from_le_bytes(footer[..4].try_into().unwrap());
+
+    if footer[4..] != ARROW_MAGIC {
+        return Err(ArrowError::OutOfSpec(
+            "Arrow file does not contain correct footer".to_string(),
+        ));
+    }
+    footer_len
+        .try_into()
+        .map_err(|_| ArrowError::oos("The footer's lenght must be a positive number"))
+}
+
+pub(super) fn deserialize_footer(
+    footer_data: &[u8],
+) -> Result<(FileMetadata, Option<Vector<arrow_format::ipc::BlockRef>>)> {
+    let footer = arrow_format::ipc::FooterRef::read_as_root(footer_data)
+        .map_err(|err| ArrowError::OutOfSpec(format!("Unable to get root as footer: {:?}", err)))?;
+
+    let blocks = footer.record_batches()?.ok_or_else(|| {
+        ArrowError::OutOfSpec("Unable to get record batches from footer".to_string())
+    })?;
+
+    let blocks = blocks
+        .iter()
+        .map(|block| Ok(block.try_into()?))
+        .collect::<Result<Vec<_>>>()?;
+
+    let ipc_schema = footer
+        .schema()?
+        .ok_or_else(|| ArrowError::OutOfSpec("Unable to get the schema from footer".to_string()))?;
+    let (schema, ipc_schema) = fb_to_schema(ipc_schema)?;
+
+    Ok((
+        FileMetadata {
+            schema,
+            ipc_schema,
+            blocks,
+            dictionaries: Default::default(),
+        },
+        footer.dictionaries()?,
+    ))
+}
+
 /// Read the IPC file's metadata
 pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata> {
-    // check if header and footer contain correct magic bytes
+    // check if header contain the correct magic bytes
     let mut magic_buffer: [u8; 6] = [0; 6];
     reader.read_exact(&mut magic_buffer)?;
     if magic_buffer != ARROW_MAGIC {
@@ -118,53 +168,29 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
             "Arrow file does not contain correct header".to_string(),
         ));
     }
-    reader.seek(SeekFrom::End(-6))?;
-    reader.read_exact(&mut magic_buffer)?;
-    if magic_buffer != ARROW_MAGIC {
-        return Err(ArrowError::OutOfSpec(
-            "Arrow file does not contain correct footer".to_string(),
-        ));
-    }
-    // read footer length
-    let mut footer_size: [u8; 4] = [0; 4];
-    reader.seek(SeekFrom::End(-10))?;
-    reader.read_exact(&mut footer_size)?;
-    let footer_len = i32::from_le_bytes(footer_size);
+
+    let footer_len = read_footer_len(reader)?;
 
     // read footer
     let mut footer_data = vec![0; footer_len as usize];
     reader.seek(SeekFrom::End(-10 - footer_len as i64))?;
     reader.read_exact(&mut footer_data)?;
 
-    let footer = arrow_format::ipc::FooterRef::read_as_root(&footer_data)
-        .map_err(|err| ArrowError::OutOfSpec(format!("Unable to get root as footer: {:?}", err)))?;
+    let (mut metadata, dictionary_blocks) = deserialize_footer(&footer_data)?;
 
-    let blocks = footer.record_batches()?.ok_or_else(|| {
-        ArrowError::OutOfSpec("Unable to get record batches from footer".to_string())
-    })?;
-
-    let ipc_schema = footer
-        .schema()?
-        .ok_or_else(|| ArrowError::OutOfSpec("Unable to get the schema from footer".to_string()))?;
-    let (schema, ipc_schema) = fb_to_schema(ipc_schema)?;
-
-    let dictionary_blocks = footer.dictionaries()?;
-
-    let dictionaries = if let Some(blocks) = dictionary_blocks {
-        read_dictionaries(reader, &schema.fields, &ipc_schema, blocks)?
+    // read dictionaries
+    metadata.dictionaries = if let Some(blocks) = dictionary_blocks {
+        read_dictionaries(
+            reader,
+            &metadata.schema.fields,
+            &metadata.ipc_schema,
+            blocks,
+        )?
     } else {
         Default::default()
     };
 
-    Ok(FileMetadata {
-        schema,
-        ipc_schema,
-        blocks: blocks
-            .iter()
-            .map(|block| Ok(block.try_into()?))
-            .collect::<Result<Vec<_>>>()?,
-        dictionaries,
-    })
+    Ok(metadata)
 }
 
 pub(super) fn get_serialized_batch<'a>(
@@ -272,26 +298,27 @@ impl<R: Read + Seek> Iterator for FileReader<R> {
 
     fn next(&mut self) -> Option<Self::Item> {
         // get current block
-        if self.current_block < self.metadata.blocks.len() {
-            let block = self.current_block;
-            self.current_block += 1;
-            let chunk = read_batch(
-                &mut self.reader,
-                &self.metadata,
-                self.projection.as_ref().map(|x| x.0.as_ref()),
-                block,
-                &mut self.buffer,
-            );
-
-            let chunk = if let Some((projection, map, _)) = &self.projection {
-                // re-order according to projection
-                chunk.map(|chunk| apply_projection(chunk, projection, map))
-            } else {
-                chunk
-            };
-            Some(chunk)
-        } else {
-            None
+        if self.current_block == self.metadata.blocks.len() {
+            return None;
         }
+
+        let block = self.current_block;
+        self.current_block += 1;
+
+        let chunk = read_batch(
+            &mut self.reader,
+            &self.metadata,
+            self.projection.as_ref().map(|x| x.0.as_ref()),
+            block,
+            &mut self.buffer,
+        );
+
+        let chunk = if let Some((projection, map, _)) = &self.projection {
+            // re-order according to projection
+            chunk.map(|chunk| apply_projection(chunk, projection, map))
+        } else {
+            chunk
+        };
+        Some(chunk)
     }
 }

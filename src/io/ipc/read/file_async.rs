@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use arrow_format::ipc::{
     planus::{ReadAsRoot, Vector},
-    BlockRef, FooterRef, MessageHeaderRef, MessageRef,
+    BlockRef, MessageHeaderRef, MessageRef,
 };
 use futures::{
     stream::BoxStream, AsyncRead, AsyncReadExt, AsyncSeek, AsyncSeekExt, Stream, StreamExt,
@@ -18,8 +18,7 @@ use crate::error::{ArrowError, Result};
 use crate::io::ipc::{IpcSchema, ARROW_MAGIC, CONTINUATION_MARKER};
 
 use super::common::{apply_projection, prepare_projection, read_dictionary, read_record_batch};
-use super::reader::get_serialized_batch;
-use super::schema::fb_to_schema;
+use super::reader::{deserialize_footer, get_serialized_batch};
 use super::Dictionaries;
 use super::FileMetadata;
 
@@ -114,62 +113,51 @@ impl<'a> Stream for FileStream<'a> {
     }
 }
 
+/// Reads the footer's length and magic number in footer
+async fn read_footer_len<R: AsyncRead + AsyncSeek + Unpin>(reader: &mut R) -> Result<usize> {
+    // read footer length and magic number in footer
+    reader.seek(SeekFrom::End(-10)).await?;
+    let mut footer: [u8; 10] = [0; 10];
+
+    reader.read_exact(&mut footer).await?;
+    let footer_len = i32::from_le_bytes(footer[..4].try_into().unwrap());
+
+    if footer[4..] != ARROW_MAGIC {
+        return Err(ArrowError::OutOfSpec(
+            "Arrow file does not contain correct footer".to_string(),
+        ));
+    }
+    footer_len
+        .try_into()
+        .map_err(|_| ArrowError::oos("The footer's lenght must be a positive number"))
+}
+
 /// Read the metadata from an IPC file.
-pub async fn read_file_metadata_async<R>(mut reader: R) -> Result<FileMetadata>
+pub async fn read_file_metadata_async<R>(reader: &mut R) -> Result<FileMetadata>
 where
     R: AsyncRead + AsyncSeek + Unpin,
 {
-    // Check header
-    let mut magic = [0; 6];
-    reader.read_exact(&mut magic).await?;
-    if magic != ARROW_MAGIC {
-        return Err(ArrowError::OutOfSpec(
-            "file does not contain correct Arrow header".to_string(),
-        ));
-    }
-    // Check footer
-    reader.seek(SeekFrom::End(-6)).await?;
-    reader.read_exact(&mut magic).await?;
-    if magic != ARROW_MAGIC {
-        return Err(ArrowError::OutOfSpec(
-            "file does not contain correct Arrow footer".to_string(),
-        ));
-    }
-    // Get footer size
-    let mut footer_size = [0; 4];
-    reader.seek(SeekFrom::End(-10)).await?;
-    reader.read_exact(&mut footer_size).await?;
-    let footer_size = i32::from_le_bytes(footer_size);
+    let footer_size = read_footer_len(reader).await?;
     // Read footer
     let mut footer = vec![0; footer_size as usize];
     reader.seek(SeekFrom::End(-10 - footer_size as i64)).await?;
     reader.read_exact(&mut footer).await?;
-    let footer = FooterRef::read_as_root(&footer[..])
-        .map_err(|err| ArrowError::OutOfSpec(format!("unable to get root as footer: {:?}", err)))?;
 
-    let blocks = footer.record_batches()?.ok_or_else(|| {
-        ArrowError::OutOfSpec("unable to get record batches from footer".to_string())
-    })?;
-    let schema = footer
-        .schema()?
-        .ok_or_else(|| ArrowError::OutOfSpec("unable to get schema from footer".to_string()))?;
-    let (schema, ipc_schema) = fb_to_schema(schema)?;
-    let dictionary_blocks = footer.dictionaries()?;
-    let dictionaries = if let Some(blocks) = dictionary_blocks {
-        read_dictionaries(reader, &schema.fields[..], &ipc_schema, blocks).await?
+    let (mut metadata, dictionary_blocks) = deserialize_footer(&footer)?;
+
+    metadata.dictionaries = if let Some(blocks) = dictionary_blocks {
+        read_dictionaries(
+            reader,
+            &metadata.schema.fields,
+            &metadata.ipc_schema,
+            blocks,
+        )
+        .await?
     } else {
         Default::default()
     };
 
-    Ok(FileMetadata {
-        schema,
-        ipc_schema,
-        blocks: blocks
-            .iter()
-            .map(|block| Ok(block.try_into()?))
-            .collect::<Result<Vec<_>>>()?,
-        dictionaries,
-    })
+    Ok(metadata)
 }
 
 async fn read_dictionaries<R>(
