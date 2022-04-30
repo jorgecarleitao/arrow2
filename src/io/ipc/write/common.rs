@@ -32,7 +32,7 @@ pub struct WriteOptions {
 
 fn encode_dictionary(
     field: &IpcField,
-    array: &Arc<dyn Array>,
+    array: &dyn Array,
     options: &WriteOptions,
     dictionary_tracker: &mut DictionaryTracker,
     encoded_dictionaries: &mut Vec<EncodedData>,
@@ -50,7 +50,7 @@ fn encode_dictionary(
             let array = array.as_any().downcast_ref::<DictionaryArray<$T>>().unwrap();
             let values = array.values();
             encode_dictionary(field,
-                values,
+                values.as_ref(),
                 options,
                 dictionary_tracker,
                 encoded_dictionaries
@@ -80,7 +80,7 @@ fn encode_dictionary(
                 .try_for_each(|(field, values)| {
                     encode_dictionary(
                         field,
-                        values,
+                        values.as_ref(),
                         options,
                         dictionary_tracker,
                         encoded_dictionaries,
@@ -96,7 +96,7 @@ fn encode_dictionary(
             let field = &field.fields[0]; // todo: error instead
             encode_dictionary(
                 field,
-                values,
+                values.as_ref(),
                 options,
                 dictionary_tracker,
                 encoded_dictionaries,
@@ -111,7 +111,7 @@ fn encode_dictionary(
             let field = &field.fields[0]; // todo: error instead
             encode_dictionary(
                 field,
-                values,
+                values.as_ref(),
                 options,
                 dictionary_tracker,
                 encoded_dictionaries,
@@ -126,7 +126,7 @@ fn encode_dictionary(
             let field = &field.fields[0]; // todo: error instead
             encode_dictionary(
                 field,
-                values,
+                values.as_ref(),
                 options,
                 dictionary_tracker,
                 encoded_dictionaries,
@@ -151,7 +151,7 @@ fn encode_dictionary(
                 .try_for_each(|(field, values)| {
                     encode_dictionary(
                         field,
-                        values,
+                        values.as_ref(),
                         options,
                         dictionary_tracker,
                         encoded_dictionaries,
@@ -163,7 +163,7 @@ fn encode_dictionary(
             let field = &field.fields[0]; // todo: error instead
             encode_dictionary(
                 field,
-                values,
+                values.as_ref(),
                 options,
                 dictionary_tracker,
                 encoded_dictionaries,
@@ -183,7 +183,7 @@ pub fn encode_chunk(
     for (field, array) in fields.iter().zip(columns.as_ref()) {
         encode_dictionary(
             field,
-            array,
+            array.as_ref(),
             options,
             dictionary_tracker,
             &mut encoded_dictionaries,
@@ -312,18 +312,11 @@ fn dictionary_batch_to_bytes<K: DictionaryKey>(
 /// multiple times. Can optionally error if an update to an existing dictionary is attempted, which
 /// isn't allowed in the `FileWriter`.
 pub struct DictionaryTracker {
-    written: Dictionaries,
-    error_on_replacement: bool,
+    pub dictionaries: Dictionaries,
+    pub cannot_replace: bool,
 }
 
 impl DictionaryTracker {
-    pub fn new(error_on_replacement: bool) -> Self {
-        Self {
-            written: Dictionaries::new(),
-            error_on_replacement,
-        }
-    }
-
     /// Keep track of the dictionary with the given ID and values. Behavior:
     ///
     /// * If this ID has been written already and has the same data, return `Ok(false)` to indicate
@@ -333,7 +326,7 @@ impl DictionaryTracker {
     /// * If the tracker has not been configured to error on replacement or this dictionary
     ///   has never been seen before, return `Ok(true)` to indicate that the dictionary was just
     ///   inserted.
-    pub fn insert(&mut self, dict_id: i64, array: &Arc<dyn Array>) -> Result<bool> {
+    pub fn insert(&mut self, dict_id: i64, array: &dyn Array) -> Result<bool> {
         let values = match array.data_type() {
             DataType::Dictionary(key_type, _, _) => {
                 match_integer_type!(key_type, |$T| {
@@ -348,11 +341,11 @@ impl DictionaryTracker {
         };
 
         // If a dictionary with this id was already emitted, check if it was the same.
-        if let Some(last) = self.written.get(&dict_id) {
+        if let Some(last) = self.dictionaries.get(&dict_id) {
             if last.as_ref() == values.as_ref() {
                 // Same dictionary values => no need to emit it again
                 return Ok(false);
-            } else if self.error_on_replacement {
+            } else if self.cannot_replace {
                 return Err(ArrowError::InvalidArgumentError(
                     "Dictionary replacement detected when writing IPC file format. \
                      Arrow IPC files only support a single dictionary for a given field \
@@ -362,7 +355,7 @@ impl DictionaryTracker {
             }
         };
 
-        self.written.insert(dict_id, values.clone());
+        self.dictionaries.insert(dict_id, values.clone());
         Ok(true)
     }
 }

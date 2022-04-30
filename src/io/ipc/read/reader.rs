@@ -27,10 +27,10 @@ pub struct FileMetadata {
     /// The blocks in the file
     ///
     /// A block indicates the regions in the file to read to get data
-    pub(super) blocks: Vec<arrow_format::ipc::Block>,
+    pub(crate) blocks: Vec<arrow_format::ipc::Block>,
 
     /// Dictionaries associated to each dict_id
-    pub(super) dictionaries: Option<Vec<arrow_format::ipc::Block>>,
+    pub(crate) dictionaries: Option<Vec<arrow_format::ipc::Block>>,
 }
 
 /// Arrow File reader
@@ -65,7 +65,7 @@ fn read_dictionary_message<R: Read + Seek>(
     Ok(())
 }
 
-fn read_dictionaries<R: Read + Seek>(
+pub(crate) fn read_dictionaries<R: Read + Seek>(
     reader: &mut R,
     fields: &[Field],
     ipc_schema: &IpcSchema,

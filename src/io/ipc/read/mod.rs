@@ -13,7 +13,7 @@ mod array;
 mod common;
 mod deserialize;
 mod read_basic;
-mod reader;
+pub(crate) mod reader;
 mod schema;
 mod stream;
 #[cfg(feature = "io_ipc_read_async")]

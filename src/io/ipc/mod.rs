@@ -81,6 +81,7 @@ use crate::error::ArrowError;
 mod compression;
 mod endianess;
 
+pub mod append;
 pub mod read;
 pub mod write;
 

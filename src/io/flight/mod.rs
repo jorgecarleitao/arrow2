@@ -25,7 +25,10 @@ pub fn serialize_batch(
     fields: &[IpcField],
     options: &WriteOptions,
 ) -> (Vec<FlightData>, FlightData) {
-    let mut dictionary_tracker = DictionaryTracker::new(false);
+    let mut dictionary_tracker = DictionaryTracker {
+        dictionaries: Default::default(),
+        cannot_replace: false,
+    };
 
     let (encoded_dictionaries, encoded_batch) =
         encode_chunk(columns, fields, &mut dictionary_tracker, options)

@@ -10,7 +10,7 @@ use arrow2::io::ipc::{write::*, IpcField};
 
 use crate::io::ipc::common::read_gzip_json;
 
-fn write_(
+pub(crate) fn write(
     batches: &[Chunk<Arc<dyn Array>>],
     schema: &Schema,
     ipc_fields: Option<Vec<IpcField>>,
@@ -34,7 +34,7 @@ fn round_trip(
 ) -> Result<()> {
     let (expected_schema, expected_batches) = (schema.clone(), vec![columns]);
 
-    let result = write_(&expected_batches, &schema, ipc_fields, compression)?;
+    let result = write(&expected_batches, &schema, ipc_fields, compression)?;
     let mut reader = Cursor::new(result);
     let metadata = read_file_metadata(&mut reader)?;
     let schema = metadata.schema.clone();
@@ -58,7 +58,7 @@ fn test_file(version: &str, file_name: &str, compressed: bool) -> Result<()> {
         None
     };
 
-    let result = write_(&batches, &schema, Some(ipc_fields), compression)?;
+    let result = write(&batches, &schema, Some(ipc_fields), compression)?;
     let mut reader = Cursor::new(result);
     let metadata = read_file_metadata(&mut reader)?;
     let schema = metadata.schema.clone();
