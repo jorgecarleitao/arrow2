@@ -180,11 +180,13 @@ fn write_ipc&lt;W: Write + Seek&gt;(writer: W, array: impl Array + 'static) -&gt
     let schema = vec![Field::new(&quot;a&quot;, array.data_type().clone(), false)].into();
 
     let options = write::WriteOptions { compression: None };
-    let mut writer = write::FileWriter::try_new(writer, &amp;schema, None, options)?;
+    let mut writer = write::FileWriter::new(writer, schema, None, options);
 
     let batch = Chunk::try_new(vec![Arc::new(array) as Arc&lt;dyn Array&gt;])?;
 
+    writer.start()?;
     writer.write(&amp;batch, None)?;
+    writer.finish()?;
 
     Ok(writer.into_inner())
 }

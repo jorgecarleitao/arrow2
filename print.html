@@ -820,11 +820,13 @@ fn write_ipc&lt;W: Write + Seek&gt;(writer: W, array: impl Array + 'static) -&gt
     let schema = vec![Field::new(&quot;a&quot;, array.data_type().clone(), false)].into();
 
     let options = write::WriteOptions { compression: None };
-    let mut writer = write::FileWriter::try_new(writer, &amp;schema, None, options)?;
+    let mut writer = write::FileWriter::new(writer, schema, None, options);
 
     let batch = Chunk::try_new(vec![Arc::new(array) as Arc&lt;dyn Array&gt;])?;
 
+    writer.start()?;
     writer.write(&amp;batch, None)?;
+    writer.finish()?;
 
     Ok(writer.into_inner())
 }
@@ -1602,12 +1604,13 @@ use arrow2::datatypes::{DataType, Field, Schema};
 use arrow2::error::Result;
 use arrow2::io::ipc::write;
 
-fn write_batches(path: &amp;str, schema: &amp;Schema, columns: &amp;[Chunk&lt;Arc&lt;dyn Array&gt;&gt;]) -&gt; Result&lt;()&gt; {
+fn write_batches(path: &amp;str, schema: Schema, columns: &amp;[Chunk&lt;Arc&lt;dyn Array&gt;&gt;]) -&gt; Result&lt;()&gt; {
     let file = File::create(path)?;
 
     let options = write::WriteOptions { compression: None };
-    let mut writer = write::FileWriter::try_new(file, schema, None, options)?;
+    let mut writer = write::FileWriter::new(file, schema, None, options);
 
+    writer.start()?;
     for columns in columns {
         writer.write(columns, None)?
     }
@@ -1632,7 +1635,7 @@ fn main() -&gt; Result&lt;()&gt; {
     let batch = Chunk::try_new(vec![Arc::new(a) as Arc&lt;dyn Array&gt;, Arc::new(b)])?;
 
     // write it
-    write_batches(file_path, &amp;schema, &amp;[batch])?;
+    write_batches(file_path, schema, &amp;[batch])?;
     Ok(())
 }
 </code></pre></pre>
