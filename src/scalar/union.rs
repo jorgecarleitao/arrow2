@@ -23,7 +23,7 @@ impl UnionScalar {
         }
     }
 
-    /// Returns the values irrespectively of the validity.
+    /// Returns the inner value
     #[inline]
     pub fn value(&self) -> &Arc<dyn Scalar> {
         &self.value
