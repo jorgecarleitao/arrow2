@@ -73,7 +73,10 @@ where
             writer: None,
             task,
             fields,
-            dictionary_tracker: DictionaryTracker::new(false),
+            dictionary_tracker: DictionaryTracker {
+                dictionaries: Default::default(),
+                cannot_replace: false,
+            },
             options: write_options,
         }
     }

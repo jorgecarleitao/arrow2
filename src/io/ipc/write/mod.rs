@@ -3,7 +3,7 @@ pub(crate) mod common;
 mod schema;
 mod serialize;
 mod stream;
-mod writer;
+pub(crate) mod writer;
 
 pub use common::{Compression, Record, WriteOptions};
 pub use schema::schema_to_bytes;

@@ -16,7 +16,7 @@ use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum State {
+pub(crate) enum State {
     None,
     Started,
     Finished,
@@ -25,22 +25,22 @@ enum State {
 /// Arrow file writer
 pub struct FileWriter<W: Write> {
     /// The object to write to
-    writer: W,
+    pub(crate) writer: W,
     /// IPC write options
-    options: WriteOptions,
+    pub(crate) options: WriteOptions,
     /// A reference to the schema, used in validating record batches
-    schema: Schema,
-    ipc_fields: Vec<IpcField>,
+    pub(crate) schema: Schema,
+    pub(crate) ipc_fields: Vec<IpcField>,
     /// The number of bytes between each block of bytes, as an offset for random access
-    block_offsets: usize,
+    pub(crate) block_offsets: usize,
     /// Dictionary blocks that will be written as part of the IPC footer
-    dictionary_blocks: Vec<arrow_format::ipc::Block>,
+    pub(crate) dictionary_blocks: Vec<arrow_format::ipc::Block>,
     /// Record blocks that will be written as part of the IPC footer
-    record_blocks: Vec<arrow_format::ipc::Block>,
+    pub(crate) record_blocks: Vec<arrow_format::ipc::Block>,
     /// Whether the writer footer has been written, and the writer is finished
-    state: State,
+    pub(crate) state: State,
     /// Keeps track of dictionaries that have been written
-    dictionary_tracker: DictionaryTracker,
+    pub(crate) dictionary_tracker: DictionaryTracker,
 }
 
 impl<W: Write> FileWriter<W> {
@@ -79,7 +79,10 @@ impl<W: Write> FileWriter<W> {
             dictionary_blocks: vec![],
             record_blocks: vec![],
             state: State::None,
-            dictionary_tracker: DictionaryTracker::new(true),
+            dictionary_tracker: DictionaryTracker {
+                dictionaries: Default::default(),
+                cannot_replace: true,
+            },
         }
     }
 

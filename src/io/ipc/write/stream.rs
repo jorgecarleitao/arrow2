@@ -42,7 +42,10 @@ impl<W: Write> StreamWriter<W> {
             writer,
             write_options,
             finished: false,
-            dictionary_tracker: DictionaryTracker::new(false),
+            dictionary_tracker: DictionaryTracker {
+                dictionaries: Default::default(),
+                cannot_replace: false,
+            },
             ipc_fields: None,
         }
     }

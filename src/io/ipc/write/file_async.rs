@@ -96,7 +96,10 @@ where
             fields,
             offset: 0,
             schema: schema.clone(),
-            dictionary_tracker: DictionaryTracker::new(true),
+            dictionary_tracker: DictionaryTracker {
+                dictionaries: Default::default(),
+                cannot_replace: true,
+            },
             record_blocks: vec![],
             dictionary_blocks: vec![],
         }
