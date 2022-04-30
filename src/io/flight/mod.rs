@@ -120,8 +120,6 @@ pub fn deserialize_batch(
 
     let mut reader = std::io::Cursor::new(&data.data_body);
 
-    let version = message.version()?;
-
     match message.header()?.ok_or_else(|| {
         ArrowError::oos("Unable to convert flight data header to a record batch".to_string())
     })? {
@@ -131,7 +129,7 @@ pub fn deserialize_batch(
             ipc_schema,
             None,
             dictionaries,
-            version,
+            message.version()?,
             &mut reader,
             0,
         ),
