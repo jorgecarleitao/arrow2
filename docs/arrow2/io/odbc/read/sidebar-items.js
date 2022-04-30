@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["buffer_from_metadata","Creates a [`api::buffers::ColumnarBuffer`] from the metadata."],["deserialize","Deserializes a [`AnyColumnView`] into an array of [`DataType`]. This is CPU-bounded"],["infer_schema","Infers the Arrow [`Field`]s from a [`ResultSetMetadata`]"]]});
