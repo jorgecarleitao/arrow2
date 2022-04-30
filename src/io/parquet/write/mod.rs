@@ -95,8 +95,11 @@ pub fn array_to_pages(
     encoding: Encoding,
 ) -> Result<DynIter<'static, Result<EncodedPage>>> {
     // maximum page size is 2^31 e.g. i32::MAX
-    // we split at 2^30 to err on the safe side
-    if estimated_bytes_size(array) >= 2u32.pow(30) as usize {
+    // we split at 2^31 - 2^25 to err on the safe side
+    // we also check for an array.len > 3 to prevent infinite recursion
+    // still have to figure out how to deal with values that are i32::MAX size, such as very large
+    // strings or a list column with many elements
+    if (estimated_bytes_size(array)) >= (2u32.pow(31) - 2u32.pow(25)) as usize && array.len() > 3 {
         let split_at = array.len() / 2;
         let left = array.slice(0, split_at);
         let right = array.slice(split_at, array.len() - split_at);
