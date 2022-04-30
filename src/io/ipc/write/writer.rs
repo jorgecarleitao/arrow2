@@ -15,6 +15,13 @@ use crate::chunk::Chunk;
 use crate::datatypes::*;
 use crate::error::{ArrowError, Result};
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum State {
+    None,
+    Started,
+    Finished,
+}
+
 /// Arrow file writer
 pub struct FileWriter<W: Write> {
     /// The object to write to
@@ -31,52 +38,78 @@ pub struct FileWriter<W: Write> {
     /// Record blocks that will be written as part of the IPC footer
     record_blocks: Vec<arrow_format::ipc::Block>,
     /// Whether the writer footer has been written, and the writer is finished
-    finished: bool,
+    state: State,
     /// Keeps track of dictionaries that have been written
     dictionary_tracker: DictionaryTracker,
 }
 
 impl<W: Write> FileWriter<W> {
-    /// Try create a new writer, with the schema written as part of the header
+    /// Creates a new [`FileWriter`] and writes the header to `writer`
     pub fn try_new(
-        mut writer: W,
+        writer: W,
         schema: &Schema,
         ipc_fields: Option<Vec<IpcField>>,
         options: WriteOptions,
     ) -> Result<Self> {
-        // write magic to header
-        writer.write_all(&ARROW_MAGIC[..])?;
-        // create an 8-byte boundary after the header
-        writer.write_all(&[0, 0])?;
-        // write the schema, set the written bytes to the schema
+        let mut slf = Self::new(writer, schema.clone(), ipc_fields, options);
+        slf.start()?;
 
+        Ok(slf)
+    }
+
+    /// Creates a new [`FileWriter`].
+    pub fn new(
+        writer: W,
+        schema: Schema,
+        ipc_fields: Option<Vec<IpcField>>,
+        options: WriteOptions,
+    ) -> Self {
         let ipc_fields = if let Some(ipc_fields) = ipc_fields {
             ipc_fields
         } else {
             default_ipc_fields(&schema.fields)
         };
-        let encoded_message = EncodedData {
-            ipc_message: schema_to_bytes(schema, &ipc_fields),
-            arrow_data: vec![],
-        };
 
-        let (meta, data) = write_message(&mut writer, encoded_message)?;
-        Ok(Self {
+        Self {
             writer,
             options,
-            schema: schema.clone(),
+            schema,
             ipc_fields,
-            block_offsets: meta + data + 8,
+            block_offsets: 0,
             dictionary_blocks: vec![],
             record_blocks: vec![],
-            finished: false,
+            state: State::None,
             dictionary_tracker: DictionaryTracker::new(true),
-        })
+        }
     }
 
     /// Consumes itself into the inner writer
     pub fn into_inner(self) -> W {
         self.writer
+    }
+
+    /// Writes the header and first (schema) message to the file.
+    /// # Errors
+    /// Errors if the file has been started or has finished.
+    pub fn start(&mut self) -> Result<()> {
+        if self.state != State::None {
+            return Err(ArrowError::oos("The IPC file can only be started once"));
+        }
+        // write magic to header
+        self.writer.write_all(&ARROW_MAGIC[..])?;
+        // create an 8-byte boundary after the header
+        self.writer.write_all(&[0, 0])?;
+        // write the schema, set the written bytes to the schema
+
+        let encoded_message = EncodedData {
+            ipc_message: schema_to_bytes(&self.schema, &self.ipc_fields),
+            arrow_data: vec![],
+        };
+
+        let (meta, data) = write_message(&mut self.writer, encoded_message)?;
+        self.block_offsets += meta + data + 8; // 8 <=> arrow magic + 2 bytes for alignment
+        self.state = State::Started;
+        Ok(())
     }
 
     /// Writes [`Chunk`] to the file
@@ -85,11 +118,10 @@ impl<W: Write> FileWriter<W> {
         columns: &Chunk<Arc<dyn Array>>,
         ipc_fields: Option<&[IpcField]>,
     ) -> Result<()> {
-        if self.finished {
-            return Err(ArrowError::Io(std::io::Error::new(
-                std::io::ErrorKind::UnexpectedEof,
-                "Cannot write to a finished file".to_string(),
-            )));
+        if self.state != State::Started {
+            return Err(ArrowError::oos(
+                "The IPC file must be started before it can be written to. Call `start` before `write`",
+            ));
         }
 
         let ipc_fields = if let Some(ipc_fields) = ipc_fields {
@@ -132,6 +164,12 @@ impl<W: Write> FileWriter<W> {
 
     /// Write footer and closing tag, then mark the writer as done
     pub fn finish(&mut self) -> Result<()> {
+        if self.state != State::Started {
+            return Err(ArrowError::oos(
+                "The IPC file must be started before it can be finished. Call `start` before `finish`",
+            ));
+        }
+
         // write EOS
         write_continuation(&mut self.writer, 0)?;
 
@@ -151,7 +189,7 @@ impl<W: Write> FileWriter<W> {
             .write_all(&(footer_data.len() as i32).to_le_bytes())?;
         self.writer.write_all(&ARROW_MAGIC)?;
         self.writer.flush()?;
-        self.finished = true;
+        self.state = State::Finished;
 
         Ok(())
     }

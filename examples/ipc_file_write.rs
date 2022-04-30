@@ -7,12 +7,13 @@ use arrow2::datatypes::{DataType, Field, Schema};
 use arrow2::error::Result;
 use arrow2::io::ipc::write;
 
-fn write_batches(path: &str, schema: &Schema, columns: &[Chunk<Arc<dyn Array>>]) -> Result<()> {
+fn write_batches(path: &str, schema: Schema, columns: &[Chunk<Arc<dyn Array>>]) -> Result<()> {
     let file = File::create(path)?;
 
     let options = write::WriteOptions { compression: None };
-    let mut writer = write::FileWriter::try_new(file, schema, None, options)?;
+    let mut writer = write::FileWriter::new(file, schema, None, options);
 
+    writer.start()?;
     for columns in columns {
         writer.write(columns, None)?
     }
@@ -37,6 +38,6 @@ fn main() -> Result<()> {
     let batch = Chunk::try_new(vec![Arc::new(a) as Arc<dyn Array>, Arc::new(b)])?;
 
     // write it
-    write_batches(file_path, &schema, &[batch])?;
+    write_batches(file_path, schema, &[batch])?;
     Ok(())
 }
