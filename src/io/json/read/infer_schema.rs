@@ -186,4 +186,15 @@ mod test {
             List(Box::new(Field::new(ITEM_NAME, Utf8, true))),
         );
     }
+
+    #[test]
+    fn test_coersion_of_nulls() {
+        assert_eq!(coerce_data_type(&[DataType::Null]), DataType::Null);
+        assert_eq!(
+            coerce_data_type(&[DataType::Null, DataType::Boolean]),
+            DataType::Utf8
+        );
+        let vec: Vec<DataType> = vec![];
+        assert_eq!(coerce_data_type(vec.as_slice()), DataType::Null);
+    }
 }

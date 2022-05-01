@@ -57,6 +57,34 @@ fn infer_nullable() -> Result<()> {
     Ok(())
 }
 
+#[test]
+fn read_null() -> Result<()> {
+    let ndjson = "null";
+    let expected_data_type = DataType::Null;
+
+    let data_type = infer(ndjson)?;
+    assert_eq!(expected_data_type, data_type);
+
+    let arrays = read_and_deserialize(ndjson, &data_type, 1000)?;
+    let expected = NullArray::new(data_type, 1);
+    assert_eq!(expected, arrays[0].as_ref());
+    Ok(())
+}
+
+#[test]
+fn read_empty_reader() -> Result<()> {
+    let ndjson = "";
+    let expected_data_type = DataType::Null;
+
+    let data_type = infer(ndjson)?;
+    assert_eq!(expected_data_type, data_type);
+
+    let arrays = read_and_deserialize(ndjson, &data_type, 1000)?;
+    let expected: Vec<Arc<dyn Array>> = vec![];
+    assert_eq!(expected, arrays);
+    Ok(())
+}
+
 fn case_nested_struct() -> (String, Arc<dyn Array>) {
     let ndjson = r#"{"a": {"a": 2.0, "b": 2}}
     {"a": {"b": 2}}
