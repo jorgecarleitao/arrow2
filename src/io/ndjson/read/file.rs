@@ -97,7 +97,7 @@ impl<R: BufRead> FallibleStreamingIterator for FileReader<R> {
 
 /// Infers the [`DataType`] from an NDJSON file, optionally only using `number_of_rows` rows.
 ///
-/// # Implementantion
+/// # Implementation
 /// This implementation reads the file line by line and infers the type of each line.
 /// It performs both `O(N)` IO and CPU-bounded operations where `N` is the number of rows.
 pub fn infer<R: std::io::BufRead>(
