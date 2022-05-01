@@ -15,6 +15,13 @@ use super::super::super::json::read::_deserialize;
 /// # Errors
 /// This function errors iff any of the rows is not a valid JSON (i.e. the format is not valid NDJSON).
 pub fn deserialize(rows: &[String], data_type: DataType) -> Result<Arc<dyn Array>, ArrowError> {
+    if rows.is_empty() {
+        return Err(ArrowError::ExternalFormat(
+            "Cannot deserialize 0 NDJSON rows because empty string is not a valid JSON value"
+                .to_string(),
+        ));
+    }
+
     // deserialize strings to `Value`s
     let rows = rows
         .iter()

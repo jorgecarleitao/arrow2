@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use arrow2::array::*;
 use arrow2::datatypes::{DataType, Field};
-use arrow2::error::Result;
+use arrow2::error::{ArrowError, Result};
 use arrow2::io::ndjson::read as ndjson_read;
 use arrow2::io::ndjson::read::FallibleStreamingIterator;
 
@@ -54,6 +54,35 @@ fn infer_nullable() -> Result<()> {
     let result = infer(ndjson)?;
 
     assert_eq!(result, expected);
+    Ok(())
+}
+
+#[test]
+fn read_null() -> Result<()> {
+    let ndjson = "null";
+    let expected_data_type = DataType::Null;
+
+    let data_type = infer(ndjson)?;
+    assert_eq!(expected_data_type, data_type);
+
+    let arrays = read_and_deserialize(ndjson, &data_type, 1000)?;
+    let expected = NullArray::new(data_type, 1);
+    assert_eq!(expected, arrays[0].as_ref());
+    Ok(())
+}
+
+#[test]
+fn read_empty_reader() -> Result<()> {
+    let ndjson = "";
+
+    let infer_error = infer(ndjson);
+    assert!(matches!(infer_error, Err(ArrowError::ExternalFormat(_))));
+
+    let deserialize_error = ndjson_read::deserialize(&[], DataType::Null);
+    assert!(matches!(
+        deserialize_error,
+        Err(ArrowError::ExternalFormat(_))
+    ));
     Ok(())
 }
 
