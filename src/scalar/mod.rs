@@ -25,6 +25,8 @@ mod fixed_size_list;
 pub use fixed_size_list::*;
 mod fixed_size_binary;
 pub use fixed_size_binary::*;
+mod union;
+pub use union::UnionScalar;
 
 /// Trait object declaring an optional value with a [`DataType`].
 /// This strait is often used in APIs that accept multiple scalar types.
@@ -144,7 +146,15 @@ pub fn new_scalar(array: &dyn Array, index: usize) -> Box<dyn Scalar> {
             };
             Box::new(FixedSizeListScalar::new(array.data_type().clone(), value))
         }
-        Union | Map => todo!(),
+        Union => {
+            let array = array.as_any().downcast_ref::<UnionArray>().unwrap();
+            Box::new(UnionScalar::new(
+                array.data_type().clone(),
+                array.types()[index],
+                array.value(index).into(),
+            ))
+        }
+        Map => todo!(),
         Dictionary(key_type) => match_integer_type!(key_type, |$T| {
             let array = array
                 .as_any()
