@@ -104,6 +104,12 @@ pub fn infer<R: std::io::BufRead>(
     reader: &mut R,
     number_of_rows: Option<usize>,
 ) -> Result<DataType> {
+    if !reader.fill_buf().map(|b| !b.is_empty())? {
+        return Err(ArrowError::ExternalFormat(
+            "Cannot infer NDJSON types on empty reader because empty string is not a valid JSON value".to_string(),
+        ));
+    }
+
     let rows = vec!["".to_string(); 1]; // 1 <=> read row by row
     let mut reader = FileReader::new(reader, rows, number_of_rows);
 
