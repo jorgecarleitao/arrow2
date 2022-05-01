@@ -78,12 +78,17 @@ fn infer_number(n: &serde_json::Number) -> DataType {
 }
 
 /// Coerce an heterogeneous set of [`DataType`] into a single one. Rules:
+/// * The empty set is coerced to `Null`
 /// * `Int64` and `Float64` are `Float64`
 /// * Lists and scalars are coerced to a list of a compatible scalar
 /// * Structs contain the union of all fields
 /// * All other types are coerced to `Utf8`
 pub(crate) fn coerce_data_type<A: Borrow<DataType>>(datatypes: &[A]) -> DataType {
     use DataType::*;
+
+    if datatypes.is_empty() {
+        return DataType::Null;
+    }
 
     let are_all_equal = datatypes.windows(2).all(|w| w[0].borrow() == w[1].borrow());
 
