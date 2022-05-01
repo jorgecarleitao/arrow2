@@ -104,7 +104,7 @@ pub fn infer<R: std::io::BufRead>(
     reader: &mut R,
     number_of_rows: Option<usize>,
 ) -> Result<DataType> {
-    if !reader.fill_buf().map(|b| !b.is_empty())? {
+    if reader.fill_buf().map(|b| b.is_empty())? {
         return Err(ArrowError::ExternalFormat(
             "Cannot infer NDJSON types on empty reader because empty string is not a valid JSON value".to_string(),
         ));
