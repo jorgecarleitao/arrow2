@@ -221,6 +221,24 @@ where
                 chunk_size,
             )
         }
+        LargeUtf8 => {
+            types.pop();
+            binary::iter_to_arrays_nested::<i64, Utf8Array<i64>, _>(
+                columns.pop().unwrap(),
+                init.pop().unwrap(),
+                field.data_type().clone(),
+                chunk_size,
+            )
+        }
+        Binary => {
+            types.pop();
+            binary::iter_to_arrays_nested::<i32, BinaryArray<i32>, _>(
+                columns.pop().unwrap(),
+                init.pop().unwrap(),
+                field.data_type().clone(),
+                chunk_size,
+            )
+        }
         LargeBinary => {
             types.pop();
             binary::iter_to_arrays_nested::<i64, BinaryArray<i64>, _>(
@@ -230,22 +248,7 @@ where
                 chunk_size,
             )
         }
-        List(inner) => {
-            let iter = columns_to_iter_recursive(
-                vec![columns.pop().unwrap()],
-                types,
-                inner.as_ref().clone(),
-                init,
-                chunk_size,
-            )?;
-            let iter = iter.map(move |x| {
-                let (mut nested, array) = x?;
-                let array = create_list(field.data_type().clone(), &mut nested, array)?;
-                Ok((nested, array))
-            });
-            Box::new(iter) as _
-        }
-        LargeList(inner) => {
+        List(inner) | LargeList(inner) | FixedSizeList(inner, _) => {
             let iter = columns_to_iter_recursive(
                 vec![columns.pop().unwrap()],
                 types,
@@ -276,23 +279,6 @@ where
                 .collect::<Result<Vec<_>>>()?;
             let columns = columns.into_iter().rev().collect();
             Box::new(struct_::StructIterator::new(columns, fields.clone()))
-        }
-        FixedSizeList(inner, _) => {
-            let iter = columns_to_iter_recursive(
-                vec![columns.pop().unwrap()],
-                types,
-                inner.as_ref().clone(),
-                init,
-                chunk_size,
-            )?;
-            let iter = iter.map(move |x| {
-                let (mut nested, array) = x?;
-                println!("{nested:?}");
-                println!("{array:?}");
-                let array = create_list(field.data_type().clone(), &mut nested, array)?;
-                Ok((nested, array))
-            });
-            Box::new(iter) as _
         }
         other => todo!("{other:?}"),
     })
