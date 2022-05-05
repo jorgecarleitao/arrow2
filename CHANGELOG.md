@@ -1,5 +1,29 @@
 # Changelog
 
+## [v0.11.2](https://github.com/jorgecarleitao/arrow2/tree/v0.11.2) (2022-05-05)
+
+[Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.11.1...v0.11.2)
+
+**New features:**
+
+- Added support to append to existing IPC Arrow file [\#972](https://github.com/jorgecarleitao/arrow2/pull/972) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added pop to utf8/binary/fixedSize MutableArray [\#966](https://github.com/jorgecarleitao/arrow2/pull/966) ([ygf11](https://github.com/ygf11))
+- Added support for union scalars [\#930](https://github.com/jorgecarleitao/arrow2/pull/930) ([ncpenke](https://github.com/ncpenke))
+
+**Fixed bugs:**
+
+- Added support to read nested binary from parquet [\#978](https://github.com/jorgecarleitao/arrow2/pull/978) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed empty reader panic for NDJSON type infer [\#974](https://github.com/jorgecarleitao/arrow2/pull/974) ([Roberto-XY](https://github.com/Roberto-XY))
+- Prevented SO in large parquet files [\#973](https://github.com/jorgecarleitao/arrow2/pull/973) ([ritchie46](https://github.com/ritchie46))
+- Fixed API bug in `async` read of IPC metadata [\#969](https://github.com/jorgecarleitao/arrow2/pull/969) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed writing required list to parquet [\#968](https://github.com/jorgecarleitao/arrow2/pull/968) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Enhancements:**
+
+- Added support Parquet deserialize LargeList and Uint data types [\#979](https://github.com/jorgecarleitao/arrow2/pull/979) ([b41sh](https://github.com/b41sh))
+- Made reading of IPC dictionaries lazy [\#971](https://github.com/jorgecarleitao/arrow2/pull/971) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Allowed creating IPC `FileWriter` without writing to the file [\#970](https://github.com/jorgecarleitao/arrow2/pull/970) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
 ## [v0.11.1](https://github.com/jorgecarleitao/arrow2/tree/v0.11.1) (2022-04-27)
 
 [Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.11.0...v0.11.1)
