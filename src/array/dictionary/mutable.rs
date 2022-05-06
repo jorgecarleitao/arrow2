@@ -24,6 +24,7 @@ use super::{DictionaryArray, DictionaryKey};
 /// array.try_push(Some("B"))?;
 /// array.try_push(None)?;
 /// array.try_push(Some("C"))?;
+/// # Ok(())
 /// # }
 /// ```
 #[derive(Debug)]
@@ -130,6 +131,16 @@ impl<K: DictionaryKey, M: MutableArray> MutableDictionaryArray<K, M> {
         self.values.shrink_to_fit();
         self.keys.shrink_to_fit();
     }
+
+    /// Returns the dictionary map
+    pub fn map(&self) -> &HashedMap<u64, K> {
+        &self.map
+    }
+
+    /// Returns the dictionary keys
+    pub fn keys(&self) -> &MutablePrimitiveArray<K> {
+        &self.keys
+    }
 }
 
 impl<K: DictionaryKey, M: 'static + MutableArray> MutableArray for MutableDictionaryArray<K, M> {
@@ -211,45 +222,5 @@ where
             self.push_null();
             Ok(())
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::array::{MutableUtf8Array, Utf8Array};
-
-    #[test]
-    fn test_push_dictionary() {
-        let mut new: MutableDictionaryArray<i32, MutableUtf8Array<i32>> =
-            MutableDictionaryArray::new();
-
-        for value in [Some("A"), Some("B"), None, Some("C"), Some("A"), Some("B")] {
-            new.try_push(value).unwrap();
-        }
-
-        let arc = new.values.as_arc();
-        let values_array: &Utf8Array<i32> = arc.as_any().downcast_ref().unwrap();
-
-        assert_eq!(*values_array, Utf8Array::<i32>::from_slice(["A", "B", "C"]));
-
-        let mut expected_keys = MutablePrimitiveArray::from_slice(&[0, 1]);
-        expected_keys.push(None);
-        expected_keys.push(Some(2));
-        expected_keys.push(Some(0));
-        expected_keys.push(Some(1));
-        assert_eq!(new.keys, expected_keys);
-
-        let expected_map = ["A", "B", "C"]
-            .iter()
-            .enumerate()
-            .map(|(index, value)| {
-                let mut hasher = DefaultHasher::new();
-                value.hash(&mut hasher);
-                let hash = hasher.finish();
-                (hash, index as i32)
-            })
-            .collect::<HashedMap<_, _>>();
-        assert_eq!(new.map, expected_map);
     }
 }
