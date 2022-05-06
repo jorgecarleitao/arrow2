@@ -22,7 +22,7 @@ use super::{DictionaryArray, DictionaryKey};
 /// let mut array: MutableDictionaryArray<i32, MutableUtf8Array<i32>> = MutableDictionaryArray::new();
 /// array.try_push(Some("A"))?;
 /// array.try_push(Some("B"))?;
-/// array.try_push(None)?;
+/// array.push_null();
 /// array.try_push(Some("C"))?;
 /// # Ok(())
 /// # }
