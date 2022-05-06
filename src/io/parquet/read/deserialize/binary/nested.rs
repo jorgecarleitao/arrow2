@@ -67,14 +67,14 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
                     ValuesDictionary::new(page, dict),
                 ))
             }
-            (Encoding::Plain, None, true, false) => {
+            (Encoding::Plain, _, true, false) => {
                 let (_, _, values) = utils::split_buffer(page);
 
                 let values = BinaryIter::new(values);
 
                 Ok(State::Optional(Optional::new(page), values))
             }
-            (Encoding::Plain, None, false, false) => Ok(State::Required(Required::new(page))),
+            (Encoding::Plain, _, false, false) => Ok(State::Required(Required::new(page))),
             _ => Err(utils::not_implemented(page)),
         }
     }
