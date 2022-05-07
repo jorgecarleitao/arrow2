@@ -7,7 +7,7 @@ mod json;
 #[cfg(feature = "io_json")]
 mod ndjson;
 
-#[cfg(feature = "io_ipc")]
+#[cfg(feature = "io_json_integration")]
 mod ipc;
 
 #[cfg(feature = "io_parquet")]

@@ -97,6 +97,7 @@ fn int64_optional_v2() -> Result<()> {
     )
 }
 
+#[cfg(feature = "io_parquet_compression")]
 #[test]
 fn int64_optional_v2_compressed() -> Result<()> {
     round_trip(
@@ -157,6 +158,7 @@ fn utf8_required_v2() -> Result<()> {
     )
 }
 
+#[cfg(feature = "io_parquet_compression")]
 #[test]
 fn utf8_optional_v2_compressed() -> Result<()> {
     round_trip(
@@ -169,6 +171,7 @@ fn utf8_optional_v2_compressed() -> Result<()> {
     )
 }
 
+#[cfg(feature = "io_parquet_compression")]
 #[test]
 fn utf8_required_v2_compressed() -> Result<()> {
     round_trip(
@@ -229,6 +232,7 @@ fn bool_required_v2_uncompressed() -> Result<()> {
     )
 }
 
+#[cfg(feature = "io_parquet_compression")]
 #[test]
 fn bool_required_v2_compressed() -> Result<()> {
     round_trip(
@@ -386,6 +390,7 @@ fn i32_optional_v2_dict() -> Result<()> {
     )
 }
 
+#[cfg(feature = "io_parquet_compression")]
 #[test]
 fn i32_optional_v2_dict_compressed() -> Result<()> {
     round_trip(
