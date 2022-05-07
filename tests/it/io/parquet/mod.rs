@@ -88,7 +88,7 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
                 Some(10),
             ])) as Arc<dyn Array>
         }
-        "list_int64_required" | "list_int64_required_required" => {
+        "list_int64_required" | "list_int64_optional_required" | "list_int64_required_required" => {
             // [[0, 1], None, [2, 0, 3], [4, 5, 6], [], [7, 8, 9], None, [10]]
             Arc::new(PrimitiveArray::<i64>::from(&[
                 Some(0),
@@ -178,13 +178,20 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
         | "list_nested_inner_required_required_i64" => {
             Arc::new(NullArray::from_data(DataType::Null, 1))
         }
-        _ => unreachable!(),
+        other => unreachable!("{}", other),
     };
 
     match column {
         "list_int64_required_required" => {
             // [[0, 1], [], [2, 0, 3], [4, 5, 6], [], [7, 8, 9], [], [10]]
             let data_type = DataType::List(Box::new(Field::new("item", DataType::Int64, false)));
+            Box::new(ListArray::<i32>::from_data(
+                data_type, offsets, values, None,
+            ))
+        }
+        "list_int64_optional_required" => {
+            // [[0, 1], [], [2, 0, 3], [4, 5, 6], [], [7, 8, 9], [], [10]]
+            let data_type = DataType::List(Box::new(Field::new("item", DataType::Int64, true)));
             Box::new(ListArray::<i32>::from_data(
                 data_type, offsets, values, None,
             ))
@@ -253,7 +260,7 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
                 "list_bool" => Field::new("item", DataType::Boolean, true),
                 "list_utf8" => Field::new("item", DataType::Utf8, true),
                 "list_large_binary" => Field::new("item", DataType::LargeBinary, true),
-                _ => unreachable!(),
+                other => unreachable!("{}", other),
             };
 
             let validity = Some(Bitmap::from([
@@ -594,7 +601,7 @@ pub fn pyarrow_nested_nullable_statistics(column: &str) -> Statistics {
             min_value: new_list(Arc::new(Int64Array::from_slice([0])), false),
             max_value: new_list(Arc::new(Int64Array::from_slice([10])), false),
         },
-        "list_int64_required_required" => Statistics {
+        "list_int64_required_required" | "list_int64_optional_required" => Statistics {
             distinct_count: Count::Single(UInt64Array::from([None])),
             null_count: Count::Single([Some(0)].into()),
             min_value: new_list(Arc::new(Int64Array::from_slice([0])), false),
@@ -636,7 +643,7 @@ pub fn pyarrow_nested_nullable_statistics(column: &str) -> Statistics {
                 true,
             ),
         },
-        _ => todo!(),
+        other => todo!("{}", other),
     }
 }
 
@@ -917,4 +924,63 @@ fn arrow_type() -> Result<()> {
     assert_eq!(new_schema, schema);
     assert_eq!(new_batches, vec![batch]);
     Ok(())
+}
+
+fn data() -> Vec<Option<Vec<Option<i32>>>> {
+    // [[0, 1], [], [2, 0, 3], [4, 5, 6], [], [7, 8, 9], [], [10]]
+    vec![
+        Some(vec![Some(0), Some(1)]),
+        Some(vec![]),
+        Some(vec![Some(2), Some(0), Some(3)]),
+        Some(vec![Some(4), Some(5), Some(6)]),
+        Some(vec![]),
+        Some(vec![Some(7), Some(8), Some(9)]),
+        Some(vec![]),
+        Some(vec![Some(10)]),
+    ]
+}
+
+fn list_array_generic(inner_is_nullable: bool, is_nullable: bool) -> Result<()> {
+    let mut array = MutableListArray::<i32, _>::new_with_field(
+        MutablePrimitiveArray::<i32>::new(),
+        "item",
+        inner_is_nullable,
+    );
+    array.try_extend(data()).unwrap();
+    let array: ListArray<i32> = array.into();
+
+    let schema = Schema::from(vec![Field::new(
+        "a1",
+        array.data_type().clone(),
+        is_nullable,
+    )]);
+    let batch = Chunk::try_new(vec![Arc::new(array) as Arc<dyn Array>])?;
+
+    let r = integration_write(&schema, &[batch.clone()])?;
+
+    let (new_schema, new_batches) = integration_read(&r)?;
+
+    assert_eq!(new_schema, schema);
+    assert_eq!(new_batches, vec![batch]);
+    Ok(())
+}
+
+#[test]
+fn list_array_required_required() -> Result<()> {
+    list_array_generic(false, false)
+}
+
+#[test]
+fn list_array_optional_optional() -> Result<()> {
+    list_array_generic(true, true)
+}
+
+#[test]
+fn list_array_required_optional() -> Result<()> {
+    list_array_generic(false, true)
+}
+
+#[test]
+fn list_array_optional_required() -> Result<()> {
+    list_array_generic(true, false)
 }

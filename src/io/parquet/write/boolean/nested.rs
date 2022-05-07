@@ -26,7 +26,7 @@ where
     levels::write_rep_levels(&mut buffer, &nested, options.version)?;
     let repetition_levels_byte_length = buffer.len();
 
-    levels::write_def_levels(&mut buffer, &nested, validity, options.version)?;
+    levels::write_def_levels(&mut buffer, &nested, validity, is_optional, options.version)?;
     let definition_levels_byte_length = buffer.len() - repetition_levels_byte_length;
 
     encode_plain(array, is_optional, &mut buffer)?;
