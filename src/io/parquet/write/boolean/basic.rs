@@ -1,7 +1,7 @@
 use parquet2::{
     encoding::{hybrid_rle::bitpacked_encode, Encoding},
-    metadata::Descriptor,
     page::DataPage,
+    schema::types::PrimitiveType,
     statistics::{serialize_statistics, BooleanStatistics, ParquetStatistics, Statistics},
 };
 
@@ -41,9 +41,9 @@ pub(super) fn encode_plain(
 pub fn array_to_page(
     array: &BooleanArray,
     options: WriteOptions,
-    descriptor: Descriptor,
+    type_: PrimitiveType,
 ) -> Result<DataPage> {
-    let is_optional = is_nullable(&descriptor.primitive_type.field_info);
+    let is_optional = is_nullable(&type_.field_info);
 
     let validity = array.validity();
 
@@ -74,7 +74,7 @@ pub fn array_to_page(
         0,
         definition_levels_byte_length,
         statistics,
-        descriptor,
+        type_,
         options,
         Encoding::Plain,
     )

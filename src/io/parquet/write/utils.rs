@@ -5,6 +5,7 @@ use parquet2::{
     encoding::{hybrid_rle::encode_bool, Encoding},
     metadata::Descriptor,
     page::{DataPage, DataPageHeader, DataPageHeaderV1, DataPageHeaderV2},
+    schema::types::PrimitiveType,
     statistics::ParquetStatistics,
 };
 
@@ -66,7 +67,7 @@ pub fn build_plain_page(
     repetition_levels_byte_length: usize,
     definition_levels_byte_length: usize,
     statistics: Option<ParquetStatistics>,
-    descriptor: Descriptor,
+    type_: PrimitiveType,
     options: WriteOptions,
     encoding: Encoding,
 ) -> Result<DataPage> {
@@ -93,7 +94,11 @@ pub fn build_plain_page(
         header,
         buffer,
         None,
-        descriptor,
+        Descriptor {
+            primitive_type: type_,
+            max_def_level: 0,
+            max_rep_level: 0,
+        },
         Some(num_rows),
     ))
 }

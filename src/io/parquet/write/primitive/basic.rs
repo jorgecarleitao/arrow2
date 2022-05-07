@@ -1,6 +1,5 @@
 use parquet2::{
     encoding::Encoding,
-    metadata::Descriptor,
     page::DataPage,
     schema::types::PrimitiveType,
     statistics::{serialize_statistics, PrimitiveStatistics},
@@ -42,14 +41,14 @@ where
 pub fn array_to_page<T, R>(
     array: &PrimitiveArray<T>,
     options: WriteOptions,
-    descriptor: Descriptor,
+    type_: PrimitiveType,
 ) -> Result<DataPage>
 where
     T: ArrowNativeType,
     R: NativeType,
     T: num_traits::AsPrimitive<R>,
 {
-    let is_optional = is_nullable(&descriptor.primitive_type.field_info);
+    let is_optional = is_nullable(&type_.field_info);
 
     let validity = array.validity();
 
@@ -69,7 +68,7 @@ where
     let statistics = if options.write_statistics {
         Some(serialize_statistics(&build_statistics(
             array,
-            descriptor.primitive_type.clone(),
+            type_.clone(),
         )))
     } else {
         None
@@ -83,7 +82,7 @@ where
         0,
         definition_levels_byte_length,
         statistics,
-        descriptor,
+        type_,
         options,
         Encoding::Plain,
     )

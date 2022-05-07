@@ -158,7 +158,7 @@ where
             let rows = crate::io::parquet::write::row_group_iter(
                 item,
                 this.encoding.clone(),
-                this.parquet_schema.columns().to_vec(),
+                this.parquet_schema.fields().to_vec(),
                 this.options,
             );
             this.task = Some(Box::pin(async move {

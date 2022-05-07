@@ -22,6 +22,7 @@ use crate::types::days_ms;
 use crate::types::NativeType;
 
 use parquet2::page::DataPage;
+use parquet2::schema::types::PrimitiveType as ParquetPrimitiveType;
 pub use parquet2::{
     compression::CompressionOptions,
     encoding::Encoding,
@@ -90,7 +91,7 @@ pub fn can_encode(data_type: &DataType, encoding: Encoding) -> bool {
 /// Returns an iterator of [`EncodedPage`].
 pub fn array_to_pages(
     array: &dyn Array,
-    descriptor: Descriptor,
+    type_: ParquetType,
     options: WriteOptions,
     encoding: Encoding,
 ) -> Result<DynIter<'static, Result<EncodedPage>>> {
@@ -105,8 +106,8 @@ pub fn array_to_pages(
         let right = array.slice(split_at, array.len() - split_at);
 
         Ok(DynIter::new(
-            array_to_pages(&*left, descriptor.clone(), options, encoding)?
-                .chain(array_to_pages(&*right, descriptor, options, encoding)?),
+            array_to_pages(&*left, type_.clone(), options, encoding)?
+                .chain(array_to_pages(&*right, type_, options, encoding)?),
         ))
     } else {
         match array.data_type() {
@@ -114,22 +115,33 @@ pub fn array_to_pages(
                 match_integer_type!(key_type, |$T| {
                     dictionary::array_to_pages::<$T>(
                         array.as_any().downcast_ref().unwrap(),
-                        descriptor,
+                        get_primitive(type_)?,
                         options,
                         encoding,
                     )
                 })
             }
-            _ => array_to_page(array, descriptor, options, encoding)
+            _ => array_to_page(array, type_, options, encoding)
                 .map(|page| DynIter::new(std::iter::once(Ok(page)))),
         }
+    }
+}
+
+fn get_primitive(type_: ParquetType) -> Result<ParquetPrimitiveType> {
+    if let ParquetType::PrimitiveType(t) = type_ {
+        Ok(t)
+    } else {
+        Err(ArrowError::InvalidArgumentError(format!(
+            "The {:?} is not a primitive type but it is trying to describe a primitive array",
+            type_
+        )))
     }
 }
 
 /// Converts an [`Array`] to a [`CompressedPage`] based on options, descriptor and `encoding`.
 pub fn array_to_page(
     array: &dyn Array,
-    descriptor: Descriptor,
+    type_: ParquetType,
     options: WriteOptions,
     encoding: Encoding,
 ) -> Result<EncodedPage> {
@@ -143,44 +155,45 @@ pub fn array_to_page(
 
     match data_type.to_logical_type() {
         DataType::Boolean => {
-            boolean::array_to_page(array.as_any().downcast_ref().unwrap(), options, descriptor)
+            let type_ = get_primitive(type_)?;
+            boolean::array_to_page(array.as_any().downcast_ref().unwrap(), options, type_)
         }
         // casts below MUST match the casts done at the metadata (field -> parquet type).
         DataType::UInt8 => primitive::array_to_page::<u8, i32>(
             array.as_any().downcast_ref().unwrap(),
             options,
-            descriptor,
+            get_primitive(type_)?,
         ),
         DataType::UInt16 => primitive::array_to_page::<u16, i32>(
             array.as_any().downcast_ref().unwrap(),
             options,
-            descriptor,
+            get_primitive(type_)?,
         ),
         DataType::UInt32 => primitive::array_to_page::<u32, i32>(
             array.as_any().downcast_ref().unwrap(),
             options,
-            descriptor,
+            get_primitive(type_)?,
         ),
         DataType::UInt64 => primitive::array_to_page::<u64, i64>(
             array.as_any().downcast_ref().unwrap(),
             options,
-            descriptor,
+            get_primitive(type_)?,
         ),
         DataType::Int8 => primitive::array_to_page::<i8, i32>(
             array.as_any().downcast_ref().unwrap(),
             options,
-            descriptor,
+            get_primitive(type_)?,
         ),
         DataType::Int16 => primitive::array_to_page::<i16, i32>(
             array.as_any().downcast_ref().unwrap(),
             options,
-            descriptor,
+            get_primitive(type_)?,
         ),
         DataType::Int32 | DataType::Date32 | DataType::Time32(_) => {
             primitive::array_to_page::<i32, i32>(
                 array.as_any().downcast_ref().unwrap(),
                 options,
-                descriptor,
+                get_primitive(type_)?,
             )
         }
         DataType::Int64
@@ -190,47 +203,48 @@ pub fn array_to_page(
         | DataType::Duration(_) => primitive::array_to_page::<i64, i64>(
             array.as_any().downcast_ref().unwrap(),
             options,
-            descriptor,
+            get_primitive(type_)?,
         ),
         DataType::Float32 => primitive::array_to_page::<f32, f32>(
             array.as_any().downcast_ref().unwrap(),
             options,
-            descriptor,
+            get_primitive(type_)?,
         ),
         DataType::Float64 => primitive::array_to_page::<f64, f64>(
             array.as_any().downcast_ref().unwrap(),
             options,
-            descriptor,
+            get_primitive(type_)?,
         ),
         DataType::Utf8 => utf8::array_to_page::<i32>(
             array.as_any().downcast_ref().unwrap(),
             options,
-            descriptor,
+            get_primitive(type_)?,
             encoding,
         ),
         DataType::LargeUtf8 => utf8::array_to_page::<i64>(
             array.as_any().downcast_ref().unwrap(),
             options,
-            descriptor,
+            get_primitive(type_)?,
             encoding,
         ),
         DataType::Binary => binary::array_to_page::<i32>(
             array.as_any().downcast_ref().unwrap(),
             options,
-            descriptor,
+            get_primitive(type_)?,
             encoding,
         ),
         DataType::LargeBinary => binary::array_to_page::<i64>(
             array.as_any().downcast_ref().unwrap(),
             options,
-            descriptor,
+            get_primitive(type_)?,
             encoding,
         ),
         DataType::Null => {
             let array = Int32Array::new_null(DataType::Int32, array.len());
-            primitive::array_to_page::<i32, i32>(&array, options, descriptor)
+            primitive::array_to_page::<i32, i32>(&array, options, get_primitive(type_)?)
         }
         DataType::Interval(IntervalUnit::YearMonth) => {
+            let type_ = get_primitive(type_)?;
             let array = array
                 .as_any()
                 .downcast_ref::<PrimitiveArray<i32>>()
@@ -247,16 +261,14 @@ pub fn array_to_page(
                 array.validity().cloned(),
             );
             let statistics = if options.write_statistics {
-                Some(fixed_len_bytes::build_statistics(
-                    &array,
-                    descriptor.primitive_type.clone(),
-                ))
+                Some(fixed_len_bytes::build_statistics(&array, type_.clone()))
             } else {
                 None
             };
-            fixed_len_bytes::array_to_page(&array, options, descriptor, statistics)
+            fixed_len_bytes::array_to_page(&array, options, type_, statistics)
         }
         DataType::Interval(IntervalUnit::DayTime) => {
+            let type_ = get_primitive(type_)?;
             let array = array
                 .as_any()
                 .downcast_ref::<PrimitiveArray<days_ms>>()
@@ -273,29 +285,25 @@ pub fn array_to_page(
                 array.validity().cloned(),
             );
             let statistics = if options.write_statistics {
-                Some(fixed_len_bytes::build_statistics(
-                    &array,
-                    descriptor.primitive_type.clone(),
-                ))
+                Some(fixed_len_bytes::build_statistics(&array, type_.clone()))
             } else {
                 None
             };
-            fixed_len_bytes::array_to_page(&array, options, descriptor, statistics)
+            fixed_len_bytes::array_to_page(&array, options, type_, statistics)
         }
         DataType::FixedSizeBinary(_) => {
+            let type_ = get_primitive(type_)?;
             let array = array.as_any().downcast_ref().unwrap();
             let statistics = if options.write_statistics {
-                Some(fixed_len_bytes::build_statistics(
-                    array,
-                    descriptor.primitive_type.clone(),
-                ))
+                Some(fixed_len_bytes::build_statistics(array, type_.clone()))
             } else {
                 None
             };
 
-            fixed_len_bytes::array_to_page(array, options, descriptor, statistics)
+            fixed_len_bytes::array_to_page(array, options, type_, statistics)
         }
         DataType::Decimal(precision, _) => {
+            let type_ = get_primitive(type_)?;
             let precision = *precision;
             let array = array
                 .as_any()
@@ -311,7 +319,7 @@ pub fn array_to_page(
 
                 let array =
                     PrimitiveArray::<i32>::new(DataType::Int32, values, array.validity().cloned());
-                primitive::array_to_page::<i32, i32>(&array, options, descriptor)
+                primitive::array_to_page::<i32, i32>(&array, options, type_)
             } else if precision <= 18 {
                 let values = array
                     .values()
@@ -322,16 +330,13 @@ pub fn array_to_page(
 
                 let array =
                     PrimitiveArray::<i64>::new(DataType::Int64, values, array.validity().cloned());
-                primitive::array_to_page::<i64, i64>(&array, options, descriptor)
+                primitive::array_to_page::<i64, i64>(&array, options, type_)
             } else {
                 let size = decimal_length_from_precision(precision);
 
                 let statistics = if options.write_statistics {
-                    let stats = fixed_len_bytes::build_statistics_decimal(
-                        array,
-                        descriptor.primitive_type.clone(),
-                        size,
-                    );
+                    let stats =
+                        fixed_len_bytes::build_statistics_decimal(array, type_.clone(), size);
                     Some(stats)
                 } else {
                     None
@@ -347,11 +352,11 @@ pub fn array_to_page(
                     values.into(),
                     array.validity().cloned(),
                 );
-                fixed_len_bytes::array_to_page(&array, options, descriptor, statistics)
+                fixed_len_bytes::array_to_page(&array, options, type_, statistics)
             }
         }
         DataType::FixedSizeList(_, _) | DataType::List(_) | DataType::LargeList(_) => {
-            nested_array_to_page(array, descriptor, options)
+            nested_array_to_page(array, type_, options)
         }
         other => Err(ArrowError::NotYetImplemented(format!(
             "Writing parquet V1 pages for data type {:?}",
@@ -378,50 +383,69 @@ fn list_array_to_page<O: Offset>(
     offsets: &[O],
     validity: Option<&Bitmap>,
     values: &dyn Array,
-    descriptor: Descriptor,
+    type_: ParquetType,
     options: WriteOptions,
 ) -> Result<DataPage> {
     use DataType::*;
-    let is_optional = is_nullable(&descriptor.primitive_type.field_info);
+
+    let is_optional = is_nullable(type_.get_field_info());
+
+    let type_ = if let ParquetType::GroupType { mut fields, .. } = type_ {
+        let inner = fields.pop().unwrap();
+        if let ParquetType::GroupType { mut fields, .. } = inner {
+            get_primitive(fields.pop().unwrap())?
+        } else {
+            return Err(ArrowError::InvalidArgumentError(format!(
+                "The {:?} is not a valid inner type of a list but it is trying to describe a list array",
+                inner
+            )));
+        }
+    } else {
+        return Err(ArrowError::InvalidArgumentError(format!(
+            "The {:?} is not a group type but it is trying to describe a list array",
+            type_
+        )));
+    };
+
     let nested = NestedInfo::new(offsets, validity, is_optional);
 
     match values.data_type() {
         Boolean => {
             let values = values.as_any().downcast_ref().unwrap();
-            boolean::nested_array_to_page::<O>(values, options, descriptor, nested)
+            boolean::nested_array_to_page::<O>(values, options, type_, nested)
         }
-        UInt8 => dyn_nested_prim!(u8, i32, O, values, nested, descriptor, options),
-        UInt16 => dyn_nested_prim!(u16, i32, O, values, nested, descriptor, options),
-        UInt32 => dyn_nested_prim!(u32, i32, O, values, nested, descriptor, options),
-        UInt64 => dyn_nested_prim!(u64, i64, O, values, nested, descriptor, options),
+        UInt8 => dyn_nested_prim!(u8, i32, O, values, nested, type_, options),
+        UInt16 => dyn_nested_prim!(u16, i32, O, values, nested, type_, options),
+        UInt32 => dyn_nested_prim!(u32, i32, O, values, nested, type_, options),
+        UInt64 => dyn_nested_prim!(u64, i64, O, values, nested, type_, options),
 
-        Int8 => dyn_nested_prim!(i8, i32, O, values, nested, descriptor, options),
-        Int16 => dyn_nested_prim!(i16, i32, O, values, nested, descriptor, options),
+        Int8 => dyn_nested_prim!(i8, i32, O, values, nested, type_, options),
+        Int16 => dyn_nested_prim!(i16, i32, O, values, nested, type_, options),
         Int32 | Date32 | Time32(_) => {
-            dyn_nested_prim!(i32, i32, O, values, nested, descriptor, options)
+            dyn_nested_prim!(i32, i32, O, values, nested, type_, options)
         }
         Int64 | Date64 | Time64(_) | Timestamp(_, _) | Duration(_) => {
-            dyn_nested_prim!(i64, i64, O, values, nested, descriptor, options)
+            dyn_nested_prim!(i64, i64, O, values, nested, type_, options)
         }
 
-        Float32 => dyn_nested_prim!(f32, f32, O, values, nested, descriptor, options),
-        Float64 => dyn_nested_prim!(f64, f64, O, values, nested, descriptor, options),
+        Float32 => dyn_nested_prim!(f32, f32, O, values, nested, type_, options),
+        Float64 => dyn_nested_prim!(f64, f64, O, values, nested, type_, options),
 
         Utf8 => {
             let values = values.as_any().downcast_ref().unwrap();
-            utf8::nested_array_to_page::<i32, O>(values, options, descriptor, nested)
+            utf8::nested_array_to_page::<i32, O>(values, options, type_, nested)
         }
         LargeUtf8 => {
             let values = values.as_any().downcast_ref().unwrap();
-            utf8::nested_array_to_page::<i64, O>(values, options, descriptor, nested)
+            utf8::nested_array_to_page::<i64, O>(values, options, type_, nested)
         }
         Binary => {
             let values = values.as_any().downcast_ref().unwrap();
-            binary::nested_array_to_page::<i32, O>(values, options, descriptor, nested)
+            binary::nested_array_to_page::<i32, O>(values, options, type_, nested)
         }
         LargeBinary => {
             let values = values.as_any().downcast_ref().unwrap();
-            binary::nested_array_to_page::<i64, O>(values, options, descriptor, nested)
+            binary::nested_array_to_page::<i64, O>(values, options, type_, nested)
         }
         _ => todo!(),
     }
@@ -429,7 +453,7 @@ fn list_array_to_page<O: Offset>(
 
 fn nested_array_to_page(
     array: &dyn Array,
-    descriptor: Descriptor,
+    type_: ParquetType,
     options: WriteOptions,
 ) -> Result<DataPage> {
     match array.data_type() {
@@ -439,7 +463,7 @@ fn nested_array_to_page(
                 array.offsets(),
                 array.validity(),
                 array.values().as_ref(),
-                descriptor,
+                type_,
                 options,
             )
         }
@@ -449,7 +473,7 @@ fn nested_array_to_page(
                 array.offsets(),
                 array.validity(),
                 array.values().as_ref(),
-                descriptor,
+                type_,
                 options,
             )
         }
@@ -462,7 +486,7 @@ fn nested_array_to_page(
                 &offsets,
                 array.validity(),
                 array.values().as_ref(),
-                descriptor,
+                type_,
                 options,
             )
         }

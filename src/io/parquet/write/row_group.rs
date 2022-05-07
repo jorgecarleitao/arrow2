@@ -1,5 +1,6 @@
+use parquet2::schema::types::ParquetType;
+use parquet2::write::Compressor;
 use parquet2::FallibleStreamingIterator;
-use parquet2::{metadata::ColumnDescriptor, write::Compressor};
 
 use crate::{
     array::Array,
@@ -18,25 +19,23 @@ use super::{
 pub fn row_group_iter<A: AsRef<dyn Array> + 'static + Send + Sync>(
     chunk: Chunk<A>,
     encodings: Vec<Encoding>,
-    columns: Vec<ColumnDescriptor>,
+    fields: Vec<ParquetType>,
     options: WriteOptions,
 ) -> RowGroupIter<'static, ArrowError> {
     DynIter::new(
         chunk
             .into_arrays()
             .into_iter()
-            .zip(columns.into_iter())
+            .zip(fields.into_iter())
             .zip(encodings.into_iter())
-            .map(move |((array, descriptor), encoding)| {
-                array_to_pages(array.as_ref(), descriptor.descriptor, options, encoding).map(
-                    move |pages| {
-                        let encoded_pages = DynIter::new(pages.map(|x| Ok(x?)));
-                        let compressed_pages =
-                            Compressor::new(encoded_pages, options.compression, vec![])
-                                .map_err(ArrowError::from);
-                        DynStreamingIterator::new(compressed_pages)
-                    },
-                )
+            .map(move |((array, type_), encoding)| {
+                array_to_pages(array.as_ref(), type_, options, encoding).map(move |pages| {
+                    let encoded_pages = DynIter::new(pages.map(|x| Ok(x?)));
+                    let compressed_pages =
+                        Compressor::new(encoded_pages, options.compression, vec![])
+                            .map_err(ArrowError::from);
+                    DynStreamingIterator::new(compressed_pages)
+                })
             }),
     )
 }
@@ -91,7 +90,7 @@ impl<A: AsRef<dyn Array> + 'static + Send + Sync, I: Iterator<Item = Result<Chun
             Ok(row_group_iter(
                 chunk,
                 encodings,
-                self.parquet_schema.columns().to_vec(),
+                self.parquet_schema.fields().to_vec(),
                 options,
             ))
         })
