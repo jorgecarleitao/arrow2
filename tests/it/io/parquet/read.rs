@@ -458,6 +458,7 @@ fn v1_nested_edge_2() -> Result<()> {
     test_pyarrow_integration("null", 1, "nested_edge", false, false, None)
 }
 
+#[cfg(feature = "io_parquet_compression")]
 #[test]
 fn all_types() -> Result<()> {
     let path = "testing/parquet-testing/data/alltypes_plain.parquet";
@@ -495,6 +496,7 @@ fn all_types() -> Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "io_parquet_compression")]
 #[test]
 fn all_types_chunked() -> Result<()> {
     // this has one batch with 8 elements
@@ -546,6 +548,7 @@ fn all_types_chunked() -> Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "io_parquet_compression")]
 #[test]
 fn invalid_utf8() {
     let invalid_data = &[
