@@ -3,9 +3,8 @@ use std::{collections::hash_map::DefaultHasher, sync::Arc};
 
 use hash_hasher::HashedMap;
 
-use crate::array::TryExtend;
 use crate::{
-    array::{primitive::MutablePrimitiveArray, Array, MutableArray},
+    array::{primitive::MutablePrimitiveArray, Array, MutableArray, TryExtend, TryPush},
     bitmap::MutableBitmap,
     datatypes::DataType,
     error::{ArrowError, Result},
@@ -14,6 +13,20 @@ use crate::{
 use super::{DictionaryArray, DictionaryKey};
 
 /// A mutable, strong-typed version of [`DictionaryArray`].
+///
+/// # Example
+/// Building a UTF8 dictionary with `i32` keys.
+/// ```
+/// # use arrow2::array::{MutableDictionaryArray, MutableUtf8Array, TryPush};
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let mut array: MutableDictionaryArray<i32, MutableUtf8Array<i32>> = MutableDictionaryArray::new();
+/// array.try_push(Some("A"))?;
+/// array.try_push(Some("B"))?;
+/// array.push_null();
+/// array.try_push(Some("C"))?;
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Debug)]
 pub struct MutableDictionaryArray<K: DictionaryKey, M: MutableArray> {
     data_type: DataType,
@@ -68,7 +81,7 @@ impl<K: DictionaryKey, M: MutableArray + Default> Default for MutableDictionaryA
 
 impl<K: DictionaryKey, M: MutableArray> MutableDictionaryArray<K, M> {
     /// Returns whether the value should be pushed to the values or not
-    pub fn try_push_valid<T: Hash>(&mut self, value: &T) -> Result<bool> {
+    fn try_push_valid<T: Hash>(&mut self, value: &T) -> Result<bool> {
         let mut hasher = DefaultHasher::new();
         value.hash(&mut hasher);
         let hash = hasher.finish();
@@ -117,6 +130,16 @@ impl<K: DictionaryKey, M: MutableArray> MutableDictionaryArray<K, M> {
     pub fn shrink_to_fit(&mut self) {
         self.values.shrink_to_fit();
         self.keys.shrink_to_fit();
+    }
+
+    /// Returns the dictionary map
+    pub fn map(&self) -> &HashedMap<u64, K> {
+        &self.map
+    }
+
+    /// Returns the dictionary keys
+    pub fn keys(&self) -> &MutablePrimitiveArray<K> {
+        &self.keys
     }
 }
 
@@ -179,5 +202,25 @@ where
             }
         }
         Ok(())
+    }
+}
+
+impl<K, M, T> TryPush<Option<T>> for MutableDictionaryArray<K, M>
+where
+    K: DictionaryKey,
+    M: MutableArray + TryPush<Option<T>>,
+    T: Hash,
+{
+    fn try_push(&mut self, item: Option<T>) -> Result<()> {
+        if let Some(value) = item {
+            if self.try_push_valid(&value)? {
+                self.values.try_push(Some(value))
+            } else {
+                Ok(())
+            }
+        } else {
+            self.push_null();
+            Ok(())
+        }
     }
 }
