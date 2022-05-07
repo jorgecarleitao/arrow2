@@ -1,4 +1,5 @@
-use parquet2::{encoding::Encoding, metadata::Descriptor, page::DataPage};
+use parquet2::schema::types::PrimitiveType;
+use parquet2::{encoding::Encoding, page::DataPage};
 
 use super::super::{levels, utils, WriteOptions};
 use super::basic::{build_statistics, encode_plain};
@@ -11,13 +12,13 @@ use crate::{
 pub fn array_to_page<O>(
     array: &BooleanArray,
     options: WriteOptions,
-    descriptor: Descriptor,
+    type_: PrimitiveType,
     nested: levels::NestedInfo<O>,
 ) -> Result<DataPage>
 where
     O: Offset,
 {
-    let is_optional = is_nullable(&descriptor.primitive_type.field_info);
+    let is_optional = is_nullable(&type_.field_info);
 
     let validity = array.validity();
 
@@ -25,7 +26,7 @@ where
     levels::write_rep_levels(&mut buffer, &nested, options.version)?;
     let repetition_levels_byte_length = buffer.len();
 
-    levels::write_def_levels(&mut buffer, &nested, validity, options.version)?;
+    levels::write_def_levels(&mut buffer, &nested, validity, is_optional, options.version)?;
     let definition_levels_byte_length = buffer.len() - repetition_levels_byte_length;
 
     encode_plain(array, is_optional, &mut buffer)?;
@@ -44,7 +45,7 @@ where
         repetition_levels_byte_length,
         definition_levels_byte_length,
         statistics,
-        descriptor,
+        type_,
         options,
         Encoding::Plain,
     )

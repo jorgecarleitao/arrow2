@@ -33,32 +33,24 @@ fn pages(
         version: Version::V1,
     };
 
-    let pages1 = vec![
-        array_to_page(
-            &array11,
-            parquet_schema.columns()[0].descriptor.clone(),
-            options,
-            Encoding::Plain,
-        )?,
-        array_to_page(
-            &array12,
-            parquet_schema.columns()[0].descriptor.clone(),
-            options,
-            Encoding::Plain,
-        )?,
-        array_to_page(
-            &array13,
-            parquet_schema.columns()[0].descriptor.clone(),
-            options,
-            Encoding::Plain,
-        )?,
-    ];
+    let pages1 = [array11, array12, array13]
+        .into_iter()
+        .map(|array| {
+            array_to_page(
+                &array,
+                parquet_schema.fields()[0].clone(),
+                options,
+                Encoding::Plain,
+            )
+        })
+        .collect::<Result<Vec<_>>>()?;
+
     let pages2 = arrays
         .iter()
         .flat_map(|array| {
             array_to_pages(
                 *array,
-                parquet_schema.columns()[1].descriptor.clone(),
+                parquet_schema.fields()[1].clone(),
                 options,
                 encoding,
             )

@@ -1,6 +1,5 @@
 use parquet2::{
     encoding::{delta_bitpacked, Encoding},
-    metadata::Descriptor,
     page::DataPage,
     schema::types::PrimitiveType,
     statistics::{serialize_statistics, BinaryStatistics, ParquetStatistics, Statistics},
@@ -43,11 +42,11 @@ pub(crate) fn encode_plain<O: Offset>(
 pub fn array_to_page<O: Offset>(
     array: &BinaryArray<O>,
     options: WriteOptions,
-    descriptor: Descriptor,
+    type_: PrimitiveType,
     encoding: Encoding,
 ) -> Result<DataPage> {
     let validity = array.validity();
-    let is_optional = is_nullable(&descriptor.primitive_type.field_info);
+    let is_optional = is_nullable(&type_.field_info);
 
     let mut buffer = vec![];
     utils::write_def_levels(
@@ -79,7 +78,7 @@ pub fn array_to_page<O: Offset>(
     }
 
     let statistics = if options.write_statistics {
-        Some(build_statistics(array, descriptor.primitive_type.clone()))
+        Some(build_statistics(array, type_.clone()))
     } else {
         None
     };
@@ -92,7 +91,7 @@ pub fn array_to_page<O: Offset>(
         0,
         definition_levels_byte_length,
         statistics,
-        descriptor,
+        type_,
         options,
         encoding,
     )

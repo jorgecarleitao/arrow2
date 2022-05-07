@@ -1,6 +1,5 @@
 use parquet2::{
     encoding::Encoding,
-    metadata::Descriptor,
     page::DataPage,
     schema::types::PrimitiveType,
     statistics::{serialize_statistics, FixedLenStatistics},
@@ -29,10 +28,10 @@ pub(crate) fn encode_plain(array: &FixedSizeBinaryArray, is_optional: bool, buff
 pub fn array_to_page(
     array: &FixedSizeBinaryArray,
     options: WriteOptions,
-    descriptor: Descriptor,
+    type_: PrimitiveType,
     statistics: Option<FixedLenStatistics>,
 ) -> Result<DataPage> {
-    let is_optional = is_nullable(&descriptor.primitive_type.field_info);
+    let is_optional = is_nullable(&type_.field_info);
     let validity = array.validity();
 
     let mut buffer = vec![];
@@ -56,7 +55,7 @@ pub fn array_to_page(
         0,
         definition_levels_byte_length,
         statistics.map(|x| serialize_statistics(&x)),
-        descriptor,
+        type_,
         options,
         Encoding::Plain,
     )

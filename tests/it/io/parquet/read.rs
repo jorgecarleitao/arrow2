@@ -227,9 +227,22 @@ fn v1_nested_int64_required_required() -> Result<()> {
 }
 
 #[test]
-fn v2_nested_i16() -> Result<()> {
+fn v2_list_int64_required_required() -> Result<()> {
     test_pyarrow_integration(
         "list_int64_required_required",
+        2,
+        "nested",
+        false,
+        false,
+        None,
+    )
+}
+
+#[test]
+#[ignore] // see https://issues.apache.org/jira/browse/ARROW-15073
+fn v2_list_int64_optional_required() -> Result<()> {
+    test_pyarrow_integration(
+        "list_int64_optional_required",
         2,
         "nested",
         false,
