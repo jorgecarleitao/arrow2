@@ -76,7 +76,7 @@ mod tests {
         let new_array = new_array.as_any().downcast_ref::<StructArray>().unwrap();
 
         assert_eq!(array.len(), new_array.len());
-        assert_eq!(array.len(), new_array.null_count());
+        assert_eq!(array.null_count(), new_array.null_count());
 
         let field_names: Vec<String> = new_array.fields().iter().map(|f| f.name.clone()).collect();
         assert_eq!(field_names, vec!["a".to_string(), "b".to_string()]);
