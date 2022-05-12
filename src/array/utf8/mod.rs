@@ -19,6 +19,7 @@ mod mutable;
 pub use iterator::*;
 pub use mutable::*;
 
+#[cfg(feature = "io_json")]
 mod json;
 #[cfg(feature = "io_json")]
 pub use json::*;
