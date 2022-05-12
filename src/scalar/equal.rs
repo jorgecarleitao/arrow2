@@ -43,6 +43,7 @@ fn equal(lhs: &dyn Scalar, rhs: &dyn Scalar) -> bool {
         }),
         Utf8 => dyn_eq!(Utf8Scalar<i32>, lhs, rhs),
         LargeUtf8 => dyn_eq!(Utf8Scalar<i64>, lhs, rhs),
+
         Binary => dyn_eq!(BinaryScalar<i32>, lhs, rhs),
         LargeBinary => dyn_eq!(BinaryScalar<i64>, lhs, rhs),
         List => dyn_eq!(ListScalar<i32>, lhs, rhs),
@@ -55,5 +56,6 @@ fn equal(lhs: &dyn Scalar, rhs: &dyn Scalar) -> bool {
         FixedSizeList => dyn_eq!(FixedSizeListScalar, lhs, rhs),
         Union => dyn_eq!(UnionScalar, lhs, rhs),
         Map => unimplemented!("{:?}", Map),
+        Utf8Sequence | LargeUtf8Sequence => unimplemented!("{:?}", Utf8Sequence),
     }
 }

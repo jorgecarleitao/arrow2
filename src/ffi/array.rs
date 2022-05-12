@@ -30,6 +30,8 @@ pub unsafe fn try_from<A: ArrowArrayRef>(array: A) -> Result<Box<dyn Array>> {
         }),
         Utf8 => Box::new(Utf8Array::<i32>::try_from_ffi(array)?),
         LargeUtf8 => Box::new(Utf8Array::<i64>::try_from_ffi(array)?),
+        Utf8Sequence => todo!("Arrow does not yet support exporting sequence views via FFI"),
+        LargeUtf8Sequence => todo!("Arrow does not yet support exporting sequence views via FFI"),
         Binary => Box::new(BinaryArray::<i32>::try_from_ffi(array)?),
         LargeBinary => Box::new(BinaryArray::<i64>::try_from_ffi(array)?),
         FixedSizeBinary => Box::new(FixedSizeBinaryArray::try_from_ffi(array)?),

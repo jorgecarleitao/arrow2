@@ -138,5 +138,6 @@ pub fn make_growable<'a>(
                 ))
             })
         }
+        _ => todo!("Sequence views"),
     }
 }

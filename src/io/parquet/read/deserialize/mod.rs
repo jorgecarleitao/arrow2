@@ -288,7 +288,9 @@ fn field_to_init(field: &Field) -> Vec<InitNested> {
     use crate::datatypes::PhysicalType::*;
     match field.data_type.to_physical_type() {
         Null | Boolean | Primitive(_) | Binary | FixedSizeBinary | LargeBinary | Utf8
-        | Dictionary(_) | LargeUtf8 => vec![InitNested::Primitive(field.is_nullable)],
+        | Dictionary(_) | LargeUtf8 | Utf8Sequence | LargeUtf8Sequence => {
+            vec![InitNested::Primitive(field.is_nullable)]
+        }
         List | FixedSizeList | LargeList => {
             let a = field.data_type().to_logical_type();
             let inner = if let DataType::List(inner) = a {

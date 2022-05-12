@@ -295,6 +295,9 @@ pub fn to_array(
         LargeBinary => Ok(to_binary::<i64>(json_col, data_type)),
         Utf8 => Ok(to_utf8::<i32>(json_col, data_type)),
         LargeUtf8 => Ok(to_utf8::<i64>(json_col, data_type)),
+        LargeUtf8Sequence | Utf8Sequence => Err(ArrowError::OutOfSpec(
+            "Arrow does not yet support exporting sequence views".to_string(),
+        )),
         FixedSizeBinary => {
             let validity = to_validity(&json_col.validity);
 

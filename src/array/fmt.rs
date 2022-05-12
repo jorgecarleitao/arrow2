@@ -51,6 +51,7 @@ pub fn get_value_display<'a, F: Write + 'a>(
                 f,
             )
         }),
+        Utf8Sequence | LargeUtf8Sequence => todo!(),
         LargeUtf8 => Box::new(|f, index| {
             super::utf8::fmt::write_value::<i64, _>(
                 array.as_any().downcast_ref().unwrap(),

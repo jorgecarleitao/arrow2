@@ -25,6 +25,10 @@ pub enum PhysicalType {
     Utf8,
     /// A variable-length string in Unicode with UFT-8 encoding and 64-bit offsets.
     LargeUtf8,
+    /// A variable-length string in Unicode with UFT-8 encoding and 32-bit offsets.
+    Utf8Sequence,
+    /// A variable-length string in Unicode with UFT-8 encoding and 32-bit offsets.
+    LargeUtf8Sequence,
     /// A list of some data type with variable length.
     List,
     /// A list of some data type with fixed length.

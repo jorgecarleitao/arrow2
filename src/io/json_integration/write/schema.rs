@@ -23,6 +23,9 @@ fn serialize_data_type(data_type: &DataType) -> Value {
         DataType::Float64 => json!({"name": "floatingpoint", "precision": "DOUBLE"}),
         DataType::Utf8 => json!({"name": "utf8"}),
         DataType::LargeUtf8 => json!({"name": "largeutf8"}),
+        DataType::Utf8Sequence | DataType::LargeUtf8Sequence => {
+            todo!("Arrow does not yet support sequence views")
+        }
         DataType::Binary => json!({"name": "binary"}),
         DataType::LargeBinary => json!({"name": "largebinary"}),
         DataType::FixedSizeBinary(byte_width) => {

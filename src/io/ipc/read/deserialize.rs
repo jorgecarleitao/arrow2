@@ -9,7 +9,7 @@ use arrow_format::ipc::MetadataVersion;
 
 use crate::array::*;
 use crate::datatypes::{DataType, Field, PhysicalType};
-use crate::error::Result;
+use crate::error::{ArrowError, Result};
 use crate::io::ipc::IpcField;
 
 use super::{array::*, Dictionaries};
@@ -115,6 +115,9 @@ pub fn read<R: Read + Seek>(
             )?;
             Ok(Arc::new(array))
         }
+        LargeUtf8Sequence | Utf8Sequence => Err(ArrowError::OutOfSpec(
+            "Arrow does not yet support exporting sequence views via IPC".to_string(),
+        )),
         List => read_list::<i32, _>(
             field_nodes,
             data_type,
@@ -223,6 +226,9 @@ pub fn skip(
         Primitive(_) => skip_primitive(field_nodes, buffers),
         LargeBinary | Binary => skip_binary(field_nodes, buffers),
         LargeUtf8 | Utf8 => skip_utf8(field_nodes, buffers),
+        LargeUtf8Sequence | Utf8Sequence => Err(ArrowError::OutOfSpec(
+            "Arrow does not yet support exporting sequence views via IPC".to_string(),
+        )),
         FixedSizeBinary => skip_fixed_size_binary(field_nodes, buffers),
         List => skip_list::<i32>(field_nodes, data_type, buffers),
         LargeList => skip_list::<i64>(field_nodes, data_type, buffers),
