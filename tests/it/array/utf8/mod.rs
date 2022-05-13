@@ -2,6 +2,8 @@ use arrow2::{array::*, bitmap::Bitmap, buffer::Buffer, datatypes::DataType, erro
 
 mod mutable;
 mod to_mutable;
+#[cfg(feature = "io_json")]
+mod json;
 
 #[test]
 fn basics() {
