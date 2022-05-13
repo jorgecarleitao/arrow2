@@ -1,4 +1,4 @@
-use arrow2::array::{Array, Utf8Array, StructArray};
+use arrow2::array::{Array, StructArray, Utf8Array};
 
 #[test]
 fn json_deserialize() {

@@ -220,10 +220,10 @@ fn case_struct() -> (String, Arc<dyn Array>) {
 
     // build expected output
     let d = Utf8Array::<i32>::from(&vec![Some("text"), None, Some("text"), None]);
-    let c = StructArray::from_data(DataType::Struct(
-            vec![d_field]),
-            vec![Arc::new(d)],
-            Some(Bitmap::from_u8_slice([0b11111101], 4)),
+    let c = StructArray::from_data(
+        DataType::Struct(vec![d_field]),
+        vec![Arc::new(d)],
+        Some(Bitmap::from_u8_slice([0b11111101], 4)),
     );
 
     let b = BooleanArray::from(vec![Some(true), Some(false), Some(true), None]);
