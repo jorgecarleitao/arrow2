@@ -1,5 +1,4 @@
 use arrow2::array::{Array, Utf8Array, StructArray};
-use arrow2::bitmap::Bitmap;
 
 #[test]
 fn json_deserialize() {
