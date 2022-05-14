@@ -23,16 +23,14 @@ impl<O: Offset> Utf8Array<O> {
         // Use the full length if no limit is provided
         let number_of_rows = number_of_rows.unwrap_or(self.len());
 
-        let data_types_iter = self.iter().take(number_of_rows);
+        let data_types_iter = self.iter().take(number_of_rows).flatten();
 
         let mut data_types = HashSet::new();
         for row in data_types_iter {
-            if let Some(row) = row {
-                let v: Value = serde_json::from_str(&row)?;
-                let data_type = infer(&v)?;
-                if data_type != DataType::Null {
-                    data_types.insert(data_type);
-                }
+            let v: Value = serde_json::from_str(row)?;
+            let data_type = infer(&v)?;
+            if data_type != DataType::Null {
+                data_types.insert(data_type);
             }
         }
 
@@ -45,7 +43,7 @@ impl<O: Offset> Utf8Array<O> {
         let rows = self
             .iter()
             .map(|row| match row {
-                Some(row) => serde_json::from_str(row.as_ref()).map_err(ArrowError::from),
+                Some(row) => serde_json::from_str(row).map_err(ArrowError::from),
                 None => Ok(Value::Null),
             })
             .collect::<Result<Vec<Value>>>()?;
