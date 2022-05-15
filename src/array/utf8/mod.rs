@@ -19,11 +19,6 @@ mod mutable;
 pub use iterator::*;
 pub use mutable::*;
 
-#[cfg(feature = "io_json")]
-mod json;
-#[cfg(feature = "io_json")]
-pub use json::*;
-
 /// A [`Utf8Array`] is arrow's equivalent of an immutable `Vec<Option<String>>`.
 /// Cloning and slicing this struct is `O(1)`.
 /// # Example
