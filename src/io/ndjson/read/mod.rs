@@ -4,5 +4,5 @@ pub use fallible_streaming_iterator::FallibleStreamingIterator;
 
 mod deserialize;
 mod file;
-pub use deserialize::deserialize;
-pub use file::{infer, FileReader};
+pub use deserialize::{deserialize, deserialize_iter};
+pub use file::{infer, infer_iter, FileReader};

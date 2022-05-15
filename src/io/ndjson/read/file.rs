@@ -125,3 +125,23 @@ pub fn infer<R: std::io::BufRead>(
     let v: Vec<&DataType> = data_types.iter().collect();
     Ok(coerce_data_type(&v))
 }
+
+/// Infers the [`DataType`] from an iterator of JSON strings. A limited number of
+/// rows can be used by passing `rows.take(number_of_rows)` as an input.
+///
+/// # Implementation
+/// This implementation infers each row by going through the entire iterator.
+pub fn infer_iter<'a>(rows: impl Iterator<Item=Option<&'a str>>) -> Result<DataType>
+{
+    let mut data_types = HashSet::new();
+    for row in rows.flatten() {
+        let v: Value = serde_json::from_str(row)?;
+        let data_type = infer_json(&v)?;
+        if data_type != DataType::Null {
+            data_types.insert(data_type);
+        }
+    }
+
+    let v: Vec<&DataType> = data_types.iter().collect();
+    Ok(coerce_data_type(&v))
+}
