@@ -282,8 +282,10 @@ fn utf8_array() -> Result<()> {
         Some(r#"{"a": 2, "b": [{"c": 2}, {"c": 5}]}"#),
         None,
     ]);
-    let data_type = ndjson_read::infer_iter(array.iter()).unwrap();
-    let new_array = ndjson_read::deserialize_iter(array.iter(), data_type).unwrap();
+    let data_type = ndjson_read::infer_iter(array.iter().map(|x| x.unwrap_or("null"))).unwrap();
+    let new_array =
+        ndjson_read::deserialize_iter(array.iter().map(|x| x.unwrap_or("null")), data_type)
+            .unwrap();
 
     // Explicitly cast as StructArray
     let new_array = new_array.as_any().downcast_ref::<StructArray>().unwrap();
