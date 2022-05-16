@@ -43,6 +43,46 @@ fn primitive_serializer<'a, T: NativeType + ToLexical>(
     ))
 }
 
+fn f64_serializer<'a>(
+    array: &'a PrimitiveArray<f64>,
+) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync> {
+    Box::new(BufStreamingIterator::new(
+        array.iter(),
+        |x, buf| {
+            if let Some(x) = x {
+                if f64::is_nan(*x) {
+                    buf.extend(b"null")
+                } else {
+                    lexical_to_bytes_mut(*x, buf)
+                }
+            } else {
+                buf.extend(b"null")
+            }
+        },
+        vec![],
+    ))
+}
+
+fn f32_serializer<'a>(
+    array: &'a PrimitiveArray<f32>,
+) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync> {
+    Box::new(BufStreamingIterator::new(
+        array.iter(),
+        |x, buf| {
+            if let Some(x) = x {
+                if f32::is_nan(*x) {
+                    buf.extend(b"null")
+                } else {
+                    lexical_to_bytes_mut(*x, buf)
+                }
+            } else {
+                buf.extend(b"null")
+            }
+        },
+        vec![],
+    ))
+}
+
 fn utf8_serializer<'a, O: Offset>(
     array: &'a Utf8Array<O>,
 ) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync> {
@@ -196,8 +236,8 @@ pub(crate) fn new_serializer<'a>(
         DataType::UInt16 => primitive_serializer::<u16>(array.as_any().downcast_ref().unwrap()),
         DataType::UInt32 => primitive_serializer::<u32>(array.as_any().downcast_ref().unwrap()),
         DataType::UInt64 => primitive_serializer::<u64>(array.as_any().downcast_ref().unwrap()),
-        DataType::Float32 => primitive_serializer::<f32>(array.as_any().downcast_ref().unwrap()),
-        DataType::Float64 => primitive_serializer::<f64>(array.as_any().downcast_ref().unwrap()),
+        DataType::Float32 => f32_serializer(array.as_any().downcast_ref().unwrap()),
+        DataType::Float64 => f64_serializer(array.as_any().downcast_ref().unwrap()),
         DataType::Utf8 => utf8_serializer::<i32>(array.as_any().downcast_ref().unwrap()),
         DataType::LargeUtf8 => utf8_serializer::<i64>(array.as_any().downcast_ref().unwrap()),
         DataType::Struct(_) => struct_serializer(array.as_any().downcast_ref().unwrap()),
