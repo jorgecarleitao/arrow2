@@ -234,12 +234,6 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
         let len = self.len();
         if let Some(validity) = self.validity.as_mut() {
             validity.extend_constant(len - validity.len(), true);
-        } else {
-            let mut validity = MutableBitmap::new();
-            validity.extend_constant(len, true);
-            if validity.null_count() > 0 {
-                self.validity = Some(validity);
-            }
         }
     }
 
