@@ -146,17 +146,21 @@ fn deserialize_struct<A: Borrow<Value>>(rows: &[A], data_type: DataType) -> Stru
         .map(|f| (&f.name, (f.data_type(), vec![])))
         .collect::<HashMap<_, _>>();
 
+    let mut validity = MutableBitmap::with_capacity(rows.len());
+
     rows.iter().for_each(|row| {
         match row.borrow() {
             Value::Object(value) => {
                 values
                     .iter_mut()
                     .for_each(|(s, (_, inner))| inner.push(value.get(*s).unwrap_or(&Value::Null)));
+                validity.push(true);
             }
             _ => {
                 values
                     .iter_mut()
                     .for_each(|(_, (_, inner))| inner.push(&Value::Null));
+                validity.push(false);
             }
         };
     });
@@ -166,7 +170,7 @@ fn deserialize_struct<A: Borrow<Value>>(rows: &[A], data_type: DataType) -> Stru
         .map(|(_, (data_type, values))| _deserialize(&values, data_type.clone()))
         .collect::<Vec<_>>();
 
-    StructArray::new(data_type, values, None)
+    StructArray::new(data_type, values, validity.into())
 }
 
 fn deserialize_dictionary<K: DictionaryKey, A: Borrow<Value>>(

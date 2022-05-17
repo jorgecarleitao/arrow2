@@ -220,11 +220,19 @@ fn case_struct() -> (String, Arc<dyn Array>) {
 
     // build expected output
     let d = Utf8Array::<i32>::from(&vec![Some("text"), None, Some("text"), None]);
-    let c = StructArray::from_data(DataType::Struct(vec![d_field]), vec![Arc::new(d)], None);
+    let c = StructArray::from_data(
+        DataType::Struct(vec![d_field]),
+        vec![Arc::new(d)],
+        Some(Bitmap::from_u8_slice([0b11111101], 4)),
+    );
 
     let b = BooleanArray::from(vec![Some(true), Some(false), Some(true), None]);
     let inner = DataType::Struct(vec![Field::new("b", DataType::Boolean, true), c_field]);
-    let expected = StructArray::from_data(inner, vec![Arc::new(b), Arc::new(c)], None);
+    let expected = StructArray::from_data(
+        inner,
+        vec![Arc::new(b), Arc::new(c)],
+        Some(Bitmap::from_u8_slice([0b11110111], 4)),
+    );
 
     let data_type = DataType::Struct(fields);
 
@@ -268,7 +276,11 @@ fn case_nested_list() -> (String, Arc<dyn Array>) {
         None,
     ]);
 
-    let c = StructArray::from_data(DataType::Struct(vec![d_field]), vec![Arc::new(d)], None);
+    let c = StructArray::from_data(
+        DataType::Struct(vec![d_field]),
+        vec![Arc::new(d)],
+        Some(Bitmap::from_u8_slice([0b11111011], 6)),
+    );
 
     let b = BooleanArray::from(vec![
         Some(true),

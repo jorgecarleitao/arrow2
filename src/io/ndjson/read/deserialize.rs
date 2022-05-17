@@ -22,9 +22,21 @@ pub fn deserialize(rows: &[String], data_type: DataType) -> Result<Arc<dyn Array
         ));
     }
 
+    deserialize_iter(rows.iter(), data_type)
+}
+
+/// Deserializes an iterator of rows into an [`Array`] of [`DataType`].
+/// # Implementation
+/// This function is CPU-bounded.
+/// This function is guaranteed to return an array of length equal to the leng
+/// # Errors
+/// This function errors iff any of the rows is not a valid JSON (i.e. the format is not valid NDJSON).
+pub fn deserialize_iter<A: AsRef<str>>(
+    rows: impl Iterator<Item = A>,
+    data_type: DataType,
+) -> Result<Arc<dyn Array>, ArrowError> {
     // deserialize strings to `Value`s
     let rows = rows
-        .iter()
         .map(|row| serde_json::from_str(row.as_ref()).map_err(ArrowError::from))
         .collect::<Result<Vec<Value>, ArrowError>>()?;
 
