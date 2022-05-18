@@ -23,17 +23,14 @@ pub struct MutablePrimitiveArray<T: NativeType> {
 
 impl<T: NativeType> From<MutablePrimitiveArray<T>> for PrimitiveArray<T> {
     fn from(other: MutablePrimitiveArray<T>) -> Self {
-        let validity = other
-            .validity
-            .map(|x| {
-                let bitmap: Bitmap = x.into();
-                if bitmap.null_count() == 0 {
-                    None
-                } else {
-                    Some(bitmap)
-                }
-            })
-            .flatten();
+        let validity = other.validity.and_then(|x| {
+            let bitmap: Bitmap = x.into();
+            if bitmap.null_count() == 0 {
+                None
+            } else {
+                Some(bitmap)
+            }
+        });
 
         PrimitiveArray::<T>::new(other.data_type, other.values.into(), validity)
     }

@@ -37,17 +37,14 @@ impl<O: Offset> From<MutableUtf8Array<O>> for Utf8Array<O> {
         // Safety:
         // `MutableUtf8Array` has the same invariants as `Utf8Array` and thus
         // `Utf8Array` can be safely created from `MutableUtf8Array` without checks.
-        let validity = other
-            .validity
-            .map(|x| {
-                let bitmap: Bitmap = x.into();
-                if bitmap.null_count() == 0 {
-                    None
-                } else {
-                    Some(bitmap)
-                }
-            })
-            .flatten();
+        let validity = other.validity.and_then(|x| {
+            let bitmap: Bitmap = x.into();
+            if bitmap.null_count() == 0 {
+                None
+            } else {
+                Some(bitmap)
+            }
+        });
 
         unsafe {
             Utf8Array::<O>::from_data_unchecked(
